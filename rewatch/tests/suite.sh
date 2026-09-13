@@ -49,8 +49,7 @@ bold "Rescript version"
 # we need to reset the yarn.lock and package.json to the original state
 # so there is not diff in git. The CI will install new ReScript package
 bold "Reset package.json and yarn.lock"
-git checkout ../testrepo/yarn.lock &> /dev/null
-git checkout ../testrepo/package.json &> /dev/null
+restore_tracked_files ../testrepo/yarn.lock ../testrepo/package.json &> /dev/null
 success "Reset package.json and yarn.lock"
 
 bold "Make sure the testrepo is clean"
@@ -181,4 +180,6 @@ fi
 
 # Compiler-args tests
 ./compiler-args/01-compiler-args-cwd-invariant.sh &&
-./compiler-args/02-warnings-in-parser-and-compiler.sh
+./compiler-args/02-warnings-in-parser-and-compiler.sh &&
+
+(cd ../testrepo && normalize_belt_portal_import)

@@ -11,7 +11,7 @@ rewatch build &> /dev/null
 rm packages/dep02/src/Dep02.res
 rewatch build &> ../tests/snapshots/remove-file.txt
 normalize_paths ../tests/snapshots/remove-file.txt
-git checkout -- packages/dep02/src/Dep02.res
+restore_tracked_files packages/dep02/src/Dep02.res
 
 rewatch build &> /dev/null
 

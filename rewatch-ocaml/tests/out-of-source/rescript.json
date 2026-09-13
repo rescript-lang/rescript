@@ -1,0 +1,5 @@
+{
+  "name": "out-of-source",
+  "sources": "src",
+  "package-specs": {"module": "esmodule", "in-source": false}
+}

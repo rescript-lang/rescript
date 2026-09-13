@@ -1,0 +1,94 @@
+(env
+ (static
+  (flags
+   (:standard -ccopt -static))))
+
+(rule
+ (target platform.ml)
+ (enabled_if
+  (= %{os_type} Win32))
+ (action
+  (copy platform_windows.ml platform.ml)))
+
+(rule
+ (target platform.ml)
+ (enabled_if
+  (<> %{os_type} Win32))
+ (action
+  (copy platform_unix.ml platform.ml)))
+
+(library
+ (name rewatch_ocaml_lib)
+ (wrapped false)
+ (modules
+  rewatch_version
+  string_util
+  source_filter
+  cli
+  config_types
+  config_decode
+  config
+  project_context
+  package_resolution
+  package_traversal
+  platform_common
+  platform
+  signal_restore
+  traversal_coverage
+  process_child
+  process
+  source
+  package_plan
+  graph
+  module_graph
+  package_diagnostics
+  package_graph
+  compiler_args
+  compiler_args_command
+  compiler_log
+  ast_header
+  compiler_process
+  compiler_scheduler
+  after_build
+  file_util
+  build_lock
+  build_artifacts
+  build_freshness
+  build_session
+  build_attempt
+  build_report
+  build_preparation
+  package_parse
+  package_compilation
+  package_build
+  clean
+  compile_assets
+  build_state
+  native_watcher
+  watch_scope
+  watch_snapshot
+  watcher
+  toolchain
+  compiler_info
+  source_dirs
+  warning_state
+  output
+  build
+  format)
+ (libraries unix threads yojson str spawn cmdliner luv re.perl)
+ (foreign_stubs
+  (language c)
+  (names windows_job_stubs)))
+
+(executable
+ (name rescript_ocaml)
+ (modules rescript_ocaml)
+ (libraries rewatch_ocaml_lib))
+
+; Keep the former scoped test command useful after moving test-only modules out
+; of this production directory.
+
+(alias
+ (name runtest)
+ (deps
+  (alias ../tests/rewatch_ounit_tests/runtest)))

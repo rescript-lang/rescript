@@ -440,7 +440,11 @@ pub fn compile(
     rayon::in_place_scope(|scope| {
         let mut in_flight: usize = 0;
         loop {
-            while in_flight < capacity && !has_errors {
+            // Keep dispatching work that was already independent of any
+            // failed module. Otherwise diagnostics vary with worker count:
+            // a warning-producing module may or may not have started before
+            // an unrelated error finishes.
+            while in_flight < capacity {
                 let Some(work) = ready_heap.pop() else { break };
                 let module_name = work.module_name.clone();
                 let is_dirty = dirty_set.contains(&module_name);
@@ -462,10 +466,6 @@ pub fn compile(
             }
 
             if in_flight == 0 {
-                if !ready_heap.is_empty() {
-                    // Errors suppressed new spawns; nothing left to drain.
-                    break;
-                }
                 if completed.len() < compile_universe_count && !has_errors {
                     stalled = true;
                 }
@@ -475,7 +475,8 @@ pub fn compile(
             let Ok(msg) = rx.recv() else { break };
             in_flight -= 1;
 
-            if msg.result.is_err() || msg.interface_result.as_ref().is_some_and(|r| r.is_err()) {
+            let failed = msg.result.is_err() || msg.interface_result.as_ref().is_some_and(|r| r.is_err());
+            if failed {
                 has_errors = true;
             }
 
@@ -489,20 +490,22 @@ pub fn compile(
             // key modules use to refer to the namespace entry.
             let dependents = build_state.get_module(&finished_name).unwrap().dependents.clone();
 
-            for dep in &dependents {
-                if !compile_universe.contains(dep) {
-                    continue;
-                }
-                if !is_clean {
-                    dirty_set.insert(dep.clone());
-                }
-                let count = pending_deps.get_mut(dep).unwrap();
-                *count -= 1;
-                if *count == 0 && !completed.contains(dep) {
-                    ready_heap.push(WorkUnit {
-                        priority: priorities[dep],
-                        module_name: dep.clone(),
-                    });
+            if !failed {
+                for dep in &dependents {
+                    if !compile_universe.contains(dep) {
+                        continue;
+                    }
+                    if !is_clean {
+                        dirty_set.insert(dep.clone());
+                    }
+                    let count = pending_deps.get_mut(dep).unwrap();
+                    *count -= 1;
+                    if *count == 0 && !completed.contains(dep) {
+                        ready_heap.push(WorkUnit {
+                            priority: priorities[dep],
+                            module_name: dep.clone(),
+                        });
+                    }
                 }
             }
         }
@@ -523,9 +526,9 @@ pub fn compile(
     let mut num_compiled_modules = 0;
 
     // Persist propagated dirtiness back onto build_state. Modules that were
-    // marked dirty (because a predecessor's cmi changed) but never scheduled
-    // — e.g. the first compile error aborted further dispatch — must keep
-    // compile_dirty = true so the next incremental build recompiles them.
+    // marked dirty (because a predecessor's cmi changed) but blocked by a
+    // failed prerequisite must keep compile_dirty = true so the next
+    // incremental build recompiles them.
     // Successful recompiles in the result loop below override this back to
     // false for the modules that actually ran.
     for name in &dirty_set {

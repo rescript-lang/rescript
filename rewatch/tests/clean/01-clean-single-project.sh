@@ -42,7 +42,7 @@ other_project_compiled_files=$(find packages/new-namespace -type f -name '*.mjs'
 if [ "$other_project_compiled_files" -gt 0 ];
 then
   success "Didn't clean other project files"
-  git restore .
+  restore_tracked_files .
 else
   error "Expected files from new-namespace not to be cleaned"
   exit 1

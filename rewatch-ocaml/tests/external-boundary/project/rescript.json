@@ -1,0 +1,8 @@
+{
+  "name": "project",
+  "sources": "src",
+  "dependencies": ["main"],
+  "package-specs": {"module": "esmodule", "in-source": true},
+  "suffix": ".mjs",
+  "sourceMap": {"enabled": "always", "mode": "linked"}
+}

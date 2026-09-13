@@ -1,0 +1,6 @@
+{
+  "name": "warning-replay",
+  "sources": "src",
+  "package-specs": {"module": "commonjs", "in-source": true},
+  "suffix": ".js"
+}

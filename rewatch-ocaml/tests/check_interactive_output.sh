@@ -1,0 +1,705 @@
+#!/bin/bash
+set -eu
+
+root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
+rust=${1:-$root/rewatch/target/debug/rescript}
+ocaml=${2:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
+rust=$(realpath "$rust")
+ocaml=$(realpath "$ocaml")
+work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-interactive-output-XXXXXX")
+windows_posix_shell=false
+case $(uname -s) in
+  CYGWIN*|MINGW*|MSYS*) windows_posix_shell=true ;;
+esac
+command_path() {
+  if $windows_posix_shell; then
+    cygpath -am "$1"
+  else
+    printf '%s\n' "$1"
+  fi
+}
+active_script_pid=""
+cleanup() {
+  if [ -n "$active_script_pid" ]; then
+    kill -TERM "$active_script_pid" 2>/dev/null || true
+    wait "$active_script_pid" 2>/dev/null || true
+  fi
+  rm -rf "$work"
+}
+trap cleanup EXIT
+
+if ! command -v script >/dev/null 2>&1; then
+  if $windows_posix_shell; then
+    echo "Skipping interactive output gate: script is unavailable on this Windows runner"
+    exit 0
+  fi
+  echo "Interactive output gate requires the util-linux script command" >&2
+  exit 1
+fi
+
+normalize_output() {
+  sed -E $'s/\033\\[[0-9;]*[[:alpha:]]//g' \
+    | sed -e 's/\[clean\]/🧹/g' -e 's/\[parse\]/🧱/g' \
+        -e 's/\[build\]/🤺/g' -e 's/\[ok\]/✅/g' \
+        -e 's/\[warn\]/⚠️/g' -e 's/\[error\]/❌/g'
+}
+
+for implementation in rust ocaml; do
+  mkdir -p "$work/$implementation/src"
+  printf '{"name":"interactive-output","sources":["src"],"namespace":"Interactive"}\n' \
+    >"$work/$implementation/rescript.json"
+  printf 'let value = 1\n' >"$work/$implementation/src/A.res"
+  printf 'let value: int\n' >"$work/$implementation/src/A.resi"
+  cp -R "$work/$implementation" "$work/$implementation-after-build"
+  cp -R "$work/$implementation" "$work/$implementation-parse-warning"
+  cp -R "$work/$implementation" "$work/$implementation-watch"
+  cp -R "$work/$implementation" "$work/$implementation-initial-failure-watch"
+  printf 'let value =\n' \
+    >"$work/$implementation-initial-failure-watch/src/A.res"
+  cp -R "$root/rewatch-ocaml/tests/basic" \
+    "$work/$implementation-partial-initial-failure-watch"
+  printf 'let answer: int = "not an int"\n' \
+    >"$work/$implementation-partial-initial-failure-watch/src/B.res"
+  cp -R "$work/$implementation" "$work/$implementation-warning-watch"
+  printf '%s\n' \
+    '{"name":"interactive-output","sources":["src"],"namespace":"Interactive","package-specs":{"module":"es6","in-source":true}}' \
+    >"$work/$implementation-warning-watch/rescript.json"
+done
+
+cat >"$work/after-build-marker.sh" <<'EOF'
+#!/bin/sh
+printf '%s\n' AFTER_BUILD_MARKER
+EOF
+chmod +x "$work/after-build-marker.sh"
+printf 'console.log("AFTER_BUILD_MARKER")\n' >"$work/after-build-marker.js"
+cat >"$work/after-build-input.js" <<'EOF'
+process.stdin.setEncoding("utf8");
+process.stdin.once("data", input => {
+  console.log(`AFTER_BUILD_INPUT:${input.trim()}`);
+});
+EOF
+
+export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$root/_build/default/compiler/bsc/rescript_compiler_main.exe}
+export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$root/packages/@rescript/runtime}
+parse_warning_bsc="$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe"
+after_build_command="$work/after-build-marker.sh"
+if $windows_posix_shell; then
+  RESCRIPT_BSC_EXE=$(command_path "$RESCRIPT_BSC_EXE")
+  RESCRIPT_RUNTIME=$(command_path "$RESCRIPT_RUNTIME")
+  parse_warning_bsc=$(command_path "$parse_warning_bsc")
+  after_build_command="node $(command_path "$work/after-build-marker.js")"
+fi
+
+capture() {
+  implementation=$1
+  executable=$2
+  transcript="$work/$implementation.tty"
+  command_executable=$(command_path "$executable")
+  command_project=$(command_path "$work/$implementation")
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
+      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
+      "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
+      "$executable" build "$work/$implementation" --no-timing >/dev/null
+  else
+    script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable build $command_project --no-timing" \
+      "$transcript" >/dev/null
+  fi
+  tr '\r' '\n' <"$transcript" \
+    | normalize_output \
+    | grep -E '^\[[123]/3\] .* (Cleaned|Parsed|Compiled) |^✅ Finished compilation in ' \
+    >"$work/$implementation.phases"
+}
+
+capture rust "$rust"
+capture ocaml "$ocaml"
+
+require_spinner_frames() {
+  implementation=$1
+  if ! grep -F $'\033[1m\033[2m[2/3]\033[0m' \
+      "$work/$implementation.tty" >/dev/null; then
+    echo "$implementation did not render the interactive step style" >&2
+    cat "$work/$implementation.tty" >&2
+    exit 1
+  fi
+  tr '\r' '\n' <"$work/$implementation.tty" \
+    | normalize_output \
+    >"$work/$implementation.frames"
+  if ! grep -E '^\[2/3\] 🧱 Parsing\.\.\. .+ [0-9]+/1' \
+      "$work/$implementation.frames" >/dev/null || \
+    ! grep -E '^\[3/3\] 🤺 Compiling\.\.\. .+ [0-9]+/2' \
+      "$work/$implementation.frames" >/dev/null; then
+    echo "$implementation did not render both live spinner phases" >&2
+    cat "$work/$implementation.frames" >&2
+    exit 1
+  fi
+}
+
+require_spinner_frames rust
+require_spinner_frames ocaml
+
+if ! cmp -s "$work/rust.phases" "$work/ocaml.phases"; then
+  echo "Interactive phase output differs" >&2
+  printf '%s\n' '--- Rust phases ---' >&2
+  cat "$work/rust.phases" >&2
+  printf '%s\n' '--- OCaml phases ---' >&2
+  cat "$work/ocaml.phases" >&2
+  exit 1
+fi
+
+cat >"$work/expected" <<'EOF'
+[1/3] 🧹 Cleaned 0/0 in 0.00s
+[2/3] 🧱 Parsed 1 source files in 0.00s
+[3/3] 🤺 Compiled 1 modules in 0.00s
+✅ Finished compilation in 0.00s
+EOF
+
+if ! cmp -s "$work/expected" "$work/ocaml.phases"; then
+  echo "Interactive phase output no longer has the expected stable shape" >&2
+  cat "$work/ocaml.phases" >&2
+  exit 1
+fi
+
+capture_parse_warning_order() {
+  implementation=$1
+  executable=$2
+  transcript="$work/$implementation-parse-warning.tty"
+  project="$work/$implementation-parse-warning"
+  command_executable=$(command_path "$executable")
+  command_project=$(command_path "$project")
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
+      "REWATCH_REAL_BSC=$RESCRIPT_BSC_EXE" \
+      "REWATCH_BSC_PROXY_MODE=parse-warning" \
+      "RESCRIPT_BSC_EXE=$parse_warning_bsc" \
+      "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
+      "$executable" build "$project" --no-timing >/dev/null
+  else
+    script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 REAL_BSC_EXE=$RESCRIPT_BSC_EXE REWATCH_REAL_BSC=$RESCRIPT_BSC_EXE REWATCH_BSC_PROXY_MODE=parse-warning RESCRIPT_BSC_EXE=$parse_warning_bsc RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable build $command_project --no-timing" \
+      "$transcript" >/dev/null
+  fi
+  tr '\r' '\n' <"$transcript" \
+    | normalize_output \
+    | grep -E '(^\[[123]/3\] .* Parsed |PARSE_WARNING_MARKER)' \
+    >"$work/$implementation-parse-warning.order"
+}
+
+capture_parse_warning_order rust "$rust"
+capture_parse_warning_order ocaml "$ocaml"
+
+if ! cmp -s "$work/rust-parse-warning.order" \
+  "$work/ocaml-parse-warning.order"; then
+  echo "Parser warning phase order differs" >&2
+  printf '%s\n' '--- Rust order ---' >&2
+  cat "$work/rust-parse-warning.order" >&2
+  printf '%s\n' '--- OCaml order ---' >&2
+  cat "$work/ocaml-parse-warning.order" >&2
+  exit 1
+fi
+
+if ! sed -n '1p' "$work/ocaml-parse-warning.order" \
+  | grep -E '^\[2/3\] .* Parsed 1 source files in 0.00s$' >/dev/null; then
+  echo "Parser warnings were emitted before the completed parse phase" >&2
+  cat "$work/ocaml-parse-warning.order" >&2
+  exit 1
+fi
+
+capture_after_build_order() {
+  implementation=$1
+  executable=$2
+  transcript="$work/$implementation-after-build.tty"
+  project="$work/$implementation-after-build"
+  command_executable=$(command_path "$executable")
+  command_project=$(command_path "$project")
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
+      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
+      "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
+      "$executable" build --after-build "$after_build_command" \
+      "$project" --no-timing >/dev/null
+  else
+    script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable build --after-build '$after_build_command' $command_project --no-timing" \
+      "$transcript" >/dev/null
+  fi
+  tr '\r' '\n' <"$transcript" \
+    | normalize_output \
+    | grep -E '^(✅ Finished compilation in |AFTER_BUILD_MARKER$)' \
+    | sed -E 's/in [0-9]+\.[0-9]+s$/in 0.00s/' \
+    >"$work/$implementation-after-build.order"
+}
+
+capture_after_build_order rust "$rust"
+capture_after_build_order ocaml "$ocaml"
+
+cat >"$work/expected-after-build-order" <<'EOF'
+✅ Finished compilation in 0.00s
+AFTER_BUILD_MARKER
+EOF
+
+for implementation in rust ocaml; do
+  if ! cmp -s "$work/expected-after-build-order" \
+    "$work/$implementation-after-build.order"; then
+    echo "$implementation ran one-shot --after-build in the wrong phase" >&2
+    cat "$work/$implementation-after-build.order" >&2
+    exit 1
+  fi
+done
+
+if $windows_posix_shell; then
+  for implementation in rust ocaml; do
+    if [ "$implementation" = rust ]; then executable=$rust; else executable=$ocaml; fi
+    command_executable=$(command_path "$executable")
+    command_project=$(command_path "$work/$implementation-after-build")
+    input_script=$(command_path "$work/after-build-input.js")
+    transcript="$work/$implementation-after-build-input.tty"
+    printf 'from-terminal\n' | script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable build --after-build 'node $input_script' $command_project --no-timing" \
+      "$transcript" >/dev/null
+    if ! tr '\r' '\n' <"$transcript" \
+      | grep -F 'AFTER_BUILD_INPUT:from-terminal' >/dev/null; then
+      echo "$implementation did not pass terminal input to --after-build" >&2
+      cat "$transcript" >&2
+      exit 1
+    fi
+  done
+fi
+
+capture_quiet_build() {
+  implementation=$1
+  executable=$2
+  transcript="$work/$implementation-quiet.tty"
+  command_executable=$(command_path "$executable")
+  command_project=$(command_path "$work/$implementation")
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
+      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
+      "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
+      "$executable" -q build "$work/$implementation" >/dev/null
+  else
+    script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable -q build $command_project" \
+      "$transcript" >/dev/null
+  fi
+  if tr '\r' '\n' <"$transcript" \
+    | grep -E '(Cleaned|Parsed|Parsing\.\.\.|Compiled|Compiling\.\.\.|Finished .*compilation)' >/dev/null; then
+    echo "$implementation quiet interactive build emitted progress" >&2
+    cat "$transcript" >&2
+    exit 1
+  fi
+}
+
+capture_quiet_build rust "$rust"
+capture_quiet_build ocaml "$ocaml"
+
+capture_clean() {
+  implementation=$1
+  executable=$2
+  transcript="$work/$implementation-clean.tty"
+  command_executable=$(command_path "$executable")
+  command_project=$(command_path "$work/$implementation")
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
+      "$executable" clean "$work/$implementation" >/dev/null
+  else
+    script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 $command_executable clean $command_project" \
+      "$transcript" >/dev/null
+  fi
+  # The initial generic label is overwritten by the first package label on the
+  # same terminal line, so it is not part of the visible phase sequence.
+  tr '\r' '\n' <"$transcript" \
+    | normalize_output \
+    | grep -E '^\[[12]/2\] 🧹 (Cleaning|Cleaned)' \
+    | awk '$0 != "[1/2] 🧹 Cleaning compiler assets..."' \
+    | sed -E 's/in [0-9]+\.[0-9]+s$/in 0.00s/' \
+    >"$work/$implementation-clean.phases"
+}
+
+capture_clean rust "$rust"
+capture_clean ocaml "$ocaml"
+
+if ! cmp -s "$work/rust-clean.phases" "$work/ocaml-clean.phases"; then
+  echo "Interactive clean phase output differs" >&2
+  printf '%s\n' '--- Rust clean phases ---' >&2
+  cat "$work/rust-clean.phases" >&2
+  printf '%s\n' '--- OCaml clean phases ---' >&2
+  cat "$work/ocaml-clean.phases" >&2
+  exit 1
+fi
+
+cat >"$work/expected-clean" <<'EOF'
+[1/2] 🧹 Cleaning interactive-output...
+[1/2] 🧹 Cleaned compiler assets in 0.00s
+[2/2] 🧹 Cleaning .js files...
+[2/2] 🧹 Cleaned .js files in 0.00s
+EOF
+
+if ! cmp -s "$work/expected-clean" "$work/ocaml-clean.phases"; then
+  echo "Interactive clean output no longer has the expected stable shape" >&2
+  cat "$work/ocaml-clean.phases" >&2
+  exit 1
+fi
+
+capture_quiet_clean() {
+  implementation=$1
+  executable=$2
+  transcript="$work/$implementation-clean-quiet.tty"
+  command_executable=$(command_path "$executable")
+  command_project=$(command_path "$work/$implementation")
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
+      "$executable" -q clean "$work/$implementation" >/dev/null
+  else
+    script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 $command_executable -q clean $command_project" \
+      "$transcript" >/dev/null
+  fi
+  if tr '\r' '\n' <"$transcript" | grep -E '(Cleaning|Cleaned)' >/dev/null; then
+    echo "$implementation quiet interactive clean emitted progress" >&2
+    cat "$transcript" >&2
+    exit 1
+  fi
+}
+
+capture_quiet_clean rust "$rust"
+capture_quiet_clean ocaml "$ocaml"
+
+wait_for_text() {
+  path=$1
+  pattern=$2
+  count=$3
+  attempts=0
+  while [ "$attempts" -lt 200 ]; do
+    actual=$(grep -cF "$pattern" "$path" 2>/dev/null || true)
+    actual=${actual:-0}
+    if [ "$actual" -ge "$count" ]; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  printf 'Timed out waiting for occurrence %s of %s in %s\n' \
+    "$count" "$pattern" "$path" >&2
+  if [ -f "$path" ]; then cat "$path" >&2; fi
+  return 1
+}
+
+wait_for_file() {
+  path=$1
+  attempts=0
+  while [ "$attempts" -lt 200 ]; do
+    if [ -f "$path" ]; then return 0; fi
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  printf 'Timed out waiting for %s\n' "$path" >&2
+  return 1
+}
+
+capture_watch_rebuild() {
+  local implementation=$1
+  local executable=$2
+  local project="$work/$implementation-watch"
+  local transcript="$work/$implementation-watch.tty"
+  local command_executable=$(command_path "$executable")
+  local command_project=$(command_path "$project")
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
+      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
+      "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
+      "$executable" watch --clear-screen "$project" >/dev/null &
+  else
+    script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable watch --clear-screen $command_project" \
+      "$transcript" >/dev/null &
+  fi
+  active_script_pid=$!
+  if ! wait_for_text "$transcript" "Finished initial compilation" 1; then
+    return 1
+  fi
+  printf 'let value = 2\n' >"$project/src/A.res"
+  if ! wait_for_text "$transcript" "Finished incremental compilation" 1; then
+    return 1
+  fi
+  cp "$transcript" "$work/$implementation-watch-phases.tty"
+  printf 'let value =\n' >"$project/src/A.res"
+  if ! wait_for_text "$transcript" "Build failed. Watching for changes..." 1; then
+    return 1
+  fi
+  printf 'let value = 3\n' >"$project/src/A.res"
+  if ! wait_for_text "$transcript" "Finished incremental compilation" 2; then
+    return 1
+  fi
+  printf '%s\n' \
+    '{"name":"interactive-output","sources":["src"],"namespace":"Interactive","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+    >"$project/rescript.next"
+  mv "$project/rescript.next" "$project/rescript.json"
+  if ! wait_for_text "$transcript" "Change detected. Full rebuild..." 1 || \
+    ! wait_for_text "$transcript" "Finished compilation" 1; then
+    return 1
+  fi
+  rm -f "$project/lib/watch.lock"
+  wait "$active_script_pid"
+  active_script_pid=""
+  tr '\r' '\n' <"$work/$implementation-watch-phases.tty" \
+    | normalize_output \
+    | sed -E 's/in [0-9]+\.[0-9]+s/in <TIME>/' \
+    >"$work/$implementation-watch.normalized"
+  awk '
+    /^\[[123]\/3\] .* (Cleaned|Parsed|Compiled) / ||
+      /^✅ Finished initial compilation in / {
+      print
+    }
+    /^✅ Finished initial compilation in / { exit }
+  ' "$work/$implementation-watch.normalized" \
+    >"$work/$implementation-watch-initial.phases"
+  grep -E '^\[[12]/2\] .* (Parsed|Compiled) |^✅ Finished incremental compilation in ' \
+    "$work/$implementation-watch.normalized" \
+    >"$work/$implementation-watch.phases"
+  tr '\r' '\n' <"$transcript" \
+    | normalize_output \
+    >"$work/$implementation-watch.presentation"
+  rebuilds=$(grep -cF 'Change detected. Rebuilding...' \
+    "$work/$implementation-watch.presentation" || true)
+  rebuilds=${rebuilds:-0}
+  full_rebuilds=$(grep -cF 'Change detected. Full rebuild...' \
+    "$work/$implementation-watch.presentation" || true)
+  full_rebuilds=${full_rebuilds:-0}
+  failures=$(grep -cF 'Build failed. Watching for changes...' \
+    "$work/$implementation-watch.presentation" || true)
+  failures=${failures:-0}
+  if [ "$rebuilds" -lt 3 ] || [ "$full_rebuilds" -ne 1 ] || \
+    [ "$failures" -ne 1 ]; then
+    echo "$implementation watch rebuild presentation changed" >&2
+    cat "$work/$implementation-watch.presentation" >&2
+    exit 1
+  fi
+}
+
+capture_watch_rebuild rust "$rust"
+capture_watch_rebuild ocaml "$ocaml"
+
+if ! cmp -s "$work/rust-watch-initial.phases" \
+  "$work/ocaml-watch-initial.phases"; then
+  echo "Interactive initial-watch output differs" >&2
+  printf '%s\n' '--- Rust initial phases ---' >&2
+  cat "$work/rust-watch-initial.phases" >&2
+  printf '%s\n' '--- OCaml initial phases ---' >&2
+  cat "$work/ocaml-watch-initial.phases" >&2
+  exit 1
+fi
+
+cat >"$work/expected-watch-initial" <<'EOF'
+[1/3] 🧹 Cleaned 0/0 in <TIME>
+[2/3] 🧱 Parsed 1 source files in <TIME>
+[3/3] 🤺 Compiled 1 modules in <TIME>
+✅ Finished initial compilation in <TIME>
+EOF
+
+if ! cmp -s "$work/expected-watch-initial" \
+  "$work/ocaml-watch-initial.phases"; then
+  echo "Interactive initial-watch output lost its stable shape" >&2
+  cat "$work/ocaml-watch-initial.phases" >&2
+  exit 1
+fi
+
+if ! cmp -s "$work/rust-watch.phases" "$work/ocaml-watch.phases"; then
+  echo "Interactive watch rebuild output differs" >&2
+  printf '%s\n' '--- Rust rebuild phases ---' >&2
+  cat "$work/rust-watch.phases" >&2
+  printf '%s\n' '--- OCaml rebuild phases ---' >&2
+  cat "$work/ocaml-watch.phases" >&2
+  exit 1
+fi
+
+cat >"$work/expected-watch" <<'EOF'
+[1/2] 🧱 Parsed 1 source files in <TIME>
+[2/2] 🤺 Compiled 1 modules in <TIME>
+✅ Finished incremental compilation in <TIME>
+EOF
+
+if ! cmp -s "$work/expected-watch" "$work/ocaml-watch.phases"; then
+  echo "Interactive watch rebuild output lost its stable shape" >&2
+  cat "$work/ocaml-watch.phases" >&2
+  exit 1
+fi
+
+capture_initial_failure_recovery() {
+  local implementation=$1
+  local executable=$2
+  local project="$work/$implementation-initial-failure-watch"
+  local transcript="$work/$implementation-initial-failure-watch.tty"
+  local command_executable=$(command_path "$executable")
+  local command_project=$(command_path "$project")
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
+      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
+      "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
+      "$executable" watch --clear-screen "$project" >/dev/null &
+  else
+    script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable watch --clear-screen $command_project" \
+      "$transcript" >/dev/null &
+  fi
+  active_script_pid=$!
+  if ! wait_for_text "$transcript" "Error parsing source files" 1; then
+    return 1
+  fi
+  printf 'let value = 1\n' >"$project/src/A.res"
+  if ! wait_for_text "$transcript" "Finished incremental compilation" 1; then
+    return 1
+  fi
+  rm -f "$project/lib/watch.lock"
+  wait "$active_script_pid"
+  active_script_pid=""
+  tr '\r' '\n' <"$transcript" \
+    | normalize_output \
+    | sed -E 's/in [0-9]+\.[0-9]+s/in <TIME>/' \
+    | sed -n '/Change detected\. Rebuilding\.\.\./,$p' \
+    | grep -E '^(Change detected|\[[12]/2\] .* (Parsed|Compiled) |✅ Finished incremental compilation)' \
+    | awk '{ print } /✅ Finished incremental compilation/ { exit }' \
+    >"$work/$implementation-initial-failure-recovery.phases"
+}
+
+capture_initial_failure_recovery rust "$rust"
+capture_initial_failure_recovery ocaml "$ocaml"
+
+if ! cmp -s "$work/rust-initial-failure-recovery.phases" \
+  "$work/ocaml-initial-failure-recovery.phases"; then
+  echo "Interactive initial-failure recovery output differs" >&2
+  printf '%s\n' '--- Rust recovery phases ---' >&2
+  cat "$work/rust-initial-failure-recovery.phases" >&2
+  printf '%s\n' '--- OCaml recovery phases ---' >&2
+  cat "$work/ocaml-initial-failure-recovery.phases" >&2
+  exit 1
+fi
+
+cat >"$work/expected-initial-failure-recovery" <<'EOF'
+Change detected. Rebuilding...
+[1/2] 🧱 Parsed 1 source files in <TIME>
+[2/2] 🤺 Compiled 1 modules in <TIME>
+✅ Finished incremental compilation in <TIME>
+EOF
+
+if ! cmp -s "$work/expected-initial-failure-recovery" \
+  "$work/ocaml-initial-failure-recovery.phases"; then
+  echo "Initial-failure recovery did not retain incremental state" >&2
+  cat "$work/ocaml-initial-failure-recovery.phases" >&2
+  exit 1
+fi
+
+capture_partial_initial_failure_recovery() {
+  local implementation=$1
+  local executable=$2
+  local project="$work/$implementation-partial-initial-failure-watch"
+  local transcript="$work/$implementation-partial-initial-failure-watch.log"
+  local command_executable=$(command_path "$executable")
+  local command_project=$(command_path "$project")
+  "$command_executable" watch "$command_project" >"$transcript" 2>&1 &
+  active_script_pid=$!
+  if ! wait_for_text "$transcript" "expected to have type" 1; then return 1; fi
+  printf 'let answer = A.value + 1\n' >"$project/src/B.res"
+  if ! wait_for_text "$transcript" "Finished incremental compilation" 1; then
+    return 1
+  fi
+  wait_for_file "$project/src/A.mjs"
+  wait_for_file "$project/src/B.mjs"
+  if grep -F "I/O error: src/A.ast" "$transcript" >/dev/null; then
+    echo "$implementation retained build state without its parsed AST" >&2
+    cat "$transcript" >&2
+    return 1
+  fi
+  rm -f "$project/lib/watch.lock"
+  wait "$active_script_pid"
+  active_script_pid=""
+}
+
+capture_partial_initial_failure_recovery rust "$rust"
+capture_partial_initial_failure_recovery ocaml "$ocaml"
+
+capture_warning_watch() {
+  local implementation=$1
+  local executable=$2
+  local project="$work/$implementation-warning-watch"
+  local transcript="$work/$implementation-warning-watch.tty"
+  local command_executable=$(command_path "$executable")
+  local command_project=$(command_path "$project")
+  if [ "$(uname -s)" = Darwin ]; then
+    script -q "$transcript" env -u NO_COLOR \
+      "TERM=xterm" \
+      "CLICOLOR=1" \
+      "CLICOLOR_FORCE=0" \
+      "RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE" \
+      "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
+      "$executable" watch "$project" >/dev/null &
+  else
+    script -qefc \
+      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 RESCRIPT_BSC_EXE=$RESCRIPT_BSC_EXE RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable watch $command_project" \
+      "$transcript" >/dev/null &
+  fi
+  active_script_pid=$!
+  if ! wait_for_text "$transcript" "Finished initial compilation" 1; then
+    return 1
+  fi
+  printf 'let value = 2\n' >"$project/src/A.res"
+  if ! wait_for_text "$transcript" "Finished incremental compilation" 1; then
+    return 1
+  fi
+  printf 'let added = 1\n' >"$project/src/B.res"
+  if ! wait_for_text "$transcript" "Finished compilation" 1; then
+    return 1
+  fi
+  rm -f "$project/lib/watch.lock"
+  wait "$active_script_pid"
+  active_script_pid=""
+
+  if [ "$(grep -cF "uses deprecated config" "$transcript")" -ne 1 ]; then
+    echo "$implementation repeated a configuration warning during watch" >&2
+    cat "$transcript" >&2
+    exit 1
+  fi
+  if grep -F "Finished incremental compilation with warnings" \
+    "$transcript" >/dev/null; then
+    echo "$implementation carried a static configuration warning into the incremental footer" >&2
+    cat "$transcript" >&2
+    exit 1
+  fi
+  if [ "$implementation" = ocaml ] && \
+    ! grep -F $'\033[33mPackage' "$transcript" >/dev/null; then
+    echo "$implementation did not render interactive configuration warnings in yellow" >&2
+    cat "$transcript" >&2
+    exit 1
+  fi
+}
+
+capture_warning_watch rust "$rust"
+capture_warning_watch ocaml "$ocaml"
+
+echo "Interactive output phases matched"

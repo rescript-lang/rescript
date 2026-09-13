@@ -1,0 +1,10 @@
+{
+  "name": "package-output-consumer",
+  "sources": "src",
+  "dependencies": ["dep"],
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true,
+    "suffix": ".js"
+  }
+}

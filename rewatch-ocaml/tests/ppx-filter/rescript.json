@@ -1,0 +1,5 @@
+{
+  "name": "rewatch-ocaml-ppx-filter",
+  "sources": "src",
+  "ppx-flags": ["missing-graphql-ppx"]
+}

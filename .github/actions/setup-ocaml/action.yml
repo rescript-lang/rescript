@@ -82,7 +82,8 @@ runs:
       run: |
         dependency_flags_key="${DEPENDENCY_FLAGS//--/}"
         dependency_flags_key="${dependency_flags_key// /_}"
-        key="$CACHE_PREFIX-$OS-3.8.0-$COMPILER-$dependency_flags_key-${{ hashFiles('*.opam') }}"
+        dependency_hash="${{ hashFiles('*.opam', '.github/opam-repository/repo', '.github/opam-repository/packages/**') }}"
+        key="$CACHE_PREFIX-$OS-3.8.0-$COMPILER-$dependency_flags_key-$dependency_hash"
         echo "value=${key//,/-}" >> "$GITHUB_OUTPUT"
         echo "setup-version=3.8.0" >> "$GITHUB_OUTPUT"
 
@@ -125,12 +126,21 @@ runs:
       env:
         DEPENDENCY_FLAGS: ${{ inputs.dependency-flags }}
       run: |
+        opam repository add rescript-overrides "$GITHUB_WORKSPACE/.github/opam-repository"
         read -ra dependency_flags <<< "$DEPENDENCY_FLAGS"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          export AR=x86_64-w64-mingw32-ar
+          export RANLIB=x86_64-w64-mingw32-ranlib
+          export STRIP=x86_64-w64-mingw32-strip
+          export NM=x86_64-w64-mingw32-nm
+          export DLLTOOL=x86_64-w64-mingw32-dlltool
+          export OBJDUMP=x86_64-w64-mingw32-objdump
+        fi
         opam install . "${dependency_flags[@]}"
 
     - name: Cache OPAM environment
       # Caches created by pull_request runs are scoped to that PR's merge ref
-      # and cannot seed other PRs or branches. Only pushes create shared caches.
+      # and cannot seed other PRs or branches, so only push runs save them.
       if: steps.cache.outputs.cache-hit != 'true' && github.event_name == 'push'
       uses: actions/cache/save@v6
       with:

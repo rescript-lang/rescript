@@ -7,10 +7,10 @@
 ; cause no timestamp churn downstream.
 ;
 ; One rule per platform; %{system}/%{architecture} come from `ocamlc -config`
-; (note: x64 is "amd64" there). Windows copies without stripping, matching
-; the historical packaging step. The browser profile is excluded because it
-; builds a playground-flavoured compiler that must never overwrite the
-; native binaries.
+; (note: x64 is "amd64" there). Every package receives the OCaml build system
+; as rescript.exe; Cargo separately promotes the Rust reference as
+; rescript-rust.exe. The browser profile is excluded because it builds a
+; playground-flavoured compiler that must never overwrite the native binaries.
 
 (rule
  (enabled_if
@@ -18,11 +18,16 @@
    (<> %{profile} browser)
    (= %{system} macosx)
    (= %{architecture} arm64)))
- (targets bsc.exe rescript-editor-analysis.exe rescript-tools.exe)
+ (targets
+  bsc.exe
+  rescript-editor-analysis.exe
+  rescript-tools.exe
+  rescript.exe)
  (deps
   ../bsc/rescript_compiler_main.exe
   ../../analysis/bin/main.exe
-  ../../tools/bin/main.exe)
+  ../../tools/bin/main.exe
+  ../../rewatch-ocaml/rescript_ocaml.exe)
  (mode
   (promote
    (until-clean)
@@ -31,7 +36,8 @@
   (progn
    (run strip -o bsc.exe ../bsc/rescript_compiler_main.exe)
    (run strip -o rescript-editor-analysis.exe ../../analysis/bin/main.exe)
-   (run strip -o rescript-tools.exe ../../tools/bin/main.exe))))
+   (run strip -o rescript-tools.exe ../../tools/bin/main.exe)
+   (run strip -o rescript.exe ../../rewatch-ocaml/rescript_ocaml.exe))))
 
 (rule
  (enabled_if
@@ -39,11 +45,16 @@
    (<> %{profile} browser)
    (= %{system} macosx)
    (= %{architecture} amd64)))
- (targets bsc.exe rescript-editor-analysis.exe rescript-tools.exe)
+ (targets
+  bsc.exe
+  rescript-editor-analysis.exe
+  rescript-tools.exe
+  rescript.exe)
  (deps
   ../bsc/rescript_compiler_main.exe
   ../../analysis/bin/main.exe
-  ../../tools/bin/main.exe)
+  ../../tools/bin/main.exe
+  ../../rewatch-ocaml/rescript_ocaml.exe)
  (mode
   (promote
    (until-clean)
@@ -52,7 +63,8 @@
   (progn
    (run strip -o bsc.exe ../bsc/rescript_compiler_main.exe)
    (run strip -o rescript-editor-analysis.exe ../../analysis/bin/main.exe)
-   (run strip -o rescript-tools.exe ../../tools/bin/main.exe))))
+   (run strip -o rescript-tools.exe ../../tools/bin/main.exe)
+   (run strip -o rescript.exe ../../rewatch-ocaml/rescript_ocaml.exe))))
 
 (rule
  (enabled_if
@@ -60,11 +72,16 @@
    (<> %{profile} browser)
    (= %{system} linux)
    (= %{architecture} arm64)))
- (targets bsc.exe rescript-editor-analysis.exe rescript-tools.exe)
+ (targets
+  bsc.exe
+  rescript-editor-analysis.exe
+  rescript-tools.exe
+  rescript.exe)
  (deps
   ../bsc/rescript_compiler_main.exe
   ../../analysis/bin/main.exe
-  ../../tools/bin/main.exe)
+  ../../tools/bin/main.exe
+  ../../rewatch-ocaml/rescript_ocaml.exe)
  (mode
   (promote
    (until-clean)
@@ -73,7 +90,8 @@
   (progn
    (run strip -o bsc.exe ../bsc/rescript_compiler_main.exe)
    (run strip -o rescript-editor-analysis.exe ../../analysis/bin/main.exe)
-   (run strip -o rescript-tools.exe ../../tools/bin/main.exe))))
+   (run strip -o rescript-tools.exe ../../tools/bin/main.exe)
+   (run strip -o rescript.exe ../../rewatch-ocaml/rescript_ocaml.exe))))
 
 (rule
  (enabled_if
@@ -81,11 +99,16 @@
    (<> %{profile} browser)
    (= %{system} linux)
    (= %{architecture} amd64)))
- (targets bsc.exe rescript-editor-analysis.exe rescript-tools.exe)
+ (targets
+  bsc.exe
+  rescript-editor-analysis.exe
+  rescript-tools.exe
+  rescript.exe)
  (deps
   ../bsc/rescript_compiler_main.exe
   ../../analysis/bin/main.exe
-  ../../tools/bin/main.exe)
+  ../../tools/bin/main.exe
+  ../../rewatch-ocaml/rescript_ocaml.exe)
  (mode
   (promote
    (until-clean)
@@ -94,7 +117,8 @@
   (progn
    (run strip -o bsc.exe ../bsc/rescript_compiler_main.exe)
    (run strip -o rescript-editor-analysis.exe ../../analysis/bin/main.exe)
-   (run strip -o rescript-tools.exe ../../tools/bin/main.exe))))
+   (run strip -o rescript-tools.exe ../../tools/bin/main.exe)
+   (run strip -o rescript.exe ../../rewatch-ocaml/rescript_ocaml.exe))))
 
 (rule
  (enabled_if
@@ -102,11 +126,16 @@
    (<> %{profile} browser)
    (= %{system} mingw64)
    (= %{architecture} amd64)))
- (targets bsc.exe rescript-editor-analysis.exe rescript-tools.exe)
+ (targets
+  bsc.exe
+  rescript-editor-analysis.exe
+  rescript-tools.exe
+  rescript.exe)
  (deps
   ../bsc/rescript_compiler_main.exe
   ../../analysis/bin/main.exe
-  ../../tools/bin/main.exe)
+  ../../tools/bin/main.exe
+  ../../rewatch-ocaml/rescript_ocaml.exe)
  (mode
   (promote
    (until-clean)
@@ -115,4 +144,5 @@
   (progn
    (copy ../bsc/rescript_compiler_main.exe bsc.exe)
    (copy ../../analysis/bin/main.exe rescript-editor-analysis.exe)
-   (copy ../../tools/bin/main.exe rescript-tools.exe))))
+   (copy ../../tools/bin/main.exe rescript-tools.exe)
+   (copy ../../rewatch-ocaml/rescript_ocaml.exe rescript.exe))))

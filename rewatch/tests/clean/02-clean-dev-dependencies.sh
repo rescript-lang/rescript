@@ -31,7 +31,7 @@ project_compiled_files=$(find packages/pure-dev -type f -name '*.mjs' | wc -l | 
 if [ "$project_compiled_files" -eq 0 ];
 then
   success "pure-dev cleaned"
-  git restore .
+  restore_tracked_files .
 else
   error "Expected 0 .mjs files in pure-dev after clean, got $project_compiled_files"
   printf "%s\n" "$error_output"

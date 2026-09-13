@@ -10,7 +10,7 @@ git_diff_file_count=$(git diff --name-only ./ | wc -l | xargs)
 if [ $? -eq 0 ] && [ $git_diff_file_count -eq 2 ];
 then
     success "file-casing formatted"
-    git restore .
+    restore_tracked_files .
 else
     error "Error formatting current project file-casing"
     echo "Expected 2 files to be changed, got $git_diff_file_count"

@@ -11,7 +11,7 @@ rewatch build &> /dev/null
 echo 'Dep01.log()' >> packages/new-namespace/src/NS_alias.res
 rewatch build &> ../tests/snapshots/dependency-cycle.txt
 normalize_paths ../tests/snapshots/dependency-cycle.txt
-git checkout -- packages/new-namespace/src/NS_alias.res
+restore_tracked_files packages/new-namespace/src/NS_alias.res
 
 rewatch build &> /dev/null
 

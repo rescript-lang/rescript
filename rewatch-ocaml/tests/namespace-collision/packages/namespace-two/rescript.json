@@ -1,0 +1,5 @@
+{
+  "name": "namespace-two",
+  "namespace": "SharedNamespace",
+  "sources": "src"
+}
