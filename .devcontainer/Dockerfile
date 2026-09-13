@@ -17,4 +17,4 @@ RUN printf '\n\n' | bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/o
 USER vscode
 ENV HOME=/home/vscode
 
-RUN opam init -y --shell-setup --enable-shell-hook --compiler=5.5.0 --disable-sandboxing
+RUN opam init -y --shell-setup --enable-shell-hook --compiler=5.5.1 --disable-sandboxing
