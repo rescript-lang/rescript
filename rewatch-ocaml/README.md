@@ -39,8 +39,6 @@ and 50.502 s for OCaml (1.195x). Seven-run no-op medians were 465 ms and 533 ms
   contract and validation inventory.
 - [`bench/README.md`](bench/README.md) documents reproducible performance,
   filesystem-work, resource, artifact, and source-size gates.
-- [`IMPLEMENTATION_HISTORY.md`](IMPLEMENTATION_HISTORY.md) is an archive of the
-  implementation and review journey, not a second current-status document.
 
 ## Build
 
