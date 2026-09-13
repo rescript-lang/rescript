@@ -85,6 +85,7 @@
 
 #### :house: Internal
 
+- Remove the unused Jane Street `base` dependency left over from vendoring the Flow parser. https://github.com/rescript-lang/rescript/pull/8655
 - Refactor parser token handling to separate inspection (`peek`/`peek2`) from consumption, removing Diamond mode and `prev_end_pos` bookkeeping and moving missing JSX prop recovery from an editor-analysis regex heuristic into the parser. https://github.com/rescript-lang/rescript/pull/8633
 - Give regexp literals a dedicated AST node. https://github.com/rescript-lang/rescript/pull/8634
 - Developer playground: Make panes resizable with wrapping text. https://github.com/rescript-lang/rescript/pull/8628
