@@ -15,7 +15,9 @@ export REWATCH_EXECUTABLE
 # Make sure we are in the right directory
 cd $(dirname $0)
 
-if [[ "$REWATCH_EXECUTABLE" == */cli/rescript.js ]]; then
+if [[ "$REWATCH_EXECUTABLE" == */cli/rescript.js ||
+  "$REWATCH_EXECUTABLE" == */cli/rescript-ocaml.js ||
+  "$REWATCH_EXECUTABLE" == */cli/rescript-rust.js ]]; then
   echo "Using rewatch CLI script: $REWATCH_EXECUTABLE"
 else
   echo "Using rewatch executable: $REWATCH_EXECUTABLE"
