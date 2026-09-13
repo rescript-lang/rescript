@@ -11,3 +11,4 @@ let use = f(/a/i, /b/m)
 let expressionAttributes = @foo /a/g
 let choice = flag ? /a/i : /b/m
 let indexed = /a/g["lastIndex"]
+let jsxField = <Comp value=(/>/).source />

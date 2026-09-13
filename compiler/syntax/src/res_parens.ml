@@ -271,8 +271,9 @@ let field_expr expr =
     | {
      pexp_desc =
        ( Pexp_assert _ | Pexp_extension _ (* %extension.x vs (%extension).x *)
-       | Pexp_object_literal _ (* ({"a": 1})["a"] *) | Pexp_fun _
-       | Pexp_constraint _ | Pexp_coerce _ | Pexp_setfield _ | Pexp_match _
+       | Pexp_regexp _ | Pexp_object_literal _ (* ({"a": 1})["a"] *)
+       | Pexp_fun _ | Pexp_constraint _ | Pexp_coerce _ | Pexp_setfield _
+       | Pexp_match _
        | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_for_of _
        | Pexp_for_await_of _ | Pexp_ifthenelse _ );
     } ->

@@ -11,7 +11,7 @@ let call =
   f ((a >> b), (a >= b)) (fun [arity:1]x -> (Some [|x|] : int array option))
 let comment = a >>> b
 let template = `prefix ${(a >> 2) >= b} suffix`
-let regex = [%re {js|/[<>]+>>=/g|js}]
+let regex = /[<>]+>>=/g
 let jsx = <div title=((a >= b)[@res.braces ]) data-value=((a >> 1)
   [@res.braces ])><span>((a << 1)[@res.braces ])</span>
   <>((`value ${a >>> 1}`)[@res.braces ])</></div>
