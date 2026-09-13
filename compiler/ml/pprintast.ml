@@ -781,6 +781,7 @@ and expression ctxt f x =
       pp f "@[<2>`%s@;%a@]" l (simple_expr ctxt) payload
     | Pexp_extension e -> extension ctxt f e
     | Pexp_await e -> pp f "@[<hov2>await@ %a@]" (simple_expr ctxt) e
+    | Pexp_regexp {pattern; flags} -> pp f "/%s/%s" pattern flags
     | Pexp_template {source_segments; values} ->
       let rec parts f (source_segments, values) =
         match (source_segments, values) with

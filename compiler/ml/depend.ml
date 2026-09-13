@@ -225,6 +225,7 @@ let rec add_expr bv exp =
   | Pexp_apply {funct = e; args = el} ->
     add_expr bv e;
     List.iter (fun (_, e) -> add_expr bv e) el
+  | Pexp_regexp _ -> ()
   | Pexp_template {values} -> List.iter (add_expr bv) values
   | Pexp_tagged_template {tag; values} ->
     add_expr bv tag;

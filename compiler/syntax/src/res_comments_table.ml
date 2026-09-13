@@ -993,7 +993,7 @@ and walk_expression expr t comments =
   in
   match expr.Parsetree.pexp_desc with
   | _ when comments = [] -> ()
-  | Pexp_constant _ ->
+  | Pexp_regexp _ | Pexp_constant _ ->
     let leading, trailing = partition_leading_trailing comments expr.pexp_loc in
     attach t.leading expr.pexp_loc leading;
     attach t.trailing expr.pexp_loc trailing

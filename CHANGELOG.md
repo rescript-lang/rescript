@@ -14,6 +14,7 @@
 
 #### :boom: Breaking Change
 
+- Remove `%re`; use regexp literals instead. https://github.com/rescript-lang/rescript/pull/8634
 - Reject malformed UTF-8 in documentation comments and invalid string or template literal escapes that were previously accepted, including empty or out-of-range braced Unicode escapes (`\u{}`, `\u{110000}`) and legacy decimal or octal escapes in templates (`\1`, `\01`, `\8`). These inputs now produce syntax diagnostics instead of compiling to invalid or inconsistent JavaScript. https://github.com/rescript-lang/rescript/pull/8606
 - Reject tagged template literals in patterns. Patterns cannot invoke their tag; previously their raw payload was compiled as a plain string comparison. https://github.com/rescript-lang/rescript/pull/8606
 - Remove runtime APIs that were deprecated for removal in ReScript 13, including the `Char` module, unsafe `Obj` operations, legacy `Pervasives` helpers, and `Array.unsafe_get`. https://github.com/rescript-lang/rescript/pull/8564
@@ -85,6 +86,7 @@
 #### :house: Internal
 
 - Refactor parser token handling to separate inspection (`peek`/`peek2`) from consumption, removing Diamond mode and `prev_end_pos` bookkeeping and moving missing JSX prop recovery from an editor-analysis regex heuristic into the parser. https://github.com/rescript-lang/rescript/pull/8633
+- Give regexp literals a dedicated AST node. https://github.com/rescript-lang/rescript/pull/8634
 - Developer playground: Make panes resizable with wrapping text. https://github.com/rescript-lang/rescript/pull/8628
 - Normalize Lambda terms where they are built: a match guard stays structured data until its fallthrough is known, and `apply` and `mk_builtin` go through the folding constructors. https://github.com/rescript-lang/rescript/pull/8615
 - Replace non-escaping local mutable blocks with scalar bindings when all uses are direct field accesses, generalizing reference unboxing to multi-field records and references captured by JavaScript closures. https://github.com/rescript-lang/rescript/pull/8617

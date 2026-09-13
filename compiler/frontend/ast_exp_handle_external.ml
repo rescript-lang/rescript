@@ -34,20 +34,13 @@ let handle_debugger loc (payload : Ast_payload.t) =
   | _ ->
     Location.raise_errorf ~loc "%%debugger extension doesn't accept arguments"
 
-let handle_raw ~kind loc payload =
+let handle_raw loc payload =
   let is_function = ref None in
-  match Ast_payload.raw_as_string_exp_exn ~kind ~is_function payload with
-  | None -> (
-    match kind with
-    | Raw_re ->
-      Location.raise_errorf ~loc
-        "%%re extension can only be applied to a string"
-    | Raw_exp ->
-      Location.raise_errorf ~loc
-        "%%raw extension can only be applied to a string"
-    | Raw_program ->
-      Location.raise_errorf ~loc
-        "%%%%raw extension can only be applied to a string")
+  match
+    Ast_payload.raw_as_string_exp_exn ~kind:Raw_exp ~is_function payload
+  with
+  | None ->
+    Location.raise_errorf ~loc "%%raw extension can only be applied to a string"
   | Some exp ->
     {
       exp with

@@ -54,8 +54,8 @@ type constant =
      otherwise the frontend rejects it. The string is JavaScript source, not a
      decoded ReScript string value. *)
   | Pconst_raw_source of string
-  (* JavaScript source carried by a compiler extension such as [raw], [ffi], or
-     [re]. For example, [%raw("x + 1")] stores ["x + 1"]. The extension
+  (* JavaScript source carried by a compiler extension such as [raw] or [ffi].
+     For example, [%raw("x + 1")] stores ["x + 1"]. The extension
      interprets the string as JavaScript source rather than as a ReScript
      runtime string value. *)
   | Pconst_float of string * char option
@@ -389,6 +389,9 @@ and expression_desc =
     (* for pattern of array_expr do body_expr *)
   | Pexp_for_await_of of pattern * expression * expression
   (* for await pattern of iterable_expr do body_expr *)
+  | Pexp_regexp of {pattern: string; flags: string}
+  (* Literal source without delimiters; escapes and flag order are preserved.
+     Validation happens during frontend lowering, not AST construction. *)
   | Pexp_template of {source_segments: string loc list; values: expression list}
   (* An ordinary backquoted expression. [source_segments] contains the validated
      text between and around the interpolations, including escape spelling;

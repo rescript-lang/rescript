@@ -174,6 +174,7 @@ let iter_expression f e =
     | Pexp_apply {funct = e; args = lel} ->
       expr e;
       List.iter (fun (_, e) -> expr e) lel
+    | Pexp_regexp _ -> ()
     | Pexp_template {values} -> List.iter expr values
     | Pexp_tagged_template {tag; values} ->
       expr tag;
@@ -2568,6 +2569,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
   | Pexp_fun {newtypes = []; params; body = sfun_body; async} ->
     type_function ~async loc sexp.pexp_attributes env ty_expected params
       sfun_body
+  | Pexp_regexp _ -> assert false (* Lowered by the built-in frontend mapper. *)
   | Pexp_template {source_segments; values} ->
     begin_def ();
     let segments : Asttypes.template_segment list =

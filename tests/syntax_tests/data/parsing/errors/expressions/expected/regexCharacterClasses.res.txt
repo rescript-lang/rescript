@@ -29,6 +29,6 @@
 
   unterminated regex
 
-let re = [%re {js|/[]/|js}]
-;;[%re {js|//|js}]
-let r = [%re {js|/./|js}]
+let re = /[]/
+;;//
+let r = /./

@@ -1,0 +1,9 @@
+
+  [1;31mSyntax error![0m
+  [36m/.../fixtures/syntaxErrorsRemovedReExtension.res[0m:[2m1:10-12[0m
+
+  [1;31m1[0m [2m│[0m let re = [1;31m%re[0m("/abc/i")
+  2 [2m│[0m // Use the literal syntax instead.
+  3 [2m│[0m let literal = /abc/i
+
+  The %re extension has been removed. Use a regexp literal such as /abc/i.

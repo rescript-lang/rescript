@@ -205,6 +205,8 @@ module Exp = struct
   let pack ?loc ?attrs a = mk ?loc ?attrs (Pexp_pack a)
   let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_open (a, b, c))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pexp_extension a)
+  let regexp ?loc ?attrs pattern flags =
+    mk ?loc ?attrs (Pexp_regexp {pattern; flags})
   let template ?loc ?attrs source_segments values =
     mk ?loc ?attrs (Pexp_template {source_segments; values})
   let tagged_template ?loc ?attrs tag raw_sources values =

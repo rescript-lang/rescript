@@ -53,6 +53,17 @@ val is_single_int : t -> int option
 val constructor_tag_of_payload : t -> Parsetree.constructor_tag option
 (** The literal denoted by a valid variant-constructor [@as] payload. *)
 
+val validate_raw_source :
+  kind:Js_raw_info.raw_kind ->
+  ?is_function:int option ref ->
+  loc:Location.t ->
+  offset:int ->
+  string ->
+  unit
+
+(** Validate JavaScript source using the same rules as raw extensions.
+    [offset] accounts for delimiters preceding the source in its location. *)
+
 val raw_as_string_exp_exn :
   kind:Js_raw_info.raw_kind ->
   ?is_function:int option ref ->
