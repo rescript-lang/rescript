@@ -222,13 +222,19 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
   and native_reconcile watcher (scope : Watch_scope.t) previous =
     let current = Watch_snapshot.create digest_cache scope in
     if not (Watch_snapshot.equal current previous) then (
-      Output.debug ~verbosity "doing Full";
-      begin_rebuild Full;
+      let changes = Watch_snapshot.changes_between previous current in
+      let rebuild_kind =
+        if Watch_snapshot.changes_are_incremental changes then Incremental
+        else Full
+      in
+      Output.debug ~verbosity
+        (match rebuild_kind with
+        | Incremental -> "doing Incremental"
+        | Full -> "doing Full");
+      begin_rebuild rebuild_kind;
       let build_scope = Watch_scope.discover ~root ~prod ~features ~filter in
       let before_build = Watch_snapshot.create digest_cache build_scope in
-      build ~poll
-        ~changes:(Some (Watch_snapshot.changes_between previous current))
-      |> finish_rebuild;
+      build ~poll ~changes:(Some changes) |> finish_rebuild;
       let new_scope = Watch_scope.discover ~root ~prod ~features ~filter in
       match Watch_snapshot.create_with_symlink_paths digest_cache new_scope with
       | Watch_snapshot.Registration_failed {snapshot; message} ->
