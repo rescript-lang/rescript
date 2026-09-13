@@ -213,7 +213,7 @@ jobs:
         shell: bash
 
       - name: Run OCaml rewatch parity tests
-        timeout-minutes: 30
+        timeout-minutes: 20
         run: |
           bash rewatch-ocaml/tests/check_rust_test_coverage.sh --require-complete
           bash rewatch-ocaml/tests/check_canonical_test_coverage.sh
@@ -223,9 +223,19 @@ jobs:
           bash rewatch-ocaml/tests/check_command_validation.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+        shell: bash
+
+      - name: Run OCaml rewatch interactive output tests
+        timeout-minutes: 15
+        run: |
           bash rewatch-ocaml/tests/check_interactive_output.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+        shell: bash
+
+      - name: Run OCaml rewatch verbose output tests
+        timeout-minutes: 10
+        run: |
           bash rewatch-ocaml/tests/check_verbose_output.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe

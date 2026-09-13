@@ -19,9 +19,29 @@ command_path() {
   fi
 }
 active_script_pid=""
+active_watch_project=""
+active_watch_transcript=""
+wait_for_pid_gone() {
+  pid=$1
+  attempts=${2:-200}
+  while [ "$attempts" -gt 0 ]; do
+    if ! kill -0 "$pid" 2>/dev/null; then return 0; fi
+    attempts=$((attempts - 1))
+    sleep 0.1
+  done
+  return 1
+}
 cleanup() {
   if [ -n "$active_script_pid" ]; then
-    kill -TERM "$active_script_pid" 2>/dev/null || true
+    if [ -n "$active_watch_project" ]; then
+      rm -f "$active_watch_project/lib/watch.lock"
+    fi
+    if ! wait_for_pid_gone "$active_script_pid" 50; then
+      kill -TERM "$active_script_pid" 2>/dev/null || true
+    fi
+    if ! wait_for_pid_gone "$active_script_pid" 50; then
+      kill -KILL "$active_script_pid" 2>/dev/null || true
+    fi
     wait "$active_script_pid" 2>/dev/null || true
   fi
   rm -rf "$work"
@@ -115,6 +135,7 @@ capture() {
     >"$work/$implementation.phases"
 }
 
+echo "Checking interactive build output..."
 capture rust "$rust"
 capture ocaml "$ocaml"
 
@@ -192,6 +213,7 @@ capture_parse_warning_order() {
     >"$work/$implementation-parse-warning.order"
 }
 
+echo "Checking interactive parser warnings..."
 capture_parse_warning_order rust "$rust"
 capture_parse_warning_order ocaml "$ocaml"
 
@@ -240,6 +262,7 @@ capture_after_build_order() {
     >"$work/$implementation-after-build.order"
 }
 
+echo "Checking interactive after-build output..."
 capture_after_build_order rust "$rust"
 capture_after_build_order ocaml "$ocaml"
 
@@ -303,6 +326,7 @@ capture_quiet_build() {
   fi
 }
 
+echo "Checking quiet interactive builds..."
 capture_quiet_build rust "$rust"
 capture_quiet_build ocaml "$ocaml"
 
@@ -333,6 +357,7 @@ capture_clean() {
     >"$work/$implementation-clean.phases"
 }
 
+echo "Checking interactive clean output..."
 capture_clean rust "$rust"
 capture_clean ocaml "$ocaml"
 
@@ -382,6 +407,7 @@ capture_quiet_clean() {
   fi
 }
 
+echo "Checking quiet interactive cleans..."
 capture_quiet_clean rust "$rust"
 capture_quiet_clean ocaml "$ocaml"
 
@@ -417,6 +443,23 @@ wait_for_file() {
   return 1
 }
 
+stop_active_watch() {
+  rm -f "$active_watch_project/lib/watch.lock"
+  if ! wait_for_pid_gone "$active_script_pid"; then
+    echo "Timed out waiting for the interactive watcher to stop" >&2
+    if [ -f "$active_watch_transcript" ]; then
+      cat "$active_watch_transcript" >&2
+    fi
+    return 1
+  fi
+  status=0
+  wait "$active_script_pid" || status=$?
+  active_script_pid=""
+  active_watch_project=""
+  active_watch_transcript=""
+  return "$status"
+}
+
 capture_watch_rebuild() {
   local implementation=$1
   local executable=$2
@@ -438,6 +481,8 @@ capture_watch_rebuild() {
       "$transcript" >/dev/null &
   fi
   active_script_pid=$!
+  active_watch_project=$project
+  active_watch_transcript=$transcript
   if ! wait_for_text "$transcript" "Finished initial compilation" 1; then
     return 1
   fi
@@ -462,9 +507,7 @@ capture_watch_rebuild() {
     ! wait_for_text "$transcript" "Finished compilation" 1; then
     return 1
   fi
-  rm -f "$project/lib/watch.lock"
-  wait "$active_script_pid"
-  active_script_pid=""
+  stop_active_watch
   tr '\r' '\n' <"$work/$implementation-watch-phases.tty" \
     | normalize_output \
     | sed -E 's/in [0-9]+\.[0-9]+s/in <TIME>/' \
@@ -500,6 +543,7 @@ capture_watch_rebuild() {
   fi
 }
 
+echo "Checking interactive watch rebuilds..."
 capture_watch_rebuild rust "$rust"
 capture_watch_rebuild ocaml "$ocaml"
 
@@ -569,6 +613,8 @@ capture_initial_failure_recovery() {
       "$transcript" >/dev/null &
   fi
   active_script_pid=$!
+  active_watch_project=$project
+  active_watch_transcript=$transcript
   if ! wait_for_text "$transcript" "Error parsing source files" 1; then
     return 1
   fi
@@ -576,9 +622,7 @@ capture_initial_failure_recovery() {
   if ! wait_for_text "$transcript" "Finished incremental compilation" 1; then
     return 1
   fi
-  rm -f "$project/lib/watch.lock"
-  wait "$active_script_pid"
-  active_script_pid=""
+  stop_active_watch
   tr '\r' '\n' <"$transcript" \
     | normalize_output \
     | sed -E 's/in [0-9]+\.[0-9]+s/in <TIME>/' \
@@ -588,6 +632,7 @@ capture_initial_failure_recovery() {
     >"$work/$implementation-initial-failure-recovery.phases"
 }
 
+echo "Checking interactive initial-failure recovery..."
 capture_initial_failure_recovery rust "$rust"
 capture_initial_failure_recovery ocaml "$ocaml"
 
@@ -624,6 +669,8 @@ capture_partial_initial_failure_recovery() {
   local command_project=$(command_path "$project")
   "$command_executable" watch "$command_project" >"$transcript" 2>&1 &
   active_script_pid=$!
+  active_watch_project=$project
+  active_watch_transcript=$transcript
   if ! wait_for_text "$transcript" "expected to have type" 1; then return 1; fi
   printf 'let answer = A.value + 1\n' >"$project/src/B.res"
   if ! wait_for_text "$transcript" "Finished incremental compilation" 1; then
@@ -636,11 +683,10 @@ capture_partial_initial_failure_recovery() {
     cat "$transcript" >&2
     return 1
   fi
-  rm -f "$project/lib/watch.lock"
-  wait "$active_script_pid"
-  active_script_pid=""
+  stop_active_watch
 }
 
+echo "Checking partial initial-failure recovery..."
 capture_partial_initial_failure_recovery rust "$rust"
 capture_partial_initial_failure_recovery ocaml "$ocaml"
 
@@ -665,6 +711,8 @@ capture_warning_watch() {
       "$transcript" >/dev/null &
   fi
   active_script_pid=$!
+  active_watch_project=$project
+  active_watch_transcript=$transcript
   if ! wait_for_text "$transcript" "Finished initial compilation" 1; then
     return 1
   fi
@@ -676,9 +724,7 @@ capture_warning_watch() {
   if ! wait_for_text "$transcript" "Finished compilation" 1; then
     return 1
   fi
-  rm -f "$project/lib/watch.lock"
-  wait "$active_script_pid"
-  active_script_pid=""
+  stop_active_watch
 
   if [ "$(grep -cF "uses deprecated config" "$transcript")" -ne 1 ]; then
     echo "$implementation repeated a configuration warning during watch" >&2
@@ -699,6 +745,7 @@ capture_warning_watch() {
   fi
 }
 
+echo "Checking interactive watch warnings..."
 capture_warning_watch rust "$rust"
 capture_warning_watch ocaml "$ocaml"
 
