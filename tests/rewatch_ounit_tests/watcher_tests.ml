@@ -28,9 +28,10 @@ let tests =
         (Watch_scope.path_in_scope scope (Filename.concat root "package.json"))
         "malformed package metadata remains in recoverable watch scope");
   Test_support.with_temp_dir "rewatch-missing-source-scope-" (fun root ->
+      Unix.mkdir (Filename.concat root "node_modules") 0o755;
       Test_support.write_file
         (Filename.concat root "rescript.json")
-        {|{"name":"root","sources":"generated/nested"}|};
+        {|{"name":"root","sources":["generated/./nested","trailing/"],"dependencies":["@scope/dep"]}|};
       let scope =
         Watch_scope.discover ~root ~prod:false ~features:None ~filter:None
       in
@@ -44,7 +45,21 @@ let tests =
         "native separators match a slash-delimited configured source root";
       check
         (Watch_scope.path_in_scope scope (Filename.concat nested "Main.res"))
-        "source files use platform-normalized directory comparisons");
+        "source files use platform-normalized directory comparisons";
+      check
+        (Watch_scope.path_in_scope scope
+           (Filename.concat (Filename.concat root "trailing") "Main.res"))
+        "source comparisons ignore a redundant trailing separator";
+      let dependency_scope =
+        Filename.concat (Filename.concat root "node_modules") "@scope"
+      in
+      let dependency = Filename.concat dependency_scope "dep" in
+      check
+        (Watch_scope.path_is_unresolved_ancestor scope dependency_scope)
+        "a scoped dependency ancestor triggers watch reconciliation";
+      check
+        (Watch_scope.path_in_scope scope dependency)
+        "native separators match a slash-delimited unresolved dependency");
   let snapshot path digest =
     [Watch_snapshot.{path; state = File {modified = 1.; size = 1; digest}}]
   in

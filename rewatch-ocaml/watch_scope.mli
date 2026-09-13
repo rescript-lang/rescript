@@ -28,3 +28,4 @@ val discover :
 val path_in_scope : t -> string -> bool
 val path_is_in_source_tree : t -> string -> bool
 val path_is_source_ancestor : t -> string -> bool
+val path_is_unresolved_ancestor : t -> string -> bool

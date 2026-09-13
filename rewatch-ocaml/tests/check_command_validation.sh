@@ -391,7 +391,7 @@ printf 'let dependency = 1\n' \
   >"$work/watch-dependency-recovery/packages/dep/src/Dep.res"
 directory_link "$work/watch-dependency-recovery/packages/dep" \
   "$work/watch-dependency-recovery/node_modules/dep"
-printf '{"name":"watch-dependency-install","sources":["src"],"dependencies":["dep"]}\n' \
+printf '{"name":"watch-dependency-install","sources":["src"],"dependencies":["@scope/dep"]}\n' \
   >"$work/watch-dependency-install/rescript.json"
 printf 'let value = 1\n' >"$work/watch-dependency-install/src/A.res"
 printf '{"name":"watch-feature-scope","sources":["src",{"dir":"inactive","feature":"inactive"}]}\n' \
@@ -1675,7 +1675,7 @@ checked=$((checked + 1))
 dependency_install_pid=$!
 background_pids="$background_pids $dependency_install_pid"
 if ! wait_for_text "$work/watch-dependency-install.err" \
-    "Could not resolve dependency dep"; then
+    "Could not resolve dependency @scope/dep"; then
   printf '%s\n' '--- watcher stdout ---' >&2
   cat "$work/watch-dependency-install.out" >&2
   exit 1
@@ -1684,11 +1684,13 @@ if ! kill -0 "$dependency_install_pid" 2>/dev/null; then
   echo "OCaml watcher exited while waiting for a missing dependency" >&2
   exit 1
 fi
-mkdir -p "$work/watch-dependency-install/node_modules/dep/src"
-printf '{"name":"dep","sources":["src"]}\n' \
-  >"$work/watch-dependency-install/node_modules/dep/rescript.json"
+mkdir "$work/watch-dependency-install/node_modules/@scope"
+sleep 1
+mkdir -p "$work/watch-dependency-install/node_modules/@scope/dep/src"
+printf '{"name":"@scope/dep","sources":["src"]}\n' \
+  >"$work/watch-dependency-install/node_modules/@scope/dep/rescript.json"
 printf 'let dependency = 1\n' \
-  >"$work/watch-dependency-install/node_modules/dep/src/Dep.res"
+  >"$work/watch-dependency-install/node_modules/@scope/dep/src/Dep.res"
 wait_for_file "$work/watch-dependency-install/src/A.js"
 terminate_and_wait "$dependency_install_pid" "dependency-install watcher"
 checked=$((checked + 1))
