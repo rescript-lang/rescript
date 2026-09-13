@@ -226,6 +226,10 @@ jobs:
         shell: bash
 
       - name: Run OCaml rewatch interactive output tests
+        # Terminal rendering depends on the host OS, not the CPU architecture.
+        # Use the faster ARM runners for one Linux and one macOS check. Windows
+        # does not provide a reliable native equivalent of the `script` PTY.
+        if: matrix.node-target == 'linux-arm64' || matrix.node-target == 'darwin-arm64'
         timeout-minutes: 15
         run: |
           bash rewatch-ocaml/tests/check_interactive_output.sh \

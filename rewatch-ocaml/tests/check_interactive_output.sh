@@ -11,6 +11,12 @@ windows_posix_shell=false
 case $(uname -s) in
   CYGWIN*|MINGW*|MSYS*) windows_posix_shell=true ;;
 esac
+
+if $windows_posix_shell; then
+  echo "Skipping interactive output gate: a POSIX pseudo-terminal does not exercise the native Windows console"
+  exit 0
+fi
+
 command_path() {
   if $windows_posix_shell; then
     cygpath -am "$1"
@@ -49,10 +55,6 @@ cleanup() {
 trap cleanup EXIT
 
 if ! command -v script >/dev/null 2>&1; then
-  if $windows_posix_shell; then
-    echo "Skipping interactive output gate: script is unavailable on this Windows runner"
-    exit 0
-  fi
   echo "Interactive output gate requires the util-linux script command" >&2
   exit 1
 fi
