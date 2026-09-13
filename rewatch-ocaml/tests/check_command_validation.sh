@@ -830,13 +830,21 @@ run_build_output_case quiet-parse-error 1 "$work/redirected-parse-fixture" quiet
 run_build_output_case quiet-warning 0 \
   "$root/rewatch-ocaml/tests/warning-replay" quiet
 
-run_case build-subcommand-version exit2 exit2 build --version
+run_case build-subcommand-version exit2 accept build --version
 run_case clustered-global-version accept accept -vV build
 run_case clustered-global-verbosity accept accept -vvvvv build "$project"
 run_case clustered-global-version-before-help accept accept -Vh build
 run_case clustered-global-help-before-version accept accept -hV build
 run_case clustered-subcommand-help-before-version accept accept build -hV
-run_case clustered-subcommand-version-before-help exit2 exit2 build -Vh
+run_case clustered-subcommand-version-before-help exit2 accept build -Vh
+"$ocaml" build --help=groff >"$work/ocaml-help-groff.out"
+if ! grep -F '.\" Pipe this output to groff' \
+  "$work/ocaml-help-groff.out" >/dev/null; then
+  echo "formatted-help: OCaml did not preserve the requested groff format" >&2
+  cat "$work/ocaml-help-groff.out" >&2
+  exit 1
+fi
+checked=$((checked + 1))
 run_case implicit-conflicting-verbosity exit2 exit2 -v -q
 run_case build-conflicting-verbosity exit2 exit2 build --verbose --quiet
 run_case filter-perl-quoting exit2 exit2 build --filter '\QFoo.res\E' "$project"
@@ -853,7 +861,7 @@ run_case filter-in-class-nonword accept exit2 build --filter \
 run_case filter-collating-element accept exit2 build --filter '[[.a.]]' "$project"
 run_case filter-class-algebra accept exit2 build --filter \
   '[a-z&&[^aeiou]]' "$project"
-run_case build-no-timing-consumes-folder exit2 exit2 build --no-timing "$project"
+run_case build-no-timing-preserves-folder exit2 accept build --no-timing "$project"
 run_case compiler-args-source accept accept compiler-args "$project/src/A.res"
 run_case compiler-args-extension accept reject compiler-args "$project/src/A.txt"
 run_case compiler-args-missing panic reject compiler-args "$project/src/Missing.res"

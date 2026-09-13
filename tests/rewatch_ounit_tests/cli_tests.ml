@@ -68,17 +68,29 @@ let tests =
     (shows_version ["-vV"; "build"])
     "a clustered leading version flag has global precedence";
   check
-    (shows_version ["-Vh"; "build"])
-    "a leading cluster uses its first display flag";
+    (shows_help ["-Vh"; "build"])
+    "help takes precedence over version in a leading cluster";
   check
     (shows_help ["-hV"; "build"])
     "a leading help flag wins when it precedes version in a cluster";
   check
     (shows_help ["build"; "-hV"])
-    "subcommand help stops before a later invalid version flag";
+    "subcommand help takes precedence over version";
   check
-    (rejects ["build"; "-Vh"])
-    "a subcommand cluster rejects version before help";
+    (shows_help ["build"; "-Vh"])
+    "subcommand help precedence is independent of cluster order";
+  check
+    (shows_help ["--version"; "build"; "--help"])
+    "subcommand help takes precedence over a leading version option";
+  check
+    (shows_help ["--version"; "build"; "--help=plain"])
+    "formatted subcommand help takes precedence over a leading version option";
+  check
+    (shows_help ["--help=plain"])
+    "formatted root help remains a root display option";
+  check
+    (shows_help ["build"; "--help=groff"])
+    "explicit Cmdliner help formats remain accepted";
   check
     (match parse ["build"; "-v"] with
     | Cli.Build _ -> true
@@ -98,20 +110,28 @@ let tests =
     "implicit build extracts a trailing global version flag";
   check (shows_version ["--version"]) "the long global version flag is accepted";
   check
-    (rejects ["build"; "-V"])
-    "explicit build rejects a trailing global version flag";
+    (shows_version ["build"; "-V"])
+    "explicit build accepts a trailing short version flag";
   check
-    (rejects ["build"; "--version"])
-    "explicit build rejects the long trailing global version flag";
+    (shows_version ["build"; "--version"])
+    "explicit build accepts the long trailing version flag";
   check
     (rejects ["watch"; "--no-timing"])
     "watch rejects build-only --no-timing";
   check
-    ((build_options ["build"; "-n=false"; "."]).folder = ".")
-    "build accepts short no-timing boolean values";
+    ((build_options ["build"; "-n"; "."]).folder = "."
+    && (build_options ["build"; "-n"; "."]).no_timing)
+    "the short no-timing flag preserves the following folder";
   check
-    (rejects ["build"; "--no-timing"; "."])
-    "an optional no-timing value consumes the following token";
+    ((build_options ["build"; "--no-timing"; "false"]).folder = "false"
+    && (build_options ["build"; "--no-timing"; "false"]).no_timing)
+    "no-timing does not interpret a folder named false as a boolean";
+  check
+    (rejects ["build"; "--no-timing=false"])
+    "no-timing rejects explicit boolean values";
+  check
+    (not (build_options ["build"]).no_timing)
+    "build defaults no-timing to false";
   check (build_options ["build"; "--prod"]).prod "build parses --prod";
   check (not (build_options ["build"]).prod) "build defaults --prod to false";
   check (watch_options ["watch"; "--prod"]).prod "watch parses --prod";

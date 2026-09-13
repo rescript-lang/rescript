@@ -17,26 +17,6 @@ let optional_member name fields =
   | None | Some `Null -> None
   | value -> value
 
-let last_member name fields =
-  List.fold_left
-    (fun found (field, value) -> if field = name then Some value else found)
-    None fields
-
-let deduplicate_last fields =
-  let seen = Hashtbl.create (List.length fields) in
-  List.fold_left
-    (fun unique ((name, _) as field) ->
-      if Hashtbl.mem seen name then unique
-      else (
-        Hashtbl.add seen name ();
-        field :: unique))
-    [] (List.rev fields)
-
-let last_optional_member name fields =
-  match last_member name fields with
-  | None | Some `Null -> None
-  | value -> value
-
 type field_policy = {known: string list; duplicate_checked: string list}
 
 let reject_all_duplicates known = {known; duplicate_checked = known}
@@ -76,7 +56,6 @@ let configuration_duplicate_fields =
     "reanalyze";
     "namespace-entry";
     "allowed-dependents";
-    "path";
   ]
 
 let configuration_fields =
@@ -118,6 +97,15 @@ let reject_duplicate_fields path context policy fields =
         if Hashtbl.mem seen name then
           fail path (Printf.sprintf "duplicate field %S in %s" name context)
         else Hashtbl.add seen name ())
+    fields
+
+let reject_duplicates path context fields =
+  let seen = Hashtbl.create (List.length fields) in
+  List.iter
+    (fun (name, _) ->
+      if Hashtbl.mem seen name then
+        fail path (Printf.sprintf "duplicate field %S in %s" name context)
+      else Hashtbl.add seen name ())
     fields
 
 let string path field = function
@@ -357,33 +345,34 @@ let gentype_args path configured_suffix package_specs_value dependencies =
         match member "shims" fields with
         | None -> []
         | Some (`Assoc values) ->
+          reject_duplicates path "gentypeconfig.shims" values;
           List.map
             (fun (from_, target) ->
               (from_, string path "gentypeconfig.shims" target))
             values
         | Some (`List values) ->
-          List.map
-            (fun value ->
-              let value = string path "gentypeconfig.shims" value in
-              match String.index_opt value '=' with
-              | Some separator ->
-                let from_ = String.sub value 0 separator |> String.trim in
-                let target =
-                  String.sub value (separator + 1)
-                    (String.length value - separator - 1)
-                  |> String.trim
-                in
-                (from_, target)
-              | None -> fail path "gentypeconfig.shims entries must contain =")
-            values
+          let pairs =
+            List.map
+              (fun value ->
+                let value = string path "gentypeconfig.shims" value in
+                match String.index_opt value '=' with
+                | Some separator ->
+                  let from_ = String.sub value 0 separator |> String.trim in
+                  let target =
+                    String.sub value (separator + 1)
+                      (String.length value - separator - 1)
+                    |> String.trim
+                  in
+                  (from_, target)
+                | None -> fail path "gentypeconfig.shims entries must contain =")
+              values
+          in
+          reject_duplicates path "gentypeconfig.shims" pairs;
+          pairs
         | Some _ ->
           fail path "field \"gentypeconfig.shims\" must be an object or array"
       in
-      let by_source = Hashtbl.create (List.length pairs) in
-      List.iter
-        (fun (from_, target) -> Hashtbl.replace by_source from_ target)
-        pairs;
-      Hashtbl.to_seq by_source |> List.of_seq |> List.sort compare
+      pairs |> List.sort compare
       |> List.concat_map (fun (from_, target) ->
           ["-bs-gentype-shim"; from_ ^ "=" ^ target])
     in
@@ -391,7 +380,8 @@ let gentype_args path configured_suffix package_specs_value dependencies =
       match member "debug" fields with
       | None -> []
       | Some (`Assoc values) ->
-        values |> deduplicate_last |> List.sort compare
+        reject_duplicates path "gentypeconfig.debug" values;
+        values |> List.sort compare
         |> List.concat_map (fun (name, value) ->
             match value with
             | `Bool true -> ["-bs-gentype-debug"; name]

@@ -118,9 +118,6 @@ let load path =
     | Some value -> string path "name" value
     | None -> fail path "missing required field \"name\""
   in
-  (match member "path" fields with
-  | None | Some (`String _) -> ()
-  | Some _ -> fail path "field \"path\" must be a string");
   let configured_suffix =
     match optional_member "suffix" fields with
     | None -> None
@@ -250,22 +247,23 @@ let load path =
         "sourceMap true is unsupported; use an object with enabled and mode \
          fields or false"
     | Some (`Assoc options) ->
+      reject_duplicates path "sourceMap" options;
       let mode =
-        match last_member "mode" options with
+        match member "mode" options with
         | Some (`String (("linked" | "inline" | "hidden") as value)) -> value
         | None -> fail path "sourceMap is missing field \"mode\""
         | Some _ ->
           fail path "sourceMap.mode must be one of linked, inline, hidden"
       in
       let dev_only =
-        match last_member "enabled" options with
+        match member "enabled" options with
         | Some (`String "always") -> false
         | Some (`String "dev") -> true
         | None -> fail path "sourceMap is missing field \"enabled\""
         | Some _ -> fail path "sourceMap.enabled must be \"always\" or \"dev\""
       in
       let content =
-        match last_optional_member "sourcesContent" options with
+        match optional_member "sourcesContent" options with
         | None -> []
         | Some (`Bool value) ->
           ["-bs-source-map-sources-content"; string_of_bool value]
@@ -273,7 +271,7 @@ let load path =
           fail path "field \"sourceMap.sourcesContent\" must be a boolean"
       in
       let root =
-        match last_optional_member "sourceRoot" options with
+        match optional_member "sourceRoot" options with
         | None -> []
         | Some value ->
           ["-bs-source-map-root"; string path "sourceMap.sourceRoot" value]
@@ -285,7 +283,8 @@ let load path =
     match optional_member "experimental-features" fields with
     | None -> []
     | Some (`Assoc features) ->
-      features |> deduplicate_last
+      reject_duplicates path "experimental-features" features;
+      features
       |> List.concat_map (fun (name, value) ->
           if name <> "LetUnwrap" then
             fail path
@@ -340,8 +339,10 @@ let load path =
     match optional_member "features" fields with
     | None -> []
     | Some (`Assoc values) ->
-      values |> deduplicate_last
-      |> List.map (fun (name, value) -> (name, strings path "features" value))
+      reject_duplicates path "features" values;
+      List.map
+        (fun (name, value) -> (name, strings path "features" value))
+        values
     | Some _ -> fail path "field \"features\" must be an object"
   in
   let unsupported = Config_decode.unsupported_fields fields in

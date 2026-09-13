@@ -16,9 +16,10 @@ are in [`bench/README.md`](bench/README.md).
 
 The final uninterrupted `make test-all` run passed all compiler, runtime,
 build, GenType, analysis, tools, and canonical rewatch tests. The port has 42
-OUnit2 cases; all 136 Rust unit tests have reviewed mappings, and all 48 shared
-integration tests run against the packaged OCaml executable. Reanalyze reports
-no unreviewed dead production code.
+OUnit2 cases, and all 48 shared integration tests run against the packaged OCaml
+executable. All 136 Rust unit tests were reviewed: 128 map to focused or shared
+tests, five document intentional differences, and three cover the omitted
+telemetry support. Reanalyze reports no unreviewed dead production code.
 
 OpenTelemetry is deliberately omitted, and source filters support the documented
 common Rust/Re regular-expression subset rather than every Rust-regex construct.

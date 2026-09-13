@@ -65,7 +65,7 @@ features	null	accept	{"name":"config-shape","features":null}
 features	empty	accept	{"name":"config-shape","features":{}}
 features	leaf	accept	{"name":"config-shape","features":{"native":[]}}
 features	transitive	accept	{"name":"config-shape","features":{"all":["native"],"native":[]}}
-features	duplicate-last	accept	{"name":"config-shape","features":{"all":["old"],"all":["new"]}}
+features	duplicate-last	accept/reject	{"name":"config-shape","features":{"all":["old"],"all":["new"]}}
 features	boolean-outer	reject	{"name":"config-shape","features":true}
 features	array-outer	reject	{"name":"config-shape","features":[]}
 features	string-value	reject	{"name":"config-shape","features":{"all":"native"}}
@@ -146,7 +146,7 @@ source-map	hidden	accept	{"name":"config-shape","sourceMap":{"enabled":"always",
 source-map	null-options	accept	{"name":"config-shape","sourceMap":{"enabled":"always","mode":"linked","sourcesContent":null,"sourceRoot":null}}
 source-map	options	accept	{"name":"config-shape","sourceMap":{"enabled":"always","mode":"linked","sourcesContent":true,"sourceRoot":"/source"}}
 source-map	unknown-field	accept	{"name":"config-shape","sourceMap":{"enabled":"always","mode":"linked","future":true}}
-source-map	duplicate-fields-last	accept	{"name":"config-shape","sourceMap":{"enabled":"dev","enabled":"always","mode":"inline","mode":"linked"}}
+source-map	duplicate-fields-last	accept/reject	{"name":"config-shape","sourceMap":{"enabled":"dev","enabled":"always","mode":"inline","mode":"linked"}}
 source-map	true	reject	{"name":"config-shape","sourceMap":true}
 source-map	string-outer	reject	{"name":"config-shape","sourceMap":"linked"}
 source-map	empty-object	reject	{"name":"config-shape","sourceMap":{}}
@@ -180,8 +180,8 @@ top-level	unknown-field	accept	{"name":"config-shape","future":{"anything":true}
 top-level	editor-arbitrary	accept	{"name":"config-shape","editor":[true,null,1]}
 top-level	reanalyze-arbitrary	accept	{"name":"config-shape","reanalyze":{"anything":true}}
 top-level	internal-path-string	accept	{"name":"config-shape","path":"ignored"}
-top-level	internal-path-null	reject	{"name":"config-shape","path":null}
-top-level	internal-path-boolean	reject	{"name":"config-shape","path":false}
+top-level	internal-path-null	reject/accept	{"name":"config-shape","path":null}
+top-level	internal-path-boolean	reject/accept	{"name":"config-shape","path":false}
 top-level	duplicate-name	reject	{"name":"first","name":"second"}
 top-level	duplicate-editor	reject	{"name":"config-shape","editor":true,"editor":false}
 warnings	omitted	accept	{"name":"config-shape"}
@@ -238,7 +238,7 @@ experimental	null	accept	{"name":"config-shape","experimental-features":null}
 experimental	empty	accept	{"name":"config-shape","experimental-features":{}}
 experimental	enabled	accept	{"name":"config-shape","experimental-features":{"LetUnwrap":true}}
 experimental	disabled	accept	{"name":"config-shape","experimental-features":{"LetUnwrap":false}}
-experimental	duplicate-last	accept	{"name":"config-shape","experimental-features":{"LetUnwrap":true,"LetUnwrap":false}}
+experimental	duplicate-last	accept/reject	{"name":"config-shape","experimental-features":{"LetUnwrap":true,"LetUnwrap":false}}
 experimental	boolean-outer	reject	{"name":"config-shape","experimental-features":true}
 experimental	unknown-feature	reject	{"name":"config-shape","experimental-features":{"Future":true}}
 experimental	null-value	reject	{"name":"config-shape","experimental-features":{"LetUnwrap":null}}
@@ -263,15 +263,15 @@ gentype	extension	accept	{"name":"config-shape","gentypeconfig":{"generatedFileE
 gentype	explicit-suffix	accept	{"name":"config-shape","suffix":".mjs","gentypeconfig":{}}
 gentype	shims-empty-object	accept	{"name":"config-shape","gentypeconfig":{"shims":{}}}
 gentype	shims-object	accept	{"name":"config-shape","gentypeconfig":{"shims":{"B":"Two","A":"One"}}}
-gentype	shims-object-duplicate-last	accept	{"name":"config-shape","gentypeconfig":{"shims":{"A":"One","A":"Two"}}}
+gentype	shims-object-duplicate-last	accept/reject	{"name":"config-shape","gentypeconfig":{"shims":{"A":"One","A":"Two"}}}
 gentype	shims-empty-list	accept	{"name":"config-shape","gentypeconfig":{"shims":[]}}
 gentype	shims-list	accept	{"name":"config-shape","gentypeconfig":{"shims":["B=Two"," A = One "]}}
-gentype	shims-list-duplicate-last	accept	{"name":"config-shape","gentypeconfig":{"shims":["A=One","A=Two"]}}
+gentype	shims-list-duplicate-last	accept/reject	{"name":"config-shape","gentypeconfig":{"shims":["A=One","A=Two"]}}
 gentype	shims-empty-source	accept	{"name":"config-shape","gentypeconfig":{"shims":["=Target"]}}
 gentype	shims-empty-target	accept	{"name":"config-shape","gentypeconfig":{"shims":["Source="]}}
 gentype	debug-empty	accept	{"name":"config-shape","gentypeconfig":{"debug":{}}}
 gentype	debug-values	accept	{"name":"config-shape","gentypeconfig":{"debug":{"z":true,"a":false,"m":true}}}
-gentype	debug-duplicate-last	accept	{"name":"config-shape","gentypeconfig":{"debug":{"all":true,"all":false}}}
+gentype	debug-duplicate-last	accept/reject	{"name":"config-shape","gentypeconfig":{"debug":{"all":true,"all":false}}}
 gentype	dependency	accept	{"name":"config-shape","dependencies":["dep"],"gentypeconfig":{}}
 gentype	source	accept	{"name":"config-shape","sources":["src"],"gentypeconfig":{}}
 gentype	unknown-field	accept	{"name":"config-shape","gentypeconfig":{"future":true}}

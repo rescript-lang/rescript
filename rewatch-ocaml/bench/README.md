@@ -207,6 +207,6 @@ and work equivalence, platform support, performance, module size, and review
 findings remain the actual quality gates.
 
 The post-Windows snapshot with cloc 2.04 contains 7,809 Rust production lines
-after excluding telemetry and 11,351 OCaml production lines including both
+after excluding telemetry and 11,320 OCaml production lines including both
 platform backends. Rust inline unit tests account for 2,773 lines; OCaml tests
-and fixtures account for 10,188 lines, and the benchmark tooling for 1,033.
+and fixtures account for 10,270 lines, and the benchmark tooling for 1,033.

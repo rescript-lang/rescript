@@ -290,9 +290,16 @@ let compiler_job_tests =
 
 let compiler_argument_tests =
   with_config_file (fun ~root:_ ~path ->
+      write_file path {|{"name":"internal-path","path":false}|};
+      let config = Config.load path in
       check
-        (rejects path {|{"name":"internal-path","path":false}|} "path")
-        "the internal path field retains Rust's string schema";
+        (List.exists
+           (fun diagnostic -> contains diagnostic "Unknown field 'path'")
+           config.diagnostics)
+        "the internal path field is ignored as unknown configuration";
+      check
+        (config.path = Unix.realpath path)
+        "the config filename remains authoritative over an ignored path field";
       write_file path
         {|{"name":"flag-whitespace","compiler-flags":["  -w  +A  "]}|};
       let config = Config.load path in
@@ -397,29 +404,32 @@ let decoder_semantics_tests =
           check
             (rejects path json "duplicate field")
             "typed configuration objects reject duplicate fields");
-      write_file path
-        {|{
-          "name": "map-duplicates",
-          "future": 1,
-          "future": 2,
-          "sourceMap": {"enabled": "always", "mode": "linked", "mode": "inline"},
-          "features": {"selected": ["first"], "selected": ["last"]},
-          "experimental-features": {"LetUnwrap": true, "LetUnwrap": false},
-          "gentypeconfig": {"debug": {"all": true, "all": false}}
-        }|};
+      [
+        {|{"name":"duplicate-map","sourceMap":{"enabled":"dev","enabled":"always","mode":"linked"}}|};
+        {|{"name":"duplicate-map","features":{"selected":[],"selected":["last"]}}|};
+        {|{"name":"duplicate-map","experimental-features":{"LetUnwrap":false,"LetUnwrap":true}}|};
+        {|{"name":"duplicate-map","gentypeconfig":{"shims":{"A":"One","A":"Two"}}}|};
+        {|{"name":"duplicate-map","gentypeconfig":{"shims":["A=One","A=Two"]}}|};
+        {|{"name":"duplicate-map","gentypeconfig":{"debug":{"all":false,"all":true}}}|};
+      ]
+      |> List.iter (fun json ->
+          check
+            (rejects path json "duplicate field")
+            "interpreted configuration maps reject duplicate keys");
+      write_file path {|{"name":"unknown-map","future":1,"future":2}|};
       let config = Config.load path in
       check
-        (contains_adjacent "-bs-source-map" "inline" config.source_map_args)
-        "sourceMap map decoding keeps the last duplicate value";
+        (List.exists
+           (fun message -> contains message "Unknown field 'future'")
+           config.diagnostics)
+        "opaque unknown values remain outside duplicate validation";
+      write_file path
+        {|{"name":"opaque-tooling","editor":{"mode":1,"mode":2},"reanalyze":{"mode":1,"mode":2}}|};
+      let config = Config.load path in
       check
-        (List.assoc "selected" config.features = ["last"])
-        "feature map decoding keeps the last duplicate value";
-      check
-        (config.experimental_args = [])
-        "experimental feature maps keep the last duplicate value";
-      check
-        (not (List.mem "-bs-gentype-debug" config.gentype_args))
-        "GenType debug maps keep the last duplicate value";
+        ((not (has_diagnostic config "editor"))
+        && not (has_diagnostic config "reanalyze"))
+        "opaque tooling payloads remain outside duplicate validation";
       [
         "sources";
         "package-specs";

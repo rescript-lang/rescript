@@ -1059,18 +1059,18 @@ let config_tests _context =
         {|{
           "name": "gentype-shims",
           "gentypeconfig": {
-            "shims": [" From = First ", "A=B", "From=Last"]
+            "shims": [" From = First ", "A=B"]
           }
         }|};
       let config = Config.load config_path in
       check
-        (contains_adjacent "-bs-gentype-shim" "From=Last" config.gentype_args)
-        "legacy GenType shims are trimmed and later duplicates win";
+        (contains_adjacent "-bs-gentype-shim" "From=First" config.gentype_args)
+        "legacy GenType shims are trimmed";
       check
         (List.length
            (List.filter (( = ) "-bs-gentype-shim") config.gentype_args)
         = 2)
-        "legacy GenType shims use map semantics";
+        "legacy GenType shims retain distinct entries";
       write_file config_path {|{"name":"unsupported","generators":["legacy"]}|};
       let config = Config.load config_path in
       check

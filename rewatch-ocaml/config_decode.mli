@@ -6,12 +6,6 @@ val member : string -> (string * 'a) list -> 'a option
 val optional_member :
   string -> (string * Yojson.Safe.t) list -> Yojson.Safe.t option
 
-val deduplicate_last : ('a * 'b) list -> ('a * 'b) list
-val last_member : string -> (string * 'a) list -> 'a option
-
-val last_optional_member :
-  string -> (string * Yojson.Safe.t) list -> Yojson.Safe.t option
-
 type field_policy
 
 val configuration_fields : field_policy
@@ -21,6 +15,8 @@ val js_post_build_fields : field_policy
 
 val reject_duplicate_fields :
   string -> string -> field_policy -> (string * 'a) list -> unit
+
+val reject_duplicates : string -> string -> (string * 'a) list -> unit
 
 val string : string -> string -> Yojson.Safe.t -> string
 val strings : string -> string -> Yojson.Safe.t -> string list

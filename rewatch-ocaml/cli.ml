@@ -106,9 +106,7 @@ let filter =
         ~doc:"Filter source files by regular expression.")
 
 let no_timing =
-  Arg.(
-    value & opt ~vopt:true bool false
-    & info ["n"; "no-timing"] ~docv:"BOOL" ~doc:"Disable output timing.")
+  Arg.(value & flag & info ["n"; "no-timing"] ~doc:"Disable output timing.")
 
 let clear_screen =
   Arg.(
@@ -250,10 +248,10 @@ exception Version
 
 let argv_is_utf_8 argv = Array.for_all String.is_valid_utf_8 argv
 
-(* Cmdliner owns option parsing. This adapter only reproduces clap's implicit
-   build routing and global help/version placement before Cmdliner sees argv. *)
-type display_request = Help_requested | Version_requested
-
+(* Bare project folders must select the default build command, even though
+   Cmdliner otherwise treats them as unknown commands. Move global options
+   behind the selected command and expand short help/version clusters because
+   Cmdliner's standard display options only provide long names. *)
 let normalize_argv argv =
   let is_short_global_cluster argument =
     let length = String.length argument in
@@ -282,7 +280,7 @@ let normalize_argv argv =
   in
   let is_help = function
     | "-h" | "--help" -> true
-    | _ -> false
+    | argument -> String.starts_with ~prefix:"--help=" argument
   in
   let is_version = function
     | "-V" | "--version" -> true
@@ -292,60 +290,29 @@ let normalize_argv argv =
     is_short_global_cluster argument
     || is_verbosity argument || is_help argument || is_version argument
   in
-  let display_request argument =
-    if argument = "--help" then Some Help_requested
-    else if argument = "--version" then Some Version_requested
-    else if is_short_global_cluster argument then
-      let rec first index =
-        if index = String.length argument then None
-        else
-          match argument.[index] with
-          | 'h' -> Some Help_requested
-          | 'V' -> Some Version_requested
-          | 'v' | 'q' -> first (index + 1)
-          | _ -> None
-      in
-      first 1
-    else None
+  let requests_help argument =
+    argument = "--help"
+    || String.starts_with ~prefix:"--help=" argument
+    || (is_short_global_cluster argument && short_cluster_contains 'h' argument)
   in
-  let first_display_request arguments =
-    List.find_map display_request arguments
+  let requests_version argument =
+    argument = "--version"
+    || (is_short_global_cluster argument && short_cluster_contains 'V' argument)
   in
   let is_command = function
     | "build" | "watch" | "clean" | "format" | "compiler-args" | "help" -> true
     | _ -> false
   in
-  let rec normalize_short_booleans = function
+  let rec normalize_display_options = function
     | [] -> []
     | "--" :: rest -> "--" :: rest
-    | ("-n" | "--no-timing") :: value :: rest
-      when value <> "--" && (String.length value = 0 || value.[0] <> '-') ->
-      ("--no-timing=" ^ value) :: normalize_short_booleans rest
-    | ("-n" | "--no-timing") :: rest ->
-      "--no-timing=true" :: normalize_short_booleans rest
-    | "-n=true" :: rest -> "--no-timing=true" :: normalize_short_booleans rest
-    | "-n=false" :: rest -> "--no-timing=false" :: normalize_short_booleans rest
-    | argument :: rest -> argument :: normalize_short_booleans rest
-  in
-  let rec normalize_help = function
-    | [] -> []
-    | "--" :: rest -> "--" :: rest
-    | ("-h" | "--help") :: rest -> "--help=plain" :: normalize_help rest
-    | argument :: rest
-      when is_short_global_cluster argument
-           && short_cluster_contains 'h' argument
-           &&
-           let help_index = String.index_from argument 1 'h' in
-           (not (short_cluster_contains 'V' argument))
-           || help_index < String.index_from argument 1 'V' ->
-      "--help=plain" :: normalize_help rest
-    | argument :: rest -> argument :: normalize_help rest
-  in
-  let rec reject_subcommand_version = function
-    | [] -> []
-    | "--" :: rest -> "--" :: rest
-    | "--version" :: rest -> "-V" :: reject_subcommand_version rest
-    | argument :: rest -> argument :: reject_subcommand_version rest
+    | argument :: rest when String.starts_with ~prefix:"--help=" argument ->
+      argument :: normalize_display_options rest
+    | argument :: rest when requests_help argument ->
+      "--help=plain" :: normalize_display_options rest
+    | argument :: rest when requests_version argument ->
+      "--version" :: normalize_display_options rest
+    | argument :: rest -> argument :: normalize_display_options rest
   in
   let explicit_command arguments =
     let rec loop globals = function
@@ -373,20 +340,20 @@ let normalize_argv argv =
   | executable :: arguments ->
     let routed =
       match explicit_command arguments with
-      | Some (globals, command, rest) -> (
-        match first_display_request globals with
-        | Some Help_requested -> [executable; "--help"]
-        | Some Version_requested -> [executable; "--version"]
-        | None ->
-          executable :: command :: reject_subcommand_version (globals @ rest))
-      | None -> (
+      | Some (globals, command, rest) ->
+        executable :: command :: (globals @ rest)
+      | None ->
         let globals, others = partition_implicit arguments in
-        match first_display_request globals with
-        | Some Help_requested -> [executable; "--help"]
-        | Some Version_requested -> [executable; "--version"]
-        | None -> executable :: "build" :: (globals @ others))
+        if
+          others = []
+          && List.exists
+               (fun argument ->
+                 requests_help argument || requests_version argument)
+               globals
+        then executable :: globals
+        else executable :: "build" :: (globals @ others)
     in
-    Array.of_list (routed |> normalize_short_booleans |> normalize_help)
+    Array.of_list (normalize_display_options routed)
 
 let eval argv =
   if not (argv_is_utf_8 argv) then (

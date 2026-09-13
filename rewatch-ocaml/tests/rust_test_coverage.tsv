@@ -41,7 +41,7 @@ cli.rs::build_option_is_parsed_normally	covered	cli_tests.ml: build-only no-timi
 cli.rs::respects_global_flag_before_subcommand	covered	cli_tests.ml: leading verbosity before watch
 cli.rs::invalid_option_for_subcommand_does_not_fallback	covered	cli_tests.ml: watch rejects build-only option
 cli.rs::version_flag_before_subcommand_displays_version	covered	cli_tests.ml: leading version flag
-cli.rs::version_flag_after_subcommand_is_rejected	covered	cli_tests.ml: explicit build trailing version rejected
+cli.rs::version_flag_after_subcommand_is_rejected	intentional	OCaml exposes Cmdliner's consistent version option on subcommands
 cli.rs::global_help_flag_shows_help	covered	cli_tests.ml: global help
 cli.rs::global_version_flag_shows_version	covered	cli_tests.ml: global version
 cli.rs::build_prod_flag_is_parsed	covered	cli_tests.ml: build prod
