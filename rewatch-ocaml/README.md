@@ -7,8 +7,8 @@ implementation remains available as `rescript-rust` on every platform.
 ## Status
 
 The cross-platform implementation, parity, performance, and release-quality
-gates are complete. The final Linux clean-build gate measured a 4.434 s Rust median
-and a 4.703 s OCaml median (1.061x), with identical compiler work, generated-file
+gates are complete. The post-rebase Linux clean-build gate measured a 4.740 s Rust
+median and a 5.020 s OCaml median (1.059x), with identical compiler work, generated-file
 sets, and byte-stable artifacts. A separate 1,425-module macOS project measured
 approximately 9.6 s for Rust and 11.5 s for OCaml (about 1.20x). Absolute timing
 is host-specific; the reproducible method and complete resource/work results

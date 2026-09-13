@@ -30,16 +30,14 @@ checks instead. The default
 acceptance threshold requires both OCaml medians to be no more than 125% of
 Rust.
 
-The latest powered, idle-host seven-run gate at `7ca5b38e6b` measured a 4.434 s
-Rust clean-build median and a 4.703 s OCaml median (1.061x). Median summed
-process-tree RSS was 1,075,760 KiB and 1,151,240 KiB respectively (1.070x).
+The post-rebase powered, idle-host seven-run gate measured a 4.740 s Rust
+clean-build median and a 5.020 s OCaml median (1.059x). Median summed
+process-tree RSS was 1,066,940 KiB and 1,184,740 KiB respectively (1.110x).
 Clean, unchanged, and one-edit compiler work matched exactly, and the complete
 post-build file sets and byte-stable artifacts were identical. The companion
-seven-edit retained-watch gate measured 130 ms for Rust and 149 ms for OCaml
-(1.146x), with identical compiler work and stable resources. These values are
-a reproducible checkpoint, not portable absolute expectations. The last OCaml
-sample was an outlying 5.579 s while the host was briefly disconnected from
-power; retaining it did not change the median.
+seven-edit retained-watch gate measured 130 ms for Rust and 153 ms for OCaml
+(1.177x), with identical compiler work and stable resources. These values are
+a reproducible checkpoint, not portable absolute expectations.
 
 This is one part of equivalence checking, not a substitute for the test suites.
 Before accepting a performance increment, also run the OCaml unit/focused tests
@@ -133,7 +131,7 @@ to the same project artifact or discovery path as the primary evidence of
 superfluous orchestration work. The existing compiler-work and artifact checks
 must remain enabled so fewer filesystem calls cannot conceal skipped work.
 
-At `3db0c177aa`, process attribution showed identical compiler-subprocess
+At `8af17037c5`, process attribution showed identical compiler-subprocess
 metadata/open work and effectively equal driver-plus-inherited clean-build open
 counts (about 8,110 for OCaml and 8,120 for Rust). OCaml made about 2,387 more
 driver-side metadata calls, led by repeated checks of source and `lib/bs`
@@ -208,7 +206,7 @@ code, or too few explanatory comments can also reduce the number. Behavioral
 and work equivalence, platform support, performance, module size, and review
 findings remain the actual quality gates.
 
-The `a3ff5e36af` snapshot with cloc 2.04 contains 7,809 Rust production lines
-after excluding telemetry and 11,187 OCaml production lines including both
+The post-Windows snapshot with cloc 2.04 contains 7,809 Rust production lines
+after excluding telemetry and 11,351 OCaml production lines including both
 platform backends. Rust inline unit tests account for 2,773 lines; OCaml tests
-and fixtures account for 9,485 lines, and the benchmark tooling for 1,032.
+and fixtures account for 10,188 lines, and the benchmark tooling for 1,033.
