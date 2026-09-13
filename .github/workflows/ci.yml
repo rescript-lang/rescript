@@ -212,7 +212,8 @@ jobs:
         run: echo "C:\Program Files\Git\bin" >> $GITHUB_PATH
         shell: bash
 
-      - name: Run OCaml rewatch unit and focused tests
+      - name: Run OCaml rewatch parity tests
+        timeout-minutes: 30
         run: |
           bash rewatch-ocaml/tests/check_rust_test_coverage.sh --require-complete
           bash rewatch-ocaml/tests/check_canonical_test_coverage.sh
@@ -228,7 +229,20 @@ jobs:
           bash rewatch-ocaml/tests/check_verbose_output.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
-          opam exec -- dune runtest tests/rewatch_ounit_tests
+        shell: bash
+
+      - name: Run OCaml rewatch unit tests
+        timeout-minutes: 10
+        run: |
+          opam exec -- dune build tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe
+          # Run the executable directly so a stuck test leaves live progress;
+          # dune otherwise buffers the test output until the action exits.
+          opam exec -- ./_build/default/tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe -runner sequential
+        shell: bash
+
+      - name: Run OCaml rewatch focused integration tests
+        timeout-minutes: 30
+        run: |
           sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
