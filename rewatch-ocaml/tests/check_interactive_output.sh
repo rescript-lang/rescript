@@ -79,7 +79,7 @@ for implementation in rust ocaml; do
   cp -R "$work/$implementation" "$work/$implementation-parse-warning"
   cp -R "$work/$implementation" "$work/$implementation-watch"
   cp -R "$work/$implementation" "$work/$implementation-initial-failure-watch"
-  printf 'let value =\n' \
+  printf 'let value = (\n' \
     >"$work/$implementation-initial-failure-watch/src/A.res"
   cp -R "$root/rewatch-ocaml/tests/basic" \
     "$work/$implementation-partial-initial-failure-watch"
@@ -448,6 +448,22 @@ wait_for_file() {
   return 1
 }
 
+# Opening an existing source with shell redirection truncates it first. Some
+# native watcher backends report that as a structural change, which correctly
+# requests a full rebuild. Equal-length writes without truncation make these
+# fixtures exercise the content-change/incremental path they are testing.
+overwrite_line_in_place() {
+  path=$1
+  line=$2
+  current_size=$(wc -c <"$path" | tr -d ' ')
+  replacement_size=$(printf '%s\n' "$line" | wc -c | tr -d ' ')
+  if [ "$current_size" -ne "$replacement_size" ]; then
+    echo "In-place test update changed size for $path" >&2
+    return 1
+  fi
+  printf '%s\n' "$line" | dd of="$path" conv=notrunc 2>/dev/null
+}
+
 stop_active_watch() {
   rm -f "$active_watch_project/lib/watch.lock"
   if ! wait_for_pid_gone "$active_script_pid"; then
@@ -491,16 +507,16 @@ capture_watch_rebuild() {
   if ! wait_for_text "$transcript" "Finished initial compilation" 1; then
     return 1
   fi
-  printf 'let value = 2\n' >"$project/src/A.res"
+  overwrite_line_in_place "$project/src/A.res" 'let value = 2'
   if ! wait_for_text "$transcript" "Finished incremental compilation" 1; then
     return 1
   fi
   cp "$transcript" "$work/$implementation-watch-phases.tty"
-  printf 'let value =\n' >"$project/src/A.res"
+  overwrite_line_in_place "$project/src/A.res" 'let value = ('
   if ! wait_for_text "$transcript" "Build failed. Watching for changes..." 1; then
     return 1
   fi
-  printf 'let value = 3\n' >"$project/src/A.res"
+  overwrite_line_in_place "$project/src/A.res" 'let value = 3'
   if ! wait_for_text "$transcript" "Finished incremental compilation" 2; then
     return 1
   fi
@@ -623,7 +639,7 @@ capture_initial_failure_recovery() {
   if ! wait_for_text "$transcript" "Error parsing source files" 1; then
     return 1
   fi
-  printf 'let value = 1\n' >"$project/src/A.res"
+  overwrite_line_in_place "$project/src/A.res" 'let value = 1'
   if ! wait_for_text "$transcript" "Finished incremental compilation" 1; then
     return 1
   fi
@@ -721,7 +737,7 @@ capture_warning_watch() {
   if ! wait_for_text "$transcript" "Finished initial compilation" 1; then
     return 1
   fi
-  printf 'let value = 2\n' >"$project/src/A.res"
+  overwrite_line_in_place "$project/src/A.res" 'let value = 2'
   if ! wait_for_text "$transcript" "Finished incremental compilation" 1; then
     return 1
   fi
