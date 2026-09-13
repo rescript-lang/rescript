@@ -6,18 +6,18 @@ not maintained as a current status document. For the maintained overview, see
 [`README.md`](README.md); for the behavior-by-behavior contract, see
 [`PARITY_CHECKLIST.md`](PARITY_CHECKLIST.md).
 
-Reference Rust implementation: `2e532c7f6587d4201befd00ced516e267c90fe73`.
+Reference branch base: `7402efc2649b1dc295e90cf4bc8cce153ee0996f`.
 
 ## Historical milestone snapshots
 
-The complete applicable canonical `rewatch/tests` suite now passes with the
-experimental `rescript_ocaml.exe`. Milestone 6 remains open for the final
-implementation and code-quality work, performance/equivalence verification,
-documentation, review, release-quality, and comment passes. The Windows
-implementation remains in the tree, but native Windows validation and changing
-the Windows default are deferred to a separate follow-up PR.
-Stable Linux performance/resource measurement, macOS testing, and the
-non-comment maintainability cleanup are complete. The configuration,
+The complete applicable canonical `rewatch/tests` suite passes with the
+experimental `rescript_ocaml.exe`. The implementation, code-quality,
+performance/equivalence, documentation, review, release-quality, and comment
+passes are complete. Linux, macOS, and native Windows validation are complete,
+and each platform package ships the OCaml executable as `rescript` while
+retaining the Rust executable as `rescript-rust`.
+Stable Linux and Windows performance/resource measurement, macOS testing, and
+the non-comment maintainability cleanup are complete. The configuration,
 Rust-source validation,
 Rust-test, control-file, and ordinary redirected-output inventories are
 complete. OpenTelemetry parity is explicitly excluded by project decision;
@@ -34,8 +34,8 @@ discovered-file inventory rather than compilation modules; and diagnostics use
 permissive display paths for external dependency cycles and namespace
 collisions. Focused regressions cover initial-failure recovery, compound and
 non-JavaScript suffixes, open-stdin termination, orphan interfaces, duplicate
-module basenames, and external diagnostic paths. Native execution of the new
-Windows handle-list path remains part of the dedicated Windows phase.
+module basenames, and external diagnostic paths. The Windows handle-list path
+was subsequently exercised by the native Windows validation suite.
 
 The same pass avoids rewriting `.sourcedirs.json` on ordinary retained edits,
 caches namespace-member freshness summaries per attempt, and reuses the CMI
@@ -114,7 +114,7 @@ tasks; RSS changed from 6,764 to 6,820 KiB for Rust and 9,844 to 9,872 KiB for
 OCaml. These idle-host figures are evidence for this checkpoint rather than a
 portable absolute baseline.
 
-Native macOS validation at checkpoint `30725fb01` passed `make test-all` and,
+Native macOS validation at checkpoint `340515a9aa` passed `make test-all` and,
 after making temporary fixture paths canonical and accounting for the host's
 case-insensitive filesystem, all 19 dedicated rewatch OUnit2 groups. The
 focused and canonical native watcher suites and packaged-binary checks remain
@@ -132,7 +132,7 @@ was confirmed by both `file` (`statically linked`) and `ldd` (`not a dynamic
 executable`); the artifact assembly gate independently rejects dynamic Linux
 binaries.
 
-At code checkpoint `324112908`, `opam exec -- make test-all` passed
+At code checkpoint `a68b608c3d`, `opam exec -- make test-all` passed
 uninterrupted with the packaged OCaml rewatch binary as the default. This
 covered formatting, roughly 300 OCaml unit assertions (now grouped into 17
 OUnit2 suites), compiler/runtime and build integration tests, runtime
@@ -141,7 +141,7 @@ canonical rewatch suite. The run left no watcher process or worktree change
 behind.
 
 After the project-context, compiler-log, and compiler-argument module splits at
-checkpoint `d5ed6acc8`, the complete 48-test canonical `rewatch/tests` suite
+checkpoint `5833325819`, the complete 48-test canonical `rewatch/tests` suite
 passed again with `_build/default/rewatch-ocaml/rescript_ocaml.exe`. The run
 covered clean/build, diagnostics, incremental edits, watcher lifecycle, locks,
 formatting, features, and compiler arguments; it restored `rewatch/testrepo`
@@ -985,7 +985,7 @@ are no other missing control-file names.
   canonical suite through the installed package. Windows keeps Rust as the
   default until the native OCaml binary is ready rather than publishing an
   unverified executable.
-  Regenerating the manifest at checkpoint `2f5067d50a` produced no diff, and
+  Regenerating the manifest at checkpoint `ca1403fcda` produced no diff, and
   the command-validation gate passed all 111 cases with physical binaries named
   exactly like CI's `rescript-rust.exe` and `rescript.exe` artifacts.
 
@@ -1013,7 +1013,7 @@ must also be identical, and the canonical/focused integration tests remain the
 behavioral-equivalence gate.
 
 The latest five-run release-build measurement was made from the
-measurement-tooling working tree above commit `353479276` in the Linux Docker
+measurement-tooling working tree above commit `005d172ced` in the Linux Docker
 environment on the plugged-in, otherwise idle Mac host:
 
 | Implementation | Median wall time | Median peak tree RSS | Median peak tasks |
@@ -1033,7 +1033,7 @@ current stable-host acceptance run. Passing this aggregate gate also does not
 excuse the clean-build publication probes identified by the filesystem audit
 below.
 
-An earlier five-run directional check at `4566147ab`, after the scheduler and
+An earlier five-run directional check at `7b97f832a6`, after the scheduler and
 review-driven simplifications, measured 5,300 ms / 1,431,388 KiB for Rust and
 6,278 ms / 1,468,592 KiB for OCaml (1.1845× wall time and 1.026× RSS). It
 passed the 1.25× gate and again matched all clean, unchanged, and single-edit
@@ -1044,7 +1044,7 @@ interfere. The small ratio change from 1.199× therefore does not demonstrate a
 performance improvement; this run establishes directional regression and work
 equivalence evidence only. The quiet-host release measurement remains due.
 
-A subsequent three-run smoke check at `6c8446b21`, after making parser-job construction
+A subsequent three-run smoke check at `276c0c5da1`, after making parser-job construction
 demand-driven, measured 5,124 ms / 1,437,824 KiB for Rust and 5,661 ms /
 1,461,376 KiB for OCaml (1.105× wall time and 1.016× RSS). It again matched
 the 1,031/4/6 clean, unchanged, and edit compiler-work manifests plus complete
@@ -1083,7 +1083,7 @@ OCaml. That 1.138× sample is useful only as a correctness smoke test and does
 not replace the five-run performance result; its much higher absolute times
 also illustrate why a single run is not an acceptance measurement.
 
-The filesystem audit at commit `d5cead598` reports nearly identical
+The filesystem audit at commit `d938473971` reports nearly identical
 incremental driver work. Unchanged builds use 2,911 OCaml versus 2,962 Rust
 metadata calls, 1,221 versus 1,220 opens, and 162 versus 160 directory scans.
 After one source edit the counts are 2,931 versus 2,979 metadata calls, 1,249
@@ -2168,7 +2168,7 @@ specific compatibility risks; they are not remaining gaps.
 
 ### Native Windows handoff
 
-The implementation checkpoint for the Windows session is `60231ebaa`. Use a
+The implementation checkpoint for the Windows session is `a35191150d`. Use a
 native checkout on the VM's NTFS volume, OCaml 5.5 through the repository's
 opam setup, and the Cygwin Bash installed with that toolchain. The checkpoint
 already selects `platform_windows.ml` through Dune, compiles the Job Object C
@@ -2533,7 +2533,7 @@ still peak near 95 tasks because each child has two stream readers and one
 waiter, but bounded pipe capture has no growth across retained builds.
 
 A further source-only review found five actionable gaps, all now fixed at
-implementation checkpoint `1ab6b3493`. Failed parses and warning-bearing parses
+implementation checkpoint `645196b093`. Failed parses and warning-bearing parses
 remain pending across incremental attempts instead of allowing an old AST to
 make a later build appear successful. Namespace maps are represented in the
 dependency graph, so adding or removing a namespaced module invalidates
@@ -2584,12 +2584,12 @@ was an OCaml-port defect rather than a shared Rust issue. The resource/quality
 review found no other concrete P0-P3 issue at this checkpoint, and the targeted
 source-only follow-up approved both the traversal fix and its regression.
 
-The latest idle-host five-run measurement at `7e6d17bc0` was coherent but did
+The latest idle-host five-run measurement at `b02947cac6` was coherent but did
 not pass the timing threshold: OCaml measured 5.680 s versus Rust at 4.145 s
 (1.370x). Median peak process-tree RSS remained close at 1,592,496 versus
 1,573,116 KiB, while OCaml used 94 versus 74 peak tasks. Clean, unchanged, and
 single-edit compiler-work counts and the complete/stable artifact sets still
-matched exactly. A same-host five-run control using the earlier `a4b0728b2f`
+matched exactly. A same-host five-run control using the earlier `60d47076c5`
 OCaml binary measured 5.710 s versus Rust at 4.124 s (1.385x). No Rust,
 compiler, runtime, or Belt source changed between those checkpoints. This rules
 out a performance regression introduced by the intervening OCaml changes—the
@@ -2599,10 +2599,10 @@ completion gate therefore remains open and requires investigation or a later
 coherent reproduction within the threshold; matching work alone is not enough.
 
 A same-host historical-binary investigation did not find an OCaml regression
-behind that changed ratio. The pre-pipe `0585d07dc4` binary measured 5.886 s
-against a 4.250 s Rust median, and the earlier `353479276f` binary measured
+behind that changed ratio. The pre-pipe `4a04407ba5` binary measured 5.886 s
+against a 4.250 s Rust median, and the earlier `005d172ced` binary measured
 5.864 s against 4.173 s. A subsequent idle-host rerun compared the exact
-`54a7273d4f` source checkpoint for which the original post-pipe gate recorded
+`a18e159a53` source checkpoint for which the original post-pipe gate recorded
 1.190x with the current binary. In separate five-run Rust comparisons, the old
 checkpoint measured 5.704 s versus 4.146 s (1.376x), while current measured
 5.674 s versus 4.115 s (1.379x). A direct five-run interleaved old/current
@@ -2618,7 +2618,7 @@ relative to the historical gate. The reason for that environment-sensitive
 difference remains unexplained, so the 1.25x completion gate stays open even
 though the source-regression hypothesis is closed.
 
-A later five-run gate at `00db0a010` measured 5.733 s OCaml versus 4.106 s
+A later five-run gate at `ff11b37749` measured 5.733 s OCaml versus 4.106 s
 Rust (1.396x), with identical clean, unchanged, and edited compiler work and
 identical complete and stable artifact sets. Peak RSS remained close at
 1,564,736 versus 1,531,416 KiB. Process tracing confirmed that the portable
@@ -2646,7 +2646,7 @@ the complete spawn/capture/wait/publication lifetime, not another isolated pipe
 or copy optimization, and must preserve the documented Windows Job Object
 lifecycle.
 
-Checkpoint `60231ebaa` confirms that hypothesis. The dependency graph remains
+Checkpoint `a35191150d` confirms that hypothesis. The dependency graph remains
 owned by the main domain, while a bounded set of persistent domains now owns
 each ready task's spawn, concurrent pipe capture, wait, publication callback,
 and process-handle release. A task returning another phase is admitted through
@@ -2671,23 +2671,23 @@ another process is active. The focused runner, 111 command cases, exact
 interactive and verbose gates, formatting, and the complete 48-test canonical
 suite pass; the faster scheduler exposed and fixed a stdout/stderr phase-order
 race by flushing completed parse output before diagnostics and compile progress.
-At documentation checkpoint `d1c576507`, `opam exec -- make test-all` also
+At documentation checkpoint `0316d985ef`, `opam exec -- make test-all` also
 passed the repository-wide gate, including promotion of the OCaml rewatch
 binary, compiler and runtime tests, both GenType projects, analysis, tools, and
 the packaged canonical rewatch suite. It left the worktree clean and no watcher
 or subprocess helper running.
 
-The latest retained-watch gate at `d1c3ca9732` was coherent and passed: 118 ms
+The latest retained-watch gate at `5b5b480138` was coherent and passed: 118 ms
 OCaml versus 123 ms Rust, exactly seven parser and seven compiler calls per
 implementation, identical generated output, stable file descriptors and task
 counts, and no RSS growth. The complete canonical 48-test rewatch suite also
 passed against the same OCaml executable and left no watcher or testrepo change
 behind. `opam exec -- make test-all` subsequently passed the repository-wide
-gate at `9cfde3697`, including formatting, compiler and runtime tests, both
+gate at `dd22f6fa9c`, including formatting, compiler and runtime tests, both
 GenType projects, analysis and reanalyze, tools, and the packaged OCaml rewatch
 canonical suite. It likewise left the worktree clean and no watcher running.
 
-At the earlier `a4b0728b2f` checkpoint on the quiet, powered host, the five-run
+At the earlier `60d47076c5` checkpoint on the quiet, powered host, the five-run
 interleaved release gate measured a 5.455 s OCaml median against 4.644 s Rust
 (1.175x), with 1,516,904 KiB versus 1,504,696 KiB summed process-tree RSS.
 Compiler work matched exactly for clean, unchanged, and edited builds, and
@@ -2697,7 +2697,7 @@ calls per implementation, stable descriptors/tasks, and no RSS growth. Both
 were within their documented thresholds.
 
 The deterministic non-Windows packaging gate was repeated at checkpoint
-`88b171cc46`. A targeted `static`-profile promotion produced a statically
+`ceb7591282`. A targeted `static`-profile promotion produced a statically
 linked `rescript.exe`; `scripts/checkCompilerExes.js` confirmed that the
 promoted platform binary was the current Dune output. Regenerating
 `packages/artifacts.json` produced no diff, and Yarn's package dry run contained
@@ -2710,8 +2710,8 @@ non-Windows default without expecting a nonexistent Dune-installed `rescript`
 binary.
 
 The latest source-only review found seven further dependency, recovery, and
-watch reconciliation gaps. They are fixed at checkpoints `fe440144c` and
-`5225a4f97`. Cycle membership now controls dispatch eligibility without
+watch reconciliation gaps. They are fixed at checkpoints `8441e3f168` and
+`758da6e0cb`. Cycle membership now controls dispatch eligibility without
 clearing persistent compilation dirtiness, including invalidations received
 while blocked. Restart freshness follows namespace-map members, and namespace
 entry modules have the implicit edge required by their `-open` argument.
@@ -2724,7 +2724,7 @@ provenance before compiler artifacts are removed. The last cleanup limitation
 also exists in the reference Rust ordering and is recorded as an inherited bug
 that the OCaml implementation fixes.
 
-The associated maintainability changes are complete at `f5553335c`. Build,
+The associated maintainability changes are complete at `8903963da6`. Build,
 watch, format, and clean share dependency selection and feature aggregation
 through `package_traversal.ml`; cached dependency identity remains separate
 from request-specific kind and features. Diagnostic path presentation has a
@@ -2763,7 +2763,7 @@ Unix build, the unselected Windows module typecheck, all 20 OUnit groups, and
 the focused integration suite pass; native signal delivery remains part of the
 planned Windows VM validation.
 
-At cooperative-interruption checkpoint `0175a05ce`, `opam exec -- make
+At cooperative-interruption checkpoint `f1915b14b1`, `opam exec -- make
 test-all` passed the repository-wide gate. This included OCaml/ReScript/JS/Rust
 formatting, compiler and runtime tests, both GenType projects, analysis and
 reanalyze, tools, and the packaged OCaml executable running all 48 canonical
@@ -2808,7 +2808,7 @@ work matched exactly at 1031/512/7/512/40/1, 4/2/0/2/1/0, and
 identical. The focused integration suite, all 20 OUnit groups, the interactive
 output gate, and all 111 command-validation cases also pass.
 
-At review-fix checkpoint `895807b478`, `opam exec -- make test-all` passed the
+At review-fix checkpoint `aac963926b`, `opam exec -- make test-all` passed the
 complete repository gate. This included formatting, compiler and runtime tests,
 both GenType projects, analysis and reanalyze, tools, and the installed OCaml
 rewatch executable running all canonical build, failure, clean, format, and
@@ -2816,7 +2816,7 @@ watch scenarios. The run left the worktree clean and no watcher or compiler
 subprocess alive.
 
 The subsequent non-comment maintainability pass is complete through checkpoint
-`c7780d735`. It removed unused retained state and test-only production APIs,
+`d6802f3994`. It removed unused retained state and test-only production APIs,
 made namespace and lifecycle stages explicit normal variants, and centralized
 artifact naming, namespace naming, AST-header decoding, path/config lookup,
 effective compiler options, source activation, and common string/file
@@ -2832,7 +2832,7 @@ catch-all OUnit cases by subsystem and configuration concern. The suite now
 reports 32 independently named groups, so one failure no longer suppresses
 unrelated assertions. `Mutex.protect` was deliberately not adopted because it
 is unavailable in the supported OCaml 5.0 baseline; the exception-safe local
-mutex helper remains. A fresh `opam exec -- make test-all` at `c7780d735`
+mutex helper remains. A fresh `opam exec -- make test-all` at `d6802f3994`
 passed formatting, compiler/runtime, GenType, analysis, tools, and the complete
 installed-package rewatch suite on Linux. This is the checkpoint for the next
 fresh source review before comments are added.
@@ -2873,7 +2873,7 @@ confirmed that accepting declaration locations within the corresponding
 signature item removes the optional-argument reports; it was not added to this
 repository because changing Reanalyze is outside the port.
 
-The source audit after `960ae779f3` found six further cleanup opportunities.
+The source audit after `598f2515e7` found six further cleanup opportunities.
 Buffered stdin-format writes now use the close-error-propagating file writer,
 and missing copy sources fail independently of the destination-directory
 policy. Package traversal now has one graph walk that owns visited packages,
@@ -2933,7 +2933,7 @@ and representation changes; after selecting the final simple substring scan,
 the affected build, unit, focused integration, configuration, command, and
 output-parity gates were rerun successfully.
 
-The quiet-host release benchmark at checkpoint `f8c0a7bc0` measured a 4.871 s
+The quiet-host release benchmark at checkpoint `d82f2b0d31` measured a 4.871 s
 OCaml median versus 4.594 s for Rust (1.060x), with 1,652,256 versus 1,562,792
 KiB median summed process-tree RSS (1.057x). Clean, unchanged, and edit compiler
 work again matched exactly at 1031/512/7/512/40/1, 4/2/0/2/1/0, and
@@ -3082,16 +3082,16 @@ the useful source-level diagnostic, while finalization still persists pending
 work if the attempt fails or is interrupted. This restored exact canonical
 parser-work parity without weakening recovery.
 
-At `7ca5b38e6b`, the powered seven-run performance gate measured clean-build
+At `ff735370ae`, the powered seven-run performance gate measured clean-build
 medians of 4.434 s for Rust and 4.703 s for OCaml (1.061x), with exact clean,
 unchanged, and edited compiler work and identical stable artifacts. A 5.579 s
 OCaml outlier coincided with a brief loss of external power and did not affect
 the median. A separate 1,425-module macOS project measured approximately 9.6 s
 for Rust and 11.5 s for OCaml on average. The final cloc 2.04 snapshot at
-`a3ff5e36af` records 7,809 Rust production lines excluding telemetry and 11,187
+`1e0e9acc50` records 7,809 Rust production lines excluding telemetry and 11,187
 OCaml production lines including both platform implementations.
 
-The release gate at `a3ff5e36af` passed an uninterrupted
+The release gate at `1e0e9acc50` passed an uninterrupted
 `opam exec -- make test-all` run on a native case-sensitive filesystem. This
 included formatting, 300 compiler OUnit tests, runtime/build/GenType/analysis/
 tools suites, and every canonical rewatch integration and watcher test. The
@@ -3099,3 +3099,24 @@ focused parity gates, executable-package check, artifact manifest check, and
 the final Reanalyze audit also passed; Reanalyze reported only the nine reviewed
 cross-module or externally exercised analyzer limitations and no newly unused
 production code.
+
+## Native Windows completion and post-rebase gate
+
+The Windows backend was subsequently completed and validated natively. Windows
+now packages the OCaml executable as `rescript.exe` and retains Rust as
+`rescript-rust.exe`, matching Linux and macOS. Native coverage includes process
+creation and Job Object cancellation, locks and native PIDs, path and executable
+resolution, batch and post-build command quoting, watcher recovery, formatting,
+interactive output, the focused suite, all applicable canonical tests, and both
+packaged executables. A Windows 11 ARM64 VM running the x64 package through OS
+emulation measured OCaml/Rust ratios of 1.195x for clean builds, 1.146x for no-op
+builds, and 1.172x for single-edit builds.
+
+After rebasing onto the current upstream branch base, the powered Linux
+seven-run gate measured 4.740 s for Rust and 5.020 s for OCaml (1.059x), with
+1.110x median summed process-tree RSS. Clean, unchanged, and edited compiler
+work, complete file sets, and byte-stable artifacts matched exactly. The
+retained-watch median was 130 ms for Rust and 153 ms for OCaml (1.177x), with
+identical compiler work and stable resources. The final source-size snapshot is
+7,809 Rust production lines and 11,351 OCaml production lines, plus 2,773 Rust
+unit-test lines and 10,188 OCaml test/fixture lines.
