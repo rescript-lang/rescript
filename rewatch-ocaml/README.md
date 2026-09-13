@@ -84,8 +84,7 @@ npx rescript build
 npx rescript-rust build
 ```
 
-The `rescript-ocaml` launcher remains as an alias for existing testers. Windows
-ships the Dune-promoted OCaml executable as `rescript.exe` and the Rust
+Windows ships the Dune-promoted OCaml executable as `rescript.exe` and the Rust
 reference as `rescript-rust.exe`, matching the other platform packages. The
 x64 package declares compatibility with ARM64 Windows because Windows runs
 these x64 executables through its emulation layer; the launcher maps native

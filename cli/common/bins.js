@@ -49,7 +49,6 @@ export const {
     rescript_editor_analysis_exe,
     rescript_tools_exe,
     rescript_exe,
-    rescript_ocaml_exe,
     rescript_rust_exe,
   },
 } = mod;

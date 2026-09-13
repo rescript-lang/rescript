@@ -2,7 +2,7 @@ open OUnit2
 
 let check condition message = assert_bool message condition
 
-let parse arguments = Cli.parse (Array.of_list ("rescript-ocaml" :: arguments))
+let parse arguments = Cli.parse (Array.of_list ("rescript" :: arguments))
 
 let rejects arguments =
   try

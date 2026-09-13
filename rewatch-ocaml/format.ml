@@ -212,7 +212,7 @@ let format_stdin ?poll extension =
       !temporary
   in
   try
-    let path = Filename.temp_file "rescript-ocaml-format-" extension in
+    let path = Filename.temp_file "rescript-format-" extension in
     temporary := Some path;
     Fun.protect ~finally:remove_temporary (fun () ->
         Signal_restore.restore deferred_signals;

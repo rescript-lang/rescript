@@ -12,6 +12,5 @@ export const binPaths = {
     "rescript-editor-analysis.exe",
   ),
   rescript_exe: path.join(binDir, "rescript.exe"),
-  rescript_ocaml_exe: path.join(binDir, "rescript.exe"),
   rescript_rust_exe: path.join(binDir, "rescript-rust.exe"),
 };
