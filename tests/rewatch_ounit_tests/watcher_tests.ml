@@ -59,7 +59,45 @@ let tests =
         "a scoped dependency ancestor triggers watch reconciliation";
       check
         (Watch_scope.path_in_scope scope dependency)
-        "native separators match a slash-delimited unresolved dependency");
+        "native separators match a slash-delimited unresolved dependency";
+      let rec filesystem_root path =
+        let parent = Filename.dirname path in
+        if parent = path then path else filesystem_root parent
+      in
+      let filesystem_root = filesystem_root root in
+      let root_scope =
+        {
+          scope with
+          sources =
+            [
+              Watch_scope.
+                {directory = filesystem_root; recursive = true; filter = None};
+            ];
+        }
+      in
+      check
+        (Watch_scope.path_is_in_source_tree root_scope
+           (Filename.concat filesystem_root "generated"))
+        "recursive filesystem-root sources include child directories";
+      if Sys.win32 then
+        let unc_scope =
+          {
+            scope with
+            sources =
+              [
+                Watch_scope.
+                  {
+                    directory = {|\\server\share\..\generated|};
+                    recursive = false;
+                    filter = None;
+                  };
+              ];
+          }
+        in
+        check
+          (Watch_scope.path_is_in_source_tree unc_scope
+             {|\\server\share\generated|})
+          "parent traversal cannot escape a UNC share root");
   let snapshot path digest =
     [Watch_snapshot.{path; state = File {modified = 1.; size = 1; digest}}]
   in

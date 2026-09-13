@@ -23,12 +23,21 @@ let normalize_lexically path =
     else decompose parent (Filename.basename current :: components)
   in
   let root, components = decompose path [] in
+  let root, components =
+    if has_double_root then
+      match components with
+      | server :: share :: remaining ->
+        ( Filename.dir_sep ^ Filename.concat (Filename.concat root server) share,
+          remaining )
+      | _ -> (root, components)
+    else (root, components)
+  in
   let normalized =
     List.fold_left
       (fun current component ->
         match component with
         | "." -> current
-        | ".." -> Filename.dirname current
+        | ".." -> if current = root then current else Filename.dirname current
         | component -> Filename.concat current component)
       root components
   in
@@ -41,11 +50,15 @@ let normalize_lexically path =
 let comparable_path path =
   path |> Platform.normalize_path_for_comparison |> normalize_lexically
 
+let descendant_prefix directory =
+  if String.ends_with ~suffix:Filename.dir_sep directory then directory
+  else directory ^ Filename.dir_sep
+
 let is_same_or_below ~directory path =
   let directory = comparable_path directory in
   let path = comparable_path path in
   path = directory
-  || String.starts_with ~prefix:(directory ^ Filename.dir_sep) path
+  || String.starts_with ~prefix:(descendant_prefix directory) path
 
 let path_is_in_source_tree scope path =
   List.exists
@@ -54,7 +67,7 @@ let path_is_in_source_tree scope path =
       let directory = comparable_path source.directory in
       path = directory
       || source.recursive
-         && String.starts_with ~prefix:(directory ^ Filename.dir_sep) path)
+         && String.starts_with ~prefix:(descendant_prefix directory) path)
     scope.sources
 
 let path_is_source_ancestor scope path =
@@ -229,7 +242,7 @@ let path_in_scope scope path =
              file_directory = source_directory
              || source.recursive
                 && String.starts_with
-                     ~prefix:(source_directory ^ Filename.dir_sep)
+                     ~prefix:(descendant_prefix source_directory)
                      file_directory
            in
            in_directory
