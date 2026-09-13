@@ -275,14 +275,14 @@ printf 'let valid = true\n' \
 atomic_save="$work/atomic-save"
 mkdir -p "$atomic_save/src"
 printf '%s\n' \
-  '{"name":"atomic-save","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  '{"name":"atomic-save","sources":"src/","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
   >"$atomic_save/rescript.json"
 printf 'let value = 1\n' >"$atomic_save/src/Main.res"
 
 missing_nested_source="$work/missing-nested-source"
 mkdir -p "$missing_nested_source"
 printf '%s\n' \
-  '{"name":"missing-nested-source","sources":"generated/nested","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  '{"name":"missing-nested-source","sources":"generated/./nested","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
   >"$missing_nested_source/rescript.json"
 
 directory_symlink="$work/directory-symlink"

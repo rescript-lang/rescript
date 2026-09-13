@@ -11,7 +11,35 @@ type t = {
   unresolved: string list;
 }
 
-let comparable_path = Platform.normalize_path_for_comparison
+let normalize_lexically path =
+  let has_double_root =
+    String.length path >= 2
+    && path.[0] = Filename.dir_sep.[0]
+    && path.[1] = Filename.dir_sep.[0]
+  in
+  let rec decompose current components =
+    let parent = Filename.dirname current in
+    if parent = current then (current, components)
+    else decompose parent (Filename.basename current :: components)
+  in
+  let root, components = decompose path [] in
+  let normalized =
+    List.fold_left
+      (fun current component ->
+        match component with
+        | "." -> current
+        | ".." -> Filename.dirname current
+        | component -> Filename.concat current component)
+      root components
+  in
+  if
+    has_double_root
+    && (String.length normalized < 2 || normalized.[1] <> Filename.dir_sep.[0])
+  then Filename.dir_sep ^ normalized
+  else normalized
+
+let comparable_path path =
+  path |> Platform.normalize_path_for_comparison |> normalize_lexically
 
 let is_same_or_below ~directory path =
   let directory = comparable_path directory in
@@ -33,6 +61,11 @@ let path_is_source_ancestor scope path =
   List.exists
     (fun source -> is_same_or_below ~directory:path source.directory)
     scope.sources
+
+let path_is_unresolved_ancestor scope path =
+  List.exists
+    (fun unresolved -> is_same_or_below ~directory:path unresolved)
+    scope.unresolved
 
 let control_file_names = ["rescript.json"; "bsconfig.json"; "package.json"]
 let is_control_file_name name = List.mem name control_file_names
@@ -182,7 +215,9 @@ let discover ~root ~prod ~features ~filter =
 let path_in_scope scope path =
   let name = Filename.basename path in
   let is_control =
-    is_control_file_name name && List.mem (Filename.dirname path) scope.roots
+    let directory = comparable_path (Filename.dirname path) in
+    is_control_file_name name
+    && List.exists (fun root -> comparable_path root = directory) scope.roots
   in
   let is_source =
     Option.is_some (Source.source_kind path)
@@ -203,4 +238,10 @@ let path_in_scope scope path =
                 source.filter)
          scope.sources
   in
-  is_control || is_source || List.mem path scope.unresolved
+  let comparable = comparable_path path in
+  let is_unresolved =
+    List.exists
+      (fun unresolved -> comparable_path unresolved = comparable)
+      scope.unresolved
+  in
+  is_control || is_source || is_unresolved

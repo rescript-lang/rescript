@@ -132,6 +132,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
             || Native_watcher.watches_directory watcher path
             || (is_in_source_tree path && File_util.is_directory path)
             || Watch_scope.path_is_source_ancestor scope path
+            || Watch_scope.path_is_unresolved_ancestor scope path
           then requires_reconciliation := true
         | Native_watcher.Content, Some path ->
           if is_symlink_target path then requires_reconciliation := true
