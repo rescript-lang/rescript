@@ -29,6 +29,10 @@ cleanup() {
 trap cleanup EXIT
 
 if ! command -v script >/dev/null 2>&1; then
+  if $windows_posix_shell; then
+    echo "Skipping interactive output gate: script is unavailable on this Windows runner"
+    exit 0
+  fi
   echo "Interactive output gate requires the util-linux script command" >&2
   exit 1
 fi
