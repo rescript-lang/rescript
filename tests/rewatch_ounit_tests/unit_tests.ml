@@ -830,9 +830,15 @@ let lock_tests _context =
             (not (Sys.file_exists lock))
             "releasing a build lock twice is harmless");
       check (not (Sys.file_exists lock)) "released build lock is removed";
+      let owner_executable =
+        Filename.concat lock_root "rescript-lock-owner.exe"
+      in
+      File_util.copy_existing_file ~ensure_parent:false test_executable
+        owner_executable;
+      if not Sys.win32 then Unix.chmod owner_executable 0o755;
       let owner_pid =
-        Spawn.spawn ~prog:test_executable
-          ~argv:[test_executable; "--wait-for-release"; lock_root]
+        Spawn.spawn ~prog:owner_executable
+          ~argv:[owner_executable; "--wait-for-release"; lock_root]
           ()
       in
       lock_owner_pid := Some owner_pid;
