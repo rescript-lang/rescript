@@ -82,7 +82,7 @@ describe(__MODULE__, () => {
   })
 
   test("emoji poly variant conversion", () => {
-    eq(__LOC__, "🚀", (#"🚀": t :> string))
-    eq(__LOC__, "🔥", (#"🔥": t :> string))
+    eq(__LOC__, "🚀", (#"🚀": t) :> string)
+    eq(__LOC__, "🔥", (#"🔥": t) :> string)
   })
 })

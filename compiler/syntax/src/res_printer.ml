@@ -1716,7 +1716,7 @@ and print_spread_dict_expr ~state parts (expr : Parsetree.expression) cmt_tbl =
     in
     let spread_doc =
       let doc = print_expression ~state spread_expr cmt_tbl in
-      match Parens.expr spread_expr with
+      match Parens.expr_allowing_coercion spread_expr with
       | Parens.Parenthesized -> add_parens doc
       | Braced braces -> print_braces doc spread_expr braces
       | Nothing -> doc
@@ -2419,7 +2419,7 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
                   print_typ_expr ~state pvc_type cmt_tbl;
                   Doc.text " =";
                   Doc.line;
-                  print_expression_with_comments ~state expr cmt_tbl;
+                  print_expression_with_comments_and_parens ~state expr cmt_tbl;
                 ]);
          ])
   | {
@@ -2463,7 +2463,8 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
                     Doc.concat
                       [
                         Doc.line;
-                        print_expression_with_comments ~state expr cmt_tbl;
+                        print_expression_with_comments_and_parens ~state expr
+                          cmt_tbl;
                       ];
                   ]);
            ])
@@ -2490,7 +2491,8 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
                     Doc.concat
                       [
                         Doc.line;
-                        print_expression_with_comments ~state expr cmt_tbl;
+                        print_expression_with_comments_and_parens ~state expr
+                          cmt_tbl;
                       ];
                   ]);
            ]))
@@ -3032,10 +3034,17 @@ and print_expression_with_comments ~state expr cmt_tbl : Doc.t =
   let doc = print_expression ~state expr cmt_tbl in
   print_comments doc cmt_tbl expr.Parsetree.pexp_loc
 
+and print_expression_with_comments_and_parens ~state expr cmt_tbl =
+  let doc = print_expression_with_comments ~state expr cmt_tbl in
+  match Parens.expr expr with
+  | Parens.Parenthesized -> add_parens doc
+  | Braced braces -> print_braces doc expr braces
+  | Nothing -> doc
+
 and print_expression_args ~state (args : Parsetree.expression list) cmt_tbl =
   let print_arg expr =
     let doc = print_expression_with_comments ~state expr cmt_tbl in
-    match Parens.expr expr with
+    match Parens.expr_allowing_coercion expr with
     | Parens.Parenthesized -> add_parens doc
     | Braced braces -> print_braces doc expr braces
     | Nothing -> doc
@@ -3261,7 +3270,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
               Doc.line;
               Doc.dotdotdot;
               (let doc = print_expression_with_comments ~state expr cmt_tbl in
-               match Parens.expr expr with
+               match Parens.expr_allowing_coercion expr with
                | Parens.Parenthesized -> add_parens doc
                | Braced braces -> print_braces doc expr braces
                | Nothing -> doc);
@@ -3283,7 +3292,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
                            let doc =
                              print_expression_with_comments ~state expr cmt_tbl
                            in
-                           match Parens.expr expr with
+                           match Parens.expr_allowing_coercion expr with
                            | Parens.Parenthesized -> add_parens doc
                            | Braced braces -> print_braces doc expr braces
                            | Nothing -> doc)
@@ -3315,7 +3324,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
                            let doc =
                              print_expression_with_comments ~state expr cmt_tbl
                            in
-                           match Parens.expr expr with
+                           match Parens.expr_allowing_coercion expr with
                            | Parens.Parenthesized -> add_parens doc
                            | Braced braces -> print_braces doc expr braces
                            | Nothing -> doc)
@@ -3344,7 +3353,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
                            let doc =
                              print_expression_with_comments ~state expr cmt_tbl
                            in
-                           match Parens.expr expr with
+                           match Parens.expr_allowing_coercion expr with
                            | Parens.Parenthesized -> add_parens doc
                            | Braced braces -> print_braces doc expr braces
                            | Nothing -> doc)
@@ -3378,7 +3387,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
               Doc.concat
                 [
                   Doc.dotdotdot;
-                  (match Parens.expr expr with
+                  (match Parens.expr_allowing_coercion expr with
                   | Parens.Parenthesized -> add_parens doc
                   | Braced braces -> print_braces doc expr braces
                   | Nothing -> doc);
@@ -3728,9 +3737,15 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
           print_cases ~state cases cmt_tbl;
         ]
     | Pexp_coerce (expr, (), typ) ->
-      let doc_expr = print_expression_with_comments ~state expr cmt_tbl in
+      let doc_expr =
+        print_expression_with_comments_and_parens ~state expr cmt_tbl
+      in
       let doc_typ = print_typ_expr ~state typ cmt_tbl in
-      Doc.concat [Doc.lparen; doc_expr; Doc.text " :> "; doc_typ; Doc.rparen]
+      let doc = Doc.concat [doc_expr; Doc.text " :> "; doc_typ] in
+      (* Keep attributes on the coercion rather than its operand. *)
+      if Parsetree_viewer.has_printable_attributes e.pexp_attributes then
+        add_parens doc
+      else doc
     | Pexp_object_get (parent_expr, label) ->
       print_object_get_doc ~state parent_expr label cmt_tbl
     | Pexp_object_set (obj, member, rhs) ->
@@ -4231,7 +4246,7 @@ and print_array_spread_apply ~state sub_lists cmt_tbl =
       (* Print expression without leading comments (they're already extracted) *)
       let expr_doc =
         let doc = print_expression ~state expr cmt_tbl in
-        match Parens.expr expr with
+        match Parens.expr_allowing_coercion expr with
         | Parens.Parenthesized -> add_parens doc
         | Braced braces -> print_braces doc expr braces
         | Nothing -> doc
@@ -4263,7 +4278,7 @@ and print_array_spread_apply ~state sub_lists cmt_tbl =
         (List.map
            (fun expr ->
              let doc = print_expression_with_comments ~state expr cmt_tbl in
-             match Parens.expr expr with
+             match Parens.expr_allowing_coercion expr with
              | Parens.Parenthesized -> add_parens doc
              | Braced braces -> print_braces doc expr braces
              | Nothing -> doc)
@@ -4298,7 +4313,7 @@ and print_list_spread_apply ~state sub_lists cmt_tbl =
           comma_before_spread;
           Doc.dotdotdot;
           (let doc = print_expression_with_comments ~state expr cmt_tbl in
-           match Parens.expr expr with
+           match Parens.expr_allowing_coercion expr with
            | Parens.Parenthesized -> add_parens doc
            | Braced braces -> print_braces doc expr braces
            | Nothing -> doc);
@@ -4319,7 +4334,7 @@ and print_list_spread_apply ~state sub_lists cmt_tbl =
           (List.map
              (fun expr ->
                let doc = print_expression_with_comments ~state expr cmt_tbl in
-               match Parens.expr expr with
+               match Parens.expr_allowing_coercion expr with
                | Parens.Parenthesized -> add_parens doc
                | Braced braces -> print_braces doc expr braces
                | Nothing -> doc)
@@ -4419,7 +4434,7 @@ and print_pexp_apply ~state expr cmt_tbl =
     let member =
       let member_doc =
         let doc = print_expression_with_comments ~state member_expr cmt_tbl in
-        match Parens.expr member_expr with
+        match Parens.expr_allowing_coercion member_expr with
         | Parens.Parenthesized -> add_parens doc
         | Braced braces -> print_braces doc member_expr braces
         | Nothing -> doc
@@ -4466,7 +4481,7 @@ and print_pexp_apply ~state expr cmt_tbl =
     let member =
       let member_doc =
         let doc = print_expression_with_comments ~state member_expr cmt_tbl in
-        match Parens.expr member_expr with
+        match Parens.expr_allowing_coercion member_expr with
         | Parens.Parenthesized -> add_parens doc
         | Braced braces -> print_braces doc member_expr braces
         | Nothing -> doc
@@ -4885,7 +4900,7 @@ and print_jsx_prop ~state prop cmt_tbl =
            [
              Doc.lbrace;
              Doc.dotdotdot;
-             print_expression_with_comments ~state value cmt_tbl;
+             print_expression_with_comments_and_parens ~state value cmt_tbl;
              Doc.rbrace;
            ])
   in
@@ -5119,7 +5134,7 @@ and print_arguments ~state ~partial
   | [(Nolabel, arg)] when Parsetree_viewer.is_huggable_expression arg ->
     let arg_doc =
       let doc = print_expression_with_comments ~state arg cmt_tbl in
-      match Parens.expr arg with
+      match Parens.expr_allowing_coercion arg with
       | Parens.Parenthesized -> add_parens doc
       | Braced braces -> print_braces doc arg braces
       | Nothing -> doc
@@ -5233,7 +5248,7 @@ and print_argument ~state (arg_lbl, arg) cmt_tbl =
     in
     let printed_expr =
       let doc = print_expression_with_comments ~state expr cmt_tbl in
-      match Parens.expr expr with
+      match Parens.expr_allowing_coercion expr with
       | Parenthesized -> add_parens doc
       | Braced braces -> print_braces doc expr braces
       | Nothing -> doc
@@ -5291,7 +5306,7 @@ and print_case ~state (case : Parsetree.case) cmt_tbl =
            [
              Doc.line;
              Doc.text "if ";
-             print_expression_with_comments ~state expr cmt_tbl;
+             print_expression_with_comments_and_parens ~state expr cmt_tbl;
            ])
   in
   let should_inline_rhs =
@@ -5804,7 +5819,9 @@ and print_payload ~state (payload : Parsetree.payload) cmt_tbl =
   match payload with
   | PStr [] -> Doc.nil
   | PStr [{pstr_desc = Pstr_eval (expr, attrs)}] ->
-    let expr_doc = print_expression_with_comments ~state expr cmt_tbl in
+    let expr_doc =
+      print_expression_with_comments_and_parens ~state expr cmt_tbl
+    in
     let needs_parens =
       match attrs with
       | [] -> false
@@ -5853,7 +5870,7 @@ and print_payload ~state (payload : Parsetree.payload) cmt_tbl =
           [
             Doc.line;
             Doc.text "if ";
-            print_expression_with_comments ~state expr cmt_tbl;
+            print_expression_with_comments_and_parens ~state expr cmt_tbl;
           ]
       | None -> Doc.nil
     in
@@ -5970,7 +5987,7 @@ and print_mod_expr ~state mod_expr cmt_tbl =
         Doc.group
           (Doc.concat
              [
-               print_expression_with_comments ~state expr cmt_tbl;
+               print_expression_with_comments_and_parens ~state expr cmt_tbl;
                module_constraint;
              ])
       in

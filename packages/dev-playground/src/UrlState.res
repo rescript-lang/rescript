@@ -42,7 +42,7 @@ let applyUrlState = (~encoded, ~config: PlaygroundConfig.t) => {
     params->UrlSearchParams.delete("sourceMapSourcesContent")
     params->UrlSearchParams.delete("sourceMapRoot")
   | sourceMapMode =>
-    params->UrlSearchParams.set("sourceMap", (sourceMapMode :> string))
+    params->UrlSearchParams.set("sourceMap", sourceMapMode :> string)
     params->UrlSearchParams.set(
       "sourceMapSourcesContent",
       config.sourceMapSourcesContent ? "true" : "false",
