@@ -11,6 +11,7 @@ fi
 
 REWATCH_EXECUTABLE="$(realpath "$1")"
 export REWATCH_EXECUTABLE
+TESTREPO_ROOT="$(realpath "$(dirname "$0")/../testrepo")"
 
 # Make sure we are in the right directory
 cd $(dirname $0)
@@ -39,9 +40,13 @@ fi
 success "No stale rescript processes found"
 
 # The published ReScript versions model dependency layouts; compilation uses
-# the repository-built compiler and runtime. See ../testrepo/README.md.
-bold "Yarn install"
-(cd ../testrepo && yarn)
+# the repository-built compiler and runtime. See ../testrepo/README.md. When
+# the caller selected an installed launcher, reinstalling after resolving it
+# could replace that package and delete the executable under test.
+if [[ "$REWATCH_EXECUTABLE" != "$TESTREPO_ROOT/node_modules/"* ]]; then
+  bold "Yarn install"
+  (cd ../testrepo && yarn)
+fi
 node ./add-belt-dependencies.mjs
 
 bold "Rescript version"
