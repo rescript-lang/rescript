@@ -2,6 +2,67 @@
 
 This file provides guidance to AI coding assistants when working with code in this repository.
 
+## Maintain coherence as you change the system
+
+A task is not complete merely because the edited code works. Preserve the
+relationships between implementation, interfaces, tests, and the explanations
+contributors rely on, including relationships the build cannot check. Apply
+this alongside the development workflow below, with effort proportional to the
+change and its risks; a small local fix does not require a repository-wide audit.
+
+1. **Identify what must stay true.** Before editing, read the relevant area
+   guide, interface contracts, and nearby rationale. Work out the few
+   relationships this task could affect, what intentionally changes, and what
+   must remain true. Make them concrete: "build and watch apply this option with
+   the same precedence," not "check the build system." These are task-specific
+   working questions, not a new document or a fixed checklist for every task.
+2. **Follow the relationships beyond the diff.** Trace relevant producers,
+   consumers, alternative paths, tests, and explanations, including unchanged
+   files. Search for the concepts and assumptions involved, not just matching
+   names or existing links. Consider newly added, removed, or renamed cases:
+   an overview can remain literally true while omitting an important new path.
+   Check that different explanations agree in meaning and retain material
+   qualifications, not that they use identical wording. Follow a relationship
+   when the requested change gives a concrete reason it could be affected.
+   Stop expanding the investigation when further checks lack such a reason;
+   report remaining material uncertainty.
+3. **Challenge, rather than confirm.** For each important relationship at risk,
+   seek a concrete case that would expose a mismatch. Prefer an existing test,
+   executable example, or checkable invariant when available. When the check is
+   semantic, inspect the relevant definitions and passages on both sides and
+   state the reason they agree or conflict. A plausible explanation, matching
+   names, or passing unrelated tests is not evidence. Distinguish observed
+   behavior from intended contracts, and implemented behavior from proposals.
+4. **Repair the right thing and check the consequences.** Make the smallest
+   justified set of changes that preserves the requested behavior and intended
+   contracts. Do not obtain agreement by weakening a test, silently dropping a
+   guarantee, or rewriting a design rationale to bless an accidental behavior.
+   Regenerate expected outputs only after checking why the differences are
+   correct. After editing, revisit the relationships from the callers' and
+   readers' perspectives: what could now be false elsewhere, even with tests
+   passing? Flag unresolved design conflicts or unrelated pre-existing drift
+   for maintainers rather than silently expanding the task.
+5. **Leave durable understanding in its owning place.** Record a discovery when
+   it explains a consequential constraint that is not already clear in its
+   owning location. Preserve the reason and relevant counterpart in an existing
+   test, interface contract, local comment, or area guide, whichever owns it.
+   Follow [CONTRIBUTING.md](CONTRIBUTING.md#repository-guides): caller contracts
+   belong in module interfaces or source API documentation; algorithm and
+   representation invariants belong beside the implementation; guides provide
+   navigation and useful high-level explanations. Prefer links to duplicating
+   detailed contracts. Do not add parallel relationship registries,
+   synchronization versions, review stamps, or boilerplate comments. Leave an
+   accurate explanation unchanged when the change does not affect it.
+6. **Give maintainers evidence, not a self-assessment.** In the final response
+   or PR description, include a brief coherence note: the important
+   relationships examined, any mismatches repaired, the supporting paths and
+   checks, and anything unresolved or not checked. It may be part of the normal
+   change and testing description rather than a separate section. Distinguish
+   executed checks and their results from inspection-based reasoning; reuse the
+   normal testing summary rather than repeating it. A sentence can suffice for
+   a small task. Do not invent a finding or claim repository-wide consistency.
+   Keep this in the handoff, not in a tracked audit log.
+
 ## Quick Start: Essential Commands
 
 ```bash
