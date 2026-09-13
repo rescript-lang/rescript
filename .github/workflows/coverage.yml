@@ -21,7 +21,7 @@ jobs:
       id-token: write # For CodeCov OIDC
     env:
       OS: ubuntu-24.04-arm
-      OCAML_COMPILER: 5.5.0
+      OCAML_COMPILER: 5.5.1
       RUST_TARGET: aarch64-unknown-linux-gnu
     steps:
       - name: Checkout
