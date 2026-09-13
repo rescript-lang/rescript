@@ -5819,7 +5819,9 @@ and print_payload ~state (payload : Parsetree.payload) cmt_tbl =
   match payload with
   | PStr [] -> Doc.nil
   | PStr [{pstr_desc = Pstr_eval (expr, attrs)}] ->
-    let expr_doc = print_expression_with_comments ~state expr cmt_tbl in
+    let expr_doc =
+      print_expression_with_comments_and_parens ~state expr cmt_tbl
+    in
     let needs_parens =
       match attrs with
       | [] -> false
@@ -5985,7 +5987,7 @@ and print_mod_expr ~state mod_expr cmt_tbl =
         Doc.group
           (Doc.concat
              [
-               print_expression_with_comments ~state expr cmt_tbl;
+               print_expression_with_comments_and_parens ~state expr cmt_tbl;
                module_constraint;
              ])
       in

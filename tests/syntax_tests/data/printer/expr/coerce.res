@@ -98,3 +98,11 @@ let jsxSpread = <Component {...(props :> propsType)} />
 
 @attr(?value if (flag :> bool))
 let attributeGuard = value
+
+// Attribute and extension payloads parse their contents as plain expressions.
+@attr((value :> b))
+let attributePayload = value
+let extensionPayload = %extension((value :> b))
+
+// First-class module unpacking also parses a plain expression.
+module Coerced = unpack((packed :> moduleValue))
