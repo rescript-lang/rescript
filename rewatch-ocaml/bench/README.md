@@ -131,7 +131,7 @@ to the same project artifact or discovery path as the primary evidence of
 superfluous orchestration work. The existing compiler-work and artifact checks
 must remain enabled so fewer filesystem calls cannot conceal skipped work.
 
-At `8af17037c5`, process attribution showed identical compiler-subprocess
+Process attribution showed identical compiler-subprocess
 metadata/open work and effectively equal driver-plus-inherited clean-build open
 counts (about 8,110 for OCaml and 8,120 for Rust). OCaml made about 2,387 more
 driver-side metadata calls, led by repeated checks of source and `lib/bs`
