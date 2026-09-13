@@ -63,7 +63,10 @@ file_link_if_supported() {
 }
 command_work=$native_work
 command_path() {
-  printf '%s\n' "${1/"$work"/"$command_work"}"
+  case $1 in
+    "$work"*) printf '%s\n' "$command_work${1#"$work"}" ;;
+    *) printf '%s\n' "$1" ;;
+  esac
 }
 terminate_and_wait() {
   local pid=$1
