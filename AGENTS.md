@@ -91,85 +91,13 @@ The Makefile’s targets build on each other in this order:
 3. `lib` uses those toolchain outputs to build the runtime sources.
 4. Test targets (`make test`, `make test-syntax`, etc.) reuse everything above.
 
-## ⚠️ Critical Guidelines & Common Pitfalls
+## Area guidance
 
-- **We are NOT bound by OCaml compatibility** - The ReScript compiler originated as a fork of the OCaml compiler, but we maintain our own AST and can make breaking changes. Focus on what's best for ReScript's JavaScript compilation target.
-
-- **Never modify `parsetree0.ml`** - Existing PPX (parser extensions) rely on this frozen v0 version. When changing `parsetree.ml`, always update the mapping modules `ast_mapper_from0.ml` and `ast_mapper_to0.ml` to maintain PPX compatibility while allowing the main parsetree to evolve. **Test the bridge with the existing infra** — do not build new harnesses for this:
-  - Add a source fixture exercising the new syntax to `tests/syntax_tests/data/ast-mapping/`. Every file there is run through `res_parser -test-ast-conversion` (which round-trips the parsetree through the frozen v0 AST before printing) as part of `make test-syntax`; the printed output must match the snapshot in its `expected/` directory.
-  - For exact-identity invariants (locations, attributes) or the v0 wire shape itself, add cases to `tests/ounit_tests/ounit_ast_mapper0_tests.ml`, which tests `ast_mapper_to0`/`ast_mapper_from0` directly.
-
-- **Missing test coverage** - Always add tests for syntax, lambda, and end-to-end behavior
-
-- **Test early and often** - Add tests immediately after modifying each compiler layer to catch problems early, rather than waiting until all changes are complete
-
-- **Use underscore patterns carefully** - Don't use `_` patterns as lazy placeholders for new language features that then get forgotten. Only use them when you're certain the value should be ignored for that specific case. Ensure all new language features are handled correctly and completely across all compiler layers
-- **Avoid `let _ = …` for side effects** - If you need to call a function only for its side effects, use `ignore expr` (or bind the result and thread state explicitly). Do not write `let _ = expr in ()`, and do not discard stateful results—plumb them through instead.
-
-- **Don't use unit `()` with mandatory labeled arguments** - When a function has a mandatory labeled argument (like `~config`), don't add a trailing `()` parameter. The labeled argument already prevents accidental partial application. Only use `()` when all parameters are optional and you need to force evaluation. Example: `let forceDelayedItems ~config = ...` not `let forceDelayedItems ~config () = ...`
-
-- **Avoid warning suppressions** - Never use `[@@warning "..."]` to silence warnings. Instead, fix the underlying issue properly
-- **Skip trailing `; _` in record patterns** - The warning it targets is disabled in this codebase, so prefer `{field = x}` over `{field = x; _}`.
-
-- **Do not introduce new keywords unless absolutely necessary** - Try to find ways to implement features without reserving keywords, as seen with the "catch" implementation that avoids making it a keyword.
-
-## Compiler Architecture
-
-### Compilation Pipeline
-
-```
-ReScript Source (.res)
-  ↓ (ReScript Parser - compiler/syntax/)
-Surface Syntax Tree
-  ↓ (Frontend transformations - compiler/frontend/)
-Surface Syntax Tree
-  ↓ (OCaml Type Checker - compiler/ml/)
-Typedtree
-  ↓ (Lambda compilation - compiler/core/lam_*)
-Lambda IR
-  ↓ (JS compilation - compiler/core/js_*)
-JS IR
-  ↓ (JS output - compiler/core/js_dump*)
-JavaScript Code
-```
-
-### Platform-specific compiler modules
-
-The Dune `browser` profile builds the playground compiler. Platform-dependent
-modules are stored below `platform/native/` and `platform/playground/` in their
-owning compiler directory. Rules in that directory's `dune` file copy the
-selected implementation into the build directory as an ordinary `.ml` module;
-all other profiles select the native source. Generated module paths in errors
-or stack traces therefore map back to one of those two source directories.
-
-### Key Directory Structure
-
-```
-compiler/
-├── syntax/          # ReScript syntax parser (MIT licensed)
-├── frontend/        # AST transformations, FFI processing
-├── ml/              # OCaml compiler infrastructure
-├── core/            # Core compilation (lam_*, js_* files)
-├── ext/             # Extended utilities and data structures
-└── gentype/         # TypeScript generation
-
-analysis/            # Language server and tooling
-packages/@rescript/
-├── runtime/         # Runtime and standard library
-└── <platform>/      # Platform-specific binaries
-
-tests/
-├── syntax_tests/    # Parser/syntax layer tests
-├── tests/           # Runtime library tests
-├── build_tests/     # Integration tests
-└── ounit_tests/     # Compiler unit tests
-```
-
-## Working on the Compiler
-
-### Development Workflow
-
-Read the area guide before changing a compiler subsystem:
+Before changing a subsystem, read its local agent instructions and area guide.
+For compiler changes, read [compiler/AGENTS.md](compiler/AGENTS.md). For build
+system changes, read [rewatch/AGENTS.md](rewatch/AGENTS.md). These apply even
+when the task starts at the repository root. Changes spanning areas need the
+relevant guidance from each.
 
 - [`compiler/syntax/README.md`](compiler/syntax/README.md) for parsing,
   printing, and JSX transformation
@@ -181,61 +109,56 @@ Read the area guide before changing a compiler subsystem:
 - [`rewatch/README.md`](rewatch/README.md) for the build system
 - [`tools/README.md`](tools/README.md) for `rescript-tools`
 
-1. **Understand which layer you're working on:**
-   - **Syntax layer** (`compiler/syntax/`): Parsing and surface syntax
-   - **ML layer** (`compiler/ml/`): Type checking and AST transformations
-   - **Lambda layer** (`compiler/core/lam_*`): Intermediate representation and optimizations
-   - **JS layer** (`compiler/core/js_*`): JavaScript generation
+## Coding guidelines
 
-2. **Always run appropriate tests:**
+- **Use underscore patterns carefully** - Don't use `_` patterns as lazy placeholders for new language features that then get forgotten. Only use them when you're certain the value should be ignored for that specific case. Ensure all new language features are handled correctly and completely across all compiler layers
+- **Avoid `let _ = …` for side effects** - If you need to call a function only for its side effects, use `ignore expr` (or bind the result and thread state explicitly). Do not write `let _ = expr in ()`, and do not discard stateful results—plumb them through instead.
 
-   ```bash
-   # For compiler or stdlib changes
-   make test
+- **Don't use unit `()` with mandatory labeled arguments** - When a function has a mandatory labeled argument (like `~config`), don't add a trailing `()` parameter. The labeled argument already prevents accidental partial application. Only use `()` when all parameters are optional and you need to force evaluation. Example: `let forceDelayedItems ~config = ...` not `let forceDelayedItems ~config () = ...`
 
-   # For syntax changes
-   make test-syntax
+- **Avoid warning suppressions** - Never use `[@@warning "..."]` to silence warnings. Instead, fix the underlying issue properly
+- **Skip trailing `; _` in record patterns** - The warning it targets is disabled in this codebase, so prefer `{field = x}` over `{field = x; _}`.
 
-   # For specific test types
-   make test-syntax-roundtrip
-   make test-gentype
-   make test-analysis
-   ```
+## Coding Conventions
 
-3. **Test your changes thoroughly:**
-   - Syntax tests for new language features
-   - Integration tests for behavior changes
-   - Unit tests for utility functions
-   - Always check JavaScript output quality
+### Naming
 
-4. **Add a `CHANGELOG.md` entry** for any user-facing change (bug fix, feature, or breaking change). Put it under the matching section of the current `(Unreleased)` version and end the line with the PR link. See [CONTRIBUTING.md](CONTRIBUTING.md). PRs are expected to include one.
+- **OCaml code**: snake_case (e.g., `to_string`)
+- **ReScript code**: camelCase (e.g., `toString`)
 
-### Debugging Techniques
+### Commit Standards
 
-#### View Intermediate Representations
+- Use DCO sign-off: `Signed-Off-By: Your Name <email>`
+- Include appropriate tests with all changes
+- Build must pass before committing
 
-```bash
-# Source code (for debugging preprocessing)
-./cli/bsc.js -dsource myfile.res
+### Stacked pull requests
 
-# Parse tree (surface syntax after parsing)
-./cli/bsc.js -dparsetree myfile.res
+When a PR depends on another unmerged PR, make a native GitHub stack. Keep the
+branches linear and in the same repository, then run `gh stack link BOTTOM
+[NEXT...]`, listing the stack bottom to top. Each argument is a branch name or
+a PR number: the command pushes each branch, reuses the PR that already exists
+for it, and opens one where there is none, so branches alone are enough. Open
+the PRs yourself first if you want to write their titles and descriptions.
 
-# Typed tree (after type checking)
-./cli/bsc.js -dtypedtree myfile.res
+Linking sets each PR's base to the branch below it, leaving only the bottom PR
+on `master`. CI runs on every PR in the stack.
 
-# Raw lambda (unoptimized intermediate representation)
-./cli/bsc.js -drawlambda myfile.res
+### Code Quality
 
-# Use lambda printing for debugging (add in compiler/core/lam_print.ml)
-```
+- Follow existing patterns in the codebase
+- Prefer existing utility functions over reinventing
+- Comment complex algorithms and non-obvious logic
+- Maintain backward compatibility where possible
 
-#### Common Debug Scenarios
+## Testing and changelog
 
-- **JavaScript formatting issues**: Check `compiler/ml/pprintast.ml`
-- **Type checking issues**: Look in `compiler/ml/` type checker modules
-- **Optimization bugs**: Check `compiler/core/lam_*.ml` analysis passes
-- **Code generation bugs**: Look in `compiler/core/js_*.ml` modules
+**Add a `CHANGELOG.md` entry** for any user-facing change (bug fix, feature, or breaking change). Put it under the matching section of the current `(Unreleased)` version and end the line with the PR link. See [CONTRIBUTING.md](CONTRIBUTING.md). PRs are expected to include one.
+
+For compiler or standard-library changes, run `make test`. For syntax changes,
+also run `make test-syntax`; use `make test-syntax-roundtrip` when parsing or
+printing changes. Other focused suites are `make test-gentype`,
+`make test-analysis`, `make test-tools`, and `make test-rewatch`.
 
 ### Testing Requirements
 
@@ -272,373 +195,18 @@ each entry mapped to a fixture (or a documented reason it's unreachable).
 suite. The catalog is the primary tool for finding coverage gaps and
 dead-code removal candidates; stale entries make both jobs harder.
 
-## Build Commands & Development
+## Additional development commands
 
-### Essential Commands
-
-```bash
-# Build compiler
-make
-
-# Build compiler in watch mode
-make watch
-
-# Build compiler and standard library
-make lib
-
-# Build compiler and standard library and run all tests
-make test
-
-# Build artifacts and update artifact list
-make artifacts
-
-# Clean build
-make clean
-```
-
-### Testing Commands
+Run commands from the repository root:
 
 ```bash
-# Specific test types
-make test-syntax           # Syntax parser tests
-make test-syntax-roundtrip # Roundtrip syntax tests
-make test-gentype         # GenType tests
-make test-analysis        # Analysis tests
-make test-tools           # Tools tests
-make test-rewatch         # Rewatch tests
-
-# Single file debugging
-./cli/bsc.js myfile.res
-```
-
-### Code Quality
-
-```bash
-# Format code
-make format
-
-# Check formatting
-make checkformat
-
-# Lint with Biome
-npm run check
+make watch        # Watch compiler sources
+make artifacts    # Build artifacts and update the artifact list
+make clean        # Clean build outputs
+npm run check     # Lint with Biome
 npm run check:all
-
-# TypeScript type checking
-npm run typecheck
+npm run typecheck # TypeScript type checking
 ```
 
-## Performance Considerations
-
-The compiler is designed for fast feedback loops and scales to large codebases:
-
-- **Avoid meaningless symbols** in generated JavaScript
-- **Maintain readable JavaScript output**
-- **Consider compilation speed impact** of changes
-- **Use appropriate optimization passes** in Lambda and JS IRs
-- **Profile** before and after performance-related changes
-
-## Coding Conventions
-
-### Naming
-
-- **OCaml code**: snake_case (e.g., `to_string`)
-- **ReScript code**: camelCase (e.g., `toString`)
-
-### Commit Standards
-
-- Use DCO sign-off: `Signed-Off-By: Your Name <email>`
-- Include appropriate tests with all changes
-- Build must pass before committing
-
-### Stacked pull requests
-
-When a PR depends on another unmerged PR, make a native GitHub stack. Keep the
-branches linear and in the same repository, then run `gh stack link BOTTOM
-[NEXT...]`, listing the stack bottom to top. Each argument is a branch name or
-a PR number: the command pushes each branch, reuses the PR that already exists
-for it, and opens one where there is none, so branches alone are enough. Open
-the PRs yourself first if you want to write their titles and descriptions.
-
-Linking sets each PR's base to the branch below it, leaving only the bottom PR
-on `master`. CI runs on every PR in the stack.
-
-### Code Quality
-
-- Follow existing patterns in the codebase
-- Prefer existing utility functions over reinventing
-- Comment complex algorithms and non-obvious logic
-- Maintain backward compatibility where possible
-
-## Development Environment
-
-- **OCaml**: 5.5.0+ with opam
-- **Build System**: dune with profiles (dev, release, browser)
-- **JavaScript**: Node.js 20+ for tooling
-- **Rust**: Toolchain needed for rewatch
-
-## Common Tasks
-
-### Adding New Language Features
-
-1. Update parser in `compiler/syntax/`
-2. Update AST definitions in `compiler/ml/`
-3. Implement type checking in `compiler/ml/`
-4. Add Lambda IR handling in `compiler/core/lam_*`
-5. Implement JS generation in `compiler/core/js_*`
-6. Add comprehensive tests
-
-### Debugging Compilation Issues
-
-1. Identify which compilation phase has the issue
-2. Use appropriate debugging flags (`-dparsetree`, `-dtypedtree`)
-3. Check intermediate representations
-4. Add debug output in relevant compiler modules
-5. Verify with minimal test cases
-
-### Working with Lambda IR
-
-- Remember Lambda IR is the core optimization layer
-- All `lam_*.ml` files process this representation
-- Use `lam_print.ml` for debugging lambda expressions
-- Test both with and without optimization passes
-
-## Working on the Build System
-
-### Rewatch Architecture
-
-Rewatch is ReScript's build system written in Rust. It provides fast incremental builds, better error messages, and improved developer experience.
-
-#### Key Components
-
-```
-rewatch/src/
-├── build/              # Core build system logic
-│   ├── build_types.rs  # Core data structures (BuildState, Module, etc.)
-│   ├── compile.rs      # Compilation logic and bsc argument generation
-│   ├── parse.rs        # AST generation and parser argument handling
-│   ├── packages.rs     # Package discovery and dependency resolution
-│   ├── deps.rs         # Dependency analysis and module graph
-│   ├── clean.rs        # Build artifact cleanup
-│   └── logs.rs         # Build logging and error reporting
-├── cli.rs              # Command-line interface definitions
-├── config.rs           # rescript.json configuration parsing
-├── watcher.rs          # File watching and incremental builds
-└── main.rs             # Application entry point
-```
-
-#### Build System Flow
-
-1. **Initialization** (`build::initialize_build`)
-   - Parse `rescript.json` configuration
-   - Discover packages and dependencies
-   - Set up compiler information
-   - Create initial `BuildState`
-
-2. **AST Generation** (`build::parse`)
-   - Generate AST files using `bsc -bs-ast`
-   - Handle PPX transformations
-   - Process JSX
-
-3. **Dependency Analysis** (`build::deps`)
-   - Analyze module dependencies from AST files
-   - Build dependency graph
-   - Detect circular dependencies
-
-4. **Compilation** (`build::compile`)
-   - Generate `bsc` compiler arguments
-   - Compile modules in dependency order
-   - Handle warnings and errors
-   - Generate JavaScript output
-
-5. **Incremental Updates** (`watcher.rs`)
-   - Watch for file changes
-   - Determine dirty modules
-   - Recompile only affected modules
-
-### Development Guidelines
-
-#### Adding New Features
-
-1. **CLI Arguments**: Add to `cli.rs` in `BuildArgs` and `WatchArgs`
-2. **Configuration**: Extend `config.rs` for new `rescript.json` fields
-3. **Build Logic**: Modify appropriate `build/*.rs` modules
-4. **Thread Parameters**: Pass new parameters through the build system chain
-5. **Add Tests**: Include unit tests for new functionality
-
-#### Common Patterns
-
-- **Parameter Threading**: New CLI flags need to be passed through:
-  - `main.rs` → `build::build()` → `initialize_build()` → `BuildState`
-  - `main.rs` → `watcher::start()` → `async_watch()` → `initialize_build()`
-
-- **Configuration Precedence**: Command-line flags override `rescript.json` config
-- **Error Handling**: Use `anyhow::Result` for error propagation
-- **Logging**: Use `log::debug!` for development debugging
-
-#### Testing
-
-```bash
-# Run rewatch tests (from project root)
-cargo test --manifest-path rewatch/Cargo.toml
-
-# Test specific functionality
-cargo test --manifest-path rewatch/Cargo.toml config::tests::test_get_warning_args
-
-# Run clippy for code quality
-cargo clippy --manifest-path rewatch/Cargo.toml --all-targets --all-features
-
-# Check formatting
-cargo fmt --check --manifest-path rewatch/Cargo.toml
-
-# Build rewatch
-cargo build --manifest-path rewatch/Cargo.toml --release
-
-# Or use the Makefile shortcuts
-make rewatch          # Build rewatch
-make test-rewatch     # Run integration tests
-```
-
-**Note**: The rewatch project is located in the `rewatch/` directory with its own `Cargo.toml` file. All cargo commands should be run from the project root using the `--manifest-path rewatch/Cargo.toml` flag, as shown in the CI workflow.
-
-**Integration Tests**: The `make test-rewatch` command runs bash-based integration tests located in `rewatch/tests/suite.sh`. These tests use the `rewatch/testrepo/` directory as a test workspace with various package configurations to verify rewatch's behavior across different scenarios.
-
-**Running Individual Integration Tests**: You can run individual test scripts directly by setting up the environment manually:
-
-```bash
-cd rewatch/tests
-export REWATCH_EXECUTABLE="$(realpath ../target/debug/rescript)"
-eval $(node ./get_bin_paths.js)
-export RESCRIPT_BSC_EXE
-export RESCRIPT_RUNTIME
-source ./utils.sh
-bash ./watch/06-watch-missing-source-folder.sh
-```
-
-This is useful for iterating on a specific test without running the full suite.
-
-#### Debugging
-
-- **Build State**: Use `log::debug!` to inspect `BuildState` contents
-- **Compiler Args**: Check generated `bsc` arguments in `compile.rs`
-- **Dependencies**: Inspect module dependency graph in `deps.rs`
-- **File Watching**: Monitor file change events in `watcher.rs`
-
-#### OpenTelemetry Tracing
-
-Rewatch supports OpenTelemetry (OTEL) tracing for build and watch commands. To visualize traces locally, run a Jaeger all-in-one container:
-
-```bash
-docker run -d --name jaeger \
-  -p 4317:4317 -p 4318:4318 -p 16686:16686 \
-  jaegertracing/all-in-one
-```
-
-Then run rewatch with the OTLP endpoint set:
-
-```bash
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 cargo run --manifest-path rewatch/Cargo.toml -- build
-```
-
-Open http://localhost:16686 to view traces in the Jaeger UI.
-
-Note: Use `tracing::debug!` (not `log::debug!`) for events you want to appear in OTEL traces — they use separate logging systems.
-
-##### Honored environment variables
-
-Rewatch follows the OTEL spec for configuration — no rewatch-specific knobs exist.
-
-| Variable | Purpose |
-|---|---|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Base endpoint of the collector (e.g. `http://localhost:4318`). `/v1/traces` is appended for the trace exporter. Setting this (or `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`) is what enables telemetry — if neither is set, tracing is a no-op. |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Full trace endpoint used verbatim. Overrides the general endpoint for traces. |
-| `OTEL_EXPORTER_OTLP_HEADERS` | Extra headers on exporter requests (e.g. `authorization=Bearer xyz`). |
-| `OTEL_SERVICE_NAME` | Service name reported on spans. Defaults to `rewatch`. |
-| `OTEL_RESOURCE_ATTRIBUTES` | Comma-separated `key=value` pairs added as resource attributes (e.g. `deployment.environment=ci,host.name=$HOSTNAME`). |
-| `RUST_LOG` | Controls which span/event levels are captured (e.g. `RUST_LOG=info`, `RUST_LOG=rewatch=debug`). Defaults to `debug` when telemetry is enabled. |
-
-#### Running Rewatch Directly
-
-When running the rewatch binary directly (via `cargo run` or the compiled binary) during development, you need to set environment variables to point to the local compiler and runtime. Otherwise, rewatch will try to use the installed versions:
-
-```bash
-# Set the compiler executable path
-export RESCRIPT_BSC_EXE=$(realpath _build/default/compiler/bsc/rescript_compiler_main.exe)
-
-# Set the runtime path
-export RESCRIPT_RUNTIME=$(realpath packages/@rescript/runtime)
-
-# Now you can run rewatch directly
-cargo run --manifest-path rewatch/Cargo.toml -- build
-```
-
-Note that the dev binary is `./rewatch/target/debug/rescript`, not `rewatch`. The binary name is `rescript` because that's the package name in `Cargo.toml`.
-
-This is useful when testing rewatch changes against local compiler modifications without running a full `make` build cycle.
-
-Use `-v` for info-level logging or `-vv` for debug-level logging (e.g., to see which folders are being watched in watch mode):
-
-```bash
-cargo run --manifest-path rewatch/Cargo.toml -- -vv watch <folder>
-```
-
-#### Performance Considerations
-
-- **Incremental Builds**: Only recompile dirty modules
-- **Parallel Compilation**: Use `rayon` for parallel processing
-- **Memory Usage**: Be mindful of `BuildState` size in large projects
-- **File I/O**: Minimize file system operations
-
-#### Performance vs Code Quality Trade-offs
-
-When clippy suggests refactoring that could impact performance, consider the trade-offs:
-
-- **Parameter Structs vs Many Arguments**: While clippy prefers parameter structs for functions with many arguments, sometimes the added complexity isn't worth it. Use `#[allow(clippy::too_many_arguments)]` for functions that legitimately need many parameters and where a struct would add unnecessary complexity.
-
-- **Cloning vs Borrowing**: Sometimes cloning is necessary due to Rust's borrow checker rules. If the clone is:
-  - Small and one-time (e.g., `Vec<String>` with few elements)
-  - Necessary for correct ownership semantics
-  - Not in a hot path
-
-  Then accept the clone rather than over-engineering the solution.
-
-- **When to Optimize**: Profile before optimizing. Most "performance concerns" in build systems are negligible compared to actual compilation time.
-
-- **Avoid Unnecessary Type Conversions**: When threading parameters through multiple function calls, use consistent types (e.g., `String` throughout) rather than converting between `String` and `&str` at each boundary. This eliminates unnecessary allocations and conversions.
-
-### Common Tasks
-
-#### Adding New CLI Flags
-
-1. Add to `BuildArgs` and `WatchArgs` in `cli.rs`
-2. Update `From<BuildArgs> for WatchArgs` implementation
-3. Pass through `main.rs` to build functions
-4. Thread through build system to where it's needed
-5. Add unit tests for the new functionality
-
-#### Modifying Compiler Arguments
-
-1. Update `compiler_args()` in `build/compile.rs`
-2. Consider both parsing and compilation phases
-3. Handle precedence between CLI flags and config
-4. Test with various `rescript.json` configurations
-
-#### Working with Dependencies
-
-1. Use `packages.rs` for package discovery
-2. Update `deps.rs` for dependency analysis
-3. Handle both local and external dependencies
-4. Consider dev dependencies vs regular dependencies
-
-#### File Watching
-
-1. Modify `watcher.rs` for file change handling
-2. Update `AsyncWatchArgs` for new parameters
-3. Handle different file types (`.res`, `.resi`, etc.)
-4. Consider performance impact of watching many files
-
-## CI Gotchas
-
-- **`sleep` is fragile** — Prefer polling (e.g., `wait_for_file`) over fixed sleeps. CI runners are slower than local machines.
-- **`exit_watcher` is async** — It only signals the watcher to stop (removes the lock file), it doesn't wait for the process to exit. Avoid triggering config-change events before exiting, as the watcher may start a concurrent rebuild.
-- **`sed -i` differs across platforms** — macOS requires `sed -i '' ...`, Linux does not. Use the `replace` / `normalize_paths` helpers from `rewatch/tests/utils.sh` instead of raw `sed`.
+See [CONTRIBUTING.md](CONTRIBUTING.md#setup) for toolchain requirements and
+setup, and the area guides above for subsystem-specific debugging commands.
