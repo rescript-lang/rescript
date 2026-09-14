@@ -83,6 +83,10 @@ let () =
       let executable = Unix.realpath Sys.executable_name in
       ignore
         (Spawn.spawn ~prog:executable ~argv:[executable; "--sleep"; "2"] ());
+      let marker = argument 2 in
+      let pending = marker ^ ".pending" in
+      write_file pending (Unix.getpid () |> string_of_int);
+      Unix.rename pending marker;
       exit 0
     | "-format" -> (
       if Sys.win32 then set_binary_mode_out stdout true;
@@ -288,27 +292,44 @@ let process_cancellation_tests _context =
   check process_cancelled
     "single subprocess cancellation terminates the active process";
   if not Sys.win32 then
-    let descendant_pipe_polls = ref 0 in
-    let started = Unix.gettimeofday () in
-    let descendant_pipe_cancelled =
-      let exception Cancel in
-      try
-        Process.run_dependency_graph
-          [graph_work "descendant-pipe" []]
-          ~poll:(fun () ->
-            incr descendant_pipe_polls;
-            if !descendant_pipe_polls = 2 then raise Cancel)
-          ~next:(fun _ result ->
-            match result with
-            | None ->
-              Some (Process.task (process_job ["--exit-with-descendant"]))
-            | Some _ -> None);
-        false
-      with Cancel -> true
-    in
-    check
-      (descendant_pipe_cancelled && Unix.gettimeofday () -. started < 1.)
-      "an exited parent with descendant-held pipes remains cancellable"
+    Test_support.with_temp_dir "rewatch-descendant-pipe-" (fun root ->
+        let marker = Filename.concat root "parent-exiting" in
+        let parent_pid = ref None in
+        let parent_has_exited pid =
+          try
+            Unix.kill pid 0;
+            false
+          with Unix.Unix_error (Unix.ESRCH, _, _) -> true
+        in
+        let started = Unix.gettimeofday () in
+        let descendant_pipe_cancelled =
+          let exception Cancel in
+          try
+            Process.run_dependency_graph
+              [graph_work "descendant-pipe" []]
+              ~poll:(fun () ->
+                (match !parent_pid with
+                | None when Sys.file_exists marker ->
+                  parent_pid := Some (read_file marker |> int_of_string)
+                | None | Some _ -> ());
+                if
+                  match !parent_pid with
+                  | Some pid -> parent_has_exited pid
+                  | None -> false
+                then raise Cancel)
+              ~next:(fun _ result ->
+                match result with
+                | None ->
+                  Some
+                    (Process.task
+                       (process_job ["--exit-with-descendant"; marker]))
+                | Some _ -> None);
+            false
+          with Cancel -> true
+        in
+        check
+          (descendant_pipe_cancelled && Unix.gettimeofday () -. started < 1.)
+          "an exited parent with descendant-held pipes remains cancellable")
 
 let process_dependency_graph_tests _context =
   let graph_completion_order = ref [] in
