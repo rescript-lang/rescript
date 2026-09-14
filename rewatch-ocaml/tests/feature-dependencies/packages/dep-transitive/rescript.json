@@ -1,0 +1,8 @@
+{
+  "name": "dep-transitive",
+  "sources": [
+    "src",
+    {"dir": "native", "feature": "native"}
+  ],
+  "features": {"bundle": ["native"]}
+}

@@ -28,25 +28,56 @@ if ! wait_for_file "./src/Test.mjs" 20; then
 fi
 success "Initial build completed"
 
-sleep 2
+if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 30; then
+  error "Initial build did not settle"
+  cat rewatch.log
+  exit_watcher
+  exit 1
+fi
+completed_builds=$(grep -c "Finished .*compilation" rewatch.log 2>/dev/null || true)
+completed_builds=${completed_builds:-0}
+wait_for_next_build() {
+  completed_builds=$((completed_builds + 1))
+  wait_for_pattern_count rewatch.log "Finished .*compilation" \
+    "$completed_builds" 30
+}
+
+wait_for_tracked_outputs() {
+  local timeout
+  timeout=$(platform_timeout 30)
+  while [ "$timeout" -gt 0 ]; do
+    if [ -z "$(git ls-files --deleted -- '*.mjs')" ]; then
+      return 0
+    fi
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  return 1
+}
 
 # Change the suffix in rescript.json (same approach as suffix test)
 replace "s/.mjs/.res.mjs/g" rescript.json
+if ! wait_for_next_build; then
+  error "Configuration rebuild did not settle"
+  cat rewatch.log
+  replace "s/.res.mjs/.mjs/g" rescript.json
+  exit_watcher
+  exit 1
+fi
 
 # After a config change, the watcher does a full rebuild. However, a suffix
 # change alone may not recompile files (sources haven't changed). Trigger a
 # source change so the watcher compiles with the new suffix.
-sleep 3
 echo '// config-change-test' >> ./src/Test.res
 
-# Wait for the file with the new suffix to appear
-if wait_for_file "./src/Test.res.mjs" 20; then
+# Wait for the file with the new suffix and the complete source rebuild.
+if wait_for_file "./src/Test.res.mjs" 20 && wait_for_next_build; then
   success "Full rebuild triggered by rescript.json change (new suffix applied)"
 else
   error "No rebuild detected after rescript.json change"
   cat rewatch.log
   replace "s/.res.mjs/.mjs/g" rescript.json
-  git checkout -- ./src/Test.res
+  restore_tracked_files ./src/Test.res
   exit_watcher
   exit 1
 fi
@@ -58,26 +89,37 @@ else
   error "Watcher crashed after config change"
   cat rewatch.log
   replace "s/.res.mjs/.mjs/g" rescript.json
-  git checkout -- ./src/Test.res
+  restore_tracked_files ./src/Test.res
   exit 1
 fi
 
-# Restore rescript.json and source file
+# Restore only the configuration while the watcher is running. Mixing the
+# unrelated source cleanup into the same native event batch can make the batch
+# look like an incremental source edit and obscure the configuration transition
+# this test is intended to verify.
 replace "s/.res.mjs/.mjs/g" rescript.json
-git checkout -- ./src/Test.res
-
-# Wait for rebuild with restored suffix (old .res.mjs should go away)
-if wait_for_file_gone "./src/Test.res.mjs" 20; then
-  success "Rebuild after restore removed old suffix files"
+if wait_for_next_build && wait_for_tracked_outputs; then
+  success "Rebuild after configuration restore completed"
 else
-  # Clean up manually if the watcher didn't remove them
-  find . -name "*.res.mjs" -delete 2>/dev/null
+  error "Configuration restore did not settle or restore tracked outputs"
+  restore_tracked_files ./src/Test.res
+  exit_watcher
+  exit 1
 fi
 
-exit_watcher
+# This fixture verifies watcher reconfiguration. Stale output migration has its
+# own implementation-specific regression coverage.
+find . -name "*.res.mjs" -delete 2>/dev/null
 
+if ! exit_watcher; then
+  exit 1
+fi
+
+restore_tracked_files ./src/Test.res
 sleep 2
 rm -f rewatch.log
+
+normalize_belt_portal_import
 
 if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];
 then

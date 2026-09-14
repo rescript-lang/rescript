@@ -75,6 +75,7 @@ if (ounitTest) {
 if (mochaTest) {
   const beltPackageDir = path.join(projectDir, "packages/@rescript/belt");
   const beltTestDir = path.join(projectDir, "tests/belt_tests");
+  const commonjsTestDir = path.join(projectDir, "tests/commonjs_tests");
 
   // No need to clean beforehand, rewatch detects changes to the compiler binary
   // and rebuilds automatically in that case.
@@ -82,8 +83,14 @@ if (mochaTest) {
     cwd: compilerTestDir,
     stdio: "inherit",
   });
-  // The CommonJS tests clean their dependencies, including Belt. Force a full
-  // rebuild so repeated test runs don't rely on stale dependency artifacts.
+  // Cleaning a project may also remove its dependencies' build artifacts.
+  // Clean the CommonJS project before rebuilding Belt so the test consumes
+  // Belt's independently published CommonJS output instead of rebuilding it
+  // with the consumer's in-source package specification.
+  await execClean([], {
+    cwd: commonjsTestDir,
+    stdio: "inherit",
+  });
   await execClean([], {
     cwd: beltPackageDir,
     stdio: "inherit",
@@ -126,11 +133,6 @@ if (mochaTest) {
   });
 
   // CommonJS tests
-  const commonjsTestDir = path.join(projectDir, "tests/commonjs_tests");
-  await execClean([], {
-    cwd: commonjsTestDir,
-    stdio: "inherit",
-  });
   await execBuild([], {
     cwd: commonjsTestDir,
     stdio: "inherit",

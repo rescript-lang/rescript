@@ -10,7 +10,7 @@ git_diff_file_count=$(git diff --name-only ./ | wc -l | xargs)
 if [ $? -eq 0 ] && [ $git_diff_file_count -eq 1 ];
 then
     success "Single file formatted successfully"
-    git restore .
+    restore_tracked_files .
 else
     error "Error formatting single file"
     echo $error_output

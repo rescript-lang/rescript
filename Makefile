@@ -79,6 +79,8 @@ $(YARN_INSTALL_STAMP): $(YARN_INSTALL_SOURCES)
 
 REWATCH_SOURCES = $(shell find rewatch/src -name '*.rs') rewatch/Cargo.toml rewatch/Cargo.lock rewatch/rust-toolchain.toml
 RESCRIPT_EXE = $(BIN_DIR)/rescript.exe
+RESCRIPT_RUST_EXE := $(BIN_DIR)/rescript-rust.exe
+PACKAGED_RUST_EXE := $(RESCRIPT_RUST_EXE)
 ifdef CI
 	REWATCH_PROFILE := release
 	REWATCH_CARGO_FLAGS := --release
@@ -88,22 +90,22 @@ else
 endif
 REWATCH_TARGET := rewatch/target/$(REWATCH_PROFILE)/rescript$(PLATFORM_EXE_EXT)
 
-rewatch: $(RESCRIPT_EXE)
+rewatch: $(PACKAGED_RUST_EXE)
 
-$(RESCRIPT_EXE): $(REWATCH_TARGET)
+$(PACKAGED_RUST_EXE): $(REWATCH_TARGET)
 	$(call COPY_EXE,$<,$@)
 
 $(REWATCH_TARGET): $(REWATCH_SOURCES)
 	cargo build --manifest-path rewatch/Cargo.toml $(REWATCH_CARGO_FLAGS)
 
 clean-rewatch:
-	cargo clean --manifest-path rewatch/Cargo.toml && rm -rf rewatch/target && rm -f $(RESCRIPT_EXE)
+	cargo clean --manifest-path rewatch/Cargo.toml && rm -rf rewatch/target && rm -f $(PACKAGED_RUST_EXE)
 
 # Compiler
 
-COMPILER_SOURCE_DIRS := compiler tests analysis tools
-COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.dune' -o -name dune -o -name dune-project \))
-COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools
+COMPILER_SOURCE_DIRS := compiler tests analysis tools rewatch-ocaml
+COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.c' -o -name '*.h' -o -name '*.dune' -o -name dune -o -name dune-project \))
+COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools rescript
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
 
 compiler: $(COMPILER_EXES)
@@ -279,9 +281,13 @@ COVERAGE_TEST_ENV := BISECT_FILE=$(COVERAGE_BISECT_PREFIX) BISECT_SILENT=YES
 .PHONY: coverage-build
 coverage-build: | $(YARN_INSTALL_STAMP)
 	dune build --instrument-with bisect_ppx
-	@$(foreach bin,$(COMPILER_BIN_NAMES), \
+	@$(foreach bin,$(filter-out rescript,$(COMPILER_BIN_NAMES)), \
 		cp $(DUNE_BIN_DIR)/$(bin)$(PLATFORM_EXE_EXT) $(BIN_DIR)/$(bin).exe && \
 		chmod 755 $(BIN_DIR)/$(bin).exe;)
+ifneq ($(OS),Windows_NT)
+	cp _build/default/rewatch-ocaml/rescript_ocaml.exe $(RESCRIPT_EXE)
+	chmod 755 $(RESCRIPT_EXE)
+endif
 
 .PHONY: coverage-prepare
 coverage-prepare: clean-coverage coverage-build

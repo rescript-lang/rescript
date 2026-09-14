@@ -1,0 +1,13 @@
+{
+  "name": "rewatch-ocaml-gentype",
+  "sources": "src",
+  "dependencies": ["dep"],
+  "package-specs": {"module": "esmodule", "in-source": true},
+  "gentypeconfig": {
+    "module": "esmodule",
+    "moduleResolution": "bundler",
+    "generatedFileExtension": ".gen.ts",
+    "exportInterfaces": true,
+    "shims": {"Date": "DateShim"}
+  }
+}
