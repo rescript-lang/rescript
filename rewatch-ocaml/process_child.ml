@@ -359,6 +359,9 @@ let wait_for_running ~poll ?(defer_signals = true) notifier active =
 
 let signal_running (children : _ running list) =
   if children <> [] then (
+    let completion_ready (child : _ running) =
+      Option.is_some (Atomic.get child.child_wait.outcome)
+    in
     let root_identity_lost (child : _ running) =
       Option.is_some (Atomic.get child.child_wait.direct_outcome)
     in
@@ -369,9 +372,11 @@ let signal_running (children : _ running list) =
     let signal_all signal =
       List.fold_left
         (fun errors child ->
-          match signal_group signal child with
-          | Ok () -> errors
-          | Error message -> message :: errors)
+          if completion_ready child then errors
+          else
+            match signal_group signal child with
+            | Ok () -> errors
+            | Error message -> (child, message) :: errors)
         [] children
     in
     let graceful_signal = Platform.graceful_termination_signal in
@@ -393,13 +398,28 @@ let signal_running (children : _ running list) =
       if Platform.escalate_process_groups then signal_all Sys.sigkill
       else graceful_errors
     in
-    match List.rev termination_errors with
+    (* On Darwin, signalling a group containing only zombies returns EPERM.
+       Pipe closure and waiter publication happen on separate threads, so the
+       process result can become ready just after that harmless failure. A
+       bounded wait distinguishes this race from a live tree that the platform
+       genuinely could not terminate. *)
+    let completion_deadline = Unix.gettimeofday () +. 0.25 in
+    let rec unresolved errors =
+      let errors =
+        List.filter (fun (child, _) -> not (completion_ready child)) errors
+      in
+      if errors <> [] && Unix.gettimeofday () < completion_deadline then (
+        ignore (Unix.select [] [] [] 0.01);
+        unresolved errors)
+      else errors
+    in
+    match unresolved termination_errors |> List.rev with
     | [] -> ()
     | errors ->
       raise
         (Error
            ("Could not terminate a subprocess tree: "
-          ^ String.concat "; " errors)))
+           ^ String.concat "; " (List.map snd errors))))
 
 let release_after_completion (child : _ running) =
   ignore
