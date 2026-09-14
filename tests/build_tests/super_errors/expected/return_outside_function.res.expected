@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/return_outside_function.res[0m:[2m1:13-23[0m
+
+  [1;31m1[0m [2m│[0m let value = [1;31m%return(42)[0m
+  2 [2m│[0m 
+
+  Early return can only be used inside a function body.

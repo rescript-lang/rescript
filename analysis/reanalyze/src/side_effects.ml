@@ -28,7 +28,7 @@ let rec expr_no_side_effects (expr : Typedtree.expression) =
   | Texp_function _ -> true
   (* Loop control changes whether subsequent code in the enclosing loop runs,
      so it should not be treated as a removable pure expression. *)
-  | Texp_break | Texp_continue -> false
+  | Texp_return _ | Texp_break | Texp_continue -> false
   | Texp_apply {funct = {exp_desc = Texp_ident (path, _, _)}; args}
     when path |> path_is_whitelisted_for_side_effects ->
     args |> List.for_all (fun (_, eo) -> eo |> expr_opt_no_side_effects)

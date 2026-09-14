@@ -1,0 +1,55 @@
+References src/EarlyReturn.res 0:4
+[
+  {
+    "range": {
+      "end": { "character": 12, "line": 0 },
+      "start": { "character": 4, "line": 0 }
+    },
+    "uri": "file:///EarlyReturn.res"
+  },
+  {
+    "range": {
+      "end": { "character": 32, "line": 3 },
+      "start": { "character": 24, "line": 3 }
+    },
+    "uri": "file:///EarlyReturn.res"
+  },
+  {
+    "range": {
+      "end": { "character": 34, "line": 6 },
+      "start": { "character": 26, "line": 6 }
+    },
+    "uri": "file:///EarlyReturn.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 10 },
+      "start": { "character": 10, "line": 10 }
+    },
+    "uri": "file:///EarlyReturn.res"
+  }
+]
+
+Hover src/EarlyReturn.res 3:26
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
+
+Hover src/EarlyReturn.res 6:4
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nunit => int\n```"
+  }
+}
+
+Complete src/EarlyReturn.res 10:13
+posCursor:[10:13] posNoWhite:[10:12] Found expr:[9:17->12:1]
+posCursor:[10:13] posNoWhite:[10:12] Found expr:[10:2->10:19]
+posCursor:[10:13] posNoWhite:[10:12] Found expr:[10:10->10:18]
+Pexp_ident returned:[10:10->10:18]
+Completable: Cpath Value[returned]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[returned]
+Path returned
+[ { "detail": "int", "kind": 12, "label": "returned", "tags": [] } ]
+

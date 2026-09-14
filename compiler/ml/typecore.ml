@@ -77,6 +77,8 @@ type error =
   | Inlined_record_expected
   | Invalid_extension_constructor_payload
   | Not_an_extension_constructor
+  | Return_outside_function
+  | Invalid_return_payload
   | Break_outside_loop
   | Continue_outside_loop
   | Literal_overflow of string
@@ -145,6 +147,17 @@ let rp node =
 
 type recarg = Allowed | Required | Rejected
 
+(* A return is scoped to a source function body, never a parameter default
+   or module initializer (functors introduce backend function boundaries).
+   Keep the actual result variable: instantiating it here would allow different
+   return sites to infer unrelated result types. *)
+let return_type : type_expr option ref = ref None
+
+let with_return_type typ f =
+  let saved = !return_type in
+  return_type := typ;
+  Misc.try_finally f (fun () -> return_type := saved)
+
 let loop_depth = ref 0
 
 let with_depth depth_ref f =
@@ -165,6 +178,9 @@ let iter_expression f e =
   let rec expr e =
     f e;
     match e.pexp_desc with
+    | Pexp_extension
+        ({txt = "return"}, PStr [{pstr_desc = Pstr_eval (value, [])}]) ->
+      expr value
     | Pexp_extension _ (* we don't iterate under extension point *)
     | Pexp_ident _ | Pexp_constant _ ->
       ()
@@ -3124,8 +3140,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
   | Pexp_sequence (sexp1, sexp2) ->
     let exp1 = type_statement ~context:None env sexp1 in
     (match exp1.exp_desc with
-    | Texp_break | Texp_continue ->
-      (* Loop control should only reuse the nonreturning-statement warning when
+    | Texp_return _ | Texp_break | Texp_continue ->
+      (* Control flow should only reuse the nonreturning-statement warning when
          there is a following statement in the same block/sequence. *)
       Location.prerr_warning (final_subexpression sexp1).pexp_loc
         Warnings.Nonreturning_statement
@@ -3319,6 +3335,14 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     if separate then begin_def ();
     let cty = Typetexp.transl_simple_type env false sty in
     let ty = cty.ctyp_type in
+    (* An annotation on the function result must constrain early returns before
+       entering a GADT case. Otherwise the first case fixes a fresh result
+       variable to its concrete type instead of using the local equation for
+       the annotated abstract type. Do not propagate unrelated constraints. *)
+    (match !return_type with
+    | Some result when repr result == repr ty_expected ->
+      unify_exp_types ~context:None loc env result ty
+    | Some _ | None -> ());
     let arg, ty' =
       if separate then (
         end_def ();
@@ -3507,7 +3531,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     begin_def ();
     Ident.set_current_time ty.level;
     let context = Typetexp.narrow () in
-    let modl = !type_module env smodl in
+    let modl = with_return_type None (fun () -> !type_module env smodl) in
     let id, new_env = Env.enter_module name.txt modl.mod_type env in
     Ctype.init_def (Ident.current_time ());
     Typetexp.widen context;
@@ -3571,7 +3595,9 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       | {desc = Tvar _} -> raise (Error (loc, env, Cannot_infer_signature))
       | _ -> raise (Error (loc, env, Not_a_packed_module ty_expected))
     in
-    let modl, tl' = !type_package env m p nl in
+    let modl, tl' =
+      with_return_type None (fun () -> !type_package env m p nl)
+    in
     rue
       {
         exp_desc = Texp_pack modl;
@@ -3616,6 +3642,25 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           exp_env = env;
         }
     | _ -> raise (Error (loc, env, Invalid_extension_constructor_payload)))
+  | Pexp_extension ({txt = "return"}, payload) -> (
+    let result_type =
+      match !return_type with
+      | Some typ -> typ
+      | None -> raise (Error (loc, env, Return_outside_function))
+    in
+    match payload with
+    | PStr [{pstr_desc = Pstr_eval (value, [])}] ->
+      let value = type_expect ~context:None env value result_type in
+      re
+        {
+          exp_desc = Texp_return value;
+          exp_loc = loc;
+          exp_extra = [];
+          exp_type = instance env ty_expected;
+          exp_attributes = sexp.pexp_attributes;
+          exp_env = env;
+        }
+    | _ -> raise (Error (loc, env, Invalid_return_payload)))
   | Pexp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
   | Pexp_await _ -> (* should be handled earlier *) assert false
@@ -3952,13 +3997,25 @@ and type_function ~async loc attrs env ty_expected_
   in
   let typed_params, body_env, unpacks, default_lets =
     with_reset_control_flow (fun () ->
-        type_params [] env [] [] sparams_bindings ty_params)
+        with_return_type None (fun () ->
+            type_params [] env [] [] sparams_bindings ty_params))
   in
   let body_exp =
     with_reset_control_flow (fun () ->
         let sbody = wrap_unpacks sbody unpacks in
         let ty_res' = if has_gadts then correct_levels ty_res else ty_res in
-        let exp = type_expect ~context:None body_env sbody ty_res' in
+        let result_type =
+          if async then (
+            let payload = newvar () in
+            unify_exp_types ~context:None loc body_env ty_res'
+              (newconstr Predef.path_promise [payload]);
+            payload)
+          else ty_res'
+        in
+        let exp =
+          with_return_type (Some result_type) (fun () ->
+              type_expect ~context:None body_env sbody ty_res')
+        in
         {exp with exp_type = instance env ty_res'})
   in
   (if has_gadts then
@@ -4561,8 +4618,13 @@ and type_statement ~context env sexp =
   let exp = type_exp ~context env sexp in
   end_def ();
   let ty = expand_head env exp.exp_type and tv = newvar () in
-  if is_Tvar ty && ty.level > tv.level then
-    Location.prerr_warning loc Warnings.Nonreturning_statement;
+  if
+    is_Tvar ty && ty.level > tv.level
+    &&
+    match exp.exp_desc with
+    | Texp_return _ -> false
+    | _ -> true
+  then Location.prerr_warning loc Warnings.Nonreturning_statement;
   let expected_ty = instance_def Predef.type_unit in
   let context = type_clash_context_in_statement sexp in
   unify_exp ~context env exp expected_ty;
@@ -4673,24 +4735,40 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
         in
         (* Format.printf "@[%i %i, ty_res' =@ %a@]@." lev (get_current_level())
            Printtyp.raw_type_expr ty_res'; *)
-        let guard =
-          match pc_guard with
-          | None -> None
-          | Some scond ->
-            Some
-              (type_expect ~context:(Some IfCondition) ext_env
-                 (wrap_unpacks scond unpacks)
-                 Predef.type_bool)
+        let type_body () =
+          let guard =
+            match pc_guard with
+            | None -> None
+            | Some scond ->
+              Some
+                (type_expect ~context:(Some IfCondition) ext_env
+                   (wrap_unpacks scond unpacks)
+                   Predef.type_bool)
+          in
+          let exp =
+            type_expect
+              ~context:
+                (match call_context with
+                | `Switch -> Some SwitchReturn
+                | `Try -> Some TryReturn
+                | `LetUnwrap -> Some LetUnwrapReturn
+                | `Function -> None)
+              ext_env sexp ty_res'
+          in
+          (guard, exp)
         in
-        let exp =
-          type_expect
-            ~context:
-              (match call_context with
-              | `Switch -> Some SwitchReturn
-              | `Try -> Some TryReturn
-              | `LetUnwrap -> Some LetUnwrapReturn
-              | `Function -> None)
-            ext_env sexp ty_res'
+        let guard, exp =
+          match !return_type with
+          | Some result when contains_gadt env pc_lhs ->
+            (* Early results need the same local-equation isolation as the
+               implicit case result, including returns in guards. Reconcile
+               the copy outside the case so existential types cannot escape. *)
+            let local_result = correct_levels result in
+            let typed = with_return_type (Some local_result) type_body in
+            unify_exp_types ~context:None pc_rhs.pexp_loc env result
+              local_result;
+            typed
+          | Some _ | None -> type_body ()
         in
         {
           c_lhs = pat;
@@ -5292,6 +5370,9 @@ let report_error env loc ppf error =
       "Invalid [%%extension_constructor] payload, a constructor is expected."
   | Not_an_extension_constructor ->
     fprintf ppf "This constructor is not an extension constructor."
+  | Return_outside_function ->
+    fprintf ppf "Early return can only be used inside a function body."
+  | Invalid_return_payload -> fprintf ppf "Expected %%return(value)."
   | Break_outside_loop ->
     fprintf ppf "`break` can only be used directly inside a loop body."
   | Continue_outside_loop ->

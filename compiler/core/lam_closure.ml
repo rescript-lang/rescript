@@ -143,6 +143,7 @@ let free_variables (export_idents : Set_ident.t) (params : stats Map_ident.t)
       local_add v;
       iter sink_pos e1;
       iter sink_pos e2
+    | Lreturn e -> iter top e
     | Lassign (id, e) ->
       used top id;
       iter top e
