@@ -117,7 +117,7 @@ jobs:
         with:
           compiler: ${{ matrix.ocaml_compiler }}
           os: ${{ matrix.os }}
-          cache-prefix: opam-env-v8
+          cache-prefix: opam-env-v9
 
       - name: Compiler build state key
         id: compiler-build-state-key
