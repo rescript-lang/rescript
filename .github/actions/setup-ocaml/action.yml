@@ -104,6 +104,11 @@ runs:
       uses: ocaml/setup-ocaml@v3.8.0
       with:
         ocaml-compiler: ${{ inputs.compiler }}
+        # Use the HTTP repository to prevent intermittent CI setup failures:
+        # the Git-backed default can race with detached Git maintenance while
+        # OPAM scans it (https://github.com/ocaml/opam/issues/7031).
+        opam-repositories: |
+          default: https://opam.ocaml.org
         opam-pin: false
         cache: false
 
