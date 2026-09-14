@@ -55,7 +55,7 @@ type launch_ownership = {
   mutable stderr_capture: capture option;
   mutable process: Platform.process option;
   mutable child_wait: child_wait option;
-  mutable termination_failed: bool;
+  mutable termination_error: string option;
 }
 
 let empty_launch_ownership () =
@@ -69,7 +69,7 @@ let empty_launch_ownership () =
     stderr_capture = None;
     process = None;
     child_wait = None;
-    termination_failed = false;
+    termination_error = None;
   }
 
 type completion_notifier = {
@@ -233,10 +233,11 @@ let fail_launch ownership deferred_signals launch_error =
         | Some wait -> Option.is_some (Atomic.get wait.direct_outcome)
         | None -> false
       in
-      if not (Platform.signal_process_tree ~root_reaped process Sys.sigkill)
-      then ownership.termination_failed <- true;
+      (match Platform.signal_process_tree ~root_reaped process Sys.sigkill with
+      | Ok () -> ()
+      | Error message -> ownership.termination_error <- Some message);
       if
-        (not ownership.termination_failed)
+        Option.is_none ownership.termination_error
         && Option.is_none ownership.child_wait
       then try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
     ownership.process;
@@ -250,11 +251,12 @@ let fail_launch ownership deferred_signals launch_error =
       ownership.stdin;
     ];
   (match ownership.child_wait with
-  | Some wait when not ownership.termination_failed -> Thread.join wait.thread
+  | Some wait when Option.is_none ownership.termination_error ->
+    Thread.join wait.thread
   | Some _ -> ()
   | None
-    when (not ownership.termination_failed) && Option.is_some ownership.process
-    ->
+    when Option.is_none ownership.termination_error
+         && Option.is_some ownership.process ->
     Option.iter
       (fun (capture : capture) -> Thread.join capture.thread)
       ownership.stdout_capture;
@@ -275,13 +277,15 @@ let fail_launch ownership deferred_signals launch_error =
     with signal_exn -> Some signal_exn
   in
   let error =
-    if ownership.termination_failed then
-      Error "Could not terminate a partially launched subprocess tree"
-    else
+    match ownership.termination_error with
+    | Some message ->
+      Error
+        ("Could not terminate a partially launched subprocess tree: " ^ message)
+    | None -> (
       match (restore_error, release_error) with
       | Some signal_exn, _ -> signal_exn
       | None, Some release_exn -> release_exn
-      | None, None -> launch_error
+      | None, None -> launch_error)
   in
   raise error
 
@@ -364,11 +368,14 @@ let signal_running (children : _ running list) =
     in
     let signal_all signal =
       List.fold_left
-        (fun succeeded child -> signal_group signal child && succeeded)
-        true children
+        (fun errors child ->
+          match signal_group signal child with
+          | Ok () -> errors
+          | Error message -> message :: errors)
+        [] children
     in
     let graceful_signal = Platform.graceful_termination_signal in
-    let graceful_succeeded = signal_all graceful_signal in
+    let graceful_errors = signal_all graceful_signal in
     let deadline = Unix.gettimeofday () +. 0.25 in
     let rec wait_until_deadline children =
       let remaining =
@@ -382,11 +389,17 @@ let signal_running (children : _ running list) =
     ignore (wait_until_deadline children);
     (* Every original process group needs escalation because a direct child can
        exit while a PPX or helper in its group remains alive. *)
-    let escalation_succeeded =
-      if Platform.escalate_process_groups then signal_all Sys.sigkill else true
+    let termination_errors =
+      if Platform.escalate_process_groups then signal_all Sys.sigkill
+      else graceful_errors
     in
-    if not (graceful_succeeded && escalation_succeeded) then
-      raise (Error "Could not terminate a subprocess tree"))
+    match List.rev termination_errors with
+    | [] -> ()
+    | errors ->
+      raise
+        (Error
+           ("Could not terminate a subprocess tree: "
+          ^ String.concat "; " errors)))
 
 let release_after_completion (child : _ running) =
   ignore

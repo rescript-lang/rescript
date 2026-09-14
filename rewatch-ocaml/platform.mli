@@ -43,7 +43,8 @@ val create_capture_pipes :
   unit ->
   (Unix.file_descr * Unix.file_descr) * (Unix.file_descr * Unix.file_descr)
 
-val signal_process_tree : root_reaped:bool -> process -> int -> bool
+val signal_process_tree :
+  root_reaped:bool -> process -> int -> (unit, string) result
 val defer_termination_signals : unit -> unit -> unit
 val graceful_termination_signal : int
 val escalate_process_groups : bool
