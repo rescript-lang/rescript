@@ -36,6 +36,7 @@ let hit_variables (fv : Set_ident.t) (l : t) : bool =
   and hit (l : t) =
     match (l : t) with
     | Lvar id -> hit_var id
+    | Lreturn value -> hit value
     | Lassign (id, e) -> hit_var id || hit e
     | Lstaticcatch (e1, (_, _vars), e2) -> hit e1 || hit e2
     | Ltrywith (e1, _exn, e2) -> hit e1 || hit e2
@@ -73,6 +74,7 @@ let hit_variable (fv : Ident.t) (l : t) : bool =
   and hit (l : t) =
     match (l : t) with
     | Lvar id -> hit_var id
+    | Lreturn value -> hit value
     | Lassign (id, e) -> hit_var id || hit e
     | Lstaticcatch (e1, (_, _vars), e2) -> hit e1 || hit e2
     | Ltrywith (e1, _exn, e2) -> hit e1 || hit e2

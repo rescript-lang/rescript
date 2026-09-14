@@ -349,6 +349,10 @@ type t =
   | Ltrywith of t * Ident.t * t
   | Lifthenelse of t * t * t
   | Lsequence of t * t
+  | Lreturn of t
+      (** Evaluates its operand, then exits the nearest [Lfunction]. This is
+          effectful even for a pure operand. Moving it across a function
+          boundary (in particular beta reduction) is invalid. *)
   | Lbreak
   | Lcontinue
   | Lwhile of t * t
@@ -664,6 +668,7 @@ let letrec bindings body : t = Lletrec (bindings, body)
 let staticraise i args : t = Lstaticraise (i, args)
 let staticcatch body catch handler : t = Lstaticcatch (body, catch, handler)
 let try_ body id handler : t = Ltrywith (body, id, handler)
+let return value : t = Lreturn value
 let break : t = Lbreak
 let continue : t = Lcontinue
 let while_ cond body : t = Lwhile (cond, body)
@@ -727,6 +732,10 @@ let rec eq_approx (l1 : t) (l2 : t) =
   | Lsequence (a, b) -> (
     match l2 with
     | Lsequence (a0, b0) -> eq_approx a a0 && eq_approx b b0
+    | _ -> false)
+  | Lreturn v -> (
+    match l2 with
+    | Lreturn v2 -> eq_approx v v2
     | _ -> false)
   | Lbreak -> l2 = Lbreak
   | Lcontinue -> l2 = Lcontinue

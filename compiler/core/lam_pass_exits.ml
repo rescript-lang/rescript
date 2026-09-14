@@ -33,6 +33,7 @@ and no_bounded_variables (l : Lambda.t) =
   match l with
   | Lvar _ -> true
   | Lconst _ -> true
+  | Lreturn e -> no_bounded_variables e
   | Lassign (_id, e) -> no_bounded_variables e
   | Lapply {ap_func; ap_args; _} ->
     no_bounded_variables ap_func && no_list ap_args

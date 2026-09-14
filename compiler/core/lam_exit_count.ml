@@ -113,7 +113,7 @@ let count_helper (lam : Lambda.t) : collection option =
       | Lfor_await_of (_, l1, l2) ->
         count l1;
         count l2
-      | Lassign (_, l) -> count l
+      | Lreturn l | Lassign (_, l) -> count l
     and count_default sw =
       match sw.sw_failaction with
       | None -> ()
