@@ -29,7 +29,7 @@
 
 #### :rocket: New Feature
 
-- Add early return from function bodies, provisionally encoded as `%return(value)`, including loops and async functions. https://github.com/rescript-lang/rescript/pull/TBD
+- Add early return from function bodies, provisionally encoded as `%return(value)`, including loops and async functions. https://github.com/rescript-lang/rescript/pull/8656
 - Support UTF-16 surrogate-pair escapes such as `"\uD83D\uDE00"` in ordinary string literals. https://github.com/rescript-lang/rescript/pull/8606
 - Support dynamic imports of external bindings annotated with `@scope`; the generated import follows the complete property path. These imports were previously rejected. https://github.com/rescript-lang/rescript/pull/8582
 - Add `@res.hoistedFunction` for emitting nested module functions as flat JavaScript exports. https://github.com/rescript-lang/rescript/pull/8402
