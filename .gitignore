@@ -108,3 +108,9 @@ package.tgz
 
 # AI Agents
 .claude/settings.local.json
+
+# Kernel lock inode for suites sharing build artifacts; do not delete while in use.
+.rescript-test.lock
+
+# Bytecode from the Python build/test tooling in scripts/
+__pycache__/

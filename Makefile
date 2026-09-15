@@ -154,36 +154,47 @@ artifacts: lib
 
 # Tests
 
+# Lock before entering prerequisites: locking only the test recipe would leave
+# lib builds and suite cleanup racing. test-all's leaf targets acquire separately,
+# including under make -j. Recursive suites run serially because nested
+# clean/test goals must also remain ordered.
+LOCKED_TEST_TARGETS := test test-analysis test-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch
+$(LOCKED_TEST_TARGETS):
+	+python3 scripts/with_test_lock.py --label $@ -- $(MAKE) -j1 _locked-$@
+
+.PHONY: $(addprefix _locked-,$(LOCKED_TEST_TARGETS))
+
 bench: compiler
 	$(DUNE_BIN_DIR)/syntax_benchmarks
 
-test: lib
+_locked-test: lib
+	python3 scripts/test_test_lock.py
 	node scripts/test.js -all
 
-test-analysis: lib
+_locked-test-analysis: lib
 	make -C tests/analysis_tests clean test
 
-test-reanalyze: lib
+_locked-test-reanalyze: lib
 	make -C tests/analysis_tests/tests-reanalyze/deadcode test
 
 # Benchmark reanalyze on larger codebase (COPIES=N for more files)
 benchmark-reanalyze: lib
 	make -C tests/analysis_tests/tests-reanalyze/deadcode-benchmark benchmark COPIES=$(or $(COPIES),50)
 
-test-tools: lib
+_locked-test-tools: lib
 	make -C tests/tools_tests clean test
 
-test-syntax: compiler
+_locked-test-syntax: compiler
 	./scripts/test_syntax.sh
 
-test-syntax-roundtrip: compiler
+_locked-test-syntax-roundtrip: compiler
 	ROUNDTRIP_TEST=1 ./scripts/test_syntax.sh
 
-test-gentype: lib
+_locked-test-gentype: lib
 	make -C tests/gentype_tests/typescript-react-example clean test
 	make -C tests/gentype_tests/stdlib-no-shims clean test
 
-test-rewatch: lib
+_locked-test-rewatch: lib
 	./rewatch/tests/suite.sh $(RESCRIPT_EXE)
 
 test-all: test test-gentype test-analysis test-tools test-rewatch
