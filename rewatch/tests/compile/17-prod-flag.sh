@@ -17,7 +17,7 @@ then
   success "Build without --prod correctly failed with nonexistent dev-dependency"
 else
   error "Build without --prod should have failed with nonexistent dev-dependency"
-  git checkout -- rescript.json
+  restore_tracked_files rescript.json
   exit 1
 fi
 
@@ -27,12 +27,12 @@ then
   success "Build with --prod succeeded despite nonexistent dev-dependency"
 else
   error "Build with --prod should have succeeded by skipping dev-dependencies"
-  git checkout -- rescript.json
+  restore_tracked_files rescript.json
   exit 1
 fi
 
 rewatch clean &> /dev/null
-git checkout -- rescript.json
+restore_tracked_files rescript.json
 
 # Test 2: --prod should skip dev source files
 rewatch clean &> /dev/null

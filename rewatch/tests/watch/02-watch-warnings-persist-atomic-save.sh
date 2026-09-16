@@ -16,7 +16,8 @@ else
 fi
 
 wait_for_pattern() {
-  local file="$1"; local pattern="$2"; local timeout="${3:-30}"
+  local file="$1"; local pattern="$2"; local timeout
+  timeout=$(platform_timeout "${3:-30}")
   while [ "$timeout" -gt 0 ]; do
     grep -q "$pattern" "$file" 2>/dev/null && return 0
     sleep 1
@@ -26,7 +27,8 @@ wait_for_pattern() {
 }
 
 wait_for_changed_completed_log() {
-  local file="$1"; local baseline="$2"; local timeout="${3:-30}"
+  local file="$1"; local baseline="$2"; local timeout
+  timeout=$(platform_timeout "${3:-30}")
   while [ "$timeout" -gt 0 ]; do
     if [ -f "$file" ] && ! cmp -s "$file" "$baseline" && grep -q "#Done(" "$file" 2>/dev/null; then
       return 0

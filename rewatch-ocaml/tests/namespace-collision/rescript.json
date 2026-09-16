@@ -1,0 +1,5 @@
+{
+  "name": "namespace-collision-root",
+  "sources": "src",
+  "dependencies": ["namespace-one", "namespace-two"]
+}

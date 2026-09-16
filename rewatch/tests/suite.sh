@@ -11,11 +11,13 @@ fi
 
 REWATCH_EXECUTABLE="$(realpath "$1")"
 export REWATCH_EXECUTABLE
+TESTREPO_ROOT="$(realpath "$(dirname "$0")/../testrepo")"
 
 # Make sure we are in the right directory
 cd $(dirname $0)
 
-if [[ "$REWATCH_EXECUTABLE" == */cli/rescript.js ]]; then
+if [[ "$REWATCH_EXECUTABLE" == */cli/rescript.js ||
+  "$REWATCH_EXECUTABLE" == */cli/rescript-rust.js ]]; then
   echo "Using rewatch CLI script: $REWATCH_EXECUTABLE"
 else
   echo "Using rewatch executable: $REWATCH_EXECUTABLE"
@@ -38,9 +40,13 @@ fi
 success "No stale rescript processes found"
 
 # The published ReScript versions model dependency layouts; compilation uses
-# the repository-built compiler and runtime. See ../testrepo/README.md.
-bold "Yarn install"
-(cd ../testrepo && yarn)
+# the repository-built compiler and runtime. See ../testrepo/README.md. When
+# the caller selected an installed launcher, reinstalling after resolving it
+# could replace that package and delete the executable under test.
+if [[ "$REWATCH_EXECUTABLE" != "$TESTREPO_ROOT/node_modules/"* ]]; then
+  bold "Yarn install"
+  (cd ../testrepo && yarn)
+fi
 node ./add-belt-dependencies.mjs
 
 bold "Rescript version"
@@ -49,8 +55,7 @@ bold "Rescript version"
 # we need to reset the yarn.lock and package.json to the original state
 # so there is not diff in git. The CI will install new ReScript package
 bold "Reset package.json and yarn.lock"
-git checkout ../testrepo/yarn.lock &> /dev/null
-git checkout ../testrepo/package.json &> /dev/null
+restore_tracked_files ../testrepo/yarn.lock ../testrepo/package.json &> /dev/null
 success "Reset package.json and yarn.lock"
 
 bold "Make sure the testrepo is clean"
@@ -181,4 +186,6 @@ fi
 
 # Compiler-args tests
 ./compiler-args/01-compiler-args-cwd-invariant.sh &&
-./compiler-args/02-warnings-in-parser-and-compiler.sh
+./compiler-args/02-warnings-in-parser-and-compiler.sh &&
+
+(cd ../testrepo && normalize_belt_portal_import)
