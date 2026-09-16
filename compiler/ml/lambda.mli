@@ -363,6 +363,10 @@ type t = private
   | Ltrywith of t * Ident.t * t
   | Lifthenelse of t * t * t
   | Lsequence of t * t
+  | Lreturn of t
+      (** Evaluates its operand, then exits the nearest [Lfunction]. This is
+          effectful even for a pure operand. Moving it across a function
+          boundary (in particular beta reduction) is invalid. *)
   | Lbreak
   | Lcontinue
   | Lwhile of t * t
@@ -506,6 +510,7 @@ val if_ : t -> t -> t -> t
 
 val seq : t -> t -> t
 
+val return : t -> t
 val break : t
 
 val continue : t

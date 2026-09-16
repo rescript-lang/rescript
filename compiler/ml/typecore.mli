@@ -110,6 +110,8 @@ type error =
   | Inlined_record_expected
   | Invalid_extension_constructor_payload
   | Not_an_extension_constructor
+  | Return_outside_function
+  | Invalid_return_payload
   | Break_outside_loop
   | Continue_outside_loop
   | Literal_overflow of string

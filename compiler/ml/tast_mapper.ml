@@ -243,6 +243,7 @@ let expr sub x =
         (sub.expr sub exp1, sub.expr sub exp2, opt (sub.expr sub) expo)
     | Texp_sequence (exp1, exp2) ->
       Texp_sequence (sub.expr sub exp1, sub.expr sub exp2)
+    | Texp_return exp -> Texp_return (sub.expr sub exp)
     | Texp_break -> Texp_break
     | Texp_continue -> Texp_continue
     | Texp_while (exp1, exp2) ->

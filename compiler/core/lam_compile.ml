@@ -42,6 +42,7 @@ let rec source_loc_of_lam (lam : Lambda.t) =
     | None -> source_loc_of_lam body)
   | Lletrec (_, body) | Lsequence (_, body) -> source_loc_of_lam body
   | Lifthenelse (_, then_, _) -> source_loc_of_lam then_
+  | Lreturn body -> source_loc_of_lam body
   | Lstaticcatch (body, _, _) | Ltrywith (body, _, _) -> source_loc_of_lam body
   | Lstringswitch (_, cases, default) -> (
     match cases with
@@ -1190,19 +1191,22 @@ let compile output_prefix =
   *)
   and compile_while (predicate : Lambda.t) (body : Lambda.t)
       (lambda_cxt : Lam_compile_context.t) =
+    let direct_condition = Lam_analysis.contains_return predicate in
+    let predicate_cxt =
+      if direct_condition then
+        (* The condition will sit inside a new while(true) below. Any break or
+           continue targeting an outer loop must cross that new loop, just as
+           it must cross a switch, so force an explicit outer-loop label. *)
+        Lam_compile_context.enter_switch lambda_cxt
+      else lambda_cxt
+    in
     match
       compile_lambda
-        {lambda_cxt with continuation = NeedValue Not_tail}
+        {predicate_cxt with continuation = NeedValue Not_tail}
         predicate
     with
     | {value = None} -> assert false
     | {block; value = Some e} ->
-      (* st = NeedValue -- this should be optimized and never happen *)
-      let e =
-        match block with
-        | [] -> e
-        | _ -> E.of_block block ~e
-      in
       let loop_cxt, loop_frame = Lam_compile_context.push_loop lambda_cxt in
       let body_block =
         Js_output.output_as_block
@@ -1212,7 +1216,18 @@ let compile output_prefix =
       in
       (* The label stays absent for ordinary loops and is filled in lazily if a
          nested switch emits break/continue for this loop. *)
-      let block = [S.while_ ?label:loop_frame.label e body_block] in
+      let condition, body_block =
+        if direct_condition then
+          (* A helper function would capture the condition's return. Evaluate
+             it at the top of each iteration in the original function. *)
+          (E.true_, block @ [S.if_ (E.not e) [S.break_ ()]] @ body_block)
+        else
+          ( (match block with
+            | [] -> e
+            | _ -> E.of_block block ~e),
+            body_block )
+      in
+      let block = [S.while_ ?label:loop_frame.label condition body_block] in
       Js_output.output_of_block_and_expression lambda_cxt.continuation block
         E.unit
   (* all non-tail
@@ -1899,6 +1914,20 @@ let compile output_prefix =
     | Lswitch (switch_arg, sw) -> compile_switch switch_arg sw lambda_cxt
     | Lstaticraise (i, largs) -> compile_staticraise i largs lambda_cxt
     | Lstaticcatch _ -> compile_staticcatch cur_lam lambda_cxt
+    | Lreturn value ->
+      (* Preserve handlers around operand evaluation. Do not infer a self-tail
+         call here from a continuation that may have been reset by a loop or
+         an expression context. The dummy value satisfies NeedValue callers
+         on this nonreturning path. *)
+      let output =
+        compile_lambda
+          {
+            lambda_cxt with
+            continuation = EffectCall (Maybe_tail_is_return Tail_in_try);
+          }
+          value
+      in
+      {output with value = Some E.undefined; output_finished = True}
     | Lbreak -> (
       match lambda_cxt.loop_stack with
       | [] -> assert false
