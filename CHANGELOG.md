@@ -93,7 +93,7 @@
 
 #### :nail_care: Polish
 
-- Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation.
+- Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662
 - Omit unnecessary parentheses around coercions where the surrounding syntax already delimits the expression, while preserving required grouping. https://github.com/rescript-lang/rescript/pull/8614
 - Print external declarations in signatures and type errors with their processed attributes instead of the `"#rescript-external"` placeholder, and print inline constants using `@inline` syntax. https://github.com/rescript-lang/rescript/pull/8581
 - Improve diagnostics for dynamic imports of local values and attempts to use `import` as a first-class value. https://github.com/rescript-lang/rescript/pull/8582

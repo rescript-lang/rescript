@@ -491,7 +491,9 @@ const SOURCE_TRIGGERED_PPXES: &[(&[&str], &str)] = &[
     (&["rescript-schema-ppx", "sury-ppx"], "@schema"),
 ];
 
-fn include_ppx(flag: &str, contents: &str) -> bool {
+// Only skip PPXs whose transformations are known to require a source marker;
+// unknown PPXs must keep running because they may transform unmarked sources.
+fn should_run_ppx(flag: &str, contents: &str) -> bool {
     if flag.contains("bisect") {
         return std::env::var("BISECT_ENABLE").is_ok();
     }
@@ -510,10 +512,10 @@ fn filter_ppx_flags(
         flags
             .iter()
             .filter(|flag| match flag {
-                config::OneOrMore::Single(str) => include_ppx(str, contents),
-                config::OneOrMore::Multiple(str) => {
-                    str.first().is_some_and(|command| include_ppx(command, contents))
-                }
+                config::OneOrMore::Single(str) => should_run_ppx(str, contents),
+                config::OneOrMore::Multiple(str) => str
+                    .first()
+                    .is_some_and(|command| should_run_ppx(command, contents)),
             })
             .map(|x| x.to_owned())
             .collect::<Vec<OneOrMore<String>>>()
@@ -522,7 +524,7 @@ fn filter_ppx_flags(
 
 #[cfg(test)]
 mod tests {
-    use super::{filter_ppx_flags, include_ppx};
+    use super::{filter_ppx_flags, should_run_ppx};
     use crate::config::OneOrMore;
 
     #[test]
@@ -536,7 +538,7 @@ mod tests {
             "rescript-schema-ppx",
             "sury-ppx/bin",
         ] {
-            assert!(!include_ppx(command, "let value = 1"), "{command}");
+            assert!(!should_run_ppx(command, "let value = 1"), "{command}");
         }
 
         for (command, marker) in [
@@ -548,10 +550,10 @@ mod tests {
             ("rescript-schema-ppx", "@schema"),
             ("sury-ppx/bin", "@schema"),
         ] {
-            assert!(include_ppx(command, marker), "{command}");
+            assert!(should_run_ppx(command, marker), "{command}");
         }
 
-        assert!(include_ppx("unconditional-ppx", "let value = 1"));
+        assert!(should_run_ppx("unconditional-ppx", "let value = 1"));
     }
 
     #[test]
