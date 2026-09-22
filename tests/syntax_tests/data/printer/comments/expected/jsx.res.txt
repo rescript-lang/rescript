@@ -14,9 +14,9 @@ module Cite = {
 
 <A /* comment */ />
 
-<A>
+<A>{
   // Comment
-</A>
+}</A>
 
 <A
 // comment1
@@ -83,3 +83,9 @@ let x =
       b // after b
     }
   </>
+
+let standaloneMultilineComment =
+  <div>{
+    /* multiline
+     comment */
+  }</div>

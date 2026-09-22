@@ -81,3 +81,6 @@ let x = <>
   // before b
   {b} // after b
 </>
+
+let standaloneMultilineComment = <div>{/* multiline
+    comment */}</div>

@@ -2964,6 +2964,22 @@ and parse_jsx_children p : Parsetree.jsx_children =
         parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p
       in
       loop p (child :: children)
+    | Lbrace when Parser.peek2 p = Rbrace ->
+      let start_pos = Parser.start_pos p in
+      Parser.next p;
+      let comments_before = p.comments in
+      Parser.next p;
+      (* Only comment-containing containers are trivia. Keep bare {} as an
+         empty record, including when nested inside an expression container. *)
+      if p.comments != comments_before then loop p children
+      else
+        let loc = mk_loc start_pos (Parser.position p) in
+        let child =
+          parse_primary_expr
+            ~operand:(Ast_helper.Exp.record ~loc [] None)
+            ~no_call:true p
+        in
+        loop p (child :: children)
     | token when Grammar.is_jsx_child_start token ->
       let child =
         parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p

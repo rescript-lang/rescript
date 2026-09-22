@@ -59,12 +59,6 @@ let has_leading_line_comment tbl loc =
   | Some comment -> Comment.is_single_line_comment comment
   | None -> false
 
-let get_leading_line_comment_count tbl loc =
-  match Hashtbl.find_opt tbl.Comment_table.leading loc with
-  | Some comments ->
-    List.filter Comment.is_single_line_comment comments |> List.length
-  | None -> 0
-
 let has_trailing_single_line_comment tbl loc =
   match Hashtbl.find_opt tbl.Comment_table.trailing loc with
   | Some (comment :: _) -> Comment.is_single_line_comment comment
@@ -4629,6 +4623,23 @@ and print_jsx_unary_tag ~state tag_name props expr_loc cmt_tbl =
          closing_tag_doc;
        ])
 
+(* Standalone JSX comments are trivia, not expression children. Keep their
+   delimiters inside braces so future literal text cannot absorb them. *)
+and print_jsx_comment_container comments_tbl loc =
+  match Hashtbl.find_opt comments_tbl loc with
+  | None | Some [] -> Doc.nil
+  | Some comments ->
+    Hashtbl.remove comments_tbl loc;
+    let docs =
+      List.map
+        (fun comment ->
+          if Comment.is_single_line_comment comment then
+            Doc.concat [Doc.text ("//" ^ Comment.txt comment); Doc.break_parent]
+          else print_multiline_comment_content (Comment.txt comment))
+        comments
+    in
+    add_braces (Doc.join docs ~sep:Doc.hard_line)
+
 and print_jsx_container_tag ~state tag_name
     (opening_greater_than : Lexing.position) props
     (children : Parsetree.jsx_children)
@@ -4720,7 +4731,7 @@ and print_jsx_container_tag ~state tag_name
            [
              (if has_children then print_children children
               else if not has_comments_inside then Doc.soft_line
-              else print_comments_inside cmt_tbl pexp_loc);
+              else print_jsx_comment_container cmt_tbl.inside pexp_loc);
              closing_element_doc;
            ];
        ])
@@ -4748,7 +4759,10 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
     (Doc.concat
        [
          opening;
-         (let doc = print_jsx_children ~state children cmt_tbl in
+         (let doc =
+            if has_children then print_jsx_children ~state children cmt_tbl
+            else print_jsx_comment_container cmt_tbl.inside fragment_loc
+          in
           if line_sep = Doc.nil then doc
           else Doc.indent (Doc.concat [line_sep; doc]));
          (if has_children then line_sep else Doc.nil);
@@ -4789,9 +4803,16 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
     let loc = get_loc expr in
     match (expr.pexp_desc, Parens.jsx_child_expr expr) with
     | Pexp_jsx_element _, Nothing ->
-      print_comments
-        (print_expression_with_comments ~state expr cmt_tbl)
-        cmt_tbl loc
+      let leading = print_jsx_comment_container cmt_tbl.leading loc in
+      let trailing = print_jsx_comment_container cmt_tbl.trailing loc in
+      Doc.concat
+        [
+          leading;
+          (if leading = Doc.nil then Doc.nil else Doc.hard_line);
+          print_expression_with_comments ~state expr cmt_tbl;
+          (if trailing = Doc.nil then Doc.nil else Doc.hard_line);
+          trailing;
+        ]
     | _ ->
       let has_line_comment =
         has_leading_line_comment cmt_tbl loc
@@ -4850,15 +4871,13 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
           loc.loc_start.pos_lnum
         in
         let lines_between = start_line_y - end_line_x - 1 in
-        let leading_single_line_comments =
-          get_leading_line_comment_count cmt_tbl (get_loc y)
+        (* Comment containers add lines around their comments. Do not mistake
+           those generated lines for blank lines between children on reparse. *)
+        let has_between_comments =
+          has_leading_comments cmt_tbl (get_loc y)
+          || Hashtbl.mem cmt_tbl.trailing (get_loc x)
         in
-        (* If there are lines between the jsx elements, we preserve at least one line *)
-        if
-          (* Unless they are all comments *)
-          (* The edge case of comment followed by blank line is not caught here *)
-          lines_between > 0 && not (lines_between = leading_single_line_comments)
-        then
+        if lines_between > 0 && not has_between_comments then
           let doc = Doc.concat [print_expr x; sep; Doc.hard_line] in
           visit (Doc.concat [acc; doc]) rest
         else

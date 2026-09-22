@@ -165,6 +165,48 @@ let () =
             \  }</span>\n" );
         ])
     [20; 40; 80; 100; 120];
+  (* Comment containers must not alter the zero/one/many-child distinction,
+     including in the React and generic JSX transforms. *)
+  List.iter
+    (fun (source, without_comments) ->
+      let actual = parse source in
+      let expected = parse without_comments in
+      assert (expression_structure actual = expression_structure expected);
+      List.iter
+        (fun jsx_module ->
+          let rewrite result =
+            let parsetree =
+              Jsx_ppx.rewrite_implementation ~jsx_version:4 ~jsx_module
+                result.Res_driver.parsetree
+            in
+            expression_structure {result with parsetree}
+          in
+          assert (rewrite actual = rewrite expected))
+        ["React"; "CustomJsx"])
+    [
+      ("let x = <span>{/* empty */}</span>", "let x = <span></span>");
+      ("let x = <>{// empty\n}</>", "let x = <></>");
+      ("let x = <C>{/* empty */}</C>", "let x = <C></C>");
+      ("let x = <C>{/* before */}<A />{/* after */}</C>", "let x = <C><A /></C>");
+      ("let x = <><A />{/* between */}<B /></>", "let x = <><A /><B /></>");
+      ("let x = <span>{}</span>", "let x = <span>{{}}</span>");
+      ("let x = <span>/* before */{}</span>", "let x = <span>{{}}</span>");
+      ("let x = <span>{{/* record */}}</span>", "let x = <span>{{}}</span>");
+    ];
+  List.iter
+    (fun source ->
+      let result =
+        Res_driver.parse_implementation_from_source ~display_filename:filename
+          ~source
+      in
+      assert result.invalid)
+    ["let x = <div>{/* missing brace */</div>"; "let x = <div>{/* unterminated"];
+  assert (
+    format ~width:80 (parse "let x = <span>/* empty */</span>")
+    = "let x = <span>{/* empty */}</span>\n");
+  assert (
+    format ~width:80 (parse "let x = <>// empty\n</>")
+    = "let x =\n  <>{\n    // empty\n  }</>\n");
   print_endline "✅ JSX child migration preserves expressions and comments"
 
 module Outcome_printer_tests = struct
