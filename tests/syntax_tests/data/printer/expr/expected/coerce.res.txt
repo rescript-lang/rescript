@@ -54,7 +54,7 @@ let record = {field: (v :> b)}
 let conditional = condition ? (v :> b) : (w :> b)
 let block = {v :> b}
 let default = (~arg=v :> b) => arg
-let jsx = <Component value={v :> b}> {v :> b} </Component>
+let jsx = <Component value={v :> b}>{v :> b}</Component>
 
 // Comments must stay attached when parentheses disappear.
 foo(/* before */ v /* operand */ :> /* type */ b /* after */)

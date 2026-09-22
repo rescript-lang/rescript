@@ -23,6 +23,9 @@ val field_expr : Parsetree.expression -> kind
 val ternary_operand : Parsetree.expression -> kind
 
 val jsx_prop_expr : Parsetree.expression -> kind
+
+(* JSX children use braces for [Parenthesized]; [Nothing] is reserved for JSX
+   elements and expressions that already print as braced blocks. *)
 val jsx_child_expr : Parsetree.expression -> kind
 
 val binary_expr : Parsetree.expression -> kind

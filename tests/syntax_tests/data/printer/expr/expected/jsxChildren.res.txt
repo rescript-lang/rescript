@@ -1,0 +1,138 @@
+// Bare expression children migrate without changing their meaning.
+let x = <span>{hello}</span>
+let x = <span>{hello}</span>
+let x = <span>{user.name}</span>
+let x = <span>{"hello"}</span>
+let x = <span>{42}</span>
+let x = <span>{-42}</span>
+let x = <span>{true}</span>
+let x = <span>{None}</span>
+let x = <span>{Some(hello)}</span>
+let x = <span>{#hello}</span>
+let x = <span>{[hello, world]}</span>
+let x = <span>{list{hello, world}}</span>
+let x = <span>{/hello/g}</span>
+let x = <span>{`hello ${name}`}</span>
+let x = <span>{%extension(hello)}</span>
+let x = <span>{(hello, world)}</span>
+let x = <span>{(hello: element)}</span>
+let x = <span>{hello :> element}</span>
+let x = <span>{{name: hello}}</span>
+let x = <span>{{"name": hello}}</span>
+let x = <span>{{}}</span>
+let x = <span>{dict{"name": hello}}</span>
+let x = <span>{module(Hello)}</span>
+let x = <span>{module(Hello: Greeting)}</span>
+
+// Nested JSX stays unwrapped, including nested fragments.
+let x =
+  <span>
+    <Icon />
+    {hello}
+    {user.name}
+  </span>
+let x =
+  <span>
+    <>
+      {hello}
+      <Icon />
+    </>
+  </span>
+let x = <>{hello}</>
+let x = <>{hello}</>
+let x =
+  <>
+    {hello}
+    {world}
+  </>
+let x = <></>
+let x = <span></span>
+
+// Existing expression braces and block braces must not accumulate.
+let x = <span>{render(hello)}</span>
+let x = <span>{hello->render}</span>
+let x = <span>{condition ? hello : world}</span>
+let x =
+  <span>
+    {switch value {
+    | Some(child) => child
+    | None => fallback
+    }}
+  </span>
+let x =
+  <span>
+    {
+      let child = render(hello)
+      child
+    }
+  </span>
+let x =
+  <span>
+    {
+      log()
+      hello
+    }
+  </span>
+let x =
+  <span>
+    {
+      open Hello
+      child
+    }
+  </span>
+let x =
+  <span>
+    {
+      module Hello = Greeting
+      Hello.child
+    }
+  </span>
+let x =
+  <span>
+    {
+      exception Empty
+      hello
+    }
+  </span>
+let x = <span>{@label hello}</span>
+let x =
+  <span>
+    {<Icon />}
+  </span>
+
+// Narrow layouts should retain every comment and remain stable.
+let x = <span> /* before bare */{hello} /* after bare */</span>
+let x = <span>{/* inside */ hello /* still inside */}</span>
+let x = <>{/* inside fragment */ hello /* still in fragment */}</>
+let x =
+  <span>
+    {hello} /* between children */
+    {world}
+  </span>
+let x = <span>{{/* record field */ name: hello}}</span>
+let x =
+  <span>
+    // before bare child
+    {hello}
+    // after bare child
+  </span>
+let x =
+  <span>
+    {
+      hello // trailing inside braces
+    }
+  </span>
+let x =
+  <>
+    // before fragment child
+    {hello}
+  </>
+let x =
+  <span>
+    // before record
+    {{name: hello}} // after record
+  </span>
+let x =
+  <LongComponentName attribute="long attribute value">
+    {aLongChildIdentifierThatWillNeedToWrapAtNarrowWidths}
+  </LongComponentName>

@@ -17,4 +17,4 @@ module React = {
   external string: string => element = "%identity"
 }
 
-let x = <> {[React.string("")]} </>
+let x = <>{[React.string("")]}</>

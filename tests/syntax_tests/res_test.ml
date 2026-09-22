@@ -77,6 +77,74 @@ let () =
     [20; 40; 80; 100; 120];
   print_endline "✅ callback trailing comments are stable at multiple widths"
 
+let () =
+  let filename = Filename.concat data_dir "printer/expr/jsxChildren.res" in
+  let source = IO.read_file ~filename in
+  let parse source =
+    let result =
+      Res_driver.parse_implementation_from_source ~display_filename:filename
+        ~source
+    in
+    assert (not result.invalid);
+    result
+  in
+  let format ~width result =
+    Res_printer.print_implementation ~width result.Res_driver.parsetree
+      ~comments:result.comments
+  in
+  let comment_texts result =
+    List.map
+      (fun comment -> String.trim (Res_comment.txt comment))
+      result.Res_driver.comments
+  in
+  (* Compare the expression structure independently of formatting locations and
+     the braces attribute introduced by the migration. Keep other attributes. *)
+  let expression_structure result =
+    let mapper =
+      {
+        Ast_mapper.default_mapper with
+        attributes =
+          (fun mapper attrs ->
+            Ast_mapper.default_mapper.attributes mapper
+              (List.filter
+                 (fun (name, _) -> name.Location.txt <> "res.braces")
+                 attrs));
+      }
+    in
+    let ast = mapper.structure mapper result.Res_driver.parsetree in
+    Format.asprintf "%a" Pprintast.structure ast
+  in
+  List.iter
+    (fun width ->
+      let original = parse source in
+      let printed = format ~width original in
+      let reparsed = parse printed in
+      if expression_structure original <> expression_structure reparsed then
+        failwith
+          (Printf.sprintf "JSX child migration changed expressions at width %d"
+             width);
+      if comment_texts original <> comment_texts reparsed then
+        failwith
+          (Printf.sprintf "JSX child migration changed comments at width %d"
+             width);
+      let reprinted = format ~width reparsed in
+      if printed <> reprinted then
+        failwith
+          (Printf.sprintf
+             "JSX child migration is unstable at width %d.\n\
+              First pass:\n\
+              %s\n\
+              Second pass:\n\
+              %s"
+             width printed reprinted))
+    [20; 40; 80; 100; 120];
+  assert (
+    format ~width:80 (parse "let x = <span> hello </span>")
+    = "let x = <span>{hello}</span>\n");
+  assert (
+    format ~width:80 (parse "let x = <> hello </>") = "let x = <>{hello}</>\n");
+  print_endline "✅ JSX child migration preserves expressions and comments"
+
 module Outcome_printer_tests = struct
   let signature_to_outcome structure =
     Lazy.force Res_outcome_printer.setup;

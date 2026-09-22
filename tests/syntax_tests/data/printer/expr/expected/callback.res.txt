@@ -204,12 +204,12 @@ let f = () => {
         <ul>
           {users
           ->Array.map(user => {
-            <li key=user.id> {user.username->React.string} </li>
+            <li key=user.id>{user.username->React.string}</li>
           })
           ->React.array}
         </ul>
         {reloadableUser.last->AsyncData.isLoading ? "Loading next page"->React.string : React.null}
-        <button onClick={_ => setPage(x => x + 1)}> {"Load next page"->React.string} </button>
+        <button onClick={_ => setPage(x => x + 1)}>{"Load next page"->React.string}</button>
       </>
     }}
   </div>

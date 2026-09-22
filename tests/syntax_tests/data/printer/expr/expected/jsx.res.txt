@@ -31,7 +31,7 @@ let x =
     <B />
     {children}
   </A>
-let x = <A> {a} </A>
+let x = <A>{a}</A>
 let x =
   <A>
     {a}
@@ -123,7 +123,7 @@ let avatarSection =
       : React.nullElement}
   </>
 
-let x = <> </>
+let x = <></>
 
 let x =
   <div
@@ -209,8 +209,8 @@ let x =
 
 let x =
   <div>
-    ident
-    "constant"
+    {ident}
+    {"constant"}
     {
       let a = 1
       let b = 2
@@ -240,13 +240,13 @@ let x =
     | Error => ()
     }}
     {(a, b, c)}
-    Rgb(red, blue, green)
-    list{}
-    list{a, b}
-    list{a, b, ...x}
-    [a, b, c]
-    {x: 1, y: 2}
-    foo.bar
+    {Rgb(red, blue, green)}
+    {list{}}
+    {list{a, b}}
+    {list{a, b, ...x}}
+    {[a, b, c]}
+    {{x: 1, y: 2}}
+    {foo.bar}
     {user.name = "Steve"}
     {if true {
       ()
@@ -274,19 +274,19 @@ let x =
     }
     {assert(true)}
     {module(Foo)}
-    module(Foo)
+    {module(Foo)}
     {module(Foo: Bar)}
-    module(Foo: Bar)
+    {module(Foo: Bar)}
     {
       open React
       React.render()
     }
-    %raw("eval()")
-    {"x": 1, "y": 2}
+    {%raw("eval()")}
+    {{"x": 1, "y": 2}}
     {@attr ident}
   </div>
 
-let x = <MyComponent sidebar={<div> test </div>} nav={<Navbar />} />
+let x = <MyComponent sidebar={<div>{test}</div>} nav={<Navbar />} />
 
 <div>
   {possibleGradeValues
@@ -301,20 +301,20 @@ let x = <MyComponent sidebar={<div> test </div>} nav={<Navbar />} />
 </div>
 
 // https://github.com/rescript-lang/syntax/issues/113
-<div> {Console.log(a <= 10)} </div>
+<div>{Console.log(a <= 10)}</div>
 <div>
-  <div> {Console.log(a <= 10)} </div>
+  <div>{Console.log(a <= 10)}</div>
 </div>
 <div>
   <div onClick={_ => Console.log(a <= 10)}>
-    <div> {Console.log(a <= 10)} </div>
+    <div>{Console.log(a <= 10)}</div>
   </div>
 </div>
 
 module App = {
   @react.component
   let make = () => {
-    <> 1 </>
+    <>{1}</>
   }
 }
 
@@ -378,12 +378,12 @@ let x = {
 }
 
 let x = {
-  let _ = <div> {children} </div>
+  let _ = <div>{children}</div>
   msg->React.string
 }
 
 let x = {
-  let _ = <> {children} </>
+  let _ = <>{children}</>
   msg->React.string
 }
 
@@ -393,7 +393,7 @@ let x = {
 }
 
 let x = {
-  let _ = <C> {children} </C>
+  let _ = <C>{children}</C>
   msg->React.string
 }
 
@@ -464,42 +464,42 @@ let x =
 
 let moo =
   <div>
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
     // c1
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
     // c2
     // c3
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
 
     // c4
 
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
   </div>
 
 let fragmented_moo =
   <>
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
     // c1
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
     // c2
     // c3
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
 
     // c4
 
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
   </>
 
 let arrow_with_fragment = el => <>
   {t(nbsp ++ "(")}
-  el
+  {el}
   {t(")")}
 </>
 
 let arrow_with_container_tag = el =>
   <div>
     {t(nbsp ++ "(")}
-    el
+    {el}
     {t(")")}
   </div>
 

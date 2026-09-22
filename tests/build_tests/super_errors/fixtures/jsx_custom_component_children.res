@@ -18,8 +18,8 @@ module React = {
 module CustomComponent = {
   @react.component
   let make = (~children) => {
-    <> {children} </>
+    <>{children}</>
   }
 }
 
-let x = <CustomComponent> {1.} </CustomComponent>
+let x = <CustomComponent>{1.}</CustomComponent>
