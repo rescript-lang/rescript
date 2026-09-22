@@ -417,6 +417,7 @@ type node =
   | CoreType of Parsetree.core_type
   | ExprArgument of {expr: Parsetree.expression; loc: Location.t}
   | Expression of Parsetree.expression
+  | JsxChild of Parsetree.expression
   | ExprRecordRow of Longident.t Asttypes.loc * Parsetree.expression
   | ExtensionConstructor of Parsetree.extension_constructor
   | LabelDeclaration of Parsetree.label_declaration
@@ -448,7 +449,7 @@ let get_loc node =
     }
   | CoreType ct -> ct.ptyp_loc
   | ExprArgument {loc} -> loc
-  | Expression e -> (
+  | Expression e | JsxChild e -> (
     match e.pexp_attributes with
     | ({txt = "res.braces" | "ns.braces"; loc}, _) :: _ -> loc
     | _ -> e.pexp_loc)
@@ -640,6 +641,13 @@ and walk_node node tbl comments =
   | CoreType ct -> walk_core_type ct tbl comments
   | ExprArgument ea -> walk_expr_argument ea.expr ea.loc tbl comments
   | Expression e -> walk_expression e tbl comments
+  | JsxChild e ->
+    (* Braces may contain comments outside the expression itself. Keep those
+       on the child, rather than moving them into record fields or call args. *)
+    let leading, inside, trailing = partition_by_loc comments e.pexp_loc in
+    attach tbl.leading e.pexp_loc leading;
+    walk_expression e tbl inside;
+    attach tbl.trailing e.pexp_loc trailing
   | ExprRecordRow (ri, e) -> walk_expr_record_row (ri, e) tbl comments
   | ExtensionConstructor ec -> walk_extension_constructor ec tbl comments
   | LabelDeclaration ld -> walk_label_declaration ld tbl comments
@@ -1606,14 +1614,16 @@ and walk_expression expr t comments =
     let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
     let on_same_line, rest =
       match children with
-      | child :: _ ->
+      | ({pexp_desc = Pexp_jsx_element _} as child) :: _
+        when Res_parens.jsx_child_expr child = Nothing ->
         partition_adjacent_trailing_before_next_token_on_same_line opening_token
           (get_loc (Expression child))
           comments
+      | _ :: _ -> ([], comments)
       | [] -> partition_by_on_same_line opening_token comments
     in
     attach t.trailing opening_token on_same_line;
-    let xs = children |> List.map (fun e -> Expression e) in
+    let xs = children |> List.map (fun e -> JsxChild e) in
     walk_list xs t rest
   | Pexp_jsx_element
       (Jsx_unary_element
@@ -1703,15 +1713,17 @@ and walk_expression expr t comments =
         rest
     in
 
-    (* Only comments before the first child belong to '>'; comments inside a
-       braced child on the same line must stay with that child. *)
+    (* Comments preceding an expression child move inside its braces. Keep
+       comments preceding a nested JSX element on the opening tag. *)
     let after_opening_greater_than, rest =
       match children with
-      | child :: _ ->
+      | ({pexp_desc = Pexp_jsx_element _} as child) :: _
+        when Res_parens.jsx_child_expr child = Nothing ->
         partition_adjacent_trailing_before_next_token_on_same_line
           opening_greater_than_loc
           (get_loc (Expression child))
           rest
+      | _ :: _ -> ([], rest)
       | [] -> partition_by_on_same_line opening_greater_than_loc rest
     in
     attach t.trailing opening_greater_than_loc after_opening_greater_than;
@@ -1758,7 +1770,7 @@ and walk_expression expr t comments =
           (* if the closing tag is on the same line, attach comments to the opening tag *)
           attach t.leading closing_tag_loc comments_for_children)
     | children ->
-      let children_nodes = List.map (fun e -> Expression e) children in
+      let children_nodes = List.map (fun e -> JsxChild e) children in
 
       walk_list children_nodes t comments_for_children
     (* It is less likely that there are comments inside the closing tag, 
