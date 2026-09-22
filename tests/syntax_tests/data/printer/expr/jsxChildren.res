@@ -44,7 +44,13 @@ let x = <span> {open Hello; child} </span>
 let x = <span> {module Hello = Greeting; Hello.child} </span>
 let x = <span> {exception Empty; hello} </span>
 let x = <span> {@label hello} </span>
+let x = <span> {@label {let child = hello; child}} </span>
 let x = <span> {<Icon />} </span>
+let x = <span> /* before braced JSX */ {<Icon />} // after braced JSX
+</span>
+let x = <> // before braced fragment
+  {<> hello </>} // after braced fragment
+</>
 
 // Narrow layouts should retain every comment and remain stable.
 let x = <span> /* before bare */ hello /* after bare */ </span>
@@ -52,6 +58,33 @@ let x = <span> {/* inside */ hello /* still inside */} </span>
 let x = <> {/* inside fragment */ hello /* still in fragment */} </>
 let x = <span> hello /* between children */ world </span>
 let x = <span> {{/* record field */ name: hello}} </span>
+// Child comments and their line breaks stay inside expression braces.
+let x = <span> hello // bare child
+</span>
+let x = <> hello // bare fragment child
+</>
+let x = <span> user.name // field child
+</span>
+let x = <span> "hello" // string child
+</span>
+let x = <span> {name: hello} // record child
+</span>
+let x = <span> {hello} // already braced child
+</span>
+let x = <span> hello /* block comment */ // line comment
+</span>
+let x = <span> // before the child
+  hello // Contains */ and must remain a line comment.
+</span>
+let x = <> /* before record */ {name: hello} /* after record */ </>
+let x = <span>
+  // before a block
+  {let child = hello; child} // after a block
+</span>
+let x = <span>
+  // before a call
+  {render(hello)} // after a call
+</span>
 let x = <span>
   // before bare child
   hello

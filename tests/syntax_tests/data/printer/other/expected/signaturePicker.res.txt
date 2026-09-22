@@ -29,16 +29,16 @@ let make = () => {
     <select
       id="country"
       className="transition duration-150 ease-in-out sm:text-sm sm:leading-5 border-none font-bold text-2xl text-gray-600 bg-transparent"
-    >
-      {options
+    >{
+      options
       ->Belt.List.map(option =>
-        <option key={option->TimeSignature.toString}>
-          {option->TimeSignature.toString->string}
-        </option>
+        <option key={option->TimeSignature.toString}>{
+          option->TimeSignature.toString->string
+        }</option>
       )
       ->Belt.List.toArray
-      ->array}
-    </select>
+      ->array
+    }</select>
     <svg
       viewBox="0 0 24 24"
       width="24"
