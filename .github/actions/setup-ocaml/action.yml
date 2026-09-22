@@ -82,9 +82,9 @@ runs:
       run: |
         dependency_flags_key="${DEPENDENCY_FLAGS//--/}"
         dependency_flags_key="${dependency_flags_key// /_}"
-        key="$CACHE_PREFIX-$OS-3.8.0-$COMPILER-$dependency_flags_key-${{ hashFiles('*.opam') }}"
+        key="$CACHE_PREFIX-$OS-3.9.0-$COMPILER-$dependency_flags_key-${{ hashFiles('*.opam') }}"
         echo "value=${key//,/-}" >> "$GITHUB_OUTPUT"
-        echo "setup-version=3.8.0" >> "$GITHUB_OUTPUT"
+        echo "setup-version=3.9.0" >> "$GITHUB_OUTPUT"
 
     - name: Restore OPAM environment
       id: cache
@@ -101,14 +101,9 @@ runs:
 
     - name: Use OCaml ${{ inputs.compiler }}
       if: steps.cache.outputs.cache-hit != 'true'
-      uses: ocaml/setup-ocaml@v3.8.0
+      uses: ocaml/setup-ocaml@v3.9.0
       with:
         ocaml-compiler: ${{ inputs.compiler }}
-        # Use the HTTP repository to prevent intermittent CI setup failures:
-        # the Git-backed default can race with detached Git maintenance while
-        # OPAM scans it (https://github.com/ocaml/opam/issues/7031).
-        opam-repositories: |
-          default: https://opam.ocaml.org
         opam-pin: false
         cache: false
 
