@@ -105,3 +105,38 @@ let x = <span>
 let x = <LongComponentName attribute="long attribute value">
   aLongChildIdentifierThatWillNeedToWrapAtNarrowWidths
 </LongComponentName>
+
+let emptyWithBlockComment = <span>/* empty */</span>
+let emptyWithLineComment = <span>// contains */
+</span>
+let emptyFragmentWithComments = <>
+  // first
+  /* second */
+</>
+let nestedStandaloneComments = <div>
+  // before
+  <span /> // after
+  /* between */
+  <><Icon /> /* nested */</>
+  // last
+</div>
+let nestedInlineComments = <div>/* before */<Icon />/* after */</div>
+let explicitCommentContainers = <>
+  {/* before */}
+  <Icon />
+  {// contains */
+  }
+  <span />
+  {/* after */}
+</>
+let adjacentCommentContainers = <span>{/* one */}{/* two */}</span>
+let commentBeforeExpression = <span>{/* before */}{hello}{/* after */}</span>
+let emptyRecordChild = <span>{}</span>
+let wrappedEmptyRecordChild = <span>{{/* record */}}</span>
+
+let mixedStandaloneComments = <>
+  <Icon /> // before expression
+  {hello} // after expression
+  /* before element */<Icon />
+  {/* last block */}
+</>
