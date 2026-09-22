@@ -12,7 +12,6 @@ Compiled 2 modules
   unused value unusedValue.
 
 
-
 Package '@testrepo/deprecated-config' uses deprecated config (support will be removed in a future version):
   - field 'bs-dependencies' — use 'dependencies' instead
   - field 'bs-dev-dependencies' — use 'dev-dependencies' instead

@@ -8,7 +8,13 @@ const path = require("node:path");
 
 const minimumNodeVersion = "22.0.0";
 
-const target = `${process.platform}-${process.arch}`;
+// Windows on ARM runs the published x64 toolchain through the OS emulation
+// layer. Native ARM64 Node must therefore resolve the same package as x64 Node.
+const binaryArch =
+  process.platform === "win32" && process.arch === "arm64"
+    ? "x64"
+    : process.arch;
+const target = `${process.platform}-${binaryArch}`;
 
 const supportedPlatforms = [
   "darwin-arm64",
@@ -50,6 +56,7 @@ exports.rescript_editor_analysis_exe = path.join(
 );
 exports.rescript_tools_exe = path.join(binDir, "rescript-tools.exe");
 exports.rescript_exe = path.join(binDir, "rescript.exe");
+exports.rescript_rust_exe = path.join(binDir, "rescript-rust.exe");
 
 function checkNodeVersionSupported() {
   if (

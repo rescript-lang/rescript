@@ -2,7 +2,7 @@
 
 // @ts-check
 
-// Copy the rewatch exe built by cargo to the platform bin dir.
+// Copy the Rust rewatch reference built by Cargo to the platform bin dir.
 // The dune-built compiler binaries are copied by dune promotion instead
 // (see compiler/sync/dune).
 
@@ -28,7 +28,11 @@ const args = parseArgs({
 const shouldCopyRewatch = args.values.all || args.values.rewatch;
 
 if (shouldCopyRewatch) {
-  copyExe(path.join(rewatchDir, "target", "release"), "rescript");
+  copyExe(
+    path.join(rewatchDir, "target", "release"),
+    "rescript",
+    "rescript-rust",
+  );
 }
 
 /**

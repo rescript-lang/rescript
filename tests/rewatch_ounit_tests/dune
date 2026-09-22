@@ -1,0 +1,48 @@
+(rule
+ (target platform_windows.ml)
+ (action
+  (copy ../../rewatch-ocaml/platform_windows.ml %{target})))
+
+(executable
+ (name rewatch_bsc_test_proxy)
+ (modules rewatch_bsc_test_proxy)
+ (libraries unix))
+
+(test
+ (name rewatch_ounit_tests_main)
+ ; Several cases launch this executable to test concurrent subprocess capture.
+ ; A sequential outer runner avoids nesting them inside OUnit worker processes;
+ ; the production concurrency is still exercised by those cases themselves.
+ (action
+  (run %{test} -runner sequential))
+ (modules
+  rewatch_ounit_tests_main
+  build_attempt_tests
+  build_artifacts_tests
+  build_state_tests
+  clean_tests
+  cli_tests
+  compile_assets_tests
+  compiler_args_tests
+  compiler_info_tests
+  compiler_process_tests
+  compiler_scheduler_tests
+  config_tests
+  file_util_tests
+  format_tests
+  native_watcher_tests
+  output_tests
+  package_metadata_tests
+  platform_windows
+  project_context_tests
+  source_tests
+  test_support
+  toolchain_tests
+  traversal_coverage_tests
+  unit_tests
+  warning_state_tests
+  watcher_tests)
+ (foreign_stubs
+  (language c)
+  (names test_env_stubs))
+ (libraries rewatch_ocaml_lib ounit2))

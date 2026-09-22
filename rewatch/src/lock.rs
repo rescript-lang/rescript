@@ -73,29 +73,19 @@ pub enum Lock {
     Error(Error),
 }
 
-fn matching_process_name() -> Option<String> {
-    std::env::current_exe()
-        .ok()
-        .and_then(|path| path.file_name().map(|name| name.to_string_lossy().into_owned()))
-}
-
 fn pid_matches_current_process(to_check_pid: u32) -> bool {
     let system = System::new_all();
-    let current_process_name = matching_process_name();
 
     system.processes().iter().any(|(pid, process)| {
         if pid.as_u32() != to_check_pid {
             return false;
         }
 
-        match &current_process_name {
-            Some(current_process_name) => process
-                .exe()
-                .file_name()
-                .map(|name| name.to_string_lossy() == current_process_name.as_str())
-                .unwrap_or_else(|| process.name() == current_process_name.as_str()),
-            None => true,
-        }
+        process
+            .exe()
+            .file_name()
+            .map(|name| name.to_string_lossy().starts_with("rescript"))
+            .unwrap_or_else(|| process.name().starts_with("rescript"))
     })
 }
 

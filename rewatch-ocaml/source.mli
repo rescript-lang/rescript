@@ -1,0 +1,60 @@
+(** Discovery keeps filesystem files separate from compilable modules. Commands
+    such as formatting can operate on orphan interfaces and duplicate basenames,
+    while compilation uses [module_] after pairing and duplicate validation. *)
+
+type module_ = {
+  name: string;
+  implementation: string;
+  interface: string option;
+  is_dev: bool;
+}
+
+type discovery = {
+  modules: module_ list;
+  source_mtimes: (string * float) list;
+  inventory_files: string list;
+  present_files: string list;
+  gentype_dirs: string list;
+}
+
+exception Error of string
+
+type source_kind = Implementation | Interface
+
+val source_kind : string -> source_kind option
+val module_name : string -> string
+val namespace_members : entry:string option -> module_ list -> module_ list
+
+val duplicate_error :
+  display_root:string -> string -> string -> string -> string -> exn
+
+val resolve_active_features :
+  Config.t -> string list -> (string, unit) Hashtbl.t
+
+val active_sources :
+  Config.t -> prod:bool -> features:string list option -> Config.source list
+
+val discover_for_cleanup :
+  ?on_missing:(string -> unit) -> Config.t -> prod:bool -> string list
+
+val discover_files :
+  ?on_missing:(string -> unit) ->
+  Config.t ->
+  prod:bool ->
+  features:string list option ->
+  filter:Source_filter.t option ->
+  string list
+
+val discover_with_inventory :
+  ?on_orphan:(string -> unit) ->
+  ?on_missing:(string -> unit) ->
+  ?display_root:string ->
+  Config.t ->
+  prod:bool ->
+  features:string list option ->
+  filter:Source_filter.t option ->
+  discovery
+
+val ast_path : string -> string
+val compiler_basename : Config.t -> string -> string
+val compiler_asset_basename : Config.t -> string -> string

@@ -67,6 +67,8 @@ if ! wait_for_pattern_gone "$target" "added-by-test" 20; then
   exit 1
 fi
 
+normalize_belt_portal_import
+
 if git diff --exit-code ./
 then
   success "Adding and removing changes nothing"
