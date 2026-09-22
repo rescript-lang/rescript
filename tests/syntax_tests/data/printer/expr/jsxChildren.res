@@ -109,6 +109,13 @@ let x = <LongComponentName attribute="long attribute value">
 let emptyWithBlockComment = <span>/* empty */</span>
 let emptyWithLineComment = <span>// contains */
 </span>
+let emptyFragmentWithInlineBlockComment = <>/* inside */</>
+let emptyFragmentWithInlineLineComment = <>// inside
+</>
+let emptyFragmentWithMixedComments = <>/* first */ // second
+  /* third */
+</>
+let emptyFragmentWithOutsideComment = <>/* inside */</> // outside
 let emptyFragmentWithComments = <>
   // first
   /* second */
