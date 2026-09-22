@@ -4661,7 +4661,7 @@ and print_jsx_container_tag ~state tag_name
     Doc.concat
       [
         Doc.indent
-          (Doc.concat [Doc.line; print_jsx_children ~state children cmt_tbl]);
+          (Doc.concat [line_sep; print_jsx_children ~state children cmt_tbl]);
         line_sep;
       ]
   in
@@ -4752,7 +4752,7 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
        [
          opening;
          Doc.indent
-           (Doc.concat [Doc.line; print_jsx_children ~state children cmt_tbl]);
+           (Doc.concat [line_sep; print_jsx_children ~state children cmt_tbl]);
          (if has_children then line_sep else Doc.nil);
          closing;
        ])
@@ -4766,7 +4766,7 @@ and get_line_sep_for_jsx_children (children : Parsetree.jsx_children) =
            | _ -> false)
          children
   then Doc.hard_line
-  else Doc.line
+  else Doc.soft_line
 
 and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
   let open Parsetree in
@@ -4784,8 +4784,26 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
   in
   let sep = get_line_sep_for_jsx_children children in
   let print_expr (expr : Parsetree.expression) =
+    let wrapping = Parens.jsx_child_expr expr in
     let leading_line_comment_present =
       has_leading_line_comment cmt_tbl expr.pexp_loc
+    in
+    let trailing_line_comment_present =
+      has_trailing_single_line_comment cmt_tbl expr.pexp_loc
+    in
+    let leading_doc, trailing_doc =
+      match wrapping with
+      | Parenthesized ->
+        (* Consume outer comments before printing: identifiers and records can
+           share their location with a subnode that would otherwise take them. *)
+        let leading =
+          print_leading_comments Doc.nil cmt_tbl.leading expr.pexp_loc
+        in
+        let trailing =
+          print_trailing_comments Doc.nil cmt_tbl.trailing expr.pexp_loc
+        in
+        (leading, trailing)
+      | Nothing | Braced _ -> (Doc.nil, Doc.nil)
     in
     let expr_doc = print_expression_with_comments ~state expr cmt_tbl in
     let add_parens_or_braces expr_doc =
@@ -4793,12 +4811,17 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
       let inner_doc =
         if Parens.braced_expr expr then add_parens expr_doc else expr_doc
       in
-      if leading_line_comment_present then add_braces inner_doc
+      if
+        wrapping <> Parens.Parenthesized
+        && (leading_line_comment_present || trailing_line_comment_present)
+      then add_braces (Doc.concat [inner_doc; Doc.break_parent])
       else Doc.concat [Doc.lbrace; inner_doc; Doc.rbrace]
     in
-    match Parens.jsx_child_expr expr with
+    match wrapping with
     | Nothing -> print_comments expr_doc cmt_tbl (get_loc expr)
-    | Parenthesized -> add_parens_or_braces expr_doc
+    | Parenthesized ->
+      (* Comments outside a bare child stay outside its newly inserted braces. *)
+      Doc.concat [leading_doc; add_parens_or_braces expr_doc; trailing_doc]
     | Braced braces_loc ->
       print_comments (add_parens_or_braces expr_doc) cmt_tbl braces_loc
   in

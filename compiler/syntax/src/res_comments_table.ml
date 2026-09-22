@@ -1604,7 +1604,14 @@ and walk_expression expr t comments =
            jsx_fragment_closing = _closing_lesser_than;
          }) ->
     let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
-    let on_same_line, rest = partition_by_on_same_line opening_token comments in
+    let on_same_line, rest =
+      match children with
+      | child :: _ ->
+        partition_adjacent_trailing_before_next_token_on_same_line opening_token
+          (get_loc (Expression child))
+          comments
+      | [] -> partition_by_on_same_line opening_token comments
+    in
     attach t.trailing opening_token on_same_line;
     let xs = children |> List.map (fun e -> Expression e) in
     walk_list xs t rest
@@ -1696,9 +1703,16 @@ and walk_expression expr t comments =
         rest
     in
 
-    (* comments after '>' on the same line should be attached to '>' *)
+    (* Only comments before the first child belong to '>'; comments inside a
+       braced child on the same line must stay with that child. *)
     let after_opening_greater_than, rest =
-      partition_by_on_same_line opening_greater_than_loc rest
+      match children with
+      | child :: _ ->
+        partition_adjacent_trailing_before_next_token_on_same_line
+          opening_greater_than_loc
+          (get_loc (Expression child))
+          rest
+      | [] -> partition_by_on_same_line opening_greater_than_loc rest
     in
     attach t.trailing opening_greater_than_loc after_opening_greater_than;
 
