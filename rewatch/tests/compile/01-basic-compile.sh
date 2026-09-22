@@ -25,6 +25,11 @@ else
   exit 1
 fi
 
+# Rust clean rebuilds the portal dependency with the consumer's output settings,
+# while the OCaml implementation preserves its independently published output.
+# Normalize the equivalent import before comparing this shared fixture.
+normalize_belt_portal_import
+
 if git diff --exit-code ./;
 then
   success "Testrepo has no changes"

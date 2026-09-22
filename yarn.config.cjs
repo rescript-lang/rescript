@@ -51,27 +51,27 @@ async function enforceCompilerMeta({ Yarn }) {
     }
   }
 
-  const { compilerVersionFile } = await import("#dev/paths");
-  const versionFile = await fs.readFile(compilerVersionFile, "utf8");
   const versionPattern = /^let version = "(?<version>[^"]+)"$/m;
-
-  if (process.argv.includes("--fix")) {
-    await fs.writeFile(
-      compilerVersionFile,
-      versionFile.replace(
-        versionPattern,
-        `let version = "${EXPECTED_VERSION}"`,
-      ),
-    );
-  } else {
-    const versionMatch = versionFile.match(versionPattern);
-    const foundVersion = versionMatch?.groups?.version;
-    if (foundVersion !== EXPECTED_VERSION) {
-      Yarn.workspace().error(
-        `compiler/common/bs_version.ml file need to be fixed; expected ${EXPECTED_VERSION}, found ${foundVersion}.`,
+  async function enforceMlVersionFile(path) {
+    const content = await fs.readFile(path, "utf8");
+    if (process.argv.includes("--fix")) {
+      await fs.writeFile(
+        path,
+        content.replace(versionPattern, `let version = "${EXPECTED_VERSION}"`),
       );
+    } else {
+      const foundVersion = content.match(versionPattern)?.groups?.version;
+      if (foundVersion !== EXPECTED_VERSION) {
+        Yarn.workspace().error(
+          `${path} file need to be fixed; expected ${EXPECTED_VERSION}, found ${foundVersion}.`,
+        );
+      }
     }
   }
+
+  const { compilerVersionFile } = await import("#dev/paths");
+  await enforceMlVersionFile(compilerVersionFile);
+  await enforceMlVersionFile("rewatch-ocaml/rewatch_version.ml");
 
   const rewatchCargoFile = "rewatch/Cargo.toml";
   const rewatchCargoContent = await fs.readFile(rewatchCargoFile, "utf8");

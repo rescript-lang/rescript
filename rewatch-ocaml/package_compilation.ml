@@ -1,0 +1,205 @@
+let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
+    ~(prepared_package : Package_plan.compilation) ~(attempt : Build_attempt.t)
+    ~watch ~removed_module_names ~parse_dirty_modules =
+  let root = package.root in
+  let is_local = package.is_local in
+  let config = package.compile_config in
+  let build_state = prepared.build_state in
+  let compile_assets = prepared.compile_assets in
+  let build_dir = package.build_dir in
+  let ocaml_dir = package.ocaml_dir in
+  let modules = package.modules in
+  let cleanup =
+    match Build_attempt.find_cleanup_result attempt root with
+    | Some result -> result
+    | None ->
+      raise
+        (Project_context.Error ("Package cleanup was not prepared for " ^ root))
+  in
+  let module_is_dirty module_ (state : Build_state.module_) =
+    let global_key = Source.compiler_basename config module_.Source.name in
+    let module_name = Source.module_name module_.Source.implementation in
+    let source_artifact_is_pending path =
+      let source = Filename.concat root path in
+      match
+        (Compile_assets.ast compile_assets source, state.last_compiled_cmt)
+      with
+      | Some ast, Some cmt_time -> ast.modified >= cmt_time
+      | Some _, None -> true
+      | None, _ -> false
+    in
+    let outputs_exist =
+      List.for_all
+        (fun spec ->
+          Hashtbl.mem cleanup.present_public_outputs
+            (Build_artifacts.generated_js_path config
+               module_.Source.implementation spec))
+        config.package_specs
+    in
+    let raw_dependencies =
+      match Build_session.find_global_module attempt.session global_key with
+      | Some node -> node.raw_dependencies
+      | None ->
+        raise
+          (Project_context.Error
+             ("Build module was not prepared for " ^ global_key))
+    in
+    let dependency_is_newer dependency =
+      let dependency_state = Build_state.find_exn build_state dependency in
+      Build_state.dependency_tree_compiled_after
+        ~namespace_freshness:attempt.namespace_freshness build_state state
+        dependency_state
+    in
+    Hashtbl.mem parse_dirty_modules module_.Source.name
+    || Hashtbl.mem removed_module_names module_name
+    || List.exists source_artifact_is_pending
+         (module_.Source.implementation
+         :: Option.to_list module_.Source.interface)
+    || (not (Build_state.has_complete_compile_assets state))
+    || (not outputs_exist)
+    || List.exists (Hashtbl.mem removed_module_names) raw_dependencies
+    || List.exists
+         (fun dependency -> Hashtbl.mem attempt.removed_modules dependency)
+         raw_dependencies
+    || List.exists dependency_is_newer state.dependencies
+  in
+  if attempt.freshness_mode = Build_attempt.Initialize_freshness then
+    List.iter
+      (fun module_ ->
+        let key = Source.compiler_basename config module_.Source.name in
+        let state = Build_state.find_exn build_state key in
+        state.compile_dirty <-
+          state.compile_dirty || module_is_dirty module_ state)
+      modules;
+  if not (Build_attempt.has_parse_error attempt.parse_messages) then (
+    attempt.parsed <- attempt.parsed + Hashtbl.length parse_dirty_modules;
+    let compile_warning_paths = Hashtbl.create 8 in
+    let prepare_outputs module_ =
+      let path = module_.Source.implementation in
+      List.iter
+        (fun spec ->
+          let output = Build_artifacts.generated_js_path config path spec in
+          File_util.ensure_dir (Filename.dirname output))
+        config.package_specs
+    in
+    let compile_process module_ ~source_kind path =
+      Compiler_process.compile_job ~bsc:prepared.compiler_context.bsc_path
+        ~build_dir ~config
+        ~common_args:
+          (if module_.Source.is_dev then
+             prepared_package.development_common_args
+           else prepared_package.regular_common_args)
+        module_ ~source_kind path
+    in
+    let record_published_outputs ~source_kind path =
+      match source_kind with
+      | Source.Interface -> ()
+      | Source.Implementation ->
+        List.iter
+          (fun spec ->
+            let output = Build_artifacts.generated_js_path config path spec in
+            [output; output ^ ".map"]
+            |> List.iter (fun path ->
+                if File_util.is_regular_file path then
+                  Hashtbl.replace cleanup.present_public_outputs path ()))
+          config.package_specs
+    in
+    let candidates =
+      List.filter_map
+        (fun module_ ->
+          let key = Source.compiler_basename config module_.Source.name in
+          let state = Build_state.find_exn build_state key in
+          if Hashtbl.mem attempt.blocked_modules key then None
+          else
+            let cmi_path =
+              Filename.concat ocaml_dir
+                (Source.compiler_asset_basename config
+                   module_.Source.implementation
+                ^ ".cmi")
+            in
+            let warning_paths =
+              module_.Source.implementation
+              :: Option.to_list module_.Source.interface
+              |> List.map (Filename.concat config.root)
+            in
+            let make () =
+              Compiler_scheduler.create ~key ~dependencies:state.dependencies
+                ~source:module_ ~state ~cmi_path
+                ~prepare:(fun () -> prepare_outputs module_)
+                ~compile:(fun ~source_kind path ->
+                  compile_process module_ ~source_kind path)
+                ~publish:(fun ~source_kind path result ->
+                  Compiler_process.publish ~build_dir ~ocaml_dir ~is_local
+                    ~config ~source_kind path result)
+                ~record_published_outputs
+                ~post_build:(Compiler_process.post_build_tasks config)
+                ~package_root:config.root ~is_local
+                ~mark_warning:(fun _path ->
+                  module_.Source.implementation
+                  :: Option.to_list module_.Source.interface
+                  |> List.iter (fun path ->
+                      Hashtbl.replace compile_warning_paths
+                        (Build_artifacts.published_ast_path ~ocaml_dir path)
+                        ()))
+            in
+            Some (Compiler_scheduler.candidate ~key ~state ~warning_paths ~make))
+        modules
+    in
+    Config.namespace_compiler_name config.namespace
+    |> Option.iter (fun compiler_name ->
+        let namespace_map =
+          Build_session.find_namespace_map attempt.session
+            (Module_graph.namespace_map_key root)
+        in
+        let namespace_state =
+          Build_state.find_exn build_state namespace_map.key
+        in
+        let package_dirty =
+          List.exists Compiler_scheduler.candidate_requires_compile candidates
+        in
+        if
+          package_dirty || namespace_state.compile_dirty
+          || attempt.freshness_mode = Build_attempt.Initialize_freshness
+        then
+          Compiler_process.namespace_task
+            ~bsc:prepared.compiler_context.bsc_path
+            ~runtime:prepared.compiler_context.runtime_path ~build_dir
+            ~ocaml_dir
+            ~entry:(Config.namespace_entry config.namespace)
+            ~package_dirty ~force:namespace_state.compile_dirty compiler_name
+            modules
+          |> Option.iter (fun namespace_task ->
+              namespace_state.compile_dirty <- true;
+              let cmi_path =
+                Filename.concat ocaml_dir (compiler_name ^ ".cmi")
+              in
+              let finish result =
+                if not (Process.succeeded result) then
+                  ignore (namespace_task.Compiler_scheduler.publish result)
+                else
+                  match
+                    Compiler_scheduler.capture_publication (fun () ->
+                        namespace_task.Compiler_scheduler.publish result)
+                  with
+                  | Compiler_scheduler.Published {cmi_change; _} ->
+                    Build_state.record_published_cmi build_state ~compile_assets
+                      namespace_state ~path:cmi_path cmi_change;
+                    let cmt_path =
+                      Filename.concat ocaml_dir (compiler_name ^ ".cmt")
+                    in
+                    Build_state.record_successful_compile ~compile_assets
+                      namespace_state ~cmt_path
+                  | Compiler_scheduler.Failed_after_cmi_publication
+                      {error; cmi_change} ->
+                    Build_state.record_published_cmi build_state ~compile_assets
+                      namespace_state ~path:cmi_path cmi_change;
+                    raise error
+              in
+              Build_attempt.add_namespace_job attempt
+                Build_attempt.{job = namespace_task.job; finish}));
+    Build_attempt.add_compile_candidates attempt candidates;
+    Build_attempt.register_cleanup attempt (fun () ->
+        if not watch then
+          Hashtbl.iter
+            (fun path () -> File_util.remove_file path)
+            compile_warning_paths))

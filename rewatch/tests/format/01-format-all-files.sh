@@ -5,6 +5,7 @@ cd ../../testrepo
 
 bold "Test: It should format all files"
 
+normalize_belt_portal_import
 git diff --name-only ./
 error_output=$("$REWATCH_EXECUTABLE" format)
 git_diff_file_count=$(git diff --name-only ./ | wc -l | xargs)

@@ -46,6 +46,7 @@ exports.rescript_editor_analysis_exe = path.join(
 );
 exports.rescript_tools_exe = path.join(binDir, "rescript-tools.exe");
 exports.rescript_exe = path.join(binDir, "rescript.exe");
+exports.rescript_rust_exe = path.join(binDir, "rescript-rust.exe");
 
 function checkNodeVersionSupported() {
   if (
