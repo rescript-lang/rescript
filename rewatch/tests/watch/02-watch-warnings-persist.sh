@@ -15,29 +15,6 @@ else
   exit 1
 fi
 
-# Wait until a pattern appears in a file (with timeout in seconds, default 30)
-wait_for_pattern() {
-  local file="$1"; local pattern="$2"; local timeout="${3:-30}"
-  while [ "$timeout" -gt 0 ]; do
-    grep -q "$pattern" "$file" 2>/dev/null && return 0
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
-}
-
-# Wait until a pattern appears N times in a file (with timeout in seconds, default 30)
-wait_for_pattern_count() {
-  local file="$1"; local pattern="$2"; local count="$3"; local timeout="${4:-30}"
-  while [ "$timeout" -gt 0 ]; do
-    local current_count=$(grep -c "$pattern" "$file" 2>/dev/null || echo "0")
-    [ "$current_count" -ge "$count" ] && return 0
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
-}
-
 # Start watcher and capture stderr (where warnings are printed)
 rewatch_bg watch > /dev/null 2> rewatch-stderr.log &
 
@@ -67,13 +44,32 @@ warning_count=$(grep -c "unused value unusedValue" rewatch-stderr.log)
 success "Warning from ModuleA.res persists after recompiling B.res (count: $warning_count)"
 
 # Restore B.res
+warning_count_before_restore=$(grep -c "unused value unusedValue" rewatch-stderr.log 2>/dev/null || true)
+warning_count_before_restore=${warning_count_before_restore:-0}
 printf 'let world = () => Console.log("world")\n' > ./packages/watch-warnings/src/B.res
 
-sleep 1
+if ! wait_for_pattern_count rewatch-stderr.log "unused value unusedValue" \
+  "$((warning_count_before_restore + 1))" 20; then
+  error "Watcher did not finish rebuilding after restoring B.res"
+  cat rewatch-stderr.log
+  exit_watcher
+  exit 1
+fi
 
 exit_watcher
 
-sleep 2
+# A new invocation has no retained in-memory warning state, so the watcher must
+# leave a freshness marker that causes the warning-producing module to run.
+next_output=$(rewatch build 2>&1)
+next_status=$?
+if [ "$next_status" -eq 0 ] \
+  && printf '%s\n' "$next_output" | grep -q "unused value unusedValue"; then
+  success "Warning persists after watcher shutdown"
+else
+  error "Warning was lost after watcher shutdown"
+  printf '%s\n' "$next_output"
+  exit 1
+fi
 
 # Clean up log file
 rm -f rewatch-stderr.log

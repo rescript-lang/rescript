@@ -32,6 +32,16 @@ if ! wait_for_file "$target" 20; then
   exit 1
 fi
 
+# The root output must not become observable before an output it imports.
+# Otherwise consumers can load a superficially completed but unusable build.
+dependency_target=./packages/dep01/src/Dep01.mjs
+if [ ! -f "$dependency_target" ]; then
+  error "Dependency output was not published with the root output: $dependency_target"
+  tail -n 200 rewatch.log || true
+  exit_watcher
+  exit 1
+fi
+
 if node ./packages/main/src/Main.mjs | grep 'added-by-test' &> /dev/null;
 then
   success "Output is correct"
@@ -41,11 +51,21 @@ else
   exit 1
 fi
 
-sleep 1
+if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 30; then
+  error "Initial build did not settle"
+  tail -n 200 rewatch.log || true
+  exit_watcher
+  exit 1
+fi
 
 replace '/Console.log("added-by-test")/d' ./packages/main/src/Main.res;
 
-sleep 5
+if ! wait_for_pattern_gone "$target" "added-by-test" 20; then
+  error "Watcher did not rebuild after restoring the source"
+  tail -n 200 rewatch.log || true
+  exit_watcher
+  exit 1
+fi
 
 if git diff --exit-code ./
 then

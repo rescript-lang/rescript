@@ -28,7 +28,12 @@ if ! wait_for_file "./src/Test.mjs" 20; then
 fi
 success "Initial build completed"
 
-sleep 1
+if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 30; then
+  error "Initial build did not settle"
+  cat rewatch.log
+  exit_watcher
+  exit 1
+fi
 
 # Create a new file in the source directory
 cat > ./src/NewWatchTestFile.res << 'EOF'
@@ -55,16 +60,22 @@ else
   exit 1
 fi
 
-# Clean up the new file
+# Clean up the new file. Wait for the resulting rebuild so it cannot race with
+# later tests; stale-output deletion is not part of this new-file watcher test.
+completed_builds=$(grep -c "Finished .*compilation" rewatch.log || true)
 rm -f ./src/NewWatchTestFile.res
 
-# Wait for the compiled output to be removed (full rebuild detects removal)
-sleep 5
+if ! wait_for_pattern_count rewatch.log "Finished .*compilation" "$((completed_builds + 1))" 30; then
+  error "Watcher did not finish rebuilding after deleting the source"
+  cat rewatch.log
+  exit_watcher
+  exit 1
+fi
+
 rm -f ./src/NewWatchTestFile.mjs
 
 exit_watcher
 
-sleep 2
 rm -f rewatch.log
 
 if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];

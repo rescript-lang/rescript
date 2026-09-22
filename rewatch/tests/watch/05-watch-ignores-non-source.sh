@@ -77,7 +77,6 @@ rm -rf ./random-dir ./another-dir
 
 exit_watcher
 
-sleep 2
 rm -f rewatch.log
 
 if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];
