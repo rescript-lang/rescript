@@ -483,20 +483,24 @@ fn generate_ast(
     result
 }
 
-fn include_ppx(flag: &str, contents: &str) -> bool {
+const SOURCE_TRIGGERED_PPXES: &[(&[&str], &str)] = &[
+    (&["graphql-ppx", "graphql_ppx"], "%graphql"),
+    (&["spice"], "@spice"),
+    (&["rescript-relay"], "%relay"),
+    (&["re-formality"], "%form"),
+    (&["rescript-schema-ppx", "sury-ppx"], "@schema"),
+];
+
+// Only skip PPXs whose transformations are known to require a source marker;
+// unknown PPXs must keep running because they may transform unmarked sources.
+fn should_run_ppx(flag: &str, contents: &str) -> bool {
     if flag.contains("bisect") {
         return std::env::var("BISECT_ENABLE").is_ok();
     }
 
-    if ((flag.contains("graphql-ppx") || flag.contains("graphql_ppx")) && !contents.contains("%graphql"))
-        || (flag.contains("spice") && !contents.contains("@spice"))
-        || (flag.contains("rescript-relay") && !contents.contains("%relay"))
-        || (flag.contains("re-formality") && !contents.contains("%form"))
-    {
-        return false;
-    };
-
-    true
+    SOURCE_TRIGGERED_PPXES
+        .iter()
+        .all(|(names, marker)| !names.iter().any(|name| flag.contains(name)) || contents.contains(marker))
 }
 
 fn filter_ppx_flags(
@@ -508,10 +512,62 @@ fn filter_ppx_flags(
         flags
             .iter()
             .filter(|flag| match flag {
-                config::OneOrMore::Single(str) => include_ppx(str, contents),
-                config::OneOrMore::Multiple(str) => include_ppx(str.first().unwrap(), contents),
+                config::OneOrMore::Single(str) => should_run_ppx(str, contents),
+                config::OneOrMore::Multiple(str) => str
+                    .first()
+                    .is_some_and(|command| should_run_ppx(command, contents)),
             })
             .map(|x| x.to_owned())
             .collect::<Vec<OneOrMore<String>>>()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{filter_ppx_flags, should_run_ppx};
+    use crate::config::OneOrMore;
+
+    #[test]
+    fn source_triggered_ppxes_only_run_for_matching_sources() {
+        for command in [
+            "graphql-ppx",
+            "graphql_ppx",
+            "spice",
+            "rescript-relay",
+            "re-formality",
+            "rescript-schema-ppx",
+            "sury-ppx/bin",
+        ] {
+            assert!(!should_run_ppx(command, "let value = 1"), "{command}");
+        }
+
+        for (command, marker) in [
+            ("graphql-ppx", "%graphql"),
+            ("graphql_ppx", "%graphql"),
+            ("spice", "@spice"),
+            ("rescript-relay", "%relay"),
+            ("re-formality", "%form"),
+            ("rescript-schema-ppx", "@schema"),
+            ("sury-ppx/bin", "@schema"),
+        ] {
+            assert!(should_run_ppx(command, marker), "{command}");
+        }
+
+        assert!(should_run_ppx("unconditional-ppx", "let value = 1"));
+    }
+
+    #[test]
+    fn empty_ppx_commands_are_ignored() {
+        let flags = Some(vec![
+            OneOrMore::Multiple(vec![]),
+            OneOrMore::Single("unconditional-ppx".to_string()),
+        ]);
+        let filtered = filter_ppx_flags(&flags, "let value = 1").unwrap();
+
+        assert_eq!(filtered.len(), 1);
+        assert!(matches!(
+            &filtered[0],
+            OneOrMore::Single(command) if command == "unconditional-ppx"
+        ));
+    }
 }

@@ -24,6 +24,8 @@
 
 #### :nail_care: Polish
 
+- Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662
+
 #### :house: Internal
 
 # 13.0.0-alpha.6
