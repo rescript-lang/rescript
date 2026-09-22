@@ -69,6 +69,8 @@ git restore --worktree -- "$DEP01_CONFIG"
 rewatch build > /dev/null 2>&1
 rm -f rewatch.log
 
+normalize_belt_portal_import
+
 if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];
 then
   success "No leftover changes"

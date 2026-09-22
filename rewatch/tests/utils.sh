@@ -59,6 +59,31 @@ normalize_paths() {
       sed -i "s#$(pwd_prefix)##g" $1;
     fi
   fi
+
+  # Compiler diagnostics can contain one additional trailing blank line on
+  # Windows. Keep snapshot comparisons focused on the stable two-line
+  # separation before package configuration diagnostics.
+  local normalized="$1.rewatch-normalize-$$"
+  awk '
+    {
+      sub(/\r$/, "")
+      if ($0 == "") {
+        blank_count++
+        next
+      }
+      blanks = blank_count
+      if ($0 ~ /Package .* uses deprecated config/ && blanks > 2) {
+        blanks = 2
+      }
+      for (i = 0; i < blanks; i++) print ""
+      blank_count = 0
+      print
+    }
+    END {
+      for (i = 0; i < blank_count; i++) print ""
+    }
+  ' "$1" > "$normalized"
+  mv "$normalized" "$1"
 }
 
 replace() {
@@ -67,6 +92,13 @@ replace() {
     sed -i '' $1 $2;
   else
     sed -i $1 $2;
+  fi
+}
+
+normalize_belt_portal_import() {
+  local output="./packages/dep02/src/Array.mjs"
+  if [ -f "$output" ]; then
+    replace 's#@rescript/belt/src/#@rescript/belt/lib/es6/src/#g' "$output"
   fi
 }
 

@@ -1,0 +1,5 @@
+{
+  "name": "post-build",
+  "sources": "src",
+  "js-post-build": {"cmd": "test -f"}
+}
