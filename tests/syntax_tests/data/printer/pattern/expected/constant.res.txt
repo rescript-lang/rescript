@@ -27,16 +27,16 @@ switch science {
 | _ => false
 }
 
-<div>
-  {switch state.uploadProgress {
+<div>{
+  switch state.uploadProgress {
   | None => React.null
   | Some(1.0) => React.null
   | Some(uploadProgress) =>
     <div className=Styles.fill>
       <StudioUploadProgressIndicator progress=uploadProgress />
     </div>
-  }}
-</div>
+  }
+}</div>
 
 switch literal {
 | "literal" => true

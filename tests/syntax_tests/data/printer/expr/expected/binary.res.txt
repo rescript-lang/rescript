@@ -474,17 +474,17 @@ foo :=
   | _ => 1
   }
 
-<div>
-  {possibleGradeValues
+<div>{
+  possibleGradeValues
   ->List.filter(g => g < state.maxGrade)
   ->List.map(possibleGradeValue =>
-    <option key={possibleGradeValue->string_of_int} value={possibleGradeValue->string_of_int}>
-      {possibleGradeValue->string_of_int->str}
-    </option>
+    <option key={possibleGradeValue->string_of_int} value={possibleGradeValue->string_of_int}>{
+      possibleGradeValue->string_of_int->str
+    }</option>
   )
   ->Array.of_list
-  ->ReasonReact.array}
-</div>
+  ->ReasonReact.array
+}</div>
 
 let aggregateTotal = (forecast, ~audienceType) =>
   Nullable.toOption(forecast["audiences"])

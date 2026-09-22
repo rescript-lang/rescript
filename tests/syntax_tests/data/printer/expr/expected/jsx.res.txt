@@ -61,8 +61,8 @@ let nav =
 
 let nav2 =
   <Nav isMobile={isMobile} fullScreen={!isMobile ? false : isOpen}>
-    <NavContent>
-      {switch isMobile {
+    <NavContent>{
+      switch isMobile {
       | true =>
         <MobileMenu
           handleOpenToggle={_ => setOpen(open_ => !open_)}
@@ -77,14 +77,14 @@ let nav2 =
         <WidescreenMenu
           menuItems={props.items} trial={props.trial} user={props.user} viewer={props.viewer}
         />
-      }}
-    </NavContent>
+      }
+    }</NavContent>
   </Nav>
 
 let nav3 =
   <Nav isMobile={isMobile} fullScreen={!isMobile ? false : isOpen}>
-    <NavContent>
-      {isMobile
+    <NavContent>{
+      isMobile
         ? <MobileMenu
             handleOpenToggle={_ => setOpen(open_ => !open_)}
             menuItems={props.items}
@@ -95,8 +95,8 @@ let nav3 =
           />
         : <WidescreenMenu
             menuItems={props.items} trial={props.trial} user={props.user} viewer={props.viewer}
-          />}
-    </NavContent>
+          />
+    }</NavContent>
   </Nav>
 
 let avatarSection =
@@ -104,23 +104,25 @@ let avatarSection =
     <div style={{"zIndex": "1", "opacity": opacityUser}}>
       <Avatar user={user} size={45} />
     </div>
-    {user.email !== viewer.email
-      ? <div
-          style={{
-            "marginLeft": marginLeft + "em",
-            "opacity": opacityAdmin,
-            "zIndex": "0",
-            "cursor": "pointer",
-          }}
-          onMouseEnter={_ => setHoveringAdmin(true)}
-          onMouseLeave={_ => setHoveringAdmin(false)}
-          onClick={_e => {
-            stopImpersonating(csrfToken)
-          }}
-        >
-          <Avatar user={viewer} size={45} />
-        </div>
-      : React.nullElement}
+    {
+      user.email !== viewer.email
+        ? <div
+            style={{
+              "marginLeft": marginLeft + "em",
+              "opacity": opacityAdmin,
+              "zIndex": "0",
+              "cursor": "pointer",
+            }}
+            onMouseEnter={_ => setHoveringAdmin(true)}
+            onMouseLeave={_ => setHoveringAdmin(false)}
+            onClick={_e => {
+              stopImpersonating(csrfToken)
+            }}
+          >
+            <Avatar user={viewer} size={45} />
+          </div>
+        : React.nullElement
+    }
   </>
 
 let x = <></>
@@ -217,28 +219,36 @@ let x =
       a + b
     }
     {event => handleClick(event)}
-    {(event1, event2, event3) => {
-      Console.log("debug click")
-      handleClick(event)
-    }}
-    {(aaaaaaaaaaaaaaarg1, aaaaaaaaaaaaaaaaaaaaaaarg2, aaaaaaaaaaaaaaarg3) => {
-      sideEffect(aaaaaaaaaaaaaaarg1)
-      sideEffect(aaaaaaaaaaaaaaaaaaaaaaarg2)
-      sideEffect(aaaaaaaaaaaaaaarg3)
-    }}
+    {
+      (event1, event2, event3) => {
+        Console.log("debug click")
+        handleClick(event)
+      }
+    }
+    {
+      (aaaaaaaaaaaaaaarg1, aaaaaaaaaaaaaaaaaaaaaaarg2, aaaaaaaaaaaaaaarg3) => {
+        sideEffect(aaaaaaaaaaaaaaarg1)
+        sideEffect(aaaaaaaaaaaaaaaaaaaaaaarg2)
+        sideEffect(aaaaaaaaaaaaaaarg3)
+      }
+    }
     {myFunction(x)}
     {myFunction(x)}
     {streets[0]}
     {a + b}
     {-1}
     {-1.2}
-    {switch color {
-    | Blue => "blue"
-    | Red => "red"
-    }}
-    {try sideEffect() catch {
-    | Error => ()
-    }}
+    {
+      switch color {
+      | Blue => "blue"
+      | Red => "red"
+      }
+    }
+    {
+      try sideEffect() catch {
+      | Error => ()
+      }
+    }
     {(a, b, c)}
     {Rgb(red, blue, green)}
     {list{}}
@@ -248,21 +258,27 @@ let x =
     {{x: 1, y: 2}}
     {foo.bar}
     {user.name = "Steve"}
-    {if true {
-      ()
-    } else {
-      ()
-    }}
+    {
+      if true {
+        ()
+      } else {
+        ()
+      }
+    }
     {
       sideEffect1()
       sideEffect2()
     }
-    {while true {
-      loop()
-    }}
-    {for i in 0 to 10 {
-      do(i)
-    }}
+    {
+      while true {
+        loop()
+      }
+    }
+    {
+      for i in 0 to 10 {
+        do(i)
+      }
+    }
     {(20: int)}
     {
       module L = Log
@@ -288,17 +304,17 @@ let x =
 
 let x = <MyComponent sidebar={<div>{test}</div>} nav={<Navbar />} />
 
-<div>
-  {possibleGradeValues
+<div>{
+  possibleGradeValues
   ->List.filter(g => g <= state.maxGrade)
   ->List.map(possibleGradeValue =>
-    <option key={possibleGradeValue->string_of_int} value={possibleGradeValue->string_of_int}>
-      {possibleGradeValue->string_of_int->str}
-    </option>
+    <option key={possibleGradeValue->string_of_int} value={possibleGradeValue->string_of_int}>{
+      possibleGradeValue->string_of_int->str
+    }</option>
   )
   ->Array.of_list
-  ->ReasonReact.array}
-</div>
+  ->ReasonReact.array
+}</div>
 
 // https://github.com/rescript-lang/syntax/issues/113
 <div>{Console.log(a <= 10)}</div>
@@ -507,6 +523,4 @@ let arrow_with_container_tag = el =>
   prop1
   //
   prop2
->
-  {React.string("yow")}
-</Component>
+>{React.string("yow")}</Component>

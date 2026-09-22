@@ -7,13 +7,13 @@ let make = (~vehicle) => {
   let (count, setCount) = React.useState(() => 0)
 
   <div>
-    <p>
-      {React.string(
+    <p>{
+      React.string(
         "Hooks example " ++
         (vehicle.name ++
         (" clicked " ++ (Belt.Int.toString(count) ++ " times"))),
-      )}
-    </p>
+      )
+    }</p>
     <button onClick={_ => setCount(_ => count + 1)}>{React.string("Click me")}</button>
     <ImportHooks
       person={name: "Mary", age: 71}

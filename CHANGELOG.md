@@ -63,6 +63,7 @@
 - Name the `allowed-dependents` key and `rescript.json` in rewatch's hint for a dependency that is not allowed. https://github.com/rescript-lang/rescript/pull/8696
 - Require Node.js 22 in the platform binary packages, as the `rescript` package already does. https://github.com/rescript-lang/rescript/pull/8695
 - Format JSX expression children with explicit braces and no surrounding inline spaces, preparing for future literal text support. Existing unbraced children remain valid syntax. https://github.com/rescript-lang/rescript/pull/8666
+- Format JSX expression children with explicit braces, keeping their comments and line wrapping inside the braces to prepare for future literal text support. Existing unbraced children remain valid syntax for now. https://github.com/rescript-lang/rescript/pull/8666
 
 #### :house: Internal
 
