@@ -107,7 +107,7 @@ let make = () => {
 
   let userPrefix = "~ "
   <WidthContainer>
-    <div role="heading" ariaLevel=1 className=Styles.title> {"Erreur"->ReasonReact.string} </div>
+    <div role="heading" ariaLevel=1 className=Styles.title>{"Erreur"->ReasonReact.string}</div>
     <div
       className=Styles.terminal
       onClick={event => (event->ReactEvent.Mouse.target)["querySelector"]("input")["focus"]()}

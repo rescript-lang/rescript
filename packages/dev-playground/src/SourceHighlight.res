@@ -258,7 +258,7 @@ let render = (source, ~activeLine) =>
     >
       {View.fragment(
         tokens->Array.map(token =>
-          <span class={tokenClass(token.kind)}> {View.text(token.text)} </span>
+          <span class={tokenClass(token.kind)}>{View.text(token.text)}</span>
         ),
       )}
     </span>
