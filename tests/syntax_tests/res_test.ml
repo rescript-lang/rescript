@@ -143,6 +143,28 @@ let () =
     = "let x = <span>{hello}</span>\n");
   assert (
     format ~width:80 (parse "let x = <> hello </>") = "let x = <>{hello}</>\n");
+  List.iter
+    (fun width ->
+      List.iter
+        (fun (source, expected) ->
+          let printed = format ~width (parse source) in
+          assert (printed = expected);
+          assert (format ~width (parse printed) = expected))
+        [
+          ( "let x = <span> hello // note\n</span>",
+            "let x =\n  <span>{\n    hello // note\n  }</span>\n" );
+          ( "let x = <> hello // note\n</>",
+            "let x =\n  <>{\n    hello // note\n  }</>\n" );
+          ( "let x = <span> hello /* block */ // note\n</span>",
+            "let x =\n  <span>{\n    hello /* block */ // note\n  }</span>\n" );
+          ( "let x = <span> // before\nhello // contains */\n</span>",
+            "let x =\n\
+            \  <span>{\n\
+            \    // before\n\
+            \    hello // contains */\n\
+            \  }</span>\n" );
+        ])
+    [20; 40; 80; 100; 120];
   print_endline "✅ JSX child migration preserves expressions and comments"
 
 module Outcome_printer_tests = struct
