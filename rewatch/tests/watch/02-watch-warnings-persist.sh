@@ -56,7 +56,9 @@ if ! wait_for_pattern_count rewatch-stderr.log "unused value unusedValue" \
   exit 1
 fi
 
-exit_watcher
+if ! exit_watcher; then
+  exit 1
+fi
 
 # A new invocation has no retained in-memory warning state, so the watcher must
 # leave a freshness marker that causes the warning-producing module to run.
