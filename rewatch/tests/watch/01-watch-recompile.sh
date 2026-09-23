@@ -76,4 +76,6 @@ else
   exit 1
 fi
 
-exit_watcher
+if ! exit_watcher; then
+  exit 1
+fi

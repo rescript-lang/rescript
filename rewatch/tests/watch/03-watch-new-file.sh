@@ -74,7 +74,9 @@ fi
 
 rm -f ./src/NewWatchTestFile.mjs
 
-exit_watcher
+if ! exit_watcher; then
+  exit 1
+fi
 
 rm -f rewatch.log
 

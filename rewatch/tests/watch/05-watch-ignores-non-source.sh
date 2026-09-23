@@ -75,7 +75,9 @@ success "File in nested non-source subdir was correctly ignored"
 rm -f ./src/WatchProbe.res ./src/WatchProbe.mjs
 rm -rf ./random-dir ./another-dir
 
-exit_watcher
+if ! exit_watcher; then
+  exit 1
+fi
 
 rm -f rewatch.log
 

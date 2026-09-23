@@ -109,7 +109,9 @@ if ! wait_for_changed_completed_log "$COMPILER_LOG" "$TMP_DIR/before-restore.com
   error "Compiler log did not complete a new cycle after restoring B.res"
   exit 1
 fi
-exit_watcher
+if ! exit_watcher; then
+  exit 1
+fi
 rm -f "$WATCH_STDOUT" "$WATCH_STDERR"
 
 if git diff --exit-code ./packages/watch-warnings > /dev/null 2>&1;
