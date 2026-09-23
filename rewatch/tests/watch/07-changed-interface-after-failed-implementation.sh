@@ -80,9 +80,10 @@ if ! grep -q "Provider.res" "$compiler_log"; then
 fi
 cp "$compiler_log" failed.compiler.log
 
-# Once the implementation satisfies the interface, Consumer must compile
-# against the new string type and report its now-invalid int annotation.
-printf 'let value = "recovered"\n' > src/Provider.res
+# An atomic replacement makes the watcher reinitialize its build state. The
+# blocked dependent must remain dirty through that full rebuild as well.
+printf 'let value = "recovered"\n' > src/Provider.next
+mv src/Provider.next src/Provider.res
 if ! wait_for_changed_compiler_log failed.compiler.log; then
   error "Watch did not finish the recovery build"
   cat rewatch.log >&2
