@@ -86,6 +86,10 @@ export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
 results="$work_root/results.csv"
 echo "scenario,implementation,iteration,wall_ms,peak_tree_rss_kib,peak_tree_tasks" \
   >"$results"
+edit_source_relative=packages/watch-warnings/src/B.res
+edit_baseline="$work_root/B.res.baseline"
+cp "$rust_fixture/$edit_source_relative" "$edit_baseline"
+cmp "$edit_baseline" "$ocaml_fixture/$edit_source_relative"
 
 tree_resources() {
   local root_pid=$1
@@ -119,7 +123,7 @@ measure() {
     unchanged) ;;
     edit)
       printf '\n// timed single edit %d\n' "$iteration" \
-        >>"$fixture/packages/watch-warnings/src/B.res" ;;
+        >>"$fixture/$edit_source_relative" ;;
     *) echo "Unknown benchmark scenario: $scenario" >&2; exit 2 ;;
   esac
   local start_ns root_pid sampler_pid peak_rss peak_tasks end_ns wall_ms
@@ -153,6 +157,12 @@ measure() {
   printf '%-9s %-5s run %d: %6d ms  %8d KiB  %4d tasks\n' \
     "$scenario" "$implementation" "$iteration" "$wall_ms" "$peak_rss" \
     "$peak_tasks"
+  if [[ $scenario == edit ]]; then
+    # Return to the same compiled baseline before the next timed edit.
+    cp "$edit_baseline" "$fixture/$edit_source_relative"
+    "$executable" build "$fixture" >"$output.restore" \
+      2>"$output.restore.stderr"
+  fi
 }
 
 median_column() {

@@ -416,8 +416,12 @@ The harness isolates dependency trees, interleaves timed clean, unchanged,
 and single-edit builds, and samples process-tree RSS and task counts. It then
 traces Rust `bsc` requests and OCaml's logical compiler-request log, compares
 work in all three scenarios, and compares complete file sets and stable
-artifact bytes at the same absolute path. The timed source edits add unique
-comments to `packages/watch-warnings/src/B.res` in both isolated fixtures.
+artifact bytes at the same absolute path. Each timed source edit adds a
+comment to `packages/watch-warnings/src/B.res` in an isolated fixture. The
+harness then restores the original source and completes an untimed build, so
+every edit sample starts from the same compiled baseline.
+The incremental figures recorded above used the earlier cumulative-comment
+procedure; the clean-build figures are unaffected by this harness change.
 The unchanged workload replays the fixture's local `ModuleA` warning, so four
 compiler requests there are expected. `KEEP_REWATCH_BENCHMARK_WORKDIR=1`
 retains raw outputs and `results.csv`. The 125% wall-time and memory limits
