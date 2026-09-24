@@ -16,6 +16,13 @@ val status_string : Unix.process_status -> string
 val default_max_jobs : int
 
 val task : ?env:Spawn.Env.t -> ?on_result:(result -> result) -> job -> task
+val in_process_task : ?on_result:(result -> result) -> (unit -> result) -> task
+val concurrent_task :
+  cancel:(unit -> unit) ->
+  ?on_result:(result -> result) ->
+  (unit -> result) ->
+  task
+val map_result : task -> (result -> result) -> task
 
 val run_parallel :
   ?max_jobs:int ->
@@ -51,7 +58,21 @@ val run_dependency_graph :
   next:('a -> result option -> task option) ->
   unit
 
-val run : ?poll:(unit -> unit) -> cwd:string -> string -> string list -> result
+val run_tasks :
+  ?max_jobs:int ->
+  ?poll:(unit -> unit) ->
+  ?on_complete:(int -> unit) ->
+  task list ->
+  result list
+
+val run :
+  ?poll:(unit -> unit) ->
+  ?defer_signals:bool ->
+  cwd:string ->
+  string ->
+  string list ->
+  result
+val run_task : ?poll:(unit -> unit) -> task -> result
 
 val run_streaming :
   ?poll:(unit -> unit) -> cwd:string -> string -> string list -> result

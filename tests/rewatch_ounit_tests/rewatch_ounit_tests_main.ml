@@ -11,6 +11,7 @@ let () =
            Cli_tests.tests;
            Compile_assets_tests.tests;
            Compiler_args_tests.tests;
+           Compiler_driver_tests.tests;
            Compiler_info_tests.tests;
            Compiler_process_tests.tests;
            Compiler_scheduler_tests.tests;

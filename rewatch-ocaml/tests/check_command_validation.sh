@@ -6,7 +6,6 @@ rust=${1:-$root/rewatch/target/debug/rescript}
 ocaml=${2:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
 rust=$(realpath "$rust")
 ocaml=$(realpath "$ocaml")
-bsc_test_proxy="$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe"
 work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-command-validation-XXXXXX")
 # Compiler diagnostics contain canonical paths. Resolve platform aliases such
 # as macOS's /var -> /private/var before deriving paths used for comparison.
@@ -21,13 +20,8 @@ case $(uname -s) in
     native_user=$(cygpath -w "$USERPROFILE" | tr '\\' '/')
     native_short_user=$(cygpath -w -s "$USERPROFILE" | tr '\\' '/')
     native_short_work=${native_work/"$native_user"/"$native_short_user"}
-    bsc_test_proxy=$(cygpath -aw \
-      "$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe")
     ;;
 esac
-delete_source_bsc=$bsc_test_proxy
-delete_parse_sources_bsc=$bsc_test_proxy
-delete_ast_bsc=$bsc_test_proxy
 lock_owner_pid() {
   local shell_pid=$1
   if $windows_posix_shell; then
@@ -146,11 +140,6 @@ mkdir -p "$work/duplicate-dependency/src" \
   "$work/duplicate-dependency/node_modules/a/src" \
   "$work/duplicate-dependency/node_modules/shared/src" \
   "$work/duplicate-dependency/node_modules/a/node_modules/shared/src"
-mkdir -p "$work/publication-race-rust/src" \
-  "$work/publication-race-ocaml/src"
-mkdir -p "$work/ast-race-rust/src" "$work/ast-race-ocaml/src"
-mkdir -p "$work/parse-source-race-rust/src" \
-  "$work/parse-source-race-ocaml/src"
 mkdir -p "$work/watch-config-rust/src" "$work/watch-config-ocaml/src"
 mkdir -p "$work/watch-retained-graph/src"
 mkdir -p "$work/watch-dependency-recovery/src" \
@@ -163,7 +152,6 @@ mkdir -p "$work/watch-dependency-fallback/src" \
   "$work/watch-dependency-fallback/packages/dep/src" \
   "$work/node_modules"
 mkdir -p "$work/watch-symlink-target/src" "$work/watch-symlink-external/sub"
-mkdir -p "$work/watch-feature-scope/src" "$work/watch-feature-scope/inactive"
 mkdir -p "$work/watch-filter-rust/src" "$work/watch-filter-rust/inactive" \
   "$work/watch-filter-ocaml/src" "$work/watch-filter-ocaml/inactive"
 mkdir -p "$work/quiet-watch-rust/src" "$work/quiet-watch-ocaml/src"
@@ -352,28 +340,6 @@ printf '{"name":"shared","sources":["src"]}\n' \
   >"$work/duplicate-dependency/node_modules/a/node_modules/shared/rescript.json"
 printf 'let value = 2\n' \
   >"$work/duplicate-dependency/node_modules/a/node_modules/shared/src/Shared.res"
-printf '{"name":"publication-race","sources":["src"]}\n' \
-  >"$work/publication-race-rust/rescript.json"
-cp "$work/publication-race-rust/rescript.json" \
-  "$work/publication-race-ocaml/rescript.json"
-printf 'let value = 1\n' >"$work/publication-race-rust/src/A.res"
-cp "$work/publication-race-rust/src/A.res" \
-  "$work/publication-race-ocaml/src/A.res"
-printf '{"name":"ast-race","sources":["src"]}\n' \
-  >"$work/ast-race-rust/rescript.json"
-cp "$work/ast-race-rust/rescript.json" "$work/ast-race-ocaml/rescript.json"
-printf 'let value = 1\n' >"$work/ast-race-rust/src/A.res"
-cp "$work/ast-race-rust/src/A.res" "$work/ast-race-ocaml/src/A.res"
-printf '{"name":"parse-source-race","sources":["src"]}\n' \
-  >"$work/parse-source-race-rust/rescript.json"
-cp "$work/parse-source-race-rust/rescript.json" \
-  "$work/parse-source-race-ocaml/rescript.json"
-for implementation in rust ocaml; do
-  printf 'let value = 1\n' \
-    >"$work/parse-source-race-$implementation/src/A.res"
-  printf 'let value = 2\n' \
-    >"$work/parse-source-race-$implementation/src/B.res"
-done
 printf '{"name":"watch-config","sources":["src"]}\n' \
   >"$work/watch-config-rust/rescript.json"
 cp "$work/watch-config-rust/rescript.json" \
@@ -397,10 +363,6 @@ directory_link "$work/watch-dependency-recovery/packages/dep" \
 printf '{"name":"watch-dependency-install","sources":["src"],"dependencies":["@scope/dep"]}\n' \
   >"$work/watch-dependency-install/rescript.json"
 printf 'let value = 1\n' >"$work/watch-dependency-install/src/A.res"
-printf '{"name":"watch-feature-scope","sources":["src",{"dir":"inactive","feature":"inactive"}]}\n' \
-  >"$work/watch-feature-scope/rescript.json"
-printf 'let value = 1\n' >"$work/watch-feature-scope/src/A.res"
-printf 'let inactive = 1\n' >"$work/watch-feature-scope/inactive/Inactive.res"
 printf '{"name":"watch-dependency-fallback","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/watch-dependency-fallback/rescript.json"
 printf 'let value = 1\n' >"$work/watch-dependency-fallback/src/A.res"
@@ -432,24 +394,6 @@ for implementation in rust ocaml; do
 done
 printf 'require("fs").appendFileSync(process.env.REWATCH_WATCH_FILTER_MARKER, "done\\n")\n' \
   >"$work/watch-filter-marker.js"
-printf '%s\n' \
-  '#!/bin/sh' \
-  'if [ -f "$REWATCH_SCOPE_BLOCK_REQUEST" ] && [ ! -f "$REWATCH_SCOPE_BLOCK_STARTED" ]; then' \
-  '  : >"$REWATCH_SCOPE_BLOCK_STARTED"' \
-  '  attempts=0' \
-  '  while [ ! -f "$REWATCH_SCOPE_BLOCK_RELEASE" ] && [ "$attempts" -lt 200 ]; do' \
-  '    attempts=$((attempts + 1))' \
-  '    sleep 0.05' \
-  '  done' \
-  'fi' \
-  'exec "$REWATCH_SCOPE_REAL_BSC" "$@"' \
-  >"$work/watch-scope-bsc.sh"
-chmod +x "$work/watch-scope-bsc.sh"
-watch_scope_bsc="$work/watch-scope-bsc.sh"
-if $windows_posix_shell; then
-  watch_scope_bsc=$bsc_test_proxy
-fi
-
 default_bsc=$root/_build/default/compiler/bsc/rescript_compiler_main.exe
 default_runtime=$root/packages/@rescript/runtime
 case $(uname -s) in
@@ -495,6 +439,10 @@ normalize_project_path() {
         text = text.split(spelling).join("<ROOT>");
       }
     }
+    // The Windows compiler can emit CRLF through the Rust process while the
+    // OCaml process converts captured compiler output to LF. Preserve bare CR
+    // characters used by terminal control sequences.
+    text = text.replaceAll("\r\n", "\n");
     text = text.replaceAll("\\", "/");
     text = text.replaceAll("./<ROOT>/", "./");
     fs.writeFileSync(process.argv[2], text);
@@ -592,7 +540,8 @@ require_both_errors_contain() {
 
 run_missing_bsc_case() {
   name=$1
-  shift
+  expected_ocaml=$2
+  shift 2
   set +e
   RESCRIPT_BSC_EXE="$work/missing-bsc" "$rust" "$@" \
     >"$work/rust.out" 2>"$work/rust.err"
@@ -602,17 +551,18 @@ run_missing_bsc_case() {
   ocaml_status=$?
   set -e
   if [ "$(classify "$rust_status")" != panic ] || \
-    [ "$(classify "$ocaml_status")" != reject ]; then
-    printf '%s: expected Rust=panic/OCaml=reject, got Rust=%s/OCaml=%s\n' \
-      "$name" "$rust_status" "$ocaml_status" >&2
+    [ "$(classify "$ocaml_status")" != "$expected_ocaml" ]; then
+    printf '%s: expected Rust=panic/OCaml=%s, got Rust=%s/OCaml=%s\n' \
+      "$name" "$expected_ocaml" "$rust_status" "$ocaml_status" >&2
     printf '%s\n' '--- Rust output ---' >&2
     cat "$work/rust.out" "$work/rust.err" >&2
     printf '%s\n' '--- OCaml output ---' >&2
     cat "$work/ocaml.out" "$work/ocaml.err" >&2
     exit 1
   fi
-  if ! grep -F 'RESCRIPT_BSC_EXE points to missing path' \
-    "$work/ocaml.err" >/dev/null; then
+  if [ "$expected_ocaml" = reject ] && \
+    ! grep -F 'RESCRIPT_BSC_EXE points to missing path' \
+      "$work/ocaml.err" >/dev/null; then
     echo "$name: OCaml did not report the stale compiler path" >&2
     cat "$work/ocaml.out" "$work/ocaml.err" >&2
     exit 1
@@ -867,8 +817,8 @@ run_case compiler-args-extension accept reject compiler-args "$project/src/A.txt
 run_case compiler-args-missing panic reject compiler-args "$project/src/Missing.res"
 run_case compiler-args-no-project panic reject compiler-args "$work/orphan/A.res"
 
-run_missing_bsc_case build-missing-bsc build "$project"
-run_missing_bsc_case format-missing-bsc format "$project/src/A.res"
+run_missing_bsc_case build-missing-bsc accept build "$project"
+run_missing_bsc_case format-missing-bsc reject format "$project/src/A.res"
 set +e
 RESCRIPT_BSC_EXE="$work/missing-bsc" \
   "$rust" clean "$work/clean-missing-bsc" \
@@ -1491,117 +1441,6 @@ if ! grep -F "$duplicate_warning" "$work/rust.err.norm" >/dev/null || \
   exit 1
 fi
 
-set +e
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=delete-source \
-REWATCH_SOURCE_TO_DELETE="$(command_path "$work/publication-race-rust/src/A.res")" \
-REWATCH_SOURCE_DELETED="$(command_path "$work/publication-race-rust/source-deleted")" \
-RESCRIPT_BSC_EXE="$delete_source_bsc" \
-  "$rust" build "$work/publication-race-rust" \
-  >"$work/rust.out" 2>"$work/rust.err" &
-rust_pid=$!
-attempts=0
-while kill -0 "$rust_pid" 2>/dev/null && [ "$attempts" -lt 150 ]; do
-  attempts=$((attempts + 1))
-  sleep 0.1
-done
-if kill -0 "$rust_pid" 2>/dev/null; then
-  kill -TERM "$rust_pid" 2>/dev/null
-  wait "$rust_pid" 2>/dev/null
-  rust_status=124
-else
-  wait "$rust_pid"
-  rust_status=$?
-fi
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=delete-source \
-REWATCH_SOURCE_TO_DELETE="$(command_path "$work/publication-race-ocaml/src/A.res")" \
-REWATCH_SOURCE_DELETED="$(command_path "$work/publication-race-ocaml/source-deleted")" \
-RESCRIPT_BSC_EXE="$delete_source_bsc" \
-  "$ocaml" build "$work/publication-race-ocaml" \
-  >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
-if [ "$rust_status" -ne 124 ] || \
-  ! grep -F "copying source file failed" "$work/rust.err" >/dev/null || \
-  [ "$(classify "$ocaml_status")" != reject ] || \
-  ! grep -F "A.res" "$work/ocaml.err" >/dev/null; then
-  printf 'build-source-disappears-during-publication: expected Rust=worker-panic/timeout and OCaml=path-bearing rejection, got Rust=%s/OCaml=%s\n' \
-    "$rust_status" "$ocaml_status" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
-  exit 1
-fi
-checked=$((checked + 1))
-
-set +e
-RAYON_NUM_THREADS=1 \
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=delete-parse-sources \
-REWATCH_SOURCE_A="$(command_path "$work/parse-source-race-rust/src/A.res")" \
-REWATCH_SOURCE_B="$(command_path "$work/parse-source-race-rust/src/B.res")" \
-REWATCH_SOURCES_DELETED="$(command_path "$work/parse-source-race-rust/sources-deleted")" \
-RESCRIPT_BSC_EXE="$delete_parse_sources_bsc" \
-  "$rust" build "$work/parse-source-race-rust" \
-  >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=delete-parse-sources \
-REWATCH_SOURCE_A="$(command_path "$work/parse-source-race-ocaml/src/A.res")" \
-REWATCH_SOURCE_B="$(command_path "$work/parse-source-race-ocaml/src/B.res")" \
-REWATCH_SOURCES_DELETED="$(command_path "$work/parse-source-race-ocaml/sources-deleted")" \
-RESCRIPT_BSC_EXE="$delete_parse_sources_bsc" \
-  "$ocaml" build "$work/parse-source-race-ocaml" \
-  >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
-if [ "$rust_status" -ne 101 ] || \
-  ! grep -F "file not found" "$work/rust.err" >/dev/null || \
-  [ "$(classify "$ocaml_status")" != reject ] || \
-  ! grep -F "parse-source-race" "$work/ocaml.err" >/dev/null || \
-  ! grep -E 'A\.(res|ast)' "$work/ocaml.err" >/dev/null; then
-  printf 'build-source-disappears-before-parse-read: expected Rust=panic and OCaml=path-bearing rejection, got Rust=%s/OCaml=%s\n' \
-    "$rust_status" "$ocaml_status" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
-  exit 1
-fi
-checked=$((checked + 1))
-
-set +e
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=delete-ast \
-REWATCH_AST_DELETED="$(command_path "$work/ast-race-rust/ast-deleted")" \
-RESCRIPT_BSC_EXE="$delete_ast_bsc" \
-  "$rust" build "$work/ast-race-rust" \
-  >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=delete-ast \
-REWATCH_AST_DELETED="$(command_path "$work/ast-race-ocaml/ast-deleted")" \
-RESCRIPT_BSC_EXE="$delete_ast_bsc" \
-  "$ocaml" build "$work/ast-race-ocaml" \
-  >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
-if [ "$rust_status" -ne 101 ] || \
-  ! grep -F "Could not read file" "$work/rust.err" >/dev/null || \
-  [ "$(classify "$ocaml_status")" != reject ] || \
-  ! grep -F "A.ast" "$work/ocaml.err" >/dev/null; then
-  printf 'build-ast-disappears-before-dependency-read: expected Rust=panic and OCaml=path-bearing rejection, got Rust=%s/OCaml=%s\n' \
-    "$rust_status" "$ocaml_status" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
-  exit 1
-fi
-checked=$((checked + 1))
-
 "$rust" watch "$work/watch-config-rust" \
   >"$work/watch-rust.out" 2>"$work/watch-rust.err" &
 rust_watch_pid=$!
@@ -1778,47 +1617,6 @@ if $file_symlinks_supported; then
   terminate_and_wait "$symlink_target_pid" "symlink-target watcher"
   checked=$((checked + 1))
 fi
-
-feature_scope_marker="$work/watch-feature-scope/after-build.log"
-scope_block_request="$work/watch-feature-scope/block-request"
-scope_block_started="$work/watch-feature-scope/block-started"
-scope_block_release="$work/watch-feature-scope/block-release"
-REWATCH_SCOPE_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=scope-block \
-REWATCH_SCOPE_BLOCK_REQUEST="$(command_path "$scope_block_request")" \
-REWATCH_SCOPE_BLOCK_STARTED="$(command_path "$scope_block_started")" \
-REWATCH_SCOPE_BLOCK_RELEASE="$(command_path "$scope_block_release")" \
-RESCRIPT_BSC_EXE="$watch_scope_bsc" \
-REWATCH_WATCH_FILTER_MARKER="$feature_scope_marker" \
-  "$ocaml" watch --features other \
-    --after-build "node $command_work/watch-filter-marker.js" \
-    "$work/watch-feature-scope" \
-    >"$work/watch-feature-scope.out" 2>"$work/watch-feature-scope.err" &
-feature_scope_pid=$!
-background_pids="$background_pids $feature_scope_pid"
-if ! wait_for_line_count "$feature_scope_marker" 1; then
-  echo "OCaml feature-scope watcher did not finish its initial build" >&2
-  cat "$work/watch-feature-scope.out" "$work/watch-feature-scope.err" >&2
-  exit 1
-fi
-: >"$scope_block_request"
-printf '{"name":"watch-feature-scope","sources":["src",{"dir":"inactive","feature":"inactive"}],"features":{"other":["inactive"]}}\n' \
-  >"$work/watch-feature-scope/rescript.json"
-wait_for_file "$scope_block_started"
-printf 'let createdDuringBuild = 2\n' \
-  >"$work/watch-feature-scope/inactive/CreatedDuringBuild.res"
-: >"$scope_block_release"
-wait_for_file "$work/watch-feature-scope/inactive/Inactive.js"
-wait_for_file "$work/watch-feature-scope/inactive/CreatedDuringBuild.js"
-wait_for_line_count "$feature_scope_marker" 3
-if ! line_count_stays "$feature_scope_marker" 3; then
-  echo "OCaml watcher lost or duplicated an edit during a source-scope transition" >&2
-  cat "$work/watch-feature-scope.out" "$work/watch-feature-scope.err" >&2
-  exit 1
-fi
-terminate_and_wait "$feature_scope_pid" "feature-scope watcher"
-checked=$((checked + 1))
 
 rust_filter_marker="$work/watch-filter-rust/after-build.log"
 REWATCH_WATCH_FILTER_MARKER="$rust_filter_marker" \

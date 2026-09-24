@@ -51,7 +51,7 @@ let pending_work_is_drained_once _context =
     Process.{program = "unused"; args = []; cwd = Sys.getcwd ()}
   in
   Build_attempt.add_namespace_job attempt
-    Build_attempt.{job = process_job; finish = ignore};
+    Build_attempt.{task = Process.task process_job; finish = ignore};
   let build_state = Build_state.create 1 in
   Build_state.add build_state ~key:"A" ~kind:Build_state.Source_module
     ~last_compiled_cmi:None ~last_compiled_cmt:None;

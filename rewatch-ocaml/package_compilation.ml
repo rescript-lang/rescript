@@ -90,6 +90,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
              prepared_package.development_common_args
            else prepared_package.regular_common_args)
         module_ ~source_kind path
+      |> Compiler_process.task
     in
     let record_published_outputs ~source_kind path =
       match source_kind with
@@ -196,7 +197,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
                     raise error
               in
               Build_attempt.add_namespace_job attempt
-                Build_attempt.{job = namespace_task.job; finish}));
+                Build_attempt.{task = namespace_task.task; finish}));
     Build_attempt.add_compile_candidates attempt candidates;
     Build_attempt.register_cleanup attempt (fun () ->
         if not watch then

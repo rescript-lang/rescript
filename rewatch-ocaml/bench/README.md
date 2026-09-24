@@ -1,110 +1,88 @@
-# Performance and work-equivalence gate
+# OCaml rewatch performance measurements
 
-`performance_gate.sh` compares release builds on two fully isolated copies of
-the tracked `rewatch/testrepo` fixture. It deliberately archives both the
-fixture and its external Belt/runtime targets and copies all installed,
-Git-ignored dependency trees (including nohoisted dependencies) separately
-into each root. Cleaning one
-implementation therefore cannot warm or remove artifacts used by the other.
+The OCaml rewatch now uses parallel in-process compiler domains by default.
+`REWATCH_COMPILER_DOMAINS` overrides the CPU-based worker count; without it,
+the worker count is `min(8, max(1, available CPUs - 1))`. Rust rewatch is the
+build-level reference for compiler work, generated file sets, and stable
+artifact bytes. Keep both implementations on the same compiler and runtime
+build when comparing them.
 
-The gate performs one warm-up per implementation, at least five interleaved
-clean builds, and reports median wall time, peak summed process-tree RSS, and
-peak process-tree task count. Wall time and RSS are acceptance criteria; task
-count is diagnostic evidence for subprocess-management overhead. It then traces
-clean, unchanged, and single-edit builds with `strace` and requires identical
-normalized package/phase/input multisets as well as identical counts for parser,
-namespace, compiler, interface, and PPX process launches. The edit targets the
-same leaf source in each isolated fixture. This sequence detects superfluous
-incremental parsing or compilation that a clean-only comparison cannot expose.
-Finally, both implementations clean and build a third fixture at the same
-absolute path. The gate first requires the complete post-build
-file-name sets to match, including auxiliary cache and editor-control files,
-and then requires byte-identical generated JavaScript, compiler interfaces
-(`.cmi`), JavaScript IR (`.cmj`), parser AST caches, namespace maps, copied
-sources, source-directory metadata, and `build.ninja` markers, including those
-below installed dependency trees. It does not treat typed debug metadata
-(`.cmt`/`.cmti`), compiler logs, or `compiler-info.json` as byte-stable: those
-contain compiler debug data, timestamps, or intentionally
-implementation-specific state and are covered by file-set and integration
-checks instead. The default
-acceptance threshold requires both OCaml medians to be no more than 125% of
-Rust.
+## Domain baseline
 
-The post-rebase powered, idle-host seven-run gate measured a 4.740 s Rust
-clean-build median and a 5.020 s OCaml median (1.059x). Median summed
-process-tree RSS was 1,066,940 KiB and 1,184,740 KiB respectively (1.110x).
-Clean, unchanged, and one-edit compiler work matched exactly, and the complete
-post-build file sets and byte-stable artifacts were identical. The companion
-seven-edit retained-watch gate measured 130 ms for Rust and 153 ms for OCaml
-(1.177x), with identical compiler work and stable resources. These values are
-a reproducible checkpoint, not portable absolute expectations.
+On a ten-CPU Linux ARM64 host, clean builds of the 472-module testrepo fixture
+at the same absolute path measured the following directional medians. The host
+had light unrelated work. Each domain build's selected AST, IAST, CMI, CMJ,
+JavaScript, source-map, and namespace-map artifacts matched a sequential
+embedded baseline in the repeated checks performed before the mode cleanup.
 
-This is one part of equivalence checking, not a substitute for the test suites.
-Before accepting a performance increment, also run the OCaml unit/focused tests
-and the canonical Rust rewatch integration suite against the OCaml executable:
+| compiler workers | samples | median wall |
+| ---: | ---: | ---: |
+| 1 | 3 | 5.49s |
+| 2 | 3 | 4.56s |
+| 4 | 3 | 2.40s |
+| 8 | 10 | 1.94s |
+| 12 | 10 | 2.17s |
 
-```sh
-opam exec -- dune runtest tests/rewatch_ounit_tests
-bash rewatch-ocaml/tests/run.sh \
-  _build/default/rewatch-ocaml/rescript_ocaml.exe
-(cd rewatch/tests && \
-  bash ./suite.sh ../../_build/default/rewatch-ocaml/rescript_ocaml.exe)
-```
+In separate samples, Rust rewatch took 4.62s, sequential embedded OCaml took
+5.22s, one persistent process worker took 10.37s, and sequential external
+compiler processes took 27.25s. Those last three execution modes have since
+been removed. A later five-run comparison of eight, ten, and twelve domains
+measured clean-build medians of 2.19s, 2.58s, and 2.37s, with peak RSS of
+336, 430, and 499 MiB respectively. All fifteen selected-artifact comparisons
+matched. Eight workers gave the best result on this host; the heuristic remains
+provisional.
 
-Together these cover three different failure classes:
+One earlier twelve-domain build differed in two generated copies of `Net.mjs`.
+Forty focused repeats and ten full selected-artifact comparisons did not
+reproduce it. The cause remains unknown; compare stable artifacts as well as
+wall time while testing parallel changes.
 
-- the canonical and focused suites check observable command/build/watch
-  behavior;
-- the three `strace` classifications check that a speed result did not hide
-  skipped or superfluous clean/incremental module or PPX work (argument
-  semantics remain covered by the compiler-argument and integration tests);
-- the fresh-tree comparisons check the complete post-build file set plus the
-  byte contents of every stable generated artifact class.
+The retained-watch gate with eight workers passed seven ordinary edits: OCaml
+median 82 ms versus Rust 132 ms, equal seven-parse/seven-compile work, and
+byte-identical edited JavaScript. The watcher held 12 file descriptors and
+four tasks; RSS rose from 26,680 to 27,688 KiB. That small fixture dirties
+only one module per edit and does not establish watch-time scaling.
 
-The manifest comparison intentionally recreates its fixture between runners.
-Using only each implementation's `clean` command would allow a Rust-only file
-to survive into the OCaml run and could conceal a missing-output bug.
+## AST I/O checkpoint
 
-`filesystem_audit.sh` writes normalized `*.categories.tsv`, `*.paths.tsv`, and
-`*.processes.tsv` files when `KEEP_REWATCH_FILESYSTEM_AUDIT=1` is set. The last
-form attributes each path operation category to the executable recorded for
-that traced process, separating driver work from compiler, PPX, and helper
-work. Processes which inherit a trace file without a subsequent `execve` are
-reported as `inherited-process`; do not assume those calls belong to the
-driver without inspecting the raw trace.
+Temporary counters on the same host and eight-domain fixture measured 917
+sequential scheduler AST-header reads totaling 123 kB in 5.5–7.8 ms (5.9 ms
+median) per clean build. Compiler domains read and deserialized 512 full ASTs
+totaling 6.93 MB in 71–120 ms summed across domains (75 ms median). Two
+additional builds spent 97–98 ms summed across domains on the AST write path,
+including dependency extraction and serialization. Three interleaved clean
+builds with counters enabled and three with counters disabled measured median
+wall times of 2.19s and 2.35s; unrelated work makes that difference noise,
+not an optimization result. The counters were removed afterward.
 
-Build both release executables and run:
+Avoiding scheduler header reads alone has little headroom on this fixture.
+A parsed-tree handoff could avoid compiler reads, but summed concurrent-worker
+time is not wall time saved. Preserve published AST/IAST files and freshness
+behavior, then measure RSS, work, and artifact parity on a larger project.
+
+## Rust comparison gates
+
+Build both release executables, then run the Linux clean-build, work, resource,
+and artifact comparison:
 
 ```sh
 cargo build --manifest-path rewatch/Cargo.toml --release
 opam exec -- dune build --profile release rewatch-ocaml/rescript_ocaml.exe
-
 rewatch-ocaml/bench/performance_gate.sh \
   rewatch/target/release/rescript \
-  _build/default/rewatch-ocaml/rescript_ocaml.exe \
-  5
+  _build/default/rewatch-ocaml/rescript_ocaml.exe 5
 ```
 
-By default the harness uses the compiler and runtime selected by
-`rewatch/tests/get_bin_paths.js`. Set both `RESCRIPT_BSC_EXE` and
-`RESCRIPT_RUNTIME` to compare with another local compiler build; the harness
-preserves them only when both are set, so the two implementations still use
-the same inputs.
-
-The authoritative gate requires Linux (`/proc`), `strace`, GNU-compatible
-nanosecond `date`, and a stable plugged-in host with no competing heavy work.
-Keep the isolated fixtures on a case-sensitive Linux filesystem. A Linux
-container backed by a case-insensitive macOS bind mount can transiently report
-that a differently-cased recreated CMI exists to `stat` and then return
-`ENOENT` from the immediately following `open`; that host-filesystem artifact
-is not valid scheduler or benchmark evidence. The harness's default `mktemp`
-workspace normally stays on the container filesystem.
-Set `REWATCH_PERFORMANCE_THRESHOLD_PERCENT` to exercise a proposed threshold
-change; changing the committed 125% completion criterion requires an explicit
-project decision. Set `KEEP_REWATCH_BENCHMARK_WORKDIR=1` to retain traces and raw
-stdout/stderr for investigation. For a quick correctness-only check, an odd run
-count below five is accepted only with `REWATCH_ALLOW_SMOKE_RUN=1`; its timing
-must never be treated as a quality-gate result.
+The harness isolates dependency trees, interleaves builds, traces Rust `bsc`
+requests and OCaml's logical compiler-request log, compares clean, unchanged,
+and one-edit work, and compares complete file sets and stable artifact bytes at
+the same absolute path. `KEEP_REWATCH_BENCHMARK_WORKDIR=1` retains raw outputs.
+The fixture currently does work on an unchanged build. In a one-run smoke check,
+both implementations performed four compiler requests there, and their clean
+and single-edit request counts matched too. The source of those unexpected
+unchanged requests is unresolved. The same check found byte differences in
+some `rescript-bun` CMI files and an AST despite equal generated file sets;
+investigate these before using the artifact gate as an acceptance result.
 
 ## Filesystem-work audit
 
@@ -131,17 +109,9 @@ to the same project artifact or discovery path as the primary evidence of
 superfluous orchestration work. The existing compiler-work and artifact checks
 must remain enabled so fewer filesystem calls cannot conceal skipped work.
 
-Process attribution showed identical compiler-subprocess
-metadata/open work and effectively equal driver-plus-inherited clean-build open
-counts (about 8,110 for OCaml and 8,120 for Rust). OCaml made about 2,387 more
-driver-side metadata calls, led by repeated checks of source and `lib/bs`
-directories during artifact publication. Unchanged and single-edit process
-runs used fewer metadata and open calls in OCaml. The clean-build difference is
-therefore understood rather than an unexplained algorithmic discrepancy. A
-future cache for already-created publication directories may remove it, but it
-must be scoped to one attempt and recover correctly if a directory is removed
-concurrently. Preserve the raw trace or repeat the process-attributed audit
-before making that tradeoff.
+The older process-attributed syscall measurements used the removed external
+compiler mode. Repeat the audit with domains before using it to guide I/O
+changes.
 
 For the ordinary-edit path inside one long-lived watcher, run:
 
@@ -171,9 +141,14 @@ rewatch-ocaml/bench/watch_performance_gate.sh \
   7
 ```
 
+Set `REWATCH_WATCH_COMPILER_DOMAINS` to measure a specific worker count;
+otherwise the compiler uses its CPU-based heuristic.
+
 It warms both implementations, interleaves an odd number of timed edits,
-requires byte-identical generated JavaScript and normalized parser/compiler
-argument logs, and samples file descriptors, tasks, and RSS after every build.
+requires byte-identical generated JavaScript and equal logical parser/compiler
+work counts, and samples file descriptors, tasks, and RSS after every build.
+Rust work is observed through the counting `bsc` proxy; embedded OCaml work is
+observed at the shared logical compiler-request boundary.
 This catches retained-state implementations that appear fast by skipping work,
 as well as resource growth that a one-event syscall trace cannot show. The
 default median-latency limit is 150% of Rust because individual watch events
@@ -206,7 +181,4 @@ code, or too few explanatory comments can also reduce the number. Behavioral
 and work equivalence, platform support, performance, module size, and review
 findings remain the actual quality gates.
 
-The post-Windows snapshot with cloc 2.04 contains 7,809 Rust production lines
-after excluding telemetry and 11,320 OCaml production lines including both
-platform backends. Rust inline unit tests account for 2,773 lines; OCaml tests
-and fixtures account for 10,270 lines, and the benchmark tooling for 1,033.
+Rerun the snapshot after the domain cleanup before quoting source counts.

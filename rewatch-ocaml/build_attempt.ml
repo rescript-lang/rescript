@@ -25,7 +25,7 @@ let preliminary_parse result =
   else Parse_failed {stdout = result.stdout; stderr = result.stderr}
 
 type cleanup_batch = {actions: (unit -> unit) list; artifacts: string list}
-type namespace_job = {job: Process.job; finish: Process.result -> unit}
+type namespace_job = {task: Process.task; finish: Process.result -> unit}
 
 type pending_work = {
   mutable namespace_jobs: namespace_job list;

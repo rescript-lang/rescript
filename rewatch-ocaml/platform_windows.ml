@@ -79,6 +79,13 @@ let post_build_command ~command ~output =
     args = ["/D"; "/V:OFF"; "/S"; "/C"; command ^ " \"%" ^ variable ^ "%\""];
   }
 
+let shell_command command =
+  {
+    env = None;
+    program = "cmd.exe";
+    args = ["/D"; "/V:OFF"; "/S"; "/C"; command];
+  }
+
 let is_batch_file program =
   List.mem
     (Filename.extension program |> String.lowercase_ascii)

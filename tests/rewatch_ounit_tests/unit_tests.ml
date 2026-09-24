@@ -2,8 +2,6 @@ open OUnit2
 
 let check condition message = assert_bool message condition
 
-module Checked_windows_platform : module type of Platform = Platform_windows
-
 type lazy_job = First | Second
 
 let rec contains_adjacent left right = function
@@ -71,6 +69,14 @@ let () =
       while true do
         ignore (Unix.select [] [] [] 1.)
       done
+    | "--ppx-wait" ->
+      write_file (argument 2) (string_of_int (Unix.getpid ()));
+      Unix.sleepf 30.;
+      exit 0
+    | "--ppx-copy" ->
+      write_file (argument 2) "started";
+      write_file (argument 4) (read_file (argument 3));
+      exit 0
     | "--sleep" ->
       Thread.delay (float_of_string (argument 2));
       exit 0
@@ -233,6 +239,59 @@ let graph_work key dependencies = Process.{key; dependencies; value = key}
 
 let process_cancellation_tests _context =
   let test_executable = test_executable () in
+  let interrupt_requested = ref false in
+  let second_request_started = ref false in
+  let completed_request =
+    Process.{status = Unix.WEXITED 0; stdout = ""; stderr = ""}
+  in
+  let in_process_cancelled =
+    try
+      ignore
+        (Process.run_tasks ~max_jobs:1
+           ~poll:(fun () ->
+             if !interrupt_requested then raise (Process.Interrupted 130))
+           [
+             Process.in_process_task (fun () ->
+                 interrupt_requested := true;
+                 completed_request);
+             Process.in_process_task (fun () ->
+                 second_request_started := true;
+                 completed_request);
+           ]);
+      false
+    with Process.Interrupted 130 -> true
+  in
+  check
+    (in_process_cancelled && not !second_request_started)
+    "an interrupt during an in-process request stops the next request";
+  let domain_interrupt_requested = Atomic.make false in
+  let second_domain_request_started = Atomic.make false in
+  let domain_cancelled =
+    try
+      ignore
+        (Process.run_tasks ~max_jobs:1
+           ~poll:(fun () ->
+             if Atomic.get domain_interrupt_requested then
+               raise (Process.Interrupted 130))
+           [
+             Process.concurrent_task
+               ~cancel:(fun () -> ())
+               ~on_result:(fun result ->
+                 Atomic.set domain_interrupt_requested true;
+                 result)
+               (fun () -> completed_request);
+             Process.concurrent_task
+               ~cancel:(fun () -> ())
+               (fun () ->
+                 Atomic.set second_domain_request_started true;
+                 completed_request);
+           ]);
+      false
+    with Process.Interrupted 130 -> true
+  in
+  check
+    (domain_cancelled && not (Atomic.get second_domain_request_started))
+    "an interrupt after a domain request stops the next request";
   let cancellation_polls = ref 0 in
   let dependency_graph_cancelled =
     let exception Cancel in
@@ -291,6 +350,33 @@ let process_cancellation_tests _context =
   in
   check process_cancelled
     "single subprocess cancellation terminates the active process";
+  let concurrent_cancelled = Atomic.make false in
+  let concurrent_started = Atomic.make false in
+  let concurrent_task_cancelled =
+    let exception Cancel in
+    try
+      Process.run_dependency_graph ~max_jobs:1
+        [graph_work "concurrent-cancel" []]
+        ~poll:(fun () -> if Atomic.get concurrent_started then raise Cancel)
+        ~next:(fun _ result ->
+          match result with
+          | Some _ -> None
+          | None ->
+            Some
+              (Process.concurrent_task
+                 ~cancel:(fun () -> Atomic.set concurrent_cancelled true)
+                 (fun () ->
+                   Atomic.set concurrent_started true;
+                   while not (Atomic.get concurrent_cancelled) do
+                     Thread.delay 0.001
+                   done;
+                   Process.{status = Unix.WEXITED 0; stdout = ""; stderr = ""})));
+      false
+    with Cancel -> true
+  in
+  check
+    (concurrent_task_cancelled && Atomic.get concurrent_cancelled)
+    "dependency scheduler cancellation invokes active concurrent-task cleanup";
   if not Sys.win32 then
     Test_support.with_temp_dir "rewatch-descendant-pipe-" (fun root ->
         let marker = Filename.concat root "parent-exiting" in
@@ -384,6 +470,36 @@ let process_dependency_graph_tests _context =
   in
   check parallel_finalizers_completed
     "independent subprocess finalizers run before scheduler dispatch resumes";
+  let concurrent_tasks_entered = Atomic.make 0 in
+  let concurrent_tasks_completed =
+    let exception Tasks_serialized in
+    try
+      Process.run_dependency_graph ~max_jobs:2
+        [graph_work "concurrent-first" []; graph_work "concurrent-second" []]
+        ~next:(fun _ result ->
+          match result with
+          | Some _ -> None
+          | None ->
+            Some
+              (Process.concurrent_task
+                 ~cancel:(fun () -> ())
+                 (fun () ->
+                   ignore (Atomic.fetch_and_add concurrent_tasks_entered 1);
+                   let deadline = Unix.gettimeofday () +. 2. in
+                   while
+                     Atomic.get concurrent_tasks_entered < 2
+                     && Unix.gettimeofday () < deadline
+                   do
+                     Thread.delay 0.001
+                   done;
+                   if Atomic.get concurrent_tasks_entered < 2 then
+                     raise Tasks_serialized;
+                   Process.{status = Unix.WEXITED 0; stdout = ""; stderr = ""})));
+      true
+    with Tasks_serialized -> false
+  in
+  check concurrent_tasks_completed
+    "independent concurrent tasks run on separate scheduler workers";
   let graph_cycle_rejected =
     try
       Process.run_dependency_graph

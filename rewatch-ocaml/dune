@@ -19,7 +19,7 @@
 
 (library
  (name rewatch_ocaml_lib)
- (wrapped false)
+ (wrapped true)
  (modules
   rewatch_version
   string_util
@@ -47,6 +47,7 @@
   compiler_args_command
   compiler_log
   ast_header
+  compiler_execution_mode
   compiler_process
   compiler_scheduler
   after_build
@@ -75,7 +76,16 @@
   output
   build
   format)
- (libraries unix threads yojson str spawn cmdliner luv re.perl)
+ (libraries
+  unix
+  threads
+  yojson
+  str
+  spawn
+  cmdliner
+  luv
+  re.perl
+  rescript_compiler_driver)
  (foreign_stubs
   (language c)
   (names windows_job_stubs)))
@@ -83,6 +93,8 @@
 (executable
  (name rescript_ocaml)
  (modules rescript_ocaml)
+ (flags
+  (:standard -open Rewatch_ocaml_lib))
  (libraries rewatch_ocaml_lib))
 
 ; Keep the former scoped test command useful after moving test-only modules out

@@ -75,9 +75,28 @@ let run = function
   | command ->
     with_termination_handlers (fun ~poll -> run_command ~poll command)
 
-let () =
+let install_gc_reporter () =
+  match Sys.getenv_opt "REWATCH_GC_STATS_FILE" with
+  | None -> ()
+  | Some path ->
+    at_exit (fun () ->
+        let stats = Gc.stat () in
+        let allocated_words =
+          stats.minor_words +. stats.major_words -. stats.promoted_words
+        in
+        File_util.write_file_atomic ~perm:0o644 path
+          (Printf.sprintf
+             {|{"allocated_words":%.0f,"minor_words":%.0f,"promoted_words":%.0f,"major_words":%.0f,"minor_collections":%d,"major_collections":%d,"compactions":%d,"heap_words":%d,"top_heap_words":%d,"live_words":%d}
+|}
+             allocated_words stats.minor_words stats.promoted_words
+             stats.major_words stats.minor_collections stats.major_collections
+             stats.compactions stats.heap_words stats.top_heap_words
+             stats.live_words))
+
+let main () =
   Platform.configure_standard_streams ();
   try
+    install_gc_reporter ();
     match Cli.eval Sys.argv with
     | Cli.Run command -> run command
     | Cli.Exit code -> exit code
@@ -97,3 +116,5 @@ let () =
   | (Sys_error _ as exn) | (Unix.Unix_error _ as exn) ->
     prerr_endline (Printexc.to_string exn);
     exit 1
+
+let () = main ()

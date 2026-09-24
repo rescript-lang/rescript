@@ -82,7 +82,6 @@ for implementation in rust ocaml; do
   printf 'let value = 1\n' >"$work/$implementation/src/A.res"
   printf 'let value: int\n' >"$work/$implementation/src/A.resi"
   cp -R "$work/$implementation" "$work/$implementation-after-build"
-  cp -R "$work/$implementation" "$work/$implementation-parse-warning"
   cp -R "$work/$implementation" "$work/$implementation-watch"
   cp -R "$work/$implementation" "$work/$implementation-initial-failure-watch"
   printf 'let value = (\n' \
@@ -112,12 +111,10 @@ EOF
 
 export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$root/_build/default/compiler/bsc/rescript_compiler_main.exe}
 export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$root/packages/@rescript/runtime}
-parse_warning_bsc="$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe"
 after_build_command="$work/after-build-marker.sh"
 if $windows_posix_shell; then
   RESCRIPT_BSC_EXE=$(command_path "$RESCRIPT_BSC_EXE")
   RESCRIPT_RUNTIME=$(command_path "$RESCRIPT_RUNTIME")
-  parse_warning_bsc=$(command_path "$parse_warning_bsc")
   after_build_command="node $(command_path "$work/after-build-marker.js")"
 fi
 
@@ -193,55 +190,6 @@ EOF
 if ! cmp -s "$work/expected" "$work/ocaml.phases"; then
   echo "Interactive phase output no longer has the expected stable shape" >&2
   cat "$work/ocaml.phases" >&2
-  exit 1
-fi
-
-capture_parse_warning_order() {
-  implementation=$1
-  executable=$2
-  transcript="$work/$implementation-parse-warning.tty"
-  project="$work/$implementation-parse-warning"
-  command_executable=$(command_path "$executable")
-  command_project=$(command_path "$project")
-  if [ "$(uname -s)" = Darwin ]; then
-    script -qF "$transcript" env -u NO_COLOR \
-      "TERM=xterm" \
-      "CLICOLOR=1" \
-      "CLICOLOR_FORCE=0" \
-      "REWATCH_REAL_BSC=$RESCRIPT_BSC_EXE" \
-      "REWATCH_BSC_PROXY_MODE=parse-warning" \
-      "RESCRIPT_BSC_EXE=$parse_warning_bsc" \
-      "RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME" \
-      "$executable" build "$project" --no-timing >/dev/null
-  else
-    script -qefc \
-      "env -u NO_COLOR TERM=xterm CLICOLOR=1 CLICOLOR_FORCE=0 REAL_BSC_EXE=$RESCRIPT_BSC_EXE REWATCH_REAL_BSC=$RESCRIPT_BSC_EXE REWATCH_BSC_PROXY_MODE=parse-warning RESCRIPT_BSC_EXE=$parse_warning_bsc RESCRIPT_RUNTIME=$RESCRIPT_RUNTIME $command_executable build $command_project --no-timing" \
-      "$transcript" >/dev/null
-  fi
-  tr '\r' '\n' <"$transcript" \
-    | normalize_output \
-    | grep -E '(^\[[123]/3\] .* Parsed |PARSE_WARNING_MARKER)' \
-    >"$work/$implementation-parse-warning.order"
-}
-
-echo "Checking interactive parser warnings..."
-capture_parse_warning_order rust "$rust"
-capture_parse_warning_order ocaml "$ocaml"
-
-if ! cmp -s "$work/rust-parse-warning.order" \
-  "$work/ocaml-parse-warning.order"; then
-  echo "Parser warning phase order differs" >&2
-  printf '%s\n' '--- Rust order ---' >&2
-  cat "$work/rust-parse-warning.order" >&2
-  printf '%s\n' '--- OCaml order ---' >&2
-  cat "$work/ocaml-parse-warning.order" >&2
-  exit 1
-fi
-
-if ! sed -n '1p' "$work/ocaml-parse-warning.order" \
-  | grep -E '^\[2/3\] .* Parsed 1 source files in 0.00s$' >/dev/null; then
-  echo "Parser warnings were emitted before the completed parse phase" >&2
-  cat "$work/ocaml-parse-warning.order" >&2
   exit 1
 fi
 

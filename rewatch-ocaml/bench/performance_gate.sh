@@ -89,10 +89,11 @@ tree_resources() {
       for (pass = 0; pass < NR; pass++)
         for (i = 1; i <= NR; i++)
           if (live[parent[pids[i]]]) live[pids[i]] = 1
-      for (pid in live) {
-        total_memory += memory[pid]
-        total_tasks += tasks[pid]
-      }
+      for (pid in live)
+        if (live[pid]) {
+          total_memory += memory[pid]
+          total_tasks += tasks[pid]
+        }
       print total_memory + 0, total_tasks + 0
     }'
 }
@@ -171,20 +172,35 @@ trace_and_classify() {
   local implementation=$1 scenario=$2 executable=$3 fixture=$4 manifest=$5
   local clean_first=$6
   local trace_prefix="$work_root/${implementation}-${scenario}.execve"
+  local call_log="$work_root/${implementation}-${scenario}.compiler"
   if [[ "$clean_first" == 1 ]]; then
     "$executable" clean "$fixture" >/dev/null 2>&1
   fi
-  strace -f -ff -qq -s 4096 -e trace=execve,chdir -o "$trace_prefix" \
-    "$executable" build "$fixture" \
-    >"$work_root/${implementation}-${scenario}-trace.out" \
-    2>"$work_root/${implementation}-${scenario}-trace.stderr"
+  if [[ $implementation == ocaml ]]; then
+    # Embedded requests have no compiler execve. Record them at their shared
+    # logical boundary while tracing PPXs as external processes.
+    strace -f -ff -qq -s 4096 -e trace=execve,chdir -o "$trace_prefix" \
+      env REWATCH_COMPILER_CALL_LOG="$call_log" \
+      "$executable" build "$fixture" \
+      >"$work_root/${implementation}-${scenario}-trace.out" \
+      2>"$work_root/${implementation}-${scenario}-trace.stderr"
+  else
+    strace -f -ff -qq -s 4096 -e trace=execve,chdir -o "$trace_prefix" \
+      "$executable" build "$fixture" \
+      >"$work_root/${implementation}-${scenario}-trace.out" \
+      2>"$work_root/${implementation}-${scenario}-trace.stderr"
+  fi
   local trace_files=("$trace_prefix".*)
   local implementation_root=${fixture%/rewatch/testrepo}
   local trace_file exec_line argv cwd_line cwd phase input identity
   : >"$manifest.unsorted"
   for trace_file in "${trace_files[@]}"; do
-    exec_line=$(grep -m1 -F "execve(\"$RESCRIPT_BSC_EXE\"" "$trace_file" \
-      || grep -m1 -E 'execve\("[^"]*sury-ppx' "$trace_file" || true)
+    if [[ $implementation == ocaml ]]; then
+      exec_line=$(grep -m1 -E 'execve\("[^"]*sury-ppx' "$trace_file" || true)
+    else
+      exec_line=$(grep -m1 -F "execve(\"$RESCRIPT_BSC_EXE\"" "$trace_file" \
+        || grep -m1 -E 'execve\("[^"]*sury-ppx' "$trace_file" || true)
+    fi
     if [[ -z "$exec_line" ]]; then
       continue
     fi
@@ -193,7 +209,7 @@ trace_and_classify() {
     cwd_line=$(grep -m1 '^chdir("' "$trace_file" || true)
     cwd=${cwd_line#chdir(\"}
     cwd=${cwd%%\"*}
-    if [[ "$exec_line" == *"execve(\"$RESCRIPT_BSC_EXE\""* ]]; then
+    if [[ $implementation == rust && "$exec_line" == *"execve(\"$RESCRIPT_BSC_EXE\""* ]]; then
       if [[ "$argv" == *'"-bs-ast"'* ]]; then
         phase=parse
       elif [[ "$argv" == *'.mlmap"'* ]]; then
@@ -205,24 +221,35 @@ trace_and_classify() {
       input=${input%]}
       identity="$cwd"$'\t'"$phase"$'\t'"$input"
     else
-      # PPX temporary input/output names are deliberately randomized. Its
-      # executable identity and count are the stable unit of work.
+      # PPX temporary input/output names are deliberately randomized.
       identity=ppx$'\t'"${argv%%,*}"
     fi
     printf '%s\n' "$identity" \
       | sed "s#$implementation_root#<ROOT>#g" >>"$manifest.unsorted"
   done
-  sort "$manifest.unsorted" >"$manifest"
   local invocations parse namespace compile interface ppx
-  invocations=$(grep -hF -c "execve(\"$RESCRIPT_BSC_EXE\"" "${trace_files[@]}" \
-    | awk '{ total += $1 } END { print total + 0 }')
-  parse=$(grep -hF "execve(\"$RESCRIPT_BSC_EXE\"" "${trace_files[@]}" \
-    | grep -F -c '"-bs-ast"' || true)
-  namespace=$(grep -hF "execve(\"$RESCRIPT_BSC_EXE\"" "${trace_files[@]}" \
-    | grep -E -c '\.mlmap"' || true)
-  interface=$(grep -hF "execve(\"$RESCRIPT_BSC_EXE\"" "${trace_files[@]}" \
-    | grep -vF '"-bs-ast"' | grep -vE '\.mlmap"' \
-    | grep -E -c '\.iast"' || true)
+  if [[ $implementation == ocaml ]]; then
+    while IFS=$'\t' read -r phase cwd input; do
+      if [[ $phase != parse && $phase != namespace ]]; then phase=compile; fi
+      printf '%s\t%s\t"%s"\n' "$cwd" "$phase" "$input" \
+        | sed "s#$implementation_root#<ROOT>#g" >>"$manifest.unsorted"
+    done <"$call_log"
+    invocations=$(wc -l <"$call_log")
+    parse=$(awk -F '\t' '$1 == "parse" { n++ } END { print n+0 }' "$call_log")
+    namespace=$(awk -F '\t' '$1 == "namespace" { n++ } END { print n+0 }' "$call_log")
+    interface=$(awk -F '\t' '$1 == "interface" { n++ } END { print n+0 }' "$call_log")
+  else
+    invocations=$(grep -hF -c "execve(\"$RESCRIPT_BSC_EXE\"" "${trace_files[@]}" \
+      | awk '{ total += $1 } END { print total + 0 }')
+    parse=$(grep -hF "execve(\"$RESCRIPT_BSC_EXE\"" "${trace_files[@]}" \
+      | grep -F -c '"-bs-ast"' || true)
+    namespace=$(grep -hF "execve(\"$RESCRIPT_BSC_EXE\"" "${trace_files[@]}" \
+      | grep -E -c '\.mlmap"' || true)
+    interface=$(grep -hF "execve(\"$RESCRIPT_BSC_EXE\"" "${trace_files[@]}" \
+      | grep -vF '"-bs-ast"' | grep -vE '\.mlmap"' \
+      | grep -E -c '\.iast"' || true)
+  fi
+  sort "$manifest.unsorted" >"$manifest"
   compile=$((invocations - parse - namespace))
   ppx=$(grep -hE -c 'execve\("[^"]*sury-ppx' "${trace_files[@]}" \
     | awk '{ total += $1 } END { print total + 0 }')

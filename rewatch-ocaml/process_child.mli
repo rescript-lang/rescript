@@ -18,7 +18,10 @@ type 'a running
 val with_lock : Mutex.t -> (unit -> 'a) -> 'a
 
 val with_completion_notifier :
-  ticker_enabled:bool -> (completion_notifier -> 'a) -> 'a
+  ?defer_signals:bool ->
+  ticker_enabled:bool ->
+  (completion_notifier -> 'a) ->
+  'a
 
 val notify_completion : completion_notifier -> unit
 val notifier_generation : completion_notifier -> int

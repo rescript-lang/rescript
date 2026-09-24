@@ -8,6 +8,91 @@ let retain_critical_external_warnings stderr =
     |> List.filter (fun block -> String_util.contains block marker)
     |> String.concat "\n\n\n"
 
+let build_identity = Rescript_compiler_driver.build_identity
+
+let compiler_phase args =
+  let input =
+    match List.rev args with
+    | input :: _ -> input
+    | [] -> "<missing>"
+  in
+  let phase =
+    if List.mem "-bs-ast" args then "parse"
+    else if Filename.check_suffix input ".mlmap" then "namespace"
+    else if Filename.check_suffix input ".iast" then "interface"
+    else "implementation"
+  in
+  (phase, input)
+
+let log_compiler_request (job : Process.job) =
+  match Sys.getenv_opt "REWATCH_COMPILER_CALL_LOG" with
+  | None -> ()
+  | Some path ->
+    let phase, input = compiler_phase job.args in
+    let channel =
+      open_out_gen [Open_creat; Open_append; Open_text] 0o644 path
+    in
+    Fun.protect
+      ~finally:(fun () -> close_out_noerr channel)
+      (fun () -> Printf.fprintf channel "%s\t%s\t%s\n" phase job.cwd input)
+
+let exit_code = function
+  | Unix.WEXITED code -> code
+  | Unix.WSIGNALED signal | Unix.WSTOPPED signal -> 128 + signal
+
+let run_in_process ?poll (job : Process.job) =
+  log_compiler_request job;
+  match List.rev job.args with
+  | [] ->
+    {
+      Process.status = Unix.WEXITED 2;
+      stdout = "";
+      stderr = "missing compiler input";
+    }
+  | input :: reversed_argv ->
+    let result =
+      Rescript_compiler_driver.run_request ~cwd:job.cwd
+        ~argv:(List.rev reversed_argv) ~input
+        ~run_external:
+          (Some
+             (fun command ->
+               let command = Platform.shell_command command in
+               (* Signal handlers are process-wide; domain workers launch PPXs
+                 without replacing the scheduler domain's handlers. *)
+               let result =
+                 Process.run ?poll ~defer_signals:false ~cwd:job.cwd
+                   command.program command.args
+               in
+               (exit_code result.status, result.stdout, result.stderr)))
+    in
+    {
+      Process.status = Unix.WEXITED result.exit_code;
+      stdout = result.stdout;
+      stderr = result.stderr;
+    }
+
+let run ?poll job =
+  Option.iter (fun poll -> poll ()) poll;
+  let result = run_in_process ?poll job in
+  Option.iter (fun poll -> poll ()) poll;
+  result
+
+let task job =
+  let cancelled = Atomic.make false in
+  Process.concurrent_task
+    ~cancel:(fun () -> Atomic.set cancelled true)
+    (fun () ->
+      run_in_process
+        ~poll:(fun () ->
+          if Atomic.get cancelled then raise (Process.Interrupted 15))
+        job)
+
+let run_jobs ?poll ?on_complete jobs =
+  jobs |> List.map task
+  |> Process.run_tasks
+       ~max_jobs:(Compiler_execution_mode.configured_count ())
+       ?poll ?on_complete
+
 let parse_job ~bsc ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   File_util.ensure_dir (Filename.concat build_dir (Filename.dirname ast));
@@ -100,23 +185,24 @@ let namespace_task ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
     Some
       Compiler_scheduler.
         {
-          job =
-            Process.
-              {
-                program = bsc;
-                args =
-                  [
-                    "-runtime-path";
-                    runtime;
-                    "-w";
-                    "-49";
-                    "-color";
-                    "always";
-                    "-no-alias-deps";
-                    Filename.basename mlmap;
-                  ];
-                cwd = build_dir;
-              };
+          task =
+            task
+              Process.
+                {
+                  program = bsc;
+                  args =
+                    [
+                      "-runtime-path";
+                      runtime;
+                      "-w";
+                      "-49";
+                      "-color";
+                      "always";
+                      "-no-alias-deps";
+                      Filename.basename mlmap;
+                    ];
+                  cwd = build_dir;
+                };
           publish =
             (fun result ->
               if not (Process.succeeded result) then

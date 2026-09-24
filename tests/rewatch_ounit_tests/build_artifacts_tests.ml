@@ -134,8 +134,8 @@ let tests =
       write_file config_path
         {|{"name":"moved-source","sources":{"dir":"src","subdirs":true}}|};
       write_file new_source "let value = 1";
-      write_file published_ast
-        ("Caml1999X\nDependency\n" ^ old_source ^ "\nbinary payload");
+      Test_support.write_ast_header published_ast ~dependencies:["Dependency"]
+        ~source:old_source;
       write_file working_ast "old working AST";
       let config = Config.load_root root in
       let module_ : Source.module_ =

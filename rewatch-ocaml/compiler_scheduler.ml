@@ -8,7 +8,7 @@ exception Publication_failure of exn * cmi_change
 
 type publish_result = {stderr: string; cmi_change: cmi_change}
 type namespace_task = {
-  job: Process.job;
+  task: Process.task;
   publish: Process.result -> publish_result;
 }
 type post_build_task = {output: string; task: Process.task}
@@ -44,7 +44,7 @@ type scheduled_module = {
   cmi_path: string;
   publication: publication option Atomic.t;
   prepare: unit -> unit;
-  compile: source_kind:Source.source_kind -> string -> Process.job;
+  compile: source_kind:Source.source_kind -> string -> Process.task;
   publish:
     source_kind:Source.source_kind -> string -> Process.result -> publish_result;
   record_published_outputs: source_kind:Source.source_kind -> string -> unit;
@@ -202,7 +202,20 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
       Publication_failed (Printexc.to_string error)
     | None -> No_publication
   in
+  let publish_compilation (scheduled : scheduled_module) ~source_kind path
+      result =
+    (if Process.succeeded result then
+       let publication =
+         capture_publication (fun () ->
+             scheduled.publish ~source_kind path result)
+       in
+       Atomic.set scheduled.publication (Some publication));
+    result
+  in
   let record_result (scheduled : scheduled_module) ~source_kind path result =
+    (* Domain tasks only compile. Publication and build-state updates remain on
+       this scheduler domain after their result has been collected. *)
+    let result = publish_compilation scheduled ~source_kind path result in
     let result, publication_error =
       match record_publication scheduled ~source_kind path with
       | Publication_succeeded stderr -> ({result with Process.stderr}, None)
@@ -239,16 +252,9 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     Option.is_none message
   in
   let compilation_task (scheduled : scheduled_module) ~source_kind path =
-    let job = scheduled.compile ~source_kind path in
+    let task = scheduled.compile ~source_kind path in
     Atomic.set scheduled.publication None;
-    Process.task job ~on_result:(fun result ->
-        (if Process.succeeded result then
-           let publication =
-             capture_publication (fun () ->
-                 scheduled.publish ~source_kind path result)
-           in
-           Atomic.set scheduled.publication (Some publication));
-        result)
+    task
   in
   let record_post_build_result (scheduled : scheduled_module) output result =
     if Process.succeeded result then (
@@ -320,12 +326,11 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
   in
   let scheduler_failed =
     try
-      Process.run_dependency_graph ?poll
+      let max_jobs = Compiler_execution_mode.configured_count () in
+      Process.run_dependency_graph ~max_jobs ?poll
         works
-        (* Rust's parallel scheduler may already have independent work in
-           flight when a module fails. Finish all ready, independent work here
-           so the same diagnostics do not depend on the host's worker count;
-           dependents of the failed module remain blocked. *)
+        (* Finish ready independent work after a module failure; dependents of
+           the failed module remain blocked. Interruptions still abort. *)
         ~on_failure:(function
           | Module_failed -> Process.Continue_independent_work
           | _ -> Process.Abort_immediately)

@@ -39,6 +39,9 @@ let post_build_command ~command ~output =
     args = ["-c"; command ^ " " ^ Filename.quote output];
   }
 
+let shell_command command =
+  {env = None; program = "/bin/sh"; args = ["-c"; command]}
+
 type process = int
 
 let spawn ~env ~cwd ~program ~args ~stdin ~stdout ~stderr =

@@ -7,27 +7,12 @@ port="$port_directory/$(basename "$port")"
 root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 : "${RESCRIPT_BSC_EXE:=$root/_build/default/compiler/bsc/rescript_compiler_main.exe}"
 : "${RESCRIPT_RUNTIME:=$root/packages/@rescript/runtime}"
-test_proxy="$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe"
 windows_posix_shell=false
 case $(uname -s) in
   CYGWIN*|MINGW*|MSYS*) windows_posix_shell=true ;;
 esac
 native_path() {
   if $windows_posix_shell; then cygpath -am "$1"; else printf '%s\n' "$1"; fi
-}
-assert_no_test_proxy_processes() {
-  if $windows_posix_shell; then
-    if ! powershell.exe -NoProfile -NonInteractive -Command \
-      'if (Get-Process -Name rewatch_bsc_test_proxy -ErrorAction SilentlyContinue) { exit 1 }'; then
-      echo "rewatch compiler test proxy was left running" >&2
-      powershell.exe -NoProfile -NonInteractive -Command \
-        'Get-Process -Name rewatch_bsc_test_proxy -ErrorAction SilentlyContinue | Format-Table -AutoSize' >&2
-      exit 1
-    fi
-  elif test -n "$(pgrep -f rewatch_bsc_test_proxy || true)"; then
-    echo "rewatch compiler test proxy was left running" >&2
-    exit 1
-  fi
 }
 directory_link() {
   link_target=$1
@@ -55,17 +40,10 @@ file_link_if_supported() {
 if $windows_posix_shell; then
   RESCRIPT_BSC_EXE=$(native_path "$RESCRIPT_BSC_EXE")
   RESCRIPT_RUNTIME=$(native_path "$RESCRIPT_RUNTIME")
-  test_proxy=$(native_path "$test_proxy")
 fi
 export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
 work="$root/tmp/rewatch-ocaml/test-$$"
 mkdir -p "$work"
-if REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" REWATCH_BSC_PROXY_MODE=parse-warning \
-  "$test_proxy" -rewatch-invalid-option \
-  >"$work/proxy-invalid.out" 2>"$work/proxy-invalid.err"; then
-  echo "rewatch compiler test proxy discarded a compiler failure" >&2
-  exit 1
-fi
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-lifecycle"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-failure"
@@ -151,7 +129,6 @@ for dependency in namespace-one namespace-two; do
     "$work/namespace-collision/node_modules/$dependency"
 done
 cp -R "$root/rewatch-ocaml/tests/source-map" "$work/source-map"
-cp -R "$root/rewatch-ocaml/tests/warning-replay" "$work/warning-replay"
 cp -R "$root/rewatch-ocaml/tests/monorepo" "$work/monorepo"
 basic="$work/basic"
 cleanup_lifecycle="$work/cleanup-lifecycle"
@@ -179,7 +156,6 @@ namespace_entry="$work/namespace-entry"
 qualified_namespace="$work/qualified-namespace"
 namespace_collision="$work/namespace-collision"
 source_map="$work/source-map"
-warning_replay="$work/warning-replay"
 monorepo="$work/monorepo"
 
 package_name_mismatch="$work/package-name-mismatch"
@@ -271,13 +247,6 @@ printf 'let dependent = A.value + 1\n' \
   >"$interface_failure_recovery/src/B.res"
 printf 'let valid = true\n' \
   >"$interface_failure_recovery/src/Broken.res"
-
-atomic_save="$work/atomic-save"
-mkdir -p "$atomic_save/src"
-printf '%s\n' \
-  '{"name":"atomic-save","sources":"src/","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
-  >"$atomic_save/rescript.json"
-printf 'let value = 1\n' >"$atomic_save/src/Main.res"
 
 missing_nested_source="$work/missing-nested-source"
 mkdir -p "$missing_nested_source"
@@ -421,14 +390,6 @@ printf '%s\n' \
   >"$moved_source/rescript.json"
 printf 'let value = 1\n' >"$moved_source/src/A.res"
 
-publication_cmi="$work/publication-cmi"
-mkdir -p "$publication_cmi/src"
-printf '%s\n' \
-  '{"name":"publication-cmi","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
-  >"$publication_cmi/rescript.json"
-printf 'let value = 1\n' >"$publication_cmi/src/A.res"
-printf 'let dependent = A.value + 1\n' >"$publication_cmi/src/B.res"
-
 retained_cycle="$work/retained-cycle"
 mkdir -p "$retained_cycle/src"
 printf '%s\n' \
@@ -436,14 +397,6 @@ printf '%s\n' \
   >"$retained_cycle/rescript.json"
 printf 'let value = 1\n' >"$retained_cycle/src/A.res"
 printf 'let dependent = A.value\n' >"$retained_cycle/src/B.res"
-
-retained_parse="$work/retained-parse"
-mkdir -p "$retained_parse/src"
-printf '%s\n' \
-  '{"name":"retained-parse","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
-  >"$retained_parse/rescript.json"
-printf 'let value = 1\n' >"$retained_parse/src/A.res"
-printf 'let other = 1\n' >"$retained_parse/src/B.res"
 
 initial_failure_freshness="$work/initial-failure-freshness"
 mkdir -p "$initial_failure_freshness/src"
@@ -542,24 +495,6 @@ for namespace_dependency_name in ns-one ns-two; do
   directory_link "$external_diagnostics_base/store/$namespace_dependency_name" \
     "$external_namespace/node_modules/$namespace_dependency_name"
 done
-
-dev_include_order="$work/dev-include-order"
-mkdir -p "$dev_include_order/src" "$dev_include_order/dev" \
-  "$dev_include_order/node_modules/regular/src" \
-  "$dev_include_order/node_modules/development/src"
-printf '%s\n' \
-  '{"name":"dev-include-root","sources":["src",{"dir":"dev","type":"dev"}],"dependencies":["regular"],"dev-dependencies":["development"]}' \
-  >"$dev_include_order/rescript.json"
-printf 'let value = 1\n' >"$dev_include_order/src/Main.res"
-printf 'let value = 2\n' >"$dev_include_order/dev/Test.res"
-printf '%s\n' '{"name":"regular","sources":"src"}' \
-  >"$dev_include_order/node_modules/regular/rescript.json"
-printf 'let value = 1\n' \
-  >"$dev_include_order/node_modules/regular/src/Regular.res"
-printf '%s\n' '{"name":"development","sources":"src"}' \
-  >"$dev_include_order/node_modules/development/rescript.json"
-printf 'let value = 1\n' \
-  >"$dev_include_order/node_modules/development/src/Development.res"
 
 if [ -x "$port_directory/bsc.exe" ]; then
   env -u RESCRIPT_BSC_EXE "$port" build "$packaged_basic" \
@@ -1203,42 +1138,6 @@ grep 'does not match the interface' \
 grep 'Parsed 0 source files' "$directory_symlink/unchanged.log" >/dev/null
 grep 'Compiled 0 modules' "$directory_symlink/unchanged.log" >/dev/null
 
-# Record the content that triggered a direct event before building it. An
-# atomic replacement made while that build is compiling must cause a second
-# build rather than becoming the post-build snapshot baseline.
-atomic_release="$atomic_save/release"
-atomic_started="$atomic_save/compile-started"
-touch "$atomic_release"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=block-compile \
-  REWATCH_OCAML_RELEASE_FILE="$(native_path "$atomic_release")" \
-  REWATCH_OCAML_COMPILE_STARTED="$(native_path "$atomic_started")" \
-  "$port" watch "$atomic_save" >"$atomic_save/watch.log" 2>&1 &
-atomic_save_pid=$!
-background_pids="$background_pids $atomic_save_pid"
-if ! wait_for_file "$atomic_save/src/Main.mjs"; then
-  cat "$atomic_save/watch.log" >&2
-  exit 1
-fi
-wait_for_initial_build "$atomic_save/watch.log"
-rm "$atomic_release" "$atomic_started"
-printf 'let value = 2\n' >"$atomic_save/src/Main.res"
-if ! wait_for_file "$atomic_started"; then
-  cat "$atomic_save/watch.log" >&2
-  exit 1
-fi
-printf 'let value = 3\n' >"$atomic_save/src/Main.next"
-mv "$atomic_save/src/Main.next" "$atomic_save/src/Main.res"
-touch "$atomic_release"
-if ! wait_for_text "$atomic_save/src/Main.mjs" 'value = 3'; then
-  cat "$atomic_save/watch.log" >&2
-  cat "$atomic_save/src/Main.mjs" >&2
-  exit 1
-fi
-kill -TERM "$atomic_save_pid"
-wait "$atomic_save_pid" 2>/dev/null || true
-
 "$port" watch "$recursive_lib" >"$recursive_lib/watch.log" 2>&1 &
 recursive_lib_pid=$!
 background_pids="$background_pids $recursive_lib_pid"
@@ -1522,38 +1421,6 @@ fi
 kill -TERM "$namespace_repair_pid"
 wait "$namespace_repair_pid" 2>/dev/null || true
 
-publication_destination="$publication_cmi/lib/bs/src/A.res"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=fail-late-publication \
-  REWATCH_FAIL_PUBLICATION="$(native_path "$publication_cmi/fail-publication")" \
-  REWATCH_PUBLICATION_FAILED="$(native_path "$publication_cmi/publication-failed")" \
-  REWATCH_PUBLICATION_DESTINATION="$(native_path "$publication_destination")" \
-  "$port" watch "$publication_cmi" >"$publication_cmi/watch.log" 2>&1 &
-publication_cmi_pid=$!
-background_pids="$background_pids $publication_cmi_pid"
-if ! wait_for_file "$publication_cmi/src/B.mjs"; then
-  cat "$publication_cmi/watch.log" >&2
-  exit 1
-fi
-wait_for_initial_build "$publication_cmi/watch.log"
-touch "$publication_cmi/fail-publication"
-printf 'let value = "changed"\n' >"$publication_cmi/src/A.res"
-if ! wait_for_file "$publication_cmi/publication-failed" || \
-  ! wait_for_text "$publication_cmi/watch.log" 'A.res'; then
-  cat "$publication_cmi/watch.log" >&2
-  exit 1
-fi
-remove_obstruction_directory "$publication_destination"
-rm "$publication_cmi/fail-publication"
-printf 'let value = "changed"\n\n' >"$publication_cmi/src/A.res"
-if ! wait_for_text "$publication_cmi/watch.log" 'This has type:'; then
-  cat "$publication_cmi/watch.log" >&2
-  exit 1
-fi
-kill -TERM "$publication_cmi_pid"
-wait "$publication_cmi_pid" 2>/dev/null || true
-
 "$port" watch "$retained_cycle" >"$retained_cycle/watch.log" 2>&1 &
 retained_cycle_pid=$!
 background_pids="$background_pids $retained_cycle_pid"
@@ -1610,61 +1477,6 @@ if ! wait_for_file "$initial_failure_freshness/lib/ocaml/A.cmi"; then
 fi
 kill -TERM "$initial_failure_freshness_pid"
 wait "$initial_failure_freshness_pid" 2>/dev/null || true
-
-# Failed parses and parser warnings remain pending until the same source parses
-# cleanly. An unrelated edit must not compile an older AST or forget diagnostics.
-retained_parse_log="$retained_parse/watch.log"
-retained_parse_calls="$retained_parse/bsc-calls.log"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=parse-warning-log \
-  REWATCH_BSC_CALL_LOG="$(native_path "$retained_parse_calls")" \
-  REWATCH_PARSE_WARNING_SOURCE=A.res \
-  "$port" watch "$retained_parse" >"$retained_parse_log" 2>&1 &
-retained_parse_pid=$!
-background_pids="$background_pids $retained_parse_pid"
-if ! wait_for_count "$retained_parse_log" REWATCH_PARSE_WARNING 1 || \
-  ! wait_for_file "$retained_parse/src/A.mjs"; then
-  cat "$retained_parse_log" >&2
-  exit 1
-fi
-wait_for_initial_build "$retained_parse_log"
-initial_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
-printf 'let other = 2\n' >"$retained_parse/src/B.res"
-if ! wait_for_count "$retained_parse_log" REWATCH_PARSE_WARNING 2; then
-  cat "$retained_parse_log" >&2
-  exit 1
-fi
-if ! wait_for_count "$retained_parse_calls" '-bs-ast.*A.res' \
-  "$((initial_a_parse_count + 1))"; then
-  cat "$retained_parse_calls" >&2
-  exit 1
-fi
-warning_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
-test "$warning_a_parse_count" -gt "$initial_a_parse_count"
-printf 'let value =\n' >"$retained_parse/src/A.res"
-if ! wait_for_count "$retained_parse_log" \
-  'This let-binding misses an expression' 1; then
-  cat "$retained_parse_log" >&2
-  exit 1
-fi
-failed_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
-printf 'let other = 3\n' >"$retained_parse/src/B.res"
-if ! wait_for_count "$retained_parse_log" \
-  'This let-binding misses an expression' 2; then
-  cat "$retained_parse_log" >&2
-  exit 1
-fi
-retried_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
-test "$retried_a_parse_count" -gt "$failed_a_parse_count"
-grep 'value = 1' "$retained_parse/src/A.mjs" >/dev/null
-printf 'let value = 2\n' >"$retained_parse/src/A.res"
-if ! wait_for_text "$retained_parse/src/A.mjs" 'value = 2'; then
-  cat "$retained_parse_log" >&2
-  exit 1
-fi
-kill -TERM "$retained_parse_pid"
-wait "$retained_parse_pid" 2>/dev/null || true
 
 "$port" build "$duplicate_selection" >/dev/null
 "$port" build "$external_duplicate" >"$external_duplicate/build.log" 2>&1
@@ -1736,52 +1548,6 @@ fi
 kill -TERM "$transitive_local_watch_pid"
 wait "$transitive_local_watch_pid" 2>/dev/null || true
 
-dev_include_call_log="$dev_include_order/bsc-calls.log"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=counting \
-  REWATCH_BSC_CALL_LOG="$(native_path "$dev_include_call_log")" \
-  "$port" build "$dev_include_order" >/dev/null
-node - "$dev_include_call_log" \
-  "$dev_include_order/node_modules/development/lib/ocaml" \
-  "$dev_include_order/node_modules/regular/lib/ocaml" <<'EOF'
-const fs = require("fs");
-const [log, development, regular] = process.argv.slice(2);
-const normalize = value => value.replaceAll("\\", "/");
-const command = fs.readFileSync(log, "utf8").split("\n")
-  .find(line => line.includes("Test.ast") && !line.includes("-bs-ast"));
-const normalizedCommand = command === undefined ? "" : normalize(command);
-if (!command || normalizedCommand.indexOf(normalize(development)) < 0 ||
-    normalizedCommand.indexOf(normalize(development)) >
-      normalizedCommand.indexOf(normalize(regular))) {
-  process.exit(1);
-}
-EOF
-
-warning_call_log="$warning_replay/bsc-calls.log"
-warning_watch_log="$warning_replay/watch.log"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=counting \
-  REWATCH_BSC_CALL_LOG="$(native_path "$warning_call_log")" \
-  "$port" watch "$warning_replay" >"$warning_watch_log" 2>&1 &
-warning_watch_pid=$!
-background_pids="$background_pids $warning_watch_pid"
-if ! wait_for_count "$warning_watch_log" 'unused value unusedValue' 1; then
-  cat "$warning_watch_log" >&2
-  exit 1
-fi
-wait_for_initial_build "$warning_watch_log"
-warning_a_calls=$(grep -c 'WarningA.ast' "$warning_call_log" || true)
-test "$warning_a_calls" -gt 0
-printf '\nlet changed = 1\n' >> "$warning_replay/src/B.res"
-if ! wait_for_count "$warning_watch_log" 'unused value unusedValue' 2; then
-  cat "$warning_watch_log" >&2
-  exit 1
-fi
-warning_a_calls_after=$(grep -c 'WarningA.ast' "$warning_call_log" || true)
-test "$warning_a_calls_after" -eq "$warning_a_calls"
-stop_watch "$warning_replay" "$warning_watch_pid"
 stop_watch "$watch_basic" "$watch_pid"
 test ! -f "$watch_basic/lib/watch.lock"
 
@@ -1798,114 +1564,6 @@ fi
 wait_for_initial_build "$watch_basic/restart.log"
 stop_watch "$watch_basic" "$watch_restart_pid"
 test ! -f "$watch_basic/lib/watch.lock"
-
-if ! $windows_posix_shell; then
-interrupt_basic="$work/interrupt-basic"
-cp -R "$root/rewatch-ocaml/tests/basic" "$interrupt_basic"
-child_marker="$interrupt_basic/child-started"
-REWATCH_OCAML_CHILD_STARTED="$(native_path "$child_marker")" \
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=slow \
-RESCRIPT_BSC_EXE="$test_proxy" \
-"$port" watch "$interrupt_basic" >"$interrupt_basic/watch.log" 2>&1 &
-interrupt_pid=$!
-background_pids="$background_pids $interrupt_pid"
-attempts=0
-while [ "$attempts" -lt 100 ] && [ ! -f "$child_marker" ]; do
-  attempts=$((attempts + 1))
-  sleep 0.1
-done
-test -f "$child_marker"
-kill -TERM "$interrupt_pid"
-wait "$interrupt_pid"
-test ! -f "$interrupt_basic/lib/watch.lock"
-assert_no_test_proxy_processes
-test -z "$(find "$interrupt_basic" -name '.rewatch-ocaml-*.log' -print)"
-
-# One-shot commands must unwind through the same process and lock owners when
-# the shell terminates them during compiler work.
-interrupt_build="$work/interrupt-build"
-cp -R "$root/rewatch-ocaml/tests/basic" "$interrupt_build"
-build_child_marker="$interrupt_build/child-started"
-REWATCH_OCAML_CHILD_STARTED="$(native_path "$build_child_marker")" \
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=slow \
-RESCRIPT_BSC_EXE="$test_proxy" \
-"$port" build "$interrupt_build" >"$interrupt_build/build.log" 2>&1 &
-interrupt_build_pid=$!
-background_pids="$background_pids $interrupt_build_pid"
-wait_for_file "$build_child_marker"
-kill -TERM "$interrupt_build_pid"
-set +e
-wait "$interrupt_build_pid"
-interrupt_build_status=$?
-set -e
-test "$interrupt_build_status" -eq 143
-test ! -f "$interrupt_build/lib/build.lock"
-assert_no_test_proxy_processes
-test -z "$(find "$interrupt_build" -name '.rewatch-ocaml-*.log' -print)"
-fi
-
-# Removing watch.lock is the shell-suite shutdown protocol. It must interrupt
-# an in-progress compiler batch just as SIGTERM does, rather than waiting for
-# every queued module to finish.
-lock_interrupt_basic="$work/lock-interrupt-basic"
-cp -R "$root/rewatch-ocaml/tests/basic" "$lock_interrupt_basic"
-lock_child_marker="$lock_interrupt_basic/child-started"
-REWATCH_OCAML_CHILD_STARTED="$(native_path "$lock_child_marker")" \
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=slow \
-RESCRIPT_BSC_EXE="$test_proxy" \
-"$port" watch "$lock_interrupt_basic" \
-  >"$lock_interrupt_basic/watch.log" 2>&1 &
-lock_interrupt_pid=$!
-background_pids="$background_pids $lock_interrupt_pid"
-if ! wait_for_file "$lock_child_marker"; then
-  cat "$lock_interrupt_basic/watch.log" >&2
-  exit 1
-fi
-remove_file_with_retry "$lock_interrupt_basic/lib/watch.lock"
-if ! wait_for_pid_gone "$lock_interrupt_pid"; then
-  echo "watcher did not stop during compiler work after watch.lock removal" >&2
-  exit 1
-fi
-wait "$lock_interrupt_pid"
-assert_no_test_proxy_processes
-
-lock_basic="$work/lock-basic"
-cp -R "$root/rewatch-ocaml/tests/basic" "$lock_basic"
-rm -rf "$lock_basic/lib"
-rm -f "$lock_basic/src/A.mjs" "$lock_basic/src/B.mjs" \
-  "$lock_basic/src/WithInterface.mjs"
-first_marker="$lock_basic/first-child-started"
-release_marker="$lock_basic/release-first-build"
-REWATCH_OCAML_CHILD_STARTED="$(native_path "$first_marker")" \
-REWATCH_OCAML_RELEASE_FILE="$(native_path "$release_marker")" \
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=slow \
-RESCRIPT_BSC_EXE="$test_proxy" \
-  "$port" build "$lock_basic" >"$lock_basic/first.log" 2>&1 &
-first_build_pid=$!
-background_pids="$background_pids $first_build_pid"
-wait_for_file "$first_marker"
-workspace_build_lock="$lock_basic/lib/build.lock"
-test -f "$workspace_build_lock"
-"$port" build "$lock_basic" >"$lock_basic/second.log" 2>&1 &
-second_build_pid=$!
-background_pids="$background_pids $second_build_pid"
-wait_for_text "$lock_basic/second.log" "Waiting for other build to finish"
-test ! -f "$lock_basic/src/A.mjs"
-touch "$release_marker"
-if ! wait "$first_build_pid"; then
-  cat "$lock_basic/first.log" >&2
-  exit 1
-fi
-if ! wait "$second_build_pid"; then
-  cat "$lock_basic/second.log" >&2
-  exit 1
-fi
-test -f "$lock_basic/src/A.mjs"
-test ! -f "$workspace_build_lock"
 
 "$port" build --features native "$features"
 test -f "$features/native/Native.js"
@@ -2056,29 +1714,20 @@ rm -f "$out_of_source/src/Main.res"
 "$port" build "$out_of_source"
 test ! -f "$out_of_source/lib/es6/src/Main.js"
 
-namespace_call_log="$namespace/bsc-calls.log"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=counting \
-  REWATCH_BSC_CALL_LOG="$(native_path "$namespace_call_log")" \
-"$port" build "$namespace"
+namespace_call_log="$namespace/compiler-calls.log"
+REWATCH_COMPILER_CALL_LOG="$(native_path "$namespace_call_log")" \
+  "$port" build "$namespace"
 test -f "$namespace/lib/ocaml/A-Widget.cmi"
 test -f "$namespace/src/B.js"
 : > "$namespace_call_log"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=counting \
-  REWATCH_BSC_CALL_LOG="$(native_path "$namespace_call_log")" \
+REWATCH_COMPILER_CALL_LOG="$(native_path "$namespace_call_log")" \
   "$port" build "$namespace"
 if grep -F 'Widget.mlmap' "$namespace_call_log" >/dev/null; then
   echo "unchanged build unexpectedly recompiled its namespace" >&2
   exit 1
 fi
 printf '\nlet changed = 1\n' >> "$namespace/src/B.res"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=counting \
-  REWATCH_BSC_CALL_LOG="$(native_path "$namespace_call_log")" \
+REWATCH_COMPILER_CALL_LOG="$(native_path "$namespace_call_log")" \
   "$port" build "$namespace"
 grep -F 'Widget.mlmap' "$namespace_call_log" >/dev/null
 

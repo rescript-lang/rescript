@@ -6,24 +6,21 @@ implementation remains available as `rescript-rust` on every platform.
 
 ## Status
 
-The cross-platform implementation, parity, performance, and release-quality
-gates are complete. The post-rebase Linux clean-build gate measured a 4.740 s Rust
-median and a 5.020 s OCaml median (1.059x), with identical compiler work, generated-file
-sets, and byte-stable artifacts. A separate 1,425-module macOS project measured
-approximately 9.6 s for Rust and 11.5 s for OCaml (about 1.20x). Absolute timing
-is host-specific; the reproducible method and complete resource/work results
-are in [`bench/README.md`](bench/README.md).
+The OCaml port's cross-platform baseline gates passed before parallel
+compiler domains became the default. Domain builds now pass repeated Linux
+artifact and focused concurrency checks; broader project and platform
+validation continues. Current domain measurements and limits are in
+[`bench/README.md`](bench/README.md).
 
-The final uninterrupted `make test-all` run passed all compiler, runtime,
-build, GenType, analysis, tools, and canonical rewatch tests. The port has 43
-OUnit2 cases, and all 48 shared integration tests run against the packaged OCaml
-executable. All 139 Rust unit tests were reviewed: 131 map to focused or shared
-tests, five document intentional differences, and three cover the omitted
-telemetry support. Reanalyze reports no unreviewed dead production code.
+Before the domain cleanup, an uninterrupted `make test-all` run passed all
+compiler, runtime, build, GenType, analysis, tools, and canonical rewatch tests.
+The shared integration suite runs against the packaged OCaml executable.
+All 139 Rust unit tests were reviewed: 131 mapped to focused or shared tests,
+five documented intentional differences, and three covered omitted telemetry.
 
 OpenTelemetry is deliberately omitted, and source filters support the documented
 common Rust/Re regular-expression subset rather than every Rust-regex construct.
-No platform correctness defect remains open. Native Windows validation covers
+Earlier native Windows validation covered
 the focused suite, all 42 OUnit2 cases, all 48 applicable canonical integration
 cases, Rust's 136 unit tests, package promotion/inventory, and both packaged
 executables. On a two-vCPU Windows 11 ARM64 guest running the x64 package under
@@ -66,14 +63,26 @@ opam exec -- dune build --profile static rewatch-ocaml/rescript_ocaml.exe
 file _build/default/rewatch-ocaml/rescript_ocaml.exe
 ```
 
-It invokes `bsc` as an external process. When running outside this repository's
-normal Makefile environment, point it at the compiler and runtime explicitly:
+Build and watch requests compile on a bounded pool of OCaml domains by
+default. The main domain schedules dependencies and publishes artifacts;
+compiler workers parse and compile independent modules. The worker count is
+the lesser of eight and one fewer than the available CPU count, with a minimum
+of one. Set `REWATCH_COMPILER_DOMAINS` to override it (one through the
+scheduler's platform bound, at least twelve). The heuristic is provisional.
+PPXs and hooks remain external processes.
+
+When running outside this repository's normal Makefile environment, supply
+the runtime explicitly:
 
 ```sh
-export RESCRIPT_BSC_EXE="$PWD/_build/default/compiler/bsc/rescript_compiler_main.exe"
 export RESCRIPT_RUNTIME="$PWD/packages/@rescript/runtime"
 _build/default/rewatch-ocaml/rescript_ocaml.exe build path/to/project
 ```
+
+The repeated testrepo clean builds matched selected AST, IAST, CMI, CMJ,
+JavaScript, source-map, and namespace-map artifacts across one, two, four,
+eight, and twelve domains. A rare earlier output mismatch remains unexplained;
+see [`bench/README.md`](bench/README.md) for measurements and limits.
 
 On this experimental branch, published ReScript packages use the OCaml
 implementation for the normal `rescript` command. The Rust reference
@@ -119,6 +128,25 @@ orchestration and aggregate dispatch, while `build_report.ml` owns presentation.
 `build_preparation.ml` consumes the prepared packages to initialize compiler
 context, clean stale assets, and run the preliminary parse; `module_graph.ml`
 owns dependency resolution, graph-node identities, and cycle analysis.
+`compiler_process.ml` is the boundary between logical compiler jobs and
+in-process execution. Independent parse and compile requests run on a bounded
+domain pool while artifact publication stays on the scheduler domain. The
+driver resets command-line flags, warnings, JSX and experimental settings,
+package and output state, runtime and project paths, load paths, environment
+and CRC caches, predefined type graphs, delayed checks, CMT accumulation,
+backend caches, and diagnostic
+state before and after every request, including exceptional returns. CMT files
+record each request's logical compiler argv rather than rewatch's process argv.
+Compiler output routed through request-owned channels and formatters is
+captured per request and returned to rewatch;
+help, version, formatting, and reprinting requests return status instead of
+terminating the host process. Built-in-PPX names, type-node identifiers, and
+Lambda static-exit identifiers also restart at the request boundary; without
+those resets, repeated requests can change binary AST or CMI serialization even
+when their source is unchanged. The compiler build identity is generated from
+the recursive compiler source, platform-stub, C-stub, and Dune-rule inputs and
+shared by the embedded driver and standalone wrapper, so nested compiler
+changes invalidate artifacts while rewatch-only edits do not.
 `package_plan.ml` owns immutable per-package build inputs, `build_session.ml`
 owns prepared state retained across watch rebuilds, and `build_attempt.ml` owns
 attempt kinds, parse outcomes, diagnostics, counters, scheduled work, and final
@@ -127,6 +155,28 @@ source-directory metadata projection and serialization. `process_child.ml`
 owns the lifecycle of one subprocess while `process.ml` owns scheduling.
 Command-level post-build execution and its error handling live in
 `after_build.ml`.
+External PPXs are deliberately still subprocesses. Their launch is routed back
+through rewatch's interruptible process owner so Unix process groups and Windows
+Job Objects continue to terminate PPX descendants. JavaScript post-build hooks,
+`--after-build`, formatting, and lock-owner probes likewise retain the generic
+process infrastructure.
+
+Both rewatch implementations skip a small set of PPXs when the source does not
+contain the syntax that can trigger them. This is deliberately conservative:
+a false positive only performs extra work, while a false negative changes the
+compiled program. New rules therefore require a PPX-specific guarantee that all
+of its transformations are gated by the marker. The current rules are kept in
+matching tables in `rewatch/src/build/parse.rs` and
+`rewatch-ocaml/compiler_args.ml`.
+
+If this optimization grows, the preferred generalization is explicit
+source-trigger metadata on each `ppx-flags` entry in `rescript.json`, decoded by
+both build systems while preserving the existing string and string-array forms.
+The build system can then strip the metadata and invoke the unchanged PPX
+command only when one of its declared markers is present. Inferring behavior
+from arbitrary PPX package names or automatically skipping every PPX is not
+safe because a PPX may transform an otherwise unmarked file.
+
 Genuinely platform-specific behavior is consolidated behind a `Platform`
 boundary rather than mixed into those modules. Unix and Windows modules now own
 executable lookup, subprocess creation, signal deferral, and process-tree

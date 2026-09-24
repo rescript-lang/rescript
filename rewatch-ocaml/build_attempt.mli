@@ -26,7 +26,7 @@ type preliminary_parse =
 
 val preliminary_parse : Process.result -> preliminary_parse
 
-type namespace_job = {job: Process.job; finish: Process.result -> unit}
+type namespace_job = {task: Process.task; finish: Process.result -> unit}
 type pending_work
 type finalization_state
 

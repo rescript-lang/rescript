@@ -109,7 +109,7 @@ let await_notification notifier generation =
       done;
       notifier.generation)
 
-let with_completion_notifier ~ticker_enabled action =
+let with_completion_notifier ?(defer_signals = true) ~ticker_enabled action =
   (* The scheduler needs immediate child completion without repeatedly asking
      the operating system about every running PID. A condition variable wakes
      it when status and captured output are both ready; one ticker also wakes a
@@ -128,7 +128,7 @@ let with_completion_notifier ~ticker_enabled action =
     in
     if continue then send_tick ()
   in
-  let deferred_signals = Signal_restore.create ~defer:true in
+  let deferred_signals = Signal_restore.create ~defer:defer_signals in
   let ticker = ref None in
   let stopped = ref false in
   let stop () =
