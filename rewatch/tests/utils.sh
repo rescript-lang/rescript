@@ -11,6 +11,25 @@ is_windows() {
   [[ $OSTYPE == 'msys'* || $OSTYPE == 'cygwin'* || $OSTYPE == 'win'* ]];
 }
 
+platform_timeout() {
+  local timeout="$1"
+  if is_windows; then
+    echo $((timeout * 4))
+  else
+    echo "$timeout"
+  fi
+}
+
+process_is_running() {
+  local pid="$1"
+  if is_windows; then
+    WATCH_PID="$pid" powershell.exe -NoProfile -NonInteractive -Command \
+      'if (Get-Process -Id ([int]$env:WATCH_PID) -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }'
+  else
+    kill -0 "$pid" 2> /dev/null
+  fi
+}
+
 # get pwd with forward slashes
 pwd_prefix() {
   if is_windows; then
@@ -52,12 +71,13 @@ replace() {
 }
 
 wait_for_pid_gone() {
-  local pid="$1"; local timeout="${2:-10}"
-  while kill -0 "$pid" 2> /dev/null && [ "$timeout" -gt 0 ]; do
+  local pid="$1"; local timeout
+  timeout=$(platform_timeout "${2:-10}")
+  while process_is_running "$pid" && [ "$timeout" -gt 0 ]; do
     sleep 1
     timeout=$((timeout - 1))
   done
-  ! kill -0 "$pid" 2> /dev/null
+  ! process_is_running "$pid"
 }
 
 exit_watcher() {
@@ -81,7 +101,8 @@ clear_locks() {
 }
 
 wait_for_file() {
-  local file="$1"; local timeout="${2:-30}"
+  local file="$1"; local timeout
+  timeout=$(platform_timeout "${2:-30}")
   while [ "$timeout" -gt 0 ]; do
     [ -f "$file" ] && return 0
     sleep 1
@@ -90,8 +111,47 @@ wait_for_file() {
   return 1
 }
 
+wait_for_pattern() {
+  local file="$1"; local pattern="$2"; local timeout
+  timeout=$(platform_timeout "${3:-30}")
+  while [ "$timeout" -gt 0 ]; do
+    grep -q "$pattern" "$file" 2>/dev/null && return 0
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  return 1
+}
+
+wait_for_pattern_count() {
+  local file="$1"; local pattern="$2"; local expected="$3"; local timeout
+  timeout=$(platform_timeout "${4:-30}")
+  while [ "$timeout" -gt 0 ]; do
+    local current_count
+    current_count=$(grep -c "$pattern" "$file" 2>/dev/null || true)
+    current_count=${current_count:-0}
+    [ "$current_count" -ge "$expected" ] && return 0
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  return 1
+}
+
+wait_for_pattern_gone() {
+  local file="$1"; local pattern="$2"; local timeout
+  timeout=$(platform_timeout "${3:-30}")
+  while [ "$timeout" -gt 0 ]; do
+    if [ -f "$file" ] && ! grep -q "$pattern" "$file" 2>/dev/null; then
+      return 0
+    fi
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  return 1
+}
+
 wait_for_file_gone() {
-  local file="$1"; local timeout="${2:-30}"
+  local file="$1"; local timeout
+  timeout=$(platform_timeout "${2:-30}")
   while [ "$timeout" -gt 0 ]; do
     [ ! -f "$file" ] && return 0
     sleep 1

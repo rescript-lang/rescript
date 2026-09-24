@@ -76,7 +76,9 @@ else
   exit 1
 fi
 
-exit_watcher
+if ! exit_watcher; then
+  exit 1
+fi
 
 if ! wait_for_file_gone "lib/watch.lock" 10; then
   error "watch.lock was not removed"
@@ -93,4 +95,6 @@ else
   exit 1
 fi
 
-exit_watcher
+if ! exit_watcher; then
+  exit 1
+fi

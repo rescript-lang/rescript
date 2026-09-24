@@ -172,7 +172,7 @@ fn unregister_watches(watcher: &mut RecommendedWatcher, watch_paths: &[(PathBuf,
     }
 }
 
-fn carry_forward_compile_warnings(previous: &BuildCommandState, next: &mut BuildCommandState) {
+fn carry_forward_compile_state(previous: &BuildCommandState, next: &mut BuildCommandState) {
     for (module_name, next_module) in next.build_state.modules.iter_mut() {
         let Some(previous_module) = previous.build_state.modules.get(module_name) else {
             continue;
@@ -184,6 +184,12 @@ fn carry_forward_compile_warnings(previous: &BuildCommandState, next: &mut Build
         match (&previous_module.source_type, &mut next_module.source_type) {
             (SourceType::SourceFile(previous_source), SourceType::SourceFile(next_source)) => {
                 if previous_source.implementation.path == next_source.implementation.path {
+                    // A changed CMI can leave a dependent blocked behind a failed
+                    // implementation. Asset timestamps alone cannot recover this
+                    // dirtiness when a full watcher rebuild recreates the state.
+                    if previous_module.compile_dirty {
+                        next_module.compile_dirty = true;
+                    }
                     next_source.implementation.compile_warnings =
                         previous_source.implementation.compile_warnings.clone();
 
@@ -501,9 +507,8 @@ async fn async_watch(
                     .expect("Could not initialize build");
 
                     // Full rebuilds can be triggered by editor atomic saves that surface as rename events.
-                    // Preserve warning state for unchanged modules so their warnings are re-emitted after the
-                    // fresh build state replaces the previous one.
-                    carry_forward_compile_warnings(&build_state, &mut next_build_state);
+                    // Preserve warnings and blocked dirty modules when fresh state replaces the previous one.
+                    carry_forward_compile_state(&build_state, &mut next_build_state);
                     build_state = next_build_state;
 
                     // Re-register watches based on the new build state
@@ -804,7 +809,7 @@ mod tests {
         );
         let mut next = test_build_state("ModuleA", test_module("src/ModuleA.res", None, None, None));
 
-        carry_forward_compile_warnings(&previous, &mut next);
+        carry_forward_compile_state(&previous, &mut next);
 
         let module = next.get_module("ModuleA").expect("module should exist");
         let SourceType::SourceFile(source_file) = &module.source_type else {
@@ -826,7 +831,7 @@ mod tests {
         );
         let mut next = test_build_state("ModuleA", test_module("src/ModuleARenamed.res", None, None, None));
 
-        carry_forward_compile_warnings(&previous, &mut next);
+        carry_forward_compile_state(&previous, &mut next);
 
         let module = next.get_module("ModuleA").expect("module should exist");
         let SourceType::SourceFile(source_file) = &module.source_type else {
@@ -853,7 +858,7 @@ mod tests {
             test_module("src/ModuleA.res", None, Some("src/ModuleA.resi"), None),
         );
 
-        carry_forward_compile_warnings(&previous, &mut next);
+        carry_forward_compile_state(&previous, &mut next);
 
         let module = next.get_module("ModuleA").expect("module should exist");
         let SourceType::SourceFile(source_file) = &module.source_type else {
@@ -863,5 +868,25 @@ mod tests {
 
         assert_eq!(interface.compile_warnings.as_deref(), Some("warning: interface"));
         assert_eq!(interface.compile_state, CompileState::Warning);
+    }
+
+    #[test]
+    fn carries_forward_blocked_dirtiness_only_for_matching_sources() {
+        let mut previous = test_build_state("ModuleA", test_module("src/ModuleA.res", None, None, None));
+        previous
+            .build_state
+            .modules
+            .get_mut("ModuleA")
+            .unwrap()
+            .compile_dirty = true;
+
+        let mut same_source = test_build_state("ModuleA", test_module("src/ModuleA.res", None, None, None));
+        carry_forward_compile_state(&previous, &mut same_source);
+        assert!(same_source.get_module("ModuleA").unwrap().compile_dirty);
+
+        let mut different_source =
+            test_build_state("ModuleA", test_module("src/Other.res", None, None, None));
+        carry_forward_compile_state(&previous, &mut different_source);
+        assert!(!different_source.get_module("ModuleA").unwrap().compile_dirty);
     }
 }

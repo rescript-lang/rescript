@@ -33,8 +33,10 @@ success "Watcher Started"
 if ! wait_for_file "./src/Test.mjs" 20; then
   error "Initial build did not complete"
   cat rewatch.log
-  git checkout "$DEP01_CONFIG"
-  exit_watcher
+  if ! exit_watcher; then
+    exit 1
+  fi
+  git restore --worktree -- "$DEP01_CONFIG"
   exit 1
 fi
 success "Initial build completed"
@@ -45,19 +47,22 @@ if grep -q 'Could not read folder.*nonexistent-folder' rewatch.log; then
 else
   error "Missing source folder error was NOT reported"
   cat rewatch.log
-  git checkout "$DEP01_CONFIG"
-  exit_watcher
+  if ! exit_watcher; then
+    exit 1
+  fi
+  git restore --worktree -- "$DEP01_CONFIG"
   exit 1
 fi
 
 # Exit the watcher before restoring the config to avoid a race condition
 # where the config change triggers a full rebuild that runs concurrently
 # with the subsequent `rewatch build`.
-exit_watcher
-sleep 1
+if ! exit_watcher; then
+  exit 1
+fi
 
 # Restore dep01's rescript.json
-git checkout "$DEP01_CONFIG"
+git restore --worktree -- "$DEP01_CONFIG"
 
 # Rebuild to regenerate any artifacts that were removed by `rewatch clean`
 # but not rebuilt due to the modified config (e.g. Dep01.mjs).

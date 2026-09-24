@@ -217,5 +217,5 @@ When clippy suggests refactoring that could impact performance, consider the tra
 ## CI Gotchas
 
 - **`sleep` is fragile** — Prefer polling (e.g., `wait_for_file`) over fixed sleeps. CI runners are slower than local machines.
-- **`exit_watcher` is async** — It only signals the watcher to stop (removes the lock file), it doesn't wait for the process to exit. Avoid triggering config-change events before exiting, as the watcher may start a concurrent rebuild.
+- **Wait for watcher shutdown with `exit_watcher`** — It removes the lock file and waits for the recorded watcher process to exit. Check its return status before continuing when later mutations could race with the watcher.
 - **`sed -i` differs across platforms** — macOS requires `sed -i '' ...`, Linux does not. Use the `replace` / `normalize_paths` helpers from `rewatch/tests/utils.sh` instead of raw `sed`.
