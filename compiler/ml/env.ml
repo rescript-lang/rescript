@@ -1514,6 +1514,8 @@ and components_of_module_maker (env, sub, path, mty) =
     let pl, sub = prefix_idents path sub sg in
     let env = ref env in
     let pos = ref 0 in
+    let labels_by_name = Hashtbl.create 127 in
+    let label_names_rev = ref [] in
     List.iter2
       (fun item path ->
         match item with
@@ -1540,7 +1542,13 @@ and components_of_module_maker (env, sub, path, mty) =
             constructors;
           List.iter
             (fun descr ->
-              c.comp_labels <- add_to_tbl descr.lbl_name descr c.comp_labels)
+              let name = descr.lbl_name in
+              match Hashtbl.find labels_by_name name with
+              | _, previous ->
+                Hashtbl.replace labels_by_name name (name, descr :: previous)
+              | exception Not_found ->
+                Hashtbl.add labels_by_name name (name, [descr]);
+                label_names_rev := name :: !label_names_rev)
             labels;
           env := store_type_infos id decl !env
         | Sig_typext (id, ext, _) ->
@@ -1568,6 +1576,16 @@ and components_of_module_maker (env, sub, path, mty) =
             Tbl.add (Ident.name id) (decl', nopos) c.comp_modtypes;
           env := store_modtype id decl !env)
       sg pl;
+    (* Large signatures often repeat label names. Keep first appearance order
+       to preserve Tbl's shape and the latest key and declarations to preserve
+       its contents. *)
+    c.comp_labels <-
+      List.fold_left
+        (fun table name ->
+          let latest_name, declarations = Hashtbl.find labels_by_name name in
+          Tbl.add latest_name declarations table)
+        Tbl.empty
+        (List.rev !label_names_rev);
     Some (Structure_comps c)
   | Mty_functor (param, _ty_arg, ty_res) ->
     Some

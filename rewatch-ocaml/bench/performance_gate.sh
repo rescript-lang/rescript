@@ -16,6 +16,11 @@ if [[ ! -x "$rust_executable" || ! -x "$ocaml_executable" ]]; then
   echo "Both rewatch executables must exist and be executable." >&2
   exit 2
 fi
+if [[ ${REWATCH_FIRST_EMBEDDED:-0} == 1 &&
+      $(dirname "$rust_executable") != $(dirname "$ocaml_executable") ]]; then
+  echo "Place both embedded executables in the same directory to avoid startup-path bias." >&2
+  exit 2
+fi
 if [[ ! "$runs" =~ ^[1-9][0-9]*$ || $((runs % 2)) -eq 0 ]]; then
   echo "RUNS must be a positive odd integer so the median is unambiguous." >&2
   exit 2
@@ -154,6 +159,9 @@ echo "host: $(uname -a)"
 echo "cpus: $(getconf _NPROCESSORS_ONLN 2>/dev/null || echo unknown)"
 echo "runs: $runs (interleaved after one warm-up each)"
 echo "clean threshold: ${threshold_percent}% of Rust median wall and RSS"
+if [[ ${REWATCH_FIRST_EMBEDDED:-0} == 1 ]]; then
+  echo "first executable uses embedded compiler tracing; 'Rust' labels mean baseline"
+fi
 
 clean_and_build "$rust_executable" "$rust_fixture" "$work_root/rust-warmup"
 clean_and_build "$ocaml_executable" "$ocaml_fixture" "$work_root/ocaml-warmup"
@@ -200,14 +208,19 @@ done
 trace_and_classify() {
   local implementation=$1 scenario=$2 executable=$3 fixture=$4 manifest=$5
   local clean_first=$6
+  local embedded=0
+  if [[ $implementation == ocaml || ${REWATCH_FIRST_EMBEDDED:-0} == 1 ]]; then
+    embedded=1
+  fi
   local trace_prefix="$work_root/${implementation}-${scenario}.execve"
   local call_log="$work_root/${implementation}-${scenario}.compiler"
   if [[ "$clean_first" == 1 ]]; then
     "$executable" clean "$fixture" >/dev/null 2>&1
   fi
-  if [[ $implementation == ocaml ]]; then
+  if ((embedded)); then
     # Embedded requests have no compiler execve. Record them at their shared
     # logical boundary while tracing PPXs as external processes.
+    : >"$call_log"
     strace -f -ff -qq -s 4096 -e trace=execve,chdir -o "$trace_prefix" \
       env REWATCH_COMPILER_CALL_LOG="$call_log" \
       "$executable" build "$fixture" \
@@ -224,7 +237,7 @@ trace_and_classify() {
   local trace_file exec_line argv cwd_line cwd phase input identity
   : >"$manifest.unsorted"
   for trace_file in "${trace_files[@]}"; do
-    if [[ $implementation == ocaml ]]; then
+    if ((embedded)); then
       exec_line=$(grep -m1 -E 'execve\("[^"]*sury-ppx' "$trace_file" || true)
     else
       exec_line=$(grep -m1 -F "execve(\"$RESCRIPT_BSC_EXE\"" "$trace_file" \
@@ -257,7 +270,7 @@ trace_and_classify() {
       | sed "s#$implementation_root#<ROOT>#g" >>"$manifest.unsorted"
   done
   local invocations parse namespace compile interface ppx
-  if [[ $implementation == ocaml ]]; then
+  if ((embedded)); then
     while IFS=$'\t' read -r phase cwd input; do
       if [[ $phase != parse && $phase != namespace ]]; then phase=compile; fi
       printf '%s\t%s\t"%s"\n' "$cwd" "$phase" "$input" \

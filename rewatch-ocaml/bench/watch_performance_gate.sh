@@ -140,7 +140,7 @@ start_watcher() {
   cp -R "$repo_root/rewatch-ocaml/tests/basic" "$fixture"
   : >"$work_root/$implementation.bsc"
   : >"$work_root/$implementation.compiler"
-  if [[ $implementation == ocaml ]]; then
+  if [[ $implementation == ocaml || ${REWATCH_FIRST_EMBEDDED:-0} == 1 ]]; then
     local -a domain_count_env=()
     if [[ ${REWATCH_WATCH_COMPILER_DOMAINS+x} ]]; then
       domain_count_env=(REWATCH_COMPILER_DOMAINS="$REWATCH_WATCH_COMPILER_DOMAINS")
@@ -245,17 +245,26 @@ median() {
 rust_median=$(median "$work_root/rust.latencies")
 ocaml_median=$(median "$work_root/ocaml.latencies")
 
-rust_parse_count=$(grep -cF -- '-bs-ast' "$work_root/rust.bsc" || true)
-rust_total_count=$(wc -l <"$work_root/rust.bsc")
+if [[ ${REWATCH_FIRST_EMBEDDED:-0} == 1 ]]; then
+  rust_parse_count=$(grep -c '^parse' "$work_root/rust.compiler" || true)
+  rust_compile_count=$(grep -c '^implementation' \
+    "$work_root/rust.compiler" || true)
+  rust_total_count=$(wc -l <"$work_root/rust.compiler")
+else
+  rust_parse_count=$(grep -cF -- '-bs-ast' "$work_root/rust.bsc" || true)
+  rust_total_count=$(wc -l <"$work_root/rust.bsc")
+  rust_compile_count=$((rust_total_count - rust_parse_count))
+fi
 ocaml_parse_count=$(grep -c '^parse' "$work_root/ocaml.compiler" || true)
 ocaml_compile_count=$(grep -c '^implementation' \
   "$work_root/ocaml.compiler" || true)
 ocaml_total_count=$(wc -l <"$work_root/ocaml.compiler")
-if ((rust_parse_count != runs || rust_total_count != runs * 2 ||
+if ((rust_parse_count != runs || rust_compile_count != runs ||
+     rust_total_count != runs * 2 ||
      ocaml_parse_count != runs || ocaml_compile_count != runs ||
      ocaml_total_count != runs * 2)); then
-  printf 'retained work mismatch: Rust %d parser / %d total; embedded OCaml %d parser / %d compiler / %d total; expected %d / %d.\n' \
-    "$rust_parse_count" "$rust_total_count" "$ocaml_parse_count" \
+  printf 'retained work mismatch: first executable %d parser / %d compiler / %d total; embedded OCaml %d parser / %d compiler / %d total; expected %d / %d.\n' \
+    "$rust_parse_count" "$rust_compile_count" "$rust_total_count" "$ocaml_parse_count" \
     "$ocaml_compile_count" "$ocaml_total_count" "$runs" "$((runs * 2))" >&2
   exit 1
 fi
