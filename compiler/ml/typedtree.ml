@@ -478,14 +478,16 @@ let map_pattern_desc f d =
 
 (* List the identifiers bound by a pattern or a let *)
 
-let idents = ref ([] : (Ident.t * string loc) list)
+let idents_key =
+  Domain.DLS.new_key (fun () -> ref ([] : (Ident.t * string loc) list))
+let idents () = Domain.DLS.get idents_key
 
 let rec bound_idents pat =
   match pat.pat_desc with
-  | Tpat_var (id, s) -> idents := (id, s) :: !idents
+  | Tpat_var (id, s) -> idents () := (id, s) :: !(idents ())
   | Tpat_alias (p, id, s) ->
     bound_idents p;
-    idents := (id, s) :: !idents
+    idents () := (id, s) :: !(idents ())
   | Tpat_or (p1, _, _) ->
     (* Invariant : both arguments binds the same variables *)
     bound_idents p1
@@ -493,22 +495,22 @@ let rec bound_idents pat =
     (* Record rest is stored on Tpat_record, not as a child Tpat_var that
        iter_pattern_desc can visit. Add it here so Lambda compilation sees the
        binding. *)
-    idents := (rest.rest_ident, rest.rest_name) :: !idents;
+    idents () := (rest.rest_ident, rest.rest_name) :: !(idents ());
     iter_pattern_desc bound_idents pat.pat_desc
   | d -> iter_pattern_desc bound_idents d
 
 let pat_bound_idents pat =
-  idents := [];
+  idents () := [];
   bound_idents pat;
-  let res = !idents in
-  idents := [];
+  let res = !(idents ()) in
+  idents () := [];
   List.map fst res
 
 let rev_let_bound_idents_with_loc bindings =
-  idents := [];
+  idents () := [];
   List.iter (fun vb -> bound_idents vb.vb_pat) bindings;
-  let res = !idents in
-  idents := [];
+  let res = !(idents ()) in
+  idents () := [];
   res
 
 let let_bound_idents_with_loc pat_expr_list =

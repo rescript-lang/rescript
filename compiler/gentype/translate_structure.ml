@@ -97,7 +97,8 @@ let translate_value_binding ~config ~output_file_relative ~resolver ~type_env
   match vb_pat.pat_desc with
   | Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _) ->
     let name = id |> Ident.name |> Ext_ident.unwrap_uppercase_exotic in
-    if !Debug.translation then Log_.item "Translate Value Binding %s\n" name;
+    if !(Debug.translation ()) then
+      Log_.item "Translate Value Binding %s\n" name;
     let module_item = Runtime.new_module_item ~name in
     type_env |> Type_env.update_module_item ~module_item;
     if
@@ -155,7 +156,7 @@ let rec translate_module_binding ~(config : Gentype_config.t)
     ({mb_id; mb_expr; mb_attributes} : Typedtree.module_binding) : Translation.t
     =
   let name = mb_id |> Ident.name in
-  if !Debug.translation then Log_.item "Translate Module Binding %s\n" name;
+  if !(Debug.translation ()) then Log_.item "Translate Module Binding %s\n" name;
   let module_item = Runtime.new_module_item ~name in
   let config = mb_attributes |> Annotation.update_config_for_module ~config in
   type_env |> Type_env.update_module_item ~module_item;
@@ -350,7 +351,7 @@ and translate_structure_item ~config ~output_file_relative ~resolver ~type_env
 
 and translate_structure ~config ~output_file_relative ~resolver ~type_env
     structure : Translation.t list =
-  if !Debug.translation then Log_.item "Translate Structure\n";
+  if !(Debug.translation ()) then Log_.item "Translate Structure\n";
   structure.Typedtree.str_items |> remove_value_binding_duplicates
   |> List.map (fun struct_item ->
       struct_item

@@ -18,8 +18,7 @@
 exception Fatal_error
 
 let fatal_error msg =
-  prerr_string ">> Fatal error: ";
-  prerr_endline msg;
+  Compiler_request_output.print_stderr (">> Fatal error: " ^ msg);
   raise Fatal_error
 
 let try_finally work cleanup =
@@ -92,13 +91,16 @@ let find_in_path_uncap path name =
     | dir :: rem ->
       let fullname = Filename.concat dir name
       and ufullname = Filename.concat dir uname in
-      if Sys.file_exists ufullname then ufullname
-      else if Sys.file_exists fullname then fullname
+      if Sys.file_exists (Compiler_request_state.resolve_path ufullname) then
+        ufullname
+      else if Sys.file_exists (Compiler_request_state.resolve_path fullname)
+      then fullname
       else try_dir rem
   in
   try_dir path
 
 let remove_file filename =
+  let filename = Compiler_request_state.resolve_path filename in
   try if Sys.file_exists filename then Sys.remove filename
   with Sys_error _msg -> ()
 
@@ -121,6 +123,7 @@ let create_hashtable init =
 (* File copy *)
 
 let output_to_bin_file_directly filename fn =
+  let filename = Compiler_request_state.resolve_path filename in
   let oc = open_out_bin filename in
   match fn filename oc with
   | v ->
@@ -131,6 +134,7 @@ let output_to_bin_file_directly filename fn =
     raise e
 
 let output_to_file_via_temporary ?(mode = [Open_text]) filename fn =
+  let filename = Compiler_request_state.resolve_path filename in
   let temp_filename, oc =
     Filename.open_temp_file ~mode ~perms:0o666
       ~temp_dir:(Filename.dirname filename)
@@ -334,19 +338,20 @@ module Color = struct
     | Format.String_tag "filename" -> [FG Cyan]
     | _ -> raise Not_found
 
-  let color_enabled = ref true
+  let color_key = Domain.DLS.new_key (fun () -> ref true)
+  let color_enabled () = Domain.DLS.get color_key
 
   (* either prints the tag of [s] or delegates to [or_else] *)
   let mark_open_tag ~or_else s =
     try
       let style = style_of_tag s in
-      if !color_enabled then ansi_of_style_l style else ""
+      if !(color_enabled ()) then ansi_of_style_l style else ""
     with Not_found -> or_else s
 
   let mark_close_tag ~or_else s =
     try
       let _ = style_of_tag s in
-      if !color_enabled then ansi_of_style_l [Reset] else ""
+      if !(color_enabled ()) then ansi_of_style_l [Reset] else ""
     with Not_found -> or_else s
 
   (* add color handling to formatter [ppf] *)
@@ -376,24 +381,20 @@ module Color = struct
 
   type setting = Auto | Always | Never
 
-  let setup =
-    let first = ref true in
-    (* initialize only once *)
-    let formatter_l =
+  (* Install shared formatter hooks during module initialization. Their tag
+     callbacks read the calling domain's color setting. *)
+  let () =
+    Format.set_mark_tags true;
+    List.iter set_color_tag_handling
       [Format.std_formatter; Format.err_formatter; Format.str_formatter]
-    in
-    fun o ->
-      if !first then (
-        first := false;
-        Format.set_mark_tags true;
-        List.iter set_color_tag_handling formatter_l;
-        color_enabled :=
-          match o with
-          | Some Always -> true
-          | Some Auto -> should_enable_color ()
-          | Some Never -> false
-          | None -> should_enable_color ());
-      ()
+
+  let setup option =
+    color_enabled () :=
+      match option with
+      | Some Always -> true
+      | Some Auto -> should_enable_color ()
+      | Some Never -> false
+      | None -> should_enable_color ()
 end
 
 let normalise_eol s =

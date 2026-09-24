@@ -179,8 +179,9 @@ let test_constructor_normalization_keeps_argument_locations _ =
         | _ -> assert_failure "Expected a constructor expression"
       in
       let typed, _, _ =
-        Typemod.type_structure Env.initial_safe_string parsed.parsetree
-          Location.none
+        Typemod.type_structure
+          (Env.initial_safe_string ())
+          parsed.parsetree Location.none
       in
       let pat, expr =
         match (Ext_list.last typed.str_items).str_desc with

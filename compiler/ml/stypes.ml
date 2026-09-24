@@ -46,14 +46,31 @@ let get_location ti =
   | An_call (l, _k) -> l
   | An_ident (l, _s, _k) -> l
 
-let annotations = ref ([] : annotation list)
-let phrases = ref ([] : Location.t list)
+(* Partial annotations survive typing errors until [dump], so a request must
+   never inherit another request's pending annotations or phrase boundaries. *)
+type request_state = {
+  mutable annotations: annotation list;
+  mutable phrases: Location.t list;
+}
+
+let fresh_state () = {annotations = []; phrases = []}
+let state_key = Domain.DLS.new_key fresh_state
+let state () = Domain.DLS.get state_key
+
+let with_fresh action =
+  let previous = state () in
+  Domain.DLS.set state_key (fresh_state ());
+  Fun.protect action ~finally:(fun () -> Domain.DLS.set state_key previous)
 
 let record ti =
-  if !Clflags.annotations && not (get_location ti).Location.loc_ghost then
-    annotations := ti :: !annotations
+  if
+    !((Clflags.current ()).annotations)
+    && not (get_location ti).Location.loc_ghost
+  then (state ()).annotations <- ti :: (state ()).annotations
 
-let record_phrase loc = if !Clflags.annotations then phrases := loc :: !phrases
+let record_phrase loc =
+  if !((Clflags.current ()).annotations) then
+    (state ()).phrases <- loc :: (state ()).phrases
 
 (* comparison order:
    the intervals are sorted by order of increasing upper bound
@@ -84,7 +101,7 @@ let print_location pp loc =
   print_position pp loc.loc_end
 
 let sort_filter_phrases () =
-  let ph = List.sort (fun x y -> cmp_loc_inner_first y x) !phrases in
+  let ph = List.sort (fun x y -> cmp_loc_inner_first y x) (state ()).phrases in
   let rec loop accu cur l =
     match l with
     | [] -> accu
@@ -95,13 +112,13 @@ let sort_filter_phrases () =
       then loop accu cur t
       else loop (loc :: accu) loc t
   in
-  phrases := loop [] Location.none ph
+  (state ()).phrases <- loop [] Location.none ph
 
 let rec printtyp_reset_maybe loc =
-  match !phrases with
+  match (state ()).phrases with
   | cur :: t when cur.loc_start.pos_cnum <= loc.loc_start.pos_cnum ->
     Printtyp.reset ();
-    phrases := t;
+    (state ()).phrases <- t;
     printtyp_reset_maybe loc
   | _ -> ()
 
@@ -143,12 +160,13 @@ let print_info pp prev_loc ti =
     output_string pp "type(\n";
     printtyp_reset_maybe loc;
     Printtyp.mark_loops typ;
-    Format.pp_print_string Format.str_formatter "  ";
-    Printtyp.wrap_printing_env env (fun () ->
-        Printtyp.type_sch Format.str_formatter typ);
-    Format.pp_print_newline Format.str_formatter ();
-    let s = Format.flush_str_formatter () in
-    output_string pp s;
+    let buffer = Buffer.create 80 in
+    let formatter = Format.formatter_of_buffer buffer in
+    Format.pp_print_string formatter "  ";
+    Printtyp.wrap_printing_env env (fun () -> Printtyp.type_sch formatter typ);
+    Format.pp_print_newline formatter ();
+    Format.pp_print_flush formatter ();
+    output_string pp (Buffer.contents buffer);
     output_string pp ")\n";
     loc
   | An_call (loc, k) ->
@@ -169,20 +187,20 @@ let print_info pp prev_loc ti =
     loc
 
 let get_info () =
-  let info = List.fast_sort cmp_ti_inner_first !annotations in
-  annotations := [];
+  let info = List.fast_sort cmp_ti_inner_first (state ()).annotations in
+  (state ()).annotations <- [];
   info
 
 let dump filename =
-  if !Clflags.annotations then (
+  if !((Clflags.current ()).annotations) then (
     let do_dump _temp_filename pp =
       let info = get_info () in
       sort_filter_phrases ();
       ignore (List.fold_left (print_info pp) Location.none info)
     in
     (match filename with
-    | None -> do_dump "" stdout
+    | None -> do_dump "" (Compiler_request_output.stdout_channel ())
     | Some filename ->
       Misc.output_to_file_via_temporary ~mode:[Open_text] filename do_dump);
-    phrases := [])
-  else annotations := []
+    (state ()).phrases <- [])
+  else (state ()).annotations <- []

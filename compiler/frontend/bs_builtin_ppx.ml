@@ -677,11 +677,37 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
       (Ast_tuple_pattern_flatten.value_bindings_mapper self vbs)
   | _ -> default_mapper.structure_item self str
 
-let local_module_name =
-  let v = ref 0 in
-  fun () ->
-    incr v;
-    "local_" ^ string_of_int !v
+type mapper_context = {
+  async_context: bool ref;
+  in_function_def: bool ref;
+  await_context: (string, string) Hashtbl.t ref;
+}
+
+(* The mapper itself is shared by compiler requests, but its traversal state
+   belongs to the domain running a request. In particular, another domain's
+   function body must not change whether an await is accepted here. *)
+let mapper_context_key =
+  Domain.DLS.new_key (fun () ->
+      {
+        async_context = ref true;
+        in_function_def = ref false;
+        await_context = ref (Hashtbl.create 10);
+      })
+
+let mapper_context () = Domain.DLS.get mapper_context_key
+
+let reset () =
+  (Compiler_request_state.current ()).builtin_ppx_local_module_counter <- 0;
+  let context = mapper_context () in
+  context.async_context := true;
+  context.in_function_def := false;
+  context.await_context := Hashtbl.create 10
+
+let local_module_name () =
+  let state = Compiler_request_state.current () in
+  state.builtin_ppx_local_module_counter <-
+    state.builtin_ppx_local_module_counter + 1;
+  "local_" ^ string_of_int state.builtin_ppx_local_module_counter
 
 let expand_reverse (stru : Ast_structure.t) (acc : Ast_structure.t) :
     Ast_structure.t =
@@ -853,12 +879,19 @@ let structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t) =
 let mapper : mapper =
   {
     default_mapper with
-    expr = expr_mapper ~async_context:(ref true) ~in_function_def:(ref false);
+    expr =
+      (fun self expression ->
+        let context = mapper_context () in
+        expr_mapper ~async_context:context.async_context
+          ~in_function_def:context.in_function_def self expression);
     pat = pat_mapper;
     typ = typ_mapper;
     signature_item = signature_item_mapper;
     structure_item = structure_item_mapper;
-    structure = structure_mapper ~await_context:(ref (Hashtbl.create 10));
+    structure =
+      (fun self structure ->
+        let context = mapper_context () in
+        structure_mapper ~await_context:context.await_context self structure);
     (* Ad-hoc way to internalize stuff *)
     label_declaration =
       (fun self lbl ->

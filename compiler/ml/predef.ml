@@ -116,37 +116,75 @@ and path_promise = Pident ident_promise
 
 and path_tagged_template = Pident ident_tagged_template
 
-let type_int = newgenty (Tconstr (path_int, [], ref Mnil))
+(* Instantiation temporarily marks source type nodes while copying them. Keep
+   predefined nodes private to each domain so those marks cannot cross
+   concurrent compiler requests. *)
+let predefined_type path =
+  Domain.DLS.new_key (fun () -> newgenty (Tconstr (path, [], ref Mnil)))
 
-and type_char = newgenty (Tconstr (path_char, [], ref Mnil))
+let type_int_key = predefined_type path_int
+let type_int () = Domain.DLS.get type_int_key
+let type_char_key = predefined_type path_char
+let type_char () = Domain.DLS.get type_char_key
+let type_float_key = predefined_type path_float
+let type_float () = Domain.DLS.get type_float_key
+let type_bool_key = predefined_type path_bool
+let type_bool () = Domain.DLS.get type_bool_key
+let type_unit_key = predefined_type path_unit
+let type_unit () = Domain.DLS.get type_unit_key
+let type_exn_key = predefined_type path_exn
+let type_exn () = Domain.DLS.get type_exn_key
 
-and type_float = newgenty (Tconstr (path_float, [], ref Mnil))
+let type_array t = newgenty (Tconstr (path_array, [t], ref Mnil))
 
-and type_bool = newgenty (Tconstr (path_bool, [], ref Mnil))
+let type_iterable t = newgenty (Tconstr (path_iterable, [t], ref Mnil))
 
-and type_unit = newgenty (Tconstr (path_unit, [], ref Mnil))
-
-and type_exn = newgenty (Tconstr (path_exn, [], ref Mnil))
-
-and type_array t = newgenty (Tconstr (path_array, [t], ref Mnil))
-
-and type_iterable t = newgenty (Tconstr (path_iterable, [t], ref Mnil))
-
-and type_async_iterable t =
+let type_async_iterable t =
   newgenty (Tconstr (path_async_iterable, [t], ref Mnil))
 
-and type_list t = newgenty (Tconstr (path_list, [t], ref Mnil))
+let type_list t = newgenty (Tconstr (path_list, [t], ref Mnil))
 
-and type_option t = newgenty (Tconstr (path_option, [t], ref Mnil))
+let type_option t = newgenty (Tconstr (path_option, [t], ref Mnil))
 
-and type_bigint = newgenty (Tconstr (path_bigint, [], ref Mnil))
+let type_bigint_key = predefined_type path_bigint
+let type_bigint () = Domain.DLS.get type_bigint_key
 
-and type_string = newgenty (Tconstr (path_string, [], ref Mnil))
+let type_string_key = predefined_type path_string
+let type_string () = Domain.DLS.get type_string_key
 
-and type_unknown = newgenty (Tconstr (path_unkonwn, [], ref Mnil))
+let type_unknown_key = predefined_type path_unkonwn
+let type_unknown () = Domain.DLS.get type_unknown_key
 
-and type_extension_constructor =
-  newgenty (Tconstr (path_extension_constructor, [], ref Mnil))
+let type_extension_constructor_key = predefined_type path_extension_constructor
+let type_extension_constructor () =
+  Domain.DLS.get type_extension_constructor_key
+
+let predefined_types =
+  [
+    (type_int_key, path_int);
+    (type_char_key, path_char);
+    (type_float_key, path_float);
+    (type_bool_key, path_bool);
+    (type_unit_key, path_unit);
+    (type_exn_key, path_exn);
+    (type_bigint_key, path_bigint);
+    (type_string_key, path_string);
+    (type_unknown_key, path_unkonwn);
+    (type_extension_constructor_key, path_extension_constructor);
+  ]
+
+let reset_for_request () =
+  List.iter
+    (fun (key, path) ->
+      Domain.DLS.set key (newgenty (Tconstr (path, [], ref Mnil))))
+    predefined_types
+
+let with_fresh action =
+  let previous =
+    List.map (fun (key, _) -> (key, Domain.DLS.get key)) predefined_types
+  in
+  Fun.protect action ~finally:(fun () ->
+      List.iter (fun (key, value) -> Domain.DLS.set key value) previous)
 
 let ident_match_failure = ident_create_predef_exn "Match_failure"
 
@@ -348,7 +386,7 @@ let common_initial_env add_type add_extension empty_env =
               cd_id = ident_ctor_unknown;
               cd_runtime_tag = None;
               cd_args = Cstr_tuple [tvar];
-              cd_res = Some type_unknown;
+              cd_res = Some (type_unknown ());
               cd_loc = Location.none;
               cd_attributes = [];
             };
@@ -413,22 +451,22 @@ let common_initial_env add_type add_extension empty_env =
   |> add_type ident_dict decl_dict
   |> add_type ident_unknown decl_unknown
   |> add_exception ident_undefined_recursive_module
-       [newgenty (Ttuple [type_string; type_int; type_int])]
+       [newgenty (Ttuple [type_string (); type_int (); type_int ()])]
   |> add_exception ident_assert_failure
-       [newgenty (Ttuple [type_string; type_int; type_int])]
+       [newgenty (Ttuple [type_string (); type_int (); type_int ()])]
   |> add_exception ident_division_by_zero []
   |> add_exception ident_end_of_file []
   |> add_exception ident_not_found []
-  |> add_exception ident_failure [type_string]
-  |> add_exception ident_js_exn [type_unknown]
-  |> add_exception ident_invalid_argument [type_string]
+  |> add_exception ident_failure [type_string ()]
+  |> add_exception ident_js_exn [type_unknown ()]
+  |> add_exception ident_invalid_argument [type_string ()]
   |> add_exception ident_match_failure
-       [newgenty (Ttuple [type_string; type_int; type_int])]
+       [newgenty (Ttuple [type_string (); type_int (); type_int ()])]
 
 let build_initial_env add_type add_exception empty_env =
   let common = common_initial_env add_type add_exception empty_env in
   let decl_type_char =
-    {decl_abstr with type_manifest = Some type_int; type_private = Private}
+    {decl_abstr with type_manifest = Some (type_int ()); type_private = Private}
   in
   add_type ident_char decl_type_char common
 

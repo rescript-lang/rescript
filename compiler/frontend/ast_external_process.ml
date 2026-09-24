@@ -219,7 +219,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
         let bundle =
           "./"
           ^ Ext_filename.new_extension
-              (Filename.basename !Location.input_name)
+              (Filename.basename (Location.get_input_name ()))
               ".gen"
         in
         ( attr :: attrs,

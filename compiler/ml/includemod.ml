@@ -634,14 +634,16 @@ let include_err ppf (cxt, env, err) =
   Printtyp.wrap_printing_env env (fun () ->
       fprintf ppf "@[<v>%a%a@]" context (List.rev cxt) (include_symptom env) err)
 
-let buffer = ref Bytes.empty
+(* Error-size marshaling may run for distinct interface failures at once. *)
+let buffer_key = Domain.DLS.new_key (fun () -> ref Bytes.empty)
+let buffer () = Domain.DLS.get buffer_key
 let is_big obj =
-  let size = !Clflags.error_size in
+  let size = !((Clflags.current ()).error_size) in
   size > 0
   &&
-  (if Bytes.length !buffer < size then buffer := Bytes.create size;
+  (if Bytes.length !(buffer ()) < size then buffer () := Bytes.create size;
    try
-     ignore (Marshal.to_buffer !buffer 0 size obj []);
+     ignore (Marshal.to_buffer !(buffer ()) 0 size obj []);
      false
    with _ -> true)
 

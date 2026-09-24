@@ -291,8 +291,9 @@ let assert_typed_template ~source_segments ~expected_semantics =
     Ast_helper.Exp.template (List.map located_string source_segments) [value]
   in
   let typed =
-    Typecore.type_exp Env.initial_safe_string expression
-      ~context:(Some Error_message_utils.StringConcat)
+    Typecore.type_exp
+      (Env.initial_safe_string ())
+      expression ~context:(Some Error_message_utils.StringConcat)
   in
   begin match typed.exp_desc with
   | Texp_template
@@ -455,7 +456,9 @@ let suites =
              Ast_helper.Exp.template [located_string "literal"] []
            in
            let typed =
-             Typecore.type_exp Env.initial_safe_string expression ~context:None
+             Typecore.type_exp
+               (Env.initial_safe_string ())
+               expression ~context:None
            in
            OUnit.assert_bool
              "an interpolation-free template should generalize like a string \

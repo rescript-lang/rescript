@@ -640,20 +640,24 @@ module Ppx_context = struct
         {lid = lid "tool_name"; x = make_string tool_name; opt = false};
         {
           lid = lid "include_dirs";
-          x = make_list make_string !Clflags.include_dirs;
+          x = make_list make_string !((Clflags.current ()).include_dirs);
           opt = false;
         };
         {
           lid = lid "load_path";
-          x = make_list make_string !Config.load_path;
+          x = make_list make_string (Config.get_load_path ());
           opt = false;
         };
         {
           lid = lid "open_modules";
-          x = make_list make_string !Clflags.open_modules;
+          x = make_list make_string !((Clflags.current ()).open_modules);
           opt = false;
         };
-        {lid = lid "debug"; x = make_bool !Clflags.debug; opt = false};
+        {
+          lid = lid "debug";
+          x = make_bool !((Clflags.current ()).debug);
+          opt = false;
+        };
         get_cookies ();
       ]
     in
@@ -715,10 +719,12 @@ module Ppx_context = struct
       in
       match name with
       | "tool_name" -> tool_name_ref := get_string payload
-      | "include_dirs" -> Clflags.include_dirs := get_list get_string payload
-      | "load_path" -> Config.load_path := get_list get_string payload
-      | "open_modules" -> Clflags.open_modules := get_list get_string payload
-      | "debug" -> Clflags.debug := get_bool payload
+      | "include_dirs" ->
+        (Clflags.current ()).include_dirs := get_list get_string payload
+      | "load_path" -> Config.set_load_path (get_list get_string payload)
+      | "open_modules" ->
+        (Clflags.current ()).open_modules := get_list get_string payload
+      | "debug" -> (Clflags.current ()).debug := get_bool payload
       | "cookies" ->
         let l = get_list (get_pair get_string (fun x -> x)) payload in
         cookies :=
@@ -811,7 +817,7 @@ let apply_lazy ~source ~target mapper =
     let ast = transform ast in
     let oc = open_out_bin target in
     output_string oc magic;
-    output_value oc !Location.input_name;
+    output_value oc (Location.get_input_name ());
     output_value oc ast;
     close_out oc
   and fail () =

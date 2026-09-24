@@ -976,16 +976,28 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
   match context_path with
   | CPString ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPString";
-    [Completion.create "dummy" ~env ~kind:(Completion.Value Predef.type_string)]
+    [
+      Completion.create "dummy" ~env
+        ~kind:(Completion.Value (Predef.type_string ()));
+    ]
   | CPBool ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPBool";
-    [Completion.create "dummy" ~env ~kind:(Completion.Value Predef.type_bool)]
+    [
+      Completion.create "dummy" ~env
+        ~kind:(Completion.Value (Predef.type_bool ()));
+    ]
   | CPInt ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPInt";
-    [Completion.create "dummy" ~env ~kind:(Completion.Value Predef.type_int)]
+    [
+      Completion.create "dummy" ~env
+        ~kind:(Completion.Value (Predef.type_int ()));
+    ]
   | CPFloat ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPFloat";
-    [Completion.create "dummy" ~env ~kind:(Completion.Value Predef.type_float)]
+    [
+      Completion.create "dummy" ~env
+        ~kind:(Completion.Value (Predef.type_float ()));
+    ]
   | CPArray None ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPArray (no payload)";
     [
@@ -1945,7 +1957,9 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
     if prefix = "" then
       [
         create "\"\"" ~includes_snippets:true ~insert_text:"\"$0\""
-          ~sort_text:"A" ~kind:(Value Predef.type_string) ~env;
+          ~sort_text:"A"
+          ~kind:(Value (Predef.type_string ()))
+          ~env;
       ]
     else []
   | Tfunction {env; typ; args; return_type}

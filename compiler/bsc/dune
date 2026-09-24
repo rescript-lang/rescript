@@ -4,11 +4,49 @@
    (:standard -ccopt -static))))
 
 (executable
+ (name build_identity_gen)
+ (modules build_identity_gen))
+
+(rule
+ (target rescript_compiler_build_identity.ml)
+ (deps
+  build_identity_gen.ml
+  dune
+  rescript_compiler_driver.ml
+  rescript_compiler_driver.mli
+  rescript_compiler_main.ml
+  rescript_compiler_main.mli
+  (source_tree ../common)
+  (source_tree ../core)
+  (source_tree ../depends)
+  (source_tree ../ext)
+  (source_tree ../flow_parser)
+  (source_tree ../frontend)
+  (source_tree ../gentype)
+  (source_tree ../ml)
+  (source_tree ../syntax))
+ (action
+  (with-stdout-to
+   %{target}
+   (run ./build_identity_gen.exe %{deps}))))
+
+(library
+ (name rescript_compiler_driver)
+ (wrapped false)
+ (modules rescript_compiler_driver rescript_compiler_build_identity)
+ (instrumentation
+  (backend bisect_ppx))
+ (flags
+  (:standard -w +a-4-9-30-40-41-42-48-70))
+ (libraries common core depends flow_parser gentype syntax unix))
+
+(executable
  (name rescript_compiler_main)
+ (modules rescript_compiler_main)
  (public_name bsc)
  (package rescript)
  (instrumentation
   (backend bisect_ppx))
  (flags
   (:standard -w +a-4-9-30-40-41-42-48-70))
- (libraries common core depends flow_parser gentype syntax))
+ (libraries rescript_compiler_driver))

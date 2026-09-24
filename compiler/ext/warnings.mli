@@ -101,9 +101,12 @@ val backup : unit -> state
 
 val restore : state -> unit
 
-val has_warnings : bool ref
+(* Isolate warning settings and counters for one compiler request. *)
+val with_fresh : (unit -> 'a) -> 'a
 
-val nerrors : int ref
+val has_warnings : unit -> bool
+
+val reset_has_warnings : unit -> unit
 
 val message : t -> string
 

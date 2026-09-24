@@ -41,11 +41,16 @@ let pivot_level = (2 * lowest_level) - 1
 
 (**** Some type creators ****)
 
-let new_id = ref (-1)
+let reinit () =
+  let state = Compiler_request_state.current () in
+  match state.type_node_reset_id with
+  | None -> state.type_node_reset_id <- Some state.type_node_id
+  | Some level -> state.type_node_id <- level
 
 let newty2 level desc =
-  incr new_id;
-  {desc; level; id = !new_id}
+  let state = Compiler_request_state.current () in
+  state.type_node_id <- state.type_node_id + 1;
+  {desc; level; id = state.type_node_id}
 let newgenty desc = newty2 generic_level desc
 let newgenvar ?name () = newgenty (Tvar name)
 (*
@@ -94,9 +99,12 @@ type change =
 
 type changes = Change of change * changes ref | Unchanged | Invalid
 
-let trail = Weak.create 1
+(* A type graph and its speculative mutation trail belong to one compiler
+   request. The trail must follow the domain that owns the graph. *)
+let trail = Domain.DLS.new_key (fun () -> Weak.create 1)
 
 let log_change ch =
+  let trail = Domain.DLS.get trail in
   match Weak.get trail 0 with
   | None -> ()
   | Some r ->
@@ -429,9 +437,10 @@ type type_copy_session = {
    Several copy calls in one session deliberately share both memo kinds.
    Session writes are raw writes restored on exit; semantic mutability changes
    use the backtracking trail instead. *)
-let type_copy_sessions = ref []
+let type_copy_sessions = Domain.DLS.new_key (fun () -> ref [])
 
 let begin_type_copy_session () =
+  let type_copy_sessions = Domain.DLS.get type_copy_sessions in
   type_copy_sessions :=
     {
       saved_desc = [];
@@ -442,11 +451,13 @@ let begin_type_copy_session () =
     :: !type_copy_sessions
 
 let current_type_copy_session () =
+  let type_copy_sessions = Domain.DLS.get type_copy_sessions in
   match !type_copy_sessions with
   | session :: _ -> session
   | [] -> assert false
 
 let end_type_copy_session () =
+  let type_copy_sessions = Domain.DLS.get type_copy_sessions in
   match !type_copy_sessions with
   | session :: rest ->
     List.iter (fun (ty, desc) -> ty.desc <- desc) session.saved_desc;
@@ -630,15 +641,29 @@ let rec find_expans priv p1 = function
      | _ -> ()
 *)
 
-let memo = ref []
+let memo = Domain.DLS.new_key (fun () -> ref [])
 (* Contains the list of saved abbreviation expansions. *)
 
+let with_fresh action =
+  let previous_trail = Domain.DLS.get trail in
+  let previous_copy_sessions = Domain.DLS.get type_copy_sessions in
+  let previous_memo = Domain.DLS.get memo in
+  Domain.DLS.set trail (Weak.create 1);
+  Domain.DLS.set type_copy_sessions (ref []);
+  Domain.DLS.set memo (ref []);
+  Fun.protect action ~finally:(fun () ->
+      Domain.DLS.set trail previous_trail;
+      Domain.DLS.set type_copy_sessions previous_copy_sessions;
+      Domain.DLS.set memo previous_memo)
+
 let cleanup_abbrev () =
+  let memo = Domain.DLS.get memo in
   (* Remove all memorized abbreviation expansions. *)
   List.iter (fun abbr -> abbr := Mnil) !memo;
   memo := []
 
 let memorize_abbrev mem priv path v v' =
+  let memo = Domain.DLS.get memo in
   (* Memorize the expansion of an abbreviation. *)
   mem := Mcons (priv, path, v, v', !mem);
   (* check_expans [] v; *)
@@ -718,10 +743,10 @@ let undo_change = function
   | Ctypeset (r, v) -> r := v
 
 type snapshot = changes ref * int
-let last_snapshot = ref 0
 
 let log_type ty =
-  if ty.id <= !last_snapshot then log_change (Ctype (ty, ty.desc))
+  if ty.id <= (Compiler_request_state.current ()).type_node_last_snapshot then
+    log_change (Ctype (ty, ty.desc))
 let link_type ty ty' =
   log_type ty;
   let desc = ty.desc in
@@ -745,7 +770,8 @@ let link_type ty ty' =
 (* ; assert (check_memorized_abbrevs ()) *)
 (*  ; check_expans [] ty' *)
 let set_level ty level =
-  if ty.id <= !last_snapshot then log_change (Clevel (ty, ty.level));
+  if ty.id <= (Compiler_request_state.current ()).type_node_last_snapshot then
+    log_change (Clevel (ty, ty.level));
   ty.level <- level
 let set_univar rty ty =
   log_change (Cuniv (rty, !rty));
@@ -765,8 +791,10 @@ let set_typeset rs s =
   rs := s
 
 let snapshot () =
-  let old = !last_snapshot in
-  last_snapshot := !new_id;
+  let state = Compiler_request_state.current () in
+  let old = state.type_node_last_snapshot in
+  state.type_node_last_snapshot <- state.type_node_id;
+  let trail = Domain.DLS.get trail in
   match Weak.get trail 0 with
   | Some r -> (r, old)
   | None ->
@@ -783,16 +811,17 @@ let rec rev_log accu = function
     rev_log (ch :: accu) d
 
 let backtrack (changes, old) =
+  let state = Compiler_request_state.current () in
   match !changes with
-  | Unchanged -> last_snapshot := old
+  | Unchanged -> state.type_node_last_snapshot <- old
   | Invalid -> failwith "Btype.backtrack"
   | Change _ as change ->
     cleanup_abbrev ();
     let backlog = rev_log [] change in
     List.iter undo_change backlog;
     changes := Unchanged;
-    last_snapshot := old;
-    Weak.set trail 0 (Some changes)
+    state.type_node_last_snapshot <- old;
+    Weak.set (Domain.DLS.get trail) 0 (Some changes)
 
 let rec rev_compress_log log r =
   match !r with

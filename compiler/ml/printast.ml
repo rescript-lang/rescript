@@ -26,7 +26,7 @@ let fmt_position with_name f l =
     fprintf f "%s[%d,%d+%d]" fname l.pos_lnum l.pos_bol (l.pos_cnum - l.pos_bol)
 
 let fmt_location f loc =
-  if !Clflags.dump_location then (
+  if !((Clflags.current ()).dump_location) then (
     let p_2nd_name = loc.loc_start.pos_fname <> loc.loc_end.pos_fname in
     fprintf f "(%a..%a)" (fmt_position true) loc.loc_start
       (fmt_position p_2nd_name) loc.loc_end;
@@ -420,7 +420,8 @@ and expression i ppf x =
          }) -> (
     line i ppf "Pexp_jsx_container_element %a\n" fmt_jsx_tag_name name;
     jsx_props i ppf props;
-    if !Clflags.dump_location then line i ppf "> %a\n" (fmt_position false) gt;
+    if !((Clflags.current ()).dump_location) then
+      line i ppf "> %a\n" (fmt_position false) gt;
     jsx_children i ppf children;
     match closing_tag with
     | None -> ()

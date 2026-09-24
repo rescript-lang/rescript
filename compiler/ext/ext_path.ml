@@ -28,8 +28,6 @@ type t =
   | Dir of string
 [@@unboxed]
 
-let cwd = lazy (Sys.getcwd ())
-
 let split_by_sep_per_os : string -> string list =
   if Ext_sys.is_windows_or_cygwin then fun x ->
     (* on Windows, we can still accept -bs-package-output lib/js *)
@@ -103,7 +101,7 @@ let absolute_path cwd s =
   in
   process s
 
-let absolute_cwd_path s = absolute_path cwd s
+let absolute_cwd_path s = absolute_path (lazy (Compiler_request_state.cwd ())) s
 
 (* let absolute cwd s =
    match s with
@@ -113,10 +111,16 @@ let absolute_cwd_path s = absolute_path cwd s
 (** Populated by [-bs-project-root]. The build system (rewatch) or
     [cli/bsc.js] is responsible for supplying it; the compiler no longer
     reads [rescript.json] itself. *)
-let project_root : string option ref = ref None
+let get_project_root () = (Compiler_request_state.current ()).project_root
+
+let set_project_root root =
+  (Compiler_request_state.current ()).project_root <- Some root
+
+let reset_project_root () =
+  (Compiler_request_state.current ()).project_root <- None
 
 let package_dir () =
-  match !project_root with
+  match get_project_root () with
   | Some dir -> dir
   | None ->
     Ext_fmt.failwithf ~loc:__LOC__

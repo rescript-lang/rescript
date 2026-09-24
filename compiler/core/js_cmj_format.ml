@@ -81,7 +81,7 @@ let make ~(values : cmj_value Map_string.t) ~hoisted_exports ~effect_
 
 (* Serialization .. *)
 let from_file name : t =
-  let ic = open_in_bin name in
+  let ic = open_in_bin (Compiler_request_state.resolve_path name) in
   let _digest = Digest.input ic in
   let v : t = input_value ic in
   close_in ic;
@@ -90,8 +90,8 @@ let from_file name : t =
 let from_string s : t = Marshal.from_string s Ext_digest.length
 
 let for_sure_not_changed (name : string) (header : string) =
-  if Sys.file_exists name then (
-    let ic = open_in_bin name in
+  if Sys.file_exists (Compiler_request_state.resolve_path name) then (
+    let ic = open_in_bin (Compiler_request_state.resolve_path name) in
     let holder = really_input_string ic Ext_digest.length in
     close_in ic;
     holder = header)
@@ -105,7 +105,7 @@ let to_file name ~check_exists (v : t) =
   let cur_digest = Digest.string s in
   let header = cur_digest in
   if not (check_exists && for_sure_not_changed name header) then (
-    let oc = open_out_bin name in
+    let oc = open_out_bin (Compiler_request_state.resolve_path name) in
     output_string oc header;
     output_string oc s;
     close_out oc)
@@ -123,7 +123,7 @@ let get_result mid_val =
   | None ->
     mid_val
   | Some _ ->
-    if !Js_config.cross_module_inline then mid_val
+    if !((Js_config.current ()).cross_module_inline) then mid_val
     else {mid_val with persistent_closed_lambda = None}
 
 let rec binary_search_aux arr lo hi (key : string) =

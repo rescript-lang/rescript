@@ -278,7 +278,7 @@ let translate_core_type ~config ~type_env core_type =
   let translation =
     core_type |> translateCoreType_ ~config ~type_vars_gen ~type_env
   in
-  if !Debug.dependencies then
+  if !(Debug.dependencies ()) then
     translation.dependencies
     |> List.iter (fun dep ->
         Log_.item "Dependency: %s\n" (dep |> dep_to_string));

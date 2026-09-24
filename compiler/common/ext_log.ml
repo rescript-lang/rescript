@@ -26,11 +26,10 @@ type 'a logging = ('a, Format.formatter, unit, unit, unit, unit) format6 -> 'a
 
 (* TODO: add {[@.]} later for all *)
 let dwarn ?(__POS__ : (string * int * int * int) option) f =
-  if !Js_config.debug_ir then
+  let output = Compiler_request_output.stderr_formatter () in
+  if !((Js_config.current ()).debug_ir) then
     match __POS__ with
-    | None -> Format.fprintf Format.err_formatter ("WARN: " ^^ f ^^ "@.")
+    | None -> Format.fprintf output ("WARN: " ^^ f ^^ "@.")
     | Some (file, line, _, _) ->
-      Format.fprintf Format.err_formatter
-        ("WARN: %s,%d " ^^ f ^^ "@.")
-        file line
-  else Format.ifprintf Format.err_formatter ("WARN: " ^^ f ^^ "@.")
+      Format.fprintf output ("WARN: %s,%d " ^^ f ^^ "@.") file line
+  else Format.ifprintf output ("WARN: " ^^ f ^^ "@.")

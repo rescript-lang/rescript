@@ -987,7 +987,8 @@ exception Not_a_path
 let rec path_of_module mexp =
   match mexp.mod_desc with
   | Tmod_ident (p, _) -> p
-  | Tmod_apply (funct, arg, _coercion) when !Clflags.applicative_functors ->
+  | Tmod_apply (funct, arg, _coercion)
+    when !((Clflags.current ()).applicative_functors) ->
     Papply (path_of_module funct, path_of_module arg)
   | Tmod_constraint (mexp, _, _, _) -> path_of_module mexp
   | _ -> raise Not_a_path
@@ -1607,7 +1608,7 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr scope =
       let new_sg = if rescript_hide desc then sig_rem else sg @ sig_rem in
       (str :: str_rem, new_sg, final_env)
   in
-  if !Clflags.annotations then
+  if !((Clflags.current ()).annotations) then
     (* moved to genannot *)
     List.iter
       (function
@@ -1736,10 +1737,10 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
       type_structure initial_env ast (Location.in_file sourcefile)
     in
     let simple_sg = simplify_signature sg in
-    let mli_status = !Clflags.assume_no_mli in
+    let mli_status = !((Clflags.current ()).assume_no_mli) in
     if mli_status = Clflags.Mli_exists then (
       let intf_file =
-        try find_in_path_uncap !Config.load_path (modulename ^ ".cmi")
+        try find_in_path_uncap (Config.get_load_path ()) (modulename ^ ".cmi")
         with Not_found ->
           let sourceintf =
             Filename.remove_extension sourcefile ^ Literals.suffix_resi
@@ -1774,7 +1775,7 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
          the value being exported. We can still capture unused
          declarations like "let x = true;; let x = 1;;", because in this
          case, the inferred signature contains only the last declaration. *)
-      (if not !Clflags.dont_write_files then
+      (if not !((Clflags.current ()).dont_write_files) then
          let deprecated = Builtin_attributes.deprecated_of_str ast in
          let cmi =
            Env.save_signature ?check_exists ~deprecated simple_sg modulename

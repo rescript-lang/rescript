@@ -170,25 +170,6 @@ let letter = function
 
 type state = {active: bool array; error: bool array}
 
-let current =
-  ref
-    {
-      active = Array.make (last_warning_number + 1) true;
-      error = Array.make (last_warning_number + 1) false;
-    }
-
-let disabled = ref false
-
-let without_warnings f = Misc.protect_refs [Misc.R (disabled, true)] f
-
-let backup () = !current
-
-let restore x = current := x
-
-let is_active x = (not !disabled) && !current.active.(number x)
-
-let is_error x = (not !disabled) && !current.error.(number x)
-
 let parse_opt error active flags s =
   let set i = flags.(i) <- true in
   let clear i = flags.(i) <- false in
@@ -247,17 +228,60 @@ let parse_opt error active flags s =
   in
   loop 0
 
+type request_state = {
+  current: state ref;
+  disabled: bool ref;
+  has_warnings: bool ref;
+  nerrors: int ref;
+}
+
+let default_state =
+  let active = Array.make (last_warning_number + 1) true in
+  let error = Array.make (last_warning_number + 1) false in
+  parse_opt error active active Bsc_warnings.defaults_w;
+  parse_opt error active error Bsc_warnings.defaults_warn_error;
+  {active; error}
+
+let fresh_state () =
+  {
+    current = ref default_state;
+    disabled = ref false;
+    has_warnings = ref false;
+    nerrors = ref 0;
+  }
+
+(* A compiler request can overlap another request on a different domain. *)
+let key = Domain.DLS.new_key fresh_state
+let request_state () = Domain.DLS.get key
+
+let with_fresh action =
+  let previous = request_state () in
+  Domain.DLS.set key (fresh_state ());
+  Fun.protect action ~finally:(fun () -> Domain.DLS.set key previous)
+
+let without_warnings f =
+  Misc.protect_refs [Misc.R ((request_state ()).disabled, true)] f
+
+let backup () = !((request_state ()).current)
+let restore x = (request_state ()).current := x
+let is_active x =
+  let state = request_state () in
+  (not !(state.disabled)) && !(state.current).active.(number x)
+
+let is_error x =
+  let state = request_state () in
+  (not !(state.disabled)) && !(state.current).error.(number x)
+
 let parse_options errflag s =
-  let error = Array.copy !current.error in
-  let active = Array.copy !current.active in
+  let state = backup () in
+  let error = Array.copy state.error in
+  let active = Array.copy state.active in
   parse_opt error active (if errflag then error else active) s;
-  current := {error; active}
+  restore {error; active}
 
 let reset () =
   parse_options false Bsc_warnings.defaults_w;
   parse_options true Bsc_warnings.defaults_warn_error
-
-let () = reset ()
 
 let message = function
   | Deprecated (s, _, _, can_be_automigrated) ->
@@ -468,9 +492,9 @@ let sub_locs = function
     [(def, "Definition"); (use, "Expected signature")]
   | _ -> []
 
-let has_warnings = ref false
-
-let nerrors = ref 0
+let has_warnings () = !((request_state ()).has_warnings)
+let reset_has_warnings () = (request_state ()).has_warnings := false
+let nerrors () = !((request_state ()).nerrors)
 
 type reporting_information = {
   number: int;
@@ -483,8 +507,8 @@ let report w =
   match is_active w with
   | false -> `Inactive
   | true ->
-    has_warnings := true;
-    if is_error w then incr nerrors;
+    (request_state ()).has_warnings := true;
+    if is_error w then incr (request_state ()).nerrors;
     `Active
       {
         number = number w;
@@ -495,11 +519,11 @@ let report w =
 
 exception Errors
 
-let reset_fatal () = nerrors := 0
+let reset_fatal () = (request_state ()).nerrors := 0
 
 let check_fatal () =
-  if !nerrors > 0 then (
-    nerrors := 0;
+  if nerrors () > 0 then (
+    reset_fatal ();
     raise Errors)
 
 let descriptions =
@@ -578,19 +602,20 @@ let descriptions =
   ]
 
 let help_warnings () =
-  List.iter (fun (i, s) -> Printf.printf "%3i %s\n" i s) descriptions;
-  print_endline "  A all warnings";
+  let output = Compiler_request_output.stdout_formatter () in
+  List.iter (fun (i, s) -> Format.fprintf output "%3i %s@." i s) descriptions;
+  Format.fprintf output "  A all warnings@.";
   for i = Char.code 'b' to Char.code 'z' do
     let c = Char.chr i in
     match letter c with
     | [] -> ()
     | [n] ->
-      Printf.printf "  %c Alias for warning %i.\n" (Char.uppercase_ascii c) n
+      Format.fprintf output "  %c Alias for warning %i.@."
+        (Char.uppercase_ascii c) n
     | l ->
-      Printf.printf "  %c warnings %s.\n" (Char.uppercase_ascii c)
+      Format.fprintf output "  %c warnings %s.@." (Char.uppercase_ascii c)
         (String.concat ", " (List.map string_of_int l))
-  done;
-  exit 0
+  done
 
 let loc_to_string (loc : loc) : string =
   Format.sprintf "(%02d,%02d--%02d,%02d)" loc.loc_start.pos_lnum

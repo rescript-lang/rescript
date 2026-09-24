@@ -33,8 +33,6 @@
 
 type value = {mutable used: bool; lambda: Lambda.t}
 
-let param_hash : _ Hash_ident.t = Hash_ident.create 20
-
 (* optimize cases like
    (fun f (a,b){ g (a,b,1)} (e0, e1))
    cases like
@@ -50,6 +48,9 @@ let param_hash : _ Hash_ident.t = Hash_ident.create 20
    ]}
 *)
 let simple_beta_reduce params body args =
+  (* Substitutions and their [used] bits belong to this reduction. A shared
+     table lets another request clear or fold them while code is generated. *)
+  let param_hash : value Hash_ident.t = Hash_ident.create 20 in
   let exception Not_simple_apply in
   let find_param_exn v opt =
     match Hash_ident.find_opt param_hash v with
@@ -83,11 +84,8 @@ let simple_beta_reduce params body args =
             let {lambda; used} = stats in
             if not used then Lambda.seq lambda acc else acc)
       in
-      Hash_ident.clear param_hash;
       Some result
-    with Not_simple_apply ->
-      Hash_ident.clear param_hash;
-      None)
+    with Not_simple_apply -> None)
   | Lapply
       {
         ap_func =
@@ -119,9 +117,6 @@ let simple_beta_reduce params body args =
             let {lambda; used} = stat in
             if not used then Lambda.seq lambda acc else acc)
       in
-      Hash_ident.clear param_hash;
       Some result
-    with Not_simple_apply ->
-      Hash_ident.clear param_hash;
-      None)
+    with Not_simple_apply -> None)
   | _ -> None

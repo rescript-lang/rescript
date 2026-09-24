@@ -125,7 +125,7 @@ let translate_value ~attributes ~config ~doc_string ~output_file_relative
 *)
 let translate_primitive ~config ~output_file_relative ~resolver ~type_env
     (value_description : Typedtree.value_description) : t =
-  if !Debug.translation then Log_.item "Translate Primitive\n";
+  if !(Debug.translation ()) then Log_.item "Translate Primitive\n";
   let value_name =
     (* external foo : someType = "abc" -- the extern name is "abc" *)
     match value_description.val_prim with

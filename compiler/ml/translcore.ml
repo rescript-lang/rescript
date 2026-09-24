@@ -1304,10 +1304,10 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
       (transl_exp body)
   | Texp_pack modl -> !transl_module Tcoerce_none None modl
   | Texp_assert {exp_desc = Texp_construct (_, {cstr_name = "false"}, _)} ->
-    if !Clflags.no_assert_false then Lambda.lambda_assert_false
+    if !((Clflags.current ()).no_assert_false) then Lambda.lambda_assert_false
     else assert_failed e
   | Texp_assert cond ->
-    if !Clflags.noassert then lambda_unit
+    if !((Clflags.current ()).noassert) then lambda_unit
     else if_ (transl_exp cond) lambda_unit (assert_failed e)
 
 and transl_list expr_list = List.map transl_exp expr_list

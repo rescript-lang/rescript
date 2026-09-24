@@ -17,20 +17,23 @@
 
 open Types
 
-val type_int : type_expr
-val type_char : type_expr
-val type_string : type_expr
-val type_float : type_expr
-val type_bool : type_expr
-val type_unit : type_expr
-val type_exn : type_expr
+val type_int : unit -> type_expr
+val type_char : unit -> type_expr
+val type_string : unit -> type_expr
+val type_float : unit -> type_expr
+val type_bool : unit -> type_expr
+val type_unit : unit -> type_expr
+val type_exn : unit -> type_expr
 val type_array : type_expr -> type_expr
 val type_iterable : type_expr -> type_expr
 val type_async_iterable : type_expr -> type_expr
 val type_list : type_expr -> type_expr
 val type_option : type_expr -> type_expr
-val type_bigint : type_expr
-val type_extension_constructor : type_expr
+val type_bigint : unit -> type_expr
+val type_extension_constructor : unit -> type_expr
+
+val reset_for_request : unit -> unit
+val with_fresh : (unit -> 'a) -> 'a
 
 val path_int : Path.t
 val path_char : Path.t

@@ -55,14 +55,15 @@ let add_modtype id ty s = {s with modtypes = Tbl.add id ty s.modtypes}
 let for_saving s = {s with for_saving = true}
 
 let loc s x =
-  if s.for_saving && not !Clflags.keep_locs then Location.none else x
+  if s.for_saving && not !((Clflags.current ()).keep_locs) then Location.none
+  else x
 
 let remove_loc =
   let open Ast_mapper in
   {default_mapper with location = (fun _this _loc -> Location.none)}
 
 let attrs s x =
-  if s.for_saving && not !Clflags.keep_locs then
+  if s.for_saving && not !((Clflags.current ()).keep_locs) then
     remove_loc.Ast_mapper.attributes remove_loc x
   else x
 
@@ -109,12 +110,13 @@ let to_subst_by_type_function s p =
 
 (* Special type ids for saved signatures *)
 
-let new_id = ref (-1)
-let reset_for_saving () = new_id := -1
+let reset_for_saving () =
+  (Compiler_request_state.current ()).substitution_saved_id <- -1
 
 let newpersty desc =
-  decr new_id;
-  {desc; level = generic_level; id = !new_id}
+  let state = Compiler_request_state.current () in
+  state.substitution_saved_id <- state.substitution_saved_id - 1;
+  {desc; level = generic_level; id = state.substitution_saved_id}
 
 (* ensure that all occurrences of 'Tvar None' are physically shared *)
 let tvar_none = Tvar None

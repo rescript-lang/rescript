@@ -108,7 +108,7 @@ let input_cmt ic = (input_value ic : cmt_infos)
 
 let read filename =
   (*  Printf.fprintf stderr "Cmt_format.read %s\n%!" filename; *)
-  let ic = open_in_bin filename in
+  let ic = open_in_bin (Compiler_request_state.resolve_path filename) in
   try
     let magic_number = read_magic_number ic in
     let cmi, cmt =
@@ -144,28 +144,41 @@ let read_cmi filename =
   | None, _ -> raise (Cmi_format.Error (Cmi_format.Not_an_interface filename))
   | Some cmi, _ -> cmi
 
-let saved_types : binary_part list ref = ref []
+(* These typed values cannot live in Compiler_request_state without a module
+   dependency cycle. Keep their accumulator together in domain-local storage;
+   the Cmt_utils callback below is shared initialization and only forwards to
+   this domain's accumulator. *)
+type accumulators = {
+  mutable saved_types: binary_part list;
+  mutable value_deps: (Types.value_description * Types.value_description) list;
+  mutable deprecated_used: Cmt_utils.deprecated_used list;
+}
 
-let value_deps : (Types.value_description * Types.value_description) list ref =
-  ref []
+let accumulators =
+  Domain.DLS.new_key (fun () ->
+      {saved_types = []; value_deps = []; deprecated_used = []})
 
-let deprecated_used : Cmt_utils.deprecated_used list ref = ref []
-
-let value_dependencies () = !value_deps
-let deprecated_uses () = !deprecated_used
+let current_accumulators () = Domain.DLS.get accumulators
+let value_dependencies () = (current_accumulators ()).value_deps
+let deprecated_uses () = (current_accumulators ()).deprecated_used
 
 let clear () =
-  saved_types := [];
-  value_deps := [];
-  deprecated_used := []
+  let state = current_accumulators () in
+  state.saved_types <- [];
+  state.value_deps <- [];
+  state.deprecated_used <- []
 
-let add_saved_type b = saved_types := b :: !saved_types
-let get_saved_types () = !saved_types
-let set_saved_types l = saved_types := l
+let add_saved_type b =
+  let state = current_accumulators () in
+  state.saved_types <- b :: state.saved_types
+
+let get_saved_types () = (current_accumulators ()).saved_types
+let set_saved_types l = (current_accumulators ()).saved_types <- l
 
 let record_deprecated_used ?deprecated_context ?migration_template
     ?migration_in_pipe_chain_template source_loc deprecated_text =
-  deprecated_used :=
+  let state = current_accumulators () in
+  state.deprecated_used <-
     {
       Cmt_utils.source_loc;
       deprecated_text;
@@ -173,10 +186,11 @@ let record_deprecated_used ?deprecated_context ?migration_template
       migration_in_pipe_chain_template;
       context = deprecated_context;
     }
-    :: !deprecated_used
+    :: state.deprecated_used
 
 let _ = Cmt_utils.record_deprecated_used := record_deprecated_used
 
 let record_value_dependency vd1 vd2 =
   if vd1.Types.val_loc <> vd2.Types.val_loc then
-    value_deps := (vd1, vd2) :: !value_deps
+    let state = current_accumulators () in
+    state.value_deps <- (vd1, vd2) :: state.value_deps

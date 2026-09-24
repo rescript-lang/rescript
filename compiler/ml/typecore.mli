@@ -19,6 +19,8 @@ open Asttypes
 open Types
 open Format
 
+val with_fresh : (unit -> 'a) -> 'a
+
 val is_nonexpansive : Typedtree.expression -> bool
 
 val type_binding :
