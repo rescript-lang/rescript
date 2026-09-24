@@ -526,6 +526,11 @@ jobs:
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
+      - name: Test packaged CLI subcommands and watch shutdown
+        run: node packaged-cli-smoke.mjs
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
+
   test-installation-pnpm:
     needs:
       - pkg-pr-new
