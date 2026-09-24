@@ -329,6 +329,52 @@ REWATCH_FIRST_EMBEDDED=1 REWATCH_WATCH_COMPILER_DOMAINS=8 \
   /tmp/rewatch-bulk-binaries/before /tmp/rewatch-bulk-binaries/after 7
 ```
 
+## Current Rust comparison and compiler placement
+
+At revision `f8c60996fbb50a1f3678723f4910549e9fe3994d`, five interleaved
+clean, unchanged, and edit runs used the Cargo release Rust executable, the
+Dune release standalone `bsc` from `_build/default`, the Dune release OCaml
+executable, and the same local runtime. This used the gate's independent wall
+timer and 20 ms process-tree RSS sampler:
+
+| scenario | Rust median wall | OCaml median wall | Rust sampled peak tree RSS | OCaml sampled peak tree RSS |
+| --- | ---: | ---: | ---: | ---: |
+| Clean, 8 OCaml workers | 3,377 ms | 1,368 ms | 272,316 KiB | 361,520 KiB |
+| Unchanged, 8 workers | 125 ms | 57 ms | 28,976 KiB | 26,320 KiB |
+| One source edit, 8 workers | 126 ms | 56 ms | 38,784 KiB | 26,400 KiB |
+| Clean, 6 OCaml workers | 3,626 ms | 1,572 ms | 263,240 KiB | 303,368 KiB |
+| Unchanged, 6 workers | 131 ms | 57 ms | 29,880 KiB | 26,276 KiB |
+| One source edit, 6 workers | 132 ms | 58 ms | 32,536 KiB | 26,268 KiB |
+
+Eight workers gave a 2.47x clean wall-time gain but exceeded the gate's 125%
+sampled-memory limit. Six workers gave a 2.31x gain and passed that limit.
+Both counts matched the 1,031 clean, four unchanged, and six edit logical
+compiler requests, complete post-build file sets, and stable artifact bytes.
+These are separate runs; compare ratios within the same worker-count group.
+The memory sampler can miss brief child-process peaks, so treat its ratios as
+directional. This refreshes the earlier native Linux checkpoint above; no
+company-project performance is implied.
+
+The standalone compiler's filesystem location materially affects the Rust
+baseline on this host. The workspace's Dune build directory is on `virtiofs`;
+`/tmp` is on `overlay`. A copied release `bsc` had the same SHA-256 digest
+(`cfefc4fe91cd78b7906fde1f546026d971f29775557654269d7a34415d15dfa9`)
+as the Dune-path executable. Thirty interleaved `bsc -version` launches
+measured about 5 ms median from `/tmp` versus 15 ms from the Dune path. This
+is consistent with executable loading from the different mounts; it does not
+show a compiler-code difference.
+
+With that byte-identical compiler on `/tmp`, a separate five-run eight-worker
+comparison measured 1,483 ms Rust versus 1,358 ms OCaml clean wall time, with
+sampled peak tree RSS of 336,308 versus 353,276 KiB. Unchanged medians were
+84 versus 59 ms and single-edit medians 83 versus 59 ms. Work counts, complete
+file sets, and stable artifact bytes matched, and the clean time and memory
+gate passed. The clean OCaml gain was only 1.09x under this placement, versus
+2.47x with the compiler on the workspace mount. Compare each pair only within
+its run. The gate now prints executable and compiler hashes, runtime path, and
+worker settings, so a benchmark can be reproduced with its actual compiler
+storage layout. Neither layout predicts the closed-source company project.
+
 ## AST I/O checkpoint
 
 Temporary counters on the same host and eight-domain fixture measured 917
