@@ -18,8 +18,9 @@ let context ?(inherited_compiler_args = []) root config source_map_args =
   let runtime = Filename.concat root "runtime" in
   if not (Sys.file_exists bsc) then write bsc "compiler-v1";
   File_util.ensure_dir runtime;
-  Compiler_info.make_context ~bsc_path:bsc ~runtime_path:runtime
-    ~source_map_args ~inherited_compiler_args
+  Compiler_info.make_context ~compiler_path:bsc
+    ~compiler_identity:(Digest.file bsc |> Digest.to_hex)
+    ~runtime_path:runtime ~source_map_args ~inherited_compiler_args
     ~package_output_specs:(Compiler_info.package_output_specs config)
 
 let tests =
@@ -123,15 +124,17 @@ let tests =
         ]
       in
       let initial =
-        Compiler_info.make_context ~bsc_path:bsc ~runtime_path:runtime
-          ~source_map_args:[] ~inherited_compiler_args:[]
+        Compiler_info.make_context ~compiler_path:bsc
+          ~compiler_identity:(Digest.file bsc |> Digest.to_hex)
+          ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
           ~package_output_specs:commonjs
       in
       Compiler_info.write_package initial dependency;
       let marker = File_util.path_of_parts root ["lib"; "ocaml"; "marker"] in
       write marker "keep";
       let changed =
-        Compiler_info.make_context ~bsc_path:bsc ~runtime_path:runtime
+        Compiler_info.make_context ~compiler_path:bsc
+          ~compiler_identity:"changed-compiler" ~runtime_path:runtime
           ~source_map_args:[] ~inherited_compiler_args:[]
           ~package_output_specs:esmodule
       in

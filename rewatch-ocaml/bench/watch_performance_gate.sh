@@ -139,16 +139,33 @@ start_watcher() {
   fixture="$work_root/$implementation"
   cp -R "$repo_root/rewatch-ocaml/tests/basic" "$fixture"
   : >"$work_root/$implementation.bsc"
-  setsid env \
-    RESCRIPT_BSC_EXE="$counting_bsc" \
-    REWATCH_BSC_PROXY_MODE=counting \
-    RESCRIPT_RUNTIME="$runtime" \
-    REWATCH_REAL_BSC="$real_bsc" \
-    REWATCH_BSC_CALL_LOG="$work_root/$implementation.bsc" \
-    REWATCH_WATCH_MARKER="$work_root/$implementation.marker" \
-    "$executable" watch --after-build "node $marker_script" "$fixture" \
-    >"$work_root/$implementation.stdout" \
-    2>"$work_root/$implementation.stderr" &
+  : >"$work_root/$implementation.compiler"
+  if [[ $implementation == ocaml ]]; then
+    local -a domain_count_env=()
+    if [[ ${REWATCH_WATCH_COMPILER_DOMAINS+x} ]]; then
+      domain_count_env=(REWATCH_COMPILER_DOMAINS="$REWATCH_WATCH_COMPILER_DOMAINS")
+    fi
+    setsid env \
+      RESCRIPT_BSC_EXE="$real_bsc" \
+      RESCRIPT_RUNTIME="$runtime" \
+      "${domain_count_env[@]}" \
+      REWATCH_COMPILER_CALL_LOG="$work_root/$implementation.compiler" \
+      REWATCH_WATCH_MARKER="$work_root/$implementation.marker" \
+      "$executable" watch --after-build "node $marker_script" "$fixture" \
+      >"$work_root/$implementation.stdout" \
+      2>"$work_root/$implementation.stderr" &
+  else
+    setsid env \
+      RESCRIPT_BSC_EXE="$counting_bsc" \
+      REWATCH_BSC_PROXY_MODE=counting \
+      RESCRIPT_RUNTIME="$runtime" \
+      REWATCH_REAL_BSC="$real_bsc" \
+      REWATCH_BSC_CALL_LOG="$work_root/$implementation.bsc" \
+      REWATCH_WATCH_MARKER="$work_root/$implementation.marker" \
+      "$executable" watch --after-build "node $marker_script" "$fixture" \
+      >"$work_root/$implementation.stdout" \
+      2>"$work_root/$implementation.stderr" &
+  fi
   pids[$implementation]=$!
   wait_for_lines "$work_root/$implementation.marker" 1
   wait_for_text_count "$work_root/$implementation.stdout" \
@@ -169,6 +186,7 @@ for implementation in rust ocaml; do
     "Finished incremental compilation" 1
   wait_for_idle "${pids[$implementation]}"
   : >"$work_root/$implementation.bsc"
+  : >"$work_root/$implementation.compiler"
 done
 
 declare -A baseline_fd baseline_tasks baseline_rss max_fd max_tasks max_rss
@@ -227,27 +245,20 @@ median() {
 rust_median=$(median "$work_root/rust.latencies")
 ocaml_median=$(median "$work_root/ocaml.latencies")
 
-normalize_calls() {
-  local implementation=$1
-  sed "s#$work_root/$implementation#<ROOT>#g" \
-    "$work_root/$implementation.bsc" >"$work_root/$implementation.bsc.normalized"
-}
-normalize_calls rust
-normalize_calls ocaml
-if ! cmp -s "$work_root/rust.bsc.normalized" \
-  "$work_root/ocaml.bsc.normalized"; then
-  echo "Rust and OCaml retained edits performed different compiler work." >&2
+rust_parse_count=$(grep -cF -- '-bs-ast' "$work_root/rust.bsc" || true)
+rust_total_count=$(wc -l <"$work_root/rust.bsc")
+ocaml_parse_count=$(grep -c '^parse' "$work_root/ocaml.compiler" || true)
+ocaml_compile_count=$(grep -c '^implementation' \
+  "$work_root/ocaml.compiler" || true)
+ocaml_total_count=$(wc -l <"$work_root/ocaml.compiler")
+if ((rust_parse_count != runs || rust_total_count != runs * 2 ||
+     ocaml_parse_count != runs || ocaml_compile_count != runs ||
+     ocaml_total_count != runs * 2)); then
+  printf 'retained work mismatch: Rust %d parser / %d total; embedded OCaml %d parser / %d compiler / %d total; expected %d / %d.\n' \
+    "$rust_parse_count" "$rust_total_count" "$ocaml_parse_count" \
+    "$ocaml_compile_count" "$ocaml_total_count" "$runs" "$((runs * 2))" >&2
   exit 1
 fi
-for implementation in rust ocaml; do
-  parse_count=$(grep -cF -- '-bs-ast' "$work_root/$implementation.bsc" || true)
-  total_count=$(wc -l <"$work_root/$implementation.bsc")
-  if ((parse_count != runs || total_count != runs * 2)); then
-    printf '%s retained work was %d parser / %d total calls; expected %d / %d.\n' \
-      "$implementation" "$parse_count" "$total_count" "$runs" "$((runs * 2))" >&2
-    exit 1
-  fi
-done
 
 for implementation in rust ocaml; do
   pid=${pids[$implementation]}

@@ -18,7 +18,7 @@ let preliminary_parse result =
   if Process.succeeded result then Parsed_successfully {stderr = result.stderr}
   else Parse_failed {stdout = result.stdout; stderr = result.stderr}
 
-type namespace_job = {job: Process.job; finish: Process.result -> unit}
+type namespace_job = {task: Process.task; finish: Process.result -> unit}
 
 type pending_work = {
   mutable namespace_jobs: namespace_job list;

@@ -5,8 +5,7 @@ type result = {
   cycle: Module_graph.cycle_info option;
 }
 
-let bsc_path () =
-  try Toolchain.bsc () with Toolchain.Error message -> raise (Error message)
+let bsc_path () = "<embedded compiler>"
 
 let runtime_path root =
   try Toolchain.runtime ~find_package:(Project_context.dependency_path root)
@@ -24,7 +23,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   let runtime = runtime_path root_config.root in
   let source_map_args = Compiler_args.source_map_args workspace_config ~watch in
   let compiler_context =
-    Compiler_info.make_context ~bsc_path:bsc ~runtime_path:runtime
+    Compiler_info.make_context ~compiler_path:bsc
+      ~compiler_identity:Compiler_process.build_identity ~runtime_path:runtime
       ~source_map_args
       ~inherited_compiler_args:
         (workspace_config.jsx_args @ workspace_config.experimental_args)
@@ -182,11 +182,12 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       (List.map (fun (_, _, group) -> group) parse_entries)
   in
   let parse_results =
-    Process.run_parallel_map ?poll:attempt.process_poll
-      ~on_complete:parse_completed parse_entries
-      ~job:(fun ((package : Package_plan.t), path, _) ->
+    parse_entries
+    |> List.map (fun ((package : Package_plan.t), path, _) ->
         Compiler_process.parse_job ~bsc ~build_dir:package.build_dir
           ~config:package.compile_config path)
+    |> Compiler_process.run_jobs ?poll:attempt.process_poll
+         ~on_complete:parse_completed
   in
   let failed_parse_paths = Hashtbl.create 8 in
   List.iter2
