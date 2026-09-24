@@ -44,6 +44,8 @@ prepare_fixture() {
     cp -a --reflink=auto "$dependency_tree" "$destination/$relative_tree"
   done < <(find "$repo_root/rewatch/testrepo" -type d -name node_modules \
     -prune -print)
+  node "$repo_root/rewatch/tests/add-belt-dependencies.mjs" \
+    "$destination/rewatch/testrepo"
 }
 
 if [[ -z ${RESCRIPT_BSC_EXE:-} || -z ${RESCRIPT_RUNTIME:-} ]]; then

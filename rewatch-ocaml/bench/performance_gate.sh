@@ -62,6 +62,8 @@ prepare_fixture() {
     cp -a --reflink=auto "$dependency_tree" "$destination/$relative_tree"
   done < <(find "$repo_root/rewatch/testrepo" -type d -name node_modules \
     -prune -print)
+  node "$repo_root/rewatch/tests/add-belt-dependencies.mjs" \
+    "$destination/rewatch/testrepo"
 }
 
 rust_root="$work_root/rust"
@@ -77,7 +79,7 @@ fi
 export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
 
 results="$work_root/results.csv"
-echo "implementation,iteration,wall_ms,peak_tree_rss_kib,peak_tree_tasks" \
+echo "scenario,implementation,iteration,wall_ms,peak_tree_rss_kib,peak_tree_tasks" \
   >"$results"
 
 tree_resources() {
@@ -105,9 +107,16 @@ clean_and_build() {
 }
 
 measure() {
-  local implementation=$1 executable=$2 fixture=$3 iteration=$4
-  local output="$work_root/${implementation}-${iteration}"
-  "$executable" clean "$fixture" >/dev/null 2>&1
+  local scenario=$1 implementation=$2 executable=$3 fixture=$4 iteration=$5
+  local output="$work_root/${scenario}-${implementation}-${iteration}"
+  case "$scenario" in
+    clean) "$executable" clean "$fixture" >/dev/null 2>&1 ;;
+    unchanged) ;;
+    edit)
+      printf '\n// timed single edit %d\n' "$iteration" \
+        >>"$fixture/packages/watch-warnings/src/B.res" ;;
+    *) echo "Unknown benchmark scenario: $scenario" >&2; exit 2 ;;
+  esac
   local start_ns root_pid peak_rss=0 peak_tasks=0 rss tasks end_ns wall_ms
   start_ns=$(date +%s%N)
   "$executable" build "$fixture" >"$output" 2>"$output.stderr" &
@@ -125,15 +134,17 @@ measure() {
   wait "$root_pid"
   end_ns=$(date +%s%N)
   wall_ms=$(((end_ns - start_ns) / 1000000))
-  echo "$implementation,$iteration,$wall_ms,$peak_rss,$peak_tasks" >>"$results"
-  printf '%-5s run %d: %6d ms  %8d KiB  %4d tasks\n' \
-    "$implementation" "$iteration" "$wall_ms" "$peak_rss" "$peak_tasks"
+  echo "$scenario,$implementation,$iteration,$wall_ms,$peak_rss,$peak_tasks" \
+    >>"$results"
+  printf '%-9s %-5s run %d: %6d ms  %8d KiB  %4d tasks\n' \
+    "$scenario" "$implementation" "$iteration" "$wall_ms" "$peak_rss" \
+    "$peak_tasks"
 }
 
 median_column() {
-  local implementation=$1 column=$2 middle=$((runs / 2 + 1))
-  awk -F, -v implementation="$implementation" \
-    '$1 == implementation { print $'"$column"' }' "$results" \
+  local scenario=$1 implementation=$2 column=$3 middle=$((runs / 2 + 1))
+  awk -F, -v scenario="$scenario" -v implementation="$implementation" \
+    '$1 == scenario && $2 == implementation { print $'"$column"' }' "$results" \
     | sort -n | sed -n "${middle}p"
 }
 
@@ -142,31 +153,49 @@ echo "commit: $(git -C "$repo_root" rev-parse HEAD)"
 echo "host: $(uname -a)"
 echo "cpus: $(getconf _NPROCESSORS_ONLN 2>/dev/null || echo unknown)"
 echo "runs: $runs (interleaved after one warm-up each)"
-echo "threshold: ${threshold_percent}% of Rust median wall and RSS"
+echo "clean threshold: ${threshold_percent}% of Rust median wall and RSS"
 
 clean_and_build "$rust_executable" "$rust_fixture" "$work_root/rust-warmup"
 clean_and_build "$ocaml_executable" "$ocaml_fixture" "$work_root/ocaml-warmup"
 
 for ((iteration = 1; iteration <= runs; iteration++)); do
   if ((iteration % 2 == 1)); then
-    measure rust "$rust_executable" "$rust_fixture" "$iteration"
-    measure ocaml "$ocaml_executable" "$ocaml_fixture" "$iteration"
+    measure clean rust "$rust_executable" "$rust_fixture" "$iteration"
+    measure clean ocaml "$ocaml_executable" "$ocaml_fixture" "$iteration"
   else
-    measure ocaml "$ocaml_executable" "$ocaml_fixture" "$iteration"
-    measure rust "$rust_executable" "$rust_fixture" "$iteration"
+    measure clean ocaml "$ocaml_executable" "$ocaml_fixture" "$iteration"
+    measure clean rust "$rust_executable" "$rust_fixture" "$iteration"
   fi
 done
 
-rust_wall=$(median_column rust 3)
-ocaml_wall=$(median_column ocaml 3)
-rust_rss=$(median_column rust 4)
-ocaml_rss=$(median_column ocaml 4)
-rust_tasks=$(median_column rust 5)
-ocaml_tasks=$(median_column ocaml 5)
-printf 'median Rust:  %6d ms  %8d KiB  %4d peak tasks\n' \
+rust_wall=$(median_column clean rust 4)
+ocaml_wall=$(median_column clean ocaml 4)
+rust_rss=$(median_column clean rust 5)
+ocaml_rss=$(median_column clean ocaml 5)
+rust_tasks=$(median_column clean rust 6)
+ocaml_tasks=$(median_column clean ocaml 6)
+printf 'clean median Rust:  %6d ms  %8d KiB  %4d peak tasks\n' \
   "$rust_wall" "$rust_rss" "$rust_tasks"
-printf 'median OCaml: %6d ms  %8d KiB  %4d peak tasks\n' \
+printf 'clean median OCaml: %6d ms  %8d KiB  %4d peak tasks\n' \
   "$ocaml_wall" "$ocaml_rss" "$ocaml_tasks"
+
+for scenario in unchanged edit; do
+  for ((iteration = 1; iteration <= runs; iteration++)); do
+    if ((iteration % 2 == 1)); then
+      measure "$scenario" rust "$rust_executable" "$rust_fixture" "$iteration"
+      measure "$scenario" ocaml "$ocaml_executable" "$ocaml_fixture" "$iteration"
+    else
+      measure "$scenario" ocaml "$ocaml_executable" "$ocaml_fixture" "$iteration"
+      measure "$scenario" rust "$rust_executable" "$rust_fixture" "$iteration"
+    fi
+  done
+  printf '%s median Rust:  %6d ms  %8d KiB peak tree RSS\n' \
+    "$scenario" "$(median_column "$scenario" rust 4)" \
+    "$(median_column "$scenario" rust 5)"
+  printf '%s median OCaml: %6d ms  %8d KiB peak tree RSS\n' \
+    "$scenario" "$(median_column "$scenario" ocaml 4)" \
+    "$(median_column "$scenario" ocaml 5)"
+done
 
 trace_and_classify() {
   local implementation=$1 scenario=$2 executable=$3 fixture=$4 manifest=$5
@@ -387,5 +416,5 @@ fi
 if ((runs < 5)); then
   echo "PASS: correctness smoke checks passed; performance gate not evaluated."
 else
-  echo "PASS: timing, memory, compiler-work, and artifact-equivalence gates passed."
+  echo "PASS: clean timing and memory, compiler-work, and artifact-equivalence gates passed."
 fi

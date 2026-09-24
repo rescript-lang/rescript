@@ -43,6 +43,66 @@ byte-identical edited JavaScript. The watcher held 12 file descriptors and
 four tasks; RSS rose from 26,680 to 27,688 KiB. That small fixture dirties
 only one module per edit and does not establish watch-time scaling.
 
+## Native Linux testrepo checkpoint
+
+At compiler revision `49951ac49f78be57f8f7ae347bf577a2839f90ca`, five
+interleaved runs on a 12-CPU Linux ARM64 host with OCaml 5.5.1 measured the
+472-module testrepo fixture. Both implementations used the same local compiler
+and runtime. The fixture includes installed, lockfile-pinned dependencies;
+the benchmark copies them into isolated roots and applies the canonical
+test-suite Belt-dependency correction to those copies. No company-project
+source was used.
+
+| scenario | Rust median wall | OCaml median wall | Rust median peak tree RSS | OCaml median peak tree RSS |
+| --- | ---: | ---: | ---: | ---: |
+| Clean, 8 OCaml workers | 3,625 ms | 1,511 ms | 264,644 KiB | 358,256 KiB |
+| Unchanged after clean, 8 workers | 142 ms | 71 ms | 29,156 KiB | 25,764 KiB |
+| One source edit, 8 workers | 163 ms | 72 ms | 45,120 KiB | 25,520 KiB |
+| Clean, 6 OCaml workers | 3,724 ms | 1,673 ms | 252,272 KiB | 303,536 KiB |
+| Clean, 4 OCaml workers | 3,642 ms | 2,020 ms | 250,644 KiB | 219,364 KiB |
+
+Eight workers gave a 2.40x clean-build wall-time gain and a 1.35x peak-RSS
+ratio relative to Rust in the complete clean/unchanged/edit run. The existing
+125% clean-memory gate therefore failed at eight workers. Six workers passed
+the complete gate, at a 2.23x clean-build gain and 1.20x peak-RSS ratio. Four
+workers also passed, with a 1.80x clean-build gain. These are separate runs,
+so compare ratios within a row rather than treating small cross-run differences
+as an effect of worker count. Peak tree RSS is sampled every 20 ms and can
+miss short-lived child peaks.
+
+All three worker counts matched Rust's clean, unchanged, and edit compiler
+work. The clean build made 1,031 logical compiler requests in each
+implementation: 512 parse, seven namespace, and 512 compile requests. The
+unchanged build made four requests because the warning in the testrepo's
+`ModuleA` deliberately invalidates its AST for diagnostic replay. Every
+comparison matched the complete post-build file set and the selected stable
+artifact bytes.
+
+In a separate seven-edit retained-watch run at the default eight workers,
+Rust's median edit-to-hook latency was 128 ms and OCaml's was 82 ms. Both made
+seven parser and seven compiler requests, produced identical edited JavaScript,
+and held stable file descriptor, task, and RSS counts. Watch-mode samples use
+a small one-module fixture, so they do not establish scaling on a large
+dependency graph.
+
+One interactive clean build reported Rust parse/compile times of 1.35/2.09 s
+and OCaml times of 0.16/1.24 s. These single-run phase timings are diagnostic,
+not medians. The remaining OCaml compile phase alone exceeds the roughly
+0.73 s total required for a 5x gain over the measured Rust clean median.
+Further work toward 5x therefore needs substantial compilation or scheduling
+improvement; eliminating the already short parse phase cannot reach it alone.
+
+The filesystem audit counted 6,604 Rust versus 9,056 OCaml project-local
+metadata calls on clean builds, with nearly equal open counts (17,636 and
+17,633). The high-count missing CMI lookups, including 313 opens of the
+fixture's `Pervasives.cmi` path, were identical in both implementations. The
+extra metadata checks merit investigation on slower filesystems, but the
+shared CMI lookup pattern does not identify an OCaml-specific optimization.
+An exploratory `OCAMLRUNPARAM=o=70` run reduced the eight-worker median peak
+tree RSS to 330,232 KiB with a 1,505 ms clean median; it still missed the
+125% memory gate in that interleaved comparison. The default GC setting is
+unchanged pending broader workload evidence.
+
 ## AST I/O checkpoint
 
 Temporary counters on the same host and eight-domain fixture measured 917
@@ -62,27 +122,33 @@ behavior, then measure RSS, work, and artifact parity on a larger project.
 
 ## Rust comparison gates
 
-Build both release executables, then run the Linux clean-build, work, resource,
+Build the local runtime, lockfile-pinned testrepo dependencies, and both
+release executables. Then run the Linux clean, unchanged, edit, work, resource,
 and artifact comparison:
 
 ```sh
+yarn --cwd rewatch/testrepo install --immutable
+opam exec -- make lib
 cargo build --manifest-path rewatch/Cargo.toml --release
 opam exec -- dune build --profile release rewatch-ocaml/rescript_ocaml.exe
+export RESCRIPT_BSC_EXE="$PWD/_build/default/compiler/bsc/rescript_compiler_main.exe"
+export RESCRIPT_RUNTIME="$PWD/packages/@rescript/runtime"
 rewatch-ocaml/bench/performance_gate.sh \
   rewatch/target/release/rescript \
   _build/default/rewatch-ocaml/rescript_ocaml.exe 5
 ```
 
-The harness isolates dependency trees, interleaves builds, traces Rust `bsc`
-requests and OCaml's logical compiler-request log, compares clean, unchanged,
-and one-edit work, and compares complete file sets and stable artifact bytes at
-the same absolute path. `KEEP_REWATCH_BENCHMARK_WORKDIR=1` retains raw outputs.
-The fixture currently does work on an unchanged build. In a one-run smoke check,
-both implementations performed four compiler requests there, and their clean
-and single-edit request counts matched too. The source of those unexpected
-unchanged requests is unresolved. The same check found byte differences in
-some `rescript-bun` CMI files and an AST despite equal generated file sets;
-investigate these before using the artifact gate as an acceptance result.
+The harness isolates dependency trees, interleaves timed clean, unchanged,
+and single-edit builds, and samples process-tree RSS and task counts. It then
+traces Rust `bsc` requests and OCaml's logical compiler-request log, compares
+work in all three scenarios, and compares complete file sets and stable
+artifact bytes at the same absolute path. The timed source edits add unique
+comments to `packages/watch-warnings/src/B.res` in both isolated fixtures.
+The unchanged workload replays the fixture's local `ModuleA` warning, so four
+compiler requests there are expected. `KEEP_REWATCH_BENCHMARK_WORKDIR=1`
+retains raw outputs and `results.csv`. The 125% wall-time and memory limits
+currently apply to the clean scenario; the other scenarios are measured and
+checked for equivalent work and artifacts.
 
 ## Filesystem-work audit
 
