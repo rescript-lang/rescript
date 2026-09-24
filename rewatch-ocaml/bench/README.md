@@ -254,6 +254,75 @@ would save only about 0.21 s. Reusing expanded components would need to keep
 the mutable type graphs isolated and invalidate them when a CMI changes. The
 temporary instrumentation was removed after these measurements.
 
+## Bulk label table checkpoint
+
+Revision `56164c19e3b0cc751301e4344cc0e4ecff46df20` builds the opened
+signature's record-label table once per distinct label name. The previous
+revision was `8d1fa55ed0f88bfdebef17bbde797109dfa1e52f`. A temporary
+single-worker trace of the testrepo's `WebAPI.DOMAPI` signature found 6,133
+label entries under 991 names in each of 137 expansions. Insertion into the
+persistent table took about 461 ms summed across those expansions. The new
+builder retains the first-seen insertion order, latest key, and per-name
+declaration order; the temporary trace code was removed.
+
+On the same 12-CPU Linux ARM64 host, five interleaved eight-worker testrepo
+runs used release-profile executables placed in the same directory, the same
+standalone `bsc` and runtime, and one warm-up per executable. The benchmark
+gate, updated at `719e4bd231bf59b21029dfff7584267550fb1799`, times process
+completion separately from its 20 ms process-tree resource sampler:
+
+| scenario | before median wall | after median wall | before peak tree RSS | after peak tree RSS |
+| --- | ---: | ---: | ---: | ---: |
+| Clean | 1,424 ms | 1,414 ms | 373,612 KiB | 365,252 KiB |
+| Unchanged | 45 ms | 44 ms | 26,892 KiB | 26,540 KiB |
+| One source edit | 45 ms | 46 ms | 26,980 KiB | 26,628 KiB |
+
+The five-run clean difference is small beside run-to-run variation. A separate
+ten-pair, high-resolution interleaved clean comparison without the resource
+sampler measured 1,457 ms before and 1,430 ms after (1.9% faster). Twenty
+warmed unchanged builds on isolated fixtures measured 45.10 and 45.01 ms;
+there was no measurable incremental gain. These direct timings used
+`process.hrtime.bigint()` around each child build, after cleaning before each
+clean sample. The resource figures above are sampled peaks, not exact maximum
+RSS, and do not establish a memory reduction.
+
+Both versions made the same 1,031 clean, four unchanged, and six edit compiler
+requests. The complete post-build file sets and stable artifact bytes matched.
+The clean time and memory gate passed. A seven-edit retained-watch comparison
+measured 84 ms before and 82 ms after, with seven parse and seven compile
+requests each, identical edited JavaScript, and stable watcher resources.
+The small watch fixture cannot establish a latency gain. `make test`,
+`make test-rewatch`, the OCaml Rewatch integration script, and the Rewatch
+unit tests passed with the new compiler. No company-project performance is
+inferred from these repository measurements.
+
+To reproduce the before/after gates after installing the dependencies shown
+below, build both revisions with the Dune `release` profile and put their
+executables in the same directory. For two embedded compiler executables,
+`REWATCH_FIRST_EMBEDDED=1` makes the first argument use the logical request
+trace; the harness still labels that first executable `Rust` in its output:
+
+```sh
+git worktree add --detach /tmp/rewatch-before-bulk 8d1fa55ed
+(cd /tmp/rewatch-before-bulk && opam exec -- dune build --profile release \
+  compiler/bsc/rescript_compiler_main.exe rewatch-ocaml/rescript_ocaml.exe)
+opam exec -- dune build --profile release \
+  compiler/bsc/rescript_compiler_main.exe rewatch-ocaml/rescript_ocaml.exe
+mkdir -p /tmp/rewatch-bulk-binaries
+cp /tmp/rewatch-before-bulk/_build/default/rewatch-ocaml/rescript_ocaml.exe \
+  /tmp/rewatch-bulk-binaries/before
+cp _build/default/rewatch-ocaml/rescript_ocaml.exe \
+  /tmp/rewatch-bulk-binaries/after
+export RESCRIPT_BSC_EXE=/tmp/rewatch-before-bulk/_build/default/compiler/bsc/rescript_compiler_main.exe
+export RESCRIPT_RUNTIME="$PWD/packages/@rescript/runtime"
+REWATCH_FIRST_EMBEDDED=1 REWATCH_COMPILER_DOMAINS=8 \
+  rewatch-ocaml/bench/performance_gate.sh \
+  /tmp/rewatch-bulk-binaries/before /tmp/rewatch-bulk-binaries/after 5
+REWATCH_FIRST_EMBEDDED=1 REWATCH_WATCH_COMPILER_DOMAINS=8 \
+  rewatch-ocaml/bench/watch_performance_gate.sh \
+  /tmp/rewatch-bulk-binaries/before /tmp/rewatch-bulk-binaries/after 7
+```
+
 ## AST I/O checkpoint
 
 Temporary counters on the same host and eight-domain fixture measured 917
