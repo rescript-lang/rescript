@@ -16,7 +16,8 @@ if ((runs < 5 || runs % 2 == 0)); then
   echo "RUNS must be an odd number of at least five." >&2
   exit 2
 fi
-for command in awk cat cmp cp date find grep mktemp node sed seq setsid sleep sort tail wc; do
+for command in awk cat cmp cp date find git grep mktemp node sed seq setsid \
+  sha256sum sleep sort tail wc; do
   command -v "$command" >/dev/null || {
     echo "Missing required command: $command" >&2
     exit 2
@@ -37,6 +38,14 @@ fi
 real_bsc=$RESCRIPT_BSC_EXE
 runtime=$RESCRIPT_RUNTIME
 counting_bsc="$repo_root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe"
+
+echo "Rewatch retained-watch performance gate"
+echo "commit: $(git -C "$repo_root" rev-parse HEAD)"
+echo "runtime: $runtime"
+echo "compiler domains: ${REWATCH_WATCH_COMPILER_DOMAINS:-default}"
+echo "executable and compiler SHA-256:"
+sha256sum "$rust_executable" "$ocaml_executable" "$real_bsc"
+echo "runs: $runs (interleaved after one warm-up edit each)"
 
 work_root=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-watch-performance.XXXXXX")
 declare -A pids=()
@@ -135,7 +144,7 @@ resource_value() {
 }
 
 start_watcher() {
-  local implementation=$1 executable=$2 fixture
+  local implementation=$1 executable=$2 count_external=${3:-0} fixture
   fixture="$work_root/$implementation"
   cp -R "$repo_root/rewatch-ocaml/tests/basic" "$fixture"
   : >"$work_root/$implementation.bsc"
@@ -154,13 +163,21 @@ start_watcher() {
       "$executable" watch --after-build "node $marker_script" "$fixture" \
       >"$work_root/$implementation.stdout" \
       2>"$work_root/$implementation.stderr" &
-  else
+  elif [[ $count_external == 1 ]]; then
     setsid env \
       RESCRIPT_BSC_EXE="$counting_bsc" \
       REWATCH_BSC_PROXY_MODE=counting \
       RESCRIPT_RUNTIME="$runtime" \
       REWATCH_REAL_BSC="$real_bsc" \
       REWATCH_BSC_CALL_LOG="$work_root/$implementation.bsc" \
+      REWATCH_WATCH_MARKER="$work_root/$implementation.marker" \
+      "$executable" watch --after-build "node $marker_script" "$fixture" \
+      >"$work_root/$implementation.stdout" \
+      2>"$work_root/$implementation.stderr" &
+  else
+    setsid env \
+      RESCRIPT_BSC_EXE="$real_bsc" \
+      RESCRIPT_RUNTIME="$runtime" \
       REWATCH_WATCH_MARKER="$work_root/$implementation.marker" \
       "$executable" watch --after-build "node $marker_script" "$fixture" \
       >"$work_root/$implementation.stdout" \
@@ -187,6 +204,8 @@ for implementation in rust ocaml; do
   wait_for_idle "${pids[$implementation]}"
   : >"$work_root/$implementation.bsc"
   : >"$work_root/$implementation.compiler"
+  cp "$work_root/$implementation/src/B.mjs" \
+    "$work_root/$implementation.prior.mjs"
 done
 
 declare -A baseline_fd baseline_tasks baseline_rss max_fd max_tasks max_rss
@@ -205,7 +224,8 @@ measure_edit() {
   local implementation=$1 round=$2 expected=$((round + 2))
   local started finished latency pid value
   started=$(date +%s%3N)
-  printf 'let answer = A.value + 1\n// retained edit %d\n' "$round" \
+  printf 'let answer = A.value + %d\n// retained edit %d\n' \
+    "$((round + 1))" "$round" \
     >"$work_root/$implementation/src/B.res"
   wait_for_lines "$work_root/$implementation.marker" "$expected"
   finished=$(tail -n 1 "$work_root/$implementation.marker")
@@ -214,6 +234,13 @@ measure_edit() {
   wait_for_text_count "$work_root/$implementation.stdout" \
     "Finished incremental compilation" "$((round + 1))"
   wait_for_idle "${pids[$implementation]}"
+  if cmp -s "$work_root/$implementation.prior.mjs" \
+    "$work_root/$implementation/src/B.mjs"; then
+    echo "$implementation output did not change after retained edit $round." >&2
+    exit 1
+  fi
+  cp "$work_root/$implementation/src/B.mjs" \
+    "$work_root/$implementation.prior.mjs"
   pid=${pids[$implementation]}
   for kind in fd tasks rss; do
     value=$(resource_value "$pid" "$kind")
@@ -237,7 +264,42 @@ for round in $(seq 1 "$runs"); do
     echo "Generated output differs after retained edit $round." >&2
     exit 1
   fi
+  cp "$work_root/rust/src/B.mjs" "$work_root/rust-round-$round.mjs"
 done
+
+if [[ ${REWATCH_FIRST_EMBEDDED:-0} != 1 ]]; then
+  # Count external compiler requests in an untimed replay. A proxy in the
+  # timed watcher would add a process launch to every parse and compile.
+  start_watcher rust_work "$rust_executable" 1
+  printf 'let answer = A.value + 1\n// warm retained edit\n' \
+    >"$work_root/rust_work/src/B.res"
+  wait_for_lines "$work_root/rust_work.marker" 2
+  wait_for_text_count "$work_root/rust_work.stdout" \
+    "Finished incremental compilation" 1
+  wait_for_idle "${pids[rust_work]}"
+  : >"$work_root/rust_work.bsc"
+  cp "$work_root/rust_work/src/B.mjs" "$work_root/rust_work.prior.mjs"
+  for round in $(seq 1 "$runs"); do
+    printf 'let answer = A.value + %d\n// retained edit %d\n' \
+      "$((round + 1))" "$round" \
+      >"$work_root/rust_work/src/B.res"
+    wait_for_lines "$work_root/rust_work.marker" "$((round + 2))"
+    wait_for_text_count "$work_root/rust_work.stdout" \
+      "Finished incremental compilation" "$((round + 1))"
+    wait_for_idle "${pids[rust_work]}"
+    if cmp -s "$work_root/rust_work.prior.mjs" \
+      "$work_root/rust_work/src/B.mjs"; then
+      echo "Replay output did not change after retained edit $round." >&2
+      exit 1
+    fi
+    cp "$work_root/rust_work/src/B.mjs" "$work_root/rust_work.prior.mjs"
+    cmp "$work_root/rust_work/src/B.mjs" \
+      "$work_root/rust-round-$round.mjs"
+  done
+  rm -f "$work_root/rust_work/lib/watch.lock"
+  wait "${pids[rust_work]}"
+  unset 'pids[rust_work]'
+fi
 
 median() {
   sort -n "$1" | sed -n "$((runs / 2 + 1))p"
@@ -251,8 +313,8 @@ if [[ ${REWATCH_FIRST_EMBEDDED:-0} == 1 ]]; then
     "$work_root/rust.compiler" || true)
   rust_total_count=$(wc -l <"$work_root/rust.compiler")
 else
-  rust_parse_count=$(grep -cF -- '-bs-ast' "$work_root/rust.bsc" || true)
-  rust_total_count=$(wc -l <"$work_root/rust.bsc")
+  rust_parse_count=$(grep -cF -- '-bs-ast' "$work_root/rust_work.bsc" || true)
+  rust_total_count=$(wc -l <"$work_root/rust_work.bsc")
   rust_compile_count=$((rust_total_count - rust_parse_count))
 fi
 ocaml_parse_count=$(grep -c '^parse' "$work_root/ocaml.compiler" || true)

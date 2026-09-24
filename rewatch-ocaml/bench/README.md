@@ -75,6 +75,64 @@ In a separate seven-edit retained-watch comparison, median latency fell from
 and produced identical edited JavaScript. The older watcher's RSS rose from
 10,960 to 11,736 KiB and the current watcher's from 26,800 to 27,932 KiB;
 both held stable file descriptor and task counts.
+That older watch gate timed the external-compiler side through its counting
+proxy, which added process launches to its latency samples.
+
+A filesystem-controlled follow-up at revision
+`9fa158aee436b0804ae7f6d0bb5d72144e038053` put both release Rewatch
+executables and the byte-identical release `bsc` on `/tmp` (`overlay`) instead
+of launching `bsc` from the workspace's `virtiofs` mount. The older executable
+was rebuilt from `95467b2bfab9d6edd8fd00a8897a5308794a211d`; both used
+the same current `bsc` and runtime. Five interleaved runs after one warm-up
+each measured:
+
+| scenario | before median wall | after median wall | before peak tree RSS | after peak tree RSS |
+| --- | ---: | ---: | ---: | ---: |
+| Clean | 1,717 ms | 1,374 ms | 365,952 KiB | 361,164 KiB |
+| Unchanged | 145 ms | 45 ms | 29,480 KiB | 25,848 KiB |
+| One source edit | 148 ms | 47 ms | 52,456 KiB | 25,220 KiB |
+
+The clean gain was 1.25x under this compiler placement, compared with 2.85x
+when `bsc` launched from the slower workspace mount. This supports compiler
+launch location as a large part of the earlier measured gain on this host.
+The unchanged and single-edit medians still fell by about 3x. Each timed edit
+started from the same restored source and compiled baseline. The gate passed
+its clean time and memory limits; both versions made the same 1,031 clean,
+four unchanged, and six edit compiler requests, and produced identical
+complete file sets and stable artifact bytes. The first executable is the
+older OCaml Rewatch, despite the gate's `Rust` label.
+
+The revised retained-watch gate times both executables with the real `bsc`
+and replays the external side through a counting proxy only after timing. In
+a separate seven-edit run with the same `/tmp` compiler, the older OCaml
+watcher measured 143 ms median versus 83 ms for current OCaml. Both made seven
+parse and seven compile requests and generated identical edited JavaScript;
+file descriptors, task counts, and retained RSS stayed within the gate's
+limits. Each edit changed the generated JavaScript, proving that the timed
+watchers rebuilt the edited module. These medians replace the proxy-influenced
+161 versus 83 ms comparison above for latency purposes.
+
+After creating the older worktree and building both release executables as
+shown below, reproduce this placement with:
+
+```sh
+mkdir -p /tmp/rewatch-before-after-fast
+cp /tmp/rewatch-before-954/_build/default/rewatch-ocaml/rescript_ocaml.exe \
+  /tmp/rewatch-before-after-fast/before
+cp _build/default/rewatch-ocaml/rescript_ocaml.exe \
+  /tmp/rewatch-before-after-fast/after
+cp _build/default/compiler/bsc/rescript_compiler_main.exe \
+  /tmp/rewatch-before-after-fast/bsc
+export RESCRIPT_BSC_EXE=/tmp/rewatch-before-after-fast/bsc
+export RESCRIPT_RUNTIME="$PWD/packages/@rescript/runtime"
+REWATCH_COMPILER_DOMAINS=8 rewatch-ocaml/bench/performance_gate.sh \
+  /tmp/rewatch-before-after-fast/before \
+  /tmp/rewatch-before-after-fast/after 5
+REWATCH_WATCH_COMPILER_DOMAINS=8 \
+  rewatch-ocaml/bench/watch_performance_gate.sh \
+  /tmp/rewatch-before-after-fast/before \
+  /tmp/rewatch-before-after-fast/after 7
+```
 
 To reproduce the before/after gate after preparing the dependencies and
 release compiler/runtime as described below:
@@ -375,6 +433,21 @@ its run. The gate now prints executable and compiler hashes, runtime path, and
 worker settings, so a benchmark can be reproduced with its actual compiler
 storage layout. Neither layout predicts the closed-source company project.
 
+With the fast-placement Rust median as the reference, a 5x clean-build gain
+would require about 297 ms total. The separate instrumented OCaml compile
+span was 1,172 ms on this fixture, before accounting for the rest of the
+build. That trace has overhead and is not a same-run lower bound, but it shows
+why scheduling and startup changes alone are unlikely to reach the target;
+compiler work would need a several-fold reduction as well.
+
+The earlier 142 versus 83 ms Rust/OCaml retained-watch comparison timed Rust
+through the counting compiler proxy. With the revised gate and the same real
+`bsc` on `/tmp` for both implementations, seven retained edits measured 92
+ms Rust versus 81 ms OCaml median. Each made seven parse and seven compile
+requests; edited JavaScript changed and matched, and file descriptor, task,
+and RSS growth stayed within the gate's limits. This small watch fixture measures
+single-module edits only.
+
 ## AST I/O checkpoint
 
 Temporary counters on the same host and eight-domain fixture measured 917
@@ -420,6 +493,7 @@ artifact bytes at the same absolute path. Each timed source edit adds a
 comment to `packages/watch-warnings/src/B.res` in an isolated fixture. The
 harness then restores the original source and completes an untimed build, so
 every edit sample starts from the same compiled baseline.
+
 The incremental figures recorded above used the earlier cumulative-comment
 procedure; the clean-build figures are unaffected by this harness change.
 The unchanged workload replays the fixture's local `ModuleA` warning, so four
@@ -494,11 +568,15 @@ rewatch-ocaml/bench/watch_performance_gate.sh \
 Set `REWATCH_WATCH_COMPILER_DOMAINS` to measure a specific worker count;
 otherwise the compiler uses its CPU-based heuristic.
 
-It warms both implementations, interleaves an odd number of timed edits,
-requires byte-identical generated JavaScript and equal logical parser/compiler
-work counts, and samples file descriptors, tasks, and RSS after every build.
-Rust work is observed through the counting `bsc` proxy; embedded OCaml work is
-observed at the shared logical compiler-request boundary.
+It warms both implementations, interleaves an odd number of timed edits with
+the real `bsc` path, requires byte-identical generated JavaScript and equal
+logical parser/compiler work counts, and samples file descriptors, tasks, and
+RSS after every build. External compiler work is counted in a separate,
+untimed replay through the `bsc` proxy; embedded OCaml work is observed at the
+shared logical compiler-request boundary during the timed run. Every edit
+changes `B.res`'s generated JavaScript; the gate verifies each timed result
+changed and compares both implementations and the replay. The proxy therefore
+adds no launch overhead to the measured edits.
 This catches retained-state implementations that appear fast by skipping work,
 as well as resource growth that a one-event syscall trace cannot show. The
 default median-latency limit is 150% of Rust because individual watch events
