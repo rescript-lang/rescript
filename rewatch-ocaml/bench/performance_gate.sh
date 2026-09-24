@@ -122,22 +122,31 @@ measure() {
         >>"$fixture/packages/watch-warnings/src/B.res" ;;
     *) echo "Unknown benchmark scenario: $scenario" >&2; exit 2 ;;
   esac
-  local start_ns root_pid peak_rss=0 peak_tasks=0 rss tasks end_ns wall_ms
+  local start_ns root_pid sampler_pid peak_rss peak_tasks end_ns wall_ms
+  local resource_file="$output.resources"
   start_ns=$(date +%s%N)
   "$executable" build "$fixture" >"$output" 2>"$output.stderr" &
   root_pid=$!
-  while kill -0 "$root_pid" 2>/dev/null; do
-    read -r rss tasks < <(tree_resources "$root_pid")
-    if ((rss > peak_rss)); then
-      peak_rss=$rss
-    fi
-    if ((tasks > peak_tasks)); then
-      peak_tasks=$tasks
-    fi
-    sleep 0.02
-  done
+  (
+    peak_rss=0
+    peak_tasks=0
+    while kill -0 "$root_pid" 2>/dev/null; do
+      read -r rss tasks < <(tree_resources "$root_pid")
+      if ((rss > peak_rss)); then
+        peak_rss=$rss
+      fi
+      if ((tasks > peak_tasks)); then
+        peak_tasks=$tasks
+      fi
+      sleep 0.02
+    done
+    printf '%d %d\n' "$peak_rss" "$peak_tasks" >"$resource_file"
+  ) &
+  sampler_pid=$!
   wait "$root_pid"
   end_ns=$(date +%s%N)
+  wait "$sampler_pid"
+  read -r peak_rss peak_tasks <"$resource_file"
   wall_ms=$(((end_ns - start_ns) / 1000000))
   echo "$scenario,$implementation,$iteration,$wall_ms,$peak_rss,$peak_tasks" \
     >>"$results"
