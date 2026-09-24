@@ -286,6 +286,12 @@ there was no measurable incremental gain. These direct timings used
 clean sample. The resource figures above are sampled peaks, not exact maximum
 RSS, and do not establish a memory reduction.
 
+One exploratory five-pair single-worker comparison had isolated long clean
+builds in both versions (15 s before and 52 s after). Five later traced clean
+builds per version did not reproduce those outliers and made the expected 512
+compile requests each. The cause is unknown, so these single-worker samples
+are not evidence for or against a stable tail-latency change.
+
 Both versions made the same 1,031 clean, four unchanged, and six edit compiler
 requests. The complete post-build file sets and stable artifact bytes matched.
 The clean time and memory gate passed. A seven-edit retained-watch comparison
