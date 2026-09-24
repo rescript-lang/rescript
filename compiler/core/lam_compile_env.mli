@@ -25,6 +25,7 @@
 (** Helper for global Ocaml module index into meaningful names  *)
 
 val reset : unit -> unit
+val with_fresh : (unit -> 'a) -> 'a
 
 val add_js_module :
   ?import_attributes:External_ffi_types.import_attributes ->

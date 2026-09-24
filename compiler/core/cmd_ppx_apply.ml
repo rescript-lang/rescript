@@ -27,14 +27,14 @@
 let write_ast fn (ast0 : Ml_binary.ast0) =
   let oc = open_out_bin fn in
   output_string oc (Ml_binary.magic_of_ast0 ast0);
-  output_value oc (!Location.input_name : string);
+  output_value oc (Location.get_input_name () : string);
   (match ast0 with
   | Ml_binary.Impl ast -> output_value oc (ast : Parsetree0.structure)
   | Ml_binary.Intf ast -> output_value oc (ast : Parsetree0.signature));
   close_out oc
 
 let temp_ppx_file () =
-  Filename.temp_file "ppx" (Filename.basename !Location.input_name)
+  Filename.temp_file "ppx" (Filename.basename (Location.get_input_name ()))
 
 let apply_rewriter kind fn_in ppx =
   let magic = Ml_binary.magic_of_kind kind in
@@ -94,9 +94,9 @@ let rewrite kind ppxs ast =
   | _ -> assert false
 
 let apply_rewriters_str ?(restore = true) ~tool_name ast =
-  match !Clflags.all_ppx with
+  match !((Clflags.current ()).all_ppx) with
   | [] ->
-    if !Js_config.test_ast_conversion then
+    if !((Js_config.current ()).test_ast_conversion) then
       Ml_binary.ast0_roundtrip Ml_binary.Ml ast
     else ast
   | ppxs ->
@@ -106,9 +106,9 @@ let apply_rewriters_str ?(restore = true) ~tool_name ast =
     |> Ast_mapper.drop_ppx_context_str ~restore
 
 let apply_rewriters_sig ?(restore = true) ~tool_name ast =
-  match !Clflags.all_ppx with
+  match !((Clflags.current ()).all_ppx) with
   | [] ->
-    if !Js_config.test_ast_conversion then
+    if !((Js_config.current ()).test_ast_conversion) then
       Ml_binary.ast0_roundtrip Ml_binary.Mli ast
     else ast
   | ppxs ->

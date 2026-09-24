@@ -27,15 +27,19 @@ let in_file name =
 
 let none = in_file "_none_"
 
-let input_name = ref "_none_"
-let set_input_name name = if name <> "" then input_name := name
+let get_input_name () = (Compiler_request_state.current ()).input_name
+let set_input_name name =
+  if name <> "" then (Compiler_request_state.current ()).input_name <- name
+
+let reset_input_name () =
+  (Compiler_request_state.current ()).input_name <- "_none_"
 (* Terminal info *)
 
 (* Print the location in some way or another *)
 
 open Format
 
-let show_filename file = if file = "_none_" then !input_name else file
+let show_filename file = if file = "_none_" then get_input_name () else file
 
 let print_filename ppf file = Format.fprintf ppf "%s" (show_filename file)
 
@@ -43,8 +47,8 @@ let print_filename ppf file = Format.fprintf ppf "%s" (show_filename file)
 let get_pos_info pos = (pos.pos_fname, pos.pos_lnum, pos.pos_cnum - pos.pos_bol)
 
 let setup_colors () =
-  Misc.Color.setup !Clflags.color;
-  Code_frame.setup !Clflags.color
+  Misc.Color.setup !((Clflags.current ()).color);
+  Code_frame.setup !((Clflags.current ()).color)
 
 (* ocaml's reported line/col numbering is horrible and super error-prone
    when being handled programmatically (or humanly for that matter. If you're
@@ -166,7 +170,13 @@ let warning_printer = ref default_warning_printer
 let print_warning loc ppf w = !warning_printer loc ppf w
 
 let formatter_for_warnings = ref err_formatter
-let prerr_warning loc w = print_warning loc !formatter_for_warnings w
+let prerr_warning loc w =
+  let ppf =
+    if Compiler_request_output.is_active () then
+      Compiler_request_output.stderr_formatter ()
+    else !formatter_for_warnings
+  in
+  print_warning loc ppf w
 
 type 'a loc = {txt: 'a; loc: t}
 
@@ -258,12 +268,12 @@ let report_error ?(custom_intro = None) ?(src = None) ppf err =
 let error_of_printer loc print x = errorf ~loc "%a@?" print x
 
 let error_of_printer_file print x =
-  error_of_printer (in_file !input_name) print x
+  error_of_printer (in_file (get_input_name ())) print x
 
 let () =
   register_error_of_exn (function
     | Sys_error msg ->
-      Some (errorf ~loc:(in_file !input_name) "I/O error: %s" msg)
+      Some (errorf ~loc:(in_file (get_input_name ())) "I/O error: %s" msg)
     | _ -> None)
 
 external reraise : exn -> 'a = "%reraise"

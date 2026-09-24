@@ -133,8 +133,8 @@ let explain t =
 
 let make ~start_pos ~end_pos category = {start_pos; end_pos; category}
 
-let print_report ?(custom_intro = None) ?(formatter = Format.err_formatter)
-    diagnostics src =
+let print_report ?(custom_intro = None)
+    ?(formatter = Compiler_request_output.stderr_formatter ()) diagnostics src =
   let rec print diagnostics src =
     match diagnostics with
     | [] -> ()

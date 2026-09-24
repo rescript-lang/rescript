@@ -7,7 +7,7 @@ type file_action =
   | Write (* File not present on disk. *)
 
 let log_file_action file_action file_name =
-  if !Debug.basic then
+  if !(Debug.basic ()) then
     Log_.item "%s  %s\n"
       (match file_action with
       | NoMatch -> "NoMatch"

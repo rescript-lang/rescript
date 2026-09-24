@@ -824,7 +824,7 @@ let test_list_constructor_wire_shape _ =
           Ast_helper.Str.value ~loc Nonrecursive [Ast_helper.Vb.mk ~loc pat expr];
         ]
       in
-      ignore (Typemod.type_structure Env.initial_safe_string structure);
+      ignore (Typemod.type_structure (Env.initial_safe_string ()) structure);
       let printed =
         Res_printer.print_implementation structure ~comments:[] ~width:80
       in
@@ -1159,7 +1159,7 @@ let test_fresh_ast0_constructor_tuple_defers_arity_to_typechecker _ =
           [type_item; value_item; pattern_item]
         | _ -> assert_failure "Expected type declaration and two value bindings"
       in
-      ignore (Typemod.type_structure Env.initial_safe_string structure))
+      ignore (Typemod.type_structure (Env.initial_safe_string ()) structure))
     ["int, int"; "(int, int)"]
 
 let test_polyvariant_args_roundtrip_through_ast0 _ =

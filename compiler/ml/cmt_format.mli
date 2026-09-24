@@ -67,6 +67,10 @@ type error = Not_a_typedtree of string
 
 exception Error of error
 
+val set_args : string array -> unit
+(** Set the logical compiler arguments recorded in subsequently written CMT
+    files. Long-lived compiler hosts set this at each request boundary. *)
+
 val read_cmt : string -> cmt_infos
 val read_cmi : string -> Cmi_format.cmi_infos
 

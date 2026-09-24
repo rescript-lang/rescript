@@ -12,7 +12,7 @@
 let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 let assert_bool = OUnit.assert_bool
 
-let int_typ () = Predef.type_int
+let int_typ () = Predef.type_int ()
 let immutable_cell () = ref (Types.Mutability_value Asttypes.Immutable)
 let mutable_cell () = ref (Types.Mutability_value Asttypes.Mutable)
 
@@ -236,7 +236,7 @@ let test_nondep_type_ends_its_copy_session _ =
 
 let test_nondep_nested_copy_preserves_class_sharing _ =
   let alias_id = Ident.create "m" in
-  let alias_decl = abstract_type_decl (Some Predef.type_int) in
+  let alias_decl = abstract_type_decl (Some (Predef.type_int ())) in
   let env = Env.add_type ~check:false alias_id alias_decl Env.empty in
   Ctype.begin_def ();
   let cell = immutable_cell () in

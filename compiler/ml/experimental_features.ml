@@ -14,12 +14,22 @@ module Feature_set = Set.Make (struct
   let compare = compare
 end)
 
-let enabled_features : Feature_set.t ref = ref Feature_set.empty
+(* Feature switches belong to the compiling domain, including nested requests. *)
+let key = Domain.DLS.new_key (fun () -> ref Feature_set.empty)
+let enabled_features () = Domain.DLS.get key
+
+let with_fresh action =
+  let previous = enabled_features () in
+  Domain.DLS.set key (ref Feature_set.empty);
+  Fun.protect action ~finally:(fun () -> Domain.DLS.set key previous)
+
 let enable_from_string (s : string) =
   match from_string s with
-  | Some f -> enabled_features := Feature_set.add f !enabled_features
+  | Some f ->
+    let enabled = enabled_features () in
+    enabled := Feature_set.add f !enabled
   | None -> ()
 
-let reset () = enabled_features := Feature_set.empty
+let reset () = enabled_features () := Feature_set.empty
 
-let is_enabled (f : feature) = Feature_set.mem f !enabled_features
+let is_enabled (f : feature) = Feature_set.mem f !(enabled_features ())

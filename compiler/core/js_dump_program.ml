@@ -110,11 +110,11 @@ let esmodule_program ~output_dir fmt f (x : J.deps_program) =
 let pp_deps_program ~(output_prefix : string)
     (kind : Js_packages_info.module_system) (program : J.deps_program)
     (f : Ext_pp.t) =
-  !Js_config.directives
+  !((Js_config.current ()).directives)
   |> List.iter (fun prim ->
       P.string f prim;
       P.newline f);
-  if not !Js_config.no_version_header then (
+  if not !((Js_config.current ()).no_version_header) then (
     P.string f Bs_version.header;
     P.newline f);
 

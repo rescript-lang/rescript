@@ -26,7 +26,7 @@ let require_module ~import ~env ~import_path module_name =
 let create_export_type_map ~config ~file ~from_cmt_read_recursively
     (type_declarations : Code_item.type_declaration list) :
     Code_item.export_type_map =
-  if !Debug.code_items then Log_.item "Create Type Map for %s\n" file;
+  if !(Debug.code_items ()) then Log_.item "Create Type Map for %s\n" file;
   let update_export_type_map (export_type_map : Code_item.export_type_map)
       (type_declaration : Code_item.type_declaration) :
       Code_item.export_type_map =
@@ -38,7 +38,7 @@ let create_export_type_map ~config ~file ~from_cmt_read_recursively
           Annotation.GenType
         | _ -> annotation
       in
-      if !Debug.code_items then
+      if !(Debug.code_items ()) then
         Log_.item "Type Map: %s%s%s\n"
           (resolved_type_name |> Resolved_name.to_string)
           (match type_vars = [] with
@@ -139,7 +139,7 @@ let emit_export_from_type_declarations ~config ~emitters ~env
 let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
     ~output_file_relative ~resolver ~inline_one_level ~type_name_is_interface
     code_item =
-  if !Debug.code_items then
+  if !(Debug.code_items ()) then
     Log_.item "Code Item: %s\n"
       (code_item |> code_item_to_string ~config ~type_name_is_interface);
   match code_item with
@@ -564,7 +564,7 @@ let propagate_annotation_to_sub_types ~code_items
           match type_map |> String_map.find type_name with
           | {annotation = GenType | GenTypeOpaque} -> ()
           | {type_ = type1; annotation = NoGenType} ->
-            if !Debug.translation then
+            if !(Debug.translation ()) then
               Log_.item "Marking Type As Annotated %s\n" type_name;
             annotated_set := !annotated_set |> String_set.add type_name;
             type1 |> visit

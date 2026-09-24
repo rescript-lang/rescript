@@ -94,21 +94,16 @@ module Color = struct
     let term = try Sys.getenv "TERM" with Not_found -> "" in
     term <> "dumb" && term <> "" && isatty stderr
 
-  let color_enabled = ref true
+  let color_key = Domain.DLS.new_key (fun () -> ref true)
+  let color_enabled () = Domain.DLS.get color_key
 
-  let setup =
-    let first = ref true in
-    (* initialize only once *)
-    fun o ->
-      if !first then (
-        first := false;
-        color_enabled :=
-          match o with
-          | Some Misc.Color.Always -> true
-          | Some Auto -> should_enable_color ()
-          | Some Never -> false
-          | None -> should_enable_color ());
-      ()
+  let setup option =
+    color_enabled () :=
+      match option with
+      | Some Misc.Color.Always -> true
+      | Some Auto -> should_enable_color ()
+      | Some Never -> false
+      | None -> should_enable_color ()
 end
 
 let setup = Color.setup
@@ -227,7 +222,7 @@ let print ~is_warning ~src ~(start_pos : Lexing.position)
   let add_ch =
     let last_color = ref NoColor in
     fun color ch ->
-      if (not !Color.color_enabled) || !last_color = color then
+      if (not !(Color.color_enabled ())) || !last_color = color then
         Buffer.add_char buf ch
       else
         let ansi =

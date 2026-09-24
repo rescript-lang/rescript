@@ -39,6 +39,7 @@ type spec = Unit_dummy | Unit of unit_action | String of string_action
 type t = (string * spec * string) array
 
 exception Bad of string
+exception Help of string
 
 val bad_arg : string -> 'a
 

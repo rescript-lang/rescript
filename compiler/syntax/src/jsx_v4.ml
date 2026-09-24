@@ -76,7 +76,7 @@ let rec get_fn_name binding =
 let filename_from_loc (pstr_loc : Location.t) =
   let file_name =
     match pstr_loc.loc_start.pos_fname with
-    | "" -> !Location.input_name
+    | "" -> Location.get_input_name ()
     | file_name -> file_name
   in
   let file_name =

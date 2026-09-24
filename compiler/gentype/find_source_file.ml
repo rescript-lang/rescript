@@ -16,7 +16,8 @@ let rec implementation items =
 
 let transform_to_absolute_path (path : string option) =
   let transform path =
-    if Filename.is_relative path then Filename.concat (Sys.getcwd ()) path
+    if Filename.is_relative path then
+      Filename.concat (Compiler_request_state.cwd ()) path
     else path
   in
   Option.map transform path
