@@ -869,7 +869,13 @@ rm -f "$basic/src/A.mjs"
 mkdir -p "$basic/lib/bs/other"
 touch "$basic/lib/bs/other/Authored.js"
 
-"$port" build --after-build 'test -f src/A.mjs' "$basic"
+REWATCH_COMPILER_TIMING_LOG=$(native_path "$work/compiler-timing.tsv") \
+  "$port" build --after-build 'test -f src/A.mjs' "$basic"
+test -s "$work/compiler-timing.tsv"
+node "$root/rewatch-ocaml/bench/analyze_compiler_timing.js" \
+  "$work/compiler-timing.tsv" >"$work/compiler-timing.summary"
+grep -Eq '^parse,[1-9][0-9]*,' "$work/compiler-timing.summary"
+grep -Eq '^compile,[1-9][0-9]*,' "$work/compiler-timing.summary"
 test -f "$basic/lib/bs/build.ninja"
 test -f "$basic/src/A.mjs"
 test -f "$basic/src/Authored.js"

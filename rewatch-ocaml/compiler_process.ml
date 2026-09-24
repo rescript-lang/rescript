@@ -24,17 +24,34 @@ let compiler_phase args =
   in
   (phase, input)
 
+let append_log path line =
+  let channel = open_out_gen [Open_creat; Open_append; Open_text] 0o644 path in
+  Fun.protect
+    ~finally:(fun () -> close_out_noerr channel)
+    (fun () -> output_string channel line)
+
 let log_compiler_request (job : Process.job) =
   match Sys.getenv_opt "REWATCH_COMPILER_CALL_LOG" with
   | None -> ()
   | Some path ->
     let phase, input = compiler_phase job.args in
-    let channel =
-      open_out_gen [Open_creat; Open_append; Open_text] 0o644 path
-    in
+    append_log path (Printf.sprintf "%s\t%s\t%s\n" phase job.cwd input)
+
+let compiler_timing_log = Sys.getenv_opt "REWATCH_COMPILER_TIMING_LOG"
+
+let time_compiler_request (job : Process.job) run =
+  match compiler_timing_log with
+  | None -> run ()
+  | Some path ->
+    let started = Unix.gettimeofday () in
     Fun.protect
-      ~finally:(fun () -> close_out_noerr channel)
-      (fun () -> Printf.fprintf channel "%s\t%s\t%s\n" phase job.cwd input)
+      ~finally:(fun () ->
+        let finished = Unix.gettimeofday () in
+        let phase, input = compiler_phase job.args in
+        append_log path
+          (Printf.sprintf "%s\t%s\t%s\t%.9f\t%.9f\n" phase job.cwd input started
+             finished))
+      run
 
 let exit_code = function
   | Unix.WEXITED code -> code
@@ -51,19 +68,20 @@ let run_in_process ?poll (job : Process.job) =
     }
   | input :: reversed_argv ->
     let result =
-      Rescript_compiler_driver.run_request ~cwd:job.cwd
-        ~argv:(List.rev reversed_argv) ~input
-        ~run_external:
-          (Some
-             (fun command ->
-               let command = Platform.shell_command command in
-               (* Signal handlers are process-wide; domain workers launch PPXs
-                 without replacing the scheduler domain's handlers. *)
-               let result =
-                 Process.run ?poll ~defer_signals:false ~cwd:job.cwd
-                   command.program command.args
-               in
-               (exit_code result.status, result.stdout, result.stderr)))
+      time_compiler_request job (fun () ->
+          Rescript_compiler_driver.run_request ~cwd:job.cwd
+            ~argv:(List.rev reversed_argv) ~input
+            ~run_external:
+              (Some
+                 (fun command ->
+                   let command = Platform.shell_command command in
+                   (* Signal handlers are process-wide; domain workers launch
+                      PPXs without replacing the scheduler domain's handlers. *)
+                   let result =
+                     Process.run ?poll ~defer_signals:false ~cwd:job.cwd
+                       command.program command.args
+                   in
+                   (exit_code result.status, result.stdout, result.stderr))))
     in
     {
       Process.status = Unix.WEXITED result.exit_code;

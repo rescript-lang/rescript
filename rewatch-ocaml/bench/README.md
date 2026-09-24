@@ -103,6 +103,38 @@ tree RSS to 330,232 KiB with a 1,505 ms clean median; it still missed the
 125% memory gate in that interleaved comparison. The default GC setting is
 unchanged pending broader workload evidence.
 
+An opt-in per-request timing trace resolves the OCaml compile phase further.
+On one eight-worker clean build of the same fixture, 512 parse requests
+spanned 95 ms and 512 implementation/interface requests spanned 1,172 ms.
+The compiler workers were active for virtually the entire compile span, with
+7.39 of eight workers active on average and all eight active at peak. The compile
+requests summed to 8,666 ms of worker time; the 95th percentile request took
+48 ms. `DOMAPI.ast`, `Net.ast`, and `Http.ast` were among the slowest requests.
+This is a single diagnostic run with logging enabled, not a benchmark median.
+It indicates that the clean-build limit is largely compiler work rather than
+idle scheduler time on this fixture. At eight workers, the summed work alone
+has a 1.08 s lower bound without faster individual requests.
+
+To collect another trace, set `REWATCH_COMPILER_TIMING_LOG` to an absolute
+path for an OCaml build and analyze the resulting tab-separated file:
+
+```sh
+export RESCRIPT_BSC_EXE="$PWD/_build/default/compiler/bsc/rescript_compiler_main.exe"
+export RESCRIPT_RUNTIME="$PWD/packages/@rescript/runtime"
+_build/default/rewatch-ocaml/rescript_ocaml.exe clean rewatch/testrepo
+rm -f /tmp/rewatch-compiler-timing.tsv
+REWATCH_COMPILER_TIMING_LOG=/tmp/rewatch-compiler-timing.tsv \
+  _build/default/rewatch-ocaml/rescript_ocaml.exe build rewatch/testrepo
+node rewatch-ocaml/bench/analyze_compiler_timing.js \
+  /tmp/rewatch-compiler-timing.tsv
+```
+
+Each row records phase, working directory, input, start time, and end time.
+Request time includes any PPX command that the compiler invokes.
+The analyzer reports elapsed phase span, summed compiler time, average and
+peak active requests, idle time inside each phase, and the longest compile
+requests. Remove an old trace before a new run; the compiler appends rows.
+
 ## AST I/O checkpoint
 
 Temporary counters on the same host and eight-domain fixture measured 917
