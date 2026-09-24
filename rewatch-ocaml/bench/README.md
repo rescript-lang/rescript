@@ -135,6 +135,28 @@ The analyzer reports elapsed phase span, summed compiler time, average and
 peak active requests, idle time inside each phase, and the longest compile
 requests. Remove an old trace before a new run; the compiler appends rows.
 
+A separate temporary compiler-core trace split 479 implementation requests
+from one instrumented clean build. These are summed concurrent-worker times,
+not elapsed build time:
+
+| compiler-core phase | summed worker time |
+| --- | ---: |
+| Initial environment setup | 1,837 ms |
+| Type checking, including CMI/CMT work | 6,736 ms |
+| Lambda translation | 30 ms |
+| Lambda compilation | 135 ms |
+| JavaScript emission | 46 ms |
+
+The remaining 33 interface requests and outer request setup are outside this
+split. The instrumented build's 512 compile requests spanned 1,253 ms, so do
+not compare that span directly with the uninstrumented benchmark median.
+Environment setup and type checking account for nearly all measured
+implementation work. Reusing a prepared environment across requests would
+have to preserve the compiler's fresh per-request type and identifier state;
+it is an architectural change with correctness and memory risks. Faster
+JavaScript emission alone has little headroom on this fixture. The temporary
+compiler-core instrumentation was removed after the measurement.
+
 ## AST I/O checkpoint
 
 Temporary counters on the same host and eight-domain fixture measured 917
