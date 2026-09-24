@@ -407,6 +407,7 @@ if ((file_set_equivalence == 0)); then
 fi
 if ((artifact_equivalence == 0)); then
   echo "FAIL: Rust and OCaml generated different artifacts." >&2
+  echo "Check that standalone bsc and OCaml rewatch use the same Dune profile." >&2
   failed=1
 fi
 

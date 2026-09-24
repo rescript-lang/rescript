@@ -5,7 +5,9 @@ The OCaml rewatch now uses parallel in-process compiler domains by default.
 the worker count is `min(8, max(1, available CPUs - 1))`. Rust rewatch is the
 build-level reference for compiler work, generated file sets, and stable
 artifact bytes. Keep both implementations on the same compiler and runtime
-build when comparing them.
+build and the same Dune profile when comparing them. The profile affects
+serialized AST and CMI bytes for at least one testrepo dependency, even when
+compiler request arguments are identical.
 
 ## Domain baseline
 
@@ -45,30 +47,41 @@ only one module per edit and does not establish watch-time scaling.
 
 ## Native Linux testrepo checkpoint
 
-At compiler revision `49951ac49f78be57f8f7ae347bf577a2839f90ca`, five
+At revision `7688129cd0bd6d8b66fec797327db3455398a4a1`, five
 interleaved runs on a 12-CPU Linux ARM64 host with OCaml 5.5.1 measured the
-472-module testrepo fixture. Both implementations used the same local compiler
-and runtime. The fixture includes installed, lockfile-pinned dependencies;
-the benchmark copies them into isolated roots and applies the canonical
-test-suite Belt-dependency correction to those copies. No company-project
-source was used.
+472-module testrepo fixture. Standalone `bsc` and the embedded compiler were
+built with the same Dune `release` profile; Rust Rewatch was a Cargo release
+build. Both implementations used the same local runtime. The fixture includes
+installed, lockfile-pinned dependencies; the benchmark copies them into
+isolated roots and applies the canonical test-suite Belt-dependency correction
+to those copies. No company-project source was used. Earlier measurements at
+`49951ac49f78be57f8f7ae347bf577a2839f90ca` did not pin both compiler
+executables to the same Dune profile and are superseded by this checkpoint.
 
 | scenario | Rust median wall | OCaml median wall | Rust median peak tree RSS | OCaml median peak tree RSS |
 | --- | ---: | ---: | ---: | ---: |
-| Clean, 8 OCaml workers | 3,625 ms | 1,511 ms | 264,644 KiB | 358,256 KiB |
-| Unchanged after clean, 8 workers | 142 ms | 71 ms | 29,156 KiB | 25,764 KiB |
-| One source edit, 8 workers | 163 ms | 72 ms | 45,120 KiB | 25,520 KiB |
-| Clean, 6 OCaml workers | 3,724 ms | 1,673 ms | 252,272 KiB | 303,536 KiB |
-| Clean, 4 OCaml workers | 3,642 ms | 2,020 ms | 250,644 KiB | 219,364 KiB |
+| Clean, 8 OCaml workers | 3,585 ms | 1,413 ms | 252,464 KiB | 368,032 KiB |
+| Unchanged after clean, 8 workers | 142 ms | 71 ms | 30,056 KiB | 26,072 KiB |
+| One source edit, 8 workers | 140 ms | 72 ms | 28,648 KiB | 26,156 KiB |
+| Clean, 7 OCaml workers | 3,712 ms | 1,527 ms | 260,280 KiB | 334,112 KiB |
+| Clean, 6 OCaml workers | 3,617 ms | 1,574 ms | 275,592 KiB | 289,640 KiB |
 
-Eight workers gave a 2.40x clean-build wall-time gain and a 1.35x peak-RSS
-ratio relative to Rust in the complete clean/unchanged/edit run. The existing
-125% clean-memory gate therefore failed at eight workers. Six workers passed
-the complete gate, at a 2.23x clean-build gain and 1.20x peak-RSS ratio. Four
-workers also passed, with a 1.80x clean-build gain. These are separate runs,
-so compare ratios within a row rather than treating small cross-run differences
-as an effect of worker count. Peak tree RSS is sampled every 20 ms and can
-miss short-lived child peaks.
+Eight workers gave a 2.54x clean-build wall-time gain and a 1.46x sampled
+peak-tree-RSS ratio relative to Rust. Seven workers gave a 2.43x gain but
+still failed the existing 125% clean-memory gate in its comparison. Six
+workers passed the complete gate, at a 2.30x gain and a 1.05x sampled RSS
+ratio. These are separate runs, so compare ratios within a row. Peak tree RSS
+is sampled every 20 ms and can miss short-lived compiler-child peaks; Rust's
+sampled clean peak varied substantially across runs. The memory gate gives a
+directional constraint, especially near its threshold, rather than a precise
+cross-architecture memory ratio.
+
+In one clean build, GNU `/usr/bin/time -v` reported 49,644 KiB maximum RSS
+for Rust and 385,944 KiB for OCaml. Rust launches many compiler children,
+whereas OCaml compiles mostly in-process. GNU time's maximum RSS does not sum
+the concurrent process tree, so those two values are not a total-build memory
+comparison. Keep the sampled tree figure alongside any per-executable GNU
+time reading.
 
 All three worker counts matched Rust's clean, unchanged, and edit compiler
 work. The clean build made 1,031 logical compiler requests in each
@@ -79,29 +92,26 @@ comparison matched the complete post-build file set and the selected stable
 artifact bytes.
 
 In a separate seven-edit retained-watch run at the default eight workers,
-Rust's median edit-to-hook latency was 128 ms and OCaml's was 82 ms. Both made
+Rust's median edit-to-hook latency was 142 ms and OCaml's was 83 ms. Both made
 seven parser and seven compiler requests, produced identical edited JavaScript,
 and held stable file descriptor, task, and RSS counts. Watch-mode samples use
 a small one-module fixture, so they do not establish scaling on a large
 dependency graph.
 
-One interactive clean build reported Rust parse/compile times of 1.35/2.09 s
-and OCaml times of 0.16/1.24 s. These single-run phase timings are diagnostic,
-not medians. The remaining OCaml compile phase alone exceeds the roughly
-0.73 s total required for a 5x gain over the measured Rust clean median.
-Further work toward 5x therefore needs substantial compilation or scheduling
-improvement; eliminating the already short parse phase cannot reach it alone.
+The later per-request timing trace measured an OCaml compile span of 1.17 s.
+A 5x clean gain over the aligned Rust median would require the entire build
+to finish in about 0.72 s. The compiler work alone exceeds that budget on
+this fixture; faster parsing or orchestration alone cannot reach it.
 
-The filesystem audit counted 6,604 Rust versus 9,056 OCaml project-local
+The aligned filesystem audit counted 6,604 Rust versus 9,042 OCaml project-local
 metadata calls on clean builds, with nearly equal open counts (17,636 and
 17,633). The high-count missing CMI lookups, including 313 opens of the
 fixture's `Pervasives.cmi` path, were identical in both implementations. The
 extra metadata checks merit investigation on slower filesystems, but the
 shared CMI lookup pattern does not identify an OCaml-specific optimization.
-An exploratory `OCAMLRUNPARAM=o=70` run reduced the eight-worker median peak
-tree RSS to 330,232 KiB with a 1,505 ms clean median; it still missed the
-125% memory gate in that interleaved comparison. The default GC setting is
-unchanged pending broader workload evidence.
+Exploratory lower GC space-overhead settings reduced OCaml RSS in individual
+runs, but did not establish a validated advantage over six default-GC
+workers. The default GC setting is unchanged.
 
 An opt-in per-request timing trace resolves the OCaml compile phase further.
 On one eight-worker clean build of the same fixture, 512 parse requests
@@ -157,6 +167,16 @@ it is an architectural change with correctness and memory risks. Faster
 JavaScript emission alone has little headroom on this fixture. The temporary
 compiler-core instrumentation was removed after the measurement.
 
+A second temporary trace split `Typemod.type_implementation_more` on the same
+fixture. Among 479 implementation requests, `type_structure` used 5,253 ms
+of summed worker time, inclusion and delayed checks 820 ms, CMI saving 267 ms,
+and CMT saving 443 ms. Signature simplification and reset took under 3 ms
+combined. This is a separate instrumented run, so its totals differ slightly
+from the compiler-core split above. The type-structure work is the main part
+of the remaining compiler cost; eliminating artifact writes alone has a
+limited bound. The temporary type-checker instrumentation was removed and
+the normal release binary rebuilt afterward.
+
 ## AST I/O checkpoint
 
 Temporary counters on the same host and eight-domain fixture measured 917
@@ -184,7 +204,9 @@ and artifact comparison:
 yarn --cwd rewatch/testrepo install --immutable
 opam exec -- make lib
 cargo build --manifest-path rewatch/Cargo.toml --release
-opam exec -- dune build --profile release rewatch-ocaml/rescript_ocaml.exe
+opam exec -- dune build --profile release \
+  compiler/bsc/rescript_compiler_main.exe \
+  rewatch-ocaml/rescript_ocaml.exe
 export RESCRIPT_BSC_EXE="$PWD/_build/default/compiler/bsc/rescript_compiler_main.exe"
 export RESCRIPT_RUNTIME="$PWD/packages/@rescript/runtime"
 rewatch-ocaml/bench/performance_gate.sh \
@@ -280,8 +302,8 @@ as well as resource growth that a one-event syscall trace cannot show. The
 default median-latency limit is 150% of Rust because individual watch events
 include operating-system notification and 50 ms polling intervals; override it
 with `REWATCH_WATCH_PERFORMANCE_THRESHOLD_PERCENT` only for investigation.
-The build gate's lower-noise 125% clean/incremental threshold remains the
-authoritative general performance criterion. Set
+The build gate's 125% clean-build wall-time limit remains the general latency
+criterion; unchanged and single-edit builds are measured separately. Set
 `KEEP_REWATCH_WATCH_PERFORMANCE=1` to retain output, compiler-call logs,
 latencies, and fixtures. This gate requires Linux `/proc`, GNU-compatible
 millisecond `date`, and `setsid`.
