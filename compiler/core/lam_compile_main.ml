@@ -261,7 +261,7 @@ let required_modules (lam : Lambda.t) : Lam_module_ident.Hash_set.t =
   required
 
 let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
-  let debug_ir = !Js_config.debug_ir in
+  let debug_ir = !((Js_config.current ()).debug_ir) in
   let diagnostics =
     if debug_ir then Some (Ir_diagnostics.create ~output_prefix) else None
   in
@@ -271,8 +271,8 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
       Ir_diagnostics.dump_lam diagnostics ~pass lam;
       Ext_log.dwarn ~__POS__ "START CHECKING PASS %s@." pass
     | None -> ());
-    if !Js_config.check_lam || debug_ir then (
-      ignore @@ Lam_check.check ~file:!Location.input_name ~pass lam;
+    if !((Js_config.current ()).check_lam) || debug_ir then (
+      ignore @@ Lam_check.check ~file:(Location.get_input_name ()) ~pass lam;
       if debug_ir then Ext_log.dwarn ~__POS__ "FINISH CHECKING PASS %s@." pass);
     lam
   in
@@ -405,7 +405,7 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
   |> Js_shake.shake_program |> j "shake"
   |> fun (program : J.program) ->
   let external_module_ids : Lam_module_ident.t list =
-    if !Js_config.all_module_aliases then []
+    if !((Js_config.current ()).all_module_aliases) then []
     else
       let hard_deps = Js_fold_basic.calculate_hard_dependencies program.block in
       Lam_compile_env.populate_required_modules may_required_modules hard_deps;
@@ -425,8 +425,9 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
          Little
        else Upper)
   in
-  if not !Clflags.dont_write_files then
-    Js_cmj_format.to_file ~check_exists:(not !Js_config.force_cmj)
+  if not !((Clflags.current ()).dont_write_files) then
+    Js_cmj_format.to_file
+      ~check_exists:(not !((Js_config.current ()).force_cmj))
       (output_prefix ^ Literals.suffix_cmj)
       v;
   {J.program; side_effect = effect_; modules = external_module_ids}
@@ -434,20 +435,20 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
 let ( // ) = Filename.concat
 
 let remove_stale_source_map ?(remove_stale_map = true) target_file =
-  if remove_stale_map && not !Clflags.dont_write_files then
+  if remove_stale_map && not !((Clflags.current ()).dont_write_files) then
     Misc.remove_file (target_file ^ ".map")
 
 let dump_deps_program_with_source_map ?(remove_stale_map = true) ~target_file
     ~output_prefix module_system lambda_output chan =
   let builder =
     Js_source_map.make ~generated_file:target_file
-      ~source_root:!Js_config.source_map_root
-      ~sources_content:!Js_config.source_map_sources_content
+      ~source_root:!((Js_config.current ()).source_map_root)
+      ~sources_content:!((Js_config.current ()).source_map_sources_content)
   in
   Js_source_map.with_builder builder (fun () ->
       Js_dump_program.pp_deps_program ~output_prefix module_system lambda_output
         (Ext_pp.from_channel chan));
-  match !Js_config.source_map with
+  match !((Js_config.current ()).source_map) with
   | Linked ->
     let json = Js_source_map.json builder in
     output_string chan
@@ -464,8 +465,11 @@ let dump_deps_program_with_source_map ?(remove_stale_map = true) ~target_file
 let lambda_as_module (lambda_output : J.deps_program) (output_prefix : string) :
     unit =
   let package_info = Js_packages_state.get_packages_info () in
-  if Js_packages_info.is_empty package_info && !Js_config.js_stdout then
-    match !Js_config.source_map with
+  if
+    Js_packages_info.is_empty package_info
+    && !((Js_config.current ()).js_stdout)
+  then
+    match !((Js_config.current ()).source_map) with
     | Inline ->
       let target_file =
         Ext_namespace.change_ext_ns_suffix
@@ -473,10 +477,11 @@ let lambda_as_module (lambda_output : J.deps_program) (output_prefix : string) :
           Literals.suffix_js
       in
       dump_deps_program_with_source_map ~remove_stale_map:false ~target_file
-        ~output_prefix Commonjs lambda_output stdout
+        ~output_prefix Commonjs lambda_output
+        (Compiler_request_output.stdout_channel ())
     | _ ->
       Js_dump_program.dump_deps_program ~output_prefix Commonjs lambda_output
-        stdout
+        (Compiler_request_output.stdout_channel ())
   else
     Js_packages_info.iter package_info (fun {module_system; path; suffix} ->
         let basename =
@@ -489,7 +494,7 @@ let lambda_as_module (lambda_output : J.deps_program) (output_prefix : string) :
           // basename (* #913 only generate little-case js file *)
         in
         let output_chan chan =
-          match !Js_config.source_map with
+          match !((Js_config.current ()).source_map) with
           | No_source_map ->
             Js_dump_program.dump_deps_program ~output_prefix module_system
               lambda_output chan;
@@ -498,17 +503,19 @@ let lambda_as_module (lambda_output : J.deps_program) (output_prefix : string) :
             dump_deps_program_with_source_map ~target_file ~output_prefix
               module_system lambda_output chan
         in
-        if not !Clflags.dont_write_files then
+        if not !((Clflags.current ()).dont_write_files) then
           Ext_pervasives.with_file_as_chan target_file output_chan;
-        if !Warnings.has_warnings then (
-          Warnings.has_warnings := false;
+        if Warnings.has_warnings () then (
+          Warnings.reset_has_warnings ();
           (* 5206: When there were warnings found during the compilation, we want the file
              to be rebuilt on the next "rescript build" so that the warnings keep being shown.
              Set the timestamp of the ast file to 1970-01-01 to make this rebuild happen.
              (Do *not* set the timestamp of the JS output file instead
              as that does not play well with every bundler.) *)
           let ast_file = output_prefix ^ Literals.suffix_ast in
-          if Sys.file_exists ast_file then Build_artifact.mark_stale ast_file))
+          if Sys.file_exists (Compiler_request_state.resolve_path ast_file) then
+            Build_artifact.mark_stale
+              (Compiler_request_state.resolve_path ast_file)))
 
 (* We can use {!Env.current_unit = "Pervasives"} to tell if it is some specific module,
     We need handle some definitions in standard libraries in a special way, most are io specific,

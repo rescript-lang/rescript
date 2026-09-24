@@ -31,29 +31,31 @@ let print_if_pipe ppf flag printer arg =
 let print_if ppf flag printer arg = if !flag then fprintf ppf "%a@." printer arg
 
 let process_with_gentype cmt_file =
-  if !Clflags.bs_gentype then Gentype_main.process_cmt_file cmt_file
+  if !((Clflags.current ()).bs_gentype) then
+    Gentype_main.process_cmt_file cmt_file
 
 let after_parsing_sig ppf outputprefix ast =
-  if !Clflags.only_parse = false then (
+  if !((Clflags.current ()).only_parse) = false then (
     Ast_config.process_sig ast;
-    (if !Js_config.binary_ast then
-       let sourcefile = !Location.input_name in
+    (if !((Js_config.current ()).binary_ast) then
+       let sourcefile = Location.get_input_name () in
        Binary_ast.write_ast Mli ~sourcefile
          ~output:(outputprefix ^ Literals.suffix_iast)
          (* to support relocate to another directory *)
          ast);
-    if !Js_config.as_pp then (
-      output_string stdout Config.ast_intf_magic_number;
-      output_value stdout (!Location.input_name : string);
-      output_value stdout ast);
-    if !Js_config.syntax_only then Warnings.check_fatal ()
+    if !((Js_config.current ()).as_pp) then (
+      let output = Compiler_request_output.stdout_channel () in
+      output_string output Config.ast_intf_magic_number;
+      output_value output (Location.get_input_name () : string);
+      output_value output ast);
+    if !((Js_config.current ()).syntax_only) then Warnings.check_fatal ()
     else
       let modulename = module_of_filename outputprefix in
       Lam_compile_env.reset ();
       let initial_env = Res_compmisc.initial_env ~modulename () in
       Env.set_unit_name modulename;
       let tsg = Typemod.transl_signature initial_env ast in
-      if !Clflags.dump_typedtree then
+      if !((Clflags.current ()).dump_typedtree) then
         fprintf ppf "%a@." Printtyped.interface tsg;
       let sg = tsg.sig_type in
       ignore (Includemod.signatures initial_env sg sg);
@@ -63,7 +65,8 @@ let after_parsing_sig ppf outputprefix ast =
       let sg =
         Env.save_signature ~deprecated sg modulename (outputprefix ^ ".cmi")
       in
-      Typemod.save_signature modulename tsg outputprefix !Location.input_name
+      Typemod.save_signature modulename tsg outputprefix
+        (Location.get_input_name ())
         initial_env sg;
       process_with_gentype (outputprefix ^ ".cmti"))
 
@@ -78,15 +81,15 @@ let interface ~parser ppf ?outputprefix fname =
   |> Cmd_ppx_apply.apply_rewriters ~restore:false ~tool_name:Js_config.tool_name
        Mli
   |> Ppx_entry.rewrite_signature
-  |> print_if_pipe ppf Clflags.dump_parsetree Printast.interface
-  |> print_if_pipe ppf Clflags.dump_source Pprintast.signature
+  |> print_if_pipe ppf (Clflags.current ()).dump_parsetree Printast.interface
+  |> print_if_pipe ppf (Clflags.current ()).dump_source Pprintast.signature
   |> after_parsing_sig ppf outputprefix
 
 let interface_mliast ppf fname =
   Res_compmisc.init_path ();
   Binary_ast.read_ast_exn ~fname Mli
-  |> print_if_pipe ppf Clflags.dump_parsetree Printast.interface
-  |> print_if_pipe ppf Clflags.dump_source Pprintast.signature
+  |> print_if_pipe ppf (Clflags.current ()).dump_parsetree Printast.interface
+  |> print_if_pipe ppf (Clflags.current ()).dump_source Pprintast.signature
   |> after_parsing_sig ppf (Config_util.output_prefix fname)
 
 let all_module_alias (ast : Parsetree.structure) =
@@ -113,21 +116,25 @@ let no_export (rest : Parsetree.structure) : Parsetree.structure =
   | _ -> rest
 
 let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
-  if !Clflags.only_parse = false then (
-    Js_config.all_module_aliases :=
-      !Clflags.assume_no_mli = Mli_non_exists && all_module_alias ast;
+  if !((Clflags.current ()).only_parse) = false then (
+    (Js_config.current ()).all_module_aliases :=
+      !((Clflags.current ()).assume_no_mli) = Mli_non_exists
+      && all_module_alias ast;
     Ast_config.process_str ast;
-    let ast = if !Js_config.no_export then no_export ast else ast in
-    (if !Js_config.binary_ast then
-       let sourcefile = !Location.input_name in
+    let ast =
+      if !((Js_config.current ()).no_export) then no_export ast else ast
+    in
+    (if !((Js_config.current ()).binary_ast) then
+       let sourcefile = Location.get_input_name () in
        Binary_ast.write_ast ~sourcefile Ml
          ~output:(outputprefix ^ Literals.suffix_ast)
          ast);
-    if !Js_config.as_pp then (
-      output_string stdout Config.ast_impl_magic_number;
-      output_value stdout (!Location.input_name : string);
-      output_value stdout ast);
-    if !Js_config.syntax_only then Warnings.check_fatal ()
+    if !((Js_config.current ()).as_pp) then (
+      let output = Compiler_request_output.stdout_channel () in
+      output_string output Config.ast_impl_magic_number;
+      output_value output (Location.get_input_name () : string);
+      output_value output ast);
+    if !((Js_config.current ()).syntax_only) then Warnings.check_fatal ()
     else
       let modulename = Ext_filename.module_name outputprefix in
       Lam_compile_env.reset ();
@@ -135,22 +142,25 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
       Env.set_unit_name modulename;
       let typedtree, coercion, _, _ =
         Typemod.type_implementation_more
-          ?check_exists:(if !Js_config.force_cmi then None else Some ())
-          !Location.input_name outputprefix modulename env ast
+          ?check_exists:
+            (if !((Js_config.current ()).force_cmi) then None else Some ())
+          (Location.get_input_name ())
+          outputprefix modulename env ast
       in
       let typedtree_coercion = (typedtree, coercion) in
-      print_if ppf Clflags.dump_typedtree
+      print_if ppf (Clflags.current ()).dump_typedtree
         Printtyped.implementation_with_coercion typedtree_coercion;
-      (if !Js_config.cmi_only then Warnings.check_fatal ()
+      (if !((Js_config.current ()).cmi_only) then Warnings.check_fatal ()
        else
          let {Translmod.lambda; exports; hoisted_functions} =
            Translmod.transl_implementation modulename typedtree_coercion
          in
          let js_program =
-           print_if_pipe ppf Clflags.dump_rawlambda Printlambda.lambda lambda
+           print_if_pipe ppf (Clflags.current ()).dump_rawlambda
+             Printlambda.lambda lambda
            |> Lam_compile_main.compile outputprefix exports hoisted_functions
          in
-         if not !Js_config.cmj_only then
+         if not !((Js_config.current ()).cmj_only) then
            Lam_compile_main.lambda_as_module js_program outputprefix);
       process_with_gentype (outputprefix ^ ".cmt"))
 
@@ -165,15 +175,17 @@ let implementation ~parser ppf ?outputprefix fname =
   |> Cmd_ppx_apply.apply_rewriters ~restore:false ~tool_name:Js_config.tool_name
        Ml
   |> Ppx_entry.rewrite_implementation
-  |> print_if_pipe ppf Clflags.dump_parsetree Printast.implementation
-  |> print_if_pipe ppf Clflags.dump_source Pprintast.structure
+  |> print_if_pipe ppf (Clflags.current ()).dump_parsetree
+       Printast.implementation
+  |> print_if_pipe ppf (Clflags.current ()).dump_source Pprintast.structure
   |> after_parsing_impl ppf outputprefix
 
 let implementation_mlast ppf fname =
   Res_compmisc.init_path ();
   Binary_ast.read_ast_exn ~fname Ml
-  |> print_if_pipe ppf Clflags.dump_parsetree Printast.implementation
-  |> print_if_pipe ppf Clflags.dump_source Pprintast.structure
+  |> print_if_pipe ppf (Clflags.current ()).dump_parsetree
+       Printast.implementation
+  |> print_if_pipe ppf (Clflags.current ()).dump_source Pprintast.structure
   |> after_parsing_impl ppf (Config_util.output_prefix fname)
 
 let make_structure_item ~ns cunit : Parsetree.structure_item =
@@ -187,8 +199,8 @@ let make_structure_item ~ns cunit : Parsetree.structure_item =
     keep in sync {!Bsb_namespace_map_gen.output}
 *)
 let implementation_map ppf sourcefile =
-  let () = Js_config.cmj_only := true in
-  let ichan = open_in_bin sourcefile in
+  let () = (Js_config.current ()).cmj_only := true in
+  let ichan = open_in_bin (Compiler_request_state.resolve_path sourcefile) in
   seek_in ichan (Ext_digest.length + 1);
   let list_of_modules = Ext_io.rev_lines_of_chann ichan in
   close_in ichan;
@@ -200,6 +212,7 @@ let implementation_map ppf sourcefile =
   in
   Res_compmisc.init_path ();
   ml_ast
-  |> print_if_pipe ppf Clflags.dump_parsetree Printast.implementation
-  |> print_if_pipe ppf Clflags.dump_source Pprintast.structure
+  |> print_if_pipe ppf (Clflags.current ()).dump_parsetree
+       Printast.implementation
+  |> print_if_pipe ppf (Clflags.current ()).dump_source Pprintast.structure
   |> after_parsing_impl ppf (Config_util.output_prefix sourcefile)

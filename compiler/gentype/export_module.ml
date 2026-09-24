@@ -113,7 +113,7 @@ let emit_all_module_items ~config ~emitters ~file_name
          let {type_for_type; doc_string} =
            M {export_module_item} |> export_module_value_to_type ~config
          in
-         if !Debug.code_items then Log_.item "EmitModule %s @." module_name;
+         if !(Debug.code_items ()) then Log_.item "EmitModule %s @." module_name;
          let emitted_module_item =
            Module_name.for_inner_module ~file_name
              ~inner_module_name:module_name

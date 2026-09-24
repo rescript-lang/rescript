@@ -103,7 +103,9 @@ type error =
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
 
-(* Forward declaration, to be filled in by Typemod.type_module *)
+(* Typemod fills these forward declarations during module initialization.
+   The driver completes that initialization before requests run on domains;
+   the callbacks are read-only during each request. *)
 
 let type_module =
   ref
@@ -145,7 +147,44 @@ let rp node =
 
 type recarg = Allowed | Required | Rejected
 
-let loop_depth = ref 0
+(* Typing a request mutates these stacks while traversing expressions and
+   patterns. A failed request must not leave them in another request. *)
+type request_state = {
+  loop_depth: int ref;
+  newtype_level: int option ref;
+  pattern_variables:
+    (Ident.t * type_expr * string loc * Location.t * bool) list ref;
+  pattern_force: (unit -> unit) list ref;
+  pattern_scope: Annot.ident option ref;
+  allow_modules: bool ref;
+  module_variables: (string loc * Location.t) list ref;
+}
+
+let fresh_state () =
+  {
+    loop_depth = ref 0;
+    newtype_level = ref None;
+    pattern_variables = ref [];
+    pattern_force = ref [];
+    pattern_scope = ref None;
+    allow_modules = ref false;
+    module_variables = ref [];
+  }
+
+let state_key = Domain.DLS.new_key fresh_state
+let state () = Domain.DLS.get state_key
+let with_fresh action =
+  let previous = state () in
+  Domain.DLS.set state_key (fresh_state ());
+  Fun.protect action ~finally:(fun () -> Domain.DLS.set state_key previous)
+
+let loop_depth_ref () = (state ()).loop_depth
+let newtype_level_ref () = (state ()).newtype_level
+let pattern_variables_ref () = (state ()).pattern_variables
+let pattern_force_ref () = (state ()).pattern_force
+let pattern_scope_ref () = (state ()).pattern_scope
+let allow_modules_ref () = (state ()).allow_modules
+let module_variables_ref () = (state ()).module_variables
 
 let with_depth depth_ref f =
   let saved = !depth_ref in
@@ -153,9 +192,9 @@ let with_depth depth_ref f =
   Misc.try_finally f (fun () -> depth_ref := saved)
 
 let with_reset_control_flow f =
-  let saved_loop_depth = !loop_depth in
-  loop_depth := 0;
-  Misc.try_finally f (fun () -> loop_depth := saved_loop_depth)
+  let saved_loop_depth = !(loop_depth_ref ()) in
+  loop_depth_ref () := 0;
+  Misc.try_finally f (fun () -> loop_depth_ref () := saved_loop_depth)
 
 let case lhs rhs = {c_lhs = lhs; c_guard = None; c_rhs = rhs}
 
@@ -272,11 +311,11 @@ let all_idents_cases el =
 (* Typing of constants *)
 
 let type_constant = function
-  | Const_int _ -> instance_def Predef.type_int
-  | Const_char _ -> instance_def Predef.type_char
-  | Const_string _ -> instance_def Predef.type_string
-  | Const_float _ -> instance_def Predef.type_float
-  | Const_bigint _ -> instance_def Predef.type_bigint
+  | Const_int _ -> instance_def (Predef.type_int ())
+  | Const_char _ -> instance_def (Predef.type_char ())
+  | Const_string _ -> instance_def (Predef.type_string ())
+  | Const_float _ -> instance_def (Predef.type_float ())
+  | Const_bigint _ -> instance_def (Predef.type_bigint ())
 
 let constant : Parsetree.constant -> (Asttypes.constant, error) result =
   function
@@ -317,13 +356,13 @@ let mkexp exp_desc exp_type exp_loc exp_env =
   {exp_desc; exp_type; exp_loc; exp_env; exp_extra = []; exp_attributes = []}
 
 let option_none ty loc =
-  let lid = Longident.Lident "None" and env = Env.initial_safe_string in
+  let lid = Longident.Lident "None" and env = Env.initial_safe_string () in
   let cnone = Env.lookup_constructor lid env in
   mkexp (Texp_construct (mknoloc lid, cnone, [])) ty loc env
 
 let option_some texp =
   let lid = Longident.Lident "Some" in
-  let csome = Env.lookup_constructor lid Env.initial_safe_string in
+  let csome = Env.lookup_constructor lid (Env.initial_safe_string ()) in
   mkexp
     (Texp_construct (mknoloc lid, csome, [texp]))
     (type_option texp.exp_type)
@@ -374,15 +413,14 @@ let unify_exp_types ~context loc env ty expected_ty =
     raise (Error (loc, env, Expr_type_clash {trace; context}))
 
 (* level at which to create the local type declarations *)
-let newtype_level = ref None
 let get_newtype_level () =
-  match !newtype_level with
+  match !(newtype_level_ref ()) with
   | Some y -> y
   | None -> assert false
 
 let unify_pat_types_gadt loc env ty ty' =
   let newtype_level =
-    match !newtype_level with
+    match !(newtype_level_ref ()) with
     | None -> assert false
     | Some x -> x
   in
@@ -439,40 +477,32 @@ let has_variants p =
   with Exit -> true
 
 (* pattern environment *)
-let pattern_variables =
-  ref
-    ([]
-      : (Ident.t * type_expr * string loc * Location.t * bool (* as-variable *))
-        list)
-let pattern_force = ref ([] : (unit -> unit) list)
-let pattern_scope = ref (None : Annot.ident option)
-let allow_modules = ref false
-let module_variables = ref ([] : (string loc * Location.t) list)
 let reset_pattern scope allow =
-  pattern_variables := [];
-  pattern_force := [];
-  pattern_scope := scope;
-  allow_modules := allow;
-  module_variables := []
+  pattern_variables_ref () := [];
+  pattern_force_ref () := [];
+  pattern_scope_ref () := scope;
+  allow_modules_ref () := allow;
+  module_variables_ref () := []
 
 let enter_variable ?(is_module = false) ?(is_as_variable = false) loc name ty =
   if
     List.exists
       (fun (id, _, _, _, _) -> Ident.name id = name.txt)
-      !pattern_variables
+      !(pattern_variables_ref ())
   then raise (Error (loc, Env.empty, Multiply_bound_variable name.txt));
   let id = Ident.create name.txt in
-  pattern_variables := (id, ty, name, loc, is_as_variable) :: !pattern_variables;
+  pattern_variables_ref () :=
+    (id, ty, name, loc, is_as_variable) :: !(pattern_variables_ref ());
   if is_module then (
     (* Note: unpack patterns enter a variable of the same name *)
-    if not !allow_modules then
+    if not !(allow_modules_ref ()) then
       raise (Error (loc, Env.empty, Modules_not_allowed));
-    module_variables := (name, loc) :: !module_variables)
+    module_variables_ref () := (name, loc) :: !(module_variables_ref ()))
   else
     (* moved to genannot *)
     may
       (fun s -> Stypes.record (Stypes.An_ident (name.loc, name.txt, s)))
-      !pattern_scope;
+      !(pattern_scope_ref ());
   id
 
 let sort_pattern_variables vs =
@@ -1317,7 +1347,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     let cty, force = Typetexp.transl_simple_type_delayed !env sty in
     let ty = cty.ctyp_type in
     unify_pat_types lloc !env ty expected_ty;
-    pattern_force := force :: !pattern_force;
+    pattern_force_ref () := force :: !(pattern_force_ref ());
     match ty.desc with
     | Tpoly (body, tyl) ->
       begin_def ();
@@ -1623,7 +1653,8 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
           try
             Some
               (Typecore_record_rest.type_record_pat_rest ~env:!env
-                 ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
+                 ~pattern_force:(pattern_force_ref ()) ~loc ~record_ty
+                 ~lbl_pat_list ~rest
                  ~enter_variable:(fun loc name ty -> enter_variable loc name ty)
                  ~unify_pat_types ~check_not_private)
           with Typecore_record_rest.Error (loc, env, err) ->
@@ -1671,21 +1702,21 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     let state = save_state env in
     match
       if mode = Split_or || mode = Splitting_or then raise Need_backtrack;
-      let initial_pattern_variables = !pattern_variables in
-      let initial_module_variables = !module_variables in
+      let initial_pattern_variables = !(pattern_variables_ref ()) in
+      let initial_module_variables = !(module_variables_ref ()) in
       let p1 =
         try Some (type_pat ~mode:Inside_or sp1 expected_ty (fun x -> x))
         with Need_backtrack -> None
       in
-      let p1_variables = !pattern_variables in
-      let p1_module_variables = !module_variables in
-      pattern_variables := initial_pattern_variables;
-      module_variables := initial_module_variables;
+      let p1_variables = !(pattern_variables_ref ()) in
+      let p1_module_variables = !(module_variables_ref ()) in
+      pattern_variables_ref () := initial_pattern_variables;
+      module_variables_ref () := initial_module_variables;
       let p2 =
         try Some (type_pat ~mode:Inside_or sp2 expected_ty (fun x -> x))
         with Need_backtrack -> None
       in
-      let p2_variables = !pattern_variables in
+      let p2_variables = !(pattern_variables_ref ()) in
       match (p1, p2) with
       | None, None -> raise Need_backtrack
       | Some p, None | None, Some p -> p (* no variables in this case *)
@@ -1693,8 +1724,8 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
         let alpha_env =
           enter_orpat_variables loc !env p1_variables p2_variables
         in
-        pattern_variables := p1_variables;
-        module_variables := p1_module_variables;
+        pattern_variables_ref () := p1_variables;
+        module_variables_ref () := p1_module_variables;
         {
           pat_desc = Tpat_or (p1, alpha_pat alpha_env p2, None);
           pat_loc = loc;
@@ -1731,7 +1762,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
         (*Format.printf "%a@.%a@."
           Printtyp.raw_type_expr ty
           Printtyp.raw_type_expr p.pat_type;*)
-        pattern_force := force :: !pattern_force;
+        pattern_force_ref () := force :: !(pattern_force_ref ());
         let extra = (Tpat_constraint cty, loc, sp.ppat_attributes) in
         let p =
           if not separate then p
@@ -1777,17 +1808,17 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
 
 let type_pat ?(allow_existentials = false) ?constrs ?labels ?(mode = Normal)
     ?(explode = 0) ?(lev = get_current_level ()) env sp expected_ty =
-  newtype_level := Some lev;
+  newtype_level_ref () := Some lev;
   try
     let r =
       type_pat ~no_existentials:(not allow_existentials) ~constrs ~labels ~mode
         ~explode ~env sp expected_ty (fun x -> x)
     in
     iter_pattern (fun p -> p.pat_env <- !env) r;
-    newtype_level := None;
+    newtype_level_ref () := None;
     r
   with e ->
-    newtype_level := None;
+    newtype_level_ref () := None;
     raise e
 
 (* this function is passed to Partial.parmatch
@@ -1829,7 +1860,7 @@ let check_unused ?(lev = get_current_level ()) env expected_ty cases =
     cases
 
 let add_pattern_variables ?check ?check_as env =
-  let pv = get_ref pattern_variables in
+  let pv = get_ref (pattern_variables_ref ()) in
   ( List.fold_right
       (fun (id, ty, _name, loc, as_var) env ->
         let check = if as_var then check_as else check in
@@ -1842,7 +1873,7 @@ let add_pattern_variables ?check ?check_as env =
           }
           env)
       pv env,
-    get_ref module_variables )
+    get_ref (module_variables_ref ()) )
 
 let type_pattern ~lev env spat scope expected_ty =
   reset_pattern scope true;
@@ -1853,7 +1884,7 @@ let type_pattern ~lev env spat scope expected_ty =
       ~check:(fun s -> Warnings.Unused_var_strict s)
       ~check_as:(fun s -> Warnings.Unused_var s)
   in
-  (pat, new_env, get_ref pattern_force, unpacks)
+  (pat, new_env, get_ref (pattern_force_ref ()), unpacks)
 
 let type_pattern_list env spatl scope expected_tys allow =
   reset_pattern scope allow;
@@ -1864,7 +1895,7 @@ let type_pattern_list env spatl scope expected_tys allow =
   in
   let patl = List.map2 type_pat spatl expected_tys in
   let new_env, unpacks = add_pattern_variables !new_env in
-  (patl, new_env, get_ref pattern_force, unpacks)
+  (patl, new_env, get_ref (pattern_force_ref ()), unpacks)
 
 let rec final_subexpression sexp =
   match sexp.pexp_desc with
@@ -2470,7 +2501,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           | v -> v)
         env lid.loc lid.txt
     in
-    (if !Clflags.annotations then
+    (if !((Clflags.current ()).annotations) then
        let dloc = desc.Types.val_loc in
        let annot =
          if dloc.Location.loc_ghost then Annot.Iref_external
@@ -2584,7 +2615,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     let values =
       List.map
         (fun value ->
-          type_expect ~context:(Some StringConcat) env value Predef.type_string)
+          type_expect ~context:(Some StringConcat) env value
+            (Predef.type_string ()))
         values
     in
     end_def ();
@@ -2593,7 +2625,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_desc = Texp_template {segments; values};
         exp_loc = loc;
         exp_extra = [];
-        exp_type = instance_def Predef.type_string;
+        exp_type = instance_def (Predef.type_string ());
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
@@ -2721,7 +2753,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         val_caselist
     in
     let exn_cases, _ =
-      type_cases ~call_context env Predef.type_exn ty_expected false loc
+      type_cases ~call_context env (Predef.type_exn ()) ty_expected false loc
         exn_caselist
     in
     re
@@ -2736,8 +2768,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
   | Pexp_try (sbody, caselist) ->
     let body = type_expect ~context:None env sbody ty_expected in
     let cases, _ =
-      type_cases ~call_context:`Try env Predef.type_exn ty_expected false loc
-        caselist
+      type_cases ~call_context:`Try env (Predef.type_exn ()) ty_expected false
+        loc caselist
     in
     re
       {
@@ -3055,7 +3087,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_desc = Texp_setfield (record, label_loc, label, newval);
         exp_loc = loc;
         exp_extra = [];
-        exp_type = instance_def Predef.type_unit;
+        exp_type = instance_def (Predef.type_unit ());
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
@@ -3091,12 +3123,12 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       if is_ternary then Some TernaryReturn else Some IfReturn
     in
     let cond =
-      type_expect ~context:(Some IfCondition) env scond Predef.type_bool
+      type_expect ~context:(Some IfCondition) env scond (Predef.type_bool ())
     in
     match sifnot with
     | None ->
       let ifso =
-        type_expect ~context:return_context env sifso Predef.type_unit
+        type_expect ~context:return_context env sifso (Predef.type_unit ())
       in
       rue
         {
@@ -3141,51 +3173,55 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_env = env;
       }
   | Pexp_break ->
-    if !loop_depth = 0 then raise (Error (loc, env, Break_outside_loop))
+    if !(loop_depth_ref ()) = 0 then
+      raise (Error (loc, env, Break_outside_loop))
     else
       rue
         {
           exp_desc = Texp_break;
           exp_loc = loc;
           exp_extra = [];
-          exp_type = instance_def Predef.type_unit;
+          exp_type = instance_def (Predef.type_unit ());
           exp_attributes = sexp.pexp_attributes;
           exp_env = env;
         }
   | Pexp_continue ->
-    if !loop_depth = 0 then raise (Error (loc, env, Continue_outside_loop))
+    if !(loop_depth_ref ()) = 0 then
+      raise (Error (loc, env, Continue_outside_loop))
     else
       rue
         {
           exp_desc = Texp_continue;
           exp_loc = loc;
           exp_extra = [];
-          exp_type = instance_def Predef.type_unit;
+          exp_type = instance_def (Predef.type_unit ());
           exp_attributes = sexp.pexp_attributes;
           exp_env = env;
         }
   | Pexp_while (scond, sbody) ->
     let cond =
-      type_expect ~context:(Some WhileCondition) env scond Predef.type_bool
+      type_expect ~context:(Some WhileCondition) env scond (Predef.type_bool ())
     in
     let body =
-      with_depth loop_depth (fun () -> type_statement ~context:None env sbody)
+      with_depth (loop_depth_ref ()) (fun () ->
+          type_statement ~context:None env sbody)
     in
     rue
       {
         exp_desc = Texp_while (cond, body);
         exp_loc = loc;
         exp_extra = [];
-        exp_type = instance_def Predef.type_unit;
+        exp_type = instance_def (Predef.type_unit ());
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
   | Pexp_for (param, slow, shigh, dir, sbody) ->
     let low =
-      type_expect ~context:(Some ForLoopCondition) env slow Predef.type_int
+      type_expect ~context:(Some ForLoopCondition) env slow (Predef.type_int ())
     in
     let high =
-      type_expect ~context:(Some ForLoopCondition) env shigh Predef.type_int
+      type_expect ~context:(Some ForLoopCondition) env shigh
+        (Predef.type_int ())
     in
     let id, new_env =
       match param.ppat_desc with
@@ -3193,7 +3229,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       | Ppat_var {txt} ->
         Env.enter_value txt
           {
-            val_type = instance_def Predef.type_int;
+            val_type = instance_def (Predef.type_int ());
             val_attributes = [];
             val_kind = Val_reg;
             Types.val_loc = loc;
@@ -3203,7 +3239,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       | _ -> raise (Error (param.ppat_loc, env, Invalid_for_loop_index))
     in
     let body =
-      with_depth loop_depth (fun () ->
+      with_depth (loop_depth_ref ()) (fun () ->
           type_statement ~context:None new_env sbody)
     in
     rue
@@ -3211,7 +3247,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_desc = Texp_for (id, param, low, high, dir, body);
         exp_loc = loc;
         exp_extra = [];
-        exp_type = instance_def Predef.type_unit;
+        exp_type = instance_def (Predef.type_unit ());
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
@@ -3264,7 +3300,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         assert false
     in
     let body =
-      with_depth loop_depth (fun () ->
+      with_depth (loop_depth_ref ()) (fun () ->
           type_statement ~context:None new_env sbody)
     in
     rue
@@ -3272,7 +3308,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_desc = Texp_for_of (id, param, collection, body);
         exp_loc = loc;
         exp_extra = [];
-        exp_type = instance_def Predef.type_unit;
+        exp_type = instance_def (Predef.type_unit ());
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
@@ -3301,7 +3337,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         assert false
     in
     let body =
-      with_depth loop_depth (fun () ->
+      with_depth (loop_depth_ref ()) (fun () ->
           type_statement ~context:None new_env sbody)
     in
     rue
@@ -3309,7 +3345,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_desc = Texp_for_await_of (id, param, collection, body);
         exp_loc = loc;
         exp_extra = [];
-        exp_type = instance_def Predef.type_unit;
+        exp_type = instance_def (Predef.type_unit ());
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
@@ -3497,7 +3533,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           exp_desc = Texp_object_set (obj, name_loc, value);
           exp_loc = loc;
           exp_extra = [];
-          exp_type = instance_def Predef.type_unit;
+          exp_type = instance_def (Predef.type_unit ());
           exp_attributes = sexp.pexp_attributes;
           exp_env = env;
         })
@@ -3548,12 +3584,12 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       }
   | Pexp_assert e ->
     let cond =
-      type_expect ~context:(Some AssertCondition) env e Predef.type_bool
+      type_expect ~context:(Some AssertCondition) env e (Predef.type_bool ())
     in
     let exp_type =
       match cond.exp_desc with
       | Texp_construct (_, {cstr_name = "false"}, _) -> instance env ty_expected
-      | _ -> instance_def Predef.type_unit
+      | _ -> instance_def (Predef.type_unit ())
     in
     rue
       {
@@ -3611,7 +3647,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           exp_desc = Texp_extension_constructor (lid, path);
           exp_loc = loc;
           exp_extra = [];
-          exp_type = instance_def Predef.type_extension_constructor;
+          exp_type = instance_def (Predef.type_extension_constructor ());
           exp_attributes = sexp.pexp_attributes;
           exp_env = env;
         }
@@ -4175,23 +4211,23 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
       let result_type =
         match (lhs_type.desc, specialization) with
         | Tconstr (path, _, _), _ when Path.same path Predef.path_int ->
-          instance_def Predef.type_int
+          instance_def (Predef.type_int ())
         | Tconstr (path, _, _), {bool = Some _}
           when Path.same path Predef.path_bool ->
-          instance_def Predef.type_bool
+          instance_def (Predef.type_bool ())
         | Tconstr (path, _, _), {float = Some _}
           when Path.same path Predef.path_float ->
-          instance_def Predef.type_float
+          instance_def (Predef.type_float ())
         | Tconstr (path, _, _), {bigint = Some _}
           when Path.same path Predef.path_bigint ->
-          instance_def Predef.type_bigint
+          instance_def (Predef.type_bigint ())
         | Tconstr (path, _, _), {string = Some _}
           when Path.same path Predef.path_string ->
-          instance_def Predef.type_string
+          instance_def (Predef.type_string ())
         | _ -> (
           try
-            unify env lhs_type (instance_def Predef.type_int);
-            instance_def Predef.type_int
+            unify env lhs_type (instance_def (Predef.type_int ()));
+            instance_def (Predef.type_int ())
           with Ctype.Unify trace ->
             raise
               (Error (lhs.exp_loc, env, Expr_type_clash {trace; context = None}))
@@ -4209,57 +4245,75 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
         (* Rule 1. Try unifying to lhs *)
         match (lhs_type.desc, specialization) with
         | Tconstr (path, _, _), _ when Path.same path Predef.path_int ->
-          let rhs = type_expect ~context:None env rhs_expr Predef.type_int in
-          (lhs, rhs, instance_def Predef.type_int)
+          let rhs =
+            type_expect ~context:None env rhs_expr (Predef.type_int ())
+          in
+          (lhs, rhs, instance_def (Predef.type_int ()))
         | Tconstr (path, _, _), {bool = Some _}
           when Path.same path Predef.path_bool ->
-          let rhs = type_expect ~context:None env rhs_expr Predef.type_bool in
-          (lhs, rhs, instance_def Predef.type_bool)
+          let rhs =
+            type_expect ~context:None env rhs_expr (Predef.type_bool ())
+          in
+          (lhs, rhs, instance_def (Predef.type_bool ()))
         | Tconstr (path, _, _), {float = Some _}
           when Path.same path Predef.path_float ->
-          let rhs = type_expect ~context:None env rhs_expr Predef.type_float in
-          (lhs, rhs, instance_def Predef.type_float)
+          let rhs =
+            type_expect ~context:None env rhs_expr (Predef.type_float ())
+          in
+          (lhs, rhs, instance_def (Predef.type_float ()))
         | Tconstr (path, _, _), {bigint = Some _}
           when Path.same path Predef.path_bigint ->
-          let rhs = type_expect ~context:None env rhs_expr Predef.type_bigint in
-          (lhs, rhs, instance_def Predef.type_bigint)
+          let rhs =
+            type_expect ~context:None env rhs_expr (Predef.type_bigint ())
+          in
+          (lhs, rhs, instance_def (Predef.type_bigint ()))
         | Tconstr (path, _, _), {string = Some _}
           when Path.same path Predef.path_string ->
-          let rhs = type_expect ~context:None env rhs_expr Predef.type_string in
-          (lhs, rhs, instance_def Predef.type_string)
+          let rhs =
+            type_expect ~context:None env rhs_expr (Predef.type_string ())
+          in
+          (lhs, rhs, instance_def (Predef.type_string ()))
         | _ -> (
           (* Rule 2. Try unifying to rhs *)
           match (rhs_type.desc, specialization) with
           | Tconstr (path, _, _), _ when Path.same path Predef.path_int ->
-            let lhs = type_expect ~context:None env lhs_expr Predef.type_int in
-            (lhs, rhs, instance_def Predef.type_int)
+            let lhs =
+              type_expect ~context:None env lhs_expr (Predef.type_int ())
+            in
+            (lhs, rhs, instance_def (Predef.type_int ()))
           | Tconstr (path, _, _), {bool = Some _}
             when Path.same path Predef.path_bool ->
-            let lhs = type_expect ~context:None env lhs_expr Predef.type_bool in
-            (lhs, rhs, instance_def Predef.type_bool)
+            let lhs =
+              type_expect ~context:None env lhs_expr (Predef.type_bool ())
+            in
+            (lhs, rhs, instance_def (Predef.type_bool ()))
           | Tconstr (path, _, _), {float = Some _}
             when Path.same path Predef.path_float ->
             let lhs =
-              type_expect ~context:None env lhs_expr Predef.type_float
+              type_expect ~context:None env lhs_expr (Predef.type_float ())
             in
-            (lhs, rhs, instance_def Predef.type_float)
+            (lhs, rhs, instance_def (Predef.type_float ()))
           | Tconstr (path, _, _), {bigint = Some _}
             when Path.same path Predef.path_bigint ->
             let lhs =
-              type_expect ~context:None env lhs_expr Predef.type_bigint
+              type_expect ~context:None env lhs_expr (Predef.type_bigint ())
             in
-            (lhs, rhs, instance_def Predef.type_bigint)
+            (lhs, rhs, instance_def (Predef.type_bigint ()))
           | Tconstr (path, _, _), {string = Some _}
             when Path.same path Predef.path_string ->
             let lhs =
-              type_expect ~context:None env lhs_expr Predef.type_string
+              type_expect ~context:None env lhs_expr (Predef.type_string ())
             in
-            (lhs, rhs, instance_def Predef.type_string)
+            (lhs, rhs, instance_def (Predef.type_string ()))
           | _ ->
             (* Rule 3. Fallback to int *)
-            let lhs = type_expect ~context:None env lhs_expr Predef.type_int in
-            let rhs = type_expect ~context:None env rhs_expr Predef.type_int in
-            (lhs, rhs, instance_def Predef.type_int))
+            let lhs =
+              type_expect ~context:None env lhs_expr (Predef.type_int ())
+            in
+            let rhs =
+              type_expect ~context:None env rhs_expr (Predef.type_int ())
+            in
+            (lhs, rhs, instance_def (Predef.type_int ())))
       in
       let targs = [(lhs_label, Some lhs); (rhs_label, Some rhs)] in
       Some (targs, result_type)
@@ -4563,7 +4617,7 @@ and type_statement ~context env sexp =
   let ty = expand_head env exp.exp_type and tv = newvar () in
   if is_Tvar ty && ty.level > tv.level then
     Location.prerr_warning loc Warnings.Nonreturning_statement;
-  let expected_ty = instance_def Predef.type_unit in
+  let expected_ty = instance_def (Predef.type_unit ()) in
   let context = type_clash_context_in_statement sexp in
   unify_exp ~context env exp expected_ty;
   exp
@@ -4680,7 +4734,7 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
             Some
               (type_expect ~context:(Some IfCondition) ext_env
                  (wrap_unpacks scond unpacks)
-                 Predef.type_bool)
+                 (Predef.type_bool ()))
         in
         let exp =
           type_expect
@@ -4979,7 +5033,7 @@ let type_expression ~context env sexp =
   begin_def ();
   let exp = type_exp ~context env sexp in
   if Warnings.is_active (Bs_toplevel_expression_unit None) then (
-    try unify env exp.exp_type (instance_def Predef.type_unit)
+    try unify env exp.exp_type (instance_def (Predef.type_unit ()))
     with Unify _ ->
       let buffer = Buffer.create 10 in
       let formatter = Format.formatter_of_buffer buffer in

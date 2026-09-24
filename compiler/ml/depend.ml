@@ -56,10 +56,13 @@ let rec lookup_map lid m =
 
 (* Collect free module identifiers in the a.s.t. *)
 
-let free_structure_names = ref String_set.empty
+let free_structure_names_key =
+  Domain.DLS.new_key (fun () -> ref String_set.empty)
+
+let free_structure_names () = Domain.DLS.get free_structure_names_key
 
 let add_names s =
-  free_structure_names := String_set.union s !free_structure_names
+  free_structure_names () := String_set.union s !(free_structure_names ())
 
 let rec add_path bv ?(p = []) = function
   | Lident s ->
@@ -166,7 +169,8 @@ let add_type_extension bv te =
   add bv te.ptyext_path;
   List.iter (add_extension_constructor bv) te.ptyext_constructors
 
-let pattern_bv = ref String_map.empty
+let pattern_bv_key = Domain.DLS.new_key (fun () -> ref String_map.empty)
+let pattern_bv () = Domain.DLS.get pattern_bv_key
 
 let rec add_pattern bv pat =
   match pat.ppat_desc with
@@ -194,7 +198,8 @@ let rec add_pattern bv pat =
     add_type bv ty
   | Ppat_variant (_, {txt = args}) -> List.iter (add_pattern bv) args
   | Ppat_type li -> add bv li
-  | Ppat_unpack id -> pattern_bv := String_map.add id.txt bound !pattern_bv
+  | Ppat_unpack id ->
+    pattern_bv () := String_map.add id.txt bound !(pattern_bv ())
   | Ppat_open (m, p) ->
     let bv = open_module bv m.txt in
     add_pattern bv p
@@ -202,9 +207,9 @@ let rec add_pattern bv pat =
   | Ppat_extension e -> handle_extension e
 
 let add_pattern bv pat =
-  pattern_bv := bv;
+  pattern_bv () := bv;
   add_pattern bv pat;
-  !pattern_bv
+  !(pattern_bv ())
 
 let rec add_expr bv exp =
   match exp.pexp_desc with
@@ -385,13 +390,13 @@ and add_module_alias bv l =
       bound (* cannot delay *))
 
 and add_modtype_binding bv mty =
-  if not !Clflags.transparent_modules then add_modtype bv mty;
+  if not !((Clflags.current ()).transparent_modules) then add_modtype bv mty;
   match mty.pmty_desc with
   | Pmty_alias l -> add_module_alias bv l
   | Pmty_signature s -> make_node (add_signature_binding bv s)
   | Pmty_typeof modl -> add_module_binding bv modl
   | _ ->
-    if !Clflags.transparent_modules then add_modtype bv mty;
+    if !((Clflags.current ()).transparent_modules) then add_modtype bv mty;
     bound
 
 and add_signature bv sg = ignore (add_signature_binding bv sg)
@@ -441,7 +446,7 @@ and add_sig_item (bv, m) item =
     (bv, m)
 
 and add_module_binding bv modl =
-  if not !Clflags.transparent_modules then add_module bv modl;
+  if not !((Clflags.current ()).transparent_modules) then add_module bv modl;
   match modl.pmod_desc with
   | Pmod_ident l -> (
     try
@@ -455,7 +460,7 @@ and add_module_binding bv modl =
         bound))
   | Pmod_structure s -> make_node (snd (add_structure_binding bv s))
   | _ ->
-    if !Clflags.transparent_modules then add_module bv modl;
+    if !((Clflags.current ()).transparent_modules) then add_module bv modl;
     bound
 
 and add_module bv modl =
@@ -530,5 +535,6 @@ and add_struct_item (bv, m) item : _ String_map.t * _ String_map.t =
     (bv, m)
 
 and add_implementation bv l =
-  if !Clflags.transparent_modules then ignore (add_structure_binding bv l)
+  if !((Clflags.current ()).transparent_modules) then
+    ignore (add_structure_binding bv l)
   else ignore (add_structure bv l)

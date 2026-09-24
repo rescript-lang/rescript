@@ -38,15 +38,17 @@ let rec longident ppf = function
 
 (* Print an identifier *)
 
-let unique_names = ref Ident.empty
+let unique_names_key = Domain.DLS.new_key (fun () -> ref Ident.empty)
+let unique_names () = Domain.DLS.get unique_names_key
 
 let ident_name id =
-  try Ident.find_same id !unique_names with Not_found -> Ident.name id
+  try Ident.find_same id !(unique_names ()) with Not_found -> Ident.name id
 
 let add_unique id =
-  try ignore (Ident.find_same id !unique_names)
+  try ignore (Ident.find_same id !(unique_names ()))
   with Not_found ->
-    unique_names := Ident.add id (Ident.unique_toplevel_name id) !unique_names
+    unique_names () :=
+      Ident.add id (Ident.unique_toplevel_name id) !(unique_names ())
 
 let ident ppf id = pp_print_string ppf (ident_name id)
 
@@ -54,12 +56,13 @@ let ident ppf id = pp_print_string ppf (ident_name id)
 
 let ident_pervasives = Ident.create_persistent "Pervasives"
 let ident_stdlib = Ident.create_persistent "Stdlib"
-let printing_env = ref Env.empty
+let printing_env_key = Domain.DLS.new_key (fun () -> ref Env.empty)
+let printing_env () = Domain.DLS.get printing_env_key
 let non_shadowed_pervasive_or_stdlib = function
   | Pdot (Pident id, s, _pos) as path -> (
     (Ident.same id ident_pervasives || Ident.same id ident_stdlib)
     &&
-      try Path.same path (Env.lookup_type (Lident s) !printing_env)
+      try Path.same path (Env.lookup_type (Lident s) !(printing_env ()))
       with Not_found -> true)
   | _ -> false
 
@@ -128,12 +131,13 @@ let string_of_label = function
   | Labelled {txt} -> txt
   | Optional {txt} -> "?" ^ txt
 
-let visited = ref []
+let visited_key = Domain.DLS.new_key (fun () -> ref [])
+let visited () = Domain.DLS.get visited_key
 let rec raw_type ppf ty =
   let ty = safe_repr [] ty in
-  if List.memq ty !visited then fprintf ppf "{id=%d}" ty.id
+  if List.memq ty !(visited ()) then fprintf ppf "{id=%d}" ty.id
   else (
-    visited := ty :: !visited;
+    visited () := ty :: !(visited ());
     fprintf ppf "@[<1>{id=%d;level=%d;desc=@,%a}@]" ty.id ty.level raw_type_desc
       ty.desc)
 
@@ -190,9 +194,9 @@ and raw_field ppf = function
   | Rabsent -> fprintf ppf "Rabsent"
 
 let raw_type_expr ppf t =
-  visited := [];
+  visited () := [];
   raw_type ppf t;
-  visited := []
+  visited () := []
 
 let () = Btype.print_raw := raw_type_expr
 
@@ -220,12 +224,18 @@ let apply_subst s1 tyl =
 
 type best_path = Paths of Path.t list | Best of Path.t
 
-let printing_depth = ref 0
-let printing_cont = ref ([] : Env.iter_cont list)
-let printing_old = ref Env.empty
-let printing_pers = ref Concr.empty
+let printing_depth_key = Domain.DLS.new_key (fun () -> ref 0)
+let printing_depth () = Domain.DLS.get printing_depth_key
+let printing_cont_key =
+  Domain.DLS.new_key (fun () -> ref ([] : Env.iter_cont list))
+let printing_cont () = Domain.DLS.get printing_cont_key
+let printing_old_key = Domain.DLS.new_key (fun () -> ref Env.empty)
+let printing_old () = Domain.DLS.get printing_old_key
+let printing_pers_key = Domain.DLS.new_key (fun () -> ref Concr.empty)
+let printing_pers () = Domain.DLS.get printing_pers_key
 module Path_map = Map.Make (Path)
-let printing_map = ref Path_map.empty
+let printing_map_key = Domain.DLS.new_key (fun () -> ref Path_map.empty)
+let printing_map () = Domain.DLS.get printing_map_key
 
 let same_type t t' = repr t == repr t'
 
@@ -277,18 +287,22 @@ let rec path_size = function
 
 let same_printing_env env =
   let used_pers = Env.used_persistent () in
-  Env.same_types !printing_old env && Concr.equal !printing_pers used_pers
+  Env.same_types !(printing_old ()) env
+  && Concr.equal !(printing_pers ()) used_pers
 
 let set_printing_env env =
-  printing_env := env;
-  if !Clflags.real_paths || !printing_env == Env.empty || same_printing_env env
+  printing_env () := env;
+  if
+    !((Clflags.current ()).real_paths)
+    || !(printing_env ()) == Env.empty
+    || same_printing_env env
   then ()
   else (
     (* printf "Reset printing_map@."; *)
-    printing_old := env;
-    printing_pers := Env.used_persistent ();
-    printing_map := Path_map.empty;
-    printing_depth := 0;
+    printing_old () := env;
+    printing_pers () := Env.used_persistent ();
+    printing_map () := Path_map.empty;
+    printing_depth () := 0;
     (* printf "Recompute printing_map.@."; *)
     let cont =
       Env.iter_types
@@ -297,16 +311,17 @@ let set_printing_env env =
           (* Format.eprintf "%a -> %a = %a@." path p path p' path p1 *)
           if s1 = Id then
             try
-              let r = Path_map.find p1 !printing_map in
+              let r = Path_map.find p1 !(printing_map ()) in
               match !r with
               | Paths l -> r := Paths (p :: l)
               | Best p' -> r := Paths [p; p']
               (* assert false *)
             with Not_found ->
-              printing_map := Path_map.add p1 (ref (Paths [p])) !printing_map)
+              printing_map () :=
+                Path_map.add p1 (ref (Paths [p])) !(printing_map ()))
         env
     in
-    printing_cont := [cont])
+    printing_cont () := [cont])
 
 let wrap_printing_env env f =
   set_printing_env env;
@@ -343,24 +358,25 @@ let rec get_best_path r =
         (* Format.eprintf "evaluating %a@." path p; *)
         match !r with
         | Best p' when path_size p >= path_size p' -> ()
-        | _ -> if is_unambiguous p !printing_env then r := Best p)
+        | _ -> if is_unambiguous p !(printing_env ()) then r := Best p)
         (* else Format.eprintf "%a ignored as ambiguous@." path p *)
       l;
     get_best_path r
 
 let best_type_path p =
-  if !Clflags.real_paths || !printing_env == Env.empty then (p, Id)
+  if !((Clflags.current ()).real_paths) || !(printing_env ()) == Env.empty then
+    (p, Id)
   else
-    let p', s = normalize_type_path !printing_env p in
-    let get_path () = get_best_path (Path_map.find p' !printing_map) in
+    let p', s = normalize_type_path !(printing_env ()) p in
+    let get_path () = get_best_path (Path_map.find p' !(printing_map ())) in
     while
-      !printing_cont <> []
+      !(printing_cont ()) <> []
       &&
-        try fst (path_size (get_path ())) > !printing_depth
+        try fst (path_size (get_path ())) > !(printing_depth ())
         with Not_found -> true
     do
-      printing_cont := List.map snd (Env.run_iter_cont !printing_cont);
-      incr printing_depth
+      printing_cont () := List.map snd (Env.run_iter_cont !(printing_cont ()));
+      incr (printing_depth ())
     done;
     let p'' = try get_path () with Not_found -> p' in
     (* Format.eprintf "%a = %a -> %a@." path p path p' path p''; *)
@@ -368,54 +384,63 @@ let best_type_path p =
 
 (* Print a type expression *)
 
-let names = ref ([] : (type_expr * string) list)
-let name_counter = ref 0
-let named_vars = ref ([] : string list)
+let names_key =
+  Domain.DLS.new_key (fun () -> ref ([] : (type_expr * string) list))
+let names () = Domain.DLS.get names_key
+let name_counter_key = Domain.DLS.new_key (fun () -> ref 0)
+let name_counter () = Domain.DLS.get name_counter_key
+let named_vars_key = Domain.DLS.new_key (fun () -> ref ([] : string list))
+let named_vars () = Domain.DLS.get named_vars_key
 
-let weak_counter = ref 1
-let weak_var_map = ref Type_map.empty
-let named_weak_vars = ref String_set.empty
+let weak_counter_key = Domain.DLS.new_key (fun () -> ref 1)
+let weak_counter () = Domain.DLS.get weak_counter_key
+let weak_var_map_key = Domain.DLS.new_key (fun () -> ref Type_map.empty)
+let weak_var_map () = Domain.DLS.get weak_var_map_key
+let named_weak_vars_key = Domain.DLS.new_key (fun () -> ref String_set.empty)
+let named_weak_vars () = Domain.DLS.get named_weak_vars_key
 
 let reset_names () =
-  names := [];
-  name_counter := 0;
-  named_vars := []
+  names () := [];
+  name_counter () := 0;
+  named_vars () := []
 let add_named_var ty =
   match ty.desc with
   | Tvar (Some name) | Tunivar (Some name) ->
-    if List.mem name !named_vars then () else named_vars := name :: !named_vars
+    if List.mem name !(named_vars ()) then ()
+    else named_vars () := name :: !(named_vars ())
   | _ -> ()
 
 let name_is_already_used name =
-  List.mem name !named_vars
-  || List.exists (fun (_, name') -> name = name') !names
-  || String_set.mem name !named_weak_vars
+  List.mem name !(named_vars ())
+  || List.exists (fun (_, name') -> name = name') !(names ())
+  || String_set.mem name !(named_weak_vars ())
 
 let rec new_name () =
   let name =
-    if !name_counter < 26 then String.make 1 (Char.chr (97 + !name_counter))
+    if !(name_counter ()) < 26 then
+      String.make 1 (Char.chr (97 + !(name_counter ())))
     else
-      String.make 1 (Char.chr (97 + (!name_counter mod 26)))
-      ^ string_of_int (!name_counter / 26)
+      String.make 1 (Char.chr (97 + (!(name_counter ()) mod 26)))
+      ^ string_of_int (!(name_counter ()) / 26)
   in
-  incr name_counter;
+  incr (name_counter ());
   if name_is_already_used name then new_name () else name
 
 let rec new_weak_name ty () =
-  let name = "weak" ^ string_of_int !weak_counter in
-  incr weak_counter;
+  let name = "weak" ^ string_of_int !(weak_counter ()) in
+  incr (weak_counter ());
   if name_is_already_used name then new_weak_name ty ()
   else (
-    named_weak_vars := String_set.add name !named_weak_vars;
-    weak_var_map := Type_map.add ty name !weak_var_map;
+    named_weak_vars () := String_set.add name !(named_weak_vars ());
+    weak_var_map () := Type_map.add ty name !(weak_var_map ());
     name)
 
 let name_of_type name_generator t =
   (* We've already been through repr at this stage, so t is our representative
      of the union-find class. *)
-  try List.assq t !names
+  try List.assq t !(names ())
   with Not_found -> (
-    try Type_map.find t !weak_var_map
+    try Type_map.find t !(weak_var_map ())
     with Not_found ->
       let name =
         match t.desc with
@@ -425,7 +450,9 @@ let name_of_type name_generator t =
            * adding a number until we find a name that's not taken. *)
           let current_name = ref name in
           let i = ref 0 in
-          while List.exists (fun (_, name') -> !current_name = name') !names do
+          while
+            List.exists (fun (_, name') -> !current_name = name') !(names ())
+          do
             current_name := name ^ string_of_int !i;
             i := !i + 1
           done;
@@ -435,26 +462,32 @@ let name_of_type name_generator t =
           name_generator ()
       in
       (* Exception for type declarations *)
-      if name <> "_" then names := (t, name) :: !names;
+      if name <> "_" then names () := (t, name) :: !(names ());
       name)
 
 let check_name_of_type t = ignore (name_of_type new_name t)
 
 let remove_names tyl =
   let tyl = List.map repr tyl in
-  names := Ext_list.filter !names (fun (ty, _) -> not (List.memq ty tyl))
+  names () :=
+    Ext_list.filter !(names ()) (fun (ty, _) -> not (List.memq ty tyl))
 
-let visited_objects = ref ([] : type_expr list)
-let aliased = ref ([] : type_expr list)
-let delayed = ref ([] : type_expr list)
+let visited_objects_key =
+  Domain.DLS.new_key (fun () -> ref ([] : type_expr list))
+let visited_objects () = Domain.DLS.get visited_objects_key
+let aliased_key = Domain.DLS.new_key (fun () -> ref ([] : type_expr list))
+let aliased () = Domain.DLS.get aliased_key
+let delayed_key = Domain.DLS.new_key (fun () -> ref ([] : type_expr list))
+let delayed () = Domain.DLS.get delayed_key
 
-let add_delayed t = if not (List.memq t !delayed) then delayed := t :: !delayed
+let add_delayed t =
+  if not (List.memq t !(delayed ())) then delayed () := t :: !(delayed ())
 
-let is_aliased ty = List.memq (proxy ty) !aliased
+let is_aliased ty = List.memq (proxy ty) !(aliased ())
 let add_alias ty =
   let px = proxy ty in
   if not (is_aliased px) then (
-    aliased := px :: !aliased;
+    aliased () := px :: !(aliased ());
     add_named_var px)
 
 let aliasable ty =
@@ -490,19 +523,20 @@ let rec mark_loops_rec visited ty =
       List.iter (mark_loops_rec visited) (apply_subst s tyl)
     | Tpackage (_, _, tyl) -> List.iter (mark_loops_rec visited) tyl
     | Tvariant row -> (
-      if List.memq px !visited_objects then add_alias px
+      if List.memq px !(visited_objects ()) then add_alias px
       else
         let row = row_repr row in
-        if not (static_row row) then visited_objects := px :: !visited_objects;
+        if not (static_row row) then
+          visited_objects () := px :: !(visited_objects ());
         match row.row_name with
         | Some (_p, tyl) when namable_row row ->
           List.iter (mark_loops_rec visited) tyl
         | _ -> iter_row (mark_loops_rec visited) row)
     | Tobject fi ->
-      if List.memq px !visited_objects then add_alias px
+      if List.memq px !(visited_objects ()) then add_alias px
       else (
         if object_row_is_structurally_open ty then
-          visited_objects := px :: !visited_objects;
+          visited_objects () := px :: !(visited_objects ());
         let fields, _ = flatten_fields fi in
         List.iter (fun {Ctype.f_typ} -> mark_loops_rec visited f_typ) fields)
     | Tfield {typ = ty1; rest = ty2} ->
@@ -521,14 +555,27 @@ let mark_loops ty =
   mark_loops_rec [] ty
 
 let reset_loop_marks () =
-  visited_objects := [];
-  aliased := [];
-  delayed := []
+  visited_objects () := [];
+  aliased () := [];
+  delayed () := []
 
 let reset () =
-  unique_names := Ident.empty;
+  unique_names () := Ident.empty;
   reset_names ();
   reset_loop_marks ()
+
+let reset_request () =
+  reset ();
+  visited () := [];
+  printing_env () := Env.empty;
+  printing_depth () := 0;
+  printing_cont () := [];
+  printing_old () := Env.empty;
+  printing_pers () := Concr.empty;
+  printing_map () := Path_map.empty;
+  weak_counter () := 1;
+  weak_var_map () := Type_map.empty;
+  named_weak_vars () := String_set.empty
 
 let reset_and_mark_loops ty =
   reset ();
@@ -567,7 +614,7 @@ let find_inlined_type name (printing_context : printing_context option) =
 let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
   let ty = repr ty in
   let px = proxy ty in
-  if List.mem_assq px !names && not (List.memq px !delayed) then
+  if List.mem_assq px !(names ()) && not (List.memq px !(delayed ())) then
     let mark = is_non_gen sch ty in
     let name = name_of_type (if mark then new_weak_name ty else new_name) px in
     Otyp_var (mark, name)
@@ -666,12 +713,12 @@ let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
       | Tpoly (ty, []) -> tree_of_typexp ?printing_context sch ty
       | Tpoly (ty, tyl) ->
         (*let print_names () =
-          List.iter (fun (_, name) -> prerr_string (name ^ " ")) !names;
+          List.iter (fun (_, name) -> prerr_string (name ^ " ")) !(names ());
           prerr_string "; " in *)
         let tyl = List.map repr tyl in
         if tyl = [] then tree_of_typexp ?printing_context sch ty
         else
-          let old_delayed = !delayed in
+          let old_delayed = !(delayed ()) in
           (* Make the names delayed, so that the real type is
              printed once when used as proxy *)
           List.iter add_delayed tyl;
@@ -679,7 +726,7 @@ let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
           let tr = Otyp_poly (tl, tree_of_typexp ?printing_context sch ty) in
           (* Forget names when we leave scope *)
           remove_names tyl;
-          delayed := old_delayed;
+          delayed () := old_delayed;
           tr
       | Tunivar _ -> Otyp_var (false, name_of_type new_name ty)
       | Tpackage (p, n, tyl) ->
@@ -688,8 +735,8 @@ let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
         in
         Otyp_module (Path.name p, n, tree_of_typlist ?printing_context sch tyl)
     in
-    if List.memq px !delayed then
-      delayed := Ext_list.filter !delayed (( != ) px);
+    if List.memq px !(delayed ()) then
+      delayed () := Ext_list.filter !(delayed ()) (( != ) px);
     if is_aliased px && aliasable ty then (
       check_name_of_type px;
       Otyp_alias (pr_typ (), name_of_type new_name px))
@@ -898,11 +945,11 @@ and tree_of_constructor ?printing_context ~layout ~position cd =
   match cd.cd_res with
   | None -> (name, arg (), None, repr)
   | Some res ->
-    let nm = !names in
-    names := [];
+    let nm = !(names ()) in
+    names () := [];
     let ret = tree_of_typexp ?printing_context false res in
     let args = arg () in
-    names := nm;
+    names () := nm;
     (name, args, Some ret, repr)
 
 and tree_of_label ?printing_context l =
@@ -978,11 +1025,11 @@ let tree_of_extension_constructor id ext es =
     match ext.ext_ret_type with
     | None -> (tree_of_constructor_arguments ext.ext_args, None)
     | Some res ->
-      let nm = !names in
-      names := [];
+      let nm = !(names ()) in
+      names () := [];
       let ret = tree_of_typexp false res in
       let args = tree_of_constructor_arguments ext.ext_args in
-      names := nm;
+      names () := nm;
       (args, Some ret)
   in
   let ext =
@@ -1029,7 +1076,7 @@ let value_description id ppf decl =
 (* Print a module type *)
 
 let wrap_env fenv ftree arg =
-  let env = !printing_env in
+  let env = !(printing_env ()) in
   set_printing_env (fenv env);
   let tree = ftree arg in
   set_printing_env env;
@@ -1055,7 +1102,7 @@ let dummy =
 
 let hide_rec_items = function
   | Sig_type (id, _decl, rs) :: rem
-    when rs = Trec_first && not !Clflags.real_paths ->
+    when rs = Trec_first && not !((Clflags.current ()).real_paths) ->
     let rec get_ids = function
       | Sig_type (id, _, Trec_next) :: rem -> id :: get_ids rem
       | _ -> []
@@ -1064,7 +1111,8 @@ let hide_rec_items = function
     set_printing_env
       (List.fold_right
          (fun id -> Env.add_type ~check:false (Ident.rename id) dummy)
-         ids !printing_env)
+         ids
+         !(printing_env ()))
   | _ -> ()
 
 let rec tree_of_modtype ?(ellipsis = false) = function
@@ -1086,7 +1134,7 @@ let rec tree_of_modtype ?(ellipsis = false) = function
   | Mty_alias (_, p) -> Omty_alias (tree_of_path p)
 
 and tree_of_signature sg =
-  wrap_env (fun env -> env) (tree_of_signature_rec !printing_env false) sg
+  wrap_env (fun env -> env) (tree_of_signature_rec !(printing_env ()) false) sg
 
 and tree_of_signature_rec env' in_type_group = function
   | [] -> []
@@ -1148,10 +1196,10 @@ let refresh_weak () =
     else (m, s)
   in
   let m, s =
-    Type_map.fold refresh !weak_var_map (Type_map.empty, String_set.empty)
+    Type_map.fold refresh !(weak_var_map ()) (Type_map.empty, String_set.empty)
   in
-  named_weak_vars := s;
-  weak_var_map := m
+  named_weak_vars () := s;
+  weak_var_map () := m
 
 let print_items showval env x =
   refresh_weak ();

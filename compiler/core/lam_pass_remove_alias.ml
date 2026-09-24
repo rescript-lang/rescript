@@ -56,7 +56,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
           args = (Lprim {primitive = Pfield (_, _)} as field_arg) :: rest;
           loc;
         }
-      when !Js_config.jsx_preserve ->
+      when !((Js_config.current ()).jsx_preserve) ->
       let rest' = Ext_list.map_sharing rest simpl in
       if rest' == rest then lam
       else Lambda.prim ~primitive ~args:(field_arg :: rest') loc

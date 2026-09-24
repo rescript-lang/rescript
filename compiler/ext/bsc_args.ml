@@ -37,6 +37,7 @@ type unit_action =
 type spec = Unit_dummy | Unit of unit_action | String of string_action
 
 exception Bad = Arg.Bad
+exception Help of string
 
 let bad_arg s = raise_notrace (Bad s)
 
@@ -81,8 +82,7 @@ let stop_raise ~usage ~(error : error) (speclist : t) =
   (match error with
   | Unknown ("-help" | "--help" | "-h") ->
     usage_b b ~usage speclist;
-    Ext_buffer.output_buffer stdout b;
-    exit 0
+    raise_notrace (Help (Ext_buffer.contents b))
   | Unknown s ->
     b +> "Unknown option \"";
     b +> s;

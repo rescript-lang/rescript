@@ -227,8 +227,14 @@ let get_functor_params mexp coercion root_path =
     ((param, loc, arg_coercion), body, path, res_coercion, inline_attribute)
   | _ -> assert false
 
-let export_identifiers : Ident.t list ref = ref []
-let js_hoisted : Lambda.hoisted_function list ref = ref []
+(* Translation can overlap on compiler domains. Each request owns the export
+   and hoisting accumulators until [transl_implementation] returns them. *)
+let export_identifiers_key = Domain.DLS.new_key (fun () -> ref [])
+let js_hoisted_key = Domain.DLS.new_key (fun () -> ref [])
+let export_identifiers () : Ident.t list ref =
+  Domain.DLS.get export_identifiers_key
+let js_hoisted () : Lambda.hoisted_function list ref =
+  Domain.DLS.get js_hoisted_key
 
 let js_hoist_handler rootpath =
   match exportable_module_path rootpath with
@@ -236,9 +242,9 @@ let js_hoist_handler rootpath =
   | Some path ->
     Some
       (fun id loc ->
-        js_hoisted :=
+        js_hoisted () :=
           {Lambda.binding = id; path = path @ [id.Ident.name]; loc}
-          :: !js_hoisted)
+          :: !(js_hoisted ()))
 
 let rec compile_functor mexp coercion root_path loc =
   let functor_param, body, body_path, res_coercion, inline_attribute =
@@ -304,14 +310,15 @@ and transl_structure loc fields cc rootpath final_env = function
         List.fold_left
           (fun acc id ->
             if is_top_root_path then
-              export_identifiers := id :: !export_identifiers;
+              export_identifiers () := id :: !(export_identifiers ());
             Lambda.var id :: acc)
           [] fields
       in
       ( Lambda.prim
           ~primitive:
             (Pmakeblock
-               (if is_top_root_path then Blk_module_export !export_identifiers
+               (if is_top_root_path then
+                  Blk_module_export !(export_identifiers ())
                 else Blk_module (List.rev_map (fun id -> id.Ident.name) fields)))
           ~args:block_fields loc,
         List.length fields )
@@ -332,13 +339,13 @@ and transl_structure loc fields cc rootpath final_env = function
             match cc with
             | Tcoerce_primitive p ->
               if is_top rootpath then
-                export_identifiers := p.pc_id :: !export_identifiers;
+                export_identifiers () := p.pc_id :: !(export_identifiers ());
               Translcore.transl_primitive p.pc_loc p.pc_desc p.pc_env p.pc_type
                 ~val_type:p.pc_type
               :: code
             | _ ->
               if is_top rootpath then
-                export_identifiers := v.(pos) :: !export_identifiers;
+                export_identifiers () := v.(pos) :: !(export_identifiers ());
               apply_coercion loc Strict cc (get_field pos) :: code)
           pos_cc_list []
       in
@@ -346,7 +353,8 @@ and transl_structure loc fields cc rootpath final_env = function
         Lambda.prim
           ~primitive:
             (Pmakeblock
-               (if is_top_root_path then Blk_module_export !export_identifiers
+               (if is_top_root_path then
+                  Blk_module_export !(export_identifiers ())
                 else Blk_module runtime_fields))
           ~args:result loc
       and id_pos_list =
@@ -465,14 +473,14 @@ type implementation = {
 }
 
 let transl_implementation module_name (str, cc) =
-  export_identifiers := [];
-  js_hoisted := [];
+  export_identifiers () := [];
+  js_hoisted () := [];
   let module_id = Ident.create_persistent module_name in
   let body, _ = transl_struct Location.none [] cc (global_path module_id) str in
   {
     lambda = body;
-    exports = !export_identifiers;
-    hoisted_functions = !js_hoisted;
+    exports = !(export_identifiers ());
+    hoisted_functions = !(js_hoisted ());
   }
 
 (* Build the list of value identifiers defined by a toplevel structure

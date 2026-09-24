@@ -15,12 +15,14 @@
 
 open Cmt_format_common
 
+let set_args value = (Compiler_request_state.current ()).cmt_args <- value
+
 let output_cmt output_channel cmt =
   output_string output_channel Config.cmt_magic_number;
   output_value output_channel (cmt : cmt_infos)
 
 let save_cmt filename modname binary_annots sourcefile initial_env cmi =
-  if !Clflags.binary_annotations then
+  if !((Clflags.current ()).binary_annotations) then
     Misc.output_to_bin_file_directly filename
       (fun temp_file_name output_channel ->
         let interface_digest =
@@ -35,11 +37,15 @@ let save_cmt filename modname binary_annots sourcefile initial_env cmi =
             cmt_annots = clear_env binary_annots;
             cmt_value_dependencies = value_dependencies ();
             cmt_comments = [];
-            cmt_args = Sys.argv;
+            cmt_args = (Compiler_request_state.current ()).cmt_args;
             cmt_sourcefile = sourcefile;
-            cmt_builddir = Sys.getcwd ();
-            cmt_loadpath = !Config.load_path;
-            cmt_source_digest = Misc.may_map Digest.file sourcefile;
+            cmt_builddir = Compiler_request_state.cwd ();
+            cmt_loadpath = Config.get_load_path ();
+            cmt_source_digest =
+              Misc.may_map
+                (fun path ->
+                  Digest.file (Compiler_request_state.resolve_path path))
+                sourcefile;
             cmt_initial_env =
               (if need_to_clear_env then keep_only_summary initial_env
                else initial_env);

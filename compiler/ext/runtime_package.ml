@@ -26,4 +26,13 @@ let default_path =
 
 (* To support pnpm and other package managers/layouts, we determine the path on the JS side and pass it in
 via -runtime-path to override the default. *)
-let path = ref default_path
+let get_path () =
+  match (Compiler_request_state.current ()).runtime_path_override with
+  | Some path -> path
+  | None -> default_path
+
+let set_path path =
+  (Compiler_request_state.current ()).runtime_path_override <- Some path
+
+let reset_path () =
+  (Compiler_request_state.current ()).runtime_path_override <- None

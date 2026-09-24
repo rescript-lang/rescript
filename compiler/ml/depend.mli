@@ -24,7 +24,7 @@ val make_leaf : string -> map_tree
 val make_node : bound_map -> map_tree
 val weaken_map : String_set.t -> map_tree -> map_tree
 
-val free_structure_names : String_set.t ref
+val free_structure_names : unit -> String_set.t ref
 
 (* dependencies found by preprocessing tools (plugins) *)
 val open_module : bound_map -> Longident.t -> bound_map

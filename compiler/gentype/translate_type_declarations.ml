@@ -364,7 +364,7 @@ let has_some_gadt_leaf constructor_declarations =
 let translate_type_declaration ~config ~output_file_relative ~resolver ~type_env
     ({typ_attributes; typ_id; typ_loc; typ_manifest; typ_params; typ_type} :
       Typedtree.type_declaration) : Code_item.type_declaration list =
-  if !Debug.translation then
+  if !(Debug.translation ()) then
     Log_.item "Translate Type Declaration %s\n" (typ_id |> Ident.name);
 
   let type_name = Ident.name typ_id in

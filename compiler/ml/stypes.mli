@@ -28,6 +28,7 @@ type annotation =
   | An_ident of Location.t * string * Annot.ident
 
 val record : annotation -> unit
+val with_fresh : (unit -> 'a) -> 'a
 val record_phrase : Location.t -> unit
 val dump : string option -> unit
 

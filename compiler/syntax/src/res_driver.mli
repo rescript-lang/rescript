@@ -63,11 +63,13 @@ val parsing_engine : Res_diagnostics.t list parsing_engine
 
 val print_engine : print_engine
 
+exception Already_reported
+
 (* ReScript implementation parsing compatible with ocaml pparse driver. Used by the compiler. *)
 val parse_implementation :
   ?ignore_parse_errors:bool -> string -> Parsetree.structure
-[@@live] [@@raises Location.Error]
+[@@live] [@@raises Location.Error Already_reported]
 
 (* ReScript interface parsing compatible with ocaml pparse driver. Used by the compiler *)
 val parse_interface : ?ignore_parse_errors:bool -> string -> Parsetree.signature
-[@@live] [@@raises Location.Error]
+[@@live] [@@raises Location.Error Already_reported]

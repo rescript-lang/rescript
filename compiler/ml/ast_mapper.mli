@@ -99,13 +99,9 @@ val default_mapper : mapper
 (** {1 Apply mappers to compilation units} *)
 
 val tool_name : unit -> string
-(** Can be used within a ppx preprocessor to know which tool is
-    calling it ["ocamlc"], ["ocamlopt"], ["ocamldoc"], ["ocamldep"],
-    ["ocaml"], ...  Some global variables that reflect command-line
-    options are automatically synchronized between the calling tool
-    and the ppx preprocessor: {!Clflags.include_dirs},
-    {!Config.load_path}, {!Clflags.open_modules}, {!Clflags.for_package},
-    {!Clflags.debug}. *)
+(** Can be used within a ppx preprocessor to know which tool is calling it.
+    Within the compiler, command-line flags for the current domain are
+    available through {!Clflags.current}. *)
 
 val apply : source:string -> target:string -> mapper -> unit
 (** Apply a mapper (parametrized by the unit name) to a dumped
@@ -116,7 +112,7 @@ val apply : source:string -> target:string -> mapper -> unit
 val run_main : (string list -> mapper) -> unit
 (** Entry point to call to implement a standalone -ppx rewriter from a
     mapper, parametrized by the command line arguments.  The current
-    unit name can be obtained from {!Location.input_name}.  This
+    unit name can be obtained from {!Location.get_input_name}.  This
     function implements proper error reporting for uncaught
     exceptions. *)
 

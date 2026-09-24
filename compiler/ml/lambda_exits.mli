@@ -23,6 +23,9 @@ val next_negative_raise_count : unit -> int
     where simplifications that assume a static raise sits in tail position of
     its handler do not apply. *)
 
+val reset : unit -> unit
+(** Reset domain-owned request-local static-exit identifiers. *)
+
 val make_exit : int -> Lambda.t
 
 val as_simple_exit : Lambda.t -> int option

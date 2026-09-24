@@ -13,7 +13,7 @@ module Doc_string = struct
 end
 
 let log_not_implemented x =
-  if !Debug.not_implemented then Log_.item "Not Implemented: %s\n" x
+  if !(Debug.not_implemented ()) then Log_.item "Not Implemented: %s\n" x
 
 type optional = Mandatory | Optional
 type mutable_ = Immutable | Mutable

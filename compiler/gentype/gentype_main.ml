@@ -135,7 +135,7 @@ let read_input_cmt is_interface cmt_file =
 
 let process_cmt_file cmt =
   let config = Paths.read_config ~namespace:(cmt |> Paths.find_name_space) in
-  if !Debug.basic then Log_.item "Cmt %s\n" cmt;
+  if !(Debug.basic ()) then Log_.item "Cmt %s\n" cmt;
   let cmt_file = cmt |> Paths.get_cmt_file in
   if cmt_file <> "" then
     let file_name = cmt |> Paths.get_module_name in

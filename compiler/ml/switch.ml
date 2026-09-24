@@ -331,7 +331,8 @@ let rec pkey chan  = function
       Printf.fprintf chan "%a %a" pkey rem pkind k
 *)
 
-let t = Hashtbl.create 17
+let cache_key = Domain.DLS.new_key (fun () -> Hashtbl.create 17)
+let cache () = Domain.DLS.get cache_key
 
 let make_key cases =
   let seen = ref [] and count = ref 0 in
@@ -386,11 +387,12 @@ let same_act t =
 
 let inter_limit = 1 lsl 16
 
-let ok_inter = ref false
+let ok_inter_key = Domain.DLS.new_key (fun () -> ref false)
+let ok_inter () = Domain.DLS.get ok_inter_key
 
 let rec opt_count top cases =
   let key = make_key cases in
-  try Hashtbl.find t key
+  try Hashtbl.find (cache ()) key
   with Not_found ->
     let r =
       let lcases = Array.length cases in
@@ -402,7 +404,7 @@ let rec opt_count top cases =
         else if lcases < !more_cut then heuristic cases
         else divide cases
     in
-    Hashtbl.add t key r;
+    Hashtbl.add (cache ()) key r;
     r
 
 and divide cases =
@@ -423,7 +425,7 @@ and heuristic cases =
 
   let sep, csep = divide cases
   and inter, cinter =
-    if !ok_inter then
+    if !(ok_inter ()) then
       let _, _, act0 = cases.(0) and _, _, act1 = cases.(lcases - 1) in
       if act0 = act1 then (
         let low, high, inside, outside = coupe_inter 1 (lcases - 2) cases in
@@ -464,7 +466,7 @@ and enum top cases =
   in
 
   let ilow, ihigh, with_inter =
-    if not !ok_inter then (
+    if not !(ok_inter ()) then (
       let rlow = ref (-1)
       and rhigh = ref (-1)
       and best_cost = ref (too_much, too_much) in
@@ -709,9 +711,9 @@ let make_clusters ({cases; actions} as s) n_clusters k =
   {cases = r; actions = acts}
 
 let do_zyva (low, high) arg cases actions =
-  let old_ok = !ok_inter in
-  ok_inter := abs low <= inter_limit && abs high <= inter_limit;
-  if !ok_inter <> old_ok then Hashtbl.clear t;
+  let old_ok = !(ok_inter ()) in
+  ok_inter () := abs low <= inter_limit && abs high <= inter_limit;
+  if !(ok_inter ()) <> old_ok then Hashtbl.clear (cache ());
 
   let s = {cases; actions} in
 
@@ -750,9 +752,9 @@ and test_sequence arg cases actions =
   assert (Array.length cases > 0);
   let actions = actions.act_get_shared () in
   let hs, actions = abstract_shared actions in
-  let old_ok = !ok_inter in
-  ok_inter := false;
-  if !ok_inter <> old_ok then Hashtbl.clear t;
+  let old_ok = !(ok_inter ()) in
+  ok_inter () := false;
+  if !(ok_inter ()) <> old_ok then Hashtbl.clear (cache ());
   let s = {cases; actions = Array.map (fun act _ -> act) actions} in
   (*
   Printf.eprintf "SEQUENCE: %B\n" !ok_inter ;

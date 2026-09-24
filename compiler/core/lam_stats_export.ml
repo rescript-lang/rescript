@@ -58,7 +58,7 @@ let values_of_export (meta : Lam_stats.t) (export_map : Lambda.t Map_ident.t) :
         | None ->
           optlam
         | Some lambda ->
-          if not !Js_config.cross_module_inline then None
+          if not !((Js_config.current ()).cross_module_inline) then None
           else if
             Lam_analysis.safe_to_inline lambda
             (* when inlning a non function, we have to be very careful,

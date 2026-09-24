@@ -1,0 +1,42 @@
+opam-version: "2.0"
+name: "luv"
+version: "0.5.14"
+synopsis: "Binding to libuv: cross-platform asynchronous I/O"
+description: """\
+Luv is a binding to libuv, the cross-platform C library that does
+asynchronous I/O in Node.js and runs its main loop.
+
+Besides asynchronous I/O, libuv also supports multiprocessing and
+multithreading. Multiple event loops can be run in different threads. libuv also
+exposes a lot of other functionality, amounting to a full OS API, and an
+alternative to the standard module Unix."""
+maintainer: "Anton Bachin <antonbachin@yahoo.com>"
+authors: "Anton Bachin <antonbachin@yahoo.com>"
+license: "MIT"
+homepage: "https://github.com/aantron/luv"
+doc: "https://aantron.github.io/luv"
+bug-reports: "https://github.com/aantron/luv/issues"
+depends: [
+  "base-unix" {build}
+  "ctypes" {>= "0.14.0"}
+  "dune" {>= "2.7.0"}
+  "ocaml" {>= "4.03.0"}
+  "alcotest" {with-test & >= "0.8.1"}
+  "base-unix" {with-test}
+  "odoc" {with-doc & = "2.4.0"}
+]
+build: ["dune" "build" "-p" name "-j" jobs]
+patches: ["arm64-musl-outline-atomics.patch"]
+extra-files: [
+  [
+    "arm64-musl-outline-atomics.patch"
+    "sha256=c15c4c4d34c9b545197c5160e19c69a128cc186b65a54e0e9a779c2543528a4f"
+  ]
+]
+dev-repo: "git+https://github.com/aantron/luv.git"
+url {
+  src:
+    "https://github.com/aantron/luv/releases/download/0.5.14/luv-0.5.14.tar.gz"
+  checksum:
+    "sha256=8e01b4a50c8876cdd98d8e245c0687c4dc4d883aed161ad9c5ace1fb1fdaae99"
+}

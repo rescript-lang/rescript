@@ -22,17 +22,20 @@
 
 open Lambda
 
-let raise_count = ref 0
-
 let next_raise_count () =
-  incr raise_count;
-  !raise_count
+  let state = Compiler_request_state.current () in
+  state.lambda_raise_count <- state.lambda_raise_count + 1;
+  state.lambda_raise_count
 
-let negative_raise_count = ref 0
+let reset () =
+  let state = Compiler_request_state.current () in
+  state.lambda_raise_count <- 0;
+  state.lambda_negative_raise_count <- 0
 
 let next_negative_raise_count () =
-  decr negative_raise_count;
-  !negative_raise_count
+  let state = Compiler_request_state.current () in
+  state.lambda_negative_raise_count <- state.lambda_negative_raise_count - 1;
+  state.lambda_negative_raise_count
 
 let make_exit i = staticraise i []
 

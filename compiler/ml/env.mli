@@ -35,7 +35,9 @@ type summary =
 type t
 
 val empty : t
-val initial_safe_string : t
+val initial_safe_string : unit -> t
+val reset_initial_for_request : unit -> unit
+val with_fresh_initial : (unit -> 'a) -> 'a
 
 val diff : t -> t -> Ident.t list
 val copy_local : from:t -> t -> t
@@ -209,8 +211,12 @@ val imports : unit -> (string * Digest.t option) list
 
 (* Direct access to the table of imported compilation units with their CRC *)
 
-val crc_units : Consistbl.t
+val crc_units : unit -> Consistbl.t
 val add_import : string -> unit
+
+val with_fresh : (unit -> 'a) -> 'a
+(* Keep persistent modules, imports, usage callbacks, and memoized summaries
+   local to a compiler request. *)
 
 (* Summaries -- compact representation of an environment, to be
    exported in debugging information. *)

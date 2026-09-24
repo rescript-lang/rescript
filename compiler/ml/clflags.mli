@@ -1,39 +1,45 @@
-val output_name : string option ref
-val include_dirs : string list ref
+type mli_status = Mli_exists | Mli_non_exists
 
-val debug : bool ref
-val fast : bool ref
+type t = {
+  output_name: string option ref;
+  include_dirs: string list ref;
+  debug: bool ref;
+  fast: bool ref;
+  nopervasives: bool ref;
+  preprocessor: string option ref;
+  all_ppx: string list ref;
+  annotations: bool ref;
+  binary_annotations: bool ref;
+  noassert: bool ref;
+  verbose: bool ref;
+  open_modules: string list ref;
+  real_paths: bool ref;
+  applicative_functors: bool ref;
+  error_size: int ref;
+  transparent_modules: bool ref;
+  dump_source: bool ref;
+  dump_parsetree: bool ref;
+  dump_typedtree: bool ref;
+  dump_rawlambda: bool ref;
+  only_parse: bool ref;
+  editor_mode: bool ref;
+  ignore_parse_errors: bool ref;
+  dont_write_files: bool ref;
+  keep_locs: bool ref;
+  color: Misc.Color.setting option ref;
+  assume_no_mli: mli_status ref;
+  dont_record_crc_unit: string option ref;
+  bs_gentype: bool ref;
+  no_assert_false: bool ref;
+  dump_location: bool ref;
+}
 
-val nopervasives : bool ref
-val open_modules : string list ref
-val preprocessor : string option ref
-val all_ppx : string list ref
-val annotations : bool ref
-val binary_annotations : bool ref
-val noassert : bool ref
-val verbose : bool ref
-val real_paths : bool ref
-val applicative_functors : bool ref
-val error_size : int ref
-val transparent_modules : bool ref
-val dump_source : bool ref
-val dump_parsetree : bool ref
-val dump_typedtree : bool ref
-val dump_rawlambda : bool ref
-val dont_write_files : bool ref
-val keep_locs : bool ref
-val only_parse : bool ref
-val ignore_parse_errors : bool ref
-val editor_mode : bool ref
+val current : unit -> t
+(* Mutable compiler flags for the current domain. *)
+
+val with_fresh : (unit -> 'a) -> 'a
+(* Run with fresh flags and restore the previous request on exit. *)
 
 val parse_color_setting : string -> Misc.Color.setting option
-val color : Misc.Color.setting option ref
-
 val reset_dump_state : unit -> unit
-
-type mli_status = Mli_exists | Mli_non_exists
-val assume_no_mli : mli_status ref
-val dont_record_crc_unit : string option ref
-val bs_gentype : bool ref
-val no_assert_false : bool ref
-val dump_location : bool ref
+val reset : unit -> unit

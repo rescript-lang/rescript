@@ -235,8 +235,8 @@ end
 (* One time setup for all relevant modules *)
 let () =
   Bs_conditional_initial.setup_env ();
-  Clflags.binary_annotations := false;
-  Clflags.color := Some Always;
+  (Clflags.current ()).binary_annotations := false;
+  (Clflags.current ()).color := Some Always;
   Lazy.force Res_outcome_printer.setup
 
 let error_of_exn e =
@@ -270,7 +270,7 @@ module Res_driver = struct
     Format.flush_str_formatter ()
 
   let parse_implementation ~sourcefile ~src =
-    Location.input_name := sourcefile;
+    Location.set_input_name sourcefile;
     let parse_result =
       let engine = setup ~filename:sourcefile ~src in
       let structure = Res_core.parse_implementation engine in
@@ -504,7 +504,7 @@ module Compile = struct
         cmt_args = [||];
         cmt_sourcefile = Some sourcefile;
         cmt_builddir = Sys.getcwd ();
-        cmt_loadpath = !Config.load_path;
+        cmt_loadpath = Config.get_load_path ();
         cmt_source_digest = None;
         cmt_initial_env = env;
         cmt_imports = [];
@@ -635,7 +635,7 @@ module Compile = struct
       let filename = get_filename ~lang config.filename in
       let modulename = "Playground" in
       let impl = rescript_parse ~filename in
-      Clflags.open_modules := open_modules;
+      (Clflags.current ()).open_modules := open_modules;
       (* let env = !Toploop.toplevel_env in *)
       (* Res_compmisc.init_path (); *)
       (* let modulename = module_of_filename ppf sourcefile outputprefix in *)
@@ -645,11 +645,12 @@ module Compile = struct
       (* Question ?? *)
       (* let finalenv = ref Env.empty in *)
       let types_signature = ref [] in
-      Js_config.jsx_version := Some Js_config.Jsx_v4;
-      Js_config.jsx_preserve := jsx_preserve_mode;
-      Js_config.source_map := source_map_mode;
-      Js_config.source_map_sources_content := source_map_sources_content;
-      Js_config.source_map_root := source_map_root;
+      (Js_config.current ()).jsx_version := Some Js_config.Jsx_v4;
+      (Js_config.current ()).jsx_preserve := jsx_preserve_mode;
+      (Js_config.current ()).source_map := source_map_mode;
+      (Js_config.current ()).source_map_sources_content :=
+        source_map_sources_content;
+      (Js_config.current ()).source_map_root := source_map_root;
       experimental_features
       |> List.iter Experimental_features.enable_from_string;
       (* default *)
@@ -757,7 +758,7 @@ module Compile = struct
 end
 
 (* To add a directory to the load path *)
-let dir_directory d = Config.load_path := d :: !Config.load_path
+let dir_directory d = Config.set_load_path (d :: Config.get_load_path ())
 let () = dir_directory "/static"
 
 module Export = struct

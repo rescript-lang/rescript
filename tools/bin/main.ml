@@ -142,7 +142,7 @@ let main () =
       let is_stdout = List.mem "--stdout" args in
       let transform_assert_equal = List.mem "--transform-assert-equal" args in
       let output_mode = if is_stdout then `Stdout else `File in
-      Clflags.color := Some Misc.Color.Never;
+      (Clflags.current ()).color := Some Misc.Color.Never;
       match
         ( Tools.Format_codeblocks.format_code_blocks_in_file ~output_mode
             ~transform_assert_equal ~entry_point_file:path,
@@ -157,7 +157,7 @@ let main () =
     | ["-h"] | ["--help"] -> log_and_exit (Ok extract_codeblocks_help)
     | path :: args ->
       let transform_assert_equal = List.mem "--transform-assert-equal" args in
-      Clflags.color := Some Misc.Color.Never;
+      (Clflags.current ()).color := Some Misc.Color.Never;
 
       (* TODO: Add result/JSON mode *)
       Tools.Extract_codeblocks.extract_codeblocks_from_file

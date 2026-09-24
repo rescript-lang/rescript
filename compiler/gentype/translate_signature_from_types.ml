@@ -15,7 +15,7 @@ let translate_type_declaration_from_types ~config ~output_file_relative
   type_env |> Type_env.new_type ~name:(id |> Ident.name);
   let type_name = Ident.name id in
   let type_vars = type_params |> Type_vars.extract_from_type_expr in
-  if !Debug.translation then
+  if !(Debug.translation ()) then
     Log_.item "Translate Types.type_declaration %s\n" type_name;
   let declaration_kind =
     match type_kind with
@@ -84,7 +84,7 @@ and translate_signature_item_from_types ~config ~output_file_relative ~resolver
          ~resolver ~type_env ~id
   | Types.Sig_value (id, {val_attributes; val_loc; val_type}) ->
     let name = id |> Ident.name |> Ext_ident.unwrap_uppercase_exotic in
-    if !Debug.translation then Log_.item "Translate Sig Value %s\n" name;
+    if !(Debug.translation ()) then Log_.item "Translate Sig Value %s\n" name;
     let module_item = Runtime.new_module_item ~name in
     type_env |> Type_env.update_module_item ~module_item;
     if
@@ -108,7 +108,7 @@ and translate_signature_item_from_types ~config ~output_file_relative ~resolver
 (** Like translateSignature but from Types not Typedtree *)
 and translate_signature_from_types ~config ~output_file_relative ~resolver
     ~type_env (signature : Types.signature_item list) : Translation.t list =
-  if !Debug.translation then Log_.item "Translate Types.signature\n";
+  if !(Debug.translation ()) then Log_.item "Translate Types.signature\n";
   signature
   |> List.map
        (translate_signature_item_from_types ~config ~output_file_relative

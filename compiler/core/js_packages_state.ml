@@ -22,26 +22,50 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let packages_info = ref Js_packages_info.empty
-let make_runtime = ref false
+type state = {
+  mutable packages_info: Js_packages_info.t;
+  mutable making_runtime: bool;
+}
+
+(* Package and output specifications belong to a compiler request. Keep the
+   record in this module because its type depends on Js_packages_info. *)
+let fresh () = {packages_info = Js_packages_info.empty; making_runtime = false}
+
+let key = Domain.DLS.new_key fresh
+let current () = Domain.DLS.get key
+
+let with_fresh action =
+  let previous = current () in
+  Domain.DLS.set key (fresh ());
+  Fun.protect action ~finally:(fun () -> Domain.DLS.set key previous)
 
 let set_package_name name =
-  if Js_packages_info.is_empty !packages_info then
-    packages_info := Js_packages_info.from_name name
-  else if not !make_runtime then
+  let state = current () in
+  if Js_packages_info.is_empty state.packages_info then
+    state.packages_info <- Js_packages_info.from_name name
+  else if not state.making_runtime then
     Bsc_args.bad_arg "duplicated flag for -bs-package-name"
 
 let make_runtime () : unit =
-  make_runtime := true;
-  packages_info := Js_packages_info.runtime_package_specs
+  let state = current () in
+  state.making_runtime <- true;
+  state.packages_info <- Js_packages_info.runtime_package_specs
 
 let set_package_map module_name =
   (* set_package_name name ;
      let module_name = Ext_namespace.namespace_of_package_name name  in *)
-  Clflags.dont_record_crc_unit := Some module_name;
-  Clflags.open_modules := module_name :: !Clflags.open_modules
+  (Clflags.current ()).dont_record_crc_unit := Some module_name;
+  (Clflags.current ()).open_modules :=
+    module_name :: !((Clflags.current ()).open_modules)
 
 let update_npm_package_path s =
-  packages_info := Js_packages_info.add_npm_package_path !packages_info s
+  let state = current () in
+  state.packages_info <-
+    Js_packages_info.add_npm_package_path state.packages_info s
 
-let get_packages_info () = !packages_info
+let get_packages_info () = (current ()).packages_info
+
+let reset () =
+  let state = current () in
+  state.packages_info <- Js_packages_info.empty;
+  state.making_runtime <- false

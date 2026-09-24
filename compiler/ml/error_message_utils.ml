@@ -1,10 +1,12 @@
 type extract_concrete_typedecl =
   Env.t -> Types.type_expr -> Path.t * Path.t * Types.type_declaration
 
-let configured_jsx_module : string option ref = ref None
+(* The JSX module affects type-error suggestions for the active request. *)
+let configured_jsx_module_key = Domain.DLS.new_key (fun () -> ref None)
+let configured_jsx_module () = Domain.DLS.get configured_jsx_module_key
 
 let with_configured_jsx_module s =
-  match !configured_jsx_module with
+  match !(configured_jsx_module ()) with
   | None -> s
   | Some module_name -> module_name ^ "." ^ s
 
@@ -908,7 +910,7 @@ let get_jsx_component_props
     ~(extract_concrete_typedecl : extract_concrete_typedecl) env ty p =
   match p with
   | Path.Pdot (Path.Pident {Ident.name = jsx_module_name}, "fragmentProps", _)
-    when Some jsx_module_name = !configured_jsx_module ->
+    when Some jsx_module_name = !(configured_jsx_module ()) ->
     Some {props_record_path = p; fields = []; jsx_type = `Fragment}
   | _ -> (
     (* TODO: handle lowercase components using JSXDOM.domProps *)

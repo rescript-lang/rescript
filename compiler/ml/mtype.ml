@@ -31,7 +31,8 @@ let rec strengthen ~aliasable env mty p =
   match scrape env mty with
   | Mty_signature sg -> Mty_signature (strengthen_sig ~aliasable env sg p 0)
   | Mty_functor (param, arg, res)
-    when !Clflags.applicative_functors && Ident.name param <> "*" ->
+    when !((Clflags.current ()).applicative_functors) && Ident.name param <> "*"
+    ->
     Mty_functor
       ( param,
         arg,

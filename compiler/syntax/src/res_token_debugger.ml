@@ -10,8 +10,9 @@ let dump_tokens input =
         close_in ic;
         content
       with e ->
-        Printf.printf "Error reading file %s: %s\n" filename
-          (Printexc.to_string e);
+        Compiler_request_output.print_stdout
+          (Printf.sprintf "Error reading file %s: %s" filename
+             (Printexc.to_string e));
         exit 1)
     | Source code -> code
   in
@@ -139,8 +140,9 @@ let dump_tokens input =
     let end_line = end_pos.Lexing.pos_lnum in
     let end_col = end_pos.Lexing.pos_cnum - end_pos.Lexing.pos_bol + 1 in
 
-    Printf.printf "%s (%d,%d-%d,%d)\n" token_str start_line start_col end_line
-      end_col;
+    Compiler_request_output.print_stdout
+      (Printf.sprintf "%s (%d,%d-%d,%d)" token_str start_line start_col end_line
+         end_col);
 
     match token with
     | Res_token.Eof -> ()

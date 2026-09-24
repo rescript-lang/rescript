@@ -41,4 +41,4 @@
  (foreign_stubs
   (language c)
   (names build_artifact_stubs))
- (libraries depends ext flow_parser frontend gentype yojson))
+ (libraries depends ext flow_parser frontend gentype yojson unix))

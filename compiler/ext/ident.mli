@@ -55,6 +55,13 @@ val current_time : unit -> int
 val set_current_time : int -> unit
 val reinit : unit -> unit
 
+val capture_request_baseline : unit -> unit
+(* Call once after predefined identifiers are initialized, before compiler
+   requests can overlap. *)
+
+val with_fresh : (unit -> 'a) -> 'a
+(* Give one request its own stamp counter and restore the prior counter. *)
+
 type 'a tbl
 (* Association tables from identifiers to type 'a. *)
 

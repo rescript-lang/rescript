@@ -37,6 +37,15 @@ val newgenty : type_desc -> type_expr
 val newgenvar : ?name:string -> unit -> type_expr
 (* Return a fresh generic variable *)
 
+val reinit : unit -> unit
+(** Restore the type identifier allocator to its post-initialization state. *)
+
+val with_fresh : (unit -> 'a) -> 'a
+(** Isolate the speculative trail, copy sessions, and abbreviation memo for
+    one compiler request on the current domain, restoring the prior state on
+    success or failure. The identifier allocator belongs to
+    [Compiler_request_state] and is reset separately by [reinit]. *)
+
 (* Use Tsubst instead
    val newmarkedvar: int -> type_expr
            (* Return a fresh marked variable *)

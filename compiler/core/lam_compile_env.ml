@@ -40,20 +40,26 @@ type ident_info = Js_cmj_format.keyed_cmj_value = {
    [ find_in_path_uncap !load_path (name ^ ".cmi")]
 *)
 
-(** It stores module => env_value mapping 
-*)
-let cached_tbl : env_value Lam_module_ident.Hash.t =
-  Lam_module_ident.Hash.create 31
+(* Each compilation owns its module-to-env_value cache: reset in one domain
+   must not erase another domain's imports while it is still compiling. *)
+let cached_tbl_key =
+  Domain.DLS.new_key (fun () -> Lam_module_ident.Hash.create 31)
 
-let ( +> ) = Lam_module_ident.Hash.add cached_tbl
+let cached_tbl () = Domain.DLS.get cached_tbl_key
 
-(* For each compilation we need reset to make it re-entrant *)
+let with_fresh action =
+  let previous = cached_tbl () in
+  Domain.DLS.set cached_tbl_key (Lam_module_ident.Hash.create 31);
+  Fun.protect action ~finally:(fun () -> Domain.DLS.set cached_tbl_key previous)
+
+let ( +> ) id value = Lam_module_ident.Hash.add (cached_tbl ()) id value
+
 let reset () =
-  Js_config.no_export := false;
+  (Js_config.current ()).no_export := false;
   (* This is needed in the playground since one no_export can make it true
      In the payground, it seems we need reset more states
   *)
-  Lam_module_ident.Hash.clear cached_tbl
+  Lam_module_ident.Hash.clear (cached_tbl ())
 
 (** We should not provide "#moduleid" as output
     since when we print it in the end, it will 
@@ -78,7 +84,7 @@ let add_js_module ?import_attributes
       dynamic_import;
     }
   in
-  match Lam_module_ident.Hash.find_key_opt cached_tbl lam_module_ident with
+  match Lam_module_ident.Hash.find_key_opt (cached_tbl ()) lam_module_ident with
   | None ->
     lam_module_ident +> External;
     id
@@ -86,7 +92,7 @@ let add_js_module ?import_attributes
 
 let cmj_table_of_module_id ~dynamic_import (module_id : Ident.t) =
   let oid = Lam_module_ident.of_ml ~dynamic_import module_id in
-  match Lam_module_ident.Hash.find_opt cached_tbl oid with
+  match Lam_module_ident.Hash.find_opt (cached_tbl ()) oid with
   | None ->
     let cmj_load_info = !Js_cmj_load.load_unit module_id.name in
     oid +> Ml cmj_load_info;
@@ -110,7 +116,7 @@ let find_hoisted_external_export ?(dynamic_import = false) (module_id : Ident.t)
 let get_package_path_from_cmj (id : Lam_module_ident.t) :
     string * Js_packages_info.t * Ext_js_file_kind.case =
   let cmj_load_info =
-    match Lam_module_ident.Hash.find_opt cached_tbl id with
+    match Lam_module_ident.Hash.find_opt (cached_tbl ()) id with
     | Some (Ml cmj_load_info) -> cmj_load_info
     | Some External -> assert false
     (* called by {!Js_name_of_module_id.string_of_module_id}
@@ -135,7 +141,7 @@ let is_pure_module (oid : Lam_module_ident.t) =
   | Runtime -> true
   | External _ -> false
   | Ml -> (
-    match Lam_module_ident.Hash.find_opt cached_tbl oid with
+    match Lam_module_ident.Hash.find_opt (cached_tbl ()) oid with
     | None -> (
       match !Js_cmj_load.load_unit (Lam_module_ident.name oid) with
       | cmj_load_info ->
@@ -147,7 +153,7 @@ let is_pure_module (oid : Lam_module_ident.t) =
 
 let populate_required_modules extras
     (hard_dependencies : Lam_module_ident.Hash_set.t) =
-  Lam_module_ident.Hash.iter cached_tbl (fun id _ ->
+  Lam_module_ident.Hash.iter (cached_tbl ()) (fun id _ ->
       if not (is_pure_module id) then add hard_dependencies id);
   Lam_module_ident.Hash_set.iter extras (fun id : unit ->
       if not (is_pure_module id) then add hard_dependencies id)

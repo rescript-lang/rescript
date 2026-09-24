@@ -266,7 +266,7 @@ let subst_map (substitution : J.expression Hash_ident.t) =
             match Ext_list.nth_opt ls (Int32.to_int i) with
             (* 7432: prevent optimization in JSX preserve mode *)
             | Some {expression_desc = J.Var (Id {name = "make"})}
-              when !Js_config.jsx_preserve ->
+              when !((Js_config.current ()).jsx_preserve) ->
               super.expression self x
             | Some
                 ({

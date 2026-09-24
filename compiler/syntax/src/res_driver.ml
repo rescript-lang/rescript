@@ -169,41 +169,45 @@ let print_engine =
   {
     print_implementation =
       (fun ~width ~filename:_ ~comments structure ->
-        print_string
+        Compiler_request_output.write_stdout
           (Res_printer.print_implementation ~width structure ~comments));
     print_implementation_from_source =
       (fun ~width ~source:_ ~comments structure ->
-        print_string
+        Compiler_request_output.write_stdout
           (Res_printer.print_implementation ~width structure ~comments));
     print_interface =
       (fun ~width ~filename:_ ~comments signature ->
-        print_string (Res_printer.print_interface ~width signature ~comments));
+        Compiler_request_output.write_stdout
+          (Res_printer.print_interface ~width signature ~comments));
     print_interface_from_source =
       (fun ~width ~source:_ ~comments signature ->
-        print_string (Res_printer.print_interface ~width signature ~comments));
+        Compiler_request_output.write_stdout
+          (Res_printer.print_interface ~width signature ~comments));
   }
 
+exception Already_reported
+
 let parse_implementation ?(ignore_parse_errors = false) sourcefile =
-  Location.input_name := sourcefile;
+  Location.set_input_name sourcefile;
   let parse_result = parsing_engine.parse_implementation ~filename:sourcefile in
   if parse_result.invalid then (
     Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
-    if not ignore_parse_errors then exit 1);
+    if not ignore_parse_errors then raise_notrace Already_reported);
   parse_result.parsetree
-[@@raises exit]
+[@@raises Already_reported]
 
 let parse_interface ?(ignore_parse_errors = false) sourcefile =
-  Location.input_name := sourcefile;
+  Location.set_input_name sourcefile;
   let parse_result = parsing_engine.parse_interface ~filename:sourcefile in
   if parse_result.invalid then (
     Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
-    if not ignore_parse_errors then exit 1);
+    if not ignore_parse_errors then raise_notrace Already_reported);
   parse_result.parsetree
-[@@raises exit]
+[@@raises Already_reported]
 
 (* suppress unused optional arg *)
 let _ =
  fun s ->
   ( parse_implementation ~ignore_parse_errors:false s,
     parse_interface ~ignore_parse_errors:false s )
-[@@raises exit]
+[@@raises Already_reported]
