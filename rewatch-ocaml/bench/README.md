@@ -226,6 +226,19 @@ of the remaining compiler cost; eliminating artifact writes alone has a
 limited bound. The temporary type-checker instrumentation was removed and
 the normal release binary rebuilt afterward.
 
+A third temporary trace timed CMI loading in `Bs_cmi_load` on one eight-worker
+clean build. The 512 compile requests made 2,952 successful persistent-module
+lookups, taking 2,711 ms summed across workers, including file selection and
+failed candidate opens. They decoded 2,992 CMIs totaling 194 MB of repeated
+input, which took 1,511 ms summed across workers; the extra 40 reads came
+through other CMI call sites. These measurements include tracing overhead and
+are not wall-time savings. Even eliminating all 2,711 ms of lookup work would
+have an ideal eight-worker bound of about 0.34 s, short of closing the 5x gap.
+A raw-byte cache would still pay most decoding cost, while reusing decoded
+type graphs across fresh compiler requests would need safe copying and CMI
+invalidation to preserve dependency correctness. The temporary trace code
+was removed and both release compiler executables rebuilt afterward.
+
 ## AST I/O checkpoint
 
 Temporary counters on the same host and eight-domain fixture measured 917
