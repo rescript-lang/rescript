@@ -274,6 +274,16 @@ it is an architectural change with correctness and memory risks. Faster
 JavaScript emission alone has little headroom on this fixture. The temporary
 compiler-core instrumentation was removed after the measurement.
 
+An exploratory change deferred construction of `Env.initial_safe_string` for
+`-bs-ast` requests while keeping it eager for type-checking requests. Fifteen
+interleaved clean testrepo builds of matched release executables on `/tmp`
+measured 1,374 ms before versus 1,372 ms after; unchanged and edit medians
+were 46 ms in both versions. Sampled clean peak tree RSS was 364,392 versus
+368,052 KiB. Compiler requests, complete file sets, and stable artifact bytes
+matched. The extra lazy-state handling had no useful measured gain, so it was
+reverted. This probe does not split the cost of opening the implicit modules
+from the rest of initial-environment setup.
+
 A second temporary trace split `Typemod.type_implementation_more` on the same
 fixture. Among 479 implementation requests, `type_structure` used 5,253 ms
 of summed worker time, inclusion and delayed checks 820 ms, CMI saving 267 ms,
