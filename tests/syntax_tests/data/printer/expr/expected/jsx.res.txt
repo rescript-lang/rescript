@@ -31,7 +31,7 @@ let x =
     <B />
     {children}
   </A>
-let x = <A> {a} </A>
+let x = <A>{a}</A>
 let x =
   <A>
     {a}
@@ -61,8 +61,8 @@ let nav =
 
 let nav2 =
   <Nav isMobile={isMobile} fullScreen={!isMobile ? false : isOpen}>
-    <NavContent>
-      {switch isMobile {
+    <NavContent>{
+      switch isMobile {
       | true =>
         <MobileMenu
           handleOpenToggle={_ => setOpen(open_ => !open_)}
@@ -77,14 +77,14 @@ let nav2 =
         <WidescreenMenu
           menuItems={props.items} trial={props.trial} user={props.user} viewer={props.viewer}
         />
-      }}
-    </NavContent>
+      }
+    }</NavContent>
   </Nav>
 
 let nav3 =
   <Nav isMobile={isMobile} fullScreen={!isMobile ? false : isOpen}>
-    <NavContent>
-      {isMobile
+    <NavContent>{
+      isMobile
         ? <MobileMenu
             handleOpenToggle={_ => setOpen(open_ => !open_)}
             menuItems={props.items}
@@ -95,8 +95,8 @@ let nav3 =
           />
         : <WidescreenMenu
             menuItems={props.items} trial={props.trial} user={props.user} viewer={props.viewer}
-          />}
-    </NavContent>
+          />
+    }</NavContent>
   </Nav>
 
 let avatarSection =
@@ -104,26 +104,28 @@ let avatarSection =
     <div style={{"zIndex": "1", "opacity": opacityUser}}>
       <Avatar user={user} size={45} />
     </div>
-    {user.email !== viewer.email
-      ? <div
-          style={{
-            "marginLeft": marginLeft + "em",
-            "opacity": opacityAdmin,
-            "zIndex": "0",
-            "cursor": "pointer",
-          }}
-          onMouseEnter={_ => setHoveringAdmin(true)}
-          onMouseLeave={_ => setHoveringAdmin(false)}
-          onClick={_e => {
-            stopImpersonating(csrfToken)
-          }}
-        >
-          <Avatar user={viewer} size={45} />
-        </div>
-      : React.nullElement}
+    {
+      user.email !== viewer.email
+        ? <div
+            style={{
+              "marginLeft": marginLeft + "em",
+              "opacity": opacityAdmin,
+              "zIndex": "0",
+              "cursor": "pointer",
+            }}
+            onMouseEnter={_ => setHoveringAdmin(true)}
+            onMouseLeave={_ => setHoveringAdmin(false)}
+            onClick={_e => {
+              stopImpersonating(csrfToken)
+            }}
+          >
+            <Avatar user={viewer} size={45} />
+          </div>
+        : React.nullElement
+    }
   </>
 
-let x = <> </>
+let x = <></>
 
 let x =
   <div
@@ -209,60 +211,74 @@ let x =
 
 let x =
   <div>
-    ident
-    "constant"
+    {ident}
+    {"constant"}
     {
       let a = 1
       let b = 2
       a + b
     }
     {event => handleClick(event)}
-    {(event1, event2, event3) => {
-      Console.log("debug click")
-      handleClick(event)
-    }}
-    {(aaaaaaaaaaaaaaarg1, aaaaaaaaaaaaaaaaaaaaaaarg2, aaaaaaaaaaaaaaarg3) => {
-      sideEffect(aaaaaaaaaaaaaaarg1)
-      sideEffect(aaaaaaaaaaaaaaaaaaaaaaarg2)
-      sideEffect(aaaaaaaaaaaaaaarg3)
-    }}
+    {
+      (event1, event2, event3) => {
+        Console.log("debug click")
+        handleClick(event)
+      }
+    }
+    {
+      (aaaaaaaaaaaaaaarg1, aaaaaaaaaaaaaaaaaaaaaaarg2, aaaaaaaaaaaaaaarg3) => {
+        sideEffect(aaaaaaaaaaaaaaarg1)
+        sideEffect(aaaaaaaaaaaaaaaaaaaaaaarg2)
+        sideEffect(aaaaaaaaaaaaaaarg3)
+      }
+    }
     {myFunction(x)}
     {myFunction(x)}
     {streets[0]}
     {a + b}
     {-1}
     {-1.2}
-    {switch color {
-    | Blue => "blue"
-    | Red => "red"
-    }}
-    {try sideEffect() catch {
-    | Error => ()
-    }}
+    {
+      switch color {
+      | Blue => "blue"
+      | Red => "red"
+      }
+    }
+    {
+      try sideEffect() catch {
+      | Error => ()
+      }
+    }
     {(a, b, c)}
-    Rgb(red, blue, green)
-    list{}
-    list{a, b}
-    list{a, b, ...x}
-    [a, b, c]
-    {x: 1, y: 2}
-    foo.bar
+    {Rgb(red, blue, green)}
+    {list{}}
+    {list{a, b}}
+    {list{a, b, ...x}}
+    {[a, b, c]}
+    {{x: 1, y: 2}}
+    {foo.bar}
     {user.name = "Steve"}
-    {if true {
-      ()
-    } else {
-      ()
-    }}
+    {
+      if true {
+        ()
+      } else {
+        ()
+      }
+    }
     {
       sideEffect1()
       sideEffect2()
     }
-    {while true {
-      loop()
-    }}
-    {for i in 0 to 10 {
-      do(i)
-    }}
+    {
+      while true {
+        loop()
+      }
+    }
+    {
+      for i in 0 to 10 {
+        do(i)
+      }
+    }
     {(20: int)}
     {
       module L = Log
@@ -274,47 +290,47 @@ let x =
     }
     {assert(true)}
     {module(Foo)}
-    module(Foo)
+    {module(Foo)}
     {module(Foo: Bar)}
-    module(Foo: Bar)
+    {module(Foo: Bar)}
     {
       open React
       React.render()
     }
-    %raw("eval()")
-    {"x": 1, "y": 2}
+    {%raw("eval()")}
+    {{"x": 1, "y": 2}}
     {@attr ident}
   </div>
 
-let x = <MyComponent sidebar={<div> test </div>} nav={<Navbar />} />
+let x = <MyComponent sidebar={<div>{test}</div>} nav={<Navbar />} />
 
-<div>
-  {possibleGradeValues
+<div>{
+  possibleGradeValues
   ->List.filter(g => g <= state.maxGrade)
   ->List.map(possibleGradeValue =>
-    <option key={possibleGradeValue->string_of_int} value={possibleGradeValue->string_of_int}>
-      {possibleGradeValue->string_of_int->str}
-    </option>
+    <option key={possibleGradeValue->string_of_int} value={possibleGradeValue->string_of_int}>{
+      possibleGradeValue->string_of_int->str
+    }</option>
   )
   ->Array.of_list
-  ->ReasonReact.array}
-</div>
+  ->ReasonReact.array
+}</div>
 
 // https://github.com/rescript-lang/syntax/issues/113
-<div> {Console.log(a <= 10)} </div>
+<div>{Console.log(a <= 10)}</div>
 <div>
-  <div> {Console.log(a <= 10)} </div>
+  <div>{Console.log(a <= 10)}</div>
 </div>
 <div>
   <div onClick={_ => Console.log(a <= 10)}>
-    <div> {Console.log(a <= 10)} </div>
+    <div>{Console.log(a <= 10)}</div>
   </div>
 </div>
 
 module App = {
   @react.component
   let make = () => {
-    <> 1 </>
+    <>{1}</>
   }
 }
 
@@ -378,12 +394,12 @@ let x = {
 }
 
 let x = {
-  let _ = <div> {children} </div>
+  let _ = <div>{children}</div>
   msg->React.string
 }
 
 let x = {
-  let _ = <> {children} </>
+  let _ = <>{children}</>
   msg->React.string
 }
 
@@ -393,7 +409,7 @@ let x = {
 }
 
 let x = {
-  let _ = <C> {children} </C>
+  let _ = <C>{children}</C>
   msg->React.string
 }
 
@@ -416,7 +432,9 @@ let x =
       world()
       world()
     }
-    // another test
+    {
+      // another test
+    }
     <span
       id="1"
       className="sdf sdfdsf sdfs sdf asdf dsf"
@@ -424,9 +442,9 @@ let x =
         ()
       }}
     />
-
-    // Comment 2
-
+    {
+      // Comment 2
+    }
     <span
       id="2"
       className="sdf sdfdsf sdfs sdf asdf dsf"
@@ -441,8 +459,9 @@ let x =
           ()
         }}
       />
-
-      // Comment
+      {
+        // Comment
+      }
       <span
         id="2-2"
         className="sdf sdfdsf sdfs sdf asdf dsf"
@@ -464,42 +483,50 @@ let x =
 
 let moo =
   <div>
-    <p> {React.string("moo")} </p>
-    // c1
-    <p> {React.string("moo")} </p>
-    // c2
-    // c3
-    <p> {React.string("moo")} </p>
-
-    // c4
-
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
+    {
+      // c1
+    }
+    <p>{React.string("moo")}</p>
+    {
+      // c2
+      // c3
+    }
+    <p>{React.string("moo")}</p>
+    {
+      // c4
+    }
+    <p>{React.string("moo")}</p>
   </div>
 
 let fragmented_moo =
   <>
-    <p> {React.string("moo")} </p>
-    // c1
-    <p> {React.string("moo")} </p>
-    // c2
-    // c3
-    <p> {React.string("moo")} </p>
-
-    // c4
-
-    <p> {React.string("moo")} </p>
+    <p>{React.string("moo")}</p>
+    {
+      // c1
+    }
+    <p>{React.string("moo")}</p>
+    {
+      // c2
+      // c3
+    }
+    <p>{React.string("moo")}</p>
+    {
+      // c4
+    }
+    <p>{React.string("moo")}</p>
   </>
 
 let arrow_with_fragment = el => <>
   {t(nbsp ++ "(")}
-  el
+  {el}
   {t(")")}
 </>
 
 let arrow_with_container_tag = el =>
   <div>
     {t(nbsp ++ "(")}
-    el
+    {el}
     {t(")")}
   </div>
 
@@ -507,6 +534,4 @@ let arrow_with_container_tag = el =>
   prop1
   //
   prop2
->
-  {React.string("yow")}
-</Component>
+>{React.string("yow")}</Component>

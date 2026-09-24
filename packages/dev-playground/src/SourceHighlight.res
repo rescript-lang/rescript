@@ -255,11 +255,11 @@ let render = (source, ~activeLine) =>
     <span
       class={activeLine === line ? "syntax-line syntax-line-current" : "syntax-line"}
       attrs={[("data-line", line->Int.toString)]}
-    >
-      {View.fragment(
+    >{
+      View.fragment(
         tokens->Array.map(token =>
-          <span class={tokenClass(token.kind)}> {View.text(token.text)} </span>
+          <span class={tokenClass(token.kind)}>{View.text(token.text)}</span>
         ),
-      )}
-    </span>
+      )
+    }</span>
   })

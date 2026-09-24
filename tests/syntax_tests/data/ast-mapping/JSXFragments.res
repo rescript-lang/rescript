@@ -12,3 +12,6 @@ let nestedFragments = <>
     <p>{React.string("Hello")}</p>
     <>{React.string("Bye")}</>
 </>
+let commentOnly = <>{// no child
+}</>
+let commentsBetweenElements = <><span />{/* between */}<span /></>

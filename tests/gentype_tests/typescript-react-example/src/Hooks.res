@@ -7,14 +7,14 @@ let make = (~vehicle) => {
   let (count, setCount) = React.useState(() => 0)
 
   <div>
-    <p>
-      {React.string(
+    <p>{
+      React.string(
         "Hooks example " ++
         (vehicle.name ++
         (" clicked " ++ (Belt.Int.toString(count) ++ " times"))),
-      )}
-    </p>
-    <button onClick={_ => setCount(_ => count + 1)}> {React.string("Click me")} </button>
+      )
+    }</p>
+    <button onClick={_ => setCount(_ => count + 1)}>{React.string("Click me")}</button>
     <ImportHooks
       person={name: "Mary", age: 71}
       renderMe={React.component(x => React.string(x["randomString"]))}
@@ -39,32 +39,31 @@ module Another = {
   @genType @react.component
   let anotherComponent = (~vehicle, ~callback: unit => unit) => {
     callback()
-    <div> {React.string("Another Hook " ++ vehicle.name)} </div>
+    <div>{React.string("Another Hook " ++ vehicle.name)}</div>
   }
 }
 
 module Inner = {
   @genType @react.component
-  let make = (~vehicle) => <div> {React.string("Another Hook " ++ vehicle.name)} </div>
+  let make = (~vehicle) => <div>{React.string("Another Hook " ++ vehicle.name)}</div>
   module Another = {
     @genType @react.component
-    let anotherComponent = (~vehicle) =>
-      <div> {React.string("Another Hook " ++ vehicle.name)} </div>
+    let anotherComponent = (~vehicle) => <div>{React.string("Another Hook " ++ vehicle.name)}</div>
   }
   module Inner2 = {
     @genType @react.component
-    let make = (~vehicle) => <div> {React.string("Another Hook " ++ vehicle.name)} </div>
+    let make = (~vehicle) => <div>{React.string("Another Hook " ++ vehicle.name)}</div>
     module Another = {
       @genType @react.component
       let anotherComponent = (~vehicle) =>
-        <div> {React.string("Another Hook " ++ vehicle.name)} </div>
+        <div>{React.string("Another Hook " ++ vehicle.name)}</div>
     }
   }
 }
 
 module NoProps = {
   @genType @react.component
-  let make = () => <div> React.null </div>
+  let make = () => <div>{React.null}</div>
 }
 
 type cb = (~_to: vehicle) => unit
@@ -88,7 +87,7 @@ module WithRef = {
   let make = React.forwardRef((~vehicle, ref) => {
     let _ = 34
     switch ref->Stdlib.Nullable.toOption {
-    | Some(ref) => <button ref={ReactDOM.Ref.domRef(ref)}> {React.string(vehicle.name)} </button>
+    | Some(ref) => <button ref={ReactDOM.Ref.domRef(ref)}>{React.string(vehicle.name)}</button>
     | None => React.null
     }
   })
@@ -98,7 +97,7 @@ type r = {x: string}
 
 module ForwardRef = {
   @genType
-  let input = React.forwardRef((r, ref) => <div ref={Obj.magic(ref)}> {React.string(r.x)} </div>)
+  let input = React.forwardRef((r, ref) => <div ref={Obj.magic(ref)}>{React.string(r.x)}</div>)
 }
 
 @genType type callback<'input, 'output> = 'input => 'output
@@ -134,7 +133,7 @@ module WithChildren = {
   let aComponentWithChildren = (~vehicle, ~children) =>
     <div>
       {React.string("Another Hook " ++ vehicle.name)}
-      <div> children </div>
+      <div>{children}</div>
     </div>
 }
 

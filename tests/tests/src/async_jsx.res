@@ -15,7 +15,7 @@ module Foo = {
   let make = async () => {
     let now = await getNow()
     <div>
-      <p> {React.string(now->Date.toLocaleString)} </p>
+      <p>{React.string(now->Date.toLocaleString)}</p>
     </div>
   }
 }

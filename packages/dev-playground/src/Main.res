@@ -273,9 +273,7 @@ let outputNode = (output, activeTab, onSourceMapSelect): View.node => {
           event->Event.preventDefault
           onSourceMapSelect()
         }}
-      >
-        {View.text(sourceMapDirective)}
-      </a>,
+      >{View.text(sourceMapDirective)}</a>,
       View.text(output->String.slice(~start=directiveEnd)),
     ])
   }
@@ -297,9 +295,7 @@ let pushOutputText = (nodes: array<View.node>, text, onSourceMapSelect) => {
           event->Event.preventDefault
           onSourceMapSelect()
         }}
-      >
-        {View.text(sourceMapDirective)}
-      </a>,
+      >{View.text(sourceMapDirective)}</a>,
     )
     nodes->Array.push(View.text(text->String.slice(~start=directiveEnd)))
   }
@@ -366,9 +362,7 @@ let mappedJavaScriptNode = (
                     onMappingSelect(mapping)
                   }
                 }}
-              >
-                {View.text(text)}
-              </span>,
+              >{View.text(text)}</span>,
             )
           }
         | None => pushOutputText(nodes, text, onSourceMapSelect)
@@ -429,9 +423,7 @@ module TabButton = {
     <button
       class={() => Signal.get(activeTab) === tab ? "tab-button tab-button-active" : "tab-button"}
       onClick={_ => onSelect(tab)}
-    >
-      {View.text(tabLabel(tab))}
-    </button>
+    >{View.text(tabLabel(tab))}</button>
   }
 }
 
@@ -439,9 +431,9 @@ module Problems = {
   @jsx.component
   let make = (~compileResult: Signal.t<option<compileSnapshot>>) => {
     <div class="problems">
-      <div class="problems-title"> {View.text("Problems")} </div>
-      <pre class="problems-output">
-        {View.signalText(() =>
+      <div class="problems-title">{View.text("Problems")}</div>
+      <pre class="problems-output">{
+        View.signalText(() =>
           switch Signal.get(compileResult) {
           | Some({result: Ok({warnings})}) if warnings->Array.length > 0 =>
             warnings->Array.join("\n")
@@ -451,8 +443,8 @@ module Problems = {
           | Some({result: Error({message})}) => message
           | _ => "No problems reported."
           }
-        )}
-      </pre>
+        )
+      }</pre>
     </div>
   }
 }
@@ -479,7 +471,7 @@ module SettingsPanel = {
       Computed.make(() =>
         CompilerApi.selectableCompilerVersions(
           Signal.get(config).compilerVersion,
-        )->Array.map(version => <option value=version.id> {View.text(version.label)} </option>)
+        )->Array.map(version => <option value=version.id>{View.text(version.label)}</option>)
       ),
     )
 
@@ -488,9 +480,7 @@ module SettingsPanel = {
         Signal.get(activeTab) === Settings ? "settings-panel" : "settings-panel hidden-panel"}
     >
       <section class="settings-section">
-        <label class="setting-label" for_="compiler-version">
-          {View.text("Compiler Version")}
-        </label>
+        <label class="setting-label" for_="compiler-version">{View.text("Compiler Version")}</label>
         <select
           id="compiler-version"
           value={() => Signal.get(config).compilerVersion}
@@ -499,23 +489,21 @@ module SettingsPanel = {
             updateConfig(config => {...config, compilerVersion: nextVersion})
             switchCompiler(nextVersion)
           }}
-        >
-          {View.signalFragment(compilerVersionOptions)}
-        </select>
+        >{View.signalFragment(compilerVersionOptions)}</select>
       </section>
       <section class="settings-section">
-        <label class="setting-label"> {View.text("Loaded Compiler")} </label>
-        <div class="setting-value">
-          {View.signalText(() =>
+        <label class="setting-label">{View.text("Loaded Compiler")}</label>
+        <div class="setting-value">{
+          View.signalText(() =>
             switch Signal.get(compilerInfo) {
             | Some(info) => `${info.version} / API ${info.apiVersion} / ${info.bundleId}`
             | None => "loading"
             }
-          )}
-        </div>
+          )
+        }</div>
       </section>
       <section class="settings-section">
-        <label class="setting-label" for_="module-system"> {View.text("Module System")} </label>
+        <label class="setting-label" for_="module-system">{View.text("Module System")}</label>
         <select
           id="module-system"
           value={() => (Signal.get(config).moduleSystem :> string)}
@@ -528,17 +516,17 @@ module SettingsPanel = {
             | None => ()
             }
           }}
-        >
-          {View.fragment(
+        >{
+          View.fragment(
             moduleSystems->Array.map(moduleSystem => {
               let value = (moduleSystem :> string)
-              <option value> {View.text(value)} </option>
+              <option value>{View.text(value)}</option>
             }),
-          )}
-        </select>
+          )
+        }</select>
       </section>
       <section class="settings-section">
-        <label class="setting-label" for_="warning-flags"> {View.text("Warning Flags")} </label>
+        <label class="setting-label" for_="warning-flags">{View.text("Warning Flags")}</label>
         <input
           id="warning-flags"
           value={() => Signal.get(config).warnFlags}
@@ -556,9 +544,7 @@ module SettingsPanel = {
             scheduleUrlSync()
             compileNow()
           }}
-        >
-          {View.text("Reset")}
-        </button>
+        >{View.text("Reset")}</button>
       </section>
       <section class="settings-section setting-row">
         <input
@@ -571,7 +557,7 @@ module SettingsPanel = {
             compileNow()
           }}
         />
-        <label for_="jsx-preserve"> {View.text("Preserve JSX output")} </label>
+        <label for_="jsx-preserve">{View.text("Preserve JSX output")}</label>
       </section>
       <section class="settings-section setting-row">
         <input
@@ -584,13 +570,13 @@ module SettingsPanel = {
             compileNow()
           }}
         />
-        <label for_="gentype-enabled"> {View.text("gentype")} </label>
+        <label for_="gentype-enabled">{View.text("gentype")}</label>
       </section>
       <section class="settings-section source-map-settings">
-        <div class="setting-label"> {View.text("Source Map")} </div>
+        <div class="setting-label">{View.text("Source Map")}</div>
         <div class="source-map-controls">
           <div class="source-map-control">
-            <label for_="source-map-mode"> {View.text("Mode")} </label>
+            <label for_="source-map-mode">{View.text("Mode")}</label>
             <select
               id="source-map-mode"
               value={() => (Signal.get(config).sourceMapMode :> string)}
@@ -603,14 +589,14 @@ module SettingsPanel = {
                 | None => ()
                 }
               }}
-            >
-              {View.fragment(
+            >{
+              View.fragment(
                 sourceMapModes->Array.map(sourceMapMode => {
                   let value = (sourceMapMode :> string)
-                  <option value> {View.text(value)} </option>
+                  <option value>{View.text(value)}</option>
                 }),
-              )}
-            </select>
+              )
+            }</select>
           </div>
           <div
             class={() =>
@@ -636,7 +622,7 @@ module SettingsPanel = {
               {View.text("Include sources content")}
             </label>
             <div class="source-map-control">
-              <label for_="source-map-root"> {View.text("Source Root")} </label>
+              <label for_="source-map-root">{View.text("Source Root")}</label>
               <input
                 id="source-map-root"
                 disabled={() => Signal.get(config).sourceMapMode === Disabled}
@@ -666,18 +652,18 @@ module SettingsPanel = {
             compileNow()
           }}
         />
-        <label for_="feature-let-unwrap"> {View.text("Experimental: let?")} </label>
+        <label for_="feature-let-unwrap">{View.text("Experimental: let?")}</label>
       </section>
       <section class="settings-section">
-        <label class="setting-label"> {View.text("Loaded Libraries")} </label>
-        <div class="setting-value">
-          {View.signalText(() =>
+        <label class="setting-label">{View.text("Loaded Libraries")}</label>
+        <div class="setting-value">{
+          View.signalText(() =>
             switch Signal.get(compilerInfo) {
             | Some(info) => info.libraries->Array.join(", ")
             | None => "loading"
             }
-          )}
-        </div>
+          )
+        }</div>
       </section>
     </div>
   }
@@ -693,14 +679,14 @@ module StatusBadge = {
         | Compiling | Loading => "status status-busy"
         | Ready => "status"
         }}
-    >
-      {View.signalText(() =>
+    >{
+      View.signalText(() =>
         switch Signal.get(status) {
         | Failed(message) => message
         | other => statusLabel(other)
         }
-      )}
-    </div>
+      )
+    }</div>
   }
 }
 
@@ -1257,7 +1243,7 @@ module App = {
     <main class="app-shell">
       <header class="topbar">
         <div>
-          <h1> {View.text("ReScript Developer Playground")} </h1>
+          <h1>{View.text("ReScript Developer Playground")}</h1>
         </div>
         <StatusBadge status />
       </header>
@@ -1268,11 +1254,11 @@ module App = {
       >
         <div class="source-column">
           <div class="column-header">
-            <h2> {View.text("Source")} </h2>
+            <h2>{View.text("Source")}</h2>
             <div class="actions">
-              <button class="secondary-action" onClick={_ => formatSource()}>
-                {View.text("Format")}
-              </button>
+              <button class="secondary-action" onClick={_ => formatSource()}>{
+                View.text("Format")
+              }</button>
               <button
                 class="secondary-action"
                 onClick={_ => {
@@ -1283,12 +1269,10 @@ module App = {
                   scheduleUrlSync()
                   scheduleCompile()
                 }}
-              >
-                {View.text("Reset")}
-              </button>
-              <button class="secondary-action" onClick={_ => shareCurrentUrl()}>
-                {View.text("Share")}
-              </button>
+              >{View.text("Reset")}</button>
+              <button class="secondary-action" onClick={_ => shareCurrentUrl()}>{
+                View.text("Share")
+              }</button>
             </div>
           </div>
           <div
@@ -1300,9 +1284,7 @@ module App = {
             style={() => editorShellStyle(Signal.get(editorScrollTop))}
           >
             <div class="line-number-gutter" ariaHidden=true />
-            <pre class="syntax-layer" ariaHidden=true>
-              {View.signalFragment(highlightedSource)}
-            </pre>
+            <pre class="syntax-layer" ariaHidden=true>{View.signalFragment(highlightedSource)}</pre>
             <textarea
               id={sourceEditorId}
               class="editor"
@@ -1342,17 +1324,17 @@ module App = {
         </div>
         <PaneSeparator layout={paneLayout} />
         <div class="result-column">
-          <div class="tabs"> {View.signalFragment(visibleTabNodes)} </div>
+          <div class="tabs">{View.signalFragment(visibleTabNodes)}</div>
           <div
             class={() =>
               Signal.get(activeTab) === Settings ? "output-panel hidden-panel" : "output-panel"}
           >
-            <div class="result-meta">
-              {View.signalText(() => resultSummary(Signal.get(compileResult)))}
-            </div>
+            <div class="result-meta">{
+              View.signalText(() => resultSummary(Signal.get(compileResult)))
+            }</div>
             <div class="output-shell">
-              <pre class="output">
-                {View.tracked(() => {
+              <pre class="output">{
+                View.tracked(() => {
                   let selectedTab = Signal.get(activeTab)
                   interactiveOutputNode(
                     Signal.get(compileResult),
@@ -1362,8 +1344,8 @@ module App = {
                     revealOriginalMapping,
                     () => Signal.set(activeTab, SourceMap),
                   )
-                })}
-              </pre>
+                })
+              }</pre>
             </div>
             <Problems compileResult />
           </div>
@@ -1378,14 +1360,14 @@ module App = {
           | Some(_) => "toast toast-visible"
           | None => "toast"
           }}
-      >
-        {View.signalText(() =>
+      >{
+        View.signalText(() =>
           switch Signal.get(shareToast) {
           | Some(message) => message
           | None => ""
           }
-        )}
-      </div>
+        )
+      }</div>
     </main>
   }
 }

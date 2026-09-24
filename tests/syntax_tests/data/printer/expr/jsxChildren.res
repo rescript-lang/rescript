@@ -1,0 +1,149 @@
+// Bare expression children migrate without changing their meaning.
+let x = <span> hello </span>
+let x = <span> { hello } </span>
+let x = <span> user.name </span>
+let x = <span> "hello" </span>
+let x = <span> 42 </span>
+let x = <span> (-42) </span>
+let x = <span> true </span>
+let x = <span> None </span>
+let x = <span> Some(hello) </span>
+let x = <span> #hello </span>
+let x = <span> [hello, world] </span>
+let x = <span> list{hello, world} </span>
+let x = <span> /hello/g </span>
+let x = <span> `hello ${name}` </span>
+let x = <span> %extension(hello) </span>
+let x = <span> (hello, world) </span>
+let x = <span> (hello: element) </span>
+let x = <span> (hello :> element) </span>
+let x = <span> {name: hello} </span>
+let x = <span> {"name": hello} </span>
+let x = <span> {} </span>
+let x = <span> dict{"name": hello} </span>
+let x = <span> module(Hello) </span>
+let x = <span> module(Hello: Greeting) </span>
+
+// Nested JSX stays unwrapped, including nested fragments.
+let x = <span> <Icon /> hello user.name </span>
+let x = <span> <> hello <Icon /> </> </span>
+let x = <> hello </>
+let x = <> {hello} </>
+let x = <> hello world </>
+let x = <> </>
+let x = <span> </span>
+
+// Existing expression braces and block braces must not accumulate.
+let x = <span> {render(hello)} </span>
+let x = <span> {hello->render} </span>
+let x = <span> {condition ? hello : world} </span>
+let x = <span> {switch value { | Some(child) => child | None => fallback }} </span>
+let x = <span> {let child = render(hello); child} </span>
+let x = <span> {log(); hello} </span>
+let x = <span> {open Hello; child} </span>
+let x = <span> {module Hello = Greeting; Hello.child} </span>
+let x = <span> {exception Empty; hello} </span>
+let x = <span> {@label hello} </span>
+let x = <span> {@label {let child = hello; child}} </span>
+let x = <span> {<Icon />} </span>
+let x = <span> /* before braced JSX */ {<Icon />} // after braced JSX
+</span>
+let x = <> // before braced fragment
+  {<> hello </>} // after braced fragment
+</>
+
+// Narrow layouts should retain every comment and remain stable.
+let x = <span> /* before bare */ hello /* after bare */ </span>
+let x = <span> {/* inside */ hello /* still inside */} </span>
+let x = <> {/* inside fragment */ hello /* still in fragment */} </>
+let x = <span> hello /* between children */ world </span>
+let x = <span> {{/* record field */ name: hello}} </span>
+// Child comments and their line breaks stay inside expression braces.
+let x = <span> hello // bare child
+</span>
+let x = <> hello // bare fragment child
+</>
+let x = <span> user.name // field child
+</span>
+let x = <span> "hello" // string child
+</span>
+let x = <span> {name: hello} // record child
+</span>
+let x = <span> {hello} // already braced child
+</span>
+let x = <span> hello /* block comment */ // line comment
+</span>
+let x = <span> // before the child
+  hello // Contains */ and must remain a line comment.
+</span>
+let x = <> /* before record */ {name: hello} /* after record */ </>
+let x = <span>
+  // before a block
+  {let child = hello; child} // after a block
+</span>
+let x = <span>
+  // before a call
+  {render(hello)} // after a call
+</span>
+let x = <span>
+  // before bare child
+  hello
+  // after bare child
+</span>
+let x = <span>
+  {hello // trailing inside braces
+  }
+</span>
+let x = <>
+  // before fragment child
+  hello
+</>
+let x = <span>
+  // before record
+  {name: hello} // after record
+</span>
+let x = <LongComponentName attribute="long attribute value">
+  aLongChildIdentifierThatWillNeedToWrapAtNarrowWidths
+</LongComponentName>
+
+let emptyWithBlockComment = <span>/* empty */</span>
+let emptyWithLineComment = <span>// contains */
+</span>
+let emptyFragmentWithInlineBlockComment = <>/* inside */</>
+let emptyFragmentWithInlineLineComment = <>// inside
+</>
+let emptyFragmentWithMixedComments = <>/* first */ // second
+  /* third */
+</>
+let emptyFragmentWithOutsideComment = <>/* inside */</> // outside
+let emptyFragmentWithComments = <>
+  // first
+  /* second */
+</>
+let nestedStandaloneComments = <div>
+  // before
+  <span /> // after
+  /* between */
+  <><Icon /> /* nested */</>
+  // last
+</div>
+let nestedInlineComments = <div>/* before */<Icon />/* after */</div>
+let explicitCommentContainers = <>
+  {/* before */}
+  <Icon />
+  {// contains */
+  }
+  <span />
+  {/* after */}
+</>
+let adjacentCommentContainers = <span>{/* one */}{/* two */}</span>
+let commentBeforeExpression = <span>{/* before */}{hello}{/* after */}</span>
+let emptyRecordChild = <span>{}</span>
+let wrappedEmptyRecordChild = <span>{{/* record */}}</span>
+
+let mixedStandaloneComments = <>
+  <Icon /> // before expression
+  {hello} // after expression
+  /* before element */<Icon />
+  {/* last block */}
+</>
