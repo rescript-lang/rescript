@@ -82,6 +82,14 @@ that a differently-cased recreated CMI exists to `stat` and then return
 `ENOENT` from the immediately following `open`; that host-filesystem artifact
 is not valid scheduler or benchmark evidence. The harness's default `mktemp`
 workspace normally stays on the container filesystem.
+
+The OCaml implementation compiles in-process, so it has no compiler `execve`
+to trace. The gate counts its compiler requests from the log it writes when
+`REWATCH_COMPILER_CALL_LOG` is set, and still traces PPXs as processes.
+`RESCRIPT_BSC_EXE` only selects Rust's compiler; the OCaml executable uses the
+compiler linked into it, so build both from the same checkout. Set
+`REWATCH_COMPILER_DOMAINS` to measure a specific number of compiler workers.
+
 Set `REWATCH_PERFORMANCE_THRESHOLD_PERCENT` to change the 125% threshold. Set `KEEP_REWATCH_BENCHMARK_WORKDIR=1` to retain traces and raw
 stdout/stderr for investigation. For a quick correctness-only check, an odd run
 count below five is accepted only with `REWATCH_ALLOW_SMOKE_RUN=1`; its timing
@@ -100,8 +108,11 @@ rewatch-ocaml/bench/watch_performance_gate.sh \
 ```
 
 It warms both implementations, interleaves an odd number of timed edits,
-requires byte-identical generated JavaScript and normalized parser/compiler
-argument logs, and samples file descriptors, tasks, and RSS after every build.
+requires byte-identical generated JavaScript and equal parser/compiler work
+counts (Rust's through the counting `bsc` proxy, OCaml's through
+`REWATCH_COMPILER_CALL_LOG`), and samples file descriptors, tasks, and RSS after
+every build. Set `REWATCH_WATCH_COMPILER_DOMAINS` to run the OCaml watcher with
+a specific number of compiler workers.
 This catches retained-state implementations that appear fast by skipping work,
 as well as resource growth that a single build cannot show. The
 default median-latency limit is 150% of Rust because individual watch events

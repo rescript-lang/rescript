@@ -20,6 +20,7 @@ val error_symbol : string
 type command = {env: Spawn.Env.t option; program: string; args: string list}
 
 val post_build_command : command:string -> output:string -> command
+val shell_command : string -> command
 
 type process
 
