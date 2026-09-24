@@ -229,6 +229,12 @@ tables, process attribution, and command output. As with the short-lived audit,
 project-local repeated paths and compiler work are the useful comparison; raw
 runtime-wide syscall totals are diagnostic rather than an acceptance limit.
 
+On the small `basic` fixture, one retained-watch edit produced 19 Rust versus
+26 OCaml project-local metadata calls and 43 versus 42 opens. The most
+repeated source and compiler-artifact opens were similar in both versions.
+This one-edit trace does not indicate a large OCaml-specific filesystem cost
+on the watch path; it says little about larger dependency graphs.
+
 The retained-watch performance and resource gate exercises several ordinary
 edits through the same long-lived watcher:
 
