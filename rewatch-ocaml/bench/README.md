@@ -239,6 +239,21 @@ type graphs across fresh compiler requests would need safe copying and CMI
 invalidation to preserve dependency correctness. The temporary trace code
 was removed and both release compiler executables rebuilt afterward.
 
+A further temporary single-worker trace separated module lookup from opening
+the resolved signature. Across 1,897 opens, lookup used about 360 ms of
+process CPU time and signature opening about 2,063 ms. The 137 opens of
+`WebAPI.DOMAPI` alone used about 230 ms for lookup and 1,687 ms for signature
+opening. Its CMI is roughly 987 kB, and expanding its large signature is
+repeated in fresh compiler requests. A separate structure-item trace counted
+429 source `open` items using about 1,784 ms of process CPU time, including
+those `DOMAPI` opens; these two traces are separate runs and their times are
+not additive. The one-worker timings are diagnostic, include tracing overhead
+and some build-system CPU activity, and cannot be read as eight-worker wall
+time savings. Even an ideal eight-way division of all `DOMAPI` opening work
+would save only about 0.21 s. Reusing expanded components would need to keep
+the mutable type graphs isolated and invalidate them when a CMI changes. The
+temporary instrumentation was removed after these measurements.
+
 ## AST I/O checkpoint
 
 Temporary counters on the same host and eight-domain fixture measured 917
