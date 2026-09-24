@@ -45,6 +45,55 @@ byte-identical edited JavaScript. The watcher held 12 file descriptors and
 four tasks; RSS rose from 26,680 to 27,688 KiB. That small fixture dirties
 only one module per edit and does not establish watch-time scaling.
 
+## Direct before-and-after comparison
+
+Revision `95467b2bf` is the parent of the parallel in-process compiler change.
+It still launches standalone `bsc` requests. On the same 12-CPU Linux ARM64
+host, five interleaved testrepo runs compared its release executable with
+revision `7494d76ece1f33e8a808c26206194b7a20158766`. Both used the
+current lockfile-pinned fixture, release-profile `bsc`, and local runtime.
+Compiler source files did not change between these revisions:
+
+| scenario | before median wall | after median wall | before peak tree RSS | after peak tree RSS |
+| --- | ---: | ---: | ---: | ---: |
+| Clean | 4,045 ms | 1,420 ms | 302,984 KiB | 365,916 KiB |
+| Unchanged | 187 ms | 71 ms | 42,336 KiB | 26,080 KiB |
+| One source edit | 185 ms | 70 ms | 53,052 KiB | 26,152 KiB |
+
+The clean build became 2.85x faster with 1.21x sampled peak tree RSS. Both
+revisions made the same 1,031 clean compiler requests and the same unchanged
+and edit requests. Complete post-build file sets and selected stable artifact
+bytes matched. The before/after gate passed its 125% clean RSS limit in this
+comparison. The first executable is labeled `Rust` by the reusable benchmark
+script below, but it is the older OCaml build system; its external compiler
+calls are observed by the same `bsc` proxy. This comparison measures the
+revision range, including the in-process compiler and parallel scheduling,
+not an isolated compiler micro-optimization.
+
+In a separate seven-edit retained-watch comparison, median latency fell from
+161 to 83 ms. Both revisions made seven parser and seven compiler requests
+and produced identical edited JavaScript. The older watcher's RSS rose from
+10,960 to 11,736 KiB and the current watcher's from 26,800 to 27,932 KiB;
+both held stable file descriptor and task counts.
+
+To reproduce the before/after gate after preparing the dependencies and
+release compiler/runtime as described below:
+
+```sh
+git worktree add --detach /tmp/rewatch-before-954 95467b2bf
+(cd /tmp/rewatch-before-954 && \
+  opam exec -- dune build --profile release rewatch-ocaml/rescript_ocaml.exe)
+export RESCRIPT_BSC_EXE="$PWD/_build/default/compiler/bsc/rescript_compiler_main.exe"
+export RESCRIPT_RUNTIME="$PWD/packages/@rescript/runtime"
+REWATCH_COMPILER_DOMAINS=8 rewatch-ocaml/bench/performance_gate.sh \
+  /tmp/rewatch-before-954/_build/default/rewatch-ocaml/rescript_ocaml.exe \
+  _build/default/rewatch-ocaml/rescript_ocaml.exe 5
+REWATCH_WATCH_COMPILER_DOMAINS=8 \
+  rewatch-ocaml/bench/watch_performance_gate.sh \
+  /tmp/rewatch-before-954/_build/default/rewatch-ocaml/rescript_ocaml.exe \
+  _build/default/rewatch-ocaml/rescript_ocaml.exe 7
+```
+
 ## Native Linux testrepo checkpoint
 
 At revision `7688129cd0bd6d8b66fec797327db3455398a4a1`, five
