@@ -433,6 +433,15 @@ its run. The gate now prints executable and compiler hashes, runtime path, and
 worker settings, so a benchmark can be reproduced with its actual compiler
 storage layout. Neither layout predicts the closed-source company project.
 
+After the gate began restoring the source between timed edit samples, a
+five-run repeat at `9fa158aee436b0804ae7f6d0bb5d72144e038053` with the
+same `/tmp` compiler measured 1,482 ms Rust versus 1,398 ms OCaml clean wall
+time, and 339,716 versus 359,656 KiB sampled peak tree RSS. Unchanged
+medians were 80 versus 59 ms; edit medians were 77 versus 57 ms. Equal
+compiler work, complete file sets, and stable artifact bytes passed the gate.
+The clean gain in this repeat was 1.06x. The older fast-placement results
+above used cumulative comment edits; compare medians only within each run.
+
 With the fast-placement Rust median as the reference, a 5x clean-build gain
 would require about 297 ms total. The separate instrumented OCaml compile
 span was 1,172 ms on this fixture, before accounting for the rest of the
