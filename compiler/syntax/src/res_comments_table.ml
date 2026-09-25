@@ -406,10 +406,10 @@ let rec is_block_expr expr =
   | Pexp_setfield (expr, _, _) when is_block_expr expr -> true
   | _ -> false
 
-let is_if_then_else_expr expr =
+let is_conditional_expr expr =
   let open Parsetree in
   match expr.pexp_desc with
-  | Pexp_ifthenelse _ -> true
+  | Pexp_ifthenelse _ | Pexp_ternary _ -> true
   | _ -> false
 
 type node =
@@ -1294,7 +1294,7 @@ and walk_expression expr t comments =
     match else_expr with
     | None -> ()
     | Some expr ->
-      if is_block_expr expr || is_if_then_else_expr expr then
+      if is_block_expr expr || is_conditional_expr expr then
         walk_expression expr t comments
       else
         let leading, inside, trailing =

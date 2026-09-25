@@ -44,20 +44,20 @@ let build_dispatch_table [arity:1]handlers =
 ;;(module Teenager).(0)
 ;;((module Teenager) -> age) -> Console.log
 ;;((module Teenager).(0)) -> Console.log
-;;((module Teenager) -> age) -> isAdult ?
+;;(((module Teenager) -> age) -> isAdult) ?
     Console.log {js|has responsibilities|js} :
     Console.log {js|can play in the playground|js}
-;;((module Streets).(0)) -> isExpensive ? Console.log {js|big money|js} :
+;;(((module Streets).(0)) -> isExpensive) ? Console.log {js|big money|js} :
     Console.log {js|affordable|js}
 let () = ((((module Teenager) -> age) -> Console.log)[@res.braces ])
 let () = (((module Teenager).(0))[@res.braces ])
 let () =
-  ((((module Teenager) -> age) -> isAdult ?
+  (((((module Teenager) -> age) -> isAdult) ?
       Console.log {js|has responsibilities|js} :
       Console.log {js|can play in the playground|js})
   [@res.braces ])
 let () =
-  ((((module Streets).(0)) -> isExpensive ? Console.log {js|big money|js} :
+  (((((module Streets).(0)) -> isExpensive) ? Console.log {js|big money|js} :
       Console.log {js|affordable|js})
   [@res.braces ])
 let () =
@@ -69,7 +69,7 @@ let () =
   ((let a = 1 in
     let b = 2 in
     ((module Teenager) -> age) -> Console.log;
-    (((module Teenager).(0)) -> age) -> isAdult ?
+    ((((module Teenager).(0)) -> age) -> isAdult) ?
       Console.log {js|has responsibilities|js} :
       Console.log {js|can play in the playground|js})
   [@res.braces ])
