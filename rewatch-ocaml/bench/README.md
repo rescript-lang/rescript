@@ -252,27 +252,67 @@ The analyzer reports elapsed phase span, summed compiler time, average and
 peak active requests, idle time inside each phase, and the longest compile
 requests. Remove an old trace before a new run; the compiler appends rows.
 
-A separate temporary compiler-core trace split 479 implementation requests
-from one instrumented clean build. These are summed concurrent-worker times,
-not elapsed build time:
+A temporary compiler-core trace split 479 implementation requests from one
+instrumented clean build. These are summed concurrent-worker times, not elapsed
+build time:
 
 | compiler-core phase | summed worker time |
 | --- | ---: |
 | Initial environment setup | 1,837 ms |
-| Type checking, including CMI/CMT work | 6,736 ms |
+| Implementation typing and persistence (split below) | 6,736 ms |
 | Lambda translation | 30 ms |
 | Lambda compilation | 135 ms |
 | JavaScript emission | 46 ms |
 
 The remaining 33 interface requests and outer request setup are outside this
-split. The instrumented build's 512 compile requests spanned 1,253 ms, so do
-not compare that span directly with the uninstrumented benchmark median.
-Environment setup and type checking account for nearly all measured
+pipeline split. The instrumented build's 512 compile requests spanned 1,253
+ms, so do not compare that span directly with the uninstrumented benchmark
+median.
+
+A second instrumented clean build split the implementation typing and
+persistence phase for the same 479 implementation requests:
+
+| work inside `Typemod.type_implementation_more` | summed worker time |
+| --- | ---: |
+| Structure typing, including imported CMI and signature work (`type_structure`) | 5,253 ms |
+| Interface inclusion and delayed checks | 820 ms |
+| CMI saving | 267 ms |
+| CMT saving | 443 ms |
+| Signature simplification and reset | under 3 ms |
+
+This second run totals about 6,783 ms, rather than the first run's 6,736 ms;
+the rows are a breakdown of the same phase on a different run, not an exact
+subtraction from 6,736 ms. `type_structure` includes import loading and
+signature expansion, so its 5,253 ms is not a measurement of source typing
+alone. Eliminating CMI/CMT saves alone has a limited bound.
+
+A third instrumented clean build measured imported CMI work across **all 512
+compile requests**, including the 33 interface requests excluded from the
+tables above:
+
+| imported CMI operation | summed worker time |
+| --- | ---: |
+| 2,952 successful persistent-module lookups, including path search and failed candidate opens | 2,711 ms |
+| 2,992 CMI decodes, including 40 through other CMI call sites | 1,511 ms |
+
+CMI decoding overlaps the lookup row, and CMI loading overlaps structure
+typing and possibly other phases. These rows came from a separate run and
+cover more requests, so 2,711 / 6,736 (about 40%) is only a numerical ratio,
+not the measured lookup share of the typing phase. The remaining source typing
+time was not isolated. A disjoint split requires nested timers in the same
+run. The CMI trace decoded 194 MB of repeated input; its measurements include
+tracing overhead and are not wall-time savings. Even eliminating all 2,711 ms
+of lookup work would have an ideal eight-worker bound of about 0.34 s, short
+of closing the 5x gap. A raw-byte cache would still pay most decoding cost,
+while reusing decoded type graphs across fresh compiler requests would need
+safe copying and CMI invalidation to preserve dependency correctness.
+
+Environment setup and implementation typing account for nearly all measured
 implementation work. Reusing a prepared environment across requests would
 have to preserve the compiler's fresh per-request type and identifier state;
 it is an architectural change with correctness and memory risks. Faster
 JavaScript emission alone has little headroom on this fixture. The temporary
-compiler-core instrumentation was removed after the measurement.
+instrumentation was removed after each measurement.
 
 An exploratory change deferred construction of `Env.initial_safe_string` for
 `-bs-ast` requests while keeping it eager for type-checking requests. Fifteen
@@ -283,29 +323,6 @@ were 46 ms in both versions. Sampled clean peak tree RSS was 364,392 versus
 matched. The extra lazy-state handling had no useful measured gain, so it was
 reverted. This probe does not split the cost of opening the implicit modules
 from the rest of initial-environment setup.
-
-A second temporary trace split `Typemod.type_implementation_more` on the same
-fixture. Among 479 implementation requests, `type_structure` used 5,253 ms
-of summed worker time, inclusion and delayed checks 820 ms, CMI saving 267 ms,
-and CMT saving 443 ms. Signature simplification and reset took under 3 ms
-combined. This is a separate instrumented run, so its totals differ slightly
-from the compiler-core split above. The type-structure work is the main part
-of the remaining compiler cost; eliminating artifact writes alone has a
-limited bound. The temporary type-checker instrumentation was removed and
-the normal release binary rebuilt afterward.
-
-A third temporary trace timed CMI loading in `Bs_cmi_load` on one eight-worker
-clean build. The 512 compile requests made 2,952 successful persistent-module
-lookups, taking 2,711 ms summed across workers, including file selection and
-failed candidate opens. They decoded 2,992 CMIs totaling 194 MB of repeated
-input, which took 1,511 ms summed across workers; the extra 40 reads came
-through other CMI call sites. These measurements include tracing overhead and
-are not wall-time savings. Even eliminating all 2,711 ms of lookup work would
-have an ideal eight-worker bound of about 0.34 s, short of closing the 5x gap.
-A raw-byte cache would still pay most decoding cost, while reusing decoded
-type graphs across fresh compiler requests would need safe copying and CMI
-invalidation to preserve dependency correctness. The temporary trace code
-was removed and both release compiler executables rebuilt afterward.
 
 A further temporary single-worker trace separated module lookup from opening
 the resolved signature. Across 1,897 opens, lookup used about 360 ms of
