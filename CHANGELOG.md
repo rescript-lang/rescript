@@ -30,6 +30,8 @@
 
 - Speed up OCaml rewatch builds that repeatedly open large signatures by reusing verified expanded signature graphs per compiler worker. https://github.com/rescript-lang/rescript/pull/8673
 - Reuse decoded standard-library interfaces and share prepared signature images across OCaml rewatch workers for faster clean builds. https://github.com/rescript-lang/rescript/pull/8673
+- Keep imported interfaces and expanded signature graphs in a project-owned compiler session across module jobs and watch edits in OCaml rewatch. https://github.com/rescript-lang/rescript/pull/8675
+- Capture text output in memory during OCaml rewatch compiler jobs and use typed graph checks for cached interfaces to reduce clean-build overhead. https://github.com/rescript-lang/rescript/pull/8675
 - Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662
 
 #### :house: Internal
