@@ -59,6 +59,13 @@ For module inclusion and signature compatibility, start with
 : Substitution and copying across environments and persistence boundaries.
   `for_saving` has stronger independence requirements than an ordinary copy.
 
+[`IMMUTABLE_INTERFACES.md`](IMMUTABLE_INTERFACES.md)
+: Design and measurements for sharing compiled interfaces across compiler
+  domains. `Frozen_type_graph` is an experimental type arena; `Frozen_values`
+  indexes values, types, constructors, labels, modules, and module types in
+  nested signatures. `Env` uses its request-local views and lazy opened-name
+  tables when `REWATCH_FROZEN_VALUES=1`.
+
 ## Polymorphic value positions
 
 A `Tpoly` node represents a type scheme, so the operation depends on whether

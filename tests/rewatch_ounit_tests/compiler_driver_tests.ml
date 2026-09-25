@@ -1019,8 +1019,10 @@ let combined_dependency_cache_tests _context =
   Test_support.with_temp_dir "rewatch-combined-dependency-" (fun root ->
       let previous_cache = Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" in
       let previous_trace = Sys.getenv_opt "REWATCH_TYPECHECK_TRACE" in
+      let previous_frozen = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
       Fun.protect
         (fun () ->
+          Unix.putenv "REWATCH_FROZEN_VALUES" "0";
           Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" "force";
           let trace = Filename.concat root "dependency-trace.tsv" in
           Unix.putenv "REWATCH_TYPECHECK_TRACE" trace;
@@ -1183,9 +1185,89 @@ let combined_dependency_cache_tests _context =
           (match previous_trace with
           | Some value -> Unix.putenv "REWATCH_TYPECHECK_TRACE" value
           | None -> Unix.unsetenv "REWATCH_TYPECHECK_TRACE");
+          (match previous_frozen with
+          | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+          | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES");
           match previous_cache with
           | Some value -> Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" value
           | None -> Unix.unsetenv "REWATCH_COMBINED_SIGNATURE_CACHE"))
+
+let frozen_overrides_combined_snapshot_tests _context =
+  Test_support.with_temp_dir "rewatch-frozen-namespace-" (fun root ->
+      let previous_cache = Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" in
+      let previous_trace = Sys.getenv_opt "REWATCH_TYPECHECK_TRACE" in
+      let previous_frozen = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+      Fun.protect
+        ~finally:(fun () ->
+          (match previous_cache with
+          | Some value -> Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" value
+          | None -> Unix.unsetenv "REWATCH_COMBINED_SIGNATURE_CACHE");
+          (match previous_trace with
+          | Some value -> Unix.putenv "REWATCH_TYPECHECK_TRACE" value
+          | None -> Unix.unsetenv "REWATCH_TYPECHECK_TRACE");
+          match previous_frozen with
+          | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+          | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+        (fun () ->
+          Unix.putenv "REWATCH_FROZEN_VALUES" "0";
+          Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" "0";
+          write root "Shapes.mlmap" "randjbuildsystem\nCircle\n";
+          write root "Circle.resi" "let value: int\n";
+          write root "Circle.res" "let value = 1\n";
+          let compile ?(extra = []) input =
+            let result = snd (run root ~extra:(["-I"; root] @ extra) input) in
+            assert_equal ~msg:result.stderr 0 result.exit_code
+          in
+          compile ~extra:["-no-alias-deps"] "Shapes.mlmap";
+          compile ~extra:["-bs-ns"; "Shapes"] "Circle.resi";
+          compile ~extra:["-bs-ns"; "Shapes"; "-bs-read-cmi"] "Circle.res";
+          compile ~extra:["-no-alias-deps"] "Shapes.mlmap";
+          write root "Consumer.res"
+            "open Shapes.Circle\nlet result: int = value\n";
+          compile "Consumer.res";
+          let output = Filename.concat root "Consumer.js" in
+          let cmi = Filename.concat root "Consumer.cmi" in
+          let baseline_js = File_util.read_file output in
+          let baseline_cmi_info = Cmi_format.read_cmi cmi in
+          Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+          Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" "force";
+          let trace = Filename.concat root "frozen-trace.tsv" in
+          Unix.putenv "REWATCH_TYPECHECK_TRACE" trace;
+          let session = Rescript_compiler_driver.create_session () in
+          for _ = 1 to 2 do
+            let result =
+              snd (run ~session root ~extra:["-I"; root] "Consumer.res")
+            in
+            assert_equal ~msg:result.stderr 0 result.exit_code
+          done;
+          assert_equal baseline_js (File_util.read_file output);
+          let frozen_cmi_info = Cmi_format.read_cmi cmi in
+          let exported_value cmi =
+            match cmi.Cmi_format.cmi_sign with
+            | [Types.Sig_value (id, value)] ->
+              ( Ident.name id,
+                Stdlib.Format.asprintf "%a" Printtyp.type_expr value.val_type )
+            | _ -> assert_failure "Consumer exports one value"
+          in
+          assert_equal
+            (exported_value baseline_cmi_info)
+            (exported_value frozen_cmi_info);
+          assert_equal baseline_cmi_info.cmi_flags frozen_cmi_info.cmi_flags;
+          let external_crcs cmi =
+            match cmi.Cmi_format.cmi_crcs with
+            | _self :: dependencies -> dependencies
+            | [] -> assert_failure "Consumer CMI contains its own CRC"
+          in
+          assert_equal
+            (external_crcs baseline_cmi_info)
+            (external_crcs frozen_cmi_info);
+          let trace = File_util.read_file trace in
+          check
+            (Test_support.contains_text trace "dependency.frozen_open")
+            "the forced legacy cache still takes the frozen open path";
+          check
+            (not (Test_support.contains_text trace "dependency.snapshot_reuse"))
+            "the frozen flag skips the mutable combined snapshot"))
 
 let runtime_cmi_cache_tests _context =
   Test_support.with_temp_dir "rewatch-runtime-cmi-cache-" (fun root ->
@@ -1323,6 +1405,295 @@ let project_cmi_cache_tests _context =
             assert_equal ~msg:"an updated interface is loaded again"
               (before_update + 1) !loads
           | _ -> assert_failure "expected the updated interface type"))
+
+let frozen_values_tests _context =
+  Test_support.with_temp_dir "rewatch-frozen-values-" (fun root ->
+      let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+      Fun.protect
+        ~finally:(fun () ->
+          match previous with
+          | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+          | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+        (fun () ->
+          write root "Api.resi"
+            "type t\n\
+             type u = t\n\
+             type box = {value: int}\n\
+             type choice = A | B(int)\n\
+             exception Boom(int)\n\
+             module Nested: {\n\
+             type item = {value: int}\n\
+             let answer: int\n\
+             module Deep: {let answer: int}\n\
+             exception Oops(int)\n\
+             }\n\
+             let value: int\n\
+             let make: unit => t\n\
+             let use: t => int\n";
+          expect_code 0 (snd (run root "Api.resi"));
+          write root "Api.res"
+            "type t = int\n\
+             type u = t\n\
+             type box = {value: int}\n\
+             type choice = A | B(int)\n\
+             exception Boom(int)\n\
+             module Nested = {\n\
+             type item = {value: int}\n\
+             let answer = 2\n\
+             module Deep = {let answer = 3}\n\
+             exception Oops(int)\n\
+             }\n\
+             let value = 1\n\
+             let make = () => 2\n\
+             let use = x => x\n";
+          expect_code 0 (snd (run root "Api.res"));
+          write root "Consumer.res"
+            "let typed: Api.u = Api.make()\n\
+             let result = Api.use(typed)\n\
+             let box: Api.box = {value: Api.value}\n\
+             let selected = Api.B(2)\n\
+             let selectedValue = switch selected {\n\
+             | Api.A => 0\n\
+             | Api.B(value) => value\n\
+             }\n\
+             let raised = Api.Boom(3)\n\
+             let nested = Api.Nested.answer\n\
+             let deep = Api.Nested.Deep.answer\n\
+             let boxed: Api.Nested.item = {value: deep}\n\
+             let nestedError = Api.Nested.Oops(nested)\n\
+             let other = Api.value\n";
+          let baseline = snd (run root ~extra:["-I"; root] "Consumer.res") in
+          assert_equal ~msg:baseline.stderr 0 baseline.exit_code;
+          let output = Filename.concat root "Consumer.js" in
+          let baseline_js = File_util.read_file output in
+          write root "Shadow.res"
+            "module Api = {let value = 9}\nlet result = Api.value\n";
+          let shadow_baseline =
+            snd (run root ~extra:["-I"; root] "Shadow.res")
+          in
+          assert_equal ~msg:shadow_baseline.stderr 0 shadow_baseline.exit_code;
+          let shadow_output = Filename.concat root "Shadow.js" in
+          let shadow_baseline_js = File_util.read_file shadow_output in
+          Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+          let session = Rescript_compiler_driver.create_session () in
+          let frozen =
+            snd (run ~session root ~extra:["-I"; root] "Consumer.res")
+          in
+          expect_code 0 frozen;
+          assert_equal baseline_js (File_util.read_file output);
+          expect_code 0
+            (snd (run ~session root ~extra:["-I"; root] "Shadow.res"));
+          assert_equal shadow_baseline_js (File_util.read_file shadow_output);
+          let cache = Env.create_dependency_cache () in
+          let load ?(mutate = false) () =
+            Env.with_dependency_cache cache (fun () ->
+                Compiler_request_state.with_fresh ~cwd:root (fun () ->
+                    Env.with_fresh (fun () ->
+                        (Compiler_request_state.current ()).load_path <- [root];
+                        let _, description =
+                          Env.lookup_value
+                            (Longident.Ldot (Longident.Lident "Api", "value"))
+                            Env.empty
+                        in
+                        let typ = description.Types.val_type in
+                        let name =
+                          match typ.desc with
+                          | Types.Tconstr (path, _, _) -> Path.name path
+                          | _ -> assert_failure "expected a named type"
+                        in
+                        if mutate then typ.desc <- Types.Tvar None;
+                        (name, typ))))
+          in
+          let constructors name =
+            Env.with_dependency_cache cache (fun () ->
+                Compiler_request_state.with_fresh ~cwd:root (fun () ->
+                    Env.with_fresh (fun () ->
+                        (Compiler_request_state.current ()).load_path <- [root];
+                        Env.lookup_all_constructors
+                          (Longident.Ldot (Longident.Lident "Api", name))
+                          Env.empty
+                        |> List.map (fun (description, _) ->
+                            description.Types.cstr_name))))
+          in
+          assert_equal "int" (fst (load ~mutate:true ()));
+          assert_equal "int" (fst (load ()));
+          assert_equal ["B"] (constructors "B");
+          assert_equal ["Boom"] (constructors "Boom");
+          let first = Domain.spawn load in
+          let second = Domain.spawn load in
+          let first_name, first_type = Domain.join first in
+          let second_name, second_type = Domain.join second in
+          assert_equal "int" first_name;
+          assert_equal "int" second_name;
+          check
+            (first_type != second_type)
+            "workers materialize independent value types";
+          write root "Api.resi"
+            "type t\n\
+             type u = t\n\
+             type box = {value: int}\n\
+             type choice = A | C(int)\n\
+             exception Bang(int)\n\
+             module Nested: {\n\
+             type item = {value: int}\n\
+             let answer: int\n\
+             module Deep: {let answer: int}\n\
+             exception Oops(int)\n\
+             }\n\
+             let value: string\n\
+             let make: unit => t\n\
+             let use: t => int\n";
+          expect_code 0 (snd (run root "Api.resi"));
+          write root "Api.res"
+            "type t = string\n\
+             type u = t\n\
+             type box = {value: int}\n\
+             type choice = A | C(int)\n\
+             exception Bang(int)\n\
+             module Nested = {\n\
+             type item = {value: int}\n\
+             let answer = 2\n\
+             module Deep = {let answer = 3}\n\
+             exception Oops(int)\n\
+             }\n\
+             let value = \"updated\"\n\
+             let make = () => \"updated\"\n\
+             let use = x => 1\n";
+          expect_code 0 (snd (run root "Api.res"));
+          assert_equal "string" (fst (load ()));
+          assert_equal [] (constructors "B");
+          assert_equal ["C"] (constructors "C");
+          assert_equal [] (constructors "Boom");
+          assert_equal ["Bang"] (constructors "Bang")))
+
+let frozen_module_forms_tests _context =
+  Test_support.with_temp_dir "rewatch-frozen-modules-" (fun root ->
+      let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+      Fun.protect
+        ~finally:(fun () ->
+          match previous with
+          | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+          | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+        (fun () ->
+          write root "Other.res" "let value = 7\n";
+          expect_code 0 (snd (run root "Other.res"));
+          write root "Api.res"
+            "module type S = {type t; let value: t}\n\
+             module A: S = {type t = int; let value = 1}\n\
+             module B: S = {type t = string; let value = \"b\"}\n\
+             module Alias = A\n\
+             module External = Other\n\
+             module F = (X: S) => {let same: X.t = X.value}\n";
+          expect_code 0 (snd (run root ~extra:["-I"; root] "Api.res"));
+          write root "Consumer.res"
+            "let a: Api.A.t = Api.A.value\n\
+             let b: Api.B.t = Api.B.value\n\
+             let aliased: Api.A.t = Api.Alias.value\n\
+             let externalValue = Api.External.value\n\
+             module Applied = Api.F(Api.A)\n\
+             let c = Applied.same\n";
+          let baseline = snd (run root ~extra:["-I"; root] "Consumer.res") in
+          assert_equal ~msg:baseline.stderr 0 baseline.exit_code;
+          let output = Filename.concat root "Consumer.js" in
+          let baseline_js = File_util.read_file output in
+          write root "Bad.res" "let wrong: Api.A.t = Api.B.value\n";
+          let baseline_error = snd (run root ~extra:["-I"; root] "Bad.res") in
+          expect_code 2 baseline_error;
+          write root "Include.res"
+            "include Api\nlet fromInclude = External.value\n";
+          let included_baseline =
+            snd (run root ~extra:["-I"; root] "Include.res")
+          in
+          assert_equal ~msg:included_baseline.stderr 0
+            included_baseline.exit_code;
+          let include_output = Filename.concat root "Include.js" in
+          let include_cmi = Filename.concat root "Include.cmi" in
+          let baseline_include_js = File_util.read_file include_output in
+          let baseline_include_cmi = File_util.read_file include_cmi in
+          Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+          let session = Rescript_compiler_driver.create_session () in
+          let frozen =
+            snd (run ~session root ~extra:["-I"; root] "Consumer.res")
+          in
+          assert_equal ~msg:frozen.stderr 0 frozen.exit_code;
+          assert_equal baseline_js (File_util.read_file output);
+          let frozen_error =
+            snd (run ~session root ~extra:["-I"; root] "Bad.res")
+          in
+          expect_code 2 frozen_error;
+          assert_equal baseline_error.stderr frozen_error.stderr;
+          let included_frozen =
+            snd (run ~session root ~extra:["-I"; root] "Include.res")
+          in
+          assert_equal ~msg:included_frozen.stderr 0 included_frozen.exit_code;
+          assert_equal baseline_include_js (File_util.read_file include_output);
+          assert_equal baseline_include_cmi (File_util.read_file include_cmi)))
+
+let frozen_inline_records_tests _context =
+  Test_support.with_temp_dir "rewatch-frozen-inline-records-" (fun root ->
+      let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+      Fun.protect
+        ~finally:(fun () ->
+          match previous with
+          | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+          | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+        (fun () ->
+          write root "Api.res"
+            "type choice = Case({field: int})\n\
+             type extensible = ..\n\
+             type extensible += More({value: int})\n";
+          expect_code 0 (snd (run root "Api.res"));
+          write root "Consumer.res"
+            "let selected = Api.Case({field: 3})\n\
+             let field = switch selected {\n\
+             | Api.Case({field}) => field\n\
+             }\n\
+             let extended = Api.More({value: field})\n";
+          let baseline = snd (run root ~extra:["-I"; root] "Consumer.res") in
+          assert_equal ~msg:baseline.stderr 0 baseline.exit_code;
+          let output = Filename.concat root "Consumer.js" in
+          let baseline_js = File_util.read_file output in
+          Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+          let session = Rescript_compiler_driver.create_session () in
+          let frozen =
+            snd (run ~session root ~extra:["-I"; root] "Consumer.res")
+          in
+          assert_equal ~msg:frozen.stderr 0 frozen.exit_code;
+          assert_equal baseline_js (File_util.read_file output)))
+
+let frozen_open_tests _context =
+  Test_support.with_temp_dir "rewatch-frozen-open-" (fun root ->
+      let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+      Fun.protect
+        ~finally:(fun () ->
+          match previous with
+          | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+          | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+        (fun () ->
+          write root "Api.res"
+            "type choice = A | B(int)\n\
+             type box = {value: int}\n\
+             exception Boom(int)\n\
+             module Nested = {let answer = 2}\n\
+             let value = 1\n";
+          expect_code 0 (snd (run root "Api.res"));
+          write root "Consumer.res"
+            "open Api\n\
+             let selected = B(value)\n\
+             let boxed: box = {value: value}\n\
+             let raised = Boom(value)\n\
+             let nested = Nested.answer\n";
+          let baseline = snd (run root ~extra:["-I"; root] "Consumer.res") in
+          assert_equal ~msg:baseline.stderr 0 baseline.exit_code;
+          let output = Filename.concat root "Consumer.js" in
+          let baseline_js = File_util.read_file output in
+          Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+          let session = Rescript_compiler_driver.create_session () in
+          let frozen =
+            snd (run ~session root ~extra:["-I"; root] "Consumer.res")
+          in
+          assert_equal ~msg:frozen.stderr 0 frozen.exit_code;
+          assert_equal baseline_js (File_util.read_file output)))
 
 let concurrent_diagnostic_recovery_tests _context =
   Test_support.with_temp_dir "rewatch-driver-errors-" (fun root ->
@@ -1602,8 +1973,14 @@ let tests =
          "interfaces_namespaces_load_paths"
          >:: interface_namespace_and_load_path_tests;
          "combined_dependency_cache" >:: combined_dependency_cache_tests;
+         "frozen_overrides_combined_snapshot"
+         >:: frozen_overrides_combined_snapshot_tests;
          "runtime_cmi_cache" >:: runtime_cmi_cache_tests;
          "project_cmi_cache" >:: project_cmi_cache_tests;
+         "frozen_values" >:: frozen_values_tests;
+         "frozen_module_forms" >:: frozen_module_forms_tests;
+         "frozen_inline_records" >:: frozen_inline_records_tests;
+         "frozen_open" >:: frozen_open_tests;
          "concurrent_diagnostic_recovery"
          >:: concurrent_diagnostic_recovery_tests;
          "concurrent_jsx_diagnostic" >:: concurrent_jsx_diagnostic_tests;

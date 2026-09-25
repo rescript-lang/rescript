@@ -169,8 +169,13 @@ module Tycomp_tbl = struct
         (** Symbolic representation of the last (innermost) open, if any. *)
   }
 
+  and 'a source = {
+    find: string -> 'a list option;
+    iter: (string -> 'a list -> unit) -> unit;
+  }
+
   and 'a opened = {
-    components: (string, 'a list) Tbl.t;
+    components: 'a source;
         (** Components from the opened module. We keep a list of
           bindings for each name, as in comp_labels and
           comp_constrs. *)
@@ -185,13 +190,24 @@ module Tycomp_tbl = struct
 
   let add id x tbl = {tbl with current = Ident.add id x tbl.current}
 
-  let add_open slot wrap components next =
+  let source_of_table table =
+    {
+      find =
+        (fun name ->
+          try Some (Tbl.find_str name table) with Not_found -> None);
+      iter = (fun callback -> Tbl.iter callback table);
+    }
+
+  let add_open_source slot wrap components next =
     let using =
       match slot with
       | None -> None
       | Some f -> Some (fun s x -> f s (wrap x))
     in
     {current = Ident.empty; opened = Some {using; components; next}}
+
+  let add_open slot wrap components next =
+    add_open_source slot wrap (source_of_table components) next
 
   let rec find_same id tbl =
     try Ident.find_same id tbl.current
@@ -219,9 +235,9 @@ module Tycomp_tbl = struct
     | None -> []
     | Some {using; next; components} -> (
       let rest = find_all name next in
-      match Tbl.find_str name components with
-      | exception Not_found -> rest
-      | opened ->
+      match components.find name with
+      | None -> rest
+      | Some opened ->
         List.map (fun desc -> (desc, mk_callback rest name desc using)) opened
         @ rest)
 
@@ -229,9 +245,10 @@ module Tycomp_tbl = struct
     let acc = Ident.fold_name (fun _id d -> f d) tbl.current acc in
     match tbl.opened with
     | Some {using = _; next; components} ->
-      acc
-      |> Tbl.fold (fun _name -> List.fold_right (fun desc -> f desc)) components
-      |> fold_name f next
+      let acc = ref acc in
+      components.iter (fun _name descriptions ->
+          acc := List.fold_right (fun desc -> f desc) descriptions !acc);
+      fold_name f next !acc
     | None -> acc
 
   let rec local_keys tbl acc =
@@ -263,13 +280,17 @@ module Id_tbl = struct
         (** Symbolic representation of the last (innermost) open, if any. *)
   }
 
+  and 'a source = {
+    find: string -> ('a * int) option;
+    iter: (string -> 'a * int -> unit) -> unit;
+  }
+
   and 'a opened = {
     root: Path.t;
         (** The path of the opened module, to be prefixed in front of
           its local names to produce a valid path in the current
           environment. *)
-    components: (string, 'a * int) Tbl.t;
-        (** Components from the opened module. *)
+    components: 'a source;  (** Components from the opened module. *)
     using: (string -> ('a * 'a) option -> unit) option;
         (** A callback to be applied when a component is used from this
           "open".  This is used to detect unused "opens".  The
@@ -281,13 +302,24 @@ module Id_tbl = struct
 
   let add id x tbl = {tbl with current = Ident.add id x tbl.current}
 
-  let add_open slot wrap root components next =
+  let source_of_table table =
+    {
+      find =
+        (fun name ->
+          try Some (Tbl.find_str name table) with Not_found -> None);
+      iter = (fun callback -> Tbl.iter callback table);
+    }
+
+  let add_open_source slot wrap root components next =
     let using =
       match slot with
       | None -> None
       | Some f -> Some (fun s x -> f s (wrap x))
     in
     {current = Ident.empty; opened = Some {using; root; components; next}}
+
+  let add_open slot wrap root components next =
+    add_open_source slot wrap root (source_of_table components) next
 
   let rec find_same id tbl =
     try Ident.find_same id tbl.current
@@ -303,8 +335,8 @@ module Id_tbl = struct
     with Not_found as exn -> (
       match tbl.opened with
       | Some {using; root; next; components} -> (
-        try
-          let descr, pos = Tbl.find_str name components in
+        match components.find name with
+        | Some (descr, pos) ->
           let res = (Pdot (root, name, pos), descr) in
           (if mark then
              match using with
@@ -313,7 +345,7 @@ module Id_tbl = struct
                try f name (Some (snd (find_name false name next), snd res))
                with Not_found -> f name None));
           res
-        with Not_found -> find_name mark name next)
+        | None -> find_name mark name next)
       | None -> raise exn)
 
   let find_name name tbl = find_name true name tbl
@@ -326,12 +358,25 @@ module Id_tbl = struct
     with Not_found -> (
       match tbl.opened with
       | Some {root; using; next; components} -> (
-        try
-          let desc, pos = Tbl.find_str name components in
+        match components.find name with
+        | Some (desc, pos) ->
           let new_desc = f desc in
-          let components = Tbl.add name (new_desc, pos) components in
+          let previous = components in
+          let components =
+            {
+              find =
+                (fun query ->
+                  if query = name then Some (new_desc, pos)
+                  else previous.find query);
+              iter =
+                (fun callback ->
+                  previous.iter (fun query entry ->
+                      callback query
+                        (if query = name then (new_desc, pos) else entry)));
+            }
+          in
           {tbl with opened = Some {root; using; next; components}}
-        with Not_found ->
+        | None ->
           let next = update name f next in
           {tbl with opened = Some {root; using; next; components}})
       | None -> tbl)
@@ -344,10 +389,9 @@ module Id_tbl = struct
     match tbl.opened with
     | None -> []
     | Some {root; using = _; next; components} -> (
-      try
-        let desc, pos = Tbl.find_str name components in
-        (Pdot (root, name, pos), desc) :: find_all name next
-      with Not_found -> find_all name next)
+      match components.find name with
+      | Some (desc, pos) -> (Pdot (root, name, pos), desc) :: find_all name next
+      | None -> find_all name next)
 
   let rec fold_name f tbl acc =
     let acc =
@@ -357,11 +401,10 @@ module Id_tbl = struct
     in
     match tbl.opened with
     | Some {root; using = _; next; components} ->
-      acc
-      |> Tbl.fold
-           (fun name (desc, pos) -> f name (Pdot (root, name, pos), desc))
-           components
-      |> fold_name f next
+      let acc = ref acc in
+      components.iter (fun name (desc, pos) ->
+          acc := f name (Pdot (root, name, pos), desc) !acc);
+      fold_name f next !acc
     | None -> acc
 
   let rec local_keys tbl acc =
@@ -374,10 +417,8 @@ module Id_tbl = struct
     Ident.iter (fun id desc -> f id (Pident id, desc)) tbl.current;
     match tbl.opened with
     | Some {root; using = _; next; components} ->
-      Tbl.iter
-        (fun s (x, pos) ->
-          f (Ident.hide (Ident.create s) (* ??? *)) (Pdot (root, s, pos), x))
-        components;
+      components.iter (fun s (x, pos) ->
+          f (Ident.hide (Ident.create s) (* ??? *)) (Pdot (root, s, pos), x));
       iter f next
     | None -> ()
 
@@ -414,6 +455,7 @@ type t = {
 and module_components = {
   deprecated: string option;
   loc: Location.t;
+  frozen_root: Frozen_values.view option;
   comps:
     ( t * Subst.t * Path.t * Types.module_type,
       module_components_repr option )
@@ -575,10 +617,17 @@ let strengthen =
 let md md_type = {md_type; md_attributes = []; md_loc = Location.none}
 
 let get_components_opt c =
+  let maker =
+    match c.frozen_root with
+    | None -> !components_of_module_maker'
+    | Some view ->
+      fun (env, sub, path, _) ->
+        let signature = Frozen_values.source_signature view in
+        !components_of_module_maker' (env, sub, path, Mty_signature signature)
+  in
   match !(can_load_cmis ()) with
-  | Can_load_cmis -> Env_lazy.force !components_of_module_maker' c.comps
-  | Cannot_load_cmis log ->
-    Env_lazy.force_logged log !components_of_module_maker' c.comps
+  | Can_load_cmis -> Env_lazy.force maker c.comps
+  | Cannot_load_cmis log -> Env_lazy.force_logged log maker c.comps
 
 let empty_structure =
   Structure_comps
@@ -698,6 +747,8 @@ type pers_struct = {
   ps_filename: string;
   ps_flags: pers_flags list;
   ps_snapshot: request_snapshot option;
+  ps_frozen_values: Frozen_values.view option;
+  ps_frozen_components: (Path.t, module_components) Hashtbl.t;
 }
 [@@warning "-69"]
 
@@ -705,6 +756,57 @@ let persistent_structures_key =
   Domain.DLS.new_key (fun () ->
       (Hashtbl.create 17 : (string, pers_struct option) Hashtbl.t))
 let persistent_structures () = Domain.DLS.get persistent_structures_key
+
+let same_file_stats first second =
+  first.Unix.st_dev = second.Unix.st_dev
+  && first.Unix.st_ino = second.Unix.st_ino
+  && first.Unix.st_size = second.Unix.st_size
+  && first.Unix.st_mtime = second.Unix.st_mtime
+  && first.Unix.st_ctime = second.Unix.st_ctime
+
+type frozen_values_entry = {
+  resolved_filename: string;
+  stats: Unix.stats;
+  image: Frozen_values.t;
+}
+
+type frozen_values_cache = {
+  lock: Mutex.t;
+  entries: (string, frozen_values_entry) Hashtbl.t;
+}
+
+let frozen_values_cache_key = Domain.DLS.new_key (fun () -> None)
+
+let prepare_frozen_values ~name ~filename cmi =
+  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then None
+  else
+    match Domain.DLS.get frozen_values_cache_key with
+    | None -> None
+    | Some cache -> (
+      try
+        let resolved_filename = Compiler_request_state.resolve_path filename in
+        let stats = Unix.stat resolved_filename in
+        Mutex.lock cache.lock;
+        Fun.protect
+          (fun () ->
+            match Hashtbl.find_opt cache.entries name with
+            | Some entry
+              when entry.resolved_filename = resolved_filename
+                   && same_file_stats entry.stats stats ->
+              Some entry.image
+            | _ ->
+              Compiler_phase_trace.dependency "dependency.frozen_values_prepare"
+                (fun () ->
+                  match Frozen_values.freeze cmi with
+                  | Error _ -> None
+                  | Ok image ->
+                    if same_file_stats (Unix.stat resolved_filename) stats then (
+                      Hashtbl.replace cache.entries name
+                        {resolved_filename; stats; image};
+                      Some image)
+                    else None))
+          ~finally:(fun () -> Mutex.unlock cache.lock)
+      with Sys_error _ | Unix.Unix_error _ -> None)
 
 (* Consistency between persistent structures *)
 
@@ -774,6 +876,10 @@ let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
       let sign = cmi.cmi_sign in
       let crcs = cmi.cmi_crcs in
       let flags = cmi.cmi_flags in
+      let frozen_values =
+        prepare_frozen_values ~name ~filename cmi
+        |> Option.map Frozen_values.create_view
+      in
       let deprecated =
         List.fold_left
           (fun _ -> function
@@ -784,17 +890,31 @@ let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
         !components_of_module' ~deprecated ~loc:Location.none empty
           Subst.identity
           (Pident (Ident.create_persistent name))
-          (Mty_signature sign)
+          (Mty_signature (if Option.is_some frozen_values then [] else sign))
+      in
+      let comps =
+        match frozen_values with
+        | Some view -> {comps with frozen_root = Some view}
+        | None -> comps
       in
       let ps =
         {
           ps_name = name;
-          ps_sig = lazy (Subst.signature Subst.identity sign);
+          ps_sig =
+            lazy
+              (Compiler_phase_trace.dependency_lazy
+                 (fun () -> "dependency.signature_copy:" ^ name)
+                 (fun () ->
+                   match frozen_values with
+                   | Some view -> Frozen_values.copy_signature view
+                   | None -> Subst.signature Subst.identity sign));
           ps_comps = comps;
           ps_crcs = crcs;
           ps_filename = filename;
           ps_flags = flags;
           ps_snapshot = None;
+          ps_frozen_values = frozen_values;
+          ps_frozen_components = Hashtbl.create 8;
         }
       in
       if ps.ps_name <> modname then
@@ -905,6 +1025,34 @@ let get_unit_name () = !(current_unit ())
 
 (* Lookup by identifier *)
 
+let find_frozen_scope_path path =
+  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then None
+  else
+    let rec find visited path =
+      if List.exists (Path.same path) visited then None
+      else
+        let visited = path :: visited in
+        match path with
+        | Pident id
+          when Ident.persistent id && Ident.name id <> !(current_unit ()) ->
+          let ps = find_pers_struct (Ident.name id) in
+          Option.map
+            (fun view -> (view, Frozen_values.root_scope view))
+            ps.ps_frozen_values
+        | Pdot (parent, name, _) -> (
+          match find visited parent with
+          | Some (view, scope) -> (
+            match Frozen_values.find_module scope name with
+            | Some (nested, _, _, _) -> Some (view, nested)
+            | None -> (
+              match Frozen_values.find_module_alias view scope name with
+              | Some target -> find visited target
+              | None -> None))
+          | None -> None)
+        | Pident _ | Papply _ -> None
+    in
+    find [] path
+
 let rec find_module_descr path env =
   match path with
   | Pident id -> (
@@ -914,11 +1062,34 @@ let rec find_module_descr path env =
         (find_pers_struct (Ident.name id)).ps_comps
       else raise Not_found)
   | Pdot (p, s, _pos) -> (
-    match get_components (find_module_descr p env) with
-    | Structure_comps c ->
-      let descr, _pos = Tbl.find_str s c.comp_components in
-      descr
-    | Functor_comps _ -> raise Not_found)
+    let generic () =
+      match get_components (find_module_descr p env) with
+      | Structure_comps c ->
+        let descr, _pos = Tbl.find_str s c.comp_components in
+        descr
+      | Functor_comps _ -> raise Not_found
+    in
+    match find_frozen_scope_path p with
+    | Some (view, scope) -> (
+      match Frozen_values.find_module_declaration view scope s with
+      | Some (declaration, position) -> (
+        let path = Pdot (p, s, position) in
+        let ps = find_pers_struct (Ident.name (Path.head p)) in
+        match Hashtbl.find_opt ps.ps_frozen_components path with
+        | Some components -> components
+        | None ->
+          let components =
+            !components_of_module'
+              ~deprecated:
+                (Builtin_attributes.deprecated_of_attrs
+                   declaration.md_attributes)
+              ~loc:declaration.md_loc empty Subst.identity path
+              declaration.md_type
+          in
+          Hashtbl.add ps.ps_frozen_components path components;
+          components)
+      | None -> generic ())
+    | None -> generic ())
   | Papply (p1, p2) -> (
     match get_components (find_module_descr p1 env) with
     | Functor_comps f -> !components_of_functor_appl' f env p1 p2
@@ -935,22 +1106,76 @@ let find proj1 proj2 path env =
     | Functor_comps _ -> raise Not_found)
   | Papply _ -> raise Not_found
 
-let find_value = find (fun env -> env.values) (fun sc -> sc.comp_values)
+let find_value_generic = find (fun env -> env.values) (fun sc -> sc.comp_values)
 
-and find_type_full = find (fun env -> env.types) (fun sc -> sc.comp_types)
+let find_value path env =
+  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then
+    find_value_generic path env
+  else
+    match path with
+    | Pdot (module_path, name, _) -> (
+      match find_frozen_scope_path module_path with
+      | Some (view, scope) -> (
+        match
+          Compiler_phase_trace.dependency "dependency.frozen_value_lookup"
+            (fun () -> Frozen_values.find_in_scope view scope name)
+        with
+        | Some (description, _) -> description
+        | None -> find_value_generic path env)
+      | None -> find_value_generic path env)
+    | _ -> find_value_generic path env
 
-and find_modtype = find (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes)
+and find_type_full_generic =
+  find (fun env -> env.types) (fun sc -> sc.comp_types)
+
+and find_modtype path env =
+  match path with
+  | Pdot (module_path, name, _) -> (
+    match find_frozen_scope_path module_path with
+    | Some (view, scope) -> (
+      match Frozen_values.find_modtype_declaration view scope name with
+      | Some declaration -> declaration
+      | None ->
+        find (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes) path env)
+    | None ->
+      find (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes) path env)
+  | Pident _ | Papply _ ->
+    find (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes) path env
 
 let type_of_cstr path = function
   | {cstr_inlined = Some d; _} ->
     (d, ([], List.map snd (Datarepr.labels_of_type path d)))
   | _ -> assert false
 
-let find_type_full path env =
+let find_frozen_type path =
+  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then None
+  else
+    match path with
+    | Pdot (module_path, name, _) -> (
+      match find_frozen_scope_path module_path with
+      | Some (view, scope) ->
+        Compiler_phase_trace.dependency "dependency.frozen_type_lookup"
+          (fun () -> Frozen_values.find_type_in_scope view scope name)
+      | None -> None)
+    | Pident _ | Papply _ -> None
+
+let find_frozen_extension mod_path name =
+  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then None
+  else
+    match find_frozen_scope_path mod_path with
+    | Some (view, scope) ->
+      Compiler_phase_trace.dependency "dependency.frozen_extension_lookup"
+        (fun () -> Frozen_values.find_extension_in_scope view scope name)
+    | None -> None
+
+let rec find_type_full path env =
   match Path.constructor_typath path with
   | Regular p -> (
     try (Path_map.find p env.local_constraints, ([], []))
-    with Not_found -> find_type_full p env)
+    with Not_found -> (
+      match find_frozen_type p with
+      | Some declaration -> declaration
+      | None -> find_type_full_generic p env))
   | Cstr (ty_path, s) ->
     let _, (cstrs, _) =
       try find_type_full ty_path env with Not_found -> assert false
@@ -966,25 +1191,29 @@ let find_type_full path env =
     in
     type_of_cstr path cstr
   | Ext (mod_path, s) -> (
-    let comps =
-      try find_module_descr mod_path env with Not_found -> assert false
-    in
-    let comps =
-      match get_components comps with
-      | Structure_comps c -> c
-      | Functor_comps _ -> assert false
-    in
-    let exts =
-      Ext_list.filter
-        (try Tbl.find_str s comps.comp_constrs with Not_found -> assert false)
-        (function
-          | {cstr_kind = Extension_constructor _} -> true
-          | _ -> false)
-    in
+    match find_frozen_extension mod_path s with
+    | Some constructor -> type_of_cstr path constructor
+    | None -> (
+      let comps =
+        try find_module_descr mod_path env with Not_found -> assert false
+      in
+      let comps =
+        match get_components comps with
+        | Structure_comps c -> c
+        | Functor_comps _ -> assert false
+      in
+      let exts =
+        Ext_list.filter
+          (try Tbl.find_str s comps.comp_constrs
+           with Not_found -> assert false)
+          (function
+            | {cstr_kind = Extension_constructor _} -> true
+            | _ -> false)
+      in
 
-    match exts with
-    | [cstr] -> type_of_cstr path cstr
-    | _ -> assert false)
+      match exts with
+      | [cstr] -> type_of_cstr path cstr
+      | _ -> assert false))
 
 let find_type p env = fst (find_type_full p env)
 let find_type_descrs p env = snd (find_type_full p env)
@@ -1001,11 +1230,22 @@ let find_module ~alias path env =
         md (Mty_signature (Lazy.force ps.ps_sig))
       else raise Not_found)
   | Pdot (p, s, _pos) -> (
-    match get_components (find_module_descr p env) with
-    | Structure_comps c ->
-      let data, _pos = Tbl.find_str s c.comp_modules in
-      Env_lazy.force subst_modtype_maker data
-    | Functor_comps _ -> raise Not_found)
+    match find_frozen_scope_path p with
+    | Some (view, scope) -> (
+      match Frozen_values.find_module_declaration view scope s with
+      | Some (declaration, _) -> declaration
+      | None -> (
+        match get_components (find_module_descr p env) with
+        | Structure_comps c ->
+          let data, _pos = Tbl.find_str s c.comp_modules in
+          Env_lazy.force subst_modtype_maker data
+        | Functor_comps _ -> raise Not_found))
+    | None -> (
+      match get_components (find_module_descr p env) with
+      | Structure_comps c ->
+        let data, _pos = Tbl.find_str s c.comp_modules in
+        Env_lazy.force subst_modtype_maker data
+      | Functor_comps _ -> raise Not_found))
   | Papply (p1, p2) -> (
     let desc1 = find_module_descr p1 env in
     match get_components desc1 with
@@ -1036,9 +1276,42 @@ let rec normalize_path lax env path =
     | _ -> path
   in
   try
-    match find_module ~alias:true path env with
-    | {md_type = Mty_alias (_, path1)} -> normalize_path lax env path1
-    | _ -> path
+    match path with
+    | Pdot (parent, name, _) when lax -> (
+      match find_frozen_scope_path parent with
+      | Some (view, scope) -> (
+        match Frozen_values.find_module_alias view scope name with
+        | Some target -> normalize_path lax env target
+        | None -> (
+          if
+            Option.is_some (Frozen_values.find_module scope name)
+            || Frozen_values.is_type_name_in_scope scope name
+          then path
+          else
+            match find_module ~alias:true path env with
+            | {md_type = Mty_alias (_, path1)} -> normalize_path lax env path1
+            | _ -> path))
+      | None -> (
+        match find_module ~alias:true path env with
+        | {md_type = Mty_alias (_, path1)} -> normalize_path lax env path1
+        | _ -> path))
+    | Pident id when Ident.persistent id && Ident.name id <> !(current_unit ())
+      -> (
+      match Id_tbl.find_same id env.modules with
+      | _ -> (
+        match find_module ~alias:true path env with
+        | {md_type = Mty_alias (_, path1)} -> normalize_path lax env path1
+        | _ -> path)
+      | exception Not_found ->
+        (* A compiled unit's root is a signature, never a module alias.
+           Loading it validates the dependency without copying its entire
+           signature just to normalize a value access path. *)
+        ignore (find_pers_struct (Ident.name id));
+        path)
+    | Pident _ | Pdot _ | Papply _ -> (
+      match find_module ~alias:true path env with
+      | {md_type = Mty_alias (_, path1)} -> normalize_path lax env path1
+      | _ -> path)
   with
   | Not_found
   when lax
@@ -1141,6 +1414,44 @@ let rec lookup_module_descr_aux ?loc lid env =
       (Pdot (p, s, pos), descr)
     | Functor_comps _ -> raise Not_found)
 
+and lookup_frozen_scope ?loc lid env =
+  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then None
+  else
+    match lid with
+    | Lident name -> (
+      let path, _ = lookup_module_descr ?loc lid env in
+      match path with
+      | Pident id when Ident.persistent id ->
+        let ps = find_pers_struct name in
+        Option.map
+          (fun view -> (path, view, Frozen_values.root_scope view))
+          ps.ps_frozen_values
+      | Pident _ | Pdot _ | Papply _ -> None)
+    | Ldot (parent, name) -> (
+      match lookup_frozen_scope ?loc parent env with
+      | Some (parent_path, view, scope) -> (
+        match Frozen_values.find_module scope name with
+        | Some (nested, position, module_loc, deprecated) ->
+          let path = Pdot (parent_path, name, position) in
+          mark_module_used env name module_loc;
+          report_deprecated ?loc path deprecated;
+          Some (path, view, nested)
+        | None -> (
+          match
+            ( Frozen_values.find_module_info scope name,
+              Frozen_values.find_module_alias view scope name )
+          with
+          | Some (position, module_loc, deprecated), Some target -> (
+            match find_frozen_scope_path target with
+            | Some (target_view, target_scope) ->
+              let path = Pdot (parent_path, name, position) in
+              mark_module_used env name module_loc;
+              report_deprecated ?loc path deprecated;
+              Some (path, target_view, target_scope)
+            | None -> None)
+          | _ -> None))
+      | None -> None)
+
 and lookup_module_descr ?loc lid env =
   let ((p, comps) as res) = lookup_module_descr_aux ?loc lid env in
   mark_module_used env (Path.last p) comps.loc;
@@ -1179,16 +1490,36 @@ and lookup_module ~load ?loc lid env : Path.t =
          report_deprecated ?loc p ps.ps_comps.deprecated);
       p)
   | Ldot (l, s) -> (
-    let p, descr = lookup_module_descr ?loc l env in
-    match get_components descr with
-    | Structure_comps c ->
-      let _data, pos = Tbl.find_str s c.comp_modules in
-      let comps, _ = Tbl.find_str s c.comp_components in
-      mark_module_used env s comps.loc;
-      let p = Pdot (p, s, pos) in
-      report_deprecated ?loc p comps.deprecated;
-      p
-    | Functor_comps _ -> raise Not_found)
+    match lookup_frozen_scope ?loc l env with
+    | Some (parent_path, _, scope) -> (
+      match Frozen_values.find_module_info scope s with
+      | Some (position, module_loc, deprecated) ->
+        let path = Pdot (parent_path, s, position) in
+        mark_module_used env s module_loc;
+        report_deprecated ?loc path deprecated;
+        path
+      | None -> (
+        let p, descr = lookup_module_descr ?loc l env in
+        match get_components descr with
+        | Structure_comps c ->
+          let _data, pos = Tbl.find_str s c.comp_modules in
+          let comps, _ = Tbl.find_str s c.comp_components in
+          mark_module_used env s comps.loc;
+          let p = Pdot (p, s, pos) in
+          report_deprecated ?loc p comps.deprecated;
+          p
+        | Functor_comps _ -> raise Not_found))
+    | None -> (
+      let p, descr = lookup_module_descr ?loc l env in
+      match get_components descr with
+      | Structure_comps c ->
+        let _data, pos = Tbl.find_str s c.comp_modules in
+        let comps, _ = Tbl.find_str s c.comp_components in
+        mark_module_used env s comps.loc;
+        let p = Pdot (p, s, pos) in
+        report_deprecated ?loc p comps.deprecated;
+        p
+      | Functor_comps _ -> raise Not_found))
 
 let lookup proj1 proj2 ?loc lid env =
   match lid with
@@ -1229,20 +1560,103 @@ let cstr_shadow cstr1 cstr2 =
 
 let lbl_shadow _lbl1 _lbl2 = false
 
-let lookup_value = lookup (fun env -> env.values) (fun sc -> sc.comp_values)
-let lookup_all_constructors =
+let lookup_value_generic =
+  lookup (fun env -> env.values) (fun sc -> sc.comp_values)
+
+let lookup_value ?loc lid env =
+  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then
+    lookup_value_generic ?loc lid env
+  else
+    match lid with
+    | Longident.Ldot (module_lid, name) -> (
+      match lookup_frozen_scope ?loc module_lid env with
+      | Some (module_path, view, scope) -> (
+        match
+          Compiler_phase_trace.dependency "dependency.frozen_value_lookup"
+            (fun () -> Frozen_values.find_in_scope view scope name)
+        with
+        | Some (description, position) ->
+          (Pdot (module_path, name, position), description)
+        | None -> lookup_value_generic ?loc lid env)
+      | None -> lookup_value_generic ?loc lid env)
+    | Longident.Lident _ -> lookup_value_generic ?loc lid env
+let lookup_all_constructors_generic =
   lookup_all_simple
     (fun env -> env.constrs)
     (fun sc -> sc.comp_constrs)
     cstr_shadow
-let lookup_all_labels =
+
+let lookup_all_constructors ?loc lid env =
+  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then
+    lookup_all_constructors_generic ?loc lid env
+  else
+    match lid with
+    | Longident.Ldot (module_lid, name) -> (
+      match lookup_frozen_scope ?loc module_lid env with
+      | Some (_, view, scope) -> (
+        match
+          Compiler_phase_trace.dependency "dependency.frozen_constructor_lookup"
+            (fun () -> Frozen_values.find_constructors_in_scope view scope name)
+        with
+        | Some constructors ->
+          List.map (fun constructor -> (constructor, fun () -> ())) constructors
+        | None -> lookup_all_constructors_generic ?loc lid env)
+      | None -> lookup_all_constructors_generic ?loc lid env)
+    | Longident.Lident _ -> lookup_all_constructors_generic ?loc lid env
+let lookup_all_labels_generic =
   lookup_all_simple
     (fun env -> env.labels)
     (fun sc -> sc.comp_labels)
     lbl_shadow
-let lookup_type = lookup (fun env -> env.types) (fun sc -> sc.comp_types)
-let lookup_modtype =
-  lookup (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes)
+
+let lookup_all_labels ?loc lid env =
+  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then
+    lookup_all_labels_generic ?loc lid env
+  else
+    match lid with
+    | Longident.Ldot (module_lid, name) -> (
+      match lookup_frozen_scope ?loc module_lid env with
+      | Some (_, view, scope) -> (
+        match
+          Compiler_phase_trace.dependency "dependency.frozen_label_lookup"
+            (fun () -> Frozen_values.find_labels_in_scope view scope name)
+        with
+        | Some labels -> List.map (fun label -> (label, fun () -> ())) labels
+        | None -> lookup_all_labels_generic ?loc lid env)
+      | None -> lookup_all_labels_generic ?loc lid env)
+    | Longident.Lident _ -> lookup_all_labels_generic ?loc lid env
+let lookup_type_generic =
+  lookup (fun env -> env.types) (fun sc -> sc.comp_types)
+
+let lookup_type ?loc lid env =
+  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then
+    lookup_type_generic ?loc lid env
+  else
+    match lid with
+    | Longident.Ldot (module_lid, name) -> (
+      match lookup_frozen_scope ?loc module_lid env with
+      | Some (module_path, view, scope) -> (
+        match
+          Compiler_phase_trace.dependency "dependency.frozen_type_lookup"
+            (fun () -> Frozen_values.find_type_in_scope view scope name)
+        with
+        | Some declaration -> (Pdot (module_path, name, nopos), declaration)
+        | None -> lookup_type_generic ?loc lid env)
+      | None -> lookup_type_generic ?loc lid env)
+    | Longident.Lident _ -> lookup_type_generic ?loc lid env
+let lookup_modtype ?loc lid env =
+  let generic () =
+    lookup (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes) ?loc lid env
+  in
+  match lid with
+  | Lident _ -> generic ()
+  | Ldot (module_lid, name) -> (
+    match lookup_frozen_scope ?loc module_lid env with
+    | Some (module_path, view, scope) -> (
+      match Frozen_values.find_modtype_declaration view scope name with
+      | Some declaration -> (Pdot (module_path, name, nopos), declaration)
+      | None -> generic ())
+    | None -> generic ())
 
 let copy_types l env =
   let f desc =
@@ -1990,10 +2404,12 @@ let preparing_expanded_snapshot = Domain.DLS.new_key (fun () -> false)
 let prepare_expanded_snapshot : (alias_key -> unit) ref = ref (fun _ -> ())
 
 let expanded_snapshot_enabled () =
-  match Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" with
-  | Some "0" -> false
-  | Some ("force" | "force_typed" | "typed" | "audit") -> true
-  | _ -> Domain.DLS.get expanded_snapshot_enabled_key
+  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" = Some "1" then false
+  else
+    match Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" with
+    | Some "0" -> false
+    | Some ("force" | "force_typed" | "typed" | "audit") -> true
+    | _ -> Domain.DLS.get expanded_snapshot_enabled_key
 
 let typed_expanded_snapshot_reuse () =
   not (Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" = Some "force")
@@ -2003,13 +2419,6 @@ let audit_expanded_snapshot_reuse () =
 
 let force_fresh_expanded_snapshot () =
   Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" = Some "force"
-
-let same_file_stats first second =
-  first.Unix.st_dev = second.Unix.st_dev
-  && first.Unix.st_ino = second.Unix.st_ino
-  && first.Unix.st_size = second.Unix.st_size
-  && first.Unix.st_mtime = second.Unix.st_mtime
-  && first.Unix.st_ctime = second.Unix.st_ctime
 
 type cmi_cache_entry = {
   resolved_filename: string;
@@ -2023,6 +2432,7 @@ type cmi_cache_entry = {
 type dependency_cache = {
   mutex: Mutex.t;
   mutable available: dependency_cache_table list;
+  frozen_values: frozen_values_cache;
 }
 
 and dependency_cache_table = {
@@ -2030,7 +2440,12 @@ and dependency_cache_table = {
   expanded_snapshot: expanded_snapshot_cache_entry option ref;
 }
 
-let create_dependency_cache () = {mutex = Mutex.create (); available = []}
+let create_dependency_cache () =
+  {
+    mutex = Mutex.create ();
+    available = [];
+    frozen_values = {lock = Mutex.create (); entries = Hashtbl.create 32};
+  }
 
 let cmi_cache_key = Domain.DLS.new_key (fun () -> Hashtbl.create 2)
 let cmi_cache () = Domain.DLS.get cmi_cache_key
@@ -2153,7 +2568,12 @@ let alias_key_of_module path mty =
 let is_alias_path key path mty = alias_key_of_module path mty = Some key
 
 let rec components_of_module ~deprecated ~loc env sub path mty =
-  {deprecated; loc; comps = Env_lazy.create (env, sub, path, mty)}
+  {
+    deprecated;
+    loc;
+    frozen_root = None;
+    comps = Env_lazy.create (env, sub, path, mty);
+  }
 
 and components_of_module_maker (env, sub, path, mty) =
   Compiler_phase_trace.dependency_lazy
@@ -2229,66 +2649,70 @@ and components_of_module_maker_uncached (env, sub, path, mty) =
     let pos = ref 0 in
     let labels_by_name = Hashtbl.create 127 in
     let label_names_rev = ref [] in
-    List.iter2
-      (fun item path ->
-        match item with
-        | Sig_value (id, decl) -> (
-          let decl' = Subst.value_description sub decl in
-          c.comp_values <- Tbl.add (Ident.name id) (decl', !pos) c.comp_values;
-          match decl.val_kind with
-          | Val_prim _ -> ()
-          | _ -> incr pos)
-        | Sig_type (id, decl, _) ->
-          let decl' = Subst.type_declaration sub decl in
-          Datarepr.set_row_name decl' (Subst.type_path sub (Path.Pident id));
-          let constructors =
-            List.map snd (Datarepr.constructors_of_type path decl')
-          in
-          let labels = List.map snd (Datarepr.labels_of_type path decl') in
-          c.comp_types <-
-            Tbl.add (Ident.name id)
-              ((decl', (constructors, labels)), nopos)
-              c.comp_types;
-          List.iter
-            (fun descr ->
-              c.comp_constrs <- add_to_tbl descr.cstr_name descr c.comp_constrs)
-            constructors;
-          List.iter
-            (fun descr ->
-              let name = descr.lbl_name in
-              match Hashtbl.find labels_by_name name with
-              | _, previous ->
-                Hashtbl.replace labels_by_name name (name, descr :: previous)
-              | exception Not_found ->
-                Hashtbl.add labels_by_name name (name, [descr]);
-                label_names_rev := name :: !label_names_rev)
-            labels;
-          env := store_type_infos id decl !env
-        | Sig_typext (id, ext, _) ->
-          let ext' = Subst.extension_constructor sub ext in
-          let descr = Datarepr.extension_descr path ext' in
-          c.comp_constrs <- add_to_tbl (Ident.name id) descr c.comp_constrs;
-          incr pos
-        | Sig_module (id, md, _) ->
-          let md' = Env_lazy.create (sub, md) in
-          c.comp_modules <- Tbl.add (Ident.name id) (md', !pos) c.comp_modules;
-          let deprecated =
-            Builtin_attributes.deprecated_of_attrs md.md_attributes
-          in
-          let comps =
-            components_of_module ~deprecated ~loc:md.md_loc !env sub path
-              md.md_type
-          in
-          c.comp_components <-
-            Tbl.add (Ident.name id) (comps, !pos) c.comp_components;
-          env := store_module ~check:false id md !env;
-          incr pos
-        | Sig_modtype (id, decl) ->
-          let decl' = Subst.modtype_declaration sub decl in
-          c.comp_modtypes <-
-            Tbl.add (Ident.name id) (decl', nopos) c.comp_modtypes;
-          env := store_modtype id decl !env)
-      sg pl;
+    Compiler_phase_trace.dependency "dependency.components_build" (fun () ->
+        List.iter2
+          (fun item path ->
+            match item with
+            | Sig_value (id, decl) -> (
+              let decl' = Subst.value_description sub decl in
+              c.comp_values <-
+                Tbl.add (Ident.name id) (decl', !pos) c.comp_values;
+              match decl.val_kind with
+              | Val_prim _ -> ()
+              | _ -> incr pos)
+            | Sig_type (id, decl, _) ->
+              let decl' = Subst.type_declaration sub decl in
+              Datarepr.set_row_name decl' (Subst.type_path sub (Path.Pident id));
+              let constructors =
+                List.map snd (Datarepr.constructors_of_type path decl')
+              in
+              let labels = List.map snd (Datarepr.labels_of_type path decl') in
+              c.comp_types <-
+                Tbl.add (Ident.name id)
+                  ((decl', (constructors, labels)), nopos)
+                  c.comp_types;
+              List.iter
+                (fun descr ->
+                  c.comp_constrs <-
+                    add_to_tbl descr.cstr_name descr c.comp_constrs)
+                constructors;
+              List.iter
+                (fun descr ->
+                  let name = descr.lbl_name in
+                  match Hashtbl.find labels_by_name name with
+                  | _, previous ->
+                    Hashtbl.replace labels_by_name name (name, descr :: previous)
+                  | exception Not_found ->
+                    Hashtbl.add labels_by_name name (name, [descr]);
+                    label_names_rev := name :: !label_names_rev)
+                labels;
+              env := store_type_infos id decl !env
+            | Sig_typext (id, ext, _) ->
+              let ext' = Subst.extension_constructor sub ext in
+              let descr = Datarepr.extension_descr path ext' in
+              c.comp_constrs <- add_to_tbl (Ident.name id) descr c.comp_constrs;
+              incr pos
+            | Sig_module (id, md, _) ->
+              let md' = Env_lazy.create (sub, md) in
+              c.comp_modules <-
+                Tbl.add (Ident.name id) (md', !pos) c.comp_modules;
+              let deprecated =
+                Builtin_attributes.deprecated_of_attrs md.md_attributes
+              in
+              let comps =
+                components_of_module ~deprecated ~loc:md.md_loc !env sub path
+                  md.md_type
+              in
+              c.comp_components <-
+                Tbl.add (Ident.name id) (comps, !pos) c.comp_components;
+              env := store_module ~check:false id md !env;
+              incr pos
+            | Sig_modtype (id, decl) ->
+              let decl' = Subst.modtype_declaration sub decl in
+              c.comp_modtypes <-
+                Tbl.add (Ident.name id) (decl', nopos) c.comp_modtypes;
+              env := store_modtype id decl !env)
+          sg pl);
     (* Large signatures often repeat label names. Keep first appearance order
        to preserve Tbl's shape and the latest key and declarations to preserve
        its contents. *)
@@ -2581,10 +3005,127 @@ let add_components slot root env0 comps =
     modules;
   }
 
+let add_frozen_components slot root env0 view scope =
+  let generic_components () =
+    Compiler_phase_trace.dependency "dependency.frozen_open_fallback" (fun () ->
+        match get_components (find_module_descr root env0) with
+        | Structure_comps components -> components
+        | Functor_comps _ -> raise Not_found)
+  in
+  let from_table table name =
+    try Some (Tbl.find_str name table) with Not_found -> None
+  in
+  let id_source names contains lookup : _ Id_tbl.source =
+    let find name = if contains name then lookup name else None in
+    {
+      find;
+      iter =
+        (fun callback ->
+          List.iter (fun name -> Option.iter (callback name) (find name)) names);
+    }
+  in
+  let ty_source names contains lookup : _ Tycomp_tbl.source =
+    let find name = if contains name then lookup name else None in
+    {
+      find;
+      iter =
+        (fun callback ->
+          List.iter (fun name -> Option.iter (callback name) (find name)) names);
+    }
+  in
+  let values =
+    id_source (Frozen_values.value_names scope) (Frozen_values.has_value scope)
+      (fun name ->
+        match Frozen_values.find_in_scope view scope name with
+        | Some value -> Some value
+        | None -> from_table (generic_components ()).comp_values name)
+  in
+  let types =
+    id_source (Frozen_values.type_names scope) (Frozen_values.has_type scope)
+      (fun name ->
+        match Frozen_values.find_type_in_scope view scope name with
+        | Some declaration -> Some (declaration, nopos)
+        | None -> from_table (generic_components ()).comp_types name)
+  in
+  let constrs =
+    ty_source (Frozen_values.constructor_names scope)
+      (Frozen_values.has_constructor scope) (fun name ->
+        match Frozen_values.find_constructors_in_scope view scope name with
+        | Some constructors -> Some constructors
+        | None -> from_table (generic_components ()).comp_constrs name)
+  in
+  let labels =
+    ty_source (Frozen_values.label_names scope) (Frozen_values.has_label scope)
+      (fun name ->
+        match Frozen_values.find_labels_in_scope view scope name with
+        | Some labels -> Some labels
+        | None -> from_table (generic_components ()).comp_labels name)
+  in
+  let module_cache = Hashtbl.create 8 in
+  let modules =
+    id_source (Frozen_values.module_names scope)
+      (Frozen_values.has_module scope) (fun name ->
+        match Hashtbl.find_opt module_cache name with
+        | Some module_entry -> Some module_entry
+        | None ->
+          let result =
+            match Frozen_values.find_module_declaration view scope name with
+            | Some (declaration, position) ->
+              Some (Env_lazy.create (Subst.identity, declaration), position)
+            | None -> from_table (generic_components ()).comp_modules name
+          in
+          Option.iter (Hashtbl.add module_cache name) result;
+          result)
+  in
+  let modtypes =
+    id_source (Frozen_values.modtype_names scope)
+      (Frozen_values.has_modtype scope) (fun name ->
+        match Frozen_values.find_modtype_declaration view scope name with
+        | Some declaration -> Some (declaration, nopos)
+        | None -> from_table (generic_components ()).comp_modtypes name)
+  in
+  let components =
+    id_source (Frozen_values.module_names scope)
+      (Frozen_values.has_module scope) (fun name ->
+        match Frozen_values.find_module_info scope name with
+        | Some (position, _, _) ->
+          Some (find_module_descr (Pdot (root, name, position)) env0, position)
+        | None -> from_table (generic_components ()).comp_components name)
+  in
+  {
+    env0 with
+    summary = Env_open (env0.summary, root);
+    values =
+      Id_tbl.add_open_source slot (fun x -> `Value x) root values env0.values;
+    types = Id_tbl.add_open_source slot (fun x -> `Type x) root types env0.types;
+    constrs =
+      Tycomp_tbl.add_open_source slot
+        (fun x -> `Constructor x)
+        constrs env0.constrs;
+    labels =
+      Tycomp_tbl.add_open_source slot (fun x -> `Label x) labels env0.labels;
+    modules =
+      Id_tbl.add_open_source slot (fun x -> `Module x) root modules env0.modules;
+    modtypes =
+      Id_tbl.add_open_source slot
+        (fun x -> `Module_type x)
+        root modtypes env0.modtypes;
+    components =
+      Id_tbl.add_open_source slot
+        (fun x -> `Component x)
+        root components env0.components;
+  }
+
 let open_signature slot root env0 =
-  match get_components (find_module_descr root env0) with
-  | Functor_comps _ -> None
-  | Structure_comps comps -> Some (add_components slot root env0 comps)
+  match find_frozen_scope_path root with
+  | Some (view, scope) ->
+    Some
+      (Compiler_phase_trace.dependency "dependency.frozen_open" (fun () ->
+           add_frozen_components slot root env0 view scope))
+  | None -> (
+    match get_components (find_module_descr root env0) with
+    | Functor_comps _ -> None
+    | Structure_comps comps -> Some (add_components slot root env0 comps))
 
 (* Open a signature from a file *)
 
@@ -2684,6 +3225,8 @@ let save_signature_with_imports ?check_exists ~deprecated sg modname filename
             ps_filename = filename;
             ps_flags = cmi.cmi_flags;
             ps_snapshot = None;
+            ps_frozen_values = None;
+            ps_frozen_components = Hashtbl.create 0;
           }
         in
         save_pers_struct crc ps;
@@ -3107,6 +3650,8 @@ let load_expanded_snapshot ~check:_ ~name =
                  ps_filename = entry.target_filename;
                  ps_flags = graph.flags;
                  ps_snapshot = Some snapshot;
+                 ps_frozen_values = None;
+                 ps_frozen_components = Hashtbl.create 0;
                }))
     | _ -> None
 
@@ -3158,15 +3703,18 @@ let with_dependency_cache cache action =
   in
   let previous_cmis = cmi_cache () in
   let previous_snapshot = expanded_snapshot_cache () in
+  let previous_frozen_values = Domain.DLS.get frozen_values_cache_key in
   Domain.DLS.set cmi_cache_key table.cmis;
   Domain.DLS.set expanded_snapshot_cache_key table.expanded_snapshot;
+  Domain.DLS.set frozen_values_cache_key (Some cache.frozen_values);
   Fun.protect action ~finally:(fun () ->
       (* Both graphs are exclusive to this request. Finalization restores
          allocation IDs and any mutated nodes before another domain leases
          the same table. A failed finalization discards the table. *)
       Fun.protect finalize_expanded_snapshot_cache ~finally:(fun () ->
           Domain.DLS.set cmi_cache_key previous_cmis;
-          Domain.DLS.set expanded_snapshot_cache_key previous_snapshot);
+          Domain.DLS.set expanded_snapshot_cache_key previous_snapshot;
+          Domain.DLS.set frozen_values_cache_key previous_frozen_values);
       Mutex.lock cache.mutex;
       Fun.protect
         (fun () -> cache.available <- table :: cache.available)

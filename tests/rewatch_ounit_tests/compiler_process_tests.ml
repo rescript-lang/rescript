@@ -180,6 +180,7 @@ let domain_execution_test _context =
           in
           let ppx_result =
             Compiler_process.run
+              ~session:(Rescript_compiler_driver.create_session ())
               Process.
                 {
                   program = "<embedded compiler>";
