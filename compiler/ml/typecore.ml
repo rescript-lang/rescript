@@ -213,6 +213,10 @@ let iter_expression f e =
       expr e1;
       expr e2;
       may expr eo
+    | Pexp_ternary (e1, e2, e3) ->
+      expr e1;
+      expr e2;
+      expr e3
     | Pexp_for (_, e1, e2, _, e3) ->
       expr e1;
       expr e2;
@@ -1872,6 +1876,7 @@ let rec final_subexpression sexp =
   | Pexp_sequence (_, e)
   | Pexp_try (e, _)
   | Pexp_ifthenelse (_, e, _)
+  | Pexp_ternary (_, e, _)
   | Pexp_match (_, {pc_rhs = e} :: _) ->
     final_subexpression e
   | _ -> sexp
@@ -2067,6 +2072,7 @@ let rec type_approx env sexp =
   | Pexp_try (e, _) -> type_approx env e
   | Pexp_tuple l -> newty (Ttuple (List.map (type_approx env) l))
   | Pexp_ifthenelse (_, e, _) -> type_approx env e
+  | Pexp_ternary (_, e, _) -> type_approx env e
   | Pexp_sequence (_, e) -> type_approx env e
   | Pexp_constraint (e, sty) ->
     let ty = type_approx env e in
@@ -3077,18 +3083,14 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
-  | Pexp_ifthenelse (scond, sifso, sifnot) -> (
-    (* TODO(attributes) Unify the attribute handling in the parser and rest of the compiler. *)
-    let is_ternary =
-      let rec has_ternary = function
-        | [] -> false
-        | ({Location.txt = "res.ternary"}, _) :: _ -> true
-        | _ :: rest -> has_ternary rest
-      in
-      has_ternary sexp.pexp_attributes
-    in
-    let return_context =
-      if is_ternary then Some TernaryReturn else Some IfReturn
+  | (Pexp_ifthenelse _ | Pexp_ternary _) as conditional -> (
+    let scond, sifso, sifnot, return_context =
+      match conditional with
+      | Pexp_ifthenelse (condition, consequent, alternate) ->
+        (condition, consequent, alternate, Some IfReturn)
+      | Pexp_ternary (condition, consequent, alternate) ->
+        (condition, consequent, Some alternate, Some TernaryReturn)
+      | _ -> assert false
     in
     let cond =
       type_expect ~context:(Some IfCondition) env scond Predef.type_bool

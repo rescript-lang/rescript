@@ -77,12 +77,9 @@ let y =
       (fun [arity:2]latestComponentBag _ ->
          ((let currentActualPath = Routes.hashOfUri newUrl in
            let pathFromState = Routes.stateToPath latestComponentBag.state in
-           ((if currentActualPath == pathFromState
-             then None
-             else
-               dispatchEventless (State.UriNavigated currentActualPath)
-                 latestComponentBag ())
-             [@res.ternary ]))
+           currentActualPath == pathFromState ? None :
+             dispatchEventless (State.UriNavigated currentActualPath)
+               latestComponentBag ())
          [@res.braces ])) ())
   [@res.braces ]) />
 let z =
@@ -114,13 +111,11 @@ let icon =
                | _ -> {js|sound-max|js})
   [@res.braces ]) />
 let _ =
-  <MessengerSharedPhotosAlbumViewPhotoReact ref=?((if foo["bar"] === baz
-                                                   then
-                                                     Some
-                                                       (foooooooooooooooooooooooo
-                                                          setRefChild)
-                                                   else None)
-  [@res.ternary ]) key=(node["legacy_attachment_id"]) />
+  <MessengerSharedPhotosAlbumViewPhotoReact ref=?(foo["bar"] === baz ?
+                                                    Some
+                                                      (foooooooooooooooooooooooo
+                                                         setRefChild)
+                                                    : None) key=(node["legacy_attachment_id"]) />
 let _ = <Foo bar />
 let _ = <Foo bar=?bar />
 let _ = <Foo bar=?Baz.bar />
