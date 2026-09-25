@@ -207,7 +207,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Or_pattern_type_clash` | ✓ | `or_pattern_type_clash.res` | |
 | `Multiply_bound_variable` | ✓ | `multiply_bound_variable.res` | |
 | `Orpat_vars` | ✓ | `orpat_vars_unbalanced.res` | |
-| `Expr_type_clash` | ✓ | many `*.res` | Most-fired expression error. Trace-shape sub-cases covered: `if_return_type_mismatch.res` (IfReturn), `maybe_unwrap_option.res` (MaybeUnwrapOption), `string_concat_non_string.res` (StringConcat), `labeled_fn_argument_type_clash.res` (FunctionArgument with explicit label), `math_operator_*.res` (MathOperator family), `ternary_branch_mismatch.res`, `switch_different_types.res`, `try_catch_same_type.res`, `comparison_operator.res`, `array_item_type_mismatch.res`, `array_literal_passed_to_tuple.res`, `if_condition_mismatch.res`, `while_condition.res`, `for_loop_condition.res`, `assert_condition.res`, `function_call_mismatch.res`, `awaiting_non_promise.res`, multiple `jsx_*` fixtures (including `jsx_preserve_external_function.res` for a plain-function external in a JSX component position), `object_literal_for_poly_field.res` (object literal against a polymorphic field annotation). |
+| `Expr_type_clash` | ✓ | many `*.res` | Early-return result checks: `return_type_mismatch.res`, `return_sites_mismatch.res`, `return_nested_type_mismatch.res`, `return_async_mismatch.res`, `return_existential_escape.res`. Most-fired expression error. Trace-shape sub-cases covered: `if_return_type_mismatch.res` (IfReturn), `maybe_unwrap_option.res` (MaybeUnwrapOption), `string_concat_non_string.res` (StringConcat), `labeled_fn_argument_type_clash.res` (FunctionArgument with explicit label), `math_operator_*.res` (MathOperator family), `ternary_branch_mismatch.res`, `switch_different_types.res`, `try_catch_same_type.res`, `comparison_operator.res`, `array_item_type_mismatch.res`, `array_literal_passed_to_tuple.res`, `if_condition_mismatch.res`, `while_condition.res`, `for_loop_condition.res`, `assert_condition.res`, `function_call_mismatch.res`, `awaiting_non_promise.res`, multiple `jsx_*` fixtures (including `jsx_preserve_external_function.res` for a plain-function external in a JSX component position), `object_literal_for_poly_field.res` (object literal against a polymorphic field annotation). |
 | `Apply_non_function` | ✓ | `apply_non_function.res` | |
 | `Apply_wrong_label` | ✓ | `apply_wrong_label.res` | |
 | `Label_multiply_defined` | ✓ | `label_multiply_defined_literal.res` | |
@@ -237,6 +237,8 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Inlined_record_expected` | ✓ | `inlined_record_expected.res`, `super_errors_multi/Cross_inline_record_constructor` | |
 | `Invalid_extension_constructor_payload` | ✓ | `invalid_extension_constructor_payload.res` | |
 | `Not_an_extension_constructor` | ✓ | `not_an_extension_constructor.res` | |
+| `Return_outside_function` | ✓ | `return_outside_function.res`, `return_in_default.res`, `return_in_module.res` | Parameter defaults and module initializers do not inherit a return scope. |
+| `Invalid_return_payload` | ✓ | `return_invalid_payload.res` | |
 | `Break_outside_loop` | ✓ | `break_outside_loop.res`, `break_in_nested_function.res` | |
 | `Continue_outside_loop` | ✓ | `continue_outside_loop.res`, `continue_in_nested_function.res` | |
 | `Literal_overflow` | ✓ | `intoverflow.res` | |
@@ -556,7 +558,8 @@ warnings still fire.
 
 Fixtures follow the naming convention `warning_<NN>_<description>.res`
 so coverage gaps stay greppable. Warning 11 (`Unused_match`) is covered by
-`warning_11_equivalent_string_patterns.res`.
+`warning_11_equivalent_string_patterns.res`. Warning 21 (`Nonreturning_statement`)
+for early return is covered by `warning_21_return_unreachable.res`.
 
 ### Removed warnings
 

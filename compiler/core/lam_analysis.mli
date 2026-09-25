@@ -29,6 +29,10 @@ val no_side_effects : Lambda.t -> bool
 
 val size : Lambda.t -> int
 
+val contains_return : Lambda.t -> bool
+(** Whether a return targets the surrounding function. Does not descend into
+    nested functions, which establish their own return scope. *)
+
 val lfunction_can_be_inlined : Lambda.lfunction -> bool
 
 val ok_to_inline_fun_when_app : Lambda.lfunction -> Lambda.t list -> bool

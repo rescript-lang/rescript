@@ -27,6 +27,9 @@ open Lambda
 let shallow_map_sharing (f : t -> t) (lam : t) : t =
   match lam with
   | Lvar _ | Lglobal_module _ | Lconst _ | Lbreak | Lcontinue -> lam
+  | Lreturn value ->
+    let value' = f value in
+    if value == value' then lam else return value'
   | Lapply ap ->
     let fn = f ap.ap_func in
     let args = Ext_list.map_sharing ap.ap_args f in
@@ -142,6 +145,7 @@ let make_key e =
     | Lifthenelse (cond, ifso, ifnot) ->
       if_ (tr_rec env cond) (tr_rec env ifso) (tr_rec env ifnot)
     | Lsequence (e1, e2) -> seq (tr_rec env e1) (tr_rec env e2)
+    | Lreturn value -> return (tr_rec env value)
     | Lbreak -> break
     | Lcontinue -> continue
     | Lassign (x, e) -> assign x (tr_rec env e)
@@ -168,6 +172,7 @@ let shallow_exists (f : t -> bool) (lam : t) : bool =
   match lam with
   | Lvar _ | Lglobal_module _ | Lconst _ | Lbreak | Lcontinue -> false
   | Lapply {ap_func; ap_args} -> f ap_func || Ext_list.exists ap_args f
+  | Lreturn value -> f value
   | Lfunction {body} -> f body
   | Llet (_, _, arg, body) -> f arg || f body
   | Lletrec (decl, body) -> f body || Ext_list.exists_snd decl f
@@ -217,7 +222,7 @@ let free_ids get l =
     | Lassign (id, _e) -> fv := Set_ident.add !fv id
     | Lvar _ | Lglobal_module _ | Lconst _ | Lapply _ | Lprim _ | Lswitch _
     | Lstringswitch _ | Lstaticraise _ | Lifthenelse _ | Lsequence _ | Lbreak
-    | Lcontinue | Lwhile _ ->
+    | Lreturn _ | Lcontinue | Lwhile _ ->
       ()
   in
   free l;

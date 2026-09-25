@@ -34,6 +34,7 @@ let nodes : (string * Lambda.t) list =
     ("trywith", Lambda.try_ debugger y var);
     ("ifthenelse", Lambda.if_ var debugger debugger);
     ("sequence", Lambda.seq debugger var);
+    ("return", Lambda.return var);
     ("while", Lambda.while_ var debugger);
     ("for", Lambda.for_ y var var Upto debugger);
     ("for_of", Lambda.for_of y var debugger);
@@ -49,6 +50,28 @@ let nodes : (string * Lambda.t) list =
 let suites =
   __FILE__
   >::: [
+         ( "return is effectful and preserves its function boundary" >:: fun _ ->
+           let value = Lambda.return (Lambda.var x) in
+           assert_bool "return cannot be discarded"
+             (not (Lam_analysis.no_side_effects value));
+           assert_bool "return operand is free"
+             (Set_ident.mem (Lambda_traverse.free_variables value) x);
+           let fn body =
+             match
+               Lambda.function_ ~loc ~attr:Lambda.default_function_attribute
+                 ~params:[x] ~body
+             with
+             | Lfunction fn -> fn
+             | _ -> assert false
+           in
+           assert_bool "returning function cannot be beta reduced"
+             (not (Lam_analysis.lfunction_can_be_inlined (fn value)));
+           let nested =
+             Lambda.function_ ~loc ~attr:Lambda.default_function_attribute
+               ~params:[x] ~body:value
+           in
+           assert_bool "a nested function retains its return scope"
+             (Lam_analysis.lfunction_can_be_inlined (fn nested)) );
          ( "an unchanged child is not rebuilt" >:: fun _ ->
            List.iter
              (fun (name, node) ->

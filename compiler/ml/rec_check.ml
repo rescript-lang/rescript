@@ -207,9 +207,9 @@ let rec classify_expression : Typedtree.expression -> sd =
     Static
   | Texp_apply {funct = {exp_desc = Texp_ident (_, _, vd)}} when is_ref vd ->
     Static
-  | Texp_apply _ | Texp_match _ | Texp_ifthenelse _ | Texp_object_get _
-  | Texp_object_set _ | Texp_field _ | Texp_assert _ | Texp_try _
-  | Texp_tagged_template _ | Texp_template _ ->
+  | Texp_return _ | Texp_apply _ | Texp_match _ | Texp_ifthenelse _
+  | Texp_object_get _ | Texp_object_set _ | Texp_field _ | Texp_assert _
+  | Texp_try _ | Texp_tagged_template _ | Texp_template _ ->
     Dynamic
 
 let rec expression : Env.env -> Typedtree.expression -> Use.t =
@@ -252,6 +252,7 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
         (* The body is evaluated, but not used, and not available
            for inclusion in another value *)
         (discard (expression env body)))
+  | Texp_return exp -> Use.inspect (expression env exp)
   | Texp_constant _ -> Use.empty
   | Texp_break | Texp_continue -> Use.empty
   | Texp_apply

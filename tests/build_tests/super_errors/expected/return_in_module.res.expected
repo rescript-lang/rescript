@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/return_in_module.res[0m:[2m3:13-23[0m
+
+  1 [2m│[0m let f = () => {
+  2 [2m│[0m   module M = {
+  [1;31m3[0m [2m│[0m     let x = [1;31m%return(42)[0m
+  4 [2m│[0m   }
+  5 [2m│[0m   M.x
+
+  Early return can only be used inside a function body.

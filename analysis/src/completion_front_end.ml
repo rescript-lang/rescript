@@ -1253,6 +1253,9 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
         match expr.pexp_desc with
         | Pexp_object_literal fields ->
           List.iter (fun (_, e) -> iterator.expr iterator e) fields
+        | Pexp_extension
+            ({txt = "return"}, PStr [{pstr_desc = Pstr_eval (value, [])}]) ->
+          iterator.expr iterator value
         | Pexp_extension ({txt}, _) -> set_result (CextensionNode txt)
         | Pexp_constant _ -> set_result Cnone
         | Pexp_ident lid ->
