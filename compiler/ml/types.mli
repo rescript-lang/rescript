@@ -24,7 +24,7 @@
 open Asttypes
 (** Asttypes exposes basic definitions shared both by Parsetree and Types. *)
 
-type type_expr = {mutable desc: type_desc; mutable level: int; id: int}
+type type_expr = {mutable desc: type_desc; mutable level: int; mutable id: int}
 (** Type expressions for the core language.
 
     The [type_desc] variant defines all the possible type expressions one can
@@ -32,6 +32,9 @@ type type_expr = {mutable desc: type_desc; mutable level: int; id: int}
 
     The [level] field tracks the level of polymorphism associated to a type,
     guiding the generalization algorithm.
+    [id] may be relocated only while a cached dependency graph is exclusive
+    to one compiler request and before it is exposed to typing or used as a
+    map key.
     Put shortly, when referring to a type in a given environment, both the type
     and the environment have a level. If the type has an higher level, then it
     can be considered fully polymorphic (type variables will be printed as

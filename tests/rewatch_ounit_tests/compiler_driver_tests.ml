@@ -981,6 +981,123 @@ let interface_namespace_and_load_path_tests _context =
             ("namespace output is retained: " ^ extension))
         ["cmi"; "cmj"; "cmt"])
 
+let combined_dependency_cache_tests _context =
+  Test_support.with_temp_dir "rewatch-combined-dependency-" (fun root ->
+      let previous_cache = Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" in
+      let previous_trace = Sys.getenv_opt "REWATCH_TYPECHECK_TRACE" in
+      Fun.protect
+        (fun () ->
+          Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" "force";
+          let trace = Filename.concat root "dependency-trace.tsv" in
+          Unix.putenv "REWATCH_TYPECHECK_TRACE" trace;
+          let compile ?(extra = []) input =
+            let _, result = run root ~extra:(["-I"; root] @ extra) input in
+            expect_code 0 result
+          in
+          let compile_dependency () =
+            compile ~extra:["-bs-ns"; "Shapes"] "Circle.resi";
+            compile ~extra:["-bs-ns"; "Shapes"; "-bs-read-cmi"] "Circle.res";
+            compile ~extra:["-no-alias-deps"] "Shapes.mlmap"
+          in
+          write root "Shapes.mlmap" "randjbuildsystem\nCircle\n";
+          write root "Circle.resi" "let value: int\n";
+          write root "Circle.res" "let value = 1\n";
+          compile ~extra:["-no-alias-deps"] "Shapes.mlmap";
+          compile_dependency ();
+          write root "Consumer.res"
+            "open Shapes.Circle\nlet result: int = value\n";
+          compile "Consumer.res";
+          let first_cmi =
+            File_util.read_file (Filename.concat root "Consumer.cmi")
+          in
+          let first_cmt =
+            File_util.read_file (Filename.concat root "Consumer.cmt")
+          in
+          compile "Consumer.res";
+          check
+            (Test_support.contains_text
+               (File_util.read_file trace)
+               "dependency.snapshot_restore")
+            "a repeated namespace open copies the combined snapshot";
+          Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" "0";
+          compile "Consumer.res";
+          assert_equal
+            ~printer:(fun _ -> "<binary CMI>")
+            first_cmi
+            (File_util.read_file (Filename.concat root "Consumer.cmi"));
+          assert_equal
+            ~printer:(fun _ -> "<binary CMT>")
+            first_cmt
+            (File_util.read_file (Filename.concat root "Consumer.cmt"));
+          Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" "force";
+          let value_path =
+            let module_path =
+              Path.Pdot
+                ( Path.Pident (Ident.create_persistent "Shapes"),
+                  "Circle",
+                  Path.nopos )
+            in
+            Path.Pdot (module_path, "value", Path.nopos)
+          in
+          let with_loaded_type action =
+            Fun.protect
+              (fun () ->
+                Compiler_request_state.with_fresh ~cwd:root (fun () ->
+                    Env.with_fresh (fun () ->
+                        (Compiler_request_state.current ()).load_path <- [root];
+                        action
+                          (Env.find_value value_path Env.empty).Types.val_type)))
+              ~finally:Env.finalize_expanded_snapshot_cache
+          in
+          let loaded_type () = with_loaded_type Fun.id in
+          let first = loaded_type () in
+          let second = loaded_type () in
+          check (first != second)
+            "cached dependency types belong to each request";
+          first.Types.desc <- Types.Tvar (Some "changed");
+          check
+            (match second.Types.desc with
+            | Types.Tvar (Some "changed") -> false
+            | _ -> true)
+            "mutating one request's dependency graph does not affect another";
+          Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" "force_typed";
+          compile "Consumer.res";
+          compile "Consumer.res";
+          let reused_first = loaded_type () in
+          let reused_second = loaded_type () in
+          check
+            (reused_first == reused_second)
+            "one compiler domain reuses its verified-clean dependency graph";
+          let other_domain_type = Domain.join (Domain.spawn loaded_type) in
+          check
+            (reused_second != other_domain_type)
+            "different compiler domains have separate dependency graphs";
+          with_loaded_type (fun ty ->
+              ty.Types.desc <- Types.Tvar (Some "changed"));
+          let restored = loaded_type () in
+          check (restored != reused_first)
+            "a changed dependency graph is restored before reuse";
+          check
+            (match restored.Types.desc with
+            | Types.Tvar (Some "changed") -> false
+            | _ -> true)
+            "the restored dependency graph keeps the original type";
+          write root "Circle.resi" "let value: string\n";
+          write root "Circle.res" {|let value = "updated"|};
+          compile_dependency ();
+          write root "ConsumerString.res"
+            "open Shapes.Circle\nlet result: string = value\n";
+          compile "ConsumerString.res";
+          let _, stale = run root ~extra:["-I"; root] "Consumer.res" in
+          expect_code 2 stale)
+        ~finally:(fun () ->
+          (match previous_trace with
+          | Some value -> Unix.putenv "REWATCH_TYPECHECK_TRACE" value
+          | None -> Unix.unsetenv "REWATCH_TYPECHECK_TRACE");
+          match previous_cache with
+          | Some value -> Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" value
+          | None -> Unix.unsetenv "REWATCH_COMBINED_SIGNATURE_CACHE"))
+
 let concurrent_diagnostic_recovery_tests _context =
   Test_support.with_temp_dir "rewatch-driver-errors-" (fun root ->
       let first = Filename.concat root "first" in
@@ -1257,6 +1374,7 @@ let tests =
          "generated_name_isolation" >:: generated_name_isolation_tests;
          "interfaces_namespaces_load_paths"
          >:: interface_namespace_and_load_path_tests;
+         "combined_dependency_cache" >:: combined_dependency_cache_tests;
          "concurrent_diagnostic_recovery"
          >:: concurrent_diagnostic_recovery_tests;
          "concurrent_jsx_diagnostic" >:: concurrent_jsx_diagnostic_tests;

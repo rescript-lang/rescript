@@ -19,7 +19,7 @@ open Asttypes
 
 (* Type expressions for the core language *)
 
-type type_expr = {mutable desc: type_desc; mutable level: int; id: int}
+type type_expr = {mutable desc: type_desc; mutable level: int; mutable id: int}
 
 and arg = {lbl: arg_label; typ: type_expr}
 

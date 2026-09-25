@@ -69,19 +69,20 @@ let run_in_process ?poll (job : Process.job) =
   | input :: reversed_argv ->
     let result =
       time_compiler_request job (fun () ->
-          Rescript_compiler_driver.run_request ~cwd:job.cwd
-            ~argv:(List.rev reversed_argv) ~input
-            ~run_external:
-              (Some
-                 (fun command ->
-                   let command = Platform.shell_command command in
-                   (* Signal handlers are process-wide; domain workers launch
-                      PPXs without replacing the scheduler domain's handlers. *)
-                   let result =
-                     Process.run ?poll ~defer_signals:false ~cwd:job.cwd
-                       command.program command.args
-                   in
-                   (exit_code result.status, result.stdout, result.stderr))))
+          Env.with_expanded_snapshot_cache (fun () ->
+              Rescript_compiler_driver.run_request ~cwd:job.cwd
+                ~argv:(List.rev reversed_argv) ~input
+                ~run_external:
+                  (Some
+                     (fun command ->
+                       let command = Platform.shell_command command in
+                       (* Signal handlers are process-wide; domain workers launch
+                          PPXs without replacing the scheduler domain's handlers. *)
+                       let result =
+                         Process.run ?poll ~defer_signals:false ~cwd:job.cwd
+                           command.program command.args
+                       in
+                       (exit_code result.status, result.stdout, result.stderr)))))
     in
     {
       Process.status = Unix.WEXITED result.exit_code;

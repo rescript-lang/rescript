@@ -215,6 +215,13 @@ val crc_units : unit -> Consistbl.t
 val add_import : string -> unit
 
 val with_fresh : (unit -> 'a) -> 'a
+
+(* Finish the exclusive cache lease after a compiler request, resetting
+   allocated IDs and discarding a graph if typing changed it. *)
+val finalize_expanded_snapshot_cache : unit -> unit
+
+(* Enable the per-domain expanded CMI cache for Rewatch requests. *)
+val with_expanded_snapshot_cache : (unit -> 'a) -> 'a
 (* Keep persistent modules, imports, usage callbacks, and memoized summaries
    local to a compiler request. *)
 

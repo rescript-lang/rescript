@@ -439,16 +439,152 @@ disabled in the same binary. The analyzer checks that exclusive phases account
 for every request. Keep worker count and fixture filesystem fixed when
 comparing results.
 
-The next optimization experiment should test a **content-aware raw CMI byte
-cache** across requests while retaining a fresh Marshal decode, consistency
-check, and mutable type graph for each request. This isolates the 1.16 s of
-repeated path search/open work without assuming decoded graphs can be shared.
-Compare cold and warm builds, invalidate entries when CMIs change, check
-stable artifacts, and measure worker and elapsed time. Eliminating that entire
-lookup row has an ideal eight-worker lower bound of about 0.14 s; decoding
-and signature opening remain. If the gain is small, measure a separate way to
-reuse expanded signature components, especially the large WebAPI imports,
-before attempting that architectural change.
+A separate 64 MiB raw CMI byte-cache prototype kept file bytes across
+requests, checked file metadata before reuse, and decoded a fresh signature
+on every read. Three interleaved eight-worker clean-build pairs gave median
+elapsed times of 1.46 s without the cache and 1.42 s with it; median peak
+RSS was 363,916 and 355,588 KiB, respectively, within the run-to-run
+spread. It left path lookup, Marshal decoding, and signature opening in place,
+so this gain was too small to justify another cache and invalidation path.
+The prototype was removed. The combined experiment below tested CMI loading
+and expansion together while preserving fresh mutable type graphs.
+
+### Expanded WebAPI component cache experiment
+
+A later release-profile experiment tried caching the expanded
+`WebAPI.DOMAPI` alias and its forced `DOMAPI-WebAPI` signature. The cache
+serialized one expanded graph, then deserialized and relocated its generated
+type and identifier IDs for each fresh compiler request. It did not share
+mutable type nodes between requests. The snapshot was 1.74 MB. Tracing
+`components_of_module_maker` with the
+`dependency.expand_components:<path>:alias=<target>` phase found 137
+`WebAPI.DOMAPI` expansions in the
+isolated testrepo clean build, taking 1.724 s and allocating 1.034 GB of
+summed worker work. Preparing the snapshot took about 29 ms once; 136 copies
+took 0.780 s and allocated 785 MB. These phase totals include tracing and
+do not predict elapsed build savings by themselves.
+
+Three interleaved eight-worker clean builds with the same fixture and
+release-profile executable gave median elapsed times of 1.57 s without the
+cache and 1.52 s with it. Median peak process RSS rose from 344,176 to
+466,916 KiB. Two single-worker pairs gave 4.30 and 4.27 s without the cache,
+versus 3.73 and 3.75 s with it; peak RSS rose from about 91 to 118 MiB.
+In one retained watcher edit, the cached compiler request took 8.78 ms versus
+11.32 ms without the cache. The build-level gain with eight workers was too
+small for the memory cost and the extra type-graph relocation machinery, so
+the prototype was removed.
+
+A follow-up replaced the graph-wide ID search with allocation capture while
+expanding the alias. It prepared the snapshot in about 17 ms, but the 136
+copies still took 885 ms of summed worker time. Three eight-worker pairs had
+the same 1.46 s median elapsed time with and without this cache; median peak
+RSS was 489,628 KiB with it and 347,792 KiB without it. Lowering the OCaml
+major-heap space overhead to 10% reduced some peaks but did not produce a
+consistent elapsed-time gain. Its 14,739 selected artifacts matched the
+same-binary uncached build byte for byte. This simpler implementation was
+also removed.
+
+The experiment also checked correctness. An isolated compiler-driver fixture
+confirmed that fresh requests received distinct mutable type nodes and that
+rebuilding `DOMAPI-WebAPI.cmi` from an `int` signature to a `string` signature
+invalidated the cache. All 14,739 selected generated artifacts in the full
+clean build had identical SHA-256 hashes with and without caching. The target
+CMI was already loaded before every alias expansion in this fixture, so this
+cache did not avoid its per-request CMI decode.
+
+### Combined CMI and expansion snapshot experiment
+
+A further prototype stored the raw target CMI signature, its expanded
+signature, and the target and `WebAPI.DOMAPI` component tables in one 2.58 MB
+snapshot. Each request deserialized the snapshot into a fresh graph and
+relocated generated IDs when each lazy stage was first forced. The target and
+namespace CMI paths and file identity, size, modification time, and change
+time guarded reuse. A separate prototype hashed both files on every hit, but
+that validation alone cost 0.71 s of summed worker time across 134 hits; file
+metadata checks took about 0.01 s. A focused compiler-driver test passed
+request graph isolation and target-CMI invalidation, and all 14,739 selected
+artifacts matched the same-binary uncached build byte for byte.
+
+The snapshot clone itself took about 1.45 s and allocated 1.30 GB of summed
+worker work across 134 hits. One traced eight-worker clean build took 1.48 s
+and peaked at 578,340 KiB RSS, versus roughly 1.46 s and 350,000 KiB in the
+uncached runs. Two interleaved single-worker pairs took 4.45 and 4.58 s
+uncached versus 3.64 and 3.68 s cached; peak RSS rose from about 92 to 145
+MiB. A retained watcher edit took 10.94 ms of compiler request time cached
+versus 11.29 ms uncached. Splitting the target components into a separate
+lazy clone raised eight-worker peak RSS to 765,876 KiB and elapsed time to
+1.78 s, though its artifacts still matched. These are small samples and the
+watcher comparison is one edit per mode.
+
+The combined cache made the single-worker clean build about 19% faster, but
+it did not improve the default eight-worker build and substantially increased
+its peak memory. It was removed. Further work needs to reduce the allocation
+cost of fresh mutable graphs or shorten the build's critical path, rather than
+only eliminating summed worker work.
+
+A later two-pair sweep of the same opt-in prototype across worker counts showed
+where the gain disappears. Each pair cleaned the same fixture and interleaved
+uncached and cached builds with the same release executable. Elapsed times and
+peak RSS (KiB) were:
+
+| workers | uncached elapsed | cached elapsed | uncached RSS | cached RSS |
+| ---: | ---: | ---: | ---: | ---: |
+| 2 | 3.90 / 3.74 s | 2.83 / 2.86 s | 134,436 / 135,312 | 214,708 / 240,496 |
+| 4 | 2.16 / 2.15 s | 1.98 / 1.92 s | 203,464 / 205,520 | 328,904 / 346,148 |
+| 6 | 1.65 / 1.66 s | 1.58 / 1.57 s | 281,580 / 280,672 | 469,440 / 476,992 |
+| 8 | 1.61 / 1.44 s | 1.50 / 1.45 s | 344,468 / 356,152 | 633,676 / 600,740 |
+
+The two-worker gain is substantial, but this implementation hard-codes one
+WebAPI alias and is not suitable as a general compiler cache. The eight-worker
+elapsed differences remain within the observed uncached spread.
+
+### Per-domain in-memory graph reuse
+
+The retained implementation keeps one expanded alias graph per compiler domain. A
+domain never compiles two requests at once, so the graph is exclusive while a
+request runs. The cache relocates generated type and identifier IDs when
+the graph enters each request, then checks that mutable graph state is
+restored before the next request. A full serialization check on one eight-worker
+clean build found no retained mutation across 129 reuses. A cheaper typed
+check covered type nodes, captured identifiers, abbreviation and object-field
+references, row-field references, variant layouts, label arrays, and component
+tables; an audit mode compared it with the full serialization check on every
+reuse without a disagreement in that fixture. Cache entries still checked the
+target and namespace CMI paths and file metadata before use.
+
+Three interleaved eight-worker pairs with the typed check took 1.48, 1.49,
+and 1.51 s uncached versus 1.31, 1.27, and 1.25 s cached. Peak RSS ranged from
+347–357 MiB uncached and 520–541 MiB cached. All 14,739 selected artifacts
+matched byte for byte in a same-binary cached/uncached comparison. An
+upper-bound trial without the request-boundary check took 1.19–1.26 s cached
+versus 1.45–1.52 s uncached. That unchecked mode was removed. The checked
+cache is enabled by default for Rewatch compiler workers. It reuses mutable
+nodes sequentially on one domain after verifying that the previous request
+left the graph clean. A dirty graph is restored from the saved snapshot.
+
+A first same-binary release-profile comparison used three interleaved
+eight-worker clean testrepo pairs. Setting
+`REWATCH_COMBINED_SIGNATURE_CACHE=0` disabled the cache for the baseline.
+Elapsed times were 1.64, 1.54, and 1.51 s without the cache versus 1.35,
+1.27, and 1.30 s with it: medians of 1.54 and 1.30 s. A cold two-module
+incremental build was slower with eager snapshot preparation, however:
+0.16 s cached versus 0.09 s uncached. It compiled one WebAPI source that
+opened the large DOMAPI signature only once.
+
+The retained cache waits until two distinct compiler requests have expanded
+the same large alias before preparing a snapshot. A small process-wide table
+tracks that first encounter; expanded graphs remain private to each domain.
+Six further interleaved eight-worker clean pairs took 1.48, 1.43, 1.43,
+1.46, 1.43, and 1.46 s uncached versus 1.23, 1.27, 1.21, 1.28, 1.27, and
+1.26 s cached. Median elapsed time fell from 1.45 to 1.27 s, about 12%.
+Median peak RSS rose from 349 to 523 MiB. Both selected-artifact comparisons
+matched all 14,741 files byte for byte. Three cold incremental pairs after
+this change took 0.08–0.09 s uncached and 0.09 s cached, rebuilt the same
+two modules, and produced identical selected artifacts. The compiler test
+suite, Rewatch integration suite, and a focused test for sequential reuse,
+cross-domain separation, dirty-graph recovery, and CMI invalidation passed.
+A final audit build checked 128 cached request boundaries against full graph
+serialization without a disagreement.
 
 ## Bulk label table checkpoint
 

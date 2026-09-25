@@ -600,10 +600,15 @@ let with_fresh_request_states ~cwd action =
                                                       Compiler_request_state
                                                       .with_fresh ~cwd action)))))))))))))
 
+let with_fresh_request_states_and_snapshot ~cwd action =
+  Fun.protect
+    (fun () -> with_fresh_request_states ~cwd action)
+    ~finally:Env.finalize_expanded_snapshot_cache
+
 let run_argv ?run_external ~cwd argv =
   let input = argv.(Array.length argv - 1) in
   Compiler_phase_trace.request ~cwd ~input (fun () ->
-      with_fresh_request_states ~cwd (fun () ->
+      with_fresh_request_states_and_snapshot ~cwd (fun () ->
           Compiler_phase_trace.section "request.reset" (fun () ->
               reset_state ~new_request:true ());
           Cmt_format.set_args argv;

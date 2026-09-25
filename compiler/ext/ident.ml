@@ -15,7 +15,7 @@
 
 open Format
 
-type t = {stamp: int; name: string; mutable flags: int}
+type t = {mutable stamp: int; name: string; mutable flags: int}
 
 let[@inlnie] max (x : int) y = if x >= y then x else y
 let global_flag = 1
@@ -23,10 +23,15 @@ let predef_exn_flag = 2
 
 (* A stamp of 0 denotes a persistent identifier *)
 
-type counter_state = {mutable currentstamp: int; mutable reinit_level: int}
+type counter_state = {
+  mutable currentstamp: int;
+  mutable reinit_level: int;
+  mutable allocation_capture: t list ref option;
+}
 
 let counter_key =
-  Domain.DLS.new_key (fun () -> {currentstamp = 0; reinit_level = -1})
+  Domain.DLS.new_key (fun () ->
+      {currentstamp = 0; reinit_level = -1; allocation_capture = None})
 
 let counter () = Domain.DLS.get counter_key
 
@@ -44,25 +49,41 @@ let with_fresh action =
     | Some baseline -> baseline
     | None -> previous.currentstamp
   in
-  Domain.DLS.set counter_key {currentstamp = baseline; reinit_level = baseline};
+  Domain.DLS.set counter_key
+    {
+      currentstamp = baseline;
+      reinit_level = baseline;
+      allocation_capture = None;
+    };
   Fun.protect action ~finally:(fun () -> Domain.DLS.set counter_key previous)
+
+let record_allocation state id =
+  match state.allocation_capture with
+  | Some captured -> captured := id :: !captured
+  | None -> ()
 
 let create s =
   let state = counter () in
   state.currentstamp <- state.currentstamp + 1;
-  {name = s; stamp = state.currentstamp; flags = 0}
+  let id = {name = s; stamp = state.currentstamp; flags = 0} in
+  record_allocation state id;
+  id
 
 let create_predef_exn s =
   let state = counter () in
   state.currentstamp <- state.currentstamp + 1;
-  {name = s; stamp = state.currentstamp; flags = predef_exn_flag}
+  let id = {name = s; stamp = state.currentstamp; flags = predef_exn_flag} in
+  record_allocation state id;
+  id
 
 let create_persistent s = {name = s; stamp = 0; flags = global_flag}
 
 let rename i =
   let state = counter () in
   state.currentstamp <- state.currentstamp + 1;
-  {i with stamp = state.currentstamp}
+  let id = {i with stamp = state.currentstamp} in
+  record_allocation state id;
+  id
 
 let name i = i.name
 
@@ -80,6 +101,20 @@ let same ({stamp; name} : t) i2 =
 let binding_time i = i.stamp
 
 let current_time () = (counter ()).currentstamp
+let with_allocation_capture action =
+  let state = counter () in
+  let previous = state.allocation_capture in
+  let captured = ref [] in
+  state.allocation_capture <- Some captured;
+  Fun.protect
+    (fun () ->
+      let result = action () in
+      (result, Array.of_list (List.rev !captured)))
+    ~finally:(fun () ->
+      state.allocation_capture <- previous;
+      match previous with
+      | Some outer -> outer := !captured @ !outer
+      | None -> ())
 let set_current_time t =
   let state = counter () in
   state.currentstamp <- max state.currentstamp t

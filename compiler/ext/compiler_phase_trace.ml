@@ -53,6 +53,11 @@ let dependency name action =
     action ()
   | _ -> section name action
 
+let dependency_lazy name action =
+  match Domain.DLS.get state_key with
+  | None -> action ()
+  | Some _ -> dependency (name ()) action
+
 let open_signature action =
   match Domain.DLS.get state_key with
   | Some {phase = "setup.initial_env"; _} -> section "setup.open" action

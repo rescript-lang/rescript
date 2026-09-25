@@ -31,6 +31,10 @@ val generic_level : int
 val newty2 : int -> type_desc -> type_expr
 (* Create a type *)
 
+val with_allocation_capture : (unit -> 'a) -> 'a * type_expr array
+(** Record fresh type nodes created by [newty2] during [action]. Nested
+    captures also contribute to their outer capture. *)
+
 val newgenty : type_desc -> type_expr
 (* Create a generic type *)
 
