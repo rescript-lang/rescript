@@ -180,8 +180,9 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     |> List.map (fun ((package : Package_plan.t), path, _) ->
         Compiler_process.parse_job ~bsc ~build_dir:package.build_dir
           ~config:package.compile_config path)
-    |> Compiler_process.run_jobs ?poll:attempt.process_poll
-         ~on_complete:parse_completed
+    |> Compiler_process.run_jobs
+         ~session:(Build_session.compiler_session attempt.session)
+         ?poll:attempt.process_poll ~on_complete:parse_completed
   in
   let failed_parse_paths = Hashtbl.create 8 in
   List.iter2

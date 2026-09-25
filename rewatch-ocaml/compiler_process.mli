@@ -3,15 +3,22 @@ val build_identity : string
 val parse_job :
   bsc:string -> build_dir:string -> config:Config.t -> string -> Process.job
 val ast_dependencies : build_dir:string -> string -> string list
-val run : ?poll:(unit -> unit) -> Process.job -> Process.result
+val run :
+  ?session:Rescript_compiler_driver.session ->
+  ?poll:(unit -> unit) ->
+  Process.job ->
+  Process.result
 val run_jobs :
+  ?session:Rescript_compiler_driver.session ->
   ?poll:(unit -> unit) ->
   ?on_complete:(int -> unit) ->
   Process.job list ->
   Process.result list
-val task : Process.job -> Process.task
+val task :
+  ?session:Rescript_compiler_driver.session -> Process.job -> Process.task
 
 val namespace_task :
+  ?session:Rescript_compiler_driver.session ->
   bsc:string ->
   runtime:string ->
   build_dir:string ->

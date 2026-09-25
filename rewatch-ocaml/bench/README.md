@@ -641,6 +641,33 @@ of clean-build wall time on this host and fixture; it does not establish the
 same gain for other projects. `make test`, `make test-rewatch`, the OCaml
 Rewatch integration script, and the focused Rewatch OUnit suite passed.
 
+A later project-session implementation retains tables of up to 32 decoded CMIs
+of at most 64 KiB each and one expanded signature graph. A module request
+borrows one table exclusively and returns it after graph verification, so a
+later worker domain can reuse it across build phases and watch edits while
+creating fresh inference state. On
+this host, nine interleaved clean-build pairs of a synthetic 1,201-module
+project measured 839.4 ms for the runtime-only cache and 843.4 ms for the
+project cache after the table-lease change; that difference is within run
+variation. A seven-edit retained-watch gate on a small fixture measured 77 ms
+for each mode, with matching compiler work and output. The larger testrepo
+gate could not run in this environment because its installed `sury-ppx` binary
+reported `Exec format error`. The performance benefit of cross-edit decoded
+interface and expanded-signature reuse on larger projects remains unmeasured.
+
+The request driver now captures ordinary text output in memory, opening a
+temporary file only if a job requests an output channel for binary ASTs or
+channel-based printing. The same synthetic clean build's summed parse-request
+setup time fell from 1,211 ms to 11 ms across 1,202 requests; a traced build
+fell from about 0.74 s to 0.62 s. Typed integrity checks on decoded CMIs
+replaced repeated full serialization, reducing summed CMI verification from
+about 170 ms to 8 ms across 1,201 implementation jobs. An audit mode that also
+serialized the CMIs found no missed mutation on this fixture. Nine untraced
+interleaved clean-build pairs with both changes gave medians of 696.2 ms for
+the runtime-only CMI cache and 695.5 ms for the broader project cache, still
+within run variation. These fixtures establish the request-overhead reduction
+but no separate wall-time win from caching project CMIs.
+
 One more temporary trace split the remaining WebAPI cache-hit work. Across 128
 hits, forcing the cached target signature took under 1 ms, alias-ID relocation
 took 17 ms, and target-signature-ID relocation took 11 ms in summed worker

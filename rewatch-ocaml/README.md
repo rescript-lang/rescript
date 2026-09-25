@@ -148,7 +148,20 @@ the recursive compiler source, platform-stub, C-stub, and Dune-rule inputs and
 shared by the embedded driver and standalone wrapper, so nested compiler
 changes invalidate artifacts while rewatch-only edits do not.
 `package_plan.ml` owns immutable per-package build inputs, `build_session.ml`
-owns prepared state retained across watch rebuilds, and `build_attempt.ml` owns
+owns the project graph, package configuration, compiled-artifact freshness,
+and compiler dependency cache retained across watch rebuilds. The driver gives
+each module job fresh inference, diagnostics, and
+environment state while the project session lends each job a private table of
+decoded small interfaces and an expanded signature graph. A cache hit checks
+the current load path and file identity; typed graph checks detect mutations,
+and changed graphs are restored from a saved image before reuse. Once a job
+ends, its table returns to the session
+and can be used by a later worker domain, including after a watch edit. A full
+watch rebuild reconstructs the graph but retains the compiler dependency
+session for the same project. Set
+`REWATCH_PROJECT_CMI_CACHE=0` to limit the small-interface cache to `Stdlib`
+and `Pervasives` when comparing build performance.
+`build_attempt.ml` owns
 attempt kinds, parse outcomes, diagnostics, counters, scheduled work, and final
 cleanup for one build attempt. `source_dirs.ml` owns
 source-directory metadata projection and serialization. `process_child.ml`

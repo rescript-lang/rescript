@@ -23,6 +23,22 @@ let retained_attempts_start_with_fresh_attempt_state _context =
   Build_attempt.cleanup_artifacts first;
   assert_equal 1 !cleanup_count
 
+let full_rebuild_keeps_project_compiler_session _context =
+  let first = create_full () in
+  Build_session.mark_parse_pending first.session "Old.res";
+  let compiler_session = Build_session.compiler_session first.session in
+  let second =
+    Build_attempt.create_full_with_compiler_session ~compiler_session
+      ~warning_state:(Warning_state.create ()) ~process_poll:None
+      ~progress:(Output.Progress.create ~enabled:false ~color:false)
+      ~verbosity:0
+  in
+  assert_bool "a full rebuild retains the compiler dependency session"
+    (Build_session.compiler_session second.session == compiler_session);
+  assert_bool "a full rebuild reconstructs the build graph"
+    (first.session != second.session);
+  assert_equal [] (Build_session.pending_parse_paths second.session)
+
 let output_inventory_survives_without_cleanup_work _context =
   let first = create_full () in
   let outputs = Hashtbl.create 1 in
@@ -89,6 +105,8 @@ let tests =
   >::: [
          "retained attempts start with fresh attempt state"
          >:: retained_attempts_start_with_fresh_attempt_state;
+         "full rebuild keeps project compiler session"
+         >:: full_rebuild_keeps_project_compiler_session;
          "output inventory survives without cleanup work"
          >:: output_inventory_survives_without_cleanup_work;
          "pending work is drained once" >:: pending_work_is_drained_once;

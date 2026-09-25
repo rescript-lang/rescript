@@ -349,6 +349,32 @@ let output_capture_isolation_tests _context =
     (Compiler_request_output.stdout_channel () == Stdlib.stdout)
     "capture scopes restore the host stream"
 
+let output_capture_channel_tests _context =
+  let (), stdout, stderr =
+    Compiler_request_output.with_capture (fun () ->
+        Compiler_request_output.write_stdout "before";
+        Stdlib.Format.pp_print_string
+          (Compiler_request_output.stdout_formatter ())
+          "formatted";
+        output_value (Compiler_request_output.stdout_channel ()) 42;
+        Compiler_request_output.write_stdout "after";
+        Compiler_request_output.write_stderr "error";
+        output_string (Compiler_request_output.stderr_channel ()) " channel")
+  in
+  assert_equal ("beforeformatted" ^ Marshal.to_string 42 [] ^ "after") stdout;
+  assert_equal "error channel" stderr;
+  (try
+     ignore
+       (Compiler_request_output.with_capture (fun () ->
+            output_string (Compiler_request_output.stdout_channel ()) "x";
+            failwith "capture failure"))
+   with
+  | Failure _ -> ()
+  | exn -> raise exn);
+  check
+    (Compiler_request_output.stdout_channel () == Stdlib.stdout)
+    "a failed capture restores the host stream"
+
 let annotation_isolation_tests _context =
   let left_ready = Atomic.make false in
   let right_ready = Atomic.make false in
@@ -684,7 +710,7 @@ let type_node_id_isolation_tests _context =
 let write root name contents =
   Test_support.write_file (Filename.concat root name) contents
 
-let run root ?(package = "driver-test") ?(extra = []) input =
+let run ?session root ?(package = "driver-test") ?(extra = []) input =
   let argv =
     [
       "-nostdlib";
@@ -699,9 +725,17 @@ let run root ?(package = "driver-test") ?(extra = []) input =
     ]
     @ extra
   in
-  ( argv,
-    Rescript_compiler_driver.run_request ~run_external:None ~cwd:root ~argv
-      ~input )
+  let result =
+    match session with
+    | None ->
+      Rescript_compiler_driver.run_request ~run_external:None ~cwd:root ~argv
+        ~input
+    | Some session ->
+      Env.with_expanded_snapshot_cache (fun () ->
+          Rescript_compiler_driver.run_request_in_session session
+            ~run_external:None ~cwd:root ~argv ~input)
+  in
+  (argv, result)
 
 let expect_code expected result =
   assert_equal ~printer:string_of_int expected
@@ -1069,6 +1103,36 @@ let combined_dependency_cache_tests _context =
           check
             (reused_first == reused_second)
             "one compiler domain reuses its verified-clean dependency graph";
+          let project_cache = Env.create_dependency_cache () in
+          let project_loaded_type () =
+            Env.with_dependency_cache project_cache loaded_type
+          in
+          ignore (project_loaded_type ());
+          let project_first = project_loaded_type () in
+          let project_second =
+            Domain.spawn project_loaded_type |> Domain.join
+          in
+          check
+            (project_first == project_second)
+            "a project session reuses its expanded graph on a later domain";
+          let compiler_session = Rescript_compiler_driver.create_session () in
+          let compile_in_session () =
+            let _, result =
+              run ~session:compiler_session root ~extra:["-I"; root]
+                "Consumer.res"
+            in
+            expect_code 0 result
+          in
+          compile_in_session ();
+          Domain.spawn compile_in_session |> Domain.join;
+          assert_equal
+            ~printer:(fun _ -> "<binary CMI>")
+            first_cmi
+            (File_util.read_file (Filename.concat root "Consumer.cmi"));
+          assert_equal
+            ~printer:(fun _ -> "<binary CMT>")
+            first_cmt
+            (File_util.read_file (Filename.concat root "Consumer.cmt"));
           let other_domain_type = Domain.join (Domain.spawn loaded_type) in
           check
             (reused_second != other_domain_type)
@@ -1106,7 +1170,15 @@ let combined_dependency_cache_tests _context =
             (match updated_on_another_domain.Types.desc with
             | Types.Tconstr (path, _, _) -> Path.name path = "string"
             | _ -> false)
-            "a new domain sees the updated dependency interface")
+            "a new domain sees the updated dependency interface";
+          let updated_in_session =
+            Domain.spawn project_loaded_type |> Domain.join
+          in
+          check
+            (match updated_in_session.Types.desc with
+            | Types.Tconstr (path, _, _) -> Path.name path = "string"
+            | _ -> false)
+            "a project session invalidates its expanded graph after an edit")
         ~finally:(fun () ->
           (match previous_trace with
           | Some value -> Unix.putenv "REWATCH_TYPECHECK_TRACE" value
@@ -1168,6 +1240,89 @@ let runtime_cmi_cache_tests _context =
       assert_equal "int" (load [first; second]);
       install second "string";
       assert_equal "string" (load [second; first]))
+
+let project_cmi_cache_tests _context =
+  Test_support.with_temp_dir "rewatch-project-cmi-cache-" (fun root ->
+      write root "Api.resi" "let value: int\n";
+      expect_code 0 (snd (run root "Api.resi"));
+      let first = Env.create_dependency_cache () in
+      let second = Env.create_dependency_cache () in
+      let original_loader = !Env.Persistent_signature.load in
+      let loads = ref 0 in
+      (Env.Persistent_signature.load :=
+         fun ~unit_name ->
+           if unit_name = "Api" then incr loads;
+           original_loader ~unit_name);
+      Fun.protect
+        ~finally:(fun () -> Env.Persistent_signature.load := original_loader)
+        (fun () ->
+          let path =
+            Path.Pdot
+              (Path.Pident (Ident.create_persistent "Api"), "value", Path.nopos)
+          in
+          let load cache ?(mutate = false) () =
+            Env.with_dependency_cache cache (fun () ->
+                Env.with_expanded_snapshot_cache (fun () ->
+                    Fun.protect
+                      (fun () ->
+                        Compiler_request_state.with_fresh ~cwd:root (fun () ->
+                            Env.with_fresh (fun () ->
+                                (Compiler_request_state.current ()).load_path <-
+                                  [root];
+                                let value = Env.find_value path Env.empty in
+                                let ty = value.Types.val_type in
+                                if mutate then
+                                  ty.desc <- Types.Tvar (Some "changed");
+                                ty)))
+                      ~finally:Env.finalize_expanded_snapshot_cache))
+          in
+          ignore (load first ());
+          assert_equal 1 !loads;
+          ignore (load first ());
+          assert_equal ~msg:"one project reuses its loaded interface" 1 !loads;
+          Domain.spawn (fun () -> ignore (load first ())) |> Domain.join;
+          assert_equal
+            ~msg:"a later worker domain reuses the project's interface" 1 !loads;
+          ignore (load second ());
+          assert_equal ~msg:"another project loads its own interface" 2 !loads;
+          write root "Api.res" "let value = 1\n";
+          expect_code 0 (snd (run root "Api.res"));
+          write root "First.res" "let result = Api.value\n";
+          write root "Second.res" "let result = Api.value\n";
+          let compiler_session = Rescript_compiler_driver.create_session () in
+          let first_result =
+            snd
+              (run ~session:compiler_session root ~extra:["-I"; root]
+                 "First.res")
+          in
+          assert_equal ~msg:first_result.stderr 0 first_result.exit_code;
+          let after_first_job = !loads in
+          let second_result =
+            Domain.spawn (fun () ->
+                snd
+                  (run ~session:compiler_session root ~extra:["-I"; root]
+                     "Second.res"))
+            |> Domain.join
+          in
+          assert_equal ~msg:second_result.stderr 0 second_result.exit_code;
+          assert_equal
+            ~msg:"module jobs in one compiler session reuse the interface"
+            after_first_job !loads;
+          ignore (load first ~mutate:true ());
+          (match (load first ()).Types.desc with
+          | Types.Tconstr (type_path, _, _) ->
+            assert_equal "int" (Path.name type_path)
+          | _ -> assert_failure "expected the original interface type");
+          write root "Api.resi" "let value: string\n";
+          expect_code 0 (snd (run root "Api.resi"));
+          let before_update = !loads in
+          let updated = load first () in
+          match updated.Types.desc with
+          | Types.Tconstr (type_path, _, _) ->
+            assert_equal "string" (Path.name type_path);
+            assert_equal ~msg:"an updated interface is loaded again"
+              (before_update + 1) !loads
+          | _ -> assert_failure "expected the updated interface type"))
 
 let concurrent_diagnostic_recovery_tests _context =
   Test_support.with_temp_dir "rewatch-driver-errors-" (fun root ->
@@ -1426,6 +1581,7 @@ let tests =
          "env_cache_isolation" >:: env_cache_isolation_tests;
          "identifier_stamp_isolation" >:: identifier_stamp_isolation_tests;
          "output_capture_isolation" >:: output_capture_isolation_tests;
+         "output_capture_channel" >:: output_capture_channel_tests;
          "annotation_isolation" >:: annotation_isolation_tests;
          "backend_module_cache_isolation"
          >:: backend_module_cache_isolation_tests;
@@ -1447,6 +1603,7 @@ let tests =
          >:: interface_namespace_and_load_path_tests;
          "combined_dependency_cache" >:: combined_dependency_cache_tests;
          "runtime_cmi_cache" >:: runtime_cmi_cache_tests;
+         "project_cmi_cache" >:: project_cmi_cache_tests;
          "concurrent_diagnostic_recovery"
          >:: concurrent_diagnostic_recovery_tests;
          "concurrent_jsx_diagnostic" >:: concurrent_jsx_diagnostic_tests;

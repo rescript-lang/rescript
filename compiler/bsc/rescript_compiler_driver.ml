@@ -547,6 +547,9 @@ let () =
   Ident.capture_request_baseline ()
 
 type result = {exit_code: int; stdout: string; stderr: string}
+type session = {dependencies: Env.dependency_cache}
+
+let create_session () = {dependencies = Env.create_dependency_cache ()}
 
 let build_identity = Rescript_compiler_build_identity.value
 
@@ -614,7 +617,11 @@ let run_argv ?run_external ~cwd argv =
           Cmt_format.set_args argv;
           let execute () =
             try
-              Bsc_args.parse_exn ~argv (command_line_flags ()) anonymous ~usage;
+              let flags =
+                Compiler_phase_trace.section "request.flags" command_line_flags
+              in
+              Compiler_phase_trace.section "request.dispatch" (fun () ->
+                  Bsc_args.parse_exn ~argv flags anonymous ~usage);
               0
             with
             | Request_exit code -> code
@@ -657,6 +664,10 @@ let run_argv ?run_external ~cwd argv =
 let run_request ~run_external ~cwd ~argv ~input =
   let logical_argv = Array.of_list ("bsc" :: (argv @ [input])) in
   run_argv ?run_external ~cwd logical_argv
+
+let run_request_in_session session ~run_external ~cwd ~argv ~input =
+  Env.with_dependency_cache session.dependencies (fun () ->
+      run_request ~run_external ~cwd ~argv ~input)
 
 let run argv =
   let result = run_argv ~cwd:(Sys.getcwd ()) argv in

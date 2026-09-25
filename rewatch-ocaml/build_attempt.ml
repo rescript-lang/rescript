@@ -104,6 +104,14 @@ let create ~freshness_mode ~session ~process_poll ~progress ~verbosity =
     verbosity;
   }
 
+let create_full_with_compiler_session ~compiler_session ~warning_state
+    ~process_poll ~progress ~verbosity =
+  create ~freshness_mode:Initialize_freshness
+    ~session:
+      (Build_session.create_with_compiler_session ~compiler_session
+         ~warning_state)
+    ~process_poll ~progress ~verbosity
+
 let create_full ~warning_state ~process_poll ~progress ~verbosity =
   create ~freshness_mode:Initialize_freshness
     ~session:(Build_session.create ~warning_state)

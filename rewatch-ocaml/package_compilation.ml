@@ -91,6 +91,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
            else prepared_package.regular_common_args)
         module_ ~source_kind path
       |> Compiler_process.task
+           ~session:(Build_session.compiler_session attempt.session)
     in
     let record_published_outputs ~source_kind path =
       match source_kind with
@@ -163,6 +164,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
           || attempt.freshness_mode = Build_attempt.Initialize_freshness
         then
           Compiler_process.namespace_task
+            ~session:(Build_session.compiler_session attempt.session)
             ~bsc:prepared.compiler_context.bsc_path
             ~runtime:prepared.compiler_context.runtime_path ~build_dir
             ~ocaml_dir

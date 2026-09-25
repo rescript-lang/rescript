@@ -57,7 +57,7 @@ let exit_code = function
   | Unix.WEXITED code -> code
   | Unix.WSIGNALED signal | Unix.WSTOPPED signal -> 128 + signal
 
-let run_in_process ?poll (job : Process.job) =
+let run_in_process ?session ?poll (job : Process.job) =
   log_compiler_request job;
   match List.rev job.args with
   | [] ->
@@ -70,19 +70,26 @@ let run_in_process ?poll (job : Process.job) =
     let result =
       time_compiler_request job (fun () ->
           Env.with_expanded_snapshot_cache (fun () ->
-              Rescript_compiler_driver.run_request ~cwd:job.cwd
-                ~argv:(List.rev reversed_argv) ~input
-                ~run_external:
-                  (Some
-                     (fun command ->
-                       let command = Platform.shell_command command in
-                       (* Signal handlers are process-wide; domain workers launch
-                          PPXs without replacing the scheduler domain's handlers. *)
-                       let result =
-                         Process.run ?poll ~defer_signals:false ~cwd:job.cwd
-                           command.program command.args
-                       in
-                       (exit_code result.status, result.stdout, result.stderr)))))
+              let run_external =
+                Some
+                  (fun command ->
+                    let command = Platform.shell_command command in
+                    (* Signal handlers are process-wide; domain workers launch
+                       PPXs without replacing the scheduler domain's handlers. *)
+                    let result =
+                      Process.run ?poll ~defer_signals:false ~cwd:job.cwd
+                        command.program command.args
+                    in
+                    (exit_code result.status, result.stdout, result.stderr))
+              in
+              match session with
+              | None ->
+                Rescript_compiler_driver.run_request ~cwd:job.cwd
+                  ~argv:(List.rev reversed_argv) ~input ~run_external
+              | Some session ->
+                Rescript_compiler_driver.run_request_in_session session
+                  ~cwd:job.cwd ~argv:(List.rev reversed_argv) ~input
+                  ~run_external))
     in
     {
       Process.status = Unix.WEXITED result.exit_code;
@@ -90,24 +97,25 @@ let run_in_process ?poll (job : Process.job) =
       stderr = result.stderr;
     }
 
-let run ?poll job =
+let run ?session ?poll job =
   Option.iter (fun poll -> poll ()) poll;
-  let result = run_in_process ?poll job in
+  let result = run_in_process ?session ?poll job in
   Option.iter (fun poll -> poll ()) poll;
   result
 
-let task job =
+let task ?session job =
   let cancelled = Atomic.make false in
   Process.concurrent_task
     ~cancel:(fun () -> Atomic.set cancelled true)
     (fun () ->
-      run_in_process
+      run_in_process ?session
         ~poll:(fun () ->
           if Atomic.get cancelled then raise (Process.Interrupted 15))
         job)
 
-let run_jobs ?poll ?on_complete jobs =
-  jobs |> List.map task
+let run_jobs ?session ?poll ?on_complete jobs =
+  jobs
+  |> List.map (task ?session)
   |> Process.run_tasks
        ~max_jobs:(Compiler_execution_mode.configured_count ())
        ?poll ?on_complete
@@ -161,8 +169,8 @@ let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
   with error ->
     raise (Compiler_scheduler.Publication_failure (error, !cmi_change))
 
-let namespace_task ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
-    ~force namespace modules =
+let namespace_task ?session ~bsc ~runtime ~build_dir ~ocaml_dir ~entry
+    ~package_dirty ~force namespace modules =
   let mlmap = Filename.concat build_dir (namespace ^ ".mlmap") in
   let contents =
     let buffer = Buffer.create 128 in
@@ -205,7 +213,7 @@ let namespace_task ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
       Compiler_scheduler.
         {
           task =
-            task
+            task ?session
               Process.
                 {
                   program = bsc;

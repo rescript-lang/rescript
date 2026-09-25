@@ -222,6 +222,14 @@ val finalize_expanded_snapshot_cache : unit -> unit
 
 (* Enable the per-domain expanded CMI cache for Rewatch requests. *)
 val with_expanded_snapshot_cache : (unit -> 'a) -> 'a
+
+(* Project-owned decoded CMIs and expanded signature graphs. A request leases
+   one table exclusively, verifies it, and returns it to the session. Finished
+   worker domains therefore do not discard the dependency information. *)
+type dependency_cache
+val create_dependency_cache : unit -> dependency_cache
+val with_dependency_cache : dependency_cache -> (unit -> 'a) -> 'a
+
 (* Keep persistent modules, imports, usage callbacks, and memoized summaries
    local to a compiler request. *)
 

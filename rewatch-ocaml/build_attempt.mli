@@ -60,6 +60,14 @@ val create_full :
   verbosity:int ->
   t
 
+val create_full_with_compiler_session :
+  compiler_session:Rescript_compiler_driver.session ->
+  warning_state:Warning_state.t ->
+  process_poll:(unit -> unit) option ->
+  progress:Output.Progress.t ->
+  verbosity:int ->
+  t
+
 val create_retained :
   session:Build_session.t ->
   process_poll:(unit -> unit) option ->

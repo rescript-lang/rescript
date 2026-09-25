@@ -1639,7 +1639,8 @@ type type_snapshot = {
 
 (* Track the mutable fields reachable from the cached signature and component
    tables. Unsupported memo shapes make the entry ineligible for direct reuse. *)
-let snapshot_type_graph graph =
+let snapshot_type_graph ~raw_signature ~expanded_signature ~target_components
+    ~alias_components ~stages ~require_components =
   let seen = Physical_type_table.create 32768 in
   let seen_identifiers = Physical_ident_table.create 8192 in
   let seen_label_arrays = Physical_label_table.create 1024 in
@@ -1766,13 +1767,11 @@ let snapshot_type_graph graph =
       visit_ident id;
       Option.iter visit_module_type declaration.mtd_type
   in
-  iterator.it_signature iterator graph.raw_signature;
-  iterator.it_signature iterator graph.expanded_signature;
-  List.iter visit_signature_item graph.raw_signature;
-  List.iter visit_signature_item graph.expanded_signature;
-  Array.iter visit graph.target_ids.type_nodes;
-  Array.iter visit graph.signature_ids.type_nodes;
-  Array.iter visit graph.alias_ids.type_nodes;
+  iterator.it_signature iterator raw_signature;
+  iterator.it_signature iterator expanded_signature;
+  List.iter visit_signature_item raw_signature;
+  List.iter visit_signature_item expanded_signature;
+  List.iter (fun stage -> Array.iter visit stage.type_nodes) stages;
   let capture_components = function
     | Some (Structure_comps components) ->
       let values = components.comp_values in
@@ -1851,13 +1850,14 @@ let snapshot_type_graph graph =
             (fun module_type -> iterator.it_module_type iterator module_type)
             declaration.mtd_type)
         modtypes
-    | Some (Functor_comps _) | None -> unsupported := true
+    | Some (Functor_comps _) -> unsupported := true
+    | None -> if require_components then unsupported := true
   in
-  capture_components graph.target_components;
-  capture_components graph.alias_components;
-  Array.iter visit_ident graph.target_ids.identifiers;
-  Array.iter visit_ident graph.signature_ids.identifiers;
-  Array.iter visit_ident graph.alias_ids.identifiers;
+  capture_components target_components;
+  capture_components alias_components;
+  List.iter
+    (fun (stage : allocation_stage) -> Array.iter visit_ident stage.identifiers)
+    stages;
   let identifiers =
     Physical_ident_table.to_seq_keys seen_identifiers
     |> Seq.map (fun id -> (id, id.Ident.stamp, id.Ident.flags))
@@ -1878,6 +1878,14 @@ let snapshot_type_graph graph =
     component_checks = Array.of_list !component_checks;
     unsupported = !unsupported;
   }
+
+let snapshot_expanded_type_graph graph =
+  snapshot_type_graph ~raw_signature:graph.raw_signature
+    ~expanded_signature:graph.expanded_signature
+    ~target_components:graph.target_components
+    ~alias_components:graph.alias_components
+    ~stages:[graph.target_ids; graph.signature_ids; graph.alias_ids]
+    ~require_components:true
 
 let type_graph_unchanged snapshot =
   (not snapshot.unsupported)
@@ -1928,10 +1936,9 @@ type expanded_snapshot_cache_entry = {
 let expanded_snapshot_cache_key = Domain.DLS.new_key (fun () -> ref None)
 let expanded_snapshot_cache () = Domain.DLS.get expanded_snapshot_cache_key
 
-(* Only the marshaled image crosses domain boundaries. Each compiler domain
-   decodes its own graph, so type inference never mutates another worker's
-   imported types. The lock also lets one worker prepare a shared image while
-   other workers wait to decode it. *)
+(* The marshaled image is available to every project, while a decoded graph
+   moves between domains only through an exclusive project cache lease. The
+   lock also lets one worker prepare the shared image while others wait. *)
 type shared_expanded_snapshot = {
   key: alias_key;
   target_filename: string;
@@ -1947,7 +1954,7 @@ let shared_expanded_snapshot_lock = Mutex.create ()
 
 (* Preparing a large graph costs more than one ordinary alias expansion. Wait
    for a second compiler request across the process so one-off edits stay cheap.
-   The expanded graphs themselves remain exclusive to their compiler domains. *)
+   An expanded graph remains exclusive to one compiler request at a time. *)
 let expanded_snapshot_candidates = Hashtbl.create 8
 let expanded_snapshot_candidates_lock = Mutex.create ()
 
@@ -2009,21 +2016,44 @@ type cmi_cache_entry = {
   stats: Unix.stats;
   bytes: bytes;
   mutable cmi: Cmi_format.cmi_infos;
+  mutable integrity: type_snapshot option;
   mutable used: bool;
 }
+
+type dependency_cache = {
+  mutex: Mutex.t;
+  mutable available: dependency_cache_table list;
+}
+
+and dependency_cache_table = {
+  cmis: (string, cmi_cache_entry) Hashtbl.t;
+  expanded_snapshot: expanded_snapshot_cache_entry option ref;
+}
+
+let create_dependency_cache () = {mutex = Mutex.create (); available = []}
 
 let cmi_cache_key = Domain.DLS.new_key (fun () -> Hashtbl.create 2)
 let cmi_cache () = Domain.DLS.get cmi_cache_key
 
-(* These two runtime interfaces are loaded by nearly every compile request.
-   Their decoded graphs stay private to one compiler domain. A request may
-   mutate them, so [finalize_cmi_cache] restores the saved image if needed.
-   Resolve the path on every hit to notice newly shadowing or replaced CMIs. *)
+let capture_cmi_integrity cmi =
+  let snapshot =
+    Compiler_phase_trace.dependency "dependency.cmi_cache_capture" (fun () ->
+        snapshot_type_graph ~raw_signature:cmi.Cmi_format.cmi_sign
+          ~expanded_signature:[] ~target_components:None ~alias_components:None
+          ~stages:[] ~require_components:false)
+  in
+  if snapshot.unsupported then None else Some snapshot
+
+(* Each decoded interface table belongs to one request at a time. A request
+   may mutate its graph, so [finalize_cmi_cache] restores the saved image before
+   the table returns to its project. Resolve the path on every hit to notice
+   newly shadowing or replaced CMIs after a watch edit. *)
 let load_cached_cmi ~name =
   if
     (not (expanded_snapshot_enabled ()))
     || Domain.DLS.get preparing_expanded_snapshot
-    || (name <> "Stdlib" && name <> "Pervasives")
+    || Sys.getenv_opt "REWATCH_PROJECT_CMI_CACHE" = Some "0"
+       && name <> "Stdlib" && name <> "Pervasives"
   then None
   else
     let cache = cmi_cache () in
@@ -2036,9 +2066,20 @@ let load_cached_cmi ~name =
         try
           let stats = Unix.stat resolved_filename in
           let bytes = Marshal.to_bytes cmi [] in
-          if same_file_stats (Unix.stat resolved_filename) stats then
+          if
+            Bytes.length bytes <= 64 * 1024
+            && (Hashtbl.mem cache name || Hashtbl.length cache < 32)
+            && same_file_stats (Unix.stat resolved_filename) stats
+          then
             Hashtbl.replace cache name
-              {resolved_filename; stats; bytes; cmi; used = true}
+              {
+                resolved_filename;
+                stats;
+                bytes;
+                cmi;
+                integrity = capture_cmi_integrity cmi;
+                used = true;
+              }
         with Sys_error _ | Unix.Unix_error _ | Invalid_argument _ -> ()));
       Some loaded
     in
@@ -2072,10 +2113,23 @@ let finalize_cmi_cache () =
         let pristine =
           Compiler_phase_trace.dependency "dependency.cmi_cache_verify"
             (fun () ->
-              try Bytes.equal (Marshal.to_bytes entry.cmi []) entry.bytes
-              with Invalid_argument _ -> false)
+              match entry.integrity with
+              | Some snapshot ->
+                let typed = type_graph_unchanged snapshot in
+                if
+                  typed
+                  && Sys.getenv_opt "REWATCH_PROJECT_CMI_CACHE" = Some "audit"
+                  && not
+                       (Bytes.equal (Marshal.to_bytes entry.cmi []) entry.bytes)
+                then failwith "typed CMI integrity check missed mutation";
+                typed
+              | None -> (
+                try Bytes.equal (Marshal.to_bytes entry.cmi []) entry.bytes
+                with Invalid_argument _ -> false))
         in
-        if not pristine then entry.cmi <- Marshal.from_bytes entry.bytes 0))
+        if not pristine then (
+          entry.cmi <- Marshal.from_bytes entry.bytes 0;
+          entry.integrity <- capture_cmi_integrity entry.cmi)))
     (cmi_cache ())
 
 let () = cached_cmi_loader := load_cached_cmi
@@ -2953,7 +3007,7 @@ let prepare_expanded_snapshot_now key =
                    Some
                      (Compiler_phase_trace.dependency
                         "dependency.snapshot_capture" (fun () ->
-                          snapshot_type_graph graph))
+                          snapshot_expanded_type_graph graph))
                  else None);
               in_use = false;
             }
@@ -3012,7 +3066,7 @@ let load_expanded_snapshot ~check:_ ~name =
                         Some
                           (Compiler_phase_trace.dependency
                              "dependency.snapshot_capture" (fun () ->
-                               snapshot_type_graph graph))
+                               snapshot_expanded_type_graph graph))
                       else None);
                    graph
                in
@@ -3089,6 +3143,34 @@ let finalize_expanded_snapshot_cache () =
         entry.typed_integrity <- None)
     | None -> ())
   | _ -> ()
+
+let with_dependency_cache cache action =
+  let table =
+    Mutex.lock cache.mutex;
+    Fun.protect
+      (fun () ->
+        match cache.available with
+        | table :: rest ->
+          cache.available <- rest;
+          table
+        | [] -> {cmis = Hashtbl.create 32; expanded_snapshot = ref None})
+      ~finally:(fun () -> Mutex.unlock cache.mutex)
+  in
+  let previous_cmis = cmi_cache () in
+  let previous_snapshot = expanded_snapshot_cache () in
+  Domain.DLS.set cmi_cache_key table.cmis;
+  Domain.DLS.set expanded_snapshot_cache_key table.expanded_snapshot;
+  Fun.protect action ~finally:(fun () ->
+      (* Both graphs are exclusive to this request. Finalization restores
+         allocation IDs and any mutated nodes before another domain leases
+         the same table. A failed finalization discards the table. *)
+      Fun.protect finalize_expanded_snapshot_cache ~finally:(fun () ->
+          Domain.DLS.set cmi_cache_key previous_cmis;
+          Domain.DLS.set expanded_snapshot_cache_key previous_snapshot);
+      Mutex.lock cache.mutex;
+      Fun.protect
+        (fun () -> cache.available <- table :: cache.available)
+        ~finally:(fun () -> Mutex.unlock cache.mutex))
 
 let () =
   prepare_expanded_snapshot := prepare_expanded_snapshot_now;

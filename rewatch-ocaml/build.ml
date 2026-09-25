@@ -196,8 +196,9 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
     |> List.map (fun source ->
         Compiler_process.parse_job ~bsc ~build_dir:source.package.build_dir
           ~config:source.package.compile_config source.source.relative_path)
-    |> Compiler_process.run_jobs ?poll:attempt.process_poll
-         ~on_complete:parse_completed
+    |> Compiler_process.run_jobs
+         ~session:(Build_session.compiler_session attempt.session)
+         ?poll:attempt.process_poll ~on_complete:parse_completed
   in
   let affected_modules = Hashtbl.create (List.length sources) in
   let dependency_updates = ref [] in
@@ -319,9 +320,17 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     | Some previous ->
       Build_attempt.create_retained ~session:previous.session ~process_poll
         ~progress ~verbosity
-    | None ->
-      Build_attempt.create_full ~warning_state ~process_poll ~progress
-        ~verbosity
+    | None -> (
+      match request with
+      | Full_watch_attempt (Some previous) ->
+        Build_attempt.create_full_with_compiler_session
+          ~compiler_session:(Build_session.compiler_session previous.session)
+          ~warning_state ~process_poll ~progress ~verbosity
+      | One_shot_attempt | Initial_watch_attempt
+      | Full_watch_attempt None
+      | Retained_watch_attempt _ ->
+        Build_attempt.create_full ~warning_state ~process_poll ~progress
+          ~verbosity)
   in
   let parse_messages () = List.rev attempt.parse_messages in
   let parse_output messages =
