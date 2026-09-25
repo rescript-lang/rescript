@@ -300,6 +300,43 @@ To run all tests:
 make test
 ```
 
+#### Test concurrency
+
+The root test-suite targets and `node scripts/test.js` acquire a shared lock
+before any build, cleanup, or test work. In particular, `make test` and
+`make test-analysis` both rebuild or clean Belt's outputs: starting them in
+parallel now makes one print `[test-lock] ... waiting for shared artifacts`
+until the other finishes. `make test-all -j` serializes its suite targets too.
+Nested runners reuse the active lock, and each suite's recursive Make invocation
+runs with `-j1` so nested `clean test` goals remain ordered.
+
+This is a macOS/Linux prototype using Python 3 and `flock`. Windows has no
+`flock`, and CI runs the suites there, so commands on Windows print
+`[test-lock] ... unlocked` and run unprotected: concurrent suites in one
+Windows checkout are not supported. Any other platform missing `flock` fails
+rather than racing silently. The lock is per physical checkout. Separate
+worktrees with independent build outputs and dependencies can run concurrently.
+Direct low-level commands such as `make lib`, `make clean`,
+`yarn workspace ... build`, and subdirectory Make invocations are not
+automatically protected. To coordinate one with a suite:
+
+```sh
+python3 scripts/with_test_lock.py --label manual-build -- make lib
+```
+
+The lock lives in `.rescript-test.lock`, outside directories cleaned by builds.
+Do not delete it while commands are running: replacing the inode would let two
+processes acquire different locks. The OS releases the lock when its command
+(and any processes inheriting its descriptor) exits, even after a crash. Finish
+child commands before leaving the protected command; do not detach test jobs.
+
+`make test` includes the process-level lock checks. To run just these checks
+(contention, nesting, failure, killed owners, and independent checkouts):
+
+```sh
+python3 scripts/test_test_lock.py
+```
+
 **Run Mocha tests only (for our runtime code):**
 
 This will run our `mocha` unit test suite defined in `tests/tests`.
