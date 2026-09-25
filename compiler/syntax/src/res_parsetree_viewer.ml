@@ -234,9 +234,9 @@ let filter_parsing_attrs attrs =
       match attr with
       | ( {
             Location.txt =
-              ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.patVariantSpread" | "res.dictPattern"
-              | "res.dictSpread" | "res.inlineRecordDefinition" );
+              ( "res.braces" | "ns.braces" | "res.iflet" | "res.await"
+              | "res.patVariantSpread" | "res.dictPattern" | "res.dictSpread"
+              | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -394,8 +394,8 @@ let has_attributes attrs =
       match attr with
       | ( {
             Location.txt =
-              ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.inlineRecordDefinition" );
+              ( "res.braces" | "ns.braces" | "res.iflet" | "res.await"
+              | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -470,27 +470,15 @@ let collect_if_expressions expr =
   in
   collect [] expr
 
-let rec has_ternary_attribute attrs =
-  match attrs with
-  | [] -> false
-  | ({Location.txt = "res.ternary"}, _) :: _ -> true
-  | _ :: attrs -> has_ternary_attribute attrs
-
 let is_ternary_expr expr =
-  match expr with
-  | {pexp_attributes = attrs; pexp_desc = Pexp_ifthenelse _}
-    when has_ternary_attribute attrs ->
-    true
+  match expr.pexp_desc with
+  | Pexp_ternary _ -> true
   | _ -> false
 
 let collect_ternary_parts expr =
   let rec collect acc expr =
     match expr with
-    | {
-     pexp_attributes = attrs;
-     pexp_desc = Pexp_ifthenelse (condition, consequent, Some alternate);
-    }
-      when has_ternary_attribute attrs ->
+    | {pexp_desc = Pexp_ternary (condition, consequent, alternate)} ->
       collect ((condition, consequent) :: acc) alternate
     | alternate -> (List.rev acc, alternate)
   in
@@ -502,14 +490,6 @@ let parameters_should_hug parameters =
     when is_huggable_pattern pat ->
     true
   | _ -> false
-
-let filter_ternary_attributes attrs =
-  List.filter
-    (fun attr ->
-      match attr with
-      | {Location.txt = "res.ternary"}, _ -> false
-      | _ -> true)
-    attrs
 
 let filter_fragile_match_attributes attrs =
   List.filter
@@ -561,8 +541,8 @@ let should_inline_rhs_binary_expr rhs =
   match rhs.pexp_desc with
   | Parsetree.Pexp_constant _ | Pexp_let _ | Pexp_letmodule _
   | Pexp_letexception _ | Pexp_sequence _ | Pexp_open _ | Pexp_ifthenelse _
-  | Pexp_for _ | Pexp_for_of _ | Pexp_for_await_of _ | Pexp_while _ | Pexp_try _
-  | Pexp_array _ | Pexp_record _ ->
+  | Pexp_ternary _ | Pexp_for _ | Pexp_for_of _ | Pexp_for_await_of _
+  | Pexp_while _ | Pexp_try _ | Pexp_array _ | Pexp_record _ ->
     true
   | _ -> false
 
@@ -571,7 +551,7 @@ let is_printable_attribute attr =
   | ( {
         Location.txt =
           ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
-          | "res.ternary" | "res.inlineRecordDefinition" | "res.dictSpread" );
+          | "res.inlineRecordDefinition" | "res.dictSpread" );
       },
       _ ) ->
     false

@@ -89,9 +89,16 @@ module If_then_else = struct
 
   let mk_iterator ~pos ~changed =
     let expr (iterator : Ast_iterator.iterator) (e : Parsetree.expression) =
-      let new_exp =
+      let conditional =
         match e.pexp_desc with
-        | Pexp_ifthenelse
+        | Pexp_ifthenelse (condition, consequent, Some alternate)
+        | Pexp_ternary (condition, consequent, alternate) ->
+          Some (condition, consequent, alternate)
+        | _ -> None
+      in
+      let new_exp =
+        match conditional with
+        | Some
             ( {
                 pexp_desc =
                   Pexp_apply
@@ -106,7 +113,7 @@ module If_then_else = struct
                     };
               },
               e1,
-              Some e2 )
+              e2 )
           when Loc.has_pos ~pos e.pexp_loc -> (
           let e1, e2 = if op = "==" then (e1, e2) else (e2, e1) in
           let mk_match ~arg ~pat =

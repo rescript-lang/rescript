@@ -17,10 +17,8 @@ let async =
     (result -> async) -> (mapAsync (fun [arity:1]a -> doStuff a)))
   [@res.braces ])
 let f =
-  ((if isPositive
-    then async fun [arity:2]a b -> (a + b : int)
-    else (async fun [arity:2]c d -> (c - d : int)))
-  [@res.ternary ])
+  isPositive ? async fun [arity:2]a b -> (a + b : int) :
+    async fun [arity:2]c d -> (c - d : int)
 let foo = async ~a:34
 let bar async [arity:1]~a  = a + 1
 let ex1 = (await 3) + (await 4)

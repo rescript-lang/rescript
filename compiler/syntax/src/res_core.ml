@@ -265,7 +265,6 @@ module Error_messages = struct
     "Spreading JSX children is no longer supported."
 end
 
-let ternary_attr = (Location.mknoloc "res.ternary", Parsetree.PStr [])
 let if_let_attr = (Location.mknoloc "res.iflet", Parsetree.PStr [])
 let make_await_attr loc = (Location.mkloc "res.await" loc, Parsetree.PStr [])
 let suppress_fragile_match_warning_attr =
@@ -1767,8 +1766,7 @@ and parse_ternary_expr left_operand p =
         loc_end = false_branch.Parsetree.pexp_loc.loc_end;
       }
     in
-    Ast_helper.Exp.ifthenelse ~attrs:[ternary_attr] ~loc left_operand
-      true_branch (Some false_branch)
+    Ast_helper.Exp.ternary ~loc left_operand true_branch false_branch
   | _ -> left_operand
 
 and parse_es6_arrow_expression ?(arrow_attrs = []) ?context ?term_parameters

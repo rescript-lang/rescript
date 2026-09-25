@@ -1244,7 +1244,15 @@ and walk_expression expr t comments =
       attach t.leading expr2.pexp_loc leading;
       walk_expression expr2 t inside;
       attach t.trailing expr2.pexp_loc trailing
-  | Pexp_ifthenelse (if_expr, then_expr, else_expr) -> (
+  | (Pexp_ifthenelse _ | Pexp_ternary _) as conditional -> (
+    let if_expr, then_expr, else_expr =
+      match conditional with
+      | Pexp_ifthenelse (condition, consequent, alternate) ->
+        (condition, consequent, alternate)
+      | Pexp_ternary (condition, consequent, alternate) ->
+        (condition, consequent, Some alternate)
+      | _ -> assert false
+    in
     let leading, rest = partition_leading_trailing comments expr.pexp_loc in
     attach t.leading expr.pexp_loc leading;
     let leading, inside, trailing = partition_by_loc rest if_expr.pexp_loc in

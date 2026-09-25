@@ -347,6 +347,8 @@ and expression_desc =
   | Pexp_array of expression list (* [| E1; ...; En |] *)
   | Pexp_ifthenelse of expression * expression * expression option
     (* if E1 then E2 else E3 *)
+  | Pexp_ternary of expression * expression * expression
+    (* E1 ? E2 : E3. All three operands are required. *)
   | Pexp_sequence of expression * expression (* E1; E2 *)
   | Pexp_break (* break *)
   | Pexp_continue (* continue *)

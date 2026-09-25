@@ -644,7 +644,8 @@ and expression ctxt f x =
     | (Pexp_fun _ | Pexp_match _ | Pexp_try _ | Pexp_sequence _)
       when ctxt.pipe || ctxt.semi ->
       paren true (expression reset_ctxt) f x
-    | (Pexp_ifthenelse _ | Pexp_sequence _) when ctxt.ifthenelse ->
+    | (Pexp_ifthenelse _ | Pexp_ternary _ | Pexp_sequence _)
+      when ctxt.ifthenelse ->
       paren true (expression reset_ctxt) f x
     | (Pexp_let _ | Pexp_letmodule _ | Pexp_open _ | Pexp_letexception _)
       when ctxt.semi ->
@@ -753,6 +754,9 @@ and expression ctxt f x =
           | Some x -> pp f "@;@[<2>else@;%a@]" (expression (under_semi ctxt)) x
           | None -> () (* pp f "()" *))
         eo
+    | Pexp_ternary (condition, consequent, alternate) ->
+      pp f "@[<2>%a@ ?@ %a@ :@ %a@]" (expression reset_ctxt) condition
+        (expression reset_ctxt) consequent (expression reset_ctxt) alternate
     | Pexp_sequence _ ->
       let rec sequence_helper acc = function
         | {pexp_desc = Pexp_sequence (e1, e2); pexp_attributes = []} ->

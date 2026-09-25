@@ -186,6 +186,13 @@ module Exp : sig
     expression ->
     expression option ->
     expression
+  val ternary :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    expression ->
+    expression ->
+    expression ->
+    expression
   val sequence :
     ?loc:loc -> ?attrs:attrs -> expression -> expression -> expression
   val break : ?loc:loc -> ?attrs:attrs -> unit -> expression
