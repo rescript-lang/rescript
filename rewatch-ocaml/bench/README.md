@@ -650,10 +650,10 @@ this host, nine interleaved clean-build pairs of a synthetic 1,201-module
 project measured 839.4 ms for the runtime-only cache and 843.4 ms for the
 project cache after the table-lease change; that difference is within run
 variation. A seven-edit retained-watch gate on a small fixture measured 77 ms
-for each mode, with matching compiler work and output. The larger testrepo
-gate could not run in this environment because its installed `sury-ppx` binary
-reported `Exec format error`. The performance benefit of cross-edit decoded
-interface and expanded-signature reuse on larger projects remains unmeasured.
+for each mode, with matching compiler work and output. The available testrepo
+dependencies came from a Linux container, so the larger testrepo gate was not
+run on macOS. The performance benefit of cross-edit decoded interface and
+expanded-signature reuse on larger projects remains unmeasured.
 
 The request driver now captures ordinary text output in memory, opening a
 temporary file only if a job requests an output channel for binary ASTs or
