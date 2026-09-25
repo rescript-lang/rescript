@@ -755,7 +755,7 @@ and expression ctxt f x =
           | None -> () (* pp f "()" *))
         eo
     | Pexp_ternary (condition, consequent, alternate) ->
-      pp f "@[<2>%a@ ?@ %a@ :@ %a@]" (expression reset_ctxt) condition
+      pp f "@[<2>%a@ ?@ %a@ :@ %a@]" (simple_expr ctxt) condition
         (expression reset_ctxt) consequent (expression reset_ctxt) alternate
     | Pexp_sequence _ ->
       let rec sequence_helper acc = function

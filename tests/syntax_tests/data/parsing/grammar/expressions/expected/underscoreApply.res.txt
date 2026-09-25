@@ -10,7 +10,7 @@ let l1 =
   ([1; 2; 3] -> (List.map (fun [arity:1]__x -> incr ~v:__x))) -> List.length
 let l2 =
   ([1; 2; 3] -> (List.map (fun [arity:1]__x -> incr ~v:__x))) -> List.length
-let optParam [arity:2]?v  () = v == None ? 0 : 1
+let optParam [arity:2]?v  () = (v == None) ? 0 : 1
 let l1 =
   ([Some 1; None; Some 2] ->
      (List.map (fun [arity:1]__x -> optParam ?v:__x ())))
