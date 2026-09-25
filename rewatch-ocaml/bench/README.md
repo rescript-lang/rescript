@@ -586,6 +586,124 @@ cross-domain separation, dirty-graph recovery, and CMI invalidation passed.
 A final audit build checked 128 cached request boundaries against full graph
 serialization without a disagreement.
 
+### Reusing decoded runtime interfaces
+
+An eight-worker release-profile trace with the expanded WebAPI cache enabled
+showed that the 519 compile requests each decoded `Stdlib.cmi` and
+`Pervasives.cmi`. Those two files cost 477 ms of summed worker time in CMI
+reading and decoding, plus 695 ms searching and opening their paths. The
+remaining implementation requests spent about 1,071 ms searching and opening
+all CMIs and 849 ms reading and decoding them, including these two runtime
+interfaces. Source checking took 1,183 ms; expanded `WebAPI.DOMAPI` work still
+accounted for 434 ms. These are exclusive traced worker totals from one build,
+not expected elapsed savings. The temporary per-file decode labels used for
+this diagnosis were removed afterward.
+
+The retained compiler cache keeps the decoded `Stdlib` and `Pervasives` CMI
+graphs private to each worker domain. Each hit resolves the current load path
+and checks the file's identity, size, modification time, and change time. At
+the end of a request it compares the graph with a saved serialized image and
+restores the image if the request changed it. The nested fresh request used to
+prepare an expanded WebAPI snapshot bypasses this cache, so the two caches do
+not share mutable input graphs. The cache is active only with the existing
+Rewatch signature cache; `REWATCH_COMBINED_SIGNATURE_CACHE=0` disables both.
+
+A follow-up traced build decoded each runtime CMI nine times rather than 519
+times. Path re-resolution across 1,020 hits took 31 ms of summed worker time, and
+1,038 request-boundary graph checks took 64 ms. The one-run trace includes
+instrumentation overhead. A focused test changes and shadows `Stdlib.cmi`
+between requests, mutates a loaded type, and loads it from another domain.
+Another traced clean build found no changed cached runtime CMI graph among
+1,038 request-boundary checks. This observation covers these two interfaces
+in this fixture; it is not a proof that arbitrary imported type graphs can be
+shared concurrently between compiler domains.
+
+The same testrepo fixture, standalone `bsc`, runtime, and release-profile
+toolchain were used for each pair of executables, placed in one directory.
+After a warm-up, the gate interleaved the default eight-worker builds. Its
+20 ms process-tree sampler measured memory; wall time stopped when each build
+process exited. The first seven pairs had clean medians of 1,184 ms before
+versus 1,118 ms after. Eleven further pairs, after the nested-request guard
+and final code cleanup, had clean medians of 1,203 versus 1,154 ms. Ten of
+those eleven paired runs favored the change. Median sampled peak tree RSS was
+557,196 KiB before and 566,480 KiB after in the final run, within the
+run-to-run spread. Unchanged medians were 44 ms in both versions; single-edit
+medians were 45 and 44 ms. Both builds made the same 1,031 clean, four
+unchanged, and six edit compiler requests. Complete post-build file sets and
+stable generated artifact bytes matched exactly.
+
+A broader prototype cached frequently loaded CMIs up to 64 KiB, with 32 entries
+per domain. Seven pairs found a 26 ms clean median gain beyond the narrow
+cache; fifteen further pairs found 19 ms, with overlapping samples and a 1 ms
+slower single-edit median. That extra gain was within benchmark variation, so
+the broader prototype was removed. The retained change avoids roughly 4–6%
+of clean-build wall time on this host and fixture; it does not establish the
+same gain for other projects. `make test`, `make test-rewatch`, the OCaml
+Rewatch integration script, and the focused Rewatch OUnit suite passed.
+
+One more temporary trace split the remaining WebAPI cache-hit work. Across 128
+hits, forcing the cached target signature took under 1 ms, alias-ID relocation
+took 17 ms, and target-signature-ID relocation took 11 ms in summed worker
+time. The larger `WebAPI.DOMAPI` phase also contains the uncached expansions
+and snapshot preparation on each domain. Optimizing hit relocation alone has
+little elapsed-time headroom. The temporary subtimers were removed.
+
+To repeat the gate, build the parent revision and this revision with Dune's
+`release` profile, copy both embedded executables into one directory, and set
+`REWATCH_FIRST_EMBEDDED=1` when invoking `performance_gate.sh`. Use the same
+`RESCRIPT_BSC_EXE` and `RESCRIPT_RUNTIME` for both and retain the default eight
+compiler domains. The gate archives the same committed testrepo fixture for
+each executable and compares work counts and all generated artifact bytes.
+
+### Sharing a prepared signature image across workers
+
+The expanded WebAPI snapshot previously had to be prepared separately by each
+compiler domain. The compiler now publishes one immutable marshaled image after
+the first preparation. Other domains decode private graphs from that image;
+fresh inference variables and request-local type and identifier IDs remain
+private to each compile job. A mutex serializes the first preparation, while
+the existing per-domain graph verifier continues to check for mutations after
+each job. The shared image is keyed by the alias, both CMI paths and file
+metadata, and the resolved load path. The per-domain cache also checks the
+resolved load path, so a job with different import resolution prepares its own
+graph. `REWATCH_COMBINED_SIGNATURE_CACHE=0` disables this reuse.
+
+One traced clean build restored the shared image on seven domains and captured
+eight private graph integrity snapshots. It made the same 128 expanded-snapshot
+cache hits as the previous implementation. Decoding the seven private graphs
+took 72 ms of summed worker time in that trace. The trace is diagnostic and
+includes instrumentation overhead.
+
+Eleven interleaved release-profile pairs compared the decoded-runtime-CMI
+version with and without cross-domain image sharing. Clean median wall time
+fell from 1,145 to 1,051 ms, and all eleven pairs favored sharing. Median
+sampled peak tree RSS fell from 543,976 to 472,236 KiB. Unchanged and
+single-edit medians were 44 versus 45 ms and 44 versus 45 ms, respectively.
+
+A separate eleven-pair gate compared the complete change directly with the
+original per-worker WebAPI cache at revision `d1c43a0c0`:
+
+| scenario | original median wall | new median wall | original peak tree RSS | new peak tree RSS |
+| --- | ---: | ---: | ---: | ---: |
+| Clean, eight workers | 1,199 ms | 1,014 ms | 545,312 KiB | 457,660 KiB |
+| Unchanged | 45 ms | 44 ms | 26,744 KiB | 26,888 KiB |
+| One source edit | 44 ms | 45 ms | 26,796 KiB | 27,076 KiB |
+
+The clean median improved by 15% and all eleven paired runs favored the
+change. An earlier eleven-pair comparison of the same source change measured
+1,190 versus 1,032 ms; ten pairs favored the change and one new-build run was
+an outlier at 1,485 ms. Both executables in the final gate used
+the same release-profile standalone `bsc`, runtime, fixture, and eight-worker
+setting. They made identical 1,031 clean, four unchanged, and six edit compiler
+requests. Complete post-build file sets and generated artifact bytes matched.
+The 20 ms process-tree memory sampler is directional. The load-path guard was
+included in this final gate.
+An additional clean build with full graph-integrity auditing checked all 128
+reused snapshots, restored the shared image on seven domains, and reported no
+dirty snapshots.
+`make test`, `make test-rewatch`, the OCaml Rewatch integration script, the
+focused Rewatch OUnit suite, and `make checkformat` passed.
+
 ## Bulk label table checkpoint
 
 Revision `56164c19e3b0cc751301e4344cc0e4ecff46df20` builds the opened

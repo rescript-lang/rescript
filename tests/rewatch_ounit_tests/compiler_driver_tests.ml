@@ -1039,12 +1039,13 @@ let combined_dependency_cache_tests _context =
             in
             Path.Pdot (module_path, "value", Path.nopos)
           in
-          let with_loaded_type action =
+          let with_loaded_type ?(load_path = [root]) action =
             Fun.protect
               (fun () ->
                 Compiler_request_state.with_fresh ~cwd:root (fun () ->
                     Env.with_fresh (fun () ->
-                        (Compiler_request_state.current ()).load_path <- [root];
+                        (Compiler_request_state.current ()).load_path <-
+                          load_path;
                         action
                           (Env.find_value value_path Env.empty).Types.val_type)))
               ~finally:Env.finalize_expanded_snapshot_cache
@@ -1082,6 +1083,14 @@ let combined_dependency_cache_tests _context =
             | Types.Tvar (Some "changed") -> false
             | _ -> true)
             "the restored dependency graph keeps the original type";
+          let extra_load_directory = Filename.concat root "extra-load-path" in
+          File_util.ensure_dir extra_load_directory;
+          let alternate =
+            with_loaded_type ~load_path:[extra_load_directory; root] Fun.id
+          in
+          check
+            (alternate != loaded_type ())
+            "a different load path does not reuse the prepared dependency graph";
           write root "Circle.resi" "let value: string\n";
           write root "Circle.res" {|let value = "updated"|};
           compile_dependency ();
@@ -1089,7 +1098,15 @@ let combined_dependency_cache_tests _context =
             "open Shapes.Circle\nlet result: string = value\n";
           compile "ConsumerString.res";
           let _, stale = run root ~extra:["-I"; root] "Consumer.res" in
-          expect_code 2 stale)
+          expect_code 2 stale;
+          let updated_on_another_domain =
+            Domain.spawn loaded_type |> Domain.join
+          in
+          check
+            (match updated_on_another_domain.Types.desc with
+            | Types.Tconstr (path, _, _) -> Path.name path = "string"
+            | _ -> false)
+            "a new domain sees the updated dependency interface")
         ~finally:(fun () ->
           (match previous_trace with
           | Some value -> Unix.putenv "REWATCH_TYPECHECK_TRACE" value
@@ -1097,6 +1114,60 @@ let combined_dependency_cache_tests _context =
           match previous_cache with
           | Some value -> Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" value
           | None -> Unix.unsetenv "REWATCH_COMBINED_SIGNATURE_CACHE"))
+
+let runtime_cmi_cache_tests _context =
+  Test_support.with_temp_dir "rewatch-runtime-cmi-cache-" (fun root ->
+      let first = Filename.concat root "first" in
+      let second = Filename.concat root "second" in
+      File_util.ensure_dir first;
+      File_util.ensure_dir second;
+      let install directory kind =
+        write directory "Api.resi" ("let value: " ^ kind ^ "\n");
+        expect_code 0 (snd (run directory "Api.resi"));
+        let cmi = Cmi_format.read_cmi (Filename.concat directory "Api.cmi") in
+        ignore
+          (Cmi_format.create_cmi
+             (Filename.concat directory "Stdlib.cmi")
+             {cmi with cmi_name = "Stdlib"; cmi_crcs = []})
+      in
+      install second "int";
+      let path =
+        Path.Pdot
+          (Path.Pident (Ident.create_persistent "Stdlib"), "value", Path.nopos)
+      in
+      let load ?(mutate = false) directories =
+        Env.with_expanded_snapshot_cache (fun () ->
+            Fun.protect
+              (fun () ->
+                Compiler_request_state.with_fresh ~cwd:root (fun () ->
+                    Env.with_fresh (fun () ->
+                        (Compiler_request_state.current ()).load_path <-
+                          directories;
+                        let value = Env.find_value path Env.empty in
+                        let type_name =
+                          match value.Types.val_type.desc with
+                          | Types.Tconstr (type_path, _, _) ->
+                            Path.name type_path
+                          | _ -> assert_failure "expected a named value type"
+                        in
+                        if mutate then
+                          value.Types.val_type.desc <-
+                            Types.Tvar (Some "changed");
+                        type_name)))
+              ~finally:Env.finalize_expanded_snapshot_cache)
+      in
+      assert_equal "int" (load [first; second]);
+      assert_equal "int" (load [first; second]);
+      assert_equal "int" (load ~mutate:true [first; second]);
+      assert_equal "int" (load [first; second]);
+      assert_equal "int"
+        (Domain.spawn (fun () -> load [first; second]) |> Domain.join);
+      install first "string";
+      assert_equal "string" (load [first; second]);
+      install first "int";
+      assert_equal "int" (load [first; second]);
+      install second "string";
+      assert_equal "string" (load [second; first]))
 
 let concurrent_diagnostic_recovery_tests _context =
   Test_support.with_temp_dir "rewatch-driver-errors-" (fun root ->
@@ -1375,6 +1446,7 @@ let tests =
          "interfaces_namespaces_load_paths"
          >:: interface_namespace_and_load_path_tests;
          "combined_dependency_cache" >:: combined_dependency_cache_tests;
+         "runtime_cmi_cache" >:: runtime_cmi_cache_tests;
          "concurrent_diagnostic_recovery"
          >:: concurrent_diagnostic_recovery_tests;
          "concurrent_jsx_diagnostic" >:: concurrent_jsx_diagnostic_tests;

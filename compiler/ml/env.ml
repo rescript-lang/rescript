@@ -764,6 +764,10 @@ let cached_pers_struct_loader :
     (check:bool -> name:string -> pers_struct option) ref =
   ref (fun ~check:_ ~name:_ -> None)
 
+let cached_cmi_loader :
+    (name:string -> Persistent_signature.t option option) ref =
+  ref (fun ~name:_ -> None)
+
 let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
   Compiler_phase_trace.dependency "dependency.make_available" (fun () ->
       let name = cmi.cmi_name in
@@ -821,7 +825,11 @@ let find_pers_struct check name =
         ps
       | None ->
         let ps =
-          match !Persistent_signature.load ~unit_name:name with
+          match
+            match !cached_cmi_loader ~name with
+            | Some cached -> cached
+            | None -> !Persistent_signature.load ~unit_name:name
+          with
           | Some ps -> ps
           | None ->
             Hashtbl.add (persistent_structures ()) name None;
@@ -1908,9 +1916,10 @@ type expanded_snapshot_cache_entry = {
   key: alias_key;
   target_filename: string;
   namespace_filename: string;
+  resolved_load_path: string list;
   target_stats: Unix.stats;
   namespace_stats: Unix.stats;
-  bytes: bytes;
+  bytes: string;
   mutable graph: expanded_snapshot option;
   mutable typed_integrity: type_snapshot option;
   mutable in_use: bool;
@@ -1918,6 +1927,23 @@ type expanded_snapshot_cache_entry = {
 
 let expanded_snapshot_cache_key = Domain.DLS.new_key (fun () -> ref None)
 let expanded_snapshot_cache () = Domain.DLS.get expanded_snapshot_cache_key
+
+(* Only the marshaled image crosses domain boundaries. Each compiler domain
+   decodes its own graph, so type inference never mutates another worker's
+   imported types. The lock also lets one worker prepare a shared image while
+   other workers wait to decode it. *)
+type shared_expanded_snapshot = {
+  key: alias_key;
+  target_filename: string;
+  namespace_filename: string;
+  resolved_load_path: string list;
+  target_stats: Unix.stats;
+  namespace_stats: Unix.stats;
+  bytes: string;
+}
+
+let shared_expanded_snapshot = ref None
+let shared_expanded_snapshot_lock = Mutex.create ()
 
 (* Preparing a large graph costs more than one ordinary alias expansion. Wait
    for a second compiler request across the process so one-off edits stay cheap.
@@ -1977,6 +2003,82 @@ let same_file_stats first second =
   && first.Unix.st_size = second.Unix.st_size
   && first.Unix.st_mtime = second.Unix.st_mtime
   && first.Unix.st_ctime = second.Unix.st_ctime
+
+type cmi_cache_entry = {
+  resolved_filename: string;
+  stats: Unix.stats;
+  bytes: bytes;
+  mutable cmi: Cmi_format.cmi_infos;
+  mutable used: bool;
+}
+
+let cmi_cache_key = Domain.DLS.new_key (fun () -> Hashtbl.create 2)
+let cmi_cache () = Domain.DLS.get cmi_cache_key
+
+(* These two runtime interfaces are loaded by nearly every compile request.
+   Their decoded graphs stay private to one compiler domain. A request may
+   mutate them, so [finalize_cmi_cache] restores the saved image if needed.
+   Resolve the path on every hit to notice newly shadowing or replaced CMIs. *)
+let load_cached_cmi ~name =
+  if
+    (not (expanded_snapshot_enabled ()))
+    || Domain.DLS.get preparing_expanded_snapshot
+    || (name <> "Stdlib" && name <> "Pervasives")
+  then None
+  else
+    let cache = cmi_cache () in
+    let load_fresh () =
+      let loaded = !Persistent_signature.load ~unit_name:name in
+      (match loaded with
+      | None -> ()
+      | Some {filename; cmi} -> (
+        let resolved_filename = Compiler_request_state.resolve_path filename in
+        try
+          let stats = Unix.stat resolved_filename in
+          let bytes = Marshal.to_bytes cmi [] in
+          if same_file_stats (Unix.stat resolved_filename) stats then
+            Hashtbl.replace cache name
+              {resolved_filename; stats; bytes; cmi; used = true}
+        with Sys_error _ | Unix.Unix_error _ | Invalid_argument _ -> ()));
+      Some loaded
+    in
+    match Hashtbl.find_opt cache name with
+    | Some entry -> (
+      try
+        let filename =
+          Compiler_phase_trace.dependency "dependency.cmi_cache_validate"
+            (fun () ->
+              find_in_path_uncap (Config.get_load_path ()) (name ^ ".cmi"))
+        in
+        if
+          Compiler_request_state.resolve_path filename = entry.resolved_filename
+          && same_file_stats (Unix.stat entry.resolved_filename) entry.stats
+        then (
+          entry.used <- true;
+          Some (Some Persistent_signature.{filename; cmi = entry.cmi}))
+        else (
+          Hashtbl.remove cache name;
+          load_fresh ())
+      with Not_found | Sys_error _ | Unix.Unix_error _ ->
+        Hashtbl.remove cache name;
+        load_fresh ())
+    | None -> load_fresh ()
+
+let finalize_cmi_cache () =
+  Hashtbl.iter
+    (fun _ entry ->
+      if entry.used then (
+        entry.used <- false;
+        let pristine =
+          Compiler_phase_trace.dependency "dependency.cmi_cache_verify"
+            (fun () ->
+              try Bytes.equal (Marshal.to_bytes entry.cmi []) entry.bytes
+              with Invalid_argument _ -> false)
+        in
+        if not pristine then entry.cmi <- Marshal.from_bytes entry.bytes 0))
+    (cmi_cache ())
+
+let () = cached_cmi_loader := load_cached_cmi
 
 let is_target_path name = function
   | Pident id -> Ident.persistent id && Ident.name id = name
@@ -2755,6 +2857,9 @@ let prepare_expanded_snapshot_now key =
     let target_filename =
       Compiler_request_state.resolve_path dependency.ps_filename
     in
+    let resolved_load_path =
+      List.map Compiler_request_state.resolve_path (Config.get_load_path ())
+    in
     let namespace_stats = Unix.stat namespace_filename in
     let target_stats = Unix.stat target_filename in
     let forced =
@@ -2767,48 +2872,91 @@ let prepare_expanded_snapshot_now key =
       let seen_in_previous_request =
         candidate_seen_in_previous_request key target_filename request
       in
-      if forced || seen_in_previous_request then (
-        let cwd = Compiler_request_state.cwd () in
-        let load_path = Config.get_load_path () in
-        let previous = Domain.DLS.get preparing_expanded_snapshot in
-        Domain.DLS.set preparing_expanded_snapshot true;
+      let prepared =
+        Mutex.lock shared_expanded_snapshot_lock;
+        Fun.protect
+          (fun () ->
+            match !shared_expanded_snapshot with
+            | Some shared
+              when shared.key = key
+                   && shared.target_filename = target_filename
+                   && shared.namespace_filename = namespace_filename
+                   && shared.resolved_load_path = resolved_load_path
+                   && same_file_stats shared.target_stats target_stats
+                   && same_file_stats shared.namespace_stats namespace_stats ->
+              Some (shared.bytes, None)
+            | _ when forced || seen_in_previous_request ->
+              let cwd = Compiler_request_state.cwd () in
+              let load_path = Config.get_load_path () in
+              let previous = Domain.DLS.get preparing_expanded_snapshot in
+              Domain.DLS.set preparing_expanded_snapshot true;
+              let graph =
+                Fun.protect
+                  (fun () ->
+                    Ident.with_fresh (fun () ->
+                        with_fresh (fun () ->
+                            Btype.with_fresh (fun () ->
+                                Compiler_request_state.with_fresh ~cwd
+                                  (fun () ->
+                                    Config.set_load_path load_path;
+                                    snapshot_graph_from_cmis key)))))
+                  ~finally:(fun () ->
+                    Domain.DLS.set preparing_expanded_snapshot previous)
+              in
+              let bytes = Marshal.to_string graph [] in
+              if
+                String.length bytes <= 8 * 1024 * 1024
+                && same_file_stats
+                     (Unix.stat namespace_filename)
+                     namespace_stats
+                && same_file_stats (Unix.stat target_filename) target_stats
+              then (
+                shared_expanded_snapshot :=
+                  Some
+                    {
+                      key;
+                      target_filename;
+                      namespace_filename;
+                      resolved_load_path;
+                      target_stats;
+                      namespace_stats;
+                      bytes;
+                    };
+                Some (bytes, Some graph))
+              else None
+            | _ -> None)
+          ~finally:(fun () -> Mutex.unlock shared_expanded_snapshot_lock)
+      in
+      match prepared with
+      | None -> ()
+      | Some (bytes, prepared_graph) ->
         let graph =
-          Fun.protect
-            (fun () ->
-              Ident.with_fresh (fun () ->
-                  with_fresh (fun () ->
-                      Btype.with_fresh (fun () ->
-                          Compiler_request_state.with_fresh ~cwd (fun () ->
-                              Config.set_load_path load_path;
-                              snapshot_graph_from_cmis key)))))
-            ~finally:(fun () ->
-              Domain.DLS.set preparing_expanded_snapshot previous)
+          match prepared_graph with
+          | Some graph -> graph
+          | None ->
+            Compiler_phase_trace.dependency "dependency.snapshot_shared_restore"
+              (fun () -> Marshal.from_string bytes 0)
         in
-        let bytes = Marshal.to_bytes graph [] in
-        if
-          Bytes.length bytes <= 8 * 1024 * 1024
-          && same_file_stats (Unix.stat namespace_filename) namespace_stats
-          && same_file_stats (Unix.stat target_filename) target_stats
-        then
-          cache :=
-            Some
-              {
-                key;
-                target_filename;
-                namespace_filename;
-                target_stats;
-                namespace_stats;
-                bytes;
-                graph = Some graph;
-                typed_integrity =
-                  (if typed_expanded_snapshot_reuse () then
-                     Some
-                       (Compiler_phase_trace.dependency
-                          "dependency.snapshot_capture" (fun () ->
-                            snapshot_type_graph graph))
-                   else None);
-                in_use = false;
-              })
+        cache :=
+          Some
+            {
+              key;
+              target_filename;
+              namespace_filename;
+              resolved_load_path;
+              target_stats;
+              namespace_stats;
+              bytes;
+              graph = Some graph;
+              typed_integrity =
+                (if typed_expanded_snapshot_reuse () then
+                   Some
+                     (Compiler_phase_trace.dependency
+                        "dependency.snapshot_capture" (fun () ->
+                          snapshot_type_graph graph))
+                 else None);
+              in_use = false;
+            }
 
 let load_expanded_snapshot ~check:_ ~name =
   if
@@ -2829,6 +2977,9 @@ let load_expanded_snapshot ~check:_ ~name =
               in
               path entry.key.target_name = entry.target_filename
               && path entry.key.namespace_name = entry.namespace_filename
+              && List.map Compiler_request_state.resolve_path
+                   (Config.get_load_path ())
+                 = entry.resolved_load_path
               && same_file_stats
                    (Unix.stat entry.target_filename)
                    entry.target_stats
@@ -2853,7 +3004,7 @@ let load_expanded_snapshot ~check:_ ~name =
                    let graph =
                      Compiler_phase_trace.dependency
                        "dependency.snapshot_restore" (fun () ->
-                         Marshal.from_bytes entry.bytes 0)
+                         Marshal.from_string entry.bytes 0)
                    in
                    entry.graph <- Some graph;
                    entry.typed_integrity <-
@@ -2906,6 +3057,7 @@ let load_expanded_snapshot ~check:_ ~name =
     | _ -> None
 
 let finalize_expanded_snapshot_cache () =
+  finalize_cmi_cache ();
   match !(expanded_snapshot_cache ()) with
   | Some entry when entry.in_use -> (
     entry.in_use <- false;
@@ -2925,7 +3077,7 @@ let finalize_expanded_snapshot_cache () =
               | None -> false
             in
             (if audit_expanded_snapshot_reuse () then
-               let full = Marshal.to_bytes graph [] = entry.bytes in
+               let full = Marshal.to_string graph [] = entry.bytes in
                if typed && not full then
                  failwith "typed dependency integrity check missed mutation");
             typed)
