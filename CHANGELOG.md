@@ -30,6 +30,8 @@
 
 #### :house: Internal
 
+- Represent ternary expressions with a dedicated parsetree node. https://github.com/rescript-lang/rescript/pull/8674
+
 # 13.0.0-alpha.6
 
 #### :boom: Breaking Change
