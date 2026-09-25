@@ -341,6 +341,10 @@ module E = struct
       sub.expr sub e1;
       sub.expr sub e2;
       iter_opt (sub.expr sub) e3
+    | Pexp_ternary (e1, e2, e3) ->
+      sub.expr sub e1;
+      sub.expr sub e2;
+      sub.expr sub e3
     | Pexp_sequence (e1, e2) ->
       sub.expr sub e1;
       sub.expr sub e2

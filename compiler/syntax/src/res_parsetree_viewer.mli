@@ -99,7 +99,6 @@ val collect_ternary_parts :
 
 val parameters_should_hug : fun_param_kind list -> bool
 
-val filter_ternary_attributes : Parsetree.attributes -> Parsetree.attributes
 val filter_fragile_match_attributes :
   Parsetree.attributes -> Parsetree.attributes
 

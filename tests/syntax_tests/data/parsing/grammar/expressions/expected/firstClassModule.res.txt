@@ -44,24 +44,22 @@ let build_dispatch_table [arity:1]handlers =
 ;;(module Teenager).(0)
 ;;((module Teenager) -> age) -> Console.log
 ;;((module Teenager).(0)) -> Console.log
-;;((if ((module Teenager) -> age) -> isAdult
-    then Console.log {js|has responsibilities|js}
-    else Console.log {js|can play in the playground|js})[@res.ternary ])
-;;((if ((module Streets).(0)) -> isExpensive
-    then Console.log {js|big money|js}
-    else Console.log {js|affordable|js})[@res.ternary ])
+;;(((module Teenager) -> age) -> isAdult) ?
+    Console.log {js|has responsibilities|js} :
+    Console.log {js|can play in the playground|js}
+;;(((module Streets).(0)) -> isExpensive) ? Console.log {js|big money|js} :
+    Console.log {js|affordable|js}
 let () = ((((module Teenager) -> age) -> Console.log)[@res.braces ])
 let () = (((module Teenager).(0))[@res.braces ])
 let () =
-  ((if ((module Teenager) -> age) -> isAdult
-    then Console.log {js|has responsibilities|js}
-    else Console.log {js|can play in the playground|js})
-  [@res.braces ][@res.ternary ])
+  (((((module Teenager) -> age) -> isAdult) ?
+      Console.log {js|has responsibilities|js} :
+      Console.log {js|can play in the playground|js})
+  [@res.braces ])
 let () =
-  ((if ((module Streets).(0)) -> isExpensive
-    then Console.log {js|big money|js}
-    else Console.log {js|affordable|js})
-  [@res.braces ][@res.ternary ])
+  (((((module Streets).(0)) -> isExpensive) ? Console.log {js|big money|js} :
+      Console.log {js|affordable|js})
+  [@res.braces ])
 let () =
   ((let a = 1 in
     let b = 2 in
@@ -71,8 +69,7 @@ let () =
   ((let a = 1 in
     let b = 2 in
     ((module Teenager) -> age) -> Console.log;
-    ((if (((module Teenager).(0)) -> age) -> isAdult
-      then Console.log {js|has responsibilities|js}
-      else Console.log {js|can play in the playground|js})
-    [@res.ternary ]))
+    ((((module Teenager).(0)) -> age) -> isAdult) ?
+      Console.log {js|has responsibilities|js} :
+      Console.log {js|can play in the playground|js})
   [@res.braces ])

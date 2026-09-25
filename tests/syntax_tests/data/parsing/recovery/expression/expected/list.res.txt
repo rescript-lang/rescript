@@ -35,18 +35,14 @@ Possible solutions:
 - To extract a subarray: Use `Array.slice`
 
 let flags =
-  ((if reasonFormat
-    then
-      ((let parts = Utils.split_on_char ' ' flags in
-        let rec loop [arity:1]items =
-          ((match items with
-            | [|{js|-pp|js};_ppFlag;rest|] -> loop rest
-            | [|x;rest|] ->
-                ((Primitive_array.spread)[@res.spread ])
-                  [|[|x|];(loop rest)|]
-            | [||] -> [||])
-          [@res.braces ]) in
-        (loop parts) -> (String.concat {js| |js}))
-      [@res.braces ])
-    else flags)
-  [@res.ternary ])
+  reasonFormat ?
+    ((let parts = Utils.split_on_char ' ' flags in
+      let rec loop [arity:1]items =
+        ((match items with
+          | [|{js|-pp|js};_ppFlag;rest|] -> loop rest
+          | [|x;rest|] ->
+              ((Primitive_array.spread)[@res.spread ]) [|[|x|];(loop rest)|]
+          | [||] -> [||])
+        [@res.braces ]) in
+      (loop parts) -> (String.concat {js| |js}))
+    [@res.braces ]) : flags

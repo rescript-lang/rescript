@@ -616,6 +616,11 @@ module E = struct
     | Pexp_ifthenelse (e1, e2, e3) ->
       ifthenelse ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
         (map_opt (sub.expr sub) e3)
+    | Pexp_ternary (condition, consequent, alternate) ->
+      let marker = (Location.mknoloc "res.ternary", Pt.PStr []) in
+      ifthenelse ~loc ~attrs:(marker :: attrs) (sub.expr sub condition)
+        (sub.expr sub consequent)
+        (Some (sub.expr sub alternate))
     | Pexp_sequence (e1, e2) ->
       sequence ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
     | Pexp_break ->

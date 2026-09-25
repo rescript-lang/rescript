@@ -98,6 +98,7 @@ let identify_pexp pexp =
   | Pexp_setfield _ -> "Pexp_setfield"
   | Pexp_array _ -> "Pexp_array"
   | Pexp_ifthenelse _ -> "Pexp_ifthenelse"
+  | Pexp_ternary _ -> "Pexp_ternary"
   | Pexp_sequence _ -> "Pexp_sequence"
   | Pexp_break -> "Pexp_break"
   | Pexp_continue -> "Pexp_continue"

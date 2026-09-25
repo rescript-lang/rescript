@@ -337,6 +337,8 @@ module E = struct
     | Pexp_ifthenelse (e1, e2, e3) ->
       ifthenelse ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
         (map_opt (sub.expr sub) e3)
+    | Pexp_ternary (e1, e2, e3) ->
+      ternary ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2) (sub.expr sub e3)
     | Pexp_sequence (e1, e2) ->
       sequence ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
     | Pexp_break -> break ~loc ~attrs ()

@@ -689,6 +689,14 @@ module Sexp_ast = struct
             | None -> Sexp.atom "None"
             | Some expr -> Sexp.list [Sexp.atom "Some"; expression expr]);
           ]
+      | Pexp_ternary (condition, consequent, alternate) ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_ternary";
+            expression condition;
+            expression consequent;
+            expression alternate;
+          ]
       | Pexp_sequence (expr1, expr2) ->
         Sexp.list
           [Sexp.atom "Pexp_sequence"; expression expr1; expression expr2]
