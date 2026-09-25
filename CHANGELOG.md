@@ -36,6 +36,8 @@
 
 #### :house: Internal
 
+- Add an opt-in immutable representation of compiled interfaces for OCaml rewatch experiments (`REWATCH_FROZEN_VALUES=1`), allowing selective lookup without eagerly expanding imported signatures. https://github.com/rescript-lang/rescript/pull/8676
+
 # 13.0.0-alpha.6
 
 #### :boom: Breaking Change
