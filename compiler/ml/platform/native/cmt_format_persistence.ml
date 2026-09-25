@@ -23,36 +23,42 @@ let output_cmt output_channel cmt =
 
 let save_cmt filename modname binary_annots sourcefile initial_env cmi =
   if !((Clflags.current ()).binary_annotations) then
-    Misc.output_to_bin_file_directly filename
-      (fun temp_file_name output_channel ->
-        let interface_digest =
-          match cmi with
-          | None -> None
-          | Some cmi ->
-            Some (Cmi_format.output_cmi temp_file_name output_channel cmi)
-        in
-        let cmt =
-          {
-            cmt_modname = modname;
-            cmt_annots = clear_env binary_annots;
-            cmt_value_dependencies = value_dependencies ();
-            cmt_comments = [];
-            cmt_args = (Compiler_request_state.current ()).cmt_args;
-            cmt_sourcefile = sourcefile;
-            cmt_builddir = Compiler_request_state.cwd ();
-            cmt_loadpath = Config.get_load_path ();
-            cmt_source_digest =
-              Misc.may_map
-                (fun path ->
-                  Digest.file (Compiler_request_state.resolve_path path))
-                sourcefile;
-            cmt_initial_env =
-              (if need_to_clear_env then keep_only_summary initial_env
-               else initial_env);
-            cmt_imports = List.sort compare (Env.imports ());
-            cmt_interface_digest = interface_digest;
-            cmt_use_summaries = need_to_clear_env;
-            cmt_extra_info = {deprecated_used = deprecated_uses ()};
-          }
-        in
-        output_cmt output_channel cmt)
+    Compiler_phase_trace.section "artifact.cmt_persist" (fun () ->
+        Misc.output_to_bin_file_directly filename
+          (fun temp_file_name output_channel ->
+            let interface_digest =
+              match cmi with
+              | None -> None
+              | Some cmi ->
+                Some (Cmi_format.output_cmi temp_file_name output_channel cmi)
+            in
+            let cmt =
+              Compiler_phase_trace.section "artifact.cmt_prep" (fun () ->
+                  {
+                    cmt_modname = modname;
+                    cmt_annots = clear_env binary_annots;
+                    cmt_value_dependencies = value_dependencies ();
+                    cmt_comments = [];
+                    cmt_args = (Compiler_request_state.current ()).cmt_args;
+                    cmt_sourcefile = sourcefile;
+                    cmt_builddir = Compiler_request_state.cwd ();
+                    cmt_loadpath = Config.get_load_path ();
+                    cmt_source_digest =
+                      Compiler_phase_trace.section "artifact.cmt_source_hash"
+                        (fun () ->
+                          Misc.may_map
+                            (fun path ->
+                              Digest.file
+                                (Compiler_request_state.resolve_path path))
+                            sourcefile);
+                    cmt_initial_env =
+                      (if need_to_clear_env then keep_only_summary initial_env
+                       else initial_env);
+                    cmt_imports = List.sort compare (Env.imports ());
+                    cmt_interface_digest = interface_digest;
+                    cmt_use_summaries = need_to_clear_env;
+                    cmt_extra_info = {deprecated_used = deprecated_uses ()};
+                  })
+            in
+            Compiler_phase_trace.section "artifact.cmt_serialize" (fun () ->
+                output_cmt output_channel cmt)))

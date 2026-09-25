@@ -339,6 +339,117 @@ would save only about 0.21 s. Reusing expanded components would need to keep
 the mutable type graphs isolated and invalidate them when a CMI changes. The
 temporary instrumentation was removed after these measurements.
 
+## Exclusive type-checking and artifact breakdown
+
+An opt-in trace now times nested compiler phases in one clean build. Its rows
+are exclusive, so they add to the request total. This resolves the overlap in
+the temporary measurements above. Set `REWATCH_TYPECHECK_TRACE` to an absolute
+TSV path to enable it; otherwise the trace is disabled.
+
+Five interleaved pairs used eight workers, OCaml 5.5.1, and Dune's development
+profile on Linux ARM64. Both executables were copied to the same `/tmp`
+directory. The plain executable was built from `80eb95963` without tracing
+hooks; the traced executable differed only by the diagnostic instrumentation.
+Each sample cleaned Belt and testrepo in an isolated fixture. All traced
+samples made 512 parse, 40 interface, 472 implementation, and seven namespace
+implementation requests (1,031 total).
+An additional clean baseline/traced comparison produced the same 10,029
+paths and SHA-256 hashes for files ending in `.ast`, `.iast`, `.cmi`, `.cmj`,
+`.cmt`, `.cmti`, `.mjs`, `.cjs`, `.js`, or `.map`.
+
+`traced-3.trace.tsv` gives the following **summed worker times** in
+milliseconds. The 519 compile requests sum to 8,106 ms. Parse requests add
+678 ms, including 452 ms of outer setup. Elapsed build time was 1.37 s;
+worker sums are not elapsed time or directly achievable wall-time savings.
+
+| Exclusive phase | Interfaces (40) | Implementations (472) | Namespace (7) | Compile total |
+| --- | ---: | ---: | ---: | ---: |
+| Request setup and initial environment | 18.1 | 553.2 | 1.5 | 572.9 |
+| Obtain dependency interfaces | 70.8 | 2,511.7 | 2.2 | 2,584.7 |
+| Check source and open signatures | 23.9 | 3,885.6 | 1.9 | 3,911.4 |
+| Prepare CMI/CMT data | 2.4 | 60.8 | 0.3 | 63.5 |
+| Serialize, hash, and write artifacts | 30.4 | 647.5 | 1.0 | 678.8 |
+| AST reading, backend, and other work | 5.5 | 287.9 | 1.3 | 294.7 |
+| **Total** | **151.1** | **7,946.7** | **8.2** | **8,106.0** |
+
+Source checking comprises 2,152 ms typing, inclusion, delayed checks, and
+typed-tree construction, plus 1,759 ms opening signatures and making names
+available. Nested CMI file work is charged only to dependencies. Setup
+includes fresh request state, include paths, and 332 ms opening implicit and
+configured modules, excluding CMI work. The outer-request timer also covers
+argument parsing, output capture, and teardown.
+
+The dependency row comprises 1,155 ms finding and opening CMI paths, 2 ms
+finding and opening the current module's explicit interface, 1,406 ms in
+buffered reading and Marshal decoding, 19 ms in CRC consistency checks,
+and 3 ms registering decoded persistent structures. The trace counted 2,966
+successful loader searches and 3,006 decodes; the extra 40 are explicit
+interface reads. `Pervasives` and `Stdlib` were each loaded 519 times, once per
+compile request, and `WebAPI` 312 times. Fresh request state repeats this work.
+The current `input_value` reader interleaves I/O and decoding, so their costs
+cannot be separated without changing that reader. Lazy expansion during
+source `open` appears in the source row, separate from CMI file loading.
+
+CMI preparation copies the exported signature into saved form and registers
+it for later checking; it is needed to make dependency types available. CMT
+and CMTI preparation clears typed-tree environments and packages metadata for
+editor tooling. The 679 ms persistence row includes 106 ms standalone CMI
+serialization, 53 ms CMI hashing, 85 ms remaining standalone CMI file work,
+212 ms CMT serialization, 19 ms source hashing, and 203 ms remaining CMT/CMTI
+file work. The last component includes the CMI prefix embedded in CMT files.
+These subtimers are exclusive and do not double-count one another.
+
+The compile requests allocated 4,218 MB in OCaml heaps: 2,848 MB during
+source checking, 671 MB obtaining dependencies, 458 MB in setup, 75 MB in
+artifact preparation, 22 MB in persistence, and 144 MB elsewhere. Parse
+requests allocated another 234 MB. The largest sampled `Gc.quick_stat`
+top heap was 34.5 million words (about 263 MiB). Summing request-boundary
+GC counter deltas gave 3,437 minor and 355 major collections, with no
+compactions; overlapping requests may observe the same global collection,
+so these sums are diagnostic rather than exact build-wide counts. Allocation
+counters cover OCaml allocations on worker domains, not native allocations or
+retained memory.
+
+Across the five pairs, median elapsed build time was 1.37 s for both plain
+and traced; median process user-plus-system time was 6.59 s for both. Median
+GNU `time` peak RSS was 368,196 KiB plain and 352,324 KiB traced, with broad
+per-run overlap (338,644–386,256 KiB across both modes). The trace showed no
+resolvable wall-time, CPU, or memory penalty here. GNU `time` records the
+build process's maximum RSS, not the sum
+of concurrently live process trees. Each nested timer reads a clock and an
+allocation counter, so tiny phase timings remain directional.
+
+Reproduce the comparison with the instrumented branch checked out:
+
+```sh
+opam exec -- dune build rewatch-ocaml/rescript_ocaml.exe compiler/bsc/rescript_compiler_main.exe
+git -c "safe.directory=$PWD" worktree add --detach /tmp/rescript-typecheck-base 80eb95963
+(cd /tmp/rescript-typecheck-base && opam exec -- dune build \
+  rewatch-ocaml/rescript_ocaml.exe compiler/bsc/rescript_compiler_main.exe)
+REWATCH_PLAIN_EXECUTABLE=/tmp/rescript-typecheck-base/_build/default/rewatch-ocaml/rescript_ocaml.exe \
+REWATCH_PLAIN_BSC=/tmp/rescript-typecheck-base/_build/default/compiler/bsc/rescript_compiler_main.exe \
+  bash rewatch-ocaml/bench/typecheck_breakdown.sh /tmp/rescript-typecheck-data 5
+node rewatch-ocaml/bench/analyze_typecheck_trace.js \
+  /tmp/rescript-typecheck-data/traced-1.trace.tsv
+```
+
+The runner records host details, binary hashes, GNU `time` results, build
+output, and raw traces. Omit `REWATCH_PLAIN_*` to compare trace enabled and
+disabled in the same binary. The analyzer checks that exclusive phases account
+for every request. Keep worker count and fixture filesystem fixed when
+comparing results.
+
+The next optimization experiment should test a **content-aware raw CMI byte
+cache** across requests while retaining a fresh Marshal decode, consistency
+check, and mutable type graph for each request. This isolates the 1.16 s of
+repeated path search/open work without assuming decoded graphs can be shared.
+Compare cold and warm builds, invalidate entries when CMIs change, check
+stable artifacts, and measure worker and elapsed time. Eliminating that entire
+lookup row has an ideal eight-worker lower bound of about 0.14 s; decoding
+and signature opening remain. If the gain is small, measure a separate way to
+reuse expanded signature components, especially the large WebAPI imports,
+before attempting that architectural change.
+
 ## Bulk label table checkpoint
 
 Revision `56164c19e3b0cc751301e4344cc0e4ecff46df20` builds the opened

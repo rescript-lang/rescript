@@ -86,13 +86,14 @@ let extract_sig_open env loc mty =
 (* Compute the environment after opening a module *)
 
 let type_open_ ?used_slot ?toplevel ovf env loc lid =
-  let path = Typetexp.lookup_module ~load:true env lid.loc lid.txt in
-  match Env.open_signature ~loc ?used_slot ?toplevel ovf path env with
-  | Some env -> (path, env)
-  | None ->
-    let md = Env.find_module path env in
-    ignore (extract_sig_open env lid.loc md.md_type);
-    assert false
+  Compiler_phase_trace.open_signature (fun () ->
+      let path = Typetexp.lookup_module ~load:true env lid.loc lid.txt in
+      match Env.open_signature ~loc ?used_slot ?toplevel ovf path env with
+      | Some env -> (path, env)
+      | None ->
+        let md = Env.find_module path env in
+        ignore (extract_sig_open env lid.loc md.md_type);
+        assert false)
 
 let type_open ?toplevel env sod =
   let path, newenv =
@@ -1730,67 +1731,75 @@ let () =
 
 let type_implementation_more ?check_exists sourcefile outputprefix modulename
     initial_env ast =
-  Cmt_format.clear ();
-  try
-    Delayed_checks.reset_delayed_checks ();
-    let str, sg, finalenv =
-      type_structure initial_env ast (Location.in_file sourcefile)
-    in
-    let simple_sg = simplify_signature sg in
-    let mli_status = !((Clflags.current ()).assume_no_mli) in
-    if mli_status = Clflags.Mli_exists then (
-      let intf_file =
-        try find_in_path_uncap (Config.get_load_path ()) (modulename ^ ".cmi")
-        with Not_found ->
-          let sourceintf =
-            Filename.remove_extension sourcefile ^ Literals.suffix_resi
+  Compiler_phase_trace.section "source.check" (fun () ->
+      Cmt_format.clear ();
+      try
+        Delayed_checks.reset_delayed_checks ();
+        let str, sg, finalenv =
+          type_structure initial_env ast (Location.in_file sourcefile)
+        in
+        let simple_sg = simplify_signature sg in
+        let mli_status = !((Clflags.current ()).assume_no_mli) in
+        if mli_status = Clflags.Mli_exists then (
+          let intf_file =
+            Compiler_phase_trace.dependency "dependency.interface_search"
+              (fun () ->
+                try
+                  find_in_path_uncap (Config.get_load_path ())
+                    (modulename ^ ".cmi")
+                with Not_found ->
+                  let sourceintf =
+                    Filename.remove_extension sourcefile ^ Literals.suffix_resi
+                  in
+                  raise
+                    (Error
+                       ( Location.in_file sourcefile,
+                         Env.empty,
+                         Interface_not_compiled sourceintf )))
           in
-          raise
-            (Error
-               ( Location.in_file sourcefile,
-                 Env.empty,
-                 Interface_not_compiled sourceintf ))
-      in
-      let dclsig = Env.read_signature modulename intf_file in
-      let coercion =
-        Includemod.compunit initial_env sourcefile sg intf_file dclsig
-      in
-      Delayed_checks.force_delayed_checks ();
-      (* It is important to run these checks after the inclusion test above,
+          let dclsig =
+            Compiler_phase_trace.dependency "dependency.interface_open"
+              (fun () -> Env.read_signature modulename intf_file)
+          in
+          let coercion =
+            Includemod.compunit initial_env sourcefile sg intf_file dclsig
+          in
+          Delayed_checks.force_delayed_checks ();
+          (* It is important to run these checks after the inclusion test above,
          so that value declarations which are not used internally but exported
          are not reported as being unused. *)
-      Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
-        (Cmt_format.Implementation str) (Some sourcefile) initial_env None;
-      (str, coercion, finalenv, dclsig)
-      (* identifier is useless might read from serialized cmi files*))
-    else
-      let coercion =
-        Includemod.compunit initial_env sourcefile sg "(inferred signature)"
-          simple_sg
-      in
-      check_nongen_schemes finalenv simple_sg;
-      normalize_signature finalenv simple_sg;
-      Delayed_checks.force_delayed_checks ();
-      (* See comment above. Here the target signature contains all
+          Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
+            (Cmt_format.Implementation str) (Some sourcefile) initial_env None;
+          (str, coercion, finalenv, dclsig)
+          (* identifier is useless might read from serialized cmi files*))
+        else
+          let coercion =
+            Includemod.compunit initial_env sourcefile sg "(inferred signature)"
+              simple_sg
+          in
+          check_nongen_schemes finalenv simple_sg;
+          normalize_signature finalenv simple_sg;
+          Delayed_checks.force_delayed_checks ();
+          (* See comment above. Here the target signature contains all
          the value being exported. We can still capture unused
          declarations like "let x = true;; let x = 1;;", because in this
          case, the inferred signature contains only the last declaration. *)
-      (if not !((Clflags.current ()).dont_write_files) then
-         let deprecated = Builtin_attributes.deprecated_of_str ast in
-         let cmi =
-           Env.save_signature ?check_exists ~deprecated simple_sg modulename
-             (outputprefix ^ ".cmi")
-         in
-         Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
-           (Cmt_format.Implementation str) (Some sourcefile) initial_env
-           (Some cmi));
-      (str, coercion, finalenv, simple_sg)
-  with e ->
-    Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
-      (Cmt_format.Partial_implementation
-         (Array.of_list (Cmt_format.get_saved_types ())))
-      (Some sourcefile) initial_env None;
-    raise e
+          (if not !((Clflags.current ()).dont_write_files) then
+             let deprecated = Builtin_attributes.deprecated_of_str ast in
+             let cmi =
+               Env.save_signature ?check_exists ~deprecated simple_sg modulename
+                 (outputprefix ^ ".cmi")
+             in
+             Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
+               (Cmt_format.Implementation str) (Some sourcefile) initial_env
+               (Some cmi));
+          (str, coercion, finalenv, simple_sg)
+      with e ->
+        Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
+          (Cmt_format.Partial_implementation
+             (Array.of_list (Cmt_format.get_saved_types ())))
+          (Some sourcefile) initial_env None;
+        raise e)
 
 let save_signature modname tsg outputprefix source_file initial_env cmi =
   Cmt_format.save_cmt (outputprefix ^ ".cmti") modname

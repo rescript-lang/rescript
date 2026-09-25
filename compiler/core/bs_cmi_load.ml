@@ -23,33 +23,36 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 let load_cmi ~unit_name : Env.Persistent_signature.t option =
-  (* On case-insensitive filesystems a lowercase alias can remain visible to
+  Compiler_phase_trace.dependency ("dependency.search_open:" ^ unit_name)
+    (fun () ->
+      (* On case-insensitive filesystems a lowercase alias can remain visible to
      [Sys.file_exists] briefly after its CMI is removed. Open each candidate
      once and parse that descriptor, so a vanished CMI is a missing module. *)
-  let name = unit_name ^ ".cmi" in
-  let lower_name = String.uncapitalize_ascii name in
-  let rec find = function
-    | [] -> None
-    | directory :: rest ->
-      let rec try_names = function
-        | [] -> find rest
-        | name :: names -> (
-          let filename = Filename.concat directory name in
-          let path = Compiler_request_state.resolve_path filename in
-          match Unix.openfile path [Unix.O_RDONLY] 0 with
-          | descriptor ->
-            let channel = Unix.in_channel_of_descr descriptor in
-            let cmi =
-              Fun.protect
-                (fun () -> Cmi_format.read_cmi_channel filename channel)
-                ~finally:(fun () -> close_in_noerr channel)
-            in
-            Some Env.Persistent_signature.{filename; cmi}
-          | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
-            try_names names
-          | exception Unix.Unix_error (error, _, _) ->
-            raise (Sys_error (path ^ ": " ^ Unix.error_message error)))
+      let name = unit_name ^ ".cmi" in
+      let lower_name = String.uncapitalize_ascii name in
+      let rec find = function
+        | [] -> None
+        | directory :: rest ->
+          let rec try_names = function
+            | [] -> find rest
+            | name :: names -> (
+              let filename = Filename.concat directory name in
+              let path = Compiler_request_state.resolve_path filename in
+              match Unix.openfile path [Unix.O_RDONLY] 0 with
+              | descriptor ->
+                let channel = Unix.in_channel_of_descr descriptor in
+                let cmi =
+                  Fun.protect
+                    (fun () -> Cmi_format.read_cmi_channel filename channel)
+                    ~finally:(fun () -> close_in_noerr channel)
+                in
+                Some Env.Persistent_signature.{filename; cmi}
+              | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
+                ->
+                try_names names
+              | exception Unix.Unix_error (error, _, _) ->
+                raise (Sys_error (path ^ ": " ^ Unix.error_message error)))
+          in
+          try_names (if lower_name = name then [name] else [lower_name; name])
       in
-      try_names (if lower_name = name then [name] else [lower_name; name])
-  in
-  find (Config.get_load_path ())
+      find (Config.get_load_path ()))

@@ -640,17 +640,18 @@ let clear_imports () =
   imported_units () := String_set.empty
 
 let check_consistency ps =
-  try
-    List.iter
-      (fun (name, crco) ->
-        match crco with
-        | None -> ()
-        | Some crc ->
-          add_import name;
-          Consistbl.check (crc_units ()) name crc ps.ps_filename)
-      ps.ps_crcs
-  with Consistbl.Inconsistency (name, source, auth) ->
-    error (Inconsistent_import (name, auth, source))
+  Compiler_phase_trace.dependency "dependency.consistency" (fun () ->
+      try
+        List.iter
+          (fun (name, crco) ->
+            match crco with
+            | None -> ()
+            | Some crc ->
+              add_import name;
+              Consistbl.check (crc_units ()) name crc ps.ps_filename)
+          ps.ps_crcs
+      with Consistbl.Inconsistency (name, source, auth) ->
+        error (Inconsistent_import (name, auth, source)))
 
 (* Reading persistent structures from .cmi files *)
 
@@ -674,36 +675,38 @@ module Persistent_signature = struct
 end
 
 let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
-  let name = cmi.cmi_name in
-  let sign = cmi.cmi_sign in
-  let crcs = cmi.cmi_crcs in
-  let flags = cmi.cmi_flags in
-  let deprecated =
-    List.fold_left
-      (fun _ -> function
-        | Deprecated s -> Some s)
-      None flags
-  in
-  let comps =
-    !components_of_module' ~deprecated ~loc:Location.none empty Subst.identity
-      (Pident (Ident.create_persistent name))
-      (Mty_signature sign)
-  in
-  let ps =
-    {
-      ps_name = name;
-      ps_sig = lazy (Subst.signature Subst.identity sign);
-      ps_comps = comps;
-      ps_crcs = crcs;
-      ps_filename = filename;
-      ps_flags = flags;
-    }
-  in
-  if ps.ps_name <> modname then
-    error (Illegal_renaming (modname, ps.ps_name, filename));
-  if check then check_consistency ps;
-  Hashtbl.add (persistent_structures ()) modname (Some ps);
-  ps
+  Compiler_phase_trace.dependency "dependency.make_available" (fun () ->
+      let name = cmi.cmi_name in
+      let sign = cmi.cmi_sign in
+      let crcs = cmi.cmi_crcs in
+      let flags = cmi.cmi_flags in
+      let deprecated =
+        List.fold_left
+          (fun _ -> function
+            | Deprecated s -> Some s)
+          None flags
+      in
+      let comps =
+        !components_of_module' ~deprecated ~loc:Location.none empty
+          Subst.identity
+          (Pident (Ident.create_persistent name))
+          (Mty_signature sign)
+      in
+      let ps =
+        {
+          ps_name = name;
+          ps_sig = lazy (Subst.signature Subst.identity sign);
+          ps_comps = comps;
+          ps_crcs = crcs;
+          ps_filename = filename;
+          ps_flags = flags;
+        }
+      in
+      if ps.ps_name <> modname then
+        error (Illegal_renaming (modname, ps.ps_name, filename));
+      if check then check_consistency ps;
+      Hashtbl.add (persistent_structures ()) modname (Some ps);
+      ps)
 
 let read_pers_struct check modname filename =
   add_import modname;
@@ -1932,43 +1935,51 @@ let imports () =
 
 let save_signature_with_imports ?check_exists ~deprecated sg modname filename
     imports =
-  (*prerr_endline filename;
+  Compiler_phase_trace.section "artifact.cmi_prep" (fun () ->
+      (*prerr_endline filename;
     List.iter (fun (name, crc) -> prerr_endline name) imports;*)
-  Btype.cleanup_abbrev ();
-  Subst.reset_for_saving ();
-  let sg = Subst.signature (Subst.for_saving Subst.identity) sg in
-  let flags =
-    match deprecated with
-    | Some s -> [Deprecated s]
-    | None -> []
-  in
-  try
-    let cmi =
-      {cmi_name = modname; cmi_sign = sg; cmi_crcs = imports; cmi_flags = flags}
-    in
-    let crc = create_cmi ?check_exists filename cmi in
-    (* Enter signature in persistent table so that imported_unit()
+      Btype.cleanup_abbrev ();
+      Subst.reset_for_saving ();
+      let sg = Subst.signature (Subst.for_saving Subst.identity) sg in
+      let flags =
+        match deprecated with
+        | Some s -> [Deprecated s]
+        | None -> []
+      in
+      try
+        let cmi =
+          {
+            cmi_name = modname;
+            cmi_sign = sg;
+            cmi_crcs = imports;
+            cmi_flags = flags;
+          }
+        in
+        let crc = create_cmi ?check_exists filename cmi in
+        (* Enter signature in persistent table so that imported_unit()
        will also return its crc *)
-    let comps =
-      components_of_module ~deprecated ~loc:Location.none empty Subst.identity
-        (Pident (Ident.create_persistent modname))
-        (Mty_signature sg)
-    in
-    let ps =
-      {
-        ps_name = modname;
-        ps_sig = lazy (Subst.signature Subst.identity sg);
-        ps_comps = comps;
-        ps_crcs = (cmi.cmi_name, Some crc) :: imports;
-        ps_filename = filename;
-        ps_flags = cmi.cmi_flags;
-      }
-    in
-    save_pers_struct crc ps;
-    cmi
-  with exn ->
-    remove_file filename;
-    raise exn
+        let comps =
+          Compiler_phase_trace.section "artifact.cmi_register" (fun () ->
+              components_of_module ~deprecated ~loc:Location.none empty
+                Subst.identity
+                (Pident (Ident.create_persistent modname))
+                (Mty_signature sg))
+        in
+        let ps =
+          {
+            ps_name = modname;
+            ps_sig = lazy (Subst.signature Subst.identity sg);
+            ps_comps = comps;
+            ps_crcs = (cmi.cmi_name, Some crc) :: imports;
+            ps_filename = filename;
+            ps_flags = cmi.cmi_flags;
+          }
+        in
+        save_pers_struct crc ps;
+        cmi
+      with exn ->
+        remove_file filename;
+        raise exn)
 
 let save_signature ?check_exists ~deprecated sg modname filename =
   save_signature_with_imports ?check_exists ~deprecated sg modname filename

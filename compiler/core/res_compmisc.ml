@@ -46,22 +46,23 @@ let open_implicit_module m env =
   snd (Typemod.type_open_ Override env lid.loc lid)
 
 let initial_env ?modulename () =
-  Ident.reinit ();
-  let open_modules =
-    match modulename with
-    | None -> !((Clflags.current ()).open_modules)
-    | Some modulename ->
-      !((Clflags.current ()).open_modules)
-      |> List.filter (fun m -> m <> modulename)
-  in
-  let initial = Env.initial_safe_string () in
-  let env =
-    if !((Clflags.current ()).nopervasives) then initial
-    else
-      initial
-      |> open_implicit_module "Pervasives"
-      |> open_implicit_module "Stdlib"
-  in
-  List.fold_left
-    (fun env m -> open_implicit_module m env)
-    env (List.rev open_modules)
+  Compiler_phase_trace.section "setup.initial_env" (fun () ->
+      Ident.reinit ();
+      let open_modules =
+        match modulename with
+        | None -> !((Clflags.current ()).open_modules)
+        | Some modulename ->
+          !((Clflags.current ()).open_modules)
+          |> List.filter (fun m -> m <> modulename)
+      in
+      let initial = Env.initial_safe_string () in
+      let env =
+        if !((Clflags.current ()).nopervasives) then initial
+        else
+          initial
+          |> open_implicit_module "Pervasives"
+          |> open_implicit_module "Stdlib"
+      in
+      List.fold_left
+        (fun env m -> open_implicit_module m env)
+        env (List.rev open_modules))

@@ -55,48 +55,52 @@ let setup_outcome_printer () = Lazy.force Res_outcome_printer.setup
 let setup_runtime_path path = Runtime_package.set_path path
 
 let process_file sourcefile ?kind ppf =
-  (* The input name must identify the source when writing the binary AST. *)
-  setup_outcome_printer ();
-  Error_message_utils_support.setup ();
-  let kind =
-    match kind with
-    | None ->
-      Ext_file_extensions.classify_input
-        (Ext_filename.get_extension_maybe sourcefile)
-    | Some kind -> kind
-  in
-  let res =
-    match kind with
-    | Res ->
-      let sourcefile = set_abs_input_name sourcefile in
-      Js_implementation.implementation
-        ~parser:
-          (Res_driver.parse_implementation
-             ~ignore_parse_errors:!((Clflags.current ()).ignore_parse_errors))
-        ppf sourcefile
-    | Resi ->
-      let sourcefile = set_abs_input_name sourcefile in
-      Js_implementation.interface
-        ~parser:
-          (Res_driver.parse_interface
-             ~ignore_parse_errors:!((Clflags.current ()).ignore_parse_errors))
-        ppf sourcefile
-    | Intf_ast -> Js_implementation.interface_mliast ppf sourcefile
-    (* The printer setup is done in the runtime depends on
+  Compiler_phase_trace.section "request.other" (fun () ->
+      (* The input name must identify the source when writing the binary AST. *)
+      setup_outcome_printer ();
+      Error_message_utils_support.setup ();
+      let kind =
+        match kind with
+        | None ->
+          Ext_file_extensions.classify_input
+            (Ext_filename.get_extension_maybe sourcefile)
+        | Some kind -> kind
+      in
+      let res =
+        match kind with
+        | Res ->
+          let sourcefile = set_abs_input_name sourcefile in
+          Js_implementation.implementation
+            ~parser:
+              (Res_driver.parse_implementation
+                 ~ignore_parse_errors:
+                   !((Clflags.current ()).ignore_parse_errors))
+            ppf sourcefile
+        | Resi ->
+          let sourcefile = set_abs_input_name sourcefile in
+          Js_implementation.interface
+            ~parser:
+              (Res_driver.parse_interface
+                 ~ignore_parse_errors:
+                   !((Clflags.current ()).ignore_parse_errors))
+            ppf sourcefile
+        | Intf_ast -> Js_implementation.interface_mliast ppf sourcefile
+        (* The printer setup is done in the runtime depends on
        the content of ast
     *)
-    | Impl_ast -> Js_implementation.implementation_mlast ppf sourcefile
-    | Mlmap ->
-      Location.set_input_name sourcefile;
-      Js_implementation.implementation_map ppf sourcefile
-    | Cmi ->
-      let cmi_sign = (Cmi_format.read_cmi sourcefile).cmi_sign in
-      let output = Compiler_request_output.stdout_formatter () in
-      Printtyp.signature output cmi_sign;
-      Format.pp_print_newline output ()
-    | Unknown -> Bsc_args.bad_arg ("don't know what to do with " ^ sourcefile)
-  in
-  res
+        | Impl_ast -> Js_implementation.implementation_mlast ppf sourcefile
+        | Mlmap ->
+          Location.set_input_name sourcefile;
+          Js_implementation.implementation_map ppf sourcefile
+        | Cmi ->
+          let cmi_sign = (Cmi_format.read_cmi sourcefile).cmi_sign in
+          let output = Compiler_request_output.stdout_formatter () in
+          Printtyp.signature output cmi_sign;
+          Format.pp_print_newline output ()
+        | Unknown ->
+          Bsc_args.bad_arg ("don't know what to do with " ^ sourcefile)
+      in
+      res)
 
 let reprint_source_file sourcefile =
   let kind =
@@ -597,50 +601,53 @@ let with_fresh_request_states ~cwd action =
                                                       .with_fresh ~cwd action)))))))))))))
 
 let run_argv ?run_external ~cwd argv =
-  with_fresh_request_states ~cwd (fun () ->
-      reset_state ~new_request:true ();
-      Cmt_format.set_args argv;
-      let execute () =
-        try
-          Bsc_args.parse_exn ~argv (command_line_flags ()) anonymous ~usage;
-          0
-        with
-        | Request_exit code -> code
-        | Bsc_args.Help message ->
-          Compiler_request_output.write_stdout message;
-          0
-        | Res_driver.Already_reported -> 1
-        | Bsc_args.Bad msg ->
-          Format.fprintf (ppf ()) "%s@." msg;
-          2
-        | x ->
-          Location.report_exception (ppf ()) x;
-          2
-      in
-      let run_with_external_owner action =
-        match run_external with
-        | None -> action ()
-        | Some run_external ->
-          Ccomp.with_command_runner
-            (fun command ->
-              let status, stdout, stderr = run_external command in
-              Compiler_request_output.write_stdout stdout;
-              Format.pp_print_string (ppf ()) stderr;
-              status)
-            action
-      in
-      let exit_code, stdout, stderr =
-        Fun.protect
-          (fun () ->
-            Compiler_request_output.with_capture (fun () ->
-                Misc.Color.set_color_tag_handling
-                  (Compiler_request_output.stdout_formatter ());
-                Misc.Color.set_color_tag_handling
-                  (Compiler_request_output.stderr_formatter ());
-                run_with_external_owner execute))
-          ~finally:reset_state
-      in
-      {exit_code; stdout; stderr})
+  let input = argv.(Array.length argv - 1) in
+  Compiler_phase_trace.request ~cwd ~input (fun () ->
+      with_fresh_request_states ~cwd (fun () ->
+          Compiler_phase_trace.section "request.reset" (fun () ->
+              reset_state ~new_request:true ());
+          Cmt_format.set_args argv;
+          let execute () =
+            try
+              Bsc_args.parse_exn ~argv (command_line_flags ()) anonymous ~usage;
+              0
+            with
+            | Request_exit code -> code
+            | Bsc_args.Help message ->
+              Compiler_request_output.write_stdout message;
+              0
+            | Res_driver.Already_reported -> 1
+            | Bsc_args.Bad msg ->
+              Format.fprintf (ppf ()) "%s@." msg;
+              2
+            | x ->
+              Location.report_exception (ppf ()) x;
+              2
+          in
+          let run_with_external_owner action =
+            match run_external with
+            | None -> action ()
+            | Some run_external ->
+              Ccomp.with_command_runner
+                (fun command ->
+                  let status, stdout, stderr = run_external command in
+                  Compiler_request_output.write_stdout stdout;
+                  Format.pp_print_string (ppf ()) stderr;
+                  status)
+                action
+          in
+          let exit_code, stdout, stderr =
+            Fun.protect
+              (fun () ->
+                Compiler_request_output.with_capture (fun () ->
+                    Misc.Color.set_color_tag_handling
+                      (Compiler_request_output.stdout_formatter ());
+                    Misc.Color.set_color_tag_handling
+                      (Compiler_request_output.stderr_formatter ());
+                    run_with_external_owner execute))
+              ~finally:reset_state
+          in
+          {exit_code; stdout; stderr}))
 
 let run_request ~run_external ~cwd ~argv ~input =
   let logical_argv = Array.of_list ("bsc" :: (argv @ [input])) in
