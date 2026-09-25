@@ -28,6 +28,7 @@
 
 #### :nail_care: Polish
 
+- Speed up OCaml rewatch builds that repeatedly open large signatures by reusing verified expanded signature graphs per compiler worker. https://github.com/rescript-lang/rescript/pull/8673
 - Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662
 
 #### :house: Internal
