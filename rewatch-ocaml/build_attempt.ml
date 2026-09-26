@@ -27,6 +27,13 @@ let preliminary_parse result =
 type cleanup_batch = {actions: (unit -> unit) list; artifacts: string list}
 type namespace_job = {task: Process.task; finish: Process.result -> unit}
 
+type parse_export = {
+  staged_ast: string;
+  published_ast: string;
+  source: string;
+  compile_assets: Compile_assets.t;
+}
+
 type pending_work = {
   mutable namespace_jobs: namespace_job list;
   mutable compile_candidates: Compiler_scheduler.candidate list;
@@ -56,6 +63,9 @@ type t = {
   blocked_modules: (string, unit) Hashtbl.t;
   namespace_freshness: (string, float option) Hashtbl.t;
   pending_work: pending_work;
+  mutable parse_exports: parse_export list;
+  mutable parse_export_worker: unit Domain.t option;
+  invalidated_parse_exports: (string, unit) Hashtbl.t;
   finalization: finalization_state;
   mutable compiler_cleaned: bool;
   mutable had_warnings: bool;
@@ -88,6 +98,9 @@ let create ~freshness_mode ~session ~process_poll ~progress ~verbosity =
     blocked_modules = Hashtbl.create 16;
     namespace_freshness = Hashtbl.create 16;
     pending_work = {namespace_jobs = []; compile_candidates = []};
+    parse_exports = [];
+    parse_export_worker = None;
+    invalidated_parse_exports = Hashtbl.create 16;
     finalization =
       {
         results = cleanup_results;
@@ -126,6 +139,59 @@ let create_retained ~session ~process_poll ~progress ~verbosity =
 
 let register_cleanup attempt action =
   attempt.finalization.actions <- action :: attempt.finalization.actions
+
+let add_parse_export attempt ~staged_ast ~published_ast ~source ~compile_assets
+    =
+  attempt.parse_exports <-
+    {staged_ast; published_ast; source; compile_assets} :: attempt.parse_exports
+
+let start_parse_exports attempt =
+  if attempt.parse_exports <> [] && Option.is_none attempt.parse_export_worker
+  then
+    let exports = List.rev attempt.parse_exports in
+    attempt.parse_export_worker <-
+      Some
+        (Domain.spawn (fun () ->
+             List.iter
+               (fun export ->
+                 File_util.copy_existing_file ~ensure_parent:false
+                   export.staged_ast export.published_ast;
+                 (* Compilation can finish before this copy. Keep the parser's
+                    time so the next build sees it as older than the CMT. *)
+                 let stats = Unix.stat export.staged_ast in
+                 Unix.utimes export.published_ast stats.st_atime stats.st_mtime)
+               exports))
+
+let invalidate_parse_export attempt ~path =
+  Hashtbl.replace attempt.invalidated_parse_exports path ()
+
+let finish_parse_exports attempt =
+  start_parse_exports attempt;
+  Option.iter
+    (fun worker ->
+      attempt.parse_export_worker <- None;
+      let error =
+        try
+          Domain.join worker;
+          None
+        with error -> Some error
+      in
+      List.iter
+        (fun export ->
+          if
+            Option.is_some error
+            || Hashtbl.mem attempt.invalidated_parse_exports
+                 export.published_ast
+          then File_util.remove_file export.published_ast;
+          Compile_assets.refresh_ast export.compile_assets ~source:export.source
+            ~path:export.published_ast;
+          if Option.is_some error then
+            Build_session.mark_parse_pending attempt.session
+              (Platform.normalize_path_for_comparison export.source))
+        attempt.parse_exports;
+      attempt.parse_exports <- [];
+      Option.iter raise error)
+    attempt.parse_export_worker
 
 let defer_artifact_cleanup attempt paths =
   attempt.finalization.artifacts <- paths @ attempt.finalization.artifacts
@@ -207,7 +273,11 @@ let finalize_logs attempt =
 
 let finish_attempt attempt =
   run_all
-    [(fun () -> cleanup_artifacts attempt); (fun () -> finalize_logs attempt)]
+    [
+      (fun () -> finish_parse_exports attempt);
+      (fun () -> cleanup_artifacts attempt);
+      (fun () -> finalize_logs attempt);
+    ]
 
 let protect attempt action =
   match action () with

@@ -7,6 +7,7 @@ type t = {
   ast_dependencies: (string, string list) Hashtbl.t;
   ast_by_source: (string, entry) Hashtbl.t;
   cmi_by_module: (string, entry) Hashtbl.t;
+  cmj_by_module: (string, entry) Hashtbl.t;
   cmt_by_module: (string, entry) Hashtbl.t;
 }
 
@@ -21,7 +22,7 @@ let is_managed_basename basename =
   List.exists (Filename.check_suffix basename) cleanup_extensions
 
 let state_extension = function
-  | ".ast" | ".iast" | ".cmi" | ".cmt" -> true
+  | ".ast" | ".iast" | ".cmi" | ".cmj" | ".cmt" -> true
   | _ -> false
 
 let read_directory directory =
@@ -57,6 +58,7 @@ let source_key = Platform.normalize_path_for_comparison
 let add_module_artifact state (entry, name) =
   match Filename.extension name with
   | ".cmi" -> Hashtbl.replace state.cmi_by_module (module_key name) entry
+  | ".cmj" -> Hashtbl.replace state.cmj_by_module (module_key name) entry
   | ".cmt" -> Hashtbl.replace state.cmt_by_module (module_key name) entry
   | _ -> ()
 
@@ -68,6 +70,7 @@ let create directories =
       ast_dependencies = Hashtbl.create 64;
       ast_by_source = Hashtbl.create 64;
       cmi_by_module = Hashtbl.create 64;
+      cmj_by_module = Hashtbl.create 64;
       cmt_by_module = Hashtbl.create 64;
     }
   in
@@ -117,6 +120,10 @@ let ast state source = Hashtbl.find_opt state.ast_by_source (source_key source)
 
 let cmi state key = Hashtbl.find_opt state.cmi_by_module key
 let cmt state key = Hashtbl.find_opt state.cmt_by_module key
+let compile_marker state key =
+  match cmt state key with
+  | Some _ as cmt -> cmt
+  | None -> Hashtbl.find_opt state.cmj_by_module key
 
 let replace_from_path table key path =
   try
@@ -129,6 +136,11 @@ let refresh_cmi state ~key ~path =
 
 let refresh_cmt state ~key ~path =
   replace_from_path state.cmt_by_module key path
+
+let refresh_compile_marker state ~key ~cmt_path =
+  refresh_cmt state ~key ~path:cmt_path;
+  replace_from_path state.cmj_by_module key
+    (Filename.remove_extension cmt_path ^ ".cmj")
 
 let refresh_ast state ~source ~path =
   replace_from_path state.ast_by_source (source_key source) path

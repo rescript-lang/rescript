@@ -14,6 +14,11 @@ val ast_dependencies : t -> string -> string list
 val ast : t -> string -> entry option
 val cmi : t -> string -> entry option
 val cmt : t -> string -> entry option
+
+(* Prefer a CMT when present; use the mandatory CMJ when binary annotations
+    are disabled for the module. *)
+val compile_marker : t -> string -> entry option
 val refresh_cmi : t -> key:string -> path:string -> unit
 val refresh_cmt : t -> key:string -> path:string -> unit
+val refresh_compile_marker : t -> key:string -> cmt_path:string -> unit
 val refresh_ast : t -> source:string -> path:string -> unit

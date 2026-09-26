@@ -105,7 +105,10 @@ let run_scheduled_modules (attempt : Build_attempt.t)
   Rescript_compiler_driver.set_frozen_for_compile
     (Build_session.compiler_session attempt.session)
     (List.length ready >= 4 || has_dirty_dependency);
-  Compiler_scheduler.run ~poll:attempt.process_poll
+  Compiler_scheduler.run
+    ~on_ast_invalidation:(fun path ->
+      Build_attempt.invalidate_parse_export attempt ~path)
+    ~poll:attempt.process_poll
     ~warning_state:(Build_session.warning_state attempt.session)
     ~compile_assets:prepared.compile_assets ~build_state:prepared.build_state
     ~candidates
@@ -474,10 +477,15 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     in
     Package_build.prepare_tree ~seen:visited ~package:root_package ~prepared
       ~watch ~attempt;
+    Build_attempt.start_parse_exports attempt;
+    if Sys.getenv_opt "REWATCH_ASYNC_AST_EXPORT" = Some "0" then
+      Build_attempt.finish_parse_exports attempt;
     Build_session.mark_freshness_initialized attempt.session;
     let parse_messages = parse_messages () in
     let parse_output = parse_output parse_messages in
-    if parse_failed parse_messages then raise (Parse_failure parse_output);
+    if parse_failed parse_messages then (
+      Build_attempt.finish_parse_exports attempt;
+      raise (Parse_failure parse_output));
     poll ();
     let namespace_count =
       try run_namespace_jobs attempt
@@ -499,6 +507,15 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
         run_scheduled_modules attempt prepared ~compile_step ~namespace_count;
         None
       with Build_failure output -> Some output
+    in
+    let compile_failure =
+      try
+        Build_attempt.finish_parse_exports attempt;
+        compile_failure
+      with error ->
+        Some
+          ("Failed to publish parser artifacts: " ^ Printexc.to_string error
+         ^ "\n")
     in
     Output.Progress.finish progress;
     let compile_seconds =

@@ -131,7 +131,7 @@ orchestration and aggregate dispatch, while `build_report.ml` owns presentation.
 context, clean stale assets, and run the preliminary parse; `module_graph.ml`
 owns dependency resolution, graph-node identities, and cycle analysis.
 
-The experimental `REWATCH_FROZEN_VALUES=1` compiler session passes newly
+The default compiler session passes newly
 parsed ASTs, dependency lists, frozen interfaces, and cross-module optimization
 metadata directly between jobs. Dependent compiler jobs can start before CMI
 and CMJ artifacts are exported; export finishes before build success. Its
@@ -140,6 +140,17 @@ diagnostics, and output paths. Separate CMI and CMJ fingerprints control
 dependent recompilation. The current implementation and benchmark results are
 documented in
 [`compiler/ml/IMMUTABLE_INTERFACES.md`](../compiler/ml/IMMUTABLE_INTERFACES.md).
+Set `REWATCH_FROZEN_VALUES=0` to compare the previous compiler path.
+Sessions containing GenType packages currently use the classic interface
+lookup because frozen lookup changed generated TypeScript in that suite.
+Parser AST cache copies run on a separate domain while compilation proceeds;
+`REWATCH_ASYNC_AST_EXPORT=0` makes those copies finish before compilation.
+OCaml Rewatch omits CMT and CMTI binary annotations by default for packages
+without GenType. It uses CMJ modification time as the compiled freshness
+marker in that case. Set `REWATCH_BIN_ANNOT=1` to produce binary annotations
+for editor tools and other consumers. GenType packages keep them automatically.
+Compiler metadata records both annotation and frozen-lookup settings, so
+switching either mode invalidates incompatible cached artifacts.
 `compiler_process.ml` is the boundary between logical compiler jobs and
 in-process execution. Independent parse and compile requests run on a bounded
 domain pool. The scheduler accepts module results and records build state;

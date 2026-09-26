@@ -399,7 +399,7 @@ let compile_job ~bsc ~build_dir ~(config : Config.t) ~common_args
 
 let publish_immediate ?session ~preserve_source_mtime ~retain_interface
     ~dependencies ~build_dir ~ocaml_dir ~is_local ~(config : Config.t)
-    ~source_kind path result =
+    ~source_kind ~compiled_at path result =
   let stderr =
     if is_local then result.Process.stderr
     else retain_critical_external_warnings result.stderr
@@ -434,6 +434,17 @@ let publish_immediate ?session ~preserve_source_mtime ~retain_interface
     in
     cmi_change := changes.cmi_change;
     optimization_changed := changes.optimization_changed;
+    (match source_kind with
+    | Source.Interface -> ()
+    | Source.Implementation ->
+      if
+        not
+          (File_util.is_regular_file
+             (Filename.concat artifact_dir (basename ^ ".cmt")))
+      then
+        Option.iter
+          (fun filename -> Unix.utimes filename compiled_at compiled_at)
+          optimization_file);
     let source = Filename.concat config.root path in
     let build_source = Filename.concat build_dir path in
     File_util.ensure_dir (Filename.dirname build_source);
@@ -537,16 +548,20 @@ let publish_immediate ?session ~preserve_source_mtime ~retain_interface
 
 let publish ?session ~retain_interface ~dependencies ~build_dir ~ocaml_dir
     ~is_local ~(config : Config.t) ~source_kind path result =
+  (* This is the producer completion time, before its dependents can start.
+     A no-CMT build uses it as the CMJ freshness marker even if CMJ bytes did
+     not change and the compiler reused its old staging file. *)
+  let compiled_at = Unix.gettimeofday () in
   let immediate preserve_source_mtime =
     publish_immediate ?session ~preserve_source_mtime ~retain_interface
-      ~dependencies ~build_dir ~ocaml_dir ~is_local ~config ~source_kind path
-      result
+      ~dependencies ~build_dir ~ocaml_dir ~is_local ~config ~source_kind
+      ~compiled_at path result
   in
   match session with
   | None -> immediate false
-  | Some _
+  | Some session
     when (not retain_interface)
-         || Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" ->
+         || not (Rescript_compiler_driver.session_frozen_enabled session) ->
     immediate false
   | Some session ->
     let basename = Source.compiler_asset_basename config path in

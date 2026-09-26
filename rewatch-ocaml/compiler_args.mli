@@ -14,6 +14,8 @@ val compiler_flags :
 val with_local_warning_policy : is_local:bool -> Config.t -> Config.t
 val gentype_dependency_args_from_paths :
   Config.t -> (Config.dependency * string) list -> string list
+val binary_annotations_enabled : Config.t -> bool
+val gentype_enabled : Config.t -> bool
 
 val parser_arguments :
   config:Config.t -> contents:string -> path:string -> string list

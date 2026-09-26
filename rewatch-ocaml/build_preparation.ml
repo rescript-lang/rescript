@@ -18,6 +18,13 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     Package_graph.discover ~root_config ~prod ~features ~warn_error ~filter
       ~attempt
   in
+  Rescript_compiler_driver.set_session_frozen_enabled
+    (Build_session.compiler_session attempt.session)
+    (not
+       (List.exists
+          (fun (package : Package_plan.t) ->
+            Compiler_args.gentype_enabled package.compile_config)
+          package_plans));
   Module_graph.validate_visible_namespaces ~root_config package_plans;
   let runtime = runtime_path root_config.root in
   let source_map_args = Compiler_args.source_map_args root_config ~watch in
@@ -27,6 +34,10 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       ~source_map_args
       ~inherited_compiler_args:
         (root_config.jsx_args @ root_config.experimental_args)
+      ~binary_annotations:(Compiler_args.binary_annotations_enabled root_config)
+      ~frozen_values:
+        (Rescript_compiler_driver.session_frozen_enabled
+           (Build_session.compiler_session attempt.session))
       ~package_output_specs:(Compiler_info.package_output_specs root_config)
   in
   let previous_compile_assets =

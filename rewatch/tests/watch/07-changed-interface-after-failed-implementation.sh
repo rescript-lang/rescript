@@ -83,8 +83,15 @@ cp "$compiler_log" failed.compiler.log
 # Keep timestamp-based freshness from masking a lost dirty bit. Both watcher
 # implementations must remember that Consumer was blocked by Provider's failed
 # implementation when the next rebuild reconstructs the build state.
-test -f lib/ocaml/Consumer.cmt
-node -e 'const fs = require("fs"); const future = new Date(Date.now() + 60000); fs.utimesSync("lib/ocaml/Consumer.cmt", future, future)'
+freshness_marker=lib/ocaml/Consumer.cmt
+if [ ! -f "$freshness_marker" ]; then
+  freshness_marker=lib/ocaml/Consumer.cmj
+fi
+if [ ! -f "$freshness_marker" ]; then
+  error "Consumer has no compiled freshness marker"
+  exit 1
+fi
+node -e 'const fs = require("fs"); const future = new Date(Date.now() + 60000); fs.utimesSync(process.argv[1], future, future)' "$freshness_marker" || exit 1
 
 # An atomic replacement makes the watcher reinitialize its build state. The
 # blocked dependent must remain dirty through that full rebuild as well.

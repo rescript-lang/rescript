@@ -131,9 +131,10 @@ let existing_tests =
                       on_make ();
                       make_scheduled key source state cmi_path))
             in
-            Compiler_scheduler.run ~poll:None
-              ~warning_state:(Warning_state.create ()) ~compile_assets
-              ~build_state ~candidates
+            Compiler_scheduler.run
+              ~on_ast_invalidation:(fun _ -> ())
+              ~poll:None ~warning_state:(Warning_state.create ())
+              ~compile_assets ~build_state ~candidates
               ~mark_compiled:(fun () -> ())
               ~mark_had_warnings:(fun () -> ())
               ~progress:(Output.Progress.create ~enabled:false ~color:false)
@@ -218,6 +219,7 @@ let existing_tests =
           let hook_interrupted =
             try
               Compiler_scheduler.run
+                ~on_ast_invalidation:(fun _ -> ())
                 ~poll:
                   (Some
                      (fun () ->
@@ -342,8 +344,9 @@ let async_export_tests _context =
                   ~make:(fun () -> make key state cmi_path))
           in
           let run () =
-            Compiler_scheduler.run ~poll:None
-              ~warning_state:(Warning_state.create ())
+            Compiler_scheduler.run
+              ~on_ast_invalidation:(fun _ -> ())
+              ~poll:None ~warning_state:(Warning_state.create ())
               ~compile_assets:(Compile_assets.create [ocaml_dir])
               ~build_state ~candidates
               ~mark_compiled:(fun () -> ())

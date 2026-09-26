@@ -2,8 +2,9 @@
 
 ## Same-session module results (Goal 3)
 
-With `REWATCH_FROZEN_VALUES=1`, the embedded compiler captures a successful
-module's CMI, CMJ, CMT, and parser AST before the request ends. Rewatch stages
+By default, the embedded OCaml Rewatch compiler captures a successful
+module's CMI, CMJ, and parser AST before the request ends. It also captures
+CMT when binary annotations are enabled. Rewatch stages
 the interface and optimization metadata, then publishes an in-memory module
 result before scheduling dependent compiler jobs. One export domain copies
 independent implementation artifacts while compiler jobs continue. Interface
@@ -41,23 +42,45 @@ comparison when a session fingerprint is unavailable. Deferred CMI and CMJ
 exports preserve their producer timestamps when contents change, so a fresh
 build process does not mistake them for newer than their compiled consumers.
 
-Typed results are retained only for local modules and only up to 4 MiB each,
+When binary annotations are enabled, typed results are retained only for local
+modules and only up to 4 MiB each,
 64 results, and 16 MiB of total CMT file size. The oldest entries are evicted;
 graph accessors return independent values and return `None` after their backing
 file changes.
-The existing editor/LSP disk-CMT path remains compatible and can adopt this
-API later. Parse jobs still write ASTs and copy them into the persistent cache
-before graph construction, although graph discovery and downstream compiler
-jobs use the in-memory parse result. External dependencies, cold starts, CLI
+The existing editor/LSP disk-CMT path requires `REWATCH_BIN_ANNOT=1` with OCaml
+Rewatch; GenType packages enable binary annotations automatically. Parser jobs
+still write ASTs, but publish them to the session before the persistent-cache
+copy. One export domain copies ASTs while compilation runs. It preserves the
+parser timestamp so the next build does not see an AST newer than its compiled
+module. Failed compiler jobs invalidate any concurrent AST export before the
+attempt finishes. `REWATCH_ASYNC_AST_EXPORT=0` disables the overlap.
+External dependencies, cold starts, CLI
 invocations, namespace map exports, leaf artifacts, and other artifact
 consumers still use files. PPXs remain external processes.
+
+The session compiler path is on by default for OCaml Rewatch; set
+`REWATCH_FROZEN_VALUES=0` to compare the prior path. Binary annotations are
+omitted by default when GenType is absent, saving CMT/CMTI preparation and
+serialization. Rewatch then uses the mandatory CMJ as the compiled freshness
+marker. `REWATCH_BIN_ANNOT=1` restores CMT/CMTI output and typed-result
+retention. GenType projects retain the classic interface lookup: the full
+GenType suite found changed TypeScript output with frozen lookup, so those
+projects use the checked legacy path until that difference is resolved.
+Standalone `bsc` keeps its previous annotation default.
+When an implementation has no CMT, publication sets its CMJ modification time
+to the compiler completion time even if its CMJ bytes did not change. This
+keeps a comment-only edit's newly parsed AST older than the compiled marker,
+so the following no-op build stays clean. Deferred exports use the completion
+time captured before dependent compilation starts.
 
 Twenty-one interleaved pairs on 2026-09-26 used four compiler domains and two
 synthetic 201-module projects. Each project has a 400-value API with 200
 consumers; the second also stresses nested module signatures and a functor.
 Two further 21-pair runs used the repository's 634-module `tests/tests`
 project with its React dependency already built. Wall-time medians include
-process launch, parse, compile, and artifact export:
+process launch, parse, compile, and artifact export. The classic column is the
+former default with binary annotations enabled; the session column also kept
+binary annotations enabled for a like-for-like comparison:
 
 | Workload | Classic | Session | Delta |
 | --- | ---: | ---: | ---: |
@@ -67,6 +90,25 @@ process launch, parse, compile, and artifact export:
 | Modules, one consumer edit | 39.46 ms | 40.57 ms | +1.11 ms (+2.82%) |
 | `tests/tests`, clean (42 pairs) | 1569.79 ms | 1521.18 ms | −48.61 ms (−3.10%) |
 | `tests/tests`, one file edit (42 pairs) | 114.86 ms | 113.30 ms | −1.57 ms (−1.37%) |
+
+Two follow-up comparisons used the same 201-module values fixture and four
+workers. With binary annotations enabled, 21 measured interleaved pairs gave
+153.41 ms median clean builds when AST export finished before compilation and
+149.21 ms when it overlapped compilation. One-consumer edits were 39.86 ms
+and 39.52 ms. In a separate 11-pair clean comparison with overlapping AST
+export, binary annotations took 140.49 ms and omitting them took 129.28 ms.
+These are separate runs; their absolute times should not be compared across
+experiments. A no-annotation no-op build parsed and compiled zero modules, and
+an edited consumer parsed and compiled one module.
+
+Nine measured interleaved pairs on a copied 634-module `tests/tests` project
+compared the old compatible settings (`REWATCH_FROZEN_VALUES=0`,
+`REWATCH_BIN_ANNOT=1`, `REWATCH_ASYNC_AST_EXPORT=0`) with the new defaults.
+With four workers, clean-build medians were 1320.75 ms and 1226.81 ms,
+respectively, a 93.94 ms (7.11%) reduction. Comment-only single-file edits
+were 65.10 ms and 62.94 ms; both modes compiled one module and the following
+no-op compiled none. The small edit difference is within the range where
+earlier runs changed sign, so the clean-build gain is the more reliable result.
 
 The scheduler skips frozen dependency lookup for fewer than four initially
 ready modules unless they depend on each other. This removed a small-edit
@@ -360,8 +402,8 @@ fixture, `--modules-only` exercises module types, aliases, and a functor, and
 `--open-only` exercises an opened interface.
 Build it with the embedded OCaml
 Rewatch executable, four domains, and `REWATCH_TYPECHECK_TRACE` set to an
-absolute TSV path; compare clean builds with `REWATCH_FROZEN_VALUES` absent and
-set to `1`. Analyze both files with
+absolute TSV path; compare clean builds with `REWATCH_FROZEN_VALUES=0` and
+its default setting. Analyze both files with
 `rewatch-ocaml/bench/analyze_typecheck_trace.js`.
 
 Direct indexing still stops where the module shape depends on a functor

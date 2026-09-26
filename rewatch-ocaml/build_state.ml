@@ -119,8 +119,9 @@ let record_published_optimization ?dirty_propagation state module_ ~changed =
     mark_dependents_compile_dirty ?visited:dirty_propagation state module_
 
 let record_successful_compile ~compile_assets module_ ~cmt_path =
-  Compile_assets.refresh_cmt compile_assets ~key:module_.key ~path:cmt_path;
+  Compile_assets.refresh_compile_marker compile_assets ~key:module_.key
+    ~cmt_path;
   module_.last_compiled_cmt <-
-    Compile_assets.cmt compile_assets module_.key
+    Compile_assets.compile_marker compile_assets module_.key
     |> Option.map (fun entry -> entry.Compile_assets.modified);
   module_.compile_dirty <- false

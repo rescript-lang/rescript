@@ -5,6 +5,8 @@ type context = {
   runtime_path: string;
   source_map_args: string list;
   inherited_compiler_args: string list;
+  binary_annotations: bool;
+  frozen_values: bool;
   package_output_specs: package_output_spec list;
 }
 (** Compiler information fingerprints effective inputs rather than only the
@@ -27,6 +29,8 @@ val make_context :
   runtime_path:string ->
   source_map_args:string list ->
   inherited_compiler_args:string list ->
+  binary_annotations:bool ->
+  frozen_values:bool ->
   package_output_specs:package_output_spec list ->
   context
 

@@ -8,6 +8,13 @@ type session
 
 val create_session : unit -> session
 
+val set_session_frozen_enabled : session -> bool -> unit
+
+val session_frozen_enabled : session -> bool
+(** GenType projects retain the classic interface lookup while their typed
+    output is being checked for frozen-lookup equivalence. The environment
+    override can also disable this mode for an entire build. *)
+
 val set_frozen_for_compile : session -> bool -> unit
 (** Small incremental builds can skip frozen dependency lookup when only one
     module is ready to compile. Set before launching worker jobs. Capturing
@@ -79,8 +86,8 @@ val staged_ast_dependencies : session -> path:string -> string list option
     the absolute staging path. *)
 
 val publish_session_ast : session -> source:string -> unit
-(** Transfer a successful parse result to one later compiler request after
-    its AST artifact has been copied. [source] is the absolute staging path. *)
+(** Transfer a successful parse result to one later compiler request.
+    [source] is the absolute staging path; persistent export may run later. *)
 
 val publish_session_semantic :
   session -> retain:bool -> source:string -> destination:string -> unit

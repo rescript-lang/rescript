@@ -162,8 +162,12 @@ bench: compiler
 test: lib
 	node scripts/test.js -all
 
-test-analysis: lib
-	make -C tests/analysis_tests clean test
+annotated-tooling-deps: lib
+	REWATCH_BIN_ANNOT=1 REWATCH_FROZEN_VALUES=0 $(RESCRIPT_EXE) build $(RUNTIME_DIR)
+	REWATCH_BIN_ANNOT=1 REWATCH_FROZEN_VALUES=0 $(RESCRIPT_EXE) build $(BELT_DIR)
+
+test-analysis: annotated-tooling-deps
+	REWATCH_BIN_ANNOT=1 REWATCH_FROZEN_VALUES=0 $(MAKE) -C tests/analysis_tests clean test
 
 test-reanalyze: lib
 	make -C tests/analysis_tests/tests-reanalyze/deadcode test
@@ -172,8 +176,8 @@ test-reanalyze: lib
 benchmark-reanalyze: lib
 	make -C tests/analysis_tests/tests-reanalyze/deadcode-benchmark benchmark COPIES=$(or $(COPIES),50)
 
-test-tools: lib
-	make -C tests/tools_tests clean test
+test-tools: annotated-tooling-deps
+	REWATCH_BIN_ANNOT=1 REWATCH_FROZEN_VALUES=0 $(MAKE) -C tests/tools_tests clean test
 
 test-syntax: compiler
 	./scripts/test_syntax.sh
@@ -374,4 +378,4 @@ dev-container:
 
 .DEFAULT_GOAL := build
 
-.PHONY: yarn-install build rewatch compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container
+.PHONY: yarn-install build rewatch compiler lib artifacts bench test annotated-tooling-deps test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container

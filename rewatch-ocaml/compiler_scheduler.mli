@@ -68,6 +68,7 @@ val candidate_key : candidate -> string
 val candidate_dependencies : candidate -> string list
 
 val run :
+  on_ast_invalidation:(string -> unit) ->
   poll:(unit -> unit) option ->
   warning_state:Warning_state.t ->
   compile_assets:Compile_assets.t ->

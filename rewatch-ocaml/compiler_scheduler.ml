@@ -104,9 +104,9 @@ let candidate ~key ~state ~warning_paths ~make =
 
 let candidate_requires_compile candidate = candidate.state.compile_dirty
 
-let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
-    ~mark_compiled ~mark_had_warnings ~progress ~compile_step ~namespace_count
-    ~verbosity =
+let run ~on_ast_invalidation ~poll ~warning_state ~compile_assets ~build_state
+    ~candidates ~mark_compiled ~mark_had_warnings ~progress ~compile_step
+    ~namespace_count ~verbosity =
   let dirty_propagation = Hashtbl.create 16 in
   let deferred_exports = ref [] in
   let async_exports = Queue.create () in
@@ -380,6 +380,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     :: Option.to_list scheduled.source.Source.interface
     |> List.iter (fun source ->
         let path = Build_artifacts.published_ast_path ~ocaml_dir source in
+        on_ast_invalidation path;
         File_util.remove_file path;
         Compile_assets.refresh_ast compile_assets
           ~source:(Filename.concat scheduled.package_root source)

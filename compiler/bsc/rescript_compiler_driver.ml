@@ -596,6 +596,7 @@ type module_result = {
 }
 type session = {
   dependencies: Env.dependency_cache;
+  frozen_enabled: bool Atomic.t;
   use_frozen_for_compile: bool Atomic.t;
   staging_lock: Mutex.t;
   staged_cmis:
@@ -623,6 +624,7 @@ type session = {
 let create_session () =
   {
     dependencies = Env.create_dependency_cache ();
+    frozen_enabled = Atomic.make true;
     use_frozen_for_compile = Atomic.make true;
     staging_lock = Mutex.create ();
     staged_cmis = Hashtbl.create 32;
@@ -648,6 +650,13 @@ let create_session () =
 
 let set_frozen_for_compile session enabled =
   Atomic.set session.use_frozen_for_compile enabled
+
+let set_session_frozen_enabled session enabled =
+  Atomic.set session.frozen_enabled enabled
+
+let session_frozen_enabled session =
+  Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "0"
+  && Atomic.get session.frozen_enabled
 
 let same_file_stats first second =
   first.Unix.st_dev = second.Unix.st_dev
@@ -895,7 +904,7 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
       ~finally:(fun () -> Mutex.unlock session.staging_lock)
   in
   Env.with_dependency_cache session.dependencies (fun () ->
-      let frozen_enabled = Sys.getenv_opt "REWATCH_FROZEN_VALUES" = Some "1" in
+      let frozen_enabled = session_frozen_enabled session in
       let cmi_enabled =
         frozen_enabled && Sys.getenv_opt "REWATCH_SESSION_CMI" <> Some "0"
       in

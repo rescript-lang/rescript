@@ -792,6 +792,21 @@ test -f "$no_bin_annot/lib/bs/src/NoBinAnnot.cmj"
 test -f "$no_bin_annot/src/NoBinAnnot.js"
 test ! -e "$no_bin_annot/lib/bs/src/NoBinAnnot.cmt"
 test ! -e "$no_bin_annot/lib/ocaml/NoBinAnnot.cmt"
+"$port" build "$no_bin_annot" >"$work/no-bin-annot-unchanged.log"
+grep 'Parsed 0 source files' "$work/no-bin-annot-unchanged.log" >/dev/null
+grep 'Compiled 0 modules' "$work/no-bin-annot-unchanged.log" >/dev/null
+printf '\nlet changed = value + 1\n' >>"$no_bin_annot/src/NoBinAnnot.res"
+"$port" build "$no_bin_annot" >"$work/no-bin-annot-edit.log"
+grep 'Parsed 1 source files' "$work/no-bin-annot-edit.log" >/dev/null
+grep 'Compiled 1 modules' "$work/no-bin-annot-edit.log" >/dev/null
+printf '// Comment-only edit keeps the CMJ bytes unchanged.\n' \
+  >>"$no_bin_annot/src/NoBinAnnot.res"
+"$port" build "$no_bin_annot" >"$work/no-bin-annot-comment.log"
+grep 'Parsed 1 source files' "$work/no-bin-annot-comment.log" >/dev/null
+grep 'Compiled 1 modules' "$work/no-bin-annot-comment.log" >/dev/null
+"$port" build "$no_bin_annot" >"$work/no-bin-annot-comment-noop.log"
+grep 'Parsed 0 source files' "$work/no-bin-annot-comment-noop.log" >/dev/null
+grep 'Compiled 0 modules' "$work/no-bin-annot-comment-noop.log" >/dev/null
 
 if (cd "$basic/src" && "$port" format --check) \
   >"$work/format-nested.out" 2>"$work/format-nested.err"; then
@@ -884,6 +899,8 @@ test -f "$basic/src/Authored.js"
 test -f "$basic/src/B.mjs"
 test -f "$basic/src/WithInterface.mjs"
 test -f "$basic/lib/ocaml/A.cmi"
+test ! -e "$basic/lib/ocaml/WithInterface.cmti"
+REWATCH_BIN_ANNOT=1 "$port" build "$basic" >/dev/null
 test -f "$basic/lib/ocaml/WithInterface.cmti"
 
 printf '\nlet streamedAfterBuild = 1\n' >>"$basic/src/A.res"
@@ -1703,6 +1720,17 @@ grep 'start.*src/Api.resi' \
   "$work/failed-interface-export-timing.tsv" >/dev/null
 remove_obstruction_directory "$session_interface/lib/ocaml/Api.cmi"
 REWATCH_FROZEN_VALUES=1 "$port" build "$session_interface"
+grep 'let answer = 5;' "$session_interface/src/Consumer.mjs" >/dev/null
+REWATCH_FROZEN_VALUES=0 REWATCH_BIN_ANNOT=1 \
+  "$port" build "$session_interface" >"$work/session-classic-mode.log"
+grep 'Cleaned previous build due to compiler update' \
+  "$work/session-classic-mode.log" >/dev/null
+test -f "$session_interface/lib/ocaml/Consumer.cmt"
+REWATCH_FROZEN_VALUES=1 REWATCH_BIN_ANNOT=0 \
+  "$port" build "$session_interface" >"$work/session-fast-mode.log"
+grep 'Cleaned previous build due to compiler update' \
+  "$work/session-fast-mode.log" >/dev/null
+test ! -e "$session_interface/lib/ocaml/Consumer.cmt"
 grep 'let answer = 5;' "$session_interface/src/Consumer.mjs" >/dev/null
 
 "$port" build "$dependency"

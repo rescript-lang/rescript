@@ -27,6 +27,7 @@ type preliminary_parse =
 val preliminary_parse : Process.result -> preliminary_parse
 
 type namespace_job = {task: Process.task; finish: Process.result -> unit}
+type parse_export
 type pending_work
 type finalization_state
 
@@ -45,6 +46,9 @@ type t = {
   blocked_modules: (string, unit) Hashtbl.t;
   namespace_freshness: (string, float option) Hashtbl.t;
   pending_work: pending_work;
+  mutable parse_exports: parse_export list;
+  mutable parse_export_worker: unit Domain.t option;
+  invalidated_parse_exports: (string, unit) Hashtbl.t;
   finalization: finalization_state;
   mutable compiler_cleaned: bool;
   mutable had_warnings: bool;
@@ -76,6 +80,16 @@ val create_retained :
   t
 
 val register_cleanup : t -> (unit -> unit) -> unit
+val add_parse_export :
+  t ->
+  staged_ast:string ->
+  published_ast:string ->
+  source:string ->
+  compile_assets:Compile_assets.t ->
+  unit
+val start_parse_exports : t -> unit
+val invalidate_parse_export : t -> path:string -> unit
+val finish_parse_exports : t -> unit
 val defer_artifact_cleanup : t -> string list -> unit
 val set_cleanup_result : t -> string -> Build_artifacts.cleanup_result -> unit
 val find_cleanup_result : t -> string -> Build_artifacts.cleanup_result option

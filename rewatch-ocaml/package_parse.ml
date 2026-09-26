@@ -90,16 +90,14 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
           Build_artifacts.published_ast_path ~ocaml_dir path
         in
         File_util.copy_existing_file ~ensure_parent:false
-          (Filename.concat build_dir ast)
-          published_ast;
-        Compile_assets.refresh_ast compile_assets ~source:absolute_path
-          ~path:published_ast;
-        File_util.copy_existing_file ~ensure_parent:false
           (Filename.concat config.root path)
           (Filename.concat ocaml_dir (Filename.basename path));
+        let staged_ast = Filename.concat build_dir ast in
         Rescript_compiler_driver.publish_session_ast
           (Build_session.compiler_session attempt.session)
-          ~source:(Filename.concat build_dir ast);
+          ~source:staged_ast;
+        Build_attempt.add_parse_export attempt ~staged_ast ~published_ast
+          ~source:absolute_path ~compile_assets;
         if is_local && stderr <> "" then
           Build_session.mark_parse_pending attempt.session pending_path
         else Build_session.clear_parse_pending attempt.session pending_path

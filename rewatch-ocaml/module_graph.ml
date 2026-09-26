@@ -196,7 +196,9 @@ let initialize ~(root_config : Config.t) ~compiler_session ~package_plans
           let compiler_base =
             Source.compiler_basename package.compile_config module_.Source.name
           in
-          if Option.is_none (Compile_assets.cmt compile_assets compiler_base)
+          if
+            Option.is_none
+              (Compile_assets.compile_marker compile_assets compiler_base)
           then
             use_existing_ast_paths :=
               Filename.concat package.root module_.Source.implementation
@@ -291,7 +293,7 @@ let initialize ~(root_config : Config.t) ~compiler_session ~package_plans
         ~last_compiled_cmi:
           (Compile_assets.cmi compile_assets node.key |> modified)
         ~last_compiled_cmt:
-          (Compile_assets.cmt compile_assets node.key |> modified))
+          (Compile_assets.compile_marker compile_assets node.key |> modified))
     source_graph_nodes;
   List.iter
     (fun (namespace_map : namespace_map) ->
@@ -301,7 +303,8 @@ let initialize ~(root_config : Config.t) ~compiler_session ~package_plans
           (Compile_assets.cmi compile_assets namespace_map.compiler_name
           |> modified)
         ~last_compiled_cmt:
-          (Compile_assets.cmt compile_assets namespace_map.compiler_name
+          (Compile_assets.compile_marker compile_assets
+             namespace_map.compiler_name
           |> modified))
     namespace_maps;
   List.iter
