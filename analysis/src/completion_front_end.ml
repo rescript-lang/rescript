@@ -209,6 +209,7 @@ let find_arg_completables ~(args : arg list) ~end_pos ~pos_before_cursor
 let rec expr_to_context_path_inner ~(in_jsx_context : bool)
     (e : Parsetree.expression) =
   match e.pexp_desc with
+  | Pexp_braces {expr} -> expr_to_context_path_inner ~in_jsx_context expr
   | Pexp_constant (Pconst_string _ | Pconst_json _ | Pconst_raw_source _) ->
     Some Completable.CPString
   | Pexp_template _ -> Some Completable.CPString
@@ -1375,7 +1376,12 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                   }
               in
               set_result (Cpath context_path)
-          else if Loc.end_ e.pexp_loc = pos_before_cursor then
+          else if
+            (match e.pexp_desc with
+              | Pexp_braces {braces_loc} -> Loc.end_ braces_loc
+              | _ -> Loc.end_ e.pexp_loc)
+            = pos_before_cursor
+          then
             match expr_to_context_path ~in_jsx_context:!in_jsx_context e with
             | Some context_path ->
               set_result
