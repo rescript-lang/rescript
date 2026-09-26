@@ -29,14 +29,15 @@ else
   exit 1
 fi
 
-# Count files with new extension
-file_count=$(find ./packages -name *.res.js | wc -l)
+# Count generated source outputs. The lib/bs mirrors are optional in OCaml
+# Rewatch's default mode, so they do not determine suffix correctness.
+file_count=$(find ./packages -type f -name '*.res.js' ! -path '*/lib/bs/*' | wc -l)
 
-if [ "$file_count" -eq 146 ];
+if [ "$file_count" -eq 73 ];
 then
-  success "Found files with correct suffix"
+  success "Found generated files with correct suffix"
 else
-  error "Suffix not correctly used, got $file_count files"
+  error "Suffix not correctly used, got $file_count generated files"
   exit 1
 fi
 
