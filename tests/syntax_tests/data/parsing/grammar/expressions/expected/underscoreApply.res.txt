@@ -20,5 +20,4 @@ let l2 =
      (List.map (fun [arity:1]__x -> optParam ?v:__x ())))
     -> List.length
 ;;fun [arity:1]__x ->
-    underscoreWithComments (fun [arity:1]x -> ((something ())[@res.braces ]))
-      __x
+    underscoreWithComments (fun [arity:1]x -> {something ()}) __x

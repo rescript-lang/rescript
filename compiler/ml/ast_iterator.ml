@@ -288,6 +288,9 @@ module E = struct
     sub.location sub loc;
     sub.attributes sub attrs;
     match desc with
+    | Pexp_braces {expr; braces_loc} ->
+      sub.location sub braces_loc;
+      sub.expr sub expr
     | Pexp_ident x -> iter_loc sub x
     | Pexp_constant _ -> ()
     | Pexp_let (_r, vbs, e) ->

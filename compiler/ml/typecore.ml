@@ -165,6 +165,7 @@ let iter_expression f e =
   let rec expr e =
     f e;
     match e.pexp_desc with
+    | Pexp_braces {expr = inner} -> expr inner
     | Pexp_extension _ (* we don't iterate under extension point *)
     | Pexp_ident _ | Pexp_constant _ ->
       ()
@@ -1860,6 +1861,7 @@ let type_pattern_list env spatl scope expected_tys allow =
 
 let rec final_subexpression sexp =
   match sexp.pexp_desc with
+  | Pexp_braces {expr = e} -> final_subexpression e
   | Pexp_let (_, _, e)
   | Pexp_sequence (_, e)
   | Pexp_try (e, _)
@@ -2042,6 +2044,7 @@ let rec approx_type env sty =
 
 let rec type_approx env sexp =
   match sexp.pexp_desc with
+  | Pexp_braces {expr = e} -> type_approx env e
   | Pexp_let (_, _, e) -> type_approx env e
   | Pexp_fun {params; body} ->
     newty
@@ -2411,12 +2414,8 @@ and type_expect ~context ?deprecated_context ?recarg env sexp ty_expected =
   (* Special errors for braced identifiers passed to records *)
   let context =
     match sexp.pexp_desc with
-    | Pexp_ident _ ->
-      if
-        sexp.pexp_attributes
-        |> List.exists (fun (attr, _) -> attr.txt = "res.braces")
-      then Some Error_message_utils.BracedIdent
-      else context
+    | Pexp_braces {expr = {pexp_desc = Pexp_ident _}} ->
+      Some Error_message_utils.BracedIdent
     | _ -> context
   in
   let previous_saved_types = Cmt_format.get_saved_types () in
@@ -2448,6 +2447,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     else (id, ld, e, opt)
   in
   match sexp.pexp_desc with
+  | Pexp_braces {expr = inner} ->
+    type_expect ~context ?deprecated_context ~recarg env inner ty_expected
   | Pexp_ident lid ->
     let path, desc =
       Typetexp.find_value
