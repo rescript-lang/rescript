@@ -30,6 +30,7 @@ type whole =
       * Longident.t Asttypes.loc
       * loc
       * Parsetree.attributes)
+  | Braces of loc * loc * Parsetree.attributes
 
 type t = whole list
 type exp = Parsetree.expression
@@ -42,6 +43,9 @@ type destruct_output = exp list
 let rec destruct_open_tuple (e : Parsetree.expression) (acc : t) :
     (t * destruct_output * _) option =
   match e.pexp_desc with
+  | Pexp_braces {expr; braces_loc} ->
+    destruct_open_tuple expr
+      (Braces (e.pexp_loc, braces_loc, e.pexp_attributes) :: acc)
   | Pexp_open (flag, lid, cont) ->
     destruct_open_tuple cont
       (Let_open (flag, lid, e.pexp_loc, e.pexp_attributes) :: acc)
@@ -55,6 +59,13 @@ let restore_exp (xs : Parsetree.expression) (qualifiers : t) :
       | Let_open (flag, lid, loc, attrs) ->
         ({
            pexp_desc = Pexp_open (flag, lid, x);
+           pexp_attributes = attrs;
+           pexp_loc = loc;
+         }
+          : Parsetree.expression)
+      | Braces (loc, braces_loc, attrs) ->
+        ({
+           pexp_desc = Pexp_braces {expr = x; braces_loc};
            pexp_attributes = attrs;
            pexp_loc = loc;
          }

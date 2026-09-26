@@ -1,21 +1,18 @@
 let greetUser async [arity:1]userId =
-  ((let name = await (getUserName userId) in
-    ({js|Hello |js} ++ name) ++ {js|!|js})
-  [@res.braces ])
+  {let name = await (getUserName userId) in
+   ({js|Hello |js} ++ name) ++ {js|!|js}}
 ;;async fun [arity:1]() -> 123
-let fetch = ((async fun [arity:1]url -> browserFetch url)[@res.braces ])
+let fetch = {async fun [arity:1]url -> browserFetch url}
 let fetch2 =
-  (((async fun [arity:1]url -> browserFetch url);
-    (async fun [arity:1]url -> browserFetch2 url))
-  [@res.braces ])
+  {(async fun [arity:1]url -> browserFetch url);
+   (async fun [arity:1]url -> browserFetch2 url)}
 let async =
-  ((let f = async () in
-    () -> async;
-    async ();
-    async.async;
-    { async = (async.(async)) };
-    (result -> async) -> (mapAsync (fun [arity:1]a -> doStuff a)))
-  [@res.braces ])
+  {let f = async () in
+   () -> async;
+   async ();
+   async.async;
+   { async = (async.(async)) };
+   (result -> async) -> (mapAsync (fun [arity:1]a -> doStuff a))}
 let f =
   ((if isPositive
     then async fun [arity:2]a b -> (a + b : int)

@@ -247,20 +247,6 @@ module Add_braces_to_fn = struct
       current_structure_item := saved
     in
     let expr (iterator : Ast_iterator.iterator) (e : Parsetree.expression) =
-      let braces_attribute =
-        let loc =
-          {
-            Location.none with
-            loc_start = Lexing.dummy_pos;
-            loc_end =
-              {
-                Lexing.dummy_pos with
-                pos_lnum = Lexing.dummy_pos.pos_lnum + 1 (* force line break *);
-              };
-          }
-        in
-        (Location.mkloc "res.braces" loc, Parsetree.PStr [])
-      in
       let is_function = function
         | {Parsetree.pexp_desc = Pexp_fun _} -> true
         | _ -> false
@@ -270,9 +256,8 @@ module Add_braces_to_fn = struct
         when Loc.has_pos ~pos body_expr.pexp_loc
              && is_braced_expr body_expr = false
              && is_function body_expr = false ->
-        body_expr.pexp_attributes <-
-          braces_attribute :: body_expr.pexp_attributes;
-        changed := !current_structure_item
+        changed :=
+          Option.map (fun item -> (item, body_expr)) !current_structure_item
       | _ -> ());
       Ast_iterator.default_iterator.expr iterator e
     in
@@ -285,7 +270,28 @@ module Add_braces_to_fn = struct
     iterator.structure iterator structure;
     match !changed with
     | None -> ()
-    | Some new_structure_item ->
+    | Some (structure_item, body_expr) ->
+      let braces_loc =
+        {
+          Location.none with
+          loc_start = Lexing.dummy_pos;
+          loc_end =
+            {
+              Lexing.dummy_pos with
+              pos_lnum = Lexing.dummy_pos.pos_lnum + 1 (* force line break *);
+            };
+        }
+      in
+      let mapper =
+        {
+          Ast_mapper.default_mapper with
+          expr =
+            (fun mapper expr ->
+              if expr == body_expr then Ast_helper.Exp.braces ~braces_loc expr
+              else Ast_mapper.default_mapper.expr mapper expr);
+        }
+      in
+      let new_structure_item = mapper.structure_item mapper structure_item in
       let range = Loc.range_of_loc new_structure_item.pstr_loc in
       let new_text = print_structure_item ~range new_structure_item in
       let code_action =

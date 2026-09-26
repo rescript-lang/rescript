@@ -149,10 +149,12 @@ val collect_spread_dict_expr_parts :
 
 val collect_or_pattern_chain : Parsetree.pattern -> Parsetree.pattern list
 
-val process_braces_attr :
-  Parsetree.expression -> Parsetree.attribute option * Parsetree.expression
+val process_braces :
+  Parsetree.expression -> Location.t option * Parsetree.expression
 
 val filter_parsing_attrs : Parsetree.attributes -> Parsetree.attributes
+
+val unwrap_braces : Parsetree.expression -> Parsetree.expression
 
 val is_braced_expr : Parsetree.expression -> bool
 

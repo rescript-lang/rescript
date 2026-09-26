@@ -443,6 +443,16 @@ module E = struct
     let is_ppx_context_string = has_ppx_context_string_attr attrs in
     let attrs = sub.attributes sub (remove_ppx_context_string_attr attrs) in
     match desc with
+    | Pexp_braces {expr; braces_loc} ->
+      let inner = sub.expr sub expr in
+      {
+        inner with
+        pexp_attributes =
+          attrs
+          @ ( Location.mkloc "res.braces" (sub.location sub braces_loc),
+              Pt.PStr [] )
+            :: inner.pexp_attributes;
+      }
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
     | Pexp_constant (Pconst_string payload) when is_ppx_context_string ->
       (* The PPX protocol predates source-preserving strings. Existing PPXs

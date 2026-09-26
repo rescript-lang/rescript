@@ -393,6 +393,8 @@ let modified_binding_old binding =
   (* TODO: there is a long-tail of unsupported features inside of blocks - Pexp_letmodule , Pexp_letexception , Pexp_ifthenelse *)
   let rec spelunk_for_fun_expression expression =
     match expression with
+    | {pexp_desc = Pexp_braces {expr = inner}} ->
+      spelunk_for_fun_expression inner
     (* let make = (~prop) => ... *)
     | {pexp_desc = Pexp_fun _} -> expression
     (* let make = {let foo = bar in (~prop) => ...} *)
@@ -427,6 +429,8 @@ let modified_binding ~binding_loc ~binding_pat_loc ~fn_name binding =
   (* TODO: there is a long-tail of unsupported features inside of blocks - Pexp_letmodule , Pexp_letexception , Pexp_ifthenelse *)
   let rec spelunk_for_fun_expression expression =
     match expression with
+    | {pexp_desc = Pexp_braces {expr = inner}} ->
+      spelunk_for_fun_expression inner
     (* let make = (()) => ... *)
     (* let make = (_) => ... *)
     | {

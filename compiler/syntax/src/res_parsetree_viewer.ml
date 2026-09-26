@@ -222,11 +222,15 @@ let fun_expr expr_ =
     (async, newtype_params newtypes @ params_of_fun params, body)
   | _ -> (false, [], expr_)
 
-let process_braces_attr expr =
-  match expr.pexp_attributes with
-  | (({txt = "res.braces" | "ns.braces"}, _) as attr) :: attrs ->
-    (Some attr, {expr with pexp_attributes = attrs})
+let process_braces expr =
+  match expr.pexp_desc with
+  | Pexp_braces {expr = inner; braces_loc} -> (Some braces_loc, inner)
   | _ -> (None, expr)
+
+let rec unwrap_braces expr =
+  match expr.pexp_desc with
+  | Pexp_braces {expr = inner} -> unwrap_braces inner
+  | _ -> expr
 
 let filter_parsing_attrs attrs =
   List.filter
@@ -234,9 +238,9 @@ let filter_parsing_attrs attrs =
       match attr with
       | ( {
             Location.txt =
-              ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.patVariantSpread" | "res.dictPattern"
-              | "res.dictSpread" | "res.inlineRecordDefinition" );
+              ( "res.iflet" | "res.ternary" | "res.await"
+              | "res.patVariantSpread" | "res.dictPattern" | "res.dictSpread"
+              | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -244,15 +248,15 @@ let filter_parsing_attrs attrs =
     attrs
 
 let is_block_expr expr =
-  match expr.pexp_desc with
+  match (unwrap_braces expr).pexp_desc with
   | Pexp_letmodule _ | Pexp_letexception _ | Pexp_let _ | Pexp_open _
   | Pexp_sequence _ ->
     true
   | _ -> false
 
 let is_braced_expr expr =
-  match process_braces_attr expr with
-  | Some _, _ -> true
+  match expr.pexp_desc with
+  | Pexp_braces _ -> true
   | _ -> false
 
 let is_multiline_text txt =
@@ -274,10 +278,9 @@ let is_huggable_expression expr =
   | Pexp_constant (Pconst_json _ | Pconst_char _)
   | Pexp_template {values = []}
   | Pexp_construct ({txt = Longident.Lident ("::" | "[]")}, _)
-  | Pexp_object_literal _ | Pexp_record _ ->
+  | Pexp_object_literal _ | Pexp_record _ | Pexp_braces _ ->
     true
   | _ when is_block_expr expr -> true
-  | _ when is_braced_expr expr -> true
   | Pexp_constant (Pconst_string payload)
     when is_multiline_text (String_literal.string_source payload) ->
     true
@@ -287,8 +290,9 @@ let is_huggable_expression expr =
 
 let is_huggable_rhs expr =
   match expr.pexp_desc with
-  | Pexp_array _ | Pexp_tuple _ | Pexp_object_literal _ | Pexp_record _ -> true
-  | _ when is_braced_expr expr -> true
+  | Pexp_array _ | Pexp_tuple _ | Pexp_object_literal _ | Pexp_record _
+  | Pexp_braces _ ->
+    true
   | _ -> false
 
 let is_huggable_pattern pattern =
@@ -394,8 +398,8 @@ let has_attributes attrs =
       match attr with
       | ( {
             Location.txt =
-              ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.inlineRecordDefinition" );
+              ( "res.iflet" | "res.ternary" | "res.await"
+              | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -558,7 +562,7 @@ let should_indent_binary_expr expr =
   | _ -> false
 
 let should_inline_rhs_binary_expr rhs =
-  match rhs.pexp_desc with
+  match (unwrap_braces rhs).pexp_desc with
   | Parsetree.Pexp_constant _ | Pexp_let _ | Pexp_letmodule _
   | Pexp_letexception _ | Pexp_sequence _ | Pexp_open _ | Pexp_ifthenelse _
   | Pexp_for _ | Pexp_for_of _ | Pexp_for_await_of _ | Pexp_while _ | Pexp_try _
@@ -570,8 +574,8 @@ let is_printable_attribute attr =
   match attr with
   | ( {
         Location.txt =
-          ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
-          | "res.ternary" | "res.inlineRecordDefinition" | "res.dictSpread" );
+          ( "res.iflet" | "JSX" | "res.await" | "res.ternary"
+          | "res.inlineRecordDefinition" | "res.dictSpread" );
       },
       _ ) ->
     false

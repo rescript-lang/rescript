@@ -271,6 +271,9 @@ and expression = {
 }
 
 and expression_desc =
+  | Pexp_braces of {expr: expression; braces_loc: Location.t}
+    (* Explicit braces around an expression. [pexp_loc] stays on the enclosed
+       expression; [braces_loc] covers the delimiters for printing. *)
   | Pexp_ident of Longident.t loc (* x
        M.x
     *)

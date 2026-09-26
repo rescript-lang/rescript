@@ -164,6 +164,8 @@ module Exp = struct
     {pexp_desc = d; pexp_loc = loc; pexp_attributes = attrs}
   let attr d a = {d with pexp_attributes = d.pexp_attributes @ [a]}
 
+  let braces ?(attrs = []) ~braces_loc e =
+    mk ~loc:e.pexp_loc ~attrs (Pexp_braces {expr = e; braces_loc})
   let ident ?loc ?attrs a = mk ?loc ?attrs (Pexp_ident a)
   let constant ?loc ?attrs a = mk ?loc ?attrs (Pexp_constant a)
   let let_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_let (a, b, c))

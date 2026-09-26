@@ -23,5 +23,5 @@
   Expressions with type constraints need to be wrapped in parens:
   ("hi": string)
 
-let x = ((let a = 1 in let b = 2 in (a + b : int))[@res.braces ])
+let x = {let a = 1 in let b = 2 in (a + b : int)}
 let x = ({js|hi|js} : string)

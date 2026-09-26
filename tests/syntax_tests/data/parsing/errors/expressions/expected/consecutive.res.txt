@@ -46,6 +46,6 @@
 
 let f [arity:2]a b = a + 3
 ;;b
-let f [arity:2]g h = ((a + 3; b)[@res.braces ])
-let () = ((sideEffect1 (); sideEffect2 ())[@res.braces ])
-let () = ((let open Foo in let exception End  in x ())[@res.braces ])
+let f [arity:2]g h = {a + 3; b}
+let () = {sideEffect1 (); sideEffect2 ()}
+let () = {let open Foo in let exception End  in x ()}

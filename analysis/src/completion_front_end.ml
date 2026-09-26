@@ -209,6 +209,7 @@ let find_arg_completables ~(args : arg list) ~end_pos ~pos_before_cursor
 let rec expr_to_context_path_inner ~(in_jsx_context : bool)
     (e : Parsetree.expression) =
   match e.pexp_desc with
+  | Pexp_braces {expr} -> expr_to_context_path_inner ~in_jsx_context expr
   | Pexp_constant (Pconst_string _ | Pconst_json _ | Pconst_raw_source _) ->
     Some Completable.CPString
   | Pexp_template _ -> Some Completable.CPString
@@ -1152,6 +1153,31 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
     in
     typed_completion_expr expr;
     match expr.pexp_desc with
+    | Pexp_braces {expr = {pexp_desc = Pexp_ident lid}} ->
+      if expr.pexp_loc |> Loc.has_pos ~pos:pos_no_white && !result = None then (
+        set_found ();
+        let lid_path = flatten_lid_check_dot lid in
+        if debug then
+          Printf.printf "Pexp_ident %s:%s\n"
+            (lid_path |> String.concat ".")
+            (Loc.to_string lid.loc);
+        if lid.loc |> Loc.has_pos ~pos:pos_before_cursor then
+          let is_likely_module_path =
+            match lid_path with
+            | head :: _ when String.length head > 0 ->
+              head.[0] == Char.uppercase_ascii head.[0]
+            | _ -> false
+          in
+          set_result
+            (Cpath
+               (CPId
+                  {
+                    loc = lid.loc;
+                    path = lid_path;
+                    completion_context =
+                      (if is_likely_module_path then ValueOrField else Value);
+                  })))
+    | Pexp_braces {expr = inner} -> iterator.expr iterator inner
     | Pexp_match (expr, cases)
       when cases <> []
            && loc_has_cursor expr.pexp_loc = false
@@ -1262,27 +1288,10 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
               (lid_path |> String.concat ".")
               (Loc.to_string lid.loc);
           if lid.loc |> Loc.has_pos ~pos:pos_before_cursor then
-            let is_likely_module_path =
-              match lid_path with
-              | head :: _
-                when String.length head > 0
-                     && head.[0] == Char.uppercase_ascii head.[0] ->
-                true
-              | _ -> false
-            in
             set_result
               (Cpath
                  (CPId
-                    {
-                      loc = lid.loc;
-                      path = lid_path;
-                      completion_context =
-                        (if
-                           is_likely_module_path
-                           && expr |> Res_parsetree_viewer.is_braced_expr
-                         then ValueOrField
-                         else Value);
-                    }))
+                    {loc = lid.loc; path = lid_path; completion_context = Value}))
         | Pexp_construct (lid, {txt = args; loc = args_loc}) -> (
           let lid_path = flatten_lid_check_dot lid in
           if debug then
@@ -1367,7 +1376,12 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                   }
               in
               set_result (Cpath context_path)
-          else if Loc.end_ e.pexp_loc = pos_before_cursor then
+          else if
+            (match e.pexp_desc with
+              | Pexp_braces {braces_loc} -> Loc.end_ braces_loc
+              | _ -> Loc.end_ e.pexp_loc)
+            = pos_before_cursor
+          then
             match expr_to_context_path ~in_jsx_context:!in_jsx_context e with
             | Some context_path ->
               set_result

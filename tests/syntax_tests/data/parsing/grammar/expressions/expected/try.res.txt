@@ -1,6 +1,5 @@
-;;try ((let x = 1 in let y = 2 in dangerousCall (x + y))[@res.braces ])
+;;try {let x = 1 in let y = 2 in dangerousCall (x + y)}
   with | Foo -> Console.log {js|catched Foo|js}
   | Exit -> Console.log {js|catched exit|js}
 ;;try myDangerousFn () with | Foo -> Console.log {js|catched Foo|js}[@@attr ]
-let x = ((let y = 1 in try ((apply y)[@res.braces ]) with | _ -> 2)
-  [@res.braces ])
+let x = {let y = 1 in try {apply y} with | _ -> 2}
