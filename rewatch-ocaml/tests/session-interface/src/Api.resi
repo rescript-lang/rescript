@@ -1,0 +1,1 @@
+let inc: int => int

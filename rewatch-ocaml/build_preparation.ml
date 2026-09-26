@@ -197,8 +197,9 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         ())
     parse_entries parse_results;
   let graph =
-    Module_graph.initialize ~root_config ~package_plans ~compile_assets
-      ~failed_parse_paths
+    Module_graph.initialize ~root_config
+      ~compiler_session:(Build_session.compiler_session attempt.session)
+      ~package_plans ~compile_assets ~failed_parse_paths
   in
   List.iter
     (fun path ->

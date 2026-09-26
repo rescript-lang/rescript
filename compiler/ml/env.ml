@@ -775,10 +775,179 @@ type frozen_values_cache = {
   entries: (string, frozen_values_entry) Hashtbl.t;
 }
 
-let frozen_values_cache_key = Domain.DLS.new_key (fun () -> None)
+let frozen_values_cache_key : frozen_values_cache option Domain.DLS.key =
+  Domain.DLS.new_key (fun () -> None)
+
+type published_cmi = {
+  filename: string;
+  stats: Unix.stats;
+  name: string;
+  fingerprint: Digest.t;
+  crcs: (string * Digest.t option) list;
+  flags: Cmi_format.pers_flags list;
+  image: Frozen_values.t;
+}
+
+type pending_cmi = {
+  destination: string;
+  source: string;
+  source_stats: Unix.stats;
+  value: published_cmi;
+}
+
+type published_cmis = {
+  lock: Mutex.t;
+  entries: (string, published_cmi) Hashtbl.t;
+  pending: (string, pending_cmi) Hashtbl.t;
+}
+
+let published_cmis_key : published_cmis option Domain.DLS.key =
+  Domain.DLS.new_key (fun () -> None)
+
+let frozen_values_setting_key = Domain.DLS.new_key (fun () -> None)
+let frozen_type_cache_key =
+  Domain.DLS.new_key (fun () ->
+      (Hashtbl.create 64
+        : ( Path.t,
+            type_declaration
+            * (constructor_description list * label_description list) )
+          Hashtbl.t))
+
+let frozen_values_enabled () =
+  match Domain.DLS.get frozen_values_setting_key with
+  | Some enabled -> enabled
+  | None -> Sys.getenv_opt "REWATCH_FROZEN_VALUES" = Some "1"
+
+let with_frozen_values_setting ?enabled action =
+  let previous = Domain.DLS.get frozen_values_setting_key in
+  let enabled =
+    Option.value enabled
+      ~default:(Sys.getenv_opt "REWATCH_FROZEN_VALUES" = Some "1")
+  in
+  Domain.DLS.set frozen_values_setting_key (Some enabled);
+  Fun.protect action ~finally:(fun () ->
+      Domain.DLS.set frozen_values_setting_key previous)
+
+let session_cmi_enabled () =
+  frozen_values_enabled () && Sys.getenv_opt "REWATCH_SESSION_CMI" <> Some "0"
+
+let has_published_cmi name =
+  if not (session_cmi_enabled ()) then false
+  else
+    match Domain.DLS.get published_cmis_key with
+    | None -> false
+    | Some published ->
+      Mutex.lock published.lock;
+      Fun.protect
+        (fun () ->
+          Hashtbl.mem published.entries name
+          || Hashtbl.mem published.pending name)
+        ~finally:(fun () -> Mutex.unlock published.lock)
+
+let pending_cmi_path name =
+  match Domain.DLS.get published_cmis_key with
+  | None -> None
+  | Some published ->
+    let pending =
+      Mutex.lock published.lock;
+      Fun.protect
+        (fun () -> Hashtbl.find_opt published.pending name)
+        ~finally:(fun () -> Mutex.unlock published.lock)
+    in
+    Option.bind pending (fun entry ->
+        try
+          if same_file_stats (Unix.stat entry.source) entry.source_stats then
+            Some entry.destination
+          else None
+        with Sys_error _ | Unix.Unix_error _ -> None)
+
+let find_in_path_with_pending name =
+  let pending = pending_cmi_path (Filename.remove_extension name) in
+  let is_pending filename =
+    Option.exists (Compiler_request_state.same_output_path filename) pending
+  in
+  let lower_name = String.uncapitalize_ascii name in
+  let rec find = function
+    | [] -> raise Not_found
+    | directory :: rest ->
+      let lower = Filename.concat directory lower_name in
+      let exact = Filename.concat directory name in
+      if is_pending lower then lower
+      else if is_pending exact then
+        if
+          Compiler_request_state.is_regular_file lower
+          && Compiler_request_state.has_exact_directory_entry lower
+        then lower
+        else exact
+      else if Compiler_request_state.is_regular_file lower then lower
+      else if Compiler_request_state.is_regular_file exact then exact
+      else find rest
+  in
+  find (Config.get_load_path ())
+
+let find_compiled_cmi name =
+  if session_cmi_enabled () && has_published_cmi name then
+    find_in_path_with_pending (name ^ ".cmi")
+  else find_in_path_uncap (Config.get_load_path ()) (name ^ ".cmi")
+
+let lookup_published_cmi name filename =
+  if not (session_cmi_enabled ()) then None
+  else
+    match Domain.DLS.get published_cmis_key with
+    | None -> None
+    | Some published -> (
+      try
+        Mutex.lock published.lock;
+        Fun.protect
+          (fun () ->
+            let current =
+              match Hashtbl.find_opt published.pending name with
+              | Some pending
+                when Compiler_request_state.same_output_path pending.destination
+                       filename
+                     && same_file_stats (Unix.stat pending.source)
+                          pending.source_stats ->
+                Some pending.value
+              | Some _ | None -> (
+                match Hashtbl.find_opt published.entries name with
+                | Some entry
+                  when Compiler_request_state.same_output_path entry.filename
+                         filename
+                       && same_file_stats
+                            (Unix.stat
+                               (Compiler_request_state.resolve_path filename))
+                            entry.stats ->
+                  Some entry
+                | Some _ | None -> None)
+            in
+            match current with
+            | Some entry ->
+              Compiler_phase_trace.dependency "dependency.session_cmi_lookup"
+                (fun () ->
+                  let cmi =
+                    Cmi_format.
+                      {
+                        cmi_name = entry.name;
+                        cmi_sign = [];
+                        cmi_crcs = entry.crcs;
+                        cmi_flags = entry.flags;
+                      }
+                  in
+                  Some (cmi, entry.image))
+            | None -> None)
+          ~finally:(fun () -> Mutex.unlock published.lock)
+      with Sys_error _ | Unix.Unix_error _ -> None)
+
+let compiled_cmi_capture_key = Domain.DLS.new_key (fun () -> None)
+
+let with_compiled_cmi_capture capture action =
+  let previous = Domain.DLS.get compiled_cmi_capture_key in
+  Domain.DLS.set compiled_cmi_capture_key (Some capture);
+  Fun.protect action ~finally:(fun () ->
+      Domain.DLS.set compiled_cmi_capture_key previous)
 
 let prepare_frozen_values ~name ~filename cmi =
-  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then None
+  if not (frozen_values_enabled ()) then None
   else
     match Domain.DLS.get frozen_values_cache_key with
     | None -> None
@@ -870,14 +1039,17 @@ let cached_cmi_loader :
     (name:string -> Persistent_signature.t option option) ref =
   ref (fun ~name:_ -> None)
 
-let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
+let acknowledge_pers_struct ?published_image check modname
+    {Persistent_signature.filename; cmi} =
   Compiler_phase_trace.dependency "dependency.make_available" (fun () ->
       let name = cmi.cmi_name in
       let sign = cmi.cmi_sign in
       let crcs = cmi.cmi_crcs in
       let flags = cmi.cmi_flags in
       let frozen_values =
-        prepare_frozen_values ~name ~filename cmi
+        (match published_image with
+          | Some image -> Some image
+          | None -> prepare_frozen_values ~name ~filename cmi)
         |> Option.map Frozen_values.create_view
       in
       let deprecated =
@@ -925,8 +1097,13 @@ let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
 
 let read_pers_struct check modname filename =
   add_import modname;
-  let cmi = read_cmi filename in
-  acknowledge_pers_struct check modname {Persistent_signature.filename; cmi}
+  match lookup_published_cmi modname filename with
+  | Some (cmi, image) ->
+    acknowledge_pers_struct ~published_image:image check modname
+      {Persistent_signature.filename; cmi}
+  | None ->
+    let cmi = read_cmi filename in
+    acknowledge_pers_struct check modname {Persistent_signature.filename; cmi}
 
 let find_pers_struct check name =
   if name = "*predef*" then raise Not_found;
@@ -937,26 +1114,42 @@ let find_pers_struct check name =
     match !(can_load_cmis ()) with
     | Cannot_load_cmis _ -> raise Not_found
     | Can_load_cmis -> (
-      match !cached_pers_struct_loader ~check ~name with
-      | Some ps ->
+      let published =
+        if not (has_published_cmi name) then None
+        else
+          try
+            let filename = find_in_path_with_pending (name ^ ".cmi") in
+            Option.map
+              (fun (cmi, image) -> (filename, cmi, image))
+              (lookup_published_cmi name filename)
+          with Not_found -> None
+      in
+      match published with
+      | Some (filename, cmi, image) ->
         add_import name;
-        if check then check_consistency ps;
-        Hashtbl.add (persistent_structures ()) name (Some ps);
-        ps
-      | None ->
-        let ps =
-          match
-            match !cached_cmi_loader ~name with
-            | Some cached -> cached
-            | None -> !Persistent_signature.load ~unit_name:name
-          with
-          | Some ps -> ps
-          | None ->
-            Hashtbl.add (persistent_structures ()) name None;
-            raise Not_found
-        in
-        add_import name;
-        acknowledge_pers_struct check name ps))
+        acknowledge_pers_struct ~published_image:image check name
+          {Persistent_signature.filename; cmi}
+      | None -> (
+        match !cached_pers_struct_loader ~check ~name with
+        | Some ps ->
+          add_import name;
+          if check then check_consistency ps;
+          Hashtbl.add (persistent_structures ()) name (Some ps);
+          ps
+        | None ->
+          let ps =
+            match
+              match !cached_cmi_loader ~name with
+              | Some cached -> cached
+              | None -> !Persistent_signature.load ~unit_name:name
+            with
+            | Some ps -> ps
+            | None ->
+              Hashtbl.add (persistent_structures ()) name None;
+              raise Not_found
+          in
+          add_import name;
+          acknowledge_pers_struct check name ps)))
 
 (* Emits a warning if there is no valid cmi for name *)
 let check_pers_struct name =
@@ -1001,6 +1194,7 @@ let reset_cache () =
   clear_imports ();
   Hashtbl.clear (value_declarations ());
   Hashtbl.clear (type_declarations ());
+  Hashtbl.clear (Domain.DLS.get frozen_type_cache_key);
   Hashtbl.clear (module_declarations ());
   Hashtbl.clear (used_constructors ());
   Hashtbl.clear (prefixed_sg ())
@@ -1026,7 +1220,7 @@ let get_unit_name () = !(current_unit ())
 (* Lookup by identifier *)
 
 let find_frozen_scope_path path =
-  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then None
+  if not (frozen_values_enabled ()) then None
   else
     let rec find visited path =
       if List.exists (Path.same path) visited then None
@@ -1109,8 +1303,7 @@ let find proj1 proj2 path env =
 let find_value_generic = find (fun env -> env.values) (fun sc -> sc.comp_values)
 
 let find_value path env =
-  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then
-    find_value_generic path env
+  if not (frozen_values_enabled ()) then find_value_generic path env
   else
     match path with
     | Pdot (module_path, name, _) -> (
@@ -1148,19 +1341,27 @@ let type_of_cstr path = function
   | _ -> assert false
 
 let find_frozen_type path =
-  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then None
+  if not (frozen_values_enabled ()) then None
   else
-    match path with
-    | Pdot (module_path, name, _) -> (
-      match find_frozen_scope_path module_path with
-      | Some (view, scope) ->
-        Compiler_phase_trace.dependency "dependency.frozen_type_lookup"
-          (fun () -> Frozen_values.find_type_in_scope view scope name)
-      | None -> None)
-    | Pident _ | Papply _ -> None
+    let cache = Domain.DLS.get frozen_type_cache_key in
+    match Hashtbl.find_opt cache path with
+    | Some declaration -> Some declaration
+    | None ->
+      let declaration =
+        match path with
+        | Pdot (module_path, name, _) -> (
+          match find_frozen_scope_path module_path with
+          | Some (view, scope) ->
+            Compiler_phase_trace.dependency "dependency.frozen_type_lookup"
+              (fun () -> Frozen_values.find_type_in_scope view scope name)
+          | None -> None)
+        | Pident _ | Papply _ -> None
+      in
+      Option.iter (Hashtbl.replace cache path) declaration;
+      declaration
 
 let find_frozen_extension mod_path name =
-  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then None
+  if not (frozen_values_enabled ()) then None
   else
     match find_frozen_scope_path mod_path with
     | Some (view, scope) ->
@@ -1415,7 +1616,7 @@ let rec lookup_module_descr_aux ?loc lid env =
     | Functor_comps _ -> raise Not_found)
 
 and lookup_frozen_scope ?loc lid env =
-  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then None
+  if not (frozen_values_enabled ()) then None
   else
     match lid with
     | Lident name -> (
@@ -1564,8 +1765,7 @@ let lookup_value_generic =
   lookup (fun env -> env.values) (fun sc -> sc.comp_values)
 
 let lookup_value ?loc lid env =
-  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then
-    lookup_value_generic ?loc lid env
+  if not (frozen_values_enabled ()) then lookup_value_generic ?loc lid env
   else
     match lid with
     | Longident.Ldot (module_lid, name) -> (
@@ -1587,7 +1787,7 @@ let lookup_all_constructors_generic =
     cstr_shadow
 
 let lookup_all_constructors ?loc lid env =
-  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then
+  if not (frozen_values_enabled ()) then
     lookup_all_constructors_generic ?loc lid env
   else
     match lid with
@@ -1610,8 +1810,7 @@ let lookup_all_labels_generic =
     lbl_shadow
 
 let lookup_all_labels ?loc lid env =
-  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then
-    lookup_all_labels_generic ?loc lid env
+  if not (frozen_values_enabled ()) then lookup_all_labels_generic ?loc lid env
   else
     match lid with
     | Longident.Ldot (module_lid, name) -> (
@@ -1629,8 +1828,7 @@ let lookup_type_generic =
   lookup (fun env -> env.types) (fun sc -> sc.comp_types)
 
 let lookup_type ?loc lid env =
-  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" then
-    lookup_type_generic ?loc lid env
+  if not (frozen_values_enabled ()) then lookup_type_generic ?loc lid env
   else
     match lid with
     | Longident.Ldot (module_lid, name) -> (
@@ -2404,7 +2602,7 @@ let preparing_expanded_snapshot = Domain.DLS.new_key (fun () -> false)
 let prepare_expanded_snapshot : (alias_key -> unit) ref = ref (fun _ -> ())
 
 let expanded_snapshot_enabled () =
-  if Sys.getenv_opt "REWATCH_FROZEN_VALUES" = Some "1" then false
+  if frozen_values_enabled () then false
   else
     match Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" with
     | Some "0" -> false
@@ -2433,6 +2631,7 @@ type dependency_cache = {
   mutex: Mutex.t;
   mutable available: dependency_cache_table list;
   frozen_values: frozen_values_cache;
+  published_cmis: published_cmis;
 }
 
 and dependency_cache_table = {
@@ -2445,7 +2644,123 @@ let create_dependency_cache () =
     mutex = Mutex.create ();
     available = [];
     frozen_values = {lock = Mutex.create (); entries = Hashtbl.create 32};
+    published_cmis =
+      {
+        lock = Mutex.create ();
+        entries = Hashtbl.create 128;
+        pending = Hashtbl.create 32;
+      };
   }
+
+let make_published_cmi ~filename ~stats ~crc cmi image =
+  {
+    filename;
+    stats;
+    name = cmi.Cmi_format.cmi_name;
+    fingerprint = crc;
+    crcs = (cmi.cmi_name, Some crc) :: cmi.cmi_crcs;
+    flags = cmi.cmi_flags;
+    image;
+  }
+
+let publish_pending_compiled_cmi cache ~source ~destination ~crc cmi =
+  let destination = Compiler_request_state.canonical_output_path destination in
+  let source_stats = Unix.stat source in
+  match Frozen_values.freeze cmi with
+  | Error _ -> false
+  | Ok image ->
+    if not (same_file_stats (Unix.stat source) source_stats) then false
+    else
+      let value =
+        make_published_cmi ~filename:destination ~stats:source_stats ~crc cmi
+          image
+      in
+      Mutex.lock cache.published_cmis.lock;
+      Fun.protect
+        (fun () ->
+          Hashtbl.replace cache.published_cmis.pending value.name
+            {destination; source; source_stats; value})
+        ~finally:(fun () -> Mutex.unlock cache.published_cmis.lock);
+      true
+
+let discard_pending_compiled_cmi cache ~filename =
+  let filename = Compiler_request_state.canonical_output_path filename in
+  let name = Filename.basename filename |> Filename.remove_extension in
+  Mutex.lock cache.published_cmis.lock;
+  Fun.protect
+    (fun () ->
+      match Hashtbl.find_opt cache.published_cmis.pending name with
+      | Some pending
+        when Compiler_request_state.same_output_path pending.destination
+               filename ->
+        Hashtbl.remove cache.published_cmis.pending name
+      | Some _ | None -> ())
+    ~finally:(fun () -> Mutex.unlock cache.published_cmis.lock)
+
+let publish_compiled_cmi cache ~filename ~crc cmi =
+  let filename = Compiler_request_state.canonical_output_path filename in
+  let pending =
+    Mutex.lock cache.published_cmis.lock;
+    Fun.protect
+      (fun () ->
+        Hashtbl.find_opt cache.published_cmis.pending cmi.Cmi_format.cmi_name)
+      ~finally:(fun () -> Mutex.unlock cache.published_cmis.lock)
+  in
+  let image =
+    match pending with
+    | Some pending
+      when Compiler_request_state.same_output_path pending.destination filename
+           && pending.value.fingerprint = crc ->
+      Some pending.value.image
+    | Some _ | None -> (
+      match Frozen_values.freeze cmi with
+      | Error _ -> None
+      | Ok image -> Some image)
+  in
+  Mutex.lock cache.published_cmis.lock;
+  Fun.protect
+    (fun () ->
+      Hashtbl.remove cache.published_cmis.pending cmi.Cmi_format.cmi_name;
+      Option.iter
+        (fun image ->
+          let stats = Unix.stat filename in
+          let entry = make_published_cmi ~filename ~stats ~crc cmi image in
+          Hashtbl.replace cache.published_cmis.entries entry.name entry)
+        image)
+    ~finally:(fun () -> Mutex.unlock cache.published_cmis.lock)
+
+let published_compiled_cmi cache ~filename =
+  let filename = Compiler_request_state.canonical_output_path filename in
+  let name = Filename.basename filename |> Filename.remove_extension in
+  let entry, pending =
+    Mutex.lock cache.published_cmis.lock;
+    Fun.protect
+      (fun () ->
+        ( Hashtbl.find_opt cache.published_cmis.entries name,
+          Hashtbl.find_opt cache.published_cmis.pending name ))
+      ~finally:(fun () -> Mutex.unlock cache.published_cmis.lock)
+  in
+  let pending_result =
+    Option.bind pending (fun pending ->
+        try
+          if
+            Compiler_request_state.same_output_path pending.destination filename
+            && same_file_stats (Unix.stat pending.source) pending.source_stats
+          then Some (pending.value.fingerprint, pending.value.image)
+          else None
+        with Sys_error _ | Unix.Unix_error _ -> None)
+  in
+  match pending_result with
+  | Some _ -> pending_result
+  | None ->
+    Option.bind entry (fun entry ->
+        try
+          if
+            Compiler_request_state.same_output_path entry.filename filename
+            && same_file_stats (Unix.stat filename) entry.stats
+          then Some (entry.fingerprint, entry.image)
+          else None
+        with Sys_error _ | Unix.Unix_error _ -> None)
 
 let cmi_cache_key = Domain.DLS.new_key (fun () -> Hashtbl.create 2)
 let cmi_cache () = Domain.DLS.get cmi_cache_key
@@ -2465,7 +2780,9 @@ let capture_cmi_integrity cmi =
    newly shadowing or replaced CMIs after a watch edit. *)
 let load_cached_cmi ~name =
   if
-    (not (expanded_snapshot_enabled ()))
+    (not
+       (Domain.DLS.get expanded_snapshot_enabled_key
+       || expanded_snapshot_enabled ()))
     || Domain.DLS.get preparing_expanded_snapshot
     || Sys.getenv_opt "REWATCH_PROJECT_CMI_CACHE" = Some "0"
        && name <> "Stdlib" && name <> "Pervasives"
@@ -3230,6 +3547,9 @@ let save_signature_with_imports ?check_exists ~deprecated sg modname filename
           }
         in
         save_pers_struct crc ps;
+        Option.iter
+          (fun capture -> capture filename crc cmi)
+          (Domain.DLS.get compiled_cmi_capture_key);
         cmi
       with exn ->
         remove_file filename;
@@ -3354,45 +3674,48 @@ let with_fresh_key key create action =
 (* The persistent CMI cache, import consistency table, declaration usage
    callbacks, and summary memo all belong to one compilation request. *)
 let with_fresh action =
-  with_fresh_key value_declarations_key
-    (fun () -> Hashtbl.create 16)
+  with_fresh_key frozen_type_cache_key
+    (fun () -> Hashtbl.create 64)
     (fun () ->
-      with_fresh_key type_declarations_key
+      with_fresh_key value_declarations_key
         (fun () -> Hashtbl.create 16)
         (fun () ->
-          with_fresh_key module_declarations_key
+          with_fresh_key type_declarations_key
             (fun () -> Hashtbl.create 16)
             (fun () ->
-              with_fresh_key used_constructors_key
+              with_fresh_key module_declarations_key
                 (fun () -> Hashtbl.create 16)
                 (fun () ->
-                  with_fresh_key prefixed_sg_key
-                    (fun () -> Hashtbl.create 113)
+                  with_fresh_key used_constructors_key
+                    (fun () -> Hashtbl.create 16)
                     (fun () ->
-                      with_fresh_key can_load_cmis_key
-                        (fun () -> ref Can_load_cmis)
+                      with_fresh_key prefixed_sg_key
+                        (fun () -> Hashtbl.create 113)
                         (fun () ->
-                          with_fresh_key current_unit_key
-                            (fun () -> ref "")
+                          with_fresh_key can_load_cmis_key
+                            (fun () -> ref Can_load_cmis)
                             (fun () ->
-                              with_fresh_key persistent_structures_key
-                                (fun () -> Hashtbl.create 17)
+                              with_fresh_key current_unit_key
+                                (fun () -> ref "")
                                 (fun () ->
-                                  with_fresh_key crc_units_key Consistbl.create
+                                  with_fresh_key persistent_structures_key
+                                    (fun () -> Hashtbl.create 17)
                                     (fun () ->
-                                      with_fresh_key imported_units_key
-                                        (fun () -> ref String_set.empty)
-                                        (fun () ->
-                                          with_fresh_key iter_env_cont_key
-                                            (fun () -> ref [])
+                                      with_fresh_key crc_units_key
+                                        Consistbl.create (fun () ->
+                                          with_fresh_key imported_units_key
+                                            (fun () -> ref String_set.empty)
                                             (fun () ->
-                                              with_fresh_key last_env_key
-                                                (fun () -> ref empty)
+                                              with_fresh_key iter_env_cont_key
+                                                (fun () -> ref [])
                                                 (fun () ->
-                                                  with_fresh_key
-                                                    last_reduced_env_key
+                                                  with_fresh_key last_env_key
                                                     (fun () -> ref empty)
-                                                    action))))))))))))
+                                                    (fun () ->
+                                                      with_fresh_key
+                                                        last_reduced_env_key
+                                                        (fun () -> ref empty)
+                                                        action)))))))))))))
 
 let snapshot_graph_from_cmis key =
   let namespace = find_pers_struct key.namespace_name in
@@ -3704,9 +4027,11 @@ let with_dependency_cache cache action =
   let previous_cmis = cmi_cache () in
   let previous_snapshot = expanded_snapshot_cache () in
   let previous_frozen_values = Domain.DLS.get frozen_values_cache_key in
+  let previous_published_cmis = Domain.DLS.get published_cmis_key in
   Domain.DLS.set cmi_cache_key table.cmis;
   Domain.DLS.set expanded_snapshot_cache_key table.expanded_snapshot;
   Domain.DLS.set frozen_values_cache_key (Some cache.frozen_values);
+  Domain.DLS.set published_cmis_key (Some cache.published_cmis);
   Fun.protect action ~finally:(fun () ->
       (* Both graphs are exclusive to this request. Finalization restores
          allocation IDs and any mutated nodes before another domain leases
@@ -3714,7 +4039,8 @@ let with_dependency_cache cache action =
       Fun.protect finalize_expanded_snapshot_cache ~finally:(fun () ->
           Domain.DLS.set cmi_cache_key previous_cmis;
           Domain.DLS.set expanded_snapshot_cache_key previous_snapshot;
-          Domain.DLS.set frozen_values_cache_key previous_frozen_values);
+          Domain.DLS.set frozen_values_cache_key previous_frozen_values;
+          Domain.DLS.set published_cmis_key previous_published_cmis);
       Mutex.lock cache.mutex;
       Fun.protect
         (fun () -> cache.available <- table :: cache.available)

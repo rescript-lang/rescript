@@ -24,6 +24,25 @@
 
 type _ kind = Ml : Parsetree.structure kind | Mli : Parsetree.signature kind
 
+type result =
+  | Implementation of {
+      sourcefile: string;
+      dependencies: string list;
+      ast: Parsetree.structure;
+    }
+  | Interface of {
+      sourcefile: string;
+      dependencies: string list;
+      ast: Parsetree.signature;
+    }
+
+val dependencies : result -> string list
+val with_capture : (string -> result -> unit) -> (unit -> 'a) -> 'a
+
+val with_lookup : (string -> result option) -> (unit -> 'a) -> 'a
+(** Captured results are request-owned until publication. A lookup transfers
+    the mutable parsetree to one consuming compiler request. *)
+
 val read_ast_exn : fname:string -> 'a kind -> 'a
 
 val magic_sep_char : char

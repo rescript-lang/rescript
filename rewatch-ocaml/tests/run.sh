@@ -62,6 +62,8 @@ cp -R "$root/rewatch-ocaml/tests/failure" "$work/failure"
 cp -R "$root/rewatch-ocaml/tests/features" "$work/features"
 cp -R "$root/rewatch-ocaml/tests/feature-dependencies" "$work/feature-dependencies"
 cp -R "$root/rewatch-ocaml/tests/gentype" "$work/gentype"
+cp -R "$root/rewatch-ocaml/tests/session-interface" \
+  "$work/session-interface"
 cp -R "$root/rewatch-ocaml/tests/dependency" "$work/dependency"
 cp -R "$root/rewatch-ocaml/tests/package-output-dependency" \
   "$work/package-output-dependency"
@@ -1619,8 +1621,89 @@ test -f "$feature_dependencies/packages/dep-union/native/UnionNative.js"
 test -f "$feature_dependencies/packages/dep-union/web/UnionWeb.js"
 test ! -f "$feature_dependencies/packages/dep-union/extra/UnionExtra.js"
 
-"$port" build "$gentype"
+REWATCH_TYPECHECK_TRACE="$work/gentype-trace.tsv" "$port" build "$gentype"
 test -f "$gentype/src/Main.js"
+test -f "$gentype/src/Annotated.gen.ts"
+test -f "$gentype/src/Pair.gen.ts"
+grep 'src/Annotated.ast.*dependency.gentype_semantic_result' \
+  "$work/gentype-trace.tsv" >/dev/null
+grep 'src/Pair.ast.*dependency.gentype_semantic_result' \
+  "$work/gentype-trace.tsv" >/dev/null
+if grep 'src/Annotated.ast.*dependency.gentype_cmt_read' \
+  "$work/gentype-trace.tsv" >/dev/null; then
+  echo "genType reread the newly written implementation CMT" >&2
+  exit 1
+fi
+
+REWATCH_FROZEN_VALUES=1 REWATCH_SESSION_CMI=1 \
+  REWATCH_TYPECHECK_TRACE="$work/session-interface-trace.tsv" \
+  REWATCH_COMPILER_TIMING_LOG="$work/session-interface-timing.tsv" \
+  REWATCH_ARTIFACT_EXPORT_LOG="$work/session-interface-export.tsv" \
+  "$port" build "$work/session-interface"
+grep 'src/Api.ast.*dependency.session_cmi_lookup' \
+  "$work/session-interface-trace.tsv" >/dev/null
+grep 'src/Consumer.ast.*dependency.session_cmi_lookup' \
+  "$work/session-interface-trace.tsv" >/dev/null
+if grep 'src/Consumer.ast.*dependency.search_open:Api' \
+  "$work/session-interface-trace.tsv" >/dev/null; then
+  echo "consumer reopened the freshly published Api CMI" >&2
+  exit 1
+fi
+consumer_start=$(awk -F '\t' \
+  '$1 == "implementation" && $3 == "src/Consumer.ast" {print $4; exit}' \
+  "$work/session-interface-timing.tsv")
+interface_export=$(awk -F '\t' \
+  '$1 == "start" && $2 == "src/Api.resi" {print $3; exit}' \
+  "$work/session-interface-export.tsv")
+if [ -z "$consumer_start" ] || [ -z "$interface_export" ] || \
+    ! awk -v consumer="$consumer_start" -v export_time="$interface_export" \
+      'BEGIN {exit !(consumer < export_time)}'; then
+  echo "consumer waited for Api artifact export" >&2
+  exit 1
+fi
+session_interface="$work/session-interface"
+cp "$session_interface/lib/ocaml/Api.cmi" "$work/session-api-before.cmi"
+cp "$session_interface/lib/ocaml/Api.cmj" "$work/session-api-before.cmj"
+printf 'let inc = x => x + 2\n' >"$session_interface/src/Api.res"
+REWATCH_FROZEN_VALUES=1 REWATCH_SESSION_CMI=1 REWATCH_SESSION_CMJ=1 \
+  "$port" build "$session_interface"
+cmp -s "$work/session-api-before.cmi" "$session_interface/lib/ocaml/Api.cmi"
+if cmp -s "$work/session-api-before.cmj" \
+  "$session_interface/lib/ocaml/Api.cmj"; then
+  echo "implementation edit did not change Api optimization metadata" >&2
+  exit 1
+fi
+grep 'let answer = 3;' "$session_interface/src/Consumer.mjs" >/dev/null
+
+# An unchanged explicit interface still governs the implementation's result.
+# A failed deferred CMJ export must fail the build and allow a retry.
+obstruct_file_with_directory "$session_interface/lib/ocaml/Api.cmj"
+printf 'let inc = x => x + 3\n' >"$session_interface/src/Api.res"
+if REWATCH_FROZEN_VALUES=1 \
+  REWATCH_ARTIFACT_EXPORT_LOG="$work/failed-export-timing.tsv" \
+  "$port" build "$session_interface" \
+  >"$session_interface/failed-export.log" 2>&1; then
+  echo "deferred optimization export failure unexpectedly succeeded" >&2
+  exit 1
+fi
+grep 'start.*src/Api.res' "$work/failed-export-timing.tsv" >/dev/null
+remove_obstruction_directory "$session_interface/lib/ocaml/Api.cmj"
+REWATCH_FROZEN_VALUES=1 "$port" build "$session_interface"
+grep 'let answer = 4;' "$session_interface/src/Consumer.mjs" >/dev/null
+obstruct_file_with_directory "$session_interface/lib/ocaml/Api.cmi"
+printf 'let inc = x => x + 4\n' >"$session_interface/src/Api.res"
+if REWATCH_FROZEN_VALUES=1 \
+  REWATCH_ARTIFACT_EXPORT_LOG="$work/failed-interface-export-timing.tsv" \
+  "$port" build "$session_interface" \
+  >"$session_interface/failed-interface-export.log" 2>&1; then
+  echo "deferred interface export failure unexpectedly succeeded" >&2
+  exit 1
+fi
+grep 'start.*src/Api.resi' \
+  "$work/failed-interface-export-timing.tsv" >/dev/null
+remove_obstruction_directory "$session_interface/lib/ocaml/Api.cmi"
+REWATCH_FROZEN_VALUES=1 "$port" build "$session_interface"
+grep 'let answer = 5;' "$session_interface/src/Consumer.mjs" >/dev/null
 
 "$port" build "$dependency"
 test -f "$dependency/src/Main.js"

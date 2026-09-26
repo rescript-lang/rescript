@@ -24,6 +24,7 @@ let output_cmt output_channel cmt =
 let save_cmt filename modname binary_annots sourcefile initial_env cmi =
   if !((Clflags.current ()).binary_annotations) then
     Compiler_phase_trace.section "artifact.cmt_persist" (fun () ->
+        let saved = ref None in
         Misc.output_to_bin_file_directly filename
           (fun temp_file_name output_channel ->
             let interface_digest =
@@ -61,4 +62,7 @@ let save_cmt filename modname binary_annots sourcefile initial_env cmi =
                   })
             in
             Compiler_phase_trace.section "artifact.cmt_serialize" (fun () ->
-                output_cmt output_channel cmt)))
+                output_cmt output_channel cmt);
+            saved := Some cmt);
+        !saved)
+  else None

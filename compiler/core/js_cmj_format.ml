@@ -63,6 +63,77 @@ type t = {
   case: Ext_js_file_kind.case;
 }
 
+type frozen_arity =
+  | Frozen_single of Lam_arity.t
+  | Frozen_submodule of Lam_arity.t list
+
+type frozen_value = {
+  frozen_name: string;
+  frozen_arity: frozen_arity;
+  frozen_lambda: bytes option;
+}
+
+type frozen = {
+  frozen_values: frozen_value array;
+  frozen_hoisted_exports: hoisted_export list;
+  frozen_pure: bool;
+  frozen_package_spec: Js_packages_info.t;
+  frozen_case: Ext_js_file_kind.case;
+}
+
+let freeze (table : t) =
+  {
+    frozen_values =
+      Array.map
+        (fun value ->
+          {
+            frozen_name = value.name;
+            frozen_arity =
+              (match value.arity with
+              | Single arity -> Frozen_single arity
+              | Submodule arities -> Frozen_submodule (Array.to_list arities));
+            frozen_lambda =
+              Option.map
+                (fun lambda -> Marshal.to_bytes lambda [])
+                value.persistent_closed_lambda;
+          })
+        table.values;
+    frozen_hoisted_exports = Array.to_list table.hoisted_exports;
+    frozen_pure = table.pure;
+    frozen_package_spec = table.package_spec;
+    frozen_case = table.case;
+  }
+
+let view (image : frozen) : t =
+  {
+    values =
+      Array.map
+        (fun value ->
+          {
+            name = value.frozen_name;
+            arity =
+              (match value.frozen_arity with
+              | Frozen_single arity -> Single arity
+              | Frozen_submodule arities -> Submodule (Array.of_list arities));
+            persistent_closed_lambda =
+              Option.map
+                (fun bytes -> (Marshal.from_bytes bytes 0 : Lambda.t))
+                value.frozen_lambda;
+          })
+        image.frozen_values;
+    hoisted_exports = Array.of_list image.frozen_hoisted_exports;
+    pure = image.frozen_pure;
+    package_spec = image.frozen_package_spec;
+    case = image.frozen_case;
+  }
+
+let capture_key = Domain.DLS.new_key (fun () -> None)
+
+let with_capture capture action =
+  let previous = Domain.DLS.get capture_key in
+  Domain.DLS.set capture_key (Some capture);
+  Fun.protect action ~finally:(fun () -> Domain.DLS.set capture_key previous)
+
 let make ~(values : cmj_value Map_string.t) ~hoisted_exports ~effect_
     ~package_spec ~case : t =
   {
@@ -81,11 +152,13 @@ let make ~(values : cmj_value Map_string.t) ~hoisted_exports ~effect_
 
 (* Serialization .. *)
 let from_file name : t =
-  let ic = open_in_bin (Compiler_request_state.resolve_path name) in
-  let _digest = Digest.input ic in
-  let v : t = input_value ic in
-  close_in ic;
-  v
+  Compiler_phase_trace.dependency "dependency.cmj_read_decode" (fun () ->
+      let ic = open_in_bin (Compiler_request_state.resolve_path name) in
+      Fun.protect
+        (fun () ->
+          let _digest = Digest.input ic in
+          (input_value ic : t))
+        ~finally:(fun () -> close_in_noerr ic))
 
 let from_string s : t = Marshal.from_string s Ext_digest.length
 
@@ -108,7 +181,10 @@ let to_file name ~check_exists (v : t) =
     let oc = open_out_bin (Compiler_request_state.resolve_path name) in
     output_string oc header;
     output_string oc s;
-    close_out oc)
+    close_out oc);
+  Option.iter
+    (fun capture -> capture name cur_digest v)
+    (Domain.DLS.get capture_key)
 
 let key_comp a b = Map_string.compare_key a b.name
 

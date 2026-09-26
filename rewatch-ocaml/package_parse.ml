@@ -97,6 +97,9 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
         File_util.copy_existing_file ~ensure_parent:false
           (Filename.concat config.root path)
           (Filename.concat ocaml_dir (Filename.basename path));
+        Rescript_compiler_driver.publish_session_ast
+          (Build_session.compiler_session attempt.session)
+          ~source:(Filename.concat build_dir ast);
         if is_local && stderr <> "" then
           Build_session.mark_parse_pending attempt.session pending_path
         else Build_session.clear_parse_pending attempt.session pending_path

@@ -131,8 +131,12 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
                 ~compile:(fun ~source_kind path ->
                   compile_process module_ ~source_kind path)
                 ~publish:(fun ~source_kind path result ->
-                  Compiler_process.publish ~build_dir ~ocaml_dir ~is_local
-                    ~config ~source_kind path result)
+                  Compiler_process.publish
+                    ~session:(Build_session.compiler_session attempt.session)
+                    ~retain_interface:
+                      (not (Build_state.String_set.is_empty state.dependents))
+                    ~dependencies:state.dependencies ~build_dir ~ocaml_dir
+                    ~is_local ~config ~source_kind path result)
                 ~record_published_outputs
                 ~post_build:(Compiler_process.post_build_tasks config)
                 ~package_root:config.root ~is_local
@@ -184,9 +188,12 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
                     Compiler_scheduler.capture_publication (fun () ->
                         namespace_task.Compiler_scheduler.publish result)
                   with
-                  | Compiler_scheduler.Published {cmi_change; _} ->
+                  | Compiler_scheduler.Published
+                      {cmi_change; optimization_changed; _} ->
                     Build_state.record_published_cmi build_state ~compile_assets
                       namespace_state ~path:cmi_path cmi_change;
+                    Build_state.record_published_optimization build_state
+                      namespace_state ~changed:optimization_changed;
                     let cmt_path =
                       Filename.concat ocaml_dir (compiler_name ^ ".cmt")
                     in

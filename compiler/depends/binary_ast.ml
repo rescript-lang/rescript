@@ -29,15 +29,61 @@ type 'a kind = 'a Ml_binary.kind =
   | Ml : Parsetree.structure kind
   | Mli : Parsetree.signature kind
 
-let read_ast_exn (type t) ~fname (_ : t kind) : t =
-  let ic = open_in_bin (Compiler_request_state.resolve_path fname) in
-  let dep_size = input_binary_int ic in
-  seek_in ic (pos_in ic + dep_size);
-  let sourcefile = input_line ic in
-  Location.set_input_name sourcefile;
-  let ast = input_value ic in
-  close_in ic;
-  ast
+type result =
+  | Implementation of {
+      sourcefile: string;
+      dependencies: string list;
+      ast: Parsetree.structure;
+    }
+  | Interface of {
+      sourcefile: string;
+      dependencies: string list;
+      ast: Parsetree.signature;
+    }
+
+let dependencies = function
+  | Implementation {dependencies; _} | Interface {dependencies; _} ->
+    dependencies
+
+let capture_key = Domain.DLS.new_key (fun () -> None)
+let lookup_key = Domain.DLS.new_key (fun () -> None)
+
+let with_capture capture action =
+  let previous = Domain.DLS.get capture_key in
+  Domain.DLS.set capture_key (Some capture);
+  Fun.protect action ~finally:(fun () -> Domain.DLS.set capture_key previous)
+
+let with_lookup lookup action =
+  let previous = Domain.DLS.get lookup_key in
+  Domain.DLS.set lookup_key (Some lookup);
+  Fun.protect action ~finally:(fun () -> Domain.DLS.set lookup_key previous)
+
+let read_ast_exn (type t) ~fname (kind : t kind) : t =
+  let staged =
+    match Domain.DLS.get lookup_key with
+    | None -> None
+    | Some lookup -> lookup fname
+  in
+  match (kind, staged) with
+  | Ml, Some (Implementation {sourcefile; ast; _}) ->
+    Compiler_phase_trace.dependency "dependency.session_ast_lookup" (fun () ->
+        Location.set_input_name sourcefile;
+        ast)
+  | Mli, Some (Interface {sourcefile; ast; _}) ->
+    Compiler_phase_trace.dependency "dependency.session_ast_lookup" (fun () ->
+        Location.set_input_name sourcefile;
+        ast)
+  | _, _ ->
+    Compiler_phase_trace.dependency "dependency.ast_read_decode" (fun () ->
+        let ic = open_in_bin (Compiler_request_state.resolve_path fname) in
+        Fun.protect
+          (fun () ->
+            let dep_size = input_binary_int ic in
+            seek_in ic (pos_in ic + dep_size);
+            let sourcefile = input_line ic in
+            Location.set_input_name sourcefile;
+            input_value ic)
+          ~finally:(fun () -> close_in_noerr ic))
 
 let magic_sep_char = '\n'
 
@@ -49,18 +95,28 @@ let magic_sep_char = '\n'
 let write_ast (type t) ~(sourcefile : string) ~output (kind : t kind) (pt : t) :
     unit =
   let output_set = Ast_extract.read_parse_and_extract kind pt in
+  let dependencies =
+    Set_string.elements output_set
+    |> List.filter (fun s -> s <> "" && s.[0] <> '*')
+  in
   let buf = Ext_buffer.create 1000 in
   Ext_buffer.add_char buf magic_sep_char;
-  Set_string.iter
-    (fun s ->
-      if s <> "" && s.[0] <> '*' then
-        (* filter *predef* *)
-        Ext_buffer.add_string_char buf s magic_sep_char)
-    output_set;
+  List.iter
+    (fun s -> Ext_buffer.add_string_char buf s magic_sep_char)
+    dependencies;
   let oc = open_out_bin (Compiler_request_state.resolve_path output) in
   output_binary_int oc (Ext_buffer.length buf);
   Ext_buffer.output_buffer oc buf;
   output_string oc sourcefile;
   output_char oc '\n';
   output_value oc pt;
-  close_out oc
+  close_out oc;
+  Option.iter
+    (fun capture ->
+      let result =
+        match kind with
+        | Ml -> Implementation {sourcefile; dependencies; ast = pt}
+        | Mli -> Interface {sourcefile; dependencies; ast = pt}
+      in
+      capture output result)
+    (Domain.DLS.get capture_key)

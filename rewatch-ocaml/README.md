@@ -64,11 +64,13 @@ file _build/default/rewatch-ocaml/rescript_ocaml.exe
 ```
 
 Build and watch requests compile on a bounded pool of OCaml domains by
-default. The main domain schedules dependencies and publishes artifacts;
-compiler workers parse and compile independent modules. The worker count is
-the lesser of eight and one fewer than the available CPU count, with a minimum
-of one. Set `REWATCH_COMPILER_DOMAINS` to override it (one through the
-scheduler's platform bound, at least twelve). The heuristic is provisional.
+default. The main domain schedules dependencies and records build state;
+compiler workers parse and compile independent modules. One export domain can
+copy independent implementation artifacts while compiler jobs continue. The
+compiler worker count is the lesser of eight and one fewer than the available
+CPU count, with a minimum of one. Set `REWATCH_COMPILER_DOMAINS` to override it
+(one through the scheduler's platform bound, at least twelve). The heuristic
+is provisional.
 PPXs and hooks remain external processes.
 
 When running outside this repository's normal Makefile environment, supply
@@ -128,9 +130,20 @@ orchestration and aggregate dispatch, while `build_report.ml` owns presentation.
 `build_preparation.ml` consumes the prepared packages to initialize compiler
 context, clean stale assets, and run the preliminary parse; `module_graph.ml`
 owns dependency resolution, graph-node identities, and cycle analysis.
+
+The experimental `REWATCH_FROZEN_VALUES=1` compiler session passes newly
+parsed ASTs, dependency lists, frozen interfaces, and cross-module optimization
+metadata directly between jobs. Dependent compiler jobs can start before CMI
+and CMJ artifacts are exported; export finishes before build success. Its
+module-result API also retains bounded typed semantic data, structured
+diagnostics, and output paths. Separate CMI and CMJ fingerprints control
+dependent recompilation. The current implementation and benchmark results are
+documented in
+[`compiler/ml/IMMUTABLE_INTERFACES.md`](../compiler/ml/IMMUTABLE_INTERFACES.md).
 `compiler_process.ml` is the boundary between logical compiler jobs and
 in-process execution. Independent parse and compile requests run on a bounded
-domain pool while artifact publication stays on the scheduler domain. The
+domain pool. The scheduler accepts module results and records build state;
+eligible artifact exports run on one separate domain. The
 driver resets command-line flags, warnings, JSX and experimental settings,
 package and output state, runtime and project paths, load paths, environment
 and CRC caches, predefined type graphs, delayed checks, CMT accumulation,

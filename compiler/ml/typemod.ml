@@ -1744,9 +1744,7 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
           let intf_file =
             Compiler_phase_trace.dependency "dependency.interface_search"
               (fun () ->
-                try
-                  find_in_path_uncap (Config.get_load_path ())
-                    (modulename ^ ".cmi")
+                try Env.find_compiled_cmi modulename
                 with Not_found ->
                   let sourceintf =
                     Filename.remove_extension sourcefile ^ Literals.suffix_resi

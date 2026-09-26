@@ -86,10 +86,29 @@ type incremental_source = {
 
 let run_scheduled_modules (attempt : Build_attempt.t)
     (prepared : Build_session.prepared) ~compile_step ~namespace_count =
+  let candidates = Build_attempt.take_compile_candidates attempt in
+  let ready =
+    List.filter Compiler_scheduler.candidate_requires_compile candidates
+  in
+  let ready_keys = Hashtbl.create (List.length ready) in
+  List.iter
+    (fun candidate ->
+      Hashtbl.replace ready_keys (Compiler_scheduler.candidate_key candidate) ())
+    ready;
+  let has_dirty_dependency =
+    List.exists
+      (fun candidate ->
+        List.exists (Hashtbl.mem ready_keys)
+          (Compiler_scheduler.candidate_dependencies candidate))
+      candidates
+  in
+  Rescript_compiler_driver.set_frozen_for_compile
+    (Build_session.compiler_session attempt.session)
+    (List.length ready >= 4 || has_dirty_dependency);
   Compiler_scheduler.run ~poll:attempt.process_poll
     ~warning_state:(Build_session.warning_state attempt.session)
     ~compile_assets:prepared.compile_assets ~build_state:prepared.build_state
-    ~candidates:(Build_attempt.take_compile_candidates attempt)
+    ~candidates
     ~mark_compiled:(fun () -> attempt.compiled <- attempt.compiled + 1)
     ~mark_had_warnings:(fun () -> attempt.had_warnings <- true)
     ~progress:attempt.progress ~compile_step ~namespace_count
@@ -229,6 +248,7 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
       if not changed_parse_failed then
         let dependencies path =
           Compiler_process.ast_dependencies
+            ~session:(Build_session.compiler_session attempt.session)
             ~build_dir:package.Package_plan.build_dir (Source.ast_path path)
         in
         let raw_dependencies =

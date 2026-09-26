@@ -38,6 +38,14 @@ let log_compiler_request (job : Process.job) =
     append_log path (Printf.sprintf "%s\t%s\t%s\n" phase job.cwd input)
 
 let compiler_timing_log = Sys.getenv_opt "REWATCH_COMPILER_TIMING_LOG"
+let artifact_export_log = Sys.getenv_opt "REWATCH_ARTIFACT_EXPORT_LOG"
+
+let log_artifact_export event path =
+  Option.iter
+    (fun log ->
+      append_log log
+        (Printf.sprintf "%s\t%s\t%.9f\n" event path (Unix.gettimeofday ())))
+    artifact_export_log
 
 let time_compiler_request (job : Process.job) run =
   match compiler_timing_log with
@@ -130,13 +138,54 @@ let parse_job ~bsc ~build_dir ~(config : Config.t) path =
   let args = Compiler_args.parser_arguments ~config ~contents ~path in
   Process.{program = bsc; args; cwd = build_dir}
 
-let ast_dependencies ~build_dir ast =
-  (Ast_header.read (Filename.concat build_dir ast)).dependencies
+let ast_dependencies ?session ~build_dir ast =
+  let path = Filename.concat build_dir ast in
+  match
+    Option.bind session (fun session ->
+        Rescript_compiler_driver.staged_ast_dependencies session ~path)
+  with
+  | Some dependencies -> dependencies
+  | None -> (Ast_header.read path).dependencies
 
 type compiler_artifact = Cmi | Required of string | Optional of string
+type artifact_changes = {
+  cmi_change: Compiler_scheduler.cmi_change;
+  optimization_changed: bool;
+}
 
-let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
+let session_fingerprint session kind filename =
+  Option.bind session (fun session ->
+      Rescript_compiler_driver.published_fingerprint session ~kind ~filename)
+
+let changes_from_fingerprints ~previous_interface ~previous_optimization
+    ~interface_file ~optimization_file ~session changes =
+  let current_interface =
+    session_fingerprint session Rescript_compiler_driver.Interface
+      interface_file
+  in
+  let current_optimization =
+    Option.bind optimization_file (fun filename ->
+        session_fingerprint session Rescript_compiler_driver.Optimization
+          filename)
+  in
+  let cmi_change =
+    match (previous_interface, current_interface) with
+    | Some previous, Some current ->
+      if previous = current then Compiler_scheduler.Cmi_unchanged
+      else Compiler_scheduler.Cmi_changed
+    | _ -> changes.cmi_change
+  in
+  let optimization_changed =
+    match (previous_optimization, current_optimization) with
+    | Some previous, Some current -> previous <> current
+    | _ -> changes.optimization_changed
+  in
+  {cmi_change; optimization_changed}
+
+let publish_compiler_artifacts ?(preserve_source_mtime = false) ~artifact_dir
+    ~ocaml_dir ~basename artifacts =
   let cmi_change = ref Compiler_scheduler.Cmi_change_unknown in
+  let optimization_changed = ref false in
   try
     List.iter
       (fun artifact ->
@@ -153,21 +202,38 @@ let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
         in
         match artifact with
         | Cmi ->
+          let changed =
+            File_util.copy_file_if_different ~ensure_parent:false source
+              destination
+          in
           cmi_change :=
-            if
-              File_util.copy_file_if_different ~ensure_parent:false source
-                destination
-            then Compiler_scheduler.Cmi_changed
-            else Compiler_scheduler.Cmi_unchanged
+            if changed then Compiler_scheduler.Cmi_changed
+            else Compiler_scheduler.Cmi_unchanged;
+          if preserve_source_mtime && changed then
+            let stats = Unix.stat source in
+            Unix.utimes destination stats.st_atime stats.st_mtime
+        | Required "cmj" ->
+          let changed =
+            File_util.copy_file_if_different ~ensure_parent:false source
+              destination
+          in
+          optimization_changed := changed;
+          if preserve_source_mtime && changed then
+            let stats = Unix.stat source in
+            Unix.utimes destination stats.st_atime stats.st_mtime
         | Required _ ->
           File_util.copy_existing_file ~ensure_parent:false source destination
         | Optional _ ->
           File_util.copy_optional_existing_file ~ensure_parent:false source
             destination)
       artifacts;
-    !cmi_change
+    {cmi_change = !cmi_change; optimization_changed = !optimization_changed}
   with error ->
-    raise (Compiler_scheduler.Publication_failure (error, !cmi_change))
+    raise
+      (Compiler_scheduler.Publication_failure
+         ( error,
+           if !optimization_changed then Compiler_scheduler.Cmi_change_unknown
+           else !cmi_change ))
 
 let namespace_task ?session ~bsc ~runtime ~build_dir ~ocaml_dir ~entry
     ~package_dirty ~force namespace modules =
@@ -236,12 +302,67 @@ let namespace_task ?session ~bsc ~runtime ~build_dir ~ocaml_dir ~entry
                 raise
                   (Compiler_scheduler.Build_failure
                      (result.Process.stderr ^ result.stdout));
-              let cmi_change =
+              let interface_file =
+                Filename.concat ocaml_dir (namespace ^ ".cmi")
+              in
+              let optimization_file =
+                Filename.concat ocaml_dir (namespace ^ ".cmj")
+              in
+              let previous_interface =
+                session_fingerprint session Rescript_compiler_driver.Interface
+                  interface_file
+              in
+              let previous_optimization =
+                session_fingerprint session
+                  Rescript_compiler_driver.Optimization optimization_file
+              in
+              let changes =
                 publish_compiler_artifacts ~artifact_dir:build_dir ~ocaml_dir
                   ~basename:namespace
                   [Cmi; Required "cmj"; Required "cmt"; Required "mlmap"]
               in
-              Compiler_scheduler.{stderr = result.stderr; cmi_change});
+              Option.iter
+                (fun session ->
+                  Rescript_compiler_driver.publish_session_cmi session
+                    ~retain:true
+                    ~source:(Filename.concat build_dir (namespace ^ ".cmi"))
+                    ~destination:
+                      (Filename.concat ocaml_dir (namespace ^ ".cmi"));
+                  Rescript_compiler_driver.publish_session_cmj session
+                    ~retain:true
+                    ~source:(Filename.concat build_dir (namespace ^ ".cmj"))
+                    ~destination:
+                      (Filename.concat ocaml_dir (namespace ^ ".cmj"));
+                  Rescript_compiler_driver.publish_session_semantic session
+                    ~retain:false
+                    ~source:(Filename.concat build_dir (namespace ^ ".cmt"))
+                    ~destination:
+                      (Filename.concat ocaml_dir (namespace ^ ".cmt"));
+                  Rescript_compiler_driver.publish_module_result session
+                    ~input:mlmap ~interface_file
+                    ~optimization_file:(Some optimization_file)
+                    ~semantic_file:None ~dependencies:[]
+                    ~generated_outputs:
+                      (List.map
+                         (fun extension ->
+                           Filename.concat ocaml_dir
+                             (namespace ^ "." ^ extension))
+                         ["cmi"; "cmj"; "cmt"; "mlmap"]))
+                session;
+              let changes =
+                changes_from_fingerprints ~previous_interface
+                  ~previous_optimization ~interface_file
+                  ~optimization_file:(Some optimization_file) ~session changes
+              in
+              Compiler_scheduler.
+                {
+                  stderr = result.stderr;
+                  cmi_change = changes.cmi_change;
+                  optimization_changed = changes.optimization_changed;
+                  deferred_export = None;
+                  cancel_export = None;
+                  staged_cmi_path = None;
+                });
         }
 
 let post_build_tasks (config : Config.t) path =
@@ -276,21 +397,43 @@ let compile_job ~bsc ~build_dir ~(config : Config.t) ~common_args
   in
   Process.{program = bsc; args; cwd = build_dir}
 
-let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~source_kind
-    path result =
+let publish_immediate ?session ~preserve_source_mtime ~retain_interface
+    ~dependencies ~build_dir ~ocaml_dir ~is_local ~(config : Config.t)
+    ~source_kind path result =
   let stderr =
     if is_local then result.Process.stderr
     else retain_critical_external_warnings result.stderr
   in
   let basename = Source.compiler_asset_basename config path in
   let artifact_dir = Filename.concat build_dir (Filename.dirname path) in
+  let interface_file = Filename.concat ocaml_dir (basename ^ ".cmi") in
+  let optimization_file =
+    match source_kind with
+    | Source.Interface -> None
+    | Source.Implementation ->
+      Some (Filename.concat ocaml_dir (basename ^ ".cmj"))
+  in
+  let previous_interface =
+    session_fingerprint session Rescript_compiler_driver.Interface
+      interface_file
+  in
+  let previous_optimization =
+    Option.bind optimization_file (fun filename ->
+        session_fingerprint session Rescript_compiler_driver.Optimization
+          filename)
+  in
   let cmi_change = ref Compiler_scheduler.Cmi_change_unknown in
+  let optimization_changed = ref false in
   try
-    cmi_change :=
-      publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
+    let changes =
+      publish_compiler_artifacts ~preserve_source_mtime ~artifact_dir ~ocaml_dir
+        ~basename
         (match source_kind with
         | Source.Interface -> [Cmi; Optional "cmti"]
-        | Source.Implementation -> [Cmi; Required "cmj"; Optional "cmt"]);
+        | Source.Implementation -> [Cmi; Required "cmj"; Optional "cmt"])
+    in
+    cmi_change := changes.cmi_change;
+    optimization_changed := changes.optimization_changed;
     let source = Filename.concat config.root path in
     let build_source = Filename.concat build_dir path in
     File_util.ensure_dir (Filename.dirname build_source);
@@ -317,7 +460,243 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~source_kind
                 (output ^ ".map") (build_output ^ ".map")
             else File_util.remove_file (build_output ^ ".map")))
         config.package_specs);
-    Compiler_scheduler.{stderr; cmi_change = !cmi_change}
+    Option.iter
+      (fun session ->
+        Rescript_compiler_driver.publish_session_cmi session
+          ~retain:retain_interface
+          ~source:(Filename.concat artifact_dir (basename ^ ".cmi"))
+          ~destination:(Filename.concat ocaml_dir (basename ^ ".cmi"));
+        (match source_kind with
+        | Source.Interface -> ()
+        | Source.Implementation ->
+          Rescript_compiler_driver.publish_session_cmj session
+            ~retain:retain_interface
+            ~source:(Filename.concat artifact_dir (basename ^ ".cmj"))
+            ~destination:(Filename.concat ocaml_dir (basename ^ ".cmj")));
+        let cmt_extension =
+          match source_kind with
+          | Source.Interface -> ".cmti"
+          | Source.Implementation -> ".cmt"
+        in
+        Rescript_compiler_driver.publish_session_semantic session
+          ~retain:is_local
+          ~source:(Filename.concat artifact_dir (basename ^ cmt_extension))
+          ~destination:(Filename.concat ocaml_dir (basename ^ cmt_extension));
+        let semantic_file =
+          let filename = Filename.concat ocaml_dir (basename ^ cmt_extension) in
+          if File_util.is_regular_file filename then Some filename else None
+        in
+        let generated_outputs =
+          let compiler_outputs =
+            List.map
+              (fun extension ->
+                Filename.concat ocaml_dir (basename ^ extension))
+              [".cmi"; ".cmj"; ".cmt"; ".cmti"]
+            @ [Build_artifacts.published_ast_path ~ocaml_dir path]
+          in
+          let js_outputs =
+            match source_kind with
+            | Source.Interface -> []
+            | Source.Implementation ->
+              List.concat_map
+                (fun spec ->
+                  let path =
+                    Build_artifacts.generated_js_path config path spec
+                  in
+                  [path; path ^ ".map"])
+                config.package_specs
+          in
+          List.filter File_util.is_regular_file (compiler_outputs @ js_outputs)
+        in
+        Rescript_compiler_driver.publish_module_result session
+          ~input:(Filename.concat build_dir (Source.ast_path path))
+          ~interface_file ~optimization_file ~semantic_file ~dependencies
+          ~generated_outputs)
+      session;
+    let changes =
+      changes_from_fingerprints ~previous_interface ~previous_optimization
+        ~interface_file ~optimization_file ~session changes
+    in
+    Compiler_scheduler.
+      {
+        stderr;
+        cmi_change = changes.cmi_change;
+        optimization_changed = changes.optimization_changed;
+        deferred_export = None;
+        cancel_export = None;
+        staged_cmi_path = None;
+      }
   with
   | Compiler_scheduler.Publication_failure _ as error -> raise error
-  | error -> raise (Compiler_scheduler.Publication_failure (error, !cmi_change))
+  | error ->
+    raise
+      (Compiler_scheduler.Publication_failure
+         ( error,
+           if !optimization_changed then Compiler_scheduler.Cmi_change_unknown
+           else !cmi_change ))
+
+let publish ?session ~retain_interface ~dependencies ~build_dir ~ocaml_dir
+    ~is_local ~(config : Config.t) ~source_kind path result =
+  let immediate preserve_source_mtime =
+    publish_immediate ?session ~preserve_source_mtime ~retain_interface
+      ~dependencies ~build_dir ~ocaml_dir ~is_local ~config ~source_kind path
+      result
+  in
+  match session with
+  | None -> immediate false
+  | Some _
+    when (not retain_interface)
+         || Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "1" ->
+    immediate false
+  | Some session ->
+    let basename = Source.compiler_asset_basename config path in
+    let artifact_dir = Filename.concat build_dir (Filename.dirname path) in
+    let source extension =
+      Filename.concat artifact_dir (basename ^ "." ^ extension)
+    in
+    let destination extension =
+      Filename.concat ocaml_dir (basename ^ "." ^ extension)
+    in
+    let interface_file = destination "cmi" in
+    let optimization_file =
+      match source_kind with
+      | Source.Interface -> None
+      | Source.Implementation -> Some (destination "cmj")
+    in
+    let previous_interface =
+      session_fingerprint (Some session) Rescript_compiler_driver.Interface
+        interface_file
+    in
+    let previous_optimization =
+      Option.bind optimization_file (fun filename ->
+          session_fingerprint (Some session)
+            Rescript_compiler_driver.Optimization filename)
+    in
+    let staged_interface =
+      Rescript_compiler_driver.stage_session_cmi session ~source:(source "cmi")
+        ~destination:interface_file
+    in
+    let staged_optimization =
+      match optimization_file with
+      | None -> true
+      | Some filename ->
+        Rescript_compiler_driver.stage_session_cmj session
+          ~source:(source "cmj") ~destination:filename
+    in
+    let interface_available =
+      staged_interface
+      || Option.is_some
+           (session_fingerprint (Some session)
+              Rescript_compiler_driver.Interface interface_file)
+    in
+    if (not interface_available) || not staged_optimization then immediate false
+    else
+      let current_interface =
+        session_fingerprint (Some session) Rescript_compiler_driver.Interface
+          interface_file
+      in
+      let current_optimization =
+        Option.bind optimization_file (fun filename ->
+            session_fingerprint (Some session)
+              Rescript_compiler_driver.Optimization filename)
+      in
+      let cmi_change =
+        match (previous_interface, current_interface) with
+        | Some old, Some current ->
+          if old = current then Compiler_scheduler.Cmi_unchanged
+          else Compiler_scheduler.Cmi_changed
+        | _ ->
+          if File_util.files_equal (source "cmi") interface_file then
+            Compiler_scheduler.Cmi_unchanged
+          else Compiler_scheduler.Cmi_changed
+      in
+      let optimization_changed =
+        match
+          (optimization_file, previous_optimization, current_optimization)
+        with
+        | None, _, _ -> false
+        | Some _, Some old, Some current -> old <> current
+        | Some filename, _, _ ->
+          not (File_util.files_equal (source "cmj") filename)
+      in
+      let cancel () =
+        Rescript_compiler_driver.discard_pending_session_artifacts session
+          ~interface_file ~optimization_file
+      in
+      let generated_outputs =
+        let compiler_outputs =
+          [
+            destination "cmi";
+            destination "cmj";
+            destination "cmt";
+            destination "cmti";
+            Build_artifacts.published_ast_path ~ocaml_dir path;
+          ]
+        in
+        let js_outputs =
+          match source_kind with
+          | Source.Interface -> []
+          | Source.Implementation ->
+            List.concat_map
+              (fun spec ->
+                let output =
+                  Build_artifacts.generated_js_path config path spec
+                in
+                [output; output ^ ".map"])
+              config.package_specs
+        in
+        compiler_outputs @ js_outputs
+      in
+      (try
+         Rescript_compiler_driver.stage_module_result session
+           ~input:(Filename.concat build_dir (Source.ast_path path))
+           ~interface_source:(source "cmi") ~interface_file
+           ~optimization_source:
+             (Option.map (fun _ -> source "cmj") optimization_file)
+           ~optimization_file
+           ~semantic_source:
+             (Some
+                (source
+                   (match source_kind with
+                   | Source.Interface -> "cmti"
+                   | Source.Implementation -> "cmt")))
+           ~dependencies ~generated_outputs
+       with error ->
+         cancel ();
+         raise error);
+      let export () =
+        log_artifact_export "start" path;
+        Fun.protect
+          ~finally:(fun () -> log_artifact_export "end" path)
+          (fun () ->
+            if
+              Option.is_none current_interface
+              || session_fingerprint (Some session)
+                   Rescript_compiler_driver.Interface interface_file
+                 <> current_interface
+              || Option.exists
+                   (fun filename ->
+                     Option.is_none current_optimization
+                     || session_fingerprint (Some session)
+                          Rescript_compiler_driver.Optimization filename
+                        <> current_optimization)
+                   optimization_file
+            then
+              failwith
+                ("compiler result changed before artifact export: " ^ path);
+            ignore (immediate true);
+            cancel ())
+      in
+      let stderr =
+        if is_local then result.Process.stderr
+        else retain_critical_external_warnings result.stderr
+      in
+      Compiler_scheduler.
+        {
+          stderr;
+          cmi_change;
+          optimization_changed;
+          deferred_export = Some export;
+          cancel_export = Some cancel;
+          staged_cmi_path = Some (source "cmi");
+        }

@@ -55,6 +55,7 @@ type initialized = {
 
 val initialize :
   root_config:Config.t ->
+  compiler_session:Rescript_compiler_driver.session ->
   package_plans:Package_plan.t list ->
   compile_assets:Compile_assets.t ->
   failed_parse_paths:(string, unit) Hashtbl.t ->

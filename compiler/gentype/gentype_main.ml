@@ -69,6 +69,14 @@ let translate_cmt ~config ~output_file_relative ~resolver input_cmt :
   translations |> Translation.combine
   |> Translation.add_type_declarations_from_module_equations ~type_env
 
+let generated_output_capture_key = Domain.DLS.new_key (fun () -> None)
+
+let with_generated_output_capture capture action =
+  let previous = Domain.DLS.get generated_output_capture_key in
+  Domain.DLS.set generated_output_capture_key (Some capture);
+  Fun.protect action ~finally:(fun () ->
+      Domain.DLS.set generated_output_capture_key previous)
+
 let emit_translation ~config ~file_name ~output_file ~output_file_relative
     ~resolver ~source_file translation =
   let code_text =
@@ -80,18 +88,32 @@ let emit_translation ~config ~file_name ~output_file ~output_file_relative
     Emit_type.file_header ~source_file:(Filename.basename source_file)
     ^ "\n" ^ code_text ^ "\n"
   in
-  Generated_files.write_file_if_required ~output_file ~file_contents
+  Generated_files.write_file_if_required ~output_file ~file_contents;
+  Option.iter
+    (fun capture -> capture output_file)
+    (Domain.DLS.get generated_output_capture_key)
 
 let read_cmt cmt_file =
-  try Cmt_format.read_cmt cmt_file
+  try
+    Compiler_phase_trace.dependency "dependency.gentype_cmt_read" (fun () ->
+        Cmt_format.read_cmt cmt_file)
   with Cmi_format.Error _ ->
     Log_.item "Error loading %s\n\n" cmt_file;
     Log_.item "It looks like you might have stale compilation artifacts.\n";
     Log_.item "Try to clean and rebuild.\n\n";
     assert false
 
-let read_input_cmt is_interface cmt_file =
-  let input_cmt = read_cmt cmt_file in
+let read_input_cmt ?compiled_cmt is_interface cmt_file =
+  let implementation_cmt () =
+    match compiled_cmt with
+    | Some cmt ->
+      Compiler_phase_trace.dependency "dependency.gentype_semantic_result"
+        (fun () -> cmt)
+    | None -> read_cmt cmt_file
+  in
+  let input_cmt =
+    if is_interface then read_cmt cmt_file else implementation_cmt ()
+  in
   let ignore_interface = ref false in
   let check_annotation ~loc:_ attributes =
     if
@@ -112,7 +134,13 @@ let read_input_cmt is_interface cmt_file =
     let cmt_file_impl =
       (cmt_file |> (Filename.chop_extension [@doesNotRaise])) ^ ".cmt"
     in
-    let input_cmt_impl = read_cmt cmt_file_impl in
+    let input_cmt_impl =
+      match compiled_cmt with
+      | Some cmt ->
+        Compiler_phase_trace.dependency "dependency.gentype_semantic_result"
+          (fun () -> cmt)
+      | None -> read_cmt cmt_file_impl
+    in
     let has_gentype_annotations_impl =
       input_cmt_impl
       |> cmt_check_annotations ~check_annotation:(fun ~loc attributes ->
@@ -133,7 +161,7 @@ let read_input_cmt is_interface cmt_file =
       | false -> has_gentype_annotations )
   else (input_cmt, has_gentype_annotations)
 
-let process_cmt_file cmt =
+let process_cmt_file ?compiled_cmt cmt =
   let config = Paths.read_config ~namespace:(cmt |> Paths.find_name_space) in
   if !(Debug.basic ()) then Log_.item "Cmt %s\n" cmt;
   let cmt_file = cmt |> Paths.get_cmt_file in
@@ -141,7 +169,7 @@ let process_cmt_file cmt =
     let file_name = cmt |> Paths.get_module_name in
     let is_interface = Filename.check_suffix cmt_file ".cmti" in
     let input_cmt, has_gentype_annotations =
-      read_input_cmt is_interface cmt_file
+      read_input_cmt ?compiled_cmt is_interface cmt_file
     in
     let source_file =
       match input_cmt.cmt_annots |> Find_source_file.cmt with

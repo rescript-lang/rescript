@@ -161,8 +161,8 @@ type initialized = {
   use_existing_ast_paths: string list;
 }
 
-let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
-    ~failed_parse_paths =
+let initialize ~(root_config : Config.t) ~compiler_session ~package_plans
+    ~compile_assets ~failed_parse_paths =
   let nodes = ref [] in
   let use_existing_ast_paths = ref [] in
   List.iter
@@ -182,8 +182,8 @@ let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
               Hashtbl.mem failed_parse_paths (Filename.concat package.root path)
             then []
             else
-              Compiler_process.ast_dependencies ~build_dir:package.build_dir
-                (Source.ast_path path)
+              Compiler_process.ast_dependencies ~session:compiler_session
+                ~build_dir:package.build_dir (Source.ast_path path)
           in
           let raw_dependencies =
             List.sort_uniq String.compare

@@ -69,6 +69,31 @@ let gentype_output_capture_tests _context =
     "GenType warnings use the request-owned stdout formatter";
   assert_equal "" stderr
 
+let structured_diagnostic_isolation_tests _context =
+  let left_ready = Atomic.make false in
+  let right_ready = Atomic.make false in
+  let capture label ready other_ready =
+    Domain.spawn (fun () ->
+        let buffer = Buffer.create 128 in
+        let formatter = Stdlib.Format.formatter_of_buffer buffer in
+        let (), diagnostics =
+          Location.with_diagnostic_capture (fun () ->
+              Atomic.set ready true;
+              while not (Atomic.get other_ready) do
+                Domain.cpu_relax ()
+              done;
+              Location.report_error formatter
+                (Location.error ~loc:Location.none label))
+        in
+        List.map
+          (fun (diagnostic : Location.diagnostic) -> diagnostic.message)
+          diagnostics)
+  in
+  let left = capture "left" left_ready right_ready in
+  let right = capture "right" right_ready left_ready in
+  assert_equal ["left"] (Domain.join left);
+  assert_equal ["right"] (Domain.join right)
+
 let used_attributes_isolation_tests _context =
   let loc = {Location.none with loc_ghost = false} in
   let name = Asttypes.{txt = "as"; loc} in
@@ -741,6 +766,282 @@ let expect_code expected result =
   assert_equal ~printer:string_of_int expected
     result.Rescript_compiler_driver.exit_code
 
+let semantic_result_isolation_tests _context =
+  Test_support.with_temp_dir "rewatch-semantic-result-" (fun root ->
+      write root "Api.res" "let answer = 42\n";
+      let session = Rescript_compiler_driver.create_session () in
+      expect_code 0 (snd (run ~session root "Api.res"));
+      let path = Filename.concat root "Api.cmt" in
+      Rescript_compiler_driver.publish_session_semantic session ~retain:true
+        ~source:path ~destination:path;
+      let read () =
+        match
+          Rescript_compiler_driver.semantic_result session ~filename:path
+        with
+        | Some result -> result
+        | None -> assert_failure "published semantic result was unavailable"
+      in
+      let first = read () in
+      let second = read () in
+      check (first != second) "semantic views belong to separate requests";
+      (match first.Cmt_format.cmt_annots with
+      | Cmt_format.Implementation _ -> ()
+      | _ -> assert_failure "expected implementation semantics");
+      let channel = open_out_gen [Open_append] 0o644 path in
+      output_char channel '\n';
+      close_out channel;
+      check
+        (Option.is_none
+           (Rescript_compiler_driver.semantic_result session ~filename:path))
+        "changed CMT invalidates the semantic result")
+
+let published_module_result_tests _context =
+  let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+  Fun.protect
+    ~finally:(fun () ->
+      match previous with
+      | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+      | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+    (fun () ->
+      Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+      Test_support.with_temp_dir "rewatch-module-result-" (fun root ->
+          write root "Api.res" "let answer = 42\n";
+          let session = Rescript_compiler_driver.create_session () in
+          let _, compiled = run ~session root "Api.res" in
+          expect_code 0 compiled;
+          let path extension = Filename.concat root ("Api." ^ extension) in
+          Rescript_compiler_driver.publish_session_cmi session ~retain:true
+            ~source:(path "cmi") ~destination:(path "cmi");
+          Rescript_compiler_driver.publish_session_cmj session ~retain:true
+            ~source:(path "cmj") ~destination:(path "cmj");
+          Rescript_compiler_driver.publish_session_semantic session ~retain:true
+            ~source:(path "cmt") ~destination:(path "cmt");
+          Rescript_compiler_driver.publish_module_result session
+            ~input:(path "res") ~interface_file:(path "cmi")
+            ~optimization_file:(Some (path "cmj"))
+            ~semantic_file:(Some (path "cmt"))
+            ~dependencies:["Dep"]
+            ~generated_outputs:[path "js"];
+          let result =
+            match
+              Rescript_compiler_driver.module_result session
+                ~interface_file:(path "cmi")
+            with
+            | Some result -> result
+            | None -> assert_failure "published module result unavailable"
+          in
+          let open Rescript_compiler_driver in
+          check
+            (Option.is_some (interface_fingerprint result))
+            "interface fingerprint published";
+          check
+            (Option.is_some (optimization_fingerprint result))
+            "optimization fingerprint published";
+          check
+            (Option.is_some (interface_signature result))
+            "immutable interface provides a request-owned view";
+          check
+            (Option.is_some (optimization_metadata result))
+            "optimization metadata provides a request-owned view";
+          check
+            (Option.is_some (typed_semantic result))
+            "typed semantic result is available";
+          assert_equal ["Dep"] (result_dependencies result);
+          assert_equal [path "js"] (result_generated_outputs result);
+          assert_equal [] (result_diagnostics result);
+          let channel = open_out_gen [Open_append] 0o644 (path "cmi") in
+          output_char channel '\n';
+          close_out channel;
+          check
+            (Option.is_none
+               (module_result session ~interface_file:(path "cmi")))
+            "changed interface invalidates the published result";
+          check
+            (Option.is_none (interface_signature result))
+            "a held result cannot expose a changed interface"))
+
+let virtual_module_artifact_lookup_tests _context =
+  let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+  let previous_trace = Sys.getenv_opt "REWATCH_TYPECHECK_TRACE" in
+  Fun.protect
+    ~finally:(fun () ->
+      (match previous with
+      | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+      | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES");
+      match previous_trace with
+      | Some value -> Unix.putenv "REWATCH_TYPECHECK_TRACE" value
+      | None -> Unix.unsetenv "REWATCH_TYPECHECK_TRACE")
+    (fun () ->
+      Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+      Test_support.with_temp_dir "rewatch-virtual-module-" (fun root ->
+          let producer = Filename.concat root "producer" in
+          let consumer = Filename.concat root "consumer" in
+          let published = Filename.concat consumer "lib/ocaml" in
+          List.iter File_util.ensure_dir [producer; consumer; published];
+          let trace = Filename.concat root "trace.tsv" in
+          Unix.putenv "REWATCH_TYPECHECK_TRACE" trace;
+          write producer "Api.res" "let identity = x => x\n";
+          write consumer "Consumer.res" "let result = Api.identity(42)\n";
+          let session = Rescript_compiler_driver.create_session () in
+          expect_code 0 (snd (run ~session producer "Api.res"));
+          let source extension =
+            Filename.concat producer ("Api." ^ extension)
+          in
+          let destination extension =
+            Filename.concat published ("Api." ^ extension)
+          in
+          check
+            (Rescript_compiler_driver.stage_session_cmi session
+               ~source:(source "cmi") ~destination:(destination "cmi"))
+            "producer CMI can be staged before export";
+          check
+            (Rescript_compiler_driver.stage_session_cmj session
+               ~source:(source "cmj") ~destination:(destination "cmj"))
+            "producer CMJ can be staged before export";
+          check
+            ((not (Sys.file_exists (destination "cmi")))
+            && not (Sys.file_exists (destination "cmj")))
+            "published paths are absent while the consumer compiles";
+          Rescript_compiler_driver.stage_module_result session
+            ~input:(source "res") ~interface_source:(source "cmi")
+            ~interface_file:(destination "cmi")
+            ~optimization_source:(Some (source "cmj"))
+            ~optimization_file:(Some (destination "cmj"))
+            ~semantic_source:(Some (source "cmt"))
+            ~dependencies:["Base"]
+            ~generated_outputs:[destination "cmi"; destination "cmj"];
+          let pending =
+            match
+              Rescript_compiler_driver.module_result session
+                ~interface_file:(destination "cmi")
+            with
+            | Some result -> result
+            | None -> assert_failure "staged module result is unavailable"
+          in
+          check
+            (Option.is_some
+               (Rescript_compiler_driver.interface_signature pending))
+            "the staged result exposes the immutable interface";
+          check
+            (Option.is_some
+               (Rescript_compiler_driver.optimization_metadata pending))
+            "the staged result exposes optimization metadata";
+          check
+            (Option.is_some (Rescript_compiler_driver.typed_semantic pending))
+            "the staged result exposes typed semantics";
+          assert_equal ["Base"]
+            (Rescript_compiler_driver.result_dependencies pending);
+          assert_equal
+            [destination "cmi"; destination "cmj"]
+            (Rescript_compiler_driver.result_generated_outputs pending);
+          let _, compiled =
+            run ~session consumer ~extra:["-I"; published] "Consumer.res"
+          in
+          assert_equal ~msg:compiled.stderr ~printer:string_of_int 0
+            compiled.exit_code;
+          check
+            (String_util.contains
+               (File_util.read_file trace)
+               "dependency.session_cmi_lookup")
+            "the consumer resolves a CMI through the virtual session path";
+          check
+            (String_util.contains
+               (File_util.read_file trace)
+               "dependency.session_cmj_lookup")
+            "the consumer resolves a CMJ through the virtual session path";
+          check
+            ((not (Sys.file_exists (destination "cmi")))
+            && not (Sys.file_exists (destination "cmj")))
+            "consumer compilation does not require artifact export";
+          Rescript_compiler_driver.discard_pending_session_artifacts session
+            ~interface_file:(destination "cmi")
+            ~optimization_file:(Some (destination "cmj"));
+          check
+            (Option.is_none
+               (Rescript_compiler_driver.module_result session
+                  ~interface_file:(destination "cmi")))
+            "cancellation withdraws the staged module result"))
+
+let failed_request_discards_staging_tests _context =
+  let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+  Fun.protect
+    ~finally:(fun () ->
+      match previous with
+      | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+      | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+    (fun () ->
+      Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+      Test_support.with_temp_dir "rewatch-staging-failure-" (fun root ->
+          let session = Rescript_compiler_driver.create_session () in
+          write root "Api.res" "let answer = 1\n";
+          expect_code 0 (snd (run ~session root "Api.res"));
+          write root "Api.res" "let answer =\n";
+          let _, failed = run ~session root "Api.res" in
+          expect_code 1 failed;
+          let cmi = Filename.concat root "Api.cmi" in
+          Rescript_compiler_driver.publish_session_cmi session ~retain:true
+            ~source:cmi ~destination:cmi;
+          check
+            (Option.is_none
+               (Rescript_compiler_driver.published_fingerprint session
+                  ~kind:Rescript_compiler_driver.Interface ~filename:cmi))
+            "a failed replacement cannot publish the previous staged CMI"))
+
+let superseded_artifact_tests _context =
+  let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+  Fun.protect
+    ~finally:(fun () ->
+      match previous with
+      | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+      | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+    (fun () ->
+      Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+      Test_support.with_temp_dir "rewatch-superseded-artifact-" (fun root ->
+          let session = Rescript_compiler_driver.create_session () in
+          write root "Api.res" "let answer = 1\n";
+          expect_code 0 (snd (run ~session root "Api.res"));
+          let cmi = Filename.concat root "Api.cmi" in
+          let channel = open_out_gen [Open_append] 0o644 cmi in
+          output_char channel '\n';
+          close_out channel;
+          Rescript_compiler_driver.publish_session_cmi session ~retain:true
+            ~source:cmi ~destination:cmi;
+          check
+            (Option.is_none
+               (Rescript_compiler_driver.published_fingerprint session
+                  ~kind:Rescript_compiler_driver.Interface ~filename:cmi))
+            "superseded artifact cannot publish its older image"))
+
+let gentype_generated_output_result_tests _context =
+  Test_support.with_temp_dir "rewatch-gentype-result-" (fun root ->
+      write root "Annotated.res" "@gentype let answer = 42\n";
+      let session = Rescript_compiler_driver.create_session () in
+      let _, compiled =
+        run ~session root ~extra:["-bs-gentype"] "Annotated.res"
+      in
+      expect_code 0 compiled;
+      let path extension = Filename.concat root ("Annotated." ^ extension) in
+      Rescript_compiler_driver.publish_session_semantic session ~retain:true
+        ~source:(path "cmt") ~destination:(path "cmt");
+      Rescript_compiler_driver.publish_module_result session ~input:(path "res")
+        ~interface_file:(path "cmi")
+        ~optimization_file:(Some (path "cmj"))
+        ~semantic_file:(Some (path "cmt"))
+        ~dependencies:[] ~generated_outputs:[];
+      let result =
+        match
+          Rescript_compiler_driver.module_result session
+            ~interface_file:(path "cmi")
+        with
+        | Some result -> result
+        | None -> assert_failure "GenType module result unavailable"
+      in
+      check
+        (List.exists
+           (fun output -> String_util.contains output "Annotated.gen.tsx")
+           (Rescript_compiler_driver.result_generated_outputs result))
+        "generated TypeScript is listed in the module result")
+
 let recovery_tests _context =
   Test_support.with_temp_dir "rewatch-driver-recovery-" (fun root ->
       write root "Parse.res" "let value = 1\n";
@@ -752,6 +1053,14 @@ let recovery_tests _context =
       check
         (Test_support.contains_text failed.stderr "Syntax error")
         "parse diagnostics are returned to the host";
+      check
+        (List.exists
+           (fun (diagnostic : Location.diagnostic) ->
+             diagnostic.severity = `Error
+             && diagnostic.location.loc_start.pos_fname <> ""
+             && diagnostic.message <> "")
+           failed.diagnostics)
+        "parse diagnostics have a structured location and message";
       write root "Parse.res" "let value = 2\n";
       let _, repaired = run root "Parse.res" in
       expect_code 0 repaired;
@@ -762,6 +1071,7 @@ let recovery_tests _context =
         (Test_support.contains_text failed.stderr "int"
         && Test_support.contains_text failed.stderr "string")
         "type diagnostics are returned to the host";
+      check (failed.diagnostics <> []) "type diagnostics are structured";
       write root "Typed.res" {|let value: string = "repaired"|};
       let _, repaired = run root "Typed.res" in
       expect_code 0 repaired)
@@ -1941,6 +2251,17 @@ let tests =
          "dependency_extraction_isolation"
          >:: dependency_extraction_isolation_tests;
          "gentype_output_capture" >:: gentype_output_capture_tests;
+         "structured_diagnostic_isolation"
+         >:: structured_diagnostic_isolation_tests;
+         "semantic_result_isolation" >:: semantic_result_isolation_tests;
+         "published_module_result" >:: published_module_result_tests;
+         "virtual_module_artifact_lookup"
+         >:: virtual_module_artifact_lookup_tests;
+         "failed_request_discards_staging"
+         >:: failed_request_discards_staging_tests;
+         "superseded_artifact" >:: superseded_artifact_tests;
+         "gentype_generated_output_result"
+         >:: gentype_generated_output_result_tests;
          "used_attributes_isolation" >:: used_attributes_isolation_tests;
          "delayed_checks_isolation" >:: delayed_checks_isolation_tests;
          "gentype_flags_isolation" >:: gentype_flags_isolation_tests;

@@ -1,5 +1,96 @@
 # Immutable compiled interfaces: experiment
 
+## Same-session module results (Goal 3)
+
+With `REWATCH_FROZEN_VALUES=1`, the embedded compiler captures a successful
+module's CMI, CMJ, CMT, and parser AST before the request ends. Rewatch stages
+the interface and optimization metadata, then publishes an in-memory module
+result before scheduling dependent compiler jobs. One export domain copies
+independent implementation artifacts while compiler jobs continue. Interface
+pairs and modules with JS post-build hooks export in their ordered scheduler
+phase. All exports finish before build success. The result API in
+`Rescript_compiler_driver` exposes separate interface and
+optimization fingerprints, request-owned interface and CMJ views, a cloned
+typed semantic result, located diagnostics, dependencies, and generated output
+paths. The regular files remain available to standalone tools and new build
+sessions.
+
+The parser hands its AST and dependency list directly to the compiler and
+module graph in the same session. The AST is transferred once; a later
+request or a cold build reads the file. Type checking resolves a staged CMI to
+a frozen interface image; JavaScript compilation resolves a staged CMJ to
+frozen optimization metadata. Both lookups validate the selected source
+identity and load-path order, including namespace paths and shadowing. A
+`.resi` publishes the governing CMI before its `.res` is checked; the
+implementation retains that interface and publishes its own CMJ. GenType
+consumes the typed implementation result that was just produced, while an
+explicit `.cmti` remains a disk input for its separate interface.
+The session loader checks actual directory entries before allowing a
+lower-case file path to shadow a staged artifact; this also avoids stale
+case aliases on case-insensitive filesystems after a failed export.
+
+Each worker request has independent inference, identifiers, and diagnostics.
+The shared images contain no request-owned mutable nodes; callers receive new
+views. A later request for the same input removes unfinished staged values,
+and a generation check prevents an older, superseded request from staging its
+result. Failed and cancelled jobs leave no pending publication. Artifact
+publication errors still fail the build. A changed staged fingerprint before
+export also fails the build. Rewatch compares the interface CRC and CMJ digest
+separately to propagate dependency changes, falling back to artifact byte
+comparison when a session fingerprint is unavailable. Deferred CMI and CMJ
+exports preserve their producer timestamps when contents change, so a fresh
+build process does not mistake them for newer than their compiled consumers.
+
+Typed results are retained only for local modules and only up to 4 MiB each,
+64 results, and 16 MiB of total CMT file size. The oldest entries are evicted;
+graph accessors return independent values and return `None` after their backing
+file changes.
+The existing editor/LSP disk-CMT path remains compatible and can adopt this
+API later. Parse jobs still write ASTs and copy them into the persistent cache
+before graph construction, although graph discovery and downstream compiler
+jobs use the in-memory parse result. External dependencies, cold starts, CLI
+invocations, namespace map exports, leaf artifacts, and other artifact
+consumers still use files. PPXs remain external processes.
+
+Twenty-one interleaved pairs on 2026-09-26 used four compiler domains and two
+synthetic 201-module projects. Each project has a 400-value API with 200
+consumers; the second also stresses nested module signatures and a functor.
+Two further 21-pair runs used the repository's 634-module `tests/tests`
+project with its React dependency already built. Wall-time medians include
+process launch, parse, compile, and artifact export:
+
+| Workload | Classic | Session | Delta |
+| --- | ---: | ---: | ---: |
+| Values, clean | 175.05 ms | 152.23 ms | −22.82 ms (−13.04%) |
+| Values, one consumer edit | 39.87 ms | 39.45 ms | −0.42 ms (−1.06%) |
+| Modules, clean | 175.74 ms | 151.26 ms | −24.48 ms (−13.93%) |
+| Modules, one consumer edit | 39.46 ms | 40.57 ms | +1.11 ms (+2.82%) |
+| `tests/tests`, clean (42 pairs) | 1569.79 ms | 1521.18 ms | −48.61 ms (−3.10%) |
+| `tests/tests`, one file edit (42 pairs) | 114.86 ms | 113.30 ms | −1.57 ms (−1.37%) |
+
+The scheduler skips frozen dependency lookup for fewer than four initially
+ready modules unless they depend on each other. This removed a small-edit
+regression found in an earlier benchmark. The larger workload initially
+regressed by 9.6% on clean builds;
+reading the frozen feature setting once per request and memoizing successful
+type lookups removed that regression. A traced real-project build reduced
+frozen type lookup calls from 934,662 to 761 and their measured allocation
+from 271.2 MB to 2.2 MB. In a traced clean values build, 202 AST lookups,
+201 CMI lookups, and 200 CMJ lookups used session data; there were no newly
+produced AST, CMI, or CMJ file reads in those categories. Four CMI reads
+remained for cold standard-library inputs. An integration trace shows the
+consumer compiler request starting before its producer's deferred interface
+export. A same-path comparison found all 1,206
+selected CMI, CMJ, and JavaScript artifacts byte-identical, with identical
+stdout and stderr. The synthetic workloads stress shared imports and gain
+13–14% on clean builds. The larger project has fewer shared imports; copying
+its independent artifacts after all compiler jobs initially made clean builds
+1–2% slower. Overlapping those exports with compiler work removed that
+regression. Reusing the staged CMJ image and avoiding repeated path
+canonicalization also removed work. The small-edit differences vary in sign
+between runs: the two `tests/tests` edit medians were +2.48 ms and −2.15 ms.
+These numbers do not predict every project or edit pattern.
+
 ## Current boundary
 
 `Env` borrows decoded CMI graphs from a project cache, one request at a time.

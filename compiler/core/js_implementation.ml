@@ -32,7 +32,9 @@ let print_if ppf flag printer arg = if !flag then fprintf ppf "%a@." printer arg
 
 let process_with_gentype cmt_file =
   if !((Clflags.current ()).bs_gentype) then
-    Gentype_main.process_cmt_file cmt_file
+    Gentype_main.process_cmt_file
+      ?compiled_cmt:(Cmt_format.last_saved_cmt ())
+      cmt_file
 
 let after_parsing_sig ppf outputprefix ast =
   if !((Clflags.current ()).only_parse) = false then (
