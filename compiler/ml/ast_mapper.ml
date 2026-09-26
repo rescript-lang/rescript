@@ -290,6 +290,10 @@ module E = struct
     let loc = sub.location sub loc in
     let attrs = sub.attributes sub attrs in
     match desc with
+    | Pexp_braces {expr; braces_loc} ->
+      braces
+        ~braces_loc:(sub.location sub braces_loc)
+        ~attrs (sub.expr sub expr)
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
     | Pexp_constant x -> constant ~loc ~attrs x
     | Pexp_let (r, vbs, e) ->

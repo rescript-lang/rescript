@@ -123,154 +123,153 @@ include
     let rec minNode [arity:1]node = [%rescript.exprhole ]
     let findMin [arity:1]rbt = [%rescript.exprhole ]
     let removeNode [arity:2]rbt node =
-      ((let nodeToRemove =
-          match ((leftGet node), (rightGet node)) with
-          | (Some _, Some _) ->
-              let successor = castNotOption (minNode (rightGet node)) in
-              (valueSet node (valueGet successor);
-               heightSet node (heightGet successor);
-               successor)
-          | _ -> node in
-        let successor =
-          match leftGet nodeToRemove with
-          | None -> rightGet nodeToRemove
-          | left -> left in
-        let (successor, isLeaf) =
-          match successor with
-          | None ->
-              let leaf =
-                createNode ~value:([%raw {js|0|js}]) ~color:Black ~height:0. in
-              let isLeaf [arity:1]x = x === leaf in (leaf, isLeaf)
-          | Some successor -> (successor, ((fun [arity:1]_ -> false))) in
-        let nodeParent = parentGet nodeToRemove in
-        parentSet successor nodeParent;
-        (match nodeParent with
-         | None -> ()
-         | Some parent ->
-             leftOrRightSet parent ~node:nodeToRemove (Some successor));
-        updateSumRecursive rbt successor;
-        if (colorGet nodeToRemove) === Black
-        then
-          (if (colorGet successor) === Red
-           then
-             (colorSet successor Black;
-              if (parentGet successor) === None
-              then rootSet rbt (Some successor))
-           else
-             (let break_ = ref false in
-              let successorRef = ref successor in
-              while not break_.contents do
-                let successor = successorRef.contents in
-                match parentGet successor with
-                | None ->
-                    (rootSet rbt (Some successor); break_.contents <- true)
-                | Some successorParent ->
-                    let sibling = siblingOf successor in
-                    (if
-                       ((!==) sibling None) &&
-                         ((colorGet (castNotOption sibling)) === Red)
+      {let nodeToRemove =
+         match ((leftGet node), (rightGet node)) with
+         | (Some _, Some _) ->
+             let successor = castNotOption (minNode (rightGet node)) in
+             (valueSet node (valueGet successor);
+              heightSet node (heightGet successor);
+              successor)
+         | _ -> node in
+       let successor =
+         match leftGet nodeToRemove with
+         | None -> rightGet nodeToRemove
+         | left -> left in
+       let (successor, isLeaf) =
+         match successor with
+         | None ->
+             let leaf =
+               createNode ~value:([%raw {js|0|js}]) ~color:Black ~height:0. in
+             let isLeaf [arity:1]x = x === leaf in (leaf, isLeaf)
+         | Some successor -> (successor, ((fun [arity:1]_ -> false))) in
+       let nodeParent = parentGet nodeToRemove in
+       parentSet successor nodeParent;
+       (match nodeParent with
+        | None -> ()
+        | Some parent ->
+            leftOrRightSet parent ~node:nodeToRemove (Some successor));
+       updateSumRecursive rbt successor;
+       if (colorGet nodeToRemove) === Black
+       then
+         (if (colorGet successor) === Red
+          then
+            (colorSet successor Black;
+             if (parentGet successor) === None
+             then rootSet rbt (Some successor))
+          else
+            (let break_ = ref false in
+             let successorRef = ref successor in
+             while not break_.contents do
+               let successor = successorRef.contents in
+               match parentGet successor with
+               | None ->
+                   (rootSet rbt (Some successor); break_.contents <- true)
+               | Some successorParent ->
+                   let sibling = siblingOf successor in
+                   (if
+                      ((!==) sibling None) &&
+                        ((colorGet (castNotOption sibling)) === Red)
+                    then
+                      (colorSet successorParent Red;
+                       colorSet (castNotOption sibling) Black;
+                       if isLeft successor
+                       then rotateLeft rbt successorParent
+                       else rotateRight rbt successorParent);
+                    (let sibling = siblingOf successor in
+                     let siblingNN = castNotOption sibling in
+                     if
+                       ((colorGet successorParent) === Black) &&
+                         ((sibling === None) ||
+                            ((((colorGet siblingNN) === Black) &&
+                                (((leftGet siblingNN) === None) ||
+                                   ((colorGet
+                                       (castNotOption (leftGet siblingNN)))
+                                      === Black)))
+                               &&
+                               (((rightGet siblingNN) === None) ||
+                                  ((colorGet
+                                      (castNotOption (rightGet siblingNN)))
+                                     === Black))))
                      then
-                       (colorSet successorParent Red;
-                        colorSet (castNotOption sibling) Black;
-                        if isLeft successor
-                        then rotateLeft rbt successorParent
-                        else rotateRight rbt successorParent);
-                     (let sibling = siblingOf successor in
-                      let siblingNN = castNotOption sibling in
-                      if
-                        ((colorGet successorParent) === Black) &&
-                          ((sibling === None) ||
-                             ((((colorGet siblingNN) === Black) &&
-                                 (((leftGet siblingNN) === None) ||
-                                    ((colorGet
-                                        (castNotOption (leftGet siblingNN)))
-                                       === Black)))
-                                &&
-                                (((rightGet siblingNN) === None) ||
-                                   ((colorGet
-                                       (castNotOption (rightGet siblingNN)))
-                                      === Black))))
-                      then
-                        (if (!==) sibling None then colorSet siblingNN Red;
-                         successorRef.contents <- successorParent)
-                      else
-                        if
-                          ((colorGet successorParent) === Red) &&
-                            ((sibling === None) ||
-                               ((((colorGet siblingNN) === Black) &&
-                                   (((leftGet siblingNN) === None) ||
-                                      ((colorGet
-                                          (castNotOption (leftGet siblingNN)))
-                                         === Black)))
-                                  &&
-                                  (((rightGet siblingNN) === None) ||
+                       (if (!==) sibling None then colorSet siblingNN Red;
+                        successorRef.contents <- successorParent)
+                     else
+                       if
+                         ((colorGet successorParent) === Red) &&
+                           ((sibling === None) ||
+                              ((((colorGet siblingNN) === Black) &&
+                                  (((leftGet siblingNN) === None) ||
                                      ((colorGet
-                                         (castNotOption (rightGet siblingNN)))
-                                        === Black))))
-                        then
-                          (if (!==) sibling None then colorSet siblingNN Red;
-                           colorSet successorParent Black;
-                           break_.contents <- true)
-                        else
-                          if
-                            ((!==) sibling None) &&
-                              ((colorGet (castNotOption sibling)) === Black)
-                          then
-                            (let sibling = castNotOption sibling in
-                             if
-                               (((isLeft successor) &&
-                                   (((rightGet sibling) === None) ||
-                                      ((colorGet
-                                          (castNotOption (rightGet sibling)))
-                                         === Black)))
-                                  && ((!==) (leftGet sibling) None))
+                                         (castNotOption (leftGet siblingNN)))
+                                        === Black)))
                                  &&
-                                 ((colorGet (castNotOption (leftGet sibling)))
-                                    === Red)
-                             then
-                               (colorSet sibling Red;
-                                colorSet (castNotOption (leftGet sibling))
-                                  Black;
-                                rotateRight rbt sibling)
-                             else
-                               if
-                                 (((not (isLeft successor)) &&
-                                     (((leftGet sibling) === None) ||
-                                        ((colorGet
-                                            (castNotOption (leftGet sibling)))
-                                           === Black)))
-                                    && ((!==) (rightGet sibling) None))
-                                   &&
-                                   ((colorGet
-                                       (castNotOption (rightGet sibling)))
-                                      === Red)
-                               then
-                                 (colorSet sibling Red;
-                                  colorSet (castNotOption (rightGet sibling))
-                                    Black;
-                                  rotateLeft rbt sibling);
-                             break_.contents <- true)
-                          else
-                            (let sibling = siblingOf successor in
-                             let sibling = castNotOption sibling in
-                             colorSet sibling (colorGet successorParent);
-                             if isLeft successor
-                             then
-                               (colorSet (castNotOption (rightGet sibling))
-                                  Black;
-                                rotateRight rbt successorParent)
-                             else
-                               (colorSet (castNotOption (leftGet sibling))
-                                  Black;
-                                rotateLeft rbt successorParent))))
-                done));
-        if isLeaf successor
-        then
-          (if (rootGet rbt) === (Some successor) then rootSet rbt None;
-           (match parentGet successor with
-            | None -> ()
-            | Some parent -> leftOrRightSet parent ~node:successor None)))
-      [@res.braces ])
+                                 (((rightGet siblingNN) === None) ||
+                                    ((colorGet
+                                        (castNotOption (rightGet siblingNN)))
+                                       === Black))))
+                       then
+                         (if (!==) sibling None then colorSet siblingNN Red;
+                          colorSet successorParent Black;
+                          break_.contents <- true)
+                       else
+                         if
+                           ((!==) sibling None) &&
+                             ((colorGet (castNotOption sibling)) === Black)
+                         then
+                           (let sibling = castNotOption sibling in
+                            if
+                              (((isLeft successor) &&
+                                  (((rightGet sibling) === None) ||
+                                     ((colorGet
+                                         (castNotOption (rightGet sibling)))
+                                        === Black)))
+                                 && ((!==) (leftGet sibling) None))
+                                &&
+                                ((colorGet (castNotOption (leftGet sibling)))
+                                   === Red)
+                            then
+                              (colorSet sibling Red;
+                               colorSet (castNotOption (leftGet sibling))
+                                 Black;
+                               rotateRight rbt sibling)
+                            else
+                              if
+                                (((not (isLeft successor)) &&
+                                    (((leftGet sibling) === None) ||
+                                       ((colorGet
+                                           (castNotOption (leftGet sibling)))
+                                          === Black)))
+                                   && ((!==) (rightGet sibling) None))
+                                  &&
+                                  ((colorGet
+                                      (castNotOption (rightGet sibling)))
+                                     === Red)
+                              then
+                                (colorSet sibling Red;
+                                 colorSet (castNotOption (rightGet sibling))
+                                   Black;
+                                 rotateLeft rbt sibling);
+                            break_.contents <- true)
+                         else
+                           (let sibling = siblingOf successor in
+                            let sibling = castNotOption sibling in
+                            colorSet sibling (colorGet successorParent);
+                            if isLeft successor
+                            then
+                              (colorSet (castNotOption (rightGet sibling))
+                                 Black;
+                               rotateRight rbt successorParent)
+                            else
+                              (colorSet (castNotOption (leftGet sibling))
+                                 Black;
+                               rotateLeft rbt successorParent))))
+               done));
+       if isLeaf successor
+       then
+         (if (rootGet rbt) === (Some successor) then rootSet rbt None;
+          (match parentGet successor with
+           | None -> ()
+           | Some parent -> leftOrRightSet parent ~node:successor None))}
     let remove [arity:2]rbt value =
       match _findNode rbt (rootGet rbt) value with
       | Some node ->
@@ -279,21 +278,20 @@ include
            Some (heightGet node))
       | None -> None
     let findThroughCallback [arity:2]rbt cb =
-      ((let rec findThroughCallback [arity:3]rbt node cb =
-          match node with
-          | None -> None
-          | Some node ->
-              let cmp = cb (valueGet node) in
-              if cmp === 0
-              then Some node
-              else
-                if cmp < 0
-                then findThroughCallback rbt (leftGet node) cb
-                else findThroughCallback rbt (rightGet node) cb in
-        match findThroughCallback rbt (rootGet rbt) cb with
-        | None -> None
-        | Some node -> Some (valueGet node))
-      [@res.braces ])
+      {let rec findThroughCallback [arity:3]rbt node cb =
+         match node with
+         | None -> None
+         | Some node ->
+             let cmp = cb (valueGet node) in
+             if cmp === 0
+             then Some node
+             else
+               if cmp < 0
+               then findThroughCallback rbt (leftGet node) cb
+               else findThroughCallback rbt (rightGet node) cb in
+       match findThroughCallback rbt (rootGet rbt) cb with
+       | None -> None
+       | Some node -> Some (valueGet node)}
     let make [arity:1]~compare  = t ~size:0 ~root:None ~compare
     let rec heightOfInterval [arity:4]rbt node lhs rhs =
       match node with
@@ -356,34 +354,32 @@ include
       | None -> firstRightParent node
       | Some right -> Some (leftmost right)
     let rec sumLeftSpine [arity:2]node ~fromRightChild  =
-      ((let leftSpine =
-          match leftGet node with
-          | None -> heightGet node
-          | Some left ->
-              if fromRightChild
-              then (heightGet node) +. (sumGet left)
-              else 0.0 in
-        match parentGet node with
-        | None -> leftSpine
-        | Some parent ->
-            leftSpine +.
-              (sumLeftSpine parent
-                 ~fromRightChild:((rightGet parent) === (Some node))))
-      [@res.braces ])
+      {let leftSpine =
+         match leftGet node with
+         | None -> heightGet node
+         | Some left ->
+             if fromRightChild
+             then (heightGet node) +. (sumGet left)
+             else 0.0 in
+       match parentGet node with
+       | None -> leftSpine
+       | Some parent ->
+           leftSpine +.
+             (sumLeftSpine parent
+                ~fromRightChild:((rightGet parent) === (Some node)))}
     let getY [arity:1]node =
       (sumLeftSpine node ~fromRightChild:true) -. (heightGet node)
     let linearSearch [arity:2]rbt callback =
-      ((let rec find [arity:2]node callback =
-          if callback (valueGet node)
-          then Some (valueGet node)
-          else
-            (match nextNode node with
-             | None -> None
-             | Some node -> find node callback) in
-        match minNode (rootGet rbt) with
-        | None -> None
-        | Some node -> find node callback)
-      [@res.braces ])
+      {let rec find [arity:2]node callback =
+         if callback (valueGet node)
+         then Some (valueGet node)
+         else
+           (match nextNode node with
+            | None -> None
+            | Some node -> find node callback) in
+       match minNode (rootGet rbt) with
+       | None -> None
+       | Some node -> find node callback}
     let rec iterate [arity:4]~inclusive  firstNode lastNode ~callback  =
       match firstNode with
       | None -> ()

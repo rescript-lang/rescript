@@ -625,8 +625,36 @@ module E = struct
     let has_jsx_attribute () =
       attrs |> List.exists (fun ({txt}, _) -> txt = "JSX")
     in
+    let first_wrapper =
+      let rec find = function
+        | ({txt = "res.braces" | "ns.braces"; loc}, _) :: _ ->
+          Some (`Braces loc)
+        | ({txt = "res.await"}, _) :: _ -> Some `Await
+        | _ :: rest -> find rest
+        | [] -> None
+      in
+      find e.pexp_attributes
+    in
     match desc with
-    | _ when has_await_attribute attrs ->
+    | _
+      when match first_wrapper with
+           | Some (`Braces _) -> true
+           | _ -> false ->
+      let outer_attrs0, braces_loc, inner_attrs0 =
+        let rec split acc = function
+          | ({Location.txt = "res.braces" | "ns.braces"; loc}, _) :: rest ->
+            (List.rev acc, loc, rest)
+          | a :: rest -> split (a :: acc) rest
+          | [] -> assert false
+        in
+        split [] e.pexp_attributes
+      in
+      let inner = sub.expr sub {e with pexp_attributes = inner_attrs0} in
+      braces
+        ~braces_loc:(sub.location sub braces_loc)
+        ~attrs:(sub.attributes sub outer_attrs0)
+        inner
+    | _ when first_wrapper = Some `Await ->
       (* [Ast_mapper_to0] merges the await node's attributes and the inner
          expression's attributes into the one v0 slot, with [res.await] as
          the boundary: await-node attributes before it, inner attributes

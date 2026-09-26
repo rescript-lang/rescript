@@ -305,8 +305,7 @@ let x = {
 
 {
   // comment
-  a +
-  b
+  a + b
 }
 
 {a} + {b}

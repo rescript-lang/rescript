@@ -126,6 +126,7 @@ module Exp : sig
   val mk : ?loc:loc -> ?attrs:attrs -> expression_desc -> expression
   val attr : expression -> attribute -> expression
 
+  val braces : ?attrs:attrs -> braces_loc:loc -> expression -> expression
   val ident : ?loc:loc -> ?attrs:attrs -> lid -> expression
   val constant : ?loc:loc -> ?attrs:attrs -> constant -> expression
   val let_ :

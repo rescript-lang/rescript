@@ -819,6 +819,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
                        ~typ:(Mty.typeof_ ~loc me)))
                 :: aux expr)
             | Pexp_let (_, vbs, expr) -> aux expr @ spelunk_vbs acc vbs
+            | Pexp_braces {expr} -> aux expr
             | Pexp_ifthenelse (_, then_expr, Some else_expr) ->
               aux then_expr @ aux else_expr
             | Pexp_construct (_, {txt = [expr]}) -> aux expr

@@ -83,6 +83,7 @@ let flatten_long_ident ?(jsx = false) ?(cut_at_offset = None) lid =
 
 let identify_pexp pexp =
   match pexp with
+  | Parsetree.Pexp_braces _ -> "Pexp_braces"
   | Parsetree.Pexp_ident _ -> "Pexp_ident"
   | Pexp_constant _ -> "Pexp_constant"
   | Pexp_let _ -> "Pexp_let"
@@ -148,9 +149,6 @@ let rec skip_white text i =
     match text.[i] with
     | ' ' | '\n' | '\r' | '\t' -> skip_white text (i - 1)
     | _ -> i
-
-let has_braces attributes =
-  attributes |> List.exists (fun (loc, _) -> loc.Location.txt = "res.braces")
 
 let rec unwrap_if_option (t : Types.type_expr) =
   match t.desc with

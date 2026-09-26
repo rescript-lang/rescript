@@ -247,6 +247,10 @@ and expression i ppf x =
   attributes i ppf x.pexp_attributes;
   let i = i + 1 in
   match x.pexp_desc with
+  | Pexp_braces {expr = inner; braces_loc} ->
+    line i ppf "Pexp_braces\n";
+    line (i + 1) ppf "braces_loc %a\n" fmt_location braces_loc;
+    expression i ppf inner
   | Pexp_ident li -> line i ppf "Pexp_ident %a\n" fmt_longident_loc li
   | Pexp_object_literal fields ->
     line i ppf "Pexp_object_literal\n";

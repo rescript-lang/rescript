@@ -569,6 +569,18 @@ module Sexp_ast = struct
   and expression expr =
     let desc =
       match expr.pexp_desc with
+      | Pexp_braces {expr = inner; braces_loc} ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_braces";
+            Sexp.list
+              [
+                Sexp.atom "braces_loc";
+                Sexp.atom (string_of_int braces_loc.Location.loc_start.pos_cnum);
+                Sexp.atom (string_of_int braces_loc.loc_end.pos_cnum);
+              ];
+            expression inner;
+          ]
       | Pexp_ident longident_loc ->
         Sexp.list [Sexp.atom "Pexp_ident"; longident longident_loc.Asttypes.txt]
       | Pexp_constant c -> Sexp.list [Sexp.atom "Pexp_constant"; constant c]

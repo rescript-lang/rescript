@@ -397,6 +397,7 @@ let fun_expr expr =
 let rec is_block_expr expr =
   let open Parsetree in
   match expr.pexp_desc with
+  | Pexp_braces {expr = inner} -> is_block_expr inner
   | Pexp_letmodule _ | Pexp_letexception _ | Pexp_let _ | Pexp_open _
   | Pexp_sequence _ ->
     true
@@ -442,15 +443,15 @@ let get_loc node =
     {
       case.pc_lhs.ppat_loc with
       loc_end =
-        (match Parsetree_viewer.process_braces_attr case.pc_rhs with
+        (match Parsetree_viewer.process_braces case.pc_rhs with
         | None, _ -> case.pc_rhs.pexp_loc.loc_end
-        | Some ({loc}, _), _ -> loc.Location.loc_end);
+        | Some loc, _ -> loc.Location.loc_end);
     }
   | CoreType ct -> ct.ptyp_loc
   | ExprArgument {loc} -> loc
   | Expression e -> (
-    match e.pexp_attributes with
-    | ({txt = "res.braces" | "ns.braces"; loc}, _) :: _ -> loc
+    match Parsetree_viewer.process_braces e with
+    | Some loc, _ -> loc
     | _ -> e.pexp_loc)
   | ExprRecordRow (li, e) -> {li.loc with loc_end = e.pexp_loc.loc_end}
   | ExtensionConstructor ec -> ec.pext_loc
@@ -993,6 +994,13 @@ and walk_expression expr t comments =
   in
   match expr.Parsetree.pexp_desc with
   | _ when comments = [] -> ()
+  | Pexp_braces {expr = inner} when is_block_expr inner ->
+    walk_expression inner t comments
+  | Pexp_braces {expr = inner} ->
+    let before, inside, after = partition_by_loc comments inner.pexp_loc in
+    attach t.leading inner.pexp_loc before;
+    walk_expression inner t inside;
+    attach t.trailing inner.pexp_loc after
   | Pexp_regexp _ | Pexp_constant _ ->
     let leading, trailing = partition_leading_trailing comments expr.pexp_loc in
     attach t.leading expr.pexp_loc leading;

@@ -801,6 +801,7 @@ and expression ctxt f x =
         | _ -> assert false
       in
       pp f "%a`%a`" (simple_expr ctxt) tag parts (raw_sources, values)
+    | Pexp_braces {expr = inner} -> pp f "{%a}" (expression ctxt) inner
     | _ -> expression1 ctxt f x
 
 and expression1 ctxt f x =
@@ -846,7 +847,7 @@ and simple_expr ctxt f x =
     | Pexp_tuple l ->
       pp f "@[<hov2>(%a)@]" (list (simple_expr ctxt) ~sep:",@;") l
     | Pexp_constraint (e, ct) ->
-      pp f "(%a : %a)" (expression ctxt) e (core_type ctxt) ct
+      pp f "(%a :@ %a)" (expression ctxt) e (core_type ctxt) ct
     | Pexp_coerce (e, (), ct) ->
       pp f "(%a :> %a)" (expression ctxt) e (core_type ctxt) ct
     | Pexp_variant (l, {txt = []}) -> pp f "`%s" l

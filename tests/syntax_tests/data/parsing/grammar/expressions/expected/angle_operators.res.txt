@@ -12,9 +12,8 @@ let call =
 let comment = a >>> b
 let template = `prefix ${(a >> 2) >= b} suffix`
 let regex = /[<>]+>>=/g
-let jsx = <div title=((a >= b)[@res.braces ]) data-value=((a >> 1)
-  [@res.braces ])><span>((a << 1)[@res.braces ])</span>
-  <>((`value ${a >>> 1}`)[@res.braces ])</></div>
+let jsx = <div title=({a >= b}) data-value=({a >> 1})><span>({a << 1})</span>
+  <>({`value ${a >>> 1}`})</></div>
 let expressionAfterType = (value : int array) >= other
 let diamond = {js|💎|js}
 let located = a >>> b

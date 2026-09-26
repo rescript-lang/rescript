@@ -5,13 +5,11 @@ let _ = <div className={js|menu|js}></div>
 let _ = <div className={js|menu|js}></div>
 let _ = <div className={js|menu|js}></div>
 let _ =
-  <div className={js|menu|js} onClick=((fun [arity:1]_ ->
-                                          Console.log {js|click|js})
-  [@res.braces ])></div>
+  <div className={js|menu|js} onClick=({fun [arity:1]_ ->
+                                          Console.log {js|click|js}})></div>
 let _ =
-  <div className={js|menu|js} onClick=((fun [arity:1]_ ->
-                                          Console.log {js|click|js})
-  [@res.braces ])></div>
+  <div className={js|menu|js} onClick=({fun [arity:1]_ ->
+                                          Console.log {js|click|js}})></div>
 let _ = <Navbar />
 let _ = <Navbar></Navbar>
 let _ = <Navbar></Navbar>
@@ -40,7 +38,7 @@ let _ = <div className={js|menu|js}><div className={js|submenu|js}>sub1</div>
   <div className={js|submenu|js}>sub2</div></div>
 let _ = <div className={js|menu|js}><div className={js|submenu|js}>sub1</div>
   <div className={js|submenu|js}>sub2</div></div>
-let _ = <div>ident [|1;2;3|] ((call a b)[@res.braces ]) ((x.y).z)</div>
+let _ = <div>ident [|1;2;3|] ({call a b}) ((x.y).z)</div>
 let _ = <Outer inner=<Inner /> />
 let _ = <div onClick=onClickHandler><>{js|foobar|js}</></div>
 let _ =
@@ -71,20 +69,18 @@ let _ = <a /> > <b />
 let _ = <a></a> < <b></b>
 let _ = <a></a> > <b></b>
 let y =
-  <Routes path=(Routes.stateToPath state) isHistorical=true onHashChange=((
+  <Routes path=(Routes.stateToPath state) isHistorical=true onHashChange=({
   fun [arity:3]_oldPath _oldUrl newUrl ->
     updater
       (fun [arity:2]latestComponentBag _ ->
-         ((let currentActualPath = Routes.hashOfUri newUrl in
-           let pathFromState = Routes.stateToPath latestComponentBag.state in
-           ((if currentActualPath == pathFromState
-             then None
-             else
-               dispatchEventless (State.UriNavigated currentActualPath)
-                 latestComponentBag ())
-             [@res.ternary ]))
-         [@res.braces ])) ())
-  [@res.braces ]) />
+         {let currentActualPath = Routes.hashOfUri newUrl in
+          let pathFromState = Routes.stateToPath latestComponentBag.state in
+          ((if currentActualPath == pathFromState
+            then None
+            else
+              dispatchEventless (State.UriNavigated currentActualPath)
+                latestComponentBag ())
+            [@res.ternary ])}) ()}) />
 let z =
   <div style=(ReactDOMRe.Style.make ~width ~height ~color ~backgroundColor
                 ~margin ~padding ~border ~borderColor ~someOtherAttribute ()) key=(
@@ -107,12 +103,11 @@ let tuples =
                 border, borderColor, someOtherAttribute, definitelyBreakere) key=(
   string_of_int 1) />
 let icon =
-  <Icon name=((match state.volume with
+  <Icon name=({match state.volume with
                | v when v < 0.1 -> {js|sound-off|js}
                | v when v < 0.11 -> {js|sound-min|js}
                | v when v < 0.51 -> {js|sound-med|js}
-               | _ -> {js|sound-max|js})
-  [@res.braces ]) />
+               | _ -> {js|sound-max|js}}) />
 let _ =
   <MessengerSharedPhotosAlbumViewPhotoReact ref=?((if foo["bar"] === baz
                                                    then
@@ -136,127 +131,102 @@ let z =
 let y = [|<div />;<div />|]
 let y =
   [|<Button onClick=handleStaleClick />;<Button onClick=handleStaleClick />|]
-let _ = <Description term=((<Text text={js|Age|js} />)
-  [@res.braces ])>child</Description>
+let _ = <Description term=({<Text text={js|Age|js} />})>child</Description>
 let _ =
-  <Description term=((Text.createElement ~text:{js|Age|js} ~children:[||] ())
-  [@res.braces ])>child</Description>
-let _ = <Description term=((Text.createElement ~text:{js|Age|js} ())
-  [@res.braces ][@JSX ])>child</Description>
+  <Description term=({Text.createElement ~text:{js|Age|js} ~children:[||] ()})>child</Description>
+let _ = <Description term=({((Text.createElement ~text:{js|Age|js} ())
+  [@JSX ])})>child</Description>
 let _ =
-  <Description term=((<Text superLongPunnedProp anotherSuperLongOneCrazyLongThingHere text={js|Age|js} />)
-  [@res.braces ])>child</Description>
+  <Description term=({<Text superLongPunnedProp anotherSuperLongOneCrazyLongThingHere text={js|Age|js} />})>child</Description>
 let _ =
-  <Foo bar=((<Baz superLongPunnedProp anotherSuperLongOneCrazyLongThingHere />)
-  [@res.braces ]) />
+  <Foo bar=({<Baz superLongPunnedProp anotherSuperLongOneCrazyLongThingHere />}) />
 let _ = <div><span>(str {js|hello|js})</span></div>
-let _ = <description term=((<text text={js|Age|js} />)
-  [@res.braces ])>child</description>
-let _ = <description term=((text ~text:{js|Age|js} ~children:[||] ())
-  [@res.braces ])>child</description>
-let _ = <description term=((text ~text:{js|Age|js} ~children:[||])
-  [@res.braces ][@JSX ])>child</description>
-let _ = <description term=((text ~text:{js|Age|js} ())
-  [@res.braces ][@JSX ])>child</description>
+let _ = <description term=({<text text={js|Age|js} />})>child</description>
 let _ =
-  <description term=((<div superLongPunnedProp anotherSuperLongOneCrazyLongThingHere text={js|Age|js} />)
-  [@res.braces ])>child</description>
-let _ = <div onClick=((fun [arity:1]event -> handleChange event)
-  [@res.braces ]) />
+  <description term=({text ~text:{js|Age|js} ~children:[||] ()})>child</description>
+let _ = <description term=({((text ~text:{js|Age|js} ~children:[||])
+  [@JSX ])})>child</description>
+let _ = <description term=({((text ~text:{js|Age|js} ())
+  [@JSX ])})>child</description>
 let _ =
-  <div onClick=((fun [arity:1]eventWithLongIdent ->
-                   handleChange eventWithLongIdent)
-  [@res.braces ]) />
+  <description term=({<div superLongPunnedProp anotherSuperLongOneCrazyLongThingHere text={js|Age|js} />})>child</description>
+let _ = <div onClick=({fun [arity:1]event -> handleChange event}) />
 let _ =
-  <div onClick=((fun [arity:1]event ->
-                   ((Console.log event; handleChange event)[@res.braces ]))
-  [@res.braces ]) />
+  <div onClick=({fun [arity:1]eventWithLongIdent ->
+                   handleChange eventWithLongIdent}) />
 let _ =
-  <StaticDiv onClick=((fun [arity:5]foo bar baz lineBreak identifier ->
-                         ((doStuff foo bar baz; bar lineBreak identifier)
-                         [@res.braces ]))
-  [@res.braces ]) />
-let _ = <AttrDiv onClick=((fun [arity:1]event -> handleChange event)
-  [@res.braces ][@bar ]) />
+  <div onClick=({fun [arity:1]event ->
+                   {Console.log event; handleChange event}}) />
 let _ =
-  <AttrDiv onClick=((fun [arity:1]eventLongIdentifier ->
-                       handleChange eventLongIdentifier)
-  [@res.braces ][@bar ]) />
+  <StaticDiv onClick=({fun [arity:5]foo bar baz lineBreak identifier ->
+                         {doStuff foo bar baz; bar lineBreak identifier}}) />
+let _ = <AttrDiv onClick=({((fun [arity:1]event -> handleChange event)
+  [@bar ])}) />
 let _ =
-  <StaticDivNamed onClick=((fun [arity:6]~foo ~bar ~baz ~lineBreak
-                              ~identifier () -> bar lineBreak identifier)
-  [@res.braces ]) />
+  <AttrDiv onClick=({((fun [arity:1]eventLongIdentifier ->
+                         handleChange eventLongIdentifier)
+  [@bar ])}) />
 let _ =
-  <div onClick=((fun [arity:1]e -> (((doStuff (); bar foo)
-                   [@res.braces ]) : event))
-  [@res.braces ]) />
+  <StaticDivNamed onClick=({fun [arity:6]~foo ~bar ~baz ~lineBreak
+                              ~identifier () -> bar lineBreak identifier}) />
+let _ = <div onClick=({fun [arity:1]e -> ({doStuff (); bar foo} : event)}) />
 let _ =
-  <div onClick=((fun [arity:2]e e2 -> (((doStuff (); bar foo)
-                   [@res.braces ]) : event))
-  [@res.braces ]) />
+  <div onClick=({fun [arity:2]e e2 -> ({doStuff (); bar foo} : event)}) />
 let _ =
-  <div onClick=((fun [arity:5]foo bar baz superLongIdent breakLine ->
-                   (((doStuff (); bar foo)
-                   [@res.braces ]) : (event * event2 * event3 * event4 *
-                                       event5)))
-  [@res.braces ]) />
+  <div onClick=({fun [arity:5]foo bar baz superLongIdent breakLine ->
+                   ({doStuff (); bar foo} :
+                   (event * event2 * event3 * event4 * event5))}) />
 let _ =
-  <div onClick=((fun [arity:5]foo bar baz superLongIdent breakLine ->
-                   (doStuff () : (event * event2 * event3 * event4 * event5)))
-  [@res.braces ]) />
+  <div onClick=({fun [arity:5]foo bar baz superLongIdent breakLine ->
+                   (doStuff () : (event * event2 * event3 * event4 * event5))}) />
 let _ =
-  <div>((match color with
+  <div>({match color with
          | Black -> ReasonReact.string {js|black|js}
-         | Red -> ReasonReact.string {js|red|js})
-  [@res.braces ])</div>
+         | Red -> ReasonReact.string {js|red|js}})</div>
 let _ =
-  <div style=((ReactDOMRe.Style.make ~width:{js|20px|js} ~height:{js|20px|js}
-                 ~borderRadius:{js|100%|js} ~backgroundColor:{js|red|js})
-  [@res.braces ][@foo ]) />
-let _ = <div callback=((reduce (fun [arity:1]() -> not state))
-  [@res.braces ]) />
+  <div style=({((ReactDOMRe.Style.make ~width:{js|20px|js}
+                   ~height:{js|20px|js} ~borderRadius:{js|100%|js}
+                   ~backgroundColor:{js|red|js})
+  [@foo ])}) />
+let _ = <div callback=({reduce (fun [arity:1]() -> not state)}) />
 let _ =
-  <button ?id className=((Cn.make [|{js|button|js};{js|is-fullwidth|js}|])
-  [@res.braces ]) onClick>(({js|Submit|js} -> ste)[@res.braces ])</button>
+  <button ?id className=({Cn.make [|{js|button|js};{js|is-fullwidth|js}|]}) onClick>({
+  {js|Submit|js} -> ste})</button>
 let _ =
-  <button ?id className=((Cn.make [{js|button|js}; {js|is-fullwidth|js}])
-  [@res.braces ]) onClick>(({js|Submit|js} -> ste)[@res.braces ])</button>
+  <button ?id className=({Cn.make [{js|button|js}; {js|is-fullwidth|js}]}) onClick>({
+  {js|Submit|js} -> ste})</button>
 let _ =
-  <button ?id className=((Cn.make ({js|button|js}, {js|is-fullwidth|js}))
-  [@res.braces ]) onClick>(({js|Submit|js} -> ste)[@res.braces ])</button>
-let _ = <button ?id className=((Cn.make { a = b })
-  [@res.braces ]) onClick>(({js|Submit|js} -> ste)[@res.braces ])</button>
-let _ = <X y=((z -> (Belt.Option.getWithDefault {js||js}))[@res.braces ]) />
-let _ = <div style=((getStyle ())
-  [@res.braces ])>((ReasonReact.string {js|BugTest|js})[@res.braces ])</div>
+  <button ?id className=({Cn.make ({js|button|js}, {js|is-fullwidth|js})}) onClick>({
+  {js|Submit|js} -> ste})</button>
 let _ =
-  <div>((let left = limit -> Int.toString in
-         (`${left} characters left`) -> React.string)
-  [@res.braces ])</div>
+  <button ?id className=({Cn.make { a = b }}) onClick>({{js|Submit|js} -> ste})</button>
+let _ = <X y=({z -> (Belt.Option.getWithDefault {js||js})}) />
 let _ =
-  <View style=(styles["backgroundImageWrapper"])>((let uri =
+  <div style=({getStyle ()})>({ReasonReact.string {js|BugTest|js}})</div>
+let _ =
+  <div>({let left = limit -> Int.toString in
+         (`${left} characters left`) -> React.string})</div>
+let _ =
+  <View style=(styles["backgroundImageWrapper"])>({let uri =
                                                      {js|/images/header-background.png|js} in
                                                    <Image resizeMode=Contain style=(
-                                                     styles["backgroundImage"]) uri />)
-  [@res.braces ])</View>
-;;<div>(((((possibleGradeValues ->
+                                                     styles["backgroundImage"]) uri />})</View>
+;;<div>({(((possibleGradeValues ->
               (List.filter (fun [arity:1]g -> g <= state.maxGrade)))
              ->
              (List.map
                 (fun [arity:1]possibleGradeValue ->
-                   <option key=((possibleGradeValue -> string_of_int)
-                   [@res.braces ]) value=((possibleGradeValue ->
-                                             string_of_int)
-                   [@res.braces ])>(((possibleGradeValue -> string_of_int) ->
-                                       str)
-                   [@res.braces ])</option>)))
+                   <option key=({possibleGradeValue -> string_of_int}) value=({
+                   possibleGradeValue -> string_of_int})>({(possibleGradeValue
+                                                              ->
+                                                              string_of_int)
+                                                             -> str})</option>)))
             -> Array.of_list)
-           -> ReasonReact.array)[@res.braces ])</div>
-;;<div>((Console.log (a <= 10))[@res.braces ])</div>
-;;<div><div>((Console.log (a <= 10))[@res.braces ])</div></div>
-;;<div><div onClick=((fun [arity:1]_ -> Console.log (a <= 10))
-  [@res.braces ])><div>((Console.log (a <= 10))
-  [@res.braces ])</div></div></div>
+           -> ReasonReact.array})</div>
+;;<div>({Console.log (a <= 10)})</div>
+;;<div><div>({Console.log (a <= 10)})</div></div>
+;;<div><div onClick=({fun [arity:1]_ -> Console.log (a <= 10)})><div>({
+  Console.log (a <= 10)})</div></div></div>
 let _ = <A x={js|y|js} {...str} />
 let _ = <p-x-y></p-x-y>
 let _ = <V.x-y></V.x-y>

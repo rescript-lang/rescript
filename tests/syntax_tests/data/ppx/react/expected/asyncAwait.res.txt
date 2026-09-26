@@ -6,9 +6,9 @@ module C0 = {
     a: 'a,
   }
 
-  let make = async ({a, _}: props<_>) => {
+  let make = async ({a, _}: props<_>): React.element => {
     let a = await f(a)
-    (ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})}): React.element)
+    ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})})
   }
   let make = React.component({
     let \"AsyncAwait$C0" = (props: props<_>) => Jsx.promise(make(props))

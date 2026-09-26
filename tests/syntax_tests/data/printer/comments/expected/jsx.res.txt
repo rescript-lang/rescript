@@ -61,8 +61,10 @@ module Cite = {
 
 <div>
   // Must not jump inside braces
-  {// But this one is inside
-  React.string("Hello, World!")}
+  {
+    // But this one is inside
+    React.string("Hello, World!")
+  }
 </div>
 
 <div>

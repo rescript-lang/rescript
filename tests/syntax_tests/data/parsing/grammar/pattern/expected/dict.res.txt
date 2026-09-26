@@ -15,15 +15,14 @@ type nonrec user = {
   name: string ;
   age?: float }
 let decodeUser [arity:1](json : json) =
-  (((match json with
-     | Object (({ name = String name; age = ageJson;_})[@res.dictPattern ])
-         ->
-         Some
-           {
-             name;
-             age =
-               ?((match ageJson with | Number age -> Some age | _ -> None))
-           }
-     | _ -> (Console.log {js|Not an object.|js}; None))
-  [@res.braces ]) : user option)
+  ({match json with
+    | Object (({ name = String name; age = ageJson;_})[@res.dictPattern ]) ->
+        Some
+          {
+            name;
+            age =
+              ?((match ageJson with | Number age -> Some age | _ -> None))
+          }
+    | _ -> (Console.log {js|Not an object.|js}; None)} :
+  user option)
 ;;Console.log (decodeUser (jsonParse (`{"name": "John", "age": 30}`)))
