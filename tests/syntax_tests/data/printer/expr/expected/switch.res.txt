@@ -35,10 +35,9 @@ switch count {
 // Expression in braces
 | 5 => expr
 // Block
-| 6 => {
-    let _ = 123
-    Console.log("Must be block")
-  }
+| 6 =>
+  let _ = 123
+  Console.log("Must be block")
 }
 
 switch route {
@@ -55,9 +54,21 @@ switch route {
 }
 
 switch x {
-| A => {
-    let _ = 1
-    let _ = 2
-  } // no blank line below
+| A =>
+  let _ = 1
+  let _ = 2 // no blank line below
 | B => ()
+}
+
+switch value {
+| A =>
+  // Keep this comment with the first statement.
+  let local = 1
+  local
+| B =>
+  let local = 2
+  local
+| C =>
+  foo()
+  {bar()}
 }

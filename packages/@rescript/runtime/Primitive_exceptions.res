@@ -86,14 +86,12 @@ let idMap = Dict.empty()
 
 let create = (str: string): string => {
   switch idMap->Dict.dangerouslyGetNonOption(str) {
-  | Some(v) => {
-      let id = v + 1
-      idMap->Dict.set(str, id)
-      str ++ ("/" ++ (Obj.magic((id: int)): string))
-    }
-  | None => {
-      idMap->Dict.set(str, 1)
-      str
-    }
+  | Some(v) =>
+    let id = v + 1
+    idMap->Dict.set(str, id)
+    str ++ ("/" ++ (Obj.magic((id: int)): string))
+  | None =>
+    idMap->Dict.set(str, 1)
+    str
   }
 }

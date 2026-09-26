@@ -97,14 +97,13 @@ let generatedForOriginal = (mappings, position) => {
   let closest: ref<option<(int, mapping)>> = ref(None)
   mappings->Array.forEach(mapping =>
     switch mapping.original {
-    | Some(original) if original.position.line === position.line => {
-        let nextDistance = distance(original.position, position)
-        switch closest.contents {
-        | None => closest := Some((nextDistance, mapping))
-        | Some((currentDistance, _)) if nextDistance < currentDistance =>
-          closest := Some((nextDistance, mapping))
-        | Some(_) => ()
-        }
+    | Some(original) if original.position.line === position.line =>
+      let nextDistance = distance(original.position, position)
+      switch closest.contents {
+      | None => closest := Some((nextDistance, mapping))
+      | Some((currentDistance, _)) if nextDistance < currentDistance =>
+        closest := Some((nextDistance, mapping))
+      | Some(_) => ()
       }
     | Some(_) | None => ()
     }

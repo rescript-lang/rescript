@@ -85,10 +85,9 @@ module Unknown = {
     switch x {
     | A => "a"
     | B => "b"
-    | Unknown(v) => {
-        Console.log(x)
-        "Unknown"
-      }
+    | Unknown(v) =>
+      Console.log(x)
+      "Unknown"
     }
 }
 
@@ -500,15 +499,13 @@ module MergeCases = {
   // The actions are alpha-equivalent, not merely identical constants.
   let shareAlphaEquivalentStringActions = value =>
     switch value {
-    | 0 => {
-        let result = sideEffect()
-        (result, "shared")
-      }
+    | 0 =>
+      let result = sideEffect()
+      (result, "shared")
     | 1 => (sideEffect(), "different")
-    | 2 => {
-        let result = sideEffect()
-        (result, "shared")
-      }
+    | 2 =>
+      let result = sideEffect()
+      (result, "shared")
     | _ => (sideEffect(), "fallback")
     }
 

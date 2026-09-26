@@ -122,10 +122,9 @@ let moveDrag = (layout, ~pointerId, ~position) =>
 
 let finishDrag = (layout, ~pointerId) =>
   switch layout.drag.contents {
-  | Some(drag) if drag.pointerId === pointerId => {
-      layout.drag := None
-      Signal.update(layout.state, state => {...state, dragging: false})
-    }
+  | Some(drag) if drag.pointerId === pointerId =>
+    layout.drag := None
+    Signal.update(layout.state, state => {...state, dragging: false})
   | Some(_) | None => ()
   }
 
