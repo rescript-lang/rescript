@@ -687,18 +687,21 @@ let publish ?session ~retain_interface ~dependencies ~build_dir ~ocaml_dir
         Fun.protect
           ~finally:(fun () -> log_artifact_export "end" path)
           (fun () ->
+            let optimization_changed =
+              match optimization_file with
+              | Some filename ->
+                Option.is_none current_optimization
+                || session_fingerprint (Some session)
+                     Rescript_compiler_driver.Optimization filename
+                   <> current_optimization
+              | None -> false
+            in
             if
               Option.is_none current_interface
               || session_fingerprint (Some session)
                    Rescript_compiler_driver.Interface interface_file
                  <> current_interface
-              || Option.exists
-                   (fun filename ->
-                     Option.is_none current_optimization
-                     || session_fingerprint (Some session)
-                          Rescript_compiler_driver.Optimization filename
-                        <> current_optimization)
-                   optimization_file
+              || optimization_changed
             then
               failwith
                 ("compiler result changed before artifact export: " ^ path);

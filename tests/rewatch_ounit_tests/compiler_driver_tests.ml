@@ -801,7 +801,7 @@ let published_module_result_tests _context =
     ~finally:(fun () ->
       match previous with
       | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
-      | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+      | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
     (fun () ->
       Unix.putenv "REWATCH_FROZEN_VALUES" "1";
       Test_support.with_temp_dir "rewatch-module-result-" (fun root ->
@@ -867,10 +867,10 @@ let virtual_module_artifact_lookup_tests _context =
     ~finally:(fun () ->
       (match previous with
       | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
-      | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES");
+      | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES");
       match previous_trace with
       | Some value -> Unix.putenv "REWATCH_TYPECHECK_TRACE" value
-      | None -> Unix.unsetenv "REWATCH_TYPECHECK_TRACE")
+      | None -> Test_support.unsetenv "REWATCH_TYPECHECK_TRACE")
     (fun () ->
       Unix.putenv "REWATCH_FROZEN_VALUES" "1";
       Test_support.with_temp_dir "rewatch-virtual-module-" (fun root ->
@@ -968,7 +968,7 @@ let failed_request_discards_staging_tests _context =
     ~finally:(fun () ->
       match previous with
       | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
-      | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+      | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
     (fun () ->
       Unix.putenv "REWATCH_FROZEN_VALUES" "1";
       Test_support.with_temp_dir "rewatch-staging-failure-" (fun root ->
@@ -993,7 +993,7 @@ let superseded_artifact_tests _context =
     ~finally:(fun () ->
       match previous with
       | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
-      | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+      | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
     (fun () ->
       Unix.putenv "REWATCH_FROZEN_VALUES" "1";
       Test_support.with_temp_dir "rewatch-superseded-artifact-" (fun root ->
@@ -1494,13 +1494,13 @@ let combined_dependency_cache_tests _context =
         ~finally:(fun () ->
           (match previous_trace with
           | Some value -> Unix.putenv "REWATCH_TYPECHECK_TRACE" value
-          | None -> Unix.unsetenv "REWATCH_TYPECHECK_TRACE");
+          | None -> Test_support.unsetenv "REWATCH_TYPECHECK_TRACE");
           (match previous_frozen with
           | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
-          | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES");
+          | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES");
           match previous_cache with
           | Some value -> Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" value
-          | None -> Unix.unsetenv "REWATCH_COMBINED_SIGNATURE_CACHE"))
+          | None -> Test_support.unsetenv "REWATCH_COMBINED_SIGNATURE_CACHE"))
 
 let frozen_overrides_combined_snapshot_tests _context =
   Test_support.with_temp_dir "rewatch-frozen-namespace-" (fun root ->
@@ -1511,13 +1511,13 @@ let frozen_overrides_combined_snapshot_tests _context =
         ~finally:(fun () ->
           (match previous_cache with
           | Some value -> Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" value
-          | None -> Unix.unsetenv "REWATCH_COMBINED_SIGNATURE_CACHE");
+          | None -> Test_support.unsetenv "REWATCH_COMBINED_SIGNATURE_CACHE");
           (match previous_trace with
           | Some value -> Unix.putenv "REWATCH_TYPECHECK_TRACE" value
-          | None -> Unix.unsetenv "REWATCH_TYPECHECK_TRACE");
+          | None -> Test_support.unsetenv "REWATCH_TYPECHECK_TRACE");
           match previous_frozen with
           | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
-          | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+          | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
         (fun () ->
           Unix.putenv "REWATCH_FROZEN_VALUES" "0";
           Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" "0";
@@ -1723,7 +1723,7 @@ let frozen_values_tests _context =
         ~finally:(fun () ->
           match previous with
           | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
-          | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+          | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
         (fun () ->
           write root "Api.resi"
             "type t\n\
@@ -1883,7 +1883,7 @@ let frozen_module_forms_tests _context =
         ~finally:(fun () ->
           match previous with
           | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
-          | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+          | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
         (fun () ->
           write root "Other.res" "let value = 7\n";
           expect_code 0 (snd (run root "Other.res"));
@@ -1946,7 +1946,7 @@ let frozen_inline_records_tests _context =
         ~finally:(fun () ->
           match previous with
           | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
-          | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+          | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
         (fun () ->
           write root "Api.res"
             "type choice = Case({field: int})\n\
@@ -1978,7 +1978,7 @@ let frozen_open_tests _context =
         ~finally:(fun () ->
           match previous with
           | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
-          | None -> Unix.unsetenv "REWATCH_FROZEN_VALUES")
+          | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
         (fun () ->
           write root "Api.res"
             "type choice = A | B(int)\n\

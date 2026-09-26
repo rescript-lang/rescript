@@ -95,8 +95,9 @@ let persistent i = i.stamp = 0
 
 let equal i1 i2 = i1.name = i2.name
 
-let same ({stamp; name} : t) i2 =
-  if stamp <> 0 then stamp = i2.stamp else i2.stamp = 0 && name = i2.name
+let same i1 i2 =
+  let stamp = i1.stamp in
+  if stamp <> 0 then stamp = i2.stamp else i2.stamp = 0 && i1.name = i2.name
 
 let binding_time i = i.stamp
 

@@ -864,7 +864,9 @@ let pending_cmi_path name =
 let find_in_path_with_pending name =
   let pending = pending_cmi_path (Filename.remove_extension name) in
   let is_pending filename =
-    Option.exists (Compiler_request_state.same_output_path filename) pending
+    match pending with
+    | Some path -> Compiler_request_state.same_output_path filename path
+    | None -> false
   in
   let lower_name = String.uncapitalize_ascii name in
   let rec find = function
