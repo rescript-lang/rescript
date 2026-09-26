@@ -33,3 +33,12 @@ describe(__MODULE__, () => {
     eq(__LOC__, basename("b/c/a.b"), "a.b")
   })
 })
+
+let bracedNoInline = {@inline(never) x => x + 1}
+let bracedNoInlineResult = bracedNoInline(1)
+
+describe("braced expression attributes", () => {
+  test("inline never is retained", () => {
+    eq(__LOC__, bracedNoInlineResult, 2)
+  })
+})

@@ -3216,7 +3216,14 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
       braces_loc.loc_start.pos_lnum + 1 < inner.pexp_loc.loc_start.pos_lnum
     | _ -> false
   in
-  let e = Parsetree_viewer.unwrap_braces e in
+  let rec unwrap_braces_with_attributes attrs (e : Parsetree.expression) =
+    match e.pexp_desc with
+    | Pexp_braces {expr = inner} ->
+      unwrap_braces_with_attributes (attrs @ e.pexp_attributes) inner
+    | _ when attrs = [] -> e
+    | _ -> {e with pexp_attributes = attrs @ e.pexp_attributes}
+  in
+  let e = unwrap_braces_with_attributes [] e in
   let printed_expression =
     match e.pexp_desc with
     | Pexp_braces {expr = inner} -> print_expression ~state inner cmt_tbl

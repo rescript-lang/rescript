@@ -2461,7 +2461,10 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
   in
   match sexp.pexp_desc with
   | Pexp_braces {expr = inner} ->
-    type_expect ~context ?deprecated_context ~recarg env inner ty_expected
+    let exp =
+      type_expect ~context ?deprecated_context ~recarg env inner ty_expected
+    in
+    {exp with exp_attributes = sexp.pexp_attributes @ exp.exp_attributes}
   | Pexp_ident lid ->
     let path, desc =
       Typetexp.find_value
