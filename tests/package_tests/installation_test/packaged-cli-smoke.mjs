@@ -64,7 +64,7 @@ watcher.stderr.on("data", chunk => {
 });
 const watcherExit = new Promise((resolve, reject) => {
   watcher.once("error", reject);
-  watcher.once("exit", (code, signal) => resolve({ code, signal }));
+  watcher.once("close", (code, signal) => resolve({ code, signal }));
 });
 
 try {
