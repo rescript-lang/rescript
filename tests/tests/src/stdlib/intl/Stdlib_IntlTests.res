@@ -38,10 +38,9 @@ try {
 | JsExn(e) =>
   switch JsExn.message(e)->Option.map(String.toLowerCase) {
   | Some("invalid key : someinvalidkey") => Console.log("Caught expected error")
-  | message => {
-      Console.warn(`Unexpected error message: "${message->Option.getUnsafe}"`)
-      JsExn.throw(e)
-    }
+  | message =>
+    Console.warn(`Unexpected error message: "${message->Option.getUnsafe}"`)
+    JsExn.throw(e)
   }
 | e =>
   switch JsExn.fromException(e) {
