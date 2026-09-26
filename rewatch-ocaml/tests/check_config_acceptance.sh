@@ -36,7 +36,7 @@ while IFS=$'\t' read -r area name expected json; do
   set +e
   "$rust" compiler-args "$work/src/A.res" >"$work/rust.out" 2>"$work/rust.err"
   rust_status=$?
-  "$ocaml" compiler-args "$work/src/A.res" >"$work/ocaml.out" 2>"$work/ocaml.err"
+  REWATCH_BIN_ANNOT=0 "$ocaml" compiler-args "$work/src/A.res" >"$work/ocaml.out" 2>"$work/ocaml.err"
   ocaml_status=$?
   set -e
 
@@ -95,10 +95,17 @@ while IFS=$'\t' read -r area name expected json; do
     ! node -e '
       const fs = require("fs");
       const assert = require("assert");
-      assert.deepStrictEqual(
-        JSON.parse(fs.readFileSync(process.argv[1], "utf8")),
-        JSON.parse(fs.readFileSync(process.argv[2], "utf8")),
-      );
+      const rust = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+      const ocaml = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+      // OCaml Rewatch skips optional binary annotations by default. GenType
+      // still needs them, so only ordinary packages add this compiler flag.
+      if (!ocaml.compiler_args.includes("-bs-gentype")) {
+        const packageName = ocaml.compiler_args.indexOf("-bs-package-name");
+        assert.ok(packageName > 0);
+        assert.strictEqual(ocaml.compiler_args[packageName - 1], "-bs-no-bin-annot");
+        ocaml.compiler_args.splice(packageName - 1, 1);
+      }
+      assert.deepStrictEqual(rust, ocaml);
     ' "$work/rust.out" "$work/ocaml.out"; then
     printf 'Config case %s/%s produced different compiler arguments\n' \
       "$area" "$name" >&2
