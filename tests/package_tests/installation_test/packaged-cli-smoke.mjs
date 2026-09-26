@@ -78,11 +78,9 @@ try {
   } else {
     assert.ok(watcher.kill("SIGINT"), "could not signal packaged CLI");
   }
-  await waitForExit(watcherExit);
-  await waitUntil(
-    () => !existsSync(watchLock),
-    `watch lock remained after shutdown: ${watchOutput}`,
-  );
+  const { code, signal } = await waitForExit(watcherExit);
+  assert.equal(signal, null, `watcher was killed: ${watchOutput}`);
+  assert.equal(code, 0, `watcher exited with code ${code}: ${watchOutput}`);
   assert.match(
     watchOutput,
     /Exiting\.\.\./,
