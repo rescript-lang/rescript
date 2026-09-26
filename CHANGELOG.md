@@ -26,6 +26,7 @@
 
 #### :nail_care: Polish
 
+- Omit redundant braces around multi-statement switch case bodies when formatting. https://github.com/rescript-lang/rescript/pull/8677
 - Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662
 
 #### :house: Internal
