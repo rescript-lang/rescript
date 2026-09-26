@@ -87,6 +87,10 @@ let gentype_enabled (config : Config.t) =
 let binary_annotations_enabled (config : Config.t) =
   Sys.getenv_opt "REWATCH_BIN_ANNOT" = Some "1" || gentype_enabled config
 
+let compatibility_copies_enabled config =
+  binary_annotations_enabled config
+  || Sys.getenv_opt "REWATCH_COMPAT_COPIES" = Some "1"
+
 let namespace_args (config : Config.t) module_name =
   match config.namespace with
   | Config.No_namespace -> []

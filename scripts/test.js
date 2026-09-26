@@ -91,6 +91,13 @@ if (mochaTest) {
     cwd: commonjsTestDir,
     stdio: "inherit",
   });
+  // Runtime annotation tests can rebuild its implicit interfaces after this
+  // project was last compiled. Rebuild the test project's own CMI files before
+  // it consumes the current runtime and Belt artifacts.
+  await execClean([], {
+    cwd: beltTestDir,
+    stdio: "inherit",
+  });
   await execClean([], {
     cwd: beltPackageDir,
     stdio: "inherit",
@@ -146,6 +153,9 @@ if (mochaTest) {
 
 if (buildTest) {
   console.log("Doing build_tests");
+  // Artifact layout fixtures inspect the private lib/bs JavaScript and source
+  // mirrors. Ordinary compiler projects use the faster default layout.
+  const compatibilityEnv = { ...process.env, REWATCH_COMPAT_COPIES: "1" };
   const files = fs.readdirSync(buildTestDir);
 
   let hasError = false;
@@ -159,7 +169,10 @@ if (buildTest) {
       console.warn(`input.js does not exist in ${testDir}`);
     } else {
       // note existsSync test already ensure that it is a directory
-      const out = await node("input.js", [], { cwd: testDir });
+      const out = await node("input.js", [], {
+        cwd: testDir,
+        env: compatibilityEnv,
+      });
       process.stdout.write(out.stdout);
 
       if (out.status === 0) {

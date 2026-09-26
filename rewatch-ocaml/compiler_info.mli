@@ -6,6 +6,7 @@ type context = {
   source_map_args: string list;
   inherited_compiler_args: string list;
   binary_annotations: bool;
+  compatibility_copies: bool;
   frozen_values: bool;
   package_output_specs: package_output_spec list;
 }
@@ -23,6 +24,7 @@ and package_output_spec = {
 val package_output_specs : Config.t -> package_output_spec list
 
 val make_context :
+  compatibility_copies:bool ->
   build_root:string ->
   compiler_path:string ->
   compiler_identity:string ->

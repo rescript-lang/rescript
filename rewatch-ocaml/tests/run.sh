@@ -790,20 +790,30 @@ grep -F "Formatting check failed" "$work/format-check.err" >/dev/null
 test -f "$no_bin_annot/lib/bs/src/NoBinAnnot.cmi"
 test -f "$no_bin_annot/lib/bs/src/NoBinAnnot.cmj"
 test -f "$no_bin_annot/src/NoBinAnnot.js"
+test ! -e "$no_bin_annot/lib/bs/src/NoBinAnnot.js"
+test ! -e "$no_bin_annot/lib/bs/src/NoBinAnnot.res"
+test ! -e "$no_bin_annot/lib/ocaml/NoBinAnnot.res"
 test ! -e "$no_bin_annot/lib/bs/src/NoBinAnnot.cmt"
 test ! -e "$no_bin_annot/lib/ocaml/NoBinAnnot.cmt"
 "$port" build "$no_bin_annot" >"$work/no-bin-annot-unchanged.log"
 grep 'Parsed 0 source files' "$work/no-bin-annot-unchanged.log" >/dev/null
 grep 'Compiled 0 modules' "$work/no-bin-annot-unchanged.log" >/dev/null
 printf '\nlet changed = value + 1\n' >>"$no_bin_annot/src/NoBinAnnot.res"
-"$port" build "$no_bin_annot" >"$work/no-bin-annot-edit.log"
+REWATCH_COMPAT_COPIES=1 \
+  "$port" build "$no_bin_annot" >"$work/no-bin-annot-edit.log"
 grep 'Parsed 1 source files' "$work/no-bin-annot-edit.log" >/dev/null
 grep 'Compiled 1 modules' "$work/no-bin-annot-edit.log" >/dev/null
+test -f "$no_bin_annot/lib/bs/src/NoBinAnnot.js"
+test -f "$no_bin_annot/lib/bs/src/NoBinAnnot.res"
+test -f "$no_bin_annot/lib/ocaml/NoBinAnnot.res"
 printf '// Comment-only edit keeps the CMJ bytes unchanged.\n' \
   >>"$no_bin_annot/src/NoBinAnnot.res"
 "$port" build "$no_bin_annot" >"$work/no-bin-annot-comment.log"
 grep 'Parsed 1 source files' "$work/no-bin-annot-comment.log" >/dev/null
 grep 'Compiled 1 modules' "$work/no-bin-annot-comment.log" >/dev/null
+test ! -e "$no_bin_annot/lib/bs/src/NoBinAnnot.js"
+test ! -e "$no_bin_annot/lib/bs/src/NoBinAnnot.res"
+test ! -e "$no_bin_annot/lib/ocaml/NoBinAnnot.res"
 "$port" build "$no_bin_annot" >"$work/no-bin-annot-comment-noop.log"
 grep 'Parsed 0 source files' "$work/no-bin-annot-comment-noop.log" >/dev/null
 grep 'Compiled 0 modules' "$work/no-bin-annot-comment-noop.log" >/dev/null
@@ -1306,7 +1316,7 @@ if ! grep 'value = 1' "$moved_source/src/nested/A.mjs" >/dev/null; then
   exit 1
 fi
 
-"$port" watch "$parse_publication" \
+REWATCH_COMPAT_COPIES=1 "$port" watch "$parse_publication" \
   >"$parse_publication/watch.log" 2>&1 &
 parse_publication_pid=$!
 background_pids="$background_pids $parse_publication_pid"
@@ -1344,7 +1354,7 @@ fi
 kill -TERM "$parse_publication_pid"
 wait "$parse_publication_pid" 2>/dev/null || true
 
-"$port" watch "$multi_package_pending" \
+REWATCH_COMPAT_COPIES=1 "$port" watch "$multi_package_pending" \
   >"$multi_package_pending/watch.log" 2>&1 &
 multi_package_pending_pid=$!
 background_pids="$background_pids $multi_package_pending_pid"
@@ -1375,7 +1385,7 @@ fi
 kill -TERM "$multi_package_pending_pid"
 wait "$multi_package_pending_pid" 2>/dev/null || true
 
-"$port" watch "$full_watch_recovery" \
+REWATCH_COMPAT_COPIES=1 "$port" watch "$full_watch_recovery" \
   >"$full_watch_recovery/watch.log" 2>&1 &
 full_watch_recovery_pid=$!
 background_pids="$background_pids $full_watch_recovery_pid"

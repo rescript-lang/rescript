@@ -14,12 +14,15 @@ let config root =
   Config.load_root root
 
 let context ?(inherited_compiler_args = []) ?(binary_annotations = true)
-    ?(frozen_values = true) root config source_map_args =
+    ?compatibility_copies ?(frozen_values = true) root config source_map_args =
   let bsc = Filename.concat root "bsc.exe" in
   let runtime = Filename.concat root "runtime" in
   if not (Sys.file_exists bsc) then write bsc "compiler-v1";
   File_util.ensure_dir runtime;
-  Compiler_info.make_context ~build_root:root ~compiler_path:bsc
+  Compiler_info.make_context
+    ~compatibility_copies:
+      (Option.value compatibility_copies ~default:binary_annotations)
+    ~build_root:root ~compiler_path:bsc
     ~compiler_identity:(Digest.file bsc |> Digest.to_hex)
     ~runtime_path:runtime ~source_map_args ~inherited_compiler_args
     ~binary_annotations ~frozen_values
@@ -59,6 +62,13 @@ let tests =
       check
         (Compiler_info.needs_clean changed_annotations config)
         "changed binary annotation mode invalidates artifacts";
+      let changed_copies =
+        context ~compatibility_copies:false root config
+          ["-bs-source-map"; "linked"]
+      in
+      check
+        (Compiler_info.needs_clean changed_copies config)
+        "changed compatibility copy mode invalidates artifacts";
       let changed_frozen =
         context ~frozen_values:false root config ["-bs-source-map"; "linked"]
       in
@@ -139,7 +149,8 @@ let tests =
         ]
       in
       let initial =
-        Compiler_info.make_context ~build_root:root ~compiler_path:bsc
+        Compiler_info.make_context ~compatibility_copies:true ~build_root:root
+          ~compiler_path:bsc
           ~compiler_identity:(Digest.file bsc |> Digest.to_hex)
           ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
           ~binary_annotations:true ~package_output_specs:commonjs
@@ -149,9 +160,9 @@ let tests =
       let marker = File_util.path_of_parts root ["lib"; "ocaml"; "marker"] in
       write marker "keep";
       let changed =
-        Compiler_info.make_context ~build_root:root ~compiler_path:bsc
-          ~compiler_identity:"changed-compiler" ~runtime_path:runtime
-          ~source_map_args:[] ~inherited_compiler_args:[]
+        Compiler_info.make_context ~compatibility_copies:true ~build_root:root
+          ~compiler_path:bsc ~compiler_identity:"changed-compiler"
+          ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
           ~binary_annotations:true ~package_output_specs:esmodule
           ~frozen_values:true
       in
@@ -171,8 +182,8 @@ let tests =
       write bsc "compiler-v1";
       File_util.ensure_dir runtime;
       let standalone =
-        Compiler_info.make_context ~build_root:dependency_root
-          ~compiler_path:bsc
+        Compiler_info.make_context ~compatibility_copies:true
+          ~build_root:dependency_root ~compiler_path:bsc
           ~compiler_identity:(Digest.file bsc |> Digest.to_hex)
           ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
           ~binary_annotations:true ~frozen_values:true
@@ -191,7 +202,8 @@ let tests =
         ]
       in
       let consumer =
-        Compiler_info.make_context ~build_root:consumer_root ~compiler_path:bsc
+        Compiler_info.make_context ~compatibility_copies:true
+          ~build_root:consumer_root ~compiler_path:bsc
           ~compiler_identity:(Digest.file bsc |> Digest.to_hex)
           ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
           ~binary_annotations:true ~package_output_specs:consumer_specs

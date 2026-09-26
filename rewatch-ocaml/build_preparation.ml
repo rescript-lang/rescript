@@ -35,6 +35,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       ~inherited_compiler_args:
         (root_config.jsx_args @ root_config.experimental_args)
       ~binary_annotations:(Compiler_args.binary_annotations_enabled root_config)
+      ~compatibility_copies:
+        (Compiler_args.compatibility_copies_enabled root_config)
       ~frozen_values:
         (Rescript_compiler_driver.session_frozen_enabled
            (Build_session.compiler_session attempt.session))

@@ -151,6 +151,14 @@ marker in that case. Set `REWATCH_BIN_ANNOT=1` to produce binary annotations
 for editor tools and other consumers. GenType packages keep them automatically.
 Compiler metadata records both annotation and frozen-lookup settings, so
 switching either mode invalidates incompatible cached artifacts.
+In-source JavaScript is written directly to its configured output path. With
+binary annotations disabled, OCaml Rewatch omits the private `lib/bs`
+JavaScript mirror and copies of source files in `lib/bs` and `lib/ocaml`.
+The parser and compiler made three source copies for a typical implementation,
+and publication made one JavaScript mirror. These files are unused by
+compilation. Set `REWATCH_COMPAT_COPIES=1` to restore them; packages with binary
+annotations or GenType retain them automatically. Switching this setting
+invalidates incompatible cached artifacts.
 `compiler_process.ml` is the boundary between logical compiler jobs and
 in-process execution. Independent parse and compile requests run on a bounded
 domain pool. The scheduler accepts module results and records build state;

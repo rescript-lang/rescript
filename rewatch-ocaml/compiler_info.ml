@@ -6,6 +6,7 @@ type context = {
   source_map_args: string list;
   inherited_compiler_args: string list;
   binary_annotations: bool;
+  compatibility_copies: bool;
   frozen_values: bool;
   package_output_specs: package_output_spec list;
 }
@@ -16,7 +17,7 @@ and package_output_spec = {
   suffix: string;
 }
 
-let format_version = "6"
+let format_version = "7"
 
 let package_output_specs (config : Config.t) =
   List.map
@@ -28,9 +29,9 @@ let package_output_specs (config : Config.t) =
       })
     config.package_specs
 
-let make_context ~build_root ~compiler_path ~compiler_identity ~runtime_path
-    ~source_map_args ~inherited_compiler_args ~binary_annotations ~frozen_values
-    ~package_output_specs =
+let make_context ~compatibility_copies ~build_root ~compiler_path
+    ~compiler_identity ~runtime_path ~source_map_args ~inherited_compiler_args
+    ~binary_annotations ~frozen_values ~package_output_specs =
   {
     build_root;
     bsc_path = compiler_path;
@@ -39,6 +40,7 @@ let make_context ~build_root ~compiler_path ~compiler_identity ~runtime_path
     source_map_args;
     inherited_compiler_args;
     binary_annotations;
+    compatibility_copies;
     frozen_values;
     package_output_specs;
   }
@@ -48,6 +50,7 @@ let for_package context ~build_root config =
     context with
     build_root;
     binary_annotations = Compiler_args.binary_annotations_enabled config;
+    compatibility_copies = Compiler_args.compatibility_copies_enabled config;
     package_output_specs = package_output_specs config;
   }
 
@@ -114,6 +117,7 @@ let json context (config : Config.t) =
              (fun value -> `String value)
              context.inherited_compiler_args) );
       ("binary_annotations", `Bool context.binary_annotations);
+      ("compatibility_copies", `Bool context.compatibility_copies);
       ("frozen_values", `Bool context.frozen_values);
       ( "package_output_specs",
         `List (List.map package_output_spec_json context.package_output_specs)

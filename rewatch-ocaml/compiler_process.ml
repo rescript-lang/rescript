@@ -445,23 +445,25 @@ let publish_immediate ?session ~preserve_source_mtime ~retain_interface
         Option.iter
           (fun filename -> Unix.utimes filename compiled_at compiled_at)
           optimization_file);
-    let source = Filename.concat config.root path in
-    let build_source = Filename.concat build_dir path in
-    File_util.ensure_dir (Filename.dirname build_source);
-    File_util.copy_existing_file ~ensure_parent:false source build_source;
-    File_util.copy_existing_file ~ensure_parent:false source
-      (Filename.concat ocaml_dir (Filename.basename path));
+    if Compiler_args.compatibility_copies_enabled config then (
+      let source = Filename.concat config.root path in
+      let build_source = Filename.concat build_dir path in
+      File_util.ensure_dir (Filename.dirname build_source);
+      File_util.copy_existing_file ~ensure_parent:false source build_source;
+      File_util.copy_existing_file ~ensure_parent:false source
+        (Filename.concat ocaml_dir (Filename.basename path)));
     (match source_kind with
     | Source.Interface -> ()
-    | Source.Implementation ->
+    | Source.Implementation
+      when Compiler_args.compatibility_copies_enabled config ->
       List.iter
         (fun spec ->
           if spec.Config.in_source then (
-            let output = Build_artifacts.generated_js_path config path spec in
             let build_output =
               Build_artifacts.generated_build_js_path ~build_dir config path
                 spec
             in
+            let output = Build_artifacts.generated_js_path config path spec in
             File_util.ensure_dir (Filename.dirname build_output);
             if File_util.exists output then
               File_util.copy_existing_file ~ensure_parent:false output
@@ -470,7 +472,8 @@ let publish_immediate ?session ~preserve_source_mtime ~retain_interface
               File_util.copy_existing_file ~ensure_parent:false
                 (output ^ ".map") (build_output ^ ".map")
             else File_util.remove_file (build_output ^ ".map")))
-        config.package_specs);
+        config.package_specs
+    | Source.Implementation -> ());
     Option.iter
       (fun session ->
         Rescript_compiler_driver.publish_session_cmi session

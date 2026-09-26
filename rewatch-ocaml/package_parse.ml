@@ -89,9 +89,10 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
         let published_ast =
           Build_artifacts.published_ast_path ~ocaml_dir path
         in
-        File_util.copy_existing_file ~ensure_parent:false
-          (Filename.concat config.root path)
-          (Filename.concat ocaml_dir (Filename.basename path));
+        if Compiler_args.compatibility_copies_enabled config then
+          File_util.copy_existing_file ~ensure_parent:false
+            (Filename.concat config.root path)
+            (Filename.concat ocaml_dir (Filename.basename path));
         let staged_ast = Filename.concat build_dir ast in
         Rescript_compiler_driver.publish_session_ast
           (Build_session.compiler_session attempt.session)

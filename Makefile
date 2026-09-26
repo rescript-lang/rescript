@@ -190,7 +190,7 @@ test-gentype: lib
 	make -C tests/gentype_tests/stdlib-no-shims clean test
 
 test-rewatch: lib
-	./rewatch/tests/suite.sh $(RESCRIPT_EXE)
+	REWATCH_COMPAT_COPIES=1 ./rewatch/tests/suite.sh $(RESCRIPT_EXE)
 
 test-all: test test-gentype test-analysis test-tools test-rewatch
 

@@ -133,6 +133,38 @@ canonicalization also removed work. The small-edit differences vary in sign
 between runs: the two `tests/tests` edit medians were +2.48 ms and −2.15 ms.
 These numbers do not predict every project or edit pattern.
 
+A follow-up tested avoiding the second CMI/CMJ byte write by moving completed
+staging files into `lib/ocaml` during asynchronous export. Eleven interleaved
+clean-build pairs on the copied 634-module `tests/tests` project, with four
+workers, measured 1393.96 ms median for the existing copy path and 1400.54 ms
+for the move path. A separate seven-pair trial that waited until all compiler
+jobs finished before moving files was also slower (1405.16 ms versus
+1413.88 ms). The move implementation was dropped: the copy already overlaps
+compiler jobs, and removing it did not improve this workload. This experiment
+only measured publication copies; it did not eliminate serialization or the
+initial staging-file write inside the compiler.
+
+Compatibility copies proved more expensive. The compiler writes in-source
+JavaScript at its final path; Rewatch also copied it back into `lib/bs` and
+copied each parsed source into `lib/ocaml`, then copied it into both `lib/bs`
+and `lib/ocaml` after compilation. An eleven-pair isolated comparison on the
+copied `tests/tests` project measured 1402.14 ms median clean builds with the
+two compiler source copies and 1366.69 ms without them, while retaining the
+parser copy and JavaScript mirror in both modes. A separate eleven-pair trial
+without the JavaScript mirror measured 1405.42 ms with it and 1345.41 ms
+without it. A repeat that included stale-mirror removal reversed the median
+difference by 15 ms. The final
+default omits all four copies for packages without binary annotations;
+`REWATCH_COMPAT_COPIES=1` restores them. These trial medians are from separate
+runs and do not establish an additive total gain.
+
+The final combined mode was measured in 21 interleaved clean-build pairs on
+the same copied project with four workers. Compatibility copies took 1395.78
+ms median; the default took 1297.46 ms median, a 98.32 ms (7.04%) reduction.
+The median paired saving was 103.10 ms. Final JavaScript, CMI, CMJ, and AST
+outputs were still written. This measures one workload and does not establish
+the benefit of eliminating compiler staging files themselves.
+
 ## Current boundary
 
 `Env` borrows decoded CMI graphs from a project cache, one request at a time.
