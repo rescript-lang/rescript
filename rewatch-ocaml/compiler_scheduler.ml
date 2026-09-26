@@ -6,7 +6,14 @@ type cmi_change = Build_state.cmi_change =
   | Cmi_change_unknown
 exception Publication_failure of exn * cmi_change
 
-type publish_result = {stderr: string; cmi_change: cmi_change}
+type publish_result = {
+  stderr: string;
+  cmi_change: cmi_change;
+  optimization_changed: bool;
+  deferred_export: (unit -> unit) option;
+  cancel_export: (unit -> unit) option;
+  staged_cmi_path: string option;
+}
 type namespace_task = {
   task: Process.task;
   publish: Process.result -> publish_result;
@@ -54,6 +61,7 @@ type scheduled_module = {
   mark_warning: string -> unit;
   mutable messages: string list;
   mutable phase: phase;
+  mutable staged_cmi_path: string option;
 }
 
 type candidate = {
@@ -62,6 +70,9 @@ type candidate = {
   warning_paths: string list;
   make: unit -> scheduled_module;
 }
+
+let candidate_key candidate = candidate.key
+let candidate_dependencies candidate = candidate.state.dependencies
 
 type scheduled_item = Module of scheduled_module | Namespace_barrier
 
@@ -85,6 +96,7 @@ let create ~key ~dependencies ~source ~state ~cmi_path ~prepare ~compile
     mark_warning;
     messages = [];
     phase = Start;
+    staged_cmi_path = None;
   }
 
 let candidate ~key ~state ~warning_paths ~make =
@@ -92,16 +104,87 @@ let candidate ~key ~state ~warning_paths ~make =
 
 let candidate_requires_compile candidate = candidate.state.compile_dirty
 
-let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
-    ~mark_compiled ~mark_had_warnings ~progress ~compile_step ~namespace_count
-    ~verbosity =
+let run ~on_ast_invalidation ~poll ~warning_state ~compile_assets ~build_state
+    ~candidates ~mark_compiled ~mark_had_warnings ~progress ~compile_step
+    ~namespace_count ~verbosity =
   let dirty_propagation = Hashtbl.create 16 in
-  let refresh_published_cmi (scheduled : scheduled_module) cmi_change =
+  let deferred_exports = ref [] in
+  let async_exports = Queue.create () in
+  let async_lock = Mutex.create () in
+  let async_ready = Condition.create () in
+  let async_closed = ref false in
+  let async_aborted = ref false in
+  let async_results = ref [] in
+  let async_worker = ref None in
+  (* Export ordinary implementation artifacts while other compiler jobs run.
+     The scheduler still owns build-state commits after the worker is joined. *)
+  let rec export_loop () =
+    let next =
+      Mutex.lock async_lock;
+      Fun.protect
+        (fun () ->
+          while Queue.is_empty async_exports && not !async_closed do
+            Condition.wait async_ready async_lock
+          done;
+          if !async_aborted || Queue.is_empty async_exports then None
+          else Some (Queue.take async_exports))
+        ~finally:(fun () -> Mutex.unlock async_lock)
+    in
+    match next with
+    | None -> ()
+    | Some (key, export) ->
+      let result = try Ok (export ()) with error -> Error error in
+      async_results := (key, result) :: !async_results;
+      export_loop ()
+  in
+  let enqueue_async_export key export =
+    if Option.is_none !async_worker then
+      async_worker := Some (Domain.spawn export_loop);
+    Mutex.lock async_lock;
+    Fun.protect
+      (fun () ->
+        Queue.add (key, export) async_exports;
+        Condition.signal async_ready)
+      ~finally:(fun () -> Mutex.unlock async_lock)
+  in
+  let finish_async_exports ~abort =
+    Option.iter
+      (fun worker ->
+        Mutex.lock async_lock;
+        Fun.protect
+          (fun () ->
+            async_closed := true;
+            async_aborted := abort;
+            Condition.broadcast async_ready)
+          ~finally:(fun () -> Mutex.unlock async_lock);
+        Domain.join worker)
+      !async_worker;
+    let results = Hashtbl.create (List.length !async_results) in
+    List.iter
+      (fun (key, result) -> Hashtbl.replace results key result)
+      !async_results;
+    results
+  in
+  let is_async_export (scheduled : scheduled_module) source_kind =
+    (* An explicit interface and a JS post-build hook have their own ordered
+       publication phases, so only independent implementations use this path. *)
+    source_kind = Source.Implementation
+    && Option.is_none scheduled.source.Source.interface
+    && scheduled.post_build scheduled.source.Source.implementation = []
+  in
+  let refresh_published_cmi (scheduled : scheduled_module) ~path cmi_change =
     Build_state.record_published_cmi ~dirty_propagation build_state
-      ~compile_assets scheduled.state ~path:scheduled.cmi_path cmi_change
+      ~compile_assets scheduled.state ~path cmi_change
+  in
+  let refresh_published_optimization (scheduled : scheduled_module) changed =
+    Build_state.record_published_optimization ~dirty_propagation build_state
+      scheduled.state ~changed
   in
   let finish_successful_compile (scheduled : scheduled_module) =
-    let cmt_path = Filename.remove_extension scheduled.cmi_path ^ ".cmt" in
+    let cmi_path =
+      Option.value scheduled.staged_cmi_path ~default:scheduled.cmi_path
+    in
+    let cmt_path = Filename.remove_extension cmi_path ^ ".cmt" in
     Build_state.record_successful_compile ~compile_assets scheduled.state
       ~cmt_path
   in
@@ -192,12 +275,33 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
   let record_publication (scheduled : scheduled_module) ~source_kind path =
     let publication = Atomic.exchange scheduled.publication None in
     match publication with
-    | Some (Published {stderr; cmi_change}) ->
-      refresh_published_cmi scheduled cmi_change;
+    | Some
+        (Published
+           {
+             stderr;
+             cmi_change;
+             optimization_changed;
+             deferred_export;
+             cancel_export;
+             staged_cmi_path;
+           }) ->
+      let cmi_path = Option.value staged_cmi_path ~default:scheduled.cmi_path in
+      scheduled.staged_cmi_path <- staged_cmi_path;
+      refresh_published_cmi scheduled ~path:cmi_path cmi_change;
+      refresh_published_optimization scheduled optimization_changed;
+      (match (deferred_export, cancel_export) with
+      | Some export, Some cancel ->
+        deferred_exports :=
+          (scheduled, source_kind, export, cancel) :: !deferred_exports;
+        if is_async_export scheduled source_kind then
+          enqueue_async_export scheduled.key export
+      | None, None -> ()
+      | Some _, None | None, Some _ ->
+        raise (Project_context.Error "incomplete deferred export"));
       scheduled.record_published_outputs ~source_kind path;
       Publication_succeeded stderr
     | Some (Failed_after_cmi_publication {error; cmi_change}) ->
-      refresh_published_cmi scheduled cmi_change;
+      refresh_published_cmi scheduled ~path:scheduled.cmi_path cmi_change;
       scheduled.record_published_outputs ~source_kind path;
       Publication_failed (Printexc.to_string error)
     | None -> No_publication
@@ -276,6 +380,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     :: Option.to_list scheduled.source.Source.interface
     |> List.iter (fun source ->
         let path = Build_artifacts.published_ast_path ~ocaml_dir source in
+        on_ast_invalidation path;
         File_util.remove_file path;
         Compile_assets.refresh_ast compile_assets
           ~source:(Filename.concat scheduled.package_root source)
@@ -403,8 +508,41 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
       reconcile_unconsumed_publications ();
       match exn with
       | Module_failed -> true
-      | _ -> raise exn)
+      | _ ->
+        ignore (finish_async_exports ~abort:true);
+        List.iter
+          (fun ((scheduled : scheduled_module), _, _, cancel) ->
+            cancel ();
+            scheduled.state.compile_dirty <- true;
+            invalidate_persistent_freshness scheduled)
+          !deferred_exports;
+        raise exn)
   in
+  let async_export_results = finish_async_exports ~abort:false in
+  List.rev !deferred_exports
+  |> List.iter (fun (scheduled, source_kind, export, cancel) ->
+      try
+        if is_async_export scheduled source_kind then
+          match Hashtbl.find_opt async_export_results scheduled.key with
+          | Some (Ok ()) -> ()
+          | Some (Error error) -> raise error
+          | None ->
+            raise
+              (Project_context.Error
+                 ("missing artifact export for " ^ scheduled.key))
+        else export ();
+        refresh_published_cmi scheduled ~path:scheduled.cmi_path Cmi_unchanged;
+        if
+          source_kind = Source.Implementation
+          && scheduled.phase = Done && scheduled.messages = []
+        then
+          Build_state.record_successful_compile ~compile_assets scheduled.state
+            ~cmt_path:(Filename.remove_extension scheduled.cmi_path ^ ".cmt")
+      with error ->
+        cancel ();
+        scheduled.state.compile_dirty <- true;
+        invalidate_persistent_freshness scheduled;
+        scheduled.messages <- Printexc.to_string error :: scheduled.messages);
   Output.Progress.finish progress;
   Output.trace ~verbosity
     (Printf.sprintf "Compiled %d out of %d in the universe" !completed_modules

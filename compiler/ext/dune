@@ -28,6 +28,7 @@
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
+ (libraries unix)
  (foreign_stubs
   (language c)
   (names ext_platform_primitives_stubs)))

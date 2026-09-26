@@ -86,10 +86,32 @@ type incremental_source = {
 
 let run_scheduled_modules (attempt : Build_attempt.t)
     (prepared : Build_session.prepared) ~compile_step ~namespace_count =
-  Compiler_scheduler.run ~poll:attempt.process_poll
+  let candidates = Build_attempt.take_compile_candidates attempt in
+  let ready =
+    List.filter Compiler_scheduler.candidate_requires_compile candidates
+  in
+  let ready_keys = Hashtbl.create (List.length ready) in
+  List.iter
+    (fun candidate ->
+      Hashtbl.replace ready_keys (Compiler_scheduler.candidate_key candidate) ())
+    ready;
+  let has_dirty_dependency =
+    List.exists
+      (fun candidate ->
+        List.exists (Hashtbl.mem ready_keys)
+          (Compiler_scheduler.candidate_dependencies candidate))
+      candidates
+  in
+  Rescript_compiler_driver.set_frozen_for_compile
+    (Build_session.compiler_session attempt.session)
+    (List.length ready >= 4 || has_dirty_dependency);
+  Compiler_scheduler.run
+    ~on_ast_invalidation:(fun path ->
+      Build_attempt.invalidate_parse_export attempt ~path)
+    ~poll:attempt.process_poll
     ~warning_state:(Build_session.warning_state attempt.session)
     ~compile_assets:prepared.compile_assets ~build_state:prepared.build_state
-    ~candidates:(Build_attempt.take_compile_candidates attempt)
+    ~candidates
     ~mark_compiled:(fun () -> attempt.compiled <- attempt.compiled + 1)
     ~mark_had_warnings:(fun () -> attempt.had_warnings <- true)
     ~progress:attempt.progress ~compile_step ~namespace_count
@@ -196,8 +218,9 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
     |> List.map (fun source ->
         Compiler_process.parse_job ~bsc ~build_dir:source.package.build_dir
           ~config:source.package.compile_config source.source.relative_path)
-    |> Compiler_process.run_jobs ?poll:attempt.process_poll
-         ~on_complete:parse_completed
+    |> Compiler_process.run_jobs
+         ~session:(Build_session.compiler_session attempt.session)
+         ?poll:attempt.process_poll ~on_complete:parse_completed
   in
   let affected_modules = Hashtbl.create (List.length sources) in
   let dependency_updates = ref [] in
@@ -228,6 +251,7 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
       if not changed_parse_failed then
         let dependencies path =
           Compiler_process.ast_dependencies
+            ~session:(Build_session.compiler_session attempt.session)
             ~build_dir:package.Package_plan.build_dir (Source.ast_path path)
         in
         let raw_dependencies =
@@ -319,9 +343,17 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     | Some previous ->
       Build_attempt.create_retained ~session:previous.session ~process_poll
         ~progress ~verbosity
-    | None ->
-      Build_attempt.create_full ~warning_state ~process_poll ~progress
-        ~verbosity
+    | None -> (
+      match request with
+      | Full_watch_attempt (Some previous) ->
+        Build_attempt.create_full_with_compiler_session
+          ~compiler_session:(Build_session.compiler_session previous.session)
+          ~warning_state ~process_poll ~progress ~verbosity
+      | One_shot_attempt | Initial_watch_attempt
+      | Full_watch_attempt None
+      | Retained_watch_attempt _ ->
+        Build_attempt.create_full ~warning_state ~process_poll ~progress
+          ~verbosity)
   in
   let parse_messages () = List.rev attempt.parse_messages in
   let parse_output messages =
@@ -445,10 +477,15 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     in
     Package_build.prepare_tree ~seen:visited ~package:root_package ~prepared
       ~watch ~attempt;
+    Build_attempt.start_parse_exports attempt;
+    if Sys.getenv_opt "REWATCH_ASYNC_AST_EXPORT" = Some "0" then
+      Build_attempt.finish_parse_exports attempt;
     Build_session.mark_freshness_initialized attempt.session;
     let parse_messages = parse_messages () in
     let parse_output = parse_output parse_messages in
-    if parse_failed parse_messages then raise (Parse_failure parse_output);
+    if parse_failed parse_messages then (
+      Build_attempt.finish_parse_exports attempt;
+      raise (Parse_failure parse_output));
     poll ();
     let namespace_count =
       try run_namespace_jobs attempt
@@ -470,6 +507,15 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
         run_scheduled_modules attempt prepared ~compile_step ~namespace_count;
         None
       with Build_failure output -> Some output
+    in
+    let compile_failure =
+      try
+        Build_attempt.finish_parse_exports attempt;
+        compile_failure
+      with error ->
+        Some
+          ("Failed to publish parser artifacts: " ^ Printexc.to_string error
+         ^ "\n")
     in
     Output.Progress.finish progress;
     let compile_seconds =

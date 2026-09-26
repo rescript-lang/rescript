@@ -18,6 +18,8 @@
 
 #### :rocket: New Feature
 
+- Use the OCaml rewatch build system with parallel in-process compiler workers as the default `rescript` executable; keep the Rust implementation available as `rescript-rust`. https://github.com/rescript-lang/rescript/pull/8653
+
 #### :bug: Bug fix
 
 - Make rewatch compile independent modules after an unrelated failure and recompile blocked dependents when a changed interface survives a failed implementation, including across full watcher rebuilds. https://github.com/rescript-lang/rescript/pull/8667
@@ -26,9 +28,15 @@
 
 #### :nail_care: Polish
 
+- Speed up OCaml rewatch builds that repeatedly open large signatures by reusing verified expanded signature graphs per compiler worker. https://github.com/rescript-lang/rescript/pull/8673
+- Reuse decoded standard-library interfaces and share prepared signature images across OCaml rewatch workers for faster clean builds. https://github.com/rescript-lang/rescript/pull/8673
+- Keep imported interfaces and expanded signature graphs in a project-owned compiler session across module jobs and watch edits in OCaml rewatch. https://github.com/rescript-lang/rescript/pull/8675
+- Capture text output in memory during OCaml rewatch compiler jobs and use typed graph checks for cached interfaces to reduce clean-build overhead. https://github.com/rescript-lang/rescript/pull/8675
 - Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662
 
 #### :house: Internal
+
+- Add an opt-in immutable representation of compiled interfaces for OCaml rewatch experiments (`REWATCH_FROZEN_VALUES=1`), allowing selective lookup without eagerly expanding imported signatures. https://github.com/rescript-lang/rescript/pull/8676
 
 # 13.0.0-alpha.6
 

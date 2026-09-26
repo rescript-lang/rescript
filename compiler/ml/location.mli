@@ -47,6 +47,12 @@ val print_loc : formatter -> t -> unit
 
 val prerr_warning : t -> Warnings.t -> unit
 
+type diagnostic = {severity: [`Error | `Warning]; location: t; message: string}
+
+val with_diagnostic_capture : (unit -> 'a) -> 'a * diagnostic list
+(** Capture located compiler diagnostics on the current domain while keeping
+    the ordinary formatted output unchanged. *)
+
 val warning_printer : (t -> formatter -> Warnings.t -> unit) ref
 (** Hook for intercepting warnings. *)
 

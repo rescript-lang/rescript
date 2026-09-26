@@ -41,6 +41,22 @@ let pivot_level = (2 * lowest_level) - 1
 
 (**** Some type creators ****)
 
+let allocation_capture_key = Domain.DLS.new_key (fun () -> None)
+
+let with_allocation_capture action =
+  let previous = Domain.DLS.get allocation_capture_key in
+  let captured = ref [] in
+  Domain.DLS.set allocation_capture_key (Some captured);
+  Fun.protect
+    (fun () ->
+      let result = action () in
+      (result, Array.of_list (List.rev !captured)))
+    ~finally:(fun () ->
+      Domain.DLS.set allocation_capture_key previous;
+      match previous with
+      | Some outer -> outer := !captured @ !outer
+      | None -> ())
+
 let reinit () =
   let state = Compiler_request_state.current () in
   match state.type_node_reset_id with
@@ -50,7 +66,11 @@ let reinit () =
 let newty2 level desc =
   let state = Compiler_request_state.current () in
   state.type_node_id <- state.type_node_id + 1;
-  {desc; level; id = state.type_node_id}
+  let ty = {desc; level; id = state.type_node_id} in
+  (match Domain.DLS.get allocation_capture_key with
+  | Some captured -> captured := ty :: !captured
+  | None -> ());
+  ty
 let newgenty desc = newty2 generic_level desc
 let newgenvar ?name () = newgenty (Tvar name)
 (*

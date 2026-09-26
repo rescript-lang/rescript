@@ -1,0 +1,3 @@
+(executable
+ (name frozen_type_graph_probe)
+ (libraries ml unix))

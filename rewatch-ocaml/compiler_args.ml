@@ -81,6 +81,16 @@ let gentype_dependency_args_from_paths (config : Config.t) dependencies =
         | None -> []
         | Some path -> ["-bs-gentype-dep-path"; dependency.name ^ "=" ^ path])
 
+let gentype_enabled (config : Config.t) =
+  config.gentype_args <> [] || List.mem "-bs-gentype" config.compiler_flags
+
+let binary_annotations_enabled (config : Config.t) =
+  Sys.getenv_opt "REWATCH_BIN_ANNOT" = Some "1" || gentype_enabled config
+
+let compatibility_copies_enabled config =
+  binary_annotations_enabled config
+  || Sys.getenv_opt "REWATCH_COMPAT_COPIES" = Some "1"
+
 let namespace_args (config : Config.t) module_name =
   match config.namespace with
   | Config.No_namespace -> []
@@ -110,6 +120,7 @@ let compiler_common_arguments ~(config : Config.t) ~runtime ~dependency_dirs
   @ List.concat_map (fun directory -> ["-I"; directory]) dependency_dirs
   @ compiler_flags ~source_maps:true ~watch ~gentype:true config
   @ gentype_dependency_args
+  @ (if binary_annotations_enabled config then [] else ["-bs-no-bin-annot"])
   @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
 
 let compiler_arguments_with_common ~(config : Config.t) ~common_args

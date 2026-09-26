@@ -1,0 +1,1 @@
+@gentype let answer: int

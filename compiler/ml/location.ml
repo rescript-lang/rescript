@@ -167,10 +167,37 @@ let default_warning_printer loc ppf w =
 
 let warning_printer = ref default_warning_printer
 
+type diagnostic = {severity: [`Error | `Warning]; location: t; message: string}
+
+let diagnostic_capture_key = Domain.DLS.new_key (fun () -> ref None)
+
+let with_diagnostic_capture action =
+  let slot = Domain.DLS.get diagnostic_capture_key in
+  let previous = !slot in
+  let captured = ref [] in
+  slot := Some captured;
+  Fun.protect
+    (fun () ->
+      let result = action () in
+      (result, List.rev !captured))
+    ~finally:(fun () -> slot := previous)
+
+let capture_diagnostic diagnostic =
+  match !(Domain.DLS.get diagnostic_capture_key) with
+  | None -> ()
+  | Some captured -> captured := diagnostic :: !captured
+
 let print_warning loc ppf w = !warning_printer loc ppf w
 
 let formatter_for_warnings = ref err_formatter
 let prerr_warning loc w =
+  if Warnings.is_active w then
+    capture_diagnostic
+      {
+        severity = (if Warnings.is_error w then `Error else `Warning);
+        location = loc;
+        message = Warnings.message w;
+      };
   let ppf =
     if Compiler_request_output.is_active () then
       Compiler_request_output.stderr_formatter ()
@@ -263,6 +290,7 @@ let rec default_error_reporter ?(custom_intro = None) ?(src = None) ppf
 let error_reporter = ref default_error_reporter
 
 let report_error ?(custom_intro = None) ?(src = None) ppf err =
+  capture_diagnostic {severity = `Error; location = err.loc; message = err.msg};
   !error_reporter ~custom_intro ~src ppf err
 
 let error_of_printer loc print x = errorf ~loc "%a@?" print x

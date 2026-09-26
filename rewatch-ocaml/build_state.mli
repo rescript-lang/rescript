@@ -58,5 +58,14 @@ val record_published_cmi :
   cmi_change ->
   unit
 
+val record_published_optimization :
+  ?dirty_propagation:(string, unit) Hashtbl.t ->
+  t ->
+  module_ ->
+  changed:bool ->
+  unit
+(** An optimization-metadata change can alter downstream JavaScript without
+    changing the exported interface. *)
+
 val record_successful_compile :
   compile_assets:Compile_assets.t -> module_ -> cmt_path:string -> unit

@@ -55,48 +55,52 @@ let setup_outcome_printer () = Lazy.force Res_outcome_printer.setup
 let setup_runtime_path path = Runtime_package.set_path path
 
 let process_file sourcefile ?kind ppf =
-  (* The input name must identify the source when writing the binary AST. *)
-  setup_outcome_printer ();
-  Error_message_utils_support.setup ();
-  let kind =
-    match kind with
-    | None ->
-      Ext_file_extensions.classify_input
-        (Ext_filename.get_extension_maybe sourcefile)
-    | Some kind -> kind
-  in
-  let res =
-    match kind with
-    | Res ->
-      let sourcefile = set_abs_input_name sourcefile in
-      Js_implementation.implementation
-        ~parser:
-          (Res_driver.parse_implementation
-             ~ignore_parse_errors:!((Clflags.current ()).ignore_parse_errors))
-        ppf sourcefile
-    | Resi ->
-      let sourcefile = set_abs_input_name sourcefile in
-      Js_implementation.interface
-        ~parser:
-          (Res_driver.parse_interface
-             ~ignore_parse_errors:!((Clflags.current ()).ignore_parse_errors))
-        ppf sourcefile
-    | Intf_ast -> Js_implementation.interface_mliast ppf sourcefile
-    (* The printer setup is done in the runtime depends on
+  Compiler_phase_trace.section "request.other" (fun () ->
+      (* The input name must identify the source when writing the binary AST. *)
+      setup_outcome_printer ();
+      Error_message_utils_support.setup ();
+      let kind =
+        match kind with
+        | None ->
+          Ext_file_extensions.classify_input
+            (Ext_filename.get_extension_maybe sourcefile)
+        | Some kind -> kind
+      in
+      let res =
+        match kind with
+        | Res ->
+          let sourcefile = set_abs_input_name sourcefile in
+          Js_implementation.implementation
+            ~parser:
+              (Res_driver.parse_implementation
+                 ~ignore_parse_errors:
+                   !((Clflags.current ()).ignore_parse_errors))
+            ppf sourcefile
+        | Resi ->
+          let sourcefile = set_abs_input_name sourcefile in
+          Js_implementation.interface
+            ~parser:
+              (Res_driver.parse_interface
+                 ~ignore_parse_errors:
+                   !((Clflags.current ()).ignore_parse_errors))
+            ppf sourcefile
+        | Intf_ast -> Js_implementation.interface_mliast ppf sourcefile
+        (* The printer setup is done in the runtime depends on
        the content of ast
     *)
-    | Impl_ast -> Js_implementation.implementation_mlast ppf sourcefile
-    | Mlmap ->
-      Location.set_input_name sourcefile;
-      Js_implementation.implementation_map ppf sourcefile
-    | Cmi ->
-      let cmi_sign = (Cmi_format.read_cmi sourcefile).cmi_sign in
-      let output = Compiler_request_output.stdout_formatter () in
-      Printtyp.signature output cmi_sign;
-      Format.pp_print_newline output ()
-    | Unknown -> Bsc_args.bad_arg ("don't know what to do with " ^ sourcefile)
-  in
-  res
+        | Impl_ast -> Js_implementation.implementation_mlast ppf sourcefile
+        | Mlmap ->
+          Location.set_input_name sourcefile;
+          Js_implementation.implementation_map ppf sourcefile
+        | Cmi ->
+          let cmi_sign = (Cmi_format.read_cmi sourcefile).cmi_sign in
+          let output = Compiler_request_output.stdout_formatter () in
+          Printtyp.signature output cmi_sign;
+          Format.pp_print_newline output ()
+        | Unknown ->
+          Bsc_args.bad_arg ("don't know what to do with " ^ sourcefile)
+      in
+      res)
 
 let reprint_source_file sourcefile =
   let kind =
@@ -542,7 +546,176 @@ let () =
   Ast_config.add_signature flags file_level_flags_handler;
   Ident.capture_request_baseline ()
 
-type result = {exit_code: int; stdout: string; stderr: string}
+type result = {
+  exit_code: int;
+  stdout: string;
+  stderr: string;
+  diagnostics: Location.diagnostic list;
+}
+type published_cmj = {
+  filename: string;
+  source: string option;
+  stats: Unix.stats;
+  fingerprint: Digest.t;
+  image: Js_cmj_format.frozen;
+}
+type published_ast = {stats: Unix.stats; result: Binary_ast.result}
+type published_semantic = {
+  stats: Unix.stats;
+  generation: int;
+  value: Cmt_format.cmt_infos;
+}
+type published_fingerprint = {
+  source: string option;
+  stats: Unix.stats;
+  fingerprint: Digest.t;
+}
+type 'a staged_artifact = {stats: Unix.stats; value: 'a}
+type staged_semantic = {
+  stats: Unix.stats;
+  value: Cmt_format.cmt_infos;
+  generation: int;
+}
+type module_result = {
+  interface_file: string;
+  interface_source: string option;
+  interface_stats: Unix.stats;
+  interface_fingerprint: Digest.t option;
+  interface_image: Frozen_values.t option;
+  optimization:
+    (string
+    * string option
+    * Unix.stats
+    * Digest.t
+    * Js_cmj_format.frozen option)
+    option;
+  semantic: unit -> Cmt_format.cmt_infos option;
+  diagnostics: Location.diagnostic list;
+  dependencies: string list;
+  generated_outputs: string list;
+}
+type session = {
+  dependencies: Env.dependency_cache;
+  frozen_enabled: bool Atomic.t;
+  use_frozen_for_compile: bool Atomic.t;
+  staging_lock: Mutex.t;
+  staged_cmis:
+    (string, (Digest.t * Cmi_format.cmi_infos) staged_artifact) Hashtbl.t;
+  staged_cmjs: (string, (Digest.t * Js_cmj_format.t) staged_artifact) Hashtbl.t;
+  published_cmjs: (string, published_cmj) Hashtbl.t;
+  cmi_fingerprints: (string, published_fingerprint) Hashtbl.t;
+  cmj_fingerprints: (string, published_fingerprint) Hashtbl.t;
+  staged_diagnostics: (string, Location.diagnostic list) Hashtbl.t;
+  staged_generated_outputs: (string, string list) Hashtbl.t;
+  staged_request_files: (string, string list) Hashtbl.t;
+  request_generations: (string, int) Hashtbl.t;
+  mutable next_request_generation: int;
+  published_results: (string, module_result) Hashtbl.t;
+  staged_asts: (string, Binary_ast.result staged_artifact) Hashtbl.t;
+  published_asts: (string, published_ast) Hashtbl.t;
+  staged_semantics: (string, staged_semantic) Hashtbl.t;
+  mutable staged_semantic_bytes: int;
+  mutable staged_semantic_generation: int;
+  published_semantics: (string, published_semantic) Hashtbl.t;
+  mutable semantic_bytes: int;
+  mutable semantic_generation: int;
+}
+
+let create_session () =
+  {
+    dependencies = Env.create_dependency_cache ();
+    frozen_enabled = Atomic.make true;
+    use_frozen_for_compile = Atomic.make true;
+    staging_lock = Mutex.create ();
+    staged_cmis = Hashtbl.create 32;
+    staged_cmjs = Hashtbl.create 32;
+    published_cmjs = Hashtbl.create 64;
+    cmi_fingerprints = Hashtbl.create 64;
+    cmj_fingerprints = Hashtbl.create 64;
+    staged_diagnostics = Hashtbl.create 64;
+    staged_generated_outputs = Hashtbl.create 64;
+    staged_request_files = Hashtbl.create 64;
+    request_generations = Hashtbl.create 64;
+    next_request_generation = 0;
+    published_results = Hashtbl.create 64;
+    staged_asts = Hashtbl.create 64;
+    published_asts = Hashtbl.create 64;
+    staged_semantics = Hashtbl.create 32;
+    staged_semantic_bytes = 0;
+    staged_semantic_generation = 0;
+    published_semantics = Hashtbl.create 32;
+    semantic_bytes = 0;
+    semantic_generation = 0;
+  }
+
+let set_frozen_for_compile session enabled =
+  Atomic.set session.use_frozen_for_compile enabled
+
+let set_session_frozen_enabled session enabled =
+  Atomic.set session.frozen_enabled enabled
+
+let session_frozen_enabled session =
+  Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "0"
+  && Atomic.get session.frozen_enabled
+
+let same_file_stats first second =
+  first.Unix.st_dev = second.Unix.st_dev
+  && first.Unix.st_ino = second.Unix.st_ino
+  && first.Unix.st_size = second.Unix.st_size
+  && first.Unix.st_mtime = second.Unix.st_mtime
+  && first.Unix.st_ctime = second.Unix.st_ctime
+
+let unit_name_of_artifact filename =
+  filename |> Filename.basename |> Filename.remove_extension
+  |> String.capitalize_ascii
+
+let lookup_session_cmj session name filename =
+  let entry =
+    Mutex.lock session.staging_lock;
+    Fun.protect
+      (fun () -> Hashtbl.find_opt session.published_cmjs name)
+      ~finally:(fun () -> Mutex.unlock session.staging_lock)
+  in
+  match entry with
+  | None -> None
+  | Some entry -> (
+    try
+      let selected = Compiler_request_state.canonical_output_path filename in
+      let checked = Option.value entry.source ~default:entry.filename in
+      if
+        Compiler_request_state.same_output_path selected entry.filename
+        && same_file_stats (Unix.stat checked) entry.stats
+      then Some (Js_cmj_format.view entry.image)
+      else None
+    with Sys_error _ | Unix.Unix_error _ -> None)
+
+let staged_ast_dependencies session ~path =
+  Mutex.lock session.staging_lock;
+  Fun.protect
+    (fun () ->
+      Hashtbl.find_opt session.staged_asts path
+      |> Option.map (fun (staged : Binary_ast.result staged_artifact) ->
+          Binary_ast.dependencies staged.value))
+    ~finally:(fun () -> Mutex.unlock session.staging_lock)
+
+let take_session_ast session filename =
+  let path = Compiler_request_state.resolve_path filename in
+  let entry =
+    Mutex.lock session.staging_lock;
+    Fun.protect
+      (fun () ->
+        let entry = Hashtbl.find_opt session.published_asts path in
+        Hashtbl.remove session.published_asts path;
+        entry)
+      ~finally:(fun () -> Mutex.unlock session.staging_lock)
+  in
+  match entry with
+  | None -> None
+  | Some entry -> (
+    try
+      if same_file_stats (Unix.stat path) entry.stats then Some entry.result
+      else None
+    with Sys_error _ | Unix.Unix_error _ -> None)
 
 let build_identity = Rescript_compiler_build_identity.value
 
@@ -596,55 +769,761 @@ let with_fresh_request_states ~cwd action =
                                                       Compiler_request_state
                                                       .with_fresh ~cwd action)))))))))))))
 
-let run_argv ?run_external ~cwd argv =
-  with_fresh_request_states ~cwd (fun () ->
-      reset_state ~new_request:true ();
-      Cmt_format.set_args argv;
-      let execute () =
-        try
-          Bsc_args.parse_exn ~argv (command_line_flags ()) anonymous ~usage;
-          0
-        with
-        | Request_exit code -> code
-        | Bsc_args.Help message ->
-          Compiler_request_output.write_stdout message;
-          0
-        | Res_driver.Already_reported -> 1
-        | Bsc_args.Bad msg ->
-          Format.fprintf (ppf ()) "%s@." msg;
-          2
-        | x ->
-          Location.report_exception (ppf ()) x;
-          2
-      in
-      let run_with_external_owner action =
-        match run_external with
-        | None -> action ()
-        | Some run_external ->
-          Ccomp.with_command_runner
-            (fun command ->
-              let status, stdout, stderr = run_external command in
-              Compiler_request_output.write_stdout stdout;
-              Format.pp_print_string (ppf ()) stderr;
-              status)
-            action
-      in
-      let exit_code, stdout, stderr =
-        Fun.protect
-          (fun () ->
-            Compiler_request_output.with_capture (fun () ->
-                Misc.Color.set_color_tag_handling
-                  (Compiler_request_output.stdout_formatter ());
-                Misc.Color.set_color_tag_handling
-                  (Compiler_request_output.stderr_formatter ());
-                run_with_external_owner execute))
-          ~finally:reset_state
-      in
-      {exit_code; stdout; stderr})
+let with_fresh_request_states_and_snapshot ~cwd action =
+  Fun.protect
+    (fun () -> with_fresh_request_states ~cwd action)
+    ~finally:Env.finalize_expanded_snapshot_cache
+
+let run_argv ?run_external ?frozen_override ~cwd argv =
+  let input = argv.(Array.length argv - 1) in
+  Env.with_frozen_values_setting ?enabled:frozen_override (fun () ->
+      Compiler_phase_trace.request ~cwd ~input (fun () ->
+          with_fresh_request_states_and_snapshot ~cwd (fun () ->
+              Compiler_phase_trace.section "request.reset" (fun () ->
+                  reset_state ~new_request:true ());
+              Cmt_format.set_args argv;
+              let execute () =
+                try
+                  let flags =
+                    Compiler_phase_trace.section "request.flags"
+                      command_line_flags
+                  in
+                  Compiler_phase_trace.section "request.dispatch" (fun () ->
+                      Bsc_args.parse_exn ~argv flags anonymous ~usage);
+                  0
+                with
+                | Request_exit code -> code
+                | Bsc_args.Help message ->
+                  Compiler_request_output.write_stdout message;
+                  0
+                | Res_driver.Already_reported -> 1
+                | Bsc_args.Bad msg ->
+                  Format.fprintf (ppf ()) "%s@." msg;
+                  2
+                | x ->
+                  Location.report_exception (ppf ()) x;
+                  2
+              in
+              let run_with_external_owner action =
+                match run_external with
+                | None -> action ()
+                | Some run_external ->
+                  Ccomp.with_command_runner
+                    (fun command ->
+                      let status, stdout, stderr = run_external command in
+                      Compiler_request_output.write_stdout stdout;
+                      Format.pp_print_string (ppf ()) stderr;
+                      status)
+                    action
+              in
+              let (exit_code, stdout, stderr), diagnostics =
+                Fun.protect
+                  (fun () ->
+                    Location.with_diagnostic_capture (fun () ->
+                        Compiler_request_output.with_capture (fun () ->
+                            Misc.Color.set_color_tag_handling
+                              (Compiler_request_output.stdout_formatter ());
+                            Misc.Color.set_color_tag_handling
+                              (Compiler_request_output.stderr_formatter ());
+                            run_with_external_owner execute)))
+                  ~finally:reset_state
+              in
+              {exit_code; stdout; stderr; diagnostics})))
 
 let run_request ~run_external ~cwd ~argv ~input =
   let logical_argv = Array.of_list ("bsc" :: (argv @ [input])) in
   run_argv ?run_external ~cwd logical_argv
+
+let run_request_with_frozen ~frozen_override ~run_external ~cwd ~argv ~input =
+  let logical_argv = Array.of_list ("bsc" :: (argv @ [input])) in
+  run_argv ?run_external ~frozen_override ~cwd logical_argv
+
+let remove_staged_semantic session filename =
+  match Hashtbl.find_opt session.staged_semantics filename with
+  | None -> ()
+  | Some entry ->
+    session.staged_semantic_bytes <-
+      session.staged_semantic_bytes - entry.stats.Unix.st_size;
+    Hashtbl.remove session.staged_semantics filename
+
+let stage_semantic session filename value =
+  try
+    let stats = Unix.stat filename in
+    remove_staged_semantic session filename;
+    if stats.Unix.st_size <= 4 * 1024 * 1024 then (
+      session.staged_semantic_generation <-
+        session.staged_semantic_generation + 1;
+      Hashtbl.replace session.staged_semantics filename
+        {stats; value; generation = session.staged_semantic_generation};
+      session.staged_semantic_bytes <-
+        session.staged_semantic_bytes + stats.Unix.st_size;
+      while
+        session.staged_semantic_bytes > 16 * 1024 * 1024
+        || Hashtbl.length session.staged_semantics > 64
+      do
+        let oldest =
+          Hashtbl.fold
+            (fun path (entry : staged_semantic) oldest ->
+              match oldest with
+              | Some (_, generation) when generation <= entry.generation ->
+                oldest
+              | _ -> Some (path, entry.generation))
+            session.staged_semantics None
+        in
+        match oldest with
+        | None -> assert false
+        | Some (path, _) -> remove_staged_semantic session path
+      done;
+      true)
+    else false
+  with Sys_error _ | Unix.Unix_error _ -> false
+
+let run_request_in_session session ~run_external ~cwd ~argv ~input =
+  let input_path =
+    if Filename.is_relative input then Filename.concat cwd input else input
+  in
+  let generation =
+    Mutex.lock session.staging_lock;
+    Fun.protect
+      (fun () ->
+        List.iter
+          (fun path ->
+            Hashtbl.remove session.staged_cmis path;
+            Hashtbl.remove session.staged_cmjs path;
+            Hashtbl.remove session.staged_asts path;
+            remove_staged_semantic session path)
+          (Hashtbl.find_opt session.staged_request_files input_path
+          |> Option.value ~default:[]);
+        Hashtbl.remove session.staged_request_files input_path;
+        Hashtbl.remove session.staged_diagnostics input_path;
+        Hashtbl.remove session.staged_generated_outputs input_path;
+        session.next_request_generation <- session.next_request_generation + 1;
+        let generation = session.next_request_generation in
+        Hashtbl.replace session.request_generations input_path generation;
+        generation)
+      ~finally:(fun () -> Mutex.unlock session.staging_lock)
+  in
+  Env.with_dependency_cache session.dependencies (fun () ->
+      let frozen_enabled = session_frozen_enabled session in
+      let cmi_enabled =
+        frozen_enabled && Sys.getenv_opt "REWATCH_SESSION_CMI" <> Some "0"
+      in
+      let cmj_enabled =
+        frozen_enabled && Sys.getenv_opt "REWATCH_SESSION_CMJ" <> Some "0"
+      in
+      let ast_enabled =
+        frozen_enabled && Sys.getenv_opt "REWATCH_SESSION_AST" <> Some "0"
+      in
+      let use_session_cmj_lookup =
+        cmj_enabled && Atomic.get session.use_frozen_for_compile
+      in
+      let compiled_cmi = ref None in
+      let compiled_cmj = ref None in
+      let parsed_ast = ref None in
+      let semantic = ref None in
+      let generated_outputs = ref [] in
+      let run () =
+        let use_frozen =
+          frozen_enabled
+          && (List.mem "-bs-ast" argv
+             || Atomic.get session.use_frozen_for_compile)
+        in
+        run_request_with_frozen ~frozen_override:use_frozen ~run_external ~cwd
+          ~argv ~input
+      in
+      let run () =
+        if cmi_enabled then
+          Env.with_compiled_cmi_capture
+            (fun filename crc cmi ->
+              compiled_cmi :=
+                Some (Compiler_request_state.resolve_path filename, crc, cmi))
+            run
+        else run ()
+      in
+      let run () =
+        if cmj_enabled then
+          Js_cmj_format.with_capture
+            (fun filename fingerprint cmj ->
+              compiled_cmj :=
+                Some
+                  ( Compiler_request_state.resolve_path filename,
+                    fingerprint,
+                    cmj ))
+            run
+        else run ()
+      in
+      let run () =
+        if ast_enabled then
+          Binary_ast.with_capture
+            (fun filename ast ->
+              parsed_ast :=
+                Some (Compiler_request_state.resolve_path filename, ast))
+            run
+        else run ()
+      in
+      let run () =
+        Cmt_format.with_capture
+          (fun filename cmt ->
+            semantic := Some (Compiler_request_state.resolve_path filename, cmt))
+          run
+      in
+      let run () =
+        Gentype_main.with_generated_output_capture
+          (fun filename ->
+            generated_outputs :=
+              Compiler_request_state.resolve_path filename :: !generated_outputs)
+          run
+      in
+      let result =
+        let run () =
+          if use_session_cmj_lookup then
+            Js_cmj_load.with_session_lookup (lookup_session_cmj session) run
+          else run ()
+        in
+        if ast_enabled then
+          Binary_ast.with_lookup (take_session_ast session) run
+        else run ()
+      in
+      (match result.exit_code with
+      | code when code <> 0 -> ()
+      | _ ->
+        Mutex.lock session.staging_lock;
+        Fun.protect
+          (fun () ->
+            if
+              Hashtbl.find_opt session.request_generations input_path
+              = Some generation
+            then (
+              let files = ref [] in
+              let record filename = files := filename :: !files in
+              let stage table filename value =
+                try
+                  let stats = Unix.stat filename in
+                  record filename;
+                  Hashtbl.replace table filename {stats; value}
+                with Sys_error _ | Unix.Unix_error _ -> ()
+              in
+              if
+                Option.is_some !compiled_cmi
+                || Option.is_some !compiled_cmj
+                || Option.is_some !semantic
+              then
+                Hashtbl.replace session.staged_diagnostics input_path
+                  result.diagnostics;
+              Hashtbl.replace session.staged_generated_outputs input_path
+                !generated_outputs;
+              Option.iter
+                (fun (filename, crc, cmi) ->
+                  stage session.staged_cmis filename (crc, cmi))
+                !compiled_cmi;
+              Option.iter
+                (fun (filename, fingerprint, cmj) ->
+                  stage session.staged_cmjs filename (fingerprint, cmj))
+                !compiled_cmj;
+              Option.iter
+                (fun (filename, ast) -> stage session.staged_asts filename ast)
+                !parsed_ast;
+              Option.iter
+                (fun (filename, cmt) ->
+                  if stage_semantic session filename cmt then record filename)
+                !semantic;
+              Hashtbl.replace session.staged_request_files input_path !files))
+          ~finally:(fun () -> Mutex.unlock session.staging_lock));
+      result)
+
+let validated_stage source (staged : 'a staged_artifact) =
+  try
+    if same_file_stats (Unix.stat source) staged.stats then Some staged.value
+    else None
+  with Sys_error _ | Unix.Unix_error _ -> None
+
+let staged_value session table source =
+  let staged =
+    Mutex.lock session.staging_lock;
+    Fun.protect
+      (fun () -> Hashtbl.find_opt table source)
+      ~finally:(fun () -> Mutex.unlock session.staging_lock)
+  in
+  Option.bind staged (validated_stage source)
+
+let stage_session_cmi session ~source ~destination =
+  match staged_value session session.staged_cmis source with
+  | None -> false
+  | Some (crc, cmi) ->
+    if
+      Env.publish_pending_compiled_cmi session.dependencies ~source ~destination
+        ~crc cmi
+    then (
+      Atomic.set session.use_frozen_for_compile true;
+      let stats = Unix.stat source in
+      Mutex.lock session.staging_lock;
+      Fun.protect
+        (fun () ->
+          Hashtbl.replace session.cmi_fingerprints destination
+            {source = Some source; stats; fingerprint = crc})
+        ~finally:(fun () -> Mutex.unlock session.staging_lock);
+      true)
+    else false
+
+let stage_session_cmj session ~source ~destination =
+  match staged_value session session.staged_cmjs source with
+  | None -> false
+  | Some (fingerprint, cmj) ->
+    Atomic.set session.use_frozen_for_compile true;
+    let stats = Unix.stat source in
+    let image = Js_cmj_format.freeze cmj in
+    Mutex.lock session.staging_lock;
+    Fun.protect
+      (fun () ->
+        Hashtbl.replace session.cmj_fingerprints destination
+          {source = Some source; stats; fingerprint};
+        let name = unit_name_of_artifact destination in
+        Hashtbl.replace session.published_cmjs name
+          {
+            filename = Compiler_request_state.canonical_output_path destination;
+            source = Some source;
+            stats;
+            fingerprint;
+            image;
+          })
+      ~finally:(fun () -> Mutex.unlock session.staging_lock);
+    true
+
+let discard_pending_session_artifacts session ~interface_file ~optimization_file
+    =
+  Env.discard_pending_compiled_cmi session.dependencies ~filename:interface_file;
+  Mutex.lock session.staging_lock;
+  Fun.protect
+    (fun () ->
+      (match Hashtbl.find_opt session.published_results interface_file with
+      | Some result when Option.is_some result.interface_source ->
+        Hashtbl.remove session.published_results interface_file
+      | Some _ | None -> ());
+      let discard table filename =
+        match Hashtbl.find_opt table filename with
+        | Some {source = Some _; stats = _; fingerprint = _} ->
+          Hashtbl.remove table filename
+        | Some _ | None -> ()
+      in
+      discard session.cmi_fingerprints interface_file;
+      Option.iter
+        (fun filename ->
+          discard session.cmj_fingerprints filename;
+          let name = unit_name_of_artifact filename in
+          match Hashtbl.find_opt session.published_cmjs name with
+          | Some
+              {
+                filename = published;
+                source = Some _;
+                stats = _;
+                fingerprint = _;
+                image = _;
+              }
+            when Compiler_request_state.same_output_path published filename ->
+            Hashtbl.remove session.published_cmjs name
+          | Some _ | None -> ())
+        optimization_file)
+    ~finally:(fun () -> Mutex.unlock session.staging_lock)
+
+let publish_session_cmi session ~retain ~source ~destination =
+  let staged =
+    Mutex.lock session.staging_lock;
+    Fun.protect
+      (fun () ->
+        let staged = Hashtbl.find_opt session.staged_cmis source in
+        Hashtbl.remove session.staged_cmis source;
+        staged)
+      ~finally:(fun () -> Mutex.unlock session.staging_lock)
+  in
+  Option.bind staged (validated_stage source)
+  |> Option.iter (fun (crc, cmi) ->
+      let stats = Unix.stat destination in
+      Mutex.lock session.staging_lock;
+      Fun.protect
+        (fun () ->
+          Hashtbl.replace session.cmi_fingerprints destination
+            {source = None; stats; fingerprint = crc})
+        ~finally:(fun () -> Mutex.unlock session.staging_lock);
+      if retain then
+        Env.publish_compiled_cmi session.dependencies ~filename:destination ~crc
+          cmi)
+
+let publish_session_cmj session ~retain ~source ~destination =
+  let staged =
+    Mutex.lock session.staging_lock;
+    Fun.protect
+      (fun () ->
+        let staged = Hashtbl.find_opt session.staged_cmjs source in
+        Hashtbl.remove session.staged_cmjs source;
+        staged)
+      ~finally:(fun () -> Mutex.unlock session.staging_lock)
+  in
+  Option.bind staged (validated_stage source)
+  |> Option.iter (fun (fingerprint, cmj) ->
+      let stats = Unix.stat destination in
+      let name = unit_name_of_artifact destination in
+      let pending_image =
+        Mutex.lock session.staging_lock;
+        Fun.protect
+          (fun () ->
+            match Hashtbl.find_opt session.published_cmjs name with
+            | Some entry
+              when entry.source = Some source
+                   && entry.fingerprint = fingerprint
+                   && Compiler_request_state.same_output_path entry.filename
+                        destination ->
+              Some entry.image
+            | Some _ | None -> None)
+          ~finally:(fun () -> Mutex.unlock session.staging_lock)
+      in
+      let image =
+        if retain then
+          Some
+            (match pending_image with
+            | Some image -> image
+            | None -> Js_cmj_format.freeze cmj)
+        else None
+      in
+      Mutex.lock session.staging_lock;
+      Fun.protect
+        (fun () ->
+          Hashtbl.replace session.cmj_fingerprints destination
+            {source = None; stats; fingerprint};
+          Option.iter
+            (fun image ->
+              Hashtbl.replace session.published_cmjs name
+                {
+                  filename =
+                    Compiler_request_state.canonical_output_path destination;
+                  source = None;
+                  stats;
+                  fingerprint;
+                  image;
+                })
+            image)
+        ~finally:(fun () -> Mutex.unlock session.staging_lock))
+
+type fingerprint_kind = Interface | Optimization
+
+let published_fingerprint session ~kind ~filename =
+  let entry =
+    Mutex.lock session.staging_lock;
+    Fun.protect
+      (fun () ->
+        let table =
+          match kind with
+          | Interface -> session.cmi_fingerprints
+          | Optimization -> session.cmj_fingerprints
+        in
+        Hashtbl.find_opt table filename)
+      ~finally:(fun () -> Mutex.unlock session.staging_lock)
+  in
+  match entry with
+  | None -> None
+  | Some entry -> (
+    try
+      let checked = Option.value entry.source ~default:filename in
+      if same_file_stats (Unix.stat checked) entry.stats then
+        Some entry.fingerprint
+      else None
+    with Sys_error _ | Unix.Unix_error _ -> None)
+
+let publish_session_ast session ~source =
+  let staged =
+    Mutex.lock session.staging_lock;
+    Fun.protect
+      (fun () ->
+        let staged = Hashtbl.find_opt session.staged_asts source in
+        Hashtbl.remove session.staged_asts source;
+        staged)
+      ~finally:(fun () -> Mutex.unlock session.staging_lock)
+  in
+  Option.bind staged (validated_stage source)
+  |> Option.iter (fun result ->
+      let stats = Unix.stat source in
+      Mutex.lock session.staging_lock;
+      Fun.protect
+        (fun () ->
+          if Hashtbl.length session.published_asts >= 2048 then
+            Hashtbl.clear session.published_asts;
+          Hashtbl.replace session.published_asts source {stats; result})
+        ~finally:(fun () -> Mutex.unlock session.staging_lock))
+
+let publish_session_semantic session ~retain ~source ~destination =
+  let staged =
+    Mutex.lock session.staging_lock;
+    Fun.protect
+      (fun () ->
+        let staged = Hashtbl.find_opt session.staged_semantics source in
+        remove_staged_semantic session source;
+        staged)
+      ~finally:(fun () -> Mutex.unlock session.staging_lock)
+  in
+  if retain then
+    Option.bind staged (fun entry ->
+        validated_stage source {stats = entry.stats; value = entry.value})
+    |> Option.iter (fun value ->
+        let stats = Unix.stat destination in
+        if stats.Unix.st_size <= 4 * 1024 * 1024 then (
+          Mutex.lock session.staging_lock;
+          Fun.protect
+            (fun () ->
+              let previous =
+                Hashtbl.find_opt session.published_semantics destination
+              in
+              Option.iter
+                (fun (entry : published_semantic) ->
+                  session.semantic_bytes <-
+                    session.semantic_bytes - entry.stats.st_size)
+                previous;
+              session.semantic_generation <- session.semantic_generation + 1;
+              Hashtbl.replace session.published_semantics destination
+                {stats; generation = session.semantic_generation; value};
+              session.semantic_bytes <- session.semantic_bytes + stats.st_size;
+              while
+                session.semantic_bytes > 16 * 1024 * 1024
+                || Hashtbl.length session.published_semantics > 64
+              do
+                let oldest =
+                  Hashtbl.fold
+                    (fun path (entry : published_semantic) oldest ->
+                      match oldest with
+                      | Some (_, generation) when generation <= entry.generation
+                        ->
+                        oldest
+                      | _ -> Some (path, entry.generation))
+                    session.published_semantics None
+                in
+                match oldest with
+                | None -> assert false
+                | Some (path, _) ->
+                  let entry = Hashtbl.find session.published_semantics path in
+                  session.semantic_bytes <-
+                    session.semantic_bytes - entry.stats.st_size;
+                  Hashtbl.remove session.published_semantics path
+              done)
+            ~finally:(fun () -> Mutex.unlock session.staging_lock)))
+
+let semantic_result session ~filename =
+  let entry =
+    Mutex.lock session.staging_lock;
+    Fun.protect
+      (fun () -> Hashtbl.find_opt session.published_semantics filename)
+      ~finally:(fun () -> Mutex.unlock session.staging_lock)
+  in
+  match entry with
+  | None -> None
+  | Some entry -> (
+    try
+      if same_file_stats (Unix.stat filename) entry.stats then
+        Some
+          (Marshal.from_bytes (Marshal.to_bytes entry.value []) 0
+            : Cmt_format.cmt_infos)
+      else None
+    with Sys_error _ | Unix.Unix_error _ -> None)
+
+let stage_module_result session ~input ~interface_source ~interface_file
+    ~optimization_source ~optimization_file ~semantic_source ~dependencies
+    ~generated_outputs =
+  let interface_stats = Unix.stat interface_source in
+  let interface_image =
+    Env.published_compiled_cmi session.dependencies ~filename:interface_file
+    |> Option.map snd
+  in
+  let interface_fingerprint =
+    published_fingerprint session ~kind:Interface ~filename:interface_file
+  in
+  let optimization =
+    match (optimization_source, optimization_file) with
+    | Some source, Some filename -> (
+      let stats = Unix.stat source in
+      match published_fingerprint session ~kind:Optimization ~filename with
+      | None -> None
+      | Some fingerprint ->
+        let name = unit_name_of_artifact filename in
+        let image =
+          Mutex.lock session.staging_lock;
+          Fun.protect
+            (fun () ->
+              match Hashtbl.find_opt session.published_cmjs name with
+              | Some entry
+                when entry.fingerprint = fingerprint
+                     && same_file_stats entry.stats stats ->
+                Some entry.image
+              | Some _ | None -> None)
+            ~finally:(fun () -> Mutex.unlock session.staging_lock)
+        in
+        Some (filename, Some source, stats, fingerprint, image))
+    | None, None | None, Some _ | Some _, None -> None
+  in
+  let semantic () =
+    Option.bind semantic_source (fun source ->
+        let staged =
+          Mutex.lock session.staging_lock;
+          Fun.protect
+            (fun () -> Hashtbl.find_opt session.staged_semantics source)
+            ~finally:(fun () -> Mutex.unlock session.staging_lock)
+        in
+        Option.bind staged (fun staged ->
+            try
+              if same_file_stats (Unix.stat source) staged.stats then
+                Some
+                  (Marshal.from_bytes (Marshal.to_bytes staged.value []) 0
+                    : Cmt_format.cmt_infos)
+              else None
+            with Sys_error _ | Unix.Unix_error _ -> None))
+  in
+  Mutex.lock session.staging_lock;
+  Fun.protect
+    (fun () ->
+      let diagnostics =
+        Hashtbl.find_opt session.staged_diagnostics input
+        |> Option.value ~default:[]
+      in
+      let captured_outputs =
+        Hashtbl.find_opt session.staged_generated_outputs input
+        |> Option.value ~default:[]
+      in
+      let result =
+        {
+          interface_file;
+          interface_source = Some interface_source;
+          interface_stats;
+          interface_fingerprint;
+          interface_image;
+          optimization;
+          semantic;
+          diagnostics;
+          dependencies;
+          generated_outputs =
+            List.sort_uniq String.compare (generated_outputs @ captured_outputs);
+        }
+      in
+      Hashtbl.replace session.published_results interface_file result)
+    ~finally:(fun () -> Mutex.unlock session.staging_lock)
+
+let publish_module_result session ~input ~interface_file ~optimization_file
+    ~semantic_file ~dependencies ~generated_outputs =
+  let interface_stats = Unix.stat interface_file in
+  let interface_image =
+    Env.published_compiled_cmi session.dependencies ~filename:interface_file
+    |> Option.map snd
+  in
+  Mutex.lock session.staging_lock;
+  Fun.protect
+    (fun () ->
+      let valid_fingerprint (table : (string, published_fingerprint) Hashtbl.t)
+          path stats =
+        match Hashtbl.find_opt table path with
+        | Some entry when same_file_stats entry.stats stats ->
+          Some entry.fingerprint
+        | _ -> None
+      in
+      let interface_fingerprint =
+        valid_fingerprint session.cmi_fingerprints interface_file
+          interface_stats
+      in
+      let optimization =
+        Option.bind optimization_file (fun path ->
+            try
+              let stats = Unix.stat path in
+              Option.map
+                (fun fingerprint ->
+                  let name = unit_name_of_artifact path in
+                  let image =
+                    match Hashtbl.find_opt session.published_cmjs name with
+                    | Some entry
+                      when same_file_stats entry.stats stats
+                           && entry.fingerprint = fingerprint ->
+                      Some entry.image
+                    | _ -> None
+                  in
+                  (path, None, stats, fingerprint, image))
+                (valid_fingerprint session.cmj_fingerprints path stats)
+            with Sys_error _ | Unix.Unix_error _ -> None)
+      in
+      let semantic () =
+        Option.bind semantic_file (fun filename ->
+            semantic_result session ~filename)
+      in
+      let diagnostics =
+        Hashtbl.find_opt session.staged_diagnostics input
+        |> Option.value ~default:[]
+      in
+      Hashtbl.remove session.staged_diagnostics input;
+      let generated_outputs =
+        let captured =
+          Hashtbl.find_opt session.staged_generated_outputs input
+          |> Option.value ~default:[]
+        in
+        Hashtbl.remove session.staged_generated_outputs input;
+        List.sort_uniq String.compare (generated_outputs @ captured)
+        |> List.filter Sys.file_exists
+      in
+      let result =
+        {
+          interface_file;
+          interface_source = None;
+          interface_stats;
+          interface_fingerprint;
+          interface_image;
+          optimization;
+          semantic;
+          diagnostics;
+          dependencies;
+          generated_outputs;
+        }
+      in
+      Hashtbl.replace session.published_results interface_file result)
+    ~finally:(fun () -> Mutex.unlock session.staging_lock)
+
+let result_interface_is_current (result : module_result) =
+  try
+    same_file_stats
+      (Unix.stat
+         (Option.value result.interface_source ~default:result.interface_file))
+      result.interface_stats
+  with Sys_error _ | Unix.Unix_error _ -> false
+
+let module_result session ~interface_file =
+  let result =
+    Mutex.lock session.staging_lock;
+    Fun.protect
+      (fun () -> Hashtbl.find_opt session.published_results interface_file)
+      ~finally:(fun () -> Mutex.unlock session.staging_lock)
+  in
+  match result with
+  | Some result when result_interface_is_current result -> Some result
+  | Some _ | None -> None
+
+let interface_fingerprint (result : module_result) =
+  result.interface_fingerprint
+let optimization_fingerprint (result : module_result) =
+  Option.map (fun (_, _, _, fingerprint, _) -> fingerprint) result.optimization
+
+let interface_signature (result : module_result) =
+  if result_interface_is_current result then
+    Option.map
+      (fun image ->
+        Frozen_values.copy_signature (Frozen_values.create_view image))
+      result.interface_image
+  else None
+
+let optimization_metadata (result : module_result) =
+  match result.optimization with
+  | None -> None
+  | Some (path, source, stats, _, image) -> (
+    try
+      if same_file_stats (Unix.stat (Option.value source ~default:path)) stats
+      then Option.map Js_cmj_format.view image
+      else None
+    with Sys_error _ | Unix.Unix_error _ -> None)
+
+let typed_semantic (result : module_result) = result.semantic ()
+
+let result_diagnostics (result : module_result) = result.diagnostics
+let result_dependencies (result : module_result) = result.dependencies
+let result_generated_outputs (result : module_result) = result.generated_outputs
 
 let run argv =
   let result = run_argv ~cwd:(Sys.getcwd ()) argv in

@@ -56,7 +56,9 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
            Compiler_process.parse_job ~bsc:prepared.compiler_context.bsc_path
              ~build_dir ~config path)
          parse_paths_to_run
-      |> Compiler_process.run_jobs ?poll:attempt.process_poll)
+      |> Compiler_process.run_jobs
+           ~session:(Build_session.compiler_session attempt.session)
+           ?poll:attempt.process_poll)
     @ (dirty_parse_paths
       |> List.filter_map (fun path ->
           Hashtbl.find_opt attempt.preliminary_parses
@@ -87,14 +89,16 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
         let published_ast =
           Build_artifacts.published_ast_path ~ocaml_dir path
         in
-        File_util.copy_existing_file ~ensure_parent:false
-          (Filename.concat build_dir ast)
-          published_ast;
-        Compile_assets.refresh_ast compile_assets ~source:absolute_path
-          ~path:published_ast;
-        File_util.copy_existing_file ~ensure_parent:false
-          (Filename.concat config.root path)
-          (Filename.concat ocaml_dir (Filename.basename path));
+        if Compiler_args.compatibility_copies_enabled config then
+          File_util.copy_existing_file ~ensure_parent:false
+            (Filename.concat config.root path)
+            (Filename.concat ocaml_dir (Filename.basename path));
+        let staged_ast = Filename.concat build_dir ast in
+        Rescript_compiler_driver.publish_session_ast
+          (Build_session.compiler_session attempt.session)
+          ~source:staged_ast;
+        Build_attempt.add_parse_export attempt ~staged_ast ~published_ast
+          ~source:absolute_path ~compile_assets;
         if is_local && stderr <> "" then
           Build_session.mark_parse_pending attempt.session pending_path
         else Build_session.clear_parse_pending attempt.session pending_path

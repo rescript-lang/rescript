@@ -79,6 +79,16 @@ type t = {
   case: Ext_js_file_kind.case;
 }
 
+type frozen
+
+val freeze : t -> frozen
+
+val view : frozen -> t
+(** [view] creates request-owned arrays and Lambda identifiers. The frozen
+    image shares only immutable metadata across compiler domains. *)
+
+val with_capture : (string -> Digest.t -> t -> unit) -> (unit -> 'a) -> 'a
+
 val make :
   values:cmj_value Map_string.t ->
   hoisted_exports:hoisted_export list ->

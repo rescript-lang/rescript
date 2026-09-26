@@ -27,15 +27,58 @@
    make sure that the distributed files are platform independent
 *)
 
+let session_lookup_key = Domain.DLS.new_key (fun () -> None)
+
+let with_session_lookup lookup action =
+  let previous = Domain.DLS.get session_lookup_key in
+  Domain.DLS.set session_lookup_key (Some lookup);
+  Fun.protect action ~finally:(fun () ->
+      Domain.DLS.set session_lookup_key previous)
+
 let load_unit_with_file unit_name : Js_cmj_format.cmj_load_info =
   let file = unit_name ^ Literals.suffix_cmj in
-  match Config_util.find_opt file with
-  | Some f ->
+  let selected =
+    match Domain.DLS.get session_lookup_key with
+    | None ->
+      Option.map (fun filename -> (filename, None)) (Config_util.find_opt file)
+    | Some lookup ->
+      let lower_file = Ext_string.uncapitalize_ascii file in
+      let rec find = function
+        | [] -> None
+        | directory :: rest -> (
+          let lower = Filename.concat directory lower_file in
+          let exact = Filename.concat directory file in
+          match lookup unit_name lower with
+          | Some table -> Some (lower, Some table)
+          | None -> (
+            match lookup unit_name exact with
+            | Some table ->
+              if
+                Compiler_request_state.is_regular_file lower
+                && Compiler_request_state.has_exact_directory_entry lower
+              then Some (lower, None)
+              else Some (exact, Some table)
+            | None ->
+              if Compiler_request_state.is_regular_file lower then
+                Some (lower, None)
+              else if Compiler_request_state.is_regular_file exact then
+                Some (exact, None)
+              else find rest))
+      in
+      find (Config.get_load_path ())
+  in
+  match selected with
+  | Some (f, session_table) ->
     {
       package_path =
         (* hacking relying on the convention of pkg/lib/ocaml/xx.cmj*)
         Filename.dirname (Filename.dirname (Filename.dirname f));
-      cmj_table = Js_cmj_format.from_file f;
+      cmj_table =
+        (match session_table with
+        | Some table ->
+          Compiler_phase_trace.dependency "dependency.session_cmj_lookup"
+            (fun () -> table)
+        | None -> Js_cmj_format.from_file f);
     }
   | None -> Bs_exception.error (Cmj_not_found unit_name)
 

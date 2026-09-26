@@ -91,6 +91,13 @@ if (mochaTest) {
     cwd: commonjsTestDir,
     stdio: "inherit",
   });
+  // Runtime annotation tests can rebuild its implicit interfaces after this
+  // project was last compiled. Rebuild the test project's own CMI files before
+  // it consumes the current runtime and Belt artifacts.
+  await execClean([], {
+    cwd: beltTestDir,
+    stdio: "inherit",
+  });
   await execClean([], {
     cwd: beltPackageDir,
     stdio: "inherit",
@@ -146,6 +153,9 @@ if (mochaTest) {
 
 if (buildTest) {
   console.log("Doing build_tests");
+  // Artifact layout fixtures inspect the private lib/bs JavaScript and source
+  // mirrors. Ordinary compiler projects use the faster default layout.
+  const compatibilityEnv = { ...process.env, REWATCH_COMPAT_COPIES: "1" };
   const files = fs.readdirSync(buildTestDir);
 
   let hasError = false;
@@ -159,7 +169,10 @@ if (buildTest) {
       console.warn(`input.js does not exist in ${testDir}`);
     } else {
       // note existsSync test already ensure that it is a directory
-      const out = await node("input.js", [], { cwd: testDir });
+      const out = await node("input.js", [], {
+        cwd: testDir,
+        env: compatibilityEnv,
+      });
       process.stdout.write(out.stdout);
 
       if (out.status === 0) {
@@ -185,6 +198,18 @@ if (runtimeDocstrings) {
   } else {
     console.log("Running runtime docstrings tests");
 
+    // The extractor reads binary annotations from runtime and Belt. Ordinary
+    // OCaml Rewatch builds omit them, so build these inputs in annotation mode
+    // before extracting examples.
+    const annotationEnv = { ...process.env, REWATCH_BIN_ANNOT: "1" };
+    for (const packageName of ["runtime", "belt"]) {
+      await execBuild([], {
+        cwd: path.join(projectDir, "packages", "@rescript", packageName),
+        env: annotationEnv,
+        stdio: "inherit",
+      });
+    }
+
     const generated_mocha_test_res = path.join(
       docstringTestDir,
       "generated_mocha_test.res",
@@ -201,6 +226,7 @@ if (runtimeDocstrings) {
 
     await execBuild([], {
       cwd: docstringTestDir,
+      env: annotationEnv,
       stdio: "inherit",
     });
 
@@ -213,6 +239,7 @@ if (runtimeDocstrings) {
     // Build again to check if generated_mocha_test.res has syntax or type erros
     await execBuild([], {
       cwd: docstringTestDir,
+      env: annotationEnv,
       stdio: "inherit",
     });
 

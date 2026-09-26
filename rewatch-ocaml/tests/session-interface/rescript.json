@@ -1,0 +1,7 @@
+{
+  "name": "rewatch-ocaml-session-interface",
+  "sources": "src",
+  "compiler-flags": ["-bs-cross-module-opt"],
+  "package-specs": {"module": "esmodule", "in-source": true},
+  "suffix": ".mjs"
+}

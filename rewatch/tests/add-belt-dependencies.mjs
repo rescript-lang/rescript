@@ -3,7 +3,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-const testrepo = path.join(import.meta.dirname, "..", "testrepo");
+const testrepo = process.argv[2] ?? path.join(import.meta.dirname, "..", "testrepo");
 const configs = [
   path.join(testrepo, "node_modules", "rescript-nodejs", "rescript.json"),
   path.join(

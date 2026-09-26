@@ -23,6 +23,7 @@ type cycle_cache =
   | Known_cycle of Module_graph.cycle_info option
 
 type t = {
+  compiler_session: Rescript_compiler_driver.session;
   global_modules: (string, Module_graph.module_node) Hashtbl.t;
   namespace_maps: (string, Module_graph.namespace_map) Hashtbl.t;
   namespace_maps_by_name: (string, Module_graph.namespace_map list) Hashtbl.t;
@@ -37,8 +38,9 @@ type t = {
   warning_state: Warning_state.t;
 }
 
-let create ~warning_state =
+let create_with_compiler_session ~compiler_session ~warning_state =
   {
+    compiler_session;
     global_modules = Hashtbl.create 64;
     namespace_maps = Hashtbl.create 16;
     namespace_maps_by_name = Hashtbl.create 16;
@@ -52,6 +54,11 @@ let create ~warning_state =
     compiler_info_state = Needs_publication;
     warning_state;
   }
+
+let create ~warning_state =
+  create_with_compiler_session
+    ~compiler_session:(Rescript_compiler_driver.create_session ())
+    ~warning_state
 
 let is_ready session =
   match session.readiness with
@@ -146,3 +153,4 @@ let set_public_outputs session root outputs =
 let iter_public_outputs session f = Hashtbl.iter f session.public_outputs
 
 let warning_state session = session.warning_state
+let compiler_session session = session.compiler_session

@@ -64,11 +64,13 @@ file _build/default/rewatch-ocaml/rescript_ocaml.exe
 ```
 
 Build and watch requests compile on a bounded pool of OCaml domains by
-default. The main domain schedules dependencies and publishes artifacts;
-compiler workers parse and compile independent modules. The worker count is
-the lesser of eight and one fewer than the available CPU count, with a minimum
-of one. Set `REWATCH_COMPILER_DOMAINS` to override it (one through the
-scheduler's platform bound, at least twelve). The heuristic is provisional.
+default. The main domain schedules dependencies and records build state;
+compiler workers parse and compile independent modules. One export domain can
+copy independent implementation artifacts while compiler jobs continue. The
+compiler worker count is the lesser of eight and one fewer than the available
+CPU count, with a minimum of one. Set `REWATCH_COMPILER_DOMAINS` to override it
+(one through the scheduler's platform bound, at least twelve). The heuristic
+is provisional.
 PPXs and hooks remain external processes.
 
 When running outside this repository's normal Makefile environment, supply
@@ -128,9 +130,39 @@ orchestration and aggregate dispatch, while `build_report.ml` owns presentation.
 `build_preparation.ml` consumes the prepared packages to initialize compiler
 context, clean stale assets, and run the preliminary parse; `module_graph.ml`
 owns dependency resolution, graph-node identities, and cycle analysis.
+
+The default compiler session passes newly
+parsed ASTs, dependency lists, frozen interfaces, and cross-module optimization
+metadata directly between jobs. Dependent compiler jobs can start before CMI
+and CMJ artifacts are exported; export finishes before build success. Its
+module-result API also retains bounded typed semantic data, structured
+diagnostics, and output paths. Separate CMI and CMJ fingerprints control
+dependent recompilation. The current implementation and benchmark results are
+documented in
+[`compiler/ml/IMMUTABLE_INTERFACES.md`](../compiler/ml/IMMUTABLE_INTERFACES.md).
+Set `REWATCH_FROZEN_VALUES=0` to compare the previous compiler path.
+Sessions containing GenType packages currently use the classic interface
+lookup because frozen lookup changed generated TypeScript in that suite.
+Parser AST cache copies run on a separate domain while compilation proceeds;
+`REWATCH_ASYNC_AST_EXPORT=0` makes those copies finish before compilation.
+OCaml Rewatch omits CMT and CMTI binary annotations by default for packages
+without GenType. It uses CMJ modification time as the compiled freshness
+marker in that case. Set `REWATCH_BIN_ANNOT=1` to produce binary annotations
+for editor tools and other consumers. GenType packages keep them automatically.
+Compiler metadata records both annotation and frozen-lookup settings, so
+switching either mode invalidates incompatible cached artifacts.
+In-source JavaScript is written directly to its configured output path. With
+binary annotations disabled, OCaml Rewatch omits the private `lib/bs`
+JavaScript mirror and copies of source files in `lib/bs` and `lib/ocaml`.
+The parser and compiler made three source copies for a typical implementation,
+and publication made one JavaScript mirror. These files are unused by
+compilation. Set `REWATCH_COMPAT_COPIES=1` to restore them; packages with binary
+annotations or GenType retain them automatically. Switching this setting
+invalidates incompatible cached artifacts.
 `compiler_process.ml` is the boundary between logical compiler jobs and
 in-process execution. Independent parse and compile requests run on a bounded
-domain pool while artifact publication stays on the scheduler domain. The
+domain pool. The scheduler accepts module results and records build state;
+eligible artifact exports run on one separate domain. The
 driver resets command-line flags, warnings, JSX and experimental settings,
 package and output state, runtime and project paths, load paths, environment
 and CRC caches, predefined type graphs, delayed checks, CMT accumulation,
@@ -148,7 +180,20 @@ the recursive compiler source, platform-stub, C-stub, and Dune-rule inputs and
 shared by the embedded driver and standalone wrapper, so nested compiler
 changes invalidate artifacts while rewatch-only edits do not.
 `package_plan.ml` owns immutable per-package build inputs, `build_session.ml`
-owns prepared state retained across watch rebuilds, and `build_attempt.ml` owns
+owns the project graph, package configuration, compiled-artifact freshness,
+and compiler dependency cache retained across watch rebuilds. The driver gives
+each module job fresh inference, diagnostics, and
+environment state while the project session lends each job a private table of
+decoded small interfaces and an expanded signature graph. A cache hit checks
+the current load path and file identity; typed graph checks detect mutations,
+and changed graphs are restored from a saved image before reuse. Once a job
+ends, its table returns to the session
+and can be used by a later worker domain, including after a watch edit. A full
+watch rebuild reconstructs the graph but retains the compiler dependency
+session for the same project. Set
+`REWATCH_PROJECT_CMI_CACHE=0` to limit the small-interface cache to `Stdlib`
+and `Pervasives` when comparing build performance.
+`build_attempt.ml` owns
 attempt kinds, parse outcomes, diagnostics, counters, scheduled work, and final
 cleanup for one build attempt. `source_dirs.ml` owns
 source-directory metadata projection and serialization. `process_child.ml`

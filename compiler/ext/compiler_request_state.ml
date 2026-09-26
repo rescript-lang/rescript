@@ -47,6 +47,38 @@ let resolve_path path =
     Filename.concat state.cwd path
   else path
 
+let is_regular_file path =
+  try (Unix.stat (resolve_path path)).Unix.st_kind = Unix.S_REG
+  with Sys_error _ | Unix.Unix_error _ -> false
+
+let has_exact_directory_entry path =
+  try
+    Sys.readdir (resolve_path (Filename.dirname path))
+    |> Array.exists (String.equal (Filename.basename path))
+  with Sys_error _ | Unix.Unix_error _ -> false
+
+let canonical_output_path path =
+  let resolved = resolve_path path in
+  try
+    Filename.concat
+      (Unix.realpath (Filename.dirname resolved))
+      (Filename.basename resolved)
+  with Sys_error _ | Unix.Unix_error _ -> resolved
+
+let same_output_path first second =
+  first = second
+  ||
+  let first = canonical_output_path first in
+  let second = canonical_output_path second in
+  first = second
+  ||
+    try
+      let first_stats = Unix.stat first in
+      let second_stats = Unix.stat second in
+      first_stats.Unix.st_dev = second_stats.Unix.st_dev
+      && first_stats.Unix.st_ino = second_stats.Unix.st_ino
+    with Sys_error _ | Unix.Unix_error _ -> false
+
 let with_fresh ?cwd:requested_cwd action =
   let previous = current () in
   let cwd =

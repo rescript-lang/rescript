@@ -198,7 +198,7 @@ jobs:
 
       - name: Run analysis / tools tests
         if: runner.os != 'Windows' && runner.os != 'Linux'
-        run: opam exec -- make -C tests/analysis_tests test && make -C tests/tools_tests test
+        run: opam exec -- make test-analysis test-tools
 
       - name: Run gentype tests
         if: runner.os != 'Windows'

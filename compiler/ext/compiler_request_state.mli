@@ -27,5 +27,20 @@ val resolve_path : string -> string
 (** Resolve a relative file path against the active request root. Outside a
     request, preserve the path so ordinary process-relative I/O is unchanged. *)
 
+val is_regular_file : string -> bool
+(** Test whether a request-relative path names a regular file. *)
+
+val has_exact_directory_entry : string -> bool
+(** Check the actual spelling of a directory entry, even on a case-insensitive
+    filesystem with another spelling cached by the OS. *)
+
+val canonical_output_path : string -> string
+(** Resolve a path and canonicalize its existing parent directory, including
+    when the output itself has not yet been exported. *)
+
+val same_output_path : string -> string -> bool
+(** Compare output locations, accounting for alternate case spellings of one
+    existing file on case-insensitive filesystems. *)
+
 val with_fresh : ?cwd:string -> (unit -> 'a) -> 'a
 (** Run with new request state and restore the prior state on success or failure. *)

@@ -215,6 +215,61 @@ val crc_units : unit -> Consistbl.t
 val add_import : string -> unit
 
 val with_fresh : (unit -> 'a) -> 'a
+
+(* Finish the exclusive cache lease after a compiler request, resetting
+   allocated IDs and discarding a graph if typing changed it. *)
+val finalize_expanded_snapshot_cache : unit -> unit
+
+(* Enable the per-domain expanded CMI cache for Rewatch requests. *)
+val with_expanded_snapshot_cache : (unit -> 'a) -> 'a
+
+(* Project-owned decoded CMIs and expanded signature graphs. A request leases
+   one table exclusively, verifies it, and returns it to the session. Finished
+   worker domains therefore do not discard the dependency information. *)
+type dependency_cache
+val create_dependency_cache : unit -> dependency_cache
+val with_dependency_cache : dependency_cache -> (unit -> 'a) -> 'a
+
+val with_frozen_values_setting : ?enabled:bool -> (unit -> 'a) -> 'a
+(** Snapshot the experimental setting once for a compiler request. *)
+
+val with_compiled_cmi_capture :
+  (string -> Digest.t -> Cmi_format.cmi_infos -> unit) -> (unit -> 'a) -> 'a
+(** Capture a saved interface in its producer request. The value remains
+    request-owned until the caller freezes it after successful publication. *)
+
+val publish_compiled_cmi :
+  dependency_cache ->
+  filename:string ->
+  crc:Digest.t ->
+  Cmi_format.cmi_infos ->
+  unit
+(** Publish a successful artifact as an immutable interface image. A later
+    request uses it only while the published file still has the same identity. *)
+
+val publish_pending_compiled_cmi :
+  dependency_cache ->
+  source:string ->
+  destination:string ->
+  crc:Digest.t ->
+  Cmi_format.cmi_infos ->
+  bool
+(** Publish a request's frozen interface before artifact export. The virtual
+    destination participates in load-path selection while the source artifact
+    still has its captured identity. Returns [false] when freezing fails. *)
+
+val discard_pending_compiled_cmi : dependency_cache -> filename:string -> unit
+(** Remove a virtual interface after cancellation or failed export. *)
+
+val published_compiled_cmi :
+  dependency_cache -> filename:string -> (Digest.t * Frozen_values.t) option
+(** Return an immutable published interface only while its disk artifact is
+    still the selected file. *)
+
+val find_compiled_cmi : string -> string
+(** Select an explicit interface CMI from the load path, including a staged
+    virtual destination in the active compiler session. *)
+
 (* Keep persistent modules, imports, usage callbacks, and memoized summaries
    local to a compiler request. *)
 

@@ -169,8 +169,13 @@ module Tycomp_tbl = struct
         (** Symbolic representation of the last (innermost) open, if any. *)
   }
 
+  and 'a source = {
+    find: string -> 'a list option;
+    iter: (string -> 'a list -> unit) -> unit;
+  }
+
   and 'a opened = {
-    components: (string, 'a list) Tbl.t;
+    components: 'a source;
         (** Components from the opened module. We keep a list of
           bindings for each name, as in comp_labels and
           comp_constrs. *)
@@ -185,13 +190,24 @@ module Tycomp_tbl = struct
 
   let add id x tbl = {tbl with current = Ident.add id x tbl.current}
 
-  let add_open slot wrap components next =
+  let source_of_table table =
+    {
+      find =
+        (fun name ->
+          try Some (Tbl.find_str name table) with Not_found -> None);
+      iter = (fun callback -> Tbl.iter callback table);
+    }
+
+  let add_open_source slot wrap components next =
     let using =
       match slot with
       | None -> None
       | Some f -> Some (fun s x -> f s (wrap x))
     in
     {current = Ident.empty; opened = Some {using; components; next}}
+
+  let add_open slot wrap components next =
+    add_open_source slot wrap (source_of_table components) next
 
   let rec find_same id tbl =
     try Ident.find_same id tbl.current
@@ -219,9 +235,9 @@ module Tycomp_tbl = struct
     | None -> []
     | Some {using; next; components} -> (
       let rest = find_all name next in
-      match Tbl.find_str name components with
-      | exception Not_found -> rest
-      | opened ->
+      match components.find name with
+      | None -> rest
+      | Some opened ->
         List.map (fun desc -> (desc, mk_callback rest name desc using)) opened
         @ rest)
 
@@ -229,9 +245,10 @@ module Tycomp_tbl = struct
     let acc = Ident.fold_name (fun _id d -> f d) tbl.current acc in
     match tbl.opened with
     | Some {using = _; next; components} ->
-      acc
-      |> Tbl.fold (fun _name -> List.fold_right (fun desc -> f desc)) components
-      |> fold_name f next
+      let acc = ref acc in
+      components.iter (fun _name descriptions ->
+          acc := List.fold_right (fun desc -> f desc) descriptions !acc);
+      fold_name f next !acc
     | None -> acc
 
   let rec local_keys tbl acc =
@@ -263,13 +280,17 @@ module Id_tbl = struct
         (** Symbolic representation of the last (innermost) open, if any. *)
   }
 
+  and 'a source = {
+    find: string -> ('a * int) option;
+    iter: (string -> 'a * int -> unit) -> unit;
+  }
+
   and 'a opened = {
     root: Path.t;
         (** The path of the opened module, to be prefixed in front of
           its local names to produce a valid path in the current
           environment. *)
-    components: (string, 'a * int) Tbl.t;
-        (** Components from the opened module. *)
+    components: 'a source;  (** Components from the opened module. *)
     using: (string -> ('a * 'a) option -> unit) option;
         (** A callback to be applied when a component is used from this
           "open".  This is used to detect unused "opens".  The
@@ -281,13 +302,24 @@ module Id_tbl = struct
 
   let add id x tbl = {tbl with current = Ident.add id x tbl.current}
 
-  let add_open slot wrap root components next =
+  let source_of_table table =
+    {
+      find =
+        (fun name ->
+          try Some (Tbl.find_str name table) with Not_found -> None);
+      iter = (fun callback -> Tbl.iter callback table);
+    }
+
+  let add_open_source slot wrap root components next =
     let using =
       match slot with
       | None -> None
       | Some f -> Some (fun s x -> f s (wrap x))
     in
     {current = Ident.empty; opened = Some {using; root; components; next}}
+
+  let add_open slot wrap root components next =
+    add_open_source slot wrap root (source_of_table components) next
 
   let rec find_same id tbl =
     try Ident.find_same id tbl.current
@@ -303,8 +335,8 @@ module Id_tbl = struct
     with Not_found as exn -> (
       match tbl.opened with
       | Some {using; root; next; components} -> (
-        try
-          let descr, pos = Tbl.find_str name components in
+        match components.find name with
+        | Some (descr, pos) ->
           let res = (Pdot (root, name, pos), descr) in
           (if mark then
              match using with
@@ -313,7 +345,7 @@ module Id_tbl = struct
                try f name (Some (snd (find_name false name next), snd res))
                with Not_found -> f name None));
           res
-        with Not_found -> find_name mark name next)
+        | None -> find_name mark name next)
       | None -> raise exn)
 
   let find_name name tbl = find_name true name tbl
@@ -326,12 +358,25 @@ module Id_tbl = struct
     with Not_found -> (
       match tbl.opened with
       | Some {root; using; next; components} -> (
-        try
-          let desc, pos = Tbl.find_str name components in
+        match components.find name with
+        | Some (desc, pos) ->
           let new_desc = f desc in
-          let components = Tbl.add name (new_desc, pos) components in
+          let previous = components in
+          let components =
+            {
+              find =
+                (fun query ->
+                  if query = name then Some (new_desc, pos)
+                  else previous.find query);
+              iter =
+                (fun callback ->
+                  previous.iter (fun query entry ->
+                      callback query
+                        (if query = name then (new_desc, pos) else entry)));
+            }
+          in
           {tbl with opened = Some {root; using; next; components}}
-        with Not_found ->
+        | None ->
           let next = update name f next in
           {tbl with opened = Some {root; using; next; components}})
       | None -> tbl)
@@ -344,10 +389,9 @@ module Id_tbl = struct
     match tbl.opened with
     | None -> []
     | Some {root; using = _; next; components} -> (
-      try
-        let desc, pos = Tbl.find_str name components in
-        (Pdot (root, name, pos), desc) :: find_all name next
-      with Not_found -> find_all name next)
+      match components.find name with
+      | Some (desc, pos) -> (Pdot (root, name, pos), desc) :: find_all name next
+      | None -> find_all name next)
 
   let rec fold_name f tbl acc =
     let acc =
@@ -357,11 +401,10 @@ module Id_tbl = struct
     in
     match tbl.opened with
     | Some {root; using = _; next; components} ->
-      acc
-      |> Tbl.fold
-           (fun name (desc, pos) -> f name (Pdot (root, name, pos), desc))
-           components
-      |> fold_name f next
+      let acc = ref acc in
+      components.iter (fun name (desc, pos) ->
+          acc := f name (Pdot (root, name, pos), desc) !acc);
+      fold_name f next !acc
     | None -> acc
 
   let rec local_keys tbl acc =
@@ -374,10 +417,8 @@ module Id_tbl = struct
     Ident.iter (fun id desc -> f id (Pident id, desc)) tbl.current;
     match tbl.opened with
     | Some {root; using = _; next; components} ->
-      Tbl.iter
-        (fun s (x, pos) ->
-          f (Ident.hide (Ident.create s) (* ??? *)) (Pdot (root, s, pos), x))
-        components;
+      components.iter (fun s (x, pos) ->
+          f (Ident.hide (Ident.create s) (* ??? *)) (Pdot (root, s, pos), x));
       iter f next
     | None -> ()
 
@@ -414,6 +455,7 @@ type t = {
 and module_components = {
   deprecated: string option;
   loc: Location.t;
+  frozen_root: Frozen_values.view option;
   comps:
     ( t * Subst.t * Path.t * Types.module_type,
       module_components_repr option )
@@ -575,10 +617,17 @@ let strengthen =
 let md md_type = {md_type; md_attributes = []; md_loc = Location.none}
 
 let get_components_opt c =
+  let maker =
+    match c.frozen_root with
+    | None -> !components_of_module_maker'
+    | Some view ->
+      fun (env, sub, path, _) ->
+        let signature = Frozen_values.source_signature view in
+        !components_of_module_maker' (env, sub, path, Mty_signature signature)
+  in
   match !(can_load_cmis ()) with
-  | Can_load_cmis -> Env_lazy.force !components_of_module_maker' c.comps
-  | Cannot_load_cmis log ->
-    Env_lazy.force_logged log !components_of_module_maker' c.comps
+  | Can_load_cmis -> Env_lazy.force maker c.comps
+  | Cannot_load_cmis log -> Env_lazy.force_logged log maker c.comps
 
 let empty_structure =
   Structure_comps
@@ -605,6 +654,91 @@ let current_unit () = Domain.DLS.get current_unit_key
 
 (* Persistent structure descriptions *)
 
+(* The three lazy expansion stages allocate identifiers at different points in
+   a request. Capture their nodes in allocation order so each stage can take
+   fresh request-local IDs without walking the large signature again. *)
+type allocation_stage = {
+  first_type_id: int;
+  allocated_type_ids: int;
+  type_nodes: type_expr array;
+  first_ident_stamp: int;
+  allocated_ident_stamps: int;
+  identifiers: Ident.t array;
+}
+
+type alias_key = {
+  target_name: string;
+  namespace_name: string;
+  alias_name: string;
+}
+
+type expanded_snapshot = {
+  raw_signature: signature;
+  expanded_signature: signature;
+  target_components: module_components_repr option;
+  alias_components: module_components_repr option;
+  target_ids: allocation_stage;
+  signature_ids: allocation_stage;
+  alias_ids: allocation_stage;
+  crcs: (string * Digest.t option) list;
+  flags: pers_flags list;
+}
+
+type request_snapshot = {
+  key: alias_key;
+  graph: expanded_snapshot;
+  mutable target_relocated: bool;
+  mutable signature_relocated: bool;
+  mutable alias_relocated: bool;
+}
+
+let capture_allocation_stage action =
+  let state = Compiler_request_state.current () in
+  let first_type_id = state.type_node_id in
+  let first_ident_stamp = Ident.current_time () in
+  let (result, identifiers), type_nodes =
+    Btype.with_allocation_capture (fun () ->
+        Ident.with_allocation_capture action)
+  in
+  let allocated_type_ids = state.type_node_id - first_type_id in
+  let allocated_ident_stamps = Ident.current_time () - first_ident_stamp in
+  if
+    Array.length type_nodes <> allocated_type_ids
+    || Array.length identifiers <> allocated_ident_stamps
+  then invalid_arg "incomplete dependency allocation capture";
+  ( result,
+    {
+      first_type_id;
+      allocated_type_ids;
+      type_nodes;
+      first_ident_stamp;
+      allocated_ident_stamps;
+      identifiers;
+    } )
+
+(* A cache entry is exclusive to one compiler domain. The graph is visible to
+   only one request at a time, and its IDs are reset before it can be reused. *)
+let relocate_allocation_stage stage =
+  let state = Compiler_request_state.current () in
+  let first_type_id = state.type_node_id in
+  let first_ident_stamp = Ident.current_time () in
+  Array.iteri
+    (fun index ty -> ty.id <- first_type_id + index + 1)
+    stage.type_nodes;
+  Array.iteri
+    (fun index id -> id.Ident.stamp <- first_ident_stamp + index + 1)
+    stage.identifiers;
+  state.type_node_id <- first_type_id + stage.allocated_type_ids;
+  Ident.set_current_time (first_ident_stamp + stage.allocated_ident_stamps)
+
+let reset_allocation_stage stage =
+  Array.iteri
+    (fun index ty -> ty.id <- stage.first_type_id + index + 1)
+    stage.type_nodes;
+  Array.iteri
+    (fun index id -> id.Ident.stamp <- stage.first_ident_stamp + index + 1)
+    stage.identifiers
+
 type pers_struct = {
   ps_name: string;
   ps_sig: signature Lazy.t;
@@ -612,6 +746,9 @@ type pers_struct = {
   ps_crcs: (string * Digest.t option) list;
   ps_filename: string;
   ps_flags: pers_flags list;
+  ps_snapshot: request_snapshot option;
+  ps_frozen_values: Frozen_values.view option;
+  ps_frozen_components: (Path.t, module_components) Hashtbl.t;
 }
 [@@warning "-69"]
 
@@ -619,6 +756,228 @@ let persistent_structures_key =
   Domain.DLS.new_key (fun () ->
       (Hashtbl.create 17 : (string, pers_struct option) Hashtbl.t))
 let persistent_structures () = Domain.DLS.get persistent_structures_key
+
+let same_file_stats first second =
+  first.Unix.st_dev = second.Unix.st_dev
+  && first.Unix.st_ino = second.Unix.st_ino
+  && first.Unix.st_size = second.Unix.st_size
+  && first.Unix.st_mtime = second.Unix.st_mtime
+  && first.Unix.st_ctime = second.Unix.st_ctime
+
+type frozen_values_entry = {
+  resolved_filename: string;
+  stats: Unix.stats;
+  image: Frozen_values.t;
+}
+
+type frozen_values_cache = {
+  lock: Mutex.t;
+  entries: (string, frozen_values_entry) Hashtbl.t;
+}
+
+let frozen_values_cache_key : frozen_values_cache option Domain.DLS.key =
+  Domain.DLS.new_key (fun () -> None)
+
+type published_cmi = {
+  filename: string;
+  stats: Unix.stats;
+  name: string;
+  fingerprint: Digest.t;
+  crcs: (string * Digest.t option) list;
+  flags: Cmi_format.pers_flags list;
+  image: Frozen_values.t;
+}
+
+type pending_cmi = {
+  destination: string;
+  source: string;
+  source_stats: Unix.stats;
+  value: published_cmi;
+}
+
+type published_cmis = {
+  lock: Mutex.t;
+  entries: (string, published_cmi) Hashtbl.t;
+  pending: (string, pending_cmi) Hashtbl.t;
+}
+
+let published_cmis_key : published_cmis option Domain.DLS.key =
+  Domain.DLS.new_key (fun () -> None)
+
+let frozen_values_setting_key = Domain.DLS.new_key (fun () -> None)
+let frozen_type_cache_key =
+  Domain.DLS.new_key (fun () ->
+      (Hashtbl.create 64
+        : ( Path.t,
+            type_declaration
+            * (constructor_description list * label_description list) )
+          Hashtbl.t))
+
+let frozen_values_enabled () =
+  match Domain.DLS.get frozen_values_setting_key with
+  | Some enabled -> enabled
+  | None -> Sys.getenv_opt "REWATCH_FROZEN_VALUES" = Some "1"
+
+let with_frozen_values_setting ?enabled action =
+  let previous = Domain.DLS.get frozen_values_setting_key in
+  let enabled =
+    Option.value enabled
+      ~default:(Sys.getenv_opt "REWATCH_FROZEN_VALUES" = Some "1")
+  in
+  Domain.DLS.set frozen_values_setting_key (Some enabled);
+  Fun.protect action ~finally:(fun () ->
+      Domain.DLS.set frozen_values_setting_key previous)
+
+let session_cmi_enabled () =
+  frozen_values_enabled () && Sys.getenv_opt "REWATCH_SESSION_CMI" <> Some "0"
+
+let has_published_cmi name =
+  if not (session_cmi_enabled ()) then false
+  else
+    match Domain.DLS.get published_cmis_key with
+    | None -> false
+    | Some published ->
+      Mutex.lock published.lock;
+      Fun.protect
+        (fun () ->
+          Hashtbl.mem published.entries name
+          || Hashtbl.mem published.pending name)
+        ~finally:(fun () -> Mutex.unlock published.lock)
+
+let pending_cmi_path name =
+  match Domain.DLS.get published_cmis_key with
+  | None -> None
+  | Some published ->
+    let pending =
+      Mutex.lock published.lock;
+      Fun.protect
+        (fun () -> Hashtbl.find_opt published.pending name)
+        ~finally:(fun () -> Mutex.unlock published.lock)
+    in
+    Option.bind pending (fun entry ->
+        try
+          if same_file_stats (Unix.stat entry.source) entry.source_stats then
+            Some entry.destination
+          else None
+        with Sys_error _ | Unix.Unix_error _ -> None)
+
+let find_in_path_with_pending name =
+  let pending = pending_cmi_path (Filename.remove_extension name) in
+  let is_pending filename =
+    match pending with
+    | Some path -> Compiler_request_state.same_output_path filename path
+    | None -> false
+  in
+  let lower_name = String.uncapitalize_ascii name in
+  let rec find = function
+    | [] -> raise Not_found
+    | directory :: rest ->
+      let lower = Filename.concat directory lower_name in
+      let exact = Filename.concat directory name in
+      if is_pending lower then lower
+      else if is_pending exact then
+        if
+          Compiler_request_state.is_regular_file lower
+          && Compiler_request_state.has_exact_directory_entry lower
+        then lower
+        else exact
+      else if Compiler_request_state.is_regular_file lower then lower
+      else if Compiler_request_state.is_regular_file exact then exact
+      else find rest
+  in
+  find (Config.get_load_path ())
+
+let find_compiled_cmi name =
+  if session_cmi_enabled () && has_published_cmi name then
+    find_in_path_with_pending (name ^ ".cmi")
+  else find_in_path_uncap (Config.get_load_path ()) (name ^ ".cmi")
+
+let lookup_published_cmi name filename =
+  if not (session_cmi_enabled ()) then None
+  else
+    match Domain.DLS.get published_cmis_key with
+    | None -> None
+    | Some published -> (
+      try
+        Mutex.lock published.lock;
+        Fun.protect
+          (fun () ->
+            let current =
+              match Hashtbl.find_opt published.pending name with
+              | Some pending
+                when Compiler_request_state.same_output_path pending.destination
+                       filename
+                     && same_file_stats (Unix.stat pending.source)
+                          pending.source_stats ->
+                Some pending.value
+              | Some _ | None -> (
+                match Hashtbl.find_opt published.entries name with
+                | Some entry
+                  when Compiler_request_state.same_output_path entry.filename
+                         filename
+                       && same_file_stats
+                            (Unix.stat
+                               (Compiler_request_state.resolve_path filename))
+                            entry.stats ->
+                  Some entry
+                | Some _ | None -> None)
+            in
+            match current with
+            | Some entry ->
+              Compiler_phase_trace.dependency "dependency.session_cmi_lookup"
+                (fun () ->
+                  let cmi =
+                    Cmi_format.
+                      {
+                        cmi_name = entry.name;
+                        cmi_sign = [];
+                        cmi_crcs = entry.crcs;
+                        cmi_flags = entry.flags;
+                      }
+                  in
+                  Some (cmi, entry.image))
+            | None -> None)
+          ~finally:(fun () -> Mutex.unlock published.lock)
+      with Sys_error _ | Unix.Unix_error _ -> None)
+
+let compiled_cmi_capture_key = Domain.DLS.new_key (fun () -> None)
+
+let with_compiled_cmi_capture capture action =
+  let previous = Domain.DLS.get compiled_cmi_capture_key in
+  Domain.DLS.set compiled_cmi_capture_key (Some capture);
+  Fun.protect action ~finally:(fun () ->
+      Domain.DLS.set compiled_cmi_capture_key previous)
+
+let prepare_frozen_values ~name ~filename cmi =
+  if not (frozen_values_enabled ()) then None
+  else
+    match Domain.DLS.get frozen_values_cache_key with
+    | None -> None
+    | Some cache -> (
+      try
+        let resolved_filename = Compiler_request_state.resolve_path filename in
+        let stats = Unix.stat resolved_filename in
+        Mutex.lock cache.lock;
+        Fun.protect
+          (fun () ->
+            match Hashtbl.find_opt cache.entries name with
+            | Some entry
+              when entry.resolved_filename = resolved_filename
+                   && same_file_stats entry.stats stats ->
+              Some entry.image
+            | _ ->
+              Compiler_phase_trace.dependency "dependency.frozen_values_prepare"
+                (fun () ->
+                  match Frozen_values.freeze cmi with
+                  | Error _ -> None
+                  | Ok image ->
+                    if same_file_stats (Unix.stat resolved_filename) stats then (
+                      Hashtbl.replace cache.entries name
+                        {resolved_filename; stats; image};
+                      Some image)
+                    else None))
+          ~finally:(fun () -> Mutex.unlock cache.lock)
+      with Sys_error _ | Unix.Unix_error _ -> None)
 
 (* Consistency between persistent structures *)
 
@@ -640,17 +999,18 @@ let clear_imports () =
   imported_units () := String_set.empty
 
 let check_consistency ps =
-  try
-    List.iter
-      (fun (name, crco) ->
-        match crco with
-        | None -> ()
-        | Some crc ->
-          add_import name;
-          Consistbl.check (crc_units ()) name crc ps.ps_filename)
-      ps.ps_crcs
-  with Consistbl.Inconsistency (name, source, auth) ->
-    error (Inconsistent_import (name, auth, source))
+  Compiler_phase_trace.dependency "dependency.consistency" (fun () ->
+      try
+        List.iter
+          (fun (name, crco) ->
+            match crco with
+            | None -> ()
+            | Some crc ->
+              add_import name;
+              Consistbl.check (crc_units ()) name crc ps.ps_filename)
+          ps.ps_crcs
+      with Consistbl.Inconsistency (name, source, auth) ->
+        error (Inconsistent_import (name, auth, source)))
 
 (* Reading persistent structures from .cmi files *)
 
@@ -673,42 +1033,79 @@ module Persistent_signature = struct
         | exception Not_found -> None)
 end
 
-let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
-  let name = cmi.cmi_name in
-  let sign = cmi.cmi_sign in
-  let crcs = cmi.cmi_crcs in
-  let flags = cmi.cmi_flags in
-  let deprecated =
-    List.fold_left
-      (fun _ -> function
-        | Deprecated s -> Some s)
-      None flags
-  in
-  let comps =
-    !components_of_module' ~deprecated ~loc:Location.none empty Subst.identity
-      (Pident (Ident.create_persistent name))
-      (Mty_signature sign)
-  in
-  let ps =
-    {
-      ps_name = name;
-      ps_sig = lazy (Subst.signature Subst.identity sign);
-      ps_comps = comps;
-      ps_crcs = crcs;
-      ps_filename = filename;
-      ps_flags = flags;
-    }
-  in
-  if ps.ps_name <> modname then
-    error (Illegal_renaming (modname, ps.ps_name, filename));
-  if check then check_consistency ps;
-  Hashtbl.add (persistent_structures ()) modname (Some ps);
-  ps
+let cached_pers_struct_loader :
+    (check:bool -> name:string -> pers_struct option) ref =
+  ref (fun ~check:_ ~name:_ -> None)
+
+let cached_cmi_loader :
+    (name:string -> Persistent_signature.t option option) ref =
+  ref (fun ~name:_ -> None)
+
+let acknowledge_pers_struct ?published_image check modname
+    {Persistent_signature.filename; cmi} =
+  Compiler_phase_trace.dependency "dependency.make_available" (fun () ->
+      let name = cmi.cmi_name in
+      let sign = cmi.cmi_sign in
+      let crcs = cmi.cmi_crcs in
+      let flags = cmi.cmi_flags in
+      let frozen_values =
+        (match published_image with
+          | Some image -> Some image
+          | None -> prepare_frozen_values ~name ~filename cmi)
+        |> Option.map Frozen_values.create_view
+      in
+      let deprecated =
+        List.fold_left
+          (fun _ -> function
+            | Deprecated s -> Some s)
+          None flags
+      in
+      let comps =
+        !components_of_module' ~deprecated ~loc:Location.none empty
+          Subst.identity
+          (Pident (Ident.create_persistent name))
+          (Mty_signature (if Option.is_some frozen_values then [] else sign))
+      in
+      let comps =
+        match frozen_values with
+        | Some view -> {comps with frozen_root = Some view}
+        | None -> comps
+      in
+      let ps =
+        {
+          ps_name = name;
+          ps_sig =
+            lazy
+              (Compiler_phase_trace.dependency_lazy
+                 (fun () -> "dependency.signature_copy:" ^ name)
+                 (fun () ->
+                   match frozen_values with
+                   | Some view -> Frozen_values.copy_signature view
+                   | None -> Subst.signature Subst.identity sign));
+          ps_comps = comps;
+          ps_crcs = crcs;
+          ps_filename = filename;
+          ps_flags = flags;
+          ps_snapshot = None;
+          ps_frozen_values = frozen_values;
+          ps_frozen_components = Hashtbl.create 8;
+        }
+      in
+      if ps.ps_name <> modname then
+        error (Illegal_renaming (modname, ps.ps_name, filename));
+      if check then check_consistency ps;
+      Hashtbl.add (persistent_structures ()) modname (Some ps);
+      ps)
 
 let read_pers_struct check modname filename =
   add_import modname;
-  let cmi = read_cmi filename in
-  acknowledge_pers_struct check modname {Persistent_signature.filename; cmi}
+  match lookup_published_cmi modname filename with
+  | Some (cmi, image) ->
+    acknowledge_pers_struct ~published_image:image check modname
+      {Persistent_signature.filename; cmi}
+  | None ->
+    let cmi = read_cmi filename in
+    acknowledge_pers_struct check modname {Persistent_signature.filename; cmi}
 
 let find_pers_struct check name =
   if name = "*predef*" then raise Not_found;
@@ -718,16 +1115,43 @@ let find_pers_struct check name =
   | exception Not_found -> (
     match !(can_load_cmis ()) with
     | Cannot_load_cmis _ -> raise Not_found
-    | Can_load_cmis ->
-      let ps =
-        match !Persistent_signature.load ~unit_name:name with
-        | Some ps -> ps
-        | None ->
-          Hashtbl.add (persistent_structures ()) name None;
-          raise Not_found
+    | Can_load_cmis -> (
+      let published =
+        if not (has_published_cmi name) then None
+        else
+          try
+            let filename = find_in_path_with_pending (name ^ ".cmi") in
+            Option.map
+              (fun (cmi, image) -> (filename, cmi, image))
+              (lookup_published_cmi name filename)
+          with Not_found -> None
       in
-      add_import name;
-      acknowledge_pers_struct check name ps)
+      match published with
+      | Some (filename, cmi, image) ->
+        add_import name;
+        acknowledge_pers_struct ~published_image:image check name
+          {Persistent_signature.filename; cmi}
+      | None -> (
+        match !cached_pers_struct_loader ~check ~name with
+        | Some ps ->
+          add_import name;
+          if check then check_consistency ps;
+          Hashtbl.add (persistent_structures ()) name (Some ps);
+          ps
+        | None ->
+          let ps =
+            match
+              match !cached_cmi_loader ~name with
+              | Some cached -> cached
+              | None -> !Persistent_signature.load ~unit_name:name
+            with
+            | Some ps -> ps
+            | None ->
+              Hashtbl.add (persistent_structures ()) name None;
+              raise Not_found
+          in
+          add_import name;
+          acknowledge_pers_struct check name ps)))
 
 (* Emits a warning if there is no valid cmi for name *)
 let check_pers_struct name =
@@ -772,6 +1196,7 @@ let reset_cache () =
   clear_imports ();
   Hashtbl.clear (value_declarations ());
   Hashtbl.clear (type_declarations ());
+  Hashtbl.clear (Domain.DLS.get frozen_type_cache_key);
   Hashtbl.clear (module_declarations ());
   Hashtbl.clear (used_constructors ());
   Hashtbl.clear (prefixed_sg ())
@@ -796,6 +1221,34 @@ let get_unit_name () = !(current_unit ())
 
 (* Lookup by identifier *)
 
+let find_frozen_scope_path path =
+  if not (frozen_values_enabled ()) then None
+  else
+    let rec find visited path =
+      if List.exists (Path.same path) visited then None
+      else
+        let visited = path :: visited in
+        match path with
+        | Pident id
+          when Ident.persistent id && Ident.name id <> !(current_unit ()) ->
+          let ps = find_pers_struct (Ident.name id) in
+          Option.map
+            (fun view -> (view, Frozen_values.root_scope view))
+            ps.ps_frozen_values
+        | Pdot (parent, name, _) -> (
+          match find visited parent with
+          | Some (view, scope) -> (
+            match Frozen_values.find_module scope name with
+            | Some (nested, _, _, _) -> Some (view, nested)
+            | None -> (
+              match Frozen_values.find_module_alias view scope name with
+              | Some target -> find visited target
+              | None -> None))
+          | None -> None)
+        | Pident _ | Papply _ -> None
+    in
+    find [] path
+
 let rec find_module_descr path env =
   match path with
   | Pident id -> (
@@ -805,11 +1258,34 @@ let rec find_module_descr path env =
         (find_pers_struct (Ident.name id)).ps_comps
       else raise Not_found)
   | Pdot (p, s, _pos) -> (
-    match get_components (find_module_descr p env) with
-    | Structure_comps c ->
-      let descr, _pos = Tbl.find_str s c.comp_components in
-      descr
-    | Functor_comps _ -> raise Not_found)
+    let generic () =
+      match get_components (find_module_descr p env) with
+      | Structure_comps c ->
+        let descr, _pos = Tbl.find_str s c.comp_components in
+        descr
+      | Functor_comps _ -> raise Not_found
+    in
+    match find_frozen_scope_path p with
+    | Some (view, scope) -> (
+      match Frozen_values.find_module_declaration view scope s with
+      | Some (declaration, position) -> (
+        let path = Pdot (p, s, position) in
+        let ps = find_pers_struct (Ident.name (Path.head p)) in
+        match Hashtbl.find_opt ps.ps_frozen_components path with
+        | Some components -> components
+        | None ->
+          let components =
+            !components_of_module'
+              ~deprecated:
+                (Builtin_attributes.deprecated_of_attrs
+                   declaration.md_attributes)
+              ~loc:declaration.md_loc empty Subst.identity path
+              declaration.md_type
+          in
+          Hashtbl.add ps.ps_frozen_components path components;
+          components)
+      | None -> generic ())
+    | None -> generic ())
   | Papply (p1, p2) -> (
     match get_components (find_module_descr p1 env) with
     | Functor_comps f -> !components_of_functor_appl' f env p1 p2
@@ -826,22 +1302,83 @@ let find proj1 proj2 path env =
     | Functor_comps _ -> raise Not_found)
   | Papply _ -> raise Not_found
 
-let find_value = find (fun env -> env.values) (fun sc -> sc.comp_values)
+let find_value_generic = find (fun env -> env.values) (fun sc -> sc.comp_values)
 
-and find_type_full = find (fun env -> env.types) (fun sc -> sc.comp_types)
+let find_value path env =
+  if not (frozen_values_enabled ()) then find_value_generic path env
+  else
+    match path with
+    | Pdot (module_path, name, _) -> (
+      match find_frozen_scope_path module_path with
+      | Some (view, scope) -> (
+        match
+          Compiler_phase_trace.dependency "dependency.frozen_value_lookup"
+            (fun () -> Frozen_values.find_in_scope view scope name)
+        with
+        | Some (description, _) -> description
+        | None -> find_value_generic path env)
+      | None -> find_value_generic path env)
+    | _ -> find_value_generic path env
 
-and find_modtype = find (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes)
+and find_type_full_generic =
+  find (fun env -> env.types) (fun sc -> sc.comp_types)
+
+and find_modtype path env =
+  match path with
+  | Pdot (module_path, name, _) -> (
+    match find_frozen_scope_path module_path with
+    | Some (view, scope) -> (
+      match Frozen_values.find_modtype_declaration view scope name with
+      | Some declaration -> declaration
+      | None ->
+        find (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes) path env)
+    | None ->
+      find (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes) path env)
+  | Pident _ | Papply _ ->
+    find (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes) path env
 
 let type_of_cstr path = function
   | {cstr_inlined = Some d; _} ->
     (d, ([], List.map snd (Datarepr.labels_of_type path d)))
   | _ -> assert false
 
-let find_type_full path env =
+let find_frozen_type path =
+  if not (frozen_values_enabled ()) then None
+  else
+    let cache = Domain.DLS.get frozen_type_cache_key in
+    match Hashtbl.find_opt cache path with
+    | Some declaration -> Some declaration
+    | None ->
+      let declaration =
+        match path with
+        | Pdot (module_path, name, _) -> (
+          match find_frozen_scope_path module_path with
+          | Some (view, scope) ->
+            Compiler_phase_trace.dependency "dependency.frozen_type_lookup"
+              (fun () -> Frozen_values.find_type_in_scope view scope name)
+          | None -> None)
+        | Pident _ | Papply _ -> None
+      in
+      Option.iter (Hashtbl.replace cache path) declaration;
+      declaration
+
+let find_frozen_extension mod_path name =
+  if not (frozen_values_enabled ()) then None
+  else
+    match find_frozen_scope_path mod_path with
+    | Some (view, scope) ->
+      Compiler_phase_trace.dependency "dependency.frozen_extension_lookup"
+        (fun () -> Frozen_values.find_extension_in_scope view scope name)
+    | None -> None
+
+let rec find_type_full path env =
   match Path.constructor_typath path with
   | Regular p -> (
     try (Path_map.find p env.local_constraints, ([], []))
-    with Not_found -> find_type_full p env)
+    with Not_found -> (
+      match find_frozen_type p with
+      | Some declaration -> declaration
+      | None -> find_type_full_generic p env))
   | Cstr (ty_path, s) ->
     let _, (cstrs, _) =
       try find_type_full ty_path env with Not_found -> assert false
@@ -857,25 +1394,29 @@ let find_type_full path env =
     in
     type_of_cstr path cstr
   | Ext (mod_path, s) -> (
-    let comps =
-      try find_module_descr mod_path env with Not_found -> assert false
-    in
-    let comps =
-      match get_components comps with
-      | Structure_comps c -> c
-      | Functor_comps _ -> assert false
-    in
-    let exts =
-      Ext_list.filter
-        (try Tbl.find_str s comps.comp_constrs with Not_found -> assert false)
-        (function
-          | {cstr_kind = Extension_constructor _} -> true
-          | _ -> false)
-    in
+    match find_frozen_extension mod_path s with
+    | Some constructor -> type_of_cstr path constructor
+    | None -> (
+      let comps =
+        try find_module_descr mod_path env with Not_found -> assert false
+      in
+      let comps =
+        match get_components comps with
+        | Structure_comps c -> c
+        | Functor_comps _ -> assert false
+      in
+      let exts =
+        Ext_list.filter
+          (try Tbl.find_str s comps.comp_constrs
+           with Not_found -> assert false)
+          (function
+            | {cstr_kind = Extension_constructor _} -> true
+            | _ -> false)
+      in
 
-    match exts with
-    | [cstr] -> type_of_cstr path cstr
-    | _ -> assert false)
+      match exts with
+      | [cstr] -> type_of_cstr path cstr
+      | _ -> assert false))
 
 let find_type p env = fst (find_type_full p env)
 let find_type_descrs p env = snd (find_type_full p env)
@@ -892,11 +1433,22 @@ let find_module ~alias path env =
         md (Mty_signature (Lazy.force ps.ps_sig))
       else raise Not_found)
   | Pdot (p, s, _pos) -> (
-    match get_components (find_module_descr p env) with
-    | Structure_comps c ->
-      let data, _pos = Tbl.find_str s c.comp_modules in
-      Env_lazy.force subst_modtype_maker data
-    | Functor_comps _ -> raise Not_found)
+    match find_frozen_scope_path p with
+    | Some (view, scope) -> (
+      match Frozen_values.find_module_declaration view scope s with
+      | Some (declaration, _) -> declaration
+      | None -> (
+        match get_components (find_module_descr p env) with
+        | Structure_comps c ->
+          let data, _pos = Tbl.find_str s c.comp_modules in
+          Env_lazy.force subst_modtype_maker data
+        | Functor_comps _ -> raise Not_found))
+    | None -> (
+      match get_components (find_module_descr p env) with
+      | Structure_comps c ->
+        let data, _pos = Tbl.find_str s c.comp_modules in
+        Env_lazy.force subst_modtype_maker data
+      | Functor_comps _ -> raise Not_found))
   | Papply (p1, p2) -> (
     let desc1 = find_module_descr p1 env in
     match get_components desc1 with
@@ -927,9 +1479,42 @@ let rec normalize_path lax env path =
     | _ -> path
   in
   try
-    match find_module ~alias:true path env with
-    | {md_type = Mty_alias (_, path1)} -> normalize_path lax env path1
-    | _ -> path
+    match path with
+    | Pdot (parent, name, _) when lax -> (
+      match find_frozen_scope_path parent with
+      | Some (view, scope) -> (
+        match Frozen_values.find_module_alias view scope name with
+        | Some target -> normalize_path lax env target
+        | None -> (
+          if
+            Option.is_some (Frozen_values.find_module scope name)
+            || Frozen_values.is_type_name_in_scope scope name
+          then path
+          else
+            match find_module ~alias:true path env with
+            | {md_type = Mty_alias (_, path1)} -> normalize_path lax env path1
+            | _ -> path))
+      | None -> (
+        match find_module ~alias:true path env with
+        | {md_type = Mty_alias (_, path1)} -> normalize_path lax env path1
+        | _ -> path))
+    | Pident id when Ident.persistent id && Ident.name id <> !(current_unit ())
+      -> (
+      match Id_tbl.find_same id env.modules with
+      | _ -> (
+        match find_module ~alias:true path env with
+        | {md_type = Mty_alias (_, path1)} -> normalize_path lax env path1
+        | _ -> path)
+      | exception Not_found ->
+        (* A compiled unit's root is a signature, never a module alias.
+           Loading it validates the dependency without copying its entire
+           signature just to normalize a value access path. *)
+        ignore (find_pers_struct (Ident.name id));
+        path)
+    | Pident _ | Pdot _ | Papply _ -> (
+      match find_module ~alias:true path env with
+      | {md_type = Mty_alias (_, path1)} -> normalize_path lax env path1
+      | _ -> path)
   with
   | Not_found
   when lax
@@ -1032,6 +1617,44 @@ let rec lookup_module_descr_aux ?loc lid env =
       (Pdot (p, s, pos), descr)
     | Functor_comps _ -> raise Not_found)
 
+and lookup_frozen_scope ?loc lid env =
+  if not (frozen_values_enabled ()) then None
+  else
+    match lid with
+    | Lident name -> (
+      let path, _ = lookup_module_descr ?loc lid env in
+      match path with
+      | Pident id when Ident.persistent id ->
+        let ps = find_pers_struct name in
+        Option.map
+          (fun view -> (path, view, Frozen_values.root_scope view))
+          ps.ps_frozen_values
+      | Pident _ | Pdot _ | Papply _ -> None)
+    | Ldot (parent, name) -> (
+      match lookup_frozen_scope ?loc parent env with
+      | Some (parent_path, view, scope) -> (
+        match Frozen_values.find_module scope name with
+        | Some (nested, position, module_loc, deprecated) ->
+          let path = Pdot (parent_path, name, position) in
+          mark_module_used env name module_loc;
+          report_deprecated ?loc path deprecated;
+          Some (path, view, nested)
+        | None -> (
+          match
+            ( Frozen_values.find_module_info scope name,
+              Frozen_values.find_module_alias view scope name )
+          with
+          | Some (position, module_loc, deprecated), Some target -> (
+            match find_frozen_scope_path target with
+            | Some (target_view, target_scope) ->
+              let path = Pdot (parent_path, name, position) in
+              mark_module_used env name module_loc;
+              report_deprecated ?loc path deprecated;
+              Some (path, target_view, target_scope)
+            | None -> None)
+          | _ -> None))
+      | None -> None)
+
 and lookup_module_descr ?loc lid env =
   let ((p, comps) as res) = lookup_module_descr_aux ?loc lid env in
   mark_module_used env (Path.last p) comps.loc;
@@ -1070,16 +1693,36 @@ and lookup_module ~load ?loc lid env : Path.t =
          report_deprecated ?loc p ps.ps_comps.deprecated);
       p)
   | Ldot (l, s) -> (
-    let p, descr = lookup_module_descr ?loc l env in
-    match get_components descr with
-    | Structure_comps c ->
-      let _data, pos = Tbl.find_str s c.comp_modules in
-      let comps, _ = Tbl.find_str s c.comp_components in
-      mark_module_used env s comps.loc;
-      let p = Pdot (p, s, pos) in
-      report_deprecated ?loc p comps.deprecated;
-      p
-    | Functor_comps _ -> raise Not_found)
+    match lookup_frozen_scope ?loc l env with
+    | Some (parent_path, _, scope) -> (
+      match Frozen_values.find_module_info scope s with
+      | Some (position, module_loc, deprecated) ->
+        let path = Pdot (parent_path, s, position) in
+        mark_module_used env s module_loc;
+        report_deprecated ?loc path deprecated;
+        path
+      | None -> (
+        let p, descr = lookup_module_descr ?loc l env in
+        match get_components descr with
+        | Structure_comps c ->
+          let _data, pos = Tbl.find_str s c.comp_modules in
+          let comps, _ = Tbl.find_str s c.comp_components in
+          mark_module_used env s comps.loc;
+          let p = Pdot (p, s, pos) in
+          report_deprecated ?loc p comps.deprecated;
+          p
+        | Functor_comps _ -> raise Not_found))
+    | None -> (
+      let p, descr = lookup_module_descr ?loc l env in
+      match get_components descr with
+      | Structure_comps c ->
+        let _data, pos = Tbl.find_str s c.comp_modules in
+        let comps, _ = Tbl.find_str s c.comp_components in
+        mark_module_used env s comps.loc;
+        let p = Pdot (p, s, pos) in
+        report_deprecated ?loc p comps.deprecated;
+        p
+      | Functor_comps _ -> raise Not_found))
 
 let lookup proj1 proj2 ?loc lid env =
   match lid with
@@ -1120,20 +1763,100 @@ let cstr_shadow cstr1 cstr2 =
 
 let lbl_shadow _lbl1 _lbl2 = false
 
-let lookup_value = lookup (fun env -> env.values) (fun sc -> sc.comp_values)
-let lookup_all_constructors =
+let lookup_value_generic =
+  lookup (fun env -> env.values) (fun sc -> sc.comp_values)
+
+let lookup_value ?loc lid env =
+  if not (frozen_values_enabled ()) then lookup_value_generic ?loc lid env
+  else
+    match lid with
+    | Longident.Ldot (module_lid, name) -> (
+      match lookup_frozen_scope ?loc module_lid env with
+      | Some (module_path, view, scope) -> (
+        match
+          Compiler_phase_trace.dependency "dependency.frozen_value_lookup"
+            (fun () -> Frozen_values.find_in_scope view scope name)
+        with
+        | Some (description, position) ->
+          (Pdot (module_path, name, position), description)
+        | None -> lookup_value_generic ?loc lid env)
+      | None -> lookup_value_generic ?loc lid env)
+    | Longident.Lident _ -> lookup_value_generic ?loc lid env
+let lookup_all_constructors_generic =
   lookup_all_simple
     (fun env -> env.constrs)
     (fun sc -> sc.comp_constrs)
     cstr_shadow
-let lookup_all_labels =
+
+let lookup_all_constructors ?loc lid env =
+  if not (frozen_values_enabled ()) then
+    lookup_all_constructors_generic ?loc lid env
+  else
+    match lid with
+    | Longident.Ldot (module_lid, name) -> (
+      match lookup_frozen_scope ?loc module_lid env with
+      | Some (_, view, scope) -> (
+        match
+          Compiler_phase_trace.dependency "dependency.frozen_constructor_lookup"
+            (fun () -> Frozen_values.find_constructors_in_scope view scope name)
+        with
+        | Some constructors ->
+          List.map (fun constructor -> (constructor, fun () -> ())) constructors
+        | None -> lookup_all_constructors_generic ?loc lid env)
+      | None -> lookup_all_constructors_generic ?loc lid env)
+    | Longident.Lident _ -> lookup_all_constructors_generic ?loc lid env
+let lookup_all_labels_generic =
   lookup_all_simple
     (fun env -> env.labels)
     (fun sc -> sc.comp_labels)
     lbl_shadow
-let lookup_type = lookup (fun env -> env.types) (fun sc -> sc.comp_types)
-let lookup_modtype =
-  lookup (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes)
+
+let lookup_all_labels ?loc lid env =
+  if not (frozen_values_enabled ()) then lookup_all_labels_generic ?loc lid env
+  else
+    match lid with
+    | Longident.Ldot (module_lid, name) -> (
+      match lookup_frozen_scope ?loc module_lid env with
+      | Some (_, view, scope) -> (
+        match
+          Compiler_phase_trace.dependency "dependency.frozen_label_lookup"
+            (fun () -> Frozen_values.find_labels_in_scope view scope name)
+        with
+        | Some labels -> List.map (fun label -> (label, fun () -> ())) labels
+        | None -> lookup_all_labels_generic ?loc lid env)
+      | None -> lookup_all_labels_generic ?loc lid env)
+    | Longident.Lident _ -> lookup_all_labels_generic ?loc lid env
+let lookup_type_generic =
+  lookup (fun env -> env.types) (fun sc -> sc.comp_types)
+
+let lookup_type ?loc lid env =
+  if not (frozen_values_enabled ()) then lookup_type_generic ?loc lid env
+  else
+    match lid with
+    | Longident.Ldot (module_lid, name) -> (
+      match lookup_frozen_scope ?loc module_lid env with
+      | Some (module_path, view, scope) -> (
+        match
+          Compiler_phase_trace.dependency "dependency.frozen_type_lookup"
+            (fun () -> Frozen_values.find_type_in_scope view scope name)
+        with
+        | Some declaration -> (Pdot (module_path, name, nopos), declaration)
+        | None -> lookup_type_generic ?loc lid env)
+      | None -> lookup_type_generic ?loc lid env)
+    | Longident.Lident _ -> lookup_type_generic ?loc lid env
+let lookup_modtype ?loc lid env =
+  let generic () =
+    lookup (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes) ?loc lid env
+  in
+  match lid with
+  | Lident _ -> generic ()
+  | Ldot (module_lid, name) -> (
+    match lookup_frozen_scope ?loc module_lid env with
+    | Some (module_path, view, scope) -> (
+      match Frozen_values.find_modtype_declaration view scope name with
+      | Some declaration -> (Pdot (module_path, name, nopos), declaration)
+      | None -> generic ())
+    | None -> generic ())
 
 let copy_types l env =
   let f desc =
@@ -1494,10 +2217,739 @@ let add_to_tbl id decl tbl =
   let decls = try Tbl.find_str id tbl with Not_found -> [] in
   Tbl.add id (decl :: decls) tbl
 
+module Physical_type_table = Hashtbl.Make (struct
+  type t = type_expr
+
+  let equal first second = first == second
+  let hash ty = ty.id
+end)
+
+module Physical_ident_table = Hashtbl.Make (struct
+  type t = Ident.t
+
+  let equal first second = first == second
+  let hash id = Hashtbl.hash (id.Ident.stamp, id.Ident.name)
+end)
+
+module Physical_label_table = Hashtbl.Make (struct
+  type t = label_description
+
+  let equal first second = first == second
+  let hash label = Hashtbl.hash (label.lbl_name, label.lbl_res.id)
+end)
+
+type type_snapshot = {
+  nodes: (type_expr * type_desc * int * int) array;
+  identifiers: (Ident.t * int * int) array;
+  abbrevs: (abbrev_memo ref * abbrev_memo) array;
+  mutabilities: (field_mutability ref * field_mutability) array;
+  row_fields: (row_field option ref * row_field option) array;
+  label_links: (label_description * label_description array) array;
+  label_arrays: (label_description array * label_description array) array;
+  layouts: (Variant_runtime.layout_ref * Variant_runtime.layout) array;
+  component_checks: (unit -> bool) array;
+  unsupported: bool;
+}
+
+(* Track the mutable fields reachable from the cached signature and component
+   tables. Unsupported memo shapes make the entry ineligible for direct reuse. *)
+let snapshot_type_graph ~raw_signature ~expanded_signature ~target_components
+    ~alias_components ~stages ~require_components =
+  let seen = Physical_type_table.create 32768 in
+  let seen_identifiers = Physical_ident_table.create 8192 in
+  let seen_label_arrays = Physical_label_table.create 1024 in
+  let abbrevs = ref [] in
+  let mutabilities = ref [] in
+  let row_fields = ref [] in
+  let label_links = ref [] in
+  let label_arrays = ref [] in
+  let layouts = ref [] in
+  let component_checks = ref [] in
+  let unsupported = ref false in
+  let visit_ident id = Physical_ident_table.replace seen_identifiers id () in
+  let rec visit_path = function
+    | Pident id -> visit_ident id
+    | Pdot (path, _, _) -> visit_path path
+    | Papply (first, second) ->
+      visit_path first;
+      visit_path second
+  in
+  let visit_abbrev = function
+    | Mnil -> ()
+    | Mcons _ | Mlink _ -> unsupported := true
+  in
+  let rec visit_mutability depth reference =
+    if depth > 128 then unsupported := true
+    else (
+      mutabilities := (reference, !reference) :: !mutabilities;
+      match !reference with
+      | Mutability_value _ -> ()
+      | Mutability_link next -> visit_mutability (depth + 1) next)
+  in
+  let rec visit_row_field depth field =
+    if depth > 128 then unsupported := true
+    else
+      match field with
+      | Reither (_, _, _, reference) ->
+        row_fields := (reference, !reference) :: !row_fields;
+        Option.iter (visit_row_field (depth + 1)) !reference
+      | Rpresent _ | Rabsent -> ()
+  in
+  let visit_layout reference =
+    try layouts := (reference, Variant_runtime.get_layout reference) :: !layouts
+    with Failure _ -> unsupported := true
+  in
+  let visit_record_representation = function
+    | Record_inlined {representation} -> visit_layout representation.variant
+    | Record_regular | Record_float_unused | Record_unboxed _ | Record_extension
+      ->
+      ()
+  in
+  let rec visit ty =
+    if not (Physical_type_table.mem seen ty) then (
+      Physical_type_table.add seen ty ();
+      (match ty.desc with
+      | Tconstr (path, _, reference) ->
+        visit_path path;
+        abbrevs := (reference, !reference) :: !abbrevs;
+        visit_abbrev !reference
+      | Tfield {mutability} -> visit_mutability 0 mutability
+      | Tvariant row ->
+        List.iter (fun (_, field) -> visit_row_field 0 field) row.row_fields;
+        Option.iter (fun (path, _) -> visit_path path) row.row_name
+      | Tpackage (path, _, _) -> visit_path path
+      | Tvar _ | Tarrow _ | Ttuple _ | Tobject _ | Tnil | Tlink _ | Tsubst _
+      | Tunivar _ | Tpoly _ ->
+        ());
+      Btype.iter_type_expr visit ty)
+  in
+  let original = Btype.type_iterators in
+  let iterator =
+    {
+      original with
+      it_type_expr = (fun _ ty -> visit ty);
+      it_type_declaration =
+        (fun iterator declaration ->
+          (match declaration.type_kind with
+          | Type_variant (_, reference) -> visit_layout reference
+          | Type_abstract | Type_record _ | Type_open -> ());
+          original.it_type_declaration iterator declaration);
+    }
+  in
+  let visit_label_declaration declaration = visit_ident declaration.ld_id in
+  let visit_constructor_declaration declaration =
+    visit_ident declaration.cd_id;
+    match declaration.cd_args with
+    | Cstr_tuple _ -> ()
+    | Cstr_record labels -> List.iter visit_label_declaration labels
+  in
+  let visit_type_declaration declaration =
+    (match declaration.type_kind with
+    | Type_variant (constructors, _) ->
+      List.iter visit_constructor_declaration constructors
+    | Type_record (labels, representation) ->
+      List.iter visit_label_declaration labels;
+      visit_record_representation representation
+    | Type_abstract | Type_open -> ());
+    List.iter
+      (function
+        | Record {labels} -> List.iter visit_label_declaration labels)
+      declaration.type_inlined_types
+  in
+  let rec visit_module_type = function
+    | Mty_ident path | Mty_alias (_, path) -> visit_path path
+    | Mty_signature signature -> List.iter visit_signature_item signature
+    | Mty_functor (id, argument, result) ->
+      visit_ident id;
+      Option.iter visit_module_type argument;
+      visit_module_type result
+  and visit_signature_item = function
+    | Sig_value (id, _) -> visit_ident id
+    | Sig_type (id, declaration, _) ->
+      visit_ident id;
+      visit_type_declaration declaration
+    | Sig_typext (id, extension, _) -> (
+      visit_ident id;
+      visit_path extension.ext_type_path;
+      match extension.ext_args with
+      | Cstr_tuple _ -> ()
+      | Cstr_record labels -> List.iter visit_label_declaration labels)
+    | Sig_module (id, declaration, _) ->
+      visit_ident id;
+      visit_module_type declaration.md_type
+    | Sig_modtype (id, declaration) ->
+      visit_ident id;
+      Option.iter visit_module_type declaration.mtd_type
+  in
+  iterator.it_signature iterator raw_signature;
+  iterator.it_signature iterator expanded_signature;
+  List.iter visit_signature_item raw_signature;
+  List.iter visit_signature_item expanded_signature;
+  List.iter (fun stage -> Array.iter visit stage.type_nodes) stages;
+  let capture_components = function
+    | Some (Structure_comps components) ->
+      let values = components.comp_values in
+      let constrs = components.comp_constrs in
+      let labels_table = components.comp_labels in
+      let types = components.comp_types in
+      let modules = components.comp_modules in
+      let modtypes = components.comp_modtypes in
+      let nested = components.comp_components in
+      component_checks :=
+        (fun () ->
+          components.comp_values == values
+          && components.comp_constrs == constrs
+          && components.comp_labels == labels_table
+          && components.comp_types == types
+          && components.comp_modules == modules
+          && components.comp_modtypes == modtypes
+          && components.comp_components == nested)
+        :: !component_checks;
+      Tbl.iter (fun _ (description, _) -> visit description.val_type) values;
+      Tbl.iter
+        (fun _ descriptions ->
+          List.iter
+            (fun label ->
+              visit label.lbl_res;
+              visit label.lbl_arg;
+              let all = label.lbl_all in
+              visit_record_representation label.lbl_repres;
+              if Array.length all = 0 then
+                label_links := (label, all) :: !label_links
+              else
+                let first = all.(0) in
+                if not (Physical_label_table.mem seen_label_arrays first) then (
+                  Physical_label_table.add seen_label_arrays first ();
+                  label_arrays := (all, Array.copy all) :: !label_arrays;
+                  Array.iter
+                    (fun member ->
+                      label_links := (member, member.lbl_all) :: !label_links)
+                    all))
+            descriptions)
+        labels_table;
+      Tbl.iter
+        (fun _ ((declaration, (constructors, labels)), _) ->
+          visit_type_declaration declaration;
+          iterator.it_type_declaration iterator declaration;
+          List.iter (fun description -> visit description.cstr_res) constructors;
+          List.iter
+            (fun description ->
+              visit description.lbl_res;
+              visit description.lbl_arg)
+            labels;
+          match declaration.type_kind with
+          | Type_variant (_, reference) -> visit_layout reference
+          | Type_abstract | Type_record _ | Type_open -> ())
+        types;
+      Tbl.iter
+        (fun _ descriptions ->
+          List.iter
+            (fun description ->
+              visit description.cstr_res;
+              List.iter visit description.cstr_existentials;
+              List.iter visit description.cstr_args;
+              Option.iter
+                (fun declaration ->
+                  iterator.it_type_declaration iterator declaration)
+                description.cstr_inlined;
+              match description.cstr_kind with
+              | Ordinary_constructor reference -> visit_layout reference.variant
+              | Extension_constructor path -> visit_path path)
+            descriptions)
+        constrs;
+      Tbl.iter
+        (fun _ (declaration, _) ->
+          Option.iter visit_module_type declaration.mtd_type;
+          Option.iter
+            (fun module_type -> iterator.it_module_type iterator module_type)
+            declaration.mtd_type)
+        modtypes
+    | Some (Functor_comps _) -> unsupported := true
+    | None -> if require_components then unsupported := true
+  in
+  capture_components target_components;
+  capture_components alias_components;
+  List.iter
+    (fun (stage : allocation_stage) -> Array.iter visit_ident stage.identifiers)
+    stages;
+  let identifiers =
+    Physical_ident_table.to_seq_keys seen_identifiers
+    |> Seq.map (fun id -> (id, id.Ident.stamp, id.Ident.flags))
+    |> Array.of_seq
+  in
+  {
+    nodes =
+      Physical_type_table.to_seq_keys seen
+      |> Seq.map (fun ty -> (ty, ty.desc, ty.level, ty.id))
+      |> Array.of_seq;
+    identifiers;
+    abbrevs = Array.of_list !abbrevs;
+    mutabilities = Array.of_list !mutabilities;
+    row_fields = Array.of_list !row_fields;
+    label_links = Array.of_list !label_links;
+    label_arrays = Array.of_list !label_arrays;
+    layouts = Array.of_list !layouts;
+    component_checks = Array.of_list !component_checks;
+    unsupported = !unsupported;
+  }
+
+let snapshot_expanded_type_graph graph =
+  snapshot_type_graph ~raw_signature:graph.raw_signature
+    ~expanded_signature:graph.expanded_signature
+    ~target_components:graph.target_components
+    ~alias_components:graph.alias_components
+    ~stages:[graph.target_ids; graph.signature_ids; graph.alias_ids]
+    ~require_components:true
+
+let type_graph_unchanged snapshot =
+  (not snapshot.unsupported)
+  && Array.for_all
+       (fun (ty, desc, level, id) ->
+         ty.desc == desc && ty.level = level && ty.id = id)
+       snapshot.nodes
+  && Array.for_all
+       (fun (id, stamp, flags) ->
+         id.Ident.stamp = stamp && id.Ident.flags = flags)
+       snapshot.identifiers
+  && Array.for_all
+       (fun (reference, value) -> !reference == value)
+       snapshot.abbrevs
+  && Array.for_all
+       (fun (reference, value) -> !reference == value)
+       snapshot.mutabilities
+  && Array.for_all
+       (fun (reference, value) -> !reference == value)
+       snapshot.row_fields
+  && Array.for_all
+       (fun (label, array) -> label.lbl_all == array)
+       snapshot.label_links
+  && Array.for_all
+       (fun (array, contents) ->
+         Array.length array = Array.length contents
+         && Array.for_all2 ( == ) array contents)
+       snapshot.label_arrays
+  && Array.for_all
+       (fun (reference, layout) ->
+         Variant_runtime.get_layout reference == layout)
+       snapshot.layouts
+  && Array.for_all (fun check -> check ()) snapshot.component_checks
+
+type expanded_snapshot_cache_entry = {
+  key: alias_key;
+  target_filename: string;
+  namespace_filename: string;
+  resolved_load_path: string list;
+  target_stats: Unix.stats;
+  namespace_stats: Unix.stats;
+  bytes: string;
+  mutable graph: expanded_snapshot option;
+  mutable typed_integrity: type_snapshot option;
+  mutable in_use: bool;
+}
+
+let expanded_snapshot_cache_key = Domain.DLS.new_key (fun () -> ref None)
+let expanded_snapshot_cache () = Domain.DLS.get expanded_snapshot_cache_key
+
+(* The marshaled image is available to every project, while a decoded graph
+   moves between domains only through an exclusive project cache lease. The
+   lock also lets one worker prepare the shared image while others wait. *)
+type shared_expanded_snapshot = {
+  key: alias_key;
+  target_filename: string;
+  namespace_filename: string;
+  resolved_load_path: string list;
+  target_stats: Unix.stats;
+  namespace_stats: Unix.stats;
+  bytes: string;
+}
+
+let shared_expanded_snapshot = ref None
+let shared_expanded_snapshot_lock = Mutex.create ()
+
+(* Preparing a large graph costs more than one ordinary alias expansion. Wait
+   for a second compiler request across the process so one-off edits stay cheap.
+   An expanded graph remains exclusive to one compiler request at a time. *)
+let expanded_snapshot_candidates = Hashtbl.create 8
+let expanded_snapshot_candidates_lock = Mutex.create ()
+
+let candidate_seen_in_previous_request key filename request =
+  Mutex.lock expanded_snapshot_candidates_lock;
+  Fun.protect
+    (fun () ->
+      let candidate = (key, filename) in
+      let seen =
+        match Hashtbl.find_opt expanded_snapshot_candidates candidate with
+        | Some previous -> previous != request
+        | None -> false
+      in
+      Hashtbl.replace expanded_snapshot_candidates candidate request;
+      seen)
+    ~finally:(fun () -> Mutex.unlock expanded_snapshot_candidates_lock)
+
+let forget_snapshot_candidate key filename =
+  Mutex.lock expanded_snapshot_candidates_lock;
+  Fun.protect
+    (fun () -> Hashtbl.remove expanded_snapshot_candidates (key, filename))
+    ~finally:(fun () -> Mutex.unlock expanded_snapshot_candidates_lock)
+
+let expanded_snapshot_enabled_key = Domain.DLS.new_key (fun () -> false)
+
+let with_expanded_snapshot_cache action =
+  let previous = Domain.DLS.get expanded_snapshot_enabled_key in
+  Domain.DLS.set expanded_snapshot_enabled_key true;
+  Fun.protect action ~finally:(fun () ->
+      Domain.DLS.set expanded_snapshot_enabled_key previous)
+
+let preparing_expanded_snapshot = Domain.DLS.new_key (fun () -> false)
+let prepare_expanded_snapshot : (alias_key -> unit) ref = ref (fun _ -> ())
+
+let expanded_snapshot_enabled () =
+  if frozen_values_enabled () then false
+  else
+    match Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" with
+    | Some "0" -> false
+    | Some ("force" | "force_typed" | "typed" | "audit") -> true
+    | _ -> Domain.DLS.get expanded_snapshot_enabled_key
+
+let typed_expanded_snapshot_reuse () =
+  not (Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" = Some "force")
+
+let audit_expanded_snapshot_reuse () =
+  Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" = Some "audit"
+
+let force_fresh_expanded_snapshot () =
+  Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" = Some "force"
+
+type cmi_cache_entry = {
+  resolved_filename: string;
+  stats: Unix.stats;
+  bytes: bytes;
+  mutable cmi: Cmi_format.cmi_infos;
+  mutable integrity: type_snapshot option;
+  mutable used: bool;
+}
+
+type dependency_cache = {
+  mutex: Mutex.t;
+  mutable available: dependency_cache_table list;
+  frozen_values: frozen_values_cache;
+  published_cmis: published_cmis;
+}
+
+and dependency_cache_table = {
+  cmis: (string, cmi_cache_entry) Hashtbl.t;
+  expanded_snapshot: expanded_snapshot_cache_entry option ref;
+}
+
+let create_dependency_cache () =
+  {
+    mutex = Mutex.create ();
+    available = [];
+    frozen_values = {lock = Mutex.create (); entries = Hashtbl.create 32};
+    published_cmis =
+      {
+        lock = Mutex.create ();
+        entries = Hashtbl.create 128;
+        pending = Hashtbl.create 32;
+      };
+  }
+
+let make_published_cmi ~filename ~stats ~crc cmi image =
+  {
+    filename;
+    stats;
+    name = cmi.Cmi_format.cmi_name;
+    fingerprint = crc;
+    crcs = (cmi.cmi_name, Some crc) :: cmi.cmi_crcs;
+    flags = cmi.cmi_flags;
+    image;
+  }
+
+let publish_pending_compiled_cmi cache ~source ~destination ~crc cmi =
+  let destination = Compiler_request_state.canonical_output_path destination in
+  let source_stats = Unix.stat source in
+  match Frozen_values.freeze cmi with
+  | Error _ -> false
+  | Ok image ->
+    if not (same_file_stats (Unix.stat source) source_stats) then false
+    else
+      let value =
+        make_published_cmi ~filename:destination ~stats:source_stats ~crc cmi
+          image
+      in
+      Mutex.lock cache.published_cmis.lock;
+      Fun.protect
+        (fun () ->
+          Hashtbl.replace cache.published_cmis.pending value.name
+            {destination; source; source_stats; value})
+        ~finally:(fun () -> Mutex.unlock cache.published_cmis.lock);
+      true
+
+let discard_pending_compiled_cmi cache ~filename =
+  let filename = Compiler_request_state.canonical_output_path filename in
+  let name = Filename.basename filename |> Filename.remove_extension in
+  Mutex.lock cache.published_cmis.lock;
+  Fun.protect
+    (fun () ->
+      match Hashtbl.find_opt cache.published_cmis.pending name with
+      | Some pending
+        when Compiler_request_state.same_output_path pending.destination
+               filename ->
+        Hashtbl.remove cache.published_cmis.pending name
+      | Some _ | None -> ())
+    ~finally:(fun () -> Mutex.unlock cache.published_cmis.lock)
+
+let publish_compiled_cmi cache ~filename ~crc cmi =
+  let filename = Compiler_request_state.canonical_output_path filename in
+  let pending =
+    Mutex.lock cache.published_cmis.lock;
+    Fun.protect
+      (fun () ->
+        Hashtbl.find_opt cache.published_cmis.pending cmi.Cmi_format.cmi_name)
+      ~finally:(fun () -> Mutex.unlock cache.published_cmis.lock)
+  in
+  let image =
+    match pending with
+    | Some pending
+      when Compiler_request_state.same_output_path pending.destination filename
+           && pending.value.fingerprint = crc ->
+      Some pending.value.image
+    | Some _ | None -> (
+      match Frozen_values.freeze cmi with
+      | Error _ -> None
+      | Ok image -> Some image)
+  in
+  Mutex.lock cache.published_cmis.lock;
+  Fun.protect
+    (fun () ->
+      Hashtbl.remove cache.published_cmis.pending cmi.Cmi_format.cmi_name;
+      Option.iter
+        (fun image ->
+          let stats = Unix.stat filename in
+          let entry = make_published_cmi ~filename ~stats ~crc cmi image in
+          Hashtbl.replace cache.published_cmis.entries entry.name entry)
+        image)
+    ~finally:(fun () -> Mutex.unlock cache.published_cmis.lock)
+
+let published_compiled_cmi cache ~filename =
+  let filename = Compiler_request_state.canonical_output_path filename in
+  let name = Filename.basename filename |> Filename.remove_extension in
+  let entry, pending =
+    Mutex.lock cache.published_cmis.lock;
+    Fun.protect
+      (fun () ->
+        ( Hashtbl.find_opt cache.published_cmis.entries name,
+          Hashtbl.find_opt cache.published_cmis.pending name ))
+      ~finally:(fun () -> Mutex.unlock cache.published_cmis.lock)
+  in
+  let pending_result =
+    Option.bind pending (fun pending ->
+        try
+          if
+            Compiler_request_state.same_output_path pending.destination filename
+            && same_file_stats (Unix.stat pending.source) pending.source_stats
+          then Some (pending.value.fingerprint, pending.value.image)
+          else None
+        with Sys_error _ | Unix.Unix_error _ -> None)
+  in
+  match pending_result with
+  | Some _ -> pending_result
+  | None ->
+    Option.bind entry (fun entry ->
+        try
+          if
+            Compiler_request_state.same_output_path entry.filename filename
+            && same_file_stats (Unix.stat filename) entry.stats
+          then Some (entry.fingerprint, entry.image)
+          else None
+        with Sys_error _ | Unix.Unix_error _ -> None)
+
+let cmi_cache_key = Domain.DLS.new_key (fun () -> Hashtbl.create 2)
+let cmi_cache () = Domain.DLS.get cmi_cache_key
+
+let capture_cmi_integrity cmi =
+  let snapshot =
+    Compiler_phase_trace.dependency "dependency.cmi_cache_capture" (fun () ->
+        snapshot_type_graph ~raw_signature:cmi.Cmi_format.cmi_sign
+          ~expanded_signature:[] ~target_components:None ~alias_components:None
+          ~stages:[] ~require_components:false)
+  in
+  if snapshot.unsupported then None else Some snapshot
+
+(* Each decoded interface table belongs to one request at a time. A request
+   may mutate its graph, so [finalize_cmi_cache] restores the saved image before
+   the table returns to its project. Resolve the path on every hit to notice
+   newly shadowing or replaced CMIs after a watch edit. *)
+let load_cached_cmi ~name =
+  if
+    (not
+       (Domain.DLS.get expanded_snapshot_enabled_key
+       || expanded_snapshot_enabled ()))
+    || Domain.DLS.get preparing_expanded_snapshot
+    || Sys.getenv_opt "REWATCH_PROJECT_CMI_CACHE" = Some "0"
+       && name <> "Stdlib" && name <> "Pervasives"
+  then None
+  else
+    let cache = cmi_cache () in
+    let load_fresh () =
+      let loaded = !Persistent_signature.load ~unit_name:name in
+      (match loaded with
+      | None -> ()
+      | Some {filename; cmi} -> (
+        let resolved_filename = Compiler_request_state.resolve_path filename in
+        try
+          let stats = Unix.stat resolved_filename in
+          let bytes = Marshal.to_bytes cmi [] in
+          if
+            Bytes.length bytes <= 64 * 1024
+            && (Hashtbl.mem cache name || Hashtbl.length cache < 32)
+            && same_file_stats (Unix.stat resolved_filename) stats
+          then
+            Hashtbl.replace cache name
+              {
+                resolved_filename;
+                stats;
+                bytes;
+                cmi;
+                integrity = capture_cmi_integrity cmi;
+                used = true;
+              }
+        with Sys_error _ | Unix.Unix_error _ | Invalid_argument _ -> ()));
+      Some loaded
+    in
+    match Hashtbl.find_opt cache name with
+    | Some entry -> (
+      try
+        let filename =
+          Compiler_phase_trace.dependency "dependency.cmi_cache_validate"
+            (fun () ->
+              find_in_path_uncap (Config.get_load_path ()) (name ^ ".cmi"))
+        in
+        if
+          Compiler_request_state.resolve_path filename = entry.resolved_filename
+          && same_file_stats (Unix.stat entry.resolved_filename) entry.stats
+        then (
+          entry.used <- true;
+          Some (Some Persistent_signature.{filename; cmi = entry.cmi}))
+        else (
+          Hashtbl.remove cache name;
+          load_fresh ())
+      with Not_found | Sys_error _ | Unix.Unix_error _ ->
+        Hashtbl.remove cache name;
+        load_fresh ())
+    | None -> load_fresh ()
+
+let finalize_cmi_cache () =
+  Hashtbl.iter
+    (fun _ entry ->
+      if entry.used then (
+        entry.used <- false;
+        let pristine =
+          Compiler_phase_trace.dependency "dependency.cmi_cache_verify"
+            (fun () ->
+              match entry.integrity with
+              | Some snapshot ->
+                let typed = type_graph_unchanged snapshot in
+                if
+                  typed
+                  && Sys.getenv_opt "REWATCH_PROJECT_CMI_CACHE" = Some "audit"
+                  && not
+                       (Bytes.equal (Marshal.to_bytes entry.cmi []) entry.bytes)
+                then failwith "typed CMI integrity check missed mutation";
+                typed
+              | None -> (
+                try Bytes.equal (Marshal.to_bytes entry.cmi []) entry.bytes
+                with Invalid_argument _ -> false))
+        in
+        if not pristine then (
+          entry.cmi <- Marshal.from_bytes entry.bytes 0;
+          entry.integrity <- capture_cmi_integrity entry.cmi)))
+    (cmi_cache ())
+
+let () = cached_cmi_loader := load_cached_cmi
+
+let is_target_path name = function
+  | Pident id -> Ident.persistent id && Ident.name id = name
+  | Pdot _ | Papply _ -> false
+
+let alias_key_of_module path mty =
+  match (path, mty) with
+  | Pdot (Pident root, alias_name, _), Mty_alias (_, Pident target)
+    when Ident.persistent root && Ident.persistent target ->
+    Some
+      {
+        target_name = Ident.name target;
+        namespace_name = Ident.name root;
+        alias_name;
+      }
+  | _ -> None
+
+let is_alias_path key path mty = alias_key_of_module path mty = Some key
+
 let rec components_of_module ~deprecated ~loc env sub path mty =
-  {deprecated; loc; comps = Env_lazy.create (env, sub, path, mty)}
+  {
+    deprecated;
+    loc;
+    frozen_root = None;
+    comps = Env_lazy.create (env, sub, path, mty);
+  }
 
 and components_of_module_maker (env, sub, path, mty) =
+  Compiler_phase_trace.dependency_lazy
+    (fun () ->
+      let origin =
+        match mty with
+        | Mty_alias (_, target) -> ":alias=" ^ Path.name target
+        | Mty_ident target -> ":ident=" ^ Path.name target
+        | Mty_signature _ -> ":signature"
+        | Mty_functor _ -> ":functor"
+      in
+      "dependency.expand_components:" ^ Path.name path ^ origin)
+    (fun () ->
+      if not (expanded_snapshot_enabled ()) then
+        components_of_module_maker_uncached (env, sub, path, mty)
+      else
+        let alias_key = alias_key_of_module path mty in
+        let target_name =
+          match path with
+          | Pident id when Ident.persistent id -> Some (Ident.name id)
+          | _ -> Option.map (fun key -> key.target_name) alias_key
+        in
+        let cached =
+          match target_name with
+          | Some target_name -> (
+            try (find_pers_struct target_name).ps_snapshot
+            with Not_found -> None)
+          | None -> None
+        in
+        match cached with
+        | Some snapshot when is_target_path snapshot.key.target_name path ->
+          if not snapshot.target_relocated then (
+            relocate_allocation_stage snapshot.graph.target_ids;
+            snapshot.target_relocated <- true);
+          snapshot.graph.target_components
+        | Some snapshot when is_alias_path snapshot.key path mty ->
+          ignore (Lazy.force (find_pers_struct snapshot.key.target_name).ps_sig);
+          if not snapshot.alias_relocated then (
+            relocate_allocation_stage snapshot.graph.alias_ids;
+            snapshot.alias_relocated <- true);
+          snapshot.graph.alias_components
+        | _ ->
+          let result =
+            components_of_module_maker_uncached (env, sub, path, mty)
+          in
+          (match alias_key with
+          | Some key when not (Domain.DLS.get preparing_expanded_snapshot) -> (
+            try !prepare_expanded_snapshot key
+            with
+            | Not_found | Sys_error _ | Unix.Unix_error _ | Cmi_format.Error _
+            | Error _ | Invalid_argument _
+            ->
+              ())
+          | _ -> ());
+          result)
+
+and components_of_module_maker_uncached (env, sub, path, mty) =
   match scrape_alias env mty with
   | Mty_signature sg ->
     let c =
@@ -1514,60 +2966,82 @@ and components_of_module_maker (env, sub, path, mty) =
     let pl, sub = prefix_idents path sub sg in
     let env = ref env in
     let pos = ref 0 in
-    List.iter2
-      (fun item path ->
-        match item with
-        | Sig_value (id, decl) -> (
-          let decl' = Subst.value_description sub decl in
-          c.comp_values <- Tbl.add (Ident.name id) (decl', !pos) c.comp_values;
-          match decl.val_kind with
-          | Val_prim _ -> ()
-          | _ -> incr pos)
-        | Sig_type (id, decl, _) ->
-          let decl' = Subst.type_declaration sub decl in
-          Datarepr.set_row_name decl' (Subst.type_path sub (Path.Pident id));
-          let constructors =
-            List.map snd (Datarepr.constructors_of_type path decl')
-          in
-          let labels = List.map snd (Datarepr.labels_of_type path decl') in
-          c.comp_types <-
-            Tbl.add (Ident.name id)
-              ((decl', (constructors, labels)), nopos)
-              c.comp_types;
-          List.iter
-            (fun descr ->
-              c.comp_constrs <- add_to_tbl descr.cstr_name descr c.comp_constrs)
-            constructors;
-          List.iter
-            (fun descr ->
-              c.comp_labels <- add_to_tbl descr.lbl_name descr c.comp_labels)
-            labels;
-          env := store_type_infos id decl !env
-        | Sig_typext (id, ext, _) ->
-          let ext' = Subst.extension_constructor sub ext in
-          let descr = Datarepr.extension_descr path ext' in
-          c.comp_constrs <- add_to_tbl (Ident.name id) descr c.comp_constrs;
-          incr pos
-        | Sig_module (id, md, _) ->
-          let md' = Env_lazy.create (sub, md) in
-          c.comp_modules <- Tbl.add (Ident.name id) (md', !pos) c.comp_modules;
-          let deprecated =
-            Builtin_attributes.deprecated_of_attrs md.md_attributes
-          in
-          let comps =
-            components_of_module ~deprecated ~loc:md.md_loc !env sub path
-              md.md_type
-          in
-          c.comp_components <-
-            Tbl.add (Ident.name id) (comps, !pos) c.comp_components;
-          env := store_module ~check:false id md !env;
-          incr pos
-        | Sig_modtype (id, decl) ->
-          let decl' = Subst.modtype_declaration sub decl in
-          c.comp_modtypes <-
-            Tbl.add (Ident.name id) (decl', nopos) c.comp_modtypes;
-          env := store_modtype id decl !env)
-      sg pl;
+    let labels_by_name = Hashtbl.create 127 in
+    let label_names_rev = ref [] in
+    Compiler_phase_trace.dependency "dependency.components_build" (fun () ->
+        List.iter2
+          (fun item path ->
+            match item with
+            | Sig_value (id, decl) -> (
+              let decl' = Subst.value_description sub decl in
+              c.comp_values <-
+                Tbl.add (Ident.name id) (decl', !pos) c.comp_values;
+              match decl.val_kind with
+              | Val_prim _ -> ()
+              | _ -> incr pos)
+            | Sig_type (id, decl, _) ->
+              let decl' = Subst.type_declaration sub decl in
+              Datarepr.set_row_name decl' (Subst.type_path sub (Path.Pident id));
+              let constructors =
+                List.map snd (Datarepr.constructors_of_type path decl')
+              in
+              let labels = List.map snd (Datarepr.labels_of_type path decl') in
+              c.comp_types <-
+                Tbl.add (Ident.name id)
+                  ((decl', (constructors, labels)), nopos)
+                  c.comp_types;
+              List.iter
+                (fun descr ->
+                  c.comp_constrs <-
+                    add_to_tbl descr.cstr_name descr c.comp_constrs)
+                constructors;
+              List.iter
+                (fun descr ->
+                  let name = descr.lbl_name in
+                  match Hashtbl.find labels_by_name name with
+                  | _, previous ->
+                    Hashtbl.replace labels_by_name name (name, descr :: previous)
+                  | exception Not_found ->
+                    Hashtbl.add labels_by_name name (name, [descr]);
+                    label_names_rev := name :: !label_names_rev)
+                labels;
+              env := store_type_infos id decl !env
+            | Sig_typext (id, ext, _) ->
+              let ext' = Subst.extension_constructor sub ext in
+              let descr = Datarepr.extension_descr path ext' in
+              c.comp_constrs <- add_to_tbl (Ident.name id) descr c.comp_constrs;
+              incr pos
+            | Sig_module (id, md, _) ->
+              let md' = Env_lazy.create (sub, md) in
+              c.comp_modules <-
+                Tbl.add (Ident.name id) (md', !pos) c.comp_modules;
+              let deprecated =
+                Builtin_attributes.deprecated_of_attrs md.md_attributes
+              in
+              let comps =
+                components_of_module ~deprecated ~loc:md.md_loc !env sub path
+                  md.md_type
+              in
+              c.comp_components <-
+                Tbl.add (Ident.name id) (comps, !pos) c.comp_components;
+              env := store_module ~check:false id md !env;
+              incr pos
+            | Sig_modtype (id, decl) ->
+              let decl' = Subst.modtype_declaration sub decl in
+              c.comp_modtypes <-
+                Tbl.add (Ident.name id) (decl', nopos) c.comp_modtypes;
+              env := store_modtype id decl !env)
+          sg pl);
+    (* Large signatures often repeat label names. Keep first appearance order
+       to preserve Tbl's shape and the latest key and declarations to preserve
+       its contents. *)
+    c.comp_labels <-
+      List.fold_left
+        (fun table name ->
+          let latest_name, declarations = Hashtbl.find labels_by_name name in
+          Tbl.add latest_name declarations table)
+        Tbl.empty
+        (List.rev !label_names_rev);
     Some (Structure_comps c)
   | Mty_functor (param, _ty_arg, ty_res) ->
     Some
@@ -1850,10 +3324,127 @@ let add_components slot root env0 comps =
     modules;
   }
 
+let add_frozen_components slot root env0 view scope =
+  let generic_components () =
+    Compiler_phase_trace.dependency "dependency.frozen_open_fallback" (fun () ->
+        match get_components (find_module_descr root env0) with
+        | Structure_comps components -> components
+        | Functor_comps _ -> raise Not_found)
+  in
+  let from_table table name =
+    try Some (Tbl.find_str name table) with Not_found -> None
+  in
+  let id_source names contains lookup : _ Id_tbl.source =
+    let find name = if contains name then lookup name else None in
+    {
+      find;
+      iter =
+        (fun callback ->
+          List.iter (fun name -> Option.iter (callback name) (find name)) names);
+    }
+  in
+  let ty_source names contains lookup : _ Tycomp_tbl.source =
+    let find name = if contains name then lookup name else None in
+    {
+      find;
+      iter =
+        (fun callback ->
+          List.iter (fun name -> Option.iter (callback name) (find name)) names);
+    }
+  in
+  let values =
+    id_source (Frozen_values.value_names scope) (Frozen_values.has_value scope)
+      (fun name ->
+        match Frozen_values.find_in_scope view scope name with
+        | Some value -> Some value
+        | None -> from_table (generic_components ()).comp_values name)
+  in
+  let types =
+    id_source (Frozen_values.type_names scope) (Frozen_values.has_type scope)
+      (fun name ->
+        match Frozen_values.find_type_in_scope view scope name with
+        | Some declaration -> Some (declaration, nopos)
+        | None -> from_table (generic_components ()).comp_types name)
+  in
+  let constrs =
+    ty_source (Frozen_values.constructor_names scope)
+      (Frozen_values.has_constructor scope) (fun name ->
+        match Frozen_values.find_constructors_in_scope view scope name with
+        | Some constructors -> Some constructors
+        | None -> from_table (generic_components ()).comp_constrs name)
+  in
+  let labels =
+    ty_source (Frozen_values.label_names scope) (Frozen_values.has_label scope)
+      (fun name ->
+        match Frozen_values.find_labels_in_scope view scope name with
+        | Some labels -> Some labels
+        | None -> from_table (generic_components ()).comp_labels name)
+  in
+  let module_cache = Hashtbl.create 8 in
+  let modules =
+    id_source (Frozen_values.module_names scope)
+      (Frozen_values.has_module scope) (fun name ->
+        match Hashtbl.find_opt module_cache name with
+        | Some module_entry -> Some module_entry
+        | None ->
+          let result =
+            match Frozen_values.find_module_declaration view scope name with
+            | Some (declaration, position) ->
+              Some (Env_lazy.create (Subst.identity, declaration), position)
+            | None -> from_table (generic_components ()).comp_modules name
+          in
+          Option.iter (Hashtbl.add module_cache name) result;
+          result)
+  in
+  let modtypes =
+    id_source (Frozen_values.modtype_names scope)
+      (Frozen_values.has_modtype scope) (fun name ->
+        match Frozen_values.find_modtype_declaration view scope name with
+        | Some declaration -> Some (declaration, nopos)
+        | None -> from_table (generic_components ()).comp_modtypes name)
+  in
+  let components =
+    id_source (Frozen_values.module_names scope)
+      (Frozen_values.has_module scope) (fun name ->
+        match Frozen_values.find_module_info scope name with
+        | Some (position, _, _) ->
+          Some (find_module_descr (Pdot (root, name, position)) env0, position)
+        | None -> from_table (generic_components ()).comp_components name)
+  in
+  {
+    env0 with
+    summary = Env_open (env0.summary, root);
+    values =
+      Id_tbl.add_open_source slot (fun x -> `Value x) root values env0.values;
+    types = Id_tbl.add_open_source slot (fun x -> `Type x) root types env0.types;
+    constrs =
+      Tycomp_tbl.add_open_source slot
+        (fun x -> `Constructor x)
+        constrs env0.constrs;
+    labels =
+      Tycomp_tbl.add_open_source slot (fun x -> `Label x) labels env0.labels;
+    modules =
+      Id_tbl.add_open_source slot (fun x -> `Module x) root modules env0.modules;
+    modtypes =
+      Id_tbl.add_open_source slot
+        (fun x -> `Module_type x)
+        root modtypes env0.modtypes;
+    components =
+      Id_tbl.add_open_source slot
+        (fun x -> `Component x)
+        root components env0.components;
+  }
+
 let open_signature slot root env0 =
-  match get_components (find_module_descr root env0) with
-  | Functor_comps _ -> None
-  | Structure_comps comps -> Some (add_components slot root env0 comps)
+  match find_frozen_scope_path root with
+  | Some (view, scope) ->
+    Some
+      (Compiler_phase_trace.dependency "dependency.frozen_open" (fun () ->
+           add_frozen_components slot root env0 view scope))
+  | None -> (
+    match get_components (find_module_descr root env0) with
+    | Functor_comps _ -> None
+    | Structure_comps comps -> Some (add_components slot root env0 comps))
 
 (* Open a signature from a file *)
 
@@ -1914,43 +3505,57 @@ let imports () =
 
 let save_signature_with_imports ?check_exists ~deprecated sg modname filename
     imports =
-  (*prerr_endline filename;
+  Compiler_phase_trace.section "artifact.cmi_prep" (fun () ->
+      (*prerr_endline filename;
     List.iter (fun (name, crc) -> prerr_endline name) imports;*)
-  Btype.cleanup_abbrev ();
-  Subst.reset_for_saving ();
-  let sg = Subst.signature (Subst.for_saving Subst.identity) sg in
-  let flags =
-    match deprecated with
-    | Some s -> [Deprecated s]
-    | None -> []
-  in
-  try
-    let cmi =
-      {cmi_name = modname; cmi_sign = sg; cmi_crcs = imports; cmi_flags = flags}
-    in
-    let crc = create_cmi ?check_exists filename cmi in
-    (* Enter signature in persistent table so that imported_unit()
+      Btype.cleanup_abbrev ();
+      Subst.reset_for_saving ();
+      let sg = Subst.signature (Subst.for_saving Subst.identity) sg in
+      let flags =
+        match deprecated with
+        | Some s -> [Deprecated s]
+        | None -> []
+      in
+      try
+        let cmi =
+          {
+            cmi_name = modname;
+            cmi_sign = sg;
+            cmi_crcs = imports;
+            cmi_flags = flags;
+          }
+        in
+        let crc = create_cmi ?check_exists filename cmi in
+        (* Enter signature in persistent table so that imported_unit()
        will also return its crc *)
-    let comps =
-      components_of_module ~deprecated ~loc:Location.none empty Subst.identity
-        (Pident (Ident.create_persistent modname))
-        (Mty_signature sg)
-    in
-    let ps =
-      {
-        ps_name = modname;
-        ps_sig = lazy (Subst.signature Subst.identity sg);
-        ps_comps = comps;
-        ps_crcs = (cmi.cmi_name, Some crc) :: imports;
-        ps_filename = filename;
-        ps_flags = cmi.cmi_flags;
-      }
-    in
-    save_pers_struct crc ps;
-    cmi
-  with exn ->
-    remove_file filename;
-    raise exn
+        let comps =
+          Compiler_phase_trace.section "artifact.cmi_register" (fun () ->
+              components_of_module ~deprecated ~loc:Location.none empty
+                Subst.identity
+                (Pident (Ident.create_persistent modname))
+                (Mty_signature sg))
+        in
+        let ps =
+          {
+            ps_name = modname;
+            ps_sig = lazy (Subst.signature Subst.identity sg);
+            ps_comps = comps;
+            ps_crcs = (cmi.cmi_name, Some crc) :: imports;
+            ps_filename = filename;
+            ps_flags = cmi.cmi_flags;
+            ps_snapshot = None;
+            ps_frozen_values = None;
+            ps_frozen_components = Hashtbl.create 0;
+          }
+        in
+        save_pers_struct crc ps;
+        Option.iter
+          (fun capture -> capture filename crc cmi)
+          (Domain.DLS.get compiled_cmi_capture_key);
+        cmi
+      with exn ->
+        remove_file filename;
+        raise exn)
 
 let save_signature ?check_exists ~deprecated sg modname filename =
   save_signature_with_imports ?check_exists ~deprecated sg modname filename
@@ -2071,45 +3676,381 @@ let with_fresh_key key create action =
 (* The persistent CMI cache, import consistency table, declaration usage
    callbacks, and summary memo all belong to one compilation request. *)
 let with_fresh action =
-  with_fresh_key value_declarations_key
-    (fun () -> Hashtbl.create 16)
+  with_fresh_key frozen_type_cache_key
+    (fun () -> Hashtbl.create 64)
     (fun () ->
-      with_fresh_key type_declarations_key
+      with_fresh_key value_declarations_key
         (fun () -> Hashtbl.create 16)
         (fun () ->
-          with_fresh_key module_declarations_key
+          with_fresh_key type_declarations_key
             (fun () -> Hashtbl.create 16)
             (fun () ->
-              with_fresh_key used_constructors_key
+              with_fresh_key module_declarations_key
                 (fun () -> Hashtbl.create 16)
                 (fun () ->
-                  with_fresh_key prefixed_sg_key
-                    (fun () -> Hashtbl.create 113)
+                  with_fresh_key used_constructors_key
+                    (fun () -> Hashtbl.create 16)
                     (fun () ->
-                      with_fresh_key can_load_cmis_key
-                        (fun () -> ref Can_load_cmis)
+                      with_fresh_key prefixed_sg_key
+                        (fun () -> Hashtbl.create 113)
                         (fun () ->
-                          with_fresh_key current_unit_key
-                            (fun () -> ref "")
+                          with_fresh_key can_load_cmis_key
+                            (fun () -> ref Can_load_cmis)
                             (fun () ->
-                              with_fresh_key persistent_structures_key
-                                (fun () -> Hashtbl.create 17)
+                              with_fresh_key current_unit_key
+                                (fun () -> ref "")
                                 (fun () ->
-                                  with_fresh_key crc_units_key Consistbl.create
+                                  with_fresh_key persistent_structures_key
+                                    (fun () -> Hashtbl.create 17)
                                     (fun () ->
-                                      with_fresh_key imported_units_key
-                                        (fun () -> ref String_set.empty)
-                                        (fun () ->
-                                          with_fresh_key iter_env_cont_key
-                                            (fun () -> ref [])
+                                      with_fresh_key crc_units_key
+                                        Consistbl.create (fun () ->
+                                          with_fresh_key imported_units_key
+                                            (fun () -> ref String_set.empty)
                                             (fun () ->
-                                              with_fresh_key last_env_key
-                                                (fun () -> ref empty)
+                                              with_fresh_key iter_env_cont_key
+                                                (fun () -> ref [])
                                                 (fun () ->
-                                                  with_fresh_key
-                                                    last_reduced_env_key
+                                                  with_fresh_key last_env_key
                                                     (fun () -> ref empty)
-                                                    action))))))))))))
+                                                    (fun () ->
+                                                      with_fresh_key
+                                                        last_reduced_env_key
+                                                        (fun () -> ref empty)
+                                                        action)))))))))))))
+
+let snapshot_graph_from_cmis key =
+  let namespace = find_pers_struct key.namespace_name in
+  let dependency = find_pers_struct key.target_name in
+  let raw_signature =
+    match Env_lazy.get_arg dependency.ps_comps.comps with
+    | Some (_, _, _, Mty_signature signature) -> signature
+    | _ -> raise Not_found
+  in
+  let alias_component =
+    match get_components namespace.ps_comps with
+    | Structure_comps components ->
+      fst (Tbl.find_str key.alias_name components.comp_components)
+    | Functor_comps _ -> raise Not_found
+  in
+  let env, sub, path, mty =
+    match Env_lazy.get_arg alias_component.comps with
+    | Some context -> context
+    | None -> raise Not_found
+  in
+  if not (is_alias_path key path mty) then raise Not_found;
+  let target_components, target_ids =
+    capture_allocation_stage (fun () -> get_components_opt dependency.ps_comps)
+  in
+  let expanded_signature, signature_ids =
+    capture_allocation_stage (fun () -> Lazy.force dependency.ps_sig)
+  in
+  let alias_components, alias_ids =
+    capture_allocation_stage (fun () ->
+        components_of_module_maker_uncached (env, sub, path, mty))
+  in
+  (match alias_components with
+  | Some (Structure_comps components) ->
+    if
+      Tbl.fold (fun _ _ _ -> true) components.comp_modules false
+      || Tbl.fold (fun _ _ _ -> true) components.comp_components false
+    then raise Not_found
+  | Some (Functor_comps _) | None -> raise Not_found);
+  {
+    raw_signature;
+    expanded_signature;
+    target_components;
+    alias_components;
+    target_ids;
+    signature_ids;
+    alias_ids;
+    crcs = dependency.ps_crcs;
+    flags = dependency.ps_flags;
+  }
+
+let prepare_expanded_snapshot_now key =
+  let cache = expanded_snapshot_cache () in
+  if !cache = None then
+    let namespace = find_pers_struct key.namespace_name in
+    let dependency = find_pers_struct key.target_name in
+    let namespace_filename =
+      Compiler_request_state.resolve_path namespace.ps_filename
+    in
+    let target_filename =
+      Compiler_request_state.resolve_path dependency.ps_filename
+    in
+    let resolved_load_path =
+      List.map Compiler_request_state.resolve_path (Config.get_load_path ())
+    in
+    let namespace_stats = Unix.stat namespace_filename in
+    let target_stats = Unix.stat target_filename in
+    let forced =
+      match Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" with
+      | Some ("force" | "force_typed") -> true
+      | _ -> false
+    in
+    if target_stats.Unix.st_size >= 256 * 1024 || forced then
+      let request = Compiler_request_state.current () in
+      let seen_in_previous_request =
+        candidate_seen_in_previous_request key target_filename request
+      in
+      let prepared =
+        Mutex.lock shared_expanded_snapshot_lock;
+        Fun.protect
+          (fun () ->
+            match !shared_expanded_snapshot with
+            | Some shared
+              when shared.key = key
+                   && shared.target_filename = target_filename
+                   && shared.namespace_filename = namespace_filename
+                   && shared.resolved_load_path = resolved_load_path
+                   && same_file_stats shared.target_stats target_stats
+                   && same_file_stats shared.namespace_stats namespace_stats ->
+              Some (shared.bytes, None)
+            | _ when forced || seen_in_previous_request ->
+              let cwd = Compiler_request_state.cwd () in
+              let load_path = Config.get_load_path () in
+              let previous = Domain.DLS.get preparing_expanded_snapshot in
+              Domain.DLS.set preparing_expanded_snapshot true;
+              let graph =
+                Fun.protect
+                  (fun () ->
+                    Ident.with_fresh (fun () ->
+                        with_fresh (fun () ->
+                            Btype.with_fresh (fun () ->
+                                Compiler_request_state.with_fresh ~cwd
+                                  (fun () ->
+                                    Config.set_load_path load_path;
+                                    snapshot_graph_from_cmis key)))))
+                  ~finally:(fun () ->
+                    Domain.DLS.set preparing_expanded_snapshot previous)
+              in
+              let bytes = Marshal.to_string graph [] in
+              if
+                String.length bytes <= 8 * 1024 * 1024
+                && same_file_stats
+                     (Unix.stat namespace_filename)
+                     namespace_stats
+                && same_file_stats (Unix.stat target_filename) target_stats
+              then (
+                shared_expanded_snapshot :=
+                  Some
+                    {
+                      key;
+                      target_filename;
+                      namespace_filename;
+                      resolved_load_path;
+                      target_stats;
+                      namespace_stats;
+                      bytes;
+                    };
+                Some (bytes, Some graph))
+              else None
+            | _ -> None)
+          ~finally:(fun () -> Mutex.unlock shared_expanded_snapshot_lock)
+      in
+      match prepared with
+      | None -> ()
+      | Some (bytes, prepared_graph) ->
+        let graph =
+          match prepared_graph with
+          | Some graph -> graph
+          | None ->
+            Compiler_phase_trace.dependency "dependency.snapshot_shared_restore"
+              (fun () -> Marshal.from_string bytes 0)
+        in
+        cache :=
+          Some
+            {
+              key;
+              target_filename;
+              namespace_filename;
+              resolved_load_path;
+              target_stats;
+              namespace_stats;
+              bytes;
+              graph = Some graph;
+              typed_integrity =
+                (if typed_expanded_snapshot_reuse () then
+                   Some
+                     (Compiler_phase_trace.dependency
+                        "dependency.snapshot_capture" (fun () ->
+                          snapshot_expanded_type_graph graph))
+                 else None);
+              in_use = false;
+            }
+
+let load_expanded_snapshot ~check:_ ~name =
+  if
+    (not (expanded_snapshot_enabled ()))
+    || Domain.DLS.get preparing_expanded_snapshot
+  then None
+  else
+    let cached = !(expanded_snapshot_cache ()) in
+    match cached with
+    | Some entry when name = entry.key.target_name ->
+      let valid =
+        Compiler_phase_trace.dependency "dependency.snapshot_validate"
+          (fun () ->
+            try
+              let path name =
+                find_in_path_uncap (Config.get_load_path ()) (name ^ ".cmi")
+                |> Compiler_request_state.resolve_path
+              in
+              path entry.key.target_name = entry.target_filename
+              && path entry.key.namespace_name = entry.namespace_filename
+              && List.map Compiler_request_state.resolve_path
+                   (Config.get_load_path ())
+                 = entry.resolved_load_path
+              && same_file_stats
+                   (Unix.stat entry.target_filename)
+                   entry.target_stats
+              && same_file_stats
+                   (Unix.stat entry.namespace_filename)
+                   entry.namespace_stats
+            with Not_found | Sys_error _ | Unix.Unix_error _ -> false)
+      in
+      if not valid then (
+        forget_snapshot_candidate entry.key entry.target_filename;
+        expanded_snapshot_cache () := None;
+        None)
+      else
+        Some
+          (Compiler_phase_trace.dependency "dependency.snapshot_reuse"
+             (fun () ->
+               let graph : expanded_snapshot =
+                 match entry.graph with
+                 | Some graph when not (force_fresh_expanded_snapshot ()) ->
+                   graph
+                 | Some _ | None ->
+                   let graph =
+                     Compiler_phase_trace.dependency
+                       "dependency.snapshot_restore" (fun () ->
+                         Marshal.from_string entry.bytes 0)
+                   in
+                   entry.graph <- Some graph;
+                   entry.typed_integrity <-
+                     (if typed_expanded_snapshot_reuse () then
+                        Some
+                          (Compiler_phase_trace.dependency
+                             "dependency.snapshot_capture" (fun () ->
+                               snapshot_expanded_type_graph graph))
+                      else None);
+                   graph
+               in
+               entry.in_use <- true;
+               let snapshot =
+                 {
+                   key = entry.key;
+                   graph;
+                   target_relocated = false;
+                   signature_relocated = false;
+                   alias_relocated = false;
+                 }
+               in
+               let deprecated =
+                 List.fold_left
+                   (fun _ -> function
+                     | Deprecated s -> Some s)
+                   None graph.flags
+               in
+               let ps_comps =
+                 components_of_module ~deprecated ~loc:Location.none empty
+                   Subst.identity
+                   (Pident (Ident.create_persistent name))
+                   (Mty_signature graph.raw_signature)
+               in
+               let ps_sig =
+                 lazy
+                   (if not snapshot.signature_relocated then (
+                      relocate_allocation_stage graph.signature_ids;
+                      snapshot.signature_relocated <- true);
+                    graph.expanded_signature)
+               in
+               {
+                 ps_name = name;
+                 ps_sig;
+                 ps_comps;
+                 ps_crcs = graph.crcs;
+                 ps_filename = entry.target_filename;
+                 ps_flags = graph.flags;
+                 ps_snapshot = Some snapshot;
+                 ps_frozen_values = None;
+                 ps_frozen_components = Hashtbl.create 0;
+               }))
+    | _ -> None
+
+let finalize_expanded_snapshot_cache () =
+  finalize_cmi_cache ();
+  match !(expanded_snapshot_cache ()) with
+  | Some entry when entry.in_use -> (
+    entry.in_use <- false;
+    match entry.graph with
+    | Some _ when force_fresh_expanded_snapshot () ->
+      entry.graph <- None;
+      entry.typed_integrity <- None
+    | Some graph ->
+      let pristine =
+        Compiler_phase_trace.dependency "dependency.snapshot_verify" (fun () ->
+            reset_allocation_stage graph.target_ids;
+            reset_allocation_stage graph.signature_ids;
+            reset_allocation_stage graph.alias_ids;
+            let typed =
+              match entry.typed_integrity with
+              | Some snapshot -> type_graph_unchanged snapshot
+              | None -> false
+            in
+            (if audit_expanded_snapshot_reuse () then
+               let full = Marshal.to_string graph [] = entry.bytes in
+               if typed && not full then
+                 failwith "typed dependency integrity check missed mutation");
+            typed)
+      in
+      if not pristine then (
+        Compiler_phase_trace.dependency "dependency.snapshot_dirty" (fun () ->
+            ());
+        entry.graph <- None;
+        entry.typed_integrity <- None)
+    | None -> ())
+  | _ -> ()
+
+let with_dependency_cache cache action =
+  let table =
+    Mutex.lock cache.mutex;
+    Fun.protect
+      (fun () ->
+        match cache.available with
+        | table :: rest ->
+          cache.available <- rest;
+          table
+        | [] -> {cmis = Hashtbl.create 32; expanded_snapshot = ref None})
+      ~finally:(fun () -> Mutex.unlock cache.mutex)
+  in
+  let previous_cmis = cmi_cache () in
+  let previous_snapshot = expanded_snapshot_cache () in
+  let previous_frozen_values = Domain.DLS.get frozen_values_cache_key in
+  let previous_published_cmis = Domain.DLS.get published_cmis_key in
+  Domain.DLS.set cmi_cache_key table.cmis;
+  Domain.DLS.set expanded_snapshot_cache_key table.expanded_snapshot;
+  Domain.DLS.set frozen_values_cache_key (Some cache.frozen_values);
+  Domain.DLS.set published_cmis_key (Some cache.published_cmis);
+  Fun.protect action ~finally:(fun () ->
+      (* Both graphs are exclusive to this request. Finalization restores
+         allocation IDs and any mutated nodes before another domain leases
+         the same table. A failed finalization discards the table. *)
+      Fun.protect finalize_expanded_snapshot_cache ~finally:(fun () ->
+          Domain.DLS.set cmi_cache_key previous_cmis;
+          Domain.DLS.set expanded_snapshot_cache_key previous_snapshot;
+          Domain.DLS.set frozen_values_cache_key previous_frozen_values;
+          Domain.DLS.set published_cmis_key previous_published_cmis);
+      Mutex.lock cache.mutex;
+      Fun.protect
+        (fun () -> cache.available <- table :: cache.available)
+        ~finally:(fun () -> Mutex.unlock cache.mutex))
+
+let () =
+  prepare_expanded_snapshot := prepare_expanded_snapshot_now;
+  cached_pers_struct_loader := load_expanded_snapshot
 
 let keep_only_summary env =
   if !(last_env ()) == env then !(last_reduced_env ())

@@ -26,6 +26,10 @@ type cycle_cache =
   | Known_cycle of Module_graph.cycle_info option
 
 val create : warning_state:Warning_state.t -> t
+val create_with_compiler_session :
+  compiler_session:Rescript_compiler_driver.session ->
+  warning_state:Warning_state.t ->
+  t
 val is_ready : t -> bool
 val prepared : t -> prepared option
 val install_prepared : t -> prepared -> unit
@@ -58,3 +62,4 @@ val iter_public_outputs :
   t -> (string -> (string, unit) Hashtbl.t -> unit) -> unit
 
 val warning_state : t -> Warning_state.t
+val compiler_session : t -> Rescript_compiler_driver.session

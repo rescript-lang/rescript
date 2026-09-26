@@ -16,6 +16,11 @@ if [[ ! -x "$rust_executable" || ! -x "$ocaml_executable" ]]; then
   echo "Both rewatch executables must exist and be executable." >&2
   exit 2
 fi
+if [[ ${REWATCH_FIRST_EMBEDDED:-0} == 1 &&
+      $(dirname "$rust_executable") != $(dirname "$ocaml_executable") ]]; then
+  echo "Place both embedded executables in the same directory to avoid startup-path bias." >&2
+  exit 2
+fi
 if [[ ! "$runs" =~ ^[1-9][0-9]*$ || $((runs % 2)) -eq 0 ]]; then
   echo "RUNS must be a positive odd integer so the median is unambiguous." >&2
   exit 2
@@ -62,6 +67,8 @@ prepare_fixture() {
     cp -a --reflink=auto "$dependency_tree" "$destination/$relative_tree"
   done < <(find "$repo_root/rewatch/testrepo" -type d -name node_modules \
     -prune -print)
+  node "$repo_root/rewatch/tests/add-belt-dependencies.mjs" \
+    "$destination/rewatch/testrepo"
 }
 
 rust_root="$work_root/rust"
@@ -77,8 +84,12 @@ fi
 export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
 
 results="$work_root/results.csv"
-echo "implementation,iteration,wall_ms,peak_tree_rss_kib,peak_tree_tasks" \
+echo "scenario,implementation,iteration,wall_ms,peak_tree_rss_kib,peak_tree_tasks" \
   >"$results"
+edit_source_relative=packages/watch-warnings/src/B.res
+edit_baseline="$work_root/B.res.baseline"
+cp "$rust_fixture/$edit_source_relative" "$edit_baseline"
+cmp "$edit_baseline" "$ocaml_fixture/$edit_source_relative"
 
 tree_resources() {
   local root_pid=$1
@@ -105,35 +116,59 @@ clean_and_build() {
 }
 
 measure() {
-  local implementation=$1 executable=$2 fixture=$3 iteration=$4
-  local output="$work_root/${implementation}-${iteration}"
-  "$executable" clean "$fixture" >/dev/null 2>&1
-  local start_ns root_pid peak_rss=0 peak_tasks=0 rss tasks end_ns wall_ms
+  local scenario=$1 implementation=$2 executable=$3 fixture=$4 iteration=$5
+  local output="$work_root/${scenario}-${implementation}-${iteration}"
+  case "$scenario" in
+    clean) "$executable" clean "$fixture" >/dev/null 2>&1 ;;
+    unchanged) ;;
+    edit)
+      printf '\n// timed single edit %d\n' "$iteration" \
+        >>"$fixture/$edit_source_relative" ;;
+    *) echo "Unknown benchmark scenario: $scenario" >&2; exit 2 ;;
+  esac
+  local start_ns root_pid sampler_pid peak_rss peak_tasks end_ns wall_ms
+  local resource_file="$output.resources"
   start_ns=$(date +%s%N)
   "$executable" build "$fixture" >"$output" 2>"$output.stderr" &
   root_pid=$!
-  while kill -0 "$root_pid" 2>/dev/null; do
-    read -r rss tasks < <(tree_resources "$root_pid")
-    if ((rss > peak_rss)); then
-      peak_rss=$rss
-    fi
-    if ((tasks > peak_tasks)); then
-      peak_tasks=$tasks
-    fi
-    sleep 0.02
-  done
+  (
+    peak_rss=0
+    peak_tasks=0
+    while kill -0 "$root_pid" 2>/dev/null; do
+      read -r rss tasks < <(tree_resources "$root_pid")
+      if ((rss > peak_rss)); then
+        peak_rss=$rss
+      fi
+      if ((tasks > peak_tasks)); then
+        peak_tasks=$tasks
+      fi
+      sleep 0.02
+    done
+    printf '%d %d\n' "$peak_rss" "$peak_tasks" >"$resource_file"
+  ) &
+  sampler_pid=$!
   wait "$root_pid"
   end_ns=$(date +%s%N)
+  wait "$sampler_pid"
+  read -r peak_rss peak_tasks <"$resource_file"
   wall_ms=$(((end_ns - start_ns) / 1000000))
-  echo "$implementation,$iteration,$wall_ms,$peak_rss,$peak_tasks" >>"$results"
-  printf '%-5s run %d: %6d ms  %8d KiB  %4d tasks\n' \
-    "$implementation" "$iteration" "$wall_ms" "$peak_rss" "$peak_tasks"
+  echo "$scenario,$implementation,$iteration,$wall_ms,$peak_rss,$peak_tasks" \
+    >>"$results"
+  printf '%-9s %-5s run %d: %6d ms  %8d KiB  %4d tasks\n' \
+    "$scenario" "$implementation" "$iteration" "$wall_ms" "$peak_rss" \
+    "$peak_tasks"
+  if [[ $scenario == edit ]]; then
+    # Return to the same compiled baseline before the next timed edit.
+    cp "$edit_baseline" "$fixture/$edit_source_relative"
+    "$executable" build "$fixture" >"$output.restore" \
+      2>"$output.restore.stderr"
+  fi
 }
 
 median_column() {
-  local implementation=$1 column=$2 middle=$((runs / 2 + 1))
-  awk -F, -v implementation="$implementation" \
-    '$1 == implementation { print $'"$column"' }' "$results" \
+  local scenario=$1 implementation=$2 column=$3 middle=$((runs / 2 + 1))
+  awk -F, -v scenario="$scenario" -v implementation="$implementation" \
+    '$1 == scenario && $2 == implementation { print $'"$column"' }' "$results" \
     | sort -n | sed -n "${middle}p"
 }
 
@@ -141,44 +176,75 @@ echo "Rewatch clean-build performance gate"
 echo "commit: $(git -C "$repo_root" rev-parse HEAD)"
 echo "host: $(uname -a)"
 echo "cpus: $(getconf _NPROCESSORS_ONLN 2>/dev/null || echo unknown)"
+echo "runtime: $RESCRIPT_RUNTIME"
+echo "compiler domains: ${REWATCH_COMPILER_DOMAINS:-default}"
+echo "Rust Rayon threads: ${RAYON_NUM_THREADS:-default}"
+echo "executable and compiler SHA-256:"
+sha256sum "$rust_executable" "$ocaml_executable" "$RESCRIPT_BSC_EXE"
 echo "runs: $runs (interleaved after one warm-up each)"
-echo "threshold: ${threshold_percent}% of Rust median wall and RSS"
+echo "clean threshold: ${threshold_percent}% of Rust median wall and RSS"
+if [[ ${REWATCH_FIRST_EMBEDDED:-0} == 1 ]]; then
+  echo "first executable uses embedded compiler tracing; 'Rust' labels mean baseline"
+fi
 
 clean_and_build "$rust_executable" "$rust_fixture" "$work_root/rust-warmup"
 clean_and_build "$ocaml_executable" "$ocaml_fixture" "$work_root/ocaml-warmup"
 
 for ((iteration = 1; iteration <= runs; iteration++)); do
   if ((iteration % 2 == 1)); then
-    measure rust "$rust_executable" "$rust_fixture" "$iteration"
-    measure ocaml "$ocaml_executable" "$ocaml_fixture" "$iteration"
+    measure clean rust "$rust_executable" "$rust_fixture" "$iteration"
+    measure clean ocaml "$ocaml_executable" "$ocaml_fixture" "$iteration"
   else
-    measure ocaml "$ocaml_executable" "$ocaml_fixture" "$iteration"
-    measure rust "$rust_executable" "$rust_fixture" "$iteration"
+    measure clean ocaml "$ocaml_executable" "$ocaml_fixture" "$iteration"
+    measure clean rust "$rust_executable" "$rust_fixture" "$iteration"
   fi
 done
 
-rust_wall=$(median_column rust 3)
-ocaml_wall=$(median_column ocaml 3)
-rust_rss=$(median_column rust 4)
-ocaml_rss=$(median_column ocaml 4)
-rust_tasks=$(median_column rust 5)
-ocaml_tasks=$(median_column ocaml 5)
-printf 'median Rust:  %6d ms  %8d KiB  %4d peak tasks\n' \
+rust_wall=$(median_column clean rust 4)
+ocaml_wall=$(median_column clean ocaml 4)
+rust_rss=$(median_column clean rust 5)
+ocaml_rss=$(median_column clean ocaml 5)
+rust_tasks=$(median_column clean rust 6)
+ocaml_tasks=$(median_column clean ocaml 6)
+printf 'clean median Rust:  %6d ms  %8d KiB  %4d peak tasks\n' \
   "$rust_wall" "$rust_rss" "$rust_tasks"
-printf 'median OCaml: %6d ms  %8d KiB  %4d peak tasks\n' \
+printf 'clean median OCaml: %6d ms  %8d KiB  %4d peak tasks\n' \
   "$ocaml_wall" "$ocaml_rss" "$ocaml_tasks"
+
+for scenario in unchanged edit; do
+  for ((iteration = 1; iteration <= runs; iteration++)); do
+    if ((iteration % 2 == 1)); then
+      measure "$scenario" rust "$rust_executable" "$rust_fixture" "$iteration"
+      measure "$scenario" ocaml "$ocaml_executable" "$ocaml_fixture" "$iteration"
+    else
+      measure "$scenario" ocaml "$ocaml_executable" "$ocaml_fixture" "$iteration"
+      measure "$scenario" rust "$rust_executable" "$rust_fixture" "$iteration"
+    fi
+  done
+  printf '%s median Rust:  %6d ms  %8d KiB peak tree RSS\n' \
+    "$scenario" "$(median_column "$scenario" rust 4)" \
+    "$(median_column "$scenario" rust 5)"
+  printf '%s median OCaml: %6d ms  %8d KiB peak tree RSS\n' \
+    "$scenario" "$(median_column "$scenario" ocaml 4)" \
+    "$(median_column "$scenario" ocaml 5)"
+done
 
 trace_and_classify() {
   local implementation=$1 scenario=$2 executable=$3 fixture=$4 manifest=$5
   local clean_first=$6
+  local embedded=0
+  if [[ $implementation == ocaml || ${REWATCH_FIRST_EMBEDDED:-0} == 1 ]]; then
+    embedded=1
+  fi
   local trace_prefix="$work_root/${implementation}-${scenario}.execve"
   local call_log="$work_root/${implementation}-${scenario}.compiler"
   if [[ "$clean_first" == 1 ]]; then
     "$executable" clean "$fixture" >/dev/null 2>&1
   fi
-  if [[ $implementation == ocaml ]]; then
+  if ((embedded)); then
     # Embedded requests have no compiler execve. Record them at their shared
     # logical boundary while tracing PPXs as external processes.
+    : >"$call_log"
     strace -f -ff -qq -s 4096 -e trace=execve,chdir -o "$trace_prefix" \
       env REWATCH_COMPILER_CALL_LOG="$call_log" \
       "$executable" build "$fixture" \
@@ -195,7 +261,7 @@ trace_and_classify() {
   local trace_file exec_line argv cwd_line cwd phase input identity
   : >"$manifest.unsorted"
   for trace_file in "${trace_files[@]}"; do
-    if [[ $implementation == ocaml ]]; then
+    if ((embedded)); then
       exec_line=$(grep -m1 -E 'execve\("[^"]*sury-ppx' "$trace_file" || true)
     else
       exec_line=$(grep -m1 -F "execve(\"$RESCRIPT_BSC_EXE\"" "$trace_file" \
@@ -228,7 +294,7 @@ trace_and_classify() {
       | sed "s#$implementation_root#<ROOT>#g" >>"$manifest.unsorted"
   done
   local invocations parse namespace compile interface ppx
-  if [[ $implementation == ocaml ]]; then
+  if ((embedded)); then
     while IFS=$'\t' read -r phase cwd input; do
       if [[ $phase != parse && $phase != namespace ]]; then phase=compile; fi
       printf '%s\t%s\t"%s"\n' "$cwd" "$phase" "$input" \
@@ -378,6 +444,7 @@ if ((file_set_equivalence == 0)); then
 fi
 if ((artifact_equivalence == 0)); then
   echo "FAIL: Rust and OCaml generated different artifacts." >&2
+  echo "Check that standalone bsc and OCaml rewatch use the same Dune profile." >&2
   failed=1
 fi
 
@@ -387,5 +454,5 @@ fi
 if ((runs < 5)); then
   echo "PASS: correctness smoke checks passed; performance gate not evaluated."
 else
-  echo "PASS: timing, memory, compiler-work, and artifact-equivalence gates passed."
+  echo "PASS: clean timing and memory, compiler-work, and artifact-equivalence gates passed."
 fi

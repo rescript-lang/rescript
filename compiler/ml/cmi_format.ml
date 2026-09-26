@@ -36,24 +36,27 @@ let input_cmi ic =
   {cmi_name = name; cmi_sign = sign; cmi_crcs = crcs; cmi_flags = flags}
 
 let read_cmi_channel filename ic =
-  try
-    let buffer =
-      really_input_string ic (String.length Config.cmi_magic_number)
-    in
-    (if buffer <> Config.cmi_magic_number then
-       let pre_len = String.length Config.cmi_magic_number - 3 in
-       if
-         String.sub buffer 0 pre_len
-         = String.sub Config.cmi_magic_number 0 pre_len
-       then
-         let msg =
-           if buffer < Config.cmi_magic_number then "an older" else "a newer"
-         in
-         raise (Error (Wrong_version_interface (filename, msg)))
-       else raise (Error (Not_an_interface filename)));
-    let cmi = input_cmi ic in
-    cmi
-  with End_of_file | Failure _ -> raise (Error (Corrupted_interface filename))
+  Compiler_phase_trace.dependency "dependency.read_decode" (fun () ->
+      try
+        let buffer =
+          really_input_string ic (String.length Config.cmi_magic_number)
+        in
+        (if buffer <> Config.cmi_magic_number then
+           let pre_len = String.length Config.cmi_magic_number - 3 in
+           if
+             String.sub buffer 0 pre_len
+             = String.sub Config.cmi_magic_number 0 pre_len
+           then
+             let msg =
+               if buffer < Config.cmi_magic_number then "an older"
+               else "a newer"
+             in
+             raise (Error (Wrong_version_interface (filename, msg)))
+           else raise (Error (Not_an_interface filename)));
+        let cmi = input_cmi ic in
+        cmi
+      with End_of_file | Failure _ ->
+        raise (Error (Corrupted_interface filename)))
 
 let read_cmi filename =
   let ic = open_in_bin (Compiler_request_state.resolve_path filename) in
@@ -76,39 +79,48 @@ let output_cmi filename oc cmi =
        cmt_format, so dont close the channel yet
 *)
 let create_cmi ?check_exists filename (cmi : cmi_infos) =
-  (* beware: the provided signature must have been substituted for saving *)
-  let content =
-    Config.cmi_magic_number ^ Marshal.to_string (cmi.cmi_name, cmi.cmi_sign) []
-    (* checkout [output_value] in {!Pervasives} module *)
-  in
-  let crc = Digest.string content in
-  let cmi_infos =
-    if
-      check_exists <> None
-      && Sys.file_exists (Compiler_request_state.resolve_path filename)
-    then Some (read_cmi filename)
-    else None
-  in
-  match cmi_infos with
-  | Some
-      {
-        cmi_name = _;
-        cmi_sign = _;
-        cmi_crcs = (old_name, Some old_crc) :: rest;
-        cmi_flags;
-      }
-  (* TODO: design the cmi format so that we don't need read the whole cmi *)
-    when cmi.cmi_name = old_name && crc = old_crc && cmi.cmi_crcs = rest
-         && cmi_flags = cmi.cmi_flags ->
-    crc
-  | _ ->
-    let crcs = (cmi.cmi_name, Some crc) :: cmi.cmi_crcs in
-    let oc = open_out_bin (Compiler_request_state.resolve_path filename) in
-    output_string oc content;
-    output_value oc crcs;
-    output_value oc cmi.cmi_flags;
-    close_out oc;
-    crc
+  Compiler_phase_trace.section "artifact.cmi_persist" (fun () ->
+      (* beware: the provided signature must have been substituted for saving *)
+      let content =
+        Compiler_phase_trace.section "artifact.cmi_serialize" (fun () ->
+            Config.cmi_magic_number
+            ^ Marshal.to_string (cmi.cmi_name, cmi.cmi_sign) [])
+        (* checkout [output_value] in {!Pervasives} module *)
+      in
+      let crc =
+        Compiler_phase_trace.section "artifact.cmi_hash" (fun () ->
+            Digest.string content)
+      in
+      let cmi_infos =
+        if
+          check_exists <> None
+          && Sys.file_exists (Compiler_request_state.resolve_path filename)
+        then
+          Some
+            (Compiler_phase_trace.section "artifact.cmi_compare" (fun () ->
+                 read_cmi filename))
+        else None
+      in
+      match cmi_infos with
+      | Some
+          {
+            cmi_name = _;
+            cmi_sign = _;
+            cmi_crcs = (old_name, Some old_crc) :: rest;
+            cmi_flags;
+          }
+      (* TODO: design the cmi format so that we don't need read the whole cmi *)
+        when cmi.cmi_name = old_name && crc = old_crc && cmi.cmi_crcs = rest
+             && cmi_flags = cmi.cmi_flags ->
+        crc
+      | _ ->
+        let crcs = (cmi.cmi_name, Some crc) :: cmi.cmi_crcs in
+        let oc = open_out_bin (Compiler_request_state.resolve_path filename) in
+        output_string oc content;
+        output_value oc crcs;
+        output_value oc cmi.cmi_flags;
+        close_out oc;
+        crc)
 
 (* Error report *)
 

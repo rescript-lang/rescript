@@ -27,3 +27,9 @@
 *)
 
 val load_unit : (string -> Js_cmj_format.cmj_load_info) ref
+
+val with_session_lookup :
+  (string -> string -> Js_cmj_format.t option) -> (unit -> 'a) -> 'a
+(** Resolve a previously published CMJ by compiler unit name and the path
+    selected from the current request's load path. Falls back to disk when no
+    matching session result exists. *)

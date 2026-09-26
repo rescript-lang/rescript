@@ -69,6 +69,31 @@ let gentype_output_capture_tests _context =
     "GenType warnings use the request-owned stdout formatter";
   assert_equal "" stderr
 
+let structured_diagnostic_isolation_tests _context =
+  let left_ready = Atomic.make false in
+  let right_ready = Atomic.make false in
+  let capture label ready other_ready =
+    Domain.spawn (fun () ->
+        let buffer = Buffer.create 128 in
+        let formatter = Stdlib.Format.formatter_of_buffer buffer in
+        let (), diagnostics =
+          Location.with_diagnostic_capture (fun () ->
+              Atomic.set ready true;
+              while not (Atomic.get other_ready) do
+                Domain.cpu_relax ()
+              done;
+              Location.report_error formatter
+                (Location.error ~loc:Location.none label))
+        in
+        List.map
+          (fun (diagnostic : Location.diagnostic) -> diagnostic.message)
+          diagnostics)
+  in
+  let left = capture "left" left_ready right_ready in
+  let right = capture "right" right_ready left_ready in
+  assert_equal ["left"] (Domain.join left);
+  assert_equal ["right"] (Domain.join right)
+
 let used_attributes_isolation_tests _context =
   let loc = {Location.none with loc_ghost = false} in
   let name = Asttypes.{txt = "as"; loc} in
@@ -348,6 +373,32 @@ let output_capture_isolation_tests _context =
   check
     (Compiler_request_output.stdout_channel () == Stdlib.stdout)
     "capture scopes restore the host stream"
+
+let output_capture_channel_tests _context =
+  let (), stdout, stderr =
+    Compiler_request_output.with_capture (fun () ->
+        Compiler_request_output.write_stdout "before";
+        Stdlib.Format.pp_print_string
+          (Compiler_request_output.stdout_formatter ())
+          "formatted";
+        output_value (Compiler_request_output.stdout_channel ()) 42;
+        Compiler_request_output.write_stdout "after";
+        Compiler_request_output.write_stderr "error";
+        output_string (Compiler_request_output.stderr_channel ()) " channel")
+  in
+  assert_equal ("beforeformatted" ^ Marshal.to_string 42 [] ^ "after") stdout;
+  assert_equal "error channel" stderr;
+  (try
+     ignore
+       (Compiler_request_output.with_capture (fun () ->
+            output_string (Compiler_request_output.stdout_channel ()) "x";
+            failwith "capture failure"))
+   with
+  | Failure _ -> ()
+  | exn -> raise exn);
+  check
+    (Compiler_request_output.stdout_channel () == Stdlib.stdout)
+    "a failed capture restores the host stream"
 
 let annotation_isolation_tests _context =
   let left_ready = Atomic.make false in
@@ -684,7 +735,7 @@ let type_node_id_isolation_tests _context =
 let write root name contents =
   Test_support.write_file (Filename.concat root name) contents
 
-let run root ?(package = "driver-test") ?(extra = []) input =
+let run ?session root ?(package = "driver-test") ?(extra = []) input =
   let argv =
     [
       "-nostdlib";
@@ -699,13 +750,297 @@ let run root ?(package = "driver-test") ?(extra = []) input =
     ]
     @ extra
   in
-  ( argv,
-    Rescript_compiler_driver.run_request ~run_external:None ~cwd:root ~argv
-      ~input )
+  let result =
+    match session with
+    | None ->
+      Rescript_compiler_driver.run_request ~run_external:None ~cwd:root ~argv
+        ~input
+    | Some session ->
+      Env.with_expanded_snapshot_cache (fun () ->
+          Rescript_compiler_driver.run_request_in_session session
+            ~run_external:None ~cwd:root ~argv ~input)
+  in
+  (argv, result)
 
 let expect_code expected result =
   assert_equal ~printer:string_of_int expected
     result.Rescript_compiler_driver.exit_code
+
+let semantic_result_isolation_tests _context =
+  Test_support.with_temp_dir "rewatch-semantic-result-" (fun root ->
+      write root "Api.res" "let answer = 42\n";
+      let session = Rescript_compiler_driver.create_session () in
+      expect_code 0 (snd (run ~session root "Api.res"));
+      let path = Filename.concat root "Api.cmt" in
+      Rescript_compiler_driver.publish_session_semantic session ~retain:true
+        ~source:path ~destination:path;
+      let read () =
+        match
+          Rescript_compiler_driver.semantic_result session ~filename:path
+        with
+        | Some result -> result
+        | None -> assert_failure "published semantic result was unavailable"
+      in
+      let first = read () in
+      let second = read () in
+      check (first != second) "semantic views belong to separate requests";
+      (match first.Cmt_format.cmt_annots with
+      | Cmt_format.Implementation _ -> ()
+      | _ -> assert_failure "expected implementation semantics");
+      let channel = open_out_gen [Open_append] 0o644 path in
+      output_char channel '\n';
+      close_out channel;
+      check
+        (Option.is_none
+           (Rescript_compiler_driver.semantic_result session ~filename:path))
+        "changed CMT invalidates the semantic result")
+
+let published_module_result_tests _context =
+  let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+  Fun.protect
+    ~finally:(fun () ->
+      match previous with
+      | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+      | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
+    (fun () ->
+      Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+      Test_support.with_temp_dir "rewatch-module-result-" (fun root ->
+          write root "Api.res" "let answer = 42\n";
+          let session = Rescript_compiler_driver.create_session () in
+          let _, compiled = run ~session root "Api.res" in
+          expect_code 0 compiled;
+          let path extension = Filename.concat root ("Api." ^ extension) in
+          Rescript_compiler_driver.publish_session_cmi session ~retain:true
+            ~source:(path "cmi") ~destination:(path "cmi");
+          Rescript_compiler_driver.publish_session_cmj session ~retain:true
+            ~source:(path "cmj") ~destination:(path "cmj");
+          Rescript_compiler_driver.publish_session_semantic session ~retain:true
+            ~source:(path "cmt") ~destination:(path "cmt");
+          Rescript_compiler_driver.publish_module_result session
+            ~input:(path "res") ~interface_file:(path "cmi")
+            ~optimization_file:(Some (path "cmj"))
+            ~semantic_file:(Some (path "cmt"))
+            ~dependencies:["Dep"]
+            ~generated_outputs:[path "js"];
+          let result =
+            match
+              Rescript_compiler_driver.module_result session
+                ~interface_file:(path "cmi")
+            with
+            | Some result -> result
+            | None -> assert_failure "published module result unavailable"
+          in
+          let open Rescript_compiler_driver in
+          check
+            (Option.is_some (interface_fingerprint result))
+            "interface fingerprint published";
+          check
+            (Option.is_some (optimization_fingerprint result))
+            "optimization fingerprint published";
+          check
+            (Option.is_some (interface_signature result))
+            "immutable interface provides a request-owned view";
+          check
+            (Option.is_some (optimization_metadata result))
+            "optimization metadata provides a request-owned view";
+          check
+            (Option.is_some (typed_semantic result))
+            "typed semantic result is available";
+          assert_equal ["Dep"] (result_dependencies result);
+          assert_equal [path "js"] (result_generated_outputs result);
+          assert_equal [] (result_diagnostics result);
+          let channel = open_out_gen [Open_append] 0o644 (path "cmi") in
+          output_char channel '\n';
+          close_out channel;
+          check
+            (Option.is_none
+               (module_result session ~interface_file:(path "cmi")))
+            "changed interface invalidates the published result";
+          check
+            (Option.is_none (interface_signature result))
+            "a held result cannot expose a changed interface"))
+
+let virtual_module_artifact_lookup_tests _context =
+  let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+  let previous_trace = Sys.getenv_opt "REWATCH_TYPECHECK_TRACE" in
+  Fun.protect
+    ~finally:(fun () ->
+      (match previous with
+      | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+      | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES");
+      match previous_trace with
+      | Some value -> Unix.putenv "REWATCH_TYPECHECK_TRACE" value
+      | None -> Test_support.unsetenv "REWATCH_TYPECHECK_TRACE")
+    (fun () ->
+      Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+      Test_support.with_temp_dir "rewatch-virtual-module-" (fun root ->
+          let producer = Filename.concat root "producer" in
+          let consumer = Filename.concat root "consumer" in
+          let published = Filename.concat consumer "lib/ocaml" in
+          List.iter File_util.ensure_dir [producer; consumer; published];
+          let trace = Filename.concat root "trace.tsv" in
+          Unix.putenv "REWATCH_TYPECHECK_TRACE" trace;
+          write producer "Api.res" "let identity = x => x\n";
+          write consumer "Consumer.res" "let result = Api.identity(42)\n";
+          let session = Rescript_compiler_driver.create_session () in
+          expect_code 0 (snd (run ~session producer "Api.res"));
+          let source extension =
+            Filename.concat producer ("Api." ^ extension)
+          in
+          let destination extension =
+            Filename.concat published ("Api." ^ extension)
+          in
+          check
+            (Rescript_compiler_driver.stage_session_cmi session
+               ~source:(source "cmi") ~destination:(destination "cmi"))
+            "producer CMI can be staged before export";
+          check
+            (Rescript_compiler_driver.stage_session_cmj session
+               ~source:(source "cmj") ~destination:(destination "cmj"))
+            "producer CMJ can be staged before export";
+          check
+            ((not (Sys.file_exists (destination "cmi")))
+            && not (Sys.file_exists (destination "cmj")))
+            "published paths are absent while the consumer compiles";
+          Rescript_compiler_driver.stage_module_result session
+            ~input:(source "res") ~interface_source:(source "cmi")
+            ~interface_file:(destination "cmi")
+            ~optimization_source:(Some (source "cmj"))
+            ~optimization_file:(Some (destination "cmj"))
+            ~semantic_source:(Some (source "cmt"))
+            ~dependencies:["Base"]
+            ~generated_outputs:[destination "cmi"; destination "cmj"];
+          let pending =
+            match
+              Rescript_compiler_driver.module_result session
+                ~interface_file:(destination "cmi")
+            with
+            | Some result -> result
+            | None -> assert_failure "staged module result is unavailable"
+          in
+          check
+            (Option.is_some
+               (Rescript_compiler_driver.interface_signature pending))
+            "the staged result exposes the immutable interface";
+          check
+            (Option.is_some
+               (Rescript_compiler_driver.optimization_metadata pending))
+            "the staged result exposes optimization metadata";
+          check
+            (Option.is_some (Rescript_compiler_driver.typed_semantic pending))
+            "the staged result exposes typed semantics";
+          assert_equal ["Base"]
+            (Rescript_compiler_driver.result_dependencies pending);
+          assert_equal
+            [destination "cmi"; destination "cmj"]
+            (Rescript_compiler_driver.result_generated_outputs pending);
+          let _, compiled =
+            run ~session consumer ~extra:["-I"; published] "Consumer.res"
+          in
+          assert_equal ~msg:compiled.stderr ~printer:string_of_int 0
+            compiled.exit_code;
+          check
+            (String_util.contains
+               (File_util.read_file trace)
+               "dependency.session_cmi_lookup")
+            "the consumer resolves a CMI through the virtual session path";
+          check
+            (String_util.contains
+               (File_util.read_file trace)
+               "dependency.session_cmj_lookup")
+            "the consumer resolves a CMJ through the virtual session path";
+          check
+            ((not (Sys.file_exists (destination "cmi")))
+            && not (Sys.file_exists (destination "cmj")))
+            "consumer compilation does not require artifact export";
+          Rescript_compiler_driver.discard_pending_session_artifacts session
+            ~interface_file:(destination "cmi")
+            ~optimization_file:(Some (destination "cmj"));
+          check
+            (Option.is_none
+               (Rescript_compiler_driver.module_result session
+                  ~interface_file:(destination "cmi")))
+            "cancellation withdraws the staged module result"))
+
+let failed_request_discards_staging_tests _context =
+  let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+  Fun.protect
+    ~finally:(fun () ->
+      match previous with
+      | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+      | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
+    (fun () ->
+      Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+      Test_support.with_temp_dir "rewatch-staging-failure-" (fun root ->
+          let session = Rescript_compiler_driver.create_session () in
+          write root "Api.res" "let answer = 1\n";
+          expect_code 0 (snd (run ~session root "Api.res"));
+          write root "Api.res" "let answer =\n";
+          let _, failed = run ~session root "Api.res" in
+          expect_code 1 failed;
+          let cmi = Filename.concat root "Api.cmi" in
+          Rescript_compiler_driver.publish_session_cmi session ~retain:true
+            ~source:cmi ~destination:cmi;
+          check
+            (Option.is_none
+               (Rescript_compiler_driver.published_fingerprint session
+                  ~kind:Rescript_compiler_driver.Interface ~filename:cmi))
+            "a failed replacement cannot publish the previous staged CMI"))
+
+let superseded_artifact_tests _context =
+  let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+  Fun.protect
+    ~finally:(fun () ->
+      match previous with
+      | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+      | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
+    (fun () ->
+      Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+      Test_support.with_temp_dir "rewatch-superseded-artifact-" (fun root ->
+          let session = Rescript_compiler_driver.create_session () in
+          write root "Api.res" "let answer = 1\n";
+          expect_code 0 (snd (run ~session root "Api.res"));
+          let cmi = Filename.concat root "Api.cmi" in
+          let channel = open_out_gen [Open_append] 0o644 cmi in
+          output_char channel '\n';
+          close_out channel;
+          Rescript_compiler_driver.publish_session_cmi session ~retain:true
+            ~source:cmi ~destination:cmi;
+          check
+            (Option.is_none
+               (Rescript_compiler_driver.published_fingerprint session
+                  ~kind:Rescript_compiler_driver.Interface ~filename:cmi))
+            "superseded artifact cannot publish its older image"))
+
+let gentype_generated_output_result_tests _context =
+  Test_support.with_temp_dir "rewatch-gentype-result-" (fun root ->
+      write root "Annotated.res" "@gentype let answer = 42\n";
+      let session = Rescript_compiler_driver.create_session () in
+      let _, compiled =
+        run ~session root ~extra:["-bs-gentype"] "Annotated.res"
+      in
+      expect_code 0 compiled;
+      let path extension = Filename.concat root ("Annotated." ^ extension) in
+      Rescript_compiler_driver.publish_session_semantic session ~retain:true
+        ~source:(path "cmt") ~destination:(path "cmt");
+      Rescript_compiler_driver.publish_module_result session ~input:(path "res")
+        ~interface_file:(path "cmi")
+        ~optimization_file:(Some (path "cmj"))
+        ~semantic_file:(Some (path "cmt"))
+        ~dependencies:[] ~generated_outputs:[];
+      let result =
+        match
+          Rescript_compiler_driver.module_result session
+            ~interface_file:(path "cmi")
+        with
+        | Some result -> result
+        | None -> assert_failure "GenType module result unavailable"
+      in
+      check
+        (List.exists
+           (fun output -> String_util.contains output "Annotated.gen.tsx")
+           (Rescript_compiler_driver.result_generated_outputs result))
+        "generated TypeScript is listed in the module result")
 
 let recovery_tests _context =
   Test_support.with_temp_dir "rewatch-driver-recovery-" (fun root ->
@@ -718,6 +1053,14 @@ let recovery_tests _context =
       check
         (Test_support.contains_text failed.stderr "Syntax error")
         "parse diagnostics are returned to the host";
+      check
+        (List.exists
+           (fun (diagnostic : Location.diagnostic) ->
+             diagnostic.severity = `Error
+             && diagnostic.location.loc_start.pos_fname <> ""
+             && diagnostic.message <> "")
+           failed.diagnostics)
+        "parse diagnostics have a structured location and message";
       write root "Parse.res" "let value = 2\n";
       let _, repaired = run root "Parse.res" in
       expect_code 0 repaired;
@@ -728,6 +1071,7 @@ let recovery_tests _context =
         (Test_support.contains_text failed.stderr "int"
         && Test_support.contains_text failed.stderr "string")
         "type diagnostics are returned to the host";
+      check (failed.diagnostics <> []) "type diagnostics are structured";
       write root "Typed.res" {|let value: string = "repaired"|};
       let _, repaired = run root "Typed.res" in
       expect_code 0 repaired)
@@ -981,6 +1325,686 @@ let interface_namespace_and_load_path_tests _context =
             ("namespace output is retained: " ^ extension))
         ["cmi"; "cmj"; "cmt"])
 
+let combined_dependency_cache_tests _context =
+  Test_support.with_temp_dir "rewatch-combined-dependency-" (fun root ->
+      let previous_cache = Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" in
+      let previous_trace = Sys.getenv_opt "REWATCH_TYPECHECK_TRACE" in
+      let previous_frozen = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+      Fun.protect
+        (fun () ->
+          Unix.putenv "REWATCH_FROZEN_VALUES" "0";
+          Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" "force";
+          let trace = Filename.concat root "dependency-trace.tsv" in
+          Unix.putenv "REWATCH_TYPECHECK_TRACE" trace;
+          let compile ?(extra = []) input =
+            let _, result = run root ~extra:(["-I"; root] @ extra) input in
+            expect_code 0 result
+          in
+          let compile_dependency () =
+            compile ~extra:["-bs-ns"; "Shapes"] "Circle.resi";
+            compile ~extra:["-bs-ns"; "Shapes"; "-bs-read-cmi"] "Circle.res";
+            compile ~extra:["-no-alias-deps"] "Shapes.mlmap"
+          in
+          write root "Shapes.mlmap" "randjbuildsystem\nCircle\n";
+          write root "Circle.resi" "let value: int\n";
+          write root "Circle.res" "let value = 1\n";
+          compile ~extra:["-no-alias-deps"] "Shapes.mlmap";
+          compile_dependency ();
+          write root "Consumer.res"
+            "open Shapes.Circle\nlet result: int = value\n";
+          compile "Consumer.res";
+          let first_cmi =
+            File_util.read_file (Filename.concat root "Consumer.cmi")
+          in
+          let first_cmt =
+            File_util.read_file (Filename.concat root "Consumer.cmt")
+          in
+          compile "Consumer.res";
+          check
+            (Test_support.contains_text
+               (File_util.read_file trace)
+               "dependency.snapshot_restore")
+            "a repeated namespace open copies the combined snapshot";
+          Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" "0";
+          compile "Consumer.res";
+          assert_equal
+            ~printer:(fun _ -> "<binary CMI>")
+            first_cmi
+            (File_util.read_file (Filename.concat root "Consumer.cmi"));
+          assert_equal
+            ~printer:(fun _ -> "<binary CMT>")
+            first_cmt
+            (File_util.read_file (Filename.concat root "Consumer.cmt"));
+          Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" "force";
+          let value_path =
+            let module_path =
+              Path.Pdot
+                ( Path.Pident (Ident.create_persistent "Shapes"),
+                  "Circle",
+                  Path.nopos )
+            in
+            Path.Pdot (module_path, "value", Path.nopos)
+          in
+          let with_loaded_type ?(load_path = [root]) action =
+            Fun.protect
+              (fun () ->
+                Compiler_request_state.with_fresh ~cwd:root (fun () ->
+                    Env.with_fresh (fun () ->
+                        (Compiler_request_state.current ()).load_path <-
+                          load_path;
+                        action
+                          (Env.find_value value_path Env.empty).Types.val_type)))
+              ~finally:Env.finalize_expanded_snapshot_cache
+          in
+          let loaded_type () = with_loaded_type Fun.id in
+          let first = loaded_type () in
+          let second = loaded_type () in
+          check (first != second)
+            "cached dependency types belong to each request";
+          first.Types.desc <- Types.Tvar (Some "changed");
+          check
+            (match second.Types.desc with
+            | Types.Tvar (Some "changed") -> false
+            | _ -> true)
+            "mutating one request's dependency graph does not affect another";
+          Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" "force_typed";
+          compile "Consumer.res";
+          compile "Consumer.res";
+          let reused_first = loaded_type () in
+          let reused_second = loaded_type () in
+          check
+            (reused_first == reused_second)
+            "one compiler domain reuses its verified-clean dependency graph";
+          let project_cache = Env.create_dependency_cache () in
+          let project_loaded_type () =
+            Env.with_dependency_cache project_cache loaded_type
+          in
+          ignore (project_loaded_type ());
+          let project_first = project_loaded_type () in
+          let project_second =
+            Domain.spawn project_loaded_type |> Domain.join
+          in
+          check
+            (project_first == project_second)
+            "a project session reuses its expanded graph on a later domain";
+          let compiler_session = Rescript_compiler_driver.create_session () in
+          let compile_in_session () =
+            let _, result =
+              run ~session:compiler_session root ~extra:["-I"; root]
+                "Consumer.res"
+            in
+            expect_code 0 result
+          in
+          compile_in_session ();
+          Domain.spawn compile_in_session |> Domain.join;
+          assert_equal
+            ~printer:(fun _ -> "<binary CMI>")
+            first_cmi
+            (File_util.read_file (Filename.concat root "Consumer.cmi"));
+          assert_equal
+            ~printer:(fun _ -> "<binary CMT>")
+            first_cmt
+            (File_util.read_file (Filename.concat root "Consumer.cmt"));
+          let other_domain_type = Domain.join (Domain.spawn loaded_type) in
+          check
+            (reused_second != other_domain_type)
+            "different compiler domains have separate dependency graphs";
+          with_loaded_type (fun ty ->
+              ty.Types.desc <- Types.Tvar (Some "changed"));
+          let restored = loaded_type () in
+          check (restored != reused_first)
+            "a changed dependency graph is restored before reuse";
+          check
+            (match restored.Types.desc with
+            | Types.Tvar (Some "changed") -> false
+            | _ -> true)
+            "the restored dependency graph keeps the original type";
+          let extra_load_directory = Filename.concat root "extra-load-path" in
+          File_util.ensure_dir extra_load_directory;
+          let alternate =
+            with_loaded_type ~load_path:[extra_load_directory; root] Fun.id
+          in
+          check
+            (alternate != loaded_type ())
+            "a different load path does not reuse the prepared dependency graph";
+          write root "Circle.resi" "let value: string\n";
+          write root "Circle.res" {|let value = "updated"|};
+          compile_dependency ();
+          write root "ConsumerString.res"
+            "open Shapes.Circle\nlet result: string = value\n";
+          compile "ConsumerString.res";
+          let _, stale = run root ~extra:["-I"; root] "Consumer.res" in
+          expect_code 2 stale;
+          let updated_on_another_domain =
+            Domain.spawn loaded_type |> Domain.join
+          in
+          check
+            (match updated_on_another_domain.Types.desc with
+            | Types.Tconstr (path, _, _) -> Path.name path = "string"
+            | _ -> false)
+            "a new domain sees the updated dependency interface";
+          let updated_in_session =
+            Domain.spawn project_loaded_type |> Domain.join
+          in
+          check
+            (match updated_in_session.Types.desc with
+            | Types.Tconstr (path, _, _) -> Path.name path = "string"
+            | _ -> false)
+            "a project session invalidates its expanded graph after an edit")
+        ~finally:(fun () ->
+          (match previous_trace with
+          | Some value -> Unix.putenv "REWATCH_TYPECHECK_TRACE" value
+          | None -> Test_support.unsetenv "REWATCH_TYPECHECK_TRACE");
+          (match previous_frozen with
+          | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+          | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES");
+          match previous_cache with
+          | Some value -> Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" value
+          | None -> Test_support.unsetenv "REWATCH_COMBINED_SIGNATURE_CACHE"))
+
+let frozen_overrides_combined_snapshot_tests _context =
+  Test_support.with_temp_dir "rewatch-frozen-namespace-" (fun root ->
+      let previous_cache = Sys.getenv_opt "REWATCH_COMBINED_SIGNATURE_CACHE" in
+      let previous_trace = Sys.getenv_opt "REWATCH_TYPECHECK_TRACE" in
+      let previous_frozen = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+      Fun.protect
+        ~finally:(fun () ->
+          (match previous_cache with
+          | Some value -> Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" value
+          | None -> Test_support.unsetenv "REWATCH_COMBINED_SIGNATURE_CACHE");
+          (match previous_trace with
+          | Some value -> Unix.putenv "REWATCH_TYPECHECK_TRACE" value
+          | None -> Test_support.unsetenv "REWATCH_TYPECHECK_TRACE");
+          match previous_frozen with
+          | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+          | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
+        (fun () ->
+          Unix.putenv "REWATCH_FROZEN_VALUES" "0";
+          Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" "0";
+          write root "Shapes.mlmap" "randjbuildsystem\nCircle\n";
+          write root "Circle.resi" "let value: int\n";
+          write root "Circle.res" "let value = 1\n";
+          let compile ?(extra = []) input =
+            let result = snd (run root ~extra:(["-I"; root] @ extra) input) in
+            assert_equal ~msg:result.stderr 0 result.exit_code
+          in
+          compile ~extra:["-no-alias-deps"] "Shapes.mlmap";
+          compile ~extra:["-bs-ns"; "Shapes"] "Circle.resi";
+          compile ~extra:["-bs-ns"; "Shapes"; "-bs-read-cmi"] "Circle.res";
+          compile ~extra:["-no-alias-deps"] "Shapes.mlmap";
+          write root "Consumer.res"
+            "open Shapes.Circle\nlet result: int = value\n";
+          compile "Consumer.res";
+          let output = Filename.concat root "Consumer.js" in
+          let cmi = Filename.concat root "Consumer.cmi" in
+          let baseline_js = File_util.read_file output in
+          let baseline_cmi_info = Cmi_format.read_cmi cmi in
+          Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+          Unix.putenv "REWATCH_COMBINED_SIGNATURE_CACHE" "force";
+          let trace = Filename.concat root "frozen-trace.tsv" in
+          Unix.putenv "REWATCH_TYPECHECK_TRACE" trace;
+          let session = Rescript_compiler_driver.create_session () in
+          for _ = 1 to 2 do
+            let result =
+              snd (run ~session root ~extra:["-I"; root] "Consumer.res")
+            in
+            assert_equal ~msg:result.stderr 0 result.exit_code
+          done;
+          assert_equal baseline_js (File_util.read_file output);
+          let frozen_cmi_info = Cmi_format.read_cmi cmi in
+          let exported_value cmi =
+            match cmi.Cmi_format.cmi_sign with
+            | [Types.Sig_value (id, value)] ->
+              ( Ident.name id,
+                Stdlib.Format.asprintf "%a" Printtyp.type_expr value.val_type )
+            | _ -> assert_failure "Consumer exports one value"
+          in
+          assert_equal
+            (exported_value baseline_cmi_info)
+            (exported_value frozen_cmi_info);
+          assert_equal baseline_cmi_info.cmi_flags frozen_cmi_info.cmi_flags;
+          let external_crcs cmi =
+            match cmi.Cmi_format.cmi_crcs with
+            | _self :: dependencies -> dependencies
+            | [] -> assert_failure "Consumer CMI contains its own CRC"
+          in
+          assert_equal
+            (external_crcs baseline_cmi_info)
+            (external_crcs frozen_cmi_info);
+          let trace = File_util.read_file trace in
+          check
+            (Test_support.contains_text trace "dependency.frozen_open")
+            "the forced legacy cache still takes the frozen open path";
+          check
+            (not (Test_support.contains_text trace "dependency.snapshot_reuse"))
+            "the frozen flag skips the mutable combined snapshot"))
+
+let runtime_cmi_cache_tests _context =
+  Test_support.with_temp_dir "rewatch-runtime-cmi-cache-" (fun root ->
+      let first = Filename.concat root "first" in
+      let second = Filename.concat root "second" in
+      File_util.ensure_dir first;
+      File_util.ensure_dir second;
+      let install directory kind =
+        write directory "Api.resi" ("let value: " ^ kind ^ "\n");
+        expect_code 0 (snd (run directory "Api.resi"));
+        let cmi = Cmi_format.read_cmi (Filename.concat directory "Api.cmi") in
+        ignore
+          (Cmi_format.create_cmi
+             (Filename.concat directory "Stdlib.cmi")
+             {cmi with cmi_name = "Stdlib"; cmi_crcs = []})
+      in
+      install second "int";
+      let path =
+        Path.Pdot
+          (Path.Pident (Ident.create_persistent "Stdlib"), "value", Path.nopos)
+      in
+      let load ?(mutate = false) directories =
+        Env.with_expanded_snapshot_cache (fun () ->
+            Fun.protect
+              (fun () ->
+                Compiler_request_state.with_fresh ~cwd:root (fun () ->
+                    Env.with_fresh (fun () ->
+                        (Compiler_request_state.current ()).load_path <-
+                          directories;
+                        let value = Env.find_value path Env.empty in
+                        let type_name =
+                          match value.Types.val_type.desc with
+                          | Types.Tconstr (type_path, _, _) ->
+                            Path.name type_path
+                          | _ -> assert_failure "expected a named value type"
+                        in
+                        if mutate then
+                          value.Types.val_type.desc <-
+                            Types.Tvar (Some "changed");
+                        type_name)))
+              ~finally:Env.finalize_expanded_snapshot_cache)
+      in
+      assert_equal "int" (load [first; second]);
+      assert_equal "int" (load [first; second]);
+      assert_equal "int" (load ~mutate:true [first; second]);
+      assert_equal "int" (load [first; second]);
+      assert_equal "int"
+        (Domain.spawn (fun () -> load [first; second]) |> Domain.join);
+      install first "string";
+      assert_equal "string" (load [first; second]);
+      install first "int";
+      assert_equal "int" (load [first; second]);
+      install second "string";
+      assert_equal "string" (load [second; first]))
+
+let project_cmi_cache_tests _context =
+  Test_support.with_temp_dir "rewatch-project-cmi-cache-" (fun root ->
+      write root "Api.resi" "let value: int\n";
+      expect_code 0 (snd (run root "Api.resi"));
+      let first = Env.create_dependency_cache () in
+      let second = Env.create_dependency_cache () in
+      let original_loader = !Env.Persistent_signature.load in
+      let loads = ref 0 in
+      (Env.Persistent_signature.load :=
+         fun ~unit_name ->
+           if unit_name = "Api" then incr loads;
+           original_loader ~unit_name);
+      Fun.protect
+        ~finally:(fun () -> Env.Persistent_signature.load := original_loader)
+        (fun () ->
+          let path =
+            Path.Pdot
+              (Path.Pident (Ident.create_persistent "Api"), "value", Path.nopos)
+          in
+          let load cache ?(mutate = false) () =
+            Env.with_dependency_cache cache (fun () ->
+                Env.with_expanded_snapshot_cache (fun () ->
+                    Fun.protect
+                      (fun () ->
+                        Compiler_request_state.with_fresh ~cwd:root (fun () ->
+                            Env.with_fresh (fun () ->
+                                (Compiler_request_state.current ()).load_path <-
+                                  [root];
+                                let value = Env.find_value path Env.empty in
+                                let ty = value.Types.val_type in
+                                if mutate then
+                                  ty.desc <- Types.Tvar (Some "changed");
+                                ty)))
+                      ~finally:Env.finalize_expanded_snapshot_cache))
+          in
+          ignore (load first ());
+          assert_equal 1 !loads;
+          ignore (load first ());
+          assert_equal ~msg:"one project reuses its loaded interface" 1 !loads;
+          Domain.spawn (fun () -> ignore (load first ())) |> Domain.join;
+          assert_equal
+            ~msg:"a later worker domain reuses the project's interface" 1 !loads;
+          ignore (load second ());
+          assert_equal ~msg:"another project loads its own interface" 2 !loads;
+          write root "Api.res" "let value = 1\n";
+          expect_code 0 (snd (run root "Api.res"));
+          write root "First.res" "let result = Api.value\n";
+          write root "Second.res" "let result = Api.value\n";
+          let compiler_session = Rescript_compiler_driver.create_session () in
+          let first_result =
+            snd
+              (run ~session:compiler_session root ~extra:["-I"; root]
+                 "First.res")
+          in
+          assert_equal ~msg:first_result.stderr 0 first_result.exit_code;
+          let after_first_job = !loads in
+          let second_result =
+            Domain.spawn (fun () ->
+                snd
+                  (run ~session:compiler_session root ~extra:["-I"; root]
+                     "Second.res"))
+            |> Domain.join
+          in
+          assert_equal ~msg:second_result.stderr 0 second_result.exit_code;
+          assert_equal
+            ~msg:"module jobs in one compiler session reuse the interface"
+            after_first_job !loads;
+          ignore (load first ~mutate:true ());
+          (match (load first ()).Types.desc with
+          | Types.Tconstr (type_path, _, _) ->
+            assert_equal "int" (Path.name type_path)
+          | _ -> assert_failure "expected the original interface type");
+          write root "Api.resi" "let value: string\n";
+          expect_code 0 (snd (run root "Api.resi"));
+          let before_update = !loads in
+          let updated = load first () in
+          match updated.Types.desc with
+          | Types.Tconstr (type_path, _, _) ->
+            assert_equal "string" (Path.name type_path);
+            assert_equal ~msg:"an updated interface is loaded again"
+              (before_update + 1) !loads
+          | _ -> assert_failure "expected the updated interface type"))
+
+let frozen_values_tests _context =
+  Test_support.with_temp_dir "rewatch-frozen-values-" (fun root ->
+      let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+      Fun.protect
+        ~finally:(fun () ->
+          match previous with
+          | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+          | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
+        (fun () ->
+          write root "Api.resi"
+            "type t\n\
+             type u = t\n\
+             type box = {value: int}\n\
+             type choice = A | B(int)\n\
+             exception Boom(int)\n\
+             module Nested: {\n\
+             type item = {value: int}\n\
+             let answer: int\n\
+             module Deep: {let answer: int}\n\
+             exception Oops(int)\n\
+             }\n\
+             let value: int\n\
+             let make: unit => t\n\
+             let use: t => int\n";
+          expect_code 0 (snd (run root "Api.resi"));
+          write root "Api.res"
+            "type t = int\n\
+             type u = t\n\
+             type box = {value: int}\n\
+             type choice = A | B(int)\n\
+             exception Boom(int)\n\
+             module Nested = {\n\
+             type item = {value: int}\n\
+             let answer = 2\n\
+             module Deep = {let answer = 3}\n\
+             exception Oops(int)\n\
+             }\n\
+             let value = 1\n\
+             let make = () => 2\n\
+             let use = x => x\n";
+          expect_code 0 (snd (run root "Api.res"));
+          write root "Consumer.res"
+            "let typed: Api.u = Api.make()\n\
+             let result = Api.use(typed)\n\
+             let box: Api.box = {value: Api.value}\n\
+             let selected = Api.B(2)\n\
+             let selectedValue = switch selected {\n\
+             | Api.A => 0\n\
+             | Api.B(value) => value\n\
+             }\n\
+             let raised = Api.Boom(3)\n\
+             let nested = Api.Nested.answer\n\
+             let deep = Api.Nested.Deep.answer\n\
+             let boxed: Api.Nested.item = {value: deep}\n\
+             let nestedError = Api.Nested.Oops(nested)\n\
+             let other = Api.value\n";
+          let baseline = snd (run root ~extra:["-I"; root] "Consumer.res") in
+          assert_equal ~msg:baseline.stderr 0 baseline.exit_code;
+          let output = Filename.concat root "Consumer.js" in
+          let baseline_js = File_util.read_file output in
+          write root "Shadow.res"
+            "module Api = {let value = 9}\nlet result = Api.value\n";
+          let shadow_baseline =
+            snd (run root ~extra:["-I"; root] "Shadow.res")
+          in
+          assert_equal ~msg:shadow_baseline.stderr 0 shadow_baseline.exit_code;
+          let shadow_output = Filename.concat root "Shadow.js" in
+          let shadow_baseline_js = File_util.read_file shadow_output in
+          Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+          let session = Rescript_compiler_driver.create_session () in
+          let frozen =
+            snd (run ~session root ~extra:["-I"; root] "Consumer.res")
+          in
+          expect_code 0 frozen;
+          assert_equal baseline_js (File_util.read_file output);
+          expect_code 0
+            (snd (run ~session root ~extra:["-I"; root] "Shadow.res"));
+          assert_equal shadow_baseline_js (File_util.read_file shadow_output);
+          let cache = Env.create_dependency_cache () in
+          let load ?(mutate = false) () =
+            Env.with_dependency_cache cache (fun () ->
+                Compiler_request_state.with_fresh ~cwd:root (fun () ->
+                    Env.with_fresh (fun () ->
+                        (Compiler_request_state.current ()).load_path <- [root];
+                        let _, description =
+                          Env.lookup_value
+                            (Longident.Ldot (Longident.Lident "Api", "value"))
+                            Env.empty
+                        in
+                        let typ = description.Types.val_type in
+                        let name =
+                          match typ.desc with
+                          | Types.Tconstr (path, _, _) -> Path.name path
+                          | _ -> assert_failure "expected a named type"
+                        in
+                        if mutate then typ.desc <- Types.Tvar None;
+                        (name, typ))))
+          in
+          let constructors name =
+            Env.with_dependency_cache cache (fun () ->
+                Compiler_request_state.with_fresh ~cwd:root (fun () ->
+                    Env.with_fresh (fun () ->
+                        (Compiler_request_state.current ()).load_path <- [root];
+                        Env.lookup_all_constructors
+                          (Longident.Ldot (Longident.Lident "Api", name))
+                          Env.empty
+                        |> List.map (fun (description, _) ->
+                            description.Types.cstr_name))))
+          in
+          assert_equal "int" (fst (load ~mutate:true ()));
+          assert_equal "int" (fst (load ()));
+          assert_equal ["B"] (constructors "B");
+          assert_equal ["Boom"] (constructors "Boom");
+          let first = Domain.spawn load in
+          let second = Domain.spawn load in
+          let first_name, first_type = Domain.join first in
+          let second_name, second_type = Domain.join second in
+          assert_equal "int" first_name;
+          assert_equal "int" second_name;
+          check
+            (first_type != second_type)
+            "workers materialize independent value types";
+          write root "Api.resi"
+            "type t\n\
+             type u = t\n\
+             type box = {value: int}\n\
+             type choice = A | C(int)\n\
+             exception Bang(int)\n\
+             module Nested: {\n\
+             type item = {value: int}\n\
+             let answer: int\n\
+             module Deep: {let answer: int}\n\
+             exception Oops(int)\n\
+             }\n\
+             let value: string\n\
+             let make: unit => t\n\
+             let use: t => int\n";
+          expect_code 0 (snd (run root "Api.resi"));
+          write root "Api.res"
+            "type t = string\n\
+             type u = t\n\
+             type box = {value: int}\n\
+             type choice = A | C(int)\n\
+             exception Bang(int)\n\
+             module Nested = {\n\
+             type item = {value: int}\n\
+             let answer = 2\n\
+             module Deep = {let answer = 3}\n\
+             exception Oops(int)\n\
+             }\n\
+             let value = \"updated\"\n\
+             let make = () => \"updated\"\n\
+             let use = x => 1\n";
+          expect_code 0 (snd (run root "Api.res"));
+          assert_equal "string" (fst (load ()));
+          assert_equal [] (constructors "B");
+          assert_equal ["C"] (constructors "C");
+          assert_equal [] (constructors "Boom");
+          assert_equal ["Bang"] (constructors "Bang")))
+
+let frozen_module_forms_tests _context =
+  Test_support.with_temp_dir "rewatch-frozen-modules-" (fun root ->
+      let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+      Fun.protect
+        ~finally:(fun () ->
+          match previous with
+          | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+          | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
+        (fun () ->
+          write root "Other.res" "let value = 7\n";
+          expect_code 0 (snd (run root "Other.res"));
+          write root "Api.res"
+            "module type S = {type t; let value: t}\n\
+             module A: S = {type t = int; let value = 1}\n\
+             module B: S = {type t = string; let value = \"b\"}\n\
+             module Alias = A\n\
+             module External = Other\n\
+             module F = (X: S) => {let same: X.t = X.value}\n";
+          expect_code 0 (snd (run root ~extra:["-I"; root] "Api.res"));
+          write root "Consumer.res"
+            "let a: Api.A.t = Api.A.value\n\
+             let b: Api.B.t = Api.B.value\n\
+             let aliased: Api.A.t = Api.Alias.value\n\
+             let externalValue = Api.External.value\n\
+             module Applied = Api.F(Api.A)\n\
+             let c = Applied.same\n";
+          let baseline = snd (run root ~extra:["-I"; root] "Consumer.res") in
+          assert_equal ~msg:baseline.stderr 0 baseline.exit_code;
+          let output = Filename.concat root "Consumer.js" in
+          let baseline_js = File_util.read_file output in
+          write root "Bad.res" "let wrong: Api.A.t = Api.B.value\n";
+          let baseline_error = snd (run root ~extra:["-I"; root] "Bad.res") in
+          expect_code 2 baseline_error;
+          write root "Include.res"
+            "include Api\nlet fromInclude = External.value\n";
+          let included_baseline =
+            snd (run root ~extra:["-I"; root] "Include.res")
+          in
+          assert_equal ~msg:included_baseline.stderr 0
+            included_baseline.exit_code;
+          let include_output = Filename.concat root "Include.js" in
+          let include_cmi = Filename.concat root "Include.cmi" in
+          let baseline_include_js = File_util.read_file include_output in
+          let baseline_include_cmi = File_util.read_file include_cmi in
+          Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+          let session = Rescript_compiler_driver.create_session () in
+          let frozen =
+            snd (run ~session root ~extra:["-I"; root] "Consumer.res")
+          in
+          assert_equal ~msg:frozen.stderr 0 frozen.exit_code;
+          assert_equal baseline_js (File_util.read_file output);
+          let frozen_error =
+            snd (run ~session root ~extra:["-I"; root] "Bad.res")
+          in
+          expect_code 2 frozen_error;
+          assert_equal baseline_error.stderr frozen_error.stderr;
+          let included_frozen =
+            snd (run ~session root ~extra:["-I"; root] "Include.res")
+          in
+          assert_equal ~msg:included_frozen.stderr 0 included_frozen.exit_code;
+          assert_equal baseline_include_js (File_util.read_file include_output);
+          assert_equal baseline_include_cmi (File_util.read_file include_cmi)))
+
+let frozen_inline_records_tests _context =
+  Test_support.with_temp_dir "rewatch-frozen-inline-records-" (fun root ->
+      let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+      Fun.protect
+        ~finally:(fun () ->
+          match previous with
+          | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+          | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
+        (fun () ->
+          write root "Api.res"
+            "type choice = Case({field: int})\n\
+             type extensible = ..\n\
+             type extensible += More({value: int})\n";
+          expect_code 0 (snd (run root "Api.res"));
+          write root "Consumer.res"
+            "let selected = Api.Case({field: 3})\n\
+             let field = switch selected {\n\
+             | Api.Case({field}) => field\n\
+             }\n\
+             let extended = Api.More({value: field})\n";
+          let baseline = snd (run root ~extra:["-I"; root] "Consumer.res") in
+          assert_equal ~msg:baseline.stderr 0 baseline.exit_code;
+          let output = Filename.concat root "Consumer.js" in
+          let baseline_js = File_util.read_file output in
+          Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+          let session = Rescript_compiler_driver.create_session () in
+          let frozen =
+            snd (run ~session root ~extra:["-I"; root] "Consumer.res")
+          in
+          assert_equal ~msg:frozen.stderr 0 frozen.exit_code;
+          assert_equal baseline_js (File_util.read_file output)))
+
+let frozen_open_tests _context =
+  Test_support.with_temp_dir "rewatch-frozen-open-" (fun root ->
+      let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+      Fun.protect
+        ~finally:(fun () ->
+          match previous with
+          | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+          | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
+        (fun () ->
+          write root "Api.res"
+            "type choice = A | B(int)\n\
+             type box = {value: int}\n\
+             exception Boom(int)\n\
+             module Nested = {let answer = 2}\n\
+             let value = 1\n";
+          expect_code 0 (snd (run root "Api.res"));
+          write root "Consumer.res"
+            "open Api\n\
+             let selected = B(value)\n\
+             let boxed: box = {value: value}\n\
+             let raised = Boom(value)\n\
+             let nested = Nested.answer\n";
+          let baseline = snd (run root ~extra:["-I"; root] "Consumer.res") in
+          assert_equal ~msg:baseline.stderr 0 baseline.exit_code;
+          let output = Filename.concat root "Consumer.js" in
+          let baseline_js = File_util.read_file output in
+          Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+          let session = Rescript_compiler_driver.create_session () in
+          let frozen =
+            snd (run ~session root ~extra:["-I"; root] "Consumer.res")
+          in
+          assert_equal ~msg:frozen.stderr 0 frozen.exit_code;
+          assert_equal baseline_js (File_util.read_file output)))
+
 let concurrent_diagnostic_recovery_tests _context =
   Test_support.with_temp_dir "rewatch-driver-errors-" (fun root ->
       let first = Filename.concat root "first" in
@@ -1227,6 +2251,17 @@ let tests =
          "dependency_extraction_isolation"
          >:: dependency_extraction_isolation_tests;
          "gentype_output_capture" >:: gentype_output_capture_tests;
+         "structured_diagnostic_isolation"
+         >:: structured_diagnostic_isolation_tests;
+         "semantic_result_isolation" >:: semantic_result_isolation_tests;
+         "published_module_result" >:: published_module_result_tests;
+         "virtual_module_artifact_lookup"
+         >:: virtual_module_artifact_lookup_tests;
+         "failed_request_discards_staging"
+         >:: failed_request_discards_staging_tests;
+         "superseded_artifact" >:: superseded_artifact_tests;
+         "gentype_generated_output_result"
+         >:: gentype_generated_output_result_tests;
          "used_attributes_isolation" >:: used_attributes_isolation_tests;
          "delayed_checks_isolation" >:: delayed_checks_isolation_tests;
          "gentype_flags_isolation" >:: gentype_flags_isolation_tests;
@@ -1238,6 +2273,7 @@ let tests =
          "env_cache_isolation" >:: env_cache_isolation_tests;
          "identifier_stamp_isolation" >:: identifier_stamp_isolation_tests;
          "output_capture_isolation" >:: output_capture_isolation_tests;
+         "output_capture_channel" >:: output_capture_channel_tests;
          "annotation_isolation" >:: annotation_isolation_tests;
          "backend_module_cache_isolation"
          >:: backend_module_cache_isolation_tests;
@@ -1257,6 +2293,15 @@ let tests =
          "generated_name_isolation" >:: generated_name_isolation_tests;
          "interfaces_namespaces_load_paths"
          >:: interface_namespace_and_load_path_tests;
+         "combined_dependency_cache" >:: combined_dependency_cache_tests;
+         "frozen_overrides_combined_snapshot"
+         >:: frozen_overrides_combined_snapshot_tests;
+         "runtime_cmi_cache" >:: runtime_cmi_cache_tests;
+         "project_cmi_cache" >:: project_cmi_cache_tests;
+         "frozen_values" >:: frozen_values_tests;
+         "frozen_module_forms" >:: frozen_module_forms_tests;
+         "frozen_inline_records" >:: frozen_inline_records_tests;
+         "frozen_open" >:: frozen_open_tests;
          "concurrent_diagnostic_recovery"
          >:: concurrent_diagnostic_recovery_tests;
          "concurrent_jsx_diagnostic" >:: concurrent_jsx_diagnostic_tests;

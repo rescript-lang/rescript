@@ -62,6 +62,8 @@ cp -R "$root/rewatch-ocaml/tests/failure" "$work/failure"
 cp -R "$root/rewatch-ocaml/tests/features" "$work/features"
 cp -R "$root/rewatch-ocaml/tests/feature-dependencies" "$work/feature-dependencies"
 cp -R "$root/rewatch-ocaml/tests/gentype" "$work/gentype"
+cp -R "$root/rewatch-ocaml/tests/session-interface" \
+  "$work/session-interface"
 cp -R "$root/rewatch-ocaml/tests/dependency" "$work/dependency"
 cp -R "$root/rewatch-ocaml/tests/package-output-dependency" \
   "$work/package-output-dependency"
@@ -788,8 +790,33 @@ grep -F "Formatting check failed" "$work/format-check.err" >/dev/null
 test -f "$no_bin_annot/lib/bs/src/NoBinAnnot.cmi"
 test -f "$no_bin_annot/lib/bs/src/NoBinAnnot.cmj"
 test -f "$no_bin_annot/src/NoBinAnnot.js"
+test ! -e "$no_bin_annot/lib/bs/src/NoBinAnnot.js"
+test ! -e "$no_bin_annot/lib/bs/src/NoBinAnnot.res"
+test ! -e "$no_bin_annot/lib/ocaml/NoBinAnnot.res"
 test ! -e "$no_bin_annot/lib/bs/src/NoBinAnnot.cmt"
 test ! -e "$no_bin_annot/lib/ocaml/NoBinAnnot.cmt"
+"$port" build "$no_bin_annot" >"$work/no-bin-annot-unchanged.log"
+grep 'Parsed 0 source files' "$work/no-bin-annot-unchanged.log" >/dev/null
+grep 'Compiled 0 modules' "$work/no-bin-annot-unchanged.log" >/dev/null
+printf '\nlet changed = value + 1\n' >>"$no_bin_annot/src/NoBinAnnot.res"
+REWATCH_COMPAT_COPIES=1 \
+  "$port" build "$no_bin_annot" >"$work/no-bin-annot-edit.log"
+grep 'Parsed 1 source files' "$work/no-bin-annot-edit.log" >/dev/null
+grep 'Compiled 1 modules' "$work/no-bin-annot-edit.log" >/dev/null
+test -f "$no_bin_annot/lib/bs/src/NoBinAnnot.js"
+test -f "$no_bin_annot/lib/bs/src/NoBinAnnot.res"
+test -f "$no_bin_annot/lib/ocaml/NoBinAnnot.res"
+printf '// Comment-only edit keeps the CMJ bytes unchanged.\n' \
+  >>"$no_bin_annot/src/NoBinAnnot.res"
+"$port" build "$no_bin_annot" >"$work/no-bin-annot-comment.log"
+grep 'Parsed 1 source files' "$work/no-bin-annot-comment.log" >/dev/null
+grep 'Compiled 1 modules' "$work/no-bin-annot-comment.log" >/dev/null
+test ! -e "$no_bin_annot/lib/bs/src/NoBinAnnot.js"
+test ! -e "$no_bin_annot/lib/bs/src/NoBinAnnot.res"
+test ! -e "$no_bin_annot/lib/ocaml/NoBinAnnot.res"
+"$port" build "$no_bin_annot" >"$work/no-bin-annot-comment-noop.log"
+grep 'Parsed 0 source files' "$work/no-bin-annot-comment-noop.log" >/dev/null
+grep 'Compiled 0 modules' "$work/no-bin-annot-comment-noop.log" >/dev/null
 
 if (cd "$basic/src" && "$port" format --check) \
   >"$work/format-nested.out" 2>"$work/format-nested.err"; then
@@ -869,13 +896,21 @@ rm -f "$basic/src/A.mjs"
 mkdir -p "$basic/lib/bs/other"
 touch "$basic/lib/bs/other/Authored.js"
 
-"$port" build --after-build 'test -f src/A.mjs' "$basic"
+REWATCH_COMPILER_TIMING_LOG=$(native_path "$work/compiler-timing.tsv") \
+  "$port" build --after-build 'test -f src/A.mjs' "$basic"
+test -s "$work/compiler-timing.tsv"
+node "$root/rewatch-ocaml/bench/analyze_compiler_timing.js" \
+  "$work/compiler-timing.tsv" >"$work/compiler-timing.summary"
+grep -Eq '^parse,[1-9][0-9]*,' "$work/compiler-timing.summary"
+grep -Eq '^compile,[1-9][0-9]*,' "$work/compiler-timing.summary"
 test -f "$basic/lib/bs/build.ninja"
 test -f "$basic/src/A.mjs"
 test -f "$basic/src/Authored.js"
 test -f "$basic/src/B.mjs"
 test -f "$basic/src/WithInterface.mjs"
 test -f "$basic/lib/ocaml/A.cmi"
+test ! -e "$basic/lib/ocaml/WithInterface.cmti"
+REWATCH_BIN_ANNOT=1 "$port" build "$basic" >/dev/null
 test -f "$basic/lib/ocaml/WithInterface.cmti"
 
 printf '\nlet streamedAfterBuild = 1\n' >>"$basic/src/A.res"
@@ -1281,7 +1316,7 @@ if ! grep 'value = 1' "$moved_source/src/nested/A.mjs" >/dev/null; then
   exit 1
 fi
 
-"$port" watch "$parse_publication" \
+REWATCH_COMPAT_COPIES=1 "$port" watch "$parse_publication" \
   >"$parse_publication/watch.log" 2>&1 &
 parse_publication_pid=$!
 background_pids="$background_pids $parse_publication_pid"
@@ -1319,7 +1354,7 @@ fi
 kill -TERM "$parse_publication_pid"
 wait "$parse_publication_pid" 2>/dev/null || true
 
-"$port" watch "$multi_package_pending" \
+REWATCH_COMPAT_COPIES=1 "$port" watch "$multi_package_pending" \
   >"$multi_package_pending/watch.log" 2>&1 &
 multi_package_pending_pid=$!
 background_pids="$background_pids $multi_package_pending_pid"
@@ -1350,7 +1385,7 @@ fi
 kill -TERM "$multi_package_pending_pid"
 wait "$multi_package_pending_pid" 2>/dev/null || true
 
-"$port" watch "$full_watch_recovery" \
+REWATCH_COMPAT_COPIES=1 "$port" watch "$full_watch_recovery" \
   >"$full_watch_recovery/watch.log" 2>&1 &
 full_watch_recovery_pid=$!
 background_pids="$background_pids $full_watch_recovery_pid"
@@ -1613,8 +1648,100 @@ test -f "$feature_dependencies/packages/dep-union/native/UnionNative.js"
 test -f "$feature_dependencies/packages/dep-union/web/UnionWeb.js"
 test ! -f "$feature_dependencies/packages/dep-union/extra/UnionExtra.js"
 
-"$port" build "$gentype"
+REWATCH_TYPECHECK_TRACE="$work/gentype-trace.tsv" "$port" build "$gentype"
 test -f "$gentype/src/Main.js"
+test -f "$gentype/src/Annotated.gen.ts"
+test -f "$gentype/src/Pair.gen.ts"
+grep 'src/Annotated.ast.*dependency.gentype_semantic_result' \
+  "$work/gentype-trace.tsv" >/dev/null
+grep 'src/Pair.ast.*dependency.gentype_semantic_result' \
+  "$work/gentype-trace.tsv" >/dev/null
+if grep 'src/Annotated.ast.*dependency.gentype_cmt_read' \
+  "$work/gentype-trace.tsv" >/dev/null; then
+  echo "genType reread the newly written implementation CMT" >&2
+  exit 1
+fi
+
+REWATCH_FROZEN_VALUES=1 REWATCH_SESSION_CMI=1 \
+  REWATCH_TYPECHECK_TRACE="$work/session-interface-trace.tsv" \
+  REWATCH_COMPILER_TIMING_LOG="$work/session-interface-timing.tsv" \
+  REWATCH_ARTIFACT_EXPORT_LOG="$work/session-interface-export.tsv" \
+  "$port" build "$work/session-interface"
+grep 'src/Api.ast.*dependency.session_cmi_lookup' \
+  "$work/session-interface-trace.tsv" >/dev/null
+grep 'src/Consumer.ast.*dependency.session_cmi_lookup' \
+  "$work/session-interface-trace.tsv" >/dev/null
+if grep 'src/Consumer.ast.*dependency.search_open:Api' \
+  "$work/session-interface-trace.tsv" >/dev/null; then
+  echo "consumer reopened the freshly published Api CMI" >&2
+  exit 1
+fi
+consumer_start=$(awk -F '\t' \
+  '$1 == "implementation" && $3 == "src/Consumer.ast" {print $4; exit}' \
+  "$work/session-interface-timing.tsv")
+interface_export=$(awk -F '\t' \
+  '$1 == "start" && $2 == "src/Api.resi" {print $3; exit}' \
+  "$work/session-interface-export.tsv")
+if [ -z "$consumer_start" ] || [ -z "$interface_export" ] || \
+    ! awk -v consumer="$consumer_start" -v export_time="$interface_export" \
+      'BEGIN {exit !(consumer < export_time)}'; then
+  echo "consumer waited for Api artifact export" >&2
+  exit 1
+fi
+session_interface="$work/session-interface"
+cp "$session_interface/lib/ocaml/Api.cmi" "$work/session-api-before.cmi"
+cp "$session_interface/lib/ocaml/Api.cmj" "$work/session-api-before.cmj"
+printf 'let inc = x => x + 2\n' >"$session_interface/src/Api.res"
+REWATCH_FROZEN_VALUES=1 REWATCH_SESSION_CMI=1 REWATCH_SESSION_CMJ=1 \
+  "$port" build "$session_interface"
+cmp -s "$work/session-api-before.cmi" "$session_interface/lib/ocaml/Api.cmi"
+if cmp -s "$work/session-api-before.cmj" \
+  "$session_interface/lib/ocaml/Api.cmj"; then
+  echo "implementation edit did not change Api optimization metadata" >&2
+  exit 1
+fi
+grep 'let answer = 3;' "$session_interface/src/Consumer.mjs" >/dev/null
+
+# An unchanged explicit interface still governs the implementation's result.
+# A failed deferred CMJ export must fail the build and allow a retry.
+obstruct_file_with_directory "$session_interface/lib/ocaml/Api.cmj"
+printf 'let inc = x => x + 3\n' >"$session_interface/src/Api.res"
+if REWATCH_FROZEN_VALUES=1 \
+  REWATCH_ARTIFACT_EXPORT_LOG="$work/failed-export-timing.tsv" \
+  "$port" build "$session_interface" \
+  >"$session_interface/failed-export.log" 2>&1; then
+  echo "deferred optimization export failure unexpectedly succeeded" >&2
+  exit 1
+fi
+grep 'start.*src/Api.res' "$work/failed-export-timing.tsv" >/dev/null
+remove_obstruction_directory "$session_interface/lib/ocaml/Api.cmj"
+REWATCH_FROZEN_VALUES=1 "$port" build "$session_interface"
+grep 'let answer = 4;' "$session_interface/src/Consumer.mjs" >/dev/null
+obstruct_file_with_directory "$session_interface/lib/ocaml/Api.cmi"
+printf 'let inc = x => x + 4\n' >"$session_interface/src/Api.res"
+if REWATCH_FROZEN_VALUES=1 \
+  REWATCH_ARTIFACT_EXPORT_LOG="$work/failed-interface-export-timing.tsv" \
+  "$port" build "$session_interface" \
+  >"$session_interface/failed-interface-export.log" 2>&1; then
+  echo "deferred interface export failure unexpectedly succeeded" >&2
+  exit 1
+fi
+grep 'start.*src/Api.resi' \
+  "$work/failed-interface-export-timing.tsv" >/dev/null
+remove_obstruction_directory "$session_interface/lib/ocaml/Api.cmi"
+REWATCH_FROZEN_VALUES=1 "$port" build "$session_interface"
+grep 'let answer = 5;' "$session_interface/src/Consumer.mjs" >/dev/null
+REWATCH_FROZEN_VALUES=0 REWATCH_BIN_ANNOT=1 \
+  "$port" build "$session_interface" >"$work/session-classic-mode.log"
+grep 'Cleaned previous build due to compiler update' \
+  "$work/session-classic-mode.log" >/dev/null
+test -f "$session_interface/lib/ocaml/Consumer.cmt"
+REWATCH_FROZEN_VALUES=1 REWATCH_BIN_ANNOT=0 \
+  "$port" build "$session_interface" >"$work/session-fast-mode.log"
+grep 'Cleaned previous build due to compiler update' \
+  "$work/session-fast-mode.log" >/dev/null
+test ! -e "$session_interface/lib/ocaml/Consumer.cmt"
+grep 'let answer = 5;' "$session_interface/src/Consumer.mjs" >/dev/null
 
 "$port" build "$dependency"
 test -f "$dependency/src/Main.js"

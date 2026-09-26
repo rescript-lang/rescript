@@ -32,7 +32,9 @@ let print_if ppf flag printer arg = if !flag then fprintf ppf "%a@." printer arg
 
 let process_with_gentype cmt_file =
   if !((Clflags.current ()).bs_gentype) then
-    Gentype_main.process_cmt_file cmt_file
+    Gentype_main.process_cmt_file
+      ?compiled_cmt:(Cmt_format.last_saved_cmt ())
+      cmt_file
 
 let after_parsing_sig ppf outputprefix ast =
   if !((Clflags.current ()).only_parse) = false then (
@@ -54,13 +56,17 @@ let after_parsing_sig ppf outputprefix ast =
       Lam_compile_env.reset ();
       let initial_env = Res_compmisc.initial_env ~modulename () in
       Env.set_unit_name modulename;
-      let tsg = Typemod.transl_signature initial_env ast in
+      let tsg =
+        Compiler_phase_trace.section "source.check" (fun () ->
+            Typemod.transl_signature initial_env ast)
+      in
       if !((Clflags.current ()).dump_typedtree) then
         fprintf ppf "%a@." Printtyped.interface tsg;
       let sg = tsg.sig_type in
-      ignore (Includemod.signatures initial_env sg sg);
-      Delayed_checks.force_delayed_checks ();
-      Warnings.check_fatal ();
+      Compiler_phase_trace.section "source.check" (fun () ->
+          ignore (Includemod.signatures initial_env sg sg);
+          Delayed_checks.force_delayed_checks ();
+          Warnings.check_fatal ());
       let deprecated = Builtin_attributes.deprecated_of_sig ast in
       let sg =
         Env.save_signature ~deprecated sg modulename (outputprefix ^ ".cmi")
@@ -76,7 +82,7 @@ let interface ~parser ppf ?outputprefix fname =
     | None -> Config_util.output_prefix fname
     | Some x -> x
   in
-  Res_compmisc.init_path ();
+  Compiler_phase_trace.section "setup.path" Res_compmisc.init_path;
   parser fname
   |> Cmd_ppx_apply.apply_rewriters ~restore:false ~tool_name:Js_config.tool_name
        Mli
@@ -86,7 +92,7 @@ let interface ~parser ppf ?outputprefix fname =
   |> after_parsing_sig ppf outputprefix
 
 let interface_mliast ppf fname =
-  Res_compmisc.init_path ();
+  Compiler_phase_trace.section "setup.path" Res_compmisc.init_path;
   Binary_ast.read_ast_exn ~fname Mli
   |> print_if_pipe ppf (Clflags.current ()).dump_parsetree Printast.interface
   |> print_if_pipe ppf (Clflags.current ()).dump_source Pprintast.signature
@@ -170,7 +176,7 @@ let implementation ~parser ppf ?outputprefix fname =
     | None -> Config_util.output_prefix fname
     | Some x -> x
   in
-  Res_compmisc.init_path ();
+  Compiler_phase_trace.section "setup.path" Res_compmisc.init_path;
   parser fname
   |> Cmd_ppx_apply.apply_rewriters ~restore:false ~tool_name:Js_config.tool_name
        Ml
@@ -181,7 +187,7 @@ let implementation ~parser ppf ?outputprefix fname =
   |> after_parsing_impl ppf outputprefix
 
 let implementation_mlast ppf fname =
-  Res_compmisc.init_path ();
+  Compiler_phase_trace.section "setup.path" Res_compmisc.init_path;
   Binary_ast.read_ast_exn ~fname Ml
   |> print_if_pipe ppf (Clflags.current ()).dump_parsetree
        Printast.implementation

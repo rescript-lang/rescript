@@ -180,6 +180,7 @@ let domain_execution_test _context =
           in
           let ppx_result =
             Compiler_process.run
+              ~session:(Rescript_compiler_driver.create_session ())
               Process.
                 {
                   program = "<embedded compiler>";
@@ -221,10 +222,67 @@ let domain_execution_test _context =
              with Invalid_argument _ -> true)
             "domain counts must honor the scheduler bound"))
 
+let project_cache_survives_worker_batches_test _context =
+  Test_support.with_temp_dir "rewatch-project-worker-cache-" (fun root ->
+      let write name contents =
+        Test_support.write_file (Filename.concat root name) contents
+      in
+      write "Api.resi" "let value: int\n";
+      write "Api.res" "let value = 1\n";
+      write "First.res" "let result = Api.value\n";
+      write "Second.res" "let result = Api.value\n";
+      let job input =
+        Process.
+          {
+            program = "<embedded compiler>";
+            cwd = root;
+            args =
+              [
+                "-nostdlib";
+                "-nopervasives";
+                "-bs-project-root";
+                root;
+                "-bs-package-name";
+                "project-worker-cache";
+                "-bs-package-output";
+                "commonjs:.:.js";
+                "-I";
+                root;
+                input;
+              ];
+          }
+      in
+      let succeeds result = check (Process.succeeded result) result.stderr in
+      succeeds (Compiler_process.run (job "Api.resi"));
+      succeeds (Compiler_process.run (job "Api.res"));
+      let session =
+        Build_session.create ~warning_state:(Warning_state.create ())
+        |> Build_session.compiler_session
+      in
+      let original_loader = !Env.Persistent_signature.load in
+      let loads = Atomic.make 0 in
+      (Env.Persistent_signature.load :=
+         fun ~unit_name ->
+           if unit_name = "Api" then ignore (Atomic.fetch_and_add loads 1);
+           original_loader ~unit_name);
+      Fun.protect
+        ~finally:(fun () -> Env.Persistent_signature.load := original_loader)
+        (fun () ->
+          let compile input =
+            Compiler_process.run_jobs ~session [job input] |> List.iter succeeds
+          in
+          compile "First.res";
+          assert_equal 1 (Atomic.get loads);
+          compile "Second.res";
+          assert_equal ~msg:"a new worker batch reuses the project cache" 1
+            (Atomic.get loads)))
+
 let tests =
   "compiler_process_tests"
   >::: [
          "publication" >:: publication_tests;
          "domain_ppx_cancellation" >:: domain_ppx_cancellation_test;
          "domain_execution" >:: domain_execution_test;
+         "project_cache_survives_worker_batches"
+         >:: project_cache_survives_worker_batches_test;
        ]

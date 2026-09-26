@@ -35,7 +35,7 @@ let source name =
       is_dev = false;
     }
 
-let tests =
+let existing_tests =
   "compiler_scheduler_tests" >:: fun _context ->
   with_single_domain (fun () ->
       with_temp_dir (fun root ->
@@ -96,6 +96,10 @@ let tests =
                     stderr = "";
                     cmi_change =
                       (if key = "A" then Cmi_changed else Cmi_unchanged);
+                    optimization_changed = false;
+                    deferred_export = None;
+                    cancel_export = None;
+                    staged_cmi_path = None;
                   })
               ~record_published_outputs:(fun ~source_kind:_ _path ->
                 check
@@ -127,9 +131,10 @@ let tests =
                       on_make ();
                       make_scheduled key source state cmi_path))
             in
-            Compiler_scheduler.run ~poll:None
-              ~warning_state:(Warning_state.create ()) ~compile_assets
-              ~build_state ~candidates
+            Compiler_scheduler.run
+              ~on_ast_invalidation:(fun _ -> ())
+              ~poll:None ~warning_state:(Warning_state.create ())
+              ~compile_assets ~build_state ~candidates
               ~mark_compiled:(fun () -> ())
               ~mark_had_warnings:(fun () -> ())
               ~progress:(Output.Progress.create ~enabled:false ~color:false)
@@ -188,7 +193,15 @@ let tests =
                     Process.task (process_job ()))
                   ~publish:(fun ~source_kind:_ _path _result ->
                     write_file interrupted_cmi "published CMI";
-                    Compiler_scheduler.{stderr = ""; cmi_change = Cmi_changed})
+                    Compiler_scheduler.
+                      {
+                        stderr = "";
+                        cmi_change = Cmi_changed;
+                        optimization_changed = false;
+                        deferred_export = None;
+                        cancel_export = None;
+                        staged_cmi_path = None;
+                      })
                   ~record_published_outputs:(fun ~source_kind:_ _path -> ())
                   ~post_build:(fun output ->
                     [
@@ -206,6 +219,7 @@ let tests =
           let hook_interrupted =
             try
               Compiler_scheduler.run
+                ~on_ast_invalidation:(fun _ -> ())
                 ~poll:
                   (Some
                      (fun () ->
@@ -244,3 +258,129 @@ let tests =
             assert_failure
               "publication capture must retain a CMI change across later copy \
                failure"))
+
+let async_export_tests _context =
+  with_single_domain (fun () ->
+      with_temp_dir (fun root ->
+          let ocaml_dir = Build_artifacts.lib_path root "ocaml" in
+          File_util.ensure_dir ocaml_dir;
+          Compiler_log.initialize root;
+          let build_state = Build_state.create 2 in
+          List.iter
+            (fun key ->
+              Build_state.add build_state ~key ~kind:Build_state.Source_module
+                ~last_compiled_cmi:(Some 0.) ~last_compiled_cmt:(Some 0.))
+            ["A"; "B"];
+          Build_state.set_dependencies build_state ~key:"B" ["A"];
+          let a_state = Build_state.find_exn build_state "A" in
+          let b_state = Build_state.find_exn build_state "B" in
+          a_state.compile_dirty <- true;
+          let a_cmi = Filename.concat ocaml_dir "A.cmi" in
+          let b_cmi = Filename.concat ocaml_dir "B.cmi" in
+          write_file a_cmi "old interface";
+          write_file b_cmi "dependent interface";
+          let consumer_started = Atomic.make false in
+          let exported = Atomic.make false in
+          let cancelled = Atomic.make false in
+          let fail_export = ref false in
+          let successful_task () =
+            Process.in_process_task (fun () ->
+                Process.{status = Unix.WEXITED 0; stdout = ""; stderr = ""})
+          in
+          let make key state cmi_path =
+            Compiler_scheduler.create ~key
+              ~dependencies:state.Build_state.dependencies ~source:(source key)
+              ~state ~cmi_path
+              ~prepare:(fun () -> ())
+              ~compile:(fun ~source_kind:_ _path ->
+                if key = "B" then
+                  Process.in_process_task (fun () ->
+                      check
+                        (not (Atomic.get exported))
+                        "the dependent starts before export finishes";
+                      Atomic.set consumer_started true;
+                      Process.
+                        {status = Unix.WEXITED 0; stdout = ""; stderr = ""})
+                else successful_task ())
+              ~publish:(fun ~source_kind:_ _path _result ->
+                Compiler_scheduler.
+                  {
+                    stderr = "";
+                    cmi_change =
+                      (if key = "A" then Cmi_changed else Cmi_unchanged);
+                    optimization_changed = false;
+                    deferred_export =
+                      (if key = "A" then
+                         Some
+                           (fun () ->
+                             let deadline = Unix.gettimeofday () +. 2. in
+                             while
+                               (not (Atomic.get consumer_started))
+                               && Unix.gettimeofday () < deadline
+                             do
+                               Domain.cpu_relax ()
+                             done;
+                             if not (Atomic.get consumer_started) then
+                               failwith "export blocked the dependent";
+                             if !fail_export then failwith "async export failed";
+                             write_file a_cmi "new interface";
+                             Atomic.set exported true)
+                       else None);
+                    cancel_export =
+                      (if key = "A" then
+                         Some (fun () -> Atomic.set cancelled true)
+                       else None);
+                    staged_cmi_path = None;
+                  })
+              ~record_published_outputs:(fun ~source_kind:_ _path -> ())
+              ~post_build:(fun _ -> [])
+              ~package_root:root ~is_local:true
+              ~mark_warning:(fun _ -> ())
+          in
+          let candidates =
+            [("A", a_state, a_cmi); ("B", b_state, b_cmi)]
+            |> List.map (fun (key, state, cmi_path) ->
+                Compiler_scheduler.candidate ~key ~state ~warning_paths:[]
+                  ~make:(fun () -> make key state cmi_path))
+          in
+          let run () =
+            Compiler_scheduler.run
+              ~on_ast_invalidation:(fun _ -> ())
+              ~poll:None ~warning_state:(Warning_state.create ())
+              ~compile_assets:(Compile_assets.create [ocaml_dir])
+              ~build_state ~candidates
+              ~mark_compiled:(fun () -> ())
+              ~mark_had_warnings:(fun () -> ())
+              ~progress:(Output.Progress.create ~enabled:false ~color:false)
+              ~compile_step:"1/1" ~namespace_count:0 ~verbosity:0
+          in
+          run ();
+          check (Atomic.get consumer_started) "the dependent compiled";
+          check (Atomic.get exported) "the export completed";
+          check
+            (not (Atomic.get cancelled))
+            "a successful export was not cancelled";
+          Atomic.set consumer_started false;
+          Atomic.set exported false;
+          fail_export := true;
+          a_state.compile_dirty <- true;
+          let a_ast = Filename.concat ocaml_dir "A.ast" in
+          Test_support.write_ast_header a_ast ~dependencies:[]
+            ~source:"src/A.res";
+          let failed =
+            try
+              run ();
+              false
+            with Compiler_scheduler.Build_failure message ->
+              Test_support.contains_text message "async export failed"
+          in
+          check failed "an asynchronous export error fails the build";
+          check (Atomic.get cancelled) "the failed staged result was cancelled";
+          check a_state.compile_dirty "the failed producer remains dirty";
+          check
+            (not (Sys.file_exists a_ast))
+            "a failed export invalidates persistent freshness"))
+
+let tests =
+  "compiler_scheduler_tests"
+  >::: [existing_tests; "async_export" >:: async_export_tests]

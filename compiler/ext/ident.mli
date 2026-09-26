@@ -15,7 +15,9 @@
 
 (* Identifiers (unique names) *)
 
-type t = {stamp: int; name: string; mutable flags: int}
+type t = {mutable stamp: int; name: string; mutable flags: int}
+(** [stamp] may be relocated only on a private, freshly deserialized
+    dependency graph before the identifier becomes visible to typing. *)
 
 include Identifiable.S with type t := t
 (* Notes:
@@ -52,6 +54,10 @@ val is_predef_exn : t -> bool
 
 val binding_time : t -> int
 val current_time : unit -> int
+
+(* Record fresh identifiers made during [action]. Nested captures also
+   contribute to their outer capture. *)
+val with_allocation_capture : (unit -> 'a) -> 'a * t array
 val set_current_time : int -> unit
 val reinit : unit -> unit
 

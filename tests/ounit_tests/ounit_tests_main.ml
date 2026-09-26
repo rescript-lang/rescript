@@ -27,6 +27,8 @@ let suites =
       Ounit_ast_mapper0_tests.suites;
       Ounit_constructor_arguments_tests.suites;
       Ounit_object_mutability_tests.suites;
+      Ounit_frozen_type_graph_tests.suites;
+      Ounit_frozen_values_tests.suites;
       Ounit_pattern_printer_tests.suites;
       Ounit_js_analyzer_tests.suites;
       Ounit_flow_parser_tests.suites;

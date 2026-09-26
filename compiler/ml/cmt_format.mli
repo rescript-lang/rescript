@@ -103,6 +103,15 @@ val save_cmt :
 (** [save_cmt filename modname binary_annots sourcefile initial_env cmi]
     writes a cmt(i) file.  *)
 
+val last_saved_cmt : unit -> cmt_infos option
+(** The semantic result of the most recent successful [save_cmt] in this
+    compiler request. It belongs to the current domain and is reset by
+    [clear]. Callers must not share its mutable typed tree across domains. *)
+
+val with_capture : (string -> cmt_infos -> unit) -> (unit -> 'a) -> 'a
+(** Capture the typed semantic result before request state is reset. The
+    captured graph is mutable and must be copied before another domain uses it. *)
+
 (* Miscellaneous functions *)
 
 val read_magic_number : in_channel -> string

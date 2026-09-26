@@ -10,7 +10,14 @@ type cmi_change = Build_state.cmi_change =
   | Cmi_change_unknown
 exception Publication_failure of exn * cmi_change
 
-type publish_result = {stderr: string; cmi_change: cmi_change}
+type publish_result = {
+  stderr: string;
+  cmi_change: cmi_change;
+  optimization_changed: bool;
+  deferred_export: (unit -> unit) option;
+  cancel_export: (unit -> unit) option;
+  staged_cmi_path: string option;
+}
 type namespace_task = {
   task: Process.task;
   publish: Process.result -> publish_result;
@@ -57,8 +64,11 @@ val candidate :
   candidate
 
 val candidate_requires_compile : candidate -> bool
+val candidate_key : candidate -> string
+val candidate_dependencies : candidate -> string list
 
 val run :
+  on_ast_invalidation:(string -> unit) ->
   poll:(unit -> unit) option ->
   warning_state:Warning_state.t ->
   compile_assets:Compile_assets.t ->
