@@ -439,9 +439,22 @@ Path CompletionSupport.TestComponent.make
   }
 ]
 
-Complete src/CompletionJsxProps.res 44:44
-posCursor:[44:44] posNoWhite:[44:43] Found expr:[44:11->44:44]
-JSX <CompletableComponentLazy:[44:12->44:36] status[44:37->44:43]=...__ghost__[0:-1->0:-1]> _children:None
+Complete src/CompletionJsxProps.res 37:47
+posCursor:[37:47] posNoWhite:[37:46] Found expr:[37:11->37:53]
+JSX <CompletionSupport.TestComponent:[37:12->37:43] on[37:44->37:46]=...[37:48->37:52]> _children:None
+Completable: Cexpression CJsxPropValue [CompletionSupport, TestComponent] on
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CJsxPropValue [CompletionSupport, TestComponent] on
+Path CompletionSupport.TestComponent.make
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionJsxProps.res 47:44
+posCursor:[47:44] posNoWhite:[47:43] Found expr:[47:11->47:44]
+JSX <CompletableComponentLazy:[47:12->47:36] status[47:37->47:43]=...__ghost__[0:-1->0:-1]> _children:None
 Completable: Cexpression CJsxPropValue [CompletableComponentLazy] status
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib

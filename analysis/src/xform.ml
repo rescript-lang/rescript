@@ -322,7 +322,7 @@ module Add_type_annotation = struct
       | _ -> ()
     in
     let process_function (e : Parsetree.expression) =
-      match e.pexp_desc with
+      match (Res_parsetree_viewer.unwrap_braces e).pexp_desc with
       | Pexp_fun {params} ->
         let single_param =
           match params with
