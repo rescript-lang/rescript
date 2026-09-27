@@ -24,6 +24,18 @@
 
 type t = Parsetree.payload
 
+let rec unwrap_braces (expression : Parsetree.expression) =
+  match expression.pexp_desc with
+  | Pexp_braces {expr} -> unwrap_braces expr
+  | _ -> expression
+
+let unwrap_payload_expression (payload : t) =
+  match payload with
+  | PStr [({pstr_desc = Pstr_eval (expression, attrs); _} as item)] ->
+    Parsetree.PStr
+      [{item with pstr_desc = Pstr_eval (unwrap_braces expression, attrs)}]
+  | payload -> payload
+
 let json_literal_outside_external_message =
   "A `json` literal can only be used in an external attribute such as `@as`"
 
@@ -31,7 +43,7 @@ let reject_json_literal ~loc =
   Location.raise_errorf ~loc "%s" json_literal_outside_external_message
 
 let reject_json_literal_payload (payload : t) =
-  match payload with
+  match unwrap_payload_expression payload with
   | PStr
       [
         {
@@ -44,7 +56,7 @@ let reject_json_literal_payload (payload : t) =
   | _ -> ()
 
 let semantic_string_of_expression (expression : Parsetree.expression) =
-  match expression with
+  match unwrap_braces expression with
   | {pexp_desc = Pexp_constant (Pconst_string payload); _} ->
     Some (String_literal.string_semantic payload)
   | {
@@ -58,7 +70,7 @@ let semantic_string_of_expression (expression : Parsetree.expression) =
   | _ -> None
 
 let string_literal_of_expression (expression : Parsetree.expression) =
-  match expression with
+  match unwrap_braces expression with
   | {pexp_desc = Pexp_constant (Pconst_string payload); _} -> Some payload
   | {
    pexp_desc = Pexp_template {source_segments = [source]; values = []};
@@ -83,7 +95,7 @@ let semantic_string_of_payload (x : t) =
   | _ -> None
 
 let single_int_source (x : t) =
-  match x with
+  match unwrap_payload_expression x with
   | PStr
       [
         {
@@ -102,7 +114,7 @@ let single_int_source (x : t) =
 let is_single_int x = Option.map int_of_string (single_int_source x)
 
 let is_single_float (x : t) : string option =
-  match x with
+  match unwrap_payload_expression x with
   | PStr
       [
         {
@@ -116,7 +128,7 @@ let is_single_float (x : t) : string option =
   | _ -> None
 
 let is_single_bigint (x : t) : string option =
-  match x with
+  match unwrap_payload_expression x with
   | PStr
       [
         {
@@ -131,7 +143,7 @@ let is_single_bigint (x : t) : string option =
   | _ -> None
 
 let is_single_bool (x : t) : bool option =
-  match x with
+  match unwrap_payload_expression x with
   | PStr
       [
         {
@@ -150,7 +162,7 @@ let is_single_bool (x : t) : bool option =
   | _ -> None
 
 let is_single_ident (x : t) =
-  match x with
+  match unwrap_payload_expression x with
   | PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_ident lid}, _); _}] ->
     Some lid.txt
   | _ -> None
@@ -204,7 +216,7 @@ let validate_raw_source ~(kind : Js_raw_info.raw_kind) ?is_function ~loc ~offset
 let raw_as_string_exp_exn ~(kind : Js_raw_info.raw_kind) ?is_function (x : t) :
     Parsetree.expression option =
   let string_expression =
-    match x with
+    match unwrap_payload_expression x with
     (* TODO also need detect empty phrase case *)
     | PStr
         [
@@ -257,7 +269,7 @@ let unrecognized_config_record loc text =
 
 let ident_or_record_as_config loc (x : t) :
     (string Location.loc * Parsetree.expression option) list =
-  match x with
+  match unwrap_payload_expression x with
   | PStr
       [
         {
@@ -305,7 +317,7 @@ let assert_strings loc (x : t) : string list =
     | Some semantic -> semantic
     | None -> raise Not_str
   in
-  match x with
+  match unwrap_payload_expression x with
   | PStr
       [
         {
@@ -324,7 +336,7 @@ let assert_strings loc (x : t) : string list =
     Location.raise_errorf ~loc "expect string tuple list"
 
 let assert_bool_lit (e : Parsetree.expression) =
-  match e.pexp_desc with
+  match (unwrap_braces e).pexp_desc with
   | Pexp_construct ({txt = Lident "true"}, {txt = []}) -> true
   | Pexp_construct ({txt = Lident "false"}, {txt = []}) -> false
   | _ ->
