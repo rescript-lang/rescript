@@ -388,35 +388,32 @@ let check_multiple_components ~config ~loc =
     Jsx_common.raise_error_multiple_component ~loc
   else config.has_component <- true
 
+(* Find the final function through expression wrappers. Applications are only
+   followed when inspecting component wrappers such as forwardRef and memo. *)
+let rec find_function_expression ~through_application expression =
+  match expression.pexp_desc with
+  | Pexp_fun _ -> Ok expression
+  | Pexp_braces {expr = inner} | Pexp_constraint (inner, _) ->
+    find_function_expression ~through_application inner
+  | Pexp_let (_, _, body) | Pexp_sequence (_, body) ->
+    find_function_expression ~through_application body
+  | Pexp_apply {args = [(Nolabel, inner)]} when through_application ->
+    find_function_expression ~through_application inner
+  | _ -> Error expression
+
+let is_function_expression expression =
+  match find_function_expression ~through_application:false expression with
+  | Ok _ -> true
+  | Error _ -> false
+
 let modified_binding_old binding =
-  let expression = binding.pvb_expr in
   (* TODO: there is a long-tail of unsupported features inside of blocks - Pexp_letmodule , Pexp_letexception , Pexp_ifthenelse *)
-  let rec spelunk_for_fun_expression expression =
-    match expression with
-    | {pexp_desc = Pexp_braces {expr = inner}} ->
-      spelunk_for_fun_expression inner
-    (* let make = (~prop) => ... *)
-    | {pexp_desc = Pexp_fun _} -> expression
-    (* let make = {let foo = bar in (~prop) => ...} *)
-    | {pexp_desc = Pexp_let (_recursive, _vbs, return_expression)} ->
-      (* here's where we spelunk! *)
-      spelunk_for_fun_expression return_expression
-    (* let make = React.forwardRef((~prop) => ...) *)
-    | {pexp_desc = Pexp_apply {args = [(Nolabel, inner_function_expression)]}}
-      ->
-      spelunk_for_fun_expression inner_function_expression
-    | {
-     pexp_desc = Pexp_sequence (_wrapperExpression, inner_function_expression);
-    } ->
-      spelunk_for_fun_expression inner_function_expression
-    | {pexp_desc = Pexp_constraint (inner_function_expression, _typ)} ->
-      spelunk_for_fun_expression inner_function_expression
-    | {pexp_loc} ->
-      Jsx_common.raise_error ~loc:pexp_loc
-        "JSX component calls can only be on function definitions or component \
-         wrappers (forwardRef, memo)."
-  in
-  spelunk_for_fun_expression expression
+  match find_function_expression ~through_application:true binding.pvb_expr with
+  | Ok expression -> expression
+  | Error {pexp_loc} ->
+    Jsx_common.raise_error ~loc:pexp_loc
+      "JSX component calls can only be on function definitions or component \
+       wrappers (forwardRef, memo)."
 
 let modified_binding ~binding_loc ~binding_pat_loc ~fn_name binding =
   let has_application = ref false in
@@ -542,15 +539,6 @@ let vb_match_expr named_arg_list expr =
   aux (List.rev named_arg_list)
 
 let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
-  let rec is_function_expression expr =
-    match expr.pexp_desc with
-    | Pexp_fun _ -> true
-    | Pexp_braces {expr} | Pexp_constraint (expr, _) ->
-      is_function_expression expr
-    | Pexp_let (_, _, body) | Pexp_sequence (_, body) ->
-      is_function_expression body
-    | _ -> false
-  in
   (* Traverse the component body and force every reachable return expression to
    be annotated as `Jsx.element`. This walks through the wrapper constructs the
    PPX introduces (fun/newtype/let/sequence) so that the constraint ends up on
