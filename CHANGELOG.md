@@ -31,6 +31,7 @@
 
 #### :house: Internal
 
+- Remove the unused `Ppat_open` and `Tpat_open` AST nodes. https://github.com/rescript-lang/rescript/pull/8682
 - Represent ternary expressions with a dedicated parsetree node. https://github.com/rescript-lang/rescript/pull/8674
 
 # 13.0.0-alpha.6
