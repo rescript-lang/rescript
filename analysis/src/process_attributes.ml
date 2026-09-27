@@ -20,7 +20,7 @@ let rec find_deprecated_attribute attributes =
     match Ast_payload.semantic_string_of_expression expr with
     | Some msg -> Some msg
     | None -> (
-      match expr.pexp_desc with
+      match (Ast_payload.unwrap_braces expr).pexp_desc with
       (* deprecated attr with record *)
       | Pexp_record (fields, _) ->
         let reason = ref "" in
@@ -61,14 +61,14 @@ let rec find_editor_complete_from_attribute ?(module_paths = []) attributes =
       PStr [{pstr_desc = Pstr_eval (payload_expr, _)}] )
     :: rest ->
     let items =
-      match payload_expr with
+      match Ast_payload.unwrap_braces payload_expr with
       | {pexp_desc = Pexp_array items} -> items
       | p -> [p]
     in
     let module_paths_from_array =
       items
       |> List.filter_map (fun item ->
-          match item.Parsetree.pexp_desc with
+          match (Ast_payload.unwrap_braces item).Parsetree.pexp_desc with
           | Pexp_construct ({txt = path}, {txt = []}) ->
             Some (Utils.flatten_long_ident path)
           | _ -> None)

@@ -489,11 +489,8 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
       Ast_external.handle_external_in_sig self value_desc sigi
     else
       match Ast_attributes.has_inline_payload pval_attributes with
-      | Some
-          (( _,
-             PStr [{pstr_desc = Pstr_eval (({pexp_desc; _} as expression), _)}]
-           ) as attr) -> (
-        match pexp_desc with
+      | Some ((_, PStr [{pstr_desc = Pstr_eval (expression, _)}]) as attr) -> (
+        match (Ast_payload.unwrap_braces expression).pexp_desc with
         | Pexp_constant (Pconst_string _)
         | Pexp_template {source_segments = [_]; values = []} ->
           let semantic =
@@ -614,7 +611,9 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
     Option.iter
       (fun (_, payload) -> Ast_payload.reject_json_literal_payload payload)
       has_inline_property;
-    match (has_inline_property, pvb_expr.pexp_desc) with
+    match
+      (has_inline_property, (Ast_payload.unwrap_braces pvb_expr).pexp_desc)
+    with
     | ( Some attr,
         ( Pexp_constant (Pconst_string _)
         | Pexp_template {source_segments = [_]; values = []} ) ) ->

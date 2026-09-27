@@ -245,7 +245,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                 call_name = Some (name_from_payload_or_prim ~loc payload);
               }
           | "module" -> (
-            match payload with
+            match Ast_payload.unwrap_payload_expression payload with
             | PStr
                 [
                   {
@@ -264,7 +264,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                     | Some name -> from_name := Some name
                     | None -> ())
                   | {txt = Lident "with"} -> (
-                    match exp.pexp_desc with
+                    match (Ast_payload.unwrap_braces exp).pexp_desc with
                     | Pexp_record (fields, _) -> with_ := Some fields
                     | _ -> ())
                   | _ -> ());

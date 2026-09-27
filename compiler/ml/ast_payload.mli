@@ -35,6 +35,12 @@ val json_literal_outside_external_message : string
 val reject_json_literal : loc:Location.t -> 'a
 val reject_json_literal_payload : t -> unit
 
+val unwrap_braces : Parsetree.expression -> Parsetree.expression
+(** Ignore explicit brace wrappers when interpreting an attribute payload. *)
+
+val unwrap_payload_expression : t -> t
+(** Unwrap the single expression in a payload while retaining its metadata. *)
+
 val semantic_string_of_expression : Parsetree.expression -> string option
 (** Return the decoded value when the expression is an ordinary string or a
     non-interpolated backquoted string. *)

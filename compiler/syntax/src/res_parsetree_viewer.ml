@@ -584,9 +584,10 @@ let partition_doc_comment_attributes attrs =
       | _ -> false)
     attrs
 
-let is_fun_expr expr =
+let rec is_fun_expr expr =
   match expr.pexp_desc with
   | Pexp_fun _ -> true
+  | Pexp_braces {expr} -> is_fun_expr expr
   | _ -> false
 
 let requires_special_callback_printing_last_arg args =

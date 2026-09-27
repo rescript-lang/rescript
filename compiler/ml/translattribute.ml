@@ -66,8 +66,8 @@ let parse_inline_attribute (attr : t option) : Lambda.inline_attribute =
     in
     match payload with
     | PStr [] -> Always_inline
-    | PStr [{pstr_desc = Pstr_eval ({pexp_desc}, [])}] -> (
-      match pexp_desc with
+    | PStr [{pstr_desc = Pstr_eval (expression, [])}] -> (
+      match (Ast_payload.unwrap_braces expression).pexp_desc with
       | Pexp_ident {txt = Longident.Lident "never"} -> Never_inline
       | Pexp_ident {txt = Longident.Lident "always"} -> Always_inline
       | _ ->

@@ -3,7 +3,7 @@
 @@warning("-110")
 
 module A = {
-  @editor.completeFrom(B) @editor.completeFrom(C)
+  @editor.completeFrom({B}) @editor.completeFrom(C)
   type a
 }
 
