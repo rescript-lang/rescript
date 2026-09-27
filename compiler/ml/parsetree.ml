@@ -258,8 +258,6 @@ and pattern_desc =
   | Ppat_exception of pattern (* exception P *)
   | Ppat_extension of extension (* [%id] *)
 
-and pat_record_label = Longident.t loc * pattern * bool (* optional *)
-
 (* Value expressions *)
 and expression = {
   pexp_desc: expression_desc;
