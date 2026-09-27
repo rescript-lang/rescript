@@ -37,6 +37,7 @@ let exists_var (p : Ident.t -> bool) (l : Lambda.t) : bool =
   and hit (l : Lambda.t) =
     match l with
     | Lvar id -> p id
+    | Lreturn value -> hit value
     | Lassign (id, e) -> p id || hit e
     | Lstaticcatch (e1, _, e2)
     | Ltrywith (e1, _, e2)

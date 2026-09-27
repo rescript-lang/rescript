@@ -930,6 +930,7 @@ let exception_id_destructed (l : Lambda.t) (fv : Ident.t) : bool =
     | Lprim {primitive = Praise; args = [Lvar _]; loc = _} -> false
     | Lprim {primitive = _; args; loc = _} -> hit_list args
     | Lvar id -> Ident.same id fv
+    | Lreturn value -> hit value
     | Lassign (id, e) -> Ident.same id fv || hit e
     | Lstaticcatch (e1, _, e2) -> hit e1 || hit e2
     | Ltrywith (e1, _, e2) -> hit e1 || hit e2
@@ -1267,6 +1268,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
   | Texp_ifthenelse (cond, ifso, None) ->
     if_ (transl_exp cond) (transl_exp ifso) lambda_unit
   | Texp_sequence (expr1, expr2) -> seq (transl_exp expr1) (transl_exp expr2)
+  | Texp_return value -> return (transl_exp value)
   | Texp_break -> break
   | Texp_continue -> continue
   | Texp_while (cond, body) -> while_ (transl_exp cond) (transl_exp body)

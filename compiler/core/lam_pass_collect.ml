@@ -139,6 +139,7 @@ let collect_info (meta : Lam_stats.t) (lam : Lambda.t) =
     | Lfor_await_of (_, l1, l2) ->
       collect l1;
       collect l2
+    | Lreturn l -> collect l
     | Lassign (_v, l) ->
       (* Lalias-bound variables are never assigned, so don't increase
          v's refcollect *)

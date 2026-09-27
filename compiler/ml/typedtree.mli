@@ -225,6 +225,12 @@ and expression_desc =
   | Texp_array of expression list
   | Texp_ifthenelse of expression * expression * expression option
   | Texp_sequence of expression * expression
+  | Texp_return of expression
+      (** Return from the nearest enclosing function. The operand has that
+          function body's result type (the resolved payload for async functions);
+          the expression itself never produces a value.
+          Parameter defaults and module initializers do not inherit a return
+          scope. The provisional parsetree encoding is [%return(value)]. *)
   | Texp_break
   | Texp_continue
   | Texp_while of expression * expression

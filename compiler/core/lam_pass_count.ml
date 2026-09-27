@@ -124,6 +124,7 @@ let collect_occurs lam : occ_tbl =
       (* count [l2] first,
          If v is unused, l1 will be removed, so don't count its variables *)
       if kind = Strict || used v then count bv l1
+    | Lreturn l -> count bv l
     | Lassign (_, l) ->
       (* Lalias-bound variables are never assigned, so don't increase
          this ident's refcount *)

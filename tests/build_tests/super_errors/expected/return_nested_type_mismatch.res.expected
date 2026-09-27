@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/return_nested_type_mismatch.res[0m:[2m2:33-34[0m
+
+  1 [2m│[0m let f = () => {
+  [1;31m2[0m [2m│[0m   let g = (): string => %return([1;31m42[0m)
+  3 [2m│[0m   g()
+  4 [2m│[0m }
+
+  This has type: [1;31mint[0m
+  But it's expected to have type: [1;33mstring[0m
+  
+  You can convert [1;33mint[0m to [1;33mstring[0m with [1;33mInt.toString[0m.

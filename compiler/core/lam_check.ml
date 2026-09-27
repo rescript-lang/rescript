@@ -95,6 +95,7 @@ let check ~file ~pass lam =
       check_staticfails e2 cxt
     | Lifthenelse (e1, e2, e3) -> check_list [e1; e2; e3] cxt
     | Lsequence (e1, e2) -> check_list [e1; e2] cxt
+    | Lreturn value -> check_staticfails value cxt
     | Lassign (_id, e) -> check_staticfails e cxt
   in
   let rec iter_list xs = Ext_list.iter xs iter
@@ -164,6 +165,7 @@ let check ~file ~pass lam =
       iter e1;
       def v;
       iter e2
+    | Lreturn e -> iter e
     | Lassign (id, e) ->
       use id;
       iter e

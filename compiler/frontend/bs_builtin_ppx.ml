@@ -129,6 +129,10 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
       ~attrs:(self.attributes self e.pexp_attributes)
       {e with pexp_desc = raw; pexp_attributes = []}
       (Ast_comb.to_regexp_type loc)
+  | Pexp_extension ({txt = "return"}, _) ->
+    (* Unlike unknown extensions, return contains an ordinary expression:
+       lower await, JSX, and other builtins in its operand before typing. *)
+    Ast_mapper.default_mapper.expr self e
   | Pexp_extension extension ->
     Ast_exp_extension.handle_extension e self extension
   | Pexp_constant (Pconst_integer (s, Some 'l')) ->

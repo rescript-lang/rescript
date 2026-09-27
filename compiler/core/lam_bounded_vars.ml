@@ -160,6 +160,7 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
       let l1 = aux l1 in
       let l2 = aux l2 in
       Lambda.seq l1 l2
+    | Lreturn value -> Lambda.return (aux value)
     | Lbreak -> Lambda.break
     | Lcontinue -> Lambda.continue
     | Lwhile (l1, l2) ->

@@ -122,7 +122,7 @@ let rec no_side_effects (lam : Lambda.t) : bool =
   | Lifthenelse (a, b, c) ->
     no_side_effects a && no_side_effects b && no_side_effects c
   | Lsequence (a, b) -> no_side_effects a && no_side_effects b
-  | Lbreak | Lcontinue -> false
+  | Lreturn _ | Lbreak | Lcontinue -> false
   | Lletrec (bindings, body) ->
     Ext_list.for_all_snd bindings no_side_effects && no_side_effects body
   | Lwhile _ ->
@@ -186,6 +186,7 @@ let rec size (lam : Lambda.t) =
     | Ltrywith _ -> really_big ()
     | Lifthenelse (l1, l2, l3) -> 1 + size l1 + size l2 + size l3
     | Lsequence (l1, l2) -> size l1 + size l2
+    | Lreturn value -> 1 + size value
     | Lbreak | Lcontinue -> 1
     | Lwhile _ -> really_big ()
     | Lfor _ -> really_big ()
@@ -249,9 +250,18 @@ let destruct_pattern (body : Lambda.t) params args =
     | Some _ | None -> false)
   | _ -> false
 
+(* Returns are relative to the nearest function, so ordinary beta reduction
+   must preserve that boundary. Nested functions retain their own boundary. *)
+let rec contains_return = function
+  | Lambda.Lreturn _ -> true
+  | Lfunction _ -> false
+  | lam -> Lambda_traverse.shallow_exists contains_return lam
+
 (* Async functions cannot be beta reduced *)
 let lfunction_can_be_inlined (lfunction : Lambda.lfunction) =
-  (not lfunction.attr.async) && lfunction.attr.directive = None
+  (not lfunction.attr.async)
+  && lfunction.attr.directive = None
+  && not (contains_return lfunction.body)
 
 (** Hints to inlining *)
 let ok_to_inline_fun_when_app (m : Lambda.lfunction) (args : Lambda.t list) =

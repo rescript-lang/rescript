@@ -272,6 +272,7 @@ end = struct
     | Texp_sequence (exp1, exp2) ->
       iter_expression exp1;
       iter_expression exp2
+    | Texp_return exp -> iter_expression exp
     | Texp_break | Texp_continue -> ()
     | Texp_while (exp1, exp2) ->
       iter_expression exp1;
