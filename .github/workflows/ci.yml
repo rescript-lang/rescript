@@ -2,10 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [master, 11.0_release]
+    branches: [master, 11.0_release, rewatch-ocaml-consolidated]
 
   pull_request:
-    branches: [master, 11.0_release, rewatch-ocaml]
+    branches: [master, 11.0_release]
 
   # Release builds are started by publish.yml after a maintainer indicates
   # whether the package version is current stable. The npm tag is derived from
