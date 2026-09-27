@@ -3,10 +3,13 @@
 
 let absolute = Math.abs(-2);
 
+let withJson = Math.abs([], -2);
+
 let first = 1;
 
 export {
   absolute,
+  withJson,
   first,
 }
 /* absolute Not a pure module */

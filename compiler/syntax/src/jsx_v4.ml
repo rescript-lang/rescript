@@ -542,6 +542,15 @@ let vb_match_expr named_arg_list expr =
   aux (List.rev named_arg_list)
 
 let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
+  let rec is_function_expression expr =
+    match expr.pexp_desc with
+    | Pexp_fun _ -> true
+    | Pexp_braces {expr} | Pexp_constraint (expr, _) ->
+      is_function_expression expr
+    | Pexp_let (_, _, body) | Pexp_sequence (_, body) ->
+      is_function_expression body
+    | _ -> false
+  in
   (* Traverse the component body and force every reachable return expression to
    be annotated as `Jsx.element`. This walks through the wrapper constructs the
    PPX introduces (fun/newtype/let/sequence) so that the constraint ends up on
@@ -551,6 +560,12 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
       Exp.constraint_ expr (jsx_element_type config ~loc:expr.pexp_loc)
     in
     match expr.pexp_desc with
+    | Pexp_braces {expr = inner; braces_loc} when is_function_expression inner
+      ->
+      {
+        expr with
+        pexp_desc = Pexp_braces {expr = constrain_jsx_return inner; braces_loc};
+      }
     | Pexp_fun ({body} as desc) ->
       {
         expr with
