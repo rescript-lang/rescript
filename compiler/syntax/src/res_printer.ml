@@ -43,8 +43,7 @@ let add_async doc = Doc.concat [Doc.text "async "; doc]
 let has_inline_type_definitions type_declarations =
   type_declarations
   |> List.find_opt (fun (td : Parsetree.type_declaration) ->
-      Res_parsetree_viewer.has_inline_record_definition_attribute
-        td.ptype_attributes)
+      td.ptype_origin = Inline_record_definition)
   |> Option.is_some
 
 let get_first_leading_comment tbl loc =
@@ -1305,8 +1304,7 @@ and print_type_declarations ~state ~rec_flag type_declarations cmt_tbl =
     let inline_record_definitions, regular_declarations =
       type_declarations
       |> List.partition (fun (td : Parsetree.type_declaration) ->
-          Res_parsetree_viewer.has_inline_record_definition_attribute
-            td.ptype_attributes)
+          td.ptype_origin = Inline_record_definition)
     in
     match regular_declarations with
     | [] -> (

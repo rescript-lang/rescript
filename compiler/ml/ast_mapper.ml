@@ -126,6 +126,7 @@ module T = struct
         ptype_kind;
         ptype_private;
         ptype_manifest;
+        ptype_origin;
         ptype_attributes;
         ptype_loc;
       } =
@@ -138,6 +139,7 @@ module T = struct
            ptype_cstrs)
       ~kind:(sub.type_kind sub ptype_kind)
       ?manifest:(map_opt (sub.typ sub) ptype_manifest)
+      ~origin:ptype_origin
       ~loc:(sub.location sub ptype_loc)
       ~attrs:(sub.attributes sub ptype_attributes)
 

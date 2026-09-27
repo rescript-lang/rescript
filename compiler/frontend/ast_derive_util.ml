@@ -42,6 +42,7 @@ let new_type_of_type_declaration (tdcl : Parsetree.type_declaration) new_name =
         ptype_cstrs = [];
         ptype_private = Public;
         ptype_manifest = None;
+        ptype_origin = Declared;
       } )
 let not_applicable loc deriving_name =
   Location.prerr_warning loc

@@ -480,6 +480,10 @@ and type_declaration i ppf x =
   line i ppf "ptype_kind =\n";
   type_kind (i + 1) ppf x.ptype_kind;
   line i ppf "ptype_private = %a\n" fmt_private_flag x.ptype_private;
+  (match x.ptype_origin with
+  | Declared -> ()
+  | Inline_record_definition ->
+    line i ppf "ptype_origin = Inline_record_definition\n");
   line i ppf "ptype_manifest =\n";
   option (i + 1) core_type ppf x.ptype_manifest
 

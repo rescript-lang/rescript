@@ -390,7 +390,17 @@ end
 
 module Type = struct
   let mk ?(loc = !default_loc) ?(attrs = []) ?(params = []) ?(cstrs = [])
-      ?(kind = Ptype_abstract) ?(priv = Public) ?manifest name =
+      ?(kind = Ptype_abstract) ?(priv = Public) ?manifest ?(origin = Declared)
+      name =
+    let origin, attrs =
+      let rec extract acc = function
+        | ({txt = "res.inlineRecordDefinition"}, _) :: rest ->
+          (Inline_record_definition, List.rev_append acc rest)
+        | attr :: rest -> extract (attr :: acc) rest
+        | [] -> (origin, List.rev acc)
+      in
+      extract [] attrs
+    in
     {
       ptype_name = name;
       ptype_params = params;
@@ -398,9 +408,17 @@ module Type = struct
       ptype_kind = kind;
       ptype_private = priv;
       ptype_manifest = manifest;
+      ptype_origin = origin;
       ptype_attributes = attrs;
       ptype_loc = loc;
     }
+
+  let declaration_attributes (decl : Parsetree.type_declaration) =
+    match decl.ptype_origin with
+    | Declared -> decl.ptype_attributes
+    | Inline_record_definition ->
+      (Location.mknoloc "res.inlineRecordDefinition", PStr [])
+      :: decl.ptype_attributes
 
   let constructor ?(loc = !default_loc) ?(attrs = []) ?(args = Pcstr_tuple [])
       ?res ?runtime_tag name =

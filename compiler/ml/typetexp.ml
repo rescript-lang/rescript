@@ -178,6 +178,7 @@ let create_package_mty fake loc env (p, l) =
             ptype_kind = Ptype_abstract;
             ptype_private = Asttypes.Public;
             ptype_manifest = (if fake then None else Some t);
+            ptype_origin = Declared;
             ptype_attributes = [];
             ptype_loc = loc;
           }

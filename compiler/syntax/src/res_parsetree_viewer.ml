@@ -37,13 +37,6 @@ let expr_is_await e =
   | Pexp_await _ -> true
   | _ -> false
 
-let has_inline_record_definition_attribute attrs =
-  List.exists
-    (function
-      | {Location.txt = "res.inlineRecordDefinition"}, _ -> true
-      | _ -> false)
-    attrs
-
 let has_res_pat_variant_spread_attribute attrs =
   List.exists
     (function
@@ -239,8 +232,7 @@ let filter_parsing_attrs attrs =
       | ( {
             Location.txt =
               ( "res.iflet" | "res.ternary" | "res.await"
-              | "res.patVariantSpread" | "res.dictPattern" | "res.dictSpread"
-              | "res.inlineRecordDefinition" );
+              | "res.patVariantSpread" | "res.dictPattern" | "res.dictSpread" );
           },
           _ ) ->
         false
@@ -396,13 +388,7 @@ let has_attributes attrs =
   List.exists
     (fun attr ->
       match attr with
-      | ( {
-            Location.txt =
-              ( "res.iflet" | "res.ternary" | "res.await"
-              | "res.inlineRecordDefinition" );
-          },
-          _ ) ->
-        false
+      | {Location.txt = "res.iflet" | "res.ternary" | "res.await"}, _ -> false
       (* Remove the fragile pattern warning for iflet expressions *)
       | ( {Location.txt = "warning"},
           PStr
@@ -554,8 +540,7 @@ let is_printable_attribute attr =
   match attr with
   | ( {
         Location.txt =
-          ( "res.iflet" | "JSX" | "res.await" | "res.ternary"
-          | "res.inlineRecordDefinition" | "res.dictSpread" );
+          "res.iflet" | "JSX" | "res.await" | "res.ternary" | "res.dictSpread";
       },
       _ ) ->
     false
