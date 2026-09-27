@@ -1633,12 +1633,22 @@ if [ -e "$work/watch-filter-rust/src/Exclude.js" ]; then
   exit 1
 fi
 cp "$work/watch-filter-rust/src/Include.js" "$work/watch-filter-rust-initial.js"
-printf 'let value = 2\n' >"$work/watch-filter-rust/src/Include.res"
+# Let the excluded edit finish before changing the included source so the
+# watcher cannot batch the events into one build.
 printf 'let value = 11\n' >"$work/watch-filter-rust/src/Exclude.res"
 wait_for_line_count "$rust_filter_marker" 2
 if ! cmp -s "$work/watch-filter-rust-initial.js" \
+    "$work/watch-filter-rust/src/Include.js" || \
+  [ -e "$work/watch-filter-rust/src/Exclude.js" ]; then
+  echo "Rust changed generated output after an excluded watch-filter edit" >&2
+  cat "$work/watch-filter-rust.out" "$work/watch-filter-rust.err" >&2
+  exit 1
+fi
+printf 'let value = 2\n' >"$work/watch-filter-rust/src/Include.res"
+if ! line_count_stays "$rust_filter_marker" 2 || \
+  ! cmp -s "$work/watch-filter-rust-initial.js" \
     "$work/watch-filter-rust/src/Include.js"; then
-  echo "Rust no longer reproduces the inverted watch-filter event behavior" >&2
+  echo "Rust no longer ignores included watch-filter edits" >&2
   cat "$work/watch-filter-rust.out" "$work/watch-filter-rust.err" >&2
   exit 1
 fi
