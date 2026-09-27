@@ -174,18 +174,14 @@ let scheduleSourceOverlayWidthSync = editor =>
 let updateActiveSourceLine = (editor, line) =>
   Window.requestAnimationFrame(() =>
     switch editor->Element.parentElement {
-    | Some(editorShell) => {
-        switch editorShell->Element.querySelector(".syntax-line-current") {
-        | Some(currentLine) =>
-          currentLine->Element.classList->ClassList.remove("syntax-line-current")
-        | None => ()
-        }
-        switch editorShell->Element.querySelector(
-          `.syntax-line[data-line="${line->Int.toString}"]`,
-        ) {
-        | Some(activeLine) => activeLine->Element.classList->ClassList.add("syntax-line-current")
-        | None => ()
-        }
+    | Some(editorShell) =>
+      switch editorShell->Element.querySelector(".syntax-line-current") {
+      | Some(currentLine) => currentLine->Element.classList->ClassList.remove("syntax-line-current")
+      | None => ()
+      }
+      switch editorShell->Element.querySelector(`.syntax-line[data-line="${line->Int.toString}"]`) {
+      | Some(activeLine) => activeLine->Element.classList->ClassList.add("syntax-line-current")
+      | None => ()
       }
     | None => ()
     }
@@ -341,36 +337,35 @@ let mappedJavaScriptNode = (
       if end_ > start {
         let text = lineText->String.slice(~start, ~end=end_)
         switch mapping.original {
-        | Some(original) => {
-            let isSelected = switch selectedPosition {
-            | Some(position) =>
-              position.line === mapping.generated.line && position.col === mapping.generated.col
-            | None => false
-            }
-            let className = isSelected
-              ? "source-map-mapped-segment source-map-mapped-segment-active"
-              : "source-map-mapped-segment"
-            let title = `${original.source}:${original.position.line->Int.toString}:${(original.position.col + 1)
-                ->Int.toString} — click to reveal in source`
-            nodes->Array.push(
-              <span
-                id={isSelected ? "generated-map-selection" : ""}
-                class={className}
-                title
-                onClick={_ => {
-                  let shouldNavigate = switch WindowSelection.get() {
-                  | Some(selection) => selection->WindowSelection.isCollapsed
-                  | None => true
-                  }
-                  if shouldNavigate {
-                    onMappingSelect(mapping)
-                  }
-                }}
-              >
-                {View.text(text)}
-              </span>,
-            )
+        | Some(original) =>
+          let isSelected = switch selectedPosition {
+          | Some(position) =>
+            position.line === mapping.generated.line && position.col === mapping.generated.col
+          | None => false
           }
+          let className = isSelected
+            ? "source-map-mapped-segment source-map-mapped-segment-active"
+            : "source-map-mapped-segment"
+          let title = `${original.source}:${original.position.line->Int.toString}:${(original.position.col + 1)
+              ->Int.toString} — click to reveal in source`
+          nodes->Array.push(
+            <span
+              id={isSelected ? "generated-map-selection" : ""}
+              class={className}
+              title
+              onClick={_ => {
+                let shouldNavigate = switch WindowSelection.get() {
+                | Some(selection) => selection->WindowSelection.isCollapsed
+                | None => true
+                }
+                if shouldNavigate {
+                  onMappingSelect(mapping)
+                }
+              }}
+            >
+              {View.text(text)}
+            </span>,
+          )
         | None => pushOutputText(nodes, text, onSourceMapSelect)
         }
       }
@@ -397,18 +392,11 @@ let interactiveOutputNode = (
 ) => {
   let output = selectedOutput(snapshot, activeTab)
   switch (snapshot, activeTab) {
-  | (Some({source: compiledSource, result: Ok({sourceMap: Some(sourceMap)})}), JavaScript) => {
-      let mappings = SourceMapNavigation.decodeForSource(sourceMap, compiledSource, currentSource)
-      mappings->Array.length > 0
-        ? mappedJavaScriptNode(
-            output,
-            mappings,
-            selectedPosition,
-            onMappingSelect,
-            onSourceMapSelect,
-          )
-        : outputNode(output, activeTab, onSourceMapSelect)
-    }
+  | (Some({source: compiledSource, result: Ok({sourceMap: Some(sourceMap)})}), JavaScript) =>
+    let mappings = SourceMapNavigation.decodeForSource(sourceMap, compiledSource, currentSource)
+    mappings->Array.length > 0
+      ? mappedJavaScriptNode(output, mappings, selectedPosition, onMappingSelect, onSourceMapSelect)
+      : outputNode(output, activeTab, onSourceMapSelect)
   | _ => outputNode(output, activeTab, onSourceMapSelect)
   }
 }
@@ -785,12 +773,11 @@ module PaneSeparator = {
         }
 
         switch delta {
-        | Some(delta) => {
-            let (size, minFirst, minSecond) = metrics(orientation, rect)
-            PaneLayout.setOrientation(layout, orientation)
-            PaneLayout.nudge(layout, delta, ~size, ~minFirst, ~minSecond)
-            event->Event.preventDefault
-          }
+        | Some(delta) =>
+          let (size, minFirst, minSecond) = metrics(orientation, rect)
+          PaneLayout.setOrientation(layout, orientation)
+          PaneLayout.nudge(layout, delta, ~size, ~minFirst, ~minSecond)
+          event->Event.preventDefault
         | None => ()
         }
       })
@@ -888,45 +875,41 @@ module App = {
       | Some({source: compiledSource})
         if SourceMapNavigation.isCurrentSource(compiledSource, Signal.peek(source)) =>
         switch mapping.original {
-        | Some(original) => {
-            Signal.set(mappedSourcePosition, Some(original.position))
-            Signal.set(mappedGeneratedPosition, Some(mapping.generated))
-            Signal.set(activeLine, original.position.line)
-            Window.requestAnimationFrame(() =>
-              switch Document.current->Document.getElementById(sourceEditorId) {
-              | Some(editor) => {
-                  let offset = offsetForPosition(Signal.peek(source), original.position)
-                  editor->TextAreaElement.setSelectionRange(offset, offset)
-                  editor->Element.focus
-                  Signal.set(activeLine, original.position.line)
-                  updateActiveSourceLine(editor, original.position.line)
-                  switch editor->Element.parentElement {
-                  | Some(editorShell) =>
-                    switch editorShell->Element.querySelector(
-                      `.syntax-line[data-line="${original.position.line->Int.toString}"]`,
-                    ) {
-                    | Some(line) => {
-                        let editorRect = editor->Element.getBoundingClientRect
-                        let lineRect = line->Element.getBoundingClientRect
-                        let centeredScrollTop =
-                          Signal.peek(editorScrollTop)->Int.toFloat +.
-                          lineRect.top -.
-                          editorRect.top -.
-                          (editor->TextAreaElement.clientHeight->Int.toFloat -.
-                            lineRect.height) /. 2.0
-                        let scrollTop = Math.Int.max(0, centeredScrollTop->Math.round->Float.toInt)
-                        editor->TextAreaElement.setScrollTop(scrollTop)
-                        Signal.set(editorScrollTop, editor->TextAreaElement.scrollTop)
-                      }
-                    | None => ()
-                    }
-                  | None => ()
-                  }
+        | Some(original) =>
+          Signal.set(mappedSourcePosition, Some(original.position))
+          Signal.set(mappedGeneratedPosition, Some(mapping.generated))
+          Signal.set(activeLine, original.position.line)
+          Window.requestAnimationFrame(() =>
+            switch Document.current->Document.getElementById(sourceEditorId) {
+            | Some(editor) =>
+              let offset = offsetForPosition(Signal.peek(source), original.position)
+              editor->TextAreaElement.setSelectionRange(offset, offset)
+              editor->Element.focus
+              Signal.set(activeLine, original.position.line)
+              updateActiveSourceLine(editor, original.position.line)
+              switch editor->Element.parentElement {
+              | Some(editorShell) =>
+                switch editorShell->Element.querySelector(
+                  `.syntax-line[data-line="${original.position.line->Int.toString}"]`,
+                ) {
+                | Some(line) =>
+                  let editorRect = editor->Element.getBoundingClientRect
+                  let lineRect = line->Element.getBoundingClientRect
+                  let centeredScrollTop =
+                    Signal.peek(editorScrollTop)->Int.toFloat +.
+                    lineRect.top -.
+                    editorRect.top -.
+                    (editor->TextAreaElement.clientHeight->Int.toFloat -. lineRect.height) /. 2.0
+                  let scrollTop = Math.Int.max(0, centeredScrollTop->Math.round->Float.toInt)
+                  editor->TextAreaElement.setScrollTop(scrollTop)
+                  Signal.set(editorScrollTop, editor->TextAreaElement.scrollTop)
+                | None => ()
                 }
               | None => ()
               }
-            )
-          }
+            | None => ()
+            }
+          )
         | None => ()
         }
       | _ => clearMappedPositions()
@@ -941,27 +924,25 @@ module App = {
         let currentSource = Event.value(event)
         let position = cursorPositionForOffset(currentSource, selectionStart)
         switch Signal.peek(compileResult) {
-        | Some({source: compiledSource, result: Ok({sourceMap: Some(sourceMap)})}) => {
-            let mappings = SourceMapNavigation.decodeForSource(
-              sourceMap,
-              compiledSource,
-              currentSource,
-            )
-            switch SourceMapNavigation.generatedForOriginal(
-              mappings,
-              {
-                line: position.line,
-                col: position.col,
-              },
-            ) {
-            | Some(mapping) => {
-                Signal.set(mappedSourcePosition, Some({line: position.line, col: position.col}))
-                Signal.set(mappedGeneratedPosition, Some(mapping.generated))
-                Signal.set(activeTab, JavaScript)
-                scrollToGeneratedMapping()
-              }
-            | None => clearMappedPositions()
-            }
+        | Some({source: compiledSource, result: Ok({sourceMap: Some(sourceMap)})}) =>
+          let mappings = SourceMapNavigation.decodeForSource(
+            sourceMap,
+            compiledSource,
+            currentSource,
+          )
+          switch SourceMapNavigation.generatedForOriginal(
+            mappings,
+            {
+              line: position.line,
+              col: position.col,
+            },
+          ) {
+          | Some(mapping) =>
+            Signal.set(mappedSourcePosition, Some({line: position.line, col: position.col}))
+            Signal.set(mappedGeneratedPosition, Some(mapping.generated))
+            Signal.set(activeTab, JavaScript)
+            scrollToGeneratedMapping()
+          | None => clearMappedPositions()
           }
         | _ => clearMappedPositions()
         }
@@ -1183,16 +1164,14 @@ module App = {
       Window.requestAnimationFrame(() =>
         if !disposed.contents {
           switch Document.current->Document.getElementById(sourceEditorId) {
-          | Some(editor) => {
-              syncSourceOverlayWidth(editor)
-              switch ResizeObserver.supported {
-              | Some(_) => {
-                  let nextObserver = ResizeObserver.make(_ => syncSourceOverlayWidth(editor))
-                  observer := Some(nextObserver)
-                  nextObserver->ResizeObserver.observe(editor)
-                }
-              | None => ()
-              }
+          | Some(editor) =>
+            syncSourceOverlayWidth(editor)
+            switch ResizeObserver.supported {
+            | Some(_) =>
+              let nextObserver = ResizeObserver.make(_ => syncSourceOverlayWidth(editor))
+              observer := Some(nextObserver)
+              nextObserver->ResizeObserver.observe(editor)
+            | None => ()
             }
           | None => ()
           }
@@ -1217,26 +1196,23 @@ module App = {
       Window.requestAnimationFrame(() =>
         if !disposed.contents {
           switch Document.current->Document.getElementById(paneLayout.containerId) {
-          | Some(container) => {
-              let updateOrientation = width =>
-                PaneLayout.setOrientation(paneLayout, PaneLayout.orientationForWidth(width))
+          | Some(container) =>
+            let updateOrientation = width =>
+              PaneLayout.setOrientation(paneLayout, PaneLayout.orientationForWidth(width))
 
-              updateOrientation((container->Element.getBoundingClientRect).width)
-              switch ResizeObserver.supported {
-              | Some(_) => {
-                  let nextObserver = ResizeObserver.make(
-                    entries =>
-                      switch entries->Array.get(0) {
-                      | Some(entry) =>
-                        updateOrientation((entry->ResizeObserverEntry.contentRect).width)
-                      | None => ()
-                      },
-                  )
-                  observer := Some(nextObserver)
-                  nextObserver->ResizeObserver.observe(container)
-                }
-              | None => ()
-              }
+            updateOrientation((container->Element.getBoundingClientRect).width)
+            switch ResizeObserver.supported {
+            | Some(_) =>
+              let nextObserver = ResizeObserver.make(
+                entries =>
+                  switch entries->Array.get(0) {
+                  | Some(entry) => updateOrientation((entry->ResizeObserverEntry.contentRect).width)
+                  | None => ()
+                  },
+              )
+              observer := Some(nextObserver)
+              nextObserver->ResizeObserver.observe(container)
+            | None => ()
             }
           | None => ()
           }

@@ -5272,18 +5272,15 @@ and print_cases ~state (cases : Parsetree.case list) cmt_tbl =
        ])
 
 and print_case ~state (case : Parsetree.case) cmt_tbl =
+  let is_block_rhs = Parsetree_viewer.is_block_expr case.pc_rhs in
   let rhs =
-    match case.pc_rhs.pexp_desc with
-    | Pexp_let _ | Pexp_letmodule _ | Pexp_letexception _ | Pexp_open _
-    | Pexp_sequence _ ->
-      print_expression_block ~state
-        ~braces:(Parsetree_viewer.is_braced_expr case.pc_rhs)
-        case.pc_rhs cmt_tbl
-    | _ -> (
+    if is_block_rhs then
+      print_expression_block ~state ~braces:false case.pc_rhs cmt_tbl
+    else
       let doc = print_expression_with_comments ~state case.pc_rhs cmt_tbl in
       match Parens.expr case.pc_rhs with
       | Parenthesized -> add_parens doc
-      | _ -> doc)
+      | _ -> doc
   in
 
   let guard =
@@ -5299,12 +5296,14 @@ and print_case ~state (case : Parsetree.case) cmt_tbl =
            ])
   in
   let should_inline_rhs =
-    match case.pc_rhs.pexp_desc with
-    | Pexp_construct ({txt = Longident.Lident ("()" | "true" | "false")}, _)
-    | Pexp_constant _ | Pexp_ident _ ->
-      true
-    | _ when Parsetree_viewer.is_huggable_rhs case.pc_rhs -> true
-    | _ -> false
+    if is_block_rhs then false
+    else
+      match case.pc_rhs.pexp_desc with
+      | Pexp_construct ({txt = Longident.Lident ("()" | "true" | "false")}, _)
+      | Pexp_constant _ | Pexp_ident _ ->
+        true
+      | _ when Parsetree_viewer.is_huggable_rhs case.pc_rhs -> true
+      | _ -> false
   in
   let should_indent_pattern =
     match case.pc_lhs.ppat_desc with

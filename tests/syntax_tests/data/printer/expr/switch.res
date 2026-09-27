@@ -57,3 +57,18 @@ switch x {
   } // no blank line below
 | B => ()
 }
+
+switch value {
+| A => {
+    // Keep this comment with the first statement.
+    let local = 1
+    local
+  }
+| B =>
+  let local = 2
+  local
+| C => {
+    foo()
+    {bar()}
+  }
+}

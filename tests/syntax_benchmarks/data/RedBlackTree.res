@@ -194,25 +194,24 @@ let rotateRight = (rbt, node) => {
 let rec findInsert = (rbt, node, nodeToInsert, value) => {
   switch node {
   | None => None
-  | Some(node) => {
-      let cmp = rbt.compare(value, node.value)
-      if cmp === 0 {
-        Some(node)
-      } else if cmp < 0 {
-        if node.left !== None {
-          rbt->findInsert(node.left, nodeToInsert, value)
-        } else {
-          nodeToInsert.parent = Some(node)
-          node.left = Some(nodeToInsert)
-          None
-        }
-      } else if node.right !== None {
-        rbt->findInsert(node.right, nodeToInsert, value)
+  | Some(node) =>
+    let cmp = rbt.compare(value, node.value)
+    if cmp === 0 {
+      Some(node)
+    } else if cmp < 0 {
+      if node.left !== None {
+        rbt->findInsert(node.left, nodeToInsert, value)
       } else {
         nodeToInsert.parent = Some(node)
-        node.right = Some(nodeToInsert)
+        node.left = Some(nodeToInsert)
         None
       }
+    } else if node.right !== None {
+      rbt->findInsert(node.right, nodeToInsert, value)
+    } else {
+      nodeToInsert.parent = Some(node)
+      node.right = Some(nodeToInsert)
+      None
     }
   }
 }

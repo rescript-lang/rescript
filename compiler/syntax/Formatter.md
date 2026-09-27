@@ -16,7 +16,6 @@ that all source line breaks must be retained.
 
 When changing the formatter:
 
-- test both narrow and wide print widths;
 - cover comments and the parentheses needed to preserve parsing;
 - run `make test-syntax` and `make test-syntax-roundtrip`;
 - inspect snapshot changes for unrelated reformatting;
