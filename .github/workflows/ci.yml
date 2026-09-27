@@ -5,7 +5,7 @@ on:
     branches: [master, 11.0_release]
 
   pull_request:
-    branches: [master, 11.0_release]
+    branches: [master, 11.0_release, rewatch-ocaml]
 
   # Release builds are started by publish.yml after a maintainer indicates
   # whether the package version is current stable. The npm tag is derived from
