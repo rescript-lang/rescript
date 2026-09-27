@@ -35,3 +35,20 @@ module C1 = {
     \"AsyncAwait$C1"
   })
 }
+
+module Braced = {
+  @res.jsxComponentProps
+  type props<'a> = {
+    a: 'a,
+  }
+
+  let make = async ({a, _}: props<_>): React.element => {
+    let a = await f(a)
+    ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})})
+  }
+  let make = React.component({
+    let \"AsyncAwait$Braced" = (props: props<_>) => Jsx.promise(make(props))
+
+    \"AsyncAwait$Braced"
+  })
+}

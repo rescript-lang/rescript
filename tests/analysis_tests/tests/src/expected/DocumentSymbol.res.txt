@@ -1,6 +1,18 @@
 DocumentSymbol src/DocumentSymbol.res
 [
   {
+    "kind": 12,
+    "name": "bracedFunction",
+    "range": {
+      "end": { "character": 33, "line": 33 },
+      "start": { "character": 0, "line": 33 }
+    },
+    "selectionRange": {
+      "end": { "character": 33, "line": 33 },
+      "start": { "character": 0, "line": 33 }
+    }
+  },
+  {
     "kind": 15,
     "name": "templateString",
     "range": {

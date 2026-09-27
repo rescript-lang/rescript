@@ -308,6 +308,34 @@ let test_braces_roundtrip_through_ast0 _ =
   | _ ->
     assert_failure "Expected two structural brace nodes after ast0 roundtrip"
 
+let test_this_on_braced_function_reaches_builtin_ppx _ =
+  let function_expr =
+    Ast_helper.Exp.fun_
+      [
+        Ast_helper.Exp.fun_param Asttypes.Nolabel
+          (Ast_helper.Pat.var ~loc (Location.mknoloc "self"));
+      ]
+      (Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident "self")))
+  in
+  let expression =
+    Ast_helper.Exp.braces ~braces_loc:loc
+      ~attrs:[attr "this" (Parsetree.PStr []); attr "other" (Parsetree.PStr [])]
+      function_expr
+  in
+  let roundtrip =
+    map_expr0
+      (Ast_mapper_to0.default_mapper.expr Ast_mapper_to0.default_mapper
+         expression)
+  in
+  let mapped = Bs_builtin_ppx.mapper.expr Bs_builtin_ppx.mapper roundtrip in
+  match mapped.pexp_desc with
+  | Parsetree.Pexp_braces {expr = {pexp_desc = Pexp_apply _}} ->
+    OUnit.assert_bool "other attribute stays on braces"
+      (has_attr "other" mapped.pexp_attributes);
+    OUnit.assert_bool "@this was consumed by the function mapper"
+      (not (has_attr "this" mapped.pexp_attributes))
+  | _ -> assert_failure "Expected @this to lower to a method callback"
+
 let map_value_binding0 vb =
   Ast_mapper_from0.default_mapper.value_binding Ast_mapper_from0.default_mapper
     vb
@@ -1661,6 +1689,8 @@ let suites =
          "v0_if_without_alternate_stays_if"
          >:: test_v0_if_without_alternate_stays_if;
          "braces_roundtrip_through_ast0" >:: test_braces_roundtrip_through_ast0;
+         "this_on_braced_function_reaches_builtin_ppx"
+         >:: test_this_on_braced_function_reaches_builtin_ppx;
          "constructor_args_roundtrip_through_ast0"
          >:: test_constructor_args_roundtrip_through_ast0;
          "list_constructor_wire_shape" >:: test_list_constructor_wire_shape;
