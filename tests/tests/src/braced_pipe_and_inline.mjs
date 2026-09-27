@@ -15,18 +15,78 @@ let opened = 5;
 
 let bound = 5;
 
+let shadowed = 4;
+
+if (shadowed !== 4) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "braced_pipe_and_inline.res",
+      20,
+      0
+    ],
+    Error: new Error()
+  };
+}
+
+let generatedName = 12;
+
+if (generatedName !== 12) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "braced_pipe_and_inline.res",
+      28,
+      0
+    ],
+    Error: new Error()
+  };
+}
+
+let fanout = [
+  9,
+  2
+];
+
+let fanoutFirst = 9;
+
+if (fanoutFirst !== 9) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "braced_pipe_and_inline.res",
+      32,
+      0
+    ],
+    Error: new Error()
+  };
+}
+
 function increment(x) {
   return x + 1 | 0;
 }
 
 let call = increment(3);
 
+let x = 1;
+
+let __tuple_internal_obj = 7;
+
+let fanoutSecond = 2;
+
 export {
   Ops,
   direct,
   opened,
   bound,
+  x,
+  shadowed,
+  __tuple_internal_obj,
+  generatedName,
+  fanout,
+  fanoutFirst,
+  fanoutSecond,
   increment,
   call,
 }
-/* call Not a pure module */
+/*  Not a pure module */

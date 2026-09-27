@@ -34,13 +34,44 @@ let rec no_need_bound (exp : exp) =
 
 let tuple_obj_id = "__tuple_internal_obj"
 
-let bound (e : exp) (cb : exp -> _) =
-  if no_need_bound e then cb e
+let fresh_bound_name (avoid : exp) =
+  let names = Hashtbl.create 8 in
+  let add name = Hashtbl.replace names name () in
+  let default = Ast_iterator.default_iterator in
+  let iterator =
+    {
+      default with
+      expr =
+        (fun self expr ->
+          (match expr.pexp_desc with
+          | Pexp_ident {txt = Lident name} -> add name
+          | _ -> ());
+          default.expr self expr);
+      pat =
+        (fun self pat ->
+          (match pat.ppat_desc with
+          | Ppat_var {txt = name} | Ppat_alias (_, {txt = name}) -> add name
+          | _ -> ());
+          default.pat self pat);
+    }
+  in
+  iterator.expr iterator avoid;
+  let rec choose suffix =
+    let name =
+      if suffix = 0 then tuple_obj_id else tuple_obj_id ^ string_of_int suffix
+    in
+    if Hashtbl.mem names name then choose (suffix + 1) else name
+  in
+  choose 0
+
+let bound ~force ~avoid (e : exp) (cb : exp -> _) =
+  if (not force) && no_need_bound e then cb e
   else
     let loc = e.pexp_loc in
+    let name = fresh_bound_name avoid in
     Exp.let_ ~loc Nonrecursive
-      [Vb.mk ~loc (Pat.var ~loc {txt = tuple_obj_id; loc}) e]
-      (cb (Exp.ident ~loc {txt = Lident tuple_obj_id; loc}))
+      [Vb.mk ~loc (Pat.var ~loc {txt = name; loc}) e]
+      (cb (Exp.ident ~loc {txt = Lident name; loc}))
 
 let default_expr_mapper = Ast_mapper.default_mapper.expr
 
@@ -112,7 +143,7 @@ let rec rewrite_pipe_rhs ~loc ~attrs a (f : exp) =
       pexp_attributes = attrs @ f.pexp_attributes;
     }
   | Pexp_tuple xs ->
-    bound a (fun bounded_obj_arg ->
+    bound ~force:false ~avoid:f a (fun bounded_obj_arg ->
         {
           pexp_desc =
             Pexp_tuple
@@ -160,7 +191,8 @@ let app_exp_mapper (e : exp) (self : Ast_mapper.mapper) : exp =
     let f = self.expr self f_ in
     match f.pexp_desc with
     | Pexp_braces _ | Pexp_open _ | Pexp_let _ | Pexp_sequence _ ->
-      bound a (fun a -> rewrite_pipe_rhs ~loc ~attrs:e.pexp_attributes a f)
+      bound ~force:true ~avoid:f a (fun a ->
+          rewrite_pipe_rhs ~loc ~attrs:e.pexp_attributes a f)
     | _ -> rewrite_pipe_rhs ~loc ~attrs:e.pexp_attributes a f)
   | Some {op = "->"; loc} ->
     Location.raise_errorf ~loc

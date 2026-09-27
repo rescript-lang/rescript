@@ -277,7 +277,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
       | "Some" -> `Option_Some
       | _ -> `Option_None
     in
-    match pvb_expr.pexp_desc with
+    match (Ast_payload.unwrap_braces pvb_expr).pexp_desc with
     | Pexp_pack _ -> default_expr_mapper self e
     | _ ->
       let cont_case =
@@ -380,7 +380,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
           };
         ],
         body ) -> (
-    match pvb_expr.pexp_desc with
+    match (Ast_payload.unwrap_braces pvb_expr).pexp_desc with
     | Pexp_pack _ -> default_expr_mapper self e
     | _ ->
       default_expr_mapper self

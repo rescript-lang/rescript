@@ -24,6 +24,8 @@ let h = u["x"]
 %%private(let (a, b) = (1, 2))
 
 let {length: len, add: c} = module(List)
+let {length: bracedLength, add: bracedAdd} = {module(List)}
+let bracedModuleValue = list{}->bracedAdd(bracedLength(list{1, 2, 3}))
 
 module H = {
   module H1 = {
@@ -39,6 +41,12 @@ let h = {
   let {v} = module(H.H1)
   Console.log(v)
 }
+
+let bracedLocalModule = {
+  let {v} = {module(H.H1)}
+  v
+}
+assert(bracedLocalModule == 3)
 
 let to = 3
 let downto = 1
