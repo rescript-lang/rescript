@@ -195,9 +195,6 @@ let rec add_pattern bv pat =
   | Ppat_variant (_, {txt = args}) -> List.iter (add_pattern bv) args
   | Ppat_type li -> add bv li
   | Ppat_unpack id -> pattern_bv := String_map.add id.txt bound !pattern_bv
-  | Ppat_open (m, p) ->
-    let bv = open_module bv m.txt in
-    add_pattern bv p
   | Ppat_exception p -> add_pattern bv p
   | Ppat_extension e -> handle_extension e
 

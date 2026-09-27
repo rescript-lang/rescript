@@ -62,7 +62,6 @@ and pat_extra =
                            where [disjunction] is a [Tpat_or _] representing the
                            branches of [tconst].
          *)
-  | Tpat_open of Path.t * Longident.t loc * Env.t
   | Tpat_unpack
       (** (module P)     { pat_desc  = Tpat_var "P"
                            ; pat_extra = (Tpat_unpack, _, _) :: ... }

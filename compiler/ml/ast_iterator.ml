@@ -464,9 +464,6 @@ module P = struct
     | Ppat_unpack s -> iter_loc sub s
     | Ppat_exception p -> sub.pat sub p
     | Ppat_extension x -> sub.extension sub x
-    | Ppat_open (lid, p) ->
-      iter_loc sub lid;
-      sub.pat sub p
 end
 
 (* Now, a generic AST mapper, to be extended to cover all kinds and

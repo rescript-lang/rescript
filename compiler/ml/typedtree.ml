@@ -45,7 +45,6 @@ and record_pat_rest = {
 and pat_extra =
   | Tpat_constraint of core_type
   | Tpat_type of Path.t * Longident.t loc
-  | Tpat_open of Path.t * Longident.t loc * Env.t
   | Tpat_unpack
 
 and pattern_desc =
