@@ -260,6 +260,10 @@ let rec add_expr bv exp =
     add_expr bv e1;
     add_expr bv e2;
     add_opt add_expr bv opte3
+  | Pexp_ternary (e1, e2, e3) ->
+    add_expr bv e1;
+    add_expr bv e2;
+    add_expr bv e3
   | Pexp_sequence (e1, e2) ->
     add_expr bv e1;
     add_expr bv e2

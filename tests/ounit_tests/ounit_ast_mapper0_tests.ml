@@ -184,6 +184,72 @@ let test_constructor_runtime_tag_reaches_ast0_as_an_attribute _ =
 let map_expr0 e =
   Ast_mapper_from0.default_mapper.expr Ast_mapper_from0.default_mapper e
 
+let to_expr0 e =
+  Ast_mapper_to0.default_mapper.expr Ast_mapper_to0.default_mapper e
+
+let test_ternary_roundtrips_through_ast0 _ =
+  let ident name =
+    Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident name))
+  in
+  let ternary =
+    Ast_helper.Exp.ternary ~loc
+      ~attrs:
+        [attr "before" (Parsetree.PStr []); attr "after" (Parsetree.PStr [])]
+      (ident "condition") (ident "consequent") (ident "alternate")
+  in
+  let wire = to_expr0 ternary in
+  (match wire.pexp_desc with
+  | Parsetree0.Pexp_ifthenelse (_, _, Some _) -> ()
+  | _ -> assert_failure "Expected a v0 if-then-else with an else branch");
+  let attr_names attrs = List.map (fun ({Location.txt}, _) -> txt) attrs in
+  OUnit.assert_equal
+    ["res.ternary"; "before"; "after"]
+    (attr_names wire.pexp_attributes);
+  let round_tripped = map_expr0 wire in
+  (match round_tripped.pexp_desc with
+  | Parsetree.Pexp_ternary (_, _, _) -> ()
+  | _ -> assert_failure "Expected a ternary after the v0 roundtrip");
+  OUnit.assert_equal ["before"; "after"]
+    (attr_names round_tripped.pexp_attributes)
+
+let test_v0_ternary_marker_preserves_other_attribute_order _ =
+  let ident name =
+    Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident name))
+  in
+  let wire =
+    Ast_helper0.Exp.ifthenelse ~loc
+      ~attrs:
+        [
+          attr "before" (Parsetree0.PStr []);
+          attr "res.ternary" (Parsetree0.PStr []);
+          attr "after" (Parsetree0.PStr []);
+        ]
+      (ident "condition") (ident "consequent")
+      (Some (ident "alternate"))
+  in
+  let mapped = map_expr0 wire in
+  match mapped.pexp_desc with
+  | Parsetree.Pexp_ternary (_, _, _) ->
+    OUnit.assert_equal ["before"; "after"]
+      (List.map (fun ({Location.txt}, _) -> txt) mapped.pexp_attributes)
+  | _ -> assert_failure "Expected a ternary from the v0 marker"
+
+let test_v0_if_without_alternate_stays_if _ =
+  let ident name =
+    Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident name))
+  in
+  let wire =
+    Ast_helper0.Exp.ifthenelse ~loc
+      ~attrs:[attr "res.ternary" (Parsetree0.PStr [])]
+      (ident "condition") (ident "consequent") None
+  in
+  let mapped = map_expr0 wire in
+  match mapped.pexp_desc with
+  | Parsetree.Pexp_ifthenelse (_, _, None) ->
+    OUnit.assert_bool "Malformed legacy marker must be preserved"
+      (has_attr "res.ternary" mapped.pexp_attributes)
+  | _ -> assert_failure "A missing alternate cannot form a ternary"
+
 let map_value_binding0 vb =
   Ast_mapper_from0.default_mapper.value_binding Ast_mapper_from0.default_mapper
     vb
@@ -1528,6 +1594,12 @@ let suites =
          >:: test_malformed_internal_record_rest_attr_fails;
          "record_rest_roundtrips_through_ast0"
          >:: test_record_rest_roundtrips_through_ast0;
+         "ternary_roundtrips_through_ast0"
+         >:: test_ternary_roundtrips_through_ast0;
+         "v0_ternary_marker_preserves_other_attribute_order"
+         >:: test_v0_ternary_marker_preserves_other_attribute_order;
+         "v0_if_without_alternate_stays_if"
+         >:: test_v0_if_without_alternate_stays_if;
          "constructor_args_roundtrip_through_ast0"
          >:: test_constructor_args_roundtrip_through_ast0;
          "list_constructor_wire_shape" >:: test_list_constructor_wire_shape;

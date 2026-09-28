@@ -38,6 +38,15 @@ let extract_internal_loc_attr attr_name attrs =
   in
   loop [] attrs
 
+let extract_ternary_attr (attrs : Pt.attributes) =
+  let rec loop rev_acc = function
+    | [] -> (false, List.rev rev_acc)
+    | ({txt = "res.ternary"}, Pt.PStr []) :: rest ->
+      (true, List.rev_append rev_acc rest)
+    | attr :: rest -> loop (attr :: rev_acc) rest
+  in
+  loop [] attrs
+
 type mapper = {
   attribute: mapper -> attribute -> Pt.attribute;
   attributes: mapper -> attribute list -> Pt.attribute list;
@@ -1009,9 +1018,15 @@ module E = struct
     | Pexp_setfield (e1, lid, e2) ->
       setfield ~loc ~attrs (sub.expr sub e1) (map_loc sub lid) (sub.expr sub e2)
     | Pexp_array el -> array ~loc ~attrs (List.map (sub.expr sub) el)
-    | Pexp_ifthenelse (e1, e2, e3) ->
-      ifthenelse ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
-        (map_opt (sub.expr sub) e3)
+    | Pexp_ifthenelse (e1, e2, e3) -> (
+      let is_ternary, remaining_attrs = extract_ternary_attr attrs in
+      match (is_ternary, e3) with
+      | true, Some alternate ->
+        ternary ~loc ~attrs:remaining_attrs (sub.expr sub e1) (sub.expr sub e2)
+          (sub.expr sub alternate)
+      | _ ->
+        ifthenelse ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
+          (map_opt (sub.expr sub) e3))
     | Pexp_sequence (e1, e2) ->
       sequence ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
     | Pexp_extension ({txt = "res.break"; _}, PStr []) -> break ~loc ~attrs ()

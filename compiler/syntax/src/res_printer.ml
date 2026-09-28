@@ -2550,10 +2550,7 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
           Parsetree_viewer.is_binary_expression expr
           ||
           match vb.pvb_expr with
-          | {
-           pexp_attributes = [({Location.txt = "res.ternary"}, _)];
-           pexp_desc = Pexp_ifthenelse (if_expr, _, _);
-          } ->
+          | {pexp_attributes = []; pexp_desc = Pexp_ternary (if_expr, _, _)} ->
             Parsetree_viewer.is_binary_expression if_expr
             || Parsetree_viewer.has_attributes if_expr.pexp_attributes
           | {pexp_desc = Pexp_tagged_template _} -> false
@@ -3504,8 +3501,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     | Pexp_setfield (expr1, longident_loc, expr2) ->
       print_set_field_expr ~state e.pexp_attributes expr1 longident_loc expr2
         e.pexp_loc cmt_tbl
-    | Pexp_ifthenelse (_ifExpr, _thenExpr, _elseExpr)
-      when Parsetree_viewer.is_ternary_expr e ->
+    | Pexp_ternary (_condition, _consequent, _alternate) ->
       let parts, alternate = Parsetree_viewer.collect_ternary_parts e in
       let ternary_doc =
         match parts with
@@ -3547,9 +3543,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
                ])
         | _ -> Doc.nil
       in
-      let attrs =
-        Parsetree_viewer.filter_ternary_attributes e.pexp_attributes
-      in
+      let attrs = e.pexp_attributes in
       let needs_parens =
         match Parsetree_viewer.filter_parsing_attrs attrs with
         | [] -> false
@@ -3764,7 +3758,9 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
   in
   let should_print_its_own_attributes =
     match e.pexp_desc with
-    | Pexp_apply _ | Pexp_fun _ | Pexp_setfield _ | Pexp_ifthenelse _ -> true
+    | Pexp_apply _ | Pexp_fun _ | Pexp_setfield _ | Pexp_ifthenelse _
+    | Pexp_ternary _ ->
+      true
     | Pexp_match _ when Parsetree_viewer.is_if_let_expr e -> true
     | Pexp_jsx_element _ -> true
     | _ -> false
@@ -4491,10 +4487,7 @@ and print_pexp_apply ~state expr cmt_tbl =
         Parsetree_viewer.is_binary_expression target_expr
         ||
         match target_expr with
-        | {
-         pexp_attributes = [({Location.txt = "res.ternary"}, _)];
-         pexp_desc = Pexp_ifthenelse (if_expr, _, _);
-        } ->
+        | {pexp_attributes = []; pexp_desc = Pexp_ternary (if_expr, _, _)} ->
           Parsetree_viewer.is_binary_expression if_expr
           || Parsetree_viewer.has_attributes if_expr.pexp_attributes
         | e ->
