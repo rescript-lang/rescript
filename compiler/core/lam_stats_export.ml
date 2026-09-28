@@ -57,6 +57,19 @@ let values_of_export (meta : Lam_stats.t) (export_map : Lambda.t Map_ident.t) :
                | Const_js_false ))
         | None ->
           optlam
+        | Some
+            (Lfunction
+               ({attr = {inline = Cross_module_inline}; loc} as lfunction) as
+             lambda) ->
+          if not (Lam_analysis.lfunction_can_be_inlined lfunction) then
+            Location.raise_errorf ~loc
+              "@inline(crossModule) cannot be used on an async or directed \
+               function"
+          else if not (Lam_closure.is_closed lambda) then
+            Location.raise_errorf ~loc
+              "@inline(crossModule) requires a function without captured local \
+               values"
+          else optlam
         | Some lambda ->
           if not !Js_config.cross_module_inline then None
           else if

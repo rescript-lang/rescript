@@ -122,6 +122,7 @@ let get_result mid_val =
          (Const_js_null | Const_js_undefined _ | Const_js_true | Const_js_false))
   | None ->
     mid_val
+  | Some (Lfunction f) when f.attr.inline = Cross_module_inline -> mid_val
   | Some _ ->
     if !Js_config.cross_module_inline then mid_val
     else {mid_val with persistent_closed_lambda = None}

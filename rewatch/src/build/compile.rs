@@ -17,6 +17,7 @@ use log::{debug, info, trace, warn};
 use rayon::prelude::*;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
+use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -32,6 +33,14 @@ use tracing::{info_span, instrument};
 /// character instead of crashing the build.
 fn compiler_output_to_string(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).to_string()
+}
+
+// The compiler prefixes each .cmj with the 16-byte digest of its serialized
+// contents. Reading that header avoids hashing the whole file again.
+fn read_cmj_digest(path: &Path) -> Option<[u8; 16]> {
+    let mut digest = [0; 16];
+    std::fs::File::open(path).ok()?.read_exact(&mut digest).ok()?;
+    Some(digest)
 }
 
 /// Execute js-post-build command for a compiled JavaScript file.
@@ -255,6 +264,13 @@ fn compile_one(
                 "cmi",
             );
             let cmi_digest = helpers::compute_file_hash(Path::new(&cmi_path));
+            let cmj_path = helpers::get_bs_compiler_asset(
+                package,
+                &package.namespace,
+                &source_file.implementation.path,
+                ".cmj",
+            );
+            let cmj_digest = read_cmj_digest(Path::new(&cmj_path));
 
             let interface_result = source_file.interface.as_ref().map(|iface| {
                 compile_file(
@@ -275,6 +291,7 @@ fn compile_one(
                 warn_error_override,
             );
             let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
+            let cmj_digest_after = read_cmj_digest(Path::new(&cmj_path));
 
             // If the cmi is byte-for-byte unchanged, downstream modules can
             // short-circuit — we check both interface and implementation
@@ -284,12 +301,15 @@ fn compile_one(
                 (cmi_digest, cmi_digest_after),
                 (Some(a), Some(b)) if a == b
             );
+            // Exported JavaScript metadata, including inline bodies, can
+            // change without changing the CMI.
+            let is_clean_cmj = cmj_digest == cmj_digest_after;
 
             CompletionMsg {
                 module_name: module_name.to_string(),
                 result,
                 interface_result,
-                is_clean: is_clean_cmi,
+                is_clean: is_clean_cmi && is_clean_cmj,
                 is_compiled: true,
             }
         }
@@ -1385,6 +1405,19 @@ mod tests {
         let truncated = [b'W', b'a', b'r', b'n', b'i', b'n', b'g', b' ', 0xe2, 0x80];
         let decoded = compiler_output_to_string(&truncated);
         assert!(decoded.starts_with("Warning "));
+    }
+
+    #[test]
+    fn read_cmj_digest_reads_only_the_header() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let cmj_path = temp_dir.path().join("Example.cmj");
+        let digest = [42; 16];
+        fs::write(&cmj_path, [digest.as_slice(), b"serialized contents"].concat())
+            .expect("cmj should be written");
+
+        assert_eq!(read_cmj_digest(&cmj_path), Some(digest));
+        fs::write(&cmj_path, b"short").expect("cmj should be rewritten");
+        assert_eq!(read_cmj_digest(&cmj_path), None);
     }
 
     fn test_project_context(root: &Path) -> ProjectContext {

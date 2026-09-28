@@ -56,7 +56,7 @@ fn remove_compile_asset(package: &packages::Package, source_file: &Path, extensi
         package,
         &package.namespace,
         source_file,
-        extension,
+        &format!(".{extension}"),
     ));
 }
 

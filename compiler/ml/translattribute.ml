@@ -52,17 +52,22 @@ let get_empty_attribute name attributes =
          (name, "This attribute does not accept a payload"));
     None
 
-let parse_inline_attribute (attr : t option) : Lambda.inline_attribute =
+let parse_inline_attribute ~allow_cross_module (attr : t option) :
+    Lambda.inline_attribute =
   match attr with
   | None -> Default_inline
   | Some ({txt; loc}, payload) -> (
     let open Parsetree in
     (* the 'inline' and 'inlined' attributes can be used as
-       [@inline], [@inline never] or [@inline always].
+       [@inline], [@inline never], [@inline always] or
+       [@inline(crossModule)].
        [@inline] is equivalent to [@inline always] *)
     let warning txt =
       Warnings.Attribute_payload
-        (txt, "It must be either empty, 'always' or 'never'")
+        ( txt,
+          if allow_cross_module then
+            "It must be empty, 'always', 'never' or 'crossModule'"
+          else "It must be either empty, 'always' or 'never'" )
     in
     match payload with
     | PStr [] -> Always_inline
@@ -70,6 +75,9 @@ let parse_inline_attribute (attr : t option) : Lambda.inline_attribute =
       match (Ast_payload.unwrap_braces expression).pexp_desc with
       | Pexp_ident {txt = Longident.Lident "never"} -> Never_inline
       | Pexp_ident {txt = Longident.Lident "always"} -> Always_inline
+      | Pexp_ident {txt = Longident.Lident "crossModule"}
+        when allow_cross_module ->
+        Cross_module_inline
       | _ ->
         Location.prerr_warning loc (warning txt);
         Default_inline)
@@ -79,7 +87,7 @@ let parse_inline_attribute (attr : t option) : Lambda.inline_attribute =
 
 let get_inline_attribute l =
   let attr, _ = find_attribute is_inline_attribute l in
-  parse_inline_attribute attr
+  parse_inline_attribute ~allow_cross_module:true attr
 
 let add_inline_attribute (expr : Lambda.t) loc attributes =
   match (expr, get_inline_attribute attributes) with
@@ -87,14 +95,11 @@ let add_inline_attribute (expr : Lambda.t) loc attributes =
   | Lfunction ({attr} as funct), inline ->
     (match attr.inline with
     | Default_inline -> ()
-    | Always_inline | Never_inline ->
+    | Always_inline | Cross_module_inline | Never_inline ->
       Location.prerr_warning loc (Warnings.Duplicated_attribute "inline"));
     let attr = {attr with inline} in
     Lambda.function_ ~loc:funct.loc ~attr ~params:funct.params ~body:funct.body
-  | expr, Always_inline ->
-    Location.prerr_warning loc (Warnings.Misplaced_attribute "inline");
-    expr
-  | expr, Never_inline ->
+  | expr, (Always_inline | Cross_module_inline | Never_inline) ->
     Location.prerr_warning loc (Warnings.Misplaced_attribute "inline");
     expr
 
@@ -107,14 +112,14 @@ let get_and_remove_inlined_attribute (e : Typedtree.expression) =
   let attr, exp_attributes =
     find_attribute is_inlined_attribute e.exp_attributes
   in
-  let inlined = parse_inline_attribute attr in
+  let inlined = parse_inline_attribute ~allow_cross_module:false attr in
   (inlined, {e with exp_attributes})
 
 let get_and_remove_inlined_attribute_on_module (e : Typedtree.module_expr) =
   let attr, mod_attributes =
     find_attribute is_inlined_attribute e.mod_attributes
   in
-  let inlined = parse_inline_attribute attr in
+  let inlined = parse_inline_attribute ~allow_cross_module:false attr in
   (inlined, {e with mod_attributes})
 
 let check_attribute (e : Typedtree.expression) (({txt; loc}, _) : t) =

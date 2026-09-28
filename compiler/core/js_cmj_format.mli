@@ -97,9 +97,8 @@ val from_file : string -> t
 
 val from_string : string -> t
 
-(*
-   Note writing the file if its content is not changed
-*)
+(* Write the .cmj. Unchanged files are not rewritten when [check_exists] is
+   true, so Rewatch can use changes to this file to invalidate callers. *)
 val to_file : string -> check_exists:bool -> t -> unit
 
 type path = string

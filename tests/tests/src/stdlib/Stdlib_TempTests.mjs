@@ -6,7 +6,6 @@ import * as Stdlib_JSON from "@rescript/runtime/lib/es6/Stdlib_JSON.mjs";
 import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.mjs";
 import * as Stdlib_Float from "@rescript/runtime/lib/es6/Stdlib_Float.mjs";
 import * as Stdlib_BigInt from "@rescript/runtime/lib/es6/Stdlib_BigInt.mjs";
-import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.mjs";
 import * as Primitive_bigint from "@rescript/runtime/lib/es6/Primitive_bigint.mjs";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 import * as Stdlib_IntlTests from "./intl/Stdlib_IntlTests.mjs";
@@ -140,7 +139,9 @@ console.info("BigInt");
 
 console.info("---");
 
-console.log(Primitive_bigint.div(BigInt(1), Stdlib_Option.getOr(Stdlib_BigInt.fromFloat(12.0), 0n)));
+let opt = Stdlib_BigInt.fromFloat(12.0);
+
+console.log(Primitive_bigint.div(BigInt(1), opt !== undefined ? Primitive_option.valFromOption(opt) : 0n));
 
 console.info("");
 
@@ -205,13 +206,11 @@ console.log(regex.test(string));
 
 let result = regex.exec(string);
 
-let result$1 = (result == null) ? undefined : Primitive_option.some(result);
+console.log(!(result == null) ? Primitive_option.some(result.input) : undefined);
 
-console.log(Stdlib_Option.map(result$1, prim => prim.input));
+console.log(!(result == null) ? Primitive_option.some(result.index) : undefined);
 
-console.log(Stdlib_Option.map(result$1, prim => prim.index));
-
-console.log(Stdlib_Option.map(result$1, prim => prim.slice(1)));
+console.log(!(result == null) ? Primitive_option.some(result.slice(1)) : undefined);
 
 console.info("");
 
@@ -323,6 +322,8 @@ let _formatter = Stdlib_IntlTests._formatter;
 let formatter = Stdlib_IntlTests.formatter;
 
 let segments = Stdlib_IntlTests.segments;
+
+let result$1 = (result == null) ? undefined : Primitive_option.some(result);
 
 export {
   _collator,

@@ -237,11 +237,13 @@ let function_attribute ppf {inline; is_a_functor; return_unit} =
   match inline with
   | Default_inline -> ()
   | Always_inline -> fprintf ppf "always_inline@ "
+  | Cross_module_inline -> fprintf ppf "cross_module_inline@ "
   | Never_inline -> fprintf ppf "never_inline@ "
 
 let apply_inlined_attribute ppf = function
   | Default_inline -> ()
   | Always_inline -> fprintf ppf " always_inline"
+  | Cross_module_inline -> fprintf ppf " cross_module_inline"
   | Never_inline -> fprintf ppf " never_inline"
 
 let rec lam ppf = function

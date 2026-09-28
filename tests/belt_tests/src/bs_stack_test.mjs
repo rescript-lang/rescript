@@ -2,7 +2,6 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.mjs";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 import * as Belt_MutableQueue from "@rescript/belt/lib/es6/src/Belt_MutableQueue.mjs";
 import * as Belt_MutableStack from "@rescript/belt/lib/es6/src/Belt_MutableStack.mjs";
@@ -11,7 +10,7 @@ function inOrder(v) {
   let current = v;
   let s = Belt_MutableStack.make();
   let q = Belt_MutableQueue.make();
-  while (Stdlib_Option.isSome(current)) {
+  while (current !== undefined) {
     let v$1 = current;
     Belt_MutableStack.push(s, v$1);
     current = v$1.left;
@@ -21,7 +20,7 @@ function inOrder(v) {
     let v$2 = current;
     Belt_MutableQueue.add(q, v$2.value);
     current = v$2.right;
-    while (Stdlib_Option.isSome(current)) {
+    while (current !== undefined) {
       let v$3 = current;
       Belt_MutableStack.push(s, v$3);
       current = v$3.left;
@@ -34,7 +33,7 @@ function inOrder3(v) {
   let current = v;
   let s = Belt_MutableStack.make();
   let q = Belt_MutableQueue.make();
-  while (Stdlib_Option.isSome(current)) {
+  while (current !== undefined) {
     let v$1 = current;
     Belt_MutableStack.push(s, v$1);
     current = v$1.left;
@@ -42,7 +41,7 @@ function inOrder3(v) {
   Belt_MutableStack.dynamicPopIter(s, popped => {
     Belt_MutableQueue.add(q, popped.value);
     let current = popped.right;
-    while (Stdlib_Option.isSome(current)) {
+    while (current !== undefined) {
       let v = current;
       Belt_MutableStack.push(s, v);
       current = v.left;

@@ -320,6 +320,7 @@ type inline_attribute =
   | Always_inline (* [@inline] or [@inline always] *)
   | Never_inline (* [@inline never] *)
   | Default_inline (* no [@inline] attribute *)
+  | Cross_module_inline (* [@inline(crossModule)] *)
 
 type let_kind = Strict | Alias | StrictOpt | Variable
 (* Meaning of kinds for let x = e in e':
