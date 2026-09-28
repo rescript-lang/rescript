@@ -5,7 +5,6 @@ import * as Stdlib_Dict from "@rescript/runtime/lib/es6/Stdlib_Dict.mjs";
 import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.mjs";
 import * as Stdlib_Float from "@rescript/runtime/lib/es6/Stdlib_Float.mjs";
 import * as Stdlib_BigInt from "@rescript/runtime/lib/es6/Stdlib_BigInt.mjs";
-import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.mjs";
 import * as Primitive_bigint from "@rescript/runtime/lib/es6/Primitive_bigint.mjs";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 import * as Stdlib_IntlTests from "./intl/Stdlib_IntlTests.mjs";
@@ -137,7 +136,9 @@ console.info("BigInt");
 
 console.info("---");
 
-console.log(Primitive_bigint.div(BigInt(1), Stdlib_Option.getOr(Stdlib_BigInt.fromFloat(12.0), 0n)));
+let opt = Stdlib_BigInt.fromFloat(12.0);
+
+console.log(Primitive_bigint.div(BigInt(1), opt !== undefined ? Primitive_option.valFromOption(opt) : 0n));
 
 console.info("");
 

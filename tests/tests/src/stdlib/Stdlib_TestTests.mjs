@@ -2,8 +2,8 @@
 
 import * as Test from "./Test.mjs";
 import * as Stdlib_BigInt from "@rescript/runtime/lib/es6/Stdlib_BigInt.mjs";
-import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.mjs";
 import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
+import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 
 let eq = Primitive_object.equal;
 
@@ -11,7 +11,9 @@ let nan = NaN;
 
 let infinity = Number.POSITIVE_INFINITY;
 
-let bign = Stdlib_Option.getOr(Stdlib_BigInt.fromFloat(Number.MAX_VALUE), 0n);
+let opt = Stdlib_BigInt.fromFloat(Number.MAX_VALUE);
+
+let bign = opt !== undefined ? Primitive_option.valFromOption(opt) : 0n;
 
 let bign$1 = bign + bign;
 
