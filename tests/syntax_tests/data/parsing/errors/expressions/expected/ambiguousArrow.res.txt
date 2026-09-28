@@ -26,5 +26,4 @@
 
 let a [arity:1]b = ({js|hi|js} : int)
 let x =
-  ((let a = 1 in let b = 2 in fun [arity:1]pattern -> ({js|test|js} : int))
-  [@res.braces ])
+  {let a = 1 in let b = 2 in fun [arity:1]pattern -> ({js|test|js} : int)}

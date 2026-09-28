@@ -12,6 +12,8 @@ let f = (a, b) => {
 let x = {a}
 let x = {a + b}
 
+let attributed = {@inline(never) x => x + 1}
+
 let x = {
   // here
   a
@@ -305,8 +307,7 @@ let x = {
 
 {
   // comment
-  a +
-  b
+  a + b
 }
 
 {a} + {b}

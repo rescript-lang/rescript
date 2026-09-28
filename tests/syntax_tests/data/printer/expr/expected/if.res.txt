@@ -8,6 +8,12 @@ let name = if true {
   "steve"
 }
 
+let sameBraces = if flag {
+  value
+} else {
+  fallback
+}
+
 let name = if true {
   user.name
 } else if false {

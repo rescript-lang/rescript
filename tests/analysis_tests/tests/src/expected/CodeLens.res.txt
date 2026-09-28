@@ -1,6 +1,13 @@
 Code Lens src/CodeLens.res
 [
   {
+    "command": { "command": "", "title": "(int, int) => int" },
+    "range": {
+      "end": { "character": 13, "line": 10 },
+      "start": { "character": 4, "line": 10 }
+    }
+  },
+  {
     "command": {
       "command": "",
       "title": "(~opt1: int=?, ~a: int, ~b: int, unit, ~opt2: int=?, unit, ~c: int) => int"

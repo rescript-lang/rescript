@@ -185,7 +185,7 @@ let as_const (attrs : t) =
         match Ast_payload.semantic_string_of_payload payload with
         | Some s -> Str s
         | None -> (
-          match payload with
+          match Ast_payload.unwrap_payload_expression payload with
           | PStr
               [
                 {

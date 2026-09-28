@@ -258,6 +258,83 @@ let test_v0_if_without_alternate_stays_if _ =
     OUnit.assert_bool "Malformed legacy marker must be preserved"
       (has_attr "res.ternary" mapped.pexp_attributes)
   | _ -> assert_failure "A missing alternate cannot form a ternary"
+let test_braces_roundtrip_through_ast0 _ =
+  let inner_loc = source_loc 10 11 in
+  let inner_braces_loc = source_loc 8 13 in
+  let outer_braces_loc = source_loc 6 15 in
+  let inner =
+    Ast_helper.Exp.ident ~loc:inner_loc
+      ~attrs:[attr "inner" (Parsetree.PStr [])]
+      (located_string ~loc:inner_loc (Longident.Lident "x"))
+  in
+  let expr =
+    Ast_helper.Exp.braces ~braces_loc:outer_braces_loc
+      ~attrs:[attr "outer" (Parsetree.PStr [])]
+      (Ast_helper.Exp.braces ~braces_loc:inner_braces_loc inner)
+  in
+  let expr0 =
+    Ast_mapper_to0.default_mapper.expr Ast_mapper_to0.default_mapper expr
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["outer"; "res.braces"; "res.braces"; "inner"]
+    (List.map
+       (fun (({txt} : string Location.loc), _) -> txt)
+       expr0.pexp_attributes);
+  let roundtrip = map_expr0 expr0 in
+  match roundtrip.pexp_desc with
+  | Parsetree.Pexp_braces
+      {
+        braces_loc = outer_loc;
+        expr =
+          {
+            pexp_desc =
+              Pexp_braces
+                {
+                  braces_loc = mapped_inner_braces_loc;
+                  expr = {pexp_desc = Pexp_ident _; pexp_loc; pexp_attributes};
+                };
+            pexp_attributes = inner_braces_attrs;
+          };
+      } ->
+    OUnit.assert_equal ~msg:"outer braces location" outer_braces_loc outer_loc;
+    OUnit.assert_equal ~msg:"inner braces location" inner_braces_loc
+      mapped_inner_braces_loc;
+    OUnit.assert_equal ~msg:"expression location" inner_loc pexp_loc;
+    OUnit.assert_bool "outer attribute retained"
+      (has_attr "outer" roundtrip.pexp_attributes);
+    OUnit.assert_equal ~msg:"middle node attributes" [] inner_braces_attrs;
+    OUnit.assert_bool "inner attribute retained"
+      (has_attr "inner" pexp_attributes)
+  | _ ->
+    assert_failure "Expected two structural brace nodes after ast0 roundtrip"
+
+let test_this_on_braced_function_reaches_builtin_ppx _ =
+  let function_expr =
+    Ast_helper.Exp.fun_
+      [
+        Ast_helper.Exp.fun_param Asttypes.Nolabel
+          (Ast_helper.Pat.var ~loc (Location.mknoloc "self"));
+      ]
+      (Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident "self")))
+  in
+  let expression =
+    Ast_helper.Exp.braces ~braces_loc:loc
+      ~attrs:[attr "this" (Parsetree.PStr []); attr "other" (Parsetree.PStr [])]
+      function_expr
+  in
+  let roundtrip =
+    map_expr0
+      (Ast_mapper_to0.default_mapper.expr Ast_mapper_to0.default_mapper
+         expression)
+  in
+  let mapped = Bs_builtin_ppx.mapper.expr Bs_builtin_ppx.mapper roundtrip in
+  match mapped.pexp_desc with
+  | Parsetree.Pexp_braces {expr = {pexp_desc = Pexp_apply _}} ->
+    OUnit.assert_bool "other attribute stays on braces"
+      (has_attr "other" mapped.pexp_attributes);
+    OUnit.assert_bool "@this was consumed by the function mapper"
+      (not (has_attr "this" mapped.pexp_attributes))
+  | _ -> assert_failure "Expected @this to lower to a method callback"
 
 let map_value_binding0 vb =
   Ast_mapper_from0.default_mapper.value_binding Ast_mapper_from0.default_mapper
@@ -1611,6 +1688,9 @@ let suites =
          >:: test_v0_ternary_marker_preserves_other_attribute_order;
          "v0_if_without_alternate_stays_if"
          >:: test_v0_if_without_alternate_stays_if;
+         "braces_roundtrip_through_ast0" >:: test_braces_roundtrip_through_ast0;
+         "this_on_braced_function_reaches_builtin_ppx"
+         >:: test_this_on_braced_function_reaches_builtin_ppx;
          "constructor_args_roundtrip_through_ast0"
          >:: test_constructor_args_roundtrip_through_ast0;
          "list_constructor_wire_shape" >:: test_list_constructor_wire_shape;

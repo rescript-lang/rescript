@@ -31,5 +31,6 @@ module O = {
 
 let zzz = 11
 let templateString = `hello ${zzz->Int.toString}`
+let bracedFunction = {x => x + 1}
 
 //^doc

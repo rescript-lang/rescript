@@ -88,6 +88,15 @@ let default_expr_mapper (self : mapper) (e : Parsetree.expression) =
       pexp_attributes = self.attributes self e.pexp_attributes;
     }
   | _ -> Ast_mapper.default_mapper.expr self e
+
+let rec add_this_to_braced_function attrs (e : Parsetree.expression) =
+  match e.pexp_desc with
+  | Pexp_fun _ -> Some {e with pexp_attributes = attrs @ e.pexp_attributes}
+  | Pexp_braces {expr; braces_loc} ->
+    Option.map
+      (fun expr -> {e with pexp_desc = Pexp_braces {expr; braces_loc}})
+      (add_this_to_braced_function attrs expr)
+  | _ -> None
 let default_pat_mapper = Ast_mapper.default_mapper.pat
 
 let pat_mapper (self : mapper) (p : Parsetree.pattern) =
@@ -134,6 +143,23 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   | Pexp_constant (Pconst_integer (s, Some 'l')) ->
     {e with pexp_desc = Pexp_constant (Pconst_integer (s, None))}
   (* End rewriting *)
+  | Pexp_braces {expr; braces_loc} -> (
+    (* The method callback rewrite runs on Pexp_fun, so forward @this through
+       braces before mapping the function. Keep unrelated attributes here. *)
+    let this_attrs, other_attrs =
+      List.partition (fun ({Location.txt}, _) -> txt = "this") e.pexp_attributes
+    in
+    if this_attrs = [] then default_expr_mapper self e
+    else
+      match add_this_to_braced_function this_attrs expr with
+      | Some expr ->
+        default_expr_mapper self
+          {
+            e with
+            pexp_desc = Pexp_braces {expr; braces_loc};
+            pexp_attributes = other_attrs;
+          }
+      | None -> default_expr_mapper self e)
   | Pexp_fun {newtypes; params; body; async} -> (
     match Ast_attributes.process_attributes_rev e.pexp_attributes with
     | Nothing, _ ->
@@ -251,7 +277,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
       | "Some" -> `Option_Some
       | _ -> `Option_None
     in
-    match pvb_expr.pexp_desc with
+    match (Ast_payload.unwrap_braces pvb_expr).pexp_desc with
     | Pexp_pack _ -> default_expr_mapper self e
     | _ ->
       let cont_case =
@@ -354,7 +380,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
           };
         ],
         body ) -> (
-    match pvb_expr.pexp_desc with
+    match (Ast_payload.unwrap_braces pvb_expr).pexp_desc with
     | Pexp_pack _ -> default_expr_mapper self e
     | _ ->
       default_expr_mapper self
@@ -463,11 +489,8 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
       Ast_external.handle_external_in_sig self value_desc sigi
     else
       match Ast_attributes.has_inline_payload pval_attributes with
-      | Some
-          (( _,
-             PStr [{pstr_desc = Pstr_eval (({pexp_desc; _} as expression), _)}]
-           ) as attr) -> (
-        match pexp_desc with
+      | Some ((_, PStr [{pstr_desc = Pstr_eval (expression, _)}]) as attr) -> (
+        match (Ast_payload.unwrap_braces expression).pexp_desc with
         | Pexp_constant (Pconst_string _)
         | Pexp_template {source_segments = [_]; values = []} ->
           let semantic =
@@ -588,7 +611,9 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
     Option.iter
       (fun (_, payload) -> Ast_payload.reject_json_literal_payload payload)
       has_inline_property;
-    match (has_inline_property, pvb_expr.pexp_desc) with
+    match
+      (has_inline_property, (Ast_payload.unwrap_braces pvb_expr).pexp_desc)
+    with
     | ( Some attr,
         ( Pexp_constant (Pconst_string _)
         | Pexp_template {source_segments = [_]; values = []} ) ) ->
@@ -819,6 +844,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
                        ~typ:(Mty.typeof_ ~loc me)))
                 :: aux expr)
             | Pexp_let (_, vbs, expr) -> aux expr @ spelunk_vbs acc vbs
+            | Pexp_braces {expr} -> aux expr
             | Pexp_ifthenelse (_, then_expr, Some else_expr) ->
               aux then_expr @ aux else_expr
             | Pexp_ternary (_, consequent, alternate) ->

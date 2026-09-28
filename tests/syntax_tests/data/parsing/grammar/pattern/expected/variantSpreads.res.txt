@@ -13,16 +13,14 @@ type nonrec d =
   | ... of b 
   | ... of c 
 let doWithA [arity:1](a : a) =
-  ((match a with
-    | One -> Console.log {js|aaa|js}
-    | Two -> Console.log {js|twwwoooo|js}
-    | Three -> Console.log {js|threeeee|js})
-  [@res.braces ])
+  {match a with
+   | One -> Console.log {js|aaa|js}
+   | Two -> Console.log {js|twwwoooo|js}
+   | Three -> Console.log {js|threeeee|js}}
 let doWithB [arity:1](b : b) =
-  ((match b with
-    | One -> Console.log {js|aaa|js}
-    | _ -> Console.log {js|twwwoooo|js})
-  [@res.braces ])
+  {match b with
+   | One -> Console.log {js|aaa|js}
+   | _ -> Console.log {js|twwwoooo|js}}
 let lookup [arity:1](b : b) =
   match b with
   | ((#a)[@res.patVariantSpread ]) as a -> doWithA a

@@ -1,7 +1,7 @@
 open Mocha
 open Test_utils
 
-@deriving({jsConverter: newType})
+@deriving({jsConverter: {newType}})
 type t<'a> = {
   x: int,
   y: bool,

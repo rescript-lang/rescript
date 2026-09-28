@@ -9,6 +9,20 @@ let make = React.component({
   \"V4"
 })
 
+module Braced = {
+  @res.jsxComponentProps
+  type props<'name> = {
+    name: 'name,
+  }
+
+  let make = ({name, _}: props<_>): React.element => React.string(name)
+  let make = React.component({
+    let \"V4$Braced" = (props: props<_>) => make(props)
+
+    \"V4$Braced"
+  })
+}
+
 module AnotherName = {
   @res.jsxComponentProps
   type // Component with another name than "make"

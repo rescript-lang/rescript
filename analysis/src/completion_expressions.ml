@@ -12,11 +12,12 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
     if loc_has_cursor exp.pexp_loc then Some v else None
   in
   match exp.pexp_desc with
-  | Pexp_ident {txt = Lident txt} when Utils.has_braces exp.pexp_attributes ->
-    (* An ident with braces attribute corresponds to for example `{n}`.
-       Looks like a record but is parsed as an ident with braces. *)
+  | Pexp_braces {expr = {pexp_desc = Pexp_ident {txt = Lident txt}}} ->
+    (* `{n}` looks like a record but contains an identifier. *)
     some_if_has_cursor
       (txt, [Completable.NRecordBody {seen_fields = []}] @ expr_path)
+  | Pexp_braces {expr} ->
+    traverse_expr expr ~expr_path ~pos ~first_char_before_cursor_no_white
   | Pexp_ident {txt = Lident txt} -> some_if_has_cursor (txt, expr_path)
   | Pexp_construct ({txt = Lident "()"}, _) -> some_if_has_cursor ("", expr_path)
   | Pexp_construct ({txt = Lident txt}, {txt = []}) ->

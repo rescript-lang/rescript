@@ -9,8 +9,7 @@ type nonrec t = < a ;u: int   >  -> < a ;v: int   >  -> unit (a:2)
 type nonrec user = < name: string   > 
 let (steve : < user ;age: int   > ) = {"name": {js|Steve|js}, "age": 30}
 let steve = ({"name": {js|Steve|js}, "age": 30} : < user ;age: int   > )
-let steve = ((({"name": {js|Steve|js}, "age": 30} : < user ;age: int   > ))
-  [@res.braces ])
+let steve = {({"name": {js|Steve|js}, "age": 30} : < user ;age: int   > )}
 let printFullUser [arity:1](steve : < user ;age: int   > ) =
   Console.log steve
 let printFullUser [arity:1]~user:(user : < user ;age: int   > )  =
@@ -20,8 +19,8 @@ let printFullUser [arity:1]~user:(user : < user ;age: int   > )  =
 let printFullUser [arity:1]?(user= (steve : < user ;age: int   > ))  =
   Console.log steve
 external steve : < user ;age: int   >  = "steve"[@@val ]
-let makeCeoOf30yearsOld [arity:1]name =
-  ({"name": name, "age": 30} : < user ;age: int   > )
+let makeCeoOf30yearsOld [arity:1]name = ({"name": name, "age": 30} :
+  < user ;age: int   > )
 type nonrec optionalUser = < user ;age: int   >  option
 type nonrec optionalTupleUser =
   (< user ;age: int   >  * < user ;age: int   > ) option

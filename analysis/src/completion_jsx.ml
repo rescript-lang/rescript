@@ -317,8 +317,11 @@ let find_jsx_props_completable ~jsx_props ~end_pos ~pos_before_cursor
           print_endline
             "[jsx_props_completable]--> Cursor between the prop name and expr \
              assigned";
-        match (first_char_before_cursor_no_white, prop.exp) with
-        | Some '=', {pexp_desc = Pexp_ident {txt = Lident txt}} ->
+        match
+          ( first_char_before_cursor_no_white,
+            (Res_parsetree_viewer.unwrap_braces prop.exp).pexp_desc )
+        with
+        | Some '=', Pexp_ident {txt = Lident txt} ->
           if Debug.verbose () then
             Printf.printf
               "[jsx_props_completable]--> Heuristic for empty JSX prop expr \

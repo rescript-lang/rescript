@@ -433,3 +433,15 @@ newText:
   <--here
   Some(#"illegal identifier" | #third(_)) | None
 
+Xform src/Xform.res 146:23
+Hit: Add type annotation
+
+TextDocumentEdit: Xform.res
+{
+  "end": { "character": 27, "line": 146 },
+  "start": { "character": 21, "line": 146 }
+}
+newText:
+                     <--here
+                     (value: 'a)
+

@@ -41,22 +41,13 @@ let js_field (o : Parsetree.expression) (m : Longident.t Asttypes.loc) =
 let handle_config (config : Parsetree.expression option) =
   match config with
   | Some config -> (
-    match config.pexp_desc with
-    | Pexp_record
-        ( [
-            {
-              lid = {txt = Lident "newType"};
-              x =
-                {
-                  pexp_desc =
-                    ( Pexp_construct
-                        ({txt = Lident (("true" | "false") as x)}, {txt = []})
-                    | Pexp_ident {txt = Lident ("newType" as x)} );
-                };
-            };
-          ],
-          None ) ->
-      not (x = "false")
+    match (Ast_payload.unwrap_braces config).pexp_desc with
+    | Pexp_record ([{lid = {txt = Lident "newType"}; x}], None) -> (
+      match (Ast_payload.unwrap_braces x).pexp_desc with
+      | Pexp_construct ({txt = Lident (("true" | "false") as value)}, {txt = []})
+      | Pexp_ident {txt = Lident ("newType" as value)} ->
+        value <> "false"
+      | _ -> U.invalid_config config)
     | Pexp_ident {txt = Lident "newType"} -> true
     | _ -> U.invalid_config config)
   | None -> false
