@@ -2,7 +2,6 @@
 
 import * as Test from "./Test.mjs";
 import * as Stdlib_BigInt from "@rescript/runtime/lib/es6/Stdlib_BigInt.mjs";
-import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.mjs";
 import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 
@@ -500,7 +499,7 @@ runGetTest({
   source: () => ({
     a: 1
   }),
-  get: i => Stdlib_Option.isSome(i["toString"]),
+  get: i => i["toString"] !== undefined,
   expected: true
 });
 
@@ -537,7 +536,13 @@ runGetTest({
       4,
       5
     ]);
-    return Stdlib_Option.getOr(opt !== undefined ? Primitive_option.some(f(Primitive_option.valFromOption(opt))) : undefined, []);
+    let opt$1 = opt !== undefined ? Primitive_option.some(f(Primitive_option.valFromOption(opt))) : undefined;
+    let $$default = [];
+    if (opt$1 !== undefined) {
+      return Primitive_option.valFromOption(opt$1);
+    } else {
+      return $$default;
+    }
   },
   expected: [
     1,
