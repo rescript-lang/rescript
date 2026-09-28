@@ -5,6 +5,7 @@
  */
 type t<'a> = option<'a> = None | Some('a)
 
+@inline(crossModule)
 let filter = (opt, p) =>
   switch opt {
   | Some(x) as option if p(x) => option
@@ -32,6 +33,7 @@ let getOrThrow = (x, ~message=?) =>
 
 external getUnsafe: option<'a> => 'a = "%identity"
 
+@inline(crossModule)
 let mapOr = (opt, default, f) =>
   switch opt {
   | Some(x) => f(x)
@@ -52,24 +54,28 @@ let flatMap = (opt, f) =>
   | None => None
   }
 
+@inline(crossModule)
 let getOr = (opt, default) =>
   switch opt {
   | Some(x) => x
   | None => default
   }
 
+@inline(crossModule)
 let orElse = (opt, other) =>
   switch opt {
   | Some(_) as some => some
   | None => other
   }
 
+@inline(crossModule)
 let isSome = x =>
   switch x {
   | Some(_) => true
   | None => false
   }
 
+@inline(crossModule)
 let isNone = x => x == None
 
 let equal = (a, b, eq) =>
