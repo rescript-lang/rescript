@@ -294,6 +294,52 @@ while preserving cycles and sharing. Unit tests exercise polymorphic
 instantiation, aliasing, class independence, cycles, concurrent views, and
 rejection of transient state.
 
+The type arena stores common nodes in parallel arrays: a byte kind, level,
+scalar payload, and offsets into one contiguous child-index array. Names,
+identifiers, and paths have separate indexed columns; variants and packages
+retain side tables for their less common shapes. A freeze reserves each node's
+child range before descending, so cyclic references can be filled without a
+temporary object graph. Views decode only reached roots into request-owned
+mutable nodes. The image remains private to the session and does not change
+the CMI format.
+
+On a 987 KiB WebAPI CMI with 7,944 reachable type nodes, the packed image
+retained 67,889 words versus 109,826 before packing (about 38% fewer). Seven
+interleaved probe pairs of 100 freezes gave median summed freeze times of
+201.75 ms packed and 203.68 ms before packing. This measures only the type
+arena; it does not show a build-speed gain. The common lookup path still
+materializes reached type nodes, and signature inclusion can still decode a
+full signature. Direct reading or instantiation from the image needs separate
+correctness and workload measurements before replacing those fallbacks.
+
+The project cache also keeps a frozen image's CMI CRCs and flags. After
+resolving the selected load-path entry and checking its file identity, later
+requests can use that image and metadata without reading or decoding the CMI
+again. Newly published session CMIs still take precedence, and a changed or
+newly shadowing file misses the cache. Full-signature callers can still use
+the image's private signature bytes. This removes repeated reads of large
+imported CMIs without changing the artifact format or request-local views.
+
+A warm edit of `HTMLElement.res` in the repository's WebAPI dependency rebuilt
+64 modules. One traced build reduced summed CMI read/decode work from 247.9 ms
+and 200.7 MB allocated to 5.4 ms and 4.0 MB. In eleven interleaved pairs
+with four compiler domains, both executables on `/tmp`, and a separate
+identically prepared fixture for each, median wall time fell from 343.11 ms
+to 179.59 ms. Every paired run compiled 64 modules. Five clean-build pairs
+on the same fixtures measured 823.17 ms versus 792.87 ms. The two fixtures
+have different absolute paths, so their AST and CMI bytes are not directly
+comparable; their generated JavaScript and CMJ files matched. This workload
+has unusually large WebAPI interfaces and does not predict the gain for a
+small or already staged dependency graph.
+
+The retained watcher was measured separately with WebAPI as the watched
+project, so `HTMLElement.res` was a local source. Two seven-edit runs reversed
+which executable went first. Each edit compiled 61 implementations; across
+the 14 samples per executable, median time from source write to the
+after-build marker was about 150 ms before CMI reuse and 108 ms with it
+(about 28% less). These sequential watcher runs include file-event and hook
+latency and are directional rather than a prediction for other projects.
+
 `Frozen_values` adds immutable indexes for exported values, all completed type
 kinds, record labels, variant and extension constructors, modules, and module
 types in nested signatures. It snapshots runtime layouts and inline-record

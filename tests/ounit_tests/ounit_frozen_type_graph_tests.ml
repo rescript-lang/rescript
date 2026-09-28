@@ -217,6 +217,47 @@ let test_registered_identifier_matches_path _ =
       (materialized_binder == path_ident && materialized_binder != binder)
   | _ -> OUnit.assert_failure "expected a constructor path"
 
+let test_packed_edges_labels_and_paths _ =
+  let module_id = Ident.create_persistent "Module" in
+  let argument_id = Ident.create_persistent "Argument" in
+  let path =
+    Path.Papply
+      (Path.Pdot (Path.Pident module_id, "Nested", 7), Path.Pident argument_id)
+  in
+  let labelled = Asttypes.Labelled (Location.mkloc "first" Location.none) in
+  let optional = Asttypes.Optional (Location.mkloc "second" Location.none) in
+  let constructor = Btype.newgenty (Types.Tconstr (path, [], ref Types.Mnil)) in
+  let arrow =
+    Btype.newgenty
+      (Types.Tarrow
+         ( [
+             Types.{lbl = labelled; typ = constructor};
+             Types.{lbl = optional; typ = constructor};
+           ],
+           constructor ))
+  in
+  let image = freeze [arrow] in
+  match (Frozen_type_graph.thaw_root image 0).Types.desc with
+  | Types.Tarrow
+      ( [{lbl = first; typ = first_type}; {lbl = second; typ = second_type}],
+        result ) -> (
+    assert_bool "packed arguments retain labels and shared type nodes"
+      (first = labelled && second = optional && first_type == second_type
+     && second_type == result);
+    match result.Types.desc with
+    | Types.Tconstr
+        ( Path.Papply
+            ( Path.Pdot (Path.Pident module_id, name, position),
+              Path.Pident argument_id ),
+          [],
+          _ ) ->
+      assert_bool "indexed paths retain their names and positions"
+        (Ident.name module_id = "Module"
+        && name = "Nested" && position = 7
+        && Ident.name argument_id = "Argument")
+    | _ -> OUnit.assert_failure "expected an applied nested path")
+  | _ -> OUnit.assert_failure "expected a labelled arrow"
+
 let suites =
   __FILE__
   >::: [
@@ -231,4 +272,5 @@ let suites =
          "selective_thaw" >:: test_selective_thaw;
          "registered_identifier_matches_path"
          >:: test_registered_identifier_matches_path;
+         "packed_edges_labels_and_paths" >:: test_packed_edges_labels_and_paths;
        ]

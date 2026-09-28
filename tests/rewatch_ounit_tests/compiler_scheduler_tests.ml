@@ -86,6 +86,12 @@ let existing_tests =
                   incr c_compilations);
                 Process.task (process_job ()))
               ~publish:(fun ~source_kind:_ _path _result ->
+                let on_scheduler =
+                  Thread.id (Thread.self ()) = scheduler_thread
+                in
+                check
+                  (on_scheduler = (key = "A"))
+                  "only modules with dependents publish on the scheduler";
                 write_file cmi_path
                   (if key = "A" then "new interface" else "dependent interface");
                 if key = "A" && !fail_a_publication then (

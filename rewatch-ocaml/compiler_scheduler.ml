@@ -308,18 +308,18 @@ let run ~on_ast_invalidation ~poll ~warning_state ~compile_assets ~build_state
   in
   let publish_compilation (scheduled : scheduled_module) ~source_kind path
       result =
-    (if Process.succeeded result then
-       let publication =
-         capture_publication (fun () ->
-             scheduled.publish ~source_kind path result)
-       in
-       Atomic.set scheduled.publication (Some publication));
-    result
+    if Process.succeeded result then
+      let publication =
+        capture_publication (fun () ->
+            scheduled.publish ~source_kind path result)
+      in
+      Atomic.set scheduled.publication (Some publication)
   in
   let record_result (scheduled : scheduled_module) ~source_kind path result =
-    (* Domain tasks only compile. Publication and build-state updates remain on
-       this scheduler domain after their result has been collected. *)
-    let result = publish_compilation scheduled ~source_kind path result in
+    (* Keep publication on the scheduler for modules that unlock dependents.
+       Leaf publication runs on the compiler worker instead. *)
+    if not (Build_state.String_set.is_empty scheduled.state.dependents) then
+      publish_compilation scheduled ~source_kind path result;
     let result, publication_error =
       match record_publication scheduled ~source_kind path with
       | Publication_succeeded stderr -> ({result with Process.stderr}, None)
@@ -358,7 +358,11 @@ let run ~on_ast_invalidation ~poll ~warning_state ~compile_assets ~build_state
   let compilation_task (scheduled : scheduled_module) ~source_kind path =
     let task = scheduled.compile ~source_kind path in
     Atomic.set scheduled.publication None;
-    task
+    if Build_state.String_set.is_empty scheduled.state.dependents then
+      Process.map_result task (fun result ->
+          publish_compilation scheduled ~source_kind path result;
+          result)
+    else task
   in
   let record_post_build_result (scheduled : scheduled_module) output result =
     if Process.succeeded result then (

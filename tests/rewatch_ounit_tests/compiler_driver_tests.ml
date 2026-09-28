@@ -1795,11 +1795,12 @@ let frozen_values_tests _context =
             (snd (run ~session root ~extra:["-I"; root] "Shadow.res"));
           assert_equal shadow_baseline_js (File_util.read_file shadow_output);
           let cache = Env.create_dependency_cache () in
-          let load ?(mutate = false) () =
+          let load ?(mutate = false) ?(load_path = [root]) () =
             Env.with_dependency_cache cache (fun () ->
                 Compiler_request_state.with_fresh ~cwd:root (fun () ->
                     Env.with_fresh (fun () ->
-                        (Compiler_request_state.current ()).load_path <- [root];
+                        (Compiler_request_state.current ()).load_path <-
+                          load_path;
                         let _, description =
                           Env.lookup_value
                             (Longident.Ldot (Longident.Lident "Api", "value"))
@@ -1826,6 +1827,32 @@ let frozen_values_tests _context =
                             description.Types.cstr_name))))
           in
           assert_equal "int" (fst (load ~mutate:true ()));
+          assert_equal "int" (fst (load ()));
+          let trace_file = Filename.concat root "frozen-cache-hit.tsv" in
+          let previous_trace = Sys.getenv_opt "REWATCH_TYPECHECK_TRACE" in
+          Fun.protect
+            ~finally:(fun () ->
+              match previous_trace with
+              | Some path -> Unix.putenv "REWATCH_TYPECHECK_TRACE" path
+              | None -> Test_support.unsetenv "REWATCH_TYPECHECK_TRACE")
+            (fun () ->
+              Unix.putenv "REWATCH_TYPECHECK_TRACE" trace_file;
+              ignore
+                (Compiler_phase_trace.request ~cwd:root ~input:"Cache.ast" load));
+          let cached_phase =
+            File_util.read_file trace_file
+            |> String.split_on_char '\n'
+            |> List.exists (fun line ->
+                match String.split_on_char '\t' line with
+                | _cwd :: _input :: "dependency.frozen_cmi_lookup" :: _ -> true
+                | _ -> false)
+          in
+          check cached_phase "a later request reuses the frozen CMI image";
+          let shadow = Filename.concat root "shadow" in
+          File_util.ensure_dir shadow;
+          write shadow "Api.resi" "let value: string\n";
+          expect_code 0 (snd (run shadow "Api.resi"));
+          assert_equal "string" (fst (load ~load_path:[shadow; root] ()));
           assert_equal "int" (fst (load ()));
           assert_equal ["B"] (constructors "B");
           assert_equal ["Boom"] (constructors "Boom");

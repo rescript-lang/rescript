@@ -768,6 +768,8 @@ type frozen_values_entry = {
   resolved_filename: string;
   stats: Unix.stats;
   image: Frozen_values.t;
+  crcs: (string * Digest.t option) list;
+  flags: Cmi_format.pers_flags list;
 }
 
 type frozen_values_cache = {
@@ -973,9 +975,47 @@ let prepare_frozen_values ~name ~filename cmi =
                   | Ok image ->
                     if same_file_stats (Unix.stat resolved_filename) stats then (
                       Hashtbl.replace cache.entries name
-                        {resolved_filename; stats; image};
+                        {
+                          resolved_filename;
+                          stats;
+                          image;
+                          crcs = cmi.cmi_crcs;
+                          flags = cmi.cmi_flags;
+                        };
                       Some image)
                     else None))
+          ~finally:(fun () -> Mutex.unlock cache.lock)
+      with Sys_error _ | Unix.Unix_error _ -> None)
+
+let lookup_cached_frozen_values ~name ~filename =
+  if not (frozen_values_enabled ()) then None
+  else
+    match Domain.DLS.get frozen_values_cache_key with
+    | None -> None
+    | Some cache -> (
+      try
+        let resolved_filename = Compiler_request_state.resolve_path filename in
+        let stats = Unix.stat resolved_filename in
+        Mutex.lock cache.lock;
+        Fun.protect
+          (fun () ->
+            match Hashtbl.find_opt cache.entries name with
+            | Some entry
+              when entry.resolved_filename = resolved_filename
+                   && same_file_stats entry.stats stats ->
+              Compiler_phase_trace.dependency "dependency.frozen_cmi_lookup"
+                (fun () ->
+                  let cmi =
+                    Cmi_format.
+                      {
+                        cmi_name = name;
+                        cmi_sign = [];
+                        cmi_crcs = entry.crcs;
+                        cmi_flags = entry.flags;
+                      }
+                  in
+                  Some (cmi, entry.image))
+            | Some _ | None -> None)
           ~finally:(fun () -> Mutex.unlock cache.lock)
       with Sys_error _ | Unix.Unix_error _ -> None)
 
@@ -1099,7 +1139,12 @@ let acknowledge_pers_struct ?published_image check modname
 
 let read_pers_struct check modname filename =
   add_import modname;
-  match lookup_published_cmi modname filename with
+  let cached =
+    match lookup_published_cmi modname filename with
+    | Some _ as published -> published
+    | None -> lookup_cached_frozen_values ~name:modname ~filename
+  in
+  match cached with
   | Some (cmi, image) ->
     acknowledge_pers_struct ~published_image:image check modname
       {Persistent_signature.filename; cmi}
@@ -1132,26 +1177,42 @@ let find_pers_struct check name =
         acknowledge_pers_struct ~published_image:image check name
           {Persistent_signature.filename; cmi}
       | None -> (
-        match !cached_pers_struct_loader ~check ~name with
-        | Some ps ->
+        let cached_frozen =
+          if not (frozen_values_enabled ()) then None
+          else
+            try
+              let filename = find_compiled_cmi name in
+              Option.map
+                (fun (cmi, image) -> (filename, cmi, image))
+                (lookup_cached_frozen_values ~name ~filename)
+            with Not_found -> None
+        in
+        match cached_frozen with
+        | Some (filename, cmi, image) ->
           add_import name;
-          if check then check_consistency ps;
-          Hashtbl.add (persistent_structures ()) name (Some ps);
-          ps
-        | None ->
-          let ps =
-            match
-              match !cached_cmi_loader ~name with
-              | Some cached -> cached
-              | None -> !Persistent_signature.load ~unit_name:name
-            with
-            | Some ps -> ps
-            | None ->
-              Hashtbl.add (persistent_structures ()) name None;
-              raise Not_found
-          in
-          add_import name;
-          acknowledge_pers_struct check name ps)))
+          acknowledge_pers_struct ~published_image:image check name
+            {Persistent_signature.filename; cmi}
+        | None -> (
+          match !cached_pers_struct_loader ~check ~name with
+          | Some ps ->
+            add_import name;
+            if check then check_consistency ps;
+            Hashtbl.add (persistent_structures ()) name (Some ps);
+            ps
+          | None ->
+            let ps =
+              match
+                match !cached_cmi_loader ~name with
+                | Some cached -> cached
+                | None -> !Persistent_signature.load ~unit_name:name
+              with
+              | Some ps -> ps
+              | None ->
+                Hashtbl.add (persistent_structures ()) name None;
+                raise Not_found
+            in
+            add_import name;
+            acknowledge_pers_struct check name ps))))
 
 (* Emits a warning if there is no valid cmi for name *)
 let check_pers_struct name =

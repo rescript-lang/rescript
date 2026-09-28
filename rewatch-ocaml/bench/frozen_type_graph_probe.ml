@@ -38,9 +38,10 @@ let () =
     | Error reason -> failwith reason
   in
   let bytes = Marshal.to_bytes cmi [] in
-  Printf.printf "cmi_bytes=%d type_roots=%d type_nodes=%d\n"
+  Printf.printf "cmi_bytes=%d type_roots=%d type_nodes=%d image_words=%d\n"
     (Bytes.length bytes) (List.length roots)
-    (Frozen_type_graph.node_count image);
+    (Frozen_type_graph.node_count image)
+    (Obj.reachable_words (Obj.repr image));
   Printf.printf "operation\titerations\tworker_ms\tallocated_MB\tchecksum\n";
   measure ~iterations "freeze_type_graph" (fun () ->
       match Frozen_type_graph.freeze roots with
