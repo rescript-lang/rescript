@@ -18,6 +18,8 @@
 
 #### :rocket: New Feature
 
+- Allow selected functions to opt into cross-module inlining with `@inline(crossModule)` and inline common `Option` helpers in application code. https://github.com/rescript-lang/rescript/pull/8689
+
 #### :bug: Bug fix
 
 - Make rewatch compile independent modules after an unrelated failure and recompile blocked dependents when a changed interface survives a failed implementation, including across full watcher rebuilds. https://github.com/rescript-lang/rescript/pull/8667
