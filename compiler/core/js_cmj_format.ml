@@ -108,7 +108,26 @@ let to_file name ~check_exists (v : t) =
     let oc = open_out_bin name in
     output_string oc header;
     output_string oc s;
-    close_out oc)
+    close_out oc);
+  (* Rewatch normally rebuilds dependents only when their dependency's .cmi
+     changes. An exported inline body can change without changing its type, so
+     give Rewatch a small digest to track for modules that export one. *)
+  let inline_digest_file = name ^ ".inline" in
+  let has_inline_export =
+    Array.exists
+      (fun (value : keyed_cmj_value) ->
+        match value.persistent_closed_lambda with
+        | Some (Lfunction f) -> f.attr.inline = Cross_module_inline
+        | _ -> false)
+      v.values
+  in
+  if has_inline_export then (
+    if not (check_exists && for_sure_not_changed inline_digest_file cur_digest)
+    then (
+      let oc = open_out_bin inline_digest_file in
+      output_string oc cur_digest;
+      close_out oc))
+  else if Sys.file_exists inline_digest_file then Sys.remove inline_digest_file
 
 let key_comp a b = Map_string.compare_key a b.name
 
@@ -122,6 +141,7 @@ let get_result mid_val =
          (Const_js_null | Const_js_undefined _ | Const_js_true | Const_js_false))
   | None ->
     mid_val
+  | Some (Lfunction f) when f.attr.inline = Cross_module_inline -> mid_val
   | Some _ ->
     if !Js_config.cross_module_inline then mid_val
     else {mid_val with persistent_closed_lambda = None}

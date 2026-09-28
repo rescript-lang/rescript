@@ -256,7 +256,7 @@ let lfunction_can_be_inlined (lfunction : Lambda.lfunction) =
 (** Hints to inlining *)
 let ok_to_inline_fun_when_app (m : Lambda.lfunction) (args : Lambda.t list) =
   match m.attr.inline with
-  | Always_inline -> true
+  | Always_inline | Cross_module_inline -> true
   | Never_inline -> false
   | Default_inline -> (
     match m with

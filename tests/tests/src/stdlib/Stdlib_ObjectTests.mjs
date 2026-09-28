@@ -4,6 +4,7 @@ import * as Test from "./Test.mjs";
 import * as Stdlib_BigInt from "@rescript/runtime/lib/es6/Stdlib_BigInt.mjs";
 import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.mjs";
 import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
+import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 
 let eq = Primitive_object.equal;
 
@@ -530,10 +531,14 @@ runGetTest({
       3
     ]
   }),
-  get: i => Stdlib_Option.getOr(Stdlib_Option.map(i["a"], i => i.concat([
-    4,
-    5
-  ])), []),
+  get: i => {
+    let opt = i["a"];
+    let f = i => i.concat([
+      4,
+      5
+    ]);
+    return Stdlib_Option.getOr(opt !== undefined ? Primitive_option.some(f(Primitive_option.valFromOption(opt))) : undefined, []);
+  },
   expected: [
     1,
     2,

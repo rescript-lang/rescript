@@ -205,13 +205,11 @@ console.log(regex.test(string));
 
 let result = regex.exec(string);
 
-let result$1 = (result == null) ? undefined : Primitive_option.some(result);
+console.log(!(result == null) ? Primitive_option.some(result.input) : undefined);
 
-console.log(Stdlib_Option.map(result$1, prim => prim.input));
+console.log(!(result == null) ? Primitive_option.some(result.index) : undefined);
 
-console.log(Stdlib_Option.map(result$1, prim => prim.index));
-
-console.log(Stdlib_Option.map(result$1, prim => prim.slice(1)));
+console.log(!(result == null) ? Primitive_option.some(result.slice(1)) : undefined);
 
 console.info("");
 
@@ -323,6 +321,8 @@ let _formatter = Stdlib_IntlTests._formatter;
 let formatter = Stdlib_IntlTests.formatter;
 
 let segments = Stdlib_IntlTests.segments;
+
+let result$1 = (result == null) ? undefined : Primitive_option.some(result);
 
 export {
   _collator,

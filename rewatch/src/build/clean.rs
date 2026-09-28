@@ -56,14 +56,14 @@ fn remove_compile_asset(package: &packages::Package, source_file: &Path, extensi
         package,
         &package.namespace,
         source_file,
-        extension,
+        &format!(".{extension}"),
     ));
 }
 
 pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     // optimization
     // only issue cmti if there is an interfacce file
-    for extension in &["cmj", "cmi", "cmt", "cmti"] {
+    for extension in &["cmj", "cmj.inline", "cmi", "cmt", "cmti"] {
         remove_compile_asset(package, source_file, extension);
     }
 }

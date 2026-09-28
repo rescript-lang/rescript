@@ -11,6 +11,7 @@ let filter = (opt, p) =>
   | _ => None
   }
 
+@inline(crossModule)
 let forEach = (opt, f) =>
   switch opt {
   | Some(x) => f(x)
@@ -41,12 +42,14 @@ let mapOr = (opt, default, f) =>
 
 let mapWithDefault = mapOr
 
+@inline(crossModule)
 let map = (opt, f) =>
   switch opt {
   | Some(x) => Some(f(x))
   | None => None
   }
 
+@inline(crossModule)
 let flatMap = (opt, f) =>
   switch opt {
   | Some(x) => f(x)
