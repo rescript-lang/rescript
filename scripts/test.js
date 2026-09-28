@@ -76,8 +76,12 @@ if (mochaTest) {
   const beltPackageDir = path.join(projectDir, "packages/@rescript/belt");
   const beltTestDir = path.join(projectDir, "tests/belt_tests");
 
-  // No need to clean beforehand, rewatch detects changes to the compiler binary
-  // and rebuilds automatically in that case.
+  // The runtime is built before this test project. Its inline exports can change
+  // without changing the compiler binary, so regenerate checked-in JS snapshots.
+  await execClean([], {
+    cwd: compilerTestDir,
+    stdio: "inherit",
+  });
   await execBuild([], {
     cwd: compilerTestDir,
     stdio: "inherit",

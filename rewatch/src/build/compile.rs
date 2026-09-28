@@ -255,13 +255,13 @@ fn compile_one(
                 "cmi",
             );
             let cmi_digest = helpers::compute_file_hash(Path::new(&cmi_path));
-            let inline_digest_path = helpers::get_bs_compiler_asset(
+            let cmj_path = helpers::get_bs_compiler_asset(
                 package,
                 &package.namespace,
                 &source_file.implementation.path,
-                ".cmj.inline",
+                ".cmj",
             );
-            let inline_digest = helpers::compute_file_hash(Path::new(&inline_digest_path));
+            let cmj_digest = helpers::compute_file_hash(Path::new(&cmj_path));
 
             let interface_result = source_file.interface.as_ref().map(|iface| {
                 compile_file(
@@ -282,7 +282,7 @@ fn compile_one(
                 warn_error_override,
             );
             let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
-            let inline_digest_after = helpers::compute_file_hash(Path::new(&inline_digest_path));
+            let cmj_digest_after = helpers::compute_file_hash(Path::new(&cmj_path));
 
             // If the cmi is byte-for-byte unchanged, downstream modules can
             // short-circuit — we check both interface and implementation
@@ -292,15 +292,15 @@ fn compile_one(
                 (cmi_digest, cmi_digest_after),
                 (Some(a), Some(b)) if a == b
             );
-            // A marked inline body can change without changing the CMI. The
-            // compiler emits a digest only for modules that export such a body.
-            let is_clean_inline = inline_digest == inline_digest_after;
+            // Exported JavaScript metadata, including inline bodies, can
+            // change without changing the CMI.
+            let is_clean_cmj = cmj_digest == cmj_digest_after;
 
             CompletionMsg {
                 module_name: module_name.to_string(),
                 result,
                 interface_result,
-                is_clean: is_clean_cmi && is_clean_inline,
+                is_clean: is_clean_cmi && is_clean_cmj,
                 is_compiled: true,
             }
         }

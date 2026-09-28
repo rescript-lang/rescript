@@ -97,9 +97,8 @@ val from_file : string -> t
 
 val from_string : string -> t
 
-(* Write the .cmj and, when it exports a cross-module inline function, a
-   .cmj.inline digest used by Rewatch to invalidate callers. Unchanged files
-   are not rewritten when [check_exists] is true. *)
+(* Write the .cmj. Unchanged files are not rewritten when [check_exists] is
+   true, so Rewatch can use changes to this file to invalidate callers. *)
 val to_file : string -> check_exists:bool -> t -> unit
 
 type path = string
