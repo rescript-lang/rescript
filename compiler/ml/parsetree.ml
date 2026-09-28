@@ -262,8 +262,7 @@ and pattern_desc =
 and expression = {
   pexp_desc: expression_desc;
   pexp_loc: Location.t;
-  (* Hack: made pexp_attributes mutable for use in analysis exe. Please do not use elsewhere! *)
-  mutable pexp_attributes: attributes; (* ... [@id1] [@id2] *)
+  pexp_attributes: attributes; (* ... [@id1] [@id2] *)
 }
 
 and expression_desc =
