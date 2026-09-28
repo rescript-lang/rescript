@@ -32,6 +32,44 @@ function forEachValue(opt, f) {
   }
 }
 
+function filterValue(opt, p) {
+  if (opt !== undefined && p(Primitive_option.valFromOption(opt))) {
+    return opt;
+  }
+}
+
+function mapOrValue(opt, $$default, f) {
+  if (opt !== undefined) {
+    return f(Primitive_option.valFromOption(opt));
+  } else {
+    return $$default;
+  }
+}
+
+function getOrValue(opt, $$default) {
+  if (opt !== undefined) {
+    return Primitive_option.valFromOption(opt);
+  } else {
+    return $$default;
+  }
+}
+
+function orElseValue(opt, other) {
+  if (opt !== undefined) {
+    return opt;
+  } else {
+    return other;
+  }
+}
+
+function isSomeValue(opt) {
+  return opt !== undefined;
+}
+
+function isNoneValue(opt) {
+  return opt === undefined;
+}
+
 let visited = [];
 
 visited.push(4);
@@ -40,22 +78,63 @@ let fromOrdinary = Cross_module_inline_export.ordinary(3, x => x + 1 | 0);
 
 Mocha.describe("cross-module inline opt-in", () => {
   Mocha.test("Option helpers", () => {
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 21, characters 7-14", mapped, 3);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 22, characters 7-14", flatMapped, 4);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 23, characters 7-14", mappedNested, Primitive_option.some(undefined));
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 24, characters 7-14", mapValue(2), 3);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 25, characters 7-14", mapValue(undefined), undefined);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 26, characters 7-14", flatMapValue(2), 4);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 27, characters 7-14", flatMapValue(undefined), undefined);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 27, characters 7-14", mapped, 3);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 28, characters 7-14", flatMapped, 4);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 29, characters 7-14", mappedNested, Primitive_option.some(undefined));
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 30, characters 7-14", mapValue(2), 3);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 31, characters 7-14", mapValue(undefined), undefined);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 32, characters 7-14", flatMapValue(2), 4);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 33, characters 7-14", flatMapValue(undefined), undefined);
     visited.push(5);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 29, characters 7-14", visited, [
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 35, characters 7-14", visited, [
       4,
       5
     ]);
   });
   Mocha.test("only marked exports are inlined", () => {
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 32, characters 7-14", 4, 4);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 33, characters 7-14", fromOrdinary, 4);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 38, characters 7-14", 4, 4);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 39, characters 7-14", fromOrdinary, 4);
+  });
+  Mocha.test("additional Option helpers", () => {
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 42, characters 7-14", 4, 4);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 43, characters 7-14", undefined, undefined);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 44, characters 7-14", undefined, undefined);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 45, characters 7-14", 3, 3);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 46, characters 7-14", 0, 0);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 47, characters 7-14", 2, 2);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 48, characters 7-14", 0, 0);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 49, characters 7-14", 2, 2);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 50, characters 7-14", 3, 3);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 51, characters 7-14", true, true);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 52, characters 7-14", false, false);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 53, characters 7-14", false, false);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 54, characters 7-14", true, true);
+  });
+  Mocha.test("eager fallback arguments", () => {
+    let effects = [];
+    let getDefault = () => {
+      effects.push("getOr");
+      return 0;
+    };
+    let mapDefault = () => {
+      effects.push("mapOr");
+      return 0;
+    };
+    let other = () => {
+      effects.push("orElse");
+      return 0;
+    };
+    getDefault();
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 70, characters 7-14", 2, 2);
+    mapDefault();
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 71, characters 7-14", 2, 2);
+    other();
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 72, characters 7-14", 2, 2);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 73, characters 7-14", effects, [
+      "getOr",
+      "mapOr",
+      "orElse"
+    ]);
   });
 });
 
@@ -69,6 +148,12 @@ export {
   mapValue,
   flatMapValue,
   forEachValue,
+  filterValue,
+  mapOrValue,
+  getOrValue,
+  orElseValue,
+  isSomeValue,
+  isNoneValue,
   visited,
   fromExport,
   fromOrdinary,
