@@ -28,6 +28,15 @@ let record_pat0 attrs =
 let map_pat0 pat =
   Ast_mapper_from0.default_mapper.pat Ast_mapper_from0.default_mapper pat
 
+let test_removed_open_pattern_is_rejected_from_ast0 _ =
+  let pat =
+    Ast_helper0.Pat.open_ ~loc
+      (located_string (Longident.Lident "Module"))
+      (Ast_helper0.Pat.any ~loc ())
+  in
+  OUnit.assert_raises (Failure "Ppat_open is no longer present in ReScript")
+    (fun () -> ignore (map_pat0 pat))
+
 let test_public_record_rest_attr_is_not_internal _ =
   let pat =
     map_pat0 (record_pat0 [attr "res.record_rest" (Parsetree0.PStr [])])
@@ -1557,6 +1566,8 @@ let test_error_extension_backquoted_strings _ =
 let suites =
   __FILE__
   >::: [
+         "removed_open_pattern_is_rejected_from_ast0"
+         >:: test_removed_open_pattern_is_rejected_from_ast0;
          "public_record_rest_attr_is_not_internal"
          >:: test_public_record_rest_attr_is_not_internal;
          "fun_node_attrs_roundtrip_through_ast0"

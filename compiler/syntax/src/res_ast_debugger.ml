@@ -906,13 +906,6 @@ module Sexp_ast = struct
       | Ppat_exception p -> Sexp.list [Sexp.atom "Ppat_exception"; pattern p]
       | Ppat_extension ext ->
         Sexp.list [Sexp.atom "Ppat_extension"; extension ext]
-      | Ppat_open (longident_loc, p) ->
-        Sexp.list
-          [
-            Sexp.atom "Ppat_open";
-            longident longident_loc.Location.txt;
-            pattern p;
-          ]
     in
     Sexp.list [Sexp.atom "pattern"; descr]
 

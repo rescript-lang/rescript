@@ -213,10 +213,6 @@ and pattern i ppf x =
     line i ppf "Tpat_type %a\n" fmt_path id;
     attributes i ppf attrs;
     pattern i ppf {x with pat_extra = rem}
-  | (Tpat_open (id, _, _), _, attrs) :: rem ->
-    line i ppf "Tpat_open \"%a\"\n" fmt_path id;
-    attributes i ppf attrs;
-    pattern i ppf {x with pat_extra = rem}
   | [] -> (
     match x.pat_desc with
     | Tpat_any -> line i ppf "Tpat_any\n"

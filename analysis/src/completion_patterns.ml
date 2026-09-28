@@ -52,10 +52,7 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
   in
   match pat.ppat_desc with
   | Ppat_constant _ | Ppat_interval _ -> None
-  | Ppat_constraint (p, _)
-  | Ppat_alias (p, _)
-  | Ppat_exception p
-  | Ppat_open (_, p) ->
+  | Ppat_constraint (p, _) | Ppat_alias (p, _) | Ppat_exception p ->
     p
     |> traverse_pattern ~pattern_path ~loc_has_cursor
          ~first_char_before_cursor_no_white ~pos_before_cursor

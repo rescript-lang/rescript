@@ -1762,18 +1762,6 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
         pat_extra =
           (Tpat_type (path, lid), loc, sp.ppat_attributes) :: p.pat_extra;
       }
-  | Ppat_open (lid, p) ->
-    let path, new_env = !type_open Asttypes.Fresh !env sp.ppat_loc lid in
-    let new_env = ref new_env in
-    type_pat ~env:new_env p expected_ty (fun p ->
-        env := Env.copy_local !env ~from:!new_env;
-        k
-          {
-            p with
-            pat_extra =
-              (Tpat_open (path, lid, !new_env), loc, sp.ppat_attributes)
-              :: p.pat_extra;
-          })
   | Ppat_exception _ ->
     raise (Error (loc, !env, Exception_pattern_below_toplevel))
   | Ppat_extension ext ->
@@ -2206,11 +2194,7 @@ let iter_ppat f p =
   | Ppat_construct (_, {txt = args}) -> List.iter f args
   | Ppat_variant (_, {txt = args}) -> List.iter f args
   | Ppat_tuple lst -> List.iter f lst
-  | Ppat_exception p
-  | Ppat_alias (p, _)
-  | Ppat_open (_, p)
-  | Ppat_constraint (p, _) ->
-    f p
+  | Ppat_exception p | Ppat_alias (p, _) | Ppat_constraint (p, _) -> f p
   | Ppat_record (args, _flag, _rest) -> List.iter (fun {x = p} -> f p) args
 
 let contains_polymorphic_variant p =
@@ -2235,9 +2219,6 @@ let contains_gadt env p =
            cstrs
        with Not_found -> ());
       iter_ppat (loop env) p
-    | Ppat_open (lid, sub_p) ->
-      let _, new_env = !type_open Asttypes.Override env p.ppat_loc lid in
-      loop new_env sub_p
     | _ -> iter_ppat (loop env) p
   in
   try

@@ -141,7 +141,6 @@ let identify_ppat pat =
   | Ppat_unpack _ -> "Ppat_unpack"
   | Ppat_exception _ -> "Ppat_exception"
   | Ppat_extension _ -> "Ppat_extension"
-  | Ppat_open _ -> "Ppat_open"
 
 let rec skip_white text i =
   if i < 0 then 0

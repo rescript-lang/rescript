@@ -235,9 +235,6 @@ and pattern i ppf x =
   | Ppat_exception p ->
     line i ppf "Ppat_exception\n";
     pattern i ppf p
-  | Ppat_open (m, p) ->
-    line i ppf "Ppat_open \"%a\"\n" fmt_longident_loc m;
-    pattern i ppf p
   | Ppat_extension (s, arg) ->
     line i ppf "Ppat_extension \"%s\"\n" s.txt;
     payload i ppf arg

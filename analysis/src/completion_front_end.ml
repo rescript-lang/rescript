@@ -554,7 +554,6 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
       scope := !scope |> Scope.add_module ~name:txt ~loc
     | Ppat_exception p -> scope_pattern ~pattern_path ?context_path p
     | Ppat_extension _ -> ()
-    | Ppat_open (_, p) -> scope_pattern ~pattern_path ?context_path p
   in
   let loc_has_cursor = Cursor_position.loc_has_cursor ~pos:pos_before_cursor in
   let loc_is_empty = Cursor_position.loc_is_empty ~pos:pos_before_cursor in

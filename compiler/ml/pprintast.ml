@@ -520,17 +520,6 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
       pp f "@[<2>(%a@;:@;%a)@]" (pattern1 ctxt) p (core_type ctxt) ct
     | Ppat_exception p -> pp f "@[<2>exception@;%a@]" (pattern1 ctxt) p
     | Ppat_extension e -> extension ctxt f e
-    | Ppat_open (lid, p) ->
-      let with_paren =
-        match p.ppat_desc with
-        | Ppat_array _ | Ppat_record _
-        | Ppat_construct ({txt = Lident ("()" | "[]"); _}, _) ->
-          false
-        | _ -> true
-      in
-      pp f "@[<2>%a.%a @]" longident_loc lid
-        (paren with_paren @@ pattern1 ctxt)
-        p
     | _ -> paren true (pattern ctxt) f x
 
 and label_exp ctxt f (l, opt, p) =
