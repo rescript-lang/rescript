@@ -97,40 +97,14 @@ let to_file name ~check_exists (v : t) =
   let s = Marshal.to_string v [] in
   let cur_digest = Digest.string s in
   let header = cur_digest in
-  if not (check_exists && for_sure_not_changed name header) then (
+  if not (check_exists && for_sure_not_changed name header) then
     let oc = open_out_bin (Compiler_request_state.resolve_path name) in
     Fun.protect
       ~finally:(fun () -> close_out_noerr oc)
       (fun () ->
         output_string oc header;
         output_string oc s;
-        close_out oc));
-  (* Rewatch normally rebuilds dependents only when their dependency's .cmi
-     changes. An exported inline body can change without changing its type, so
-     give Rewatch a small digest to track for modules that export one. *)
-  let inline_digest_file = name ^ ".inline" in
-  let has_inline_export =
-    Array.exists
-      (fun (value : keyed_cmj_value) ->
-        match value.persistent_closed_lambda with
-        | Some (Lfunction f) -> f.attr.inline = Cross_module_inline
-        | _ -> false)
-      v.values
-  in
-  if has_inline_export then (
-    if not (check_exists && for_sure_not_changed inline_digest_file cur_digest)
-    then (
-      let oc =
-        open_out_bin (Compiler_request_state.resolve_path inline_digest_file)
-      in
-      Fun.protect
-        ~finally:(fun () -> close_out_noerr oc)
-        (fun () ->
-          output_string oc cur_digest;
-          close_out oc)))
-  else
-    let path = Compiler_request_state.resolve_path inline_digest_file in
-    if Sys.file_exists path then Sys.remove path
+        close_out oc)
 
 let key_comp a b = Ext_string.compare a b.name
 

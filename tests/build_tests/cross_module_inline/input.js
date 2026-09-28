@@ -8,22 +8,16 @@ import { setup } from "#dev/process";
 const { execBuildOrThrow, execClean } = setup(import.meta.dirname);
 const source = path.join(import.meta.dirname, "src", "A.res");
 const output = path.join(import.meta.dirname, "src", "B.js");
-const inlineDigest = path.join(
-  import.meta.dirname,
-  "lib",
-  "bs",
-  "src",
-  "A.cmj.inline",
-);
+const cmj = path.join(import.meta.dirname, "lib", "bs", "src", "A.cmj");
 const original = await fs.readFile(source, "utf8");
 
 await execClean();
 try {
   await execBuildOrThrow();
   assert.match(await fs.readFile(output, "utf8"), /let result = 2;/);
-  await fs.access(inlineDigest);
+  await fs.access(cmj);
   await execClean();
-  await assert.rejects(fs.access(inlineDigest));
+  await assert.rejects(fs.access(cmj));
   await execBuildOrThrow();
 
   // The public type stays the same, but the saved inline body changes.
@@ -31,11 +25,10 @@ try {
   await execBuildOrThrow();
   assert.match(await fs.readFile(output, "utf8"), /let result = 3;/);
 
-  // Removing the marker removes the digest and restores a normal call.
+  // Removing the marker restores a normal call.
   await fs.writeFile(source, original.replace("@inline(crossModule)\n", ""));
   await execBuildOrThrow();
   assert.match(await fs.readFile(output, "utf8"), /A\.bump\(1\)/);
-  await assert.rejects(fs.access(inlineDigest));
 } finally {
   await fs.writeFile(source, original);
   await execClean();
