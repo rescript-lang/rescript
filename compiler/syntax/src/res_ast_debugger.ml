@@ -460,6 +460,14 @@ module Sexp_ast = struct
             | Some typ -> Sexp.list [Sexp.atom "Some"; core_type typ]);
           ];
         Sexp.list [Sexp.atom "ptype_private"; private_flag td.ptype_private];
+        Sexp.list
+          [
+            Sexp.atom "ptype_origin";
+            Sexp.atom
+              (match td.ptype_origin with
+              | Declared -> "Declared"
+              | Inline_record_definition -> "Inline_record_definition");
+          ];
         attributes td.ptype_attributes;
       ]
 

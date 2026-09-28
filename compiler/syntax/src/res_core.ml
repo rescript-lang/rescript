@@ -6360,8 +6360,8 @@ and parse_type_definition_or_extension ~attrs p =
       inline_types_context.found_inline_types
       |> List.map (fun inline_type ->
           Ast_helper.Type.mk ~params:inline_type.params
-            ~attrs:[(Location.mknoloc "res.inlineRecordDefinition", PStr [])]
-            ~loc:inline_type.loc ~kind:inline_type.kind
+            ~origin:Inline_record_definition ~loc:inline_type.loc
+            ~kind:inline_type.kind
             {name with txt = inline_type.name})
     in
     TypeDef {rec_flag; types = inline_types @ type_defs}
@@ -6404,8 +6404,8 @@ and parse_external_def ~attrs ~start_pos p =
         inline_types_context.found_inline_types
         |> List.rev_map (fun inline_type ->
             Ast_helper.Type.mk ~params:inline_type.params
-              ~attrs:[(Location.mknoloc "res.inlineRecordDefinition", PStr [])]
-              ~loc:inline_type.loc ~kind:inline_type.kind
+              ~origin:Inline_record_definition ~loc:inline_type.loc
+              ~kind:inline_type.kind
               {name with txt = inline_type.name})
         |> List.rev
       in

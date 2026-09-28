@@ -309,8 +309,12 @@ module Type : sig
     ?kind:type_kind ->
     ?priv:private_flag ->
     ?manifest:core_type ->
+    ?origin:type_declaration_origin ->
     str ->
     type_declaration
+
+  val declaration_attributes : type_declaration -> attributes
+  (** Restore the inline-record marker for the frozen v0 PPX tree. *)
 
   val constructor :
     ?loc:loc ->

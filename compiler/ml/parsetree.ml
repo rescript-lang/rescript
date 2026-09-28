@@ -530,9 +530,14 @@ and type_declaration = {
   ptype_kind: type_kind;
   ptype_private: private_flag; (* = private ... *)
   ptype_manifest: core_type option; (* = T *)
+  ptype_origin: type_declaration_origin;
   ptype_attributes: attributes; (* ... [@@id1] [@@id2] *)
   ptype_loc: Location.t;
 }
+
+(* Inline records in field and external types are lifted to named declarations
+   for type checking. Keep their source origin separate from user attributes. *)
+and type_declaration_origin = Declared | Inline_record_definition
 
 (*
   type t                     (abstract, no manifest)

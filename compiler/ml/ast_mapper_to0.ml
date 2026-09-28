@@ -222,16 +222,15 @@ module T = struct
     | Ptyp_extension x -> extension ~loc ~attrs (sub.extension sub x)
 
   let map_type_declaration sub
-      {
-        ptype_name;
-        ptype_params;
-        ptype_cstrs;
-        ptype_kind;
-        ptype_private;
-        ptype_manifest;
-        ptype_attributes;
-        ptype_loc;
-      } =
+      ({
+         ptype_name;
+         ptype_params;
+         ptype_cstrs;
+         ptype_kind;
+         ptype_private;
+         ptype_manifest;
+         ptype_loc;
+       } as decl) =
     Type.mk (map_loc sub ptype_name)
       ~params:(List.map (map_fst (sub.typ sub)) ptype_params)
       ~priv:ptype_private
@@ -242,7 +241,7 @@ module T = struct
       ~kind:(sub.type_kind sub ptype_kind)
       ?manifest:(map_opt (sub.typ sub) ptype_manifest)
       ~loc:(sub.location sub ptype_loc)
-      ~attrs:(sub.attributes sub ptype_attributes)
+      ~attrs:(sub.attributes sub (Ast_helper.Type.declaration_attributes decl))
 
   let map_type_kind sub = function
     | Ptype_abstract -> Pt.Ptype_abstract

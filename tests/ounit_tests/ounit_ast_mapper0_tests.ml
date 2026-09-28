@@ -308,6 +308,36 @@ let test_braces_roundtrip_through_ast0 _ =
   | _ ->
     assert_failure "Expected two structural brace nodes after ast0 roundtrip"
 
+let test_inline_record_definition_roundtrips_through_ast0 _ =
+  let name = located_string "person.details" in
+  let field =
+    Ast_helper.Type.field ~loc (located_string "name")
+      (Ast_helper.Typ.constr ~loc
+         (located_string (Longident.Lident "string"))
+         [])
+  in
+  let decl =
+    Ast_helper.Type.mk ~loc ~origin:Parsetree.Inline_record_definition
+      ~kind:(Parsetree.Ptype_record [field])
+      ~attrs:[attr "other" (Parsetree.PStr [])]
+      name
+  in
+  let wire =
+    Ast_mapper_to0.default_mapper.type_declaration Ast_mapper_to0.default_mapper
+      decl
+  in
+  OUnit.assert_bool "inline record marker reaches the v0 wire"
+    (has_attr "res.inlineRecordDefinition" wire.ptype_attributes);
+  let roundtrip =
+    Ast_mapper_from0.default_mapper.type_declaration
+      Ast_mapper_from0.default_mapper wire
+  in
+  OUnit.assert_equal Parsetree.Inline_record_definition roundtrip.ptype_origin;
+  OUnit.assert_bool "other attributes survive the bridge"
+    (has_attr "other" roundtrip.ptype_attributes);
+  OUnit.assert_bool "the v0 marker is decoded into the origin field"
+    (not (has_attr "res.inlineRecordDefinition" roundtrip.ptype_attributes))
+
 let test_this_on_braced_function_reaches_builtin_ppx _ =
   let function_expr =
     Ast_helper.Exp.fun_
@@ -1689,6 +1719,8 @@ let suites =
          "v0_if_without_alternate_stays_if"
          >:: test_v0_if_without_alternate_stays_if;
          "braces_roundtrip_through_ast0" >:: test_braces_roundtrip_through_ast0;
+         "inline_record_definition_roundtrips_through_ast0"
+         >:: test_inline_record_definition_roundtrips_through_ast0;
          "this_on_braced_function_reaches_builtin_ppx"
          >:: test_this_on_braced_function_reaches_builtin_ppx;
          "constructor_args_roundtrip_through_ast0"
