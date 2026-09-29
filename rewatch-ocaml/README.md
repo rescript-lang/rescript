@@ -9,7 +9,7 @@ implementation remains available as `rescript-rust` on every platform.
 The OCaml port's cross-platform baseline gates passed before parallel
 compiler domains became the default. Domain builds now pass repeated Linux
 artifact and focused concurrency checks; broader project and platform
-validation continues. Current domain measurements and limits are in
+validation continues. Reproducible performance and resource checks are in
 [`bench/README.md`](bench/README.md).
 
 Before the domain cleanup, an uninterrupted `make test-all` run passed all
@@ -83,8 +83,8 @@ _build/default/rewatch-ocaml/rescript_ocaml.exe build path/to/project
 
 The repeated testrepo clean builds matched selected AST, IAST, CMI, CMJ,
 JavaScript, source-map, and namespace-map artifacts across one, two, four,
-eight, and twelve domains. A rare earlier output mismatch remains unexplained;
-see [`bench/README.md`](bench/README.md) for measurements and limits.
+eight, and twelve domains. The benchmark gate checks these artifacts alongside
+compiler work and elapsed time.
 
 On this experimental branch, published ReScript packages use the OCaml
 implementation for the normal `rescript` command. The Rust reference
@@ -131,15 +131,15 @@ orchestration and aggregate dispatch, while `build_report.ml` owns presentation.
 context, clean stale assets, and run the preliminary parse; `module_graph.ml`
 owns dependency resolution, graph-node identities, and cycle analysis.
 
-The default compiler session passes newly
-parsed ASTs, dependency lists, frozen interfaces, and cross-module optimization
-metadata directly between jobs. Dependent compiler jobs can start before CMI
-and CMJ artifacts are exported; export finishes before build success. Its
+The default compiler session passes newly parsed ASTs, dependency lists,
+frozen interfaces, and cross-module optimization metadata directly between
+jobs. Dependent compiler jobs can start before CMI and CMJ artifacts are
+exported; export finishes before build success. Its
 module-result API also retains bounded typed semantic data, structured
 diagnostics, and output paths. Separate CMI and CMJ fingerprints control
-dependent recompilation. The current implementation and benchmark results are
-documented in
-[`compiler/ml/IMMUTABLE_INTERFACES.md`](../compiler/ml/IMMUTABLE_INTERFACES.md).
+dependent recompilation. `Frozen_values` and `Frozen_type_graph` provide
+immutable shared images with request-local views; the benchmark commands are
+in [`bench/README.md`](bench/README.md).
 Set `REWATCH_FROZEN_VALUES=0` to compare the previous compiler path.
 Sessions containing GenType packages currently use the classic interface
 lookup because frozen lookup changed generated TypeScript in that suite.

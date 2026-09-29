@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create the flat-CMI workload used by IMMUTABLE_INTERFACES.md."""
+"""Create synthetic projects for frozen-interface benchmarks."""
 
 import json
 import sys
