@@ -24,11 +24,19 @@ let compiler_phase args =
   in
   (phase, input)
 
+let log_lock = Mutex.create ()
+
 let append_log path line =
-  let channel = open_out_gen [Open_creat; Open_append; Open_text] 0o644 path in
+  Mutex.lock log_lock;
   Fun.protect
-    ~finally:(fun () -> close_out_noerr channel)
-    (fun () -> output_string channel line)
+    ~finally:(fun () -> Mutex.unlock log_lock)
+    (fun () ->
+      let channel =
+        open_out_gen [Open_creat; Open_append; Open_text] 0o644 path
+      in
+      Fun.protect
+        ~finally:(fun () -> close_out_noerr channel)
+        (fun () -> output_string channel line))
 
 let log_compiler_request (job : Process.job) =
   match Sys.getenv_opt "REWATCH_COMPILER_CALL_LOG" with

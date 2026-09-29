@@ -65,6 +65,7 @@ type t = {
   pending_work: pending_work;
   mutable parse_exports: parse_export list;
   mutable parse_export_worker: unit Domain.t option;
+  parse_export_lock: Mutex.t;
   invalidated_parse_exports: (string, unit) Hashtbl.t;
   finalization: finalization_state;
   mutable compiler_cleaned: bool;
@@ -100,6 +101,7 @@ let create ~freshness_mode ~session ~process_poll ~progress ~verbosity =
     pending_work = {namespace_jobs = []; compile_candidates = []};
     parse_exports = [];
     parse_export_worker = None;
+    parse_export_lock = Mutex.create ();
     invalidated_parse_exports = Hashtbl.create 16;
     finalization =
       {
@@ -145,6 +147,10 @@ let add_parse_export attempt ~staged_ast ~published_ast ~source ~compile_assets
   attempt.parse_exports <-
     {staged_ast; published_ast; source; compile_assets} :: attempt.parse_exports
 
+let with_parse_export_lock attempt action =
+  Mutex.lock attempt.parse_export_lock;
+  Fun.protect action ~finally:(fun () -> Mutex.unlock attempt.parse_export_lock)
+
 let start_parse_exports attempt =
   if attempt.parse_exports <> [] && Option.is_none attempt.parse_export_worker
   then
@@ -154,16 +160,26 @@ let start_parse_exports attempt =
         (Domain.spawn (fun () ->
              List.iter
                (fun export ->
-                 File_util.copy_existing_file ~ensure_parent:false
-                   export.staged_ast export.published_ast;
-                 (* Compilation can finish before this copy. Keep the parser's
-                    time so the next build sees it as older than the CMT. *)
-                 let stats = Unix.stat export.staged_ast in
-                 Unix.utimes export.published_ast stats.st_atime stats.st_mtime)
+                 with_parse_export_lock attempt (fun () ->
+                     if
+                       not
+                         (Hashtbl.mem attempt.invalidated_parse_exports
+                            export.published_ast)
+                     then (
+                       File_util.copy_existing_file ~ensure_parent:false
+                         export.staged_ast export.published_ast;
+                       (* Compilation can finish before this copy. Keep the
+                          parser's time so the next build sees it as older than
+                          the CMT. The scheduler cannot invalidate this AST
+                          between the copy and timestamp update. *)
+                       let stats = Unix.stat export.staged_ast in
+                       Unix.utimes export.published_ast stats.st_atime
+                         stats.st_mtime)))
                exports))
 
 let invalidate_parse_export attempt ~path =
-  Hashtbl.replace attempt.invalidated_parse_exports path ()
+  with_parse_export_lock attempt (fun () ->
+      Hashtbl.replace attempt.invalidated_parse_exports path ())
 
 let finish_parse_exports attempt =
   start_parse_exports attempt;

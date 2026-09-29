@@ -146,6 +146,28 @@ let invalidated_parse_export_is_removed _context =
         (not (File_util.exists published_ast));
       assert_equal None (Compile_assets.ast compile_assets source))
 
+let invalidated_parse_export_skips_pending_copy _context =
+  Test_support.with_temp_dir "rewatch-invalidated-parse-export" (fun root ->
+      let attempt = create_full () in
+      let source = Test_support.path root "src/A.res" in
+      let staged_ast = Test_support.path root "lib/bs/src/A.ast" in
+      let published_ast = Test_support.path root "lib/ocaml/A.ast" in
+      Test_support.write_file source "let value = 1\n";
+      File_util.ensure_dir (Filename.dirname published_ast);
+      let compile_assets =
+        Compile_assets.create [Filename.dirname published_ast]
+      in
+      Test_support.write_file published_ast "old AST";
+      Build_attempt.add_parse_export attempt ~staged_ast ~published_ast ~source
+        ~compile_assets;
+      Build_attempt.invalidate_parse_export attempt ~path:published_ast;
+      File_util.remove_file published_ast;
+      Build_attempt.start_parse_exports attempt;
+      Build_attempt.finish_parse_exports attempt;
+      assert_bool "invalidated AST must stay absent"
+        (not (File_util.exists published_ast));
+      assert_equal None (Compile_assets.ast compile_assets source))
+
 let failed_parse_export_forces_reparse _context =
   Test_support.with_temp_dir "rewatch-parse-export-failure" (fun root ->
       let attempt = create_full () in
@@ -187,6 +209,8 @@ let tests =
          >:: parse_export_preserves_parser_time;
          "invalidated parse export is removed"
          >:: invalidated_parse_export_is_removed;
+         "invalidated parse export skips pending copy"
+         >:: invalidated_parse_export_skips_pending_copy;
          "failed parse export forces reparse"
          >:: failed_parse_export_forces_reparse;
        ]

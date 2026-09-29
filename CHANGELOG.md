@@ -23,6 +23,7 @@
 #### :bug: Bug fix
 
 - Make rewatch compile independent modules after an unrelated failure and recompile blocked dependents when a changed interface survives a failed implementation, including across full watcher rebuilds. https://github.com/rescript-lang/rescript/pull/8667
+- Avoid a parser-artifact publication error when an OCaml rewatch compilation fails while its AST is being exported. https://github.com/rescript-lang/rescript/pull/8680
 
 #### :memo: Documentation
 

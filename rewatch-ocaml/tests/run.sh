@@ -896,6 +896,16 @@ rm -f "$basic/src/A.mjs"
 mkdir -p "$basic/lib/bs/other"
 touch "$basic/lib/bs/other/Authored.js"
 
+# Windows timestamps can coincide for very short compiler requests, and text
+# mode writes CRLF rows. Both still describe valid timing data.
+printf 'parse\tfixture\tA.ast\t1.000000000\t1.000000000\r\n' \
+  >"$work/short-compiler-timing.tsv"
+node "$root/rewatch-ocaml/bench/analyze_compiler_timing.js" \
+  "$work/short-compiler-timing.tsv" \
+  >"$work/short-compiler-timing.summary"
+grep -Eq '^parse,1,0[.]0,0[.]0,0[.]00,' \
+  "$work/short-compiler-timing.summary"
+
 REWATCH_COMPILER_TIMING_LOG=$(native_path "$work/compiler-timing.tsv") \
   "$port" build --after-build 'test -f src/A.mjs' "$basic"
 test -s "$work/compiler-timing.tsv"

@@ -10,7 +10,7 @@ if (process.argv.length !== 3) {
 const rows = fs
   .readFileSync(process.argv[2], "utf8")
   .trim()
-  .split("\n")
+  .split(/\r?\n/)
   .filter(Boolean)
   .map((line, index) => {
     const [phase, cwd, input, startText, endText, ...extra] = line.split("\t");
@@ -23,9 +23,9 @@ const rows = fs
       !input ||
       !Number.isFinite(start) ||
       !Number.isFinite(end) ||
-      end <= start
+      end < start
     ) {
-      throw new Error(`Invalid timing row ${index + 1}`);
+      throw new Error(`Invalid timing row ${index + 1}: ${JSON.stringify(line)}`);
     }
     return { phase, cwd, input, start, end };
   });
@@ -59,7 +59,7 @@ function summarize(name, requests) {
       requests.length,
       span.toFixed(1),
       summed.toFixed(1),
-      (summed / span).toFixed(2),
+      (span > 0 ? summed / span : 0).toFixed(2),
       peak,
       (zeroActive * 1000).toFixed(1),
       durations[Math.ceil(0.95 * durations.length) - 1].toFixed(2),

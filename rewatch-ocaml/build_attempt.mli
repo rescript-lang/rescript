@@ -48,6 +48,7 @@ type t = {
   pending_work: pending_work;
   mutable parse_exports: parse_export list;
   mutable parse_export_worker: unit Domain.t option;
+  parse_export_lock: Mutex.t;
   invalidated_parse_exports: (string, unit) Hashtbl.t;
   finalization: finalization_state;
   mutable compiler_cleaned: bool;
