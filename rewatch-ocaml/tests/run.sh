@@ -1671,15 +1671,25 @@ if [ ! -f "$native_output" ] || [ ! -f "$web_output" ] || \
 fi
 
 REWATCH_TYPECHECK_TRACE="$work/gentype-trace.tsv" "$port" build "$gentype"
-test -f "$gentype/src/Main.js"
-test -f "$gentype/src/Annotated.gen.ts"
-test -f "$gentype/src/Pair.gen.ts"
-grep 'src/Annotated.ast.*dependency.gentype_semantic_result' \
-  "$work/gentype-trace.tsv" >/dev/null
-grep 'src/Pair.ast.*dependency.gentype_semantic_result' \
-  "$work/gentype-trace.tsv" >/dev/null
+for output in "$gentype/src/Main.js" "$gentype/src/Annotated.gen.ts" \
+  "$gentype/src/Pair.gen.ts" "$work/gentype-trace.tsv"; do
+  if [ ! -f "$output" ]; then
+    echo "genType build did not produce $output" >&2
+    find "$gentype/src" -maxdepth 1 -type f -print >&2
+    exit 1
+  fi
+done
+tr '\\' '/' <"$work/gentype-trace.tsv" >"$work/gentype-trace.normalized.tsv"
+if ! grep 'src/Annotated.ast.*dependency.gentype_semantic_result' \
+  "$work/gentype-trace.normalized.tsv" >/dev/null || \
+  ! grep 'src/Pair.ast.*dependency.gentype_semantic_result' \
+    "$work/gentype-trace.normalized.tsv" >/dev/null; then
+  echo "genType did not reuse the in-session semantic result" >&2
+  cat "$work/gentype-trace.normalized.tsv" >&2
+  exit 1
+fi
 if grep 'src/Annotated.ast.*dependency.gentype_cmt_read' \
-  "$work/gentype-trace.tsv" >/dev/null; then
+  "$work/gentype-trace.normalized.tsv" >/dev/null; then
   echo "genType reread the newly written implementation CMT" >&2
   exit 1
 fi
