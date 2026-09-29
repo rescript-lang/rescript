@@ -373,7 +373,7 @@ jobs:
       - name: Generate API Docs
         if: ${{ matrix.generate_api_docs }}
         run: |
-          make annotated-tooling-deps
+          opam exec -- make annotated-tooling-deps
           REWATCH_BIN_ANNOT=1 yarn apidocs:generate
 
       - name: "Upload artifacts: scripts/res/apiDocs"

@@ -1795,6 +1795,10 @@ fi
 printf '{"name":"missing-dependency","sources":["src"]}\n' \
   >"$work/missing-dependency/rescript.json"
 wait_for_file "$work/missing-dependency/src/A.js"
+# A.js is published before the watcher releases build.lock. On Windows the
+# harness terminates the native process without a graceful cleanup signal, so
+# wait for the completed build before intentionally leaving only watch.lock.
+wait_for_text "$work/ocaml.out" "Finished initial compilation"
 terminate_and_wait "$missing_dependency_watch_pid" \
   "missing-dependency watcher"
 if $windows_posix_shell; then
@@ -1815,6 +1819,8 @@ run_cwd_case format-malformed-dependency exit2 exit2 \
 if [ -e "$work/missing-dependency/lib/build.lock" ] || \
   [ -e "$work/missing-dependency/lib/watch.lock" ]; then
   echo "OCaml dependency failures left a build or watch lock behind" >&2
+  ls -l "$work/missing-dependency/lib/build.lock" \
+    "$work/missing-dependency/lib/watch.lock" 2>/dev/null || true
   exit 1
 fi
 
