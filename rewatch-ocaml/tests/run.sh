@@ -1670,7 +1670,8 @@ if [ ! -f "$native_output" ] || [ ! -f "$web_output" ] || \
   exit 1
 fi
 
-REWATCH_TYPECHECK_TRACE="$work/gentype-trace.tsv" "$port" build "$gentype"
+REWATCH_TYPECHECK_TRACE="$(native_path "$work/gentype-trace.tsv")" \
+  "$port" build "$gentype"
 for output in "$gentype/src/Main.js" "$gentype/src/Annotated.gen.ts" \
   "$gentype/src/Pair.gen.ts" "$work/gentype-trace.tsv"; do
   if [ ! -f "$output" ]; then
@@ -1695,25 +1696,35 @@ if grep 'src/Annotated.ast.*dependency.gentype_cmt_read' \
 fi
 
 REWATCH_FROZEN_VALUES=1 REWATCH_SESSION_CMI=1 \
-  REWATCH_TYPECHECK_TRACE="$work/session-interface-trace.tsv" \
-  REWATCH_COMPILER_TIMING_LOG="$work/session-interface-timing.tsv" \
-  REWATCH_ARTIFACT_EXPORT_LOG="$work/session-interface-export.tsv" \
+  REWATCH_TYPECHECK_TRACE="$(native_path "$work/session-interface-trace.tsv")" \
+  REWATCH_COMPILER_TIMING_LOG="$(native_path "$work/session-interface-timing.tsv")" \
+  REWATCH_ARTIFACT_EXPORT_LOG="$(native_path "$work/session-interface-export.tsv")" \
   "$port" build "$work/session-interface"
-grep 'src/Api.ast.*dependency.session_cmi_lookup' \
-  "$work/session-interface-trace.tsv" >/dev/null
-grep 'src/Consumer.ast.*dependency.session_cmi_lookup' \
-  "$work/session-interface-trace.tsv" >/dev/null
+tr '\\' '/' <"$work/session-interface-trace.tsv" \
+  >"$work/session-interface-trace.normalized.tsv"
+if ! grep 'src/Api.ast.*dependency.session_cmi_lookup' \
+  "$work/session-interface-trace.normalized.tsv" >/dev/null || \
+  ! grep 'src/Consumer.ast.*dependency.session_cmi_lookup' \
+    "$work/session-interface-trace.normalized.tsv" >/dev/null; then
+  echo "session interface lookup was missing from the typecheck trace" >&2
+  cat "$work/session-interface-trace.normalized.tsv" >&2
+  exit 1
+fi
 if grep 'src/Consumer.ast.*dependency.search_open:Api' \
-  "$work/session-interface-trace.tsv" >/dev/null; then
+  "$work/session-interface-trace.normalized.tsv" >/dev/null; then
   echo "consumer reopened the freshly published Api CMI" >&2
   exit 1
 fi
+tr '\\' '/' <"$work/session-interface-timing.tsv" \
+  >"$work/session-interface-timing.normalized.tsv"
+tr '\\' '/' <"$work/session-interface-export.tsv" \
+  >"$work/session-interface-export.normalized.tsv"
 consumer_start=$(awk -F '\t' \
   '$1 == "implementation" && $3 == "src/Consumer.ast" {print $4; exit}' \
-  "$work/session-interface-timing.tsv")
+  "$work/session-interface-timing.normalized.tsv")
 interface_export=$(awk -F '\t' \
   '$1 == "start" && $2 == "src/Api.resi" {print $3; exit}' \
-  "$work/session-interface-export.tsv")
+  "$work/session-interface-export.normalized.tsv")
 if [ -z "$consumer_start" ] || [ -z "$interface_export" ] || \
     ! awk -v consumer="$consumer_start" -v export_time="$interface_export" \
       'BEGIN {exit !(consumer < export_time)}'; then
@@ -1739,27 +1750,28 @@ grep 'let answer = 3;' "$session_interface/src/Consumer.mjs" >/dev/null
 obstruct_file_with_directory "$session_interface/lib/ocaml/Api.cmj"
 printf 'let inc = x => x + 3\n' >"$session_interface/src/Api.res"
 if REWATCH_FROZEN_VALUES=1 \
-  REWATCH_ARTIFACT_EXPORT_LOG="$work/failed-export-timing.tsv" \
+  REWATCH_ARTIFACT_EXPORT_LOG="$(native_path "$work/failed-export-timing.tsv")" \
   "$port" build "$session_interface" \
   >"$session_interface/failed-export.log" 2>&1; then
   echo "deferred optimization export failure unexpectedly succeeded" >&2
   exit 1
 fi
-grep 'start.*src/Api.res' "$work/failed-export-timing.tsv" >/dev/null
+tr '\\' '/' <"$work/failed-export-timing.tsv" | \
+  grep 'start.*src/Api.res' >/dev/null
 remove_obstruction_directory "$session_interface/lib/ocaml/Api.cmj"
 REWATCH_FROZEN_VALUES=1 "$port" build "$session_interface"
 grep 'let answer = 4;' "$session_interface/src/Consumer.mjs" >/dev/null
 obstruct_file_with_directory "$session_interface/lib/ocaml/Api.cmi"
 printf 'let inc = x => x + 4\n' >"$session_interface/src/Api.res"
 if REWATCH_FROZEN_VALUES=1 \
-  REWATCH_ARTIFACT_EXPORT_LOG="$work/failed-interface-export-timing.tsv" \
+  REWATCH_ARTIFACT_EXPORT_LOG="$(native_path "$work/failed-interface-export-timing.tsv")" \
   "$port" build "$session_interface" \
   >"$session_interface/failed-interface-export.log" 2>&1; then
   echo "deferred interface export failure unexpectedly succeeded" >&2
   exit 1
 fi
-grep 'start.*src/Api.resi' \
-  "$work/failed-interface-export-timing.tsv" >/dev/null
+tr '\\' '/' <"$work/failed-interface-export-timing.tsv" | \
+  grep 'start.*src/Api.resi' >/dev/null
 remove_obstruction_directory "$session_interface/lib/ocaml/Api.cmi"
 REWATCH_FROZEN_VALUES=1 "$port" build "$session_interface"
 grep 'let answer = 5;' "$session_interface/src/Consumer.mjs" >/dev/null
