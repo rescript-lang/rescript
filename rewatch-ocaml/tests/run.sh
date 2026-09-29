@@ -1654,9 +1654,21 @@ test -f "$unlinked_dependency/packages/dep/lib/ocaml/marker"
 
 "$port" clean "$feature_dependencies"
 "$port" build --prod "$feature_dependencies"
-test -f "$feature_dependencies/packages/dep-union/native/UnionNative.js"
-test -f "$feature_dependencies/packages/dep-union/web/UnionWeb.js"
-test ! -f "$feature_dependencies/packages/dep-union/extra/UnionExtra.js"
+native_output="$feature_dependencies/packages/dep-union/native/UnionNative.js"
+web_output="$feature_dependencies/packages/dep-union/web/UnionWeb.js"
+extra_output="$feature_dependencies/packages/dep-union/extra/UnionExtra.js"
+if [ ! -f "$native_output" ] || [ ! -f "$web_output" ] || \
+  [ -f "$extra_output" ]; then
+  echo "production feature outputs did not match the requested dependency features" >&2
+  for output in "$native_output" "$web_output" "$extra_output"; do
+    if [ -f "$output" ]; then
+      echo "present: $output" >&2
+    else
+      echo "missing: $output" >&2
+    fi
+  done
+  exit 1
+fi
 
 REWATCH_TYPECHECK_TRACE="$work/gentype-trace.tsv" "$port" build "$gentype"
 test -f "$gentype/src/Main.js"
