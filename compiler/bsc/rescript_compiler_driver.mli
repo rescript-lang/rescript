@@ -18,6 +18,10 @@ val session_handoff_enabled : session -> bool
 val set_session_frozen_lookup_enabled : session -> bool -> unit
 val set_session_owned_ast_enabled : session -> bool -> unit
 val session_owned_ast_enabled : session -> bool
+val set_session_owned_artifacts_enabled : session -> bool -> unit
+val persist_owned_cmi : session -> path:string -> unit
+val persist_owned_cmj : session -> path:string -> unit
+val persist_owned_cmt : session -> path:string -> unit
 
 val session_frozen_lookup_enabled : session -> bool
 (** GenType projects retain classic dependency lookup while their typed output

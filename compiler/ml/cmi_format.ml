@@ -64,6 +64,14 @@ let read_cmi filename =
     (fun () -> read_cmi_channel filename ic)
     ~finally:(fun () -> close_in_noerr ic)
 
+let encode_cmi cmi =
+  let prefix =
+    Config.cmi_magic_number ^ Marshal.to_string (cmi.cmi_name, cmi.cmi_sign) []
+  in
+  let crc = Digest.string prefix in
+  let crcs = (cmi.cmi_name, Some crc) :: cmi.cmi_crcs in
+  (prefix ^ Marshal.to_string crcs [] ^ Marshal.to_string cmi.cmi_flags [], crc)
+
 let output_cmi filename oc cmi =
   (* beware: the provided signature must have been substituted for saving *)
   output_string oc Config.cmi_magic_number;
@@ -74,6 +82,14 @@ let output_cmi filename oc cmi =
   output_value oc crcs;
   output_value oc cmi.cmi_flags;
   crc
+
+let output_capture_key = Domain.DLS.new_key (fun () -> None)
+
+let with_output_capture capture action =
+  let previous = Domain.DLS.get output_capture_key in
+  Domain.DLS.set output_capture_key (Some capture);
+  Fun.protect action ~finally:(fun () ->
+      Domain.DLS.set output_capture_key previous)
 
 (* This function is also called by [save_cmt] as cmi_format is subset of
        cmt_format, so dont close the channel yet
@@ -115,11 +131,24 @@ let create_cmi ?check_exists filename (cmi : cmi_infos) =
         crc
       | _ ->
         let crcs = (cmi.cmi_name, Some crc) :: cmi.cmi_crcs in
-        let oc = open_out_bin (Compiler_request_state.resolve_path filename) in
-        output_string oc content;
-        output_value oc crcs;
-        output_value oc cmi.cmi_flags;
-        close_out oc;
+        let deferred =
+          match Domain.DLS.get output_capture_key with
+          | None -> false
+          | Some capture ->
+            let contents =
+              content ^ Marshal.to_string crcs []
+              ^ Marshal.to_string cmi.cmi_flags []
+            in
+            capture filename crc cmi contents
+        in
+        if not deferred then (
+          let oc =
+            open_out_bin (Compiler_request_state.resolve_path filename)
+          in
+          output_string oc content;
+          output_value oc crcs;
+          output_value oc cmi.cmi_flags;
+          close_out oc);
         crc)
 
 (* Error report *)

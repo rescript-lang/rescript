@@ -128,11 +128,18 @@ let view (image : frozen) : t =
   }
 
 let capture_key = Domain.DLS.new_key (fun () -> None)
+let output_capture_key = Domain.DLS.new_key (fun () -> None)
 
 let with_capture capture action =
   let previous = Domain.DLS.get capture_key in
   Domain.DLS.set capture_key (Some capture);
   Fun.protect action ~finally:(fun () -> Domain.DLS.set capture_key previous)
+
+let with_output_capture capture action =
+  let previous = Domain.DLS.get output_capture_key in
+  Domain.DLS.set output_capture_key (Some capture);
+  Fun.protect action ~finally:(fun () ->
+      Domain.DLS.set output_capture_key previous)
 
 let make ~(values : cmj_value Map_string.t) ~hoisted_exports ~effect_
     ~package_spec ~case : t =
@@ -177,11 +184,17 @@ let to_file name ~check_exists (v : t) =
   let s = Marshal.to_string v [] in
   let cur_digest = Digest.string s in
   let header = cur_digest in
-  if not (check_exists && for_sure_not_changed name header) then (
-    let oc = open_out_bin (Compiler_request_state.resolve_path name) in
-    output_string oc header;
-    output_string oc s;
-    close_out oc);
+  (if not (check_exists && for_sure_not_changed name header) then
+     let deferred =
+       match Domain.DLS.get output_capture_key with
+       | None -> false
+       | Some capture -> capture name cur_digest v (header ^ s)
+     in
+     if not deferred then (
+       let oc = open_out_bin (Compiler_request_state.resolve_path name) in
+       output_string oc header;
+       output_string oc s;
+       close_out oc));
   Option.iter
     (fun capture -> capture name cur_digest v)
     (Domain.DLS.get capture_key)

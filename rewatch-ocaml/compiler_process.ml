@@ -231,6 +231,9 @@ let publish_compiler_artifacts ?(preserve_source_mtime = false) ~artifact_dir
             Unix.utimes destination stats.st_atime stats.st_mtime
         | Required _ ->
           File_util.copy_existing_file ~ensure_parent:false source destination
+        | Optional ("cmt" | "cmti") ->
+          File_util.copy_optional_existing_file_atomic ~ensure_parent:false
+            source destination
         | Optional _ ->
           File_util.copy_optional_existing_file ~ensure_parent:false source
             destination)
@@ -586,6 +589,23 @@ let publish_immediate ?session ~preserve_source_mtime ~retain_interface
 
 let publish ?session ~retain_interface ~dependencies ~build_dir ~ocaml_dir
     ~is_local ~(config : Config.t) ~source_kind path result =
+  Option.iter
+    (fun session ->
+      let basename = Source.compiler_asset_basename config path in
+      let artifact_dir = Filename.concat build_dir (Filename.dirname path) in
+      Rescript_compiler_driver.persist_owned_cmi session
+        ~path:(Filename.concat artifact_dir (basename ^ ".cmi"));
+      Rescript_compiler_driver.persist_owned_cmj session
+        ~path:(Filename.concat artifact_dir (basename ^ ".cmj"));
+      Rescript_compiler_driver.persist_owned_cmt session
+        ~path:
+          (Filename.concat artifact_dir
+             (basename
+             ^
+             match source_kind with
+             | Source.Interface -> ".cmti"
+             | Source.Implementation -> ".cmt")))
+    session;
   (* This is the producer completion time, before its dependents can start.
      A no-CMT build uses it as the CMJ freshness marker even if CMJ bytes did
      not change and the compiler reused its old staging file. *)

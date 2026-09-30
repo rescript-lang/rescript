@@ -112,6 +112,11 @@ val with_capture : (string -> cmt_infos -> unit) -> (unit -> 'a) -> 'a
 (** Capture the typed semantic result before request state is reset. The
     captured graph is mutable and must be copied before another domain uses it. *)
 
+val with_output_capture :
+  (string -> cmt_infos -> string -> bool) -> (unit -> 'a) -> 'a
+(** Capture a complete encoded annotation before its staging write. Return
+    [true] to let the caller persist the owned bytes. *)
+
 (* Miscellaneous functions *)
 
 val read_magic_number : in_channel -> string

@@ -27,6 +27,14 @@ val output_cmi : string -> out_channel -> cmi_infos -> Digest.t
 
 val create_cmi : ?check_exists:unit -> string -> cmi_infos -> Digest.t
 
+val encode_cmi : cmi_infos -> string * Digest.t
+(** Encode the complete CMI prefix and return its interface digest. *)
+
+val with_output_capture :
+  (string -> Digest.t -> cmi_infos -> string -> bool) -> (unit -> 'a) -> 'a
+(** Capture the encoded interface before writing it. Return [true] to defer
+    the staging write to the owner of the captured bytes. *)
+
 (* read the cmi information (the magic is supposed to have already been read) *)
 val input_cmi : in_channel -> cmi_infos
 

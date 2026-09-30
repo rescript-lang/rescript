@@ -16,6 +16,9 @@ val copy_existing_file : ensure_parent:bool -> string -> string -> unit
 val copy_optional_existing_file :
   ?ensure_parent:bool -> string -> string -> unit
 
+val copy_optional_existing_file_atomic :
+  ?ensure_parent:bool -> string -> string -> unit
+
 val exists : string -> bool
 val files_equal : string -> string -> bool
 val copy_file_if_different : ?ensure_parent:bool -> string -> string -> bool

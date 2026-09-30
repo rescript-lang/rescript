@@ -1598,6 +1598,140 @@ let owned_ast_result_tests _context =
       assert_equal (Some ["C"])
         (Rescript_compiler_driver.staged_ast_dependencies session ~path:ast_path))
 
+let owned_ast_source_change_fallback_tests _context =
+  Test_support.with_temp_dir "rewatch-owned-ast-source-change-" (fun root ->
+      let session = Rescript_compiler_driver.create_session () in
+      Rescript_compiler_driver.set_session_owned_ast_enabled session true;
+      let parse name =
+        let source = name ^ ".res" in
+        let ast = name ^ ".ast" in
+        write root source "let value = 1\n";
+        expect_code 0
+          (snd
+             (run root ~extra:["-bs-ast"; "-o"; name ^ "Reference.ast"] source));
+        let reference =
+          File_util.read_file (Filename.concat root (name ^ "Reference.ast"))
+        in
+        expect_code 0
+          (snd (run ~session root ~extra:["-bs-ast"; "-o"; ast] source));
+        let path = Filename.concat root ast in
+        check
+          (not (Sys.file_exists path))
+          "the current AST is still owned before a source change";
+        (source, ast, path, reference)
+      in
+      let source, _, path, reference = parse "Before" in
+      write root source "let value = 1000\n";
+      assert_equal None
+        (Rescript_compiler_driver.publish_session_ast session ~source:path);
+      assert_equal reference (File_util.read_file path);
+      let source, ast, path, reference = parse "After" in
+      check
+        (Option.is_some
+           (Rescript_compiler_driver.publish_session_ast session ~source:path))
+        "the parser hands off its AST before the source changes";
+      write root source "let value = 1000\n";
+      expect_code 0 (snd (run ~session root ast));
+      assert_equal reference (File_util.read_file path))
+
+let owned_compiler_artifact_result_tests _context =
+  Test_support.with_temp_dir "rewatch-owned-artifacts-" (fun root ->
+      write root "A.res" "let value = 1\n";
+      expect_code 0 (snd (run root ~extra:["-bs-ast"; "-o"; "A.ast"] "A.res"));
+      let session = Rescript_compiler_driver.create_session () in
+      Rescript_compiler_driver.set_session_owned_artifacts_enabled session true;
+      expect_code 0 (snd (run ~session root "A.ast"));
+      let staged_cmi = Filename.concat root "A.cmi" in
+      let staged_cmj = Filename.concat root "A.cmj" in
+      check
+        (not (Sys.file_exists staged_cmi))
+        "owned CMI result precedes its staging write";
+      check
+        (not (Sys.file_exists staged_cmj))
+        "owned CMJ result precedes its staging write";
+      Rescript_compiler_driver.persist_owned_cmi session ~path:staged_cmi;
+      Rescript_compiler_driver.persist_owned_cmj session ~path:staged_cmj;
+      check (Sys.file_exists staged_cmi) "the owner persists the captured CMI";
+      check (Sys.file_exists staged_cmj) "the owner persists the captured CMJ";
+      let owned_bytes = File_util.read_file staged_cmi in
+      let owned_cmj_bytes = File_util.read_file staged_cmj in
+      let destination = Filename.concat root "published/A.cmi" in
+      File_util.ensure_dir (Filename.dirname destination);
+      check
+        (Rescript_compiler_driver.stage_session_cmi session ~source:staged_cmi
+           ~destination)
+        "the persisted CMI remains available to dependent requests";
+      check
+        (Rescript_compiler_driver.stage_session_cmj session ~source:staged_cmj
+           ~destination:(Filename.concat root "published/A.cmj"))
+        "the persisted CMJ remains available to dependent requests";
+      expect_code 0 (snd (run root "A.ast"));
+      assert_equal owned_bytes (File_util.read_file staged_cmi);
+      assert_equal owned_cmj_bytes (File_util.read_file staged_cmj))
+
+let owned_editor_artifact_result_tests _context =
+  Test_support.with_temp_dir "rewatch-owned-editor-artifacts-" (fun root ->
+      let session = Rescript_compiler_driver.create_session () in
+      Rescript_compiler_driver.set_session_owned_artifacts_enabled session true;
+      let check_artifact name extension source =
+        let ast = name ^ if extension = ".cmti" then ".iast" else ".ast" in
+        write root source
+          (if extension = ".cmti" then "type value = int\n"
+           else "let value = 1\n");
+        expect_code 0 (snd (run root ~extra:["-bs-ast"; "-o"; ast] source));
+        let path = Filename.concat root (name ^ extension) in
+        expect_code 0 (snd (run ~session root ast));
+        check
+          (not (Sys.file_exists path))
+          "owned editor output precedes its staging write";
+        Rescript_compiler_driver.persist_owned_cmi session
+          ~path:(Filename.concat root (name ^ ".cmi"));
+        Rescript_compiler_driver.persist_owned_cmj session
+          ~path:(Filename.concat root (name ^ ".cmj"));
+        Rescript_compiler_driver.persist_owned_cmt session ~path;
+        check (Sys.file_exists path) "the owner persists the editor artifact";
+        let owned_bytes = File_util.read_file path in
+        expect_code 0 (snd (run root ast));
+        assert_equal
+          ~printer:(fun _ -> "<binary editor artifact>")
+          owned_bytes (File_util.read_file path)
+      in
+      check_artifact "Implementation" ".cmt" "Implementation.res";
+      check_artifact "Interface" ".cmti" "Interface.resi";
+      write root "Broken.res" "let value: string = 1\n";
+      expect_code 0
+        (snd (run root ~extra:["-bs-ast"; "-o"; "Broken.ast"] "Broken.res"));
+      expect_code 2 (snd (run ~session root "Broken.ast"));
+      let partial = Filename.concat root "Broken.cmt" in
+      check (Sys.file_exists partial)
+        "failed requests retain their partial editor artifact";
+      (match (Cmt_format.read_cmt partial).Cmt_format.cmt_annots with
+      | Partial_implementation _ -> ()
+      | _ -> assert_failure "failed request should publish partial annotations");
+      write root "Stale.res" "let value = 1\n";
+      expect_code 0
+        (snd (run root ~extra:["-bs-ast"; "-o"; "Stale.ast"] "Stale.res"));
+      expect_code 0 (snd (run ~session root "Stale.ast"));
+      write root "Stale.res" "let value = 1000\n";
+      [
+        (".cmi", Rescript_compiler_driver.persist_owned_cmi);
+        (".cmj", Rescript_compiler_driver.persist_owned_cmj);
+        (".cmt", Rescript_compiler_driver.persist_owned_cmt);
+      ]
+      |> List.iter (fun (extension, persist) ->
+          let path = Filename.concat root ("Stale" ^ extension) in
+          let stale_is_rejected =
+            try
+              persist session ~path;
+              false
+            with Failure _ -> true
+          in
+          check stale_is_rejected
+            "changed sources reject owned artifact publication";
+          check
+            (not (Sys.file_exists path))
+            "stale owned artifact bytes do not reach disk"))
+
 let package_and_load_path_isolation_tests _context =
   Test_support.with_temp_dir "rewatch-driver-load-roots-" (fun root ->
       let first = Filename.concat root "first" in
@@ -2694,6 +2828,11 @@ let tests =
          "typed_request_options" >:: typed_request_options_tests;
          "session_policy_isolation" >:: session_policy_isolation_tests;
          "owned_ast_result" >:: owned_ast_result_tests;
+         "owned_ast_source_change_fallback"
+         >:: owned_ast_source_change_fallback_tests;
+         "owned_compiler_artifact_result"
+         >:: owned_compiler_artifact_result_tests;
+         "owned_editor_artifact_result" >:: owned_editor_artifact_result_tests;
          "package_and_load_path_isolation"
          >:: package_and_load_path_isolation_tests;
          "generated_name_isolation" >:: generated_name_isolation_tests;

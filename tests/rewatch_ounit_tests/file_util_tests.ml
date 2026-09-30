@@ -173,6 +173,35 @@ let tests =
         |> List.for_all (fun name ->
             not (String.starts_with ~prefix:".rewatch-write-" name)))
         "successful atomic writes should not leave temporary files";
+      let atomic_copy = Filename.concat root "atomic-copy" in
+      File_util.copy_optional_existing_file_atomic first atomic_copy;
+      check
+        (File_util.read_file atomic_copy = "same")
+        "atomic copies publish the complete source";
+      if not Sys.win32 then
+        check
+          ((Unix.stat atomic_copy).Unix.st_perm = (Unix.stat first).Unix.st_perm)
+          "new atomic copies retain source permissions";
+      let failed_copy =
+        try
+          File_util.copy_optional_existing_file_atomic ~ensure_parent:false root
+            atomic_copy;
+          false
+        with Sys_error _ | Unix.Unix_error _ -> true
+      in
+      check failed_copy "atomic copies report source read errors";
+      check
+        (File_util.read_file atomic_copy = "same")
+        "failed atomic copies preserve the previous destination";
+      check
+        (Sys.readdir root |> Array.to_list
+        |> List.for_all (fun name ->
+            not (String.starts_with ~prefix:".rewatch-copy-" name)))
+        "failed atomic copies clean up temporary files";
+      File_util.copy_optional_existing_file_atomic missing atomic_copy;
+      check
+        (not (Sys.file_exists atomic_copy))
+        "missing optional editor artifacts remove old published copies";
       if (not Sys.win32) && Sys.file_exists "/dev/full" then
         check
           (try

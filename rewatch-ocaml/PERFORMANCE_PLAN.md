@@ -130,10 +130,29 @@ editor-only work, including when GenType is enabled.
    suite, focused OUnit (111 tests), and `make checkformat` passed afterward.
    Next: checkpoint 8, owned CMI/CMJ and persistence.
 
-8. [ ] **Owned CMI/CMJ and persistence.** Migrate CMI, CMJ, then optional editor
+8. [x] **Owned CMI/CMJ and persistence.** Migrate CMI, CMJ, then optional editor
    outputs. Snapshot mutable graphs before async serialization; serialize once;
    bound retained heap memory. Preserve fingerprints, freshness, partial publication,
    hook ordering, failure recovery, atomic editor files, and eviction/exit disk fallback.
+
+   Record: Captured serialized CMI, CMJ, and optional complete CMT/CMTI byte
+   images in the embedded compiler session; publication validates source and
+   request generation before staging. A 32 MiB retained-image budget falls
+   back to immediate disk persistence. Partial annotations remain available
+   on failed requests; editor staging and published copies use atomic
+   replacement. Updated the compiler formats and driver, OCaml Rewatch
+   publication and file utilities, focused parity and failure tests, and the
+   Rewatch guide. The [five-run gates](bench/checkpoint-8-2026-09-30.md)
+   passed with identical compiler work, complete file sets, and artifact
+   bytes both with and without annotations. Clean medians were 3,155/3,228 ms
+   with annotations unset and 4,700/4,720 ms with them enabled; sampled peak
+   RSS was 197,892/208,852 and 253,916/259,152 KiB. GenType clean/edit/
+   restart output and error diagnostics matched in unset, `0`, and `1` modes.
+   A final AST source-change fallback closed an intermittent watch race; the
+   final binary passed one-run full artifact comparisons in both annotation
+   modes. `make test-all` passed before that fallback; final `make test`, two
+   OCaml Rewatch port runs, focused OUnit (114 tests), and `make checkformat`
+   passed. Next: checkpoint 9, immutable imported types.
 
 9. [ ] **Immutable imported types.** Measure copying/materialization; migrate
    values, constructors, records, modules, then substitution/inclusion as separate

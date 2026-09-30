@@ -159,6 +159,46 @@ let copy_optional_existing_file ?(ensure_parent = true) source destination =
     try Unix.unlink destination
     with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ())
 
+let copy_existing_file_atomic ~ensure_parent source destination =
+  if ensure_parent then ensure_dir (Filename.dirname destination);
+  let signals = Signal_restore.create ~defer:true in
+  let temporary = ref None in
+  let remove_temporary path =
+    try Unix.unlink path with Sys_error _ | Unix.Unix_error _ -> ()
+  in
+  Fun.protect
+    ~finally:(fun () -> Option.iter remove_temporary !temporary)
+    (fun () ->
+      let candidate =
+        Signal_restore.protect signals (fun () ->
+            let candidate =
+              Filename.temp_file
+                ~temp_dir:(Filename.dirname destination)
+                ".rewatch-copy-" ".tmp"
+            in
+            temporary := Some candidate;
+            candidate)
+      in
+      let permissions =
+        match Unix.stat destination with
+        | metadata -> metadata.Unix.st_perm
+        | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+          (Unix.stat source).Unix.st_perm
+      in
+      Unix.chmod candidate permissions;
+      copy_existing_file ~ensure_parent:false source candidate;
+      let publish_signals = Signal_restore.create ~defer:true in
+      Signal_restore.protect publish_signals (fun () ->
+          Sys.rename candidate destination;
+          temporary := None))
+
+let copy_optional_existing_file_atomic ?(ensure_parent = true) source
+    destination =
+  try copy_existing_file_atomic ~ensure_parent source destination
+  with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> (
+    try Unix.unlink destination
+    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ())
+
 let stat_opt path =
   try Some (Unix.stat path)
   with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None

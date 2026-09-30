@@ -40,6 +40,8 @@ type t = {
 
 let create_with_compiler_session ~compiler_session ~warning_state =
   Rescript_compiler_driver.set_session_owned_ast_enabled compiler_session true;
+  Rescript_compiler_driver.set_session_owned_artifacts_enabled compiler_session
+    true;
   {
     compiler_session;
     global_modules = Hashtbl.create 64;

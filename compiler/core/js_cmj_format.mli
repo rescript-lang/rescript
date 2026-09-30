@@ -89,6 +89,11 @@ val view : frozen -> t
 
 val with_capture : (string -> Digest.t -> t -> unit) -> (unit -> 'a) -> 'a
 
+val with_output_capture :
+  (string -> Digest.t -> t -> string -> bool) -> (unit -> 'a) -> 'a
+(** Capture the encoded optimization artifact before writing it. Return
+    [true] to let the caller persist the bytes. *)
+
 val make :
   values:cmj_value Map_string.t ->
   hoisted_exports:hoisted_export list ->

@@ -598,6 +598,33 @@ type published_fingerprint = {
   fingerprint: Digest.t;
 }
 type 'a staged_artifact = {stats: Unix.stats; value: 'a}
+type owned_cmi = {
+  input_path: string;
+  source_path: string;
+  generation: int;
+  source_stats: Unix.stats;
+  crc: Digest.t;
+  cmi: Cmi_format.cmi_infos;
+  contents: string;
+}
+type owned_cmj = {
+  input_path: string;
+  source_path: string;
+  generation: int;
+  source_stats: Unix.stats;
+  fingerprint: Digest.t;
+  cmj: Js_cmj_format.t;
+  contents: string;
+}
+type owned_cmt = {
+  input_path: string;
+  source_path: string;
+  generation: int;
+  source_stats: Unix.stats;
+  semantic: Cmt_format.cmt_infos;
+  contents: string;
+}
+
 type staged_semantic = {
   stats: Unix.stats;
   value: Cmt_format.cmt_infos;
@@ -626,13 +653,17 @@ type session = {
   handoff_enabled: bool Atomic.t;
   frozen_lookup_enabled: bool Atomic.t;
   owned_ast_enabled: bool Atomic.t;
+  owned_artifacts_enabled: bool Atomic.t;
   use_frozen_for_compile: bool Atomic.t;
   options_lock: Mutex.t;
   option_templates: (string * string list, prepared_options) Hashtbl.t;
   staging_lock: Mutex.t;
   staged_cmis:
     (string, (Digest.t * Cmi_format.cmi_infos) staged_artifact) Hashtbl.t;
+  owned_cmis: (string, owned_cmi) Hashtbl.t;
   staged_cmjs: (string, (Digest.t * Js_cmj_format.t) staged_artifact) Hashtbl.t;
+  owned_cmjs: (string, owned_cmj) Hashtbl.t;
+  owned_cmts: (string, owned_cmt) Hashtbl.t;
   published_cmjs: (string, published_cmj) Hashtbl.t;
   cmi_fingerprints: (string, published_fingerprint) Hashtbl.t;
   cmj_fingerprints: (string, published_fingerprint) Hashtbl.t;
@@ -653,18 +684,40 @@ type session = {
   mutable semantic_generation: int;
 }
 
+let max_owned_artifact_bytes = 32 * 1024 * 1024
+
+let owned_artifact_bytes session =
+  let bytes = ref 0 in
+  Hashtbl.iter
+    (fun _ (entry : owned_cmi) ->
+      bytes := !bytes + String.length entry.contents)
+    session.owned_cmis;
+  Hashtbl.iter
+    (fun _ (entry : owned_cmj) ->
+      bytes := !bytes + String.length entry.contents)
+    session.owned_cmjs;
+  Hashtbl.iter
+    (fun _ (entry : owned_cmt) ->
+      bytes := !bytes + String.length entry.contents)
+    session.owned_cmts;
+  !bytes
+
 let create_session () =
   {
     dependencies = Env.create_dependency_cache ();
     handoff_enabled = Atomic.make true;
     frozen_lookup_enabled = Atomic.make true;
     owned_ast_enabled = Atomic.make false;
+    owned_artifacts_enabled = Atomic.make false;
     use_frozen_for_compile = Atomic.make true;
     options_lock = Mutex.create ();
     option_templates = Hashtbl.create 32;
     staging_lock = Mutex.create ();
     staged_cmis = Hashtbl.create 32;
+    owned_cmis = Hashtbl.create 32;
     staged_cmjs = Hashtbl.create 32;
+    owned_cmjs = Hashtbl.create 32;
+    owned_cmts = Hashtbl.create 32;
     published_cmjs = Hashtbl.create 64;
     cmi_fingerprints = Hashtbl.create 64;
     cmj_fingerprints = Hashtbl.create 64;
@@ -696,7 +749,10 @@ let invalidate_session_policy_caches session =
       Hashtbl.clear session.staged_generated_outputs;
       Hashtbl.clear session.staged_request_files;
       Hashtbl.clear session.staged_cmis;
+      Hashtbl.clear session.owned_cmis;
       Hashtbl.clear session.staged_cmjs;
+      Hashtbl.clear session.owned_cmjs;
+      Hashtbl.clear session.owned_cmts;
       Hashtbl.clear session.published_cmjs;
       Hashtbl.clear session.cmi_fingerprints;
       Hashtbl.clear session.cmj_fingerprints;
@@ -726,6 +782,13 @@ let set_session_frozen_lookup_enabled session enabled =
 let set_session_owned_ast_enabled session enabled =
   if Atomic.exchange session.owned_ast_enabled enabled <> enabled then
     invalidate_session_policy_caches session
+
+let set_session_owned_artifacts_enabled session enabled =
+  if Atomic.exchange session.owned_artifacts_enabled enabled <> enabled then
+    invalidate_session_policy_caches session
+
+let session_owned_artifacts_enabled session =
+  Atomic.get session.owned_artifacts_enabled
 
 let session_owned_ast_enabled session =
   Atomic.get session.owned_ast_enabled
@@ -769,7 +832,7 @@ let lookup_session_cmj session name filename =
       else None
     with Sys_error _ | Unix.Unix_error _ -> None)
 
-let valid_session_ast session ~path entry =
+let valid_session_ast session ~path (entry : session_ast) =
   Hashtbl.find_opt session.request_generations entry.input_path
   = Some entry.generation
   &&
@@ -780,6 +843,20 @@ let valid_session_ast session ~path entry =
       | None -> true
       | Some stats -> same_file_stats (Unix.stat path) stats
     with Sys_error _ | Unix.Unix_error _ -> false
+
+let persist_stale_ast_for_disk_fallback session ~path (entry : session_ast) =
+  if
+    Hashtbl.find_opt session.request_generations entry.input_path
+    = Some entry.generation
+  then
+    Option.iter
+      (fun contents ->
+        (* The source changed after parsing. Keep the captured AST available
+           to the disk reader while the watcher schedules a fresh parse. *)
+        Misc.output_to_file_via_temporary ~mode:[Open_binary] path
+          (fun _ output -> output_string output contents);
+        Unix.utimes path entry.parsed_at entry.parsed_at)
+      entry.contents
 
 let staged_ast_dependencies session ~path =
   Mutex.lock session.staging_lock;
@@ -801,7 +878,9 @@ let take_session_ast session filename =
         Hashtbl.remove session.published_asts path;
         Option.bind entry (fun entry ->
             if valid_session_ast session ~path entry then Some entry.result
-            else None))
+            else (
+              persist_stale_ast_for_disk_fallback session ~path entry;
+              None)))
       ~finally:(fun () -> Mutex.unlock session.staging_lock)
   in
   entry
@@ -1104,7 +1183,20 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
         List.iter
           (fun path ->
             Hashtbl.remove session.staged_cmis path;
+            (match Hashtbl.find_opt session.owned_cmis path with
+            | Some entry when entry.input_path = input_path ->
+              Hashtbl.remove session.owned_cmis path
+            | Some _ -> ()
+            | None -> ());
             Hashtbl.remove session.staged_cmjs path;
+            (match Hashtbl.find_opt session.owned_cmjs path with
+            | Some entry when entry.input_path = input_path ->
+              Hashtbl.remove session.owned_cmjs path
+            | Some _ | None -> ());
+            (match Hashtbl.find_opt session.owned_cmts path with
+            | Some entry when entry.input_path = input_path ->
+              Hashtbl.remove session.owned_cmts path
+            | Some _ | None -> ());
             Hashtbl.remove session.staged_asts path;
             remove_staged_semantic session path)
           (Hashtbl.find_opt session.staged_request_files input_path
@@ -1127,6 +1219,26 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
       let cmj_enabled =
         handoff_enabled && Sys.getenv_opt "REWATCH_SESSION_CMJ" <> Some "0"
       in
+      let owned_cmi_enabled =
+        cmi_enabled && frozen_lookup_enabled
+        && session_owned_artifacts_enabled session
+        && Sys.getenv_opt "REWATCH_OWNED_CMI" <> Some "0"
+        && (Filename.check_suffix input ".ast"
+           || Filename.check_suffix input ".iast")
+      in
+      let owned_cmj_enabled =
+        cmj_enabled && frozen_lookup_enabled
+        && session_owned_artifacts_enabled session
+        && Sys.getenv_opt "REWATCH_OWNED_CMJ" <> Some "0"
+        && Filename.check_suffix input ".ast"
+      in
+      let owned_cmt_enabled =
+        frozen_lookup_enabled
+        && session_owned_artifacts_enabled session
+        && Sys.getenv_opt "REWATCH_OWNED_CMT" <> Some "0"
+        && (Filename.check_suffix input ".ast"
+           || Filename.check_suffix input ".iast")
+      in
       (* Classic requests retain the disk AST roundtrip, including the sharing
          shape serialized in binary annotations. *)
       let ast_enabled =
@@ -1141,9 +1253,12 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
         && Atomic.get session.use_frozen_for_compile
       in
       let compiled_cmi = ref None in
+      let owned_cmi = ref None in
       let compiled_cmj = ref None in
+      let owned_cmj = ref None in
       let parsed_ast = ref None in
       let semantic = ref None in
+      let owned_cmt = ref None in
       let generated_outputs = ref [] in
       let run () =
         let use_frozen =
@@ -1164,6 +1279,24 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
         else run ()
       in
       let run () =
+        if owned_cmi_enabled then
+          Cmi_format.with_output_capture
+            (fun filename crc cmi contents ->
+              if String.length contents > 1024 * 1024 then false
+              else (
+                owned_cmi :=
+                  Some
+                    ( Compiler_request_state.resolve_path filename,
+                      Compiler_request_state.resolve_path
+                        (Location.get_input_name ()),
+                      crc,
+                      cmi,
+                      contents );
+                true))
+            run
+        else run ()
+      in
+      let run () =
         if cmj_enabled then
           Js_cmj_format.with_capture
             (fun filename fingerprint cmj ->
@@ -1172,6 +1305,24 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
                   ( Compiler_request_state.resolve_path filename,
                     fingerprint,
                     cmj ))
+            run
+        else run ()
+      in
+      let run () =
+        if owned_cmj_enabled then
+          Js_cmj_format.with_output_capture
+            (fun filename fingerprint cmj contents ->
+              if String.length contents > 1024 * 1024 then false
+              else (
+                owned_cmj :=
+                  Some
+                    ( Compiler_request_state.resolve_path filename,
+                      Compiler_request_state.resolve_path
+                        (Location.get_input_name ()),
+                      fingerprint,
+                      cmj,
+                      contents );
+                true))
             run
         else run ()
       in
@@ -1198,6 +1349,29 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
             run
       in
       let run () =
+        if owned_cmt_enabled then
+          Cmt_format.with_output_capture
+            (fun filename cmt contents ->
+              match cmt.Cmt_format.cmt_annots with
+              | Partial_implementation _ | Partial_interface _ ->
+                owned_cmt := None;
+                false
+              | Implementation _ | Interface _ | Packed _ -> (
+                match cmt.cmt_sourcefile with
+                | None -> false
+                | Some _ when String.length contents > 4 * 1024 * 1024 -> false
+                | Some source_path ->
+                  owned_cmt :=
+                    Some
+                      ( Compiler_request_state.resolve_path filename,
+                        Compiler_request_state.resolve_path source_path,
+                        cmt,
+                        contents );
+                  true))
+            run
+        else run ()
+      in
+      let run () =
         Gentype_main.with_generated_output_capture
           (fun filename ->
             generated_outputs :=
@@ -1220,8 +1394,70 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
           run
       in
       (match result.exit_code with
-      | code when code <> 0 -> ()
+      | code when code <> 0 ->
+        Option.iter
+          (fun (filename, _, _, contents) ->
+            Misc.output_to_file_via_temporary ~mode:[Open_binary] filename
+              (fun _ output -> output_string output contents))
+          !owned_cmt
       | _ ->
+        let owned_cmi =
+          Option.bind !owned_cmi
+            (fun (filename, source_path, crc, cmi, contents) ->
+              try
+                Some
+                  ( filename,
+                    {
+                      input_path;
+                      source_path;
+                      generation;
+                      source_stats = Unix.stat source_path;
+                      crc;
+                      cmi;
+                      contents;
+                    } )
+              with Sys_error _ | Unix.Unix_error _ ->
+                Ext_io.write_file filename contents;
+                None)
+        in
+        let owned_cmj =
+          Option.bind !owned_cmj
+            (fun (filename, source_path, fingerprint, cmj, contents) ->
+              try
+                Some
+                  ( filename,
+                    {
+                      input_path;
+                      source_path;
+                      generation;
+                      source_stats = Unix.stat source_path;
+                      fingerprint;
+                      cmj;
+                      contents;
+                    } )
+              with Sys_error _ | Unix.Unix_error _ ->
+                Ext_io.write_file filename contents;
+                None)
+        in
+        let owned_cmt =
+          Option.bind !owned_cmt
+            (fun (filename, source_path, semantic, contents) ->
+              try
+                Some
+                  ( filename,
+                    {
+                      input_path;
+                      source_path;
+                      generation;
+                      source_stats = Unix.stat source_path;
+                      semantic;
+                      contents;
+                    } )
+              with Sys_error _ | Unix.Unix_error _ ->
+                Misc.output_to_file_via_temporary ~mode:[Open_binary] filename
+                  (fun _ output -> output_string output contents);
+                None)
+        in
         let parsed_ast =
           Option.bind !parsed_ast (fun (filename, ast) ->
               try
@@ -1260,6 +1496,16 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
                   Hashtbl.replace table filename {stats; value}
                 with Sys_error _ | Unix.Unix_error _ -> ()
               in
+              let retain_owned table filename entry ~size ~fallback =
+                (* Bound byte images held across completed requests. When the
+                   budget is full, persist this request before handoff. *)
+                Hashtbl.remove table filename;
+                if
+                  owned_artifact_bytes session + size entry
+                  <= max_owned_artifact_bytes
+                then Hashtbl.replace table filename entry
+                else fallback ()
+              in
               if
                 Option.is_some !compiled_cmi
                 || Option.is_some !compiled_cmj
@@ -1274,9 +1520,30 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
                   stage session.staged_cmis filename (crc, cmi))
                 !compiled_cmi;
               Option.iter
+                (fun (filename, owned) ->
+                  record filename;
+                  retain_owned session.owned_cmis filename owned
+                    ~size:(fun (entry : owned_cmi) ->
+                      String.length entry.contents)
+                    ~fallback:(fun () ->
+                      Ext_io.write_file filename owned.contents;
+                      stage session.staged_cmis filename (owned.crc, owned.cmi)))
+                owned_cmi;
+              Option.iter
                 (fun (filename, fingerprint, cmj) ->
                   stage session.staged_cmjs filename (fingerprint, cmj))
                 !compiled_cmj;
+              Option.iter
+                (fun (filename, owned) ->
+                  record filename;
+                  retain_owned session.owned_cmjs filename owned
+                    ~size:(fun (entry : owned_cmj) ->
+                      String.length entry.contents)
+                    ~fallback:(fun () ->
+                      Ext_io.write_file filename owned.contents;
+                      stage session.staged_cmjs filename
+                        (owned.fingerprint, owned.cmj)))
+                owned_cmj;
               Option.iter
                 (fun (filename, ast) ->
                   record filename;
@@ -1286,9 +1553,88 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
                 (fun (filename, cmt) ->
                   if stage_semantic session filename cmt then record filename)
                 !semantic;
+              Option.iter
+                (fun (filename, owned) ->
+                  record filename;
+                  retain_owned session.owned_cmts filename owned
+                    ~size:(fun (entry : owned_cmt) ->
+                      String.length entry.contents)
+                    ~fallback:(fun () ->
+                      Misc.output_to_file_via_temporary ~mode:[Open_binary]
+                        filename (fun _ output ->
+                          output_string output owned.contents);
+                      ignore (stage_semantic session filename owned.semantic)))
+                owned_cmt;
               Hashtbl.replace session.staged_request_files input_path !files))
           ~finally:(fun () -> Mutex.unlock session.staging_lock));
       result)
+
+let valid_owned_source session ~input_path ~generation ~source_path
+    ~source_stats =
+  Hashtbl.find_opt session.request_generations input_path = Some generation
+  &&
+    try same_file_stats (Unix.stat source_path) source_stats
+    with Sys_error _ | Unix.Unix_error _ -> false
+
+let persist_owned_cmi session ~path =
+  Mutex.lock session.staging_lock;
+  Fun.protect
+    (fun () ->
+      let owned = Hashtbl.find_opt session.owned_cmis path in
+      Option.iter
+        (fun (entry : owned_cmi) ->
+          if
+            not
+              (valid_owned_source session ~input_path:entry.input_path
+                 ~generation:entry.generation ~source_path:entry.source_path
+                 ~source_stats:entry.source_stats)
+          then failwith ("stale owned CMI: " ^ path);
+          Ext_io.write_file path entry.contents;
+          Hashtbl.replace session.staged_cmis path
+            {stats = Unix.stat path; value = (entry.crc, entry.cmi)};
+          Hashtbl.remove session.owned_cmis path)
+        owned)
+    ~finally:(fun () -> Mutex.unlock session.staging_lock)
+
+let persist_owned_cmj session ~path =
+  Mutex.lock session.staging_lock;
+  Fun.protect
+    (fun () ->
+      let owned = Hashtbl.find_opt session.owned_cmjs path in
+      Option.iter
+        (fun (entry : owned_cmj) ->
+          if
+            not
+              (valid_owned_source session ~input_path:entry.input_path
+                 ~generation:entry.generation ~source_path:entry.source_path
+                 ~source_stats:entry.source_stats)
+          then failwith ("stale owned CMJ: " ^ path);
+          Ext_io.write_file path entry.contents;
+          Hashtbl.replace session.staged_cmjs path
+            {stats = Unix.stat path; value = (entry.fingerprint, entry.cmj)};
+          Hashtbl.remove session.owned_cmjs path)
+        owned)
+    ~finally:(fun () -> Mutex.unlock session.staging_lock)
+
+let persist_owned_cmt session ~path =
+  Mutex.lock session.staging_lock;
+  Fun.protect
+    (fun () ->
+      let owned = Hashtbl.find_opt session.owned_cmts path in
+      Option.iter
+        (fun (entry : owned_cmt) ->
+          if
+            not
+              (valid_owned_source session ~input_path:entry.input_path
+                 ~generation:entry.generation ~source_path:entry.source_path
+                 ~source_stats:entry.source_stats)
+          then failwith ("stale owned CMT: " ^ path);
+          Misc.output_to_file_via_temporary ~mode:[Open_binary] path
+            (fun _ output -> output_string output entry.contents);
+          ignore (stage_semantic session path entry.semantic);
+          Hashtbl.remove session.owned_cmts path)
+        owned)
+    ~finally:(fun () -> Mutex.unlock session.staging_lock)
 
 let validated_stage source (staged : 'a staged_artifact) =
   try
@@ -1494,7 +1840,9 @@ let publish_session_ast session ~source =
       let staged = Hashtbl.find_opt session.staged_asts source in
       Hashtbl.remove session.staged_asts source;
       Option.bind staged (fun entry ->
-          if not (valid_session_ast session ~path:source entry) then None
+          if not (valid_session_ast session ~path:source entry) then (
+            persist_stale_ast_for_disk_fallback session ~path:source entry;
+            None)
           else (
             if Hashtbl.length session.published_asts >= 2048 then
               Hashtbl.clear session.published_asts;

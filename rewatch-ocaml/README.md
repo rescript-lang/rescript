@@ -164,9 +164,21 @@ session before writing an AST file. The export domain writes the serialized
 staging file and persistent cache copy while compilation proceeds. Source
 identity and request generation guard the handoff; after persistence, the
 staging file identity is checked too. A restarted build reads the persistent
-AST cache. GenType's classic lookup keeps the original disk AST path. Set
+AST cache. If the source changes before staging finishes, the captured AST is
+written for the disk reader while the watcher schedules a fresh parse.
+GenType's classic lookup keeps the original disk AST path. Set
 `REWATCH_OWNED_AST=0` to use synchronous staging writes, or
 `REWATCH_ASYNC_AST_EXPORT=0` to finish exports before compilation.
+Frozen compiler requests also hand serialized CMI and CMJ byte images to the
+session before staging writes. With editor annotations enabled, complete CMT
+and CMTI images follow the same path; partial annotations are written during
+the request so errors retain them. The publisher checks source identity and
+request generation before writing each image. Retained images have a 32 MiB
+session budget; a full budget writes the next result before handoff. Editor
+files use atomic replacement in staging and published directories. Disk files
+remain available for restarted builds and session cache misses. Set
+`REWATCH_OWNED_CMI=0`, `REWATCH_OWNED_CMJ=0`, or `REWATCH_OWNED_CMT=0` to
+disable the corresponding handoff.
 OCaml Rewatch omits CMT and CMTI binary annotations by default, including in
 GenType packages. GenType keeps request-owned typed results and `.gts` inputs;
 an interface summary also retains the semantic information needed when its
