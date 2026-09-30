@@ -37,3 +37,10 @@ val reset : unit -> unit
 val with_fresh : (unit -> 'a) -> 'a
 (** Use fresh package/output configuration for one compiler request on this
     domain, restoring the previous configuration even when it fails. *)
+
+type snapshot
+val snapshot : unit -> snapshot
+
+val install_copy : snapshot -> unit
+(** Package/output specifications are immutable; request-owned mutable state
+    still receives a separate record. *)

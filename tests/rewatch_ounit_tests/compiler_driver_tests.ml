@@ -1227,6 +1227,83 @@ let state_boundary_tests _context =
         && !(Gentype_config.module_flag ()) = None)
         "JSX, experimental, and GenType state is restored after the request")
 
+let typed_request_options_tests _context =
+  Test_support.with_temp_dir "rewatch-typed-options-" (fun root ->
+      let warning_source =
+        "let rec notActuallyRecursive = () => 42\n\n\
+         let answer = notActuallyRecursive()\n"
+      in
+      write root "Override.res"
+        ("@@config({flags: [\"-warn-error\", \"+39\"]})\n" ^ warning_source);
+      write root "Plain.res" warning_source;
+      let session = Rescript_compiler_driver.create_session () in
+      let common =
+        [
+          "-warn-error";
+          "-39";
+          "-bs-source-map";
+          "linked";
+          "-bs-source-map";
+          "false";
+        ]
+      in
+      let compile ?session ?(extra = []) input =
+        run ?session root ~extra:(common @ extra) input
+      in
+      let _, overridden = compile ~session "Override.res" in
+      expect_code 2 overridden;
+      let plain_args, plain = compile ~session "Plain.res" in
+      expect_code 0 plain;
+      check
+        (Test_support.contains_text plain.stderr "Warning number 39")
+        "source warning override does not mutate the cached options";
+      check
+        (not (Sys.file_exists (Filename.concat root "Plain.js.map")))
+        "the last source-map option wins";
+      let cmt = Cmt_format.read_cmt (Filename.concat root "Plain.cmt") in
+      assert_equal
+        (("bsc" :: plain_args) @ ["Plain.res"])
+        (Array.to_list cmt.cmt_args);
+      let session_js = File_util.read_file (Filename.concat root "Plain.js") in
+      let _, direct = compile "Plain.res" in
+      expect_code 0 direct;
+      assert_equal plain.stderr direct.stderr;
+      assert_equal session_js
+        (File_util.read_file (Filename.concat root "Plain.js"));
+      let _, linked =
+        compile ~session ~extra:["-bs-source-map"; "linked"] "Plain.res"
+      in
+      expect_code 0 linked;
+      check
+        (Sys.file_exists (Filename.concat root "Plain.js.map"))
+        "a later option overrides the reusable configuration";
+      let _, overridden_again = compile ~session "Override.res" in
+      expect_code 2 overridden_again;
+      let _, invalid =
+        compile ~session ~extra:["-unknown-typed-option"] "Plain.res"
+      in
+      expect_code 2 invalid;
+      check
+        (Test_support.contains_text invalid.stderr
+           "Unknown option \"-unknown-typed-option\"")
+        "invalid options preserve standalone diagnostics";
+      let _, version = compile ~session ~extra:["-version"] "Plain.res" in
+      expect_code 0 version;
+      check
+        (Test_support.contains_text version.stdout "ReScript")
+        "effectful version requests retain standalone dispatch";
+      let parallel_session = Rescript_compiler_driver.create_session () in
+      let left =
+        Domain.spawn (fun () ->
+            snd (compile ~session:parallel_session "Override.res"))
+      in
+      let right =
+        Domain.spawn (fun () ->
+            snd (compile ~session:parallel_session "Plain.res"))
+      in
+      expect_code 2 (Domain.join left);
+      expect_code 0 (Domain.join right))
+
 let package_and_load_path_isolation_tests _context =
   Test_support.with_temp_dir "rewatch-driver-load-roots-" (fun root ->
       let first = Filename.concat root "first" in
@@ -2315,6 +2392,7 @@ let tests =
          "ppx_recovery" >:: ppx_recovery_tests;
          "control_flow_and_output" >:: control_flow_and_output_tests;
          "state_boundary" >:: state_boundary_tests;
+         "typed_request_options" >:: typed_request_options_tests;
          "package_and_load_path_isolation"
          >:: package_and_load_path_isolation_tests;
          "generated_name_isolation" >:: generated_name_isolation_tests;

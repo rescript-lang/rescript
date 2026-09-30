@@ -101,6 +101,12 @@ val backup : unit -> state
 
 val restore : state -> unit
 
+type snapshot
+val snapshot : unit -> snapshot
+
+val install_copy : snapshot -> unit
+(** Clone warning policy arrays for a request. Diagnostic counters stay fresh. *)
+
 (* Isolate warning settings and counters for one compiler request. *)
 val with_fresh : (unit -> 'a) -> 'a
 

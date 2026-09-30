@@ -32,4 +32,8 @@ let enable_from_string (s : string) =
 
 let reset () = enabled_features () := Feature_set.empty
 
+type snapshot = Feature_set.t
+let snapshot () = !(enabled_features ())
+let install_copy snapshot = enabled_features () := snapshot
+
 let is_enabled (f : feature) = Feature_set.mem f !(enabled_features ())

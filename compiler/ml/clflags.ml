@@ -74,6 +74,46 @@ let create () =
 let key = Domain.DLS.new_key create
 let current () = Domain.DLS.get key
 
+type snapshot = t
+
+let copy state =
+  {
+    output_name = ref !(state.output_name);
+    include_dirs = ref !(state.include_dirs);
+    debug = ref !(state.debug);
+    fast = ref !(state.fast);
+    nopervasives = ref !(state.nopervasives);
+    preprocessor = ref !(state.preprocessor);
+    all_ppx = ref !(state.all_ppx);
+    annotations = ref !(state.annotations);
+    binary_annotations = ref !(state.binary_annotations);
+    noassert = ref !(state.noassert);
+    verbose = ref !(state.verbose);
+    open_modules = ref !(state.open_modules);
+    real_paths = ref !(state.real_paths);
+    applicative_functors = ref !(state.applicative_functors);
+    error_size = ref !(state.error_size);
+    transparent_modules = ref !(state.transparent_modules);
+    dump_source = ref !(state.dump_source);
+    dump_parsetree = ref !(state.dump_parsetree);
+    dump_typedtree = ref !(state.dump_typedtree);
+    dump_rawlambda = ref !(state.dump_rawlambda);
+    only_parse = ref !(state.only_parse);
+    editor_mode = ref !(state.editor_mode);
+    ignore_parse_errors = ref !(state.ignore_parse_errors);
+    dont_write_files = ref !(state.dont_write_files);
+    keep_locs = ref !(state.keep_locs);
+    color = ref !(state.color);
+    assume_no_mli = ref !(state.assume_no_mli);
+    dont_record_crc_unit = ref !(state.dont_record_crc_unit);
+    bs_gentype = ref !(state.bs_gentype);
+    no_assert_false = ref !(state.no_assert_false);
+    dump_location = ref !(state.dump_location);
+  }
+
+let snapshot () = copy (current ())
+let install_copy snapshot = Domain.DLS.set key (copy snapshot)
+
 let with_fresh action =
   let previous = current () in
   Domain.DLS.set key (create ());

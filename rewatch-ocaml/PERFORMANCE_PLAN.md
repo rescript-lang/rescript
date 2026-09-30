@@ -21,9 +21,24 @@ editor-only work, including when GenType is enabled.
    with annotations. Next: checkpoint 2, typed requests and per-request
    configuration.
 
-2. [ ] **Typed requests.** Share option decoding with standalone `bsc`; copy
+2. [x] **Typed requests.** Share option decoding with standalone `bsc`; copy
    reusable configuration per request. Preserve option precedence, source
    overrides, logical argv, and fresh state.
+
+   Record: Updated the shared compiler driver, option-state modules, driver
+   tests, and OCaml Rewatch documentation. The session caches bounded option
+   templates by working directory and argv; requests install private copies.
+   Standalone and effectful requests retain direct dispatch. The five-run
+   one-domain testrepo gate passed with identical compiler work, complete file
+   sets, and artifact bytes. Clean medians were 1,658 ms before and 1,667 ms
+   after; unchanged 42/43 ms; edit 43/42 ms. The [four-domain wide-fixture
+   samples and gate report](bench/checkpoint-2-2026-09-30.md) record allocation,
+   RSS, and annotation modes. The four-domain full-fixture CMI comparison is
+   affected by existing parallel nondeterminism: two builds of checkpoint 1
+   differed in 203 WebAPI CMIs, while one-domain repeats matched. `make test`,
+   `make test-rewatch`, focused OUnit (104 tests), `make test-gentype`,
+   `make test-analysis`, and `make checkformat` passed. Next:
+   checkpoint 3, separate compiler and editor policies.
 
 3. [ ] **Independent policies.** Separate capture/handoff from frozen lookup,
    and editor artifacts from GenType inputs. Preserve initial defaults;

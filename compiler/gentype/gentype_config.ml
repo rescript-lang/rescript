@@ -85,21 +85,71 @@ type flag_refs = {
 
 (* A request builds its GenType config from these flags. Another request must
    not reset them while its CMT or declaration output is being generated. *)
-let flag_refs =
-  Domain.DLS.new_key (fun () ->
-      {
-        project_root_ref = ref "";
-        bsb_project_root_ref = ref "";
-        module_ref = ref None;
-        module_resolution_ref = ref None;
-        export_interfaces_ref = ref false;
-        generated_file_extension_ref = ref None;
-        suffix_ref = ref None;
-        shims_ref = ref [];
-        bs_dependencies_ref = ref [];
-        source_dirs_ref = ref [];
-        dep_paths_ref = ref [];
-      })
+let fresh_flag_refs () =
+  {
+    project_root_ref = ref "";
+    bsb_project_root_ref = ref "";
+    module_ref = ref None;
+    module_resolution_ref = ref None;
+    export_interfaces_ref = ref false;
+    generated_file_extension_ref = ref None;
+    suffix_ref = ref None;
+    shims_ref = ref [];
+    bs_dependencies_ref = ref [];
+    source_dirs_ref = ref [];
+    dep_paths_ref = ref [];
+  }
+
+let flag_refs = Domain.DLS.new_key fresh_flag_refs
+
+type flags_snapshot = {
+  project_root: string;
+  bsb_project_root: string;
+  module_: module_ option;
+  module_resolution: module_resolution option;
+  export_interfaces: bool;
+  generated_file_extension: string option;
+  suffix: string option;
+  shims: (string * string) list;
+  bs_dependencies: string list;
+  source_dirs: string list;
+  dep_paths: (string * string) list;
+}
+
+let snapshot_flags () =
+  let state = Domain.DLS.get flag_refs in
+  {
+    project_root = !(state.project_root_ref);
+    bsb_project_root = !(state.bsb_project_root_ref);
+    module_ = !(state.module_ref);
+    module_resolution = !(state.module_resolution_ref);
+    export_interfaces = !(state.export_interfaces_ref);
+    generated_file_extension = !(state.generated_file_extension_ref);
+    suffix = !(state.suffix_ref);
+    shims = !(state.shims_ref);
+    bs_dependencies = !(state.bs_dependencies_ref);
+    source_dirs = !(state.source_dirs_ref);
+    dep_paths = !(state.dep_paths_ref);
+  }
+
+let install_flags_snapshot snapshot =
+  let state = Domain.DLS.get flag_refs in
+  state.project_root_ref := snapshot.project_root;
+  state.bsb_project_root_ref := snapshot.bsb_project_root;
+  state.module_ref := snapshot.module_;
+  state.module_resolution_ref := snapshot.module_resolution;
+  state.export_interfaces_ref := snapshot.export_interfaces;
+  state.generated_file_extension_ref := snapshot.generated_file_extension;
+  state.suffix_ref := snapshot.suffix;
+  state.shims_ref := snapshot.shims;
+  state.bs_dependencies_ref := snapshot.bs_dependencies;
+  state.source_dirs_ref := snapshot.source_dirs;
+  state.dep_paths_ref := snapshot.dep_paths
+
+let with_fresh_flags action =
+  let previous = Domain.DLS.get flag_refs in
+  Domain.DLS.set flag_refs (fresh_flag_refs ());
+  Fun.protect action ~finally:(fun () -> Domain.DLS.set flag_refs previous)
 
 let project_root () = (Domain.DLS.get flag_refs).project_root_ref
 let bsb_project_root () = (Domain.DLS.get flag_refs).bsb_project_root_ref

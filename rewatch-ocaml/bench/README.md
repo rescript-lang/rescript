@@ -29,6 +29,9 @@ starting point for this plan is [the 2026-09-30 baseline](baseline-2026-09-30.md
 The identity PPX measures the external protocol and subprocess boundary; use a
 real PPX fixture when validating transformation behavior.
 
+The [checkpoint 2 comparison](checkpoint-2-2026-09-30.md) records typed-request
+option caching, interleaved measurements, and the one-domain artifact gate.
+
 ## Build and compare
 
 From the repository root:

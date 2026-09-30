@@ -264,6 +264,14 @@ let without_warnings f =
 
 let backup () = !((request_state ()).current)
 let restore x = (request_state ()).current := x
+
+type snapshot = state
+
+let copy_state state =
+  {active = Array.copy state.active; error = Array.copy state.error}
+
+let snapshot () = copy_state (backup ())
+let install_copy snapshot = restore (copy_state snapshot)
 let is_active x =
   let state = request_state () in
   (not !(state.disabled)) && !(state.current).active.(number x)

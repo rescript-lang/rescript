@@ -169,6 +169,11 @@ and CRC caches, predefined type graphs, delayed checks, CMT accumulation,
 backend caches, and diagnostic
 state before and after every request, including exceptional returns. CMT files
 record each request's logical compiler argv rather than rewatch's process argv.
+The session decodes recurring compiler options with the standalone `bsc` parser
+once per working directory and option list, then installs a private copy for
+each request. Source-level flags can still override those options without
+changing the cached template. Help and other effectful options use the normal
+standalone dispatch path.
 Compiler output routed through request-owned channels and formatters is
 captured per request and returned to rewatch;
 help, version, formatting, and reprinting requests return status instead of

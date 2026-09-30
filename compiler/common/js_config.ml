@@ -96,6 +96,42 @@ let create () =
 let key = Domain.DLS.new_key create
 let current () = Domain.DLS.get key
 
+type snapshot = t
+
+let copy state =
+  {
+    no_version_header = ref !(state.no_version_header);
+    directives = ref !(state.directives);
+    cross_module_inline = ref !(state.cross_module_inline);
+    debug_ir = ref !(state.debug_ir);
+    check_lam = ref !(state.check_lam);
+    no_builtin_ppx = ref !(state.no_builtin_ppx);
+    check_div_by_zero = ref !(state.check_div_by_zero);
+    syntax_only = ref !(state.syntax_only);
+    binary_ast = ref !(state.binary_ast);
+    test_ast_conversion = ref !(state.test_ast_conversion);
+    debug = ref !(state.debug);
+    cmi_only = ref !(state.cmi_only);
+    cmj_only = ref !(state.cmj_only);
+    force_cmi = ref !(state.force_cmi);
+    force_cmj = ref !(state.force_cmj);
+    jsx_version = ref !(state.jsx_version);
+    jsx_module = ref !(state.jsx_module);
+    jsx_preserve = ref !(state.jsx_preserve);
+    js_stdout = ref !(state.js_stdout);
+    source_map = ref !(state.source_map);
+    source_map_sources_content = ref !(state.source_map_sources_content);
+    source_map_root = ref !(state.source_map_root);
+    all_module_aliases = ref !(state.all_module_aliases);
+    no_stdlib = ref !(state.no_stdlib);
+    no_export = ref !(state.no_export);
+    as_pp = ref !(state.as_pp);
+    self_stack = Stack.copy state.self_stack;
+  }
+
+let snapshot () = copy (current ())
+let install_copy snapshot = Domain.DLS.set key (copy snapshot)
+
 let with_fresh action =
   let previous = current () in
   Domain.DLS.set key (create ());

@@ -22,6 +22,32 @@ let type_env () = Domain.DLS.get type_env_key
 let type_resolution_key = new_flag ()
 let type_resolution () = Domain.DLS.get type_resolution_key
 
+type snapshot = bool array
+
+let flags () =
+  [|
+    basic ();
+    code_items ();
+    config ();
+    converter ();
+    dependencies ();
+    module_resolution ();
+    not_implemented ();
+    translation ();
+    type_env ();
+    type_resolution ();
+  |]
+
+let snapshot () = Array.map (fun flag -> !flag) (flags ())
+
+let install_copy snapshot =
+  Array.iteri (fun i flag -> flag := snapshot.(i)) (flags ())
+
+let with_fresh action =
+  let previous = snapshot () in
+  Array.iter (fun flag -> flag := false) (flags ());
+  Fun.protect action ~finally:(fun () -> install_copy previous)
+
 let reset () =
   basic () := false;
   code_items () := false;

@@ -68,6 +68,13 @@ val current : unit -> t
 val with_fresh : (unit -> 'a) -> 'a
 (* Run with default settings and restore the previous request on exit. *)
 
+type snapshot
+val snapshot : unit -> snapshot
+
+val install_copy : snapshot -> unit
+(** Clone parsed options into a request, including a private transformation
+    stack. Source-level flags may then update the clone. *)
+
 val tool_name : string
 
 val int_of_jsx_version : jsx_version -> int

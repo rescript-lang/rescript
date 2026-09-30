@@ -12,6 +12,11 @@
 
 let absname_key = Domain.DLS.new_key (fun () -> ref false)
 let absname () = Domain.DLS.get absname_key
+let with_fresh_absname action =
+  let previous = absname () in
+  Domain.DLS.set absname_key (ref false);
+  Fun.protect action ~finally:(fun () -> Domain.DLS.set absname_key previous)
+
 exception Request_exit of int
 
 module Error_message_utils_support = struct
@@ -552,6 +557,20 @@ type result = {
   stderr: string;
   diagnostics: Location.diagnostic list;
 }
+
+type prepared_options = {
+  clflags: Clflags.snapshot;
+  js_config: Js_config.snapshot;
+  packages: Js_packages_state.snapshot;
+  gentype: Gentype_config.flags_snapshot;
+  warnings: Warnings.snapshot;
+  debug: Debug.snapshot;
+  experimental: Experimental_features.snapshot;
+  runtime_path: string option;
+  project_root: string option;
+  absname: bool;
+  rev_other_inputs: string list;
+}
 type published_cmj = {
   filename: string;
   source: string option;
@@ -598,6 +617,8 @@ type session = {
   dependencies: Env.dependency_cache;
   frozen_enabled: bool Atomic.t;
   use_frozen_for_compile: bool Atomic.t;
+  options_lock: Mutex.t;
+  option_templates: (string * string list, prepared_options) Hashtbl.t;
   staging_lock: Mutex.t;
   staged_cmis:
     (string, (Digest.t * Cmi_format.cmi_infos) staged_artifact) Hashtbl.t;
@@ -626,6 +647,8 @@ let create_session () =
     dependencies = Env.create_dependency_cache ();
     frozen_enabled = Atomic.make true;
     use_frozen_for_compile = Atomic.make true;
+    options_lock = Mutex.create ();
+    option_templates = Hashtbl.create 32;
     staging_lock = Mutex.create ();
     staged_cmis = Hashtbl.create 32;
     staged_cmjs = Hashtbl.create 32;
@@ -750,6 +773,17 @@ let reset_state ?(new_request = false) () =
   Location.reset_input_name ();
   absname () := false
 
+let with_fresh_option_states ~cwd action =
+  Clflags.with_fresh (fun () ->
+      Js_config.with_fresh (fun () ->
+          Js_packages_state.with_fresh (fun () ->
+              Warnings.with_fresh (fun () ->
+                  Experimental_features.with_fresh (fun () ->
+                      Gentype_config.with_fresh_flags (fun () ->
+                          Debug.with_fresh (fun () ->
+                              with_fresh_absname (fun () ->
+                                  Compiler_request_state.with_fresh ~cwd action))))))))
+
 let with_fresh_request_states ~cwd action =
   Predef.with_fresh (fun () ->
       Env.with_fresh_initial (fun () ->
@@ -757,24 +791,91 @@ let with_fresh_request_states ~cwd action =
               Typecore.with_fresh (fun () ->
                   Stypes.with_fresh (fun () ->
                       Ident.with_fresh (fun () ->
-                          Clflags.with_fresh (fun () ->
-                              Env.with_fresh (fun () ->
-                                  Js_config.with_fresh (fun () ->
-                                      Warnings.with_fresh (fun () ->
-                                          Experimental_features.with_fresh
-                                            (fun () ->
-                                              Btype.with_fresh (fun () ->
-                                                  Js_packages_state.with_fresh
-                                                    (fun () ->
-                                                      Compiler_request_state
-                                                      .with_fresh ~cwd action)))))))))))))
+                          Env.with_fresh (fun () ->
+                              Btype.with_fresh (fun () ->
+                                  with_fresh_option_states ~cwd action))))))))
 
 let with_fresh_request_states_and_snapshot ~cwd action =
   Fun.protect
     (fun () -> with_fresh_request_states ~cwd action)
     ~finally:Env.finalize_expanded_snapshot_cache
 
-let run_argv ?run_external ?frozen_override ~cwd argv =
+let effectful_option = function
+  | "-e" | "-format" | "-reprint-source" | "-v" | "-version" | "-warn-help"
+  | "-help" | "--help" | "-h" ->
+    true
+  | _ -> false
+
+let prepare_options ~cwd argv =
+  if List.exists effectful_option argv then None
+  else
+    try
+      Some
+        (with_fresh_option_states ~cwd (fun () ->
+             Clflags.reset ();
+             Js_config.reset ();
+             Warnings.reset ();
+             let rev_other_inputs = ref [] in
+             Bsc_args.parse_exn
+               ~argv:(Array.of_list ("bsc" :: argv))
+               (command_line_flags ())
+               (fun ~rev_args -> rev_other_inputs := rev_args)
+               ~usage;
+             let request_state = Compiler_request_state.current () in
+             {
+               clflags = Clflags.snapshot ();
+               js_config = Js_config.snapshot ();
+               packages = Js_packages_state.snapshot ();
+               gentype = Gentype_config.snapshot_flags ();
+               warnings = Warnings.snapshot ();
+               debug = Debug.snapshot ();
+               experimental = Experimental_features.snapshot ();
+               runtime_path = request_state.runtime_path_override;
+               project_root = request_state.project_root;
+               absname = !(absname ());
+               rev_other_inputs = !rev_other_inputs;
+             }))
+    with Bsc_args.Bad _ | Bsc_args.Help _ | Request_exit _ -> None
+
+let install_options options =
+  Clflags.install_copy options.clflags;
+  Js_config.install_copy options.js_config;
+  Js_packages_state.install_copy options.packages;
+  Gentype_config.install_flags_snapshot options.gentype;
+  Warnings.install_copy options.warnings;
+  Debug.install_copy options.debug;
+  Experimental_features.install_copy options.experimental;
+  let request_state = Compiler_request_state.current () in
+  request_state.runtime_path_override <- options.runtime_path;
+  request_state.project_root <- options.project_root;
+  absname () := options.absname
+
+let session_options session ~cwd ~argv =
+  let key = (cwd, argv) in
+  let cached =
+    Mutex.lock session.options_lock;
+    Fun.protect
+      (fun () -> Hashtbl.find_opt session.option_templates key)
+      ~finally:(fun () -> Mutex.unlock session.options_lock)
+  in
+  match cached with
+  | Some options -> Some options
+  | None -> (
+    match prepare_options ~cwd argv with
+    | None -> None
+    | Some options ->
+      Mutex.lock session.options_lock;
+      Fun.protect
+        (fun () ->
+          (* A changed project configuration produces a new argv key. Bound
+             templates retained by a long-lived watch process. *)
+          if Hashtbl.length session.option_templates >= 256 then
+            Hashtbl.clear session.option_templates;
+          Hashtbl.replace session.option_templates key options)
+        ~finally:(fun () -> Mutex.unlock session.options_lock);
+      Some options)
+
+let run_argv ?run_external ?frozen_override ?prepared ~cwd argv =
   let input = argv.(Array.length argv - 1) in
   Env.with_frozen_values_setting ?enabled:frozen_override (fun () ->
       Compiler_phase_trace.request ~cwd ~input (fun () ->
@@ -784,12 +885,19 @@ let run_argv ?run_external ?frozen_override ~cwd argv =
               Cmt_format.set_args argv;
               let execute () =
                 try
-                  let flags =
-                    Compiler_phase_trace.section "request.flags"
-                      command_line_flags
-                  in
-                  Compiler_phase_trace.section "request.dispatch" (fun () ->
-                      Bsc_args.parse_exn ~argv flags anonymous ~usage);
+                  (match prepared with
+                  | None ->
+                    let flags =
+                      Compiler_phase_trace.section "request.flags"
+                        command_line_flags
+                    in
+                    Compiler_phase_trace.section "request.dispatch" (fun () ->
+                        Bsc_args.parse_exn ~argv flags anonymous ~usage)
+                  | Some options ->
+                    Compiler_phase_trace.section "request.flags" (fun () ->
+                        install_options options);
+                    Compiler_phase_trace.section "request.dispatch" (fun () ->
+                        anonymous ~rev_args:(input :: options.rev_other_inputs)));
                   0
                 with
                 | Request_exit code -> code
@@ -834,9 +942,10 @@ let run_request ~run_external ~cwd ~argv ~input =
   let logical_argv = Array.of_list ("bsc" :: (argv @ [input])) in
   run_argv ?run_external ~cwd logical_argv
 
-let run_request_with_frozen ~frozen_override ~run_external ~cwd ~argv ~input =
+let run_request_with_frozen ~prepared ~frozen_override ~run_external ~cwd ~argv
+    ~input =
   let logical_argv = Array.of_list ("bsc" :: (argv @ [input])) in
-  run_argv ?run_external ~frozen_override ~cwd logical_argv
+  run_argv ?run_external ~frozen_override ?prepared ~cwd logical_argv
 
 let remove_staged_semantic session filename =
   match Hashtbl.find_opt session.staged_semantics filename with
@@ -879,6 +988,7 @@ let stage_semantic session filename value =
   with Sys_error _ | Unix.Unix_error _ -> false
 
 let run_request_in_session session ~run_external ~cwd ~argv ~input =
+  let prepared = session_options session ~cwd ~argv in
   let input_path =
     if Filename.is_relative input then Filename.concat cwd input else input
   in
@@ -928,8 +1038,8 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
           && (List.mem "-bs-ast" argv
              || Atomic.get session.use_frozen_for_compile)
         in
-        run_request_with_frozen ~frozen_override:use_frozen ~run_external ~cwd
-          ~argv ~input
+        run_request_with_frozen ~prepared ~frozen_override:use_frozen
+          ~run_external ~cwd ~argv ~input
       in
       let run () =
         if cmi_enabled then

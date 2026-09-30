@@ -34,6 +34,17 @@ let fresh () = {packages_info = Js_packages_info.empty; making_runtime = false}
 let key = Domain.DLS.new_key fresh
 let current () = Domain.DLS.get key
 
+type snapshot = Js_packages_info.t * bool
+
+let snapshot () =
+  let state = current () in
+  (state.packages_info, state.making_runtime)
+
+let install_copy (packages_info, making_runtime) =
+  let state = current () in
+  state.packages_info <- packages_info;
+  state.making_runtime <- making_runtime
+
 let with_fresh action =
   let previous = current () in
   Domain.DLS.set key (fresh ());

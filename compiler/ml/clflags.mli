@@ -40,6 +40,14 @@ val current : unit -> t
 val with_fresh : (unit -> 'a) -> 'a
 (* Run with fresh flags and restore the previous request on exit. *)
 
+type snapshot
+val snapshot : unit -> snapshot
+
+val install_copy : snapshot -> unit
+(** Copy option values into an already isolated request. The snapshot and
+    request have distinct mutable refs, so source flags cannot change a
+    reusable option template. *)
+
 val parse_color_setting : string -> Misc.Color.setting option
 val reset_dump_state : unit -> unit
 val reset : unit -> unit

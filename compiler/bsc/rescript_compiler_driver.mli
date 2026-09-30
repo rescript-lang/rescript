@@ -48,7 +48,10 @@ val run_request_in_session :
   input:string ->
   result
 (** Run a module job with project-owned dependency information. Each job still
-    receives fresh inference and request state. *)
+    receives fresh inference and request state. Valid option sequences are
+    decoded by the same parser as standalone [bsc], cached in the session,
+    and copied into each request before source-level flags are applied. The
+    original logical [argv] remains in binary annotations. *)
 
 val publish_session_cmi :
   session -> retain:bool -> source:string -> destination:string -> unit
