@@ -217,7 +217,8 @@ editor-only work, including when GenType is enabled.
    contract. Updated the CI parity matrix, Rewatch guide, and changelog. The
    [local gate report](bench/checkpoint-12-2026-09-30.md) records a passing
    `make test-all`, focused OCaml Rewatch runs with 1, 4, and 12 domains,
-   mixed GenType and PPX parity, and formatting. The symlink-source test now
+   mixed GenType and PPX parity, static-profile Linux builds, and formatting.
+   The symlink-source test now
    creates its atomic replacement on the target filesystem, so the worker-count
    gate measures the intended rename on split-filesystem hosts. Linux, macOS,
    and Windows CI results for these unpushed commits remain required before
