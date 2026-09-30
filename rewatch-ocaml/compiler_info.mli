@@ -7,6 +7,7 @@ type context = {
   inherited_compiler_args: string list;
   editor_artifacts: bool;
   gentype_inputs: bool;
+  gentype_disk_publication: bool;
   binary_annotations: bool;
   compatibility_copies: bool;
   session_handoff: bool;
@@ -30,6 +31,7 @@ val package_output_specs : Config.t -> package_output_spec list
 val make_context :
   editor_artifacts:bool ->
   gentype_inputs:bool ->
+  gentype_disk_publication:bool ->
   session_handoff:bool ->
   compatibility_copies:bool ->
   build_root:string ->

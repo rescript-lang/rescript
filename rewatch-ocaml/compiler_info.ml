@@ -7,6 +7,7 @@ type context = {
   inherited_compiler_args: string list;
   editor_artifacts: bool;
   gentype_inputs: bool;
+  gentype_disk_publication: bool;
   binary_annotations: bool;
   compatibility_copies: bool;
   session_handoff: bool;
@@ -20,7 +21,7 @@ and package_output_spec = {
   suffix: string;
 }
 
-let format_version = "9"
+let format_version = "10"
 
 let package_output_specs (config : Config.t) =
   List.map
@@ -32,10 +33,10 @@ let package_output_specs (config : Config.t) =
       })
     config.package_specs
 
-let make_context ~editor_artifacts ~gentype_inputs ~session_handoff
-    ~compatibility_copies ~build_root ~compiler_path ~compiler_identity
-    ~runtime_path ~source_map_args ~inherited_compiler_args ~binary_annotations
-    ~frozen_values ~package_output_specs =
+let make_context ~editor_artifacts ~gentype_inputs ~gentype_disk_publication
+    ~session_handoff ~compatibility_copies ~build_root ~compiler_path
+    ~compiler_identity ~runtime_path ~source_map_args ~inherited_compiler_args
+    ~binary_annotations ~frozen_values ~package_output_specs =
   {
     build_root;
     bsc_path = compiler_path;
@@ -45,6 +46,7 @@ let make_context ~editor_artifacts ~gentype_inputs ~session_handoff
     inherited_compiler_args;
     editor_artifacts;
     gentype_inputs;
+    gentype_disk_publication;
     binary_annotations;
     compatibility_copies;
     session_handoff;
@@ -127,6 +129,7 @@ let json context (config : Config.t) =
              context.inherited_compiler_args) );
       ("editor_artifacts", `Bool context.editor_artifacts);
       ("gentype_inputs", `Bool context.gentype_inputs);
+      ("gentype_disk_publication", `Bool context.gentype_disk_publication);
       ("binary_annotations", `Bool context.binary_annotations);
       ("compatibility_copies", `Bool context.compatibility_copies);
       ("session_handoff", `Bool context.session_handoff);

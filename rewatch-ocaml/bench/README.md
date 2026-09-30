@@ -54,6 +54,8 @@ CMJ, and editor artifact publication and its byte-parity gates.
 The [checkpoint 9 comparison](checkpoint-9-2026-09-30.md) records imported type
 graph costs, frozen lookup by declaration kind, module path substitution, and
 the remaining full-signature fallback.
+The [checkpoint 10 comparison](checkpoint-10-2026-09-30.md) records GenType
+parity and mixed-package lookup in both directions.
 
 ## Build and compare
 
@@ -150,6 +152,20 @@ bytes can differ across policies because imported type nodes receive different
 internal IDs when frozen lookup avoids eager graph materialization.
 It removes generated projects after a successful run; set
 `KEEP_REWATCH_IMMUTABLE_PROJECTS=1` to retain them.
+
+To check GenType artifacts across classic and frozen policies, including
+clean, edit, restart, all three annotation settings, and packages importing each
+other in both directions, run:
+
+```sh
+opam exec -- dune build rewatch-ocaml/bench/cmt_compare.exe
+python3 rewatch-ocaml/bench/frozen_gentype_parity.py \
+  /tmp/frozen-gentype-parity
+```
+
+The output directory must not exist. The gate checks TypeScript, JavaScript,
+CMI, CMJ, GenType sidecars, mismatch diagnostics, request traces, and metadata
+invalidation on both policy switches.
 
 ## Filesystem and source-size audits
 

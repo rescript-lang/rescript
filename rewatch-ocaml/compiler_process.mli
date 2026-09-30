@@ -49,6 +49,7 @@ val post_build_tasks :
 
 val publish :
   ?session:Rescript_compiler_driver.session ->
+  force_disk_publication:bool ->
   retain_interface:bool ->
   dependencies:string list ->
   build_dir:string ->

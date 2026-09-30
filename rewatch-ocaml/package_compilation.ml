@@ -133,6 +133,8 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
                 ~publish:(fun ~source_kind path result ->
                   Compiler_process.publish
                     ~session:(Build_session.compiler_session attempt.session)
+                    ~force_disk_publication:
+                      prepared.compiler_context.gentype_disk_publication
                     ~retain_interface:
                       (not (Build_state.String_set.is_empty state.dependents))
                     ~dependencies:state.dependencies ~build_dir ~ocaml_dir

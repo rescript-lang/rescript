@@ -141,12 +141,13 @@ dependent recompilation. `Frozen_values` and `Frozen_type_graph` provide
 immutable shared images with request-local views; the benchmark commands are
 in [`bench/README.md`](bench/README.md).
 Set `REWATCH_FROZEN_VALUES=0` to compare the previous compiler path.
-Sessions containing GenType packages currently use the classic interface
-lookup because frozen lookup changed generated TypeScript in that suite.
-They still capture compiler results for session publication. Classic lookup
-waits for the interface file to reach disk before dependent jobs start;
-early publication requires frozen lookup. The compiler metadata records
-session handoff and frozen lookup as separate policies.
+GenType parse requests use the classic disk AST path, and GenType compile
+requests use classic interface lookup. When a project contains GenType,
+compiler artifacts from every package reach disk before dependents run; GenType
+uses those files to validate dependency summaries. Other requests in the same
+project use frozen lookup, including dependencies of GenType packages and
+consumers of GenType packages. The compiler metadata records the publication
+and lookup policies and invalidates retained results when they change.
 GenType consumes the current implementation's semantic result in its compiler
 request. For a module with an interface, an embedded session supplies an
 isolated copy of the published interface semantics when the staged source and

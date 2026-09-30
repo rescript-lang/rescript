@@ -1213,6 +1213,12 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
   Env.with_dependency_cache session.dependencies (fun () ->
       let handoff_enabled = session_handoff_enabled session in
       let frozen_lookup_enabled = session_frozen_lookup_enabled session in
+      (* GenType uses disk-backed interface precedence and source summaries.
+         Keep its requests on the classic path while unrelated jobs use the
+         frozen session image. *)
+      let request_frozen_lookup_enabled =
+        frozen_lookup_enabled && not (List.mem "-bs-gentype" argv)
+      in
       let cmi_enabled =
         handoff_enabled && Sys.getenv_opt "REWATCH_SESSION_CMI" <> Some "0"
       in
@@ -1220,20 +1226,20 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
         handoff_enabled && Sys.getenv_opt "REWATCH_SESSION_CMJ" <> Some "0"
       in
       let owned_cmi_enabled =
-        cmi_enabled && frozen_lookup_enabled
+        cmi_enabled && request_frozen_lookup_enabled
         && session_owned_artifacts_enabled session
         && Sys.getenv_opt "REWATCH_OWNED_CMI" <> Some "0"
         && (Filename.check_suffix input ".ast"
            || Filename.check_suffix input ".iast")
       in
       let owned_cmj_enabled =
-        cmj_enabled && frozen_lookup_enabled
+        cmj_enabled && request_frozen_lookup_enabled
         && session_owned_artifacts_enabled session
         && Sys.getenv_opt "REWATCH_OWNED_CMJ" <> Some "0"
         && Filename.check_suffix input ".ast"
       in
       let owned_cmt_enabled =
-        frozen_lookup_enabled
+        request_frozen_lookup_enabled
         && session_owned_artifacts_enabled session
         && Sys.getenv_opt "REWATCH_OWNED_CMT" <> Some "0"
         && (Filename.check_suffix input ".ast"
@@ -1242,14 +1248,14 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
       (* Classic requests retain the disk AST roundtrip, including the sharing
          shape serialized in binary annotations. *)
       let ast_enabled =
-        frozen_lookup_enabled
+        request_frozen_lookup_enabled
         && Sys.getenv_opt "REWATCH_SESSION_AST" <> Some "0"
       in
       let owned_ast_enabled =
         ast_enabled && session_owned_ast_enabled session
       in
       let use_session_cmj_lookup =
-        cmj_enabled && frozen_lookup_enabled
+        cmj_enabled && request_frozen_lookup_enabled
         && Atomic.get session.use_frozen_for_compile
       in
       let compiled_cmi = ref None in
@@ -1262,7 +1268,7 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
       let generated_outputs = ref [] in
       let run () =
         let use_frozen =
-          frozen_lookup_enabled
+          request_frozen_lookup_enabled
           && (List.mem "-bs-ast" argv
              || Atomic.get session.use_frozen_for_compile)
         in

@@ -587,8 +587,9 @@ let publish_immediate ?session ~preserve_source_mtime ~retain_interface
            if !optimization_changed then Compiler_scheduler.Cmi_change_unknown
            else !cmi_change ))
 
-let publish ?session ~retain_interface ~dependencies ~build_dir ~ocaml_dir
-    ~is_local ~(config : Config.t) ~source_kind path result =
+let publish ?session ~force_disk_publication ~retain_interface ~dependencies
+    ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~source_kind path
+    result =
   Option.iter
     (fun session ->
       let basename = Source.compiler_asset_basename config path in
@@ -615,13 +616,13 @@ let publish ?session ~retain_interface ~dependencies ~build_dir ~ocaml_dir
       ~dependencies ~build_dir ~ocaml_dir ~is_local ~config ~source_kind
       ~compiled_at path result
   in
-  (* Classic lookup cannot resolve a staged virtual CMI. Publish its disk
-     artifact before releasing dependents, while retaining captured results
-     for the session after publication. *)
+  (* Classic lookup cannot resolve a staged virtual CMI. GenType also needs
+     disk ASTs and dependency CMIs to validate its interface summaries.
+     Publish these artifacts before releasing dependents. *)
   match session with
   | None -> immediate false
   | Some session
-    when (not retain_interface)
+    when (not retain_interface) || force_disk_publication
          || (not (Rescript_compiler_driver.session_handoff_enabled session))
          || not (Rescript_compiler_driver.session_frozen_lookup_enabled session)
     ->

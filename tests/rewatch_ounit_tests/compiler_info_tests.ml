@@ -15,8 +15,8 @@ let config root =
 
 let context ?(inherited_compiler_args = []) ?(binary_annotations = true)
     ?compatibility_copies ?editor_artifacts ?(gentype_inputs = false)
-    ?(session_handoff = true) ?(frozen_values = true) root config
-    source_map_args =
+    ?(gentype_disk_publication = false) ?(session_handoff = true)
+    ?(frozen_values = true) root config source_map_args =
   let bsc = Filename.concat root "bsc.exe" in
   let runtime = Filename.concat root "runtime" in
   if not (Sys.file_exists bsc) then write bsc "compiler-v1";
@@ -30,7 +30,7 @@ let context ?(inherited_compiler_args = []) ?(binary_annotations = true)
     ~binary_annotations
     ~editor_artifacts:
       (Option.value editor_artifacts ~default:binary_annotations)
-    ~gentype_inputs ~session_handoff ~frozen_values
+    ~gentype_inputs ~gentype_disk_publication ~session_handoff ~frozen_values
     ~package_output_specs:(Compiler_info.package_output_specs config)
 
 let tests =
@@ -79,6 +79,13 @@ let tests =
       check
         (Compiler_info.needs_clean changed_gentype config)
         "GenType input policy invalidates artifacts independently";
+      let changed_disk_publication =
+        context ~gentype_disk_publication:true root config
+          ["-bs-source-map"; "linked"]
+      in
+      check
+        (Compiler_info.needs_clean changed_disk_publication config)
+        "GenType disk publication policy invalidates artifacts";
       let changed_copies =
         context ~compatibility_copies:false root config
           ["-bs-source-map"; "linked"]
@@ -173,8 +180,8 @@ let tests =
       in
       let initial =
         Compiler_info.make_context ~editor_artifacts:true ~gentype_inputs:false
-          ~session_handoff:true ~compatibility_copies:true ~build_root:root
-          ~compiler_path:bsc
+          ~gentype_disk_publication:false ~session_handoff:true
+          ~compatibility_copies:true ~build_root:root ~compiler_path:bsc
           ~compiler_identity:(Digest.file bsc |> Digest.to_hex)
           ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
           ~binary_annotations:true ~package_output_specs:commonjs
@@ -185,9 +192,10 @@ let tests =
       write marker "keep";
       let changed =
         Compiler_info.make_context ~editor_artifacts:true ~gentype_inputs:false
-          ~session_handoff:true ~compatibility_copies:true ~build_root:root
-          ~compiler_path:bsc ~compiler_identity:"changed-compiler"
-          ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
+          ~gentype_disk_publication:false ~session_handoff:true
+          ~compatibility_copies:true ~build_root:root ~compiler_path:bsc
+          ~compiler_identity:"changed-compiler" ~runtime_path:runtime
+          ~source_map_args:[] ~inherited_compiler_args:[]
           ~binary_annotations:true ~package_output_specs:esmodule
           ~frozen_values:true
       in
@@ -208,8 +216,9 @@ let tests =
       File_util.ensure_dir runtime;
       let standalone =
         Compiler_info.make_context ~editor_artifacts:true ~gentype_inputs:false
-          ~session_handoff:true ~compatibility_copies:true
-          ~build_root:dependency_root ~compiler_path:bsc
+          ~gentype_disk_publication:false ~session_handoff:true
+          ~compatibility_copies:true ~build_root:dependency_root
+          ~compiler_path:bsc
           ~compiler_identity:(Digest.file bsc |> Digest.to_hex)
           ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
           ~binary_annotations:true ~frozen_values:true
@@ -229,8 +238,9 @@ let tests =
       in
       let consumer =
         Compiler_info.make_context ~editor_artifacts:true ~gentype_inputs:false
-          ~session_handoff:true ~compatibility_copies:true
-          ~build_root:consumer_root ~compiler_path:bsc
+          ~gentype_disk_publication:false ~session_handoff:true
+          ~compatibility_copies:true ~build_root:consumer_root
+          ~compiler_path:bsc
           ~compiler_identity:(Digest.file bsc |> Digest.to_hex)
           ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
           ~binary_annotations:true ~package_output_specs:consumer_specs

@@ -174,9 +174,24 @@ editor-only work, including when GenType is enabled.
    Rewatch port suite, `make test-analysis`, and `make checkformat` passed.
    Next: checkpoint 10, GenType parity.
 
-10. [ ] **Frozen GenType parity.** Fix TypeScript differences before enabling
+10. [x] **Frozen GenType parity.** Fix TypeScript differences before enabling
     frozen lookup. Test mixed imports both ways; restrict classic lookup to
     affected requests and invalidate policy-dependent caches.
+
+   Record: Updated the compiler driver, Rewatch request arguments, publication,
+   metadata, parity runner, port fixtures, and OUnit policy test. GenType parse
+   and compile requests retain classic disk lookup, while non-GenType requests
+   in either mixed-import direction use frozen lookup. Projects with GenType
+   publish compiler artifacts before releasing dependents, and the publication
+   policy participates in cache invalidation. The [parity and five-run
+   gate](bench/checkpoint-10-2026-09-30.md) passed clean/edit/restart/
+   switch-back builds in all three annotation modes with matching TypeScript,
+   JavaScript, compiler artifacts, annotation semantics, and mismatch
+   diagnostics. On the 141-module GenType fixture, the frozen request split
+   reduced median wall time 3.6% with 18% higher peak RSS. `make test`,
+   `make test-gentype` with one and default domain counts, `make test-analysis`,
+   the OCaml Rewatch port suite, focused OUnit (114 tests), and
+   `make checkformat` passed. Next: checkpoint 11, the legacy PPX boundary.
 
 11. [ ] **Legacy PPX boundary.** Measure AST 0 conversion, serialization, I/O,
     and execution. Isolate the adapter; preserve frozen AST 0, bridge coverage,

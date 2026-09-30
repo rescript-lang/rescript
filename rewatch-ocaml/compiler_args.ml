@@ -107,6 +107,8 @@ let parser_arguments ~(config : Config.t) ~contents ~path =
   compiler_flags
     ~ppx_flags:(filter_ppx_flags config.ppx_flags contents)
     ~source_maps:false ~watch:false ~gentype:false config
+  (* The marker keeps GenType parse requests on the disk AST path. *)
+  @ (if gentype_enabled config then ["-bs-gentype"] else [])
   @ [
       "-absname";
       "-bs-ast";

@@ -18,13 +18,12 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     Package_graph.discover ~root_config ~prod ~features ~warn_error ~filter
       ~attempt
   in
-  Rescript_compiler_driver.set_session_frozen_lookup_enabled
-    (Build_session.compiler_session attempt.session)
-    (not
-       (List.exists
-          (fun (package : Package_plan.t) ->
-            Compiler_args.gentype_enabled package.compile_config)
-          package_plans));
+  let gentype_disk_publication =
+    List.exists
+      (fun (package : Package_plan.t) ->
+        Compiler_args.gentype_enabled package.compile_config)
+      package_plans
+  in
   Module_graph.validate_visible_namespaces ~root_config package_plans;
   let runtime = runtime_path root_config.root in
   let source_map_args = Compiler_args.source_map_args root_config ~watch in
@@ -36,6 +35,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         (root_config.jsx_args @ root_config.experimental_args)
       ~editor_artifacts:(Compiler_args.editor_artifacts_enabled ())
       ~gentype_inputs:(Compiler_args.gentype_inputs_enabled root_config)
+      ~gentype_disk_publication
       ~binary_annotations:(Compiler_args.binary_annotations_enabled root_config)
       ~compatibility_copies:
         (Compiler_args.compatibility_copies_enabled root_config)

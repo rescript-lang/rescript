@@ -1671,6 +1671,7 @@ if [ ! -f "$native_output" ] || [ ! -f "$web_output" ] || \
   exit 1
 fi
 
+REWATCH_FROZEN_VALUES=1 \
 REWATCH_TYPECHECK_TRACE="$(native_path "$work/gentype-trace.tsv")" \
   "$port" build "$gentype"
 for output in "$gentype/src/Main.js" "$gentype/src/Annotated.gen.ts" \
@@ -1683,6 +1684,13 @@ for output in "$gentype/src/Main.js" "$gentype/src/Annotated.gen.ts" \
   fi
 done
 tr '\\' '/' <"$work/gentype-trace.tsv" >"$work/gentype-trace.normalized.tsv"
+grep 'src/Dep.ast.*dependency.frozen_open' \
+  "$work/gentype-trace.normalized.tsv" >/dev/null
+if grep 'src/Pair.ast.*dependency.frozen_open' \
+  "$work/gentype-trace.normalized.tsv" >/dev/null; then
+  echo "genType request used frozen dependency lookup" >&2
+  exit 1
+fi
 if ! grep 'src/Annotated.ast.*dependency.gentype_semantic_result' \
   "$work/gentype-trace.normalized.tsv" >/dev/null || \
   ! grep 'src/Pair.ast.*dependency.gentype_semantic_result' \
@@ -1709,6 +1717,32 @@ REWATCH_BIN_ANNOT=0 "$port" build "$gentype"
 test ! -e "$gentype/lib/bs/src/Pair.cmti"
 test ! -e "$gentype/lib/ocaml/Pair.cmti"
 test ! -e "$gentype/lib/ocaml/Pair.resi"
+
+inverse_gentype="$work/inverse-gentype"
+mkdir -p "$inverse_gentype/src" "$inverse_gentype/node_modules/dep/src"
+printf '%s\n' \
+  '{"name":"inverse-gentype","sources":"src","dependencies":["dep"],"package-specs":{"module":"esmodule","in-source":true}}' \
+  >"$inverse_gentype/rescript.json"
+printf 'let result = Dep.value\n' >"$inverse_gentype/src/Consumer.res"
+printf '%s\n' \
+  '{"name":"dep","sources":"src","gentypeconfig":{"module":"esmodule","generatedFileExtension":".gen.ts"}}' \
+  >"$inverse_gentype/node_modules/dep/rescript.json"
+printf '@genType let value = 42\n' \
+  >"$inverse_gentype/node_modules/dep/src/Dep.res"
+REWATCH_FROZEN_VALUES=1 \
+REWATCH_TYPECHECK_TRACE="$(native_path "$work/inverse-gentype-trace.tsv")" \
+  "$port" build "$inverse_gentype"
+test -f "$inverse_gentype/node_modules/dep/src/Dep.gen.ts"
+grep 'let result = Dep.value;' "$inverse_gentype/src/Consumer.js" >/dev/null
+tr '\\' '/' <"$work/inverse-gentype-trace.tsv" \
+  >"$work/inverse-gentype-trace.normalized.tsv"
+grep 'src/Consumer.ast.*dependency.frozen_value_lookup' \
+  "$work/inverse-gentype-trace.normalized.tsv" >/dev/null
+if grep 'src/Dep.ast.*dependency.frozen_open' \
+  "$work/inverse-gentype-trace.normalized.tsv" >/dev/null; then
+  echo "genType dependency used frozen lookup" >&2
+  exit 1
+fi
 
 summary_project="$work/gentype-summary"
 summary_trace="$work/gentype-summary-trace.tsv"
