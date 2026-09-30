@@ -854,6 +854,52 @@ let gentype_owned_inputs_tests _context =
         "@genType type t = int\n" (fun ~interface:_ ~implementation ->
           implementation))
 
+let gentype_summary_validation_tests _context =
+  Test_support.with_temp_dir "rewatch-gentype-summary-" (fun root ->
+      let source = "@genType type t = {value: int}\n" in
+      write root "Leaf.res" source;
+      expect_code 0 (snd (run root ~extra:["-bs-gentype"] "Leaf.res"));
+      let cmt_file = Filename.concat root "Leaf.cmt" in
+      let cmi_file = Filename.concat root "Leaf.cmi" in
+      let summary_file = Gentype_summary.summary_file cmt_file in
+      check
+        (Sys.file_exists summary_file)
+        "GenType writes a declaration summary";
+      let read ?(identity = Rescript_compiler_driver.build_identity)
+          ?(module_ = None) () =
+        Gentype_summary.with_compiler_identity identity (fun () ->
+            Gentype_config.with_fresh_flags (fun () ->
+                Gentype_config.project_root () := root;
+                Gentype_config.module_flag () := module_;
+                Gentype_summary.read ~cmt_file))
+      in
+      check (Option.is_some (read ())) "matching summary is accepted";
+      let summary_contents = File_util.read_file summary_file in
+      let invalid_summary = Bytes.of_string summary_contents in
+      Bytes.set invalid_summary 0 'X';
+      write root "Leaf.cmt.gts" (Bytes.to_string invalid_summary);
+      check (Option.is_none (read ())) "invalid summary header falls back";
+      write root "Leaf.cmt.gts" summary_contents;
+      check
+        (Option.is_none (read ~identity:"other compiler" ()))
+        "compiler identity invalidates the summary";
+      check
+        (Option.is_none (read ~module_:(Some Gentype_config.CommonJS) ()))
+        "GenType configuration invalidates the summary";
+      write root "Leaf.res" (source ^ "\n");
+      check (Option.is_none (read ())) "source contents invalidate the summary";
+      write root "Leaf.res" source;
+      let cmi_contents = File_util.read_file cmi_file in
+      write root "Leaf.cmi" (cmi_contents ^ "\n");
+      check
+        (Option.is_none (read ()))
+        "dependency contents invalidate the summary";
+      write root "Leaf.cmi" cmi_contents;
+      Sys.remove cmt_file;
+      check
+        (Option.is_some (read ()))
+        "summary supplies declarations without the original CMT")
+
 let published_module_result_tests _context =
   let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
   Fun.protect
@@ -2484,6 +2530,7 @@ let tests =
          "semantic_result_isolation" >:: semantic_result_isolation_tests;
          "semantic_source_alias" >:: semantic_source_alias_tests;
          "gentype_owned_inputs" >:: gentype_owned_inputs_tests;
+         "gentype_summary_validation" >:: gentype_summary_validation_tests;
          "published_module_result" >:: published_module_result_tests;
          "virtual_module_artifact_lookup"
          >:: virtual_module_artifact_lookup_tests;

@@ -62,6 +62,7 @@ cp -R "$root/rewatch-ocaml/tests/failure" "$work/failure"
 cp -R "$root/rewatch-ocaml/tests/features" "$work/features"
 cp -R "$root/rewatch-ocaml/tests/feature-dependencies" "$work/feature-dependencies"
 cp -R "$root/rewatch-ocaml/tests/gentype" "$work/gentype"
+cp -R "$root/rewatch-ocaml/tests/gentype-summary" "$work/gentype-summary"
 cp -R "$root/rewatch-ocaml/tests/session-interface" \
   "$work/session-interface"
 cp -R "$root/rewatch-ocaml/tests/dependency" "$work/dependency"
@@ -1673,7 +1674,8 @@ fi
 REWATCH_TYPECHECK_TRACE="$(native_path "$work/gentype-trace.tsv")" \
   "$port" build "$gentype"
 for output in "$gentype/src/Main.js" "$gentype/src/Annotated.gen.ts" \
-  "$gentype/src/Pair.gen.ts" "$work/gentype-trace.tsv"; do
+  "$gentype/src/Pair.gen.ts" "$gentype/lib/bs/src/Pair.cmti.gts" \
+  "$work/gentype-trace.tsv"; do
   if [ ! -f "$output" ]; then
     echo "genType build did not produce $output" >&2
     find "$gentype/src" -maxdepth 1 -type f -print >&2
@@ -1694,6 +1696,54 @@ if grep 'src/Annotated.ast.*dependency.gentype_cmt_read' \
   echo "genType reread the newly written implementation CMT" >&2
   exit 1
 fi
+
+summary_project="$work/gentype-summary"
+summary_trace="$work/gentype-summary-trace.tsv"
+REWATCH_TYPECHECK_TRACE="$(native_path "$summary_trace")" \
+  "$port" build "$summary_project"
+for module_name in Leaf Middle Main; do
+  test -f "$summary_project/lib/bs/src/$module_name.cmt.gts"
+  test -f "$summary_project/src/$module_name.gen.ts"
+done
+tr '\\' '/' <"$summary_trace" >"$work/gentype-summary-trace.normalized.tsv"
+if ! grep 'src/Main.ast.*dependency.gentype_summary_read' \
+  "$work/gentype-summary-trace.normalized.tsv" >/dev/null || \
+  grep 'src/Main.ast.*dependency.gentype_dependency_cmt_read' \
+    "$work/gentype-summary-trace.normalized.tsv" >/dev/null; then
+  echo "genType did not use validated dependency summaries" >&2
+  exit 1
+fi
+cp "$summary_project/src/Main.gen.ts" "$work/gentype-summary-clean.ts"
+printf '\n// unchanged type after edit\n' >>"$summary_project/src/Main.res"
+REWATCH_TYPECHECK_TRACE="$(native_path "$work/gentype-summary-edit.tsv")" \
+  "$port" build "$summary_project"
+cmp "$work/gentype-summary-clean.ts" "$summary_project/src/Main.gen.ts"
+tr '\\' '/' <"$work/gentype-summary-edit.tsv" \
+  >"$work/gentype-summary-edit.normalized.tsv"
+grep 'src/Main.ast.*dependency.gentype_summary_read' \
+  "$work/gentype-summary-edit.normalized.tsv" >/dev/null
+printf '\n// unchanged type after restart\n' >>"$summary_project/src/Main.res"
+REWATCH_TYPECHECK_TRACE="$(native_path "$work/gentype-summary-restart.tsv")" \
+  "$port" build "$summary_project"
+cmp "$work/gentype-summary-clean.ts" "$summary_project/src/Main.gen.ts"
+tr '\\' '/' <"$work/gentype-summary-restart.tsv" \
+  >"$work/gentype-summary-restart.normalized.tsv"
+grep 'src/Main.ast.*dependency.gentype_summary_read' \
+  "$work/gentype-summary-restart.normalized.tsv" >/dev/null
+rm -f "$summary_project/lib/bs/src/Leaf.cmt.gts" \
+  "$summary_project/lib/bs/src/Middle.cmt.gts"
+printf '\n// use legacy dependency inputs\n' >>"$summary_project/src/Main.res"
+REWATCH_TYPECHECK_TRACE="$(native_path "$work/gentype-summary-fallback.tsv")" \
+  "$port" build "$summary_project"
+cmp "$work/gentype-summary-clean.ts" "$summary_project/src/Main.gen.ts"
+tr '\\' '/' <"$work/gentype-summary-fallback.tsv" \
+  >"$work/gentype-summary-fallback.normalized.tsv"
+grep 'src/Main.ast.*dependency.gentype_dependency_cmt_read' \
+  "$work/gentype-summary-fallback.normalized.tsv" >/dev/null
+rm "$summary_project/src/Main.res"
+"$port" build "$summary_project"
+test ! -e "$summary_project/lib/bs/src/Main.cmt.gts"
+test ! -e "$summary_project/lib/ocaml/Main.cmt.gts"
 
 REWATCH_FROZEN_VALUES=1 REWATCH_SESSION_CMI=1 \
   REWATCH_TYPECHECK_TRACE="$(native_path "$work/session-interface-trace.tsv")" \

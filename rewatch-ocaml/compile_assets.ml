@@ -16,7 +16,18 @@ let ast_header path =
   with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
 
 let cleanup_extensions =
-  [".cmi"; ".cmj"; ".cmt"; ".cmti"; ".ast"; ".iast"; ".res"; ".resi"; ".mlmap"]
+  [
+    ".cmi";
+    ".cmj";
+    ".cmt";
+    ".cmti";
+    ".gts";
+    ".ast";
+    ".iast";
+    ".res";
+    ".resi";
+    ".mlmap";
+  ]
 
 let is_managed_basename basename =
   List.exists (Filename.check_suffix basename) cleanup_extensions

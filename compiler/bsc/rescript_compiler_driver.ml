@@ -916,66 +916,70 @@ let session_options session ~cwd ~argv =
 
 let run_argv ?run_external ?frozen_override ?prepared ~cwd argv =
   let input = argv.(Array.length argv - 1) in
-  Env.with_frozen_values_setting ?enabled:frozen_override (fun () ->
-      Compiler_phase_trace.request ~cwd ~input (fun () ->
-          with_fresh_request_states_and_snapshot ~cwd (fun () ->
-              Compiler_phase_trace.section "request.reset" (fun () ->
-                  reset_state ~new_request:true ());
-              Cmt_format.set_args argv;
-              let execute () =
-                try
-                  (match prepared with
-                  | None ->
-                    let flags =
-                      Compiler_phase_trace.section "request.flags"
-                        command_line_flags
-                    in
-                    Compiler_phase_trace.section "request.dispatch" (fun () ->
-                        Bsc_args.parse_exn ~argv flags anonymous ~usage)
-                  | Some options ->
-                    Compiler_phase_trace.section "request.flags" (fun () ->
-                        install_options options);
-                    Compiler_phase_trace.section "request.dispatch" (fun () ->
-                        anonymous ~rev_args:(input :: options.rev_other_inputs)));
-                  0
-                with
-                | Request_exit code -> code
-                | Bsc_args.Help message ->
-                  Compiler_request_output.write_stdout message;
-                  0
-                | Res_driver.Already_reported -> 1
-                | Bsc_args.Bad msg ->
-                  Format.fprintf (ppf ()) "%s@." msg;
-                  2
-                | x ->
-                  Location.report_exception (ppf ()) x;
-                  2
-              in
-              let run_with_external_owner action =
-                match run_external with
-                | None -> action ()
-                | Some run_external ->
-                  Ccomp.with_command_runner
-                    (fun command ->
-                      let status, stdout, stderr = run_external command in
-                      Compiler_request_output.write_stdout stdout;
-                      Format.pp_print_string (ppf ()) stderr;
-                      status)
-                    action
-              in
-              let (exit_code, stdout, stderr), diagnostics =
-                Fun.protect
-                  (fun () ->
-                    Location.with_diagnostic_capture (fun () ->
-                        Compiler_request_output.with_capture (fun () ->
-                            Misc.Color.set_color_tag_handling
-                              (Compiler_request_output.stdout_formatter ());
-                            Misc.Color.set_color_tag_handling
-                              (Compiler_request_output.stderr_formatter ());
-                            run_with_external_owner execute)))
-                  ~finally:reset_state
-              in
-              {exit_code; stdout; stderr; diagnostics})))
+  Gentype_summary.with_compiler_identity build_identity (fun () ->
+      Env.with_frozen_values_setting ?enabled:frozen_override (fun () ->
+          Compiler_phase_trace.request ~cwd ~input (fun () ->
+              with_fresh_request_states_and_snapshot ~cwd (fun () ->
+                  Compiler_phase_trace.section "request.reset" (fun () ->
+                      reset_state ~new_request:true ());
+                  Cmt_format.set_args argv;
+                  let execute () =
+                    try
+                      (match prepared with
+                      | None ->
+                        let flags =
+                          Compiler_phase_trace.section "request.flags"
+                            command_line_flags
+                        in
+                        Compiler_phase_trace.section "request.dispatch"
+                          (fun () ->
+                            Bsc_args.parse_exn ~argv flags anonymous ~usage)
+                      | Some options ->
+                        Compiler_phase_trace.section "request.flags" (fun () ->
+                            install_options options);
+                        Compiler_phase_trace.section "request.dispatch"
+                          (fun () ->
+                            anonymous
+                              ~rev_args:(input :: options.rev_other_inputs)));
+                      0
+                    with
+                    | Request_exit code -> code
+                    | Bsc_args.Help message ->
+                      Compiler_request_output.write_stdout message;
+                      0
+                    | Res_driver.Already_reported -> 1
+                    | Bsc_args.Bad msg ->
+                      Format.fprintf (ppf ()) "%s@." msg;
+                      2
+                    | x ->
+                      Location.report_exception (ppf ()) x;
+                      2
+                  in
+                  let run_with_external_owner action =
+                    match run_external with
+                    | None -> action ()
+                    | Some run_external ->
+                      Ccomp.with_command_runner
+                        (fun command ->
+                          let status, stdout, stderr = run_external command in
+                          Compiler_request_output.write_stdout stdout;
+                          Format.pp_print_string (ppf ()) stderr;
+                          status)
+                        action
+                  in
+                  let (exit_code, stdout, stderr), diagnostics =
+                    Fun.protect
+                      (fun () ->
+                        Location.with_diagnostic_capture (fun () ->
+                            Compiler_request_output.with_capture (fun () ->
+                                Misc.Color.set_color_tag_handling
+                                  (Compiler_request_output.stdout_formatter ());
+                                Misc.Color.set_color_tag_handling
+                                  (Compiler_request_output.stderr_formatter ());
+                                run_with_external_owner execute)))
+                      ~finally:reset_state
+                  in
+                  {exit_code; stdout; stderr; diagnostics}))))
 
 let run_request ~run_external ~cwd ~argv ~input =
   let logical_argv = Array.of_list ("bsc" :: (argv @ [input])) in

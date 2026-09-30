@@ -213,8 +213,8 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
       add_expected source_base [".ast"; ".res"];
       if Option.is_some module_.Source.interface then (
         add_expected source_base [".iast"; ".resi"];
-        add_expected compiler_base [".cmti"]);
-      add_expected compiler_base [".cmi"; ".cmj"; ".cmt"])
+        add_expected compiler_base [".cmti"; ".cmti.gts"]);
+      add_expected compiler_base [".cmi"; ".cmj"; ".cmt"; ".cmt.gts"])
     modules;
   Config.namespace_compiler_name config.namespace
   |> Option.iter (fun namespace ->
@@ -253,8 +253,12 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
     let extension = Filename.extension basename in
     if extension = ".mlmap" then [Filename.concat build_dir basename]
     else
-      Hashtbl.find_opt mapped_source_directories
-        (Filename.remove_extension basename)
+      let compiler_base =
+        if extension = ".gts" then
+          basename |> Filename.remove_extension |> Filename.remove_extension
+        else Filename.remove_extension basename
+      in
+      Hashtbl.find_opt mapped_source_directories compiler_base
       |> Option.value ~default:[]
       |> List.map (fun directory ->
           Filename.concat build_dir (Filename.concat directory basename))

@@ -414,10 +414,10 @@ let type_get_inlined ~config ~export_type_map type_ =
        ~lookup_id:(fun s -> export_type_map |> String_map.find s)
        ~type_name_is_interface:(fun _ -> false)
 
-(** Read the cmt file referenced in an import type,
-   and recursively for the import types obtained from reading the cmt file. *)
+(** Read the dependency input referenced in an import type, and recursively for
+   the import types obtained from its declarations. *)
 let rec read_cmt_files_recursively ~config ~env
-    ~input_cmt_translate_type_declarations ~output_file_relative ~resolver
+    ~input_annots_translate_type_declarations ~output_file_relative ~resolver
     {Code_item.type_name; as_type_name; import_path} =
   let update_type_map_from_other_files ~as_type ~export_type_map_from_cmt env =
     match export_type_map_from_cmt |> String_map.find type_name with
@@ -447,9 +447,17 @@ let rec read_cmt_files_recursively ~config ~env
     | exception Not_found ->
       (* cmt file not read before: this ensures termination  *)
       let type_declarations =
-        Cmt_format.read_cmt cmt_file
-        |> input_cmt_translate_type_declarations ~config ~output_file_relative
-             ~resolver
+        (match
+           Compiler_phase_trace.dependency "dependency.gentype_summary_read"
+             (fun () -> Gentype_summary.read ~cmt_file)
+         with
+          | Some annots -> annots
+          | None ->
+            Compiler_phase_trace.dependency
+              "dependency.gentype_dependency_cmt_read" (fun () ->
+                (Cmt_format.read_cmt cmt_file).cmt_annots))
+        |> input_annots_translate_type_declarations ~config
+             ~output_file_relative ~resolver
         |> fun (x : Code_item.translation) -> x.type_declarations
       in
       let export_type_map_from_cmt =
@@ -478,19 +486,20 @@ let rec read_cmt_files_recursively ~config ~env
            (fun env new_import_type ->
              new_import_type
              |> read_cmt_files_recursively ~config ~env
-                  ~input_cmt_translate_type_declarations ~output_file_relative
-                  ~resolver)
+                  ~input_annots_translate_type_declarations
+                  ~output_file_relative ~resolver)
            env)
   | _ -> env
 
 let emit_import_type ~config ~emitters ~env
-    ~input_cmt_translate_type_declarations ~output_file_relative ~resolver
+    ~input_annots_translate_type_declarations ~output_file_relative ~resolver
     ~type_name_is_interface
     ({Code_item.type_name; as_type_name; import_path} as import_type) =
   let env =
     import_type
     |> read_cmt_files_recursively ~config ~env
-         ~input_cmt_translate_type_declarations ~output_file_relative ~resolver
+         ~input_annots_translate_type_declarations ~output_file_relative
+         ~resolver
   in
   let emitters =
     Emit_type.emit_import_type_as ~emitters ~config ~type_name ~as_type_name
@@ -500,13 +509,13 @@ let emit_import_type ~config ~emitters ~env
   (env, emitters)
 
 let emit_import_types ~config ~emitters ~env
-    ~input_cmt_translate_type_declarations ~output_file_relative ~resolver
+    ~input_annots_translate_type_declarations ~output_file_relative ~resolver
     ~type_name_is_interface import_types =
   import_types
   |> List.fold_left
        (fun (env, emitters) ->
          emit_import_type ~config ~emitters ~env
-           ~input_cmt_translate_type_declarations ~output_file_relative
+           ~input_annots_translate_type_declarations ~output_file_relative
            ~resolver ~type_name_is_interface)
        (env, emitters)
 
@@ -602,7 +611,7 @@ let propagate_annotation_to_sub_types ~code_items
   (new_type_map, !annotated_set)
 
 let emit_translation_as_string ~config ~file_name
-    ~input_cmt_translate_type_declarations ~output_file_relative ~resolver
+    ~input_annots_translate_type_declarations ~output_file_relative ~resolver
     (translation : Translation.t) =
   let initial_env =
     {
@@ -652,8 +661,8 @@ let emit_translation_as_string ~config ~file_name
     import_types_from_type_declarations @ translation.import_types
     |> List.sort_uniq Translation.import_type_compare
     |> emit_import_types ~config ~emitters ~env
-         ~input_cmt_translate_type_declarations ~output_file_relative ~resolver
-         ~type_name_is_interface
+         ~input_annots_translate_type_declarations ~output_file_relative
+         ~resolver ~type_name_is_interface
   in
   let env, emitters =
     export_from_type_declarations

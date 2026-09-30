@@ -35,6 +35,13 @@ The [checkpoint 3 comparison](checkpoint-3-2026-09-30.md) records independent
 compiler and editor policies and GenType artifact parity.
 The [checkpoint 4 comparison](checkpoint-4-2026-09-30.md) records owned GenType
 semantic inputs, reduced CMT reads, and interface precedence checks.
+The [checkpoint 5 comparison](checkpoint-5-2026-09-30.md) records versioned
+dependency summaries, recursive-read traces, TypeScript parity, and fallback
+behavior. `gentype_summary_parity.py` checks clean, edit, and restart builds in
+all three annotation modes against the previous executable. The focused
+`gentype_summary_benchmark.py` measures clean, unchanged, and restarted edit
+builds of its recursive-import fixture. Pass both runners the old executable,
+new executable, and a new output directory, in that order.
 
 ## Build and compare
 

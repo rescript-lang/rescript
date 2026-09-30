@@ -23,9 +23,8 @@ let signature_item_is_declaration signature_item =
   | Typedtree.Tsig_type _ | Tsig_modtype _ -> true
   | _ -> false
 
-let input_cmt_translate_type_declarations ~config ~output_file_relative
-    ~resolver input_cmt : Code_item.translation =
-  let {Cmt_format.cmt_annots} = input_cmt in
+let input_annots_translate_type_declarations ~config ~output_file_relative
+    ~resolver (cmt_annots : Cmt_format.binary_annots) : Code_item.translation =
   let type_env = Type_env.root () in
   let translations =
     match cmt_annots with
@@ -49,6 +48,11 @@ let input_cmt_translate_type_declarations ~config ~output_file_relative
   in
   translations |> Translation.combine
   |> Translation.add_type_declarations_from_module_equations ~type_env
+
+let input_cmt_translate_type_declarations ~config ~output_file_relative
+    ~resolver (input_cmt : Cmt_format.cmt_infos) =
+  input_annots_translate_type_declarations ~config ~output_file_relative
+    ~resolver input_cmt.cmt_annots
 
 let translate_cmt ~config ~output_file_relative ~resolver input_cmt :
     Translation.t =
@@ -82,7 +86,8 @@ let emit_translation ~config ~file_name ~output_file ~output_file_relative
   let code_text =
     translation
     |> Emit_js.emit_translation_as_string ~config ~file_name
-         ~output_file_relative ~resolver ~input_cmt_translate_type_declarations
+         ~output_file_relative ~resolver
+         ~input_annots_translate_type_declarations
   in
   let file_contents =
     Emit_type.file_header ~source_file:(Filename.basename source_file)

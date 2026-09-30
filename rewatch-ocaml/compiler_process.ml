@@ -437,8 +437,9 @@ let publish_immediate ?session ~preserve_source_mtime ~retain_interface
       publish_compiler_artifacts ~preserve_source_mtime ~artifact_dir ~ocaml_dir
         ~basename
         (match source_kind with
-        | Source.Interface -> [Cmi; Optional "cmti"]
-        | Source.Implementation -> [Cmi; Required "cmj"; Optional "cmt"])
+        | Source.Interface -> [Cmi; Optional "cmti"; Optional "cmti.gts"]
+        | Source.Implementation ->
+          [Cmi; Required "cmj"; Optional "cmt"; Optional "cmt.gts"])
     in
     cmi_change := changes.cmi_change;
     optimization_changed := changes.optimization_changed;
@@ -513,7 +514,7 @@ let publish_immediate ?session ~preserve_source_mtime ~retain_interface
             List.map
               (fun extension ->
                 Filename.concat ocaml_dir (basename ^ extension))
-              [".cmi"; ".cmj"; ".cmt"; ".cmti"]
+              [".cmi"; ".cmj"; ".cmt"; ".cmti"; ".cmt.gts"; ".cmti.gts"]
             @ [Build_artifacts.published_ast_path ~ocaml_dir path]
           in
           let js_outputs =
@@ -661,6 +662,8 @@ let publish ?session ~retain_interface ~dependencies ~build_dir ~ocaml_dir
             destination "cmj";
             destination "cmt";
             destination "cmti";
+            destination "cmt.gts";
+            destination "cmti.gts";
             Build_artifacts.published_ast_path ~ocaml_dir path;
           ]
         in

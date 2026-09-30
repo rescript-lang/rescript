@@ -1,0 +1,11 @@
+{
+  "name": "rewatch-gentype-summary",
+  "sources": "src",
+  "package-specs": {"module": "esmodule", "in-source": true},
+  "gentypeconfig": {
+    "module": "esmodule",
+    "moduleResolution": "node",
+    "generatedFileExtension": ".gen.ts",
+    "exportInterfaces": true
+  }
+}

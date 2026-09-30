@@ -555,8 +555,8 @@ module Compile = struct
         |> Gentype_main.translate_cmt ~config ~output_file_relative ~resolver
         |> Emit_js.emit_translation_as_string ~config ~file_name
              ~output_file_relative ~resolver
-             ~input_cmt_translate_type_declarations:
-               Gentype_main.input_cmt_translate_type_declarations
+             ~input_annots_translate_type_declarations:
+               Gentype_main.input_annots_translate_type_declarations
       in
       Emit_type.file_header ~source_file:(Filename.basename source_file)
       ^ "\n" ^ code_text ^ "\n"

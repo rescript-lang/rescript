@@ -152,8 +152,12 @@ request. For a module with an interface, an embedded session supplies an
 isolated copy of the published interface semantics when the staged source and
 published file still match; a missing or stale session value falls back to the
 existing CMTI reader. Standalone compilation also uses the CMTI reader.
-Dependency annotation reads remain on their existing path until the next
-checkpoint.
+For imported GenType types, the compiler writes a versioned declaration summary
+beside each CMT or CMTI. A recursive import reads that summary after checking
+the source, compiler build, GenType settings, and CMI dependency contents.
+Missing or stale summaries use the existing CMT reader, including for prebuilt
+packages. OCaml Rewatch publishes the summaries and removes them when their
+source modules are removed.
 Parser AST cache copies run on a separate domain while compilation proceeds;
 `REWATCH_ASYNC_AST_EXPORT=0` makes those copies finish before compilation.
 OCaml Rewatch omits CMT and CMTI binary annotations by default for packages

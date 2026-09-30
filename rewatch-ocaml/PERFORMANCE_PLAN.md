@@ -73,10 +73,22 @@ editor-only work, including when GenType is enabled.
    a final `make test`, focused OUnit (107 tests), and `make checkformat` passed.
    Next: checkpoint 5, versioned GenType dependency summaries.
 
-5. [ ] **GenType dependency inputs.** Replace recursive annotation reads with
+5. [x] **GenType dependency inputs.** Replace recursive annotation reads with
    versioned summaries; validate sources, compiler, configuration, and dependencies.
    Keep legacy readers for prebuilt packages. Require clean/edit/restart TypeScript
    parity using summaries.
+
+   Record: Added declaration-only CMT/CMTI sidecars, compiler/source/configuration/
+   CMI validation, the recursive summary reader with legacy fallback, artifact
+   publication and cleanup, a recursive-import fixture, validation and integration
+   tests, and repeatable GenType parity and timing runners. The [five-run gate
+   and GenType measurements](bench/checkpoint-5-2026-09-30.md) passed with
+   identical compiler work, complete file sets, artifact bytes, and TypeScript
+   in clean/edit/restart builds for all three annotation modes. The small
+   GenType fixture showed added clean and restart latency from summary writing;
+   this is a preparatory step for removing forced annotations. `make test-all`,
+   the OCaml Rewatch port suite, focused OUnit (108 tests), and
+   `make checkformat` passed. Next: checkpoint 6, editor-only annotations.
 
 6. [ ] **Editor-only annotations.** Remove GenType's forced annotations and
    compatibility copies. Gate editor collection, metadata, capture, snapshots,
