@@ -20,7 +20,7 @@ and package_output_spec = {
   suffix: string;
 }
 
-let format_version = "8"
+let format_version = "9"
 
 let package_output_specs (config : Config.t) =
   List.map

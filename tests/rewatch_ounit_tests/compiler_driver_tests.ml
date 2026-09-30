@@ -556,6 +556,7 @@ let cmt_accumulator_isolation_tests _context =
   let right_ready = Atomic.make false in
   let left =
     Domain.spawn (fun () ->
+        Clflags.reset ();
         Cmt_format.clear ();
         Cmt_format.set_args [|"bsc"; "First.res"|];
         Cmt_format.add_saved_type (Cmt_format.Partial_class_expr ());
@@ -567,6 +568,7 @@ let cmt_accumulator_isolation_tests _context =
   let right =
     Domain.spawn (fun () ->
         wait_for_atomic left_ready;
+        Clflags.reset ();
         Cmt_format.clear ();
         Cmt_format.set_args [|"bsc"; "Second.res"|];
         Cmt_format.add_saved_type (Cmt_format.Partial_class_expr ());
@@ -857,6 +859,7 @@ let gentype_owned_inputs_tests _context =
 let gentype_summary_validation_tests _context =
   Test_support.with_temp_dir "rewatch-gentype-summary-" (fun root ->
       let source = "@genType type t = {value: int}\n" in
+      write root "rescript.json" "{}\n";
       write root "Leaf.res" source;
       expect_code 0 (snd (run root ~extra:["-bs-gentype"] "Leaf.res"));
       let cmt_file = Filename.concat root "Leaf.cmt" in
@@ -866,10 +869,10 @@ let gentype_summary_validation_tests _context =
         (Sys.file_exists summary_file)
         "GenType writes a declaration summary";
       let read ?(identity = Rescript_compiler_driver.build_identity)
-          ?(module_ = None) () =
+          ?(module_ = None) ?(project_root = root) () =
         Gentype_summary.with_compiler_identity identity (fun () ->
             Gentype_config.with_fresh_flags (fun () ->
-                Gentype_config.project_root () := root;
+                Gentype_config.project_root () := project_root;
                 Gentype_config.module_flag () := module_;
                 Gentype_summary.read ~cmt_file))
       in
@@ -886,6 +889,14 @@ let gentype_summary_validation_tests _context =
       check
         (Option.is_none (read ~module_:(Some Gentype_config.CommonJS) ()))
         "GenType configuration invalidates the summary";
+      check
+        (Option.is_some (read ~project_root:(root ^ "/consumer") ()))
+        "another package can use a validated producer summary";
+      write root "rescript.json" "{\"name\":\"changed\"}\n";
+      check
+        (Option.is_none (read ~project_root:(root ^ "/consumer") ()))
+        "producer configuration contents invalidate cross-package summaries";
+      write root "rescript.json" "{}\n";
       write root "Leaf.res" (source ^ "\n");
       check (Option.is_none (read ())) "source contents invalidate the summary";
       write root "Leaf.res" source;
@@ -899,6 +910,51 @@ let gentype_summary_validation_tests _context =
       check
         (Option.is_some (read ()))
         "summary supplies declarations without the original CMT")
+
+let gentype_without_editor_annotations_tests _context =
+  Test_support.with_temp_dir "rewatch-gentype-no-editor-" (fun root ->
+      write root "Api.resi" "@genType let answer: int\n";
+      write root "Api.res" "let answer = 42\n";
+      let no_editor = ["-bs-gentype"; "-bs-no-bin-annot"] in
+      expect_code 0 (snd (run root ~extra:no_editor "Api.resi"));
+      check
+        (not (Sys.file_exists (Filename.concat root "Api.cmti")))
+        "GenType interface skips editor annotations";
+      check
+        (Sys.file_exists (Filename.concat root "Api.cmti.gts"))
+        "GenType interface retains its own semantic input";
+      expect_code 0
+        (snd
+           (run root
+              ~extra:(["-I"; root; "-bs-read-cmi"] @ no_editor)
+              "Api.res"));
+      check
+        (not (Sys.file_exists (Filename.concat root "Api.cmt")))
+        "GenType implementation skips editor annotations";
+      check
+        (Sys.file_exists (Filename.concat root "Api.cmt.gts"))
+        "GenType implementation retains a dependency summary";
+      check
+        (Sys.file_exists (Filename.concat root "Api.gen.tsx"))
+        "GenType uses the interface summary without a CMTI";
+      write root "Bad.res" "@genType let answer: int = \"wrong\"\n";
+      let bad = snd (run root ~extra:no_editor "Bad.res") in
+      check (bad.exit_code <> 0) "invalid GenType source reports a type error";
+      check
+        (not (Sys.file_exists (Filename.concat root "Bad.cmt")))
+        "disabled editor annotations skip partial CMTs";
+      check
+        (not (Sys.file_exists (Filename.concat root "Bad.cmt.gts")))
+        "failed GenType source has no summary";
+      let enabled = snd (run root ~extra:["-bs-gentype"] "Bad.res") in
+      check (enabled.exit_code <> 0) "enabled editor annotations report errors";
+      check
+        (match
+           (Cmt_format.read_cmt (Filename.concat root "Bad.cmt")).cmt_annots
+         with
+        | Partial_implementation _ -> true
+        | _ -> false)
+        "enabled editor annotations retain partial CMTs")
 
 let published_module_result_tests _context =
   let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
@@ -2531,6 +2587,8 @@ let tests =
          "semantic_source_alias" >:: semantic_source_alias_tests;
          "gentype_owned_inputs" >:: gentype_owned_inputs_tests;
          "gentype_summary_validation" >:: gentype_summary_validation_tests;
+         "gentype_without_editor_annotations"
+         >:: gentype_without_editor_annotations_tests;
          "published_module_result" >:: published_module_result_tests;
          "virtual_module_artifact_lookup"
          >:: virtual_module_artifact_lookup_tests;

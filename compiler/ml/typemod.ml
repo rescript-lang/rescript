@@ -112,7 +112,7 @@ let type_open ?toplevel env sod =
 
 (* Record a module type *)
 let rm node =
-  Stypes.record (Stypes.Ti_mod node);
+  if !((Clflags.current ()).annotations) then Stypes.record (Stypes.Ti_mod node);
   node
 
 (* Forward declaration, to be filled in by type_module_type_of *)
@@ -680,12 +680,14 @@ let mkmty desc typ env loc attrs =
       mty_attributes = attrs;
     }
   in
-  Cmt_format.add_saved_type (Cmt_format.Partial_module_type mty);
+  if !((Clflags.current ()).binary_annotations) then
+    Cmt_format.add_saved_type (Cmt_format.Partial_module_type mty);
   mty
 
 let mksig desc env loc =
   let sg = {sig_desc = desc; sig_loc = loc; sig_env = env} in
-  Cmt_format.add_saved_type (Cmt_format.Partial_signature_item sg);
+  if !((Clflags.current ()).binary_annotations) then
+    Cmt_format.add_saved_type (Cmt_format.Partial_signature_item sg);
   sg
 
 (* let signature sg = List.map (fun item -> item.sig_type) sg *)
@@ -1793,10 +1795,11 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
                (Some cmi));
           (str, coercion, finalenv, simple_sg)
       with e ->
-        Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
-          (Cmt_format.Partial_implementation
-             (Array.of_list (Cmt_format.get_saved_types ())))
-          (Some sourcefile) initial_env None;
+        if !((Clflags.current ()).binary_annotations) then
+          Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
+            (Cmt_format.Partial_implementation
+               (Array.of_list (Cmt_format.get_saved_types ())))
+            (Some sourcefile) initial_env None;
         raise e)
 
 let save_signature modname tsg outputprefix source_file initial_env cmi =

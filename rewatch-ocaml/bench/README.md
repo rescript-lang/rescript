@@ -42,6 +42,10 @@ all three annotation modes against the previous executable. The focused
 `gentype_summary_benchmark.py` measures clean, unchanged, and restarted edit
 builds of its recursive-import fixture. Pass both runners the old executable,
 new executable, and a new output directory, in that order.
+The [checkpoint 6 comparison](checkpoint-6-2026-09-30.md) records the removal
+of GenType's forced editor annotations, with allocation, artifact, diagnostics,
+and TypeScript parity checks. `gentype_editor_policy_parity.py` checks interface
+and error behavior across all three annotation modes.
 
 ## Build and compare
 

@@ -169,28 +169,33 @@ let clear () =
   state.deprecated_used <- []
 
 let add_saved_type b =
-  let state = current_accumulators () in
-  state.saved_types <- b :: state.saved_types
+  if !((Clflags.current ()).binary_annotations) then
+    let state = current_accumulators () in
+    state.saved_types <- b :: state.saved_types
 
 let get_saved_types () = (current_accumulators ()).saved_types
 let set_saved_types l = (current_accumulators ()).saved_types <- l
 
 let record_deprecated_used ?deprecated_context ?migration_template
     ?migration_in_pipe_chain_template source_loc deprecated_text =
-  let state = current_accumulators () in
-  state.deprecated_used <-
-    {
-      Cmt_utils.source_loc;
-      deprecated_text;
-      migration_template;
-      migration_in_pipe_chain_template;
-      context = deprecated_context;
-    }
-    :: state.deprecated_used
+  if !((Clflags.current ()).binary_annotations) then
+    let state = current_accumulators () in
+    state.deprecated_used <-
+      {
+        Cmt_utils.source_loc;
+        deprecated_text;
+        migration_template;
+        migration_in_pipe_chain_template;
+        context = deprecated_context;
+      }
+      :: state.deprecated_used
 
 let _ = Cmt_utils.record_deprecated_used := record_deprecated_used
 
 let record_value_dependency vd1 vd2 =
-  if vd1.Types.val_loc <> vd2.Types.val_loc then
+  if
+    !((Clflags.current ()).binary_annotations)
+    && vd1.Types.val_loc <> vd2.Types.val_loc
+  then
     let state = current_accumulators () in
     state.value_deps <- (vd1, vd2) :: state.value_deps

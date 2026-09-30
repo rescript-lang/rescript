@@ -42,6 +42,7 @@ val with_fresh : (unit -> 'a) -> 'a
 
 type snapshot
 val snapshot : unit -> snapshot
+val snapshot_binary_annotations : snapshot -> bool
 
 val install_copy : snapshot -> unit
 (** Copy option values into an already isolated request. The snapshot and

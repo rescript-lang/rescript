@@ -1155,10 +1155,16 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
         else run ()
       in
       let run () =
-        Cmt_format.with_capture
-          (fun filename cmt ->
-            semantic := Some (Compiler_request_state.resolve_path filename, cmt))
-          run
+        match prepared with
+        | Some options
+          when not (Clflags.snapshot_binary_annotations options.clflags) ->
+          run ()
+        | Some _ | None ->
+          Cmt_format.with_capture
+            (fun filename cmt ->
+              semantic :=
+                Some (Compiler_request_state.resolve_path filename, cmt))
+            run
       in
       let run () =
         Gentype_main.with_generated_output_capture

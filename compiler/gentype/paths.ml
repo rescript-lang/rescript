@@ -59,6 +59,9 @@ let get_module_name cmt =
   cmt |> handle_namespace |> Filename.basename |> Module_name.from_string_unsafe
 
 let get_cmt_file cmt =
+  let has_semantic_input path =
+    Sys.file_exists path || Sys.file_exists (path ^ ".gts")
+  in
   let path_cmt =
     if Filename.is_relative cmt then
       Filename.concat (Compiler_request_state.cwd ()) cmt
@@ -77,10 +80,10 @@ let get_cmt_file cmt =
       let path_cmti_lower_case =
         (Filename.chop_extension path_cmt_lower_case [@doesNotRaise]) ^ ".cmti"
       in
-      if Sys.file_exists path_cmti_lower_case then path_cmti_lower_case
-      else if Sys.file_exists path_cmti then path_cmti
-      else if Sys.file_exists path_cmt_lower_case then path_cmt_lower_case
-      else if Sys.file_exists path_cmt then path_cmt
+      if has_semantic_input path_cmti_lower_case then path_cmti_lower_case
+      else if has_semantic_input path_cmti then path_cmti
+      else if has_semantic_input path_cmt_lower_case then path_cmt_lower_case
+      else if has_semantic_input path_cmt then path_cmt
       else ""
     else ""
   in

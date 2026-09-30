@@ -90,10 +90,25 @@ editor-only work, including when GenType is enabled.
    the OCaml Rewatch port suite, focused OUnit (108 tests), and
    `make checkformat` passed. Next: checkpoint 6, editor-only annotations.
 
-6. [ ] **Editor-only annotations.** Remove GenType's forced annotations and
+6. [x] **Editor-only annotations.** Remove GenType's forced annotations and
    compatibility copies. Gate editor collection, metadata, capture, snapshots,
    serialization, and export before allocation when disabled. Enabled builds
    retain editor features and complete/partial annotations.
+
+   Record: Decoupled GenType inputs from the editor annotation and compatibility
+   copy policies. The compiler retains a normalized request-local GenType
+   semantic result without writing CMT/CMTI, and summary-only interfaces keep
+   the semantic input needed after restart. Disabled builds skip editor type
+   collection, metadata, session capture, CMT serialization, and export;
+   enabled builds retain complete and partial annotations. The
+   [five-run gate and GenType measurements](bench/checkpoint-6-2026-09-30.md)
+   passed with identical compiler work, complete file sets and artifact bytes
+   outside GenType, and matching TypeScript, JavaScript, errors, and enabled
+   editor artifacts in GenType. Disabled GenType allocation fell 8% on the
+   interface fixture and 19% on recursive imports, with roughly level clean
+   wall time. `make test-all`, the OCaml Rewatch port suite, focused OUnit
+   (109 tests), and `make checkformat` passed. Next: checkpoint 7, owned AST
+   results.
 
 7. [ ] **Owned AST results.** Return ASTs/dependencies before disk persistence;
    validate session generations and disk identities. Preserve persistent caches,

@@ -76,6 +76,8 @@ let current () = Domain.DLS.get key
 
 type snapshot = t
 
+let snapshot_binary_annotations snapshot = !(snapshot.binary_annotations)
+
 let copy state =
   {
     output_name = ref !(state.output_name);

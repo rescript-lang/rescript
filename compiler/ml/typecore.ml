@@ -137,12 +137,15 @@ let type_package = ref (fun _ -> assert false)
   or [Typedtree.pattern] that will end up in the typed AST.
 *)
 let re node =
-  Cmt_format.add_saved_type (Cmt_format.Partial_expression node);
-  Stypes.record (Stypes.Ti_expr node);
+  if !((Clflags.current ()).binary_annotations) then
+    Cmt_format.add_saved_type (Cmt_format.Partial_expression node);
+  if !((Clflags.current ()).annotations) then
+    Stypes.record (Stypes.Ti_expr node);
   node
 let rp node =
-  Cmt_format.add_saved_type (Cmt_format.Partial_pattern node);
-  Stypes.record (Stypes.Ti_pat node);
+  if !((Clflags.current ()).binary_annotations) then
+    Cmt_format.add_saved_type (Cmt_format.Partial_pattern node);
+  if !((Clflags.current ()).annotations) then Stypes.record (Stypes.Ti_pat node);
   node
 
 type recarg = Allowed | Required | Rejected
@@ -498,8 +501,7 @@ let enter_variable ?(is_module = false) ?(is_as_variable = false) loc name ty =
     if not !(allow_modules_ref ()) then
       raise (Error (loc, Env.empty, Modules_not_allowed));
     module_variables_ref () := (name, loc) :: !(module_variables_ref ()))
-  else
-    (* moved to genannot *)
+  else if !((Clflags.current ()).annotations) then
     may
       (fun s -> Stypes.record (Stypes.An_ident (name.loc, name.txt, s)))
       !(pattern_scope_ref ());

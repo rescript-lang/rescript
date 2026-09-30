@@ -133,17 +133,28 @@ let owned_semantic_result cmt =
     (fun () -> cmt)
 
 let read_input_cmt ~inputs is_interface cmt_file =
+  let interface_cmt () =
+    match inputs.interface with
+    | Some cmt -> cmt
+    | None -> (
+      match
+        Compiler_phase_trace.dependency
+          "dependency.gentype_interface_summary_read" (fun () ->
+            Gentype_summary.read_interface ~cmt_file)
+      with
+      | Some annots -> (
+        match inputs.implementation with
+        | Some cmt -> {cmt with cmt_annots = annots}
+        | None -> read_cmt cmt_file)
+      | None -> read_cmt cmt_file)
+  in
   let implementation_cmt () =
     match inputs.implementation with
     | Some cmt -> owned_semantic_result cmt
     | None -> read_cmt cmt_file
   in
   let input_cmt =
-    if is_interface then
-      match inputs.interface with
-      | Some cmt -> cmt
-      | None -> read_cmt cmt_file
-    else implementation_cmt ()
+    if is_interface then interface_cmt () else implementation_cmt ()
   in
   let ignore_interface = ref false in
   let check_annotation ~loc:_ attributes =
@@ -193,7 +204,11 @@ let read_input_cmt ~inputs is_interface cmt_file =
 let process_cmt_file ?compiled_cmt cmt =
   let config = Paths.read_config ~namespace:(cmt |> Paths.find_name_space) in
   if !(Debug.basic ()) then Log_.item "Cmt %s\n" cmt;
-  let cmt_file = cmt |> Paths.get_cmt_file in
+  let cmt_file =
+    match (Paths.get_cmt_file cmt, compiled_cmt) with
+    | "", Some _ -> Compiler_request_state.resolve_path cmt
+    | path, _ -> path
+  in
   if cmt_file <> "" then
     let file_name = cmt |> Paths.get_module_name in
     let is_interface = Filename.check_suffix cmt_file ".cmti" in
@@ -201,7 +216,10 @@ let process_cmt_file ?compiled_cmt cmt =
       {
         implementation = compiled_cmt;
         interface =
-          (if is_interface then semantic_input ~filename:cmt_file else None);
+          (if is_interface then
+             if Filename.check_suffix cmt ".cmti" then compiled_cmt
+             else semantic_input ~filename:cmt_file
+           else None);
       }
     in
     let input_cmt, has_gentype_annotations =

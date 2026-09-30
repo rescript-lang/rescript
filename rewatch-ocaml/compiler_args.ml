@@ -88,8 +88,8 @@ let editor_artifacts_enabled () = Sys.getenv_opt "REWATCH_BIN_ANNOT" = Some "1"
 
 let gentype_inputs_enabled = gentype_enabled
 
-let binary_annotations_enabled (config : Config.t) =
-  editor_artifacts_enabled () || gentype_inputs_enabled config
+let binary_annotations_enabled (_config : Config.t) =
+  editor_artifacts_enabled ()
 
 let compatibility_copies_enabled config =
   binary_annotations_enabled config

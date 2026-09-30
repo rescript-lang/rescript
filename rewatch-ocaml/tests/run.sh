@@ -1696,6 +1696,19 @@ if grep 'src/Annotated.ast.*dependency.gentype_cmt_read' \
   echo "genType reread the newly written implementation CMT" >&2
   exit 1
 fi
+grep 'src/Pair.ast.*dependency.gentype_interface_summary_read' \
+  "$work/gentype-trace.normalized.tsv" >/dev/null
+test ! -e "$gentype/lib/bs/src/Pair.cmti"
+test ! -e "$gentype/lib/ocaml/Pair.cmti"
+test ! -e "$gentype/lib/ocaml/Pair.resi"
+REWATCH_BIN_ANNOT=1 "$port" build "$gentype"
+test -f "$gentype/lib/bs/src/Pair.cmti"
+test -f "$gentype/lib/ocaml/Pair.cmti"
+test -f "$gentype/lib/ocaml/Pair.resi"
+REWATCH_BIN_ANNOT=0 "$port" build "$gentype"
+test ! -e "$gentype/lib/bs/src/Pair.cmti"
+test ! -e "$gentype/lib/ocaml/Pair.cmti"
+test ! -e "$gentype/lib/ocaml/Pair.resi"
 
 summary_project="$work/gentype-summary"
 summary_trace="$work/gentype-summary-trace.tsv"
@@ -1704,6 +1717,8 @@ REWATCH_TYPECHECK_TRACE="$(native_path "$summary_trace")" \
 for module_name in Leaf Middle Main; do
   test -f "$summary_project/lib/bs/src/$module_name.cmt.gts"
   test -f "$summary_project/src/$module_name.gen.ts"
+  test ! -e "$summary_project/lib/bs/src/$module_name.cmt"
+  test ! -e "$summary_project/lib/ocaml/$module_name.cmt"
 done
 tr '\\' '/' <"$summary_trace" >"$work/gentype-summary-trace.normalized.tsv"
 if ! grep 'src/Main.ast.*dependency.gentype_summary_read' \
@@ -1730,9 +1745,15 @@ tr '\\' '/' <"$work/gentype-summary-restart.tsv" \
   >"$work/gentype-summary-restart.normalized.tsv"
 grep 'src/Main.ast.*dependency.gentype_summary_read' \
   "$work/gentype-summary-restart.normalized.tsv" >/dev/null
+REWATCH_BIN_ANNOT=1 "$port" build "$summary_project"
+for module_name in Leaf Middle Main; do
+  test -f "$summary_project/lib/bs/src/$module_name.cmt"
+  test -f "$summary_project/lib/ocaml/$module_name.cmt"
+done
 rm -f "$summary_project/lib/bs/src/Leaf.cmt.gts" \
   "$summary_project/lib/bs/src/Middle.cmt.gts"
 printf '\n// use legacy dependency inputs\n' >>"$summary_project/src/Main.res"
+REWATCH_BIN_ANNOT=1 \
 REWATCH_TYPECHECK_TRACE="$(native_path "$work/gentype-summary-fallback.tsv")" \
   "$port" build "$summary_project"
 cmp "$work/gentype-summary-clean.ts" "$summary_project/src/Main.gen.ts"
@@ -1741,7 +1762,7 @@ tr '\\' '/' <"$work/gentype-summary-fallback.tsv" \
 grep 'src/Main.ast.*dependency.gentype_dependency_cmt_read' \
   "$work/gentype-summary-fallback.normalized.tsv" >/dev/null
 rm "$summary_project/src/Main.res"
-"$port" build "$summary_project"
+REWATCH_BIN_ANNOT=1 "$port" build "$summary_project"
 test ! -e "$summary_project/lib/bs/src/Main.cmt.gts"
 test ! -e "$summary_project/lib/ocaml/Main.cmt.gts"
 

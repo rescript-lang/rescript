@@ -65,4 +65,29 @@ let save_cmt filename modname binary_annots sourcefile initial_env cmi =
                 output_cmt output_channel cmt);
             saved := Some cmt);
         !saved)
+  else if !((Clflags.current ()).bs_gentype) then
+    match binary_annots with
+    | Partial_implementation _ | Partial_interface _ -> None
+    | Implementation _ | Interface _ | Packed _ ->
+      Some
+        {
+          cmt_modname = modname;
+          cmt_annots = clear_env binary_annots;
+          cmt_value_dependencies = [];
+          cmt_comments = [];
+          cmt_args = [||];
+          cmt_sourcefile = sourcefile;
+          cmt_builddir = Compiler_request_state.cwd ();
+          cmt_loadpath = Config.get_load_path ();
+          cmt_source_digest =
+            Misc.may_map
+              (fun path ->
+                Digest.file (Compiler_request_state.resolve_path path))
+              sourcefile;
+          cmt_initial_env = initial_env;
+          cmt_imports = List.sort compare (Env.imports ());
+          cmt_interface_digest = None;
+          cmt_use_summaries = false;
+          cmt_extra_info = {deprecated_used = []};
+        }
   else None

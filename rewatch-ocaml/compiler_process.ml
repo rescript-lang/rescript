@@ -414,6 +414,8 @@ let publish_immediate ?session ~preserve_source_mtime ~retain_interface
   in
   let basename = Source.compiler_asset_basename config path in
   let artifact_dir = Filename.concat build_dir (Filename.dirname path) in
+  let editor_artifacts = Compiler_args.binary_annotations_enabled config in
+  let gentype_inputs = Compiler_args.gentype_inputs_enabled config in
   let interface_file = Filename.concat ocaml_dir (basename ^ ".cmi") in
   let optimization_file =
     match source_kind with
@@ -433,13 +435,30 @@ let publish_immediate ?session ~preserve_source_mtime ~retain_interface
   let cmi_change = ref Compiler_scheduler.Cmi_change_unknown in
   let optimization_changed = ref false in
   try
+    let required_artifacts =
+      match source_kind with
+      | Source.Interface -> [Cmi]
+      | Source.Implementation -> [Cmi; Required "cmj"]
+    in
+    let optional_editor_artifacts =
+      if editor_artifacts then
+        match source_kind with
+        | Source.Interface -> [Optional "cmti"]
+        | Source.Implementation -> [Optional "cmt"]
+      else []
+    in
+    let optional_gentype_inputs =
+      if gentype_inputs then
+        match source_kind with
+        | Source.Interface -> [Optional "cmti.gts"]
+        | Source.Implementation -> [Optional "cmt.gts"]
+      else []
+    in
     let changes =
       publish_compiler_artifacts ~preserve_source_mtime ~artifact_dir ~ocaml_dir
         ~basename
-        (match source_kind with
-        | Source.Interface -> [Cmi; Optional "cmti"; Optional "cmti.gts"]
-        | Source.Implementation ->
-          [Cmi; Required "cmj"; Optional "cmt"; Optional "cmt.gts"])
+        (required_artifacts @ optional_editor_artifacts
+       @ optional_gentype_inputs)
     in
     cmi_change := changes.cmi_change;
     optimization_changed := changes.optimization_changed;
@@ -501,20 +520,27 @@ let publish_immediate ?session ~preserve_source_mtime ~retain_interface
           | Source.Interface -> ".cmti"
           | Source.Implementation -> ".cmt"
         in
-        Rescript_compiler_driver.publish_session_semantic session
-          ~retain:is_local
-          ~source:(Filename.concat artifact_dir (basename ^ cmt_extension))
-          ~destination:(Filename.concat ocaml_dir (basename ^ cmt_extension));
+        if editor_artifacts then
+          Rescript_compiler_driver.publish_session_semantic session
+            ~retain:is_local
+            ~source:(Filename.concat artifact_dir (basename ^ cmt_extension))
+            ~destination:(Filename.concat ocaml_dir (basename ^ cmt_extension));
         let semantic_file =
-          let filename = Filename.concat ocaml_dir (basename ^ cmt_extension) in
-          if File_util.is_regular_file filename then Some filename else None
+          if editor_artifacts then
+            let filename =
+              Filename.concat ocaml_dir (basename ^ cmt_extension)
+            in
+            if File_util.is_regular_file filename then Some filename else None
+          else None
         in
         let generated_outputs =
           let compiler_outputs =
             List.map
               (fun extension ->
                 Filename.concat ocaml_dir (basename ^ extension))
-              [".cmi"; ".cmj"; ".cmt"; ".cmti"; ".cmt.gts"; ".cmti.gts"]
+              ([".cmi"; ".cmj"]
+              @ (if editor_artifacts then [".cmt"; ".cmti"] else [])
+              @ if gentype_inputs then [".cmt.gts"; ".cmti.gts"] else [])
             @ [Build_artifacts.published_ast_path ~ocaml_dir path]
           in
           let js_outputs =
@@ -657,15 +683,14 @@ let publish ?session ~retain_interface ~dependencies ~build_dir ~ocaml_dir
       in
       let generated_outputs =
         let compiler_outputs =
-          [
-            destination "cmi";
-            destination "cmj";
-            destination "cmt";
-            destination "cmti";
-            destination "cmt.gts";
-            destination "cmti.gts";
-            Build_artifacts.published_ast_path ~ocaml_dir path;
-          ]
+          [destination "cmi"; destination "cmj"]
+          @ (if Compiler_args.binary_annotations_enabled config then
+               [destination "cmt"; destination "cmti"]
+             else [])
+          @ (if Compiler_args.gentype_inputs_enabled config then
+               [destination "cmt.gts"; destination "cmti.gts"]
+             else [])
+          @ [Build_artifacts.published_ast_path ~ocaml_dir path]
         in
         let js_outputs =
           match source_kind with
@@ -689,11 +714,13 @@ let publish ?session ~retain_interface ~dependencies ~build_dir ~ocaml_dir
              (Option.map (fun _ -> source "cmj") optimization_file)
            ~optimization_file
            ~semantic_source:
-             (Some
-                (source
-                   (match source_kind with
-                   | Source.Interface -> "cmti"
-                   | Source.Implementation -> "cmt")))
+             (if Compiler_args.binary_annotations_enabled config then
+                Some
+                  (source
+                     (match source_kind with
+                     | Source.Interface -> "cmti"
+                     | Source.Implementation -> "cmt"))
+              else None)
            ~dependencies ~generated_outputs
        with error ->
          cancel ();

@@ -106,8 +106,9 @@ let tests =
           check
             ((not (Compiler_args.editor_artifacts_enabled ()))
             && Compiler_args.gentype_inputs_enabled gentype_config
-            && Compiler_args.binary_annotations_enabled gentype_config)
-            "GenType inputs preserve annotations without editor policy";
+            && (not (Compiler_args.binary_annotations_enabled gentype_config))
+            && not (Compiler_args.compatibility_copies_enabled gentype_config))
+            "GenType inputs do not force editor artifacts or copies";
           Unix.putenv "REWATCH_BIN_ANNOT" "1";
           check
             (Compiler_args.editor_artifacts_enabled ()

@@ -153,28 +153,31 @@ isolated copy of the published interface semantics when the staged source and
 published file still match; a missing or stale session value falls back to the
 existing CMTI reader. Standalone compilation also uses the CMTI reader.
 For imported GenType types, the compiler writes a versioned declaration summary
-beside each CMT or CMTI. A recursive import reads that summary after checking
-the source, compiler build, GenType settings, and CMI dependency contents.
-Missing or stale summaries use the existing CMT reader, including for prebuilt
-packages. OCaml Rewatch publishes the summaries and removes them when their
-source modules are removed.
+at the CMT or CMTI path with a `.gts` suffix. A recursive import reads that
+summary after checking the source, compiler build, producer configuration,
+GenType settings for the same package, and CMI dependency contents. When a
+CMT is available, missing or stale summaries use the existing CMT reader,
+including for prebuilt packages. OCaml Rewatch publishes the summaries and
+removes them when their source modules are removed.
 Parser AST cache copies run on a separate domain while compilation proceeds;
 `REWATCH_ASYNC_AST_EXPORT=0` makes those copies finish before compilation.
-OCaml Rewatch omits CMT and CMTI binary annotations by default for packages
-without GenType. It uses CMJ modification time as the compiled freshness
-marker in that case. Set `REWATCH_BIN_ANNOT=1` to produce binary annotations
-for editor tools and other consumers. GenType packages keep them automatically.
+OCaml Rewatch omits CMT and CMTI binary annotations by default, including in
+GenType packages. GenType keeps request-owned typed results and `.gts` inputs;
+an interface summary also retains the semantic information needed when its
+implementation compiles after a restart. OCaml Rewatch uses CMJ modification
+time as the compiled freshness marker without CMT. Set `REWATCH_BIN_ANNOT=1`
+to produce complete and partial binary annotations for editor tools and other
+consumers.
 Compiler metadata records editor-artifact and GenType-input requirements
-separately, even though either currently enables binary annotations. Switching
-either policy invalidates incompatible cached artifacts.
+separately. Switching either policy invalidates incompatible cached artifacts.
 In-source JavaScript is written directly to its configured output path. With
 binary annotations disabled, OCaml Rewatch omits the private `lib/bs`
 JavaScript mirror and copies of source files in `lib/bs` and `lib/ocaml`.
 The parser and compiler made three source copies for a typical implementation,
 and publication made one JavaScript mirror. These files are unused by
 compilation. Set `REWATCH_COMPAT_COPIES=1` to restore them; packages with binary
-annotations or GenType retain them automatically. Switching this setting
-invalidates incompatible cached artifacts.
+annotations retain them automatically. GenType does not require these copies.
+Switching this setting invalidates incompatible cached artifacts.
 `compiler_process.ml` is the boundary between logical compiler jobs and
 in-process execution. Independent parse and compile requests run on a bounded
 domain pool. The scheduler accepts module results and records build state;
