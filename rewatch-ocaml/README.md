@@ -243,11 +243,17 @@ source-directory metadata projection and serialization. `process_child.ml`
 owns the lifecycle of one subprocess while `process.ml` owns scheduling.
 Command-level post-build execution and its error handling live in
 `after_build.ml`.
-External PPXs are deliberately still subprocesses. Their launch is routed back
-through rewatch's interruptible process owner so Unix process groups and Windows
-Job Objects continue to terminate PPX descendants. JavaScript post-build hooks,
-`--after-build`, formatting, and lock-owner probes likewise retain the generic
-process infrastructure.
+External PPXs use the isolated `compiler/core/legacy_ppx_adapter.ml` boundary.
+It converts the current parsetree to frozen AST 0, writes the existing file
+protocol, executes each PPX, reads its result, and converts back. Requests with
+no external PPX bypass this adapter and its AST 0 conversions. Set
+`REWATCH_TYPECHECK_TRACE` to measure `ppx.convert.to0`, `ppx.serialize`,
+`ppx.write`, `ppx.execute`, `ppx.read`, `ppx.deserialize`, and
+`ppx.convert.from0` separately. PPXs remain subprocesses; their launch is
+routed through rewatch's interruptible process owner so Unix process groups and
+Windows Job Objects continue to terminate descendants. JavaScript post-build
+hooks, `--after-build`, formatting, and lock-owner probes likewise retain the
+generic process infrastructure.
 
 Both rewatch implementations skip a small set of PPXs when the source does not
 contain the syntax that can trigger them. This is deliberately conservative:

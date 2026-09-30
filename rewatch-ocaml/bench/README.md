@@ -29,6 +29,20 @@ starting point for this plan is [the 2026-09-30 baseline](baseline-2026-09-30.md
 The identity PPX measures the external protocol and subprocess boundary; use a
 real PPX fixture when validating transformation behavior.
 
+The [checkpoint 11 PPX report](checkpoint-11-2026-09-30.md) separates frozen
+AST 0 conversion, serialization, file reads and writes, and external execution.
+Its repeatable identity-PPX gate also checks that ordinary requests do not
+enter the adapter:
+
+```sh
+python3 rewatch-ocaml/bench/legacy_ppx_gate.py \
+  /tmp/legacy-ppx-gate 5
+```
+
+The output directory must not exist. Each interleaved pair compiles the same
+four-module project without a PPX and with a file-copying external PPX, checks
+20 generated artifact hashes, and records trace phases and elapsed time.
+
 The [checkpoint 2 comparison](checkpoint-2-2026-09-30.md) records typed-request
 option caching, interleaved measurements, and the one-domain artifact gate.
 The [checkpoint 3 comparison](checkpoint-3-2026-09-30.md) records independent

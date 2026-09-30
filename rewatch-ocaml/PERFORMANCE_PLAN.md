@@ -193,9 +193,20 @@ editor-only work, including when GenType is enabled.
    the OCaml Rewatch port suite, focused OUnit (114 tests), and
    `make checkformat` passed. Next: checkpoint 11, the legacy PPX boundary.
 
-11. [ ] **Legacy PPX boundary.** Measure AST 0 conversion, serialization, I/O,
+11. [x] **Legacy PPX boundary.** Measure AST 0 conversion, serialization, I/O,
     and execution. Isolate the adapter; preserve frozen AST 0, bridge coverage,
     and no conversion without external PPXs.
+
+   Record: Moved the frozen AST 0 protocol into
+   `compiler/core/legacy_ppx_adapter.ml`, added per-phase trace buckets and a
+   repeatable PPX gate, and updated the Rewatch and benchmark guides. The
+   [five-run report](bench/checkpoint-11-2026-09-30.md) records equal generated
+   artifact hashes with and without an identity PPX, all seven adapter phases
+   only on PPX requests, and a successful real `sury-ppx` transformation.
+   Median conversion to/from AST 0 cost 0.025/0.032 ms for five requests,
+   versus 28.350 ms for external execution. `make test-syntax`, `make test`,
+   the OCaml Rewatch port suite, and the focused gate passed. Next: checkpoint
+   12, core promotion.
 
 12. [ ] **Core promotion.** Pass final gates; enable validated defaults, remove
     superseded paths, and update documentation, parity coverage, and changelog.
