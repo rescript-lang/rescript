@@ -38,12 +38,14 @@ let write_ast fn (ast0 : Ml_binary.ast0) =
   in
   Compiler_phase_trace.section "ppx.write" (fun () ->
       let channel = open_out_bin fn in
-      Fun.protect
-        (fun () ->
-          output_string channel (Ml_binary.magic_of_ast0 ast0);
-          output_string channel source;
-          output_string channel ast)
-        ~finally:(fun () -> close_out_noerr channel))
+      try
+        output_string channel (Ml_binary.magic_of_ast0 ast0);
+        output_string channel source;
+        output_string channel ast;
+        close_out channel
+      with error ->
+        close_out_noerr channel;
+        raise error)
 
 let apply_rewriter kind fn_in ppx =
   let magic = Ml_binary.magic_of_kind kind in

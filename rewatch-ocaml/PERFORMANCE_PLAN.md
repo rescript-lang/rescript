@@ -203,8 +203,8 @@ editor-only work, including when GenType is enabled.
    [five-run report](bench/checkpoint-11-2026-09-30.md) records equal generated
    artifact hashes with and without an identity PPX, all seven adapter phases
    only on PPX requests, and a successful real `sury-ppx` transformation.
-   Median conversion to/from AST 0 cost 0.025/0.032 ms for five requests,
-   versus 28.350 ms for external execution. `make test-syntax`, `make test`,
+   Median conversion to/from AST 0 cost 0.024/0.027 ms for five requests,
+   versus 27.762 ms for external execution. `make test-syntax`, `make test`,
    the OCaml Rewatch port suite, and the focused gate passed. Next: checkpoint
    12, core promotion.
 
@@ -217,9 +217,11 @@ editor-only work, including when GenType is enabled.
    contract. Updated the CI parity matrix, Rewatch guide, and changelog. The
    [local gate report](bench/checkpoint-12-2026-09-30.md) records a passing
    `make test-all`, focused OCaml Rewatch runs with 1, 4, and 12 domains,
-   mixed GenType and PPX parity, and formatting. Linux, macOS, and Windows CI
-   results for these unpushed commits remain required before this checkpoint
-   can be checked off.
+   mixed GenType and PPX parity, and formatting. The symlink-source test now
+   creates its atomic replacement on the target filesystem, so the worker-count
+   gate measures the intended rename on split-filesystem hosts. Linux, macOS,
+   and Windows CI results for these unpushed commits remain required before
+   this checkpoint can be checked off.
 
 **Separate PPX goals:** After checkpoint 11, persistent AST 0 workers require a
 cooperating executable and request reset/recovery tests. A modern AST protocol
