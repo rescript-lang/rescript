@@ -12,9 +12,12 @@ val freeze : Cmi_format.cmi_infos -> (t, string) result
 
 val create_view : t -> view
 
+val has_materialized_type_graph : view -> bool
+(** Report whether any request-local type graph has been materialized. *)
+
 val copy_signature : view -> Types.signature
-(** Materialize and prefix an entire request-owned signature when a caller
-    needs one. This is intentionally a full-copy compatibility path. *)
+(** Materialize an entire request-owned signature when a caller needs one.
+    This is intentionally a full-copy compatibility path. *)
 
 val source_signature : view -> Types.signature
 (** Decode a private source signature for legacy component expansion. *)
@@ -49,11 +52,12 @@ val find_module_alias : view -> scope -> string -> Path.t option
 
 val find_module_declaration :
   view -> scope -> string -> (Types.module_declaration * int) option
-(** Decode and substitute one module declaration in the request view. *)
+(** Materialize one request-local module declaration. Simple paths use the
+    frozen binder map; complex signatures and functors are substituted. *)
 
 val find_modtype_declaration :
   view -> scope -> string -> Types.modtype_declaration option
-(** Decode and substitute one module-type declaration in the request view. *)
+(** Materialize one request-local module-type declaration. *)
 
 val find_in_scope :
   view -> scope -> string -> (Types.value_description * int) option

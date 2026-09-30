@@ -622,7 +622,11 @@ let get_components_opt c =
     | None -> !components_of_module_maker'
     | Some view ->
       fun (env, sub, path, _) ->
-        let signature = Frozen_values.source_signature view in
+        let signature =
+          Compiler_phase_trace.dependency
+            "dependency.frozen_source_signature_fallback" (fun () ->
+              Frozen_values.source_signature view)
+        in
         !components_of_module_maker' (env, sub, path, Mty_signature signature)
   in
   match !(can_load_cmis ()) with

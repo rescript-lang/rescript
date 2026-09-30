@@ -420,6 +420,8 @@ let test_nested_scope_paths_and_sharing _ =
 let test_reused_module_type_has_distinct_binders _ =
   let signature_id = Ident.create "S" in
   let type_id = Ident.create "t" in
+  let nested_id = Ident.create "Nested" in
+  let nested_modtype_id = Ident.create "T" in
   let value_type =
     Btype.newgenty (Types.Tconstr (Path.Pident type_id, [], ref Types.Mnil))
   in
@@ -427,6 +429,32 @@ let test_reused_module_type_has_distinct_binders _ =
     [
       Types.Sig_type (type_id, abstract_type, Trec_not);
       Types.Sig_value (Ident.create "value", value value_type);
+      Types.Sig_module
+        ( nested_id,
+          {
+            md_type = Mty_signature [];
+            md_attributes = [];
+            md_loc = Location.none;
+          },
+          Trec_not );
+      Types.Sig_module
+        ( Ident.create "Alias",
+          {
+            md_type = Mty_alias (Mta_present, Path.Pident nested_id);
+            md_attributes = [];
+            md_loc = Location.none;
+          },
+          Trec_not );
+      Types.Sig_modtype
+        ( nested_modtype_id,
+          {mtd_type = None; mtd_attributes = []; mtd_loc = Location.none} );
+      Types.Sig_modtype
+        ( Ident.create "AliasT",
+          {
+            mtd_type = Some (Mty_ident (Path.Pident nested_modtype_id));
+            mtd_attributes = [];
+            mtd_loc = Location.none;
+          } );
     ]
   in
   let module_decl : Types.module_declaration =
@@ -472,6 +500,49 @@ let test_reused_module_type_has_distinct_binders _ =
         (Path.same module_type_path
            (Path.Pdot
               (Path.Pident (Ident.create_persistent "Api"), "S", Path.nopos)));
+      let check_alias scope module_name position =
+        match
+          ( Frozen_values.find_module_alias view scope "Alias",
+            Frozen_values.find_module_declaration view scope "Alias" )
+        with
+        | ( Some path,
+            Some ({md_type = Mty_alias (Mta_present, declaration_path)}, _) ) ->
+          let expected =
+            Path.Pdot
+              ( Path.Pdot
+                  ( Path.Pident (Ident.create_persistent "Api"),
+                    module_name,
+                    position ),
+                "Nested",
+                1 )
+          in
+          assert_bool "reused module type aliases retain their own context"
+            (Path.same path expected && Path.same declaration_path expected)
+        | _ -> OUnit.assert_failure "expected a nested module alias"
+      in
+      check_alias a "A" 0;
+      check_alias b "B" 1;
+      let check_modtype scope module_name position =
+        match
+          ( Frozen_values.find_modtype_declaration view scope "T",
+            Frozen_values.find_modtype_declaration view scope "AliasT" )
+        with
+        | Some {mtd_type = None}, Some {mtd_type = Some (Mty_ident path)} ->
+          let expected =
+            Path.Pdot
+              ( Path.Pdot
+                  ( Path.Pident (Ident.create_persistent "Api"),
+                    module_name,
+                    position ),
+                "T",
+                Path.nopos )
+          in
+          assert_bool "reused module type references retain their own context"
+            (Path.same path expected)
+        | _ -> OUnit.assert_failure "expected abstract and alias module types"
+      in
+      check_modtype a "A" 0;
+      check_modtype b "B" 1;
       match (a_value.val_type.desc, b_value.val_type.desc) with
       | Types.Tconstr (a_path, _, _), Types.Tconstr (b_path, _, _) ->
         assert_bool "A uses its own abstract type"
@@ -585,6 +656,148 @@ let test_full_signature_copies_are_independent _ =
   | Types.Tvar (Some "a"), Types.Tvar (Some "a") -> ()
   | _ -> OUnit.assert_failure "a full signature copy leaked into another"
 
+let test_module_alias_declarations_are_local_and_prefixed _ =
+  let target = Ident.create "Target" in
+  let attributes = [(Location.mknoloc "tag", Parsetree.PStr [])] in
+  let module_decl md_type md_attributes : Types.module_declaration =
+    {md_type; md_attributes; md_loc = Location.none}
+  in
+  let image =
+    freeze
+      [
+        Types.Sig_module (target, module_decl (Mty_signature []) [], Trec_not);
+        Types.Sig_module
+          ( Ident.create "Present",
+            module_decl (Mty_alias (Mta_present, Path.Pident target)) attributes,
+            Trec_not );
+        Types.Sig_module
+          ( Ident.create "Absent",
+            module_decl (Mty_alias (Mta_absent, Path.Pident target)) [],
+            Trec_not );
+        Types.Sig_value
+          (Ident.create "value", value (Btype.newgenty (Types.Tvar None)));
+      ]
+  in
+  let first = Frozen_values.create_view image in
+  let second = Frozen_values.create_view image in
+  assert_bool "module paths do not materialize the type graph"
+    (not (Frozen_values.has_materialized_type_graph first));
+  let lookup view name =
+    match
+      Frozen_values.find_module_declaration view
+        (Frozen_values.root_scope view)
+        name
+    with
+    | Some declaration -> declaration
+    | None -> OUnit.assert_failure ("missing module alias " ^ name)
+  in
+  let present, position = lookup first "Present" in
+  OUnit.assert_equal 1 position;
+  assert_bool "alias lookup keeps the type graph lazy"
+    (not (Frozen_values.has_materialized_type_graph first));
+  OUnit.assert_equal attributes present.md_attributes;
+  let second_present, _ = lookup second "Present" in
+  assert_bool "alias attributes belong to each request"
+    (present.md_attributes != second_present.md_attributes);
+  assert_bool "one request reuses the alias declaration"
+    (match lookup first "Present" with
+    | again, _ -> again == present);
+  let expected =
+    Path.Pdot (Path.Pident (Ident.create_persistent "Api"), "Target", 0)
+  in
+  (match present.md_type with
+  | Mty_alias (Mta_present, path) ->
+    assert_bool "alias target is prefixed" (Path.same path expected)
+  | _ -> OUnit.assert_failure "expected a present alias");
+  let absent, _ = lookup first "Absent" in
+  (match absent.md_type with
+  | Mty_alias (Mta_absent, path) ->
+    assert_bool "absent alias target is prefixed" (Path.same path expected)
+  | _ -> OUnit.assert_failure "expected an absent alias");
+  ignore (Frozen_values.find first "value");
+  assert_bool "value lookup materializes the type graph"
+    (Frozen_values.has_materialized_type_graph first)
+
+let test_module_type_path_qualifies_nested_module _ =
+  let outer = Ident.create "Outer" in
+  let module_decl md_type : Types.module_declaration =
+    {md_type; md_attributes = []; md_loc = Location.none}
+  in
+  let image =
+    freeze
+      [
+        Types.Sig_module
+          ( outer,
+            module_decl
+              (Mty_signature
+                 [
+                   Types.Sig_modtype
+                     ( Ident.create "S",
+                       {
+                         mtd_type = Some (Mty_signature []);
+                         mtd_attributes = [];
+                         mtd_loc = Location.none;
+                       } );
+                 ]),
+            Trec_not );
+        Types.Sig_module
+          ( Ident.create "Uses",
+            module_decl
+              (Mty_ident (Path.Pdot (Path.Pident outer, "S", Path.nopos))),
+            Trec_not );
+      ]
+  in
+  let view = Frozen_values.create_view image in
+  match
+    Frozen_values.find_module_declaration view
+      (Frozen_values.root_scope view)
+      "Uses"
+  with
+  | Some ({md_type = Mty_ident path}, 1) ->
+    let expected =
+      Path.Pdot
+        ( Path.Pdot (Path.Pident (Ident.create_persistent "Api"), "Outer", 0),
+          "S",
+          Path.nopos )
+    in
+    assert_bool "module type path qualifies its local module"
+      (Path.same path expected)
+  | _ -> OUnit.assert_failure "expected a qualified module type"
+
+let test_abstract_module_type_attributes_are_request_local _ =
+  let attributes = [(Location.mknoloc "tag", Parsetree.PStr [])] in
+  let image =
+    freeze
+      [
+        Types.Sig_modtype
+          ( Ident.create "S",
+            {
+              mtd_type = None;
+              mtd_attributes = attributes;
+              mtd_loc = Location.none;
+            } );
+      ]
+  in
+  let first = Frozen_values.create_view image in
+  let second = Frozen_values.create_view image in
+  let find view =
+    match
+      Frozen_values.find_modtype_declaration view
+        (Frozen_values.root_scope view)
+        "S"
+    with
+    | Some declaration -> declaration
+    | None -> OUnit.assert_failure "expected an abstract module type"
+  in
+  let first_declaration = find first in
+  let second_declaration = find second in
+  assert_bool "abstract module type is cached within one request"
+    (find first == first_declaration);
+  assert_bool "module type attributes belong to each request"
+    (first_declaration.mtd_attributes != second_declaration.mtd_attributes);
+  OUnit.assert_equal attributes first_declaration.mtd_attributes;
+  OUnit.assert_equal None first_declaration.mtd_type
+
 let suites =
   __FILE__
   >::: [
@@ -608,4 +821,10 @@ let suites =
          "open_and_inline_record_types" >:: test_open_and_inline_record_types;
          "full_signature_copies_are_independent"
          >:: test_full_signature_copies_are_independent;
+         "module_alias_declarations_are_local_and_prefixed"
+         >:: test_module_alias_declarations_are_local_and_prefixed;
+         "module_type_path_qualifies_nested_module"
+         >:: test_module_type_path_qualifies_nested_module;
+         "abstract_module_type_attributes_are_request_local"
+         >:: test_abstract_module_type_attributes_are_request_local;
        ]

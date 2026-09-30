@@ -16,11 +16,12 @@ def main() -> None:
             "--variants-only",
             "--modules-only",
             "--open-only",
+            "--inclusion-only",
         )
     ):
         raise SystemExit(
             f"Usage: {sys.argv[0]} OUTPUT_DIRECTORY "
-            "[--values-only|--types-only|--variants-only|--modules-only|--open-only]"
+            "[--values-only|--types-only|--variants-only|--modules-only|--open-only|--inclusion-only]"
         )
     mode = sys.argv[2] if len(sys.argv) == 3 else "default"
     root = Path(sys.argv[1]).resolve()
@@ -40,7 +41,21 @@ def main() -> None:
         )
         + "\n"
     )
-    if mode == "--modules-only":
+    if mode == "--inclusion-only":
+        (source / "Api.resi").write_text(
+            "".join(f"let value{i}: int\n" for i in range(400))
+            + "module type S = {type t; let answer: int}\n"
+            + "module A: S\nmodule Alias: S\n"
+            + "module F: (X: S) => {let same: int}\n"
+        )
+        (source / "Api.res").write_text(
+            "".join(f"let value{i} = {i}\n" for i in range(400))
+            + "module type S = {type t; let answer: int}\n"
+            + "module A: S = {type t = int; let answer = 1}\n"
+            + "module Alias = A\n"
+            + "module F = (X: S) => {let same = X.answer}\n"
+        )
+    elif mode == "--modules-only":
         (source / "Api.res").write_text(
             "".join(f"let value{i} = {i}\n" for i in range(400))
             + "module type S = {type t; let answer: int}\n"
@@ -77,7 +92,13 @@ def main() -> None:
             + "type box<'a> = {value: 'a}\n"
         )
     for i in range(200):
-        if mode == "--modules-only":
+        if mode == "--inclusion-only":
+            text = (
+                "module Applied = Api.F(Api.A)\n"
+                f"let result = Api.value{i} + Api.A.answer "
+                "+ Api.Alias.answer + Applied.same\n"
+            )
+        elif mode == "--modules-only":
             text = (
                 "module Applied = Api.F(Api.A)\n"
                 f"let result = Api.value{i} + Api.A.answer + Api.B.answer "

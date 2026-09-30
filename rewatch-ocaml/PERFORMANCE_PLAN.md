@@ -154,10 +154,25 @@ editor-only work, including when GenType is enabled.
    OCaml Rewatch port runs, focused OUnit (114 tests), and `make checkformat`
    passed. Next: checkpoint 9, immutable imported types.
 
-9. [ ] **Immutable imported types.** Measure copying/materialization; migrate
+9. [x] **Immutable imported types.** Measure copying/materialization; migrate
    values, constructors, records, modules, then substitution/inclusion as separate
    validated changes. Preserve sharing/identities; mutable nodes/views remain
    request-local. Replace measured fallbacks.
+
+   Record: Updated frozen module and module-type declarations, path substitution,
+   lazy request-local type graphs, the legacy expansion trace, focused ownership
+   tests, a 201-module inclusion fixture, and the annotation-aware parity gate.
+   The [five-run comparisons](bench/checkpoint-9-2026-09-30.md) passed in six
+   declaration modes with equal JavaScript/CMI/CMJ bytes, editor semantics,
+   incremental work, and inclusion diagnostics. With annotations enabled, raw
+   CMT bytes were stable within each policy; semantic CMT content and editor
+   responses matched across policies. Frozen lookup improved median clean time
+   on every focused fixture but raised peak RSS in some. Complete-signature
+   inclusion and complex functor substitution still materialize mutable
+   request-local structures; they cost below 1 ms per build and have no
+   demonstrated replacement gain. `make test` (345 OUnit cases), the OCaml
+   Rewatch port suite, `make test-analysis`, and `make checkformat` passed.
+   Next: checkpoint 10, GenType parity.
 
 10. [ ] **Frozen GenType parity.** Fix TypeScript differences before enabling
     frozen lookup. Test mixed imports both ways; restrict classic lookup to

@@ -89,6 +89,20 @@ type frozen_type = {
   inlined_types: frozen_inlined_type list;
 }
 
+type frozen_module_type =
+  | Simple_alias of alias_presence * string
+  | Simple_ident of string
+  | Complex_module_type of string
+
+let freeze_module_type = function
+  | Mty_alias (presence, path) ->
+    Simple_alias (presence, Marshal.to_string path [])
+  | Mty_ident ((Path.Pident _ | Path.Pdot _) as path) ->
+    Simple_ident (Marshal.to_string path [])
+  | (Mty_ident (Path.Papply _) | Mty_signature _ | Mty_functor _) as module_type
+    ->
+    Complex_module_type (Marshal.to_string module_type [])
+
 type scope = {
   id: int;
   path: binder_path;
@@ -101,7 +115,7 @@ type scope = {
   constructor_sources: constructor_source list String_map.t;
   modules: module_entry String_map.t;
   duplicate_module_names: String_set.t;
-  modtypes: string String_map.t;
+  modtypes: modtype_entry String_map.t;
   duplicate_modtype_names: String_set.t;
 }
 
@@ -110,8 +124,14 @@ and module_entry = {
   loc: Location.t;
   deprecated: string option;
   nested: scope option;
-  alias_path: string option;
-  declaration: string;
+  module_type: frozen_module_type;
+  attributes: string option;
+}
+
+and modtype_entry = {
+  definition: frozen_module_type option;
+  loc: Location.t;
+  attributes: string option;
 }
 
 type t = {
@@ -141,9 +161,16 @@ type building_context = {
   modtypes: binder_path Stamp_map.t ref;
 }
 
+type graph_context = {
+  graph: Frozen_type_graph.view Lazy.t;
+  map_type_path: Path.t -> Path.t;
+  map_module_path: Path.t -> Path.t;
+  map_modtype_path: Path.t -> Path.t;
+}
+
 type view = {
   image: t;
-  graph: Frozen_type_graph.view;
+  root_context: graph_context;
   materialized_values: (int * string, value_description * int) Hashtbl.t;
   materialized_types:
     ( int * string,
@@ -154,10 +181,8 @@ type view = {
   materialized_modules: (int * string, module_declaration) Hashtbl.t;
   materialized_modtypes: (int * string, modtype_declaration) Hashtbl.t;
   substitutions: (int, Subst.t) Hashtbl.t;
-  context_graphs: (int, Frozen_type_graph.view * (Path.t -> Path.t)) Hashtbl.t;
-  materialized_layouts:
-    (int option * int, Variant_runtime.layout_ref) Hashtbl.t;
-  map_type_path: Path.t -> Path.t;
+  context_graphs: (int, graph_context) Hashtbl.t;
+  materialized_layouts: (int option * int, Variant_runtime.layout_ref) Hashtbl.t;
 }
 
 (* Keep imported member IDs outside the positive request-local stamp range.
@@ -454,11 +479,8 @@ let freeze (cmi : Cmi_format.cmi_infos) =
                   Builtin_attributes.deprecated_of_attrs
                     declaration.md_attributes;
                 nested;
-                alias_path =
-                  (match declaration.md_type with
-                  | Mty_alias (_, path) -> Some (Marshal.to_string path [])
-                  | Mty_ident _ | Mty_signature _ | Mty_functor _ -> None);
-                declaration = Marshal.to_string declaration [];
+                module_type = freeze_module_type declaration.md_type;
+                attributes = marshal_nonempty declaration.md_attributes;
               }
               !modules;
           incr position
@@ -473,7 +495,13 @@ let freeze (cmi : Cmi_format.cmi_infos) =
               Hashtbl.replace modtype_definitions id.Ident.stamp module_type)
             declaration.mtd_type;
           modtypes :=
-            String_map.add name (Marshal.to_string declaration []) !modtypes)
+            String_map.add name
+              {
+                definition = Option.map freeze_module_type declaration.mtd_type;
+                loc = declaration.mtd_loc;
+                attributes = marshal_nonempty declaration.mtd_attributes;
+              }
+              !modtypes)
       signature;
     {
       id;
@@ -508,7 +536,7 @@ let freeze (cmi : Cmi_format.cmi_infos) =
         root;
       }
 
-let create_graph_view image context_id =
+let create_graph_context image context_id =
   let root = Path.Pident (Ident.create_persistent image.name) in
   let rec find_context_binder context_id select stamp =
     match context_id with
@@ -568,16 +596,20 @@ let create_graph_view image context_id =
       Path.Pdot (map_module_path path, name, position)
     | Path.Papply _ as path -> map_module_path path
   in
-  let graph =
-    Frozen_type_graph.create_view ~map_type_path ~map_modtype_path image.graph
-  in
-  (graph, map_type_path)
+  {
+    graph =
+      lazy
+        (Frozen_type_graph.create_view ~map_type_path ~map_modtype_path
+           image.graph);
+    map_type_path;
+    map_module_path;
+    map_modtype_path;
+  }
 
 let create_view image =
-  let graph, map_type_path = create_graph_view image None in
   {
     image;
-    graph;
+    root_context = create_graph_context image None;
     materialized_values = Hashtbl.create 16;
     materialized_types = Hashtbl.create 16;
     materialized_extensions = Hashtbl.create 8;
@@ -586,8 +618,13 @@ let create_view image =
     substitutions = Hashtbl.create 8;
     context_graphs = Hashtbl.create 8;
     materialized_layouts = Hashtbl.create 8;
-    map_type_path;
   }
+
+let has_materialized_type_graph view =
+  Lazy.is_val view.root_context.graph
+  || Hashtbl.fold
+       (fun _ context found -> found || Lazy.is_val context.graph)
+       view.context_graphs false
 
 let copy_signature view : signature =
   let source = Marshal.from_string view.image.signature_bytes 0 in
@@ -596,16 +633,20 @@ let copy_signature view : signature =
 let source_signature view : signature =
   Marshal.from_string view.image.signature_bytes 0
 
-let scope_graph view (scope : scope) =
+let scope_context view (scope : scope) =
   match scope.context_id with
-  | None -> (view.graph, view.map_type_path)
+  | None -> view.root_context
   | Some context_id -> (
     match Hashtbl.find_opt view.context_graphs context_id with
-    | Some graph -> graph
+    | Some context -> context
     | None ->
-      let graph = create_graph_view view.image (Some context_id) in
-      Hashtbl.add view.context_graphs context_id graph;
-      graph)
+      let context = create_graph_context view.image (Some context_id) in
+      Hashtbl.add view.context_graphs context_id context;
+      context)
+
+let scope_graph view scope =
+  let context = scope_context view scope in
+  (Lazy.force context.graph, context.map_type_path)
 
 let scope_layout view (scope : scope) id =
   let key = (scope.context_id, id) in
@@ -709,6 +750,21 @@ let scope_substitution view (scope : scope) =
     Hashtbl.add view.substitutions scope.id substitution;
     substitution
 
+let thaw_module_type view (scope : scope) = function
+  | Simple_alias (presence, bytes) ->
+    let source_path = Marshal.from_string bytes 0 in
+    let context = scope_context view scope in
+    Mty_alias (presence, context.map_module_path source_path)
+  | Simple_ident bytes ->
+    let source_path = Marshal.from_string bytes 0 in
+    let context = scope_context view scope in
+    Mty_ident (context.map_modtype_path source_path)
+  | Complex_module_type bytes ->
+    Compiler_phase_trace.dependency "dependency.frozen_complex_modtype_fallback"
+      (fun () ->
+        let source = Marshal.from_string bytes 0 in
+        Subst.modtype (scope_substitution view scope) source)
+
 let find_module_declaration view (scope : scope) name =
   if String_set.mem name scope.duplicate_module_names then None
   else
@@ -719,9 +775,12 @@ let find_module_declaration view (scope : scope) name =
       match Hashtbl.find_opt view.materialized_modules key with
       | Some declaration -> Some (declaration, entry.position)
       | None ->
-        let source = Marshal.from_string entry.declaration 0 in
         let declaration =
-          Subst.module_declaration (scope_substitution view scope) source
+          {
+            md_type = thaw_module_type view scope entry.module_type;
+            md_attributes = thaw_attributes entry.attributes;
+            md_loc = entry.loc;
+          }
         in
         Hashtbl.add view.materialized_modules key declaration;
         Some (declaration, entry.position))
@@ -731,14 +790,17 @@ let find_modtype_declaration view (scope : scope) name =
   else
     match String_map.find_opt name scope.modtypes with
     | None -> None
-    | Some bytes -> (
+    | Some entry -> (
       let key = (scope.id, name) in
       match Hashtbl.find_opt view.materialized_modtypes key with
       | Some declaration -> Some declaration
       | None ->
-        let source = Marshal.from_string bytes 0 in
         let declaration =
-          Subst.modtype_declaration (scope_substitution view scope) source
+          {
+            mtd_type = Option.map (thaw_module_type view scope) entry.definition;
+            mtd_attributes = thaw_attributes entry.attributes;
+            mtd_loc = entry.loc;
+          }
         in
         Hashtbl.add view.materialized_modtypes key declaration;
         Some declaration)
@@ -967,10 +1029,11 @@ let find_module_alias view (scope : scope) name =
   if String_set.mem name scope.duplicate_module_names then None
   else
     match String_map.find_opt name scope.modules with
-    | Some {alias_path = Some bytes} ->
+    | Some {module_type = Simple_alias (_, bytes)} ->
       let path = Marshal.from_string bytes 0 in
-      Some (Subst.module_path (scope_substitution view scope) path)
-    | Some {alias_path = None} | None -> None
+      let context = scope_context view scope in
+      Some (context.map_module_path path)
+    | Some {module_type = Simple_ident _ | Complex_module_type _} | None -> None
 
 let find_module (scope : scope) name =
   if String_set.mem name scope.duplicate_module_names then None

@@ -49,6 +49,11 @@ and error behavior across all three annotation modes.
 The [checkpoint 7 comparison](checkpoint-7-2026-09-30.md) records the owned AST
 handoff, deferred persistence, byte parity, and the one-domain artifact and
 resource gate.
+The [checkpoint 8 comparison](checkpoint-8-2026-09-30.md) records owned CMI,
+CMJ, and editor artifact publication and its byte-parity gates.
+The [checkpoint 9 comparison](checkpoint-9-2026-09-30.md) records imported type
+graph costs, frozen lookup by declaration kind, module path substitution, and
+the remaining full-signature fallback.
 
 ## Build and compare
 
@@ -118,11 +123,33 @@ python3 rewatch-ocaml/bench/make_immutable_interface_fixture.py /tmp/rewatch-int
 ```
 
 The generator also accepts `--values-only`, `--types-only`,
-`--variants-only`, `--modules-only`, or `--open-only`. Compare builds with
+`--variants-only`, `--modules-only`, `--open-only`, or `--inclusion-only`.
+Compare builds with
 `REWATCH_FROZEN_VALUES=0` and the default setting while holding binary
 annotations and worker count fixed. The type-graph microprobe is
 `rewatch-ocaml/bench/frozen_type_graph_probe.exe`; build it with Dune and pass
 a CMI path and iteration count.
+
+For an interleaved comparison with artifact byte checks, run:
+
+```sh
+opam exec -- dune build rewatch-ocaml/bench/cmt_compare.exe \
+  analysis/bin/main.exe
+python3 rewatch-ocaml/bench/immutable_interface_gate.py \
+  /tmp/immutable-interface-gate 5
+REWATCH_BIN_ANNOT=1 python3 rewatch-ocaml/bench/immutable_interface_gate.py \
+  /tmp/immutable-interface-annotations 5
+```
+
+The runner uses one compiler domain and records wall time, CPU, peak RSS, and
+per-request traces and artifact manifests. Its output directory must not exist.
+With annotations enabled, it checks typedtree and value-dependency semantics
+across policies, raw annotation bytes across repeated builds of each policy,
+and hover, references, completion, and incomplete-source recovery. Raw CMT
+bytes can differ across policies because imported type nodes receive different
+internal IDs when frozen lookup avoids eager graph materialization.
+It removes generated projects after a successful run; set
+`KEEP_REWATCH_IMMUTABLE_PROJECTS=1` to retain them.
 
 ## Filesystem and source-size audits
 
