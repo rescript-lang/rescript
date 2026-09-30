@@ -257,7 +257,18 @@ jobs:
       - name: Run OCaml rewatch focused integration tests
         timeout-minutes: 30
         run: |
+          REWATCH_COMPILER_DOMAINS=1 sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+          REWATCH_COMPILER_DOMAINS=4 sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
           sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+        shell: bash
+
+      - name: Check frozen compiler and GenType parity
+        if: matrix.node-target == 'linux-arm64'
+        timeout-minutes: 15
+        run: |
+          opam exec -- dune build rewatch-ocaml/bench/cmt_compare.exe
+          python3 rewatch-ocaml/bench/frozen_gentype_parity.py "$RUNNER_TEMP/frozen-gentype-parity"
+          python3 rewatch-ocaml/bench/legacy_ppx_gate.py "$RUNNER_TEMP/legacy-ppx-gate" 5
         shell: bash
 
       - name: Run OCaml rewatch canonical tests

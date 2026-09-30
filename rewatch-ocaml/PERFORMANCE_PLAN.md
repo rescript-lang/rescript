@@ -211,6 +211,16 @@ editor-only work, including when GenType is enabled.
 12. [ ] **Core promotion.** Pass final gates; enable validated defaults, remove
     superseded paths, and update documentation, parity coverage, and changelog.
 
+   Record (local preparation): The frozen session and owned handoff policies
+   were already OCaml Rewatch defaults. No remaining classic, disk, editor, or
+   PPX path is superseded; each serves a validated fallback or compatibility
+   contract. Updated the CI parity matrix, Rewatch guide, and changelog. The
+   [local gate report](bench/checkpoint-12-2026-09-30.md) records a passing
+   `make test-all`, focused OCaml Rewatch runs with 1, 4, and 12 domains,
+   mixed GenType and PPX parity, and formatting. Linux, macOS, and Windows CI
+   results for these unpushed commits remain required before this checkpoint
+   can be checked off.
+
 **Separate PPX goals:** After checkpoint 11, persistent AST 0 workers require a
 cooperating executable and request reset/recovery tests. A modern AST protocol
 follows worker validation and requires a cooperating consumer. Retain the legacy

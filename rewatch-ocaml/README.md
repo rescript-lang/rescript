@@ -12,6 +12,14 @@ artifact and focused concurrency checks; broader project and platform
 validation continues. Reproducible performance and resource checks are in
 [`bench/README.md`](bench/README.md).
 
+The embedded compiler performance plan has completed its local Linux gates:
+`make test-all`, the focused OCaml Rewatch suite with one, four, and twelve
+compiler domains, mixed GenType parity in all annotation modes, and the frozen
+AST 0 PPX gate. The CI matrix also runs the focused suite with one and four
+domains on Linux, macOS, and Windows; its results for this revision are pending
+until the local commits are published. The retained classic GenType, disk,
+editor compatibility, and legacy PPX paths are described below.
+
 Before the domain cleanup, an uninterrupted `make test-all` run passed all
 compiler, runtime, build, GenType, analysis, tools, and canonical rewatch tests.
 The shared integration suite runs against the packaged OCaml executable.

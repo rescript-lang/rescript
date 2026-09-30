@@ -70,6 +70,9 @@ graph costs, frozen lookup by declaration kind, module path substitution, and
 the remaining full-signature fallback.
 The [checkpoint 10 comparison](checkpoint-10-2026-09-30.md) records GenType
 parity and mixed-package lookup in both directions.
+The [checkpoint 12 local gate](checkpoint-12-2026-09-30.md) records the Linux
+final-suite results and the cross-platform CI requirement still pending for
+the unpushed branch.
 
 ## Build and compare
 

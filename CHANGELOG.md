@@ -30,6 +30,7 @@
 #### :nail_care: Polish
 
 - Speed up OCaml rewatch builds with project-owned compiler caches, in-memory module results, and fewer compatibility copies. https://github.com/rescript-lang/rescript/pull/8680
+- Use frozen compiler imports in mixed GenType builds while preserving generated TypeScript and editor annotations. https://github.com/rescript-lang/rescript/pull/8680
 - Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662
 
 #### :house: Internal
