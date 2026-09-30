@@ -159,8 +159,14 @@ GenType settings for the same package, and CMI dependency contents. When a
 CMT is available, missing or stale summaries use the existing CMT reader,
 including for prebuilt packages. OCaml Rewatch publishes the summaries and
 removes them when their source modules are removed.
-Parser AST cache copies run on a separate domain while compilation proceeds;
-`REWATCH_ASYNC_AST_EXPORT=0` makes those copies finish before compilation.
+With frozen lookup, parser requests hand their AST and dependency list to the
+session before writing an AST file. The export domain writes the serialized
+staging file and persistent cache copy while compilation proceeds. Source
+identity and request generation guard the handoff; after persistence, the
+staging file identity is checked too. A restarted build reads the persistent
+AST cache. GenType's classic lookup keeps the original disk AST path. Set
+`REWATCH_OWNED_AST=0` to use synchronous staging writes, or
+`REWATCH_ASYNC_AST_EXPORT=0` to finish exports before compilation.
 OCaml Rewatch omits CMT and CMTI binary annotations by default, including in
 GenType packages. GenType keeps request-owned typed results and `.gts` inputs;
 an interface summary also retains the semantic information needed when its

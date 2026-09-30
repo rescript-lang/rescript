@@ -578,7 +578,15 @@ type published_cmj = {
   fingerprint: Digest.t;
   image: Js_cmj_format.frozen;
 }
-type published_ast = {stats: Unix.stats; result: Binary_ast.result}
+type session_ast = {
+  input_path: string;
+  generation: int;
+  source_stats: Unix.stats;
+  disk_stats: Unix.stats option;
+  result: Binary_ast.result;
+  contents: string option;
+  parsed_at: float;
+}
 type published_semantic = {
   stats: Unix.stats;
   generation: int;
@@ -617,6 +625,7 @@ type session = {
   mutable dependencies: Env.dependency_cache;
   handoff_enabled: bool Atomic.t;
   frozen_lookup_enabled: bool Atomic.t;
+  owned_ast_enabled: bool Atomic.t;
   use_frozen_for_compile: bool Atomic.t;
   options_lock: Mutex.t;
   option_templates: (string * string list, prepared_options) Hashtbl.t;
@@ -633,8 +642,8 @@ type session = {
   request_generations: (string, int) Hashtbl.t;
   mutable next_request_generation: int;
   published_results: (string, module_result) Hashtbl.t;
-  staged_asts: (string, Binary_ast.result staged_artifact) Hashtbl.t;
-  published_asts: (string, published_ast) Hashtbl.t;
+  staged_asts: (string, session_ast) Hashtbl.t;
+  published_asts: (string, session_ast) Hashtbl.t;
   staged_semantics: (string, staged_semantic) Hashtbl.t;
   mutable staged_semantic_bytes: int;
   mutable staged_semantic_generation: int;
@@ -649,6 +658,7 @@ let create_session () =
     dependencies = Env.create_dependency_cache ();
     handoff_enabled = Atomic.make true;
     frozen_lookup_enabled = Atomic.make true;
+    owned_ast_enabled = Atomic.make false;
     use_frozen_for_compile = Atomic.make true;
     options_lock = Mutex.create ();
     option_templates = Hashtbl.create 32;
@@ -713,6 +723,14 @@ let set_session_frozen_lookup_enabled session enabled =
   if Atomic.exchange session.frozen_lookup_enabled enabled <> enabled then
     invalidate_session_policy_caches session
 
+let set_session_owned_ast_enabled session enabled =
+  if Atomic.exchange session.owned_ast_enabled enabled <> enabled then
+    invalidate_session_policy_caches session
+
+let session_owned_ast_enabled session =
+  Atomic.get session.owned_ast_enabled
+  && Sys.getenv_opt "REWATCH_OWNED_AST" <> Some "0"
+
 let session_handoff_enabled session =
   Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "0"
   && Atomic.get session.handoff_enabled
@@ -751,13 +769,26 @@ let lookup_session_cmj session name filename =
       else None
     with Sys_error _ | Unix.Unix_error _ -> None)
 
+let valid_session_ast session ~path entry =
+  Hashtbl.find_opt session.request_generations entry.input_path
+  = Some entry.generation
+  &&
+    try
+      same_file_stats (Unix.stat entry.input_path) entry.source_stats
+      &&
+      match entry.disk_stats with
+      | None -> true
+      | Some stats -> same_file_stats (Unix.stat path) stats
+    with Sys_error _ | Unix.Unix_error _ -> false
+
 let staged_ast_dependencies session ~path =
   Mutex.lock session.staging_lock;
   Fun.protect
     (fun () ->
-      Hashtbl.find_opt session.staged_asts path
-      |> Option.map (fun (staged : Binary_ast.result staged_artifact) ->
-          Binary_ast.dependencies staged.value))
+      Option.bind (Hashtbl.find_opt session.staged_asts path) (fun entry ->
+          if valid_session_ast session ~path entry then
+            Some (Binary_ast.dependencies entry.result)
+          else None))
     ~finally:(fun () -> Mutex.unlock session.staging_lock)
 
 let take_session_ast session filename =
@@ -768,16 +799,12 @@ let take_session_ast session filename =
       (fun () ->
         let entry = Hashtbl.find_opt session.published_asts path in
         Hashtbl.remove session.published_asts path;
-        entry)
+        Option.bind entry (fun entry ->
+            if valid_session_ast session ~path entry then Some entry.result
+            else None))
       ~finally:(fun () -> Mutex.unlock session.staging_lock)
   in
-  match entry with
-  | None -> None
-  | Some entry -> (
-    try
-      if same_file_stats (Unix.stat path) entry.stats then Some entry.result
-      else None
-    with Sys_error _ | Unix.Unix_error _ -> None)
+  entry
 
 let build_identity = Rescript_compiler_build_identity.value
 
@@ -1106,6 +1133,9 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
         frozen_lookup_enabled
         && Sys.getenv_opt "REWATCH_SESSION_AST" <> Some "0"
       in
+      let owned_ast_enabled =
+        ast_enabled && session_owned_ast_enabled session
+      in
       let use_session_cmj_lookup =
         cmj_enabled && frozen_lookup_enabled
         && Atomic.get session.use_frozen_for_compile
@@ -1150,7 +1180,8 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
           Binary_ast.with_capture
             (fun filename ast ->
               parsed_ast :=
-                Some (Compiler_request_state.resolve_path filename, ast))
+                Some (Compiler_request_state.resolve_path filename, ast);
+              owned_ast_enabled)
             run
         else run ()
       in
@@ -1191,6 +1222,28 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
       (match result.exit_code with
       | code when code <> 0 -> ()
       | _ ->
+        let parsed_ast =
+          Option.bind !parsed_ast (fun (filename, ast) ->
+              try
+                let source_stats = Unix.stat input_path in
+                let contents, disk_stats =
+                  if owned_ast_enabled then
+                    (Some (Binary_ast.serialize_result ast), None)
+                  else (None, Some (Unix.stat filename))
+                in
+                Some
+                  ( filename,
+                    {
+                      input_path;
+                      generation;
+                      source_stats;
+                      disk_stats;
+                      result = ast;
+                      contents;
+                      parsed_at = Unix.gettimeofday ();
+                    } )
+              with Sys_error _ | Unix.Unix_error _ -> None)
+        in
         Mutex.lock session.staging_lock;
         Fun.protect
           (fun () ->
@@ -1225,8 +1278,10 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
                   stage session.staged_cmjs filename (fingerprint, cmj))
                 !compiled_cmj;
               Option.iter
-                (fun (filename, ast) -> stage session.staged_asts filename ast)
-                !parsed_ast;
+                (fun (filename, ast) ->
+                  record filename;
+                  Hashtbl.replace session.staged_asts filename ast)
+                parsed_ast;
               Option.iter
                 (fun (filename, cmt) ->
                   if stage_semantic session filename cmt then record filename)
@@ -1433,25 +1488,35 @@ let published_fingerprint session ~kind ~filename =
     with Sys_error _ | Unix.Unix_error _ -> None)
 
 let publish_session_ast session ~source =
-  let staged =
-    Mutex.lock session.staging_lock;
-    Fun.protect
-      (fun () ->
-        let staged = Hashtbl.find_opt session.staged_asts source in
-        Hashtbl.remove session.staged_asts source;
-        staged)
-      ~finally:(fun () -> Mutex.unlock session.staging_lock)
-  in
-  Option.bind staged (validated_stage source)
-  |> Option.iter (fun result ->
-      let stats = Unix.stat source in
-      Mutex.lock session.staging_lock;
-      Fun.protect
-        (fun () ->
-          if Hashtbl.length session.published_asts >= 2048 then
-            Hashtbl.clear session.published_asts;
-          Hashtbl.replace session.published_asts source {stats; result})
-        ~finally:(fun () -> Mutex.unlock session.staging_lock))
+  Mutex.lock session.staging_lock;
+  Fun.protect
+    (fun () ->
+      let staged = Hashtbl.find_opt session.staged_asts source in
+      Hashtbl.remove session.staged_asts source;
+      Option.bind staged (fun entry ->
+          if not (valid_session_ast session ~path:source entry) then None
+          else (
+            if Hashtbl.length session.published_asts >= 2048 then
+              Hashtbl.clear session.published_asts;
+            Hashtbl.replace session.published_asts source entry;
+            Option.map
+              (fun contents -> (contents, entry.parsed_at))
+              entry.contents)))
+    ~finally:(fun () -> Mutex.unlock session.staging_lock)
+
+let record_session_ast_persistence session ~path =
+  Mutex.lock session.staging_lock;
+  Fun.protect
+    (fun () ->
+      match Hashtbl.find_opt session.published_asts path with
+      | None -> ()
+      | Some entry -> (
+        try
+          if valid_session_ast session ~path entry then
+            Hashtbl.replace session.published_asts path
+              {entry with disk_stats = Some (Unix.stat path); contents = None}
+        with Sys_error _ | Unix.Unix_error _ -> ()))
+    ~finally:(fun () -> Mutex.unlock session.staging_lock)
 
 let remove_semantic_source_aliases session destination =
   Hashtbl.filter_map_inplace

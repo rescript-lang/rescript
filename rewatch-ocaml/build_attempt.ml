@@ -32,6 +32,7 @@ type parse_export = {
   published_ast: string;
   source: string;
   compile_assets: Compile_assets.t;
+  mutable owned_ast: (string * float) option;
 }
 
 type pending_work = {
@@ -142,10 +143,11 @@ let create_retained ~session ~process_poll ~progress ~verbosity =
 let register_cleanup attempt action =
   attempt.finalization.actions <- action :: attempt.finalization.actions
 
-let add_parse_export attempt ~staged_ast ~published_ast ~source ~compile_assets
-    =
+let add_parse_export ?owned_ast attempt ~staged_ast ~published_ast ~source
+    ~compile_assets =
   attempt.parse_exports <-
-    {staged_ast; published_ast; source; compile_assets} :: attempt.parse_exports
+    {staged_ast; published_ast; source; compile_assets; owned_ast}
+    :: attempt.parse_exports
 
 let with_parse_export_lock attempt action =
   Mutex.lock attempt.parse_export_lock;
@@ -166,6 +168,17 @@ let start_parse_exports attempt =
                          (Hashtbl.mem attempt.invalidated_parse_exports
                             export.published_ast)
                      then (
+                       Option.iter
+                         (fun (contents, parsed_at) ->
+                           File_util.write_file_atomic ~ensure_parent:false
+                             export.staged_ast contents;
+                           Unix.utimes export.staged_ast parsed_at parsed_at;
+                           Rescript_compiler_driver
+                           .record_session_ast_persistence
+                             (Build_session.compiler_session attempt.session)
+                             ~path:export.staged_ast;
+                           export.owned_ast <- None)
+                         export.owned_ast;
                        File_util.copy_existing_file ~ensure_parent:false
                          export.staged_ast export.published_ast;
                        (* Compilation can finish before this copy. Keep the

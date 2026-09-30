@@ -37,7 +37,13 @@ type result =
     }
 
 val dependencies : result -> string list
-val with_capture : (string -> result -> unit) -> (unit -> 'a) -> 'a
+
+val with_capture : (string -> result -> bool) -> (unit -> 'a) -> 'a
+(** The callback runs before the AST is written. Return [true] to retain the
+    result and defer persistence to the caller. *)
+
+val serialize_result : result -> string
+(** Encode a captured result with the same bytes as the persistent AST. *)
 
 val with_lookup : (string -> result option) -> (unit -> 'a) -> 'a
 (** Captured results are request-owned until publication. A lookup transfers

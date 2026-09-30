@@ -82,6 +82,7 @@ val create_retained :
 
 val register_cleanup : t -> (unit -> unit) -> unit
 val add_parse_export :
+  ?owned_ast:string * float ->
   t ->
   staged_ast:string ->
   published_ast:string ->

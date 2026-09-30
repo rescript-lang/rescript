@@ -46,6 +46,9 @@ The [checkpoint 6 comparison](checkpoint-6-2026-09-30.md) records the removal
 of GenType's forced editor annotations, with allocation, artifact, diagnostics,
 and TypeScript parity checks. `gentype_editor_policy_parity.py` checks interface
 and error behavior across all three annotation modes.
+The [checkpoint 7 comparison](checkpoint-7-2026-09-30.md) records the owned AST
+handoff, deferred persistence, byte parity, and the one-domain artifact and
+resource gate.
 
 ## Build and compare
 

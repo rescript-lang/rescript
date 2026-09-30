@@ -125,6 +125,28 @@ let parse_export_preserves_parser_time _context =
            (Compile_assets.ast compile_assets source));
       Build_attempt.finish_parse_exports attempt)
 
+let owned_parse_export_persists_after_handoff _context =
+  Test_support.with_temp_dir "rewatch-owned-parse-export" (fun root ->
+      let attempt = create_full () in
+      let source = Test_support.path root "src/A.res" in
+      let staged_ast = Test_support.path root "lib/bs/src/A.ast" in
+      let published_ast = Test_support.path root "lib/ocaml/A.ast" in
+      Test_support.write_file source "let value = 1\n";
+      File_util.ensure_dir (Filename.dirname staged_ast);
+      File_util.ensure_dir (Filename.dirname published_ast);
+      let compile_assets =
+        Compile_assets.create [Filename.dirname published_ast]
+      in
+      Build_attempt.add_parse_export attempt ~owned_ast:("owned AST", 1000.)
+        ~staged_ast ~published_ast ~source ~compile_assets;
+      assert_bool "the parser has not written a staging file"
+        (not (File_util.exists staged_ast));
+      Build_attempt.start_parse_exports attempt;
+      Build_attempt.finish_parse_exports attempt;
+      assert_equal "owned AST" (File_util.read_file staged_ast);
+      assert_equal "owned AST" (File_util.read_file published_ast);
+      assert_equal 1000. (Unix.stat published_ast).Unix.st_mtime)
+
 let invalidated_parse_export_is_removed _context =
   Test_support.with_temp_dir "rewatch-parse-invalidation" (fun root ->
       let attempt = create_full () in
@@ -207,6 +229,8 @@ let tests =
          "log finalization runs once" >:: log_finalization_runs_once;
          "parse export preserves parser time"
          >:: parse_export_preserves_parser_time;
+         "owned parse export persists after handoff"
+         >:: owned_parse_export_persists_after_handoff;
          "invalidated parse export is removed"
          >:: invalidated_parse_export_is_removed;
          "invalidated parse export skips pending copy"

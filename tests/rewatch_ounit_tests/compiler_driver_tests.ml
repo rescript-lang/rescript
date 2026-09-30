@@ -1530,6 +1530,74 @@ let session_policy_isolation_tests _context =
                   ~destination:other))
             "disabled handoff does not stage new interfaces"))
 
+let owned_ast_result_tests _context =
+  Test_support.with_temp_dir "rewatch-owned-ast-" (fun root ->
+      let ast_path = Filename.concat root "A.ast" in
+      write root "A.res" "let value = 1\n";
+      expect_code 0
+        (snd (run root ~extra:["-bs-ast"; "-o"; "Reference.ast"] "A.res"));
+      let expected =
+        File_util.read_file (Filename.concat root "Reference.ast")
+      in
+      let session = Rescript_compiler_driver.create_session () in
+      Rescript_compiler_driver.set_session_owned_ast_enabled session true;
+      expect_code 0
+        (snd (run ~session root ~extra:["-bs-ast"; "-o"; "A.ast"] "A.res"));
+      check
+        (not (Sys.file_exists ast_path))
+        "owned parser result precedes disk persistence";
+      assert_equal (Some [])
+        (Rescript_compiler_driver.staged_ast_dependencies session ~path:ast_path);
+      let contents, parsed_at =
+        match
+          Rescript_compiler_driver.publish_session_ast session ~source:ast_path
+        with
+        | Some owned_ast -> owned_ast
+        | None -> assert_failure "owned parser result was not published"
+      in
+      assert_equal expected contents;
+      expect_code 0 (snd (run ~session root "A.ast"));
+      let session_js = File_util.read_file (Filename.concat root "A.js") in
+      File_util.write_file ast_path contents;
+      Unix.utimes ast_path parsed_at parsed_at;
+      expect_code 0 (snd (run root "A.ast"));
+      assert_equal session_js
+        (File_util.read_file (Filename.concat root "A.js"));
+      expect_code 0
+        (snd (run ~session root ~extra:["-bs-ast"; "-o"; "A.ast"] "A.res"));
+      let contents, _ =
+        match
+          Rescript_compiler_driver.publish_session_ast session ~source:ast_path
+        with
+        | Some owned_ast -> owned_ast
+        | None -> assert_failure "second owned parser result was not published"
+      in
+      File_util.write_file ast_path contents;
+      Rescript_compiler_driver.record_session_ast_persistence session
+        ~path:ast_path;
+      write root "Different.res" "let value = 2\n";
+      expect_code 0
+        (snd
+           (run root ~extra:["-bs-ast"; "-o"; "Different.ast"] "Different.res"));
+      File_util.write_file ast_path
+        (File_util.read_file (Filename.concat root "Different.ast"));
+      expect_code 0 (snd (run ~session root "A.ast"));
+      check
+        (File_util.read_file (Filename.concat root "A.js") <> session_js)
+        "a changed AST file rejects its retained session result";
+      write root "A.res" "let value = B.value\n";
+      expect_code 0
+        (snd (run ~session root ~extra:["-bs-ast"; "-o"; "A.ast"] "A.res"));
+      assert_equal (Some ["B"])
+        (Rescript_compiler_driver.staged_ast_dependencies session ~path:ast_path);
+      write root "A.res" "let value = C.value\n";
+      assert_equal None
+        (Rescript_compiler_driver.staged_ast_dependencies session ~path:ast_path);
+      expect_code 0
+        (snd (run ~session root ~extra:["-bs-ast"; "-o"; "A.ast"] "A.res"));
+      assert_equal (Some ["C"])
+        (Rescript_compiler_driver.staged_ast_dependencies session ~path:ast_path))
+
 let package_and_load_path_isolation_tests _context =
   Test_support.with_temp_dir "rewatch-driver-load-roots-" (fun root ->
       let first = Filename.concat root "first" in
@@ -2625,6 +2693,7 @@ let tests =
          "state_boundary" >:: state_boundary_tests;
          "typed_request_options" >:: typed_request_options_tests;
          "session_policy_isolation" >:: session_policy_isolation_tests;
+         "owned_ast_result" >:: owned_ast_result_tests;
          "package_and_load_path_isolation"
          >:: package_and_load_path_isolation_tests;
          "generated_name_isolation" >:: generated_name_isolation_tests;

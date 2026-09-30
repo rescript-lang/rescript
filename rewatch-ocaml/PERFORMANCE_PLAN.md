@@ -110,9 +110,25 @@ editor-only work, including when GenType is enabled.
    (109 tests), and `make checkformat` passed. Next: checkpoint 7, owned AST
    results.
 
-7. [ ] **Owned AST results.** Return ASTs/dependencies before disk persistence;
+7. [x] **Owned AST results.** Return ASTs/dependencies before disk persistence;
    validate session generations and disk identities. Preserve persistent caches,
    restart behavior, and cancellation recovery.
+
+   Record: Updated `compiler/depends/binary_ast.ml`, the embedded compiler
+   driver, and the OCaml Rewatch session, parse, and export modules. Frozen
+   requests capture ASTs and dependencies before staging writes; the export
+   worker persists byte-identical ASTs while compilation consumes the owned
+   result. Source identity, request generation, and then staging file identity
+   validate handoff. Classic lookup and an explicit synchronous fallback
+   remain. Added driver and export unit tests, updated Rewatch and benchmark
+   documentation, and recorded the [five-run gate](bench/checkpoint-7-2026-09-30.md).
+   It passed with identical compiler work, complete file sets, and artifact
+   bytes. Clean medians were 3,136/3,140 ms before/after with 196,304/198,708
+   KiB sampled peak RSS; unchanged 229/227 ms and edit 245/262 ms. The clean
+   gate showed no demonstrated speed gain. `make test-all` passed before the
+   final buffer-retention cleanup; final `make test`, the OCaml Rewatch port
+   suite, focused OUnit (111 tests), and `make checkformat` passed afterward.
+   Next: checkpoint 8, owned CMI/CMJ and persistence.
 
 8. [ ] **Owned CMI/CMJ and persistence.** Migrate CMI, CMJ, then optional editor
    outputs. Snapshot mutable graphs before async serialization; serialize once;

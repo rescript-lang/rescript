@@ -87,6 +87,33 @@ let read_ast_exn (type t) ~fname (kind : t kind) : t =
 
 let magic_sep_char = '\n'
 
+let serialize_result result =
+  let sourcefile, dependencies, ast =
+    match result with
+    | Implementation {sourcefile; dependencies; ast} ->
+      (sourcefile, dependencies, Marshal.to_string ast [])
+    | Interface {sourcefile; dependencies; ast} ->
+      (sourcefile, dependencies, Marshal.to_string ast [])
+  in
+  let dependency_buffer = Buffer.create 1000 in
+  Buffer.add_char dependency_buffer magic_sep_char;
+  List.iter
+    (fun dependency ->
+      Buffer.add_string dependency_buffer dependency;
+      Buffer.add_char dependency_buffer magic_sep_char)
+    dependencies;
+  let dependency_size = Buffer.length dependency_buffer in
+  let output = Buffer.create (dependency_size + String.length ast + 128) in
+  for shift = 3 downto 0 do
+    Buffer.add_char output
+      (Char.chr ((dependency_size lsr (shift * 8)) land 255))
+  done;
+  Buffer.add_buffer output dependency_buffer;
+  Buffer.add_string output sourcefile;
+  Buffer.add_char output '\n';
+  Buffer.add_string output ast;
+  Buffer.contents output
+
 (*
    Reasons that we don't [output_value] the set:
    1. for performance , easy skipping and calcuate the length 
@@ -99,24 +126,29 @@ let write_ast (type t) ~(sourcefile : string) ~output (kind : t kind) (pt : t) :
     Set_string.elements output_set
     |> List.filter (fun s -> s <> "" && s.[0] <> '*')
   in
-  let buf = Ext_buffer.create 1000 in
-  Ext_buffer.add_char buf magic_sep_char;
-  List.iter
-    (fun s -> Ext_buffer.add_string_char buf s magic_sep_char)
-    dependencies;
-  let oc = open_out_bin (Compiler_request_state.resolve_path output) in
-  output_binary_int oc (Ext_buffer.length buf);
-  Ext_buffer.output_buffer oc buf;
-  output_string oc sourcefile;
-  output_char oc '\n';
-  output_value oc pt;
-  close_out oc;
-  Option.iter
-    (fun capture ->
-      let result =
-        match kind with
-        | Ml -> Implementation {sourcefile; dependencies; ast = pt}
-        | Mli -> Interface {sourcefile; dependencies; ast = pt}
-      in
-      capture output result)
-    (Domain.DLS.get capture_key)
+  let result =
+    match kind with
+    | Ml -> Implementation {sourcefile; dependencies; ast = pt}
+    | Mli -> Interface {sourcefile; dependencies; ast = pt}
+  in
+  let deferred =
+    match Domain.DLS.get capture_key with
+    | None -> false
+    | Some capture -> capture output result
+  in
+  if deferred then
+    try Unix.unlink (Compiler_request_state.resolve_path output)
+    with Unix.Unix_error (Unix.ENOENT, _, _) -> ()
+  else
+    let buf = Ext_buffer.create 1000 in
+    Ext_buffer.add_char buf magic_sep_char;
+    List.iter
+      (fun s -> Ext_buffer.add_string_char buf s magic_sep_char)
+      dependencies;
+    let oc = open_out_bin (Compiler_request_state.resolve_path output) in
+    output_binary_int oc (Ext_buffer.length buf);
+    Ext_buffer.output_buffer oc buf;
+    output_string oc sourcefile;
+    output_char oc '\n';
+    output_value oc pt;
+    close_out oc

@@ -16,6 +16,8 @@ val session_handoff_enabled : session -> bool
     [REWATCH_FROZEN_VALUES=0] disables both handoff and frozen lookup. *)
 
 val set_session_frozen_lookup_enabled : session -> bool -> unit
+val set_session_owned_ast_enabled : session -> bool -> unit
+val session_owned_ast_enabled : session -> bool
 
 val session_frozen_lookup_enabled : session -> bool
 (** GenType projects retain classic dependency lookup while their typed output
@@ -95,9 +97,13 @@ val staged_ast_dependencies : session -> path:string -> string list option
 (** The parser's dependency list before AST artifact publication. [path] is
     the absolute staging path. *)
 
-val publish_session_ast : session -> source:string -> unit
+val publish_session_ast : session -> source:string -> (string * float) option
 (** Transfer a successful parse result to one later compiler request.
-    [source] is the absolute staging path; persistent export may run later. *)
+    [source] is the absolute staging path. Return serialized contents when
+    persistence was deferred; the caller must publish them before completion. *)
+
+val record_session_ast_persistence : session -> path:string -> unit
+(** Attach the staged file identity once its deferred write finishes. *)
 
 val publish_session_semantic :
   session -> retain:bool -> source:string -> destination:string -> unit
