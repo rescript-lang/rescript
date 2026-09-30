@@ -33,6 +33,8 @@ The [checkpoint 2 comparison](checkpoint-2-2026-09-30.md) records typed-request
 option caching, interleaved measurements, and the one-domain artifact gate.
 The [checkpoint 3 comparison](checkpoint-3-2026-09-30.md) records independent
 compiler and editor policies and GenType artifact parity.
+The [checkpoint 4 comparison](checkpoint-4-2026-09-30.md) records owned GenType
+semantic inputs, reduced CMT reads, and interface precedence checks.
 
 ## Build and compare
 

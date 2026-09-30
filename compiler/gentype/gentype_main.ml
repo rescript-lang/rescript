@@ -103,16 +103,42 @@ let read_cmt cmt_file =
     Log_.item "Try to clean and rebuild.\n\n";
     assert false
 
-let read_input_cmt ?compiled_cmt is_interface cmt_file =
+type semantic_inputs = {
+  implementation: Cmt_format.cmt_infos option;
+  interface: Cmt_format.cmt_infos option;
+}
+
+let semantic_lookup_key = Domain.DLS.new_key (fun () -> None)
+
+let with_semantic_lookup lookup action =
+  let previous = Domain.DLS.get semantic_lookup_key in
+  Domain.DLS.set semantic_lookup_key (Some lookup);
+  Fun.protect action ~finally:(fun () ->
+      Domain.DLS.set semantic_lookup_key previous)
+
+let semantic_input ~filename =
+  match Domain.DLS.get semantic_lookup_key with
+  | None -> None
+  | Some lookup ->
+    Compiler_phase_trace.dependency "dependency.gentype_semantic_result"
+      (fun () -> lookup filename)
+
+let owned_semantic_result cmt =
+  Compiler_phase_trace.dependency "dependency.gentype_semantic_result"
+    (fun () -> cmt)
+
+let read_input_cmt ~inputs is_interface cmt_file =
   let implementation_cmt () =
-    match compiled_cmt with
-    | Some cmt ->
-      Compiler_phase_trace.dependency "dependency.gentype_semantic_result"
-        (fun () -> cmt)
+    match inputs.implementation with
+    | Some cmt -> owned_semantic_result cmt
     | None -> read_cmt cmt_file
   in
   let input_cmt =
-    if is_interface then read_cmt cmt_file else implementation_cmt ()
+    if is_interface then
+      match inputs.interface with
+      | Some cmt -> cmt
+      | None -> read_cmt cmt_file
+    else implementation_cmt ()
   in
   let ignore_interface = ref false in
   let check_annotation ~loc:_ attributes =
@@ -135,10 +161,8 @@ let read_input_cmt ?compiled_cmt is_interface cmt_file =
       (cmt_file |> (Filename.chop_extension [@doesNotRaise])) ^ ".cmt"
     in
     let input_cmt_impl =
-      match compiled_cmt with
-      | Some cmt ->
-        Compiler_phase_trace.dependency "dependency.gentype_semantic_result"
-          (fun () -> cmt)
+      match inputs.implementation with
+      | Some cmt -> owned_semantic_result cmt
       | None -> read_cmt cmt_file_impl
     in
     let has_gentype_annotations_impl =
@@ -168,8 +192,15 @@ let process_cmt_file ?compiled_cmt cmt =
   if cmt_file <> "" then
     let file_name = cmt |> Paths.get_module_name in
     let is_interface = Filename.check_suffix cmt_file ".cmti" in
+    let inputs =
+      {
+        implementation = compiled_cmt;
+        interface =
+          (if is_interface then semantic_input ~filename:cmt_file else None);
+      }
+    in
     let input_cmt, has_gentype_annotations =
-      read_input_cmt ?compiled_cmt is_interface cmt_file
+      read_input_cmt ~inputs is_interface cmt_file
     in
     let source_file =
       match input_cmt.cmt_annots |> Find_source_file.cmt with

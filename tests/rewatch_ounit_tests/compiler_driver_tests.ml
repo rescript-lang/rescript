@@ -795,6 +795,65 @@ let semantic_result_isolation_tests _context =
            (Rescript_compiler_driver.semantic_result session ~filename:path))
         "changed CMT invalidates the semantic result")
 
+let semantic_source_alias_tests _context =
+  Test_support.with_temp_dir "rewatch-semantic-alias-" (fun root ->
+      write root "Api.res" "let answer = 42\n";
+      let session = Rescript_compiler_driver.create_session () in
+      expect_code 0 (snd (run ~session root "Api.res"));
+      let source = Filename.concat root "Api.cmt" in
+      let destination = Filename.concat root "published.cmt" in
+      write root "published.cmt" (File_util.read_file source);
+      Rescript_compiler_driver.publish_session_semantic session ~retain:true
+        ~source ~destination;
+      let lookup filename =
+        Rescript_compiler_driver.semantic_result session ~filename
+      in
+      check (Option.is_some (lookup source)) "source alias resolves semantics";
+      check
+        (Option.is_some (lookup destination))
+        "published path resolves semantics";
+      let channel = open_out_gen [Open_append] 0o644 source in
+      output_char channel '\n';
+      close_out channel;
+      check
+        (Option.is_none (lookup source))
+        "changed staging source invalidates its alias";
+      check
+        (Option.is_some (lookup destination))
+        "published semantics remain valid after source changes")
+
+let gentype_owned_inputs_tests _context =
+  Test_support.with_temp_dir "rewatch-gentype-inputs-" (fun root ->
+      let check_inputs name interface_text implementation_text expected =
+        write root (name ^ ".resi") interface_text;
+        write root (name ^ ".res") implementation_text;
+        expect_code 0 (snd (run root (name ^ ".resi")));
+        expect_code 0
+          (snd (run root ~extra:["-I"; root; "-bs-read-cmi"] (name ^ ".res")));
+        let interface_path = Filename.concat root (name ^ ".cmti") in
+        let implementation_path = Filename.concat root (name ^ ".cmt") in
+        let interface = Cmt_format.read_cmt interface_path in
+        let implementation = Cmt_format.read_cmt implementation_path in
+        Sys.remove interface_path;
+        Sys.remove implementation_path;
+        let inputs =
+          Gentype_main.
+            {interface = Some interface; implementation = Some implementation}
+        in
+        let selected, has_annotations =
+          Gentype_main.read_input_cmt ~inputs true interface_path
+        in
+        check
+          (selected == expected ~interface ~implementation)
+          "GenType selects the supplied semantic input without CMT files";
+        check has_annotations "selected GenType input retains annotations"
+      in
+      check_inputs "Api" "@genType type t\n" "type t = int\n"
+        (fun ~interface ~implementation:_ -> interface);
+      check_inputs "Ignore" "@@genType.ignoreInterface\ntype t\n"
+        "@genType type t = int\n" (fun ~interface:_ ~implementation ->
+          implementation))
+
 let published_module_result_tests _context =
   let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
   Fun.protect
@@ -2423,6 +2482,8 @@ let tests =
          "structured_diagnostic_isolation"
          >:: structured_diagnostic_isolation_tests;
          "semantic_result_isolation" >:: semantic_result_isolation_tests;
+         "semantic_source_alias" >:: semantic_source_alias_tests;
+         "gentype_owned_inputs" >:: gentype_owned_inputs_tests;
          "published_module_result" >:: published_module_result_tests;
          "virtual_module_artifact_lookup"
          >:: virtual_module_artifact_lookup_tests;

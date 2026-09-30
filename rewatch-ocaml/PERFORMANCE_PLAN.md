@@ -57,9 +57,21 @@ editor-only work, including when GenType is enabled.
    focused OUnit (105 tests), and `make checkformat` passed. Next: checkpoint 4,
    owned semantic inputs for GenType.
 
-4. [ ] **Owned semantic inputs.** Provide file-independent implementation/interface
+4. [x] **Owned semantic inputs.** Provide file-independent implementation/interface
    inputs to GenType with safe ownership/lifetimes. Preserve interface precedence,
    TypeScript, and errors. Dependency reads move in checkpoint 5.
+
+   Record: Updated GenType input selection, the embedded compiler session's
+   published-semantic lookup, focused ownership/precedence tests, and OCaml
+   Rewatch documentation. GenType consumes request-local implementation
+   semantics and an isolated session copy of a validated interface result;
+   missing or stale results use the original CMTI reader. A clean GenType trace
+   reduced current-module CMT reads from one to zero. The [five-run gate and
+   GenType measurements](bench/checkpoint-4-2026-09-30.md) passed with identical
+   compiler work, complete file sets, artifact bytes, TypeScript, and all three
+   annotation modes. `make test-all`, the OCaml Rewatch port integration suite,
+   a final `make test`, focused OUnit (107 tests), and `make checkformat` passed.
+   Next: checkpoint 5, versioned GenType dependency summaries.
 
 5. [ ] **GenType dependency inputs.** Replace recursive annotation reads with
    versioned summaries; validate sources, compiler, configuration, and dependencies.

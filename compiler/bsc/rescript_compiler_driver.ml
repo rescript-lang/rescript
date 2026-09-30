@@ -639,6 +639,7 @@ type session = {
   mutable staged_semantic_bytes: int;
   mutable staged_semantic_generation: int;
   published_semantics: (string, published_semantic) Hashtbl.t;
+  published_semantic_sources: (string, string * Unix.stats) Hashtbl.t;
   mutable semantic_bytes: int;
   mutable semantic_generation: int;
 }
@@ -669,6 +670,7 @@ let create_session () =
     staged_semantic_bytes = 0;
     staged_semantic_generation = 0;
     published_semantics = Hashtbl.create 32;
+    published_semantic_sources = Hashtbl.create 32;
     semantic_bytes = 0;
     semantic_generation = 0;
   }
@@ -694,6 +696,7 @@ let invalidate_session_policy_caches session =
       Hashtbl.clear session.published_asts;
       Hashtbl.clear session.staged_semantics;
       Hashtbl.clear session.published_semantics;
+      Hashtbl.clear session.published_semantic_sources;
       session.staged_semantic_bytes <- 0;
       session.semantic_bytes <- 0;
       Atomic.set session.use_frozen_for_compile true)
@@ -1023,6 +1026,41 @@ let stage_semantic session filename value =
     else false
   with Sys_error _ | Unix.Unix_error _ -> false
 
+let lookup_session_semantic session ~filename =
+  let entry, destination, source_stats =
+    Mutex.lock session.staging_lock;
+    Fun.protect
+      (fun () ->
+        match Hashtbl.find_opt session.published_semantics filename with
+        | Some entry -> (Some entry, filename, None)
+        | None -> (
+          match
+            Hashtbl.find_opt session.published_semantic_sources filename
+          with
+          | None -> (None, filename, None)
+          | Some (destination, stats) ->
+            ( Hashtbl.find_opt session.published_semantics destination,
+              destination,
+              Some stats )))
+      ~finally:(fun () -> Mutex.unlock session.staging_lock)
+  in
+  match entry with
+  | None -> None
+  | Some entry -> (
+    try
+      let valid_source =
+        match source_stats with
+        | None -> true
+        | Some stats -> same_file_stats (Unix.stat filename) stats
+      in
+      if valid_source && same_file_stats (Unix.stat destination) entry.stats
+      then
+        Some
+          (Marshal.from_bytes (Marshal.to_bytes entry.value []) 0
+            : Cmt_format.cmt_infos)
+      else None
+    with Sys_error _ | Unix.Unix_error _ -> None)
+
 let run_request_in_session session ~run_external ~cwd ~argv ~input =
   let prepared = session_options session ~cwd ~argv in
   let input_path =
@@ -1131,9 +1169,14 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
             Js_cmj_load.with_session_lookup (lookup_session_cmj session) run
           else run ()
         in
-        if ast_enabled then
-          Binary_ast.with_lookup (take_session_ast session) run
-        else run ()
+        let run () =
+          if ast_enabled then
+            Binary_ast.with_lookup (take_session_ast session) run
+          else run ()
+        in
+        Gentype_main.with_semantic_lookup
+          (fun filename -> lookup_session_semantic session ~filename)
+          run
       in
       (match result.exit_code with
       | code when code <> 0 -> ()
@@ -1400,6 +1443,12 @@ let publish_session_ast session ~source =
           Hashtbl.replace session.published_asts source {stats; result})
         ~finally:(fun () -> Mutex.unlock session.staging_lock))
 
+let remove_semantic_source_aliases session destination =
+  Hashtbl.filter_map_inplace
+    (fun _ (published, stats) ->
+      if published = destination then None else Some (published, stats))
+    session.published_semantic_sources
+
 let publish_session_semantic session ~retain ~source ~destination =
   let staged =
     Mutex.lock session.staging_lock;
@@ -1412,8 +1461,9 @@ let publish_session_semantic session ~retain ~source ~destination =
   in
   if retain then
     Option.bind staged (fun entry ->
-        validated_stage source {stats = entry.stats; value = entry.value})
-    |> Option.iter (fun value ->
+        validated_stage source {stats = entry.stats; value = entry.value}
+        |> Option.map (fun value -> (value, entry.stats)))
+    |> Option.iter (fun (value, source_stats) ->
         let stats = Unix.stat destination in
         if stats.Unix.st_size <= 4 * 1024 * 1024 then (
           Mutex.lock session.staging_lock;
@@ -1427,9 +1477,12 @@ let publish_session_semantic session ~retain ~source ~destination =
                   session.semantic_bytes <-
                     session.semantic_bytes - entry.stats.st_size)
                 previous;
+              remove_semantic_source_aliases session destination;
               session.semantic_generation <- session.semantic_generation + 1;
               Hashtbl.replace session.published_semantics destination
                 {stats; generation = session.semantic_generation; value};
+              Hashtbl.replace session.published_semantic_sources source
+                (destination, source_stats);
               session.semantic_bytes <- session.semantic_bytes + stats.st_size;
               while
                 session.semantic_bytes > 16 * 1024 * 1024
@@ -1451,27 +1504,12 @@ let publish_session_semantic session ~retain ~source ~destination =
                   let entry = Hashtbl.find session.published_semantics path in
                   session.semantic_bytes <-
                     session.semantic_bytes - entry.stats.st_size;
-                  Hashtbl.remove session.published_semantics path
+                  Hashtbl.remove session.published_semantics path;
+                  remove_semantic_source_aliases session path
               done)
             ~finally:(fun () -> Mutex.unlock session.staging_lock)))
 
-let semantic_result session ~filename =
-  let entry =
-    Mutex.lock session.staging_lock;
-    Fun.protect
-      (fun () -> Hashtbl.find_opt session.published_semantics filename)
-      ~finally:(fun () -> Mutex.unlock session.staging_lock)
-  in
-  match entry with
-  | None -> None
-  | Some entry -> (
-    try
-      if same_file_stats (Unix.stat filename) entry.stats then
-        Some
-          (Marshal.from_bytes (Marshal.to_bytes entry.value []) 0
-            : Cmt_format.cmt_infos)
-      else None
-    with Sys_error _ | Unix.Unix_error _ -> None)
+let semantic_result = lookup_session_semantic
 
 let stage_module_result session ~input ~interface_source ~interface_file
     ~optimization_source ~optimization_file ~semantic_source ~dependencies

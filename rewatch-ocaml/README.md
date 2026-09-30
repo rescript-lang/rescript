@@ -147,6 +147,13 @@ They still capture compiler results for session publication. Classic lookup
 waits for the interface file to reach disk before dependent jobs start;
 early publication requires frozen lookup. The compiler metadata records
 session handoff and frozen lookup as separate policies.
+GenType consumes the current implementation's semantic result in its compiler
+request. For a module with an interface, an embedded session supplies an
+isolated copy of the published interface semantics when the staged source and
+published file still match; a missing or stale session value falls back to the
+existing CMTI reader. Standalone compilation also uses the CMTI reader.
+Dependency annotation reads remain on their existing path until the next
+checkpoint.
 Parser AST cache copies run on a separate domain while compilation proceeds;
 `REWATCH_ASYNC_AST_EXPORT=0` makes those copies finish before compilation.
 OCaml Rewatch omits CMT and CMTI binary annotations by default for packages
