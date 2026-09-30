@@ -95,6 +95,25 @@ let tests =
         "source directory matching respects path-component boundaries";
       let config = Config.load_root root in
       let gentype_config = {config with gentype_args = ["-bs-gentype"]} in
+      let previous_annotations = Sys.getenv_opt "REWATCH_BIN_ANNOT" in
+      Fun.protect
+        ~finally:(fun () ->
+          match previous_annotations with
+          | Some value -> Unix.putenv "REWATCH_BIN_ANNOT" value
+          | None -> Test_support.unsetenv "REWATCH_BIN_ANNOT")
+        (fun () ->
+          Unix.putenv "REWATCH_BIN_ANNOT" "0";
+          check
+            ((not (Compiler_args.editor_artifacts_enabled ()))
+            && Compiler_args.gentype_inputs_enabled gentype_config
+            && Compiler_args.binary_annotations_enabled gentype_config)
+            "GenType inputs preserve annotations without editor policy";
+          Unix.putenv "REWATCH_BIN_ANNOT" "1";
+          check
+            (Compiler_args.editor_artifacts_enabled ()
+            && (not (Compiler_args.gentype_inputs_enabled config))
+            && Compiler_args.binary_annotations_enabled config)
+            "editor policy enables annotations without GenType inputs");
       let selected_regular = Filename.concat root "selected/regular" in
       check
         (Compiler_args.gentype_dependency_args_from_paths gentype_config

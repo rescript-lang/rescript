@@ -14,7 +14,9 @@ let config root =
   Config.load_root root
 
 let context ?(inherited_compiler_args = []) ?(binary_annotations = true)
-    ?compatibility_copies ?(frozen_values = true) root config source_map_args =
+    ?compatibility_copies ?editor_artifacts ?(gentype_inputs = false)
+    ?(session_handoff = true) ?(frozen_values = true) root config
+    source_map_args =
   let bsc = Filename.concat root "bsc.exe" in
   let runtime = Filename.concat root "runtime" in
   if not (Sys.file_exists bsc) then write bsc "compiler-v1";
@@ -25,7 +27,10 @@ let context ?(inherited_compiler_args = []) ?(binary_annotations = true)
     ~build_root:root ~compiler_path:bsc
     ~compiler_identity:(Digest.file bsc |> Digest.to_hex)
     ~runtime_path:runtime ~source_map_args ~inherited_compiler_args
-    ~binary_annotations ~frozen_values
+    ~binary_annotations
+    ~editor_artifacts:
+      (Option.value editor_artifacts ~default:binary_annotations)
+    ~gentype_inputs ~session_handoff ~frozen_values
     ~package_output_specs:(Compiler_info.package_output_specs config)
 
 let tests =
@@ -62,6 +67,18 @@ let tests =
       check
         (Compiler_info.needs_clean changed_annotations config)
         "changed binary annotation mode invalidates artifacts";
+      let changed_editor =
+        context ~editor_artifacts:false root config ["-bs-source-map"; "linked"]
+      in
+      check
+        (Compiler_info.needs_clean changed_editor config)
+        "editor-artifact policy invalidates artifacts even with annotations on";
+      let changed_gentype =
+        context ~gentype_inputs:true root config ["-bs-source-map"; "linked"]
+      in
+      check
+        (Compiler_info.needs_clean changed_gentype config)
+        "GenType input policy invalidates artifacts independently";
       let changed_copies =
         context ~compatibility_copies:false root config
           ["-bs-source-map"; "linked"]
@@ -75,6 +92,12 @@ let tests =
       check
         (Compiler_info.needs_clean changed_frozen config)
         "changed frozen interface mode invalidates artifacts";
+      let changed_handoff =
+        context ~session_handoff:false root config ["-bs-source-map"; "linked"]
+      in
+      check
+        (Compiler_info.needs_clean changed_handoff config)
+        "changed session handoff policy invalidates artifacts";
       Compiler_info.clean_package config;
       check (not (Sys.file_exists marker)) "mismatched artifacts are removed");
   with_temp_dir (fun root ->
@@ -149,7 +172,8 @@ let tests =
         ]
       in
       let initial =
-        Compiler_info.make_context ~compatibility_copies:true ~build_root:root
+        Compiler_info.make_context ~editor_artifacts:true ~gentype_inputs:false
+          ~session_handoff:true ~compatibility_copies:true ~build_root:root
           ~compiler_path:bsc
           ~compiler_identity:(Digest.file bsc |> Digest.to_hex)
           ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
@@ -160,7 +184,8 @@ let tests =
       let marker = File_util.path_of_parts root ["lib"; "ocaml"; "marker"] in
       write marker "keep";
       let changed =
-        Compiler_info.make_context ~compatibility_copies:true ~build_root:root
+        Compiler_info.make_context ~editor_artifacts:true ~gentype_inputs:false
+          ~session_handoff:true ~compatibility_copies:true ~build_root:root
           ~compiler_path:bsc ~compiler_identity:"changed-compiler"
           ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
           ~binary_annotations:true ~package_output_specs:esmodule
@@ -182,7 +207,8 @@ let tests =
       write bsc "compiler-v1";
       File_util.ensure_dir runtime;
       let standalone =
-        Compiler_info.make_context ~compatibility_copies:true
+        Compiler_info.make_context ~editor_artifacts:true ~gentype_inputs:false
+          ~session_handoff:true ~compatibility_copies:true
           ~build_root:dependency_root ~compiler_path:bsc
           ~compiler_identity:(Digest.file bsc |> Digest.to_hex)
           ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
@@ -202,7 +228,8 @@ let tests =
         ]
       in
       let consumer =
-        Compiler_info.make_context ~compatibility_copies:true
+        Compiler_info.make_context ~editor_artifacts:true ~gentype_inputs:false
+          ~session_handoff:true ~compatibility_copies:true
           ~build_root:consumer_root ~compiler_path:bsc
           ~compiler_identity:(Digest.file bsc |> Digest.to_hex)
           ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]

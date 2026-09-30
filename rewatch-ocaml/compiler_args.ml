@@ -84,8 +84,12 @@ let gentype_dependency_args_from_paths (config : Config.t) dependencies =
 let gentype_enabled (config : Config.t) =
   config.gentype_args <> [] || List.mem "-bs-gentype" config.compiler_flags
 
+let editor_artifacts_enabled () = Sys.getenv_opt "REWATCH_BIN_ANNOT" = Some "1"
+
+let gentype_inputs_enabled = gentype_enabled
+
 let binary_annotations_enabled (config : Config.t) =
-  Sys.getenv_opt "REWATCH_BIN_ANNOT" = Some "1" || gentype_enabled config
+  editor_artifacts_enabled () || gentype_inputs_enabled config
 
 let compatibility_copies_enabled config =
   binary_annotations_enabled config

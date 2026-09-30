@@ -614,8 +614,9 @@ type module_result = {
   generated_outputs: string list;
 }
 type session = {
-  dependencies: Env.dependency_cache;
-  frozen_enabled: bool Atomic.t;
+  mutable dependencies: Env.dependency_cache;
+  handoff_enabled: bool Atomic.t;
+  frozen_lookup_enabled: bool Atomic.t;
   use_frozen_for_compile: bool Atomic.t;
   options_lock: Mutex.t;
   option_templates: (string * string list, prepared_options) Hashtbl.t;
@@ -645,7 +646,8 @@ type session = {
 let create_session () =
   {
     dependencies = Env.create_dependency_cache ();
-    frozen_enabled = Atomic.make true;
+    handoff_enabled = Atomic.make true;
+    frozen_lookup_enabled = Atomic.make true;
     use_frozen_for_compile = Atomic.make true;
     options_lock = Mutex.create ();
     option_templates = Hashtbl.create 32;
@@ -671,15 +673,49 @@ let create_session () =
     semantic_generation = 0;
   }
 
+let invalidate_session_policy_caches session =
+  (* Build preparation changes policies before launching compiler workers. Do
+     not retain images or staged results produced under the previous policy. *)
+  Mutex.lock session.staging_lock;
+  Fun.protect
+    (fun () ->
+      session.dependencies <- Env.create_dependency_cache ();
+      Hashtbl.clear session.staged_diagnostics;
+      Hashtbl.clear session.staged_generated_outputs;
+      Hashtbl.clear session.staged_request_files;
+      Hashtbl.clear session.staged_cmis;
+      Hashtbl.clear session.staged_cmjs;
+      Hashtbl.clear session.published_cmjs;
+      Hashtbl.clear session.cmi_fingerprints;
+      Hashtbl.clear session.cmj_fingerprints;
+      Hashtbl.clear session.request_generations;
+      Hashtbl.clear session.published_results;
+      Hashtbl.clear session.staged_asts;
+      Hashtbl.clear session.published_asts;
+      Hashtbl.clear session.staged_semantics;
+      Hashtbl.clear session.published_semantics;
+      session.staged_semantic_bytes <- 0;
+      session.semantic_bytes <- 0;
+      Atomic.set session.use_frozen_for_compile true)
+    ~finally:(fun () -> Mutex.unlock session.staging_lock)
+
 let set_frozen_for_compile session enabled =
   Atomic.set session.use_frozen_for_compile enabled
 
-let set_session_frozen_enabled session enabled =
-  Atomic.set session.frozen_enabled enabled
+let set_session_handoff_enabled session enabled =
+  if Atomic.exchange session.handoff_enabled enabled <> enabled then
+    invalidate_session_policy_caches session
 
-let session_frozen_enabled session =
+let set_session_frozen_lookup_enabled session enabled =
+  if Atomic.exchange session.frozen_lookup_enabled enabled <> enabled then
+    invalidate_session_policy_caches session
+
+let session_handoff_enabled session =
   Sys.getenv_opt "REWATCH_FROZEN_VALUES" <> Some "0"
-  && Atomic.get session.frozen_enabled
+  && Atomic.get session.handoff_enabled
+
+let session_frozen_lookup_enabled session =
+  session_handoff_enabled session && Atomic.get session.frozen_lookup_enabled
 
 let same_file_stats first second =
   first.Unix.st_dev = second.Unix.st_dev
@@ -1014,18 +1050,23 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
       ~finally:(fun () -> Mutex.unlock session.staging_lock)
   in
   Env.with_dependency_cache session.dependencies (fun () ->
-      let frozen_enabled = session_frozen_enabled session in
+      let handoff_enabled = session_handoff_enabled session in
+      let frozen_lookup_enabled = session_frozen_lookup_enabled session in
       let cmi_enabled =
-        frozen_enabled && Sys.getenv_opt "REWATCH_SESSION_CMI" <> Some "0"
+        handoff_enabled && Sys.getenv_opt "REWATCH_SESSION_CMI" <> Some "0"
       in
       let cmj_enabled =
-        frozen_enabled && Sys.getenv_opt "REWATCH_SESSION_CMJ" <> Some "0"
+        handoff_enabled && Sys.getenv_opt "REWATCH_SESSION_CMJ" <> Some "0"
       in
+      (* Classic requests retain the disk AST roundtrip, including the sharing
+         shape serialized in binary annotations. *)
       let ast_enabled =
-        frozen_enabled && Sys.getenv_opt "REWATCH_SESSION_AST" <> Some "0"
+        frozen_lookup_enabled
+        && Sys.getenv_opt "REWATCH_SESSION_AST" <> Some "0"
       in
       let use_session_cmj_lookup =
-        cmj_enabled && Atomic.get session.use_frozen_for_compile
+        cmj_enabled && frozen_lookup_enabled
+        && Atomic.get session.use_frozen_for_compile
       in
       let compiled_cmi = ref None in
       let compiled_cmj = ref None in
@@ -1034,7 +1075,7 @@ let run_request_in_session session ~run_external ~cwd ~argv ~input =
       let generated_outputs = ref [] in
       let run () =
         let use_frozen =
-          frozen_enabled
+          frozen_lookup_enabled
           && (List.mem "-bs-ast" argv
              || Atomic.get session.use_frozen_for_compile)
         in

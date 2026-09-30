@@ -1304,6 +1304,71 @@ let typed_request_options_tests _context =
       expect_code 2 (Domain.join left);
       expect_code 0 (Domain.join right))
 
+let session_policy_isolation_tests _context =
+  Test_support.with_temp_dir "rewatch-session-policy-" (fun root ->
+      let previous = Sys.getenv_opt "REWATCH_FROZEN_VALUES" in
+      Fun.protect
+        ~finally:(fun () ->
+          match previous with
+          | Some value -> Unix.putenv "REWATCH_FROZEN_VALUES" value
+          | None -> Test_support.unsetenv "REWATCH_FROZEN_VALUES")
+        (fun () ->
+          Unix.putenv "REWATCH_FROZEN_VALUES" "1";
+          let session = Rescript_compiler_driver.create_session () in
+          Rescript_compiler_driver.set_session_frozen_lookup_enabled session
+            false;
+          check
+            (Rescript_compiler_driver.session_handoff_enabled session
+            && not
+                 (Rescript_compiler_driver.session_frozen_lookup_enabled session)
+            )
+            "classic lookup leaves session handoff enabled";
+          write root "Api.resi" "let value: int\n";
+          expect_code 0 (snd (run ~session root "Api.resi"));
+          let source = Filename.concat root "Api.cmi" in
+          let destination = Filename.concat root "published/Api.cmi" in
+          File_util.ensure_dir (Filename.dirname destination);
+          check
+            (Rescript_compiler_driver.stage_session_cmi session ~source
+               ~destination)
+            "classic lookup still captures and stages interfaces";
+          check
+            (Option.is_some
+               (Rescript_compiler_driver.published_fingerprint session
+                  ~kind:Rescript_compiler_driver.Interface ~filename:destination))
+            "staged interface has a session fingerprint";
+          Rescript_compiler_driver.set_session_frozen_lookup_enabled session
+            true;
+          check
+            (Option.is_none
+               (Rescript_compiler_driver.published_fingerprint session
+                  ~kind:Rescript_compiler_driver.Interface ~filename:destination))
+            "changing lookup policy discards retained fingerprints";
+          write root "Additional.resi" "let additional: int\n";
+          expect_code 0 (snd (run ~session root "Additional.resi"));
+          let additional = Filename.concat root "Additional.cmi" in
+          check
+            (Rescript_compiler_driver.stage_session_cmi session
+               ~source:additional ~destination:additional)
+            "handoff remains available after lookup policy changes";
+          Rescript_compiler_driver.set_session_handoff_enabled session false;
+          check
+            (not (Rescript_compiler_driver.session_handoff_enabled session))
+            "handoff can be disabled independently";
+          check
+            (Option.is_none
+               (Rescript_compiler_driver.published_fingerprint session
+                  ~kind:Rescript_compiler_driver.Interface ~filename:additional))
+            "changing handoff policy discards retained fingerprints";
+          write root "Other.resi" "let other: int\n";
+          expect_code 0 (snd (run ~session root "Other.resi"));
+          let other = Filename.concat root "Other.cmi" in
+          check
+            (not
+               (Rescript_compiler_driver.stage_session_cmi session ~source:other
+                  ~destination:other))
+            "disabled handoff does not stage new interfaces"))
+
 let package_and_load_path_isolation_tests _context =
   Test_support.with_temp_dir "rewatch-driver-load-roots-" (fun root ->
       let first = Filename.concat root "first" in
@@ -2393,6 +2458,7 @@ let tests =
          "control_flow_and_output" >:: control_flow_and_output_tests;
          "state_boundary" >:: state_boundary_tests;
          "typed_request_options" >:: typed_request_options_tests;
+         "session_policy_isolation" >:: session_policy_isolation_tests;
          "package_and_load_path_isolation"
          >:: package_and_load_path_isolation_tests;
          "generated_name_isolation" >:: generated_name_isolation_tests;

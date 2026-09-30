@@ -8,12 +8,19 @@ type session
 
 val create_session : unit -> session
 
-val set_session_frozen_enabled : session -> bool -> unit
+val set_session_handoff_enabled : session -> bool -> unit
 
-val session_frozen_enabled : session -> bool
-(** GenType projects retain the classic interface lookup while their typed
-    output is being checked for frozen-lookup equivalence. The environment
-    override can also disable this mode for an entire build. *)
+val session_handoff_enabled : session -> bool
+(** Capture and publish request results independently from the dependency
+    lookup strategy. Changing the policy discards retained session artifacts.
+    [REWATCH_FROZEN_VALUES=0] disables both handoff and frozen lookup. *)
+
+val set_session_frozen_lookup_enabled : session -> bool -> unit
+
+val session_frozen_lookup_enabled : session -> bool
+(** GenType projects retain classic dependency lookup while their typed output
+    is checked for frozen-lookup equivalence. Changing this policy discards
+    retained session artifacts. *)
 
 val set_frozen_for_compile : session -> bool -> unit
 (** Small incremental builds can skip frozen dependency lookup when only one

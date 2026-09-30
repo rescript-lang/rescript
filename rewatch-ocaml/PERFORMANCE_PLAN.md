@@ -40,9 +40,22 @@ editor-only work, including when GenType is enabled.
    `make test-analysis`, and `make checkformat` passed. Next:
    checkpoint 3, separate compiler and editor policies.
 
-3. [ ] **Independent policies.** Separate capture/handoff from frozen lookup,
+3. [x] **Independent policies.** Separate capture/handoff from frozen lookup,
    and editor artifacts from GenType inputs. Preserve initial defaults;
    invalidate caches on policy changes.
+
+   Record: Split session capture/handoff from frozen dependency lookup in the
+   compiler driver. Policy changes discard retained session results; classic
+   lookup keeps disk publication ahead of dependents and the disk AST roundtrip.
+   Build metadata now fingerprints handoff, lookup, editor-artifact, and
+   GenType-input policies independently. The initial annotation behavior is
+   preserved. The one-domain five-run gate passed with identical compiler work,
+   file sets, and artifact bytes; clean medians were 1,686/1,703 ms. The
+   [GenType measurements](bench/checkpoint-3-2026-09-30.md) include all three
+   annotation settings, each with byte-identical generated artifacts across
+   revisions. `make test-all` (compiler, GenType, analysis, tools, and Rewatch),
+   focused OUnit (105 tests), and `make checkformat` passed. Next: checkpoint 4,
+   owned semantic inputs for GenType.
 
 4. [ ] **Owned semantic inputs.** Provide file-independent implementation/interface
    inputs to GenType with safe ownership/lifetimes. Preserve interface precedence,

@@ -5,8 +5,11 @@ type context = {
   runtime_path: string;
   source_map_args: string list;
   inherited_compiler_args: string list;
+  editor_artifacts: bool;
+  gentype_inputs: bool;
   binary_annotations: bool;
   compatibility_copies: bool;
+  session_handoff: bool;
   frozen_values: bool;
   package_output_specs: package_output_spec list;
 }
@@ -17,7 +20,7 @@ and package_output_spec = {
   suffix: string;
 }
 
-let format_version = "7"
+let format_version = "8"
 
 let package_output_specs (config : Config.t) =
   List.map
@@ -29,9 +32,10 @@ let package_output_specs (config : Config.t) =
       })
     config.package_specs
 
-let make_context ~compatibility_copies ~build_root ~compiler_path
-    ~compiler_identity ~runtime_path ~source_map_args ~inherited_compiler_args
-    ~binary_annotations ~frozen_values ~package_output_specs =
+let make_context ~editor_artifacts ~gentype_inputs ~session_handoff
+    ~compatibility_copies ~build_root ~compiler_path ~compiler_identity
+    ~runtime_path ~source_map_args ~inherited_compiler_args ~binary_annotations
+    ~frozen_values ~package_output_specs =
   {
     build_root;
     bsc_path = compiler_path;
@@ -39,8 +43,11 @@ let make_context ~compatibility_copies ~build_root ~compiler_path
     runtime_path;
     source_map_args;
     inherited_compiler_args;
+    editor_artifacts;
+    gentype_inputs;
     binary_annotations;
     compatibility_copies;
+    session_handoff;
     frozen_values;
     package_output_specs;
   }
@@ -49,6 +56,8 @@ let for_package context ~build_root config =
   {
     context with
     build_root;
+    editor_artifacts = Compiler_args.editor_artifacts_enabled ();
+    gentype_inputs = Compiler_args.gentype_inputs_enabled config;
     binary_annotations = Compiler_args.binary_annotations_enabled config;
     compatibility_copies = Compiler_args.compatibility_copies_enabled config;
     package_output_specs = package_output_specs config;
@@ -116,8 +125,11 @@ let json context (config : Config.t) =
           (List.map
              (fun value -> `String value)
              context.inherited_compiler_args) );
+      ("editor_artifacts", `Bool context.editor_artifacts);
+      ("gentype_inputs", `Bool context.gentype_inputs);
       ("binary_annotations", `Bool context.binary_annotations);
       ("compatibility_copies", `Bool context.compatibility_copies);
+      ("session_handoff", `Bool context.session_handoff);
       ("frozen_values", `Bool context.frozen_values);
       ( "package_output_specs",
         `List (List.map package_output_spec_json context.package_output_specs)

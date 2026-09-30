@@ -5,15 +5,19 @@ type context = {
   runtime_path: string;
   source_map_args: string list;
   inherited_compiler_args: string list;
+  editor_artifacts: bool;
+  gentype_inputs: bool;
   binary_annotations: bool;
   compatibility_copies: bool;
+  session_handoff: bool;
   frozen_values: bool;
   package_output_specs: package_output_spec list;
 }
 (** Compiler information fingerprints effective inputs rather than only the
     package's own JSON. Root-level JSX, experimental options, runtime identity,
-    and output layout can all change dependency output without changing a
-    dependency configuration file. *)
+    output layout, and independent editor, GenType, and session policies can
+    all change dependency output without changing a dependency configuration
+    file. *)
 
 and package_output_spec = {
   module_format: Config.module_format;
@@ -24,6 +28,9 @@ and package_output_spec = {
 val package_output_specs : Config.t -> package_output_spec list
 
 val make_context :
+  editor_artifacts:bool ->
+  gentype_inputs:bool ->
+  session_handoff:bool ->
   compatibility_copies:bool ->
   build_root:string ->
   compiler_path:string ->

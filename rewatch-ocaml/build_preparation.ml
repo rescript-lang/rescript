@@ -18,7 +18,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     Package_graph.discover ~root_config ~prod ~features ~warn_error ~filter
       ~attempt
   in
-  Rescript_compiler_driver.set_session_frozen_enabled
+  Rescript_compiler_driver.set_session_frozen_lookup_enabled
     (Build_session.compiler_session attempt.session)
     (not
        (List.exists
@@ -34,11 +34,16 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       ~source_map_args
       ~inherited_compiler_args:
         (root_config.jsx_args @ root_config.experimental_args)
+      ~editor_artifacts:(Compiler_args.editor_artifacts_enabled ())
+      ~gentype_inputs:(Compiler_args.gentype_inputs_enabled root_config)
       ~binary_annotations:(Compiler_args.binary_annotations_enabled root_config)
       ~compatibility_copies:
         (Compiler_args.compatibility_copies_enabled root_config)
+      ~session_handoff:
+        (Rescript_compiler_driver.session_handoff_enabled
+           (Build_session.compiler_session attempt.session))
       ~frozen_values:
-        (Rescript_compiler_driver.session_frozen_enabled
+        (Rescript_compiler_driver.session_frozen_lookup_enabled
            (Build_session.compiler_session attempt.session))
       ~package_output_specs:(Compiler_info.package_output_specs root_config)
   in

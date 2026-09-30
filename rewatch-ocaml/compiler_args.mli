@@ -14,6 +14,8 @@ val compiler_flags :
 val with_local_warning_policy : is_local:bool -> Config.t -> Config.t
 val gentype_dependency_args_from_paths :
   Config.t -> (Config.dependency * string) list -> string list
+val editor_artifacts_enabled : unit -> bool
+val gentype_inputs_enabled : Config.t -> bool
 val binary_annotations_enabled : Config.t -> bool
 val compatibility_copies_enabled : Config.t -> bool
 val gentype_enabled : Config.t -> bool

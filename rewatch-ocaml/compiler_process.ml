@@ -568,11 +568,16 @@ let publish ?session ~retain_interface ~dependencies ~build_dir ~ocaml_dir
       ~dependencies ~build_dir ~ocaml_dir ~is_local ~config ~source_kind
       ~compiled_at path result
   in
+  (* Classic lookup cannot resolve a staged virtual CMI. Publish its disk
+     artifact before releasing dependents, while retaining captured results
+     for the session after publication. *)
   match session with
   | None -> immediate false
   | Some session
     when (not retain_interface)
-         || not (Rescript_compiler_driver.session_frozen_enabled session) ->
+         || (not (Rescript_compiler_driver.session_handoff_enabled session))
+         || not (Rescript_compiler_driver.session_frozen_lookup_enabled session)
+    ->
     immediate false
   | Some session ->
     let basename = Source.compiler_asset_basename config path in

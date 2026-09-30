@@ -143,14 +143,19 @@ in [`bench/README.md`](bench/README.md).
 Set `REWATCH_FROZEN_VALUES=0` to compare the previous compiler path.
 Sessions containing GenType packages currently use the classic interface
 lookup because frozen lookup changed generated TypeScript in that suite.
+They still capture compiler results for session publication. Classic lookup
+waits for the interface file to reach disk before dependent jobs start;
+early publication requires frozen lookup. The compiler metadata records
+session handoff and frozen lookup as separate policies.
 Parser AST cache copies run on a separate domain while compilation proceeds;
 `REWATCH_ASYNC_AST_EXPORT=0` makes those copies finish before compilation.
 OCaml Rewatch omits CMT and CMTI binary annotations by default for packages
 without GenType. It uses CMJ modification time as the compiled freshness
 marker in that case. Set `REWATCH_BIN_ANNOT=1` to produce binary annotations
 for editor tools and other consumers. GenType packages keep them automatically.
-Compiler metadata records both annotation and frozen-lookup settings, so
-switching either mode invalidates incompatible cached artifacts.
+Compiler metadata records editor-artifact and GenType-input requirements
+separately, even though either currently enables binary annotations. Switching
+either policy invalidates incompatible cached artifacts.
 In-source JavaScript is written directly to its configured output path. With
 binary annotations disabled, OCaml Rewatch omits the private `lib/bs`
 JavaScript mirror and copies of source files in `lib/bs` and `lib/ocaml`.
