@@ -1,0 +1,29 @@
+{
+  "host": "Linux-7.0.12-linuxkit-aarch64-with-glibc2.41",
+  "python": "3.13.5",
+  "word_bytes": 8,
+  "commit": "ef0a737a8a18a6b2d50af2aefb98870e3cf09c1b",
+  "executable_sha256": "3bff6c6f8aa37210ef4cf8fd7f5c58f715c84d726b66665abb6a0b190cb27a1b",
+  "compiler_sha256": "837759c001322d04cc342eefab934559f247f0016f381d7fa305d37f58732a09",
+  "runtime": "/workspaces/rescript-compiler/packages/@rescript/runtime",
+  "domains": 4,
+  "runs": 5,
+  "scenarios": [
+    "clean",
+    "noop",
+    "edit",
+    "shared-interface",
+    "gentype",
+    "ppx",
+    "restart",
+    "wide-clean",
+    "wide-noop",
+    "wide-edit",
+    "wide-shared-interface"
+  ],
+  "annotation_modes": [
+    "unset",
+    "0",
+    "1"
+  ]
+}

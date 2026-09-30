@@ -7,6 +7,28 @@ runtime, Dune profile, and installed testrepo dependencies. Keep executable
 locations comparable: launching `bsc` from a different filesystem has changed
 the measured Rust baseline substantially.
 
+## Embedded compiler baseline
+
+Run the fixed-setting baseline for clean, no-op, implementation edit,
+shared-interface edit, GenType, an external identity PPX, and build-after-restart
+requests. It also measures a 201-module project for clean, no-op, leaf edit, and
+shared-interface edit. Each scenario runs with `REWATCH_BIN_ANNOT` unset, `0`,
+and `1`, in alternating order. The runner records elapsed time, `wait4` CPU,
+embedded OCaml allocation, peak RSS, and generated artifact size.
+
+```sh
+opam exec -- dune build rewatch-ocaml/rescript_ocaml.exe \
+  compiler/bsc/rescript_compiler_main.exe
+python3 rewatch-ocaml/bench/embedded_baseline.py \
+  /tmp/embedded-baseline --runs 5 --domains 4
+```
+
+The output directory must not exist. It contains raw CSV samples, executable
+hashes and host settings in `metadata.json`, and per-request logs. The recorded
+starting point for this plan is [the 2026-09-30 baseline](baseline-2026-09-30.md).
+The identity PPX measures the external protocol and subprocess boundary; use a
+real PPX fixture when validating transformation behavior.
+
 ## Build and compare
 
 From the repository root:
