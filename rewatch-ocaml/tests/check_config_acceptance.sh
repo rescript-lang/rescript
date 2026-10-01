@@ -97,13 +97,19 @@ while IFS=$'\t' read -r area name expected json; do
       const assert = require("assert");
       const rust = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
       const ocaml = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-      // OCaml Rewatch skips optional binary annotations by default. GenType
-      // still needs them, so only ordinary packages add this compiler flag.
-      if (!ocaml.compiler_args.includes("-bs-gentype")) {
-        const packageName = ocaml.compiler_args.indexOf("-bs-package-name");
-        assert.ok(packageName > 0);
-        assert.strictEqual(ocaml.compiler_args[packageName - 1], "-bs-no-bin-annot");
-        ocaml.compiler_args.splice(packageName - 1, 1);
+      // Editor annotations are disabled for every package in this check,
+      // including GenType packages, which consume independent typed inputs.
+      const packageName = ocaml.compiler_args.lastIndexOf("-bs-package-name");
+      assert.ok(packageName > 0);
+      assert.strictEqual(ocaml.compiler_args[packageName - 1], "-bs-no-bin-annot");
+      ocaml.compiler_args.splice(packageName - 1, 1);
+      // GenType parse requests carry a marker selecting classic lookup.
+      // Remove only the injected marker, preserving user-supplied flags.
+      if (ocaml.compiler_args.includes("-bs-gentype")) {
+        const absname = ocaml.parser_args.lastIndexOf("-absname");
+        assert.ok(absname > 0);
+        assert.strictEqual(ocaml.parser_args[absname - 1], "-bs-gentype");
+        ocaml.parser_args.splice(absname - 1, 1);
       }
       assert.deepStrictEqual(rust, ocaml);
     ' "$work/rust.out" "$work/ocaml.out"; then

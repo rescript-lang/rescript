@@ -220,9 +220,13 @@ editor-only work, including when GenType is enabled.
    mixed GenType and PPX parity, static-profile Linux builds, and formatting.
    The symlink-source test now
    creates its atomic replacement on the target filesystem, so the worker-count
-   gate measures the intended rename on split-filesystem hosts. Linux, macOS,
-   and Windows CI results for these unpushed commits remain required before
-   this checkpoint can be checked off.
+   gate measures the intended rename on split-filesystem hosts. The first
+   platform CI run failed on stale GenType argument-parity assumptions.
+   Updated the checker to assert the disabled-annotation flag and parser policy
+   marker explicitly before comparing all remaining arguments. Linux container
+   verification passed all 297 configuration cases, 108 command cases, both
+   coverage inventories, and verbose output parity. Linux, macOS, and Windows
+   CI results after this correction remain required before checking this off.
 
 **Separate PPX goals:** After checkpoint 11, persistent AST 0 workers require a
 cooperating executable and request reset/recovery tests. A modern AST protocol
