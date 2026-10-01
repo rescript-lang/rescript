@@ -1579,7 +1579,7 @@ let owned_ast_result_tests _context =
       expect_code 0
         (snd
            (run root ~extra:["-bs-ast"; "-o"; "Different.ast"] "Different.res"));
-      File_util.write_file ast_path
+      Test_support.rewrite_file ast_path
         (File_util.read_file (Filename.concat root "Different.ast"));
       expect_code 0 (snd (run ~session root "A.ast"));
       check
@@ -1590,7 +1590,9 @@ let owned_ast_result_tests _context =
         (snd (run ~session root ~extra:["-bs-ast"; "-o"; "A.ast"] "A.res"));
       assert_equal (Some ["B"])
         (Rescript_compiler_driver.staged_ast_dependencies session ~path:ast_path);
-      write root "A.res" "let value = C.value\n";
+      Test_support.rewrite_file
+        (Filename.concat root "A.res")
+        "let value = C.value\n";
       assert_equal None
         (Rescript_compiler_driver.staged_ast_dependencies session ~path:ast_path);
       expect_code 0

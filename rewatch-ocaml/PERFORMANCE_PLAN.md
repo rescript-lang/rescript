@@ -225,8 +225,10 @@ editor-only work, including when GenType is enabled.
    Updated the checker to assert the disabled-annotation flag and parser policy
    marker explicitly before comparing all remaining arguments. Linux container
    verification passed all 297 configuration cases, 108 command cases, both
-   coverage inventories, and verbose output parity. Linux, macOS, and Windows
-   CI results after this correction remain required before checking this off.
+   coverage inventories, and verbose output parity. Parity then passed on all
+   platforms; Windows unit tests exposed rapid-rewrite timestamp assumptions.
+   Test edits now advance timestamps explicitly, and CI retains detailed failure
+   logs. Complete platform CI remains required before checking this off.
 
 **Separate PPX goals:** After checkpoint 11, persistent AST 0 workers require a
 cooperating executable and request reset/recovery tests. A modern AST protocol

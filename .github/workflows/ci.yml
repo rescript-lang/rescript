@@ -246,13 +246,23 @@ jobs:
         shell: bash
 
       - name: Run OCaml rewatch unit tests
+        id: rewatch-unit-tests
         timeout-minutes: 10
         run: |
           opam exec -- dune build tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe
           # Run the executable directly so a stuck test leaves live progress;
           # dune otherwise buffers the test output until the action exits.
-          opam exec -- ./_build/default/tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe -runner sequential
+          REWATCH_COMPILER_WORKER_EXECUTABLE="$PWD/_build/default/rewatch-ocaml/rescript_ocaml.exe" \
+            opam exec -- ./_build/default/tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe -runner sequential -verbose true
         shell: bash
+
+      - name: Upload OCaml rewatch unit test failure logs
+        if: failure() && steps.rewatch-unit-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: rewatch-unit-test-logs-${{ matrix.os }}-${{ matrix.ocaml_compiler }}
+          path: _build/oUnit-rewatch-*.log
+          if-no-files-found: warn
 
       - name: Run OCaml rewatch focused integration tests
         timeout-minutes: 30

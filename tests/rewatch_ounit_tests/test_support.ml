@@ -9,6 +9,13 @@ let write_file path contents =
     ~finally:(fun () -> close_out_noerr channel)
     (fun () -> output_string channel contents)
 
+let rewrite_file path contents =
+  let previous = Unix.stat path in
+  write_file path contents;
+  (* Rapid same-size writes can retain their timestamp on Windows. Tests of
+     metadata invalidation need a distinct identity without waiting on a clock. *)
+  Unix.utimes path previous.Unix.st_atime (previous.Unix.st_mtime +. 1.)
+
 let write_ast_header path ~dependencies ~source =
   File_util.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in

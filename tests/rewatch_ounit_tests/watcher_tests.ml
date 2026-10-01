@@ -232,9 +232,7 @@ let tests =
               incr builds;
               match (!builds, changes) with
               | 1, None ->
-                let channel = open_out source in
-                output_string channel "let value = 2\n";
-                close_out channel;
+                Test_support.rewrite_file source "let value = 2\n";
                 Watcher.Succeeded
               | 2, Some [Watcher.{path; kind = Modified}] when path = source ->
                 raise Exit
