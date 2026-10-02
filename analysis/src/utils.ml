@@ -1,5 +1,5 @@
 (**
- * `startsWith(string, prefix)`
+ * `starts_with s prefix`
  * true if the string starts with the prefix
  *)
 let starts_with s prefix =

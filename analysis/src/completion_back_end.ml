@@ -1503,7 +1503,7 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
       ])
   | CPatternPath {root_ctx_path; nested} -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPatternPath";
-    (* TODO(env-stuff) Get rid of innerType etc *)
+    (* TODO(env-stuff) Get rid of inner_type etc *)
     match
       root_ctx_path
       |> get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens
@@ -1588,7 +1588,7 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
   let print_constructor_args = print_constructor_args ~mode in
   let create = Completion.create ?type_arg_context in
   let get_record_completions ~env ~fields ~extracted_type =
-    (* As we're completing for a record, we'll need a hint (completionContext)
+    (* As we're completing for a record, we'll need a hint (completion_context)
        here to figure out whether we should complete for a record field, or
        the record body itself. *)
     match completion_context with
