@@ -307,7 +307,7 @@ Use `-timing` flag to see per-node statistics:
 
 ## Testing
 
-**Order-independence test**: Run with `-test-shuffle` flag to randomize file processing order. The test (`make test-reanalyze-order-independence`) verifies that shuffled runs produce identical output.
+**Order-independence test**: Run with `-test-shuffle` flag to randomize file processing order. The test (`make -C tests/analysis_tests/tests-reanalyze/deadcode test-reanalyze-order-independence`) verifies that shuffled runs produce identical output.
 
 **Unit testing**: Each phase can be tested independently:
 - Phase 1: Process a single `.cmt` file, verify `file_data`
