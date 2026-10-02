@@ -207,6 +207,26 @@ let partition_adjacent_trailing loc1 comments =
   in
   loop ~prev_end_pos:loc1.loc_end [] comments
 
+(* Like [partition_adjacent_trailing], and also keeps the comments that follow
+ * a [?] token placed right after [loc1], as in the [=?] of an optional
+ * parameter without a default:
+ *   (~x /* before */ =? /* after */, ~y)
+ * Both comments trail the parameter [~x]. *)
+let partition_adjacent_trailing_through_question loc1 comments =
+  let after_loc1, rest = partition_adjacent_trailing loc1 comments in
+  match rest with
+  | first :: _
+    when Comment.prev_tok_is_question first
+         && (Comment.prev_tok_end_pos first).pos_cnum
+            > loc1.Location.loc_end.pos_cnum ->
+    let after_question, rest =
+      partition_adjacent_trailing
+        {loc1 with loc_end = Comment.prev_tok_end_pos first}
+        rest
+    in
+    (after_loc1 @ after_question, rest)
+  | _ -> (after_loc1, rest)
+
 (* Splits comments that follow a location but come before another token.
  * This is particularly useful for handling comments between two tokens
  * where traditional leading/trailing partitioning isn't precise enough.
@@ -717,7 +737,7 @@ and visit_list_but_continue_with_remaining_comments :
     | Some loc ->
       let after_prev, rest =
         if newline_delimited then partition_by_on_same_line loc comments
-        else partition_adjacent_trailing loc comments
+        else partition_adjacent_trailing_through_question loc comments
       in
       attach t.trailing loc after_prev;
       rest
@@ -735,7 +755,7 @@ and visit_list_but_continue_with_remaining_comments :
         (* Same line *)
         if prev_loc.loc_end.pos_lnum == curr_loc.loc_start.pos_lnum then
           let after_prev, before_curr =
-            partition_adjacent_trailing prev_loc leading
+            partition_adjacent_trailing_through_question prev_loc leading
           in
           let () = attach t.trailing prev_loc after_prev in
           let () = attach t.leading curr_loc before_curr in

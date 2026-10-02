@@ -70,8 +70,12 @@ let rec read cache =
   match token with
   | Comment c when not (Comment.is_doc_comment c || Comment.is_module_comment c)
     ->
-    let _, preceding_end, _ = cache.scanned in
+    let _, preceding_end, preceding_token = cache.scanned in
     Comment.set_prev_tok_end_pos c preceding_end;
+    Comment.set_prev_tok_is_question c
+      (match preceding_token with
+      | Token.Question -> true
+      | _ -> false);
     cache.comments <- c :: cache.comments;
     cache.scanned <- scanned;
     read cache

@@ -81,14 +81,13 @@ external another_test: (
 type optionalArg = (~x: int /* a */ =?, unit) => int
 type lastOptionalArg = (~x: int /* a */ =?) => int
 external optionalArgExternal: (~x: int /* a */ =?, unit) => int = "f"
-type optionalArgAfter = (
+type optionalArgAfter = (~x: int=? /* a */, ~y: int) => int
+type lastOptionalArgAfter = (~x: int=? /* a */) => int
+type optionalArgAround = (~x: int /* a */ /* a2 */ =? /* b */, ~y: int) => int
+type optionalArgThenComma = (~x: int=?, /* a */ ~y: int) => int
+external optionalArgAfterExternal: (~x: int=? /* a */, unit) => int = "f"
+type optionalArgAfterMultiline = (
   ~x: int=? /* a */,
-  ~someLongParameterName: int,
-  ~anotherLongParameterName: int,
-  ~yetAnotherLongParameterName: int,
-) => int
-type optionalArgAround = (
-  ~x: int /* a */ =? /* b */,
   ~someLongParameterName: int,
   ~anotherLongParameterName: int,
   ~yetAnotherLongParameterName: int,

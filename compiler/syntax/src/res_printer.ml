@@ -342,20 +342,16 @@ let print_comments doc (tbl : Comment_table.t) loc =
   print_trailing_comments doc_with_leading_comments tbl.trailing loc
 
 (* Prints [doc] with the comments of [loc], followed by [marker], a token that
-   the source writes right after [loc] (such as [=?]). A trailing comment whose
-   preceding token ends after [loc] follows the marker in the source, so it
-   prints after [marker]; the other trailing comments print before it. *)
+   the source writes right after [loc] (such as [=?]). The trailing comments
+   adjacent to [loc] precede the marker in the source and print before it; the
+   remaining trailing comments print after it. *)
 let print_comments_before_marker doc (tbl : Comment_table.t) loc marker =
   let after_marker =
     match Hashtbl.find_opt tbl.trailing loc with
     | None -> []
     | Some comments ->
-      let after_marker, before_marker =
-        List.partition
-          (fun comment ->
-            (Comment.prev_tok_end_pos comment).pos_cnum
-            > loc.Location.loc_end.pos_cnum)
-          comments
+      let before_marker, after_marker =
+        Comment_table.partition_adjacent_trailing loc comments
       in
       Hashtbl.replace tbl.trailing loc before_marker;
       after_marker
