@@ -195,7 +195,7 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~direct_callees
       (* Work around lowercase jsx with no children producing an artifact `emptyArray`
          which is called from its own location as many things are generated on the same location. *)
       if config.Dce_config.cli.debug then
-        Log_.item "addDummyReference %s --> %s@."
+        Log_.item "add_value_ref (dummy) %s --> %s@."
           (Location.none.loc_start |> Pos.to_string)
           (loc_to.loc_start |> Pos.to_string);
       References.add_value_ref refs ~pos_to:loc_to.loc_start

@@ -4,7 +4,7 @@ open Dead_common
 
 let add_type_reference ~config ~refs ~pos_from ~pos_to =
   if config.Dce_config.cli.debug then
-    Log_.item "addTypeReference %s --> %s@."
+    Log_.item "add_type_reference %s --> %s@."
       (pos_from |> Pos.to_string)
       (pos_to |> Pos.to_string);
   References.add_type_ref refs ~pos_to ~pos_from

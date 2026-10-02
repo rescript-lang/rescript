@@ -69,7 +69,7 @@ let add_value_reference ~config ~refs ~file_deps ~(binding : Location.t)
   let effective_from = if binding = Location.none then loc_from else binding in
   if not effective_from.loc_ghost then (
     if config.Dce_config.cli.debug then
-      Log_.item "addValueReference %s --> %s@."
+      Log_.item "add_value_reference %s --> %s@."
         (effective_from.loc_start |> Pos.to_string)
         (loc_to.loc_start |> Pos.to_string);
     References.add_value_ref refs ~pos_to:loc_to.loc_start
@@ -103,7 +103,7 @@ let addDeclaration_ ~config ~decls ~(file : File_context.t) ?pos_end ?pos_start
   *)
   if (not loc.loc_ghost) && pos.pos_fname = file.source_path then (
     if config.Dce_config.cli.debug then
-      Log_.item "add%sDeclaration %s %s path:%s@."
+      Log_.item "addDeclaration_ %s %s %s path:%s@."
         (decl_kind |> Decl.Kind.to_string)
         (name |> Name.to_string) (pos |> Pos.to_string)
         (path |> Dce_path.to_string);
