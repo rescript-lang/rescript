@@ -83,18 +83,28 @@ async function runFixture(fixturesDir, fileName) {
 }
 
 // Diagnostics must not depend on the length of the source path. Every
-// fixture also runs from a copy under a temporary directory whose path is
+// fixture also runs from a copy whose directory path is 180 characters long,
 // longer than any checkout path, ending in the same
 // tests/build_tests/super_errors/fixtures suffix so that
-// postProcessErrorOutput yields the same snapshot text.
+// postProcessErrorOutput yields the same snapshot text. The directory length
+// is fixed rather than the padding, so the fixture paths stay below Windows'
+// 260-character MAX_PATH whatever the length of the temporary directory.
 const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "super_errors-"));
-const fixturesLongPath = path.join(
-  tempRoot,
-  "x".repeat(200),
+const fixturesSuffix = path.join(
   "tests",
   "build_tests",
   "super_errors",
   "fixtures",
+);
+const fixturesLongPath = path.join(
+  tempRoot,
+  "x".repeat(
+    Math.max(
+      1,
+      180 - tempRoot.length - fixturesSuffix.length - 2 * path.sep.length,
+    ),
+  ),
+  fixturesSuffix,
 );
 await fs.mkdir(fixturesLongPath, { recursive: true });
 for (const fileName of fixtures) {
