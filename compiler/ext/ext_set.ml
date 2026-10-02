@@ -177,8 +177,6 @@ module Make (Elt : OrderedType) = struct
       else if c < 0 then Set_gen.bal (remove l x) v r
       else Set_gen.bal l v (remove r x)
 
-  (* let compare s1 s2 = Set_gen.compare ~cmp:compare_elt s1 s2  *)
-
   let of_list l =
     match l with
     | [] -> empty

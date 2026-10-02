@@ -23,11 +23,6 @@ val try_finally : (unit -> 'a) -> (unit -> unit) -> 'a
 val map_end : ('a -> 'b) -> 'a list -> 'b list -> 'b list
 (* [map_end f l t] is [map f l @ t], just more efficient. *)
 
-val for_all2 : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
-(* Same as [List.for_all] but for a binary predicate.
-   In addition, this [for_all2] never fails: given two lists
-   with different lengths, it returns false. *)
-
 val replicate_list : 'a -> int -> 'a list
 (* [replicate_list elem n] is the list with [n] elements
    all identical to [elem]. *)
@@ -63,15 +58,6 @@ val create_hashtable : ('a * 'b) array -> ('a, 'b) Hashtbl.t
 
 val output_to_bin_file_directly : string -> (string -> out_channel -> 'a) -> 'a
 
-val output_to_file_via_temporary :
-  ?mode:open_flag list -> string -> (string -> out_channel -> 'a) -> 'a
-(* Produce output in temporary file, then rename it
-   (as atomically as possible) to the desired output file name.
-   [output_to_file_via_temporary filename fn] opens a temporary file
-   which is passed to [fn] (name + output channel).  When [fn] returns,
-   the channel is closed and the temporary file is renamed to
-   [filename]. *)
-
 module Int_literal_converter : sig
   val int : string -> int
 end
@@ -79,8 +65,6 @@ end
 val get_ref : 'a list ref -> 'a list
 (* [get_ref lr] returns the content of the list reference [lr] and reset
    its content to the empty list. *)
-
-val fst3 : 'a * 'b * 'c -> 'a
 
 val edit_distance : string -> string -> int -> int option
 (** [edit_distance a b cutoff] computes the edit distance between

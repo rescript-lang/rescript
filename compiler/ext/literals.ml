@@ -34,8 +34,6 @@ let tmp = "tmp"
 
 let create = "create" (* {!Caml_exceptions.create}*)
 
-let debugger = "debugger"
-
 let suffix_cmj = ".cmj"
 
 let suffix_cmi = ".cmi"

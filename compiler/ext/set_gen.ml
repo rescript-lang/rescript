@@ -297,10 +297,6 @@ let is_ordered ~cmp tree =
   in
   is_ordered_min_max tree <> `No
 
-let invariant ~cmp t =
-  check t;
-  is_ordered ~cmp t
-
 module type S = sig
   type elt
 

@@ -54,12 +54,6 @@ let rec map_end f l1 l2 =
   | [] -> l2
   | hd :: tl -> f hd :: map_end f tl l2
 
-let rec for_all2 pred l1 l2 =
-  match (l1, l2) with
-  | [], [] -> true
-  | hd1 :: tl1, hd2 :: tl2 -> pred hd1 hd2 && for_all2 pred tl1 tl2
-  | _, _ -> false
-
 let rec replicate_list elem n =
   if n <= 0 then [] else elem :: replicate_list elem (n - 1)
 
@@ -120,36 +114,6 @@ let output_to_bin_file_directly filename fn =
     close_out oc;
     raise e
 
-let output_to_file_via_temporary ?(mode = [Open_text]) filename fn =
-  let temp_filename, oc =
-    Filename.open_temp_file ~mode ~perms:0o666
-      ~temp_dir:(Filename.dirname filename)
-      (Filename.basename filename)
-      ".tmp"
-  in
-  (* The 0o666 permissions will be modified by the umask.  It's just
-     like what [open_out] and [open_out_bin] do.
-     With temp_dir = dirname filename, we ensure that the returned
-     temp file is in the same directory as filename itself, making
-     it safe to rename temp_filename to filename later.
-     With prefix = basename filename, we are almost certain that
-     the first generated name will be unique.  A fixed prefix
-     would work too but might generate more collisions if many
-     files are being produced simultaneously in the same directory. *)
-  match fn temp_filename oc with
-  | res -> (
-    close_out oc;
-    try
-      Sys.rename temp_filename filename;
-      res
-    with exn ->
-      remove_file temp_filename;
-      raise exn)
-  | exception exn ->
-    close_out oc;
-    remove_file temp_filename;
-    raise exn
-
 (* Integer operations *)
 
 module Int_literal_converter = struct
@@ -165,7 +129,6 @@ let get_ref r =
   r := [];
   v
 
-let fst3 (x, _, _) = x
 let edit_distance a b cutoff =
   let la, lb = (String.length a, String.length b) in
   let cutoff =

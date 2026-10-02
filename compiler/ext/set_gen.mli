@@ -41,8 +41,6 @@ val of_sorted_array : 'a array -> 'a t
 
 val is_ordered : cmp:('a -> 'a -> int) -> 'a t -> bool
 
-val invariant : cmp:('a -> 'a -> int) -> 'a t -> bool
-
 module type S = sig
   type elt
 
