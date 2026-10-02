@@ -113,11 +113,11 @@ module Outcome_printer_tests = struct
           case to the `try` pattern match.\n");
       raise e
 
-  (* `tests/oprint/oprint.res` will be read into memory and typechecked.
+  (* `data/oprint/oprint.res` will be read into memory and typechecked.
    * The inferred signature (i.e. the type of the module `oprint.res`) will
    * then be converted to the outcome tree.
    * The outcome tree is printed to a string
-   * and stored in a snapshot `tests/oprint/expected/oprint.resi.txt` *)
+   * and stored in a snapshot `data/oprint/expected/oprint.resi.txt` *)
   let run () =
     let filename = Filename.concat data_dir "oprint/oprint.res" in
     let result = Res_driver.parsing_engine.parse_implementation ~filename in
