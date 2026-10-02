@@ -19,11 +19,7 @@ external typeof: 'a => string = "%typeof"
 
 external lt: ('a, 'a) => bool = "%unsafe_lt"
 
-external le: ('a, 'a) => bool = "%unsafe_le"
-
 external gt: ('a, 'a) => bool = "%unsafe_gt"
-
-external ge: ('a, 'a) => bool = "%unsafe_ge"
 
 external unsafe_to_method: 'a => 'a = "%unsafe_to_method"
 
