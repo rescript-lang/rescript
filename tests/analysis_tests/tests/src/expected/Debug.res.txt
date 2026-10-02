@@ -8,7 +8,7 @@ Definition src/Debug.res 2:27
 }
 
 Complete src/Debug.res 10:8
-posCursor:[10:8] posNoWhite:[10:7] Found expr:[10:5->10:8]
+pos_cursor:[10:8] pos_no_white:[10:7] Found expr:[10:5->10:8]
 Pexp_ident eqN:[10:5->10:8]
 Completable: Cpath Value[eqN]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder

@@ -21,7 +21,7 @@ let full_type_id_from_decl ~env ~name ~module_path =
   |> String.concat "."
 
 let debug_log_type_arg_context {env; type_args; type_params} =
-  Printf.sprintf "Type arg context. env: %s, typeArgs: %s, typeParams: %s\n"
+  Printf.sprintf "Type arg context. env: %s, type_args: %s, type_params: %s\n"
     (Debug.debug_print_env env)
     (type_args |> List.map Shared.type_to_string |> String.concat ", ")
     (type_params |> List.map Shared.type_to_string |> String.concat ", ")
@@ -1144,7 +1144,7 @@ let get_module_path_relative_to_env ~debug ~(env : Query_env.t) ~env_from_item
       Query_env.path_from_env env_from_item (List.rev path_rev)
     in
     if debug then
-      Printf.printf "CPPipe pathFromEnv:%s found:%b\n"
+      Printf.printf "CPPipe path_from_env:%s found:%b\n"
         (path_from_env |> String.concat ".")
         found;
     if path_from_env = [] then None
@@ -1275,31 +1275,33 @@ let rec find_root_type_id ~full ~env ~state (t : Types.type_expr) =
   | Tconstr (path, _, _) -> (
     (* We have a path. Try to dig to its declaration *)
     if debug then
-      Printf.printf "[findRootTypeId] path %s, dig\n" (Path.name path);
+      Printf.printf "[find_root_type_id] path %s, dig\n" (Path.name path);
     match References.dig_constructor ~env ~state ~package:full.package path with
     | Some (env, {item = {decl = {type_manifest = Some t1}}}) ->
       if debug then
-        Printf.printf "[findRootTypeId] dug up type alias at module path %s \n"
+        Printf.printf
+          "[find_root_type_id] dug up type alias at module path %s \n"
           (module_path_from_env env |> String.concat ".");
       find_root_type_id ~full ~env ~state t1
     | Some (env, {item = {name}; module_path}) ->
       (* if it's a named type, then we know its name will be its module path from the env + its name.*)
       if debug then
         Printf.printf
-          "[findRootTypeId] dug up named type at module path %s, from item: %s \n"
+          "[find_root_type_id] dug up named type at module path %s, from item: \
+           %s \n"
           (module_path_from_env env |> String.concat ".")
           (Module_path.to_path module_path name |> String.concat ".");
       Some (full_type_id_from_decl ~env ~name ~module_path)
     | None ->
       (* If we didn't find anything, then it might be a builtin type. Check it.*)
-      if debug then Printf.printf "[findRootTypeId] dug up non-type alias\n";
+      if debug then Printf.printf "[find_root_type_id] dug up non-type alias\n";
       if
         Predef.builtin_idents
         |> List.find_opt (fun (_, i) -> Ident.same i (Path.head path))
         |> Option.is_some
       then
         Some
-          (if debug then Printf.printf "[findRootTypeId] returning builtin\n";
+          (if debug then Printf.printf "[find_root_type_id] returning builtin\n";
            Path.name path)
       else None)
   | _ -> None

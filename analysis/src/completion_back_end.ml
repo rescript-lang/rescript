@@ -394,7 +394,7 @@ let kind_to_data file_path (kind : Completion.kind) =
 
 let find_all_completions ~(env : Query_env.t) ~prefix ~exact ~names_used
     ~(completion_context : Completable.completion_context) =
-  Log.log ("findAllCompletions uri:" ^ Uri.to_string env.file.uri);
+  Log.log ("find_all_completions uri:" ^ Uri.to_string env.file.uri);
   match completion_context with
   | Value ->
     completion_for_exported_values ~env ~prefix ~exact ~names_used
@@ -660,8 +660,8 @@ let find_local_completions_with_opens ~pos ~(env : Query_env.t) ~prefix ~exact
     ~opens ~scope ~(completion_context : Completable.completion_context) =
   (* TODO: handle arbitrary interleaving of opens and local bindings correctly *)
   Log.log
-    ("findLocalCompletionsWithOpens uri:" ^ Uri.to_string env.file.uri ^ " pos:"
-   ^ Pos.to_string pos);
+    ("find_local_completions_with_opens uri:" ^ Uri.to_string env.file.uri
+   ^ " pos:" ^ Pos.to_string pos);
   let local_tables = Local_tables.create () in
   match completion_context with
   | Value | ValueOrField ->
@@ -1242,12 +1242,12 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
       | None ->
         if Debug.verbose () then
           Printf.printf
-            "[pipe_completion] Could not find mainTypeId. Aborting pipe \
+            "[pipe_completion] Could not find main_type_id. Aborting pipe \
              completions.\n";
         []
       | Some main_type_id ->
         if Debug.verbose () then
-          Printf.printf "[pipe_completion] mainTypeId: %s\n" main_type_id;
+          Printf.printf "[pipe_completion] main_type_id: %s\n" main_type_id;
         let pipe_completions =
           (* We now need a completion path from where to look up the module for our dot completion type.
               This is from where we pull all of the functions we want to complete for the pipe.

@@ -768,7 +768,7 @@ let file_for_module ~state module_name ~package =
   | Some paths ->
     let uri = get_uri paths in
     let cmt = get_cmt_path ~uri paths in
-    Log.log ("fileForModule " ^ show_paths paths);
+    Log.log ("file_for_module " ^ show_paths paths);
     file_for_cmt ~state ~cmt ~module_name ~uri
   | None ->
     Log.log ("No path for module " ^ module_name);

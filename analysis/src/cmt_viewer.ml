@@ -12,7 +12,7 @@ let dump ~(filter_for_position : (int * int) option) ~full =
   | None -> ()
   | Some (line, col) -> printf "Filtering by cursor %d,%d\n" line col);
 
-  printf "file moduleName: %s\n\n" full.file.module_name;
+  printf "file module_name: %s\n\n" full.file.module_name;
 
   let stamps =
     full.file.stamps |> get_entries
@@ -73,14 +73,14 @@ let dump ~(filter_for_position : (int * int) option) ~full =
   printf "\n";
   dump_structure 0 full.file.structure;
 
-  (* Dump all locItems (typed nodes) *)
+  (* Dump all loc_items (typed nodes) *)
   let loc_items =
     match full.extra with
     | {loc_items} ->
       loc_items |> List.filter (fun loc_item -> apply_filter loc_item.loc)
   in
 
-  printf "\nFound %d locItems (typed nodes):\n\n" (List.length loc_items);
+  printf "\nFound %d loc_items (typed nodes):\n\n" (List.length loc_items);
 
   loc_items
   |> List.sort (fun a b ->
