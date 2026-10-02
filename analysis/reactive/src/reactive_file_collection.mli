@@ -50,5 +50,4 @@ val remove_batch : ('raw, 'v) t -> string list -> int
 (** {1 Access} *)
 
 val mem : ('raw, 'v) t -> string -> bool
-val length : ('raw, 'v) t -> int
 val iter : (string -> 'v -> unit) -> ('raw, 'v) t -> unit

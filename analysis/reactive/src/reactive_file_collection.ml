@@ -73,5 +73,4 @@ let remove_batch t paths =
   List.length entries
 
 let mem t path = Hashtbl.mem t.internal.cache path
-let length t = Reactive.length t.collection
 let iter f t = Reactive.iter f t.collection
