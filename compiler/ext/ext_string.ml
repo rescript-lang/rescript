@@ -132,14 +132,6 @@ let for_all s (p : char -> bool) =
 
 let is_empty s = String.length s = 0
 
-let repeat n s =
-  let len = String.length s in
-  let res = Bytes.create (n * len) in
-  for i = 0 to pred n do
-    String.blit s 0 res (i * len) len
-  done;
-  Bytes.to_string res
-
 let unsafe_is_sub ~sub i s j ~len =
   let rec check k =
     if k = len then true
@@ -242,14 +234,7 @@ let rec rindex_rec s i c =
   else if String.unsafe_get s i = c then i
   else rindex_rec s (i - 1) c
 
-let rec rindex_rec_opt s i c =
-  if i < 0 then None
-  else if String.unsafe_get s i = c then Some i
-  else rindex_rec_opt s (i - 1) c
-
 let rindex_neg s c = rindex_rec s (String.length s - 1) c
-
-let rindex_opt s c = rindex_rec_opt s (String.length s - 1) c
 
 (** TODO: can be improved to return a positive integer instead *)
 let rec unsafe_no_char x ch i last_idx =
@@ -408,14 +393,7 @@ let capitalize_sub (s : string) len : string =
 
 let uncapitalize_ascii = String.uncapitalize_ascii
 
-let lowercase_ascii = String.lowercase_ascii
-
 external ( .![] ) : string -> int -> int = "%string_unsafe_get"
-
-let unsafe_sub x offs len =
-  let b = Bytes.create len in
-  Ext_bytes.unsafe_blit_string x offs b 0 len;
-  Bytes.unsafe_to_string b
 
 let is_valid_hash_number (x : string) =
   let len = String.length x in

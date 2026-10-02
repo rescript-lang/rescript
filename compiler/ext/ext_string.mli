@@ -66,8 +66,6 @@ val for_all : string -> (char -> bool) -> bool
 
 val is_empty : string -> bool
 
-val repeat : int -> string -> string
-
 val equal : string -> string -> bool
 
 (**
@@ -112,8 +110,6 @@ val tail_from : string -> int -> string
 val rindex_neg : string -> char -> int
 (** returns negative number if not found *)
 
-val rindex_opt : string -> char -> int option
-
 val no_slash : string -> bool
 
 val no_slash_idx : string -> int
@@ -147,10 +143,6 @@ val capitalize_ascii : string -> string
 val capitalize_sub : string -> int -> string
 
 val uncapitalize_ascii : string -> string
-
-val lowercase_ascii : string -> string
-
-val unsafe_sub : string -> int -> int -> string
 
 val is_valid_hash_number : string -> bool
 

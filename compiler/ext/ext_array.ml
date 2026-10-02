@@ -35,8 +35,6 @@ let reverse_range a i len =
       a.!(i + len - 1 - k) <- t
     done
 
-let reverse_in_place a = reverse_range a 0 (Array.length a)
-
 let reverse a =
   let b_len = Array.length a in
   if b_len = 0 then [||]
@@ -59,49 +57,6 @@ let reverse_of_list = function
         fill (i - 1) tl
     in
     fill (len - 1) tl
-
-let filter a f =
-  let arr_len = Array.length a in
-  let rec aux acc i =
-    if i = arr_len then reverse_of_list acc
-    else
-      let v = Array.unsafe_get a i in
-      if f v then aux (v :: acc) (i + 1) else aux acc (i + 1)
-  in
-  aux [] 0
-
-let filter_map a (f : _ -> _ option) =
-  let arr_len = Array.length a in
-  let rec aux acc i =
-    if i = arr_len then reverse_of_list acc
-    else
-      let v = Array.unsafe_get a i in
-      match f v with
-      | Some v -> aux (v :: acc) (i + 1)
-      | None -> aux acc (i + 1)
-  in
-  aux [] 0
-
-let filter_mapi a (f : _ -> _ -> _ option) =
-  let arr_len = Array.length a in
-  let rec aux acc i =
-    if i = arr_len then reverse_of_list acc
-    else
-      let v = Array.unsafe_get a i in
-      match f i v with
-      | Some v -> aux (v :: acc) (i + 1)
-      | None -> aux acc (i + 1)
-  in
-  aux [] 0
-
-let range from to_ =
-  if from > to_ then invalid_arg "Ext_array.range"
-  else Array.init (to_ - from + 1) (fun i -> i + from)
-
-let map2i f a b =
-  let len = Array.length a in
-  if len <> Array.length b then invalid_arg "Ext_array.map2i"
-  else Array.mapi (fun i a -> f i a (Array.unsafe_get b i)) a
 
 let rec tolist_f_aux a f i res =
   if i < 0 then res
@@ -196,8 +151,6 @@ let exists a p =
     else loop (succ i)
   in
   loop 0
-
-let is_empty arr = Array.length arr = 0
 
 let rec unsafe_loop index len p xs ys =
   if index >= len then true

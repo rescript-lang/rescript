@@ -29,15 +29,6 @@ type t = int Map_int.t Map_string.t
 *)
 let empty : t = Map_string.empty
 
-let rec print fmt v =
-  Format.fprintf fmt "@[<v>{";
-  Map_string.iter v (fun k m ->
-      Format.fprintf fmt "%s: @[%a@],@ " k print_int_map m);
-  Format.fprintf fmt "}@]"
-
-and print_int_map fmt m =
-  Map_int.iter m (fun k v -> Format.fprintf fmt "%d - %d" k v)
-
 let add_ident ~mangled:name (stamp : int) (cxt : t) : int * t =
   match Map_string.find_opt cxt name with
   | None -> (0, Map_string.add cxt name (Map_int.add Map_int.empty stamp 0))
