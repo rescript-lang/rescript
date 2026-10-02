@@ -6231,7 +6231,6 @@ let print_implementation ?(width = default_print_width)
   Comment_table.walk_structure s cmt_tbl comments;
   (* CommentTable.log cmt_tbl; *)
   let doc = print_structure ~state:(State.init ()) s cmt_tbl in
-  (* Doc.debug doc; *)
   Doc.to_string ~width doc ^ "\n"
 
 let print_interface ?(width = default_print_width) (s : Parsetree.signature)
