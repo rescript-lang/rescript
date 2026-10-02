@@ -30,16 +30,8 @@ let rec swap = (tree: tree): tree =>
 @genType type rec mutuallyRecursiveA = {b: mutuallyRecursiveB}
 and mutuallyRecursiveB = {a: mutuallyRecursiveA}
 
-/*
- * This is a recursive type which requires conversion (a record).
- * Only a shallow conversion of the top-level element is performed.
- */
 @genType let selfRecursiveConverter = ({self}) => self
 
-/*
- * This is a mutually recursive type which requires conversion (a record).
- * Only a shallow conversion of the two top-level elements is performed.
- */
 @genType let mutuallyRecursiveConverter = ({b}) => b
 
 @genType let testFunctionOnOptionsAsArgument = (a: option<'a>, foo) => foo(a)
