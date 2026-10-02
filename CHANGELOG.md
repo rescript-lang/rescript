@@ -10,6 +10,12 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
+# 12.3.2 (Unreleased)
+
+#### :bug: Bug fix
+
+- Fix integer range patterns, including nested record and exception patterns, incorrectly matching values below the range. https://github.com/rescript-lang/rescript/pull/8714
+
 # 12.3.1
 
 #### :bug: Bug fix
