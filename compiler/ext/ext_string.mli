@@ -36,12 +36,6 @@ val split : ?keep_empty:bool -> string -> char -> string list
 
 val starts_with : string -> string -> bool
 
-val ends_with_index : string -> string -> int
-(**
-   return [-1] when not found, the returned index is useful 
-   see [ends_with_then_chop]
-*)
-
 val ends_with : string -> string -> bool
 
 val ends_with_then_chop : string -> string -> string option
@@ -130,7 +124,6 @@ val single_space : string
 
 val concat3 : string -> string -> string -> string
 val concat4 : string -> string -> string -> string -> string
-val concat5 : string -> string -> string -> string -> string -> string
 val inter2 : string -> string -> string
 val inter3 : string -> string -> string -> string
 val inter4 : string -> string -> string -> string -> string

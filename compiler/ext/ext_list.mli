@@ -77,9 +77,6 @@ val fold_left_with_offset :
 val filter_map : 'a list -> ('a -> 'b option) -> 'b list
 (** @unused *)
 
-val exclude : 'a list -> ('a -> bool) -> 'a list
-(** [exclude p l] is the opposite of [filter p l] *)
-
 val exclude_with_val : 'a list -> ('a -> bool) -> 'a list option
 (** [excludes p l]
     return a tuple [excluded,newl]

@@ -27,8 +27,6 @@ val check : 'a t -> unit
 
 val bal : 'a t -> 'a -> 'a t -> 'a t
 
-val remove_min_elt : 'a t -> 'a t
-
 val singleton : 'a -> 'a t
 
 val internal_merge : 'a t -> 'a t -> 'a t
