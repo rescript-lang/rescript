@@ -1621,9 +1621,6 @@ and float_minus ?comment (e1 : t) (e2 : t) : t =
 
 let int32_add ?comment e1 e2 = to_int32 (float_add ?comment e1 e2)
 
-let offset e1 (offset : int) =
-  if offset = 0 then e1 else int32_add e1 (small_int offset)
-
 let int32_minus ?comment e1 e2 : J.expression =
   to_int32 (float_minus ?comment e1 e2)
 

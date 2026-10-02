@@ -199,8 +199,6 @@ val to_int32 : ?comment:string -> t -> t
 
 val int32_add : ?comment:string -> t -> t -> t
 
-val offset : t -> int -> t
-
 val int32_minus : ?comment:string -> t -> t -> t
 
 val int32_mul : ?comment:string -> t -> t -> t

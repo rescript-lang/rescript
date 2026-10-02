@@ -232,11 +232,6 @@ let field_flatten_get lam v i info (tbl : Lam_id_kind.t Hash_ident.t) : Lambda.t
     | Some _ -> lam ())
   | Some _ | None -> lam ()
 
-let is_function (lam : Lambda.t) =
-  match lam with
-  | Lfunction _ -> true
-  | _ -> false
-
 let not_function (lam : Lambda.t) =
   match lam with
   | Lfunction _ -> false

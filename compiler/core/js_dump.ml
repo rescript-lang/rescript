@@ -1720,13 +1720,6 @@ and statements top cxt f b =
     (fun cxt f s -> statement top cxt f s)
     (if top then P.at_least_two_lines else P.newline)
 
-let string_of_block (block : J.block) =
-  let buffer = Buffer.create 50 in
-  let f = P.from_buffer buffer in
-  let (_ : cxt) = statements true Ext_pp_scope.empty f block in
-  P.flush f ();
-  Buffer.contents buffer
-
 let string_of_expression (e : J.expression) =
   let buffer = Buffer.create 50 in
   let f = P.from_buffer buffer in

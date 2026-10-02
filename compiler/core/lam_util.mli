@@ -63,5 +63,3 @@ val refine_let :
     unchanged if no refinement applies. *)
 
 val not_function : Lambda.t -> bool
-
-val is_function : Lambda.t -> bool
