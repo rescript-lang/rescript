@@ -9,6 +9,7 @@
     "README.md",
     "cli/bsc.js",
     "cli/common/args.js",
+    "cli/common/bins.cjs",
     "cli/common/bins.js",
     "cli/common/minisocket.js",
     "cli/common/runtime.js",

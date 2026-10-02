@@ -1,1 +1,2 @@
-src/**/*.js
+src/**/*.mjs
+src/**/*.cjs
