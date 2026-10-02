@@ -4,8 +4,6 @@
     "module": "esmodule",
     "importPath": "relative",
     "shims": {
-      "Js": "Js",
-      "Jsx": "Jsx",
       "JsxEvent": "JsxEvent",
       "Belt": "Belt",
       "RescriptPervasives": "RescriptPervasives"
