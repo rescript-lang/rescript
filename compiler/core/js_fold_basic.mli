@@ -27,4 +27,3 @@
 (* val depends_j : J.expression -> Set_ident.t -> Set_ident.t *)
 
 val calculate_hard_dependencies : J.block -> Lam_module_ident.Hash_set.t
-(** TODO: {!Ordered_hash_set} for better ordering *)

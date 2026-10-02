@@ -34,7 +34,6 @@ let compile_group output_prefix (meta : Lam_stats.t) (x : Lam_group.t) :
         2. [E.builtin_dot] for javascript builtin
         3. [E.mldot]
      *)
-  (* ATTENTION: check {!Lam_compile_global} for consistency  *)
   (* Special handling for values in [Pervasives] *)
   (*
          we delegate [stdout, stderr, and stdin] into [caml_io] module,
