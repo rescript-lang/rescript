@@ -1512,7 +1512,7 @@ let rec is_out ?comment (e : t) (range : t) : t =
           {expression_desc = Number (Int {i = 0l}); _} ) ) ->
     (* TODO: check correctness *)
     is_out ?comment e range
-  | _, _ -> int_comp ?comment Cgt e range
+  | _, _ -> int_comp ?comment Cgt (int32_lsr e zero_int_literal) range
 
 let rec float_add ?comment (e1 : t) (e2 : t) =
   match (e1.expression_desc, e2.expression_desc) with
