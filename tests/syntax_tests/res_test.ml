@@ -96,17 +96,21 @@ let () =
       result.Res_driver.comments
   in
   (* Compare the expression structure independently of formatting locations and
-     the braces attribute introduced by the migration. Keep other attributes. *)
+     explicit braces introduced by the migration. Keep expression attributes. *)
   let expression_structure result =
     let mapper =
       {
         Ast_mapper.default_mapper with
-        attributes =
-          (fun mapper attrs ->
-            Ast_mapper.default_mapper.attributes mapper
-              (List.filter
-                 (fun (name, _) -> name.Location.txt <> "res.braces")
-                 attrs));
+        expr =
+          (fun mapper expr ->
+            match expr.Parsetree.pexp_desc with
+            | Pexp_braces {expr = inner; braces_loc = _braces_loc} ->
+              mapper.expr mapper
+                {
+                  inner with
+                  pexp_attributes = expr.pexp_attributes @ inner.pexp_attributes;
+                }
+            | _ -> Ast_mapper.default_mapper.expr mapper expr);
       }
     in
     let ast = mapper.structure mapper result.Res_driver.parsetree in
@@ -149,23 +153,59 @@ let () =
           assert (printed = expected);
           assert (format ~width (parse printed) = expected))
         [
-          ("let x = <>// empty\n</>", "let x =\n  <>{\n    // empty\n  }</>\n");
+          ( "let x = <>// empty\n</>",
+            "let x =\n  <>\n    {\n      // empty\n    }\n  </>\n" );
           ( "let x = <>/* a */ // b\n/* c */</>",
-            "let x =\n  <>{\n    /* a */\n    // b\n    /* c */\n  }</>\n" );
+            "let x =\n\
+            \  <>\n\
+            \    {\n\
+            \      /* a */\n\
+            \      // b\n\
+            \      /* c */\n\
+            \    }\n\
+            \  </>\n" );
           ( "let x = <span> hello // note\n</span>",
-            "let x =\n  <span>{\n    hello // note\n  }</span>\n" );
+            "let x =\n  <span>\n    {\n      hello // note\n    }\n  </span>\n"
+          );
           ( "let x = <> hello // note\n</>",
-            "let x =\n  <>{\n    hello // note\n  }</>\n" );
+            "let x =\n  <>\n    {\n      hello // note\n    }\n  </>\n" );
           ( "let x = <span> hello /* block */ // note\n</span>",
-            "let x =\n  <span>{\n    hello /* block */ // note\n  }</span>\n" );
+            "let x =\n\
+            \  <span>\n\
+            \    {\n\
+            \      hello /* block */ // note\n\
+            \    }\n\
+            \  </span>\n" );
           ( "let x = <span> // before\nhello // contains */\n</span>",
             "let x =\n\
-            \  <span>{\n\
-            \    // before\n\
-            \    hello // contains */\n\
-            \  }</span>\n" );
+            \  <span>\n\
+            \    {\n\
+            \      // before\n\
+            \      hello // contains */\n\
+            \    }\n\
+            \  </span>\n" );
         ])
     [20; 40; 80; 100; 120];
+  List.iter
+    (fun (opening, closing) ->
+      let source =
+        "let x = " ^ opening
+        ^ "{value ? <XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX /> \
+           : <YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY />}"
+        ^ closing
+      in
+      let expected =
+        "let x =\n  " ^ opening
+        ^ "\n\
+          \    {value\n\
+          \      ? <XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX />\n\
+          \      : <YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY />}\n\
+          \  " ^ closing ^ "\n"
+      in
+      let printed = format ~width:80 (parse source) in
+      assert (printed = expected);
+      assert (format ~width:80 (parse printed) = expected))
+    [("<div>", "</div>"); ("<>", "</>")];
   (* Comment containers must not alter the zero/one/many-child distinction,
      including in the React and generic JSX transforms. *)
   List.iter
