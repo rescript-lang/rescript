@@ -26,7 +26,6 @@ val type_binding :
   Env.t ->
   rec_flag ->
   Parsetree.value_binding list ->
-  Annot.ident option ->
   Typedtree.value_binding list * Env.t
 val type_expression :
   context:Error_message_utils.type_clash_context option ->

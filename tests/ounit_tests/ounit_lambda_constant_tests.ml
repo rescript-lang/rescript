@@ -256,7 +256,6 @@ let suites =
                  in
                  let typed, _, _ =
                    Typemod.type_structure Env.initial_safe_string structure
-                     Location.none
                  in
                  let implementation =
                    Translmod.transl_implementation "RegexpTest"

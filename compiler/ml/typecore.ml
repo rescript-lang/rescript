@@ -136,11 +136,9 @@ let type_package = ref (fun _ -> assert false)
 *)
 let re node =
   Cmt_format.add_saved_type (Cmt_format.Partial_expression node);
-  Stypes.record (Stypes.Ti_expr node);
   node
 let rp node =
   Cmt_format.add_saved_type (Cmt_format.Partial_pattern node);
-  Stypes.record (Stypes.Ti_pat node);
   node
 
 type recarg = Allowed | Required | Rejected
@@ -450,13 +448,11 @@ let pattern_variables =
       : (Ident.t * type_expr * string loc * Location.t * bool (* as-variable *))
         list)
 let pattern_force = ref ([] : (unit -> unit) list)
-let pattern_scope = ref (None : Annot.ident option)
 let allow_modules = ref false
 let module_variables = ref ([] : (string loc * Location.t) list)
-let reset_pattern scope allow =
+let reset_pattern allow =
   pattern_variables := [];
   pattern_force := [];
-  pattern_scope := scope;
   allow_modules := allow;
   module_variables := []
 
@@ -472,12 +468,7 @@ let enter_variable ?(is_module = false) ?(is_as_variable = false) loc name ty =
     (* Note: unpack patterns enter a variable of the same name *)
     if not !allow_modules then
       raise (Error (loc, Env.empty, Modules_not_allowed));
-    module_variables := (name, loc) :: !module_variables)
-  else
-    (* moved to genannot *)
-    may
-      (fun s -> Stypes.record (Stypes.An_ident (name.loc, name.txt, s)))
-      !pattern_scope;
+    module_variables := (name, loc) :: !module_variables);
   id
 
 let sort_pattern_variables vs =
@@ -1789,7 +1780,7 @@ let partial_pred ~lev ?mode ?explode env expected_ty constrs labels p =
   let env = ref env in
   let state = save_state env in
   try
-    reset_pattern None true;
+    reset_pattern true;
     let typed_p =
       Ctype.with_passive_variants
         (type_pat ~allow_existentials:true ~lev ~constrs ~labels ?mode ?explode
@@ -1837,8 +1828,8 @@ let add_pattern_variables ?check ?check_as env =
       pv env,
     get_ref module_variables )
 
-let type_pattern ~lev env spat scope expected_ty =
-  reset_pattern scope true;
+let type_pattern ~lev env spat expected_ty =
+  reset_pattern true;
   let new_env = ref env in
   let pat = type_pat ~allow_existentials:true ~lev new_env spat expected_ty in
   let new_env, unpacks =
@@ -1848,8 +1839,8 @@ let type_pattern ~lev env spat scope expected_ty =
   in
   (pat, new_env, get_ref pattern_force, unpacks)
 
-let type_pattern_list env spatl scope expected_tys allow =
-  reset_pattern scope allow;
+let type_pattern_list env spatl expected_tys allow =
+  reset_pattern allow;
   let new_env = ref env in
   let type_pat (attrs, pat) ty =
     Builtin_attributes.warning_scope ~ppwarning:false attrs (fun () ->
@@ -2461,14 +2452,6 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           | v -> v)
         env lid.loc lid.txt
     in
-    (if !Clflags.annotations then
-       let dloc = desc.Types.val_loc in
-       let annot =
-         if dloc.Location.loc_ghost then Annot.Iref_external
-         else Annot.Iref_internal dloc
-       in
-       let name = Path.name ~paren:Oprint.parenthesized_ident path in
-       Stypes.record (Stypes.An_ident (loc, name, annot)));
     let is_recarg =
       match (repr desc.val_type).desc with
       | Tconstr (p, _, _) -> Path.is_constructor_typath p
@@ -2513,13 +2496,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       }
       ty_expected
   | Pexp_let (rec_flag, spat_sexp_list, sbody) ->
-    let scp =
-      match rec_flag with
-      | Recursive -> Some (Annot.Idef loc)
-      | Nonrecursive -> Some (Annot.Idef sbody.pexp_loc)
-    in
     let pat_exp_list, new_env, unpacks =
-      type_let ~context:None env rec_flag spat_sexp_list scp true
+      type_let ~context:None env rec_flag spat_sexp_list true
     in
     let body =
       type_expect ~context:None new_env (wrap_unpacks sbody unpacks) ty_expected
@@ -3822,7 +3800,6 @@ and type_function ~async loc attrs env ty_expected_
   let lev, env =
     if has_gadts then init_env () else (get_current_level (), env)
   in
-  let scope = Some (Annot.Idef sbody.pexp_loc) in
   let rec type_params typed_acc env unpacks_acc defaults_acc
       (params : (Parsetree.fun_param * Parsetree.value_binding option) list) tys
       =
@@ -3844,7 +3821,7 @@ and type_function ~async loc attrs env ty_expected_
       let pat, ext_env, force, unpacks =
         let partial = if erase_either then Some false else None in
         let ty_arg_i = instance ?partial env ty_arg_c in
-        type_pattern ~lev env spat scope ty_arg_i
+        type_pattern ~lev env spat ty_arg_i
       in
       pattern_force := force @ !pattern_force;
       let ty_arg' = newvar () in
@@ -3869,7 +3846,7 @@ and type_function ~async loc attrs env ty_expected_
         | Some vb ->
           let let_env = ext_env in
           let pat_exp_list, ext_env, let_unpacks =
-            type_let ~context:None ext_env Nonrecursive [vb] None true
+            type_let ~context:None ext_env Nonrecursive [vb] true
           in
           (* The pattern binds the option carrier under an unspellable name
              ([*opt_<label>*]), which typing needs so that user code can
@@ -4612,18 +4589,11 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
      Printtyp.raw_type_expr ty_arg; *)
   let pat_env_list =
     List.map
-      (fun {pc_lhs; pc_guard; pc_rhs} ->
-        let loc =
-          let open Location in
-          match pc_guard with
-          | None -> pc_rhs.pexp_loc
-          | Some g -> {pc_rhs.pexp_loc with loc_start = g.pexp_loc.loc_start}
-        in
-        let scope = Some (Annot.Idef loc) in
+      (fun {pc_lhs} ->
         let pat, ext_env, force, unpacks =
           let partial = if erase_either then Some false else None in
           let ty_arg = instance ?partial env ty_arg in
-          type_pattern ~lev env pc_lhs scope ty_arg
+          type_pattern ~lev env pc_lhs ty_arg
         in
         pattern_force := force @ !pattern_force;
         (pat, (ext_env, unpacks)))
@@ -4720,7 +4690,7 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
 
 and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
     ?(check_strict = fun s -> Warnings.Unused_var_strict s) env rec_flag
-    spat_sexp_list scope allow =
+    spat_sexp_list allow =
   let spat_sexp_list =
     List.map
       (fun (vb : Parsetree.value_binding) ->
@@ -4755,7 +4725,7 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
   in
   let nvs = List.map (fun _ -> newvar ()) spatl in
   let pat_list, new_env, force, unpacks =
-    type_pattern_list env spatl scope nvs allow
+    type_pattern_list env spatl nvs allow
   in
   let attrs_list = List.map fst spatl in
   let is_recursive = rec_flag = Recursive in
@@ -4949,13 +4919,13 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
 
 (* Typing of toplevel bindings *)
 
-let type_binding ~context env rec_flag spat_sexp_list scope =
+let type_binding ~context env rec_flag spat_sexp_list =
   Typetexp.reset_type_variables ();
   let pat_exp_list, new_env, _unpacks =
     type_let
       ~check:(fun s -> Warnings.Unused_value_declaration s)
       ~check_strict:(fun s -> Warnings.Unused_value_declaration s)
-      ~context env rec_flag spat_sexp_list scope false
+      ~context env rec_flag spat_sexp_list false
   in
   (pat_exp_list, new_env)
 

@@ -13,7 +13,6 @@ and preprocessor = ref (None : string option) (* -pp *)
 and all_ppx = ref ([] : string list)
 
 (* -ppx *)
-let annotations = ref false (* -annot *)
 let binary_annotations = ref false (* -annot *)
 
 and noassert = ref false (* -noassert *)

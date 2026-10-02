@@ -8,7 +8,6 @@ val nopervasives : bool ref
 val open_modules : string list ref
 val preprocessor : string option ref
 val all_ppx : string list ref
-val annotations : bool ref
 val binary_annotations : bool ref
 val noassert : bool ref
 val verbose : bool ref
