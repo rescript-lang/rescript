@@ -1238,8 +1238,8 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
     if has_any_unallowed_dependent {
         log::error!(
             "\nUpdate the {} value in the {} of the unallowed dependencies to solve the issue!",
-            console::style("unallowed_dependents").bold().dim(),
-            console::style("config.json").bold().dim()
+            console::style("allowed-dependents").bold().dim(),
+            console::style("rescript.json").bold().dim()
         )
     }
     !has_any_unallowed_dependent
