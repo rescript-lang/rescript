@@ -4,30 +4,6 @@ module Comment_table = Res_comments_table
 module Parser = Res_parser
 module Printer = Res_printer
 
-module IO : sig
-  val read_file : string -> string
-end = struct
-  (* random chunk size: 2^15, TODO: why do we guess randomly? *)
-  let chunk_size = 32768
-
-  let read_file filename =
-    let chan = open_in filename in
-    let buffer = Buffer.create chunk_size in
-    let chunk = (Bytes.create [@doesNotRaise]) chunk_size in
-    let rec loop () =
-      let len =
-        try input chan chunk 0 chunk_size with Invalid_argument _ -> 0
-      in
-      if len == 0 then (
-        close_in_noerr chan;
-        Buffer.contents buffer)
-      else (
-        Buffer.add_subbytes buffer chunk 0 len;
-        loop ())
-    in
-    loop ()
-end
-
 module Time : sig
   type t
 
@@ -152,7 +128,7 @@ end = struct
 
   let benchmark (filename, action) =
     let path = Filename.concat data_dir filename in
-    let src = IO.read_file path in
+    let src = Ext_io.load_file path in
     let benchmark_fn =
       match action with
       | Parse ->
@@ -187,7 +163,7 @@ end = struct
 
   let benchmark_corpus files =
     let sources =
-      List.map (fun filename -> (filename, IO.read_file filename)) files
+      List.map (fun filename -> (filename, Ext_io.load_file filename)) files
     in
     let parse () =
       List.iter
