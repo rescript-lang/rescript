@@ -1,1 +1,0 @@
-type t = RegExp.t
