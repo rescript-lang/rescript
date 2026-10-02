@@ -1719,9 +1719,6 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     in
     unify_pat_types loc !env ty expected_ty;
     type_pat sp expected_ty' (fun p ->
-        (*Format.printf "%a@.%a@."
-          Printtyp.raw_type_expr ty
-          Printtyp.raw_type_expr p.pat_type;*)
         pattern_force := force :: !pattern_force;
         let extra = (Tpat_constraint cty, loc, sp.ppat_attributes) in
         let p =
@@ -4565,8 +4562,6 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
   let lev, env =
     if has_gadts then init_env () else (get_current_level (), env)
   in
-  (* if has_gadts then
-     Format.printf "lev = %d@.%a@." lev Printtyp.raw_type_expr ty_res; *)
   (* Do we need to propagate polymorphism *)
   let propagate =
     has_gadts
@@ -4579,8 +4574,6 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
   if propagate then begin_def ();
   (* propagation of the argument *)
   let pattern_force = ref [] in
-  (* Format.printf "@[%i %i@ %a@]@." lev (get_current_level())
-     Printtyp.raw_type_expr ty_arg; *)
   let pat_env_list =
     List.map
       (fun {pc_lhs} ->
@@ -4622,8 +4615,6 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
         let ty_res' =
           if contains_gadt env pc_lhs then correct_levels ty_res else ty_res
         in
-        (* Format.printf "@[%i %i, ty_res' =@ %a@]@." lev (get_current_level())
-           Printtyp.raw_type_expr ty_res'; *)
         let guard =
           match pc_guard with
           | None -> None

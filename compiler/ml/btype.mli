@@ -239,7 +239,6 @@ val log_type : type_expr -> unit
 (* Log the old value of a type, before modifying it by hand *)
 
 (**** Forward declarations ****)
-val print_raw : (Format.formatter -> type_expr -> unit) ref
 
 val iter_type_expr_kind : (type_expr -> unit) -> type_kind -> unit
 

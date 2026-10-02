@@ -102,99 +102,10 @@ let tree_of_rec = function
   | Trec_first -> Orec_first
   | Trec_next -> Orec_next
 
-(* Print a raw type expression, with sharing *)
-
-let raw_list pr ppf = function
-  | [] -> fprintf ppf "[]"
-  | a :: l ->
-    fprintf ppf "@[<1>[%a%t]@]" pr a (fun ppf ->
-        List.iter (fun x -> fprintf ppf ";@,%a" pr x) l)
-
-let rec safe_repr v = function
-  | {desc = Tlink t} when not (List.memq t v) -> safe_repr (t :: v) t
-  | t -> t
-
-let rec list_of_memo = function
-  | Mnil -> []
-  | Mcons (_priv, p, _t1, _t2, rem) -> p :: list_of_memo rem
-  | Mlink rem -> list_of_memo !rem
-
-let print_name ppf = function
-  | None -> fprintf ppf "None"
-  | Some name -> fprintf ppf "\"%s\"" name
-
 let string_of_label = function
   | Nolabel -> ""
   | Labelled {txt} -> txt
   | Optional {txt} -> "?" ^ txt
-
-let visited = ref []
-let rec raw_type ppf ty =
-  let ty = safe_repr [] ty in
-  if List.memq ty !visited then fprintf ppf "{id=%d}" ty.id
-  else (
-    visited := ty :: !visited;
-    fprintf ppf "@[<1>{id=%d;level=%d;desc=@,%a}@]" ty.id ty.level raw_type_desc
-      ty.desc)
-
-and raw_type_list tl = raw_list raw_type tl
-
-and raw_type_desc ppf = function
-  | Tvar name -> fprintf ppf "Tvar %a" print_name name
-  | Tarrow (params, ret) ->
-    fprintf ppf "@[<hov1>Tarrow(%a,@,%a)@]"
-      (raw_list (fun ppf (arg : Types.arg) ->
-           fprintf ppf "@[\"%s\":%a@]" (string_of_label arg.lbl) raw_type
-             arg.typ))
-      params raw_type ret
-  | Ttuple tl -> fprintf ppf "@[<1>Ttuple@,%a@]" raw_type_list tl
-  | Tconstr (p, tl, abbrev) ->
-    fprintf ppf "@[<hov1>Tconstr(@,%a,@,%a,@,%a)@]" path p raw_type_list tl
-      (raw_list path) (list_of_memo !abbrev)
-  | Tobject t -> fprintf ppf "@[<hov1>Tobject@,%a@]" raw_type t
-  | Tfield {name = f; mutability; typ = t1; rest = t2} ->
-    fprintf ppf "@[<hov1>Tfield(@,%s,@,%s,@,%a,@;<0 -1>%a)@]" f
-      (match Btype.mutability_repr mutability with
-      | Mutable -> "mutable"
-      | Immutable -> "immutable")
-      raw_type t1 raw_type t2
-  | Tnil -> fprintf ppf "Tnil"
-  | Tlink t -> fprintf ppf "@[<1>Tlink@,%a@]" raw_type t
-  | Tsubst t -> fprintf ppf "@[<1>Tsubst@,%a@]" raw_type t
-  | Tunivar name -> fprintf ppf "Tunivar %a" print_name name
-  | Tpoly (t, tl) ->
-    fprintf ppf "@[<hov1>Tpoly(@,%a,@,%a)@]" raw_type t raw_type_list tl
-  | Tvariant row ->
-    fprintf ppf
-      "@[<hov1>{@[%s@,%a;@]@ @[%s@,%a;@]@ %s%B;@ %s%B;@ @[<1>%s%t@]}@]"
-      "row_fields="
-      (raw_list (fun ppf (l, f) -> fprintf ppf "@[%s,@ %a@]" l raw_field f))
-      row.row_fields "row_more=" raw_type row.row_more "row_closed="
-      row.row_closed "row_fixed=" row.row_fixed "row_name="
-      (fun ppf ->
-        match row.row_name with
-        | None -> fprintf ppf "None"
-        | Some (p, tl) -> fprintf ppf "Some(@,%a,@,%a)" path p raw_type_list tl)
-  | Tpackage (p, _, tl) ->
-    fprintf ppf "@[<hov1>Tpackage(@,%a@,%a)@]" path p raw_type_list tl
-
-and raw_field ppf = function
-  | Rpresent None -> fprintf ppf "Rpresent None"
-  | Rpresent (Some t) -> fprintf ppf "@[<1>Rpresent(Some@,%a)@]" raw_type t
-  | Reither (c, tl, m, e) ->
-    fprintf ppf "@[<hov1>Reither(%B,@,%a,@,%B,@,@[<1>ref%t@])@]" c raw_type_list
-      tl m (fun ppf ->
-        match !e with
-        | None -> fprintf ppf " None"
-        | Some f -> fprintf ppf "@,@[<1>(%a)@]" raw_field f)
-  | Rabsent -> fprintf ppf "Rabsent"
-
-let raw_type_expr ppf t =
-  visited := [];
-  raw_type ppf t;
-  visited := []
-
-let () = Btype.print_raw := raw_type_expr
 
 (* Normalize paths *)
 
@@ -1008,7 +919,6 @@ let extension_constructor id ppf ext =
 (* Print a value declaration *)
 
 let tree_of_value_description id decl =
-  (* Format.eprintf "@[%a@]@." raw_type_expr decl.val_type; *)
   let id = Ident.name id in
   let ty = tree_of_type_scheme decl.val_type in
   let vd =

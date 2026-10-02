@@ -1317,9 +1317,6 @@ let add_gadt_instances env lv tl =
   let r =
     try List.assoc lv env.gadt_instances with Not_found -> assert false
   in
-  (* Format.eprintf "Added";
-     List.iter (fun ty -> Format.eprintf "@ %a" !Btype.print_raw ty) tl;
-     Format.eprintf "@."; *)
   set_typeset r (List.fold_right Type_set.add tl !r)
 
 (* Only use this after expand_head! *)
@@ -1330,7 +1327,6 @@ let add_gadt_instance_chain env lv t =
   let rec add_instance t =
     let t = repr t in
     if not (Type_set.mem t !r) then (
-      (* Format.eprintf "@ %a" !Btype.print_raw t; *)
       set_typeset r (Type_set.add t !r);
       match t.desc with
       | Tconstr (p, _, memo) -> may add_instance (find_expans Private p !memo)

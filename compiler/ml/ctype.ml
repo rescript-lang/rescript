@@ -1378,7 +1378,6 @@ let occur_in env ty0 t =
 (* This is a simplified version of occur, only for the rectypes case *)
 
 let rec local_non_recursive_abbrev strict visited env p ty =
-  (*Format.eprintf "@[Check %s =@ %a@]@." (Path.name p) !Btype.print_raw ty;*)
   let ty = repr ty in
   if not (List.memq ty visited) then
     match ty.desc with
