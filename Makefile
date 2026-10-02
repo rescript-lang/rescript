@@ -77,7 +77,7 @@ $(YARN_INSTALL_STAMP): $(YARN_INSTALL_SOURCES)
 
 # Rewatch
 
-REWATCH_SOURCES = $(shell find rewatch/src -name '*.rs') rewatch/Cargo.toml rewatch/Cargo.lock rewatch/rust-toolchain.toml
+REWATCH_SOURCES = $(shell find rewatch/src -name '*.rs') rewatch/Cargo.toml rewatch/Cargo.lock
 RESCRIPT_EXE = $(BIN_DIR)/rescript.exe
 ifdef CI
 	REWATCH_PROFILE := release
