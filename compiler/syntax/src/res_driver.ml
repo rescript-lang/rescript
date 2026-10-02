@@ -1,5 +1,3 @@
-module IO = Res_io
-
 type ('ast, 'diagnostics) parse_result = {
   filename: string; [@live]
   source: string;
@@ -38,7 +36,7 @@ type print_engine = {
 }
 
 let setup ~filename =
-  let src = IO.read_file ~filename in
+  let src = Ext_io.load_file filename in
   Res_parser.make src filename
 
 let setup_from_source ~display_filename ~source =
