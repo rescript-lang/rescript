@@ -13,7 +13,6 @@
   },
   "include": [
     "cli/*",
-    "lib/*",
     "lib_dev/*",
     "scripts/*",
     "packages/**",
