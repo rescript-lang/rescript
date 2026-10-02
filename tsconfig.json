@@ -9,14 +9,15 @@
     "strictNullChecks": true,
     "noImplicitAny": true,
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]
   },
   "include": [
     "cli/*",
     "lib/*",
     "lib_dev/*",
     "scripts/*",
-    "packages/**",
+    "packages/**/*",
     "tests/**/input.js",
     ".github/workflows/*.js",
     "yarn.config.cjs",
