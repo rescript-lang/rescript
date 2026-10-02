@@ -166,11 +166,6 @@ let is_jsx_component (vb : Parsetree.value_binding) =
 let check_name name ~prefix ~exact =
   if exact then name = prefix else starts_with name prefix
 
-let rec get_unqualified_name txt =
-  match txt with
-  | Longident.Lident field_name -> field_name
-  | Ldot (t, _) -> get_unqualified_name t
-
 let indent n text =
   let spaces = String.make n ' ' in
   let len = String.length text in
