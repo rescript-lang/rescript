@@ -1811,10 +1811,10 @@ and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =
   walk_pattern pattern t inside;
   match expr_opt with
   | Some expr ->
-    let _afterPat, rest =
+    let after_pat, rest =
       partition_adjacent_trailing pattern.ppat_loc trailing
     in
-    attach t.trailing pattern.ppat_loc trailing;
+    attach t.trailing pattern.ppat_loc after_pat;
     if is_block_expr expr then walk_expression expr t rest
     else
       let leading, inside, trailing = partition_by_loc rest expr.pexp_loc in
