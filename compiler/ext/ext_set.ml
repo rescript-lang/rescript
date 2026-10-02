@@ -27,7 +27,6 @@ module type OrderedType = sig
 
   val compare : t -> t -> int
   val equal : t -> t -> bool
-  val print : Format.formatter -> t -> unit
 end
 
 module Make (Elt : OrderedType) = struct
@@ -35,7 +34,6 @@ module Make (Elt : OrderedType) = struct
 
   let compare_elt = Elt.compare
   let eq_elt = Elt.equal
-  let print_elt = Elt.print
 
   type 'a t0 = 'a Set_gen.t
 
@@ -198,10 +196,4 @@ module Make (Elt : OrderedType) = struct
   let invariant t =
     Set_gen.check t;
     Set_gen.is_ordered ~cmp:compare_elt t
-
-  let print fmt s =
-    Format.fprintf fmt "@[<v>{%a}@]@."
-      (fun fmt s ->
-        iter s (fun e -> Format.fprintf fmt "@[<v>%a@],@ " print_elt e))
-      s
 end

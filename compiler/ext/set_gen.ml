@@ -250,20 +250,6 @@ let internal_concat t1 t2 =
   | t, Empty -> t
   | _, _ -> internal_join t1 (min_exn t2) (remove_min_elt t2)
 
-let rec partition x p =
-  match x with
-  | Empty -> (empty, empty)
-  | Leaf v ->
-    let pv = p v in
-    if pv then (x, empty) else (empty, x)
-  | Node {l; v; r} ->
-    (* call [p] in the expected left-to-right order *)
-    let lt, lf = partition l p in
-    let pv = p v in
-    let rt, rf = partition r p in
-    if pv then (internal_join lt v rt, internal_concat lf rf)
-    else (internal_concat lt rt, internal_join lf v rf)
-
 let of_sorted_array l =
   let rec sub start n l =
     if n = 0 then empty
@@ -357,6 +343,4 @@ module type S = sig
   val of_sorted_array : elt array -> t
 
   val invariant : t -> bool
-
-  val print : Format.formatter -> t -> unit
 end
