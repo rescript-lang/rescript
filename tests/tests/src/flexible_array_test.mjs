@@ -315,7 +315,17 @@ let x$1 = sort(of_array(v));
 
 let y = Stdlib_Array.fromInitializer(500, i => i + 1 | 0);
 
-Primitive_object.equal(x$1, of_array(y));
+if (!Primitive_object.equal(x$1, of_array(y))) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "flexible_array_test.res",
+      187,
+      2
+    ],
+    Error: new Error()
+  };
+}
 
 export {
   sub,

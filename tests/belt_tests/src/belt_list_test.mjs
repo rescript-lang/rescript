@@ -770,7 +770,7 @@ Mocha.describe("Belt_list_test", () => {
     Test_utils.eq("File \"belt_list_test.res\", line 147, characters 7-14", Belt_List.take(length_10_id, 0), /* [] */0);
     Test_utils.eq("File \"belt_list_test.res\", line 148, characters 7-14", Belt_List.take(length_8_id, -2), undefined);
   });
-  Mocha.test("droo", () => {
+  Mocha.test("drop", () => {
     Test_utils.eq("File \"belt_list_test.res\", line 152, characters 7-14", Belt_List.drop(length_10_id, 10), /* [] */0);
     Test_utils.eq("File \"belt_list_test.res\", line 153, characters 7-14", Belt_List.drop(length_10_id, 8), {
       hd: 8,
@@ -1962,7 +1962,7 @@ Mocha.describe("Belt_list_test", () => {
       }
     }) === 0);
   });
-  Mocha.test("makeBy", () => {
+  Mocha.test("make equals makeBy", () => {
     let makeTest = n => Test_utils.eq("File \"belt_list_test.res\", line 329, characters 27-34", Belt_List.make(n, 3), Belt_List.makeBy(n, param => 3));
     makeTest(0);
     makeTest(1);

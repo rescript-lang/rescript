@@ -184,5 +184,8 @@ let _ = {
   assert(\"=~"(Int_array.sort(u), [1, 2, 2, 3, 5, 6]))
   let len = 500
   let v = Array.fromInitializer(~length=len, i => len - i)
-  \"=~"(Int_array.sort(Int_array.of_array(v)), Array.fromInitializer(~length=len, i => i + 1))
+  assert(\"=~"(
+    Int_array.sort(Int_array.of_array(v)),
+    Array.fromInitializer(~length=len, i => i + 1),
+  ))
 }

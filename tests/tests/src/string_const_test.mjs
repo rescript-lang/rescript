@@ -4,7 +4,7 @@ import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
 Mocha.describe("String_const_test", () => {
-  Mocha.test("getUnsafe", () => {
+  Mocha.test("codePointAt", () => {
     Test_utils.eq("File \"string_const_test.res\", line 6, characters 7-14", "ghsogh".codePointAt(3), 111);
     Test_utils.eq("File \"string_const_test.res\", line 7, characters 7-14", "ghsogh".codePointAt(-3), undefined);
   });
