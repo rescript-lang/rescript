@@ -72,3 +72,27 @@ let f = (~x /* a */ : int, ()) => x
 let f = (~x /* a */ = ?, ()) => x
 let f = (~x: int /* a */ = ?, ()) => x
 let f = (~x as y /* a */ = ?, ()) => y
+let f = (
+  ~x=? /* a */,
+  ~someLongParameterName,
+  ~anotherLongParameterName,
+  ~yetAnotherLongParameterName,
+) => x
+let f = (
+  ~x: int=? /* a */,
+  ~someLongParameterName,
+  ~anotherLongParameterName,
+  ~yetAnotherLongParameterName,
+) => x
+let f = (
+  ~x /* a */ =? /* b */,
+  ~someLongParameterName,
+  ~anotherLongParameterName,
+  ~yetAnotherLongParameterName,
+) => x
+let f = (
+  ~x as y=? /* a */,
+  ~someLongParameterName,
+  ~anotherLongParameterName,
+  ~yetAnotherLongParameterName,
+) => y
