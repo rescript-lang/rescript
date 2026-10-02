@@ -32,16 +32,16 @@
    ]}
    will be desugared into
    {[
-     let module Js =
-     struct unsafe_js : string -> 'a end
-     in Js.unsafe_js {| blabla |}
+     let module J =
+     struct external unsafe_expr : _ -> _ = "#raw_expr" end
+     in J.unsafe_expr {| blabla |}
    ]}
    The major benefit is to better error reporting (with locations).
    Otherwise
 
    {[
 
-     let f u = Js.unsafe_js u
+     let f u = J.unsafe_expr u
      let _ = f (1 + 2)
    ]}
    And if it is inlined some where

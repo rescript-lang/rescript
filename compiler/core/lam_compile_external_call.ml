@@ -26,17 +26,6 @@
 
 module E = Js_exp_make
 
-(** 
-   [bind_name] is a hint to the compiler to generate 
-   better names for external module 
-*)
-(* let handle_external
-    ({bundle ; module_bind_name} : External_ffi_types.external_module_name)
-   : Ident.t * string
-   =
-   Lam_compile_env.add_js_module module_bind_name bundle ,
-   bundle *)
-
 let external_var
     ({bundle; module_bind_name; import_attributes} :
       External_ffi_types.external_module_name) =
@@ -45,14 +34,6 @@ let external_var
       false ~dynamic_import:false
   in
   E.external_var ?import_attributes ~external_name:bundle id
-
-(* let handle_external_opt
-    (module_name : External_ffi_types.external_module_name option)
-   : (Ident.t * string) option =
-   match module_name with
-   | Some module_name -> Some (handle_external module_name)
-   | None -> None
-*)
 
 type arg_expression = Js_of_lam_variant.arg_expression =
   | Splice0
@@ -388,7 +369,6 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
          arguments. Expected exactly one object argument."
     (* Note these assertion happens in call site *))
   | Decl_set {name}, _ -> (
-    (* assert (js_splice = false) ;  *)
     let args, cur_eff = assemble_args_no_splice arg_types args in
     add_eff cur_eff
     @@

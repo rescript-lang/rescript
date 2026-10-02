@@ -29,7 +29,7 @@
     some inline opportunities for the produced statemetns, 
     (inline) expressions inside a nested expression would generate ugly code.
 
-    Since we are aiming to flatten expressions, we should avoid some smart constructors in {!Js_helper}, 
+    Since we are aiming to flatten expressions, we should avoid some smart constructors in {!Js_exp_make}, 
     it  tries to spit out expression istead of statements if it can
 *)
 

@@ -22,7 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(* let derivingName = "abstract" *)
 module U = Ast_derive_util
 open Ast_helper
 (* type tdcls = Parsetree.type_declaration list *)
@@ -210,7 +209,6 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
         my_maker :: setter_accessor )
   | Ptype_abstract | Ptype_variant _ | Ptype_open ->
     (* Looks obvious that it does not make sense to warn *)
-    (* U.notApplicable tdcl.ptype_loc derivingName;  *)
     (tdcl, [])
 
 let handle_tdcls_in_str ~light rf tdcls =

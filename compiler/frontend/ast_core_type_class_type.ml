@@ -30,7 +30,7 @@ let default_typ_mapper = Ast_mapper.default_mapper.typ
 *)
 
 (* Turns [(t1, .., tn) => ret] with a method-callback attribute into
-   [Js.MethodCallback.arityN<full type>]. *)
+   [Primitive_js_extern.Callback.arityN<full type>]. *)
 let to_method_callback_type loc (mapper : Ast_mapper.mapper) ~arity
     (meth_type : Parsetree.core_type) =
   let meth_type = Ast_mapper.default_mapper.typ mapper meth_type in

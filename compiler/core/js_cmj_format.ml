@@ -87,8 +87,6 @@ let from_file name : t =
   close_in ic;
   v
 
-let from_string s : t = Marshal.from_string s Ext_digest.length
-
 let for_sure_not_changed (name : string) (header : string) =
   if Sys.file_exists name then (
     let ic = open_in_bin name in
