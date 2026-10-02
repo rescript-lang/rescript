@@ -48,26 +48,31 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
     | For_sure_yes -> true
     | For_sure_no -> false
     | NA -> (
-      let decl = Env.find_type p env in
-      match decl.type_kind with
-      | exception _ -> false
-      | Type_abstract ->
-        List.exists Typedecl.is_not_undefined_attr decl.type_attributes
-      | Type_open -> false
-      | Type_record _ -> true
-      | Type_variant
-          ( ( [
-                {cd_id = {name = "None"}; cd_args = Cstr_tuple []};
-                {cd_id = {name = "Some"}; cd_args = Cstr_tuple [_]};
-              ]
-            | [
-                {cd_id = {name = "Some"}; cd_args = Cstr_tuple [_]};
-                {cd_id = {name = "None"}; cd_args = Cstr_tuple []};
-              ]
-            | [{cd_id = {name = "()"}; cd_args = Cstr_tuple []}] ),
-            _ ) ->
+      match Env.find_type p env with
+      | exception Not_found ->
+        (* A transitive dependency's interface may not be on the search path.
+           Keep option wrapping when its runtime representation is unknown. *)
+        false
+      | {type_kind = Type_abstract; type_attributes} ->
+        List.exists Typedecl.is_not_undefined_attr type_attributes
+      | {type_kind = Type_open} -> false
+      | {type_kind = Type_record _} -> true
+      | {
+       type_kind =
+         Type_variant
+           ( ( [
+                 {cd_id = {name = "None"}; cd_args = Cstr_tuple []};
+                 {cd_id = {name = "Some"}; cd_args = Cstr_tuple [_]};
+               ]
+             | [
+                 {cd_id = {name = "Some"}; cd_args = Cstr_tuple [_]};
+                 {cd_id = {name = "None"}; cd_args = Cstr_tuple []};
+               ]
+             | [{cd_id = {name = "()"}; cd_args = Cstr_tuple []}] ),
+             _ );
+      } ->
         false (* conservative *)
-      | Type_variant (cdecls, layout_ref) ->
+      | {type_kind = Type_variant (cdecls, layout_ref)} ->
         let layout = Variant_runtime.get_layout layout_ref in
         let rec all_cases_cannot_contain_undefined position = function
           | [] -> true
