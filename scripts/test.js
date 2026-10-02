@@ -5,6 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import {
   buildTestDir,
+  commonjsTestDir,
   compilerTestDir,
   docstringTestDir,
   ounitTestBin,
@@ -126,7 +127,6 @@ if (mochaTest) {
   });
 
   // CommonJS tests
-  const commonjsTestDir = path.join(projectDir, "tests/commonjs_tests");
   await execClean([], {
     cwd: commonjsTestDir,
     stdio: "inherit",
