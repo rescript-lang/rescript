@@ -10,11 +10,11 @@ function f(xOpt, y) {
   return xOpt$1 + y | 0;
 }
 
-Mocha.describe("Test_case_opt_collision", () => {
+Mocha.describe("Case_opt_collision_test", () => {
   Mocha.test("optional parameter collision", () => {
     console.log(f(undefined, 2));
-    Test_utils.eq("File \"test_case_opt_collision.res\", line 13, characters 7-14", f(undefined, 2), 7);
-    Test_utils.eq("File \"test_case_opt_collision.res\", line 14, characters 7-14", f(4, 2), 8);
+    Test_utils.eq("File \"case_opt_collision_test.res\", line 13, characters 7-14", f(undefined, 2), 7);
+    Test_utils.eq("File \"case_opt_collision_test.res\", line 14, characters 7-14", f(4, 2), 8);
   });
 });
 

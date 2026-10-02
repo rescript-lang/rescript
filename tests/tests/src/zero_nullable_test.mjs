@@ -172,12 +172,12 @@ let Test_nullable = {
   f11: f11$1
 };
 
-Mocha.describe("Test_zero_nullable", () => {
-  Mocha.test("Test_nullable.f1 with return(0)", () => Test_utils.eq("File \"test_zero_nullable.res\", line 161, characters 51-58", f1$1(0), 1));
-  Mocha.test("Test_nullable.f1 with null", () => Test_utils.eq("File \"test_zero_nullable.res\", line 162, characters 46-53", f1$1(null), 3));
-  Mocha.test("Test_nullable.f1 with undefined", () => Test_utils.eq("File \"test_zero_nullable.res\", line 163, characters 51-58", f1$1(undefined), 3));
-  Mocha.test("Test_null.f1 with return(0)", () => Test_utils.eq("File \"test_zero_nullable.res\", line 165, characters 47-54", f1(0), 1));
-  Mocha.test("Test_null.f1 with null", () => Test_utils.eq("File \"test_zero_nullable.res\", line 166, characters 42-49", f1(null), 3));
+Mocha.describe("Zero_nullable_test", () => {
+  Mocha.test("Test_nullable.f1 with return(0)", () => Test_utils.eq("File \"zero_nullable_test.res\", line 161, characters 51-58", f1$1(0), 1));
+  Mocha.test("Test_nullable.f1 with null", () => Test_utils.eq("File \"zero_nullable_test.res\", line 162, characters 46-53", f1$1(null), 3));
+  Mocha.test("Test_nullable.f1 with undefined", () => Test_utils.eq("File \"zero_nullable_test.res\", line 163, characters 51-58", f1$1(undefined), 3));
+  Mocha.test("Test_null.f1 with return(0)", () => Test_utils.eq("File \"zero_nullable_test.res\", line 165, characters 47-54", f1(0), 1));
+  Mocha.test("Test_null.f1 with null", () => Test_utils.eq("File \"zero_nullable_test.res\", line 166, characters 42-49", f1(null), 3));
 });
 
 let a = null;

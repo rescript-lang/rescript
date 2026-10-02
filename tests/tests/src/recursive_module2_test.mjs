@@ -11,7 +11,7 @@ let Xx = {
 };
 
 let Int3 = Primitive_module.init([
-  "recursive_module.res",
+  "recursive_module2_test.res",
   24,
   4
 ], {
@@ -47,9 +47,9 @@ let A = {
   Intb: Intb
 };
 
-Mocha.describe("Recursive_module", () => {
+Mocha.describe("Recursive_module2_test", () => {
   Mocha.test("recursive module test", () => {
-    Test_utils.eq("File \"recursive_module.res\", line 41, characters 7-14", Stdlib_Lazy.get(a$1), 3);
+    Test_utils.eq("File \"recursive_module2_test.res\", line 41, characters 7-14", Stdlib_Lazy.get(a$1), 3);
     let tmp;
     try {
       Int3.u(3);
@@ -62,7 +62,7 @@ Mocha.describe("Recursive_module", () => {
         throw exn;
       }
     }
-    Test_utils.eq("File \"recursive_module.res\", line 44, characters 6-13", 4, tmp);
+    Test_utils.eq("File \"recursive_module2_test.res\", line 44, characters 6-13", 4, tmp);
   });
 });
 
