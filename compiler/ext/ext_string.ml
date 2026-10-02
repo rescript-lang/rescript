@@ -100,9 +100,6 @@ let ends_with_then_chop s beg =
 (* let check_suffix_case = ends_with  *)
 (* let check_suffix_case_then_chop = ends_with_then_chop *)
 
-(* let check_any_suffix_case s suffixes =
-   Ext_list.exists suffixes (fun x -> check_suffix_case s x)  *)
-
 (* let check_any_suffix_case_then_chop s suffixes =
    let rec aux suffixes =
     match suffixes with
@@ -208,26 +205,6 @@ let index_count s i c count =
 
 (* let index_next s i c =
    index_count s i c 1  *)
-
-(* let extract_until s cursor c =
-   let len = String.length s in
-   let start = !cursor in
-   if start < 0 || start >= len then (
-    cursor := -1;
-    ""
-    )
-   else
-    let i = index_rec s len start c in
-    let finish =
-      if i < 0 then (
-        cursor := -1 ;
-        len
-      )
-      else (
-        cursor := i + 1;
-        i
-      ) in
-    String.sub s start (finish - start) *)
 
 let rec rindex_rec s i c =
   if i < 0 then i

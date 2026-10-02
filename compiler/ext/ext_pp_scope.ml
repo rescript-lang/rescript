@@ -40,7 +40,7 @@ let add_ident ~mangled:name (stamp : int) (cxt : t) : int * t =
     | Some i -> (i, cxt))
 
 (**
-   same as {!Js_dump.ident} except it generates a string instead of doing the printing
+   same as {!ident} except it generates a string instead of doing the printing
    For fast/debug mode, we can generate the name as 
        [Printf.sprintf "%s$%d" name id.stamp] which is 
        not relevant to the context       
@@ -53,8 +53,6 @@ let add_ident ~mangled:name (stamp : int) (cxt : t) : int * t =
        However, this means we loose the ability of dynamic loading, is it a big 
        deal? we can fix this by a scanning first, since we already know which 
        modules are global
-
-       check [test/test_global_print.ml] for regression
    - collision
       It is obvious that for the same identifier that they 
       print the same name.

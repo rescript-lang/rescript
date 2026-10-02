@@ -32,7 +32,7 @@ let js_type_boolean = "boolean"
 
 let tmp = "tmp"
 
-let create = "create" (* {!Caml_exceptions.create}*)
+let create = "create" (* {!Primitive_exceptions.create}*)
 
 let suffix_cmj = ".cmj"
 
