@@ -212,7 +212,7 @@ let run_analysis_and_report ~cmt_root =
   let prev_issue_count = ref 0 in
   (* Track currently removed files (to add them back on next run) *)
   let removed_files = ref [] in
-  (* Set of removed files for filtering in processCmtFiles *)
+  (* Set of removed files for filtering in process_cmt_files *)
   let removed_set = Hashtbl.create 64 in
   (* Aggregate stats for churn mode *)
   let churn_times = ref [] in
@@ -258,7 +258,7 @@ let run_analysis_and_report ~cmt_root =
            let shuffled = shuffle_list paths in
            let to_remove = List.filteri (fun i _ -> i < num_churn) shuffled in
            removed_files := to_remove;
-           (* Mark as removed so processCmtFiles skips them *)
+           (* Mark as removed so process_cmt_files skips them *)
            List.iter (fun p -> Hashtbl.replace removed_set p ()) to_remove;
            let t0 = Unix.gettimeofday () in
            let removed =

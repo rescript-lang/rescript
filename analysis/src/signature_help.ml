@@ -447,7 +447,7 @@ let signature_help ~debug ~source ~kind_file ~pos
         with
         | Some (args, docstring, type_expr, package, _env, file) ->
           if debug then
-            Printf.printf "argAtCursor: %s\n"
+            Printf.printf "arg_at_cursor: %s\n"
               (match arg_at_cursor with
               | None -> "none"
               | Some (Labelled name) -> "~" ^ name

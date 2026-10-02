@@ -19,7 +19,7 @@ let iter_optional_arg_value_escapes t f =
       List.iter f items.Cross_file_items.optional_arg_value_escapes)
 
 (** Compute optional args state from calls and function references.
-    Returns a map from position to final OptionalArgs.t state.
+    Returns a map from position to final Optional_args.t state.
     Pure function - does not mutate declarations. *)
 let compute_optional_args_state (store : t) ~find_decl ~is_live :
     Optional_args_state.t =

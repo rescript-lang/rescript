@@ -387,7 +387,6 @@ let pat ~(file : File.t) ~env ~extra (iter : Tast_iterator.iterator)
     add_for_declared_pattern ~stamp ~name ~extent:pattern.pat_loc
       ~item:pattern.pat_type ~attributes:pattern.pat_attributes
   in
-  (* Log.log("Entering pattern " ++ Utils.showLocation(pat_loc)); *)
   (match pattern.pat_desc with
   | Tpat_record (items, _, rest) -> (
     add_for_record ~env ~extra ~record_type:pattern.pat_type items;
