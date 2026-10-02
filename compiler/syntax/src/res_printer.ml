@@ -5478,27 +5478,34 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
           {ppat_desc = Ppat_var string_loc; ppat_attributes} )
         when lbl = string_loc.txt ->
         (* ~d *)
-        Doc.concat
-          [
-            print_attributes ~state ppat_attributes cmt_tbl;
-            Doc.text "~";
-            print_ident_like lbl;
-          ]
+        print_comments
+          (Doc.concat
+             [
+               print_attributes ~state ppat_attributes cmt_tbl;
+               Doc.text "~";
+               print_ident_like lbl;
+             ])
+          cmt_tbl pattern.ppat_loc
       | ( (Labelled {txt = lbl} | Optional {txt = lbl}),
           {
-            ppat_desc = Ppat_constraint ({ppat_desc = Ppat_var {txt}}, typ);
+            ppat_desc =
+              Ppat_constraint
+                (({ppat_desc = Ppat_var {txt}} as var_pattern), typ);
             ppat_attributes;
           } )
         when lbl = txt ->
         (* ~d: e *)
-        Doc.concat
-          [
-            print_attributes ~state ppat_attributes cmt_tbl;
-            Doc.text "~";
-            print_ident_like lbl;
-            Doc.text ": ";
-            print_typ_expr ~state typ cmt_tbl;
-          ]
+        print_comments
+          (Doc.concat
+             [
+               print_attributes ~state ppat_attributes cmt_tbl;
+               print_comments
+                 (Doc.concat [Doc.text "~"; print_ident_like lbl])
+                 cmt_tbl var_pattern.ppat_loc;
+               Doc.text ": ";
+               print_typ_expr ~state typ cmt_tbl;
+             ])
+          cmt_tbl pattern.ppat_loc
       | (Labelled {txt = lbl} | Optional {txt = lbl}), pattern ->
         (* ~b as c *)
         Doc.concat
@@ -5515,9 +5522,7 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
       | _ -> Doc.nil
     in
     let doc =
-      Doc.group
-        (Doc.concat
-           [attrs; label_with_pattern; default_expr_doc; optional_label_suffix])
+      Doc.group (Doc.concat [attrs; label_with_pattern; default_expr_doc])
     in
     let lbl_loc = Asttypes.get_lbl_loc lbl in
     let cmt_loc =
@@ -5525,7 +5530,9 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
       | None -> {lbl_loc with loc_end = pattern.ppat_loc.loc_end}
       | Some expr -> {lbl_loc with loc_end = expr.pexp_loc.loc_end}
     in
-    print_comments doc cmt_tbl cmt_loc
+    (* Without a default, [cmt_loc] ends before [=?], so the comments
+       attached to it precede [=?] in the source. *)
+    Doc.concat [print_comments doc cmt_tbl cmt_loc; optional_label_suffix]
 
 and print_expression_block ~state ~braces expr cmt_tbl =
   let expr = Parsetree_viewer.unwrap_braces expr in
