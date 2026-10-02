@@ -4677,10 +4677,8 @@ and print_jsx_container_tag ~state tag_name
     | [] -> false
   in
   let line_sep = get_line_sep_for_jsx_children children in
-  let print_children children =
-    let doc = print_jsx_children ~state children cmt_tbl in
-    if line_sep = Doc.nil then doc
-    else Doc.concat [Doc.indent (Doc.concat [line_sep; doc]); line_sep]
+  let indent_children doc =
+    Doc.concat [Doc.indent (Doc.concat [line_sep; doc]); line_sep]
   in
 
   (* comments between the opening and closing tag *)
@@ -4738,9 +4736,12 @@ and print_jsx_container_tag ~state tag_name
               ]);
          Doc.concat
            [
-             (if has_children then print_children children
+             (if has_children then
+                indent_children (print_jsx_children ~state children cmt_tbl)
               else if not has_comments_inside then Doc.soft_line
-              else print_jsx_comment_container cmt_tbl.inside pexp_loc);
+              else
+                indent_children
+                  (print_jsx_comment_container cmt_tbl.inside pexp_loc));
              closing_element_doc;
            ];
        ])
@@ -4772,16 +4773,14 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
             if has_children then print_jsx_children ~state children cmt_tbl
             else print_jsx_comment_container cmt_tbl.inside fragment_loc
           in
-          if line_sep = Doc.nil then doc
-          else Doc.indent (Doc.concat [line_sep; doc]));
-         (if has_children then line_sep else Doc.nil);
+          if doc = Doc.nil then doc
+          else Doc.concat [Doc.indent (Doc.concat [line_sep; doc]); line_sep]);
          closing;
        ])
 
 and get_line_sep_for_jsx_children (children : Parsetree.jsx_children) =
-  (* Keep wrapping a single expression inside its braces, never between it and
-     its tag. Layout between sibling children still uses the legacy whitespace
-     rules until literal JSX text is introduced. *)
+  (* Single children stay inline when they fit, otherwise indent between the
+     tags. Literal JSX text will need to ignore this formatting whitespace. *)
   if
     List.length children > 1
     || List.exists
@@ -4791,7 +4790,7 @@ and get_line_sep_for_jsx_children (children : Parsetree.jsx_children) =
            | _ -> false)
          children
   then Doc.hard_line
-  else Doc.nil
+  else Doc.soft_line
 
 and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
   let open Parsetree in
@@ -4833,8 +4832,14 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
         print_trailing_comments Doc.nil cmt_tbl.trailing expr.pexp_loc
       in
       let trailing = print_trailing_comments Doc.nil cmt_tbl.trailing loc in
-      let expr_doc =
+      let rec print_child_expr expr =
         match expr.pexp_desc with
+        | Pexp_braces {expr = inner}
+          when Parsetree_viewer.is_block_expr inner
+               && not
+                    (Parsetree_viewer.has_printable_attributes
+                       expr.pexp_attributes) ->
+          print_child_expr inner
         | Pexp_let _ | Pexp_sequence _ | Pexp_letexception _ | Pexp_letmodule _
         | Pexp_open _
           when not
@@ -4845,7 +4850,13 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
           let doc = print_expression_with_comments ~state expr cmt_tbl in
           if Parens.braced_expr expr then add_parens doc else doc
       in
-      add_braces
+      let expr_doc = print_child_expr expr in
+      let wrap doc =
+        if has_line_comment || Parsetree_viewer.is_block_expr expr then
+          add_braces doc
+        else Doc.concat [Doc.lbrace; doc; Doc.rbrace]
+      in
+      wrap
         (Doc.concat
            [
              leading;
