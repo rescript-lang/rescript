@@ -6,17 +6,17 @@
 
     {[
       (* Create file collection *)
-      let files = ReactiveFileCollection.create
+      let files = Reactive_file_collection.create
         ~read_file:Cmt_format.read_cmt
         ~process:(fun path cmt -> extract_data path cmt)
 
-      (* Compose with flatMap *)
-      let decls = Reactive.flatMap ~name:"decls" (ReactiveFileCollection.to_collection files)
+      (* Compose with flat_map *)
+      let decls = Reactive.flat_map ~name:"decls" (Reactive_file_collection.to_collection files)
         ~f:(fun _path data -> data.decls)
         ()
 
       (* Process files - decls updates automatically *)
-      ReactiveFileCollection.process_files files [file_a; file_b];
+      ignore (Reactive_file_collection.process_files_batch files [file_a; file_b]);
 
       (* Read results *)
       Reactive.iter (fun pos decl -> ...) decls
@@ -35,37 +35,20 @@ val create :
 (** {1 Composition} *)
 
 val to_collection : ('raw, 'v) t -> (string, 'v) Reactive.t
-(** Get the reactive collection interface for use with [Reactive.flatMap]. *)
+(** Get the reactive collection interface for use with [Reactive.flat_map]. *)
 
 (** {1 Processing} *)
 
-val process_files : ('raw, 'v) t -> string list -> unit
-(** Process files, emitting individual deltas for each changed file. *)
-
 val process_files_batch : ('raw, 'v) t -> string list -> int
 (** Process files, emitting a single [Batch] delta with all changes.
-    Returns the number of files that changed.
-    More efficient than [process_files] when processing many files at once,
-    as downstream combinators can process all changes together. *)
-
-val process_if_changed : ('raw, 'v) t -> string -> bool
-(** Process a file if changed. Returns true if file was processed. *)
-
-val remove : ('raw, 'v) t -> string -> unit
-(** Remove a file from the collection. *)
+    Returns the number of files that changed. Downstream combinators
+    process all changes together. *)
 
 val remove_batch : ('raw, 'v) t -> string list -> int
-(** Remove multiple files as a batch. Returns the number of files removed.
-    More efficient than calling [remove] multiple times. *)
-
-(** {1 Cache Management} *)
-
-val invalidate : ('raw, 'v) t -> string -> unit
-val clear : ('raw, 'v) t -> unit
+(** Remove multiple files as a batch. Returns the number of files removed. *)
 
 (** {1 Access} *)
 
-val get : ('raw, 'v) t -> string -> 'v option
 val mem : ('raw, 'v) t -> string -> bool
 val length : ('raw, 'v) t -> int
 val iter : (string -> 'v -> unit) -> ('raw, 'v) t -> unit
