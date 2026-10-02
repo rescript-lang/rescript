@@ -266,8 +266,8 @@ Type-declaration errors. Source: `type error` in [typedecl.ml](../compiler/ml/ty
 | `Duplicate_constructor` | ✓ | `duplicate_variant_constructor.res` | |
 | `Duplicate_label` | ✓ | `duplicate_labels_error.res` | |
 | `Object_spread_with_record_field` | ✓ | `object_spread_with_record_field.res` | |
-| `Recursive_abbrev` | ✓ | `recursive_type_abbreviation.res`, `recursive_type.res` | |
-| `Cycle_in_def` | ✓ | `recursive_type_abbrev_cycle.res` | |
+| `Recursive_abbrev` | ✓ | `recursive_type_abbrev_cycle.res` | `type rec t = t` reports "The type abbreviation t is cyclic". |
+| `Cycle_in_def` | ? | — | No fixture reports "The definition of … contains a cycle"; `recursive_type_abbrev_cycle.res` reports `Recursive_abbrev`. |
 | `Definition_mismatch` | ✓ | `definition_mismatch.res` | |
 | `Constraint_failed` | ✓ | `constraint_failed.res` | |
 | `Inconsistent_constraint` | ✓ | `inconsistent_constraint.res` | |
@@ -317,7 +317,7 @@ Module-level errors. Source: `type error` in [typemod.ml](../compiler/ml/typemod
 | `Non_generalizable` | ✓ | `non_generalizable.res` | |
 | `Non_generalizable_module` | ✓ | `non_generalizable_module.res` | Nested module containing `let r = ref(None)` — the outer module's `md_type` carries the free `'_weak1` from the inner ref, so `closed_modtype` returns false and the `Sig_module` branch fires. |
 | `Interface_not_compiled` | ✓ | `super_errors_multi/Iface_not_compiled` | |
-| `Not_allowed_in_functor_body` | ✓ | `super_errors_multi/not_allowed_in_functor_body` (TODO: confirm path) | |
+| `Not_allowed_in_functor_body` | ✓ | `not_allowed_in_functor_body.res` | |
 | `Not_a_packed_module` | ✓ | `not_a_packed_module.res` | |
 | `Incomplete_packed_module` | ✓ | `incomplete_packed_module.res` | |
 | `Recursive_module_require_explicit_type` | ✓ | `recursive_module_require_explicit_type.res` | |
@@ -371,7 +371,7 @@ Wrapper symptoms attached to inclusion failures. Source: `type symptom` in [incl
 | `Extension_constructors` | ✓ | `super_errors_multi/Iface_extension_constructors` | |
 | `Module_types` | ✓ | `super_errors_multi/Iface_module_types` | |
 | `Modtype_infos` | ✓ | `super_errors_multi/Iface_modtype_infos` | |
-| `Modtype_permutation` | ✓ | `super_errors_multi/include_modtype_permutation` | |
+| `Modtype_permutation` | ✓ | `include_modtype_permutation.res` | |
 | `Interface_mismatch` | ✓ | wrapper added to all `Iface_*` failures by `compunit`. | |
 | `Unbound_modtype_path` | ☐ (needs stale-cmi harness) | — | includemod.ml, `expand_module_path`. Re-validated during removal: not completely dead. It represents `Env.find_modtype` failing during module-type path comparison, which can happen only with a stale or inconsistent compiled interface. The source-only harness cannot produce that state because it pre-compiles every fixture, so this needs a build/binary-state harness rather than deletion. |
 | `Unbound_module_path` | ☐ (needs build harness) | — | includemod.ml, `expand_module_alias` and `try_modtypes`. Alias comparison where `Env.normalize_path` raises `Not_found`. Requires a module alias whose target `.cmi` is absent at inclusion time — multi-unit only. |
