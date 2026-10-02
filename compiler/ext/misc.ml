@@ -57,13 +57,6 @@ let rec map_end f l1 l2 =
 let rec replicate_list elem n =
   if n <= 0 then [] else elem :: replicate_list elem (n - 1)
 
-let rec split_last = function
-  | [] -> assert false
-  | [x] -> ([], x)
-  | hd :: tl ->
-    let lst, last = split_last tl in
-    (hd :: lst, last)
-
 let may = Stdlib.Option.iter
 let may_map = Stdlib.Option.map
 
@@ -202,7 +195,7 @@ let did_you_mean ppf get_choices =
   match get_choices () with
   | [] -> ()
   | choices ->
-    let rest, last = split_last choices in
+    let rest, last = Ext_list.split_at_last choices in
     Format.fprintf ppf "@\nHint: Did you mean %s%s%s?@?"
       (String.concat ", " rest)
       (if rest = [] then "" else " or ")

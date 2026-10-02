@@ -27,9 +27,6 @@ val replicate_list : 'a -> int -> 'a list
 (* [replicate_list elem n] is the list with [n] elements
    all identical to [elem]. *)
 
-val split_last : 'a list -> 'a list * 'a
-(* Return the last element and the other elements of the given list. *)
-
 val may : ('a -> unit) -> 'a option -> unit
 val may_map : ('a -> 'b) -> 'a option -> 'b option
 

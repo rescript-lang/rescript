@@ -15,7 +15,6 @@
 
 (* Inclusion checks for the module language *)
 
-open Misc
 open Path
 open Typedtree
 open Types
@@ -648,7 +647,7 @@ let is_big obj =
 let report_error ppf errs =
   if errs = [] then ()
   else
-    let errs, err = split_last errs in
+    let errs, err = Ext_list.split_at_last errs in
     let pe = ref true in
     let include_err' ppf ((_, _, obj) as err) =
       if not (is_big obj) then fprintf ppf "%a@ " include_err err
