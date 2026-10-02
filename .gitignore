@@ -46,7 +46,6 @@ _build_playground
 
 node_modules
 *.dump
-coverage
 _coverage/
 bisect*.coverage
 
@@ -58,7 +57,6 @@ tests/build_tests/*/lib/
 *.so
 tmp/
 tracing*.json
-.nyc_output
 .vscode/launch.json
 .vscode/settings.json
 
