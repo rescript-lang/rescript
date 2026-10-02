@@ -85,6 +85,24 @@ let compile_group output_prefix (meta : Lam_stats.t) (x : Lam_group.t) :
       }
       lam
 
+(* When a toplevel group always throws, [Js_output.concat] drops every later
+   group, and a [let] whose right-hand side throws compiles to the [throw]
+   alone. The identifiers those groups bind are then undeclared, and an export
+   list naming them is a JavaScript syntax error. This appends a declaration
+   for each such exported identifier after the [throw]. *)
+let declare_undeclared_exports (exports : Ident.t list) (block : J.block) :
+    J.block =
+  let declared =
+    Ext_list.fold_left block Set_ident.empty (fun acc (stmt : J.statement) ->
+        match stmt.statement_desc with
+        | Variable {ident} -> Set_ident.add acc ident
+        | _ -> acc)
+  in
+  block
+  @ Ext_list.filter_map exports (fun id ->
+      if Set_ident.mem declared id then None
+      else Some (Js_stmt_make.declare_variable ~kind:Strict id))
+
 (** Also need analyze its depenency is pure or not *)
 let no_side_effects (rest : Lam_group.t list) : string option =
   Ext_list.find_opt rest (fun x ->
@@ -379,8 +397,14 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
         (Sys.time () *. 1000.)
   in
   let body =
-    Ext_list.map groups (fun group -> compile_group output_prefix meta group)
-    |> Js_output.concat |> Js_output.output_as_block
+    let output =
+      Ext_list.map groups (fun group -> compile_group output_prefix meta group)
+      |> Js_output.concat
+    in
+    let block = Js_output.output_as_block output in
+    if output.output_finished = True then
+      declare_undeclared_exports meta.exports block
+    else block
   in
   let () =
     if debug_ir then
