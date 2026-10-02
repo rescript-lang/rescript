@@ -83,6 +83,8 @@ let fortytwoOK = "fortytwo";
 
 let fortytwoBAD = "fortytwo";
 
+let typeCase = "type";
+
 export {
   isWeekend,
   monday,
@@ -98,6 +100,7 @@ export {
   testConvert2to3,
   id1,
   id2,
+  typeCase,
   polyWithOpt,
   restResult1,
   restResult2,
