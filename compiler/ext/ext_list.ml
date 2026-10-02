@@ -71,7 +71,7 @@ let rec arr_list_combine_unsafe arr l i j acc f =
   if i = j then acc
   else
     match l with
-    | [] -> invalid_arg "Ext_list.combine"
+    | [] -> invalid_arg "Ext_list.arr_list_combine_unsafe"
     | h :: tl ->
       (f arr.!(i), h) :: arr_list_combine_unsafe arr tl (i + 1) j acc f
 
@@ -79,19 +79,19 @@ let combine_array arr l f =
   let len = Array.length arr in
   arr_list_combine_unsafe arr l 0 len [] f
 
-let rec arr_list_filter_map_unasfe arr l i j acc f =
+let rec arr_list_filter_map_unsafe arr l i j acc f =
   if i = j then acc
   else
     match l with
     | [] -> invalid_arg "Ext_list.arr_list_filter_map_unsafe"
     | h :: tl -> (
       match f arr.!(i) h with
-      | None -> arr_list_filter_map_unasfe arr tl (i + 1) j acc f
-      | Some v -> v :: arr_list_filter_map_unasfe arr tl (i + 1) j acc f)
+      | None -> arr_list_filter_map_unsafe arr tl (i + 1) j acc f
+      | Some v -> v :: arr_list_filter_map_unsafe arr tl (i + 1) j acc f)
 
 let array_list_filter_map arr l f =
   let len = Array.length arr in
-  arr_list_filter_map_unasfe arr l 0 len [] f
+  arr_list_filter_map_unsafe arr l 0 len [] f
 
 let rec map_snd l f =
   match l with

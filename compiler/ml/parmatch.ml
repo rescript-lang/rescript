@@ -512,7 +512,7 @@ let record_arg p =
   match p.pat_desc with
   | Tpat_any -> []
   | Tpat_record (args, _, _rest) -> args
-  | _ -> fatal_error "Parmatch.as_record"
+  | _ -> fatal_error "Parmatch.record_arg"
 
 (* Raise Not_found when pos is not present in arg *)
 let get_field pos arg =

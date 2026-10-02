@@ -2803,7 +2803,7 @@ let flatten_cases size cases =
     (fun (ps, action) ->
       match ps with
       | [p] -> (flatten_pattern size p, action)
-      | _ -> fatal_error "Matching.flatten_case")
+      | _ -> fatal_error "Matching.flatten_cases")
     cases
 
 let flatten_matrix size pss =
