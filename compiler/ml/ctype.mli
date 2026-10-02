@@ -303,7 +303,6 @@ val nondep_extension_constructor :
   Env.t -> Ident.t -> extension_constructor -> extension_constructor
 
 (* Same for extension constructor *)
-(*val correct_abbrev: Env.t -> Path.t -> type_expr list -> type_expr -> unit*)
 val cyclic_abbrev : Env.t -> Ident.t -> type_expr -> bool
 val normalize_type : Env.t -> type_expr -> unit
 

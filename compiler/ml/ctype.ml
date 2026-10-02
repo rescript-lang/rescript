@@ -2073,7 +2073,7 @@ let rec unify (env : Env.t ref) t1 t2 =
           update_level !env t1.level t2;
           link_type t1 t2
         | Tconstr (p1, [], a1), Tconstr (p2, [], a2)
-          when Path.same p1 p2 (* && actual_mode !env = Old *)
+          when Path.same p1 p2
                (* This optimization assumes that t1 does not expand to t2
                   (and conversely), so we fall back to the general case
                   when any of the types has a cached expansion. *)

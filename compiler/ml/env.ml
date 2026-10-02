@@ -1849,7 +1849,7 @@ let save_signature_with_imports ?check_exists ~deprecated sg modname filename
       {cmi_name = modname; cmi_sign = sg; cmi_crcs = imports; cmi_flags = flags}
     in
     let crc = create_cmi ?check_exists filename cmi in
-    (* Enter signature in persistent table so that imported_unit()
+    (* Enter signature in persistent table so that imports ()
        will also return its crc *)
     let comps =
       components_of_module ~deprecated ~loc:Location.none empty Subst.identity

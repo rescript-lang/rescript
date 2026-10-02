@@ -64,8 +64,6 @@ let rec add_path bv ?(p = []) = function
     let free =
       try lookup_free (s :: p) bv with Not_found -> String_set.singleton s
     in
-    (*StringSet.iter (fun s -> Printf.eprintf "%s " s) free;
-      prerr_endline "";*)
     add_names free
   | Ldot (l, s) -> add_path bv ~p:(s :: p) l
 

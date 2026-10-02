@@ -419,12 +419,7 @@ let finalize_variant pat =
       | Some pat -> List.iter (unify_pat pat.pat_env pat) (ty :: tl))
     | Reither (c, _l, true, e) when not (row_fixed row) ->
       set_row_field e (Reither (c, [], false, ref None))
-    | _ -> ()
-    (* Force check of well-formedness   WHY? *)
-    (* unify_pat pat.pat_env pat
-       (newty(Tvariant{row_fields=[]; row_more=newvar(); row_closed=false;
-                       row_bound=(); row_fixed=false; row_name=None})); *)
-    )
+    | _ -> ())
   | _ -> ()
 
 let rec iter_pattern f p =
@@ -1774,8 +1769,8 @@ let type_pat ?(allow_existentials = false) ?constrs ?labels ?(mode = Normal)
     newtype_level := None;
     raise e
 
-(* this function is passed to Partial.parmatch
-   to type check gadt nonexhaustiveness *)
+(* this function is passed to Parmatch.check_partial_gadt and
+   Parmatch.check_unused to type check gadt nonexhaustiveness *)
 let partial_pred ~lev ?mode ?explode env expected_ty constrs labels p =
   let env = ref env in
   let state = save_state env in
@@ -2229,7 +2224,6 @@ let check_absent_variant env =
           (fun (s', fi) -> s = s' && row_field_repr fi <> Rabsent)
           row.row_fields
         || ((not row.row_fixed) && not (static_row row))
-        (* same as Ctype.poly *)
       then ()
       else
         let ty_arg =
@@ -2261,9 +2255,9 @@ let duplicate_ident_types caselist env =
   in
   Env.copy_types (all_idents_cases caselist) env
 
-(* type_label_a_list returns a list of labels sorted by lbl_pos *)
+(* type_record_elem_list returns a list of labels sorted by lbl_pos *)
 (* note: check_duplicates would better be implemented in
-         type_label_a_list directly *)
+         type_record_elem_list directly *)
 let rec check_duplicates ~get_jsx_component_error_info loc env = function
   | (_, lbl1, _, _) :: ((l : Longident.t loc), lbl2, _, _) :: _
     when lbl1.lbl_pos = lbl2.lbl_pos ->
@@ -3223,7 +3217,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           } env ~check:(fun s -> Warnings.Unused_for_index s)
       | _ ->
         (* unreachable: the parser's normalize_for_of_pattern
-           (compiler/syntax/src/res_core.ml:3841) catches every non-var,
+           (compiler/syntax/src/res_core.ml) catches every non-var,
            non-`_` pattern, emits a syntax error, and replaces the pattern
            with Ppat_any before the typer runs *)
         assert false
@@ -3260,7 +3254,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           } env ~check:(fun s -> Warnings.Unused_for_index s)
       | _ ->
         (* unreachable: the parser's normalize_for_of_pattern
-           (compiler/syntax/src/res_core.ml:3841) catches every non-var,
+           (compiler/syntax/src/res_core.ml) catches every non-var,
            non-`_` pattern, emits a syntax error, and replaces the pattern
            with Ppat_any before the typer runs *)
         assert false

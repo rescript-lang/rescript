@@ -115,9 +115,6 @@ and apply_coercion_result loc strict funct param arg cc_res =
 
 and wrap_id_pos_list loc id_pos_list get_field lam =
   let fv = Lambda_traverse.free_variables lam in
-  (*Format.eprintf "%a@." Printlambda.lambda lam;
-    IdentSet.iter (fun id -> Format.eprintf "%a " Ident.print id) fv;
-    Format.eprintf "@.";*)
   let lam, s =
     List.fold_left
       (fun (lam, s) (id', pos, c) ->

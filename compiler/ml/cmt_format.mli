@@ -99,15 +99,3 @@ val set_saved_types : binary_part list -> unit
 
 val record_value_dependency :
   Types.value_description -> Types.value_description -> unit
-
-(*
-
-  val is_magic_number : string -> bool
-  val read : in_channel -> Env.cmi_infos option * t
-  val write_magic_number : out_channel -> unit
-  val write : out_channel -> t -> unit
-
-  val find : string list -> string -> string
-  val read_signature : 'a -> string -> Types.signature * 'b list * 'c list
-
-*)

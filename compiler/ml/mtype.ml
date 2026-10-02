@@ -356,8 +356,6 @@ and remove_aliases_sig env excl sg =
 
 let remove_aliases env sg =
   let excl = collect_arg_paths sg in
-  (* PathSet.iter (fun p -> Format.eprintf "%a@ " Printtyp.path p) excl;
-     Format.eprintf "@."; *)
   remove_aliases env excl sg
 
 (* Lower non-generalizable type variables *)
