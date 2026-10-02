@@ -16,7 +16,6 @@
 type space_formatter = (unit, Format.formatter, unit) format
 
 val expression : Format.formatter -> Parsetree.expression -> unit
-val string_of_expression : Parsetree.expression -> string
 
 val core_type : Format.formatter -> Parsetree.core_type -> unit
 val pattern : Format.formatter -> Parsetree.pattern -> unit

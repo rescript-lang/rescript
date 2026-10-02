@@ -1138,33 +1138,6 @@ let modtype ppf mty = !Oprint.out_module_type ppf (tree_of_modtype mty)
 let modtype_declaration id ppf decl =
   !Oprint.out_sig_item ppf (tree_of_modtype_declaration id decl)
 
-(* For the toplevel: merge with tree_of_signature? *)
-
-(* Refresh weak variable map in the toplevel *)
-let refresh_weak () =
-  let refresh t name (m, s) =
-    if is_non_gen true (repr t) then
-      (Type_map.add t name m, String_set.add name s)
-    else (m, s)
-  in
-  let m, s =
-    Type_map.fold refresh !weak_var_map (Type_map.empty, String_set.empty)
-  in
-  named_weak_vars := s;
-  weak_var_map := m
-
-let print_items showval env x =
-  refresh_weak ();
-  let rec print showval env = function
-    | [] -> []
-    | item :: rem as items ->
-      let _sg, rem = filter_rem_sig item rem in
-      hide_rec_items items;
-      let trees = trees_of_sigitem item in
-      List.map (fun d -> (d, showval env item)) trees @ print showval env rem
-  in
-  print showval env x
-
 (* Print a signature body (used by -i when compiling a .ml) *)
 
 let print_signature ppf tree =

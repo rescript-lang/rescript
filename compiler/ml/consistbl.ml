@@ -42,15 +42,3 @@ let extract l tbl =
         (name, Some crc) :: assc
       with Not_found -> (name, None) :: assc)
     [] l
-
-let filter p tbl =
-  let to_remove = ref [] in
-  Hashtbl.iter
-    (fun name _ -> if not (p name) then to_remove := name :: !to_remove)
-    tbl;
-  List.iter
-    (fun name ->
-      while Hashtbl.mem tbl name do
-        Hashtbl.remove tbl name
-      done)
-    !to_remove

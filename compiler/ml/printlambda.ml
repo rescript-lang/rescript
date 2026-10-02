@@ -378,8 +378,6 @@ and sequence ppf = function
   | Lsequence (l1, l2) -> fprintf ppf "%a@ %a" sequence l1 sequence l2
   | l -> lam ppf l
 
-let structured_constant = struct_const
-
 let lambda = lam
 
 let serialize (filename : string) (l : Lambda.t) : unit =

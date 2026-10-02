@@ -312,7 +312,7 @@ let check_polyvar_name env loc name =
     | Some _ -> ()
     | None -> raise (Error (loc, env, Polyvar_literal_overflow))
 
-(* Specific version of type_option, using newty rather than newgenty *)
+(* The type [ty option], created at the current level *)
 
 let type_option ty = newty (Tconstr (Predef.path_option, [ty], ref Mnil))
 

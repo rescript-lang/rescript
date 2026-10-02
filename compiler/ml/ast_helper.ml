@@ -25,23 +25,11 @@ type attrs = attribute list
 
 let default_loc = ref Location.none
 
-let with_default_loc l f =
-  let old = !default_loc in
-  default_loc := l;
-  try
-    let r = f () in
-    default_loc := old;
-    r
-  with exn ->
-    default_loc := old;
-    raise exn
-
 module Const = struct
   let integer ?suffix i = Pconst_integer (i, suffix)
   let int ?suffix i = integer ?suffix (string_of_int i)
   let int32 ?(suffix = 'l') i = integer ~suffix (Int32.to_string i)
   let int64 ?(suffix = 'L') i = integer ~suffix (Int64.to_string i)
-  let nativeint ?(suffix = 'n') i = integer ~suffix (Nativeint.to_string i)
   let float ?suffix f = Pconst_float (f, suffix)
   let char c =
     let semantic = Char.code c in

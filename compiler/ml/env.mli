@@ -37,9 +37,6 @@ type t
 val empty : t
 val initial_safe_string : t
 
-val diff : t -> t -> Ident.t list
-val copy_local : from:t -> t -> t
-
 type type_descriptions = constructor_description list * label_description list
 
 (* For short-paths *)

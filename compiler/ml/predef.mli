@@ -28,7 +28,6 @@ val type_array : type_expr -> type_expr
 val type_iterable : type_expr -> type_expr
 val type_async_iterable : type_expr -> type_expr
 val type_list : type_expr -> type_expr
-val type_option : type_expr -> type_expr
 val type_bigint : type_expr
 val type_extension_constructor : type_expr
 

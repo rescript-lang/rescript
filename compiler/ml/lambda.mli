@@ -88,8 +88,6 @@ val fld_record_inline : string -> field_dbg_info
 
 val fld_record_extension : string -> field_dbg_info
 
-val ref_field_info : field_dbg_info
-
 type set_field_dbg_info =
   | Fld_record_set of string
   | Fld_record_inline_set of string

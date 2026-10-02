@@ -105,10 +105,3 @@ val report_ambiguous_type_error :
   (formatter -> unit) ->
   (formatter -> unit) ->
   unit
-
-(* for toploop *)
-val print_items :
-  (Env.t -> signature_item -> 'a option) ->
-  Env.t ->
-  signature_item list ->
-  (out_sig_item * 'a option) list

@@ -86,8 +86,6 @@ let fld_record name = Fld_record {name}
 
 let fld_record_extension name = Fld_record_extension {name}
 
-let ref_field_info : field_dbg_info = Fld_record {name = "contents"}
-
 type set_field_dbg_info =
   | Fld_record_set of string
   | Fld_record_inline_set of string

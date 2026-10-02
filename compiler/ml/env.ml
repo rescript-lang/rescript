@@ -226,22 +226,6 @@ module Tycomp_tbl = struct
       |> Tbl.fold (fun _name -> List.fold_right (fun desc -> f desc)) components
       |> fold_name f next
     | None -> acc
-
-  let rec local_keys tbl acc =
-    let acc = Ident.fold_all (fun k _ accu -> k :: accu) tbl.current acc in
-    match tbl.opened with
-    | Some o -> local_keys o.next acc
-    | None -> acc
-
-  let diff_keys is_local tbl1 tbl2 =
-    let keys2 = local_keys tbl2 [] in
-    Ext_list.filter keys2 (fun id ->
-        is_local (find_same id tbl2)
-        &&
-          try
-            ignore (find_same id tbl1);
-            false
-          with Not_found -> true)
 end
 
 module Id_tbl = struct
@@ -357,12 +341,6 @@ module Id_tbl = struct
       |> fold_name f next
     | None -> acc
 
-  let rec local_keys tbl acc =
-    let acc = Ident.fold_all (fun k _ accu -> k :: accu) tbl.current acc in
-    match tbl.opened with
-    | Some o -> local_keys o.next acc
-    | None -> acc
-
   let rec iter f tbl =
     Ident.iter (fun id desc -> f id (Pident id, desc)) tbl.current;
     match tbl.opened with
@@ -373,14 +351,6 @@ module Id_tbl = struct
         components;
       iter f next
     | None -> ()
-
-  let diff_keys tbl1 tbl2 =
-    let keys2 = local_keys tbl2 [] in
-    Ext_list.filter keys2 (fun id ->
-        try
-          ignore (find_same id tbl1);
-          false
-        with Not_found -> true)
 end
 
 type type_descriptions = constructor_description list * label_description list
@@ -436,14 +406,6 @@ and functor_components = {
   fcomp_cache: (Path.t, module_components) Hashtbl.t; (* For memoization *)
   fcomp_subst_cache: (Path.t, module_type) Hashtbl.t;
 }
-
-let copy_local ~from env =
-  {
-    env with
-    local_constraints = from.local_constraints;
-    gadt_instances = from.gadt_instances;
-    flags = from.flags;
-  }
 
 let same_constr = ref (fun _ _ _ -> assert false)
 
@@ -504,19 +466,6 @@ let implicit_coercion env =
 
 let is_in_signature env = env.flags land in_signature_flag <> 0
 let is_implicit_coercion env = env.flags land implicit_coercion_flag <> 0
-
-let is_ident = function
-  | Pident _ -> true
-  | Pdot _ | Papply _ -> false
-
-let is_local_ext = function
-  | {cstr_kind = Extension_constructor p} -> is_ident p
-  | _ -> false
-
-let diff env1 env2 =
-  Id_tbl.diff_keys env1.values env2.values
-  @ Tycomp_tbl.diff_keys is_local_ext env1.constrs env2.constrs
-  @ Id_tbl.diff_keys env1.modules env2.modules
 
 type can_load_cmis = Can_load_cmis | Cannot_load_cmis of Env_lazy.log
 

@@ -28,10 +28,6 @@ type attrs = attribute list
 val default_loc : loc ref
 (** Default value for all optional location arguments. *)
 
-val with_default_loc : loc -> (unit -> 'a) -> 'a
-(** Set the [default_loc] within the scope of the execution
-        of the provided function. *)
-
 (** {1 Constants} *)
 
 module Const : sig
@@ -41,7 +37,6 @@ module Const : sig
   val int : ?suffix:char -> int -> constant
   val int32 : ?suffix:char -> int32 -> constant
   val int64 : ?suffix:char -> int64 -> constant
-  val nativeint : ?suffix:char -> nativeint -> constant
   val float : ?suffix:char -> string -> constant
 end
 

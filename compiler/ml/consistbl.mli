@@ -44,7 +44,6 @@ val extract : string list -> t -> (string * Digest.t option) list
    in [names] to the CRC associated with it in [tbl]. If no CRC is
    associated with a name then it is mapped to [None]. *)
 
-val filter : (string -> bool) -> t -> unit
 (* [filter pred tbl] removes from [tbl] table all (name, CRC) pairs
    such that [pred name] is [false]. *)
 

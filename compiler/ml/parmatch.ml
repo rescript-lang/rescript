@@ -2235,29 +2235,6 @@ let check_unused pred casel =
 
 let irrefutable pat = le_pat pat omega
 
-let inactive ~partial pat =
-  match partial with
-  | Partial -> false
-  | Total ->
-    let rec loop pat =
-      match pat.pat_desc with
-      | Tpat_array _ -> false
-      | Tpat_any | Tpat_var _ | Tpat_variant (_, None, _) -> true
-      | Tpat_constant c -> (
-        match c with
-        | Const_string _ -> true (*Config.safe_string*)
-        | Const_int _ | Const_char _ | Const_float _ | Const_bigint _ -> true)
-      | Tpat_tuple ps | Tpat_construct (_, _, ps) ->
-        List.for_all (fun p -> loop p) ps
-      | Tpat_alias (p, _, _) | Tpat_variant (_, Some p, _) -> loop p
-      | Tpat_record (ldps, _, _rest) ->
-        List.for_all
-          (fun (_, lbl, p, _) -> lbl.lbl_mut = Immutable && loop p)
-          ldps
-      | Tpat_or (p, q, _) -> loop p && loop q
-    in
-    loop pat
-
 (*********************************)
 (* Exported exhaustiveness check *)
 (*********************************)

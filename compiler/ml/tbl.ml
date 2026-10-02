@@ -99,13 +99,3 @@ let rec fold f m accu =
   match m with
   | Empty -> accu
   | Node (l, v, d, r, _) -> fold f r (f v d (fold f l accu))
-
-open Format
-
-let print print_key print_data ppf tbl =
-  let print_tbl ppf tbl =
-    iter
-      (fun k d -> fprintf ppf "@[<2>%a ->@ %a;@]@ " print_key k print_data d)
-      tbl
-  in
-  fprintf ppf "@[<hv 2>[[%a]]@]" print_tbl tbl

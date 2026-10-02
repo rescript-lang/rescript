@@ -27,12 +27,3 @@ val remove : 'k -> ('k, 'v) t -> ('k, 'v) t
 val iter : ('k -> 'v -> unit) -> ('k, 'v) t -> unit
 val map : ('k -> 'v1 -> 'v2) -> ('k, 'v1) t -> ('k, 'v2) t
 val fold : ('k -> 'v -> 'acc -> 'acc) -> ('k, 'v) t -> 'acc -> 'acc
-
-open Format
-
-val print :
-  (formatter -> 'k -> unit) ->
-  (formatter -> 'v -> unit) ->
-  formatter ->
-  ('k, 'v) t ->
-  unit
