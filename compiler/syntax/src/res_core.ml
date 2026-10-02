@@ -950,7 +950,6 @@ let read_jsx_tag_name (p : Parser.t) :
      Foo
      Foo.Bar *)
 let parse_module_long_ident ~lowercase p =
-  (* Parser.leaveBreadcrumb p Reporting.ModuleLongIdent; *)
   let start_pos = Parser.start_pos p in
   let module_ident =
     match Parser.peek p with
