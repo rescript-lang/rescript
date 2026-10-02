@@ -96,51 +96,6 @@ type mapper = {
 val default_mapper : mapper
 (** A default mapper, which implements a "deep identity" mapping. *)
 
-(** {1 Apply mappers to compilation units} *)
-
-val tool_name : unit -> string
-(** Can be used within a ppx preprocessor to know which tool is
-    calling it ["ocamlc"], ["ocamlopt"], ["ocamldoc"], ["ocamldep"],
-    ["ocaml"], ...  Some global variables that reflect command-line
-    options are automatically synchronized between the calling tool
-    and the ppx preprocessor: {!Clflags.include_dirs},
-    {!Config.load_path}, {!Clflags.open_modules}, {!Clflags.for_package},
-    {!Clflags.debug}. *)
-
-val apply : source:string -> target:string -> mapper -> unit
-(** Apply a mapper (parametrized by the unit name) to a dumped
-    parsetree found in the [source] file and put the result in the
-    [target] file. The [structure] or [signature] field of the mapper
-    is applied to the implementation or interface.  *)
-
-val run_main : (string list -> mapper) -> unit
-(** Entry point to call to implement a standalone -ppx rewriter from a
-    mapper, parametrized by the command line arguments.  The current
-    unit name can be obtained from {!Location.input_name}.  This
-    function implements proper error reporting for uncaught
-    exceptions. *)
-
-(** {1 Registration API} *)
-
-val register_function : (string -> (string list -> mapper) -> unit) ref
-
-val register : string -> (string list -> mapper) -> unit
-(** Apply the [register_function].  The default behavior is to run the
-    mapper immediately, taking arguments from the process command
-    line.  This is to support a scenario where a mapper is linked as a
-    stand-alone executable.
-
-    It is possible to overwrite the [register_function] to define
-    "-ppx drivers", which combine several mappers in a single process.
-    Typically, a driver starts by defining [register_function] to a
-    custom implementation, then lets ppx rewriters (linked statically
-    or dynamically) register themselves, and then run all or some of
-    them.  It is also possible to have -ppx drivers apply rewriters to
-    only specific parts of an AST.
-
-    The first argument to [register] is a symbolic name to be used by
-    the ppx driver.  *)
-
 (** {1 Convenience functions to write mappers} *)
 
 val map_opt : ('a -> 'b) -> 'a option -> 'b option
