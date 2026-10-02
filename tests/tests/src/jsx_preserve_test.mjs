@@ -239,6 +239,19 @@ function Jsx_preserve_test(props) {
   </ContextProvider.make>;
 }
 
+let _comment_only_host = <div />;
+
+let _comment_only_fragment = <></>;
+
+let _comment_single_child = <div>
+  <span />
+</div>;
+
+let _comment_multiple_children = <div>
+  <span />
+  <span />
+</div>;
+
 let make$2 = Jsx_preserve_test;
 
 export {
@@ -273,5 +286,9 @@ export {
   context,
   ContextProvider,
   make$2 as make,
+  _comment_only_host,
+  _comment_only_fragment,
+  _comment_single_child,
+  _comment_multiple_children,
 }
 /* _single_element_child Not a pure module */

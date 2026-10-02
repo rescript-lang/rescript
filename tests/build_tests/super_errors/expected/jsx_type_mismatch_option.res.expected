@@ -1,10 +1,10 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/jsx_type_mismatch_option.res[0m:[2m18:13-16[0m
+  [36m/.../fixtures/jsx_type_mismatch_option.res[0m:[2m18:12-15[0m
 
   16 [2m│[0m }
   17 [2m│[0m 
-  [1;31m18[0m [2m│[0m let x = <> {[1;31mNone[0m} </>
+  [1;31m18[0m [2m│[0m let x = <>{[1;31mNone[0m}</>
   19 [2m│[0m 
 
   This has type: [1;31moption<'a>[0m

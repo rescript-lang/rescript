@@ -10,3 +10,18 @@ module ComponentWithOptionalProps = {
 }
 
 let _element = <ComponentWithOptionalProps i=1 s="test" element={<div />} />
+
+let _comment_only_host = <div>{/* no children prop */}</div>
+let _comment_only_fragment = <>{/* no children */}</>
+let _comment_single_child =
+  <div>
+    {/* before */}
+    <span />
+    {/* after */}
+  </div>
+let _comment_multiple_children =
+  <div>
+    <span />
+    {/* between */}
+    <span />
+  </div>
