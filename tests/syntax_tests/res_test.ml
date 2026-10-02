@@ -1,5 +1,3 @@
-module IO = Res_io
-
 let data_dir = "tests/syntax_tests/data"
 
 (* test printing of .res file*)
@@ -32,7 +30,7 @@ let () =
   let filename =
     Filename.concat data_dir "printer/comments/callbackTrailing.res"
   in
-  let source = IO.read_file ~filename in
+  let source = Ext_io.load_file filename in
   let parse source =
     let result =
       Res_driver.parse_implementation_from_source ~display_filename:filename
@@ -128,9 +126,9 @@ module Outcome_printer_tests = struct
         exit 1)
       else result.Res_driver.parsetree
     in
-    IO.write_file
-      ~filename:(Filename.concat data_dir "oprint/expected/oprint.resi.txt")
-      ~contents:(signature_to_outcome signature)
+    Ext_io.write_file
+      (Filename.concat data_dir "oprint/expected/oprint.resi.txt")
+      (signature_to_outcome signature)
 end
 
 module Parser_api_test = struct
