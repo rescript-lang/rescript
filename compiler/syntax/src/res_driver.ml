@@ -29,21 +29,9 @@ type print_engine = {
     comments:Res_comment.t list ->
     Parsetree.structure ->
     unit;
-  print_implementation_from_source:
-    width:int ->
-    source:string ->
-    comments:Res_comment.t list ->
-    Parsetree.structure ->
-    unit;
   print_interface:
     width:int ->
     filename:string ->
-    comments:Res_comment.t list ->
-    Parsetree.signature ->
-    unit;
-  print_interface_from_source:
-    width:int ->
-    source:string ->
     comments:Res_comment.t list ->
     Parsetree.signature ->
     unit;
@@ -171,15 +159,8 @@ let print_engine =
       (fun ~width ~filename:_ ~comments structure ->
         print_string
           (Res_printer.print_implementation ~width structure ~comments));
-    print_implementation_from_source =
-      (fun ~width ~source:_ ~comments structure ->
-        print_string
-          (Res_printer.print_implementation ~width structure ~comments));
     print_interface =
       (fun ~width ~filename:_ ~comments signature ->
-        print_string (Res_printer.print_interface ~width signature ~comments));
-    print_interface_from_source =
-      (fun ~width ~source:_ ~comments signature ->
         print_string (Res_printer.print_interface ~width signature ~comments));
   }
 
