@@ -13,39 +13,39 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** The interface of a -ppx rewriter
+(** Parsetree mappers
 
-  A -ppx rewriter is a program that accepts a serialized abstract syntax
-  tree and outputs another, possibly modified, abstract syntax tree.
-  This module encapsulates the interface between the compiler and
-  the -ppx rewriters, handling such details as the serialization format,
-  forwarding of command-line flags, and storing state.
-
-  {!mapper} allows to implement AST rewriting using open recursion.
-  A typical mapper would be based on {!default_mapper}, a deep
-  identity mapper, and will fall back on it for handling the syntax it
-  does not modify. For example:
+  {!mapper} implements AST rewriting using open recursion. A typical
+  mapper is based on {!default_mapper}, a deep identity mapper, and
+  falls back on it for the syntax it does not modify. For example:
 
   {[
-open Asttypes
 open Parsetree
 open Ast_mapper
 
-let test_mapper argv =
+let test_mapper =
   { default_mapper with
     expr = fun mapper expr ->
       match expr with
       | { pexp_desc = Pexp_extension ({ txt = "test" }, PStr [])} ->
-        Ast_helper.Exp.constant (Const_int 42)
+        Ast_helper.Exp.constant (Ast_helper.Const.int 42)
       | other -> default_mapper.expr mapper other; }
 
-let () =
-  register "ppx_test" test_mapper]}
+let rewrite (str : structure) = test_mapper.structure test_mapper str]}
 
-  This -ppx rewriter, which replaces [[%test]] in expressions with
-  the constant [42], can be compiled using
-  [ocamlc -o ppx_test -I +compiler-libs ocamlcommon.cma ppx_test.ml].
+  This mapper replaces [[%test]] in expressions with the constant [42].
+  The compiler's built-in rewriters ({!Bs_builtin_ppx}, {!Jsx_ppx}) are
+  mappers of this kind and run inside [bsc].
 
+  External rewriters passed to [bsc] with [-ppx] are separate
+  executables. {!Cmd_ppx_apply} prepends the [ocaml.ppx.context]
+  attribute ({!add_ppx_context_str}, {!add_ppx_context_sig}), writes the
+  AST to a temporary file as the magic number of {!Ml_binary}, the
+  source file name and the marshalled {!Parsetree0} structure or
+  signature, and runs [ppx input output]. The executable writes its
+  result to [output] in the same format; {!Cmd_ppx_apply} reads it back,
+  converts it to {!Parsetree}, and removes the context attribute
+  ({!drop_ppx_context_str}, {!drop_ppx_context_sig}).
   *)
 
 open Parsetree
@@ -123,9 +123,3 @@ val drop_ppx_context_str :
 val drop_ppx_context_sig :
   restore:bool -> Parsetree.signature -> Parsetree.signature
 (** Same as [drop_ppx_context_str], but for signatures. *)
-
-(** {1 Cookies} *)
-
-(** Cookies are used to pass information from a ppx processor to
-    a further invocation of itself, when called from the OCaml
-    toplevel (or other tools that support cookies). *)
