@@ -21,6 +21,7 @@
 #### :bug: Bug fix
 
 - Make rewatch compile independent modules after an unrelated failure and recompile blocked dependents when a changed interface survives a failed implementation, including across full watcher rebuilds. https://github.com/rescript-lang/rescript/pull/8667
+- Fix invalid JavaScript that exported names left unbound when a module's toplevel always throws. https://github.com/rescript-lang/rescript/pull/8692
 
 #### :memo: Documentation
 
