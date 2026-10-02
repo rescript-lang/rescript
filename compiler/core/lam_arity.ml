@@ -55,8 +55,6 @@ let extract_arity (x : t) =
   | Arity_na -> []
   | Arity_info (xs, _) -> xs
 
-(* let update_arity (x : t) xs =    *)
-
 let rec merge_arities_aux (acc : int list) (xs : int list) (ys : int list)
     (tail : bool) (tail2 : bool) =
   match (xs, ys) with

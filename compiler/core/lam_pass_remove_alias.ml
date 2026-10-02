@@ -194,11 +194,6 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
             (* ap_inlined = Always_inline || *)
             Lam_analysis.ok_to_inline_fun_when_app m ap_args
           then
-            (* let param_map =  *)
-            (*   Lam_analysis.free_variables meta.export_idents  *)
-            (*     (Lam_analysis.param_map_of_list params) body in *)
-            (* let old_count = List.length params in *)
-            (* let new_count = Map_ident.cardinal param_map in *)
             let param_map =
               Lam_closure.is_closed_with_map meta.export_idents params body
             in
@@ -229,13 +224,6 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
       when Ext_list.same_length params args
            && Lam_analysis.lfunction_can_be_inlined lfunction ->
       simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
-    (* | Lapply{ fn = Lfunction{function_kind =  Tupled;  params; body};  *)
-    (*          args = [Lprim {primitive = Pmakeblock _; args; _}]; _} *)
-    (*   (\** TODO: keep track of this parameter in ocaml trunk, *)
-    (*       can we switch to the tupled backend? *)
-    (*   *\) *)
-    (*   when  Ext_list.same_length params args -> *)
-    (*   simpl (Lam_beta_reduce.propogate_beta_reduce meta params body args) *)
     | Lstringswitch (l, sw, d) -> (
       let known_constant =
         match l with

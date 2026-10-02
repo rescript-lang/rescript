@@ -28,28 +28,7 @@
 let compile_group output_prefix (meta : Lam_stats.t) (x : Lam_group.t) :
     Js_output.t =
   match x with
-  (*
-        We need
-
-        2. [E.builtin_dot] for javascript builtin
-        3. [E.mldot]
-     *)
-  (* Special handling for values in [Pervasives] *)
-  (*
-         we delegate [stdout, stderr, and stdin] into [caml_io] module,
-         the motivation is to help dead code eliminatiion, it's helpful
-         to make those parts pure (not a function call), then it can be removed
-         if unused
-      *)
-
-  (* QUICK hack to make hello world example nicer,
-     Note the arity of [print_endline] is already analyzed before,
-     so it should be safe
-  *)
   | Single (kind, id, lam) ->
-    (* let lam = Optimizer.simplify_lets [] lam in  *)
-    (* can not apply again, it's wrong USE it with care*)
-    (* ([Js_stmt_make.comment (Gen_of_env.query_type id  env )], None)  ++ *)
     Lam_compile.compile_lambda ~output_prefix
       {
         continuation = Declare (kind, id);
@@ -101,9 +80,7 @@ let no_side_effects (rest : Lam_group.t list) : string option =
               Some (Printf.sprintf "%s" id.Ident.name)
             else None)
       | Nop lam ->
-        if not @@ Lam_analysis.no_side_effects lam then
-          (*  (Lam_util.string_of_lambda lam) *)
-          Some ""
+        if not @@ Lam_analysis.no_side_effects lam then Some ""
         else None (* TODO :*))
 
 (* Materialize JS-hoisted values as root-level aliases and exports. The source
@@ -386,8 +363,6 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
       Ext_log.dwarn ~__POS__ "\n@[[TIME:]Post-compile: %f@]@."
         (Sys.time () *. 1000.)
   in
-  (* The file is not big at all compared with [cmo] *)
-  (* Ext_marshal.to_file (Ext_path.chop_extension filename ^ ".mj")  js; *)
   let meta_exports = meta.exports in
   let export_set = Set_ident.of_list meta_exports in
   let js : J.program = {exports = meta_exports; export_set; block = body} in
@@ -396,8 +371,6 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
   |> Js_pass_tailcall_inline.tailcall_inline |> j "inline_and_shake"
   |> Js_pass_record_rest.program |> j "record_rest"
   |> Js_pass_flatten_and_mark_dead.program |> j "flatten_and_mark_dead"
-  (* |> Js_inline_and_eliminate.inline_and_shake *)
-  (* |> j "inline_and_shake" *)
   |> (fun js ->
   ignore @@ Js_pass_scope.program js;
   js)

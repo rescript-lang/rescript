@@ -311,7 +311,7 @@ let unit : t =
 *)
 
 (* Attention: Shared *mutable state* is evil,
-   [Js_fun_env.empty] is a mutable state ..
+   [Js_fun_env.make] creates a mutable state ..
 *)
 
 let ocaml_fun ?comment ?immutable_mask ?directive ~return_unit ~async
@@ -352,7 +352,6 @@ let method_ ?comment ?immutable_mask ~async ~return_unit params body : t =
     source_loc = None;
   }
 
-(** ATTENTION: This is coupuled with {!Caml_obj.caml_update_dummy} *)
 let dummy_obj ?comment (info : Lambda.tag_info) : t =
   (* TODO:
      for record it is [{}]
@@ -758,16 +757,6 @@ let bin ?comment (op : J.binop) (e0 : t) (e1 : t) : t =
    We wrap all boolean functions here, since OCaml boolean is a
    bit different from Javascript, so that we can change it in the future
 
-   {[ a && (b && c) === (a && b ) && c ]}
-     is not used: benefit is not clear
-     | Int_of_boolean e10, Bin(And, {expression_desc = Int_of_boolean e20 }, e3)
-      ->
-      and_ ?comment
-        { e1 with expression_desc
-                  =
-                    J.Int_of_boolean { expression_desc = Bin (And, e10,e20); comment = None; source_loc = None}
-        }
-        e3
    Note that
    {[ "" && 3 ]}
      return  "" instead of false, so [e1] is indeed useful
@@ -1451,11 +1440,6 @@ let is_int_tag ?has_null_undefined_other e =
       (Expr e)
   in
   emit_check check
-
-(* we are calling [Caml_primitive.primitive_name], since it's under our
-   control, we should make it follow the javascript name convention, and
-   call plain [dot]
-*)
 
 let tag ?comment ?(name = Js_dump_lit.tag) e : t =
   {expression_desc = Caml_block_tag (e, name); comment; source_loc = None}

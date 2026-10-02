@@ -510,15 +510,6 @@ and expression_desc cxt ~(level : int) f x : cxt =
     (* TODO: dump for comments *)
     pp_function ?directive ~is_method ~return_unit ~async
       ~fn_state:default_fn_exp_state cxt f params body env
-  (* TODO:
-       when [e] is [Js_raw_code] with arity
-       print it in a more precise way
-       It seems the optimizer already did work to make sure
-       {[
-         Call (Raw_js_code (s, Exp i), el, {Full})
-         when Ext_list.length_equal el i
-       ]}
-    *)
   (* When -bs-preserve-jsx is enabled, we marked each transformed application node throughout the compilation.
      Here we print the transformed application node into a JSX syntax.
      The JSX is slightly different from what a user would write,

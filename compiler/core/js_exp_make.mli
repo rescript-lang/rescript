@@ -29,7 +29,7 @@ type t = J.expression
 
     The better signature might be 
     {[
-      J.expresssion -> Js_output.t
+      J.expression -> Js_output.t
     ]}
     for exmaple
     {[
@@ -308,7 +308,6 @@ val in_ : t -> t -> t
 (** we don't expose a general interface, since a general interface is generally not safe *)
 
 val dummy_obj : ?comment:string -> Lambda.tag_info -> t
-(** used combined with [caml_update_dummy]*)
 
 val of_block : ?comment:string -> ?e:J.expression -> J.statement list -> t
 (** convert a block to expresion by using IIFE *)
