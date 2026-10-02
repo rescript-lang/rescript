@@ -21,6 +21,12 @@ function maybeWait {
   [[ $((taskCount % 20)) = 0 ]] && wait
 }
 
+# printer API, outcome printer snapshot, parser position and UTF-8 tests
+if ! $DUNE_BIN_DIR/syntax_tests; then
+  printf "syntax_tests failed\n"
+  exit 1
+fi
+
 pushd tests
 
 legacyJsReferences=$(find syntax_tests/data syntax_benchmarks/data \( -name "*.res" -o -name "*.resi" \) -exec grep -nHE '(^|[^[:alnum:]_])Js\.' {} + || true)
