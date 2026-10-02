@@ -37,9 +37,6 @@ type svgProps = {
 
 let x: svgProps = {x: "test", name: "test"}
 
-// uncomment this to reveal a parser error
-// type copiedSvgProps = {...svgProps}
-
 module MultipleDotDotDots = {
   type t1 = {x: int}
   type t2 = {y: string}
