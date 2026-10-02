@@ -31,10 +31,8 @@ end = struct
      **This command line is for the repo developer's testing purpose only. DO \
      NOT use it in production**!\n\n"
     ^ "Usage:\n  res_parser <options> <file>\n\n" ^ "Examples:\n"
-    ^ "  res_parser myFile.res\n"
-    ^ "  res_parser -parse ml -print res myFile.ml\n"
-    ^ "  res_parser -parse res -print binary -interface myFile.resi\n\n"
-    ^ "Options are:"
+    ^ "  res_parser myFile.res\n" ^ "  res_parser -print ml myFile.res\n"
+    ^ "  res_parser -print binary -interface myFile.resi\n\n" ^ "Options are:"
 
   let spec =
     [
@@ -51,8 +49,7 @@ end = struct
         "Parse as interface" );
       ( "-jsx-version",
         Arg.Int (fun i -> jsx_version := i),
-        "Apply a specific built-in ppx before parsing, none or 3, 4. Default: \
-         none" );
+        "Apply the built-in JSX transform before printing: 4. Default: none" );
       ( "-jsx-module",
         Arg.String (fun txt -> jsx_module := txt),
         "Specify the jsx module. Default: react" );

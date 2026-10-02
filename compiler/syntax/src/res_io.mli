@@ -5,4 +5,3 @@ val read_file : filename:string -> string
 
 (* writes "content" into file with name "filename" *)
 val write_file : filename:string -> contents:string -> unit
-[@@dead "+write_file"]

@@ -11,4 +11,4 @@ let write_file ~filename ~contents:txt =
   let chan = open_out_bin filename in
   output_string chan txt;
   close_out chan
-[@@raises Sys_error] [@@dead "+write_file"]
+[@@raises Sys_error]
