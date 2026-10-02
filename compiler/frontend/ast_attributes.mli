@@ -59,7 +59,6 @@ val get_index : attr
 val set : attr
 
 val internal_expansive : attr
-(* val deprecated : string -> attr *)
 
 val rs_externals : t -> Parsetree.primitive_repr option -> bool
 
