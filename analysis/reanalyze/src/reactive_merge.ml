@@ -9,7 +9,9 @@ type t = {
   decls: (Lexing.position, Decl.t) Reactive.t;
   annotations: (Lexing.position, File_annotations.annotated_as) Reactive.t;
   value_refs_from: (Lexing.position, Pos_set.t) Reactive.t;
+      (** Value refs: source -> targets *)
   type_refs_from: (Lexing.position, Pos_set.t) Reactive.t;
+      (** Type refs: source -> targets *)
   cross_file_items: (string, Cross_file_items.t) Reactive.t;
   file_deps_map: (string, File_set.t) Reactive.t;
   files: (string, unit) Reactive.t;
@@ -22,6 +24,8 @@ type t = {
 
 (** {1 Creation} *)
 
+(** Create reactive merge from a file data collection.
+    All derived collections update automatically when source changes. *)
 let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
     : t =
   (* Declarations: (pos, Decl.t) with last-write-wins *)

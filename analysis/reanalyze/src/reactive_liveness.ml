@@ -12,7 +12,14 @@ type t = {
   roots: (Lexing.position, unit) Reactive.t;
 }
 
-(** Compute reactive liveness from ReactiveMerge.t *)
+(** [create ~merged] computes reactive liveness from merged DCE data.
+    
+    Returns a record containing:
+    - live: positions that are live (via fixpoint)
+    - edges: declaration → referenced positions
+    - roots: initial live positions (annotated + externally referenced)
+    
+    Updates automatically when any input changes. *)
 let create ~(merged : Reactive_merge.t) : t =
   let decls = merged.decls in
   let annotations = merged.annotations in
@@ -123,7 +130,7 @@ let create ~(merged : Reactive_merge.t) : t =
   in
   {live; edges; roots = all_roots}
 
-(** Print reactive collection update statistics *)
+(** Print update statistics for liveness collections (roots, edges, live fixpoint) *)
 let print_stats ~(t : t) : unit =
   let print name (c : _ Reactive.t) =
     let s = Reactive.stats c in

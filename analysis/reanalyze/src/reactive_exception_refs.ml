@@ -5,14 +5,32 @@
     - exception_decls: (path, loc_to) indexed from Declarations
     - result: value refs (pos_to, pos_from)
     
-    When declarations or exception_refs change, only affected refs update. *)
+    When declarations or exception_refs change, only affected refs update.
+
+    {2 Pipeline}
+
+    {[
+      decls                    exception_refs
+        |                           |
+        | flat_map                  |
+        ↓                           |
+      exception_decls               |
+      (path → loc)                  |
+              ↘                    ↙
+                    join
+                      ↓
+               resolved_refs
+              (pos → PosSet)
+    ]} *)
 
 (** {1 Types} *)
 
 type t = {
   exception_decls: (Dce_path.t, Location.t) Reactive.t;
   resolved_refs: (Lexing.position, Pos_set.t) Reactive.t;
+      (** refs_to direction: target -> sources *)
   resolved_refs_from: (Lexing.position, Pos_set.t) Reactive.t;
+      (** refs_from direction: source -> targets (for forward solver) *)
 }
 (** Reactive exception ref collections *)
 

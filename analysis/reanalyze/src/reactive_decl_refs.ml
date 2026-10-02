@@ -1,7 +1,5 @@
 (** Reactive mapping from declarations to their outgoing references.
     
-    This is the reactive version of [Liveness.build_decl_refs_index].
-    
     For each declaration, computes the set of positions it references.
     Updates incrementally when refs or declarations change. *)
 
