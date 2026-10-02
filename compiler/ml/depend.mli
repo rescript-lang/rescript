@@ -22,7 +22,6 @@ type map_tree = Node of String_set.t * bound_map
 and bound_map = map_tree String_map.t
 val make_leaf : string -> map_tree
 val make_node : bound_map -> map_tree
-val weaken_map : String_set.t -> map_tree -> map_tree
 
 val free_structure_names : String_set.t ref
 

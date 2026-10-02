@@ -31,8 +31,6 @@ let check tbl name crc source =
 
 let set tbl name crc source = Hashtbl.add tbl name (crc, source)
 
-let source tbl name = snd (Hashtbl.find tbl name)
-
 let extract l tbl =
   let l = List.sort_uniq String.compare l in
   List.fold_left

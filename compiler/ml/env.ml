@@ -1958,12 +1958,6 @@ let initial_safe_string =
     (add_extension ~check:false)
     empty
 
-(* Return the environment summary *)
-
-let summary env =
-  if Path_map.is_empty env.local_constraints then env.summary
-  else Env_constraints (env.summary, env.local_constraints)
-
 let last_env = ref empty
 let last_reduced_env = ref empty
 

@@ -63,37 +63,12 @@ let rec find_str (x : string) = function
     let c = compare x v in
     if c = 0 then d else find_str x (if c < 0 then l else r)
 
-let rec mem x = function
-  | Empty -> false
-  | Node (l, v, _d, r, _) ->
-    let c = compare x v in
-    c = 0 || mem x (if c < 0 then l else r)
-
-let rec merge t1 t2 =
-  match (t1, t2) with
-  | Empty, t -> t
-  | t, Empty -> t
-  | Node (l1, v1, d1, r1, _h1), Node (l2, v2, d2, r2, _h2) ->
-    bal l1 v1 d1 (bal (merge r1 l2) v2 d2 r2)
-
-let rec remove x = function
-  | Empty -> Empty
-  | Node (l, v, d, r, _h) ->
-    let c = compare x v in
-    if c = 0 then merge l r
-    else if c < 0 then bal (remove x l) v d r
-    else bal l v d (remove x r)
-
 let rec iter f = function
   | Empty -> ()
   | Node (l, v, d, r, _) ->
     iter f l;
     f v d;
     iter f r
-
-let rec map f = function
-  | Empty -> Empty
-  | Node (l, v, d, r, h) -> Node (map f l, v, f v d, map f r, h)
 
 let rec fold f m accu =
   match m with

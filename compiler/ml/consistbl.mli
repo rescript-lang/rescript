@@ -34,11 +34,6 @@ val set : t -> string -> Digest.t -> string -> unit
    [crc] in [tbl], even if [name] already had a different CRC
    associated with [name] in [tbl]. *)
 
-val source : t -> string -> string
-(* [source tbl name] returns the file name associated with [name]
-   if the latter has an associated CRC in [tbl].
-   Raise [Not_found] otherwise. *)
-
 val extract : string list -> t -> (string * Digest.t option) list
 (* [extract tbl names] returns an associative list mapping each string
    in [names] to the CRC associated with it in [tbl]. If no CRC is

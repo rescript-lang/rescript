@@ -85,8 +85,6 @@ type change =
   | Ctype of type_expr * type_desc
   | Ccompress of type_expr * type_desc * type_desc
   | Clevel of type_expr * int
-  | Cname of
-      (Path.t * type_expr list) option ref * (Path.t * type_expr list) option
   | Crow of row_field option ref * row_field option
   | Cmutability of field_mutability ref * field_mutability
   | Cuniv of type_expr option ref * type_expr option
@@ -711,7 +709,6 @@ let undo_change = function
   | Ctype (ty, desc) -> ty.desc <- desc
   | Ccompress (ty, desc, _) -> ty.desc <- desc
   | Clevel (ty, level) -> ty.level <- level
-  | Cname (r, v) -> r := v
   | Crow (r, v) -> r := v
   | Cmutability (r, v) -> r := v
   | Cuniv (r, v) -> r := v
@@ -750,9 +747,6 @@ let set_level ty level =
 let set_univar rty ty =
   log_change (Cuniv (rty, !rty));
   rty := Some ty
-let set_name nm v =
-  log_change (Cname (nm, !nm));
-  nm := v
 let set_row_field e v =
   log_change (Crow (e, !e));
   e := Some v

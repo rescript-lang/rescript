@@ -932,8 +932,6 @@ let typexp ?printing_context sch ppf ty =
 
 let type_expr ppf ty = typexp false ppf ty
 
-and type_sch ppf ty = typexp true ppf ty
-
 and type_scheme ppf ty =
   reset_and_mark_loops ty;
   typexp true ppf ty

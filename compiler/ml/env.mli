@@ -212,8 +212,6 @@ val add_import : string -> unit
 (* Summaries -- compact representation of an environment, to be
    exported in debugging information. *)
 
-val summary : t -> summary
-
 (* Return an equivalent environment where all fields have been reset,
    except the summary. *)
 
