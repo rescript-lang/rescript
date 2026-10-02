@@ -380,13 +380,9 @@ let is_es6_arrow_expression ~in_ternary p =
   match Parser.peek p with
   | Lident "async" | Lparen ->
     Parser.lookahead p (fun state ->
-        let _async =
-          match Parser.peek state with
-          | Lident "async" ->
-            Parser.next state;
-            true
-          | _ -> false
-        in
+        (match Parser.peek state with
+        | Lident "async" -> Parser.next state
+        | _ -> ());
         match Parser.peek state with
         | Lident _ | Underscore -> (
           Parser.next state;

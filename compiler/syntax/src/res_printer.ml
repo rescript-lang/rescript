@@ -4651,12 +4651,8 @@ and print_jsx_container_tag ~state tag_name
       loc_ghost = false;
     }
   in
-  let _opening_greater_than_has_leading_comments, opening_greater_than_doc =
-    let has_leading_comments =
-      has_leading_comments cmt_tbl opening_greater_than_loc
-    in
-    ( has_leading_comments,
-      print_comments Doc.greater_than cmt_tbl opening_greater_than_loc )
+  let opening_greater_than_doc =
+    print_comments Doc.greater_than cmt_tbl opening_greater_than_loc
   in
   let formatted_props = print_jsx_props ~state props cmt_tbl in
   (* <div className="test" /> *)
