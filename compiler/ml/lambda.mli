@@ -524,10 +524,6 @@ val sequor : t -> t -> t
 
 val sequand : t -> t -> t
 
-val lambda_true : t
-
-val lambda_false : t
-
 val eq_approx : t -> t -> bool
 
 val mk_builtin : builtin -> t list -> Location.t -> t

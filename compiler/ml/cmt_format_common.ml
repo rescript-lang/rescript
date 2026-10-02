@@ -107,6 +107,14 @@ exception Error of error
 
 let input_cmt ic = (input_value ic : cmt_infos)
 
+(** [read filename] opens filename, and extract both the cmi_infos, if
+    it exists, and the cmt_infos, if it exists. Thus, it can be used
+    with .cmi, .cmt and .cmti files.
+
+    .cmti files always contain a cmi_infos at the beginning. .cmt files
+    only contain a cmi_infos at the beginning if there is no associated
+    .cmti file.
+*)
 let read filename =
   (*  Printf.fprintf stderr "Cmt_format.read %s\n%!" filename; *)
   let ic = open_in_bin filename in

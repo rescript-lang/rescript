@@ -60,7 +60,6 @@ val extension_constructor : t -> extension_constructor -> extension_constructor
 val modtype : t -> module_type -> module_type
 val signature : t -> signature -> signature
 val modtype_declaration : t -> modtype_declaration -> modtype_declaration
-val module_declaration : t -> module_declaration -> module_declaration
 
 (* A forward reference to be filled in ctype.ml. *)
 val ctype_apply_env_empty :

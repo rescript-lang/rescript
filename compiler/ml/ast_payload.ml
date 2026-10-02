@@ -264,6 +264,8 @@ type action = lid * Parsetree.expression option
     {[ { x = exp }]}
 *)
 
+(** Report to the user, as a warning, that the bs-attribute parser is bailing out. (This is to allow
+    external ppx, like ppx_deriving, to pick up where the builtin ppx leave off.) *)
 let unrecognized_config_record loc text =
   Location.prerr_warning loc (Warnings.Bs_derive_warning text)
 

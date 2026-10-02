@@ -23,6 +23,7 @@ type str = string loc
 type loc = Location.t
 type attrs = attribute list
 
+(** Default value for all optional location arguments. *)
 let default_loc = ref Location.none
 
 module Const = struct

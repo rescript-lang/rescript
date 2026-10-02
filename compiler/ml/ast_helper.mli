@@ -25,9 +25,6 @@ type attrs = attribute list
 
 (** {1 Default locations} *)
 
-val default_loc : loc ref
-(** Default value for all optional location arguments. *)
-
 (** {1 Constants} *)
 
 module Const : sig

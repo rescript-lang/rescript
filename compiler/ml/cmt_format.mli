@@ -70,16 +70,6 @@ type error = Not_a_typedtree of string
 
 exception Error of error
 
-val read : string -> Cmi_format.cmi_infos option * cmt_infos option
-(** [read filename] opens filename, and extract both the cmi_infos, if
-    it exists, and the cmt_infos, if it exists. Thus, it can be used
-    with .cmi, .cmt and .cmti files.
-
-    .cmti files always contain a cmi_infos at the beginning. .cmt files
-    only contain a cmi_infos at the beginning if there is no associated
-    .cmti file.
-*)
-
 val read_cmt : string -> cmt_infos
 val read_cmi : string -> Cmi_format.cmi_infos
 
@@ -101,8 +91,6 @@ val save_cmt :
 
 (* Miscellaneous functions *)
 
-val read_magic_number : in_channel -> string
-
 val clear : unit -> unit
 
 val add_saved_type : binary_part -> unit
@@ -111,14 +99,6 @@ val set_saved_types : binary_part list -> unit
 
 val record_value_dependency :
   Types.value_description -> Types.value_description -> unit
-
-val record_deprecated_used :
-  ?deprecated_context:Cmt_utils.deprecated_used_context ->
-  ?migration_template:Parsetree.expression ->
-  ?migration_in_pipe_chain_template:Parsetree.expression ->
-  Location.t ->
-  string ->
-  unit
 
 (*
 

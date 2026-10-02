@@ -17,8 +17,6 @@ open Format
 
 val lambda : formatter -> Lambda.t -> unit
 
-val primitive : formatter -> Lambda.primitive -> unit
-
 val serialize : string -> Lambda.t -> unit
 (** Print a term to a file, unwrapped: used for the -debug-ir dumps. *)
 
