@@ -90,7 +90,7 @@ let filename_from_loc (pstr_loc : Location.t) =
 let make_module_name file_name nested_modules fn_name =
   let full_module_name =
     match (file_name, nested_modules, fn_name) with
-    (* TODO: is this even reachable? It seems like the fileName always exists *)
+    (* TODO: is this even reachable? It seems like the file_name always exists *)
     | "", nested_modules, "make" -> nested_modules
     | "", nested_modules, fn_name -> List.rev (fn_name :: nested_modules)
     | file_name, nested_modules, "make" -> file_name :: List.rev nested_modules

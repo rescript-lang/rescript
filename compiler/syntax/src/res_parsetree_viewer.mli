@@ -2,9 +2,9 @@
  * and optional arguments it starts at the label and ends at the expression. *)
 val argument_loc : Asttypes.arg_label * Parsetree.expression -> Location.t
 
-(* Restructures a nested tree of arrow types into its args & returnType
+(* Restructures a nested tree of arrow types into its args & return type
  * The parsetree contains: a => b => c => d, for printing purposes
- * we restructure the tree into (a, b, c) and its returnType d *)
+ * we restructure the tree into (a, b, c) and its return type d *)
 val arrow_type :
   Parsetree.core_type ->
   Parsetree.attributes * Parsetree.arg list * Parsetree.core_type
@@ -113,7 +113,7 @@ val mod_expr_apply :
 (* Collection of utilities to view the ast in a more a convenient form,
  * allowing for easier processing.
  * Example: given a ptyp_arrow type, what are its arguments and what is the
- * returnType? *)
+ * return type? *)
 
 val mod_expr_functor :
   Parsetree.module_expr ->
