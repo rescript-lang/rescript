@@ -5,7 +5,7 @@
     - [t] - immutable, for solver (read-only access)
     
     References are stored in refs_from direction:
-    - refs_from: posFrom -> {targets it references}
+    - refs_from: pos_from -> {targets it references}
     
     This is what the forward liveness algorithm needs. *)
 
@@ -29,6 +29,6 @@ val add_type_ref :
 (** {2 Builder extraction for reactive merge} *)
 
 val builder_value_refs_from_list : builder -> (Lexing.position * Pos_set.t) list
-(** Extract value refs (posFrom -> targets) *)
+(** Extract value refs (pos_from -> targets) *)
 
 val builder_type_refs_from_list : builder -> (Lexing.position * Pos_set.t) list

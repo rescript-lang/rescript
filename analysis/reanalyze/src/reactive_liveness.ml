@@ -12,7 +12,14 @@ type t = {
   roots: (Lexing.position, unit) Reactive.t;
 }
 
-(** Compute reactive liveness from ReactiveMerge.t *)
+(** [create ~merged] computes reactive liveness from merged DCE data.
+    
+    Returns a record containing:
+    - live: positions that are live (via fixpoint)
+    - edges: declaration → referenced positions
+    - roots: initial live positions (annotated + externally referenced)
+    
+    Updates automatically when any input changes. *)
 let create ~(merged : Reactive_merge.t) : t =
   let decls = merged.decls in
   let annotations = merged.annotations in
@@ -24,7 +31,7 @@ let create ~(merged : Reactive_merge.t) : t =
   in
 
   (* Combine type refs using union: per-file refs + type deps from
-     ReactiveTypeDeps + record coercion links *)
+     Reactive_type_deps + record coercion links *)
   let type_refs_from : (Lexing.position, Pos_set.t) Reactive.t =
     let with_type_deps =
       Reactive.union ~name:"liveness.type_refs_from" merged.type_refs_from
@@ -55,20 +62,18 @@ let create ~(merged : Reactive_merge.t) : t =
      A position is externally referenced if any reference to it comes from
      a position that is NOT a declaration position (exact match).
      
-     This matches the non-reactive algorithm which uses DeclarationStore.find_opt.
-     
      We use join to explicitly track the dependency on decls. When a decl at
-     position P arrives, any ref with posFrom=P will be reprocessed. *)
+     position P arrives, any ref with pos_from=P will be reprocessed. *)
   let external_value_refs : (Lexing.position, unit) Reactive.t =
     Reactive.join ~name:"liveness.external_value_refs" value_refs_from decls
       ~key_of:(fun pos_from _targets -> pos_from)
       ~f:(fun _posFrom targets decl_opt ->
         match decl_opt with
         | Some _ ->
-          (* posFrom IS a decl position, refs are internal *)
+          (* pos_from IS a decl position, refs are internal *)
           []
         | None ->
-          (* posFrom is NOT a decl position, targets are externally referenced *)
+          (* pos_from is NOT a decl position, targets are externally referenced *)
           Pos_set.elements targets |> List.map (fun pos_to -> (pos_to, ())))
       ~merge:(fun () () -> ())
       ()
@@ -80,10 +85,10 @@ let create ~(merged : Reactive_merge.t) : t =
       ~f:(fun _posFrom targets decl_opt ->
         match decl_opt with
         | Some _ ->
-          (* posFrom IS a decl position, refs are internal *)
+          (* pos_from IS a decl position, refs are internal *)
           []
         | None ->
-          (* posFrom is NOT a decl position, targets are externally referenced *)
+          (* pos_from is NOT a decl position, targets are externally referenced *)
           Pos_set.elements targets |> List.map (fun pos_to -> (pos_to, ())))
       ~merge:(fun () () -> ())
       ()
@@ -123,7 +128,7 @@ let create ~(merged : Reactive_merge.t) : t =
   in
   {live; edges; roots = all_roots}
 
-(** Print reactive collection update statistics *)
+(** Print update statistics for liveness collections (roots, edges, live fixpoint) *)
 let print_stats ~(t : t) : unit =
   let print name (c : _ Reactive.t) =
     let s = Reactive.stats c in

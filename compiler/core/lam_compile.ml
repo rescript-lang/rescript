@@ -360,8 +360,8 @@ let compile output_prefix =
       Js_output.output_of_block_and_expression lambda_cxt.continuation args_code
         expression
   (*
-    The second return values are values which need to be wrapped using
-   [update_dummy]
+    The second return value holds declarations, such as [dummy_obj]
+   placeholders, that are emitted before the bindings
 
    Invariant:  jmp_table can not across function boundary,
        here we share env
@@ -1626,7 +1626,7 @@ let compile output_prefix =
       in
       let args_code : J.block = List.concat args_block in
       let exp =
-        (* TODO: all can be done in [compile_primitive] *)
+        (* TODO: all can be done in [Lam_compile_primitive.translate] *)
         Lam_compile_primitive.translate output_prefix loc lambda_cxt primitive
           args_expr
       in
@@ -1862,8 +1862,6 @@ let compile output_prefix =
          it requires compile args first (register that some objects are jsidentifiers)
          and compile body wiht such effect.
          So here we should compile [id_args] first, then [body] later.
-         Note it has some side effect over cache number as well, mostly the value of
-         [Caml_primitive["caml_get_public_method"](x,hash_tab, number)]
 
          To fix this,
          1. scan the lambda layer first, register js identifier before proceeding

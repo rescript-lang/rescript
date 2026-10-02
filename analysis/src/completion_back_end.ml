@@ -394,7 +394,7 @@ let kind_to_data file_path (kind : Completion.kind) =
 
 let find_all_completions ~(env : Query_env.t) ~prefix ~exact ~names_used
     ~(completion_context : Completable.completion_context) =
-  Log.log ("findAllCompletions uri:" ^ Uri.to_string env.file.uri);
+  Log.log ("find_all_completions uri:" ^ Uri.to_string env.file.uri);
   match completion_context with
   | Value ->
     completion_for_exported_values ~env ~prefix ~exact ~names_used
@@ -428,9 +428,6 @@ let process_local_value name loc context_path scope ~prefix ~exact ~env
           }
           :: local_tables.result_rev)
     | None ->
-      if !Cfg.debug_follow_ctx_path then
-        Printf.printf "Completion Value Not Found %s loc:%s\n" name
-          (Loc.to_string loc);
       local_tables.result_rev <-
         Completion.create name ~env
           ~kind:
@@ -663,8 +660,8 @@ let find_local_completions_with_opens ~pos ~(env : Query_env.t) ~prefix ~exact
     ~opens ~scope ~(completion_context : Completable.completion_context) =
   (* TODO: handle arbitrary interleaving of opens and local bindings correctly *)
   Log.log
-    ("findLocalCompletionsWithOpens uri:" ^ Uri.to_string env.file.uri ^ " pos:"
-   ^ Pos.to_string pos);
+    ("find_local_completions_with_opens uri:" ^ Uri.to_string env.file.uri
+   ^ " pos:" ^ Pos.to_string pos);
   let local_tables = Local_tables.create () in
   match completion_context with
   | Value | ValueOrField ->
@@ -898,12 +895,6 @@ let completion_to_item ~state
     insertTextFormat = insert_text_format;
     filterText = filter_text;
   }
-
-let completions_get_type_env = function
-  | {Completion.kind = Value typ; env} :: _ -> Some (typ, env)
-  | {Completion.kind = ObjLabel typ; env} :: _ -> Some (typ, env)
-  | {Completion.kind = Field ({typ}, _); env} :: _ -> Some (typ, env)
-  | _ -> None
 
 type get_completions_for_context_path_mode = Regular | Pipe
 
@@ -1251,12 +1242,12 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
       | None ->
         if Debug.verbose () then
           Printf.printf
-            "[pipe_completion] Could not find mainTypeId. Aborting pipe \
+            "[pipe_completion] Could not find main_type_id. Aborting pipe \
              completions.\n";
         []
       | Some main_type_id ->
         if Debug.verbose () then
-          Printf.printf "[pipe_completion] mainTypeId: %s\n" main_type_id;
+          Printf.printf "[pipe_completion] main_type_id: %s\n" main_type_id;
         let pipe_completions =
           (* We now need a completion path from where to look up the module for our dot completion type.
               This is from where we pull all of the functions we want to complete for the pipe.
@@ -1512,7 +1503,7 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
       ])
   | CPatternPath {root_ctx_path; nested} -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPatternPath";
-    (* TODO(env-stuff) Get rid of innerType etc *)
+    (* TODO(env-stuff) Get rid of inner_type etc *)
     match
       root_ctx_path
       |> get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens
@@ -1597,7 +1588,7 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
   let print_constructor_args = print_constructor_args ~mode in
   let create = Completion.create ?type_arg_context in
   let get_record_completions ~env ~fields ~extracted_type =
-    (* As we're completing for a record, we'll need a hint (completionContext)
+    (* As we're completing for a record, we'll need a hint (completion_context)
        here to figure out whether we should complete for a record field, or
        the record body itself. *)
     match completion_context with

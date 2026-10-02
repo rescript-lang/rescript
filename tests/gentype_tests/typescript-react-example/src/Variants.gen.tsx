@@ -26,7 +26,7 @@ export type x1 = "x" | "x1";
 
 export type x2 = "x" | "x2";
 
-export type type_ = "Type";
+export type type_ = "type";
 export type type = type_;
 
 export type myList = "E" | { TAG: "C"; _0: number; _1: myList };
@@ -76,6 +76,8 @@ export const testConvert2to3: (x:testGenTypeAs2) => testGenTypeAs3 = VariantsJS.
 export const id1: (x:x1) => x1 = VariantsJS.id1 as any;
 
 export const id2: (x:x2) => x2 = VariantsJS.id2 as any;
+
+export const typeCase: type_ = VariantsJS.typeCase as any;
 
 export const polyWithOpt: (foo:string) => (undefined | (
     { NAME: "One"; VAL: string }

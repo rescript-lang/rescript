@@ -2,9 +2,9 @@
  * and optional arguments it starts at the label and ends at the expression. *)
 val argument_loc : Asttypes.arg_label * Parsetree.expression -> Location.t
 
-(* Restructures a nested tree of arrow types into its args & returnType
+(* Restructures a nested tree of arrow types into its args & return type
  * The parsetree contains: a => b => c => d, for printing purposes
- * we restructure the tree into (a, b, c) and its returnType d *)
+ * we restructure the tree into (a, b, c) and its return type d *)
 val arrow_type :
   Parsetree.core_type ->
   Parsetree.attributes * Parsetree.arg list * Parsetree.core_type
@@ -19,7 +19,6 @@ val expr_is_await : Parsetree.expression -> bool
 val has_await_attribute : Parsetree.attributes -> bool
 val has_res_pat_variant_spread_attribute : Parsetree.attributes -> bool
 val has_dict_pattern_attribute : Parsetree.attributes -> bool
-val has_dict_spread_attribute : Parsetree.attributes -> bool
 
 type dict_expr_part =
   | DictExprRows of Parsetree.expression
@@ -54,12 +53,6 @@ type fun_param_kind =
     }
   | NewTypes of {attrs: Parsetree.attributes; locs: string Asttypes.loc list}
 
-(* Groups a function's newtypes into printable groups: a new group starts
-   at each attribute-bearing newtype. *)
-val group_newtypes :
-  (string Asttypes.loc * Parsetree.attributes) list ->
-  (Parsetree.attributes * string Asttypes.loc list) list
-
 val fun_expr :
   Parsetree.expression -> bool * fun_param_kind list * Parsetree.expression
 
@@ -79,7 +72,6 @@ val operator_precedence : string -> int
 
 val not_ghost_operator : string -> Location.t -> bool
 val is_unary_expression : Parsetree.expression -> bool
-val is_binary_operator : string -> bool
 val is_binary_expression : Parsetree.expression -> bool
 val is_rhs_binary_operator : string -> bool
 val is_equality_operator : string -> bool
@@ -121,7 +113,7 @@ val mod_expr_apply :
 (* Collection of utilities to view the ast in a more a convenient form,
  * allowing for easier processing.
  * Example: given a ptyp_arrow type, what are its arguments and what is the
- * returnType? *)
+ * return type? *)
 
 val mod_expr_functor :
   Parsetree.module_expr ->

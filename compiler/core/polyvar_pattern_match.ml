@@ -89,15 +89,9 @@ let make_test_sequence_variant_constant (fail : lam option) (arg : lam)
         Lambda.if_ predicate act1 acc)
   | [], None -> assert false
 
-let call_switcher_variant_constant (fail : lam option) (arg : lam)
-    (int_lambda_list : (int * (string * lam)) list) =
-  let int_lambda_list = convert int_lambda_list in
-  match (int_lambda_list, fail) with
-  | (_, act) :: rest, None | rest, Some act ->
-    Ext_list.fold_right rest act (fun (hash_names, act1) acc ->
-        let predicate = or_list arg hash_names in
-        Lambda.if_ predicate act1 acc)
-  | [], None -> assert false
+(* Both Matching hooks compile constant polymorphic-variant cases to the
+   same chain of tag tests. *)
+let call_switcher_variant_constant = make_test_sequence_variant_constant
 
 let call_switcher_variant_constr (loc : Location.t) (fail : lam option)
     (arg : lam) int_lambda_list : lam =

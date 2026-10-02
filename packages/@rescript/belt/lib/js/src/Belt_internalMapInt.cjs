@@ -307,12 +307,6 @@ let A;
 
 let S;
 
-let cmpU = cmp;
-
-let eqU = eq;
-
-let mergeU = merge;
-
 exports.N = N;
 exports.A = A;
 exports.S = S;
@@ -331,7 +325,4 @@ exports.eqAux = eqAux;
 exports.eq = eq;
 exports.addMutate = addMutate;
 exports.fromArray = fromArray;
-exports.cmpU = cmpU;
-exports.eqU = eqU;
-exports.mergeU = mergeU;
 /* No side effect */

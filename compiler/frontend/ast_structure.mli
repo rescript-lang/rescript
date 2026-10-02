@@ -28,11 +28,4 @@ type t = item list
 
 val fuse_all : ?loc:Ast_helper.loc -> t -> item
 
-(* val fuse_with_constraint:
-   ?loc:Ast_helper.loc ->
-   Parsetree.type_declaration list ->
-   t   ->
-   Ast_signature.t ->
-   item *)
-
 val constraint_ : ?loc:Ast_helper.loc -> t -> Ast_signature.t -> item

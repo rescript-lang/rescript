@@ -419,14 +419,6 @@ let scan_string_escape_sequence ~start_pos scanner =
   | _ ->
     (* unknown escape sequence
      * TODO: we should warn the user here. Let's not make it a hard error for now, for reason compat *)
-    (*
-      let pos = position scanner in
-      let msg =
-        if ch == -1 then "unclosed escape sequence"
-        else "unknown escape sequence"
-      in
-      scanner.err ~startPos ~endPos:pos (Diagnostics.message msg)
-     *)
     ()
 
 let scan_string scanner =
@@ -1051,7 +1043,6 @@ let rec scan scanner =
       token
   in
   let end_pos = position scanner in
-  (* _printDebug ~startPos ~endPos scanner token; *)
   (start_pos, end_pos, token)
 
 (* misc helpers used elsewhere *)
@@ -1066,7 +1057,7 @@ let is_binary_op src start_cnum end_cnum =
     assert (end_cnum >= 0);
     assert (start_cnum > 0 && start_cnum < String.length src);
     let left_ok = is_whitespace (String.unsafe_get src (start_cnum - 1)) in
-    (* we need some stronger confidence that endCnum is ok *)
+    (* we need some stronger confidence that end_cnum is ok *)
     let right_ok =
       end_cnum >= String.length src
       || is_whitespace (String.unsafe_get src end_cnum)

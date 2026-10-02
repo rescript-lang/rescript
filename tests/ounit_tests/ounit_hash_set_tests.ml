@@ -175,11 +175,7 @@ let suites =
            for i = 0 to 1100 do
              OUnit.assert_bool "exist"
                (Id_hash_set.mem v {name = "x"; stamp = i})
-           done
-         (* OUnit.assert_equal (Hash_set.stats v) *)
-         (*   {num_bindings = 1990; num_buckets = 1024; max_bucket_length = 8; *)
-         (*    bucket_histogram = [|148; 275; 285; 182; 95; 21; 14; 2; 2|]} *)
-         );
+           done );
          ( __LOC__ >:: fun _ ->
            let duplicate arr =
              let len = Array.length arr in

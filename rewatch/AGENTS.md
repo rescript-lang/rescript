@@ -188,10 +188,9 @@ When clippy suggests refactoring that could impact performance, consider the tra
 #### Adding New CLI Flags
 
 1. Add to `BuildArgs` and `WatchArgs` in `cli.rs`
-2. Update `From<BuildArgs> for WatchArgs` implementation
-3. Pass through `main.rs` to build functions
-4. Thread through build system to where it's needed
-5. Add unit tests for the new functionality
+2. Pass through `main.rs` to build functions
+3. Thread through build system to where it's needed
+4. Add unit tests for the new functionality
 
 #### Modifying Compiler Arguments
 

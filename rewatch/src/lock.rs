@@ -114,9 +114,9 @@ impl LockKind {
     }
 }
 
-pub const TIMEOUT_SECONDS: u64 = 60;
+const TIMEOUT_SECONDS: u64 = 60;
 
-pub fn await_lock_deletion(location: &Path, kind: LockKind) -> Result<(), Error> {
+fn await_lock_deletion(location: &Path, kind: LockKind) -> Result<(), Error> {
     let now = SystemTime::now();
     let lock_path = location.join(kind.file_name());
     let queue = Arc::new(FifoQueue::<Result<Event, notify::Error>>::new());
@@ -163,7 +163,7 @@ pub fn await_lock_deletion(location: &Path, kind: LockKind) -> Result<(), Error>
     }
 }
 
-pub fn get(kind: LockKind, folder: &str) -> Lock {
+fn get(kind: LockKind, folder: &str) -> Lock {
     let project_folder = Path::new(folder);
     if !project_folder.exists() {
         return Lock::Error(Error::ProjectFolderMissing(project_folder.to_path_buf()));

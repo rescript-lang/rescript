@@ -41,16 +41,6 @@ let derive_table : derive_table ref = ref Map_string.empty
 
 let register key value = derive_table := Map_string.add !derive_table key value
 
-(* let gen_structure
-    (tdcls : tdcls)
-    (actions :  Ast_payload.action list )
-    (explict_nonrec : bool )
-   : Ast_structure.t =
-   Ext_list.flat_map
-    (fun action ->
-       (Ast_payload.table_dispatch !derive_table action).structure_gen
-         tdcls explict_nonrec) actions *)
-
 let gen_signature tdcls (actions : Ast_payload.action list)
     (explict_nonrec : Asttypes.rec_flag) : Ast_signature.t =
   Ext_list.flat_map actions (fun action ->

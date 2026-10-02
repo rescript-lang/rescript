@@ -22,7 +22,7 @@ type Pkg = (PackageName, AbsolutePath);
 /// To avoid reanalyze-side "package resolution", v2 includes an explicit `cmt_scan` plan:
 /// a list of build roots (`.../lib/bs`) and the subdirectories within those roots to scan.
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CmtScanEntry {
+struct CmtScanEntry {
     /// Path to a `lib/bs` directory, relative to the workspace root.
     pub build_root: PathBuf,
     /// Subdirectories (relative to `build_root`) to scan for `.cmt/.cmti`.
@@ -32,7 +32,7 @@ pub struct CmtScanEntry {
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SourceDirs {
+struct SourceDirs {
     pub version: u8,
     pub dirs: Vec<Dir>,
     pub pkgs: Vec<Pkg>,

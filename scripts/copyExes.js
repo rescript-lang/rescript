@@ -34,12 +34,11 @@ if (shouldCopyRewatch) {
 /**
  * @param {string} dir
  * @param {string} exe
- * @param {string | undefined} renamed
  */
-function copyExe(dir, exe, renamed) {
+function copyExe(dir, exe) {
   const ext = process.platform === "win32" ? ".exe" : "";
   const src = path.join(dir, exe + ext);
-  const dest = path.join(binDir, `${renamed ?? exe}.exe`);
+  const dest = path.join(binDir, `${exe}.exe`);
 
   // For some reason, the copy operation fails in Windows CI if the file already exists.
   if (process.platform === "win32" && fs.existsSync(dest)) {

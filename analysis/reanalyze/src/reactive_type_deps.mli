@@ -20,8 +20,8 @@
     {2 Example}
 
     {[
-      let reactive_decls = ReactiveMerge.create ... in
-      let type_deps = ReactiveTypeDeps.create
+      let reactive_decls = Reactive_merge.create ... in
+      let type_deps = Reactive_type_deps.create
         ~decls:reactive_decls.decls
         ~report_types_dead_only_in_interface:true
       in

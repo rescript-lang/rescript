@@ -380,22 +380,13 @@ let is_es6_arrow_expression ~in_ternary p =
   match Parser.peek p with
   | Lident "async" | Lparen ->
     Parser.lookahead p (fun state ->
-        let _async =
-          match Parser.peek state with
-          | Lident "async" ->
-            Parser.next state;
-            true
-          | _ -> false
-        in
+        (match Parser.peek state with
+        | Lident "async" -> Parser.next state
+        | _ -> ());
         match Parser.peek state with
         | Lident _ | Underscore -> (
           Parser.next state;
           match Parser.peek state with
-          (* Don't think that this valid
-         * Imagine: let x = (a: int)
-         * This is a parenthesized expression with a type constraint, wait for
-         * the arrow *)
-          (* | Colon when not inTernary -> true *)
           | EqualGreater -> true
           | _ -> false)
         | Lparen -> (
@@ -950,7 +941,6 @@ let read_jsx_tag_name (p : Parser.t) :
      Foo
      Foo.Bar *)
 let parse_module_long_ident ~lowercase p =
-  (* Parser.leaveBreadcrumb p Reporting.ModuleLongIdent; *)
   let start_pos = Parser.start_pos p in
   let module_ident =
     match Parser.peek p with
@@ -973,7 +963,6 @@ let parse_module_long_ident ~lowercase p =
       Location.mkloc (Longident.Lident "_")
         (mk_loc start_pos (Parser.position p))
   in
-  (* Parser.eatBreadcrumb p; *)
   module_ident
 
 (* open-def ::=
@@ -2088,7 +2077,7 @@ and parse_atomic_expr p =
         | _ ->
           Parser.expect Rparen p;
           expr
-        (* {expr with pexp_loc = mkLoc startPos p.prevEndPos}
+        (* {expr with pexp_loc = mk_loc start_pos p.prev_end_pos}
          * What does this location mean here? It means that when there's
          * a parenthesized we keep the location here for whitespace interleaving.
          * Without the closing paren in the location there will always be an extra
@@ -2349,11 +2338,9 @@ and parse_operand_expr ~context p =
         parse_es6_arrow_expression ~async:false ~arrow_attrs ~context p
       else parse_unary_expr p
   in
-  (* let endPos = p.Parser.prevEndPos in *)
   {
     expr with
     pexp_attributes = List.concat [expr.Parsetree.pexp_attributes; !attrs];
-    (* pexp_loc = mkLoc startPos endPos *)
   }
 
 (* a binary expression is an expression that combines two expressions with an
@@ -2413,39 +2400,6 @@ and parse_binary_expr ?(context = OrdinaryExpr) ?a p prec =
       loop expr)
   in
   loop a
-
-(* If we even need this, determines if < might be the start of jsx. Not 100% complete *)
-(* and isStartOfJsx p = *)
-(* Parser.lookahead p (fun p -> *)
-(* match (Parser.peek p) with *)
-(* | LessThan -> *)
-(* Parser.next p; *)
-(* begin match (Parser.peek p) with *)
-(* | GreaterThan (* <> *) -> true *)
-(* | Lident _ | Uident _ | List -> *)
-(* ignore (parseJsxName p); *)
-(* begin match (Parser.peek p) with *)
-(* | GreaterThan (* <div> *) -> true *)
-(* | Question (*<Component ? *) -> true *)
-(* | Lident _ | List -> *)
-(* Parser.next p; *)
-(* begin match (Parser.peek p) with *)
-(* | Equal (* <Component handleClick= *) -> true *)
-(* | _ -> false (* TODO *) *)
-(* end *)
-(* | Forwardslash (* <Component / *)-> *)
-(* Parser.next p; *)
-(* begin match (Parser.peek p) with *)
-(* | GreaterThan (* <Component /> *) -> true *)
-(* | _ -> false *)
-(* end *)
-(* | _ -> *)
-(* false *)
-(* end *)
-(* | _ -> false *)
-(* end *)
-(* | _ -> false *)
-(* ) *)
 
 and parse_template_expr ?prefix p =
   let parse_parts p =
@@ -4877,7 +4831,6 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
  *)
 and parse_typ_expr ?current_type_name_path ?inline_types_context ?attrs
     ?(es6_arrow = true) ?(alias = true) p =
-  (* Parser.leaveBreadcrumb p Grammar.TypeExpression; *)
   let start_pos = Parser.start_pos p in
   let attrs =
     match attrs with
@@ -4897,7 +4850,6 @@ and parse_typ_expr ?current_type_name_path ?inline_types_context ?attrs
         ~es6_arrow ~start_pos typ p
   in
   let typ = if alias then parse_type_alias p typ else typ in
-  (* Parser.eatBreadcrumb p; *)
   typ
 
 and parse_arrow_type_rest ?current_type_name_path ?inline_types_context
@@ -6233,7 +6185,6 @@ and parse_type_equation_and_representation ?current_type_name_path
  * type-equation	::=	= typexpr *)
 and parse_type_def ~attrs ~start_pos p =
   Parser.leave_breadcrumb p Grammar.TypeDef;
-  (* let attrs = match attrs with | Some attrs -> attrs | None -> parseAttributes p in *)
   Parser.leave_breadcrumb p Grammar.TypeConstrName;
   let name, loc = parse_lident p in
   let type_constr_name = Location.mkloc name loc in

@@ -1,7 +1,7 @@
 (** Configuration for dead code elimination analysis.
     
     This module encapsulates all configuration needed for DCE,
-    gathered from RunConfig and CLI flags. *)
+    gathered from Run_config and CLI flags. *)
 
 type cli_config = {
   debug: bool;
@@ -16,7 +16,7 @@ type t = {run: Run_config.t; cli: cli_config}
 
 (** Capture the current DCE configuration from global state.
     
-    This reads from [RunConfig.runConfig] and [Cli] refs
+    This reads from [Run_config.run_config] and [Cli] refs
     to produce a single immutable configuration value. *)
 let current () =
   let cli =

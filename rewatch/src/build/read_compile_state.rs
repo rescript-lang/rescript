@@ -59,7 +59,6 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                                     ext.to_owned(),
                                     package.name.to_owned(),
                                     package.namespace.to_owned(),
-                                    package.is_root,
                                 )),
                                 _ => None,
                             },
@@ -68,15 +67,15 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                     }
                     Err(_) => None,
                 })
-                .collect::<Vec<(PathBuf, SystemTime, String, String, packages::Namespace, bool)>>()
+                .collect::<Vec<(PathBuf, SystemTime, String, String, packages::Namespace)>>()
         })
         .flatten()
-        .collect::<Vec<(PathBuf, SystemTime, String, String, packages::Namespace, bool)>>();
+        .collect::<Vec<(PathBuf, SystemTime, String, String, packages::Namespace)>>();
 
     let root_config = build_state.get_root_config();
 
     compile_assets.iter().for_each(
-        |(path, last_modified, extension, package_name, package_namespace, package_is_root)| {
+        |(path, last_modified, extension, package_name, package_namespace)| {
             match extension.as_str() {
                 "iast" | "ast" => {
                     let module_name = helpers::file_path_to_module_name(path, package_namespace);
@@ -87,10 +86,8 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                             AstModule {
                                 module_name,
                                 package_name: package_name.to_owned(),
-                                namespace: package_namespace.to_owned(),
                                 last_modified: last_modified.to_owned(),
                                 ast_file_path: path.to_path_buf(),
-                                is_root: *package_is_root,
                                 suffix: root_config
                                     .get_suffix(root_config.get_package_specs().first().unwrap()),
                             },

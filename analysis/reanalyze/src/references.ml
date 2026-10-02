@@ -5,7 +5,7 @@
     - [t] - immutable, for solver (read-only access)
     
     References are stored in refs_from direction only:
-    - refs_from: posFrom -> {posTo1, posTo2, ...} = what posFrom references
+    - refs_from: pos_from -> {pos_to1, pos_to2, ...} = what pos_from references
     
     This is what the forward liveness algorithm needs. *)
 

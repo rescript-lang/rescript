@@ -1,7 +1,7 @@
 Complete src/IncludeModuleCompletion.res 47:11
-posCursor:[47:11] posNoWhite:[47:10] Found expr:[45:13->52:3]
-posCursor:[47:11] posNoWhite:[47:10] Found expr:[46:4->51:5]
-posCursor:[47:11] posNoWhite:[47:10] Found expr:[47:9->47:11]
+pos_cursor:[47:11] pos_no_white:[47:10] Found expr:[45:13->52:3]
+pos_cursor:[47:11] pos_no_white:[47:10] Found expr:[46:4->51:5]
+pos_cursor:[47:11] pos_no_white:[47:10] Found expr:[47:9->47:11]
 Pexp_field [47:9->47:10] _:[51:4->47:11]
 Completable: Cpath Value[k].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -12,7 +12,7 @@ Path k
 ContextPath Value[k]->
 ContextPath Value[k]
 Path k
-CPPipe pathFromEnv:Types found:true
+CPPipe path_from_env:Types found:true
 Path Types.
 Path 
 [
@@ -87,9 +87,9 @@ Path
 ]
 
 Complete src/IncludeModuleCompletion.res 49:12
-posCursor:[49:12] posNoWhite:[49:11] Found expr:[45:13->52:3]
-posCursor:[49:12] posNoWhite:[49:11] Found expr:[46:4->51:5]
-posCursor:[49:12] posNoWhite:[49:11] Found expr:[49:9->49:12]
+pos_cursor:[49:12] pos_no_white:[49:11] Found expr:[45:13->52:3]
+pos_cursor:[49:12] pos_no_white:[49:11] Found expr:[46:4->51:5]
+pos_cursor:[49:12] pos_no_white:[49:11] Found expr:[49:9->49:12]
 Pexp_ident add:[49:9->49:12]
 Completable: Cpath Value[add]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -118,8 +118,8 @@ Path add
 ]
 
 Complete src/IncludeModuleCompletion.res 58:13
-posCursor:[58:13] posNoWhite:[58:12] Found expr:[54:17->61:3]
-posCursor:[58:13] posNoWhite:[58:12] Found expr:[55:4->60:6]
+pos_cursor:[58:13] pos_no_white:[58:12] Found expr:[54:17->61:3]
+pos_cursor:[58:13] pos_no_white:[58:12] Found expr:[55:4->60:6]
 Completable: Cexpression CArgument Value[add]($1)=addP->array
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -142,9 +142,9 @@ Path add
 ]
 
 Complete src/IncludeModuleCompletion.res 70:13
-posCursor:[70:13] posNoWhite:[70:12] Found expr:[68:15->73:5]
-posCursor:[70:13] posNoWhite:[70:12] Found expr:[69:6->72:7]
-posCursor:[70:13] posNoWhite:[70:12] Found expr:[70:11->70:13]
+pos_cursor:[70:13] pos_no_white:[70:12] Found expr:[68:15->73:5]
+pos_cursor:[70:13] pos_no_white:[70:12] Found expr:[69:6->72:7]
+pos_cursor:[70:13] pos_no_white:[70:12] Found expr:[70:11->70:13]
 Pexp_field [70:11->70:12] _:[72:6->70:13]
 Completable: Cpath Value[k].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -155,7 +155,7 @@ Path k
 ContextPath Value[k]->
 ContextPath Value[k]
 Path k
-CPPipe pathFromEnv:Types found:true
+CPPipe path_from_env:Types found:true
 Path Types.
 Path 
 [
@@ -247,7 +247,7 @@ Path
 ]
 
 Complete src/IncludeModuleCompletion.res 85:16
-posCursor:[85:16] posNoWhite:[85:15] Found expr:[85:13->85:16]
+pos_cursor:[85:16] pos_no_white:[85:15] Found expr:[85:13->85:16]
 Pexp_field [85:13->85:14] l:[85:15->85:16]
 Completable: Cpath Value[a].l
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -281,7 +281,7 @@ Path l
 ]
 
 Complete src/IncludeModuleCompletion.res 88:14
-posCursor:[88:14] posNoWhite:[88:13] Found expr:[88:13->88:14]
+pos_cursor:[88:14] pos_no_white:[88:13] Found expr:[88:13->88:14]
 Pexp_ident l:[88:13->88:14]
 Completable: Cpath Value[l]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder

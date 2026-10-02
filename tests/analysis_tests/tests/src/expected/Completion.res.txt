@@ -1,5 +1,5 @@
 Complete src/Completion.res 1:11
-posCursor:[1:11] posNoWhite:[1:10] Found expr:[1:3->1:11]
+pos_cursor:[1:11] pos_no_white:[1:10] Found expr:[1:3->1:11]
 Pexp_ident MyList.m:[1:3->1:11]
 Completable: Cpath Value[MyList, m]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -60,7 +60,7 @@ Path MyList.m
 ]
 
 Complete src/Completion.res 3:9
-posCursor:[3:9] posNoWhite:[3:8] Found expr:[3:3->3:9]
+pos_cursor:[3:9] pos_no_white:[3:8] Found expr:[3:3->3:9]
 Pexp_ident Array.:[3:3->3:9]
 Completable: Cpath Value[Array, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1076,7 +1076,7 @@ Path Array.
 ]
 
 Complete src/Completion.res 5:10
-posCursor:[5:10] posNoWhite:[5:9] Found expr:[5:3->5:10]
+pos_cursor:[5:10] pos_no_white:[5:9] Found expr:[5:3->5:10]
 Pexp_ident Array.m:[5:3->5:10]
 Completable: Cpath Value[Array, m]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1117,7 +1117,7 @@ Path Array.m
 ]
 
 Complete src/Completion.res 15:17
-posCursor:[15:17] posNoWhite:[15:16] Found expr:[15:12->15:17]
+pos_cursor:[15:17] pos_no_white:[15:16] Found expr:[15:12->15:17]
 Pexp_ident Dep.c:[15:12->15:17]
 Completable: Cpath Value[Dep, c]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1139,7 +1139,7 @@ Path Dep.c
 ]
 
 Complete src/Completion.res 23:20
-posCursor:[23:20] posNoWhite:[23:19] Found expr:[23:11->23:20]
+pos_cursor:[23:20] pos_no_white:[23:19] Found expr:[23:11->23:20]
 Pexp_apply ...[23:11->23:18] ()
 Completable: CnamedArg(Value[Lib, foo], "", [])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1153,7 +1153,7 @@ Found type for function (~age: int, ~name: string) => string
 ]
 
 Complete src/Completion.res 26:13
-posCursor:[26:13] posNoWhite:[26:12] Found expr:[26:3->26:13]
+pos_cursor:[26:13] pos_no_white:[26:12] Found expr:[26:3->26:13]
 Completable: Cpath array<int>->m
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1186,7 +1186,7 @@ Path m
 ]
 
 Complete src/Completion.res 29:13
-posCursor:[29:13] posNoWhite:[29:12] Found expr:[29:3->29:13]
+pos_cursor:[29:13] pos_no_white:[29:12] Found expr:[29:3->29:13]
 Completable: Cpath string->toU
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1208,7 +1208,7 @@ Path toU
 ]
 
 Complete src/Completion.res 34:8
-posCursor:[34:8] posNoWhite:[34:7] Found expr:[34:3->34:8]
+pos_cursor:[34:8] pos_no_white:[34:7] Found expr:[34:3->34:8]
 Completable: Cpath Value[op]->e
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1231,16 +1231,16 @@ Path e
 ]
 
 Complete src/Completion.res 44:7
-posCursor:[44:7] posNoWhite:[44:6] Found expr:[44:3->54:3]
+pos_cursor:[44:7] pos_no_white:[44:6] Found expr:[44:3->54:3]
 Pexp_apply ...[50:9->50:10] (...[44:3->50:8], ...[51:2->54:3])
-posCursor:[44:7] posNoWhite:[44:6] Found expr:[44:3->50:8]
+pos_cursor:[44:7] pos_no_white:[44:6] Found expr:[44:3->50:8]
 Completable: Cpath Value[fa]->
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[fa]->
 ContextPath Value[fa]
 Path fa
-CPPipe pathFromEnv:ForAuto found:true
+CPPipe path_from_env:ForAuto found:true
 Path ForAuto.
 Path 
 [
@@ -1263,7 +1263,7 @@ XXX Not found!
 []
 
 Complete src/Completion.res 59:30
-posCursor:[59:30] posNoWhite:[59:29] Found expr:[59:14->59:30]
+pos_cursor:[59:30] pos_no_white:[59:29] Found expr:[59:14->59:30]
 JSX <O.Comp:[59:15->59:21] second[59:22->59:28]=...[59:29->59:30]> _children:None
 Completable: Cexpression CJsxPropValue [O, Comp] second=z
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1273,7 +1273,7 @@ Path O.Comp.make
 [ { "detail": "int", "kind": 12, "label": "zzz", "tags": [] } ]
 
 Complete src/Completion.res 62:23
-posCursor:[62:23] posNoWhite:[62:22] Found expr:[62:14->62:23]
+pos_cursor:[62:23] pos_no_white:[62:22] Found expr:[62:14->62:23]
 JSX <O.Comp:[62:15->62:21] z[62:22->62:23]=...[62:22->62:23]> _children:None
 Completable: Cjsx([O, Comp], z, [z])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1312,7 +1312,7 @@ Resolved opens 1 Stdlib
 ]
 
 Complete src/Completion.res 68:10
-posCursor:[68:10] posNoWhite:[68:9] Found expr:[0:-1->86:1]
+pos_cursor:[68:10] pos_no_white:[68:9] Found expr:[0:-1->86:1]
 Pexp_apply ...[80:6->80:7] (...[80:8->86:1])
 Attribute id:react.let:[68:3->80:3] label:react.
 Completable: Cdecorator(react.)
@@ -1344,7 +1344,7 @@ Resolved opens 1 Stdlib
 ]
 
 Complete src/Completion.res 71:27
-posCursor:[71:27] posNoWhite:[71:26] Found expr:[71:11->71:27]
+pos_cursor:[71:27] pos_no_white:[71:26] Found expr:[71:11->71:27]
 Pexp_apply ...[71:11->71:18] (~name71:20->71:24=...[71:20->71:24])
 Completable: CnamedArg(Value[Lib, foo], "", [name])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1355,7 +1355,7 @@ Found type for function (~age: int, ~name: string) => string
 [ { "detail": "int", "kind": 4, "label": "age", "tags": [] } ]
 
 Complete src/Completion.res 74:26
-posCursor:[74:26] posNoWhite:[74:25] Found expr:[74:11->74:26]
+pos_cursor:[74:26] pos_no_white:[74:25] Found expr:[74:11->74:26]
 Pexp_apply ...[74:11->74:18] (~age74:20->74:23=...[74:20->74:23])
 Completable: CnamedArg(Value[Lib, foo], "", [age])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1366,7 +1366,7 @@ Found type for function (~age: int, ~name: string) => string
 [ { "detail": "string", "kind": 4, "label": "name", "tags": [] } ]
 
 Complete src/Completion.res 77:32
-posCursor:[77:32] posNoWhite:[77:31] Found expr:[77:11->77:32]
+pos_cursor:[77:32] pos_no_white:[77:31] Found expr:[77:11->77:32]
 Pexp_apply ...[77:11->77:18] (~age77:20->77:23=...[77:25->77:28])
 Completable: CnamedArg(Value[Lib, foo], "", [age])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1377,7 +1377,7 @@ Found type for function (~age: int, ~name: string) => string
 [ { "detail": "string", "kind": 4, "label": "name", "tags": [] } ]
 
 Complete src/Completion.res 82:5
-posCursor:[82:5] posNoWhite:[82:4] Found expr:[80:8->86:1]
+pos_cursor:[82:5] pos_no_white:[82:4] Found expr:[80:8->86:1]
 Pexp_apply ...[80:8->80:15] (~age84:3->84:6=...[84:7->84:8], ~name85:3->85:7=...[85:8->85:10])
 Completable: CnamedArg(Value[Lib, foo], "", [age, name])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1388,7 +1388,7 @@ Found type for function (~age: int, ~name: string) => string
 []
 
 Complete src/Completion.res 90:13
-posCursor:[90:13] posNoWhite:[90:12] Found expr:[90:3->93:18]
+pos_cursor:[90:13] pos_no_white:[90:12] Found expr:[90:3->93:18]
 Pexp_object_get a[90:12->90:13] e:[90:3->90:10]
 Completable: Cpath Value[someObj]["a"]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1399,7 +1399,7 @@ Path someObj
 [ { "detail": "int", "kind": 4, "label": "age", "tags": [] } ]
 
 Complete src/Completion.res 95:24
-posCursor:[95:24] posNoWhite:[95:23] Found expr:[95:3->99:6]
+pos_cursor:[95:24] pos_no_white:[95:23] Found expr:[95:3->99:6]
 Pexp_object_get [95:24->95:24] e:[95:3->95:22]
 Completable: Cpath Value[nestedObj]["x"]["y"][""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1415,7 +1415,7 @@ Path nestedObj
 ]
 
 Complete src/Completion.res 99:7
-posCursor:[99:7] posNoWhite:[99:6] Found expr:[99:3->102:20]
+pos_cursor:[99:7] pos_no_white:[99:6] Found expr:[99:3->102:20]
 Pexp_object_get a[99:6->99:7] e:[99:3->99:4]
 Completable: Cpath Value[o]["a"]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1426,7 +1426,7 @@ Path o
 [ { "detail": "int", "kind": 4, "label": "age", "tags": [] } ]
 
 Complete src/Completion.res 104:17
-posCursor:[104:17] posNoWhite:[104:16] Found expr:[104:3->125:19]
+pos_cursor:[104:17] pos_no_white:[104:16] Found expr:[104:3->125:19]
 Pexp_object_get [104:17->104:17] e:[104:3->104:15]
 Completable: Cpath Value[no]["x"]["y"][""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1442,7 +1442,7 @@ Path no
 ]
 
 Complete src/Completion.res 110:5
-posCursor:[110:5] posNoWhite:[110:4] Found expr:[110:3->110:5]
+pos_cursor:[110:5] pos_no_white:[110:4] Found expr:[110:3->110:5]
 Pexp_field [110:3->110:4] _:[116:0->110:5]
 Completable: Cpath Value[r].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1453,7 +1453,7 @@ Path r
 ContextPath Value[r]->
 ContextPath Value[r]
 Path r
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Completion.
 Path 
 [
@@ -1480,7 +1480,7 @@ Path
 ]
 
 Complete src/Completion.res 113:25
-posCursor:[113:25] posNoWhite:[113:24] Found expr:[113:3->113:25]
+pos_cursor:[113:25] pos_no_white:[113:24] Found expr:[113:3->113:25]
 Pexp_field [113:3->113:24] _:[116:0->113:25]
 Completable: Cpath Value[Objects, Rec, recordVal].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1491,7 +1491,7 @@ Path Objects.Rec.recordVal
 ContextPath Value[Objects, Rec, recordVal]->
 ContextPath Value[Objects, Rec, recordVal]
 Path Objects.Rec.recordVal
-CPPipe pathFromEnv:Rec found:true
+CPPipe path_from_env:Rec found:true
 Path Objects.Rec.
 Path 
 [
@@ -1518,9 +1518,9 @@ Path
 ]
 
 Complete src/Completion.res 120:7
-posCursor:[120:7] posNoWhite:[120:6] Found expr:[119:11->123:1]
-posCursor:[120:7] posNoWhite:[120:6] Found expr:[120:5->122:8]
-posCursor:[120:7] posNoWhite:[120:6] Found expr:[120:5->120:7]
+pos_cursor:[120:7] pos_no_white:[120:6] Found expr:[119:11->123:1]
+pos_cursor:[120:7] pos_no_white:[120:6] Found expr:[120:5->122:8]
+pos_cursor:[120:7] pos_no_white:[120:6] Found expr:[120:5->120:7]
 Pexp_ident my:[120:5->120:7]
 Completable: Cpath Value[my]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1537,7 +1537,7 @@ Path my
 ]
 
 Complete src/Completion.res 125:19
-posCursor:[125:19] posNoWhite:[125:18] Found expr:[125:3->145:32]
+pos_cursor:[125:19] pos_no_white:[125:18] Found expr:[125:3->145:32]
 Pexp_object_get [125:19->125:19] e:[125:3->125:17]
 Completable: Cpath Value[Objects, object][""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1551,12 +1551,12 @@ Path Objects.object
 ]
 
 Complete src/Completion.res 151:6
-posCursor:[151:6] posNoWhite:[151:5] Found expr:[151:3->151:6]
+pos_cursor:[151:6] pos_no_white:[151:5] Found expr:[151:3->151:6]
 JSX <O.:__ghost__[0:-1->0:-1] > _children:None
 []
 
 Complete src/Completion.res 157:8
-posCursor:[157:8] posNoWhite:[157:7] Found expr:[157:3->157:8]
+pos_cursor:[157:8] pos_no_white:[157:7] Found expr:[157:3->157:8]
 Pexp_field [157:3->157:7] _:[165:0->157:8]
 Completable: Cpath Value[q].aa.""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1568,7 +1568,7 @@ Path q
 ContextPath Value[q]->aa
 ContextPath Value[q]
 Path q
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Completion.aa
 Path aa
 ContextPath Value[q].aa->
@@ -1578,10 +1578,10 @@ Path q
 ContextPath Value[q]->aa
 ContextPath Value[q]
 Path q
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Completion.aa
 Path aa
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Completion.
 Path 
 [
@@ -1608,7 +1608,7 @@ Path
 ]
 
 Complete src/Completion.res 159:9
-posCursor:[159:9] posNoWhite:[159:8] Found expr:[159:3->159:9]
+pos_cursor:[159:9] pos_no_white:[159:8] Found expr:[159:3->159:9]
 Pexp_field [159:3->159:7] n:[159:8->159:9]
 Completable: Cpath Value[q].aa.n
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1620,7 +1620,7 @@ Path q
 ContextPath Value[q]->aa
 ContextPath Value[q]
 Path q
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Completion.aa
 Path aa
 ContextPath Value[q].aa->n
@@ -1630,10 +1630,10 @@ Path q
 ContextPath Value[q]->aa
 ContextPath Value[q]
 Path q
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Completion.aa
 Path aa
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Completion.n
 Path n
 [
@@ -1650,7 +1650,7 @@ Path n
 ]
 
 Complete src/Completion.res 162:6
-posCursor:[162:6] posNoWhite:[162:5] Found expr:[162:3->162:6]
+pos_cursor:[162:6] pos_no_white:[162:5] Found expr:[162:3->162:6]
 Pexp_construct Lis:[162:3->162:6] None
 Completable: Cpath Value[Lis]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1660,7 +1660,7 @@ Path Lis
 [ { "detail": "module List", "kind": 9, "label": "List", "tags": [] } ]
 
 Complete src/Completion.res 169:16
-posCursor:[169:16] posNoWhite:[169:15] Found expr:[169:3->169:16]
+pos_cursor:[169:16] pos_no_white:[169:15] Found expr:[169:3->169:16]
 JSX <WithChildren:[169:4->169:16] > _children:None
 Completable: Cpath Module[WithChildren]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1677,7 +1677,7 @@ Path WithChildren
 ]
 
 Complete src/Completion.res 172:17
-posCursor:[172:17] posNoWhite:[172:16] Found type:[172:12->172:17]
+pos_cursor:[172:17] pos_no_white:[172:16] Found type:[172:12->172:17]
 Ptyp_constr Null.:[172:12->172:17]
 Completable: Cpath Type[Null, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1698,7 +1698,7 @@ Path Null.
 ]
 
 Complete src/Completion.res 174:20
-posCursor:[174:20] posNoWhite:[174:19] Found type:[174:12->174:20]
+pos_cursor:[174:20] pos_no_white:[174:19] Found type:[174:12->174:20]
 Ptyp_constr ForAuto.:[174:12->174:20]
 Completable: Cpath Type[ForAuto, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1719,7 +1719,7 @@ Path ForAuto.
 ]
 
 Complete src/Completion.res 179:13
-posCursor:[179:13] posNoWhite:[179:12] Found expr:[179:11->179:13]
+pos_cursor:[179:13] pos_no_white:[179:12] Found expr:[179:11->179:13]
 Pexp_construct As:[179:11->179:13] None
 Completable: Cpath Value[As]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1780,7 +1780,7 @@ Path For
 [ { "detail": "module ForAuto", "kind": 9, "label": "ForAuto", "tags": [] } ]
 
 Complete src/Completion.res 190:11
-posCursor:[190:11] posNoWhite:[190:10] Found expr:[190:3->190:11]
+pos_cursor:[190:11] pos_no_white:[190:10] Found expr:[190:3->190:11]
 Pexp_ident Private.:[190:3->190:11]
 Completable: Cpath Value[Private, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1790,7 +1790,7 @@ Path Private.
 [ { "detail": "int", "kind": 12, "label": "b", "tags": [] } ]
 
 Complete src/Completion.res 202:6
-posCursor:[202:6] posNoWhite:[202:5] Found expr:[202:3->202:6]
+pos_cursor:[202:6] pos_no_white:[202:5] Found expr:[202:3->202:6]
 Pexp_ident sha:[202:3->202:6]
 Completable: Cpath Value[sha]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1800,7 +1800,7 @@ Path sha
 []
 
 Complete src/Completion.res 205:6
-posCursor:[205:6] posNoWhite:[205:5] Found expr:[205:3->205:6]
+pos_cursor:[205:6] pos_no_white:[205:5] Found expr:[205:3->205:6]
 Pexp_ident sha:[205:3->205:6]
 Completable: Cpath Value[sha]
 Raw opens: 1 Shadow.A.place holder
@@ -1811,7 +1811,7 @@ Path sha
 [ { "detail": "int", "kind": 12, "label": "shadowed", "tags": [] } ]
 
 Complete src/Completion.res 208:6
-posCursor:[208:6] posNoWhite:[208:5] Found expr:[208:3->208:6]
+pos_cursor:[208:6] pos_no_white:[208:5] Found expr:[208:3->208:6]
 Pexp_ident sha:[208:3->208:6]
 Completable: Cpath Value[sha]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -1822,7 +1822,7 @@ Path sha
 [ { "detail": "string", "kind": 12, "label": "shadowed", "tags": [] } ]
 
 Complete src/Completion.res 221:22
-posCursor:[221:22] posNoWhite:[221:21] Found expr:[221:3->224:22]
+pos_cursor:[221:22] pos_no_white:[221:21] Found expr:[221:3->224:22]
 Pexp_object_get [221:22->221:22] e:[221:3->221:20]
 Completable: Cpath Value[FAO, forAutoObject][""]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -1842,7 +1842,7 @@ Path FAO.forAutoObject
 ]
 
 Complete src/Completion.res 224:37
-posCursor:[224:37] posNoWhite:[224:36] Found expr:[224:3->224:37]
+pos_cursor:[224:37] pos_no_white:[224:36] Found expr:[224:3->224:37]
 Pexp_field [224:3->224:36] _:[233:0->224:37]
 Completable: Cpath Value[FAO, forAutoObject]["forAutoLabel"].""
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -1856,7 +1856,7 @@ ContextPath Value[FAO, forAutoObject]["forAutoLabel"]->
 ContextPath Value[FAO, forAutoObject]["forAutoLabel"]
 ContextPath Value[FAO, forAutoObject]
 Path FAO.forAutoObject
-CPPipe pathFromEnv:FAR found:true
+CPPipe path_from_env:FAR found:true
 Path FAR.
 Path 
 [
@@ -1883,7 +1883,7 @@ Path
 ]
 
 Complete src/Completion.res 227:46
-posCursor:[227:46] posNoWhite:[227:45] Found expr:[227:3->0:-1]
+pos_cursor:[227:46] pos_no_white:[227:45] Found expr:[227:3->0:-1]
 Completable: Cpath Value[FAO, forAutoObject]["forAutoLabel"].forAuto->
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1897,10 +1897,10 @@ ContextPath Value[FAO, forAutoObject]["forAutoLabel"]->forAuto
 ContextPath Value[FAO, forAutoObject]["forAutoLabel"]
 ContextPath Value[FAO, forAutoObject]
 Path FAO.forAutoObject
-CPPipe pathFromEnv:FAR found:true
+CPPipe path_from_env:FAR found:true
 Path FAR.forAuto
 Path forAuto
-CPPipe pathFromEnv:ForAuto found:false
+CPPipe path_from_env:ForAuto found:false
 Path ForAuto.
 Path 
 [
@@ -1925,8 +1925,8 @@ Path
 ]
 
 Complete src/Completion.res 230:55
-posCursor:[230:55] posNoWhite:[230:54] Found expr:[230:3->230:55]
-posCursor:[230:55] posNoWhite:[230:54] Found expr:[230:46->230:55]
+pos_cursor:[230:55] pos_no_white:[230:54] Found expr:[230:3->230:55]
+pos_cursor:[230:55] pos_no_white:[230:54] Found expr:[230:46->230:55]
 Pexp_ident ForAuto.a:[230:46->230:55]
 Completable: Cpath Value[ForAuto, a]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -1940,8 +1940,8 @@ Path ForAuto.a
 ]
 
 Complete src/Completion.res 234:34
-posCursor:[234:34] posNoWhite:[234:33] Found expr:[234:18->234:36]
-posCursor:[234:34] posNoWhite:[234:33] Found expr:[234:32->234:34]
+pos_cursor:[234:34] pos_no_white:[234:33] Found expr:[234:18->234:36]
+pos_cursor:[234:34] pos_no_white:[234:33] Found expr:[234:32->234:34]
 Pexp_ident na:[234:32->234:34]
 Completable: Cpath Value[na]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -1952,7 +1952,7 @@ Path na
 [ { "detail": "string", "kind": 12, "label": "name", "tags": [] } ]
 
 Complete src/Completion.res 237:17
-posCursor:[237:17] posNoWhite:[237:14] Found expr:[237:14->237:22]
+pos_cursor:[237:17] pos_no_white:[237:14] Found expr:[237:14->237:22]
 Completable: Cnone
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1960,9 +1960,9 @@ Resolved opens 3 Stdlib Completion Completion
 []
 
 Complete src/Completion.res 243:8
-posCursor:[243:8] posNoWhite:[243:7] Found expr:[242:14->243:8]
+pos_cursor:[243:8] pos_no_white:[243:7] Found expr:[242:14->243:8]
 Pexp_apply ...[243:3->243:4] (...[242:14->242:15], ...[243:5->243:8])
-posCursor:[243:8] posNoWhite:[243:7] Found expr:[243:5->243:8]
+pos_cursor:[243:8] pos_no_white:[243:7] Found expr:[243:5->243:8]
 Pexp_field [243:5->243:7] _:[245:0->243:8]
 Completable: Cpath Value[_z].""
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -1974,7 +1974,7 @@ Path _z
 ContextPath Value[_z]->
 ContextPath Value[_z]
 Path _z
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Completion.
 Path 
 [
@@ -2001,7 +2001,7 @@ Path
 ]
 
 Complete src/Completion.res 254:17
-posCursor:[254:17] posNoWhite:[254:16] Found expr:[254:11->254:17]
+pos_cursor:[254:17] pos_no_white:[254:16] Found expr:[254:11->254:17]
 Pexp_construct SomeLo:[254:11->254:17] None
 Completable: Cpath Value[SomeLo]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2019,7 +2019,7 @@ Path SomeLo
 ]
 
 Complete src/Completion.res 256:29
-posCursor:[256:29] posNoWhite:[256:28] Found type:[256:13->256:29]
+pos_cursor:[256:29] pos_no_white:[256:28] Found type:[256:13->256:29]
 Ptyp_constr SomeLocalModule.:[256:13->256:29]
 Completable: Cpath Type[SomeLocalModule, ""]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2041,7 +2041,7 @@ Path SomeLocalModule.
 ]
 
 Complete src/Completion.res 261:33
-posCursor:[261:33] posNoWhite:[261:32] Found type:[261:17->263:11]
+pos_cursor:[261:33] pos_no_white:[261:32] Found type:[261:17->263:11]
 Ptyp_constr SomeLocalModule.:[261:17->263:11]
 Completable: Cpath Type[SomeLocalModule, ""]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2090,8 +2090,8 @@ Path SomeLocal
 ]
 
 Complete src/Completion.res 271:20
-posCursor:[271:20] posNoWhite:[271:19] Found pattern:[271:7->274:3]
-posCursor:[271:20] posNoWhite:[271:19] Found type:[271:11->274:3]
+pos_cursor:[271:20] pos_no_white:[271:19] Found pattern:[271:7->274:3]
+pos_cursor:[271:20] pos_no_white:[271:19] Found type:[271:11->274:3]
 Ptyp_constr SomeLocal:[271:11->274:3]
 Completable: Cpath Type[SomeLocal]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2109,9 +2109,9 @@ Path SomeLocal
 ]
 
 Complete src/Completion.res 275:15
-posCursor:[275:15] posNoWhite:[275:14] Found expr:[274:11->278:1]
-posCursor:[275:15] posNoWhite:[275:14] Found expr:[275:5->277:3]
-posCursor:[275:15] posNoWhite:[275:14] Found expr:[275:13->275:15]
+pos_cursor:[275:15] pos_no_white:[275:14] Found expr:[274:11->278:1]
+pos_cursor:[275:15] pos_no_white:[275:14] Found expr:[275:5->277:3]
+pos_cursor:[275:15] pos_no_white:[275:14] Found expr:[275:13->275:15]
 Pexp_ident _w:[275:13->275:15]
 Completable: Cpath Value[_w]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2122,7 +2122,7 @@ Path _w
 [ { "detail": "'a", "kind": 12, "label": "_world", "tags": [] } ]
 
 Complete src/Completion.res 281:22
-posCursor:[281:22] posNoWhite:[281:21] Found type:[281:21->281:22]
+pos_cursor:[281:22] pos_no_white:[281:21] Found type:[281:21->281:22]
 Ptyp_constr s:[281:21->281:22]
 Completable: Cpath Type[s]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2154,7 +2154,7 @@ Path s
 ]
 
 Complete src/Completion.res 291:30
-posCursor:[291:30] posNoWhite:[291:29] Found expr:[291:11->291:32]
+pos_cursor:[291:30] pos_no_white:[291:29] Found expr:[291:11->291:32]
 Pexp_apply ...[291:11->291:28] ()
 Completable: CnamedArg(Value[funRecord].someFun, "", [])
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2166,14 +2166,14 @@ Path funRecord
 ContextPath Value[funRecord]->someFun
 ContextPath Value[funRecord]
 Path funRecord
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Completion.someFun
 Path someFun
 Found type for function (~name: string) => unit
 [ { "detail": "string", "kind": 4, "label": "name", "tags": [] } ]
 
 Complete src/Completion.res 296:11
-posCursor:[296:11] posNoWhite:[296:10] Found expr:[296:3->296:11]
+pos_cursor:[296:11] pos_no_white:[296:10] Found expr:[296:3->296:11]
 Pexp_field [296:3->296:10] _:[299:0->296:11]
 Completable: Cpath Value[retAA](Nolabel).""
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2187,7 +2187,7 @@ ContextPath Value[retAA](Nolabel, Nolabel)->
 ContextPath Value[retAA](Nolabel, Nolabel)
 ContextPath Value[retAA]
 Path retAA
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Completion.
 Path 
 [
@@ -2214,7 +2214,7 @@ Path
 ]
 
 Complete src/Completion.res 301:13
-posCursor:[301:13] posNoWhite:[301:12] Found expr:[301:3->301:13]
+pos_cursor:[301:13] pos_no_white:[301:12] Found expr:[301:3->301:13]
 Pexp_apply ...[301:3->301:11] ()
 Completable: CnamedArg(Value[ff](~c), "", [])
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2239,7 +2239,7 @@ Found type for function (
 ]
 
 Complete src/Completion.res 304:15
-posCursor:[304:15] posNoWhite:[304:14] Found expr:[304:3->304:15]
+pos_cursor:[304:15] pos_no_white:[304:14] Found expr:[304:3->304:15]
 Pexp_apply ...[304:3->304:13] ()
 Completable: CnamedArg(Value[ff](~c)(Nolabel), "", [])
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2257,7 +2257,7 @@ Found type for function (~a: int, ~b: int, ~opt2: int=?, unit) => int
 ]
 
 Complete src/Completion.res 307:17
-posCursor:[307:17] posNoWhite:[307:16] Found expr:[307:3->307:17]
+pos_cursor:[307:17] pos_no_white:[307:16] Found expr:[307:3->307:17]
 Pexp_apply ...[307:3->307:15] ()
 Completable: CnamedArg(Value[ff](~c, Nolabel), "", [])
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2274,7 +2274,7 @@ Found type for function (~a: int, ~b: int, ~opt2: int=?, unit) => int
 ]
 
 Complete src/Completion.res 310:21
-posCursor:[310:21] posNoWhite:[310:20] Found expr:[310:3->310:21]
+pos_cursor:[310:21] pos_no_white:[310:20] Found expr:[310:3->310:21]
 Pexp_apply ...[310:3->310:19] ()
 Completable: CnamedArg(Value[ff](~c, Nolabel, Nolabel), "", [])
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2290,7 +2290,7 @@ Found type for function (~a: int, ~b: int) => int
 ]
 
 Complete src/Completion.res 313:23
-posCursor:[313:23] posNoWhite:[313:22] Found expr:[313:3->313:23]
+pos_cursor:[313:23] pos_no_white:[313:22] Found expr:[313:3->313:23]
 Pexp_apply ...[313:3->313:21] ()
 Completable: CnamedArg(Value[ff](~c, Nolabel, ~b), "", [])
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2306,7 +2306,7 @@ Found type for function (~a: int, ~opt2: int=?, unit) => int
 ]
 
 Complete src/Completion.res 316:16
-posCursor:[316:16] posNoWhite:[316:15] Found expr:[316:3->316:16]
+pos_cursor:[316:16] pos_no_white:[316:15] Found expr:[316:3->316:16]
 Pexp_apply ...[316:3->316:14] ()
 Completable: CnamedArg(Value[ff](~opt2), "", [])
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2324,7 +2324,7 @@ Found type for function (~opt1: int=?, ~a: int, ~b: int, unit, unit, ~c: int) =>
 ]
 
 Complete src/Completion.res 326:17
-posCursor:[326:17] posNoWhite:[326:16] Found expr:[326:3->326:17]
+pos_cursor:[326:17] pos_no_white:[326:16] Found expr:[326:3->326:17]
 Pexp_apply ...[326:3->326:15] ()
 Completable: CnamedArg(Value[withCallback], "", [])
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2339,7 +2339,7 @@ Found type for function (~b: int) => callback
 ]
 
 Complete src/Completion.res 329:21
-posCursor:[329:21] posNoWhite:[329:20] Found expr:[329:3->329:21]
+pos_cursor:[329:21] pos_no_white:[329:20] Found expr:[329:3->329:21]
 Pexp_apply ...[329:3->329:19] ()
 Completable: CnamedArg(Value[withCallback](~a), "", [])
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2355,7 +2355,7 @@ Found type for function (~b: int) => callback
 ]
 
 Complete src/Completion.res 332:21
-posCursor:[332:21] posNoWhite:[332:20] Found expr:[332:3->332:21]
+pos_cursor:[332:21] pos_no_white:[332:20] Found expr:[332:3->332:21]
 Pexp_apply ...[332:3->332:19] ()
 Completable: CnamedArg(Value[withCallback](~b), "", [])
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2368,17 +2368,17 @@ Found type for function callback
 [ { "detail": "int", "kind": 4, "label": "a", "tags": [] } ]
 
 Complete src/Completion.res 339:26
-posCursor:[339:26] posNoWhite:[339:25] Found expr:[336:2->349:23]
+pos_cursor:[339:26] pos_no_white:[339:25] Found expr:[336:2->349:23]
 JSX <div:[336:3->336:6] onClick[337:4->337:11]=...[337:13->349:23]> _children:None
-posCursor:[339:26] posNoWhite:[339:25] Found expr:[337:13->349:23]
-posCursor:[339:26] posNoWhite:[339:25] Found expr:[337:13->341:6]
-posCursor:[339:26] posNoWhite:[339:25] Found expr:[338:6->341:5]
-posCursor:[339:26] posNoWhite:[339:25] Found expr:[339:16->341:5]
-posCursor:[339:26] posNoWhite:[339:25] Found pattern:[339:20->341:5]
-posCursor:[339:26] posNoWhite:[339:25] Found type:[339:23->341:5]
+pos_cursor:[339:26] pos_no_white:[339:25] Found expr:[337:13->349:23]
+pos_cursor:[339:26] pos_no_white:[339:25] Found expr:[337:13->341:6]
+pos_cursor:[339:26] pos_no_white:[339:25] Found expr:[338:6->341:5]
+pos_cursor:[339:26] pos_no_white:[339:25] Found expr:[339:16->341:5]
+pos_cursor:[339:26] pos_no_white:[339:25] Found pattern:[339:20->341:5]
+pos_cursor:[339:26] pos_no_white:[339:25] Found type:[339:23->341:5]
 Ptyp_constr Res:[339:23->341:5]
-posCursor:[339:26] posNoWhite:[339:25] Found pattern:[339:20->341:5]
-posCursor:[339:26] posNoWhite:[339:25] Found type:[339:23->341:5]
+pos_cursor:[339:26] pos_no_white:[339:25] Found pattern:[339:20->341:5]
+pos_cursor:[339:26] pos_no_white:[339:25] Found type:[339:23->341:5]
 Ptyp_constr Res:[339:23->341:5]
 Completable: Cpath Type[Res]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2441,8 +2441,8 @@ Path Res
 ]
 
 Complete src/Completion.res 346:57
-posCursor:[346:57] posNoWhite:[346:56] Found expr:[346:53->349:23]
-posCursor:[346:57] posNoWhite:[346:56] Found expr:[346:53->346:57]
+pos_cursor:[346:57] pos_no_white:[346:56] Found expr:[346:53->349:23]
+pos_cursor:[346:57] pos_no_white:[346:56] Found expr:[346:53->346:57]
 Pexp_ident this:[346:53->346:57]
 Completable: Cpath Value[this]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2469,9 +2469,9 @@ Hover src/Completion.res 349:14
 
 Hover src/Completion.res 352:17
 Nothing at that position. Now trying to use completion.
-posCursor:[352:17] posNoWhite:[352:16] Found expr:[352:11->352:35]
+pos_cursor:[352:17] pos_no_white:[352:16] Found expr:[352:11->352:35]
 Pexp_object_get age[352:30->352:33] e:[352:11->352:28]
-posCursor:[352:17] posNoWhite:[352:16] Found expr:[352:11->352:28]
+pos_cursor:[352:17] pos_no_white:[352:16] Found expr:[352:11->352:28]
 Pexp_ident FAO.forAutoObject:[352:11->352:28]
 Completable: Cpath Value[FAO, forAutoObject]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2491,7 +2491,7 @@ Resolved opens 1 Stdlib
 
 Hover src/Completion.res 355:17
 Nothing at that position. Now trying to use completion.
-posCursor:[355:17] posNoWhite:[355:16] Found expr:[355:11->355:22]
+pos_cursor:[355:17] pos_no_white:[355:16] Found expr:[355:11->355:22]
 Pexp_apply ...[355:11->355:13] (~opt1355:15->355:19=...[355:20->355:21])
 Completable: CnamedArg(Value[ff], opt1, [opt1])
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2516,14 +2516,14 @@ Found type for function (
 }
 
 Complete src/Completion.res 358:23
-posCursor:[358:23] posNoWhite:[358:22] Found expr:[0:-1->358:23]
-posCursor:[358:23] posNoWhite:[358:22] Found expr:[358:12->358:23]
+pos_cursor:[358:23] pos_no_white:[358:22] Found expr:[0:-1->358:23]
+pos_cursor:[358:23] pos_no_white:[358:22] Found expr:[358:12->358:23]
 []
 
 Complete src/Completion.res 365:8
-posCursor:[365:8] posNoWhite:[365:7] Found expr:[363:8->368:3]
-posCursor:[365:8] posNoWhite:[365:7] Found pattern:[365:7->367:5]
-posCursor:[365:8] posNoWhite:[365:7] Found pattern:[365:7->365:8]
+pos_cursor:[365:8] pos_no_white:[365:7] Found expr:[363:8->368:3]
+pos_cursor:[365:8] pos_no_white:[365:7] Found pattern:[365:7->367:5]
+pos_cursor:[365:8] pos_no_white:[365:7] Found pattern:[365:7->365:8]
 Ppat_construct T:[365:7->365:8]
 Completable: Cpattern Value[x]=T
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2627,9 +2627,9 @@ Path T
 ]
 
 Complete src/Completion.res 376:21
-posCursor:[376:21] posNoWhite:[376:20] Found expr:[374:8->379:3]
-posCursor:[376:21] posNoWhite:[376:20] Found pattern:[376:7->378:5]
-posCursor:[376:21] posNoWhite:[376:20] Found pattern:[376:7->376:21]
+pos_cursor:[376:21] pos_no_white:[376:20] Found expr:[374:8->379:3]
+pos_cursor:[376:21] pos_no_white:[376:20] Found pattern:[376:7->378:5]
+pos_cursor:[376:21] pos_no_white:[376:20] Found pattern:[376:7->376:21]
 Ppat_construct AndThatOther.T:[376:7->376:21]
 Completable: Cpath Value[AndThatOther, T]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2651,8 +2651,8 @@ Path AndThatOther.T
 ]
 
 Complete src/Completion.res 381:24
-posCursor:[381:24] posNoWhite:[381:23] Found expr:[381:12->381:26]
-posCursor:[381:24] posNoWhite:[381:23] Found expr:[381:16->381:24]
+pos_cursor:[381:24] pos_no_white:[381:23] Found expr:[381:12->381:26]
+pos_cursor:[381:24] pos_no_white:[381:23] Found expr:[381:16->381:24]
 Pexp_ident ForAuto.:[381:16->381:24]
 Completable: Cpath Value[ForAuto, ""]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2666,8 +2666,8 @@ Path ForAuto.
 ]
 
 Complete src/Completion.res 384:38
-posCursor:[384:38] posNoWhite:[384:37] Found expr:[384:12->384:41]
-posCursor:[384:38] posNoWhite:[384:37] Found expr:[384:19->384:39]
+pos_cursor:[384:38] pos_no_white:[384:37] Found expr:[384:12->384:41]
+pos_cursor:[384:38] pos_no_white:[384:37] Found expr:[384:19->384:39]
 Pexp_object_get [384:38->384:38] e:[384:19->384:36]
 Completable: Cpath Value[FAO, forAutoObject][""]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2687,8 +2687,8 @@ Path FAO.forAutoObject
 ]
 
 Complete src/Completion.res 387:24
-posCursor:[387:24] posNoWhite:[387:23] Found expr:[387:11->387:26]
-posCursor:[387:24] posNoWhite:[387:23] Found expr:[387:14->387:24]
+pos_cursor:[387:24] pos_no_white:[387:23] Found expr:[387:11->387:26]
+pos_cursor:[387:24] pos_no_white:[387:23] Found expr:[387:14->387:24]
 Pexp_field [387:14->387:23] _:[387:24->387:24]
 Completable: Cpath Value[funRecord].""
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2700,7 +2700,7 @@ Path funRecord
 ContextPath Value[funRecord]->
 ContextPath Value[funRecord]
 Path funRecord
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Completion.
 Path 
 [
@@ -2727,9 +2727,9 @@ Path
 ]
 
 Complete src/Completion.res 391:12
-posCursor:[391:12] posNoWhite:[391:11] Found expr:[390:8->394:1]
-posCursor:[391:12] posNoWhite:[391:11] Found expr:[391:6->393:4]
-posCursor:[391:12] posNoWhite:[391:11] Found expr:[391:6->391:12]
+pos_cursor:[391:12] pos_no_white:[391:11] Found expr:[390:8->394:1]
+pos_cursor:[391:12] pos_no_white:[391:11] Found expr:[391:6->393:4]
+pos_cursor:[391:12] pos_no_white:[391:11] Found expr:[391:6->391:12]
 Completable: Cpath array->ma
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -2763,8 +2763,8 @@ Path ma
 ]
 
 Complete src/Completion.res 399:14
-posCursor:[399:14] posNoWhite:[399:13] Found expr:[398:14->399:20]
-posCursor:[399:14] posNoWhite:[399:13] Found expr:[399:13->399:16]
+pos_cursor:[399:14] pos_no_white:[399:13] Found expr:[398:14->399:20]
+pos_cursor:[399:14] pos_no_white:[399:13] Found expr:[399:13->399:16]
 Pexp_ident red:[399:13->399:16]
 Completable: Cpath Value[red]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2775,8 +2775,8 @@ Path red
 [ { "detail": "string", "kind": 12, "label": "red", "tags": [] } ]
 
 Complete src/Completion.res 404:25
-posCursor:[404:25] posNoWhite:[404:24] Found expr:[402:14->404:31]
-posCursor:[404:25] posNoWhite:[404:24] Found expr:[404:24->404:27]
+pos_cursor:[404:25] pos_no_white:[404:24] Found expr:[402:14->404:31]
+pos_cursor:[404:25] pos_no_white:[404:24] Found expr:[404:24->404:27]
 Pexp_ident red:[404:24->404:27]
 Completable: Cpath Value[red]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2787,9 +2787,9 @@ Path red
 [ { "detail": "string", "kind": 12, "label": "red", "tags": [] } ]
 
 Complete src/Completion.res 407:22
-posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:11->485:0]
-posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:21->425:17]
-posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:21->407:22]
+pos_cursor:[407:22] pos_no_white:[407:21] Found expr:[407:11->485:0]
+pos_cursor:[407:22] pos_no_white:[407:21] Found expr:[407:21->425:17]
+pos_cursor:[407:22] pos_no_white:[407:21] Found expr:[407:21->407:22]
 Pexp_ident r:[407:21->407:22]
 Completable: Cpath Value[r]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2813,10 +2813,10 @@ Path r
 ]
 
 Complete src/Completion.res 411:21
-posCursor:[411:21] posNoWhite:[411:20] Found expr:[410:14->417:1]
-posCursor:[411:21] posNoWhite:[411:20] Found expr:[411:5->416:22]
-posCursor:[411:21] posNoWhite:[411:20] Found expr:[411:5->413:42]
-posCursor:[411:21] posNoWhite:[411:20] Found expr:[411:5->413:5]
+pos_cursor:[411:21] pos_no_white:[411:20] Found expr:[410:14->417:1]
+pos_cursor:[411:21] pos_no_white:[411:20] Found expr:[411:5->416:22]
+pos_cursor:[411:21] pos_no_white:[411:20] Found expr:[411:5->413:42]
+pos_cursor:[411:21] pos_no_white:[411:20] Found expr:[411:5->413:5]
 Pexp_ident SomeLocalModule.:[411:5->413:5]
 Completable: Cpath Value[SomeLocalModule, ""]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2830,11 +2830,11 @@ Path SomeLocalModule.
 ]
 
 Complete src/Completion.res 414:21
-posCursor:[414:21] posNoWhite:[414:20] Found expr:[410:14->417:1]
-posCursor:[414:21] posNoWhite:[414:20] Found expr:[413:2->416:22]
-posCursor:[414:21] posNoWhite:[414:20] Found expr:[414:5->416:22]
+pos_cursor:[414:21] pos_no_white:[414:20] Found expr:[410:14->417:1]
+pos_cursor:[414:21] pos_no_white:[414:20] Found expr:[413:2->416:22]
+pos_cursor:[414:21] pos_no_white:[414:20] Found expr:[414:5->416:22]
 Pexp_apply ...[414:5->416:13] (...[416:14->416:21])
-posCursor:[414:21] posNoWhite:[414:20] Found expr:[414:5->416:13]
+pos_cursor:[414:21] pos_no_white:[414:20] Found expr:[414:5->416:13]
 Pexp_ident SomeLocalModule.:[414:5->416:13]
 Completable: Cpath Value[SomeLocalModule, ""]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2848,7 +2848,7 @@ Path SomeLocalModule.
 ]
 
 Complete src/Completion.res 419:17
-posCursor:[419:17] posNoWhite:[419:16] Found expr:[419:11->419:17]
+pos_cursor:[419:17] pos_no_white:[419:16] Found expr:[419:11->419:17]
 Completable: Cpath int->t
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -2965,7 +2965,7 @@ Path t
 ]
 
 Complete src/Completion.res 422:19
-posCursor:[422:19] posNoWhite:[422:18] Found expr:[422:11->422:19]
+pos_cursor:[422:19] pos_no_white:[422:18] Found expr:[422:11->422:19]
 Completable: Cpath float->t
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -3082,7 +3082,7 @@ Path t
 ]
 
 Complete src/Completion.res 427:8
-posCursor:[427:8] posNoWhite:[427:7] Found expr:[427:3->427:8]
+pos_cursor:[427:8] pos_no_white:[427:7] Found expr:[427:3->427:8]
 Completable: Cpath Value[ok]->g
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -3138,7 +3138,7 @@ Path g
 ]
 
 Complete src/Completion.res 445:15
-posCursor:[445:15] posNoWhite:[445:14] Found expr:[445:3->445:15]
+pos_cursor:[445:15] pos_no_white:[445:14] Found expr:[445:3->445:15]
 Pexp_field [445:3->445:12] so:[445:13->445:15]
 Completable: Cpath Value[rWithDepr].so
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -3150,7 +3150,7 @@ Path rWithDepr
 ContextPath Value[rWithDepr]->so
 ContextPath Value[rWithDepr]
 Path rWithDepr
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Completion.so
 Path so
 [
@@ -3228,7 +3228,7 @@ Path someVariantWithDeprecated
 ]
 
 Complete src/Completion.res 457:28
-posCursor:[457:28] posNoWhite:[457:27] Found expr:[457:11->457:28]
+pos_cursor:[457:28] pos_no_white:[457:27] Found expr:[457:11->457:28]
 Completable: Cpath Value[uncurried](Nolabel)->toS
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -3284,7 +3284,7 @@ Path withUncurried
 ]
 
 Complete src/Completion.res 465:26
-posCursor:[465:26] posNoWhite:[465:25] Found expr:[465:22->465:26]
+pos_cursor:[465:26] pos_no_white:[465:25] Found expr:[465:22->465:26]
 Pexp_ident FAR.:[465:22->465:26]
 Completable: Cpath ValueOrField[FAR, ""]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder

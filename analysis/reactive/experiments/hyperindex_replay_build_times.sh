@@ -1,10 +1,16 @@
 #!/bin/zsh
 set -euo pipefail
 
-# Fixed benchmark range/repo:
-START_REF="benchmark/rescript-baseline"
-END_REF="benchmark/rescript-followup"
-HYPERINDEX_REPO="/Users/cristianocalcagno/GitHub/hyperindex"
+# Usage: hyperindex_replay_build_times.sh <hyperindex-checkout>
+# The checkout must contain the branches START_REF and END_REF; the replay
+# walks the commits between them.
+if [[ $# -ne 1 ]]; then
+  echo "usage: $0 <hyperindex-checkout>" >&2
+  exit 2
+fi
+HYPERINDEX_REPO="$(cd "$1" && pwd)"
+START_REF="${START_REF:-benchmark/rescript-baseline}"
+END_REF="${END_REF:-benchmark/rescript-followup}"
 OUT_DIR="${OUT_DIR:-/tmp/hyperindex-replay-times-refs}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RESCRIPT_REPO="$(cd "$SCRIPT_DIR/../../.." && pwd)"

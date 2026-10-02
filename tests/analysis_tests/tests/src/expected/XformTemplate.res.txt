@@ -1,5 +1,5 @@
 Xform src/XformTemplate.res 2:5
-posCursor:[2:3] posNoWhite:[2:1] Found expr:[2:0->7:1]
+pos_cursor:[2:3] pos_no_white:[2:1] Found expr:[2:0->7:1]
 Completable: Cpath Value[value]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
