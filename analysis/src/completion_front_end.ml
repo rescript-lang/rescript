@@ -414,23 +414,10 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
 
   let current_ctx_path = ref None in
   let processing_fun = ref None in
-  let set_current_ctx_path ctx_path =
-    if !Cfg.debug_follow_ctx_path then
-      Printf.printf "setting current ctxPath: %s\n"
-        (Completable.context_path_to_string ctx_path);
+  let set_current_ctx_path (ctx_path : Completable.context_path) =
     current_ctx_path := Some ctx_path
   in
-  let reset_current_ctx_path ctx_path =
-    (match (!current_ctx_path, ctx_path) with
-    | None, None -> ()
-    | _ ->
-      if !Cfg.debug_follow_ctx_path then
-        Printf.printf "resetting current ctxPath to: %s\n"
-          (match ctx_path with
-          | None -> "None"
-          | Some ctx_path -> Completable.context_path_to_string ctx_path));
-    current_ctx_path := ctx_path
-  in
+  let reset_current_ctx_path ctx_path = current_ctx_path := ctx_path in
 
   let found = ref false in
   let result = ref None in

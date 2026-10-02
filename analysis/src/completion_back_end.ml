@@ -428,9 +428,6 @@ let process_local_value name loc context_path scope ~prefix ~exact ~env
           }
           :: local_tables.result_rev)
     | None ->
-      if !Cfg.debug_follow_ctx_path then
-        Printf.printf "Completion Value Not Found %s loc:%s\n" name
-          (Loc.to_string loc);
       local_tables.result_rev <-
         Completion.create name ~env
           ~kind:
