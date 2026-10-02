@@ -104,7 +104,7 @@ impl StrippedVerbatimPath for PathBuf {
     }
 }
 
-pub trait LexicalAbsolute {
+trait LexicalAbsolute {
     fn to_lexical_absolute(&self) -> std::io::Result<PathBuf>;
 }
 
@@ -128,7 +128,7 @@ impl LexicalAbsolute for Path {
     }
 }
 
-pub fn package_path(root: &Path, package_name: &str) -> PathBuf {
+fn package_path(root: &Path, package_name: &str) -> PathBuf {
     root.join("node_modules").join(package_name)
 }
 
@@ -348,7 +348,7 @@ pub fn create_path_for_path(path: &Path) {
     fs::DirBuilder::new().recursive(true).create(path).unwrap();
 }
 
-pub fn get_bin_dir() -> PathBuf {
+fn get_bin_dir() -> PathBuf {
     let current_exe_path = std::env::current_exe().expect("Could not get current executable path");
     current_exe_path
         .parent()

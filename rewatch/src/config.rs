@@ -232,7 +232,7 @@ impl PackageSpec {
         self.module == PackageModule::CommonJs
     }
 
-    pub fn get_suffix(&self) -> Option<String> {
+    fn get_suffix(&self) -> Option<String> {
         self.suffix.to_owned()
     }
 }
@@ -374,7 +374,7 @@ pub enum GenTypeModule {
 }
 
 impl GenTypeModule {
-    pub fn as_str(&self) -> &'static str {
+    fn as_str(&self) -> &'static str {
         match self {
             GenTypeModule::CommonJs => "commonjs",
             GenTypeModule::EsModule => "esmodule",
@@ -393,7 +393,7 @@ pub enum GenTypeModuleResolution {
 }
 
 impl GenTypeModuleResolution {
-    pub fn as_str(&self) -> &'static str {
+    fn as_str(&self) -> &'static str {
         match self {
             GenTypeModuleResolution::Node => "node",
             GenTypeModuleResolution::Node16 => "node16",
@@ -727,7 +727,7 @@ impl Config {
     }
 
     /// Try to convert a config from a string to a config struct
-    pub fn new_from_json_string(config_str: &str) -> Result<Self> {
+    fn new_from_json_string(config_str: &str) -> Result<Self> {
         let raw_value = serde_json::from_str::<serde_json::Value>(config_str).ok();
         if let Some(value) = raw_value.as_ref() {
             validate_package_specs_value(value)?;
@@ -907,7 +907,7 @@ impl Config {
         args
     }
 
-    pub fn effective_source_map_mode(&self, command: SourceMapCommand) -> Option<SourceMapMode> {
+    fn effective_source_map_mode(&self, command: SourceMapCommand) -> Option<SourceMapMode> {
         match &self.source_map {
             Some(SourceMapConfig::Options(options)) => {
                 let source_map_enabled = match options.enabled {
@@ -1022,7 +1022,7 @@ impl Config {
     }
 
     /// Directory containing the `rescript.json` this config was parsed from.
-    pub fn get_package_root(&self) -> &Path {
+    fn get_package_root(&self) -> &Path {
         self.path
             .parent()
             .expect("rescript.json path should always have a parent directory")

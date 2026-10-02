@@ -68,7 +68,7 @@ pub fn parse_with_default() -> Result<Cli, clap::Error> {
 }
 
 /// Parse the provided argv while applying the implicit `build` defaulting rules.
-pub fn parse_with_default_from(raw_args: &[OsString]) -> Result<Cli, clap::Error> {
+fn parse_with_default_from(raw_args: &[OsString]) -> Result<Cli, clap::Error> {
     match Cli::try_parse_from(raw_args) {
         Ok(cli) => Ok(cli),
         Err(err) => {

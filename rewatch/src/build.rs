@@ -53,7 +53,7 @@ fn is_dirty(module: &Module) -> bool {
 }
 
 #[derive(Serialize, Debug, Clone)]
-pub struct CompilerArgs {
+struct CompilerArgs {
     pub compiler_args: Vec<String>,
     pub parser_args: Vec<String>,
 }
@@ -155,7 +155,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
     Ok(result)
 }
 
-pub fn get_compiler_info(project_context: &ProjectContext) -> Result<CompilerInfo> {
+fn get_compiler_info(project_context: &ProjectContext) -> Result<CompilerInfo> {
     let bsc_path = helpers::get_bsc();
     let bsc_hash = helpers::compute_file_hash(&bsc_path).ok_or(anyhow!(
         "Failed to compute bsc hash for {}",
