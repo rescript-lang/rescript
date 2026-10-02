@@ -17,12 +17,6 @@ external testAny: 'a => bool = "%is_nullable"
 
 external typeof: 'a => string = "%typeof"
 
-external eqNull: ('a, null<'a>) => bool = "%equal_null"
-
-external eqUndefined: ('a, undefined<'a>) => bool = "%equal_undefined"
-
-external eqNullable: ('a, nullable<'a>) => bool = "%equal_nullable"
-
 external lt: ('a, 'a) => bool = "%unsafe_lt"
 
 external le: ('a, 'a) => bool = "%unsafe_le"
