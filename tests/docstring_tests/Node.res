@@ -1,20 +1,16 @@
 module Path = {
-  @module("node:path") external join2: (string, string) => string = "join"
   @module("node:path") @variadic external join: array<string> => string = "join"
   @module("node:path") external dirname: string => string = "dirname"
 }
 
 module Process = {
-  @scope("process") external cwd: unit => string = "cwd"
   @scope("process") @val external version: string = "version"
-  @scope("process") @val external argv: array<string> = "argv"
-  @scope("process") external exit: int => unit = "exit"
-  @scope("process") external env: Dict.t<string> = "env"
 }
 
 module Fs = {
   @module("node:fs") external readdirSync: string => array<string> = "readdirSync"
   @module("node:fs/promises") external writeFile: (string, string) => promise<unit> = "writeFile"
+  // existsSync, mkdirSync, writeFileSync and readFileSync are used by scripts/res/GenApiDocs.res
   @module("node:fs") external existsSync: string => bool = "existsSync"
   @module("node:fs") external mkdirSync: string => unit = "mkdirSync"
   @module("node:fs") external writeFileSync: (string, string) => unit = "writeFileSync"
@@ -36,6 +32,7 @@ module ChildProcess = {
   @send external on: (readable, string, Buffer.t => unit) => unit = "on"
   @send
   external once: (spawnReturns, string, (Null.t<float>, Null.t<string>) => unit) => unit = "once"
+  // execSync is used by scripts/res/GenApiDocs.res
   type execSyncOptions = {maxBuffer?: float}
   @module("child_process")
   external execSync: (string, ~options: execSyncOptions=?) => Buffer.t = "execSync"
@@ -51,4 +48,5 @@ module URL = {
 }
 
 @val @scope(("import", "meta")) external url: string = "url"
+// dirname is used by scripts/res/GenApiDocs.res
 @val @scope(("import", "meta")) external dirname: string = "dirname"
