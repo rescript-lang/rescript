@@ -2001,8 +2001,6 @@
   addVariantCaseDeclaration R VariantsWithPayload.res:96:22 path:+VariantsWithPayload.variant1Object
   addValueReference VariantsWithPayload.res:99:4 --> VariantsWithPayload.res:99:26
   Implementation 0
-  Implementation 0
-  Implementation 0
 
   Warning Dead Module
   AutoAnnotate.res:0:1
