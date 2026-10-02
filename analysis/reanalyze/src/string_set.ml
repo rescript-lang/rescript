@@ -1,3 +1,3 @@
-(** File name set. *)
+(** Set of strings. *)
 
 include Set.Make (String)

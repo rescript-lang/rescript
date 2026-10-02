@@ -13,7 +13,7 @@ type t = {
   type_refs_from: (Lexing.position, Pos_set.t) Reactive.t;
       (** Type refs: source -> targets *)
   cross_file_items: (string, Cross_file_items.t) Reactive.t;
-  file_deps_map: (string, File_set.t) Reactive.t;
+  file_deps_map: (string, String_set.t) Reactive.t;
   files: (string, unit) Reactive.t;
   (* Reactive type/exception dependencies *)
   type_deps: Reactive_type_deps.t;
@@ -108,7 +108,7 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
         | None -> []
         | Some file_data ->
           File_deps.builder_deps_to_list file_data.Dce_file_processing.file_deps)
-      ~merge:File_set.union ()
+      ~merge:String_set.union ()
   in
 
   (* Files set: (source_path, ()) - just track which source files exist *)
@@ -122,7 +122,7 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
           let file_set =
             File_deps.builder_files file_data.Dce_file_processing.file_deps
           in
-          File_set.fold (fun f acc -> (f, ()) :: acc) file_set [])
+          String_set.fold (fun f acc -> (f, ()) :: acc) file_set [])
       ()
   in
 

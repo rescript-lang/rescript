@@ -3,8 +3,6 @@
     - alwaysUsed: args that are always passed (when count > 0)
     - count: number of calls observed *)
 
-module String_set = Set.Make (String)
-
 type t = {count: int; unused: String_set.t; always_used: String_set.t}
 
 let empty =

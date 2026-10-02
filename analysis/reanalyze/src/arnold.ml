@@ -5,8 +5,6 @@ let print_pos ppf (pos : Lexing.position) =
     (file |> Filename.basename)
     line
 
-module String_set = Set.Make (String)
-
 (** Type Definitions *)
 module Function_name = struct
   type t = string
