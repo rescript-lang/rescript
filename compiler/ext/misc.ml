@@ -54,12 +54,6 @@ let rec map_end f l1 l2 =
   | [] -> l2
   | hd :: tl -> f hd :: map_end f tl l2
 
-let rec map_left_right f = function
-  | [] -> []
-  | hd :: tl ->
-    let res = f hd in
-    res :: map_left_right f tl
-
 let rec for_all2 pred l1 l2 =
   match (l1, l2) with
   | [], [] -> true
@@ -68,10 +62,6 @@ let rec for_all2 pred l1 l2 =
 
 let rec replicate_list elem n =
   if n <= 0 then [] else elem :: replicate_list elem (n - 1)
-
-let rec list_remove x = function
-  | [] -> []
-  | hd :: tl -> if hd = x then tl else hd :: list_remove x tl
 
 let rec split_last = function
   | [] -> assert false
@@ -162,29 +152,13 @@ let output_to_file_via_temporary ?(mode = [Open_text]) filename fn =
 
 (* Integer operations *)
 
-let rec log2 n = if n <= 1 then 0 else 1 + log2 (n asr 1)
-
 module Int_literal_converter = struct
   (* To convert integer literals, allowing max_int + 1 (PR#4210) *)
   let cvt_int_aux str neg of_string =
     if String.length str = 0 || str.[0] = '-' then of_string str
     else neg (of_string ("-" ^ str))
   let int s = cvt_int_aux s ( ~- ) int_of_string
-  let int32 s = cvt_int_aux s Int32.neg Int32.of_string
-  let int64 s = cvt_int_aux s Int64.neg Int64.of_string
 end
-
-(* String operations *)
-
-let chop_extensions file =
-  let dirname = Filename.dirname file and basename = Filename.basename file in
-  try
-    let pos = String.index basename '.' in
-    let basename = String.sub basename 0 pos in
-    if Filename.is_implicit file && dirname = Filename.current_dir_name then
-      basename
-    else Filename.concat dirname basename
-  with Not_found -> file
 
 let get_ref r =
   let v = !r in

@@ -23,9 +23,6 @@ val try_finally : (unit -> 'a) -> (unit -> unit) -> 'a
 val map_end : ('a -> 'b) -> 'a list -> 'b list -> 'b list
 (* [map_end f l t] is [map f l @ t], just more efficient. *)
 
-val map_left_right : ('a -> 'b) -> 'a list -> 'b list
-(* Like [List.map], with guaranteed left-to-right evaluation order *)
-
 val for_all2 : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
 (* Same as [List.for_all] but for a binary predicate.
    In addition, this [for_all2] never fails: given two lists
@@ -34,10 +31,6 @@ val for_all2 : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
 val replicate_list : 'a -> int -> 'a list
 (* [replicate_list elem n] is the list with [n] elements
    all identical to [elem]. *)
-
-val list_remove : 'a -> 'a list -> 'a list
-(* [list_remove x l] returns a copy of [l] with the first
-   element equal to [x] removed. *)
 
 val split_last : 'a list -> 'a list * 'a
 (* Return the last element and the other elements of the given list. *)
@@ -79,22 +72,9 @@ val output_to_file_via_temporary :
    the channel is closed and the temporary file is renamed to
    [filename]. *)
 
-val log2 : int -> int
-(* [log2 n] returns [s] such that [n = 1 lsl s]
-   if [n] is a power of 2*)
-
 module Int_literal_converter : sig
   val int : string -> int
-  val int32 : string -> int32
-  val int64 : string -> int64
 end
-
-val chop_extensions : string -> string
-(* Return the given file name without its extensions. The extensions
-   is the longest suffix starting with a period and not including
-   a directory separator, [.xyz.uvw] for instance.
-
-   Return the given name if it does not contain an extension. *)
 
 val get_ref : 'a list ref -> 'a list
 (* [get_ref lr] returns the content of the list reference [lr] and reset
