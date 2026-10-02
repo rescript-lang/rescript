@@ -18,9 +18,12 @@ await fs.mkdir(nodeModules, { recursive: true });
 await fs.symlink(repoRoot, path.join(nodeModules, "rescript"), "junction");
 
 try {
-  const out = await node(path.join("src", "Main.js"));
-  assert.equal(out.stderr, "");
-  assert.equal(out.stdout.trim(), rescript_tools_exe);
+  // The project emits both ES module and CommonJS output.
+  for (const output of ["Main.mjs", "Main.cjs"]) {
+    const out = await node(path.join("src", output));
+    assert.equal(out.stderr, "", output);
+    assert.equal(out.stdout.trim(), rescript_tools_exe, output);
+  }
 } finally {
   await fs.rm(nodeModules, { recursive: true, force: true });
   await execClean();
