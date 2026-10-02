@@ -143,9 +143,6 @@ let process_files ~(collection : t) ~config:_ cmt_file_paths :
         },
         stats ))
 
-(** Get collection length *)
-let length (collection : t) = Reactive_file_collection.length collection
-
 (** Get the underlying reactive collection for composition.
     Returns (path, file_data option) suitable for ReactiveMerge. *)
 let to_file_data_collection (collection : t) :

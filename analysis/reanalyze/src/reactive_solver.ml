@@ -12,7 +12,7 @@
     - issues_by_file = per-file issue generation (reactive flatMap)
     - incorrect_dead_decls = live decls with @dead annotation (reactive join)
     - dead_module_issues = dead_modules joined with modules_with_reported (reactive join)
-    - is_pos_live uses reactive live collection (no resolvedDead mutation)
+    - is_pos_live uses reactive live collection
     - shouldReport callback replaces report field mutation (no mutation needed)
     - isInsideReportedValue is per-file only, so files are independent
     - hasRefBelow uses on-demand search: O(total_refs) per dead decl (cross-file refs count as "below")

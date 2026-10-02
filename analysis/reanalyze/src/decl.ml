@@ -40,7 +40,6 @@ type t = {
   pos: Lexing.position;
   pos_end: Lexing.position;
   pos_start: Lexing.position;
-  mutable resolved_dead: bool option;
   mutable report: bool;
 }
 
@@ -48,12 +47,6 @@ let is_value decl =
   match decl.decl_kind with
   | Value _ (* | Exception *) -> true
   | _ -> false
-
-(** Check if a declaration is live (or unknown). Returns false only if resolved as dead. *)
-let is_live decl =
-  match decl.resolved_dead with
-  | Some true -> false
-  | Some false | None -> true
 
 let compare_for_reporting
     {

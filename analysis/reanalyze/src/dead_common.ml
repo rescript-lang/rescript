@@ -117,7 +117,6 @@ let addDeclaration_ ~config ~decls ~(file : File_context.t) ?pos_end ?pos_start
         pos;
         pos_end;
         pos_start;
-        resolved_dead = None;
         report = true;
       }
     in
@@ -178,16 +177,12 @@ let make_hasRefBelow ~transitive ~iter_value_refs_from =
 (** Report a dead declaration. Returns list of issues (dead module first, then dead value).
     [hasRefBelow] checks if there are references from "below" the declaration.
     Only used when [config.run.transitive] is false.
-    [?checkModuleDead] optional callback for checking dead modules. Defaults to DeadModules.checkModuleDead.
-    [?shouldReport] optional callback to check if a decl should be reported. Defaults to checking decl.report. *)
-let report_declaration ~config ~has_ref_below ?check_module_dead ?should_report
+    [checkModuleDead] returns the dead-module issue for a module, if any.
+    [shouldReport] checks if a decl should be reported. *)
+let report_declaration ~config ~has_ref_below ~check_module_dead ~should_report
     (ctx : Reporting_context.t) decl : Issue.t list =
   let inside_reported_value = decl |> is_inside_reported_value ctx in
-  let should_report =
-    match should_report with
-    | Some f -> f decl
-    | None -> decl.report
-  in
+  let should_report = should_report decl in
   (* For type re-exports (type y = x = {...}), the re-exported record/variant
      labels are restated but not independently actionable. Avoid duplicate/noisy
      warnings by suppressing reporting for the re-exported copy. *)
@@ -242,11 +237,7 @@ let report_declaration ~config ~has_ref_below ?check_module_dead ?should_report
         |> Dce_path.to_module_name ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
       in
       let dead_module_issue =
-        match check_module_dead with
-        | Some f -> f ~file_name:decl.pos.pos_fname module_name
-        | None ->
-          Dead_modules.check_module_dead ~config ~file_name:decl.pos.pos_fname
-            module_name
+        check_module_dead ~file_name:decl.pos.pos_fname module_name
       in
       let dead_value_issue = make_dead_issue ~decl ~message dead_warning in
       (* Return in order: dead module first (if any), then dead value *)
