@@ -8,6 +8,8 @@ Dead code analysis and other experimental analyses for ReScript.
 - **Exception Analysis** - Track potential exceptions through call chains
 - **Termination Analysis** - Experimental analysis for detecting non-terminating functions
 
+[TERMINATION.md](TERMINATION.md) states the program language, typing rules and abstract evaluation that the termination analysis (`src/arnold.ml`) implements.
+
 ## Usage
 
 ```bash
