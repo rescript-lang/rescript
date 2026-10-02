@@ -33,17 +33,6 @@ module Time : sig
 
   val now : unit -> t
 
-  val [@warning "-32"] to_uint64 : t -> int64
-
-  (* let of_uint64_ns ns = ns *)
-
-  val [@warning "-32"] nanosecond : t
-  val [@warning "-32"] microsecond : t
-  val [@warning "-32"] millisecond : t
-  val [@warning "-32"] second : t
-  val [@warning "-32"] minute : t
-  val [@warning "-32"] hour : t
-
   val zero : t
 
   val diff : t -> t -> t
@@ -54,15 +43,6 @@ end = struct
   type t = int64
 
   let zero = 0L
-
-  let to_uint64 s = s
-
-  let nanosecond = 1L
-  let microsecond = Int64.mul 1000L nanosecond
-  let millisecond = Int64.mul 1000L microsecond
-  let second = Int64.mul 1000L millisecond
-  let minute = Int64.mul 60L second
-  let hour = Int64.mul 60L minute
 
   (* TODO: we could do this inside caml_absolute_time *)
   external init : unit -> unit = "caml_mach_initialize"
