@@ -24,11 +24,6 @@ let copy tbl =
 
 let empty = make ()
 
-let rec list_last = function
-  | [] -> failwith "list_last: empty list"
-  | [x] -> x
-  | _ :: rest -> list_last rest
-
 let print_location (k : Warnings.loc) =
   Doc.concat
     [
