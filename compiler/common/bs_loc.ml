@@ -27,15 +27,3 @@ type t = Location.t = {
   loc_end: Lexing.position;
   loc_ghost: bool;
 }
-
-let is_ghost x = x.loc_ghost
-
-let merge (l : t) (r : t) =
-  if is_ghost l then r
-  else if is_ghost r then l
-  else
-    match (l, r) with
-    | {loc_start; _}, {loc_end; _} (* TODO: improve*) ->
-      {loc_start; loc_end; loc_ghost = false}
-
-(* let none = Location.none *)
