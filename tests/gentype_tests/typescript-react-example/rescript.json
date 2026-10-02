@@ -1,8 +1,6 @@
 {
   "gentypeconfig": {
-    "language": "typescript",
     "module": "esmodule",
-    "importPath": "relative",
     "shims": {
       "JsxEvent": "JsxEvent",
       "Belt": "Belt",
