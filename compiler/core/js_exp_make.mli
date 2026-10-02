@@ -192,7 +192,6 @@ val is_a_literal_case :
 val is_type_object : t -> t
 
 val typeof : ?comment:string -> t -> t
-val instanceof : ?comment:string -> t -> t -> t
 val is_array : t -> t
 
 val to_int32 : ?comment:string -> t -> t
