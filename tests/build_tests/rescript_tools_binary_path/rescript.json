@@ -1,0 +1,8 @@
+{
+  "name": "rescript-tools-binary-path",
+  "sources": "src",
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  }
+}
