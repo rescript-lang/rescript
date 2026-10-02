@@ -151,4 +151,3 @@ let populate_required_modules extras
       if not (is_pure_module id) then add hard_dependencies id);
   Lam_module_ident.Hash_set.iter extras (fun id : unit ->
       if not (is_pure_module id) then add hard_dependencies id)
-(* Lam_module_ident.Hash_set.elements hard_dependencies *)
