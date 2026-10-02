@@ -125,13 +125,6 @@ impl Package {
             .expect("namespace should be set for mlmap module");
         self.get_build_path().join(format!("{suffix}.cmi"))
     }
-
-    pub fn is_source_file_type_dev(&self, path: &Path) -> bool {
-        self.source_files
-            .as_ref()
-            .and_then(|sf| sf.get(path).map(|sfm| sfm.is_type_dev))
-            .unwrap_or(false)
-    }
 }
 
 impl PartialEq for Package {

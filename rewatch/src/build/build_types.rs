@@ -127,9 +127,6 @@ pub struct BuildCommandState {
     pub build_state: BuildState,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     pub warn_error_override: Option<String>,
-    // Command-line --features override. `None` means all features are active; `Some(list)`
-    // restricts the root package to those features (and whatever they transitively imply).
-    pub features: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -183,23 +180,17 @@ impl BuildCommandState {
         packages: AHashMap<String, Package>,
         compiler: CompilerInfo,
         warn_error_override: Option<String>,
-        features: Option<Vec<String>>,
         source_map_command: SourceMapCommand,
     ) -> Self {
         Self {
             root_folder,
             build_state: BuildState::new(project_context, packages, compiler, source_map_command),
             warn_error_override,
-            features,
         }
     }
 
     pub fn get_warn_error_override(&self) -> Option<String> {
         self.warn_error_override.clone()
-    }
-
-    pub fn get_features(&self) -> Option<Vec<String>> {
-        self.features.clone()
     }
 
     pub fn module_name_package_pairs(&self) -> Vec<(String, String)> {

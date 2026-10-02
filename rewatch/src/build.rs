@@ -203,7 +203,6 @@ pub fn initialize_build(
         packages,
         compiler,
         warn_error,
-        features,
         source_map_command,
     );
     packages::parse_packages(&mut build_state)?;
