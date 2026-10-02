@@ -6,14 +6,7 @@ let get key t =
   | `Assoc items -> List.assoc_opt key items
   | _ -> None
 
-let read_file filename =
-  try
-    (* windows can't use open_in *)
-    let chan = open_in_bin filename in
-    let content = really_input_string chan (in_channel_length chan) in
-    close_in_noerr chan;
-    Some content
-  with _ -> None
+let read_file filename = try Some (Ext_io.load_file filename) with _ -> None
 
 let rec find_project_root ~dir =
   let rescript_json_file = Filename.concat dir rescript_json in
