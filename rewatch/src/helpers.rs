@@ -400,13 +400,6 @@ pub fn get_compiler_asset(
         .join(format!("{basename}.{extension}"))
 }
 
-pub fn canonicalize_string_path(path: &str) -> Option<PathBuf> {
-    Path::new(path)
-        .canonicalize()
-        .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-        .ok()
-}
-
 pub fn get_bs_compiler_asset(
     package: &packages::Package,
     namespace: &packages::Namespace,

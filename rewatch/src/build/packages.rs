@@ -1132,24 +1132,6 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
     Ok(())
 }
 
-impl Package {
-    pub fn get_jsx_args(&self) -> Vec<String> {
-        self.config.get_jsx_args()
-    }
-
-    pub fn get_jsx_mode_args(&self) -> Vec<String> {
-        self.config.get_jsx_mode_args()
-    }
-
-    pub fn get_jsx_module_args(&self) -> Vec<String> {
-        self.config.get_jsx_module_args()
-    }
-
-    pub fn get_jsx_preserve_args(&self) -> Vec<String> {
-        self.config.get_jsx_preserve_args()
-    }
-}
-
 fn get_unallowed_dependents(
     packages: &AHashMap<String, Package>,
     package_name: &String,

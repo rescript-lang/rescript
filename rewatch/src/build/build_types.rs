@@ -1,4 +1,4 @@
-use crate::build::packages::{Namespace, Package};
+use crate::build::packages::Package;
 use crate::config::{Config, SourceMapCommand};
 use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
@@ -222,10 +222,8 @@ impl std::ops::DerefMut for BuildCommandState {
 pub struct AstModule {
     pub module_name: String,
     pub package_name: String,
-    pub namespace: Namespace,
     pub last_modified: SystemTime,
     pub ast_file_path: PathBuf,
-    pub is_root: bool,
     pub suffix: String,
 }
 
