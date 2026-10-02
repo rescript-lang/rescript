@@ -13,7 +13,7 @@ and preprocessor = ref (None : string option) (* -pp *)
 and all_ppx = ref ([] : string list)
 
 (* -ppx *)
-let binary_annotations = ref false (* -annot *)
+let binary_annotations = ref false (* write .cmt/.cmti; -bs-no-bin-annot *)
 
 and noassert = ref false (* -noassert *)
 
