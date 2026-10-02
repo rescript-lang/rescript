@@ -2364,10 +2364,11 @@ and print_type_parameter ?inline_record_definitions ~state {attrs; lbl; typ}
            attrs;
            label;
            print_typ_expr ?inline_record_definitions ~state typ cmt_tbl;
-           optional_indicator;
          ])
   in
-  print_comments doc cmt_tbl loc
+  (* [loc] ends before [=?], so the comments attached to it precede [=?] in
+     the source. *)
+  Doc.concat [print_comments doc cmt_tbl loc; optional_indicator]
 
 and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
     i =

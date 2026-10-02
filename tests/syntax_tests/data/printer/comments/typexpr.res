@@ -78,3 +78,6 @@ external another_test: (
   // comment 2
   int,
 ) => unit = "test"
+type optionalArg = (~x: int /* a */ =?, unit) => int
+type lastOptionalArg = (~x: int /* a */ =?) => int
+external optionalArgExternal: (~x: int /* a */ =?, unit) => int = "f"
