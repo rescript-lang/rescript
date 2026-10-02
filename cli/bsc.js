@@ -41,7 +41,7 @@ if (!delegate_args.includes("-bs-project-root")) {
 try {
   execFileSync(bsc_exe, delegate_args, { stdio: "inherit" });
 } catch (e) {
-  if (e.code === "ENOENT") {
+  if (/** @type {NodeJS.ErrnoException} */ (e).code === "ENOENT") {
     console.error(String(e));
   }
   process.exit(2);

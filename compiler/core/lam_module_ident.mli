@@ -31,8 +31,6 @@ type t = J.module_id = {
   dynamic_import: bool;
 }
 
-val id : t -> Ident.t
-
 val name : t -> string
 
 val of_ml : ?dynamic_import:bool -> Ident.t -> t

@@ -8,8 +8,6 @@ type t = {issues: Issue.t list}
 
 let empty = {issues = []}
 
-let add_issue result issue = {issues = issue :: result.issues}
-
 let add_issues result new_issues =
   {issues = List.rev_append new_issues result.issues}
 
@@ -29,8 +27,6 @@ let issue_sort_key (issue : Issue.t) =
 let get_issues result =
   result.issues |> List.rev
   |> List.stable_sort (fun a b -> compare (issue_sort_key a) (issue_sort_key b))
-
-let issue_count result = List.length result.issues
 
 (** Create a dead code issue *)
 let make_dead_issue ~loc ~dead_warning ~path ~message : Issue.t =

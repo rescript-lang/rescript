@@ -1,7 +1,6 @@
 module Scanner = Res_scanner
 module Token = Res_token
 module Grammar = Res_grammar
-module Reporting = Res_reporting
 module Diagnostics = Res_diagnostics
 module Comment = Res_comment
 
@@ -17,7 +16,6 @@ type t = {
   mutable current: token_cache;
   mutable spare: token_cache;
   mutable breadcrumbs: (Grammar.t * Lexing.position) list;
-  mutable errors: Reporting.parse_error list;
   mutable diagnostics: Diagnostics.t list;
   mutable comments: Comment.t list;
   mutable regions: region_status list;

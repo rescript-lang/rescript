@@ -25,13 +25,13 @@ val add_dep : builder -> from_file:string -> to_file:string -> unit
 
 (** {2 Builder extraction for reactive merge} *)
 
-val builder_files : builder -> File_set.t
+val builder_files : builder -> String_set.t
 (** Get files set from builder *)
 
-val builder_deps_to_list : builder -> (string * File_set.t) list
+val builder_deps_to_list : builder -> (string * String_set.t) list
 (** Extract all deps as a list for reactive merge *)
 
-(** {2 Internal types (for ReactiveMerge)} *)
+(** {2 Internal types (for Reactive_merge)} *)
 
 module File_hash : Hashtbl.S with type key = string
 (** Iterate over files in topological order (roots first, leaves last).

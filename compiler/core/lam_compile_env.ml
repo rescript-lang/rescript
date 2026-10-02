@@ -88,7 +88,7 @@ let cmj_table_of_module_id ~dynamic_import (module_id : Ident.t) =
   let oid = Lam_module_ident.of_ml ~dynamic_import module_id in
   match Lam_module_ident.Hash.find_opt cached_tbl oid with
   | None ->
-    let cmj_load_info = !Js_cmj_load.load_unit module_id.name in
+    let cmj_load_info = Js_cmj_load.load_unit module_id.name in
     oid +> Ml cmj_load_info;
     cmj_load_info.cmj_table
   | Some (Ml {cmj_table}) -> cmj_table
@@ -120,7 +120,7 @@ let get_package_path_from_cmj (id : Lam_module_ident.t) :
       match id.kind with
       | Runtime | External _ -> assert false
       | Ml ->
-        let cmj_load_info = !Js_cmj_load.load_unit (Lam_module_ident.name id) in
+        let cmj_load_info = Js_cmj_load.load_unit (Lam_module_ident.name id) in
         id +> Ml cmj_load_info;
         cmj_load_info)
   in
@@ -137,7 +137,7 @@ let is_pure_module (oid : Lam_module_ident.t) =
   | Ml -> (
     match Lam_module_ident.Hash.find_opt cached_tbl oid with
     | None -> (
-      match !Js_cmj_load.load_unit (Lam_module_ident.name oid) with
+      match Js_cmj_load.load_unit (Lam_module_ident.name oid) with
       | cmj_load_info ->
         oid +> Ml cmj_load_info;
         cmj_load_info.cmj_table.pure
@@ -151,4 +151,3 @@ let populate_required_modules extras
       if not (is_pure_module id) then add hard_dependencies id);
   Lam_module_ident.Hash_set.iter extras (fun id : unit ->
       if not (is_pure_module id) then add hard_dependencies id)
-(* Lam_module_ident.Hash_set.elements hard_dependencies *)

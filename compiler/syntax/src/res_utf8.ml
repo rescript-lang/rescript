@@ -13,9 +13,4 @@ let decode_code_point i s len =
       (Uchar.to_int (Uchar.utf_decode_uchar decoded), size)
     else (repl, 1)
 
-let encode_code_point c =
-  let buf = Buffer.create 4 in
-  Buffer.add_utf_8_uchar buf (Uchar.of_int c);
-  Buffer.contents buf
-
 let is_valid_code_point = Uchar.is_valid

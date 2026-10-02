@@ -24,14 +24,6 @@ let add_module ~name ~loc x = Module (name, loc) :: x
 let add_open ~lid x =
   Open (Utils.flatten_long_ident lid @ ["place holder"]) :: x
 let add_value ~name ~loc ?context_path x =
-  let show_debug = !Cfg.debug_follow_ctx_path in
-  (if show_debug then
-     match context_path with
-     | None -> Printf.printf "adding value '%s', no ctxPath\n" name
-     | Some context_path ->
-       if show_debug then
-         Printf.printf "adding value '%s' with ctxPath: %s\n" name
-           (Shared_types.Completable.context_path_to_string context_path));
   Value (name, loc, context_path, x) :: x
 let add_type ~name ~loc x = Type (name, loc) :: x
 let add_include ~name ~loc x = Include (name, loc) :: x

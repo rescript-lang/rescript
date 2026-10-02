@@ -43,14 +43,7 @@ let relpath base path =
 let maybe_stat path =
   try Some (Unix.stat path) with Unix.Unix_error (Unix.ENOENT, _, _) -> None
 
-let read_file filename =
-  try
-    (* windows can't use open_in *)
-    let chan = open_in_bin filename in
-    let content = really_input_string chan (in_channel_length chan) in
-    close_in_noerr chan;
-    Some content
-  with _ -> None
+let read_file filename = try Some (Ext_io.load_file filename) with _ -> None
 
 let exists path =
   match maybe_stat path with

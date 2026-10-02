@@ -7,7 +7,7 @@ for file in src/*.res; do
   fi
 
   # Remove unwanted output (machine-specific path)
-  perl -ni -e 'print unless /^\[getRuntimeDir\]/' -- $output
+  perl -ni -e 'print unless /^\[get_runtime_dir\]/' -- $output
 
   # Strip leading newlines caused by ^in+ and ^dv+ marker usage.
   perl -0pi -e 's/\A\n+//' -- $output

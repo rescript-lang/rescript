@@ -1,5 +1,5 @@
 Complete src/CompletionBracedReceiver.res 4:12
-posCursor:[4:12] posNoWhite:[4:11] Found expr:[4:4->4:12]
+pos_cursor:[4:12] pos_no_white:[4:11] Found expr:[4:4->4:12]
 Pexp_field [4:4->4:9] t:[4:11->4:12]
 Completable: Cpath Value[value].t
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -10,7 +10,7 @@ Path value
 ContextPath Value[value]->t
 ContextPath Value[value]
 Path value
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path CompletionBracedReceiver.t
 Path t
 [
@@ -27,7 +27,7 @@ Path t
 ]
 
 Complete src/CompletionBracedReceiver.res 7:11
-posCursor:[7:11] posNoWhite:[7:10] Found expr:[7:4->7:11]
+pos_cursor:[7:11] pos_no_white:[7:10] Found expr:[7:4->7:11]
 Pexp_field [7:4->7:9] _:[13:0->7:11]
 Completable: Cpath Value[value].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -38,7 +38,7 @@ Path value
 ContextPath Value[value]->
 ContextPath Value[value]
 Path value
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path CompletionBracedReceiver.
 Path 
 [
@@ -55,7 +55,7 @@ Path
 ]
 
 Complete src/CompletionBracedReceiver.res 10:9
-posCursor:[10:9] posNoWhite:[10:8] Found expr:[10:3->10:9]
+pos_cursor:[10:9] pos_no_white:[10:8] Found expr:[10:3->10:9]
 Pexp_field [10:3->10:8] _:[13:0->10:9]
 Completable: Cpath Value[value].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -66,7 +66,7 @@ Path value
 ContextPath Value[value]->
 ContextPath Value[value]
 Path value
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path CompletionBracedReceiver.
 Path 
 [

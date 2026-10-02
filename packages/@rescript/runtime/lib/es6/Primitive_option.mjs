@@ -27,14 +27,6 @@ function fromNullable(x) {
   }
 }
 
-function fromUndefined(x) {
-  if (x === undefined) {
-    return;
-  } else {
-    return some(x);
-  }
-}
-
 function fromNull(x) {
   if (x === null) {
     return;
@@ -67,7 +59,6 @@ function unwrapPolyVar(x) {
 
 export {
   fromNullable,
-  fromUndefined,
   fromNull,
   valFromOption,
   some,

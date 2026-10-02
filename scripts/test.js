@@ -5,6 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import {
   buildTestDir,
+  commonjsTestDir,
   compilerTestDir,
   docstringTestDir,
   ounitTestBin,
@@ -103,9 +104,8 @@ if (mochaTest) {
       "10000",
       "tests/tests/src/**/*_test.mjs",
       "tests/belt_tests/src/**/*_test.mjs",
-      // Ignore the preserve_jsx_test.mjs file.
-      // I can't run because Mocha doesn't support jsx.
-      // We also want to keep the output as is.
+      // jsx_preserve_test.mjs contains JSX, which Node cannot load; the
+      // file exists to pin the preserved-JSX output.
       "--ignore",
       "tests/tests/src/jsx_preserve_test.mjs",
     ],
@@ -126,7 +126,6 @@ if (mochaTest) {
   });
 
   // CommonJS tests
-  const commonjsTestDir = path.join(projectDir, "tests/commonjs_tests");
   await execClean([], {
     cwd: commonjsTestDir,
     stdio: "inherit",

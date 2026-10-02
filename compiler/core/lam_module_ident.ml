@@ -24,8 +24,6 @@
 
 type t = J.module_id = {id: Ident.t; kind: Js_op.kind; dynamic_import: bool}
 
-let id x = x.id
-
 let of_ml ?(dynamic_import = false) id = {id; kind = Ml; dynamic_import}
 
 let of_runtime id = {id; kind = Runtime; dynamic_import = false}
