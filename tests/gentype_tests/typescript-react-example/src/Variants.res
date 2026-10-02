@@ -72,7 +72,9 @@ type testGenTypeAs3 = [
 @genType let id2 = (x: x2) => x
 
 @genType @genType.as("type")
-type type_ = | @genType.as("type") Type
+type type_ = | @as("type") Type
+
+@genType let typeCase = Type
 
 @genType
 type rec myList = E | C(int, myList)
