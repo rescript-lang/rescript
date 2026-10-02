@@ -158,16 +158,6 @@ let to_file_data_collection (collection : t) :
       | _ -> [(path, None)])
     ()
 
-(** Iterate over all file_data in the collection *)
-let iter_file_data (collection : t) (f : Dce_file_processing.file_data -> unit)
-    : unit =
-  Reactive_file_collection.iter
-    (fun _path result_opt ->
-      match result_opt with
-      | Some {dce_data = Some data; _} -> f data
-      | _ -> ())
-    collection
-
 (** Collect all exception results from the collection *)
 let collect_exception_results (collection : t) : Exception.file_result list =
   let results = ref [] in

@@ -1,19 +1,3 @@
-let filter_by_cursor cursor (loc : Warnings.loc) : bool =
-  match cursor with
-  | None -> true
-  | Some (line, col) ->
-    let start = loc.loc_start and end_ = loc.loc_end in
-    let line_in = start.pos_lnum <= line && line <= end_.pos_lnum in
-    let col_in =
-      if start.pos_lnum = end_.pos_lnum then
-        start.pos_cnum - start.pos_bol <= col
-        && col <= end_.pos_cnum - end_.pos_bol
-      else if line = start.pos_lnum then col >= start.pos_cnum - start.pos_bol
-      else if line = end_.pos_lnum then col <= end_.pos_cnum - end_.pos_bol
-      else true
-    in
-    line_in && col_in
-
 let dump ~(filter_for_position : (int * int) option) ~full =
   let open Shared_types in
   let open Shared_types.Stamps in

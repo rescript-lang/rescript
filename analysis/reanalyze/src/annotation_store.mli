@@ -9,4 +9,3 @@ val of_reactive :
 
 val is_annotated_dead : t -> Lexing.position -> bool
 val is_annotated_gentype_or_live : t -> Lexing.position -> bool
-val is_annotated_gentype_or_dead : t -> Lexing.position -> bool

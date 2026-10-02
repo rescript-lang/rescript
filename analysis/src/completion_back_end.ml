@@ -899,12 +899,6 @@ let completion_to_item ~state
     filterText = filter_text;
   }
 
-let completions_get_type_env = function
-  | {Completion.kind = Value typ; env} :: _ -> Some (typ, env)
-  | {Completion.kind = ObjLabel typ; env} :: _ -> Some (typ, env)
-  | {Completion.kind = Field ({typ}, _); env} :: _ -> Some (typ, env)
-  | _ -> None
-
 type get_completions_for_context_path_mode = Regular | Pipe
 
 let completions_get_completion_type ~full ~state completions =

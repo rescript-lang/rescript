@@ -1005,11 +1005,6 @@ let rec context_path_from_core_type (core_type : Parsetree.core_type) =
          })
   | _ -> None
 
-let unwrap_completion_type_if_option (t : Shared_types.completion_type) =
-  match t with
-  | Toption (_, ExtractedType unwrapped) -> unwrapped
-  | _ -> t
-
 module Codegen = struct
   let mk_fail_with_exp () =
     Ast_helper.Exp.apply

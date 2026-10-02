@@ -11,14 +11,6 @@ let mark_dead ~config ~is_type ~loc path =
     | Some _ -> ()
     | _ -> Hashtbl.replace table module_name (false, loc)
 
-let mark_live ~config ~is_type ~(loc : Location.t) path =
-  if active ~config then
-    let module_name = path |> Dce_path.to_module_name ~is_type in
-    match Hashtbl.find_opt table module_name with
-    | None -> Hashtbl.replace table module_name (true, loc)
-    | Some (false, loc) -> Hashtbl.replace table module_name (true, loc)
-    | Some (true, _) -> ()
-
 (** Check if a module is dead and return issue if so. Pure - no logging. *)
 let check_module_dead ~config ~file_name:pos_fname module_name : Issue.t option
     =
@@ -29,7 +21,7 @@ let check_module_dead ~config ~file_name:pos_fname module_name : Issue.t option
       Hashtbl.remove table module_name;
       (* only report once *)
       let loc =
-        if loc.loc_ghost then
+        if loc.Location.loc_ghost then
           let pos =
             {Lexing.pos_fname; pos_lnum = 0; pos_bol = 0; pos_cnum = 0}
           in

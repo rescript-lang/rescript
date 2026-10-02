@@ -9,16 +9,6 @@ let add_type_reference ~config ~refs ~pos_from ~pos_to =
       (pos_to |> Pos.to_string);
   References.add_type_ref refs ~pos_to ~pos_from
 
-let extend_type_dependencies ~config ~refs (loc1 : Location.t)
-    (loc2 : Location.t) =
-  let {Location.loc_start = pos_to; loc_ghost = ghost1} = loc1 in
-  let {Location.loc_start = pos_from; loc_ghost = ghost2} = loc2 in
-  if (not ghost1) && (not ghost2) && pos_to <> pos_from then (
-    if config.Dce_config.cli.debug then
-      Log_.item "extendTypeDependencies %s --> %s@." (pos_to |> Pos.to_string)
-        (pos_from |> Pos.to_string);
-    add_type_reference ~config ~refs ~pos_from ~pos_to)
-
 let add_declaration ~config ~decls ~file ~(module_path : Module_path.t)
     ~(type_id : Ident.t) ~(type_kind : Types.type_kind)
     ~(manifest_type_path : Dce_path.t option) =

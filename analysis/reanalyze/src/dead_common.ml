@@ -254,6 +254,3 @@ let report_declaration ~config ~has_ref_below ?check_module_dead ?should_report
       | Some mi -> [mi; dead_value_issue]
       | None -> [dead_value_issue]
     else []
-
-let do_report_dead ~ann_store pos =
-  not (Annotation_store.is_annotated_gentype_or_dead ann_store pos)
