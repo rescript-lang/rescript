@@ -10,8 +10,6 @@ type module_resolution =
   | Bundler
       (** should use TS input's extension (e.g. `.gen.tsx`) on import statements *)
 
-type bs_version = int * int * int
-
 type t = {
   bsb_project_root: string;
   bs_dependencies: string list;
