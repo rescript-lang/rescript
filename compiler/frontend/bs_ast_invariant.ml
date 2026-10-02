@@ -37,12 +37,7 @@ let warn_unused_attribute ((({txt; loc} as sloc), _) : Parsetree.attribute) =
   if
     is_checked_attribute txt && (not loc.loc_ghost)
     && not (Used_attributes.is_used_attribute sloc)
-  then
-    (*
-         dump_used_attributes Format.err_formatter;
-       dump_attribute Format.err_formatter attr ;
-    *)
-    Location.prerr_warning loc (Bs_unused_attribute txt)
+  then Location.prerr_warning loc (Bs_unused_attribute txt)
 
 let warn_discarded_unused_attributes (attrs : Parsetree.attributes) =
   if attrs <> [] then Ext_list.iter attrs warn_unused_attribute
