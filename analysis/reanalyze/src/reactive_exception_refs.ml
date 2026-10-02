@@ -1,7 +1,7 @@
 (** Reactive exception reference resolution.
 
     Expresses exception ref resolution as a reactive join:
-    - exception_refs: (path, loc_from) from CrossFileItems
+    - exception_refs: (path, loc_from) from Cross_file_items
     - exception_decls: (path, loc_to) indexed from Declarations
     - result: value refs (pos_to, pos_from)
     
@@ -20,7 +20,7 @@
                     join
                       ↓
                resolved_refs
-              (pos → PosSet)
+              (pos → Pos_set)
     ]} *)
 
 (** {1 Types} *)
@@ -39,7 +39,7 @@ type t = {
 (** Create reactive exception refs from decls and cross-file exception refs.
     
     [decls] is the reactive declarations collection.
-    [exception_refs] is the reactive collection of (path, loc_from) from CrossFileItems. *)
+    [exception_refs] is the reactive collection of (path, loc_from) from Cross_file_items. *)
 let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     ~(exception_refs : (Dce_path.t, Location.t) Reactive.t) : t =
   (* Step 1: Index exception declarations by path *)

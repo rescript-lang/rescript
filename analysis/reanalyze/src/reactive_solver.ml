@@ -13,9 +13,9 @@
     - incorrect_dead_decls = live decls with @dead annotation (reactive join)
     - dead_module_issues = dead_modules joined with modules_with_reported (reactive join)
     - is_pos_live uses reactive live collection
-    - shouldReport callback replaces report field mutation (no mutation needed)
-    - isInsideReportedValue is per-file only, so files are independent
-    - hasRefBelow uses on-demand search: O(total_refs) per dead decl (cross-file refs count as "below")
+    - should_report callback replaces report field mutation (no mutation needed)
+    - is_inside_reported_value is per-file only, so files are independent
+    - has_ref_below uses on-demand search: O(total_refs) per dead decl (cross-file refs count as "below")
     
     All issues now match between reactive and non-reactive modes (380 on deadcode test):
     - Dead code issues: 362 (Exception:2, Module:31, Type:87, Value:233, ValueWithSideEffects:8)
@@ -30,7 +30,7 @@ type t = {
   annotations: (Lexing.position, File_annotations.annotated_as) Reactive.t;
   value_refs_from: (Lexing.position, Pos_set.t) Reactive.t option;
   dead_modules: (Name.t, Location.t * string) Reactive.t;
-      (** Modules where all declarations are dead. Value is (loc, fileName). Reactive anti-join. *)
+      (** Modules where all declarations are dead. Value is (loc, file_name). Reactive anti-join. *)
   dead_decls_by_file: (string, Decl.t list) Reactive.t;
       (** Dead declarations grouped by file. Reactive per-file grouping. *)
   issues_by_file: (string, Issue.t list * Name.t list) Reactive.t;
@@ -84,7 +84,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
         ~f:(fun _ _ -> [])
         ()
     else
-      (* modules_with_dead: (moduleName, (loc, fileName)) for each module with dead decls *)
+      (* modules_with_dead: (module_name, (loc, file_name)) for each module with dead decls *)
       let modules_with_dead =
         Reactive.flat_map ~name:"solver.modules_with_dead" dead_decls
           ~f:(fun _pos decl ->
@@ -95,7 +95,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
           ~merge:(fun v1 _v2 -> v1) (* keep first *)
           ()
       in
-      (* modules_with_live: (moduleName, ()) for each module with live decls *)
+      (* modules_with_live: (module_name, ()) for each module with live decls *)
       let modules_with_live =
         Reactive.flat_map ~name:"solver.modules_with_live" live_decls
           ~f:(fun _pos decl -> [(decl_module_name decl, ())])
@@ -123,13 +123,13 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let transitive = config.Dce_config.run.transitive in
 
   (* Reactive per-file issues.
-     IMPORTANT: in non-transitive mode, warning emission depends on hasRefBelow,
+     IMPORTANT: in non-transitive mode, warning emission depends on has_ref_below,
      which depends on value_refs_from (cross-file refs). So we must recompute
      issues when refs change, not only when the file's dead decls change. *)
   let issues_for_file (_file : string) decls =
     (* Track modules that have reported values *)
     let modules_with_values : (Name.t, unit) Hashtbl.t = Hashtbl.create 8 in
-    (* shouldReport checks annotations reactively *)
+    (* should_report checks annotations reactively *)
     let should_report (decl : Decl.t) =
       match Reactive.get annotations decl.pos with
       | Some File_annotations.Live -> false
@@ -142,7 +142,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       Hashtbl.replace modules_with_values module_name ();
       None (* Module issues generated separately *)
     in
-    (* hasRefBelow: check if decl has any ref from "below" (including cross-file refs) *)
+    (* has_ref_below: check if decl has any ref from "below" (including cross-file refs) *)
     let has_ref_below =
       if transitive then fun _ -> false
       else
@@ -263,7 +263,7 @@ let check_module_dead ~(dead_modules : (Name.t, Location.t * string) Reactive.t)
       Hashtbl.replace reported_modules module_name ();
       let loc =
         if loc.Location.loc_ghost then
-          (* Use fileName from dead_modules, fallback to pos_fname *)
+          (* Use file_name from dead_modules, fallback to pos_fname *)
           let fname = if file_name <> "" then file_name else pos_fname in
           let pos =
             {Lexing.pos_fname = fname; pos_lnum = 0; pos_bol = 0; pos_cnum = 0}

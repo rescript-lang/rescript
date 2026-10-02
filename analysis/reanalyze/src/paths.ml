@@ -77,7 +77,7 @@ module Config = struct
     | Some (`Bool bool) -> Run_config.transitive bool
     | _ -> ()
 
-  (* Read the config from rescript.json and apply it to runConfig and suppress and unsuppress *)
+  (* Read the config from rescript.json and apply it to Run_config.run_config and suppress and unsuppress *)
   let process_config () =
     set_project_root_from_cwd ();
     let rescript_file = Filename.concat run_config.project_root rescript_json in

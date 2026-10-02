@@ -51,7 +51,7 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
       ()
   in
 
-  (* Value refs_from: (posFrom, PosSet of targets) with PosSet.union merge *)
+  (* Value refs_from: (pos_from, Pos_set of targets) with Pos_set.union merge *)
   let value_refs_from =
     Reactive.flat_map ~name:"value_refs_from" source
       ~f:(fun _path file_data_opt ->
@@ -63,7 +63,7 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
       ~merge:Pos_set.union ()
   in
 
-  (* Type refs_from: (posFrom, PosSet of targets) with PosSet.union merge *)
+  (* Type refs_from: (pos_from, Pos_set of targets) with Pos_set.union merge *)
   let type_refs_from =
     Reactive.flat_map ~name:"type_refs_from" source
       ~f:(fun _path file_data_opt ->
@@ -75,7 +75,7 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
       ~merge:Pos_set.union ()
   in
 
-  (* Cross-file items: (path, CrossFileItems.t) with merge by concatenation *)
+  (* Cross-file items: (path, Cross_file_items.t) with merge by concatenation *)
   let cross_file_items =
     Reactive.flat_map ~name:"cross_file_items" source
       ~f:(fun path file_data_opt ->
@@ -100,7 +100,7 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
       ()
   in
 
-  (* File deps map: (from_file, FileSet of to_files) with FileSet.union merge *)
+  (* File deps map: (from_file, File_set of to_files) with File_set.union merge *)
   let file_deps_map =
     Reactive.flat_map ~name:"file_deps_map" source
       ~f:(fun _path file_data_opt ->
@@ -126,7 +126,7 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
       ()
   in
 
-  (* Extract exception_refs from cross_file_items for ReactiveExceptionRefs *)
+  (* Extract exception_refs from cross_file_items for Reactive_exception_refs *)
   let exception_refs_collection =
     Reactive.flat_map ~name:"exception_refs_collection" cross_file_items
       ~f:(fun _path items ->

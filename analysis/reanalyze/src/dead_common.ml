@@ -33,10 +33,6 @@ let live_annotation = "live"
 type decls = Decl.t Pos_hash.t
 (** type alias for declaration hashtables *)
 
-(* NOTE: Global decls removed - now using Declarations.builder/t pattern *)
-
-(* NOTE: Global ValueReferences removed - now using References.builder/t pattern *)
-
 (* Local reporting context used only while emitting dead-code warnings.
    It tracks, per file, the end position of the last value we reported on,
    so nested values inside that range don't get duplicate warnings. *)
@@ -47,8 +43,6 @@ module Reporting_context = struct
   let get_max_end (ctx : t) = !ctx
   let set_max_end (ctx : t) (pos : Lexing.position) = ctx := pos
 end
-
-(* NOTE: Global TypeReferences removed - now using References.builder/t pattern *)
 
 let decl_get_loc decl =
   let loc_start =
@@ -162,8 +156,8 @@ let ref_is_below (decl : Decl.t) (pos_from : Lexing.position) =
      (* not a function defined inside a function, e.g. not a callback *)
      decl.pos_end.pos_cnum < pos_from.pos_cnum
 
-(** Create hasRefBelow function using on-demand per-decl search.
-    [iter_value_refs_from] iterates over (posFrom, posToSet) pairs.
+(** Create has_ref_below function using on-demand per-decl search.
+    [iter_value_refs_from] iterates over (pos_from, pos_to_set) pairs.
     O(total_refs) per dead decl, but dead decls should be few. *)
 let make_hasRefBelow ~transitive ~iter_value_refs_from =
   if transitive then fun _ -> false
@@ -175,10 +169,10 @@ let make_hasRefBelow ~transitive ~iter_value_refs_from =
     !found
 
 (** Report a dead declaration. Returns list of issues (dead module first, then dead value).
-    [hasRefBelow] checks if there are references from "below" the declaration.
+    [has_ref_below] checks if there are references from "below" the declaration.
     Only used when [config.run.transitive] is false.
-    [checkModuleDead] returns the dead-module issue for a module, if any.
-    [shouldReport] checks if a decl should be reported. *)
+    [check_module_dead] returns the dead-module issue for a module, if any.
+    [should_report] checks if a decl should be reported. *)
 let report_declaration ~config ~has_ref_below ~check_module_dead ~should_report
     (ctx : Reporting_context.t) decl : Issue.t list =
   let inside_reported_value = decl |> is_inside_reported_value ctx in

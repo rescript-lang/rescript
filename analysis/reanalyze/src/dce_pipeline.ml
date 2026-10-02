@@ -19,7 +19,7 @@ let create ~(config : Dce_config.t) : t =
   in
   let liveness = Reactive_liveness.create ~merged in
   let solver =
-    (* value_refs_from feeds hasRefBelow, needed when transitive = false *)
+    (* value_refs_from feeds has_ref_below, needed when transitive = false *)
     let value_refs_from =
       if config.Dce_config.run.transitive then None
       else Some merged.Reactive_merge.value_refs_from

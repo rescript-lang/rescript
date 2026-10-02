@@ -1184,7 +1184,7 @@ module Eval = struct
           in
           cache
           |> update_cache ~config ~function_call ~loc ~state:state_after_call;
-          (* Invariant: run should restore the callStack *)
+          (* Invariant: run should restore the call_stack *)
           call_stack |> Call_stack.remove_function_call ~function_call;
           let trace = Trace.Tcall (call, state_after_call.progress) in
           {state_after_call with trace})

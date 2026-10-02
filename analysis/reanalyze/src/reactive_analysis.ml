@@ -1,7 +1,7 @@
-(** Reactive analysis service using ReactiveFileCollection.
+(** Reactive analysis service using Reactive_file_collection.
 
     This module provides incremental analysis that only re-processes
-    files that have changed, using ReactiveFileCollection for efficient
+    files that have changed, using Reactive_file_collection for efficient
     delta-based updates. *)
 
 type cmt_file_result = {
@@ -94,7 +94,7 @@ let create ~config : t =
     ~process:(fun path cmt_infos ->
       process_cmt_infos ~config ~cmt_file_path:path cmt_infos)
 
-(** Process all files incrementally using ReactiveFileCollection.
+(** Process all files incrementally using Reactive_file_collection.
     First run processes all files. Subsequent runs only process changed files.
     Uses batch processing to emit all changes as a single Batch delta.
     Returns (result, stats) where stats contains processing information. *)
@@ -144,7 +144,7 @@ let process_files ~(collection : t) ~config:_ cmt_file_paths :
         stats ))
 
 (** Get the underlying reactive collection for composition.
-    Returns (path, file_data option) suitable for ReactiveMerge. *)
+    Returns (path, file_data option) suitable for Reactive_merge. *)
 let to_file_data_collection (collection : t) :
     (string, Dce_file_processing.file_data option) Reactive.t =
   Reactive.flat_map ~name:"file_data_collection"

@@ -1,7 +1,7 @@
 (** AST traversal to collect source annotations (@dead, @live, @genType).
 
     This module traverses the typed AST to find attribute annotations
-    and records them in a FileAnnotations.builder. *)
+    and records them in a File_annotations.builder. *)
 
 open Dead_common
 

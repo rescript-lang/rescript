@@ -66,8 +66,8 @@ let add_declaration ~config ~decls ~file ~(module_path : Module_path.t)
    The batch and the reactive pipelines share this rule and the shape of a
    record-label declaration below, and differ only in how they index
    declarations and how they record an edge. *)
-(* Use raw declaration positions, not [declGetLoc], because references are keyed
-   by raw positions (decl.pos). [declGetLoc] applies [posAdjustment] (e.g. +2 for
+(* Use raw declaration positions, not [decl_get_loc], because references are keyed
+   by raw positions (decl.pos). [decl_get_loc] applies [pos_adjustment] (e.g. +2 for
    OtherVariant), which is intended for reporting locations, not for reference
    graph keys. *)
 let decl_raw_loc (decl : Decl.t) : Location.t =

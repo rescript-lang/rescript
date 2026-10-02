@@ -31,7 +31,7 @@ val builder_files : builder -> String_set.t
 val builder_deps_to_list : builder -> (string * String_set.t) list
 (** Extract all deps as a list for reactive merge *)
 
-(** {2 Internal types (for ReactiveMerge)} *)
+(** {2 Internal types (for Reactive_merge)} *)
 
 module File_hash : Hashtbl.S with type key = string
 (** Iterate over files in topological order (roots first, leaves last).

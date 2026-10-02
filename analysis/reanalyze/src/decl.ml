@@ -34,7 +34,7 @@ type t = {
   path: Dce_path.t;
       (** For type re-exports (e.g. [type y = x = {...}]), record/variant label
       declarations belonging to the re-exporting type can carry the manifest
-      type path so [DeadType.process_type_label_dependencies] can link fields
+      type path so [Reactive_type_deps] (manifest_refs) can link fields
       without needing the typed tree. *)
   manifest_type_path: Dce_path.t option;
   pos: Lexing.position;
