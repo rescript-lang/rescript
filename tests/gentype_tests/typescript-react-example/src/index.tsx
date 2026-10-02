@@ -10,6 +10,7 @@ import * as MyMath from "./MyMath.tsx";
 import { Universe_Nested2_Nested3_nested3Value } from "./NestedModules.gen.tsx";
 import * as Records from "./Records.gen.tsx";
 import * as TestPromise from "./TestPromise.gen.tsx";
+import * as Unboxed from "./Unboxed.gen.tsx";
 import * as Variants from "./Variants.gen.tsx";
 import {
   printManyPayloads,
@@ -128,6 +129,8 @@ type Props = {
 export const make: React.FC<Props> = (_x: Props) => {
   return <div />;
 };
+
+consoleLog("Unboxed: tLength({ x: 3 }) =", Unboxed.tLength({ x: 3 }));
 
 const signedMessage = DocStrings.signMessage("hello", 42);
 consoleLog("signedMessage:", signedMessage);
