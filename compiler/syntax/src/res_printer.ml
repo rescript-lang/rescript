@@ -28,6 +28,12 @@ let add_parens doc =
          Doc.rparen;
        ])
 
+(* Keep the delimiters on the expression's first and last lines. The parser
+   excludes parentheses from expression locations, so breaking just inside
+   them would create blank lines or move comments on the next formatting pass. *)
+let add_statement_parens doc =
+  Doc.group (Doc.concat [Doc.lparen; doc; Doc.rparen])
+
 let add_braces ?(force_break = false) doc =
   Doc.breakable_group ~force_break
     (Doc.concat
@@ -688,7 +694,10 @@ and print_structure_item ~state (si : Parsetree.structure_item) cmt_tbl =
       match Parens.structure_expr expr with
       | Parens.Parenthesized -> add_parens doc
       | Braced braces -> print_braces doc expr braces
-      | Nothing -> doc
+      | Nothing -> (
+        match Parens.statement_expr expr with
+        | Parenthesized -> add_statement_parens doc
+        | Braced _ | Nothing -> doc)
     in
     Doc.concat [print_attributes ~state attrs cmt_tbl; expr_doc]
   | Pstr_attribute attr ->
@@ -5580,7 +5589,10 @@ and print_expression_block ~state ~braces expr cmt_tbl =
         match Parens.expr expr1 with
         | Parens.Parenthesized -> add_parens doc
         | Braced braces -> print_braces doc expr1 braces
-        | Nothing -> doc
+        | Nothing -> (
+          match Parens.statement_expr expr1 with
+          | Parenthesized when acc <> [] -> add_statement_parens doc
+          | Parenthesized | Braced _ | Nothing -> doc)
       in
       let loc = expr1.pexp_loc in
       collect_rows ((loc, expr_doc) :: acc) expr2
@@ -5622,7 +5634,10 @@ and print_expression_block ~state ~braces expr cmt_tbl =
         match Parens.expr expr with
         | Parens.Parenthesized -> add_parens doc
         | Braced braces -> print_braces doc expr braces
-        | Nothing -> doc
+        | Nothing -> (
+          match Parens.statement_expr expr with
+          | Parenthesized when acc <> [] -> add_statement_parens doc
+          | Parenthesized | Braced _ | Nothing -> doc)
       in
       List.rev ((expr.pexp_loc, expr_doc) :: acc)
   in

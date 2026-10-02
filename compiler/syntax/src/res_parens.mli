@@ -1,6 +1,7 @@
 type kind = Parenthesized | Braced of Location.t | Nothing
 
 val expr : Parsetree.expression -> kind
+val statement_expr : Parsetree.expression -> kind
 
 (* Unlike [expr], this does not request parentheses for a top-level coercion.
    Use only where the surrounding grammar delimits the expression, such as call
