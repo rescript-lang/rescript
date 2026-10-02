@@ -20,7 +20,7 @@ end = struct
 
   let zero = 0L
 
-  (* TODO: we could do this inside caml_absolute_time *)
+  (* TODO: we could do this inside caml_mach_absolute_time *)
   external init : unit -> unit = "caml_mach_initialize"
   let () = init ()
   external now : unit -> t = "caml_mach_absolute_time"
