@@ -33,6 +33,7 @@
 
 #### :house: Internal
 
+- Forward-port integer range pattern regression coverage from v12 to v13. https://github.com/rescript-lang/rescript/pull/8718
 - Represent inline record definitions with an explicit parsetree origin while retaining the existing PPX wire representation. https://github.com/rescript-lang/rescript/pull/8686
 - Make expression attributes immutable in the current parsetree, now that editor refactors construct new expression nodes. https://github.com/rescript-lang/rescript/pull/8685
 - Remove the unused `pat_record_label` alias from the current parsetree. https://github.com/rescript-lang/rescript/pull/8684
