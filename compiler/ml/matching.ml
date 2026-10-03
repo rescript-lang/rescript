@@ -1943,7 +1943,13 @@ let combine_constant loc arg cst partial ctx def
             | _ -> assert false)
           const_lambda_list
       in
-      call_switcher fail arg min_int max_int int_lambda_list
+      (* Match intervals must use ReScript's int32 bounds, not the host's.
+         Otherwise the upper fail interval starts at 2147483648, which wraps
+         when converted to a Lambda integer constant. *)
+      call_switcher fail arg
+        (Int32.to_int Int32.min_int)
+        (Int32.to_int Int32.max_int)
+        int_lambda_list
     | Const_char _ ->
       let int_lambda_list =
         List.map
