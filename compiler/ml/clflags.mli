@@ -19,6 +19,7 @@ val dump_source : bool ref
 val dump_parsetree : bool ref
 val dump_typedtree : bool ref
 val dump_rawlambda : bool ref
+val dump_coercions : bool ref
 val dont_write_files : bool ref
 val keep_locs : bool ref
 val only_parse : bool ref
