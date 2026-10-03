@@ -19,6 +19,29 @@ let expr_with_coercion_kind coercion_kind expr =
 let expr expr = expr_with_coercion_kind Parenthesized expr
 let expr_allowing_coercion expr = expr_with_coercion_kind Nothing expr
 
+(* A leading regexp can be read as division continuing the previous statement.
+   Follow the left edge of pipes, calls and ternaries, including placeholder
+   sugar, so parentheses protect the whole statement even when it wraps. *)
+let rec starts_with_regexp expr =
+  match expr.Parsetree.pexp_desc with
+  | Pexp_regexp _ -> true
+  | Pexp_apply {args = [(Nolabel, lhs); (Nolabel, _rhs)]}
+    when Parsetree_viewer.is_binary_expression expr ->
+    starts_with_regexp lhs
+  | Pexp_apply {funct} -> starts_with_regexp funct
+  | Pexp_ternary (condition, _consequent, _alternate) ->
+    starts_with_regexp condition
+  | Pexp_object_get (obj, _) | Pexp_object_set (obj, _, _) ->
+    starts_with_regexp obj
+  | Pexp_fun _ when Parsetree_viewer.is_underscore_apply_sugar expr ->
+    starts_with_regexp (Parsetree_viewer.rewrite_underscore_apply expr)
+  | _ -> false
+
+let statement_expr e =
+  match expr e with
+  | Nothing when starts_with_regexp e -> Parenthesized
+  | kind -> kind
+
 let expr_record_row_rhs ~optional e =
   let kind = expr e in
   match kind with

@@ -20,6 +20,7 @@
 
 #### :bug: Bug fix
 
+- Preserve parentheses around statements that start with a regexp literal, so formatting cannot turn them into division continuing the previous statement. https://github.com/rescript-lang/rescript/pull/8720
 - Make rewatch compile independent modules after an unrelated failure and recompile blocked dependents when a changed interface survives a failed implementation, including across full watcher rebuilds. https://github.com/rescript-lang/rescript/pull/8667
 - Fix invalid JavaScript that exported names left unbound when a module's toplevel always throws. https://github.com/rescript-lang/rescript/pull/8692
 - Make module inclusion error messages independent of the length of the source file path. https://github.com/rescript-lang/rescript/pull/8691
