@@ -19,12 +19,12 @@ function f3(x) {
   return (y, z) => (x + y | 0) + z | 0;
 }
 
-Mocha.describe("Arity_deopt", () => {
+Mocha.describe("Arity_deopt_test", () => {
   Mocha.test("arity_deopt_tests", () => {
-    Test_utils.eq("File \"arity_deopt.res\", line 43, characters 7-14", 6, 6);
-    Test_utils.eq("File \"arity_deopt.res\", line 44, characters 7-14", 6, 6);
-    Test_utils.eq("File \"arity_deopt.res\", line 45, characters 7-14", 6, 6);
-    Test_utils.eq("File \"arity_deopt.res\", line 46, characters 7-14", 6, 6);
+    Test_utils.eq("File \"arity_deopt_test.res\", line 43, characters 7-14", 6, 6);
+    Test_utils.eq("File \"arity_deopt_test.res\", line 44, characters 7-14", 6, 6);
+    Test_utils.eq("File \"arity_deopt_test.res\", line 45, characters 7-14", 6, 6);
+    Test_utils.eq("File \"arity_deopt_test.res\", line 46, characters 7-14", 6, 6);
   });
 });
 

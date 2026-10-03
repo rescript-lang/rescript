@@ -69,9 +69,9 @@ function isOdd(n) {
   }
 }
 
-Mocha.describe("Tramp_fib", () => {
-  Mocha.test("fibonacci trampoline", () => Test_utils.eq("File \"tramp_fib.res\", line 54, characters 7-14", iter(u), 89));
-  Mocha.test("even/odd trampoline", () => Test_utils.eq("File \"tramp_fib.res\", line 58, characters 7-14", iter(isEven(20000)), true));
+Mocha.describe("Tramp_fib_test", () => {
+  Mocha.test("fibonacci trampoline", () => Test_utils.eq("File \"tramp_fib_test.res\", line 54, characters 7-14", iter(u), 89));
+  Mocha.test("even/odd trampoline", () => Test_utils.eq("File \"tramp_fib_test.res\", line 58, characters 7-14", iter(isEven(20000)), true));
 });
 
 export {

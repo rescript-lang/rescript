@@ -24,6 +24,3 @@ let a15 = Math.log
 let a16 = Math.log10
 let a17 = Math.log1p
 let a18 = \"**"
-/* local variables: */
-/* compile-command: "ocamlc -dlambda -c test_pervasive.ml" */
-/* end: */

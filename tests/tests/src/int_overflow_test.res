@@ -3,8 +3,8 @@ open Test_utils
 
 @@warning("-107")
 
-let max_int = 2147483647 // 0x80000000
-let min_int = -2147483648 // 0x7FFFFFFF
+let max_int = 2147483647 // 0x7FFFFFFF
+let min_int = -2147483648 // 0x80000000
 
 let hash_variant = s => {
   let accu = ref(0)

@@ -36,7 +36,7 @@ function bal(l, x, d, r) {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "inline_map_demo.res",
+          "inline_map_demo_test.res",
           41,
           15
         ],
@@ -56,7 +56,7 @@ function bal(l, x, d, r) {
     throw {
       RE_EXN_ID: "Assert_failure",
       _1: [
-        "inline_map_demo.res",
+        "inline_map_demo_test.res",
         47,
         19
       ],
@@ -77,7 +77,7 @@ function bal(l, x, d, r) {
     throw {
       RE_EXN_ID: "Assert_failure",
       _1: [
-        "inline_map_demo.res",
+        "inline_map_demo_test.res",
         55,
         15
       ],
@@ -97,7 +97,7 @@ function bal(l, x, d, r) {
   throw {
     RE_EXN_ID: "Assert_failure",
     _1: [
-      "inline_map_demo.res",
+      "inline_map_demo_test.res",
       61,
       19
     ],
@@ -181,8 +181,8 @@ function find(px, _x) {
   };
 }
 
-Mocha.describe("Inline_map_demo", () => {
-  Mocha.test("find", () => Test_utils.eq("File \"inline_map_demo.res\", line 141, characters 24-31", find(10, m), /* 'a' */97));
+Mocha.describe("Inline_map_demo_test", () => {
+  Mocha.test("find", () => Test_utils.eq("File \"inline_map_demo_test.res\", line 141, characters 24-31", find(10, m), /* 'a' */97));
 });
 
 /* m Not a pure module */

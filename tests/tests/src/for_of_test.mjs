@@ -31,7 +31,7 @@ function countItems(arr) {
   return count;
 }
 
-Mocha.describe("Test_for_of", () => {
+Mocha.describe("For_of_test", () => {
   Mocha.test("basic iteration", () => {
     let arr = [
       1,
@@ -44,7 +44,7 @@ Mocha.describe("Test_for_of", () => {
     for (let x of arr) {
       sum = sum + x | 0;
     }
-    Test_utils.eq("File \"test_for_of.res\", line 44, characters 7-14", sum, 15);
+    Test_utils.eq("File \"for_of_test.res\", line 44, characters 7-14", sum, 15);
   });
   Mocha.test("single element", () => {
     let arr = [42];
@@ -52,15 +52,15 @@ Mocha.describe("Test_for_of", () => {
     for (let x of arr) {
       result = x;
     }
-    Test_utils.eq("File \"test_for_of.res\", line 55, characters 7-14", result, 42);
+    Test_utils.eq("File \"for_of_test.res\", line 55, characters 7-14", result, 42);
   });
   Mocha.test("empty array", () => {
     let arr = [];
     for (let _for_of of arr) {
-      Test_utils.ok("File \"test_for_of.res\", line 63, characters 9-16", false);
+      Test_utils.ok("File \"for_of_test.res\", line 63, characters 9-16", false);
     }
   });
-  Mocha.test("unused named loop variable", () => Test_utils.eq("File \"test_for_of.res\", line 68, characters 7-14", countItems([
+  Mocha.test("unused named loop variable", () => Test_utils.eq("File \"for_of_test.res\", line 68, characters 7-14", countItems([
     1,
     2,
     3
@@ -76,7 +76,7 @@ Mocha.describe("Test_for_of", () => {
       let x$1 = x + 10 | 0;
       sum = sum + x$1 | 0;
     }
-    Test_utils.eq("File \"test_for_of.res\", line 80, characters 7-14", sum, 36);
+    Test_utils.eq("File \"for_of_test.res\", line 80, characters 7-14", sum, 36);
   });
   Mocha.test("break and continue target the for..of loop from nested switches", () => {
     let arr = [
@@ -99,7 +99,7 @@ Mocha.describe("Test_for_of", () => {
           ]);
       }
     }
-    Test_utils.eq("File \"test_for_of.res\", line 95, characters 7-14", seen, [2]);
+    Test_utils.eq("File \"for_of_test.res\", line 95, characters 7-14", seen, [2]);
   });
   Mocha.test("blog-style order scan uses continue and break", () => {
     let orders = [
@@ -129,7 +129,7 @@ Mocha.describe("Test_for_of", () => {
         total: 900
       }
     ];
-    Test_utils.eq("File \"test_for_of.res\", line 107, characters 7-14", firstLargeOpenOrder(orders), 104);
+    Test_utils.eq("File \"for_of_test.res\", line 107, characters 7-14", firstLargeOpenOrder(orders), 104);
   });
 });
 
