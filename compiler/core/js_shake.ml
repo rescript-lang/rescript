@@ -65,26 +65,9 @@ let shake_program (program : J.program) =
     let loop block export_set : Set_ident.t =
       let rec aux acc block =
         let result, diff = get_initial_exports false acc block in
-        (* let _d ()  =  *)
-        (*   if Ext_string.ends_with program.name  debug_file then  *)
-        (*     begin *)
-        (*       Ext_log.err "@[%a@]@." Set_ident.print result  ; *)
-        (*     end *)
-        (* in *)
         if Set_ident.is_empty diff then result else aux result block
       in
       let first_iteration, delta = get_initial_exports true export_set block in
-
-      (* let _d ()  =  *)
-      (*   if Ext_string.ends_with program.name  debug_file then  *)
-      (*   begin   *)
-      (*     Ext_log.err "@[<v>%a@ %a@]@." *)
-      (*       Set_ident.print first_iteration   *)
-      (*       Set_ident.print delta (\* TODO: optimization, don't add persistent variables *\) *)
-      (*       ; *)
-      (*     Ext_log.err "init ---- @." *)
-      (*   end *)
-      (* in *)
       if not @@ Set_ident.is_empty delta then aux first_iteration block
       else first_iteration
     in

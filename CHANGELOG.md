@@ -22,6 +22,8 @@
 
 - Make rewatch compile independent modules after an unrelated failure and recompile blocked dependents when a changed interface survives a failed implementation, including across full watcher rebuilds. https://github.com/rescript-lang/rescript/pull/8667
 - Keep comments on labelled parameters with default values, and before `=?` in optional arrow-type arguments, when formatting. https://github.com/rescript-lang/rescript/pull/8690
+- Fix invalid JavaScript that exported names left unbound when a module's toplevel always throws. https://github.com/rescript-lang/rescript/pull/8692
+- Make module inclusion error messages independent of the length of the source file path. https://github.com/rescript-lang/rescript/pull/8691
 
 #### :memo: Documentation
 
@@ -30,6 +32,7 @@
 - Represent explicit expression braces as `Pexp_braces` in parsetree v1 and format `else` branches consistently with `if` branches. https://github.com/rescript-lang/rescript/pull/8678
 - Omit redundant braces around multi-statement switch case bodies when formatting. https://github.com/rescript-lang/rescript/pull/8677
 - Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662
+- Require Node.js 22 in the platform binary packages, as the `rescript` package already does. https://github.com/rescript-lang/rescript/pull/8695
 
 #### :house: Internal
 

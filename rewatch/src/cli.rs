@@ -68,7 +68,7 @@ pub fn parse_with_default() -> Result<Cli, clap::Error> {
 }
 
 /// Parse the provided argv while applying the implicit `build` defaulting rules.
-pub fn parse_with_default_from(raw_args: &[OsString]) -> Result<Cli, clap::Error> {
+fn parse_with_default_from(raw_args: &[OsString]) -> Result<Cli, clap::Error> {
     match Cli::try_parse_from(raw_args) {
         Ok(cli) => Ok(cli),
         Err(err) => {
@@ -506,21 +506,6 @@ mod tests {
     }
 
     #[test]
-    fn features_flag_round_trips_through_build_to_watch_args() {
-        let cli = parse(&["rescript", "build", "--features", "a,b"]).expect("expected build command");
-        match cli.command {
-            Command::Build(build_args) => {
-                let watch_args: WatchArgs = build_args.into();
-                assert_eq!(
-                    watch_args.features.parsed(),
-                    Some(vec!["a".to_string(), "b".to_string()])
-                );
-            }
-            other => panic!("expected build command, got {other:?}"),
-        }
-    }
-
-    #[test]
     fn build_features_flag_strips_whitespace() {
         let cli = parse(&["rescript", "build", "--features", " native , experimental "])
             .expect("expected build command");
@@ -558,20 +543,6 @@ pub struct WatchArgs {
     /// Skip dev-dependencies and dev sources (type: "dev")
     #[arg(long, default_value_t = false)]
     pub prod: bool,
-}
-
-impl From<BuildArgs> for WatchArgs {
-    fn from(build_args: BuildArgs) -> Self {
-        Self {
-            folder: build_args.folder,
-            filter: build_args.filter,
-            after_build: build_args.after_build,
-            warn_error: build_args.warn_error,
-            features: build_args.features,
-            clear_screen: false,
-            prod: build_args.prod,
-        }
-    }
 }
 
 #[derive(Subcommand, Clone, Debug)]

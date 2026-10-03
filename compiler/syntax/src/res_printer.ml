@@ -775,16 +775,7 @@ and print_type_extension ~state (te : Parsetree.type_extension) cmt_tbl =
         ~nodes:ecs ~force_break cmt_tbl
     in
     Doc.breakable_group ~force_break
-      (Doc.indent
-         (Doc.concat
-            [
-              Doc.line;
-              private_flag;
-              rows;
-              (* Doc.join ~sep:Doc.line ( *)
-              (* List.mapi printExtensionConstructor ecs *)
-              (* ) *)
-            ]))
+      (Doc.indent (Doc.concat [Doc.line; private_flag; rows]))
   in
   Doc.group
     (Doc.concat
@@ -1881,7 +1872,7 @@ and print_constructor_arguments ?(is_dot_dot_dot = false) ~state ~indent
       Doc.concat
         [
           Doc.lparen;
-          (* manually inline the printRecordDeclaration, gives better layout *)
+          (* manually inline the print_record_declaration, gives better layout *)
           Doc.lbrace;
           Doc.indent
             (Doc.concat
@@ -4673,12 +4664,8 @@ and print_jsx_container_tag ~state tag_name
       loc_ghost = false;
     }
   in
-  let _opening_greater_than_has_leading_comments, opening_greater_than_doc =
-    let has_leading_comments =
-      has_leading_comments cmt_tbl opening_greater_than_loc
-    in
-    ( has_leading_comments,
-      print_comments Doc.greater_than cmt_tbl opening_greater_than_loc )
+  let opening_greater_than_doc =
+    print_comments Doc.greater_than cmt_tbl opening_greater_than_loc
   in
   let formatted_props = print_jsx_props ~state props cmt_tbl in
   (* <div className="test" /> *)
@@ -6103,11 +6090,6 @@ and print_mod_functor ~state mod_expr cmt_tbl =
   let parameters, return_mod_expr =
     Parsetree_viewer.mod_expr_functor mod_expr
   in
-  (* let shouldInline = match returnModExpr.pmod_desc with *)
-  (* | Pmod_structure _ | Pmod_ident _ -> true *)
-  (* | Pmod_constraint ({pmod_desc = Pmod_structure _}, _) -> true *)
-  (* | _ -> false *)
-  (* in *)
   let return_constraint, return_mod_expr =
     match return_mod_expr.pmod_desc with
     | Pmod_constraint (mod_expr, mod_type) ->
@@ -6257,7 +6239,6 @@ let print_implementation ?(width = default_print_width)
     (s : Parsetree.structure) ~comments =
   let cmt_tbl = Comment_table.make () in
   Comment_table.walk_structure s cmt_tbl comments;
-  (* CommentTable.log cmt_tbl; *)
   let doc = print_structure ~state:(State.init ()) s cmt_tbl in
   (* Doc.debug doc; *)
   Doc.to_string ~width doc ^ "\n"

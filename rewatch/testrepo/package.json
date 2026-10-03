@@ -9,7 +9,6 @@
       "packages/new-namespace",
       "packages/namespace-casing",
       "packages/with-dev-deps",
-      "packages/nonexisting-dev-files",
       "packages/deprecated-config",
       "packages/file-casing",
       "packages/file-casing-no-namespace",
@@ -27,10 +26,5 @@
     "@rescript/belt": "portal:../../packages/@rescript/belt",
     "@rescript/runtime": "portal:../../packages/@rescript/runtime",
     "rescript": "12.0.0"
-  },
-  "scripts": {
-    "build": "../target/release/rescript build .",
-    "watch": "../target/release/rescript watch .",
-    "clean": "../target/release/rescript clean ."
   }
 }

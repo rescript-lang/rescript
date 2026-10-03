@@ -1,5 +1,5 @@
 Complete src/ConstructorCompletion__Own.res 4:24
-posCursor:[4:24] posNoWhite:[4:23] Found expr:[4:8->4:25]
+pos_cursor:[4:24] pos_no_white:[4:23] Found expr:[4:8->4:25]
 Pexp_construct WithVariant
 One:[4:8->4:23] [4:23->4:25]
 Completable: Cexpression CTypeAtPos()->variantPayload::One($0)

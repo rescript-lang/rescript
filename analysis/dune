@@ -1,4 +1,4 @@
-(dirs bin src reactive reanalyze vendor)
+(dirs bin src reactive reanalyze)
 
 (env
  (release

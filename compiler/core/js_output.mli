@@ -75,5 +75,3 @@ val output_of_block_and_expression :
 *)
 
 val concat : t list -> t
-
-val to_string : t -> string

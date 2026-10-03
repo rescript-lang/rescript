@@ -24,11 +24,6 @@ let copy tbl =
 
 let empty = make ()
 
-let rec list_last = function
-  | [] -> failwith "list_last: empty list"
-  | [x] -> x
-  | _ :: rest -> list_last rest
-
 let print_location (k : Warnings.loc) =
   Doc.concat
     [
@@ -335,7 +330,7 @@ let rec collect_list_exprs acc expr =
   | Pexp_construct ({txt = Longident.Lident "[]"}, _) -> List.rev acc
   | _ -> List.rev (expr :: acc)
 
-(* TODO: use ParsetreeViewer *)
+(* TODO: use Parsetree_viewer *)
 let arrow_type ct =
   let open Parsetree in
   match ct with
@@ -343,7 +338,7 @@ let arrow_type ct =
     (attrs, params |> List.map (fun (p : arg) -> (p.attrs, p.lbl, p.typ)), ret)
   | typ -> ([], [], typ)
 
-(* TODO: avoiding the dependency on ParsetreeViewer here, is this a good idea? *)
+(* TODO: avoiding the dependency on Parsetree_viewer here, is this a good idea? *)
 let mod_expr_apply mod_expr =
   let rec loop acc mod_expr =
     match mod_expr with
@@ -352,7 +347,7 @@ let mod_expr_apply mod_expr =
   in
   loop [] mod_expr
 
-(* TODO: avoiding the dependency on ParsetreeViewer here, is this a good idea? *)
+(* TODO: avoiding the dependency on Parsetree_viewer here, is this a good idea? *)
 let mod_expr_functor mod_expr =
   let rec loop acc mod_expr =
     match mod_expr with

@@ -105,7 +105,8 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
         match first_char_before_cursor_no_white with
         | None -> ()
         | Some c ->
-          Printf.printf "[traverse_expr] firstCharBeforeCursorNoWhite: %c.\n" c);
+          Printf.printf
+            "[traverse_expr] first_char_before_cursor_no_white: %c.\n" c);
 
       (* Figure out if we're completing for a new field.
          If the cursor is inside of the record body, but no field has the cursor,

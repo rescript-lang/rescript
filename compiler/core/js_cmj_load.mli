@@ -22,8 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(** This module is platform dependent, on browser environment, 
-    it depends on {!Js_cmj_datasets}, for non-browser environment, it fails
-*)
-
-val load_unit : (string -> Js_cmj_format.cmj_load_info) ref
+val load_unit : string -> Js_cmj_format.cmj_load_info
+(** [load_unit name] reads [name.cmj] from the load path, together with the
+    package path of the directory it was found in. Raises
+    [Bs_exception.Error (Cmj_not_found name)] when no such file exists. *)

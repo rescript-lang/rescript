@@ -64,7 +64,7 @@ let code_item_to_string ~config ~type_name_is_interface
     (code_item : Code_item.t) =
   match code_item with
   | ExportValue {resolved_name; type_} ->
-    "ExportValue" ^ " resolvedName:"
+    "ExportValue" ^ " resolved_name:"
     ^ Resolved_name.to_string resolved_name
     ^ " type:"
     ^ Emit_type.type_to_string ~config ~type_name_is_interface type_

@@ -25,7 +25,7 @@
 open Ast_helper
 
 (**
-   [newTdcls tdcls newAttrs]
+   [new_tdcls tdcls new_attrs]
    functional update attributes of last declaration *)
 let new_tdcls (tdcls : Parsetree.type_declaration list)
     (new_attrs : Parsetree.attributes) : Parsetree.type_declaration list =

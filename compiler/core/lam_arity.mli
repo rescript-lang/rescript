@@ -32,10 +32,6 @@ type t = private
   *)
   | Arity_na
 
-val equal : t -> t -> bool
-
-val print : Format.formatter -> t -> unit
-
 val merge : int -> t -> t
 
 val non_function_arity_info : t
@@ -47,8 +43,6 @@ val na : t
 val info : int list -> bool -> t
 
 val first_arity_na : t -> bool
-
-val get_first_arity : t -> int option
 
 val extract_arity : t -> int list
 (** when [NA] return  empty list*)

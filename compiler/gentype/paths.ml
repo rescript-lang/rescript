@@ -1,7 +1,5 @@
 open Gentype_common
 
-let concat = Filename.concat
-
 let handle_namespace cmt =
   let cut_after_dash s =
     match String.index s '-' with
