@@ -160,12 +160,6 @@ let constructor_tag layout position =
   | Constant tag -> tag.literal
   | Block (Tagged {tag} | Untagged {tag}) -> tag.literal
 
-let constructor_is_untagged layout position =
-  match constructor_at layout position with
-  | Constant _ -> false
-  | Block (Tagged _) -> false
-  | Block (Untagged _) -> true
-
 let representation ({variant; position} : constructor_reference) =
   constructor_at (get_layout variant) position
 

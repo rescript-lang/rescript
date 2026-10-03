@@ -282,10 +282,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
               [
                 label_declarations
                 |> translate_label_declarations ~inline:true
-                     ~unboxed:
-                       (type_representation = Unboxed
-                       || Variant_runtime.constructor_is_untagged layout
-                            position);
+                     ~unboxed:(type_representation = Unboxed);
               ]
           in
           let arg_types =
