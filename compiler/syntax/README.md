@@ -24,6 +24,8 @@ parsetree consumed by `compiler/ml`.
 See [Formatter.md](Formatter.md) for formatter policy and [JSX.md](JSX.md) for
 the current JSX transformation contract.
 
+[ParserCursor.md](ParserCursor.md) states the parser's token-cursor invariants (peek versus next, lookahead and try_parse rollback, pending comments and diagnostics); read it before changing `Res_parser` consumption or recovery.
+
 ## Building and testing
 
 Run commands from the repository root:

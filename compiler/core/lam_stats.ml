@@ -36,8 +36,6 @@
     in the  beginning, when we do alpha conversion, we can instrument the table
 *)
 
-(* type alias_tbl =  Ident.t Hash_ident.t *)
-
 type ident_tbl = Lam_id_kind.t Hash_ident.t
 
 type t = {
@@ -51,9 +49,6 @@ type t = {
 }
 
 let pp = Format.fprintf
-
-(* let pp_alias_tbl fmt (tbl : alias_tbl) =
-   Hash_ident.iter  tbl (fun k v -> pp fmt "@[%a -> %a@]@." Ident.print k Ident.print v) *)
 
 let pp_ident_tbl fmt (ident_tbl : ident_tbl) =
   Hash_ident.iter ident_tbl (fun k v ->

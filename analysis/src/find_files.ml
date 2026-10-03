@@ -185,7 +185,7 @@ let find_project_files ~public ~namespace ~path ~source_directories ~lib_bs =
     source_directories |> List.map (Filename.concat path) |> String_set.of_list
   in
   let files =
-    (* Use maxDepth to prevent infinite recursion where `rescript` depends on `@rescript/runtime`,
+    (* Use max_depth to prevent infinite recursion where `rescript` depends on `@rescript/runtime`,
        but `@rescript/runtime` also has `rescript` as a dev dependency *)
     dirs |> String_set.elements
     |> List.map (fun name -> Files.collect ~max_depth:2 name is_source_file)

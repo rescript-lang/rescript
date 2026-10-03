@@ -1,6 +1,6 @@
 open Shared_types
 
-(* Creates the `pathsForModule` hashtbl, which maps a `moduleName` to it's `paths` (the ml/re, mli/rei, cmt, and cmti files) *)
+(* Creates the `paths_for_module` hashtbl, which maps a `mod_name` to it's `paths` (the ml/re, mli/rei, cmt, and cmti files) *)
 let make_paths_for_module ~project_files_and_paths ~dependencies_files_and_paths
     =
   let paths_for_module = Hashtbl.create 30 in

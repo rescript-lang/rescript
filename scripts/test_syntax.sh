@@ -21,6 +21,12 @@ function maybeWait {
   [[ $((taskCount % 20)) = 0 ]] && wait
 }
 
+# printer API, outcome printer snapshot, parser position and UTF-8 tests
+if ! $DUNE_BIN_DIR/syntax_tests; then
+  printf "syntax_tests failed\n"
+  exit 1
+fi
+
 pushd tests
 
 legacyJsReferences=$(find syntax_tests/data syntax_benchmarks/data \( -name "*.res" -o -name "*.resi" \) -exec grep -nHE '(^|[^[:alnum:]_])Js\.' {} + || true)
@@ -43,13 +49,13 @@ while read file; do
 done <temp/files.txt
 
 # printing
-find syntax_tests/data/{printer,conversion} -name "*.res" -o -name "*.resi" -o -name "*.ml" -o -name "*.mli" >temp/files.txt
+find syntax_tests/data/{printer,conversion} -name "*.res" -o -name "*.resi" >temp/files.txt
 while read file; do
   $DUNE_BIN_DIR/res_parser $file &> $(exp $file) & maybeWait
 done <temp/files.txt
 
 # printing with ast conversion
-find syntax_tests/data/ast-mapping -name "*.res" -o -name "*.resi" -o -name "*.ml" -o -name "*.mli" >temp/files.txt
+find syntax_tests/data/ast-mapping -name "*.res" -o -name "*.resi" >temp/files.txt
 while read file; do
   $DUNE_BIN_DIR/res_parser -test-ast-conversion -jsx-version 4 $file &> $(exp $file) & maybeWait
 done <temp/files.txt

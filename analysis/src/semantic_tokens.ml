@@ -288,7 +288,7 @@ let command ~debug ~emitter ~source ~kind_file =
           - Here we handle `<` and `>`
 
          Component names:
-          - handled like other Longitent.t, except lowercase id is marked Token.JsxLowercase
+          - handled like other Longident.t, except lowercase id is marked Token.JsxLowercase
       *)
       emitter (* --> <div... *)
       |> emit_jsx_tag ~debug ~name:"<" ~pos:(Loc.start e.pexp_loc);

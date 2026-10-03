@@ -739,7 +739,6 @@ mod tests {
             packages,
             compiler,
             None,
-            None,
             SourceMapCommand::Watch,
         );
         build_state.insert_module(module_name, module);

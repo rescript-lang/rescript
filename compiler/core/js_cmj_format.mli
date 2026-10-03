@@ -95,8 +95,6 @@ val single_na : arity
 
 val from_file : string -> t
 
-val from_string : string -> t
-
 (*
    Note writing the file if its content is not changed
 *)

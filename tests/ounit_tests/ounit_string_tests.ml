@@ -18,29 +18,6 @@ let suites =
            Ext_string.rindex_neg "hello" 'l' =~ 3;
            Ext_string.rindex_neg "hello" 'l' =~ 3;
            Ext_string.rindex_neg "hello" 'o' =~ 4 );
-         (* __LOC__ >:: begin
-              fun _ ->
-              let nl cur s = Ext_string.extract_until s cur '\n' in
-              nl (ref 0) "hello\n" =~ "hello";
-              nl (ref 0) "\nhell" =~ "";
-              nl (ref 0) "hello" =~ "hello";
-              let cur = ref 0 in
-              let b = "a\nb\nc\nd" in
-              nl cur b =~ "a";
-              nl cur b =~ "b";
-              nl cur b =~ "c";
-              nl cur b =~ "d";
-              nl cur b =~ "" ;
-              nl cur b =~ "" ;
-              cur := 0 ;
-              let b = "a\nb\nc\nd\n" in
-              nl cur b =~ "a";
-              nl cur b =~ "b";
-              nl cur b =~ "c";
-              nl cur b =~ "d";
-              nl cur b =~ "" ;
-              nl cur b =~ "" ;
-            end ; *)
          ( __LOC__ >:: fun _ ->
            let b = "a\nb\nc\nd\n" in
            let a = Ext_string.index_count in
@@ -66,20 +43,6 @@ let suites =
              (Ext_string.for_all_from "xABC" 1_000 (function
                | 'A' .. 'Z' -> true
                | _ -> false)) );
-         (* __LOC__ >:: begin fun _ ->
-              OUnit.assert_bool __LOC__ @@
-              List.for_all (fun x -> Ext_string.is_valid_source_name x = Good)
-                ["x.ml"; "x.mli"; "x.res"; "x.resi";
-                 "A_x.ml"; "ab.ml"; "a_.ml"; "a__.ml";
-                 "ax.ml"];
-              OUnit.assert_bool __LOC__ @@ not @@
-              List.exists (fun x -> Ext_string.is_valid_source_name x = Good)
-                [".res"; ".resi";"..res"; "..resi"; "..ml"; ".mll~";
-                 "...ml"; "_.mli"; "_x.ml"; "__.ml"; "__.rei";
-                 ".#hello.ml"; ".#hello.rei"; "a-.ml"; "a-b.ml"; "-a-.ml"
-                ; "-.ml"
-                ]
-            end; *)
          ( __LOC__ >:: fun _ ->
            Ext_filename.module_name "a/hello.ml" =~ "Hello";
            Ext_filename.as_module ~basename:"a.ml"
@@ -139,14 +102,6 @@ let suites =
          ( __LOC__ >:: fun _ ->
            Ext_string.ends_with_then_chop "xx.ml" ".ml" =~ Some "xx";
            Ext_string.ends_with_then_chop "xx.ml" ".mll" =~ None );
-         (* __LOC__ >:: begin fun _ ->
-            Ext_string.starts_with_and_number "js_fn_mk_01" ~offset:0 "js_fn_mk_" =~ 1 ;
-            Ext_string.starts_with_and_number "js_fn_run_02" ~offset:0 "js_fn_mk_" =~ -1 ;
-            Ext_string.starts_with_and_number "js_fn_mk_03" ~offset:6 "mk_" =~ 3 ;
-            Ext_string.starts_with_and_number "js_fn_mk_04" ~offset:6 "run_" =~ -1;
-            Ext_string.starts_with_and_number "js_fn_run_04" ~offset:6 "run_" =~ 4;
-            Ext_string.(starts_with_and_number "js_fn_run_04" ~offset:6 "run_" = 3) =~ false
-            end; *)
          ( __LOC__ >:: fun _ ->
            Ext_string.for_all "____" (function
              | '_' -> true
@@ -163,9 +118,6 @@ let suites =
          ( __LOC__ >:: fun _ ->
            Ext_string.tail_from "ghsogh" 1 =~ "hsogh";
            Ext_string.tail_from "ghsogh" 0 =~ "ghsogh" );
-         (* __LOC__ >:: begin fun _ ->
-            Ext_string.digits_of_str "11_js" ~offset:0 2 =~ 11
-            end; *)
          ( __LOC__ >:: fun _ ->
            OUnit.assert_bool __LOC__
              (Ext_string.replace_backward_slash "a:\\b\\d" = "a:/b/d");

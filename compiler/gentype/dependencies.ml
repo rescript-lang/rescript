@@ -51,7 +51,8 @@ let rec is_internal dep =
 let from_path ~config ~type_env path =
   let _, dep = path |> from_path1 ~config ~type_env in
   if !Debug.type_resolution then
-    Log_.item "fromPath path:%s typeEnv:%s %s resolved:%s\n" (path |> Path.name)
+    Log_.item "Dependencies.from_path path:%s type_env:%s %s resolved:%s\n"
+      (path |> Path.name)
       (type_env |> Type_env.to_string)
       (match dep |> is_internal with
       | true -> "Internal"

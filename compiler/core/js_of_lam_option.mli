@@ -39,8 +39,6 @@ val destruct_optional :
   J.expression ->
   'a
 
-val some : J.expression -> J.expression
-
 val is_not_none : J.expression -> J.expression
 
 val null_to_opt : J.expression -> J.expression

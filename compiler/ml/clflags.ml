@@ -26,7 +26,7 @@ and real_paths = ref true (* -short-paths *)
 
 and applicative_functors = ref true (* -no-app-funct *)
 
-and error_size = ref 500 (* -error-size *)
+and error_size = ref 400 (* -error-size, in heap words *)
 
 and transparent_modules = ref false (* -trans-mod *)
 let dump_source = ref false (* -dsource *)

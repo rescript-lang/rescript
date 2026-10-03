@@ -7,14 +7,8 @@ let print_engine =
       print_implementation =
         (fun ~width:_ ~filename:_ ~comments:_ structure ->
           Printast.implementation Format.std_formatter structure);
-      print_implementation_from_source =
-        (fun ~width:_ ~source:_ ~comments:_ structure ->
-          Printast.implementation Format.std_formatter structure);
       print_interface =
         (fun ~width:_ ~filename:_ ~comments:_ signature ->
-          Printast.interface Format.std_formatter signature);
-      print_interface_from_source =
-        (fun ~width:_ ~source:_ ~comments:_ signature ->
           Printast.interface Format.std_formatter signature);
     }
 
@@ -1063,14 +1057,8 @@ module Sexp_ast = struct
         print_implementation =
           (fun ~width:_ ~filename:_ ~comments:_ parsetree ->
             parsetree |> structure |> Sexp.to_string |> print_string);
-        print_implementation_from_source =
-          (fun ~width:_ ~source:_ ~comments:_ parsetree ->
-            parsetree |> structure |> Sexp.to_string |> print_string);
         print_interface =
           (fun ~width:_ ~filename:_ ~comments:_ parsetree ->
-            parsetree |> signature |> Sexp.to_string |> print_string);
-        print_interface_from_source =
-          (fun ~width:_ ~source:_ ~comments:_ parsetree ->
             parsetree |> signature |> Sexp.to_string |> print_string);
       }
 end
@@ -1084,18 +1072,8 @@ let comments_print_engine =
         let cmt_tbl = Comment_table.make () in
         Comment_table.walk_structure s cmt_tbl comments;
         Comment_table.log cmt_tbl);
-    Res_driver.print_implementation_from_source =
-      (fun ~width:_ ~source:_ ~comments s ->
-        let cmt_tbl = Comment_table.make () in
-        Comment_table.walk_structure s cmt_tbl comments;
-        Comment_table.log cmt_tbl);
     Res_driver.print_interface =
       (fun ~width:_ ~filename:_ ~comments s ->
-        let cmt_tbl = Comment_table.make () in
-        Comment_table.walk_signature s cmt_tbl comments;
-        Comment_table.log cmt_tbl);
-    Res_driver.print_interface_from_source =
-      (fun ~width:_ ~source:_ ~comments s ->
         let cmt_tbl = Comment_table.make () in
         Comment_table.walk_signature s cmt_tbl comments;
         Comment_table.log cmt_tbl);
