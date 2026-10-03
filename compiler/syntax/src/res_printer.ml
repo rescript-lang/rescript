@@ -341,6 +341,28 @@ let print_comments doc (tbl : Comment_table.t) loc =
   let doc_with_leading_comments = print_leading_comments doc tbl.leading loc in
   print_trailing_comments doc_with_leading_comments tbl.trailing loc
 
+(* Prints [doc] with the comments of [loc], followed by [marker], a token that
+   the source writes right after [loc] (such as [=?]). The trailing comments
+   adjacent to [loc] precede the marker in the source and print before it; the
+   remaining trailing comments print after it. *)
+let print_comments_before_marker doc (tbl : Comment_table.t) loc marker =
+  let after_marker =
+    match Hashtbl.find_opt tbl.trailing loc with
+    | None -> []
+    | Some comments ->
+      let before_marker, after_marker =
+        Comment_table.partition_adjacent_trailing loc comments
+      in
+      Hashtbl.replace tbl.trailing loc before_marker;
+      after_marker
+  in
+  let doc = Doc.concat [print_comments doc tbl loc; marker] in
+  match after_marker with
+  | [] -> doc
+  | _ ->
+    Hashtbl.replace tbl.trailing loc after_marker;
+    print_trailing_comments doc tbl.trailing loc
+
 let is_empty_doc doc = doc = Doc.nil
 
 let print_list ~get_loc ~nodes ~print ?(force_break = false) t =
@@ -2355,10 +2377,10 @@ and print_type_parameter ?inline_record_definitions ~state {attrs; lbl; typ}
            attrs;
            label;
            print_typ_expr ?inline_record_definitions ~state typ cmt_tbl;
-           optional_indicator;
          ])
   in
-  print_comments doc cmt_tbl loc
+  (* [loc] ends before [=?]. *)
+  print_comments_before_marker doc cmt_tbl loc optional_indicator
 
 and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
     i =
@@ -5465,27 +5487,34 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
           {ppat_desc = Ppat_var string_loc; ppat_attributes} )
         when lbl = string_loc.txt ->
         (* ~d *)
-        Doc.concat
-          [
-            print_attributes ~state ppat_attributes cmt_tbl;
-            Doc.text "~";
-            print_ident_like lbl;
-          ]
+        print_comments
+          (Doc.concat
+             [
+               print_attributes ~state ppat_attributes cmt_tbl;
+               Doc.text "~";
+               print_ident_like lbl;
+             ])
+          cmt_tbl pattern.ppat_loc
       | ( (Labelled {txt = lbl} | Optional {txt = lbl}),
           {
-            ppat_desc = Ppat_constraint ({ppat_desc = Ppat_var {txt}}, typ);
+            ppat_desc =
+              Ppat_constraint
+                (({ppat_desc = Ppat_var {txt}} as var_pattern), typ);
             ppat_attributes;
           } )
         when lbl = txt ->
         (* ~d: e *)
-        Doc.concat
-          [
-            print_attributes ~state ppat_attributes cmt_tbl;
-            Doc.text "~";
-            print_ident_like lbl;
-            Doc.text ": ";
-            print_typ_expr ~state typ cmt_tbl;
-          ]
+        print_comments
+          (Doc.concat
+             [
+               print_attributes ~state ppat_attributes cmt_tbl;
+               print_comments
+                 (Doc.concat [Doc.text "~"; print_ident_like lbl])
+                 cmt_tbl var_pattern.ppat_loc;
+               Doc.text ": ";
+               print_typ_expr ~state typ cmt_tbl;
+             ])
+          cmt_tbl pattern.ppat_loc
       | (Labelled {txt = lbl} | Optional {txt = lbl}), pattern ->
         (* ~b as c *)
         Doc.concat
@@ -5502,9 +5531,7 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
       | _ -> Doc.nil
     in
     let doc =
-      Doc.group
-        (Doc.concat
-           [attrs; label_with_pattern; default_expr_doc; optional_label_suffix])
+      Doc.group (Doc.concat [attrs; label_with_pattern; default_expr_doc])
     in
     let lbl_loc = Asttypes.get_lbl_loc lbl in
     let cmt_loc =
@@ -5512,7 +5539,8 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
       | None -> {lbl_loc with loc_end = pattern.ppat_loc.loc_end}
       | Some expr -> {lbl_loc with loc_end = expr.pexp_loc.loc_end}
     in
-    print_comments doc cmt_tbl cmt_loc
+    (* Without a default, [cmt_loc] ends before [=?]. *)
+    print_comments_before_marker doc cmt_tbl cmt_loc optional_label_suffix
 
 and print_expression_block ~state ~braces expr cmt_tbl =
   let expr = Parsetree_viewer.unwrap_braces expr in
