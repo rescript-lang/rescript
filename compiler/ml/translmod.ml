@@ -71,6 +71,8 @@ let transl_type_extension env rootpath (tyext : Typedtree.type_extension) body :
 (* Compile a coercion *)
 
 let rec apply_coercion loc strict (restr : Typedtree.module_coercion) arg =
+  if !Clflags.dump_coercions then
+    Format.eprintf "@[<2>apply_coercion@ %a@]@." Includemod.print_coercion restr;
   match restr with
   | Tcoerce_none -> arg
   | Tcoerce_structure (pos_cc_list, id_pos_list, runtime_fields) ->
@@ -162,19 +164,6 @@ let rec compose_coercions c1 c2 =
     Tcoerce_functor (compose_coercions arg2 arg1, compose_coercions res1 res2)
   | c1, Tcoerce_alias (path, c2) -> Tcoerce_alias (path, compose_coercions c1 c2)
   | _, _ -> Misc.fatal_error "Translmod.compose_coercions"
-
-let apply_coercion a b c =
-  if !Clflags.dump_coercions then
-    Format.eprintf "@[<2>apply_coercion@ %a@]@." Includemod.print_coercion b;
-  apply_coercion a b c
-
-let compose_coercions c1 c2 =
-  let c3 = compose_coercions c1 c2 in
-  if !Clflags.dump_coercions then
-    let open Includemod in
-    Format.eprintf "@[<2>compose_coercions@ (%a)@ (%a) =@ %a@]@."
-      print_coercion c1 print_coercion c2 print_coercion c3;
-  c3
 
 (* Record the primitive declarations occurring in the module compiled *)
 
