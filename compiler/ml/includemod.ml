@@ -15,7 +15,6 @@
 
 (* Inclusion checks for the module language *)
 
-open Misc
 open Path
 open Typedtree
 open Types
@@ -167,7 +166,7 @@ and print_coercion2 ppf (n, c) =
   Format.fprintf ppf "@[%d,@ %a@]" n print_coercion c
 
 and print_coercion3 ppf (i, n, c) =
-  Format.fprintf ppf "@[%s, %d,@ %a@]" (Ident.unique_name i) n print_coercion c
+  Format.fprintf ppf "@[%s, %d,@ %a@]" (Ident.name i) n print_coercion c
 
 (* Simplify a structure coercion *)
 
@@ -669,7 +668,7 @@ let is_big obj =
 let report_error ppf errs =
   if errs = [] then ()
   else
-    let errs, err = split_last errs in
+    let errs, err = Ext_list.split_at_last errs in
     let pe = ref true in
     let include_err' ppf ((_, _, obj) as err) =
       if not (is_big obj) then fprintf ppf "%a@ " include_err err

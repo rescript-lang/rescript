@@ -56,5 +56,3 @@ val for_multiple_match :
   Location.t -> Lambda.t list -> (pattern * action) list -> partial -> Lambda.t
 
 exception Cannot_flatten
-
-val flatten_pattern : int -> pattern -> pattern list

@@ -1,8 +1,8 @@
 (* The runtime representation of variants: plain data describing how each
    constructor is laid out in JavaScript and how a whole variant is
    dispatched on. This module sits below [Types] so the canonical layout can
-   be stored on type declarations; [Ast_untagged_variants] re-exports these
-   definitions and derives them from declarations. *)
+   be stored on type declarations; [Variant_layout] derives the layout of
+   each declaration. *)
 
 module Instance = struct
   type t =

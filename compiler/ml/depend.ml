@@ -34,8 +34,6 @@ let bound = Node (String_set.empty, String_map.empty)
 let get_map (Node (_s, m)) = m
 let make_leaf s = Node (String_set.singleton s, String_map.empty)
 let make_node m = Node (String_set.empty, m)
-let rec weaken_map s (Node (s0, m0)) =
-  Node (String_set.union s s0, String_map.map (weaken_map s) m0)
 let rec collect_free (Node (s, m)) =
   String_map.fold (fun _ n -> String_set.union (collect_free n)) m s
 
@@ -66,8 +64,6 @@ let rec add_path bv ?(p = []) = function
     let free =
       try lookup_free (s :: p) bv with Not_found -> String_set.singleton s
     in
-    (*StringSet.iter (fun s -> Printf.eprintf "%s " s) free;
-      prerr_endline "";*)
     add_names free
   | Ldot (l, s) -> add_path bv ~p:(s :: p) l
 

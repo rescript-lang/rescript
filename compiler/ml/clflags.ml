@@ -13,8 +13,7 @@ and preprocessor = ref (None : string option) (* -pp *)
 and all_ppx = ref ([] : string list)
 
 (* -ppx *)
-let annotations = ref false (* -annot *)
-let binary_annotations = ref false (* -annot *)
+let binary_annotations = ref false (* write .cmt/.cmti; -bs-no-bin-annot *)
 
 and noassert = ref false (* -noassert *)
 
@@ -36,6 +35,8 @@ and dump_typedtree = ref false (* -dtypedtree *)
 
 and dump_rawlambda = ref false (* -drawlambda *)
 
+and dump_coercions = ref false (* -draw-coercions *)
+
 and only_parse = ref false (* -only-parse *)
 
 and editor_mode = ref false (* -editor-mode *)
@@ -48,7 +49,8 @@ let reset_dump_state () =
   dump_source := false;
   dump_parsetree := false;
   dump_typedtree := false;
-  dump_rawlambda := false
+  dump_rawlambda := false;
+  dump_coercions := false
 
 let keep_locs = ref true (* -keep-locs *)
 

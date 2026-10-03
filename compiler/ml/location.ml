@@ -199,7 +199,7 @@ let pp_ksprintf ?before k fmt =
    is always added by the compiler after the message has been formatted *)
 let print_phanton_error_prefix ppf =
   (* modified from the original. We use only 2 indentations for error report
-     (see super_error_reporter above) *)
+     (see default_error_reporter below) *)
   Format.pp_print_as ppf 2 ""
 
 let errorf ?(loc = none) ?(sub = []) ?(if_highlight = "") fmt =

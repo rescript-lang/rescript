@@ -8,7 +8,6 @@ val nopervasives : bool ref
 val open_modules : string list ref
 val preprocessor : string option ref
 val all_ppx : string list ref
-val annotations : bool ref
 val binary_annotations : bool ref
 val noassert : bool ref
 val verbose : bool ref
@@ -20,6 +19,7 @@ val dump_source : bool ref
 val dump_parsetree : bool ref
 val dump_typedtree : bool ref
 val dump_rawlambda : bool ref
+val dump_coercions : bool ref
 val dont_write_files : bool ref
 val keep_locs : bool ref
 val only_parse : bool ref

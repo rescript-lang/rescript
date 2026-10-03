@@ -42,25 +42,9 @@ module type Map = sig
   val filter_map : (key -> 'a -> 'b option) -> 'a t -> 'b t
   val of_list : (key * 'a) list -> 'a t
 
-  val disjoint_union :
-    ?eq:('a -> 'a -> bool) ->
-    ?print:(Format.formatter -> 'a -> unit) ->
-    'a t ->
-    'a t ->
-    'a t
-
-  val union_right : 'a t -> 'a t -> 'a t
-
-  val union_left : 'a t -> 'a t -> 'a t
-
-  val union_merge : ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t
   val rename : key t -> key -> key
-  val map_keys : (key -> key) -> 'a t -> 'a t
   val keys : 'a t -> Set.Make(T).t
   val data : 'a t -> 'a list
-  val of_set : (key -> 'a) -> Set.Make(T).t -> 'a t
-  val transpose_keys_and_data : key t -> key t
-  val transpose_keys_and_data_set : key t -> Set.Make(T).t t
   val print :
     (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 end
@@ -78,21 +62,7 @@ module type Tbl = sig
 
   val to_map : 'a t -> 'a Map.Make(T).t
   val of_map : 'a Map.Make(T).t -> 'a t
-  val memoize : 'a t -> (key -> 'a) -> key -> 'a
   val map : 'a t -> ('a -> 'b) -> 'b t
-end
-
-module Pair (A : Thing) (B : Thing) : Thing with type t = A.t * B.t = struct
-  type t = A.t * B.t
-
-  let compare (a1, b1) (a2, b2) =
-    let c = A.compare a1 a2 in
-    if c <> 0 then c else B.compare b1 b2
-
-  let output oc (a, b) = Printf.fprintf oc " (%a, %a)" A.output a B.output b
-  let hash (a, b) = Hashtbl.hash (A.hash a, B.hash b)
-  let equal (a1, b1) (a2, b2) = A.equal a1 a2 && B.equal b1 b2
-  let print ppf (a, b) = Format.fprintf ppf " (%a, @ %a)" A.print a B.print b
 end
 
 module Make_map (T : Thing) = struct
@@ -108,47 +78,7 @@ module Make_map (T : Thing) = struct
 
   let of_list l = List.fold_left (fun map (id, v) -> add id v map) empty l
 
-  let disjoint_union ?eq ?print m1 m2 =
-    union
-      (fun id v1 v2 ->
-        let ok =
-          match eq with
-          | None -> false
-          | Some eq -> eq v1 v2
-        in
-        if not ok then
-          let err =
-            match print with
-            | None -> Format.asprintf "Map.disjoint_union %a" T.print id
-            | Some print ->
-              Format.asprintf "Map.disjoint_union %a => %a <> %a" T.print id
-                print v1 print v2
-          in
-          Misc.fatal_error err
-        else Some v1)
-      m1 m2
-
-  let union_right m1 m2 =
-    merge
-      (fun _id x y ->
-        match (x, y) with
-        | None, None -> None
-        | None, Some v | Some v, None | Some _, Some v -> Some v)
-      m1 m2
-
-  let union_left m1 m2 = union_right m2 m1
-
-  let union_merge f m1 m2 =
-    let aux _ m1 m2 =
-      match (m1, m2) with
-      | None, m | m, None -> m
-      | Some m1, Some m2 -> Some (f m1 m2)
-    in
-    merge aux m1 m2
-
   let rename m v = try find v m with Not_found -> v
-
-  let map_keys f m = of_list (List.map (fun (k, v) -> (f k, v)) (bindings m))
 
   let print f ppf s =
     let elts ppf s =
@@ -161,20 +91,6 @@ module Make_map (T : Thing) = struct
   let keys map = fold (fun k _ set -> T_set.add k set) map T_set.empty
 
   let data t = List.map snd (bindings t)
-
-  let of_set f set = T_set.fold (fun e map -> add e (f e) map) set empty
-
-  let transpose_keys_and_data map = fold (fun k v m -> add v k m) map empty
-  let transpose_keys_and_data_set map =
-    fold
-      (fun k v m ->
-        let set =
-          match find v m with
-          | exception Not_found -> T_set.singleton k
-          | set -> T_set.add k set
-        in
-        add v set m)
-      map empty
 end
 
 module Make_set (T : Thing) = struct
@@ -218,13 +134,6 @@ module Make_tbl (T : Thing) = struct
     let t = create (T_map.cardinal m) in
     T_map.iter (fun k v -> add t k v) m;
     t
-
-  let memoize t f key =
-    try find t key
-    with Not_found ->
-      let r = f key in
-      add t key r;
-      r
 
   let map t f = of_map (T_map.map f (to_map t))
 end

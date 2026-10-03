@@ -25,8 +25,6 @@
 (** Extension to standard library [Pervavives] module, safe to open 
 *)
 
-external reraise : exn -> 'a = "%raise"
-
 val finally : 'a -> clean:('a -> unit) -> ('a -> 'b) -> 'b
 
 (* val try_it : (unit -> 'a) ->  unit  *)

@@ -33,8 +33,6 @@ type t
 
 val empty : t
 
-val print : Format.formatter -> t -> unit
-
 val sub_scope : t -> Set_ident.t -> t
 
 val merge : t -> Set_ident.t -> t

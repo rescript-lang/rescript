@@ -26,25 +26,11 @@ type jsx_version = Jsx_v4
 type jsx_module = React | Generic of {module_name: string}
 type source_map = No_source_map | Linked | Inline | Hidden
 
-(* val get_packages_info :
-   unit -> Js_packages_info.t *)
-
 val no_version_header : bool ref
 (** set/get header *)
 
 val directives : string list ref
 (** directives printed verbatims just after the version header *)
-
-(** return [package_name] and [path] 
-    when in script mode: 
-*)
-
-(* val get_current_package_name_and_path :
-   Js_packages_info.module_system ->
-   Js_packages_info.info_query *)
-
-(* val set_package_name : string -> unit
-   val get_package_name : unit -> string option *)
 
 val cross_module_inline : bool ref
 (** cross module inline option *)

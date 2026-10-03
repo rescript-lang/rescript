@@ -425,6 +425,9 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ("-dtypedtree", set Clflags.dump_typedtree, "*internal* debug typedtree");
     ("-dparsetree", set Clflags.dump_parsetree, "*internal* debug parsetree");
     ("-drawlambda", set Clflags.dump_rawlambda, "*internal* debug raw lambda");
+    ( "-draw-coercions",
+      set Clflags.dump_coercions,
+      "*internal* debug module coercions with raw internal types" );
     ("-dsource", set Clflags.dump_source, "*internal* print source");
     ( "-reprint-source",
       string_call reprint_source_file,
