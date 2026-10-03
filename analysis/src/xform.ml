@@ -416,7 +416,7 @@ module Expand_catch_all_for_variants = struct
     | Some (switch_expr, catch_all_case, cases) -> (
       if Debug.verbose () then
         print_endline
-          "[codeAction - ExpandCatchAllForVariants] Found target switch";
+          "[codeAction - Expand_catch_all_for_variants] Found target switch";
       let rec find_all_constructor_names
           ?(mode : [`option | `default] = `default) ?(constructor_names = [])
           (p : Parsetree.pattern) =
@@ -496,7 +496,7 @@ module Expand_catch_all_for_variants = struct
       | Some (Toption (env, inner_type)) -> (
         if Debug.verbose () then
           print_endline
-            "[codeAction - ExpandCatchAllForVariants] Found option type";
+            "[codeAction - Expand_catch_all_for_variants] Found option type";
         let inner_type =
           match inner_type with
           | ExtractedType t -> Some t

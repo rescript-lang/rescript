@@ -1,5 +1,5 @@
 Complete src/CompletionInferValues.res 15:43
-posCursor:[15:43] posNoWhite:[15:42] Found expr:[15:33->15:43]
+pos_cursor:[15:43] pos_no_white:[15:42] Found expr:[15:33->15:43]
 Completable: Cpath Value[aliased]->t
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -119,7 +119,7 @@ Path t
 ]
 
 Complete src/CompletionInferValues.res 18:30
-posCursor:[18:30] posNoWhite:[18:29] Found expr:[18:28->18:30]
+pos_cursor:[18:30] pos_no_white:[18:29] Found expr:[18:28->18:30]
 Pexp_field [18:28->18:29] _:[33:0->18:30]
 Completable: Cpath Value[x].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -136,7 +136,7 @@ Path x
 ContextPath Value[getSomeRecord](Nolabel)
 ContextPath Value[getSomeRecord]
 Path getSomeRecord
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path CompletionInferValues.
 Path 
 [
@@ -163,7 +163,7 @@ Path
 ]
 
 Complete src/CompletionInferValues.res 21:53
-posCursor:[21:53] posNoWhite:[21:52] Found expr:[21:45->21:53]
+pos_cursor:[21:53] pos_no_white:[21:52] Found expr:[21:45->21:53]
 Pexp_field [21:45->21:52] _:[33:0->21:53]
 Completable: Cpath Value[aliased].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -184,7 +184,7 @@ Path x
 ContextPath Value[getSomeRecord](Nolabel)
 ContextPath Value[getSomeRecord]
 Path getSomeRecord
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path CompletionInferValues.
 Path 
 [
@@ -211,10 +211,10 @@ Path
 ]
 
 Complete src/CompletionInferValues.res 24:63
-posCursor:[24:63] posNoWhite:[24:62] Found expr:[24:3->24:64]
+pos_cursor:[24:63] pos_no_white:[24:62] Found expr:[24:3->24:64]
 Pexp_apply ...[24:3->24:21] (...[24:22->24:63])
-posCursor:[24:63] posNoWhite:[24:62] Found expr:[24:22->24:63]
-posCursor:[24:63] posNoWhite:[24:62] Found expr:[24:52->24:63]
+pos_cursor:[24:63] pos_no_white:[24:62] Found expr:[24:22->24:63]
+pos_cursor:[24:63] pos_no_white:[24:62] Found expr:[24:52->24:63]
 Pexp_field [24:52->24:62] _:[24:63->24:63]
 Completable: Cpath Value[someRecord].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -233,7 +233,7 @@ ContextPath CArgument CArgument Value[someFnWithCallback]($0)(~someRecord)
 ContextPath CArgument Value[someFnWithCallback]($0)
 ContextPath Value[someFnWithCallback]
 Path someFnWithCallback
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path CompletionInferValues.
 Path 
 [
@@ -260,10 +260,10 @@ Path
 ]
 
 Complete src/CompletionInferValues.res 27:90
-posCursor:[27:90] posNoWhite:[27:89] Found expr:[27:39->27:91]
+pos_cursor:[27:90] pos_no_white:[27:89] Found expr:[27:39->27:91]
 Pexp_apply ...[27:39->27:48] (...[27:49->27:90])
-posCursor:[27:90] posNoWhite:[27:89] Found expr:[27:49->27:90]
-posCursor:[27:90] posNoWhite:[27:89] Found expr:[27:79->27:90]
+pos_cursor:[27:90] pos_no_white:[27:89] Found expr:[27:49->27:90]
+pos_cursor:[27:90] pos_no_white:[27:89] Found expr:[27:79->27:90]
 Pexp_field [27:79->27:89] _:[27:90->27:90]
 Completable: Cpath Value[someRecord].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -286,7 +286,7 @@ ContextPath Value[aliasedFn]
 Path aliasedFn
 ContextPath Value[someFnWithCallback]
 Path someFnWithCallback
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path CompletionInferValues.
 Path 
 [
@@ -313,10 +313,10 @@ Path
 ]
 
 Complete src/CompletionInferValues.res 30:36
-posCursor:[30:36] posNoWhite:[30:35] Found expr:[30:3->30:39]
+pos_cursor:[30:36] pos_no_white:[30:35] Found expr:[30:3->30:39]
 Pexp_apply ...[30:3->30:15] (...[30:16->30:38])
-posCursor:[30:36] posNoWhite:[30:35] Found expr:[30:16->30:38]
-posCursor:[30:36] posNoWhite:[30:35] Found expr:[30:27->30:36]
+pos_cursor:[30:36] pos_no_white:[30:35] Found expr:[30:16->30:38]
+pos_cursor:[30:36] pos_no_white:[30:35] Found expr:[30:27->30:36]
 Completable: Cpath Value[event]->pr
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -327,7 +327,7 @@ ContextPath CArgument CArgument Value[reactEventFn]($0)($0)
 ContextPath CArgument Value[reactEventFn]($0)
 ContextPath Value[reactEventFn]
 Path reactEventFn
-CPPipe pathFromEnv:ReactEvent.Mouse found:false
+CPPipe path_from_env:ReactEvent.Mouse found:false
 Path ReactEvent.Mouse.pr
 Path pr
 [
@@ -340,10 +340,10 @@ Path pr
 ]
 
 Complete src/CompletionInferValues.res 41:50
-posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:11->41:56]
+pos_cursor:[41:50] pos_no_white:[41:49] Found expr:[41:11->41:56]
 JSX <div:[41:12->41:15] onMouseEnter[41:16->41:28]=...[41:36->41:52]> _children:None
-posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:36->41:52]
-posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:41->41:50]
+pos_cursor:[41:50] pos_no_white:[41:49] Found expr:[41:36->41:52]
+pos_cursor:[41:50] pos_no_white:[41:49] Found expr:[41:41->41:50]
 Completable: Cpath Value[event]->pr <<jsx>>
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -354,7 +354,7 @@ ContextPath CArgument CJsxPropValue [div] onMouseEnter($0)
 ContextPath CJsxPropValue [div] onMouseEnter
 Path ReactDOM.domProps
 Path JsxDOM.domProps
-CPPipe pathFromEnv:JsxEvent.Mouse found:false
+CPPipe path_from_env:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.pr
 Path pr
 [
@@ -367,10 +367,10 @@ Path pr
 ]
 
 Complete src/CompletionInferValues.res 44:50
-posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:11->44:56]
+pos_cursor:[44:50] pos_no_white:[44:49] Found expr:[44:11->44:56]
 JSX <Div:[44:12->44:15] onMouseEnter[44:16->44:28]=...[44:36->44:52]> _children:None
-posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:36->44:52]
-posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:41->44:50]
+pos_cursor:[44:50] pos_no_white:[44:49] Found expr:[44:36->44:52]
+pos_cursor:[44:50] pos_no_white:[44:49] Found expr:[44:41->44:50]
 Completable: Cpath Value[event]->pr <<jsx>>
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -380,7 +380,7 @@ Path event
 ContextPath CArgument CJsxPropValue [Div] onMouseEnter($0)
 ContextPath CJsxPropValue [Div] onMouseEnter
 Path Div.make
-CPPipe pathFromEnv:JsxEvent.Mouse found:false
+CPPipe path_from_env:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.pr
 Path pr
 [
@@ -393,11 +393,11 @@ Path pr
 ]
 
 Complete src/CompletionInferValues.res 47:87
-posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:11->47:93]
+pos_cursor:[47:87] pos_no_white:[47:86] Found expr:[47:11->47:93]
 JSX <div:[47:12->47:15] onMouseEnter[47:16->47:28]=...[47:36->47:89]> _children:None
-posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:36->47:89]
-posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:41->47:87]
-posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:81->47:87]
+pos_cursor:[47:87] pos_no_white:[47:86] Found expr:[47:36->47:89]
+pos_cursor:[47:87] pos_no_white:[47:86] Found expr:[47:41->47:87]
+pos_cursor:[47:87] pos_no_white:[47:86] Found expr:[47:81->47:87]
 Completable: Cpath Value[btn]->t <<jsx>>
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -517,11 +517,11 @@ Path t
 ]
 
 Complete src/CompletionInferValues.res 50:103
-posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:11->50:109]
+pos_cursor:[50:103] pos_no_white:[50:102] Found expr:[50:11->50:109]
 JSX <div:[50:12->50:15] onMouseEnter[50:16->50:28]=...[50:36->50:105]> _children:None
-posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:36->50:105]
-posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:41->50:103]
-posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:95->50:103]
+pos_cursor:[50:103] pos_no_white:[50:102] Found expr:[50:36->50:105]
+pos_cursor:[50:103] pos_no_white:[50:102] Found expr:[50:41->50:103]
+pos_cursor:[50:103] pos_no_white:[50:102] Found expr:[50:95->50:103]
 Completable: Cpath Value[btn]->spl <<jsx>>
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -534,11 +534,11 @@ Path Int.toString
 []
 
 Complete src/CompletionInferValues.res 53:121
-posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:11->53:127]
+pos_cursor:[53:121] pos_no_white:[53:120] Found expr:[53:11->53:127]
 JSX <div:[53:12->53:15] onMouseEnter[53:16->53:28]=...[53:36->53:123]> _children:None
-posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:36->53:123]
-posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:41->53:121]
-posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:114->53:121]
+pos_cursor:[53:121] pos_no_white:[53:120] Found expr:[53:36->53:123]
+pos_cursor:[53:121] pos_no_white:[53:120] Found expr:[53:41->53:121]
+pos_cursor:[53:121] pos_no_white:[53:120] Found expr:[53:114->53:121]
 Completable: Cpath Value[btn]->ma <<jsx>>
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -575,7 +575,7 @@ Path ma
 ]
 
 Complete src/CompletionInferValues.res 75:78
-posCursor:[75:78] posNoWhite:[75:77] Found expr:[75:70->75:78]
+pos_cursor:[75:78] pos_no_white:[75:77] Found expr:[75:70->75:78]
 Pexp_field [75:70->75:77] _:[118:0->75:78]
 Completable: Cpath Value[srecord].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -596,7 +596,7 @@ ContextPath Value[x]
 Path x
 ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path CompletionInferValues.
 Path 
 [
@@ -623,7 +623,7 @@ Path
 ]
 
 Complete src/CompletionInferValues.res 79:86
-posCursor:[79:86] posNoWhite:[79:85] Found expr:[79:78->79:86]
+pos_cursor:[79:86] pos_no_white:[79:85] Found expr:[79:78->79:86]
 Pexp_field [79:78->79:85] _:[118:0->79:86]
 Completable: Cpath Value[aliased].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -644,7 +644,7 @@ ContextPath Value[x]
 Path x
 ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path CompletionInferValues.
 Path 
 [
@@ -661,7 +661,7 @@ Path
 ]
 
 Complete src/CompletionInferValues.res 83:103
-posCursor:[83:103] posNoWhite:[83:102] Found expr:[83:92->83:103]
+pos_cursor:[83:103] pos_no_white:[83:102] Found expr:[83:92->83:103]
 Pexp_field [83:92->83:102] _:[118:0->83:103]
 Completable: Cpath Value[someRecord].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -682,7 +682,7 @@ ContextPath Value[x]
 Path x
 ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path CompletionInferValues.
 Path 
 [
@@ -709,7 +709,7 @@ Path
 ]
 
 Complete src/CompletionInferValues.res 87:81
-posCursor:[87:81] posNoWhite:[87:80] Found expr:[87:69->87:81]
+pos_cursor:[87:81] pos_no_white:[87:80] Found expr:[87:69->87:81]
 Completable: Cpath Value[things]->slic
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -748,7 +748,7 @@ Path slic
 ]
 
 Complete src/CompletionInferValues.res 91:82
-posCursor:[91:82] posNoWhite:[91:81] Found expr:[91:70->91:82]
+pos_cursor:[91:82] pos_no_white:[91:81] Found expr:[91:70->91:82]
 Completable: Cpath Value[someInt]->toS
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -787,7 +787,7 @@ Path toS
 ]
 
 Complete src/CompletionInferValues.res 95:109
-posCursor:[95:109] posNoWhite:[95:108] Found expr:[95:97->95:109]
+pos_cursor:[95:109] pos_no_white:[95:108] Found expr:[95:97->95:109]
 Completable: Cpath Value[someInt]->toS
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -829,8 +829,8 @@ Path toS
 ]
 
 Complete src/CompletionInferValues.res 99:102
-posCursor:[99:102] posNoWhite:[99:101] Found expr:[99:57->99:102]
-posCursor:[99:102] posNoWhite:[99:101] Found expr:[99:90->99:102]
+pos_cursor:[99:102] pos_no_white:[99:101] Found expr:[99:57->99:102]
+pos_cursor:[99:102] pos_no_white:[99:101] Found expr:[99:90->99:102]
 Completable: Cpath Value[someInt]->toS
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -872,7 +872,7 @@ Path toS
 ]
 
 Complete src/CompletionInferValues.res 103:88
-posCursor:[103:88] posNoWhite:[103:87] Found expr:[103:79->103:88]
+pos_cursor:[103:88] pos_no_white:[103:87] Found expr:[103:79->103:88]
 Completable: Cpath Value[str]->slic
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -911,7 +911,7 @@ Path slic
 ]
 
 Complete src/CompletionInferValues.res 107:89
-posCursor:[107:89] posNoWhite:[107:88] Found expr:[107:80->107:89]
+pos_cursor:[107:89] pos_no_white:[107:88] Found expr:[107:80->107:89]
 Completable: Cpath Value[str]->slic
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -950,7 +950,7 @@ Path slic
 ]
 
 Complete src/CompletionInferValues.res 111:80
-posCursor:[111:80] posNoWhite:[111:79] Found expr:[111:70->111:80]
+pos_cursor:[111:80] pos_no_white:[111:79] Found expr:[111:70->111:80]
 Completable: Cpath Value[name]->slic
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -989,7 +989,7 @@ Path slic
 ]
 
 Complete src/CompletionInferValues.res 115:53
-posCursor:[115:53] posNoWhite:[115:52] Found expr:[115:46->115:53]
+pos_cursor:[115:53] pos_no_white:[115:52] Found expr:[115:46->115:53]
 Completable: Cpath Value[v]->toSt
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1026,11 +1026,11 @@ Path toSt
 ]
 
 Complete src/CompletionInferValues.res 123:26
-posCursor:[123:26] posNoWhite:[123:25] Found expr:[123:3->123:37]
+pos_cursor:[123:26] pos_no_white:[123:25] Found expr:[123:3->123:37]
 Pexp_apply ...[123:3->123:23] (...[123:24->123:36])
-posCursor:[123:26] posNoWhite:[123:25] Found expr:[123:24->123:36]
-posCursor:[123:26] posNoWhite:[123:25] Found pattern:[123:25->123:27]
-posCursor:[123:26] posNoWhite:[123:25] Found pattern:[123:25->123:27]
+pos_cursor:[123:26] pos_no_white:[123:25] Found expr:[123:24->123:36]
+pos_cursor:[123:26] pos_no_white:[123:25] Found pattern:[123:25->123:27]
+pos_cursor:[123:26] pos_no_white:[123:25] Found pattern:[123:25->123:27]
 Completable: Cpattern CArgument CArgument Value[fnWithRecordCallback]($0)($0)->recordBody
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1062,11 +1062,11 @@ Path fnWithRecordCallback
 ]
 
 Complete src/CompletionInferValues.res 130:30
-posCursor:[130:30] posNoWhite:[130:29] Found expr:[130:3->130:33]
+pos_cursor:[130:30] pos_no_white:[130:29] Found expr:[130:3->130:33]
 Pexp_apply ...[130:3->130:6] (~cb130:8->130:10=...[130:11->130:32])
-posCursor:[130:30] posNoWhite:[130:29] Found expr:[130:11->130:32]
-posCursor:[130:30] posNoWhite:[130:29] Found expr:[130:24->0:-1]
-posCursor:[130:30] posNoWhite:[130:29] Found expr:[130:24->0:-1]
+pos_cursor:[130:30] pos_no_white:[130:29] Found expr:[130:11->130:32]
+pos_cursor:[130:30] pos_no_white:[130:29] Found expr:[130:24->0:-1]
+pos_cursor:[130:30] pos_no_white:[130:29] Found expr:[130:24->0:-1]
 Completable: Cpath Value[root]->
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1078,7 +1078,7 @@ ContextPath CArgument CArgument Value[fn2](~cb)($0)
 ContextPath CArgument Value[fn2](~cb)
 ContextPath Value[fn2]
 Path fn2
-CPPipe pathFromEnv:ReactDOM.Client.Root found:false
+CPPipe path_from_env:ReactDOM.Client.Root found:false
 Path ReactDOM.Client.Root.
 Path 
 [
@@ -1097,11 +1097,11 @@ Path
 ]
 
 Complete src/CompletionInferValues.res 139:30
-posCursor:[139:30] posNoWhite:[139:29] Found expr:[139:3->139:33]
+pos_cursor:[139:30] pos_no_white:[139:29] Found expr:[139:3->139:33]
 Pexp_apply ...[139:3->139:6] (~cb139:8->139:10=...[139:11->139:32])
-posCursor:[139:30] posNoWhite:[139:29] Found expr:[139:11->139:32]
-posCursor:[139:30] posNoWhite:[139:29] Found expr:[139:24->0:-1]
-posCursor:[139:30] posNoWhite:[139:29] Found expr:[139:24->0:-1]
+pos_cursor:[139:30] pos_no_white:[139:29] Found expr:[139:11->139:32]
+pos_cursor:[139:30] pos_no_white:[139:29] Found expr:[139:24->0:-1]
+pos_cursor:[139:30] pos_no_white:[139:29] Found expr:[139:24->0:-1]
 Completable: Cpath Value[root]->
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1113,7 +1113,7 @@ ContextPath CArgument CArgument Value[fn3](~cb)($0)
 ContextPath CArgument Value[fn3](~cb)
 ContextPath Value[fn3]
 Path fn3
-CPPipe pathFromEnv:CompletionSupport.Test found:false
+CPPipe path_from_env:CompletionSupport.Test found:false
 Path CompletionSupport.Test.
 Path 
 [
@@ -1172,10 +1172,10 @@ Path String.split
 ]
 
 Complete src/CompletionInferValues.res 151:105
-posCursor:[151:105] posNoWhite:[151:104] Found expr:[151:18->151:110]
+pos_cursor:[151:105] pos_no_white:[151:104] Found expr:[151:18->151:110]
 Pexp_apply ...[151:18->151:49] (~prepare151:51->151:58=...[151:59->151:72], ~render151:74->151:80=...[151:81->151:106], ...[151:107->151:109])
-posCursor:[151:105] posNoWhite:[151:104] Found expr:[151:81->151:106]
-posCursor:[151:105] posNoWhite:[151:104] Found expr:[151:97->151:105]
+pos_cursor:[151:105] pos_no_white:[151:104] Found expr:[151:81->151:106]
+pos_cursor:[151:105] pos_no_white:[151:104] Found expr:[151:97->151:105]
 Pexp_field [151:97->151:104] _:[151:105->151:105]
 Completable: Cpath Value[support].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1196,7 +1196,7 @@ ContextPath CArgument CArgument Value[CompletionSupport2, makeRenderer](~render)
 ContextPath CArgument Value[CompletionSupport2, makeRenderer](~render)
 ContextPath Value[CompletionSupport2, makeRenderer]
 Path CompletionSupport2.makeRenderer
-CPPipe pathFromEnv:CompletionSupport.Nested found:false
+CPPipe path_from_env:CompletionSupport.Nested found:false
 Path CompletionSupport.Nested.
 Path 
 [
@@ -1213,11 +1213,11 @@ Path
 ]
 
 Complete src/CompletionInferValues.res 155:110
-posCursor:[155:110] posNoWhite:[155:109] Found expr:[155:18->155:115]
+pos_cursor:[155:110] pos_no_white:[155:109] Found expr:[155:18->155:115]
 Pexp_apply ...[155:18->155:49] (~prepare155:51->155:58=...[155:59->155:72], ~render155:74->155:80=...[155:81->155:111], ...[155:112->155:114])
-posCursor:[155:110] posNoWhite:[155:109] Found expr:[155:81->155:111]
-posCursor:[155:110] posNoWhite:[155:109] Found expr:[155:104->0:-1]
-posCursor:[155:110] posNoWhite:[155:109] Found expr:[155:104->0:-1]
+pos_cursor:[155:110] pos_no_white:[155:109] Found expr:[155:81->155:111]
+pos_cursor:[155:110] pos_no_white:[155:109] Found expr:[155:104->0:-1]
+pos_cursor:[155:110] pos_no_white:[155:109] Found expr:[155:104->0:-1]
 Completable: Cpath Value[root]->
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -1229,7 +1229,7 @@ ContextPath CArgument CArgument Value[CompletionSupport2, makeRenderer](~render)
 ContextPath CArgument Value[CompletionSupport2, makeRenderer](~render)
 ContextPath Value[CompletionSupport2, makeRenderer]
 Path CompletionSupport2.makeRenderer
-CPPipe pathFromEnv:ReactDOM.Client.Root found:false
+CPPipe path_from_env:ReactDOM.Client.Root found:false
 Path ReactDOM.Client.Root.
 Path 
 [
@@ -1249,7 +1249,7 @@ Path
 
 Hover src/CompletionInferValues.res 160:27
 Nothing at that position. Now trying to use completion.
-posCursor:[160:27] posNoWhite:[160:26] Found expr:[160:25->160:28]
+pos_cursor:[160:27] pos_no_white:[160:26] Found expr:[160:25->160:28]
 Pexp_ident res:[160:25->160:28]
 Completable: Cpath Value[res]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder

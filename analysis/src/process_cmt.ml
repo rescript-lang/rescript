@@ -418,14 +418,6 @@ let for_signature ~name ~env sig_items =
   let deprecated = Process_attributes.find_deprecated_attribute attributes in
   {Module.name; docstring; exported; items; deprecated}
 
-let for_tree_module_type ~name ~env {Typedtree.mty_desc} =
-  match mty_desc with
-  | Tmty_ident _ -> None
-  | Tmty_signature {sig_items} ->
-    let contents = for_signature ~name ~env sig_items in
-    Some (Module.Structure contents)
-  | _ -> None
-
 let rec get_module_path mod_desc =
   match mod_desc with
   | Typedtree.Tmod_ident (path, _lident) -> Some path
@@ -776,7 +768,7 @@ let file_for_module ~state module_name ~package =
   | Some paths ->
     let uri = get_uri paths in
     let cmt = get_cmt_path ~uri paths in
-    Log.log ("fileForModule " ^ show_paths paths);
+    Log.log ("file_for_module " ^ show_paths paths);
     file_for_cmt ~state ~cmt ~module_name ~uri
   | None ->
     Log.log ("No path for module " ^ module_name);

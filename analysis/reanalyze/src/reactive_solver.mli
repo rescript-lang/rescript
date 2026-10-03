@@ -1,7 +1,7 @@
 (** Reactive dead code solver.
     
     Reactive pipeline: decls + live → dead_decls, live_decls
-    Issue generation uses DeadCommon.reportDeclaration for correct filtering.
+    Issue generation uses Dead_common.report_declaration for correct filtering.
     
     O(dead_decls + live_decls), not O(all_decls). *)
 

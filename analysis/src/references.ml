@@ -33,12 +33,12 @@ let normalize_external_reference_key ~namespace ~module_name ~path =
   | _ -> (module_name, path)
 
 let get_loc_item ~full ~pos ~debug =
-  let log n msg = if debug then Printf.printf "getLocItem #%d: %s\n" n msg in
+  let log n msg = if debug then Printf.printf "get_loc_item #%d: %s\n" n msg in
   let pos = line_col_to_cmt_loc ~pos in
   let loc_items = loc_items_for_pos ~extra:full.extra pos in
   if !Log.verbose then
     print_endline
-      ("locItems:\n  "
+      ("loc_items:\n  "
       ^ (loc_items |> List.map loc_item_to_string |> String.concat "\n  "));
   let name_of li =
     match li.loc_type with
@@ -219,7 +219,7 @@ let alternate_declared ~state ~(file : File.t) ~package
     match paths with
     | IntfAndImpl {resi; res} -> (
       maybe_log
-        ("alternateDeclared for " ^ file.module_name ^ " has both resi and res");
+        ("alternate_declared for " ^ file.module_name ^ " has both resi and res");
       let alternate_uri = if Uri.is_interface file.uri then res else resi in
       match Cmt.full_from_uri ~state ~uri:(Uri.from_path alternate_uri) with
       | None -> None
@@ -237,7 +237,7 @@ let alternate_declared ~state ~(file : File.t) ~package
         | None -> None
         | Some declared -> Some (file, extra, declared)))
     | _ ->
-      maybe_log ("alternateDeclared for " ^ file.module_name ^ " not found");
+      maybe_log ("alternate_declared for " ^ file.module_name ^ " not found");
 
       None)
 
@@ -379,7 +379,7 @@ let definition_for_loc_item ~state ~full:{file; package} loc_item =
   | LModule (GlobalReference (module_name, path, tip))
   | Typed (_, _, GlobalReference (module_name, path, tip)) -> (
     maybe_log
-      ("Typed GlobalReference moduleName:" ^ module_name ^ " path:"
+      ("Typed GlobalReference module_name:" ^ module_name ^ " path:"
      ^ path_to_string path ^ " tip:" ^ Tip.to_string tip);
     match Process_cmt.file_for_module ~state ~package module_name with
     | None -> None

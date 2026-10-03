@@ -22,12 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(*
-let add_required_modules ( x : Ident.t list) (meta : Lam_stats.t) = 
-  let meta_require_modules = meta.required_modules in
-  List.iter (fun x -> add meta_require_modules (Lam_module_ident.of_ml x)) x 
-*)
-
 (* refine_let normalises let-bindings so we avoid redundant locals while
    preserving the semantics encoded by Lambda's let_kind.  Downstream passes at
    the JS backend interpret the k-tag as the shape of code they are allowed to
@@ -231,11 +225,6 @@ let field_flatten_get lam v i info (tbl : Lam_id_kind.t Hash_ident.t) : Lambda.t
     | Some x when not (Lambda.const_is_allocating x) -> Lambda.const x
     | Some _ -> lam ())
   | Some _ | None -> lam ()
-
-let is_function (lam : Lambda.t) =
-  match lam with
-  | Lfunction _ -> true
-  | _ -> false
 
 let not_function (lam : Lambda.t) =
   match lam with

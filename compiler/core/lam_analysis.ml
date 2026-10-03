@@ -114,8 +114,7 @@ let rec no_side_effects (lam : Lambda.t) : bool =
   | Lstaticraise _ -> false
   | Lstaticcatch _ -> false
   (* It would be nice that we can also analysis some small functions
-      for example [String.contains],
-      [Format.make_queue_elem]
+      for example [String.contains]
   *)
   | Ltrywith (body, _exn, handler) ->
     no_side_effects body && no_side_effects handler

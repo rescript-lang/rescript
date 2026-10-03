@@ -654,14 +654,6 @@ let extract_embedded ~extension_points ~filename =
   in
   Yojson.Safe.pretty_to_string (`List result)
 
-let read_file path =
-  let ic = open_in path in
-  let n = in_channel_length ic in
-  let s = Bytes.create n in
-  really_input ic s 0 n;
-  close_in ic;
-  Bytes.to_string s
-
 let is_res_lang lang =
   match String.lowercase_ascii lang with
   | "res" | "rescript" | "resi" -> true
@@ -888,7 +880,7 @@ module Format_codeblocks = struct
     in
     let content =
       if Filename.check_suffix path ".md" then
-        let content = read_file path in
+        let content = Ext_io.load_file path in
         let display_filename = Filename.basename path in
         let formatted_contents, had_code_blocks =
           format_rescript_code_blocks ~transform_assert_equal ~add_error
@@ -1207,7 +1199,7 @@ module Extract_codeblocks = struct
 
     let content =
       if Filename.check_suffix path ".md" then
-        let content = read_file path in
+        let content = Ext_io.load_file path in
         let display_filename = Filename.basename path in
         let code_blocks =
           extract_rescript_code_blocks ~transform_assert_equal ~add_error

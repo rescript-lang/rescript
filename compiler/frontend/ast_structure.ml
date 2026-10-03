@@ -31,20 +31,6 @@ open Ast_helper
 let fuse_all ?(loc = Location.none) (t : t) : item =
   Str.include_ ~loc (Incl.mk ~loc (Mod.structure ~loc t))
 
-(* let fuse_with_constraint
-    ?(loc=Location.none)
-    (item : Parsetree.type_declaration list ) (t : t) (coercion) =
-   Str.include_ ~loc
-    (Incl.mk ~loc
-       (Mod.constraint_
-         (Mod.structure ~loc
-         ({pstr_loc = loc; pstr_desc = Pstr_type item} :: t) )
-         (
-           Mty.signature ~loc
-           ({psig_loc = loc; psig_desc = Psig_type item} :: coercion)
-         )
-         )
-    ) *)
 let constraint_ ?(loc = Location.none) (stru : t) (sign : Ast_signature.t) =
   Str.include_ ~loc
     (Incl.mk ~loc

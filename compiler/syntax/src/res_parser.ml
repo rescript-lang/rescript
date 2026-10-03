@@ -2,7 +2,6 @@ module Scanner = Res_scanner
 module Diagnostics = Res_diagnostics
 module Token = Res_token
 module Grammar = Res_grammar
-module Reporting = Res_reporting
 
 module Comment = Res_comment
 
@@ -33,7 +32,6 @@ type t = {
   mutable current: token_cache;
   mutable spare: token_cache;
   mutable breadcrumbs: (Grammar.t * Lexing.position) list;
-  mutable errors: Reporting.parse_error list;
   mutable diagnostics: Diagnostics.t list;
   mutable comments: Comment.t list;
   mutable regions: region_status list;
@@ -70,8 +68,12 @@ let rec read cache =
   match token with
   | Comment c when not (Comment.is_doc_comment c || Comment.is_module_comment c)
     ->
-    let _, preceding_end, _ = cache.scanned in
+    let _, preceding_end, preceding_token = cache.scanned in
     Comment.set_prev_tok_end_pos c preceding_end;
+    Comment.set_prev_tok_is_question c
+      (match preceding_token with
+      | Token.Question -> true
+      | _ -> false);
     cache.comments <- c :: cache.comments;
     cache.scanned <- scanned;
     read cache
@@ -238,7 +240,6 @@ let make source filename =
     current = make_token_cache (Scanner.make ~filename source) Lexing.dummy_pos;
     spare = make_token_cache (Scanner.make ~filename source) Lexing.dummy_pos;
     breadcrumbs = [];
-    errors = [];
     diagnostics = [];
     comments = [];
     regions = [Report];
@@ -281,7 +282,6 @@ let with_checkpoint p ~commit callback =
   let pending_diagnostics = cache.diagnostics in
   let position = p.cursor in
   let breadcrumbs = p.breadcrumbs in
-  let errors = p.errors in
   let diagnostics = p.diagnostics in
   let comments = p.comments in
   let regions = p.regions in
@@ -313,7 +313,6 @@ let with_checkpoint p ~commit callback =
     spare.available <- false;
     p.cursor <- position;
     if p.breadcrumbs != breadcrumbs then p.breadcrumbs <- breadcrumbs;
-    if p.errors != errors then p.errors <- errors;
     if p.diagnostics != diagnostics then p.diagnostics <- diagnostics;
     if p.comments != comments then p.comments <- comments;
     if p.regions != regions then p.regions <- regions;

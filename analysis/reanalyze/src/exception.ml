@@ -79,7 +79,7 @@ module Event = struct
   let rec print ppf event =
     match event with
     | {kind = Call {callee; module_path}; exceptions; loc} ->
-      Format.fprintf ppf "%s Call(%s, modulePath:%s) %a@."
+      Format.fprintf ppf "%s Call(%s, module_path:%s) %a@."
         (loc.loc_start |> Pos.to_string)
         (callee |> Dce_path.to_string)
         (module_path |> Dce_path.to_string)
@@ -97,7 +97,7 @@ module Event = struct
         (Exceptions.pp ~exn_table:None)
         exceptions
     | {kind = Catches nested_events; exceptions; loc} ->
-      Format.fprintf ppf "%s Catches exceptions:%a nestedEvents:%a@."
+      Format.fprintf ppf "%s Catches exceptions:%a nested_events:%a@."
         (loc.loc_start |> Pos.to_string)
         (Exceptions.pp ~exn_table:None)
         exceptions

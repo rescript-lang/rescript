@@ -341,6 +341,28 @@ let print_comments doc (tbl : Comment_table.t) loc =
   let doc_with_leading_comments = print_leading_comments doc tbl.leading loc in
   print_trailing_comments doc_with_leading_comments tbl.trailing loc
 
+(* Prints [doc] with the comments of [loc], followed by [marker], a token that
+   the source writes right after [loc] (such as [=?]). The trailing comments
+   adjacent to [loc] precede the marker in the source and print before it; the
+   remaining trailing comments print after it. *)
+let print_comments_before_marker doc (tbl : Comment_table.t) loc marker =
+  let after_marker =
+    match Hashtbl.find_opt tbl.trailing loc with
+    | None -> []
+    | Some comments ->
+      let before_marker, after_marker =
+        Comment_table.partition_adjacent_trailing loc comments
+      in
+      Hashtbl.replace tbl.trailing loc before_marker;
+      after_marker
+  in
+  let doc = Doc.concat [print_comments doc tbl loc; marker] in
+  match after_marker with
+  | [] -> doc
+  | _ ->
+    Hashtbl.replace tbl.trailing loc after_marker;
+    print_trailing_comments doc tbl.trailing loc
+
 let is_empty_doc doc = doc = Doc.nil
 
 let print_list ~get_loc ~nodes ~print ?(force_break = false) t =
@@ -753,16 +775,7 @@ and print_type_extension ~state (te : Parsetree.type_extension) cmt_tbl =
         ~nodes:ecs ~force_break cmt_tbl
     in
     Doc.breakable_group ~force_break
-      (Doc.indent
-         (Doc.concat
-            [
-              Doc.line;
-              private_flag;
-              rows;
-              (* Doc.join ~sep:Doc.line ( *)
-              (* List.mapi printExtensionConstructor ecs *)
-              (* ) *)
-            ]))
+      (Doc.indent (Doc.concat [Doc.line; private_flag; rows]))
   in
   Doc.group
     (Doc.concat
@@ -1859,7 +1872,7 @@ and print_constructor_arguments ?(is_dot_dot_dot = false) ~state ~indent
       Doc.concat
         [
           Doc.lparen;
-          (* manually inline the printRecordDeclaration, gives better layout *)
+          (* manually inline the print_record_declaration, gives better layout *)
           Doc.lbrace;
           Doc.indent
             (Doc.concat
@@ -2364,10 +2377,10 @@ and print_type_parameter ?inline_record_definitions ~state {attrs; lbl; typ}
            attrs;
            label;
            print_typ_expr ?inline_record_definitions ~state typ cmt_tbl;
-           optional_indicator;
          ])
   in
-  print_comments doc cmt_tbl loc
+  (* [loc] ends before [=?]. *)
+  print_comments_before_marker doc cmt_tbl loc optional_indicator
 
 and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
     i =
@@ -4651,12 +4664,8 @@ and print_jsx_container_tag ~state tag_name
       loc_ghost = false;
     }
   in
-  let _opening_greater_than_has_leading_comments, opening_greater_than_doc =
-    let has_leading_comments =
-      has_leading_comments cmt_tbl opening_greater_than_loc
-    in
-    ( has_leading_comments,
-      print_comments Doc.greater_than cmt_tbl opening_greater_than_loc )
+  let opening_greater_than_doc =
+    print_comments Doc.greater_than cmt_tbl opening_greater_than_loc
   in
   let formatted_props = print_jsx_props ~state props cmt_tbl in
   (* <div className="test" /> *)
@@ -5478,27 +5487,34 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
           {ppat_desc = Ppat_var string_loc; ppat_attributes} )
         when lbl = string_loc.txt ->
         (* ~d *)
-        Doc.concat
-          [
-            print_attributes ~state ppat_attributes cmt_tbl;
-            Doc.text "~";
-            print_ident_like lbl;
-          ]
+        print_comments
+          (Doc.concat
+             [
+               print_attributes ~state ppat_attributes cmt_tbl;
+               Doc.text "~";
+               print_ident_like lbl;
+             ])
+          cmt_tbl pattern.ppat_loc
       | ( (Labelled {txt = lbl} | Optional {txt = lbl}),
           {
-            ppat_desc = Ppat_constraint ({ppat_desc = Ppat_var {txt}}, typ);
+            ppat_desc =
+              Ppat_constraint
+                (({ppat_desc = Ppat_var {txt}} as var_pattern), typ);
             ppat_attributes;
           } )
         when lbl = txt ->
         (* ~d: e *)
-        Doc.concat
-          [
-            print_attributes ~state ppat_attributes cmt_tbl;
-            Doc.text "~";
-            print_ident_like lbl;
-            Doc.text ": ";
-            print_typ_expr ~state typ cmt_tbl;
-          ]
+        print_comments
+          (Doc.concat
+             [
+               print_attributes ~state ppat_attributes cmt_tbl;
+               print_comments
+                 (Doc.concat [Doc.text "~"; print_ident_like lbl])
+                 cmt_tbl var_pattern.ppat_loc;
+               Doc.text ": ";
+               print_typ_expr ~state typ cmt_tbl;
+             ])
+          cmt_tbl pattern.ppat_loc
       | (Labelled {txt = lbl} | Optional {txt = lbl}), pattern ->
         (* ~b as c *)
         Doc.concat
@@ -5515,9 +5531,7 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
       | _ -> Doc.nil
     in
     let doc =
-      Doc.group
-        (Doc.concat
-           [attrs; label_with_pattern; default_expr_doc; optional_label_suffix])
+      Doc.group (Doc.concat [attrs; label_with_pattern; default_expr_doc])
     in
     let lbl_loc = Asttypes.get_lbl_loc lbl in
     let cmt_loc =
@@ -5525,7 +5539,8 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
       | None -> {lbl_loc with loc_end = pattern.ppat_loc.loc_end}
       | Some expr -> {lbl_loc with loc_end = expr.pexp_loc.loc_end}
     in
-    print_comments doc cmt_tbl cmt_loc
+    (* Without a default, [cmt_loc] ends before [=?]. *)
+    print_comments_before_marker doc cmt_tbl cmt_loc optional_label_suffix
 
 and print_expression_block ~state ~braces expr cmt_tbl =
   let expr = Parsetree_viewer.unwrap_braces expr in
@@ -6075,11 +6090,6 @@ and print_mod_functor ~state mod_expr cmt_tbl =
   let parameters, return_mod_expr =
     Parsetree_viewer.mod_expr_functor mod_expr
   in
-  (* let shouldInline = match returnModExpr.pmod_desc with *)
-  (* | Pmod_structure _ | Pmod_ident _ -> true *)
-  (* | Pmod_constraint ({pmod_desc = Pmod_structure _}, _) -> true *)
-  (* | _ -> false *)
-  (* in *)
   let return_constraint, return_mod_expr =
     match return_mod_expr.pmod_desc with
     | Pmod_constraint (mod_expr, mod_type) ->
@@ -6229,7 +6239,6 @@ let print_implementation ?(width = default_print_width)
     (s : Parsetree.structure) ~comments =
   let cmt_tbl = Comment_table.make () in
   Comment_table.walk_structure s cmt_tbl comments;
-  (* CommentTable.log cmt_tbl; *)
   let doc = print_structure ~state:(State.init ()) s cmt_tbl in
   (* Doc.debug doc; *)
   Doc.to_string ~width doc ^ "\n"

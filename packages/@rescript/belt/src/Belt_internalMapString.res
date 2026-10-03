@@ -261,7 +261,3 @@ let fromArray = (xs: array<(key, _)>) => {
     result.contents
   }
 }
-
-let cmpU = cmp
-let eqU = eq
-let mergeU = merge
