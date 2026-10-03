@@ -133,6 +133,41 @@ let is_runtime_component = function
     false
   | Sig_value (_, _) | Sig_typext (_, _, _) | Sig_module (_, _, _) -> true
 
+(* Print a coercion *)
+
+let rec print_list pr ppf = function
+  | [] -> ()
+  | [a] -> pr ppf a
+  | a :: l ->
+    pr ppf a;
+    Format.fprintf ppf ";@ ";
+    print_list pr ppf l
+let print_list pr ppf l = Format.fprintf ppf "[@[%a@]]" (print_list pr) l
+
+let rec print_coercion ppf c =
+  let pr fmt = Format.fprintf ppf fmt in
+  match c with
+  | Tcoerce_none -> pr "id"
+  | Tcoerce_structure (fl, nl, _) ->
+    pr "@[<2>struct@ %a@ %a@]"
+      (print_list print_coercion2)
+      fl
+      (print_list print_coercion3)
+      nl
+  | Tcoerce_functor (inp, out) ->
+    pr "@[<2>functor@ (%a)@ (%a)@]" print_coercion inp print_coercion out
+  | Tcoerce_primitive {pc_desc; pc_env = _; pc_type} ->
+    pr "prim %s@ (%a)" pc_desc.Primitive.prim_name Printtyp.raw_type_expr
+      pc_type
+  | Tcoerce_alias (p, c) ->
+    pr "@[<2>alias %a@ (%a)@]" Printtyp.path p print_coercion c
+
+and print_coercion2 ppf (n, c) =
+  Format.fprintf ppf "@[%d,@ %a@]" n print_coercion c
+
+and print_coercion3 ppf (i, n, c) =
+  Format.fprintf ppf "@[%s, %d,@ %a@]" (Ident.name i) n print_coercion c
+
 (* Simplify a structure coercion *)
 
 let simplify_structure_coercion cc id_pos_list runtime_fields =
