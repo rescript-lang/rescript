@@ -1,8 +1,8 @@
 // @ts-check
 
 // Paths of the compiler binaries in the platform package (@rescript/<target>).
-// The lookup is synchronous so that `require("rescript/cli/bins")` works;
-// bins.js re-exports these values for ES modules.
+// The lookup is synchronous so that tools.cjs, the CommonJS entry of
+// `rescript/tools`, can load it; bins.js re-exports these values for ES modules.
 
 const path = require("node:path");
 

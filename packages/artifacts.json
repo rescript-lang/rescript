@@ -11,6 +11,8 @@
     "cli/common/bins.cjs",
     "cli/common/bins.js",
     "cli/common/runtime.js",
+    "cli/common/tools.cjs",
+    "cli/common/tools.js",
     "cli/rescript-tools.js",
     "cli/rescript.js",
     "docs/docson/build-schema.json",
