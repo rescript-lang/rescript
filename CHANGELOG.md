@@ -21,6 +21,7 @@
 #### :bug: Bug fix
 
 - Make rewatch compile independent modules after an unrelated failure and recompile blocked dependents when a changed interface survives a failed implementation, including across full watcher rebuilds. https://github.com/rescript-lang/rescript/pull/8667
+- Fix `RescriptTools.binaryPath` failing with `ERR_PACKAGE_IMPORT_NOT_DEFINED` when used from a user project. https://github.com/rescript-lang/rescript/pull/8694
 - GenType: type inline-record cases of untagged variants as objects instead of their single field's type. https://github.com/rescript-lang/rescript/pull/8693
 - Keep comments on labelled parameters with default values, and before `=?` in optional arrow-type arguments, when formatting. https://github.com/rescript-lang/rescript/pull/8690
 - Fix invalid JavaScript that exported names left unbound when a module's toplevel always throws. https://github.com/rescript-lang/rescript/pull/8692

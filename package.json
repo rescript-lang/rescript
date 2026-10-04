@@ -69,6 +69,10 @@
   "exports": {
     "./lib/es6/*": "./lib/es6/*",
     "./lib/js/*": "./lib/js/*",
+    "./tools": {
+      "require": "./cli/common/tools.cjs",
+      "default": "./cli/common/tools.js"
+    },
     "./package.json": "./package.json"
   },
   "imports": {
