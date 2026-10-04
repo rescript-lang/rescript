@@ -118,16 +118,6 @@ module Make (Key : OrderedType) = struct
       let c = compare_key x k in
       c = 0 || mem (if c < 0 then l else r) x
 
-  let rec remove (tree : _ Map_gen.t as 'a) x : 'a =
-    match tree with
-    | Empty -> empty
-    | Leaf leaf -> if eq_key x leaf.k then empty else tree
-    | Node {l; k; v; r} ->
-      let c = compare_key x k in
-      if c = 0 then Map_gen.merge l r
-      else if c < 0 then bal (remove l x) k v r
-      else bal l k v (remove r x)
-
   type 'a split =
     | Yes of {l: (key, 'a) Map_gen.t; r: (key, 'a) Map_gen.t; v: 'a}
     | No of {l: (key, 'a) Map_gen.t; r: (key, 'a) Map_gen.t}
@@ -192,10 +182,7 @@ module Make (Key : OrderedType) = struct
               (disjoint_merge_exn r s2.r fail)
           | Yes {v = s1v} -> raise_notrace (fail k s1v s2.v)))
 
-  let add_list (xs : _ list) init =
-    Ext_list.fold_left xs init (fun acc (k, v) -> add acc k v)
-
-  let of_list xs = add_list xs empty
+  let of_list xs = Ext_list.fold_left xs empty (fun acc (k, v) -> add acc k v)
 
   let of_array xs = Ext_array.fold_left xs empty (fun acc (k, v) -> add acc k v)
 end

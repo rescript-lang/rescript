@@ -889,7 +889,7 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
     Location.raise_errorf ~loc "Attribute found that conflicts with %@get"
 
 (** Note that the passed [type_annotation] is already processed by visitor pattern before*)
-let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
+let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
     (prim_attributes : Ast_attributes.t) (prim_name : string) :
     Parsetree.core_type * External_ffi_types.t * Parsetree.attributes * bool =
   let prim_name_with_source = {name = prim_name; source = External} in

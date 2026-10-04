@@ -59,9 +59,6 @@ val cst_int : int -> cst
 val cst_string : string -> cst
 val cst_json : string -> cst
 
-val empty_label : label
-
-(* val empty_lit : cst -> label  *)
 val obj_label : string -> label
 
 val optional : bool -> string -> label

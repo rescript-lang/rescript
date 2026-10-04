@@ -1450,15 +1450,6 @@ and label_x_expression_param ctxt f (l, e) =
     if Some lbl = simple_name then pp f "~%s" lbl
     else pp f "~%s:%a" lbl (simple_expr ctxt) e
 
-let expression f x = pp f "@[%a@]" (expression reset_ctxt) x
-
-let string_of_expression x =
-  ignore (flush_str_formatter ());
-  let f = str_formatter in
-  expression f x;
-  flush_str_formatter ()
-
-let core_type = core_type reset_ctxt
 let pattern = pattern reset_ctxt
 let signature = signature reset_ctxt
 let structure = structure reset_ctxt

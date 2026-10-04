@@ -220,10 +220,6 @@ val link_type : type_expr -> type_expr -> unit
    value if there is an active snapshot *)
 
 val set_level : type_expr -> int -> unit
-val set_name :
-  (Path.t * type_expr list) option ref ->
-  (Path.t * type_expr list) option ->
-  unit
 val set_row_field : row_field option ref -> row_field -> unit
 val set_univar : type_expr option ref -> type_expr -> unit
 
@@ -243,7 +239,6 @@ val log_type : type_expr -> unit
 (* Log the old value of a type, before modifying it by hand *)
 
 (**** Forward declarations ****)
-val print_raw : (Format.formatter -> type_expr -> unit) ref
 
 val iter_type_expr_kind : (type_expr -> unit) -> type_kind -> unit
 

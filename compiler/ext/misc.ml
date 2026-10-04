@@ -54,31 +54,8 @@ let rec map_end f l1 l2 =
   | [] -> l2
   | hd :: tl -> f hd :: map_end f tl l2
 
-let rec map_left_right f = function
-  | [] -> []
-  | hd :: tl ->
-    let res = f hd in
-    res :: map_left_right f tl
-
-let rec for_all2 pred l1 l2 =
-  match (l1, l2) with
-  | [], [] -> true
-  | hd1 :: tl1, hd2 :: tl2 -> pred hd1 hd2 && for_all2 pred tl1 tl2
-  | _, _ -> false
-
 let rec replicate_list elem n =
   if n <= 0 then [] else elem :: replicate_list elem (n - 1)
-
-let rec list_remove x = function
-  | [] -> []
-  | hd :: tl -> if hd = x then tl else hd :: list_remove x tl
-
-let rec split_last = function
-  | [] -> assert false
-  | [x] -> ([], x)
-  | hd :: tl ->
-    let lst, last = split_last tl in
-    (hd :: lst, last)
 
 let may = Stdlib.Option.iter
 let may_map = Stdlib.Option.map
@@ -130,39 +107,7 @@ let output_to_bin_file_directly filename fn =
     close_out oc;
     raise e
 
-let output_to_file_via_temporary ?(mode = [Open_text]) filename fn =
-  let temp_filename, oc =
-    Filename.open_temp_file ~mode ~perms:0o666
-      ~temp_dir:(Filename.dirname filename)
-      (Filename.basename filename)
-      ".tmp"
-  in
-  (* The 0o666 permissions will be modified by the umask.  It's just
-     like what [open_out] and [open_out_bin] do.
-     With temp_dir = dirname filename, we ensure that the returned
-     temp file is in the same directory as filename itself, making
-     it safe to rename temp_filename to filename later.
-     With prefix = basename filename, we are almost certain that
-     the first generated name will be unique.  A fixed prefix
-     would work too but might generate more collisions if many
-     files are being produced simultaneously in the same directory. *)
-  match fn temp_filename oc with
-  | res -> (
-    close_out oc;
-    try
-      Sys.rename temp_filename filename;
-      res
-    with exn ->
-      remove_file temp_filename;
-      raise exn)
-  | exception exn ->
-    close_out oc;
-    remove_file temp_filename;
-    raise exn
-
 (* Integer operations *)
-
-let rec log2 n = if n <= 1 then 0 else 1 + log2 (n asr 1)
 
 module Int_literal_converter = struct
   (* To convert integer literals, allowing max_int + 1 (PR#4210) *)
@@ -170,28 +115,23 @@ module Int_literal_converter = struct
     if String.length str = 0 || str.[0] = '-' then of_string str
     else neg (of_string ("-" ^ str))
   let int s = cvt_int_aux s ( ~- ) int_of_string
-  let int32 s = cvt_int_aux s Int32.neg Int32.of_string
-  let int64 s = cvt_int_aux s Int64.neg Int64.of_string
 end
-
-(* String operations *)
-
-let chop_extensions file =
-  let dirname = Filename.dirname file and basename = Filename.basename file in
-  try
-    let pos = String.index basename '.' in
-    let basename = String.sub basename 0 pos in
-    if Filename.is_implicit file && dirname = Filename.current_dir_name then
-      basename
-    else Filename.concat dirname basename
-  with Not_found -> file
 
 let get_ref r =
   let v = !r in
   r := [];
   v
 
-let fst3 (x, _, _) = x
+(** [edit_distance a b cutoff] computes the edit distance between
+    strings [a] and [b]. To help efficiency, it uses a cutoff: if the
+    distance [d] is smaller than [cutoff], it returns [Some d], else
+    [None].
+
+    The distance algorithm currently used is Damerau-Levenshtein: it
+    computes the number of insertion, deletion, substitution of
+    letters, or swapping of adjacent letters to go from one word to the
+    other. The particular algorithm may change in the future.
+*)
 let edit_distance a b cutoff =
   let la, lb = (String.length a, String.length b) in
   let cutoff =
@@ -265,7 +205,7 @@ let did_you_mean ppf get_choices =
   match get_choices () with
   | [] -> ()
   | choices ->
-    let rest, last = split_last choices in
+    let rest, last = Ext_list.split_at_last choices in
     Format.fprintf ppf "@\nHint: Did you mean %s%s%s?@?"
       (String.concat ", " rest)
       (if rest = [] then "" else " or ")

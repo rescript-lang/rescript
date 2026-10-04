@@ -36,12 +36,6 @@ val split : ?keep_empty:bool -> string -> char -> string list
 
 val starts_with : string -> string -> bool
 
-val ends_with_index : string -> string -> int
-(**
-   return [-1] when not found, the returned index is useful 
-   see [ends_with_then_chop]
-*)
-
 val ends_with : string -> string -> bool
 
 val ends_with_then_chop : string -> string -> string option
@@ -66,23 +60,7 @@ val for_all : string -> (char -> bool) -> bool
 
 val is_empty : string -> bool
 
-val repeat : int -> string -> string
-
 val equal : string -> string -> bool
-
-(**
-   [extract_until s cursor sep]
-   When [sep] not found, the cursor is updated to -1,
-   otherwise cursor is increased to 1 + [sep_position]
-   User can not determine whether it is found or not by
-   telling the return string is empty since 
-   "\n\n" would result in an empty string too.
-*)
-(* val extract_until:
-   string -> 
-   int ref -> (* cursor to be updated *)
-   char -> 
-   string *)
 
 val index_count : string -> int -> char -> int -> int
 
@@ -112,8 +90,6 @@ val tail_from : string -> int -> string
 val rindex_neg : string -> char -> int
 (** returns negative number if not found *)
 
-val rindex_opt : string -> char -> int option
-
 val no_slash : string -> bool
 
 val no_slash_idx : string -> int
@@ -134,7 +110,6 @@ val single_space : string
 
 val concat3 : string -> string -> string -> string
 val concat4 : string -> string -> string -> string -> string
-val concat5 : string -> string -> string -> string -> string -> string
 val inter2 : string -> string -> string
 val inter3 : string -> string -> string -> string
 val inter4 : string -> string -> string -> string -> string
@@ -147,10 +122,6 @@ val capitalize_ascii : string -> string
 val capitalize_sub : string -> int -> string
 
 val uncapitalize_ascii : string -> string
-
-val lowercase_ascii : string -> string
-
-val unsafe_sub : string -> int -> int -> string
 
 val is_valid_hash_number : string -> bool
 

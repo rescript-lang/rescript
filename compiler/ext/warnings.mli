@@ -76,8 +76,6 @@ val without_warnings : (unit -> 'a) -> 'a
 
 val is_active : t -> bool
 
-val is_error : t -> bool
-
 type reporting_information = {
   number: int;
   message: string;
@@ -102,8 +100,6 @@ val backup : unit -> state
 val restore : state -> unit
 
 val has_warnings : bool ref
-
-val nerrors : int ref
 
 val message : t -> string
 

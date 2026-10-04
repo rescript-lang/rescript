@@ -273,7 +273,7 @@ let const_compare x y =
   | _, _ -> compare x y
 
 let records_args l1 l2 =
-  (* Invariant: fields are already sorted by Typecore.type_label_a_list *)
+  (* Invariant: fields are already sorted by Typecore.type_record_elem_list *)
   let rec combine r1 r2 l1 l2 =
     match (l1, l2) with
     | [], [] -> (List.rev r1, List.rev r2)
@@ -512,7 +512,7 @@ let record_arg p =
   match p.pat_desc with
   | Tpat_any -> []
   | Tpat_record (args, _, _rest) -> args
-  | _ -> fatal_error "Parmatch.as_record"
+  | _ -> fatal_error "Parmatch.record_arg"
 
 (* Raise Not_found when pos is not present in arg *)
 let get_field pos arg =
@@ -1239,15 +1239,6 @@ type 'a result =
   | Rnone (* No matching value *)
   | Rsome of 'a (* This matching value *)
 
-(*
-let rec try_many  f = function
-  | [] -> Rnone
-  | (p,pss)::rest ->
-      match f (p,pss) with
-      | Rnone -> try_many  f rest
-      | r -> r
-*)
-
 let rappend r1 r2 =
   match (r1, r2) with
   | Rnone, _ -> r2
@@ -1258,68 +1249,6 @@ let rec try_many_gadt f = function
   | [] -> Rnone
   | (p, pss) :: rest -> rappend (f (p, pss)) (try_many_gadt f rest)
 
-(*
-let rec exhaust ext pss n = match pss with
-| []    ->  Rsome (omegas n)
-| []::_ ->  Rnone
-| pss   ->
-    let q0 = discr_pat omega pss in
-    begin match filter_all q0 pss with
-          (* first column of pss is made of variables only *)
-    | [] ->
-        begin match exhaust ext (filter_extra pss) (n-1) with
-        | Rsome r -> Rsome (q0::r)
-        | r -> r
-      end
-    | constrs ->
-        let try_non_omega (p,pss) =
-          if is_absent_pat p then
-            Rnone
-          else
-            match
-              exhaust
-                ext pss (List.length (simple_match_args p omega) + n - 1)
-            with
-            | Rsome r -> Rsome (set_args p r)
-            | r       -> r in
-        if
-          full_match true false constrs && not (should_extend ext constrs)
-        then
-          try_many try_non_omega constrs
-        else
-          (*
-             D = filter_extra pss is the default matrix
-             as it is included in pss, one can avoid
-             recursive calls on specialized matrices,
-             Essentially :
-             * D exhaustive => pss exhaustive
-             * D non-exhaustive => we have a non-filtered value
-          *)
-          let r =  exhaust ext (filter_extra pss) (n-1) in
-          match r with
-          | Rnone -> Rnone
-          | Rsome r ->
-              try
-                Rsome (build_other ext constrs::r)
-              with
-      (* cannot occur, since constructors don't make a full signature *)
-              | Empty -> fatal_error "Parmatch.exhaust"
-    end
-
-let combinations f lst lst' =
-  let rec iter2 x =
-    function
-        [] -> []
-      | y :: ys ->
-          f x y :: iter2 x ys
-  in
-  let rec iter =
-    function
-        [] -> []
-      | x :: xs -> iter2 x lst' @ iter xs
-  in
-  iter lst
-*)
 (*
 let print_pat pat =
   let rec string_of_pat pat =
@@ -1486,7 +1415,7 @@ let rec pressure_variants tdefs = function
 (* Yet another satisfiable function *)
 
 (*
-   This time every_satisfiable pss qs checks the
+   This time every_satisfiables pss qs checks the
    utility of every expansion of qs.
    Expansion means expansion of or-patterns inside qs
 *)
@@ -1702,7 +1631,7 @@ let rec every_satisfiables pss qs =
 (*
   This function ``every_both'' performs the usefulness check
   of or-pat q1|q2.
-  The trick is to call every_satisfied twice with
+  The trick is to call every_satisfiables twice with
   current active columns restricted to q1 and q2,
   That way,
   - others orpats in qs.ors will not get expanded.
@@ -2083,11 +2012,6 @@ let do_check_partial ?partial_match_warning_hint ?pred exhaust loc casel pss =
         Partial)
     | _ -> fatal_error "Parmatch.check_partial")
 
-(*
-let do_check_partial_normal loc casel pss =
-  do_check_partial exhaust loc casel pss
- *)
-
 let do_check_partial_gadt ?partial_match_warning_hint pred loc casel pss =
   do_check_partial ?partial_match_warning_hint ~pred exhaust_gadt loc casel pss
 
@@ -2153,7 +2077,6 @@ let do_check_fragile_param exhaust loc casel pss =
           | Rsome _ -> ())
         exts)
 
-(*let do_check_fragile_normal = do_check_fragile_param exhaust*)
 let do_check_fragile_gadt = do_check_fragile_param exhaust_gadt
 
 (********************************)
@@ -2235,29 +2158,6 @@ let check_unused pred casel =
 
 let irrefutable pat = le_pat pat omega
 
-let inactive ~partial pat =
-  match partial with
-  | Partial -> false
-  | Total ->
-    let rec loop pat =
-      match pat.pat_desc with
-      | Tpat_array _ -> false
-      | Tpat_any | Tpat_var _ | Tpat_variant (_, None, _) -> true
-      | Tpat_constant c -> (
-        match c with
-        | Const_string _ -> true (*Config.safe_string*)
-        | Const_int _ | Const_char _ | Const_float _ | Const_bigint _ -> true)
-      | Tpat_tuple ps | Tpat_construct (_, _, ps) ->
-        List.for_all (fun p -> loop p) ps
-      | Tpat_alias (p, _, _) | Tpat_variant (_, Some p, _) -> loop p
-      | Tpat_record (ldps, _, _rest) ->
-        List.for_all
-          (fun (_, lbl, p, _) -> lbl.lbl_mut = Immutable && loop p)
-          ldps
-      | Tpat_or (p, q, _) -> loop p && loop q
-    in
-    loop pat
-
 (*********************************)
 (* Exported exhaustiveness check *)
 (*********************************)
@@ -2274,11 +2174,6 @@ let check_partial_param do_check_partial do_check_fragile loc casel =
   if total = Total && Warnings.is_active (Warnings.Fragile_match "") then
     do_check_fragile loc casel pss;
   total
-
-(*let check_partial =
-    check_partial_param
-      do_check_partial_normal
-      do_check_fragile_normal*)
 
 let check_partial_gadt ?partial_match_warning_hint pred loc casel =
   check_partial_param

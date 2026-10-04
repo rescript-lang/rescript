@@ -94,7 +94,7 @@ let shallow_map_sharing (f : t -> t) (lam : t) : t =
     if b' == b then lam else assign id b'
 
 (*
-   Those keys are later compared with Pervasives.compare.
+   Those keys are later compared with Stdlib.compare.
    For that reason, they should not include cycles.
 *)
 

@@ -136,11 +136,9 @@ let type_package = ref (fun _ -> assert false)
 *)
 let re node =
   Cmt_format.add_saved_type (Cmt_format.Partial_expression node);
-  Stypes.record (Stypes.Ti_expr node);
   node
 let rp node =
   Cmt_format.add_saved_type (Cmt_format.Partial_pattern node);
-  Stypes.record (Stypes.Ti_pat node);
   node
 
 type recarg = Allowed | Required | Rejected
@@ -314,7 +312,7 @@ let check_polyvar_name env loc name =
     | Some _ -> ()
     | None -> raise (Error (loc, env, Polyvar_literal_overflow))
 
-(* Specific version of type_option, using newty rather than newgenty *)
+(* The type [ty option], created at the current level *)
 
 let type_option ty = newty (Tconstr (Predef.path_option, [ty], ref Mnil))
 
@@ -421,12 +419,7 @@ let finalize_variant pat =
       | Some pat -> List.iter (unify_pat pat.pat_env pat) (ty :: tl))
     | Reither (c, _l, true, e) when not (row_fixed row) ->
       set_row_field e (Reither (c, [], false, ref None))
-    | _ -> ()
-    (* Force check of well-formedness   WHY? *)
-    (* unify_pat pat.pat_env pat
-       (newty(Tvariant{row_fields=[]; row_more=newvar(); row_closed=false;
-                       row_bound=(); row_fixed=false; row_name=None})); *)
-    )
+    | _ -> ())
   | _ -> ()
 
 let rec iter_pattern f p =
@@ -450,13 +443,11 @@ let pattern_variables =
       : (Ident.t * type_expr * string loc * Location.t * bool (* as-variable *))
         list)
 let pattern_force = ref ([] : (unit -> unit) list)
-let pattern_scope = ref (None : Annot.ident option)
 let allow_modules = ref false
 let module_variables = ref ([] : (string loc * Location.t) list)
-let reset_pattern scope allow =
+let reset_pattern allow =
   pattern_variables := [];
   pattern_force := [];
-  pattern_scope := scope;
   allow_modules := allow;
   module_variables := []
 
@@ -472,12 +463,7 @@ let enter_variable ?(is_module = false) ?(is_as_variable = false) loc name ty =
     (* Note: unpack patterns enter a variable of the same name *)
     if not !allow_modules then
       raise (Error (loc, Env.empty, Modules_not_allowed));
-    module_variables := (name, loc) :: !module_variables)
-  else
-    (* moved to genannot *)
-    may
-      (fun s -> Stypes.record (Stypes.An_ident (name.loc, name.txt, s)))
-      !pattern_scope;
+    module_variables := (name, loc) :: !module_variables);
   id
 
 let sort_pattern_variables vs =
@@ -1733,9 +1719,6 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     in
     unify_pat_types loc !env ty expected_ty;
     type_pat sp expected_ty' (fun p ->
-        (*Format.printf "%a@.%a@."
-          Printtyp.raw_type_expr ty
-          Printtyp.raw_type_expr p.pat_type;*)
         pattern_force := force :: !pattern_force;
         let extra = (Tpat_constraint cty, loc, sp.ppat_attributes) in
         let p =
@@ -1783,13 +1766,13 @@ let type_pat ?(allow_existentials = false) ?constrs ?labels ?(mode = Normal)
     newtype_level := None;
     raise e
 
-(* this function is passed to Partial.parmatch
-   to type check gadt nonexhaustiveness *)
+(* this function is passed to Parmatch.check_partial_gadt and
+   Parmatch.check_unused to type check gadt nonexhaustiveness *)
 let partial_pred ~lev ?mode ?explode env expected_ty constrs labels p =
   let env = ref env in
   let state = save_state env in
   try
-    reset_pattern None true;
+    reset_pattern true;
     let typed_p =
       Ctype.with_passive_variants
         (type_pat ~allow_existentials:true ~lev ~constrs ~labels ?mode ?explode
@@ -1837,8 +1820,8 @@ let add_pattern_variables ?check ?check_as env =
       pv env,
     get_ref module_variables )
 
-let type_pattern ~lev env spat scope expected_ty =
-  reset_pattern scope true;
+let type_pattern ~lev env spat expected_ty =
+  reset_pattern true;
   let new_env = ref env in
   let pat = type_pat ~allow_existentials:true ~lev new_env spat expected_ty in
   let new_env, unpacks =
@@ -1848,8 +1831,8 @@ let type_pattern ~lev env spat scope expected_ty =
   in
   (pat, new_env, get_ref pattern_force, unpacks)
 
-let type_pattern_list env spatl scope expected_tys allow =
-  reset_pattern scope allow;
+let type_pattern_list env spatl expected_tys allow =
+  reset_pattern allow;
   let new_env = ref env in
   let type_pat (attrs, pat) ty =
     Builtin_attributes.warning_scope ~ppwarning:false attrs (fun () ->
@@ -2238,7 +2221,6 @@ let check_absent_variant env =
           (fun (s', fi) -> s = s' && row_field_repr fi <> Rabsent)
           row.row_fields
         || ((not row.row_fixed) && not (static_row row))
-        (* same as Ctype.poly *)
       then ()
       else
         let ty_arg =
@@ -2270,9 +2252,9 @@ let duplicate_ident_types caselist env =
   in
   Env.copy_types (all_idents_cases caselist) env
 
-(* type_label_a_list returns a list of labels sorted by lbl_pos *)
+(* type_record_elem_list returns a list of labels sorted by lbl_pos *)
 (* note: check_duplicates would better be implemented in
-         type_label_a_list directly *)
+         type_record_elem_list directly *)
 let rec check_duplicates ~get_jsx_component_error_info loc env = function
   | (_, lbl1, _, _) :: ((l : Longident.t loc), lbl2, _, _) :: _
     when lbl1.lbl_pos = lbl2.lbl_pos ->
@@ -2461,14 +2443,6 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           | v -> v)
         env lid.loc lid.txt
     in
-    (if !Clflags.annotations then
-       let dloc = desc.Types.val_loc in
-       let annot =
-         if dloc.Location.loc_ghost then Annot.Iref_external
-         else Annot.Iref_internal dloc
-       in
-       let name = Path.name ~paren:Oprint.parenthesized_ident path in
-       Stypes.record (Stypes.An_ident (loc, name, annot)));
     let is_recarg =
       match (repr desc.val_type).desc with
       | Tconstr (p, _, _) -> Path.is_constructor_typath p
@@ -2513,13 +2487,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       }
       ty_expected
   | Pexp_let (rec_flag, spat_sexp_list, sbody) ->
-    let scp =
-      match rec_flag with
-      | Recursive -> Some (Annot.Idef loc)
-      | Nonrecursive -> Some (Annot.Idef sbody.pexp_loc)
-    in
     let pat_exp_list, new_env, unpacks =
-      type_let ~context:None env rec_flag spat_sexp_list scp true
+      type_let ~context:None env rec_flag spat_sexp_list true
     in
     let body =
       type_expect ~context:None new_env (wrap_unpacks sbody unpacks) ty_expected
@@ -3245,7 +3214,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           } env ~check:(fun s -> Warnings.Unused_for_index s)
       | _ ->
         (* unreachable: the parser's normalize_for_of_pattern
-           (compiler/syntax/src/res_core.ml:3841) catches every non-var,
+           (compiler/syntax/src/res_core.ml) catches every non-var,
            non-`_` pattern, emits a syntax error, and replaces the pattern
            with Ppat_any before the typer runs *)
         assert false
@@ -3282,7 +3251,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           } env ~check:(fun s -> Warnings.Unused_for_index s)
       | _ ->
         (* unreachable: the parser's normalize_for_of_pattern
-           (compiler/syntax/src/res_core.ml:3841) catches every non-var,
+           (compiler/syntax/src/res_core.ml) catches every non-var,
            non-`_` pattern, emits a syntax error, and replaces the pattern
            with Ppat_any before the typer runs *)
         assert false
@@ -3822,7 +3791,6 @@ and type_function ~async loc attrs env ty_expected_
   let lev, env =
     if has_gadts then init_env () else (get_current_level (), env)
   in
-  let scope = Some (Annot.Idef sbody.pexp_loc) in
   let rec type_params typed_acc env unpacks_acc defaults_acc
       (params : (Parsetree.fun_param * Parsetree.value_binding option) list) tys
       =
@@ -3844,7 +3812,7 @@ and type_function ~async loc attrs env ty_expected_
       let pat, ext_env, force, unpacks =
         let partial = if erase_either then Some false else None in
         let ty_arg_i = instance ?partial env ty_arg_c in
-        type_pattern ~lev env spat scope ty_arg_i
+        type_pattern ~lev env spat ty_arg_i
       in
       pattern_force := force @ !pattern_force;
       let ty_arg' = newvar () in
@@ -3869,7 +3837,7 @@ and type_function ~async loc attrs env ty_expected_
         | Some vb ->
           let let_env = ext_env in
           let pat_exp_list, ext_env, let_unpacks =
-            type_let ~context:None ext_env Nonrecursive [vb] None true
+            type_let ~context:None ext_env Nonrecursive [vb] true
           in
           (* The pattern binds the option carrier under an unspellable name
              ([*opt_<label>*]), which typing needs so that user code can
@@ -4594,8 +4562,6 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
   let lev, env =
     if has_gadts then init_env () else (get_current_level (), env)
   in
-  (* if has_gadts then
-     Format.printf "lev = %d@.%a@." lev Printtyp.raw_type_expr ty_res; *)
   (* Do we need to propagate polymorphism *)
   let propagate =
     has_gadts
@@ -4608,22 +4574,13 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
   if propagate then begin_def ();
   (* propagation of the argument *)
   let pattern_force = ref [] in
-  (* Format.printf "@[%i %i@ %a@]@." lev (get_current_level())
-     Printtyp.raw_type_expr ty_arg; *)
   let pat_env_list =
     List.map
-      (fun {pc_lhs; pc_guard; pc_rhs} ->
-        let loc =
-          let open Location in
-          match pc_guard with
-          | None -> pc_rhs.pexp_loc
-          | Some g -> {pc_rhs.pexp_loc with loc_start = g.pexp_loc.loc_start}
-        in
-        let scope = Some (Annot.Idef loc) in
+      (fun {pc_lhs} ->
         let pat, ext_env, force, unpacks =
           let partial = if erase_either then Some false else None in
           let ty_arg = instance ?partial env ty_arg in
-          type_pattern ~lev env pc_lhs scope ty_arg
+          type_pattern ~lev env pc_lhs ty_arg
         in
         pattern_force := force @ !pattern_force;
         (pat, (ext_env, unpacks)))
@@ -4658,8 +4615,6 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
         let ty_res' =
           if contains_gadt env pc_lhs then correct_levels ty_res else ty_res
         in
-        (* Format.printf "@[%i %i, ty_res' =@ %a@]@." lev (get_current_level())
-           Printtyp.raw_type_expr ty_res'; *)
         let guard =
           match pc_guard with
           | None -> None
@@ -4720,7 +4675,7 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
 
 and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
     ?(check_strict = fun s -> Warnings.Unused_var_strict s) env rec_flag
-    spat_sexp_list scope allow =
+    spat_sexp_list allow =
   let spat_sexp_list =
     List.map
       (fun (vb : Parsetree.value_binding) ->
@@ -4755,7 +4710,7 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
   in
   let nvs = List.map (fun _ -> newvar ()) spatl in
   let pat_list, new_env, force, unpacks =
-    type_pattern_list env spatl scope nvs allow
+    type_pattern_list env spatl nvs allow
   in
   let attrs_list = List.map fst spatl in
   let is_recursive = rec_flag = Recursive in
@@ -4949,13 +4904,13 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
 
 (* Typing of toplevel bindings *)
 
-let type_binding ~context env rec_flag spat_sexp_list scope =
+let type_binding ~context env rec_flag spat_sexp_list =
   Typetexp.reset_type_variables ();
   let pat_exp_list, new_env, _unpacks =
     type_let
       ~check:(fun s -> Warnings.Unused_value_declaration s)
       ~check_strict:(fun s -> Warnings.Unused_value_declaration s)
-      ~context env rec_flag spat_sexp_list scope false
+      ~context env rec_flag spat_sexp_list false
   in
   (pat_exp_list, new_env)
 

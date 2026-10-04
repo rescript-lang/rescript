@@ -43,12 +43,6 @@ let rec struct_const ppf = function
   | Const_js_false -> fprintf ppf "false"
   | Const_js_true -> fprintf ppf "true"
 
-(* let field_kind = function
-   | Pgenval -> "*"
-   | Pintval -> "int"
-   | Pfloatval -> "float"
-   | Pboxedintval bi -> boxed_integer_name bi *)
-
 (* let block_shape ppf shape = match shape with
    | None | Some [] -> ()
    | Some l when List.for_all ((=) Pgenval) l -> ()
@@ -377,8 +371,6 @@ let rec lam ppf = function
 and sequence ppf = function
   | Lsequence (l1, l2) -> fprintf ppf "%a@ %a" sequence l1 sequence l2
   | l -> lam ppf l
-
-let structured_constant = struct_const
 
 let lambda = lam
 

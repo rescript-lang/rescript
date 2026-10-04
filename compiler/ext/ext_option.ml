@@ -22,10 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let map v f =
-  match v with
-  | None -> None
-  | Some x -> Some (f x)
+let map v f = Stdlib.Option.map f v
 
 let map_sharing v f =
   match v with
@@ -34,10 +31,7 @@ let map_sharing v f =
     let x' = f x in
     if x' == x then v else Some x'
 
-let iter v f =
-  match v with
-  | None -> ()
-  | Some x -> f x
+let iter v f = Stdlib.Option.iter f v
 
 let exists v f =
   match v with

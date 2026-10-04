@@ -13,14 +13,13 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* Module [Outcometree]: results displayed by the toplevel *)
+(* Module [Outcometree]: printable representation of types, values and
+   signature items *)
 
-(* These types represent messages that the toplevel displays as normal
-   results or errors. The real displaying is customisable using the hooks:
-      [Toploop.print_out_value]
-      [Toploop.print_out_type]
-      [Toploop.print_out_sig_item]
-      [Toploop.print_out_phrase] *)
+(* [Printtyp] builds these trees. They are printed through the hooks
+   [Oprint.out_type], [Oprint.out_value], [Oprint.out_sig_item],
+   [Oprint.out_signature] and related refs, which bsc sets to the ReScript
+   printer through [Res_outcome_printer.setup]. *)
 
 type out_ident =
   | Oide_apply of out_ident * out_ident

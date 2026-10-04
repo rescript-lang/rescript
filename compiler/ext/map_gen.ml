@@ -184,28 +184,6 @@ let[@inline] is_empty = function
   | Empty -> true
   | _ -> false
 
-let rec min_binding_exn = function
-  | Empty -> raise Not_found
-  | Leaf {k; v} -> (k, v)
-  | Node {l; k; v} -> (
-    match l with
-    | Empty -> (k, v)
-    | Leaf _ | Node _ -> min_binding_exn l)
-
-let rec remove_min_binding = function
-  | Empty -> invalid_arg "Map.remove_min_elt"
-  | Leaf _ -> empty
-  | Node {l = Empty; r} -> r
-  | Node {l; k; v; r} -> bal (remove_min_binding l) k v r
-
-let merge t1 t2 =
-  match (t1, t2) with
-  | Empty, t -> t
-  | t, Empty -> t
-  | _, _ ->
-    let x, d = min_binding_exn t2 in
-    bal t1 x d (remove_min_binding t2)
-
 let rec iter x f =
   match x with
   | Empty -> ()
@@ -269,18 +247,6 @@ let rec join l v d r =
       else if rh > lh + 2 then bal (join l v d xr.l) xr.k xr.v xr.r
       else unsafe_node v d l r (calc_height lh rh))
 
-(* Merge two trees l and r into one.
-   All elements of l must precede the elements of r.
-   No assumption on the heights of l and r. *)
-
-let concat t1 t2 =
-  match (t1, t2) with
-  | Empty, t -> t
-  | t, Empty -> t
-  | _, _ ->
-    let x, d = min_binding_exn t2 in
-    join t1 x d (remove_min_binding t2)
-
 module type S = sig
   type key
 
@@ -308,10 +274,6 @@ module type S = sig
   *)
 
   val singleton : key -> 'a -> 'a t
-
-  val remove : 'a t -> key -> 'a t
-  (** [remove x m] returns a map containing the same bindings as
-      [m], except for [x] which is unbound in the returned map. *)
 
   (* val merge:
        'a t -> 'b t ->
@@ -402,6 +364,4 @@ module type S = sig
   val of_list : (key * 'a) list -> 'a t
 
   val of_array : (key * 'a) array -> 'a t
-
-  val add_list : (key * 'b) list -> 'b t -> 'b t
 end

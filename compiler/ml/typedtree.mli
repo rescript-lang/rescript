@@ -16,7 +16,7 @@
 (** Abstract syntax tree after typing *)
 
 (** By comparison with {!Parsetree}:
-    - Every {!Longindent.t} is accompanied by a resolved {!Path.t}.
+    - Every {!Longident.t} is accompanied by a resolved {!Path.t}.
 
 *)
 
