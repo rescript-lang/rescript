@@ -10,10 +10,6 @@
 module Doc = Res_doc
 module Printer = Res_printer
 
-(* ReScript doesn't have parenthesized identifiers.
- * We don't support custom operators. *)
-let parenthesized_ident _name = true
-
 (* TODO: better allocation strategy for the buffer *)
 let escape_string_contents s =
   let len = String.length s in
