@@ -51,6 +51,8 @@ git clone --depth 1 https://github.com/rescript-lang/rescript.git
 
 This will only consume less than 50MB.
 
+[.gitattributes](.gitattributes) checks out every text file with LF line endings, which the committed snapshots and formatters expect on every platform. It also marks the Yarn release and the copied test dependencies in `tests/dependencies` as vendored, which leaves them out of GitHub's language statistics.
+
 ## Installation
 
 ### A. Manual installation
