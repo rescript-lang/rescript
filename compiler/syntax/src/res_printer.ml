@@ -6235,17 +6235,22 @@ let print_typ_expr t = print_typ_expr ~state:(State.init ()) t
 let print_expression e = print_expression ~state:(State.init ()) e
 let print_pattern p = print_pattern ~state:(State.init ()) p
 
-let print_implementation ?(width = default_print_width)
-    (s : Parsetree.structure) ~comments =
+let implementation_doc (s : Parsetree.structure) ~comments =
   let cmt_tbl = Comment_table.make () in
   Comment_table.walk_structure s cmt_tbl comments;
-  let doc = print_structure ~state:(State.init ()) s cmt_tbl in
-  Doc.to_string ~width doc ^ "\n"
+  print_structure ~state:(State.init ()) s cmt_tbl
+
+let interface_doc (s : Parsetree.signature) ~comments =
+  let cmt_tbl = Comment_table.make () in
+  Comment_table.walk_signature s cmt_tbl comments;
+  print_signature ~state:(State.init ()) s cmt_tbl
+
+let print_implementation ?(width = default_print_width)
+    (s : Parsetree.structure) ~comments =
+  Doc.to_string ~width (implementation_doc s ~comments) ^ "\n"
 
 let print_interface ?(width = default_print_width) (s : Parsetree.signature)
     ~comments =
-  let cmt_tbl = Comment_table.make () in
-  Comment_table.walk_signature s cmt_tbl comments;
-  Doc.to_string ~width (print_signature ~state:(State.init ()) s cmt_tbl) ^ "\n"
+  Doc.to_string ~width (interface_doc s ~comments) ^ "\n"
 
 let print_structure = print_structure ~state:(State.init ())

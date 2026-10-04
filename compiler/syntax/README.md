@@ -44,6 +44,7 @@ dune exec res_parser -- example.res
 dune exec res_parser -- -print tokens example.res
 dune exec res_parser -- -print ast -recover example.res
 dune exec res_parser -- -print comments example.res
+dune exec res_parser -- -print doc example.res
 dune exec res_parser -- -print ml example.res
 dune exec res_parser -- -print res -width 80 example.res
 ```
