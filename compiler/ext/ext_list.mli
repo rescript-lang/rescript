@@ -22,6 +22,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+val map_to_array : 'a list -> ('a -> 'b) -> 'b array
+(** Map left to right directly into an array without allocating an intermediate
+    list. *)
+
 val map : 'a list -> ('a -> 'b) -> 'b list
 
 val map_combine : 'a list -> 'b list -> ('a -> 'c) -> ('c * 'b) list

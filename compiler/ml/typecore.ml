@@ -993,7 +993,7 @@ module Label = Name_choice (struct
     in
     let lbl_all_list = Array.to_list lbl.lbl_all @ [l] in
     let lbl_all = Array.of_list lbl_all_list in
-    Ext_array.iter lbl_all (fun lbl -> lbl.lbl_all <- lbl_all);
+    lbl_all |> Array.iter (fun lbl -> lbl.lbl_all <- lbl_all);
     l
   let get_type lbl = lbl.lbl_res
   let get_descrs = snd
@@ -1009,10 +1009,11 @@ let disambiguate_label_by_ids closed ids labels =
   in
   let mandatory_labels_are_present num_ids lbl =
     (* check that all mandatory labels are present *)
-    let has_optional_labels = Ext_array.exists lbl.lbl_all label_is_optional in
+    let has_optional_labels = Array.exists label_is_optional lbl.lbl_all in
     if has_optional_labels then (
       let mandatory_lbls = ref 0 in
-      Ext_array.iter lbl.lbl_all (fun l ->
+      lbl.lbl_all
+      |> Array.iter (fun l ->
           if not (label_is_optional l) then incr mandatory_lbls);
       num_ids >= !mandatory_lbls)
     else num_ids = Array.length lbl.lbl_all
