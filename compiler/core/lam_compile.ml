@@ -278,8 +278,8 @@ let compile output_prefix =
   let hoisted_external_field_name primitive args =
     match extract_field_path [] primitive args with
     | Some (id, (_ :: _ :: _ as segments)) ->
-      Ext_option.map (Lam_compile_env.find_hoisted_external_export id segments)
-        (fun name -> (id, name))
+      Lam_compile_env.find_hoisted_external_export id segments
+      |> Option.map (fun name -> (id, name))
     | Some (_, ([] | [_])) | None -> None
   in
   let rec compile_external_field (* Like [List.empty]*)
