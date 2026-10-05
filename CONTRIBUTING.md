@@ -510,7 +510,7 @@ Adding a new entry there requires re-running the analysis tests. Follow these st
 
 (If a `make` command fails, consider using the [DevContainer](#b-devcontainer).)
 
-Finally, add a line to [CHANGELOG.md](CHANGELOG.md), using the `#### :nail_care: Polish` section.
+Finally, add a `changelog/<description>.polish.md` fragment following [the changelog instructions](changelog/README.md).
 
 ## Code structure
 
@@ -572,7 +572,7 @@ The repository's `npm-release` GitHub environment should have required reviewers
 To build a new version and release it on NPM, follow these steps:
 
 1. Verify that the version number is already set correctly for the release. (It should have been incremented after releasing the previous version.)
-1. Create a PR to update `CHANGELOG.md`, removing the "(Unreleased)" for the version to be released.
+1. Run `yarn changelog:preview` to review pending notes, then `yarn changelog:release` to collect fragments into `CHANGELOG.md`, remove "(Unreleased)", and delete consumed fragments. Create a PR containing these changes, review the combined release notes, and apply the `changelog:release` label. Existing unreleased entries are preserved.
 1. Once that PR is merged and built successfully, run the `Publish` workflow from the GitHub Actions tab. Use the "Run workflow" branch dropdown to select the release branch (normally `master`, or the relevant maintenance branch) and indicate whether this is the current stable release. The version is read from that branch's `package.json`, and the npm tag is derived automatically:
    - A current stable release is published as `latest`.
    - A stable maintenance release for an older major is published as `latest-<major>`, for example `latest-12`.
@@ -618,3 +618,7 @@ To participate under these terms, all that you must do is include a line like th
     Signed-Off-By: Random J. Developer <random@developer.example.org>
 
 You must use your real name (sorry, no pseudonyms, and no anonymous contributions).
+
+## Changelog fragments
+
+For user-facing changes, add a fragment following [changelog/README.md](changelog/README.md). Ordinary PRs do not edit `CHANGELOG.md`.

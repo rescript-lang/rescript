@@ -31,7 +31,7 @@
     "Jaap Frolich (https://github.com/jfrolich)",
     "Matthias Le Brun (https://github.com/bloodyowl)",
     "Patrick Ecker (https://github.com/ryyppy)",
-    "Paul Tsnobiladzé (https://github.com/tsnobip)",
+    "Paul Tsnobiladz\u00e9 (https://github.com/tsnobip)",
     "Shulhi Sapli (https://github.com/shulhi)",
     "Woonki Moon (https://github.com/mununki)"
   ],
@@ -56,7 +56,11 @@
     "check:all": "biome check .",
     "format": "biome check --no-errors-on-unmatched . --fix",
     "typecheck": "tsc",
-    "apidocs:generate": "yarn workspace @utils/scripts apidocs:generate"
+    "apidocs:generate": "yarn workspace @utils/scripts apidocs:generate",
+    "changelog:check": "node scripts/changelog.js check",
+    "changelog:preview": "node scripts/changelog.js preview",
+    "changelog:release": "node scripts/changelog.js release",
+    "test-changelog": "node --test scripts/changelog.test.js"
   },
   "files": [
     "CHANGELOG.md",
