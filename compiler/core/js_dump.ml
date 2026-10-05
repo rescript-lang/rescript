@@ -885,10 +885,8 @@ and expression_desc cxt ~(level : int) f x : cxt =
                Js_op.Lit (Ext_ident.convert x)) ))
   (*name convention of Record is slight different from modules*)
   | Caml_block (el, _, Blk_record {fields}) ->
-    if
-      Array.length fields <> 0
-      && Ext_array.for_alli fields (fun i (v, _) -> string_of_int i = v)
-    then expression_desc cxt ~level f (Array el)
+    if Lambda.record_fields_are_array fields then
+      expression_desc cxt ~level f (Array el)
     else
       let fields =
         Ext_list.array_list_filter_map fields el (fun (f, opt) x ->

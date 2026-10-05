@@ -780,6 +780,16 @@ type value_kind =
   | Is_array
   | Unknown_value
 
+let record_fields_are_array fields =
+  let len = Array.length fields in
+  let rec loop i =
+    if i = len then true
+    else
+      let name, _optional = fields.(i) in
+      string_of_int i = name && loop (i + 1)
+  in
+  len <> 0 && loop 0
+
 let runtime_value_kind (c : structured_constant) =
   match c with
   | Const_string s -> Is_literal (String s)
@@ -796,11 +806,7 @@ let runtime_value_kind (c : structured_constant) =
   | Const_constructor {literal = Some literal} -> Is_literal literal
   | Const_block (Blk_tuple, _) -> Is_array
   | Const_block (Blk_record {fields}, _) ->
-    if
-      Array.length fields <> 0
-      && Ext_array.for_alli fields (fun i (name, _) -> string_of_int i = name)
-    then Is_array
-    else Is_object
+    if record_fields_are_array fields then Is_array else Is_object
   | Const_block
       ( ( Blk_constructor _ | Blk_record_inlined _ | Blk_poly_var
         | Blk_record_ext _ | Blk_module _ | Blk_module_export _ | Blk_extension

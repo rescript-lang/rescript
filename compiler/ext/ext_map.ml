@@ -184,5 +184,5 @@ module Make (Key : OrderedType) = struct
 
   let of_list xs = Ext_list.fold_left xs empty (fun acc (k, v) -> add acc k v)
 
-  let of_array xs = Ext_array.fold_left xs empty (fun acc (k, v) -> add acc k v)
+  let of_array xs = Array.fold_left (fun acc (k, v) -> add acc k v) empty xs
 end

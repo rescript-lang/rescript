@@ -523,3 +523,8 @@ val name_lambda : let_kind -> t -> (Ident.t -> t) -> t
 val bind : let_kind -> Ident.t -> t -> t -> t
 
 val default_function_attribute : function_attribute
+
+val record_fields_are_array : (string * bool) array -> bool
+(** Whether a nonempty record has consecutive field names starting at ["0"],
+    so it is represented as a JavaScript array. Optionality does not affect
+    the layout. *)

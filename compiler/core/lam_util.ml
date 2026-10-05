@@ -193,7 +193,7 @@ let element_of_lambda (lam : Lambda.t) : Lam_id_kind.element =
   | _ -> NA
 
 let kind_of_lambda_block (xs : Lambda.t list) : Lam_id_kind.t =
-  ImmutableBlock (Ext_array.of_list_map xs (fun x -> element_of_lambda x))
+  ImmutableBlock (Ext_list.map_to_array xs (fun x -> element_of_lambda x))
 
 let field_flatten_get lam v i info (tbl : Lam_id_kind.t Hash_ident.t) : Lambda.t
     =

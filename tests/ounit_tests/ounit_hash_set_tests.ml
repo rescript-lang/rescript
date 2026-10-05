@@ -166,7 +166,7 @@ let suites =
            let of_array lst =
              let len = Array.length lst in
              let tbl = Hash_set_string.create len in
-             Ext_array.iter lst (Hash_set_string.add tbl);
+             lst |> Array.iter (Hash_set_string.add tbl);
              tbl
            in
            let hash = of_array const_tbl in

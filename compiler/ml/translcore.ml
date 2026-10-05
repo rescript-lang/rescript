@@ -1448,19 +1448,19 @@ and transl_record loc env fields repres opt_init_expr =
   (* The runtime shape of the record: each field's runtime name, and whether
      it is optional. *)
   let field_shape () =
-    Ext_array.map fields (fun ((lbl : Types.label_description), _, _) ->
+    fields
+    |> Array.map (fun ((lbl : Types.label_description), _, _) ->
         (lbl.lbl_runtime_name, lbl.lbl_optional))
   in
   let field_names () =
-    Ext_array.map fields (fun ((lbl : Types.label_description), _, _) ->
+    fields
+    |> Array.map (fun ((lbl : Types.label_description), _, _) ->
         lbl.lbl_runtime_name)
   in
   match (opt_init_expr, repres, fields) with
   | _ -> (
     let size = Array.length fields in
-    let optional =
-      Ext_array.exists fields (fun (ld, _, _) -> ld.lbl_optional)
-    in
+    let optional = fields |> Array.exists (fun (ld, _, _) -> ld.lbl_optional) in
     (* Determine if there are "enough" fields (only relevant if this is a
        functional-style record update *)
     let no_init =

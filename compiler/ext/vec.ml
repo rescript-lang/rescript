@@ -82,8 +82,13 @@ module Make (Resize : Vec_gen.ResizeType) = struct
     let len = src.len in
     {len; arr = unsafe_sub src.arr 0 len}
 
-  (* FIXME *)
-  let reverse_in_place src = Ext_array.reverse_range src.arr 0 src.len
+  let reverse_in_place src =
+    for i = 0 to (src.len / 2) - 1 do
+      let j = src.len - 1 - i in
+      let value = Array.unsafe_get src.arr i in
+      Array.unsafe_set src.arr i (Array.unsafe_get src.arr j);
+      Array.unsafe_set src.arr j value
+    done
 
   (* {!Array.sub} is not enough for error checking, it
    may contain some garbage

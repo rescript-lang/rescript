@@ -5,7 +5,7 @@ let ( =~ ) = OUnit.assert_equal
 module Set_poly = struct
   include Set_int
   let of_sorted_list xs = Array.of_list xs |> of_sorted_array
-  let of_array l = Ext_array.fold_left l empty add
+  let of_array l = Array.fold_left add empty l
 end
 let suites =
   __FILE__

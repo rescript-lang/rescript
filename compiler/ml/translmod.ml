@@ -18,6 +18,19 @@
 
 open Typedtree
 
+let reverse_of_list = function
+  | [] -> [||]
+  | hd :: tl ->
+    let len = List.length tl in
+    let a = Array.make (len + 1) hd in
+    let rec fill i = function
+      | [] -> a
+      | hd :: tl ->
+        Array.unsafe_set a i hd;
+        fill (i - 1) tl
+    in
+    fill (len - 1) tl
+
 type error = Fragile_pattern_in_toplevel
 
 exception Error of Location.t * error
@@ -308,7 +321,7 @@ and transl_structure loc fields cc rootpath final_env = function
           fields;
         Format.eprintf "@]@.";*)
       assert (List.length runtime_fields = List.length pos_cc_list);
-      let v = Ext_array.reverse_of_list fields in
+      let v = reverse_of_list fields in
       let get_field pos = Lambda.var v.(pos)
       and ids = List.fold_left Set_ident.add Set_ident.empty fields in
       let get_field_name _name = get_field in

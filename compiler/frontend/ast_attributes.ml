@@ -78,7 +78,7 @@ let rs_externals (attrs : t) (pval_prim : Parsetree.primitive_repr option) =
     prim_to_be_encoded name
   | _, Some (Prim_name name) ->
     Ext_list.exists_fst attrs (fun ({txt} : string Asttypes.loc) ->
-        Ext_array.exists external_attrs (fun (x : string) -> txt = x))
+        external_attrs |> Array.exists (fun (x : string) -> txt = x))
     || prim_to_be_encoded name
 
 let is_inline : attr -> bool = fun ({txt}, _) -> txt = "inline"

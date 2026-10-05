@@ -24,6 +24,54 @@
 
 external ( .!() ) : 'a array -> int -> 'a = "%array_unsafe_get"
 
+let map_to_array a f =
+  match a with
+  | [] -> [||]
+  | [a0] ->
+    let b0 = f a0 in
+    [|b0|]
+  | [a0; a1] ->
+    let b0 = f a0 in
+    let b1 = f a1 in
+    [|b0; b1|]
+  | [a0; a1; a2] ->
+    let b0 = f a0 in
+    let b1 = f a1 in
+    let b2 = f a2 in
+    [|b0; b1; b2|]
+  | [a0; a1; a2; a3] ->
+    let b0 = f a0 in
+    let b1 = f a1 in
+    let b2 = f a2 in
+    let b3 = f a3 in
+    [|b0; b1; b2; b3|]
+  | [a0; a1; a2; a3; a4] ->
+    let b0 = f a0 in
+    let b1 = f a1 in
+    let b2 = f a2 in
+    let b3 = f a3 in
+    let b4 = f a4 in
+    [|b0; b1; b2; b3; b4|]
+  | a0 :: a1 :: a2 :: a3 :: a4 :: tl ->
+    let b0 = f a0 in
+    let b1 = f a1 in
+    let b2 = f a2 in
+    let b3 = f a3 in
+    let b4 = f a4 in
+    let len = List.length tl + 5 in
+    let arr = Array.make len b0 in
+    Array.unsafe_set arr 1 b1;
+    Array.unsafe_set arr 2 b2;
+    Array.unsafe_set arr 3 b3;
+    Array.unsafe_set arr 4 b4;
+    let rec fill i = function
+      | [] -> arr
+      | hd :: tl ->
+        Array.unsafe_set arr i (f hd);
+        fill (i + 1) tl
+    in
+    fill 5 tl
+
 let rec map l f =
   match l with
   | [] -> []
@@ -620,7 +668,7 @@ let sort_via_array lst cmp =
 let sort_via_arrayf lst cmp f =
   let arr = Array.of_list lst in
   Array.sort cmp arr;
-  Ext_array.to_list_f arr f
+  Array.fold_right (fun x acc -> f x :: acc) arr []
 
 let rec assoc_by_string lst (k : string) def =
   match lst with
