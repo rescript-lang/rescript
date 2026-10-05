@@ -271,7 +271,8 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
     lam
   in
   let j pass program =
-    Ext_option.iter diagnostics (fun diagnostics ->
+    diagnostics
+    |> Option.iter (fun diagnostics ->
         Ir_diagnostics.dump_js diagnostics ~pass program);
     program
   in
@@ -335,7 +336,8 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
   let () =
     if debug_ir then (
       Ext_log.dwarn ~__POS__ "After coercion: %a@." Lam_stats.print meta;
-      Ext_option.iter diagnostics (fun diagnostics ->
+      diagnostics
+      |> Option.iter (fun diagnostics ->
           Ir_diagnostics.dump_groups diagnostics coerced_input.groups))
   in
   let maybe_pure = no_side_effects groups in

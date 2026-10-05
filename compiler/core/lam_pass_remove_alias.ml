@@ -238,7 +238,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
         (* Switch on the constant the scrutinee is bound to. *)
         Lambda.stringswitch (Lambda.const c)
           (Ext_list.map_snd sw simpl)
-          (Ext_option.map d simpl)
+          (Option.map simpl d)
       | None -> Lambda_traverse.shallow_map_sharing simpl lam)
     | _ -> Lambda_traverse.shallow_map_sharing simpl lam
   in

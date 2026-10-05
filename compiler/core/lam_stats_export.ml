@@ -112,7 +112,7 @@ let get_dependent_module_effect (maybe_pure : string option)
     let non_pure_module =
       Ext_list.find_first_not external_ids Lam_compile_env.is_pure_module
     in
-    Ext_option.map non_pure_module (fun x -> Lam_module_ident.name x)
+    Option.map (fun x -> Lam_module_ident.name x) non_pure_module
   else maybe_pure
 
 (* Note that
