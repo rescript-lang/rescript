@@ -14,7 +14,7 @@
 
 #### :boom: Breaking Change
 
-- Remove `@deriving(abstract)` and `@deriving(jsConverter)`. Use record types (with optional fields, mutable fields and `@as` renaming) and polymorphic variants directly instead. https://github.com/rescript-lang/rescript/pull/XXXX
+- Remove `@deriving(abstract)` and `@deriving(jsConverter)`. Use record types (with optional fields, mutable fields and `@as` renaming) and polymorphic variants directly instead. https://github.com/rescript-lang/rescript/pull/8729
 
 #### :eyeglasses: Spec Compliance
 
