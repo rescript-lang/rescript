@@ -155,14 +155,6 @@ let as_string (attrs : t) : string option =
       | None -> Bs_syntaxerr.err loc Expect_string_literal
       | Some v -> v)
 
-let has_bs_optional (attrs : t) : bool =
-  Ext_list.exists attrs (fun (({txt}, _) as attr) ->
-      match txt with
-      | "optional" ->
-        Used_attributes.mark_used_attribute attr;
-        true
-      | _ -> false)
-
 let has_unwrap_attr (attrs : t) : bool =
   Ext_list.exists attrs (fun ({txt}, _) ->
       match txt with
@@ -207,12 +199,6 @@ let as_const (attrs : t) =
           | _ -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal)))
 
 let locg = Location.none
-
-let get : attr = ({txt = "get"; loc = locg}, Ast_payload.empty)
-
-let get_index : attr = ({txt = "get_index"; loc = locg}, Ast_payload.empty)
-
-let set : attr = ({txt = "set"; loc = locg}, Ast_payload.empty)
 
 let internal_expansive : attr =
   ({txt = "internal.expansive"; loc = locg}, Ast_payload.empty)

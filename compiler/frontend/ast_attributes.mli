@@ -41,8 +41,6 @@ val arg_encoding : t -> [`Nothing | `String | `Int | `Ignore | `Unwrap]
 
 val as_string : t -> string option
 
-val has_bs_optional : t -> bool
-
 val has_unwrap_attr : t -> bool
 
 val as_int : t -> int option
@@ -51,12 +49,6 @@ type as_const_payload = Int of int | Str of string | Json of string
 val as_const : t -> as_const_payload option
 
 val process_derive_type : t -> derive_attr * t
-
-val get : attr
-
-val get_index : attr
-
-val set : attr
 
 val internal_expansive : attr
 
