@@ -227,7 +227,6 @@ type primitive =
   | Parrayrefu
   | Parraysetu
   | Parrayrefs
-  | Parraysets
   (* List primitives *)
   | Pmakelist
   (* dict primitives *)
@@ -245,7 +244,6 @@ type primitive =
   | Phash_mixstring
   | Phash_finalmix
   (* Test if the argument is a block or an immediate integer *)
-  | Pisint
   (* Test if the (integer) argument is outside an interval *)
   (* Test if the argument is null or undefined *)
   | Pis_null_undefined
@@ -464,7 +462,7 @@ let eq_primitive_approx (lhs : primitive) (rhs : primitive) =
   (* bool primitives *)
   | Psequand | Psequor | Pnot | Pboolcomp _ | Pboolorder | Pboolmin | Pboolmax
   (* int primitives *)
-  | Pisint | Pnegint | Paddint | Psubint | Pmulint | Pdivint | Pmodint | Ppowint
+  | Pnegint | Paddint | Psubint | Pmulint | Pdivint | Pmodint | Ppowint
   | Pnotint | Pandint | Porint | Pxorint | Plslint | Plsrint | Pasrint
   | Pintorder | Pintmin | Pintmax
   (* float primitives *)
@@ -488,7 +486,7 @@ let eq_primitive_approx (lhs : primitive) (rhs : primitive) =
   | Pnull_undefined_to_opt | Pis_null | Pis_not_none | Psome | Psome_not_nest
   | Pis_undefined | Pis_null_undefined | Ptypeof | Pis_poly_var_block
   | Pdebugger | Pinit_mod | Pupdate_mod | Pduprecord | Pmakearray | Parraylength
-  | Parrayrefu | Parraysetu | Parrayrefs | Parraysets | Pjs_fn_method | Phash
+  | Parrayrefu | Parraysetu | Parrayrefs | Pjs_fn_method | Phash
   | Phash_mixstring | Phash_mixint | Phash_finalmix | Precord_rest _ ->
     rhs = lhs
   (* Reachable only via the optimizer's term-equality comparison, which the
@@ -1194,44 +1192,7 @@ let if_ (a : t) (b : t) (c : t) : t =
        matching's own exit bookkeeping inspects after the term is assembled,
        and doing it here leaves static raises without their catch. It is
        {!Lam_pass_guard_raises} instead. *)
-    | _ -> (
-      match a with
-      | Lprim {primitive = Pisint; args = [Lvar i]; _} -> (
-        match b with
-        | Lifthenelse
-            (Lprim {primitive = Pintcomp Ceq; args = [Lvar j; Lconst _]}, _, b_f)
-          when Ident.same i j && eq_approx b_f c ->
-          b
-        | Lprim {primitive = Pintcomp Ceq; args = [Lvar j; Lconst _]}
-          when Ident.same i j && eq_approx lambda_false c ->
-          b
-        | Lifthenelse
-            ( Lprim
-                ({primitive = Pintcomp Cneq; args = [Lvar j; Lconst _]} as
-                 b_pred),
-              b_t,
-              b_f )
-          when Ident.same i j && eq_approx b_t c ->
-          Lifthenelse (Lprim {b_pred with primitive = Pintcomp Ceq}, b_f, b_t)
-        | Lprim
-            {primitive = Pintcomp Cneq; args = [Lvar j; Lconst _] as args; loc}
-        | Lprim
-            {
-              primitive = Pnot;
-              args =
-                [
-                  Lprim
-                    {
-                      primitive = Pintcomp Ceq;
-                      args = [Lvar j; Lconst _] as args;
-                      loc;
-                    };
-                ];
-            }
-          when Ident.same i j && eq_approx lambda_true c ->
-          Lprim {primitive = Pintcomp Cneq; args; loc}
-        | _ -> Lifthenelse (a, b, c))
-      | _ -> Lifthenelse (a, b, c)))
+    | _ -> Lifthenelse (a, b, c))
 
 let sequor l r = if_ l lambda_true r
 

@@ -369,7 +369,7 @@ module E = struct
       Exp.tagged_template ~loc ~attrs (sub.expr sub tag)
         (List.map (map_loc sub) raw_sources)
         (List.map (sub.expr sub) values)
-    | Pexp_coerce (e, (), t2) ->
+    | Pexp_coerce (e, t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->
       constraint_ ~loc ~attrs (sub.expr sub e) (sub.typ sub t)

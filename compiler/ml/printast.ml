@@ -357,7 +357,7 @@ and expression i ppf x =
     line i ppf "Pexp_constraint\n";
     expression i ppf e;
     core_type i ppf ct
-  | Pexp_coerce (e, (), cto2) ->
+  | Pexp_coerce (e, cto2) ->
     line i ppf "Pexp_coerce\n";
     expression i ppf e;
     core_type i ppf cto2

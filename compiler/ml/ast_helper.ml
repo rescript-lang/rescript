@@ -187,7 +187,7 @@ module Exp = struct
   let for_await_of ?loc ?attrs a b c =
     mk ?loc ?attrs (Pexp_for_await_of (a, b, c))
   let constraint_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_constraint (a, b))
-  let coerce ?loc ?attrs a c = mk ?loc ?attrs (Pexp_coerce (a, (), c))
+  let coerce ?loc ?attrs a c = mk ?loc ?attrs (Pexp_coerce (a, c))
   let object_get ?loc ?attrs a b = mk ?loc ?attrs (Pexp_object_get (a, b))
   let object_set ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_object_set (a, b, c))
   let object_literal ?loc ?attrs a = mk ?loc ?attrs (Pexp_object_literal a)

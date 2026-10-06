@@ -269,7 +269,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       (* Finish Triples for  ref data type *)
       ("%field0", Pfield (0, Fld_tuple));
       ("%field1", Pfield (1, Fld_tuple));
-      ("%obj_dup", Pduprecord);
       ("%obj_tag", Pobjtag);
       ("%obj_size", Pobjsize);
       ("%obj_get_field", Parrayrefu);
@@ -283,7 +282,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       ("%boolmin", Pboolmin);
       ("%boolmax", Pboolmax);
       (* int primitives *)
-      ("%obj_is_int", Pisint);
       ("%negint", Pnegint);
       ("%addint", Paddint);
       ("%subint", Psubint);
@@ -356,7 +354,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       (* array primitives *)
       ("%array_length", Parraylength);
       ("%array_safe_get", Parrayrefs);
-      ("%array_safe_set", Parraysets);
       ("%array_unsafe_get", Parrayrefu);
       ("%array_unsafe_set", Parraysetu);
       (* dict primitives *)
@@ -382,8 +379,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       ("%unsafe_gt", Pjscomp Cgt);
       ("%unsafe_ge", Pjscomp Cge);
       ("%is_nullable", Pis_null_undefined);
-      ("%null_to_opt", Pnull_to_opt);
-      ("%nullable_to_opt", Pnull_undefined_to_opt);
       ("%makemutablelist", Pmakelist);
       ("%unsafe_to_method", Pjs_fn_method);
       (* Compiler internals, never expose to ReScript files *)
@@ -393,8 +388,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       ("#null_to_opt", Pnull_to_opt);
       ("#nullable_to_opt", Pnull_undefined_to_opt);
       ("#makemutablelist", Pmakelist);
-      (* FIXME: Deprecated *)
-      ("%obj_field", Parrayrefu);
     |]
 
 let builtins_table : (string, Lambda.builtin) Hashtbl.t =
