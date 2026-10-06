@@ -50,8 +50,6 @@ let hash = "Primitive_hash"
 
 let exceptions = "Primitive_exceptions"
 
-let util = "Primitive_util"
-
 let js_extern = "Primitive_js_extern"
 
 let pervasives = "Pervasives"
