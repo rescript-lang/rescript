@@ -165,11 +165,27 @@ fn register_watches(watcher: &mut RecommendedWatcher, watch_paths: &[(PathBuf, R
     }
 }
 
-/// Unregisters all watch paths from the given watcher.
-fn unregister_watches(watcher: &mut RecommendedWatcher, watch_paths: &[(PathBuf, RecursiveMode)]) {
-    for (path, _) in watch_paths {
-        let _ = watcher.unwatch(path);
+/// Brings the registered watches from `current` to `next`, touching only the paths that changed.
+///
+/// Some backends restart their event stream on every `watch`/`unwatch` call (FSEvents on macOS
+/// does), and events that happen during the restart are lost. Leaving unchanged paths alone
+/// avoids those gaps entirely in the common case where a full rebuild keeps the same paths.
+fn update_watches(
+    watcher: &mut RecommendedWatcher,
+    current: &[(PathBuf, RecursiveMode)],
+    next: &[(PathBuf, RecursiveMode)],
+) {
+    for entry @ (path, _) in current {
+        if !next.contains(entry) {
+            let _ = watcher.unwatch(path);
+        }
     }
+    let added: Vec<_> = next
+        .iter()
+        .filter(|entry| !current.contains(entry))
+        .cloned()
+        .collect();
+    register_watches(watcher, &added);
 }
 
 fn carry_forward_compile_state(previous: &BuildCommandState, next: &mut BuildCommandState) {
@@ -512,9 +528,9 @@ async fn async_watch(
                     build_state = next_build_state;
 
                     // Re-register watches based on the new build state
-                    unregister_watches(watcher, &current_watch_paths);
-                    current_watch_paths = compute_watch_paths(&build_state, path);
-                    register_watches(watcher, &current_watch_paths);
+                    let next_watch_paths = compute_watch_paths(&build_state, path);
+                    update_watches(watcher, &current_watch_paths, &next_watch_paths);
+                    current_watch_paths = next_watch_paths;
 
                     let result = build::incremental_build_without_lock(
                         &mut build_state,
@@ -547,6 +563,18 @@ async fn async_watch(
                     }
                 }
                 needs_compile_type = CompileType::None;
+
+                // If watches were re-registered, the removal event of watch.lock may have been
+                // dropped while the backend restarted its event stream, so check the file itself.
+                if !path.join("lib").join(LockKind::Watch.file_name()).exists() {
+                    cleanup_before_watch_exit(
+                        path,
+                        &build_state,
+                        show_progress,
+                        "\nExiting... (lockfile removed)",
+                    );
+                    return Ok(());
+                }
             }
             CompileType::None => {
                 // We want to sleep for a little while so the CPU can schedule other work. That way we end
