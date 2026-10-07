@@ -34,7 +34,7 @@ let with_source_loc loc (exp : J.expression) =
 
 let rec source_loc_of_lam (lam : Lambda.t) =
   match lam with
-  | Lapply {ap_info = {ap_loc}} -> Some ap_loc
+  | Lapply {ap_loc} -> Some ap_loc
   | Lprim {loc} | Lfunction {loc} -> Some loc
   | Llet (_, _, arg, body) -> (
     match source_loc_of_lam arg with
@@ -356,7 +356,7 @@ let compile output_prefix =
                appinfo)
           fn args
       in
-      let expression = with_source_loc appinfo.ap_info.ap_loc expression in
+      let expression = with_source_loc appinfo.ap_loc expression in
       Js_output.output_of_block_and_expression lambda_cxt.continuation args_code
         expression
   (*
@@ -1606,7 +1606,7 @@ let compile output_prefix =
       | _ ->
         Js_output.output_of_block_and_expression lambda_cxt.continuation
           args_code
-          (with_source_loc appinfo.ap_info.ap_loc
+          (with_source_loc appinfo.ap_loc
              (E.call
                 ~info:
                   (call_info_of_apply lambda_cxt.meta appinfo.ap_transformed_jsx

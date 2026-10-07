@@ -125,8 +125,7 @@ and apply_coercion_result loc strict funct param arg cc_res =
         ~params:[param]
         ~body:
           (apply_coercion loc Strict cc_res
-             (Lambda.apply ~ap_transformed_jsx:false (Lambda.var id) [arg]
-                {ap_loc = loc})))
+             (Lambda.apply ~ap_transformed_jsx:false (Lambda.var id) [arg] loc)))
 
 and wrap_id_pos_list loc id_pos_list get_field lam =
   let fv = Lambda_traverse.free_variables lam in
@@ -289,7 +288,7 @@ and transl_module0 cc rootpath mexp =
         (Lambda.apply ~ap_transformed_jsx:false
            (transl_module Tcoerce_none None funct)
            [transl_module ccarg None arg]
-           {ap_loc = loc})
+           loc)
     | Tmod_constraint (arg, _, _, ccarg) ->
       transl_module (compose_coercions cc ccarg) rootpath arg
     | Tmod_unpack (arg, _) ->

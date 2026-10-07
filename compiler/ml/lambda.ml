@@ -362,12 +362,10 @@ and lfunction = {
 
 and prim_info = {primitive: primitive; args: t list; loc: Location.t}
 
-and ap_info = {ap_loc: Location.t}
-
 and lambda_apply = {
   ap_func: t;
   ap_args: t list;
-  ap_info: ap_info;
+  ap_loc: Location.t;
   ap_transformed_jsx: bool;
 }
 
@@ -1074,7 +1072,7 @@ let prim ~primitive:(prim : primitive) ~args loc : t =
     *)
     | _ -> default ())
 
-let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
+let rec apply ?(ap_transformed_jsx = false) fn args (ap_loc : Location.t) : t =
   match fn with
   | Lfunction
       {
@@ -1091,21 +1089,20 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
       } -> (
     match is_eta_conversion_exn params inner_args args with
     | args ->
-      let loc = ap_info.ap_loc in
       prim ~primitive:wrap
-        ~args:[prim ~primitive:primitive_call.primitive ~args loc]
-        loc
+        ~args:[prim ~primitive:primitive_call.primitive ~args ap_loc]
+        ap_loc
     | exception Not_simple_form ->
-      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx})
+      Lapply {ap_func = fn; ap_args = args; ap_loc; ap_transformed_jsx})
   | Lfunction
       {
         params;
         body = Lprim ({primitive = _; args = inner_args} as primitive_call);
       } -> (
     match is_eta_conversion_exn params inner_args args with
-    | args -> prim ~primitive:primitive_call.primitive ~args ap_info.ap_loc
+    | args -> prim ~primitive:primitive_call.primitive ~args ap_loc
     | exception _ ->
-      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx})
+      Lapply {ap_func = fn; ap_args = args; ap_loc; ap_transformed_jsx})
   | Lfunction
       {
         params;
@@ -1115,20 +1112,19 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
               (Lconst _ as const) );
       } -> (
     match is_eta_conversion_exn params inner_args args with
-    | args ->
-      seq (prim ~primitive:primitive_call.primitive ~args ap_info.ap_loc) const
+    | args -> seq (prim ~primitive:primitive_call.primitive ~args ap_loc) const
     | exception _ ->
-      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
+      Lapply {ap_func = fn; ap_args = args; ap_loc; ap_transformed_jsx}
       (* | Lfunction {params;body} when Ext_list.same_length params args ->
           Ext_list.fold_right2 (fun p arg acc ->
             Llet(Strict,p,arg,acc)
           ) params args body *)
       (* TODO: more rigirous analysis on [let_kind] *))
   | Llet (kind, id, e, (Lfunction _ as fn)) ->
-    let_ kind id e (apply fn args ap_info ~ap_transformed_jsx)
+    let_ kind id e (apply fn args ap_loc ~ap_transformed_jsx)
   (* | Llet (kind0, id0, e0, Llet (kind,id, e, (Lfunction _ as fn))) ->
      Llet(kind0,id0,e0,Llet (kind, id, e, apply fn args loc status)) *)
-  | _ -> Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
+  | _ -> Lapply {ap_func = fn; ap_args = args; ap_loc; ap_transformed_jsx}
 
 let not_ loc x : t =
   match x with
