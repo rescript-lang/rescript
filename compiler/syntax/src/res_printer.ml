@@ -28,6 +28,10 @@ let add_parens doc =
          Doc.rparen;
        ])
 
+(* Module expressions hug their parens, so a multi-line structure or
+   signature keeps its braces next to them: [(M: {...})] *)
+let add_mod_expr_parens doc = Doc.concat [Doc.lparen; doc; Doc.rparen]
+
 let add_braces ?(force_break = false) doc =
   Doc.breakable_group ~force_break
     (Doc.concat
@@ -798,18 +802,17 @@ and print_module_binding ~state ~is_rec module_binding cmt_tbl i =
   in
   let mod_expr_doc, mod_constraint_doc =
     match module_binding.pmb_expr with
-    | {pmod_desc = Pmod_constraint (mod_expr, mod_type); pmod_attributes}
+    | {pmod_desc = Pmod_constraint (mod_expr, mod_type)} as constrained
     (* [module M: S = E] has no node for the constraint's attributes *)
-      when (not (Parsetree_viewer.has_await_attribute pmod_attributes))
-           && not (Parsetree_viewer.has_printable_attributes pmod_attributes) ->
-      ( print_mod_expr ~state mod_expr cmt_tbl,
+      when not (Parsetree_viewer.mod_expr_has_attributes constrained) ->
+      let mod_expr_doc =
+        if Parens.mod_expr_parens constrained then
+          add_mod_expr_parens (print_mod_expr ~state mod_expr cmt_tbl)
+        else print_mod_expr_constraint_parens ~state mod_expr cmt_tbl
+      in
+      ( mod_expr_doc,
         Doc.concat [Doc.text ": "; print_mod_type ~state mod_type cmt_tbl] )
     | mod_expr -> (print_mod_expr ~state mod_expr cmt_tbl, Doc.nil)
-  in
-  let mod_expr_doc_parens =
-    if Parens.mod_expr_parens module_binding.pmb_expr then
-      Doc.concat [Doc.lparen; mod_expr_doc; Doc.rparen]
-    else mod_expr_doc
   in
   let mod_name =
     let doc = Doc.text module_binding.pmb_name.Location.txt in
@@ -824,7 +827,7 @@ and print_module_binding ~state ~is_rec module_binding cmt_tbl i =
         mod_name;
         mod_constraint_doc;
         Doc.text " = ";
-        mod_expr_doc_parens;
+        mod_expr_doc;
       ]
   in
   print_comments doc cmt_tbl module_binding.pmb_loc
@@ -983,7 +986,10 @@ and print_mod_type ~state mod_type cmt_tbl =
            ])
     | Pmty_typeof mod_expr ->
       Doc.concat
-        [Doc.text "module type of "; print_mod_expr ~state mod_expr cmt_tbl]
+        [
+          Doc.text "module type of ";
+          print_mod_expr_constraint_parens ~state mod_expr cmt_tbl;
+        ]
     | Pmty_extension extension ->
       print_extension ~state ~at_module_lvl:false extension cmt_tbl
     | Pmty_alias longident ->
@@ -1205,8 +1211,9 @@ and print_include_declaration ~state
            try as oneliner if there is a single type alias declaration
           *)
          | Pmod_apply
-             ( {pmod_desc = Pmod_ident longident_loc},
+             ( {pmod_desc = Pmod_ident longident_loc; pmod_attributes = []},
                {
+                 pmod_attributes = [];
                  pmod_desc =
                    Pmod_structure
                      [
@@ -1222,7 +1229,8 @@ and print_include_declaration ~state
                                 ] );
                         } as structure_item);
                      ];
-               } ) ->
+               } )
+           when include_declaration.pincl_mod.pmod_attributes = [] ->
            Doc.concat
              [
                print_longident_location longident_loc cmt_tbl;
@@ -3670,7 +3678,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
                (Doc.concat
                   [
                     Doc.soft_line;
-                    print_mod_expr ~state mod_expr cmt_tbl;
+                    print_mod_expr_constraint_parens ~state mod_expr cmt_tbl;
                     Doc.text ": ";
                     print_comments
                       (print_package_type ~state
@@ -3706,7 +3714,10 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
              Doc.text "module(";
              Doc.indent
                (Doc.concat
-                  [Doc.soft_line; print_mod_expr ~state mod_expr cmt_tbl]);
+                  [
+                    Doc.soft_line;
+                    print_mod_expr_constraint_parens ~state mod_expr cmt_tbl;
+                  ]);
              Doc.soft_line;
              Doc.rparen;
            ])
@@ -5554,9 +5565,7 @@ and print_expression_block ~state ~braces expr cmt_tbl =
       let name, mod_expr =
         match mod_expr.pmod_desc with
         | Pmod_constraint (mod_expr2, mod_type)
-          when not
-                 (Parsetree_viewer.has_await_attribute mod_expr.pmod_attributes)
-          ->
+          when not (Parsetree_viewer.mod_expr_has_attributes mod_expr) ->
           let name =
             Doc.concat
               [name; Doc.text ": "; print_mod_type ~state mod_type cmt_tbl]
@@ -5570,7 +5579,7 @@ and print_expression_block ~state ~braces expr cmt_tbl =
             Doc.text "module ";
             name;
             Doc.text " = ";
-            print_mod_expr ~state mod_expr cmt_tbl;
+            print_mod_expr_constraint_parens ~state mod_expr cmt_tbl;
           ]
       in
       let loc = {expr.pexp_loc with loc_end = mod_expr.pmod_loc.loc_end} in
@@ -6025,7 +6034,7 @@ and print_mod_expr ~state mod_expr cmt_tbl =
       let args, call_expr = Parsetree_viewer.mod_expr_apply mod_expr in
       let is_unit_sugar =
         match args with
-        | [{pmod_desc = Pmod_structure []}] -> true
+        | [{pmod_desc = Pmod_structure []; pmod_attributes = []}] -> true
         | _ -> false
       in
       let should_hug =
@@ -6035,11 +6044,14 @@ and print_mod_expr ~state mod_expr cmt_tbl =
       in
       let call_expr_doc =
         let doc = print_mod_expr ~state call_expr cmt_tbl in
+        match call_expr.pmod_desc with
+        | Pmod_constraint _ | Pmod_functor _ | Pmod_extension _ ->
+          add_mod_expr_parens doc
         (* Without parens, attributes on the functor would attach to the
            whole application *)
-        if Parsetree_viewer.has_printable_attributes call_expr.pmod_attributes
-        then add_parens doc
-        else doc
+        | _ when Parsetree_viewer.mod_expr_has_attributes call_expr ->
+          add_mod_expr_parens doc
+        | _ -> doc
       in
       Doc.group
         (Doc.concat
@@ -6084,7 +6096,8 @@ and print_mod_expr ~state mod_expr cmt_tbl =
             print_mod_type ~state mod_type cmt_tbl;
           ]
       in
-      if Parens.attributed_mod_constraint mod_expr then add_parens doc else doc
+      if Parens.attributed_mod_constraint mod_expr then add_mod_expr_parens doc
+      else doc
     | Pmod_functor _ -> print_mod_functor ~state mod_expr cmt_tbl
   in
   let doc =
@@ -6117,14 +6130,15 @@ and print_mod_functor ~state mod_expr cmt_tbl =
   in
   let return_constraint, return_mod_expr =
     match return_mod_expr.pmod_desc with
-    | Pmod_constraint (mod_expr, mod_type) ->
+    | Pmod_constraint (mod_expr, mod_type)
+      when not (Parsetree_viewer.mod_expr_has_attributes return_mod_expr) ->
       let constraint_doc =
         let doc = print_mod_type ~state mod_type cmt_tbl in
         if Parens.mod_expr_functor_constraint mod_type then add_parens doc
         else doc
       in
       let mod_constraint = Doc.concat [Doc.text ": "; constraint_doc] in
-      (mod_constraint, print_mod_expr ~state mod_expr cmt_tbl)
+      (mod_constraint, print_mod_expr_constraint_parens ~state mod_expr cmt_tbl)
     | _ -> (Doc.nil, print_mod_expr ~state return_mod_expr cmt_tbl)
   in
   let parameters_doc =
@@ -6185,9 +6199,21 @@ and print_mod_functor_param ~state (attrs, lbl, opt_mod_type) cmt_tbl =
   print_comments doc cmt_tbl cmt_loc
 
 and print_mod_apply_arg ~state mod_expr cmt_tbl =
-  match mod_expr.pmod_desc with
-  | Pmod_structure [] -> Doc.text "()"
+  match mod_expr with
+  | {pmod_desc = Pmod_structure []; pmod_attributes = []} -> Doc.text "()"
   | _ -> print_mod_expr ~state mod_expr cmt_tbl
+
+(* A constraint without attributes needs parens where [M: S] would not parse
+   or would mean something else: after [module M: T =], in a functor's
+   result, after [module type of] and inside [module(...)]. With attributes
+   it prints its own. *)
+and print_mod_expr_constraint_parens ~state mod_expr cmt_tbl =
+  let doc = print_mod_expr ~state mod_expr cmt_tbl in
+  match mod_expr.pmod_desc with
+  | Pmod_constraint _
+    when not (Parsetree_viewer.mod_expr_has_attributes mod_expr) ->
+    add_mod_expr_parens doc
+  | _ -> doc
 
 and print_exception_def ~state (constr : Parsetree.extension_constructor)
     cmt_tbl =

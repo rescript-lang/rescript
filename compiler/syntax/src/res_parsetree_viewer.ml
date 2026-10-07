@@ -548,6 +548,12 @@ let is_printable_attribute attr =
 
 let has_printable_attributes attrs = List.exists is_printable_attribute attrs
 
+(* Attributes or [await] on a module expression: either one prints before it
+   and binds less tightly than an application or a constraint *)
+let mod_expr_has_attributes (mod_expr : Parsetree.module_expr) =
+  has_printable_attributes mod_expr.pmod_attributes
+  || has_await_attribute mod_expr.pmod_attributes
+
 let filter_printable_attributes attrs = List.filter is_printable_attribute attrs
 
 let partition_printable_attributes attrs =
@@ -602,8 +608,8 @@ let mod_expr_apply mod_expr =
     match mod_expr with
     (* An inner application with attributes is kept as the callee, so the
        printer can parenthesize it with its attributes *)
-    | {pmod_desc = Pmod_apply (next, arg); pmod_attributes}
-      when acc = [] || not (has_printable_attributes pmod_attributes) ->
+    | {pmod_desc = Pmod_apply (next, arg)} as apply
+      when acc = [] || not (mod_expr_has_attributes apply) ->
       loop (arg :: acc) next
     | _ -> (acc, mod_expr)
   in
@@ -612,10 +618,12 @@ let mod_expr_apply mod_expr =
 let mod_expr_functor mod_expr =
   let rec loop acc mod_expr =
     match mod_expr with
+    (* An awaited inner functor is kept as the result, so [await] is printed *)
     | {
      pmod_desc = Pmod_functor (lbl, mod_type, return_mod_expr);
      pmod_attributes = attrs;
-    } ->
+    }
+      when acc = [] || not (has_await_attribute attrs) ->
       let param = (attrs, lbl, mod_type) in
       loop (param :: acc) return_mod_expr
     | return_mod_expr -> (List.rev acc, return_mod_expr)

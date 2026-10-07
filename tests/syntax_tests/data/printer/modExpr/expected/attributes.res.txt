@@ -11,6 +11,16 @@ module G = (@attr F)()
 module H = @attr F(A, B)
 module I = (@attr F(A))(B)
 module J = F(@attr X)
+module Q = F(@attr {})
+include @attr F({
+  type t = int
+})
+include (@attr F)({
+  type t = int
+})
+include F(@attr {
+  type t = int
+})
 
 module K: T = @attr X
 include @attr F()
@@ -22,6 +32,10 @@ module P = F(@attr X: S)
 include @attr (X: S)
 include (@attr X: S)
 
+// on a functor's result
+module R = (_: X) => @attr (Y: S)
+module S = (_: X): S => @attr Y
+
 module L = @attr unpack(x)
 module M = @attr %ext
 
@@ -29,5 +43,10 @@ let f = async () => {
   module A = await @attr X
   module B = await (@attr X: S)
   module C = await @attr (X: S)
+  module D = @attr (X: S)
+  module E = (await F)(A)
+  module G = (await F(A))(B)
+  module H = (X: T) => await (Y: S)
+  module I = (X: T) => await (Y: S) => {}
   ()
 }
