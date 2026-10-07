@@ -82,7 +82,7 @@ type inline_const =
           source spelling is not needed after FFI processing. *)
   | Const_bool of bool
   | Const_int of int32
-  | Const_bigint of {negative: bool; digits: string}
+  | Const_bigint of {positive: bool; digits: string}
   | Const_float of string
 
 type t =

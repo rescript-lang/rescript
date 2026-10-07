@@ -463,7 +463,7 @@ let lambda_of_inline_const (c : External_ffi_types.inline_const) :
   | Const_bool true -> Const_js_true
   | Const_bool false -> Const_js_false
   | Const_int i -> Const_int i
-  | Const_bigint {negative; digits} -> Const_bigint (not negative, digits)
+  | Const_bigint {positive; digits} -> Const_bigint (positive, digits)
   | Const_float f -> Const_float f
 
 (* The argument of the dynamic-import primitive is a module reference,
