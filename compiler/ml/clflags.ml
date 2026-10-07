@@ -4,11 +4,7 @@ and include_dirs = ref ([] : string list) (* -I *)
 
 and debug = ref false (* -g *)
 
-and fast = ref false (* -unsafe *)
-
 and nopervasives = ref false (* -nopervasives *)
-
-and preprocessor = ref (None : string option) (* -pp *)
 
 and all_ppx = ref ([] : string list)
 
@@ -23,8 +19,6 @@ and open_modules = ref [] (* -open *)
 
 and real_paths = ref true (* -short-paths *)
 
-and applicative_functors = ref true (* -no-app-funct *)
-
 and error_size = ref 400 (* -error-size, in heap words *)
 
 and transparent_modules = ref false (* -trans-mod *)
@@ -38,8 +32,6 @@ and dump_rawlambda = ref false (* -drawlambda *)
 and dump_coercions = ref false (* -draw-coercions *)
 
 and only_parse = ref false (* -only-parse *)
-
-and editor_mode = ref false (* -editor-mode *)
 
 and ignore_parse_errors = ref false (* -ignore-parse-errors *)
 

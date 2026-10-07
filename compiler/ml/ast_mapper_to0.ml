@@ -721,7 +721,7 @@ module E = struct
           ( Asttypes.Noloc.Nolabel,
             Ast_helper0.Exp.array ~loc (List.map (sub.expr sub) values) );
         ]
-    | Pexp_coerce (e, (), t2) ->
+    | Pexp_coerce (e, t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->
       constraint_ ~loc ~attrs (sub.expr sub e) (sub.typ sub t)

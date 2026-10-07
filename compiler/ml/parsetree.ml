@@ -356,9 +356,7 @@ and expression_desc =
        for i = E1 downto E2 do E3 done  (flag = Downto)
     *)
   | Pexp_constraint of expression * core_type (* (E : T) *)
-  | Pexp_coerce of expression * unit * core_type
-    (* (E :> T)        (None, T)
-         *)
+  | Pexp_coerce of expression * core_type (* (E :> T) *)
   | Pexp_object_get of expression * label loc (* obj["x"] *)
   | Pexp_object_set of expression * label loc * expression (* obj["x"] = v *)
   | Pexp_object_literal of (label loc * expression) list

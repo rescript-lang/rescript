@@ -564,6 +564,9 @@ The warning constructors listed in **Removed in `jono/remove-dead-errors`**
 were deleted. Their numeric warning slots remain holes; no warning number
 was reused.
 
+Warning 24 (`Bad_module_name`) was removed later for the same reason: it
+had no raise site. Its slot is likewise left unused.
+
 ### Live but no fixture yet
 
 These warnings have `prerr_warning` raise sites in `compiler/` and are

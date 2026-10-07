@@ -3745,7 +3745,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
           Doc.space;
           print_cases ~state cases cmt_tbl;
         ]
-    | Pexp_coerce (expr, (), typ) ->
+    | Pexp_coerce (expr, typ) ->
       let doc_expr =
         print_expression_with_comments_and_parens ~state expr cmt_tbl
       in

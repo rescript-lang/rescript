@@ -134,10 +134,6 @@ let expression_desc : expression_desc fn =
   | Interpolated_template ({values} as template) ->
     let values = list _self.expression _self values in
     Interpolated_template {template with values}
-  | String_index (_x0, _x1) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = _self.expression _self _x1 in
-    String_index (_x0, _x1)
   | Array_index (_x0, _x1) ->
     let _x0 = _self.expression _self _x0 in
     let _x1 = _self.expression _self _x1 in

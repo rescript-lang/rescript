@@ -56,7 +56,7 @@ module Expr_utils = struct
       true
     | Pexp_construct (_, {txt = [e]})
     | Pexp_constraint (e, _)
-    | Pexp_coerce (e, _, _)
+    | Pexp_coerce (e, _)
     | Pexp_let (_, _, e)
     | Pexp_sequence (e, _)
     | Pexp_letmodule (_, _, e)

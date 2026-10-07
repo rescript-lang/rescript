@@ -195,7 +195,7 @@ let iter_expression f e =
     | Pexp_open (_, _, e)
     | Pexp_assert e
     | Pexp_constraint (e, _)
-    | Pexp_coerce (e, _, _)
+    | Pexp_coerce (e, _)
     | Pexp_letexception (_, e)
     | Pexp_object_get (e, _)
     | Pexp_field (e, _) ->
@@ -2057,7 +2057,7 @@ let rec type_approx env sexp =
        raise
          (Error (sexp.pexp_loc, env, Expr_type_clash {trace; context = None})));
     ty1
-  | Pexp_coerce (e, (), sty2) ->
+  | Pexp_coerce (e, sty2) ->
     let approx_ty_opt = function
       | None -> newvar ()
       | Some sty -> approx_type env sty
@@ -3294,7 +3294,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_extra =
           (Texp_constraint cty, loc, sexp.pexp_attributes) :: arg.exp_extra;
       }
-  | Pexp_coerce (sarg, (), sty') ->
+  | Pexp_coerce (sarg, sty') ->
     let separate = true in
     (* always separate, 1% slowdown for lablgtk *)
     (* Also see PR#7199 for a problem with the following:

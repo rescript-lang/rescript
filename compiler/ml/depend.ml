@@ -277,7 +277,7 @@ let rec add_expr bv exp =
     add_pattern bv pat |> ignore;
     add_expr bv e1;
     add_expr bv e2
-  | Pexp_coerce (e1, (), ty3) ->
+  | Pexp_coerce (e1, ty3) ->
     add_expr bv e1;
     add_type bv ty3
   | Pexp_constraint (e1, ty2) ->

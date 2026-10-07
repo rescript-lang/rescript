@@ -228,7 +228,6 @@ type primitive =
   | Parrayrefu
   | Parraysetu
   | Parrayrefs
-  | Parraysets
   (* List primitives *)
   | Pmakelist
   (* dict primitives *)
@@ -245,8 +244,6 @@ type primitive =
   | Phash_mixint
   | Phash_mixstring
   | Phash_finalmix
-  (* Test if the argument is a block or an immediate integer *)
-  | Pisint
   (* Test if the (integer) argument is outside an interval *)
   (* Test if the argument is null or undefined *)
   | Pis_null_undefined
@@ -444,8 +441,7 @@ val const_is_allocating : structured_constant -> bool
      collapses a module record rebuilt field-by-field from another module
      back to that module.
    - [if_] resolves a constant condition, collapses a branch that asserts
-     false, turns boolean branches into the condition or its negation, and
-     recognizes a few [Pisint] shapes.
+     false, turns boolean branches into the condition or its negation.
    - [switch] and [stringswitch] pick the matching case when the scrutinee
      is constant.
    - [not_] rewrites a negated inequality into an equality.

@@ -70,8 +70,6 @@ let default = "default"
 
 let length = "length"
 
-let code_point_at = "codePointAt"
-
 let new_ = "new"
 
 let question = "?"

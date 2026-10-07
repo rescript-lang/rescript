@@ -742,7 +742,7 @@ module Sexp_ast = struct
       | Pexp_constraint (expr, typexpr) ->
         Sexp.list
           [Sexp.atom "Pexp_constraint"; expression expr; core_type typexpr]
-      | Pexp_coerce (expr, (), typexpr) ->
+      | Pexp_coerce (expr, typexpr) ->
         Sexp.list [Sexp.atom "Pexp_coerce"; expression expr; core_type typexpr]
       | Pexp_object_get _ -> Sexp.list [Sexp.atom "Pexp_object_get"]
       | Pexp_object_set (e1, _, e2) ->

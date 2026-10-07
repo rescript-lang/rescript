@@ -142,10 +142,9 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   | Json_literal _ -> true
   | Raw_js_code {code_info = Stmt _}
   | Length _ | Call _ | Caml_block_tag _ | Seq _ | Static_index _ | Cond _
-  | Bin _ | Is_null_or_undefined _ | String_index _ | Array_index _
-  | String_append _ | Var _ | Undefined _ | Null | Str _ | Template_literal _
-  | Array _ | Caml_block _ | Typeof _ | Number _ | Js_not _ | Js_bnot _ | In _
-  | Bool _ | New _ ->
+  | Bin _ | Is_null_or_undefined _ | Array_index _ | String_append _ | Var _
+  | Undefined _ | Null | Str _ | Template_literal _ | Array _ | Caml_block _
+  | Typeof _ | Number _ | Js_not _ | Js_bnot _ | In _ | Bool _ | New _ ->
     false
   | Await _ -> false
   | Spread _ -> false
@@ -715,13 +714,6 @@ and expression_desc cxt ~(level : int) f x : cxt =
     let cxt = print_segments cxt segments values in
     P.string f "`";
     cxt
-  | String_index (a, b) ->
-    P.group f 1 (fun _ ->
-        let cxt = expression ~level:15 cxt f a in
-        P.string f L.dot;
-        P.string f L.code_point_at;
-        (* FIXME: use code_point_at *)
-        P.paren_group f 1 (fun _ -> expression ~level:0 cxt f b))
   | Str txt ->
     Js_dump_string.pp_string f txt;
     cxt

@@ -1151,7 +1151,7 @@ and walk_expression expr t comments =
       attach t.leading expr.pexp_loc leading;
       walk_expression expr t inside;
       attach t.trailing expr.pexp_loc trailing
-  | Pexp_coerce (expr, (), typexpr) ->
+  | Pexp_coerce (expr, typexpr) ->
     let leading, inside, trailing = partition_by_loc comments expr.pexp_loc in
     attach t.leading expr.pexp_loc leading;
     walk_expression expr t inside;

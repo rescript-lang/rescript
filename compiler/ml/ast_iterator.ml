@@ -368,7 +368,7 @@ module E = struct
       sub.pat sub p;
       sub.expr sub e1;
       sub.expr sub e2
-    | Pexp_coerce (e, (), t2) ->
+    | Pexp_coerce (e, t2) ->
       sub.expr sub e;
       sub.typ sub t2
     | Pexp_constraint (e, t) ->
