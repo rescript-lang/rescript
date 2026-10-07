@@ -55,7 +55,7 @@ let inline_bool b = inline_const (Const_bool b)
 let inline_int i = inline_const (Const_int i)
 
 let inline_bigint s =
-  let negative, digits = Bigint_utils.parse_bigint s in
-  inline_const (Const_bigint {negative; digits})
+  let positive, digits = Bigint_utils.parse_bigint s in
+  inline_const (Const_bigint {negative = not positive; digits})
 
 let inline_float s = inline_const (Const_float s)
