@@ -362,7 +362,7 @@ and lfunction = {
 
 and prim_info = {primitive: primitive; args: t list; loc: Location.t}
 
-and ap_info = {ap_loc: Location.t; ap_inlined: inline_attribute}
+and ap_info = {ap_loc: Location.t}
 
 and lambda_apply = {
   ap_func: t;

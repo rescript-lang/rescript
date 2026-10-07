@@ -231,19 +231,13 @@ let function_attribute ppf {inline; is_a_functor; return_unit} =
   | Always_inline -> fprintf ppf "always_inline@ "
   | Never_inline -> fprintf ppf "never_inline@ "
 
-let apply_inlined_attribute ppf = function
-  | Default_inline -> ()
-  | Always_inline -> fprintf ppf " always_inline"
-  | Never_inline -> fprintf ppf " never_inline"
-
 let rec lam ppf = function
   | Lvar id -> Ident.print ppf id
   | Lglobal_module id -> fprintf ppf "global %a" Ident.print id
   | Lconst cst -> struct_const ppf cst
   | Lapply ap ->
     let lams ppf largs = List.iter (fun l -> fprintf ppf "@ %a" lam l) largs in
-    fprintf ppf "@[<2>(apply@ %a%a%a)@]" lam ap.ap_func lams ap.ap_args
-      apply_inlined_attribute ap.ap_info.ap_inlined
+    fprintf ppf "@[<2>(apply@ %a%a)@]" lam ap.ap_func lams ap.ap_args
   | Lfunction {params; body; attr} ->
     let pr_params ppf params =
       List.iter (fun param -> fprintf ppf "@ %a" Ident.print param) params

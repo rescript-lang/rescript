@@ -191,7 +191,6 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
               (Lam_beta_reduce.propagate_beta_reduce meta params body ap_args)
           else if
             (* Lam_analysis.size body < Lam_analysis.small_inline_size *)
-            (* ap_inlined = Always_inline || *)
             Lam_analysis.ok_to_inline_fun_when_app m ap_args
           then
             let param_map =

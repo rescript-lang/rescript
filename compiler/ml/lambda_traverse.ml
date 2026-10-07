@@ -124,8 +124,7 @@ let make_key e =
     | Lglobal_module _ | Lconst _ -> e
     | Lapply ap ->
       apply ~ap_transformed_jsx:ap.ap_transformed_jsx (tr_rec env ap.ap_func)
-        (tr_recs env ap.ap_args)
-        {ap.ap_info with ap_loc = Location.none}
+        (tr_recs env ap.ap_args) {ap_loc = Location.none}
     | Llet (Alias, x, ex, e) ->
       (* Ignore aliases -> substitute *)
       let ex = tr_rec env ex in
