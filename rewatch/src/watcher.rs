@@ -977,4 +977,26 @@ mod tests {
         carry_forward_compile_state(&previous, &mut different_source);
         assert!(!different_source.get_module("ModuleA").unwrap().compile_dirty);
     }
+
+    #[cfg(unix)]
+    #[test]
+    fn registered_watch_is_invalid_after_directory_is_replaced() {
+        let temp_dir = tempfile::TempDir::new().expect("temp dir should be created");
+        let dir = temp_dir.path().join("src");
+        std::fs::create_dir(&dir).expect("dir should be created");
+
+        let watch = RegisteredWatch {
+            path: dir.clone(),
+            mode: RecursiveMode::Recursive,
+            identity: dir_identity(&dir),
+        };
+        assert!(watch.is_still_valid_for(&dir, RecursiveMode::Recursive));
+        assert!(!watch.is_still_valid_for(&dir, RecursiveMode::NonRecursive));
+
+        // Move the old directory away instead of deleting it, so that its inode stays in use and
+        // cannot be reused for the new directory.
+        std::fs::rename(&dir, temp_dir.path().join("src-old")).expect("dir should be renamed");
+        std::fs::create_dir(&dir).expect("dir should be recreated");
+        assert!(!watch.is_still_valid_for(&dir, RecursiveMode::Recursive));
+    }
 }
