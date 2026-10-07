@@ -28,6 +28,7 @@
 - Keep comments on labelled parameters with default values, and before `=?` in optional arrow-type arguments, when formatting. https://github.com/rescript-lang/rescript/pull/8690
 - Fix invalid JavaScript that exported names left unbound when a module's toplevel always throws. https://github.com/rescript-lang/rescript/pull/8692
 - Make module inclusion error messages independent of the length of the source file path. https://github.com/rescript-lang/rescript/pull/8691
+- Fix the sign of `@inline` bigint constants printed in signatures and error messages, which showed `@inline(-12n)` for `@inline(12n)`. https://github.com/rescript-lang/rescript/pull/8732
 
 #### :memo: Documentation
 

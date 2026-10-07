@@ -23,3 +23,12 @@ let hh: string
 @inline(true) let f5: bool
 
 @inline(1) let f6: int
+
+module BigintConsts: (
+  X: {
+    @inline(12n) let pos: bigint
+    @inline(-5n) let neg: bigint
+  },
+) => {
+  let both: (bigint, bigint)
+}

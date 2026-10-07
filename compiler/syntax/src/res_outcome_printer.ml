@@ -483,8 +483,8 @@ let print_inline_const_doc (c : External_ffi_types.inline_const) =
   | Const_string s -> print_string_literal_doc s
   | Const_bool b -> Doc.text (if b then "true" else "false")
   | Const_int i -> Doc.text (Int32.to_string i)
-  | Const_bigint {negative; digits} ->
-    Doc.text ((if negative then "-" else "") ^ digits ^ "n")
+  | Const_bigint {positive; digits} ->
+    Doc.text ((if positive then "" else "-") ^ digits ^ "n")
   | Const_float f -> Doc.text f
 
 let print_external_module_doc (emn : External_ffi_types.external_module_name) =
