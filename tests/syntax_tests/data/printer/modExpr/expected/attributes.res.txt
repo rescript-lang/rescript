@@ -28,5 +28,6 @@ module M = @attr %ext
 let f = async () => {
   module A = await @attr X
   module B = await (@attr X: S)
+  module C = await @attr (X: S)
   ()
 }

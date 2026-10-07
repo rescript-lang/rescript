@@ -6103,7 +6103,8 @@ and print_mod_expr ~state mod_expr cmt_tbl =
   let doc =
     if Parsetree_viewer.has_await_attribute mod_expr.pmod_attributes then
       match mod_expr.pmod_desc with
-      | Pmod_constraint _ ->
+      | Pmod_constraint _ when not (Parens.attributed_mod_constraint mod_expr)
+        ->
         Doc.concat [Doc.text "await "; Doc.lparen; doc; Doc.rparen]
       | _ -> Doc.concat [Doc.text "await "; doc]
     else doc

@@ -429,10 +429,9 @@ let braced_expr expr =
   | _ -> false
 
 (* [@attr (M: S)]: an attributed module constraint prints its own parens, so
-   the attributes don't attach to [M]. [await] already parenthesizes it. *)
+   the attributes don't attach to [M] *)
 let attributed_mod_constraint (mod_expr : Parsetree.module_expr) =
   Parsetree_viewer.has_printable_attributes mod_expr.pmod_attributes
-  && not (Parsetree_viewer.has_await_attribute mod_expr.pmod_attributes)
 
 let include_mod_expr mod_expr =
   match mod_expr.Parsetree.pmod_desc with
