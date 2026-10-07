@@ -798,10 +798,10 @@ and print_module_binding ~state ~is_rec module_binding cmt_tbl i =
   in
   let mod_expr_doc, mod_constraint_doc =
     match module_binding.pmb_expr with
-    | {pmod_desc = Pmod_constraint (mod_expr, mod_type)}
-      when not
-             (Parsetree_viewer.has_await_attribute
-                module_binding.pmb_expr.pmod_attributes) ->
+    | {pmod_desc = Pmod_constraint (mod_expr, mod_type); pmod_attributes}
+    (* [module M: S = E] has no node for the constraint's attributes *)
+      when (not (Parsetree_viewer.has_await_attribute pmod_attributes))
+           && Parsetree_viewer.filter_parsing_attrs pmod_attributes = [] ->
       ( print_mod_expr ~state mod_expr cmt_tbl,
         Doc.concat [Doc.text ": "; print_mod_type ~state mod_type cmt_tbl] )
     | mod_expr -> (print_mod_expr ~state mod_expr cmt_tbl, Doc.nil)
@@ -6077,13 +6077,22 @@ and print_mod_expr ~state mod_expr cmt_tbl =
                     Doc.rparen;
                   ]);
            ])
-    | Pmod_constraint (mod_expr, mod_type) ->
-      Doc.concat
-        [
-          print_mod_expr ~state mod_expr cmt_tbl;
-          Doc.text ": ";
-          print_mod_type ~state mod_type cmt_tbl;
-        ]
+    | Pmod_constraint (inner, mod_type) ->
+      let doc =
+        Doc.concat
+          [
+            print_mod_expr ~state inner cmt_tbl;
+            Doc.text ": ";
+            print_mod_type ~state mod_type cmt_tbl;
+          ]
+      in
+      (* [@attr (M: S)]: without parens the attributes would attach to [M].
+         [await] already parenthesizes the constraint. *)
+      if
+        Parsetree_viewer.filter_parsing_attrs mod_expr.pmod_attributes <> []
+        && not (Parsetree_viewer.has_await_attribute mod_expr.pmod_attributes)
+      then add_parens doc
+      else doc
     | Pmod_functor _ -> print_mod_functor ~state mod_expr cmt_tbl
   in
   let doc =

@@ -14,6 +14,14 @@ module J = F(@attr X)
 
 module K: T = @attr X
 include @attr F({})
+
+// on a module constraint, or on the module it constrains
+module N = @attr (X: S)
+module O = F(@attr (X: S))
+module P = F((@attr X: S))
+include @attr (X: S)
+include (@attr X: S)
+
 module L = @attr unpack(x)
 module M = @attr %ext
 

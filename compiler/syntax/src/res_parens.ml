@@ -430,7 +430,10 @@ let braced_expr expr =
 
 let include_mod_expr mod_expr =
   match mod_expr.Parsetree.pmod_desc with
-  | Parsetree.Pmod_constraint _ -> true
+  (* An attributed constraint already prints its own parens *)
+  | Parsetree.Pmod_constraint _ ->
+    Parsetree_viewer.filter_parsing_attrs mod_expr.pmod_attributes = []
+    || Parsetree_viewer.has_await_attribute mod_expr.pmod_attributes
   | _ -> false
 
 let mod_expr_parens mod_expr =
