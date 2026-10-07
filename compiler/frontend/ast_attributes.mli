@@ -50,7 +50,7 @@ val process_derive_type : t -> derive_attr * t
 
 val internal_expansive : attr
 
-val rs_externals : t -> string Asttypes.loc option -> bool
+val is_ffi_external : t -> string Asttypes.loc option -> bool
 
 val is_gentype : attr -> bool
 

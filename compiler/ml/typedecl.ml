@@ -1890,21 +1890,24 @@ let parse_arity env _core_type ty =
 
 (* Translate a value declaration *)
 let transl_value_decl env loc valdecl =
-  let resolved =
+  let pval_type, pval_attributes, prim =
     match valdecl.pval_prim with
-    | None -> None
-    | Some {txt = prim} -> Some (!Primitive.resolve_external valdecl prim)
-  in
-  let pval_type, pval_attributes =
-    match resolved with
-    | None -> (valdecl.pval_type, valdecl.pval_attributes)
-    | Some {resolved_type; resolved_attributes} ->
-      (resolved_type, resolved_attributes)
+    | None -> (valdecl.pval_type, valdecl.pval_attributes, None)
+    | Some {txt} ->
+      let {
+        Primitive.resolved_type;
+        resolved_attributes;
+        resolved_name;
+        resolved_kind;
+      } =
+        !Primitive.resolve_external valdecl txt
+      in
+      (resolved_type, resolved_attributes, Some (resolved_name, resolved_kind))
   in
   let cty = Typetexp.transl_type_scheme env pval_type in
   let ty = cty.ctyp_type in
   let v =
-    match resolved with
+    match prim with
     | None when Env.is_in_signature env ->
       {
         val_type = ty;
@@ -1919,12 +1922,9 @@ let transl_value_decl env loc valdecl =
          declaration. A bare `val x: int` in a .res is also rejected at
          parse time. *)
       assert false
-    | Some {resolved_name; resolved_kind} ->
+    | Some (name, kind) ->
       let arity, from_constructor = parse_arity env pval_type ty in
-      let prim =
-        Primitive.make ~name:resolved_name ~kind:resolved_kind ~arity
-          ~from_constructor
-      in
+      let prim = Primitive.make ~name ~kind ~arity ~from_constructor in
       if
         prim.prim_arity = 0
         && prim.prim_kind = Kind_intrinsic

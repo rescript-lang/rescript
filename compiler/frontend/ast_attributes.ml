@@ -69,7 +69,7 @@ let prim_to_be_encoded (name : string) = not (first_char_special name)
    They are not considered externals, they are part of the language
 *)
 
-let rs_externals (attrs : t) (pval_prim : string Asttypes.loc option) =
+let is_ffi_external (attrs : t) (pval_prim : string Asttypes.loc option) =
   match (attrs, pval_prim) with
   | _, None -> false (* [None] is a [val] *)
   | [], Some {txt = name} ->
