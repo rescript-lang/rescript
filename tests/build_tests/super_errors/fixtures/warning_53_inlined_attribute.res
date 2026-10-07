@@ -5,3 +5,4 @@ let b = @inlined f(2)
 
 external id: int => int = "%identity"
 let c = (@inlined id)(3)
+let d = (@warning("-53") @inlined id)(4)

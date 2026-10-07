@@ -1044,8 +1044,10 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
     when List.length oargs >= p.prim_arity
          && List.for_all (fun (_, arg) -> arg <> None) oargs -> (
     (* [funct] is not translated with [transl_exp], so check its attributes
-       here *)
-    List.iter (Translattribute.check_attribute funct) funct.exp_attributes;
+       here, in the warning scope [transl_exp] would use *)
+    Builtin_attributes.warning_scope ~ppwarning:false funct.exp_attributes
+      (fun () ->
+        List.iter (Translattribute.check_attribute funct) funct.exp_attributes);
     let args, args' = cut p.prim_arity oargs in
     let wrap f =
       if args' = [] then f else transl_apply ~transformed_jsx f args' e.exp_loc
