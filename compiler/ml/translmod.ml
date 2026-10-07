@@ -262,9 +262,17 @@ let rec compile_functor mexp coercion root_path loc =
       }
     ~params:[param'] ~body
 
-(* Compile a module expression *)
+(* Compile a module expression, in the warning scope of its attributes like
+   [Translcore.transl_exp] *)
 and transl_module cc rootpath mexp =
-  List.iter (Translattribute.check_attribute_on_module mexp) mexp.mod_attributes;
+  Builtin_attributes.warning_scope ~ppwarning:false mexp.mod_attributes
+    (fun () ->
+      List.iter
+        (Translattribute.check_attribute_on_module mexp)
+        mexp.mod_attributes;
+      transl_module0 cc rootpath mexp)
+
+and transl_module0 cc rootpath mexp =
   let loc = mexp.mod_loc in
   match mexp.mod_type with
   | Mty_alias (Mta_absent, _) ->
