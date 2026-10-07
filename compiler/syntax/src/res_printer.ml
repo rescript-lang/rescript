@@ -6033,10 +6033,20 @@ and print_mod_expr ~state mod_expr cmt_tbl =
         | [{pmod_desc = Pmod_structure _}] -> true
         | _ -> false
       in
+      let call_expr_doc =
+        let doc = print_mod_expr ~state call_expr cmt_tbl in
+        (* Without parens, attributes on the functor would attach to the
+           whole application *)
+        match
+          Parsetree_viewer.filter_parsing_attrs call_expr.pmod_attributes
+        with
+        | [] -> doc
+        | _ -> add_parens doc
+      in
       Doc.group
         (Doc.concat
            [
-             print_mod_expr ~state call_expr cmt_tbl;
+             call_expr_doc;
              (if is_unit_sugar then
                 print_mod_apply_arg ~state
                   (List.hd args [@doesNotRaise])
@@ -6076,6 +6086,19 @@ and print_mod_expr ~state mod_expr cmt_tbl =
         ]
     | Pmod_functor _ -> print_mod_functor ~state mod_expr cmt_tbl
   in
+  let doc =
+    match mod_expr.pmod_desc with
+    (* A functor's attributes belong to its first parameter, see
+       [print_mod_functor] *)
+    | Pmod_functor _ -> doc
+    | _ ->
+      Doc.concat
+        [
+          print_attributes ~state ~inline:true mod_expr.pmod_attributes cmt_tbl;
+          doc;
+        ]
+  in
+  (* [await] comes first: [@attr await M] does not parse *)
   let doc =
     if Parsetree_viewer.has_await_attribute mod_expr.pmod_attributes then
       match mod_expr.pmod_desc with

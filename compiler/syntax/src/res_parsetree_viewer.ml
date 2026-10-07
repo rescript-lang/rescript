@@ -600,7 +600,11 @@ let requires_special_callback_printing_first_arg args =
 let mod_expr_apply mod_expr =
   let rec loop acc mod_expr =
     match mod_expr with
-    | {pmod_desc = Pmod_apply (next, arg)} -> loop (arg :: acc) next
+    (* An inner application with attributes is kept as the callee, so the
+       printer can parenthesize it with its attributes *)
+    | {pmod_desc = Pmod_apply (next, arg); pmod_attributes}
+      when acc = [] || filter_parsing_attrs pmod_attributes = [] ->
+      loop (arg :: acc) next
     | _ -> (acc, mod_expr)
   in
   loop [] mod_expr
