@@ -30,6 +30,15 @@ include (@attr X: S)
 module R = (X) => @attr (Y: S)
 module S = (X): S => @attr Y
 
+// @JSX is printed like any other attribute
+module T = (@JSX F)(A)
+module U = (@JSX F(A))(B)
+module V = @JSX (X: S)
+
+// a functor argument can't start with a doc comment
+module W = H(@w /** doc */ X)
+module Y = H((/** doc */ X: S))
+
 module L = @attr unpack(x)
 module M = @attr %ext
 

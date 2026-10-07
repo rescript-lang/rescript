@@ -549,9 +549,10 @@ let is_printable_attribute attr =
 let has_printable_attributes attrs = List.exists is_printable_attribute attrs
 
 (* Attributes or [await] on a module expression: either one prints before it
-   and binds less tightly than an application or a constraint *)
+   and binds less tightly than an application or a constraint. The attributes
+   are the ones [Res_printer.print_attributes] prints. *)
 let mod_expr_has_attributes (mod_expr : Parsetree.module_expr) =
-  has_printable_attributes mod_expr.pmod_attributes
+  filter_parsing_attrs mod_expr.pmod_attributes <> []
   || has_await_attribute mod_expr.pmod_attributes
 
 let filter_printable_attributes attrs = List.filter is_printable_attribute attrs
