@@ -825,7 +825,12 @@ and print_module_binding ~state ~is_rec module_binding cmt_tbl i =
     | {pmod_desc = Pmod_constraint (mod_expr, mod_type)} as constrained
     (* [module M: S = E] has no node for the constraint's attributes *)
       when not (Parsetree_viewer.mod_expr_has_attributes constrained) ->
-      ( print_mod_expr_constraint_parens ~state mod_expr cmt_tbl,
+      let mod_expr_doc =
+        if Parens.mod_expr_parens constrained then
+          add_mod_expr_parens (print_mod_expr ~state mod_expr cmt_tbl)
+        else print_mod_expr_constraint_parens ~state mod_expr cmt_tbl
+      in
+      ( mod_expr_doc,
         Doc.concat [Doc.text ": "; print_mod_type ~state mod_type cmt_tbl] )
     | mod_expr -> (print_mod_expr ~state mod_expr cmt_tbl, Doc.nil)
   in

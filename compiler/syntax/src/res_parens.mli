@@ -35,6 +35,8 @@ val call_expr : Parsetree.expression -> kind
 
 val include_mod_expr : Parsetree.module_expr -> bool
 
+val mod_expr_parens : Parsetree.module_expr -> bool
+
 val arrow_return_typ_expr : Parsetree.core_type -> bool
 
 val pattern_record_row_rhs : Parsetree.pattern -> bool

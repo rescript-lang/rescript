@@ -435,6 +435,23 @@ let include_mod_expr mod_expr =
     not (Parsetree_viewer.mod_expr_has_attributes mod_expr)
   | _ -> false
 
+let mod_expr_parens mod_expr =
+  match mod_expr with
+  | {
+   Parsetree.pmod_desc =
+     Pmod_constraint
+       ( {Parsetree.pmod_desc = Pmod_structure _},
+         {Parsetree.pmty_desc = Pmty_signature [{psig_desc = Psig_module _}]} );
+  } ->
+    false
+  | {
+   Parsetree.pmod_desc =
+     Pmod_constraint
+       (_, {Parsetree.pmty_desc = Pmty_signature [{psig_desc = Psig_module _}]});
+  } ->
+    true
+  | _ -> false
+
 let arrow_return_typ_expr typ_expr =
   match typ_expr.Parsetree.ptyp_desc with
   | Ptyp_arrow _ -> true
