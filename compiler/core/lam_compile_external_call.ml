@@ -298,7 +298,7 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
        E.new_ fn args)
   | ( (Decl_send _ | Decl_get _ | Decl_set _ | Decl_get_index | Decl_set_index),
       Some Module_itself ) ->
-    assert false (* rejected during digestion *)
+    assert false (* rejected during resolution *)
   | Decl_val {name}, _ when decl.effective_arity = 0 ->
     (* a global value *)
     let e = translate_scoped_module_val named_module name scopes in

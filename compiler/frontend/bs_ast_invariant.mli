@@ -37,3 +37,12 @@ val iter_warnings_on_sigi : Parsetree.signature -> unit
 val emit_external_warnings_on_structure : Parsetree.structure -> unit
 
 val emit_external_warnings_on_signature : Parsetree.signature -> unit
+
+val reject_unconsumed_json_on_structure : Parsetree.structure -> unit
+
+val reject_unconsumed_json_on_signature : Parsetree.signature -> unit
+
+val check_resolved_external : Parsetree.value_description -> unit
+(** Runs the checks above on an FFI external's resolved form, as a [val].
+    They skip the external itself, which stays unresolved until type
+    checking. *)

@@ -112,9 +112,15 @@ and out_type_extension = {
 and out_val_decl = {
   oval_name: string;
   oval_type: out_type;
-  oval_prim: Parsetree.primitive_repr option;
+  oval_prim: out_primitive option;
   oval_attributes: out_attribute list;
 }
+
+(* A resolved primitive, so the printer can render its FFI attributes *)
+and out_primitive =
+  | Oprim_intrinsic of string
+  | Oprim_external of {name: string; spec: External_ffi_types.t}
+  | Oprim_inline_const of External_ffi_types.inline_const
 and out_rec_status = Orec_not | Orec_first | Orec_next
 and out_ext_status = Oext_first | Oext_next | Oext_exception
 

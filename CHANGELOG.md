@@ -56,6 +56,7 @@
 
 #### :house: Internal
 
+- Keep resolved FFI specifications out of the current parsetree: `pval_prim` is the primitive string as written, and the type checker resolves FFI externals, with current-AST and CMT format bumps. https://github.com/rescript-lang/rescript/pull/8728
 - Make `dict` an abstract type instead of a record with a hidden field. https://github.com/rescript-lang/rescript/pull/8752
 - Represent dict patterns with a dedicated `Tpat_dict` typed tree node. https://github.com/rescript-lang/rescript/pull/8751
 - Represent dict patterns with a dedicated `Ppat_dict` node. https://github.com/rescript-lang/rescript/pull/8749

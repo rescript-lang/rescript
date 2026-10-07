@@ -6264,8 +6264,9 @@ and parse_external_def ~attrs ~start_pos p =
       let prim =
         match Parser.peek p with
         | String s ->
+          let loc = mk_loc (Parser.start_pos p) (Parser.end_pos p) in
           Parser.next p;
-          Some (Parsetree.Prim_name s)
+          Some (Location.mkloc s loc)
         | _ ->
           Parser.err ~start_pos:equal_start ~end_pos:equal_end p
             (Diagnostics.message

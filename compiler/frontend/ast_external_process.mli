@@ -22,23 +22,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type response = {
+type resolution = {
   pval_type: Parsetree.core_type;
-  pval_prim: Parsetree.primitive_repr;
-  pval_attributes: Parsetree.attributes;
+      (** The declared type, without the arguments FFI attributes erase *)
+  spec: External_ffi_types.t;
+  pval_attributes: Parsetree.attributes;  (** Attributes not consumed *)
   no_inline_cross_module: bool;
+      (** The external names a relative module, so other modules must not
+          inline it *)
 }
 
-val handle_attributes_as_prim :
-  Location.t -> Ast_core_type.t -> Ast_attributes.t -> string -> response
-(**
-   [handle_attributes_as_prim
-   loc pval_name.txt pval_type pval_attributes pval_prim]
-   [pval_name.txt] is the name of identifier
-   [pval_prim] is the name of string literal
-
-   return value is of [pval_type, pval_prim, new_attrs]
-*)
-
-val pval_prim_of_option_labels :
-  (bool * string Asttypes.loc) list -> bool -> Parsetree.primitive_repr
+val resolve :
+  Location.t -> Ast_core_type.t -> Ast_attributes.t -> string -> resolution
+(** [resolve loc pval_type pval_attributes prim_name] applies the FFI
+    attributes of an [external] declaration. Errors are raised and warnings
+    reported for the declaration, and the attributes it consumes are marked
+    used. *)

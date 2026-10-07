@@ -69,14 +69,13 @@ let prim_to_be_encoded (name : string) = not (first_char_special name)
    They are not considered externals, they are part of the language
 *)
 
-let rs_externals (attrs : t) (pval_prim : Parsetree.primitive_repr option) =
+let rs_externals (attrs : t) (pval_prim : string Asttypes.loc option) =
   match (attrs, pval_prim) with
-  | _, (None | Some (Prim_ffi _ | Prim_inline_const _)) -> false
-  (* [None] is a [val]; an already-digested external is not processed again *)
-  | [], Some (Prim_name name) ->
+  | _, None -> false (* [None] is a [val] *)
+  | [], Some {txt = name} ->
     (* Not any attribute found *)
     prim_to_be_encoded name
-  | _, Some (Prim_name name) ->
+  | _, Some {txt = name} ->
     Ext_list.exists_fst attrs (fun ({txt} : string Asttypes.loc) ->
         external_attrs |> Array.exists (fun (x : string) -> txt = x))
     || prim_to_be_encoded name

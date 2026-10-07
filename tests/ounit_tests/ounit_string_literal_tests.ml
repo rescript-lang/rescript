@@ -335,9 +335,13 @@ let assert_external_json_literal ~expected constant =
   | _ -> OUnit.assert_failure "expected a JavaScript JSON literal expression"
 
 let inline_string semantic =
-  match Ast_external_mk.inline_string semantic with
-  | Prim_inline_const constant -> constant
-  | _ -> OUnit.assert_failure "expected an inline constant"
+  match
+    Ast_external_mk.inline_const_of_expression
+      (Ast_helper.Exp.constant
+         (Pconst_string (String_literal.string_from_semantic semantic)))
+  with
+  | Some constant -> constant
+  | None -> OUnit.assert_failure "expected an inline constant"
 
 let assert_js_global ~expected (expression : J.expression) =
   match expression.expression_desc with

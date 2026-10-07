@@ -58,6 +58,12 @@ let check_constant loc (const : Parsetree.constant) =
     with _ -> Bs_warnings.warn_literal_overflow loc)
   | _ -> ()
 
+(* An FFI external stays as written until the type checker resolves it, so its
+   argument types still carry the attributes resolution consumes. The checks
+   below skip it; [check_resolved_external] runs them on its resolved form. *)
+let is_unresolved_ffi_external (v : Parsetree.value_description) =
+  Ast_attributes.rs_externals v.pval_attributes v.pval_prim
+
 (* Note we only used Bs_ast_iterator here, we can reuse compiler-libs instead of
    rolling our own*)
 let emit_external_warnings : iterator =
@@ -112,26 +118,17 @@ let emit_external_warnings : iterator =
     value_description =
       (fun self v ->
         match v with
-        | ({pval_loc; pval_prim = Some (Prim_name byte_name); pval_type} :
-            Parsetree.value_description) -> (
-          match byte_name with
-          | ("%identity" | "%component_identity")
-            when not (Ast_core_type.is_arity_one pval_type) ->
-            Location.raise_errorf ~loc:pval_loc
-              "%s expects a function type of the form 'a => 'b (arity 1)"
-              byte_name
-          | _ ->
-            if byte_name <> "" then
-              let c = String.unsafe_get byte_name 0 in
-              if not (c = '%' || c = '#' || c = '?') then
-                Location.prerr_warning pval_loc
-                  (Warnings.Bs_ffi_warning
-                     (byte_name ^ " such externals are unsafe"))
-              else super.value_description self v
-            else
-              Location.prerr_warning pval_loc
-                (Warnings.Bs_ffi_warning
-                   (byte_name ^ " such externals are unsafe")))
+        | _ when is_unresolved_ffi_external v -> ()
+        | {
+         pval_loc;
+         pval_prim =
+           Some {txt = ("%identity" | "%component_identity") as byte_name};
+         pval_type;
+        }
+          when not (Ast_core_type.is_arity_one pval_type) ->
+          Location.raise_errorf ~loc:pval_loc
+            "%s expects a function type of the form 'a => 'b (arity 1)"
+            byte_name
         | _ -> super.value_description self v);
     pat =
       (fun self (pat : Parsetree.pattern) ->
@@ -165,3 +162,38 @@ let emit_external_warnings_on_structure (stru : Parsetree.structure) =
 
 let emit_external_warnings_on_signature (sigi : Parsetree.signature) =
   emit_external_warnings.signature emit_external_warnings sigi
+
+(* [json] payloads are syntax-level expressions until built-in FFI processing
+   consumes valid [@as(json`...`)] occurrences. Reject anything left only
+   after that processing, so generic attributes and ordinary expressions
+   cannot reinterpret them as strings. *)
+let unconsumed_json_iterator : iterator =
+  {
+    super with
+    value_description =
+      (fun self v ->
+        if not (is_unresolved_ffi_external v) then
+          super.value_description self v);
+    expr =
+      (fun self expression ->
+        match expression.pexp_desc with
+        | Pexp_constant (Pconst_json _) ->
+          Ast_payload.reject_json_literal ~loc:expression.pexp_loc
+        | _ -> super.expr self expression);
+    pat =
+      (fun self pattern ->
+        match pattern.ppat_desc with
+        | Ppat_constant (Pconst_json _) ->
+          Ast_payload.reject_json_literal ~loc:pattern.ppat_loc
+        | _ -> super.pat self pattern);
+  }
+
+let reject_unconsumed_json_on_structure (stru : Parsetree.structure) =
+  unconsumed_json_iterator.structure unconsumed_json_iterator stru
+
+let reject_unconsumed_json_on_signature (sigi : Parsetree.signature) =
+  unconsumed_json_iterator.signature unconsumed_json_iterator sigi
+
+let check_resolved_external (v : Parsetree.value_description) =
+  super.value_description unconsumed_json_iterator v;
+  super.value_description emit_external_warnings v

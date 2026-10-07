@@ -511,26 +511,19 @@ and fun_param = {
 and value_description = {
   pval_name: string loc;
   pval_type: core_type;
-  pval_prim: primitive_repr option;
+  pval_prim: string loc option;
+      (* The primitive string as written: an intrinsic ("%identity",
+         "#raw_expr") or the JS name of an FFI external. Its FFI attributes
+         stay in [pval_attributes] and on the argument types; the type
+         checker resolves them through [Primitive.resolve_external]. *)
   pval_attributes: attributes; (* ... [@@id1] [@@id2] *)
   pval_loc: Location.t;
 }
 
 (*
   val x: T                            (prim = None)
-  external x: T = "s"                 (prim = Some _)
+  external x: T = "s"                 (prim = Some "s")
 *)
-and primitive_repr =
-  | Prim_name of string
-    (* as written in the source: an intrinsic ("%identity", "#raw_expr")
-         or the not-yet-digested JS name of an FFI external *)
-  | Prim_ffi of {name: string; spec: External_ffi_types.t}
-    (* produced by the frontend digestion of an FFI external's
-       attributes; never observed by external PPXes, which run before
-       digestion *)
-  | Prim_inline_const of External_ffi_types.inline_const
-(* an [@inline(<literal>)] value declaration: a compile-time constant,
-   not an FFI; produced by digestion like [Prim_ffi] *)
 
 (* Type declarations *)
 and type_declaration = {

@@ -138,8 +138,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
     let source = "/" ^ pattern ^ "/" ^ flags in
     Ast_payload.validate_raw_source ~kind:Raw_re ~loc ~offset:0 source;
     let raw =
-      Ast_external_mk.local_external_apply loc
-        ~pval_prim:(Prim_name "#raw_expr")
+      Ast_external_mk.local_external_apply loc ~pval_prim:"#raw_expr"
         ~pval_type:
           (Ast_helper.Typ.arrow
              [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
@@ -477,77 +476,20 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
       Ast_external.handle_external_in_sig self value_desc sigi
     else
       match Ast_attributes.has_inline_payload pval_attributes with
-      | Some ((_, PStr [{pstr_desc = Pstr_eval (expression, _)}]) as attr) -> (
-        match (Ast_payload.unwrap_braces expression).pexp_desc with
-        | Pexp_constant (Pconst_string _)
-        | Pexp_template {source_segments = [_]; values = []} ->
-          let semantic =
-            match Ast_payload.semantic_string_of_expression expression with
-            | Some semantic -> semantic
-            | None -> assert false
-          in
+      | Some
+          (({loc = attr_loc}, PStr [{pstr_desc = Pstr_eval (expression, _)}]) as
+           attr) -> (
+        match Ast_external_mk.inline_const_of_expression expression with
+        | Some _ ->
           succeed attr pval_attributes;
           {
             sigi with
             psig_desc =
               Psig_value
-                {
-                  value_desc with
-                  pval_prim = Some (Ast_external_mk.inline_string semantic);
-                  pval_attributes = [];
-                };
+                (Ast_external_mk.inline_const_declaration ~attr_loc value_desc
+                   expression);
           }
-        | Pexp_constant (Pconst_integer (s, None)) ->
-          succeed attr pval_attributes;
-          let s = Int32.of_string s in
-          {
-            sigi with
-            psig_desc =
-              Psig_value
-                {
-                  value_desc with
-                  pval_prim = Some (Ast_external_mk.inline_int s);
-                  pval_attributes = [];
-                };
-          }
-        | Pexp_constant (Pconst_integer (s, Some 'n')) ->
-          succeed attr pval_attributes;
-          {
-            sigi with
-            psig_desc =
-              Psig_value
-                {
-                  value_desc with
-                  pval_prim = Some (Ast_external_mk.inline_bigint s);
-                  pval_attributes = [];
-                };
-          }
-        | Pexp_constant (Pconst_float (s, None)) ->
-          succeed attr pval_attributes;
-          {
-            sigi with
-            psig_desc =
-              Psig_value
-                {
-                  value_desc with
-                  pval_prim = Some (Ast_external_mk.inline_float s);
-                  pval_attributes = [];
-                };
-          }
-        | Pexp_construct ({txt = Lident (("true" | "false") as txt)}, {txt = []})
-          ->
-          succeed attr pval_attributes;
-          {
-            sigi with
-            psig_desc =
-              Psig_value
-                {
-                  value_desc with
-                  pval_prim = Some (Ast_external_mk.inline_bool (txt = "true"));
-                  pval_attributes = [];
-                };
-          }
-        | _ -> default_mapper.signature_item self sigi)
+        | None -> default_mapper.signature_item self sigi)
       | Some _ | None -> default_mapper.signature_item self sigi)
   | _ -> default_mapper.signature_item self sigi
 
@@ -599,74 +541,38 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
     Option.iter
       (fun (_, payload) -> Ast_payload.reject_json_literal_payload payload)
       has_inline_property;
-    match
-      (has_inline_property, (Ast_payload.unwrap_braces pvb_expr).pexp_desc)
-    with
-    | ( Some attr,
-        ( Pexp_constant (Pconst_string _)
-        | Pexp_template {source_segments = [_]; values = []} ) ) ->
-      let semantic =
-        match Ast_payload.semantic_string_of_expression pvb_expr with
-        | Some semantic -> semantic
-        | None -> assert false
+    let inline_const =
+      match has_inline_property with
+      | None -> None
+      | Some attr -> (
+        match Ast_external_mk.inline_const_of_expression pvb_expr with
+        | None | Some (Const_bigint _) -> None
+        | Some c -> Some (attr, c))
+    in
+    match inline_const with
+    | Some ((({loc = attr_loc}, _) as attr), c) ->
+      succeed attr pvb_attributes;
+      let pval_type =
+        match c with
+        | Const_string _ -> Ast_literal.type_string ()
+        | Const_int _ -> Ast_literal.type_int ()
+        | Const_float _ -> Ast_literal.type_float
+        | Const_bool _ -> Ast_literal.type_bool ()
+        | Const_bigint _ -> assert false
       in
-      succeed attr pvb_attributes;
       {
         str with
         pstr_desc =
           Pstr_primitive
-            {
-              pval_name;
-              pval_type = Ast_literal.type_string ();
-              pval_loc = pvb_loc;
-              pval_attributes = [];
-              pval_prim = Some (Ast_external_mk.inline_string semantic);
-            };
-      }
-    | Some attr, Pexp_constant (Pconst_integer (s, None)) ->
-      let s = Int32.of_string s in
-      succeed attr pvb_attributes;
-      {
-        str with
-        pstr_desc =
-          Pstr_primitive
-            {
-              pval_name;
-              pval_type = Ast_literal.type_int ();
-              pval_loc = pvb_loc;
-              pval_attributes = [];
-              pval_prim = Some (Ast_external_mk.inline_int s);
-            };
-      }
-    | Some attr, Pexp_constant (Pconst_float (s, None)) ->
-      succeed attr pvb_attributes;
-      {
-        str with
-        pstr_desc =
-          Pstr_primitive
-            {
-              pval_name;
-              pval_type = Ast_literal.type_float;
-              pval_loc = pvb_loc;
-              pval_attributes = [];
-              pval_prim = Some (Ast_external_mk.inline_float s);
-            };
-      }
-    | ( Some attr,
-        Pexp_construct ({txt = Lident (("true" | "false") as txt)}, {txt = []})
-      ) ->
-      succeed attr pvb_attributes;
-      {
-        str with
-        pstr_desc =
-          Pstr_primitive
-            {
-              pval_name;
-              pval_type = Ast_literal.type_bool ();
-              pval_loc = pvb_loc;
-              pval_attributes = [];
-              pval_prim = Some (Ast_external_mk.inline_bool (txt = "true"));
-            };
+            (Ast_external_mk.inline_const_declaration ~attr_loc
+               {
+                 pval_name;
+                 pval_type;
+                 pval_loc = pvb_loc;
+                 pval_attributes = [];
+                 pval_prim = None;
+               }
+               pvb_expr);
       }
     | _ ->
       {

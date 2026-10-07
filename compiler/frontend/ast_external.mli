@@ -22,6 +22,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+val resolve :
+  Parsetree.value_description -> string -> Primitive.resolved_external
+(** The resolver behind [Primitive.resolve_external]: an [@inline] constant,
+    an FFI external with its specification, or an intrinsic. *)
+
 val handle_external_in_sig :
   Ast_mapper.mapper ->
   Parsetree.value_description ->
