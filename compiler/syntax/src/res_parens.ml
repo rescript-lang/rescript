@@ -428,12 +428,15 @@ let braced_expr expr =
   | Pexp_constraint _ -> true
   | _ -> false
 
+(* [@attr (M: S)]: an attributed module constraint prints its own parens, so
+   the attributes don't attach to [M]. [await] already parenthesizes it. *)
+let attributed_mod_constraint (mod_expr : Parsetree.module_expr) =
+  Parsetree_viewer.has_printable_attributes mod_expr.pmod_attributes
+  && not (Parsetree_viewer.has_await_attribute mod_expr.pmod_attributes)
+
 let include_mod_expr mod_expr =
   match mod_expr.Parsetree.pmod_desc with
-  (* An attributed constraint already prints its own parens *)
-  | Parsetree.Pmod_constraint _ ->
-    Parsetree_viewer.filter_parsing_attrs mod_expr.pmod_attributes = []
-    || Parsetree_viewer.has_await_attribute mod_expr.pmod_attributes
+  | Parsetree.Pmod_constraint _ -> not (attributed_mod_constraint mod_expr)
   | _ -> false
 
 let mod_expr_parens mod_expr =
