@@ -150,8 +150,13 @@ fn compute_watch_paths(build_state: &BuildCommandState, root: &Path) -> Vec<(Pat
     watch_paths.into_iter().collect()
 }
 
-/// Registers all watch paths with the given watcher.
-fn register_watches(watcher: &mut RecommendedWatcher, watch_paths: &[(PathBuf, RecursiveMode)]) {
+/// Registers the watch paths with the given watcher and returns the ones that were registered
+/// successfully. Failed paths are left out so that the next full rebuild retries them.
+fn register_watches(
+    watcher: &mut RecommendedWatcher,
+    watch_paths: &[(PathBuf, RecursiveMode)],
+) -> WatchPaths {
+    let mut registered = Vec::with_capacity(watch_paths.len());
     for (path, mode) in watch_paths {
         let mode_str = if *mode == RecursiveMode::Recursive {
             "recursive"
@@ -159,10 +164,12 @@ fn register_watches(watcher: &mut RecommendedWatcher, watch_paths: &[(PathBuf, R
             "non-recursive"
         };
         log::debug!("  watching ({mode_str}): {}", path.display());
-        if let Err(e) = watcher.watch(path, *mode) {
-            log::error!("Could not watch {}: {}", path.display(), e);
+        match watcher.watch(path, *mode) {
+            Ok(()) => registered.push((path.clone(), *mode)),
+            Err(e) => log::error!("Could not watch {}: {}", path.display(), e),
         }
     }
+    registered
 }
 
 /// Brings the registered watches from `current` to `next`, touching only the paths that changed.
@@ -170,22 +177,22 @@ fn register_watches(watcher: &mut RecommendedWatcher, watch_paths: &[(PathBuf, R
 /// Some backends restart their event stream on every `watch`/`unwatch` call (FSEvents on macOS
 /// does), and events that happen during the restart are lost. Leaving unchanged paths alone
 /// avoids those gaps entirely in the common case where a full rebuild keeps the same paths.
+///
+/// Returns the watches that are registered afterwards, which excludes paths that failed to register.
 fn update_watches(
     watcher: &mut RecommendedWatcher,
     current: &[(PathBuf, RecursiveMode)],
     next: &[(PathBuf, RecursiveMode)],
-) {
+) -> WatchPaths {
     for entry @ (path, _) in current {
         if !next.contains(entry) {
             let _ = watcher.unwatch(path);
         }
     }
-    let added: Vec<_> = next
-        .iter()
-        .filter(|entry| !current.contains(entry))
-        .cloned()
-        .collect();
-    register_watches(watcher, &added);
+    let (mut registered, added): (WatchPaths, WatchPaths) =
+        next.iter().cloned().partition(|entry| current.contains(entry));
+    registered.extend(register_watches(watcher, &added));
+    registered
 }
 
 fn carry_forward_compile_state(previous: &BuildCommandState, next: &mut BuildCommandState) {
@@ -529,8 +536,7 @@ async fn async_watch(
 
                     // Re-register watches based on the new build state
                     let next_watch_paths = compute_watch_paths(&build_state, path);
-                    update_watches(watcher, &current_watch_paths, &next_watch_paths);
-                    current_watch_paths = next_watch_paths;
+                    current_watch_paths = update_watches(watcher, &current_watch_paths, &next_watch_paths);
 
                     let result = build::incremental_build_without_lock(
                         &mut build_state,
@@ -633,8 +639,8 @@ pub fn start(
                 .with_context(|| "Could not initialize build")?;
 
                 // Compute and register targeted watches based on source folders.
-                let current_watch_paths = compute_watch_paths(&build_state, path);
-                register_watches(&mut watcher, &current_watch_paths);
+                let current_watch_paths =
+                    register_watches(&mut watcher, &compute_watch_paths(&build_state, path));
 
                 let timing_total = Instant::now();
                 let initial_compile_result = build::incremental_build_without_lock(
