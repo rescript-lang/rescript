@@ -26,38 +26,37 @@ let is_await_expr (e : Parsetree.expression) =
   | _ -> false
 
 (* An awaited module path: [await M], and [await (M: S)] or [(await M: S)],
-   where [await] may be repeated, e.g. [await (await M)]. Returns the path
-   of [M] and its node, and [S] for the constrained forms. It is a dynamic
-   import when [S] is absent or a module type path. *)
+   where [await] may be repeated, e.g. [await (await M)]. Returns the path of
+   [M]; the module to import, which is [e] without its awaits, whose
+   attributes (e.g. [@warning]) stay on the module they wrap; and [S] for the
+   constrained forms. It is a dynamic import when [S] is absent or a module
+   type path. *)
 let awaited_module_path (e : Parsetree.module_expr) =
   let rec remove_awaits awaited (m : Parsetree.module_expr) =
     match m.pmod_desc with
-    | Pmod_await inner -> remove_awaits true inner
+    | Pmod_await inner ->
+      remove_awaits true
+        {inner with pmod_attributes = m.pmod_attributes @ inner.pmod_attributes}
     | _ -> (awaited, m)
   in
   match remove_awaits false e with
-  | true, ({pmod_desc = Pmod_ident lid} as path) -> Some (lid, path, None)
-  | awaited, {pmod_desc = Pmod_constraint (m, mty)} -> (
+  | true, ({pmod_desc = Pmod_ident lid} as imported) ->
+    Some (lid, imported, None)
+  | awaited, ({pmod_desc = Pmod_constraint (m, mty)} as constrained) -> (
     match remove_awaits awaited m with
-    | true, ({pmod_desc = Pmod_ident lid} as path) -> Some (lid, path, Some mty)
+    | true, ({pmod_desc = Pmod_ident lid} as path) ->
+      Some
+        ( lid,
+          {constrained with pmod_desc = Pmod_constraint (path, mty)},
+          Some mty )
     | _ -> None)
   | _ -> None
 
-(* Transform a dynamic import form [await M] to
-   unpack(await import(module(M: __M0__))) *)
+(* Transform the dynamic import [e] of [imported], as returned by
+   [awaited_module_path], to unpack(await import(module(M: __M0__))) *)
 let create_await_module_expression ~module_type_lid (e : Parsetree.module_expr)
-    =
+    imported =
   let open Ast_helper in
-  let rec remove_await (m : Parsetree.module_expr) =
-    match m.pmod_desc with
-    (* Its attributes, e.g. [@warning], stay on the imported module *)
-    | Pmod_await inner ->
-      remove_await
-        {inner with pmod_attributes = m.pmod_attributes @ inner.pmod_attributes}
-    | Pmod_constraint (inner, mty) ->
-      {m with pmod_desc = Pmod_constraint (remove_await inner, mty)}
-    | _ -> m
-  in
   {
     e with
     pmod_desc =
@@ -73,7 +72,7 @@ let create_await_module_expression ~module_type_lid (e : Parsetree.module_expr)
               [
                 ( Nolabel,
                   Exp.constraint_ ~loc:e.pmod_loc
-                    (Exp.pack ~loc:e.pmod_loc (remove_await e))
+                    (Exp.pack ~loc:e.pmod_loc imported)
                     (Typ.package ~loc:e.pmod_loc module_type_lid []) );
               ]));
   }

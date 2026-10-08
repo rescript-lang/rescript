@@ -113,6 +113,20 @@ let local_module_type_name txt =
   ^ (Longident.flatten txt |> List.fold_left (fun ll l -> ll ^ "_" ^ l) "")
   ^ "__"
 
+(* [module type __List__ = module type of List], the module type a dynamic
+   import of [List] unpacks to, declared once per module *)
+let local_module_type_decl ~await_context
+    ({txt; loc} : Longident.t Asttypes.loc) (me : Parsetree.module_expr) =
+  let name = local_module_type_name txt in
+  if Hashtbl.mem !await_context name then []
+  else (
+    Hashtbl.add !await_context name name;
+    [
+      Ast_helper.(
+        Str.modtype ~loc
+          (Mtd.mk ~loc {txt = name; loc} ~typ:(Mty.typeof_ ~loc me)));
+    ])
+
 let expr_mapper ~async_context ~in_function_def (self : mapper)
     (e : Parsetree.expression) =
   let old_in_function_def = !in_function_def in
@@ -398,25 +412,27 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   *)
   (* module M = await List, module M = await (List: ListType) *)
   | Pexp_letmodule (lid, me, expr) -> (
-    let dynamic_import module_type_lid =
+    let dynamic_import module_type_lid imported =
       {
         e with
         pexp_desc =
           Pexp_letmodule
             ( lid,
-              Ast_await.create_await_module_expression ~module_type_lid me,
+              Ast_await.create_await_module_expression ~module_type_lid me
+                imported,
               self.expr self expr );
       }
     in
     match Ast_await.awaited_module_path me with
-    | Some (module_lid, _, None) ->
+    | Some (module_lid, imported, None) ->
       dynamic_import
         {
           txt = Lident (local_module_type_name module_lid.txt);
           loc = module_lid.loc;
         }
-    | Some (_, _, Some {pmty_desc = Pmty_ident mtyp_lid}) ->
-      dynamic_import mtyp_lid
+        imported
+    | Some (_, imported, Some {pmty_desc = Pmty_ident mtyp_lid}) ->
+      dynamic_import mtyp_lid imported
     | Some (_, _, Some _) | None -> default_expr_mapper self e)
   | _ -> default_expr_mapper self e
 
@@ -743,29 +759,17 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
     (* Dynamic import of module transformation: module M = await List *)
     | Pstr_module mb -> (
       match Ast_await.awaited_module_path mb.pmb_expr with
-      | Some ({txt; loc}, me, None) ->
+      | Some (module_lid, imported, None) ->
         let item = self.structure_item self item in
-        let safe_module_type_name = local_module_type_name txt in
-        let has_local_module_name =
-          Hashtbl.find_opt !await_context safe_module_type_name
-        in
-        (* module __List__ = module type of List *)
-        let module_type_decl =
-          match has_local_module_name with
-          | Some _ -> []
-          | None ->
-            Hashtbl.add !await_context safe_module_type_name
-              safe_module_type_name;
-            [
-              Ast_helper.(
-                Str.modtype ~loc
-                  (Mtd.mk ~loc
-                     {txt = safe_module_type_name; loc}
-                     ~typ:(Mty.typeof_ ~loc me)));
-            ]
-        in
         let safe_module_type_lid : Ast_helper.lid =
-          {txt = Lident safe_module_type_name; loc = mb.pmb_expr.pmod_loc}
+          {
+            txt = Lident (local_module_type_name module_lid.txt);
+            loc = mb.pmb_expr.pmod_loc;
+          }
+        in
+        (* Before mapping the rest, which may import the same module *)
+        let module_type_decl =
+          local_module_type_decl ~await_context module_lid imported
         in
         module_type_decl
         @
@@ -778,7 +782,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
                 mb with
                 pmb_expr =
                   Ast_await.create_await_module_expression
-                    ~module_type_lid:safe_module_type_lid mb.pmb_expr;
+                    ~module_type_lid:safe_module_type_lid mb.pmb_expr imported;
               };
         }
         :: structure_mapper ~await_context self rest
@@ -796,23 +800,12 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
             match expr.pexp_desc with
             | Pexp_letmodule (_, me, expr) -> (
               match Ast_await.awaited_module_path me with
-              | Some ({txt; loc}, me, None) -> (
-                let safe_module_type_name = local_module_type_name txt in
-                let has_local_module_name =
-                  Hashtbl.find_opt !await_context safe_module_type_name
+              | Some (module_lid, imported, None) ->
+                (* Before [aux expr], which may import the same module *)
+                let module_type_decl =
+                  local_module_type_decl ~await_context module_lid imported
                 in
-
-                match has_local_module_name with
-                | Some _ -> aux expr
-                | None ->
-                  Hashtbl.add !await_context safe_module_type_name
-                    safe_module_type_name;
-                  Ast_helper.(
-                    Str.modtype ~loc
-                      (Mtd.mk ~loc
-                         {txt = safe_module_type_name; loc}
-                         ~typ:(Mty.typeof_ ~loc me)))
-                  :: aux expr)
+                module_type_decl @ aux expr
               | _ -> acc)
             | Pexp_let (_, vbs, expr) -> aux expr @ spelunk_vbs acc vbs
             | Pexp_braces {expr} -> aux expr

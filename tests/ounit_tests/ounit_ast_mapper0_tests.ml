@@ -398,9 +398,12 @@ let test_dynamic_import_keeps_await_attributes _ =
       (Ast_helper.Mty.ident ~loc (located_string (Longident.Lident "ListT")))
   in
   let imported =
-    Ast_await.create_await_module_expression
-      ~module_type_lid:(located_string (Longident.Lident "ListT"))
-      module_expr
+    match Ast_await.awaited_module_path module_expr with
+    | Some (_, imported, _) ->
+      Ast_await.create_await_module_expression
+        ~module_type_lid:(located_string (Longident.Lident "ListT"))
+        module_expr imported
+    | None -> assert_failure "Expected an awaited module path"
   in
   match imported.pmod_desc with
   | Pmod_unpack
