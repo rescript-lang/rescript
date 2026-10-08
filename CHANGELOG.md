@@ -48,7 +48,7 @@
 #### :house: Internal
 
 - Remove the unused `res.iflet` encoding of `if let`, which the parser always rejects with a syntax error suggesting a `switch`. The error is unchanged. https://github.com/rescript-lang/rescript/pull/8741
-- Represent variant spread patterns (`...t`) with a dedicated `Ppat_variant_spread` parsetree node instead of `Ppat_type` with a `res.patVariantSpread` attribute, which remains only in the PPX wire representation. PR_LINK
+- Represent variant spread patterns (`...t`) with a dedicated `Ppat_variant_spread` parsetree node instead of `Ppat_type` with a `res.patVariantSpread` attribute, which remains only in the PPX wire representation. https://github.com/rescript-lang/rescript/pull/8742
 - Remove the obsolete `res.ternary` and `JSX` attributes from the formatter's internal attribute filters and merge the filters into one. https://github.com/rescript-lang/rescript/pull/8740
 - Represent `await` on module expressions with a dedicated `Pmod_await` parsetree node instead of a `res.await` attribute, which remains only in the PPX wire representation. https://github.com/rescript-lang/rescript/pull/8738
 - Remove dead compiler code: warning 24, the `J.String_index` JS IR node, the `Pisint` and `Parraysets` Lambda primitives with their unused `%` primitive names (`%obj_is_int`, `%obj_dup`, `%obj_field`, `%array_safe_set`, `%null_to_opt`, `%nullable_to_opt`), the no-op `-pp` bsc flag and unread `Clflags` fields (`-unsafe` stays accepted as an explicit no-op), and the unused `unit` slot of `Pexp_coerce`. https://github.com/rescript-lang/rescript/pull/8731
