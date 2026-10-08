@@ -23,6 +23,7 @@
 
 #### :bug: Bug fix
 
+- Fix unused-pattern warnings for variant spreads reported without a location. https://github.com/rescript-lang/rescript/pull/8744
 - Keep `@warning("-4")` on `if` expressions when formatting; the formatter dropped it. https://github.com/rescript-lang/rescript/pull/8741
 - Fix the formatter dropping a `@res.ternary` attribute written in source, e.g. `let b = @res.ternary x`, and print `@JSX` and `@res.ternary` with the same parens as other attributes, e.g. `(@JSX x) + 1`. https://github.com/rescript-lang/rescript/pull/8740
 - Respect `@warning` attributes on the module in `module type of`, e.g. `module type of @warning("-3") DeprecatedModule`, which still reported the warning. https://github.com/rescript-lang/rescript/pull/8738
