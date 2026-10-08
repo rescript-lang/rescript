@@ -70,8 +70,7 @@ let structure_expr expr =
   | None -> (
     match expr with
     | {pexp_desc = Pexp_jsx_element _} -> Nothing
-    | _ when Parsetree_viewer.has_attributes expr.pexp_attributes ->
-      Parenthesized
+    | _ when expr.pexp_attributes <> [] -> Parenthesized
     | {
      Parsetree.pexp_desc =
        Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});

@@ -174,8 +174,7 @@ module Error_messages = struct
     "A polymorphic variant (e.g. #id) must start with an alphabetical letter \
      or be a number (e.g. #742)"
 
-  let experimental_if_let expr =
-    let switch_expr = {expr with Parsetree.pexp_attributes = []} in
+  let experimental_if_let switch_expr =
     Doc.concat
       [
         Doc.text "If-let is currently highly experimental.";
@@ -265,17 +264,8 @@ module Error_messages = struct
     "Spreading JSX children is no longer supported."
 end
 
-let if_let_attr = (Location.mknoloc "res.iflet", Parsetree.PStr [])
-let suppress_fragile_match_warning_attr =
-  ( Location.mknoloc "warning",
-    Parsetree.PStr
-      [
-        Ast_helper.Str.eval
-          (Ast_helper.Exp.constant (Ast_helper.Const.string "-4"));
-      ] )
 let make_pat_variant_spread_attr =
   (Location.mknoloc "res.patVariantSpread", Parsetree.PStr [])
-
 let spread_attr = (Location.mknoloc "res.spread", Parsetree.PStr [])
 let dict_spread_attr = (Location.mknoloc "res.dictSpread", Parsetree.PStr [])
 
@@ -3610,9 +3600,7 @@ and parse_if_let_expr start_pos p =
         (Location.mkloc [] loc)
   in
   let loc = mk_loc start_pos (Parser.position p) in
-  Ast_helper.Exp.match_
-    ~attrs:[if_let_attr; suppress_fragile_match_warning_attr]
-    ~loc condition_expr
+  Ast_helper.Exp.match_ ~loc condition_expr
     [
       Ast_helper.Exp.case pattern then_expr;
       Ast_helper.Exp.case (Ast_helper.Pat.any ()) else_expr;

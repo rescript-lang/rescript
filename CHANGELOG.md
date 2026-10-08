@@ -23,6 +23,7 @@
 
 #### :bug: Bug fix
 
+- Keep `@warning("-4")` on `if` expressions when formatting; the formatter dropped it. https://github.com/rescript-lang/rescript/pull/8741
 - Fix the formatter dropping a `@res.ternary` attribute written in source, e.g. `let b = @res.ternary x`, and print `@JSX` and `@res.ternary` with the same parens as other attributes, e.g. `(@JSX x) + 1`. https://github.com/rescript-lang/rescript/pull/8740
 - Respect `@warning` attributes on the module in `module type of`, e.g. `module type of @warning("-3") DeprecatedModule`, which still reported the warning. https://github.com/rescript-lang/rescript/pull/8738
 - Fix the formatter dropping or moving attributes and `await` on module expressions, such as `module M = @attr F(X)`, and printing invalid code for module constraints and functors in some positions, such as `module M: T = (X: S)`. https://github.com/rescript-lang/rescript/pull/8735
@@ -46,6 +47,7 @@
 
 #### :house: Internal
 
+- Remove the unused `res.iflet` encoding of `if let`, which the parser always rejects with a syntax error suggesting a `switch`. The error is unchanged. https://github.com/rescript-lang/rescript/pull/8741
 - Remove the obsolete `res.ternary` and `JSX` attributes from the formatter's internal attribute filters and merge the filters into one. https://github.com/rescript-lang/rescript/pull/8740
 - Represent `await` on module expressions with a dedicated `Pmod_await` parsetree node instead of a `res.await` attribute, which remains only in the PPX wire representation. https://github.com/rescript-lang/rescript/pull/8738
 - Remove dead compiler code: warning 24, the `J.String_index` JS IR node, the `Pisint` and `Parraysets` Lambda primitives with their unused `%` primitive names (`%obj_is_int`, `%obj_dup`, `%obj_field`, `%array_safe_set`, `%null_to_opt`, `%nullable_to_opt`), the no-op `-pp` bsc flag and unread `Clflags` fields (`-unsafe` stays accepted as an explicit no-op), and the unused `unit` slot of `Pexp_coerce`. https://github.com/rescript-lang/rescript/pull/8731
