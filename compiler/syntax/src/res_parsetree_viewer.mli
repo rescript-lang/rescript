@@ -96,9 +96,11 @@ val filter_fragile_match_attributes :
 val should_indent_binary_expr : Parsetree.expression -> bool
 val should_inline_rhs_binary_expr : Parsetree.expression -> bool
 val has_printable_attributes : Parsetree.attributes -> bool
+val mod_expr_has_attributes : Parsetree.module_expr -> bool
 val filter_printable_attributes : Parsetree.attributes -> Parsetree.attributes
 val partition_printable_attributes :
   Parsetree.attributes -> Parsetree.attributes * Parsetree.attributes
+val is_doc_comment_attribute : Parsetree.attribute -> bool
 val partition_doc_comment_attributes :
   Parsetree.attributes -> Parsetree.attributes * Parsetree.attributes
 
