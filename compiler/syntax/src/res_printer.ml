@@ -2827,9 +2827,7 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
       in
       let args_doc = print_pattern_args ~state variant_args cmt_tbl in
       Doc.group (Doc.concat [variant_name; args_doc])
-    | Ppat_type ident
-      when Parsetree_viewer.has_res_pat_variant_spread_attribute
-             p.ppat_attributes ->
+    | Ppat_variant_spread ident ->
       Doc.concat [Doc.text "..."; print_ident_path ident cmt_tbl]
     | Ppat_type ident ->
       Doc.concat [Doc.text "#..."; print_ident_path ident cmt_tbl]

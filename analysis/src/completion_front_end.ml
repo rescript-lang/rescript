@@ -537,7 +537,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
       scope_pattern ~pattern_path
         ?context_path:(Type_utils.context_path_from_core_type core_type)
         p
-    | Ppat_type _ -> ()
+    | Ppat_type _ | Ppat_variant_spread _ -> ()
     | Ppat_unpack {txt; loc} ->
       scope := !scope |> Scope.add_module ~name:txt ~loc
     | Ppat_exception p -> scope_pattern ~pattern_path ?context_path p

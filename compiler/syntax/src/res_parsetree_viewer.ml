@@ -30,13 +30,6 @@ let expr_is_await e =
   | Pexp_await _ -> true
   | _ -> false
 
-let has_res_pat_variant_spread_attribute attrs =
-  List.exists
-    (function
-      | {Location.txt = "res.patVariantSpread"}, _ -> true
-      | _ -> false)
-    attrs
-
 let has_dict_pattern_attribute attrs =
   attrs
   |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
@@ -221,12 +214,7 @@ let rec unwrap_braces expr =
 (* Attributes the parser adds to encode syntax; they are never printed *)
 let is_parsing_attr (attr : Parsetree.attribute) =
   match attr with
-  | ( {
-        Location.txt =
-          "res.patVariantSpread" | "res.dictPattern" | "res.dictSpread";
-      },
-      _ ) ->
-    true
+  | {Location.txt = "res.dictPattern" | "res.dictSpread"}, _ -> true
   | _ -> false
 
 let filter_parsing_attrs attrs =

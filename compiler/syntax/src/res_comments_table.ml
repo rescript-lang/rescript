@@ -2064,7 +2064,7 @@ and walk_pattern pat t comments =
     walk_list (List.map (fun pat -> Pattern pat) pats) t rest
   | Ppat_variant (_label, {txt = args}) ->
     walk_list (List.map (fun pat -> Pattern pat) args) t comments
-  | Ppat_type _ -> ()
+  | Ppat_type _ | Ppat_variant_spread _ -> ()
   | Ppat_record (record_rows, _, rest) ->
     let nodes =
       Ext_list.map record_rows (fun {lid; x = p} -> PatternRecordRow (lid, p))
