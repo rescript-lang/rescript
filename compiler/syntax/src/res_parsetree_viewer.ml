@@ -223,8 +223,7 @@ let is_parsing_attr (attr : Parsetree.attribute) =
   match attr with
   | ( {
         Location.txt =
-          ( "res.iflet" | "res.patVariantSpread" | "res.dictPattern"
-          | "res.dictSpread" );
+          "res.patVariantSpread" | "res.dictPattern" | "res.dictSpread";
       },
       _ ) ->
     true
@@ -365,39 +364,6 @@ let flattenable_operators parent_operator child_operator =
       && is_equality_operator child_operator)
   else false
 
-let rec has_if_let_attribute attrs =
-  match attrs with
-  | [] -> false
-  | ({Location.txt = "res.iflet"}, _) :: _ -> true
-  | _ :: attrs -> has_if_let_attribute attrs
-
-let is_if_let_expr expr =
-  match expr with
-  | {pexp_attributes = attrs; pexp_desc = Pexp_match _}
-    when has_if_let_attribute attrs ->
-    true
-  | _ -> false
-
-let has_attributes attrs =
-  List.exists
-    (fun attr ->
-      match attr with
-      | {Location.txt = "res.iflet"}, _ -> false
-      (* Remove the fragile pattern warning for iflet expressions *)
-      | ( {Location.txt = "warning"},
-          PStr
-            [
-              {
-                pstr_desc =
-                  Pstr_eval
-                    ({pexp_desc = Pexp_constant (Pconst_string payload)}, _);
-              };
-            ] ) ->
-        String_literal.string_semantic payload <> "-4"
-        || not (has_if_let_attribute attrs)
-      | _ -> true)
-    attrs
-
 let is_array_access expr =
   match expr.pexp_desc with
   | Pexp_apply
@@ -413,43 +379,15 @@ let is_array_access expr =
     true
   | _ -> false
 
-type if_condition_kind =
-  | If of Parsetree.expression
-  | IfLet of Parsetree.pattern * Parsetree.expression
-
 let collect_if_expressions expr =
   let rec collect acc expr =
     let expr_loc = expr.pexp_loc in
     match expr.pexp_desc with
     | Pexp_ifthenelse (if_expr, then_expr, Some else_expr) ->
-      collect ((expr_loc, If if_expr, then_expr) :: acc) else_expr
+      collect ((expr_loc, if_expr, then_expr) :: acc) else_expr
     | Pexp_ifthenelse (if_expr, then_expr, (None as else_expr)) ->
-      let ifs = List.rev ((expr_loc, If if_expr, then_expr) :: acc) in
+      let ifs = List.rev ((expr_loc, if_expr, then_expr) :: acc) in
       (ifs, else_expr)
-    | Pexp_match
-        ( condition,
-          [
-            {pc_lhs = pattern; pc_guard = None; pc_rhs = then_expr};
-            {
-              pc_rhs =
-                {pexp_desc = Pexp_construct ({txt = Longident.Lident "()"}, _)};
-            };
-          ] )
-      when is_if_let_expr expr ->
-      let ifs =
-        List.rev ((expr_loc, IfLet (pattern, condition), then_expr) :: acc)
-      in
-      (ifs, None)
-    | Pexp_match
-        ( condition,
-          [
-            {pc_lhs = pattern; pc_guard = None; pc_rhs = then_expr};
-            {pc_rhs = else_expr};
-          ] )
-      when is_if_let_expr expr ->
-      collect
-        ((expr_loc, IfLet (pattern, condition), then_expr) :: acc)
-        else_expr
     | _ -> (List.rev acc, Some expr)
   in
   collect [] expr
@@ -474,23 +412,6 @@ let parameters_should_hug parameters =
     when is_huggable_pattern pat ->
     true
   | _ -> false
-
-let filter_fragile_match_attributes attrs =
-  List.filter
-    (fun attr ->
-      match attr with
-      | ( {Location.txt = "warning"},
-          PStr
-            [
-              {
-                pstr_desc =
-                  Pstr_eval
-                    ({pexp_desc = Pexp_constant (Pconst_string payload)}, _);
-              };
-            ] ) ->
-        String_literal.string_semantic payload <> "-4"
-      | _ -> true)
-    attrs
 
 let should_indent_binary_expr expr =
   let same_precedence_sub_expression operator sub_expression =

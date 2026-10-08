@@ -2594,12 +2594,10 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
           match vb.pvb_expr with
           | {pexp_attributes = []; pexp_desc = Pexp_ternary (if_expr, _, _)} ->
             Parsetree_viewer.is_binary_expression if_expr
-            || Parsetree_viewer.has_attributes if_expr.pexp_attributes
+            || if_expr.pexp_attributes <> []
           | {pexp_desc = Pexp_tagged_template _} -> false
           | {pexp_desc = Pexp_jsx_element _} -> true
-          | e ->
-            Parsetree_viewer.has_attributes e.pexp_attributes
-            || Parsetree_viewer.is_array_access e)
+          | e -> e.pexp_attributes <> [] || Parsetree_viewer.is_array_access e)
       in
       Doc.group
         (Doc.concat
@@ -3131,53 +3129,31 @@ and print_if_chain ~state pexp_attributes ifs else_expr cmt_tbl =
          (fun i (outer_loc, if_expr, then_expr) ->
            let if_txt = if i > 0 then Doc.text "else if " else Doc.text "if " in
            let doc =
-             match if_expr with
-             | Parsetree_viewer.If if_expr ->
-               let condition =
-                 if Parsetree_viewer.is_block_expr if_expr then
-                   print_expression_block ~state ~braces:true if_expr cmt_tbl
-                 else
-                   let doc =
-                     print_expression_with_comments ~state if_expr cmt_tbl
-                   in
-                   match Parens.expr if_expr with
-                   | Parens.Parenthesized -> add_parens doc
-                   | Braced braces -> print_braces doc if_expr braces
-                   | Nothing -> Doc.if_breaks (add_parens doc) doc
-               in
-               Doc.concat
-                 [
-                   if_txt;
-                   Doc.group condition;
-                   Doc.space;
-                   (let then_expr =
-                      match Parsetree_viewer.process_braces then_expr with
-                      (* This case only happens when coming from Reason, we strip braces *)
-                      | Some _, expr -> expr
-                      | _ -> then_expr
-                    in
-                    print_expression_block ~state ~braces:true then_expr cmt_tbl);
-                 ]
-             | IfLet (pattern, condition_expr) ->
-               let condition_doc =
+             let condition =
+               if Parsetree_viewer.is_block_expr if_expr then
+                 print_expression_block ~state ~braces:true if_expr cmt_tbl
+               else
                  let doc =
-                   print_expression_with_comments ~state condition_expr cmt_tbl
+                   print_expression_with_comments ~state if_expr cmt_tbl
                  in
-                 match Parens.expr condition_expr with
+                 match Parens.expr if_expr with
                  | Parens.Parenthesized -> add_parens doc
-                 | Braced braces -> print_braces doc condition_expr braces
-                 | Nothing -> doc
-               in
-               Doc.concat
-                 [
-                   if_txt;
-                   Doc.text "let ";
-                   print_pattern ~state pattern cmt_tbl;
-                   Doc.text " = ";
-                   condition_doc;
-                   Doc.space;
-                   print_expression_block ~state ~braces:true then_expr cmt_tbl;
-                 ]
+                 | Braced braces -> print_braces doc if_expr braces
+                 | Nothing -> Doc.if_breaks (add_parens doc) doc
+             in
+             Doc.concat
+               [
+                 if_txt;
+                 Doc.group condition;
+                 Doc.space;
+                 (let then_expr =
+                    match Parsetree_viewer.process_braces then_expr with
+                    (* This case only happens when coming from Reason, we strip braces *)
+                    | Some _, expr -> expr
+                    | _ -> then_expr
+                  in
+                  print_expression_block ~state ~braces:true then_expr cmt_tbl);
+               ]
            in
            print_leading_comments doc cmt_tbl.leading outer_loc)
          ifs)
@@ -3193,10 +3169,8 @@ and print_if_chain ~state pexp_attributes ifs else_expr cmt_tbl =
           print_expression_block ~state ~braces:true expr cmt_tbl;
         ]
   in
-  let attrs =
-    Parsetree_viewer.filter_fragile_match_attributes pexp_attributes
-  in
-  Doc.concat [print_attributes ~state attrs cmt_tbl; if_docs; else_doc]
+  Doc.concat
+    [print_attributes ~state pexp_attributes cmt_tbl; if_docs; else_doc]
 
 and print_assignment_rhs ~operator rhs rhs_doc =
   (* Delimited expressions handle their own indentation. Binary expressions
@@ -3206,7 +3180,7 @@ and print_assignment_rhs ~operator rhs rhs_doc =
     && (Parsetree_viewer.is_binary_expression rhs
        ||
        match rhs.pexp_desc with
-       | Pexp_match _ -> not (Parsetree_viewer.is_if_let_expr rhs)
+       | Pexp_match _ -> true
        | _ -> false)
   in
   Doc.concat
@@ -3778,9 +3752,6 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
           Doc.text " catch ";
           print_cases ~state cases cmt_tbl;
         ]
-    | Pexp_match (_, [_; _]) when Parsetree_viewer.is_if_let_expr e ->
-      let ifs, else_expr = Parsetree_viewer.collect_if_expressions e in
-      print_if_chain ~state e.pexp_attributes ifs else_expr cmt_tbl
     | Pexp_match (expr, cases) ->
       let expr_doc =
         let doc = print_expression_with_comments ~state expr cmt_tbl in
@@ -3830,7 +3801,6 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     | Pexp_apply _ | Pexp_fun _ | Pexp_setfield _ | Pexp_ifthenelse _
     | Pexp_ternary _ ->
       true
-    | Pexp_match _ when Parsetree_viewer.is_if_let_expr e -> true
     | Pexp_jsx_element _ -> true
     | _ -> false
   in
@@ -4074,7 +4044,7 @@ and print_binary_expression ~state ~force_pipe_breaks
         } ->
           if
             Parsetree_viewer.flattenable_operators parent_operator operator
-            && not (Parsetree_viewer.has_attributes expr.pexp_attributes)
+            && expr.pexp_attributes = []
           then
             let left_printed =
               flatten ~is_lhs:true ~is_multiline left operator
@@ -4568,10 +4538,8 @@ and print_pexp_apply ~state expr cmt_tbl =
         match target_expr with
         | {pexp_attributes = []; pexp_desc = Pexp_ternary (if_expr, _, _)} ->
           Parsetree_viewer.is_binary_expression if_expr
-          || Parsetree_viewer.has_attributes if_expr.pexp_attributes
-        | e ->
-          Parsetree_viewer.has_attributes e.pexp_attributes
-          || Parsetree_viewer.is_array_access e
+          || if_expr.pexp_attributes <> []
+        | e -> e.pexp_attributes <> [] || Parsetree_viewer.is_array_access e
     in
     let target_expr =
       let doc = print_expression_with_comments ~state target_expr cmt_tbl in
