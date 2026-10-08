@@ -23,6 +23,7 @@
 
 #### :bug: Bug fix
 
+- Respect `@warning` attributes on the module in `module type of`, e.g. `module type of @warning("-3") DeprecatedModule`, which still reported the warning. https://github.com/rescript-lang/rescript/pull/8738
 - Fix the formatter dropping or moving attributes and `await` on module expressions, such as `module M = @attr F(X)`, and printing invalid code for module constraints and functors in some positions, such as `module M: T = (X: S)`. https://github.com/rescript-lang/rescript/pull/8735
 - Make rewatch compile independent modules after an unrelated failure and recompile blocked dependents when a changed interface survives a failed implementation, including across full watcher rebuilds. https://github.com/rescript-lang/rescript/pull/8667
 - Fix `RescriptTools.binaryPath` failing with `ERR_PACKAGE_IMPORT_NOT_DEFINED` when used from a user project. https://github.com/rescript-lang/rescript/pull/8694

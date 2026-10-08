@@ -1627,8 +1627,12 @@ let type_module_type_of env smod =
   let tmty =
     match smod.pmod_desc with
     | Pmod_ident lid ->
-      (* turn off strengthening in this case *)
-      let path, md = Typetexp.find_module env smod.pmod_loc lid.txt in
+      (* turn off strengthening in this case; look the module up in the
+         warning scope of its attributes, as [type_module] does *)
+      let path, md =
+        Builtin_attributes.warning_scope smod.pmod_attributes (fun () ->
+            Typetexp.find_module env smod.pmod_loc lid.txt)
+      in
       {
         mod_desc = Tmod_ident (path, lid);
         mod_type = md.md_type;
