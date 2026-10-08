@@ -37,13 +37,15 @@ let add_mod_expr_parens doc = Doc.concat [Doc.lparen; doc; Doc.rparen]
    constraint or application starts with its leftmost module *)
 let rec mod_expr_starts_with_doc_comment (mod_expr : Parsetree.module_expr) =
   match mod_expr.pmod_desc with
-  (* [await] and a functor's parameter list come first *)
-  | Pmod_await _ | Pmod_functor _ -> false
+  (* A functor's attributes print on its first parameter *)
+  | Pmod_functor _ -> false
   | _
     when List.exists Parsetree_viewer.is_doc_comment_attribute
            mod_expr.pmod_attributes ->
     true
   | _ when Parsetree_viewer.mod_expr_has_attributes mod_expr -> false
+  (* Without attributes, [await] comes first *)
+  | Pmod_await _ -> false
   | Pmod_constraint (inner, _) -> mod_expr_starts_with_doc_comment inner
   | Pmod_apply _ ->
     let _, call_expr = Parsetree_viewer.mod_expr_apply mod_expr in
