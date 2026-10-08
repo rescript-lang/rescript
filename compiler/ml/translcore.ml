@@ -909,8 +909,7 @@ let wrap_exn loc arg =
        ~args:
          [global_module (Ident.create_persistent Primitive_modules.exceptions)]
        loc)
-    [arg]
-    {ap_loc = loc; ap_inlined = Default_inline}
+    [arg] {ap_loc = loc}
 let exception_id_destructed (l : Lambda.t) (fv : Ident.t) : bool =
   let rec hit_opt = function
     | None -> false
@@ -1044,14 +1043,14 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
       }
     when List.length oargs >= p.prim_arity
          && List.for_all (fun (_, arg) -> arg <> None) oargs -> (
+    (* [funct] is not translated with [transl_exp], so check its attributes
+       here, in the warning scope [transl_exp] would use *)
+    Builtin_attributes.warning_scope ~ppwarning:false funct.exp_attributes
+      (fun () ->
+        List.iter (Translattribute.check_attribute funct) funct.exp_attributes);
     let args, args' = cut p.prim_arity oargs in
     let wrap f =
-      if args' = [] then f
-      else
-        let inlined, _ =
-          Translattribute.get_and_remove_inlined_attribute funct
-        in
-        transl_apply ~inlined ~transformed_jsx f args' e.exp_loc
+      if args' = [] then f else transl_apply ~transformed_jsx f args' e.exp_loc
     in
     let args =
       List.map
@@ -1104,9 +1103,6 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
           warn_polymorphic_comparison e.exp_loc builtin argl;
           wrap (mk_builtin builtin argl e.exp_loc))))
   | Texp_apply {funct; args = oargs; partial; transformed_jsx} ->
-    let inlined, funct =
-      Translattribute.get_and_remove_inlined_attribute funct
-    in
     let uncurried_partial_application =
       (* In case of partial application foo(args, ...) when some args are missing,
          get the arity *)
@@ -1119,7 +1115,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
         | None -> None
       else None
     in
-    transl_apply ~inlined ~uncurried_partial_application ~transformed_jsx
+    transl_apply ~uncurried_partial_application ~transformed_jsx
       (transl_exp funct) oargs e.exp_loc
   | Texp_match (arg, pat_expr_list, exn_pat_expr_list, partial) ->
     transl_match e arg pat_expr_list exn_pat_expr_list partial
@@ -1315,12 +1311,10 @@ and transl_case {c_lhs; c_guard; c_rhs} = (c_lhs, transl_guard c_guard c_rhs)
 
 and transl_cases cases = List.map transl_case cases
 
-and transl_apply ?(inlined = Default_inline)
-    ?(uncurried_partial_application = None) ?(transformed_jsx = false) lam sargs
-    loc =
+and transl_apply ?(uncurried_partial_application = None)
+    ?(transformed_jsx = false) lam sargs loc =
   let lapply ap_func ap_args =
-    apply ~ap_transformed_jsx:transformed_jsx ap_func ap_args
-      {ap_loc = loc; ap_inlined = inlined}
+    apply ~ap_transformed_jsx:transformed_jsx ap_func ap_args {ap_loc = loc}
   in
   let rec build_apply lam args = function
     | (None, optional) :: l ->
@@ -1371,8 +1365,7 @@ and transl_apply ?(inlined = Default_inline)
     let extra_args = Ext_list.map extra_ids (fun id -> var id) in
     let ap_args = args @ extra_args in
     let l0 =
-      apply ~ap_transformed_jsx:transformed_jsx lam ap_args
-        {ap_loc = loc; ap_inlined = inlined}
+      apply ~ap_transformed_jsx:transformed_jsx lam ap_args {ap_loc = loc}
     in
     function_ ~loc ~attr:default_function_attribute
       ~params:(List.rev_append !none_ids extra_ids)

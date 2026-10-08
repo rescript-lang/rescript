@@ -126,7 +126,7 @@ and apply_coercion_result loc strict funct param arg cc_res =
         ~body:
           (apply_coercion loc Strict cc_res
              (Lambda.apply ~ap_transformed_jsx:false (Lambda.var id) [arg]
-                {ap_loc = loc; ap_inlined = Default_inline})))
+                {ap_loc = loc})))
 
 and wrap_id_pos_list loc id_pos_list get_field lam =
   let fv = Lambda_traverse.free_variables lam in
@@ -262,9 +262,17 @@ let rec compile_functor mexp coercion root_path loc =
       }
     ~params:[param'] ~body
 
-(* Compile a module expression *)
+(* Compile a module expression, in the warning scope of its attributes like
+   [Translcore.transl_exp] *)
 and transl_module cc rootpath mexp =
-  List.iter (Translattribute.check_attribute_on_module mexp) mexp.mod_attributes;
+  Builtin_attributes.warning_scope ~ppwarning:false mexp.mod_attributes
+    (fun () ->
+      List.iter
+        (Translattribute.check_attribute_on_module mexp)
+        mexp.mod_attributes;
+      transl_module0 cc rootpath mexp)
+
+and transl_module0 cc rootpath mexp =
   let loc = mexp.mod_loc in
   match mexp.mod_type with
   | Mty_alias (Mta_absent, _) ->
@@ -277,14 +285,11 @@ and transl_module cc rootpath mexp =
     | Tmod_structure str -> fst (transl_struct loc [] cc rootpath str)
     | Tmod_functor _ -> compile_functor mexp cc rootpath loc
     | Tmod_apply (funct, arg, ccarg) ->
-      let inlined_attribute, funct =
-        Translattribute.get_and_remove_inlined_attribute_on_module funct
-      in
       apply_coercion loc Strict cc
         (Lambda.apply ~ap_transformed_jsx:false
            (transl_module Tcoerce_none None funct)
            [transl_module ccarg None arg]
-           {ap_loc = loc; ap_inlined = inlined_attribute})
+           {ap_loc = loc})
     | Tmod_constraint (arg, _, _, ccarg) ->
       transl_module (compose_coercions cc ccarg) rootpath arg
     | Tmod_unpack (arg, _) ->

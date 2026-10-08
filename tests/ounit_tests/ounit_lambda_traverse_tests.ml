@@ -10,7 +10,7 @@ let var = Lambda.var x
    would pass either check below without exercising anything. *)
 let nodes : (string * Lambda.t) list =
   [
-    ("apply", Lambda.apply var [var] {ap_loc = loc; ap_inlined = Default_inline});
+    ("apply", Lambda.apply var [var] {ap_loc = loc});
     ( "function",
       Lambda.function_ ~loc ~attr:Lambda.default_function_attribute ~params:[x]
         ~body:debugger );

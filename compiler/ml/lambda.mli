@@ -375,10 +375,7 @@ and lfunction = {
 
 and prim_info = private {primitive: primitive; args: t list; loc: Location.t}
 
-and ap_info = {
-  ap_loc: Location.t;
-  ap_inlined: inline_attribute; (* specified with the [@inlined] attribute *)
-}
+and ap_info = {ap_loc: Location.t}
 
 and lambda_apply = private {
   ap_func: t;
