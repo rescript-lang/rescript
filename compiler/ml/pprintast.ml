@@ -1100,6 +1100,7 @@ and module_expr ctxt f x =
       (* Cf: #7200 *)
     | Pmod_unpack e -> pp f "(val@ %a)" (expression ctxt) e
     | Pmod_extension e -> extension ctxt f e
+    | Pmod_await me -> pp f "await@ %a" (module_expr ctxt) me
 
 and structure ctxt f x = list ~sep:"@\n" (structure_item ctxt) f x
 

@@ -308,6 +308,209 @@ let test_braces_roundtrip_through_ast0 _ =
   | _ ->
     assert_failure "Expected two structural brace nodes after ast0 roundtrip"
 
+let attr_names attrs = List.map (fun ({Location.txt}, _) -> txt) attrs
+
+let to_mod0 m =
+  Ast_mapper_to0.default_mapper.module_expr Ast_mapper_to0.default_mapper m
+
+let map_mod0 m =
+  Ast_mapper_from0.default_mapper.module_expr Ast_mapper_from0.default_mapper m
+
+let test_module_await_roundtrips_through_ast0 _ =
+  let await_loc = source_loc 11 22 in
+  let inner_loc = source_loc 17 22 in
+  let inner =
+    Ast_helper.Mod.ident ~loc:inner_loc
+      ~attrs:[attr "inner" (Parsetree.PStr [])]
+      (located_string ~loc:inner_loc (Longident.Lident "List"))
+  in
+  let wire =
+    to_mod0
+      (Ast_helper.Mod.await ~loc:await_loc
+         ~attrs:[attr "outer" (Parsetree.PStr [])]
+         inner)
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["inner"; "res.await"; "outer"]
+    (attr_names wire.pmod_attributes);
+  match map_mod0 wire with
+  | {
+   pmod_desc =
+     Pmod_await
+       {pmod_desc = Pmod_ident _; pmod_loc = mapped_inner_loc; pmod_attributes};
+   pmod_loc = mapped_await_loc;
+   pmod_attributes = await_attributes;
+  } ->
+    OUnit.assert_equal ~msg:"await location" await_loc mapped_await_loc;
+    OUnit.assert_equal ~msg:"inner location" inner_loc mapped_inner_loc;
+    OUnit.assert_equal ["outer"] (attr_names await_attributes);
+    OUnit.assert_equal ["inner"] (attr_names pmod_attributes)
+  | _ -> assert_failure "Expected Pmod_await after the ast0 roundtrip"
+
+let test_expression_await_location_through_ast0 _ =
+  let await_loc = source_loc 0 9 in
+  let inner_loc = source_loc 6 9 in
+  let inner =
+    Ast_helper.Exp.ident ~loc:inner_loc
+      ~attrs:[attr "inner" (Parsetree.PStr [])]
+      (located_string ~loc:inner_loc (Longident.Lident "p"))
+  in
+  let wire =
+    to_expr0
+      (Ast_helper.Exp.await ~loc:await_loc
+         ~attrs:[attr "outer" (Parsetree.PStr [])]
+         inner)
+  in
+  match map_expr0 wire with
+  | {
+   pexp_desc =
+     Pexp_await
+       {pexp_desc = Pexp_ident _; pexp_loc = mapped_inner_loc; pexp_attributes};
+   pexp_loc = mapped_await_loc;
+   pexp_attributes = await_attributes;
+  } ->
+    OUnit.assert_equal ~msg:"await location" await_loc mapped_await_loc;
+    OUnit.assert_equal ~msg:"inner location" inner_loc mapped_inner_loc;
+    OUnit.assert_equal ["outer"] (attr_names await_attributes);
+    OUnit.assert_equal ["inner"] (attr_names pexp_attributes)
+  | _ -> assert_failure "Expected Pexp_await after the ast0 roundtrip"
+
+let test_v0_await_marker_without_location _ =
+  let node_loc = source_loc 4 8 in
+  let wire =
+    Ast_helper0.Mod.ident ~loc:node_loc
+      ~attrs:[attr "res.await" (Parsetree0.PStr [])]
+      (located_string ~loc:node_loc (Longident.Lident "List"))
+  in
+  match map_mod0 wire with
+  | {pmod_desc = Pmod_await {pmod_desc = Pmod_ident _}; pmod_loc} ->
+    OUnit.assert_equal ~msg:"falls back to the node location" node_loc pmod_loc
+  | _ -> assert_failure "Expected Pmod_await from a v0 res.await marker"
+
+(* [(@warning("-3") (await List): ListT)] can come from a PPX through the v0
+   bridge; the imported module must keep the await node's attributes *)
+let test_dynamic_import_keeps_await_attributes _ =
+  let module_expr =
+    Ast_helper.Mod.constraint_ ~loc
+      (Ast_helper.Mod.await ~loc
+         ~attrs:[attr "warning" (Parsetree.PStr [])]
+         (Ast_helper.Mod.ident ~loc (located_string (Longident.Lident "List"))))
+      (Ast_helper.Mty.ident ~loc (located_string (Longident.Lident "ListT")))
+  in
+  let imported =
+    match Ast_await.awaited_module_path module_expr with
+    | Some (_, imported, _) ->
+      Ast_await.create_await_module_expression
+        ~module_type_lid:(located_string (Longident.Lident "ListT"))
+        module_expr imported
+    | None -> assert_failure "Expected an awaited module path"
+  in
+  match imported.pmod_desc with
+  | Pmod_unpack
+      {
+        pexp_desc =
+          Pexp_apply
+            {
+              args =
+                [
+                  ( _,
+                    {
+                      pexp_desc =
+                        Pexp_apply
+                          {
+                            args =
+                              [
+                                ( _,
+                                  {
+                                    pexp_desc =
+                                      Pexp_constraint
+                                        ( {
+                                            pexp_desc =
+                                              Pexp_pack
+                                                {
+                                                  pmod_desc =
+                                                    Pmod_constraint
+                                                      ( {
+                                                          pmod_desc =
+                                                            Pmod_ident _;
+                                                          pmod_attributes;
+                                                        },
+                                                        _ );
+                                                };
+                                          },
+                                          _ );
+                                  } );
+                              ];
+                          };
+                    } );
+                ];
+            };
+      } ->
+    OUnit.assert_equal ["warning"] (attr_names pmod_attributes)
+  | _ -> assert_failure "Expected unpack(await import(module(List: ListT)))"
+
+(* The v0 encoding of module [await] keeps the attribute order that PPXs saw
+   when [await] was only the [res.await] attribute: the module's own
+   attributes, the marker, then those written after [await] or around the
+   await. Decoding it gives back the parsed module expression. *)
+let test_module_await_v0_attribute_order _ =
+  let strip_locs =
+    {Ast_mapper.default_mapper with location = (fun _ _ -> Location.none)}
+  in
+  List.iter
+    (fun (source, expected) ->
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"ModuleAwait.res"
+          ~source:("module X = F(" ^ source ^ ")")
+      in
+      match parsed.parsetree with
+      | [
+       {pstr_desc = Pstr_module {pmb_expr = {pmod_desc = Pmod_apply (_, me)}}};
+      ]
+        when not parsed.invalid ->
+        let wire = to_mod0 me in
+        OUnit.assert_equal ~msg:source ~printer:(String.concat ", ") expected
+          (attr_names wire.pmod_attributes);
+        OUnit.assert_bool
+          (source ^ " roundtrips through ast0")
+          (strip_locs.module_expr strip_locs (map_mod0 wire)
+          = strip_locs.module_expr strip_locs me)
+      | _ -> assert_failure ("Expected a functor application: " ^ source))
+    [
+      ("await @b (@a M)", ["a"; "res.await"; "b"]);
+      ("@c (await @b M)", ["res.await"; "b"; "c"]);
+      ("@c (await (@a M))", ["a"; "res.await"; "c"]);
+      ("await @b (await @a M)", ["res.await"; "a"; "res.await"; "b"]);
+      ("await (@a (await M))", ["res.await"; "a"; "res.await"]);
+    ]
+
+(* [await (await M)], [await (await (M: S))] and [(await (await M): S)] are
+   dynamic imports like their single-await forms *)
+let test_nested_awaits_are_dynamic_imports _ =
+  let await m = Ast_helper.Mod.await ~loc m in
+  let path =
+    Ast_helper.Mod.ident ~loc (located_string (Longident.Lident "M"))
+  in
+  let mty = Ast_helper.Mty.ident ~loc (located_string (Longident.Lident "S")) in
+  let constrained m = Ast_helper.Mod.constraint_ ~loc m mty in
+  let recognized ~constrained:expected_constrained me =
+    match Ast_await.awaited_module_path me with
+    | Some ({txt = Longident.Lident "M"}, _, mty) ->
+      Option.is_some mty = expected_constrained
+    | _ -> false
+  in
+  OUnit.assert_bool "await (await M)"
+    (recognized ~constrained:false (await (await path)));
+  OUnit.assert_bool "await (await (M: S))"
+    (recognized ~constrained:true (await (await (constrained path))));
+  OUnit.assert_bool "(await (await M): S)"
+    (recognized ~constrained:true (constrained (await (await path))));
+  OUnit.assert_bool "await ((await M): S)"
+    (recognized ~constrained:true (await (constrained (await path))));
+  OUnit.assert_bool "M without await"
+    (Option.is_none (Ast_await.awaited_module_path (constrained path)))
+
 let test_inline_record_definition_roundtrips_through_ast0 _ =
   let name = located_string "person.details" in
   let field =
@@ -1719,6 +1922,18 @@ let suites =
          "v0_if_without_alternate_stays_if"
          >:: test_v0_if_without_alternate_stays_if;
          "braces_roundtrip_through_ast0" >:: test_braces_roundtrip_through_ast0;
+         "module_await_roundtrips_through_ast0"
+         >:: test_module_await_roundtrips_through_ast0;
+         "expression_await_location_through_ast0"
+         >:: test_expression_await_location_through_ast0;
+         "v0_await_marker_without_location"
+         >:: test_v0_await_marker_without_location;
+         "dynamic_import_keeps_await_attributes"
+         >:: test_dynamic_import_keeps_await_attributes;
+         "nested_awaits_are_dynamic_imports"
+         >:: test_nested_awaits_are_dynamic_imports;
+         "module_await_v0_attribute_order"
+         >:: test_module_await_v0_attribute_order;
          "inline_record_definition_roundtrips_through_ast0"
          >:: test_inline_record_definition_roundtrips_through_ast0;
          "this_on_braced_function_reaches_builtin_ppx"

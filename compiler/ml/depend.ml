@@ -471,6 +471,7 @@ and add_module bv modl =
     add_modtype bv mty
   | Pmod_unpack e -> add_expr bv e
   | Pmod_extension e -> handle_extension e
+  | Pmod_await modl -> add_module bv modl
 
 and add_structure bv item_list =
   let bv, m = add_structure_binding bv item_list in

@@ -430,7 +430,7 @@ let braced_expr expr =
 
 (* A constraint that needs parens where [M: S] would not parse or would mean
    something else, e.g. after [include] or [module type of]. With attributes
-   or [await] it prints its own. *)
+   it prints its own. *)
 let mod_constraint mod_expr =
   match mod_expr.Parsetree.pmod_desc with
   | Parsetree.Pmod_constraint _ ->
@@ -438,11 +438,13 @@ let mod_constraint mod_expr =
   | _ -> false
 
 (* An applied module expression that needs parens: [(M: S)(X)],
-   [((Y) => M)(X)], [(%ext)(X)], and with attributes or [await], which
+   [((Y) => M)(X)], [(%ext)(X)], [(await M)(X)], and with attributes, which
    would otherwise apply to the whole application *)
 let mod_apply_callee callee =
   match callee.Parsetree.pmod_desc with
-  | Pmod_constraint _ | Pmod_functor _ | Pmod_extension (_, PStr []) -> true
+  | Pmod_constraint _ | Pmod_functor _ | Pmod_await _
+  | Pmod_extension (_, PStr []) ->
+    true
   | _ -> Parsetree_viewer.mod_expr_has_attributes callee
 
 let mod_expr_parens mod_expr =

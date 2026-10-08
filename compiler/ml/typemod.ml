@@ -1369,6 +1369,16 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
     }
   | Pmod_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
+  | Pmod_await sarg ->
+    (* The builtin ppx turns the dynamic import forms into [unpack] and
+       removes any other [await], which has no effect; this only types a tree
+       that bypassed it *)
+    let arg = type_module ~alias sttn funct_body anchor env sarg in
+    {
+      arg with
+      mod_loc = smod.pmod_loc;
+      mod_attributes = arg.mod_attributes @ smod.pmod_attributes;
+    }
 
 and type_structure ?(toplevel = false) funct_body anchor env sstr =
   let names = new_names () in
@@ -1618,8 +1628,12 @@ let type_module_type_of env smod =
   let tmty =
     match smod.pmod_desc with
     | Pmod_ident lid ->
-      (* turn off strengthening in this case *)
-      let path, md = Typetexp.find_module env smod.pmod_loc lid.txt in
+      (* turn off strengthening in this case; look the module up in the
+         warning scope of its attributes, as [type_module] does *)
+      let path, md =
+        Builtin_attributes.warning_scope smod.pmod_attributes (fun () ->
+            Typetexp.find_module env smod.pmod_loc lid.txt)
+      in
       {
         mod_desc = Tmod_ident (path, lid);
         mod_type = md.md_type;

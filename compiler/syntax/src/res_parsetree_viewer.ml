@@ -25,13 +25,6 @@ let functor_type modtype =
   in
   process [] modtype
 
-let has_await_attribute attrs =
-  List.exists
-    (function
-      | {Location.txt = "res.await"}, _ -> true
-      | _ -> false)
-    attrs
-
 let expr_is_await e =
   match e.pexp_desc with
   | Pexp_await _ -> true
@@ -230,7 +223,7 @@ let is_parsing_attr (attr : Parsetree.attribute) =
   match attr with
   | ( {
         Location.txt =
-          ( "res.iflet" | "res.ternary" | "res.await" | "res.patVariantSpread"
+          ( "res.iflet" | "res.ternary" | "res.patVariantSpread"
           | "res.dictPattern" | "res.dictSpread" );
       },
       _ ) ->
@@ -389,7 +382,7 @@ let has_attributes attrs =
   List.exists
     (fun attr ->
       match attr with
-      | {Location.txt = "res.iflet" | "res.ternary" | "res.await"}, _ -> false
+      | {Location.txt = "res.iflet" | "res.ternary"}, _ -> false
       (* Remove the fragile pattern warning for iflet expressions *)
       | ( {Location.txt = "warning"},
           PStr
@@ -539,26 +532,18 @@ let should_inline_rhs_binary_expr rhs =
 
 let is_printable_attribute attr =
   match attr with
-  | ( {
-        Location.txt =
-          "res.iflet" | "JSX" | "res.await" | "res.ternary" | "res.dictSpread";
-      },
-      _ ) ->
+  | {Location.txt = "res.iflet" | "JSX" | "res.ternary" | "res.dictSpread"}, _
+    ->
     false
   | _ -> true
 
 let has_printable_attributes attrs = List.exists is_printable_attribute attrs
 
-(* Attributes or [await] on a module expression: either one prints before it
-   and binds less tightly than an application or a constraint. The attributes
-   are the ones [Res_printer.print_attributes] prints. *)
+(* Attributes on a module expression, the ones [Res_printer.print_attributes]
+   prints: they print before it and bind less tightly than an application or
+   a constraint *)
 let mod_expr_has_attributes (mod_expr : Parsetree.module_expr) =
-  List.exists
-    (fun attr ->
-      match attr with
-      | {Location.txt = "res.await"}, _ -> true
-      | _ -> not (is_parsing_attr attr))
-    mod_expr.pmod_attributes
+  List.exists (fun attr -> not (is_parsing_attr attr)) mod_expr.pmod_attributes
 
 let filter_printable_attributes attrs = List.filter is_printable_attribute attrs
 
@@ -624,12 +609,10 @@ let mod_expr_apply mod_expr =
 let mod_expr_functor mod_expr =
   let rec loop acc mod_expr =
     match mod_expr with
-    (* An awaited inner functor is kept as the result, so [await] is printed *)
     | {
      pmod_desc = Pmod_functor (lbl, mod_type, return_mod_expr);
      pmod_attributes = attrs;
-    }
-      when acc = [] || not (has_await_attribute attrs) ->
+    } ->
       let param = (attrs, lbl, mod_type) in
       loop (param :: acc) return_mod_expr
     | return_mod_expr -> (List.rev acc, return_mod_expr)

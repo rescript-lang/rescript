@@ -662,6 +662,9 @@ and module_expr i ppf x =
   | Pmod_extension (s, arg) ->
     line i ppf "Pmod_extension \"%s\"\n" s.txt;
     payload i ppf arg
+  | Pmod_await me ->
+    line i ppf "Pmod_await\n";
+    module_expr i ppf me
 
 and structure i ppf x = list i structure_item ppf x
 

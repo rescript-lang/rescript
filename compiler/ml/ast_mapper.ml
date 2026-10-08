@@ -250,6 +250,7 @@ module M = struct
       constraint_ ~loc ~attrs (sub.module_expr sub m) (sub.module_type sub mty)
     | Pmod_unpack e -> unpack ~loc ~attrs (sub.expr sub e)
     | Pmod_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Pmod_await m -> await ~loc ~attrs (sub.module_expr sub m)
 
   let map_structure_item sub {pstr_loc = loc; pstr_desc = desc} =
     let open Str in

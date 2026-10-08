@@ -266,7 +266,6 @@ module Error_messages = struct
 end
 
 let if_let_attr = (Location.mknoloc "res.iflet", Parsetree.PStr [])
-let make_await_attr loc = (Location.mkloc "res.await" loc, Parsetree.PStr [])
 let suppress_fragile_match_warning_attr =
   ( Location.mknoloc "warning",
     Parsetree.PStr
@@ -6718,25 +6717,30 @@ and parse_functor_module_expr p =
  *  | extension
  *  | attributes module-expr *)
 and parse_module_expr p =
-  let has_await, loc_await =
-    let start_pos = Parser.start_pos p in
+  let start_pos = Parser.start_pos p in
+  let has_await =
     match Parser.peek p with
     | Await ->
       Parser.expect Await p;
-      let end_pos = Parser.end_pos p in
-      (true, mk_loc start_pos end_pos)
-    | _ -> (false, mk_loc start_pos start_pos)
+      true
+    | _ -> false
   in
   let attrs = parse_attributes p in
-  let attrs = if has_await then make_await_attr loc_await :: attrs else attrs in
   let mod_expr =
     if is_es6_arrow_functor p then parse_functor_module_expr p
     else parse_primary_mod_expr p
   in
-  {
-    mod_expr with
-    pmod_attributes = List.concat [mod_expr.pmod_attributes; attrs];
-  }
+  (* The attributes after [await] belong to the await, like those of
+     [@attr (await M)], and the module keeps its own: [await @b (@a M)] *)
+  if has_await then
+    Ast_helper.Mod.await
+      ~loc:(mk_loc start_pos mod_expr.pmod_loc.loc_end)
+      ~attrs mod_expr
+  else
+    {
+      mod_expr with
+      pmod_attributes = List.concat [mod_expr.pmod_attributes; attrs];
+    }
 
 and parse_constrained_mod_expr p =
   let mod_expr = parse_module_expr p in

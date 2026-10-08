@@ -31,8 +31,6 @@ val process_attributes_rev : t -> attr_kind * t
 
 val has_inline_payload : t -> attr option
 
-val has_await_payload : t -> bool
-
 type derive_attr = {bs_deriving: Ast_payload.action list option} [@@unboxed]
 
 val arg_encoding : t -> [`Nothing | `String | `Int | `Ignore | `Unwrap]

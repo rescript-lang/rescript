@@ -38,6 +38,7 @@ module V = @JSX (X: S)
 // a functor argument can't start with a doc comment
 module W = H(@w /** doc */ X)
 module Y = H((/** doc */ X: S))
+module AA = H((/** doc */ (await X)))
 module Z = /** doc */ X
 include /** doc */ X
 
@@ -53,5 +54,10 @@ let f = async () => {
   module G = (await F(A))(B)
   module H = (X: T) => await (Y: S)
   module I = (X: T) => await (Y: S) => {}
+  module J = @w (await X)
+  module K = await @w (await X)
+  module L = H(await {
+    let x = 1
+  })
   ()
 }

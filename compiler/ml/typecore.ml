@@ -239,7 +239,8 @@ let iter_expression f e =
     match me.pmod_desc with
     | Pmod_extension _ | Pmod_ident _ -> ()
     | Pmod_structure str -> List.iter structure_item str
-    | Pmod_constraint (me, _) | Pmod_functor (_, _, me) -> module_expr me
+    | Pmod_constraint (me, _) | Pmod_functor (_, _, me) | Pmod_await me ->
+      module_expr me
     | Pmod_apply (me1, me2) ->
       module_expr me1;
       module_expr me2
