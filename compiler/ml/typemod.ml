@@ -1370,8 +1370,9 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
   | Pmod_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
   | Pmod_await sarg ->
-    (* The frontend turns the dynamic import forms into [unpack]; any other
-       [await] has no effect *)
+    (* The builtin ppx turns the dynamic import forms into [unpack] and
+       removes any other [await], which has no effect; this only types a tree
+       that bypassed it *)
     let arg = type_module ~alias sttn funct_body anchor env sarg in
     {
       arg with

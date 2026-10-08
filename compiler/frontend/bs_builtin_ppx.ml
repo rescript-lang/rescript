@@ -842,9 +842,23 @@ let structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t) =
   await_context := await_saved;
   result
 
+(* Outside the dynamic import forms, which the [expr] and [structure] mappers
+   rewrite before mapping their children, [await] on a module has no effect.
+   Remove it, keeping its attributes on the module it wraps, so the type
+   checker sees the same module expressions as without it: it treats some
+   shapes specially, e.g. a module path in [module type of] or [()] as the
+   argument of a generative functor. *)
+let module_expr_mapper (self : mapper) (me : Parsetree.module_expr) =
+  match me.pmod_desc with
+  | Pmod_await inner ->
+    self.module_expr self
+      {inner with pmod_attributes = me.pmod_attributes @ inner.pmod_attributes}
+  | _ -> default_mapper.module_expr self me
+
 let mapper : mapper =
   {
     default_mapper with
+    module_expr = module_expr_mapper;
     expr = expr_mapper ~async_context:(ref true) ~in_function_def:(ref false);
     pat = pat_mapper;
     typ = typ_mapper;
