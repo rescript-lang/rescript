@@ -446,6 +446,32 @@ let test_dynamic_import_keeps_await_attributes _ =
     OUnit.assert_equal ["warning"] (attr_names pmod_attributes)
   | _ -> assert_failure "Expected unpack(await import(module(List: ListT)))"
 
+(* [await (await M)], [await (await (M: S))] and [(await (await M): S)] are
+   dynamic imports like their single-await forms *)
+let test_nested_awaits_are_dynamic_imports _ =
+  let await_ m = Ast_helper.Mod.await_ ~loc m in
+  let path =
+    Ast_helper.Mod.ident ~loc (located_string (Longident.Lident "M"))
+  in
+  let mty = Ast_helper.Mty.ident ~loc (located_string (Longident.Lident "S")) in
+  let constrained m = Ast_helper.Mod.constraint_ ~loc m mty in
+  let recognized ~constrained:expected_constrained me =
+    match Ast_await.awaited_module_path me with
+    | Some ({txt = Longident.Lident "M"}, _, mty) ->
+      Option.is_some mty = expected_constrained
+    | _ -> false
+  in
+  OUnit.assert_bool "await (await M)"
+    (recognized ~constrained:false (await_ (await_ path)));
+  OUnit.assert_bool "await (await (M: S))"
+    (recognized ~constrained:true (await_ (await_ (constrained path))));
+  OUnit.assert_bool "(await (await M): S)"
+    (recognized ~constrained:true (constrained (await_ (await_ path))));
+  OUnit.assert_bool "await ((await M): S)"
+    (recognized ~constrained:true (await_ (constrained (await_ path))));
+  OUnit.assert_bool "M without await"
+    (Option.is_none (Ast_await.awaited_module_path (constrained path)))
+
 let test_inline_record_definition_roundtrips_through_ast0 _ =
   let name = located_string "person.details" in
   let field =
@@ -1865,6 +1891,8 @@ let suites =
          >:: test_v0_await_marker_without_location;
          "dynamic_import_keeps_await_attributes"
          >:: test_dynamic_import_keeps_await_attributes;
+         "nested_awaits_are_dynamic_imports"
+         >:: test_nested_awaits_are_dynamic_imports;
          "inline_record_definition_roundtrips_through_ast0"
          >:: test_inline_record_definition_roundtrips_through_ast0;
          "this_on_braced_function_reaches_builtin_ppx"

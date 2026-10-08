@@ -409,15 +409,15 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
       }
     in
     match Ast_await.awaited_module_path me with
-    | Some (module_lid, None) ->
+    | Some (module_lid, _, None) ->
       dynamic_import
         {
           txt = Lident (local_module_type_name module_lid.txt);
           loc = module_lid.loc;
         }
-    | Some (_, Some {pmty_desc = Pmty_ident mtyp_lid}) ->
+    | Some (_, _, Some {pmty_desc = Pmty_ident mtyp_lid}) ->
       dynamic_import mtyp_lid
-    | Some (_, Some _) | None -> default_expr_mapper self e)
+    | Some (_, _, Some _) | None -> default_expr_mapper self e)
   | _ -> default_expr_mapper self e
 
 let expr_mapper ~async_context ~in_function_def (self : mapper)
@@ -431,7 +431,8 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
         "Await on expression not in an async context"
   in
   match e.pexp_desc with
-  | Pexp_letmodule (_, me, _) when Ast_await.awaited_module_path me <> None ->
+  | Pexp_letmodule (_, me, _)
+    when Option.is_some (Ast_await.awaited_module_path me) ->
     check_await ();
     result
   | _ -> (
@@ -740,50 +741,50 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
       in
       aux [] stru
     (* Dynamic import of module transformation: module M = await List *)
-    | Pstr_module
-        ({
-           pmb_expr =
-             {
-               pmod_desc = Pmod_await ({pmod_desc = Pmod_ident {txt; loc}} as me);
-             };
-         } as mb) ->
-      let item = self.structure_item self item in
-      let safe_module_type_name = local_module_type_name txt in
-      let has_local_module_name =
-        Hashtbl.find_opt !await_context safe_module_type_name
-      in
-      (* module __List__ = module type of List *)
-      let module_type_decl =
-        match has_local_module_name with
-        | Some _ -> []
-        | None ->
-          Hashtbl.add !await_context safe_module_type_name safe_module_type_name;
-          [
-            Ast_helper.(
-              Str.modtype ~loc
-                (Mtd.mk ~loc
-                   {txt = safe_module_type_name; loc}
-                   ~typ:(Mty.typeof_ ~loc me)));
-          ]
-      in
-      let safe_module_type_lid : Ast_helper.lid =
-        {txt = Lident safe_module_type_name; loc = mb.pmb_expr.pmod_loc}
-      in
-      module_type_decl
-      @
-      (* module M = await List *)
-      {
-        item with
-        pstr_desc =
-          Pstr_module
-            {
-              mb with
-              pmb_expr =
-                Ast_await.create_await_module_expression
-                  ~module_type_lid:safe_module_type_lid mb.pmb_expr;
-            };
-      }
-      :: structure_mapper ~await_context self rest
+    | Pstr_module mb -> (
+      match Ast_await.awaited_module_path mb.pmb_expr with
+      | Some ({txt; loc}, me, None) ->
+        let item = self.structure_item self item in
+        let safe_module_type_name = local_module_type_name txt in
+        let has_local_module_name =
+          Hashtbl.find_opt !await_context safe_module_type_name
+        in
+        (* module __List__ = module type of List *)
+        let module_type_decl =
+          match has_local_module_name with
+          | Some _ -> []
+          | None ->
+            Hashtbl.add !await_context safe_module_type_name
+              safe_module_type_name;
+            [
+              Ast_helper.(
+                Str.modtype ~loc
+                  (Mtd.mk ~loc
+                     {txt = safe_module_type_name; loc}
+                     ~typ:(Mty.typeof_ ~loc me)));
+            ]
+        in
+        let safe_module_type_lid : Ast_helper.lid =
+          {txt = Lident safe_module_type_name; loc = mb.pmb_expr.pmod_loc}
+        in
+        module_type_decl
+        @
+        (* module M = await List *)
+        {
+          item with
+          pstr_desc =
+            Pstr_module
+              {
+                mb with
+                pmb_expr =
+                  Ast_await.create_await_module_expression
+                    ~module_type_lid:safe_module_type_lid mb.pmb_expr;
+              };
+        }
+        :: structure_mapper ~await_context self rest
+      | _ ->
+        self.structure_item self item
+        :: structure_mapper ~await_context self rest)
     | Pstr_value (_, vbs) ->
       let item = self.structure_item self item in
       (* [ module __List__ = module type of List ] *)
@@ -793,29 +794,26 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
         | ({pvb_expr} : Parsetree.value_binding) :: tl ->
           let rec aux (expr : Parsetree.expression) =
             match expr.pexp_desc with
-            | Pexp_letmodule
-                ( _,
-                  {
-                    pmod_desc =
-                      Pmod_await ({pmod_desc = Pmod_ident {txt; loc}} as me);
-                  },
-                  expr ) -> (
-              let safe_module_type_name = local_module_type_name txt in
-              let has_local_module_name =
-                Hashtbl.find_opt !await_context safe_module_type_name
-              in
+            | Pexp_letmodule (_, me, expr) -> (
+              match Ast_await.awaited_module_path me with
+              | Some ({txt; loc}, me, None) -> (
+                let safe_module_type_name = local_module_type_name txt in
+                let has_local_module_name =
+                  Hashtbl.find_opt !await_context safe_module_type_name
+                in
 
-              match has_local_module_name with
-              | Some _ -> aux expr
-              | None ->
-                Hashtbl.add !await_context safe_module_type_name
-                  safe_module_type_name;
-                Ast_helper.(
-                  Str.modtype ~loc
-                    (Mtd.mk ~loc
-                       {txt = safe_module_type_name; loc}
-                       ~typ:(Mty.typeof_ ~loc me)))
-                :: aux expr)
+                match has_local_module_name with
+                | Some _ -> aux expr
+                | None ->
+                  Hashtbl.add !await_context safe_module_type_name
+                    safe_module_type_name;
+                  Ast_helper.(
+                    Str.modtype ~loc
+                      (Mtd.mk ~loc
+                         {txt = safe_module_type_name; loc}
+                         ~typ:(Mty.typeof_ ~loc me)))
+                  :: aux expr)
+              | _ -> acc)
             | Pexp_let (_, vbs, expr) -> aux expr @ spelunk_vbs acc vbs
             | Pexp_braces {expr} -> aux expr
             | Pexp_ifthenelse (_, then_expr, Some else_expr) ->

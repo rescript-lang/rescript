@@ -25,16 +25,22 @@ let is_await_expr (e : Parsetree.expression) =
     true
   | _ -> false
 
-(* An awaited module path: [await M], and [await (M: S)] or [(await M: S)].
-   Returns [M], and [S] for the constrained forms. It is a dynamic import
-   when [S] is absent or a module type path. *)
+(* An awaited module path: [await M], and [await (M: S)] or [(await M: S)],
+   where [await] may be repeated, e.g. [await (await M)]. Returns the path
+   of [M] and its node, and [S] for the constrained forms. It is a dynamic
+   import when [S] is absent or a module type path. *)
 let awaited_module_path (e : Parsetree.module_expr) =
-  match e.pmod_desc with
-  | Pmod_await {pmod_desc = Pmod_ident lid} -> Some (lid, None)
-  | Pmod_await {pmod_desc = Pmod_constraint ({pmod_desc = Pmod_ident lid}, mty)}
-  | Pmod_constraint ({pmod_desc = Pmod_await {pmod_desc = Pmod_ident lid}}, mty)
-    ->
-    Some (lid, Some mty)
+  let rec remove_awaits awaited (m : Parsetree.module_expr) =
+    match m.pmod_desc with
+    | Pmod_await inner -> remove_awaits true inner
+    | _ -> (awaited, m)
+  in
+  match remove_awaits false e with
+  | true, ({pmod_desc = Pmod_ident lid} as path) -> Some (lid, path, None)
+  | awaited, {pmod_desc = Pmod_constraint (m, mty)} -> (
+    match remove_awaits awaited m with
+    | true, ({pmod_desc = Pmod_ident lid} as path) -> Some (lid, path, Some mty)
+    | _ -> None)
   | _ -> None
 
 (* Transform a dynamic import form [await M] to
@@ -46,7 +52,8 @@ let create_await_module_expression ~module_type_lid (e : Parsetree.module_expr)
     match m.pmod_desc with
     (* Its attributes, e.g. [@warning], stay on the imported module *)
     | Pmod_await inner ->
-      {inner with pmod_attributes = m.pmod_attributes @ inner.pmod_attributes}
+      remove_await
+        {inner with pmod_attributes = m.pmod_attributes @ inner.pmod_attributes}
     | Pmod_constraint (inner, mty) ->
       {m with pmod_desc = Pmod_constraint (remove_await inner, mty)}
     | _ -> m
