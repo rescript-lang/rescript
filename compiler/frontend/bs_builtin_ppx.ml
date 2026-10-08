@@ -849,11 +849,8 @@ let structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t) =
    shapes specially, e.g. a module path in [module type of] or [()] as the
    argument of a generative functor. *)
 let module_expr_mapper (self : mapper) (me : Parsetree.module_expr) =
-  match me.pmod_desc with
-  | Pmod_await inner ->
-    self.module_expr self
-      {inner with pmod_attributes = me.pmod_attributes @ inner.pmod_attributes}
-  | _ -> default_mapper.module_expr self me
+  let _, me = Ast_await.remove_awaits false me in
+  default_mapper.module_expr self me
 
 let mapper : mapper =
   {

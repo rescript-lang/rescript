@@ -25,6 +25,16 @@ let is_await_expr (e : Parsetree.expression) =
     true
   | _ -> false
 
+(* [m] without its outer awaits, e.g. [await (await M)], whose attributes
+   (e.g. [@warning]) stay on the module they wrap, and whether it had any
+   ([awaited] for the awaits already removed) *)
+let rec remove_awaits awaited (m : Parsetree.module_expr) =
+  match m.pmod_desc with
+  | Pmod_await inner ->
+    remove_awaits true
+      {inner with pmod_attributes = m.pmod_attributes @ inner.pmod_attributes}
+  | _ -> (awaited, m)
+
 (* An awaited module path: [await M], and [await (M: S)] or [(await M: S)],
    where [await] may be repeated, e.g. [await (await M)]. Returns the path of
    [M]; the module to import, which is [e] without its awaits, whose
@@ -32,13 +42,6 @@ let is_await_expr (e : Parsetree.expression) =
    constrained forms. It is a dynamic import when [S] is absent or a module
    type path. *)
 let awaited_module_path (e : Parsetree.module_expr) =
-  let rec remove_awaits awaited (m : Parsetree.module_expr) =
-    match m.pmod_desc with
-    | Pmod_await inner ->
-      remove_awaits true
-        {inner with pmod_attributes = m.pmod_attributes @ inner.pmod_attributes}
-    | _ -> (awaited, m)
-  in
   match remove_awaits false e with
   | true, ({pmod_desc = Pmod_ident lid} as imported) ->
     Some (lid, imported, None)
