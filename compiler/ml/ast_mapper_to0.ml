@@ -352,13 +352,14 @@ module M = struct
     | Pmod_await m ->
       (* Single v0 attribute slot for two nodes, as for [Pexp_await]: the
          await node's own attributes go in front of the [res.await] marker,
-         the inner module's attributes after it. *)
+         the inner module's attributes after it. The marker carries the await
+         node's location. *)
       let m = sub.module_expr sub m in
       {
         m with
         pmod_attributes =
           attrs
-          @ ((Location.mknoloc "res.await", Pt.PStr []) :: m.pmod_attributes);
+          @ ((Location.mkloc "res.await" loc, Pt.PStr []) :: m.pmod_attributes);
       }
 
   let map_structure_item sub {pstr_loc = loc; pstr_desc = desc} =
@@ -777,13 +778,13 @@ module E = struct
       (* Single v0 attribute slot for two nodes: the await node's own
          attributes go in front of the [res.await] marker, the inner
          expression's attributes after it, so [Ast_mapper_from0] can split
-         them again. *)
+         them again. The marker carries the await node's location. *)
       let e = sub.expr sub e in
       {
         e with
         pexp_attributes =
           attrs
-          @ ((Location.mknoloc "res.await", Pt.PStr []) :: e.pexp_attributes);
+          @ ((Location.mkloc "res.await" loc, Pt.PStr []) :: e.pexp_attributes);
       }
     | Pexp_jsx_element
         (Jsx_fragment

@@ -38,6 +38,12 @@ let extract_internal_loc_attr attr_name attrs =
   in
   loop [] attrs
 
+(* The location of an await node, which [Ast_mapper_to0] stores on the
+   [res.await] marker. A marker created without one, e.g. by a PPX, falls back
+   to the location of the node it is on. *)
+let await_marker_loc ~node_loc (marker_loc : Location.t) =
+  if marker_loc = Location.none then node_loc else marker_loc
+
 let extract_ternary_attr (attrs : Pt.attributes) =
   let rec loop rev_acc = function
     | [] -> (false, List.rev rev_acc)
@@ -471,16 +477,18 @@ module M = struct
       ({pmod_loc = loc; pmod_desc = desc; pmod_attributes = attrs} as m) =
     let open Mod in
     let rec split_await acc = function
-      | ({Location.txt = "res.await"}, _) :: rest -> Some (List.rev acc, rest)
+      | ({Location.txt = "res.await"; loc = await_loc}, _) :: rest ->
+        Some (List.rev acc, await_loc, rest)
       | a :: rest -> split_await (a :: acc) rest
       | [] -> None
     in
     match split_await [] attrs with
-    | Some (await_attrs0, inner_attrs0) ->
+    | Some (await_attrs0, await_loc, inner_attrs0) ->
       (* [Ast_mapper_to0] puts the await node's attributes before the
          [res.await] marker and the inner module's attributes after it *)
       let inner = map sub {m with pmod_attributes = inner_attrs0} in
-      await_ ~loc:(sub.location sub loc)
+      await_
+        ~loc:(sub.location sub (await_marker_loc ~node_loc:loc await_loc))
         ~attrs:(sub.attributes sub await_attrs0)
         inner
     | None -> (
@@ -683,16 +691,21 @@ module E = struct
          expression's attributes into the one v0 slot, with [res.await] as
          the boundary: await-node attributes before it, inner attributes
          after it. *)
-      let await_attrs0, inner_attrs0 =
+      let await_attrs0, await_loc, inner_attrs0 =
         let rec split acc = function
-          | ({Location.txt = "res.await"}, _) :: rest -> (List.rev acc, rest)
+          | ({Location.txt = "res.await"; loc = await_loc}, _) :: rest ->
+            (List.rev acc, await_loc, rest)
           | a :: rest -> split (a :: acc) rest
-          | [] -> (List.rev acc, [])
+          | [] -> (List.rev acc, Location.none, [])
         in
         split [] e.pexp_attributes
       in
       let inner = sub.expr sub {e with pexp_attributes = inner_attrs0} in
-      await ~loc ~attrs:(sub.attributes sub await_attrs0) inner
+      await
+        ~loc:
+          (sub.location sub (await_marker_loc ~node_loc:e.pexp_loc await_loc))
+        ~attrs:(sub.attributes sub await_attrs0)
+        inner
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
     | Pexp_constant (Pconst_string (text, delimiter))
       when has_template_attr attrs && delimiter <> Some "json" ->

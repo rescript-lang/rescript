@@ -44,7 +44,9 @@ let create_await_module_expression ~module_type_lid (e : Parsetree.module_expr)
   let open Ast_helper in
   let rec remove_await (m : Parsetree.module_expr) =
     match m.pmod_desc with
-    | Pmod_await inner -> inner
+    (* Its attributes, e.g. [@warning], stay on the imported module *)
+    | Pmod_await inner ->
+      {inner with pmod_attributes = m.pmod_attributes @ inner.pmod_attributes}
     | Pmod_constraint (inner, mty) ->
       {m with pmod_desc = Pmod_constraint (remove_await inner, mty)}
     | _ -> m
