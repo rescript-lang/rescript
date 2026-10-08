@@ -476,16 +476,18 @@ module M = struct
   let rec map sub
       ({pmod_loc = loc; pmod_desc = desc; pmod_attributes = attrs} as m) =
     let open Mod in
-    let rec split_await acc = function
-      | ({Location.txt = "res.await"; loc = await_loc}, _) :: rest ->
-        Some (List.rev acc, await_loc, rest)
-      | a :: rest -> split_await (a :: acc) rest
+    (* [Ast_mapper_to0] puts the inner module's attributes before the
+       [res.await] marker and the await node's attributes after it. The last
+       marker belongs to the outermost await: [await (await M)] is
+       [[res.await; res.await]]. *)
+    let rec split_await after = function
       | [] -> None
+      | ({Location.txt = "res.await"; loc = await_loc}, _) :: before ->
+        Some (List.rev before, await_loc, after)
+      | a :: before -> split_await (a :: after) before
     in
-    match split_await [] attrs with
-    | Some (await_attrs0, await_loc, inner_attrs0) ->
-      (* [Ast_mapper_to0] puts the await node's attributes before the
-         [res.await] marker and the inner module's attributes after it *)
+    match split_await [] (List.rev attrs) with
+    | Some (inner_attrs0, await_loc, await_attrs0) ->
       let inner = map sub {m with pmod_attributes = inner_attrs0} in
       await_
         ~loc:(sub.location sub (await_marker_loc ~node_loc:loc await_loc))

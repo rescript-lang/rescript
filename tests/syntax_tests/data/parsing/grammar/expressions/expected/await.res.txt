@@ -13,12 +13,12 @@ let () =
 let () = {await (delay 10)}
 let () = {await (delay 10); await (delay 20)}
 let forEach = await ((import Belt.List.forEach)[@a ][@b ])
-module M = await ((Belt.List)[@a ][@b ])
+module M = ((await Belt.List)[@a ][@b ])
 let f [arity:1]() =
-  {let module M = await ((Belt.List)[@a ][@b ]) in M.forEach}
-let () = {let module M = await ((Belt.List)[@a ][@b ]) in M.forEach}
+  {let module M = ((await Belt.List)[@a ][@b ]) in M.forEach}
+let () = {let module M = ((await Belt.List)[@a ][@b ]) in M.forEach}
 module type BeltList  = module type of Belt.List
 let f [arity:1]() =
-  {let module M = await (((Belt.List : BeltList))[@a ][@b ]) in M.forEach}
+  {let module M = ((await (Belt.List : BeltList))[@a ][@b ]) in M.forEach}
 let () =
-  {let module M = await (((Belt.List : BeltList))[@a ][@b ]) in M.forEach}
+  {let module M = ((await (Belt.List : BeltList))[@a ][@b ]) in M.forEach}

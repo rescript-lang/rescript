@@ -6730,17 +6730,17 @@ and parse_module_expr p =
     if is_es6_arrow_functor p then parse_functor_module_expr p
     else parse_primary_mod_expr p
   in
-  let mod_expr =
+  (* The attributes after [await] belong to the await, like those of
+     [@attr (await M)], and the module keeps its own: [await @b (@a M)] *)
+  if has_await then
+    Ast_helper.Mod.await_
+      ~loc:(mk_loc start_pos mod_expr.pmod_loc.loc_end)
+      ~attrs mod_expr
+  else
     {
       mod_expr with
       pmod_attributes = List.concat [mod_expr.pmod_attributes; attrs];
     }
-  in
-  if has_await then
-    Ast_helper.Mod.await_
-      ~loc:(mk_loc start_pos mod_expr.pmod_loc.loc_end)
-      mod_expr
-  else mod_expr
 
 and parse_constrained_mod_expr p =
   let mod_expr = parse_module_expr p in

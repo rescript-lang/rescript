@@ -350,16 +350,17 @@ module M = struct
     | Pmod_unpack e -> unpack ~loc ~attrs (sub.expr sub e)
     | Pmod_extension x -> extension ~loc ~attrs (sub.extension sub x)
     | Pmod_await m ->
-      (* Single v0 attribute slot for two nodes, as for [Pexp_await]: the
-         await node's own attributes go in front of the [res.await] marker,
-         the inner module's attributes after it. The marker carries the await
-         node's location. *)
+      (* Single v0 attribute slot for two nodes, in the order of the
+         attribute encoding of module [await] that PPXs know: the inner
+         module's attributes, the [res.await] marker, then the await node's
+         own attributes, e.g. [[@a; res.await; @b]] for [await @b (@a M)].
+         The marker carries the await node's location. *)
       let m = sub.module_expr sub m in
       {
         m with
         pmod_attributes =
-          attrs
-          @ ((Location.mkloc "res.await" loc, Pt.PStr []) :: m.pmod_attributes);
+          m.pmod_attributes
+          @ ((Location.mkloc "res.await" loc, Pt.PStr []) :: attrs);
       }
 
   let map_structure_item sub {pstr_loc = loc; pstr_desc = desc} =

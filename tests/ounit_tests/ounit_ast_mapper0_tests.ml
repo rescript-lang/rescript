@@ -331,7 +331,7 @@ let test_module_await_roundtrips_through_ast0 _ =
          inner)
   in
   OUnit.assert_equal ~printer:(String.concat ", ")
-    ["outer"; "res.await"; "inner"]
+    ["inner"; "res.await"; "outer"]
     (attr_names wire.pmod_attributes);
   match map_mod0 wire with
   | {
@@ -448,6 +448,42 @@ let test_dynamic_import_keeps_await_attributes _ =
       } ->
     OUnit.assert_equal ["warning"] (attr_names pmod_attributes)
   | _ -> assert_failure "Expected unpack(await import(module(List: ListT)))"
+
+(* The v0 encoding of module [await] keeps the attribute order that PPXs saw
+   when [await] was only the [res.await] attribute: the module's own
+   attributes, the marker, then those written after [await] or around the
+   await. Decoding it gives back the parsed module expression. *)
+let test_module_await_v0_attribute_order _ =
+  let strip_locs =
+    {Ast_mapper.default_mapper with location = (fun _ _ -> Location.none)}
+  in
+  List.iter
+    (fun (source, expected) ->
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"ModuleAwait.res"
+          ~source:("module X = F(" ^ source ^ ")")
+      in
+      match parsed.parsetree with
+      | [
+       {pstr_desc = Pstr_module {pmb_expr = {pmod_desc = Pmod_apply (_, me)}}};
+      ]
+        when not parsed.invalid ->
+        let wire = to_mod0 me in
+        OUnit.assert_equal ~msg:source ~printer:(String.concat ", ") expected
+          (attr_names wire.pmod_attributes);
+        OUnit.assert_bool
+          (source ^ " roundtrips through ast0")
+          (strip_locs.module_expr strip_locs (map_mod0 wire)
+          = strip_locs.module_expr strip_locs me)
+      | _ -> assert_failure ("Expected a functor application: " ^ source))
+    [
+      ("await @b (@a M)", ["a"; "res.await"; "b"]);
+      ("@c (await @b M)", ["res.await"; "b"; "c"]);
+      ("@c (await (@a M))", ["a"; "res.await"; "c"]);
+      ("await @b (await @a M)", ["res.await"; "a"; "res.await"; "b"]);
+      ("await (@a (await M))", ["res.await"; "a"; "res.await"]);
+    ]
 
 (* [await (await M)], [await (await (M: S))] and [(await (await M): S)] are
    dynamic imports like their single-await forms *)
@@ -1896,6 +1932,8 @@ let suites =
          >:: test_dynamic_import_keeps_await_attributes;
          "nested_awaits_are_dynamic_imports"
          >:: test_nested_awaits_are_dynamic_imports;
+         "module_await_v0_attribute_order"
+         >:: test_module_await_v0_attribute_order;
          "inline_record_definition_roundtrips_through_ast0"
          >:: test_inline_record_definition_roundtrips_through_ast0;
          "this_on_braced_function_reaches_builtin_ppx"

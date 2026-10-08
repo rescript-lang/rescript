@@ -1377,7 +1377,7 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
     {
       arg with
       mod_loc = smod.pmod_loc;
-      mod_attributes = smod.pmod_attributes @ arg.mod_attributes;
+      mod_attributes = arg.mod_attributes @ smod.pmod_attributes;
     }
 
 and type_structure ?(toplevel = false) funct_body anchor env sstr =

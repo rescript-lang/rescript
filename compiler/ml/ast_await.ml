@@ -26,13 +26,14 @@ let is_await_expr (e : Parsetree.expression) =
   | _ -> false
 
 (* [m] without its outer awaits, e.g. [await (await M)], whose attributes
-   (e.g. [@warning]) stay on the module they wrap, and whether it had any
-   ([awaited] for the awaits already removed) *)
+   (e.g. [@warning]) stay on the module they wrap, after its own as in the v0
+   encoding, and whether it had any ([awaited] for the awaits already
+   removed) *)
 let rec remove_awaits awaited (m : Parsetree.module_expr) =
   match m.pmod_desc with
   | Pmod_await inner ->
     remove_awaits true
-      {inner with pmod_attributes = m.pmod_attributes @ inner.pmod_attributes}
+      {inner with pmod_attributes = inner.pmod_attributes @ m.pmod_attributes}
   | _ -> (awaited, m)
 
 (* An awaited module path: [await M], and [await (M: S)] or [(await M: S)],
