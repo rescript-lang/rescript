@@ -418,6 +418,7 @@ module Mod : sig
     ?loc:loc -> ?attrs:attrs -> module_expr -> module_type -> module_expr
   val unpack : ?loc:loc -> ?attrs:attrs -> expression -> module_expr
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> module_expr
+  val await_ : ?loc:loc -> ?attrs:attrs -> module_expr -> module_expr
 end
 
 (** Signature items *)

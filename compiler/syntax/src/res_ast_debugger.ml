@@ -261,6 +261,8 @@ module Sexp_ast = struct
       | Pmod_unpack expr -> Sexp.list [Sexp.atom "Pmod_unpack"; expression expr]
       | Pmod_extension ext ->
         Sexp.list [Sexp.atom "Pmod_extension"; extension ext]
+      | Pmod_await mod_expr ->
+        Sexp.list [Sexp.atom "Pmod_await"; module_expression mod_expr]
     in
     Sexp.list [Sexp.atom "module_expr"; desc; attributes me.pmod_attributes]
 

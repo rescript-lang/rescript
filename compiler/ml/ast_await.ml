@@ -1,6 +1,3 @@
-let is_await : Parsetree.attribute -> bool =
- fun ({txt}, _) -> txt = "await" || txt = "res.await"
-
 let create_await_expression (e : Parsetree.expression) =
   let loc = {e.pexp_loc with loc_ghost = true} in
   let unsafe_await =
@@ -28,12 +25,29 @@ let is_await_expr (e : Parsetree.expression) =
     true
   | _ -> false
 
-(* Transform `@res.await M` to unpack(@res.await import(module(M: __M0__))) *)
+(* An awaited module path: [await M], and [await (M: S)] or [(await M: S)].
+   Returns [M], and [S] for the constrained forms. It is a dynamic import
+   when [S] is absent or a module type path. *)
+let awaited_module_path (e : Parsetree.module_expr) =
+  match e.pmod_desc with
+  | Pmod_await {pmod_desc = Pmod_ident lid} -> Some (lid, None)
+  | Pmod_await {pmod_desc = Pmod_constraint ({pmod_desc = Pmod_ident lid}, mty)}
+  | Pmod_constraint ({pmod_desc = Pmod_await {pmod_desc = Pmod_ident lid}}, mty)
+    ->
+    Some (lid, Some mty)
+  | _ -> None
+
+(* Transform a dynamic import form [await M] to
+   unpack(await import(module(M: __M0__))) *)
 let create_await_module_expression ~module_type_lid (e : Parsetree.module_expr)
     =
   let open Ast_helper in
-  let remove_await_attribute =
-    List.filter (fun ((loc, _) : Parsetree.attribute) -> loc.txt != "res.await")
+  let rec remove_await (m : Parsetree.module_expr) =
+    match m.pmod_desc with
+    | Pmod_await inner -> inner
+    | Pmod_constraint (inner, mty) ->
+      {m with pmod_desc = Pmod_constraint (remove_await inner, mty)}
+    | _ -> m
   in
   {
     e with
@@ -50,12 +64,7 @@ let create_await_module_expression ~module_type_lid (e : Parsetree.module_expr)
               [
                 ( Nolabel,
                   Exp.constraint_ ~loc:e.pmod_loc
-                    (Exp.pack ~loc:e.pmod_loc
-                       {
-                         e with
-                         pmod_attributes =
-                           remove_await_attribute e.pmod_attributes;
-                       })
+                    (Exp.pack ~loc:e.pmod_loc (remove_await e))
                     (Typ.package ~loc:e.pmod_loc module_type_lid []) );
               ]));
   }

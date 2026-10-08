@@ -396,44 +396,28 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
      the attribute to the whole expression, in general, when shuffuling the ast
      it is very hard to place attributes correctly
   *)
-  (* module M = await List *)
-  | Pexp_letmodule
-      (lid, ({pmod_desc = Pmod_ident {txt}; pmod_attributes} as me), expr)
-    when Res_parsetree_viewer.has_await_attribute pmod_attributes ->
-    let safe_module_type_lid : Ast_helper.lid =
-      {txt = Lident (local_module_type_name txt); loc = me.pmod_loc}
+  (* module M = await List, module M = await (List: ListType) *)
+  | Pexp_letmodule (lid, me, expr) -> (
+    let dynamic_import module_type_lid =
+      {
+        e with
+        pexp_desc =
+          Pexp_letmodule
+            ( lid,
+              Ast_await.create_await_module_expression ~module_type_lid me,
+              self.expr self expr );
+      }
     in
-    {
-      e with
-      pexp_desc =
-        Pexp_letmodule
-          ( lid,
-            Ast_await.create_await_module_expression
-              ~module_type_lid:safe_module_type_lid me,
-            self.expr self expr );
-    }
-  (* module M = await (List: ListType) *)
-  | Pexp_letmodule
-      ( lid,
-        ({
-           pmod_desc =
-             Pmod_constraint
-               ( {pmod_desc = Pmod_ident _; pmod_attributes = attrs1},
-                 {pmty_desc = Pmty_ident mtyp_lid} );
-           pmod_attributes = attrs2;
-         } as me),
-        expr )
-    when Res_parsetree_viewer.has_await_attribute attrs1
-         || Res_parsetree_viewer.has_await_attribute attrs2 ->
-    {
-      e with
-      pexp_desc =
-        Pexp_letmodule
-          ( lid,
-            Ast_await.create_await_module_expression ~module_type_lid:mtyp_lid
-              me,
-            self.expr self expr );
-    }
+    match Ast_await.awaited_module_path me with
+    | Some (module_lid, None) ->
+      dynamic_import
+        {
+          txt = Lident (local_module_type_name module_lid.txt);
+          loc = module_lid.loc;
+        }
+    | Some (_, Some {pmty_desc = Pmty_ident mtyp_lid}) ->
+      dynamic_import mtyp_lid
+    | Some (_, Some _) | None -> default_expr_mapper self e)
   | _ -> default_expr_mapper self e
 
 let expr_mapper ~async_context ~in_function_def (self : mapper)
@@ -447,21 +431,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
         "Await on expression not in an async context"
   in
   match e.pexp_desc with
-  | Pexp_letmodule (_, {pmod_desc = Pmod_ident _; pmod_attributes}, _)
-    when Ast_attributes.has_await_payload pmod_attributes ->
-    check_await ();
-    result
-  | Pexp_letmodule
-      ( _,
-        {
-          pmod_desc =
-            Pmod_constraint
-              ({pmod_desc = Pmod_ident _; pmod_attributes = attrs1}, _);
-          pmod_attributes = attrs2;
-        },
-        _ )
-    when Ast_attributes.has_await_payload attrs1
-         || Ast_attributes.has_await_payload attrs2 ->
+  | Pexp_letmodule (_, me, _) when Ast_await.awaited_module_path me <> None ->
     check_await ();
     result
   | _ -> (
@@ -769,11 +739,14 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
         | _ -> expand_reverse acc (structure_mapper ~await_context self rest)
       in
       aux [] stru
-    (* Dynamic import of module transformation: module M = @res.await List *)
+    (* Dynamic import of module transformation: module M = await List *)
     | Pstr_module
-        ({pmb_expr = {pmod_desc = Pmod_ident {txt; loc}; pmod_attributes} as me}
-         as mb)
-      when Res_parsetree_viewer.has_await_attribute pmod_attributes ->
+        ({
+           pmb_expr =
+             {
+               pmod_desc = Pmod_await ({pmod_desc = Pmod_ident {txt; loc}} as me);
+             };
+         } as mb) ->
       let item = self.structure_item self item in
       let safe_module_type_name = local_module_type_name txt in
       let has_local_module_name =
@@ -798,7 +771,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
       in
       module_type_decl
       @
-      (* module M = @res.await List *)
+      (* module M = await List *)
       {
         item with
         pstr_desc =
@@ -822,9 +795,11 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
             match expr.pexp_desc with
             | Pexp_letmodule
                 ( _,
-                  ({pmod_desc = Pmod_ident {txt; loc}; pmod_attributes} as me),
-                  expr )
-              when Res_parsetree_viewer.has_await_attribute pmod_attributes -> (
+                  {
+                    pmod_desc =
+                      Pmod_await ({pmod_desc = Pmod_ident {txt; loc}} as me);
+                  },
+                  expr ) -> (
               let safe_module_type_name = local_module_type_name txt in
               let has_local_module_name =
                 Hashtbl.find_opt !await_context safe_module_type_name

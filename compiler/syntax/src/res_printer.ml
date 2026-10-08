@@ -38,9 +38,7 @@ let add_mod_expr_parens doc = Doc.concat [Doc.lparen; doc; Doc.rparen]
 let rec mod_expr_starts_with_doc_comment (mod_expr : Parsetree.module_expr) =
   match mod_expr.pmod_desc with
   (* [await] and a functor's parameter list come first *)
-  | _ when Parsetree_viewer.has_await_attribute mod_expr.pmod_attributes ->
-    false
-  | Pmod_functor _ -> false
+  | Pmod_await _ | Pmod_functor _ -> false
   | _
     when List.exists Parsetree_viewer.is_doc_comment_attribute
            mod_expr.pmod_attributes ->
@@ -6080,7 +6078,13 @@ and print_mod_expr ~state mod_expr cmt_tbl =
       in
       let should_hug =
         match args with
-        | [{pmod_desc = Pmod_structure _}] -> true
+        | [
+         {
+           pmod_desc =
+             Pmod_structure _ | Pmod_await {pmod_desc = Pmod_structure _};
+         };
+        ] ->
+          true
         | _ -> false
       in
       let call_expr_doc =
@@ -6131,25 +6135,37 @@ and print_mod_expr ~state mod_expr cmt_tbl =
             print_mod_type ~state mod_type cmt_tbl;
           ]
       in
-      (* [@attr (M: S)], [await (M: S)]: without parens, attributes and
-         [await] would apply to [M] *)
+      (* [@attr (M: S)]: without parens, the attributes would apply to [M] *)
       if Parsetree_viewer.mod_expr_has_attributes mod_expr then
         add_mod_expr_parens doc
       else doc
     | Pmod_functor _ -> print_mod_functor ~state mod_expr cmt_tbl
+    | Pmod_await inner ->
+      let inner_doc = print_mod_expr ~state inner cmt_tbl in
+      let inner_doc =
+        match inner.pmod_desc with
+        (* [await (await M)]: the parser reads one [await] per module *)
+        | Pmod_await _ when not (Parsetree_viewer.mod_expr_has_attributes inner)
+          ->
+          add_mod_expr_parens inner_doc
+        | _ when Parens.mod_constraint inner -> add_mod_expr_parens inner_doc
+        | _ -> inner_doc
+      in
+      Doc.concat [Doc.text "await "; inner_doc]
   in
   let doc =
     match mod_expr.pmod_desc with
     (* A functor's attributes belong to its first parameter, see
        [print_mod_functor] *)
     | Pmod_functor _ -> doc
+    (* [@attr await M] does not parse *)
+    | Pmod_await _ when Parsetree_viewer.mod_expr_has_attributes mod_expr ->
+      Doc.concat
+        [
+          print_mod_expr_attributes ~state mod_expr cmt_tbl;
+          add_mod_expr_parens doc;
+        ]
     | _ -> Doc.concat [print_mod_expr_attributes ~state mod_expr cmt_tbl; doc]
-  in
-  (* [await] comes first: [@attr await M] does not parse *)
-  let doc =
-    if Parsetree_viewer.has_await_attribute mod_expr.pmod_attributes then
-      Doc.concat [Doc.text "await "; doc]
-    else doc
   in
   print_comments doc cmt_tbl mod_expr.pmod_loc
 

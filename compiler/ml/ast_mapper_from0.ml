@@ -467,23 +467,39 @@ end
 module M = struct
   (* Value expressions for the module language *)
 
-  let map sub {pmod_loc = loc; pmod_desc = desc; pmod_attributes = attrs} =
+  let rec map sub
+      ({pmod_loc = loc; pmod_desc = desc; pmod_attributes = attrs} as m) =
     let open Mod in
-    let loc = sub.location sub loc in
-    let attrs = sub.attributes sub attrs in
-    match desc with
-    | Pmod_ident x -> ident ~loc ~attrs (map_loc sub x)
-    | Pmod_structure str -> structure ~loc ~attrs (sub.structure sub str)
-    | Pmod_functor (arg, arg_ty, body) ->
-      functor_ ~loc ~attrs (map_loc sub arg)
-        (Misc.may_map (sub.module_type sub) arg_ty)
-        (sub.module_expr sub body)
-    | Pmod_apply (m1, m2) ->
-      apply ~loc ~attrs (sub.module_expr sub m1) (sub.module_expr sub m2)
-    | Pmod_constraint (m, mty) ->
-      constraint_ ~loc ~attrs (sub.module_expr sub m) (sub.module_type sub mty)
-    | Pmod_unpack e -> unpack ~loc ~attrs (sub.expr sub e)
-    | Pmod_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    let rec split_await acc = function
+      | ({Location.txt = "res.await"}, _) :: rest -> Some (List.rev acc, rest)
+      | a :: rest -> split_await (a :: acc) rest
+      | [] -> None
+    in
+    match split_await [] attrs with
+    | Some (await_attrs0, inner_attrs0) ->
+      (* [Ast_mapper_to0] puts the await node's attributes before the
+         [res.await] marker and the inner module's attributes after it *)
+      let inner = map sub {m with pmod_attributes = inner_attrs0} in
+      await_ ~loc:(sub.location sub loc)
+        ~attrs:(sub.attributes sub await_attrs0)
+        inner
+    | None -> (
+      let loc = sub.location sub loc in
+      let attrs = sub.attributes sub attrs in
+      match desc with
+      | Pmod_ident x -> ident ~loc ~attrs (map_loc sub x)
+      | Pmod_structure str -> structure ~loc ~attrs (sub.structure sub str)
+      | Pmod_functor (arg, arg_ty, body) ->
+        functor_ ~loc ~attrs (map_loc sub arg)
+          (Misc.may_map (sub.module_type sub) arg_ty)
+          (sub.module_expr sub body)
+      | Pmod_apply (m1, m2) ->
+        apply ~loc ~attrs (sub.module_expr sub m1) (sub.module_expr sub m2)
+      | Pmod_constraint (m, mty) ->
+        constraint_ ~loc ~attrs (sub.module_expr sub m)
+          (sub.module_type sub mty)
+      | Pmod_unpack e -> unpack ~loc ~attrs (sub.expr sub e)
+      | Pmod_extension x -> extension ~loc ~attrs (sub.extension sub x))
 
   let map_structure_item sub {pstr_loc = loc; pstr_desc = desc} =
     let open Str in

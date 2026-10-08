@@ -2,9 +2,9 @@ let cmi_magic_number = "Caml1999I035"
 
 (* Magic numbers for marshaled values of the *current* parsetree, whose layout
    changes across compiler versions. *)
-and ast_impl_magic_number = "ResImpl01311"
+and ast_impl_magic_number = "ResImpl01312"
 
-and ast_intf_magic_number = "ResIntf01311"
+and ast_intf_magic_number = "ResIntf01312"
 
 (* Magic numbers of the frozen Parsetree0 (OCaml 4.06) layout used on the
    external-PPX wire. They must never be written in front of a

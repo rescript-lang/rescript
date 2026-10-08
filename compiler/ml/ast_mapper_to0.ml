@@ -349,6 +349,17 @@ module M = struct
       constraint_ ~loc ~attrs (sub.module_expr sub m) (sub.module_type sub mty)
     | Pmod_unpack e -> unpack ~loc ~attrs (sub.expr sub e)
     | Pmod_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Pmod_await m ->
+      (* Single v0 attribute slot for two nodes, as for [Pexp_await]: the
+         await node's own attributes go in front of the [res.await] marker,
+         the inner module's attributes after it. *)
+      let m = sub.module_expr sub m in
+      {
+        m with
+        pmod_attributes =
+          attrs
+          @ ((Location.mknoloc "res.await", Pt.PStr []) :: m.pmod_attributes);
+      }
 
   let map_structure_item sub {pstr_loc = loc; pstr_desc = desc} =
     let open Str in

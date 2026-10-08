@@ -1930,6 +1930,7 @@ and walk_module_expr mod_expr t comments =
   | Pmod_structure [] -> attach t.inside mod_expr.pmod_loc comments
   | Pmod_structure structure -> walk_structure structure t comments
   | Pmod_extension extension -> walk_extension extension t comments
+  | Pmod_await mod_expr -> walk_module_expr mod_expr t comments
   | Pmod_unpack expr ->
     let before, inside, after = partition_by_loc comments expr.pexp_loc in
     attach t.leading expr.pexp_loc before;

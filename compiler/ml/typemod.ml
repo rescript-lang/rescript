@@ -1369,6 +1369,15 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
     }
   | Pmod_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
+  | Pmod_await sarg ->
+    (* The frontend turns the dynamic import forms into [unpack]; any other
+       [await] has no effect *)
+    let arg = type_module ~alias sttn funct_body anchor env sarg in
+    {
+      arg with
+      mod_loc = smod.pmod_loc;
+      mod_attributes = smod.pmod_attributes @ arg.mod_attributes;
+    }
 
 and type_structure ?(toplevel = false) funct_body anchor env sstr =
   let names = new_names () in
