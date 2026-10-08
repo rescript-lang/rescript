@@ -223,8 +223,8 @@ let is_parsing_attr (attr : Parsetree.attribute) =
   match attr with
   | ( {
         Location.txt =
-          ( "res.iflet" | "res.ternary" | "res.patVariantSpread"
-          | "res.dictPattern" | "res.dictSpread" );
+          ( "res.iflet" | "res.patVariantSpread" | "res.dictPattern"
+          | "res.dictSpread" );
       },
       _ ) ->
     true
@@ -382,7 +382,7 @@ let has_attributes attrs =
   List.exists
     (fun attr ->
       match attr with
-      | {Location.txt = "res.iflet" | "res.ternary"}, _ -> false
+      | {Location.txt = "res.iflet"}, _ -> false
       (* Remove the fragile pattern warning for iflet expressions *)
       | ( {Location.txt = "warning"},
           PStr
@@ -530,25 +530,16 @@ let should_inline_rhs_binary_expr rhs =
     true
   | _ -> false
 
-let is_printable_attribute attr =
-  match attr with
-  | {Location.txt = "res.iflet" | "JSX" | "res.ternary" | "res.dictSpread"}, _
-    ->
-    false
-  | _ -> true
+let has_printable_attributes attrs =
+  List.exists (fun attr -> not (is_parsing_attr attr)) attrs
 
-let has_printable_attributes attrs = List.exists is_printable_attribute attrs
-
-(* Attributes on a module expression, the ones [Res_printer.print_attributes]
-   prints: they print before it and bind less tightly than an application or
-   a constraint *)
+(* Attributes on a module expression print before it and bind less tightly
+   than an application or a constraint *)
 let mod_expr_has_attributes (mod_expr : Parsetree.module_expr) =
-  List.exists (fun attr -> not (is_parsing_attr attr)) mod_expr.pmod_attributes
-
-let filter_printable_attributes attrs = List.filter is_printable_attribute attrs
+  has_printable_attributes mod_expr.pmod_attributes
 
 let partition_printable_attributes attrs =
-  List.partition is_printable_attribute attrs
+  List.partition (fun attr -> not (is_parsing_attr attr)) attrs
 
 let is_doc_comment_attribute ((id, payload) : Parsetree.attribute) =
   match (id, payload) with

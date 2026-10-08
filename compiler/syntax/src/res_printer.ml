@@ -4290,8 +4290,7 @@ and print_binary_expression ~state ~force_pipe_breaks
                 {
                   expr with
                   pexp_attributes =
-                    Parsetree_viewer.filter_printable_attributes
-                      expr.pexp_attributes;
+                    Parsetree_viewer.filter_parsing_attrs expr.pexp_attributes;
                 }
             with
            | Braced braces_loc -> print_braces doc expr braces_loc
