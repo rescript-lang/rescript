@@ -38,6 +38,8 @@ module V = @JSX (X: S)
 // a functor argument can't start with a doc comment
 module W = H(@w /** doc */ X)
 module Y = H((/** doc */ X: S))
+module Z = /** doc */ X
+include /** doc */ X
 
 module L = @attr unpack(x)
 module M = @attr %ext
