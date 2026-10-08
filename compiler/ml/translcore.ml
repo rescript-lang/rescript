@@ -909,7 +909,7 @@ let wrap_exn loc arg =
        ~args:
          [global_module (Ident.create_persistent Primitive_modules.exceptions)]
        loc)
-    [arg] {ap_loc = loc}
+    [arg] loc
 let exception_id_destructed (l : Lambda.t) (fv : Ident.t) : bool =
   let rec hit_opt = function
     | None -> false
@@ -1314,7 +1314,7 @@ and transl_cases cases = List.map transl_case cases
 and transl_apply ?(uncurried_partial_application = None)
     ?(transformed_jsx = false) lam sargs loc =
   let lapply ap_func ap_args =
-    apply ~ap_transformed_jsx:transformed_jsx ap_func ap_args {ap_loc = loc}
+    apply ~ap_transformed_jsx:transformed_jsx ap_func ap_args loc
   in
   let rec build_apply lam args = function
     | (None, optional) :: l ->
@@ -1364,9 +1364,7 @@ and transl_apply ?(uncurried_partial_application = None)
     in
     let extra_args = Ext_list.map extra_ids (fun id -> var id) in
     let ap_args = args @ extra_args in
-    let l0 =
-      apply ~ap_transformed_jsx:transformed_jsx lam ap_args {ap_loc = loc}
-    in
+    let l0 = apply ~ap_transformed_jsx:transformed_jsx lam ap_args loc in
     function_ ~loc ~attr:default_function_attribute
       ~params:(List.rev_append !none_ids extra_ids)
       ~body:l0

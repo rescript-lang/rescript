@@ -375,12 +375,10 @@ and lfunction = {
 
 and prim_info = private {primitive: primitive; args: t list; loc: Location.t}
 
-and ap_info = {ap_loc: Location.t}
-
 and lambda_apply = private {
   ap_func: t;
   ap_args: t list;
-  ap_info: ap_info;
+  ap_loc: Location.t;
   ap_transformed_jsx: bool;
 }
 
@@ -456,7 +454,7 @@ val global_module : Ident.t -> t
 
 val const : structured_constant -> t
 
-val apply : ?ap_transformed_jsx:bool -> t -> t list -> ap_info -> t
+val apply : ?ap_transformed_jsx:bool -> t -> t list -> Location.t -> t
 
 val function_ :
   loc:Location.t ->

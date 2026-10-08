@@ -130,7 +130,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
                 _;
               } as l1;
           ap_args = args;
-          ap_info;
+          ap_loc;
         } -> (
       match Lam_compile_env.query_external_id_info ident fld_name with
       | {
@@ -151,7 +151,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
         let fn = simpl l1 in
         let args' = Ext_list.map_sharing args simpl in
         if fn == l1 && args' == args then lam
-        else Lambda.apply fn args' ap_info ?ap_transformed_jsx:None)
+        else Lambda.apply fn args' ap_loc ?ap_transformed_jsx:None)
     (* Function inlining interact with other optimizations...
 
        - parameter attributes
@@ -159,14 +159,14 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
        - code bloat
     *)
     | Lapply
-        {ap_func = Lvar v as fn; ap_args = args; ap_info; ap_transformed_jsx}
+        {ap_func = Lvar v as fn; ap_args = args; ap_loc; ap_transformed_jsx}
       -> (
       (* Check info for always inlining *)
       let ap_args = Ext_list.map_sharing args simpl in
       let[@local] normal () =
         let fn' = simpl fn in
         if fn' == fn && ap_args == args then lam
-        else Lambda.apply fn' ap_args ap_info ~ap_transformed_jsx
+        else Lambda.apply fn' ap_args ap_loc ~ap_transformed_jsx
       in
       match Hash_ident.find_opt meta.ident_tbl v with
       | Some
