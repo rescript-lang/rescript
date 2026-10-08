@@ -6733,7 +6733,7 @@ and parse_module_expr p =
   (* The attributes after [await] belong to the await, like those of
      [@attr (await M)], and the module keeps its own: [await @b (@a M)] *)
   if has_await then
-    Ast_helper.Mod.await_
+    Ast_helper.Mod.await
       ~loc:(mk_loc start_pos mod_expr.pmod_loc.loc_end)
       ~attrs mod_expr
   else

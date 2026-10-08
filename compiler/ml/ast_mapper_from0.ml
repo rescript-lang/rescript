@@ -489,7 +489,7 @@ module M = struct
     match split_await [] (List.rev attrs) with
     | Some (inner_attrs0, await_loc, await_attrs0) ->
       let inner = map sub {m with pmod_attributes = inner_attrs0} in
-      await_
+      await
         ~loc:(sub.location sub (await_marker_loc ~node_loc:loc await_loc))
         ~attrs:(sub.attributes sub await_attrs0)
         inner

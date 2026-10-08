@@ -326,7 +326,7 @@ let test_module_await_roundtrips_through_ast0 _ =
   in
   let wire =
     to_mod0
-      (Ast_helper.Mod.await_ ~loc:await_loc
+      (Ast_helper.Mod.await ~loc:await_loc
          ~attrs:[attr "outer" (Parsetree.PStr [])]
          inner)
   in
@@ -392,7 +392,7 @@ let test_v0_await_marker_without_location _ =
 let test_dynamic_import_keeps_await_attributes _ =
   let module_expr =
     Ast_helper.Mod.constraint_ ~loc
-      (Ast_helper.Mod.await_ ~loc
+      (Ast_helper.Mod.await ~loc
          ~attrs:[attr "warning" (Parsetree.PStr [])]
          (Ast_helper.Mod.ident ~loc (located_string (Longident.Lident "List"))))
       (Ast_helper.Mty.ident ~loc (located_string (Longident.Lident "ListT")))
@@ -488,7 +488,7 @@ let test_module_await_v0_attribute_order _ =
 (* [await (await M)], [await (await (M: S))] and [(await (await M): S)] are
    dynamic imports like their single-await forms *)
 let test_nested_awaits_are_dynamic_imports _ =
-  let await_ m = Ast_helper.Mod.await_ ~loc m in
+  let await m = Ast_helper.Mod.await ~loc m in
   let path =
     Ast_helper.Mod.ident ~loc (located_string (Longident.Lident "M"))
   in
@@ -501,13 +501,13 @@ let test_nested_awaits_are_dynamic_imports _ =
     | _ -> false
   in
   OUnit.assert_bool "await (await M)"
-    (recognized ~constrained:false (await_ (await_ path)));
+    (recognized ~constrained:false (await (await path)));
   OUnit.assert_bool "await (await (M: S))"
-    (recognized ~constrained:true (await_ (await_ (constrained path))));
+    (recognized ~constrained:true (await (await (constrained path))));
   OUnit.assert_bool "(await (await M): S)"
-    (recognized ~constrained:true (constrained (await_ (await_ path))));
+    (recognized ~constrained:true (constrained (await (await path))));
   OUnit.assert_bool "await ((await M): S)"
-    (recognized ~constrained:true (await_ (constrained (await_ path))));
+    (recognized ~constrained:true (await (constrained (await path))));
   OUnit.assert_bool "M without await"
     (Option.is_none (Ast_await.awaited_module_path (constrained path)))
 
