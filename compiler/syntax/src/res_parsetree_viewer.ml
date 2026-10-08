@@ -225,19 +225,20 @@ let rec unwrap_braces expr =
   | Pexp_braces {expr = inner} -> unwrap_braces inner
   | _ -> expr
 
+(* Attributes the parser adds to encode syntax; they are never printed *)
+let is_parsing_attr (attr : Parsetree.attribute) =
+  match attr with
+  | ( {
+        Location.txt =
+          ( "res.iflet" | "res.ternary" | "res.await" | "res.patVariantSpread"
+          | "res.dictPattern" | "res.dictSpread" );
+      },
+      _ ) ->
+    true
+  | _ -> false
+
 let filter_parsing_attrs attrs =
-  List.filter
-    (fun attr ->
-      match attr with
-      | ( {
-            Location.txt =
-              ( "res.iflet" | "res.ternary" | "res.await"
-              | "res.patVariantSpread" | "res.dictPattern" | "res.dictSpread" );
-          },
-          _ ) ->
-        false
-      | _ -> true)
-    attrs
+  List.filter (fun attr -> not (is_parsing_attr attr)) attrs
 
 let is_block_expr expr =
   match (unwrap_braces expr).pexp_desc with
@@ -552,29 +553,33 @@ let has_printable_attributes attrs = List.exists is_printable_attribute attrs
    and binds less tightly than an application or a constraint. The attributes
    are the ones [Res_printer.print_attributes] prints. *)
 let mod_expr_has_attributes (mod_expr : Parsetree.module_expr) =
-  filter_parsing_attrs mod_expr.pmod_attributes <> []
-  || has_await_attribute mod_expr.pmod_attributes
+  List.exists
+    (fun attr ->
+      match attr with
+      | {Location.txt = "res.await"}, _ -> true
+      | _ -> not (is_parsing_attr attr))
+    mod_expr.pmod_attributes
 
 let filter_printable_attributes attrs = List.filter is_printable_attribute attrs
 
 let partition_printable_attributes attrs =
   List.partition is_printable_attribute attrs
 
+let is_doc_comment_attribute ((id, payload) : Parsetree.attribute) =
+  match (id, payload) with
+  | ( {txt = "res.doc"},
+      PStr
+        [
+          {
+            pstr_desc =
+              Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string _)}, _);
+          };
+        ] ) ->
+    true
+  | _ -> false
+
 let partition_doc_comment_attributes attrs =
-  List.partition
-    (fun ((id, payload) : Parsetree.attribute) ->
-      match (id, payload) with
-      | ( {txt = "res.doc"},
-          PStr
-            [
-              {
-                pstr_desc =
-                  Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string _)}, _);
-              };
-            ] ) ->
-        true
-      | _ -> false)
-    attrs
+  List.partition is_doc_comment_attribute attrs
 
 let rec is_fun_expr expr =
   match expr.pexp_desc with

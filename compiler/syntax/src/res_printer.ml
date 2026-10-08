@@ -36,11 +36,10 @@ let add_mod_expr_parens doc = Doc.concat [Doc.lparen; doc; Doc.rparen]
    doc comments print before other attributes, and an unparenthesized
    constraint or application starts with its leftmost module *)
 let rec mod_expr_starts_with_doc_comment (mod_expr : Parsetree.module_expr) =
-  let attrs = Parsetree_viewer.filter_parsing_attrs mod_expr.pmod_attributes in
-  let doc_comments, _ =
-    Parsetree_viewer.partition_doc_comment_attributes attrs
-  in
-  if doc_comments <> [] then true
+  if
+    List.exists Parsetree_viewer.is_doc_comment_attribute
+      mod_expr.pmod_attributes
+  then true
   else if Parsetree_viewer.mod_expr_has_attributes mod_expr then false
   else
     match mod_expr.pmod_desc with
