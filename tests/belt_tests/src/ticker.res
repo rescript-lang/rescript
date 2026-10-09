@@ -95,7 +95,7 @@ module Ticker_map = Map.String
     algorithm (lowest rank for the deepest nodes).
 
     We then collect all the tickers which depends on each of the
-    market tickers and finally we `sort_uniq` that list by rank to
+    market tickers and finally we sort that list by rank to
     guarantee that a composite ticker is update only once and in
     the correct order.
  */

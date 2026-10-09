@@ -45,7 +45,6 @@ and record_pat_rest = {
 and pat_extra =
   | Tpat_constraint of core_type
   | Tpat_type of Path.t * Longident.t loc
-  | Tpat_open of Path.t * Longident.t loc * Env.t
   | Tpat_unpack
 
 and pattern_desc =
@@ -74,7 +73,11 @@ and expression = {
 
 and exp_extra =
   | Texp_constraint of core_type
-  | Texp_coerce of core_type
+  | Texp_coerce of {
+      source_type: type_expr;
+      target: core_type;
+      target_type: type_expr;
+    }
   | Texp_open of override_flag * Path.t * Longident.t loc * Env.t
 
 and expression_desc =

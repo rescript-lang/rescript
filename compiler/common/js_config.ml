@@ -22,8 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(** Browser is not set via command line only for internal use *)
-
 type jsx_version = Jsx_v4
 type jsx_module = React | Generic of {module_name: string}
 type source_map = No_source_map | Linked | Inline | Hidden
@@ -34,10 +32,6 @@ let directives = ref []
 let cross_module_inline = ref false
 let debug_ir = ref false
 let check_lam = ref false
-
-(* let (//) = Filename.concat *)
-
-(* let get_packages_info () = !packages_info *)
 
 let no_builtin_ppx = ref false
 let tool_name = "ReScript"

@@ -1,7 +1,7 @@
 (** Per-file AST processing for dead code analysis.
     
     This module uses mutable builders during AST traversal
-    and returns them for merging. The caller freezes the accumulated
+    and returns them, to be fed into the reactive collections. The caller
     builders before passing to the solver. *)
 
 type file_context = {
@@ -27,4 +27,4 @@ val process_cmt_file :
   Cmt_format.cmt_infos ->
   file_data
 (** Process a cmt file and return mutable builders.
-    Caller should merge builders and freeze before passing to solver. *)
+    Caller feeds the builders into the reactive collections. *)

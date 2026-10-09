@@ -159,7 +159,6 @@ let extension_constructor sub x =
 let pat sub x =
   let extra = function
     | (Tpat_type _ | Tpat_unpack) as d -> d
-    | Tpat_open (path, loc, env) -> Tpat_open (path, loc, sub.env sub env)
     | Tpat_constraint ct -> Tpat_constraint (sub.typ sub ct)
   in
   let pat_env = sub.env sub x.pat_env in
@@ -182,7 +181,8 @@ let pat sub x =
 let expr sub x =
   let extra = function
     | Texp_constraint cty -> Texp_constraint (sub.typ sub cty)
-    | Texp_coerce cty2 -> Texp_coerce (sub.typ sub cty2)
+    | Texp_coerce {source_type; target; target_type} ->
+      Texp_coerce {source_type; target = sub.typ sub target; target_type}
     | Texp_open (ovf, path, loc, env) ->
       Texp_open (ovf, path, loc, sub.env sub env)
   in

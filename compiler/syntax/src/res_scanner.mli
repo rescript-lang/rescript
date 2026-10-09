@@ -1,5 +1,3 @@
-type mode = Diamond
-
 type char_encoding
 
 type t = {
@@ -16,23 +14,29 @@ type t = {
       (* current number of utf16 code units since line start *)
   mutable line_offset: int; (* current line offset *)
   mutable lnum: int; (* current line number *)
-  mutable mode: mode list;
 }
 
 val make : filename:string -> string -> t
+val position : t -> Lexing.position
 
 (* TODO: make this a record *)
 val scan : t -> Lexing.position * Lexing.position * Res_token.t
 
 val is_binary_op : string -> int -> int -> bool
 
-val set_diamond_mode : t -> unit
-val pop_mode : t -> mode -> unit
+(* Extend a just-scanned < or > with an adjacent operator suffix. This never
+   skips trivia, and returns the original token without advancing if there is
+   no suffix. *)
+val scan_binary_operator : t -> Res_token.t -> Res_token.t
 
 val scan_template_literal_token :
   t -> Lexing.position * Lexing.position * Res_token.t
 
-val scan_regex : t -> Lexing.position * Lexing.position * Res_token.t
+val scan_regex :
+  start_pos:Lexing.position ->
+  prefix_length:int ->
+  t ->
+  Lexing.position * Lexing.position * Res_token.t
 
 (* Look ahead to see if the next non-whitespace character is a slash *)
 val peek_slash : t -> bool

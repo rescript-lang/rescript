@@ -31,14 +31,14 @@ let to_string type_env = type_env.name
 
 let new_module ~name type_env =
   if !Debug.type_env then
-    Log_.item "TypeEnv.newModule %s %s\n" (type_env |> to_string) name;
+    Log_.item "Type_env.new_module %s %s\n" (type_env |> to_string) name;
   let new_type_env = Some type_env |> create_type_env ~name in
   type_env.map <- type_env.map |> String_map.add name (Module new_type_env);
   new_type_env
 
 let new_module_type ~name ~signature type_env =
   if !Debug.type_env then
-    Log_.item "TypeEnv.newModuleType %s %s\n" (type_env |> to_string) name;
+    Log_.item "Type_env.new_module_type %s %s\n" (type_env |> to_string) name;
   let new_type_env = Some type_env |> create_type_env ~name in
   type_env.map_module_types <-
     type_env.map_module_types |> String_map.add name (signature, new_type_env);
@@ -46,7 +46,7 @@ let new_module_type ~name ~signature type_env =
 
 let new_type ~name type_env =
   if !Debug.type_env then
-    Log_.item "TypeEnv.newType %s %s\n" (type_env |> to_string) name;
+    Log_.item "Type_env.new_type %s %s\n" (type_env |> to_string) name;
   type_env.map <- type_env.map |> String_map.add name (Type name)
 
 let get_module ~name type_env =
@@ -59,14 +59,15 @@ let expand_alias_to_external_module ~name type_env =
   match type_env |> get_module ~name with
   | Some {module_equation = Some {internal = false; dep}} ->
     if !Debug.type_env then
-      Log_.item "TypeEnv.expandAliasToExternalModule %s %s aliased to %s\n"
+      Log_.item "Type_env.expand_alias_to_external_module %s %s aliased to %s\n"
         (type_env |> to_string) name (dep |> dep_to_string);
     Some dep
   | _ -> None
 
 let add_module_equation ~dep ~internal type_env =
   if !Debug.type_env then
-    Log_.item "Typenv.addModuleEquation %s %s dep:%s\n" (type_env |> to_string)
+    Log_.item "Type_env.add_module_equation %s %s dep:%s\n"
+      (type_env |> to_string)
       (match internal with
       | true -> "Internal"
       | false -> "External")
@@ -109,7 +110,7 @@ let apply_type_equations ~config ~path type_env =
     match type_env.type_equations |> String_map.find (id |> Ident.name) with
     | type_ ->
       if !Debug.type_resolution then
-        Log_.item "Typenv.applyTypeEquations %s name:%s type_:%s\n"
+        Log_.item "Type_env.apply_type_equations %s name:%s type_:%s\n"
           (type_env |> to_string) (id |> Ident.name)
           (type_
           |> Emit_type.type_to_string ~config ~type_name_is_interface:(fun _ ->
@@ -130,7 +131,7 @@ let rec lookup_module_type ~path type_env =
   match path with
   | [module_type_name] -> (
     if !Debug.type_env then
-      Log_.item "Typenv.lookupModuleType %s moduleTypeName:%s\n"
+      Log_.item "Type_env.lookup_module_type %s module_type_name:%s\n"
         (type_env |> to_string) module_type_name;
     match type_env.map_module_types |> String_map.find module_type_name with
     | x -> Some x
@@ -140,7 +141,7 @@ let rec lookup_module_type ~path type_env =
       | Some parent -> parent |> lookup_module_type ~path))
   | module_name :: path1 -> (
     if !Debug.type_env then
-      Log_.item "Typenv.lookupModuleType %s moduleName:%s\n"
+      Log_.item "Type_env.lookup_module_type %s module_name:%s\n"
         (type_env |> to_string) module_name;
     match type_env.map |> String_map.find module_name with
     | Module type_env1 -> type_env1 |> lookup_module_type ~path:path1
@@ -159,7 +160,7 @@ let rec path_to_list path =
 
 let lookup_module_type_signature ~path type_env =
   if !Debug.type_env then
-    Log_.item "TypeEnv.lookupModuleTypeSignature %s %s\n"
+    Log_.item "Type_env.lookup_module_type_signature %s %s\n"
       (type_env |> to_string) (path |> Path.name);
   type_env |> lookup_module_type ~path:(path |> path_to_list |> List.rev)
 

@@ -35,21 +35,13 @@ module Lid : sig
 
   val type_int : t
 
-  val type_bigint : t
-
-  val pervasives : t
-
   val js_extern : t
 
   val method_callback : t
 
   val hidden_field : string -> t
 
-  val js_null : t
-
   val js_undefined : t
-
-  val js_null_undefined : t
 
   val regexp_id : t
 end
@@ -58,13 +50,9 @@ type expression_lit = Parsetree.expression lit
 
 type core_type_lit = Parsetree.core_type lit
 
-type pattern_lit = Parsetree.pattern lit
-
 val val_unit : expression_lit
 
 val type_unit : core_type_lit
-
-val type_exn : core_type_lit
 
 val type_string : core_type_lit
 
@@ -73,9 +61,3 @@ val type_bool : core_type_lit
 val type_int : core_type_lit
 
 val type_float : Parsetree.core_type
-
-val type_bigint : core_type_lit
-
-val type_any : core_type_lit
-
-val pat_unit : pattern_lit

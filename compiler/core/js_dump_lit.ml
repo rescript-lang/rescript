@@ -70,17 +70,9 @@ let default = "default"
 
 let length = "length"
 
-let code_point_at = "codePointAt"
-
 let new_ = "new"
 
-let array = "Array"
-
 let question = "?"
-
-let plusplus = "++"
-
-let minusminus = "--"
 
 let semi = ";"
 
@@ -106,14 +98,6 @@ let start_block = "start_block"
 
 let end_block = "end_block"
 
-let json = "JSON"
-
-let stringify = "stringify"
-
-let console = "console"
-
-let define = "define"
-
 let break = "break"
 
 let continue = "continue"
@@ -130,17 +114,9 @@ let debugger = "debugger"
 
 let tag = "TAG"
 
-let bind = "bind"
-
-let math = "Math"
-
 let null = "null"
 
 let undefined = "undefined"
-
-let string_cap = "String"
-
-let from_charcode = "fromCharCode"
 
 let eq = "="
 
@@ -150,21 +126,9 @@ let lt = "<"
 
 let ge = ">="
 
-let gt = ">"
-
 let plus_plus = "++"
 
 (*  FIXME: use (i = i + 1 | 0) instead  *)
 let minus_minus = "--"
-
-let caml_block_create = "__"
-
-(** debug symbols *)
-
-let block_poly_var = "polyVar"
-
-let block_variant = "variant"
-
-let block_simple_variant = "simpleVariant"
 
 let case = "case"

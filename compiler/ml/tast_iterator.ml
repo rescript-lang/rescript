@@ -117,7 +117,6 @@ let pat sub {pat_extra; pat_desc; pat_env; _} =
   let extra = function
     | Tpat_type _ -> ()
     | Tpat_unpack -> ()
-    | Tpat_open (_, _, env) -> sub.env sub env
     | Tpat_constraint ct -> sub.typ sub ct
   in
   sub.env sub pat_env;
@@ -139,7 +138,7 @@ let pat sub {pat_extra; pat_desc; pat_env; _} =
 let expr sub {exp_extra; exp_desc; exp_env; _} =
   let extra = function
     | Texp_constraint cty -> sub.typ sub cty
-    | Texp_coerce cty2 -> sub.typ sub cty2
+    | Texp_coerce {target} -> sub.typ sub target
     | Texp_open (_, _, _, _) -> ()
   in
   List.iter (fun (e, _, _) -> extra e) exp_extra;

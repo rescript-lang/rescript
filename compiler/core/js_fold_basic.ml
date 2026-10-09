@@ -47,20 +47,3 @@ let calculate_hard_dependencies block =
   let obj = count_hard_dependencies hard_dependencies in
   obj.block obj block;
   hard_dependencies
-
-(*
-   Given a set of [variables], count which variables  [lam] will depend on
-   Invariant:
-   [variables] are parameters which means immutable so that [Call] 
-   will not depend [variables]
-
-*)
-(* let depends_j (lam : J.expression) (variables : Set_ident.t) =
-   let v = ref Set_ident.empty in
-   let add id =
-    if Set_ident.mem variables id then
-      v := Set_ident.add !v id
-   in
-   ignore @@ (new count_deps add ) # expression lam ;
-   !v
-*)

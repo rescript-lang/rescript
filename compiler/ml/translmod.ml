@@ -18,6 +18,19 @@
 
 open Typedtree
 
+let reverse_of_list = function
+  | [] -> [||]
+  | hd :: tl ->
+    let len = List.length tl in
+    let a = Array.make (len + 1) hd in
+    let rec fill i = function
+      | [] -> a
+      | hd :: tl ->
+        Array.unsafe_set a i hd;
+        fill (i - 1) tl
+    in
+    fill (len - 1) tl
+
 type error = Fragile_pattern_in_toplevel
 
 exception Error of Location.t * error
@@ -71,6 +84,8 @@ let transl_type_extension env rootpath (tyext : Typedtree.type_extension) body :
 (* Compile a coercion *)
 
 let rec apply_coercion loc strict (restr : Typedtree.module_coercion) arg =
+  if !Clflags.dump_coercions then
+    Format.eprintf "@[<2>apply_coercion@ %a@]@." Includemod.print_coercion restr;
   match restr with
   | Tcoerce_none -> arg
   | Tcoerce_structure (pos_cc_list, id_pos_list, runtime_fields) ->
@@ -110,14 +125,10 @@ and apply_coercion_result loc strict funct param arg cc_res =
         ~params:[param]
         ~body:
           (apply_coercion loc Strict cc_res
-             (Lambda.apply ~ap_transformed_jsx:false (Lambda.var id) [arg]
-                {ap_loc = loc; ap_inlined = Default_inline})))
+             (Lambda.apply ~ap_transformed_jsx:false (Lambda.var id) [arg] loc)))
 
 and wrap_id_pos_list loc id_pos_list get_field lam =
   let fv = Lambda_traverse.free_variables lam in
-  (*Format.eprintf "%a@." Printlambda.lambda lam;
-    IdentSet.iter (fun id -> Format.eprintf "%a " Ident.print id) fv;
-    Format.eprintf "@.";*)
   let lam, s =
     List.fold_left
       (fun (lam, s) (id', pos, c) ->
@@ -165,19 +176,6 @@ let rec compose_coercions c1 c2 =
     Tcoerce_functor (compose_coercions arg2 arg1, compose_coercions res1 res2)
   | c1, Tcoerce_alias (path, c2) -> Tcoerce_alias (path, compose_coercions c1 c2)
   | _, _ -> Misc.fatal_error "Translmod.compose_coercions"
-
-(*
-let apply_coercion a b c =
-  Format.eprintf "@[<2>apply_coercion@ %a@]@." Includemod.print_coercion b;
-  apply_coercion a b c
-
-let compose_coercions c1 c2 =
-  let c3 = compose_coercions c1 c2 in
-  let open Includemod in
-  Format.eprintf "@[<2>compose_coercions@ (%a)@ (%a) =@ %a@]@."
-    print_coercion c1 print_coercion c2 print_coercion c3;
-  c3
-*)
 
 (* Record the primitive declarations occurring in the module compiled *)
 
@@ -263,9 +261,17 @@ let rec compile_functor mexp coercion root_path loc =
       }
     ~params:[param'] ~body
 
-(* Compile a module expression *)
+(* Compile a module expression, in the warning scope of its attributes like
+   [Translcore.transl_exp] *)
 and transl_module cc rootpath mexp =
-  List.iter (Translattribute.check_attribute_on_module mexp) mexp.mod_attributes;
+  Builtin_attributes.warning_scope ~ppwarning:false mexp.mod_attributes
+    (fun () ->
+      List.iter
+        (Translattribute.check_attribute_on_module mexp)
+        mexp.mod_attributes;
+      transl_module0 cc rootpath mexp)
+
+and transl_module0 cc rootpath mexp =
   let loc = mexp.mod_loc in
   match mexp.mod_type with
   | Mty_alias (Mta_absent, _) ->
@@ -278,14 +284,11 @@ and transl_module cc rootpath mexp =
     | Tmod_structure str -> fst (transl_struct loc [] cc rootpath str)
     | Tmod_functor _ -> compile_functor mexp cc rootpath loc
     | Tmod_apply (funct, arg, ccarg) ->
-      let inlined_attribute, funct =
-        Translattribute.get_and_remove_inlined_attribute_on_module funct
-      in
       apply_coercion loc Strict cc
         (Lambda.apply ~ap_transformed_jsx:false
            (transl_module Tcoerce_none None funct)
            [transl_module ccarg None arg]
-           {ap_loc = loc; ap_inlined = inlined_attribute})
+           loc)
     | Tmod_constraint (arg, _, _, ccarg) ->
       transl_module (compose_coercions cc ccarg) rootpath arg
     | Tmod_unpack (arg, _) ->
@@ -322,7 +325,7 @@ and transl_structure loc fields cc rootpath final_env = function
           fields;
         Format.eprintf "@]@.";*)
       assert (List.length runtime_fields = List.length pos_cc_list);
-      let v = Ext_array.reverse_of_list fields in
+      let v = reverse_of_list fields in
       let get_field pos = Lambda.var v.(pos)
       and ids = List.fold_left Set_ident.add Set_ident.empty fields in
       let get_field_name _name = get_field in

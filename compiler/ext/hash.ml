@@ -37,7 +37,6 @@ module Make (Key : Hashtbl.HashedType) = struct
   let to_list = Hash_gen.to_list
   let fold = Hash_gen.fold
   let length = Hash_gen.length
-  (* let stats = Hash_gen.stats *)
 
   let add (h : _ t) key data =
     let i = key_index h key in

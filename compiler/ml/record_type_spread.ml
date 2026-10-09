@@ -1,7 +1,5 @@
 module String_map = Map.Make (String)
 
-let t_equals t1 t2 = t1.Types.level = t2.Types.level && t1.id = t2.id
-
 let substitute_types ~type_map (t : Types.type_expr) =
   if String_map.is_empty type_map then t
   else

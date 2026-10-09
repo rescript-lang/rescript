@@ -29,19 +29,12 @@ time:
 	@echo "Sequential:"
 	@dune exec rescript-tools -- reanalyze -config -ci -timing 2>&1 | grep -E "Analysis reported|=== Timing|CMT processing|File loading|Analysis:|Merging|Solving|Reporting:|Total:"
 
-# Benchmark with CMT cache
+# Benchmark the cmt cache across runs. `-runs` keeps one process alive, so the
+# second and third runs read cached file data.
 time-cache: generate build
-	@echo "=== Without cache ==="
+	@echo "=== Cold, then warm (3 runs in one process) ==="
 	@echo "Sequential:"
-	@dune exec rescript-tools -- reanalyze -config -ci -timing 2>&1 | grep -E "=== Timing|CMT processing|File loading|Total:"
-	@echo ""
-	@echo "=== With CMT cache (first run - cold) ==="
-	@echo "Sequential:"
-	@dune exec rescript-tools -- reanalyze -config -ci -timing -cmt-cache 2>&1 | grep -E "=== Timing|CMT processing|File loading|Total:"
-	@echo ""
-	@echo "=== With CMT cache (second run - warm) ==="
-	@echo "Sequential:"
-	@dune exec rescript-tools -- reanalyze -config -ci -timing -cmt-cache 2>&1 | grep -E "=== Timing|CMT processing|File loading|Total:"
+	@dune exec rescript-tools -- reanalyze -config -ci -timing -runs 3 2>&1 | grep -E "=== Timing|CMT processing|File loading|Total:"
 
 # Benchmark reactive mode (simulates repeated analysis)
 time-reactive: generate build
@@ -50,8 +43,8 @@ time-reactive: generate build
 	@echo "Standard (baseline):"
 	@dune exec rescript-tools -- reanalyze -config -ci -timing 2>&1 | grep -E "=== Timing|CMT processing|File loading|Total:"
 	@echo ""
-	@echo "Reactive mode (3 runs - first is cold, subsequent are warm):"
-	@dune exec rescript-tools -- reanalyze -config -ci -timing -reactive -runs 3 >/dev/null
+	@echo "3 runs - first is cold, subsequent are warm:"
+	@dune exec rescript-tools -- reanalyze -config -ci -timing -runs 3 >/dev/null
 
 .DEFAULT_GOAL := benchmark
 

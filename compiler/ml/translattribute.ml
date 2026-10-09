@@ -20,11 +20,6 @@ let is_inline_attribute (attr : t) =
   | {txt = "inline"}, _ -> true
   | _ -> false
 
-let is_inlined_attribute (attr : t) =
-  match attr with
-  | {txt = "inlined"}, _ -> true
-  | _ -> false
-
 let find_attribute p (attributes : t list) =
   let inline_attribute, other_attributes = List.partition p attributes in
   let attr =
@@ -57,7 +52,7 @@ let parse_inline_attribute (attr : t option) : Lambda.inline_attribute =
   | None -> Default_inline
   | Some ({txt; loc}, payload) -> (
     let open Parsetree in
-    (* the 'inline' and 'inlined' attributes can be used as
+    (* the 'inline' attribute can be used as
        [@inline], [@inline never] or [@inline always].
        [@inline] is equivalent to [@inline always] *)
     let warning txt =
@@ -66,8 +61,8 @@ let parse_inline_attribute (attr : t option) : Lambda.inline_attribute =
     in
     match payload with
     | PStr [] -> Always_inline
-    | PStr [{pstr_desc = Pstr_eval ({pexp_desc}, [])}] -> (
-      match pexp_desc with
+    | PStr [{pstr_desc = Pstr_eval (expression, [])}] -> (
+      match (Ast_payload.unwrap_braces expression).pexp_desc with
       | Pexp_ident {txt = Longident.Lident "never"} -> Never_inline
       | Pexp_ident {txt = Longident.Lident "always"} -> Always_inline
       | _ ->
@@ -98,25 +93,6 @@ let add_inline_attribute (expr : Lambda.t) loc attributes =
     Location.prerr_warning loc (Warnings.Misplaced_attribute "inline");
     expr
 
-(* Get the [@inlined] attribute payload (or default if not present).
-   It also returns the expression without this attribute. This is
-   used to ensure that this attribute is not misplaced: If it
-   appears on any expression, it is an error, otherwise it would
-   have been removed by this function *)
-let get_and_remove_inlined_attribute (e : Typedtree.expression) =
-  let attr, exp_attributes =
-    find_attribute is_inlined_attribute e.exp_attributes
-  in
-  let inlined = parse_inline_attribute attr in
-  (inlined, {e with exp_attributes})
-
-let get_and_remove_inlined_attribute_on_module (e : Typedtree.module_expr) =
-  let attr, mod_attributes =
-    find_attribute is_inlined_attribute e.mod_attributes
-  in
-  let inlined = parse_inline_attribute attr in
-  (inlined, {e with mod_attributes})
-
 let check_attribute (e : Typedtree.expression) (({txt; loc}, _) : t) =
   match txt with
   | "inline" -> (
@@ -124,7 +100,7 @@ let check_attribute (e : Typedtree.expression) (({txt; loc}, _) : t) =
     | Texp_function _ -> ()
     | _ -> Location.prerr_warning loc (Warnings.Misplaced_attribute txt))
   | "inlined" ->
-    (* Removed by the Texp_apply cases *)
+    (* Call-site inlining hints are not supported *)
     Location.prerr_warning loc (Warnings.Misplaced_attribute txt)
   | _ -> ()
 
@@ -136,6 +112,6 @@ let check_attribute_on_module (e : Typedtree.module_expr) (({txt; loc}, _) : t)
     | Tmod_functor _ -> ()
     | _ -> Location.prerr_warning loc (Warnings.Misplaced_attribute txt))
   | "inlined" ->
-    (* Removed by the Texp_apply cases *)
+    (* Call-site inlining hints are not supported *)
     Location.prerr_warning loc (Warnings.Misplaced_attribute txt)
   | _ -> ()

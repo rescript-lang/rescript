@@ -6,5 +6,3 @@ let with_file_as_pp filename f =
       v)
 
 let failwithf ~loc fmt = Format.ksprintf (fun s -> failwith (loc ^ s)) fmt
-
-let invalid_argf fmt = Format.ksprintf invalid_arg fmt

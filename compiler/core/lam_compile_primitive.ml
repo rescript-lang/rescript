@@ -558,7 +558,6 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     | [e; e1] -> Js_of_lam_array.ref_array e e1 (* Todo: Constant Folding *)
     | _ -> assert false)
   | Parrayrefs -> E.runtime_call Primitive_modules.array "get" args
-  | Parraysets -> E.runtime_call Primitive_modules.array "set" args
   | Pmakearray -> Js_of_lam_array.make_array args
   | Pmakelist ->
     Js_of_lam_block.make_block
@@ -598,14 +597,12 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | [e] -> {e with expression_desc = Await e}
     | _ -> assert false)
-  (* Lam_compile_external_call.translate loc cxt prim args *)
   (* Test if the argument is a block or an immediate integer *)
   | Pjs_object_create _ -> assert false
   | Pjs_call {prim_name; arg_types; ffi; transformed_jsx} ->
     Lam_compile_external_call.translate_ffi cxt arg_types ~prim_name ffi args
       ~transformed_jsx
   (* FIXME, this can be removed later *)
-  | Pisint -> E.is_type_number (Ext_list.singleton_exn args)
   | Pis_poly_var_block -> E.is_type_object (Ext_list.singleton_exn args)
   | Pduprecord -> (
     match args with

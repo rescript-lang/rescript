@@ -22,11 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(** [is_closed_by map lam]
-    return [true] if all unbound variables
-    belongs to the given [map] *)
-(* val is_closed_by : Set_ident.t -> Lambda.t -> bool *)
-
 val is_closed : Lambda.t -> bool
 
 val is_closed_with_map :

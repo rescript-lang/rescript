@@ -7,10 +7,10 @@ Hover src/FirstClassModules.res 11:16
 }
 
 Complete src/FirstClassModules.res 13:15
-posCursor:[13:15] posNoWhite:[13:14] Found expr:[10:13->26:1]
-posCursor:[13:15] posNoWhite:[13:14] Found expr:[11:2->25:4]
-posCursor:[13:15] posNoWhite:[13:14] Found expr:[13:4->25:4]
-posCursor:[13:15] posNoWhite:[13:14] Found expr:[13:4->13:15]
+pos_cursor:[13:15] pos_no_white:[13:14] Found expr:[10:13->26:1]
+pos_cursor:[13:15] pos_no_white:[13:14] Found expr:[11:2->25:4]
+pos_cursor:[13:15] pos_no_white:[13:14] Found expr:[13:4->25:4]
+pos_cursor:[13:15] pos_no_white:[13:14] Found expr:[13:4->13:15]
 Pexp_ident SomeModule.:[13:4->13:15]
 Completable: Cpath Value[SomeModule, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -48,12 +48,12 @@ Hover src/FirstClassModules.res 16:8
 }
 
 Complete src/FirstClassModules.res 20:7
-posCursor:[20:7] posNoWhite:[20:6] Found expr:[10:13->26:1]
-posCursor:[20:7] posNoWhite:[20:6] Found expr:[11:2->25:4]
-posCursor:[20:7] posNoWhite:[20:6] Found expr:[16:2->25:4]
-posCursor:[20:7] posNoWhite:[20:6] Found expr:[19:2->25:4]
-posCursor:[20:7] posNoWhite:[20:6] Found expr:[20:5->25:4]
-posCursor:[20:7] posNoWhite:[20:6] Found expr:[20:5->20:7]
+pos_cursor:[20:7] pos_no_white:[20:6] Found expr:[10:13->26:1]
+pos_cursor:[20:7] pos_no_white:[20:6] Found expr:[11:2->25:4]
+pos_cursor:[20:7] pos_no_white:[20:6] Found expr:[16:2->25:4]
+pos_cursor:[20:7] pos_no_white:[20:6] Found expr:[19:2->25:4]
+pos_cursor:[20:7] pos_no_white:[20:6] Found expr:[20:5->25:4]
+pos_cursor:[20:7] pos_no_white:[20:6] Found expr:[20:5->20:7]
 Pexp_ident M.:[20:5->20:7]
 Completable: Cpath Value[M, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -81,12 +81,12 @@ Path M.
 ]
 
 Complete src/FirstClassModules.res 23:8
-posCursor:[23:8] posNoWhite:[23:7] Found expr:[10:13->26:1]
-posCursor:[23:8] posNoWhite:[23:7] Found expr:[11:2->25:4]
-posCursor:[23:8] posNoWhite:[23:7] Found expr:[16:2->25:4]
-posCursor:[23:8] posNoWhite:[23:7] Found expr:[19:2->25:4]
-posCursor:[23:8] posNoWhite:[23:7] Found expr:[23:5->25:4]
-posCursor:[23:8] posNoWhite:[23:7] Found expr:[23:5->23:8]
+pos_cursor:[23:8] pos_no_white:[23:7] Found expr:[10:13->26:1]
+pos_cursor:[23:8] pos_no_white:[23:7] Found expr:[11:2->25:4]
+pos_cursor:[23:8] pos_no_white:[23:7] Found expr:[16:2->25:4]
+pos_cursor:[23:8] pos_no_white:[23:7] Found expr:[19:2->25:4]
+pos_cursor:[23:8] pos_no_white:[23:7] Found expr:[23:5->25:4]
+pos_cursor:[23:8] pos_no_white:[23:7] Found expr:[23:5->23:8]
 Pexp_ident M.g:[23:5->23:8]
 Completable: Cpath Value[M, g]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -96,10 +96,10 @@ Path M.g
 [ { "detail": "t => string", "kind": 12, "label": "getName", "tags": [] } ]
 
 Complete src/FirstClassModules.res 32:8
-posCursor:[32:8] posNoWhite:[32:7] Found expr:[30:22->35:1]
-posCursor:[32:8] posNoWhite:[32:7] Found expr:[31:2->34:4]
-posCursor:[32:8] posNoWhite:[32:7] Found expr:[32:5->34:4]
-posCursor:[32:8] posNoWhite:[32:7] Found expr:[32:5->32:8]
+pos_cursor:[32:8] pos_no_white:[32:7] Found expr:[30:22->35:1]
+pos_cursor:[32:8] pos_no_white:[32:7] Found expr:[31:2->34:4]
+pos_cursor:[32:8] pos_no_white:[32:7] Found expr:[32:5->34:4]
+pos_cursor:[32:8] pos_no_white:[32:7] Found expr:[32:5->32:8]
 Pexp_ident S2.:[32:5->32:8]
 Completable: Cpath Value[S2, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -129,7 +129,7 @@ Path S2.
 ]
 
 Complete src/FirstClassModules.res 38:7
-posCursor:[38:7] posNoWhite:[38:6] Found expr:[38:5->38:7]
+pos_cursor:[38:7] pos_no_white:[38:6] Found expr:[38:5->38:7]
 Pexp_ident X.:[38:5->38:7]
 Completable: Cpath Value[X, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -167,10 +167,10 @@ Hover src/FirstClassModules.res 44:7
 }
 
 Complete src/FirstClassModules.res 52:17
-posCursor:[52:17] posNoWhite:[52:16] Found expr:[50:15->55:3]
-posCursor:[52:17] posNoWhite:[52:16] Found expr:[51:4->54:6]
-posCursor:[52:17] posNoWhite:[52:16] Found expr:[52:6->54:6]
-posCursor:[52:17] posNoWhite:[52:16] Found expr:[52:6->52:17]
+pos_cursor:[52:17] pos_no_white:[52:16] Found expr:[50:15->55:3]
+pos_cursor:[52:17] pos_no_white:[52:16] Found expr:[51:4->54:6]
+pos_cursor:[52:17] pos_no_white:[52:16] Found expr:[52:6->54:6]
+pos_cursor:[52:17] pos_no_white:[52:16] Found expr:[52:6->52:17]
 Pexp_ident SomeModule.:[52:6->52:17]
 Completable: Cpath Value[SomeModule, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -200,11 +200,11 @@ Path SomeModule.
 ]
 
 Complete src/FirstClassModules.res 65:17
-posCursor:[65:17] posNoWhite:[65:16] Found expr:[58:16->69:1]
-posCursor:[65:17] posNoWhite:[65:16] Found expr:[62:2->68:3]
-posCursor:[65:17] posNoWhite:[65:16] Found expr:[64:4->67:6]
-posCursor:[65:17] posNoWhite:[65:16] Found expr:[65:6->67:6]
-posCursor:[65:17] posNoWhite:[65:16] Found expr:[65:6->65:17]
+pos_cursor:[65:17] pos_no_white:[65:16] Found expr:[58:16->69:1]
+pos_cursor:[65:17] pos_no_white:[65:16] Found expr:[62:2->68:3]
+pos_cursor:[65:17] pos_no_white:[65:16] Found expr:[64:4->67:6]
+pos_cursor:[65:17] pos_no_white:[65:16] Found expr:[65:6->67:6]
+pos_cursor:[65:17] pos_no_white:[65:16] Found expr:[65:6->65:17]
 Pexp_ident SomeModule.:[65:6->65:17]
 Completable: Cpath Value[SomeModule, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder

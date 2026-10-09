@@ -28,21 +28,4 @@ val core_type_of_type_declaration :
     used in code gen later
 *)
 
-val new_type_of_type_declaration :
-  Parsetree.type_declaration ->
-  string ->
-  Parsetree.core_type * Parsetree.type_declaration
-
-(* val mk_fun :
-   loc:Location.t ->
-   Parsetree.core_type ->
-   string -> Parsetree.expression -> Parsetree.expression
-   val destruct_label_declarations :
-   loc:Location.t ->
-   string ->
-   Parsetree.label_declaration list ->
-   (Parsetree.core_type * Parsetree.expression) list * string list *)
-
 val not_applicable : Location.t -> string -> unit
-
-val invalid_config : Parsetree.expression -> 'a

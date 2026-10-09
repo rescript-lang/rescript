@@ -46,8 +46,6 @@ type section = {
   submodules: array<module_>,
 }
 
-let env = Process.env
-
 let docsDecoded = entryPointFiles->Array.map(((packageName, libFile)) =>
   try {
     let entryPointFile = Path.join([

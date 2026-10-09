@@ -35,14 +35,10 @@ switch result {
 | _ => ()
 }
 
-;;((match result with
-    | Some x -> Console.log {js|The sky is blue|js}
-    | _ -> ())[@res.iflet ][@warning {js|-4|js}])
-;;((match result with
-    | Error x -> Console.log {js|The sky is red|js}
-    | _ ->
-        (((match result with
-           | Ok y -> Console.log {js|The sky is blue|js}
-           | _ -> ()))
-        [@res.iflet ][@warning {js|-4|js}]))
-  [@res.iflet ][@warning {js|-4|js}])
+;;match result with | Some x -> Console.log {js|The sky is blue|js} | _ -> ()
+;;match result with
+  | Error x -> Console.log {js|The sky is red|js}
+  | _ ->
+      (match result with
+       | Ok y -> Console.log {js|The sky is blue|js}
+       | _ -> ())

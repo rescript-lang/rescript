@@ -4,7 +4,7 @@ module String_map = Map.Make (String)
 module String_set = Set.Make (String)
 module Int_set = Set.Make (Int)
 
-(* Public API: migrate ~entryPointFile ~outputMode *)
+(* Public API: migrate ~entry_point_file ~output_mode *)
 
 let is_unit_expr (e : Parsetree.expression) =
   match e.pexp_desc with
@@ -56,7 +56,7 @@ module Expr_utils = struct
       true
     | Pexp_construct (_, {txt = [e]})
     | Pexp_constraint (e, _)
-    | Pexp_coerce (e, _, _)
+    | Pexp_coerce (e, _)
     | Pexp_let (_, _, e)
     | Pexp_sequence (e, _)
     | Pexp_letmodule (_, _, e)
@@ -202,9 +202,9 @@ module Mapper_utils = struct
      (e.g. `lhs -> f(args)`), adjust drop positions accordingly at the call site.
 
      Returns:
-     - template_args_to_insert: args to append to the final call
-     - labelled_names_to_drop: names of labelled source args consumed
-     - unlabelled_positions_to_drop: 0-based indices of unlabelled source args to drop
+     - args_to_insert: args to append to the final call
+     - labelled_to_drop: names of labelled source args consumed
+     - unlabelled_to_drop: 0-based indices of unlabelled source args to drop
   *)
   type template_resolution = {
     args_to_insert: args;

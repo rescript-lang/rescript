@@ -5,7 +5,7 @@
 
 import * as MoreVariantsJS from './MoreVariants.res.js';
 
-export type withRenaming = "type_" | "b";
+export type withRenaming = "type" | "b";
 
 export type withoutRenaming = "type_" | "b";
 

@@ -6,7 +6,13 @@ function methodThroughPpxBridge() {
   return 1 + $$this | 0;
 }
 
+function bracedMethodThroughPpxBridge() {
+  let $$this = this ;
+  return 1 + $$this | 0;
+}
+
 export {
   methodThroughPpxBridge,
+  bracedMethodThroughPpxBridge,
 }
 /* methodThroughPpxBridge Not a pure module */

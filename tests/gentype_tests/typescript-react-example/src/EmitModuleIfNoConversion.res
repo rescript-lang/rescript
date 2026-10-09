@@ -3,7 +3,6 @@ type t =
   | A
   | B({name: string})
 
-// foo requires converion: don't emit module X
 module X = {
   @genType
   let foo = (t: t) =>

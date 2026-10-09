@@ -73,15 +73,15 @@ pub struct Package {
     pub is_root: bool,
 }
 
-pub fn get_build_path(canonical_path: &Path) -> PathBuf {
+fn get_build_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("bs")
 }
 
-pub fn get_js_path(canonical_path: &Path) -> PathBuf {
+fn get_js_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("js")
 }
 
-pub fn get_esmodule_path(canonical_path: &Path) -> PathBuf {
+fn get_esmodule_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("es6")
 }
 
@@ -102,11 +102,11 @@ impl Package {
         self.get_build_path().join("compiler-info.json")
     }
 
-    pub fn get_js_path(&self) -> PathBuf {
+    fn get_js_path(&self) -> PathBuf {
         get_js_path(&self.path)
     }
 
-    pub fn get_esmodule_path(&self) -> PathBuf {
+    fn get_esmodule_path(&self) -> PathBuf {
         get_esmodule_path(&self.path)
     }
 
@@ -124,13 +124,6 @@ impl Package {
             .to_suffix()
             .expect("namespace should be set for mlmap module");
         self.get_build_path().join(format!("{suffix}.cmi"))
-    }
-
-    pub fn is_source_file_type_dev(&self, path: &Path) -> bool {
-        self.source_files
-            .as_ref()
-            .and_then(|sf| sf.get(path).map(|sfm| sfm.is_type_dev))
-            .unwrap_or(false)
     }
 }
 
@@ -153,7 +146,7 @@ fn matches_filter(filter: &Option<regex::Regex>, path: &str) -> bool {
     }
 }
 
-pub fn read_folders(
+fn read_folders(
     filter: &Option<regex::Regex>,
     package_dir: &Path,
     path: &Path,
@@ -433,7 +426,7 @@ fn flatten_dependencies(dependencies: Vec<Dependency>) -> Vec<Dependency> {
     flattened
 }
 
-pub fn read_package_name(package_dir: &Path) -> Result<String> {
+fn read_package_name(package_dir: &Path) -> Result<String> {
     let read_name = |file_name: &str| -> Result<Option<String>> {
         let path = package_dir.join(file_name);
         if !Path::exists(&path) {
@@ -612,7 +605,7 @@ fn read_packages(
 /// can be marked with the type 'dev'. Which means that they may not be around in the distributed
 /// NPM package. The file reader allows for this, just warns when this happens.
 /// TODO -> Check whether we actually need the `fs::Metadata`
-pub fn get_source_files(
+fn get_source_files(
     package_name: &String,
     package_dir: &Path,
     filter: &Option<regex::Regex>,
@@ -769,7 +762,7 @@ fn collect_gentype_source_dirs(package: &Package) -> Vec<PathBuf> {
 /// `read_dependencies` — i.e. when the consumer is a local dep and we're not in `--prod`. This
 /// keeps dev-only feature requests (e.g. a shorthand `dev-dependencies` entry that would flip
 /// everything to "all features") from leaking into production builds.
-pub fn compute_active_features(
+fn compute_active_features(
     packages: &AHashMap<String, Package>,
     cli_features: Option<&Vec<String>>,
     prod: bool,
@@ -1139,24 +1132,6 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
     Ok(())
 }
 
-impl Package {
-    pub fn get_jsx_args(&self) -> Vec<String> {
-        self.config.get_jsx_args()
-    }
-
-    pub fn get_jsx_mode_args(&self) -> Vec<String> {
-        self.config.get_jsx_mode_args()
-    }
-
-    pub fn get_jsx_module_args(&self) -> Vec<String> {
-        self.config.get_jsx_module_args()
-    }
-
-    pub fn get_jsx_preserve_args(&self) -> Vec<String> {
-        self.config.get_jsx_preserve_args()
-    }
-}
-
 fn get_unallowed_dependents(
     packages: &AHashMap<String, Package>,
     package_name: &String,
@@ -1236,13 +1211,19 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
     let has_any_unallowed_dependent = !detected_unallowed_dependencies.is_empty();
 
     if has_any_unallowed_dependent {
-        log::error!(
-            "\nUpdate the {} value in the {} of the unallowed dependencies to solve the issue!",
-            console::style("unallowed_dependents").bold().dim(),
-            console::style("config.json").bold().dim()
-        )
+        log::error!("{}", unallowed_dependents_hint())
     }
     !has_any_unallowed_dependent
+}
+
+/// The hint printed after the list of unallowed dependencies, naming the
+/// package setting and the file that holds it.
+fn unallowed_dependents_hint() -> String {
+    format!(
+        "\nUpdate the {} value in the {} of the unallowed dependencies to solve the issue!",
+        console::style("allowed-dependents").bold().dim(),
+        console::style("rescript.json").bold().dim()
+    )
 }
 
 #[cfg(test)]
@@ -1257,7 +1238,7 @@ mod test {
     use std::sync::RwLock;
     use tempfile::TempDir;
 
-    pub struct CreatePackageArgs {
+    struct CreatePackageArgs {
         name: String,
         bs_deps: Vec<String>,
         build_dev_deps: Vec<String>,
@@ -1309,6 +1290,15 @@ mod test {
 
         let is_valid = super::validate_packages_dependencies(&packages);
         assert!(!is_valid)
+    }
+
+    #[test]
+    fn unallowed_dependents_hint_names_the_setting_and_its_file() {
+        let hint = console::strip_ansi_codes(&super::unallowed_dependents_hint()).into_owned();
+        assert_eq!(
+            hint,
+            "\nUpdate the allowed-dependents value in the rescript.json of the unallowed dependencies to solve the issue!"
+        );
     }
 
     #[test]

@@ -21,7 +21,7 @@ type rec node = {
   left: t,
   right: t,
 }
-@deriving(abstract) and t = option<node>
+and t = option<node>
 
 module S = Belt.MutableStack
 module Q = Belt.MutableQueue
@@ -33,17 +33,17 @@ let inOrder = (v: t): array<int> => {
   while current.contents->Option.isSome {
     let v = current.contents->Option.getUnsafe
     S.push(s, v)
-    current := leftGet(v)
+    current := v.left
   }
   while !S.isEmpty(s) {
     current := Some(S.popOrThrow(s))
     let v = current.contents->Option.getUnsafe
-    Q.add(q, valueGet(v))
-    current := rightGet(v)
+    Q.add(q, v.value)
+    current := v.right
     while current.contents->Option.isSome {
       let v = current.contents->Option.getUnsafe
       S.push(s, v)
-      current := leftGet(v)
+      current := v.left
     }
   }
   Q.toArray(q)
@@ -56,21 +56,21 @@ let inOrder3 = (v: t): array<int> => {
   while current.contents->Option.isSome {
     let v = current.contents->Option.getUnsafe
     S.push(s, v)
-    current := leftGet(v)
+    current := v.left
   }
   S.dynamicPopIter(s, popped => {
-    Q.add(q, valueGet(popped))
-    let current = ref(rightGet(popped))
+    Q.add(q, popped.value)
+    let current = ref(popped.right)
     while current.contents->Option.isSome {
       let v = current.contents->Option.getUnsafe
       S.push(s, v)
-      current := leftGet(v)
+      current := v.left
     }
   })
   Q.toArray(q)
 }
 
-let n = (~l=?, ~r=?, a) => node(~value=a, ~left=l, ~right=r)
+let n = (~l=?, ~r=?, a) => {value: a, left: l, right: r}
 
 let test1 = n(1, ~l=n(2, ~l=n(4), ~r=n(5)), ~r=n(3))
 

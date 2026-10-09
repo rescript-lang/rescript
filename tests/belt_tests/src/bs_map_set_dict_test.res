@@ -94,7 +94,7 @@ describe(__MODULE__, () => {
   })
 
   test("map_set_dict_tests", () => {
-    // All tests are already run as standalone assertions above
+    // The top-level blocks above only log their results
     ok(__LOC__, true)
   })
 })

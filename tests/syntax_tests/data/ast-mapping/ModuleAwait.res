@@ -1,0 +1,15 @@
+module A = await List
+module B = await @a @b List
+module C = await (List: ListT)
+module D = (await List: ListT)
+module E = @a (await List)
+module G = await @w (await X)
+module H = (await F)(X)
+module I = F(await X)
+include await X
+
+let f = async () => {
+  module M = await List
+  module N = await @a (List: ListT)
+  M.length + N.length
+}

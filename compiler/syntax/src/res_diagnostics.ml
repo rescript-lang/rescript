@@ -9,6 +9,7 @@ type category =
       token: Token.t;
     }
   | Message of string
+  | LazyMessage of string Lazy.t
   | Uident of Token.t
   | Lident of Token.t
   | UnclosedString
@@ -61,6 +62,7 @@ let explain t =
     | Underscore -> "`_` isn't a valid name."
     | _ -> "I'm expecting a lowercase name like `user or `age`")
   | Message txt -> txt
+  | LazyMessage txt -> Lazy.force txt
   | UnclosedString -> "This string is missing a double quote at the end"
   | UnclosedTemplate ->
     "Did you forget to close this template expression with a backtick?"
@@ -197,3 +199,4 @@ let unclosed_comment = UnclosedComment
 let unclosed_template = UnclosedTemplate
 let unknown_uchar code = UnknownUchar code
 let message txt = Message txt
+let lazy_message txt = LazyMessage txt

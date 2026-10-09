@@ -213,10 +213,6 @@ and pattern i ppf x =
     line i ppf "Tpat_type %a\n" fmt_path id;
     attributes i ppf attrs;
     pattern i ppf {x with pat_extra = rem}
-  | (Tpat_open (id, _, _), _, attrs) :: rem ->
-    line i ppf "Tpat_open \"%a\"\n" fmt_path id;
-    attributes i ppf attrs;
-    pattern i ppf {x with pat_extra = rem}
   | [] -> (
     match x.pat_desc with
     | Tpat_any -> line i ppf "Tpat_any\n"
@@ -252,10 +248,11 @@ and expression_extra i ppf x attrs =
     line i ppf "Texp_constraint\n";
     attributes i ppf attrs;
     core_type i ppf ct
-  | Texp_coerce cto2 ->
+  | Texp_coerce {source_type; target} ->
     line i ppf "Texp_coerce\n";
     attributes i ppf attrs;
-    core_type i ppf cto2
+    line i ppf "source %a\n" Printtyp.type_expr source_type;
+    core_type i ppf target
   | Texp_open (ovf, m, _, _) ->
     line i ppf "Texp_open %a \"%a\"\n" fmt_override_flag ovf fmt_path m;
     attributes i ppf attrs

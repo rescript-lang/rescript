@@ -60,8 +60,7 @@ This document captures what the migration framework currently supports, based on
 - Resolution: IDs map to functions in `tools/src/transforms.ml`. Unknown IDs are ignored.
 - Application:
   - Attributes attached to template or placeholder expressions are preserved on replacements and applied in a second pass over `.res` implementations.
-  - Currently implemented transform: `dropUnitArgumentsInApply` (drops only unlabelled unit arguments from application nodes).
-  - Other registry entries are stubs and currently no‑ops.
+  - Transforms: `labelledToUnlabelledArgumentsInFnDefinition` (drops the labels of function definition parameters) and `dropUnitArgumentsInApply` (drops only unlabelled unit arguments from application nodes).
 - Note: The second pass runs for `.res` (implementations). Interfaces (`.resi`) do not contain expression bodies; transform pass is not applied there.
 
 ## Limitations / Not Supported (Today)
@@ -71,7 +70,6 @@ This document captures what the migration framework currently supports, based on
 - No special handling for method sends beyond normal call/pipe matching.
 - Transforms run only in `.res`. Attachments in `.resi` will be carried in attrs but not executed.
 - Only type constructor occurrences are replaced via `%replace.type`; no pattern matching over other type forms.
-- Transform registry is minimal; most listed transforms are placeholders.
 
 ## Summary of Behavior
 

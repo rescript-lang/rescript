@@ -150,9 +150,6 @@ let free_variables (export_idents : Set_ident.t) (params : stats Map_ident.t)
   iter Lam_var_stats.fresh_env lam;
   !fv
 
-(* let is_closed_by (set : Set_ident.t) (lam : Lambda.t) : bool =
-   Map_ident.is_empty (free_variables set (Map_ident.empty ) lam   ) *)
-
 (** A bit consverative , it should be empty *)
 let is_closed lam =
   Map_ident.for_all (free_variables Set_ident.empty Map_ident.empty lam)

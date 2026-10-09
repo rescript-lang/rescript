@@ -13,3 +13,5 @@ include Stdlib_NullableTests
 include Stdlib_DictTests
 include Stdlib_IteratorTests
 include Stdlib_RegExpTest
+include Stdlib_StringTests
+include Stdlib_ImportTests

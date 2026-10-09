@@ -4,26 +4,18 @@ This document describes the architecture of the reanalyze dead code analysis pip
 
 ## Overview
 
-The DCE (Dead Code Elimination) analysis is structured as a **pure pipeline** with four phases:
+The DCE (Dead Code Elimination) analysis runs in four phases over one reactive
+pipeline (`Dce_pipeline.t`):
 
 1. **MAP** - Process each `.cmt` file independently → per-file data
-2. **MERGE** - Combine all per-file data → immutable project-wide view
-3. **SOLVE** - Compute dead/live status → immutable result with issues
+2. **MERGE** - Derive project-wide collections from the per-file data
+3. **SOLVE** - Compute dead/live status → issues
 4. **REPORT** - Output issues (side effects only here)
 
-This design enables:
+This design gives:
 - **Order independence** - Processing files in any order gives identical results
-- **Incremental updates** - Replace one file's data without reprocessing others
-- **Testability** - Each phase is independently testable with pure functions
-- **Parallelization potential** - Phases 1-3 work on immutable data
-
----
-
-## Pipeline Diagram
-
-> **Source**: [`diagrams/batch-pipeline.mmd`](diagrams/batch-pipeline.mmd)
-
-![Batch Pipeline](diagrams/batch-pipeline.svg)
+- **Incremental updates** - Adding, changing or removing one file updates only the derived entries it affects
+- **Testability** - Each phase consumes and produces plain data
 
 ---
 
@@ -31,14 +23,13 @@ This design enables:
 
 | Type | Purpose | Mutability |
 |------|---------|------------|
-| `DceFileProcessing.file_data` | Per-file collected data | Builders (mutable during AST walk) |
-| `FileAnnotations.t` | Source annotations (`@dead`, `@live`) | Immutable after merge |
-| `Declarations.t` | All exported declarations (pos → Decl.t) | Immutable after merge |
-| `References.t` | Value/type references (source → targets) | Immutable after merge |
-| `FileDeps.t` | Cross-file dependencies (file → FileSet.t) | Immutable after merge |
-| `OptionalArgsState.t` | Computed optional arg state per-decl | Immutable |
-| `AnalysisResult.t` | Solver output with Issue.t list | Immutable |
-| `DceConfig.t` | Analysis configuration | Immutable (passed explicitly) |
+| `Dce_file_processing.file_data` | Per-file collected data | Builders (mutable during AST walk) |
+| `Reactive_merge.t` | Project-wide decls, annotations, refs, cross-file items, file deps | Reactive collections |
+| `Annotation_store.t` | Source annotations (`@dead`, `@live`, `@genType`) read by the solver | Read-only view of a reactive collection |
+| `Cross_file_items_store.t` | Optional-arg calls, function refs and value escapes | Read-only view of a reactive collection |
+| `Optional_args_state.t` | Computed optional arg state per-decl | Built once per solve |
+| `Analysis_result.t` | Issue list handed to reporting | Immutable |
+| `Dce_config.t` | Analysis configuration | Immutable (passed explicitly) |
 
 ---
 
@@ -46,100 +37,80 @@ This design enables:
 
 ### Phase 1: MAP (Per-File Processing)
 
-**Entry point**: `DceFileProcessing.process_cmt_file`
+**Entry point**: `Dce_file_processing.process_cmt_file`, called per file by
+`Reactive_analysis.process_files`
 
-**Input**: `.cmt` file path + `DceConfig.t`
+**Input**: `.cmt` file path + `Dce_config.t`
 
 **Output**: `file_data` containing builders for:
-- `annotations` - `@dead`, `@live` annotations from source
+- `annotations` - `@dead`, `@live`, `@genType` annotations from source
 - `decls` - Exported value/type/exception declarations
 - `refs` - References to other declarations
 - `file_deps` - Which files this file depends on
 - `cross_file` - Items needing cross-file resolution (optional args, exceptions)
 
-**Key property**: Local mutable state is OK here (performance). Each file is processed independently.
+**Key property**: Local mutable state is OK here (performance). Each file is processed independently. `Reactive_file_collection` caches the result per file and reprocesses only files whose `.cmt` changed.
 
-### Phase 2: MERGE (Combine Builders)
+### Phase 2: MERGE (Project-Wide Collections)
 
-**Entry point**: `Reanalyze.runAnalysis` (merge section)
+**Entry point**: `Reactive_merge.create`
 
-**Input**: `file_data list`
+**Input**: the reactive collection of `(path, file_data)`
 
-**Output**: Immutable project-wide data structures
+**Output**: `Reactive_merge.t`, whose collections (`decls`, `annotations`,
+`value_refs_from`, `type_refs_from`, `cross_file_items`, `file_deps_map`,
+`files`) are `flat_map`s over the per-file data, plus the type-dependency,
+exception-reference and coercion collections derived from them.
 
-**Operations**:
-```ocaml
-let annotations = FileAnnotations.merge_all (file_data_list |> List.map (fun fd -> fd.annotations))
-let decls = Declarations.merge_all (file_data_list |> List.map (fun fd -> fd.decls))
-let refs = References.merge_all (file_data_list |> List.map (fun fd -> fd.refs))
-let file_deps = FileDeps.merge_all (file_data_list |> List.map (fun fd -> fd.file_deps))
-```
-
-**Key property**: Merge operations are commutative - order of `file_data_list` doesn't matter.
+**Key property**: Each merged collection is keyed by position or file, so the result does not depend on the order files arrive in.
 
 ### Phase 3: SOLVE (Deadness Computation)
 
-**Entry point**: `DeadCommon.solveDead` + optional args second pass in `Reanalyze.runAnalysis`
+**Entry point**: `Reanalyze.run_analysis` (solving section): `Reactive_solver.collect_issues`, then the optional args pass
 
-**Input**: All merged data + config
+**Input**: The merged collections + config
 
-**Output**: `AnalysisResult.t` containing `Issue.t list`
+**Output**: `Analysis_result.t` containing `Issue.t list`
 
 **Algorithm** (forward fixpoint + liveness-aware optional args):
 
-**Core liveness computation** (`Liveness.compute_forward`):
+**Core liveness computation** (`Reactive_liveness.create`):
 1. Identify roots: declarations with `@live`/`@genType` annotations or referenced from outside any declaration
-2. Build index mapping each declaration to its outgoing references (refs_from direction)
-3. Run forward fixpoint: propagate liveness from roots through references
-4. Return set of all live positions
+2. Build the edges mapping each declaration to its outgoing references (`Reactive_decl_refs`)
+3. Run a reactive fixpoint: propagate liveness from roots through edges
+4. The `live` collection holds all live positions
 
-**Pass 1: Deadness resolution**
-1. Compute liveness via forward propagation
-2. For each declaration, check if in live set
-3. Mark dead declarations, collect issues
+**Pass 1: Deadness resolution** (`Reactive_solver`)
+1. Partition declarations into `dead_decls` and `live_decls` by joining with `live`
+2. Group dead declarations per file and generate issues per file (`Dead_common.report_declaration`)
+3. Derive dead-module issues and incorrect `@dead` annotations
 
-**Pass 2: Liveness-aware optional args analysis**
-1. Use `Decl.isLive` to build an `is_live` predicate from Pass 1 results
-2. Compute optional args state via `CrossFileItems.compute_optional_args_state`, filtering out calls from dead code
-3. Collect optional args issues only for live declarations
-4. Merge optional args issues into the final result
+**Pass 2: Liveness-aware optional args analysis** (`Reanalyze.run_analysis`)
+1. Use `Reactive_solver.is_pos_live` as the `is_live` predicate
+2. Compute optional args state via `Cross_file_items_store.compute_optional_args_state`, filtering out calls from dead code
+3. Run `Dead_optional_args.check` on each live declaration (`Reactive_solver.iter_live_decls`)
+4. Append optional args issues to the dead code issues
 
 This two-pass approach ensures that optional argument warnings (e.g., "argument X is never used") only consider calls from live code, preventing false positives when a function is only called from dead code.
 
-**Key property**: Pure functions - immutable in, immutable out. No side effects.
+**Key property**: The solver returns issues; it never logs directly.
 
 ### Phase 4: REPORT (Output)
 
-**Entry point**: `Reanalyze.runAnalysis` (report section)
+**Entry point**: `Reanalyze.run_analysis` (report section)
 
-**Input**: `AnalysisResult.t`
+**Input**: `Analysis_result.t`
 
 **Output**: Logging / JSON to stdout
 
 **Operations**:
 ```ocaml
-AnalysisResult.get_issues analysis_result
-|> List.iter (fun issue -> Log_.warning ~loc:issue.loc issue.description)
+Analysis_result.get_issues result
+|> List.iter (fun (issue : Issue.t) ->
+    Log_.warning ~loc:issue.loc issue.description)
 ```
 
-**Key property**: All side effects live here at the edge. The solver never logs directly.
-
----
-
-## Incremental updates in the non-reactive pipeline
-
-The phase boundaries permit the non-reactive pipeline to update one file's
-input without retaining mutable per-file analysis state:
-
-1. Re-run Phase 1 for changed file only → new `file_data`
-2. Replace in `file_data` map (keyed by filename)
-3. Re-run Phase 2 (merge) - fast, pure function
-4. Re-run Phase 3 (solve) - fast, pure function
-
-Immutable phase outputs allow one file's data to be replaced without mutating
-the retained outputs for other files. The current reactive pipeline below goes
-further by propagating deltas through derived collections rather than rerunning
-the complete merge and solve phases.
+**Key property**: All side effects live here at the edge.
 
 ---
 
@@ -151,17 +122,17 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 
 | Primitive | Description |
 |-----------|-------------|
-| `Reactive.t ('k, 'v)` | Universal reactive collection interface |
+| `('k, 'v) Reactive.t` | Universal reactive collection interface |
 | `subscribe` | Register for delta notifications |
 | `iter` | Iterate current entries |
 | `get` | Lookup by key |
 | `delta` | Change notification: `Set (k, v)`, `Remove k`, or `Batch [(k, v option); ...]` |
 | `source` | Create a mutable source collection with emit function |
-| `flatMap` | Transform collection, optionally merge same-key values |
+| `flat_map` | Transform collection, optionally merge same-key values |
 | `join` | Hash join two collections (left join behavior) |
 | `union` | Combine two collections, optionally merge same-key values |
 | `fixpoint` | Transitive closure: `init + edges → reachable` |
-| `ReactiveFileCollection` | File-backed collection with change detection |
+| `Reactive_file_collection` | File-backed collection with change detection |
 
 ### Glitch-Free Semantics via Topological Scheduling
 
@@ -187,8 +158,8 @@ When a batch of file changes arrives:
 
 The `Reactive.Registry` and `Reactive.Scheduler` modules provide:
 - Named nodes with stats tracking (use `-timing` flag to see stats)
-- `to_mermaid()` - Generate pipeline diagram (use `-mermaid` flag)
-- `print_stats()` - Show per-node timing and delta counts
+- `Reactive.to_mermaid ()` - Generate pipeline diagram (use `-mermaid` flag)
+- `Reactive.print_stats ()` - Show per-node timing and delta counts
 
 ### Fully Reactive Analysis Pipeline
 
@@ -197,8 +168,8 @@ The reactive pipeline computes issues directly from source files with **zero rec
 ```
 Files → file_data → decls, annotations, refs → live (fixpoint) → dead/live_decls → issues → REPORT
          ↓              ↓                          ↓                    ↓              ↓        ↓
-     ReactiveFile   ReactiveMerge          ReactiveLiveness      ReactiveSolver            iter
-     Collection         (flatMap)              (fixpoint)      (multiple joins)          (only)
+ Reactive_file_   Reactive_merge          Reactive_liveness     Reactive_solver           iter
+   collection       (flat_map)               (fixpoint)        (multiple joins)          (only)
 ```
 
 **Key property**: When no files change, no computation happens. All reactive collections are stable. Only the final `collect_issues` call iterates pre-computed collections (O(issues)).
@@ -207,31 +178,32 @@ Files → file_data → decls, annotations, refs → live (fixpoint) → dead/li
 
 | Stage | Input | Output | Combinator |
 |-------|-------|--------|------------|
-| **File Processing** | `.cmt` files | `file_data` | `ReactiveFileCollection` |
-| **Merge** | `file_data` | `decls`, `annotations`, `refs` | `flatMap` |
+| **File Processing** | `.cmt` files | `file_data` | `Reactive_file_collection` |
+| **Merge** | `file_data` | `decls`, `annotations`, `refs` | `flat_map` |
 | **Liveness** | `refs`, `annotations` | `live` (positions) | `fixpoint` |
 | **Dead/Live Partition** | `decls`, `live` | `dead_decls`, `live_decls` | `join` (partition by liveness) |
-| **Dead Modules** | `dead_decls`, `live_decls` | `dead_modules` | `flatMap` + `join` (anti-join) |
-| **Per-File Grouping** | `dead_decls`, `refs` | `dead_decls_by_file`, `refs_by_file` | `flatMap` with merge |
-| **Per-File Issues** | `dead_decls_by_file`, `annotations` | `issues_by_file` | `flatMap` (sort + filter + generate) |
+| **Dead Modules** | `dead_decls`, `live_decls` | `dead_modules` | `flat_map` + `join` (anti-join) |
+| **Per-File Grouping** | `dead_decls` | `dead_decls_by_file` | `flat_map` with merge |
+| **Per-File Issues** | `dead_decls_by_file`, `annotations` | `issues_by_file` | `flat_map` (sort + filter + generate) |
 | **Incorrect @dead** | `live_decls`, `annotations` | `incorrect_dead_decls` | `join` (live with Dead annotation) |
-| **Module Issues** | `dead_modules`, `issues_by_file` | `dead_module_issues` | `flatMap` + `join` |
+| **Module Issues** | `dead_modules`, `issues_by_file` | `dead_module_issues` | `flat_map` + `join` |
 | **Report** | all issue collections | stdout | `iter` (ONLY iteration) |
 
-### ReactiveSolver Collections
+### Reactive_solver Collections
 
 | Collection | Type | Description |
 |------------|------|-------------|
 | `dead_decls` | `(pos, Decl.t)` | Declarations NOT in live set |
 | `live_decls` | `(pos, Decl.t)` | Declarations IN live set |
-| `dead_modules` | `(Name.t, Location.t)` | Modules with only dead declarations (anti-join) |
+| `dead_modules` | `(Name.t, Location.t * string)` | Modules with only dead declarations (anti-join) |
 | `dead_decls_by_file` | `(file, Decl.t list)` | Dead decls grouped by file |
-| `value_refs_from_by_file` | `(file, (pos, PosSet.t) list)` | Refs grouped by source file (for hasRefBelow) |
 | `issues_by_file` | `(file, Issue.t list * Name.t list)` | Per-file issues + reported modules |
 | `incorrect_dead_decls` | `(pos, Decl.t)` | Live decls with @dead annotation |
 | `dead_module_issues` | `(Name.t, Issue.t)` | Module issues (join of dead_modules + modules_with_reported) |
 
-**Note**: Optional args analysis (unused/redundant arguments) is not yet in the reactive pipeline - it still uses the non-reactive path (~8-14ms). TODO: Add `live_decls + cross_file_items → optional_args_issues` to the reactive pipeline.
+In non-transitive mode (`-no-transitive`), per-file issue generation also reads `value_refs_from` for the `has_ref_below` check.
+
+**Note**: Optional args analysis (unused/redundant arguments) is computed after the solver settles, by iterating live declarations; it is not a reactive collection.
 
 ### Reactive Pipeline Diagram
 
@@ -244,11 +216,11 @@ This is a high-level view (~25 nodes). See also the [full detailed diagram sourc
 Key stages:
 
 1. **File Layer**: `file_collection` → `file_data` → extracted collections
-2. **TypeDeps**: `decl_by_path` → interface/implementation refs → `all_type_refs`
-3. **ExceptionRefs**: `cross_file` → `resolved_refs` → `resolved_from`
-4. **DeclRefs**: Combines value/type refs → `combined` edges
-5. **Liveness**: `annotated_roots` + `externally_referenced` → `all_roots` + `edges` → `live` (fixpoint)
-6. **Solver**: `decls` + `live` → `dead_decls`/`live_decls` → per-file issues → module issues
+2. **TypeDeps** (`Reactive_type_deps`): `decl_by_path` → interface/implementation refs → `all_type_refs`
+3. **ExceptionRefs** (`Reactive_exception_refs`): `cross_file` → `resolved_refs` → `resolved_from`
+4. **DeclRefs** (`Reactive_decl_refs`): Combines value/type refs → `combined` edges
+5. **Liveness** (`Reactive_liveness`): `annotated_roots` + `externally_referenced` → `all_roots` + `edges` → `live` (fixpoint)
+6. **Solver** (`Reactive_solver`): `decls` + `live` → `dead_decls`/`live_decls` → per-file issues → module issues
 
 Use `-mermaid` flag to generate the current pipeline diagram from code.
 
@@ -256,10 +228,10 @@ Use `-mermaid` flag to generate the current pipeline diagram from code.
 
 When a file changes:
 
-1. `ReactiveFileCollection` detects change, emits delta for `file_data`
-2. `ReactiveMerge` receives delta, updates `decls`, `refs`, `annotations`
-3. `ReactiveLiveness` receives delta, updates `live` set via incremental fixpoint
-4. `ReactiveSolver` receives delta, updates `dead_decls` and `issues` via reactive joins
+1. `Reactive_file_collection` detects change, emits delta for `file_data`
+2. `Reactive_merge` receives delta, updates `decls`, `refs`, `annotations`
+3. `Reactive_liveness` receives delta, updates `live` set via incremental fixpoint
+4. `Reactive_solver` receives delta, updates `dead_decls` and `issues` via reactive joins
 5. **Only affected entries are recomputed** - untouched entries remain stable
 
 When no files change:
@@ -282,15 +254,16 @@ No joins are recomputed, no fixpoints are re-run - the reactive collections are 
 
 | Module | Responsibility |
 |--------|---------------|
-| `Reactive` | Core primitives: `source`, `flatMap`, `join`, `union`, `fixpoint`, `Scheduler`, `Registry` |
-| `ReactiveFileCollection` | File-backed collection with change detection |
-| `ReactiveAnalysis` | CMT processing with file caching |
-| `ReactiveMerge` | Derives decls, annotations, refs from file_data |
-| `ReactiveTypeDeps` | Type-label dependency resolution |
-| `ReactiveExceptionRefs` | Exception ref resolution via join |
-| `ReactiveDeclRefs` | Maps declarations to their outgoing references |
-| `ReactiveLiveness` | Computes live positions via reactive fixpoint |
-| `ReactiveSolver` | Computes dead_decls and issues via reactive joins |
+| `Reactive` | Core primitives: `source`, `flat_map`, `join`, `union`, `fixpoint`, `Scheduler`, `Registry` |
+| `Reactive_file_collection` | File-backed collection with change detection |
+| `Reactive_analysis` | CMT processing with file caching |
+| `Reactive_merge` | Derives decls, annotations, refs from file_data |
+| `Reactive_type_deps` | Type-label dependency resolution |
+| `Reactive_exception_refs` | Exception ref resolution via join |
+| `Reactive_coercions` | References induced by type coercions |
+| `Reactive_decl_refs` | Maps declarations to their outgoing references |
+| `Reactive_liveness` | Computes live positions via reactive fixpoint |
+| `Reactive_solver` | Computes dead_decls and issues via reactive joins |
 
 ### Stats Tracking
 
@@ -311,12 +284,7 @@ Use `-timing` flag to see per-node statistics:
 
 ## Testing
 
-**Order-independence test**: Run with `-test-shuffle` flag to randomize file processing order. The test (`make test-reanalyze-order-independence`) verifies that shuffled runs produce identical output.
-
-**Unit testing**: Each phase can be tested independently:
-- Phase 1: Process a single `.cmt` file, verify `file_data`
-- Phase 2: Merge known builders, verify merged result
-- Phase 3: Call solver with known inputs, verify issues
+**Order-independence test**: Run with `-test-shuffle` flag to randomize file processing order. The test (`make -C tests/analysis_tests/tests-reanalyze/deadcode test-reanalyze-order-independence`) verifies that shuffled runs produce identical output.
 
 ---
 
@@ -325,16 +293,16 @@ Use `-timing` flag to see per-node statistics:
 | Module | Responsibility |
 |--------|---------------|
 | `Reanalyze` | Entry point, orchestrates pipeline |
-| `DceFileProcessing` | Phase 1: Per-file AST processing |
-| `DceConfig` | Configuration (CLI flags + run config) |
-| `DeadCommon` | Phase 3: Solver (`solveDead`, `solveDeadReactive`) |
-| `Liveness` | Forward fixpoint liveness computation |
-| `Declarations` | Declaration storage (builder/immutable) |
-| `References` | Reference tracking (source → targets) |
-| `FileAnnotations` | Source annotation tracking |
-| `FileDeps` | Cross-file dependency graph |
-| `CrossFileItems` | Cross-file optional args and exceptions |
-| `AnalysisResult` | Immutable solver output |
+| `Dce_pipeline` | Creates the reactive collection, merge, liveness and solver |
+| `Dce_file_processing` | Phase 1: Per-file AST processing |
+| `Dce_config` | Configuration (CLI flags + run config) |
+| `Dead_common` | Declaration and reference recording, per-declaration issue reporting (`report_declaration`) |
+| `Dead_optional_args` | Optional-argument issues for a live declaration |
+| `Declarations` | Per-file declaration builder |
+| `References` | Per-file reference builder (source → targets) |
+| `File_annotations` | Per-file source annotation builder |
+| `File_deps` | Per-file dependency builder |
+| `Cross_file_items` | Cross-file optional args and exceptions |
+| `Analysis_result` | Issue list handed to reporting |
 | `Issue` | Issue type definitions |
 | `Log_` | Phase 4: Logging output |
-| `ReactiveSolver` | Reactive dead_decls → issues computation |

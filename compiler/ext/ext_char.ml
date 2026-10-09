@@ -22,15 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(** {!Char.escaped} is locale sensitive in 4.02.3, fixed in the trunk,
-    backport it here
-*)
-
-let valid_hex x =
-  match x with
-  | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> true
-  | _ -> false
-
 let is_lower_case c =
   (c >= 'a' && c <= 'z')
   || (c >= '\224' && c <= '\246')

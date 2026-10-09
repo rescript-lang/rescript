@@ -49,8 +49,7 @@ bold "Rescript version"
 # we need to reset the yarn.lock and package.json to the original state
 # so there is not diff in git. The CI will install new ReScript package
 bold "Reset package.json and yarn.lock"
-git checkout ../testrepo/yarn.lock &> /dev/null
-git checkout ../testrepo/package.json &> /dev/null
+git restore --worktree -- ../testrepo/yarn.lock ../testrepo/package.json &> /dev/null
 success "Reset package.json and yarn.lock"
 
 bold "Make sure the testrepo is clean"
@@ -132,6 +131,7 @@ fi
 ./compile/17-prod-flag.sh &&
 ./compile/18-external-dep-uncurried-dot.sh &&
 ./compile/19-utf8-warning.sh &&
+./compile/20-schedule-independent-modules-after-error.sh &&
 ./compile/14-no-testrepo-changes.sh &&
 ./compile/15-no-new-files.sh &&
 ./compile/16-snapshots-unchanged.sh &&
@@ -144,6 +144,7 @@ fi
 ./watch/04-watch-config-change.sh &&
 ./watch/05-watch-ignores-non-source.sh &&
 ./watch/06-watch-missing-source-folder.sh &&
+./watch/07-changed-interface-after-failed-implementation.sh &&
 
 # Lock tests
 ./lock/01-lock-when-watching.sh &&

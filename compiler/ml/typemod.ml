@@ -109,11 +109,6 @@ let type_open ?toplevel env sod =
   in
   (path, newenv, od)
 
-(* Record a module type *)
-let rm node =
-  Stypes.record (Stypes.Ti_mod node);
-  node
-
 (* Forward declaration, to be filled in by type_module_type_of *)
 let type_module_type_of_fwd :
     (Env.t ->
@@ -987,7 +982,7 @@ exception Not_a_path
 let rec path_of_module mexp =
   match mexp.mod_desc with
   | Tmod_ident (p, _) -> p
-  | Tmod_apply (funct, arg, _coercion) when !Clflags.applicative_functors ->
+  | Tmod_apply (funct, arg, _coercion) ->
     Papply (path_of_module funct, path_of_module arg)
   | Tmod_constraint (mexp, _, _, _) -> path_of_module mexp
   | _ -> raise Not_a_path
@@ -1258,20 +1253,17 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
           in
           {md with mod_type = mty}
     in
-    rm md
+    md
   | Pmod_structure sstr ->
-    let str, sg, _finalenv =
-      type_structure funct_body anchor env sstr smod.pmod_loc
-    in
+    let str, sg, _finalenv = type_structure funct_body anchor env sstr in
     let md =
-      rm
-        {
-          mod_desc = Tmod_structure str;
-          mod_type = Mty_signature sg;
-          mod_env = env;
-          mod_attributes = smod.pmod_attributes;
-          mod_loc = smod.pmod_loc;
-        }
+      {
+        mod_desc = Tmod_structure str;
+        mod_type = Mty_signature sg;
+        mod_env = env;
+        mod_attributes = smod.pmod_attributes;
+        mod_loc = smod.pmod_loc;
+      }
     in
     let sg' = simplify_signature sg in
     if List.length sg' = List.length sg then md
@@ -1290,14 +1282,13 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
     Ctype.init_def (Ident.current_time ());
     (* PR#6981 *)
     let body = type_module sttn funct_body None newenv sbody in
-    rm
-      {
-        mod_desc = Tmod_functor (id, name, mty, body);
-        mod_type = Mty_functor (id, ty_arg, body.mod_type);
-        mod_env = env;
-        mod_attributes = smod.pmod_attributes;
-        mod_loc = smod.pmod_loc;
-      }
+    {
+      mod_desc = Tmod_functor (id, name, mty, body);
+      mod_type = Mty_functor (id, ty_arg, body.mod_type);
+      mod_env = env;
+      mod_attributes = smod.pmod_attributes;
+      mod_loc = smod.pmod_loc;
+    }
   | Pmod_apply (sfunct, sarg) -> (
     let arg = type_module true funct_body None env sarg in
     let path = path_of_module arg in
@@ -1334,26 +1325,24 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
                    (smod.pmod_loc, env, Cannot_eliminate_dependency mty_functor))
           )
       in
-      rm
-        {
-          mod_desc = Tmod_apply (funct, arg, coercion);
-          mod_type = mty_appl;
-          mod_env = env;
-          mod_attributes = smod.pmod_attributes;
-          mod_loc = smod.pmod_loc;
-        }
+      {
+        mod_desc = Tmod_apply (funct, arg, coercion);
+        mod_type = mty_appl;
+        mod_env = env;
+        mod_attributes = smod.pmod_attributes;
+        mod_loc = smod.pmod_loc;
+      }
     | Mty_alias (_, path) ->
       raise (Error (sfunct.pmod_loc, env, Cannot_scrape_alias path))
     | _ -> raise (Error (sfunct.pmod_loc, env, Cannot_apply funct.mod_type)))
   | Pmod_constraint (sarg, smty) ->
     let arg = type_module ~alias true funct_body anchor env sarg in
     let mty = transl_modtype env smty in
-    rm
-      {
-        (wrap_constraint env arg mty.mty_type (Tmodtype_explicit mty)) with
-        mod_loc = smod.pmod_loc;
-        mod_attributes = smod.pmod_attributes;
-      }
+    {
+      (wrap_constraint env arg mty.mty_type (Tmodtype_explicit mty)) with
+      mod_loc = smod.pmod_loc;
+      mod_attributes = smod.pmod_attributes;
+    }
   | Pmod_unpack sexp ->
     let exp = Typecore.type_exp ~context:None env sexp in
     let mty =
@@ -1371,21 +1360,30 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
     in
     if funct_body && Mtype.contains_type env mty then
       raise (Error (smod.pmod_loc, env, Not_allowed_in_functor_body));
-    rm
-      {
-        mod_desc = Tmod_unpack (exp, mty);
-        mod_type = mty;
-        mod_env = env;
-        mod_attributes = smod.pmod_attributes;
-        mod_loc = smod.pmod_loc;
-      }
+    {
+      mod_desc = Tmod_unpack (exp, mty);
+      mod_type = mty;
+      mod_env = env;
+      mod_attributes = smod.pmod_attributes;
+      mod_loc = smod.pmod_loc;
+    }
   | Pmod_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
+  | Pmod_await sarg ->
+    (* The builtin ppx turns the dynamic import forms into [unpack] and
+       removes any other [await], which has no effect; this only types a tree
+       that bypassed it *)
+    let arg = type_module ~alias sttn funct_body anchor env sarg in
+    {
+      arg with
+      mod_loc = smod.pmod_loc;
+      mod_attributes = arg.mod_attributes @ smod.pmod_attributes;
+    }
 
-and type_structure ?(toplevel = false) funct_body anchor env sstr scope =
+and type_structure ?(toplevel = false) funct_body anchor env sstr =
   let names = new_names () in
 
-  let type_str_item env srem {pstr_loc = loc; pstr_desc = desc} =
+  let type_str_item env {pstr_loc = loc; pstr_desc = desc} =
     match desc with
     | Pstr_eval (sexpr, attrs) ->
       let expr =
@@ -1394,21 +1392,8 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr scope =
       in
       (Tstr_eval (expr, attrs), [], env)
     | Pstr_value (rec_flag, sdefs) ->
-      let scope =
-        match rec_flag with
-        | Recursive ->
-          Some
-            (Annot.Idef {scope with Location.loc_start = loc.Location.loc_start})
-        | Nonrecursive ->
-          let start =
-            match srem with
-            | [] -> loc.Location.loc_end
-            | {pstr_loc = loc2} :: _ -> loc2.Location.loc_start
-          in
-          Some (Annot.Idef {scope with Location.loc_start = start})
-      in
       let defs, newenv =
-        Typecore.type_binding ~context:None env rec_flag sdefs scope
+        Typecore.type_binding ~context:None env rec_flag sdefs
       in
       let () =
         if rec_flag = Recursive then Rec_check.check_recursive_bindings defs
@@ -1599,7 +1584,7 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr scope =
     | [] -> ([], [], env)
     | pstr :: srem ->
       let previous_saved_types = Cmt_format.get_saved_types () in
-      let desc, sg, new_env = type_str_item env srem pstr in
+      let desc, sg, new_env = type_str_item env pstr in
       let str = {str_desc = desc; str_loc = pstr.pstr_loc; str_env = env} in
       Cmt_format.set_saved_types
         (Cmt_format.Partial_structure_item str :: previous_saved_types);
@@ -1607,12 +1592,6 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr scope =
       let new_sg = if rescript_hide desc then sig_rem else sg @ sig_rem in
       (str :: str_rem, new_sg, final_env)
   in
-  if !Clflags.annotations then
-    (* moved to genannot *)
-    List.iter
-      (function
-        | {pstr_loc = l} -> Stypes.record_phrase l)
-      sstr;
   let previous_saved_types = Cmt_format.get_saved_types () in
   let run () =
     let items, sg, final_env = type_struct env sstr in
@@ -1623,8 +1602,7 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr scope =
   in
   if toplevel then run () else Builtin_attributes.warning_scope [] run
 
-let type_toplevel_phrase env s =
-  type_structure ~toplevel:true false None env s Location.none
+let type_toplevel_phrase env s = type_structure ~toplevel:true false None env s
 
 let type_module_alias = type_module ~alias:true true false None
 let type_module = type_module true false None
@@ -1650,16 +1628,19 @@ let type_module_type_of env smod =
   let tmty =
     match smod.pmod_desc with
     | Pmod_ident lid ->
-      (* turn off strengthening in this case *)
-      let path, md = Typetexp.find_module env smod.pmod_loc lid.txt in
-      rm
-        {
-          mod_desc = Tmod_ident (path, lid);
-          mod_type = md.md_type;
-          mod_env = env;
-          mod_attributes = smod.pmod_attributes;
-          mod_loc = smod.pmod_loc;
-        }
+      (* turn off strengthening in this case; look the module up in the
+         warning scope of its attributes, as [type_module] does *)
+      let path, md =
+        Builtin_attributes.warning_scope smod.pmod_attributes (fun () ->
+            Typetexp.find_module env smod.pmod_loc lid.txt)
+      in
+      {
+        mod_desc = Tmod_ident (path, lid);
+        mod_type = md.md_type;
+        mod_env = env;
+        mod_attributes = smod.pmod_attributes;
+        mod_loc = smod.pmod_loc;
+      }
     | _ -> type_module env smod
   in
   let mty = tmty.mod_type in
@@ -1732,9 +1713,7 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
   Cmt_format.clear ();
   try
     Delayed_checks.reset_delayed_checks ();
-    let str, sg, finalenv =
-      type_structure initial_env ast (Location.in_file sourcefile)
-    in
+    let str, sg, finalenv = type_structure initial_env ast in
     let simple_sg = simplify_signature sg in
     let mli_status = !Clflags.assume_no_mli in
     if mli_status = Clflags.Mli_exists then (

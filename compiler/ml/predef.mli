@@ -27,8 +27,6 @@ val type_exn : type_expr
 val type_array : type_expr -> type_expr
 val type_iterable : type_expr -> type_expr
 val type_async_iterable : type_expr -> type_expr
-val type_list : type_expr -> type_expr
-val type_option : type_expr -> type_expr
 val type_bigint : type_expr
 val type_extension_constructor : type_expr
 
@@ -40,15 +38,12 @@ val path_bool : Path.t
 val path_unit : Path.t
 val path_exn : Path.t
 val path_array : Path.t
-val path_iterable : Path.t
-val path_async_iterable : Path.t
 val path_list : Path.t
 val path_option : Path.t
 val path_result : Path.t
 val path_dict : Path.t
 
 val path_bigint : Path.t
-val path_extension_constructor : Path.t
 val path_promise : Path.t
 val path_tagged_template : Path.t
 
@@ -67,12 +62,6 @@ val build_initial_env :
 (* To initialize linker tables *)
 
 val builtin_idents : (string * Ident.t) list
-
-val ident_division_by_zero : Ident.t
-(** All predefined exceptions, exposed as [Ident.t] for flambda (for
-    building value approximations).
-    The [Ident.t] for division by zero is also exported explicitly
-    so flambda can generate code to raise it. *)
 
 type test = For_sure_yes | For_sure_no | NA
 

@@ -110,11 +110,15 @@ let find_relevant_types_from_type ~state ~file ~package typ =
   let constructors = Shared.find_type_constructors types_to_search in
   constructors |> List.filter_map (from_constructor_path ~env:env_to_search)
 
+let is_inline_record_definition (decl : Types.type_declaration) path =
+  List.exists
+    (function
+      | Types.Record {type_name} -> type_name = Path.last path)
+    decl.type_inlined_types
+
 let expand_types ~state ~file ~package ~supports_markdown_links typ =
   match find_relevant_types_from_type ~state typ ~file ~package with
-  | {decl; path} :: _
-    when Res_parsetree_viewer.has_inline_record_definition_attribute
-           decl.type_attributes ->
+  | {decl; path} :: _ when is_inline_record_definition decl path ->
     (* We print inline record types just with their definition, not the constr pointing
     to them, since that doesn't make sense to show the user. *)
     ( [
@@ -142,9 +146,7 @@ let expand_types ~state ~file ~package ~supports_markdown_links typ =
           let link_to_type_definition_str =
             if
               supports_markdown_links
-              && not
-                   (Res_parsetree_viewer.has_inline_record_definition_attribute
-                      decl.type_attributes)
+              && not (is_inline_record_definition decl path)
             then Markdown.go_to_definition_text ~env ~pos:loc.Warnings.loc_start
             else ""
           in

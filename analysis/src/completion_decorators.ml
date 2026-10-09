@@ -25,7 +25,7 @@ It is also possible to map a ReScript record to a JavaScript array by passing in
     ( "deriving",
       Some "deriving($0)",
       [
-        {|When the `@deriving` decorator is applied to a record type, it expands the type into a factory function plus a set of getter/setter functions for its fields.
+        {|When the `@deriving(accessors)` decorator is applied to a record type, it generates a getter function for each field. Applied to a variant type, it generates a function for each constructor.
   
 [Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#deriving-decorator).|};
       ] );
