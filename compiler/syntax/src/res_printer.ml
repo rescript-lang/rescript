@@ -2682,8 +2682,14 @@ and print_extension ~state ~at_module_lvl (string_loc, payload) cmt_tbl =
 and print_pattern_args ~state (patterns : Parsetree.pattern list) cmt_tbl =
   match patterns with
   | [] -> Doc.nil
-  | [{ppat_loc; ppat_desc = Ppat_construct ({txt = Longident.Lident "()"}, _)}]
-    ->
+  | [
+   {
+     ppat_loc;
+     ppat_desc = Ppat_construct ({txt = Longident.Lident "()"}, _);
+     ppat_attributes;
+   };
+  ]
+    when not (Parsetree_viewer.has_printable_attributes ppat_attributes) ->
     Doc.concat [Doc.lparen; print_comments_inside cmt_tbl ppat_loc; Doc.rparen]
   | [{ppat_desc = Ppat_tuple []; ppat_loc = loc}] ->
     Doc.concat [Doc.lparen; print_comments_inside cmt_tbl loc; Doc.rparen]
@@ -2943,7 +2949,8 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
       let needs_parens =
         match p.ppat_desc with
         | Ppat_or (_, _) | Ppat_alias (_, _) -> true
-        | _ -> false
+        (* Attributes before [x as z] belong to the alias *)
+        | _ -> Parsetree_viewer.has_printable_attributes p.ppat_attributes
       in
       let rendered_pattern =
         let p = print_pattern ~state p cmt_tbl in
@@ -5376,7 +5383,7 @@ and print_expr_fun_parameters ~state ~in_callback ~async ~has_constraint
        attrs = [];
        lbl = Nolabel;
        default_expr = None;
-       pat = {Parsetree.ppat_desc = Ppat_any; ppat_loc};
+       pat = {Parsetree.ppat_desc = Ppat_any; ppat_loc; ppat_attributes = []};
      };
   ] ->
     let any =
@@ -5421,6 +5428,7 @@ and print_expr_fun_parameters ~state ~in_callback ~async ~has_constraint
          {
            ppat_desc =
              Ppat_construct ({txt = Longident.Lident "()"; loc}, {txt = []});
+           ppat_attributes = [];
          };
      };
   ] ->

@@ -1185,7 +1185,7 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
       let end_pos = Parser.end_pos p in
       Parser.next p;
       let loc = mk_loc start_pos end_pos in
-      Ast_helper.Pat.construct ~loc
+      Ast_helper.Pat.construct ~loc ~attrs
         (Location.mkloc (Longident.Lident (Token.to_string token)) loc)
         (Location.mkloc [] loc)
     | Int _ | String _ | Float _ | Codepoint _ | Minus | Plus -> (
@@ -1194,14 +1194,18 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
       | DotDot ->
         Parser.next p;
         let c2 = parse_constant p in
-        Ast_helper.Pat.interval ~loc:(mk_loc start_pos (Parser.position p)) c c2
+        Ast_helper.Pat.interval
+          ~loc:(mk_loc start_pos (Parser.position p))
+          ~attrs c c2
       | _ ->
-        Ast_helper.Pat.constant ~loc:(mk_loc start_pos (Parser.position p)) c)
+        Ast_helper.Pat.constant
+          ~loc:(mk_loc start_pos (Parser.position p))
+          ~attrs c)
     | Backtick ->
       let constant = parse_template_constant ~start_pos ~prefix:None p in
       Ast_helper.Pat.constant
         ~loc:(mk_loc start_pos (Parser.position p))
-        constant
+        ~attrs constant
     | Lparen -> (
       Parser.next p;
       match Parser.peek p with
@@ -1209,7 +1213,7 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
         Parser.next p;
         let loc = mk_loc start_pos (Parser.position p) in
         let lid = Location.mkloc (Longident.Lident "()") loc in
-        Ast_helper.Pat.construct ~loc lid (Location.mkloc [] loc)
+        Ast_helper.Pat.construct ~loc ~attrs lid (Location.mkloc [] loc)
       | _ -> (
         let pat = parse_constrained_pattern p in
         match Parser.peek p with
@@ -1343,6 +1347,8 @@ and skip_tokens_and_maybe_retry p ~is_start_of_grammar =
     if is_start_of_grammar (Parser.peek p) then Some () else None)
 
 (* alias ::= pattern as lident *)
+(* [attrs] were written before [pattern]: with [as], they belong to the alias
+   instead, and [pattern] keeps only its own, e.g. [@b] in [@a (@b x) as z] *)
 and parse_alias_pattern ~attrs pattern p =
   match Parser.peek p with
   | As ->
@@ -1351,7 +1357,15 @@ and parse_alias_pattern ~attrs pattern p =
     let name = Location.mkloc name loc in
     Ast_helper.Pat.alias
       ~loc:{pattern.ppat_loc with loc_end = Parser.position p}
-      ~attrs pattern name
+      ~attrs
+      {
+        pattern with
+        ppat_attributes =
+          List.filter
+            (fun attr -> not (List.memq attr attrs))
+            pattern.ppat_attributes;
+      }
+      name
   | _ -> pattern
 
 (* or ::= pattern | pattern
