@@ -23,6 +23,7 @@
 
 #### :bug: Bug fix
 
+- Emit `"__proto__"` keys in object literals as computed keys, so they create a property instead of setting the prototype. https://github.com/rescript-lang/rescript/pull/8747
 - Fix the formatter dropping attributes on dict literals and flattening nested dict spreads. https://github.com/rescript-lang/rescript/pull/8746
 - Fix attributes on patterns being duplicated before `as` and dropped on constants when formatting. https://github.com/rescript-lang/rescript/pull/8750
 - Fix compiler crashes when wrapping values in `Some` or passing optional arguments whose types come from a transitive dependency. https://github.com/rescript-lang/rescript/pull/8719

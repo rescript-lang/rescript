@@ -83,7 +83,7 @@ let rec no_side_effects (lam : Lambda.t) : bool =
     (* list primitives *)
     | Pmakelist
     (* dict primitives *)
-    | Pmakedict | Pdict_spread | Pdict_has
+    | Pmakedict | Pdict_has
     (* Test if the argument is a block or an immediate integer *)
     | Pis_poly_var_block
     (* Test if the (integer) argument is outside an interval *)
@@ -98,7 +98,10 @@ let rec no_side_effects (lam : Lambda.t) : bool =
     (* A tagged template invokes its tag at runtime, so it always has side
        effects. *)
     | Ptagged_template _ | Pjs_call _ | Pinit_mod | Pupdate_mod
-    | Pjs_object_get _ | Pjs_object_set _ | Pdebugger | Pjs_fn_method
+    (* A spread reads the source's properties, which may run getters or
+       proxy traps *)
+    | Pdict_spread | Pjs_object_get _ | Pjs_object_set _ | Pdebugger
+    | Pjs_fn_method
     (* Await promise *)
     | Pawait
     (* TODO *)

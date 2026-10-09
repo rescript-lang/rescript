@@ -389,9 +389,70 @@ Test.run([
   "dict spread copies a single source into a fresh dictionary"
 ], result$5 === foo$1, eq, false);
 
-let withProtoKey = JSON.parse(`{"__proto__": 1}`);
+let count = 0;
+
+let makeCounted = (f => ({get a() { f(); return 1 }}));
+
+let counted = makeCounted(() => {
+  count = count + 1 | 0;
+});
+
+({...counted});
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    241,
+    22,
+    48
+  ],
+  "dict spread runs getters"
+], count, eq, 1);
+
+let other = {
+  b: 2
+};
 
 let result$6 = {
+  ["__proto__"]: 1,
+  ...other,
+  ["__proto__"]: 3
+};
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    250,
+    15,
+    49
+  ],
+  "dict rows can be named __proto__"
+], [
+  Object.keys(result$6),
+  result$6["__proto__"]
+], eq, [
+  [
+    "__proto__",
+    "b"
+  ],
+  3
+]);
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    256,
+    15,
+    62
+  ],
+  "a dict literal keeps a __proto__ row as a key"
+], Object.keys({
+  ["__proto__"]: 1
+}), eq, ["__proto__"]);
+
+let withProtoKey = JSON.parse(`{"__proto__": 1}`);
+
+let result$7 = {
   ...withProtoKey,
   a: 2
 };
@@ -399,12 +460,12 @@ let result$6 = {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    239,
+    269,
     15,
     51
   ],
   "dict spread copies a __proto__ key"
-], Object.keys(result$6), eq, [
+], Object.keys(result$7), eq, [
   "__proto__",
   "a"
 ]);
@@ -412,7 +473,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    247,
+    277,
     13,
     35
   ],
@@ -425,7 +486,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    253,
+    283,
     13,
     34
   ],
@@ -440,7 +501,7 @@ let dict = {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    265,
+    295,
     22,
     38
   ],
@@ -450,7 +511,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    266,
+    296,
     22,
     43
   ],
@@ -460,7 +521,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    267,
+    297,
     22,
     37
   ],
@@ -470,7 +531,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    268,
+    298,
     22,
     39
   ],
@@ -480,7 +541,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    270,
+    300,
     15,
     51
   ],

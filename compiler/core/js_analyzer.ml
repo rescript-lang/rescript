@@ -124,7 +124,10 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
   | Optional_block (x, _) -> no_side_effect x
   | Object entries ->
     Ext_list.for_all entries (function
-        | Object_property (_, e) | Object_spread e -> no_side_effect e)
+      | Object_property (_, e) -> no_side_effect e
+      (* A spread reads the source's properties, which may run getters or
+         proxy traps *)
+      | Object_spread _ -> false)
   | String_append (a, b) | Seq (a, b) -> no_side_effect a && no_side_effect b
   | Length e | Caml_block_tag (e, _) | Typeof e -> no_side_effect e
   | Bin (Eq, _, _) -> false

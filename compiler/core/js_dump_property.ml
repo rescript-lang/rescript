@@ -84,6 +84,9 @@ let property_access f s =
 
 let property_key (s : J.property_name) : string =
   match s with
+  (* A non-computed __proto__ key sets the prototype of an object literal,
+     and may occur only once in it *)
+  | Lit "__proto__" -> {|["__proto__"]|}
   | Lit s ->
     let s = Ext_ident.unwrap_uppercase_exotic s in
     if obj_property_no_need_quot s then s else Js_dump_string.escape_to_string s
