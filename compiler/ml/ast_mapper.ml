@@ -341,6 +341,14 @@ module E = struct
     | Pexp_setfield (e1, lid, e2) ->
       setfield ~loc ~attrs (sub.expr sub e1) (map_loc sub lid) (sub.expr sub e2)
     | Pexp_array el -> array ~loc ~attrs (List.map (sub.expr sub) el)
+    | Pexp_dict entries ->
+      dict ~loc ~attrs
+        (List.map
+           (function
+             | Pdict_entry (key, e) ->
+               Pdict_entry (map_loc sub key, sub.expr sub e)
+             | Pdict_spread e -> Pdict_spread (sub.expr sub e))
+           entries)
     | Pexp_ifthenelse (e1, e2, e3) ->
       ifthenelse ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
         (map_opt (sub.expr sub) e3)

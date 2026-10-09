@@ -695,6 +695,20 @@ module Sexp_ast = struct
       | Pexp_array exprs ->
         Sexp.list
           [Sexp.atom "Pexp_array"; Sexp.list (map_empty ~f:expression exprs)]
+      | Pexp_dict entries ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_dict";
+            Sexp.list
+              (map_empty
+                 ~f:(function
+                   | Parsetree.Pdict_entry (key, e) ->
+                     Sexp.list
+                       [Sexp.atom "Pdict_entry"; string key.txt; expression e]
+                   | Pdict_spread e ->
+                     Sexp.list [Sexp.atom "Pdict_spread"; expression e])
+                 entries);
+          ]
       | Pexp_ifthenelse (expr1, expr2, opt_expr) ->
         Sexp.list
           [

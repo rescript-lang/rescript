@@ -1,22 +1,10 @@
-let x = Primitive_dict.make [||]
-let x = Primitive_dict.make [|({js|foo|js}, {js|bar|js})|]
-let x =
-  Primitive_dict.make
-    [|({js|foo|js}, {js|bar|js});({js|bar|js}, {js|baz|js})|]
+let x = dict{}
+let x = dict{"foo": {js|bar|js}}
+let x = dict{"foo": {js|bar|js}, "bar": {js|baz|js}}
 let baz = {js|foo|js}
-let x =
-  Primitive_dict.make
-    [|({js|foo|js}, {js|bar|js});({js|bar|js}, {js|baz|js});({js|baz|js},
-                                                              baz)|]
-let foo = Primitive_dict.make [|({js|a|js}, 1)|]
-let qux = Primitive_dict.make [|({js|c|js}, 3)|]
-let x =
-  ((Primitive_dict.spread)[@res.dictSpread ]) (Primitive_dict.make [||])
-    [|foo;(Primitive_dict.make [|({js|bar|js}, 2)|]);qux|]
-let x =
-  ((Primitive_dict.spread)[@res.dictSpread ])
-    (Primitive_dict.make [|({js|before|js}, 1)|])
-    [|foo;(Primitive_dict.make [|({js|after|js}, 2)|])|]
-let x =
-  ((Primitive_dict.spread)[@res.dictSpread ]) (Primitive_dict.make [||])
-    [|foo|]
+let x = dict{"foo": {js|bar|js}, "bar": {js|baz|js}, "baz": baz}
+let foo = dict{"a": 1}
+let qux = dict{"c": 3}
+let x = dict{...foo, "bar": 2, ...qux}
+let x = dict{"before": 1, ...foo, "after": 2}
+let x = dict{...foo}

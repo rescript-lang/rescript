@@ -983,6 +983,12 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
       Completion.create "array" ~env
         ~kind:(Completion.Value (Ctype.newconstr Predef.path_array []));
     ]
+  | CPDict ->
+    if Debug.verbose () then print_endline "[ctx_path]--> CPDict";
+    [
+      Completion.create "dict" ~env
+        ~kind:(Completion.Value (Ctype.newconstr Predef.path_dict []));
+    ]
   | CPArray (Some cp) -> (
     if Debug.verbose () then
       print_endline "[ctx_path]--> CPArray (with payload)";

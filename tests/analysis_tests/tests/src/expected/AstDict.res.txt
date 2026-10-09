@@ -1,0 +1,16 @@
+Dump AST src/AstDict.res 2:8
+
+Source:
+// let d = dict{"a": 1, ...other}
+//      ^ast
+
+<*>Pstr_value(
+  value:
+    Ppat_var(d)
+  expr:
+    <*>Pexp_dict(
+      "a": Pexp_constant(Pconst_integer(1))
+      ...Pexp_ident:other
+    )
+)
+

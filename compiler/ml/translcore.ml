@@ -1251,6 +1251,41 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
   | Texp_array expr_list ->
     let ll = transl_list expr_list in
     prim ~primitive:Pmakearray ~args:ll e.exp_loc
+  | Texp_dict entries -> (
+    (* [%makedict] of the rows ([Primitive_dict.make]), and [Object.assign]
+       of a dict of the rows before the first spread with the spreads and the
+       dicts of the rows between them ([Primitive_dict.spread]) *)
+    let make rows =
+      let row ((key : string loc), value) =
+        let ll = [const (Const_string key.txt); transl_exp value] in
+        try const (Const_block (Blk_tuple, List.map extract_constant ll))
+        with Not_constant ->
+          prim ~primitive:(Pmakeblock Blk_tuple) ~args:ll e.exp_loc
+      in
+      prim ~primitive:Pmakedict
+        ~args:[prim ~primitive:Pmakearray ~args:(List.map row rows) e.exp_loc]
+        e.exp_loc
+    in
+    let parts =
+      Ast_dict.group
+        (List.map
+           (function
+             | Tdict_entry (key, value) -> `Row (key, value)
+             | Tdict_spread spread -> `Spread spread)
+           entries)
+    in
+    match Ast_dict.target_and_sources parts with
+    | `Rows rows -> make rows
+    | `Spread (target, sources) ->
+      prim ~primitive:Pdict_spread
+        ~args:
+          (make target
+          :: List.map
+               (function
+                 | Ast_dict.Rows rows -> make rows
+                 | Spread spread -> transl_exp spread)
+               sources)
+        e.exp_loc)
   | Texp_ifthenelse (cond, ifso, Some ifnot) ->
     if_ (transl_exp cond) (transl_exp ifso) (transl_exp ifnot)
   | Texp_ifthenelse (cond, ifso, None) ->

@@ -114,6 +114,7 @@ and expression_desc =
   | Texp_setfield of
       expression * Longident.t loc * label_description * expression
   | Texp_array of expression list
+  | Texp_dict of dict_entry list
   | Texp_ifthenelse of expression * expression * expression option
   | Texp_sequence of expression * expression
   | Texp_break
@@ -158,6 +159,10 @@ and expression_desc =
   | Texp_template of {segments: template_segment list; values: expression list}
 
 and case = {c_lhs: pattern; c_guard: expression option; c_rhs: expression}
+
+and dict_entry =
+  | Tdict_entry of string loc * expression
+  | Tdict_spread of expression
 
 and function_param = {
   fp_lbl: arg_label;

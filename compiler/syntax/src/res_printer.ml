@@ -3525,6 +3525,20 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
       else if Parsetree_viewer.is_binary_expression e then
         print_binary_expression ~state ~force_pipe_breaks e cmt_tbl
       else print_pexp_apply ~state e cmt_tbl
+    | Pexp_dict entries when Parsetree_viewer.dict_has_spread entries ->
+      print_spread_dict_expr ~state
+        (Parsetree_viewer.dict_expr_parts ~loc:e.pexp_loc entries)
+        e cmt_tbl
+    | Pexp_dict entries ->
+      Doc.concat
+        [
+          Doc.text "dict{";
+          print_comments_inside cmt_tbl e.pexp_loc;
+          print_literal_dict_expr ~state
+            (Parsetree_viewer.dict_expr_rows ~loc:e.pexp_loc entries)
+            cmt_tbl;
+          Doc.rbrace;
+        ]
     | Pexp_field (expr, longident_loc) ->
       let lhs =
         let doc = print_expression_with_comments ~state expr cmt_tbl in
@@ -4435,30 +4449,6 @@ and print_pexp_apply ~state expr cmt_tbl =
            member;
            Doc.rbracket;
          ])
-  | Pexp_apply _
-    when Option.is_some
-           (Res_parsetree_viewer.collect_spread_dict_expr_parts expr) -> (
-    match Res_parsetree_viewer.collect_spread_dict_expr_parts expr with
-    | Some parts -> print_spread_dict_expr ~state parts expr cmt_tbl
-    | None -> assert false)
-  | Pexp_apply
-      {
-        funct =
-          {
-            pexp_desc =
-              Pexp_ident
-                {txt = Longident.Ldot (Lident "Primitive_dict", "make")};
-          };
-        args = [(Nolabel, key_values)];
-      }
-    when Res_parsetree_viewer.is_tuple_array key_values ->
-    Doc.concat
-      [
-        Doc.text "dict{";
-        print_comments_inside cmt_tbl expr.pexp_loc;
-        print_literal_dict_expr ~state key_values cmt_tbl;
-        Doc.rbrace;
-      ]
   | Pexp_apply
       {
         funct =

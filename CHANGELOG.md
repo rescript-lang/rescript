@@ -23,6 +23,7 @@
 
 #### :bug: Bug fix
 
+- Fix the formatter dropping attributes on dict literals and flattening nested dict spreads. https://github.com/rescript-lang/rescript/pull/8746
 - Fix attributes on patterns being duplicated before `as` and dropped on constants when formatting. https://github.com/rescript-lang/rescript/pull/8750
 - Fix compiler crashes when wrapping values in `Some` or passing optional arguments whose types come from a transitive dependency. https://github.com/rescript-lang/rescript/pull/8719
 - Fix unused-pattern warnings for variant spreads reported without a location. https://github.com/rescript-lang/rescript/pull/8744
@@ -51,6 +52,7 @@
 
 #### :house: Internal
 
+- Represent dict literals with dedicated `Pexp_dict` and `Texp_dict` nodes. https://github.com/rescript-lang/rescript/pull/8746
 - Forward-port integer range pattern regression coverage from v12 to v13. https://github.com/rescript-lang/rescript/pull/8718
 - Remove the unused `res.iflet` encoding of `if let`, which the parser always rejects with a syntax error suggesting a `switch`. The error is unchanged. https://github.com/rescript-lang/rescript/pull/8741
 - Represent variant spread patterns (`...t`) with a dedicated `Ppat_variant_spread` parsetree node instead of `Ppat_type` with a `res.patVariantSpread` attribute, which remains only in the PPX wire representation. https://github.com/rescript-lang/rescript/pull/8742

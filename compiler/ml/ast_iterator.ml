@@ -341,6 +341,14 @@ module E = struct
       iter_loc sub lid;
       sub.expr sub e2
     | Pexp_array el -> List.iter (sub.expr sub) el
+    | Pexp_dict entries ->
+      List.iter
+        (function
+          | Pdict_entry (key, e) ->
+            iter_loc sub key;
+            sub.expr sub e
+          | Pdict_spread e -> sub.expr sub e)
+        entries
     | Pexp_ifthenelse (e1, e2, e3) ->
       sub.expr sub e1;
       sub.expr sub e2;

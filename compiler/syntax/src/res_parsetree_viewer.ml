@@ -36,12 +36,6 @@ let has_dict_pattern_attribute attrs =
       txt = "res.dictPattern")
   |> Option.is_some
 
-let has_dict_spread_attribute attrs =
-  attrs
-  |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
-      txt = "res.dictSpread")
-  |> Option.is_some
-
 type dict_expr_part =
   | DictExprRows of Parsetree.expression
   | DictExprSpread of Parsetree.expression
@@ -214,7 +208,7 @@ let rec unwrap_braces expr =
 (* Attributes the parser adds to encode syntax; they are never printed *)
 let is_parsing_attr (attr : Parsetree.attribute) =
   match attr with
-  | {Location.txt = "res.dictPattern" | "res.dictSpread"}, _ -> true
+  | {Location.txt = "res.dictPattern"}, _ -> true
   | _ -> false
 
 let filter_parsing_attrs attrs =
@@ -561,67 +555,31 @@ let is_spread_array expr =
     has_spread_attr expr.pexp_attributes
   | _ -> false
 
-let is_tuple_array (expr : Parsetree.expression) =
-  let is_plain_tuple (expr : Parsetree.expression) =
-    match expr with
-    | {pexp_desc = Pexp_tuple _} -> true
-    | _ -> false
-  in
-  match expr with
-  | {pexp_desc = Pexp_array items} -> List.for_all is_plain_tuple items
-  | _ -> false
+let dict_has_spread entries =
+  List.exists
+    (function
+      | Parsetree.Pdict_spread _ -> true
+      | Pdict_entry _ -> false)
+    entries
 
-let collect_spread_dict_expr_parts expr =
-  let extract_literal_dict_rows (expr : Parsetree.expression) =
-    match expr with
-    | {
-     pexp_desc =
-       Pexp_apply
-         {
-           funct =
-             {
-               pexp_desc =
-                 Pexp_ident
-                   {txt = Longident.Ldot (Lident "Primitive_dict", "make")};
-             };
-           args = [(Nolabel, key_values)];
-         };
-    }
-      when is_tuple_array key_values ->
-      Some key_values
-    | _ -> None
-  in
-  let is_empty_tuple_array (expr : Parsetree.expression) =
-    match expr.pexp_desc with
-    | Pexp_array [] -> true
-    | _ -> false
-  in
-  match expr with
-  | {
-   pexp_desc =
-     Pexp_apply
-       {
-         funct =
-           {
-             pexp_desc =
-               Pexp_ident
-                 {txt = Longident.Ldot (Lident "Primitive_dict", "spread")};
-             pexp_attributes;
-           };
-         args =
-           [(Nolabel, target_expr); (Nolabel, {pexp_desc = Pexp_array sources})];
-       };
-  }
-    when has_dict_spread_attribute pexp_attributes ->
-    let to_part expr =
-      match extract_literal_dict_rows expr with
-      | Some rows_expr ->
-        if is_empty_tuple_array rows_expr then None
-        else Some (DictExprRows rows_expr)
-      | None -> Some (DictExprSpread expr)
-    in
-    Some (List.filter_map to_part (target_expr :: sources))
-  | _ -> None
+(* The rows of a dict literal without spreads as the array
+   [[("a", 1), ...]], which the printer prints, see [Ast_dict] *)
+let dict_expr_rows ~loc entries =
+  Ast_dict.rows_array ~loc
+    (List.filter_map
+       (function
+         | Parsetree.Pdict_entry (key, value) -> Some (key, value)
+         | Pdict_spread _ -> None)
+       entries)
+
+(* The parts of a dict literal with spreads: the spreads, and such arrays for
+   the rows between them *)
+let dict_expr_parts ~loc entries =
+  Ast_dict.parts entries
+  |> List.map (function
+    | Ast_dict.Rows rows ->
+      DictExprRows (Ast_dict.rows_array ~loc:(Ast_dict.rows_loc ~loc rows) rows)
+    | Spread spread -> DictExprSpread spread)
 
 (* Blue | Red | Green -> [Blue; Red; Green] *)
 let collect_or_pattern_chain pat =
