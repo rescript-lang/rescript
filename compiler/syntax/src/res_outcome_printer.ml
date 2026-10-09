@@ -474,7 +474,7 @@ let print_type_parameter_doc (typ, (co, cn)) =
       (if typ = "_" then Doc.text "_" else Doc.text ("'" ^ typ));
     ]
 
-(* Print a digested FFI declaration as the surface attributes the user
+(* Print a resolved FFI declaration as the surface attributes the user
    wrote; the stored form is the declaration itself. *)
 let print_string_literal_doc s = Doc.text ("\"" ^ String.escaped s ^ "\"")
 
@@ -505,7 +505,7 @@ let print_external_module_doc (emn : External_ffi_types.external_module_name) =
       let with_fields =
         import_attributes
         |> List.map (fun (k, v) ->
-            (* digestion stores the source key [type_] as [type]; other
+            (* resolution stores the source key [type_] as [type]; other
                   keys are stored as written, including exotic ones from
                   escaped idents (\"some-identifier"), which must print
                   escaped again to be writable source *)
@@ -608,14 +608,14 @@ let rec print_out_sig_item_doc ?(print_name_as_is = false)
     let ffi_attrs, keyword, prim_name =
       match value_decl.oval_prim with
       | None -> (Doc.nil, "let ", None)
-      | Some (Prim_name s) -> (Doc.nil, "external ", Some s)
-      | Some (Prim_inline_const c) ->
+      | Some (Oprim_intrinsic s) -> (Doc.nil, "external ", Some s)
+      | Some (Oprim_inline_const c) ->
         (* surface syntax: [@inline("hello") let f: string] *)
         ( Doc.concat
             [Doc.text "@inline("; print_inline_const_doc c; Doc.text ") "],
           "let ",
           None )
-      | Some (Prim_ffi {name; spec}) -> (
+      | Some (Oprim_external {name; spec}) -> (
         match spec with
         | Ffi_obj_create _ -> (Doc.text "@obj ", "external ", Some name)
         | Ffi_bs (_params, return_wrapper, decl) ->

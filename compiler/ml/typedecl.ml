@@ -1890,16 +1890,30 @@ let parse_arity env _core_type ty =
 
 (* Translate a value declaration *)
 let transl_value_decl env loc valdecl =
-  let cty = Typetexp.transl_type_scheme env valdecl.pval_type in
+  let pval_type, pval_attributes, prim =
+    match valdecl.pval_prim with
+    | None -> (valdecl.pval_type, valdecl.pval_attributes, None)
+    | Some {txt} ->
+      let {
+        Primitive.resolved_type;
+        resolved_attributes;
+        resolved_name;
+        resolved_kind;
+      } =
+        !Primitive.resolve_external valdecl txt
+      in
+      (resolved_type, resolved_attributes, Some (resolved_name, resolved_kind))
+  in
+  let cty = Typetexp.transl_type_scheme env pval_type in
   let ty = cty.ctyp_type in
   let v =
-    match valdecl.pval_prim with
+    match prim with
     | None when Env.is_in_signature env ->
       {
         val_type = ty;
         val_kind = Val_reg;
         Types.val_loc = loc;
-        val_attributes = valdecl.pval_attributes;
+        val_attributes = pval_attributes;
       }
     | None ->
       (* unreachable: `pval_prim = None` outside a signature can only arise
@@ -1908,20 +1922,20 @@ let transl_value_decl env loc valdecl =
          declaration. A bare `val x: int` in a .res is also rejected at
          parse time. *)
       assert false
-    | Some _ ->
-      let arity, from_constructor = parse_arity env valdecl.pval_type ty in
-      let prim = Primitive.parse_declaration valdecl ~arity ~from_constructor in
+    | Some (name, kind) ->
+      let arity, from_constructor = parse_arity env pval_type ty in
+      let prim = Primitive.make ~name ~kind ~arity ~from_constructor in
       if
         prim.prim_arity = 0
         && prim.prim_kind = Kind_intrinsic
         && (prim.prim_name = ""
            || (prim.prim_name.[0] <> '%' && prim.prim_name.[0] <> '#'))
-      then raise (Error (valdecl.pval_type.ptyp_loc, Null_arity_external));
+      then raise (Error (pval_type.ptyp_loc, Null_arity_external));
       {
         val_type = ty;
         val_kind = Val_prim prim;
         Types.val_loc = loc;
-        val_attributes = valdecl.pval_attributes;
+        val_attributes = pval_attributes;
       }
   in
   let id, newenv =
@@ -1936,7 +1950,7 @@ let transl_value_decl env loc valdecl =
       val_val = v;
       val_prim = valdecl.pval_prim;
       val_loc = valdecl.pval_loc;
-      val_attributes = valdecl.pval_attributes;
+      val_attributes = pval_attributes;
     }
   in
   (desc, newenv)

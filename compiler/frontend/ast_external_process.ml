@@ -396,13 +396,6 @@ let check_return_wrapper loc (wrapper : External_ffi_types.return_wrapper)
     if Ast_core_type.is_user_option result_type then wrapper
     else Bs_syntaxerr.err loc Expect_opt_in_bs_return_to_opt
 
-type response = {
-  pval_type: Parsetree.core_type;
-  pval_prim: Parsetree.primitive_repr;
-  pval_attributes: Parsetree.attributes;
-  no_inline_cross_module: bool;
-}
-
 let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
     (arg_types_ty : Parsetree.arg list) (result_type : Ast_core_type.t) :
     int * Parsetree.core_type * External_ffi_types.t =
@@ -888,10 +881,16 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
   | {get_name = Some _} ->
     Location.raise_errorf ~loc "Attribute found that conflicts with %@get"
 
+type resolution = {
+  pval_type: Parsetree.core_type;
+  spec: External_ffi_types.t;
+  pval_attributes: Parsetree.attributes;
+  no_inline_cross_module: bool;
+}
+
 (** Note that the passed [type_annotation] is already processed by visitor pattern before*)
-let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
-    (prim_attributes : Ast_attributes.t) (prim_name : string) :
-    Parsetree.core_type * External_ffi_types.t * Parsetree.attributes * bool =
+let resolve (loc : Location.t) (type_annotation : Parsetree.core_type)
+    (prim_attributes : Ast_attributes.t) (prim_name : string) : resolution =
   let prim_name_with_source = {name = prim_name; source = External} in
   let result_type, arg_types_ty =
     (* Note this assumes external type is syntatic (no abstraction)*)
@@ -907,7 +906,12 @@ let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
     let _arity, new_type, spec =
       process_obj loc external_desc prim_name arg_types_ty result_type
     in
-    (new_type, spec, unused_attrs, false)
+    {
+      pval_type = new_type;
+      spec;
+      pval_attributes = unused_attrs;
+      no_inline_cross_module = false;
+    }
   else
     let splice = external_desc.splice in
     let arg_type_specs, args, arg_type_specs_length =
@@ -995,37 +999,12 @@ let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
     let return_wrapper =
       check_return_wrapper loc external_desc.return_wrapper result_type
     in
-    ( (match args with
-      | [] -> result_type
-      | _ -> Ast_helper.Typ.arrow ~loc args result_type),
-      External_ffi_types.ffi_bs arg_type_specs return_wrapper decl,
-      unused_attrs,
-      relative )
-
-let handle_attributes_as_prim (pval_loc : Location.t) (typ : Ast_core_type.t)
-    (attrs : Ast_attributes.t) (prim_name : string) : response =
-  let pval_type, ffi, pval_attributes, no_inline_cross_module =
-    handle_attributes pval_loc typ attrs prim_name
-  in
-  {
-    pval_type;
-    pval_prim = Prim_ffi {name = prim_name; spec = ffi};
-    pval_attributes;
-    no_inline_cross_module;
-  }
-
-let pval_prim_of_option_labels (labels : (bool * string Asttypes.loc) list)
-    (ends_with_unit : bool) =
-  let arg_kinds =
-    Ext_list.fold_right labels
-      (if ends_with_unit then [External_arg_spec.empty_kind Extern_unit] else [])
-      (fun (is_option, p) arg_kinds ->
-        let label_name = p.txt in
-        let obj_arg_label =
-          if is_option then External_arg_spec.optional false label_name
-          else External_arg_spec.obj_label label_name
-        in
-        {obj_arg_type = Nothing; obj_arg_label} :: arg_kinds)
-  in
-  Parsetree.Prim_ffi
-    {name = ""; spec = External_ffi_types.ffi_obj_create arg_kinds}
+    {
+      pval_type =
+        (match args with
+        | [] -> result_type
+        | _ -> Ast_helper.Typ.arrow ~loc args result_type);
+      spec = External_ffi_types.ffi_bs arg_type_specs return_wrapper decl;
+      pval_attributes = unused_attrs;
+      no_inline_cross_module = relative;
+    }

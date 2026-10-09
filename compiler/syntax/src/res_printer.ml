@@ -1332,10 +1332,8 @@ and print_value_description ~state value_description cmt_tbl =
                           Doc.line;
                           (let s =
                              match value_description.pval_prim with
-                             | Some (Prim_name s) | Some (Prim_ffi {name = s})
-                               ->
-                               s
-                             | Some (Prim_inline_const _) | None -> ""
+                             | Some {txt} -> txt
+                             | None -> ""
                            in
                            Doc.concat [Doc.text "\""; Doc.text s; Doc.text "\""]);
                         ]);

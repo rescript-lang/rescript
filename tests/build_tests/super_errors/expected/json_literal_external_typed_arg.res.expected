@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/json_literal_external_typed_arg.res[0m:[2m2:31-39[0m
+
+  1 [2m│[0m type t
+  [1;31m2[0m [2m│[0m @send external f: (t, @as(json[1;31m`{"a": 1}[0m`) int) => unit = "f"
+  3 [2m│[0m 
+
+  A `json` literal can only be used in an external attribute such as `@as`

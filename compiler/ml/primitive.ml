@@ -16,7 +16,6 @@
 (* Description of primitive functions *)
 
 open Misc
-open Parsetree
 
 type prim_kind =
   | Kind_intrinsic
@@ -50,15 +49,19 @@ let coercible (impl : description) (intf : description) =
     External_ffi_types.inclusion_compatible impl_ffi intf_ffi
   | _ -> false
 
-let parse_declaration (valdecl : Parsetree.value_description) ~arity
-    ~from_constructor =
-  let name, kind =
-    match valdecl.pval_prim with
-    | Some (Prim_name name) -> (name, Kind_intrinsic)
-    | Some (Prim_ffi {name; spec}) -> (name, Kind_external spec)
-    | Some (Prim_inline_const c) -> ("", Kind_inline_const c)
-    | None -> fatal_error "Primitive.parse_declaration"
-  in
+type resolved_external = {
+  resolved_type: Parsetree.core_type;
+  resolved_attributes: Parsetree.attributes;
+  resolved_name: string;
+  resolved_kind: prim_kind;
+}
+
+let resolve_external :
+    (Parsetree.value_description -> string -> resolved_external) ref =
+  ref (fun (_ : Parsetree.value_description) (_ : string) ->
+      fatal_error "Primitive.resolve_external: no resolver registered")
+
+let make ~name ~kind ~arity ~from_constructor =
   {
     prim_name = name;
     prim_arity = arity;
@@ -70,10 +73,10 @@ let parse_declaration (valdecl : Parsetree.value_description) ~arity
 open Outcometree
 
 let print p osig_val_decl =
-  let repr : Parsetree.primitive_repr =
+  let prim =
     match p.prim_kind with
-    | Kind_intrinsic -> Prim_name p.prim_name
-    | Kind_external spec -> Prim_ffi {name = p.prim_name; spec}
-    | Kind_inline_const c -> Prim_inline_const c
+    | Kind_intrinsic -> Oprim_intrinsic p.prim_name
+    | Kind_external spec -> Oprim_external {name = p.prim_name; spec}
+    | Kind_inline_const c -> Oprim_inline_const c
   in
-  {osig_val_decl with oval_prim = Some repr; oval_attributes = []}
+  {osig_val_decl with oval_prim = Some prim; oval_attributes = []}

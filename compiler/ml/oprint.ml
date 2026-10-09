@@ -485,14 +485,14 @@ and print_out_sig_item ppf = function
       ppf td
   | Osig_value vd ->
     let kwd = if vd.oval_prim = None then "val" else "external" in
-    let pr_prim ppf (repr : Parsetree.primitive_repr option) =
+    let pr_prim ppf (prim : out_primitive option) =
       (* this OCaml-syntax debug printer shows the external's name only; the
          ReScript outcome printer renders the full attribute syntax *)
-      match repr with
+      match prim with
       | None -> ()
-      | Some (Prim_name s) | Some (Prim_ffi {name = s}) ->
+      | Some (Oprim_intrinsic s) | Some (Oprim_external {name = s}) ->
         fprintf ppf "@ = \"%s\"" s
-      | Some (Prim_inline_const _) -> fprintf ppf "@ = \"#rescript-inline\""
+      | Some (Oprim_inline_const _) -> fprintf ppf "@ = \"#rescript-inline\""
     in
     fprintf ppf "@[<2>%s %a :@ %a%a%a@]" kwd value_ident vd.oval_name !out_type
       vd.oval_type pr_prim vd.oval_prim

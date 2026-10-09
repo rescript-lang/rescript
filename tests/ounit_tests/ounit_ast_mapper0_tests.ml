@@ -221,6 +221,33 @@ let test_ternary_roundtrips_through_ast0 _ =
   OUnit.assert_equal ["before"; "after"]
     (attr_names round_tripped.pexp_attributes)
 
+let test_external_primitive_roundtrips_through_ast0 _ =
+  let typ =
+    Ast_helper.Typ.constr ~loc (Location.mknoloc (Longident.Lident "t")) []
+  in
+  let external_ =
+    Ast_helper.Val.mk ~loc
+      ~attrs:[attr "send" (Parsetree.PStr [])]
+      ~prim:(located_string ~loc:(source_loc 10 16) "join")
+      (Location.mknoloc "join") typ
+  in
+  let wire =
+    Ast_mapper_to0.default_mapper.value_description
+      Ast_mapper_to0.default_mapper external_
+  in
+  OUnit.assert_equal ["join"] wire.pval_prim;
+  OUnit.assert_bool "the FFI attribute stays on the wire"
+    (has_attr "send" wire.pval_attributes);
+  let round_tripped =
+    Ast_mapper_from0.default_mapper.value_description
+      Ast_mapper_from0.default_mapper wire
+  in
+  (match round_tripped.pval_prim with
+  | Some {txt = "join"} -> ()
+  | _ -> assert_failure "Expected the primitive string after the v0 roundtrip");
+  OUnit.assert_bool "the FFI attribute survives the v0 roundtrip"
+    (has_attr "send" round_tripped.pval_attributes)
+
 let test_v0_ternary_marker_preserves_other_attribute_order _ =
   let ident name =
     Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident name))
@@ -2059,6 +2086,8 @@ let suites =
          >:: test_record_rest_roundtrips_through_ast0;
          "ternary_roundtrips_through_ast0"
          >:: test_ternary_roundtrips_through_ast0;
+         "external_primitive_roundtrips_through_ast0"
+         >:: test_external_primitive_roundtrips_through_ast0;
          "v0_ternary_marker_preserves_other_attribute_order"
          >:: test_v0_ternary_marker_preserves_other_attribute_order;
          "v0_if_without_alternate_stays_if"

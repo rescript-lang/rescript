@@ -60,7 +60,7 @@ let check_constant loc (const : Parsetree.constant) =
 
 (* Note we only used Bs_ast_iterator here, we can reuse compiler-libs instead of
    rolling our own*)
-let emit_external_warnings : iterator =
+let emit_external_warnings ~resolved_ffi_external : iterator =
   {
     super with
     type_declaration =
@@ -112,26 +112,18 @@ let emit_external_warnings : iterator =
     value_description =
       (fun self v ->
         match v with
-        | ({pval_loc; pval_prim = Some (Prim_name byte_name); pval_type} :
-            Parsetree.value_description) -> (
-          match byte_name with
-          | ("%identity" | "%component_identity")
-            when not (Ast_core_type.is_arity_one pval_type) ->
-            Location.raise_errorf ~loc:pval_loc
-              "%s expects a function type of the form 'a => 'b (arity 1)"
-              byte_name
-          | _ ->
-            if byte_name <> "" then
-              let c = String.unsafe_get byte_name 0 in
-              if not (c = '%' || c = '#' || c = '?') then
-                Location.prerr_warning pval_loc
-                  (Warnings.Bs_ffi_warning
-                     (byte_name ^ " such externals are unsafe"))
-              else super.value_description self v
-            else
-              Location.prerr_warning pval_loc
-                (Warnings.Bs_ffi_warning
-                   (byte_name ^ " such externals are unsafe")))
+        | _ when Ast_attributes.is_ffi_external v.pval_attributes v.pval_prim ->
+          super.value_description self (resolved_ffi_external v)
+        | {
+         pval_loc;
+         pval_prim =
+           Some {txt = ("%identity" | "%component_identity") as byte_name};
+         pval_type;
+        }
+          when not (Ast_core_type.is_arity_one pval_type) ->
+          Location.raise_errorf ~loc:pval_loc
+            "%s expects a function type of the form 'a => 'b (arity 1)"
+            byte_name
         | _ -> super.value_description self v);
     pat =
       (fun self (pat : Parsetree.pattern) ->
@@ -160,8 +152,48 @@ let rec iter_warnings_on_sigi (stru : Parsetree.signature) =
       iter_warnings_on_sigi rest
     | _ -> ())
 
-let emit_external_warnings_on_structure (stru : Parsetree.structure) =
-  emit_external_warnings.structure emit_external_warnings stru
+let emit_external_warnings_on_structure ~resolved_ffi_external
+    (stru : Parsetree.structure) =
+  let it = emit_external_warnings ~resolved_ffi_external in
+  it.structure it stru
 
-let emit_external_warnings_on_signature (sigi : Parsetree.signature) =
-  emit_external_warnings.signature emit_external_warnings sigi
+let emit_external_warnings_on_signature ~resolved_ffi_external
+    (sigi : Parsetree.signature) =
+  let it = emit_external_warnings ~resolved_ffi_external in
+  it.signature it sigi
+
+(* [json] payloads are syntax-level expressions until built-in FFI processing
+   consumes valid [@as(json`...`)] occurrences. Reject anything left only
+   after that processing, so generic attributes and ordinary expressions
+   cannot reinterpret them as strings. *)
+let unconsumed_json_iterator ~resolved_ffi_external : iterator =
+  {
+    super with
+    value_description =
+      (fun self v ->
+        if Ast_attributes.is_ffi_external v.pval_attributes v.pval_prim then
+          super.value_description self (resolved_ffi_external v)
+        else super.value_description self v);
+    expr =
+      (fun self expression ->
+        match expression.pexp_desc with
+        | Pexp_constant (Pconst_json _) ->
+          Ast_payload.reject_json_literal ~loc:expression.pexp_loc
+        | _ -> super.expr self expression);
+    pat =
+      (fun self pattern ->
+        match pattern.ppat_desc with
+        | Ppat_constant (Pconst_json _) ->
+          Ast_payload.reject_json_literal ~loc:pattern.ppat_loc
+        | _ -> super.pat self pattern);
+  }
+
+let reject_unconsumed_json_on_structure ~resolved_ffi_external
+    (stru : Parsetree.structure) =
+  let it = unconsumed_json_iterator ~resolved_ffi_external in
+  it.structure it stru
+
+let reject_unconsumed_json_on_signature ~resolved_ffi_external
+    (sigi : Parsetree.signature) =
+  let it = unconsumed_json_iterator ~resolved_ffi_external in
+  it.signature it sigi

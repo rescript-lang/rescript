@@ -128,9 +128,8 @@ let translate_primitive ~config ~output_file_relative ~resolver ~type_env
   if !Debug.translation then Log_.item "Translate Primitive\n";
   let value_name =
     (* external foo : someType = "abc" -- the extern name is "abc" *)
-    match value_description.val_prim with
-    | (Some (Prim_name name_of_extern) | Some (Prim_ffi {name = name_of_extern}))
-      when name_of_extern <> "" ->
+    match value_description.val_val.val_kind with
+    | Val_prim {prim_name = name_of_extern} when name_of_extern <> "" ->
       name_of_extern
     | _ -> value_description.val_id |> Ident.name
   in
