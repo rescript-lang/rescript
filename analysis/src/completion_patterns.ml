@@ -114,6 +114,31 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
       some_if_has_cursor
         ("", [Completable.NRecordBody {seen_fields = []}] @ pattern_path)
         "Ppat_record(empty)")
+  | Ppat_dict entries -> (
+    (* Complete inside the pattern of the entry with the cursor, as for a
+       record field *)
+    let entry_with_cursor =
+      entries
+      |> List.find_opt (fun {Parsetree.pdp_pattern} ->
+          pdp_pattern.ppat_loc
+          |> Cursor_position.classify_loc ~pos:pos_before_cursor
+          = HasCursor
+          || is_pattern_hole pdp_pattern)
+    in
+    match entry_with_cursor with
+    | None -> None
+    | Some {pdp_key; pdp_pattern} -> (
+      let pattern_path =
+        [Completable.NFollowRecordField {field_name = pdp_key.txt}]
+        @ pattern_path
+      in
+      match pdp_pattern.ppat_desc with
+      | Ppat_extension ({txt = "rescript.patternhole"}, _) ->
+        some_if_has_cursor ("", pattern_path) "patternhole"
+      | _ ->
+        pdp_pattern
+        |> traverse_pattern ~pattern_path ~loc_has_cursor
+             ~first_char_before_cursor_no_white ~pos_before_cursor))
   | Ppat_record (fields, _, rest) -> (
     let field_with_cursor = ref None in
     let field_with_pat_hole = ref None in

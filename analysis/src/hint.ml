@@ -65,7 +65,8 @@ let inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug =
         push vb.pvb_pat.ppat_loc Type
       | _ -> ())
     | {pvb_pat = {ppat_desc = Ppat_tuple _}} -> process_pattern vb.pvb_pat
-    | {pvb_pat = {ppat_desc = Ppat_record _}} -> process_pattern vb.pvb_pat
+    | {pvb_pat = {ppat_desc = Ppat_record _ | Ppat_dict _}} ->
+      process_pattern vb.pvb_pat
     | _ -> ());
     Ast_iterator.default_iterator.value_binding iterator vb
   in
