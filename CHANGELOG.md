@@ -54,6 +54,7 @@
 
 #### :house: Internal
 
+- Represent dict patterns with a dedicated `Ppat_dict` node. https://github.com/rescript-lang/rescript/pull/8749
 - Represent dict literals with dedicated `Pexp_dict` and `Texp_dict` nodes. https://github.com/rescript-lang/rescript/pull/8746
 - Forward-port integer range pattern regression coverage from v12 to v13. https://github.com/rescript-lang/rescript/pull/8718
 - Remove the unused `res.iflet` encoding of `if let`, which the parser always rejects with a syntax error suggesting a `switch`. The error is unchanged. https://github.com/rescript-lang/rescript/pull/8741
