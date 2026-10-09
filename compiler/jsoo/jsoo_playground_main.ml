@@ -53,8 +53,9 @@
  * v6: Added `config.experimental_features` and `config.jsx_preserve_mode` to the BundleConfig.
  * v7: Added debug dump output APIs for developer playground tooling.
  * v8: Added genType and source map configuration and compilation outputs.
+ * v9: Added optimized Lambda output to debug compilation.
  * *)
-let api_version = "8"
+let api_version = "9"
 
 module Js = Js_of_ocaml.Js
 
@@ -667,8 +668,18 @@ module Compile = struct
       let {Translmod.lambda; exports; hoisted_functions} =
         Translmod.transl_implementation modulename typed_tree
       in
+      let optimized_lambda = ref None in
+      let on_optimized_lambda =
+        if include_debug_outputs then
+          Some
+            (fun lambda ->
+              optimized_lambda :=
+                Some (Printer.to_string Printlambda.lambda lambda))
+        else None
+      in
       let lambda_output =
-        Lam_compile_main.compile "" exports hoisted_functions lambda
+        Lam_compile_main.compile ?on_optimized_lambda "" exports
+          hoisted_functions lambda
       in
       let js_code, source_map =
         render_javascript ~module_system ~filename ~source:str ~source_map_mode
@@ -725,7 +736,15 @@ module Compile = struct
               ("lam", inject @@ Js.string lam);
             |]
         in
-        Js.Unsafe.obj (Array.concat [attrs; debug_attrs; gentype_attrs])
+        let optimized_lambda_attrs =
+          match !optimized_lambda with
+          | None -> [||]
+          | Some output ->
+            Js.Unsafe.[|("lambda_optimized", inject @@ Js.string output)|]
+        in
+        Js.Unsafe.obj
+          (Array.concat
+             [attrs; debug_attrs; gentype_attrs; optimized_lambda_attrs])
       else Js.Unsafe.obj attrs
     with e -> (
       match e with

@@ -50,6 +50,7 @@
 
 #### :house: Internal
 
+- Add before/after optimization views and inline diffs to the developer playground's Lambda tab, with optimized Lambda output in playground API v9. https://github.com/rescript-lang/rescript/pull/8636
 - Forward-port integer range pattern regression coverage from v12 to v13. https://github.com/rescript-lang/rescript/pull/8718
 - Remove the unused `res.iflet` encoding of `if let`, which the parser always rejects with a syntax error suggesting a `switch`. The error is unchanged. https://github.com/rescript-lang/rescript/pull/8741
 - Represent variant spread patterns (`...t`) with a dedicated `Ppat_variant_spread` parsetree node instead of `Ppat_type` with a `res.patVariantSpread` attribute, which remains only in the PPX wire representation. https://github.com/rescript-lang/rescript/pull/8742

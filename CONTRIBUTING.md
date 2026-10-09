@@ -428,6 +428,18 @@ $ node
 > eval(result.js_code);
 ```
 
+### Lambda debug outputs (API v9)
+
+`comp.rescript.compileWithDebug(source)` returns `lambda` before the backend's
+Lambda optimization passes and `lambda_optimized` after the whole-term passes,
+before export grouping and JavaScript lowering. Both use the same Lambda printer
+so their text can be compared directly. JavaScript lowering performs further
+transformations; this snapshot is not the final JavaScript IR.
+
+Regular `comp.rescript.compile(source)` does not capture these debug outputs.
+Older bundles do not provide `lambda_optimized`; consumers should treat it as
+optional when supporting multiple API versions.
+
 ### Testing the Playground bundle
 
 Run `yarn workspace playground test` for a quick sanity check to see if all the build artifacts are working together correctly. When releasing the playground bundle, the test will always be executed before publishing to catch regressions.

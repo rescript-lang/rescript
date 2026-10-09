@@ -25,6 +25,7 @@ type success = {
   parsetree: string,
   typedtree: string,
   lambda: string,
+  lambdaOptimized: option<string>,
   gentype: option<string>,
   sourceMap: option<string>,
   warnings: array<string>,
