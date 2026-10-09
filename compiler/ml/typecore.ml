@@ -683,8 +683,20 @@ let build_ppat_or_for_variant_spread pat env expected_ty =
     let pat =
       match synthetic_or_patterns with
       | [] -> pat
-      | pat :: pats ->
-        List.fold_left (fun p1 p2 -> Ast_helper.Pat.or_ p1 p2) pat pats
+      | p :: ps ->
+        (* The constructors and the or-patterns grouping them are marked, so
+           that the ones earlier cases already match aren't reported as
+           unused. The root stands for the spread the user wrote: it's
+           reported, at the spread, when all of it is unused. *)
+        let root =
+          List.fold_left
+            (fun p1 p2 ->
+              Ast_helper.Pat.or_ ~loc:lident.loc
+                ~attrs:[Variant_type_spread.mk_pat_from_variant_spread_attr ()]
+                p1 p2)
+            p ps
+        in
+        {root with ppat_loc = pat.ppat_loc; ppat_attributes = []}
     in
     Some (pat, ty)
   | _ -> None
