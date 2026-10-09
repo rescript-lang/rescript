@@ -239,6 +239,15 @@ Test.run(
   let _ = dict{...counted}
 
   Test.run(__POS_OF__("dict spread runs getters"), count.contents, eq, 1)
+
+  // Like a JS spread, it's evaluated left to right
+  let order = []
+  let row = () => {
+    order->Array.push(count.contents)
+    2
+  }
+  let _ = dict{...counted, "b": row()}
+  Test.run(__POS_OF__("dict spread is evaluated left to right"), order, eq, [2])
 }
 
 {

@@ -409,6 +409,28 @@ Test.run([
   "dict spread runs getters"
 ], count, eq, 1);
 
+let order = [];
+
+function row() {
+  order.push(count);
+  return 2;
+}
+
+({
+    ...counted,
+    b: row()
+  });
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    250,
+    22,
+    62
+  ],
+  "dict spread is evaluated left to right"
+], order, eq, [2]);
+
 let other = {
   b: 2
 };
@@ -422,7 +444,7 @@ let result$6 = {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    250,
+    259,
     15,
     49
   ],
@@ -441,7 +463,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    256,
+    265,
     15,
     62
   ],
@@ -460,7 +482,7 @@ let result$7 = {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    269,
+    278,
     15,
     51
   ],
@@ -473,7 +495,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    277,
+    286,
     13,
     35
   ],
@@ -486,7 +508,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    283,
+    292,
     13,
     34
   ],
@@ -501,7 +523,7 @@ let dict = {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    295,
+    304,
     22,
     38
   ],
@@ -511,7 +533,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    296,
+    305,
     22,
     43
   ],
@@ -521,7 +543,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    297,
+    306,
     22,
     37
   ],
@@ -531,7 +553,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    298,
+    307,
     22,
     39
   ],
@@ -541,7 +563,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    300,
+    309,
     15,
     51
   ],

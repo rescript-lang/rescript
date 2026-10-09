@@ -45,7 +45,7 @@
 
 #### :nail_care: Polish
 
-- Compile dict spreads to object spread syntax instead of `Object.assign`. https://github.com/rescript-lang/rescript/pull/8747
+- Compile dict spreads to object spread syntax instead of `Object.assign`, evaluated left to right like JS spreads. https://github.com/rescript-lang/rescript/pull/8747
 - Represent explicit expression braces as `Pexp_braces` in parsetree v1 and format `else` branches consistently with `if` branches. https://github.com/rescript-lang/rescript/pull/8678
 - Omit redundant braces around multi-statement switch case bodies when formatting. https://github.com/rescript-lang/rescript/pull/8677
 - Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662
