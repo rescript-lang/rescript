@@ -139,6 +139,7 @@ let identify_ppat pat =
   | Ppat_or _ -> "Ppat_or"
   | Ppat_constraint _ -> "Ppat_constraint"
   | Ppat_type _ -> "Ppat_type"
+  | Ppat_variant_spread _ -> "Ppat_variant_spread"
   | Ppat_unpack _ -> "Ppat_unpack"
   | Ppat_exception _ -> "Ppat_exception"
   | Ppat_extension _ -> "Ppat_extension"

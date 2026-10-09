@@ -44,6 +44,17 @@ let extract_internal_loc_attr attr_name attrs =
 let await_marker_loc ~node_loc (marker_loc : Location.t) =
   if marker_loc = Location.none then node_loc else marker_loc
 
+(* The [res.patVariantSpread] marker that [Ast_mapper_to0] puts on a variant
+   spread pattern, with any payload *)
+let extract_variant_spread_attr (attrs : Pt.attributes) =
+  let rec loop rev_acc = function
+    | [] -> (false, List.rev rev_acc)
+    | ({txt = "res.patVariantSpread"}, _) :: rest ->
+      (true, List.rev_append rev_acc rest)
+    | attr :: rest -> loop (attr :: rev_acc) rest
+  in
+  loop [] attrs
+
 let extract_ternary_attr (attrs : Pt.attributes) =
   let rec loop rev_acc = function
     | [] -> (false, List.rev rev_acc)
@@ -1327,7 +1338,10 @@ module P = struct
     | Ppat_or (p1, p2) -> or_ ~loc ~attrs (sub.pat sub p1) (sub.pat sub p2)
     | Ppat_constraint (p, t) ->
       constraint_ ~loc ~attrs (sub.pat sub p) (sub.typ sub t)
-    | Ppat_type s -> type_ ~loc ~attrs (map_loc sub s)
+    | Ppat_type s -> (
+      match extract_variant_spread_attr attrs with
+      | true, attrs -> variant_spread ~loc ~attrs (map_loc sub s)
+      | false, _ -> type_ ~loc ~attrs (map_loc sub s))
     | Ppat_lazy _ -> failwith "Ppat_lazy is no longer present in ReScript"
     | Ppat_unpack s -> unpack ~loc ~attrs (map_loc sub s)
     | Ppat_open _ -> failwith "Ppat_open is no longer present in ReScript"

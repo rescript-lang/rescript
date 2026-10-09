@@ -657,9 +657,7 @@ let extract_type_from_pat_variant_spread env lid expected_ty =
 
 let build_ppat_or_for_variant_spread pat env expected_ty =
   match pat with
-  | {ppat_desc = Ppat_type lident; ppat_attributes}
-    when Variant_coercion.has_res_pat_variant_spread_attribute ppat_attributes
-    ->
+  | {ppat_desc = Ppat_variant_spread lident} ->
     let _, _, constructors, ty =
       extract_type_from_pat_variant_spread !env lident expected_ty
     in
@@ -693,9 +691,7 @@ let build_ppat_or_for_variant_spread pat env expected_ty =
 
 let maybe_expand_variant_spread_in_pattern pattern env expected_ty =
   match pattern.Parsetree.ppat_desc with
-  | Ppat_type _
-    when Variant_coercion.has_res_pat_variant_spread_attribute
-           pattern.ppat_attributes -> (
+  | Ppat_variant_spread _ -> (
     match build_ppat_or_for_variant_spread pattern env expected_ty with
     | None -> assert false (* TODO: Fix. *)
     | Some (pattern, _) -> pattern)
@@ -1331,9 +1327,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
   | Ppat_alias (sq, name) ->
     let override_type_from_variant_spread, sq =
       match sq with
-      | {ppat_desc = Ppat_type _; ppat_attributes}
-        when Variant_coercion.has_res_pat_variant_spread_attribute
-               ppat_attributes -> (
+      | {ppat_desc = Ppat_variant_spread _} -> (
         match build_ppat_or_for_variant_spread sq env expected_ty with
         | Some (p, ty) -> (Some ty, p)
         | None -> (None, sq))
@@ -1739,7 +1733,9 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
             | _ -> {p with pat_type = ty; pat_extra = extra :: p.pat_extra}
         in
         k p)
-  | Ppat_type lid ->
+  (* [Ppat_variant_spread] is expanded above, except for a variant without
+     constructors, which is typed (and rejected) like [#...t] *)
+  | Ppat_type lid | Ppat_variant_spread lid ->
     let path, p, ty = build_or_pat !env loc lid in
     unify_pat_types loc !env ty expected_ty;
     k
@@ -2173,7 +2169,7 @@ let contains_variant_either ty =
 let iter_ppat f p =
   match p.ppat_desc with
   | Ppat_any | Ppat_var _ | Ppat_constant _ | Ppat_interval _ | Ppat_extension _
-  | Ppat_type _ | Ppat_unpack _ ->
+  | Ppat_type _ | Ppat_variant_spread _ | Ppat_unpack _ ->
     ()
   | Ppat_array pats -> List.iter f pats
   | Ppat_or (p1, p2) ->

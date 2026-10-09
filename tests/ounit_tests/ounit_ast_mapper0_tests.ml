@@ -682,6 +682,40 @@ let map_pat_to0 p =
 
 let attr_names attrs = List.map (fun ({Location.txt}, _) -> txt) attrs
 
+(* v0 has no variant spread pattern: [...t] is [#...t] with a
+   [res.patVariantSpread] marker in front of its own attributes, as the
+   parser used to produce it *)
+let test_variant_spread_pattern_through_ast0 _ =
+  let spread_loc = source_loc 2 8 in
+  let lid = located_string ~loc:(source_loc 5 8) (Longident.Lident "t") in
+  let spread =
+    Ast_helper.Pat.variant_spread ~loc:spread_loc
+      ~attrs:[attr "user" (Parsetree.PStr [])]
+      lid
+  in
+  let wire = map_pat_to0 spread in
+  (match wire.ppat_desc with
+  | Parsetree0.Ppat_type {txt = Longident.Lident "t"} -> ()
+  | _ -> assert_failure "Expected Ppat_type on the v0 wire");
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["res.patVariantSpread"; "user"]
+    (attr_names wire.ppat_attributes);
+  (match map_pat0 wire with
+  | {
+   ppat_desc = Ppat_variant_spread {txt = Longident.Lident "t"; loc};
+   ppat_loc;
+   ppat_attributes;
+  } ->
+    OUnit.assert_equal ~msg:"pattern location" spread_loc ppat_loc;
+    OUnit.assert_equal ~msg:"type location" lid.loc loc;
+    OUnit.assert_equal ["user"] (attr_names ppat_attributes)
+  | _ -> assert_failure "Expected Ppat_variant_spread after the ast0 roundtrip");
+  (* [#...t] stays a polymorphic variant type pattern *)
+  let poly = Ast_helper.Pat.type_ ~loc lid in
+  match map_pat0 (map_pat_to0 poly) with
+  | {ppat_desc = Ppat_type _; ppat_attributes = []} -> ()
+  | _ -> assert_failure "Expected Ppat_type without attributes"
+
 let test_attributed_constructor_payloads_through_ast0 _ =
   let payload_loc = source_loc 10 30 in
   let payload_attrs = [attr "ppx.payload" (Parsetree0.PStr [])] in
@@ -1934,6 +1968,8 @@ let suites =
          >:: test_nested_awaits_are_dynamic_imports;
          "module_await_v0_attribute_order"
          >:: test_module_await_v0_attribute_order;
+         "variant_spread_pattern_through_ast0"
+         >:: test_variant_spread_pattern_through_ast0;
          "inline_record_definition_roundtrips_through_ast0"
          >:: test_inline_record_definition_roundtrips_through_ast0;
          "this_on_braced_function_reaches_builtin_ppx"

@@ -142,6 +142,7 @@ module Pat = struct
   let or_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_or (a, b))
   let constraint_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_constraint (a, b))
   let type_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_type a)
+  let variant_spread ?loc ?attrs a = mk ?loc ?attrs (Ppat_variant_spread a)
   let unpack ?loc ?attrs a = mk ?loc ?attrs (Ppat_unpack a)
   let exception_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_exception a)
   let extension ?loc ?attrs a = mk ?loc ?attrs (Ppat_extension a)

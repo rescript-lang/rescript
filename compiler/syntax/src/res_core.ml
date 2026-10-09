@@ -264,8 +264,6 @@ module Error_messages = struct
     "Spreading JSX children is no longer supported."
 end
 
-let make_pat_variant_spread_attr =
-  (Location.mknoloc "res.patVariantSpread", Parsetree.PStr [])
 let spread_attr = (Location.mknoloc "res.spread", Parsetree.PStr [])
 let dict_spread_attr = (Location.mknoloc "res.dictSpread", Parsetree.PStr [])
 
@@ -1257,9 +1255,7 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
       Parser.next p;
       let ident = parse_value_path p in
       let loc = mk_loc start_pos ident.loc.loc_end in
-      Ast_helper.Pat.type_ ~loc
-        ~attrs:(make_pat_variant_spread_attr :: attrs)
-        ident
+      Ast_helper.Pat.variant_spread ~loc ~attrs ident
     | Hash -> (
       Parser.next p;
       if Parser.peek p == DotDotDot then (

@@ -249,7 +249,8 @@ and pattern_desc =
   | Ppat_array of pattern list (* [| P1; ...; Pn |] *)
   | Ppat_or of pattern * pattern (* P1 | P2 *)
   | Ppat_constraint of pattern * core_type (* (P : T) *)
-  | Ppat_type of Longident.t loc (* #tconst *)
+  | Ppat_type of Longident.t loc (* #...tconst *)
+  | Ppat_variant_spread of Longident.t loc (* ...tconst *)
   | Ppat_unpack of string loc
     (* (module P)
        Note: (module P : S) is represented as

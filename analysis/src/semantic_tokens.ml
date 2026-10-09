@@ -244,7 +244,7 @@ let command ~debug ~emitter ~source ~kind_file =
     | Ppat_construct (name, _) ->
       emitter |> emit_variant ~name ~debug;
       Ast_iterator.default_iterator.pat iterator p
-    | Ppat_type {txt = lid; loc} ->
+    | Ppat_type {txt = lid; loc} | Ppat_variant_spread {txt = lid; loc} ->
       emitter |> emit_type ~lid ~debug ~loc;
       Ast_iterator.default_iterator.pat iterator p
     | _ -> Ast_iterator.default_iterator.pat iterator p

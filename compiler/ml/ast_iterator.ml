@@ -464,7 +464,7 @@ module P = struct
     | Ppat_constraint (p, t) ->
       sub.pat sub p;
       sub.typ sub t
-    | Ppat_type s -> iter_loc sub s
+    | Ppat_type s | Ppat_variant_spread s -> iter_loc sub s
     | Ppat_unpack s -> iter_loc sub s
     | Ppat_exception p -> sub.pat sub p
     | Ppat_extension x -> sub.extension sub x
