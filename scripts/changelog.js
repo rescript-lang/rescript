@@ -55,7 +55,7 @@ export function parseFragment(name, content) {
 }
 
 export async function readFragments(root) {
-  const directory = path.join(root, "changelog");
+  const directory = path.join(root, "changes");
   const entries = await fs.readdir(directory, { withFileTypes: true });
   const fragments = [];
   entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
@@ -63,7 +63,7 @@ export async function readFragments(root) {
     if (entry.name === "README.md") continue;
     if (!entry.isFile()) {
       throw new Error(
-        `changelog/${entry.name}: expected a regular fragment file`,
+        `changes/${entry.name}: expected a regular fragment file`,
       );
     }
     fragments.push(
@@ -182,7 +182,7 @@ export function checkPullRequest(files, pullRequest) {
     !files.some(
       file =>
         file.status === "A" &&
-        /^changelog\/(?!README\.md$)[^/]+\.md$/.test(file.name),
+        /^changes\/(?!README\.md$)[^/]+\.md$/.test(file.name),
     )
   ) {
     throw new Error(
@@ -237,7 +237,7 @@ export async function run(command, root = process.cwd()) {
   }
   await fs.writeFile(target, prepareRelease(changelog, version, fragments));
   for (const fragment of fragments) {
-    await fs.unlink(path.join(root, "changelog", fragment.name));
+    await fs.unlink(path.join(root, "changes", fragment.name));
   }
 }
 

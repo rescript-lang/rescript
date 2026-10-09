@@ -110,13 +110,13 @@ test("checks pull request fragments and CHANGELOG.md edits", () => {
     labels: labels.map(name => ({ name })),
   });
   const someone = pullRequest("someone");
-  const fragment = { status: "A", name: "changelog/new.fix.md" };
+  const fragment = { status: "A", name: "changes/new.fix.md" };
   const changelogEdit = { status: "M", name: "CHANGELOG.md" };
   checkPullRequest([fragment], someone);
   for (const files of [
     [],
-    [{ status: "M", name: "changelog/existing.fix.md" }],
-    [{ status: "A", name: "changelog/README.md" }],
+    [{ status: "M", name: "changes/existing.fix.md" }],
+    [{ status: "A", name: "changes/README.md" }],
     [fragment, changelogEdit],
   ]) {
     assert.throws(() => checkPullRequest(files, someone));
@@ -159,14 +159,14 @@ test("opens the next unreleased section for the following release", () => {
 test("validates before mutation, sorts fragments, consumes only on release", async t => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "rescript-changelog-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
-  await fs.mkdir(path.join(root, "changelog"));
+  await fs.mkdir(path.join(root, "changes"));
   await fs.writeFile(
     path.join(root, "package.json"),
     JSON.stringify({ version: "13.0.0" }),
   );
   await fs.writeFile(path.join(root, "CHANGELOG.md"), changelog);
   const write = (name, text) =>
-    fs.writeFile(path.join(root, "changelog", name), text);
+    fs.writeFile(path.join(root, "changes", name), text);
   await write("README.md", "Instructions");
   await write("z.fix.md", note);
   await write("a.fix.md", note.replace("recovery", "formatting"));
@@ -177,17 +177,15 @@ test("validates before mutation, sorts fragments, consumes only on release", asy
     changelog,
   );
   assert.ok(
-    (await fs.readdir(path.join(root, "changelog"))).includes("z.fix.md"),
+    (await fs.readdir(path.join(root, "changes"))).includes("z.fix.md"),
   );
-  await fs.unlink(path.join(root, "changelog", "bad.unknown.md"));
+  await fs.unlink(path.join(root, "changes", "bad.unknown.md"));
   assert.deepEqual(
     (await readFragments(root)).map(fragment => fragment.name),
     ["a.fix.md", "z.fix.md"],
   );
   await run("release", root);
-  assert.deepEqual(await fs.readdir(path.join(root, "changelog")), [
-    "README.md",
-  ]);
+  assert.deepEqual(await fs.readdir(path.join(root, "changes")), ["README.md"]);
   await assert.rejects(run("release", root));
 });
 

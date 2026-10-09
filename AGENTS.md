@@ -92,7 +92,7 @@ on `master`. CI runs on every PR in the stack.
 
 ## Testing and changelog
 
-**Add a changelog fragment** `changelog/<description>.<category>.md` for any user-facing change (bug fix, feature, or breaking change) instead of editing `CHANGELOG.md`; see [changelog/README.md](changelog/README.md) for categories and format. Validate with `yarn changelog:check`. Since the PR number is not known yet, open the PR as a draft with the placeholder link `https://github.com/rescript-lang/rescript/pull/XXXX`, then replace it with the real link, amend, push again, and mark the PR ready for review (`gh pr ready`).
+**Add a changelog fragment** `changes/<description>.<category>.md` for any user-facing change (bug fix, feature, or breaking change) instead of editing `CHANGELOG.md`; see [changes/README.md](changes/README.md) for categories and format. Validate with `yarn changelog:check`. Since the PR number is not known yet, open the PR as a draft with the placeholder link `https://github.com/rescript-lang/rescript/pull/XXXX`, then replace it with the real link, amend, push again, and mark the PR ready for review (`gh pr ready`).
 
 For compiler or standard-library changes, run `make test`. For syntax changes,
 also run `make test-syntax`; use `make test-syntax-roundtrip` when parsing or

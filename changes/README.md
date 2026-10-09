@@ -21,7 +21,7 @@ The PR number is only known once the PR exists, so open it as a draft with the p
 
 `yarn changelog:preview` prints pending fragments grouped by category, newest PR first, without changing files. It does not include entries already in `CHANGELOG.md`.
 
-During release preparation, run `yarn changelog:release`. It verifies that the first version heading matches `package.json` and is unreleased, validates every fragment before writing, adds fragments above the existing entries of each section, newest PR first, removes `(Unreleased)`, and deletes consumed files. Review and commit all changes in the release PR. Historical entries and existing unreleased notes are preserved. Running it again fails because the version has already been finalized. Releases with no fragments can still finalize existing notes. The publish workflow refuses to release while fragments remain in `changelog/`.
+During release preparation, run `yarn changelog:release`. It verifies that the first version heading matches `package.json` and is unreleased, validates every fragment before writing, adds fragments above the existing entries of each section, newest PR first, removes `(Unreleased)`, and deletes consumed files. Review and commit all changes in the release PR. Historical entries and existing unreleased notes are preserved. Running it again fails because the version has already been finalized. Releases with no fragments can still finalize existing notes. The publish workflow refuses to release while fragments remain in `changes/`.
 
 After publishing, run `yarn changelog:open` once `package.json` has the next version. It adds an empty unreleased section with every category heading.
 

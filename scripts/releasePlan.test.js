@@ -74,9 +74,9 @@ test("finds changelog fragments left unreleased", async t => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "rescript-release-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   assert.deepEqual(await findPendingFragments(root), []);
-  await fs.mkdir(path.join(root, "changelog"));
-  await fs.writeFile(path.join(root, "changelog", "README.md"), "");
+  await fs.mkdir(path.join(root, "changes"));
+  await fs.writeFile(path.join(root, "changes", "README.md"), "");
   assert.deepEqual(await findPendingFragments(root), []);
-  await fs.writeFile(path.join(root, "changelog", "late.fix.md"), "");
+  await fs.writeFile(path.join(root, "changes", "late.fix.md"), "");
   assert.deepEqual(await findPendingFragments(root), ["late.fix.md"]);
 });

@@ -49,12 +49,12 @@ export function findFirstReleasedVersion(changelog) {
   return null;
 }
 
-// Fragments left in changelog/ were merged after release preparation, so
+// Fragments left in changes/ were merged after release preparation, so
 // publishing would ship their changes without release notes.
 export async function findPendingFragments(root = ".") {
   let names;
   try {
-    names = await fs.readdir(path.join(root, "changelog"));
+    names = await fs.readdir(path.join(root, "changes"));
   } catch (error) {
     if (error.code === "ENOENT") return [];
     throw error;

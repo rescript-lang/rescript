@@ -510,7 +510,7 @@ Adding a new entry there requires re-running the analysis tests. Follow these st
 
 (If a `make` command fails, consider using the [DevContainer](#b-devcontainer).)
 
-Finally, add a `changelog/<description>.polish.md` fragment following [the changelog instructions](changelog/README.md).
+Finally, add a `changes/<description>.polish.md` fragment following [the changelog instructions](changes/README.md).
 
 ## Code structure
 
