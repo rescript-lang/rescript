@@ -865,6 +865,13 @@ and simple_expr ctxt f x =
       pp f "@[<0>@[<2>[|%a|]@]@]"
         (list (simple_expr (under_semi ctxt)) ~sep:";")
         l
+    | Pexp_dict entries ->
+      let dict_entry f = function
+        | Pdict_entry (key, e) ->
+          pp f "@[<hov2>%S:@;%a@]" key.txt (simple_expr ctxt) e
+        | Pdict_spread e -> pp f "...%a" (simple_expr ctxt) e
+      in
+      pp f "@[<hv2>dict{%a}@]" (list dict_entry ~sep:",@;") entries
     | Pexp_break -> pp f "break"
     | Pexp_continue -> pp f "continue"
     | Pexp_while (e1, e2) ->

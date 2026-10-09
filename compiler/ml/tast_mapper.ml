@@ -237,6 +237,13 @@ let expr sub x =
     | Texp_setfield (exp1, lid, ld, exp2) ->
       Texp_setfield (sub.expr sub exp1, lid, ld, sub.expr sub exp2)
     | Texp_array list -> Texp_array (List.map (sub.expr sub) list)
+    | Texp_dict entries ->
+      Texp_dict
+        (List.map
+           (function
+             | Tdict_entry (key, exp) -> Tdict_entry (key, sub.expr sub exp)
+             | Tdict_spread exp -> Tdict_spread (sub.expr sub exp))
+           entries)
     | Texp_ifthenelse (exp1, exp2, expo) ->
       Texp_ifthenelse
         (sub.expr sub exp1, sub.expr sub exp2, opt (sub.expr sub) expo)

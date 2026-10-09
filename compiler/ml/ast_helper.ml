@@ -176,6 +176,7 @@ module Exp = struct
   let field ?loc ?attrs a b = mk ?loc ?attrs (Pexp_field (a, b))
   let setfield ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_setfield (a, b, c))
   let array ?loc ?attrs a = mk ?loc ?attrs (Pexp_array a)
+  let dict ?loc ?attrs a = mk ?loc ?attrs (Pexp_dict a)
   let ifthenelse ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_ifthenelse (a, b, c))
   let ternary ?loc ?attrs condition consequent alternate =
     mk ?loc ?attrs (Pexp_ternary (condition, consequent, alternate))

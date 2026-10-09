@@ -1,0 +1,36 @@
+Complete src/CompletionDictLiteral.res 7:28
+pos_cursor:[7:28] pos_no_white:[7:27] Found expr:[7:11->7:29]
+pos_cursor:[7:28] pos_no_white:[7:27] Found expr:[7:21->7:28]
+Pexp_ident Colors.:[7:21->7:28]
+Completable: Cpath Value[Colors, ""]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Colors, ""]
+Path Colors.
+[
+  { "detail": "string", "kind": 12, "label": "red", "tags": [] },
+  { "detail": "string", "kind": 12, "label": "green", "tags": [] }
+]
+
+Complete src/CompletionDictLiteral.res 10:29
+pos_cursor:[10:29] pos_no_white:[10:28] Found expr:[10:11->10:30]
+pos_cursor:[10:29] pos_no_white:[10:28] Found expr:[10:27->10:29]
+Pexp_ident ba:[10:27->10:29]
+Completable: Cpath Value[ba]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[ba]
+Path ba
+[ { "detail": "dict<string>", "kind": 12, "label": "base", "tags": [] } ]
+
+Complete src/CompletionDictLiteral.res 13:37
+pos_cursor:[13:37] pos_no_white:[13:36] Found expr:[13:11->13:39]
+pos_cursor:[13:37] pos_no_white:[13:36] Found expr:[13:30->13:38]
+Pexp_ident Colors.g:[13:30->13:38]
+Completable: Cpath Value[Colors, g]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Colors, g]
+Path Colors.g
+[ { "detail": "string", "kind": 12, "label": "green", "tags": [] } ]
+

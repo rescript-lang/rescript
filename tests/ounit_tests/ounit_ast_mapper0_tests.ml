@@ -1476,6 +1476,76 @@ let test_raw_extension_payloads_roundtrip_through_ast0 _ =
         (map_expr0 (map_expr_to0 expression)))
     ["raw"; "ffi"]
 
+(* On the v0 wire, dict literals are the calls they used to be parsed into:
+   [Primitive_dict.make] without spreads, [Primitive_dict.spread] marked with
+   [res.dictSpread] with them. They come back as [Pexp_dict]. *)
+let test_dict_literal_through_ast0 _ =
+  let strip_locs =
+    {Ast_mapper.default_mapper with location = (fun _ _ -> Location.none)}
+  in
+  let strip e = strip_locs.expr strip_locs e in
+  List.iter
+    (fun (source, wire_function) ->
+      let parsed =
+        Res_driver.parse_implementation_from_source ~display_filename:"Dict.res"
+          ~source:("let x = " ^ source)
+      in
+      match parsed.parsetree with
+      | [{pstr_desc = Pstr_value (_, [{pvb_expr = e}])}] when not parsed.invalid
+        -> (
+        let wire = map_expr_to0 e in
+        (match wire.pexp_desc with
+        | Parsetree0.Pexp_apply
+            ( {
+                pexp_desc =
+                  Pexp_ident
+                    {txt = Longident.Ldot (Lident "Primitive_dict", name)};
+                pexp_attributes;
+              },
+              _ ) ->
+          OUnit.assert_equal ~msg:source wire_function name;
+          OUnit.assert_equal ~msg:source ~printer:(String.concat ", ")
+            (if name = "spread" then ["res.dictSpread"] else [])
+            (attr_names pexp_attributes)
+        | _ -> assert_failure ("Expected a Primitive_dict call: " ^ source));
+        match map_expr0 wire with
+        | {pexp_desc = Pexp_dict _} as back ->
+          OUnit.assert_bool
+            (source ^ " roundtrips through ast0")
+            (strip back = strip e)
+        | _ -> assert_failure ("Expected Pexp_dict back: " ^ source))
+      | _ -> assert_failure ("Expected a let binding: " ^ source))
+    [
+      ("dict{}", "make");
+      ({|dict{"a": 1, "b": "x"}|}, "make");
+      ({|dict{"a\"b": 1}|}, "make");
+      ("dict{...a}", "spread");
+      ({|dict{"a": 1, ...b, "c": 3, ...d}|}, "spread");
+    ];
+  (* A call a PPX writes, with a semantic string key *)
+  let make =
+    Ast_helper0.Exp.apply ~loc
+      (Ast_helper0.Exp.ident ~loc
+         (located_string
+            (Longident.Ldot (Longident.Lident "Primitive_dict", "make"))))
+      [
+        ( Asttypes.Noloc.Nolabel,
+          Ast_helper0.Exp.array ~loc
+            [
+              Ast_helper0.Exp.tuple ~loc
+                [
+                  Ast_helper0.Exp.constant ~loc
+                    (Parsetree0.Pconst_string ("k", None));
+                  Ast_helper0.Exp.constant ~loc
+                    (Parsetree0.Pconst_integer ("1", None));
+                ];
+            ] );
+      ]
+  in
+  match (map_expr0 make).pexp_desc with
+  | Pexp_dict [Pdict_entry ({txt = "k"}, _)] -> ()
+  | _ -> assert_failure "Expected a dict literal from Primitive_dict.make"
+
 let test_removed_regexp_extension _ =
   List.iter
     (fun source ->
@@ -1970,6 +2040,7 @@ let suites =
          >:: test_module_await_v0_attribute_order;
          "variant_spread_pattern_through_ast0"
          >:: test_variant_spread_pattern_through_ast0;
+         "dict_literal_through_ast0" >:: test_dict_literal_through_ast0;
          "inline_record_definition_roundtrips_through_ast0"
          >:: test_inline_record_definition_roundtrips_through_ast0;
          "this_on_braced_function_reaches_builtin_ppx"

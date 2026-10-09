@@ -172,6 +172,7 @@ module Exp : sig
   val setfield :
     ?loc:loc -> ?attrs:attrs -> expression -> lid -> expression -> expression
   val array : ?loc:loc -> ?attrs:attrs -> expression list -> expression
+  val dict : ?loc:loc -> ?attrs:attrs -> dict_entry list -> expression
   val ifthenelse :
     ?loc:loc ->
     ?attrs:attrs ->

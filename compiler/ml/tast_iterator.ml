@@ -177,6 +177,11 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
     sub.expr sub exp1;
     sub.expr sub exp2
   | Texp_array list -> List.iter (sub.expr sub) list
+  | Texp_dict entries ->
+    List.iter
+      (function
+        | Tdict_entry (_, exp) | Tdict_spread exp -> sub.expr sub exp)
+      entries
   | Texp_ifthenelse (exp1, exp2, expo) ->
     sub.expr sub exp1;
     sub.expr sub exp2;

@@ -320,6 +320,9 @@ and expression i ppf x =
   | Pexp_array l ->
     line i ppf "Pexp_array\n";
     list i expression ppf l
+  | Pexp_dict l ->
+    line i ppf "Pexp_dict\n";
+    list i dict_entry ppf l
   | Pexp_ifthenelse (e1, e2, eo) ->
     line i ppf "Pexp_ifthenelse\n";
     expression i ppf e1;
@@ -436,6 +439,14 @@ and expression i ppf x =
     | Some closing_tag ->
       line i ppf "closing_tag =%a\n" fmt_jsx_tag_name
         closing_tag.jsx_closing_container_tag_name)
+
+and dict_entry i ppf = function
+  | Pdict_entry (key, e) ->
+    line i ppf "Pdict_entry %a\n" fmt_string_loc key;
+    expression (i + 1) ppf e
+  | Pdict_spread e ->
+    line i ppf "Pdict_spread\n";
+    expression (i + 1) ppf e
 
 and jsx_children i ppf children =
   line i ppf "jsx_children =\n";

@@ -121,6 +121,7 @@ let identify_pexp pexp =
   | Pexp_await _ -> "Pexp_await"
   | Pexp_jsx_element _ -> "Pexp_jsx_element"
   | Pexp_regexp _ -> "Pexp_regexp"
+  | Pexp_dict _ -> "Pexp_dict"
   | Pexp_template _ -> "Pexp_template"
   | Pexp_tagged_template _ -> "Pexp_tagged_template"
 

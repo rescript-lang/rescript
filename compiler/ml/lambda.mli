@@ -232,6 +232,7 @@ type primitive =
   | Pmakelist
   (* dict primitives *)
   | Pmakedict
+  | Pdict_spread (* Object.assign(target, ...sources) *)
   | Pdict_has
   (* promise *)
   | Pawait

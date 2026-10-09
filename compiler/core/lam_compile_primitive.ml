@@ -580,6 +580,11 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
               Some (Js_op.Lit txt, expr)
             | _ -> None))
     | _ -> assert false)
+  | Pdict_spread ->
+    E.call
+      ~info:(Js_call_info.na_full_call false)
+      (E.js_global "Object.assign")
+      args
   | Pdict_has -> (
     match args with
     | [obj; prop] -> E.in_ prop obj

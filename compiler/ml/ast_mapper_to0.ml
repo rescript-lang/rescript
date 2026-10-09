@@ -448,7 +448,8 @@ module E = struct
 
   (* Value expressions for the core language *)
 
-  let map sub {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} =
+  let map sub ({pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} as e)
+      =
     let open Exp in
     let loc = sub.location sub loc in
     let is_ppx_context_string = has_ppx_context_string_attr attrs in
@@ -634,6 +635,11 @@ module E = struct
     | Pexp_setfield (e1, lid, e2) ->
       setfield ~loc ~attrs (sub.expr sub e1) (map_loc sub lid) (sub.expr sub e2)
     | Pexp_array el -> array ~loc ~attrs (List.map (sub.expr sub) el)
+    | Pexp_dict entries ->
+      (* v0 has no dict literals: they're the calls they used to be parsed
+         into *)
+      sub.expr sub
+        (Ast_dict.to_calls ~loc:e.pexp_loc ~attrs:e.pexp_attributes entries)
     | Pexp_ifthenelse (e1, e2, e3) ->
       ifthenelse ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
         (map_opt (sub.expr sub) e3)

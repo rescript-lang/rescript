@@ -990,6 +990,11 @@ module Compile = struct
       [e1; e2] |> List.map (expression ~ctx) |> Command.unordered_sequence
     | Texp_tuple expressions | Texp_array expressions ->
       expressions |> List.map (expression ~ctx) |> Command.unordered_sequence
+    | Texp_dict entries ->
+      entries
+      |> List.map (function Typedtree.Tdict_entry (_, e) | Tdict_spread e ->
+          expression ~ctx e)
+      |> Command.unordered_sequence
     | Texp_assert _ -> Command.nothing
     | Texp_try (e, cases) ->
       let c_e = e |> expression ~ctx in

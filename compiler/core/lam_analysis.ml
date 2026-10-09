@@ -97,7 +97,7 @@ let rec no_side_effects (lam : Lambda.t) : bool =
       true
     (* A tagged template invokes its tag at runtime, so it always has side
        effects. *)
-    | Ptagged_template _ | Pjs_call _ | Pinit_mod | Pupdate_mod
+    | Ptagged_template _ | Pjs_call _ | Pdict_spread | Pinit_mod | Pupdate_mod
     | Pjs_object_get _ | Pjs_object_set _ | Pdebugger | Pjs_fn_method
     (* Await promise *)
     | Pawait

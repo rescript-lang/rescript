@@ -231,6 +231,7 @@ type primitive =
   | Pmakelist
   (* dict primitives *)
   | Pmakedict
+  | Pdict_spread (* Object.assign(target, ...sources) *)
   | Pdict_has
   (* promise *)
   | Pawait
@@ -476,7 +477,7 @@ let eq_primitive_approx (lhs : primitive) (rhs : primitive) =
   (* List primitives *)
   | Pmakelist
   (* dict primitives *)
-  | Pmakedict | Pdict_has
+  | Pmakedict | Pdict_spread | Pdict_has
   (* promise *)
   | Pawait
   (* etc *)

@@ -228,6 +228,11 @@ let iter_expression f e =
       expr e;
       module_expr me
     | Pexp_pack me -> module_expr me
+    | Pexp_dict entries ->
+      List.iter
+        (function
+          | Pdict_entry (_, e) | Pdict_spread e -> expr e)
+        entries
     | Pexp_await _ -> assert false (* should be handled earlier *)
     | Pexp_jsx_element _ ->
       raise (Error (e.pexp_loc, Env.empty, Jsx_not_enabled))
@@ -2355,10 +2360,6 @@ let extract_function_name funct =
 
 let should_unify_expected_result_before_typing_lowered_apply funct sargs =
   match (extract_function_name funct, sargs) with
-  | ( Some (Longident.Ldot (Longident.Lident "Primitive_dict", "make")),
-      [(Asttypes.Nolabel, {Parsetree.pexp_desc = Parsetree.Pexp_array _})] ) ->
-    (* Dict literals *)
-    true
   | ( Some
         (Longident.Ldot (Longident.Lident "Primitive_promise", "unsafe_async")),
       [(Asttypes.Nolabel, _)] ) ->
@@ -3041,6 +3042,28 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     re
       {
         exp_desc = Texp_array argl;
+        exp_loc = loc;
+        exp_extra = [];
+        exp_type = instance env ty_expected;
+        exp_attributes = sexp.pexp_attributes;
+        exp_env = env;
+      }
+  | Pexp_dict entries ->
+    let dict_type ty = newgenty (Tconstr (Predef.path_dict, [ty], ref Mnil)) in
+    let ty = newgenvar () in
+    unify_exp_types ~context:None loc env (dict_type ty) ty_expected;
+    let entries =
+      List.map
+        (function
+          | Pdict_entry (key, svalue) ->
+            Tdict_entry (key, type_expect ~context:None env svalue ty)
+          | Pdict_spread sspread ->
+            Tdict_spread (type_expect ~context:None env sspread (dict_type ty)))
+        entries
+    in
+    re
+      {
+        exp_desc = Texp_dict entries;
         exp_loc = loc;
         exp_extra = [];
         exp_type = instance env ty_expected;

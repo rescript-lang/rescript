@@ -56,6 +56,12 @@ let rec expr_no_side_effects (expr : Typedtree.expression) =
   | Texp_field (e, _lid, _ld) -> e |> expr_no_side_effects
   | Texp_setfield _ -> false
   | Texp_array el -> el |> List.for_all expr_no_side_effects
+  | Texp_dict entries ->
+    entries
+    |> List.for_all (function
+      | Typedtree.Tdict_entry (_, e) -> e |> expr_no_side_effects
+      (* Object.assign reads the spread dicts *)
+      | Tdict_spread _ -> false)
   | Texp_ifthenelse (e1, e2, eo) ->
     e1 |> expr_no_side_effects && e2 |> expr_no_side_effects
     && eo |> expr_opt_no_side_effects

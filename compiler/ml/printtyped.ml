@@ -329,6 +329,9 @@ and expression i ppf x =
   | Texp_array l ->
     line i ppf "Texp_array\n";
     list i expression ppf l
+  | Texp_dict l ->
+    line i ppf "Texp_dict\n";
+    list i dict_entry ppf l
   | Texp_ifthenelse (e1, e2, eo) ->
     line i ppf "Texp_ifthenelse\n";
     expression i ppf e1;
@@ -697,6 +700,14 @@ and label_decl i ppf
 and longident_x_pattern i ppf (li, _, p, opt) =
   line i ppf "%a%s\n" fmt_longident li (if opt then "?" else "");
   pattern (i + 1) ppf p
+
+and dict_entry i ppf = function
+  | Tdict_entry (key, e) ->
+    line i ppf "Tdict_entry %S\n" key.txt;
+    expression (i + 1) ppf e
+  | Tdict_spread e ->
+    line i ppf "Tdict_spread\n";
+    expression (i + 1) ppf e
 
 and case i ppf {c_lhs; c_guard; c_rhs} =
   line i ppf "<case>\n";

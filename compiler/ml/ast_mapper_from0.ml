@@ -549,6 +549,79 @@ end
 module E = struct
   (* Value expressions for the core language *)
 
+  (* The rows of [Primitive_dict.make([("a", 1), ...])] *)
+  let dict_rows (e : expression) =
+    match e.pexp_desc with
+    | Pexp_apply
+        ( {
+            pexp_desc = Pexp_ident {txt = Ldot (Lident "Primitive_dict", "make")};
+            pexp_attributes = [];
+          },
+          [
+            ( Asttypes.Noloc.Nolabel,
+              {pexp_desc = Pexp_array items; pexp_attributes = []} );
+          ] ) ->
+      let row = function
+        | {
+            pexp_desc =
+              Pexp_tuple
+                [
+                  {
+                    pexp_desc =
+                      Pexp_constant
+                        (Pconst_string (_, (None | Some ("js" | "*j"))) as key);
+                    pexp_loc = key_loc;
+                    pexp_attributes = [];
+                  };
+                  value;
+                ];
+            pexp_attributes = [];
+          } -> (
+          match map_constant ~loc:key_loc key with
+          | Pt.Pconst_string key ->
+            Some
+              ({txt = String_literal.string_semantic key; loc = key_loc}, value)
+          | _ -> None)
+        | _ -> None
+      in
+      let rows = List.filter_map row items in
+      if List.length rows = List.length items then Some rows else None
+    | _ -> None
+
+  (* The entries of a dict literal encoded as calls, see [Ast_dict] *)
+  let dict_entries (e : expression) =
+    let chunk (e : expression) =
+      match e.pexp_attributes with
+      | [] -> dict_rows e
+      | _ -> None
+    in
+    let rows = List.map (fun row -> `Row row) in
+    match e.pexp_desc with
+    | Pexp_apply
+        ( {
+            pexp_desc =
+              Pexp_ident {txt = Ldot (Lident "Primitive_dict", "spread")};
+            pexp_attributes = [({txt}, PStr [])];
+          },
+          [
+            (Asttypes.Noloc.Nolabel, target);
+            ( Asttypes.Noloc.Nolabel,
+              {pexp_desc = Pexp_array sources; pexp_attributes = []} );
+          ] )
+      when txt = Ast_dict.spread_marker -> (
+      match chunk target with
+      | Some target_rows ->
+        Some
+          (rows target_rows
+          @ List.concat_map
+              (fun source ->
+                match chunk source with
+                | Some source_rows -> rows source_rows
+                | None -> [`Spread source])
+              sources)
+      | None -> None)
+    | _ -> Option.map rows (dict_rows e)
+
   let has_await_attribute attrs =
     List.exists
       (function
@@ -784,6 +857,15 @@ module E = struct
       fun_ ~loc ~attrs
         [{p_attrs = []; p_lbl = Nolabel; p_default = None; p_pat = pat}]
         body
+    | Pexp_apply _ when Option.is_some (dict_entries e) ->
+      let entries = Option.get (dict_entries e) in
+      dict ~loc ~attrs
+        (List.map
+           (function
+             | `Row (key, value) ->
+               Pt.Pdict_entry (map_loc sub key, sub.expr sub value)
+             | `Spread spread -> Pt.Pdict_spread (sub.expr sub spread))
+           entries)
     | Pexp_apply
         ( {pexp_desc = Pexp_ident {txt = Longident.Lident "#="}},
           [

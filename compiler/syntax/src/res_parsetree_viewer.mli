@@ -123,8 +123,11 @@ val is_spread_list : Parsetree.expression -> bool
 
 val is_spread_array : Parsetree.expression -> bool
 
-val collect_spread_dict_expr_parts :
-  Parsetree.expression -> dict_expr_part list option
+val dict_has_spread : Parsetree.dict_entry list -> bool
+val dict_expr_rows :
+  loc:Location.t -> Parsetree.dict_entry list -> Parsetree.expression
+val dict_expr_parts :
+  loc:Location.t -> Parsetree.dict_entry list -> dict_expr_part list
 
 val collect_or_pattern_chain : Parsetree.pattern -> Parsetree.pattern list
 
@@ -151,8 +154,6 @@ val is_underscore_apply_sugar : Parsetree.expression -> bool
 val is_rewritten_underscore_apply_sugar : Parsetree.expression -> bool
 
 val is_fun_expr : Parsetree.expression -> bool
-
-val is_tuple_array : Parsetree.expression -> bool
 
 val get_jsx_prop_loc : Parsetree.jsx_prop -> Warnings.loc
 

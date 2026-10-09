@@ -262,6 +262,11 @@ end = struct
       iter_expression exp1;
       iter_expression exp2
     | Texp_array list -> List.iter iter_expression list
+    | Texp_dict entries ->
+      List.iter
+        (function
+          | Tdict_entry (_, exp) | Tdict_spread exp -> iter_expression exp)
+        entries
     | Texp_ifthenelse (exp1, exp2, expo) -> (
       iter_expression exp1;
       iter_expression exp2;

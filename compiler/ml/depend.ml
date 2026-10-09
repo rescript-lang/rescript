@@ -250,6 +250,11 @@ let rec add_expr bv exp =
     add bv fld;
     add_expr bv e2
   | Pexp_array el -> List.iter (add_expr bv) el
+  | Pexp_dict entries ->
+    List.iter
+      (function
+        | Pdict_entry (_, e) | Pdict_spread e -> add_expr bv e)
+      entries
   | Pexp_ifthenelse (e1, e2, opte3) ->
     add_expr bv e1;
     add_expr bv e2;

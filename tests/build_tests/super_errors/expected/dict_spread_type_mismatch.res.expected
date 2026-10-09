@@ -1,0 +1,16 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/dict_spread_type_mismatch.res[0m:[2m4:47-50[0m
+
+  2 [2m│[0m 
+  3 [2m│[0m // The error points at the spread dict
+  [1;31m4[0m [2m│[0m let strings: dict<string> = dict{"b": "x", ...[1;31mints[0m}
+  5 [2m│[0m 
+
+  This has type: [1;31mdict<int>[0m
+  But it's expected to have type: [1;33mdict<string>[0m
+  
+  The incompatible parts:
+    [1;31mint[0m vs [1;33mstring[0m
+  
+  You can convert [1;33mint[0m to [1;33mstring[0m with [1;33mInt.toString[0m.
