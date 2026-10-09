@@ -1,6 +1,7 @@
 // Test "framework"
 
-@scope("process") @val external exit: int => unit = "exit"
+type process = {mutable exitCode: int}
+@val external process: process = "process"
 @scope("Error") @val external captureStackTrace: {..} => unit = "captureStackTrace"
 @module("@babel/code-frame") @val
 external codeFrameColumns: (string, {..}, {..}) => string = "codeFrameColumns"
@@ -36,6 +37,7 @@ ${codeFrame}
   \u001b[39mRight: \u001b[31m${right}\u001b[0m
 `
     Console.log(errorMessage)
+    process.exitCode = 1
     // API: https://nodejs.org/api/errors.html#errors_error_capturestacktrace_targetobject_constructoropt
     let obj = Object.make()
     captureStackTrace(obj)

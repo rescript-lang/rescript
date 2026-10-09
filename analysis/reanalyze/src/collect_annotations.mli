@@ -1,6 +1,6 @@
 (** AST traversal to collect source annotations (@dead, @live, @genType).
 
-    Traverses the typed AST and records annotations in a FileAnnotations.builder. *)
+    Traverses the typed AST and records annotations in a File_annotations.builder. *)
 
 val structure :
   state:File_annotations.builder ->

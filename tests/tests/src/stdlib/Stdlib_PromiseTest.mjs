@@ -264,9 +264,9 @@ function testResolveFinally() {
         "Stdlib_PromiseTest.res",
         242,
         26,
-        45
+        46
       ],
-      "value should be 5"
+      "value should be 10"
     ], v, equal, 10);
     Test.run([
       [

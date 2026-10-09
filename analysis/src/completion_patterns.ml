@@ -38,7 +38,7 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
     if loc_has_cursor pat.Parsetree.ppat_loc then (
       if Debug.verbose () then
         Printf.printf
-          "[traversePattern:someIfHasCursor] '%s' has cursor, returning \n"
+          "[traverse_pattern:some_if_has_cursor] '%s' has cursor, returning \n"
           debug_id;
       Some v)
     else None
@@ -68,7 +68,7 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
     | None when is_pattern_hole p1 || is_pattern_hole p2 ->
       if Debug.verbose () then
         Printf.printf
-          "[traversePattern] found or-pattern that was pattern hole\n";
+          "[traverse_pattern] found or-pattern that was pattern hole\n";
       Some ("", pattern_path)
     | v -> v)
   | Ppat_any ->
@@ -168,7 +168,7 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
       | Some ',' ->
         some_if_has_cursor
           ("", [Completable.NRecordBody {seen_fields}] @ pattern_path)
-          "firstCharBeforeCursorNoWhite:,"
+          "first_char_before_cursor_no_white:,"
       | _ -> None))
   | Ppat_construct
       ( {txt},

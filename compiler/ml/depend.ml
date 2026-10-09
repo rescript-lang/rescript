@@ -34,8 +34,6 @@ let bound = Node (String_set.empty, String_map.empty)
 let get_map (Node (_s, m)) = m
 let make_leaf s = Node (String_set.singleton s, String_map.empty)
 let make_node m = Node (String_set.empty, m)
-let rec weaken_map s (Node (s0, m0)) =
-  Node (String_set.union s s0, String_map.map (weaken_map s) m0)
 let rec collect_free (Node (s, m)) =
   String_map.fold (fun _ n -> String_set.union (collect_free n)) m s
 
@@ -66,8 +64,6 @@ let rec add_path bv ?(p = []) = function
     let free =
       try lookup_free (s :: p) bv with Not_found -> String_set.singleton s
     in
-    (*StringSet.iter (fun s -> Printf.eprintf "%s " s) free;
-      prerr_endline "";*)
     add_names free
   | Ldot (l, s) -> add_path bv ~p:(s :: p) l
 
@@ -193,7 +189,7 @@ let rec add_pattern bv pat =
     add_pattern bv p;
     add_type bv ty
   | Ppat_variant (_, {txt = args}) -> List.iter (add_pattern bv) args
-  | Ppat_type li -> add bv li
+  | Ppat_type li | Ppat_variant_spread li -> add bv li
   | Ppat_unpack id -> pattern_bv := String_map.add id.txt bound !pattern_bv
   | Ppat_exception p -> add_pattern bv p
   | Ppat_extension e -> handle_extension e
@@ -281,7 +277,7 @@ let rec add_expr bv exp =
     add_pattern bv pat |> ignore;
     add_expr bv e1;
     add_expr bv e2
-  | Pexp_coerce (e1, (), ty3) ->
+  | Pexp_coerce (e1, ty3) ->
     add_expr bv e1;
     add_type bv ty3
   | Pexp_constraint (e1, ty2) ->
@@ -475,6 +471,7 @@ and add_module bv modl =
     add_modtype bv mty
   | Pmod_unpack e -> add_expr bv e
   | Pmod_extension e -> handle_extension e
+  | Pmod_await modl -> add_module bv modl
 
 and add_structure bv item_list =
   let bv, m = add_structure_binding bv item_list in

@@ -2,8 +2,10 @@
 
 ## Install
 
+The `rescript` package provides the `rescript-tools` executable:
+
 ```sh
-npm install --save-dev @rescript/tools
+npm install --save-dev rescript
 ```
 
 ## CLI Usage
@@ -39,11 +41,8 @@ rescript-tools reanalyze --help
 
 ## Decode JSON
 
-Add to `bs-dev-dependencies`:
-
-```json
-"dev-dependencies": ["@rescript/tools"]
-```
+`RescriptTools.Docgen` in the standard library (`@rescript/runtime`)
+decodes the JSON that `rescript-tools doc` prints:
 
 ```rescript
 // Read JSON file and parse with `JSON.parseOrThrow`

@@ -118,37 +118,6 @@ let suites =
   __FILE__
   >::: [
          ( __LOC__ >:: fun _ ->
-           let v = Hash_set_poly.create 31 in
-           for i = 0 to 1000 do
-             Hash_set_poly.add v i
-           done;
-           OUnit.assert_equal (Hash_set_poly.length v) 1001 );
-         ( __LOC__ >:: fun _ ->
-           let v = Hash_set_poly.create 31 in
-           for _ = 0 to 1_0_000 do
-             Hash_set_poly.add v 0
-           done;
-           OUnit.assert_equal (Hash_set_poly.length v) 1 );
-         ( __LOC__ >:: fun _ ->
-           let v = Hash_set_poly.create 30 in
-           for i = 0 to 2_000 do
-             Hash_set_poly.add v {name = "x"; stamp = i}
-           done;
-           for i = 0 to 2_000 do
-             Hash_set_poly.add v {name = "x"; stamp = i}
-           done;
-           for i = 0 to 2_000 do
-             assert (Hash_set_poly.mem v {name = "x"; stamp = i})
-           done;
-           OUnit.assert_equal (Hash_set_poly.length v) 2_001;
-           for i = 1990 to 3_000 do
-             Hash_set_poly.remove v {name = "x"; stamp = i}
-           done;
-           OUnit.assert_equal (Hash_set_poly.length v) 1990
-         (* OUnit.assert_equal (Hash_set.stats v) *)
-         (*   {Hashtbl.num_bindings = 1990; num_buckets = 1024; max_bucket_length = 7; *)
-         (*    bucket_histogram = [|139; 303; 264; 178; 93; 32; 12; 3|]} *) );
-         ( __LOC__ >:: fun _ ->
            let v = Id_hash_set.create 30 in
            for i = 0 to 2_000 do
              Id_hash_set.add v {name = "x"; stamp = i}
@@ -175,11 +144,7 @@ let suites =
            for i = 0 to 1100 do
              OUnit.assert_bool "exist"
                (Id_hash_set.mem v {name = "x"; stamp = i})
-           done
-         (* OUnit.assert_equal (Hash_set.stats v) *)
-         (*   {num_bindings = 1990; num_buckets = 1024; max_bucket_length = 8; *)
-         (*    bucket_histogram = [|148; 275; 285; 182; 95; 21; 14; 2; 2|]} *)
-         );
+           done );
          ( __LOC__ >:: fun _ ->
            let duplicate arr =
              let len = Array.length arr in
@@ -201,7 +166,7 @@ let suites =
            let of_array lst =
              let len = Array.length lst in
              let tbl = Hash_set_string.create len in
-             Ext_array.iter lst (Hash_set_string.add tbl);
+             lst |> Array.iter (Hash_set_string.add tbl);
              tbl
            in
            let hash = of_array const_tbl in

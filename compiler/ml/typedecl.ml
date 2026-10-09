@@ -903,7 +903,6 @@ let check_well_founded env loc path to_check ty =
   let rec check ty0 parents ty =
     let ty = Btype.repr ty in
     if Type_set.mem ty parents then
-      (*Format.eprintf "@[%a@]@." Printtyp.raw_type_expr ty;*)
       if
         match ty0.desc with
         | Tconstr (p, _, _) -> Path.same p path

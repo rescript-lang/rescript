@@ -38,21 +38,6 @@ and add_annotations_to_types ~config ~(expr : Typedtree.expression)
         {a_name = a_name ^ "_" ^ string_of_int i; a_type})
   else arg_types
 
-and add_annotations_to_fields ~config (expr : Typedtree.expression)
-    (fields : fields) (arg_types : arg_type list) =
-  match fields with
-  | [] -> ([], arg_types |> add_annotations_to_types ~config ~expr)
-  | field :: next_fields ->
-    let next_fields1, types1 =
-      add_annotations_to_fields ~config expr next_fields arg_types
-    in
-    let name =
-      Translate_type_declarations.rename_record_field
-        ~attributes:expr.exp_attributes ~name:field.name_js
-    in
-    ({field with name_js = name} :: next_fields1, types1)
-[@@live]
-
 (** Recover from expr the renaming annotations on named arguments. *)
 let add_annotations_to_function_type ~config (expr : Typedtree.expression)
     (type_ : type_) =

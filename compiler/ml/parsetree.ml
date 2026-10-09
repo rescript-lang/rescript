@@ -249,7 +249,8 @@ and pattern_desc =
   | Ppat_array of pattern list (* [| P1; ...; Pn |] *)
   | Ppat_or of pattern * pattern (* P1 | P2 *)
   | Ppat_constraint of pattern * core_type (* (P : T) *)
-  | Ppat_type of Longident.t loc (* #tconst *)
+  | Ppat_type of Longident.t loc (* #...tconst *)
+  | Ppat_variant_spread of Longident.t loc (* ...tconst *)
   | Ppat_unpack of string loc
     (* (module P)
        Note: (module P : S) is represented as
@@ -356,9 +357,7 @@ and expression_desc =
        for i = E1 downto E2 do E3 done  (flag = Downto)
     *)
   | Pexp_constraint of expression * core_type (* (E : T) *)
-  | Pexp_coerce of expression * unit * core_type
-    (* (E :> T)        (None, T)
-         *)
+  | Pexp_coerce of expression * core_type (* (E :> T) *)
   | Pexp_object_get of expression * label loc (* obj["x"] *)
   | Pexp_object_set of expression * label loc * expression (* obj["x"] = v *)
   | Pexp_object_literal of (label loc * expression) list
@@ -754,8 +753,10 @@ and module_expr_desc =
   | Pmod_apply of module_expr * module_expr (* ME1(ME2) *)
   | Pmod_constraint of module_expr * module_type (* (ME : MT) *)
   | Pmod_unpack of expression (* (val E) *)
-  | Pmod_extension of extension
-(* [%id] *)
+  | Pmod_extension of extension (* [%id] *)
+  | Pmod_await of module_expr
+(* await ME: a dynamic import when ME is a module path, possibly
+   constrained; elsewhere it has no effect *)
 
 and structure = structure_item list
 

@@ -76,11 +76,6 @@ val add_coercion :
   unit
 (** Record a record coercion, to be resolved against the declarations later. *)
 
-(** {2 Merge API} *)
-
-val merge_all : builder list -> t
-(** Merge all builders into one immutable result. Order doesn't matter. *)
-
 (** {2 Builder extraction for reactive merge} *)
 
 val builder_to_t : builder -> t

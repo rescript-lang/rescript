@@ -31,8 +31,6 @@ val process_attributes_rev : t -> attr_kind * t
 
 val has_inline_payload : t -> attr option
 
-val has_await_payload : t -> bool
-
 type derive_attr = {bs_deriving: Ast_payload.action list option} [@@unboxed]
 
 val arg_encoding : t -> [`Nothing | `String | `Int | `Ignore | `Unwrap]
@@ -40,8 +38,6 @@ val arg_encoding : t -> [`Nothing | `String | `Int | `Ignore | `Unwrap]
     [@ignore] and [@unwrap] it carries. *)
 
 val as_string : t -> string option
-
-val has_bs_optional : t -> bool
 
 val has_unwrap_attr : t -> bool
 
@@ -51,12 +47,6 @@ type as_const_payload = Int of int | Str of string | Json of string
 val as_const : t -> as_const_payload option
 
 val process_derive_type : t -> derive_attr * t
-
-val get : attr
-
-val get_index : attr
-
-val set : attr
 
 val internal_expansive : attr
 

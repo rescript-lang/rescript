@@ -26,9 +26,13 @@ type _ kind = Ml : Parsetree.structure kind | Mli : Parsetree.signature kind
 
 type ast0 = Impl of Parsetree0.structure | Intf of Parsetree0.signature
 
+let magic_of_kind : type a. a kind -> string = function
+  | Ml -> Config.ast0_impl_magic_number
+  | Mli -> Config.ast0_intf_magic_number
+
 let magic_of_ast0 : ast0 -> string = function
-  | Impl _ -> Config.ast0_impl_magic_number
-  | Intf _ -> Config.ast0_intf_magic_number
+  | Impl _ -> magic_of_kind Ml
+  | Intf _ -> magic_of_kind Mli
 
 let to_ast0 : type a. a kind -> a -> ast0 =
  fun kind ast ->
@@ -57,7 +61,3 @@ let ast0_roundtrip : type a. a kind -> a -> a =
   match kind with
   | Ml -> ast |> to_ast0 Ml |> ast0_to_structure
   | Mli -> ast |> to_ast0 Mli |> ast0_to_signature
-
-let magic_of_kind : type a. a kind -> string = function
-  | Ml -> Config.ast0_impl_magic_number
-  | Mli -> Config.ast0_intf_magic_number

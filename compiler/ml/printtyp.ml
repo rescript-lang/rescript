@@ -102,6 +102,11 @@ let tree_of_rec = function
   | Trec_first -> Orec_first
   | Trec_next -> Orec_next
 
+let string_of_label = function
+  | Nolabel -> ""
+  | Labelled {txt} -> txt
+  | Optional {txt} -> "?" ^ txt
+
 (* Print a raw type expression, with sharing *)
 
 let raw_list pr ppf = function
@@ -122,11 +127,6 @@ let rec list_of_memo = function
 let print_name ppf = function
   | None -> fprintf ppf "None"
   | Some name -> fprintf ppf "\"%s\"" name
-
-let string_of_label = function
-  | Nolabel -> ""
-  | Labelled {txt} -> txt
-  | Optional {txt} -> "?" ^ txt
 
 let visited = ref []
 let rec raw_type ppf ty =
@@ -193,8 +193,6 @@ let raw_type_expr ppf t =
   visited := [];
   raw_type ppf t;
   visited := []
-
-let () = Btype.print_raw := raw_type_expr
 
 (* Normalize paths *)
 
@@ -932,8 +930,6 @@ let typexp ?printing_context sch ppf ty =
 
 let type_expr ppf ty = typexp false ppf ty
 
-and type_sch ppf ty = typexp true ppf ty
-
 and type_scheme ppf ty =
   reset_and_mark_loops ty;
   typexp true ppf ty
@@ -1010,7 +1006,6 @@ let extension_constructor id ppf ext =
 (* Print a value declaration *)
 
 let tree_of_value_description id decl =
-  (* Format.eprintf "@[%a@]@." raw_type_expr decl.val_type; *)
   let id = Ident.name id in
   let ty = tree_of_type_scheme decl.val_type in
   let vd =
@@ -1137,33 +1132,6 @@ and tree_of_module id ?ellipsis mty rs =
 let modtype ppf mty = !Oprint.out_module_type ppf (tree_of_modtype mty)
 let modtype_declaration id ppf decl =
   !Oprint.out_sig_item ppf (tree_of_modtype_declaration id decl)
-
-(* For the toplevel: merge with tree_of_signature? *)
-
-(* Refresh weak variable map in the toplevel *)
-let refresh_weak () =
-  let refresh t name (m, s) =
-    if is_non_gen true (repr t) then
-      (Type_map.add t name m, String_set.add name s)
-    else (m, s)
-  in
-  let m, s =
-    Type_map.fold refresh !weak_var_map (Type_map.empty, String_set.empty)
-  in
-  named_weak_vars := s;
-  weak_var_map := m
-
-let print_items showval env x =
-  refresh_weak ();
-  let rec print showval env = function
-    | [] -> []
-    | item :: rem as items ->
-      let _sg, rem = filter_rem_sig item rem in
-      hide_rec_items items;
-      let trees = trees_of_sigitem item in
-      List.map (fun d -> (d, showval env item)) trees @ print showval env rem
-  in
-  print showval env x
 
 (* Print a signature body (used by -i when compiling a .ml) *)
 

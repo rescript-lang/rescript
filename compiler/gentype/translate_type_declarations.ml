@@ -52,23 +52,9 @@ let create_variant_case label = function
   | Some Variant_runtime.Undefined -> {label_js = UndefinedLabel}
   | None -> {label_js = StringLabel label}
 
-(**
- * Rename record fields.
- * If @genType.as is used, perform renaming conversion.
- * If @as is used (with records-as-objects active), escape and quote if
- * the identifier contains characters which are invalid as JS property names.
- * For escaped identifiers like \"foo-bar", strip the surrounding \"..."
- * since they are part of the ReScript syntax, not the actual field name.
- * The resulting name will be quoted later in EmitType if needed.
-*)
-let rename_record_field ~attributes ~name =
-  attributes |> Annotation.check_unsupported_gentype_as_renaming;
-  match attributes |> Annotation.get_as_string with
-  | Some s -> Emit_text.escape_string_contents s
-  | None -> name |> Ext_ident.unwrap_uppercase_exotic
-
-(* A declared field carries its runtime name; only the renaming that reaches
-   gentype through an expression's attributes still has to be read off one. *)
+(* The JS name of a declared record field: its runtime name (set by @as),
+   escaped as string contents, or else its identifier with the \"..." of an
+   exotic name removed. *)
 let declared_field_name (ld : Types.label_declaration) =
   ld.ld_attributes |> Annotation.check_unsupported_gentype_as_renaming;
   match ld.ld_runtime_name with
@@ -282,10 +268,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
               [
                 label_declarations
                 |> translate_label_declarations ~inline:true
-                     ~unboxed:
-                       (type_representation = Unboxed
-                       || Variant_runtime.constructor_is_untagged layout
-                            position);
+                     ~unboxed:(type_representation = Unboxed);
               ]
           in
           let arg_types =

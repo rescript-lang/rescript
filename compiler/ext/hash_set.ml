@@ -33,12 +33,10 @@ struct
   let clear = Hash_set_gen.clear
   let reset = Hash_set_gen.reset
 
-  (* let copy = Hash_set_gen.copy *)
   let iter = Hash_set_gen.iter
   let fold = Hash_set_gen.fold
   let length = Hash_set_gen.length
 
-  (* let stats = Hash_set_gen.stats *)
   let to_list = Hash_set_gen.to_list
 
   let remove (h : _ Hash_set_gen.t) key =

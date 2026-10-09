@@ -1,5 +1,5 @@
 @genType
-type withRenaming = [@genType.as("type") #type_ | #b]
+type withRenaming = [#"type" | #b]
 
 @genType
 let testWithRenaming = (x: withRenaming) => x

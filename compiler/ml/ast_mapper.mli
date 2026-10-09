@@ -13,39 +13,39 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** The interface of a -ppx rewriter
+(** Parsetree mappers
 
-  A -ppx rewriter is a program that accepts a serialized abstract syntax
-  tree and outputs another, possibly modified, abstract syntax tree.
-  This module encapsulates the interface between the compiler and
-  the -ppx rewriters, handling such details as the serialization format,
-  forwarding of command-line flags, and storing state.
-
-  {!mapper} allows to implement AST rewriting using open recursion.
-  A typical mapper would be based on {!default_mapper}, a deep
-  identity mapper, and will fall back on it for handling the syntax it
-  does not modify. For example:
+  {!mapper} implements AST rewriting using open recursion. A typical
+  mapper is based on {!default_mapper}, a deep identity mapper, and
+  falls back on it for the syntax it does not modify. For example:
 
   {[
-open Asttypes
 open Parsetree
 open Ast_mapper
 
-let test_mapper argv =
+let test_mapper =
   { default_mapper with
     expr = fun mapper expr ->
       match expr with
       | { pexp_desc = Pexp_extension ({ txt = "test" }, PStr [])} ->
-        Ast_helper.Exp.constant (Const_int 42)
+        Ast_helper.Exp.constant (Ast_helper.Const.int 42)
       | other -> default_mapper.expr mapper other; }
 
-let () =
-  register "ppx_test" test_mapper]}
+let rewrite (str : structure) = test_mapper.structure test_mapper str]}
 
-  This -ppx rewriter, which replaces [[%test]] in expressions with
-  the constant [42], can be compiled using
-  [ocamlc -o ppx_test -I +compiler-libs ocamlcommon.cma ppx_test.ml].
+  This mapper replaces [[%test]] in expressions with the constant [42].
+  The compiler's built-in rewriters ({!Bs_builtin_ppx}, {!Jsx_ppx}) are
+  mappers of this kind and run inside [bsc].
 
+  External rewriters passed to [bsc] with [-ppx] are separate
+  executables. {!Cmd_ppx_apply} prepends the [ocaml.ppx.context]
+  attribute ({!add_ppx_context_str}, {!add_ppx_context_sig}), writes the
+  AST to a temporary file as the magic number of {!Ml_binary}, the
+  source file name and the marshalled {!Parsetree0} structure or
+  signature, and runs [ppx input output]. The executable writes its
+  result to [output] in the same format; {!Cmd_ppx_apply} reads it back,
+  converts it to {!Parsetree}, and removes the context attribute
+  ({!drop_ppx_context_str}, {!drop_ppx_context_sig}).
   *)
 
 open Parsetree
@@ -96,54 +96,7 @@ type mapper = {
 val default_mapper : mapper
 (** A default mapper, which implements a "deep identity" mapping. *)
 
-(** {1 Apply mappers to compilation units} *)
-
-val tool_name : unit -> string
-(** Can be used within a ppx preprocessor to know which tool is
-    calling it ["ocamlc"], ["ocamlopt"], ["ocamldoc"], ["ocamldep"],
-    ["ocaml"], ...  Some global variables that reflect command-line
-    options are automatically synchronized between the calling tool
-    and the ppx preprocessor: {!Clflags.include_dirs},
-    {!Config.load_path}, {!Clflags.open_modules}, {!Clflags.for_package},
-    {!Clflags.debug}. *)
-
-val apply : source:string -> target:string -> mapper -> unit
-(** Apply a mapper (parametrized by the unit name) to a dumped
-    parsetree found in the [source] file and put the result in the
-    [target] file. The [structure] or [signature] field of the mapper
-    is applied to the implementation or interface.  *)
-
-val run_main : (string list -> mapper) -> unit
-(** Entry point to call to implement a standalone -ppx rewriter from a
-    mapper, parametrized by the command line arguments.  The current
-    unit name can be obtained from {!Location.input_name}.  This
-    function implements proper error reporting for uncaught
-    exceptions. *)
-
-(** {1 Registration API} *)
-
-val register_function : (string -> (string list -> mapper) -> unit) ref
-
-val register : string -> (string list -> mapper) -> unit
-(** Apply the [register_function].  The default behavior is to run the
-    mapper immediately, taking arguments from the process command
-    line.  This is to support a scenario where a mapper is linked as a
-    stand-alone executable.
-
-    It is possible to overwrite the [register_function] to define
-    "-ppx drivers", which combine several mappers in a single process.
-    Typically, a driver starts by defining [register_function] to a
-    custom implementation, then lets ppx rewriters (linked statically
-    or dynamically) register themselves, and then run all or some of
-    them.  It is also possible to have -ppx drivers apply rewriters to
-    only specific parts of an AST.
-
-    The first argument to [register] is a symbolic name to be used by
-    the ppx driver.  *)
-
 (** {1 Convenience functions to write mappers} *)
-
-val map_opt : ('a -> 'b) -> 'a option -> 'b option
 
 val extension_of_error : Location.error -> extension
 (** Encode an error into an 'ocaml.error' extension node which can be
@@ -170,9 +123,3 @@ val drop_ppx_context_str :
 val drop_ppx_context_sig :
   restore:bool -> Parsetree.signature -> Parsetree.signature
 (** Same as [drop_ppx_context_str], but for signatures. *)
-
-(** {1 Cookies} *)
-
-(** Cookies are used to pass information from a ppx processor to
-    a further invocation of itself, when called from the OCaml
-    toplevel (or other tools that support cookies). *)

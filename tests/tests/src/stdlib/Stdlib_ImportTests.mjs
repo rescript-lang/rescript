@@ -15,7 +15,9 @@ async function main() {
   ], 1, eq, 1);
 }
 
+main();
+
 export {
   main,
 }
-/* Test Not a pure module */
+/*  Not a pure module */

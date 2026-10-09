@@ -78,14 +78,12 @@ let rs_externals (attrs : t) (pval_prim : Parsetree.primitive_repr option) =
     prim_to_be_encoded name
   | _, Some (Prim_name name) ->
     Ext_list.exists_fst attrs (fun ({txt} : string Asttypes.loc) ->
-        Ext_array.exists external_attrs (fun (x : string) -> txt = x))
+        external_attrs |> Array.exists (fun (x : string) -> txt = x))
     || prim_to_be_encoded name
 
 let is_inline : attr -> bool = fun ({txt}, _) -> txt = "inline"
 
 let has_inline_payload (attrs : t) = Ext_list.find_first attrs is_inline
-
-let has_await_payload (attrs : t) = Ext_list.exists attrs Ast_await.is_await
 
 type derive_attr = {bs_deriving: Ast_payload.action list option} [@@unboxed]
 
@@ -155,14 +153,6 @@ let as_string (attrs : t) : string option =
       | None -> Bs_syntaxerr.err loc Expect_string_literal
       | Some v -> v)
 
-let has_bs_optional (attrs : t) : bool =
-  Ext_list.exists attrs (fun (({txt}, _) as attr) ->
-      match txt with
-      | "optional" ->
-        Used_attributes.mark_used_attribute attr;
-        true
-      | _ -> false)
-
 let has_unwrap_attr (attrs : t) : bool =
   Ext_list.exists attrs (fun ({txt}, _) ->
       match txt with
@@ -207,12 +197,6 @@ let as_const (attrs : t) =
           | _ -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal)))
 
 let locg = Location.none
-
-let get : attr = ({txt = "get"; loc = locg}, Ast_payload.empty)
-
-let get_index : attr = ({txt = "get_index"; loc = locg}, Ast_payload.empty)
-
-let set : attr = ({txt = "set"; loc = locg}, Ast_payload.empty)
 
 let internal_expansive : attr =
   ({txt = "internal.expansive"; loc = locg}, Ast_payload.empty)

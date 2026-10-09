@@ -27,7 +27,3 @@ let getChar = (s, i) =>
   } else {
     Primitive_string_extern.getChar(s, i)
   }
-
-// TODO: delete
-let make = (n, ch: char): string =>
-  Primitive_string_extern.fromChar(ch)->Primitive_string_extern.repeat(n)

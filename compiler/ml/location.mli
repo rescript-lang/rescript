@@ -110,15 +110,6 @@ val report_error :
   error ->
   unit
 
-val error_reporter :
-  (?custom_intro:string option ->
-  ?src:string option ->
-  formatter ->
-  error ->
-  unit)
-  ref
-(** Hook for intercepting error reports. *)
-
 val default_error_reporter :
   ?custom_intro:string option ->
   ?src:string option ->
