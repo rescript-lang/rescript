@@ -121,14 +121,18 @@ let is_jsx_attribute_name (name : string) =
     | _ -> false)
 
 (* JSX props given as an object literal [{...base, x: 1}]: a spread followed
-   by properties only, whose names are JSX attribute names. Dict keys can be
-   any string. *)
+   by properties only, whose names are distinct JSX attribute names. Dict keys
+   can be any string, and repeat. *)
 let jsx_spread_props_only_properties (entries : J.object_entry list) =
-  List.for_all
-    (function
-      | J.Object_property (Lit name, _) -> is_jsx_attribute_name name
-      | Object_property (Symbol_name, _) | Object_spread _ -> false)
-    entries
+  let rec distinct_attributes seen = function
+    | [] -> true
+    | J.Object_property (Lit name, _) :: rest ->
+      is_jsx_attribute_name name
+      && (not (Set_string.mem seen name))
+      && distinct_attributes (Set_string.add seen name) rest
+    | (Object_property (Symbol_name, _) | Object_spread _) :: _ -> false
+  in
+  distinct_attributes Set_string.empty entries
 
 (* Their named properties *)
 let jsx_spread_fields (entries : J.object_entry list) =

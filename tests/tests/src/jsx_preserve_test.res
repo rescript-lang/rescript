@@ -58,6 +58,18 @@ let _unary_element_with_spread_and_proto_key =
 let _unary_element_with_spread_and_hyphenated_key =
   <input {...dict{...baseProps->Obj.magic, "aria-label": "x"}->Obj.magic} />
 
+// So are props with a repeated key, where the last one wins
+let _container_with_spread_and_repeated_children =
+  <div
+    {...dict{
+      ...baseProps->Obj.magic,
+      "children": React.string("first"),
+        "children": React.string("second"),
+    }->Obj.magic}
+  />
+let _unary_element_with_spread_and_repeated_key =
+  <input {...dict{...baseProps->Obj.magic, "title": "x", "title": "y"}->Obj.magic} />
+
 let _container_with_spread_props =
   <div {...baseProps} title="barry" className="barry">
     {React.string("Hello, world!")}
