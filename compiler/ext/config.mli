@@ -38,4 +38,4 @@ val ast0_impl_magic_number : string
    tree, as used on the external-PPX wire *)
 
 val cmt_magic_number : string
-(* Magic number for compiled interface files *)
+(* Magic number for typed-tree files (.cmt, .cmti) *)

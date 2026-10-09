@@ -30,8 +30,7 @@ let freshen mty = Subst.modtype Subst.identity mty
 let rec strengthen ~aliasable env mty p =
   match scrape env mty with
   | Mty_signature sg -> Mty_signature (strengthen_sig ~aliasable env sg p 0)
-  | Mty_functor (param, arg, res)
-    when !Clflags.applicative_functors && Ident.name param <> "*" ->
+  | Mty_functor (param, arg, res) when Ident.name param <> "*" ->
     Mty_functor
       ( param,
         arg,
@@ -225,29 +224,6 @@ and type_paths_sig env p pos sg =
     type_paths_sig (Env.add_modtype id decl env) p pos rem
   | Sig_typext _ :: rem -> type_paths_sig env p (pos + 1) rem
 
-let rec no_code_needed env mty =
-  match scrape env mty with
-  | Mty_ident _ -> false
-  | Mty_signature sg -> no_code_needed_sig env sg
-  | Mty_functor (_, _, _) -> false
-  | Mty_alias (Mta_absent, _) -> true
-  | Mty_alias (Mta_present, _) -> false
-
-and no_code_needed_sig env sg =
-  match sg with
-  | [] -> true
-  | Sig_value (_id, decl) :: rem -> (
-    match decl.val_kind with
-    | Val_prim _ -> no_code_needed_sig env rem
-    | _ -> false)
-  | Sig_module (id, md, _) :: rem ->
-    no_code_needed env md.md_type
-    && no_code_needed_sig
-         (Env.add_module_declaration ~check:false id md env)
-         rem
-  | (Sig_type _ | Sig_modtype _) :: rem -> no_code_needed_sig env rem
-  | Sig_typext _ :: _ -> false
-
 (* Check whether a module type may return types *)
 
 let rec contains_type env = function
@@ -379,8 +355,6 @@ and remove_aliases_sig env excl sg =
 
 let remove_aliases env sg =
   let excl = collect_arg_paths sg in
-  (* PathSet.iter (fun p -> Format.eprintf "%a@ " Printtyp.path p) excl;
-     Format.eprintf "@."; *)
   remove_aliases env excl sg
 
 (* Lower non-generalizable type variables *)

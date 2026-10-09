@@ -174,8 +174,7 @@ module Error_messages = struct
     "A polymorphic variant (e.g. #id) must start with an alphabetical letter \
      or be a number (e.g. #742)"
 
-  let experimental_if_let expr =
-    let switch_expr = {expr with Parsetree.pexp_attributes = []} in
+  let experimental_if_let switch_expr =
     Doc.concat
       [
         Doc.text "If-let is currently highly experimental.";
@@ -264,18 +263,6 @@ module Error_messages = struct
   let spread_children_no_longer_supported =
     "Spreading JSX children is no longer supported."
 end
-
-let if_let_attr = (Location.mknoloc "res.iflet", Parsetree.PStr [])
-let make_await_attr loc = (Location.mkloc "res.await" loc, Parsetree.PStr [])
-let suppress_fragile_match_warning_attr =
-  ( Location.mknoloc "warning",
-    Parsetree.PStr
-      [
-        Ast_helper.Str.eval
-          (Ast_helper.Exp.constant (Ast_helper.Const.string "-4"));
-      ] )
-let make_pat_variant_spread_attr =
-  (Location.mknoloc "res.patVariantSpread", Parsetree.PStr [])
 
 let spread_attr = (Location.mknoloc "res.spread", Parsetree.PStr [])
 let dict_spread_attr = (Location.mknoloc "res.dictSpread", Parsetree.PStr [])
@@ -1268,9 +1255,7 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
       Parser.next p;
       let ident = parse_value_path p in
       let loc = mk_loc start_pos ident.loc.loc_end in
-      Ast_helper.Pat.type_ ~loc
-        ~attrs:(make_pat_variant_spread_attr :: attrs)
-        ident
+      Ast_helper.Pat.variant_spread ~loc ~attrs ident
     | Hash -> (
       Parser.next p;
       if Parser.peek p == DotDotDot then (
@@ -3611,9 +3596,7 @@ and parse_if_let_expr start_pos p =
         (Location.mkloc [] loc)
   in
   let loc = mk_loc start_pos (Parser.position p) in
-  Ast_helper.Exp.match_
-    ~attrs:[if_let_attr; suppress_fragile_match_warning_attr]
-    ~loc condition_expr
+  Ast_helper.Exp.match_ ~loc condition_expr
     [
       Ast_helper.Exp.case pattern then_expr;
       Ast_helper.Exp.case (Ast_helper.Pat.any ()) else_expr;
@@ -6718,25 +6701,30 @@ and parse_functor_module_expr p =
  *  | extension
  *  | attributes module-expr *)
 and parse_module_expr p =
-  let has_await, loc_await =
-    let start_pos = Parser.start_pos p in
+  let start_pos = Parser.start_pos p in
+  let has_await =
     match Parser.peek p with
     | Await ->
       Parser.expect Await p;
-      let end_pos = Parser.end_pos p in
-      (true, mk_loc start_pos end_pos)
-    | _ -> (false, mk_loc start_pos start_pos)
+      true
+    | _ -> false
   in
   let attrs = parse_attributes p in
-  let attrs = if has_await then make_await_attr loc_await :: attrs else attrs in
   let mod_expr =
     if is_es6_arrow_functor p then parse_functor_module_expr p
     else parse_primary_mod_expr p
   in
-  {
-    mod_expr with
-    pmod_attributes = List.concat [mod_expr.pmod_attributes; attrs];
-  }
+  (* The attributes after [await] belong to the await, like those of
+     [@attr (await M)], and the module keeps its own: [await @b (@a M)] *)
+  if has_await then
+    Ast_helper.Mod.await
+      ~loc:(mk_loc start_pos mod_expr.pmod_loc.loc_end)
+      ~attrs mod_expr
+  else
+    {
+      mod_expr with
+      pmod_attributes = List.concat [mod_expr.pmod_attributes; attrs];
+    }
 
 and parse_constrained_mod_expr p =
   let mod_expr = parse_module_expr p in

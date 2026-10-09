@@ -1,5 +1,5 @@
 Complete src/CompletionTaggedTemplate.res 13:13
-posCursor:[13:13] posNoWhite:[13:12] Found expr:[13:11->13:13]
+pos_cursor:[13:13] pos_no_white:[13:12] Found expr:[13:11->13:13]
 Pexp_field [13:11->13:12] _:[19:0->13:13]
 Completable: Cpath Value[w].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -10,7 +10,7 @@ Path w
 ContextPath Value[w]->
 ContextPath Value[w]
 Path w
-CPPipe pathFromEnv:M found:true
+CPPipe path_from_env:M found:true
 Path M.
 Path 
 [
@@ -68,7 +68,7 @@ Path
 ]
 
 Complete src/CompletionTaggedTemplate.res 16:20
-posCursor:[16:20] posNoWhite:[16:19] Found expr:[16:11->0:-1]
+pos_cursor:[16:20] pos_no_white:[16:19] Found expr:[16:11->0:-1]
 Completable: Cpath Value[meh](Nolabel, Nolabel).""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -80,7 +80,7 @@ ContextPath Value[meh](Nolabel, Nolabel, Nolabel)->
 ContextPath Value[meh](Nolabel, Nolabel, Nolabel)
 ContextPath Value[meh]
 Path meh
-CPPipe pathFromEnv:M found:true
+CPPipe path_from_env:M found:true
 Path M.
 Path 
 [
@@ -138,11 +138,11 @@ Path
 ]
 
 Complete src/CompletionTaggedTemplate.res 21:19
-posCursor:[21:19] posNoWhite:[21:18] Found expr:[19:28->24:3]
-posCursor:[21:19] posNoWhite:[21:18] Found expr:[20:2->23:20]
-posCursor:[21:19] posNoWhite:[21:18] Found expr:[21:5->23:20]
+pos_cursor:[21:19] pos_no_white:[21:18] Found expr:[19:28->24:3]
+pos_cursor:[21:19] pos_no_white:[21:18] Found expr:[20:2->23:20]
+pos_cursor:[21:19] pos_no_white:[21:18] Found expr:[21:5->23:20]
 Pexp_apply ...[21:5->23:17] (...[23:18->23:19])
-posCursor:[21:19] posNoWhite:[21:18] Found expr:[21:5->23:17]
+pos_cursor:[21:19] pos_no_white:[21:18] Found expr:[21:5->23:17]
 Pexp_ident LocalOrdinary.:[21:5->23:17]
 Completable: Cpath Value[LocalOrdinary, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -166,11 +166,11 @@ Path LocalOrdinary.
 ]
 
 Complete src/CompletionTaggedTemplate.res 28:17
-posCursor:[28:17] posNoWhite:[28:16] Found expr:[26:26->31:3]
-posCursor:[28:17] posNoWhite:[28:16] Found expr:[27:2->30:18]
-posCursor:[28:17] posNoWhite:[28:16] Found expr:[28:5->30:18]
+pos_cursor:[28:17] pos_no_white:[28:16] Found expr:[26:26->31:3]
+pos_cursor:[28:17] pos_no_white:[28:16] Found expr:[27:2->30:18]
+pos_cursor:[28:17] pos_no_white:[28:16] Found expr:[28:5->30:18]
 Pexp_apply ...[28:5->30:15] (...[30:16->30:17])
-posCursor:[28:17] posNoWhite:[28:16] Found expr:[28:5->30:15]
+pos_cursor:[28:17] pos_no_white:[28:16] Found expr:[28:5->30:15]
 Pexp_ident LocalTagged.:[28:5->30:15]
 Completable: Cpath Value[LocalTagged, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder

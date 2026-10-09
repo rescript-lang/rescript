@@ -70,7 +70,6 @@ type mapper = {
 }
 
 let map_fst f (x, y) = (f x, y)
-let map_snd f (x, y) = (x, f y)
 let map_tuple f1 f2 (x, y) = (f1 x, f2 y)
 let map_tuple3 f1 f2 f3 (x, y, z) = (f1 x, f2 y, f3 z)
 let map_opt f = function
@@ -350,6 +349,19 @@ module M = struct
       constraint_ ~loc ~attrs (sub.module_expr sub m) (sub.module_type sub mty)
     | Pmod_unpack e -> unpack ~loc ~attrs (sub.expr sub e)
     | Pmod_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Pmod_await m ->
+      (* Single v0 attribute slot for two nodes, in the order of the
+         attribute encoding of module [await] that PPXs know: the inner
+         module's attributes, the [res.await] marker, then the await node's
+         own attributes, e.g. [[@a; res.await; @b]] for [await @b (@a M)].
+         The marker carries the await node's location. *)
+      let m = sub.module_expr sub m in
+      {
+        m with
+        pmod_attributes =
+          m.pmod_attributes
+          @ ((Location.mkloc "res.await" loc, Pt.PStr []) :: attrs);
+      }
 
   let map_structure_item sub {pstr_loc = loc; pstr_desc = desc} =
     let open Str in
@@ -722,7 +734,7 @@ module E = struct
           ( Asttypes.Noloc.Nolabel,
             Ast_helper0.Exp.array ~loc (List.map (sub.expr sub) values) );
         ]
-    | Pexp_coerce (e, (), t2) ->
+    | Pexp_coerce (e, t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->
       constraint_ ~loc ~attrs (sub.expr sub e) (sub.typ sub t)
@@ -767,13 +779,13 @@ module E = struct
       (* Single v0 attribute slot for two nodes: the await node's own
          attributes go in front of the [res.await] marker, the inner
          expression's attributes after it, so [Ast_mapper_from0] can split
-         them again. *)
+         them again. The marker carries the await node's location. *)
       let e = sub.expr sub e in
       {
         e with
         pexp_attributes =
           attrs
-          @ ((Location.mknoloc "res.await", Pt.PStr []) :: e.pexp_attributes);
+          @ ((Location.mkloc "res.await" loc, Pt.PStr []) :: e.pexp_attributes);
       }
     | Pexp_jsx_element
         (Jsx_fragment
@@ -895,6 +907,11 @@ module P = struct
     | Ppat_constraint (p, t) ->
       constraint_ ~loc ~attrs (sub.pat sub p) (sub.typ sub t)
     | Ppat_type s -> type_ ~loc ~attrs (map_loc sub s)
+    | Ppat_variant_spread s ->
+      (* v0 has no variant spread pattern: it's [#...t] with a marker *)
+      type_ ~loc
+        ~attrs:((Location.mknoloc "res.patVariantSpread", Pt.PStr []) :: attrs)
+        (map_loc sub s)
     | Ppat_unpack s -> unpack ~loc ~attrs (map_loc sub s)
     | Ppat_exception p -> exception_ ~loc ~attrs (sub.pat sub p)
     | Ppat_extension x -> extension ~loc ~attrs (sub.extension sub x)

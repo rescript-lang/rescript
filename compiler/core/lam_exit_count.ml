@@ -71,7 +71,7 @@ let count_helper (lam : Lambda.t) : collection option =
       | Lstringswitch (l, sw, d) ->
         count l;
         Ext_list.iter_snd sw count;
-        Ext_option.iter d count
+        Option.iter count d
       | Lglobal_module _ | Lvar _ | Lconst _ -> ()
       | Lapply {ap_func; ap_args; _} ->
         count ap_func;

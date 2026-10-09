@@ -20,6 +20,15 @@
 
 open Lambda
 
+(* Preserve the option wrapper so unchanged switch defaults do not rebuild
+   their parent node. *)
+let option_map_sharing option f =
+  match option with
+  | None -> option
+  | Some value ->
+    let mapped = f value in
+    if mapped == value then option else Some mapped
+
 (** [shallow_map_sharing f lam] rewrites [lam]'s immediate children with [f]
     and rebuilds the node through its smart constructor, so the result is
     normalized. A node whose children all come back physically unchanged is
@@ -31,7 +40,7 @@ let shallow_map_sharing (f : t -> t) (lam : t) : t =
     let fn = f ap.ap_func in
     let args = Ext_list.map_sharing ap.ap_args f in
     if fn == ap.ap_func && args == ap.ap_args then lam
-    else apply fn args ap.ap_info ~ap_transformed_jsx:ap.ap_transformed_jsx
+    else apply fn args ap.ap_loc ~ap_transformed_jsx:ap.ap_transformed_jsx
   | Lfunction {params; body; attr; loc} ->
     let body' = f body in
     if body' == body then lam else function_ ~loc ~attr ~params ~body:body'
@@ -48,7 +57,7 @@ let shallow_map_sharing (f : t -> t) (lam : t) : t =
     let e' = f e in
     let consts = Ext_list.map_snd_sharing sw.sw_consts f in
     let blocks = Ext_list.map_snd_sharing sw.sw_blocks f in
-    let fail = Ext_option.map_sharing sw.sw_failaction f in
+    let fail = option_map_sharing sw.sw_failaction f in
     if
       e' == e && consts == sw.sw_consts && blocks == sw.sw_blocks
       && fail == sw.sw_failaction
@@ -59,7 +68,7 @@ let shallow_map_sharing (f : t -> t) (lam : t) : t =
   | Lstringswitch (e, cases, d) ->
     let e' = f e in
     let cases' = Ext_list.map_snd_sharing cases f in
-    let d' = Ext_option.map_sharing d f in
+    let d' = option_map_sharing d f in
     if e' == e && cases' == cases && d' == d then lam
     else stringswitch e' cases' d'
   | Lstaticraise (i, args) ->
@@ -94,7 +103,7 @@ let shallow_map_sharing (f : t -> t) (lam : t) : t =
     if b' == b then lam else assign id b'
 
 (*
-   Those keys are later compared with Pervasives.compare.
+   Those keys are later compared with Stdlib.compare.
    For that reason, they should not include cycles.
 *)
 
@@ -115,8 +124,7 @@ let make_key e =
     | Lglobal_module _ | Lconst _ -> e
     | Lapply ap ->
       apply ~ap_transformed_jsx:ap.ap_transformed_jsx (tr_rec env ap.ap_func)
-        (tr_recs env ap.ap_args)
-        {ap.ap_info with ap_loc = Location.none}
+        (tr_recs env ap.ap_args) Location.none
     | Llet (Alias, x, ex, e) ->
       (* Ignore aliases -> substitute *)
       let ex = tr_rec env ex in
@@ -176,9 +184,11 @@ let shallow_exists (f : t -> bool) (lam : t) : bool =
     f arg
     || Ext_list.exists_snd sw_consts f
     || Ext_list.exists_snd sw_blocks f
-    || Ext_option.exists sw_failaction f
+    || Option.fold ~none:false ~some:f sw_failaction
   | Lstringswitch (arg, cases, default) ->
-    f arg || Ext_list.exists_snd cases f || Ext_option.exists default f
+    f arg
+    || Ext_list.exists_snd cases f
+    || Option.fold ~none:false ~some:f default
   | Lstaticraise (_, args) -> Ext_list.exists args f
   | Lstaticcatch (e1, _, e2) -> f e1 || f e2
   | Ltrywith (e1, _, e2) -> f e1 || f e2

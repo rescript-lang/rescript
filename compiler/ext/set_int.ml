@@ -27,5 +27,4 @@ include Ext_set.Make (struct
 
   let compare = Ext_int.compare
   let equal = Ext_int.equal
-  let print = Format.pp_print_int
 end)

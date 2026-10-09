@@ -23,25 +23,14 @@ type str = string loc
 type loc = Location.t
 type attrs = attribute list
 
+(** Default value for all optional location arguments. *)
 let default_loc = ref Location.none
-
-let with_default_loc l f =
-  let old = !default_loc in
-  default_loc := l;
-  try
-    let r = f () in
-    default_loc := old;
-    r
-  with exn ->
-    default_loc := old;
-    raise exn
 
 module Const = struct
   let integer ?suffix i = Pconst_integer (i, suffix)
   let int ?suffix i = integer ?suffix (string_of_int i)
   let int32 ?(suffix = 'l') i = integer ~suffix (Int32.to_string i)
   let int64 ?(suffix = 'L') i = integer ~suffix (Int64.to_string i)
-  let nativeint ?(suffix = 'n') i = integer ~suffix (Nativeint.to_string i)
   let float ?suffix f = Pconst_float (f, suffix)
   let char c =
     let semantic = Char.code c in
@@ -153,6 +142,7 @@ module Pat = struct
   let or_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_or (a, b))
   let constraint_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_constraint (a, b))
   let type_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_type a)
+  let variant_spread ?loc ?attrs a = mk ?loc ?attrs (Ppat_variant_spread a)
   let unpack ?loc ?attrs a = mk ?loc ?attrs (Ppat_unpack a)
   let exception_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_exception a)
   let extension ?loc ?attrs a = mk ?loc ?attrs (Ppat_extension a)
@@ -198,7 +188,7 @@ module Exp = struct
   let for_await_of ?loc ?attrs a b c =
     mk ?loc ?attrs (Pexp_for_await_of (a, b, c))
   let constraint_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_constraint (a, b))
-  let coerce ?loc ?attrs a c = mk ?loc ?attrs (Pexp_coerce (a, (), c))
+  let coerce ?loc ?attrs a c = mk ?loc ?attrs (Pexp_coerce (a, c))
   let object_get ?loc ?attrs a b = mk ?loc ?attrs (Pexp_object_get (a, b))
   let object_set ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_object_set (a, b, c))
   let object_literal ?loc ?attrs a = mk ?loc ?attrs (Pexp_object_literal a)
@@ -299,6 +289,7 @@ module Mod = struct
   let constraint_ ?loc ?attrs m mty = mk ?loc ?attrs (Pmod_constraint (m, mty))
   let unpack ?loc ?attrs e = mk ?loc ?attrs (Pmod_unpack e)
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pmod_extension a)
+  let await ?loc ?attrs m = mk ?loc ?attrs (Pmod_await m)
 end
 
 module Sig = struct

@@ -43,7 +43,7 @@ describe(__MODULE__, () => {
     let v = bug_to_fix(side_effect, counter)
     let pair = ((v, counter.contents), (4, 1))
     let v2 = bug_to_fix2(side_effect2, counter2)
-    let pair2 = ((v2, counter.contents), (4, 1))
+    let pair2 = ((v2, counter2.contents), (4, 1))
     /* Console.log (pair,pair2) */
     eq(__LOC__, pair, ((4, 1), (4, 1)))
     eq(__LOC__, pair2, ((4, 1), (4, 1)))

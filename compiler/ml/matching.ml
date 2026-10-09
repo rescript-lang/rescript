@@ -176,7 +176,7 @@ let ctx_matcher p =
     fun q rem ->
       match q.pat_desc with
       | Tpat_construct (_, cstr', args)
-      (* NB:  may_constr_equal considers (potential) constructor rebinding *)
+      (* NB:  may_equal_constr considers (potential) constructor rebinding *)
         when Types.may_equal_constr cstr cstr' ->
         (p, args @ rem)
       | Tpat_any -> (p, omegas @ rem)
@@ -2809,7 +2809,7 @@ let flatten_cases size cases =
     (fun (ps, action) ->
       match ps with
       | [p] -> (flatten_pattern size p, action)
-      | _ -> fatal_error "Matching.flatten_case")
+      | _ -> fatal_error "Matching.flatten_cases")
     cases
 
 let flatten_matrix size pss =
@@ -2846,7 +2846,7 @@ let flatten_precompiled size args pmh =
   | PmVar _ -> assert false
 
 (*
-   compiled_flattened is a ``comp_fun'' argument to comp_match_handlers.
+   compile_flattened is a ``comp_fun'' argument to comp_match_handlers.
    Hence it needs a fourth argument, which it ignores
 *)
 

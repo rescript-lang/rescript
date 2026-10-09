@@ -16,17 +16,6 @@ function get(xs, index) {
   return xs[index];
 }
 
-function set(xs, index, newval) {
-  if (index < 0 || index >= xs.length) {
-    throw {
-      RE_EXN_ID: "Invalid_argument",
-      _1: "index out of bounds",
-      Error: new Error()
-    };
-  }
-  xs[index] = newval;
-}
-
 function spread(arrays) {
   let arraysLength = arrays.length;
   let resultLength = 0;
@@ -48,7 +37,6 @@ function spread(arrays) {
 export {
   length,
   get,
-  set,
   spread,
 }
 /* No side effect */

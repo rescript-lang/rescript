@@ -65,10 +65,6 @@ val encode_js_string : string -> string
 (** Encode a semantic UTF-8 string as a canonical JavaScript string-literal
     body. *)
 
-val encode_js_template : string -> string
-(** Encode a semantic UTF-8 string as a canonical JavaScript template-segment
-    body. *)
-
 val string_from_source : string -> string_literal option
 (** Validate and decode an ordinary string-literal body. *)
 

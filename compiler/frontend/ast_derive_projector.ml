@@ -16,7 +16,7 @@ let deriving_name = "accessors"
 
 let init () =
   Ast_derive.register deriving_name (fun (x : Parsetree.expression option) ->
-      Ext_option.iter x invalid_config;
+      Option.iter invalid_config x;
       {
         structure_gen =
           (fun (tdcls : tdcls) _explict_nonrec ->

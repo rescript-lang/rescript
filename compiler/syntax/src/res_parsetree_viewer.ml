@@ -25,24 +25,10 @@ let functor_type modtype =
   in
   process [] modtype
 
-let has_await_attribute attrs =
-  List.exists
-    (function
-      | {Location.txt = "res.await"}, _ -> true
-      | _ -> false)
-    attrs
-
 let expr_is_await e =
   match e.pexp_desc with
   | Pexp_await _ -> true
   | _ -> false
-
-let has_res_pat_variant_spread_attribute attrs =
-  List.exists
-    (function
-      | {Location.txt = "res.patVariantSpread"}, _ -> true
-      | _ -> false)
-    attrs
 
 let has_dict_pattern_attribute attrs =
   attrs
@@ -225,19 +211,14 @@ let rec unwrap_braces expr =
   | Pexp_braces {expr = inner} -> unwrap_braces inner
   | _ -> expr
 
+(* Attributes the parser adds to encode syntax; they are never printed *)
+let is_parsing_attr (attr : Parsetree.attribute) =
+  match attr with
+  | {Location.txt = "res.dictPattern" | "res.dictSpread"}, _ -> true
+  | _ -> false
+
 let filter_parsing_attrs attrs =
-  List.filter
-    (fun attr ->
-      match attr with
-      | ( {
-            Location.txt =
-              ( "res.iflet" | "res.ternary" | "res.await"
-              | "res.patVariantSpread" | "res.dictPattern" | "res.dictSpread" );
-          },
-          _ ) ->
-        false
-      | _ -> true)
-    attrs
+  List.filter (fun attr -> not (is_parsing_attr attr)) attrs
 
 let is_block_expr expr =
   match (unwrap_braces expr).pexp_desc with
@@ -371,39 +352,6 @@ let flattenable_operators parent_operator child_operator =
       && is_equality_operator child_operator)
   else false
 
-let rec has_if_let_attribute attrs =
-  match attrs with
-  | [] -> false
-  | ({Location.txt = "res.iflet"}, _) :: _ -> true
-  | _ :: attrs -> has_if_let_attribute attrs
-
-let is_if_let_expr expr =
-  match expr with
-  | {pexp_attributes = attrs; pexp_desc = Pexp_match _}
-    when has_if_let_attribute attrs ->
-    true
-  | _ -> false
-
-let has_attributes attrs =
-  List.exists
-    (fun attr ->
-      match attr with
-      | {Location.txt = "res.iflet" | "res.ternary" | "res.await"}, _ -> false
-      (* Remove the fragile pattern warning for iflet expressions *)
-      | ( {Location.txt = "warning"},
-          PStr
-            [
-              {
-                pstr_desc =
-                  Pstr_eval
-                    ({pexp_desc = Pexp_constant (Pconst_string payload)}, _);
-              };
-            ] ) ->
-        String_literal.string_semantic payload <> "-4"
-        || not (has_if_let_attribute attrs)
-      | _ -> true)
-    attrs
-
 let is_array_access expr =
   match expr.pexp_desc with
   | Pexp_apply
@@ -419,43 +367,15 @@ let is_array_access expr =
     true
   | _ -> false
 
-type if_condition_kind =
-  | If of Parsetree.expression
-  | IfLet of Parsetree.pattern * Parsetree.expression
-
 let collect_if_expressions expr =
   let rec collect acc expr =
     let expr_loc = expr.pexp_loc in
     match expr.pexp_desc with
     | Pexp_ifthenelse (if_expr, then_expr, Some else_expr) ->
-      collect ((expr_loc, If if_expr, then_expr) :: acc) else_expr
+      collect ((expr_loc, if_expr, then_expr) :: acc) else_expr
     | Pexp_ifthenelse (if_expr, then_expr, (None as else_expr)) ->
-      let ifs = List.rev ((expr_loc, If if_expr, then_expr) :: acc) in
+      let ifs = List.rev ((expr_loc, if_expr, then_expr) :: acc) in
       (ifs, else_expr)
-    | Pexp_match
-        ( condition,
-          [
-            {pc_lhs = pattern; pc_guard = None; pc_rhs = then_expr};
-            {
-              pc_rhs =
-                {pexp_desc = Pexp_construct ({txt = Longident.Lident "()"}, _)};
-            };
-          ] )
-      when is_if_let_expr expr ->
-      let ifs =
-        List.rev ((expr_loc, IfLet (pattern, condition), then_expr) :: acc)
-      in
-      (ifs, None)
-    | Pexp_match
-        ( condition,
-          [
-            {pc_lhs = pattern; pc_guard = None; pc_rhs = then_expr};
-            {pc_rhs = else_expr};
-          ] )
-      when is_if_let_expr expr ->
-      collect
-        ((expr_loc, IfLet (pattern, condition), then_expr) :: acc)
-        else_expr
     | _ -> (List.rev acc, Some expr)
   in
   collect [] expr
@@ -480,23 +400,6 @@ let parameters_should_hug parameters =
     when is_huggable_pattern pat ->
     true
   | _ -> false
-
-let filter_fragile_match_attributes attrs =
-  List.filter
-    (fun attr ->
-      match attr with
-      | ( {Location.txt = "warning"},
-          PStr
-            [
-              {
-                pstr_desc =
-                  Pstr_eval
-                    ({pexp_desc = Pexp_constant (Pconst_string payload)}, _);
-              };
-            ] ) ->
-        String_literal.string_semantic payload <> "-4"
-      | _ -> true)
-    attrs
 
 let should_indent_binary_expr expr =
   let same_precedence_sub_expression operator sub_expression =
@@ -536,38 +439,32 @@ let should_inline_rhs_binary_expr rhs =
     true
   | _ -> false
 
-let is_printable_attribute attr =
-  match attr with
-  | ( {
-        Location.txt =
-          "res.iflet" | "JSX" | "res.await" | "res.ternary" | "res.dictSpread";
-      },
-      _ ) ->
-    false
-  | _ -> true
+let has_printable_attributes attrs =
+  List.exists (fun attr -> not (is_parsing_attr attr)) attrs
 
-let has_printable_attributes attrs = List.exists is_printable_attribute attrs
-
-let filter_printable_attributes attrs = List.filter is_printable_attribute attrs
+(* Attributes on a module expression print before it and bind less tightly
+   than an application or a constraint *)
+let mod_expr_has_attributes (mod_expr : Parsetree.module_expr) =
+  has_printable_attributes mod_expr.pmod_attributes
 
 let partition_printable_attributes attrs =
-  List.partition is_printable_attribute attrs
+  List.partition (fun attr -> not (is_parsing_attr attr)) attrs
+
+let is_doc_comment_attribute ((id, payload) : Parsetree.attribute) =
+  match (id, payload) with
+  | ( {txt = "res.doc"},
+      PStr
+        [
+          {
+            pstr_desc =
+              Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string _)}, _);
+          };
+        ] ) ->
+    true
+  | _ -> false
 
 let partition_doc_comment_attributes attrs =
-  List.partition
-    (fun ((id, payload) : Parsetree.attribute) ->
-      match (id, payload) with
-      | ( {txt = "res.doc"},
-          PStr
-            [
-              {
-                pstr_desc =
-                  Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string _)}, _);
-              };
-            ] ) ->
-        true
-      | _ -> false)
-    attrs
+  List.partition is_doc_comment_attribute attrs
 
 let rec is_fun_expr expr =
   match expr.pexp_desc with
@@ -600,7 +497,11 @@ let requires_special_callback_printing_first_arg args =
 let mod_expr_apply mod_expr =
   let rec loop acc mod_expr =
     match mod_expr with
-    | {pmod_desc = Pmod_apply (next, arg)} -> loop (arg :: acc) next
+    (* An inner application with attributes is kept as the callee, so the
+       printer can parenthesize it with its attributes *)
+    | {pmod_desc = Pmod_apply (next, arg)} as apply
+      when acc = [] || not (mod_expr_has_attributes apply) ->
+      loop (arg :: acc) next
     | _ -> (acc, mod_expr)
   in
   loop [] mod_expr

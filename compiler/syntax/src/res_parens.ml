@@ -70,8 +70,7 @@ let structure_expr expr =
   | None -> (
     match expr with
     | {pexp_desc = Pexp_jsx_element _} -> Nothing
-    | _ when Parsetree_viewer.has_attributes expr.pexp_attributes ->
-      Parenthesized
+    | _ when expr.pexp_attributes <> [] -> Parenthesized
     | {
      Parsetree.pexp_desc =
        Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
@@ -428,10 +427,24 @@ let braced_expr expr =
   | Pexp_constraint _ -> true
   | _ -> false
 
-let include_mod_expr mod_expr =
+(* A constraint that needs parens where [M: S] would not parse or would mean
+   something else, e.g. after [include] or [module type of]. With attributes
+   it prints its own. *)
+let mod_constraint mod_expr =
   match mod_expr.Parsetree.pmod_desc with
-  | Parsetree.Pmod_constraint _ -> true
+  | Parsetree.Pmod_constraint _ ->
+    not (Parsetree_viewer.mod_expr_has_attributes mod_expr)
   | _ -> false
+
+(* An applied module expression that needs parens: [(M: S)(X)],
+   [((Y) => M)(X)], [(%ext)(X)], [(await M)(X)], and with attributes, which
+   would otherwise apply to the whole application *)
+let mod_apply_callee callee =
+  match callee.Parsetree.pmod_desc with
+  | Pmod_constraint _ | Pmod_functor _ | Pmod_await _
+  | Pmod_extension (_, PStr []) ->
+    true
+  | _ -> Parsetree_viewer.mod_expr_has_attributes callee
 
 let mod_expr_parens mod_expr =
   match mod_expr with

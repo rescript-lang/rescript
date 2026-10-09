@@ -28,7 +28,7 @@ enum CompileType {
 type WatchPaths = Vec<(PathBuf, RecursiveMode)>;
 type StartupBuildResult = (
     BuildCommandState,
-    WatchPaths,
+    Vec<RegisteredWatch>,
     Option<(Instant, build::CompilationOutcome)>,
 );
 
@@ -150,8 +150,50 @@ fn compute_watch_paths(build_state: &BuildCommandState, root: &Path) -> Vec<(Pat
     watch_paths.into_iter().collect()
 }
 
-/// Registers all watch paths with the given watcher.
-fn register_watches(watcher: &mut RecommendedWatcher, watch_paths: &[(PathBuf, RecursiveMode)]) {
+/// Identity of a watched directory, used to notice when it was replaced at the same path.
+type DirIdentity = (u64, u64);
+
+#[cfg(unix)]
+fn dir_identity(path: &Path) -> Option<DirIdentity> {
+    use std::os::unix::fs::MetadataExt;
+    path.metadata()
+        .ok()
+        .map(|metadata| (metadata.dev(), metadata.ino()))
+}
+
+// Stable file identities are not available on other platforms, so their watches are always
+// re-registered on full rebuilds.
+#[cfg(not(unix))]
+fn dir_identity(_path: &Path) -> Option<DirIdentity> {
+    None
+}
+
+/// A watch that was registered successfully.
+struct RegisteredWatch {
+    path: PathBuf,
+    mode: RecursiveMode,
+    /// The identity of the directory when the watch was registered. Watches can be tied to the
+    /// directory rather than its path (inotify drops the watch when the directory is deleted), so
+    /// a watch is only still valid while the path refers to the same directory.
+    identity: Option<DirIdentity>,
+}
+
+impl RegisteredWatch {
+    fn is_still_valid_for(&self, path: &Path, mode: RecursiveMode) -> bool {
+        self.path == path
+            && self.mode == mode
+            && self.identity.is_some()
+            && self.identity == dir_identity(path)
+    }
+}
+
+/// Registers the watch paths with the given watcher and returns the ones that were registered
+/// successfully. Failed paths are left out so that the next full rebuild retries them.
+fn register_watches(
+    watcher: &mut RecommendedWatcher,
+    watch_paths: &[(PathBuf, RecursiveMode)],
+) -> Vec<RegisteredWatch> {
+    let mut registered = Vec::with_capacity(watch_paths.len());
     for (path, mode) in watch_paths {
         let mode_str = if *mode == RecursiveMode::Recursive {
             "recursive"
@@ -159,17 +201,52 @@ fn register_watches(watcher: &mut RecommendedWatcher, watch_paths: &[(PathBuf, R
             "non-recursive"
         };
         log::debug!("  watching ({mode_str}): {}", path.display());
-        if let Err(e) = watcher.watch(path, *mode) {
-            log::error!("Could not watch {}: {}", path.display(), e);
+        // Read the identity before registering: if the directory is replaced in between, the
+        // recorded identity is stale and the next full rebuild registers the watch again.
+        let identity = dir_identity(path);
+        match watcher.watch(path, *mode) {
+            Ok(()) => registered.push(RegisteredWatch {
+                path: path.clone(),
+                mode: *mode,
+                identity,
+            }),
+            Err(e) => log::error!("Could not watch {}: {}", path.display(), e),
         }
     }
+    registered
 }
 
-/// Unregisters all watch paths from the given watcher.
-fn unregister_watches(watcher: &mut RecommendedWatcher, watch_paths: &[(PathBuf, RecursiveMode)]) {
-    for (path, _) in watch_paths {
-        let _ = watcher.unwatch(path);
+/// Brings the registered watches from `current` to `next`, touching only the paths that changed.
+///
+/// Some backends restart their event stream on every `watch`/`unwatch` call (FSEvents on macOS
+/// does), and events that happen during the restart are lost. Leaving unchanged watches alone
+/// avoids those gaps entirely in the common case where a full rebuild keeps the same paths.
+/// Watches whose directory was replaced since registration are registered again.
+///
+/// Returns the watches that are registered afterwards, which excludes paths that failed to register.
+fn update_watches(
+    watcher: &mut RecommendedWatcher,
+    current: Vec<RegisteredWatch>,
+    next: &[(PathBuf, RecursiveMode)],
+) -> Vec<RegisteredWatch> {
+    let (mut kept, stale): (Vec<_>, Vec<_>) = current.into_iter().partition(|watch| {
+        next.iter()
+            .any(|(path, mode)| watch.is_still_valid_for(path, *mode))
+    });
+    for watch in stale {
+        let _ = watcher.unwatch(&watch.path);
     }
+    let added: WatchPaths = next
+        .iter()
+        .filter(|(path, mode)| {
+            !kept
+                .iter()
+                .any(|watch| watch.path == *path && watch.mode == *mode)
+        })
+        .cloned()
+        .collect();
+    kept.extend(register_watches(watcher, &added));
+    kept
 }
 
 fn carry_forward_compile_state(previous: &BuildCommandState, next: &mut BuildCommandState) {
@@ -250,7 +327,7 @@ fn cleanup_before_watch_exit(
 
 struct AsyncWatchArgs<'a> {
     watcher: &'a mut RecommendedWatcher,
-    current_watch_paths: Vec<(PathBuf, RecursiveMode)>,
+    current_watches: Vec<RegisteredWatch>,
     initial_build_state: BuildCommandState,
     q: Arc<FifoQueue<Result<Event, Error>>>,
     ctrlc_pressed: Arc<AtomicBool>,
@@ -268,7 +345,7 @@ struct AsyncWatchArgs<'a> {
 async fn async_watch(
     AsyncWatchArgs {
         watcher,
-        mut current_watch_paths,
+        mut current_watches,
         initial_build_state,
         q,
         ctrlc_pressed,
@@ -512,9 +589,9 @@ async fn async_watch(
                     build_state = next_build_state;
 
                     // Re-register watches based on the new build state
-                    unregister_watches(watcher, &current_watch_paths);
-                    current_watch_paths = compute_watch_paths(&build_state, path);
-                    register_watches(watcher, &current_watch_paths);
+                    let next_watch_paths = compute_watch_paths(&build_state, path);
+                    current_watches =
+                        update_watches(watcher, std::mem::take(&mut current_watches), &next_watch_paths);
 
                     let result = build::incremental_build_without_lock(
                         &mut build_state,
@@ -547,6 +624,18 @@ async fn async_watch(
                     }
                 }
                 needs_compile_type = CompileType::None;
+
+                // The removal event of watch.lock can be lost while watches are re-registered
+                // (some backends restart their event stream), so check the file itself.
+                if !path.join("lib").join(LockKind::Watch.file_name()).exists() {
+                    cleanup_before_watch_exit(
+                        path,
+                        &build_state,
+                        show_progress,
+                        "\nExiting... (lockfile removed)",
+                    );
+                    return Ok(());
+                }
             }
             CompileType::None => {
                 // We want to sleep for a little while so the CPU can schedule other work. That way we end
@@ -589,7 +678,7 @@ pub fn start(
 
         // Initialization can clean previous build artifacts, so it has to be serialized
         // with the initial compile too.
-        let (build_state, current_watch_paths, initial_compile_result): StartupBuildResult =
+        let (build_state, current_watches, initial_compile_result): StartupBuildResult =
             build::with_build_lock(path, || {
                 let mut build_state = build::initialize_build(
                     None,
@@ -605,8 +694,8 @@ pub fn start(
                 .with_context(|| "Could not initialize build")?;
 
                 // Compute and register targeted watches based on source folders.
-                let current_watch_paths = compute_watch_paths(&build_state, path);
-                register_watches(&mut watcher, &current_watch_paths);
+                let current_watches =
+                    register_watches(&mut watcher, &compute_watch_paths(&build_state, path));
 
                 let timing_total = Instant::now();
                 let initial_compile_result = build::incremental_build_without_lock(
@@ -623,7 +712,7 @@ pub fn start(
 
                 Ok::<StartupBuildResult, anyhow::Error>((
                     build_state,
-                    current_watch_paths,
+                    current_watches,
                     initial_compile_result,
                 ))
             })?;
@@ -648,7 +737,7 @@ pub fn start(
 
         async_watch(AsyncWatchArgs {
             watcher: &mut watcher,
-            current_watch_paths,
+            current_watches,
             initial_build_state: build_state,
             q: consumer,
             ctrlc_pressed,
@@ -738,7 +827,6 @@ mod tests {
             test_project_context(root),
             packages,
             compiler,
-            None,
             None,
             SourceMapCommand::Watch,
         );
@@ -888,5 +976,27 @@ mod tests {
             test_build_state("ModuleA", test_module("src/Other.res", None, None, None));
         carry_forward_compile_state(&previous, &mut different_source);
         assert!(!different_source.get_module("ModuleA").unwrap().compile_dirty);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn registered_watch_is_invalid_after_directory_is_replaced() {
+        let temp_dir = tempfile::TempDir::new().expect("temp dir should be created");
+        let dir = temp_dir.path().join("src");
+        std::fs::create_dir(&dir).expect("dir should be created");
+
+        let watch = RegisteredWatch {
+            path: dir.clone(),
+            mode: RecursiveMode::Recursive,
+            identity: dir_identity(&dir),
+        };
+        assert!(watch.is_still_valid_for(&dir, RecursiveMode::Recursive));
+        assert!(!watch.is_still_valid_for(&dir, RecursiveMode::NonRecursive));
+
+        // Move the old directory away instead of deleting it, so that its inode stays in use and
+        // cannot be reused for the new directory.
+        std::fs::rename(&dir, temp_dir.path().join("src-old")).expect("dir should be renamed");
+        std::fs::create_dir(&dir).expect("dir should be recreated");
+        assert!(!watch.is_still_valid_for(&dir, RecursiveMode::Recursive));
     }
 }

@@ -106,11 +106,11 @@ let collect_info (meta : Lam_stats.t) (lam : Lambda.t) =
       collect l;
       Ext_list.iter_snd sw_consts collect;
       Ext_list.iter_snd sw_blocks collect;
-      Ext_option.iter sw_failaction collect
+      Option.iter collect sw_failaction
     | Lstringswitch (l, sw, d) ->
       collect l;
       Ext_list.iter_snd sw collect;
-      Ext_option.iter d collect
+      Option.iter collect d
     | Lstaticraise (_code, ls) -> List.iter collect ls
     | Lstaticcatch (l1, (_, _), l2) ->
       collect l1;

@@ -8,8 +8,6 @@ type nested = {@as("BS_PRIVATE_NESTED_SOME_NONE") depth: int}
 
 let fromNullable: Primitive_js_extern.null_undefined<'a> => option<'a>
 
-let fromUndefined: Primitive_js_extern.undefined<'a> => option<'a>
-
 let fromNull: Primitive_js_extern.null<'a> => option<'a>
 
 let valFromOption: Primitive_object_extern.t => Primitive_object_extern.t

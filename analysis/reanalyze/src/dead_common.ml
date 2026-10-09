@@ -33,10 +33,6 @@ let live_annotation = "live"
 type decls = Decl.t Pos_hash.t
 (** type alias for declaration hashtables *)
 
-(* NOTE: Global decls removed - now using Declarations.builder/t pattern *)
-
-(* NOTE: Global ValueReferences removed - now using References.builder/t pattern *)
-
 (* Local reporting context used only while emitting dead-code warnings.
    It tracks, per file, the end position of the last value we reported on,
    so nested values inside that range don't get duplicate warnings. *)
@@ -47,8 +43,6 @@ module Reporting_context = struct
   let get_max_end (ctx : t) = !ctx
   let set_max_end (ctx : t) (pos : Lexing.position) = ctx := pos
 end
-
-(* NOTE: Global TypeReferences removed - now using References.builder/t pattern *)
 
 let decl_get_loc decl =
   let loc_start =
@@ -69,7 +63,7 @@ let add_value_reference ~config ~refs ~file_deps ~(binding : Location.t)
   let effective_from = if binding = Location.none then loc_from else binding in
   if not effective_from.loc_ghost then (
     if config.Dce_config.cli.debug then
-      Log_.item "addValueReference %s --> %s@."
+      Log_.item "add_value_reference %s --> %s@."
         (effective_from.loc_start |> Pos.to_string)
         (loc_to.loc_start |> Pos.to_string);
     References.add_value_ref refs ~pos_to:loc_to.loc_start
@@ -103,7 +97,7 @@ let addDeclaration_ ~config ~decls ~(file : File_context.t) ?pos_end ?pos_start
   *)
   if (not loc.loc_ghost) && pos.pos_fname = file.source_path then (
     if config.Dce_config.cli.debug then
-      Log_.item "add%sDeclaration %s %s path:%s@."
+      Log_.item "addDeclaration_ %s %s %s path:%s@."
         (decl_kind |> Decl.Kind.to_string)
         (name |> Name.to_string) (pos |> Pos.to_string)
         (path |> Dce_path.to_string);
@@ -117,7 +111,6 @@ let addDeclaration_ ~config ~decls ~(file : File_context.t) ?pos_end ?pos_start
         pos;
         pos_end;
         pos_start;
-        resolved_dead = None;
         report = true;
       }
     in
@@ -163,8 +156,8 @@ let ref_is_below (decl : Decl.t) (pos_from : Lexing.position) =
      (* not a function defined inside a function, e.g. not a callback *)
      decl.pos_end.pos_cnum < pos_from.pos_cnum
 
-(** Create hasRefBelow function using on-demand per-decl search.
-    [iter_value_refs_from] iterates over (posFrom, posToSet) pairs.
+(** Create has_ref_below function using on-demand per-decl search.
+    [iter_value_refs_from] iterates over (pos_from, pos_to_set) pairs.
     O(total_refs) per dead decl, but dead decls should be few. *)
 let make_hasRefBelow ~transitive ~iter_value_refs_from =
   if transitive then fun _ -> false
@@ -176,18 +169,14 @@ let make_hasRefBelow ~transitive ~iter_value_refs_from =
     !found
 
 (** Report a dead declaration. Returns list of issues (dead module first, then dead value).
-    [hasRefBelow] checks if there are references from "below" the declaration.
+    [has_ref_below] checks if there are references from "below" the declaration.
     Only used when [config.run.transitive] is false.
-    [?checkModuleDead] optional callback for checking dead modules. Defaults to DeadModules.checkModuleDead.
-    [?shouldReport] optional callback to check if a decl should be reported. Defaults to checking decl.report. *)
-let report_declaration ~config ~has_ref_below ?check_module_dead ?should_report
+    [check_module_dead] returns the dead-module issue for a module, if any.
+    [should_report] checks if a decl should be reported. *)
+let report_declaration ~config ~has_ref_below ~check_module_dead ~should_report
     (ctx : Reporting_context.t) decl : Issue.t list =
   let inside_reported_value = decl |> is_inside_reported_value ctx in
-  let should_report =
-    match should_report with
-    | Some f -> f decl
-    | None -> decl.report
-  in
+  let should_report = should_report decl in
   (* For type re-exports (type y = x = {...}), the re-exported record/variant
      labels are restated but not independently actionable. Avoid duplicate/noisy
      warnings by suppressing reporting for the re-exported copy. *)
@@ -242,11 +231,7 @@ let report_declaration ~config ~has_ref_below ?check_module_dead ?should_report
         |> Dce_path.to_module_name ~is_type:(decl.decl_kind |> Decl.Kind.is_type)
       in
       let dead_module_issue =
-        match check_module_dead with
-        | Some f -> f ~file_name:decl.pos.pos_fname module_name
-        | None ->
-          Dead_modules.check_module_dead ~config ~file_name:decl.pos.pos_fname
-            module_name
+        check_module_dead ~file_name:decl.pos.pos_fname module_name
       in
       let dead_value_issue = make_dead_issue ~decl ~message dead_warning in
       (* Return in order: dead module first (if any), then dead value *)
@@ -254,6 +239,3 @@ let report_declaration ~config ~has_ref_below ?check_module_dead ?should_report
       | Some mi -> [mi; dead_value_issue]
       | None -> [dead_value_issue]
     else []
-
-let do_report_dead ~ann_store pos =
-  not (Annotation_store.is_annotated_gentype_or_dead ann_store pos)

@@ -86,8 +86,6 @@ let fld_record name = Fld_record {name}
 
 let fld_record_extension name = Fld_record_extension {name}
 
-let ref_field_info : field_dbg_info = Fld_record {name = "contents"}
-
 type set_field_dbg_info =
   | Fld_record_set of string
   | Fld_record_inline_set of string
@@ -229,7 +227,6 @@ type primitive =
   | Parrayrefu
   | Parraysetu
   | Parrayrefs
-  | Parraysets
   (* List primitives *)
   | Pmakelist
   (* dict primitives *)
@@ -247,7 +244,6 @@ type primitive =
   | Phash_mixstring
   | Phash_finalmix
   (* Test if the argument is a block or an immediate integer *)
-  | Pisint
   (* Test if the (integer) argument is outside an interval *)
   (* Test if the argument is null or undefined *)
   | Pis_null_undefined
@@ -366,12 +362,10 @@ and lfunction = {
 
 and prim_info = {primitive: primitive; args: t list; loc: Location.t}
 
-and ap_info = {ap_loc: Location.t; ap_inlined: inline_attribute}
-
 and lambda_apply = {
   ap_func: t;
   ap_args: t list;
-  ap_info: ap_info;
+  ap_loc: Location.t;
   ap_transformed_jsx: bool;
 }
 
@@ -466,7 +460,7 @@ let eq_primitive_approx (lhs : primitive) (rhs : primitive) =
   (* bool primitives *)
   | Psequand | Psequor | Pnot | Pboolcomp _ | Pboolorder | Pboolmin | Pboolmax
   (* int primitives *)
-  | Pisint | Pnegint | Paddint | Psubint | Pmulint | Pdivint | Pmodint | Ppowint
+  | Pnegint | Paddint | Psubint | Pmulint | Pdivint | Pmodint | Ppowint
   | Pnotint | Pandint | Porint | Pxorint | Plslint | Plsrint | Pasrint
   | Pintorder | Pintmin | Pintmax
   (* float primitives *)
@@ -490,7 +484,7 @@ let eq_primitive_approx (lhs : primitive) (rhs : primitive) =
   | Pnull_undefined_to_opt | Pis_null | Pis_not_none | Psome | Psome_not_nest
   | Pis_undefined | Pis_null_undefined | Ptypeof | Pis_poly_var_block
   | Pdebugger | Pinit_mod | Pupdate_mod | Pduprecord | Pmakearray | Parraylength
-  | Parrayrefu | Parraysetu | Parrayrefs | Parraysets | Pjs_fn_method | Phash
+  | Parrayrefu | Parraysetu | Parrayrefs | Pjs_fn_method | Phash
   | Phash_mixstring | Phash_mixint | Phash_finalmix | Precord_rest _ ->
     rhs = lhs
   (* Reachable only via the optimizer's term-equality comparison, which the
@@ -782,6 +776,16 @@ type value_kind =
   | Is_array
   | Unknown_value
 
+let record_fields_are_array fields =
+  let len = Array.length fields in
+  let rec loop i =
+    if i = len then true
+    else
+      let name, _optional = fields.(i) in
+      string_of_int i = name && loop (i + 1)
+  in
+  len <> 0 && loop 0
+
 let runtime_value_kind (c : structured_constant) =
   match c with
   | Const_string s -> Is_literal (String s)
@@ -798,11 +802,7 @@ let runtime_value_kind (c : structured_constant) =
   | Const_constructor {literal = Some literal} -> Is_literal literal
   | Const_block (Blk_tuple, _) -> Is_array
   | Const_block (Blk_record {fields}, _) ->
-    if
-      Array.length fields <> 0
-      && Ext_array.for_alli fields (fun i (name, _) -> string_of_int i = name)
-    then Is_array
-    else Is_object
+    if record_fields_are_array fields then Is_array else Is_object
   | Const_block
       ( ( Blk_constructor _ | Blk_record_inlined _ | Blk_poly_var
         | Blk_record_ext _ | Blk_module _ | Blk_module_export _ | Blk_extension
@@ -1072,7 +1072,7 @@ let prim ~primitive:(prim : primitive) ~args loc : t =
     *)
     | _ -> default ())
 
-let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
+let rec apply ?(ap_transformed_jsx = false) fn args (ap_loc : Location.t) : t =
   match fn with
   | Lfunction
       {
@@ -1089,21 +1089,20 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
       } -> (
     match is_eta_conversion_exn params inner_args args with
     | args ->
-      let loc = ap_info.ap_loc in
       prim ~primitive:wrap
-        ~args:[prim ~primitive:primitive_call.primitive ~args loc]
-        loc
+        ~args:[prim ~primitive:primitive_call.primitive ~args ap_loc]
+        ap_loc
     | exception Not_simple_form ->
-      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx})
+      Lapply {ap_func = fn; ap_args = args; ap_loc; ap_transformed_jsx})
   | Lfunction
       {
         params;
         body = Lprim ({primitive = _; args = inner_args} as primitive_call);
       } -> (
     match is_eta_conversion_exn params inner_args args with
-    | args -> prim ~primitive:primitive_call.primitive ~args ap_info.ap_loc
+    | args -> prim ~primitive:primitive_call.primitive ~args ap_loc
     | exception _ ->
-      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx})
+      Lapply {ap_func = fn; ap_args = args; ap_loc; ap_transformed_jsx})
   | Lfunction
       {
         params;
@@ -1113,20 +1112,19 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
               (Lconst _ as const) );
       } -> (
     match is_eta_conversion_exn params inner_args args with
-    | args ->
-      seq (prim ~primitive:primitive_call.primitive ~args ap_info.ap_loc) const
+    | args -> seq (prim ~primitive:primitive_call.primitive ~args ap_loc) const
     | exception _ ->
-      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
+      Lapply {ap_func = fn; ap_args = args; ap_loc; ap_transformed_jsx}
       (* | Lfunction {params;body} when Ext_list.same_length params args ->
           Ext_list.fold_right2 (fun p arg acc ->
             Llet(Strict,p,arg,acc)
           ) params args body *)
       (* TODO: more rigirous analysis on [let_kind] *))
   | Llet (kind, id, e, (Lfunction _ as fn)) ->
-    let_ kind id e (apply fn args ap_info ~ap_transformed_jsx)
+    let_ kind id e (apply fn args ap_loc ~ap_transformed_jsx)
   (* | Llet (kind0, id0, e0, Llet (kind,id, e, (Lfunction _ as fn))) ->
      Llet(kind0,id0,e0,Llet (kind, id, e, apply fn args loc status)) *)
-  | _ -> Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
+  | _ -> Lapply {ap_func = fn; ap_args = args; ap_loc; ap_transformed_jsx}
 
 let not_ loc x : t =
   match x with
@@ -1190,44 +1188,7 @@ let if_ (a : t) (b : t) (c : t) : t =
        matching's own exit bookkeeping inspects after the term is assembled,
        and doing it here leaves static raises without their catch. It is
        {!Lam_pass_guard_raises} instead. *)
-    | _ -> (
-      match a with
-      | Lprim {primitive = Pisint; args = [Lvar i]; _} -> (
-        match b with
-        | Lifthenelse
-            (Lprim {primitive = Pintcomp Ceq; args = [Lvar j; Lconst _]}, _, b_f)
-          when Ident.same i j && eq_approx b_f c ->
-          b
-        | Lprim {primitive = Pintcomp Ceq; args = [Lvar j; Lconst _]}
-          when Ident.same i j && eq_approx lambda_false c ->
-          b
-        | Lifthenelse
-            ( Lprim
-                ({primitive = Pintcomp Cneq; args = [Lvar j; Lconst _]} as
-                 b_pred),
-              b_t,
-              b_f )
-          when Ident.same i j && eq_approx b_t c ->
-          Lifthenelse (Lprim {b_pred with primitive = Pintcomp Ceq}, b_f, b_t)
-        | Lprim
-            {primitive = Pintcomp Cneq; args = [Lvar j; Lconst _] as args; loc}
-        | Lprim
-            {
-              primitive = Pnot;
-              args =
-                [
-                  Lprim
-                    {
-                      primitive = Pintcomp Ceq;
-                      args = [Lvar j; Lconst _] as args;
-                      loc;
-                    };
-                ];
-            }
-          when Ident.same i j && eq_approx lambda_true c ->
-          Lprim {primitive = Pintcomp Cneq; args; loc}
-        | _ -> Lifthenelse (a, b, c))
-      | _ -> Lifthenelse (a, b, c)))
+    | _ -> Lifthenelse (a, b, c))
 
 let sequor l r = if_ l lambda_true r
 

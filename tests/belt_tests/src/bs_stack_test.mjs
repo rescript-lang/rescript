@@ -3,7 +3,6 @@
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.mjs";
-import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 import * as Belt_MutableQueue from "@rescript/belt/lib/es6/src/Belt_MutableQueue.mjs";
 import * as Belt_MutableStack from "@rescript/belt/lib/es6/src/Belt_MutableStack.mjs";
 
@@ -17,7 +16,7 @@ function inOrder(v) {
     current = v$1.left;
   };
   while (!Belt_MutableStack.isEmpty(s)) {
-    current = Primitive_option.some(Belt_MutableStack.popOrThrow(s));
+    current = Belt_MutableStack.popOrThrow(s);
     let v$2 = current;
     Belt_MutableQueue.add(q, v$2.value);
     current = v$2.right;
@@ -59,38 +58,42 @@ function n(l, r, a) {
   };
 }
 
-let test1 = {
-  value: 1,
+let test1_left = {
+  value: 2,
   left: {
-    value: 2,
-    left: {
-      value: 4,
-      left: undefined,
-      right: undefined
-    },
-    right: {
-      value: 5,
-      left: undefined,
-      right: undefined
-    }
+    value: 4,
+    left: undefined,
+    right: undefined
   },
   right: {
-    value: 3,
+    value: 5,
     left: undefined,
     right: undefined
   }
 };
 
+let test1_right = {
+  value: 3,
+  left: undefined,
+  right: undefined
+};
+
+let test1 = {
+  value: 1,
+  left: test1_left,
+  right: test1_right
+};
+
 Mocha.describe("Bs_stack_test", () => {
   Mocha.test("tree in-order traversal", () => {
-    Test_utils.eq("File \"bs_stack_test.res\", line 79, characters 7-14", inOrder(Primitive_option.some(test1)), [
+    Test_utils.eq("File \"bs_stack_test.res\", line 79, characters 7-14", inOrder(test1), [
       4,
       2,
       5,
       1,
       3
     ]);
-    Test_utils.eq("File \"bs_stack_test.res\", line 80, characters 7-14", inOrder3(Primitive_option.some(test1)), [
+    Test_utils.eq("File \"bs_stack_test.res\", line 80, characters 7-14", inOrder3(test1), [
       4,
       2,
       5,

@@ -69,7 +69,7 @@ Mocha.describe("Optional_ffi_test", () => {
     let v2 = bug_to_fix2(side_effect2, counter2);
     let pair2_0 = [
       v2,
-      counter.contents
+      counter2.contents
     ];
     let pair2_1 = [
       4,
