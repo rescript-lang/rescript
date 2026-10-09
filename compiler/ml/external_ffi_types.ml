@@ -82,7 +82,7 @@ type inline_const =
           source spelling is not needed after FFI processing. *)
   | Const_bool of bool
   | Const_int of int32
-  | Const_bigint of {negative: bool; digits: string}
+  | Const_bigint of {positive: bool; digits: string}
   | Const_float of string
 
 type t =
@@ -170,18 +170,20 @@ let check_decl ?loc (decl : external_decl) ~prim_name : bool =
     | Decl_val {name} ->
       if decl.effective_arity = 0 then (
         upgrade (is_package_relative_path name);
-        Ext_option.iter emn (fun emn ->
+        emn
+        |> Option.iter (fun emn ->
             upgrade (is_package_relative_path emn.bundle));
         valid_global_name ?loc name)
       else (
-        Ext_option.iter emn (fun emn ->
+        emn
+        |> Option.iter (fun emn ->
             upgrade (is_package_relative_path emn.bundle));
-        Ext_option.iter emn (fun emn -> check_external_module_name ?loc emn);
+        Option.iter (fun emn -> check_external_module_name ?loc emn) emn;
         valid_global_name ?loc name)
     | Decl_new {name} ->
-      Ext_option.iter emn (fun emn ->
-          upgrade (is_package_relative_path emn.bundle));
-      Ext_option.iter emn (fun emn -> check_external_module_name ?loc emn);
+      emn
+      |> Option.iter (fun emn -> upgrade (is_package_relative_path emn.bundle));
+      Option.iter (fun emn -> check_external_module_name ?loc emn) emn;
       valid_global_name ?loc name
     | Decl_send {name} | Decl_set {name} | Decl_get {name} ->
       valid_method_name ?loc name

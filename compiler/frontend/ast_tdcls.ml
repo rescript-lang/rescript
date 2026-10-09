@@ -25,7 +25,7 @@
 open Ast_helper
 
 (**
-   [newTdcls tdcls newAttrs]
+   [new_tdcls tdcls new_attrs]
    functional update attributes of last declaration *)
 let new_tdcls (tdcls : Parsetree.type_declaration list)
     (new_attrs : Parsetree.attributes) : Parsetree.type_declaration list =
@@ -43,30 +43,13 @@ let handle_tdcls_in_sigi (self : Ast_mapper.mapper)
   with
   | {bs_deriving = Some actions}, new_attrs ->
     let loc = sigi.psig_loc in
-    let original_tdcls_new_attrs = new_tdcls tdcls new_attrs in
     (* remove the processed attr*)
     let new_tdcls_new_attrs =
-      List.map (self.type_declaration self) original_tdcls_new_attrs
+      List.map (self.type_declaration self) (new_tdcls tdcls new_attrs)
     in
-    let kind = Ast_derive_abstract.is_abstract actions in
-    if kind <> Not_abstract then
-      let codes =
-        Ast_derive_abstract.handle_tdcls_in_sig ~light:(kind = Light_abstract)
-          rf original_tdcls_new_attrs
-      in
-      Ast_signature.fuse_all ~loc
-        (Sig.include_ ~loc
-           (Incl.mk ~loc
-              (Mty.typeof_ ~loc
-                 (Mod.constraint_ ~loc
-                    (Mod.structure ~loc [Str.type_ ~loc rf new_tdcls_new_attrs])
-                    (Mty.signature ~loc []))))
-        :: (* include module type of struct [processed_code for checking like invariance ]end *)
-           self.signature self codes)
-    else
-      Ast_signature.fuse_all ~loc
-        (Sig.type_ ~loc rf new_tdcls_new_attrs
-        :: self.signature self (Ast_derive.gen_signature tdcls actions rf))
+    Ast_signature.fuse_all ~loc
+      (Sig.type_ ~loc rf new_tdcls_new_attrs
+      :: self.signature self (Ast_derive.gen_signature tdcls actions rf))
   | {bs_deriving = None}, _ ->
     Ast_mapper.default_mapper.signature_item self sigi
 
@@ -78,28 +61,15 @@ let handle_tdcls_in_stru (self : Ast_mapper.mapper)
   with
   | {bs_deriving = Some actions}, new_attrs ->
     let loc = str.pstr_loc in
-    let original_tdcls_new_attrs = new_tdcls tdcls new_attrs in
     let new_str : Parsetree.structure_item =
       Str.type_ ~loc rf
-        (List.map (self.type_declaration self) original_tdcls_new_attrs)
+        (List.map (self.type_declaration self) (new_tdcls tdcls new_attrs))
     in
-    let kind = Ast_derive_abstract.is_abstract actions in
-    if kind <> Not_abstract then
-      let codes =
-        Ast_derive_abstract.handle_tdcls_in_str ~light:(kind = Light_abstract)
-          rf original_tdcls_new_attrs
-      in
-      (* use [tdcls2] avoid nonterminating *)
-      Ast_structure.fuse_all ~loc
-        (Ast_structure.constraint_ ~loc [new_str] []
-        :: (* [include struct end : sig end] for error checking *)
-           self.structure self codes)
-    else
-      Ast_structure.fuse_all ~loc
-        (new_str
-        :: self.structure self
-             (List.map
-                (fun action ->
-                  Ast_derive.gen_structure_signature loc tdcls action rf)
-                actions))
+    Ast_structure.fuse_all ~loc
+      (new_str
+      :: self.structure self
+           (List.map
+              (fun action ->
+                Ast_derive.gen_structure_signature loc tdcls action rf)
+              actions))
   | {bs_deriving = None}, _ -> Ast_mapper.default_mapper.structure_item self str

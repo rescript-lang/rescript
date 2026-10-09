@@ -37,8 +37,6 @@ val nondep_supertype : Env.t -> Ident.t -> module_type -> module_type
    in which the given ident does not appear.
    Raise [Not_found] if no such type exists. *)
 
-val no_code_needed : Env.t -> module_type -> bool
-val no_code_needed_sig : Env.t -> signature -> bool
 (* Determine whether a module needs no implementation code,
    i.e. consists only of type definitions. *)
 

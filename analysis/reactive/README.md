@@ -10,7 +10,7 @@ This library provides composable reactive collections that automatically propaga
 
 - **Delta-based updates**: Changes propagate as `Set`, `Remove`, or `Batch` deltas
 - **Glitch-free semantics**: Topological scheduling ensures consistent updates
-- **Composable combinators**: `flatMap`, `join`, `union`, `fixpoint`
+- **Composable combinators**: `flat_map`, `join`, `union`, `fixpoint`
 - **Incremental fixpoint**: Efficient transitive closure with support for additions and removals
 
 ## Usage
@@ -22,13 +22,13 @@ open Reactive
 let (files, emit) = source ~name:"files" ()
 
 (* Derive collections with combinators *)
-let decls = flatMap ~name:"decls" files
+let decls = flat_map ~name:"decls" files
   ~f:(fun _path data -> data.declarations)
   ()
 
-let refs = flatMap ~name:"refs" files
+let refs = flat_map ~name:"refs" files
   ~f:(fun _path data -> data.references)
-  ~merge:PosSet.union
+  ~merge:Pos_set.union
   ()
 
 (* Join collections *)
@@ -53,7 +53,7 @@ emit (Batch [set "a.res" data_a; set "b.res" data_b])
 | Combinator | Description |
 |------------|-------------|
 | `source` | Create a mutable source collection |
-| `flatMap` | Transform and flatten entries, with optional merge |
+| `flat_map` | Transform and flatten entries, with optional merge |
 | `join` | Look up keys from left collection in right collection |
 | `union` | Combine two collections, with optional merge for conflicts |
 | `fixpoint` | Compute transitive closure incrementally |
@@ -77,14 +77,14 @@ Tests are organized by theme:
 
 | File | Description |
 |------|-------------|
-| `FlatMapTest.ml` | FlatMap combinator tests |
-| `JoinTest.ml` | Join combinator tests |
-| `UnionTest.ml` | Union combinator tests |
-| `FixpointBasicTest.ml` | Basic fixpoint graph traversal |
-| `FixpointIncrementalTest.ml` | Incremental fixpoint updates |
-| `BatchTest.ml` | Batch processing tests |
-| `IntegrationTest.ml` | End-to-end file processing |
-| `GlitchFreeTest.ml` | Glitch-free scheduler tests |
+| `flat_map_test.ml` | `flat_map` combinator tests |
+| `join_test.ml` | Join combinator tests |
+| `union_test.ml` | Union combinator tests |
+| `fixpoint_basic_test.ml` | Basic fixpoint graph traversal |
+| `fixpoint_incremental_test.ml` | Incremental fixpoint updates |
+| `batch_test.ml` | Batch processing tests |
+| `integration_test.ml` | End-to-end file processing |
+| `glitch_free_test.ml` | Glitch-free scheduler tests |
 
 ## Glitch-Free Semantics
 
@@ -107,7 +107,7 @@ its invariants, and the limits of its evaluation data.
 
 This library powers the reactive dead code analysis in reanalyze:
 
-- `ReactiveFileCollection`: Manages CMT file processing
-- `ReactiveMerge`: Merges per-file data into global collections
-- `ReactiveLiveness`: Computes live declarations via fixpoint
-- `ReactiveSolver`: Generates dead code issues reactively
+- `Reactive_file_collection`: Manages CMT file processing
+- `Reactive_merge`: Merges per-file data into global collections
+- `Reactive_liveness`: Computes live declarations via fixpoint
+- `Reactive_solver`: Generates dead code issues reactively

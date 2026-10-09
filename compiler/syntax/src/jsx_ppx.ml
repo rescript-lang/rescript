@@ -4,7 +4,7 @@ open Parsetree
 open Longident
 
 let get_payload_fields payload =
-  match payload with
+  match Ast_payload.unwrap_payload_expression payload with
   | PStr
       ({
          pstr_desc =
@@ -24,7 +24,7 @@ let get_jsx_config_by_key ~key ~type_ record_fields =
         | {txt = Lident k} when k = key -> (
           match type_ with
           | Int -> (
-            match expr.pexp_desc with
+            match (Ast_payload.unwrap_braces expr).pexp_desc with
             | Pexp_constant (Pconst_integer (value, None)) -> Some value
             | _ -> None)
           | String -> Ast_payload.semantic_string_of_expression expr)

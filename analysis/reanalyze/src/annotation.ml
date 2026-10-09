@@ -20,7 +20,7 @@ let rec get_attribute_payload check_text (attributes : Typedtree.attributes) =
     match Ast_payload.semantic_string_of_expression expr with
     | Some s -> Some (StringPayload s)
     | None -> (
-      match expr with
+      match Ast_payload.unwrap_braces expr with
       | {pexp_desc = Pexp_constant (Pconst_integer (n, _))} ->
         Some (IntPayload n)
       | {pexp_desc = Pexp_constant (Pconst_float (s, _))} ->

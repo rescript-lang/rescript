@@ -47,9 +47,6 @@ val length : t -> int
 
 val is_empty : t -> bool
 
-val clear : t -> unit
-(** Empty the buffer. *)
-
 val add_char : t -> char -> unit
 (** [add_char b c] appends the character [c] at the end of the buffer [b]. *)
 

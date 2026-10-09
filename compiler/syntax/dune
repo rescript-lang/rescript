@@ -1,4 +1,4 @@
-(dirs compiler-libs-406 src cli)
+(dirs src cli)
 
 (env
  (dev

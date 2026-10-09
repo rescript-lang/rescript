@@ -6,6 +6,5 @@
       "subdirs": true
     }
   ],
-  "compiler-flags": ["-w -33-44-8-26-27-110"],
-  "jsx": { "module": "GenericJsx" }
+  "compiler-flags": ["-w -33-44-8-26-27-110"]
 }

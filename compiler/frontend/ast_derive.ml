@@ -41,28 +41,37 @@ let derive_table : derive_table ref = ref Map_string.empty
 
 let register key value = derive_table := Map_string.add !derive_table key value
 
-(* let gen_structure
-    (tdcls : tdcls)
-    (actions :  Ast_payload.action list )
-    (explict_nonrec : bool )
-   : Ast_structure.t =
-   Ext_list.flat_map
-    (fun action ->
-       (Ast_payload.table_dispatch !derive_table action).structure_gen
-         tdcls explict_nonrec) actions *)
+(* Derivers that used to be built in. They get a dedicated error pointing to
+   the replacement instead of the generic "is not supported". *)
+let removed_deriver_hint = function
+  | "abstract" ->
+    Some
+      "Use a record type instead. Records compile to plain JavaScript objects \
+       and support optional fields (`field?: t`), mutable fields and `@as` \
+       field renaming."
+  | "jsConverter" ->
+    Some
+      "Records already compile to plain JavaScript objects and polymorphic \
+       variants to their (`@as`-renamed) names, so the conversion functions \
+       are no longer needed."
+  | _ -> None
+
+let dispatch (({txt = name; loc}, _) as action : Ast_payload.action) =
+  match removed_deriver_hint name with
+  | Some hint ->
+    Location.raise_errorf ~loc "@deriving(%s) has been removed. %s" name hint
+  | None -> Ast_payload.table_dispatch !derive_table action
 
 let gen_signature tdcls (actions : Ast_payload.action list)
     (explict_nonrec : Asttypes.rec_flag) : Ast_signature.t =
   Ext_list.flat_map actions (fun action ->
-      (Ast_payload.table_dispatch !derive_table action).signature_gen tdcls
-        explict_nonrec)
+      (dispatch action).signature_gen tdcls explict_nonrec)
 
 open Ast_helper
 
 let gen_structure_signature loc (tdcls : tdcls) (action : Ast_payload.action)
     (explicit_nonrec : Asttypes.rec_flag) =
-  let derive_table = !derive_table in
-  let u = Ast_payload.table_dispatch derive_table action in
+  let u = dispatch action in
 
   let a = u.structure_gen tdcls explicit_nonrec in
   let b = u.signature_gen tdcls explicit_nonrec in

@@ -8,6 +8,32 @@ let printer_int_list xs =
 let suites =
   __FILE__
   >::: [
+         ( "map_to_array" >:: fun _ ->
+           let ( =~ ) =
+             OUnit.assert_equal ~printer:(fun xs ->
+                 String.concat "," (List.map string_of_int (Array.to_list xs)))
+           in
+           let k x y = Ext_list.map_to_array y x in
+           k succ [] =~ [||];
+           k succ [1] =~ [|2|];
+           k succ [1; 2; 3] =~ [|2; 3; 4|];
+           k succ [1; 2; 3; 4] =~ [|2; 3; 4; 5|];
+           k succ [1; 2; 3; 4; 5] =~ [|2; 3; 4; 5; 6|];
+           k succ [1; 2; 3; 4; 5; 6] =~ [|2; 3; 4; 5; 6; 7|];
+           k succ [1; 2; 3; 4; 5; 6; 7] =~ [|2; 3; 4; 5; 6; 7; 8|] );
+         ( "sort_via_arrayf maps right to left" >:: fun _ ->
+           let visited = ref [] in
+           let mapped =
+             Ext_list.sort_via_arrayf [3; 1; 2] Int.compare (fun value ->
+                 visited := value :: !visited;
+                 value * 2)
+           in
+           OUnit.assert_equal [2; 4; 6] mapped;
+           OUnit.assert_equal [3; 2; 1] (List.rev !visited);
+           OUnit.assert_equal []
+             (Ext_list.sort_via_arrayf [] Int.compare (fun _ ->
+                  OUnit.assert_failure "empty input must not invoke callback"))
+         );
          ( __LOC__ >:: fun _ ->
            OUnit.assert_equal
              (Ext_list.flat_map [1; 2] (fun x -> [x; x]))

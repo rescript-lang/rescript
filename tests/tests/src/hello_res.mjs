@@ -28,6 +28,17 @@ Stdlib_List.add(/* [] */0, Stdlib_List.length({
   }
 }));
 
+Stdlib_List.add(/* [] */0, Stdlib_List.length({
+  hd: 1,
+  tl: {
+    hd: 2,
+    tl: {
+      hd: 3,
+      tl: /* [] */0
+    }
+  }
+}));
+
 console.log(3);
 
 console.log([

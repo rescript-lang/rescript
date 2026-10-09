@@ -38,7 +38,7 @@ val local_external_apply :
      let module J = struct 
        external unsafe_expr : pval_type = pval_prim 
      end in 
-     J.unssafe_expr args
+     J.unsafe_expr args
    ]}
 *)
 

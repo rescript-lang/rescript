@@ -51,6 +51,8 @@ git clone --depth 1 https://github.com/rescript-lang/rescript.git
 
 This will only consume less than 50MB.
 
+[.gitattributes](.gitattributes) checks out every text file with LF line endings, which the committed snapshots and formatters expect on every platform. It also marks the Yarn release and the copied test dependencies in `tests/dependencies` as vendored, which leaves them out of GitHub's language statistics.
+
 ## Installation
 
 ### A. Manual installation
@@ -66,9 +68,9 @@ opam init
 
 # Any recent OCaml version works as a development compiler
 # Can also create local switch with opam switch create
-# If you get "No compiler matching `5.5.0' found" error,
+# If you get "No compiler matching `5.5.1' found" error,
 # then you need to run `opam update && opam upgrade` first
-opam switch create 5.5.0
+opam switch create 5.5.1
 
 # Install dev dependencies from OPAM
 opam install . --deps-only --with-test --with-dev-setup -y
@@ -183,6 +185,59 @@ make checkformat
 To make sure that no files are added to or removed from the `rescript`, `@rescript/runtime`, or `@rescript/belt` npm package inadvertently, an artifact list is kept at `packages/artifacts.json`. During CI build, it is verified that only the files that are listed there are actually included in the npm packages.
 
 After adding a new file to the repository that should go into one of the npm packages - e.g., a new stdlib module -, run `make artifacts`.
+
+## Adding a New npm Package
+
+npm trusted publishing can only be configured after a package exists in the
+registry. Before the package's first real release, create it with a minimal
+`0.0.0` version under a temporary `bootstrap` tag. This keeps `latest` and the
+normal release tags unchanged. The npm account used for these commands needs
+write access to the package scope and two-factor authentication enabled. Run
+`npm login` first if the account is not already authenticated locally.
+
+Run the following outside the repository, replacing `@rescript/example` with
+the new package name:
+
+```sh
+bootstrap_dir="$(mktemp -d)"
+cd "$bootstrap_dir"
+
+npm init --yes
+npm pkg set \
+  name="@rescript/example" \
+  version="0.0.0" \
+  license="MIT" \
+  repository.type="git" \
+  repository.url="git+https://github.com/rescript-lang/rescript.git"
+
+npm publish \
+  --access public \
+  --tag bootstrap \
+  --provenance=false
+```
+
+Then use npm 11.15 or newer to authorize this repository's protected publish
+job as the package's trusted publisher:
+
+```sh
+npm trust github @rescript/example \
+  --file publish.yml \
+  --repository rescript-lang/rescript \
+  --environment npm-release \
+  --allow-publish \
+  --yes
+```
+
+The normal `Publish` workflow can now publish the package with provenance. Once
+the first real version has been published successfully, remove the temporary
+tag:
+
+```sh
+npm dist-tag rm @rescript/example bootstrap
+```
+
+The `0.0.0` version remains in npm's immutable package history but is not
+selected by `latest` or any of the repository's release tags.
 
 ## Test the compiler
 

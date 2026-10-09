@@ -54,8 +54,8 @@ type constant =
      otherwise the frontend rejects it. The string is JavaScript source, not a
      decoded ReScript string value. *)
   | Pconst_raw_source of string
-  (* JavaScript source carried by a compiler extension such as [raw], [ffi], or
-     [re]. For example, [%raw("x + 1")] stores ["x + 1"]. The extension
+  (* JavaScript source carried by a compiler extension such as [raw] or [ffi].
+     For example, [%raw("x + 1")] stores ["x + 1"]. The extension
      interprets the string as JavaScript source rather than as a ReScript
      runtime string value. *)
   | Pconst_float of string * char option
@@ -249,7 +249,8 @@ and pattern_desc =
   | Ppat_array of pattern list (* [| P1; ...; Pn |] *)
   | Ppat_or of pattern * pattern (* P1 | P2 *)
   | Ppat_constraint of pattern * core_type (* (P : T) *)
-  | Ppat_type of Longident.t loc (* #tconst *)
+  | Ppat_type of Longident.t loc (* #...tconst *)
+  | Ppat_variant_spread of Longident.t loc (* ...tconst *)
   | Ppat_unpack of string loc
     (* (module P)
        Note: (module P : S) is represented as
@@ -257,20 +258,18 @@ and pattern_desc =
     *)
   | Ppat_exception of pattern (* exception P *)
   | Ppat_extension of extension (* [%id] *)
-  | Ppat_open of Longident.t loc * pattern
-(* M.(P) *)
-
-and pat_record_label = Longident.t loc * pattern * bool (* optional *)
 
 (* Value expressions *)
 and expression = {
   pexp_desc: expression_desc;
   pexp_loc: Location.t;
-  (* Hack: made pexp_attributes mutable for use in analysis exe. Please do not use elsewhere! *)
-  mutable pexp_attributes: attributes; (* ... [@id1] [@id2] *)
+  pexp_attributes: attributes; (* ... [@id1] [@id2] *)
 }
 
 and expression_desc =
+  | Pexp_braces of {expr: expression; braces_loc: Location.t}
+    (* Explicit braces around an expression. [pexp_loc] stays on the enclosed
+       expression; [braces_loc] covers the delimiters for printing. *)
   | Pexp_ident of Longident.t loc (* x
        M.x
     *)
@@ -347,6 +346,8 @@ and expression_desc =
   | Pexp_array of expression list (* [| E1; ...; En |] *)
   | Pexp_ifthenelse of expression * expression * expression option
     (* if E1 then E2 else E3 *)
+  | Pexp_ternary of expression * expression * expression
+    (* E1 ? E2 : E3. All three operands are required. *)
   | Pexp_sequence of expression * expression (* E1; E2 *)
   | Pexp_break (* break *)
   | Pexp_continue (* continue *)
@@ -356,9 +357,7 @@ and expression_desc =
        for i = E1 downto E2 do E3 done  (flag = Downto)
     *)
   | Pexp_constraint of expression * core_type (* (E : T) *)
-  | Pexp_coerce of expression * unit * core_type
-    (* (E :> T)        (None, T)
-         *)
+  | Pexp_coerce of expression * core_type (* (E :> T) *)
   | Pexp_object_get of expression * label loc (* obj["x"] *)
   | Pexp_object_set of expression * label loc * expression (* obj["x"] = v *)
   | Pexp_object_literal of (label loc * expression) list
@@ -389,6 +388,9 @@ and expression_desc =
     (* for pattern of array_expr do body_expr *)
   | Pexp_for_await_of of pattern * expression * expression
   (* for await pattern of iterable_expr do body_expr *)
+  | Pexp_regexp of {pattern: string; flags: string}
+  (* Literal source without delimiters; escapes and flag order are preserved.
+     Validation happens during frontend lowering, not AST construction. *)
   | Pexp_template of {source_segments: string loc list; values: expression list}
   (* An ordinary backquoted expression. [source_segments] contains the validated
      text between and around the interpolations, including escape spelling;
@@ -527,9 +529,14 @@ and type_declaration = {
   ptype_kind: type_kind;
   ptype_private: private_flag; (* = private ... *)
   ptype_manifest: core_type option; (* = T *)
+  ptype_origin: type_declaration_origin;
   ptype_attributes: attributes; (* ... [@@id1] [@@id2] *)
   ptype_loc: Location.t;
 }
+
+(* Inline records in field and external types are lifted to named declarations
+   for type checking. Keep their source origin separate from user attributes. *)
+and type_declaration_origin = Declared | Inline_record_definition
 
 (*
   type t                     (abstract, no manifest)
@@ -746,8 +753,10 @@ and module_expr_desc =
   | Pmod_apply of module_expr * module_expr (* ME1(ME2) *)
   | Pmod_constraint of module_expr * module_type (* (ME : MT) *)
   | Pmod_unpack of expression (* (val E) *)
-  | Pmod_extension of extension
-(* [%id] *)
+  | Pmod_extension of extension (* [%id] *)
+  | Pmod_await of module_expr
+(* await ME: a dynamic import when ME is a module path, possibly
+   constrained; elsewhere it has no effect *)
 
 and structure = structure_item list
 

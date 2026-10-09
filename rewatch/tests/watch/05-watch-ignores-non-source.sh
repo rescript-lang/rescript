@@ -75,9 +75,10 @@ success "File in nested non-source subdir was correctly ignored"
 rm -f ./src/WatchProbe.res ./src/WatchProbe.mjs
 rm -rf ./random-dir ./another-dir
 
-exit_watcher
+if ! exit_watcher; then
+  exit 1
+fi
 
-sleep 2
 rm -f rewatch.log
 
 if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];

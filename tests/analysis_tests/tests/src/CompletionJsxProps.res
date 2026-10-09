@@ -35,6 +35,9 @@ let tsomeVar = #two
 // let _ = <CompletionSupport.TestComponent on={t}
 //                                               ^com
 
+// let _ = <CompletionSupport.TestComponent on={test}
+//                                             ^com
+
 @@jsxConfig({version: 4})
 
 module CompletableComponentLazy = {

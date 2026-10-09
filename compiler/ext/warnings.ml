@@ -40,7 +40,6 @@ type t =
   | Nonreturning_statement (* 21 *)
   | Preprocessor of string (* 22 *)
   | Useless_record_with (* 23 *)
-  | Bad_module_name of string (* 24 *)
   | All_clauses_guarded (* 8, used to be 25 *)
   | Unused_var of string (* 26 *)
   | Unused_var_strict of string (* 27 *)
@@ -95,7 +94,6 @@ let number = function
   | Nonreturning_statement -> 21
   | Preprocessor _ -> 22
   | Useless_record_with -> 23
-  | Bad_module_name _ -> 24
   | All_clauses_guarded -> 8 (* used to be 25 *)
   | Unused_var _ -> 26
   | Unused_var_strict _ -> 27
@@ -299,12 +297,6 @@ let message = function
   | Useless_record_with ->
     "All the fields are already explicitly listed in this record. You can \
      remove the `...` spread."
-  | Bad_module_name modname ->
-    "This file's name is potentially invalid. The build systems conventionally \
-     turn a file name into a module name by upper-casing the first letter. "
-    ^ modname ^ " isn't a valid module name.\n"
-    ^ "Note: some build systems might e.g. turn kebab-case into CamelCase \
-       module, which is why this isn't a hard error."
   | All_clauses_guarded ->
     "this pattern-matching is not exhaustive.\n\
      All clauses in this pattern-matching are guarded."
@@ -523,9 +515,6 @@ let descriptions =
     (21, "Non-returning statement.");
     (22, "Preprocessor warning.");
     (23, "Useless record \"with\" clause.");
-    ( 24,
-      "Bad module name: the source file name is not a valid ReScript module \
-       name." );
     (25, "Deprecated: now part of warning 8.");
     ( 26,
       "Suspicious unused variable: unused variable that is bound\n\

@@ -15,7 +15,6 @@
 
 (* Inclusion checks for the module language *)
 
-open Misc
 open Path
 open Typedtree
 open Types
@@ -167,7 +166,7 @@ and print_coercion2 ppf (n, c) =
   Format.fprintf ppf "@[%d,@ %a@]" n print_coercion c
 
 and print_coercion3 ppf (i, n, c) =
-  Format.fprintf ppf "@[%s, %d,@ %a@]" (Ident.unique_name i) n print_coercion c
+  Format.fprintf ppf "@[%s, %d,@ %a@]" (Ident.name i) n print_coercion c
 
 (* Simplify a structure coercion *)
 
@@ -634,21 +633,42 @@ let include_err ppf (cxt, env, err) =
   Printtyp.wrap_printing_env env (fun () ->
       fprintf ppf "@[<v>%a%a@]" context (List.rev cxt) (include_symptom env) err)
 
-let buffer = ref Bytes.empty
+(* An error part is big when its heap representation exceeds
+   [!Clflags.error_size] words. Each distinct reachable block counts its header
+   and fields; a block without scannable fields (string, float, custom) or a
+   closure counts its header only. String contents are excluded so that the
+   decision is independent of source file names stored in locations. The walk
+   stops as soon as the limit is exceeded, which bounds the visited list. *)
 let is_big obj =
-  let size = !Clflags.error_size in
-  size > 0
-  &&
-  (if Bytes.length !buffer < size then buffer := Bytes.create size;
-   try
-     ignore (Marshal.to_buffer !buffer 0 size obj []);
-     false
-   with _ -> true)
+  let limit = !Clflags.error_size in
+  let size = ref 0 in
+  let visited = ref [] in
+  let exception Big in
+  let rec walk (o : Obj.t) =
+    if Obj.is_block o && not (List.memq o !visited) then (
+      visited := o :: !visited;
+      let tag = Obj.tag o in
+      let scan =
+        tag < Obj.no_scan_tag && tag <> Obj.closure_tag && tag <> Obj.infix_tag
+      in
+      size := !size + if scan then 1 + Obj.size o else 1;
+      if !size > limit then raise_notrace Big;
+      if scan then
+        for i = 0 to Obj.size o - 1 do
+          walk (Obj.field o i)
+        done)
+  in
+  if limit <= 0 then false
+  else
+    try
+      walk (Obj.repr obj);
+      false
+    with Big -> true
 
 let report_error ppf errs =
   if errs = [] then ()
   else
-    let errs, err = split_last errs in
+    let errs, err = Ext_list.split_at_last errs in
     let pe = ref true in
     let include_err' ppf ((_, _, obj) as err) =
       if not (is_big obj) then fprintf ppf "%a@ " include_err err

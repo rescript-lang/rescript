@@ -34,7 +34,7 @@ let with_source_loc loc (exp : J.expression) =
 
 let rec source_loc_of_lam (lam : Lambda.t) =
   match lam with
-  | Lapply {ap_info = {ap_loc}} -> Some ap_loc
+  | Lapply {ap_loc} -> Some ap_loc
   | Lprim {loc} | Lfunction {loc} -> Some loc
   | Llet (_, _, arg, body) -> (
     match source_loc_of_lam arg with
@@ -278,8 +278,8 @@ let compile output_prefix =
   let hoisted_external_field_name primitive args =
     match extract_field_path [] primitive args with
     | Some (id, (_ :: _ :: _ as segments)) ->
-      Ext_option.map (Lam_compile_env.find_hoisted_external_export id segments)
-        (fun name -> (id, name))
+      Lam_compile_env.find_hoisted_external_export id segments
+      |> Option.map (fun name -> (id, name))
     | Some (_, ([] | [_])) | None -> None
   in
   let rec compile_external_field (* Like [List.empty]*)
@@ -356,12 +356,12 @@ let compile output_prefix =
                appinfo)
           fn args
       in
-      let expression = with_source_loc appinfo.ap_info.ap_loc expression in
+      let expression = with_source_loc appinfo.ap_loc expression in
       Js_output.output_of_block_and_expression lambda_cxt.continuation args_code
         expression
   (*
-    The second return values are values which need to be wrapped using
-   [update_dummy]
+    The second return value holds declarations, such as [dummy_obj]
+   placeholders, that are emitted before the bindings
 
    Invariant:  jmp_table can not across function boundary,
        here we share env
@@ -1606,7 +1606,7 @@ let compile output_prefix =
       | _ ->
         Js_output.output_of_block_and_expression lambda_cxt.continuation
           args_code
-          (with_source_loc appinfo.ap_info.ap_loc
+          (with_source_loc appinfo.ap_loc
              (E.call
                 ~info:
                   (call_info_of_apply lambda_cxt.meta appinfo.ap_transformed_jsx
@@ -1626,7 +1626,7 @@ let compile output_prefix =
       in
       let args_code : J.block = List.concat args_block in
       let exp =
-        (* TODO: all can be done in [compile_primitive] *)
+        (* TODO: all can be done in [Lam_compile_primitive.translate] *)
         Lam_compile_primitive.translate output_prefix loc lambda_cxt primitive
           args_expr
       in
@@ -1862,8 +1862,6 @@ let compile output_prefix =
          it requires compile args first (register that some objects are jsidentifiers)
          and compile body wiht such effect.
          So here we should compile [id_args] first, then [body] later.
-         Note it has some side effect over cache number as well, mostly the value of
-         [Caml_primitive["caml_get_public_method"](x,hash_tab, number)]
 
          To fix this,
          1. scan the lambda layer first, register js identifier before proceeding

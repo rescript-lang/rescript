@@ -46,7 +46,6 @@ let f_02 = xs =>
     Console.log("x")
   })
 let f_03 = (xs, u) => hi(u)
-/* arity adjust to [0] [ function (){return u (0)}] */
 
 let h = (x, y, z) => map2(x, y, z)
 

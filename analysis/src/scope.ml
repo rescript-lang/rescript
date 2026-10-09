@@ -4,19 +4,6 @@ type t = item list
 
 open Shared_types.Scope_types
 
-let item_to_string item =
-  let str s = if s = "" then "\"\"" else s in
-  let list l = "[" ^ (l |> List.map str |> String.concat ", ") ^ "]" in
-  match item with
-  | Constructor (s, loc) -> "Constructor " ^ s ^ " " ^ Loc.to_string loc
-  | Field (s, loc) -> "Field " ^ s ^ " " ^ Loc.to_string loc
-  | Open sl -> "Open " ^ list sl
-  | Module (s, loc) -> "Module " ^ s ^ " " ^ Loc.to_string loc
-  | Value (s, loc, _, _) -> "Value " ^ s ^ " " ^ Loc.to_string loc
-  | Type (s, loc) -> "Type " ^ s ^ " " ^ Loc.to_string loc
-  | Include (s, loc) -> "Include " ^ s ^ " " ^ Loc.to_string loc
-[@@live]
-
 let create () : t = []
 let add_constructor ~name ~loc x = Constructor (name, loc) :: x
 let add_field ~name ~loc x = Field (name, loc) :: x
@@ -24,14 +11,6 @@ let add_module ~name ~loc x = Module (name, loc) :: x
 let add_open ~lid x =
   Open (Utils.flatten_long_ident lid @ ["place holder"]) :: x
 let add_value ~name ~loc ?context_path x =
-  let show_debug = !Cfg.debug_follow_ctx_path in
-  (if show_debug then
-     match context_path with
-     | None -> Printf.printf "adding value '%s', no ctxPath\n" name
-     | Some context_path ->
-       if show_debug then
-         Printf.printf "adding value '%s' with ctxPath: %s\n" name
-           (Shared_types.Completable.context_path_to_string context_path));
   Value (name, loc, context_path, x) :: x
 let add_type ~name ~loc x = Type (name, loc) :: x
 let add_include ~name ~loc x = Include (name, loc) :: x

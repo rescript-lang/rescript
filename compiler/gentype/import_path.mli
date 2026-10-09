@@ -3,7 +3,6 @@ open Gentype_common
 type t
 
 val bs_curry_path : config:Config.t -> t
-val chop_extension_safe : t -> t [@@live]
 val dump : t -> string
 
 (* Escape a semantic import path for a single-quoted JavaScript/TypeScript

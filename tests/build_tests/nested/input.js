@@ -21,6 +21,7 @@ assert.equal(content.match(/a0_main/g)?.length, 1);
 assert.equal(content.match(/B0_main/g)?.length, 2);
 assert.equal(content.match(/b0_main/g)?.length, 1);
 
-const mod = await import("./src/demo.js");
+// src/demo.js is a build output tsc cannot resolve, so the URL is computed at run time
+const mod = await import(new URL("./src/demo.js", import.meta.url).href);
 assert.equal(mod.v, 4, "nested");
 await execClean();

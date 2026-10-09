@@ -3,7 +3,6 @@ use crate::config::Config;
 use crate::helpers;
 use crate::project_context::ProjectContext;
 use anyhow::anyhow;
-use std::ffi::OsString;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
@@ -105,7 +104,7 @@ impl StrippedVerbatimPath for PathBuf {
     }
 }
 
-pub trait LexicalAbsolute {
+trait LexicalAbsolute {
     fn to_lexical_absolute(&self) -> std::io::Result<PathBuf>;
 }
 
@@ -129,7 +128,7 @@ impl LexicalAbsolute for Path {
     }
 }
 
-pub fn package_path(root: &Path, package_name: &str) -> PathBuf {
+fn package_path(root: &Path, package_name: &str) -> PathBuf {
     root.join("node_modules").join(package_name)
 }
 
@@ -321,10 +320,6 @@ fn add_suffix(base: &str, namespace: &packages::Namespace) -> String {
     }
 }
 
-pub fn module_name_with_namespace(module_name: &str, namespace: &packages::Namespace) -> String {
-    capitalize(&add_suffix(module_name, namespace))
-}
-
 // this doesn't capitalize the module name! if the rescript name of the file is "foo.res" the
 // compiler assets are foo-Namespace.cmt and foo-Namespace.cmj, but the module name is Foo
 pub fn file_path_to_compiler_asset_basename(path: &Path, namespace: &packages::Namespace) -> String {
@@ -353,7 +348,7 @@ pub fn create_path_for_path(path: &Path) {
     fs::DirBuilder::new().recursive(true).create(path).unwrap();
 }
 
-pub fn get_bin_dir() -> PathBuf {
+fn get_bin_dir() -> PathBuf {
     let current_exe_path = std::env::current_exe().expect("Could not get current executable path");
     current_exe_path
         .parent()
@@ -371,12 +366,6 @@ pub fn get_bsc() -> PathBuf {
         .canonicalize()
         .expect("Could not get bsc path, did you set environment variable RESCRIPT_BSC_EXE ?")
         .to_stripped_verbatim_path()
-}
-
-pub fn string_ends_with_any(s: &Path, suffixes: &[&str]) -> bool {
-    suffixes
-        .iter()
-        .any(|&suffix| s.extension().unwrap_or(&OsString::new()).to_str().unwrap_or("") == suffix)
 }
 
 fn path_to_ast_extension(path: &Path) -> &str {
@@ -409,13 +398,6 @@ pub fn get_compiler_asset(
     package
         .get_ocaml_build_path()
         .join(format!("{basename}.{extension}"))
-}
-
-pub fn canonicalize_string_path(path: &str) -> Option<PathBuf> {
-    Path::new(path)
-        .canonicalize()
-        .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-        .ok()
 }
 
 pub fn get_bs_compiler_asset(

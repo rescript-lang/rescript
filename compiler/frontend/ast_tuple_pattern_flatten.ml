@@ -60,7 +60,8 @@ let flattern_tuple_pattern_vb (self : Ast_mapper.mapper)
   in
   let pvb_expr = self.expr self vb.pvb_expr in
   let pvb_attributes = self.attributes self vb.pvb_attributes in
-  match (pvb_constraint, pvb_pat.ppat_desc, pvb_expr.pexp_desc) with
+  let pvb_expr_desc = (Ast_payload.unwrap_braces pvb_expr).pexp_desc in
+  match (pvb_constraint, pvb_pat.ppat_desc, pvb_expr_desc) with
   | Some _, _, _ ->
     {pvb_pat; pvb_expr; pvb_constraint; pvb_loc = vb.pvb_loc; pvb_attributes}
     :: acc

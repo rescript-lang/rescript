@@ -1,5 +1,3 @@
-module String_set = Set.Make (String)
-
 let cmt_check_annotations ~check_annotation input_cmt =
   match input_cmt.Cmt_format.cmt_annots with
   | Implementation structure ->

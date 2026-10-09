@@ -903,7 +903,6 @@ let check_well_founded env loc path to_check ty =
   let rec check ty0 parents ty =
     let ty = Btype.repr ty in
     if Type_set.mem ty parents then
-      (*Format.eprintf "@[%a@]@." Printtyp.raw_type_expr ty;*)
       if
         match ty0.desc with
         | Tconstr (p, _, _) -> Path.same p path
@@ -1527,15 +1526,10 @@ let transl_type_decl env rec_flag sdecl_list =
     List.map2 transl_declaration sdecl_list (List.map id_slots id_list)
   in
   let inline_types =
-    tdecls
-    |> List.filter (fun tdecl ->
-        tdecl.typ_attributes
-        |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
-            txt = "res.inlineRecordDefinition")
-        |> Option.is_some)
-    |> List.filter_map (fun tdecl ->
-        match tdecl.typ_type.type_kind with
-        | Type_record (labels, _) ->
+    List.combine sdecl_list tdecls
+    |> List.filter_map (fun (sdecl, tdecl) ->
+        match (sdecl.ptype_origin, tdecl.typ_type.type_kind) with
+        | Inline_record_definition, Type_record (labels, _) ->
           Some (Record {type_name = tdecl.typ_name.txt; labels})
         | _ -> None)
   in

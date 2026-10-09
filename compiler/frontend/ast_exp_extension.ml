@@ -56,11 +56,7 @@ let handle_extension e (_self : Ast_mapper.mapper)
                | Some msg -> " - Todo: " ^ msg)) );
       ]
   | "ffi" -> Ast_exp_handle_external.handle_ffi ~loc ~payload
-  | "raw" -> Ast_exp_handle_external.handle_raw ~kind:Raw_exp loc payload
-  | "re" ->
-    Exp.constraint_ ~loc
-      (Ast_exp_handle_external.handle_raw ~kind:Raw_re loc payload)
-      (Ast_comb.to_regexp_type loc)
+  | "raw" -> Ast_exp_handle_external.handle_raw loc payload
   | "debugger" ->
     {e with pexp_desc = Ast_exp_handle_external.handle_debugger loc payload}
   | _ -> e

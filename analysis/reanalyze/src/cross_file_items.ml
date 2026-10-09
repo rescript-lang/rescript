@@ -73,28 +73,6 @@ let add_optional_arg_value_escape (b : builder) ~pos_from ~pos_to =
 let add_coercion (b : builder) ~source_type_paths ~target_type_paths =
   b.coercions <- {source_type_paths; target_type_paths} :: b.coercions
 
-(** {2 Merge API} *)
-
-let merge_all (builders : builder list) : t =
-  let exception_refs =
-    builders |> List.concat_map (fun b -> b.exception_refs)
-  in
-  let optional_arg_calls =
-    builders |> List.concat_map (fun b -> b.optional_arg_calls)
-  in
-  let function_refs = builders |> List.concat_map (fun b -> b.function_refs) in
-  let optional_arg_value_escapes =
-    builders |> List.concat_map (fun b -> b.optional_arg_value_escapes)
-  in
-  let coercions = builders |> List.concat_map (fun b -> b.coercions) in
-  {
-    exception_refs;
-    optional_arg_calls;
-    function_refs;
-    optional_arg_value_escapes;
-    coercions;
-  }
-
 (** {2 Builder extraction for reactive merge} *)
 
 let builder_to_t (builder : builder) : t =

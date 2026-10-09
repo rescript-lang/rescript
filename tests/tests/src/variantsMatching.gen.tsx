@@ -15,6 +15,10 @@ export type MyNullable_t<a> = null | undefined | a;
 
 export type MyNullableExtended_t<a> = null | undefined | "WhyNotAnotherOne" | a;
 
-export type UntaggedWithBool_t = string | number | boolean | string;
+export type UntaggedWithBool_t = 
+    string
+  | number
+  | boolean
+  | { readonly name: string };
 
 export type UntaggedWithTuple_t = string | [number, number, string];

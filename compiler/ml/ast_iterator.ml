@@ -247,6 +247,7 @@ module M = struct
       sub.module_type sub mty
     | Pmod_unpack e -> sub.expr sub e
     | Pmod_extension x -> sub.extension sub x
+    | Pmod_await m -> sub.module_expr sub m
 
   let iter_structure_item sub {pstr_loc = loc; pstr_desc = desc} =
     sub.location sub loc;
@@ -288,6 +289,9 @@ module E = struct
     sub.location sub loc;
     sub.attributes sub attrs;
     match desc with
+    | Pexp_braces {expr; braces_loc} ->
+      sub.location sub braces_loc;
+      sub.expr sub expr
     | Pexp_ident x -> iter_loc sub x
     | Pexp_constant _ -> ()
     | Pexp_let (_r, vbs, e) ->
@@ -341,6 +345,10 @@ module E = struct
       sub.expr sub e1;
       sub.expr sub e2;
       iter_opt (sub.expr sub) e3
+    | Pexp_ternary (e1, e2, e3) ->
+      sub.expr sub e1;
+      sub.expr sub e2;
+      sub.expr sub e3
     | Pexp_sequence (e1, e2) ->
       sub.expr sub e1;
       sub.expr sub e2
@@ -361,7 +369,7 @@ module E = struct
       sub.pat sub p;
       sub.expr sub e1;
       sub.expr sub e2
-    | Pexp_coerce (e, (), t2) ->
+    | Pexp_coerce (e, t2) ->
       sub.expr sub e;
       sub.typ sub t2
     | Pexp_constraint (e, t) ->
@@ -390,6 +398,7 @@ module E = struct
       iter_loc sub lid;
       sub.expr sub e
     | Pexp_extension x -> sub.extension sub x
+    | Pexp_regexp _ -> ()
     | Pexp_template {values} -> List.iter (sub.expr sub) values
     | Pexp_tagged_template {tag; values} ->
       sub.expr sub tag;
@@ -455,13 +464,10 @@ module P = struct
     | Ppat_constraint (p, t) ->
       sub.pat sub p;
       sub.typ sub t
-    | Ppat_type s -> iter_loc sub s
+    | Ppat_type s | Ppat_variant_spread s -> iter_loc sub s
     | Ppat_unpack s -> iter_loc sub s
     | Ppat_exception p -> sub.pat sub p
     | Ppat_extension x -> sub.extension sub x
-    | Ppat_open (lid, p) ->
-      iter_loc sub lid;
-      sub.pat sub p
 end
 
 (* Now, a generic AST mapper, to be extended to cover all kinds and

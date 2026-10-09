@@ -1,9 +1,7 @@
 (** Immutable record tracking optional argument usage.
     - unused: args that have never been passed
-    - alwaysUsed: args that are always passed (when count > 0)
+    - always_used: args that are always passed (when count > 0)
     - count: number of calls observed *)
-
-module String_set = Set.Make (String)
 
 type t = {count: int; unused: String_set.t; always_used: String_set.t}
 
@@ -31,14 +29,11 @@ let apply_call ~arg_names ~arg_names_maybe x =
   {count = x.count + 1; unused; always_used}
 
 (** Combine two optional args states (for function references).
-    Returns a pair of updated states with intersected unused/alwaysUsed. *)
+    Returns a pair of updated states with intersected unused/always_used. *)
 let combine_pair x y =
   let unused = String_set.inter x.unused y.unused in
   let always_used = String_set.inter x.always_used y.always_used in
   ({x with unused; always_used}, {y with unused; always_used})
-
-let iter_unused f x = String_set.iter f x.unused
-let iter_always_used f x = String_set.iter (fun s -> f s x.count) x.always_used
 
 let fold_unused f x init = String_set.fold f x.unused init
 

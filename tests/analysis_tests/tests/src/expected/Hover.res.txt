@@ -34,7 +34,7 @@ Hover src/Hover.res 22:11
 }
 
 Hover src/Hover.res 26:6
-getLocItem #8: heuristic for JSX with at most one child
+get_loc_item #8: heuristic for JSX with at most one child
 heuristic for: [makeProps, make, createElement], give the loc of `make` 
 { "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
 
@@ -106,13 +106,13 @@ Hover src/Hover.res 77:7
 
 Hover src/Hover.res 91:10
 Nothing at that position. Now trying to use completion.
-posCursor:[91:10] posNoWhite:[91:8] Found expr:[88:2->91:9]
+pos_cursor:[91:10] pos_no_white:[91:8] Found expr:[88:2->91:9]
 JSX <Comp:[88:3->88:7] > _children:89:4
 null
 
 Hover src/Hover.res 98:10
 Nothing at that position. Now trying to use completion.
-posCursor:[98:10] posNoWhite:[98:9] Found expr:[95:2->98:10]
+pos_cursor:[98:10] pos_no_white:[98:9] Found expr:[95:2->98:10]
 JSX <Comp1:[95:3->95:8] > _children:96:4
 null
 
@@ -216,7 +216,7 @@ Hover src/Hover.res 167:22
 }
 
 Complete src/Hover.res 170:16
-posCursor:[170:16] posNoWhite:[170:15] Found expr:[170:5->170:16]
+pos_cursor:[170:16] pos_no_white:[170:15] Found expr:[170:5->170:16]
 Pexp_field [170:5->170:15] _:[176:2->170:16]
 Completable: Cpath Value[x1].content.""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -228,7 +228,7 @@ Path x1
 ContextPath Value[x1]->content
 ContextPath Value[x1]
 Path x1
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Hover.content
 Path content
 ContextPath Value[x1].content->
@@ -238,10 +238,10 @@ Path x1
 ContextPath Value[x1]->content
 ContextPath Value[x1]
 Path x1
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Hover.content
 Path content
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Hover.
 Path 
 [
@@ -258,7 +258,7 @@ Path
 ]
 
 Complete src/Hover.res 173:16
-posCursor:[173:16] posNoWhite:[173:15] Found expr:[173:5->173:16]
+pos_cursor:[173:16] pos_no_white:[173:15] Found expr:[173:5->173:16]
 Pexp_field [173:5->173:15] _:[176:2->173:16]
 Completable: Cpath Value[x2].content.""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -270,7 +270,7 @@ Path x2
 ContextPath Value[x2]->content
 ContextPath Value[x2]
 Path x2
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Hover.content
 Path content
 ContextPath Value[x2].content->
@@ -280,10 +280,10 @@ Path x2
 ContextPath Value[x2]->content
 ContextPath Value[x2]
 Path x2
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Hover.content
 Path content
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Hover.
 Path 
 [
@@ -300,7 +300,7 @@ Path
 ]
 
 Complete src/Hover.res 182:16
-posCursor:[182:16] posNoWhite:[182:15] Found expr:[182:5->182:16]
+pos_cursor:[182:16] pos_no_white:[182:15] Found expr:[182:5->182:16]
 Pexp_field [182:5->182:15] _:[187:0->182:16]
 Completable: Cpath Value[y1].content.""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -312,7 +312,7 @@ Path y1
 ContextPath Value[y1]->content
 ContextPath Value[y1]
 Path y1
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Hover.content
 Path content
 ContextPath Value[y1].content->
@@ -322,10 +322,10 @@ Path y1
 ContextPath Value[y1]->content
 ContextPath Value[y1]
 Path y1
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Hover.content
 Path content
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Hover.
 Path 
 [
@@ -342,7 +342,7 @@ Path
 ]
 
 Complete src/Hover.res 185:16
-posCursor:[185:16] posNoWhite:[185:15] Found expr:[185:5->185:16]
+pos_cursor:[185:16] pos_no_white:[185:15] Found expr:[185:5->185:16]
 Pexp_field [185:5->185:15] _:[187:0->185:16]
 Completable: Cpath Value[y2].content.""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -354,7 +354,7 @@ Path y2
 ContextPath Value[y2]->content
 ContextPath Value[y2]
 Path y2
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Hover.content
 Path content
 ContextPath Value[y2].content->
@@ -364,10 +364,10 @@ Path y2
 ContextPath Value[y2]->content
 ContextPath Value[y2]
 Path y2
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Hover.content
 Path content
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Hover.
 Path 
 [
@@ -401,7 +401,7 @@ Hover src/Hover.res 202:16
 
 Hover src/Hover.res 210:13
 Nothing at that position. Now trying to use completion.
-posCursor:[210:13] posNoWhite:[210:12] Found expr:[210:11->210:14]
+pos_cursor:[210:13] pos_no_white:[210:12] Found expr:[210:11->210:14]
 Pexp_ident usr:[210:11->210:14]
 Completable: Cpath Value[usr]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -435,7 +435,7 @@ Hover src/Hover.res 233:17
 
 Hover src/Hover.res 245:6
 Nothing at that position. Now trying to use completion.
-posCursor:[245:6] posNoWhite:[245:5] Found expr:[245:3->245:14]
+pos_cursor:[245:6] pos_no_white:[245:5] Found expr:[245:3->245:14]
 Pexp_field [245:3->245:4] someField:[245:5->245:14]
 Completable: Cpath Value[x].someField
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -446,7 +446,7 @@ Path x
 ContextPath Value[x]->someField
 ContextPath Value[x]
 Path x
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path Hover.someField
 Path someField
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -500,7 +500,7 @@ Hover src/Hover.res 268:42
 
 Hover src/Hover.res 272:23
 Nothing at that position. Now trying to use completion.
-posCursor:[272:23] posNoWhite:[272:22] Found expr:[272:22->272:25]
+pos_cursor:[272:23] pos_no_white:[272:22] Found expr:[272:22->272:25]
 Pexp_ident fff:[272:22->272:25]
 Completable: Cpath Value[fff]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -514,7 +514,7 @@ ContextPath string
 
 Hover src/Hover.res 275:33
 Nothing at that position. Now trying to use completion.
-posCursor:[275:33] posNoWhite:[275:32] Found expr:[275:31->275:40]
+pos_cursor:[275:33] pos_no_white:[275:32] Found expr:[275:31->275:40]
 Pexp_ident someField:[275:31->275:40]
 Completable: Cpath Value[someField]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
