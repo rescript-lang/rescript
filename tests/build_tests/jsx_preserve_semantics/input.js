@@ -44,12 +44,15 @@ function typeName(type) {
 
 /** @param {string} kind */
 function recordElement(kind) {
-  /**
-   * @param {unknown} type
-   * @param {unknown} props
-   * @param {unknown} [key]
-   */
-  return (type, props, key) => ({ kind, type: typeName(type), props, key });
+  // The argument count tells an explicit undefined key from an absent one
+  /** @param {unknown[]} args */
+  return (...args) => ({
+    kind,
+    type: typeName(args[0]),
+    props: args[1],
+    key: args[2],
+    argumentCount: args.length,
+  });
 }
 
 const jsxRuntime = {

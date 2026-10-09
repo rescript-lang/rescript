@@ -175,11 +175,6 @@ let is_empty_fragment ~fragment ~spread ~props ~key =
 
 let jsx_printable ~tag ~spread ~props ~(children : J.expression list option)
     ~key ~multi ~fragment =
-  let key =
-    match key with
-    | Some {J.expression_desc = Undefined {is_unit = false}} -> None
-    | _ -> key
-  in
   (* Cross-module inlining can bring an element from a preserve-mode module
      into one compiled without preserve mode *)
   !Js_config.jsx_preserve
@@ -615,11 +610,8 @@ and expression_desc cxt ~(level : int) f x : cxt =
       let props =
         Ext_list.map props (fun (name, value) -> (Js_op.Lit name, value))
       in
-      let key =
-        match key with
-        | None | Some {expression_desc = Undefined {is_unit = false}} -> []
-        | Some key -> [key]
-      in
+      (* An explicit undefined key is still passed, as by the call *)
+      let key = Option.to_list key in
       expression_desc cxt ~level f
         (Call
            ( callee,
@@ -1054,11 +1046,6 @@ and print_jsx cxt f ~(tag : J.expression) ~(spread : J.expression option)
     ~(props : (string * J.expression) list)
     ~(children : J.expression list option) ~(key : J.expression option)
     ~(fragment : bool) : cxt =
-  let key =
-    match key with
-    | Some {expression_desc = Undefined {is_unit = false}} -> None
-    | _ -> key
-  in
   let empty_fragment = is_empty_fragment ~fragment ~spread ~props ~key in
   let print_tag cxt =
     match tag.expression_desc with

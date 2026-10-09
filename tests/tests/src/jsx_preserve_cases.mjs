@@ -99,6 +99,10 @@ function localComp() {
   />;
 }
 
+let undefinedKey = <div
+  key={undefined}
+/>;
+
 export {
   AsProp,
   asProp,
@@ -117,5 +121,6 @@ export {
   Req,
   copySpread,
   localComp,
+  undefinedKey,
 }
 /*  Not a pure module */

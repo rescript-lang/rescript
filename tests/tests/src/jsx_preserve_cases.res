@@ -70,3 +70,6 @@ let localComp = () => {
   }
   <M a="a" b="b" />
 }
+
+// An explicit undefined key is still passed to the runtime
+let undefinedKey = <div key=?None />
