@@ -2,6 +2,13 @@ Inlay Hint src/InlayHintDict.res 1:34
 [
   {
     "kind": 1,
+    "label": ": option<int>",
+    "paddingLeft": true,
+    "paddingRight": false,
+    "position": { "character": 20, "line": 5 }
+  },
+  {
+    "kind": 1,
     "label": ": dict<int>",
     "paddingLeft": true,
     "paddingRight": false,

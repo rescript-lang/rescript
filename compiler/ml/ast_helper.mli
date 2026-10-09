@@ -103,6 +103,7 @@ module Pat : sig
     pattern record_element list ->
     closed_flag ->
     pattern
+  val dict : ?loc:loc -> ?attrs:attrs -> dict_pattern_entry list -> pattern
   val array : ?loc:loc -> ?attrs:attrs -> pattern list -> pattern
   val or_ : ?loc:loc -> ?attrs:attrs -> pattern -> pattern -> pattern
   val constraint_ : ?loc:loc -> ?attrs:attrs -> pattern -> core_type -> pattern

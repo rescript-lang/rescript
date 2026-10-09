@@ -1916,18 +1916,26 @@ let contains_extension pat =
   loop pat;
   !r
 
+(* A dict pattern: a record pattern of the [dict] type *)
+let is_dict_pattern (p : Typedtree.pattern) =
+  match p.pat_desc with
+  | Tpat_record _ -> (
+    match (Ctype.expand_head p.pat_env p.pat_type).desc with
+    | Tconstr (path, _, _) -> Path.same path Predef.path_dict
+    | _ -> false)
+  | _ -> false
+
 let contains_dict_pattern pat =
   let r = ref false in
   let rec loop p =
-    if Dict_type_helpers.has_dict_pattern_attribute p.pat_attributes then
-      r := true
+    if is_dict_pattern p then r := true
     else Typedtree.iter_pattern_desc loop p.pat_desc
   in
   loop pat;
   !r
 
 let rec opaque_dict_patterns pat =
-  if Dict_type_helpers.has_dict_pattern_attribute pat.pat_attributes then
+  if is_dict_pattern pat then
     {pat with pat_desc = Tpat_any; pat_extra = []; pat_attributes = []}
   else
     {

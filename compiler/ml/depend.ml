@@ -174,6 +174,8 @@ let rec add_pattern bv pat =
   | Ppat_construct (c, {txt = args}) ->
     add bv c;
     List.iter (add_pattern bv) args
+  | Ppat_dict entries ->
+    List.iter (fun {pdp_pattern} -> add_pattern bv pdp_pattern) entries
   | Ppat_record (pl, _, rest) ->
     List.iter
       (fun {lid = lbl; x = p} ->

@@ -16,7 +16,6 @@ val functor_type :
   * Parsetree.module_type
 
 val expr_is_await : Parsetree.expression -> bool
-val has_dict_pattern_attribute : Parsetree.attributes -> bool
 
 type dict_expr_part =
   | DictExprRows of Parsetree.expression
@@ -83,10 +82,7 @@ val parameters_should_hug : fun_param_kind list -> bool
 
 val should_indent_binary_expr : Parsetree.expression -> bool
 val should_inline_rhs_binary_expr : Parsetree.expression -> bool
-val has_printable_attributes : Parsetree.attributes -> bool
 val mod_expr_has_attributes : Parsetree.module_expr -> bool
-val partition_printable_attributes :
-  Parsetree.attributes -> Parsetree.attributes * Parsetree.attributes
 val is_doc_comment_attribute : Parsetree.attribute -> bool
 val partition_doc_comment_attributes :
   Parsetree.attributes -> Parsetree.attributes * Parsetree.attributes
@@ -133,8 +129,6 @@ val collect_or_pattern_chain : Parsetree.pattern -> Parsetree.pattern list
 
 val process_braces :
   Parsetree.expression -> Location.t option * Parsetree.expression
-
-val filter_parsing_attrs : Parsetree.attributes -> Parsetree.attributes
 
 val unwrap_braces : Parsetree.expression -> Parsetree.expression
 

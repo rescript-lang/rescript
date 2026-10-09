@@ -112,6 +112,16 @@ let rec print_pattern pattern ~pos ~indentation =
       |> List.map (fun pat -> "," ^ print_pattern pat ~pos ~indentation)
       |> String.concat "")
     ^ ")"
+  | Ppat_dict entries ->
+    "Ppat_dict(\n"
+    ^ (Ext_list.map entries (fun {pdp_key; pdp_pattern} ->
+           add_indentation (indentation + 1)
+           ^ str pdp_key.txt ^ ": "
+           ^ print_pattern pdp_pattern ~pos ~indentation:(indentation + 1))
+      |> String.concat "\n")
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | Ppat_record (fields, _, rest) ->
     "Ppat_record(\n"
     ^ add_indentation (indentation + 1)

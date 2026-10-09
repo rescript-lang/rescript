@@ -1667,11 +1667,15 @@ and parse_dict_pattern_row p =
   | String s ->
     let loc = mk_loc (Parser.start_pos p) (Parser.end_pos p) in
     Parser.next p;
-    let field_name = Location.mkloc (Longident.Lident s) loc in
     Parser.expect Colon p;
     let optional = parse_optional_label p in
     let pat = parse_pattern p in
-    Some {Parsetree.lid = field_name; x = pat; opt = optional}
+    Some
+      {
+        Parsetree.pdp_key = Location.mkloc s loc;
+        pdp_pattern = pat;
+        pdp_optional = optional;
+      }
   | _ -> None
 
 and parse_dict_pattern ~start_pos ~attrs (p : Parser.t) =
@@ -1681,9 +1685,7 @@ and parse_dict_pattern ~start_pos ~attrs (p : Parser.t) =
   in
   Parser.expect Rbrace p;
   let loc = mk_loc start_pos (Parser.position p) in
-  Ast_helper.Pat.record ~loc
-    ~attrs:((Location.mknoloc "res.dictPattern", PStr []) :: attrs)
-    fields Open
+  Ast_helper.Pat.dict ~loc ~attrs fields
 
 and parse_array_pattern ~attrs p =
   let start_pos = Parser.start_pos p in

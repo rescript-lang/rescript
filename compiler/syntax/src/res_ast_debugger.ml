@@ -896,6 +896,22 @@ module Sexp_ast = struct
             string lbl;
             Sexp.list (map_empty ~f:pattern patterns);
           ]
+      | Ppat_dict entries ->
+        Sexp.list
+          [
+            Sexp.atom "Ppat_dict";
+            Sexp.list
+              (map_empty
+                 ~f:(fun {Parsetree.pdp_key; pdp_pattern; pdp_optional} ->
+                   Sexp.list
+                     [
+                       string pdp_key.txt;
+                       Sexp.atom
+                         (if pdp_optional then "optional" else "required");
+                       pattern pdp_pattern;
+                     ])
+                 entries);
+          ]
       | Ppat_record (rows, flag, rest) ->
         Sexp.list
           [

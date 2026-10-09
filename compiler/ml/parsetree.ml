@@ -201,6 +201,13 @@ and record_pat_rest = {
   rest_type: core_type option;
 }
 
+(* "k": P, or "k": ?P *)
+and dict_pattern_entry = {
+  pdp_key: string loc;
+  pdp_pattern: pattern;
+  pdp_optional: bool;
+}
+
 and pattern_desc =
   | Ppat_any (* _ *)
   | Ppat_var of string loc (* x *)
@@ -247,6 +254,7 @@ and pattern_desc =
        Invariant: n > 0
     *)
   | Ppat_array of pattern list (* [| P1; ...; Pn |] *)
+  | Ppat_dict of dict_pattern_entry list (* dict{"k1": P1, "k2": ?P2} *)
   | Ppat_or of pattern * pattern (* P1 | P2 *)
   | Ppat_constraint of pattern * core_type (* (P : T) *)
   | Ppat_type of Longident.t loc (* #...tconst *)
