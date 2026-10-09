@@ -197,6 +197,8 @@ end = struct
       | Some pat -> iter_pattern pat)
     | Tpat_record (list, _closed, _rest) ->
       List.iter (fun (_, _, pat, _) -> iter_pattern pat) list
+    | Tpat_dict entries ->
+      List.iter (fun {tdp_pattern} -> iter_pattern tdp_pattern) entries
     | Tpat_array list -> List.iter iter_pattern list
     | Tpat_or (p1, p2, _) ->
       iter_pattern p1;

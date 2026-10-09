@@ -312,3 +312,20 @@ module Has = {
     #boolean,
   )
 }
+
+module PatternKeys = {
+  // A key matched in several cases is checked as one field
+  let classify = d =>
+    switch d {
+    | dict{"a": 1} => "one"
+    | dict{"a": 2, "b": _} => "two with b"
+    | dict{"a": ?None} => "no a"
+    | _ => "other"
+    }
+
+  Test.run(__POS_OF__("dict pattern - first case"), classify(dict{"a": 1}), eq, "one")
+  Test.run(__POS_OF__("dict pattern - two keys"), classify(dict{"a": 2, "b": 0}), eq, "two with b")
+  Test.run(__POS_OF__("dict pattern - missing key"), classify(dict{"a": 2}), eq, "other")
+  Test.run(__POS_OF__("dict pattern - absent key"), classify(dict{"b": 0}), eq, "no a")
+  Test.run(__POS_OF__("dict pattern - fallback"), classify(dict{"a": 3}), eq, "other")
+}

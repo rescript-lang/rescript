@@ -97,6 +97,10 @@ and pattern_desc =
 
             Invariant: n > 0 unless this is a rest-only record pattern
          *)
+  | Tpat_dict of dict_pattern_entry list
+      (** dict{"k1": P1, ..., "kn": ?Pn}
+
+            Entries are in source order, and their keys are distinct. *)
   | Tpat_array of pattern list  (** [| P1; ...; Pn |] *)
   | Tpat_or of pattern * pattern * row_desc option
       (** P1 | P2
@@ -104,6 +108,14 @@ and pattern_desc =
             [row_desc] = [Some _] when translating [Ppat_type _],
                          [None] otherwise.
          *)
+
+and dict_pattern_entry = {
+  tdp_key: string loc;
+  tdp_pattern: pattern;
+      (** Matches the key's value as an option, [None] when the key is absent:
+          [Some(P)] for ["k": P], and [P] itself for ["k": ?P] *)
+  tdp_optional: bool;  (** Whether the entry is written ["k": ?P] *)
+}
 
 and expression = {
   exp_desc: expression_desc;

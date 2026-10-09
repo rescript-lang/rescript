@@ -59,8 +59,15 @@ and pattern_desc =
       (Longident.t loc * label_description * pattern * bool (* optional *)) list
       * closed_flag
       * record_pat_rest option
+  | Tpat_dict of dict_pattern_entry list
   | Tpat_array of pattern list
   | Tpat_or of pattern * pattern * row_desc option
+
+and dict_pattern_entry = {
+  tdp_key: string loc;
+  tdp_pattern: pattern;
+  tdp_optional: bool;
+}
 
 and expression = {
   exp_desc: expression_desc;
@@ -461,6 +468,7 @@ let iter_pattern_desc f = function
   | Tpat_variant (_, pat, _) -> may f pat
   | Tpat_record (lbl_pat_list, _, _rest) ->
     List.iter (fun (_, _, pat, _) -> f pat) lbl_pat_list
+  | Tpat_dict entries -> List.iter (fun {tdp_pattern} -> f tdp_pattern) entries
   | Tpat_array patl -> List.iter f patl
   | Tpat_or (p1, p2, _) ->
     f p1;
@@ -474,6 +482,11 @@ let map_pattern_desc f d =
   | Tpat_record (lpats, closed, rest) ->
     Tpat_record
       (List.map (fun (lid, l, p, o) -> (lid, l, f p, o)) lpats, closed, rest)
+  | Tpat_dict entries ->
+    Tpat_dict
+      (List.map
+         (fun entry -> {entry with tdp_pattern = f entry.tdp_pattern})
+         entries)
   | Tpat_construct (lid, c, pats) -> Tpat_construct (lid, c, List.map f pats)
   | Tpat_array pats -> Tpat_array (List.map f pats)
   | Tpat_variant (x1, Some p1, x2) -> Tpat_variant (x1, Some (f p1), x2)

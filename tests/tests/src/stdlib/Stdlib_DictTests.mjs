@@ -574,6 +574,90 @@ let Has = {
   dict: dict
 };
 
+function classify(d) {
+  let match = d.a;
+  if (match !== 1) {
+    if (match !== 2) {
+      if (match !== undefined) {
+        return "other";
+      } else {
+        return "no a";
+      }
+    } else if (d.b !== undefined) {
+      return "two with b";
+    } else {
+      return "other";
+    }
+  } else {
+    return "one";
+  }
+}
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    326,
+    22,
+    49
+  ],
+  "dict pattern - first case"
+], classify({
+  a: 1
+}), eq, "one");
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    327,
+    22,
+    47
+  ],
+  "dict pattern - two keys"
+], classify({
+  a: 2,
+  b: 0
+}), eq, "two with b");
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    328,
+    22,
+    50
+  ],
+  "dict pattern - missing key"
+], classify({
+  a: 2
+}), eq, "other");
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    329,
+    22,
+    49
+  ],
+  "dict pattern - absent key"
+], classify({
+  b: 0
+}), eq, "no a");
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    330,
+    22,
+    47
+  ],
+  "dict pattern - fallback"
+], classify({
+  a: 3
+}), eq, "other");
+
+let PatternKeys = {
+  classify: classify
+};
+
 let three = 3;
 
 export {
@@ -584,5 +668,6 @@ export {
   intDict,
   PatternMatching,
   Has,
+  PatternKeys,
 }
 /*  Not a pure module */

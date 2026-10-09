@@ -234,6 +234,9 @@ and pattern i ppf x =
       line i ppf "Tpat_record\n";
       list i longident_x_pattern ppf l;
       Option.iter (record_pat_rest i ppf) rest
+    | Tpat_dict l ->
+      line i ppf "Tpat_dict\n";
+      list i dict_pattern_entry ppf l
     | Tpat_array l ->
       line i ppf "Tpat_array\n";
       list i pattern ppf l
@@ -700,6 +703,10 @@ and label_decl i ppf
 and longident_x_pattern i ppf (li, _, p, opt) =
   line i ppf "%a%s\n" fmt_longident li (if opt then "?" else "");
   pattern (i + 1) ppf p
+
+and dict_pattern_entry i ppf {tdp_key; tdp_pattern; tdp_optional} =
+  line i ppf "%S%s\n" tdp_key.txt (if tdp_optional then "?" else "");
+  pattern (i + 1) ppf tdp_pattern
 
 and dict_entry i ppf = function
   | Tdict_entry (key, e) ->

@@ -47,6 +47,7 @@ type error =
       label: string;
       jsx_component_info: jsx_prop_error_info option;
     }
+  | Dict_key_multiply_defined of string
   | Labels_missing of {
       labels: string list;
       jsx_component_info: jsx_prop_error_info option;
@@ -571,7 +572,8 @@ let rec build_as_type env p =
     | Some row ->
       let row = row_repr row in
       newty (Tvariant {row with row_closed = false; row_more = newvar ()}))
-  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_array _ -> p.pat_type
+  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_dict _ | Tpat_array _ ->
+    p.pat_type
 
 let build_or_pat env loc lid =
   let path, decl = Typetexp.find_type env lid.loc lid.txt in
@@ -871,8 +873,6 @@ module Name_choice (Name : sig
   val get_name : t -> string
   val get_type : t -> type_expr
   val get_descrs : Env.type_descriptions -> t list
-
-  val unsafe_do_not_use__add_with_name : t -> string -> t
   val unbound_name_error :
     ?from_type:type_expr -> Env.t -> Longident.t loc -> 'a
 end) =
@@ -887,29 +887,17 @@ struct
   let lookup_from_type env tpath (lid : Longident.t loc) : Name.t =
     let descrs = get_descrs (Env.find_type_descrs tpath env) in
     Env.mark_type_used env (Path.last tpath) (Env.find_type tpath env);
-    if Path.same tpath Predef.path_dict then
-      (* [dict] Handle directing any label lookup to the magic dict field. *)
-      match lid.txt with
-      | Longident.Lident s ->
-        let x =
-          List.find
-            (fun nd -> get_name nd = Dict_type_helpers.dict_magic_field_name)
-            descrs
-        in
-        unsafe_do_not_use__add_with_name x s
-      | _ -> raise Not_found
-    else
-      match lid.txt with
-      | Longident.Lident s -> (
-        try List.find (fun nd -> get_name nd = s) descrs
-        with Not_found ->
-          let names = List.map get_name descrs in
-          raise
-            (Error
-               ( lid.loc,
-                 env,
-                 Wrong_name ("", newvar (), type_kind, tpath, s, names) )))
-      | _ -> raise Not_found
+    match lid.txt with
+    | Longident.Lident s -> (
+      try List.find (fun nd -> get_name nd = s) descrs
+      with Not_found ->
+        let names = List.map get_name descrs in
+        raise
+          (Error
+             ( lid.loc,
+               env,
+               Wrong_name ("", newvar (), type_kind, tpath, s, names) )))
+    | _ -> raise Not_found
 
   let rec unique eq acc = function
     | [] -> List.rev acc
@@ -992,23 +980,6 @@ module Label = Name_choice (struct
   let type_kind = "record"
   let get_name lbl = lbl.lbl_name
 
-  let unsafe_do_not_use__add_with_name lbl name =
-    (* [dict] This is used in dicts and shouldn't be used anywhere else.
-       It adds a new field to an existing record type, to "fool" the pattern
-       matching into thinking the label exists. *)
-    let l =
-      {
-        lbl with
-        lbl_name = name;
-        lbl_runtime_name = name;
-        lbl_pos = Array.length lbl.lbl_all;
-        lbl_repres = Record_regular;
-      }
-    in
-    let lbl_all_list = Array.to_list lbl.lbl_all @ [l] in
-    let lbl_all = Array.of_list lbl_all_list in
-    lbl_all |> Array.iter (fun lbl -> lbl.lbl_all <- lbl_all);
-    l
   let get_type lbl = lbl.lbl_res
   let get_descrs = snd
   let unbound_name_error = Typetexp.unbound_label_error
@@ -1188,7 +1159,6 @@ module Constructor = Name_choice (struct
   let get_name cstr = cstr.cstr_name
   let get_type cstr = cstr.cstr_res
 
-  let unsafe_do_not_use__add_with_name _cstr _name = assert false
   let get_descrs = fst
   let unbound_name_error = Typetexp.unbound_constructor_error
 end)
@@ -1240,6 +1210,19 @@ let normalize_constructor_pat_args ~arity {Location.txt = sargs; loc} =
   | [{ppat_desc = Ppat_tuple args}] when arity > 1 -> args
   | _ :: _ :: _ when arity = 1 -> [Ast_helper.Pat.tuple ~loc sargs]
   | sargs -> sargs
+
+(* A constructor of a counter-example rebuilt by [Parmatch.Conv] *)
+let is_from_parmatch (pat : Parsetree.pattern) =
+  match pat.ppat_desc with
+  | Ppat_construct ({txt = Lident s}, _) ->
+    String.length s >= 2 && s.[0] = '#' && s.[1] = '$'
+  | _ -> false
+
+(* The pattern of an optional field: [Some(pat)] *)
+let wrap_some (pat : Parsetree.pattern) =
+  let lid = mknoloc Longident.(Ldot (Lident "*predef*", "Some")) in
+  Ast_helper.Pat.construct ~loc:pat.ppat_loc lid
+    (Location.mkloc [pat] pat.ppat_loc)
 
 (* type_pat propagates the expected type as well as maps for
    constructors and labels.
@@ -1550,37 +1533,48 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     match (sarg, arg_type) with
     | Some p, [ty] -> type_pat p ty (fun p -> k (Some p))
     | _ -> k None)
-  | (Ppat_record _ | Ppat_dict _) as record_or_dict ->
-    let is_dict, lid_sp_list, closed, rest =
-      match record_or_dict with
-      | Ppat_record (lid_sp_list, closed, rest) ->
-        (false, lid_sp_list, closed, rest)
-      | Ppat_dict entries ->
-        (* A dict pattern is typed as a record pattern of the [dict] type,
-           whose keys are its labels, see [Dict_type_helpers] *)
-        ( true,
-          List.map
-            (fun {pdp_key; pdp_pattern; pdp_optional} ->
-              {
-                lid = {pdp_key with txt = Longident.Lident pdp_key.txt};
-                x = pdp_pattern;
-                opt = pdp_optional;
-              })
-            entries,
-          Asttypes.Open,
-          None )
-      | _ -> assert false
+  | Ppat_dict entries ->
+    (* An entry matches its key's value as an option, [None] when the key is
+       absent, like an optional record field *)
+    let seen = Hashtbl.create 7 in
+    List.iter
+      (fun {pdp_key} ->
+        if Hashtbl.mem seen pdp_key.txt then
+          raise
+            (Error (pdp_key.loc, !env, Dict_key_multiply_defined pdp_key.txt))
+        else Hashtbl.add seen pdp_key.txt ())
+      entries;
+    let ty_value = newvar () in
+    let ty_option =
+      newty (Tconstr (Predef.path_option, [ty_value], ref Mnil))
     in
+    let type_entry {pdp_key; pdp_pattern; pdp_optional} k =
+      let sarg =
+        if pdp_optional || is_from_parmatch pdp_pattern then pdp_pattern
+        else wrap_some pdp_pattern
+      in
+      type_pat sarg ty_option (fun tdp_pattern ->
+          k {tdp_key = pdp_key; tdp_pattern; tdp_optional = pdp_optional})
+    in
+    map_fold_cont type_entry entries (fun entries ->
+        unify_pat_types loc !env
+          (newty (Tconstr (Predef.path_dict, [ty_value], ref Mnil)))
+          expected_ty;
+        rp k
+          {
+            pat_desc = Tpat_dict entries;
+            pat_loc = loc;
+            pat_extra = [];
+            pat_type = expected_ty;
+            pat_attributes = sp.ppat_attributes;
+            pat_env = !env;
+          })
+  | Ppat_record (lid_sp_list, closed, rest) ->
     let opath, record_ty =
-      if is_dict then
-        ( (* [dict] Make sure dict patterns are inferred as actual dicts *)
-          Some (Predef.path_dict, Predef.path_dict),
-          newgenty (Tconstr (Predef.path_dict, [newvar ()], ref Mnil)) )
-      else
-        try
-          let p0, p, _, _ = extract_concrete_record !env expected_ty in
-          (Some (p0, p), expected_ty)
-        with Not_found -> (None, newvar ())
+      try
+        let p0, p, _, _ = extract_concrete_record !env expected_ty in
+        (Some (p0, p), expected_ty)
+      with Not_found -> (None, newvar ())
     in
     let get_jsx_component_error_info =
       get_jsx_component_error_info ~extract_concrete_typedecl opath !env
@@ -1590,17 +1584,10 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
       let exp_optional_attr =
         check_optional_attr !env ld optional pat.ppat_loc
       in
-      let is_from_pamatch =
-        match pat.ppat_desc with
-        | Ppat_construct ({txt = Lident s}, _) ->
-          String.length s >= 2 && s.[0] = '#' && s.[1] = '$'
-        | _ -> false
-      in
-      if label_is_optional ld && (not exp_optional_attr) && not is_from_pamatch
-      then
-        let lid = mknoloc Longident.(Ldot (Lident "*predef*", "Some")) in
-        Ast_helper.Pat.construct ~loc:pat.ppat_loc lid
-          (Location.mkloc [pat] pat.ppat_loc)
+      if
+        label_is_optional ld && (not exp_optional_attr)
+        && not (is_from_parmatch pat)
+      then wrap_some pat
       else pat
     in
     let type_label_pat (label_lid, label, sarg, opt) k =
@@ -5161,6 +5148,9 @@ let report_error env loc ppf error =
     fprintf ppf "@,@,You can't pass the same prop more than once."
   | Label_multiply_defined {label} ->
     fprintf ppf "The record field label %s is defined several times" label
+  | Dict_key_multiply_defined key ->
+    fprintf ppf "The key \"%s\" is matched several times in this dict pattern"
+      key
   | Labels_missing {labels; jsx_component_info = Some jsx_component_info} ->
     print_component_labels_missing_error ppf labels jsx_component_info
   | Labels_missing {labels} ->
