@@ -24,6 +24,7 @@
 #### :bug: Bug fix
 
 - Preserve parentheses around statements that start with a regexp literal, so formatting cannot turn them into division continuing the previous statement. https://github.com/rescript-lang/rescript/pull/8720
+- Fix attributes on patterns being duplicated before `as` and dropped on constants when formatting. https://github.com/rescript-lang/rescript/pull/8750
 - Fix compiler crashes when wrapping values in `Some` or passing optional arguments whose types come from a transitive dependency. https://github.com/rescript-lang/rescript/pull/8719
 - Fix unused-pattern warnings for variant spreads reported without a location. https://github.com/rescript-lang/rescript/pull/8744
 - Keep `@warning("-4")` on `if` expressions when formatting; the formatter dropped it. https://github.com/rescript-lang/rescript/pull/8741

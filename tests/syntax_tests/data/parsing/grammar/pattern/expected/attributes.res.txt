@@ -1,0 +1,17 @@
+let f [arity:1]x =
+  match x with
+  | ((y as z)[@a ]) -> 1
+  | (({ y } as z)[@a ][@b ]) -> 2
+  | ((((y)[@b ]) as z)[@a ]) -> 3
+  | ((y)[@b ]) as z -> 4
+  | Some ((y as z)[@a ]) -> 5
+  | _ -> 6
+let g [arity:1]x =
+  match x with
+  | ((1)[@a ]) -> 1
+  | (({js|s|js})[@a ]) -> 2
+  | ((true)[@a ]) -> 3
+  | (('a'..'z')[@a ]) -> 4
+  | Some ((())[@a ]) -> 5
+  | ((2 as z)[@a ]) -> z
+  | _ -> 6
