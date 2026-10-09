@@ -47,6 +47,12 @@ try {
   assert.equal(output.ternaryAndBinary("b"), 0);
   assert.equal(output.arrayAccess("lastIndex"), 0);
   assert.equal(output.arrayMutation("lastIndex", 7), 7);
+  assert.equal(output.fieldAccess("a"), 1);
+  assert.equal(output.fieldAccess("b"), 2);
+  assert.equal(output.fieldMutation("a", 7), 7);
+  assert.equal(output.fieldMutation("b", 7), 0);
+  assert.equal(output.fieldCall("a"), true);
+  assert.equal(output.fieldCall("b"), false);
   assert.equal(output.division(24), 4);
   assert.equal(output.floatDivision(24), 4);
 } finally {

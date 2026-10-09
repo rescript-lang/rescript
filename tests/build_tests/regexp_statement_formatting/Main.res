@@ -53,6 +53,35 @@ let arrayMutation = (key, value) => {
   written.contents
 }
 
+type field = {mutable value: int}
+type predicate = {test: unit => bool}
+
+let fieldAccess = key => {
+  module Array = {
+    let get = (regexp, key) => {value: regexp->RegExp.test(key) ? 1 : 2}
+  }
+  ignore(key)
+  (/a/[key].value)
+}
+
+let fieldMutation = (key, value) => {
+  let field = {value: 0}
+  module Array = {
+    let get = (regexp, key) => regexp->RegExp.test(key) ? field : {value: -1}
+  }
+  ignore(key)
+  (/a/[key].value = value)
+  field.value
+}
+
+let fieldCall = key => {
+  module Array = {
+    let get = (regexp, key) => {test: () => regexp->RegExp.test(key)}
+  }
+  ignore(key)
+  (/a/[key].test())
+}
+
 let division = a => {
   let b = a / 2 / 3
   b

@@ -67,6 +67,32 @@ let arrayComments = i => {
   ((/* before regexp */ /a/ /* after regexp */)[/* index */ i])
 }
 
+let fieldAccess = i => {
+  Console.log("before")
+  ((/a/)[i]).foo
+}
+
+let fieldMutation = (i, value) => {
+  Console.log("before")
+  ((/a/)[i]).foo = value
+  Console.log("after")
+}
+
+let fieldChains = (i, j, value) => {
+  Console.log("before")
+  ((/a/)[i]).foo.bar
+  ((/a/)[i]).foo.bar = value
+  ((/a/)[i]).foo()
+  ((/a/)[i]).foo->ignore
+  ((/a/)[i]).foo[j]
+  ((/a/)[i]).foo["bar"]
+}
+
+let fieldComments = (i, value) => {
+  Console.log("before")
+  ((/* before field regexp */ /a/ /* after field regexp */)[/* field index */ i]).foo /* after field */ = value
+}
+
 let comments = s => {
   let t = s // binding
   // before regexp
@@ -99,4 +125,6 @@ module Nested = {
   (/a/)->RegExp.test(s)->ignore
   ((/a/)[0])
   ((/a/g)[0] = 1)
+  ((/a/)[0]).foo
+  ((/a/g)[0]).foo = 1
 }
