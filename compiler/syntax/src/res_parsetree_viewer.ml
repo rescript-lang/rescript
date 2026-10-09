@@ -199,15 +199,6 @@ let rec unwrap_braces expr =
   | Pexp_braces {expr = inner} -> unwrap_braces inner
   | _ -> expr
 
-(* Attributes the parser adds to encode syntax; they are never printed *)
-let is_parsing_attr (attr : Parsetree.attribute) =
-  match attr with
-  | {Location.txt = "res.dictPattern"}, _ -> true
-  | _ -> false
-
-let filter_parsing_attrs attrs =
-  List.filter (fun attr -> not (is_parsing_attr attr)) attrs
-
 let is_block_expr expr =
   match (unwrap_braces expr).pexp_desc with
   | Pexp_letmodule _ | Pexp_letexception _ | Pexp_let _ | Pexp_open _
@@ -427,16 +418,10 @@ let should_inline_rhs_binary_expr rhs =
     true
   | _ -> false
 
-let has_printable_attributes attrs =
-  List.exists (fun attr -> not (is_parsing_attr attr)) attrs
-
 (* Attributes on a module expression print before it and bind less tightly
    than an application or a constraint *)
 let mod_expr_has_attributes (mod_expr : Parsetree.module_expr) =
-  has_printable_attributes mod_expr.pmod_attributes
-
-let partition_printable_attributes attrs =
-  List.partition (fun attr -> not (is_parsing_attr attr)) attrs
+  mod_expr.pmod_attributes <> []
 
 let is_doc_comment_attribute ((id, payload) : Parsetree.attribute) =
   match (id, payload) with
