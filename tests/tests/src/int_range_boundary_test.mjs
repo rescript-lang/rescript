@@ -85,6 +85,87 @@ function separateCases(value) {
   }
 }
 
+function wrappedHex(value) {
+  return value === 1;
+}
+
+function wrappedOctal(value) {
+  return value === 1;
+}
+
+function wrappedBinary(value) {
+  return value === 1;
+}
+
+function wrappedRange(value) {
+  return !(value > 3 || value < 1);
+}
+
+function wrappedRecordRange(value) {
+  let match = value.status;
+  if (match > 0) {
+    return match < 4;
+  } else {
+    return match === -1;
+  }
+}
+
+function wrappedSeparateCases(value) {
+  if (value >= 3) {
+    if (value >= 2147483647) {
+      return 1;
+    } else {
+      return 0;
+    }
+  }
+  if (value < -1) {
+    return 0;
+  }
+  switch (value) {
+    case -1 :
+      return 4;
+    case 0 :
+      return 5;
+    case 1 :
+      return 2;
+    case 2 :
+      return 3;
+  }
+}
+
+function wrappedAliasGuard(value, enabled) {
+  if (value !== 1) {
+    return 0;
+  } else if (enabled) {
+    return 1;
+  } else {
+    return 2;
+  }
+}
+
+function decimalAliasGuard(value, enabled) {
+  if (value !== 1) {
+    return 0;
+  } else if (enabled) {
+    return 1;
+  } else {
+    return 2;
+  }
+}
+
+let wrappedSamples = [
+  -2147483648,
+  -2,
+  -1,
+  0,
+  1,
+  2,
+  3,
+  4,
+  2147483646,
+  2147483647
+];
+
 let samples = [
   [
     -2147483648,
@@ -160,9 +241,9 @@ Mocha.describe("Int_range_boundary_test", () => {
       let upper = param[2];
       let lower = param[1];
       let value = param[0];
-      Test_utils.eq("File \"int_range_boundary_test.res\", line 91, characters 11-18", value >= 2147483645, upper);
-      Test_utils.eq("File \"int_range_boundary_test.res\", line 92, characters 11-18", value < -2147483645, lower);
-      Test_utils.eq("File \"int_range_boundary_test.res\", line 93, characters 11-18", bothRanges(value), lower ? -1 : (
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 147, characters 11-18", value >= 2147483645, upper);
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 148, characters 11-18", value < -2147483645, lower);
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 149, characters 11-18", bothRanges(value), lower ? -1 : (
           upper ? 1 : 0
         ));
     });
@@ -171,34 +252,86 @@ Mocha.describe("Int_range_boundary_test", () => {
     samples.forEach(param => {
       let upper = param[2];
       let value = param[0];
-      Test_utils.eq("File \"int_range_boundary_test.res\", line 101, characters 11-18", recordRange({
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 157, characters 11-18", recordRange({
         status: value
       }), upper);
-      Test_utils.eq("File \"int_range_boundary_test.res\", line 102, characters 11-18", tupleRange([
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 158, characters 11-18", tupleRange([
         value,
         true
       ]), upper);
-      Test_utils.eq("File \"int_range_boundary_test.res\", line 103, characters 11-18", tupleRange([
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 159, characters 11-18", tupleRange([
         value,
         false
       ]), false);
-      Test_utils.eq("File \"int_range_boundary_test.res\", line 104, characters 11-18", variantRange({
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 160, characters 11-18", variantRange({
         TAG: "Status",
         _0: value
       }), upper);
-      Test_utils.eq("File \"int_range_boundary_test.res\", line 105, characters 11-18", arrayRange([value]), upper);
-      Test_utils.eq("File \"int_range_boundary_test.res\", line 106, characters 11-18", arrayRange([
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 161, characters 11-18", arrayRange([value]), upper);
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 162, characters 11-18", arrayRange([
         value,
         value
       ]), false);
-      Test_utils.eq("File \"int_range_boundary_test.res\", line 107, characters 11-18", arrayRange([]), false);
-      Test_utils.eq("File \"int_range_boundary_test.res\", line 108, characters 11-18", callRange(() => value), upper);
-      Test_utils.eq("File \"int_range_boundary_test.res\", line 109, characters 11-18", guardedRange(value, true), upper);
-      Test_utils.eq("File \"int_range_boundary_test.res\", line 110, characters 11-18", guardedRange(value, false), false);
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 163, characters 11-18", arrayRange([]), false);
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 164, characters 11-18", callRange(() => value), upper);
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 165, characters 11-18", guardedRange(value, true), upper);
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 166, characters 11-18", guardedRange(value, false), false);
     });
   });
   Mocha.test("distinct actions at both 32-bit limits", () => {
-    samples.forEach(param => Test_utils.eq("File \"int_range_boundary_test.res\", line 118, characters 11-18", separateCases(param[0]), param[3]));
+    samples.forEach(param => Test_utils.eq("File \"int_range_boundary_test.res\", line 174, characters 11-18", separateCases(param[0]), param[3]));
+  });
+  Mocha.test("wrapped nondecimal patterns match only their int32 value", () => {
+    wrappedSamples.forEach(value => {
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 182, characters 11-18", value === 1, value === 1);
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 183, characters 11-18", value === 1, value === 1);
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 184, characters 11-18", value === 1, value === 1);
+    });
+  });
+  Mocha.test("wrapped ranges are sorted in the int32 domain", () => {
+    wrappedSamples.forEach(value => {
+      let inRange = value >= 1 && value <= 3;
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 193, characters 11-18", wrappedRange(value), inRange);
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 194, characters 11-18", wrappedRecordRange({
+        status: value
+      }), value === -1 || inRange);
+      let expected;
+      if (value >= 3) {
+        expected = value >= 2147483647 ? 1 : 0;
+      } else if (value >= -1) {
+        switch (value) {
+          case -1 :
+            expected = 4;
+            break;
+          case 0 :
+            expected = 5;
+            break;
+          case 1 :
+            expected = 2;
+            break;
+          case 2 :
+            expected = 3;
+            break;
+        }
+      } else {
+        expected = 0;
+      }
+      Test_utils.eq("File \"int_range_boundary_test.res\", line 203, characters 11-18", wrappedSeparateCases(value), expected);
+    });
+  });
+  Mocha.test("guards fall through between wrapped and decimal aliases", () => {
+    wrappedSamples.forEach(value => {
+      [
+        false,
+        true
+      ].forEach(enabled => {
+        let expected = value === 1 ? (
+            enabled ? 1 : 2
+          ) : 0;
+        Test_utils.eq("File \"int_range_boundary_test.res\", line 214, characters 15-22", wrappedAliasGuard(value, enabled), expected);
+        Test_utils.eq("File \"int_range_boundary_test.res\", line 215, characters 15-22", decimalAliasGuard(value, enabled), expected);
+      });
+    });
   });
 });
 
@@ -213,6 +346,15 @@ export {
   guardedRange,
   bothRanges,
   separateCases,
+  wrappedHex,
+  wrappedOctal,
+  wrappedBinary,
+  wrappedRange,
+  wrappedRecordRange,
+  wrappedSeparateCases,
+  wrappedAliasGuard,
+  decimalAliasGuard,
+  wrappedSamples,
   samples,
 }
 /*  Not a pure module */

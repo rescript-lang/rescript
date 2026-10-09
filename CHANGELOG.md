@@ -23,7 +23,7 @@
 
 #### :bug: Bug fix
 
-- Fix integer range patterns ending at `2147483647` incorrectly falling through due to an overflowing comparison bound. https://github.com/rescript-lang/rescript/pull/8717
+- Fix integer range patterns at int32 boundaries and wrapped nondecimal patterns matching incorrect values. https://github.com/rescript-lang/rescript/pull/8717
 - Fix compiler crashes when wrapping values in `Some` or passing optional arguments whose types come from a transitive dependency. https://github.com/rescript-lang/rescript/pull/8719
 - Fix unused-pattern warnings for variant spreads reported without a location. https://github.com/rescript-lang/rescript/pull/8744
 - Keep `@warning("-4")` on `if` expressions when formatting; the formatter dropped it. https://github.com/rescript-lang/rescript/pull/8741
