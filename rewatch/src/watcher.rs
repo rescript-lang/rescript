@@ -625,8 +625,8 @@ async fn async_watch(
                 }
                 needs_compile_type = CompileType::None;
 
-                // If watches were re-registered, the removal event of watch.lock may have been
-                // dropped while the backend restarted its event stream, so check the file itself.
+                // The removal event of watch.lock can be lost while watches are re-registered
+                // (some backends restart their event stream), so check the file itself.
                 if !path.join("lib").join(LockKind::Watch.file_name()).exists() {
                     cleanup_before_watch_exit(
                         path,
