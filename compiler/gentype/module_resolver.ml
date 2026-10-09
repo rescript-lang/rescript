@@ -133,11 +133,10 @@ let resolve_module ~(config : Config.t) ~import_extension ~output_file_relative
   if Sys.file_exists module_name_res_file then candidate
   else
     let rec path_to_list path =
-      let is_root = path |> Filename.basename = path in
-      match is_root with
-      | true -> [path]
-      | false ->
-        (path |> Filename.basename) :: (path |> Filename.dirname |> path_to_list)
+      let parent = Filename.dirname path in
+      (* On Windows, the basename of a drive root omits the drive prefix. *)
+      if Filename.basename path = path || parent = path then [path]
+      else (path |> Filename.basename) :: path_to_list parent
     in
     match module_name |> apply ~resolver ~use_bs_dependencies with
     | None -> candidate
