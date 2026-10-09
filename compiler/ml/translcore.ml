@@ -1001,6 +1001,7 @@ type jsx_call = {
   jsx_name: string;
   jsx_ffi: External_ffi_types.external_decl;
   jsx_multi: bool;
+  jsx_fragment: bool;
   jsx_tag: expression;
   jsx_props: jsx_props;
   jsx_key: expression option;
@@ -1010,6 +1011,15 @@ let jsx_last_name (e : expression) =
   match e.exp_desc with
   | Texp_ident (path, _, _) -> Some (Path.last path)
   | _ -> None
+
+(* A fragment's tag is the [jsxFragment] of the JSX module whose [jsx] or
+   [jsxs] the PPX calls; a component of another module may have that name *)
+let jsx_is_fragment ~(funct : expression) ~(tag : expression) =
+  match (funct.exp_desc, tag.exp_desc) with
+  | ( Texp_ident (Pdot (jsx_module, _, _), _, _),
+      Texp_ident (Pdot (tag_module, "jsxFragment", _), _, _) ) ->
+    Path.same jsx_module tag_module
+  | _ -> false
 
 (* The PPX's children: a single child, or for [jsxs] an array literal wrapped
    in the JSX module's [array] identity. An optional [children] field wraps
@@ -1089,8 +1099,9 @@ let jsx_props_of ~multi (props : expression) =
 
 (* [None] when the call doesn't have the shape the PPX produces; it then
    compiles as an ordinary external call *)
-let jsx_call (funct : expression) (p : Primitive.description)
-    (args : (arg_label * expression option) list) : jsx_call option =
+let jsx_call env (funct : expression) (p : Primitive.description)
+    ~(val_type : type_expr) (args : (arg_label * expression option) list) :
+    jsx_call option =
   let is_plain_param ({arg_label; arg_type} : External_arg_spec.param) =
     arg_label = Arg_empty && arg_type = Nothing
   in
@@ -1111,12 +1122,16 @@ let jsx_call (funct : expression) (p : Primitive.description)
         Kind_external
           (Ffi_bs
              ( arg_types,
-               (Return_unset | Return_identity),
+               ((Return_unset | Return_identity) as result),
                ({
                   kind = Decl_val {name = _};
                   module_ = None | Some (Module_named _);
                   variadic = false;
-                } as ffi) )) ) -> (
+                } as ffi) )) )
+    (* a call returning unit is sequenced with the unit value, see
+       [external_result_wrap] *)
+      when not (result = Return_unset && external_returns_unit env p val_type)
+      -> (
       match (arg_types, args) with
       | [tag_t; props_t], [(Nolabel, Some tag); (Nolabel, Some props)]
         when is_plain_param tag_t && is_plain_param props_t ->
@@ -1150,6 +1165,7 @@ let jsx_call (funct : expression) (p : Primitive.description)
           jsx_name = p.prim_name;
           jsx_ffi;
           jsx_multi;
+          jsx_fragment = jsx_is_fragment ~funct ~tag:jsx_tag;
           jsx_tag;
           jsx_props;
           jsx_key;
@@ -1202,15 +1218,18 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
     prim ~primitive:(Ptemplate segments) ~args:(transl_list values) e.exp_loc
   | Texp_apply
       {
-        funct = {exp_desc = Texp_ident (_, _, {val_kind = Val_prim p})} as funct;
+        funct =
+          {exp_desc = Texp_ident (_, _, {val_kind = Val_prim p; val_type})} as
+          funct;
         args;
         transformed_jsx = true;
       }
-    when !Clflags.jsx_preserve && Option.is_some (jsx_call funct p args) -> (
+    when !Clflags.jsx_preserve
+         && Option.is_some (jsx_call e.exp_env funct p ~val_type args) -> (
     Builtin_attributes.warning_scope ~ppwarning:false funct.exp_attributes
       (fun () ->
         List.iter (Translattribute.check_attribute funct) funct.exp_attributes);
-    match jsx_call funct p args with
+    match jsx_call e.exp_env funct p ~val_type args with
     | Some call -> transl_jsx_element e.exp_loc call
     | None -> assert false)
   | Texp_apply
@@ -1643,7 +1662,8 @@ and transl_let ~js_hoist rec_flag pat_expr_list body =
    order the call evaluates them, except that the children come after the
    other props, as in JSX. *)
 and transl_jsx_element loc
-    ({jsx_name; jsx_ffi; jsx_multi; jsx_tag; jsx_props; jsx_key} : jsx_call) =
+    ({jsx_name; jsx_ffi; jsx_multi; jsx_fragment; jsx_tag; jsx_props; jsx_key} :
+      jsx_call) =
   let init_id = Ident.create "init" in
   let init, spread, fields, children =
     match jsx_props with
@@ -1691,7 +1711,7 @@ and transl_jsx_element loc
              jsx_name;
              jsx_ffi;
              jsx_multi;
-             jsx_fragment = jsx_last_name jsx_tag = Some "jsxFragment";
+             jsx_fragment;
              jsx_spread = Option.is_some spread;
              jsx_props =
                List.map (fun (name, optional, _) -> (name, optional)) fields;

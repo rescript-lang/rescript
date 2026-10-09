@@ -92,3 +92,10 @@ module Outer = {
   }
 }
 let nested = <Outer.Inner a="x" />
+
+// A component whose name is the JSX module's fragment name is not a fragment
+module Widgets = {
+  type props = {}
+  let jsxFragment: React.component<props> = React.component(_ => <span />)
+}
+let notFragment = <Widgets.jsxFragment />
