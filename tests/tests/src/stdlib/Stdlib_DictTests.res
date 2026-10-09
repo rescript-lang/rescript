@@ -236,17 +236,17 @@ Test.run(
   let count = ref(0)
   let makeCounted: (unit => unit) => dict<int> = %raw(`f => ({get a() { f(); return 1 }})`)
   let counted = makeCounted(() => count := count.contents + 1)
-  let _ = dict{...counted}
+  ignore(dict{...counted})
 
   Test.run(__POS_OF__("dict spread runs getters"), count.contents, eq, 1)
 
-  // Like a JS spread, it's evaluated left to right
+  // An expression row is evaluated after the spreads before it
   let order = []
   let row = () => {
     order->Array.push(count.contents)
     2
   }
-  let _ = dict{...counted, "b": row()}
+  ignore(dict{...counted, "b": row()})
   Test.run(__POS_OF__("dict spread is evaluated left to right"), order, eq, [2])
 }
 
