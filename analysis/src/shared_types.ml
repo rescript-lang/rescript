@@ -633,6 +633,7 @@ module Completable = struct
   type context_path =
     | CPString
     | CPArray of context_path option
+    | CPDict
     | CPInt
     | CPFloat
     | CPBool
@@ -734,6 +735,7 @@ module Completable = struct
     | CPArray (Some ctx_path) ->
       "array<" ^ context_path_to_string ctx_path ^ ">"
     | CPArray None -> "array"
+    | CPDict -> "dict"
     | CPId {path; completion_context} ->
       completion_context_to_string completion_context ^ list path
     | CPField {context_path = cp; field_name = s} ->

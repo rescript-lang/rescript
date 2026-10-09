@@ -231,6 +231,7 @@ let rec expr_to_context_path_inner ~(in_jsx_context : bool)
          (match exprs with
          | [] -> None
          | exp :: _ -> expr_to_context_path ~in_jsx_context exp))
+  | Pexp_dict _ -> Some CPDict
   | Pexp_ident {txt = Lident "->"} -> None
   | Pexp_ident {txt; loc} ->
     Some

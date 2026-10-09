@@ -13,3 +13,9 @@ let base = dict{"a": Colors.red}
 
 // let x = dict{...base, "b": Colors.g}
 //                                   ^com
+
+// let x = dict{"a": 1}->
+//                       ^com
+
+// let x = dict{"a": 1}->ge
+//                         ^com
