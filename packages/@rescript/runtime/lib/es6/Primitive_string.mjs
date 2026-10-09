@@ -38,15 +38,10 @@ function getChar(s, i) {
   return s.codePointAt(i);
 }
 
-function make(n, ch) {
-  return String.fromCodePoint(ch).repeat(n);
-}
-
 export {
   compare,
   min,
   max,
   getChar,
-  make,
 }
 /* No side effect */

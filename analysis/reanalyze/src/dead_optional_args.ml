@@ -24,7 +24,7 @@ let add_function_reference ~config ~cross_file ~(loc_from : Location.t)
     let pos_to = loc_to.loc_start in
     let pos_from = loc_from.loc_start in
     if config.Dce_config.cli.debug then
-      Log_.item "OptionalArgs.addFunctionReference %s %s@."
+      Log_.item "Dead_optional_args.add_function_reference %s %s@."
         (pos_from |> Pos.to_string)
         (pos_to |> Pos.to_string);
     Cross_file_items.add_function_reference cross_file ~pos_from ~pos_to)

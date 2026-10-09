@@ -1491,9 +1491,6 @@ let string_comp (cmp : Lambda.comparison) ?comment (e0 : t) (e1 : t) =
 
 let string_equal ?comment (e0 : t) (e1 : t) : t = string_comp Ceq ?comment e0 e1
 
-let is_type_number ?comment (e : t) : t =
-  string_equal ?comment (typeof e) (str "number")
-
 let is_type_object (e : t) : t = string_equal (typeof e) (str "object")
 
 let obj_length ?comment e : t =

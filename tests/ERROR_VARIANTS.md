@@ -196,7 +196,7 @@ completely dead and have been retained as named variants:
 ## `compiler/ml/typecore.ml`
 
 The largest error type; covers expression / pattern type-checking.
-Source: [typecore.ml:27](../compiler/ml/typecore.ml).
+Source: `type error` in [typecore.ml](../compiler/ml/typecore.ml).
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
@@ -207,7 +207,7 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Or_pattern_type_clash` | ✓ | `or_pattern_type_clash.res` | |
 | `Multiply_bound_variable` | ✓ | `multiply_bound_variable.res` | |
 | `Orpat_vars` | ✓ | `orpat_vars_unbalanced.res` | |
-| `Expr_type_clash` | ✓ | many `*.res` | Most-fired expression error. Trace-shape sub-cases covered: `if_return_type_mismatch.res` (IfReturn), `maybe_unwrap_option.res` (MaybeUnwrapOption), `string_concat_non_string.res` (StringConcat), `labeled_fn_argument_type_clash.res` (FunctionArgument with explicit label), `math_operator_*.res` (MathOperator family), `ternary_branch_mismatch.res`, `switch_different_types.res`, `try_catch_same_type.res`, `comparison_operator.res`, `array_item_type_mismatch.res`, `array_literal_passed_to_tuple.res`, `if_condition_mismatch.res`, `while_condition.res`, `for_loop_condition.res`, `assert_condition.res`, `function_call_mismatch.res`, `awaiting_non_promise.res`, multiple `jsx_*` fixtures (including `jsx_preserve_external_function.res` for a plain-function external in a JSX component position), `object_literal_for_poly_field.res` (object literal against a polymorphic field annotation). |
+| `Expr_type_clash` | ✓ | many `*.res` | Most-fired expression error. Trace-shape sub-cases covered: `if_return_type_mismatch.res` (IfReturn), `string_concat_non_string.res` (StringConcat), `labeled_fn_argument_type_clash.res` (FunctionArgument with explicit label), `math_operator_*.res` (MathOperator family), `ternary_branch_mismatch.res`, `switch_different_types.res`, `try_catch_same_type.res`, `comparison_operator.res`, `array_item_type_mismatch.res`, `array_literal_passed_to_tuple.res`, `if_condition_mismatch.res`, `while_condition.res`, `for_loop_condition.res`, `assert_condition.res`, `function_call_mismatch.res`, `awaiting_non_promise.res`, `maybe_unwrap_option.res`, multiple `jsx_*` fixtures (including `jsx_preserve_external_function.res` for a plain-function external in a JSX component position), `object_literal_for_poly_field.res` (object literal against a polymorphic field annotation). |
 | `Apply_non_function` | ✓ | `apply_non_function.res` | |
 | `Apply_wrong_label` | ✓ | `apply_wrong_label.res` | |
 | `Label_multiply_defined` | ✓ | `label_multiply_defined_literal.res` | |
@@ -251,14 +251,14 @@ Source: [typecore.ml:27](../compiler/ml/typecore.ml).
 | `Record_rest` | ✓ | `record_rest_*.res` | Wrapper for record-rest validation errors reported by `typecore_record_rest.ml`; fixtures cover missing annotation, invalid rest type, non-record and unresolved rest types, private and unboxed record types, mutable source records, field mismatch/missing/extra cases, runtime-name mismatch, non-optional overlap errors, optional overlap warnings, module destructure rejection, and singular/plural missing messages. |
 | `Type_params_not_supported` | ✓ | `variant_spread_pattern_type_params.res` | Pattern-level variant spread (`| ...a as v`) where `a` has type params; typedecl path covered by `variant_spread_type_parameters.res`. |
 | `Field_access_on_dict_type` | ✓ | `field_access_on_dict_type.res` | |
-| `Jsx_not_enabled` | ☐ (needs harness flag) | — | typecore.ml:218/3470. Fires when JSX is used without `-bs-jsx N`. The `super_errors` runner hard-codes `-bs-jsx 4` in `bscFlags`; adding a per-fixture opt-out (e.g. a `.opts` sidecar) would expose this. Until then, it's reachable in real code but blocked at the harness level. |
+| `Jsx_not_enabled` | ☐ (needs harness flag) | — | typecore.ml, the `Pexp_jsx_element` cases of `iter_expression` and `type_expect_`. Fires when JSX is used without `-bs-jsx N`. The `super_errors` runner hard-codes `-bs-jsx 4` in `bscFlags`; adding a per-fixture opt-out (e.g. a `.opts` sidecar) would expose this. Until then, it's reachable in real code but blocked at the harness level. |
 | `Tagged_template_non_tag` | ✓ | `tagged_template_non_tag.res` | Backtick tagged-template syntax used on a value whose type is not `taggedTemplate<'param, 'output>`. |
 
 ---
 
 ## `compiler/ml/typedecl.ml`
 
-Type-declaration errors. Source: [typedecl.ml:27](../compiler/ml/typedecl.ml).
+Type-declaration errors. Source: `type error` in [typedecl.ml](../compiler/ml/typedecl.ml).
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
@@ -266,8 +266,8 @@ Type-declaration errors. Source: [typedecl.ml:27](../compiler/ml/typedecl.ml).
 | `Duplicate_constructor` | ✓ | `duplicate_variant_constructor.res` | |
 | `Duplicate_label` | ✓ | `duplicate_labels_error.res` | |
 | `Object_spread_with_record_field` | ✓ | `object_spread_with_record_field.res` | |
-| `Recursive_abbrev` | ✓ | `recursive_type_abbreviation.res`, `recursive_type.res` | |
-| `Cycle_in_def` | ✓ | `recursive_type_abbrev_cycle.res` | |
+| `Recursive_abbrev` | ✓ | `recursive_type_abbrev_cycle.res` | `type rec t = t` reports "The type abbreviation t is cyclic". |
+| `Cycle_in_def` | ? | — | No fixture reports "The definition of … contains a cycle"; `recursive_type_abbrev_cycle.res` reports `Recursive_abbrev`. |
 | `Definition_mismatch` | ✓ | `definition_mismatch.res` | |
 | `Constraint_failed` | ✓ | `constraint_failed.res` | |
 | `Inconsistent_constraint` | ✓ | `inconsistent_constraint.res` | |
@@ -282,7 +282,7 @@ Type-declaration errors. Source: [typedecl.ml:27](../compiler/ml/typedecl.ml).
 | `Rebind_mismatch` | ? | — | The later declaration-shape check after `Rebind_wrong_type`; no source fixture was confirmed in this pass. |
 | `Rebind_private` | ✓ | `extension_rebind_private.res` | Rebinding a private extension constructor as public. |
 | `Bad_variance` | ✓ | `bad_variance.res`, `bad_variance_contra.res`, `object_settable_field_covariant_param.res` | The latter pins that a settable object field is an invariant occurrence, like a mutable record label. |
-| `Unavailable_type_constructor` | ☐ (needs build harness) | — | typedecl.ml:778. Requires a type path findable at parse time but missing during constraint enforcement; only cross-unit scenarios where a `.cmi` was found but later removed. |
+| `Unavailable_type_constructor` | ☐ (needs build harness) | — | typedecl.ml, `check_constraints_rec` and `check_coherence`. Requires a type path findable at parse time but missing during constraint enforcement; only cross-unit scenarios where a `.cmi` was found but later removed. |
 | `Bad_fixed_type` | ✓ | `fixed_type_no_row_variable.res` | Fully-bounded closed private polymorphic variant (`type t = private [< #A | #B > #A #B]`) satisfies `is_fixed_type` but has a static (non-`Tvar`) row. |
 | `Unbound_type_var_ext` | ✓ | `unbound_type_var_extension.res` | |
 | `Varying_anonymous` | ✓ | `gadt_varying_anonymous.res` | Variance annotation on a GADT parameter whose return type constrains it (`type rec t<+'a> = K(int): t<int>`). |
@@ -298,7 +298,7 @@ Type-declaration errors. Source: [typedecl.ml:27](../compiler/ml/typedecl.ml).
 
 ## `compiler/ml/typemod.ml`
 
-Module-level errors. Source: [typemod.ml:24](../compiler/ml/typemod.ml).
+Module-level errors. Source: `type error` in [typemod.ml](../compiler/ml/typemod.ml).
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
@@ -308,27 +308,27 @@ Module-level errors. Source: [typemod.ml:24](../compiler/ml/typemod.ml).
 | `Structure_expected` | ✓ | `super_errors_multi/Smoke_unbound_module_reference` (indirect); also `open_functor.res` | |
 | `With_no_component` | ✓ | `with_no_component.res` | |
 | `With_mismatch` | ✓ | `with_mismatch.res` | |
-| `With_makes_applicative_functor_ill_typed` | ? | — | typemod.ml:249. Fires when a `with` constraint on a signature containing a `Path.Papply` makes that application ill-typed. Reachable via destructive substitution on applicative functors; reproduction attempts surfaced `not a signature` first. Retained on the conservative side. |
+| `With_makes_applicative_functor_ill_typed` | ? | — | typemod.ml, `check_usage_of_path_of_substituted_item`. Fires when a `with` constraint on a signature containing a `Path.Papply` makes that application ill-typed. Reachable via destructive substitution on applicative functors; reproduction attempts surfaced `not a signature` first. Retained on the conservative side. |
 | `With_cannot_remove_constrained_type` | ✓ | `with_cannot_remove_constrained_type.res` | Destructive substitution on a constrained type, e.g. `S with type t<'a> := 'a` where `S` has `type t<'a> constraint 'a = int`. |
-| `With_changes_module_alias` | ☐ (needs build harness) | — | typemod.ml:240. Fires during `with module := M2` substitution when an aliased sub-module inside the constrained signature is affected. ReScript parses `with module N := M2` (destructive substitution), but constructing a sub-module alias chain that gets invalidated requires multiple `.resi` files and a specific shape I couldn't reproduce single-file. |
-| `Cannot_eliminate_dependency` | ? | — | typemod.ml:1332. Fires when `Mtype.nondep_supertype` raises `Not_found` during functor-application result-type computation. Reproduction attempts routed through `Incomplete_packed_module` or `escapes its scope`. Retained on the conservative side. |
-| `Scoping_pack` | ? | — | typemod.ml:1717. Fires during first-class module packing with `with type` constraints whose constrained type isn't a free `Tvar`. Reproduction attempts routed through `Incomplete_packed_module`. Retained on the conservative side. |
+| `With_changes_module_alias` | ☐ (needs build harness) | — | typemod.ml, `check_usage_of_path_of_substituted_item`. Fires during `with module := M2` substitution when an aliased sub-module inside the constrained signature is affected. ReScript parses `with module N := M2` (destructive substitution), but constructing a sub-module alias chain that gets invalidated requires multiple `.resi` files and a specific shape I couldn't reproduce single-file. |
+| `Cannot_eliminate_dependency` | ? | — | typemod.ml, the `Pmod_apply` case of `type_module_aux`. Fires when `Mtype.nondep_supertype` raises `Not_found` during functor-application result-type computation. Reproduction attempts routed through `Incomplete_packed_module` or `escapes its scope`. Retained on the conservative side. |
+| `Scoping_pack` | ? | — | typemod.ml, `type_package`. Fires during first-class module packing with `with type` constraints whose constrained type isn't a free `Tvar`. Reproduction attempts routed through `Incomplete_packed_module`. Retained on the conservative side. |
 | `Repeated_name` | ✓ | `repeated_def_*.res` (multiple) | |
 | `Non_generalizable` | ✓ | `non_generalizable.res` | |
 | `Non_generalizable_module` | ✓ | `non_generalizable_module.res` | Nested module containing `let r = ref(None)` — the outer module's `md_type` carries the free `'_weak1` from the inner ref, so `closed_modtype` returns false and the `Sig_module` branch fires. |
 | `Interface_not_compiled` | ✓ | `super_errors_multi/Iface_not_compiled` | |
-| `Not_allowed_in_functor_body` | ✓ | `super_errors_multi/not_allowed_in_functor_body` (TODO: confirm path) | |
+| `Not_allowed_in_functor_body` | ✓ | `not_allowed_in_functor_body.res` | |
 | `Not_a_packed_module` | ✓ | `not_a_packed_module.res` | |
 | `Incomplete_packed_module` | ✓ | `incomplete_packed_module.res` | |
 | `Recursive_module_require_explicit_type` | ✓ | `recursive_module_require_explicit_type.res` | |
 | `Apply_generative` | ✓ | `apply_generative.res` | |
-| `Cannot_scrape_alias` | ☐ (needs build harness) | — | typemod.ml:77, 83, 1347. Requires `Env.scrape_alias` to return `Mty_alias` for an alias whose target `.cmi` couldn't be loaded. The `super_errors_multi` runner pre-compiles every file in the fixture, so the alias target is always present. |
+| `Cannot_scrape_alias` | ☐ (needs build harness) | — | typemod.ml, `extract_sig`, `extract_sig_open` and the `Pmod_apply` case of `type_module_aux`. Requires `Env.scrape_alias` to return `Mty_alias` for an alias whose target `.cmi` couldn't be loaded. The `super_errors_multi` runner pre-compiles every file in the fixture, so the alias target is always present. |
 
 ---
 
 ## `compiler/ml/typetexp.ml`
 
-Type-expression errors. Source: [typetexp.ml:28](../compiler/ml/typetexp.ml).
+Type-expression errors. Source: `type error` in [typetexp.ml](../compiler/ml/typetexp.ml).
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
@@ -338,7 +338,7 @@ Type-expression errors. Source: [typetexp.ml:28](../compiler/ml/typetexp.ml).
 | `Type_arity_mismatch` | ✓ | `type_arity_mismatch.res`, `record_rest_type_arity_mismatch.res` | |
 | `Type_mismatch` | ✓ | `typetexp_type_mismatch.res` | Type-constructor application that violates a `constraint 'a = …` on the declaration. |
 | `Alias_type_mismatch` | ✓ | `typetexp_alias_type_mismatch.res` | |
-| `Present_has_conjunction` | ✓ | `polyvariant_present_has_conjunction.res` | `[< #A(int) & (string) > #A]` — `<` syntax marks `#A` as a "present" tag, and the body has both `(int)` and `& (string)` types, so the conjunctive payload triggers the check at line 451. |
+| `Present_has_conjunction` | ✓ | `polyvariant_present_has_conjunction.res` | `[< #A(int) & (string) > #A]` — `<` syntax marks `#A` as a "present" tag, and the body has both `(int)` and `& (string)` types, so the conjunctive payload triggers the check in the `Ptyp_variant` case of `transl_type_aux`. |
 | `Present_has_no_type` | ✓ | `polyvariant_present_has_no_type.res` | `[< #B > #A]` — `#A` is listed as a "present" tag but isn't defined in the polyvariant body. |
 | `Constructor_mismatch` | ✓ | `polyvariant_constructor_mismatch.res` | |
 | `Not_a_variant` | ✓ | `typetexp_not_a_variant.res` | Polyvariant `[#X \| a]` where `a` is not a polyvariant. |
@@ -353,7 +353,7 @@ Type-expression errors. Source: [typetexp.ml:28](../compiler/ml/typetexp.ml).
 | `Unbound_modtype` | ✓ | `typetexp_unbound_modtype.res` | |
 | `Illegal_reference_to_recursive_module` | ✓ | `illegal_recursive_module_reference.res` | `module rec A: B.S = …` references another recmodule's module-type before signatures are sealed. During `approx_modtype` of A, `Env.lookup_module B` returns the `#recmod#` placeholder and raises `Env.Recmodule`. |
 | `Access_functor_as_structure` | ✓ | `access_functor_as_structure.res` | |
-| `Cannot_scrape_alias` | ☐ (needs build harness) | — | typetexp.ml:86 (Ldot path, live), 95/101 (Lapply path, dead since `Lapply` isn't parsed). The live Ldot trigger needs `Env.scrape_alias` to return `Mty_alias` — an alias whose target `.cmi` couldn't be loaded. The `super_errors_multi` harness pre-compiles every alias target. |
+| `Cannot_scrape_alias` | ☐ (needs build harness) | — | typetexp.ml, the `Ldot` case of `narrow_unbound_lid_error`. The trigger needs `Env.scrape_alias` to return `Mty_alias` — an alias whose target `.cmi` couldn't be loaded. The `super_errors_multi` harness pre-compiles every alias target. |
 | `Opened_object` | ✓ | `object_inherit_opened.res` | |
 | `Not_an_object` | ✓ | `object_inherit_not_an_object.res` | |
 
@@ -361,28 +361,28 @@ Type-expression errors. Source: [typetexp.ml:28](../compiler/ml/typetexp.ml).
 
 ## `compiler/ml/includemod.ml` (symptom)
 
-Wrapper symptoms attached to inclusion failures. Source: [includemod.ml:23](../compiler/ml/includemod.ml).
+Wrapper symptoms attached to inclusion failures. Source: `type symptom` in [includemod.ml](../compiler/ml/includemod.ml).
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
 | `Missing_field` | ✓ | `super_errors_multi/Iface_missing_value` | |
-| `Value_descriptions` | ✓ | `super_errors_multi/Iface_value_descriptions`, `super_errors_multi/Iface_value_arity_mismatch`, `super_errors_multi/Smoke_interface_mismatch`, `super_errors_multi/Cross_external_spec_mismatch`, `super_errors_multi/Cross_external_payload_name`, `super_errors_multi/Cross_external_import_attrs`, `module_sig_value_arity_mismatch*.res`, `object_value_signature_set_mismatch.res` | Arity mismatches print a dedicated hint (implementation vs interface argument counts), including through aliases and nested function types. The object fixture pins that a value signature cannot drop `@set` from an object type (moregeneral requires equal field mutability). |
+| `Value_descriptions` | ✓ | `super_errors_multi/Iface_value_descriptions`, `super_errors_multi/Iface_value_arity_mismatch`, `super_errors_multi/Smoke_interface_mismatch`, `super_errors_multi/Cross_external_spec_mismatch`, `super_errors_multi/Cross_external_payload_name`, `super_errors_multi/Cross_external_import_attrs`, `module_sig_value_arity_mismatch*.res`, `object_value_signature_set_mismatch.res`, `inline_bigint_signature_mismatch.res` | Arity mismatches print a dedicated hint (implementation vs interface argument counts), including through aliases and nested function types. The object fixture pins that a value signature cannot drop `@set` from an object type (moregeneral requires equal field mutability). The inline-bigint fixture pins the sign printed for `@inline(<bigint>)` values. |
 | `Type_declarations` | ✓ | `super_errors_multi/Iface_type_decl_record`, `super_errors_multi/Iface_type_decl_variant`, `RecordInclusion.res`, `type_decl_function_arity_mismatch.res` | |
 | `Extension_constructors` | ✓ | `super_errors_multi/Iface_extension_constructors` | |
 | `Module_types` | ✓ | `super_errors_multi/Iface_module_types` | |
 | `Modtype_infos` | ✓ | `super_errors_multi/Iface_modtype_infos` | |
-| `Modtype_permutation` | ✓ | `super_errors_multi/include_modtype_permutation` | |
-| `Interface_mismatch` | ✓ | wrapper added to all `Iface_*` failures (line 476). | |
-| `Unbound_modtype_path` | ☐ (needs stale-cmi harness) | — | includemod.ml:94. Re-validated during removal: not completely dead. It represents `Env.find_modtype` failing during module-type path comparison, which can happen only with a stale or inconsistent compiled interface. The source-only harness cannot produce that state because it pre-compiles every fixture, so this needs a build/binary-state harness rather than deletion. |
-| `Unbound_module_path` | ☐ (needs build harness) | — | includemod.ml:226/233. Alias comparison where `Env.normalize_path` raises `Not_found`. Requires a module alias whose target `.cmi` is absent at inclusion time — multi-unit only. |
-| `Invalid_module_alias` | ☐ (needs build harness) | — | includemod.ml:211. Requires both sides `Mty_alias` with one pointing to a functor argument. Reachable only when the alias chain crosses a functor application that the `super_errors_multi` harness doesn't construct. |
+| `Modtype_permutation` | ✓ | `include_modtype_permutation.res` | |
+| `Interface_mismatch` | ✓ | wrapper added to all `Iface_*` failures by `compunit`. | |
+| `Unbound_modtype_path` | ☐ (needs stale-cmi harness) | — | includemod.ml, `expand_module_path`. Re-validated during removal: not completely dead. It represents `Env.find_modtype` failing during module-type path comparison, which can happen only with a stale or inconsistent compiled interface. The source-only harness cannot produce that state because it pre-compiles every fixture, so this needs a build/binary-state harness rather than deletion. |
+| `Unbound_module_path` | ☐ (needs build harness) | — | includemod.ml, `expand_module_alias` and `try_modtypes`. Alias comparison where `Env.normalize_path` raises `Not_found`. Requires a module alias whose target `.cmi` is absent at inclusion time — multi-unit only. |
+| `Invalid_module_alias` | ☐ (needs build harness) | — | includemod.ml, `try_modtypes`. Requires both sides `Mty_alias` with one pointing to a functor argument. Reachable only when the alias chain crosses a functor application that the `super_errors_multi` harness doesn't construct. |
 
 ---
 
 ## `compiler/ml/includecore.ml` (`type_mismatch`)
 
 Sub-symptoms produced during signature inclusion (rendered inside `Type_declarations`).
-Source: [includecore.ml:159](../compiler/ml/includecore.ml).
+Source: `type type_mismatch` in [includecore.ml](../compiler/ml/includecore.ml).
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
@@ -408,7 +408,7 @@ Source: [includecore.ml:159](../compiler/ml/includecore.ml).
 
 ## `compiler/frontend/bs_syntaxerr.ml`
 
-FFI / attribute / experimental-feature errors. Source: [bs_syntaxerr.ml:27](../compiler/frontend/bs_syntaxerr.ml).
+FFI / attribute / experimental-feature errors. Source: `type error` in [bs_syntaxerr.ml](../compiler/frontend/bs_syntaxerr.ml).
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
@@ -435,7 +435,7 @@ FFI / attribute / experimental-feature errors. Source: [bs_syntaxerr.ml:27](../c
 
 ## `compiler/ml/ast_untagged_variants.ml`
 
-Untagged-variant validation errors. Source: [ast_untagged_variants.ml:52](../compiler/ml/ast_untagged_variants.ml).
+Untagged-variant validation errors. Source: `type untagged_error` and `type error` in [ast_untagged_variants.ml](../compiler/ml/ast_untagged_variants.ml).
 
 ### `untagged_error`
 
@@ -467,7 +467,7 @@ Untagged-variant validation errors. Source: [ast_untagged_variants.ml:52](../com
 
 ## `compiler/depends/bs_exception.ml`
 
-Build / dependency errors. Mostly need the `rescript build` runtime to fire — not reachable from raw `bsc`. Source: [bs_exception.ml:25](../compiler/depends/bs_exception.ml).
+Build / dependency errors. Mostly need the `rescript build` runtime to fire — not reachable from raw `bsc`. Source: `type error` in [bs_exception.ml](../compiler/depends/bs_exception.ml).
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
@@ -475,13 +475,13 @@ Build / dependency errors. Mostly need the `rescript build` runtime to fire — 
 | `Js_not_found` | ✓ | implicitly — bypassed via `-bs-cmi-only` in `super_errors_multi` runner. Not a fixture, but the harness commit documents the workaround. | |
 | `Bs_duplicate_exports` | ☐ (needs build harness) | — | Same export emitted twice across compilation units. |
 | `Missing_ml_dependency` | ☐ (needs build harness) | — | Compile-time missing dependency from a `.cmj` lookup table. |
-| `Dependency_script_module_dependent_not` | ☐ (needs build harness) | — | `core/platform/native/js_name_of_module_id.ml:99`. **Reachable** when a dependent module is in script mode (`Package_script`) but the current module is in package mode (`Package_found _`). Legacy script-vs-package interaction; needs `rescript.json` harness. |
+| `Dependency_script_module_dependent_not` | ☐ (needs build harness) | — | `string_of_module_id` in `core/platform/native/js_name_of_module_id.ml`. **Reachable** when a dependent module is in script mode (`Package_script`) but the current module is in package mode (`Package_found _`). Legacy script-vs-package interaction; needs `rescript.json` harness. |
 
 ---
 
 ## `compiler/ml/env.ml`
 
-Environment / `.cmi`-consistency errors. Source: [env.ml:57](../compiler/ml/env.ml).
+Environment / `.cmi`-consistency errors. Source: `type error` in [env.ml](../compiler/ml/env.ml).
 
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
@@ -510,7 +510,7 @@ hand-written `.res` / `.resi` sources.
 
 ## `compiler/core/cmd_ast_exception.ml`
 
-PPX-runtime errors. Source: [cmd_ast_exception.ml:24](../compiler/core/cmd_ast_exception.ml).
+PPX-runtime errors. Source: `type error` in [cmd_ast_exception.ml](../compiler/core/cmd_ast_exception.ml).
 Both require running `bsc` with `-ppx <executable>` and exercising the
 external process boundary. Not reachable from the single-file or
 multi-file harnesses, which never set `-ppx`.
@@ -531,8 +531,8 @@ multi-file harnesses, which never set `-ppx`.
 | `compiler/ml/transl_recmodule.ml` | `Circular_dependency` | ✓ | `recmodule_circular_dependency.res` | |
 | `compiler/ml/rec_check.ml` | `Illegal_letrec_expr` | ✓ | `illegal_letrec_expr.res` | |
 | `compiler/ml/syntaxerr.ml` | `Variable_in_scope` | ? (live, broken printer) | — | Reachable via `let f: type t. (t, 't) => t = …` (locally-abstract `t` collides with type variable `'t` during `varify_constructors`), but `Syntaxerr.error` has no registered pretty-printer, so it propagates as an uncaught `Fatal error: exception Syntaxerr.Error(_)`. Not removed because the variant is live; the fix should wire up a printer or convert the check into a regular typed diagnostic. |
-| `compiler/ml/cmt_format_common.ml` | `Not_a_typedtree` | ☐ (needs binary harness) | — | cmt_format_common.ml:139. Fires when a tool reads a `.cmt` file whose first block isn't a typed tree. Reachable in principle by pointing the analyzer at an arbitrary file with a `.cmt` extension; out of scope for the source-only fixture harnesses. |
-| `compiler/ext/bsc_args.ml` | `Unknown` | ☐ (needs CLI harness) | — | bsc_args.ml:45. Reachable trivially via `bsc --bogus`, but the `super_errors{,_multi}` runners only pass `bsc` a fixed flag list plus the source file — they can't exercise CLI-level errors. |
+| `compiler/ml/cmt_format_common.ml` | `Not_a_typedtree` | ☐ (needs binary harness) | — | cmt_format_common.ml, `read_cmt`. Fires when a tool reads a `.cmt` file whose first block isn't a typed tree. Reachable in principle by pointing the analyzer at an arbitrary file with a `.cmt` extension; out of scope for the source-only fixture harnesses. |
+| `compiler/ext/bsc_args.ml` | `Unknown` | ☐ (needs CLI harness) | — | bsc_args.ml, `type error`. Reachable trivially via `bsc --bogus`, but the `super_errors{,_multi}` runners only pass `bsc` a fixed flag list plus the source file — they can't exercise CLI-level errors. |
 | `compiler/ext/bsc_args.ml` | `Missing` | ☐ (needs CLI harness) | — | Same as above: `bsc -o` (no following filename). Needs a harness that invokes `bsc` with crafted argv. |
 
 ## Removal audit notes
@@ -564,6 +564,9 @@ The warning constructors listed in **Removed in `jono/remove-dead-errors`**
 were deleted. Their numeric warning slots remain holes; no warning number
 was reused.
 
+Warning 24 (`Bad_module_name`) was removed later for the same reason: it
+had no raise site. Its slot is likewise left unused.
+
 ### Live but no fixture yet
 
 These warnings have `prerr_warning` raise sites in `compiler/` and are
@@ -572,4 +575,4 @@ currently exercises them.
 
 | Number | Variant | Trigger |
 |---|---|---|
-| 5 | `Partial_application` | `typecore.ml:2049`, `:3980` — fires from `check_application_result` and a guarded branch in the `ignore` special case. The 3980 branch needs `not total_app`, which would require `ignore(arg, ...)` partial application — syntactically non-sensical. The 2049 site fires via a delayed check whose only path is hard to trigger from plain source. Status: live raise sites but I couldn't construct a reproduction; may be effectively dead. |
+| 5 | `Partial_application` | typecore.ml, `check_application_result` and the `ignore` special case of `type_application`. The `type_application` branch needs `not total_app`, which would require `ignore(arg, ...)` partial application — syntactically non-sensical. The `check_application_result` site fires via a delayed check whose only path is hard to trigger from plain source. Status: live raise sites but I couldn't construct a reproduction; may be effectively dead. |

@@ -24,6 +24,54 @@
 
 external ( .!() ) : 'a array -> int -> 'a = "%array_unsafe_get"
 
+let map_to_array a f =
+  match a with
+  | [] -> [||]
+  | [a0] ->
+    let b0 = f a0 in
+    [|b0|]
+  | [a0; a1] ->
+    let b0 = f a0 in
+    let b1 = f a1 in
+    [|b0; b1|]
+  | [a0; a1; a2] ->
+    let b0 = f a0 in
+    let b1 = f a1 in
+    let b2 = f a2 in
+    [|b0; b1; b2|]
+  | [a0; a1; a2; a3] ->
+    let b0 = f a0 in
+    let b1 = f a1 in
+    let b2 = f a2 in
+    let b3 = f a3 in
+    [|b0; b1; b2; b3|]
+  | [a0; a1; a2; a3; a4] ->
+    let b0 = f a0 in
+    let b1 = f a1 in
+    let b2 = f a2 in
+    let b3 = f a3 in
+    let b4 = f a4 in
+    [|b0; b1; b2; b3; b4|]
+  | a0 :: a1 :: a2 :: a3 :: a4 :: tl ->
+    let b0 = f a0 in
+    let b1 = f a1 in
+    let b2 = f a2 in
+    let b3 = f a3 in
+    let b4 = f a4 in
+    let len = List.length tl + 5 in
+    let arr = Array.make len b0 in
+    Array.unsafe_set arr 1 b1;
+    Array.unsafe_set arr 2 b2;
+    Array.unsafe_set arr 3 b3;
+    Array.unsafe_set arr 4 b4;
+    let rec fill i = function
+      | [] -> arr
+      | hd :: tl ->
+        Array.unsafe_set arr i (f hd);
+        fill (i + 1) tl
+    in
+    fill 5 tl
+
 let rec map l f =
   match l with
   | [] -> []
@@ -71,7 +119,7 @@ let rec arr_list_combine_unsafe arr l i j acc f =
   if i = j then acc
   else
     match l with
-    | [] -> invalid_arg "Ext_list.combine"
+    | [] -> invalid_arg "Ext_list.arr_list_combine_unsafe"
     | h :: tl ->
       (f arr.!(i), h) :: arr_list_combine_unsafe arr tl (i + 1) j acc f
 
@@ -79,33 +127,19 @@ let combine_array arr l f =
   let len = Array.length arr in
   arr_list_combine_unsafe arr l 0 len [] f
 
-let rec arr_list_filter_map_unasfe arr l i j acc f =
+let rec arr_list_filter_map_unsafe arr l i j acc f =
   if i = j then acc
   else
     match l with
     | [] -> invalid_arg "Ext_list.arr_list_filter_map_unsafe"
     | h :: tl -> (
       match f arr.!(i) h with
-      | None -> arr_list_filter_map_unasfe arr tl (i + 1) j acc f
-      | Some v -> v :: arr_list_filter_map_unasfe arr tl (i + 1) j acc f)
+      | None -> arr_list_filter_map_unsafe arr tl (i + 1) j acc f
+      | Some v -> v :: arr_list_filter_map_unsafe arr tl (i + 1) j acc f)
 
 let array_list_filter_map arr l f =
   let len = Array.length arr in
-  arr_list_filter_map_unasfe arr l 0 len [] f
-
-let rec map_split_opt (xs : 'a list) (f : 'a -> 'b option * 'c option) :
-    'b list * 'c list =
-  match xs with
-  | [] -> ([], [])
-  | x :: xs -> (
-    let c, d = f x in
-    let cs, ds = map_split_opt xs f in
-    ( (match c with
-      | Some c -> c :: cs
-      | None -> cs),
-      match d with
-      | Some d -> d :: ds
-      | None -> ds ))
+  arr_list_filter_map_unsafe arr l 0 len [] f
 
 let rec map_snd l f =
   match l with
@@ -296,41 +330,6 @@ let rec fold_right3 l r last acc f =
             (f a3 b3 c3 (f a4 b4 c4 (fold_right3 arest brest crest acc f)))))
   | _, _, _ -> invalid_arg "Ext_list.fold_right2"
 
-let rec map2i l r f =
-  match (l, r) with
-  | [], [] -> []
-  | [a0], [b0] -> [f 0 a0 b0]
-  | [a0; a1], [b0; b1] ->
-    let c0 = f 0 a0 b0 in
-    let c1 = f 1 a1 b1 in
-    [c0; c1]
-  | [a0; a1; a2], [b0; b1; b2] ->
-    let c0 = f 0 a0 b0 in
-    let c1 = f 1 a1 b1 in
-    let c2 = f 2 a2 b2 in
-    [c0; c1; c2]
-  | [a0; a1; a2; a3], [b0; b1; b2; b3] ->
-    let c0 = f 0 a0 b0 in
-    let c1 = f 1 a1 b1 in
-    let c2 = f 2 a2 b2 in
-    let c3 = f 3 a3 b3 in
-    [c0; c1; c2; c3]
-  | [a0; a1; a2; a3; a4], [b0; b1; b2; b3; b4] ->
-    let c0 = f 0 a0 b0 in
-    let c1 = f 1 a1 b1 in
-    let c2 = f 2 a2 b2 in
-    let c3 = f 3 a3 b3 in
-    let c4 = f 4 a4 b4 in
-    [c0; c1; c2; c3; c4]
-  | a0 :: a1 :: a2 :: a3 :: a4 :: arest, b0 :: b1 :: b2 :: b3 :: b4 :: brest ->
-    let c0 = f 0 a0 b0 in
-    let c1 = f 1 a1 b1 in
-    let c2 = f 2 a2 b2 in
-    let c3 = f 3 a3 b3 in
-    let c4 = f 4 a4 b4 in
-    c0 :: c1 :: c2 :: c3 :: c4 :: map2i arest brest f
-  | _, _ -> invalid_arg "Ext_list.map2"
-
 let rec map2 l r f =
   match (l, r) with
   | [], [] -> []
@@ -485,15 +484,6 @@ let filter_mapi xs f =
   in
   aux 0 xs
 
-let rec filter_map2 xs ys (f : 'a -> 'b -> 'c option) =
-  match (xs, ys) with
-  | [], [] -> []
-  | u :: us, v :: vs -> (
-    match f u v with
-    | None -> filter_map2 us vs f (* idea: rec f us vs instead? *)
-    | Some z -> z :: filter_map2 us vs f)
-  | _ -> invalid_arg "Ext_list.filter_map2"
-
 let rec rev_map_append l1 l2 f =
   match l1 with
   | [] -> l2
@@ -557,14 +547,6 @@ and aux eq (x : 'a) (xss : 'a list list) : 'a list list =
   | _ :: _ -> assert false
 
 let stable_group lst eq = group eq lst |> rev
-
-let rec drop h n =
-  if n < 0 then invalid_arg "Ext_list.drop"
-  else if n = 0 then h
-  else
-    match h with
-    | [] -> invalid_arg "Ext_list.drop"
-    | _ :: tl -> drop tl (n - 1)
 
 let rec find_first x p =
   match x with
@@ -648,14 +630,6 @@ let rec find_opt xs p =
     | Some _ as v -> v
     | None -> find_opt l p)
 
-let rec find_def xs p def =
-  match xs with
-  | [] -> def
-  | x :: l -> (
-    match p x with
-    | Some v -> v
-    | None -> find_def l p def)
-
 let rec split_map l f =
   match l with
   | [] -> ([], [])
@@ -694,7 +668,7 @@ let sort_via_array lst cmp =
 let sort_via_arrayf lst cmp f =
   let arr = Array.of_list lst in
   Array.sort cmp arr;
-  Ext_array.to_list_f arr f
+  Array.fold_right (fun x acc -> f x :: acc) arr []
 
 let rec assoc_by_string lst (k : string) def =
   match lst with
@@ -768,11 +742,6 @@ let singleton_exn xs =
   match xs with
   | [x] -> x
   | _ -> assert false
-
-let rec mem_string (xs : string list) (x : string) =
-  match xs with
-  | [] -> false
-  | a :: l -> a = x || mem_string l x
 
 let filter lst p =
   let rec find ~p accu lst =

@@ -33,5 +33,4 @@ include Ext_set.Make (struct
       if name <> 0 then name else Stdlib.compare x.flags y.flags
 
   let equal = Ident.same
-  let print = Ident.print
 end)

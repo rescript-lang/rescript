@@ -16,24 +16,18 @@ val functor_type :
   * Parsetree.module_type
 
 val expr_is_await : Parsetree.expression -> bool
-val has_await_attribute : Parsetree.attributes -> bool
-val has_res_pat_variant_spread_attribute : Parsetree.attributes -> bool
 val has_dict_pattern_attribute : Parsetree.attributes -> bool
 
 type dict_expr_part =
   | DictExprRows of Parsetree.expression
   | DictExprSpread of Parsetree.expression
 
-type if_condition_kind =
-  | If of Parsetree.expression
-  | IfLet of Parsetree.pattern * Parsetree.expression
-
 (* if ... else if ... else ... is represented as nested expressions: if ... else { if ... }
  * The purpose of this function is to flatten nested ifs into one sequence.
  * Basically compute: ([if, else if, else if, else if], else) *)
 val collect_if_expressions :
   Parsetree.expression ->
-  (Location.t * if_condition_kind * Parsetree.expression) list
+  (Location.t * Parsetree.expression * Parsetree.expression) list
   * Parsetree.expression option
 
 val collect_array_expressions :
@@ -78,11 +72,8 @@ val is_equality_operator : string -> bool
 
 val flattenable_operators : string -> string -> bool
 
-val has_attributes : Parsetree.attributes -> bool
-
 val is_array_access : Parsetree.expression -> bool
 val is_ternary_expr : Parsetree.expression -> bool
-val is_if_let_expr : Parsetree.expression -> bool
 
 val collect_ternary_parts :
   Parsetree.expression ->
@@ -90,15 +81,13 @@ val collect_ternary_parts :
 
 val parameters_should_hug : fun_param_kind list -> bool
 
-val filter_fragile_match_attributes :
-  Parsetree.attributes -> Parsetree.attributes
-
 val should_indent_binary_expr : Parsetree.expression -> bool
 val should_inline_rhs_binary_expr : Parsetree.expression -> bool
 val has_printable_attributes : Parsetree.attributes -> bool
-val filter_printable_attributes : Parsetree.attributes -> Parsetree.attributes
+val mod_expr_has_attributes : Parsetree.module_expr -> bool
 val partition_printable_attributes :
   Parsetree.attributes -> Parsetree.attributes * Parsetree.attributes
+val is_doc_comment_attribute : Parsetree.attribute -> bool
 val partition_doc_comment_attributes :
   Parsetree.attributes -> Parsetree.attributes * Parsetree.attributes
 
@@ -158,8 +147,6 @@ val rewrite_underscore_apply_in_pipe :
 
 (* (__x) => f(a, __x, c) -----> f(a, _, c)  *)
 val is_underscore_apply_sugar : Parsetree.expression -> bool
-
-val has_if_let_attribute : Parsetree.attributes -> bool
 
 val is_rewritten_underscore_apply_sugar : Parsetree.expression -> bool
 

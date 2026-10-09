@@ -269,7 +269,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       (* Finish Triples for  ref data type *)
       ("%field0", Pfield (0, Fld_tuple));
       ("%field1", Pfield (1, Fld_tuple));
-      ("%obj_dup", Pduprecord);
       ("%obj_tag", Pobjtag);
       ("%obj_size", Pobjsize);
       ("%obj_get_field", Parrayrefu);
@@ -283,7 +282,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       ("%boolmin", Pboolmin);
       ("%boolmax", Pboolmax);
       (* int primitives *)
-      ("%obj_is_int", Pisint);
       ("%negint", Pnegint);
       ("%addint", Paddint);
       ("%subint", Psubint);
@@ -356,7 +354,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       (* array primitives *)
       ("%array_length", Parraylength);
       ("%array_safe_get", Parrayrefs);
-      ("%array_safe_set", Parraysets);
       ("%array_unsafe_get", Parrayrefu);
       ("%array_unsafe_set", Parraysetu);
       (* dict primitives *)
@@ -382,8 +379,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       ("%unsafe_gt", Pjscomp Cgt);
       ("%unsafe_ge", Pjscomp Cge);
       ("%is_nullable", Pis_null_undefined);
-      ("%null_to_opt", Pnull_to_opt);
-      ("%nullable_to_opt", Pnull_undefined_to_opt);
       ("%makemutablelist", Pmakelist);
       ("%unsafe_to_method", Pjs_fn_method);
       (* Compiler internals, never expose to ReScript files *)
@@ -393,8 +388,6 @@ let primitive_builtins : (string * Lambda.builtin) array =
       ("#null_to_opt", Pnull_to_opt);
       ("#nullable_to_opt", Pnull_undefined_to_opt);
       ("#makemutablelist", Pmakelist);
-      (* FIXME: Deprecated *)
-      ("%obj_field", Parrayrefu);
     |]
 
 let builtins_table : (string, Lambda.builtin) Hashtbl.t =
@@ -463,7 +456,7 @@ let lambda_of_inline_const (c : External_ffi_types.inline_const) :
   | Const_bool true -> Const_js_true
   | Const_bool false -> Const_js_false
   | Const_int i -> Const_int i
-  | Const_bigint {negative; digits} -> Const_bigint (negative, digits)
+  | Const_bigint {positive; digits} -> Const_bigint (positive, digits)
   | Const_float f -> Const_float f
 
 (* The argument of the dynamic-import primitive is a module reference,
@@ -916,8 +909,7 @@ let wrap_exn loc arg =
        ~args:
          [global_module (Ident.create_persistent Primitive_modules.exceptions)]
        loc)
-    [arg]
-    {ap_loc = loc; ap_inlined = Default_inline}
+    [arg] loc
 let exception_id_destructed (l : Lambda.t) (fv : Ident.t) : bool =
   let rec hit_opt = function
     | None -> false
@@ -1051,14 +1043,14 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
       }
     when List.length oargs >= p.prim_arity
          && List.for_all (fun (_, arg) -> arg <> None) oargs -> (
+    (* [funct] is not translated with [transl_exp], so check its attributes
+       here, in the warning scope [transl_exp] would use *)
+    Builtin_attributes.warning_scope ~ppwarning:false funct.exp_attributes
+      (fun () ->
+        List.iter (Translattribute.check_attribute funct) funct.exp_attributes);
     let args, args' = cut p.prim_arity oargs in
     let wrap f =
-      if args' = [] then f
-      else
-        let inlined, _ =
-          Translattribute.get_and_remove_inlined_attribute funct
-        in
-        transl_apply ~inlined ~transformed_jsx f args' e.exp_loc
+      if args' = [] then f else transl_apply ~transformed_jsx f args' e.exp_loc
     in
     let args =
       List.map
@@ -1111,9 +1103,6 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
           warn_polymorphic_comparison e.exp_loc builtin argl;
           wrap (mk_builtin builtin argl e.exp_loc))))
   | Texp_apply {funct; args = oargs; partial; transformed_jsx} ->
-    let inlined, funct =
-      Translattribute.get_and_remove_inlined_attribute funct
-    in
     let uncurried_partial_application =
       (* In case of partial application foo(args, ...) when some args are missing,
          get the arity *)
@@ -1126,7 +1115,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
         | None -> None
       else None
     in
-    transl_apply ~inlined ~uncurried_partial_application ~transformed_jsx
+    transl_apply ~uncurried_partial_application ~transformed_jsx
       (transl_exp funct) oargs e.exp_loc
   | Texp_match (arg, pat_expr_list, exn_pat_expr_list, partial) ->
     transl_match e arg pat_expr_list exn_pat_expr_list partial
@@ -1322,12 +1311,10 @@ and transl_case {c_lhs; c_guard; c_rhs} = (c_lhs, transl_guard c_guard c_rhs)
 
 and transl_cases cases = List.map transl_case cases
 
-and transl_apply ?(inlined = Default_inline)
-    ?(uncurried_partial_application = None) ?(transformed_jsx = false) lam sargs
-    loc =
+and transl_apply ?(uncurried_partial_application = None)
+    ?(transformed_jsx = false) lam sargs loc =
   let lapply ap_func ap_args =
-    apply ~ap_transformed_jsx:transformed_jsx ap_func ap_args
-      {ap_loc = loc; ap_inlined = inlined}
+    apply ~ap_transformed_jsx:transformed_jsx ap_func ap_args loc
   in
   let rec build_apply lam args = function
     | (None, optional) :: l ->
@@ -1377,10 +1364,7 @@ and transl_apply ?(inlined = Default_inline)
     in
     let extra_args = Ext_list.map extra_ids (fun id -> var id) in
     let ap_args = args @ extra_args in
-    let l0 =
-      apply ~ap_transformed_jsx:transformed_jsx lam ap_args
-        {ap_loc = loc; ap_inlined = inlined}
-    in
+    let l0 = apply ~ap_transformed_jsx:transformed_jsx lam ap_args loc in
     function_ ~loc ~attr:default_function_attribute
       ~params:(List.rev_append !none_ids extra_ids)
       ~body:l0
@@ -1448,19 +1432,19 @@ and transl_record loc env fields repres opt_init_expr =
   (* The runtime shape of the record: each field's runtime name, and whether
      it is optional. *)
   let field_shape () =
-    Ext_array.map fields (fun ((lbl : Types.label_description), _, _) ->
+    fields
+    |> Array.map (fun ((lbl : Types.label_description), _, _) ->
         (lbl.lbl_runtime_name, lbl.lbl_optional))
   in
   let field_names () =
-    Ext_array.map fields (fun ((lbl : Types.label_description), _, _) ->
+    fields
+    |> Array.map (fun ((lbl : Types.label_description), _, _) ->
         lbl.lbl_runtime_name)
   in
   match (opt_init_expr, repres, fields) with
   | _ -> (
     let size = Array.length fields in
-    let optional =
-      Ext_array.exists fields (fun (ld, _, _) -> ld.lbl_optional)
-    in
+    let optional = fields |> Array.exists (fun (ld, _, _) -> ld.lbl_optional) in
     (* Determine if there are "enough" fields (only relevant if this is a
        functional-style record update *)
     let no_init =

@@ -8,6 +8,8 @@ Dead code analysis and other experimental analyses for ReScript.
 - **Exception Analysis** - Track potential exceptions through call chains
 - **Termination Analysis** - Experimental analysis for detecting non-terminating functions
 
+[TERMINATION.md](TERMINATION.md) states the program language, typing rules and abstract evaluation that the termination analysis (`src/arnold.ml`) implements.
+
 ## Usage
 
 ```bash
@@ -131,11 +133,11 @@ Examples:
 
 ```bash
 # Start server with default socket (recommended)
-rescript-tools reanalyze-server \
+rescript-tools reanalyze-server
 
 # With custom socket path
 rescript-tools reanalyze-server \
-  --socket /tmp/my-custom.sock \
+  --socket /tmp/my-custom.sock
 ```
 
 ### Behavior
@@ -163,7 +165,7 @@ rescript-tools reanalyze-server \
 make test-reanalyze
 
 # Run with shuffled file order (order-independence test)
-make test-reanalyze-order-independence
+make -C tests/analysis_tests/tests-reanalyze/deadcode test-reanalyze-order-independence
 ```
 
 The order-independence test uses the test-only CLI flag `-test-shuffle`, which randomizes the per-file processing order to ensure results don’t depend on traversal order.

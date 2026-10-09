@@ -29,15 +29,6 @@ type t = int Map_int.t Map_string.t
 *)
 let empty : t = Map_string.empty
 
-let rec print fmt v =
-  Format.fprintf fmt "@[<v>{";
-  Map_string.iter v (fun k m ->
-      Format.fprintf fmt "%s: @[%a@],@ " k print_int_map m);
-  Format.fprintf fmt "}@]"
-
-and print_int_map fmt m =
-  Map_int.iter m (fun k v -> Format.fprintf fmt "%d - %d" k v)
-
 let add_ident ~mangled:name (stamp : int) (cxt : t) : int * t =
   match Map_string.find_opt cxt name with
   | None -> (0, Map_string.add cxt name (Map_int.add Map_int.empty stamp 0))
@@ -49,7 +40,7 @@ let add_ident ~mangled:name (stamp : int) (cxt : t) : int * t =
     | Some i -> (i, cxt))
 
 (**
-   same as {!Js_dump.ident} except it generates a string instead of doing the printing
+   same as {!ident} except it generates a string instead of doing the printing
    For fast/debug mode, we can generate the name as 
        [Printf.sprintf "%s$%d" name id.stamp] which is 
        not relevant to the context       
@@ -62,8 +53,6 @@ let add_ident ~mangled:name (stamp : int) (cxt : t) : int * t =
        However, this means we loose the ability of dynamic loading, is it a big 
        deal? we can fix this by a scanning first, since we already know which 
        modules are global
-
-       check [test/test_global_print.ml] for regression
    - collision
       It is obvious that for the same identifier that they 
       print the same name.

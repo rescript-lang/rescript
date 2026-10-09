@@ -179,8 +179,6 @@ val eq_null_undefined_boolean : ?comment:string -> t -> t -> t
 
 val neq_null_undefined_boolean : ?comment:string -> t -> t -> t
 
-val is_type_number : ?comment:string -> t -> t
-
 val is_int_tag : ?has_null_undefined_other:bool * bool * bool -> t -> t
 
 val is_a_literal_case :

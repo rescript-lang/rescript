@@ -37,9 +37,6 @@ type t
 val empty : t
 val initial_safe_string : t
 
-val diff : t -> t -> Ident.t list
-val copy_local : from:t -> t -> t
-
 type type_descriptions = constructor_description list * label_description list
 
 (* For short-paths *)
@@ -71,7 +68,6 @@ val find_type_expansion_opt :
 (* Find the manifest type information associated to a type for the sake
    of the compiler's type-based optimisations. *)
 val find_modtype_expansion : Path.t -> t -> module_type
-val add_functor_arg : Ident.t -> t -> t
 val is_functor_arg : Path.t -> t -> bool
 val normalize_path : Location.t option -> t -> Path.t -> Path.t
 
@@ -192,14 +188,6 @@ val save_signature :
   Cmi_format.cmi_infos
 (* Arguments: signature, module name, file name. *)
 
-val save_signature_with_imports :
-  ?check_exists:unit ->
-  deprecated:string option ->
-  signature ->
-  string ->
-  string ->
-  (string * Digest.t option) list ->
-  Cmi_format.cmi_infos
 (* Arguments: signature, module name, file name,
    imported units with their CRCs. *)
 
@@ -209,13 +197,8 @@ val imports : unit -> (string * Digest.t option) list
 
 (* Direct access to the table of imported compilation units with their CRC *)
 
-val crc_units : Consistbl.t
-val add_import : string -> unit
-
 (* Summaries -- compact representation of an environment, to be
    exported in debugging information. *)
-
-val summary : t -> summary
 
 (* Return an equivalent environment where all fields have been reset,
    except the summary. *)
@@ -228,10 +211,6 @@ type error =
   | Illegal_value_name of Location.t * string
 
 exception Error of error
-
-open Format
-
-val report_error : formatter -> error -> unit
 
 val mark_value_used : t -> string -> value_description -> unit
 val mark_module_used : t -> string -> Location.t -> unit

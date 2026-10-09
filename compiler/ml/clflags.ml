@@ -4,17 +4,12 @@ and include_dirs = ref ([] : string list) (* -I *)
 
 and debug = ref false (* -g *)
 
-and fast = ref false (* -unsafe *)
-
 and nopervasives = ref false (* -nopervasives *)
-
-and preprocessor = ref (None : string option) (* -pp *)
 
 and all_ppx = ref ([] : string list)
 
 (* -ppx *)
-let annotations = ref false (* -annot *)
-let binary_annotations = ref false (* -annot *)
+let binary_annotations = ref false (* write .cmt/.cmti; -bs-no-bin-annot *)
 
 and noassert = ref false (* -noassert *)
 
@@ -24,9 +19,7 @@ and open_modules = ref [] (* -open *)
 
 and real_paths = ref true (* -short-paths *)
 
-and applicative_functors = ref true (* -no-app-funct *)
-
-and error_size = ref 500 (* -error-size *)
+and error_size = ref 400 (* -error-size, in heap words *)
 
 and transparent_modules = ref false (* -trans-mod *)
 let dump_source = ref false (* -dsource *)
@@ -36,9 +29,9 @@ and dump_typedtree = ref false (* -dtypedtree *)
 
 and dump_rawlambda = ref false (* -drawlambda *)
 
-and only_parse = ref false (* -only-parse *)
+and dump_coercions = ref false (* -draw-coercions *)
 
-and editor_mode = ref false (* -editor-mode *)
+and only_parse = ref false (* -only-parse *)
 
 and ignore_parse_errors = ref false (* -ignore-parse-errors *)
 
@@ -48,7 +41,8 @@ let reset_dump_state () =
   dump_source := false;
   dump_parsetree := false;
   dump_typedtree := false;
-  dump_rawlambda := false
+  dump_rawlambda := false;
+  dump_coercions := false
 
 let keep_locs = ref true (* -keep-locs *)
 

@@ -654,14 +654,6 @@ let extract_embedded ~extension_points ~filename =
   in
   Yojson.Safe.pretty_to_string (`List result)
 
-let read_file path =
-  let ic = open_in path in
-  let n = in_channel_length ic in
-  let s = Bytes.create n in
-  really_input ic s 0 n;
-  close_in ic;
-  Bytes.to_string s
-
 let is_res_lang lang =
   match String.lowercase_ascii lang with
   | "res" | "rescript" | "resi" -> true
@@ -670,6 +662,55 @@ let is_res_lang lang =
     String.starts_with ~prefix:"res " lang
     || String.starts_with ~prefix:"rescript " lang
     || String.starts_with ~prefix:"resi " lang
+
+(* Parses a ReScript code block of a docstring or Markdown file, offset to the
+   block's line so diagnostics point into the enclosing file, and prints it.
+   Returns the printed code, or reports the syntax error through [add_error]
+   and returns the block's own text. *)
+let print_rescript_code_block ~display_filename ~add_error
+    ~markdown_block_start_line ~transform_implementation ~lang ~meta code =
+  let current_line =
+    meta |> Cmarkit.Meta.textloc |> Cmarkit.Textloc.first_line |> fst
+  in
+  (* Account for 0-based line numbers *)
+  let current_line = current_line + 1 in
+  let code_text =
+    code |> List.map Cmarkit.Block_line.to_string |> String.concat "\n"
+  in
+  let n = List.length code in
+  let newlines_needed = max 0 (markdown_block_start_line + current_line - n) in
+  let code_with_offset = String.make newlines_needed '\n' ^ code_text in
+  let report_parse_error diagnostics =
+    let buf = Buffer.create 1000 in
+    let formatter = Format.formatter_of_buffer buf in
+    Res_diagnostics.print_report ~formatter
+      ~custom_intro:(Some "Syntax error in code block in docstring") diagnostics
+      code_with_offset;
+    add_error (Buffer.contents buf)
+  in
+  if lang |> String.split_on_char ' ' |> List.hd = "resi" then
+    let {Res_driver.parsetree; comments; invalid; diagnostics} =
+      Res_driver.parse_interface_from_source ~display_filename
+        ~source:code_with_offset
+    in
+    if invalid then (
+      report_parse_error diagnostics;
+      Error code_text)
+    else Ok (Res_printer.print_interface parsetree ~comments |> String.trim)
+  else
+    let {Res_driver.parsetree; comments; invalid; diagnostics} =
+      Res_driver.parse_implementation_from_source ~display_filename
+        ~source:code_with_offset
+    in
+    if invalid then (
+      report_parse_error diagnostics;
+      Error code_text)
+    else
+      Ok
+        (Res_printer.print_implementation
+           (transform_implementation parsetree)
+           ~comments
+        |> String.trim)
 
 module Format_codeblocks = struct
   module Transform = struct
@@ -773,60 +814,21 @@ module Format_codeblocks = struct
         match Cmarkit.Block.Code_block.info_string code_block with
         | Some ((lang, _) as info_string) when is_res_lang lang ->
           had_code_blocks := true;
-
-          let current_line =
-            meta |> Cmarkit.Meta.textloc |> Cmarkit.Textloc.first_line |> fst
-          in
-          (* Account for 0-based line numbers *)
-          let current_line = current_line + 1 in
           let layout = Cmarkit.Block.Code_block.layout code_block in
           let code = Cmarkit.Block.Code_block.code code_block in
-          let code_text =
-            code |> List.map Cmarkit.Block_line.to_string |> String.concat "\n"
-          in
-
-          let n = List.length code in
-          let newlines_needed =
-            max 0 (markdown_block_start_line + current_line - n)
-          in
-          let code_with_offset = String.make newlines_needed '\n' ^ code_text in
-          let report_parse_error diagnostics =
-            let buf = Buffer.create 1000 in
-            let formatter = Format.formatter_of_buffer buf in
-            Res_diagnostics.print_report ~formatter
-              ~custom_intro:(Some "Syntax error in code block in docstring")
-              diagnostics code_with_offset;
-            add_error (Buffer.contents buf)
+          let transform_implementation parsetree =
+            if transform_assert_equal then
+              Transform.transform ~transforms:[AssertEqualFnToEquals] parsetree
+            else parsetree
           in
           let formatted_code =
-            if lang |> String.split_on_char ' ' |> List.hd = "resi" then
-              let {Res_driver.parsetree; comments; invalid; diagnostics} =
-                Res_driver.parse_interface_from_source ~display_filename
-                  ~source:code_with_offset
-              in
-              if invalid then (
-                report_parse_error diagnostics;
-                code)
-              else
-                Res_printer.print_interface parsetree ~comments
-                |> String.trim |> Cmarkit.Block_line.list_of_string
-            else
-              let {Res_driver.parsetree; comments; invalid; diagnostics} =
-                Res_driver.parse_implementation_from_source ~display_filename
-                  ~source:code_with_offset
-              in
-              if invalid then (
-                report_parse_error diagnostics;
-                code)
-              else
-                let parsetree =
-                  if transform_assert_equal then
-                    Transform.transform ~transforms:[AssertEqualFnToEquals]
-                      parsetree
-                  else parsetree
-                in
-                Res_printer.print_implementation parsetree ~comments
-                |> String.trim |> Cmarkit.Block_line.list_of_string
+            match
+              print_rescript_code_block ~display_filename ~add_error
+                ~markdown_block_start_line ~transform_implementation ~lang ~meta
+                code
+            with
+            | Ok printed -> Cmarkit.Block_line.list_of_string printed
+            | Error _ -> code
           in
 
           let mapped_code_block =
@@ -888,7 +890,7 @@ module Format_codeblocks = struct
     in
     let content =
       if Filename.check_suffix path ".md" then
-        let content = read_file path in
+        let content = Ext_io.load_file path in
         let display_filename = Filename.basename path in
         let formatted_contents, had_code_blocks =
           format_rescript_code_blocks ~transform_assert_equal ~add_error
@@ -1128,56 +1130,20 @@ module Extract_codeblocks = struct
       | Cmarkit.Block.Code_block (code_block, meta) -> (
         match Cmarkit.Block.Code_block.info_string code_block with
         | Some (lang, _) when is_res_lang lang ->
-          let current_line =
-            meta |> Cmarkit.Meta.textloc |> Cmarkit.Textloc.first_line |> fst
-          in
-          (* Account for 0-based line numbers *)
-          let current_line = current_line + 1 in
           let code = Cmarkit.Block.Code_block.code code_block in
-          let code_text =
-            code |> List.map Cmarkit.Block_line.to_string |> String.concat "\n"
-          in
-          let n = List.length code in
-          let newlines_needed =
-            max 0 (markdown_block_start_line + current_line - n)
-          in
-          let code_with_offset = String.make newlines_needed '\n' ^ code_text in
-          let report_parse_error diagnostics =
-            let buf = Buffer.create 1000 in
-            let formatter = Format.formatter_of_buffer buf in
-            Res_diagnostics.print_report ~formatter
-              ~custom_intro:(Some "Syntax error in code block in docstring")
-              diagnostics code_with_offset;
-            add_error (Buffer.contents buf)
+          let transform_implementation parsetree =
+            if transform_assert_equal then
+              Transform.transform ~transforms:[EqualsToAssertEqualFn] parsetree
+            else parsetree
           in
           let mapped_code =
-            if lang |> String.split_on_char ' ' |> List.hd = "resi" then
-              let {Res_driver.parsetree; comments; invalid; diagnostics} =
-                Res_driver.parse_interface_from_source ~display_filename
-                  ~source:code_with_offset
-              in
-              if invalid then (
-                report_parse_error diagnostics;
-                code_text)
-              else
-                Res_printer.print_interface parsetree ~comments |> String.trim
-            else
-              let {Res_driver.parsetree; comments; invalid; diagnostics} =
-                Res_driver.parse_implementation_from_source ~display_filename
-                  ~source:code_with_offset
-              in
-              if invalid then (
-                report_parse_error diagnostics;
-                code_text)
-              else
-                let parsetree =
-                  if transform_assert_equal then
-                    Transform.transform ~transforms:[EqualsToAssertEqualFn]
-                      parsetree
-                  else parsetree
-                in
-                Res_printer.print_implementation parsetree ~comments
-                |> String.trim
+            match
+              print_rescript_code_block ~display_filename ~add_error
+                ~markdown_block_start_line ~transform_implementation ~lang ~meta
+                code
+            with
+            | Ok printed -> printed
+            | Error code_text -> code_text
           in
           add_code_block mapped_code;
           Cmarkit.Mapper.default
@@ -1207,7 +1173,7 @@ module Extract_codeblocks = struct
 
     let content =
       if Filename.check_suffix path ".md" then
-        let content = read_file path in
+        let content = Ext_io.load_file path in
         let display_filename = Filename.basename path in
         let code_blocks =
           extract_rescript_code_blocks ~transform_assert_equal ~add_error

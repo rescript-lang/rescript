@@ -18,12 +18,6 @@ type ('k, 'v) delta =
 val set : 'k -> 'v -> 'k * 'v option
 (** Create a batch entry that sets a key *)
 
-val remove : 'k -> 'k * 'v option
-(** Create a batch entry that removes a key *)
-
-val delta_to_entries : ('k, 'v) delta -> ('k * 'v option) list
-(** Convert delta to batch entries *)
-
 (** {1 Statistics} *)
 
 type stats = {
@@ -44,8 +38,6 @@ type stats = {
   mutable removes_emitted: int;  (** Remove operations emitted downstream *)
 }
 (** Per-node statistics for diagnostics *)
-
-val create_stats : unit -> stats
 
 (** {1 Node Registry} *)
 
@@ -97,8 +89,6 @@ val iter : ('k -> 'v -> unit) -> ('k, 'v) t -> unit
 val get : ('k, 'v) t -> 'k -> 'v option
 val length : ('k, 'v) t -> int
 val stats : ('k, 'v) t -> stats
-val level : ('k, 'v) t -> int
-val name : ('k, 'v) t -> string
 
 (** {1 Source Collection} *)
 

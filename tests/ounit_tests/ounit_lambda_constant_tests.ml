@@ -191,6 +191,20 @@ let suites =
   __FILE__
   >::: switch_tests
        @ [
+           ( "record array layout" >:: fun _ ->
+             List.iter
+               (fun (fields, expected) ->
+                 OUnit.assert_equal expected
+                   (Lambda.record_fields_are_array fields))
+               [
+                 ([||], false);
+                 ([|("0", false)|], true);
+                 ([|("0", true); ("1", false)|], true);
+                 ([|("1", false)|], false);
+                 ([|("0", false); ("2", false)|], false);
+                 ([|("00", false)|], false);
+                 ([|("name", false)|], false);
+               ] );
            ( "regexp literals lower to raw JavaScript" >:: fun _ ->
              let expression = Ast_helper.Exp.regexp {|a\/b\d|} "ig" in
              let wire =
@@ -256,7 +270,6 @@ let suites =
                  in
                  let typed, _, _ =
                    Typemod.type_structure Env.initial_safe_string structure
-                     Location.none
                  in
                  let implementation =
                    Translmod.transl_implementation "RegexpTest"

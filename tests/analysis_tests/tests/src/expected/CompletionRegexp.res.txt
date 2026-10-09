@@ -1,5 +1,5 @@
 Complete src/CompletionRegexp.res 1:17
-posCursor:[1:17] posNoWhite:[1:16] Found expr:[1:3->0:-1]
+pos_cursor:[1:17] pos_no_white:[1:16] Found expr:[1:3->0:-1]
 Completable: Cpath Value[emailPattern]->
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib

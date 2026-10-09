@@ -78,11 +78,11 @@ let check ~file ~pass lam =
       check_staticfails arg cxt;
       check_list_snd sw.sw_consts cxt;
       check_list_snd sw.sw_blocks cxt;
-      Ext_option.iter sw.sw_failaction (fun x -> check_staticfails x cxt)
+      Option.iter (fun x -> check_staticfails x cxt) sw.sw_failaction
     | Lstringswitch (arg, cases, default) ->
       check_staticfails arg cxt;
       check_list_snd cases cxt;
-      Ext_option.iter default (fun x -> check_staticfails x cxt)
+      Option.iter (fun x -> check_staticfails x cxt) default
     | Lstaticraise (i, args) ->
       if Set_int.mem cxt i then check_list args cxt
       else
@@ -124,13 +124,13 @@ let check ~file ~pass lam =
       iter arg;
       iter_list_snd sw.sw_consts;
       iter_list_snd sw.sw_blocks;
-      Ext_option.iter sw.sw_failaction iter;
+      Option.iter iter sw.sw_failaction;
       assert (
         not (sw.sw_failaction <> None && sw.sw_consts_full && sw.sw_blocks_full))
     | Lstringswitch (arg, cases, default) ->
       iter arg;
       iter_list_snd cases;
-      Ext_option.iter default iter
+      Option.iter iter default
     | Lstaticraise (_i, args) -> iter_list args
     | Lstaticcatch (e1, (_, vars), e2) ->
       iter e1;

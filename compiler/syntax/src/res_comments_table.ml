@@ -202,6 +202,26 @@ let partition_adjacent_trailing loc1 comments =
   in
   loop ~prev_end_pos:loc1.loc_end [] comments
 
+(* Like [partition_adjacent_trailing], and also keeps the comments that follow
+ * a [?] token placed right after [loc1], as in the [=?] of an optional
+ * parameter without a default:
+ *   (~x /* before */ =? /* after */, ~y)
+ * Both comments trail the parameter [~x]. *)
+let partition_adjacent_trailing_through_question loc1 comments =
+  let after_loc1, rest = partition_adjacent_trailing loc1 comments in
+  match rest with
+  | first :: _
+    when Comment.prev_tok_is_question first
+         && (Comment.prev_tok_end_pos first).pos_cnum
+            > loc1.Location.loc_end.pos_cnum ->
+    let after_question, rest =
+      partition_adjacent_trailing
+        {loc1 with loc_end = Comment.prev_tok_end_pos first}
+        rest
+    in
+    (after_loc1 @ after_question, rest)
+  | _ -> (after_loc1, rest)
+
 (* Splits comments that follow a location but come before another token.
  * This is particularly useful for handling comments between two tokens
  * where traditional leading/trailing partitioning isn't precise enough.
@@ -712,7 +732,7 @@ and visit_list_but_continue_with_remaining_comments :
     | Some loc ->
       let after_prev, rest =
         if newline_delimited then partition_by_on_same_line loc comments
-        else partition_adjacent_trailing loc comments
+        else partition_adjacent_trailing_through_question loc comments
       in
       attach t.trailing loc after_prev;
       rest
@@ -730,7 +750,7 @@ and visit_list_but_continue_with_remaining_comments :
         (* Same line *)
         if prev_loc.loc_end.pos_lnum == curr_loc.loc_start.pos_lnum then
           let after_prev, before_curr =
-            partition_adjacent_trailing prev_loc leading
+            partition_adjacent_trailing_through_question prev_loc leading
           in
           let () = attach t.trailing prev_loc after_prev in
           let () = attach t.leading curr_loc before_curr in
@@ -1131,7 +1151,7 @@ and walk_expression expr t comments =
       attach t.leading expr.pexp_loc leading;
       walk_expression expr t inside;
       attach t.trailing expr.pexp_loc trailing
-  | Pexp_coerce (expr, (), typexpr) ->
+  | Pexp_coerce (expr, typexpr) ->
     let leading, inside, trailing = partition_by_loc comments expr.pexp_loc in
     attach t.leading expr.pexp_loc leading;
     walk_expression expr t inside;
@@ -1361,56 +1381,6 @@ and walk_expression expr t comments =
     attach t.leading mod_expr.pmod_loc before;
     walk_module_expr mod_expr t inside;
     attach t.trailing mod_expr.pmod_loc after
-  | Pexp_match (expr1, [case; else_branch])
-    when Res_parsetree_viewer.has_if_let_attribute expr.pexp_attributes ->
-    let before, inside, after =
-      partition_by_loc comments case.pc_lhs.ppat_loc
-    in
-    attach t.leading case.pc_lhs.ppat_loc before;
-    walk_pattern case.pc_lhs t inside;
-    let after_pat, rest =
-      partition_adjacent_trailing case.pc_lhs.ppat_loc after
-    in
-    attach t.trailing case.pc_lhs.ppat_loc after_pat;
-    let before, inside, after = partition_by_loc rest expr1.pexp_loc in
-    attach t.leading expr1.pexp_loc before;
-    walk_expression expr1 t inside;
-    let after_expr, rest = partition_adjacent_trailing expr1.pexp_loc after in
-    attach t.trailing expr1.pexp_loc after_expr;
-    let before, inside, after = partition_by_loc rest case.pc_rhs.pexp_loc in
-    let after =
-      if is_block_expr case.pc_rhs then (
-        let after_expr, rest =
-          partition_adjacent_trailing case.pc_rhs.pexp_loc after
-        in
-        walk_expression case.pc_rhs t (List.concat [before; inside; after_expr]);
-        rest)
-      else (
-        attach t.leading case.pc_rhs.pexp_loc before;
-        walk_expression case.pc_rhs t inside;
-        after)
-    in
-    let after_expr, rest =
-      partition_adjacent_trailing case.pc_rhs.pexp_loc after
-    in
-    attach t.trailing case.pc_rhs.pexp_loc after_expr;
-    let before, inside, after =
-      partition_by_loc rest else_branch.pc_rhs.pexp_loc
-    in
-    let after =
-      if is_block_expr else_branch.pc_rhs then (
-        let after_expr, rest =
-          partition_adjacent_trailing else_branch.pc_rhs.pexp_loc after
-        in
-        walk_expression else_branch.pc_rhs t
-          (List.concat [before; inside; after_expr]);
-        rest)
-      else (
-        attach t.leading else_branch.pc_rhs.pexp_loc before;
-        walk_expression else_branch.pc_rhs t inside;
-        after)
-    in
-    attach t.trailing else_branch.pc_rhs.pexp_loc after
   | Pexp_match (expr, cases) | Pexp_try (expr, cases) ->
     let before, inside, after = partition_by_loc comments expr.pexp_loc in
     let after =
@@ -1806,10 +1776,10 @@ and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =
   walk_pattern pattern t inside;
   match expr_opt with
   | Some expr ->
-    let _afterPat, rest =
+    let after_pat, rest =
       partition_adjacent_trailing pattern.ppat_loc trailing
     in
-    attach t.trailing pattern.ppat_loc trailing;
+    attach t.trailing pattern.ppat_loc after_pat;
     if is_block_expr expr then walk_expression expr t rest
     else
       let leading, inside, trailing = partition_by_loc rest expr.pexp_loc in
@@ -1910,6 +1880,7 @@ and walk_module_expr mod_expr t comments =
   | Pmod_structure [] -> attach t.inside mod_expr.pmod_loc comments
   | Pmod_structure structure -> walk_structure structure t comments
   | Pmod_extension extension -> walk_extension extension t comments
+  | Pmod_await mod_expr -> walk_module_expr mod_expr t comments
   | Pmod_unpack expr ->
     let before, inside, after = partition_by_loc comments expr.pexp_loc in
     attach t.leading expr.pexp_loc before;
@@ -2093,7 +2064,7 @@ and walk_pattern pat t comments =
     walk_list (List.map (fun pat -> Pattern pat) pats) t rest
   | Ppat_variant (_label, {txt = args}) ->
     walk_list (List.map (fun pat -> Pattern pat) args) t comments
-  | Ppat_type _ -> ()
+  | Ppat_type _ | Ppat_variant_spread _ -> ()
   | Ppat_record (record_rows, _, rest) ->
     let nodes =
       Ext_list.map record_rows (fun {lid; x = p} -> PatternRecordRow (lid, p))

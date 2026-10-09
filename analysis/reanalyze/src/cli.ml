@@ -1,5 +1,5 @@
 (** Command-line interface options for reanalyze.
-    These refs are set by argument parsing in Reanalyze.ml *)
+    These refs are set by argument parsing in reanalyze.ml *)
 
 let debug = ref false
 let ci = ref false

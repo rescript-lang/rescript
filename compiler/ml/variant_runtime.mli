@@ -109,7 +109,6 @@ val matching_facts : layout -> matching_facts
 val configuration : layout -> configuration
 val constructor_at : layout -> int -> constructor_case
 val constructor_tag : layout -> int -> literal_tag option
-val constructor_is_untagged : layout -> int -> bool
 val representation : constructor_reference -> constructor_case
 val length : layout -> int
 val num_constants : layout -> int

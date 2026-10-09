@@ -30,13 +30,6 @@ let fromNullable = (type t, x: Primitive_js_extern.nullable<t>): option<t> =>
     Obj.magic(some((Obj.magic(x): 'a)))
   }
 
-let fromUndefined = (type t, x: Primitive_js_extern.undefined<t>): option<t> =>
-  if Obj.magic(x) === Primitive_js_extern.undefined {
-    None
-  } else {
-    Obj.magic(some((Obj.magic(x): 'a)))
-  }
-
 let fromNull = (type t, x: Primitive_js_extern.null<t>): option<t> =>
   if Obj.magic(x) === Primitive_js_extern.null {
     None

@@ -148,7 +148,7 @@ describe(__MODULE__, () => {
     eq(__LOC__, N.take(length_8_id, -2), None)
   })
 
-  test("droo", () => {
+  test("drop", () => {
     eq(__LOC__, N.drop(length_10_id, 10), Some(list{}))
     eq(__LOC__, N.drop(length_10_id, 8), Some(list{8, 9}))
     eq(__LOC__, N.drop(length_10_id, 0), Some(length_10_id))
@@ -325,7 +325,7 @@ describe(__MODULE__, () => {
     ok(__LOC__, N.cmpByLength(list{1, 3}, list{1, 2}) == 0)
   })
 
-  test("makeBy", () => {
+  test("make equals makeBy", () => {
     let makeTest = n => eq(__LOC__, N.make(n, 3), N.makeBy(n, _ => 3))
 
     makeTest(0)

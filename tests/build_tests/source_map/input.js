@@ -8,9 +8,29 @@ import { setup } from "#dev/process";
 
 const { execBuildOrThrow, execClean, node } = setup(import.meta.dirname);
 
+/**
+ * @typedef {{ line: number, column: number }} Position
+ * @typedef {{
+ *   generatedLine: number,
+ *   generatedColumn: number,
+ *   sourceIndex: number,
+ *   originalLine: number,
+ *   originalColumn: number,
+ * }} Mapping
+ * @typedef {{
+ *   version: number,
+ *   file: string,
+ *   mappings: string,
+ *   sourceRoot?: string,
+ *   sources: string[],
+ *   sourcesContent?: string[],
+ * }} SourceMap
+ */
+
 const base64VlqChars =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
+/** @param {string} segment */
 function decodeVlq(segment) {
   const values = [];
   let value = 0;
@@ -36,7 +56,9 @@ function decodeVlq(segment) {
   return values;
 }
 
+/** @param {string} mappings */
 function decodeMappings(mappings) {
+  /** @type {Mapping[]} */
   const decoded = [];
   let previousSource = 0;
   let previousOriginalLine = 0;
@@ -71,6 +93,11 @@ function decodeMappings(mappings) {
   return decoded;
 }
 
+/**
+ * @param {string} content
+ * @param {string} token
+ * @returns {Position[]}
+ */
 function findTokenPositions(content, token) {
   return content.split(/\r?\n/).flatMap((line, lineIndex) => {
     const positions = [];
@@ -85,12 +112,17 @@ function findTokenPositions(content, token) {
   });
 }
 
+/**
+ * @param {string} content
+ * @param {string} token
+ */
 function findSingleTokenPosition(content, token) {
   const positions = findTokenPositions(content, token);
   assert.equal(positions.length, 1, `${token} should appear exactly once`);
   return positions[0];
 }
 
+/** @param {string} filename */
 async function fileExists(filename) {
   try {
     await fs.access(filename);
@@ -100,6 +132,11 @@ async function fileExists(filename) {
   }
 }
 
+/**
+ * @param {string} js
+ * @param {string} filename
+ * @returns {SourceMap}
+ */
 function mapFromInlineComment(js, filename) {
   const match = js.match(
     /\/\/# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+)\s*$/,
@@ -148,6 +185,7 @@ const originalHelperPatternBranchPositions = [
   findSingleTokenPosition(helperSource, "Int.toString(count)"),
 ];
 
+/** @param {unknown} sourceMap */
 function configWithSourceMap(sourceMap) {
   const config = JSON.parse(originalConfig);
   config.sourceMap =
@@ -166,6 +204,7 @@ function configWithoutSourceMap() {
   return `${JSON.stringify(config, null, 2)}\n`;
 }
 
+/** @param {string} mode */
 function configWithMode(mode) {
   return configWithSourceMap({ mode });
 }
@@ -182,10 +221,12 @@ async function removeGeneratedMapFiles() {
   }
 }
 
+/** @param {string} filename */
 function moduleNameFromFilename(filename) {
   return filename.slice(0, filename.indexOf("."));
 }
 
+/** @param {string} filename */
 function sourceMapFixture(filename) {
   switch (moduleNameFromFilename(filename)) {
     case "Demo":
@@ -211,6 +252,12 @@ function sourceMapFixture(filename) {
   }
 }
 
+/**
+ * @param {string} filename
+ * @param {string} js
+ * @param {SourceMap} map
+ * @param {{ expectSourcesContent?: boolean, sourceRoot?: string }} [options]
+ */
 function assertSourceMap(filename, js, map, options = {}) {
   const { expectSourcesContent = true, sourceRoot = undefined } = options;
   const fixture = sourceMapFixture(filename);
@@ -232,7 +279,7 @@ function assertSourceMap(filename, js, map, options = {}) {
   );
   if (expectSourcesContent) {
     assert.ok(
-      map.sourcesContent.some(content =>
+      map.sourcesContent?.some(content =>
         content.includes(fixture.sourceContentMarker),
       ),
       `${filename}.map should include source contents`,
@@ -283,10 +330,12 @@ function assertSourceMap(filename, js, map, options = {}) {
     fixture.raiseErrorPositions,
   );
 
-  for (const [label, positions] of [
+  /** @type {[string, Position[]][]} */
+  const mappedPositions = [
     ["pipe call", fixture.pipeCallPositions],
     ["pattern branch", fixture.patternBranchPositions],
-  ]) {
+  ];
+  for (const [label, positions] of mappedPositions) {
     for (const position of positions) {
       const mapping = decodedMappings.find(
         decoded =>
@@ -443,6 +492,7 @@ async function assertDefaultOutput() {
   return output;
 }
 
+/** @param {Map<string, string>} defaultOutput */
 async function assertDisabledOutput(defaultOutput) {
   await fs.writeFile(configPath, configWithSourceMap(false));
   await execBuildOrThrow();
