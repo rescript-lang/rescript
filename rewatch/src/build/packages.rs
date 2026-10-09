@@ -8,12 +8,13 @@ use crate::helpers::StrippedVerbatimPath;
 use crate::helpers::emojis::*;
 use crate::project_context::{MonoRepoContext, ProjectContext};
 use ahash::{AHashMap, AHashSet};
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use console::style;
 use log::debug;
 use rayon::prelude::*;
 use std::collections::hash_map::Entry;
 use std::error;
+use std::fmt;
 use std::fs::{self};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
@@ -282,6 +283,30 @@ pub fn read_dependency(
     Ok(canonical_path)
 }
 
+/// Retain the resolved directory even when its config cannot be read, so watch mode can
+/// observe a correction to a dependency that was absent from the previous build state.
+#[derive(Debug)]
+pub struct DependencyConfigError {
+    pub package_path: PathBuf,
+    source: anyhow::Error,
+}
+
+impl fmt::Display for DependencyConfigError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Could not read dependency config at {}",
+            self.package_path.display()
+        )
+    }
+}
+
+impl error::Error for DependencyConfigError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        Some(self.source.as_ref())
+    }
+}
+
 /// Given a config, recursively finds all dependencies.
 /// 1. It starts with registering dependencies and
 ///    prevents the operation for the ones which are already
@@ -296,7 +321,7 @@ fn read_dependencies(
     show_progress: bool,
     is_local_dep: bool,
     prod: bool,
-) -> Vec<Dependency> {
+) -> Result<Vec<Dependency>> {
     let mut dependencies: Vec<String> = package_config.get_dependency_names();
 
     // Concatenate dev dependencies if is_local_dep is true and not in prod mode
@@ -311,17 +336,14 @@ fn read_dependencies(
                 // Package already registered - check for duplicate (different path)
                 // Re-resolve from current package and from root to compare paths
                 if let Ok(current_path) = read_dependency(package_name, package_config, project_context)
-                    && let Ok(chosen_path) = read_dependency(package_name, &project_context.current_config, project_context)
+                    && let Ok(chosen_path) =
+                        read_dependency(package_name, &project_context.current_config, project_context)
                     && current_path != chosen_path
                 {
                     // Different paths - this is a duplicate
                     let root_path = project_context.get_root_path();
-                    let chosen_relative = chosen_path
-                        .strip_prefix(root_path)
-                        .unwrap_or(&chosen_path);
-                    let duplicate_relative = current_path
-                        .strip_prefix(root_path)
-                        .unwrap_or(&current_path);
+                    let chosen_relative = chosen_path.strip_prefix(root_path).unwrap_or(&chosen_path);
+                    let duplicate_relative = current_path.strip_prefix(root_path).unwrap_or(&current_path);
                     let current_package_path = package_config
                         .path
                         .parent()
@@ -348,39 +370,22 @@ fn read_dependencies(
         .collect::<Vec<String>>()
         // Read all config files in parallel instead of blocking
         .par_iter()
-        .map(|package_name| {
-            let (config, canonical_path) =
-                match read_dependency(package_name, package_config, project_context) {
-                    Err(error) => {
-                        if show_progress {
-                            println!(
-                                "{} {} Error building package tree. {}",
-                                style("[1/2]").bold().dim(),
-                                CROSS,
-                                error
-                            );
-                        }
-
-                        let parent_path_str = project_context.get_root_path().to_string_lossy();
-                        log::error!(
-                            "Could not build package tree reading dependency '{package_name}' at path '{parent_path_str}'. Error: {error}",
+        .map(|package_name| -> Result<Dependency> {
+            let canonical_path =
+                read_dependency(package_name, package_config, project_context).inspect_err(|error| {
+                    if show_progress {
+                        println!(
+                            "{} {} Error building package tree. {}",
+                            style("[1/2]").bold().dim(),
+                            CROSS,
+                            error
                         );
-
-                        std::process::exit(2)
                     }
-                    Ok(canonical_path) => {
-                        match read_config(&canonical_path) {
-                            Ok(config) => (config, canonical_path),
-                            Err(error) => {
-                                let parent_path_str = project_context.get_root_path().to_string_lossy();
-                                log::error!(
-                                    "Could not build package tree for '{package_name}' at path '{parent_path_str}'. Error: {error}",
-                                );
-                                std::process::exit(2)
-                            }
-                        }
-                    }
-                };
+                })?;
+            let config = read_config(&canonical_path).map_err(|source| DependencyConfigError {
+                package_path: canonical_path.clone(),
+                source,
+            })?;
 
             let is_local_dep = is_local_dependency(project_context, package_name, &canonical_path);
 
@@ -391,15 +396,16 @@ fn read_dependencies(
                 show_progress,
                 is_local_dep,
                 prod,
-            );
+            )
+            .with_context(|| format!("Could not read dependencies of '{package_name}'"))?;
 
-            Dependency {
+            Ok(Dependency {
                 name: package_name.to_owned(),
                 config,
                 path: canonical_path,
                 dependencies,
                 is_local_dep,
-            }
+            })
         })
         .collect()
 }
@@ -585,7 +591,7 @@ fn read_packages(
         show_progress,
         /* is local dep */ true,
         prod,
-    ));
+    )?);
 
     for d in dependencies.iter() {
         if !map.contains_key(&d.name) {
