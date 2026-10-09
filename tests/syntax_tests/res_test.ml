@@ -75,6 +75,35 @@ let () =
     [20; 40; 80; 100; 120];
   print_endline "✅ callback trailing comments are stable at multiple widths"
 
+let () =
+  let filename = Filename.concat data_dir "printer/regexpStatements.res" in
+  let source = Ext_io.load_file filename in
+  let parse source =
+    let result =
+      Res_driver.parse_implementation_from_source ~display_filename:filename
+        ~source
+    in
+    if result.invalid then
+      failwith ("Regexp statements failed to parse:\n" ^ source);
+    result
+  in
+  let original = parse source in
+  let comment_texts result =
+    List.map Res_comment.txt result.Res_driver.comments
+  in
+  List.iter
+    (fun width ->
+      let format result =
+        Res_printer.print_implementation ~width result.Res_driver.parsetree
+          ~comments:result.comments
+      in
+      let printed = format original in
+      let reparsed = parse printed in
+      assert (comment_texts original = comment_texts reparsed);
+      assert (printed = format reparsed))
+    [20; 40; 80; 100; 120];
+  print_endline "✅ regexp statements round-trip at multiple widths"
+
 module Outcome_printer_tests = struct
   let signature_to_outcome structure =
     Lazy.force Res_outcome_printer.setup;
