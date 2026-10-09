@@ -22,21 +22,6 @@ let labelled_to_unlabelled_arguments_in_fn_definition (e : Parsetree.expression)
   in
   drop_labels e
 
-let maker_fn_to_record (e : Parsetree.expression) : Parsetree.expression =
-  (* `ReactDOM.Style.make(~width="12px", ~height="12px", ())` to `{height: "12px", width: "12px"}` *)
-  e
-
-let dict_from_array_to_dict_literal_syntax (e : Parsetree.expression) :
-    Parsetree.expression =
-  (* `Dict.fromArray([("a", 1), ("b", 2)])` to `dict{"a": 1, "b": 2}` *)
-  (* Elgible if all keys are strings *)
-  e
-
-let converted_literal_to_pure_literal (e : Parsetree.expression) :
-    Parsetree.expression =
-  (* `Float.fromInt(1)` to `1.`,  *)
-  e
-
 let drop_unit_arguments_in_apply (e : Parsetree.expression) :
     Parsetree.expression =
   (* Drop only unlabelled unit arguments from an application expression. *)
@@ -68,9 +53,6 @@ let registry : (string * transform) list =
   [
     ( "labelledToUnlabelledArgumentsInFnDefinition",
       labelled_to_unlabelled_arguments_in_fn_definition );
-    ("makerFnToRecord", maker_fn_to_record);
-    ("dictFromArrayToDictLiteralSyntax", dict_from_array_to_dict_literal_syntax);
-    ("convertedLiteralToPureLiteral", converted_literal_to_pure_literal);
     ("dropUnitArgumentsInApply", drop_unit_arguments_in_apply);
   ]
 

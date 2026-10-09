@@ -65,7 +65,7 @@ let test_decode_invalid_utf8 () =
 let test_encode () =
   Array.iter
     (fun t ->
-      let encoded_string = Res_utf8.encode_code_point t.codepoint in
+      let encoded_string = Ext_utf8.encode_codepoint t.codepoint in
       assert (encoded_string = t.str))
     utf8_code_point_tests
 

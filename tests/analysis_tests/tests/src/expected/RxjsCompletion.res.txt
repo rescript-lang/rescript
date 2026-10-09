@@ -1,10 +1,10 @@
 Complete src/RxjsCompletion.res 26:29
-posCursor:[26:29] posNoWhite:[26:28] Found expr:[10:17->38:1]
-posCursor:[26:29] posNoWhite:[26:28] Found expr:[11:2->32:78]
-posCursor:[26:29] posNoWhite:[26:28] Found expr:[12:4->26:29]
-posCursor:[26:29] posNoWhite:[26:28] Found expr:[14:4->26:29]
-posCursor:[26:29] posNoWhite:[26:28] Found expr:[20:4->26:29]
-posCursor:[26:29] posNoWhite:[26:28] Found expr:[26:7->26:29]
+pos_cursor:[26:29] pos_no_white:[26:28] Found expr:[10:17->38:1]
+pos_cursor:[26:29] pos_no_white:[26:28] Found expr:[11:2->32:78]
+pos_cursor:[26:29] pos_no_white:[26:28] Found expr:[12:4->26:29]
+pos_cursor:[26:29] pos_no_white:[26:28] Found expr:[14:4->26:29]
+pos_cursor:[26:29] pos_no_white:[26:28] Found expr:[20:4->26:29]
+pos_cursor:[26:29] pos_no_white:[26:28] Found expr:[26:7->26:29]
 Pexp_field [26:7->26:28] _:[30:2->26:29]
 Completable: Cpath Value[merge](Nolabel, Nolabel).""
 Raw opens: 1 Rxjs.place holder
@@ -18,7 +18,7 @@ ContextPath Value[merge](Nolabel, Nolabel, Nolabel)->
 ContextPath Value[merge](Nolabel, Nolabel, Nolabel)
 ContextPath Value[merge]
 Path merge
-CPPipe pathFromEnv:Observable found:true
+CPPipe path_from_env:Observable found:true
 Path Rxjs.Observable.
 Path Rxjs.
 Path 
@@ -111,10 +111,10 @@ Path
 ]
 
 Complete src/RxjsCompletion.res 34:30
-posCursor:[34:30] posNoWhite:[34:29] Found expr:[10:17->38:1]
-posCursor:[34:30] posNoWhite:[34:29] Found expr:[11:2->34:30]
-posCursor:[34:30] posNoWhite:[34:29] Found expr:[32:2->34:30]
-posCursor:[34:30] posNoWhite:[34:29] Found expr:[34:5->34:30]
+pos_cursor:[34:30] pos_no_white:[34:29] Found expr:[10:17->38:1]
+pos_cursor:[34:30] pos_no_white:[34:29] Found expr:[11:2->34:30]
+pos_cursor:[34:30] pos_no_white:[34:29] Found expr:[32:2->34:30]
+pos_cursor:[34:30] pos_no_white:[34:29] Found expr:[34:5->34:30]
 Pexp_field [34:5->34:29] _:[38:0->34:30]
 Completable: Cpath Value[Rxjs, combineLatest](Nolabel, Nolabel).""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -127,7 +127,7 @@ ContextPath Value[Rxjs, combineLatest](Nolabel, Nolabel, Nolabel)->
 ContextPath Value[Rxjs, combineLatest](Nolabel, Nolabel, Nolabel)
 ContextPath Value[Rxjs, combineLatest]
 Path Rxjs.combineLatest
-CPPipe pathFromEnv:Observable found:true
+CPPipe path_from_env:Observable found:true
 Path Rxjs.Observable.
 Path Rxjs.
 Path 

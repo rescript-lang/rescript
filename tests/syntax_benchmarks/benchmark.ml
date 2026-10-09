@@ -4,45 +4,10 @@ module Comment_table = Res_comments_table
 module Parser = Res_parser
 module Printer = Res_printer
 
-module IO : sig
-  val read_file : string -> string
-end = struct
-  (* random chunk size: 2^15, TODO: why do we guess randomly? *)
-  let chunk_size = 32768
-
-  let read_file filename =
-    let chan = open_in filename in
-    let buffer = Buffer.create chunk_size in
-    let chunk = (Bytes.create [@doesNotRaise]) chunk_size in
-    let rec loop () =
-      let len =
-        try input chan chunk 0 chunk_size with Invalid_argument _ -> 0
-      in
-      if len == 0 then (
-        close_in_noerr chan;
-        Buffer.contents buffer)
-      else (
-        Buffer.add_subbytes buffer chunk 0 len;
-        loop ())
-    in
-    loop ()
-end
-
 module Time : sig
   type t
 
   val now : unit -> t
-
-  val [@warning "-32"] to_uint64 : t -> int64
-
-  (* let of_uint64_ns ns = ns *)
-
-  val [@warning "-32"] nanosecond : t
-  val [@warning "-32"] microsecond : t
-  val [@warning "-32"] millisecond : t
-  val [@warning "-32"] second : t
-  val [@warning "-32"] minute : t
-  val [@warning "-32"] hour : t
 
   val zero : t
 
@@ -55,16 +20,7 @@ end = struct
 
   let zero = 0L
 
-  let to_uint64 s = s
-
-  let nanosecond = 1L
-  let microsecond = Int64.mul 1000L nanosecond
-  let millisecond = Int64.mul 1000L microsecond
-  let second = Int64.mul 1000L millisecond
-  let minute = Int64.mul 60L second
-  let hour = Int64.mul 60L minute
-
-  (* TODO: we could do this inside caml_absolute_time *)
+  (* TODO: we could do this inside caml_mach_absolute_time *)
   external init : unit -> unit = "caml_mach_initialize"
   let () = init ()
   external now : unit -> t = "caml_mach_absolute_time"
@@ -150,6 +106,9 @@ end
 module Benchmarks : sig
   val run : unit -> unit
 end = struct
+  let num_iterations = ref 150
+  let parse_manifest = ref None
+
   type action = Parse | Print
 
   let string_of_action action =
@@ -166,11 +125,10 @@ end = struct
     structure
 
   let data_dir = "tests/syntax_benchmarks/data"
-  let num_iterations = 150
 
   let benchmark (filename, action) =
     let path = Filename.concat data_dir filename in
-    let src = IO.read_file path in
+    let src = Ext_io.load_file path in
     let benchmark_fn =
       match action with
       | Parse ->
@@ -190,7 +148,7 @@ end = struct
           in
           ()
     in
-    Benchmark.run benchmark_fn ~num_iterations
+    Benchmark.run benchmark_fn ~num_iterations:!num_iterations
 
   let specs =
     [
@@ -203,12 +161,60 @@ end = struct
       ("HeroGraphic.res", Print);
     ]
 
+  let benchmark_corpus files =
+    let sources =
+      List.map (fun filename -> (filename, Ext_io.load_file filename)) files
+    in
+    let parse () =
+      List.iter
+        (fun (filename, source) ->
+          let p = Parser.make source filename in
+          if Filename.check_suffix filename ".resi" then
+            ignore (Sys.opaque_identity (Res_core.parse_specification p))
+          else ignore (Sys.opaque_identity (Res_core.parse_implementation p));
+          if p.diagnostics <> [] then (
+            Res_diagnostics.print_report p.diagnostics source;
+            failwith ("Invalid benchmark input: " ^ filename)))
+        sources
+    in
+    (* Validate and warm the inputs before measuring. File I/O is excluded. *)
+    parse ();
+    Benchmark.run parse ~num_iterations:!num_iterations
+
   let run () =
-    List.to_seq specs
-    |> Seq.flat_map (fun spec ->
-        let filename, action = spec in
-        let test_name = string_of_action action ^ " " ^ filename in
-        let {Benchmark.ms_per_run; allocs_per_run} = benchmark spec in
+    Arg.parse
+      [
+        ( "--parse-manifest",
+          Arg.String (fun path -> parse_manifest := Some path),
+          "JSON object mapping corpus names to arrays of .res/.resi paths" );
+        ( "--iterations",
+          Arg.Set_int num_iterations,
+          "Number of iterations per benchmark (default: 150)" );
+      ]
+      (fun arg -> raise (Arg.Bad ("Unexpected argument: " ^ arg)))
+      "syntax_benchmarks [--parse-manifest FILE] [--iterations N]";
+    if !num_iterations <= 0 then invalid_arg "--iterations must be positive";
+    let benchmarks =
+      match !parse_manifest with
+      | None ->
+        List.map
+          (fun ((filename, action) as spec) ->
+            (string_of_action action ^ " " ^ filename, fun () -> benchmark spec))
+          specs
+      | Some path ->
+        Yojson.Basic.from_file path
+        |> Yojson.Basic.Util.to_assoc
+        |> List.map (fun (name, files) ->
+            let files =
+              files |> Yojson.Basic.Util.to_list
+              |> List.map Yojson.Basic.Util.to_string
+            in
+            (name, fun () -> benchmark_corpus files))
+    in
+    print_endline "[";
+    List.to_seq benchmarks
+    |> Seq.flat_map (fun (test_name, benchmark_fn) ->
+        let {Benchmark.ms_per_run; allocs_per_run} = benchmark_fn () in
         [
           `Assoc
             [
@@ -225,7 +231,7 @@ end = struct
         ]
         |> List.to_seq)
     |> Seq.iteri (fun i json ->
-        print_endline (if i == 0 then "[" else ",");
+        if i > 0 then print_endline ",";
         print_string (Yojson.to_string json));
     print_newline ();
     print_endline "]"

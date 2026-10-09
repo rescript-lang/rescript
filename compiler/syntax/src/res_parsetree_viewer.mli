@@ -2,9 +2,9 @@
  * and optional arguments it starts at the label and ends at the expression. *)
 val argument_loc : Asttypes.arg_label * Parsetree.expression -> Location.t
 
-(* Restructures a nested tree of arrow types into its args & returnType
+(* Restructures a nested tree of arrow types into its args & return type
  * The parsetree contains: a => b => c => d, for printing purposes
- * we restructure the tree into (a, b, c) and its returnType d *)
+ * we restructure the tree into (a, b, c) and its return type d *)
 val arrow_type :
   Parsetree.core_type ->
   Parsetree.attributes * Parsetree.arg list * Parsetree.core_type
@@ -16,26 +16,18 @@ val functor_type :
   * Parsetree.module_type
 
 val expr_is_await : Parsetree.expression -> bool
-val has_await_attribute : Parsetree.attributes -> bool
-val has_inline_record_definition_attribute : Parsetree.attributes -> bool
-val has_res_pat_variant_spread_attribute : Parsetree.attributes -> bool
 val has_dict_pattern_attribute : Parsetree.attributes -> bool
-val has_dict_spread_attribute : Parsetree.attributes -> bool
 
 type dict_expr_part =
   | DictExprRows of Parsetree.expression
   | DictExprSpread of Parsetree.expression
-
-type if_condition_kind =
-  | If of Parsetree.expression
-  | IfLet of Parsetree.pattern * Parsetree.expression
 
 (* if ... else if ... else ... is represented as nested expressions: if ... else { if ... }
  * The purpose of this function is to flatten nested ifs into one sequence.
  * Basically compute: ([if, else if, else if, else if], else) *)
 val collect_if_expressions :
   Parsetree.expression ->
-  (Location.t * if_condition_kind * Parsetree.expression) list
+  (Location.t * Parsetree.expression * Parsetree.expression) list
   * Parsetree.expression option
 
 val collect_array_expressions :
@@ -54,12 +46,6 @@ type fun_param_kind =
       pat: Parsetree.pattern;
     }
   | NewTypes of {attrs: Parsetree.attributes; locs: string Asttypes.loc list}
-
-(* Groups a function's newtypes into printable groups: a new group starts
-   at each attribute-bearing newtype. *)
-val group_newtypes :
-  (string Asttypes.loc * Parsetree.attributes) list ->
-  (Parsetree.attributes * string Asttypes.loc list) list
 
 val fun_expr :
   Parsetree.expression -> bool * fun_param_kind list * Parsetree.expression
@@ -80,18 +66,14 @@ val operator_precedence : string -> int
 
 val not_ghost_operator : string -> Location.t -> bool
 val is_unary_expression : Parsetree.expression -> bool
-val is_binary_operator : string -> bool
 val is_binary_expression : Parsetree.expression -> bool
 val is_rhs_binary_operator : string -> bool
 val is_equality_operator : string -> bool
 
 val flattenable_operators : string -> string -> bool
 
-val has_attributes : Parsetree.attributes -> bool
-
 val is_array_access : Parsetree.expression -> bool
 val is_ternary_expr : Parsetree.expression -> bool
-val is_if_let_expr : Parsetree.expression -> bool
 
 val collect_ternary_parts :
   Parsetree.expression ->
@@ -99,16 +81,13 @@ val collect_ternary_parts :
 
 val parameters_should_hug : fun_param_kind list -> bool
 
-val filter_ternary_attributes : Parsetree.attributes -> Parsetree.attributes
-val filter_fragile_match_attributes :
-  Parsetree.attributes -> Parsetree.attributes
-
 val should_indent_binary_expr : Parsetree.expression -> bool
 val should_inline_rhs_binary_expr : Parsetree.expression -> bool
 val has_printable_attributes : Parsetree.attributes -> bool
-val filter_printable_attributes : Parsetree.attributes -> Parsetree.attributes
+val mod_expr_has_attributes : Parsetree.module_expr -> bool
 val partition_printable_attributes :
   Parsetree.attributes -> Parsetree.attributes * Parsetree.attributes
+val is_doc_comment_attribute : Parsetree.attribute -> bool
 val partition_doc_comment_attributes :
   Parsetree.attributes -> Parsetree.attributes * Parsetree.attributes
 
@@ -123,7 +102,7 @@ val mod_expr_apply :
 (* Collection of utilities to view the ast in a more a convenient form,
  * allowing for easier processing.
  * Example: given a ptyp_arrow type, what are its arguments and what is the
- * returnType? *)
+ * return type? *)
 
 val mod_expr_functor :
   Parsetree.module_expr ->
@@ -149,10 +128,12 @@ val collect_spread_dict_expr_parts :
 
 val collect_or_pattern_chain : Parsetree.pattern -> Parsetree.pattern list
 
-val process_braces_attr :
-  Parsetree.expression -> Parsetree.attribute option * Parsetree.expression
+val process_braces :
+  Parsetree.expression -> Location.t option * Parsetree.expression
 
 val filter_parsing_attrs : Parsetree.attributes -> Parsetree.attributes
+
+val unwrap_braces : Parsetree.expression -> Parsetree.expression
 
 val is_braced_expr : Parsetree.expression -> bool
 
@@ -166,8 +147,6 @@ val rewrite_underscore_apply_in_pipe :
 
 (* (__x) => f(a, __x, c) -----> f(a, _, c)  *)
 val is_underscore_apply_sugar : Parsetree.expression -> bool
-
-val has_if_let_attribute : Parsetree.attributes -> bool
 
 val is_rewritten_underscore_apply_sugar : Parsetree.expression -> bool
 

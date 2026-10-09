@@ -110,8 +110,7 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
   | Json_literal _ -> true
   | Static_index (obj, (_name : string), (_pos : int32 option)) ->
     no_side_effect obj
-  | String_index (a, b) | Array_index (a, b) ->
-    no_side_effect a && no_side_effect b
+  | Array_index (a, b) -> no_side_effect a && no_side_effect b
   | Is_null_or_undefined b -> no_side_effect b
   | Str _ | Template_literal _ -> true
   | Interpolated_template {values} -> Ext_list.for_all values no_side_effect
@@ -217,10 +216,6 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
       false (* conservative *)
      | _ -> false
      end *)
-  | String_index (a0, a1) -> (
-    match y0 with
-    | String_index (b0, b1) -> eq_expression a0 b0 && eq_expression a1 b1
-    | _ -> false)
   | Array_index (a0, a1) -> (
     match y0 with
     | Array_index (b0, b1) -> eq_expression a0 b0 && eq_expression a1 b1

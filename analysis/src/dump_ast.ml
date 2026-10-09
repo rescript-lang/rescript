@@ -178,6 +178,15 @@ and print_expr_item expr ~pos ~indentation =
   ^ (expr.pexp_loc |> print_loc_denominator ~pos)
   ^
   match expr.Parsetree.pexp_desc with
+  | Pexp_braces {expr = inner; braces_loc} ->
+    "Pexp_braces("
+    ^ print_loc_denominator braces_loc ~pos
+    ^ "\n"
+    ^ add_indentation (indentation + 1)
+    ^ print_expr_item inner ~pos ~indentation:(indentation + 1)
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | Pexp_array exprs ->
     "Pexp_array(\n"
     ^ add_indentation (indentation + 1)
@@ -267,6 +276,8 @@ and print_expr_item expr ~pos ~indentation =
     ^ ")"
   | Pexp_extension (({txt} as loc), _) ->
     "Pexp_extension(%" ^ (loc |> print_loc_denominator_loc ~pos) ^ txt ^ ")"
+  | Pexp_regexp {pattern; flags} ->
+    "Pexp_regexp(/" ^ pattern ^ "/" ^ flags ^ ")"
   | Pexp_template {source_segments; values} ->
     "Pexp_template(source_segments=["
     ^ String.concat ", " (List.map (fun {Asttypes.txt} -> txt) source_segments)

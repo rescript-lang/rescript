@@ -1,25 +1,14 @@
-type input = Filename of string | Source of string
-
-let dump_tokens input =
+let dump_tokens filename =
   let src =
-    match input with
-    | Filename filename -> (
-      try
-        let ic = open_in filename in
-        let content = really_input_string ic (in_channel_length ic) in
-        close_in ic;
-        content
-      with e ->
-        Printf.printf "Error reading file %s: %s\n" filename
-          (Printexc.to_string e);
-        exit 1)
-    | Source code -> code
-  in
-
-  let filename =
-    match input with
-    | Filename filename -> filename
-    | Source _ -> "<source>"
+    try
+      let ic = open_in filename in
+      let content = really_input_string ic (in_channel_length ic) in
+      close_in ic;
+      content
+    with e ->
+      Printf.printf "Error reading file %s: %s\n" filename
+        (Printexc.to_string e);
+      exit 1
   in
   let scanner = Res_scanner.make ~filename src in
 
@@ -151,11 +140,7 @@ let dump_tokens input =
 let token_print_engine =
   {
     Res_driver.print_implementation =
-      (fun ~width:_ ~filename ~comments:_ _ -> dump_tokens (Filename filename));
-    Res_driver.print_implementation_from_source =
-      (fun ~width:_ ~source ~comments:_ _ -> dump_tokens (Source source));
+      (fun ~width:_ ~filename ~comments:_ _ -> dump_tokens filename);
     Res_driver.print_interface =
-      (fun ~width:_ ~filename ~comments:_ _ -> dump_tokens (Filename filename));
-    Res_driver.print_interface_from_source =
-      (fun ~width:_ ~source ~comments:_ _ -> dump_tokens (Source source));
+      (fun ~width:_ ~filename ~comments:_ _ -> dump_tokens filename);
   }

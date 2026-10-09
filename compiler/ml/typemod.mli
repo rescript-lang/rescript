@@ -18,12 +18,8 @@
 open Types
 open Format
 
-val type_module : Env.t -> Parsetree.module_expr -> Typedtree.module_expr
 val type_structure :
-  Env.t ->
-  Parsetree.structure ->
-  Location.t ->
-  Typedtree.structure * Types.signature * Env.t
+  Env.t -> Parsetree.structure -> Typedtree.structure * Types.signature * Env.t
 val type_toplevel_phrase :
   Env.t -> Parsetree.structure -> Typedtree.structure * Types.signature * Env.t
 
@@ -39,7 +35,6 @@ val type_implementation_more :
   Typedtree.structure * Typedtree.module_coercion * Env.t * Types.signature
 
 val transl_signature : Env.t -> Parsetree.signature -> Typedtree.signature
-val check_nongen_schemes : Env.t -> Types.signature -> unit
 val type_open_ :
   ?used_slot:bool ref ->
   ?toplevel:bool ->
@@ -48,9 +43,6 @@ val type_open_ :
   Location.t ->
   Longident.t Asttypes.loc ->
   Path.t * Env.t
-val simplify_signature : signature -> signature
-
-val path_of_module : Typedtree.module_expr -> Path.t option
 
 val save_signature :
   string ->

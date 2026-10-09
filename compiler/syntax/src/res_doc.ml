@@ -329,7 +329,7 @@ let debug t =
         | Classic -> "Classic"
         | Soft -> "Soft"
         | Hard -> "Hard"
-        | Literal -> "Liteal"
+        | Literal -> "Literal"
       in
       text ("LineBreak(" ^ break_txt ^ ")")
     | Group {should_break; doc} ->
@@ -351,4 +351,3 @@ let debug t =
   in
   let doc = to_doc t in
   to_string ~width:10 doc |> print_endline
-[@@live]

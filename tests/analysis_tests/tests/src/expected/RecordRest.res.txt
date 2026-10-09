@@ -8,9 +8,9 @@ Definition src/RecordRest.res 8:4
 }
 
 Complete src/RecordRest.res 13:10
-posCursor:[13:10] posNoWhite:[13:9] Found expr:[12:26->16:1]
-posCursor:[13:10] posNoWhite:[13:9] Found expr:[12:78->16:1]
-posCursor:[13:10] posNoWhite:[13:9] Found expr:[13:5->13:10]
+pos_cursor:[13:10] pos_no_white:[13:9] Found expr:[12:26->16:1]
+pos_cursor:[13:10] pos_no_white:[13:9] Found expr:[12:78->16:1]
+pos_cursor:[13:10] pos_no_white:[13:9] Found expr:[13:5->13:10]
 Pexp_ident param:[13:5->13:10]
 Completable: Cpath Value[param]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -53,8 +53,8 @@ Source:
 )
 
 Complete src/RecordRest.res 21:9
-posCursor:[21:9] posNoWhite:[21:8] Found pattern:[21:4->21:33]
-posCursor:[21:9] posNoWhite:[21:8] Found type:[21:8->21:19]
+pos_cursor:[21:9] pos_no_white:[21:8] Found pattern:[21:4->21:33]
+pos_cursor:[21:9] pos_no_white:[21:8] Found type:[21:8->21:19]
 Ptyp_constr SubConfig.t:[21:8->21:19]
 Completable: Cpath Type[SubConfig, t]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder

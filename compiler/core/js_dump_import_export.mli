@@ -22,8 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val default_export : string
-
 val js_export_name : string -> string
 (** The emitted export name of an ML binding: JS identifier conversion,
     with the ES default export kept literal. The single source of truth

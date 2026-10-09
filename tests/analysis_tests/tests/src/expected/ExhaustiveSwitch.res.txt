@@ -93,15 +93,15 @@ Path someOp
 ]
 
 Xform src/ExhaustiveSwitch.res 30:13
-posCursor:[30:13] posNoWhite:[30:12] Found expr:[30:3->30:17]
-posCursor:[30:13] posNoWhite:[30:12] Found expr:[30:10->30:17]
+pos_cursor:[30:13] pos_no_white:[30:12] Found expr:[30:3->30:17]
+pos_cursor:[30:13] pos_no_white:[30:12] Found expr:[30:10->30:17]
 Completable: Cpath Value[x]->
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[x]->
 ContextPath Value[x]
 Path x
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path ExhaustiveSwitch.
 Path 
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder

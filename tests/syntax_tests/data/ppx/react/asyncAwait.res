@@ -17,3 +17,11 @@ module C1 = {
     }
   }
 }
+
+module Braced = {
+  @react.component
+  let make = {async (~a) => {
+    let a = await f(a)
+    <div> {React.int(a)} </div>
+  }}
+}

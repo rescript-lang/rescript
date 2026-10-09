@@ -1,5 +1,5 @@
 Complete src/Destructuring.res 4:11
-posCursor:[4:11] posNoWhite:[4:9] Found pattern:[4:4->4:12]
+pos_cursor:[4:11] pos_no_white:[4:9] Found pattern:[4:4->4:12]
 Completable: Cpattern Value[x]->recordBody
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -19,7 +19,7 @@ Path x
 ]
 
 Complete src/Destructuring.res 7:8
-posCursor:[7:8] posNoWhite:[7:7] Found pattern:[7:7->7:9]
+pos_cursor:[7:8] pos_no_white:[7:7] Found pattern:[7:7->7:9]
 Completable: Cpattern Value[x]->recordBody
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -49,9 +49,9 @@ Path x
 ]
 
 Complete src/Destructuring.res 11:13
-posCursor:[11:13] posNoWhite:[11:11] Found expr:[10:8->14:1]
-posCursor:[11:13] posNoWhite:[11:11] Found expr:[11:2->13:6]
-posCursor:[11:13] posNoWhite:[11:11] Found pattern:[11:6->11:14]
+pos_cursor:[11:13] pos_no_white:[11:11] Found expr:[10:8->14:1]
+pos_cursor:[11:13] pos_no_white:[11:11] Found expr:[11:2->13:6]
+pos_cursor:[11:13] pos_no_white:[11:11] Found pattern:[11:6->11:14]
 Completable: Cpattern Value[x]->recordBody
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -71,9 +71,9 @@ Path x
 ]
 
 Complete src/Destructuring.res 17:10
-posCursor:[17:10] posNoWhite:[17:9] Found expr:[16:9->20:1]
-posCursor:[17:10] posNoWhite:[17:9] Found expr:[17:5->19:11]
-posCursor:[17:10] posNoWhite:[17:9] Found pattern:[17:9->17:11]
+pos_cursor:[17:10] pos_no_white:[17:9] Found expr:[16:9->20:1]
+pos_cursor:[17:10] pos_no_white:[17:9] Found expr:[17:5->19:11]
+pos_cursor:[17:10] pos_no_white:[17:9] Found pattern:[17:9->17:11]
 Completable: Cpattern Value[x]->recordBody
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -103,7 +103,7 @@ Path x
 ]
 
 Complete src/Destructuring.res 31:8
-posCursor:[31:8] posNoWhite:[31:7] Found pattern:[31:7->31:9]
+pos_cursor:[31:8] pos_no_white:[31:7] Found pattern:[31:7->31:9]
 Completable: Cpattern Value[x]->recordBody
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib

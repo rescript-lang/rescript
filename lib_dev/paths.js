@@ -13,21 +13,6 @@ export const projectDir = path.resolve(import.meta.dirname, "..");
 export const compilerRootDir = path.resolve(projectDir, "compiler");
 
 /**
- * path: `<projectDir>/runtime/`
- */
-export const runtimeDir = path.resolve(projectDir, "runtime");
-
-/**
- * path: `<projectDir>/lib/js/`
- */
-export const runtimeCjsOutputDir = path.resolve(projectDir, "lib", "js");
-
-/**
- * path: `<projectDir>/lib/es6/`
- */
-export const runtimeEsmOutputDir = path.resolve(projectDir, "lib", "es6");
-
-/**
  * path: `<projectDir>/rewatch/`
  */
 export const rewatchDir = path.resolve(projectDir, "rewatch");
@@ -90,12 +75,3 @@ export const compilerBinDir = path.resolve(
  * path: `<projectDir>/_build/install/default/bin/ounit_tests`
  */
 export const ounitTestBin = path.join(compilerBinDir, "ounit_tests");
-
-/**
- * path: `<projectDir>/tests/gentype_tests/typescript-react-example/`
- */
-export const gentypeExampleDir = path.resolve(
-  testDir,
-  "gentype_tests",
-  "typescript-react-example",
-);

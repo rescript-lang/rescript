@@ -232,8 +232,6 @@ let rec typexp_rec s ty =
 *)
 let type_expr s ty = with_copy_session (fun () -> typexp_rec s ty)
 
-let typexp = type_expr
-
 let label_declaration s l =
   {
     ld_id = l.ld_id;

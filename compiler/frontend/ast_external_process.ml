@@ -245,7 +245,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                 call_name = Some (name_from_payload_or_prim ~loc payload);
               }
           | "module" -> (
-            match payload with
+            match Ast_payload.unwrap_payload_expression payload with
             | PStr
                 [
                   {
@@ -264,7 +264,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                     | Some name -> from_name := Some name
                     | None -> ())
                   | {txt = Lident "with"} -> (
-                    match exp.pexp_desc with
+                    match (Ast_payload.unwrap_braces exp).pexp_desc with
                     | Pexp_record (fields, _) -> with_ := Some fields
                     | _ -> ())
                   | _ -> ());
@@ -889,7 +889,7 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
     Location.raise_errorf ~loc "Attribute found that conflicts with %@get"
 
 (** Note that the passed [type_annotation] is already processed by visitor pattern before*)
-let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
+let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
     (prim_attributes : Ast_attributes.t) (prim_name : string) :
     Parsetree.core_type * External_ffi_types.t * Parsetree.attributes * bool =
   let prim_name_with_source = {name = prim_name; source = External} in

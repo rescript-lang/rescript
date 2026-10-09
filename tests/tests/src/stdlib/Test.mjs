@@ -46,6 +46,7 @@ ${codeFrame}
   \u001b[39mRight: \u001b[31m${right$1}\u001b[0m
 `;
   console.log(errorMessage);
+  process.exitCode = 1;
   let obj = {};
   Error.captureStackTrace(obj);
   console.log(obj.stack.replace(/\n    /g, "\n  ").replace(/^Error\n/, "").replace(/^.+\n/, "").replace(/\n  at .+\(node:internal.+\n?/g, ""));

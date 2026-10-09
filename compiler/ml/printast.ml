@@ -231,12 +231,12 @@ and pattern i ppf x =
   | Ppat_type li ->
     line i ppf "Ppat_type\n";
     longident_loc i ppf li
+  | Ppat_variant_spread li ->
+    line i ppf "Ppat_variant_spread\n";
+    longident_loc i ppf li
   | Ppat_unpack s -> line i ppf "Ppat_unpack %a\n" fmt_string_loc s
   | Ppat_exception p ->
     line i ppf "Ppat_exception\n";
-    pattern i ppf p
-  | Ppat_open (m, p) ->
-    line i ppf "Ppat_open \"%a\"\n" fmt_longident_loc m;
     pattern i ppf p
   | Ppat_extension (s, arg) ->
     line i ppf "Ppat_extension \"%s\"\n" s.txt;
@@ -247,6 +247,10 @@ and expression i ppf x =
   attributes i ppf x.pexp_attributes;
   let i = i + 1 in
   match x.pexp_desc with
+  | Pexp_braces {expr = inner; braces_loc} ->
+    line i ppf "Pexp_braces\n";
+    line (i + 1) ppf "braces_loc %a\n" fmt_location braces_loc;
+    expression i ppf inner
   | Pexp_ident li -> line i ppf "Pexp_ident %a\n" fmt_longident_loc li
   | Pexp_object_literal fields ->
     line i ppf "Pexp_object_literal\n";
@@ -321,6 +325,11 @@ and expression i ppf x =
     expression i ppf e1;
     expression i ppf e2;
     option i expression ppf eo
+  | Pexp_ternary (e1, e2, e3) ->
+    line i ppf "Pexp_ternary\n";
+    expression i ppf e1;
+    expression i ppf e2;
+    expression i ppf e3
   | Pexp_sequence (e1, e2) ->
     line i ppf "Pexp_sequence\n";
     expression i ppf e1;
@@ -351,7 +360,7 @@ and expression i ppf x =
     line i ppf "Pexp_constraint\n";
     expression i ppf e;
     core_type i ppf ct
-  | Pexp_coerce (e, (), cto2) ->
+  | Pexp_coerce (e, cto2) ->
     line i ppf "Pexp_coerce\n";
     expression i ppf e;
     core_type i ppf cto2
@@ -382,6 +391,8 @@ and expression i ppf x =
   | Pexp_extension (s, arg) ->
     line i ppf "Pexp_extension \"%s\"\n" s.txt;
     payload i ppf arg
+  | Pexp_regexp {pattern; flags} ->
+    line i ppf "Pexp_regexp %S %S\n" pattern flags
   | Pexp_template {source_segments; values} ->
     line i ppf "Pexp_template\n";
     List.iter
@@ -472,6 +483,10 @@ and type_declaration i ppf x =
   line i ppf "ptype_kind =\n";
   type_kind (i + 1) ppf x.ptype_kind;
   line i ppf "ptype_private = %a\n" fmt_private_flag x.ptype_private;
+  (match x.ptype_origin with
+  | Declared -> ()
+  | Inline_record_definition ->
+    line i ppf "ptype_origin = Inline_record_definition\n");
   line i ppf "ptype_manifest =\n";
   option (i + 1) core_type ppf x.ptype_manifest
 
@@ -650,6 +665,9 @@ and module_expr i ppf x =
   | Pmod_extension (s, arg) ->
     line i ppf "Pmod_extension \"%s\"\n" s.txt;
     payload i ppf arg
+  | Pmod_await me ->
+    line i ppf "Pmod_await\n";
+    module_expr i ppf me
 
 and structure i ppf x = list i structure_item ppf x
 

@@ -10,7 +10,7 @@ describe(__MODULE__, () => {
   })
 
   test("length2", () => {
-    eq(__LOC__, 5, List.length(list{0, 1, 2, 3, 4})) /* This is tuple haha */
+    eq(__LOC__, 5, List.length(list{0, 1, 2, 3, 4}))
   })
 
   test("long_length", () => {

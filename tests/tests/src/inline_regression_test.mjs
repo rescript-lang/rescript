@@ -42,8 +42,20 @@ Mocha.describe("Inline_regression_test", () => {
   Mocha.test("basename", () => Test_utils.eq("File \"inline_regression_test.res\", line 33, characters 7-14", basename("b/c/a.b"), "a.b"));
 });
 
+function bracedNoInline(x) {
+  return x + 1 | 0;
+}
+
+let bracedNoInlineResult = bracedNoInline(1);
+
+Mocha.describe("braced expression attributes", () => {
+  Mocha.test("inline never is retained", () => Test_utils.eq("File \"inline_regression_test.res\", line 42, characters 7-14", bracedNoInlineResult, 2));
+});
+
 export {
   generic_basename,
   basename,
+  bracedNoInline,
+  bracedNoInlineResult,
 }
 /*  Not a pure module */

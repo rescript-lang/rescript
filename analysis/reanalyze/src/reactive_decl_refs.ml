@@ -1,7 +1,5 @@
 (** Reactive mapping from declarations to their outgoing references.
     
-    This is the reactive version of [Liveness.build_decl_refs_index].
-    
     For each declaration, computes the set of positions it references.
     Updates incrementally when refs or declarations change. *)
 
@@ -19,7 +17,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~merge:( @ ) ()
   in
 
-  (* Check if posFrom is contained in decl's range *)
+  (* Check if pos_from is contained in decl's range *)
   let pos_in_decl (pos_from : Lexing.position) (decl : Decl.t) : bool =
     pos_from.pos_fname = decl.pos.pos_fname
     && pos_from.pos_cnum >= decl.pos_start.pos_cnum

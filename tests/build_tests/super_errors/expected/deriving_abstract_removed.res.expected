@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/deriving_abstract_removed.res[0m:[2m1:11-18[0m
+
+  [1;31m1[0m [2m│[0m @deriving([1;31mabstract[0m)
+  2 [2m│[0m type t = {
+  3 [2m│[0m   name: string,
+
+  @deriving(abstract) has been removed. Use a record type instead. Records compile to plain JavaScript objects and support optional fields (`field?: t`), mutable fields and `@as` field renaming.

@@ -18,6 +18,7 @@ let get_symbols ~source ~kind_file =
   let rec expr_kind (exp : Parsetree.expression) =
     match exp.pexp_desc with
     | Pexp_fun _ -> Lsp.Types.SymbolKind.Function
+    | Pexp_braces {expr} -> expr_kind expr
     | Pexp_constraint (e, _) -> expr_kind e
     | Pexp_constant (Pconst_string _ | Pconst_json _ | Pconst_raw_source _) ->
       Lsp.Types.SymbolKind.String

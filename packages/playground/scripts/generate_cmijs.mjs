@@ -5,9 +5,10 @@
 /*
  * You need to build cmij files with the same rescript version as the compiler bundle.
  *
- * This script extracts all cmi / cmj files of the rescript/lib/ocaml and all
- * dependencies listed in the project root's rescript.json, creates cmij.js
- * files for each library and puts them in the compiler playground directory.
+ * This script extracts the cmi / cmj files of packages/@rescript/runtime/lib/ocaml
+ * and of every dependency listed in the playground package's rescript.json,
+ * creates a cmij.js file for each library and puts them in the playground's
+ * packages directory.
  *
  * The cmij files are representing the marshaled dependencies that can be used with the ReScript
  * playground bundle.

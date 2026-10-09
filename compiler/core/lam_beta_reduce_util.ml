@@ -94,7 +94,7 @@ let simple_beta_reduce params body args =
           (Lvar _ | Lprim {primitive = Pfield _; args = [Lglobal_module _]}) as
           f;
         ap_args;
-        ap_info;
+        ap_loc;
       } -> (
     let () =
       List.iter2
@@ -114,7 +114,7 @@ let simple_beta_reduce params body args =
         | _ -> f
       in
       let result =
-        Hash_ident.fold param_hash (Lambda.apply f new_args ap_info)
+        Hash_ident.fold param_hash (Lambda.apply f new_args ap_loc)
           (fun _param stat acc ->
             let {lambda; used} = stat in
             if not used then Lambda.seq lambda acc else acc)

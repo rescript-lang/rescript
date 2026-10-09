@@ -307,12 +307,6 @@ let A;
 
 let S;
 
-let cmpU = cmp;
-
-let eqU = eq;
-
-let mergeU = merge;
-
 export {
   N,
   A,
@@ -332,8 +326,5 @@ export {
   eq,
   addMutate,
   fromArray,
-  cmpU,
-  eqU,
-  mergeU,
 }
 /* No side effect */

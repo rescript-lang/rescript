@@ -182,7 +182,6 @@ end = struct
         match cstr with
         | Tpat_type _ -> ()
         | Tpat_unpack -> ()
-        | Tpat_open _ -> ()
         | Tpat_constraint ct -> iter_core_type ct)
       pat.pat_extra;
     (match pat.pat_desc with

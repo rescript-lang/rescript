@@ -33,7 +33,7 @@ external returnMixedArray: unit => array<numberOrString> = "returnMixedArray"
 @genType let areaValue = area({x: 3, y: None})
 
 module AbsoluteValue = {
-  @genType.import(("./MyMath", "AbsoluteValue"))
+  @genType.import({("./MyMath", "AbsoluteValue")})
   type t = {"getAbs": unit => int}
 
   /* This is untyped */

@@ -11,7 +11,7 @@ val create : int -> t
 val add_unmask : t -> ident -> unit
 
 val mask_and_check_all_hit : t -> ident -> bool
-(** [check_mask h key] if [key] exists mask it otherwise nothing
+(** [mask_and_check_all_hit h key] if [key] exists mask it otherwise nothing
     return true if all keys are masked otherwise false
 *)
 

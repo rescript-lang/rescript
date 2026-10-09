@@ -35,6 +35,12 @@ val json_literal_outside_external_message : string
 val reject_json_literal : loc:Location.t -> 'a
 val reject_json_literal_payload : t -> unit
 
+val unwrap_braces : Parsetree.expression -> Parsetree.expression
+(** Ignore explicit brace wrappers when interpreting an attribute payload. *)
+
+val unwrap_payload_expression : t -> t
+(** Unwrap the single expression in a payload while retaining its metadata. *)
+
 val semantic_string_of_expression : Parsetree.expression -> string option
 (** Return the decoded value when the expression is an ordinary string or a
     non-interpolated backquoted string. *)
@@ -52,6 +58,17 @@ val is_single_int : t -> int option
 
 val constructor_tag_of_payload : t -> Parsetree.constructor_tag option
 (** The literal denoted by a valid variant-constructor [@as] payload. *)
+
+val validate_raw_source :
+  kind:Js_raw_info.raw_kind ->
+  ?is_function:int option ref ->
+  loc:Location.t ->
+  offset:int ->
+  string ->
+  unit
+
+(** Validate JavaScript source using the same rules as raw extensions.
+    [offset] accounts for delimiters preceding the source in its location. *)
 
 val raw_as_string_exp_exn :
   kind:Js_raw_info.raw_kind ->
@@ -88,7 +105,3 @@ val empty : t
 
 val table_dispatch :
   (Parsetree.expression option -> 'a) Map_string.t -> action -> 'a
-
-val unrecognized_config_record : Location.t -> string -> unit
-(** Report to the user, as a warning, that the bs-attribute parser is bailing out. (This is to allow
-    external ppx, like ppx_deriving, to pick up where the builtin ppx leave off.) *)

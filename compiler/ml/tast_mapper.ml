@@ -159,7 +159,6 @@ let extension_constructor sub x =
 let pat sub x =
   let extra = function
     | (Tpat_type _ | Tpat_unpack) as d -> d
-    | Tpat_open (path, loc, env) -> Tpat_open (path, loc, sub.env sub env)
     | Tpat_constraint ct -> Tpat_constraint (sub.typ sub ct)
   in
   let pat_env = sub.env sub x.pat_env in

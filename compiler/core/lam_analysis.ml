@@ -85,7 +85,7 @@ let rec no_side_effects (lam : Lambda.t) : bool =
     (* dict primitives *)
     | Pmakedict | Pdict_has
     (* Test if the argument is a block or an immediate integer *)
-    | Pisint | Pis_poly_var_block
+    | Pis_poly_var_block
     (* Test if the (integer) argument is outside an interval *)
     (* Operations on big arrays: (unsafe, #dimensions, kind, layout) *)
     (* Compile time constants *)
@@ -104,7 +104,7 @@ let rec no_side_effects (lam : Lambda.t) : bool =
     (* TODO *)
     | Praw_js_code _
     (* byte swap *)
-    | Parraysets | Parraysetu | Praise | Psetfield _
+    | Parraysetu | Praise | Psetfield _
     (* bounds-checked reads throw when the index is out of range *)
     | Parrayrefs | Pstringrefs | Pstringrefu ->
       false)
@@ -114,8 +114,7 @@ let rec no_side_effects (lam : Lambda.t) : bool =
   | Lstaticraise _ -> false
   | Lstaticcatch _ -> false
   (* It would be nice that we can also analysis some small functions
-      for example [String.contains],
-      [Format.make_queue_elem]
+      for example [String.contains]
   *)
   | Ltrywith (body, _exn, handler) ->
     no_side_effects body && no_side_effects handler

@@ -25,7 +25,7 @@
 (** Primitive compilation  *)
 
 (* The entry point of compile primitives
-   Note it will call {!Lam_compile_external_call.translate} for c stubs compilation
+   Note it will call {!Lam_compile_external_call.translate_ffi} for external calls
 *)
 
 val translate :

@@ -89,9 +89,16 @@ module If_then_else = struct
 
   let mk_iterator ~pos ~changed =
     let expr (iterator : Ast_iterator.iterator) (e : Parsetree.expression) =
-      let new_exp =
+      let conditional =
         match e.pexp_desc with
-        | Pexp_ifthenelse
+        | Pexp_ifthenelse (condition, consequent, Some alternate)
+        | Pexp_ternary (condition, consequent, alternate) ->
+          Some (condition, consequent, alternate)
+        | _ -> None
+      in
+      let new_exp =
+        match conditional with
+        | Some
             ( {
                 pexp_desc =
                   Pexp_apply
@@ -106,7 +113,7 @@ module If_then_else = struct
                     };
               },
               e1,
-              Some e2 )
+              e2 )
           when Loc.has_pos ~pos e.pexp_loc -> (
           let e1, e2 = if op = "==" then (e1, e2) else (e2, e1) in
           let mk_match ~arg ~pat =
@@ -247,20 +254,6 @@ module Add_braces_to_fn = struct
       current_structure_item := saved
     in
     let expr (iterator : Ast_iterator.iterator) (e : Parsetree.expression) =
-      let braces_attribute =
-        let loc =
-          {
-            Location.none with
-            loc_start = Lexing.dummy_pos;
-            loc_end =
-              {
-                Lexing.dummy_pos with
-                pos_lnum = Lexing.dummy_pos.pos_lnum + 1 (* force line break *);
-              };
-          }
-        in
-        (Location.mkloc "res.braces" loc, Parsetree.PStr [])
-      in
       let is_function = function
         | {Parsetree.pexp_desc = Pexp_fun _} -> true
         | _ -> false
@@ -270,9 +263,8 @@ module Add_braces_to_fn = struct
         when Loc.has_pos ~pos body_expr.pexp_loc
              && is_braced_expr body_expr = false
              && is_function body_expr = false ->
-        body_expr.pexp_attributes <-
-          braces_attribute :: body_expr.pexp_attributes;
-        changed := !current_structure_item
+        changed :=
+          Option.map (fun item -> (item, body_expr)) !current_structure_item
       | _ -> ());
       Ast_iterator.default_iterator.expr iterator e
     in
@@ -285,7 +277,28 @@ module Add_braces_to_fn = struct
     iterator.structure iterator structure;
     match !changed with
     | None -> ()
-    | Some new_structure_item ->
+    | Some (structure_item, body_expr) ->
+      let braces_loc =
+        {
+          Location.none with
+          loc_start = Lexing.dummy_pos;
+          loc_end =
+            {
+              Lexing.dummy_pos with
+              pos_lnum = Lexing.dummy_pos.pos_lnum + 1 (* force line break *);
+            };
+        }
+      in
+      let mapper =
+        {
+          Ast_mapper.default_mapper with
+          expr =
+            (fun mapper expr ->
+              if expr == body_expr then Ast_helper.Exp.braces ~braces_loc expr
+              else Ast_mapper.default_mapper.expr mapper expr);
+        }
+      in
+      let new_structure_item = mapper.structure_item mapper structure_item in
       let range = Loc.range_of_loc new_structure_item.pstr_loc in
       let new_text = print_structure_item ~range new_structure_item in
       let code_action =
@@ -309,7 +322,7 @@ module Add_type_annotation = struct
       | _ -> ()
     in
     let process_function (e : Parsetree.expression) =
-      match e.pexp_desc with
+      match (Res_parsetree_viewer.unwrap_braces e).pexp_desc with
       | Pexp_fun {params} ->
         let single_param =
           match params with
@@ -403,7 +416,7 @@ module Expand_catch_all_for_variants = struct
     | Some (switch_expr, catch_all_case, cases) -> (
       if Debug.verbose () then
         print_endline
-          "[codeAction - ExpandCatchAllForVariants] Found target switch";
+          "[codeAction - Expand_catch_all_for_variants] Found target switch";
       let rec find_all_constructor_names
           ?(mode : [`option | `default] = `default) ?(constructor_names = [])
           (p : Parsetree.pattern) =
@@ -483,7 +496,7 @@ module Expand_catch_all_for_variants = struct
       | Some (Toption (env, inner_type)) -> (
         if Debug.verbose () then
           print_endline
-            "[codeAction - ExpandCatchAllForVariants] Found option type";
+            "[codeAction - Expand_catch_all_for_variants] Found option type";
         let inner_type =
           match inner_type with
           | ExtractedType t -> Some t

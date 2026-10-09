@@ -137,8 +137,6 @@ and type_async_iterable t =
 
 and type_list t = newgenty (Tconstr (path_list, [t], ref Mnil))
 
-and type_option t = newgenty (Tconstr (path_option, [t], ref Mnil))
-
 and type_bigint = newgenty (Tconstr (path_bigint, [], ref Mnil))
 
 and type_string = newgenty (Tconstr (path_string, [], ref Mnil))

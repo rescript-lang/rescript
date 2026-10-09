@@ -60,9 +60,6 @@ let module_id : module_id fn =
   let _x0 = _self.ident _self _x0 in
   {id = _x0; kind = _x1; dynamic_import = _x2}
 
-let required_modules : required_modules fn =
- fun _self arg -> list _self.module_id _self arg
-
 let vident : vident fn =
  fun _self -> function
   | Id _x0 ->
@@ -137,10 +134,6 @@ let expression_desc : expression_desc fn =
   | Interpolated_template ({values} as template) ->
     let values = list _self.expression _self values in
     Interpolated_template {template with values}
-  | String_index (_x0, _x1) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = _self.expression _self _x1 in
-    String_index (_x0, _x1)
   | Array_index (_x0, _x1) ->
     let _x0 = _self.expression _self _x0 in
     let _x1 = _self.expression _self _x1 in
@@ -305,12 +298,6 @@ let program : program fn =
  fun _self {block = _x0; exports = _x1; export_set = _x2} ->
   let _x0 = _self.block _self _x0 in
   {block = _x0; exports = _x1; export_set = _x2}
-
-let deps_program : deps_program fn =
- fun _self {program = _x0; modules = _x1; side_effect = _x2} ->
-  let _x0 = _self.program _self _x0 in
-  let _x1 = required_modules _self _x1 in
-  {program = _x0; modules = _x1; side_effect = _x2}
 
 let super : iter =
   {

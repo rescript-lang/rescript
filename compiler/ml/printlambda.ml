@@ -43,12 +43,6 @@ let rec struct_const ppf = function
   | Const_js_false -> fprintf ppf "false"
   | Const_js_true -> fprintf ppf "true"
 
-(* let field_kind = function
-   | Pgenval -> "*"
-   | Pintval -> "int"
-   | Pfloatval -> "float"
-   | Pboxedintval bi -> boxed_integer_name bi *)
-
 (* let block_shape ppf shape = match shape with
    | None | Some [] -> ()
    | Some l when List.for_all ((=) Pgenval) l -> ()
@@ -198,11 +192,9 @@ let primitive ppf = function
   | Parrayrefu -> fprintf ppf "array.unsafe_get"
   | Parraysetu -> fprintf ppf "array.unsafe_set"
   | Parrayrefs -> fprintf ppf "array.get"
-  | Parraysets -> fprintf ppf "array.set"
   | Pmakelist -> fprintf ppf "makelist"
   | Pmakedict -> fprintf ppf "makedict"
   | Pdict_has -> fprintf ppf "dict.has"
-  | Pisint -> fprintf ppf "isint"
   | Pis_null -> fprintf ppf "is_null"
   | Pis_undefined -> fprintf ppf "is_undefined"
   | Pis_null_undefined -> fprintf ppf "isnullable"
@@ -239,19 +231,13 @@ let function_attribute ppf {inline; is_a_functor; return_unit} =
   | Always_inline -> fprintf ppf "always_inline@ "
   | Never_inline -> fprintf ppf "never_inline@ "
 
-let apply_inlined_attribute ppf = function
-  | Default_inline -> ()
-  | Always_inline -> fprintf ppf " always_inline"
-  | Never_inline -> fprintf ppf " never_inline"
-
 let rec lam ppf = function
   | Lvar id -> Ident.print ppf id
   | Lglobal_module id -> fprintf ppf "global %a" Ident.print id
   | Lconst cst -> struct_const ppf cst
   | Lapply ap ->
     let lams ppf largs = List.iter (fun l -> fprintf ppf "@ %a" lam l) largs in
-    fprintf ppf "@[<2>(apply@ %a%a%a)@]" lam ap.ap_func lams ap.ap_args
-      apply_inlined_attribute ap.ap_info.ap_inlined
+    fprintf ppf "@[<2>(apply@ %a%a)@]" lam ap.ap_func lams ap.ap_args
   | Lfunction {params; body; attr} ->
     let pr_params ppf params =
       List.iter (fun param -> fprintf ppf "@ %a" Ident.print param) params
@@ -377,8 +363,6 @@ let rec lam ppf = function
 and sequence ppf = function
   | Lsequence (l1, l2) -> fprintf ppf "%a@ %a" sequence l1 sequence l2
   | l -> lam ppf l
-
-let structured_constant = struct_const
 
 let lambda = lam
 

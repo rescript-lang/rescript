@@ -23,12 +23,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 val setup_env : unit -> unit
-(** This function set up built in compile time variables used in 
-    conditional compilation so that 
-    {[
-      #if  BS 
-      #elif ..
-      #end
-    ]}
-    Is understood, also make sure the playground do the same initialization. 
-*)
+(** Installs the compiler's hooks into the type checker and the pattern
+    compiler (.cmi loading, polymorphic-variant matching and subtyping,
+    namespace-aware printing) and sets the default compilation flags. bsc and
+    the playground call it before compiling. *)

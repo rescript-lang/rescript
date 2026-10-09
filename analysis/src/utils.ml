@@ -1,5 +1,5 @@
 (**
- * `startsWith(string, prefix)`
+ * `starts_with s prefix`
  * true if the string starts with the prefix
  *)
 let starts_with s prefix =
@@ -83,6 +83,7 @@ let flatten_long_ident ?(jsx = false) ?(cut_at_offset = None) lid =
 
 let identify_pexp pexp =
   match pexp with
+  | Parsetree.Pexp_braces _ -> "Pexp_braces"
   | Parsetree.Pexp_ident _ -> "Pexp_ident"
   | Pexp_constant _ -> "Pexp_constant"
   | Pexp_let _ -> "Pexp_let"
@@ -98,6 +99,7 @@ let identify_pexp pexp =
   | Pexp_setfield _ -> "Pexp_setfield"
   | Pexp_array _ -> "Pexp_array"
   | Pexp_ifthenelse _ -> "Pexp_ifthenelse"
+  | Pexp_ternary _ -> "Pexp_ternary"
   | Pexp_sequence _ -> "Pexp_sequence"
   | Pexp_break -> "Pexp_break"
   | Pexp_continue -> "Pexp_continue"
@@ -118,6 +120,7 @@ let identify_pexp pexp =
   | Pexp_open _ -> "Pexp_open"
   | Pexp_await _ -> "Pexp_await"
   | Pexp_jsx_element _ -> "Pexp_jsx_element"
+  | Pexp_regexp _ -> "Pexp_regexp"
   | Pexp_template _ -> "Pexp_template"
   | Pexp_tagged_template _ -> "Pexp_tagged_template"
 
@@ -136,10 +139,10 @@ let identify_ppat pat =
   | Ppat_or _ -> "Ppat_or"
   | Ppat_constraint _ -> "Ppat_constraint"
   | Ppat_type _ -> "Ppat_type"
+  | Ppat_variant_spread _ -> "Ppat_variant_spread"
   | Ppat_unpack _ -> "Ppat_unpack"
   | Ppat_exception _ -> "Ppat_exception"
   | Ppat_extension _ -> "Ppat_extension"
-  | Ppat_open _ -> "Ppat_open"
 
 let rec skip_white text i =
   if i < 0 then 0
@@ -147,9 +150,6 @@ let rec skip_white text i =
     match text.[i] with
     | ' ' | '\n' | '\r' | '\t' -> skip_white text (i - 1)
     | _ -> i
-
-let has_braces attributes =
-  attributes |> List.exists (fun (loc, _) -> loc.Location.txt = "res.braces")
 
 let rec unwrap_if_option (t : Types.type_expr) =
   match t.desc with
@@ -166,11 +166,6 @@ let is_jsx_component (vb : Parsetree.value_binding) =
 
 let check_name name ~prefix ~exact =
   if exact then name = prefix else starts_with name prefix
-
-let rec get_unqualified_name txt =
-  match txt with
-  | Longident.Lident field_name -> field_name
-  | Ldot (t, _) -> get_unqualified_name t
 
 let indent n text =
   let spaces = String.make n ' ' in

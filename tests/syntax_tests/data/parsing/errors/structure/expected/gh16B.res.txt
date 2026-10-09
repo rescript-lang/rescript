@@ -24,9 +24,8 @@ module ClientSet =
       (Belt.Id.MakeComparable)(struct
                                  type nonrec t = Client.t
                                  let cmp [arity:2]a b =
-                                   ((compare (a -> Client.getUniqueId)
-                                       (b -> Client.getUniqueId))
-                                   [@res.braces ])
+                                   {compare (a -> Client.getUniqueId)
+                                      (b -> Client.getUniqueId)}
                                end)
     let empty = Belt.Set.make ~id:(module T)
   end

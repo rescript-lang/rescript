@@ -279,6 +279,7 @@ f((~a)
 
 // ternary
 let x = /* c0 */ test /* c1 */ ? /* c2 */ true /* c3 */ : /* c4 */ false /* c5 */
+let nestedTernary = a ? b : c ? d : e // keep nested alternate comment
 
 // Pexp_if case, don't duplicate comments
 if next == null {

@@ -12,6 +12,7 @@ type t = {
   style: style;
   loc: Location.t;
   mutable prev_tok_end_pos: Lexing.position;
+  mutable prev_tok_is_question: bool;
 }
 
 let loc t = t.loc
@@ -19,6 +20,10 @@ let txt t = t.txt
 let prev_tok_end_pos t = t.prev_tok_end_pos
 
 let set_prev_tok_end_pos t pos = t.prev_tok_end_pos <- pos
+
+let prev_tok_is_question t = t.prev_tok_is_question
+
+let set_prev_tok_is_question t b = t.prev_tok_is_question <- b
 
 let is_single_line_comment t = t.style = SingleLine
 
@@ -35,7 +40,13 @@ let to_string t =
     (loc_end.pos_cnum - loc_end.pos_bol)
 
 let make_single_line_comment ~loc txt =
-  {txt; loc; style = SingleLine; prev_tok_end_pos = Lexing.dummy_pos}
+  {
+    txt;
+    loc;
+    style = SingleLine;
+    prev_tok_end_pos = Lexing.dummy_pos;
+    prev_tok_is_question = false;
+  }
 
 let make_multi_line_comment ~loc ~doc_comment ~standalone txt =
   {
@@ -45,6 +56,7 @@ let make_multi_line_comment ~loc ~doc_comment ~standalone txt =
       (if doc_comment then if standalone then ModuleComment else DocComment
        else MultiLine);
     prev_tok_end_pos = Lexing.dummy_pos;
+    prev_tok_is_question = false;
   }
 
 let trim_spaces s =

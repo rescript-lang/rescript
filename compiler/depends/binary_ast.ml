@@ -23,7 +23,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 module Set_string = Ast_extract.Set_string
-(** Synced up with module {!Bsb_helper_depfile_gen} *)
 
 type 'a kind = 'a Ml_binary.kind =
   | Ml : Parsetree.structure kind

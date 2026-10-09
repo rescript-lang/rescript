@@ -27,8 +27,6 @@ val check : 'a t -> unit
 
 val bal : 'a t -> 'a -> 'a t -> 'a t
 
-val remove_min_elt : 'a t -> 'a t
-
 val singleton : 'a -> 'a t
 
 val internal_merge : 'a t -> 'a t -> 'a t
@@ -37,13 +35,9 @@ val internal_join : 'a t -> 'a -> 'a t -> 'a t
 
 val internal_concat : 'a t -> 'a t -> 'a t
 
-val partition : 'a t -> ('a -> bool) -> 'a t * 'a t
-
 val of_sorted_array : 'a array -> 'a t
 
 val is_ordered : cmp:('a -> 'a -> int) -> 'a t -> bool
-
-val invariant : cmp:('a -> 'a -> int) -> 'a t -> bool
 
 module type S = sig
   type elt
@@ -87,6 +81,4 @@ module type S = sig
   val of_sorted_array : elt array -> t
 
   val invariant : t -> bool
-
-  val print : Format.formatter -> t -> unit
 end

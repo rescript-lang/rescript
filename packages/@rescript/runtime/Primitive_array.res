@@ -7,13 +7,6 @@ let get = (xs, index) =>
     xs->Primitive_array_extern.getUnsafe(index)
   }
 
-let set = (xs, index, newval) =>
-  if index < 0 || index >= length(xs) {
-    throw(Invalid_argument("index out of bounds"))
-  } else {
-    xs->Primitive_array_extern.setUnsafe(index, newval)
-  }
-
 // Note: this is exposed to support syntax
 @new external makeUninitializedUnsafe: int => array<'a> = "Array"
 

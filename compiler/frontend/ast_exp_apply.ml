@@ -34,13 +34,44 @@ let rec no_need_bound (exp : exp) =
 
 let tuple_obj_id = "__tuple_internal_obj"
 
-let bound (e : exp) (cb : exp -> _) =
-  if no_need_bound e then cb e
+let fresh_bound_name (avoid : exp) =
+  let names = Hashtbl.create 8 in
+  let add name = Hashtbl.replace names name () in
+  let default = Ast_iterator.default_iterator in
+  let iterator =
+    {
+      default with
+      expr =
+        (fun self expr ->
+          (match expr.pexp_desc with
+          | Pexp_ident {txt = Lident name} -> add name
+          | _ -> ());
+          default.expr self expr);
+      pat =
+        (fun self pat ->
+          (match pat.ppat_desc with
+          | Ppat_var {txt = name} | Ppat_alias (_, {txt = name}) -> add name
+          | _ -> ());
+          default.pat self pat);
+    }
+  in
+  iterator.expr iterator avoid;
+  let rec choose suffix =
+    let name =
+      if suffix = 0 then tuple_obj_id else tuple_obj_id ^ string_of_int suffix
+    in
+    if Hashtbl.mem names name then choose (suffix + 1) else name
+  in
+  choose 0
+
+let bound ~force ~avoid (e : exp) (cb : exp -> _) =
+  if (not force) && no_need_bound e then cb e
   else
     let loc = e.pexp_loc in
+    let name = fresh_bound_name avoid in
     Exp.let_ ~loc Nonrecursive
-      [Vb.mk ~loc (Pat.var ~loc {txt = tuple_obj_id; loc}) e]
-      (cb (Exp.ident ~loc {txt = Lident tuple_obj_id; loc}))
+      [Vb.mk ~loc (Pat.var ~loc {txt = name; loc}) e]
+      (cb (Exp.ident ~loc {txt = Lident name; loc}))
 
 let default_expr_mapper = Ast_mapper.default_mapper.expr
 
@@ -67,80 +98,102 @@ let view_as_app (fn : exp) (s : string list) : app_pattern option =
 
 let infix_ops = ["->"]
 
+let rec rewrite_pipe_rhs ~loc ~attrs a (f : exp) =
+  match f.pexp_desc with
+  | Pexp_braces {expr; braces_loc} ->
+    {
+      f with
+      pexp_desc =
+        Pexp_braces {expr = rewrite_pipe_rhs ~loc ~attrs a expr; braces_loc};
+    }
+  | Pexp_open (flag, lid, expr) ->
+    {
+      f with
+      pexp_desc = Pexp_open (flag, lid, rewrite_pipe_rhs ~loc ~attrs a expr);
+    }
+  | Pexp_let (flag, bindings, expr) ->
+    {
+      f with
+      pexp_desc = Pexp_let (flag, bindings, rewrite_pipe_rhs ~loc ~attrs a expr);
+    }
+  | Pexp_sequence (first, second) ->
+    {
+      f with
+      pexp_desc = Pexp_sequence (first, rewrite_pipe_rhs ~loc ~attrs a second);
+    }
+  | Pexp_variant (label, {txt = []}) ->
+    {
+      f with
+      pexp_desc = Pexp_variant (label, {txt = [a]; loc = a.pexp_loc});
+      pexp_loc = loc;
+    }
+  | Pexp_construct (ctor, {txt = []}) ->
+    {
+      f with
+      pexp_desc = Pexp_construct (ctor, {txt = [a]; loc = a.pexp_loc});
+      pexp_loc = loc;
+    }
+  | Pexp_apply {funct = fn1; args; partial; transformed_jsx} ->
+    Bs_ast_invariant.warn_discarded_unused_attributes fn1.pexp_attributes;
+    {
+      pexp_desc =
+        Pexp_apply
+          {funct = fn1; args = (Nolabel, a) :: args; partial; transformed_jsx};
+      pexp_loc = loc;
+      pexp_attributes = attrs @ f.pexp_attributes;
+    }
+  | Pexp_tuple xs ->
+    bound ~force:false ~avoid:f a (fun bounded_obj_arg ->
+        {
+          pexp_desc =
+            Pexp_tuple
+              (Ext_list.map xs (fun fn ->
+                   match fn.pexp_desc with
+                   | Pexp_construct (ctor, {txt = []}) ->
+                     {
+                       fn with
+                       pexp_desc =
+                         Pexp_construct
+                           ( ctor,
+                             {
+                               txt = [bounded_obj_arg];
+                               loc = bounded_obj_arg.pexp_loc;
+                             } );
+                     }
+                   | Pexp_apply {funct = fn; args; transformed_jsx} ->
+                     Bs_ast_invariant.warn_discarded_unused_attributes
+                       fn.pexp_attributes;
+                     {
+                       Parsetree.pexp_desc =
+                         Pexp_apply
+                           {
+                             funct = fn;
+                             args = (Nolabel, bounded_obj_arg) :: args;
+                             partial = false;
+                             transformed_jsx;
+                           };
+                       pexp_attributes = [];
+                       pexp_loc = fn.pexp_loc;
+                     }
+                   | _ ->
+                     Exp.apply ~loc:fn.pexp_loc fn [(Nolabel, bounded_obj_arg)]));
+          pexp_attributes = f.pexp_attributes;
+          pexp_loc = f.pexp_loc;
+        })
+  | _ -> Exp.apply ~loc ~attrs f [(Nolabel, a)]
+
 let app_exp_mapper (e : exp) (self : Ast_mapper.mapper) : exp =
   match view_as_app e infix_ops with
   | Some {op = "->"; args = [a_; f_]; loc} -> (
-    (*
-        a |. f
-        a |. f b c [@bs]  --> f a b c [@bs]
-        a |. (g |. b)
-        a |. `Variant
-        a |. (b |. f c [@bs])
-      *)
+    (* A braced pipeline RHS may contain local bindings or opens before its
+       final call. Bind the left-hand expression before entering that context. *)
     let a = self.expr self a_ in
     let f = self.expr self f_ in
     match f.pexp_desc with
-    | Pexp_variant (label, {txt = []}) ->
-      {
-        f with
-        pexp_desc = Pexp_variant (label, {txt = [a]; loc = a.pexp_loc});
-        pexp_loc = e.pexp_loc;
-      }
-    | Pexp_construct (ctor, {txt = []}) ->
-      {
-        f with
-        pexp_desc = Pexp_construct (ctor, {txt = [a]; loc = a.pexp_loc});
-        pexp_loc = e.pexp_loc;
-      }
-    | Pexp_apply {funct = fn1; args; partial; transformed_jsx} ->
-      Bs_ast_invariant.warn_discarded_unused_attributes fn1.pexp_attributes;
-      {
-        pexp_desc =
-          Pexp_apply
-            {funct = fn1; args = (Nolabel, a) :: args; partial; transformed_jsx};
-        pexp_loc = e.pexp_loc;
-        pexp_attributes = e.pexp_attributes @ f.pexp_attributes;
-      }
-    | Pexp_tuple xs ->
-      bound a (fun bounded_obj_arg ->
-          {
-            pexp_desc =
-              Pexp_tuple
-                (Ext_list.map xs (fun fn ->
-                     match fn.pexp_desc with
-                     | Pexp_construct (ctor, {txt = []}) ->
-                       {
-                         fn with
-                         pexp_desc =
-                           Pexp_construct
-                             ( ctor,
-                               {
-                                 txt = [bounded_obj_arg];
-                                 loc = bounded_obj_arg.pexp_loc;
-                               } );
-                       }
-                     | Pexp_apply {funct = fn; args; transformed_jsx} ->
-                       Bs_ast_invariant.warn_discarded_unused_attributes
-                         fn.pexp_attributes;
-                       {
-                         Parsetree.pexp_desc =
-                           Pexp_apply
-                             {
-                               funct = fn;
-                               args = (Nolabel, bounded_obj_arg) :: args;
-                               partial = false;
-                               transformed_jsx;
-                             };
-                         pexp_attributes = [];
-                         pexp_loc = fn.pexp_loc;
-                       }
-                     | _ ->
-                       Exp.apply ~loc:fn.pexp_loc fn
-                         [(Nolabel, bounded_obj_arg)]));
-            pexp_attributes = f.pexp_attributes;
-            pexp_loc = f.pexp_loc;
-          })
-    | _ -> Exp.apply ~loc ~attrs:e.pexp_attributes f [(Nolabel, a)])
+    | Pexp_braces _ | Pexp_open _ | Pexp_let _ | Pexp_sequence _ ->
+      bound ~force:true ~avoid:f a (fun a ->
+          rewrite_pipe_rhs ~loc ~attrs:e.pexp_attributes a f)
+    | _ -> rewrite_pipe_rhs ~loc ~attrs:e.pexp_attributes a f)
   | Some {op = "->"; loc} ->
     Location.raise_errorf ~loc
       "Invalid pipe syntax. The pipe symbol (->) can only be used as a binary \

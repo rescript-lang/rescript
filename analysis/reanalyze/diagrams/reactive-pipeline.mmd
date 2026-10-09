@@ -8,7 +8,7 @@ flowchart TB
         file_data[file_data]
     end
 
-    subgraph Extracted["Extracted (ReactiveMerge)"]
+    subgraph Extracted["Extracted (Reactive_merge)"]
         decls[decls]
         annotations[annotations]
         value_refs[value_refs]
@@ -16,28 +16,28 @@ flowchart TB
         cross_file_items[cross_file_items]
     end
 
-    subgraph TypeDeps["ReactiveTypeDeps"]
+    subgraph TypeDeps["Reactive_type_deps"]
         decl_by_path[decl_by_path]
         all_type_refs[all_type_refs]
     end
 
-    subgraph ExcRefs["ReactiveExceptionRefs"]
+    subgraph ExcRefs["Reactive_exception_refs"]
         exception_refs[exception_refs]
         exception_decls[exception_decls]
         resolved_refs[resolved_refs]
     end
 
-    subgraph DeclRefs["ReactiveDeclRefs"]
+    subgraph DeclRefs["Reactive_decl_refs"]
         combined_refs[combined_refs]
     end
 
-    subgraph Liveness["ReactiveLiveness"]
+    subgraph Liveness["Reactive_liveness"]
         roots[roots]
         edges[edges]
         live[live<br/>fixpoint]
     end
 
-    subgraph Solver["ReactiveSolver"]
+    subgraph Solver["Reactive_solver"]
         dead_decls[dead_decls]
         live_decls[live_decls]
         dead_modules[dead_modules]

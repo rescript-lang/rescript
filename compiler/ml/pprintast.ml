@@ -486,6 +486,7 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
     | Ppat_array l -> pp f "@[<2>[|%a|]@]" (list (pattern1 ctxt) ~sep:";") l
     | Ppat_unpack s -> pp f "(module@ %s)@ " s.txt
     | Ppat_type li -> pp f "#%a" longident_loc li
+    | Ppat_variant_spread li -> pp f "...%a" longident_loc li
     | Ppat_record (l, closed, rest) -> (
       let longident_x_pattern f {lid = li; x = p; opt} =
         let opt_str = if opt then "?" else "" in
@@ -520,17 +521,6 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
       pp f "@[<2>(%a@;:@;%a)@]" (pattern1 ctxt) p (core_type ctxt) ct
     | Ppat_exception p -> pp f "@[<2>exception@;%a@]" (pattern1 ctxt) p
     | Ppat_extension e -> extension ctxt f e
-    | Ppat_open (lid, p) ->
-      let with_paren =
-        match p.ppat_desc with
-        | Ppat_array _ | Ppat_record _
-        | Ppat_construct ({txt = Lident ("()" | "[]"); _}, _) ->
-          false
-        | _ -> true
-      in
-      pp f "@[<2>%a.%a @]" longident_loc lid
-        (paren with_paren @@ pattern1 ctxt)
-        p
     | _ -> paren true (pattern ctxt) f x
 
 and label_exp ctxt f (l, opt, p) =
@@ -644,7 +634,8 @@ and expression ctxt f x =
     | (Pexp_fun _ | Pexp_match _ | Pexp_try _ | Pexp_sequence _)
       when ctxt.pipe || ctxt.semi ->
       paren true (expression reset_ctxt) f x
-    | (Pexp_ifthenelse _ | Pexp_sequence _) when ctxt.ifthenelse ->
+    | (Pexp_ifthenelse _ | Pexp_ternary _ | Pexp_sequence _)
+      when ctxt.ifthenelse ->
       paren true (expression reset_ctxt) f x
     | (Pexp_let _ | Pexp_letmodule _ | Pexp_open _ | Pexp_letexception _)
       when ctxt.semi ->
@@ -753,6 +744,9 @@ and expression ctxt f x =
           | Some x -> pp f "@;@[<2>else@;%a@]" (expression (under_semi ctxt)) x
           | None -> () (* pp f "()" *))
         eo
+    | Pexp_ternary (condition, consequent, alternate) ->
+      pp f "@[<2>%a@ ?@ %a@ :@ %a@]" (simple_expr ctxt) condition
+        (expression reset_ctxt) consequent (expression reset_ctxt) alternate
     | Pexp_sequence _ ->
       let rec sequence_helper acc = function
         | {pexp_desc = Pexp_sequence (e1, e2); pexp_attributes = []} ->
@@ -781,6 +775,7 @@ and expression ctxt f x =
       pp f "@[<2>`%s@;%a@]" l (simple_expr ctxt) payload
     | Pexp_extension e -> extension ctxt f e
     | Pexp_await e -> pp f "@[<hov2>await@ %a@]" (simple_expr ctxt) e
+    | Pexp_regexp {pattern; flags} -> pp f "/%s/%s" pattern flags
     | Pexp_template {source_segments; values} ->
       let rec parts f (source_segments, values) =
         match (source_segments, values) with
@@ -800,6 +795,7 @@ and expression ctxt f x =
         | _ -> assert false
       in
       pp f "%a`%a`" (simple_expr ctxt) tag parts (raw_sources, values)
+    | Pexp_braces {expr = inner} -> pp f "{%a}" (expression ctxt) inner
     | _ -> expression1 ctxt f x
 
 and expression1 ctxt f x =
@@ -845,8 +841,8 @@ and simple_expr ctxt f x =
     | Pexp_tuple l ->
       pp f "@[<hov2>(%a)@]" (list (simple_expr ctxt) ~sep:",@;") l
     | Pexp_constraint (e, ct) ->
-      pp f "(%a : %a)" (expression ctxt) e (core_type ctxt) ct
-    | Pexp_coerce (e, (), ct) ->
+      pp f "(%a :@ %a)" (expression ctxt) e (core_type ctxt) ct
+    | Pexp_coerce (e, ct) ->
       pp f "(%a :> %a)" (expression ctxt) e (core_type ctxt) ct
     | Pexp_variant (l, {txt = []}) -> pp f "`%s" l
     | Pexp_record (l, eo) ->
@@ -1105,6 +1101,7 @@ and module_expr ctxt f x =
       (* Cf: #7200 *)
     | Pmod_unpack e -> pp f "(val@ %a)" (expression ctxt) e
     | Pmod_extension e -> extension ctxt f e
+    | Pmod_await me -> pp f "await@ %a" (module_expr ctxt) me
 
 and structure ctxt f x = list ~sep:"@\n" (structure_item ctxt) f x
 
@@ -1455,15 +1452,6 @@ and label_x_expression_param ctxt f (l, e) =
     if Some lbl = simple_name then pp f "~%s" lbl
     else pp f "~%s:%a" lbl (simple_expr ctxt) e
 
-let expression f x = pp f "@[%a@]" (expression reset_ctxt) x
-
-let string_of_expression x =
-  ignore (flush_str_formatter ());
-  let f = str_formatter in
-  expression f x;
-  flush_str_formatter ()
-
-let core_type = core_type reset_ctxt
 let pattern = pattern reset_ctxt
 let signature = signature reset_ctxt
 let structure = structure reset_ctxt
