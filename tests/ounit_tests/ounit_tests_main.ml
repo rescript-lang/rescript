@@ -35,6 +35,7 @@ let suites =
       Ounit_analysis_config_tests.suites;
       Ounit_analysis_references_tests.suites;
       Ounit_ffi_inclusion_tests.suites;
+      Ounit_typeopt_tests.suites;
       Ounit_gentype_tests.suites;
     ]
 
