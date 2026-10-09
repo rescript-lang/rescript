@@ -861,7 +861,8 @@ end
 module P = struct
   (* Patterns *)
 
-  let map sub {ppat_desc = desc; ppat_loc = loc; ppat_attributes = attrs} =
+  let map sub ({ppat_desc = desc; ppat_loc = loc; ppat_attributes = attrs} as p)
+      =
     let open Pat in
     let loc = sub.location sub loc in
     let attrs = sub.attributes sub attrs in
@@ -892,6 +893,22 @@ module P = struct
           ~attrs ~mark_args:true args
       in
       variant ~loc ~attrs l arg
+    | Ppat_dict entries ->
+      (* v0 has no dict patterns: they're record patterns with a marker *)
+      sub.pat sub
+        (Ast_helper.Pat.record ~loc:p.ppat_loc
+           ~attrs:
+             ((Location.mknoloc "res.dictPattern", Parsetree.PStr [])
+             :: p.ppat_attributes)
+           (List.map
+              (fun {pdp_key; pdp_pattern; pdp_optional} ->
+                {
+                  lid = {pdp_key with txt = Longident.Lident pdp_key.txt};
+                  x = pdp_pattern;
+                  opt = pdp_optional;
+                })
+              entries)
+           Open)
     | Ppat_record (lpl, cf, rest) ->
       let attrs =
         match rest with

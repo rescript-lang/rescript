@@ -510,6 +510,13 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                  }
               :: pattern_path)
             ?context_path)
+    | Ppat_dict entries ->
+      Ext_list.iter entries (fun {pdp_key; pdp_pattern} ->
+          scope_pattern
+            ~pattern_path:
+              (Completable.NFollowRecordField {field_name = pdp_key.txt}
+              :: pattern_path)
+            ?context_path pdp_pattern)
     | Ppat_record (fields, _, rest) -> (
       Ext_list.iter fields (fun {lid = fname; x = p} ->
           match fname with

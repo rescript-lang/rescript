@@ -450,6 +450,16 @@ module P = struct
     | Ppat_variant (l, {txt = args; loc = args_loc}) ->
       variant ~loc ~attrs l
         {txt = List.map (sub.pat sub) args; loc = sub.location sub args_loc}
+    | Ppat_dict entries ->
+      dict ~loc ~attrs
+        (List.map
+           (fun e ->
+             {
+               e with
+               pdp_key = map_loc sub e.pdp_key;
+               pdp_pattern = sub.pat sub e.pdp_pattern;
+             })
+           entries)
     | Ppat_record (lpl, cf, rest) ->
       record ~loc ~attrs
         ?rest:

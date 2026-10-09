@@ -1550,12 +1550,29 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     match (sarg, arg_type) with
     | Some p, [ty] -> type_pat p ty (fun p -> k (Some p))
     | _ -> k None)
-  | Ppat_record (lid_sp_list, closed, rest) ->
-    let has_dict_pattern_attr =
-      Dict_type_helpers.has_dict_pattern_attribute sp.ppat_attributes
+  | (Ppat_record _ | Ppat_dict _) as record_or_dict ->
+    let is_dict, lid_sp_list, closed, rest =
+      match record_or_dict with
+      | Ppat_record (lid_sp_list, closed, rest) ->
+        (false, lid_sp_list, closed, rest)
+      | Ppat_dict entries ->
+        (* A dict pattern is typed as a record pattern of the [dict] type,
+           whose keys are its labels, see [Dict_type_helpers] *)
+        ( true,
+          List.map
+            (fun {pdp_key; pdp_pattern; pdp_optional} ->
+              {
+                lid = {pdp_key with txt = Longident.Lident pdp_key.txt};
+                x = pdp_pattern;
+                opt = pdp_optional;
+              })
+            entries,
+          Asttypes.Open,
+          None )
+      | _ -> assert false
     in
     let opath, record_ty =
-      if has_dict_pattern_attr then
+      if is_dict then
         ( (* [dict] Make sure dict patterns are inferred as actual dicts *)
           Some (Predef.path_dict, Predef.path_dict),
           newgenty (Tconstr (Predef.path_dict, [newvar ()], ref Mnil)) )
@@ -2197,6 +2214,7 @@ let iter_ppat f p =
   | Ppat_tuple lst -> List.iter f lst
   | Ppat_exception p | Ppat_alias (p, _) | Ppat_constraint (p, _) -> f p
   | Ppat_record (args, _flag, _rest) -> List.iter (fun {x = p} -> f p) args
+  | Ppat_dict entries -> List.iter (fun {pdp_pattern} -> f pdp_pattern) entries
 
 let contains_polymorphic_variant p =
   let rec loop p =

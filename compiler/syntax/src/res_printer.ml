@@ -2837,24 +2837,25 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
       Doc.concat [Doc.text "..."; print_ident_path ident cmt_tbl]
     | Ppat_type ident ->
       Doc.concat [Doc.text "#..."; print_ident_path ident cmt_tbl]
-    | Ppat_record (rows, _, _rest)
-      when Parsetree_viewer.has_dict_pattern_attribute p.ppat_attributes ->
-      Doc.concat
-        [
-          Doc.text "dict{";
-          Doc.indent
-            (Doc.concat
-               [
-                 Doc.soft_line;
-                 Doc.join
-                   ~sep:(Doc.concat [Doc.text ","; Doc.line])
-                   (Ext_list.map rows (fun row ->
-                        print_pattern_dict_row ~state row cmt_tbl));
-               ]);
-          Doc.if_breaks (Doc.text ",") Doc.nil;
-          Doc.soft_line;
-          Doc.rbrace;
-        ]
+    | Ppat_dict rows ->
+      (* Its own group, as when it was a record pattern with an attribute *)
+      Doc.group
+        (Doc.concat
+           [
+             Doc.text "dict{";
+             Doc.indent
+               (Doc.concat
+                  [
+                    Doc.soft_line;
+                    Doc.join
+                      ~sep:(Doc.concat [Doc.text ","; Doc.line])
+                      (Ext_list.map rows (fun row ->
+                           print_pattern_dict_row ~state row cmt_tbl));
+                  ]);
+             Doc.if_breaks (Doc.text ",") Doc.nil;
+             Doc.soft_line;
+             Doc.rbrace;
+           ])
     | Ppat_record ([], Open, None) ->
       Doc.concat [Doc.lbrace; Doc.text "_"; Doc.rbrace]
     | Ppat_record (rows, open_flag, rest) ->
@@ -3043,11 +3044,9 @@ and print_pattern_record_row ~state row cmt_tbl =
     print_comments doc cmt_tbl loc_for_comments
 
 and print_pattern_dict_row ~state
-    ({lid = longident; x = pattern; opt} :
-      Parsetree.pattern Parsetree.record_element) cmt_tbl =
-  let loc_for_comments =
-    {longident.loc with loc_end = pattern.ppat_loc.loc_end}
-  in
+    ({pdp_key = key; pdp_pattern = pattern; pdp_optional = opt} :
+      Parsetree.dict_pattern_entry) cmt_tbl =
+  let loc_for_comments = {key.loc with loc_end = pattern.ppat_loc.loc_end} in
   let rhs_doc =
     let doc = print_pattern ~state pattern cmt_tbl in
     let doc =
@@ -3056,7 +3055,7 @@ and print_pattern_dict_row ~state
     if opt then Doc.concat [Doc.text "?"; doc] else doc
   in
   let lbl_doc =
-    Doc.concat [Doc.text "\""; print_longident longident.txt; Doc.text "\""]
+    Doc.concat [Doc.text "\""; print_longident (Lident key.txt); Doc.text "\""]
   in
   let doc =
     Doc.group

@@ -16,7 +16,6 @@ val functor_type :
   * Parsetree.module_type
 
 val expr_is_await : Parsetree.expression -> bool
-val has_dict_pattern_attribute : Parsetree.attributes -> bool
 
 type dict_expr_part =
   | DictExprRows of Parsetree.expression

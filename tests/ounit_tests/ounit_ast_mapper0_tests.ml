@@ -1479,6 +1479,44 @@ let test_raw_extension_payloads_roundtrip_through_ast0 _ =
 (* On the v0 wire, dict literals are the calls they used to be parsed into:
    [Primitive_dict.make] without spreads, [Primitive_dict.spread] marked with
    [res.dictSpread] with them. They come back as [Pexp_dict]. *)
+(* On the v0 wire, a dict pattern is an open record pattern with string keys
+   as labels, marked with [res.dictPattern] in front of its attributes *)
+let test_dict_pattern_through_ast0 _ =
+  let key_loc = source_loc 5 8 in
+  let entry key pattern optional =
+    {
+      Parsetree.pdp_key = located_string ~loc:key_loc key;
+      pdp_pattern = pattern;
+      pdp_optional = optional;
+    }
+  in
+  let dict =
+    Ast_helper.Pat.dict ~loc
+      ~attrs:[attr "user" (Parsetree.PStr [])]
+      [
+        entry "a" (Ast_helper.Pat.var ~loc (located_string "x")) false;
+        entry "b-c" (Ast_helper.Pat.any ~loc ()) true;
+      ]
+  in
+  let wire = map_pat_to0 dict in
+  (match wire.ppat_desc with
+  | Parsetree0.Ppat_record
+      ( [
+          ({txt = Longident.Lident "a"; loc = a_loc}, _);
+          ({txt = Longident.Lident "b-c"}, _);
+        ],
+        Open ) ->
+    OUnit.assert_equal ~msg:"key location" key_loc a_loc
+  | _ -> assert_failure "Expected an open v0 record pattern");
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["res.dictPattern"; "user"]
+    (attr_names wire.ppat_attributes);
+  let strip_locs =
+    {Ast_mapper.default_mapper with location = (fun _ _ -> Location.none)}
+  in
+  OUnit.assert_bool "dict pattern roundtrips through ast0"
+    (strip_locs.pat strip_locs (map_pat0 wire) = strip_locs.pat strip_locs dict)
+
 let test_dict_literal_through_ast0 _ =
   let strip_locs =
     {Ast_mapper.default_mapper with location = (fun _ _ -> Location.none)}
@@ -2041,6 +2079,7 @@ let suites =
          "variant_spread_pattern_through_ast0"
          >:: test_variant_spread_pattern_through_ast0;
          "dict_literal_through_ast0" >:: test_dict_literal_through_ast0;
+         "dict_pattern_through_ast0" >:: test_dict_pattern_through_ast0;
          "inline_record_definition_roundtrips_through_ast0"
          >:: test_inline_record_definition_roundtrips_through_ast0;
          "this_on_braced_function_reaches_builtin_ppx"

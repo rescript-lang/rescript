@@ -30,12 +30,6 @@ let expr_is_await e =
   | Pexp_await _ -> true
   | _ -> false
 
-let has_dict_pattern_attribute attrs =
-  attrs
-  |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
-      txt = "res.dictPattern")
-  |> Option.is_some
-
 type dict_expr_part =
   | DictExprRows of Parsetree.expression
   | DictExprSpread of Parsetree.expression
@@ -264,7 +258,7 @@ let is_huggable_rhs expr =
 
 let is_huggable_pattern pattern =
   match pattern.ppat_desc with
-  | Ppat_array _ | Ppat_tuple _ | Ppat_record _ | Ppat_variant _
+  | Ppat_array _ | Ppat_tuple _ | Ppat_record _ | Ppat_dict _ | Ppat_variant _
   | Ppat_construct _ ->
     true
   | _ -> false

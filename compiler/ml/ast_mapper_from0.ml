@@ -1401,6 +1401,32 @@ module P = struct
           ~split_tuple:has_constructor_args arg
       in
       variant ~loc ~attrs l {txt = args; loc = args_loc}
+    | Ppat_record (lpl, Open)
+      when List.exists (fun ({txt}, _) -> txt = "res.dictPattern") attrs
+           && List.for_all
+                (fun (lid, _) ->
+                  match lid.txt with
+                  | Longident.Lident _ -> true
+                  | _ -> false)
+                lpl ->
+      (* A dict pattern, see [Ast_mapper_to0] *)
+      let attrs =
+        List.filter (fun ({txt}, _) -> txt <> "res.dictPattern") attrs
+      in
+      dict ~loc ~attrs
+        (List.map
+           (fun (lid, p) ->
+             let p1 = sub.pat sub p in
+             let optional, attrs =
+               Parsetree0.get_optional_attr p1.ppat_attributes
+             in
+             {
+               Pt.pdp_key =
+                 {txt = Longident.last lid.txt; loc = sub.location sub lid.loc};
+               pdp_pattern = {p1 with ppat_attributes = attrs};
+               pdp_optional = optional;
+             })
+           lpl)
     | Ppat_record (lpl, cf) ->
       let rest, attrs = get_record_rest_attr attrs in
       record ~loc ~attrs ?rest

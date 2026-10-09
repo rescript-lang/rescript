@@ -454,6 +454,12 @@ module P = struct
     | Ppat_variant (_l, {txt = args; loc = args_loc}) ->
       sub.location sub args_loc;
       List.iter (sub.pat sub) args
+    | Ppat_dict entries ->
+      List.iter
+        (fun {pdp_key; pdp_pattern} ->
+          iter_loc sub pdp_key;
+          sub.pat sub pdp_pattern)
+        entries
     | Ppat_record (lpl, _cf, rest) ->
       List.iter
         (fun {lid; x = pat} ->
