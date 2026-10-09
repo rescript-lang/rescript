@@ -88,8 +88,6 @@ val fld_record_inline : string -> field_dbg_info
 
 val fld_record_extension : string -> field_dbg_info
 
-val ref_field_info : field_dbg_info
-
 type set_field_dbg_info =
   | Fld_record_set of string
   | Fld_record_inline_set of string
@@ -230,7 +228,6 @@ type primitive =
   | Parrayrefu
   | Parraysetu
   | Parrayrefs
-  | Parraysets
   (* List primitives *)
   | Pmakelist
   (* dict primitives *)
@@ -247,8 +244,6 @@ type primitive =
   | Phash_mixint
   | Phash_mixstring
   | Phash_finalmix
-  (* Test if the argument is a block or an immediate integer *)
-  | Pisint
   (* Test if the (integer) argument is outside an interval *)
   (* Test if the argument is null or undefined *)
   | Pis_null_undefined
@@ -380,15 +375,10 @@ and lfunction = {
 
 and prim_info = private {primitive: primitive; args: t list; loc: Location.t}
 
-and ap_info = {
-  ap_loc: Location.t;
-  ap_inlined: inline_attribute; (* specified with the [@inlined] attribute *)
-}
-
 and lambda_apply = private {
   ap_func: t;
   ap_args: t list;
-  ap_info: ap_info;
+  ap_loc: Location.t;
   ap_transformed_jsx: bool;
 }
 
@@ -410,18 +400,6 @@ and 'a switch = {
 }
 
 and lambda_switch = t switch
-
-(* Lambda code for the middle-end.
-   * In the closure case the code is a sequence of assignments to a
-     preallocated block of size [main_module_block_size] using
-     (Setfield(Getglobal(module_ident))). The size is used to preallocate
-     the block.
-   * In the flambda case the code is an expression returning a block
-     value of size [main_module_block_size]. The size is used to build
-     the module root as an initialize_symbol
-     Initialize_symbol(module_name, 0,
-       [getfield 0; ...; getfield (main_module_block_size - 1)])
-*)
 
 (* Sharing key *)
 
@@ -458,8 +436,7 @@ val const_is_allocating : structured_constant -> bool
      collapses a module record rebuilt field-by-field from another module
      back to that module.
    - [if_] resolves a constant condition, collapses a branch that asserts
-     false, turns boolean branches into the condition or its negation, and
-     recognizes a few [Pisint] shapes.
+     false, turns boolean branches into the condition or its negation.
    - [switch] and [stringswitch] pick the matching case when the scrutinee
      is constant.
    - [not_] rewrites a negated inequality into an equality.
@@ -477,7 +454,7 @@ val global_module : Ident.t -> t
 
 val const : structured_constant -> t
 
-val apply : ?ap_transformed_jsx:bool -> t -> t list -> ap_info -> t
+val apply : ?ap_transformed_jsx:bool -> t -> t list -> Location.t -> t
 
 val function_ :
   loc:Location.t ->
@@ -526,10 +503,6 @@ val sequor : t -> t -> t
 
 val sequand : t -> t -> t
 
-val lambda_true : t
-
-val lambda_false : t
-
 val eq_approx : t -> t -> bool
 
 val mk_builtin : builtin -> t list -> Location.t -> t
@@ -541,3 +514,8 @@ val name_lambda : let_kind -> t -> (Ident.t -> t) -> t
 val bind : let_kind -> Ident.t -> t -> t -> t
 
 val default_function_attribute : function_attribute
+
+val record_fields_are_array : (string * bool) array -> bool
+(** Whether a nonempty record has consecutive field names starting at ["0"],
+    so it is represented as a JavaScript array. Optionality does not affect
+    the layout. *)

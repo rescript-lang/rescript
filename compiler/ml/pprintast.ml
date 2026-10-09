@@ -486,6 +486,7 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
     | Ppat_array l -> pp f "@[<2>[|%a|]@]" (list (pattern1 ctxt) ~sep:";") l
     | Ppat_unpack s -> pp f "(module@ %s)@ " s.txt
     | Ppat_type li -> pp f "#%a" longident_loc li
+    | Ppat_variant_spread li -> pp f "...%a" longident_loc li
     | Ppat_record (l, closed, rest) -> (
       let longident_x_pattern f {lid = li; x = p; opt} =
         let opt_str = if opt then "?" else "" in
@@ -841,7 +842,7 @@ and simple_expr ctxt f x =
       pp f "@[<hov2>(%a)@]" (list (simple_expr ctxt) ~sep:",@;") l
     | Pexp_constraint (e, ct) ->
       pp f "(%a :@ %a)" (expression ctxt) e (core_type ctxt) ct
-    | Pexp_coerce (e, (), ct) ->
+    | Pexp_coerce (e, ct) ->
       pp f "(%a :> %a)" (expression ctxt) e (core_type ctxt) ct
     | Pexp_variant (l, {txt = []}) -> pp f "`%s" l
     | Pexp_record (l, eo) ->
@@ -1100,6 +1101,7 @@ and module_expr ctxt f x =
       (* Cf: #7200 *)
     | Pmod_unpack e -> pp f "(val@ %a)" (expression ctxt) e
     | Pmod_extension e -> extension ctxt f e
+    | Pmod_await me -> pp f "await@ %a" (module_expr ctxt) me
 
 and structure ctxt f x = list ~sep:"@\n" (structure_item ctxt) f x
 
@@ -1450,15 +1452,6 @@ and label_x_expression_param ctxt f (l, e) =
     if Some lbl = simple_name then pp f "~%s" lbl
     else pp f "~%s:%a" lbl (simple_expr ctxt) e
 
-let expression f x = pp f "@[%a@]" (expression reset_ctxt) x
-
-let string_of_expression x =
-  ignore (flush_str_formatter ());
-  let f = str_formatter in
-  expression f x;
-  flush_str_formatter ()
-
-let core_type = core_type reset_ctxt
 let pattern = pattern reset_ctxt
 let signature = signature reset_ctxt
 let structure = structure reset_ctxt

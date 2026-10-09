@@ -1,5 +1,5 @@
 (* Reanalyze server implementation.
-   Kept in a separate module so Reanalyze.ml stays focused on analysis logic. *)
+   Kept in a separate module so reanalyze.ml stays focused on analysis logic. *)
 
 (** Default socket location invariant:
     - the socket lives in the project root

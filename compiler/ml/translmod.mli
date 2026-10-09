@@ -27,5 +27,3 @@ val transl_implementation :
 
 type error
 (* exception Error of Location.t * error *)
-
-val report_error : Format.formatter -> error -> unit

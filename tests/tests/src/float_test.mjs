@@ -111,9 +111,9 @@ Mocha.describe("Float_test", () => {
     Test_utils.eq("File \"float_test.res\", line 70, characters 7-14", Primitive_object.greaterthan(nan, 4.2), false);
     Test_utils.eq("File \"float_test.res\", line 71, characters 7-14", nan <= nan, false);
     Test_utils.eq("File \"float_test.res\", line 72, characters 7-14", Primitive_object.lessequal(nan, nan), false);
-    Test_utils.eq("File \"float_test.res\", line 73, characters 7-14", Primitive_object.lessequal(4.2, nan), false);
+    Test_utils.eq("File \"float_test.res\", line 73, characters 7-14", 4.2 <= nan, false);
     Test_utils.eq("File \"float_test.res\", line 74, characters 7-14", Primitive_object.lessequal(4.2, nan), false);
-    Test_utils.eq("File \"float_test.res\", line 75, characters 7-14", Primitive_object.lessequal(nan, 4.2), false);
+    Test_utils.eq("File \"float_test.res\", line 75, characters 7-14", nan <= 4.2, false);
     Test_utils.eq("File \"float_test.res\", line 76, characters 7-14", Primitive_object.lessequal(nan, 4.2), false);
     Test_utils.eq("File \"float_test.res\", line 77, characters 7-14", nan >= nan, false);
     Test_utils.eq("File \"float_test.res\", line 78, characters 7-14", Primitive_object.greaterequal(nan, nan), false);

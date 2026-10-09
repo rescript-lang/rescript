@@ -9,6 +9,4 @@ module InnerModule = {
   let make = () => ()
 }
 
-// ^dex
-
 let log = msg => Console.log(msg)

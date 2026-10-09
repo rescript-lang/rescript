@@ -1211,13 +1211,19 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
     let has_any_unallowed_dependent = !detected_unallowed_dependencies.is_empty();
 
     if has_any_unallowed_dependent {
-        log::error!(
-            "\nUpdate the {} value in the {} of the unallowed dependencies to solve the issue!",
-            console::style("unallowed_dependents").bold().dim(),
-            console::style("config.json").bold().dim()
-        )
+        log::error!("{}", unallowed_dependents_hint())
     }
     !has_any_unallowed_dependent
+}
+
+/// The hint printed after the list of unallowed dependencies, naming the
+/// package setting and the file that holds it.
+fn unallowed_dependents_hint() -> String {
+    format!(
+        "\nUpdate the {} value in the {} of the unallowed dependencies to solve the issue!",
+        console::style("allowed-dependents").bold().dim(),
+        console::style("rescript.json").bold().dim()
+    )
 }
 
 #[cfg(test)]
@@ -1284,6 +1290,15 @@ mod test {
 
         let is_valid = super::validate_packages_dependencies(&packages);
         assert!(!is_valid)
+    }
+
+    #[test]
+    fn unallowed_dependents_hint_names_the_setting_and_its_file() {
+        let hint = console::strip_ansi_codes(&super::unallowed_dependents_hint()).into_owned();
+        assert_eq!(
+            hint,
+            "\nUpdate the allowed-dependents value in the rescript.json of the unallowed dependencies to solve the issue!"
+        );
     }
 
     #[test]

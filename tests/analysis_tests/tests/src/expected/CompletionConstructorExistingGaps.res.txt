@@ -23,7 +23,7 @@ Path gap
 ]
 
 Complete src/CompletionConstructorExistingGaps.res 8:25
-posCursor:[8:25] posNoWhite:[8:23] Found expr:[8:15->8:38]
+pos_cursor:[8:25] pos_no_white:[8:23] Found expr:[8:15->8:38]
 Pexp_construct Gap:[8:15->8:18] [8:19->8:23], [8:26->8:31], [8:33->8:37]
 Completable: Cexpression CTypeAtPos()->variantPayload::Gap($1)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder

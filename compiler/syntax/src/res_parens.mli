@@ -34,7 +34,8 @@ val mod_expr_functor_constraint : Parsetree.module_type -> bool
 val braced_expr : Parsetree.expression -> bool
 val call_expr : Parsetree.expression -> kind
 
-val include_mod_expr : Parsetree.module_expr -> bool
+val mod_constraint : Parsetree.module_expr -> bool
+val mod_apply_callee : Parsetree.module_expr -> bool
 
 val mod_expr_parens : Parsetree.module_expr -> bool
 

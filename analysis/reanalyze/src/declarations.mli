@@ -4,7 +4,7 @@
     - [builder] - mutable, for AST processing
     - [t] - immutable, for solver (read-only access)
     
-    Only DceFileProcessing should use [builder].
+    Only Dce_file_processing should use [builder].
     The solver uses [t] which is frozen/immutable. *)
 
 (** {2 Types} *)
@@ -12,7 +12,7 @@
 type builder
 (** Mutable builder - for AST processing *)
 
-(** {2 Builder API - for DceFileProcessing only} *)
+(** {2 Builder API - for Dce_file_processing only} *)
 
 val create_builder : unit -> builder
 val add : builder -> Lexing.position -> Decl.t -> unit

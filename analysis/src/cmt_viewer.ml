@@ -1,19 +1,3 @@
-let filter_by_cursor cursor (loc : Warnings.loc) : bool =
-  match cursor with
-  | None -> true
-  | Some (line, col) ->
-    let start = loc.loc_start and end_ = loc.loc_end in
-    let line_in = start.pos_lnum <= line && line <= end_.pos_lnum in
-    let col_in =
-      if start.pos_lnum = end_.pos_lnum then
-        start.pos_cnum - start.pos_bol <= col
-        && col <= end_.pos_cnum - end_.pos_bol
-      else if line = start.pos_lnum then col >= start.pos_cnum - start.pos_bol
-      else if line = end_.pos_lnum then col <= end_.pos_cnum - end_.pos_bol
-      else true
-    in
-    line_in && col_in
-
 let dump ~(filter_for_position : (int * int) option) ~full =
   let open Shared_types in
   let open Shared_types.Stamps in
@@ -28,7 +12,7 @@ let dump ~(filter_for_position : (int * int) option) ~full =
   | None -> ()
   | Some (line, col) -> printf "Filtering by cursor %d,%d\n" line col);
 
-  printf "file moduleName: %s\n\n" full.file.module_name;
+  printf "file module_name: %s\n\n" full.file.module_name;
 
   let stamps =
     full.file.stamps |> get_entries
@@ -89,14 +73,14 @@ let dump ~(filter_for_position : (int * int) option) ~full =
   printf "\n";
   dump_structure 0 full.file.structure;
 
-  (* Dump all locItems (typed nodes) *)
+  (* Dump all loc_items (typed nodes) *)
   let loc_items =
     match full.extra with
     | {loc_items} ->
       loc_items |> List.filter (fun loc_item -> apply_filter loc_item.loc)
   in
 
-  printf "\nFound %d locItems (typed nodes):\n\n" (List.length loc_items);
+  printf "\nFound %d loc_items (typed nodes):\n\n" (List.length loc_items);
 
   loc_items
   |> List.sort (fun a b ->

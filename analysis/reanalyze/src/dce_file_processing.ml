@@ -47,7 +47,7 @@ type file_data = {
 
 let process_cmt_file ~config ~(file : file_context) ~cmt_file_path
     (cmt_infos : Cmt_format.cmt_infos) : file_data =
-  (* Convert to DeadCommon.FileContext for functions that need it *)
+  (* Convert to Dead_common.File_context for functions that need it *)
   let dead_common_file : File_context.t =
     {
       source_path = file.source_path;

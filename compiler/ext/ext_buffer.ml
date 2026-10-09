@@ -41,8 +41,6 @@ let length b = b.position
 
 let is_empty b = b.position = 0
 
-let clear b = b.position <- 0
-
 (* let reset b =
    b.position <- 0; b.buffer <- b.initial_buffer;
    b.length <- Bytes.length b.buffer *)

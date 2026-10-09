@@ -253,7 +253,7 @@ Resolved opens 1 Stdlib
 ]
 
 Complete src/CompletionAttributes.res 36:14
-posCursor:[36:14] posNoWhite:[36:13] Found expr:[36:12->36:14]
+pos_cursor:[36:14] pos_no_white:[36:13] Found expr:[36:12->36:14]
 Completable: CextensionNode(t)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib

@@ -1,5 +1,5 @@
 Complete src/TypeAtPosCompletion.res 7:17
-posCursor:[7:17] posNoWhite:[7:15] Found expr:[6:16->9:1]
+pos_cursor:[7:17] pos_no_white:[7:15] Found expr:[6:16->9:1]
 Completable: Cexpression CTypeAtPos()->recordBody
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -28,7 +28,7 @@ ContextPath CTypeAtPos()
 ]
 
 Complete src/TypeAtPosCompletion.res 16:18
-posCursor:[16:18] posNoWhite:[16:16] Found expr:[13:8->19:1]
+pos_cursor:[16:18] pos_no_white:[16:16] Found expr:[13:8->19:1]
 Pexp_construct One:[13:8->13:11] [14:2->14:3], [15:2->18:3]
 Completable: Cexpression CTypeAtPos()->variantPayload::One($1), recordBody
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -58,7 +58,7 @@ ContextPath CTypeAtPos()
 ]
 
 Complete src/TypeAtPosCompletion.res 22:12
-posCursor:[22:12] posNoWhite:[22:11] Found expr:[21:10->24:1]
+pos_cursor:[22:12] pos_no_white:[22:11] Found expr:[21:10->24:1]
 Completable: Cexpression CTypeAtPos()->array
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib

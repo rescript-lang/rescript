@@ -8,6 +8,15 @@ console.log([
   3e-6
 ]);
 
+function BigintConsts(X) {
+  return {
+    both: [
+      12n,
+      -5n
+    ]
+  };
+}
+
 let x = true;
 
 function N1(funarg) {
@@ -24,5 +33,6 @@ export {
   N1,
   h,
   hh,
+  BigintConsts,
 }
 /*  Not a pure module */

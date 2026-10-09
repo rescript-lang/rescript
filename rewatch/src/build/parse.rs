@@ -438,41 +438,26 @@ fn generate_ast(
     helpers::create_path(&ast_parent_path);
 
     /* Create .ast */
-    let result = match Some(
-        Command::new(&build_state.compiler_info.bsc_path)
-            .current_dir(&build_path_abs)
-            .args(parser_args)
-            .output()
-            .map_err(|e| {
-                anyhow!(
-                    "Error running bsc for parsing {}: {}",
-                    filename.to_string_lossy(),
-                    e
-                )
-            })?,
-    ) {
-        Some(res_to_ast) => {
-            let stderr = String::from_utf8_lossy(&res_to_ast.stderr).to_string();
-
-            if helpers::contains_ascii_characters(&stderr) {
-                if res_to_ast.status.success() {
-                    Ok((ast_path, Some(stderr.to_string())))
-                } else {
-                    Err(anyhow!("Error in {}:\n{}", package.name, stderr))
-                }
-            } else {
-                Ok((ast_path, None))
-            }
+    let res_to_ast = Command::new(&build_state.compiler_info.bsc_path)
+        .current_dir(&build_path_abs)
+        .args(parser_args)
+        .output()
+        .map_err(|e| {
+            anyhow!(
+                "Error running bsc for parsing {}: {}",
+                filename.to_string_lossy(),
+                e
+            )
+        })?;
+    let stderr = String::from_utf8_lossy(&res_to_ast.stderr).to_string();
+    let result = if helpers::contains_ascii_characters(&stderr) {
+        if res_to_ast.status.success() {
+            Ok((ast_path, Some(stderr)))
+        } else {
+            Err(anyhow!("Error in {}:\n{}", package.name, stderr))
         }
-        _ => {
-            log::info!("Parsing file {}...", filename.display());
-
-            Err(anyhow!(
-                "Could not find canonicalize_string_path for file {} in package {}",
-                filename.display(),
-                package.name
-            ))
-        }
+    } else {
+        Ok((ast_path, None))
     };
     if let Ok((ast_path, _)) = &result {
         let _ = std::fs::copy(

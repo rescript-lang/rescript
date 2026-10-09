@@ -26,21 +26,12 @@ type _ kind = Ml : Parsetree.structure kind | Mli : Parsetree.signature kind
 
 val read_ast_exn : fname:string -> 'a kind -> 'a
 
-val magic_sep_char : char
-
 val write_ast : sourcefile:string -> output:string -> 'a kind -> 'a -> unit
-(**
-   Check out {!Bsb_depfile_gen} for set decoding
-   The [.ml] file can be recognized as an ast directly, the format
-   is
-   {
-   magic number;
-   filename;
-   ast
-   }
-   when [fname] is "-" it means the file is from an standard input or pipe.
-   An empty name would marshallized.
-
-   Use case cat - | fan -printer -impl -
-   redirect the standard input to fan
-*)
+(** [write_ast ~sourcefile ~output kind ast] writes to [output]:
+    - the length in bytes of the dependency block ([output_binary_int]);
+    - the dependency block: a newline, then each module name [ast] refers to
+      (predefined names excluded), each followed by a newline;
+    - [sourcefile] and a newline;
+    - the marshalled [ast].
+    [read_ast_exn] skips the dependency block; rewatch reads it in
+    [get_dep_modules] (rewatch/src/build/deps.rs). *)

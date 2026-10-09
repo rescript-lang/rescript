@@ -32,15 +32,10 @@ module Make (H : Hashtbl.HashedType) :
   open Ordered_hash_map_gen
 
   let create = create
-  let clear = clear
-  let reset = reset
 
   let iter = iter
-  let fold = fold
   let length = length
 
-  let elements = elements
-  let choose = choose
   let to_sorted_array = to_sorted_array
 
   let rec small_bucket_mem key lst =
@@ -99,8 +94,6 @@ module Make (H : Hashtbl.HashedType) :
       h.size <- h.size + 1;
       if h.size > Array.length h.data lsl 1 then resize key_index h)
 
-  let mem h key =
-    small_bucket_mem key (Array.unsafe_get h.data (key_index h key))
   let rank h key =
     small_bucket_rank key (Array.unsafe_get h.data (key_index h key))
 

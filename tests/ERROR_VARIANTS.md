@@ -207,7 +207,7 @@ Source: `type error` in [typecore.ml](../compiler/ml/typecore.ml).
 | `Or_pattern_type_clash` | ✓ | `or_pattern_type_clash.res` | |
 | `Multiply_bound_variable` | ✓ | `multiply_bound_variable.res` | |
 | `Orpat_vars` | ✓ | `orpat_vars_unbalanced.res` | |
-| `Expr_type_clash` | ✓ | many `*.res` | Most-fired expression error. Trace-shape sub-cases covered: `if_return_type_mismatch.res` (IfReturn), `maybe_unwrap_option.res` (MaybeUnwrapOption), `string_concat_non_string.res` (StringConcat), `labeled_fn_argument_type_clash.res` (FunctionArgument with explicit label), `math_operator_*.res` (MathOperator family), `ternary_branch_mismatch.res`, `switch_different_types.res`, `try_catch_same_type.res`, `comparison_operator.res`, `array_item_type_mismatch.res`, `array_literal_passed_to_tuple.res`, `if_condition_mismatch.res`, `while_condition.res`, `for_loop_condition.res`, `assert_condition.res`, `function_call_mismatch.res`, `awaiting_non_promise.res`, multiple `jsx_*` fixtures (including `jsx_preserve_external_function.res` for a plain-function external in a JSX component position), `object_literal_for_poly_field.res` (object literal against a polymorphic field annotation). |
+| `Expr_type_clash` | ✓ | many `*.res` | Most-fired expression error. Trace-shape sub-cases covered: `if_return_type_mismatch.res` (IfReturn), `string_concat_non_string.res` (StringConcat), `labeled_fn_argument_type_clash.res` (FunctionArgument with explicit label), `math_operator_*.res` (MathOperator family), `ternary_branch_mismatch.res`, `switch_different_types.res`, `try_catch_same_type.res`, `comparison_operator.res`, `array_item_type_mismatch.res`, `array_literal_passed_to_tuple.res`, `if_condition_mismatch.res`, `while_condition.res`, `for_loop_condition.res`, `assert_condition.res`, `function_call_mismatch.res`, `awaiting_non_promise.res`, `maybe_unwrap_option.res`, multiple `jsx_*` fixtures (including `jsx_preserve_external_function.res` for a plain-function external in a JSX component position), `object_literal_for_poly_field.res` (object literal against a polymorphic field annotation). |
 | `Apply_non_function` | ✓ | `apply_non_function.res` | |
 | `Apply_wrong_label` | ✓ | `apply_wrong_label.res` | |
 | `Label_multiply_defined` | ✓ | `label_multiply_defined_literal.res` | |
@@ -366,7 +366,7 @@ Wrapper symptoms attached to inclusion failures. Source: `type symptom` in [incl
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
 | `Missing_field` | ✓ | `super_errors_multi/Iface_missing_value` | |
-| `Value_descriptions` | ✓ | `super_errors_multi/Iface_value_descriptions`, `super_errors_multi/Iface_value_arity_mismatch`, `super_errors_multi/Smoke_interface_mismatch`, `super_errors_multi/Cross_external_spec_mismatch`, `super_errors_multi/Cross_external_payload_name`, `super_errors_multi/Cross_external_import_attrs`, `module_sig_value_arity_mismatch*.res`, `object_value_signature_set_mismatch.res` | Arity mismatches print a dedicated hint (implementation vs interface argument counts), including through aliases and nested function types. The object fixture pins that a value signature cannot drop `@set` from an object type (moregeneral requires equal field mutability). |
+| `Value_descriptions` | ✓ | `super_errors_multi/Iface_value_descriptions`, `super_errors_multi/Iface_value_arity_mismatch`, `super_errors_multi/Smoke_interface_mismatch`, `super_errors_multi/Cross_external_spec_mismatch`, `super_errors_multi/Cross_external_payload_name`, `super_errors_multi/Cross_external_import_attrs`, `module_sig_value_arity_mismatch*.res`, `object_value_signature_set_mismatch.res`, `inline_bigint_signature_mismatch.res` | Arity mismatches print a dedicated hint (implementation vs interface argument counts), including through aliases and nested function types. The object fixture pins that a value signature cannot drop `@set` from an object type (moregeneral requires equal field mutability). The inline-bigint fixture pins the sign printed for `@inline(<bigint>)` values. |
 | `Type_declarations` | ✓ | `super_errors_multi/Iface_type_decl_record`, `super_errors_multi/Iface_type_decl_variant`, `RecordInclusion.res`, `type_decl_function_arity_mismatch.res` | |
 | `Extension_constructors` | ✓ | `super_errors_multi/Iface_extension_constructors` | |
 | `Module_types` | ✓ | `super_errors_multi/Iface_module_types` | |
@@ -563,6 +563,9 @@ so coverage gaps stay greppable. Warning 11 (`Unused_match`) is covered by
 The warning constructors listed in **Removed in `jono/remove-dead-errors`**
 were deleted. Their numeric warning slots remain holes; no warning number
 was reused.
+
+Warning 24 (`Bad_module_name`) was removed later for the same reason: it
+had no raise site. Its slot is likewise left unused.
 
 ### Live but no fixture yet
 

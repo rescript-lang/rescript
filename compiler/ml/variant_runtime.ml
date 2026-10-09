@@ -1,8 +1,8 @@
 (* The runtime representation of variants: plain data describing how each
    constructor is laid out in JavaScript and how a whole variant is
    dispatched on. This module sits below [Types] so the canonical layout can
-   be stored on type declarations; [Ast_untagged_variants] re-exports these
-   definitions and derives them from declarations. *)
+   be stored on type declarations; [Variant_layout] derives the layout of
+   each declaration. *)
 
 module Instance = struct
   type t =
@@ -159,12 +159,6 @@ let constructor_tag layout position =
   match constructor_at layout position with
   | Constant tag -> tag.literal
   | Block (Tagged {tag} | Untagged {tag}) -> tag.literal
-
-let constructor_is_untagged layout position =
-  match constructor_at layout position with
-  | Constant _ -> false
-  | Block (Tagged _) -> false
-  | Block (Untagged _) -> true
 
 let representation ({variant; position} : constructor_reference) =
   constructor_at (get_layout variant) position

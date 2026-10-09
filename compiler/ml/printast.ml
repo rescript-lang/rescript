@@ -231,6 +231,9 @@ and pattern i ppf x =
   | Ppat_type li ->
     line i ppf "Ppat_type\n";
     longident_loc i ppf li
+  | Ppat_variant_spread li ->
+    line i ppf "Ppat_variant_spread\n";
+    longident_loc i ppf li
   | Ppat_unpack s -> line i ppf "Ppat_unpack %a\n" fmt_string_loc s
   | Ppat_exception p ->
     line i ppf "Ppat_exception\n";
@@ -357,7 +360,7 @@ and expression i ppf x =
     line i ppf "Pexp_constraint\n";
     expression i ppf e;
     core_type i ppf ct
-  | Pexp_coerce (e, (), cto2) ->
+  | Pexp_coerce (e, cto2) ->
     line i ppf "Pexp_coerce\n";
     expression i ppf e;
     core_type i ppf cto2
@@ -662,6 +665,9 @@ and module_expr i ppf x =
   | Pmod_extension (s, arg) ->
     line i ppf "Pmod_extension \"%s\"\n" s.txt;
     payload i ppf arg
+  | Pmod_await me ->
+    line i ppf "Pmod_await\n";
+    module_expr i ppf me
 
 and structure i ppf x = list i structure_item ppf x
 
