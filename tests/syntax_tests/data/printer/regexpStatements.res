@@ -40,6 +40,33 @@ let objectAccess = () => {
   (/a/g)["lastIndex"]
 }
 
+let arrayAccess = i => {
+  Console.log("before")
+  ((/a/)[i])
+}
+
+let arrayMutation = (i, value) => {
+  Console.log("before")
+  ((/a/g)[i] = value)
+  Console.log("after")
+}
+
+let nestedArrayAccess = (i, j) => {
+  Console.log("before")
+  ((/a/)[i][j])->ignore
+}
+
+let arrayCalls = (i, value) => {
+  Console.log("before")
+  Array.get(/a/, i)
+  Array.set(/a/g, i, value)
+}
+
+let arrayComments = i => {
+  Console.log("before")
+  ((/* before regexp */ /a/ /* after regexp */)[/* index */ i])
+}
+
 let comments = s => {
   let t = s // binding
   // before regexp
@@ -70,4 +97,6 @@ let s = "a";
 module Nested = {
   let s = "a"
   (/a/)->RegExp.test(s)->ignore
+  ((/a/)[0])
+  ((/a/g)[0] = 1)
 }

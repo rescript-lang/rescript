@@ -45,6 +45,8 @@ try {
   assert.equal(output.dotAndWhitespace(" a"), true);
   assert.equal(output.ternaryAndBinary("a"), 1);
   assert.equal(output.ternaryAndBinary("b"), 0);
+  assert.equal(output.arrayAccess("lastIndex"), 0);
+  assert.equal(output.arrayMutation("lastIndex", 7), 7);
   assert.equal(output.division(24), 4);
   assert.equal(output.floatDivision(24), 4);
 } finally {

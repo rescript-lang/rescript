@@ -30,6 +30,29 @@ let ternaryAndBinary = s => {
   (/a/->RegExp.test(t) && true ? 1 : 0)
 }
 
+module Array = {
+  @get_index external get: (RegExp.t, string) => int = ""
+  @set_index external set: (RegExp.t, string, int) => unit = ""
+}
+
+let arrayAccess = key => {
+  ignore(key)
+  (/a/g[key])
+}
+
+let arrayMutation = (key, value) => {
+  let written = ref(0)
+  module Array = {
+    let set = (regexp, key, value) => {
+      regexp[key] = value
+      written := regexp[key]
+    }
+  }
+  ignore(key)
+  (/a/g[key] = value)
+  written.contents
+}
+
 let division = a => {
   let b = a / 2 / 3
   b
