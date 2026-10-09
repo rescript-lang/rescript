@@ -230,6 +230,19 @@ Test.run(
   )
 }
 
+{
+  // A "__proto__" key is copied as a key, not used to set the prototype
+  let withProtoKey: dict<int> = JSON.parseOrThrow(`{"__proto__": 1}`)->Obj.magic
+  let result = dict{...withProtoKey, "a": 2}
+
+  Test.run(
+    __POS_OF__("dict spread copies a __proto__ key"),
+    result->Dict.keysToArray,
+    eq,
+    ["__proto__", "a"],
+  )
+}
+
 Test.run(
   __POS_OF__("getUnsafe - existing"),
   Dict.fromArray([("foo", "bar")])->Dict.getUnsafe("foo"),

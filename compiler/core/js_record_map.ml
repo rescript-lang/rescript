@@ -76,13 +76,14 @@ let for_ident : for_ident fn = fun _self arg -> _self.ident _self arg
 
 let for_direction : for_direction fn = unknown
 
-let property_map : property_map fn =
- fun _self arg ->
-  list
-    (fun _self (_x0, _x1) ->
-      let _x1 = _self.expression _self _x1 in
-      (_x0, _x1))
-    _self arg
+let object_entry : object_entry fn =
+ fun _self -> function
+  | Object_property (_x0, _x1) ->
+    let _x1 = _self.expression _self _x1 in
+    Object_property (_x0, _x1)
+  | Object_spread _x0 ->
+    let _x0 = _self.expression _self _x0 in
+    Object_spread _x0
 
 let expression_desc : expression_desc fn =
  fun _self -> function
@@ -169,10 +170,9 @@ let expression_desc : expression_desc fn =
     let _x0 = _self.expression _self _x0 in
     Caml_block_tag (_x0, tag)
   | Number _ as v -> v
-  | Object (_x0, _x1) ->
-    let _x0 = option _self.expression _self _x0 in
-    let _x1 = property_map _self _x1 in
-    Object (_x0, _x1)
+  | Object _x0 ->
+    let _x0 = list object_entry _self _x0 in
+    Object _x0
   | Undefined _ as v -> v
   | Null as v -> v
   | Await _x0 ->

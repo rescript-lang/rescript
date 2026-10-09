@@ -122,11 +122,9 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
     *)
     Ext_list.for_all xs no_side_effect
   | Optional_block (x, _) -> no_side_effect x
-  | Object (dup, kvs) ->
-    (match dup with
-      | Some e -> no_side_effect e
-      | None -> true)
-    && Ext_list.for_all_snd kvs no_side_effect
+  | Object entries ->
+    Ext_list.for_all entries (function
+        | Object_property (_, e) | Object_spread e -> no_side_effect e)
   | String_append (a, b) | Seq (a, b) -> no_side_effect a && no_side_effect b
   | Length e | Caml_block_tag (e, _) | Typeof e -> no_side_effect e
   | Bin (Eq, _, _) -> false

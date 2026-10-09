@@ -201,7 +201,7 @@ let suites =
                             };
                           ]
                           {
-                            expression_desc = Object (None, []);
+                            expression_desc = Object [];
                             comment = None;
                             source_loc = None;
                           });

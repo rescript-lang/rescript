@@ -275,7 +275,11 @@ val seq : ?comment:string -> t -> t -> t
 
 val fuse_to_seq : t -> t list -> t
 
+val object_entries : ?dup:J.expression -> J.property_map -> J.object_entry list
+
 val obj : ?comment:string -> ?dup:J.expression -> J.property_map -> t
+
+val obj_entries : ?comment:string -> J.object_entry list -> t
 
 val true_ : t
 

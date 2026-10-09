@@ -303,11 +303,12 @@ let baz = {
   c: 5
 };
 
-let result$4 = Object.assign({}, foo, {
-  b: 3
-}, baz, {
+let result$4 = {
+  ...foo,
+  b: 3,
+  ...baz,
   d: 6
-});
+};
 
 Test.run([
   [
@@ -364,7 +365,7 @@ let foo$1 = {
   a: 1
 };
 
-let result$5 = Object.assign({}, foo$1);
+let result$5 = {...foo$1};
 
 Test.run([
   [
@@ -388,10 +389,30 @@ Test.run([
   "dict spread copies a single source into a fresh dictionary"
 ], result$5 === foo$1, eq, false);
 
+let withProtoKey = JSON.parse(`{"__proto__": 1}`);
+
+let result$6 = {
+  ...withProtoKey,
+  a: 2
+};
+
 Test.run([
   [
     "Stdlib_DictTests.res",
-    234,
+    239,
+    15,
+    51
+  ],
+  "dict spread copies a __proto__ key"
+], Object.keys(result$6), eq, [
+  "__proto__",
+  "a"
+]);
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    247,
     13,
     35
   ],
@@ -404,7 +425,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    240,
+    253,
     13,
     34
   ],
@@ -419,7 +440,7 @@ let dict = {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    252,
+    265,
     22,
     38
   ],
@@ -429,7 +450,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    253,
+    266,
     22,
     43
   ],
@@ -439,7 +460,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    254,
+    267,
     22,
     37
   ],
@@ -449,7 +470,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    255,
+    268,
     22,
     39
   ],
@@ -459,7 +480,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    257,
+    270,
     15,
     51
   ],
