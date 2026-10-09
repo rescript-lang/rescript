@@ -48,7 +48,7 @@ let get_module_system () =
   | [module_system] -> module_system
   | _ -> Commonjs
 
-let call_info = {Js_call_info.call_info = Call_na; call_transformed_jsx = false}
+let call_info = Js_call_info.na_full_call
 
 let import_of_path path =
   E.call ~info:call_info (E.js_global "import") [E.str path]
@@ -614,9 +614,55 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     | _ -> assert false)
   (* Test if the argument is a block or an immediate integer *)
   | Pjs_object_create _ -> assert false
-  | Pjs_call {prim_name; arg_types; ffi; transformed_jsx} ->
+  | Pjs_call {prim_name; arg_types; ffi} ->
     Lam_compile_external_call.translate_ffi cxt arg_types ~prim_name ffi args
-      ~transformed_jsx
+  | Pjsx
+      {
+        jsx_name = _;
+        jsx_ffi;
+        jsx_multi;
+        jsx_fragment;
+        jsx_spread;
+        jsx_props;
+        jsx_children;
+        jsx_key;
+      } -> (
+    match args with
+    | [] -> assert false
+    | tag :: rest ->
+      let spread, rest =
+        if jsx_spread then
+          match rest with
+          | spread :: rest -> (Some spread, rest)
+          | [] -> assert false
+        else (None, rest)
+      in
+      let values, rest = Ext_list.split_at rest (List.length jsx_props) in
+      let props =
+        List.combine jsx_props values
+        |> List.filter_map (fun ((name, optional), (value : J.expression)) ->
+            match value.expression_desc with
+            | Undefined _ when optional -> None
+            | _ -> Some (name, value))
+      in
+      let children, rest =
+        match jsx_children with
+        | None -> (None, rest)
+        | Some n ->
+          let children, rest = Ext_list.split_at rest n in
+          (Some children, rest)
+      in
+      let key =
+        match (jsx_key, rest) with
+        | true, [key] ->
+          Some (Js_of_lam_option.get_default_undefined_from_optional key)
+        | false, [] -> None
+        | _ -> assert false
+      in
+      E.jsx
+        ~callee:(Lam_compile_external_call.jsx_callee jsx_ffi)
+        ~tag ~spread ~props ~children ~key ~multi:jsx_multi
+        ~fragment:jsx_fragment)
   (* FIXME, this can be removed later *)
   | Pis_poly_var_block -> E.is_type_object (Ext_list.singleton_exn args)
   | Pduprecord -> (

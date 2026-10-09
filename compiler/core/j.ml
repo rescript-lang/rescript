@@ -104,6 +104,24 @@ and expression_desc =
       some primitive  call is translated
       into a plain call, it's better to keep them
   *)
+  | Jsx of {
+      callee: expression;
+      tag: expression;
+      spread: expression option;
+      props: (string * expression) list;
+      children: expression list option;
+      key: expression option;
+      multi: bool;
+      fragment: bool;
+    }
+      (** A JSX element in JSX preserve mode, from [Lambda.Pjsx]. js_dump
+          prints it as JSX when every part can be written in JSX, and
+          otherwise as the call
+          [callee(tag, {...spread, props, children}, key)]. [props] holds
+          runtime names in declaration order, without optional props that are
+          statically [undefined]. With [multi], each child is a separate
+          element of the [children] array. Subexpressions are evaluated in
+          the order [callee], [tag], [spread], [props], [children], [key]. *)
   | Array_index of expression * expression
   (* arr.(i)
      Invariant:

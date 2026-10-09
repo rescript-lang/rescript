@@ -33,10 +33,10 @@ type call_info =
    {[ fun x y -> f x y === f ]} when [f] is an atom
 *)
 
-type t = {call_info: call_info; call_transformed_jsx: bool}
+type t = {call_info: call_info}
 
 val builtin_runtime_call : t
 
 val ml_full_call : t
 
-val na_full_call : bool -> t
+val na_full_call : t

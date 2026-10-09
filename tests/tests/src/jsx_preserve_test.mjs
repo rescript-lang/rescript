@@ -25,7 +25,7 @@ let _multiple_element_children = <div>
 </div>;
 
 let _single_element_fragment = <>
-  {<input />}
+  <input />
 </>;
 
 let _multiple_element_fragment = <>
@@ -55,7 +55,7 @@ let baseProps = {
 };
 
 let _unary_element_with_spread_props = <input
-  {...baseProps} 
+  {...baseProps}
   type={"text"}
 />;
 
@@ -98,7 +98,7 @@ let _unary_element_with_spread_and_key_prop_keyed = JsxRuntime.jsx("input", {
 }, "outer");
 
 let _container_with_spread_props = <div
-  {...baseProps} 
+  {...baseProps}
   className={"barry"}
   title={"barry"}
 >
@@ -118,14 +118,14 @@ let baseChildren = [
 ];
 
 let _unary_element_with_spread_props_keyed = <input
-  key={"barry-key"} 
-  {...baseProps} 
+  key={"barry-key"}
+  {...baseProps}
   type={"text"}
 />;
 
 let _container_with_spread_props_keyed = <div
-  key={"barry-key"} 
-  {...baseProps} 
+  key={"barry-key"}
+  {...baseProps}
   className={"barry"}
   title={"barry"}
 >
@@ -136,7 +136,8 @@ let _container_with_spread_props_keyed = <div
 </div>;
 
 let _unary_element_with_only_spread_props = <input
-  {...baseProps} />;
+  {...baseProps}
+/>;
 
 function QueryClientProvider(props) { return props.children }
 ;

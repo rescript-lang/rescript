@@ -122,6 +122,21 @@ type import_source =
    rather than primitives. See [builtin]. *)
 type eliminated = Identity | Ignore
 
+(* A JSX element in JSX preserve mode, built by [Translcore] from a call the
+   JSX PPX produced. The arguments of [Pjsx] are, in evaluation order: the tag,
+   the spread props (if [jsx_spread]), one value per [jsx_props] entry, the
+   children ([jsx_children] of them) and the key (if [jsx_key]). *)
+type jsx_element = {
+  jsx_name: string; (* name of the external, for the fallback call *)
+  jsx_ffi: External_ffi_types.external_decl;
+  jsx_multi: bool; (* [jsxs]: each child is a separate argument *)
+  jsx_fragment: bool; (* the tag is the JSX module's [jsxFragment] *)
+  jsx_spread: bool;
+  jsx_props: (string * bool) list; (* runtime name, optional *)
+  jsx_children: int option; (* [None]: no children prop *)
+  jsx_key: bool;
+}
+
 type primitive =
   | Pdebugger
   | Ptypeof
@@ -140,8 +155,8 @@ type primitive =
       prim_name: string;
       arg_types: External_arg_spec.params;
       ffi: External_ffi_types.external_decl;
-      transformed_jsx: bool;
     }
+  | Pjsx of jsx_element
   | Pjs_object_create of External_arg_spec.obj_params
   | Pjs_object_get of string
   | Pjs_object_set of string
@@ -379,12 +394,7 @@ and lfunction = {
 
 and prim_info = private {primitive: primitive; args: t list; loc: Location.t}
 
-and lambda_apply = private {
-  ap_func: t;
-  ap_args: t list;
-  ap_loc: Location.t;
-  ap_transformed_jsx: bool;
-}
+and lambda_apply = private {ap_func: t; ap_args: t list; ap_loc: Location.t}
 
 and switch_key =
   | Switch_int of int
@@ -458,7 +468,7 @@ val global_module : Ident.t -> t
 
 val const : structured_constant -> t
 
-val apply : ?ap_transformed_jsx:bool -> t -> t list -> Location.t -> t
+val apply : t -> t list -> Location.t -> t
 
 val function_ :
   loc:Location.t ->

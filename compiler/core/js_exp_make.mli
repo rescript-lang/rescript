@@ -252,6 +252,17 @@ val call : ?comment:string -> info:Js_call_info.t -> t -> t list -> t
 
 val tagged_template : ?comment:string -> t -> string list -> t list -> t
 
+val jsx :
+  callee:t ->
+  tag:t ->
+  spread:t option ->
+  props:(string * t) list ->
+  children:t list option ->
+  key:t option ->
+  multi:bool ->
+  fragment:bool ->
+  t
+
 val interpolated_template :
   ?comment:string -> Asttypes.template_segment list -> t list -> t
 

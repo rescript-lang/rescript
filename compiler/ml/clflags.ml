@@ -59,5 +59,6 @@ type mli_status = Mli_exists | Mli_non_exists
 let assume_no_mli = ref Mli_non_exists
 let dont_record_crc_unit : string option ref = ref None
 let bs_gentype = ref false
+let jsx_preserve = ref false
 let no_assert_false = ref false
 let dump_location = ref true

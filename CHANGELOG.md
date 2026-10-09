@@ -24,6 +24,7 @@
 
 #### :bug: Bug fix
 
+- Fix JSX preserve mode emitting JSX that means something other than the compiled call, and keep more elements as JSX. https://github.com/rescript-lang/rescript/pull/XXXX
 - Fix exhaustiveness and unused-case checks for dict patterns that match the same key in several cases, print their counter-examples as dict patterns, and reject a key matched twice in one pattern. https://github.com/rescript-lang/rescript/pull/8751
 - Emit `"__proto__"` keys in object literals as computed keys, so they create a property instead of setting the prototype. https://github.com/rescript-lang/rescript/pull/8747
 - Fix the formatter dropping attributes on dict literals and flattening nested dict spreads. https://github.com/rescript-lang/rescript/pull/8746

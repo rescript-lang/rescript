@@ -40,7 +40,7 @@ let shallow_map_sharing (f : t -> t) (lam : t) : t =
     let fn = f ap.ap_func in
     let args = Ext_list.map_sharing ap.ap_args f in
     if fn == ap.ap_func && args == ap.ap_args then lam
-    else apply fn args ap.ap_loc ~ap_transformed_jsx:ap.ap_transformed_jsx
+    else apply fn args ap.ap_loc
   | Lfunction {params; body; attr; loc} ->
     let body' = f body in
     if body' == body then lam else function_ ~loc ~attr ~params ~body:body'
@@ -123,8 +123,7 @@ let make_key e =
     | Lvar id -> ( try Ident.find_same id env with Not_found -> e)
     | Lglobal_module _ | Lconst _ -> e
     | Lapply ap ->
-      apply ~ap_transformed_jsx:ap.ap_transformed_jsx (tr_rec env ap.ap_func)
-        (tr_recs env ap.ap_args) Location.none
+      apply (tr_rec env ap.ap_func) (tr_recs env ap.ap_args) Location.none
     | Llet (Alias, x, ex, e) ->
       (* Ignore aliases -> substitute *)
       let ex = tr_rec env ex in
