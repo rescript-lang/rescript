@@ -231,7 +231,6 @@ type primitive =
   | Pmakelist
   (* dict primitives *)
   | Pmakedict
-  | Pdict_spread (* Object.assign(target, ...sources) *)
   | Pdict_has
   (* promise *)
   | Pawait
@@ -275,6 +274,10 @@ type primitive =
      and the primitive arguments contain [value]. The source forms are retained
      for JavaScript output; semantic forms are used by optimizations. *)
   | Ptemplate of Asttypes.template_segment list
+  (* Object.assign(target, ...sources). Kept after all other constant
+     constructors: .cmj files marshal Lambda.t without a version check, so
+     inserting it earlier would shift the tags of existing primitives. *)
+  | Pdict_spread
 
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 

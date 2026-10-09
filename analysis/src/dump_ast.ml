@@ -197,6 +197,23 @@ and print_expr_item expr ~pos ~indentation =
     ^ "\n"
     ^ add_indentation indentation
     ^ ")"
+  | Pexp_dict entries ->
+    "Pexp_dict(\n"
+    ^ (entries
+      |> List.map (fun entry ->
+          add_indentation (indentation + 1)
+          ^
+          match entry with
+          | Parsetree.Pdict_entry (key, expr) ->
+            (key |> print_loc_denominator_loc ~pos)
+            ^ "\"" ^ key.txt ^ "\": "
+            ^ print_expr_item expr ~pos ~indentation:(indentation + 1)
+          | Pdict_spread expr ->
+            "..." ^ print_expr_item expr ~pos ~indentation:(indentation + 1))
+      |> String.concat "\n")
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | Pexp_match (match_expr, cases) ->
     "Pexp_match("
     ^ print_expr_item match_expr ~pos ~indentation:0
