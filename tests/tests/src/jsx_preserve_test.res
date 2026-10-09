@@ -50,6 +50,14 @@ let otherProps: JsxDOM.domProps = {
 let _unary_element_with_props_of_two_spreads =
   <input {...dict{...baseProps->Obj.magic, ...otherProps->Obj.magic}->Obj.magic} />
 
+// Props with a key that isn't a JSX attribute name are passed in a call
+let _unary_element_with_spread_and_spaced_key =
+  <input {...dict{...baseProps->Obj.magic, "foo bar": "x"}->Obj.magic} />
+let _unary_element_with_spread_and_proto_key =
+  <input {...dict{...baseProps->Obj.magic, "__proto__": "x"}->Obj.magic} />
+let _unary_element_with_spread_and_hyphenated_key =
+  <input {...dict{...baseProps->Obj.magic, "aria-label": "x"}->Obj.magic} />
+
 let _container_with_spread_props =
   <div {...baseProps} title="barry" className="barry">
     {React.string("Hello, world!")}

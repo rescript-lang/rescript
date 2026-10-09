@@ -109,13 +109,25 @@ let rec iter_lst cxt (f : P.t) ls element inter =
     inter f;
     iter_lst acxt f r element inter
 
+(* A name that prints as the same JSX attribute. "__proto__" would set the
+   prototype of the props object. *)
+let is_jsx_attribute_name (name : string) =
+  name <> "__proto__" && name <> ""
+  && (match name.[0] with
+    | 'a' .. 'z' | 'A' .. 'Z' | '_' | '$' -> true
+    | _ -> false)
+  && Ext_string.for_all name (function
+    | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '$' | '-' -> true
+    | _ -> false)
+
 (* JSX props given as an object literal [{...base, x: 1}]: a spread followed
-   by properties only *)
+   by properties only, whose names are JSX attribute names. Dict keys can be
+   any string. *)
 let jsx_spread_props_only_properties (entries : J.object_entry list) =
   List.for_all
     (function
-      | J.Object_property _ -> true
-      | Object_spread _ -> false)
+      | J.Object_property (Lit name, _) -> is_jsx_attribute_name name
+      | Object_property (Symbol_name, _) | Object_spread _ -> false)
     entries
 
 (* Their named properties *)

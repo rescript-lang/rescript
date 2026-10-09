@@ -65,6 +65,21 @@ let otherProps = {
 
 let _unary_element_with_props_of_two_spreads = JsxRuntime.jsx("input", {...baseProps, ...otherProps});
 
+let _unary_element_with_spread_and_spaced_key = JsxRuntime.jsx("input", {
+  ...baseProps,
+  "foo bar": "x"
+});
+
+let _unary_element_with_spread_and_proto_key = JsxRuntime.jsx("input", {
+  ...baseProps,
+  ["__proto__"]: "x"
+});
+
+let _unary_element_with_spread_and_hyphenated_key = <input
+  {...baseProps} 
+  aria-label={"x"}
+/>;
+
 let _container_with_spread_props = <div
   {...baseProps} 
   className={"barry"}
@@ -259,6 +274,9 @@ export {
   _unary_element_with_spread_props,
   otherProps,
   _unary_element_with_props_of_two_spreads,
+  _unary_element_with_spread_and_spaced_key,
+  _unary_element_with_spread_and_proto_key,
+  _unary_element_with_spread_and_hyphenated_key,
   _container_with_spread_props,
   baseChildren,
   _unary_element_with_spread_props_keyed,
