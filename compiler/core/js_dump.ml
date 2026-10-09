@@ -142,10 +142,9 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   | Json_literal _ -> true
   | Raw_js_code {code_info = Stmt _}
   | Length _ | Call _ | Caml_block_tag _ | Seq _ | Static_index _ | Cond _
-  | Bin _ | Is_null_or_undefined _ | String_index _ | Array_index _
-  | String_append _ | Var _ | Undefined _ | Null | Str _ | Template_literal _
-  | Array _ | Caml_block _ | Typeof _ | Number _ | Js_not _ | Js_bnot _ | In _
-  | Bool _ | New _ ->
+  | Bin _ | Is_null_or_undefined _ | Array_index _ | String_append _ | Var _
+  | Undefined _ | Null | Str _ | Template_literal _ | Array _ | Caml_block _
+  | Typeof _ | Number _ | Js_not _ | Js_bnot _ | In _ | Bool _ | New _ ->
     false
   | Await _ -> false
   | Spread _ -> false
@@ -510,15 +509,6 @@ and expression_desc cxt ~(level : int) f x : cxt =
     (* TODO: dump for comments *)
     pp_function ?directive ~is_method ~return_unit ~async
       ~fn_state:default_fn_exp_state cxt f params body env
-  (* TODO:
-       when [e] is [Js_raw_code] with arity
-       print it in a more precise way
-       It seems the optimizer already did work to make sure
-       {[
-         Call (Raw_js_code (s, Exp i), el, {Full})
-         when Ext_list.length_equal el i
-       ]}
-    *)
   (* When -bs-preserve-jsx is enabled, we marked each transformed application node throughout the compilation.
      Here we print the transformed application node into a JSX syntax.
      The JSX is slightly different from what a user would write,
@@ -724,13 +714,6 @@ and expression_desc cxt ~(level : int) f x : cxt =
     let cxt = print_segments cxt segments values in
     P.string f "`";
     cxt
-  | String_index (a, b) ->
-    P.group f 1 (fun _ ->
-        let cxt = expression ~level:15 cxt f a in
-        P.string f L.dot;
-        P.string f L.code_point_at;
-        (* FIXME: use code_point_at *)
-        P.paren_group f 1 (fun _ -> expression ~level:0 cxt f b))
   | Str txt ->
     Js_dump_string.pp_string f txt;
     cxt
@@ -894,10 +877,8 @@ and expression_desc cxt ~(level : int) f x : cxt =
                Js_op.Lit (Ext_ident.convert x)) ))
   (*name convention of Record is slight different from modules*)
   | Caml_block (el, _, Blk_record {fields}) ->
-    if
-      Array.length fields <> 0
-      && Ext_array.for_alli fields (fun i (v, _) -> string_of_int i = v)
-    then expression_desc cxt ~level f (Array el)
+    if Lambda.record_fields_are_array fields then
+      expression_desc cxt ~level f (Array el)
     else
       let fields =
         Ext_list.array_list_filter_map fields el (fun (f, opt) x ->
@@ -1719,13 +1700,6 @@ and statements top cxt f b =
   iter_lst cxt f b
     (fun cxt f s -> statement top cxt f s)
     (if top then P.at_least_two_lines else P.newline)
-
-let string_of_block (block : J.block) =
-  let buffer = Buffer.create 50 in
-  let f = P.from_buffer buffer in
-  let (_ : cxt) = statements true Ext_pp_scope.empty f block in
-  P.flush f ();
-  Buffer.contents buffer
 
 let string_of_expression (e : J.expression) =
   let buffer = Buffer.create 50 in

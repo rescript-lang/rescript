@@ -1,6 +1,6 @@
 {
   "name": "@rescript/belt",
-  "version": "13.0.0-alpha.6",
+  "version": "13.0.0-alpha.7",
   "description": "Extended utility and collection library for ReScript",
   "license": "MIT",
   "homepage": "https://rescript-lang.org",

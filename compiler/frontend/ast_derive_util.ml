@@ -29,24 +29,6 @@ let core_type_of_type_declaration (tdcl : Parsetree.type_declaration) =
   | {ptype_name = {txt; loc}; ptype_params; ptype_attributes = attrs} ->
     Typ.constr ~attrs {txt = Lident txt; loc} (Ext_list.map ptype_params fst)
 
-let new_type_of_type_declaration (tdcl : Parsetree.type_declaration) new_name =
-  match tdcl with
-  | {ptype_name = {loc}; ptype_params} ->
-    ( Typ.constr {txt = Lident new_name; loc} (Ext_list.map ptype_params fst),
-      {
-        Parsetree.ptype_params = tdcl.ptype_params;
-        ptype_name = {txt = new_name; loc};
-        ptype_kind = Ptype_abstract;
-        ptype_attributes = [];
-        ptype_loc = tdcl.ptype_loc;
-        ptype_cstrs = [];
-        ptype_private = Public;
-        ptype_manifest = None;
-      } )
 let not_applicable loc deriving_name =
   Location.prerr_warning loc
     (Warnings.Bs_derive_warning (deriving_name ^ " not applicable to this type"))
-
-let invalid_config (config : Parsetree.expression) =
-  Location.raise_errorf ~loc:config.pexp_loc
-    "such configuration is not supported"

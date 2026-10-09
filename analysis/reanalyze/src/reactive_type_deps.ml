@@ -66,16 +66,15 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
         match decls with
         | [] | [_] -> []
         | first :: rest ->
-          (* Connect each decl to the first one (and vice-versa if needed).
-             Original: extendTypeDependencies loc loc0 adds posTo=loc, posFrom=loc0
-             So: posTo=other, posFrom=first *)
+          (* Connect each decl to the first one (and vice-versa if needed):
+             pos_to=other, pos_from=first *)
           rest
           |> List.concat_map (fun other ->
-              (* Always add: other -> first (posTo=other, posFrom=first) *)
+              (* Always add: other -> first (pos_to=other, pos_from=first) *)
               let refs = [(other.pos, Pos_set.singleton first.pos)] in
               if report_types_dead_only_in_interface then refs
               else
-                (* Also add: first -> other (posTo=first, posFrom=other) *)
+                (* Also add: first -> other (pos_to=first, pos_from=other) *)
                 (first.pos, Pos_set.singleton other.pos) :: refs))
       ~merge:Pos_set.union ()
   in
@@ -100,20 +99,18 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ()
   in
 
-  (* Join impl decls with decl_by_path to find intf.
-     Original: extendTypeDependencies loc loc1 where loc=impl, loc1=intf
-               adds posTo=impl, posFrom=intf *)
+  (* Join impl decls with decl_by_path to find intf: pos_to=impl, pos_from=intf *)
   let impl_to_intf_refs =
     Reactive.join ~name:"type_deps.impl_to_intf_refs" impl_decls decl_by_path
       ~key_of:(fun _pos (_, intf_path1, _) -> intf_path1)
       ~f:(fun _pos (info, _intf_path1, _intf_path2) intf_decls_opt ->
         match intf_decls_opt with
         | Some (intf_info :: _) ->
-          (* Found at path1: posTo=impl, posFrom=intf *)
+          (* Found at path1: pos_to=impl, pos_from=intf *)
           let refs = [(info.pos, Pos_set.singleton intf_info.pos)] in
           if report_types_dead_only_in_interface then refs
           else
-            (* Also: posTo=intf, posFrom=impl *)
+            (* Also: pos_to=intf, pos_from=impl *)
             (intf_info.pos, Pos_set.singleton info.pos) :: refs
         | _ -> [])
       ~merge:Pos_set.union ()
@@ -137,7 +134,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~f:(fun _pos (info, _) intf_decls_opt ->
         match intf_decls_opt with
         | Some (intf_info :: _) ->
-          (* posTo=impl, posFrom=intf *)
+          (* pos_to=impl, pos_from=intf *)
           let refs = [(info.pos, Pos_set.singleton intf_info.pos)] in
           if report_types_dead_only_in_interface then refs
           else (intf_info.pos, Pos_set.singleton info.pos) :: refs
@@ -145,11 +142,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~merge:Pos_set.union ()
   in
 
-  (* Also handle intf -> impl direction.
-     Original: extendTypeDependencies loc1 loc where loc=impl, loc1=intf
-               adds posTo=impl, posFrom=intf (note: same direction!)
-     The intf->impl code in original only runs when isInterface=true,
-     and the lookup is for finding the impl. *)
+  (* Also handle intf -> impl direction: an intf decl looks up its impl.
+     The edge has the same direction as above: pos_to=impl, pos_from=intf *)
   let intf_decls =
     Reactive.flat_map ~name:"type_deps.intf_decls" decls
       ~f:(fun _pos decl ->
@@ -172,20 +166,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~f:(fun _pos (intf_info, _) impl_decls_opt ->
         match impl_decls_opt with
         | Some (impl_info :: _) ->
-          (* Original: extendTypeDependencies loc1 loc where loc1=intf, loc=impl
-             But wait, looking at the original code more carefully:
-             
-             if isInterface then
-               match find_one path1 with
-               | None -> ()
-               | Some loc1 ->
-                 extendTypeDependencies ~config ~refs loc1 loc;
-                 if not Config.reportTypesDeadOnlyInInterface then
-                   extendTypeDependencies ~config ~refs loc loc1
-             
-             Here loc is the current intf decl, loc1 is the found impl.
-             So extendTypeDependencies loc1 loc means posTo=loc1=impl, posFrom=loc=intf
-          *)
+          (* pos_to=impl, pos_from=intf *)
           let refs = [(impl_info.pos, Pos_set.singleton intf_info.pos)] in
           if report_types_dead_only_in_interface then refs
           else (intf_info.pos, Pos_set.singleton impl_info.pos) :: refs

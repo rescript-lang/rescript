@@ -27,7 +27,6 @@ module type OrderedType = sig
 
   val compare : t -> t -> int
   val equal : t -> t -> bool
-  val print : Format.formatter -> t -> unit
 end
 
 module Make (Elt : OrderedType) : Set_gen.S with type elt = Elt.t

@@ -72,7 +72,7 @@ let rec get_arity (meta : Lam_stats.t) (lam : Lambda.t) : Lam_arity.t =
 
       -- Check external c functions ?
       -- it's not true for primitives
-      like caml_set_oo_id  or  Lprim (Pmakeblock , [])
+      like Lprim (Pmakeblock , [])
 
       it seems true that primitive is always fully applied, however,
       it can return a function

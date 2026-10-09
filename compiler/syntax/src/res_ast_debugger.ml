@@ -7,14 +7,8 @@ let print_engine =
       print_implementation =
         (fun ~width:_ ~filename:_ ~comments:_ structure ->
           Printast.implementation Format.std_formatter structure);
-      print_implementation_from_source =
-        (fun ~width:_ ~source:_ ~comments:_ structure ->
-          Printast.implementation Format.std_formatter structure);
       print_interface =
         (fun ~width:_ ~filename:_ ~comments:_ signature ->
-          Printast.interface Format.std_formatter signature);
-      print_interface_from_source =
-        (fun ~width:_ ~source:_ ~comments:_ signature ->
           Printast.interface Format.std_formatter signature);
     }
 
@@ -267,6 +261,8 @@ module Sexp_ast = struct
       | Pmod_unpack expr -> Sexp.list [Sexp.atom "Pmod_unpack"; expression expr]
       | Pmod_extension ext ->
         Sexp.list [Sexp.atom "Pmod_extension"; extension ext]
+      | Pmod_await mod_expr ->
+        Sexp.list [Sexp.atom "Pmod_await"; module_expression mod_expr]
     in
     Sexp.list [Sexp.atom "module_expr"; desc; attributes me.pmod_attributes]
 
@@ -460,6 +456,14 @@ module Sexp_ast = struct
             | Some typ -> Sexp.list [Sexp.atom "Some"; core_type typ]);
           ];
         Sexp.list [Sexp.atom "ptype_private"; private_flag td.ptype_private];
+        Sexp.list
+          [
+            Sexp.atom "ptype_origin";
+            Sexp.atom
+              (match td.ptype_origin with
+              | Declared -> "Declared"
+              | Inline_record_definition -> "Inline_record_definition");
+          ];
         attributes td.ptype_attributes;
       ]
 
@@ -569,6 +573,18 @@ module Sexp_ast = struct
   and expression expr =
     let desc =
       match expr.pexp_desc with
+      | Pexp_braces {expr = inner; braces_loc} ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_braces";
+            Sexp.list
+              [
+                Sexp.atom "braces_loc";
+                Sexp.atom (string_of_int braces_loc.Location.loc_start.pos_cnum);
+                Sexp.atom (string_of_int braces_loc.loc_end.pos_cnum);
+              ];
+            expression inner;
+          ]
       | Pexp_ident longident_loc ->
         Sexp.list [Sexp.atom "Pexp_ident"; longident longident_loc.Asttypes.txt]
       | Pexp_constant c -> Sexp.list [Sexp.atom "Pexp_constant"; constant c]
@@ -689,6 +705,14 @@ module Sexp_ast = struct
             | None -> Sexp.atom "None"
             | Some expr -> Sexp.list [Sexp.atom "Some"; expression expr]);
           ]
+      | Pexp_ternary (condition, consequent, alternate) ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_ternary";
+            expression condition;
+            expression consequent;
+            expression alternate;
+          ]
       | Pexp_sequence (expr1, expr2) ->
         Sexp.list
           [Sexp.atom "Pexp_sequence"; expression expr1; expression expr2]
@@ -720,7 +744,7 @@ module Sexp_ast = struct
       | Pexp_constraint (expr, typexpr) ->
         Sexp.list
           [Sexp.atom "Pexp_constraint"; expression expr; core_type typexpr]
-      | Pexp_coerce (expr, (), typexpr) ->
+      | Pexp_coerce (expr, typexpr) ->
         Sexp.list [Sexp.atom "Pexp_coerce"; expression expr; core_type typexpr]
       | Pexp_object_get _ -> Sexp.list [Sexp.atom "Pexp_object_get"]
       | Pexp_object_set (e1, _, e2) ->
@@ -763,6 +787,8 @@ module Sexp_ast = struct
           ]
       | Pexp_extension ext ->
         Sexp.list [Sexp.atom "Pexp_extension"; extension ext]
+      | Pexp_regexp {pattern; flags} ->
+        Sexp.list [Sexp.atom "Pexp_regexp"; string pattern; string flags]
       | Pexp_template {source_segments; values} ->
         Sexp.list
           [
@@ -891,18 +917,16 @@ module Sexp_ast = struct
         Sexp.list [Sexp.atom "Ppat_constraint"; pattern p; core_type typexpr]
       | Ppat_type longident_loc ->
         Sexp.list [Sexp.atom "Ppat_type"; longident longident_loc.Location.txt]
+      | Ppat_variant_spread longident_loc ->
+        Sexp.list
+          [
+            Sexp.atom "Ppat_variant_spread"; longident longident_loc.Location.txt;
+          ]
       | Ppat_unpack string_loc ->
         Sexp.list [Sexp.atom "Ppat_unpack"; string string_loc.Location.txt]
       | Ppat_exception p -> Sexp.list [Sexp.atom "Ppat_exception"; pattern p]
       | Ppat_extension ext ->
         Sexp.list [Sexp.atom "Ppat_extension"; extension ext]
-      | Ppat_open (longident_loc, p) ->
-        Sexp.list
-          [
-            Sexp.atom "Ppat_open";
-            longident longident_loc.Location.txt;
-            pattern p;
-          ]
     in
     Sexp.list [Sexp.atom "pattern"; descr]
 
@@ -1040,14 +1064,8 @@ module Sexp_ast = struct
         print_implementation =
           (fun ~width:_ ~filename:_ ~comments:_ parsetree ->
             parsetree |> structure |> Sexp.to_string |> print_string);
-        print_implementation_from_source =
-          (fun ~width:_ ~source:_ ~comments:_ parsetree ->
-            parsetree |> structure |> Sexp.to_string |> print_string);
         print_interface =
           (fun ~width:_ ~filename:_ ~comments:_ parsetree ->
-            parsetree |> signature |> Sexp.to_string |> print_string);
-        print_interface_from_source =
-          (fun ~width:_ ~source:_ ~comments:_ parsetree ->
             parsetree |> signature |> Sexp.to_string |> print_string);
       }
 end
@@ -1061,19 +1079,19 @@ let comments_print_engine =
         let cmt_tbl = Comment_table.make () in
         Comment_table.walk_structure s cmt_tbl comments;
         Comment_table.log cmt_tbl);
-    Res_driver.print_implementation_from_source =
-      (fun ~width:_ ~source:_ ~comments s ->
-        let cmt_tbl = Comment_table.make () in
-        Comment_table.walk_structure s cmt_tbl comments;
-        Comment_table.log cmt_tbl);
     Res_driver.print_interface =
       (fun ~width:_ ~filename:_ ~comments s ->
         let cmt_tbl = Comment_table.make () in
         Comment_table.walk_signature s cmt_tbl comments;
         Comment_table.log cmt_tbl);
-    Res_driver.print_interface_from_source =
-      (fun ~width:_ ~source:_ ~comments s ->
-        let cmt_tbl = Comment_table.make () in
-        Comment_table.walk_signature s cmt_tbl comments;
-        Comment_table.log cmt_tbl);
+  }
+
+let doc_print_engine =
+  {
+    Res_driver.print_implementation =
+      (fun ~width:_ ~filename:_ ~comments s ->
+        Res_doc.debug (Res_printer.implementation_doc s ~comments));
+    Res_driver.print_interface =
+      (fun ~width:_ ~filename:_ ~comments s ->
+        Res_doc.debug (Res_printer.interface_doc s ~comments));
   }

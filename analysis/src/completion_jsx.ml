@@ -284,32 +284,6 @@ type jsx_props = {
   children_start: (int * int) option;
 }
 
-(**
-<div muted= />
-
-This is a special case for JSX props, where the above code is parsed
-as <div muted=//, a regexp literal. We leverage that fact to trigger completion
-for the JSX prop value.
-
-This code is safe because we also check that the location of the expression is broken,
-which only happens when the expression is a parse error/not complete.
-*)
-let is_regexp_jsx_heuristic_expr expr =
-  match expr.Parsetree.pexp_desc with
-  | Pexp_extension
-      ( {txt = "re"},
-        PStr
-          [
-            {
-              pstr_desc =
-                Pstr_eval
-                  ({pexp_desc = Pexp_constant (Pconst_raw_source "//")}, _);
-            };
-          ] )
-    when expr.pexp_loc |> Loc.end_ = (Location.none |> Loc.end_) ->
-    true
-  | _ -> false
-
 let find_jsx_props_completable ~jsx_props ~end_pos ~pos_before_cursor
     ~first_char_before_cursor_no_white ~char_at_cursor ~pos_after_comp_name =
   let all_labels =
@@ -343,8 +317,11 @@ let find_jsx_props_completable ~jsx_props ~end_pos ~pos_before_cursor
           print_endline
             "[jsx_props_completable]--> Cursor between the prop name and expr \
              assigned";
-        match (first_char_before_cursor_no_white, prop.exp) with
-        | Some '=', {pexp_desc = Pexp_ident {txt = Lident txt}} ->
+        match
+          ( first_char_before_cursor_no_white,
+            (Res_parsetree_viewer.unwrap_braces prop.exp).pexp_desc )
+        with
+        | Some '=', Pexp_ident {txt = Lident txt} ->
           if Debug.verbose () then
             Printf.printf
               "[jsx_props_completable]--> Heuristic for empty JSX prop expr \
@@ -392,14 +369,9 @@ let find_jsx_props_completable ~jsx_props ~end_pos ~pos_before_cursor
       else if prop.exp.pexp_loc |> Loc.end_ = (Location.none |> Loc.end_) then (
         if Debug.verbose () then
           print_endline "[jsx_props_completable]--> Loc is broken";
-        if
-          Completion_expressions.is_expr_hole prop.exp
-          || is_regexp_jsx_heuristic_expr prop.exp
-        then (
+        if Completion_expressions.is_expr_hole prop.exp then (
           if Debug.verbose () then
-            print_endline
-              "[jsx_props_completable]--> Expr was expr hole or regexp literal \
-               heuristic";
+            print_endline "[jsx_props_completable]--> Expr was expr hole";
           Some
             (Cexpression
                {

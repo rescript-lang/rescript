@@ -91,6 +91,3 @@ let add_help = speclist => {
 
   List.concat(speclist, List.concat(add1, add2))
 }
-
-/* FIXME- not compatible with strict mode */
-/* let f x x   =  x */

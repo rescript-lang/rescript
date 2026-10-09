@@ -36,12 +36,6 @@ val register : string -> (Parsetree.expression option -> gen) -> unit
    example: [register "accessors" cb]
 *)
 
-(* val gen_structure:
-   tdcls  ->
-   Ast_payload.action list ->
-   bool ->
-   Ast_structure.t *)
-
 val gen_signature :
   tdcls -> Ast_payload.action list -> Asttypes.rec_flag -> Ast_signature.t
 

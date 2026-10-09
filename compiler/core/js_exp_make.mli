@@ -29,7 +29,7 @@ type t = J.expression
 
     The better signature might be 
     {[
-      J.expresssion -> Js_output.t
+      J.expression -> Js_output.t
     ]}
     for exmaple
     {[
@@ -179,8 +179,6 @@ val eq_null_undefined_boolean : ?comment:string -> t -> t -> t
 
 val neq_null_undefined_boolean : ?comment:string -> t -> t -> t
 
-val is_type_number : ?comment:string -> t -> t
-
 val is_int_tag : ?has_null_undefined_other:bool * bool * bool -> t -> t
 
 val is_a_literal_case :
@@ -192,14 +190,11 @@ val is_a_literal_case :
 val is_type_object : t -> t
 
 val typeof : ?comment:string -> t -> t
-val instanceof : ?comment:string -> t -> t -> t
 val is_array : t -> t
 
 val to_int32 : ?comment:string -> t -> t
 
 val int32_add : ?comment:string -> t -> t -> t
-
-val offset : t -> int -> t
 
 val int32_minus : ?comment:string -> t -> t -> t
 
@@ -311,7 +306,6 @@ val in_ : t -> t -> t
 (** we don't expose a general interface, since a general interface is generally not safe *)
 
 val dummy_obj : ?comment:string -> Lambda.tag_info -> t
-(** used combined with [caml_update_dummy]*)
 
 val of_block : ?comment:string -> ?e:J.expression -> J.statement list -> t
 (** convert a block to expresion by using IIFE *)

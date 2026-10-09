@@ -25,8 +25,6 @@ const signals = {
 export const {
   shell,
   node,
-  npm,
-  yarn,
   mocha,
   bsc,
   execBin,
@@ -118,30 +116,6 @@ export function setup(cwd = process.cwd()) {
      */
     node(script, args = [], options = {}) {
       return exec("node", [script, ...args], options);
-    },
-
-    /**
-     * Execute npm command
-     *
-     * @param {string} command
-     * @param {string[]} [args]
-     * @param {ExecOptions} [options]
-     * @return {Promise<ExecResult>}
-     */
-    npm(command, args = [], options = {}) {
-      return exec("npm", [...command.split(" "), ...args], options);
-    },
-
-    /**
-     * Execute Yarn command
-     *
-     * @param {string} command
-     * @param {string[]} [args]
-     * @param {ExecOptions} [options]
-     * @return {Promise<ExecResult>}
-     */
-    yarn(command, args = [], options = {}) {
-      return exec("yarn", [...command.split(" "), ...args], options);
     },
 
     /**

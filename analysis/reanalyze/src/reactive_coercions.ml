@@ -1,7 +1,7 @@
 (** Reactive record-coercion label linking.
 
     Expresses coercion resolution as reactive joins:
-    - coercions: candidate source/target type paths from CrossFileItems
+    - coercions: candidate source/target type paths from Cross_file_items
     - labels_by_type_path: record labels indexed by the type they belong to
     - result: type refs (pos_to = source label, pos_from = target label)
 
@@ -24,7 +24,7 @@ type t = {
 (** Create reactive coercion refs from decls and cross-file coercions.
 
     [decls] is the reactive declarations collection.
-    [coercions] is the reactive collection of coercions from CrossFileItems,
+    [coercions] is the reactive collection of coercions from Cross_file_items,
     keyed by the coercion itself so identical coercions collapse. *)
 let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     ~(coercions : (Cross_file_items.coercion, unit) Reactive.t) : t =

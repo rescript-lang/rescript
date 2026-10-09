@@ -51,4 +51,4 @@ val will_break : t -> bool
     [break_parent] to propagate it to the parent document. *)
 
 val to_string : width:int -> t -> string
-val debug : t -> unit [@@live]
+val debug : t -> unit

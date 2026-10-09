@@ -1,6 +1,6 @@
 open Gentype_common
 
-(** Like translateTypeDeclaration but from Types not Typedtree  *)
+(** Like Translate_type_declarations.translate_type_declaration but from Types not Typedtree  *)
 let translate_type_declaration_from_types ~config ~output_file_relative
     ~resolver ~type_env ~id
     ({
@@ -38,7 +38,7 @@ let translate_type_declaration_from_types ~config ~output_file_relative
        ~output_file_relative ~resolver ~type_attributes ~type_env ~type_name
        ~type_vars
 
-(** Like translateModuleDeclaration but from Types not Typedtree *)
+(** Like Translate_signature.translate_module_declaration but from Types not Typedtree *)
 let rec translate_module_declaration_from_types ~config ~output_file_relative
     ~resolver ~type_env ~id (module_declaration : Types.module_declaration) :
     Translation.t =
@@ -59,7 +59,7 @@ let rec translate_module_declaration_from_types ~config ~output_file_relative
     log_not_implemented ("Mty_alias " ^ __LOC__);
     Translation.empty
 
-(** Like translateSignatureItem but from Types not Typedtree  *)
+(** Like Translate_signature.translate_signature_item but from Types not Typedtree  *)
 and translate_signature_item_from_types ~config ~output_file_relative ~resolver
     ~type_env (signature_item : Types.signature_item) : Translation.t =
   match signature_item with
@@ -105,7 +105,7 @@ and translate_signature_item_from_types ~config ~output_file_relative ~resolver
     log_not_implemented ("Sig_modtype " ^ __LOC__);
     Translation.empty
 
-(** Like translateSignature but from Types not Typedtree *)
+(** Like Translate_signature.translate_signature but from Types not Typedtree *)
 and translate_signature_from_types ~config ~output_file_relative ~resolver
     ~type_env (signature : Types.signature_item list) : Translation.t list =
   if !Debug.translation then Log_.item "Translate Types.signature\n";

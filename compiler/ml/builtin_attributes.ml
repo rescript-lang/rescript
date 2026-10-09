@@ -67,44 +67,44 @@ let rec deprecated_of_attrs = function
 
 let rec deprecated_of_attrs_with_migrate = function
   | [] -> None
-  | ( {txt = "deprecated"; _},
-      PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_record (fields, _)}, _)}]
-    )
-    :: _ -> (
-    let reason =
-      fields
-      |> List.find_map (fun field ->
-          match field with
-          | {lid = {txt = Lident "reason"}; x} ->
-            Ast_payload.semantic_string_of_expression x
-          | _ -> None)
-    in
-    let migration_template =
-      fields
-      |> List.find_map (fun field ->
-          match field with
-          | {lid = {txt = Lident "migrate"}; x = migration_template} ->
-            Some migration_template
-          | _ -> None)
-    in
-    let migration_in_pipe_chain_template =
-      fields
-      |> List.find_map (fun field ->
-          match field with
-          | {
-           lid = {txt = Lident "migrateInPipeChain"};
-           x = migration_in_pipe_chain_template;
-          } ->
-            Some migration_in_pipe_chain_template
-          | _ -> None)
-    in
-
-    (* TODO: Validate and error if expected shape mismatches *)
-    match reason with
-    | Some reason ->
-      Some (reason, migration_template, migration_in_pipe_chain_template)
-    | None -> None)
-  | ({txt = "ocaml.deprecated" | "deprecated"; _}, p) :: _ ->
+  | ({txt = "deprecated"; _}, payload) :: _ -> (
+    match Ast_payload.unwrap_payload_expression payload with
+    | PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_record (fields, _)}, _)}]
+      -> (
+      let reason =
+        fields
+        |> List.find_map (fun field ->
+            match field with
+            | {lid = {txt = Lident "reason"}; x} ->
+              Ast_payload.semantic_string_of_expression x
+            | _ -> None)
+      in
+      let migration_template =
+        fields
+        |> List.find_map (fun field ->
+            match field with
+            | {lid = {txt = Lident "migrate"}; x = migration_template} ->
+              Some migration_template
+            | _ -> None)
+      in
+      let migration_in_pipe_chain_template =
+        fields
+        |> List.find_map (fun field ->
+            match field with
+            | {
+             lid = {txt = Lident "migrateInPipeChain"};
+             x = migration_in_pipe_chain_template;
+            } ->
+              Some migration_in_pipe_chain_template
+            | _ -> None)
+      in
+      (* TODO: Validate and error if expected shape mismatches *)
+      match reason with
+      | Some reason ->
+        Some (reason, migration_template, migration_in_pipe_chain_template)
+      | None -> None)
+    | _ -> Some (string_of_opt_payload payload, None, None))
+  | ({txt = "ocaml.deprecated"; _}, p) :: _ ->
     Some (string_of_opt_payload p, None, None)
   | _ :: tl -> deprecated_of_attrs_with_migrate tl
 

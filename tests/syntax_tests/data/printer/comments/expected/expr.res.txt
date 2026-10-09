@@ -232,8 +232,8 @@ let multiply = (~x=/* c0 */ m1 /* c1 */, ~y=/* c2 */ m2 /* c3 */) => ()
 let f = (
   /* c0 */ ~greeting /* c1 */,
   /* c2 */ ~from as /* c3 */ /* c4 */ hometown /* c5 */,
-  /* c6 */ ~x=?,
-) => /* c7 */ ()
+  /* c6 */ ~x=? /* c7 */,
+) => ()
 
 let multiply = (type /* c-2 */ t /* c-1 */, /* c0 */ m1 /* c1 */, /* c2 */ m2 /* c3 */) => ()
 let multiply = (
@@ -281,6 +281,7 @@ f((~a) =>
 
 // ternary
 let x = /* c0 */ test /* c1 */ ? /* c2 */ true /* c3 */ : /* c4 */ false /* c5 */
+let nestedTernary = a ? b : c ? d : e // keep nested alternate comment
 
 // Pexp_if case, don't duplicate comments
 if next == null {

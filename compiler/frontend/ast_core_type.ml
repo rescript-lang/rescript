@@ -50,11 +50,6 @@ let is_builtin_rank0_type txt =
   | "int" | "char" | "float" | "bool" | "unit" | "exn" | "string" -> true
   | _ -> false
 
-let is_unit (ty : t) =
-  match ty.ptyp_desc with
-  | Ptyp_constr ({txt = Lident "unit"}, []) -> true
-  | _ -> false
-
 (* let is_array (ty : t) =
    match ty.ptyp_desc with
    | Ptyp_constr({txt =Lident "array"}, [_]) -> true

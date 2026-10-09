@@ -117,7 +117,6 @@ let pat sub {pat_extra; pat_desc; pat_env; _} =
   let extra = function
     | Tpat_type _ -> ()
     | Tpat_unpack -> ()
-    | Tpat_open (_, _, env) -> sub.env sub env
     | Tpat_constraint ct -> sub.typ sub ct
   in
   sub.env sub pat_env;

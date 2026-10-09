@@ -99,22 +99,3 @@ let rec dump r =
     | _ -> opaque (Printf.sprintf "unknown: tag %d size %d" t s)
 
 let dump v = dump (Obj.repr v)
-
-let bt () =
-  let raw_bt = Printexc.backtrace_slots (Printexc.get_raw_backtrace ()) in
-  match raw_bt with
-  | None -> ()
-  | Some raw_bt ->
-    let acc = ref [] in
-    for i = Array.length raw_bt - 1 downto 0 do
-      let slot = raw_bt.(i) in
-      match Printexc.Slot.location slot with
-      | None -> ()
-      | Some bt -> (
-        match !acc with
-        | [] -> acc := [bt]
-        | hd :: _ -> if hd <> bt then acc := bt :: !acc)
-    done;
-    Ext_list.iter !acc (fun bt ->
-        Printf.eprintf "File \"%s\", line %d, characters %d-%d\n" bt.filename
-          bt.line_number bt.start_char bt.end_char)

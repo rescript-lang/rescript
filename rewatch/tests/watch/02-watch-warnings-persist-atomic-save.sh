@@ -15,18 +15,9 @@ else
   exit 1
 fi
 
-wait_for_pattern() {
-  local file="$1"; local pattern="$2"; local timeout="${3:-30}"
-  while [ "$timeout" -gt 0 ]; do
-    grep -q "$pattern" "$file" 2>/dev/null && return 0
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
-}
-
 wait_for_changed_completed_log() {
-  local file="$1"; local baseline="$2"; local timeout="${3:-30}"
+  local file="$1"; local baseline="$2"; local timeout
+  timeout=$(platform_timeout "${3:-30}")
   while [ "$timeout" -gt 0 ]; do
     if [ -f "$file" ] && ! cmp -s "$file" "$baseline" && grep -q "#Done(" "$file" 2>/dev/null; then
       return 0
@@ -53,7 +44,6 @@ cleanup() {
     cp "$BACKUP_B" "$B_FILE"
   fi
   exit_watcher
-  sleep 1
   rm -rf "$TMP_DIR"
   rm -f "$WATCH_STDOUT" "$WATCH_STDERR"
 }
@@ -113,10 +103,15 @@ else
   exit 1
 fi
 
+cp "$COMPILER_LOG" "$TMP_DIR/before-restore.compiler.log"
 cp "$BACKUP_B" "$B_FILE"
-sleep 1
-exit_watcher
-sleep 2
+if ! wait_for_changed_completed_log "$COMPILER_LOG" "$TMP_DIR/before-restore.compiler.log" 30; then
+  error "Compiler log did not complete a new cycle after restoring B.res"
+  exit 1
+fi
+if ! exit_watcher; then
+  exit 1
+fi
 rm -f "$WATCH_STDOUT" "$WATCH_STDERR"
 
 if git diff --exit-code ./packages/watch-warnings > /dev/null 2>&1;

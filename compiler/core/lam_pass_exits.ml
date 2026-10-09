@@ -12,7 +12,7 @@
 (* Adapted for Javascript backend: Hongbo Zhang                        *)
 
 (**
-        [no_bounded_varaibles lambda]
+        [no_bounded_variables lambda]
         checks if [lambda] contains bounded variable, for
         example [Llet (str,id,arg,body) ] will fail such check.
         This is used to indicate such lambda expression if it is okay
@@ -83,14 +83,12 @@ and no_bounded_variables (l : Lambda.t) =
     we should refresh
 *)
 type lam_subst = Id of Lambda.t [@@unboxed]
-(* | Refresh of Lambda.t *)
 
 type subst_tbl = (Ident.t list * lam_subst) Hash_int.t
 
 let to_lam x =
   match x with
   | Id x -> x
-(* | Refresh x -> Lam_bounded_vars.refresh x  *)
 
 (**
    Simplify  ``catch body with (i ...) handler''

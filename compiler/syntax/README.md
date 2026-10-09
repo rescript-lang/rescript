@@ -24,6 +24,8 @@ parsetree consumed by `compiler/ml`.
 See [Formatter.md](Formatter.md) for formatter policy and [JSX.md](JSX.md) for
 the current JSX transformation contract.
 
+[ParserCursor.md](ParserCursor.md) states the parser's token-cursor invariants (peek versus next, lookahead and try_parse rollback, pending comments and diagnostics); read it before changing `Res_parser` consumption or recovery.
+
 ## Building and testing
 
 Run commands from the repository root:
@@ -42,6 +44,7 @@ dune exec res_parser -- example.res
 dune exec res_parser -- -print tokens example.res
 dune exec res_parser -- -print ast -recover example.res
 dune exec res_parser -- -print comments example.res
+dune exec res_parser -- -print doc example.res
 dune exec res_parser -- -print ml example.res
 dune exec res_parser -- -print res -width 80 example.res
 ```

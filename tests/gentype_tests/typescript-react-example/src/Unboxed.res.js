@@ -9,6 +9,18 @@ function r2Test(x) {
   return x;
 }
 
+function tLength(v) {
+  if (Array.isArray(v)) {
+    return v.length;
+  }
+  switch (typeof v) {
+    case "object" :
+      return v.x;
+    case "function" :
+      return v(0);
+  }
+}
+
 let a = "0";
 
 let b = "1";
@@ -18,6 +30,7 @@ let zero = 0;
 export {
   testV1,
   r2Test,
+  tLength,
   a,
   b,
   zero,

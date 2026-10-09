@@ -283,6 +283,8 @@ let encode_js mode s =
 
 let encode_js_string = encode_js String
 
+(** Encode a semantic UTF-8 string as a canonical JavaScript template-segment
+    body. *)
 let encode_js_template = encode_js Template
 
 let string_from_source source : string_literal option =

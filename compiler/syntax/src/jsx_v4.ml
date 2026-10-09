@@ -90,7 +90,7 @@ let filename_from_loc (pstr_loc : Location.t) =
 let make_module_name file_name nested_modules fn_name =
   let full_module_name =
     match (file_name, nested_modules, fn_name) with
-    (* TODO: is this even reachable? It seems like the fileName always exists *)
+    (* TODO: is this even reachable? It seems like the file_name always exists *)
     | "", nested_modules, "make" -> nested_modules
     | "", nested_modules, fn_name -> List.rev (fn_name :: nested_modules)
     | file_name, nested_modules, "make" -> file_name :: List.rev nested_modules
@@ -388,33 +388,32 @@ let check_multiple_components ~config ~loc =
     Jsx_common.raise_error_multiple_component ~loc
   else config.has_component <- true
 
+(* Find the final function through expression wrappers. Applications are only
+   followed when inspecting component wrappers such as forwardRef and memo. *)
+let rec find_function_expression ~through_application expression =
+  match expression.pexp_desc with
+  | Pexp_fun _ -> Ok expression
+  | Pexp_braces {expr = inner} | Pexp_constraint (inner, _) ->
+    find_function_expression ~through_application inner
+  | Pexp_let (_, _, body) | Pexp_sequence (_, body) ->
+    find_function_expression ~through_application body
+  | Pexp_apply {args = [(Nolabel, inner)]} when through_application ->
+    find_function_expression ~through_application inner
+  | _ -> Error expression
+
+let is_function_expression expression =
+  match find_function_expression ~through_application:false expression with
+  | Ok _ -> true
+  | Error _ -> false
+
 let modified_binding_old binding =
-  let expression = binding.pvb_expr in
   (* TODO: there is a long-tail of unsupported features inside of blocks - Pexp_letmodule , Pexp_letexception , Pexp_ifthenelse *)
-  let rec spelunk_for_fun_expression expression =
-    match expression with
-    (* let make = (~prop) => ... *)
-    | {pexp_desc = Pexp_fun _} -> expression
-    (* let make = {let foo = bar in (~prop) => ...} *)
-    | {pexp_desc = Pexp_let (_recursive, _vbs, return_expression)} ->
-      (* here's where we spelunk! *)
-      spelunk_for_fun_expression return_expression
-    (* let make = React.forwardRef((~prop) => ...) *)
-    | {pexp_desc = Pexp_apply {args = [(Nolabel, inner_function_expression)]}}
-      ->
-      spelunk_for_fun_expression inner_function_expression
-    | {
-     pexp_desc = Pexp_sequence (_wrapperExpression, inner_function_expression);
-    } ->
-      spelunk_for_fun_expression inner_function_expression
-    | {pexp_desc = Pexp_constraint (inner_function_expression, _typ)} ->
-      spelunk_for_fun_expression inner_function_expression
-    | {pexp_loc} ->
-      Jsx_common.raise_error ~loc:pexp_loc
-        "JSX component calls can only be on function definitions or component \
-         wrappers (forwardRef, memo)."
-  in
-  spelunk_for_fun_expression expression
+  match find_function_expression ~through_application:true binding.pvb_expr with
+  | Ok expression -> expression
+  | Error {pexp_loc} ->
+    Jsx_common.raise_error ~loc:pexp_loc
+      "JSX component calls can only be on function definitions or component \
+       wrappers (forwardRef, memo)."
 
 let modified_binding ~binding_loc ~binding_pat_loc ~fn_name binding =
   let has_application = ref false in
@@ -427,6 +426,8 @@ let modified_binding ~binding_loc ~binding_pat_loc ~fn_name binding =
   (* TODO: there is a long-tail of unsupported features inside of blocks - Pexp_letmodule , Pexp_letexception , Pexp_ifthenelse *)
   let rec spelunk_for_fun_expression expression =
     match expression with
+    | {pexp_desc = Pexp_braces {expr = inner}} ->
+      spelunk_for_fun_expression inner
     (* let make = (()) => ... *)
     (* let make = (_) => ... *)
     | {
@@ -547,6 +548,12 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
       Exp.constraint_ expr (jsx_element_type config ~loc:expr.pexp_loc)
     in
     match expr.pexp_desc with
+    | Pexp_braces {expr = inner; braces_loc} when is_function_expression inner
+      ->
+      {
+        expr with
+        pexp_desc = Pexp_braces {expr = constrain_jsx_return inner; braces_loc};
+      }
     | Pexp_fun ({body} as desc) ->
       {
         expr with

@@ -23,25 +23,14 @@ type str = string loc
 type loc = Location.t
 type attrs = attribute list
 
+(** Default value for all optional location arguments. *)
 let default_loc = ref Location.none
-
-let with_default_loc l f =
-  let old = !default_loc in
-  default_loc := l;
-  try
-    let r = f () in
-    default_loc := old;
-    r
-  with exn ->
-    default_loc := old;
-    raise exn
 
 module Const = struct
   let integer ?suffix i = Pconst_integer (i, suffix)
   let int ?suffix i = integer ?suffix (string_of_int i)
   let int32 ?(suffix = 'l') i = integer ~suffix (Int32.to_string i)
   let int64 ?(suffix = 'L') i = integer ~suffix (Int64.to_string i)
-  let nativeint ?(suffix = 'n') i = integer ~suffix (Nativeint.to_string i)
   let float ?suffix f = Pconst_float (f, suffix)
   let char c =
     let semantic = Char.code c in
@@ -153,8 +142,8 @@ module Pat = struct
   let or_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_or (a, b))
   let constraint_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_constraint (a, b))
   let type_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_type a)
+  let variant_spread ?loc ?attrs a = mk ?loc ?attrs (Ppat_variant_spread a)
   let unpack ?loc ?attrs a = mk ?loc ?attrs (Ppat_unpack a)
-  let open_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_open (a, b))
   let exception_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_exception a)
   let extension ?loc ?attrs a = mk ?loc ?attrs (Ppat_extension a)
 end
@@ -164,6 +153,8 @@ module Exp = struct
     {pexp_desc = d; pexp_loc = loc; pexp_attributes = attrs}
   let attr d a = {d with pexp_attributes = d.pexp_attributes @ [a]}
 
+  let braces ?(attrs = []) ~braces_loc e =
+    mk ~loc:e.pexp_loc ~attrs (Pexp_braces {expr = e; braces_loc})
   let ident ?loc ?attrs a = mk ?loc ?attrs (Pexp_ident a)
   let constant ?loc ?attrs a = mk ?loc ?attrs (Pexp_constant a)
   let let_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_let (a, b, c))
@@ -186,6 +177,8 @@ module Exp = struct
   let setfield ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_setfield (a, b, c))
   let array ?loc ?attrs a = mk ?loc ?attrs (Pexp_array a)
   let ifthenelse ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_ifthenelse (a, b, c))
+  let ternary ?loc ?attrs condition consequent alternate =
+    mk ?loc ?attrs (Pexp_ternary (condition, consequent, alternate))
   let sequence ?loc ?attrs a b = mk ?loc ?attrs (Pexp_sequence (a, b))
   let break ?loc ?attrs () = mk ?loc ?attrs Pexp_break
   let continue ?loc ?attrs () = mk ?loc ?attrs Pexp_continue
@@ -195,7 +188,7 @@ module Exp = struct
   let for_await_of ?loc ?attrs a b c =
     mk ?loc ?attrs (Pexp_for_await_of (a, b, c))
   let constraint_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_constraint (a, b))
-  let coerce ?loc ?attrs a c = mk ?loc ?attrs (Pexp_coerce (a, (), c))
+  let coerce ?loc ?attrs a c = mk ?loc ?attrs (Pexp_coerce (a, c))
   let object_get ?loc ?attrs a b = mk ?loc ?attrs (Pexp_object_get (a, b))
   let object_set ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_object_set (a, b, c))
   let object_literal ?loc ?attrs a = mk ?loc ?attrs (Pexp_object_literal a)
@@ -205,6 +198,8 @@ module Exp = struct
   let pack ?loc ?attrs a = mk ?loc ?attrs (Pexp_pack a)
   let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_open (a, b, c))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pexp_extension a)
+  let regexp ?loc ?attrs pattern flags =
+    mk ?loc ?attrs (Pexp_regexp {pattern; flags})
   let template ?loc ?attrs source_segments values =
     mk ?loc ?attrs (Pexp_template {source_segments; values})
   let tagged_template ?loc ?attrs tag raw_sources values =
@@ -294,6 +289,7 @@ module Mod = struct
   let constraint_ ?loc ?attrs m mty = mk ?loc ?attrs (Pmod_constraint (m, mty))
   let unpack ?loc ?attrs e = mk ?loc ?attrs (Pmod_unpack e)
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pmod_extension a)
+  let await ?loc ?attrs m = mk ?loc ?attrs (Pmod_await m)
 end
 
 module Sig = struct
@@ -385,7 +381,17 @@ end
 
 module Type = struct
   let mk ?(loc = !default_loc) ?(attrs = []) ?(params = []) ?(cstrs = [])
-      ?(kind = Ptype_abstract) ?(priv = Public) ?manifest name =
+      ?(kind = Ptype_abstract) ?(priv = Public) ?manifest ?(origin = Declared)
+      name =
+    let origin, attrs =
+      let rec extract acc = function
+        | ({txt = "res.inlineRecordDefinition"}, _) :: rest ->
+          (Inline_record_definition, List.rev_append acc rest)
+        | attr :: rest -> extract (attr :: acc) rest
+        | [] -> (origin, List.rev acc)
+      in
+      extract [] attrs
+    in
     {
       ptype_name = name;
       ptype_params = params;
@@ -393,9 +399,17 @@ module Type = struct
       ptype_kind = kind;
       ptype_private = priv;
       ptype_manifest = manifest;
+      ptype_origin = origin;
       ptype_attributes = attrs;
       ptype_loc = loc;
     }
+
+  let declaration_attributes (decl : Parsetree.type_declaration) =
+    match decl.ptype_origin with
+    | Declared -> decl.ptype_attributes
+    | Inline_record_definition ->
+      (Location.mknoloc "res.inlineRecordDefinition", PStr [])
+      :: decl.ptype_attributes
 
   let constructor ?(loc = !default_loc) ?(attrs = []) ?(args = Pcstr_tuple [])
       ?res ?runtime_tag name =

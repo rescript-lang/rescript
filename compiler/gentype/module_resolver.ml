@@ -1,5 +1,5 @@
 open Gentype_common
-module Module_name_map = Map.Make (Module_name)
+module Module_name_map = Config.Module_name_map
 
 let ( +++ ) = Filename.concat
 

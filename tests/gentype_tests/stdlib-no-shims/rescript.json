@@ -1,8 +1,6 @@
 {
   "gentypeconfig": {
-    "language": "typescript",
     "module": "esmodule",
-    "importPath": "relative",
     "debug": { "all": false },
     "exportInterfaces": false
   },

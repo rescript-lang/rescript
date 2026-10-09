@@ -6,3 +6,4 @@
 *.resi linguist-language=ReScript
 
 .yarn/releases/* binary linguist-vendored
+tests/dependencies/** linguist-vendored

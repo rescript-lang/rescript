@@ -7,10 +7,6 @@ val cardinal : ('a, 'b) t -> int
 
 val bindings : ('a, 'b) t -> ('a * 'b) list
 
-val fill_array_with_f : ('a, 'b) t -> int -> 'c array -> ('a -> 'b -> 'c) -> int
-
-val fill_array_aux : ('a, 'b) t -> int -> ('a * 'b) array -> int
-
 val to_sorted_array : ('key, 'a) t -> ('key * 'a) array
 
 val to_sorted_array_with_f : ('a, 'b) t -> ('a -> 'b -> 'c) -> 'c array
@@ -32,8 +28,6 @@ val empty : ('a, 'b) t
 
 val is_empty : ('a, 'b) t -> bool
 
-val merge : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t
-
 val iter : ('a, 'b) t -> ('a -> 'b -> unit) -> unit
 
 val map : ('a, 'b) t -> ('b -> 'c) -> ('a, 'c) t
@@ -47,8 +41,6 @@ val for_all : ('a, 'b) t -> ('a -> 'b -> bool) -> bool
 val exists : ('a, 'b) t -> ('a -> 'b -> bool) -> bool
 
 val join : ('a, 'b) t -> 'a -> 'b -> ('a, 'b) t -> ('a, 'b) t
-
-val concat : ('a, 'b) t -> ('a, 'b) t -> ('a, 'b) t
 
 module type S = sig
   type key
@@ -72,8 +64,6 @@ module type S = sig
   val adjust : 'a t -> key -> ('a option -> 'a) -> 'a t
 
   val singleton : key -> 'a -> 'a t
-
-  val remove : 'a t -> key -> 'a t
 
   (* val merge :
      'a t -> 'b t -> (key -> 'a option -> 'b option -> 'c option) -> 'c t *)
@@ -109,6 +99,4 @@ module type S = sig
   val of_list : (key * 'a) list -> 'a t
 
   val of_array : (key * 'a) array -> 'a t
-
-  val add_list : (key * 'b) list -> 'b t -> 'b t
 end

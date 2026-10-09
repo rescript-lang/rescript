@@ -126,6 +126,7 @@ module T = struct
         ptype_kind;
         ptype_private;
         ptype_manifest;
+        ptype_origin;
         ptype_attributes;
         ptype_loc;
       } =
@@ -138,6 +139,7 @@ module T = struct
            ptype_cstrs)
       ~kind:(sub.type_kind sub ptype_kind)
       ?manifest:(map_opt (sub.typ sub) ptype_manifest)
+      ~origin:ptype_origin
       ~loc:(sub.location sub ptype_loc)
       ~attrs:(sub.attributes sub ptype_attributes)
 
@@ -248,6 +250,7 @@ module M = struct
       constraint_ ~loc ~attrs (sub.module_expr sub m) (sub.module_type sub mty)
     | Pmod_unpack e -> unpack ~loc ~attrs (sub.expr sub e)
     | Pmod_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Pmod_await m -> await ~loc ~attrs (sub.module_expr sub m)
 
   let map_structure_item sub {pstr_loc = loc; pstr_desc = desc} =
     let open Str in
@@ -290,6 +293,10 @@ module E = struct
     let loc = sub.location sub loc in
     let attrs = sub.attributes sub attrs in
     match desc with
+    | Pexp_braces {expr; braces_loc} ->
+      braces
+        ~braces_loc:(sub.location sub braces_loc)
+        ~attrs (sub.expr sub expr)
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
     | Pexp_constant x -> constant ~loc ~attrs x
     | Pexp_let (r, vbs, e) ->
@@ -337,6 +344,8 @@ module E = struct
     | Pexp_ifthenelse (e1, e2, e3) ->
       ifthenelse ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
         (map_opt (sub.expr sub) e3)
+    | Pexp_ternary (e1, e2, e3) ->
+      ternary ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2) (sub.expr sub e3)
     | Pexp_sequence (e1, e2) ->
       sequence ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
     | Pexp_break -> break ~loc ~attrs ()
@@ -352,6 +361,7 @@ module E = struct
     | Pexp_for_await_of (p, e1, e2) ->
       Exp.mk ~loc ~attrs
         (Pexp_for_await_of (sub.pat sub p, sub.expr sub e1, sub.expr sub e2))
+    | Pexp_regexp {pattern; flags} -> regexp ~loc ~attrs pattern flags
     | Pexp_template {source_segments; values} ->
       Exp.template ~loc ~attrs
         (List.map (map_loc sub) source_segments)
@@ -360,7 +370,7 @@ module E = struct
       Exp.tagged_template ~loc ~attrs (sub.expr sub tag)
         (List.map (map_loc sub) raw_sources)
         (List.map (sub.expr sub) values)
-    | Pexp_coerce (e, (), t2) ->
+    | Pexp_coerce (e, t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->
       constraint_ ~loc ~attrs (sub.expr sub e) (sub.typ sub t)
@@ -454,8 +464,8 @@ module P = struct
     | Ppat_constraint (p, t) ->
       constraint_ ~loc ~attrs (sub.pat sub p) (sub.typ sub t)
     | Ppat_type s -> type_ ~loc ~attrs (map_loc sub s)
+    | Ppat_variant_spread s -> variant_spread ~loc ~attrs (map_loc sub s)
     | Ppat_unpack s -> unpack ~loc ~attrs (map_loc sub s)
-    | Ppat_open (lid, p) -> open_ ~loc ~attrs (map_loc sub lid) (sub.pat sub p)
     | Ppat_exception p -> exception_ ~loc ~attrs (sub.pat sub p)
     | Ppat_extension x -> extension ~loc ~attrs (sub.extension sub x)
 end
@@ -591,10 +601,6 @@ end)
 
 let cookies = ref String_map.empty
 
-let tool_name_ref = ref "_none_"
-
-let tool_name () = !tool_name_ref
-
 module Ppx_context = struct
   open Longident
   open Asttypes
@@ -713,7 +719,6 @@ module Ppx_context = struct
             name
       in
       match name with
-      | "tool_name" -> tool_name_ref := get_string payload
       | "include_dirs" -> Clflags.include_dirs := get_list get_string payload
       | "load_path" -> Config.load_path := get_list get_string payload
       | "open_modules" -> Clflags.open_modules := get_list get_string payload
@@ -731,98 +736,9 @@ module Ppx_context = struct
         | {lid = {txt = Lident name}; x} -> field name x
         | _ -> ())
       fields
-
-  let update_cookies fields =
-    let fields =
-      Ext_list.filter fields (function
-        | {lid = {txt = Lident "cookies"}} -> false
-        | _ -> true)
-    in
-    fields @ [get_cookies ()]
 end
 
 let ppx_context = Ppx_context.make
-
-let extension_of_exn exn =
-  match error_of_exn exn with
-  | Some (`Ok error) -> extension_of_error error
-  | Some `Already_displayed ->
-    ({loc = Location.none; txt = "ocaml.error"}, PStr [])
-  | None -> raise exn
-
-let apply_lazy ~source ~target mapper =
-  let implem ast =
-    let fields, ast =
-      match ast with
-      | {pstr_desc = Pstr_attribute ({txt = "ocaml.ppx.context"}, x)} :: l ->
-        (Ppx_context.get_fields x, l)
-      | _ -> ([], ast)
-    in
-    Ppx_context.restore fields;
-    let ast =
-      try
-        let mapper = mapper () in
-        mapper.structure mapper ast
-      with exn ->
-        [
-          {
-            pstr_desc = Pstr_extension (extension_of_exn exn, []);
-            pstr_loc = Location.none;
-          };
-        ]
-    in
-    let fields = Ppx_context.update_cookies fields in
-    Str.attribute (Ppx_context.mk fields) :: ast
-  in
-  let iface ast =
-    let fields, ast =
-      match ast with
-      | {psig_desc = Psig_attribute ({txt = "ocaml.ppx.context"}, x)} :: l ->
-        (Ppx_context.get_fields x, l)
-      | _ -> ([], ast)
-    in
-    Ppx_context.restore fields;
-    let ast =
-      try
-        let mapper = mapper () in
-        mapper.signature mapper ast
-      with exn ->
-        [
-          {
-            psig_desc = Psig_extension (extension_of_exn exn, []);
-            psig_loc = Location.none;
-          };
-        ]
-    in
-    let fields = Ppx_context.update_cookies fields in
-    Sig.attribute (Ppx_context.mk fields) :: ast
-  in
-
-  let ic = open_in_bin source in
-  let magic =
-    really_input_string ic (String.length Config.ast_impl_magic_number)
-  in
-
-  let rewrite transform =
-    Location.set_input_name @@ input_value ic;
-    let ast = input_value ic in
-    close_in ic;
-    let ast = transform ast in
-    let oc = open_out_bin target in
-    output_string oc magic;
-    output_value oc !Location.input_name;
-    output_value oc ast;
-    close_out oc
-  and fail () =
-    close_in ic;
-    failwith "Ast_mapper: OCaml version mismatch or malformed input"
-  in
-
-  if magic = Config.ast_impl_magic_number then
-    rewrite (implem : structure -> structure)
-  else if magic = Config.ast_intf_magic_number then
-    rewrite (iface : signature -> signature)
-  else fail ()
 
 let drop_ppx_context_str ~restore = function
   | {pstr_desc = Pstr_attribute ({Location.txt = "ocaml.ppx.context"}, a)}
@@ -843,29 +759,3 @@ let add_ppx_context_str ~tool_name ast =
 
 let add_ppx_context_sig ~tool_name ast =
   Ast_helper.Sig.attribute (ppx_context ~tool_name ()) :: ast
-
-let apply ~source ~target mapper = apply_lazy ~source ~target (fun () -> mapper)
-
-let run_main mapper =
-  try
-    let a = Sys.argv in
-    let n = Array.length a in
-    if n > 2 then
-      let mapper () =
-        try mapper (Array.to_list (Array.sub a 1 (n - 3)))
-        with exn ->
-          (* PR#6463 *)
-          let f _ _ = raise exn in
-          {default_mapper with structure = f; signature = f}
-      in
-      apply_lazy ~source:a.(n - 2) ~target:a.(n - 1) mapper
-    else (
-      Printf.eprintf "Usage: %s [extra_args] <infile> <outfile>\n%!"
-        Sys.executable_name;
-      exit 2)
-  with exn ->
-    prerr_endline (Printexc.to_string exn);
-    exit 2
-
-let register_function = ref (fun _name f -> run_main f)
-let register name f = !register_function name f

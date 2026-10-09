@@ -425,6 +425,9 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ("-dtypedtree", set Clflags.dump_typedtree, "*internal* debug typedtree");
     ("-dparsetree", set Clflags.dump_parsetree, "*internal* debug parsetree");
     ("-drawlambda", set Clflags.dump_rawlambda, "*internal* debug raw lambda");
+    ( "-draw-coercions",
+      set Clflags.dump_coercions,
+      "*internal* debug module coercions with raw internal types" );
     ("-dsource", set Clflags.dump_source, "*internal* print source");
     ( "-reprint-source",
       string_call reprint_source_file,
@@ -434,7 +437,6 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ("-only-parse", set Clflags.only_parse, "*internal* stop after parsing");
     ( "-editor-mode",
       unit_call (fun () ->
-          Clflags.editor_mode := true;
           Clflags.ignore_parse_errors := true;
           Js_config.cmi_only := true),
       "*internal* Enable editor mode." );
@@ -455,9 +457,6 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       unit_call print_version_string,
       "Print compiler version and location of standard library and exit" );
     ("-version", unit_call print_version_string, "Print version and exit");
-    ( "-pp",
-      string_optional_set Clflags.preprocessor,
-      "*internal* <command>  Pipe sources through preprocessor <command>" );
     ( "-absname",
       set absname,
       "*internal* Show absolute filenames in error messages" );
@@ -472,9 +471,7 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ( "-short-paths",
       clear Clflags.real_paths,
       "*internal* Shorten paths in types" );
-    ( "-unsafe",
-      set Clflags.fast,
-      "*internal* Do not compile bounds checking on array and string access" );
+    ("-unsafe", Unit_dummy, "*internal* No longer used and is a no-op.");
     ( "-runtime-path",
       string_call setup_runtime_path,
       "*internal* Set the path of the runtime package (@rescript/runtime)" );

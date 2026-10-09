@@ -32,5 +32,6 @@ let alice = {
 };
 
 let {name, age} = alice;
+let bracedAdd = {(x, y) => x + y}
 
 //^hin

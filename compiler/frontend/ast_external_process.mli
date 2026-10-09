@@ -30,7 +30,7 @@ type response = {
 }
 
 val handle_attributes_as_prim :
-  Bs_loc.t -> Ast_core_type.t -> Ast_attributes.t -> string -> response
+  Location.t -> Ast_core_type.t -> Ast_attributes.t -> string -> response
 (**
    [handle_attributes_as_prim
    loc pval_name.txt pval_type pval_attributes pval_prim]

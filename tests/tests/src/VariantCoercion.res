@@ -124,7 +124,7 @@ module CoerceFromPolyvariantToVariant = {
 module CoerceVariantBinaryOp = {
   type flag = | @as(0) A | @as(2) B
 
-  let x = 0->Int.bitwiseOr((B :> int))
+  let x = 0->Int.bitwiseOr(B :> int)
 
   let v = B
   let f1 = () =>

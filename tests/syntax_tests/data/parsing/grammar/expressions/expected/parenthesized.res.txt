@@ -11,7 +11,7 @@ let aList = [1; 2]
 let anArray = [|1;2|]
 let aTuple = (1, 2)
 let aRecord = { name = {js|steve|js}; age = 30 }
-let blockExpression = ((let a = 1 in let b = 2 in a + b)[@res.braces ])
+let blockExpression = {let a = 1 in let b = 2 in a + b}
 let assertSmthing = assert true
 let jsx = <div className={js|cx|js}>foo</div>
 let ifExpr = if true then Console.log true else Console.log false

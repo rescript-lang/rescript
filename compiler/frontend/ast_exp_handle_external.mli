@@ -26,11 +26,7 @@ val handle_debugger : Location.t -> Ast_payload.t -> Parsetree.expression_desc
 
 val handle_ffi : loc:Location.t -> payload:Ast_payload.t -> Parsetree.expression
 
-val handle_raw :
-  kind:Js_raw_info.raw_kind ->
-  Location.t ->
-  Ast_payload.t ->
-  Parsetree.expression
+val handle_raw : Location.t -> Ast_payload.t -> Parsetree.expression
 
 val handle_raw_structure :
   Location.t -> Ast_payload.t -> Parsetree.structure_item
