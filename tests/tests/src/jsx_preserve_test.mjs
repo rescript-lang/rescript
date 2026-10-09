@@ -92,6 +92,11 @@ let _unary_element_with_spread_and_repeated_key = JsxRuntime.jsx("input", {
   title: "y"
 });
 
+let _unary_element_with_spread_and_key_prop_keyed = JsxRuntime.jsx("input", {
+  ...baseProps,
+  key: "inner"
+}, "outer");
+
 let _container_with_spread_props = <div
   {...baseProps} 
   className={"barry"}
@@ -291,6 +296,7 @@ export {
   _unary_element_with_spread_and_hyphenated_key,
   _container_with_spread_and_repeated_children,
   _unary_element_with_spread_and_repeated_key,
+  _unary_element_with_spread_and_key_prop_keyed,
   _container_with_spread_props,
   baseChildren,
   _unary_element_with_spread_props_keyed,

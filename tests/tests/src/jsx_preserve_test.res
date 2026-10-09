@@ -69,6 +69,9 @@ let _container_with_spread_and_repeated_children =
   />
 let _unary_element_with_spread_and_repeated_key =
   <input {...dict{...baseProps->Obj.magic, "title": "x", "title": "y"}->Obj.magic} />
+// And keyed props with a "key" property, which would repeat the key attribute
+let _unary_element_with_spread_and_key_prop_keyed =
+  <input {...dict{...baseProps->Obj.magic, "key": "inner"}->Obj.magic} key="outer" />
 
 let _container_with_spread_props =
   <div {...baseProps} title="barry" className="barry">

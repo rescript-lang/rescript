@@ -122,8 +122,10 @@ let is_jsx_attribute_name (name : string) =
 
 (* JSX props given as an object literal [{...base, x: 1}]: a spread followed
    by properties only, whose names are distinct JSX attribute names. Dict keys
-   can be any string, and repeat. *)
-let jsx_spread_props_only_properties (entries : J.object_entry list) =
+   can be any string, and repeat. With [~keyed], the element's key is printed
+   as a [key] attribute, so no property may be named [key]. *)
+let jsx_spread_props_only_properties ?(keyed = false)
+    (entries : J.object_entry list) =
   let rec distinct_attributes seen = function
     | [] -> true
     | J.Object_property (Lit name, _) :: rest ->
@@ -132,7 +134,9 @@ let jsx_spread_props_only_properties (entries : J.object_entry list) =
       && distinct_attributes (Set_string.add seen name) rest
     | (Object_property (Symbol_name, _) | Object_spread _) :: _ -> false
   in
-  distinct_attributes Set_string.empty entries
+  distinct_attributes
+    (if keyed then Set_string.add Set_string.empty "key" else Set_string.empty)
+    entries
 
 (* Their named properties *)
 let jsx_spread_fields (entries : J.object_entry list) =
@@ -653,7 +657,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
       print_jsx cxt ~level ~spread_props:spread f fn_name tag
         (jsx_spread_fields props)
     | [tag; {expression_desc = J.Object (Object_spread spread :: props)}; key]
-      when jsx_spread_props_only_properties props ->
+      when jsx_spread_props_only_properties ~keyed:true props ->
       print_jsx cxt ~level ~spread_props:spread ~key f fn_name tag
         (jsx_spread_fields props)
     | _ ->
