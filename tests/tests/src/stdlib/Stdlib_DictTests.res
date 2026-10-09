@@ -230,6 +230,58 @@ Test.run(
   )
 }
 
+{
+  // Spreading reads the source, which may run getters, even when the result
+  // is unused
+  let count = ref(0)
+  let makeCounted: (unit => unit) => dict<int> = %raw(`f => ({get a() { f(); return 1 }})`)
+  let counted = makeCounted(() => count := count.contents + 1)
+  ignore(dict{...counted})
+
+  Test.run(__POS_OF__("dict spread runs getters"), count.contents, eq, 1)
+
+  // An expression row is evaluated after the spreads before it
+  let order = []
+  let row = () => {
+    order->Array.push(count.contents)
+    2
+  }
+  ignore(dict{...counted, "b": row()})
+  Test.run(__POS_OF__("dict spread is evaluated left to right"), order, eq, [2])
+}
+
+{
+  // A "__proto__" row is a key, not the prototype
+  let other = dict{"b": 2}
+  let result = dict{"__proto__": 1, ...other, "__proto__": 3}
+
+  Test.run(
+    __POS_OF__("dict rows can be named __proto__"),
+    (result->Dict.keysToArray, result->Dict.get("__proto__")),
+    eq,
+    (["__proto__", "b"], Some(3)),
+  )
+  Test.run(
+    __POS_OF__("a dict literal keeps a __proto__ row as a key"),
+    dict{"__proto__": 1}->Dict.keysToArray,
+    eq,
+    ["__proto__"],
+  )
+}
+
+{
+  // A "__proto__" key is copied as a key, not used to set the prototype
+  let withProtoKey: dict<int> = JSON.parseOrThrow(`{"__proto__": 1}`)->Obj.magic
+  let result = dict{...withProtoKey, "a": 2}
+
+  Test.run(
+    __POS_OF__("dict spread copies a __proto__ key"),
+    result->Dict.keysToArray,
+    eq,
+    ["__proto__", "a"],
+  )
+}
+
 Test.run(
   __POS_OF__("getUnsafe - existing"),
   Dict.fromArray([("foo", "bar")])->Dict.getUnsafe("foo"),

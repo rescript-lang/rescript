@@ -581,10 +581,20 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
             | _ -> None))
     | _ -> assert false)
   | Pdict_spread ->
-    E.call
-      ~info:(Js_call_info.na_full_call false)
-      (E.js_global "Object.assign")
-      args
+    (* {...target, ...source}, with the rows of dict literals in place *)
+    E.obj_entries
+      (List.concat_map
+         (fun (e : J.expression) ->
+           match e.expression_desc with
+           | Object entries
+             when List.for_all
+                    (function
+                      | J.Object_property _ -> true
+                      | Object_spread _ -> false)
+                    entries ->
+             entries
+           | _ -> [J.Object_spread e])
+         args)
   | Pdict_has -> (
     match args with
     | [obj; prop] -> E.in_ prop obj

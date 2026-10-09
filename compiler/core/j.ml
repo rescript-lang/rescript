@@ -73,6 +73,11 @@ and for_ident = ident
 and for_direction = Js_op.direction_flag
 and property_map = (property_name * expression) list
 
+(* An entry of an object literal: [k: v] or [...e] *)
+and object_entry =
+  | Object_property of property_name * expression
+  | Object_spread of expression
+
 and record_rest_field = {
   record_rest_label: string;
   record_rest_ident: ident option;
@@ -174,7 +179,7 @@ and expression_desc =
      last step since "|0" can potentially be optimized
   *)
   | Number of number
-  | Object of expression option * property_map
+  | Object of object_entry list
   | Undefined of {is_unit: bool}
   | Null
   | Await of expression
@@ -349,6 +354,7 @@ and deps_program = {
         label;
         finish_ident_expression;
         property_map;
+        object_entry;
         record_rest_field;
         required_modules;
         case_clause;

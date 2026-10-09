@@ -23,6 +23,7 @@
 
 #### :bug: Bug fix
 
+- Emit `"__proto__"` keys in object literals as computed keys, so they create a property instead of setting the prototype. https://github.com/rescript-lang/rescript/pull/8747
 - Fix the formatter dropping attributes on dict literals and flattening nested dict spreads. https://github.com/rescript-lang/rescript/pull/8746
 - Fix attributes on patterns being duplicated before `as` and dropped on constants when formatting. https://github.com/rescript-lang/rescript/pull/8750
 - Fix compiler crashes when wrapping values in `Some` or passing optional arguments whose types come from a transitive dependency. https://github.com/rescript-lang/rescript/pull/8719
@@ -44,6 +45,7 @@
 
 #### :nail_care: Polish
 
+- Compile dict spreads to object spread syntax instead of `Object.assign`. https://github.com/rescript-lang/rescript/pull/8747
 - Represent explicit expression braces as `Pexp_braces` in parsetree v1 and format `else` branches consistently with `if` branches. https://github.com/rescript-lang/rescript/pull/8678
 - Omit redundant braces around multi-statement switch case bodies when formatting. https://github.com/rescript-lang/rescript/pull/8677
 - Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662

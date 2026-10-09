@@ -93,12 +93,12 @@ let exn_block_as_obj ~(stack : bool) (el : J.expression list) (ext : J.tag_info)
     | _ -> assert false
   in
   Object
-    ( None,
-      if stack then
-        Ext_list.mapi_append el
-          (fun i e -> (Js_op.Lit (field_name i), e))
-          [(Js_op.Lit "Error", E.new_ (E.js_global "Error") [])]
-      else Ext_list.mapi el (fun i e -> (Js_op.Lit (field_name i), e)) )
+    (E.object_entries
+       (if stack then
+          Ext_list.mapi_append el
+            (fun i e -> (Js_op.Lit (field_name i), e))
+            [(Js_op.Lit "Error", E.new_ (E.js_global "Error") [])]
+        else Ext_list.mapi el (fun i e -> (Js_op.Lit (field_name i), e))))
 
 let rec iter_lst cxt (f : P.t) ls element inter =
   match ls with
@@ -108,6 +108,43 @@ let rec iter_lst cxt (f : P.t) ls element inter =
     let acxt = element cxt f e in
     inter f;
     iter_lst acxt f r element inter
+
+(* A name that prints as the same JSX attribute. "__proto__" would set the
+   prototype of the props object. *)
+let is_jsx_attribute_name (name : string) =
+  name <> "__proto__" && name <> ""
+  && (match name.[0] with
+    | 'a' .. 'z' | 'A' .. 'Z' | '_' | '$' -> true
+    | _ -> false)
+  && Ext_string.for_all name (function
+    | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '$' | '-' -> true
+    | _ -> false)
+
+(* JSX props given as an object literal [{...base, x: 1}]: a spread followed
+   by properties only, whose names are distinct JSX attribute names. Dict keys
+   can be any string, and repeat. With [~keyed], the element's key is printed
+   as a [key] attribute, so no property may be named [key]. *)
+let jsx_spread_props_only_properties ?(keyed = false)
+    (entries : J.object_entry list) =
+  let rec distinct_attributes seen = function
+    | [] -> true
+    | J.Object_property (Lit name, _) :: rest ->
+      is_jsx_attribute_name name
+      && (not (Set_string.mem seen name))
+      && distinct_attributes (Set_string.add seen name) rest
+    | (Object_property (Symbol_name, _) | Object_spread _) :: _ -> false
+  in
+  distinct_attributes
+    (if keyed then Set_string.add Set_string.empty "key" else Set_string.empty)
+    entries
+
+(* Their named properties *)
+let jsx_spread_fields (entries : J.object_entry list) =
+  List.filter_map
+    (function
+      | J.Object_property (Js_op.Lit name, x) -> Some (name, x)
+      | Object_property (Symbol_name, _) | Object_spread _ -> None)
+    entries
 
 let raw_snippet_exp_simple_enough (s : string) =
   Ext_string.for_all s (fun c ->
@@ -612,31 +649,20 @@ and expression_desc cxt ~(level : int) f x : cxt =
     | [tag; ({expression_desc = J.Var _} as spread_props)] ->
       (* All the props are spread *)
       print_jsx cxt ~level ~spread_props f fn_name tag []
-    | [tag; {expression_desc = J.Object (Some spread, props)}] ->
+    | [tag; {expression_desc = J.Object (Object_spread spread :: props)}]
+      when jsx_spread_props_only_properties props ->
       (* Spread props with overrides emitted as a single object literal:
          {...base, x: 1}
       *)
-      let fields =
-        List.filter_map
-          (fun (n, x) ->
-            match n with
-            | Js_op.Lit name -> Some (name, x)
-            | Symbol_name -> None)
-          props
-      in
-      print_jsx cxt ~level ~spread_props:spread f fn_name tag fields
-    | [tag; {expression_desc = J.Object (Some spread, props)}; key] ->
-      let fields =
-        List.filter_map
-          (fun (n, x) ->
-            match n with
-            | Js_op.Lit name -> Some (name, x)
-            | Symbol_name -> None)
-          props
-      in
-      print_jsx cxt ~level ~spread_props:spread ~key f fn_name tag fields
+      print_jsx cxt ~level ~spread_props:spread f fn_name tag
+        (jsx_spread_fields props)
+    | [tag; {expression_desc = J.Object (Object_spread spread :: props)}; key]
+      when jsx_spread_props_only_properties ~keyed:true props ->
+      print_jsx cxt ~level ~spread_props:spread ~key f fn_name tag
+        (jsx_spread_fields props)
     | _ ->
-      (* This should not happen, we fallback to the general case *)
+      (* Other props, e.g. an object literal with more spreads: the general
+         case *)
       expression_desc cxt ~level f
         (Call (e, el, {call_transformed_jsx = false; call_info = Call_ml})))
   | Call (e, el, _info) ->
@@ -872,9 +898,9 @@ and expression_desc cxt ~(level : int) f x : cxt =
   | Caml_block (el, _, Blk_module fields) ->
     expression_desc cxt ~level f
       (Object
-         ( None,
-           Ext_list.map_combine fields el (fun x ->
-               Js_op.Lit (Ext_ident.convert x)) ))
+         (E.object_entries
+            (Ext_list.map_combine fields el (fun x ->
+                 Js_op.Lit (Ext_ident.convert x)))))
   (*name convention of Record is slight different from modules*)
   | Caml_block (el, _, Blk_record {fields}) ->
     if Lambda.record_fields_are_array fields then
@@ -886,17 +912,17 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | Undefined _ when opt -> None
             | _ -> Some (Js_op.Lit f, x))
       in
-      expression_desc cxt ~level f (Object (None, fields))
+      expression_desc cxt ~level f (Object (E.object_entries fields))
   | Caml_block (el, _, Blk_poly_var) -> (
     match el with
     | [tag; value] ->
       expression_desc cxt ~level f
         (Object
-           ( None,
-             [
-               (Js_op.Lit Literals.polyvar_hash, tag);
-               (Lit Literals.polyvar_value, value);
-             ] ))
+           (E.object_entries
+              [
+                (Js_op.Lit Literals.polyvar_hash, tag);
+                (Lit Literals.polyvar_value, value);
+              ]))
     | _ -> assert false)
   | Caml_block (el, _, ((Blk_extension | Blk_record_ext _) as ext)) ->
     expression_desc cxt ~level f (exn_block_as_obj ~stack:false el ext)
@@ -921,7 +947,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
           | Some t -> E.literal_tag t )
         :: tails
     in
-    expression_desc cxt ~level f (Object (None, objs))
+    expression_desc cxt ~level f (Object (E.object_entries objs))
   | Caml_block (el, _, Blk_constructor p) ->
     let not_is_cons = p.name <> Literals.cons in
     let {Variant_runtime.tag; tag_name} = p.runtime in
@@ -948,7 +974,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
           | Some t -> E.literal_tag t )
         :: tails
     in
-    expression_desc cxt ~level f (J.Object (None, objs))
+    expression_desc cxt ~level f (J.Object (E.object_entries objs))
   | Caml_block (_, _, Blk_module_export _) -> assert false
   | Caml_block (el, _, Blk_tuple) -> expression_desc cxt ~level f (Array el)
   | Caml_block_tag (e, tag) ->
@@ -1003,7 +1029,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
       P.group f 1 (fun _ -> expression ~level:3 cxt f e2)
     in
     if level > 2 then P.paren_vgroup f 1 action else action ()
-  | Object (dup, lst) ->
+  | Object entries ->
     (* #1946 object literal is easy to be
        interpreted as block statement
        here we avoid parens in such case
@@ -1012,25 +1038,21 @@ and expression_desc cxt ~(level : int) f x : cxt =
        ]}
     *)
     P.cond_paren_group f (level > 1) (fun _ ->
-        let dup_expression e =
-          expression ~level:1 cxt f {e with expression_desc = J.Spread e}
+        let entry cxt f = function
+          | J.Object_spread e ->
+            expression ~level:1 cxt f {e with expression_desc = J.Spread e}
+          | Object_property (name, value) ->
+            property_name_and_value cxt f (name, value)
         in
-        if lst = [] then
-          P.brace f (fun _ ->
-              match dup with
-              | Some e -> dup_expression e
-              | _ -> cxt)
-        else
-          P.brace_vgroup f 1 (fun _ ->
-              let cxt =
-                match dup with
-                | Some e ->
-                  let cxt = dup_expression e in
-                  comma_nl f;
-                  cxt
-                | _ -> cxt
-              in
-              property_name_and_value_list cxt f lst))
+        (* Only spreads, e.g. [{...a, ...b}], on one line *)
+        if
+          List.for_all
+            (function
+              | J.Object_spread _ -> true
+              | Object_property _ -> false)
+            entries
+        then P.brace f (fun _ -> iter_lst cxt f entries entry comma_sp)
+        else P.brace_vgroup f 1 (fun _ -> iter_lst cxt f entries entry comma_nl))
   | Await e ->
     P.cond_paren_group f (level > 13) (fun _ ->
         P.string f "await ";
@@ -1225,26 +1247,23 @@ and print_jsx cxt ?(spread_props : J.expression option)
     P.string f ">";
     cxt
 
-and property_name_and_value_list cxt f (l : J.property_map) =
-  iter_lst cxt f l
-    (fun cxt f (pn, e) ->
-      match e.expression_desc with
-      | Var (Id v | Qualified ({id = v; _}, None)) ->
-        let key = Js_dump_property.property_key pn in
-        let str, cxt = Ext_pp_scope.str_of_ident cxt v in
-        let content =
-          (* if key = str then key
-             else *)
-          key ^ L.colon_space ^ str
-        in
-        P.string f content;
-        cxt
-      | _ ->
-        let key = Js_dump_property.property_key pn in
-        P.string f key;
-        P.string f L.colon_space;
-        expression ~level:1 cxt f e)
-    comma_nl
+and property_name_and_value cxt f ((pn, e) : J.property_name * J.expression) =
+  match e.expression_desc with
+  | Var (Id v | Qualified ({id = v; _}, None)) ->
+    let key = Js_dump_property.property_key pn in
+    let str, cxt = Ext_pp_scope.str_of_ident cxt v in
+    let content =
+      (* if key = str then key
+         else *)
+      key ^ L.colon_space ^ str
+    in
+    P.string f content;
+    cxt
+  | _ ->
+    let key = Js_dump_property.property_key pn in
+    P.string f key;
+    P.string f L.colon_space;
+    expression ~level:1 cxt f e
 
 and array_element_list cxt f (el : E.t list) : cxt =
   iter_lst cxt f el (expression ~level:1) comma_nl

@@ -303,11 +303,12 @@ let baz = {
   c: 5
 };
 
-let result$4 = Object.assign({}, foo, {
-  b: 3
-}, baz, {
+let result$4 = {
+  ...foo,
+  b: 3,
+  ...baz,
   d: 6
-});
+};
 
 Test.run([
   [
@@ -364,7 +365,7 @@ let foo$1 = {
   a: 1
 };
 
-let result$5 = Object.assign({}, foo$1);
+let result$5 = {...foo$1};
 
 Test.run([
   [
@@ -388,10 +389,113 @@ Test.run([
   "dict spread copies a single source into a fresh dictionary"
 ], result$5 === foo$1, eq, false);
 
+let count = 0;
+
+let makeCounted = (f => ({get a() { f(); return 1 }}));
+
+let counted = makeCounted(() => {
+  count = count + 1 | 0;
+});
+
+({...counted});
+
 Test.run([
   [
     "Stdlib_DictTests.res",
-    234,
+    241,
+    22,
+    48
+  ],
+  "dict spread runs getters"
+], count, eq, 1);
+
+let order = [];
+
+function row() {
+  order.push(count);
+  return 2;
+}
+
+({
+    ...counted,
+    b: row()
+  });
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    250,
+    22,
+    62
+  ],
+  "dict spread is evaluated left to right"
+], order, eq, [2]);
+
+let other = {
+  b: 2
+};
+
+let result$6 = {
+  ["__proto__"]: 1,
+  ...other,
+  ["__proto__"]: 3
+};
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    259,
+    15,
+    49
+  ],
+  "dict rows can be named __proto__"
+], [
+  Object.keys(result$6),
+  result$6["__proto__"]
+], eq, [
+  [
+    "__proto__",
+    "b"
+  ],
+  3
+]);
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    265,
+    15,
+    62
+  ],
+  "a dict literal keeps a __proto__ row as a key"
+], Object.keys({
+  ["__proto__"]: 1
+}), eq, ["__proto__"]);
+
+let withProtoKey = JSON.parse(`{"__proto__": 1}`);
+
+let result$7 = {
+  ...withProtoKey,
+  a: 2
+};
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    278,
+    15,
+    51
+  ],
+  "dict spread copies a __proto__ key"
+], Object.keys(result$7), eq, [
+  "__proto__",
+  "a"
+]);
+
+Test.run([
+  [
+    "Stdlib_DictTests.res",
+    286,
     13,
     35
   ],
@@ -404,7 +508,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    240,
+    292,
     13,
     34
   ],
@@ -419,7 +523,7 @@ let dict = {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    252,
+    304,
     22,
     38
   ],
@@ -429,7 +533,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    253,
+    305,
     22,
     43
   ],
@@ -439,7 +543,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    254,
+    306,
     22,
     37
   ],
@@ -449,7 +553,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    255,
+    307,
     22,
     39
   ],
@@ -459,7 +563,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    257,
+    309,
     15,
     51
   ],

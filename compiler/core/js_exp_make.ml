@@ -360,7 +360,7 @@ let dummy_obj ?comment (info : Lambda.tag_info) : t =
   match info with
   | Blk_record _ | Blk_module _ | Blk_constructor _ | Blk_record_inlined _
   | Blk_poly_var | Blk_extension | Blk_record_ext _ ->
-    {comment; source_loc = None; expression_desc = Object (None, [])}
+    {comment; source_loc = None; expression_desc = Object []}
   | Blk_tuple | Blk_module_export _ ->
     {comment; source_loc = None; expression_desc = Array []}
 
@@ -717,8 +717,21 @@ let rec string_append ?comment (e : t) (el : t) : t =
       | _ -> append ())
     | _ -> append ())
 
+let object_entries ?dup properties : J.object_entry list =
+  (match dup with
+    | Some e -> [J.Object_spread e]
+    | None -> [])
+  @ List.map (fun (name, value) -> J.Object_property (name, value)) properties
+
 let obj ?comment ?dup properties : t =
-  {expression_desc = Object (dup, properties); comment; source_loc = None}
+  {
+    expression_desc = Object (object_entries ?dup properties);
+    comment;
+    source_loc = None;
+  }
+
+let obj_entries ?comment entries : t =
+  {expression_desc = Object entries; comment; source_loc = None}
 
 let rec triple_equal ?comment (e0 : t) (e1 : t) : t =
   match (e0.expression_desc, e1.expression_desc) with
