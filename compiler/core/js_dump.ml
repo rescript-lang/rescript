@@ -109,8 +109,16 @@ let rec iter_lst cxt (f : P.t) ls element inter =
     inter f;
     iter_lst acxt f r element inter
 
-(* The named properties after the spread of JSX props given as an object
-   literal [{...base, x: 1}] *)
+(* JSX props given as an object literal [{...base, x: 1}]: a spread followed
+   by properties only *)
+let jsx_spread_props_only_properties (entries : J.object_entry list) =
+  List.for_all
+    (function
+      | J.Object_property _ -> true
+      | Object_spread _ -> false)
+    entries
+
+(* Their named properties *)
 let jsx_spread_fields (entries : J.object_entry list) =
   List.filter_map
     (function
@@ -621,18 +629,20 @@ and expression_desc cxt ~(level : int) f x : cxt =
     | [tag; ({expression_desc = J.Var _} as spread_props)] ->
       (* All the props are spread *)
       print_jsx cxt ~level ~spread_props f fn_name tag []
-    | [tag; {expression_desc = J.Object (Object_spread spread :: props)}] ->
+    | [tag; {expression_desc = J.Object (Object_spread spread :: props)}]
+      when jsx_spread_props_only_properties props ->
       (* Spread props with overrides emitted as a single object literal:
          {...base, x: 1}
       *)
       print_jsx cxt ~level ~spread_props:spread f fn_name tag
         (jsx_spread_fields props)
     | [tag; {expression_desc = J.Object (Object_spread spread :: props)}; key]
-      ->
+      when jsx_spread_props_only_properties props ->
       print_jsx cxt ~level ~spread_props:spread ~key f fn_name tag
         (jsx_spread_fields props)
     | _ ->
-      (* This should not happen, we fallback to the general case *)
+      (* Other props, e.g. an object literal with more spreads: the general
+         case *)
       expression_desc cxt ~level f
         (Call (e, el, {call_transformed_jsx = false; call_info = Call_ml})))
   | Call (e, el, _info) ->

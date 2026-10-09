@@ -59,6 +59,12 @@ let _unary_element_with_spread_props = <input
   type={"text"}
 />;
 
+let otherProps = {
+  id: "bar"
+};
+
+let _unary_element_with_props_of_two_spreads = JsxRuntime.jsx("input", {...baseProps, ...otherProps});
+
 let _container_with_spread_props = <div
   {...baseProps} 
   className={"barry"}
@@ -251,6 +257,8 @@ export {
   _container_element_with_props_and_children,
   baseProps,
   _unary_element_with_spread_props,
+  otherProps,
+  _unary_element_with_props_of_two_spreads,
   _container_with_spread_props,
   baseChildren,
   _unary_element_with_spread_props_keyed,

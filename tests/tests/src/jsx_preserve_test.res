@@ -43,6 +43,13 @@ let baseProps: JsxDOM.domProps = {
 
 let _unary_element_with_spread_props = <input {...baseProps} type_="text" />
 
+// Props that spread more than one object
+let otherProps: JsxDOM.domProps = {
+  id: "bar",
+}
+let _unary_element_with_props_of_two_spreads =
+  <input {...dict{...baseProps->Obj.magic, ...otherProps->Obj.magic}->Obj.magic} />
+
 let _container_with_spread_props =
   <div {...baseProps} title="barry" className="barry">
     {React.string("Hello, world!")}
