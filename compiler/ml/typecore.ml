@@ -48,6 +48,7 @@ type error =
       jsx_component_info: jsx_prop_error_info option;
     }
   | Dict_key_multiply_defined of string
+  | Record_syntax_on_dict_type of string
   | Labels_missing of {
       labels: string list;
       jsx_component_info: jsx_prop_error_info option;
@@ -970,6 +971,15 @@ struct
     lbl
 end
 
+(* Record syntax on a dict, e.g. [let d: dict<int> = {foo: 1}]: point to
+   [dict{...}] *)
+let check_no_record_syntax_on_dict env loc ty (fields : _ record_element list) =
+  match ((expand_head env ty).desc, fields) with
+  | Tconstr (path, _, _), {lid} :: _ when Path.same path Predef.path_dict ->
+    raise
+      (Error (loc, env, Record_syntax_on_dict_type (Longident.last lid.txt)))
+  | _ -> ()
+
 let wrap_disambiguate kind ty f x =
   try f x
   with Error (loc, env, Wrong_name ("", _, tk, tp, name, valid_names)) ->
@@ -1570,6 +1580,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
             pat_env = !env;
           })
   | Ppat_record (lid_sp_list, closed, rest) ->
+    check_no_record_syntax_on_dict !env loc expected_ty lid_sp_list;
     let opath, record_ty =
       try
         let p0, p, _, _ = extract_concrete_record !env expected_ty in
@@ -2805,6 +2816,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           exp_env = env;
         })
   | Pexp_record (lid_sexp_list, None) ->
+    check_no_record_syntax_on_dict env loc ty_expected lid_sexp_list;
     let ty_record, opath, fields, repr_opt =
       match extract_concrete_record env ty_expected with
       | p0, p, fields, repr ->
@@ -2903,7 +2915,9 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       }
   | Pexp_record (lid_sexp_list, Some sexp) ->
     assert (lid_sexp_list <> []);
+    check_no_record_syntax_on_dict env loc ty_expected lid_sexp_list;
     let exp = type_exp ~context:None ~recarg env sexp in
+    check_no_record_syntax_on_dict env loc exp.exp_type lid_sexp_list;
     let ty_record, opath =
       let get_path ty =
         try
@@ -5148,6 +5162,11 @@ let report_error env loc ppf error =
     fprintf ppf "@,@,You can't pass the same prop more than once."
   | Label_multiply_defined {label} ->
     fprintf ppf "The record field label %s is defined several times" label
+  | Record_syntax_on_dict_type key ->
+    fprintf ppf
+      "Record syntax can't be used on a dict. Use dict{...} instead, e.g. \
+       dict{\"%s\": ...}."
+      key
   | Dict_key_multiply_defined key ->
     fprintf ppf "The key \"%s\" is matched several times in this dict pattern"
       key

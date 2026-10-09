@@ -64,6 +64,7 @@ type error =
       jsx_component_info: Error_message_utils.jsx_prop_error_info option;
     }
   | Dict_key_multiply_defined of string
+  | Record_syntax_on_dict_type of string
   | Labels_missing of {
       labels: string list;
       jsx_component_info: Error_message_utils.jsx_prop_error_info option;

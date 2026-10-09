@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/dict_record_pattern.res[0m:[2m3:5-12[0m
+
+  1 [2m│[0m let f = (d: dict<int>) =>
+  2 [2m│[0m   switch d {
+  [1;31m3[0m [2m│[0m   | [1;31m{foo: 1}[0m => true
+  4 [2m│[0m   | _ => false
+  5 [2m│[0m   }
+
+  Record syntax can't be used on a dict. Use dict{...} instead, e.g. dict{"foo": ...}.
