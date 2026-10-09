@@ -1,0 +1,32 @@
+name: Changelog
+
+on:
+  push:
+    branches: [master, 11.0_release]
+
+  # Label events rerun only this check, so applying changelog:skip or
+  # changelog:release does not restart the main CI.
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    branches: [master, 11.0_release]
+
+concurrency:
+  group: changelog-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  changelog:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: node --test scripts/changelog.test.js
+      - run: node scripts/changelog.js check

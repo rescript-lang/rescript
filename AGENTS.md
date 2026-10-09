@@ -92,7 +92,7 @@ on `master`. CI runs on every PR in the stack.
 
 ## Testing and changelog
 
-**Add a changelog fragment** in `changelog/<description>.<category>.md` for any user-facing change (bug fix, feature, or breaking change). Use a unique descriptive filename and Markdown bullets ending with PR links. Categories: `breaking`, `compliance`, `feature`, `fix`, `docs`, `polish`, `internal`. Do not edit `CHANGELOG.md` in ordinary PRs. See [changelog/README.md](changelog/README.md). Run `yarn changelog:check`; changes without release notes need the maintainer-applied `changelog:skip` label. Release preparation PRs use `changelog:release`.
+**Add a changelog fragment** `changelog/<description>.<category>.md` for any user-facing change (bug fix, feature, or breaking change) instead of editing `CHANGELOG.md`; see [changelog/README.md](changelog/README.md) for categories and format. Validate with `yarn changelog:check`.
 
 For compiler or standard-library changes, run `make test`. For syntax changes,
 also run `make test-syntax`; use `make test-syntax-roundtrip` when parsing or

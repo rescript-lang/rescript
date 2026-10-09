@@ -618,7 +618,3 @@ To participate under these terms, all that you must do is include a line like th
     Signed-Off-By: Random J. Developer <random@developer.example.org>
 
 You must use your real name (sorry, no pseudonyms, and no anonymous contributions).
-
-## Changelog fragments
-
-For user-facing changes, add a fragment following [changelog/README.md](changelog/README.md). Ordinary PRs do not edit `CHANGELOG.md`.

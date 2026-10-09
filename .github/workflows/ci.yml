@@ -5,7 +5,6 @@ on:
     branches: [master, 11.0_release]
 
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches: [master, 11.0_release]
 
   # Release builds are started by publish.yml after a maintainer indicates
@@ -30,21 +29,6 @@ env:
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
-  changelog:
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-      - run: node --test scripts/changelog.test.js
-      - run: node scripts/changelog.js check
-
   build-compiler:
     outputs:
       api-docs-artifact-id: ${{ steps.upload-api-docs.outputs.artifact-id }}
