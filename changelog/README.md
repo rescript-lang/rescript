@@ -11,7 +11,6 @@ The PR number is only known once the PR exists, so open it as a draft with the p
 | Category | Section |
 | --- | --- |
 | `breaking` | Breaking Change |
-| `compliance` | Spec Compliance |
 | `feature` | New Feature |
 | `fix` | Bug fix |
 | `docs` | Documentation |

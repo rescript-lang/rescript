@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url";
 
 export const categories = {
   breaking: "#### :boom: Breaking Change",
-  compliance: "#### :eyeglasses: Spec Compliance",
   feature: "#### :rocket: New Feature",
   fix: "#### :bug: Bug fix",
   docs: "#### :memo: Documentation",
