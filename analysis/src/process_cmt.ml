@@ -530,6 +530,10 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
               loc = declared.extent_loc;
             }
             :: !items)
+      | Tpat_dict entries ->
+        entries
+        |> List.iter (fun {Typedtree.tdp_pattern} ->
+            handle_pattern [] tdp_pattern)
       | Tpat_variant (_, Some p, _) -> handle_pattern [] p
       | Tpat_variant (_, None, _) | Tpat_any | Tpat_constant _ -> ()
     in

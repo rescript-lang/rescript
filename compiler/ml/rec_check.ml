@@ -163,6 +163,10 @@ let rec pattern_variables : Typedtree.pattern -> Ident.t list =
     match rest with
     | None -> fields
     | Some {rest_ident; _} -> rest_ident :: fields)
+  | Tpat_dict entries ->
+    List.concat_map
+      (fun {Typedtree.tdp_pattern} -> pattern_variables tdp_pattern)
+      entries
   | Tpat_array pats -> List.concat (List.map pattern_variables pats)
   | Tpat_or (l, r, _) -> pattern_variables l @ pattern_variables r
 
@@ -466,6 +470,7 @@ and is_destructuring_pattern : Typedtree.pattern -> bool =
   | Tpat_construct (_, _, _) -> true
   | Tpat_variant _ -> true
   | Tpat_record (_, _, _) -> true
+  | Tpat_dict _ -> true
   | Tpat_array _ -> true
   | Tpat_or (l, r, _) ->
     is_destructuring_pattern l || is_destructuring_pattern r

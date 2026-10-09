@@ -412,6 +412,8 @@ let rec pretty_val ppf v =
       | (_, _lbl, _, _) :: _q ->
         let elision_mark _ = () in
         fprintf ppf "@[{%a%t}@]" pretty_lvals filtered_lvs elision_mark)
+    | Tpat_dict entries ->
+      fprintf ppf "@[dict{%a}@]" pretty_dict_entries entries
     | Tpat_array vs -> fprintf ppf "@[[%a]@]" (pretty_vals ",") vs
     | Tpat_alias (v, x, _) ->
       fprintf ppf "@[(%a@ as %a)@]" pretty_val v Ident.print x
@@ -450,6 +452,14 @@ and pretty_lvals ppf = function
   | [(_, lbl, v, _)] -> fprintf ppf "%s: %a" lbl.lbl_name pretty_val v
   | (_, lbl, v, _) :: rest ->
     fprintf ppf "%s: %a,@ %a" lbl.lbl_name pretty_val v pretty_lvals rest
+
+and pretty_dict_entries ppf = function
+  | [] -> ()
+  | [{tdp_key; tdp_pattern}] ->
+    fprintf ppf "%S: %a" tdp_key.txt pretty_val tdp_pattern
+  | {tdp_key; tdp_pattern} :: rest ->
+    fprintf ppf "%S: %a,@ %a" tdp_key.txt pretty_val tdp_pattern
+      pretty_dict_entries rest
 
 let top_pretty ppf v = fprintf ppf "@[%a@]@?" pretty_val v
 
@@ -617,6 +627,7 @@ let rec normalize_pat q =
            rest ))
       q.pat_type q.pat_env
   | Tpat_or _ -> fatal_error "Parmatch.normalize_pat"
+  | Tpat_dict _ -> fatal_error "Parmatch.normalize_pat: dict pattern"
 
 (*
   Build normalized (cf. supra) discriminating pattern,
@@ -889,8 +900,10 @@ let full_match closing env =
   | ({pat_desc = Tpat_tuple _}, _) :: _ -> true
   | ({pat_desc = Tpat_record _}, _) :: _ -> true
   | ({pat_desc = Tpat_array _}, _) :: _ -> false
-  | ({pat_desc = Tpat_any | Tpat_var _ | Tpat_alias _ | Tpat_or _}, _) :: _ | []
-    ->
+  | ( {pat_desc = Tpat_any | Tpat_var _ | Tpat_alias _ | Tpat_or _ | Tpat_dict _},
+      _ )
+    :: _
+  | [] ->
     assert false
 
 (* Written as a non-fragile matching, PR#7451 originated from a fragile matching below. *)
@@ -909,7 +922,8 @@ let should_extend ext env =
       | Tpat_constant _ | Tpat_tuple _ | Tpat_variant _ | Tpat_record _
       | Tpat_array _ ->
         false
-      | Tpat_any | Tpat_var _ | Tpat_alias _ | Tpat_or _ -> assert false))
+      | Tpat_any | Tpat_var _ | Tpat_alias _ | Tpat_or _ | Tpat_dict _ ->
+        assert false))
 
 (* build a pattern from a constructor list *)
 let pat_of_constr ex_pat cstr =
@@ -945,6 +959,10 @@ let pats_of_type ?(always = false) env ty =
              || List.for_all (fun cd -> cd.Types.cd_res <> None) cl ->
         let cstrs = fst (Env.find_type_descrs path env) in
         List.map (pat_of_constr (make_pat Tpat_any ty env)) cstrs
+      | Type_record _ when Path.same path Predef.path_dict ->
+        (* A dict's fields are the keys its patterns match, not its declared
+           field *)
+        [omega]
       | Type_record _ ->
         let labels = snd (Env.find_type_descrs path env) in
         let fields =
@@ -1129,6 +1147,8 @@ let rec has_instance p =
     has_instances ps
   | Tpat_record (lps, _, _rest) ->
     has_instances (List.map (fun (_, _, x, _) -> x) lps)
+  | Tpat_dict entries ->
+    has_instances (List.map (fun {tdp_pattern} -> tdp_pattern) entries)
 
 and has_instances = function
   | [] -> true
@@ -1760,6 +1780,7 @@ and lubs ps qs =
 (* Apply pressure to variants *)
 
 let pressure_variants tdefs patl =
+  let patl = List.map (Dict_pattern.lowering patl) patl in
   let pss = List.map (fun p -> [p; omega]) patl in
   ignore (pressure_variants (Some tdefs) pss)
 
@@ -1841,6 +1862,15 @@ let check_partial_all v casel =
 (* Exhaustiveness check *)
 (************************)
 
+(* A lowered dict pattern: a record pattern of the [dict] type *)
+let is_dict_pattern (p : Typedtree.pattern) =
+  match p.pat_desc with
+  | Tpat_record _ -> (
+    match (Ctype.expand_head p.pat_env p.pat_type).desc with
+    | Tconstr (path, _, _) -> Path.same path Predef.path_dict
+    | _ -> false)
+  | _ -> false
+
 (* conversion from Typedtree.pattern to Parsetree.pattern list *)
 module Conv = struct
   open Parsetree
@@ -1890,6 +1920,35 @@ module Conv = struct
           | Some p -> [loop p]
         in
         mkpat (Ppat_variant (label, Location.mknoloc args))
+      | Tpat_record (subpatterns, _, _) when is_dict_pattern pat ->
+        (* Its labels are the keys, in order of appearance in the match *)
+        let subpatterns =
+          List.sort
+            (fun (_, lbl1, _, _) (_, lbl2, _, _) ->
+              compare lbl1.lbl_pos lbl2.lbl_pos)
+            subpatterns
+        in
+        mkpat
+          (Ppat_dict
+             (List.map
+                (fun (_, lbl, p, optional) ->
+                  {
+                    pdp_key = mknoloc lbl.lbl_name;
+                    pdp_pattern = loop p;
+                    pdp_optional = optional;
+                  })
+                subpatterns))
+      | Tpat_dict entries ->
+        mkpat
+          (Ppat_dict
+             (List.map
+                (fun {tdp_key; tdp_pattern; tdp_optional} ->
+                  {
+                    pdp_key = tdp_key;
+                    pdp_pattern = loop tdp_pattern;
+                    pdp_optional = tdp_optional;
+                  })
+                entries))
       | Tpat_record (subpatterns, _closed_flag, rest) ->
         let fields =
           List.map
@@ -1915,15 +1974,6 @@ let contains_extension pat =
   in
   loop pat;
   !r
-
-(* A dict pattern: a record pattern of the [dict] type *)
-let is_dict_pattern (p : Typedtree.pattern) =
-  match p.pat_desc with
-  | Tpat_record _ -> (
-    match (Ctype.expand_head p.pat_env p.pat_type).desc with
-    | Tconstr (path, _, _) -> Path.same path Predef.path_dict
-    | _ -> false)
-  | _ -> false
 
 let contains_dict_pattern pat =
   let r = ref false in
@@ -2055,6 +2105,10 @@ let rec collect_paths_from_pat r p =
     List.fold_left collect_paths_from_pat r ps
   | Tpat_record (lps, _, _rest) ->
     List.fold_left (fun r (_, _, p, _) -> collect_paths_from_pat r p) r lps
+  | Tpat_dict entries ->
+    List.fold_left
+      (fun r {tdp_pattern} -> collect_paths_from_pat r tdp_pattern)
+      r entries
   | Tpat_variant (_, Some p, _) | Tpat_alias (p, _, _) ->
     collect_paths_from_pat r p
   | Tpat_or (p1, p2, _) ->
@@ -2091,8 +2145,13 @@ let do_check_fragile_gadt = do_check_fragile_param exhaust_gadt
 (* Exported unused clause check *)
 (********************************)
 
+let lower_cases casel =
+  let lower = Dict_pattern.lowering (List.map (fun c -> c.c_lhs) casel) in
+  List.map (fun c -> {c with c_lhs = lower c.c_lhs}) casel
+
 let check_unused pred casel =
   if Warnings.is_active Warnings.Unused_match then
+    let casel = lower_cases casel in
     let rec do_rec pref = function
       | [] -> ()
       | {c_lhs = q; c_guard} :: rem ->
@@ -2164,7 +2223,7 @@ let check_unused pred casel =
 (* Exported irrefutability tests *)
 (*********************************)
 
-let irrefutable pat = le_pat pat omega
+let irrefutable pat = le_pat (Dict_pattern.lowering [pat] pat) omega
 
 (*********************************)
 (* Exported exhaustiveness check *)
@@ -2184,6 +2243,7 @@ let check_partial_param do_check_partial do_check_fragile loc casel =
   total
 
 let check_partial_gadt ?partial_match_warning_hint pred loc casel =
+  let casel = lower_cases casel in
   check_partial_param
     (do_check_partial_gadt ?partial_match_warning_hint pred)
     do_check_fragile_gadt loc casel
@@ -2441,6 +2501,7 @@ let check_ambiguous_bindings =
   let warn0 = Ambiguous_pattern [] in
   fun cases ->
     if is_active warn0 then
+      let cases = lower_cases cases in
       List.iter
         (fun case ->
           match case with

@@ -655,6 +655,8 @@ let rec extract_vars r p =
     match rest with
     | None -> r
     | Some rest -> Set_ident.add r rest.rest_ident)
+  | Tpat_dict entries ->
+    List.fold_left (fun r {tdp_pattern} -> extract_vars r tdp_pattern) r entries
   | Tpat_construct (_, _, pats) -> List.fold_left extract_vars r pats
   | Tpat_array pats -> List.fold_left extract_vars r pats
   | Tpat_variant (_, Some p, _) -> extract_vars r p
@@ -2608,6 +2610,8 @@ let find_in_pat pred =
       List.exists find_rec ps
     | Tpat_record (lpats, _, _rest) ->
       List.exists (fun (_, _, p, _) -> find_rec p) lpats
+    | Tpat_dict entries ->
+      List.exists (fun {tdp_pattern} -> find_rec tdp_pattern) entries
     | Tpat_or (p, q, _) -> find_rec p || find_rec q
     | Tpat_constant _ | Tpat_var _ | Tpat_any | Tpat_variant (_, None, _) ->
       false
@@ -2624,7 +2628,8 @@ let have_mutable_field p =
         | Immutable -> false)
       lps
   | Tpat_alias _ | Tpat_variant _ | Tpat_tuple _ | Tpat_construct _
-  | Tpat_array _ | Tpat_or _ | Tpat_constant _ | Tpat_var _ | Tpat_any ->
+  | Tpat_dict _ | Tpat_array _ | Tpat_or _ | Tpat_constant _ | Tpat_var _
+  | Tpat_any ->
     false
 
 let is_mutable p = find_in_pat have_mutable_field p
@@ -2705,18 +2710,24 @@ let partial_function loc () =
       ]
     loc
 
+let lower_dict_patterns pat_act_list =
+  let lower = Dict_pattern.lowering (List.map fst pat_act_list) in
+  List.map (fun (pat, act) -> (lower pat, act)) pat_act_list
+
 let for_function loc repr param pat_act_list partial =
+  let pat_act_list = lower_dict_patterns pat_act_list in
   compile_matching repr (partial_function loc) param pat_act_list partial
 
 (* In the following two cases, exhaustiveness info is not available! *)
 let for_trywith param pat_act_list =
+  let pat_act_list = lower_dict_patterns pat_act_list in
   compile_matching None
     (fun () -> prim ~primitive:Praise ~args:[param] Location.none)
     param pat_act_list Partial
 
 let simple_for_let loc param pat body =
   compile_matching None (partial_function loc) param
-    [(pat, unguarded body)]
+    (lower_dict_patterns [(pat, unguarded body)])
     Partial
 
 (* Optimize binding of immediate tuples
@@ -2923,6 +2934,7 @@ let bind_opt (v, eo) k =
   | Some e -> Lambda.bind Strict v e k
 
 let for_multiple_match loc paraml pat_act_list partial =
+  let pat_act_list = lower_dict_patterns pat_act_list in
   let v_paraml = List.map param_to_var paraml in
   let paraml = List.map (fun (v, _) -> var v) v_paraml in
   List.fold_right bind_opt v_paraml

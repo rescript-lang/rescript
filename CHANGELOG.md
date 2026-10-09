@@ -14,6 +14,7 @@
 
 #### :boom: Breaking Change
 
+- Record syntax no longer creates or matches dicts, e.g. `let d: dict<int> = {foo: 1}`; it's an error pointing to `dict{...}`. https://github.com/rescript-lang/rescript/pull/8751
 - Remove the call-site `@inlined` attribute, which was parsed but never affected code generation. It is now reported as a misplaced attribute (warning 53). https://github.com/rescript-lang/rescript/pull/8734
 - Remove `@deriving(abstract)` and `@deriving(jsConverter)`. Use record types (with optional fields, mutable fields and `@as` renaming) and polymorphic variants directly instead. https://github.com/rescript-lang/rescript/pull/8729
 
@@ -23,6 +24,7 @@
 
 #### :bug: Bug fix
 
+- Fix exhaustiveness and unused-case checks for dict patterns that match the same key in several cases, print their counter-examples as dict patterns, and reject a key matched twice in one pattern. https://github.com/rescript-lang/rescript/pull/8751
 - Emit `"__proto__"` keys in object literals as computed keys, so they create a property instead of setting the prototype. https://github.com/rescript-lang/rescript/pull/8747
 - Fix the formatter dropping attributes on dict literals and flattening nested dict spreads. https://github.com/rescript-lang/rescript/pull/8746
 - Fix attributes on patterns being duplicated before `as` and dropped on constants when formatting. https://github.com/rescript-lang/rescript/pull/8750
@@ -54,6 +56,7 @@
 
 #### :house: Internal
 
+- Represent dict patterns with a dedicated `Tpat_dict` typed tree node. https://github.com/rescript-lang/rescript/pull/8751
 - Represent dict patterns with a dedicated `Ppat_dict` node. https://github.com/rescript-lang/rescript/pull/8749
 - Represent dict literals with dedicated `Pexp_dict` and `Texp_dict` nodes. https://github.com/rescript-lang/rescript/pull/8746
 - Forward-port integer range pattern regression coverage from v12 to v13. https://github.com/rescript-lang/rescript/pull/8718

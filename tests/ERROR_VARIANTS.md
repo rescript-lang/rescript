@@ -211,6 +211,8 @@ Source: `type error` in [typecore.ml](../compiler/ml/typecore.ml).
 | `Apply_non_function` | ✓ | `apply_non_function.res` | |
 | `Apply_wrong_label` | ✓ | `apply_wrong_label.res` | |
 | `Label_multiply_defined` | ✓ | `label_multiply_defined_literal.res` | |
+| `Dict_key_multiply_defined` | ✓ | `dict_pattern_duplicate_key.res` | |
+| `Record_syntax_on_dict_type` | ✓ | `dict_record_literal.res`, `dict_record_pattern.res`, `dict_record_update.res` | |
 | `Labels_missing` | ✓ | `missing_label.res`, `missing_labels.res` | |
 | `Label_not_mutable` | ✓ | `label_not_mutable.res` | |
 | `Wrong_name` | ✓ | `wrong_name_record_field.res`, `Cross_record_extra_field` (multi) | |

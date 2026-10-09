@@ -102,6 +102,25 @@ let untype typed =
       let closed_flag = if saw_optional_rewrite then Closed else closed_flag in
       mkpat
         (Ppat_record (fields, closed_flag, Option.map untype_record_rest rest))
+    | Tpat_dict entries ->
+      (* An entry's pattern matches the key's value as an option *)
+      let entry {tdp_key; tdp_pattern} =
+        match tdp_pattern.pat_desc with
+        | Tpat_any -> None
+        | Tpat_construct (_, cstr, [value]) when cstr.cstr_name = "Some" ->
+          Some
+            {pdp_key = tdp_key; pdp_pattern = loop value; pdp_optional = false}
+        | Tpat_var _ | Tpat_alias _ | Tpat_constant _ | Tpat_tuple _
+        | Tpat_construct _ | Tpat_variant _ | Tpat_record _ | Tpat_dict _
+        | Tpat_array _ | Tpat_or _ ->
+          Some
+            {
+              pdp_key = tdp_key;
+              pdp_pattern = loop tdp_pattern;
+              pdp_optional = true;
+            }
+      in
+      mkpat (Ppat_dict (List.filter_map entry entries))
     | Tpat_array lst -> mkpat (Ppat_array (List.map loop lst))
   in
   loop typed
