@@ -4054,17 +4054,14 @@ and type_function ~async loc attrs env ty_expected_
 and type_label_access env srecord lid =
   let record = type_exp ~context:None ~recarg:Allowed env srecord in
   let ty_exp = record.exp_type in
+  (match (expand_head env ty_exp).desc with
+  | Tconstr (path, _, _) when Path.same path Predef.path_dict ->
+    (* [someDict.name]: point to [Dict.get] *)
+    raise (Error (lid.loc, env, Field_access_on_dict_type))
+  | _ -> ());
   let opath =
     try
       match extract_concrete_typedecl env ty_exp with
-      | p0, _, {type_attributes}
-        when Path.same p0 Predef.path_dict
-             && Dict_type_helpers.has_dict_attribute type_attributes ->
-        (* [dict] Cover the case when trying to direct field access on a dict, e.g. `someDict.name`.
-           We need to disallow this because the fact that a dict is represented as a single magic
-           field record internally is just an implementation detail, and not intended to be exposed
-           to the user. *)
-        raise (Error (lid.loc, env, Field_access_on_dict_type))
       | p0, p, {type_kind = Type_record _} -> Some (p0, p)
       | _ -> None
     with Not_found -> None
