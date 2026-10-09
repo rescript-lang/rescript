@@ -585,7 +585,7 @@ To build a new version and release it on NPM, follow these steps:
 1. Create a PR with the following changes to prepare for development of the next version:
    - Increment the `EXPECTED_VERSION` number in `yarn.config.cjs` for the next version.
    - Run `yarn constraints --fix` to take that version number over into other files.
-   - Update `CHANGELOG.md` and add an entry for the next version, e.g., "10.0.0-beta.2 (Unreleased)"
+   - Run `yarn changelog:open` to add the empty "(Unreleased)" section for the next version to `CHANGELOG.md`, and apply the `changelog:release` label to the PR.
 
 ## Debugging issues from CI builds
 

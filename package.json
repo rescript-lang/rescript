@@ -60,6 +60,7 @@
     "changelog:check": "node scripts/changelog.js check",
     "changelog:preview": "node scripts/changelog.js preview",
     "changelog:release": "node scripts/changelog.js release",
+    "changelog:open": "node scripts/changelog.js open",
     "test-changelog": "node --test scripts/changelog.test.js"
   },
   "files": [

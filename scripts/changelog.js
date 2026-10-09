@@ -15,6 +15,8 @@ export const categories = {
 
 const prLink =
   /https:\/\/github\.com\/rescript-lang\/rescript(?:-compiler)?\/pull\/([1-9]\d*)/;
+export const placeholderLink =
+  "https://github.com/rescript-lang/rescript/pull/XXXX";
 const trailingPrLinks = new RegExp(
   `${prLink.source}(?:\\s+${prLink.source})*$`,
 );
@@ -27,6 +29,11 @@ export function parseFragment(name, content) {
     );
   }
   const text = content.trim();
+  if (text.includes(placeholderLink)) {
+    throw new Error(
+      `${name}: replace the placeholder ${placeholderLink} with the PR link`,
+    );
+  }
   const bullets = text.split(/\n(?=- )/);
   const invalid = bullets.some(
     bullet =>
@@ -89,10 +96,14 @@ export function renderFragments(fragments) {
     .join("");
 }
 
-export function prepareRelease(changelog, version, fragments) {
-  const headings = [...changelog.matchAll(/^# (.+)$/gm)].filter(
+function versionHeadings(changelog) {
+  return [...changelog.matchAll(/^# (.+)$/gm)].filter(
     match => match[1] !== "Changelog",
   );
+}
+
+export function prepareRelease(changelog, version, fragments) {
+  const headings = versionHeadings(changelog);
   const first = headings[0];
   if (!first || first[1] !== `${version} (Unreleased)`) {
     throw new Error(
@@ -133,17 +144,41 @@ export function prepareRelease(changelog, version, fragments) {
   );
 }
 
-export function isExempt(pullRequest) {
-  const labels = pullRequest.labels.map(label => label.name);
+// Adds an empty unreleased section with every category heading, so that the
+// next release can insert fragments into it.
+export function openSection(changelog, version) {
+  const [first] = versionHeadings(changelog);
+  if (first?.[1].endsWith(" (Unreleased)")) {
+    throw new Error(`${first[1]} must be released first`);
+  }
+  if (first?.[1] === version) {
+    throw new Error(`${version} has already been released`);
+  }
+  const index = first?.index ?? changelog.length;
   return (
-    labels.includes("changelog:skip") ||
-    labels.includes("changelog:release") ||
-    pullRequest.user.login === "dependabot[bot]"
+    changelog.slice(0, index) +
+    `# ${version} (Unreleased)\n\n${Object.values(categories).join("\n\n")}\n\n` +
+    changelog.slice(index)
   );
 }
 
-export function checkRequirement(files, exempt = false) {
-  if (exempt) return;
+export function checkPullRequest(files, pullRequest) {
+  const labels = pullRequest.labels.map(label => label.name);
+  if (
+    files.some(file => file.name === "CHANGELOG.md") &&
+    !labels.includes("changelog:release")
+  ) {
+    throw new Error(
+      "Add a changelog fragment instead of editing CHANGELOG.md. Release PRs use the changelog:release label.",
+    );
+  }
+  if (
+    labels.includes("changelog:skip") ||
+    labels.includes("changelog:release") ||
+    pullRequest.user.login === "dependabot[bot]"
+  ) {
+    return;
+  }
   if (
     !files.some(
       file =>
@@ -158,8 +193,10 @@ export function checkRequirement(files, exempt = false) {
 }
 
 export async function run(command, root = process.cwd()) {
-  if (!["check", "preview", "release"].includes(command)) {
-    throw new Error("Usage: node scripts/changelog.js check|preview|release");
+  if (!["check", "preview", "release", "open"].includes(command)) {
+    throw new Error(
+      "Usage: node scripts/changelog.js check|preview|release|open",
+    );
   }
   const fragments = await readFragments(root);
   if (command === "check") {
@@ -182,7 +219,7 @@ export async function run(command, root = process.cwd()) {
       for (let i = 0; i + 1 < diff.length; i += 2) {
         files.push({ status: diff[i], name: diff[i + 1] });
       }
-      checkRequirement(files, isExempt(pullRequest));
+      checkPullRequest(files, pullRequest);
     }
     return;
   }
@@ -194,12 +231,12 @@ export async function run(command, root = process.cwd()) {
     await fs.readFile(path.join(root, "package.json"), "utf8"),
   );
   const target = path.join(root, "CHANGELOG.md");
-  const output = prepareRelease(
-    await fs.readFile(target, "utf8"),
-    version,
-    fragments,
-  );
-  await fs.writeFile(target, output);
+  const changelog = await fs.readFile(target, "utf8");
+  if (command === "open") {
+    await fs.writeFile(target, openSection(changelog, version));
+    return;
+  }
+  await fs.writeFile(target, prepareRelease(changelog, version, fragments));
   for (const fragment of fragments) {
     await fs.unlink(path.join(root, "changelog", fragment.name));
   }

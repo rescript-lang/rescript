@@ -5,9 +5,10 @@ import path from "node:path";
 import test from "node:test";
 import {
   categories,
-  checkRequirement,
-  isExempt,
+  checkPullRequest,
+  openSection,
   parseFragment,
+  placeholderLink,
   prepareRelease,
   readFragments,
   renderFragments,
@@ -30,6 +31,11 @@ test("validates category names and bullet content", () => {
   ]) {
     assert.throws(() => parseFragment(name, content));
   }
+  assert.throws(
+    () =>
+      parseFragment("recovery.fix.md", `- Fix recovery. ${placeholderLink}`),
+    /replace the placeholder/,
+  );
   assert.equal(
     parseFragment("recovery.fix.md", `${note}\n${note}`).text,
     `${note}\n${note}`,
@@ -98,26 +104,56 @@ test("inserts notes containing replacement patterns verbatim", () => {
   assert.ok(output.includes(`${categories.fix}\n\n${text}\n`));
 });
 
-test("exempts labelled and Dependabot pull requests", () => {
+test("checks pull request fragments and CHANGELOG.md edits", () => {
   const pullRequest = (login, labels = []) => ({
     user: { login },
     labels: labels.map(name => ({ name })),
   });
-  assert.equal(isExempt(pullRequest("someone")), false);
-  assert.equal(isExempt(pullRequest("someone", ["changelog:skip"])), true);
-  assert.equal(isExempt(pullRequest("someone", ["changelog:release"])), true);
-  assert.equal(isExempt(pullRequest("dependabot[bot]")), true);
+  const someone = pullRequest("someone");
+  const fragment = { status: "A", name: "changelog/new.fix.md" };
+  const changelogEdit = { status: "M", name: "CHANGELOG.md" };
+  checkPullRequest([fragment], someone);
+  for (const files of [
+    [],
+    [{ status: "M", name: "changelog/existing.fix.md" }],
+    [{ status: "A", name: "changelog/README.md" }],
+    [fragment, changelogEdit],
+  ]) {
+    assert.throws(() => checkPullRequest(files, someone));
+  }
+  checkPullRequest([], pullRequest("someone", ["changelog:skip"]));
+  checkPullRequest([], pullRequest("dependabot[bot]"));
+  for (const author of [
+    pullRequest("someone", ["changelog:skip"]),
+    pullRequest("dependabot[bot]"),
+  ]) {
+    assert.throws(() => checkPullRequest([changelogEdit], author), /CHANGELOG/);
+  }
+  checkPullRequest(
+    [changelogEdit],
+    pullRequest("someone", ["changelog:release"]),
+  );
 });
 
-test("requires newly added fragments, with explicit exemptions", () => {
-  assert.throws(() =>
-    checkRequirement([{ status: "M", name: "changelog/existing.fix.md" }]),
+test("opens the next unreleased section for the following release", () => {
+  const released = prepareRelease(changelog, "13.0.0", [
+    parseFragment("recovery.fix.md", note),
+  ]);
+  const opened = openSection(released, "13.0.1");
+  assert.equal(
+    opened,
+    released.replace(
+      "# 13.0.0\n",
+      `# 13.0.1 (Unreleased)\n\n${Object.values(categories).join("\n\n")}\n\n# 13.0.0\n`,
+    ),
   );
-  assert.throws(() =>
-    checkRequirement([{ status: "A", name: "changelog/README.md" }]),
+  assert.ok(
+    prepareRelease(opened, "13.0.1", [
+      parseFragment("later.feature.md", note),
+    ]).includes(`# 13.0.1\n\n${categories.breaking}`),
   );
-  checkRequirement([{ status: "A", name: "changelog/new.fix.md" }]);
-  checkRequirement([], true);
+  assert.throws(() => openSection(opened, "13.0.2"), /must be released/);
+  assert.throws(() => openSection(released, "13.0.0"), /already been released/);
 });
 
 test("validates before mutation, sorts fragments, consumes only on release", async t => {
