@@ -48,12 +48,6 @@ val update_entries :
   change list ->
   entry list option
 
-val polling_build_changes :
-  previous:entry list ->
-  trigger:entry list ->
-  before_build:entry list ->
-  change list
-
 val changes_are_incremental : change list -> bool
 
 val reconciliation_baseline :

@@ -102,17 +102,14 @@ let tests =
     [Watch_snapshot.{path; state = File {modified = 1.; size = 1; digest}}]
   in
   let previous = snapshot "A.res" "old-a" @ snapshot "B.res" "old-b" in
-  let trigger = snapshot "A.res" "new-a" @ snapshot "B.res" "old-b" in
   let before_build = snapshot "A.res" "new-a" @ snapshot "B.res" "new-b" in
-  let polling_changes =
-    Watch_snapshot.polling_build_changes ~previous ~trigger ~before_build
-  in
+  let polling_changes = Watch_snapshot.changes_between previous before_build in
   check
     (List.map
        (fun (change : Watch_snapshot.change) -> change.path)
        polling_changes
     = ["A.res"; "B.res"])
-    "polling includes edits that arrive after the triggering snapshot";
+    "polling compares the previous snapshot with the one taken before the build";
   check
     (Watch_snapshot.changes_are_incremental polling_changes)
     "polling source modifications use incremental presentation";
