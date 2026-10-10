@@ -56,14 +56,6 @@ The manifest comparison intentionally recreates its fixture between runners.
 Using only each implementation's `clean` command would allow a Rust-only file
 to survive into the OCaml run and could conceal a missing-output bug.
 
-`filesystem_audit.sh` writes normalized `*.categories.tsv`, `*.paths.tsv`, and
-`*.processes.tsv` files when `KEEP_REWATCH_FILESYSTEM_AUDIT=1` is set. The last
-form attributes each path operation category to the executable recorded for
-that traced process, separating driver work from compiler, PPX, and helper
-work. Processes which inherit a trace file without a subsequent `execve` are
-reported as `inherited-process`; do not assume those calls belong to the
-driver without inspecting the raw trace.
-
 Build both release executables and run:
 
 ```sh
@@ -95,51 +87,10 @@ stdout/stderr for investigation. For a quick correctness-only check, an odd run
 count below five is accepted only with `REWATCH_ALLOW_SMOKE_RUN=1`; its timing
 is not a meaningful measurement.
 
-## Filesystem-work audit
-
-Pipe-based subprocess capture has removed the intentional temporary capture
-files. Run the second orchestration audit on Linux with:
-
-```sh
-rewatch-ocaml/bench/filesystem_audit.sh \
-  rewatch/target/release/rescript \
-  _build/default/rewatch-ocaml/rescript_ocaml.exe
-```
-
-It traces isolated clean, unchanged, and single-edit builds with `strace`,
-normalizes each fixture root, retains operations whose target is inside that
-root, and reports per-path operation multisets plus metadata, open,
-directory-scan, create, rename, remove, and execute categories. Set
-`KEEP_REWATCH_FILESYSTEM_AUDIT=1` to retain normalized manifests and raw traces
-for investigation.
-
-Do not gate on the raw process-wide syscall total: Rust, OCaml, libc, the
-dynamic loader, and subprocess startup legitimately perform different
-toolchain-level accesses. Report those separately, and treat repeated accesses
-to the same project artifact or discovery path as the primary evidence of
-superfluous orchestration work. The existing compiler-work and artifact checks
-must remain enabled so fewer filesystem calls cannot conceal skipped work.
-
-For the ordinary-edit path inside one long-lived watcher, run:
-
-```sh
-rewatch-ocaml/bench/watch_filesystem_audit.sh \
-  rewatch/target/release/rescript \
-  _build/default/rewatch-ocaml/rescript_ocaml.exe
-```
-
-This starts each implementation on an isolated small project, waits for its
-initial build hook, traces one dependency-preserving source edit, and stops the
-watcher through its lock file. Only calls timestamped between the edit and the
-successful incremental-build hook enter the normalized reports, so initial
-discovery and shutdown do not obscure retained-state work. Set
-`KEEP_REWATCH_WATCH_AUDIT=1` to retain raw traces, normalized path/category
-tables, process attribution, and command output. As with the short-lived audit,
-project-local repeated paths and compiler work are the useful comparison; raw
-runtime-wide syscall totals are diagnostic rather than an acceptance limit.
+## Watch performance gate
 
 The retained-watch performance and resource gate exercises several ordinary
-edits through the same long-lived watcher:
+edits through one long-lived watcher:
 
 ```sh
 rewatch-ocaml/bench/watch_performance_gate.sh \
@@ -152,7 +103,7 @@ It warms both implementations, interleaves an odd number of timed edits,
 requires byte-identical generated JavaScript and normalized parser/compiler
 argument logs, and samples file descriptors, tasks, and RSS after every build.
 This catches retained-state implementations that appear fast by skipping work,
-as well as resource growth that a one-event syscall trace cannot show. The
+as well as resource growth that a single build cannot show. The
 default median-latency limit is 150% of Rust because individual watch events
 include operating-system notification and 50 ms polling intervals; override it
 with `REWATCH_WATCH_PERFORMANCE_THRESHOLD_PERCENT` only for investigation.
@@ -161,22 +112,3 @@ authoritative general performance criterion. Set
 `KEEP_REWATCH_WATCH_PERFORMANCE=1` to retain output, compiler-call logs,
 latencies, and fixtures. This gate requires Linux `/proc`, GNU-compatible
 millisecond `date`, and `setsid`.
-
-## Source-size snapshot
-
-Run `bench/source_size.sh` with `cloc` installed to record a reproducible
-maintainability snapshot. The production comparison excludes Rust's explicitly
-out-of-scope telemetry module and reports its inline `#[cfg(test)]` sections as
-tests rather than implementation. Both OCaml platform backends count because
-both remain maintained production source. All tracked OCaml test harnesses,
-fixtures, and configuration files are reported together but separately from
-implementation; benchmark tooling includes every executable shell/JavaScript
-file in `bench`, including this counting script itself. The report also lists
-the ten largest production modules and test/tooling files so growth and mixed
-responsibilities are visible without treating line count as a target.
-
-Source lines are an observation, not an acceptance threshold. A smaller port
-can indicate less machinery, but missing compatibility, weak tests, compressed
-code, or too few explanatory comments can also reduce the number. Behavioral
-and work equivalence, platform support, performance, module size, and review
-findings remain the actual quality gates.
