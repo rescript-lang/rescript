@@ -299,8 +299,6 @@ let run =
     ~report_native_fallback
 
 module For_test = struct
-  let is_control_file_name = Watch_scope.is_control_file_name
-
   let run_with_native_failure ~message ~on_fallback =
     run_with_native_create
       ~native_create:(fun ~paths:_ -> Error message)

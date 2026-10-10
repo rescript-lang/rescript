@@ -12,9 +12,9 @@ let signal_is_ignored signal =
 let tests =
   "watcher_tests" >:: fun _context ->
   check
-    (Watcher.For_test.is_control_file_name "rescript.json"
-    && Watcher.For_test.is_control_file_name "bsconfig.json"
-    && Watcher.For_test.is_control_file_name "package.json")
+    (Watch_scope.is_control_file_name "rescript.json"
+    && Watch_scope.is_control_file_name "bsconfig.json"
+    && Watch_scope.is_control_file_name "package.json")
     "configuration and package identity files trigger control-file rebuilds";
   Test_support.with_temp_dir "rewatch-watch-scope-metadata-" (fun root ->
       Test_support.write_file

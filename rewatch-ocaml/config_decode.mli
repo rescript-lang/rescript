@@ -1,6 +1,5 @@
 val fail : string -> string -> 'a
 val fail_read : string -> string -> 'a
-val strip_read_path : string -> string -> string
 val member : string -> (string * 'a) list -> 'a option
 
 val optional_member :

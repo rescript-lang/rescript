@@ -5,8 +5,6 @@ type change = {path: string; kind: change_kind}
 type build_result = Succeeded | Failed
 
 module For_test : sig
-  val is_control_file_name : string -> bool
-
   val run_with_native_failure :
     message:string ->
     on_fallback:(string -> unit) ->

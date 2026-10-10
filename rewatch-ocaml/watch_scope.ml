@@ -174,9 +174,9 @@ let discover ~root ~prod ~features ~filter =
           add_path package_root false;
           try
             let requested =
-              Package_traversal.find_feature_selection graph package_root
-              |> Option.map Package_traversal.feature_selection_to_option
-              |> Option.value ~default:None
+              Option.bind
+                (Package_traversal.find_feature_selection graph package_root)
+                Package_traversal.feature_selection_to_option
             in
             Source.active_sources config
               ~prod:(Package_traversal.source_discovery_prod ~prod ~is_local)

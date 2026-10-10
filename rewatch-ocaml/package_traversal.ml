@@ -56,7 +56,7 @@ let requests ~prod ~is_local (config : Config.t) =
     (fun declaration -> {kind = Regular; declaration})
     config.dependencies
   @
-  if prod || not is_local then []
+  if source_discovery_prod ~prod ~is_local then []
   else
     List.map
       (fun declaration -> {kind = Development; declaration})
@@ -102,10 +102,6 @@ let discover ~root_config ~prod ~features ~resolution =
 module For_test = struct
   let create_feature_requests () = Hashtbl.create 4
   let add_feature_request = add_feature_request
-  let find_feature_selection requests root =
-    Hashtbl.find_opt requests root
-    |> Option.map (function
-      | All_requested -> All_features
-      | Selected_requested features ->
-        Selected_features (String_set.elements features))
+  let find_feature_selection feature_requests root =
+    find_feature_selection {packages = []; feature_requests} root
 end

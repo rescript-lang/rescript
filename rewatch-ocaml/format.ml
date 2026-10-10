@@ -1,15 +1,12 @@
 exception Error of string
 
-let strip_path path message =
-  String_util.strip_prefix ~prefix:(path ^ ": ") message
-
 let with_file_error ~action path f =
   try f () with
   | Sys_error message ->
     raise
       (Error
          (Printf.sprintf "Could not %s %s: %s" action path
-            (strip_path path message)))
+            (String_util.strip_path path message)))
   | Unix.Unix_error (error, _, _) ->
     raise
       (Error

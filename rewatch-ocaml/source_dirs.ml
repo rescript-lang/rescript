@@ -1,13 +1,10 @@
-type scan = {
-  build_root: string;
-  scan_dirs: string list;
-  also_scan_build_root: bool;
-}
+type scan = {build_root: string; scan_dirs: string list}
 
+(* Every scan includes its build root, as in Rust's .sourcedirs.json. *)
 let scan_json scan =
   `Assoc
     [
-      ("also_scan_build_root", `Bool scan.also_scan_build_root);
+      ("also_scan_build_root", `Bool true);
       ("build_root", `String scan.build_root);
       ("scan_dirs", `List (List.map (fun path -> `String path) scan.scan_dirs));
     ]
@@ -87,11 +84,7 @@ let write_build ~(root_config : Config.t) session =
           if relative_root = "" then File_util.path_of_parts "" ["lib"; "bs"]
           else File_util.path_of_parts relative_root ["lib"; "bs"]
         in
-        {
-          build_root;
-          scan_dirs = source_directories package;
-          also_scan_build_root = true;
-        })
+        {build_root; scan_dirs = source_directories package})
     |> List.sort (fun (left : scan) right ->
         String.compare left.build_root right.build_root)
   in
