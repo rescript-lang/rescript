@@ -22,7 +22,6 @@ val find_node : 'a index -> string -> 'a
 val dependencies : 'a index -> string -> string list
 val dependents : 'a index -> string -> string list
 val dependency_count : 'a index -> string -> int
-val shortest_cycle_in_index : 'a index -> string list option
 
 val cycle_blocked_nodes :
   'a list -> name:('a -> string) -> deps:('a -> string list) -> 'a list

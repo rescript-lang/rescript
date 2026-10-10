@@ -62,10 +62,7 @@ let run_parallel_map_with_notifier ~max_jobs ~poll ~on_complete notifier values
   in
   try
     schedule indexed;
-    Array.to_list results
-    |> List.map (function
-      | Some result -> result
-      | None -> raise (Error "subprocess result was not collected"))
+    Array.to_list results |> List.map Option.get
   with exn ->
     Child.terminate_running !active;
     raise exn
@@ -266,7 +263,6 @@ let create_worker_pool ~max_jobs notifier =
 
 let submit_pool_task pool payload task =
   Mutex.protect pool.mutex (fun () ->
-      if pool.stopping then raise (Error "subprocess worker pool is stopping");
       Queue.add (payload, task) pool.queued;
       Condition.signal pool.work_available)
 
@@ -375,10 +371,8 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
         Hashtbl.add priorities work.key 1;
         Queue.add work.key leaves))
     works;
-  let prioritized = ref 0 in
   while not (Queue.is_empty leaves) do
     let key = Queue.take leaves in
-    incr prioritized;
     let key_priority = Hashtbl.find priorities key in
     Graph.dependencies graph key
     |> List.iter (fun dependency ->
@@ -392,18 +386,6 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
         Hashtbl.replace remaining_dependents dependency remaining;
         if remaining = 0 then Queue.add dependency leaves)
   done;
-  let () =
-    if !prioritized <> count then
-      let cycle =
-        Graph.shortest_cycle_in_index graph |> Option.value ~default:[]
-      in
-      let details =
-        match cycle with
-        | [] -> ""
-        | cycle -> ": " ^ String.concat " -> " cycle
-      in
-      raise (Error ("subprocess dependency graph contains a cycle" ^ details))
-  in
   let ready = ref Work_ready.empty in
   let add_ready work =
     ready := Work_ready.add (Hashtbl.find priorities work.key, work.key) !ready
@@ -412,7 +394,6 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
     (fun work -> if Hashtbl.find pending work.key = 0 then add_ready work)
     works;
   let in_flight = ref 0 in
-  let completed = ref 0 in
   let stopped = ref false in
   let errors = ref [] in
   let record_error work exn =
@@ -424,7 +405,6 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
     | Continue_independent_work -> errors := (work.key, exn) :: !errors
   in
   let complete work =
-    incr completed;
     Graph.dependents graph work.key
     |> List.iter (fun dependent_key ->
         let remaining = Hashtbl.find pending dependent_key - 1 in
@@ -455,8 +435,6 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
         |> List.sort (fun (first, _) (second, _) -> String.compare first second)
       with
       | (_, exn) :: _ -> raise exn
-      | [] when !completed <> count ->
-        raise (Error "subprocess dependency graph stalled")
       | [] -> ()
     else
       let completion = await_pool_completion ~poll pool in

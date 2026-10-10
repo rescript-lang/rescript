@@ -2252,11 +2252,6 @@ if "$port" build "$multiple_cycles" \
   exit 1
 fi
 grep "circular dependency" "$multiple_cycles/output.log" >/dev/null
-if grep "subprocess dependency graph contains a cycle" \
-  "$multiple_cycles/output.log" >/dev/null; then
-  echo "multiple cycles escaped build preparation" >&2
-  exit 1
-fi
 test -f "$multiple_cycles/src/Valid.mjs"
 test ! -f "$multiple_cycles/src/A.mjs"
 test ! -f "$multiple_cycles/src/B.mjs"
