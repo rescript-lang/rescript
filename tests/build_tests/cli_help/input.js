@@ -8,88 +8,284 @@ import { normalizeNewlines } from "#dev/utils";
 const { rescript } = setup(import.meta.dirname);
 
 const cliHelp =
-  "ReScript - Fast, Simple, Fully Typed JavaScript from the Future\n" +
+  "NAME\n" +
+  "       rescript - Fast, Simple, Fully Typed JavaScript from the Future\n" +
   "\n" +
-  "Usage: rescript [OPTIONS] <COMMAND>\n" +
+  "SYNOPSIS\n" +
+  "       rescript [COMMAND] …\n" +
   "\n" +
-  "Commands:\n" +
-  "  build          Build the project (default command)\n" +
-  "  watch          Build, then start a watcher\n" +
-  "  clean          Clean the build artifacts\n" +
-  "  format         Format ReScript files\n" +
-  "  compiler-args  Print the compiler arguments for a ReScript source file\n" +
-  "  help           Print this message or the help of the given subcommand(s)\n" +
+  "NOTES\n" +
+  "       If no command is provided, the build command is run by default. See\n" +
+  "       rescript help build for more information.\n" +
   "\n" +
-  "Options:\n" +
-  "  -v, --verbose...  Increase logging verbosity\n" +
-  "  -q, --quiet...    Decrease logging verbosity\n" +
-  "  -h, --help        Print help\n" +
-  "  -V, --version     Print version\n" +
+  "       To create a new ReScript project, or to add ReScript to an existing\n" +
+  "       project, use https://github.com/rescript-lang/create-rescript-app.\n" +
   "\n" +
-  "Notes:\n" +
-  "  - If no command is provided, the build command is run by default. See `rescript help build` for more information.\n" +
-  "  - To create a new ReScript project, or to add ReScript to an existing project, use https://github.com/rescript-lang/create-rescript-app.\n";
+  "COMMANDS\n" +
+  "       build [OPTION]… [FOLDER]\n" +
+  "           Build the project.\n" +
+  "\n" +
+  "       clean [--prod] [--quiet] [--verbose] [OPTION]… [FOLDER]\n" +
+  "           Clean build artifacts.\n" +
+  "\n" +
+  "       compiler-args [--quiet] [--verbose] [OPTION]… PATH\n" +
+  "           Print compiler arguments for a ReScript source file.\n" +
+  "\n" +
+  "       format [OPTION]… [FILES]…\n" +
+  "           Format ReScript files.\n" +
+  "\n" +
+  "       help [OPTION]… [COMMAND]\n" +
+  "           Print this message or command help.\n" +
+  "\n" +
+  "       watch [OPTION]… [FOLDER]\n" +
+  "           Build, then start a watcher.\n" +
+  "\n" +
+  "ARGUMENTS\n" +
+  "       FOLDER (absent=.)\n" +
+  "           Path to the project or subproject containing rescript.json.\n" +
+  "\n" +
+  "OPTIONS\n" +
+  "       -a COMMAND, --after-build=COMMAND\n" +
+  "           Run an additional command after a successful build.\n" +
+  "\n" +
+  "       -f REGEX, --filter=REGEX\n" +
+  "           Filter source files by regular expression.\n" +
+  "\n" +
+  "       --features=FEATURES\n" +
+  "           Restrict the current package to comma-separated features.\n" +
+  "\n" +
+  "       -n, --no-timing\n" +
+  "           Disable output timing.\n" +
+  "\n" +
+  "       --prod\n" +
+  "           Skip development dependencies and sources.\n" +
+  "\n" +
+  "       -q, --quiet\n" +
+  "           Decrease logging verbosity.\n" +
+  "\n" +
+  "       -v, --verbose\n" +
+  "           Increase logging verbosity.\n" +
+  "\n" +
+  "       --warn-error=WARNINGS\n" +
+  "           Override warning configuration from rescript.json.\n" +
+  "\n" +
+  "COMMON OPTIONS\n" +
+  "       --help[=FMT] (default=auto)\n" +
+  "           Show this help in format FMT. The value FMT must be one of auto,\n" +
+  "           pager, groff or plain. With auto, the format is pager or plain\n" +
+  "           whenever the TERM env var is dumb or undefined.\n" +
+  "\n" +
+  "       --version\n" +
+  "           Show version information.\n" +
+  "\n" +
+  "EXIT STATUS\n" +
+  "       rescript exits with:\n" +
+  "\n" +
+  "       0   on success.\n" +
+  "\n" +
+  "       1   on build, configuration, or file system errors.\n" +
+  "\n" +
+  "       2   on command-line usage errors and invalid package dependencies.\n" +
+  "\n" +
+  "       129-143\n" +
+  "           when interrupted by a signal (128 plus the signal number).\n" +
+  "\n";
 
 const buildHelp =
-  "Build the project (default command)\n" +
+  "NAME\n" +
+  "       rescript-build - Build the project.\n" +
   "\n" +
-  "Usage: rescript build [OPTIONS] [FOLDER]\n" +
+  "SYNOPSIS\n" +
+  "       rescript build [OPTION]… [FOLDER]\n" +
   "\n" +
-  "Arguments:\n" +
-  "  [FOLDER]  Path to the project or subproject. This folder must contain a rescript.json file [default: .]\n" +
+  "ARGUMENTS\n" +
+  "       FOLDER (absent=.)\n" +
+  "           Path to the project or subproject containing rescript.json.\n" +
   "\n" +
-  "Options:\n" +
-  "  -f, --filter <FILTER>            Filter source files by regex. E.g., filter out test files for compilation while doing feature work\n" +
-  "  -v, --verbose...                 Increase logging verbosity\n" +
-  "  -a, --after-build <AFTER_BUILD>  Run an additional command after build. E.g., play a sound or run a test suite when done compiling\n" +
-  "  -q, --quiet...                   Decrease logging verbosity\n" +
-  '      --warn-error <WARN_ERROR>    Override warning configuration from rescript.json. Example: --warn-error "+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110"\n' +
-  "      --features <FEATURES>        Restrict the current package to a comma-separated set of features. Only source directories tagged with one of these features (plus untagged ones, and features they transitively imply through the top-level `features` map) are compiled. Omit the flag to build with all features active. Example: --features native,experimental\n" +
-  "  -n, --no-timing [<NO_TIMING>]    Disable output timing [default: false] [possible values: true, false]\n" +
-  '      --prod                       Skip dev-dependencies and dev sources (type: "dev")\n' +
-  "  -h, --help                       Print help\n";
+  "OPTIONS\n" +
+  "       -a COMMAND, --after-build=COMMAND\n" +
+  "           Run an additional command after a successful build.\n" +
+  "\n" +
+  "       -f REGEX, --filter=REGEX\n" +
+  "           Filter source files by regular expression.\n" +
+  "\n" +
+  "       --features=FEATURES\n" +
+  "           Restrict the current package to comma-separated features.\n" +
+  "\n" +
+  "       -n, --no-timing\n" +
+  "           Disable output timing.\n" +
+  "\n" +
+  "       --prod\n" +
+  "           Skip development dependencies and sources.\n" +
+  "\n" +
+  "       -q, --quiet\n" +
+  "           Decrease logging verbosity.\n" +
+  "\n" +
+  "       -v, --verbose\n" +
+  "           Increase logging verbosity.\n" +
+  "\n" +
+  "       --warn-error=WARNINGS\n" +
+  "           Override warning configuration from rescript.json.\n" +
+  "\n" +
+  "COMMON OPTIONS\n" +
+  "       --help[=FMT] (default=auto)\n" +
+  "           Show this help in format FMT. The value FMT must be one of auto,\n" +
+  "           pager, groff or plain. With auto, the format is pager or plain\n" +
+  "           whenever the TERM env var is dumb or undefined.\n" +
+  "\n" +
+  "       --version\n" +
+  "           Show version information.\n" +
+  "\n" +
+  "EXIT STATUS\n" +
+  "       rescript build exits with:\n" +
+  "\n" +
+  "       0   on success.\n" +
+  "\n" +
+  "       1   on build, configuration, or file system errors.\n" +
+  "\n" +
+  "       2   on command-line usage errors and invalid package dependencies.\n" +
+  "\n" +
+  "       129-143\n" +
+  "           when interrupted by a signal (128 plus the signal number).\n" +
+  "\n" +
+  "SEE ALSO\n" +
+  "       rescript(1)\n" +
+  "\n";
 
 const cleanHelp =
-  "Clean the build artifacts\n" +
+  "NAME\n" +
+  "       rescript-clean - Clean build artifacts.\n" +
   "\n" +
-  "Usage: rescript clean [OPTIONS] [FOLDER]\n" +
+  "SYNOPSIS\n" +
+  "       rescript clean [--prod] [--quiet] [--verbose] [OPTION]… [FOLDER]\n" +
   "\n" +
-  "Arguments:\n" +
-  "  [FOLDER]  Path to the project or subproject. This folder must contain a rescript.json file [default: .]\n" +
+  "ARGUMENTS\n" +
+  "       FOLDER (absent=.)\n" +
+  "           Path to the project or subproject containing rescript.json.\n" +
   "\n" +
-  "Options:\n" +
-  '      --prod        Skip dev-dependencies and dev sources (type: "dev")\n' +
-  "  -v, --verbose...  Increase logging verbosity\n" +
-  "  -q, --quiet...    Decrease logging verbosity\n" +
-  "  -h, --help        Print help\n";
+  "OPTIONS\n" +
+  "       --prod\n" +
+  "           Skip development dependencies and sources.\n" +
+  "\n" +
+  "       -q, --quiet\n" +
+  "           Decrease logging verbosity.\n" +
+  "\n" +
+  "       -v, --verbose\n" +
+  "           Increase logging verbosity.\n" +
+  "\n" +
+  "COMMON OPTIONS\n" +
+  "       --help[=FMT] (default=auto)\n" +
+  "           Show this help in format FMT. The value FMT must be one of auto,\n" +
+  "           pager, groff or plain. With auto, the format is pager or plain\n" +
+  "           whenever the TERM env var is dumb or undefined.\n" +
+  "\n" +
+  "       --version\n" +
+  "           Show version information.\n" +
+  "\n" +
+  "EXIT STATUS\n" +
+  "       rescript clean exits with:\n" +
+  "\n" +
+  "       0   on success.\n" +
+  "\n" +
+  "       1   on build, configuration, or file system errors.\n" +
+  "\n" +
+  "       2   on command-line usage errors and invalid package dependencies.\n" +
+  "\n" +
+  "       129-143\n" +
+  "           when interrupted by a signal (128 plus the signal number).\n" +
+  "\n" +
+  "SEE ALSO\n" +
+  "       rescript(1)\n" +
+  "\n";
 
 const formatHelp =
-  "Format ReScript files\n" +
+  "NAME\n" +
+  "       rescript-format - Format ReScript files.\n" +
   "\n" +
-  "Usage: rescript format [OPTIONS] [FILES]...\n" +
+  "SYNOPSIS\n" +
+  "       rescript format [OPTION]… [FILES]…\n" +
   "\n" +
-  "Arguments:\n" +
-  "  [FILES]...  Files to format. If no files are provided, all files are formatted\n" +
+  "OPTIONS\n" +
+  "       -c, --check\n" +
+  "           Check formatting without modifying files.\n" +
   "\n" +
-  "Options:\n" +
-  "  -c, --check          Check formatting status without applying changes\n" +
-  "  -v, --verbose...     Increase logging verbosity\n" +
-  "  -q, --quiet...       Decrease logging verbosity\n" +
-  "  -s, --stdin <STDIN>  Read the code from stdin and print the formatted code to stdout [possible values: .res, .resi]\n" +
-  "  -h, --help           Print help\n";
+  "       -q, --quiet\n" +
+  "           Decrease logging verbosity.\n" +
+  "\n" +
+  "       -s EXTENSION, --stdin=EXTENSION\n" +
+  "           Read stdin and write formatted source to stdout.\n" +
+  "\n" +
+  "       -v, --verbose\n" +
+  "           Increase logging verbosity.\n" +
+  "\n" +
+  "COMMON OPTIONS\n" +
+  "       --help[=FMT] (default=auto)\n" +
+  "           Show this help in format FMT. The value FMT must be one of auto,\n" +
+  "           pager, groff or plain. With auto, the format is pager or plain\n" +
+  "           whenever the TERM env var is dumb or undefined.\n" +
+  "\n" +
+  "       --version\n" +
+  "           Show version information.\n" +
+  "\n" +
+  "EXIT STATUS\n" +
+  "       rescript format exits with:\n" +
+  "\n" +
+  "       0   on success.\n" +
+  "\n" +
+  "       1   on build, configuration, or file system errors.\n" +
+  "\n" +
+  "       2   on command-line usage errors and invalid package dependencies.\n" +
+  "\n" +
+  "       129-143\n" +
+  "           when interrupted by a signal (128 plus the signal number).\n" +
+  "\n" +
+  "SEE ALSO\n" +
+  "       rescript(1)\n" +
+  "\n";
 
 const compilerArgsHelp =
-  "Print the compiler arguments for a ReScript source file\n" +
+  "NAME\n" +
+  "       rescript-compiler-args - Print compiler arguments for a ReScript\n" +
+  "       source file.\n" +
   "\n" +
-  "Usage: rescript compiler-args [OPTIONS] <PATH>\n" +
+  "SYNOPSIS\n" +
+  "       rescript compiler-args [--quiet] [--verbose] [OPTION]… PATH\n" +
   "\n" +
-  "Arguments:\n" +
-  "  <PATH>  Path to a ReScript source file (.res or .resi)\n" +
+  "ARGUMENTS\n" +
+  "       PATH (required)\n" +
+  "           ReScript source file (.res or .resi).\n" +
   "\n" +
-  "Options:\n" +
-  "  -v, --verbose...  Increase logging verbosity\n" +
-  "  -q, --quiet...    Decrease logging verbosity\n" +
-  "  -h, --help        Print help\n";
+  "OPTIONS\n" +
+  "       -q, --quiet\n" +
+  "           Decrease logging verbosity.\n" +
+  "\n" +
+  "       -v, --verbose\n" +
+  "           Increase logging verbosity.\n" +
+  "\n" +
+  "COMMON OPTIONS\n" +
+  "       --help[=FMT] (default=auto)\n" +
+  "           Show this help in format FMT. The value FMT must be one of auto,\n" +
+  "           pager, groff or plain. With auto, the format is pager or plain\n" +
+  "           whenever the TERM env var is dumb or undefined.\n" +
+  "\n" +
+  "       --version\n" +
+  "           Show version information.\n" +
+  "\n" +
+  "EXIT STATUS\n" +
+  "       rescript compiler-args exits with:\n" +
+  "\n" +
+  "       0   on success.\n" +
+  "\n" +
+  "       1   on build, configuration, or file system errors.\n" +
+  "\n" +
+  "       2   on command-line usage errors and invalid package dependencies.\n" +
+  "\n" +
+  "       129-143\n" +
+  "           when interrupted by a signal (128 plus the signal number).\n" +
+  "\n" +
+  "SEE ALSO\n" +
+  "       rescript(1)\n" +
+  "\n";
 
 /**
  * @param {string[]} params
@@ -106,66 +302,6 @@ async function test(params, expected) {
   assert.equal(stripVTControlCharacters(out.stderr), out.stderr);
   const stdout = normalizeNewlines(out.stdout);
   const stderr = normalizeNewlines(out.stderr);
-
-  // Cmdliner intentionally renders man-page-style help rather than clap's
-  // table layout. Keep the Rust snapshots exact, while checking the same
-  // commands and discoverable options semantically for the OCaml CLI.
-  if (stdout.startsWith("NAME\n") && expected.status === 0) {
-    const command = ["build", "clean", "format", "compiler-args"].find(
-      candidate => params[0] === candidate,
-    );
-    const fragments =
-      command === "build"
-        ? [
-            "rescript-build",
-            "rescript build",
-            "--after-build",
-            "--features",
-            "--filter",
-            "--no-timing",
-            "--prod",
-            "--warn-error",
-          ]
-        : command === "clean"
-          ? ["rescript-clean", "rescript clean", "--prod"]
-          : command === "format"
-            ? ["rescript-format", "rescript format", "--check", "--stdin"]
-            : command === "compiler-args"
-              ? ["rescript-compiler-args", "rescript compiler-args", "PATH"]
-              : [
-                  "rescript - Fast, Simple, Fully Typed JavaScript from the Future",
-                  "build [",
-                  "watch [",
-                  "clean [",
-                  "format [",
-                  "compiler-args [",
-                  "help [",
-                ];
-    for (const fragment of [...fragments, "--quiet", "--verbose", "--help"]) {
-      assert.ok(
-        stdout.includes(fragment),
-        `Missing ${fragment} in:\n${stdout}`,
-      );
-    }
-    if (command === undefined) {
-      // The documented exit statuses are the ones the CLI actually uses.
-      assert.match(
-        stdout,
-        /EXIT STATUS[\s\S]*\b2\s+on command-line usage errors/,
-      );
-      assert.doesNotMatch(stdout, /\b12[345]\b/);
-    }
-    assert.equal(stderr, "");
-    assert.equal(out.status, 0);
-    return;
-  }
-
-  if (params.includes("--foo") && /unknown option ['"]?--foo/.test(stderr)) {
-    assert.equal(stdout, "");
-    assert.match(stderr, /Usage: rescript( build| clean)? /);
-    assert.equal(out.status, 2);
-    return;
-  }
 
   assert.equal(stdout, expected.stdout);
   assert.equal(stderr, expected.stderr);
@@ -189,13 +325,8 @@ await test(["build", "-h"], { stdout: buildHelp, stderr: "", status: 0 });
 await test(["build", "--foo"], {
   stdout: "",
   stderr:
-    "error: unexpected argument '--foo' found\n" +
-    "\n" +
-    "  tip: to pass '--foo' as a value, use '-- --foo'\n" +
-    "\n" +
-    "Usage: rescript build [OPTIONS] [FOLDER]\n" +
-    "\n" +
-    "For more information, try '--help'.\n",
+    "Usage: rescript build [--help] [OPTION]… [FOLDER]\n" +
+    "rescript: unknown option --foo. Did you mean -f?\n",
   status: 2,
 });
 
@@ -213,13 +344,8 @@ await test(["help"], { stdout: cliHelp, stderr: "", status: 0 });
 await test(["--foo"], {
   stdout: "",
   stderr:
-    "error: unexpected argument '--foo' found\n" +
-    "\n" +
-    "  tip: to pass '--foo' as a value, use '-- --foo'\n" +
-    "\n" +
-    "Usage: rescript build [OPTIONS] [FOLDER]\n" +
-    "\n" +
-    "For more information, try '--help'.\n",
+    "Usage: rescript build [--help] [OPTION]… [FOLDER]\n" +
+    "rescript: unknown option --foo. Did you mean -f?\n",
   status: 2,
 });
 
@@ -237,13 +363,9 @@ await test(["clean", "-h"], { stdout: cleanHelp, stderr: "", status: 0 });
 await test(["clean", "--foo"], {
   stdout: "",
   stderr:
-    "error: unexpected argument '--foo' found\n" +
-    "\n" +
-    "  tip: to pass '--foo' as a value, use '-- --foo'\n" +
-    "\n" +
-    "Usage: rescript clean [OPTIONS] [FOLDER]\n" +
-    "\n" +
-    "For more information, try '--help'.\n",
+    "Usage: rescript clean [--help] [--prod] [--quiet] [--verbose] [OPTION]…\n" +
+    "       [FOLDER]\n" +
+    "rescript: unknown option --foo\n",
   status: 2,
 });
 
