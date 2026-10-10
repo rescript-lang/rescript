@@ -22,6 +22,7 @@
 
 #### :rocket: New Feature
 
+- Support Windows 11 on ARM by installing the x64 binaries, which Windows runs through its x64 emulation. https://github.com/rescript-lang/rescript/pull/8776
 #### :bug: Bug fix
 
 - Fix editor completion of values from modules included with `include await M`. https://github.com/rescript-lang/rescript/pull/8770

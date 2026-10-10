@@ -4,22 +4,18 @@
 // The lookup is synchronous so that tools.cjs, the CommonJS entry of
 // `rescript/tools`, can load it; bins.js re-exports these values for ES modules.
 
+const os = require("node:os");
 const path = require("node:path");
+const { getTarget } = require("./platform.cjs");
 
 const minimumNodeVersion = "22.0.0";
 
-const target = `${process.platform}-${process.arch}`;
+const target = getTarget(process.platform, process.arch, os.release());
 
-const supportedPlatforms = [
-  "darwin-arm64",
-  "darwin-x64",
-  "linux-arm64",
-  "linux-x64",
-  "win32-x64",
-];
-
-if (!supportedPlatforms.includes(target)) {
-  throw new Error(`Platform ${target} is not supported!`);
+if (target === undefined) {
+  throw new Error(
+    `Platform ${process.platform}-${process.arch} is not supported!`,
+  );
 }
 
 const binPackageName = `@rescript/${target}`;
