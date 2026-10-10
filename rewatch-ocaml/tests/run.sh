@@ -700,6 +700,24 @@ obstruct_file_with_directory() {
   return 1
 }
 
+# Waits until a -v watcher logs a watch handle for a path ending in the given
+# extended regular expression. Paths use native separators; trailing space
+# tolerates CRLF output on Windows.
+wait_for_watch() {
+  file="$1"
+  suffix="$2"
+  attempts=0
+  while [ "$attempts" -lt 200 ]; do
+    if grep -Eq "watching \((non-)?recursive\): .*$suffix[[:space:]]*\$" \
+        "$file" 2>/dev/null; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  return 1
+}
+
 wait_for_text() {
   file="$1"
   pattern="$2"
@@ -1155,15 +1173,21 @@ test ! -f "$watch_basic/src/New.js"
 # A shallow watch on the nearest existing ancestor must advance one directory
 # at a time until a configured nested source root exists. The slash in the JSON
 # path also exercises native separator normalization on Windows.
-"$port" watch "$missing_nested_source" \
+"$port" -v watch "$missing_nested_source" \
   >"$missing_nested_source/watch.log" 2>&1 &
 missing_nested_source_pid=$!
 background_pids="$background_pids $missing_nested_source_pid"
 wait_for_initial_build "$missing_nested_source/watch.log"
 mkdir "$missing_nested_source/generated"
-sleep 1
+if ! wait_for_watch "$missing_nested_source/watch.log" '[/\\]generated[/\\]\.'; then
+  cat "$missing_nested_source/watch.log" >&2
+  exit 1
+fi
 mkdir "$missing_nested_source/generated/nested"
-sleep 1
+if ! wait_for_watch "$missing_nested_source/watch.log" '[/\\]nested'; then
+  cat "$missing_nested_source/watch.log" >&2
+  exit 1
+fi
 printf 'let value = 1\n' \
   >"$missing_nested_source/generated/nested/Main.res"
 if ! wait_for_file "$missing_nested_source/generated/nested/Main.mjs"; then

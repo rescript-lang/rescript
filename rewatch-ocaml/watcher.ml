@@ -23,6 +23,18 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     Atomic.set stop_requested true
   in
   let digest_cache = Hashtbl.create 256 in
+  let watch_paths (scope : Watch_scope.t) symlink_paths =
+    let paths = scope.paths @ symlink_paths in
+    Output.debug ~verbosity
+      (String.concat "\n"
+         (List.map
+            (fun ({directory; recursive} : Native_watcher.watch_path) ->
+              Printf.sprintf "  watching (%s): %s"
+                (if recursive then "recursive" else "non-recursive")
+                directory)
+            paths));
+    paths
+  in
   let refresh_and_snapshot watcher ~symlink_paths (scope : Watch_scope.t) =
     (* Watch paths can change while handles are being installed, especially
        when a source symlink is repointed. A snapshot is authoritative only
@@ -32,7 +44,8 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       if remaining = 0 then Error "watch paths did not stabilize"
       else
         match
-          Native_watcher.refresh watcher ~paths:(scope.paths @ symlink_paths)
+          Native_watcher.refresh watcher
+            ~paths:(watch_paths scope symlink_paths)
         with
         | Error _ as error -> error
         | Ok () -> (
@@ -260,7 +273,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
            output appears cannot land in a blind interval between compilation and
            watcher setup. Snapshot reconciliation below consumes any event queued
            while compiler subprocesses were running. *)
-        match native_create ~paths:(scope.paths @ symlink_paths) with
+        match native_create ~paths:(watch_paths scope symlink_paths) with
         | Error message -> fallback_to_polling message before_build
         | Ok watcher ->
           let fallback =
