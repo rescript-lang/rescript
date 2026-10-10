@@ -79,7 +79,7 @@ let with_root_options (config : t) (root_config : t) =
 
 let with_read_errors path f =
   try f () with
-  | Sys_error message -> fail_read path (strip_read_path path message)
+  | Sys_error message -> fail_read path (String_util.strip_path path message)
   | Unix.Unix_error (error, _, _) -> fail_read path (Unix.error_message error)
 
 let decode_package_specs path ~suffix fields =

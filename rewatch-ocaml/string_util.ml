@@ -20,3 +20,5 @@ let strip_prefix ~prefix value =
     String.sub value (String.length prefix)
       (String.length value - String.length prefix)
   else value
+
+let strip_path path message = strip_prefix ~prefix:(path ^ ": ") message

@@ -7,9 +7,6 @@ let fail path message = raise (Error (Printf.sprintf "%s: %s" path message))
 let fail_read path message =
   raise (Error (Printf.sprintf "Could not read '%s': %s" path message))
 
-let strip_read_path path message =
-  String_util.strip_prefix ~prefix:(path ^ ": ") message
-
 let member name fields = List.assoc_opt name fields
 
 let optional_member name fields =
