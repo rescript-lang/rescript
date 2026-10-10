@@ -77,7 +77,10 @@ let values_of_export (meta : Lam_stats.t) (export_map : Lambda.t Map_ident.t) :
                 optlam
               else None
             | _ ->
-              let lam_size = Lam_analysis.size lambda in
+              let lam_size =
+                Lam_analysis.size_upto ~limit:Lam_analysis.small_inline_size
+                  lambda
+              in
               (* TODO:
                  1. global need re-assocate when do the beta reduction
                  2. [lambda_exports] is not precise

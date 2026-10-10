@@ -141,62 +141,10 @@ let rec no_side_effects (lam : Lambda.t) : bool =
   | Lapply _ -> false
 (* we need purity analysis .. *)
 
-(*
-     Estimate the size of lambda for better inlining
-     threshold is 1000 - so that we
-*)
-exception Too_big_to_inline
+(* Size of a lambda that is too big to inline, e.g. one containing a loop *)
+let too_big = 1000
 
-let really_big () = raise_notrace Too_big_to_inline
-
-(* let big_lambda = 1000 *)
-
-let rec size (lam : Lambda.t) =
-  try
-    match lam with
-    | Lvar _ -> 1
-    | Lconst c -> size_constant c
-    | Llet (_, _, l1, l2) -> 1 + size l1 + size l2
-    | Lletrec _ -> really_big ()
-    | Lprim
-        {
-          primitive = Pfield (_, Fld_module _);
-          args = [(Lglobal_module _ | Lvar _)];
-          _;
-        } ->
-      1
-    | Lprim {primitive = Praise | Pis_not_none; args = [l]; _} -> size l
-    | Lglobal_module _ -> 1
-    | Lprim {primitive = Praw_js_code _} -> really_big ()
-    | Lprim {args = ll; _} -> size_lams 1 ll
-    (* complicated
-           1. inline this function
-           2. ...
-           exports.Make=
-           function(funarg)
-       {var $$let=Make(funarg);
-         return [0, $$let[5],... $$let[16]]}
-    *)
-    | Lapply {ap_func; ap_args; _} -> size_lams (size ap_func) ap_args
-    (* | Lfunction(_, params, l) -> really_big () *)
-    | Lfunction {body} -> size body
-    | Lswitch _ -> really_big ()
-    | Lstringswitch (_, _, _) -> really_big ()
-    | Lstaticraise (_i, ls) ->
-      Ext_list.fold_left ls 1 (fun acc x -> size x + acc)
-    | Lstaticcatch _ -> really_big ()
-    | Ltrywith _ -> really_big ()
-    | Lifthenelse (l1, l2, l3) -> 1 + size l1 + size l2 + size l3
-    | Lsequence (l1, l2) -> size l1 + size l2
-    | Lbreak | Lcontinue -> 1
-    | Lwhile _ -> really_big ()
-    | Lfor _ -> really_big ()
-    | Lfor_of _ | Lfor_await_of _ -> really_big ()
-    | Lassign (_, v) -> 1 + size v
-    (* This is side effectful,  be careful *)
-  with Too_big_to_inline -> 1000
-
-and size_constant x =
+let rec size_constant (x : Lambda.structured_constant) =
   match x with
   | Const_int _ | Const_assertfalse | Const_constructor _ | Const_char _
   | Const_float _ | Const_bigint _ | Const_polyvar _ | Const_js_null
@@ -208,8 +156,81 @@ and size_constant x =
   | Const_block (_, str) ->
     Ext_list.fold_left str 0 (fun acc x -> acc + size_constant x)
 
-and size_lams acc (lams : Lambda.t list) =
-  Ext_list.fold_left lams acc (fun acc l -> acc + size l)
+exception Limit_reached
+
+(*
+   Estimate the size of a lambda for inlining. Callers only compare it with
+   small thresholds, so stop counting once [limit] is reached: the result is
+   the size if it is below [limit], and [limit] otherwise.
+*)
+let size_upto ~limit (lam : Lambda.t) =
+  assert (limit <= too_big);
+  let total = ref 0 in
+  let add n =
+    total := !total + n;
+    if !total >= limit then raise_notrace Limit_reached
+  in
+  let rec size (lam : Lambda.t) =
+    match lam with
+    | Lvar _ -> add 1
+    | Lconst c -> add (size_constant c)
+    | Llet (_, _, l1, l2) ->
+      add 1;
+      size l1;
+      size l2
+    | Lletrec _ -> add too_big
+    | Lprim
+        {
+          primitive = Pfield (_, Fld_module _);
+          args = [(Lglobal_module _ | Lvar _)];
+          _;
+        } ->
+      add 1
+    | Lprim {primitive = Praise | Pis_not_none; args = [l]; _} -> size l
+    | Lglobal_module _ -> add 1
+    | Lprim {primitive = Praw_js_code _} -> add too_big
+    | Lprim {args = ll; _} ->
+      add 1;
+      List.iter size ll
+    (* complicated
+           1. inline this function
+           2. ...
+           exports.Make=
+           function(funarg)
+       {var $$let=Make(funarg);
+         return [0, $$let[5],... $$let[16]]}
+    *)
+    | Lapply {ap_func; ap_args; _} ->
+      size ap_func;
+      List.iter size ap_args
+    | Lfunction {body} -> size body
+    | Lswitch _ -> add too_big
+    | Lstringswitch (_, _, _) -> add too_big
+    | Lstaticraise (_i, ls) ->
+      add 1;
+      List.iter size ls
+    | Lstaticcatch _ -> add too_big
+    | Ltrywith _ -> add too_big
+    | Lifthenelse (l1, l2, l3) ->
+      add 1;
+      size l1;
+      size l2;
+      size l3
+    | Lsequence (l1, l2) ->
+      size l1;
+      size l2
+    | Lbreak | Lcontinue -> add 1
+    | Lwhile _ -> add too_big
+    | Lfor _ -> add too_big
+    | Lfor_of _ | Lfor_await_of _ -> add too_big
+    | Lassign (_, v) ->
+      add 1;
+      size v
+    (* This is side effectful,  be careful *)
+  in
+  match size lam with
+  | () -> !total
+  | exception Limit_reached -> limit
 
 let args_all_const (args : Lambda.t list) =
   Ext_list.for_all args (fun x ->
@@ -241,13 +262,15 @@ let destruct_pattern (body : Lambda.t) params args =
   | Lswitch (Lvar v, switch) -> (
     match aux v params args with
     | Some (Lambda.Lconst _ as lam) ->
-      size (Lambda.switch lam switch) < small_inline_size
+      size_upto ~limit:small_inline_size (Lambda.switch lam switch)
+      < small_inline_size
     | Some _ | None -> false)
   | Lifthenelse (Lvar v, then_, else_) -> (
     (* -FIXME *)
     match aux v params args with
     | Some (Lconst _ as lam) ->
-      size (Lambda.if_ lam then_ else_) < small_inline_size
+      size_upto ~limit:small_inline_size (Lambda.if_ lam then_ else_)
+      < small_inline_size
     | Some _ | None -> false)
   | _ -> false
 
@@ -263,7 +286,7 @@ let ok_to_inline_fun_when_app (m : Lambda.lfunction) (args : Lambda.t list) =
   | Default_inline -> (
     match m with
     | {body; params} ->
-      let s = size body in
+      let s = size_upto ~limit:10 body in
       s < small_inline_size
       || destruct_pattern body params args
       || (args_all_const args && s < 10 && no_side_effects body))
