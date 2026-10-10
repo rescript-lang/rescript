@@ -68,76 +68,84 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       Build_attempt.register_cleanup attempt (fun () ->
           List.iter File_util.remove_file dependent_asts))
   in
+  let cleanup_stale (package : Package_plan.t) ~on_deferred_artifact =
+    Build_artifacts.cleanup_stale
+      ~ocaml_files:
+        (Compile_assets.files previous_compile_assets package.ocaml_dir)
+      ~ast_sources:
+        (Compile_assets.ast_sources previous_compile_assets package.ocaml_dir)
+      ~root:package.root ~ocaml_dir:package.ocaml_dir
+      ~source_files:package.source_files
+      ~present_source_files:package.present_source_files
+      ~on_removed_module:invalidate_removed_module ~on_deferred_artifact
+      ~is_local:package.is_local package.compile_config package.modules
+  in
+  (* Outputs written under the previous package-specs are removed before the
+     package is cleaned, because the new specs no longer name them. *)
+  let remove_previous_spec_outputs (package : Package_plan.t) package_context =
+    Compiler_info.changed_package_output_specs package_context package.config
+    |> Option.iter (fun previous_specs ->
+        let previous_config =
+          Compiler_info.config_with_package_output_specs package.compile_config
+            previous_specs
+        in
+        let previous_implementations =
+          List.map
+            (fun (module_ : Source.module_) -> module_.implementation)
+            package.modules
+          @ (Compile_assets.ast_sources previous_compile_assets
+               package.ocaml_dir
+            |> List.filter_map (fun (source : Compile_assets.ast_source) ->
+                if Filename.check_suffix source.ast_path ".iast" then None
+                else
+                  Project_context.relative_to_opt package.root
+                    source.source_path))
+          |> List.sort_uniq String.compare
+        in
+        Build_artifacts.remove_public_outputs previous_config
+          previous_implementations)
+  in
   let cleanup_started = Unix.gettimeofday () in
-  List.iter
-    (fun (package : Package_plan.t) ->
-      let package_context =
-        Compiler_info.for_package compiler_context package.compile_config
-      in
-      if Compiler_info.needs_clean package_context package.config then (
-        Compiler_info.changed_package_output_specs package_context
-          package.config
-        |> Option.iter (fun previous_specs ->
-            let previous_config =
-              Compiler_info.config_with_package_output_specs
-                package.compile_config previous_specs
+  (* A package that needs cleaning has its stale outputs removed before its
+     lib/bs and lib/ocaml trees are wiped, while the lib/bs mirror still
+     identifies which public outputs it owns. That cleanup result is final, so
+     the second pass only cleans up the remaining packages. *)
+  let cleanups_before_clean =
+    List.map
+      (fun (package : Package_plan.t) ->
+        let package_context =
+          Compiler_info.for_package compiler_context package.compile_config
+        in
+        let cleanup =
+          if Compiler_info.needs_clean package_context package.config then (
+            remove_previous_spec_outputs package package_context;
+            let cleanup =
+              cleanup_stale package ~on_deferred_artifact:File_util.remove_file
             in
-            let previous_implementations =
-              List.map
-                (fun (module_ : Source.module_) -> module_.implementation)
-                package.modules
-              @ (Compile_assets.ast_sources previous_compile_assets
-                   package.ocaml_dir
-                |> List.filter_map (fun (source : Compile_assets.ast_source) ->
-                    if Filename.check_suffix source.ast_path ".iast" then None
-                    else
-                      Project_context.relative_to_opt package.root
-                        source.source_path))
-              |> List.sort_uniq String.compare
-            in
-            Build_artifacts.remove_public_outputs previous_config
-              previous_implementations);
-        ignore
-          (Build_artifacts.cleanup_stale
-             ~ocaml_files:
-               (Compile_assets.files previous_compile_assets package.ocaml_dir)
-             ~ast_sources:
-               (Compile_assets.ast_sources previous_compile_assets
-                  package.ocaml_dir)
-             ~root:package.root ~ocaml_dir:package.ocaml_dir
-             ~source_files:package.source_files
-             ~present_source_files:package.present_source_files
-             ~on_removed_module:invalidate_removed_module
-             ~on_deferred_artifact:File_util.remove_file
-             ~is_local:package.is_local package.compile_config package.modules);
-        Compiler_info.clean_package package.config;
-        attempt.compiler_cleaned <- true);
-      File_util.ensure_dir package.build_dir;
-      File_util.ensure_dir package.ocaml_dir)
-    package_plans;
+            Compiler_info.clean_package package.config;
+            attempt.compiler_cleaned <- true;
+            Some cleanup)
+          else None
+        in
+        File_util.ensure_dir package.build_dir;
+        File_util.ensure_dir package.ocaml_dir;
+        (package, cleanup))
+      package_plans
+  in
   List.iter
-    (fun (package : Package_plan.t) ->
+    (fun ((package : Package_plan.t), cleanup) ->
       let cleanup =
-        Build_artifacts.cleanup_stale
-          ~ocaml_files:
-            (Compile_assets.files previous_compile_assets package.ocaml_dir)
-          ~ast_sources:
-            (Compile_assets.ast_sources previous_compile_assets
-               package.ocaml_dir)
-          ~root:package.root ~ocaml_dir:package.ocaml_dir
-          ~source_files:package.source_files
-          ~present_source_files:package.present_source_files
-          ~on_removed_module:invalidate_removed_module
-          ~on_deferred_artifact:(fun path ->
-            Build_attempt.defer_artifact_cleanup attempt [path])
-          ~is_local:package.is_local package.compile_config package.modules
+        match cleanup with
+        | Some cleanup -> cleanup
+        | None ->
+          cleanup_stale package ~on_deferred_artifact:(fun path ->
+              Build_attempt.defer_artifact_cleanup attempt [path])
       in
       Build_attempt.set_cleanup_result attempt package.root cleanup;
       attempt.cleaned <- attempt.cleaned + List.length cleanup.removed_modules;
       attempt.previous_asts <-
-        attempt.previous_asts + cleanup.previous_ast_count;
-      ())
-    package_plans;
+        attempt.previous_asts + cleanup.previous_ast_count)
+    cleanups_before_clean;
   let compile_assets =
     if attempt.compiler_cleaned || Hashtbl.length registered_removed_modules > 0
     then
