@@ -9,6 +9,7 @@ type untagged_error =
   | AtMostOneNumber
   | AtMostOneBigint
   | AtMostOneBoolean
+  | UnreachableBoolean of string
   | DuplicateLiteral of string
   | ConstructorMoreThanOneArg of string
 type error =
@@ -50,6 +51,10 @@ let report_error ppf =
       | AtMostOneFunction -> "At most one case can be a function type."
       | AtMostOneString -> "At most one case can be a string type."
       | AtMostOneBoolean -> "At most one case can be a boolean type."
+      | UnreachableBoolean name ->
+        "Case " ^ name
+        ^ " can never match: both true and false are already cases of this \
+           variant."
       | AtMostOneNumber ->
         "At most one case can be a number type (int or float)."
       | AtMostOneBigint -> "At most one case can be a bigint type."
@@ -259,11 +264,6 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
       raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBigint));
     if !boolean_types > 1 then
       raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBoolean));
-    if
-      !boolean_types > 0
-      && (String_set.mem "true" !nonstring_literals_consts
-         || String_set.mem "false" !nonstring_literals_consts)
-    then raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBoolean));
     ()
   in
   let check_literal ~is_const ~loc (tag : tag) =
@@ -296,7 +296,20 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
           | FunctionType -> incr function_types
           | IntType | FloatType -> incr number_types
           | BigintType -> incr bigint_types
-          | BooleanType -> incr boolean_types
+          | BooleanType ->
+            (* Literal cases are matched before payload cases, so a boolean
+               payload only receives the booleans that are not literal cases.
+               A partial overlap is allowed, like for strings and numbers. *)
+            if
+              String_set.mem "true" !nonstring_literals_consts
+              && String_set.mem "false" !nonstring_literals_consts
+            then
+              raise
+                (Error
+                   ( loc,
+                     InvalidUntaggedVariantDefinition
+                       (UnreachableBoolean tag.name) ));
+            incr boolean_types
           | StringType -> incr string_types);
           invariant loc tag.name
         | Tagged _ -> ())
