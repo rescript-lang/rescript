@@ -43,7 +43,7 @@ let check ~file ~pass lam =
         "\n[SANITY after %s]:%s/%d bound twice in %s@." pass id.name id.stamp
         file;
       success := false)
-    else Hash_set_ident.add defined_variables id
+    else Hash_set_ident.add defined_variables id ()
   in
   let rec check_list xs (cxt : Set_int.t) =
     Ext_list.iter xs (fun x -> check_staticfails x cxt)
