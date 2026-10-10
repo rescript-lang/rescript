@@ -30,15 +30,6 @@ checks instead. The default
 acceptance threshold requires both OCaml medians to be no more than 125% of
 Rust.
 
-The post-rebase powered, idle-host seven-run gate measured a 4.740 s Rust
-clean-build median and a 5.020 s OCaml median (1.059x). Median summed
-process-tree RSS was 1,066,940 KiB and 1,184,740 KiB respectively (1.110x).
-Clean, unchanged, and one-edit compiler work matched exactly, and the complete
-post-build file sets and byte-stable artifacts were identical. The companion
-seven-edit retained-watch gate measured 130 ms for Rust and 153 ms for OCaml
-(1.177x), with identical compiler work and stable resources. These values are
-a reproducible checkpoint, not portable absolute expectations.
-
 This is one part of equivalence checking, not a substitute for the test suites.
 Before accepting a performance increment, also run the OCaml unit/focused tests
 and the canonical Rust rewatch integration suite against the OCaml executable:
@@ -99,12 +90,10 @@ that a differently-cased recreated CMI exists to `stat` and then return
 `ENOENT` from the immediately following `open`; that host-filesystem artifact
 is not valid scheduler or benchmark evidence. The harness's default `mktemp`
 workspace normally stays on the container filesystem.
-Set `REWATCH_PERFORMANCE_THRESHOLD_PERCENT` to exercise a proposed threshold
-change; changing the committed 125% completion criterion requires an explicit
-project decision. Set `KEEP_REWATCH_BENCHMARK_WORKDIR=1` to retain traces and raw
+Set `REWATCH_PERFORMANCE_THRESHOLD_PERCENT` to change the 125% threshold. Set `KEEP_REWATCH_BENCHMARK_WORKDIR=1` to retain traces and raw
 stdout/stderr for investigation. For a quick correctness-only check, an odd run
 count below five is accepted only with `REWATCH_ALLOW_SMOKE_RUN=1`; its timing
-must never be treated as a quality-gate result.
+is not a meaningful measurement.
 
 ## Filesystem-work audit
 
@@ -130,18 +119,6 @@ toolchain-level accesses. Report those separately, and treat repeated accesses
 to the same project artifact or discovery path as the primary evidence of
 superfluous orchestration work. The existing compiler-work and artifact checks
 must remain enabled so fewer filesystem calls cannot conceal skipped work.
-
-Process attribution showed identical compiler-subprocess
-metadata/open work and effectively equal driver-plus-inherited clean-build open
-counts (about 8,110 for OCaml and 8,120 for Rust). OCaml made about 2,387 more
-driver-side metadata calls, led by repeated checks of source and `lib/bs`
-directories during artifact publication. Unchanged and single-edit process
-runs used fewer metadata and open calls in OCaml. The clean-build difference is
-therefore understood rather than an unexplained algorithmic discrepancy. A
-future cache for already-created publication directories may remove it, but it
-must be scoped to one attempt and recover correctly if a directory is removed
-concurrently. Preserve the raw trace or repeat the process-attributed audit
-before making that tradeoff.
 
 For the ordinary-edit path inside one long-lived watcher, run:
 
@@ -196,17 +173,10 @@ fixtures, and configuration files are reported together but separately from
 implementation; benchmark tooling includes every executable shell/JavaScript
 file in `bench`, including this counting script itself. The report also lists
 the ten largest production modules and test/tooling files so growth and mixed
-responsibilities are visible without treating line count as a target. Record
-the `cloc` version with the result and rerun this at the final maintainability
-review.
+responsibilities are visible without treating line count as a target.
 
 Source lines are an observation, not an acceptance threshold. A smaller port
 can indicate less machinery, but missing compatibility, weak tests, compressed
 code, or too few explanatory comments can also reduce the number. Behavioral
 and work equivalence, platform support, performance, module size, and review
 findings remain the actual quality gates.
-
-The post-Windows snapshot with cloc 2.04 contains 7,809 Rust production lines
-after excluding telemetry and 11,320 OCaml production lines including both
-platform backends. Rust inline unit tests account for 2,773 lines; OCaml tests
-and fixtures account for 10,270 lines, and the benchmark tooling for 1,033.
