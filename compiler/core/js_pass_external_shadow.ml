@@ -40,22 +40,6 @@ let should_rewrite_binding (ident : Ident.t) =
   && (not (Js_reserved_map.is_js_keyword ident.name))
   && not (Js_reserved_map.is_js_global ident.name)
 
-let rewrite_shadowed_global_in_expr ~(name : string) (expr : J.expression) :
-    J.expression =
-  let super = Js_record_map.super in
-  let self =
-    {
-      super with
-      expression =
-        (fun self expr ->
-          match expr.expression_desc with
-          | Var (Id id) when Ext_ident.is_js id && String.equal id.name name ->
-            E.dot global_this name
-          | _ -> super.expression self expr);
-    }
-  in
-  self.expression self expr
-
 let program (js : J.program) : J.program =
   let shadowed_globals =
     Ext_list.fold_left js.block String_set.empty (fun acc (st : J.statement) ->
@@ -66,6 +50,9 @@ let program (js : J.program) : J.program =
           String_set.add ident.name acc
         | _ -> acc)
   in
+  (* Names of the lexical bindings whose initializer is being traversed: a JS
+     global with such a name can't be referenced directly there. *)
+  let enclosing_bindings = ref String_set.empty in
   let super = Js_record_map.super in
   let self =
     {
@@ -73,6 +60,10 @@ let program (js : J.program) : J.program =
       expression =
         (fun self expr ->
           match expr.expression_desc with
+          | Var (Id id)
+            when Ext_ident.is_js id
+                 && String_set.mem id.name !enclosing_bindings ->
+            E.dot global_this id.name
           | Static_index (obj, field, pos) ->
             let obj = self.expression self obj in
             let obj =
@@ -88,11 +79,14 @@ let program (js : J.program) : J.program =
       variable_declaration =
         (fun self (vd : J.variable_declaration) ->
           match vd with
-          | {ident; value = Some expr; property}
+          | {ident; value = Some _; property}
             when is_lexical_binding_kind property
                  && should_rewrite_binding ident ->
-            let expr = rewrite_shadowed_global_in_expr ~name:ident.name expr in
-            super.variable_declaration self {vd with value = Some expr}
+            let outer = !enclosing_bindings in
+            enclosing_bindings := String_set.add ident.name outer;
+            let vd = super.variable_declaration self vd in
+            enclosing_bindings := outer;
+            vd
           | _ -> super.variable_declaration self vd);
     }
   in
