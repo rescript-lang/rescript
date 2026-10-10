@@ -622,18 +622,18 @@ if grep 'DEBUG' "$work/format-verbose.out" >/dev/null; then
   exit 1
 fi
 # Format resolves the package graph once, so a package metadata mismatch is
-# reported once, as in Rust.
+# reported once, as in Rust. This rewrites rather than checks: on Windows the
+# formatter emits CRLF, so --check would flag this LF fixture.
 format_name_mismatch="$work/format-name-mismatch"
 mkdir -p "$format_name_mismatch/src"
 printf '%s\n' '{"name":"rescript-name","sources":["src"]}' \
   >"$format_name_mismatch/rescript.json"
 printf '%s\n' '{"name":"package-name"}' >"$format_name_mismatch/package.json"
 printf 'let value = 1\n' >"$format_name_mismatch/src/A.res"
-if ! (cd "$format_name_mismatch" && "$port" format --check \
+if ! (cd "$format_name_mismatch" && "$port" format \
   >"$work/format-name-mismatch.out" 2>"$work/format-name-mismatch.err"); then
-  echo "format --check failed on a formatted package" >&2
+  echo "format failed on a package with a name mismatch" >&2
   cat "$work/format-name-mismatch.out" "$work/format-name-mismatch.err" >&2
-  od -c "$format_name_mismatch/src/A.res" >&2
   exit 1
 fi
 mismatch_warnings=$(grep -c 'Package name mismatch' "$work/format-name-mismatch.err" || true)
