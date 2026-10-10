@@ -31,8 +31,7 @@ let source_map_args (config : Config.t) ~watch =
   if config.source_map_dev && not watch then ["-bs-source-map"; "false"]
   else config.source_map_args
 
-let compiler_flags ?(ppx_flags = []) ~source_maps ~watch ~gentype
-    (config : Config.t) =
+let parser_flags ?(ppx_flags = []) (config : Config.t) =
   let ppx_args =
     ppx_flags
     |> List.concat_map (function
@@ -45,17 +44,14 @@ let compiler_flags ?(ppx_flags = []) ~source_maps ~watch ~gentype
         in
         ["-ppx"; String.concat " " (executable :: arguments)])
   in
-  let source_map_args =
-    if source_maps then source_map_args config ~watch else []
-  in
-  if source_maps then
-    ppx_args @ config.jsx_args @ source_map_args @ config.compiler_flags
-    @ config.warning_flags
-    @ (if gentype then config.gentype_args else [])
-    @ config.experimental_args
-  else
-    ppx_args @ config.jsx_args @ config.experimental_args @ config.warning_flags
-    @ config.compiler_flags
+  ppx_args @ config.jsx_args @ config.experimental_args @ config.warning_flags
+  @ config.compiler_flags
+
+let compiler_flags ~watch (config : Config.t) =
+  config.jsx_args
+  @ source_map_args config ~watch
+  @ config.compiler_flags @ config.warning_flags @ config.gentype_args
+  @ config.experimental_args
 
 let with_local_warning_policy ~is_local (config : Config.t) =
   if is_local then config else {config with warning_flags = []}
@@ -90,9 +86,7 @@ let namespace_args (config : Config.t) module_name =
     else ["-bs-ns"; "@" ^ name]
 
 let parser_arguments ~(config : Config.t) ~contents ~path =
-  compiler_flags
-    ~ppx_flags:(filter_ppx_flags config.ppx_flags contents)
-    ~source_maps:false ~watch:false ~gentype:false config
+  parser_flags ~ppx_flags:(filter_ppx_flags config.ppx_flags contents) config
   @ [
       "-absname";
       "-bs-ast";
@@ -108,7 +102,7 @@ let compiler_common_arguments ~(config : Config.t) ~runtime ~dependency_dirs
   ["-I"; Filename.concat Filename.parent_dir_name "ocaml"]
   @ ["-runtime-path"; runtime]
   @ List.concat_map (fun directory -> ["-I"; directory]) dependency_dirs
-  @ compiler_flags ~source_maps:true ~watch ~gentype:true config
+  @ compiler_flags ~watch config
   @ gentype_dependency_args
   @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
 

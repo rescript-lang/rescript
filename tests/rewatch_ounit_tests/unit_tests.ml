@@ -1068,13 +1068,11 @@ let config_tests _context =
       check config.source_map_dev "sourceMap dev mode is parsed";
       check
         (contains_adjacent "-bs-source-map" "false"
-           (Compiler_args.compiler_flags ~source_maps:true ~watch:false
-              ~gentype:false config))
+           (Compiler_args.compiler_flags ~watch:false config))
         "sourceMap dev mode is disabled for one-shot builds";
       check
         (contains_adjacent "-bs-source-map" "linked"
-           (Compiler_args.compiler_flags ~source_maps:true ~watch:true
-              ~gentype:false config))
+           (Compiler_args.compiler_flags ~watch:true config))
         "sourceMap dev mode is enabled for watch builds";
       write_file config_path
         {|{
@@ -1085,8 +1083,7 @@ let config_tests _context =
       check (not config.source_map_dev) "sourceMap always mode is parsed";
       check
         (contains_adjacent "-bs-source-map" "inline"
-           (Compiler_args.compiler_flags ~source_maps:true ~watch:false
-              ~gentype:false config))
+           (Compiler_args.compiler_flags ~watch:false config))
         "sourceMap always mode is enabled for one-shot builds";
       Sys.remove config_path;
       let legacy_path = Filename.concat config_root "bsconfig.json" in
