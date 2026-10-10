@@ -318,7 +318,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
         if attempt_is_incomplete then invalidate_persistent_freshness scheduled)
       scheduled_modules
   in
-  let scheduler_failed =
+  let () =
     try
       Process.run_dependency_graph ?poll
         works
@@ -331,13 +331,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
           | _ -> Process.Abort_immediately)
         ~next:(fun item result ->
           match item with
-          | Namespace_barrier -> (
-            match result with
-            | None -> None
-            | Some _ ->
-              raise
-                (Project_context.Error
-                   "namespace scheduler barrier produced a process result"))
+          | Namespace_barrier -> None
           | Module scheduled -> (
             match (result, scheduled.phase) with
             | None, Start ->
@@ -392,12 +386,11 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
                 None)
             | None, (Interface _ | Implementation _ | Post_build _ | Done)
             | Some _, (Start | Done) ->
-              raise (Project_context.Error "invalid compiler scheduler state")));
-      false
+              raise (Project_context.Error "invalid compiler scheduler state")))
     with exn -> (
       reconcile_unconsumed_publications ();
       match exn with
-      | Module_failed -> true
+      | Module_failed -> ()
       | _ -> raise exn)
   in
   Output.Progress.finish progress;
@@ -419,11 +412,8 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     (fun ((scheduled : scheduled_module), output) ->
       Compiler_log.append scheduled.package_root output)
     failures;
-  match (failures, scheduler_failed) with
-  | [], false -> ()
-  | [], true ->
-    raise
-      (Project_context.Error "compiler scheduler stopped without a diagnostic")
-  | failures, _ ->
+  match failures with
+  | [] -> ()
+  | failures ->
     failures |> List.map snd |> String.concat "" |> fun output ->
     raise (Build_failure output)

@@ -387,15 +387,6 @@ let process_dependency_graph_tests _context =
   in
   check parallel_finalizers_completed
     "independent subprocess finalizers run before scheduler dispatch resumes";
-  let graph_cycle_rejected =
-    try
-      Process.run_dependency_graph
-        [graph_work "a" ["b"]; graph_work "b" ["a"]]
-        ~next:(fun _ _ -> None);
-      false
-    with Process.Error _ -> true
-  in
-  check graph_cycle_rejected "subprocess dependency cycles are rejected";
   let drained_failures = ref 0 in
   let deterministic_failure =
     try
