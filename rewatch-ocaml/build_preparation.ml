@@ -36,7 +36,6 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     |> List.map (fun (package : Package_plan.t) -> package.ocaml_dir)
     |> Compile_assets.create
   in
-  let registered_removed_modules = Hashtbl.create 16 in
   let dependents_by_raw_dependency = Hashtbl.create 64 in
   package_plans
   |> List.concat_map (fun (package : Package_plan.t) ->
@@ -52,9 +51,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
           Hashtbl.replace dependents_by_raw_dependency dependency
             (ast_source.ast_path :: dependents)));
   let invalidate_removed_module module_name =
-    if not (Hashtbl.mem registered_removed_modules module_name) then (
-      Hashtbl.add registered_removed_modules module_name ();
-      Hashtbl.replace attempt.removed_modules module_name ();
+    if not (Hashtbl.mem attempt.removed_modules module_name) then (
+      Hashtbl.add attempt.removed_modules module_name ();
       Build_session.mark_module_removed attempt.session module_name;
       let dependent_asts =
         Hashtbl.find_opt dependents_by_raw_dependency module_name
@@ -147,7 +145,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         attempt.previous_asts + cleanup.previous_ast_count)
     cleanups_before_clean;
   let compile_assets =
-    if attempt.compiler_cleaned || Hashtbl.length registered_removed_modules > 0
+    if attempt.compiler_cleaned || Hashtbl.length attempt.removed_modules > 0
     then
       package_plans
       |> List.map (fun (package : Package_plan.t) -> package.ocaml_dir)

@@ -4,6 +4,7 @@ val prepare :
   prepared_package:Package_plan.compilation ->
   attempt:Build_attempt.t ->
   watch:bool ->
+  present_public_outputs:(string, unit) Hashtbl.t ->
   removed_module_names:(string, unit) Hashtbl.t ->
   parse_dirty_modules:(string, unit) Hashtbl.t ->
   unit
