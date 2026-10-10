@@ -5,7 +5,9 @@ let check condition message = assert_bool message condition
 let write_file = Test_support.write_file
 
 let arguments field path =
-  match Yojson.Safe.from_string (Compiler_args_command.run path) with
+  match
+    Yojson.Safe.from_string (Compiler_args_command.run ~verbosity:0 path)
+  with
   | `Assoc fields -> (
     match List.assoc_opt field fields with
     | Some (`List values) ->
@@ -150,7 +152,7 @@ let tests =
       let missing_source = Filename.concat root "src/Missing.res" in
       check
         (try
-           ignore (Compiler_args_command.run missing_source);
+           ignore (Compiler_args_command.run ~verbosity:0 missing_source);
            false
          with Project_context.Error message ->
            Test_support.contains_text message "Could not read source file"
@@ -177,7 +179,7 @@ let tests =
         File_util.ensure_dir outside_dependency;
         check
           (try
-             ignore (Compiler_args_command.run source);
+             ignore (Compiler_args_command.run ~verbosity:0 source);
              false
            with Project_context.Error message ->
              Test_support.contains_text message

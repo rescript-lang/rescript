@@ -63,6 +63,16 @@ let workspace_config_for (current : Config.t) =
 
 let workspace_lock_root_for current = (workspace_config_for current).root
 
+let describe (config : Config.t) ~workspace_root =
+  if workspace_root = config.root then
+    Printf.sprintf "Created project context for %S at %S" config.name
+      config.path
+  else
+    Printf.sprintf
+      "Created project context for monorepo package %S at %S with parent \
+       workspace at %S"
+      config.name config.path workspace_root
+
 let workspace_lock_root folder =
   workspace_lock_root_for (Config.load_root folder)
 

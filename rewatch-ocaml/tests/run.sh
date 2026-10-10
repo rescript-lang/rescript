@@ -609,6 +609,19 @@ printf '%s\n' "$compiler_args_json" | node -e '
     if (args.at(-1) !== path.join("..", "..", "src", "A.res")) process.exit(1);
   });
 '
+# Editors parse compiler-args' stdout, so verbose logs go to stderr.
+"$port" compiler-args -v "$basic/src/A.res" >"$work/compiler-args-verbose.out" \
+  2>"$work/compiler-args-verbose.err"
+node -e 'JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"))' \
+  "$work/compiler-args-verbose.out"
+grep 'Created project context' "$work/compiler-args-verbose.err" >/dev/null
+(cd "$basic" && "$port" format -v --check >"$work/format-verbose.out" \
+  2>"$work/format-verbose.err") || true
+grep 'Created project context' "$work/format-verbose.err" >/dev/null
+if grep 'DEBUG' "$work/format-verbose.out" >/dev/null; then
+  echo "format -v wrote logs to stdout" >&2
+  exit 1
+fi
 sed 's/"suffix": "\.mjs"/"suffix": "\.mjs", "bsc-flags": ["-w -9"]/' "$basic/rescript.json" > "$basic/rescript.next"
 mv "$basic/rescript.next" "$basic/rescript.json"
 sed 's/"module": "esmodule"/"module": "es6"/' "$basic/rescript.json" > "$basic/rescript.next"

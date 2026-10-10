@@ -1,10 +1,16 @@
 let line_clear = "\027[2K\r"
 
-let log ~minimum ~verbosity ~label message =
-  if verbosity >= minimum then Printf.printf "%s:\n%s\n%!" label message
+(* Like Rust rewatch, logs go to stdout by default. Commands whose stdout is
+   machine-readable output (compiler-args, format) log to stderr instead. *)
+let log ?(channel = stdout) ~minimum ~verbosity ~label message =
+  if verbosity >= minimum then
+    Printf.fprintf channel "%s:\n%s\n%!" label message
 
-let debug ~verbosity message = log ~minimum:1 ~verbosity ~label:"DEBUG" message
-let trace ~verbosity message = log ~minimum:2 ~verbosity ~label:"TRACE" message
+let debug ?channel ~verbosity message =
+  log ?channel ~minimum:1 ~verbosity ~label:"DEBUG" message
+
+let trace ?channel ~verbosity message =
+  log ?channel ~minimum:2 ~verbosity ~label:"TRACE" message
 let trace_enabled verbosity = verbosity >= 2
 
 let format_step ~color step =

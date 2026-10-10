@@ -58,9 +58,10 @@ let run_command ~poll = function
       ~filter ~clear_screen
   | Cli.Format (Cli.Format_stdin extension) ->
     Format.format_stdin ~poll extension
-  | Cli.Format (Cli.Format_files {check; paths}) ->
-    Format.run_files ~poll ~check paths
-  | Cli.Compiler_args path -> print_endline (Compiler_args_command.run path)
+  | Cli.Format (Cli.Format_files {verbosity; check; paths}) ->
+    Format.run_files ~poll ~verbosity ~check paths
+  | Cli.Compiler_args {verbosity; path} ->
+    print_endline (Compiler_args_command.run ~verbosity path)
   | Cli.Clean {verbosity; folder; prod} ->
     Clean.run ~poll ~verbosity ~folder ~prod
 

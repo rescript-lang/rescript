@@ -152,7 +152,7 @@ let tests =
           check
             (Project_context.workspace_lock_root standalone = standalone)
             "an unrelated project below a workspace remains standalone";
-          let arguments = Compiler_args_command.run source in
+          let arguments = Compiler_args_command.run ~verbosity:0 source in
           check
             (not (Test_support.contains_text arguments "\"-bs-jsx\""))
             "standalone compiler arguments do not inherit workspace JSX";
