@@ -66,15 +66,13 @@ let workspace_lock_root_for current = (workspace_config_for current).root
 (* The same wording as Rust rewatch's debug output, which tests compare. *)
 let describe (config : Config.t) ~(workspace : Config.t) =
   if workspace.root = config.root then
-    Printf.sprintf
-      "Created project context Single project: \"%s\" at \"%s\" for \"%s\""
-      config.name config.path config.root
+    Printf.sprintf "Created project context for \"%s\" at \"%s\"" config.name
+      config.path
   else
     Printf.sprintf
-      "Created project context MonorepoPackage:\n\
-      \  \"%s\" at \"%s\"\n\
-      \  with parent \"%s\" at \"%s\" for \"%s\""
-      config.name config.path workspace.name workspace.path config.root
+      "Created project context for \"%s\" at \"%s\" with parent workspace \
+       \"%s\" at \"%s\""
+      config.name config.path workspace.name workspace.path
 
 let workspace_lock_root folder =
   workspace_lock_root_for (Config.load_root folder)

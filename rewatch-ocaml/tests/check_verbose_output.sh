@@ -30,7 +30,7 @@ normalize_events() {
   input=$1
   output=$2
   sed -E \
-    's# at ".*rescript\.json" for ".*"# at "<PROJECT>/rescript.json" for "<PROJECT>"#' \
+    's# at "[^"]*rescript\.json"# at "<PROJECT>/rescript.json"#g' \
     "$input" \
     | awk '
         /^(DEBUG|TRACE):$/ {
