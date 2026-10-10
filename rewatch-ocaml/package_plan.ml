@@ -23,5 +23,4 @@ type t = {
 type compilation = {
   regular_common_args: string list;
   development_common_args: string list;
-  parse_paths: string list;
 }

@@ -230,12 +230,10 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
             let directory =
               Build_artifacts.lib_path dependency.directory "ocaml"
             in
-            if not (File_util.exists directory) then (regular, development)
-            else
-              match dependency.kind with
-              | Package_traversal.Regular -> (directory :: regular, development)
-              | Package_traversal.Development ->
-                (regular, directory :: development))
+            match dependency.kind with
+            | Package_traversal.Regular -> (directory :: regular, development)
+            | Package_traversal.Development ->
+              (regular, directory :: development))
           ([], []) package.dependencies
         |> fun (regular, development) -> (List.rev regular, List.rev development)
       in
@@ -244,19 +242,12 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
           ~runtime ~dependency_dirs ~watch
           ~gentype_dependency_args:package.gentype_dependency_args
       in
-      let parse_paths =
-        package.modules
-        |> List.concat_map (fun module_ ->
-            module_.Source.implementation
-            :: Option.to_list module_.Source.interface)
-      in
       Hashtbl.add packages package.root
         Package_plan.
           {
             regular_common_args = common_args regular_dependency_dirs;
             development_common_args =
               common_args (development_dependency_dirs @ regular_dependency_dirs);
-            parse_paths;
           })
     package_plans;
   let prepared =

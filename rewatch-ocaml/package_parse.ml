@@ -1,6 +1,5 @@
 let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
-    ~(prepared_package : Package_plan.compilation) ~(attempt : Build_attempt.t)
-    ~removed_module_names =
+    ~(attempt : Build_attempt.t) ~removed_module_names =
   let root = package.root in
   let is_local = package.is_local in
   let config = package.compile_config in
@@ -9,7 +8,9 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
   let build_dir = package.build_dir in
   let ocaml_dir = package.ocaml_dir in
   let dirty_parse_paths =
-    prepared_package.parse_paths
+    package.modules
+    |> List.concat_map (fun (module_ : Source.module_) ->
+        module_.implementation :: Option.to_list module_.interface)
     |> List.filter (fun path ->
         let forced =
           Hashtbl.mem attempt.preliminary_parses (Filename.concat root path)

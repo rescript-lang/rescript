@@ -38,8 +38,7 @@ let rec prepare_tree ~seen ~(package : Package_plan.t) ~prepared ~watch
   |> List.iter (fun module_name ->
       Hashtbl.replace removed_module_names module_name ());
   let parse_dirty_modules =
-    Package_parse.run ~package ~prepared ~prepared_package ~attempt
-      ~removed_module_names
+    Package_parse.run ~package ~prepared ~attempt ~removed_module_names
   in
   Package_compilation.prepare ~package ~prepared ~prepared_package ~attempt
     ~watch ~present_public_outputs ~removed_module_names ~parse_dirty_modules

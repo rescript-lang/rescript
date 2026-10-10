@@ -1,6 +1,7 @@
-(** A package plan freezes discovery and configuration decisions that are
-    stable across retained watch attempts. Compilation-specific arguments are
-    stored separately so per-attempt dirtiness does not require rediscovery. *)
+(** A package plan holds the discovery and configuration decisions for one
+    package, and [compilation] the compiler arguments that build preparation
+    derives from it. Both live as long as the session that prepared them, so
+    retained watch attempts reuse them without rediscovery. *)
 
 type dependency = {
   declaration: Config.dependency;
@@ -27,5 +28,4 @@ type t = {
 type compilation = {
   regular_common_args: string list;
   development_common_args: string list;
-  parse_paths: string list;
 }
