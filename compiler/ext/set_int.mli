@@ -1,1 +1,1 @@
-include Set_gen.S with type elt = int
+include Set.S with type elt = int

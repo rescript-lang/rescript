@@ -69,7 +69,7 @@ let mark_dead_code (js : J.program) : J.program =
                 Js_analyzer.no_side_effect_expression x
             in
             let () =
-              if Set_ident.mem js.export_set ident then
+              if Set_ident.mem ident js.export_set then
                 Js_op_util.update_used_stats ident_info Exported
             in
             let () =

@@ -32,7 +32,7 @@ let transitive_closure (initial_idents : Ident.t list)
       | None ->
         Ext_fmt.failwithf ~loc:__LOC__ "%s/%d not found" (Ident.name id)
           id.stamp
-      | Some e -> Set_ident.iter e dfs)
+      | Some e -> Set_ident.iter dfs e)
   in
   Ext_list.iter initial_idents dfs;
   visited
@@ -61,8 +61,10 @@ let remove export_idents (rest : Lam_group.t list) : Lam_group.t list =
           if Lam_analysis.no_side_effects lam then acc
           else
             (* its free varaibles here will be defined above *)
-            Set_ident.fold (Lambda_traverse.free_variables lam) acc
-              (fun x acc -> x :: acc))
+            Set_ident.fold
+              (fun x acc -> x :: acc)
+              (Lambda_traverse.free_variables lam)
+              acc)
   in
   let visited = transitive_closure initial_idents ident_free_vars in
   Ext_list.fold_left rest [] (fun acc x ->

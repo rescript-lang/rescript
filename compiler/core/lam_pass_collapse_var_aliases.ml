@@ -22,7 +22,7 @@ let collapse ~exports (lam : Lambda.t) : Lambda.t =
       Hash_ident.add tbl id u;
       (* The binding is dropped unless the name is exported, in which case it
          has to survive under its own name. *)
-      if Set_ident.mem exports id then
+      if Set_ident.mem id exports then
         Lambda.let_ Alias id (Lambda.var u) (go body)
       else go body
     | _ -> Lambda_traverse.shallow_map_sharing go lam

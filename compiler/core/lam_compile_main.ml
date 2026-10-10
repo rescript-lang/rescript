@@ -73,12 +73,12 @@ let declare_undeclared_exports (exports : Ident.t list) (block : J.block) :
   let declared =
     Ext_list.fold_left block Set_ident.empty (fun acc (stmt : J.statement) ->
         match stmt.statement_desc with
-        | Variable {ident} -> Set_ident.add acc ident
+        | Variable {ident} -> Set_ident.add ident acc
         | _ -> acc)
   in
   block
   @ Ext_list.filter_map exports (fun id ->
-      if Set_ident.mem declared id then None
+      if Set_ident.mem id declared then None
       else Some (Js_stmt_make.declare_variable ~kind:Strict id))
 
 (** Also need analyze its depenency is pure or not *)
@@ -129,13 +129,13 @@ let js_hoisted_aliases (export_ids : Ident.t list)
     in
     let rec resolve_binding seen = function
       | Lambda.Lvar id as lam -> (
-        if Set_ident.mem seen id then (lam, Some id)
+        if Set_ident.mem id seen then (lam, Some id)
         else
           match Map_ident.find_opt group_map id with
           | Some
               ((Lambda.Lvar _ | Lambda.Lprim {primitive = Lambda.Pfield _; _})
                as alias) ->
-            resolve_binding (Set_ident.add seen id) alias
+            resolve_binding (Set_ident.add id seen) alias
           | Some resolved -> (resolved, Some id)
           | None -> (lam, Some id))
       | Lambda.Lprim {primitive = Lambda.Pfield (pos, _); args = [base]} as lam
@@ -178,10 +178,10 @@ let js_hoisted_aliases (export_ids : Ident.t list)
       Ext_list.fold_left groups Set_string.empty (fun occupied group ->
           match group with
           | Single (_, id, _) ->
-            Set_string.add occupied (Ext_ident.convert id.Ident.name)
+            Set_string.add (Ext_ident.convert id.Ident.name) occupied
           | Recursive bindings ->
             Ext_list.fold_left bindings occupied (fun occupied (id, _) ->
-                Set_string.add occupied (Ext_ident.convert id.Ident.name))
+                Set_string.add (Ext_ident.convert id.Ident.name) occupied)
           | Nop _ -> occupied)
     in
     fst
@@ -208,7 +208,7 @@ let js_hoisted_aliases (export_ids : Ident.t list)
                      |> String.concat "$"
                    in
                    let js_name = Ext_ident.convert name in
-                   if Set_string.mem occupied_names js_name then
+                   if Set_string.mem js_name occupied_names then
                      let error_loc =
                        match target with
                        | Lambda.Lfunction {loc} -> loc
@@ -227,7 +227,7 @@ let js_hoisted_aliases (export_ids : Ident.t list)
                          path,
                          name )
                        :: aliases,
-                       Set_string.add occupied_names js_name )
+                       Set_string.add js_name occupied_names )
                  | Some _ | None -> missing_path ())
                | None -> missing_path ())
              | None -> missing_path ())
@@ -362,7 +362,7 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
       exports = meta.exports @ List.rev hoisted_exports;
       export_idents =
         Ext_list.fold_left hoisted_exports meta.export_idents (fun acc id ->
-            Set_ident.add acc id);
+            Set_ident.add id acc);
     }
   in
   let export_map =

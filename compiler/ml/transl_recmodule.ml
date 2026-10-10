@@ -99,7 +99,7 @@ let reorder_rec_bindings bindings =
       if init.(i) = None then (
         status.(i) <- Inprogress;
         for j = 0 to num_bindings - 1 do
-          if Set_ident.mem fv.(i) id.(j) then emit_binding j
+          if Set_ident.mem id.(j) fv.(i) then emit_binding j
         done);
       res := (id.(i), init.(i), rhs.(i)) :: !res;
       status.(i) <- Defined
@@ -173,25 +173,25 @@ let rec is_function_or_const_block (lam : Lambda.t) acc =
   | Lprim {primitive = Pmakeblock _; args; loc = _} ->
     Ext_list.for_all args (fun x ->
         match x with
-        | Lvar id -> Set_ident.mem acc id
+        | Lvar id -> Set_ident.mem id acc
         | Lfunction _ | Lconst _ -> true
         | _ -> false)
   | Llet (_, id, Lfunction _, cont) ->
-    is_function_or_const_block cont (Set_ident.add acc id)
+    is_function_or_const_block cont (Set_ident.add id acc)
   | Lletrec (bindings, cont) -> (
     let rec aux_bindings bindings acc =
       match bindings with
       | [] -> Some acc
       | (id, Lambda.Lfunction _) :: rest ->
-        aux_bindings rest (Set_ident.add acc id)
+        aux_bindings rest (Set_ident.add id acc)
       | (_, _) :: _ -> None
     in
     match aux_bindings bindings acc with
     | None -> false
     | Some acc -> is_function_or_const_block cont acc)
   | Llet (_, _, Lconst _, cont) -> is_function_or_const_block cont acc
-  | Llet (_, id1, Lvar id2, cont) when Set_ident.mem acc id2 ->
-    is_function_or_const_block cont (Set_ident.add acc id1)
+  | Llet (_, id1, Lvar id2, cont) when Set_ident.mem id2 acc ->
+    is_function_or_const_block cont (Set_ident.add id1 acc)
   | _ -> false
 
 let is_strict_or_all_functions (xs : binding list) =
