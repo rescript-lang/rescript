@@ -18,7 +18,6 @@ let preliminary_parse result =
   if Process.succeeded result then Parsed_successfully {stderr = result.stderr}
   else Parse_failed {stdout = result.stdout; stderr = result.stderr}
 
-type cleanup_batch = {actions: (unit -> unit) list; artifacts: string list}
 type namespace_job = {job: Process.job; finish: Process.result -> unit}
 
 type pending_work = {
@@ -111,17 +110,6 @@ let register_cleanup attempt action =
 let defer_artifact_cleanup attempt paths =
   attempt.finalization.artifacts <- paths @ attempt.finalization.artifacts
 
-let take_cleanup attempt =
-  let batch =
-    {
-      actions = attempt.finalization.actions;
-      artifacts = attempt.finalization.artifacts;
-    }
-  in
-  attempt.finalization.actions <- [];
-  attempt.finalization.artifacts <- [];
-  batch
-
 let set_cleanup_result attempt root (result : Build_artifacts.cleanup_result) =
   Hashtbl.replace attempt.package_removed_modules root result.removed_modules;
   Build_session.set_public_outputs attempt.session root
@@ -152,13 +140,6 @@ let take_compile_candidates attempt =
 let mark_log_initialized attempt root =
   Hashtbl.replace attempt.finalization.initialized_logs root ()
 
-let take_initialized_logs attempt =
-  let roots =
-    attempt.finalization.initialized_logs |> Hashtbl.to_seq_keys |> List.of_seq
-  in
-  Hashtbl.clear attempt.finalization.initialized_logs;
-  roots
-
 let run_all actions =
   let first_error = ref None in
   List.iter
@@ -172,15 +153,19 @@ let run_all actions =
 let cleanup_artifacts attempt =
   if not attempt.finalization.artifacts_cleaned then (
     attempt.finalization.artifacts_cleaned <- true;
-    let cleanup = take_cleanup attempt in
     run_all
-      (cleanup.actions
-      @ List.map (fun path () -> File_util.remove_file path) cleanup.artifacts))
+      (attempt.finalization.actions
+      @ List.map
+          (fun path () -> File_util.remove_file path)
+          attempt.finalization.artifacts))
 
 let finalize_logs attempt =
   if not attempt.finalization.logs_finalized then (
     attempt.finalization.logs_finalized <- true;
-    let package_roots = take_initialized_logs attempt in
+    let package_roots =
+      attempt.finalization.initialized_logs |> Hashtbl.to_seq_keys
+      |> List.of_seq
+    in
     run_all
       ((fun () -> Output.Progress.finish attempt.progress)
       :: List.map
@@ -196,7 +181,6 @@ let protect attempt action =
   | result ->
     finish_attempt attempt;
     result
-  | exception original -> (
-    match finish_attempt attempt with
-    | () -> raise original
-    | exception cleanup_error -> raise cleanup_error)
+  | exception error ->
+    finish_attempt attempt;
+    raise error
