@@ -157,7 +157,7 @@ let release_process process = close_process_job process.job
 
 let create_capture_pipes = Platform_common.create_capture_pipes
 
-let signal_process_tree ~root_reaped:_ process _signal =
+let signal_process_tree process _signal =
   if terminate_process_job process.job then Ok ()
   else Error "TerminateJobObject failed"
 

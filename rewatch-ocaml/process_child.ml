@@ -219,12 +219,7 @@ let fail_launch ownership launch_error =
   Option.iter
     (fun process ->
       let pid = Platform.process_id process in
-      let root_reaped =
-        match ownership.child_wait with
-        | Some wait -> Option.is_some (Atomic.get wait.direct_outcome)
-        | None -> false
-      in
-      (match Platform.signal_process_tree ~root_reaped process Sys.sigkill with
+      (match Platform.signal_process_tree process Sys.sigkill with
       | Ok () -> ()
       | Error message -> ownership.termination_error <- Some message);
       if
@@ -339,16 +334,12 @@ let signal_running (children : _ running list) =
     let root_identity_lost (child : _ running) =
       Option.is_some (Atomic.get child.child_wait.direct_outcome)
     in
-    let signal_group signal (child : _ running) =
-      let root_reaped = root_identity_lost child in
-      Platform.signal_process_tree ~root_reaped child.process signal
-    in
     let signal_all signal =
       List.fold_left
         (fun errors child ->
           if completion_ready child then errors
           else
-            match signal_group signal child with
+            match Platform.signal_process_tree child.process signal with
             | Ok () -> errors
             | Error message -> (child, message) :: errors)
         [] children

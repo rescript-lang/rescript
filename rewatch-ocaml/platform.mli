@@ -43,8 +43,7 @@ val create_capture_pipes :
   unit ->
   (Unix.file_descr * Unix.file_descr) * (Unix.file_descr * Unix.file_descr)
 
-val signal_process_tree :
-  root_reaped:bool -> process -> int -> (unit, string) result
+val signal_process_tree : process -> int -> (unit, string) result
 
 val termination_signals : int list
 (** Signals that request a clean shutdown: killing children, releasing locks,
