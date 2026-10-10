@@ -46,6 +46,14 @@ val resolved_dependencies :
   module_node ->
   string list
 
+val raw_dependencies :
+  build_dir:string ->
+  parse_failed:(string -> bool) ->
+  Source.module_ ->
+  string list
+(** The sorted module names that a module's ASTs reference, skipping the
+    source paths whose parse failed. *)
+
 type initialized = {
   nodes: module_node list;
   namespace_maps: namespace_map list;

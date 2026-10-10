@@ -154,6 +154,18 @@ let resolved_dependencies ~find_module ~find_namespace_maps (node : module_node)
   |> List.filter (fun dependency -> dependency <> node.key)
   |> List.sort_uniq String.compare
 
+let raw_dependencies ~build_dir ~parse_failed (module_ : Source.module_) =
+  let dependencies path =
+    if parse_failed path then []
+    else Compiler_process.ast_dependencies ~build_dir (Source.ast_path path)
+  in
+  List.sort_uniq String.compare
+    (dependencies module_.implementation
+    @
+    match module_.interface with
+    | None -> []
+    | Some path -> dependencies path)
+
 type initialized = {
   nodes: module_node list;
   namespace_maps: namespace_map list;
@@ -177,21 +189,12 @@ let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
         package.dependencies;
       List.iter
         (fun module_ ->
-          let dependencies path =
-            if
-              Hashtbl.mem failed_parse_paths (Filename.concat package.root path)
-            then []
-            else
-              Compiler_process.ast_dependencies ~build_dir:package.build_dir
-                (Source.ast_path path)
-          in
           let raw_dependencies =
-            List.sort_uniq String.compare
-              (dependencies module_.Source.implementation
-              @
-              match module_.Source.interface with
-              | None -> []
-              | Some path -> dependencies path)
+            raw_dependencies ~build_dir:package.build_dir
+              ~parse_failed:(fun path ->
+                Hashtbl.mem failed_parse_paths
+                  (Filename.concat package.root path))
+              module_
           in
           let compiler_base =
             Source.compiler_basename package.compile_config module_.Source.name
