@@ -16,10 +16,13 @@ let discover config ?(prod = false) ?features ?filter () =
         | Error message -> failwith message)
       filter
   in
-  (Source.discover_with_inventory config ~prod ~features ~filter).modules
+  (Source.discover_with_inventory config ~on_missing:ignore ~prod ~features
+     ~filter)
+    .modules
 
 let discover_with_inventory config ?(prod = false) ?features () =
-  Source.discover_with_inventory config ~prod ~features ~filter:None
+  Source.discover_with_inventory config ~on_missing:ignore ~prod ~features
+    ~filter:None
 
 let tests =
   "source_tests" >:: fun _context ->
