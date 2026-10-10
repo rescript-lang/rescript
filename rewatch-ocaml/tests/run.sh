@@ -622,6 +622,22 @@ if grep 'DEBUG' "$work/format-verbose.out" >/dev/null; then
   echo "format -v wrote logs to stdout" >&2
   exit 1
 fi
+# Format resolves the package graph once, so a package metadata mismatch is
+# reported once, as in Rust.
+format_name_mismatch="$work/format-name-mismatch"
+mkdir -p "$format_name_mismatch/src"
+printf '%s\n' '{"name":"rescript-name","sources":["src"]}' \
+  >"$format_name_mismatch/rescript.json"
+printf '%s\n' '{"name":"package-name"}' >"$format_name_mismatch/package.json"
+printf 'let value = 1\n' >"$format_name_mismatch/src/A.res"
+(cd "$format_name_mismatch" && "$port" format --check \
+  >"$work/format-name-mismatch.out" 2>"$work/format-name-mismatch.err")
+mismatch_warnings=$(grep -c 'Package name mismatch' "$work/format-name-mismatch.err" || true)
+if [ "$mismatch_warnings" != 1 ]; then
+  echo "format reported a package name mismatch $mismatch_warnings times" >&2
+  cat "$work/format-name-mismatch.err" >&2
+  exit 1
+fi
 sed 's/"suffix": "\.mjs"/"suffix": "\.mjs", "bsc-flags": ["-w -9"]/' "$basic/rescript.json" > "$basic/rescript.next"
 mv "$basic/rescript.next" "$basic/rescript.json"
 sed 's/"module": "esmodule"/"module": "es6"/' "$basic/rescript.json" > "$basic/rescript.next"
