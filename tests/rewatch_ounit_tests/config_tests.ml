@@ -113,6 +113,26 @@ let loading_tests =
       check
         (config.namespace = Config.Namespace "SomenamespaceName_here")
         "namespace punctuation is normalized while decoding";
+      let namespace_with_entry namespace =
+        write_file path
+          (Printf.sprintf
+             {|{"name":"namespace-test","namespace":%S,"namespace-entry":"Entry"}|}
+             namespace);
+        Config.namespace_name (Config.load path).namespace
+      in
+      List.iter
+        (fun (namespace, expected) ->
+          check
+            (namespace_with_entry namespace = Some expected)
+            (Printf.sprintf "namespace %S with an entry is named %s" namespace
+               expected))
+        [
+          ("my_lib", "MyLib");
+          ("my-lib", "MyLib");
+          ("myLib", "MyLib");
+          ("HTTPServer", "HttpServer");
+          ("FOO", "FOO");
+        ];
       write_file path
         {|{
           "name": "unknown-fields",

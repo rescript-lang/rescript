@@ -135,6 +135,70 @@ let namespace_from_package_name name =
     name;
   Buffer.contents buffer
 
+(* A string namespace combined with a namespace-entry is converted with the
+   Pascal case of Rust's convert_case crate (0.6), which rescript.json files
+   already depend on: "my_lib" names the namespace MyLib. Words split at
+   '-', '_' and ' ' (which are dropped), between a lower-case letter and an
+   upper-case letter or digit, between an upper-case letter and a digit,
+   between a digit and a letter, and before the last capital of an acronym
+   followed by a lower-case letter ("ABCdef" -> "AB", "Cdef"). Each word is
+   then capitalized and the rest lower-cased. Characters that are neither
+   letters nor digits, such as '.', stay inside their word. *)
+let pascal_case_words value =
+  let is_upper = function
+    | 'A' .. 'Z' -> true
+    | _ -> false
+  in
+  let is_lower = function
+    | 'a' .. 'z' -> true
+    | _ -> false
+  in
+  let is_digit = function
+    | '0' .. '9' -> true
+    | _ -> false
+  in
+  let length = String.length value in
+  let words = ref [] in
+  let word = Buffer.create length in
+  let finish_word () =
+    if Buffer.length word > 0 then (
+      words := Buffer.contents word :: !words;
+      Buffer.clear word)
+  in
+  String.iteri
+    (fun index character ->
+      match character with
+      | '-' | '_' | ' ' -> finish_word ()
+      | _ ->
+        let splits_before =
+          index > 0
+          &&
+          let previous = value.[index - 1] in
+          (is_lower previous && (is_upper character || is_digit character))
+          || (is_upper previous && is_digit character)
+          || (is_digit previous && (is_upper character || is_lower character))
+          || index + 1 < length
+             && is_upper previous && is_upper character
+             && is_lower value.[index + 1]
+        in
+        if splits_before then finish_word ();
+        Buffer.add_char word character)
+    value;
+  finish_word ();
+  List.rev !words
+
+let pascal_case value =
+  pascal_case_words value
+  |> List.map (fun word ->
+      String.capitalize_ascii (String.lowercase_ascii word))
+  |> String.concat ""
+
+(* convert_case's upper-flat case: a value that is already all capitals without
+   word separators is used as the namespace unchanged. *)
+let is_upper_flat_case value =
+  String.concat "" (List.map String.uppercase_ascii (pascal_case_words value))
+  = value
+
 let compiler_flags path field = function
   | `List values ->
     values

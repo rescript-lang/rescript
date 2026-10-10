@@ -142,21 +142,27 @@ let load path =
              effective_suffix);
       Hashtbl.add seen_package_outputs key ())
     package_specs;
+  let namespace_entry =
+    optional_member "namespace-entry" fields
+    |> Option.map (string path "namespace-entry")
+  in
   let namespace_name =
     match optional_member "namespace" fields with
     | None | Some (`Bool false) -> None
     | Some (`Bool true) -> Some (namespace_from_package_name name)
     | Some (`String "true") -> Some (namespace_from_package_name name)
+    | Some (`String value) when is_upper_flat_case value -> Some value
+    | Some (`String value) when Option.is_some namespace_entry ->
+      Some (pascal_case value)
     | Some (`String value) -> Some (namespace_from_package_name value)
     | Some _ -> fail path "field \"namespace\" must be a boolean or string"
   in
   let namespace =
-    match (optional_member "namespace-entry" fields, namespace_name) with
+    match (namespace_entry, namespace_name) with
     | None, None -> No_namespace
     | None, Some name -> Namespace name
     | Some _, None -> fail path "field \"namespace-entry\" requires a namespace"
-    | Some value, Some name ->
-      Namespace_with_entry {name; entry = string path "namespace-entry" value}
+    | Some entry, Some name -> Namespace_with_entry {name; entry}
   in
   let compiler_flags =
     match (member "compiler-flags" fields, member "bsc-flags" fields) with
