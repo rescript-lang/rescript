@@ -594,9 +594,63 @@ let decoder_semantics_tests =
         | _ -> false)
         "shorthand and feature-qualified dependencies retain their data")
 
+let strict_json_tests =
+  with_config_file (fun ~root:_ ~path ->
+      let rejected contents ~line ~column message =
+        match Strict_json.check contents with
+        | Error error ->
+          error.line = line && error.column = column && error.message = message
+        | Ok () -> false
+      in
+      check
+        (rejected {|{"a": 1, /* note */ "b": 2}|} ~line:1 ~column:10
+           "comments are not allowed in JSON")
+        "block comments are rejected";
+      check
+        (rejected "{\n  \"a\": 1 // note\n}" ~line:2 ~column:10
+           "comments are not allowed in JSON")
+        "line comments are rejected on their line";
+      check
+        (rejected {|{"a": [1, 2,],}|} ~line:1 ~column:13 "trailing comma")
+        "trailing commas in arrays are rejected";
+      check
+        (rejected {|{"a": 1,}|} ~line:1 ~column:9 "trailing comma")
+        "trailing commas in objects are rejected";
+      check
+        (rejected {|{name: "x"}|} ~line:1 ~column:2 "expected a string key")
+        "unquoted keys are rejected";
+      check
+        (rejected {|{"a": NaN}|} ~line:1 ~column:7 "expected a value")
+        "NaN is rejected";
+      check
+        (rejected {|{"a": -Infinity}|} ~line:1 ~column:8 "invalid number")
+        "Infinity is rejected";
+      check
+        (rejected {|{"a": 01}|} ~line:1 ~column:8 "expected ',' or '}'")
+        "leading zeros are rejected";
+      check
+        (rejected "\xEF\xBB\xBF{}" ~line:1 ~column:1
+           "byte order mark is not allowed")
+        "a byte order mark is rejected";
+      check
+        (rejected "{\"\xC3\xA9\": x}" ~line:1 ~column:7 "expected a value")
+        "columns count characters rather than bytes";
+      check
+        (Strict_json.check
+           {|{"s": "\"\\\/\b\f\n\r\t\u00e9 Ã©", "n": [-0.5e+3, 0, 12E-1], "x": [true, false, null, {}, []]}|}
+        = Ok ())
+        "standard JSON is accepted";
+      check
+        (rejects path {|{"name": "x",
+  "sources": "src",
+}|}
+           "rescript.json:3:1: invalid JSON: trailing comma")
+        "configuration syntax errors name the file, line, and column")
+
 let tests =
   "config_tests"
   >::: [
+         "strict_json" >:: strict_json_tests;
          "loading" >:: loading_tests;
          "gentype_discovery" >:: gentype_discovery_tests;
          "validation" >:: validation_tests;

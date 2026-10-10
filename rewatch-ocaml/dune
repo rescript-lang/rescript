@@ -23,6 +23,7 @@
  (modules
   rewatch_version
   string_util
+  strict_json
   source_filter
   cli
   config_types
