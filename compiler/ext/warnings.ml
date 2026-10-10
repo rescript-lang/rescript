@@ -460,8 +460,6 @@ let sub_locs = function
     [(def, "Definition"); (use, "Expected signature")]
   | _ -> []
 
-let has_warnings = ref false
-
 let nerrors = ref 0
 
 type reporting_information = {
@@ -475,7 +473,6 @@ let report w =
   match is_active w with
   | false -> `Inactive
   | true ->
-    has_warnings := true;
     if is_error w then incr nerrors;
     `Active
       {

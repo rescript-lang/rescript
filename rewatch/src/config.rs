@@ -259,26 +259,20 @@ pub enum NamespaceConfig {
 
 #[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub enum JsxMode {
-    Classic,
-    Automatic,
-}
-
-#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
-#[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum JsxModule {
     React,
     Other(String),
 }
 
+/// Config fields that no longer have any effect. They are dropped silently instead of being
+/// reported as unknown, so that existing configs keep building without warnings.
+const OBSOLETE_FIELDS: &[&str] = &["jsx.mode", "jsx.v3-dependencies"];
+
 #[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct JsxSpecs {
     pub version: Option<i32>,
     pub module: Option<JsxModule>,
-    pub mode: Option<JsxMode>,
-    #[serde(rename = "v3-dependencies")]
-    pub v3_dependencies: Option<Vec<String>>,
     pub preserve: Option<bool>,
 }
 
@@ -737,16 +731,26 @@ impl Config {
         let mut tracker = serde_path_to_error::Track::new();
         let path_deserializer = serde_path_to_error::Deserializer::new(&mut deserializer, &mut tracker);
         let mut unknown_fields = Vec::new();
-        let mut config: Config =
-            serde_ignored::deserialize(path_deserializer, |path| unknown_fields.push(path.to_string()))
-                .map_err(|err: serde_json::Error| {
-                    let path = tracker.path().to_string();
-                    if path.is_empty() {
-                        anyhow!("Failed to parse rescript.json: {err}")
-                    } else {
-                        anyhow!("Failed to parse rescript.json at {path}: {err}")
-                    }
-                })?;
+        let mut config: Config = serde_ignored::deserialize(path_deserializer, |path| {
+            let path = path.to_string();
+            // Paths contain a `?` segment for each `Option`, e.g. `jsx.?.mode`.
+            let field = path
+                .split('.')
+                .filter(|segment| *segment != "?")
+                .collect::<Vec<_>>()
+                .join(".");
+            if !OBSOLETE_FIELDS.contains(&field.as_str()) {
+                unknown_fields.push(path)
+            }
+        })
+        .map_err(|err: serde_json::Error| {
+            let path = tracker.path().to_string();
+            if path.is_empty() {
+                anyhow!("Failed to parse rescript.json: {err}")
+            } else {
+                anyhow!("Failed to parse rescript.json at {path}: {err}")
+            }
+        })?;
 
         if let Some(value) = raw_value.as_ref().and_then(|v| v.as_object()) {
             for (raw_key, warning) in [
@@ -831,22 +835,6 @@ impl Config {
                 None => vec![],
             },
             None => vec![],
-        }
-    }
-
-    pub fn get_jsx_mode_args(&self) -> Vec<String> {
-        match self.jsx.to_owned() {
-            Some(jsx) => match jsx.mode {
-                Some(JsxMode::Classic) => {
-                    vec!["-bs-jsx-mode".to_string(), "classic".to_string()]
-                }
-                Some(JsxMode::Automatic) => {
-                    vec!["-bs-jsx-mode".to_string(), "automatic".to_string()]
-                }
-
-                None => vec![],
-            },
-            _ => vec![],
         }
     }
 
@@ -1683,8 +1671,6 @@ pub mod tests {
             JsxSpecs {
                 version: None,
                 module: Some(JsxModule::Other(String::from("Voby.JSX"))),
-                mode: None,
-                v3_dependencies: None,
                 preserve: None,
             },
         );
@@ -1710,8 +1696,6 @@ pub mod tests {
             JsxSpecs {
                 version: Some(4),
                 module: None,
-                mode: None,
-                v3_dependencies: None,
                 preserve: Some(true),
             },
         );
@@ -2110,6 +2094,28 @@ pub mod tests {
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
         assert_eq!(config.get_unknown_fields(), vec!["some-new-field".to_string()]);
+        assert!(config.get_unsupported_fields().is_empty());
+    }
+
+    #[test]
+    fn test_obsolete_fields_are_ignored() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "jsx": {
+                "version": 4,
+                "mode": "automatic",
+                "v3-dependencies": ["some-dep"]
+            }
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert!(config.get_unknown_fields().is_empty());
         assert!(config.get_unsupported_fields().is_empty());
     }
 

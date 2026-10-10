@@ -798,7 +798,6 @@ pub fn compiler_args(
     let root_config = project_context.get_root_config();
     let jsx_args = root_config.get_jsx_args();
     let jsx_module_args = root_config.get_jsx_module_args();
-    let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
     let source_map_args = root_config.get_source_map_args(source_map_command);
     let bsb_project_root = project_context.get_root_path();
@@ -883,7 +882,6 @@ pub fn compiler_args(
         dependency_paths,
         jsx_args,
         jsx_module_args,
-        jsx_mode_args,
         jsx_preserve_args,
         source_map_args,
         bsc_flags.to_owned(),

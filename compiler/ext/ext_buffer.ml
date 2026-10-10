@@ -94,17 +94,6 @@ let add_string_char b s c =
   Bytes.unsafe_set b_buffer (new_position - 1) c;
   b.position <- new_position
 
-let add_char_string b c s =
-  let s_len = String.length s in
-  let len = s_len + 1 in
-  let new_position = b.position + len in
-  if new_position > b.length then resize b len;
-  let b_buffer = b.buffer in
-  let b_position = b.position in
-  Bytes.unsafe_set b_buffer b_position c;
-  Ext_bytes.unsafe_blit_string s 0 b_buffer (b_position + 1) s_len;
-  b.position <- new_position
-
 (* let add_bytes b s = add_string b (Bytes.unsafe_to_string s)
 
    let add_buffer b bs =
@@ -120,18 +109,6 @@ let add_char_string b c s =
    b.position <- b.position + len *)
 
 let output_buffer oc b = output oc b.buffer 0 b.position
-
-let rec not_equal_aux (b : bytes) (s : string) i len =
-  if i >= len then false
-  else
-    Bytes.unsafe_get b i <> String.unsafe_get s i
-    || not_equal_aux b s (i + 1) len
-
-(** avoid a large copy *)
-let not_equal (b : t) (s : string) =
-  let b_len = b.position in
-  let s_len = String.length s in
-  b_len <> s_len || not_equal_aux b.buffer s 0 s_len
 
 (**
    It could be one byte, two bytes, three bytes and four bytes 

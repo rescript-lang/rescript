@@ -37,14 +37,4 @@ val js_name_of_modulename : string -> Ext_js_file_kind.case -> string -> string
 (** [js_name_of_modulename ~little A-Ns]
 *)
 
-(* TODO handle cases like
-   '@angular/core'
-   its directory structure is like
-   {[
-     @angular
-     |-------- core
-   ]}
-*)
-val is_valid_npm_package_name : string -> bool
-
 val namespace_of_package_name : string -> string

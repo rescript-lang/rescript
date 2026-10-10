@@ -785,9 +785,6 @@ let bin ?comment (op : J.binop) (e0 : t) (e1 : t) : t =
      be careful for side effect
 *)
 
-let string_of_expression = ref (fun _ -> "")
-let debug = false
-
 (**
   [push_negation e] attempts to simplify a negated expression by pushing the negation
   deeper into the expression tree. Returns [Some simplified] if simplification is possible,
@@ -862,10 +859,6 @@ let simplify_max_depth = 10
   returns [None].
 *)
 let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
-  if debug then
-    Printf.eprintf "%s simplify_and %s %s\n"
-      (String.make (n * 2) ' ')
-      (!string_of_expression e1) (!string_of_expression e2);
   (* Bail out if recursion is too deep to prevent exponential blowup *)
   if n > simplify_max_depth then None
   else
@@ -1182,13 +1175,6 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
         else Some e2
       | _ -> None
     in
-    (if debug then
-       match res with
-       | None -> ()
-       | Some e ->
-         Printf.eprintf "%s = %s\n"
-           (String.make (n * 2) ' ')
-           (!string_of_expression e));
     res
 
 and simplify_and_force ~n (e1 : t) (e2 : t) : t option =
@@ -1219,11 +1205,6 @@ and simplify_and_force ~n (e1 : t) (e2 : t) : t option =
   in the context of OR expressions.
 *)
 and simplify_or_ ~n (e1 : t) (e2 : t) : t option =
-  if debug then
-    Printf.eprintf "%ssimplify_or %s %s\n"
-      (String.make (n * 2) ' ')
-      (!string_of_expression e1) (!string_of_expression e2);
-
   let res =
     match (e1.expression_desc, e2.expression_desc) with
     | Bool true, _ -> Some true_
@@ -1238,13 +1219,6 @@ and simplify_or_ ~n (e1 : t) (e2 : t) : t option =
         | None -> None)
       | _ -> None)
   in
-  (if debug then
-     match res with
-     | None -> ()
-     | Some e ->
-       Printf.eprintf "%s = %s\n"
-         (String.make (n * 2) ' ')
-         (!string_of_expression e));
   res
 
 and simplify_or_force ~n (e1 : t) (e2 : t) : t option =

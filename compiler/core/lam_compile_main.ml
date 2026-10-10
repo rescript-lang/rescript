@@ -497,16 +497,7 @@ let lambda_as_module (lambda_output : J.deps_program) (output_prefix : string) :
               module_system lambda_output chan
         in
         if not !Clflags.dont_write_files then
-          Ext_pervasives.with_file_as_chan target_file output_chan;
-        if !Warnings.has_warnings then (
-          Warnings.has_warnings := false;
-          (* 5206: When there were warnings found during the compilation, we want the file
-             to be rebuilt on the next "rescript build" so that the warnings keep being shown.
-             Set the timestamp of the ast file to 1970-01-01 to make this rebuild happen.
-             (Do *not* set the timestamp of the JS output file instead
-             as that does not play well with every bundler.) *)
-          let ast_file = output_prefix ^ Literals.suffix_ast in
-          if Sys.file_exists ast_file then Build_artifact.mark_stale ast_file))
+          Ext_pervasives.with_file_as_chan target_file output_chan)
 
 (* We can use {!Env.current_unit = "Pervasives"} to tell if it is some specific module,
     We need handle some definitions in standard libraries in a special way, most are io specific,

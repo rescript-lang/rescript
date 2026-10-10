@@ -38,8 +38,6 @@ let setup_env () =
   *)
   Clflags.debug := true;
   Clflags.binary_annotations := true;
-  (* Turn on [-no-alias-deps] by default -- double check *)
-  Oprint.out_ident := Outcome_printer_ns.out_ident;
   Printtyp.print_res_poly_identifier := Res_printer.polyvar_ident_to_string
 (*; Switch.cut := 100*)
 (* tweakable but not very useful *)

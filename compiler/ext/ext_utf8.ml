@@ -24,20 +24,6 @@
 
 exception Invalid_utf8 of string
 
-let decode_utf8_string s =
-  let len = String.length s in
-  let rec loop acc index =
-    if index = len then List.rev acc
-    else
-      let decoded = String.get_utf_8_uchar s index in
-      if Uchar.utf_decode_is_valid decoded then
-        loop
-          (Uchar.to_int (Uchar.utf_decode_uchar decoded) :: acc)
-          (index + Uchar.utf_decode_length decoded)
-      else raise (Invalid_utf8 "Invalid UTF-8 sequence")
-  in
-  loop [] 0
-
 let encode_codepoint c =
   let buf = Buffer.create 4 in
   Buffer.add_utf_8_uchar buf (Uchar.of_int c);

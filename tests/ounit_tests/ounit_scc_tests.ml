@@ -189,6 +189,13 @@ let medium_test_cases =
 49 22
 49 49
 |}
+
+(* Number of components and their sizes *)
+let graph_check v =
+  let v = Ext_scc.graph v in
+  ( Int_vec_vec.length v,
+    Int_vec_vec.fold_left (fun acc x -> Vec_int.length x :: acc) [] v )
+
 (*
    reference output:
    http://algs4.cs.princeton.edu/42digraph/KosarajuSharirSCC.java.html
@@ -227,7 +234,7 @@ let test (input : (string * string list) list) =
       others
       |> List.iter (fun y ->
           Vec_int.push node_array.(idx) (String_hash.find_exn tbl y)));
-  Ext_scc.graph_check node_array
+  graph_check node_array
 
 let test2 (input : (string * string list) list) =
   (* string -> int mapping 
@@ -261,11 +268,11 @@ let suites =
   >::: [
          ( __LOC__ >:: fun _ ->
            OUnit.assert_equal
-             (fst @@ Ext_scc.graph_check (handle_lines tiny_test_cases))
+             (fst @@ graph_check (handle_lines tiny_test_cases))
              5 );
          ( __LOC__ >:: fun _ ->
            OUnit.assert_equal
-             (fst @@ Ext_scc.graph_check (handle_lines medium_test_cases))
+             (fst @@ graph_check (handle_lines medium_test_cases))
              10 );
          ( __LOC__ >:: fun _ ->
            OUnit.assert_equal
