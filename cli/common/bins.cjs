@@ -8,7 +8,13 @@ const path = require("node:path");
 
 const minimumNodeVersion = "20.11.0";
 
-const target = `${process.platform}-${process.arch}`;
+// Windows on ARM runs the x64 toolchain through the operating system's x64
+// emulation, so ARM64 Node uses the x64 package.
+const binaryArch =
+  process.platform === "win32" && process.arch === "arm64"
+    ? "x64"
+    : process.arch;
+const target = `${process.platform}-${binaryArch}`;
 
 const supportedPlatforms = [
   "darwin-arm64",
