@@ -122,7 +122,6 @@ let discover ~(root_config : Config.t) ~(workspace_config : Config.t) ~prod
       in
       let build_dir = Build_artifacts.lib_path root "bs" in
       let ocaml_dir = Build_artifacts.lib_path root "ocaml" in
-      File_util.ensure_dir build_dir;
       let source_mtimes =
         Hashtbl.create (List.length discovery.source_mtimes)
       in
