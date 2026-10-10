@@ -111,10 +111,10 @@ let js_hoisted_aliases (export_ids : Ident.t list)
     let group_map =
       Ext_list.fold_left groups Map_ident.empty (fun group_map group ->
           match group with
-          | Single (_, id, lam) -> Map_ident.add group_map id lam
+          | Single (_, id, lam) -> Map_ident.add id lam group_map
           | Recursive bindings ->
             Ext_list.fold_left bindings group_map (fun group_map (id, lam) ->
-                Map_ident.add group_map id lam)
+                Map_ident.add id lam group_map)
           | Nop _ -> group_map)
     in
     let rec access loc base fields =
@@ -131,7 +131,7 @@ let js_hoisted_aliases (export_ids : Ident.t list)
       | Lambda.Lvar id as lam -> (
         if Set_ident.mem id seen then (lam, Some id)
         else
-          match Map_ident.find_opt group_map id with
+          match Map_ident.find_opt id group_map with
           | Some
               ((Lambda.Lvar _ | Lambda.Lprim {primitive = Lambda.Pfield _; _})
                as alias) ->
@@ -172,7 +172,7 @@ let js_hoisted_aliases (export_ids : Ident.t list)
     in
     let exported_modules =
       Ext_list.fold_left export_ids Map_string.empty (fun modules id ->
-          Map_string.add modules id.Ident.name id)
+          Map_string.add id.Ident.name id modules)
     in
     let occupied_names =
       Ext_list.fold_left groups Set_string.empty (fun occupied group ->
@@ -195,9 +195,9 @@ let js_hoisted_aliases (export_ids : Ident.t list)
            in
            match path with
            | top :: fields -> (
-             match Map_string.find_opt exported_modules top with
+             match Map_string.find_opt top exported_modules with
              | Some top_id -> (
-               match Map_ident.find_opt group_map top_id with
+               match Map_ident.find_opt top_id group_map with
                | Some lam -> (
                  match find_path lam fields [] with
                  | Some (access_path, Some target_id, target)
@@ -352,7 +352,7 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
       ->
         ( group :: groups,
           id :: exports,
-          Map_ident.add export_map id lam,
+          Map_ident.add id lam export_map,
           {Js_cmj_format.path; export_name = name} :: hoisted_metadata ))
   in
   let groups = groups @ List.rev hoisted_groups in
@@ -366,8 +366,9 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
     }
   in
   let export_map =
-    Map_ident.fold hoisted_export_map coerced_input.export_map
-      (fun id lam acc -> Map_ident.add acc id lam)
+    Map_ident.fold
+      (fun id lam acc -> Map_ident.add id lam acc)
+      hoisted_export_map coerced_input.export_map
   in
   let () =
     if debug_ir then

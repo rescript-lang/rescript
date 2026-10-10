@@ -116,7 +116,7 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
             {
               acc with
               export_list = newid :: acc.export_list;
-              export_map = Map_ident.add acc.export_map newid lam;
+              export_map = Map_ident.add newid lam acc.export_map;
               groups = Single (kind, newid, lam) :: acc.groups;
             }
         | _ ->
@@ -152,7 +152,7 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
           {
             acc with
             export_list = newid :: acc.export_list;
-            export_map = Map_ident.add acc.export_map newid lam;
+            export_map = Map_ident.add newid lam acc.export_map;
             groups = Single (Strict, newid, lam) :: acc.groups;
           })
   in
@@ -162,7 +162,7 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
       (fun (export_map, acc) x ->
         ( (match x with
           | Single (_, id, lam) when Set_ident.mem id export_set ->
-            Map_ident.add export_map id lam
+            Map_ident.add id lam export_map
           (* relies on the Invariant that [eoid] can not be bound before
               FIX: such invariant may not hold
           *)

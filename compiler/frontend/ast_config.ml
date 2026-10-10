@@ -33,12 +33,12 @@ let structural_config_table : action_table ref =
            | None -> true))
 
 let add_structure k v =
-  structural_config_table := Map_string.add !structural_config_table k v
+  structural_config_table := Map_string.add k v !structural_config_table
 
 let signature_config_table : action_table ref = ref Map_string.empty
 
 let add_signature k v =
-  signature_config_table := Map_string.add !signature_config_table k v
+  signature_config_table := Map_string.add k v !signature_config_table
 
 let process_directives str =
   Js_config.directives := [];
