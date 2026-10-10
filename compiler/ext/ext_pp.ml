@@ -85,7 +85,7 @@ let from_channel ?(track_positions = false) chan =
     track_positions;
   }
 
-let from_buffer buf =
+let from_buffer ?(track_positions = false) buf =
   {
     output_string = (fun s -> Buffer.add_string buf s);
     output_char = (fun c -> Buffer.add_char buf c);
@@ -94,7 +94,7 @@ let from_buffer buf =
     last_new_line = false;
     line = 0;
     column = 0;
-    track_positions = false;
+    track_positions;
   }
 
 (* If we have [newline] in [s],
