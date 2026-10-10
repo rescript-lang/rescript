@@ -7,6 +7,7 @@ type t = {
   mutable lambda_raise_count: int;
   mutable lambda_negative_raise_count: int;
   mutable builtin_ppx_local_module_counter: int;
+  mutable parmatch_name_counter: int;
   mutable substitution_saved_id: int;
   mutable type_node_id: int;
   mutable type_node_reset_id: int option;
