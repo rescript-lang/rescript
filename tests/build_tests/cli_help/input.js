@@ -294,6 +294,7 @@ const compilerArgsHelp =
 async function test(params, expected) {
   // A color-capable TERM makes Cmdliner style its output. The streams are
   // pipes, so the CLI must still write plain text, as clap does.
+  /** @type {NodeJS.ProcessEnv} */
   const env = { ...process.env, TERM: "xterm" };
   delete env.NO_COLOR;
   delete env.CLICOLOR_FORCE;

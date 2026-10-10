@@ -2,8 +2,6 @@ include Config_types
 
 open Config_decode
 
-let namespace_from_package_name = Config_decode.namespace_from_package_name
-
 let namespace_name = function
   | No_namespace -> None
   | Namespace name | Namespace_with_entry {name; entry = _} -> Some name

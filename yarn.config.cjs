@@ -52,6 +52,7 @@ async function enforceCompilerMeta({ Yarn }) {
   }
 
   const versionPattern = /^let version = "(?<version>[^"]+)"$/m;
+  /** @param {string} path */
   async function enforceMlVersionFile(path) {
     const content = await fs.readFile(path, "utf8");
     if (process.argv.includes("--fix")) {
