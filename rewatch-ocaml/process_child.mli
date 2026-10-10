@@ -14,6 +14,9 @@ val status_string : Unix.process_status -> string
 type completion_notifier
 type 'a running
 
+val with_lock : Mutex.t -> (unit -> 'a) -> 'a
+(** Runs the action holding the mutex and releases it on exceptions too. *)
+
 val with_completion_notifier :
   ticker_enabled:bool -> (completion_notifier -> 'a) -> 'a
 

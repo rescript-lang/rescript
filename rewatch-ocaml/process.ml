@@ -133,7 +133,7 @@ type 'a worker_pool = {
 }
 
 let remove_active pool active =
-  Mutex.protect pool.mutex (fun () ->
+  Child.with_lock pool.mutex (fun () ->
       while
         pool.signalling_cancellation
         && cancellation_was_requested active.cancellation
@@ -146,7 +146,8 @@ let remove_active pool active =
           pool.active_children)
 
 let complete_pool_task pool completion =
-  Mutex.protect pool.mutex (fun () -> Queue.add completion pool.completed_tasks);
+  Child.with_lock pool.mutex (fun () ->
+      Queue.add completion pool.completed_tasks);
   Child.notify_completion pool.notifier
 
 let run_pool_task pool payload task =
@@ -157,7 +158,7 @@ let run_pool_task pool payload task =
   | Error exn -> complete_pool_task pool (Task_failed (payload, exn))
   | Ok child ->
     let active, cancel_after_launch =
-      Mutex.protect pool.mutex (fun () ->
+      Child.with_lock pool.mutex (fun () ->
           let active =
             {
               id = pool.next_active_id;
@@ -178,7 +179,7 @@ let run_pool_task pool payload task =
           (Child.wait_for_running
              ~poll:(fun () ->
                match
-                 Mutex.protect pool.mutex (fun () -> active.cancellation)
+                 Child.with_lock pool.mutex (fun () -> active.cancellation)
                with
                | Cancellation_failed exn -> raise exn
                | Cancellation_not_requested | Cancellation_requested -> ())
@@ -216,7 +217,7 @@ let run_pool_task pool payload task =
 
 let rec worker_loop pool =
   let queued =
-    Mutex.protect pool.mutex (fun () ->
+    Child.with_lock pool.mutex (fun () ->
         while Queue.is_empty pool.queued && not pool.stopping do
           Condition.wait pool.work_available pool.mutex
         done;
@@ -255,21 +256,21 @@ let create_worker_pool ~max_jobs notifier =
     start_workers max_jobs;
     pool
   with exn ->
-    Mutex.protect pool.mutex (fun () ->
+    Child.with_lock pool.mutex (fun () ->
         pool.stopping <- true;
         Condition.broadcast pool.work_available);
     List.iter Domain.join pool.workers;
     raise exn
 
 let submit_pool_task pool payload task =
-  Mutex.protect pool.mutex (fun () ->
+  Child.with_lock pool.mutex (fun () ->
       Queue.add (payload, task) pool.queued;
       Condition.signal pool.work_available)
 
 let await_pool_completion ~poll pool =
   let rec wait generation =
     match
-      Mutex.protect pool.mutex (fun () ->
+      Child.with_lock pool.mutex (fun () ->
           if Queue.is_empty pool.completed_tasks then None
           else Some (Queue.take pool.completed_tasks))
     with
@@ -282,7 +283,7 @@ let await_pool_completion ~poll pool =
 
 let stop_worker_pool ~cancel pool =
   let active =
-    Mutex.protect pool.mutex (fun () ->
+    Child.with_lock pool.mutex (fun () ->
         pool.stopping <- true;
         Queue.clear pool.queued;
         Condition.broadcast pool.work_available;
@@ -303,7 +304,7 @@ let stop_worker_pool ~cancel pool =
       None
     with exn -> Some exn
   in
-  Mutex.protect pool.mutex (fun () ->
+  Child.with_lock pool.mutex (fun () ->
       Option.iter
         (fun exn ->
           List.iter

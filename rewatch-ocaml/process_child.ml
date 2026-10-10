@@ -74,6 +74,11 @@ type completion_notifier = {
   mutable stopped: bool;
 }
 
+(* Mutex.protect needs OCaml 5.1; the minimum supported version is 5.0. *)
+let with_lock mutex action =
+  Mutex.lock mutex;
+  Fun.protect ~finally:(fun () -> Mutex.unlock mutex) action
+
 let create_completion_notifier () =
   {
     mutex = Mutex.create ();
@@ -83,16 +88,16 @@ let create_completion_notifier () =
   }
 
 let notify_completion notifier =
-  Mutex.protect notifier.mutex (fun () ->
+  with_lock notifier.mutex (fun () ->
       if not notifier.stopped then (
         notifier.generation <- notifier.generation + 1;
         Condition.broadcast notifier.condition))
 
 let notifier_generation notifier =
-  Mutex.protect notifier.mutex (fun () -> notifier.generation)
+  with_lock notifier.mutex (fun () -> notifier.generation)
 
 let await_notification notifier generation =
-  Mutex.protect notifier.mutex (fun () ->
+  with_lock notifier.mutex (fun () ->
       while notifier.generation = generation && not notifier.stopped do
         Condition.wait notifier.condition notifier.mutex
       done;
@@ -108,7 +113,7 @@ let with_completion_notifier ~ticker_enabled action =
   let rec send_tick () =
     Thread.delay 0.005;
     let continue =
-      Mutex.protect notifier.mutex (fun () ->
+      with_lock notifier.mutex (fun () ->
           if notifier.stopped then false
           else (
             notifier.generation <- notifier.generation + 1;
@@ -121,7 +126,7 @@ let with_completion_notifier ~ticker_enabled action =
     if ticker_enabled then Some (Thread.create send_tick ()) else None
   in
   let stop () =
-    Mutex.protect notifier.mutex (fun () ->
+    with_lock notifier.mutex (fun () ->
         notifier.stopped <- true;
         Condition.broadcast notifier.condition);
     Option.iter Thread.join ticker
