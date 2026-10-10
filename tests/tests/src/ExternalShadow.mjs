@@ -17,6 +17,21 @@ let Global = {};
 
 let $$parseInt = parseInt;
 
+let Y = {};
+
+function myGlobalA(n) {
+  let inner = m => {
+    let myGlobalB = (((globalThis.myGlobalB * m | 0) + (globalThis.myGlobalA * n | 0) | 0) + ((m * n | 0) * 3 | 0) | 0) + 7 | 0;
+    return (myGlobalB * myGlobalB | 0) + m | 0;
+  };
+  let sibling = m => (((myGlobalB * m | 0) + (globalThis.myGlobalA * n | 0) | 0) + ((m * n | 0) * 5 | 0) | 0) + 11 | 0;
+  return (((inner(n) + inner(n + 1 | 0) | 0) + sibling(n) | 0) + sibling(n + 1 | 0) | 0) + globalThis.myGlobalA | 0;
+}
+
+function useB(n) {
+  return ((myGlobalB * n | 0) + ((n * n | 0) * 7 | 0) | 0) + 13 | 0;
+}
+
 export {
   X,
   process,
@@ -25,5 +40,8 @@ export {
   url,
   Global,
   $$parseInt,
+  Y,
+  myGlobalA,
+  useB,
 }
 /* process Not a pure module */
