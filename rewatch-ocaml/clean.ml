@@ -1,5 +1,4 @@
 type package = {
-  root: string;
   name: string;
   output_config: Config.t;
   implementation_files: string list;
@@ -36,8 +35,7 @@ let prepare ~(root_config : Config.t) ~(workspace_config : Config.t) ~resolution
       in
       let output_config = Config.with_root_options config workspace_config in
       packages :=
-        {root; name = config.name; output_config; implementation_files}
-        :: !packages)
+        {name = config.name; output_config; implementation_files} :: !packages)
   in
   visit root_config ~is_local;
   List.rev !packages
@@ -46,9 +44,7 @@ let remove_compiler_assets packages ~on_clean =
   List.iter
     (fun package ->
       on_clean package.name;
-      List.iter
-        (fun dir -> File_util.remove_tree (Filename.concat package.root dir))
-        [Build_artifacts.lib_path "" "bs"; Build_artifacts.lib_path "" "ocaml"])
+      Compiler_info.clean_package package.output_config)
     packages
 
 let remove_generated_outputs packages =
