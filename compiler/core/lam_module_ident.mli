@@ -37,5 +37,5 @@ val of_ml : ?dynamic_import:bool -> Ident.t -> t
 
 val of_runtime : Ident.t -> t
 
-module Hash : Hash_gen.S with type key = t
+module Hash : Hashtbl.S with type key = t
 module Hash_set : Hash_set_gen.S with type key = t

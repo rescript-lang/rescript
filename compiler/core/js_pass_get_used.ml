@@ -22,11 +22,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let add_use stats id = Hash_ident.add_or_update stats id 1 ~update:succ
+let add_use stats id =
+  match Hash_ident.find_opt stats id with
+  | None -> Hash_ident.add stats id 1
+  | Some n -> Hash_ident.replace stats id (n + 1)
 
 let post_process_stats my_export_set
     (defined_idents : J.variable_declaration Hash_ident.t) stats =
-  Hash_ident.iter defined_idents (fun ident v ->
+  Hash_ident.iter
+    (fun ident (v : J.variable_declaration) ->
       if Set_ident.mem my_export_set ident then
         Js_op_util.update_used_stats v.ident_info Exported
       else
@@ -42,7 +46,8 @@ let post_process_stats my_export_set
         | Some num ->
           if num = 1 then
             Js_op_util.update_used_stats v.ident_info
-              (if pure then Once_pure else Used));
+              (if pure then Once_pure else Used))
+    defined_idents;
   defined_idents
 
 (* Update ident info use cases, it is a non pure function,

@@ -58,6 +58,7 @@
 - Speed up the rewriting of JS globals shadowed by local bindings in nested functions. https://github.com/rescript-lang/rescript/pull/8772
 - Speed up dead code elimination of toplevel bindings in large modules. https://github.com/rescript-lang/rescript/pull/8773
 - Make .cmt and .cmti files smaller by no longer embedding a copy of the .cmi. https://github.com/rescript-lang/rescript/pull/8774
+- Speed up compilation by using the OCaml standard library's hash tables in the compiler. https://github.com/rescript-lang/rescript/pull/PRNUM
 - Represent explicit expression braces as `Pexp_braces` in parsetree v1 and format `else` branches consistently with `if` branches. https://github.com/rescript-lang/rescript/pull/8678
 - Omit redundant braces around multi-statement switch case bodies when formatting. https://github.com/rescript-lang/rescript/pull/8677
 - Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662

@@ -30,7 +30,7 @@ type input = (int * (string * lam)) list
 
 type output = (hash_names * lam) list
 
-module Coll = Hash.Make (struct
+module Coll = Hashtbl.Make (struct
   type t = lam
 
   let equal = Stdlib.( = )
@@ -47,12 +47,14 @@ let convert (xs : input) : output =
   |> List.iteri (fun i (hash, (name, act)) ->
       match Lambda_traverse.make_key act with
       | None -> os := {stamp = i; hash_names_act = ([(hash, name)], act)} :: !os
-      | Some key ->
-        Coll.add_or_update coll key
-          ~update:(fun ({hash_names_act = hash_names, act} as acc) ->
-            {acc with hash_names_act = ((hash, name) :: hash_names, act)})
-          {hash_names_act = ([(hash, name)], act); stamp = i});
-  let result = Coll.to_list coll (fun _ value -> value) @ !os in
+      | Some key -> (
+        match Coll.find_opt coll key with
+        | Some ({hash_names_act = hash_names, act} as acc) ->
+          Coll.replace coll key
+            {acc with hash_names_act = ((hash, name) :: hash_names, act)}
+        | None ->
+          Coll.add coll key {hash_names_act = ([(hash, name)], act); stamp = i}));
+  let result = Coll.fold (fun _ value acc -> value :: acc) coll !os in
   Ext_list.sort_via_arrayf result
     (fun x y -> compare x.stamp y.stamp)
     (fun x -> x.hash_names_act)

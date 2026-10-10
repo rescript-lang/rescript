@@ -68,6 +68,6 @@ module Cmp = struct
       Ext_platform_primitives.hash_stamp_and_name x_id.stamp x_id.name
 end
 
-module Hash = Hash.Make (Cmp)
+module Hash = Hashtbl.Make (Cmp)
 
 module Hash_set = Hash_set.Make (Cmp)

@@ -39,7 +39,7 @@ let param_hash : _ Hash_ident.t = Hash_ident.create 20
 let seq_unused params body =
   List.fold_right
     (fun param acc ->
-      let {lambda; used} = Hash_ident.find_exn param_hash param in
+      let {lambda; used} = Hash_ident.find param_hash param in
       if not used then Lambda.seq lambda acc else acc)
     params body
 
