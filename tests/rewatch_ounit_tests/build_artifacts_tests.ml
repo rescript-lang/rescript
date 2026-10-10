@@ -6,12 +6,12 @@ let write_file = Test_support.write_file
 
 let with_temp_dir = Test_support.with_temp_dir "rewatch-build-artifacts-"
 
-let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
-    ?(on_removed_module = ignore) ?(on_deferred_artifact = ignore) ~root
-    ~ocaml_dir ~is_local config modules =
-  Build_artifacts.cleanup_stale ?ocaml_files ?ast_sources ?source_files
-    ?present_source_files ~on_removed_module ~on_deferred_artifact ~root
-    ~ocaml_dir ~is_local config modules
+let cleanup_stale ~ocaml_files ~ast_sources ~source_files
+    ?(present_source_files = source_files) ?(on_removed_module = ignore)
+    ?(on_deferred_artifact = ignore) ~root ~is_local config modules =
+  Build_artifacts.cleanup_stale ~ocaml_files ~ast_sources ~source_files
+    ~present_source_files ~on_removed_module ~on_deferred_artifact ~root
+    ~is_local config modules
 
 let tests =
   "build_artifacts_tests" >:: fun _context ->
@@ -53,7 +53,7 @@ let tests =
           ~ast_sources:
             [{Compile_assets.ast_path = published_ast; source_path = source}]
           ~source_files:[public_output; public_map]
-          ~root ~ocaml_dir ~is_local:true config []
+          ~root ~is_local:true config []
       in
       List.iter
         (fun path ->
@@ -89,7 +89,7 @@ let tests =
       let config = Config.load_root root in
       ignore
         (cleanup_stale ~ocaml_files:[published_cmt] ~ast_sources:[]
-           ~source_files:[] ~root ~ocaml_dir ~is_local:true config []);
+           ~source_files:[] ~root ~is_local:true config []);
       check
         (not (Sys.file_exists working_cmt))
         "unmapped legacy artifacts fall back to the recursive working inventory");
@@ -99,7 +99,6 @@ let tests =
       let old_map = old_output ^ ".map" in
       let working_output = Test_support.path root "lib/bs/src/A.js" in
       let working_map = working_output ^ ".map" in
-      let ocaml_dir = Test_support.path root "lib/ocaml" in
       write_file config_path
         {|{"name":"cleanup-map","sources":{"dir":"src","subdirs":true},"package-specs":{"module":"esmodule","in-source":true}}|};
       List.iter
@@ -116,8 +115,8 @@ let tests =
       in
       ignore
         (cleanup_stale ~ocaml_files:[] ~ast_sources:[]
-           ~source_files:[old_output; old_map] ~root ~ocaml_dir ~is_local:true
-           config [moved_module]);
+           ~source_files:[old_output; old_map] ~root ~is_local:true config
+           [moved_module]);
       List.iter
         (fun path ->
           check
@@ -153,8 +152,7 @@ let tests =
             [
               {Compile_assets.ast_path = published_ast; source_path = old_source};
             ]
-          ~source_files:[new_source] ~root ~ocaml_dir ~is_local:true config
-          [module_]
+          ~source_files:[new_source] ~root ~is_local:true config [module_]
       in
       check
         (not (Sys.file_exists published_ast || Sys.file_exists working_ast))
@@ -197,7 +195,7 @@ let tests =
                  source_path = old_source;
                };
              ]
-           ~source_files:[] ~root ~ocaml_dir ~is_local:true config []);
+           ~source_files:[] ~root ~is_local:true config []);
       List.iter
         (fun path ->
           check
@@ -227,7 +225,7 @@ let tests =
            ~ast_sources:
              [{Compile_assets.ast_path = published_ast; source_path = source}]
            ~source_files:[public_output; public_map]
-           ~root ~ocaml_dir ~is_local:true config []);
+           ~root ~is_local:true config []);
       List.iter
         (fun path ->
           check
@@ -237,7 +235,6 @@ let tests =
   with_temp_dir (fun root ->
       let config_path = Filename.concat root "rescript.json" in
       let output = Test_support.path root "src/Present.output" in
-      let ocaml_dir = Test_support.path root "lib/ocaml" in
       write_file config_path
         {|{"name":"custom-freshness","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".output"}}|};
       write_file output "generated";
@@ -252,8 +249,7 @@ let tests =
       in
       let result =
         cleanup_stale ~ocaml_files:[] ~ast_sources:[] ~source_files:[output]
-          ~present_source_files:[output] ~root ~ocaml_dir ~is_local:true config
-          [module_]
+          ~present_source_files:[output] ~root ~is_local:true config [module_]
       in
       check
         (Hashtbl.mem result.present_public_outputs output)
@@ -279,7 +275,7 @@ let tests =
       in
       ignore
         (cleanup_stale ~ocaml_files:[published_cmti] ~ast_sources:[]
-           ~source_files:[] ~root ~ocaml_dir ~is_local:true config [module_]);
+           ~source_files:[] ~root ~is_local:true config [module_]);
       List.iter
         (fun path ->
           check
@@ -309,7 +305,7 @@ let tests =
                };
              ]
            ~source_files:[generated_output; authored_output]
-           ~root ~ocaml_dir ~is_local:true config []);
+           ~root ~is_local:true config []);
       check
         (not (Sys.file_exists generated_output))
         "cleanup removes the output at the historical source location";

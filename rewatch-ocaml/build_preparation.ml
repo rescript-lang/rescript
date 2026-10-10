@@ -72,8 +72,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         (Compile_assets.files previous_compile_assets package.ocaml_dir)
       ~ast_sources:
         (Compile_assets.ast_sources previous_compile_assets package.ocaml_dir)
-      ~root:package.root ~ocaml_dir:package.ocaml_dir
-      ~source_files:package.source_files
+      ~root:package.root ~source_files:package.source_files
       ~present_source_files:package.present_source_files
       ~on_removed_module:invalidate_removed_module ~on_deferred_artifact
       ~is_local:package.is_local package.compile_config package.modules
