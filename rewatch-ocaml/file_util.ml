@@ -92,16 +92,8 @@ let directory_entries path =
       in
       read [])
 
-let write_file_atomic ?(ensure_parent = true) ?perm path contents =
+let write_file_atomic ?(ensure_parent = true) path contents =
   if ensure_parent then ensure_dir (Filename.dirname path);
-  let perm =
-    match perm with
-    | Some _ as perm -> perm
-    | None -> (
-      match Unix.stat path with
-      | metadata -> Some metadata.Unix.st_perm
-      | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None)
-  in
   let candidate =
     Filename.temp_file ~temp_dir:(Filename.dirname path) ".rewatch-write-"
       ".tmp"
@@ -112,15 +104,12 @@ let write_file_atomic ?(ensure_parent = true) ?perm path contents =
       if not !published then
         try Sys.remove candidate with Sys_error _ | Unix.Unix_error _ -> ())
     (fun () ->
-      Option.iter (Unix.chmod candidate) perm;
+      Unix.chmod candidate 0o644;
       write_file candidate contents;
       Sys.rename candidate path;
       published := true)
 
-(* Callers that already created the destination directory may skip that work,
-   avoiding repeated metadata probes when publishing many files. *)
-let copy_existing_file ~ensure_parent source destination =
-  if ensure_parent then ensure_dir (Filename.dirname destination);
+let copy_existing_file source destination =
   let input_descriptor =
     Unix.openfile source [Unix.O_RDONLY; Unix.O_CLOEXEC] 0
   in
@@ -139,8 +128,8 @@ let copy_existing_file ~ensure_parent source destination =
           in
           copy ()))
 
-let copy_optional_existing_file ?(ensure_parent = true) source destination =
-  try copy_existing_file ~ensure_parent source destination
+let copy_optional_existing_file source destination =
+  try copy_existing_file source destination
   with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> (
     try Unix.unlink destination
     with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ())
@@ -205,9 +194,9 @@ let files_equal first second =
               in
               loop ())))
 
-let copy_file_if_different ?(ensure_parent = true) source destination =
+let copy_file_if_different source destination =
   let changed = not (files_equal source destination) in
-  if changed then copy_existing_file ~ensure_parent source destination;
+  if changed then copy_existing_file source destination;
   changed
 
 let modification_time path =

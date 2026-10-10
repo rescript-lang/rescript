@@ -258,7 +258,7 @@ let launch ?env ?stdout_chunk ?stderr_chunk ?(stdin = Null_stdin) ~notifier
     payload job =
   let ownership = empty_launch_ownership () in
   try
-    let pipes = Platform.create_capture_pipes () in
+    let pipes = Platform_common.create_capture_pipes () in
     let (stdout_read, stdout_write), (stderr_read, stderr_write) = pipes in
     ownership.stdout_read <- Some stdout_read;
     ownership.stdout_write <- Some stdout_write;
@@ -332,8 +332,7 @@ let signal_running (children : _ running list) =
             | Error message -> (child, message) :: errors)
         [] children
     in
-    let graceful_signal = Platform.graceful_termination_signal in
-    let graceful_errors = signal_all graceful_signal in
+    let graceful_errors = signal_all Sys.sigterm in
     let deadline = Unix.gettimeofday () +. 0.25 in
     let rec wait_until_deadline children =
       let remaining =

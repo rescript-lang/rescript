@@ -143,4 +143,4 @@ let write_package context (config : Config.t) =
   if not (matches context config) then
     let info_path = path config.root in
     let contents = Yojson.Safe.pretty_to_string (json context config) ^ "\n" in
-    File_util.write_file_atomic ~perm:0o644 info_path contents
+    File_util.write_file_atomic info_path contents

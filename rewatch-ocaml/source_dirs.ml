@@ -26,7 +26,7 @@ let write ~root ~dirs ~packages ~scans =
         ("version", `Int 2);
       ]
   in
-  File_util.write_file_atomic ~ensure_parent:false ~perm:0o644 path
+  File_util.write_file_atomic ~ensure_parent:false path
     (Yojson.Safe.to_string json)
 
 let write_build ~(root_config : Config.t) session =

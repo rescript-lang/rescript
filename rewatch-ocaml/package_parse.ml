@@ -86,12 +86,12 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
         let published_ast =
           Build_artifacts.published_ast_path ~ocaml_dir path
         in
-        File_util.copy_existing_file ~ensure_parent:false
+        File_util.copy_existing_file
           (Filename.concat build_dir ast)
           published_ast;
         Compile_assets.refresh_ast compile_assets ~source:absolute_path
           ~path:published_ast;
-        File_util.copy_existing_file ~ensure_parent:false
+        File_util.copy_existing_file
           (Filename.concat config.root path)
           (Filename.concat ocaml_dir (Filename.basename path));
         if is_local && stderr <> "" then

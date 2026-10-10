@@ -63,7 +63,7 @@ let tests =
         String.init 150_000 (fun index -> Char.chr (index mod 251))
       in
       write_file large_source large_contents;
-      File_util.copy_existing_file ~ensure_parent:true large_source large_copy;
+      File_util.copy_existing_file large_source large_copy;
       check
         (File_util.files_equal large_source large_copy)
         "streaming copies preserve files spanning multiple buffer reads";
@@ -135,8 +135,7 @@ let tests =
       for _ = 1 to 32 do
         let destination_failure_is_reported =
           try
-            File_util.copy_optional_existing_file ~ensure_parent:false first
-              missing_destination;
+            File_util.copy_optional_existing_file first missing_destination;
             false
           with Sys_error _ | Unix.Unix_error _ -> true
         in
@@ -145,18 +144,16 @@ let tests =
       done;
       check_descriptor_count descriptors_before_failed_copies
         "failed destination acquisition should close the source";
-      [true; false]
-      |> List.iter (fun ensure_parent ->
-          let missing_source_failure_is_reported =
-            try
-              ignore
-                (File_util.copy_file_if_different ~ensure_parent missing
-                   (Filename.concat root "missing-copy"));
-              false
-            with Sys_error _ | Unix.Unix_error _ -> true
-          in
-          check missing_source_failure_is_reported
-            "directory creation policy must not change missing-source semantics");
+      let missing_source_failure_is_reported =
+        try
+          ignore
+            (File_util.copy_file_if_different missing
+               (Filename.concat root "missing-copy"));
+          false
+        with Sys_error _ | Unix.Unix_error _ -> true
+      in
+      check missing_source_failure_is_reported
+        "a conditional copy must report a missing source";
       let atomic = Filename.concat root "atomic" in
       write_file atomic "previous";
       if not Sys.win32 then Unix.chmod atomic 0o640;
@@ -166,8 +163,8 @@ let tests =
         "atomic writes should publish the complete replacement";
       if not Sys.win32 then
         check
-          ((Unix.stat atomic).Unix.st_perm = 0o640)
-          "atomic replacement should preserve existing file permissions";
+          ((Unix.stat atomic).Unix.st_perm = 0o644)
+          "atomic replacement should publish world-readable permissions";
       check
         (Sys.readdir root |> Array.to_list
         |> List.for_all (fun name ->

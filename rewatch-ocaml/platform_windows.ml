@@ -155,8 +155,6 @@ external current_process_id : unit -> int = "rewatch_windows_current_process_id"
 let process_id process = process.wait_id
 let release_process process = close_process_job process.job
 
-let create_capture_pipes = Platform_common.create_capture_pipes
-
 let signal_process_tree process _signal =
   if terminate_process_job process.job then Ok ()
   else Error "TerminateJobObject failed"
@@ -164,7 +162,6 @@ let signal_process_tree process _signal =
 (* OCaml supports only these two signals on Windows. *)
 let termination_signals = [Sys.sigint; Sys.sigterm]
 
-let graceful_termination_signal = Sys.sigkill
 let escalate_process_groups = false
 
 let parse_tasklist_csv_line line =
