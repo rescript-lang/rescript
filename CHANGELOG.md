@@ -81,6 +81,7 @@
 - Remove the unused `pat_record_label` alias from the current parsetree. https://github.com/rescript-lang/rescript/pull/8684
 - Remove the unused `Ppat_open` and `Tpat_open` AST nodes, with current-AST and CMT format bumps. https://github.com/rescript-lang/rescript/pull/8682
 - Represent ternary expressions with a dedicated parsetree node. https://github.com/rescript-lang/rescript/pull/8674
+- Remove the compiler's own growable vector (`Vec`) in favor of plain arrays. https://github.com/rescript-lang/rescript/pull/8784
 
 # 13.0.0-alpha.6
 
