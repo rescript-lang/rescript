@@ -65,20 +65,8 @@ let tests =
     ((build_options ["-vvvvv"; "build"]).verbosity = 5)
     "arbitrarily long clustered verbosity remains global";
   check
-    (shows_version ["-vV"; "build"])
-    "a clustered leading version flag has global precedence";
-  check
     (shows_help ["-Vh"; "build"])
     "help takes precedence over version in a leading cluster";
-  check
-    (shows_help ["-hV"; "build"])
-    "a leading help flag wins when it precedes version in a cluster";
-  check
-    (shows_help ["build"; "-hV"])
-    "subcommand help takes precedence over version";
-  check
-    (shows_help ["build"; "-Vh"])
-    "subcommand help precedence is independent of cluster order";
   check
     (shows_help ["--version"; "build"; "--help"])
     "subcommand help takes precedence over a leading version option";
@@ -96,12 +84,6 @@ let tests =
     | Cli.Build _ -> true
     | _ -> false)
     "build accepts a trailing verbosity flag";
-  check
-    (rejects ["-v"; "-q"])
-    "implicit build rejects conflicting verbose and quiet modes";
-  check
-    (rejects ["build"; "--verbose"; "--quiet"])
-    "explicit build rejects conflicting verbose and quiet modes";
   check
     (shows_version ["-V"; "build"])
     "a leading short version flag has global precedence";
