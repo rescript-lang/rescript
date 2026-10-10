@@ -164,6 +164,9 @@ let signal_process_tree ~root_reaped:_ process _signal =
   if terminate_process_job process.job then Ok ()
   else Error "TerminateJobObject failed"
 
+(* OCaml supports only these two signals on Windows. *)
+let termination_signals = [Sys.sigint; Sys.sigterm]
+
 let termination_signal_mutex = Mutex.create ()
 
 let defer_termination_signals () =

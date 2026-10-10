@@ -1823,27 +1823,34 @@ assert_no_test_proxy_processes
 test -z "$(find "$interrupt_basic" -name '.rewatch-ocaml-*.log' -print)"
 
 # One-shot commands must unwind through the same process and lock owners when
-# the shell terminates them during compiler work.
-interrupt_build="$work/interrupt-build"
-cp -R "$root/rewatch-ocaml/tests/basic" "$interrupt_build"
-build_child_marker="$interrupt_build/child-started"
-REWATCH_OCAML_CHILD_STARTED="$(native_path "$build_child_marker")" \
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=slow \
-RESCRIPT_BSC_EXE="$test_proxy" \
-"$port" build "$interrupt_build" >"$interrupt_build/build.log" 2>&1 &
-interrupt_build_pid=$!
-background_pids="$background_pids $interrupt_build_pid"
-wait_for_file "$build_child_marker"
-kill -TERM "$interrupt_build_pid"
-set +e
-wait "$interrupt_build_pid"
-interrupt_build_status=$?
-set -e
-test "$interrupt_build_status" -eq 143
-test ! -f "$interrupt_build/lib/build.lock"
-assert_no_test_proxy_processes
-test -z "$(find "$interrupt_build" -name '.rewatch-ocaml-*.log' -print)"
+# the shell terminates them during compiler work. Compiler children run in
+# their own process groups, so a closing terminal's SIGHUP and a SIGQUIT reach
+# only rescript and must be handled like SIGTERM, or the children outlive the
+# build and its lock is left behind.
+for interrupt_signal in TERM:143 HUP:129 QUIT:131; do
+  signal_name=${interrupt_signal%%:*}
+  expected_status=${interrupt_signal#*:}
+  interrupt_build="$work/interrupt-build-$signal_name"
+  cp -R "$root/rewatch-ocaml/tests/basic" "$interrupt_build"
+  build_child_marker="$interrupt_build/child-started"
+  REWATCH_OCAML_CHILD_STARTED="$(native_path "$build_child_marker")" \
+  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
+  REWATCH_BSC_PROXY_MODE=slow \
+  RESCRIPT_BSC_EXE="$test_proxy" \
+  "$port" build "$interrupt_build" >"$interrupt_build/build.log" 2>&1 &
+  interrupt_build_pid=$!
+  background_pids="$background_pids $interrupt_build_pid"
+  wait_for_file "$build_child_marker"
+  kill "-$signal_name" "$interrupt_build_pid"
+  set +e
+  wait "$interrupt_build_pid"
+  interrupt_build_status=$?
+  set -e
+  test "$interrupt_build_status" -eq "$expected_status"
+  test ! -f "$interrupt_build/lib/build.lock"
+  assert_no_test_proxy_processes
+  test -z "$(find "$interrupt_build" -name '.rewatch-ocaml-*.log' -print)"
+done
 fi
 
 # Removing watch.lock is the shell-suite shutdown protocol. It must interrupt
