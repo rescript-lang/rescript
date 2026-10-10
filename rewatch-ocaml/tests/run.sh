@@ -1,5 +1,10 @@
 #!/bin/sh
 set -eu
+# Many checks fail silently under set -e; name the failing command where the
+# shell can (bash, which is sh on Windows CI).
+if [ -n "${BASH_VERSION:-}" ]; then
+  trap 'case $- in *e*) echo "run.sh: line $LINENO failed: $BASH_COMMAND" >&2 ;; esac' ERR
+fi
 
 port="$1"
 port_directory=$(CDPATH= cd -- "$(dirname "$port")" && pwd)
