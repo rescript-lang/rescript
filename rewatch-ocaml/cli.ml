@@ -256,8 +256,6 @@ exception Parse_error of string
 exception Help
 exception Version
 
-let argv_is_utf_8 argv = Array.for_all String.is_valid_utf_8 argv
-
 (* Bare project folders must select the default build command, even though
    Cmdliner otherwise treats them as unknown commands. Move global options
    behind the selected command and expand short help/version clusters because
@@ -279,36 +277,19 @@ let normalize_argv argv =
     is_short_global_cluster argument
     && String.contains_from argument 1 character
   in
-  let is_verbosity = function
-    | "-v" | "-vv" | "-vvv" | "-vvvv" | "--verbose" | "-q" | "-qq" | "-qqq"
-    | "-qqqq" | "--quiet" ->
-      true
+  let is_global = function
+    | "--verbose" | "--quiet" | "--help" | "--version" -> true
     | argument ->
       is_short_global_cluster argument
-      && not
-           (short_cluster_contains 'h' argument
-           || short_cluster_contains 'V' argument)
-  in
-  let is_help = function
-    | "-h" | "--help" -> true
-    | argument -> String.starts_with ~prefix:"--help=" argument
-  in
-  let is_version = function
-    | "-V" | "--version" -> true
-    | _ -> false
-  in
-  let is_global argument =
-    is_short_global_cluster argument
-    || is_verbosity argument || is_help argument || is_version argument
+      || String.starts_with ~prefix:"--help=" argument
   in
   let requests_help argument =
     argument = "--help"
     || String.starts_with ~prefix:"--help=" argument
-    || (is_short_global_cluster argument && short_cluster_contains 'h' argument)
+    || short_cluster_contains 'h' argument
   in
   let requests_version argument =
-    argument = "--version"
-    || (is_short_global_cluster argument && short_cluster_contains 'V' argument)
+    argument = "--version" || short_cluster_contains 'V' argument
   in
   let is_command = function
     | "build" | "watch" | "clean" | "format" | "compiler-args" | "help" -> true
@@ -365,21 +346,31 @@ let normalize_argv argv =
     in
     Array.of_list (normalize_display_options routed)
 
-let eval argv =
-  if not (argv_is_utf_8 argv) then (
-    prerr_endline "invalid UTF-8 in command-line argument";
-    Exit 2)
+(* Evaluates the command line and returns Cmdliner's result with the
+   diagnostics it wrote, or [Error] for arguments that are not UTF-8. Help is
+   written to [help] when given, otherwise to stdout. *)
+let evaluate ?help argv =
+  if not (Array.for_all String.is_valid_utf_8 argv) then
+    Error "invalid UTF-8 in command-line argument"
   else
-    (* Cmdliner styles its diagnostics whenever TERM allows it, even when stderr
-       is redirected, and offers no way to override that choice. Capture them
-       and apply the color policy used for all other output. *)
     let error_buffer = Buffer.create 256 in
     let err = Stdlib.Format.formatter_of_buffer error_buffer in
     let result =
-      Cmd.eval_value ~catch:false ~err ~argv:(normalize_argv argv) root
+      Cmd.eval_value ~catch:false ?help ~err ~argv:(normalize_argv argv) root
     in
+    Option.iter (fun help -> Stdlib.Format.pp_print_flush help ()) help;
     Stdlib.Format.pp_print_flush err ();
-    let errors = Buffer.contents error_buffer in
+    Ok (result, Buffer.contents error_buffer)
+
+let eval argv =
+  match evaluate argv with
+  | Error message ->
+    prerr_endline message;
+    Exit 2
+  | Ok (result, errors) -> (
+    (* Cmdliner styles its diagnostics whenever TERM allows it, even when stderr
+       is redirected, and offers no way to override that choice. Capture them
+       and apply the color policy used for all other output. *)
     prerr_string
       (if Output.colors_enabled ~interactive:(Unix.isatty Unix.stderr) then
          errors
@@ -388,22 +379,13 @@ let eval argv =
     match result with
     | Ok (`Ok command) -> Run command
     | Ok `Help | Ok `Version -> Exit 0
-    | Error _ -> Exit 2
+    | Error _ -> Exit 2)
 
 let parse argv =
-  if not (argv_is_utf_8 argv) then
-    raise (Parse_error "invalid UTF-8 in command-line argument");
-  let help_buffer = Buffer.create 256 in
-  let error_buffer = Buffer.create 256 in
-  let help = Stdlib.Format.formatter_of_buffer help_buffer in
-  let err = Stdlib.Format.formatter_of_buffer error_buffer in
-  let result =
-    Cmd.eval_value ~catch:false ~help ~err ~argv:(normalize_argv argv) root
-  in
-  Stdlib.Format.pp_print_flush help ();
-  Stdlib.Format.pp_print_flush err ();
-  match result with
-  | Ok (`Ok command) -> command
-  | Ok `Help -> raise Help
-  | Ok `Version -> raise Version
-  | Error _ -> raise (Parse_error (Buffer.contents error_buffer))
+  let help = Stdlib.Format.formatter_of_buffer (Buffer.create 256) in
+  match evaluate ~help argv with
+  | Error message -> raise (Parse_error message)
+  | Ok (Ok (`Ok command), _) -> command
+  | Ok (Ok `Help, _) -> raise Help
+  | Ok (Ok `Version, _) -> raise Version
+  | Ok (Error _, errors) -> raise (Parse_error errors)
