@@ -35,6 +35,14 @@ type value = {mutable used: bool; lambda: Lambda.t}
 
 let param_hash : _ Hash_ident.t = Hash_ident.create 20
 
+(* Sequence the unused arguments before [body], in parameter order *)
+let seq_unused params body =
+  List.fold_right
+    (fun param acc ->
+      let {lambda; used} = Hash_ident.find_exn param_hash param in
+      if not used then Lambda.seq lambda acc else acc)
+    params body
+
 (* optimize cases like
    (fun f (a,b){ g (a,b,1)} (e0, e1))
    cases like
@@ -77,11 +85,7 @@ let simple_beta_reduce params body args =
     try
       let new_args = aux_exn [] ap_args in
       let result =
-        Hash_ident.fold param_hash
-          (Lambda.prim ~primitive ~args:new_args ap_loc)
-          (fun _param stats acc ->
-            let {lambda; used} = stats in
-            if not used then Lambda.seq lambda acc else acc)
+        seq_unused params (Lambda.prim ~primitive ~args:new_args ap_loc)
       in
       Hash_ident.clear param_hash;
       Some result
@@ -113,12 +117,7 @@ let simple_beta_reduce params body args =
         | Lvar fn_name -> find_param_exn fn_name f
         | _ -> f
       in
-      let result =
-        Hash_ident.fold param_hash (Lambda.apply f new_args ap_loc)
-          (fun _param stat acc ->
-            let {lambda; used} = stat in
-            if not used then Lambda.seq lambda acc else acc)
-      in
+      let result = seq_unused params (Lambda.apply f new_args ap_loc) in
       Hash_ident.clear param_hash;
       Some result
     with Not_simple_apply ->

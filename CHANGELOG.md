@@ -24,6 +24,7 @@
 
 #### :bug: Bug fix
 
+- Evaluate the unused arguments of an inlined function call in parameter order. https://github.com/rescript-lang/rescript/pull/PRNUM
 - Fix editor completion of values from modules included with `include await M`. https://github.com/rescript-lang/rescript/pull/8770
 - Fix editor completion inside dict literals and dict patterns, which suggested untyped values. https://github.com/rescript-lang/rescript/pull/8770
 - Report the required Node.js version 22 when the platform package can't be found. https://github.com/rescript-lang/rescript/pull/8770
