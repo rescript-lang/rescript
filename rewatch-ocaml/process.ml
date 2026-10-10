@@ -435,7 +435,14 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
         |> List.sort (fun (first, _) (second, _) -> String.compare first second)
       with
       | (_, exn) :: _ -> raise exn
-      | [] -> ()
+      | [] ->
+        (* Without errors, only a cycle leaves a node waiting on dependencies. *)
+        if
+          Hashtbl.fold
+            (fun _ count blocked -> blocked || count > 0)
+            pending false
+        then invalid_arg "dependency graph contains a cycle"
+        else ()
     else
       let completion = await_pool_completion ~poll pool in
       decr in_flight;
