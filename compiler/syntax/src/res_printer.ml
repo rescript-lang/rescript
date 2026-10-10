@@ -4835,16 +4835,12 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
       let rec print_child_expr expr =
         match expr.pexp_desc with
         | Pexp_braces {expr = inner}
-          when Parsetree_viewer.is_block_expr inner
-               && not
-                    (Parsetree_viewer.has_printable_attributes
-                       expr.pexp_attributes) ->
+          when Parsetree_viewer.is_block_expr inner && expr.pexp_attributes = []
+          ->
           print_child_expr inner
         | Pexp_let _ | Pexp_sequence _ | Pexp_letexception _ | Pexp_letmodule _
         | Pexp_open _
-          when not
-                 (Parsetree_viewer.has_printable_attributes expr.pexp_attributes)
-          ->
+          when expr.pexp_attributes = [] ->
           print_expression_block ~state ~braces:false expr cmt_tbl
         | _ ->
           let doc = print_expression_with_comments ~state expr cmt_tbl in

@@ -65,5 +65,5 @@ let spreadOptNone = <div {...base} title=?optNone />
 
 // Spread with children prop in spread and explicit children
 let childrenBase: JsxDOM.domProps = {children: React.string("from spread")}
-let spreadWithChildren = <div {...childrenBase}> {React.string("explicit")} </div>
+let spreadWithChildren = <div {...childrenBase}>{React.string("explicit")}</div>
 let spreadChildrenNone = <div {...childrenBase} children=?None />
