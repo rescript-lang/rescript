@@ -13,11 +13,11 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* Module [Outcometree]: printable representation of types, values and
+(* Module [Outcometree]: printable representation of types and
    signature items *)
 
 (* [Printtyp] builds these trees. They are printed through the hooks
-   [Oprint.out_type], [Oprint.out_value], [Oprint.out_sig_item],
+   [Oprint.out_type], [Oprint.out_sig_item],
    [Oprint.out_signature] and related refs, which bsc sets to the ReScript
    printer through [Res_outcome_printer.setup]. *)
 
@@ -26,27 +26,7 @@ type out_ident =
   | Oide_dot of out_ident * string
   | Oide_ident of string
 
-type out_string = Ostr_string | Ostr_bytes
-
 type out_attribute = {oattr_name: string}
-
-type out_value =
-  | Oval_array of out_value list
-  | Oval_char of char
-  | Oval_constr of out_ident * out_value list
-  | Oval_ellipsis
-  | Oval_float of float
-  | Oval_int of int
-  | Oval_int32 of int32
-  | Oval_int64 of int64
-  | Oval_nativeint of nativeint
-  | Oval_list of out_value list
-  | Oval_printer of (Format.formatter -> unit)
-  | Oval_record of (out_ident * out_value) list
-  | Oval_string of string * int * out_string (* string, size-to-print, kind *)
-  | Oval_stuff of string
-  | Oval_tuple of out_value list
-  | Oval_variant of string * out_value option
 
 type out_type =
   | Otyp_abstract
@@ -117,8 +97,3 @@ and out_val_decl = {
 }
 and out_rec_status = Orec_not | Orec_first | Orec_next
 and out_ext_status = Oext_first | Oext_next | Oext_exception
-
-type out_phrase =
-  | Ophr_eval of out_value * out_type
-  | Ophr_signature of (out_sig_item * out_value option) list
-  | Ophr_exception of (exn * out_value)
