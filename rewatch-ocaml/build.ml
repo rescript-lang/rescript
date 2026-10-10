@@ -61,6 +61,7 @@ let carry_forward_compile_dirtiness previous next_session next_state =
 type incremental_source = {
   package: Package_plan.t;
   source: Build_session.source_reference;
+  key: string;
 }
 
 let run_scheduled_modules (attempt : Build_attempt.t)
@@ -120,7 +121,10 @@ let incremental_sources (previous : retained_build) changes =
           | Some package -> package
           | None -> raise Full_rebuild_required
         in
-        sources := {package; source} :: !sources
+        let key =
+          Source.compiler_basename package.compile_config source.module_.name
+        in
+        sources := {package; source; key} :: !sources
       | None -> raise Full_rebuild_required)
   in
   List.iter
@@ -146,16 +150,11 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
     (fun source ->
       Build_session.mark_parse_pending attempt.session
         (Platform.normalize_path_for_comparison source.source.absolute_path);
-      let key =
-        Source.compiler_basename source.package.compile_config
-          source.source.module_.Source.name
-      in
-      (Build_state.find_exn prepared.build_state key).compile_dirty <- true)
+      (Build_state.find_exn prepared.build_state source.key).compile_dirty <-
+        true)
     sources;
   sources
-  |> List.map (fun source ->
-      Source.compiler_basename source.package.compile_config
-        source.source.module_.Source.name)
+  |> List.map (fun source -> source.key)
   |> List.sort_uniq String.compare
   |> List.iter (fun name ->
       Output.debug ~verbosity:attempt.verbosity
@@ -185,33 +184,23 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
          Hashtbl.replace source.package.source_mtimes
            source.source.relative_path modified
        with Unix.Unix_error _ | Sys_error _ -> raise Full_rebuild_required);
-      let key =
-        Source.compiler_basename source.package.compile_config
-          source.source.module_.Source.name
-      in
       let parse_failed = not (Process.succeeded result) in
       let parse_failed =
-        match Hashtbl.find_opt affected_modules key with
+        match Hashtbl.find_opt affected_modules source.key with
         | Some (_, _, previous_failed) -> previous_failed || parse_failed
         | None -> parse_failed
       in
-      Hashtbl.replace affected_modules key
+      Hashtbl.replace affected_modules source.key
         (source.package, source.source.module_, parse_failed))
     sources results;
   Hashtbl.iter
     (fun key (package, module_, changed_parse_failed) ->
       if not changed_parse_failed then
-        let dependencies path =
-          Compiler_process.ast_dependencies
-            ~build_dir:package.Package_plan.build_dir (Source.ast_path path)
-        in
         let raw_dependencies =
-          List.sort_uniq String.compare
-            (dependencies module_.Source.implementation
-            @
-            match module_.Source.interface with
-            | None -> []
-            | Some path -> dependencies path)
+          Module_graph.raw_dependencies
+            ~build_dir:package.Package_plan.build_dir
+            ~parse_failed:(fun _ -> false)
+            module_
         in
         let node =
           match Build_session.find_global_module attempt.session key with
@@ -234,7 +223,10 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
              ~find_namespace_maps:
                (Build_session.find_namespace_maps attempt.session)
              node))
-      !dependency_updates;
+      !dependency_updates);
+  match Build_session.graph_cycle attempt.session with
+  | Build_session.Known_cycle cycle -> cycle
+  | Build_session.Unknown_cycle ->
     let cycle =
       Module_graph.find_cycle
         (Build_session.global_module_values attempt.session)
@@ -242,19 +234,7 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
         prepared.build_state
     in
     Build_session.set_graph_cycle attempt.session cycle;
-    cycle)
-  else
-    match Build_session.graph_cycle attempt.session with
-    | Build_session.Known_cycle cycle -> cycle
-    | Build_session.Unknown_cycle ->
-      let cycle =
-        Module_graph.find_cycle
-          (Build_session.global_module_values attempt.session)
-          (Build_session.namespace_map_values attempt.session)
-          prepared.build_state
-      in
-      Build_session.set_graph_cycle attempt.session cycle;
-      cycle
+    cycle
 
 let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     ~folder ~prod ~features ~warn_error ~after_build ~filter ~on_state =
