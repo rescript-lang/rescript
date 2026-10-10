@@ -6,7 +6,7 @@
 
 const path = require("node:path");
 
-const minimumNodeVersion = "20.11.0";
+const minimumNodeVersion = "22.0.0";
 
 const target = `${process.platform}-${process.arch}`;
 
