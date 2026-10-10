@@ -35,19 +35,18 @@ val active_sources :
   Config.t -> prod:bool -> features:string list option -> Config.source list
 
 val discover_for_cleanup :
-  ?on_missing:(string -> unit) -> Config.t -> prod:bool -> string list
+  on_missing:(string -> unit) -> Config.t -> prod:bool -> string list
 
 val discover_files :
-  ?on_missing:(string -> unit) ->
+  on_missing:(string -> unit) ->
   Config.t ->
   prod:bool ->
   features:string list option ->
-  filter:Source_filter.t option ->
   string list
 
 val discover_with_inventory :
   ?on_orphan:(string -> unit) ->
-  ?on_missing:(string -> unit) ->
+  on_missing:(string -> unit) ->
   ?display_root:string ->
   Config.t ->
   prod:bool ->

@@ -231,27 +231,26 @@ let resolve_active_features (config : Config.t) requested =
       raise_feature_cycle feature visiting;
     if not (Hashtbl.mem active_features feature) then (
       Hashtbl.add visiting_features feature ();
-      match Hashtbl.find_opt features feature with
-      | None ->
-        Hashtbl.remove visiting_features feature;
-        Hashtbl.add active_features feature ()
-      | Some implied ->
-        List.iter (fun name -> activate name (feature :: visiting)) implied;
-        Hashtbl.remove visiting_features feature;
-        Hashtbl.add active_features feature ())
+      let implied =
+        Hashtbl.find_opt features feature |> Option.value ~default:[]
+      in
+      List.iter (fun name -> activate name (feature :: visiting)) implied;
+      Hashtbl.remove visiting_features feature;
+      Hashtbl.add active_features feature ())
   in
   List.iter (fun feature -> activate feature []) requested;
   active_features
 
+let feature_enabled ~all_features ~active_features (source : Config.source) =
+  all_features
+  || Option.fold ~none:true
+       ~some:(fun feature -> Hashtbl.mem active_features feature)
+       source.feature
+
 let source_is_active ~prod ~all_features ~active_features
     (source : Config.source) =
-  let feature_enabled =
-    all_features
-    || Option.fold ~none:true
-         ~some:(fun feature -> Hashtbl.mem active_features feature)
-         source.feature
-  in
-  (not (prod && source.is_dev)) && feature_enabled
+  (not (prod && source.is_dev))
+  && feature_enabled ~all_features ~active_features source
 
 let active_sources (config : Config.t) ~prod ~features =
   let active_features =
@@ -282,18 +281,14 @@ let scan_sources ~on_missing (config : Config.t) ~prod ~features
   let gentype_dirs = ref [] in
   config.sources
   |> List.iter (fun (source : Config.source) ->
-      let feature_enabled =
-        all_features
-        || Option.fold ~none:true
-             ~some:(fun feature -> Hashtbl.mem active_features feature)
-             source.feature
-      in
       let discover_modules =
         source_is_active ~prod ~all_features ~active_features source
       in
       scan_source ~root:config.root source ~discover_modules ~on_missing
         ~visited_dirs ~visited_inventory_dirs ~collect_inventory
-        ~collect_gentype:(collect_gentype && feature_enabled)
+        ~collect_gentype:
+          (collect_gentype
+          && feature_enabled ~all_features ~active_features source)
         ~visited_gentype_dirs files inventory_files present_files gentype_dirs);
   {
     files = !files;
@@ -302,10 +297,7 @@ let scan_sources ~on_missing (config : Config.t) ~prod ~features
     gentype_dirs = List.sort_uniq String.compare !gentype_dirs;
   }
 
-let discover_for_cleanup
-    ?(on_missing =
-      fun path -> Printf.eprintf "Could not read folder %s\n%!" path)
-    (config : Config.t) ~prod =
+let discover_for_cleanup ~on_missing (config : Config.t) ~prod =
   let scanned =
     scan_sources ~on_missing config ~prod ~features:None
       ~collect_inventory:false ~collect_gentype:false
@@ -320,27 +312,16 @@ let discover_for_cleanup
   in
   implementations
 
-let discover_files
-    ?(on_missing =
-      fun path -> Printf.eprintf "Could not read folder %s\n%!" path)
-    (config : Config.t) ~prod ~features ~filter =
-  let matches_filter =
-    match filter with
-    | None -> fun _ -> true
-    | Some filter -> Source_filter.matches_basename filter
-  in
+let discover_files ~on_missing (config : Config.t) ~prod ~features =
   let scanned =
     scan_sources ~on_missing config ~prod ~features ~collect_inventory:false
       ~collect_gentype:false
   in
   scanned.files
-  |> List.filter_map (fun source ->
-      if matches_filter source.file.path then Some source.file.path else None)
+  |> List.map (fun source -> source.file.path)
   |> List.sort_uniq String.compare
 
-let discover_with_inventory ?(on_orphan = fun _ -> ())
-    ?(on_missing =
-      fun path -> Printf.eprintf "Could not read folder %s\n%!" path)
+let discover_with_inventory ?(on_orphan = fun _ -> ()) ~on_missing
     ?(display_root = Sys.getcwd ()) (config : Config.t) ~prod ~features ~filter
     =
   let matches_filter =
