@@ -12,7 +12,6 @@ type task = {job: job; env: Spawn.Env.t option; on_result: result -> result}
 exception Error = Child.Error
 exception Interrupted of int
 
-let decode_utf8_lossy = Child.decode_utf8_lossy
 let succeeded = Child.succeeded
 let status_string = Child.status_string
 
@@ -21,6 +20,14 @@ let status_string = Child.status_string
    The threads perform only blocking I/O; dependency scheduling stays on the
    calling thread. *)
 let default_max_jobs = min 32 (max 1 (Domain.recommended_domain_count ()))
+
+let with_completion_notifier ~poll action =
+  match poll with
+  | Some poll ->
+    Child.with_completion_notifier ~ticker_enabled:true (action ~poll)
+  | None ->
+    Child.with_completion_notifier ~ticker_enabled:false
+      (action ~poll:(fun () -> ()))
 
 let task ?env ?(on_result = fun result -> result) job = {job; env; on_result}
 
@@ -69,12 +76,7 @@ let run_parallel_map ?(max_jobs = default_max_jobs) ?poll
   match values with
   | [] -> []
   | _ ->
-    let poll, ticker_enabled =
-      match poll with
-      | Some poll -> (poll, true)
-      | None -> ((fun () -> ()), false)
-    in
-    Child.with_completion_notifier ~ticker_enabled (fun notifier ->
+    with_completion_notifier ~poll (fun ~poll notifier ->
         run_parallel_map_with_notifier ~max_jobs ~poll ~on_complete notifier
           values ~job)
 
@@ -134,7 +136,7 @@ type 'a worker_pool = {
 }
 
 let remove_active pool active =
-  Child.with_lock pool.mutex (fun () ->
+  Mutex.protect pool.mutex (fun () ->
       while
         pool.signalling_cancellation
         && cancellation_was_requested active.cancellation
@@ -146,14 +148,8 @@ let remove_active pool active =
           (fun current -> current.id <> active.id)
           pool.active_children)
 
-let release_active active = Child.release active.child
-
-let release_active_after_completion active =
-  Child.release_after_completion active.child
-
 let complete_pool_task pool completion =
-  Child.with_lock pool.mutex (fun () ->
-      Queue.add completion pool.completed_tasks);
+  Mutex.protect pool.mutex (fun () -> Queue.add completion pool.completed_tasks);
   Child.notify_completion pool.notifier
 
 let run_pool_task pool payload task =
@@ -164,7 +160,7 @@ let run_pool_task pool payload task =
   | Error exn -> complete_pool_task pool (Task_failed (payload, exn))
   | Ok child ->
     let active, cancel_after_launch =
-      Child.with_lock pool.mutex (fun () ->
+      Mutex.protect pool.mutex (fun () ->
           let active =
             {
               id = pool.next_active_id;
@@ -185,7 +181,7 @@ let run_pool_task pool payload task =
           (Child.wait_for_running
              ~poll:(fun () ->
                match
-                 Child.with_lock pool.mutex (fun () -> active.cancellation)
+                 Mutex.protect pool.mutex (fun () -> active.cancellation)
                with
                | Cancellation_failed exn -> raise exn
                | Cancellation_not_requested | Cancellation_requested -> ())
@@ -197,8 +193,7 @@ let run_pool_task pool payload task =
       | Ok (_, result) -> (
         remove_active pool active;
         try
-          Child.await_termination child;
-          release_active active;
+          Child.release_running child;
           Task_completed (payload, task.on_result result)
         with exn -> Task_failed (payload, exn))
       | Error exn -> (
@@ -212,20 +207,19 @@ let run_pool_task pool payload task =
         | Termination_confirmed -> (
           remove_active pool active;
           try
-            Child.await_termination child;
-            release_active active;
+            Child.release_running child;
             Task_failed (payload, exn)
           with release_exn -> Task_failed (payload, release_exn))
         | Termination_unconfirmed cancellation_exn ->
           remove_active pool active;
-          release_active_after_completion active;
+          Child.release_after_completion child;
           Task_failed (payload, cancellation_exn))
     in
     complete_pool_task pool completion
 
 let rec worker_loop pool =
   let queued =
-    Child.with_lock pool.mutex (fun () ->
+    Mutex.protect pool.mutex (fun () ->
         while Queue.is_empty pool.queued && not pool.stopping do
           Condition.wait pool.work_available pool.mutex
         done;
@@ -264,14 +258,14 @@ let create_worker_pool ~max_jobs notifier =
     start_workers max_jobs;
     pool
   with exn ->
-    Child.with_lock pool.mutex (fun () ->
+    Mutex.protect pool.mutex (fun () ->
         pool.stopping <- true;
         Condition.broadcast pool.work_available);
     List.iter Domain.join pool.workers;
     raise exn
 
 let submit_pool_task pool payload task =
-  Child.with_lock pool.mutex (fun () ->
+  Mutex.protect pool.mutex (fun () ->
       if pool.stopping then raise (Error "subprocess worker pool is stopping");
       Queue.add (payload, task) pool.queued;
       Condition.signal pool.work_available)
@@ -279,7 +273,7 @@ let submit_pool_task pool payload task =
 let await_pool_completion ~poll pool =
   let rec wait generation =
     match
-      Child.with_lock pool.mutex (fun () ->
+      Mutex.protect pool.mutex (fun () ->
           if Queue.is_empty pool.completed_tasks then None
           else Some (Queue.take pool.completed_tasks))
     with
@@ -292,7 +286,7 @@ let await_pool_completion ~poll pool =
 
 let stop_worker_pool ~cancel pool =
   let active =
-    Child.with_lock pool.mutex (fun () ->
+    Mutex.protect pool.mutex (fun () ->
         pool.stopping <- true;
         Queue.clear pool.queued;
         Condition.broadcast pool.work_available;
@@ -313,7 +307,7 @@ let stop_worker_pool ~cancel pool =
       None
     with exn -> Some exn
   in
-  Child.with_lock pool.mutex (fun () ->
+  Mutex.protect pool.mutex (fun () ->
       Option.iter
         (fun exn ->
           List.iter
@@ -490,22 +484,12 @@ let run_dependency_graph ?(max_jobs = default_max_jobs)
   match works with
   | [] -> ()
   | _ ->
-    let poll, ticker_enabled =
-      match poll with
-      | Some poll -> (poll, true)
-      | None -> ((fun () -> ()), false)
-    in
-    Child.with_completion_notifier ~ticker_enabled (fun notifier ->
+    with_completion_notifier ~poll (fun ~poll notifier ->
         run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
           works ~next)
 
 let run_one ?poll ?stdout_chunk ?stderr_chunk ?stdin ~cwd program args =
-  let poll, ticker_enabled =
-    match poll with
-    | Some poll -> (poll, true)
-    | None -> ((fun () -> ()), false)
-  in
-  Child.with_completion_notifier ~ticker_enabled (fun notifier ->
+  with_completion_notifier ~poll (fun ~poll notifier ->
       let child =
         Child.launch ?stdout_chunk ?stderr_chunk ?stdin ~notifier ()
           {program; args; cwd}

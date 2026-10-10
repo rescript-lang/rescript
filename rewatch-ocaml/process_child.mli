@@ -8,14 +8,11 @@ type stdin_policy = Inherit_stdin | Null_stdin
 
 exception Error of string
 
-val decode_utf8_lossy : string -> string
 val succeeded : result -> bool
 val status_string : Unix.process_status -> string
 
 type completion_notifier
 type 'a running
-
-val with_lock : Mutex.t -> (unit -> 'a) -> 'a
 
 val with_completion_notifier :
   ticker_enabled:bool -> (completion_notifier -> 'a) -> 'a
@@ -41,10 +38,7 @@ val wait_for_running :
   'a running * result
 
 val payload : 'a running -> 'a
-val pid : 'a running -> int
 val signal_running : 'a running list -> unit
-val await_termination : 'a running -> unit
-val release : 'a running -> unit
 val release_after_completion : 'a running -> unit
 val terminate_running : 'a running list -> unit
 val release_running : 'a running -> unit

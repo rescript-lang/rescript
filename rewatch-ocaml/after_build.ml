@@ -8,12 +8,7 @@ let run ?poll ~root command =
   in
   let result =
     try Process.run_streaming ?poll ~cwd:root program args with
-    | Process.Error message ->
-      raise
-        (Error
-           (Printf.sprintf "Could not run --after-build command %S: %s" command
-              message))
-    | Sys_error message ->
+    | Process.Error message | Sys_error message ->
       raise
         (Error
            (Printf.sprintf "Could not run --after-build command %S: %s" command
