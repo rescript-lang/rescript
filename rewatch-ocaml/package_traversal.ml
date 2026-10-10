@@ -98,10 +98,3 @@ let discover ~root_config ~prod ~features ~resolution =
     ~root_name:(Package_resolution.root_package_name resolution) ~prod ~features
     ~resolve:(fun config request ->
       Some (resolve resolution ~package_root:config.root request))
-
-module For_test = struct
-  let create_feature_requests () = Hashtbl.create 4
-  let add_feature_request = add_feature_request
-  let find_feature_selection feature_requests root =
-    find_feature_selection {packages = []; feature_requests} root
-end
