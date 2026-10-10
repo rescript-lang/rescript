@@ -1330,6 +1330,11 @@ and skip_tokens_and_maybe_retry p ~is_start_of_grammar =
   then (
     Parser.next p;
     None)
+  else if Parser.peek p = Comma then
+    (* Something is missing before a comma, e.g. the value in [{a: , b: 1}]:
+       leave the comma to the enclosing list instead of skipping to the next
+       row *)
+    None
   else if Recover.should_abort_list_parse p (Parser.peek p) then
     if is_start_of_grammar (Parser.peek p) then (
       Parser.next p;
