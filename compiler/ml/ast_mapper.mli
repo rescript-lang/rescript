@@ -103,6 +103,9 @@ val extension_of_error : Location.error -> extension
     inserted in a generated Parsetree.  The compiler will be
     responsible for reporting the error. *)
 
+val reset_cookies : unit -> unit
+(** Forget the cookies returned by external PPXs in the current request. *)
+
 val add_ppx_context_str :
   tool_name:string -> Parsetree.structure -> Parsetree.structure
 (** Extract information from the current environment and encode it

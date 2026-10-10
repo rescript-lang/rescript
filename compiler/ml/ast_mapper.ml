@@ -617,7 +617,10 @@ module String_map = Map.Make (struct
   let compare = compare
 end)
 
-let cookies = ref String_map.empty
+(* Cookies exchanged with external PPXs belong to one compiler request. *)
+let cookies_key = Domain.DLS.new_key (fun () -> ref String_map.empty)
+let cookies () = Domain.DLS.get cookies_key
+let reset_cookies () = cookies () := String_map.empty
 
 module Ppx_context = struct
   open Longident
@@ -649,7 +652,7 @@ module Ppx_context = struct
       x =
         make_list
           (make_pair make_string (fun x -> x))
-          (String_map.bindings !cookies);
+          (String_map.bindings !(cookies ()));
       opt = false;
     }
 
@@ -749,7 +752,7 @@ module Ppx_context = struct
       | "debug" -> (Clflags.current ()).debug := get_bool payload
       | "cookies" ->
         let l = get_list (get_pair get_string (fun x -> x)) payload in
-        cookies :=
+        cookies () :=
           List.fold_left
             (fun s (k, v) -> String_map.add k v s)
             String_map.empty l

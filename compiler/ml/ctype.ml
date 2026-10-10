@@ -4385,3 +4385,18 @@ let get_arity env typ =
   match (expand_head env typ).desc with
   | Tarrow (params, _) -> Some (List.length params)
   | _ -> None
+
+(* A compiler process starts with this state. Requests that run in-process on
+   the same domain must too: identifier stamps and type ids restart for each
+   request, so a memorized expansion or a cached environment from an earlier
+   request would be mistaken for one of the current request. *)
+let reset_request () =
+  let levels = Domain.DLS.get level_refs in
+  levels.current := 0;
+  levels.nongen := 0;
+  levels.global := 1;
+  levels.saved := [];
+  trace_gadt_instances () := false;
+  simple_abbrevs () := Mnil;
+  abbreviations () := ref Mnil;
+  previous_env () := Env.empty

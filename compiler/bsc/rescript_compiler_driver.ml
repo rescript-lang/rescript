@@ -20,7 +20,8 @@ module Error_message_utils_support = struct
   external from_comment : Error_message_utils.Parser.comment -> Res_comment.t
     = "%identity"
 
-  let setup () =
+  (* The parser hooks are installed once, before worker domains start. *)
+  let install_parser () =
     (Error_message_utils.Parser.parse_source :=
        fun source ->
          let res =
@@ -29,12 +30,13 @@ module Error_message_utils_support = struct
          in
          (res.parsetree, res.comments |> List.map to_comment));
 
-    (Error_message_utils.Parser.reprint_source :=
-       fun parsetree comments ->
-         Res_printer.print_implementation parsetree
-           ~comments:(comments |> List.map from_comment)
-           ~width:80);
+    Error_message_utils.Parser.reprint_source :=
+      fun parsetree comments ->
+        Res_printer.print_implementation parsetree
+          ~comments:(comments |> List.map from_comment)
+          ~width:80
 
+  let setup () =
     Error_message_utils.configured_jsx_module ()
     := Some
          (match !((Js_config.current ()).jsx_module) with
@@ -533,6 +535,7 @@ let file_level_flags_handler (e : Parsetree.expression option) =
 let () =
   Bs_conditional_initial.setup_env ();
   setup_outcome_printer ();
+  Error_message_utils_support.install_parser ();
   (Clflags.current ()).color := Some Always;
   let flags = "flags" in
   Ast_config.add_structure flags file_level_flags_handler;
@@ -562,6 +565,8 @@ let reset_state ?(new_request = false) () =
   Bs_builtin_ppx.reset ();
   Used_attributes.reset ();
   Btype.reinit ();
+  Ctype.reset_request ();
+  Ast_mapper.reset_cookies ();
   if new_request then (
     (* Allocate shared predefined graphs in a fixed order. Lazy first use on
        different worker domains would otherwise shift serialized type IDs. *)

@@ -849,6 +849,24 @@ let state_boundary_tests _context =
         && !(Gentype_config.module_flag ()) = None)
         "JSX, experimental, and GenType state is restored after the request")
 
+(* A request that fails with a type error can leave memorized abbreviation
+   expansions behind. They are keyed by path, and paths into other compilation
+   units compare by name, so a later request must not find this [Lib.t]. *)
+let ctype_memo_reset_tests _context =
+  Test_support.with_temp_dir "rewatch-driver-ctype-" (fun root ->
+      write root "Lib.res" "type t = int\n";
+      expect_code 0 (snd (run root "Lib.res"));
+      write root "Bad.res" "let value: Lib.t = \"text\"\n";
+      expect_code 2 (snd (run root ~extra:["-I"; root] "Bad.res"));
+      let lib_t =
+        Ctype.newconstr
+          (Path.Pdot (Path.Pident (Ident.create_persistent "Lib"), "t", 0))
+          []
+      in
+      check
+        (Ctype.expand_head Env.empty lib_t == lib_t)
+        "abbreviation expansions do not outlive their request")
+
 let package_and_load_path_isolation_tests _context =
   Test_support.with_temp_dir "rewatch-driver-load-roots-" (fun root ->
       let first = Filename.concat root "first" in
@@ -1189,6 +1207,7 @@ let tests =
   "compiler_driver_tests"
   >::: [
          "ctype_level_isolation" >:: ctype_level_isolation_tests;
+         "ctype_memo_reset" >:: ctype_memo_reset_tests;
          "shared_type_graph_isolation" >:: shared_type_graph_isolation_tests;
          "dependency_extraction_isolation"
          >:: dependency_extraction_isolation_tests;

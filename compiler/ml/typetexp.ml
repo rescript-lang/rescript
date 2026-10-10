@@ -193,7 +193,6 @@ let create_package_mty fake loc env (p, l) =
 type variable_refs = {
   type_variables_ref: (string, type_expr) Tbl.t ref;
   univars_ref: (string * type_expr) list ref;
-  pre_univars_ref: type_expr list ref;
   used_variables_ref: (string, type_expr * Location.t) Tbl.t ref;
 }
 
@@ -205,13 +204,11 @@ let variable_refs =
       {
         type_variables_ref = ref Tbl.empty;
         univars_ref = ref [];
-        pre_univars_ref = ref [];
         used_variables_ref = ref Tbl.empty;
       })
 
 let type_variables () = (Domain.DLS.get variable_refs).type_variables_ref
 let univars () = (Domain.DLS.get variable_refs).univars_ref
-let pre_univars () = (Domain.DLS.get variable_refs).pre_univars_ref
 let used_variables () = (Domain.DLS.get variable_refs).used_variables_ref
 
 let reset_type_variables () =
@@ -273,10 +270,7 @@ let transl_type_param env styp =
   Builtin_attributes.warning_scope styp.ptyp_attributes (fun () ->
       transl_type_param env styp)
 
-let new_pre_univar ?name () =
-  let v = newvar ?name () in
-  pre_univars () := v :: !(pre_univars ());
-  v
+let new_pre_univar ?name () = newvar ?name ()
 
 let rec swap_list = function
   | x :: y :: l -> y :: x :: swap_list l
