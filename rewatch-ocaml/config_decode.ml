@@ -215,7 +215,7 @@ let compiler_flags path field = function
           (Printf.sprintf "field %S entries must be strings or arrays" field))
   | _ -> fail path (Printf.sprintf "field %S must be an array" field)
 
-let dependency_name path = function
+let dependency_name path field = function
   | `String value -> {name = value; features = None}
   | `Assoc fields -> (
     reject_duplicate_fields path "dependency" dependency_fields fields;
@@ -227,13 +227,18 @@ let dependency_name path = function
         | Some value -> Some (strings path "features" value)
       in
       {name = string path "name" value; features}
-    | None -> fail path "dependency object is missing field \"name\"")
-  | _ -> fail path "dependency must be a string or object"
+    | None ->
+      fail path
+        (Printf.sprintf "an object in field %S is missing field \"name\"" field)
+    )
+  | _ ->
+    fail path
+      (Printf.sprintf "entries of field %S must be strings or objects" field)
 
 let parse_dependencies path field fields =
   match optional_member field fields with
   | None -> []
-  | Some (`List values) -> List.map (dependency_name path) values
+  | Some (`List values) -> List.map (dependency_name path field) values
   | Some _ -> fail path (Printf.sprintf "field %S must be an array" field)
 
 let dependency_alias path modern legacy fields =
@@ -261,14 +266,15 @@ let rec sources_of_json path inherited_dir forced_dev inherited_feature =
     let dir =
       match member "dir" fields with
       | Some value -> Filename.concat inherited_dir (string path "dir" value)
-      | None -> fail path "source object is missing field \"dir\""
+      | None ->
+        fail path "an object in field \"sources\" is missing field \"dir\""
     in
     let declared_dev =
       match optional_member "type" fields with
       | None -> false
       | Some (`String "dev") -> true
       | Some (`String _) -> false
-      | Some _ -> fail path "source field \"type\" must be a string"
+      | Some _ -> fail path "field \"type\" in \"sources\" must be a string"
     in
     let is_dev = Option.value forced_dev ~default:declared_dev in
     let feature =
@@ -286,10 +292,13 @@ let rec sources_of_json path inherited_dir forced_dev inherited_feature =
             (sources_of_json path dir (Some is_dev) feature)
             values )
       | Some _ ->
-        fail path "source field \"subdirs\" must be a boolean or array"
+        fail path
+          "field \"subdirs\" in \"sources\" must be a boolean or an array"
     in
     {dir; recurse; is_dev; feature} :: children
-  | _ -> fail path "source must be a string or object"
+  | _ ->
+    fail path
+      "field \"sources\" must be a string, an object, or an array of them"
 
 let parse_sources path fields =
   match optional_member "sources" fields with
@@ -329,10 +338,14 @@ let parse_package_spec path = function
       match member "module" fields with
       | Some (`String ("esmodule" | "es6")) -> Esmodule
       | Some (`String ("commonjs" | "cjs")) -> Commonjs
-      | None -> fail path "package-specs entry is missing field \"module\""
+      | None ->
+        fail path
+          "an object in field \"package-specs\" is missing field \"module\""
       | Some value ->
         fail path
-          (Printf.sprintf "unsupported package module %s"
+          (Printf.sprintf
+             "unsupported module %s in field \"package-specs\"; expected \
+              \"commonjs\" or \"esmodule\""
              (Yojson.Safe.to_string value))
     in
     let in_source =
@@ -346,7 +359,8 @@ let parse_package_spec path = function
       | Some value -> Some (string path "suffix" value)
     in
     {module_format; in_source; suffix}
-  | _ -> fail path "package-specs entries must be objects"
+  | _ ->
+    fail path "field \"package-specs\" must be an object or an array of objects"
 
 let package_specs_use_alias alias = function
   | `Assoc fields -> member "module" fields = Some (`String alias)
@@ -386,7 +400,9 @@ let gentype_args path configured_suffix package_specs_value dependencies =
       | Some (`String (("node" | "node16" | "bundler") as value)) ->
         ["-bs-gentype-module-resolution"; value]
       | Some _ ->
-        fail path "field \"gentypeconfig.moduleResolution\" is invalid"
+        fail path
+          "field \"gentypeconfig.moduleResolution\" must be \"node\", \
+           \"node16\", or \"bundler\""
     in
     let export_interfaces =
       match optional_member "exportInterfaces" fields with

@@ -536,9 +536,25 @@ let decoder_semantics_tests =
           ignore (Config.load path);
           false
         with Config.Error message ->
-          contains message "unsupported package module"
+          contains message
+            {|unsupported module "es6-global" in field "package-specs"; expected "commonjs" or "esmodule"|}
       in
-      check rejected "unsupported package modules are rejected";
+      check rejected "unsupported package modules name the accepted values";
+      check
+        (rejects path {|{"name":"x","sources":42}|}
+           {|field "sources" must be a string, an object, or an array of them|})
+        "invalid sources name the field";
+      check
+        (rejects path {|{"name":"x","dependencies":[1]}|}
+           {|entries of field "dependencies" must be strings or objects|})
+        "invalid dependencies name the field";
+      check
+        (rejects path {|{"name":"x","dev-dependencies":[{}]}|}
+           {|an object in field "dev-dependencies" is missing field "name"|})
+        "dependency objects without a name name the field";
+      check
+        (rejects path {|[]|} "rescript.json must contain a JSON object")
+        "a configuration that is not an object is rejected";
       write_file path
         {|{"name":"hidden-map","sourceMap":{"enabled":"always","mode":"hidden"}}|};
       let config = Config.load path in
