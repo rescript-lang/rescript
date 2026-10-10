@@ -89,24 +89,24 @@ let source_fields = reject_all_duplicates ["dir"; "subdirs"; "type"; "feature"]
 let package_spec_fields =
   reject_all_duplicates ["module"; "in-source"; "suffix"]
 
-let reject_duplicate_fields path context policy fields =
+(* Fails on the second occurrence of a field accepted by [checked]. *)
+let reject_repeated ~checked path context fields =
   let seen = Hashtbl.create (List.length fields) in
   List.iter
     (fun (name, _) ->
-      if List.mem name policy.duplicate_checked then
+      if checked name then
         if Hashtbl.mem seen name then
           fail path (Printf.sprintf "duplicate field %S in %s" name context)
         else Hashtbl.add seen name ())
     fields
 
+let reject_duplicate_fields path context policy fields =
+  reject_repeated
+    ~checked:(fun name -> List.mem name policy.duplicate_checked)
+    path context fields
+
 let reject_duplicates path context fields =
-  let seen = Hashtbl.create (List.length fields) in
-  List.iter
-    (fun (name, _) ->
-      if Hashtbl.mem seen name then
-        fail path (Printf.sprintf "duplicate field %S in %s" name context)
-      else Hashtbl.add seen name ())
-    fields
+  reject_repeated ~checked:(fun _ -> true) path context fields
 
 let string path field = function
   | `String value -> value

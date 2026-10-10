@@ -77,57 +77,12 @@ let with_root_options (config : t) (root_config : t) =
          @ ["-bs-gentype-bsb-project-root"; root_config.root]);
   }
 
-let load path =
-  let requested_path = path in
-  let root =
-    try Platform.canonicalize_path (Filename.dirname path) with
-    | Sys_error message ->
-      fail_read requested_path (strip_read_path requested_path message)
-    | Unix.Unix_error (error, _, _) ->
-      fail_read requested_path (Unix.error_message error)
-  in
-  let path = Filename.concat root (Filename.basename path) in
-  (try
-     match (Unix.stat path).Unix.st_kind with
-     | Unix.S_DIR -> fail_read path (Unix.error_message Unix.EISDIR)
-     | Unix.S_REG | Unix.S_CHR | Unix.S_BLK | Unix.S_LNK | Unix.S_FIFO
-     | Unix.S_SOCK ->
-       ()
-   with
+let with_read_errors path f =
+  try f () with
   | Sys_error message -> fail_read path (strip_read_path path message)
-  | Unix.Unix_error (error, _, _) -> fail_read path (Unix.error_message error));
-  let contents =
-    try File_util.read_file path with
-    | Sys_error message -> fail_read path (strip_read_path path message)
-    | Unix.Unix_error (error, _, _) -> fail_read path (Unix.error_message error)
-  in
-  (match Strict_json.check contents with
-  | Ok () -> ()
-  | Error {line; column; message} ->
-    raise
-      (Error
-         (Printf.sprintf "%s:%d:%d: invalid JSON: %s" path line column message)));
-  let json =
-    try Yojson.Safe.from_string contents
-    with Yojson.Json_error message -> fail path ("invalid JSON: " ^ message)
-  in
-  let fields =
-    match json with
-    | `Assoc fields -> fields
-    | _ -> fail path "rescript.json must contain a JSON object"
-  in
-  reject_duplicate_fields path "configuration" configuration_fields fields;
-  let name =
-    match member "name" fields with
-    | Some value -> string path "name" value
-    | None -> fail path "missing required field \"name\""
-  in
-  let configured_suffix =
-    match optional_member "suffix" fields with
-    | None -> None
-    | Some value -> Some (string path "suffix" value)
-  in
-  let suffix = Option.value configured_suffix ~default:".js" in
+  | Unix.Unix_error (error, _, _) -> fail_read path (Unix.error_message error)
+
+let decode_package_specs path ~suffix fields =
   let package_specs =
     match optional_member "package-specs" fields with
     | None ->
@@ -146,6 +101,9 @@ let load path =
              effective_suffix);
       Hashtbl.add seen_package_outputs key ())
     package_specs;
+  package_specs
+
+let decode_namespace path ~name fields =
   let namespace_entry =
     optional_member "namespace-entry" fields
     |> Option.map (string path "namespace-entry")
@@ -161,201 +119,157 @@ let load path =
     | Some (`String value) -> Some (namespace_from_package_name value)
     | Some _ -> fail path "field \"namespace\" must be a boolean or string"
   in
-  let namespace =
-    match (namespace_entry, namespace_name) with
-    | None, None -> No_namespace
-    | None, Some name -> Namespace name
-    | Some _, None -> fail path "field \"namespace-entry\" requires a namespace"
-    | Some entry, Some name -> Namespace_with_entry {name; entry}
-  in
-  let compiler_flags =
-    match (member "compiler-flags" fields, member "bsc-flags" fields) with
-    | Some _, Some _ ->
-      fail path "fields \"compiler-flags\" and \"bsc-flags\" cannot both be set"
-    | Some `Null, None | None, Some `Null -> []
-    | Some value, None -> compiler_flags path "compiler-flags" value
-    | None, Some value -> compiler_flags path "bsc-flags" value
-    | None, None -> []
-  in
-  let warning_flags =
-    match optional_member "warnings" fields with
-    | None -> []
-    | Some (`Assoc warning_fields) ->
-      reject_duplicate_fields path "warnings" Config_decode.warning_fields
-        warning_fields;
-      let number =
-        match optional_member "number" warning_fields with
-        | None -> []
-        | Some value -> ["-w"; string path "number" value]
-      in
-      let error =
-        match optional_member "error" warning_fields with
-        | Some (`Bool true) -> ["-warn-error"; "A"]
-        | Some (`String value) -> ["-warn-error"; value]
-        | None | Some (`Bool false) -> []
-        | Some _ ->
-          fail path "field \"warnings.error\" must be a boolean or string"
-      in
-      number @ error
-    | Some _ -> fail path "field \"warnings\" must be an object"
-  in
-  let ppx_flags =
-    match optional_member "ppx-flags" fields with
-    | None -> []
-    | Some (`List values) ->
-      List.map
-        (function
-          | `String value -> [value]
-          | `List values -> List.map (string path "ppx-flags") values
-          | _ ->
-            fail path "field \"ppx-flags\" entries must be strings or arrays")
-        values
-    | Some _ -> fail path "field \"ppx-flags\" must be an array"
-  in
-  let jsx_args =
-    match optional_member "jsx" fields with
-    | None -> []
-    | Some (`Assoc jsx) ->
-      reject_duplicate_fields path "jsx" jsx_fields jsx;
-      let version =
-        match optional_member "version" jsx with
-        | None -> []
-        | Some (`Int 4) -> ["-bs-jsx"; "4"]
-        | Some _ -> fail path "field \"jsx.version\" must be 4"
-      in
-      let module_ =
-        match optional_member "module" jsx with
-        | None -> []
-        | Some value -> ["-bs-jsx-module"; string path "jsx.module" value]
-      in
-      let mode =
-        match optional_member "mode" jsx with
-        | None -> []
-        | Some (`String (("classic" | "automatic") as value)) ->
-          ["-bs-jsx-mode"; value]
-        | Some _ ->
-          fail path "field \"jsx.mode\" must be \"classic\" or \"automatic\""
-      in
-      let preserve =
-        match optional_member "preserve" jsx with
-        | None | Some (`Bool false) -> []
-        | Some (`Bool true) -> ["-bs-jsx-preserve"]
-        | Some _ -> fail path "field \"jsx.preserve\" must be a boolean"
-      in
-      (match optional_member "v3-dependencies" jsx with
-      | None -> ()
-      | Some value -> ignore (strings path "jsx.v3-dependencies" value));
-      version @ module_ @ mode @ preserve
-    | Some _ -> fail path "field \"jsx\" must be an object"
-  in
-  let source_map_args, source_map_dev =
-    match optional_member "sourceMap" fields with
-    | None -> ([], false)
-    | Some (`Bool false) -> (["-bs-source-map"; "false"], false)
-    | Some (`Bool true) ->
-      fail path
-        "sourceMap true is unsupported; use an object with enabled and mode \
-         fields or false"
-    | Some (`Assoc options) ->
-      reject_duplicates path "sourceMap" options;
-      let mode =
-        match member "mode" options with
-        | Some (`String (("linked" | "inline" | "hidden") as value)) -> value
-        | None -> fail path "sourceMap is missing field \"mode\""
-        | Some _ ->
-          fail path "sourceMap.mode must be one of linked, inline, hidden"
-      in
-      let dev_only =
-        match member "enabled" options with
-        | Some (`String "always") -> false
-        | Some (`String "dev") -> true
-        | None -> fail path "sourceMap is missing field \"enabled\""
-        | Some _ -> fail path "sourceMap.enabled must be \"always\" or \"dev\""
-      in
-      let content =
-        match optional_member "sourcesContent" options with
-        | None -> []
-        | Some (`Bool value) ->
-          ["-bs-source-map-sources-content"; string_of_bool value]
-        | Some _ ->
-          fail path "field \"sourceMap.sourcesContent\" must be a boolean"
-      in
-      let root =
-        match optional_member "sourceRoot" options with
-        | None -> []
-        | Some value ->
-          ["-bs-source-map-root"; string path "sourceMap.sourceRoot" value]
-      in
-      (["-bs-source-map"; mode] @ content @ root, dev_only)
-    | Some _ -> fail path "field \"sourceMap\" must be false or an object"
-  in
-  let experimental_args =
-    match optional_member "experimental-features" fields with
-    | None -> []
-    | Some (`Assoc features) ->
-      reject_duplicates path "experimental-features" features;
-      features
-      |> List.concat_map (fun (name, value) ->
-          if name <> "LetUnwrap" then
-            fail path
-              (Printf.sprintf
-                 "Unknown experimental feature '%s'. Available features: \
-                  LetUnwrap"
-                 name);
-          match value with
-          | `Bool true -> ["-enable-experimental"; name]
-          | `Bool false -> []
-          | _ ->
-            fail path
-              "experimental-features: invalid type: feature values must be \
-               booleans")
-    | Some _ ->
-      fail path
-        "Could not read rescript.json: experimental-features: invalid type: \
-         expected an object"
-  in
-  let sources_defined = Option.is_some (optional_member "sources" fields) in
-  let sources = parse_sources path fields in
-  let dependencies =
-    dependency_alias path "dependencies" "bs-dependencies" fields
-  in
-  let dev_dependencies =
-    dependency_alias path "dev-dependencies" "bs-dev-dependencies" fields
-  in
-  let gentype_args =
-    match optional_member "gentypeconfig" fields with
-    | None -> []
-    | Some value ->
-      gentype_args path configured_suffix
-        (member "package-specs" fields)
-        dependencies value
-  in
-  let js_post_build =
-    match optional_member "js-post-build" fields with
-    | None -> None
-    | Some (`Assoc fields) -> (
-      reject_duplicate_fields path "js-post-build" js_post_build_fields fields;
-      match member "cmd" fields with
-      | Some value -> Some (string path "js-post-build.cmd" value)
-      | None -> fail path "field \"js-post-build\" is missing \"cmd\"")
-    | Some _ -> fail path "field \"js-post-build\" must be an object"
-  in
-  let allowed_dependents =
-    match optional_member "allowed-dependents" fields with
-    | None -> None
-    | Some value -> Some (strings path "allowed-dependents" value)
-  in
-  let features =
-    match optional_member "features" fields with
-    | None -> []
-    | Some (`Assoc values) ->
-      reject_duplicates path "features" values;
-      List.map
-        (fun (name, value) -> (name, strings path "features" value))
-        values
-    | Some _ -> fail path "field \"features\" must be an object"
-  in
-  let unsupported = Config_decode.unsupported_fields fields in
+  match (namespace_entry, namespace_name) with
+  | None, None -> No_namespace
+  | None, Some name -> Namespace name
+  | Some _, None -> fail path "field \"namespace-entry\" requires a namespace"
+  | Some entry, Some name -> Namespace_with_entry {name; entry}
+
+let decode_warnings path fields =
+  match optional_member "warnings" fields with
+  | None -> []
+  | Some (`Assoc warning_fields) ->
+    reject_duplicate_fields path "warnings" Config_decode.warning_fields
+      warning_fields;
+    let number =
+      match optional_member "number" warning_fields with
+      | None -> []
+      | Some value -> ["-w"; string path "number" value]
+    in
+    let error =
+      match optional_member "error" warning_fields with
+      | Some (`Bool true) -> ["-warn-error"; "A"]
+      | Some (`String value) -> ["-warn-error"; value]
+      | None | Some (`Bool false) -> []
+      | Some _ ->
+        fail path "field \"warnings.error\" must be a boolean or string"
+    in
+    number @ error
+  | Some _ -> fail path "field \"warnings\" must be an object"
+
+let decode_jsx path fields =
+  match optional_member "jsx" fields with
+  | None -> []
+  | Some (`Assoc jsx) ->
+    reject_duplicate_fields path "jsx" jsx_fields jsx;
+    let version =
+      match optional_member "version" jsx with
+      | None -> []
+      | Some (`Int 4) -> ["-bs-jsx"; "4"]
+      | Some _ -> fail path "field \"jsx.version\" must be 4"
+    in
+    let module_ =
+      match optional_member "module" jsx with
+      | None -> []
+      | Some value -> ["-bs-jsx-module"; string path "jsx.module" value]
+    in
+    let mode =
+      match optional_member "mode" jsx with
+      | None -> []
+      | Some (`String (("classic" | "automatic") as value)) ->
+        ["-bs-jsx-mode"; value]
+      | Some _ ->
+        fail path "field \"jsx.mode\" must be \"classic\" or \"automatic\""
+    in
+    let preserve =
+      match optional_member "preserve" jsx with
+      | None | Some (`Bool false) -> []
+      | Some (`Bool true) -> ["-bs-jsx-preserve"]
+      | Some _ -> fail path "field \"jsx.preserve\" must be a boolean"
+    in
+    (match optional_member "v3-dependencies" jsx with
+    | None -> ()
+    | Some value -> ignore (strings path "jsx.v3-dependencies" value));
+    version @ module_ @ mode @ preserve
+  | Some _ -> fail path "field \"jsx\" must be an object"
+
+(* Returns the compiler arguments and whether source maps are emitted only for
+   development builds. *)
+let decode_source_map path fields =
+  match optional_member "sourceMap" fields with
+  | None -> ([], false)
+  | Some (`Bool false) -> (["-bs-source-map"; "false"], false)
+  | Some (`Bool true) ->
+    fail path
+      "sourceMap true is unsupported; use an object with enabled and mode \
+       fields or false"
+  | Some (`Assoc options) ->
+    reject_duplicates path "sourceMap" options;
+    let mode =
+      match member "mode" options with
+      | Some (`String (("linked" | "inline" | "hidden") as value)) -> value
+      | None -> fail path "sourceMap is missing field \"mode\""
+      | Some _ ->
+        fail path "sourceMap.mode must be one of linked, inline, hidden"
+    in
+    let dev_only =
+      match member "enabled" options with
+      | Some (`String "always") -> false
+      | Some (`String "dev") -> true
+      | None -> fail path "sourceMap is missing field \"enabled\""
+      | Some _ -> fail path "sourceMap.enabled must be \"always\" or \"dev\""
+    in
+    let content =
+      match optional_member "sourcesContent" options with
+      | None -> []
+      | Some (`Bool value) ->
+        ["-bs-source-map-sources-content"; string_of_bool value]
+      | Some _ ->
+        fail path "field \"sourceMap.sourcesContent\" must be a boolean"
+    in
+    let root =
+      match optional_member "sourceRoot" options with
+      | None -> []
+      | Some value ->
+        ["-bs-source-map-root"; string path "sourceMap.sourceRoot" value]
+    in
+    (["-bs-source-map"; mode] @ content @ root, dev_only)
+  | Some _ -> fail path "field \"sourceMap\" must be false or an object"
+
+let decode_experimental_features path fields =
+  match optional_member "experimental-features" fields with
+  | None -> []
+  | Some (`Assoc features) ->
+    reject_duplicates path "experimental-features" features;
+    features
+    |> List.concat_map (fun (name, value) ->
+        if name <> "LetUnwrap" then
+          fail path
+            (Printf.sprintf
+               "Unknown experimental feature '%s'. Available features: \
+                LetUnwrap"
+               name);
+        match value with
+        | `Bool true -> ["-enable-experimental"; name]
+        | `Bool false -> []
+        | _ ->
+          fail path
+            "experimental-features: invalid type: feature values must be \
+             booleans")
+  | Some _ ->
+    fail path
+      "Could not read rescript.json: experimental-features: invalid type: \
+       expected an object"
+
+let decode_js_post_build path fields =
+  match optional_member "js-post-build" fields with
+  | None -> None
+  | Some (`Assoc fields) -> (
+    reject_duplicate_fields path "js-post-build" js_post_build_fields fields;
+    match member "cmd" fields with
+    | Some value -> Some (string path "js-post-build.cmd" value)
+    | None -> fail path "field \"js-post-build\" is missing \"cmd\"")
+  | Some _ -> fail path "field \"js-post-build\" must be an object"
+
+let decode_features path fields =
+  match optional_member "features" fields with
+  | None -> []
+  | Some (`Assoc values) ->
+    reject_duplicates path "features" values;
+    List.map (fun (name, value) -> (name, strings path "features" value)) values
+  | Some _ -> fail path "field \"features\" must be an object"
+
+let deprecation_diagnostics path ~name fields =
   let deprecated =
     (if Filename.basename path = "bsconfig.json" then
        ["  - filename 'bsconfig.json' — rename to 'rescript.json'"]
@@ -382,22 +296,109 @@ let load path =
           if package_specs_use_alias alias value then Some message else None)
     | None -> []
   in
-  let deprecation_diagnostics =
-    if deprecated = [] then []
-    else
-      [
-        Printf.sprintf
-          "\n\
-           Package '%s' uses deprecated config (support will be removed in a \
-           future version):\n\
-           %s"
-          name
-          (String.concat "\n" deprecated);
-      ]
+  if deprecated = [] then []
+  else
+    [
+      Printf.sprintf
+        "\n\
+         Package '%s' uses deprecated config (support will be removed in a \
+         future version):\n\
+         %s"
+        name
+        (String.concat "\n" deprecated);
+    ]
+
+let load path =
+  let root =
+    with_read_errors path (fun () ->
+        Platform.canonicalize_path (Filename.dirname path))
   in
+  let path = Filename.concat root (Filename.basename path) in
+  let contents =
+    with_read_errors path (fun () ->
+        if (Unix.stat path).Unix.st_kind = Unix.S_DIR then
+          fail_read path (Unix.error_message Unix.EISDIR);
+        File_util.read_file path)
+  in
+  (match Strict_json.check contents with
+  | Ok () -> ()
+  | Error {line; column; message} ->
+    raise
+      (Error
+         (Printf.sprintf "%s:%d:%d: invalid JSON: %s" path line column message)));
+  let json =
+    try Yojson.Safe.from_string contents
+    with Yojson.Json_error message -> fail path ("invalid JSON: " ^ message)
+  in
+  let fields =
+    match json with
+    | `Assoc fields -> fields
+    | _ -> fail path "rescript.json must contain a JSON object"
+  in
+  reject_duplicate_fields path "configuration" configuration_fields fields;
+  let name =
+    match member "name" fields with
+    | Some value -> string path "name" value
+    | None -> fail path "missing required field \"name\""
+  in
+  let configured_suffix =
+    optional_member "suffix" fields |> Option.map (string path "suffix")
+  in
+  let suffix = Option.value configured_suffix ~default:".js" in
+  let package_specs = decode_package_specs path ~suffix fields in
+  let namespace = decode_namespace path ~name fields in
+  let compiler_flags =
+    match (member "compiler-flags" fields, member "bsc-flags" fields) with
+    | Some _, Some _ ->
+      fail path "fields \"compiler-flags\" and \"bsc-flags\" cannot both be set"
+    | Some `Null, None | None, Some `Null -> []
+    | Some value, None -> compiler_flags path "compiler-flags" value
+    | None, Some value -> compiler_flags path "bsc-flags" value
+    | None, None -> []
+  in
+  let warning_flags = decode_warnings path fields in
+  let ppx_flags =
+    match optional_member "ppx-flags" fields with
+    | None -> []
+    | Some (`List values) ->
+      List.map
+        (function
+          | `String value -> [value]
+          | `List values -> List.map (string path "ppx-flags") values
+          | _ ->
+            fail path "field \"ppx-flags\" entries must be strings or arrays")
+        values
+    | Some _ -> fail path "field \"ppx-flags\" must be an array"
+  in
+  let jsx_args = decode_jsx path fields in
+  let source_map_args, source_map_dev = decode_source_map path fields in
+  let experimental_args = decode_experimental_features path fields in
+  let sources_defined = Option.is_some (optional_member "sources" fields) in
+  let sources = parse_sources path fields in
+  let dependencies =
+    dependency_alias path "dependencies" "bs-dependencies" fields
+  in
+  let dev_dependencies =
+    dependency_alias path "dev-dependencies" "bs-dev-dependencies" fields
+  in
+  let gentype_args =
+    match optional_member "gentypeconfig" fields with
+    | None -> []
+    | Some value ->
+      gentype_args path configured_suffix
+        (member "package-specs" fields)
+        dependencies value
+  in
+  let js_post_build = decode_js_post_build path fields in
+  let allowed_dependents =
+    optional_member "allowed-dependents" fields
+    |> Option.map (strings path "allowed-dependents")
+  in
+  let features = decode_features path fields in
+  let deprecation_diagnostics = deprecation_diagnostics path ~name fields in
   let diagnostics =
     deprecation_diagnostics
-    @ (unsupported
+    @ (Config_decode.unsupported_fields fields
       |> List.map (fun field ->
           Printf.sprintf
             "The field '%s' found in the package config of '%s' is not \
