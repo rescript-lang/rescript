@@ -122,7 +122,9 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
                   compile_process module_ ~source_kind path)
                 ~publish:(fun ~source_kind path result ->
                   Compiler_process.publish ~build_dir ~ocaml_dir ~is_local
-                    ~config ~source_kind path result)
+                    ~config
+                    ~has_interface:(Option.is_some module_.Source.interface)
+                    ~source_kind path result)
                 ~record_published_outputs
                 ~post_build:(Compiler_process.post_build_tasks config)
                 ~package_root:config.root ~is_local
