@@ -22,30 +22,38 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(* Stamps seen for one mangled name, each mapped to its index suffix.
-   [count] is the number of entries in [stamps], which is also the next index. *)
-type stamps = {count: int; stamps: int Map_int.t}
+(* Stamps seen for one mangled name, each mapped to its printed name.
+   [count] is the number of entries in [stamps], the first suffix to try. *)
+type stamps = {count: int; stamps: string Map_int.t}
 
-(*
-   -- "name" --> int map -- stamp --> index suffix
-*)
-type t = stamps Map_string.t
+(* [used] holds every printed name in scope. Identifiers may contain [$], so
+   a suffixed name like [x$1] can equal another identifier's mangled name;
+   new names are checked against [used] instead of being assumed fresh. *)
+type t = {names: stamps Map_string.t; used: Set_string.t}
 
-let empty : t = Map_string.empty
+let empty : t = {names = Map_string.empty; used = Set_string.empty}
 
-let add_ident ~mangled:name (stamp : int) (cxt : t) : int * t =
-  match Map_string.find_opt cxt name with
+let add_ident ~mangled:name (stamp : int) (cxt : t) : string * t =
+  let {count; stamps} =
+    match Map_string.find_opt cxt.names name with
+    | None -> {count = 0; stamps = Map_int.empty}
+    | Some s -> s
+  in
+  match Map_int.find_opt stamps stamp with
+  | Some str -> (str, cxt)
   | None ->
-    ( 0,
-      Map_string.add cxt name
-        {count = 1; stamps = Map_int.add Map_int.empty stamp 0} )
-  | Some {count; stamps} -> (
-    match Map_int.find_opt stamps stamp with
-    | None ->
-      ( count,
-        Map_string.add cxt name
-          {count = count + 1; stamps = Map_int.add stamps stamp count} )
-    | Some i -> (i, cxt))
+    let rec pick i =
+      let str = if i = 0 then name else Printf.sprintf "%s$%d" name i in
+      if Set_string.mem cxt.used str then pick (i + 1) else str
+    in
+    let str = pick count in
+    ( str,
+      {
+        names =
+          Map_string.add cxt.names name
+            {count = count + 1; stamps = Map_int.add stamps stamp str};
+        used = Set_string.add cxt.used str;
+      } )
 
 (**
    same as {!ident} except it generates a string instead of doing the printing
@@ -84,8 +92,7 @@ let str_of_ident (cxt : t) (id : Ident.t) : string * t =
   else
     let id_name = id.name in
     let name = Ext_ident.convert id_name in
-    let i, new_cxt = add_ident ~mangled:name id.stamp cxt in
-    ((if i == 0 then name else Printf.sprintf "%s$%d" name i), new_cxt)
+    add_ident ~mangled:name id.stamp cxt
 
 let ident (cxt : t) f (id : Ident.t) : t =
   let str, cxt = str_of_ident cxt id in
@@ -103,8 +110,14 @@ let merge (cxt : t) (set : Set_ident.t) =
 let sub_scope (scope : t) (idents : Set_ident.t) : t =
   Set_ident.fold idents empty (fun {name} acc ->
       let mangled = Ext_ident.convert name in
-      match Map_string.find_exn scope mangled with
+      match Map_string.find_exn scope.names mangled with
       | exception Not_found -> assert false
       | stamps ->
-        if Map_string.mem acc mangled then acc
-        else Map_string.add acc mangled stamps)
+        if Map_string.mem acc.names mangled then acc
+        else
+          {
+            names = Map_string.add acc.names mangled stamps;
+            used =
+              Map_int.fold stamps.stamps acc.used (fun _ str used ->
+                  Set_string.add used str);
+          })
