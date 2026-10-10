@@ -14,10 +14,15 @@ let create ~started_at ~interactive ~show_progress ~colors ~no_timing ~kind
     ~attempt =
   {started_at; interactive; show_progress; colors; no_timing; kind; attempt}
 
+let parse_step report =
+  match report.kind with
+  | Incremental_watch -> "1/2"
+  | One_shot | Initial_watch | Full_watch -> "2/3"
+
 let compile_step report =
   match report.kind with
   | Incremental_watch -> "2/2"
-  | _ -> "3/3"
+  | One_shot | Initial_watch | Full_watch -> "3/3"
 
 let output_kind report =
   match report.kind with
@@ -88,9 +93,8 @@ let report_completion report diagnostics =
       | Incremental_watch -> "incremental "
       | One_shot | Full_watch -> "")
 
-let report report ~success ~compile_seconds =
-  let diagnostics = prepare report ~success ~compile_seconds in
-  if success then report_completion report diagnostics
+let report_failure report ~compile_seconds =
+  ignore (prepare report ~success:false ~compile_seconds)
 
 let print_success_details report ~compile_seconds =
   prepare report ~success:true ~compile_seconds
@@ -99,10 +103,7 @@ let report_parse_failure report ~output =
   (if report.interactive && report.show_progress then
      prerr_endline
        (Output.parsing_failed_message ~color:report.colors
-          ~step:
-            (match report.kind with
-            | Incremental_watch -> "1/2"
-            | One_shot | Initial_watch | Full_watch -> "2/3")
+          ~step:(parse_step report)
           ~seconds:
             (if report.no_timing then 0. else report.attempt.parse_seconds))
    else if report.show_progress then
