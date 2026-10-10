@@ -77,7 +77,7 @@ let () =
 
 let () =
   let filename = Filename.concat data_dir "printer/expr/jsxChildren.res" in
-  let source = IO.read_file ~filename in
+  let source = Ext_io.load_file filename in
   let parse source =
     let result =
       Res_driver.parse_implementation_from_source ~display_filename:filename
