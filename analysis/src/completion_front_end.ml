@@ -752,13 +752,23 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
       mbs |> List.iter scope_module_binding;
       mbs |> List.iter (fun b -> iterator.module_binding iterator b);
       processed := true
-    | Pstr_include {pincl_mod = {pmod_desc = med}} -> (
-      match med with
-      | Pmod_ident {txt = lid; loc}
-      | Pmod_apply ({pmod_desc = Pmod_ident {txt = lid; loc}}, _) ->
+    | Pstr_include {pincl_mod} -> (
+      (* [include await M] and [include (await F)(X)] include [M] and [F] *)
+      let without_awaits m = snd (Ast_await.remove_awaits false m) in
+      let included_path =
+        match (without_awaits pincl_mod).pmod_desc with
+        | Pmod_ident lid -> Some lid
+        | Pmod_apply (functor_, _) -> (
+          match (without_awaits functor_).pmod_desc with
+          | Pmod_ident lid -> Some lid
+          | _ -> None)
+        | _ -> None
+      in
+      match included_path with
+      | Some {txt = lid; loc} ->
         let module_name = Longident.flatten lid |> String.concat "." in
         scope := !scope |> Scope.add_include ~name:module_name ~loc
-      | _ -> ())
+      | None -> ())
     | _ -> ());
     if not !processed then
       Ast_iterator.default_iterator.structure_item iterator item

@@ -290,3 +290,30 @@ ContextPath Value[l]
 Path l
 [ { "detail": "int => string", "kind": 12, "label": "lex", "tags": [] } ]
 
+Complete src/IncludeModuleCompletion.res 95:14
+pos_cursor:[95:14] pos_no_white:[95:13] Found expr:[95:13->95:14]
+Pexp_ident l:[95:13->95:14]
+Completable: Cpath Value[l]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[l]
+Path l
+[ { "detail": "int => string", "kind": 12, "label": "lex", "tags": [] } ]
+
+Complete src/IncludeModuleCompletion.res 104:17
+pos_cursor:[104:17] pos_no_white:[104:16] Found expr:[104:13->104:17]
+Pexp_ident addS:[104:13->104:17]
+Completable: Cpath Value[addS]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[addS]
+Path addS
+[
+  {
+    "detail": "(Types.context, string) => Types.comp",
+    "kind": 12,
+    "label": "addSprite",
+    "tags": []
+  }
+]
+
