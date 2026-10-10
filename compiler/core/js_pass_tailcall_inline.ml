@@ -38,7 +38,14 @@ module S = Js_stmt_make
 let super = Js_record_map.super
 
 let substitue_variables (map : Ident.t Map_ident.t) =
-  {super with ident = (fun _ id -> Map_ident.find_default map id id)}
+  {
+    super with
+    ident =
+      (fun _ id ->
+        match Map_ident.find_opt id map with
+        | Some id -> id
+        | None -> id);
+  }
 
 (* 1. recursive value ? let rec x = 1 :: x
     non-terminating
@@ -64,13 +71,13 @@ let inline_call (immutable_list : bool list) params (args : J.expression list)
       Ext_list.fold_right2 params args (Map_ident.empty, processed_blocks)
         (fun param arg (map, acc) ->
           match arg.expression_desc with
-          | Var (Id id) -> (Map_ident.add map param id, acc)
+          | Var (Id id) -> (Map_ident.add param id map, acc)
           | _ -> (map, S.define_variable ~kind:Variable param arg :: acc))
     else
       Ext_list.fold_right3 params args immutable_list
         (Map_ident.empty, processed_blocks) (fun param arg mask (map, acc) ->
           match (mask, arg.expression_desc) with
-          | true, Var (Id id) -> (Map_ident.add map param id, acc)
+          | true, Var (Id id) -> (Map_ident.add param id map, acc)
           | _ -> (map, S.define_variable ~kind:Variable param arg :: acc))
   in
   if Map_ident.is_empty map then block

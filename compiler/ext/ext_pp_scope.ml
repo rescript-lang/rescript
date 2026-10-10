@@ -34,17 +34,19 @@ type t = stamps Map_string.t
 let empty : t = Map_string.empty
 
 let add_ident ~mangled:name (stamp : int) (cxt : t) : int * t =
-  match Map_string.find_opt cxt name with
+  match Map_string.find_opt name cxt with
   | None ->
     ( 0,
-      Map_string.add cxt name
-        {count = 1; stamps = Map_int.add Map_int.empty stamp 0} )
+      Map_string.add name
+        {count = 1; stamps = Map_int.add stamp 0 Map_int.empty}
+        cxt )
   | Some {count; stamps} -> (
-    match Map_int.find_opt stamps stamp with
+    match Map_int.find_opt stamp stamps with
     | None ->
       ( count,
-        Map_string.add cxt name
-          {count = count + 1; stamps = Map_int.add stamps stamp count} )
+        Map_string.add name
+          {count = count + 1; stamps = Map_int.add stamp count stamps}
+          cxt )
     | Some i -> (i, cxt))
 
 (**
@@ -106,9 +108,9 @@ let sub_scope (scope : t) (idents : Set_ident.t) : t =
   Set_ident.fold
     (fun {name} acc ->
       let mangled = Ext_ident.convert name in
-      match Map_string.find_exn scope mangled with
+      match Map_string.find mangled scope with
       | exception Not_found -> assert false
       | stamps ->
-        if Map_string.mem acc mangled then acc
-        else Map_string.add acc mangled stamps)
+        if Map_string.mem mangled acc then acc
+        else Map_string.add mangled stamps acc)
     idents empty

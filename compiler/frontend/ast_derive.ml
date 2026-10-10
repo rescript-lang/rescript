@@ -39,7 +39,7 @@ type derive_table = (Parsetree.expression option -> gen) Map_string.t
 
 let derive_table : derive_table ref = ref Map_string.empty
 
-let register key value = derive_table := Map_string.add !derive_table key value
+let register key value = derive_table := Map_string.add key value !derive_table
 
 (* Derivers that used to be built in. They get a dedicated error pointing to
    the replacement instead of the generic "is not supported". *)

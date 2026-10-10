@@ -97,7 +97,7 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
             ((p, arg) :: rest_bindings, Lambda.var p :: acc)
           | _ ->
             if Lam_analysis.no_side_effects arg then
-              match Map_ident.find_exn map old_param with
+              match Map_ident.find old_param map with
               | stat ->
                 if Lam_var_stats.top_and_used_zero_or_one stat then
                   (rest_bindings, arg :: acc)

@@ -30,7 +30,7 @@ let rec eliminate_tuple (id : Ident.t) (lam : Lambda.t) acc =
   match lam with
   | Llet (Alias, v, Lprim {primitive = Pfield (i, _); args = [Lvar tuple]}, e2)
     when Ident.same tuple id ->
-    eliminate_tuple id e2 (Map_int.add acc i v)
+    eliminate_tuple id e2 (Map_int.add i v acc)
   (* it is okay to have duplicates*)
   | _ -> if Lam_hit.hit_variable id lam then None else Some (acc, lam)
 (* [groups] are in reverse order *)
@@ -210,7 +210,7 @@ let deep_flatten (lam : Lambda.t) : Lambda.t =
         | Some (tuple_mapping, body) ->
           flatten
             (Ext_list.fold_left_with_offset args accux 0 (fun arg acc i ->
-                 match Map_int.find_opt tuple_mapping i with
+                 match Map_int.find_opt i tuple_mapping with
                  | None -> Lam_group.nop_cons arg acc
                  | Some key -> Lam_group.single str key arg :: acc))
             body
