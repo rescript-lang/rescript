@@ -54,8 +54,6 @@ type launch_ownership = {
   mutable stdout_capture: capture option;
   mutable stderr_capture: capture option;
   mutable process: Platform.process option;
-  mutable child_wait: child_wait option;
-  mutable termination_error: string option;
 }
 
 let empty_launch_ownership () =
@@ -68,8 +66,6 @@ let empty_launch_ownership () =
     stdout_capture = None;
     stderr_capture = None;
     process = None;
-    child_wait = None;
-    termination_error = None;
   }
 
 type completion_notifier = {
@@ -216,17 +212,17 @@ let start_child_wait pid notifier stdout_capture stderr_capture : child_wait =
   {thread; direct_outcome; outcome}
 
 let fail_launch ownership launch_error =
-  Option.iter
-    (fun process ->
-      let pid = Platform.process_id process in
-      (match Platform.signal_process_tree process Sys.sigkill with
-      | Ok () -> ()
-      | Error message -> ownership.termination_error <- Some message);
-      if
-        Option.is_none ownership.termination_error
-        && Option.is_none ownership.child_wait
-      then try ignore (Unix.waitpid [] pid) with Unix.Unix_error _ -> ())
-    ownership.process;
+  let termination_error =
+    match ownership.process with
+    | None -> None
+    | Some process -> (
+      match Platform.signal_process_tree process Sys.sigkill with
+      | Ok () ->
+        (try ignore (Unix.waitpid [] (Platform.process_id process))
+         with Unix.Unix_error _ -> ());
+        None
+      | Error message -> Some message)
+  in
   List.iter
     (fun descriptor -> Option.iter close_noerr descriptor)
     [
@@ -236,20 +232,13 @@ let fail_launch ownership launch_error =
       ownership.stderr_read;
       ownership.stdin;
     ];
-  (match ownership.child_wait with
-  | Some wait when Option.is_none ownership.termination_error ->
-    Thread.join wait.thread
-  | Some _ -> ()
-  | None
-    when Option.is_none ownership.termination_error
-         && Option.is_some ownership.process ->
+  if Option.is_none termination_error && Option.is_some ownership.process then (
     Option.iter
       (fun (capture : capture) -> Thread.join capture.thread)
       ownership.stdout_capture;
     Option.iter
       (fun (capture : capture) -> Thread.join capture.thread)
-      ownership.stderr_capture
-  | None -> ());
+      ownership.stderr_capture);
   let release_error =
     try
       Option.iter Platform.release_process ownership.process;
@@ -257,7 +246,7 @@ let fail_launch ownership launch_error =
     with release_exn -> Some release_exn
   in
   let error =
-    match ownership.termination_error with
+    match termination_error with
     | Some message ->
       Error
         ("Could not terminate a partially launched subprocess tree: " ^ message)
@@ -303,9 +292,8 @@ let launch ?env ?stdout_chunk ?stderr_chunk ?(stdin = Null_stdin) ~notifier
     close_noerr stdout_write;
     ownership.stderr_write <- None;
     close_noerr stderr_write;
-    let wait = start_child_wait pid notifier stdout stderr in
-    ownership.child_wait <- Some wait;
-    {payload; process; pid; child_wait = wait}
+    let child_wait = start_child_wait pid notifier stdout stderr in
+    {payload; process; pid; child_wait}
   with exn -> fail_launch ownership exn
 
 let wait_for_running ~poll notifier active =
