@@ -39,17 +39,12 @@ val current_process_id : unit -> int
 val process_id : process -> int
 val release_process : process -> unit
 
-val create_capture_pipes :
-  unit ->
-  (Unix.file_descr * Unix.file_descr) * (Unix.file_descr * Unix.file_descr)
-
 val signal_process_tree : process -> int -> (unit, string) result
 
 val termination_signals : int list
 (** Signals that request a clean shutdown: killing children, releasing locks,
     and removing temporary outputs before exiting. *)
 
-val graceful_termination_signal : int
 val escalate_process_groups : bool
 
 val process_is_active :

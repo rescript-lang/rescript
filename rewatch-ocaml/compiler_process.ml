@@ -42,16 +42,11 @@ let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
         match artifact with
         | Cmi ->
           cmi_change :=
-            if
-              File_util.copy_file_if_different ~ensure_parent:false source
-                destination
-            then Compiler_scheduler.Cmi_changed
+            if File_util.copy_file_if_different source destination then
+              Compiler_scheduler.Cmi_changed
             else Compiler_scheduler.Cmi_unchanged
-        | Required _ ->
-          File_util.copy_existing_file ~ensure_parent:false source destination
-        | Optional _ ->
-          File_util.copy_optional_existing_file ~ensure_parent:false source
-            destination)
+        | Required _ -> File_util.copy_existing_file source destination
+        | Optional _ -> File_util.copy_optional_existing_file source destination)
       artifacts;
     !cmi_change
   with error ->
@@ -77,7 +72,7 @@ let namespace_task ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
   in
   let mlmap_changed = previous_contents <> Some contents in
   if mlmap_changed then
-    File_util.write_file_atomic ~ensure_parent:false ~perm:0o644 mlmap contents;
+    File_util.write_file_atomic ~ensure_parent:false mlmap contents;
   let outputs_exist =
     ["cmi"; "cmj"; "cmt"; "mlmap"]
     |> List.for_all (fun extension ->
@@ -181,8 +176,8 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~source_kind
     let source = Filename.concat config.root path in
     let build_source = Filename.concat build_dir path in
     File_util.ensure_dir (Filename.dirname build_source);
-    File_util.copy_existing_file ~ensure_parent:false source build_source;
-    File_util.copy_existing_file ~ensure_parent:false source
+    File_util.copy_existing_file source build_source;
+    File_util.copy_existing_file source
       (Filename.concat ocaml_dir (Filename.basename path));
     (match source_kind with
     | Source.Interface -> ()
@@ -197,11 +192,10 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~source_kind
             in
             File_util.ensure_dir (Filename.dirname build_output);
             if File_util.exists output then
-              File_util.copy_existing_file ~ensure_parent:false output
-                build_output;
+              File_util.copy_existing_file output build_output;
             if File_util.exists (output ^ ".map") then
-              File_util.copy_existing_file ~ensure_parent:false
-                (output ^ ".map") (build_output ^ ".map")
+              File_util.copy_existing_file (output ^ ".map")
+                (build_output ^ ".map")
             else File_util.remove_file (build_output ^ ".map")))
         config.package_specs);
     Compiler_scheduler.{stderr; cmi_change = !cmi_change}

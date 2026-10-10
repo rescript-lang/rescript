@@ -452,8 +452,7 @@ let platform_tests _context =
       let command = if Sys.win32 then "worker.exe" else "worker" in
       Unix.mkdir (Filename.concat first command) 0o755;
       let executable = Filename.concat second command in
-      File_util.copy_existing_file ~ensure_parent:true test_executable
-        executable;
+      File_util.copy_existing_file test_executable executable;
       Unix.chmod executable 0o755;
       let previous_path = Sys.getenv_opt "PATH" in
       let separator = if Sys.win32 then ";" else ":" in
@@ -476,8 +475,7 @@ let platform_tests _context =
             "an explicit current-directory executable does not use PATH";
           if Sys.win32 then (
             let cwd_executable = Filename.concat path_root "current.exe" in
-            File_util.copy_existing_file ~ensure_parent:true test_executable
-              cwd_executable;
+            File_util.copy_existing_file test_executable cwd_executable;
             check
               (Platform.resolve_program ~cwd:path_root "current" = "current")
               "Windows executable lookup does not search the current directory")
@@ -492,10 +490,8 @@ let platform_tests _context =
             let trimmed_executable =
               Filename.concat trimmed_directory command
             in
-            File_util.copy_existing_file ~ensure_parent:true test_executable
-              literal_executable;
-            File_util.copy_existing_file ~ensure_parent:true test_executable
-              trimmed_executable;
+            File_util.copy_existing_file test_executable literal_executable;
+            File_util.copy_existing_file test_executable trimmed_executable;
             Unix.chmod literal_executable 0o755;
             Unix.chmod trimmed_executable 0o755;
             Unix.putenv "PATH" literal_directory;
@@ -879,8 +875,7 @@ let lock_tests _context =
             "releasing a build lock twice is harmless");
       check (not (Sys.file_exists lock)) "released build lock is removed";
       let owner_executable = Filename.concat lock_root "rescript.exe" in
-      File_util.copy_existing_file ~ensure_parent:false test_executable
-        owner_executable;
+      File_util.copy_existing_file test_executable owner_executable;
       if not Sys.win32 then Unix.chmod owner_executable 0o755;
       let owner_pid =
         Spawn.spawn ~prog:owner_executable

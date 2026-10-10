@@ -35,5 +35,4 @@ let append root content =
 
 let finalize root =
   append root (Printf.sprintf "#Done(%.6f)\n" (Unix.gettimeofday ()));
-  File_util.copy_existing_file ~ensure_parent:false (path root "bs")
-    (path root "ocaml")
+  File_util.copy_existing_file (path root "bs") (path root "ocaml")

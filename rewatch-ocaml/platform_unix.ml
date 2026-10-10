@@ -52,8 +52,6 @@ let current_process_id = Unix.getpid
 let process_id process = process
 let release_process _process = ()
 
-let create_capture_pipes = Platform_common.create_capture_pipes
-
 let signal_process_tree process signal =
   try
     Unix.kill (-process) signal;
@@ -73,7 +71,6 @@ let signal_process_tree process signal =
    children from outliving the build and leaving its lock behind. *)
 let termination_signals = [Sys.sigint; Sys.sigterm; Sys.sighup; Sys.sigquit]
 
-let graceful_termination_signal = Sys.sigterm
 let escalate_process_groups = true
 
 let process_name_from_ps ~run pid =
