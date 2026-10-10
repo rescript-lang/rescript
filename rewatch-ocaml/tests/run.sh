@@ -1851,6 +1851,51 @@ for interrupt_signal in TERM:143 HUP:129 QUIT:131; do
   assert_no_test_proxy_processes
   test -z "$(find "$interrupt_build" -name '.rewatch-ocaml-*.log' -print)"
 done
+
+# The same signals must also stop a build while it waits for an external
+# js-post-build hook, which runs in its own process group too. The hook records
+# its pid and then sleeps, so the build is still running when it is signalled;
+# the hook must be gone afterwards and the build lock released.
+for hook_signal in TERM:143 HUP:129 QUIT:131; do
+  signal_name=${hook_signal%%:*}
+  expected_status=${hook_signal#*:}
+  hook_build="$work/hook-interrupt-$signal_name"
+  mkdir -p "$hook_build/src"
+  hook_pid_file="$hook_build/hook.pid"
+  hook_script="$hook_build/slow-post-build.sh"
+  printf '#!/bin/sh\necho $$ >"%s.tmp"\nmv "%s.tmp" "%s"\nexec sleep 30\n' \
+    "$hook_pid_file" "$hook_pid_file" "$hook_pid_file" >"$hook_script"
+  chmod +x "$hook_script"
+  printf '%s\n' \
+    "{\"name\":\"hook-interrupt\",\"sources\":\"src\",\"package-specs\":{\"module\":\"esmodule\",\"in-source\":true},\"suffix\":\".mjs\",\"js-post-build\":{\"cmd\":\"$hook_script\"}}" \
+    >"$hook_build/rescript.json"
+  printf 'let value = 1\n' >"$hook_build/src/Main.res"
+  "$port" build "$hook_build" >"$hook_build/build.log" 2>&1 &
+  hook_build_pid=$!
+  background_pids="$background_pids $hook_build_pid"
+  if ! wait_for_file "$hook_pid_file"; then
+    cat "$hook_build/build.log" >&2
+    echo "js-post-build hook did not start before $signal_name" >&2
+    exit 1
+  fi
+  hook_pid=$(cat "$hook_pid_file")
+  background_pids="$background_pids $hook_pid"
+  kill "-$signal_name" "$hook_build_pid"
+  set +e
+  wait "$hook_build_pid"
+  hook_build_status=$?
+  set -e
+  if [ "$hook_build_status" -ne "$expected_status" ]; then
+    cat "$hook_build/build.log" >&2
+    echo "build stopped by $signal_name during js-post-build exited with $hook_build_status, expected $expected_status" >&2
+    exit 1
+  fi
+  if ! wait_for_pid_gone "$hook_pid"; then
+    echo "js-post-build hook survived $signal_name of the build" >&2
+    exit 1
+  fi
+  test ! -f "$hook_build/lib/build.lock"
+done
 fi
 
 # Removing watch.lock is the shell-suite shutdown protocol. It must interrupt
