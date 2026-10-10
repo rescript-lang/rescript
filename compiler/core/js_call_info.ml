@@ -31,12 +31,10 @@ type call_info =
    {[ fun x y -> (f x y) === f ]} when [f] is an atom
 *)
 
-type t = {call_info: call_info; call_transformed_jsx: bool}
+type t = {call_info: call_info}
 
-let builtin_runtime_call =
-  {call_info = Call_builtin_runtime; call_transformed_jsx = false}
+let builtin_runtime_call = {call_info = Call_builtin_runtime}
 
-let ml_full_call = {call_info = Call_ml; call_transformed_jsx = false}
+let ml_full_call = {call_info = Call_ml}
 
-let na_full_call transformed_jsx =
-  {call_info = Call_na; call_transformed_jsx = transformed_jsx}
+let na_full_call = {call_info = Call_na}

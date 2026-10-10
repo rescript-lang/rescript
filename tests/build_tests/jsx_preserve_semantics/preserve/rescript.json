@@ -1,0 +1,15 @@
+{
+  "name": "jsx-preserve-semantics-preserve",
+  "sources": ["src"],
+  "package-specs": {
+    "module": "commonjs",
+    "in-source": false,
+    "suffix": ".jsx"
+  },
+  "jsx": {
+    "version": 4,
+    "preserve": true
+  },
+  "dependencies": ["@rescript/react"],
+  "compiler-flags": ["-check-lam"]
+}

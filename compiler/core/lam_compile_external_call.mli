@@ -30,7 +30,6 @@ val ocaml_to_js_eff :
 (** Compile ocaml external function call to JS IR. *)
 
 val translate_ffi :
-  ?transformed_jsx:bool ->
   Lam_compile_context.t ->
   External_arg_spec.params ->
   prim_name:string ->
@@ -42,3 +41,6 @@ val translate_ffi :
     Attributes starting with `js` are reserved
     examples: "variadic"
 *)
+
+val jsx_callee : External_ffi_types.external_decl -> J.expression
+(** The function a JSX external refers to, for [J.Jsx] *)

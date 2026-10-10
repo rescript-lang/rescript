@@ -132,6 +132,18 @@ let expression_desc : expression_desc fn =
     let _x0 = _self.expression _self _x0 in
     let _x2 = list _self.expression _self _x2 in
     Tagged_template (_x0, _x1, _x2)
+  | Jsx ({callee; tag; spread; props; children; key} as jsx) ->
+    let callee = _self.expression _self callee in
+    let tag = _self.expression _self tag in
+    let spread = option _self.expression _self spread in
+    let props =
+      list
+        (fun _self (name, value) -> (name, _self.expression _self value))
+        _self props
+    in
+    let children = option (list _self.expression) _self children in
+    let key = option _self.expression _self key in
+    Jsx {jsx with callee; tag; spread; props; children; key}
   | Interpolated_template ({values} as template) ->
     let values = list _self.expression _self values in
     Interpolated_template {template with values}

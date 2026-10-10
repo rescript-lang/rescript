@@ -242,14 +242,28 @@ let translate_scoped_module_val
       let start = E.js_global x in
       Ext_list.fold_left (Ext_list.append_one rest fn) start E.dot)
 
+(* The function a JSX external refers to; [Translcore] only builds [Pjsx]
+   for [Decl_val] externals that aren't the module itself *)
+let jsx_callee
+    ({kind; module_; scopes; variadic = _; effective_arity = _} :
+      External_ffi_types.external_decl) =
+  match (kind, module_) with
+  | Decl_val {name}, None -> translate_scoped_module_val None name scopes
+  | Decl_val {name}, Some (Module_named emn) ->
+    translate_scoped_module_val (Some emn) name scopes
+  | Decl_val _, Some Module_itself
+  | ( ( Decl_send _ | Decl_new _ | Decl_get _ | Decl_set _ | Decl_get_index
+      | Decl_set_index ),
+      _ ) ->
+    assert false
+
 let translate_scoped_access scopes obj =
   match scopes with
   | [] -> obj
   | x :: xs -> Ext_list.fold_left xs (E.dot obj x) E.dot
 
-let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
-    arg_types ~(prim_name : string) (decl : External_ffi_types.external_decl)
-    (args : J.expression list) =
+let translate_ffi (cxt : Lam_compile_context.t) arg_types ~(prim_name : string)
+    (decl : External_ffi_types.external_decl) (args : J.expression list) =
   let {External_ffi_types.kind; module_; scopes; variadic = splice; _} = decl in
   (* a bare [@module] binds the module itself under the primitive name *)
   let module_itself_name () : External_ffi_types.external_module_name =
@@ -281,13 +295,11 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
     if splice then
       let args, eff, dynamic = assemble_args_has_splice arg_types args in
       let args = if dynamic then E.variadic_args args else args in
-      add_eff eff
-        (E.call ~info:(Js_call_info.na_full_call transformed_jsx) fn args)
+      add_eff eff (E.call ~info:Js_call_info.na_full_call fn args)
     else
       let args, eff = assemble_args_no_splice arg_types args in
       (* TODO: fix in rest calling convention *)
-      add_eff eff
-        (E.call ~info:(Js_call_info.na_full_call transformed_jsx) fn args)
+      add_eff eff (E.call ~info:Js_call_info.na_full_call fn args)
   | Decl_new _, Some Module_itself ->
     (* the module itself, as a class *)
     let fn = external_var (module_itself_name ()) in
@@ -302,22 +314,17 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
   | Decl_val {name}, _ when decl.effective_arity = 0 ->
     (* a global value *)
     let e = translate_scoped_module_val named_module name scopes in
-    if args = [] then e
-    else E.call ~info:(Js_call_info.na_full_call transformed_jsx) e args
+    if args = [] then e else E.call ~info:Js_call_info.na_full_call e args
   | Decl_val {name = fn}, _ ->
     (* a global (possibly module-scoped) function call *)
     let fn = translate_scoped_module_val named_module fn scopes in
     if splice then
       let args, eff, dynamic = assemble_args_has_splice arg_types args in
       let args = if dynamic then E.variadic_args args else args in
-      add_eff eff
-        (E.call ~info:(Js_call_info.na_full_call transformed_jsx) fn args)
+      add_eff eff (E.call ~info:Js_call_info.na_full_call fn args)
     else
       let args, eff = assemble_args_no_splice arg_types args in
-      add_eff eff
-      @@ E.call
-           ~info:{call_info = Call_na; call_transformed_jsx = transformed_jsx}
-           fn args
+      add_eff eff @@ E.call ~info:Js_call_info.na_full_call fn args
   | Decl_new {name = fn}, _ ->
     if splice then
       let args, eff, dynamic = assemble_args_has_splice arg_types args in
@@ -343,16 +350,12 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
         let args = if dynamic then E.variadic_args args else args in
         add_eff eff
           (let self = translate_scoped_access scopes self in
-           E.call
-             ~info:{call_info = Call_na; call_transformed_jsx = transformed_jsx}
-             (E.dot self name) args)
+           E.call ~info:Js_call_info.na_full_call (E.dot self name) args)
       else
         let args, eff = assemble_args_no_splice arg_types args in
         add_eff eff
           (let self = translate_scoped_access scopes self in
-           E.call
-             ~info:(Js_call_info.na_full_call transformed_jsx)
-             (E.dot self name) args)
+           E.call ~info:Js_call_info.na_full_call (E.dot self name) args)
     | _ -> assert false)
   | Decl_get {name}, _ -> (
     let args, cur_eff = assemble_args_no_splice arg_types args in

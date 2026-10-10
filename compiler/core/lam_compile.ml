@@ -94,8 +94,8 @@ let args_either_function_or_const (args : Lambda.t list) =
    which is only sound for a ReScript value of exactly that arity - never for
    an FFI name, whose wrapper carries argument adaptation. Looked up here
    rather than stamped on the application by an earlier pass. *)
-let call_info_of_apply (meta : Lam_stats.t) call_transformed_jsx
-    (appinfo : Lambda.lambda_apply) : Js_call_info.t =
+let call_info_of_apply (meta : Lam_stats.t) (appinfo : Lambda.lambda_apply) :
+    Js_call_info.t =
   let saturated =
     match
       Lam_arity.extract_arity
@@ -104,8 +104,7 @@ let call_info_of_apply (meta : Lam_stats.t) call_transformed_jsx
     | x :: _ -> x = List.length appinfo.ap_args
     | [] -> false
   in
-  if saturated then {call_info = Call_ml; call_transformed_jsx}
-  else {call_info = Call_na; call_transformed_jsx}
+  if saturated then Js_call_info.ml_full_call else Js_call_info.na_full_call
 
 let change_tail_type_in_try (x : Lam_compile_context.tail_type) :
     Lam_compile_context.tail_type =
@@ -350,11 +349,7 @@ let compile output_prefix =
 
       let fn = E.ml_var_dot module_id ident_info.name in
       let expression =
-        E.call
-          ~info:
-            (call_info_of_apply lambda_cxt.meta appinfo.ap_transformed_jsx
-               appinfo)
-          fn args
+        E.call ~info:(call_info_of_apply lambda_cxt.meta appinfo) fn args
       in
       let expression = with_source_loc appinfo.ap_loc expression in
       Js_output.output_of_block_and_expression lambda_cxt.continuation args_code
@@ -1608,9 +1603,7 @@ let compile output_prefix =
           args_code
           (with_source_loc appinfo.ap_loc
              (E.call
-                ~info:
-                  (call_info_of_apply lambda_cxt.meta appinfo.ap_transformed_jsx
-                     appinfo)
+                ~info:(call_info_of_apply lambda_cxt.meta appinfo)
                 fn_code args)))
   and compile_prim (prim_info : Lambda.prim_info)
       (lambda_cxt : Lam_compile_context.t) =

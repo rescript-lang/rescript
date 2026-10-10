@@ -69,6 +69,14 @@ let nil : t = {expression_desc = Null; comment = None; source_loc = None}
 let call ?comment ~info e0 args : t =
   {expression_desc = Call (e0, args, info); comment; source_loc = None}
 
+let jsx ~callee ~tag ~spread ~props ~children ~key ~multi ~fragment : t =
+  {
+    expression_desc =
+      Jsx {callee; tag; spread; props; children; key; multi; fragment};
+    comment = None;
+    source_loc = None;
+  }
+
 let tagged_template ?comment call_expr string_args value_args : t =
   {
     expression_desc = Tagged_template (call_expr, string_args, value_args);

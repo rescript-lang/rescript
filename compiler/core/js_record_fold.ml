@@ -121,6 +121,17 @@ let expression_desc : 'a. ('a, expression_desc) fn =
     let st = _self.expression _self st _xo in
     let st = list _self.expression _self st _x2 in
     st
+  | Jsx {callee; tag; spread; props; children; key} ->
+    let st = _self.expression _self st callee in
+    let st = _self.expression _self st tag in
+    let st = option _self.expression _self st spread in
+    let st =
+      list
+        (fun _self st (_name, value) -> _self.expression _self st value)
+        _self st props
+    in
+    let st = option (list _self.expression) _self st children in
+    option _self.expression _self st key
   | Interpolated_template {values} -> list _self.expression _self st values
   | Array_index (_x0, _x1) ->
     let st = _self.expression _self st _x0 in

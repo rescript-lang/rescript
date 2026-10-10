@@ -121,6 +121,21 @@ type import_source =
    rather than primitives. See [builtin]. *)
 type eliminated = Identity | Ignore
 
+(* A JSX element in JSX preserve mode, built by [Translcore] from a call the
+   JSX PPX produced. The arguments of [Pjsx] are, in evaluation order: the tag,
+   the spread props (if [jsx_spread]), one value per [jsx_props] entry, the
+   children ([jsx_children] of them) and the key (if [jsx_key]). *)
+type jsx_element = {
+  jsx_name: string; (* name of the external, for the fallback call *)
+  jsx_ffi: External_ffi_types.external_decl;
+  jsx_multi: bool; (* [jsxs]: each child is a separate argument *)
+  jsx_fragment: bool; (* the tag is the JSX module's [jsxFragment] *)
+  jsx_spread: bool;
+  jsx_props: (string * bool) list; (* runtime name, optional *)
+  jsx_children: int option; (* [None]: no children prop *)
+  jsx_key: bool;
+}
+
 type primitive =
   | Pdebugger
   | Ptypeof
@@ -139,8 +154,8 @@ type primitive =
       prim_name: string;
       arg_types: External_arg_spec.params;
       ffi: External_ffi_types.external_decl;
-      transformed_jsx: bool;
     }
+  | Pjsx of jsx_element
   | Pjs_object_create of External_arg_spec.obj_params
   | Pjs_object_get of string
   | Pjs_object_set of string
@@ -366,12 +381,7 @@ and lfunction = {
 
 and prim_info = {primitive: primitive; args: t list; loc: Location.t}
 
-and lambda_apply = {
-  ap_func: t;
-  ap_args: t list;
-  ap_loc: Location.t;
-  ap_transformed_jsx: bool;
-}
+and lambda_apply = {ap_func: t; ap_args: t list; ap_loc: Location.t}
 
 and switch_key =
   | Switch_int of int
@@ -515,6 +525,10 @@ let eq_primitive_approx (lhs : primitive) (rhs : primitive) =
     match rhs with
     | Pjs_call rhs ->
       prim_name = rhs.prim_name && arg_types = rhs.arg_types && ffi = rhs.ffi
+    | _ -> false)
+  | Pjsx jsx -> (
+    match rhs with
+    | Pjsx rhs -> jsx = rhs
     | _ -> false)
   | Pimport src -> (
     match rhs with
@@ -1076,7 +1090,7 @@ let prim ~primitive:(prim : primitive) ~args loc : t =
     *)
     | _ -> default ())
 
-let rec apply ?(ap_transformed_jsx = false) fn args (ap_loc : Location.t) : t =
+let rec apply fn args (ap_loc : Location.t) : t =
   match fn with
   | Lfunction
       {
@@ -1096,8 +1110,8 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_loc : Location.t) : t =
       prim ~primitive:wrap
         ~args:[prim ~primitive:primitive_call.primitive ~args ap_loc]
         ap_loc
-    | exception Not_simple_form ->
-      Lapply {ap_func = fn; ap_args = args; ap_loc; ap_transformed_jsx})
+    | exception Not_simple_form -> Lapply {ap_func = fn; ap_args = args; ap_loc}
+    )
   | Lfunction
       {
         params;
@@ -1105,8 +1119,7 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_loc : Location.t) : t =
       } -> (
     match is_eta_conversion_exn params inner_args args with
     | args -> prim ~primitive:primitive_call.primitive ~args ap_loc
-    | exception _ ->
-      Lapply {ap_func = fn; ap_args = args; ap_loc; ap_transformed_jsx})
+    | exception _ -> Lapply {ap_func = fn; ap_args = args; ap_loc})
   | Lfunction
       {
         params;
@@ -1118,17 +1131,17 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_loc : Location.t) : t =
     match is_eta_conversion_exn params inner_args args with
     | args -> seq (prim ~primitive:primitive_call.primitive ~args ap_loc) const
     | exception _ ->
-      Lapply {ap_func = fn; ap_args = args; ap_loc; ap_transformed_jsx}
+      Lapply {ap_func = fn; ap_args = args; ap_loc}
       (* | Lfunction {params;body} when Ext_list.same_length params args ->
           Ext_list.fold_right2 (fun p arg acc ->
             Llet(Strict,p,arg,acc)
           ) params args body *)
       (* TODO: more rigirous analysis on [let_kind] *))
   | Llet (kind, id, e, (Lfunction _ as fn)) ->
-    let_ kind id e (apply fn args ap_loc ~ap_transformed_jsx)
+    let_ kind id e (apply fn args ap_loc)
   (* | Llet (kind0, id0, e0, Llet (kind,id, e, (Lfunction _ as fn))) ->
      Llet(kind0,id0,e0,Llet (kind, id, e, apply fn args loc status)) *)
-  | _ -> Lapply {ap_func = fn; ap_args = args; ap_loc; ap_transformed_jsx}
+  | _ -> Lapply {ap_func = fn; ap_args = args; ap_loc}
 
 let not_ loc x : t =
   match x with

@@ -109,42 +109,92 @@ let rec iter_lst cxt (f : P.t) ls element inter =
     inter f;
     iter_lst acxt f r element inter
 
-(* A name that prints as the same JSX attribute. "__proto__" would set the
-   prototype of the props object. *)
-let is_jsx_attribute_name (name : string) =
-  name <> "__proto__" && name <> ""
-  && (match name.[0] with
-    | 'a' .. 'z' | 'A' .. 'Z' | '_' | '$' -> true
-    | _ -> false)
-  && Ext_string.for_all name (function
-    | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '$' | '-' -> true
+(* JSX preserve mode: a [J.Jsx] element is printed as JSX only when JSX can
+   express it exactly; otherwise it is printed as the call it stands for. *)
+
+let is_jsx_name_char ~dash = function
+  | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '$' -> true
+  | '-' -> dash
+  | _ -> false
+
+(* An attribute name: a JSX identifier, which may contain [-] *)
+let is_jsx_attribute_name name =
+  match name with
+  | "" | "key" | "__proto__" -> false
+  | _ -> (
+    match name.[0] with
+    | 'a' .. 'z' | 'A' .. 'Z' | '_' | '$' ->
+      Ext_string.for_all_from name 1 (is_jsx_name_char ~dash:true)
     | _ -> false)
 
-(* JSX props given as an object literal [{...base, x: 1}]: a spread followed
-   by properties only, whose names are distinct JSX attribute names. Dict keys
-   can be any string, and repeat. With [~keyed], the element's key is printed
-   as a [key] attribute, so no property may be named [key]. *)
-let jsx_spread_props_only_properties ?(keyed = false)
-    (entries : J.object_entry list) =
-  let rec distinct_attributes seen = function
-    | [] -> true
-    | J.Object_property (Lit name, _) :: rest ->
-      is_jsx_attribute_name name
-      && (not (Set_string.mem seen name))
-      && distinct_attributes (Set_string.add seen name) rest
-    | (Object_property (Symbol_name, _) | Object_spread _) :: _ -> false
-  in
-  distinct_attributes
-    (if keyed then Set_string.add Set_string.empty "key" else Set_string.empty)
-    entries
+(* An element name that JSX reads as a value rather than an intrinsic
+   element: one not starting with a lowercase letter *)
+let is_jsx_value_name name =
+  name <> ""
+  &&
+  match name.[0] with
+  | 'A' .. 'Z' | '_' | '$' ->
+    Ext_string.for_all_from name 1 (is_jsx_name_char ~dash:false)
+  | _ -> false
 
-(* Their named properties *)
-let jsx_spread_fields (entries : J.object_entry list) =
-  List.filter_map
-    (function
-      | J.Object_property (Js_op.Lit name, x) -> Some (name, x)
-      | Object_property (Symbol_name, _) | Object_spread _ -> None)
-    entries
+(* How [vident] prints a variable's name *)
+let printed_ident_name (id : Ident.t) =
+  if Ext_ident.is_js id then id.name else Ext_ident.convert id.name
+
+let rec is_jsx_member_expression (e : J.expression) =
+  match e.expression_desc with
+  | Var _ -> true
+  | Static_index (obj, name, _) ->
+    Js_dump_property.obj_property_no_need_quot
+      (Ext_ident.unwrap_uppercase_exotic name)
+    && is_jsx_member_expression obj
+  | _ -> false
+
+let is_jsx_tag (tag : J.expression) =
+  match tag.expression_desc with
+  | Str name -> (
+    (* an intrinsic element *)
+    match name.[0] with
+    | 'a' .. 'z' -> Ext_string.for_all_from name 1 (is_jsx_name_char ~dash:true)
+    | _ -> false
+    | exception Invalid_argument _ -> false)
+  | Var
+      ( Id id
+      | Qualified ({id}, None)
+      | Qualified ({id; kind = External {default = true}}, _) ) ->
+    is_jsx_value_name (printed_ident_name id)
+  | Var (Qualified ({kind = Ml | Runtime}, Some _)) -> true
+  | Var (Qualified ({kind = External _}, Some name)) ->
+    Js_dump_property.obj_property_no_need_quot
+      (Ext_ident.unwrap_uppercase_exotic name)
+  | Static_index _ -> is_jsx_member_expression tag
+  | _ -> false
+
+let is_empty_fragment ~fragment ~spread ~props ~key =
+  fragment && spread = None && props = [] && key = None
+
+let jsx_printable ~tag ~spread ~props ~(children : J.expression list option)
+    ~key ~multi ~fragment =
+  (* Cross-module inlining can bring an element from a preserve-mode module
+     into one compiled without preserve mode *)
+  !Js_config.jsx_preserve
+  && (is_empty_fragment ~fragment ~spread ~props ~key || is_jsx_tag tag)
+  && List.for_all
+       (fun (name, _) ->
+         is_jsx_attribute_name (Ext_ident.unwrap_uppercase_exotic name))
+       props
+  &&
+  (* JSX makes [children] an array exactly when there are several children *)
+  match children with
+  | None -> true
+  | Some children -> List.length children >= 2 = multi
+
+let rec is_printable_jsx (e : J.expression) =
+  match e.expression_desc with
+  | Jsx {tag; spread; props; children; key; multi; fragment; callee = _} ->
+    jsx_printable ~tag ~spread ~props ~children ~key ~multi ~fragment
+  | Optional_block (e, true) -> is_printable_jsx e
+  | _ -> false
 
 let raw_snippet_exp_simple_enough (s : string) =
   Ext_string.for_all s (fun c ->
@@ -185,7 +235,7 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
     false
   | Await _ -> false
   | Spread _ -> false
-  | Tagged_template _ | Interpolated_template _ -> false
+  | Tagged_template _ | Interpolated_template _ | Jsx _ -> false
   | Record_rest _ -> false
   | Optional_block (e, true) when arrow -> exp_need_paren ~arrow e
   | Optional_block _ -> false
@@ -546,125 +596,27 @@ and expression_desc cxt ~(level : int) f x : cxt =
     (* TODO: dump for comments *)
     pp_function ?directive ~is_method ~return_unit ~async
       ~fn_state:default_fn_exp_state cxt f params body env
-  (* When -bs-preserve-jsx is enabled, we marked each transformed application node throughout the compilation.
-     Here we print the transformed application node into a JSX syntax.
-     The JSX is slightly different from what a user would write,
-     but it is still valid JSX and is usable by tools like ESBuild.
-  *)
-  | Call
-      ( ({
-           expression_desc =
-             J.Var
-               ( Id {name = fn_name}
-               | J.Qualified
-                   ( _,
-                     Some fn_name
-                     (* We care about the function name when it is jsxs,
-                       If this is the case, we need to unpack an array later on *)
-                   ) );
-         } as e),
-        el,
-        {call_transformed_jsx = true} )
-    when !Js_config.jsx_preserve -> (
-    (* We match a JsxRuntime.jsx call *)
-    match el with
-    | [
-     tag;
-     {
-       expression_desc =
-         (* This is the props javascript object *)
-         Caml_block (el, _mutable_flag, Lambda.Blk_record {fields});
-     };
-    ] ->
-      (* We extract the props from the javascript object *)
-      let fields =
-        Ext_list.array_list_filter_map fields el (fun (f, opt) x ->
-            match x.expression_desc with
-            | Undefined _ when opt -> None
-            | _ -> Some (f, x))
+  | Jsx {callee; tag; spread; props; children; key; multi; fragment} ->
+    if jsx_printable ~tag ~spread ~props ~children ~key ~multi ~fragment then
+      print_jsx cxt f ~tag ~spread ~props ~children ~key ~fragment
+    else
+      (* not writable as JSX: print the call the element stands for *)
+      let children_prop =
+        match children with
+        | None -> []
+        | Some [child] when not multi -> [(Js_op.Lit "children", child)]
+        | Some children -> [(Js_op.Lit "children", E.array children)]
       in
-      print_jsx cxt ~level f fn_name tag fields
-    | [
-     tag;
-     {
-       expression_desc =
-         Caml_block (el, _mutable_flag, Lambda.Blk_record {fields});
-     };
-     key;
-    ] ->
-      (* When a component has a key the matching runtime function call will have a third argument being the key *)
-      let fields =
-        Ext_list.array_list_filter_map fields el (fun (f, opt) x ->
-            match x.expression_desc with
-            | Undefined _ when opt -> None
-            | _ -> Some (f, x))
+      let props =
+        Ext_list.map props (fun (name, value) -> (Js_op.Lit name, value))
       in
-      print_jsx cxt ~level ~key f fn_name tag fields
-    | [tag; ({expression_desc = J.Seq _} as props)] ->
-      (* In the case of prop spreading, the expression will look like:
-           (props.a = "Hello, world!", props)
-           which is equivalent to
-           <tag {...props} a="Hello, world!" />
-
-           We need to extract the props and the spread object.
-         *)
-      let fields, spread_props =
-        let rec visit acc e =
-          match e.J.expression_desc with
-          | J.Seq
-              ( {
-                  J.expression_desc =
-                    J.Bin
-                      ( Js_op.Eq,
-                        {J.expression_desc = J.Static_index (_, name, _)},
-                        value );
-                },
-                rest ) ->
-            visit ((name, value) :: acc) rest
-          | _ -> (List.rev acc, e)
-        in
-        visit [] props
-      in
-      print_jsx cxt ~level ~spread_props f fn_name tag fields
-    | [tag; ({expression_desc = J.Seq _} as props); key] ->
-      (* In the case of props + prop spreading and key argument *)
-      let fields, spread_props =
-        let rec visit acc e =
-          match e.J.expression_desc with
-          | J.Seq
-              ( {
-                  J.expression_desc =
-                    J.Bin
-                      ( Js_op.Eq,
-                        {J.expression_desc = J.Static_index (_, name, _)},
-                        value );
-                },
-                rest ) ->
-            visit ((name, value) :: acc) rest
-          | _ -> (List.rev acc, e)
-        in
-        visit [] props
-      in
-      print_jsx cxt ~level ~spread_props ~key f fn_name tag fields
-    | [tag; ({expression_desc = J.Var _} as spread_props)] ->
-      (* All the props are spread *)
-      print_jsx cxt ~level ~spread_props f fn_name tag []
-    | [tag; {expression_desc = J.Object (Object_spread spread :: props)}]
-      when jsx_spread_props_only_properties props ->
-      (* Spread props with overrides emitted as a single object literal:
-         {...base, x: 1}
-      *)
-      print_jsx cxt ~level ~spread_props:spread f fn_name tag
-        (jsx_spread_fields props)
-    | [tag; {expression_desc = J.Object (Object_spread spread :: props)}; key]
-      when jsx_spread_props_only_properties ~keyed:true props ->
-      print_jsx cxt ~level ~spread_props:spread ~key f fn_name tag
-        (jsx_spread_fields props)
-    | _ ->
-      (* Other props, e.g. an object literal with more spreads: the general
-         case *)
+      (* An explicit undefined key is still passed, as by the call *)
+      let key = Option.to_list key in
       expression_desc cxt ~level f
-        (Call (e, el, {call_transformed_jsx = false; call_info = Call_ml})))
+        (Call
+           ( callee,
+             tag :: E.obj ?dup:spread (props @ children_prop) :: key,
+             Js_call_info.na_full_call ))
   | Call (e, el, _info) ->
     P.cond_paren_group f (level > 15) (fun _ ->
         P.group f 0 (fun _ ->
@@ -1090,158 +1042,80 @@ and print_indented_list (f : P.t) (parent_expr_level : int) (cxt : cxt)
         (* Initial call to the recursive helper; initial check ensures items is not empty *)
         process_items cxt items)
 
-and print_jsx cxt ?(spread_props : J.expression option)
-    ?(key : J.expression option) ~(level : int) f (fn_name : string)
-    (tag : J.expression) (fields : (string * J.expression) list) : cxt =
-  (* TODO: make fragment detection respect custom JSX runtime modules instead of
-     assuming "JsxRuntime". *)
-  let is_fragment =
-    match tag.expression_desc with
-    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) ->
-      true
-    | _ -> false
-  in
+and print_jsx cxt f ~(tag : J.expression) ~(spread : J.expression option)
+    ~(props : (string * J.expression) list)
+    ~(children : J.expression list option) ~(key : J.expression option)
+    ~(fragment : bool) : cxt =
+  let empty_fragment = is_empty_fragment ~fragment ~spread ~props ~key in
   let print_tag cxt =
     match tag.expression_desc with
-    (* "div" or any other primitive tag *)
+    | _ when empty_fragment -> cxt
     | J.Str txt ->
       P.string f txt;
       cxt
-    (* fragment *)
-    | _ when is_fragment -> cxt
-    (* A user defined component or external component *)
-    | _ -> expression ~level cxt f tag
+    | _ -> expression ~level:15 cxt f tag
   in
-  let children_opt =
-    List.find_map
-      (fun (n, e) ->
-        if n = "children" then
-          if fn_name = "jsxs" then
-            match e.J.expression_desc with
-            | J.Array xs | J.Optional_block ({expression_desc = J.Array xs}, _)
-              ->
-              Some xs
-            | _ -> Some [e]
-          else Some [e]
-        else None)
-      fields
-    (* For fragments without children we normalize to an empty list so they
-       print as <></> instead of </> which is invalid JSX. *)
-    |> function
-    | None when is_fragment -> Some []
-    | other -> other
+  (* Fragments without children print as <></>, since </> is invalid *)
+  let children =
+    match children with
+    | None when empty_fragment -> Some []
+    | _ -> children
   in
-  let print_props cxt props =
-    (* If a key is present, should be printed before the spread props,
-    This is to ensure tools like ESBuild use the automatic JSX runtime *)
-    let print_key key cxt =
-      P.string f "key={";
-      let cxt_k = expression ~level:0 cxt f key in
-      P.string f "} ";
-      cxt_k
-    in
-
-    let print_spread_props spread cxt =
-      P.string f "{...";
-      let cxt = expression ~level:0 cxt f spread in
-      P.string f "} ";
-      cxt
-    in
-
-    let print_prop n x ctx =
-      let prop_name = Ext_ident.unwrap_uppercase_exotic n in
-      P.string f prop_name;
-      P.string f "=";
-      P.string f "{";
-      let next_cxt = expression ~level:0 ctx f x in
-      P.string f "}";
-      next_cxt
-    in
-    let printable_props =
-      (match key with
-        | None -> []
-        | Some k -> [print_key k])
-      @ (match spread_props with
-        | None -> []
-        | Some spread -> [print_spread_props spread])
-      @ List.map (fun (n, x) -> print_prop n x) props
-    in
-    if List.length printable_props = 0 then (
-      match children_opt with
-      | Some _ -> cxt
-      | None ->
-        (* Put a space between the tag name and /> *)
-        P.space f;
-        cxt)
-    else
-      P.group f 1 (fun () ->
-          P.newline f;
-          let rec process_remaining_props acc_cxt printable_props =
-            match printable_props with
-            | [] -> acc_cxt
-            | print_prop :: [] -> print_prop acc_cxt
-            | print_prop :: tail ->
-              let next_cxt = print_prop acc_cxt in
-              P.newline f;
-              process_remaining_props next_cxt tail
-          in
-          process_remaining_props cxt printable_props)
+  let print_attribute name value cxt =
+    P.string f name;
+    P.string f "={";
+    let cxt = expression ~level:1 cxt f value in
+    P.string f "}";
+    cxt
   in
-
-  let print_one_child expr_level_for_child current_cxt_for_child f_format
-      child_expr =
-    let child_is_jsx_itself =
-      match child_expr.J.expression_desc with
-      | J.Call (_, _, {call_transformed_jsx = is_jsx}) -> is_jsx
-      | _ -> false
-    in
-    if not child_is_jsx_itself then P.string f_format "{";
-    let next_cxt =
-      expression ~level:expr_level_for_child current_cxt_for_child f_format
-        child_expr
-    in
-    if not child_is_jsx_itself then P.string f_format "}";
-    next_cxt
+  let attributes =
+    (* The key goes before the spread so that tools like esbuild keep using
+       the automatic runtime's jsx() rather than createElement() *)
+    (match key with
+      | None -> []
+      | Some key -> [print_attribute "key" key])
+    @ (match spread with
+      | None -> []
+      | Some spread ->
+        [
+          (fun cxt ->
+            P.string f "{...";
+            let cxt = expression ~level:1 cxt f spread in
+            P.string f "}";
+            cxt);
+        ])
+    @ Ext_list.map props (fun (name, value) ->
+        print_attribute (Ext_ident.unwrap_uppercase_exotic name) value)
   in
-
-  let props = List.filter (fun (n, _) -> n <> "children") fields in
-
-  (* Actual printing of JSX element starts here *)
+  let print_child _level cxt f (child : J.expression) =
+    let bare = is_printable_jsx child in
+    if not bare then P.string f "{";
+    let cxt = expression ~level:1 cxt f child in
+    if not bare then P.string f "}";
+    cxt
+  in
   P.string f "<";
   let cxt = print_tag cxt in
-  let cxt = print_props cxt props in
-  (* print_props handles its own block and updates cxt *)
-
-  let has_multiple_props = List.length props > 0 in
-
-  match children_opt with
+  let cxt =
+    match attributes with
+    | [] ->
+      if children = None then P.space f;
+      cxt
+    | _ ->
+      P.group f 1 (fun () ->
+          Ext_list.fold_left attributes cxt (fun cxt print_attribute ->
+              P.newline f;
+              print_attribute cxt))
+  in
+  if attributes <> [] then P.newline f;
+  match children with
   | None ->
-    (* Self-closing tag *)
-    if has_multiple_props then P.newline f;
     P.string f "/>";
     cxt
   | Some children ->
-    (* Tag with children *)
-    let has_children = List.length children > 0 in
-    (* Newline for ">" only if props themselves were multi-line. Children alone don't push ">" to a new line. *)
-    if has_multiple_props then P.newline f;
     P.string f ">";
-
-    let cxt_after_children =
-      if has_children then
-        (* Only call print_indented_list if there are children *)
-        print_indented_list f level cxt children print_one_child
-      else cxt
-      (* No children, no change to context here, no newlines from children block *)
-    in
-    let cxt = cxt_after_children in
-
-    (* The closing "</tag>" goes on a new line if the opening part was multi-line (due to props)
-       OR if there were actual children printed (which always makes the element multi-line).
-    *)
-    let element_content_was_multiline = has_multiple_props || has_children in
-    if element_content_was_multiline then P.newline f;
-
+    let cxt = print_indented_list f 1 cxt children print_child in
+    if attributes <> [] || children <> [] then P.newline f;
     P.string f "</";
     let cxt = print_tag cxt in
     P.string f ">";

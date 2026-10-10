@@ -151,7 +151,7 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
   | In (prop, obj) -> no_side_effect prop && no_side_effect obj
   | Cond (a, b, c) -> no_side_effect a && no_side_effect b && no_side_effect c
   | Call (fn, [e], _) when is_array_function fn -> no_side_effect e
-  | Call _ | New _ | Raw_js_code _ (* actually true? *) -> false
+  | Call _ | Jsx _ | New _ | Raw_js_code _ (* actually true? *) -> false
   | Await _ -> false
   | Spread _ -> false
   | Record_rest _ -> false
@@ -267,7 +267,7 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
     | _ -> false)
   | Length _ | Is_null_or_undefined _ | String_append _ | Typeof _ | Js_not _
   | Js_bnot _ | In _ | Cond _ | New _ | Fun _ | Json_literal _ | Raw_js_code _
-  | Array _ | Caml_block_tag _ | Object _ | Tagged_template _
+  | Array _ | Caml_block_tag _ | Object _ | Tagged_template _ | Jsx _
   | Interpolated_template _ | Await _ | Record_rest _ ->
     false
   | Spread _ -> false

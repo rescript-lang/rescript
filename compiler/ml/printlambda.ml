@@ -114,6 +114,16 @@ let primitive ppf = function
   | Precord_rest excluded ->
     fprintf ppf "record_rest(%s)" (String.concat ", " excluded)
   | Pjs_call {prim_name} -> fprintf ppf "js_call[%s]" prim_name
+  | Pjsx {jsx_name; jsx_multi; jsx_fragment; jsx_spread; jsx_props; jsx_key} ->
+    fprintf ppf "jsx[%s%s%s%s%s%s]" jsx_name
+      (if jsx_multi then " multi" else "")
+      (if jsx_fragment then " fragment" else "")
+      (if jsx_spread then " spread" else "")
+      (String.concat ""
+         (List.map
+            (fun (name, optional) -> " " ^ name ^ if optional then "?" else "")
+            jsx_props))
+      (if jsx_key then " key" else "")
   | Pjs_object_create _ -> fprintf ppf "js_obj_create"
   | Pjs_object_get name -> fprintf ppf "js_object_get[%s]" name
   | Pjs_object_set name -> fprintf ppf "js_object_set[%s]" name

@@ -264,10 +264,6 @@ let subst_map (substitution : J.expression Hash_ident.t) =
                turn a runtime crash into compile time crash : )
             *)
             match Ext_list.nth_opt ls (Int32.to_int i) with
-            (* 7432: prevent optimization in JSX preserve mode *)
-            | Some {expression_desc = J.Var (Id {name = "make"})}
-              when !Js_config.jsx_preserve ->
-              super.expression self x
             | Some
                 ({
                    expression_desc =
@@ -277,6 +273,27 @@ let subst_map (substitution : J.expression Hash_ident.t) =
               x
             | None | Some _ -> super.expression self x)
           | Some _ | None -> super.expression self x)
+        | Jsx
+            ({tag = {expression_desc = Static_index _ | Array_index _}} as jsx)
+          ->
+          (* Keep a JSX tag like [M.make] as it is: the field's value may be a
+             variable with a lowercase name, which JSX reads as an intrinsic
+             element, so js_dump would have to print the call instead (#7432) *)
+          let map = self.expression self in
+          {
+            x with
+            expression_desc =
+              Jsx
+                {
+                  jsx with
+                  callee = map jsx.callee;
+                  spread = Option.map map jsx.spread;
+                  props =
+                    List.map (fun (name, value) -> (name, map value)) jsx.props;
+                  children = Option.map (List.map map) jsx.children;
+                  key = Option.map map jsx.key;
+                };
+          }
         | _ -> super.expression self x);
   }
 
