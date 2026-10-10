@@ -22,7 +22,7 @@
 
 #### :rocket: New Feature
 
-- Allow an untagged variant to have both a boolean literal case and a boolean payload case, e.g. `@unboxed type t = | @as(true) A | B(bool)`, like for strings and numbers. https://github.com/rescript-lang/rescript/pull/PRNUM
+- Allow an untagged variant to have both a boolean literal case and a boolean payload case, e.g. `@unboxed type t = | @as(true) A | B(bool)`, like for strings and numbers. https://github.com/rescript-lang/rescript/pull/8777
 
 #### :bug: Bug fix
 
