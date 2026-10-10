@@ -71,8 +71,13 @@ let rec signal_process_tree ~root_reaped process signal =
       (Printf.sprintf "%s while sending signal %d to process group %d: %s"
          operation signal process (Unix.error_message error))
 
+(* Children run in their own process groups, so a closing terminal's SIGHUP
+   and a SIGQUIT reach only rescript. Handling them like SIGTERM keeps those
+   children from outliving the build and leaving its lock behind. *)
+let termination_signals = [Sys.sigint; Sys.sigterm; Sys.sighup; Sys.sigquit]
+
 let defer_termination_signals () =
-  let previous = Unix.sigprocmask Unix.SIG_BLOCK [Sys.sigint; Sys.sigterm] in
+  let previous = Unix.sigprocmask Unix.SIG_BLOCK termination_signals in
   fun () -> ignore (Unix.sigprocmask Unix.SIG_SETMASK previous)
 
 let graceful_termination_signal = Sys.sigterm

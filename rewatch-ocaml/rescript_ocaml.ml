@@ -5,9 +5,12 @@
 let with_termination_handlers action =
   let requested_exit = Atomic.make 0 in
   let interrupt signal =
+    (* Shells report a process killed by signal n as exit status 128 + n. *)
     let exit_code =
       if signal = Sys.sigint then 130
       else if signal = Sys.sigterm then 143
+      else if signal = Sys.sighup then 129
+      else if signal = Sys.sigquit then 131
       else 1
     in
     ignore (Atomic.compare_and_set requested_exit 0 exit_code)
@@ -16,17 +19,8 @@ let with_termination_handlers action =
     let exit_code = Atomic.get requested_exit in
     if exit_code <> 0 then raise (Process.Interrupted exit_code)
   in
-  let previous_sigint = Sys.signal Sys.sigint (Sys.Signal_handle interrupt) in
   let result =
-    Fun.protect
-      (fun () ->
-        let previous_sigterm =
-          Sys.signal Sys.sigterm (Sys.Signal_handle interrupt)
-        in
-        Fun.protect
-          (fun () -> action ~poll)
-          ~finally:(fun () -> ignore (Sys.signal Sys.sigterm previous_sigterm)))
-      ~finally:(fun () -> ignore (Sys.signal Sys.sigint previous_sigint))
+    Signal_restore.with_termination_handlers interrupt (fun () -> action ~poll)
   in
   poll ();
   result

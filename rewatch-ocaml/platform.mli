@@ -45,6 +45,11 @@ val create_capture_pipes :
 
 val signal_process_tree :
   root_reaped:bool -> process -> int -> (unit, string) result
+
+val termination_signals : int list
+(** Signals that request a clean shutdown: killing children, releasing locks,
+    and removing temporary outputs before exiting. *)
+
 val defer_termination_signals : unit -> unit -> unit
 val graceful_termination_signal : int
 val escalate_process_groups : bool

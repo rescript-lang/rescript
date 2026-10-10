@@ -11,16 +11,7 @@ type fallback = {
   snapshot: Watch_snapshot.entry list;
 }
 
-let with_signal_handlers handler f =
-  let previous_sigint = Sys.signal Sys.sigint (Sys.Signal_handle handler) in
-  Fun.protect
-    (fun () ->
-      let previous_sigterm =
-        Sys.signal Sys.sigterm (Sys.Signal_handle handler)
-      in
-      Fun.protect f ~finally:(fun () ->
-          ignore (Sys.signal Sys.sigterm previous_sigterm)))
-    ~finally:(fun () -> ignore (Sys.signal Sys.sigint previous_sigint))
+let with_signal_handlers = Signal_restore.with_termination_handlers
 
 let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     ~filter ~clear_screen ~show_progress ~verbosity ~build ~watch_lock =
