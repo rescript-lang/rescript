@@ -85,11 +85,3 @@
  (name rescript_ocaml)
  (modules rescript_ocaml)
  (libraries rewatch_ocaml_lib))
-
-; Keep the former scoped test command useful after moving test-only modules out
-; of this production directory.
-
-(alias
- (name runtest)
- (deps
-  (alias ../tests/rewatch_ounit_tests/runtest)))
