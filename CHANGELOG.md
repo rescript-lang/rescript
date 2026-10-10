@@ -52,6 +52,7 @@
 - Make compilation slightly faster and stop rewatch from copying files twice for modules with an interface. https://github.com/rescript-lang/rescript/pull/8769
 - Speed up inlining decisions for large functions. https://github.com/rescript-lang/rescript/pull/8771
 - Speed up the rewriting of JS globals shadowed by local bindings in nested functions. https://github.com/rescript-lang/rescript/pull/8772
+- Speed up dead code elimination of toplevel bindings in large modules. https://github.com/rescript-lang/rescript/pull/8773
 - Represent explicit expression braces as `Pexp_braces` in parsetree v1 and format `else` branches consistently with `if` branches. https://github.com/rescript-lang/rescript/pull/8678
 - Omit redundant braces around multi-statement switch case bodies when formatting. https://github.com/rescript-lang/rescript/pull/8677
 - Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662
