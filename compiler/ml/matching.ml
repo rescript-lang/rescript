@@ -395,7 +395,7 @@ let action_free_variables {binds; guard; body} =
     (fun (_, id, e) acc ->
       Set_ident.union
         (Lambda_traverse.free_variables e)
-        (Set_ident.remove acc id))
+        (Set_ident.remove id acc))
     binds inner
 
 type pattern_matching = {
@@ -647,14 +647,14 @@ let default_compat p def =
 (* Or-pattern expansion, variables are a complication w.r.t. the article *)
 let rec extract_vars r p =
   match p.pat_desc with
-  | Tpat_var (id, _) -> Set_ident.add r id
-  | Tpat_alias (p, id, _) -> extract_vars (Set_ident.add r id) p
+  | Tpat_var (id, _) -> Set_ident.add id r
+  | Tpat_alias (p, id, _) -> extract_vars (Set_ident.add id r) p
   | Tpat_tuple pats -> List.fold_left extract_vars r pats
   | Tpat_record (lpats, _, rest) -> (
     let r = List.fold_left (fun r (_, _, p, _) -> extract_vars r p) r lpats in
     match rest with
     | None -> r
-    | Some rest -> Set_ident.add r rest.rest_ident)
+    | Some rest -> Set_ident.add rest.rest_ident r)
   | Tpat_dict entries ->
     List.fold_left (fun r {tdp_pattern} -> extract_vars r tdp_pattern) r entries
   | Tpat_construct (_, _, pats) -> List.fold_left extract_vars r pats

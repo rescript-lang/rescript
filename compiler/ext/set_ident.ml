@@ -22,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-include Ext_set.Make (struct
+include Set.Make (struct
   type t = Ident.t
 
   let compare (x : t) (y : t) =
@@ -31,6 +31,4 @@ include Ext_set.Make (struct
     else
       let name = Stdlib.compare x.name y.name in
       if name <> 0 then name else Stdlib.compare x.flags y.flags
-
-  let equal = Ident.same
 end)

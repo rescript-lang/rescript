@@ -31,7 +31,7 @@ let post_process_stats my_export_set
     (defined_idents : J.variable_declaration Hash_ident.t) stats =
   Hash_ident.iter
     (fun ident (v : J.variable_declaration) ->
-      if Set_ident.mem my_export_set ident then
+      if Set_ident.mem ident my_export_set then
         Js_op_util.update_used_stats v.ident_info Exported
       else
         let pure =

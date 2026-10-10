@@ -236,7 +236,7 @@ let deep_flatten (lam : Lambda.t) : Lambda.t =
       let groups = Ext_list.map_snd_sharing bind_args aux in
       let collections =
         Ext_list.fold_left groups Set_ident.empty (fun set (id, _) ->
-            Set_ident.add set id)
+            Set_ident.add id set)
       in
       (* Try to extract some value definitions from recursive values as [wrap],
          it will stop whenever it find it could not move forward

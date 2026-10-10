@@ -132,7 +132,7 @@ and wrap_id_pos_list loc id_pos_list get_field lam =
   let lam, s =
     List.fold_left
       (fun (lam, s) (id', pos, c) ->
-        if Set_ident.mem fv id' then
+        if Set_ident.mem id' fv then
           let id'' = Ident.create (Ident.name id') in
           ( Lambda.let_ Alias id''
               (apply_coercion loc Alias c (get_field (Ident.name id') pos))
@@ -327,7 +327,7 @@ and transl_structure loc fields cc rootpath final_env = function
       assert (List.length runtime_fields = List.length pos_cc_list);
       let v = reverse_of_list fields in
       let get_field pos = Lambda.var v.(pos)
-      and ids = List.fold_left Set_ident.add Set_ident.empty fields in
+      and ids = Set_ident.of_list fields in
       let get_field_name _name = get_field in
       let result =
         List.fold_right
@@ -354,7 +354,7 @@ and transl_structure loc fields cc rootpath final_env = function
           ~args:result loc
       and id_pos_list =
         Ext_list.filter id_pos_list (fun (id, _, _) ->
-            not (Set_ident.mem ids id))
+            not (Set_ident.mem id ids))
       in
       ( wrap_id_pos_list loc id_pos_list get_field_name lam,
         List.length pos_cc_list )
