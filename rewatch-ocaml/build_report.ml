@@ -66,7 +66,7 @@ let prepare report ~success ~compile_seconds =
   List.iter
     (fun entry -> prerr_string entry.Warning_state.output)
     warning_entries;
-  if warning_entries <> [] && diagnostics = [] then prerr_newline ();
+  if warning_entries <> [] then prerr_newline ();
   flush stderr;
   if diagnostics <> [] then
     diagnostics
