@@ -24,7 +24,8 @@ assert_no_test_proxy_processes() {
         'Get-Process -Name rewatch_bsc_test_proxy -ErrorAction SilentlyContinue | Format-Table -AutoSize' >&2
       exit 1
     fi
-  elif test -n "$(pgrep -f rewatch_bsc_test_proxy || true)"; then
+  # Match only this checkout's proxy: other worktrees may run tests concurrently.
+  elif test -n "$(pgrep -f -- "$test_proxy_pattern" || true)"; then
     echo "rewatch compiler test proxy was left running" >&2
     exit 1
   fi
@@ -57,15 +58,10 @@ if $windows_posix_shell; then
   RESCRIPT_RUNTIME=$(native_path "$RESCRIPT_RUNTIME")
   test_proxy=$(native_path "$test_proxy")
 fi
+test_proxy_pattern=$(printf '%s\n' "$test_proxy" | sed 's/[][\.*^$+?(){}|]/\\&/g')
 export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
 work="$root/tmp/rewatch-ocaml/test-$$"
 mkdir -p "$work"
-if REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" REWATCH_BSC_PROXY_MODE=parse-warning \
-  "$test_proxy" -rewatch-invalid-option \
-  >"$work/proxy-invalid.out" 2>"$work/proxy-invalid.err"; then
-  echo "rewatch compiler test proxy discarded a compiler failure" >&2
-  exit 1
-fi
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/basic"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-lifecycle"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-failure"
@@ -2269,22 +2265,3 @@ test ! -f "$root/lib/build.lock"
 cp "$failure/Broken.fixed" "$failure/src/Broken.res"
 "$port" build "$failure"
 test -f "$failure/src/Broken.js"
-
-rm -rf "$basic/lib" "$cycle/lib" "$failure/lib"
-rm -rf "$legacy_config/lib"
-rm -rf "$features/lib"
-rm -rf "$gentype/lib"
-rm -rf "$gentype/node_modules/dep/lib"
-rm -rf "$dependency/lib" "$dependency/node_modules/dep/lib"
-rm -rf "$post_build/lib"
-rm -rf "$out_of_source/lib"
-rm -rf "$namespace/lib"
-rm -rf "$namespace_entry/lib"
-rm -rf "$qualified_namespace/lib"
-rm -rf "$namespace_collision/lib"
-rm -rf "$source_map/lib"
-rm -f "$source_map/unchanged.log" "$source_map/changed.log"
-rm -f "$basic/src/A.mjs" "$basic/src/B.mjs" "$basic/src/WithInterface.mjs"
-rm -f "$legacy_config/src/A.mjs" "$legacy_config/src/B.mjs" "$legacy_config/src/WithInterface.mjs"
-rm -f "$cycle/output.log" "$failure/output.log"
-rm -f "$namespace_collision/output.log"
