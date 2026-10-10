@@ -501,18 +501,68 @@ normalize_project_path() {
   ' "$input" "$output"
 }
 
+dump_both() {
+  printf '%s\n' '--- Rust output ---' >&2
+  cat "$work/rust.out" "$work/rust.err" >&2
+  printf '%s\n' '--- OCaml output ---' >&2
+  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+}
+
+# run_both [--cwd DIR] [--unset VAR] ARGS...
+# Runs Rust and then OCaml with ARGS, writing $work/{rust,ocaml}.{out,err} and
+# setting rust_status and ocaml_status. A literal {impl} in an argument becomes
+# "rust" or "ocaml", for cases that use a separate fixture copy per
+# implementation.
+run_both() {
+  local cwd="" unset_variable="" implementation executable argument status
+  local -a arguments command
+  while :; do
+    case $1 in
+      --cwd) cwd=$2; shift 2 ;;
+      --unset) unset_variable=$2; shift 2 ;;
+      *) break ;;
+    esac
+  done
+  for implementation in rust ocaml; do
+    if [ "$implementation" = rust ]; then executable=$rust; else executable=$ocaml; fi
+    arguments=()
+    for argument in "$@"; do
+      arguments+=("${argument//"{impl}"/$implementation}")
+    done
+    command=("$executable" "${arguments[@]}")
+    if [ -n "$unset_variable" ]; then
+      command=(env -u "$unset_variable" "${command[@]}")
+    fi
+    set +e
+    if [ -n "$cwd" ]; then
+      (cd "$cwd" && "${command[@]}") \
+        >"$work/$implementation.out" 2>"$work/$implementation.err"
+    else
+      "${command[@]}" >"$work/$implementation.out" 2>"$work/$implementation.err"
+    fi
+    status=$?
+    set -e
+    if [ "$implementation" = rust ]; then
+      rust_status=$status
+    else
+      ocaml_status=$status
+    fi
+  done
+}
+
 checked=0
+# run_case [--cwd DIR] NAME RUST_EXPECTED OCAML_EXPECTED ARGS...
 run_case() {
+  local -a options=()
+  if [ "$1" = --cwd ]; then
+    options=(--cwd "$2")
+    shift 2
+  fi
   name=$1
   rust_expected=$2
   ocaml_expected=$3
   shift 3
-  set +e
-  "$rust" "$@" >"$work/rust.out" 2>"$work/rust.err"
-  rust_status=$?
-  "$ocaml" "$@" >"$work/ocaml.out" 2>"$work/ocaml.err"
-  ocaml_status=$?
-  set -e
+  run_both ${options[@]+"${options[@]}"} "$@"
   rust_actual=$(classify "$rust_status")
   ocaml_actual=$(classify "$ocaml_status")
   if [ "$rust_actual" != "$rust_expected" ] || \
@@ -520,38 +570,7 @@ run_case() {
     printf '%s: expected Rust=%s/OCaml=%s, got Rust=%s/OCaml=%s\n' \
       "$name" "$rust_expected" "$ocaml_expected" \
       "$rust_status" "$ocaml_status" >&2
-    printf '%s\n' '--- Rust output ---' >&2
-    cat "$work/rust.out" "$work/rust.err" >&2
-    printf '%s\n' '--- OCaml output ---' >&2
-    cat "$work/ocaml.out" "$work/ocaml.err" >&2
-    exit 1
-  fi
-  checked=$((checked + 1))
-}
-
-run_cwd_case() {
-  name=$1
-  rust_expected=$2
-  ocaml_expected=$3
-  cwd=$4
-  shift 4
-  set +e
-  (cd "$cwd" && "$rust" "$@") >"$work/rust.out" 2>"$work/rust.err"
-  rust_status=$?
-  (cd "$cwd" && "$ocaml" "$@") >"$work/ocaml.out" 2>"$work/ocaml.err"
-  ocaml_status=$?
-  set -e
-  rust_actual=$(classify "$rust_status")
-  ocaml_actual=$(classify "$ocaml_status")
-  if [ "$rust_actual" != "$rust_expected" ] || \
-    [ "$ocaml_actual" != "$ocaml_expected" ]; then
-    printf '%s: expected Rust=%s/OCaml=%s, got Rust=%s/OCaml=%s\n' \
-      "$name" "$rust_expected" "$ocaml_expected" \
-      "$rust_status" "$ocaml_status" >&2
-    printf '%s\n' '--- Rust output ---' >&2
-    cat "$work/rust.out" "$work/rust.err" >&2
-    printf '%s\n' '--- OCaml output ---' >&2
-    cat "$work/ocaml.out" "$work/ocaml.err" >&2
+    dump_both
     exit 1
   fi
   checked=$((checked + 1))
@@ -562,10 +581,7 @@ require_same_output() {
   if ! cmp -s "$work/rust.out" "$work/ocaml.out" || \
     ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
     echo "$name: Rust and OCaml output differ" >&2
-    printf '%s\n' '--- Rust output ---' >&2
-    cat "$work/rust.out" "$work/rust.err" >&2
-    printf '%s\n' '--- OCaml output ---' >&2
-    cat "$work/ocaml.out" "$work/ocaml.err" >&2
+    dump_both
     exit 1
   fi
 }
@@ -582,10 +598,7 @@ require_both_errors_contain() {
       tr '\\' '/' <"$work/ocaml.err" | grep -F "$native_fragment" >/dev/null || \
       tr '\\' '/' <"$work/ocaml.err" | grep -F "$native_short_fragment" >/dev/null; }; then
     printf '%s: expected both errors to contain %s\n' "$name" "$fragment" >&2
-    printf '%s\n' '--- Rust output ---' >&2
-    cat "$work/rust.out" "$work/rust.err" >&2
-    printf '%s\n' '--- OCaml output ---' >&2
-    cat "$work/ocaml.out" "$work/ocaml.err" >&2
+    dump_both
     exit 1
   fi
 }
@@ -593,22 +606,12 @@ require_both_errors_contain() {
 run_missing_bsc_case() {
   name=$1
   shift
-  set +e
-  RESCRIPT_BSC_EXE="$work/missing-bsc" "$rust" "$@" \
-    >"$work/rust.out" 2>"$work/rust.err"
-  rust_status=$?
-  RESCRIPT_BSC_EXE="$work/missing-bsc" "$ocaml" "$@" \
-    >"$work/ocaml.out" 2>"$work/ocaml.err"
-  ocaml_status=$?
-  set -e
+  RESCRIPT_BSC_EXE="$work/missing-bsc" run_both "$@"
   if [ "$(classify "$rust_status")" != panic ] || \
     [ "$(classify "$ocaml_status")" != reject ]; then
     printf '%s: expected Rust=panic/OCaml=reject, got Rust=%s/OCaml=%s\n' \
       "$name" "$rust_status" "$ocaml_status" >&2
-    printf '%s\n' '--- Rust output ---' >&2
-    cat "$work/rust.out" "$work/rust.err" >&2
-    printf '%s\n' '--- OCaml output ---' >&2
-    cat "$work/ocaml.out" "$work/ocaml.err" >&2
+    dump_both
     exit 1
   fi
   if ! grep -F 'RESCRIPT_BSC_EXE points to missing path' \
@@ -629,26 +632,13 @@ run_build_output_case() {
   ocaml_project="$work/$name-ocaml"
   cp -R "$fixture" "$rust_project"
   cp -R "$fixture" "$ocaml_project"
-  set +e
   if [ "$mode" = quiet ]; then
-    "$rust" -q build "$rust_project" >"$work/rust.out" 2>"$work/rust.err"
-    rust_status=$?
-    "$ocaml" -q build "$ocaml_project" >"$work/ocaml.out" 2>"$work/ocaml.err"
-    ocaml_status=$?
+    run_both -q build "$work/$name-{impl}"
   elif [ "$mode" = forced-color ]; then
-    CLICOLOR_FORCE=1 "$rust" build "$rust_project" \
-      >"$work/rust.out" 2>"$work/rust.err"
-    rust_status=$?
-    CLICOLOR_FORCE=1 "$ocaml" build "$ocaml_project" \
-      >"$work/ocaml.out" 2>"$work/ocaml.err"
-    ocaml_status=$?
+    CLICOLOR_FORCE=1 run_both build "$work/$name-{impl}"
   else
-    "$rust" build "$rust_project" >"$work/rust.out" 2>"$work/rust.err"
-    rust_status=$?
-    "$ocaml" build "$ocaml_project" >"$work/ocaml.out" 2>"$work/ocaml.err"
-    ocaml_status=$?
+    run_both build "$work/$name-{impl}"
   fi
-  set -e
   normalize_project_path "$work/rust.out" "$work/rust.out.norm" "$rust_project"
   normalize_project_path "$work/rust.err" "$work/rust.err.norm" "$rust_project"
   normalize_project_path "$work/ocaml.out" "$work/ocaml.out.norm" "$ocaml_project"
@@ -692,12 +682,7 @@ run_multiple_parse_errors_case() {
   ocaml_project="$work/multiple-parse-errors-ocaml"
   cp -R "$work/multiple-parse-errors" "$rust_project"
   cp -R "$work/multiple-parse-errors" "$ocaml_project"
-  set +e
-  "$rust" build "$rust_project" >"$work/rust.out" 2>"$work/rust.err"
-  rust_status=$?
-  "$ocaml" build "$ocaml_project" >"$work/ocaml.out" 2>"$work/ocaml.err"
-  ocaml_status=$?
-  set -e
+  run_both build "$work/multiple-parse-errors-{impl}"
   if [ "$rust_status" -ne 1 ] || [ "$ocaml_status" -ne 1 ]; then
     printf 'multiple-parse-errors: expected status 1, got Rust=%s OCaml=%s\n' \
       "$rust_status" "$ocaml_status" >&2
@@ -869,52 +854,23 @@ run_case compiler-args-no-project panic reject compiler-args "$work/orphan/A.res
 
 run_missing_bsc_case build-missing-bsc build "$project"
 run_missing_bsc_case format-missing-bsc format "$project/src/A.res"
-set +e
-RESCRIPT_BSC_EXE="$work/missing-bsc" \
-  "$rust" clean "$work/clean-missing-bsc" \
-  >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-RESCRIPT_BSC_EXE="$work/missing-bsc" \
-  "$ocaml" clean "$work/clean-missing-bsc" \
-  >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
+RESCRIPT_BSC_EXE="$work/missing-bsc" run_both clean "$work/clean-missing-bsc"
 if [ "$(classify "$rust_status")" != panic ] || [ "$ocaml_status" -ne 0 ] || \
   [ -e "$work/clean-missing-bsc/lib/bs/marker" ]; then
   echo "clean-missing-bsc: expected Rust panic and successful OCaml cleanup" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 checked=$((checked + 1))
-set +e
-env -u RESCRIPT_RUNTIME "$rust" clean "$work/clean-missing-runtime" \
-  >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-env -u RESCRIPT_RUNTIME "$ocaml" clean "$work/clean-missing-runtime" \
-  >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
+run_both --unset RESCRIPT_RUNTIME clean "$work/clean-missing-runtime"
 if [ "$(classify "$rust_status")" != reject ] || [ "$ocaml_status" -ne 0 ] || \
   [ -e "$work/clean-missing-runtime/lib/bs/marker" ]; then
   echo "clean-missing-runtime: expected Rust rejection and successful OCaml cleanup" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 checked=$((checked + 1))
-set +e
-env -u RESCRIPT_RUNTIME "$rust" build "$work/missing-runtime-package" \
-  >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-env -u RESCRIPT_RUNTIME "$ocaml" build "$work/missing-runtime-package" \
-  >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
+run_both --unset RESCRIPT_RUNTIME build "$work/missing-runtime-package"
 if [ "$rust_status" -eq 0 ] || [ "$ocaml_status" -eq 0 ]; then
   echo "build-missing-runtime-package: expected both builds to reject" >&2
   exit 1
@@ -924,14 +880,7 @@ require_both_errors_contain build-missing-runtime-package \
 require_both_errors_contain build-missing-runtime-package \
   'Please set RESCRIPT_RUNTIME environment variable'
 checked=$((checked + 1))
-set +e
-RESCRIPT_RUNTIME="$work/missing-runtime" "$rust" build "$project" \
-  >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-RESCRIPT_RUNTIME="$work/missing-runtime" "$ocaml" build "$project" \
-  >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
+RESCRIPT_RUNTIME="$work/missing-runtime" run_both build "$project"
 if [ "$rust_status" -eq 0 ] || [ "$ocaml_status" -eq 0 ] || \
   ! grep -F "RESCRIPT_RUNTIME points to missing path" \
     "$work/ocaml.err" >/dev/null || \
@@ -939,10 +888,7 @@ if [ "$rust_status" -eq 0 ] || [ "$ocaml_status" -eq 0 ] || \
   ! grep -F "The module or file Pervasives can't be found." \
     "$work/rust.err" >/dev/null; then
   echo "build-stale-runtime: expected contextual OCaml preflight rejection" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 checked=$((checked + 1))
@@ -952,23 +898,21 @@ run_case format-directory reject reject format "$project/src"
 require_same_output format-directory
 run_case format-unsupported-extension reject reject format "$project/src/A.txt"
 require_same_output format-unsupported-extension
-run_cwd_case format-no-config reject reject "$work/empty" format
+run_case --cwd "$work/empty" format-no-config reject reject format
 require_both_errors_contain format-no-config \
   "Could not read rescript.json at $work/empty:"
 require_both_errors_contain format-no-config "$work/empty/bsconfig.json"
-run_cwd_case format-malformed-config reject reject "$work/malformed" format
+run_case --cwd "$work/malformed" format-malformed-config reject reject format
 require_both_errors_contain format-malformed-config \
   "Could not read rescript.json at $work/malformed:"
 if ! grep -F 'Failed to parse rescript.json' "$work/rust.err" >/dev/null || \
   ! grep -F 'invalid JSON' "$work/ocaml.err" >/dev/null; then
   echo "format-malformed-config: JSON parser context was lost" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
-run_cwd_case format-config-directory reject reject "$work/config-directory" format
+run_case --cwd "$work/config-directory" \
+  format-config-directory reject reject format
 require_both_errors_contain format-config-directory \
   "$work/config-directory/rescript.json"
 if ! grep -E 'Is a directory|Access is denied' "$work/rust.err" >/dev/null || \
@@ -999,24 +943,14 @@ printf 'let value=1\n' >"$work/format-write-ocaml/A.res"
 chmod 0444 "$work/format-write-rust/A.res" "$work/format-write-ocaml/A.res"
 if [ ! -w "$work/format-write-rust/A.res" ] && \
   [ ! -w "$work/format-write-ocaml/A.res" ]; then
-  set +e
-  "$rust" format "$work/format-write-rust/A.res" \
-    >"$work/rust.out" 2>"$work/rust.err"
-  rust_status=$?
-  "$ocaml" format "$work/format-write-ocaml/A.res" \
-    >"$work/ocaml.out" 2>"$work/ocaml.err"
-  ocaml_status=$?
-  set -e
+  run_both format "$work/format-write-{impl}/A.res"
   if [ "$rust_status" -eq 0 ] || [ "$ocaml_status" -eq 0 ] || \
     ! grep -E 'Permission denied|Access is denied' "$work/rust.err" >/dev/null || \
     ! grep -F "Could not write formatted file" "$work/ocaml.err" >/dev/null || \
     ! grep -F "format-write-ocaml/A.res" \
       < <(tr '\\' '/' <"$work/ocaml.err") >/dev/null; then
     echo "format-write-failure: formatter write failures lost context" >&2
-    printf '%s\n' '--- Rust output ---' >&2
-    cat "$work/rust.out" "$work/rust.err" >&2
-    printf '%s\n' '--- OCaml output ---' >&2
-    cat "$work/ocaml.out" "$work/ocaml.err" >&2
+    dump_both
     exit 1
   fi
   checked=$((checked + 1))
@@ -1042,10 +976,7 @@ if ! grep -F 'hook failed' "$work/rust.err" >/dev/null || \
     "$work/ocaml.err" >/dev/null || \
   ! grep -F 'hook failed' "$work/ocaml.err" >/dev/null; then
   echo "Nonzero --after-build handling differs from its recorded outcomes" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 run_case after-build-empty panic reject build --after-build '' "$project"
@@ -1174,20 +1105,10 @@ run_case build-interface-path-mismatch reject reject build \
   "$work/interface-mismatch"
 if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
   echo "Implementation/interface mismatch diagnostics differ" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
-set +e
-"$rust" build "$work/exotic-module-rust" \
-  >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-"$ocaml" build "$work/exotic-module-ocaml" \
-  >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
+run_both build "$work/exotic-module-{impl}"
 rust_mlmap="$work/exotic-module-rust/lib/bs/Ns.mlmap"
 ocaml_mlmap="$work/exotic-module-ocaml/lib/bs/Ns.mlmap"
 if [ "$(classify "$rust_status")" != accept ] || \
@@ -1204,63 +1125,33 @@ if [ "$(classify "$rust_status")" != accept ] || \
   exit 1
 fi
 checked=$((checked + 1))
-set +e
-"$rust" build --filter nested "$work/filter-basename-rust" \
-  >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-"$ocaml" build --filter nested "$work/filter-basename-ocaml" \
-  >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
+run_both build --filter nested "$work/filter-basename-{impl}"
 if [ "$(classify "$rust_status")" != accept ] || \
   [ "$(classify "$ocaml_status")" != accept ] || \
   [ -e "$work/filter-basename-rust/src/nested/A.js" ] || \
   [ -e "$work/filter-basename-ocaml/src/nested/A.js" ]; then
   echo "Source filters did not consistently ignore directory-only matches" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 checked=$((checked + 1))
-set +e
-"$rust" build --filter 'A\.res$' "$work/filter-basename-rust" \
-  >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-"$ocaml" build --filter 'A\.res$' "$work/filter-basename-ocaml" \
-  >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
+run_both build --filter 'A\.res$' "$work/filter-basename-{impl}"
 if [ "$(classify "$rust_status")" != accept ] || \
   [ "$(classify "$ocaml_status")" != accept ] || \
   [ ! -e "$work/filter-basename-rust/src/nested/A.js" ] || \
   [ ! -e "$work/filter-basename-ocaml/src/nested/A.js" ]; then
   echo "Source filters did not consistently include a basename match" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 checked=$((checked + 1))
-set +e
-"$rust" build --filter '(?:A|B\d)\.res$' "$work/filter-basename-rust" \
-  >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-"$ocaml" build --filter '(?:A|B\d)\.res$' "$work/filter-basename-ocaml" \
-  >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
+run_both build --filter '(?:A|B\d)\.res$' "$work/filter-basename-{impl}"
 if [ "$(classify "$rust_status")" != accept ] || \
   [ "$(classify "$ocaml_status")" != accept ] || \
   [ ! -e "$work/filter-basename-rust/src/nested/B2.js" ] || \
   [ ! -e "$work/filter-basename-ocaml/src/nested/B2.js" ]; then
   echo "Source filters did not consistently support Rust-style regex syntax" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 checked=$((checked + 1))
@@ -1292,57 +1183,41 @@ if [ "$rust_permission_details" -ne 1 ] || \
   ! grep -F 'Update allowed-dependents in the dependency rescript.json files.' \
     "$work/ocaml.err.plain" >/dev/null || [ -s "$work/ocaml.out.plain" ]; then
   echo "Active dependency-permission diagnostics changed unexpectedly" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 run_case build-source-path-is-file accept accept build "$work/source-path-file"
 if ! cmp -s "$work/rust.err" "$work/ocaml.err" || \
   ! grep -F 'Could not read folder: "src"' "$work/ocaml.err" >/dev/null; then
   echo "Non-directory source diagnostics differ" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 run_case build-missing-source-folder accept accept build \
   "$work/missing-source-folder"
 if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
   echo "Missing source-folder diagnostics differ" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 run_case build-dependency-without-sources accept accept build \
   "$work/dependency-without-sources"
 if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
   echo "Dependency-without-sources diagnostics differ" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 run_case build-default-feature-cycle accept accept build \
   "$work/default-feature-cycle"
-run_cwd_case format-requested-feature-cycle reject reject \
-  "$work/format-feature-cycle" format
+run_case --cwd "$work/format-feature-cycle" \
+  format-requested-feature-cycle reject reject format
 if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
   echo "Requested format feature-cycle diagnostics differ" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
-run_cwd_case format-scans-graph-with-effective-features \
-  reject reject \
-  "$work/format-source-selection" format --check
+run_case --cwd "$work/format-source-selection" \
+  format-scans-graph-with-effective-features reject reject format --check
 normalize_project_path "$work/rust.err" "$work/rust.err.norm" \
   "$work/format-source-selection"
 normalize_project_path "$work/ocaml.err" "$work/ocaml.err.norm" \
@@ -1362,65 +1237,40 @@ if ! grep -F "$missing_folder" "$work/rust.err.norm" >/dev/null || \
   ! grep -F 'The 2 files listed above need formatting' "$work/rust.err.norm" >/dev/null || \
   ! grep -F 'The 2 files listed above need formatting' "$work/ocaml.err.norm" >/dev/null; then
   echo "Implicit format package scanning or feature selection differs" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 run_case clean-dependency-without-sources accept accept clean \
   "$work/dependency-without-sources"
 if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
   echo "Clean dependency-without-sources diagnostics differ" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
-set +e
-"$rust" clean "$project" >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-"$ocaml" clean "$project" >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
+run_both clean "$project"
 if [ "$rust_status" -ne 0 ] || [ "$ocaml_status" -ne 0 ] || \
   ! cmp -s "$work/rust.out" "$work/ocaml.out" || \
   ! cmp -s "$work/rust.err" "$work/ocaml.err" || \
   ! grep -Fx 'Cleaning command-validation' "$work/ocaml.out" >/dev/null; then
   echo "Redirected clean progress differs" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 checked=$((checked + 1))
-set +e
-"$rust" -q clean "$project" >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-"$ocaml" -q clean "$project" >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
+run_both -q clean "$project"
 if [ "$rust_status" -ne 0 ] || [ "$ocaml_status" -ne 0 ] || \
   [ -s "$work/rust.out" ] || [ -s "$work/rust.err" ] || \
   [ -s "$work/ocaml.out" ] || [ -s "$work/ocaml.err" ]; then
   echo "Quiet redirected clean emitted output" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 checked=$((checked + 1))
-run_cwd_case format-dependency-without-sources accept accept \
-  "$work/dependency-without-sources" format
+run_case --cwd "$work/dependency-without-sources" \
+  format-dependency-without-sources accept accept format
 if ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
   echo "Format dependency-without-sources diagnostics differ" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 run_case build-package-name-mismatch accept accept build \
@@ -1431,10 +1281,7 @@ normalize_project_path "$work/ocaml.err" "$work/ocaml.err.norm" \
   "$work/package-name-mismatch"
 if ! cmp -s "$work/rust.err.norm" "$work/ocaml.err.norm"; then
   echo "Package-name mismatch diagnostics differ" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 run_case build-malformed-package-json reject reject build \
@@ -1469,14 +1316,11 @@ normalize_project_path "$work/ocaml.err" "$work/ocaml.err.norm" \
 if ! grep -F "$duplicate_warning" "$work/rust.err.norm" >/dev/null || \
   ! grep -F "$duplicate_warning" "$work/ocaml.err.norm" >/dev/null; then
   echo "Duplicate dependency warning was not emitted by both implementations" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
-run_cwd_case format-duplicate-dependency accept accept \
-  "$work/duplicate-dependency" format
+run_case --cwd "$work/duplicate-dependency" \
+  format-duplicate-dependency accept accept format
 normalize_project_path "$work/rust.err" "$work/rust.err.norm" \
   "$work/duplicate-dependency"
 normalize_project_path "$work/ocaml.err" "$work/ocaml.err.norm" \
@@ -1484,10 +1328,7 @@ normalize_project_path "$work/ocaml.err" "$work/ocaml.err.norm" \
 if ! grep -F "$duplicate_warning" "$work/rust.err.norm" >/dev/null || \
   ! grep -F "$duplicate_warning" "$work/ocaml.err.norm" >/dev/null; then
   echo "Format duplicate dependency warning was not emitted by both implementations" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 
@@ -1528,10 +1369,7 @@ if [ "$rust_status" -ne 124 ] || \
   ! grep -F "A.res" "$work/ocaml.err" >/dev/null; then
   printf 'build-source-disappears-during-publication: expected Rust=worker-panic/timeout and OCaml=path-bearing rejection, got Rust=%s/OCaml=%s\n' \
     "$rust_status" "$ocaml_status" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 checked=$((checked + 1))
@@ -1564,10 +1402,7 @@ if [ "$rust_status" -ne 101 ] || \
   ! grep -E 'A\.(res|ast)' "$work/ocaml.err" >/dev/null; then
   printf 'build-source-disappears-before-parse-read: expected Rust=panic and OCaml=path-bearing rejection, got Rust=%s/OCaml=%s\n' \
     "$rust_status" "$ocaml_status" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 checked=$((checked + 1))
@@ -1594,10 +1429,7 @@ if [ "$rust_status" -ne 101 ] || \
   ! grep -F "A.ast" "$work/ocaml.err" >/dev/null; then
   printf 'build-ast-disappears-before-dependency-read: expected Rust=panic and OCaml=path-bearing rejection, got Rust=%s/OCaml=%s\n' \
     "$rust_status" "$ocaml_status" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 checked=$((checked + 1))
@@ -1942,14 +1774,7 @@ checked=$((checked + 1))
 run_case clean-missing-dependency exit2 exit2 clean "$work/missing-dependency"
 run_case clean-configless-dependency exit2 exit2 clean "$work/configless-dependency"
 run_case clean-malformed-dependency exit2 exit2 clean "$work/malformed-dependency"
-set +e
-"$rust" clean "$work/clean-duplicate-rust" \
-  >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-"$ocaml" clean "$work/clean-duplicate-ocaml" \
-  >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
+run_both clean "$work/clean-duplicate-{impl}"
 if [ "$(classify "$rust_status")" != reject ] || [ "$ocaml_status" -ne 0 ] || \
   [ ! -e "$work/clean-duplicate-rust/src/one/A.js" ] || \
   [ ! -e "$work/clean-duplicate-rust/src/two/A.js" ] || \
@@ -1958,10 +1783,7 @@ if [ "$(classify "$rust_status")" != reject ] || [ "$ocaml_status" -ne 0 ] || \
   [ -e "$work/clean-duplicate-ocaml/src/two/A.js" ] || \
   [ -e "$work/clean-duplicate-ocaml/lib/bs/marker" ]; then
   echo "clean-duplicate-modules: cleanup behavior differs unexpectedly" >&2
-  printf '%s\n' '--- Rust output ---' >&2
-  cat "$work/rust.out" "$work/rust.err" >&2
-  printf '%s\n' '--- OCaml output ---' >&2
-  cat "$work/ocaml.out" "$work/ocaml.err" >&2
+  dump_both
   exit 1
 fi
 checked=$((checked + 1))
@@ -1998,26 +1820,19 @@ fi
 printf '{"name":"missing-dependency","sources":["src"],"dependencies":["absent"]}\n' \
   >"$work/missing-dependency/rescript.json"
 checked=$((checked + 1))
-run_cwd_case format-missing-dependency exit2 exit2 \
-  "$work/missing-dependency" format
-run_cwd_case format-configless-dependency exit2 exit2 \
-  "$work/configless-dependency" format
-run_cwd_case format-malformed-dependency exit2 exit2 \
-  "$work/malformed-dependency" format
+run_case --cwd "$work/missing-dependency" \
+  format-missing-dependency exit2 exit2 format
+run_case --cwd "$work/configless-dependency" \
+  format-configless-dependency exit2 exit2 format
+run_case --cwd "$work/malformed-dependency" \
+  format-malformed-dependency exit2 exit2 format
 if [ -e "$work/missing-dependency/lib/build.lock" ] || \
   [ -e "$work/missing-dependency/lib/watch.lock" ]; then
   echo "OCaml dependency failures left a build or watch lock behind" >&2
   exit 1
 fi
 
-set +e
-(cd "$project/src" && "$rust" format --check) \
-  >"$work/rust.out" 2>"$work/rust.err"
-rust_status=$?
-(cd "$project/src" && "$ocaml" format --check) \
-  >"$work/ocaml.out" 2>"$work/ocaml.err"
-ocaml_status=$?
-set -e
+run_both --cwd "$project/src" format --check
 if [ "$(classify "$rust_status")" != reject ] || \
   [ "$(classify "$ocaml_status")" != reject ]; then
   printf 'format-nested: expected both implementations to reject, got Rust=%s/OCaml=%s\n' \
