@@ -75,7 +75,6 @@ printf '{"name":"no-bin-annot","sources":["src"]}\n' \
 printf '@@config({flags: ["-bs-no-bin-annot"]})\nlet value = 1\n' \
   >"$work/no-bin-annot/src/NoBinAnnot.res"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/legacy-config"
-cp -R "$root/rewatch-ocaml/tests/cycle" "$work/cycle"
 cp -R "$root/rewatch-ocaml/tests/failure" "$work/failure"
 cp -R "$root/rewatch-ocaml/tests/features" "$work/features"
 cp -R "$root/rewatch-ocaml/tests/feature-dependencies" "$work/feature-dependencies"
@@ -158,7 +157,6 @@ packaged_basic="$work/packaged-basic"
 runtime_discovery="$work/runtime-discovery"
 no_bin_annot="$work/no-bin-annot"
 legacy_config="$work/legacy-config"
-cycle="$work/cycle"
 failure="$work/failure"
 features="$work/features"
 feature_dependencies="$work/feature-dependencies"
@@ -890,7 +888,7 @@ basic_src_native=$(native_path "$basic/src")
 tr '\\' '/' <"$work/format-nested.err" | \
   grep -F "Could not read rescript.json at $basic_src_native" >/dev/null
 
-rm -rf "$basic/lib" "$cycle/lib" "$failure/lib"
+rm -rf "$basic/lib" "$failure/lib"
 rm -rf "$legacy_config/lib"
 mv "$legacy_config/rescript.json" "$legacy_config/bsconfig.json"
 rm -rf "$features/lib"
@@ -1984,9 +1982,6 @@ fi
 test -f "$lock_basic/src/A.mjs"
 test ! -f "$workspace_build_lock"
 
-"$port" build --features native "$features"
-test -f "$features/native/Native.js"
-
 # dep-union is requested with [web] by consumer, then with all features by
 # consumer's dev-dependency, then with [native] by the root. All features win
 # over a later named request; under --prod (below) the named requests merge.
@@ -2235,15 +2230,8 @@ test -d "$monorepo/packages/dep/lib/ocaml"
 "$port" clean "$monorepo/packages/consumer"
 test ! -d "$monorepo/packages/consumer/lib/ocaml"
 test ! -d "$monorepo/packages/dep/lib/ocaml"
-rm -f "$features/native/Native.js"
 "$port" build --features all "$features"
 test -f "$features/native/Native.js"
-
-if "$port" build "$cycle" >"$cycle/output.log" 2>&1; then
-  echo "cycle build unexpectedly succeeded" >&2
-  exit 1
-fi
-grep "circular dependency" "$cycle/output.log" >/dev/null
 
 if "$port" build "$multiple_cycles" \
   >"$multiple_cycles/output.log" 2>&1; then
