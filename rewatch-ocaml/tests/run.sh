@@ -1805,6 +1805,41 @@ fi
 warning_a_calls_after=$(grep -c 'WarningA.ast' "$warning_call_log" || true)
 test "$warning_a_calls_after" -eq "$warning_a_calls"
 stop_watch "$warning_replay" "$warning_watch_pid"
+
+# Leaving watch mode with warnings tries to take the build lock for a cleanup.
+# Another build holding that lock must not delay the exit by its full wait. The
+# previous session left the warning module stale, so this one recompiles it.
+if ! $windows_posix_shell; then
+  lock_holder="$work/lock-holder/rescript"
+  mkdir -p "$work/lock-holder"
+  cp "$(command -v sleep)" "$lock_holder"
+  "$lock_holder" 60 &
+  lock_holder_pid=$!
+  background_pids="$background_pids $lock_holder_pid"
+  exit_watch_log="$warning_replay/exit-watch.log"
+  "$port" watch "$warning_replay" >"$exit_watch_log" 2>&1 &
+  exit_watch_pid=$!
+  background_pids="$background_pids $exit_watch_pid"
+  if ! wait_for_count "$exit_watch_log" 'unused value unusedValue' 1; then
+    cat "$exit_watch_log" >&2
+    exit 1
+  fi
+  wait_for_initial_build "$exit_watch_log"
+  printf '%s' "$lock_holder_pid" >"$warning_replay/lib/build.lock"
+  exit_started=$(date +%s)
+  kill -TERM "$exit_watch_pid"
+  set +e
+  wait "$exit_watch_pid"
+  set -e
+  exit_seconds=$(($(date +%s) - exit_started))
+  if [ "$exit_seconds" -ge 15 ]; then
+    echo "watch exit waited ${exit_seconds}s for another build's lock" >&2
+    exit 1
+  fi
+  test "$(cat "$warning_replay/lib/build.lock")" = "$lock_holder_pid"
+  kill "$lock_holder_pid"
+  rm "$warning_replay/lib/build.lock"
+fi
 stop_watch "$watch_basic" "$watch_pid"
 test ! -f "$watch_basic/lib/watch.lock"
 

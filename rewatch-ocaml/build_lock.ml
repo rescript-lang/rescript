@@ -150,8 +150,8 @@ let retry_delay poll =
    with Unix.Unix_error (Unix.EINTR, _, _) -> ());
   poll ()
 
-let with_build ?(poll = fun () -> ()) root action =
-  acquire ~poll ~name:"build.lock" ~prefix:".build-lock-" ~attempts:1200
+let with_build ?(poll = fun () -> ()) ?(attempts = 1200) root action =
+  acquire ~poll ~name:"build.lock" ~prefix:".build-lock-" ~attempts
     ~delay:(fun () -> retry_delay poll)
     ~timeout:"Timed out waiting for another ReScript build to finish"
     ~on_live_owner:(fun ~first_attempt _owner ->
