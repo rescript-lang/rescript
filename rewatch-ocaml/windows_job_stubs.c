@@ -166,6 +166,7 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
   PROCESS_INFORMATION process;
   struct rewatch_windows_job *job;
   HANDLE job_handle;
+  BOOL created;
   HANDLE inherited_handles[3];
   SIZE_T attribute_list_size = 0;
   DWORD error;
@@ -182,8 +183,8 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
   job->environment = NULL;
   job->cwd = NULL;
   process_value = caml_alloc_small(2, 0);
-  Store_field(process_value, 0, Val_long(0));
-  Store_field(process_value, 1, job_value);
+  Field(process_value, 0) = Val_long(0);
+  Field(process_value, 1) = job_value;
   job = Job_val(job_value);
 
   ZeroMemory(&startup, sizeof(startup));
@@ -205,6 +206,27 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
   inherited_handles[0] = job->stdin_handle;
   inherited_handles[1] = job->stdout_handle;
   inherited_handles[2] = job->stderr_handle;
+
+  job->program = caml_stat_strdup_to_utf16(String_val(program_value));
+  job->command_line =
+    caml_stat_strdup_to_utf16(String_val(command_line_value));
+  job->cwd = caml_stat_strdup_to_utf16(String_val(cwd_value));
+  if (Is_block(env_value)) {
+    value contents = Field(env_value, 0);
+    mlsize_t length = caml_string_length(contents);
+    int size = caml_win32_multi_byte_to_wide_char(
+      String_val(contents), length, NULL, 0);
+    if (size <= 0) {
+      rewatch_windows_release_launch_resources(job);
+      caml_failwith("rewatch: invalid child environment encoding");
+    }
+    job->environment = caml_stat_alloc(size * sizeof(WCHAR));
+    if (caml_win32_multi_byte_to_wide_char(String_val(contents), length,
+                                           job->environment, size) != size) {
+      rewatch_windows_release_launch_resources(job);
+      caml_failwith("rewatch: invalid child environment encoding");
+    }
+  }
 
   InitializeProcThreadAttributeList(NULL, 1, 0, &attribute_list_size);
   startup.lpAttributeList =
@@ -236,20 +258,6 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
     uerror("UpdateProcThreadAttribute", Nothing);
   }
 
-  job->program = caml_stat_strdup_to_utf16(String_val(program_value));
-  job->command_line =
-    caml_stat_strdup_to_utf16(String_val(command_line_value));
-  job->cwd = caml_stat_strdup_to_utf16(String_val(cwd_value));
-  if (Is_block(env_value)) {
-    value contents = Field(env_value, 0);
-    mlsize_t length = caml_string_length(contents);
-    int size = caml_win32_multi_byte_to_wide_char(
-      String_val(contents), length, NULL, 0);
-    job->environment = caml_stat_alloc(size * sizeof(WCHAR));
-    caml_win32_multi_byte_to_wide_char(String_val(contents), length,
-                                       job->environment, size);
-  }
-
   job_handle = CreateJobObjectW(NULL, NULL);
   if (job_handle == NULL) {
     error = GetLastError();
@@ -261,12 +269,22 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
   }
   job->handle = job_handle;
 
-  if (!CreateProcessW(job->program, job->command_line, NULL, NULL, TRUE,
-                      CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT |
-                        EXTENDED_STARTUPINFO_PRESENT,
-                      job->environment, job->cwd, &startup.StartupInfo,
-                      &process)) {
-    error = GetLastError();
+  {
+    WCHAR *program = job->program;
+    WCHAR *command_line = job->command_line;
+    WCHAR *environment = job->environment;
+    WCHAR *cwd = job->cwd;
+    caml_enter_blocking_section();
+    created = CreateProcessW(program, command_line, NULL, NULL, TRUE,
+                             CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT |
+                               EXTENDED_STARTUPINFO_PRESENT,
+                             environment, cwd, &startup.StartupInfo,
+                             &process);
+    error = created ? 0 : GetLastError();
+    caml_leave_blocking_section();
+  }
+  job = Job_val(job_value);
+  if (!created) {
     DeleteProcThreadAttributeList(startup.lpAttributeList);
     HeapFree(GetProcessHeap(), 0, startup.lpAttributeList);
     rewatch_windows_release_launch_resources(job);
