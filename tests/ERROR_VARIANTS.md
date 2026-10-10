@@ -451,6 +451,7 @@ Untagged-variant validation errors. Source: `type untagged_error` and `type erro
 | `AtMostOneNumber` | ✓ | `UntaggedAtMostOneNumber.res` | `int` and `float` payloads collide on the number runtime check. |
 | `AtMostOneBigint` | ✓ | `UntaggedAtMostOneBigint.res` | Two bigint payloads. |
 | `AtMostOneBoolean` | ✓ | `UntaggedAtMostOneBoolean.res` | Two boolean payloads. |
+| `UnreachableBoolean` | ✓ | `UntaggedUnreachableBoolean.res` | Boolean payload alongside both `@as(true)` and `@as(false)` cases. |
 | `DuplicateLiteral` | ✓ | `UntaggedDuplicateLiteral.res` | `@as("x")` on two different constructors. |
 | `ConstructorMoreThanOneArg` | ✓ | `UntaggedConstructorMoreThanOneArg.res`, `UntaggedConstructorAttributeMoreThanOneArg.res` | Multiple payload arguments with type-level or constructor-level `@unboxed`. |
 
