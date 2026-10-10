@@ -70,24 +70,18 @@ type cleanup_result = {
   present_public_outputs: (string, unit) Hashtbl.t;
 }
 
-let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
-    ~on_removed_module ~on_deferred_artifact ~root ~ocaml_dir ~is_local
-    (config : Config.t) modules =
+let cleanup_stale ~ocaml_files ~ast_sources ~source_files ~present_source_files
+    ~on_removed_module ~on_deferred_artifact ~root ~is_local (config : Config.t)
+    modules =
   let build_dir = lib_path root "bs" in
-  (* Keep one inventory of each artifact tree to avoid repeating directory and
-     metadata work during every cleanup phase. Paths removed below can safely
-     remain in the inventory: later phases only classify their names or call
-     the idempotent File_util.remove_file. *)
-  let ocaml_files =
-    match ocaml_files with
-    | Some files -> files
-    | None -> File_util.files_under ocaml_dir
-  in
+  (* The caller passes one inventory of each artifact tree to avoid repeating
+     directory and metadata work during every cleanup phase. Paths removed
+     below can safely remain in the inventory: later phases only classify their
+     names or call the idempotent File_util.remove_file. *)
   (* Published ASTs contain the absolute source path used to create them, which
      is enough to address their working artifacts without scanning for them.
      Keep the recursive walk lazy for malformed or legacy ASTs that cannot be
      mapped; normal unchanged builds must not inventory the whole lib/bs tree. *)
-  let ast_sources = Option.value ast_sources ~default:[] in
   let fallback_build_files_by_basename =
     lazy
       (let by_basename = Hashtbl.create 32 in
@@ -99,17 +93,6 @@ let cleanup_stale ?ocaml_files ?ast_sources ?source_files ?present_source_files
            in
            Hashtbl.replace by_basename basename (path :: paths));
        by_basename)
-  in
-  let source_files =
-    match source_files with
-    | Some files -> files
-    | None ->
-      config.sources
-      |> List.concat_map (fun source ->
-          File_util.files_under (Filename.concat root source.Config.dir))
-  in
-  let present_source_files =
-    Option.value present_source_files ~default:source_files
   in
   let output_files =
     [lib_path "" "es6"; lib_path "" "js"]
