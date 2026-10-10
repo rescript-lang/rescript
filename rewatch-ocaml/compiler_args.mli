@@ -3,13 +3,11 @@ val filter_ppx_flags :
 
 val source_map_args : Config.t -> watch:bool -> string list
 
-val compiler_flags :
-  ?ppx_flags:string list list ->
-  source_maps:bool ->
-  watch:bool ->
-  gentype:bool ->
-  Config.t ->
-  string list
+val parser_flags : ?ppx_flags:string list list -> Config.t -> string list
+(** The flags of a parse, in the order Rust rewatch passes them. *)
+
+val compiler_flags : watch:bool -> Config.t -> string list
+(** The configured flags of a compile, including source maps and genType. *)
 
 val with_local_warning_policy : is_local:bool -> Config.t -> Config.t
 val gentype_dependency_args_from_paths :

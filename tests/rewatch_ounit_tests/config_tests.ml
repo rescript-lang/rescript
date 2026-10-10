@@ -338,8 +338,7 @@ let compiler_argument_tests =
         }|};
       let config = Config.load path in
       check
-        (Compiler_args.compiler_flags ~source_maps:false ~watch:false
-           ~gentype:false config
+        (Compiler_args.parser_flags config
         = [
             "-bs-jsx-mode";
             "automatic";
@@ -352,8 +351,7 @@ let compiler_argument_tests =
           ])
         "parser arguments follow Rust phase ordering";
       check
-        (Compiler_args.compiler_flags ~source_maps:true ~watch:false
-           ~gentype:true config
+        (Compiler_args.compiler_flags ~watch:false config
         = [
             "-bs-jsx-mode";
             "automatic";
@@ -420,9 +418,7 @@ let compiler_argument_tests =
         ];
       check
         (match
-           Compiler_args.compiler_flags
-             ~ppx_flags:[["tool"; "--arg"]]
-             ~source_maps:false ~watch:false ~gentype:false config
+           Compiler_args.parser_flags ~ppx_flags:[["tool"; "--arg"]] config
          with
         | "-ppx" :: "tool --arg" :: _ -> true
         | _ -> false)
