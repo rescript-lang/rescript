@@ -15,7 +15,6 @@ val status_string : Unix.process_status -> string
 val default_max_jobs : int
 
 val task : ?env:Spawn.Env.t -> ?on_result:(result -> result) -> job -> task
-val in_process_task : ?on_result:(result -> result) -> (unit -> result) -> task
 val concurrent_task :
   cancel:(unit -> unit) ->
   ?on_result:(result -> result) ->
