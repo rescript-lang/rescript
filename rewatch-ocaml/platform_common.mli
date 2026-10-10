@@ -8,6 +8,7 @@ val resolve_program :
   string ->
   string
 
+val is_lock_owner_name : string -> bool
 val process_is_active : probe:(int -> bool) -> string -> bool
 val create_capture_pipes :
   unit ->

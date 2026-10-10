@@ -87,7 +87,7 @@ let process_name_from_ps ~run pid =
   match run "/bin/ps" ["-p"; string_of_int pid; "-o"; "comm="] with
   | Some (Unix.WEXITED 0, output) ->
     output |> String.trim |> Filename.basename
-    |> String.starts_with ~prefix:"rescript"
+    |> Platform_common.is_lock_owner_name
   | Some (Unix.WEXITED _, _) -> false
   | Some (Unix.WSIGNALED _, _) | Some (Unix.WSTOPPED _, _) | None -> true
 
@@ -96,8 +96,8 @@ let probe_process ~run pid =
   let executable = Printf.sprintf "/proc/%d/exe" pid in
   if Sys.file_exists executable then
     try
-      let basename = Unix.realpath executable |> Filename.basename in
-      String.starts_with ~prefix:"rescript" basename
+      Unix.realpath executable |> Filename.basename
+      |> Platform_common.is_lock_owner_name
     with Unix.Unix_error _ -> true
   else
     (* macOS has no procfs. `ps` supplies the same executable-name check so a

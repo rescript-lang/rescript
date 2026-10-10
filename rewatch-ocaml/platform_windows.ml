@@ -269,7 +269,7 @@ let tasklist_probe ~pid output =
     List.exists
       (function
         | Some [image; row_pid; _session; _session_number; _memory] ->
-          String.starts_with ~prefix:"rescript" (String.lowercase_ascii image)
+          Platform_common.is_lock_owner_name image
           && row_pid = string_of_int pid
         | Some _ | None -> false)
       rows
