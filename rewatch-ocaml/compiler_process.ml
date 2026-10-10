@@ -10,6 +10,8 @@ let retain_critical_external_warnings stderr =
 
 let build_identity = Rescript_compiler_driver.build_identity
 
+type request = {args: string list; cwd: string}
+
 let compiler_phase args =
   let input =
     match List.rev args with
@@ -24,25 +26,25 @@ let compiler_phase args =
   in
   (phase, input)
 
-let log_compiler_request (job : Process.job) =
+let log_compiler_request (request : request) =
   match Sys.getenv_opt "REWATCH_COMPILER_CALL_LOG" with
   | None -> ()
   | Some path ->
-    let phase, input = compiler_phase job.args in
+    let phase, input = compiler_phase request.args in
     let channel =
       open_out_gen [Open_creat; Open_append; Open_text] 0o644 path
     in
     Fun.protect
       ~finally:(fun () -> close_out_noerr channel)
-      (fun () -> Printf.fprintf channel "%s\t%s\t%s\n" phase job.cwd input)
+      (fun () -> Printf.fprintf channel "%s\t%s\t%s\n" phase request.cwd input)
 
 let exit_code = function
   | Unix.WEXITED code -> code
   | Unix.WSIGNALED signal | Unix.WSTOPPED signal -> 128 + signal
 
-let run_in_process ?poll (job : Process.job) =
-  log_compiler_request job;
-  match List.rev job.args with
+let run_in_process ?poll (request : request) =
+  log_compiler_request request;
+  match List.rev request.args with
   | [] ->
     {
       Process.status = Unix.WEXITED 2;
@@ -51,14 +53,14 @@ let run_in_process ?poll (job : Process.job) =
     }
   | input :: reversed_argv ->
     let result =
-      Rescript_compiler_driver.run_request ~cwd:job.cwd
+      Rescript_compiler_driver.run_request ~cwd:request.cwd
         ~argv:(List.rev reversed_argv) ~input
         ~run_external:
           (Some
              (fun command ->
                let command = Platform.shell_command command in
                let result =
-                 Process.run ?poll ~cwd:job.cwd command.program command.args
+                 Process.run ?poll ~cwd:request.cwd command.program command.args
                in
                (exit_code result.status, result.stdout, result.stderr)))
     in
@@ -68,13 +70,13 @@ let run_in_process ?poll (job : Process.job) =
       stderr = result.stderr;
     }
 
-let run ?poll job =
+let run ?poll request =
   Option.iter (fun poll -> poll ()) poll;
-  let result = run_in_process ?poll job in
+  let result = run_in_process ?poll request in
   Option.iter (fun poll -> poll ()) poll;
   result
 
-let task job =
+let task request =
   let cancelled = Atomic.make false in
   Process.concurrent_task
     ~cancel:(fun () -> Atomic.set cancelled true)
@@ -82,15 +84,15 @@ let task job =
       run_in_process
         ~poll:(fun () ->
           if Atomic.get cancelled then raise (Process.Interrupted 15))
-        job)
+        request)
 
-let run_jobs ?poll ?on_complete jobs =
-  jobs |> List.map task
+let run_requests ?poll ?on_complete requests =
+  requests |> List.map task
   |> Process.run_tasks
        ~max_jobs:(Compiler_execution_mode.configured_count ())
        ?poll ?on_complete
 
-let parse_job ~bsc ~build_dir ~(config : Config.t) path =
+let parse_request ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
   File_util.ensure_dir (Filename.concat build_dir (Filename.dirname ast));
   let contents =
@@ -98,7 +100,7 @@ let parse_job ~bsc ~build_dir ~(config : Config.t) path =
     else File_util.read_file (Filename.concat config.root path)
   in
   let args = Compiler_args.parser_arguments ~config ~contents ~path in
-  Process.{program = bsc; args; cwd = build_dir}
+  {args; cwd = build_dir}
 
 let ast_dependencies ~build_dir ast =
   (Ast_header.read (Filename.concat build_dir ast)).dependencies
@@ -134,8 +136,8 @@ let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
   with error ->
     raise (Compiler_scheduler.Publication_failure (error, !cmi_change))
 
-let namespace_task ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
-    ~force namespace modules =
+let namespace_task ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty ~force
+    namespace modules =
   let mlmap = Filename.concat build_dir (namespace ^ ".mlmap") in
   let contents =
     let buffer = Buffer.create 128 in
@@ -179,22 +181,20 @@ let namespace_task ~bsc ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty
         {
           task =
             task
-              Process.
-                {
-                  program = bsc;
-                  args =
-                    [
-                      "-runtime-path";
-                      runtime;
-                      "-w";
-                      "-49";
-                      "-color";
-                      "always";
-                      "-no-alias-deps";
-                      Filename.basename mlmap;
-                    ];
-                  cwd = build_dir;
-                };
+              {
+                args =
+                  [
+                    "-runtime-path";
+                    runtime;
+                    "-w";
+                    "-49";
+                    "-color";
+                    "always";
+                    "-no-alias-deps";
+                    Filename.basename mlmap;
+                  ];
+                cwd = build_dir;
+              };
           publish =
             (fun result ->
               if not (Process.succeeded result) then
@@ -231,7 +231,7 @@ let post_build_tasks (config : Config.t) path =
           })
       config.package_specs
 
-let compile_job ~bsc ~build_dir ~(config : Config.t) ~common_args
+let compile_request ~build_dir ~(config : Config.t) ~common_args
     (module_ : Source.module_) ~source_kind path =
   let args =
     Compiler_args.compiler_arguments_with_common ~config ~common_args
@@ -239,7 +239,7 @@ let compile_job ~bsc ~build_dir ~(config : Config.t) ~common_args
       ~has_interface:(Option.is_some module_.interface)
       ~path
   in
-  Process.{program = bsc; args; cwd = build_dir}
+  {args; cwd = build_dir}
 
 let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~has_interface
     ~source_kind path result =

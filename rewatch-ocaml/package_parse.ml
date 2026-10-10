@@ -53,11 +53,9 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
       (fun path result -> (path, Build_attempt.preliminary_parse result))
       parse_paths_to_run
       (List.map
-         (fun path ->
-           Compiler_process.parse_job ~bsc:prepared.compiler_context.bsc_path
-             ~build_dir ~config path)
+         (fun path -> Compiler_process.parse_request ~build_dir ~config path)
          parse_paths_to_run
-      |> Compiler_process.run_jobs ?poll:attempt.process_poll)
+      |> Compiler_process.run_requests ?poll:attempt.process_poll)
     @ (dirty_parse_paths
       |> List.filter_map (fun path ->
           Hashtbl.find_opt attempt.preliminary_parses

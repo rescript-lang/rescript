@@ -13,12 +13,8 @@
  ; Several cases launch this executable to test concurrent subprocess capture.
  ; A sequential outer runner avoids nesting them inside OUnit worker processes;
  ; the production concurrency is still exercised by those cases themselves.
- (deps ../../rewatch-ocaml/rescript_ocaml.exe)
  (action
-  (setenv
-   REWATCH_COMPILER_WORKER_EXECUTABLE
-   %{exe:../../rewatch-ocaml/rescript_ocaml.exe}
-   (run %{test} -runner sequential)))
+  (run %{test} -runner sequential))
  (modules
   rewatch_ounit_tests_main
   build_attempt_tests

@@ -146,7 +146,6 @@ start_watcher() {
       domain_count_env=(REWATCH_COMPILER_DOMAINS="$REWATCH_WATCH_COMPILER_DOMAINS")
     fi
     setsid env \
-      RESCRIPT_BSC_EXE="$real_bsc" \
       RESCRIPT_RUNTIME="$runtime" \
       "${domain_count_env[@]}" \
       REWATCH_COMPILER_CALL_LOG="$work_root/$implementation.compiler" \

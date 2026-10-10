@@ -23,21 +23,6 @@ val concurrent_task :
   task
 val map_result : task -> (result -> result) -> task
 
-val run_parallel :
-  ?max_jobs:int ->
-  ?poll:(unit -> unit) ->
-  ?on_complete:(int -> unit) ->
-  job list ->
-  result list
-
-val run_parallel_map :
-  ?max_jobs:int ->
-  ?poll:(unit -> unit) ->
-  ?on_complete:(int -> unit) ->
-  'a list ->
-  job:('a -> job) ->
-  result list
-
 type 'a work = {key: string; dependencies: string list; value: 'a}
 
 (* [Stop_new_work] preserves results from children that already started while

@@ -46,55 +46,6 @@ let concurrent_task ~cancel ?(on_result = fun result -> result) run =
 let map_result task map =
   {task with on_result = (fun result -> map (task.on_result result))}
 
-let run_parallel_map_with_notifier ~max_jobs ~poll ~on_complete notifier values
-    ~job =
-  let indexed = List.mapi (fun index value -> (index, value)) values in
-  let results = Array.make (List.length values) None in
-  let active = ref [] in
-  let launch_indexed (index, value) =
-    active := Child.launch ~notifier index (job value) :: !active
-  in
-  let rec fill slots queued =
-    if slots = 0 then queued
-    else
-      match queued with
-      | [] -> []
-      | job :: rest ->
-        launch_indexed job;
-        fill (slots - 1) rest
-  in
-  let rec schedule queued =
-    let queued = fill (max_jobs - List.length !active) queued in
-    match !active with
-    | [] -> ()
-    | _ ->
-      let child, result = Child.wait_for_running ~poll notifier !active in
-      active := List.filter (fun running -> running != child) !active;
-      Child.release_running child;
-      results.(Child.payload child) <- Some result;
-      on_complete (Child.payload child);
-      schedule queued
-  in
-  try
-    schedule indexed;
-    Array.to_list results |> List.map Option.get
-  with exn ->
-    Child.terminate_running !active;
-    raise exn
-
-let run_parallel_map ?(max_jobs = default_max_jobs) ?poll
-    ?(on_complete = fun _ -> ()) values ~job =
-  if max_jobs < 1 then raise (Error "max_jobs must be at least one");
-  match values with
-  | [] -> []
-  | _ ->
-    with_completion_notifier ~poll (fun ~poll notifier ->
-        run_parallel_map_with_notifier ~max_jobs ~poll ~on_complete notifier
-          values ~job)
-
-let run_parallel ?max_jobs ?poll ?on_complete jobs =
-  run_parallel_map ?max_jobs ?poll ?on_complete jobs ~job:Fun.id
-
 type 'a work = {key: string; dependencies: string list; value: 'a}
 type failure_action =
   | Abort_immediately

@@ -75,8 +75,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
         config.package_specs
     in
     let compile_process module_ ~source_kind path =
-      Compiler_process.compile_job ~bsc:prepared.compiler_context.bsc_path
-        ~build_dir ~config
+      Compiler_process.compile_request ~build_dir ~config
         ~common_args:
           (if module_.Source.is_dev then
              prepared_package.development_common_args
@@ -157,7 +156,6 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
           || attempt.freshness_mode = Build_attempt.Initialize_freshness
         then
           Compiler_process.namespace_task
-            ~bsc:prepared.compiler_context.bsc_path
             ~runtime:prepared.compiler_context.runtime_path ~build_dir
             ~ocaml_dir
             ~entry:(Config.namespace_entry config.namespace)
