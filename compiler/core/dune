@@ -6,20 +6,6 @@
 ; The browser profile builds the playground compiler; these rules generate modules from platform/{native,playground}.
 
 (rule
- (target build_artifact.ml)
- (enabled_if
-  (= %{profile} browser))
- (action
-  (copy platform/playground/build_artifact.ml build_artifact.ml)))
-
-(rule
- (target build_artifact.ml)
- (enabled_if
-  (<> %{profile} browser))
- (action
-  (copy platform/native/build_artifact.ml build_artifact.ml)))
-
-(rule
  (target js_name_of_module_id.ml)
  (enabled_if
   (= %{profile} browser))
@@ -38,7 +24,4 @@
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (foreign_stubs
-  (language c)
-  (names build_artifact_stubs))
  (libraries depends ext flow_parser frontend gentype yojson))
