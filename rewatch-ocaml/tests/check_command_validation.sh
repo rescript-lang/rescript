@@ -716,6 +716,28 @@ wait_for_file() {
   return 1
 }
 
+# Waits until a -v watcher logs a watch handle for a path ending in the given
+# extended regular expression. Paths use native separators; trailing space
+# tolerates CRLF output on Windows.
+wait_for_watch() {
+  path=$1
+  suffix=$2
+  attempts=0
+  while [ "$attempts" -lt 150 ]; do
+    if grep -Eq "watching \((non-)?recursive\): .*$suffix[[:space:]]*\$" \
+        "$path" 2>/dev/null; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    sleep 0.1
+  done
+  printf 'Timed out waiting for a watch on %s in %s\n' "$suffix" "$path" >&2
+  if [ -f "$path" ]; then
+    cat "$path" >&2
+  fi
+  return 1
+}
+
 wait_for_text() {
   path=$1
   pattern=$2
@@ -1528,7 +1550,7 @@ wait_for_file "$work/watch-dependency-recovery/src/A.js"
 terminate_and_wait "$dependency_recovery_pid" "dependency-recovery watcher"
 checked=$((checked + 1))
 
-"$ocaml" watch "$work/watch-dependency-install" \
+"$ocaml" -v watch "$work/watch-dependency-install" \
   >"$work/watch-dependency-install.out" \
   2>"$work/watch-dependency-install.err" &
 dependency_install_pid=$!
@@ -1544,7 +1566,7 @@ if ! kill -0 "$dependency_install_pid" 2>/dev/null; then
   exit 1
 fi
 mkdir "$work/watch-dependency-install/node_modules/@scope"
-sleep 1
+wait_for_watch "$work/watch-dependency-install.out" '[/\\]@scope'
 mkdir -p "$work/watch-dependency-install/node_modules/@scope/dep/src"
 printf '{"name":"@scope/dep","sources":["src"]}\n' \
   >"$work/watch-dependency-install/node_modules/@scope/dep/rescript.json"
