@@ -13,6 +13,16 @@ let loop = Lambda.while_ (Lambda.var x) (Lambda.var x)
 
 let size_upto = Lam_analysis.size_upto
 
+let int i = Lambda.const_int i
+
+(* A constant list of [n] elements, nested [n] levels deep *)
+let constant_list n =
+  let rec go i acc =
+    if i < 0 then acc
+    else go (i - 1) (Lambda.Const_block (Blk_tuple, [int i; acc]))
+  in
+  go (n - 1) (int 0)
+
 let suites =
   __FILE__
   >::: [
@@ -41,4 +51,12 @@ let suites =
            =~ 5;
            (* the old unbounded size was 1000 for these *)
            size_upto ~limit:1000 loop =~ 1000 );
+         ( "counts the leaves of constants" >:: fun _ ->
+           let tuple = Lambda.Const_block (Blk_tuple, [int 1; int 2; int 3]) in
+           size_upto ~limit:10 (Lambda.const tuple) =~ 3;
+           size_upto ~limit:10 (Lambda.const (Lambda.Const_some (int 1))) =~ 1;
+           size_upto ~limit:2 (Lambda.const tuple) =~ 2 );
+         ( "stops inside large constants" >:: fun _ ->
+           (* would need a million nested calls without the cutoff *)
+           size_upto ~limit:5 (Lambda.const (constant_list 1_000_000)) =~ 5 );
        ]

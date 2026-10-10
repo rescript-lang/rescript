@@ -144,18 +144,6 @@ let rec no_side_effects (lam : Lambda.t) : bool =
 (* Size of a lambda that is too big to inline, e.g. one containing a loop *)
 let too_big = 1000
 
-let rec size_constant (x : Lambda.structured_constant) =
-  match x with
-  | Const_int _ | Const_assertfalse | Const_constructor _ | Const_char _
-  | Const_float _ | Const_bigint _ | Const_polyvar _ | Const_js_null
-  | Const_js_undefined _ | Const_module_alias | Const_js_true | Const_js_false
-    ->
-    1
-  | Const_string _ -> 1
-  | Const_some s -> size_constant s
-  | Const_block (_, str) ->
-    Ext_list.fold_left str 0 (fun acc x -> acc + size_constant x)
-
 exception Limit_reached
 
 (*
@@ -170,10 +158,22 @@ let size_upto ~limit (lam : Lambda.t) =
     total := !total + n;
     if !total >= limit then raise_notrace Limit_reached
   in
+  (* Constants count their leaves, and stop at the limit too: a large constant
+     list or record should not be walked completely. *)
+  let rec constant (c : Lambda.structured_constant) =
+    match c with
+    | Const_int _ | Const_assertfalse | Const_constructor _ | Const_char _
+    | Const_float _ | Const_bigint _ | Const_polyvar _ | Const_js_null
+    | Const_js_undefined _ | Const_module_alias | Const_js_true | Const_js_false
+    | Const_string _ ->
+      add 1
+    | Const_some s -> constant s
+    | Const_block (_, str) -> List.iter constant str
+  in
   let rec size (lam : Lambda.t) =
     match lam with
     | Lvar _ -> add 1
-    | Lconst c -> add (size_constant c)
+    | Lconst c -> constant c
     | Llet (_, _, l1, l2) ->
       add 1;
       size l1;
