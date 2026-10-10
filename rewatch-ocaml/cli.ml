@@ -28,11 +28,16 @@ let verbosity =
   let verbose =
     Arg.(
       value & flag_all
-      & info ["v"; "verbose"] ~doc:"Increase logging verbosity.")
+      & info ["v"; "verbose"]
+          ~doc:
+            "Increase logging verbosity: $(b,-v) shows debug and $(b,-vv) also \
+             trace output.")
   in
   let quiet =
     Arg.(
-      value & flag_all & info ["q"; "quiet"] ~doc:"Decrease logging verbosity.")
+      value & flag_all
+      & info ["q"; "quiet"]
+          ~doc:"Decrease logging verbosity: hide progress and summary output.")
   in
   Term.term_result
     (let+ verbose and+ quiet in
@@ -45,12 +50,15 @@ let folder =
   Arg.(
     value & pos 0 string "."
     & info [] ~docv:"FOLDER"
-        ~doc:"Path to the project or subproject containing rescript.json.")
+        ~doc:
+          "Path to the project or subproject. This folder must contain a \
+           rescript.json file.")
 
 let prod =
   Arg.(
     value & flag
-    & info ["prod"] ~doc:"Skip development dependencies and sources.")
+    & info ["prod"]
+        ~doc:"Skip dev-dependencies and dev sources (type: \"dev\").")
 
 let features =
   let parse value =
@@ -74,21 +82,31 @@ let features =
     value
     & opt (some converter) None
     & info ["features"] ~docv:"FEATURES"
-        ~doc:"Restrict the current package to comma-separated features.")
+        ~doc:
+          "Restrict the current package to a comma-separated set of features. \
+           Only source directories tagged with one of these features (plus \
+           untagged ones, and features they transitively imply through the \
+           top-level $(b,features) map) are compiled. Omit the flag to build \
+           with all features active. Example: $(b,--features \
+           native,experimental)")
 
 let warn_error =
   Arg.(
     value
     & opt (some string) None
     & info ["warn-error"] ~docv:"WARNINGS"
-        ~doc:"Override warning configuration from rescript.json.")
+        ~doc:
+          "Override warning configuration from rescript.json. Example: \
+           $(b,--warn-error \"+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110\")")
 
 let after_build =
   Arg.(
     value
     & opt (some string) None
     & info ["a"; "after-build"] ~docv:"COMMAND"
-        ~doc:"Run an additional command after a successful build.")
+        ~doc:
+          "Run an additional command after a successful build. E.g., play a \
+           sound or run a test suite when done compiling.")
 
 let filter =
   let parse value =
@@ -103,7 +121,9 @@ let filter =
     value
     & opt (some (conv (parse, print))) None
     & info ["f"; "filter"] ~docv:"REGEX"
-        ~doc:"Filter source files by regular expression.")
+        ~doc:
+          "Filter source files by regular expression. E.g., filter out test \
+           files for compilation while doing feature work.")
 
 let no_timing =
   Arg.(value & flag & info ["n"; "no-timing"] ~doc:"Disable output timing.")
@@ -152,14 +172,23 @@ let format_term =
       value
       & opt (some extension) None
       & info ["s"; "stdin"] ~docv:"EXTENSION"
-          ~doc:"Read stdin and write formatted source to stdout.")
+          ~doc:
+            "Read the code from stdin and print the formatted code to stdout.")
   in
   let check =
     Arg.(
       value & flag
-      & info ["c"; "check"] ~doc:"Check formatting without modifying files.")
+      & info ["c"; "check"]
+          ~doc:"Check formatting status without applying changes.")
   in
-  let files = Arg.(value & pos_all string [] & info [] ~docv:"FILES") in
+  let files =
+    Arg.(
+      value & pos_all string []
+      & info [] ~docv:"FILES"
+          ~doc:
+            "Files to format. If no files are provided, all files are \
+             formatted.")
+  in
   Term.term_result
     (let+ verbosity = verbosity and+ check and+ stdin and+ files in
      match (check, stdin, files) with
@@ -193,7 +222,7 @@ let command_info name doc = Cmd.info name ~doc ~exits
 let root =
   let build =
     Cmd.make
-      (command_info "build" "Build the project.")
+      (command_info "build" "Build the project (default command).")
       (build_term ~watch:false)
   in
   let watch =
@@ -202,7 +231,7 @@ let root =
       (build_term ~watch:true)
   in
   let clean =
-    Cmd.make (command_info "clean" "Clean build artifacts.") clean_term
+    Cmd.make (command_info "clean" "Clean the build artifacts.") clean_term
   in
   let format =
     Cmd.make (command_info "format" "Format ReScript files.") format_term
@@ -210,7 +239,7 @@ let root =
   let compiler_args =
     Cmd.make
       (command_info "compiler-args"
-         "Print compiler arguments for a ReScript source file.")
+         "Print the compiler arguments for a ReScript source file.")
       compiler_args_term
   in
   let help =
