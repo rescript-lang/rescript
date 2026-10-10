@@ -46,14 +46,11 @@ let run_parallel_map_with_notifier ~max_jobs ~poll ~on_complete notifier values
     match !active with
     | [] -> ()
     | _ ->
-      let (child, result), deferred_signals =
-        Child.wait_for_running ~poll notifier !active
-      in
-      Signal_restore.protect deferred_signals (fun () ->
-          active := List.filter (fun running -> running != child) !active;
-          Child.release_running child;
-          results.(Child.payload child) <- Some result;
-          on_complete (Child.payload child));
+      let child, result = Child.wait_for_running ~poll notifier !active in
+      active := List.filter (fun running -> running != child) !active;
+      Child.release_running child;
+      results.(Child.payload child) <- Some result;
+      on_complete (Child.payload child);
       schedule queued
   in
   try
@@ -136,13 +133,6 @@ type 'a worker_pool = {
   mutable workers: unit Domain.t list;
 }
 
-let launch_worker_task notifier task =
-  (* Signal handlers are process-wide and may execute on a worker domain. A
-     worker therefore keeps ownership across launch without temporarily
-     replacing those handlers: an interruption unwinds through [launch] or the
-     completion queue, and the scheduler then cancels the other process trees. *)
-  Child.launch ?env:task.env ~defer_signals:false ~notifier () task.job
-
 let remove_active pool active =
   Child.with_lock pool.mutex (fun () ->
       while
@@ -168,7 +158,8 @@ let complete_pool_task pool completion =
 
 let run_pool_task pool payload task =
   match
-    try Ok (launch_worker_task pool.notifier task) with exn -> Error exn
+    try Ok (Child.launch ?env:task.env ~notifier:pool.notifier () task.job)
+    with exn -> Error exn
   with
   | Error exn -> complete_pool_task pool (Task_failed (payload, exn))
   | Ok child ->
@@ -191,7 +182,7 @@ let run_pool_task pool payload task =
       try
         if cancel_after_launch then Child.signal_running [child];
         Ok
-          (Child.wait_for_running ~defer_signals:false
+          (Child.wait_for_running
              ~poll:(fun () ->
                match
                  Child.with_lock pool.mutex (fun () -> active.cancellation)
@@ -203,13 +194,12 @@ let run_pool_task pool payload task =
     in
     let completion =
       match wait_result with
-      | Ok ((_, result), deferred_signals) -> (
+      | Ok (_, result) -> (
         remove_active pool active;
         try
-          Signal_restore.protect deferred_signals (fun () ->
-              Child.await_termination child;
-              release_active active;
-              Task_completed (payload, task.on_result result))
+          Child.await_termination child;
+          release_active active;
+          Task_completed (payload, task.on_result result)
         with exn -> Task_failed (payload, exn))
       | Error exn -> (
         let termination =
@@ -494,7 +484,7 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
 let run_dependency_graph ?(max_jobs = default_max_jobs)
     ?(on_failure =
       function
-      | Sys.Break | Interrupted _ -> Abort_immediately
+      | Interrupted _ -> Abort_immediately
       | _ -> Stop_new_work) ?poll works ~next =
   if max_jobs < 1 then raise (Error "max_jobs must be at least one");
   match works with
@@ -522,13 +512,10 @@ let run_one ?poll ?stdout_chunk ?stderr_chunk ?stdin ~cwd program args =
       in
       let completion_received = ref false in
       try
-        let (_, result), deferred_signals =
-          Child.wait_for_running ~poll notifier [child]
-        in
+        let _, result = Child.wait_for_running ~poll notifier [child] in
         completion_received := true;
-        Signal_restore.protect deferred_signals (fun () ->
-            Child.release_running child;
-            result)
+        Child.release_running child;
+        result
       with exn ->
         if not !completion_received then Child.terminate_running [child];
         raise exn)

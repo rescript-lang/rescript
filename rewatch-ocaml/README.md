@@ -47,7 +47,7 @@ does not depend on the runner's libc. The version lives in
 | Parsing and compiling | `package_parse`, `package_compilation`, `compiler_args`, `compiler_process`, `compiler_scheduler`, `compiler_info` (fingerprints that decide when a package is cleaned), `compile_assets`, `module_graph`, `graph` |
 | Artifacts | `build_artifacts` (output paths, publication, stale cleanup), `build_freshness`, `clean`, `file_util` |
 | Processes | `process` (worker pool), `process_child` (one child and its pipes), `after_build` |
-| Platform | `platform.mli` implemented by `platform_unix.ml` or `platform_windows.ml` (selected by dune), `windows_job_stubs.c`, `signal_restore`, `build_lock` |
+| Platform | `platform.mli` implemented by `platform_unix.ml` or `platform_windows.ml` (selected by dune), `windows_job_stubs.c`, `termination_signals`, `build_lock` |
 | Watching | `watcher` (rebuild loop), `watch_scope` (what to watch), `watch_snapshot` (filesystem snapshots), `native_watcher` (libuv notifications) |
 | Other commands | `format`, `compiler_args_command` |
 

@@ -128,25 +128,16 @@ let with_completion_notifier ~ticker_enabled action =
     in
     if continue then send_tick ()
   in
-  let deferred_signals = Signal_restore.create ~defer:true in
-  let ticker = ref None in
-  let stopped = ref false in
-  let stop () =
-    if not !stopped then (
-      with_lock notifier.mutex (fun () ->
-          notifier.stopped <- true;
-          Condition.broadcast notifier.condition);
-      Option.iter Thread.join !ticker;
-      stopped := true)
+  let ticker =
+    if ticker_enabled then Some (Thread.create send_tick ()) else None
   in
-  try
-    if ticker_enabled then ticker := Some (Thread.create send_tick ());
-    Fun.protect ~finally:stop (fun () ->
-        Signal_restore.restore deferred_signals;
-        action notifier)
-  with exn ->
-    stop ();
-    raise (Signal_restore.exception_after_restore deferred_signals exn)
+  let stop () =
+    with_lock notifier.mutex (fun () ->
+        notifier.stopped <- true;
+        Condition.broadcast notifier.condition);
+    Option.iter Thread.join ticker
+  in
+  Fun.protect ~finally:stop (fun () -> action notifier)
 
 let close_noerr descriptor =
   try Unix.close descriptor with Unix.Unix_error _ -> ()
@@ -224,7 +215,7 @@ let start_child_wait pid notifier stdout_capture stderr_capture : child_wait =
   in
   {thread; direct_outcome; outcome}
 
-let fail_launch ownership deferred_signals launch_error =
+let fail_launch ownership launch_error =
   Option.iter
     (fun process ->
       let pid = Platform.process_id process in
@@ -270,31 +261,17 @@ let fail_launch ownership deferred_signals launch_error =
       None
     with release_exn -> Some release_exn
   in
-  let restore_error =
-    try
-      Signal_restore.restore deferred_signals;
-      None
-    with signal_exn -> Some signal_exn
-  in
   let error =
     match ownership.termination_error with
     | Some message ->
       Error
         ("Could not terminate a partially launched subprocess tree: " ^ message)
-    | None -> (
-      match (restore_error, release_error) with
-      | Some signal_exn, _ -> signal_exn
-      | None, Some release_exn -> release_exn
-      | None, None -> launch_error)
+    | None -> Option.value release_error ~default:launch_error
   in
   raise error
 
-let launch ?env ?stdout_chunk ?stderr_chunk ?(stdin = Null_stdin)
-    ?(defer_signals = true) ~notifier payload job =
-  (* Capture descriptors need a cleanup owner before asynchronous watch
-     termination can raise. Signals are therefore deferred across pipe
-     acquisition and restored only after every descriptor has an owner. *)
-  let deferred_signals = Signal_restore.create ~defer:defer_signals in
+let launch ?env ?stdout_chunk ?stderr_chunk ?(stdin = Null_stdin) ~notifier
+    payload job =
   let ownership = empty_launch_ownership () in
   try
     let pipes = Platform.create_capture_pipes () in
@@ -333,11 +310,10 @@ let launch ?env ?stdout_chunk ?stderr_chunk ?(stdin = Null_stdin)
     close_noerr stderr_write;
     let wait = start_child_wait pid notifier stdout stderr in
     ownership.child_wait <- Some wait;
-    Signal_restore.restore deferred_signals;
     {payload; process; pid; child_wait = wait}
-  with exn -> fail_launch ownership deferred_signals exn
+  with exn -> fail_launch ownership exn
 
-let wait_for_running ~poll ?(defer_signals = true) notifier active =
+let wait_for_running ~poll notifier active =
   let rec find_completed = function
     | [] -> None
     | (child : _ running) :: rest -> (
@@ -347,9 +323,7 @@ let wait_for_running ~poll ?(defer_signals = true) notifier active =
   in
   let rec wait generation =
     match find_completed active with
-    | Some (child, Ok result) ->
-      let deferred_signals = Signal_restore.create ~defer:defer_signals in
-      ((child, result), deferred_signals)
+    | Some (child, Ok result) -> (child, result)
     | Some (_, Error exn) -> raise exn
     | None ->
       poll ();

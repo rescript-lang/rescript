@@ -65,32 +65,17 @@ let process_is_active ?poll value =
       with Process.Error _ | Unix.Unix_error _ | Sys_error _ -> None)
 
 let with_candidate ~lock_dir prefix pid action =
-  (* Termination is deferred until candidate cleanup has an owner because the
-     watcher's signal handlers raise asynchronous exceptions. Without this
-     protected setup, a signal could leave the temporary file or its output
-     channel behind between two otherwise ordinary OCaml expressions. *)
-  let deferred_signals = Signal_restore.create ~defer:true in
-  let candidate = ref None in
-  let channel = ref None in
-  try
-    let path, output =
-      Filename.open_temp_file ~temp_dir:lock_dir prefix ".tmp"
-    in
-    candidate := Some path;
-    channel := Some output;
-    output_string output pid;
-    close_out output;
-    channel := None;
-    Fun.protect
-      ~finally:(fun () -> File_util.remove_file_best_effort path)
-      (fun () ->
-        Signal_restore.restore deferred_signals;
-        action path)
-  with exception_raised ->
-    Option.iter close_out_noerr !channel;
-    Option.iter File_util.remove_file_best_effort !candidate;
-    raise
-      (Signal_restore.exception_after_restore deferred_signals exception_raised)
+  let path, output = Filename.open_temp_file ~temp_dir:lock_dir prefix ".tmp" in
+  Fun.protect
+    ~finally:(fun () -> File_util.remove_file_best_effort path)
+    (fun () ->
+      (try
+         output_string output pid;
+         close_out output
+       with exn ->
+         close_out_noerr output;
+         raise exn);
+      action path)
 
 let clear_stale ?poll ~candidate ~pid path =
   let takeover = path ^ ".takeover" in
@@ -126,22 +111,10 @@ let release lock =
     release_owned lock.path lock.pid;
     lock.released <- true)
 
-let attempt_link ~candidate ~path ~pid =
-  let deferred_signals = Signal_restore.create ~defer:true in
-  let linked =
-    try publish ~candidate ~path ~contents:pid
-    with exception_raised ->
-      raise
-        (Signal_restore.exception_after_restore deferred_signals
-           exception_raised)
-  in
-  (linked, deferred_signals)
-
-let with_acquired ~candidate ~path ~pid ~deferred_signals action =
+let with_acquired ~candidate ~path ~pid action =
   let lock = {path; pid; released = false} in
   match
-    Signal_restore.protect deferred_signals (fun () ->
-        unlink_existing candidate);
+    unlink_existing candidate;
     action lock
   with
   | result ->
@@ -169,12 +142,10 @@ let with_build ?(poll = fun () -> ()) root action =
           raise
             (Project_context.Error
                "Timed out waiting for another ReScript build to finish");
-        let linked, deferred_signals = attempt_link ~candidate ~path ~pid in
-        if linked then
-          with_acquired ~candidate ~path ~pid ~deferred_signals (fun lock ->
+        if publish ~candidate ~path ~contents:pid then
+          with_acquired ~candidate ~path ~pid (fun lock ->
               action ~release:(fun () -> release lock))
-        else (
-          Signal_restore.restore deferred_signals;
+        else
           match read_owner path with
           | Some "" when being_written path ->
             retry_delay poll;
@@ -190,7 +161,7 @@ let with_build ?(poll = fun () -> ()) root action =
           | _ ->
             if not (clear_stale ~poll ~candidate ~pid path) then
               retry_delay poll;
-            acquire (attempts - 1))
+            acquire (attempts - 1)
       in
       acquire 1200)
 
@@ -205,12 +176,9 @@ let with_watch root action =
           raise
             (Project_context.Error
                "Timed out recovering a stale ReScript watch lock");
-        let linked, deferred_signals = attempt_link ~candidate ~path ~pid in
-        if linked then
-          with_acquired ~candidate ~path ~pid ~deferred_signals (fun _ ->
-              action {path; pid})
-        else (
-          Signal_restore.restore deferred_signals;
+        if publish ~candidate ~path ~contents:pid then
+          with_acquired ~candidate ~path ~pid (fun _ -> action {path; pid})
+        else
           match read_owner path with
           | Some "" when being_written path ->
             ignore (Unix.select [] [] [] 0.01);
@@ -227,7 +195,7 @@ let with_watch root action =
           | _ ->
             if not (clear_stale ~candidate ~pid path) then
               ignore (Unix.select [] [] [] 0.01);
-            acquire (attempts - 1))
+            acquire (attempts - 1)
       in
       acquire 1000)
 

@@ -11,8 +11,6 @@ type fallback = {
   snapshot: Watch_snapshot.entry list;
 }
 
-let with_signal_handlers = Signal_restore.with_termination_handlers
-
 let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     ~filter ~clear_screen ~show_progress ~verbosity ~build ~watch_lock =
   let stop_requested = Atomic.make false in
@@ -248,7 +246,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
           native_reconcile watcher new_scope baseline
         else native_loop watcher new_scope symlink_targets registered_snapshot)
   in
-  with_signal_handlers
+  Termination_signals.with_handlers
     (fun _ -> stop ())
     (fun () ->
       let scope = Watch_scope.discover ~root ~prod ~features ~filter in
