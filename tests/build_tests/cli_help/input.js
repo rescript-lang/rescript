@@ -96,9 +96,16 @@ const compilerArgsHelp =
  * @param {{ stdout: string; stderr: string; status: number; }} expected
  */
 async function test(params, expected) {
-  const out = await rescript("", params);
-  const stdout = normalizeNewlines(stripVTControlCharacters(out.stdout));
-  const stderr = normalizeNewlines(stripVTControlCharacters(out.stderr));
+  // A color-capable TERM makes Cmdliner style its output. The streams are
+  // pipes, so the CLI must still write plain text, as clap does.
+  const env = { ...process.env, TERM: "xterm" };
+  delete env.NO_COLOR;
+  delete env.CLICOLOR_FORCE;
+  const out = await rescript("", params, { env });
+  assert.equal(stripVTControlCharacters(out.stdout), out.stdout);
+  assert.equal(stripVTControlCharacters(out.stderr), out.stderr);
+  const stdout = normalizeNewlines(out.stdout);
+  const stderr = normalizeNewlines(out.stderr);
 
   // Cmdliner intentionally renders man-page-style help rather than clap's
   // table layout. Keep the Rust snapshots exact, while checking the same
@@ -139,6 +146,14 @@ async function test(params, expected) {
         stdout.includes(fragment),
         `Missing ${fragment} in:\n${stdout}`,
       );
+    }
+    if (command === undefined) {
+      // The documented exit statuses are the ones the CLI actually uses.
+      assert.match(
+        stdout,
+        /EXIT STATUS[\s\S]*\b2\s+on command-line usage errors/,
+      );
+      assert.doesNotMatch(stdout, /\b12[345]\b/);
     }
     assert.equal(stderr, "");
     assert.equal(out.status, 0);

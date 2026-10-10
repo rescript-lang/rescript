@@ -113,6 +113,35 @@ let colors_enabled_with ~getenv ~win32 ~interactive =
   (terminal_supports_color && nonzero "CLICOLOR" true)
   || nonzero "CLICOLOR_FORCE" false
 
+(* Removes SGR sequences (ESC [ parameters m), the only escapes Cmdliner
+   writes into its diagnostics. *)
+let strip_sgr text =
+  let length = String.length text in
+  let buffer = Buffer.create length in
+  let rec sequence_end index =
+    if index >= length then None
+    else
+      match text.[index] with
+      | '0' .. '9' | ';' -> sequence_end (index + 1)
+      | 'm' -> Some (index + 1)
+      | _ -> None
+  in
+  let rec copy index =
+    if index < length then
+      if text.[index] = '\027' && index + 1 < length && text.[index + 1] = '['
+      then (
+        match sequence_end (index + 2) with
+        | Some next -> copy next
+        | None ->
+          Buffer.add_char buffer text.[index];
+          copy (index + 1))
+      else (
+        Buffer.add_char buffer text.[index];
+        copy (index + 1))
+  in
+  copy 0;
+  Buffer.contents buffer
+
 let colors_enabled ~interactive =
   colors_enabled_with ~getenv:Sys.getenv_opt
     ~win32:Platform.terminal_supports_color_without_term ~interactive

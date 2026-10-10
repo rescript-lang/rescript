@@ -7,6 +7,16 @@ let environment values name = List.assoc_opt name values
 let tests =
   "output_tests" >:: fun _context ->
   check
+    (Output.strip_sgr
+       "Usage: \027[01mrescript build\027[m [\027[04mOPTION\027[m]\n\
+        rescript: \027[31munknown\027[m option"
+    = "Usage: rescript build [OPTION]\nrescript: unknown option")
+    "SGR styling is removed from captured diagnostics";
+  check
+    (Output.strip_sgr "\027[2K\rkeep \027[ unterminated \027"
+    = "\027[2K\rkeep \027[ unterminated \027")
+    "other escapes and incomplete sequences are kept";
+  check
     (Output.cleanup_message ~color:false ~step:"1/3" ~cleaned:2 ~total:5
        ~seconds:1.5
     = Printf.sprintf "\027[2K\r[1/3] %sCleaned 2/5 in 1.50s"

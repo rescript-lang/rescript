@@ -25,6 +25,7 @@ val colors_enabled_with :
   getenv:(string -> string option) -> win32:bool -> interactive:bool -> bool
 
 val colors_enabled : interactive:bool -> bool
+val strip_sgr : string -> string
 
 val cleanup_message :
   color:bool ->
