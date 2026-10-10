@@ -74,6 +74,8 @@ jobs:
             dune-profile: release
 
           # Verify that the compiler still builds with the oldest OCaml version we support.
+          # Steps comparing OCaml and Rust rewatch are skipped on this job; the
+          # first linux-x64 job runs them.
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
             node-target: linux-x64
@@ -213,6 +215,7 @@ jobs:
         shell: bash
 
       - name: Run OCaml rewatch parity tests
+        if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
         timeout-minutes: 20
         run: |
           bash rewatch-ocaml/tests/check_canonical_test_coverage.sh
@@ -237,6 +240,7 @@ jobs:
         shell: bash
 
       - name: Run OCaml rewatch verbose output tests
+        if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
         timeout-minutes: 10
         run: |
           bash rewatch-ocaml/tests/check_verbose_output.sh \
@@ -264,6 +268,7 @@ jobs:
         shell: bash
 
       - name: Run Rust rewatch reference tests
+        if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
         run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe
         shell: bash
 
