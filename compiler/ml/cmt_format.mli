@@ -15,19 +15,16 @@
 
 (** cmt and cmti files format. *)
 
-(** The layout of a cmt file is as follows:
-      <cmt> := \{<cmi>\} <cmt magic> \{cmt infos\} \{<source info>\}
+(** The layout of a cmt or cmti file is as follows:
+      <cmt> := \{<cmi>\} <cmt magic> \{cmt infos\}
     where <cmi> is the cmi file format:
       <cmi> := <cmi magic> <cmi info>.
-    More precisely, the optional <cmi> part must be present if and only if
-    the file is:
-    - a cmti, or
-    - a cmt, for a ml file which has no corresponding mli (hence no
-    corresponding cmti).
+    The compiler no longer writes the optional <cmi> part: the signature is
+    read from the .cmi file. Files written by older compilers have it in a
+    cmti, and in the cmt of a module without an interface.
 
-    Thus, we provide a common reading function for cmi and cmt(i)
-    files which returns an option for each of the three parts: cmi
-    info, cmt info, source info. *)
+    [read] accepts cmi, cmt and cmti files, with or without the <cmi> part,
+    and returns an option for the cmi info and the cmt info. *)
 
 open Typedtree
 
