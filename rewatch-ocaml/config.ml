@@ -101,6 +101,12 @@ let load path =
     | Sys_error message -> fail_read path (strip_read_path path message)
     | Unix.Unix_error (error, _, _) -> fail_read path (Unix.error_message error)
   in
+  (match Strict_json.check contents with
+  | Ok () -> ()
+  | Error {line; column; message} ->
+    raise
+      (Error
+         (Printf.sprintf "%s:%d:%d: invalid JSON: %s" path line column message)));
   let json =
     try Yojson.Safe.from_string contents
     with Yojson.Json_error message -> fail path ("invalid JSON: " ^ message)
