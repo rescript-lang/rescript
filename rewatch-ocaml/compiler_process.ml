@@ -158,8 +158,8 @@ let compile_job ~bsc ~build_dir ~(config : Config.t) ~common_args
   in
   Process.{program = bsc; args; cwd = build_dir}
 
-let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~source_kind
-    path result =
+let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~has_interface
+    ~source_kind path result =
   let stderr =
     if is_local then result.Process.stderr
     else retain_critical_external_warnings result.stderr
@@ -168,11 +168,21 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~source_kind
   let artifact_dir = Filename.concat build_dir (Filename.dirname path) in
   let cmi_change = ref Compiler_scheduler.Cmi_change_unknown in
   try
-    cmi_change :=
-      publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
-        (match source_kind with
-        | Source.Interface -> [Cmi; Optional "cmti"]
-        | Source.Implementation -> [Cmi; Required "cmj"; Optional "cmt"]);
+    (cmi_change :=
+       match source_kind with
+       | Source.Interface ->
+         publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
+           [Cmi; Optional "cmti"]
+       | Source.Implementation when has_interface ->
+         (* The implementation is compiled with -bs-read-cmi, so its .cmi is
+           the one already published after compiling the interface. *)
+         ignore
+           (publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
+              [Required "cmj"; Optional "cmt"]);
+         Compiler_scheduler.Cmi_unchanged
+       | Source.Implementation ->
+         publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
+           [Cmi; Required "cmj"; Optional "cmt"]);
     let source = Filename.concat config.root path in
     let build_source = Filename.concat build_dir path in
     File_util.ensure_dir (Filename.dirname build_source);

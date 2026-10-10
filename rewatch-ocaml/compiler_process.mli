@@ -33,6 +33,7 @@ val publish :
   ocaml_dir:string ->
   is_local:bool ->
   config:Config.t ->
+  has_interface:bool ->
   source_kind:Source.source_kind ->
   string ->
   Process.result ->
