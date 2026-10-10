@@ -1,5 +1,13 @@
 type t
-(** Reporting owns presentation state independently of build execution. This
+
+(** Which output a build reports: watch builds print a completion line, and
+    incremental rebuilds skip the cleanup phase. *)
+type kind =
+  | One_shot
+  | Initial_watch
+  | Incremental_watch
+  | Full_watch
+      (** Reporting owns presentation state independently of build execution. This
     keeps terminal progress, timing, and final diagnostics from influencing
     cleanup or retained-state transitions. *)
 
@@ -9,7 +17,7 @@ val create :
   show_progress:bool ->
   colors:bool ->
   no_timing:bool ->
-  compilation_kind:Build_attempt.compilation_kind ->
+  kind:kind ->
   attempt:Build_attempt.t ->
   t
 

@@ -1,11 +1,5 @@
 type freshness_mode = Initialize_freshness | Reuse_freshness
 
-type compilation_kind =
-  | One_shot
-  | Initial_watch
-  | Incremental_watch
-  | Full_watch
-
 type parse_message = Parse_warning of string | Parse_error of string
 
 let has_parse_error messages =

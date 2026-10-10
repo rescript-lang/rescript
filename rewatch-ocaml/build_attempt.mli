@@ -4,15 +4,6 @@
 
 type freshness_mode = Initialize_freshness | Reuse_freshness
 
-(** The compilation kind makes output and recovery policy explicit. In
-    particular, an initial watch build cannot assume that retained freshness
-    has already been initialized. *)
-type compilation_kind =
-  | One_shot
-  | Initial_watch
-  | Incremental_watch
-  | Full_watch
-
 type parse_message = Parse_warning of string | Parse_error of string
 val has_parse_error : parse_message list -> bool
 

@@ -1,35 +1,29 @@
+type kind = One_shot | Initial_watch | Incremental_watch | Full_watch
+
 type t = {
   started_at: float;
   interactive: bool;
   show_progress: bool;
   colors: bool;
   no_timing: bool;
-  compilation_kind: Build_attempt.compilation_kind;
+  kind: kind;
   attempt: Build_attempt.t;
 }
 
-let create ~started_at ~interactive ~show_progress ~colors ~no_timing
-    ~compilation_kind ~attempt =
-  {
-    started_at;
-    interactive;
-    show_progress;
-    colors;
-    no_timing;
-    compilation_kind;
-    attempt;
-  }
+let create ~started_at ~interactive ~show_progress ~colors ~no_timing ~kind
+    ~attempt =
+  {started_at; interactive; show_progress; colors; no_timing; kind; attempt}
 
 let compile_step report =
-  match report.compilation_kind with
-  | Build_attempt.Incremental_watch -> "2/2"
+  match report.kind with
+  | Incremental_watch -> "2/2"
   | _ -> "3/3"
 
 let output_kind report =
-  match report.compilation_kind with
-  | Build_attempt.Initial_watch -> Output.Initial
-  | Build_attempt.Incremental_watch -> Output.Incremental
-  | Build_attempt.One_shot | Build_attempt.Full_watch -> Output.Standard
+  match report.kind with
+  | Initial_watch -> Output.Initial
+  | Incremental_watch -> Output.Incremental
+  | One_shot | Full_watch -> Output.Standard
 
 let prepare report ~success ~compile_seconds =
   let attempt = report.attempt in
@@ -46,18 +40,17 @@ let prepare report ~success ~compile_seconds =
              ~step:(compile_step report) ~count:attempt.compiled
              ~seconds:compile_seconds)
     else (
-      (match report.compilation_kind with
-      | Build_attempt.One_shot | Build_attempt.Initial_watch
-      | Build_attempt.Full_watch ->
+      (match report.kind with
+      | One_shot | Initial_watch | Full_watch ->
         Printf.printf "Cleaned %d/%d\n%!" attempt.cleaned attempt.previous_asts
-      | Build_attempt.Incremental_watch -> ());
+      | Incremental_watch -> ());
       Printf.printf "Parsed %d source files\n%!" attempt.parsed;
       if success then Printf.printf "Compiled %d modules\n%!" attempt.compiled
       else Printf.eprintf "Compiled %d modules\n%!" attempt.compiled);
   let diagnostics =
-    match report.compilation_kind with
-    | Build_attempt.Incremental_watch | Build_attempt.Full_watch -> []
-    | Build_attempt.One_shot | Build_attempt.Initial_watch ->
+    match report.kind with
+    | Incremental_watch | Full_watch -> []
+    | One_shot | Initial_watch ->
       attempt.diagnostics |> List.rev |> List.sort_uniq String.compare
   in
   let warning_entries =
@@ -88,14 +81,12 @@ let report_completion report diagnostics =
                 (Build_session.warning_state report.attempt.session)
               <> [])
          ~seconds)
-  else if
-    report.compilation_kind <> Build_attempt.One_shot && report.show_progress
-  then
+  else if report.kind <> One_shot && report.show_progress then
     Printf.printf "Finished %scompilation\n%!"
-      (match report.compilation_kind with
-      | Build_attempt.Initial_watch -> "initial "
-      | Build_attempt.Incremental_watch -> "incremental "
-      | Build_attempt.One_shot | Build_attempt.Full_watch -> "")
+      (match report.kind with
+      | Initial_watch -> "initial "
+      | Incremental_watch -> "incremental "
+      | One_shot | Full_watch -> "")
 
 let report report ~success ~compile_seconds =
   let diagnostics = prepare report ~success ~compile_seconds in
@@ -109,18 +100,15 @@ let report_parse_failure report ~output =
      prerr_endline
        (Output.parsing_failed_message ~color:report.colors
           ~step:
-            (match report.compilation_kind with
-            | Build_attempt.Incremental_watch -> "1/2"
-            | Build_attempt.One_shot | Build_attempt.Initial_watch
-            | Build_attempt.Full_watch ->
-              "2/3")
+            (match report.kind with
+            | Incremental_watch -> "1/2"
+            | One_shot | Initial_watch | Full_watch -> "2/3")
           ~seconds:
             (if report.no_timing then 0. else report.attempt.parse_seconds))
    else if report.show_progress then
-     match report.compilation_kind with
-     | Build_attempt.One_shot | Build_attempt.Initial_watch
-     | Build_attempt.Full_watch ->
+     match report.kind with
+     | One_shot | Initial_watch | Full_watch ->
        Printf.printf "Cleaned %d/%d\n%!" report.attempt.cleaned
          report.attempt.previous_asts
-     | Build_attempt.Incremental_watch -> ());
+     | Incremental_watch -> ());
   prerr_endline output
