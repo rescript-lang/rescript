@@ -94,8 +94,9 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
         groups = [];
       } (fun (original_export_id : Ident.t) (lam : Lambda.t) (acc : t) ->
         let original_name = original_export_id.name in
-        if not @@ Hash_set_string.check_add tbl original_name then
+        if Hash_set_string.mem tbl original_name then
           Bs_exception.error (Bs_duplicate_exports original_name);
+        Hash_set_string.add tbl original_name ();
         match lam with
         | Lvar id ->
           if Ident.name id = original_name then

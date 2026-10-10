@@ -38,4 +38,11 @@ val of_ml : ?dynamic_import:bool -> Ident.t -> t
 val of_runtime : Ident.t -> t
 
 module Hash : Hashtbl.S with type key = t
-module Hash_set : Hash_set_gen.S with type key = t
+module Hash_set = Hash
+
+val set_add : unit Hash_set.t -> t -> unit
+(** Adds a module unless an equal one is present. The first key is kept since
+    it carries the id the module is bound to. *)
+
+val compare_same_name : t -> t -> int
+(** Orders modules with the same [name]: by kind, then by [default] *)

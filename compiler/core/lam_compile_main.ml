@@ -242,12 +242,12 @@ let js_hoisted_aliases (export_ids : Ident.t list)
 (** Actually simplify_lets is kind of global optimization since it requires you to know whether
     it's used or not
 *)
-let required_modules (lam : Lambda.t) : Lam_module_ident.Hash_set.t =
+let required_modules (lam : Lambda.t) : unit Lam_module_ident.Hash_set.t =
   let required = Lam_module_ident.Hash_set.create 0 in
   let rec collect (lam : Lambda.t) =
     (match lam with
     | Lglobal_module id ->
-      Lam_module_ident.Hash_set.add required (Lam_module_ident.of_ml id)
+      Lam_module_ident.set_add required (Lam_module_ident.of_ml id)
     | _ -> ());
     Lambda_traverse.iter collect lam
   in
@@ -407,11 +407,18 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
     else
       let hard_deps = Js_fold_basic.calculate_hard_dependencies program.block in
       Lam_compile_env.populate_required_modules may_required_modules hard_deps;
-      Ext_list.sort_via_array (Lam_module_ident.Hash_set.to_list hard_deps)
+      Ext_list.sort_via_array
+        (Lam_module_ident.Hash_set.fold
+           (fun id () acc -> id :: acc)
+           hard_deps [])
         (fun id1 id2 ->
-          Ext_string.compare
-            (Lam_module_ident.name id1)
-            (Lam_module_ident.name id2))
+          match
+            Ext_string.compare
+              (Lam_module_ident.name id1)
+              (Lam_module_ident.name id2)
+          with
+          | 0 -> Lam_module_ident.compare_same_name id1 id2
+          | c -> c)
   in
   Warnings.check_fatal ();
   let effect_ =
