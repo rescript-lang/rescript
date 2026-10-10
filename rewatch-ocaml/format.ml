@@ -91,21 +91,10 @@ let files_in_scope ~verbosity =
            (Printf.sprintf "Could not read rescript.json at %s: %s"
               current_directory message))
   in
-  let listed_by_parent =
-    match
-      Project_context.nearest_config_path (Filename.dirname current.root)
-    with
-    | None -> false
-    | Some path ->
-      let parent = Config.load path in
-      List.exists
-        (fun (dependency : Config.dependency) -> dependency.name = current.name)
-        (Package_traversal.requests ~prod:false ~is_local:true parent
-        |> List.map (fun request -> request.Package_traversal.declaration))
-  in
+  let workspace = Project_context.workspace_config_for current in
+  let listed_by_parent = workspace.root <> current.root in
   Output.debug ~channel:stderr ~verbosity
-    (Project_context.describe current
-       ~workspace:(Project_context.workspace_config_for current));
+    (Project_context.describe current ~workspace);
   let resolution, packages = discover_package_graph current in
   let roots_in_scope =
     if listed_by_parent then [current.root]
