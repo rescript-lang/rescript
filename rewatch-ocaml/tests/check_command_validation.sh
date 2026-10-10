@@ -1835,9 +1835,11 @@ terminate_and_wait "$missing_dependency_watch_pid" \
   "missing-dependency watcher"
 if $windows_posix_shell; then
   # MSYS cannot deliver the graceful console event that lets a native watcher
-  # remove its lock. Its external termination intentionally leaves a stale
-  # watch lock, so remove that harness artifact before checking failure paths.
-  rm -f "$work/missing-dependency/lib/watch.lock"
+  # remove its locks. Its external termination intentionally leaves a stale
+  # watch lock, and a build lock if the rebuild was still finishing, so remove
+  # those harness artifacts before checking failure paths.
+  rm -f "$work/missing-dependency/lib/watch.lock" \
+    "$work/missing-dependency/lib/build.lock"
 fi
 printf '{"name":"missing-dependency","sources":["src"],"dependencies":["absent"]}\n' \
   >"$work/missing-dependency/rescript.json"
