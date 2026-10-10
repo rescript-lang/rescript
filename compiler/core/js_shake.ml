@@ -22,57 +22,53 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(** we also need make it complete 
-*)
-let get_initial_exports count_non_variable_declaration_statement
-    (export_set : Set_ident.t) (block : J.block) =
-  let result =
-    Ext_list.fold_left block export_set (fun acc st ->
-        match st.statement_desc with
-        | Variable {ident; value; _} -> (
-          if Set_ident.mem acc ident then
-            match value with
-            | None -> acc
-            | Some x ->
-              (* If not a function, we have to calcuate again and again
-                  TODO: add hashtbl for a cache
-              *)
-              Set_ident.(union (Js_analyzer.free_variables_of_expression x) acc)
-          else
-            match value with
-            | None -> acc
-            | Some x ->
-              if Js_analyzer.no_side_effect_expression x then acc
-              else
-                Set_ident.(
-                  union
-                    (Js_analyzer.free_variables_of_expression x)
-                    (add acc ident)))
-        | _ ->
-          (* recalcuate again and again ... *)
-          if
-            Js_analyzer.no_side_effect_statement st
-            || not count_non_variable_declaration_statement
-          then acc
-          else
-            Set_ident.(union (Js_analyzer.free_variables_of_statement st) acc))
+(** The identifiers that the toplevel [block] needs: the exports, everything a
+    statement with side effects refers to, and transitively the free variables
+    of the initializers of needed declarations. Each initializer's free
+    variables are computed once, and a worklist follows the dependencies. *)
+let live_idents (export_set : Set_ident.t) (block : J.block) : Set_ident.t =
+  (* free variables of the initializer of each toplevel declaration *)
+  let deps = Hash_ident.create 64 in
+  let live = ref Set_ident.empty in
+  let worklist = ref [] in
+  let mark id =
+    if not (Set_ident.mem !live id) then (
+      live := Set_ident.add !live id;
+      worklist := id :: !worklist)
   in
-  (result, Set_ident.(diff result export_set))
+  Ext_list.iter block (fun (st : J.statement) ->
+      match st.statement_desc with
+      | Variable {ident; value = Some x; _} ->
+        let fv = Js_analyzer.free_variables_of_expression x in
+        let fv =
+          match Hash_ident.find_opt deps ident with
+          | None -> fv
+          | Some other -> Set_ident.union fv other
+        in
+        Hash_ident.replace deps ident fv;
+        if not (Js_analyzer.no_side_effect_expression x) then mark ident
+      | Variable {value = None; _} -> ()
+      | _ ->
+        if not (Js_analyzer.no_side_effect_statement st) then
+          Set_ident.iter (Js_analyzer.free_variables_of_statement st) mark);
+  Set_ident.iter export_set mark;
+  let rec drain () =
+    match !worklist with
+    | [] -> ()
+    | id :: rest ->
+      worklist := rest;
+      (match Hash_ident.find_opt deps id with
+      | Some fv -> Set_ident.iter fv mark
+      | None -> ());
+      drain ()
+  in
+  drain ();
+  !live
 
 let shake_program (program : J.program) =
   let shake_block block export_set =
     let block = List.rev @@ Js_analyzer.rev_toplevel_flatten block in
-    let loop block export_set : Set_ident.t =
-      let rec aux acc block =
-        let result, diff = get_initial_exports false acc block in
-        if Set_ident.is_empty diff then result else aux result block
-      in
-      let first_iteration, delta = get_initial_exports true export_set block in
-      if not @@ Set_ident.is_empty delta then aux first_iteration block
-      else first_iteration
-    in
-
-    let really_set = loop block export_set in
+    let really_set = live_idents export_set block in
     Ext_list.fold_right block [] (fun (st : J.statement) acc ->
         match st.statement_desc with
         | Variable {ident; value; _} -> (
