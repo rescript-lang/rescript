@@ -415,12 +415,15 @@ let compile output_prefix =
             ~return_unit ~async ~one_unit_arg ?directive
             ~immutable_mask:ret.immutable_mask
             (Ext_list.map params (fun x ->
-                 Map_ident.find_default ret.new_params x x))
+                 match Map_ident.find_opt x ret.new_params with
+                 | Some y -> y
+                 | None -> x))
             [
               S.while_ E.true_
-                (Map_ident.fold ret.new_params body_block
+                (Map_ident.fold
                    (fun old new_param acc ->
-                     S.define_variable ~kind:Alias old (E.var new_param) :: acc));
+                     S.define_variable ~kind:Alias old (E.var new_param) :: acc)
+                   ret.new_params body_block);
             ]
         else
           (* TODO:  save computation of length several times *)
@@ -1579,18 +1582,17 @@ let compile output_prefix =
                 (i + 1, assigns, new_params)
               | _ ->
                 let new_param, m =
-                  match Map_ident.find_opt ret.new_params param with
+                  match Map_ident.find_opt param ret.new_params with
                   | None ->
                     ret.immutable_mask.(i) <- false;
                     let v = Ext_ident.create ("_" ^ param.name) in
-                    (v, Map_ident.add new_params param v)
+                    (v, Map_ident.add param v new_params)
                   | Some v -> (v, new_params)
                 in
                 (i + 1, (new_param, arg) :: assigns, m))
         in
         ret.new_params <-
-          Map_ident.disjoint_merge_exn new_params ret.new_params (fun _ _ _ ->
-              assert false);
+          Map_ident.union (fun _ _ _ -> assert false) new_params ret.new_params;
         let block =
           Ext_list.map_append assigned_params
             [S.continue_ ()]

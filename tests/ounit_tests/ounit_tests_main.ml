@@ -6,7 +6,6 @@ let suites =
       Ounit_scc_tests.suites;
       Ounit_list_test.suites;
       Ounit_hash_stubs_test.suites;
-      Ounit_map_tests.suites;
       Ounit_hashtbl_tests.suites;
       Ounit_string_tests.suites;
       Ounit_string_literal_tests.suites;

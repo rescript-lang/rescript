@@ -197,15 +197,4 @@ let suites =
            Ext_string.split "" ':' =~ [];
            Ext_string.split "a:b:" ':' =~ ["a"; "b"];
            Ext_string.split "a:b:" ':' ~keep_empty:true =~ ["a"; "b"; ""] );
-         ( __LOC__ >:: fun _ ->
-           let cmp0 = Ext_string.compare in
-           let cmp1 = Map_string.compare_key in
-           let f a b =
-             cmp0 a b =~ cmp1 a b;
-             cmp0 b a =~ cmp1 b a
-           in
-           f "a" "A";
-           f "bcdef" "abcdef";
-           f "" "A";
-           f "Abcdef" "abcdef" );
        ]
