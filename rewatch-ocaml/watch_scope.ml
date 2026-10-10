@@ -60,15 +60,16 @@ let is_same_or_below ~directory path =
   path = directory
   || String.starts_with ~prefix:(descendant_prefix directory) path
 
+(* The source's own directory, or any directory below it when it recurses. *)
+let source_covers source path =
+  let path = comparable_path path in
+  let directory = comparable_path source.directory in
+  path = directory
+  || source.recursive
+     && String.starts_with ~prefix:(descendant_prefix directory) path
+
 let path_is_in_source_tree scope path =
-  List.exists
-    (fun source ->
-      let path = comparable_path path in
-      let directory = comparable_path source.directory in
-      path = directory
-      || source.recursive
-         && String.starts_with ~prefix:(descendant_prefix directory) path)
-    scope.sources
+  List.exists (fun source -> source_covers source path) scope.sources
 
 let path_is_source_ancestor scope path =
   List.exists
@@ -236,16 +237,7 @@ let path_in_scope scope path =
     Option.is_some (Source.source_kind path)
     && List.exists
          (fun source ->
-           let source_directory = comparable_path source.directory in
-           let file_directory = comparable_path (Filename.dirname path) in
-           let in_directory =
-             file_directory = source_directory
-             || source.recursive
-                && String.starts_with
-                     ~prefix:(descendant_prefix source_directory)
-                     file_directory
-           in
-           in_directory
+           source_covers source (Filename.dirname path)
            && Option.fold ~none:true
                 ~some:(fun filter -> Source_filter.matches_basename filter path)
                 source.filter)
