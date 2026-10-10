@@ -307,14 +307,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
   in
   let build_lock_root = Project_context.workspace_lock_root_for root_config in
   Output.debug ~verbosity
-    (if build_lock_root = root_config.root then
-       Printf.sprintf "Created project context for %S at %S" root_config.name
-         root_config.path
-     else
-       Printf.sprintf
-         "Created project context for monorepo package %S at %S with parent \
-          workspace at %S"
-         root_config.name root_config.path build_lock_root);
+    (Project_context.describe root_config ~workspace_root:build_lock_root);
   let visited = Hashtbl.create 32 in
   let attempt : Build_attempt.t =
     match previous_build request with

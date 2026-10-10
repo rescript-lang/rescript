@@ -3,7 +3,7 @@ type command =
   | Clean of {verbosity: int; folder: string; prod: bool}
   | Watch of build_options
   | Format of format_input
-  | Compiler_args of string
+  | Compiler_args of {verbosity: int; path: string}
 
 and build_options = {
   verbosity: int;
@@ -19,7 +19,7 @@ and build_options = {
 
 and format_input =
   | Format_stdin of string
-  | Format_files of {check: bool; paths: string list}
+  | Format_files of {verbosity: int; check: bool; paths: string list}
 
 type evaluation = Run of command | Exit of int
 

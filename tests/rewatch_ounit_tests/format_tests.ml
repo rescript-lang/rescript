@@ -59,7 +59,7 @@ let tests =
             | None -> Test_support.unsetenv "RESCRIPT_BSC_EXE")
           (fun () ->
             try
-              Format.run_files ~check:false [];
+              Format.run_files ~verbosity:0 ~check:false [];
               None
             with Format.Error message -> Some message)
       in
@@ -147,7 +147,7 @@ let tests =
           | None -> Test_support.unsetenv "REWATCH_FORMAT_INVENTORY_TEST_ROOT")
         (fun () ->
           Unix.chdir root;
-          Format.run_files ~check:true []);
+          Format.run_files ~verbosity:0 ~check:true []);
       check
         (Sys.file_exists (marker root_source))
         "implicit format includes the current package";

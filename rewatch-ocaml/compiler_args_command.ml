@@ -10,7 +10,7 @@ let runtime_path resolution package_root =
 let source_error path message =
   error (Printf.sprintf "Could not read source file %s: %s" path message)
 
-let run path =
+let run ~verbosity path =
   let source =
     try
       Filename.concat
@@ -32,6 +32,8 @@ let run path =
     | None -> error "could not find a rescript.json parent"
   in
   let root = Project_context.workspace_lock_root package_config.root in
+  Output.debug ~channel:stderr ~verbosity
+    (Project_context.describe package_config ~workspace_root:root);
   let root_config_path = Config.path_in_root root in
   let root_config =
     if root <> package_config.root && Config.exists_in_root root then

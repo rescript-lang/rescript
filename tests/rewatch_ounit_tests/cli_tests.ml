@@ -221,7 +221,9 @@ let tests =
     "format represents standard input independently from file inputs";
   check
     (match parse ["format"; "--check"; "A.res"] with
-    | Cli.Format (Cli.Format_files {check = true; paths = ["A.res"]}) -> true
+    | Cli.Format
+        (Cli.Format_files {verbosity = 0; check = true; paths = ["A.res"]}) ->
+      true
     | _ -> false)
     "format represents file inputs with their check mode";
   check (shows_help ["help"]) "the help command displays global help";

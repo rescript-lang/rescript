@@ -73,7 +73,7 @@ let discover_package_graph (current : Config.t) =
       in
       {config; files})
 
-let files_in_scope () =
+let files_in_scope ~verbosity =
   let current_directory = Sys.getcwd () in
   let current =
     try Config.load_root current_directory
@@ -95,6 +95,9 @@ let files_in_scope () =
         (Package_traversal.requests ~prod:false ~is_local:true parent
         |> List.map (fun request -> request.Package_traversal.declaration))
   in
+  Output.debug ~channel:stderr ~verbosity
+    (Project_context.describe current
+       ~workspace_root:(Project_context.workspace_lock_root_for current));
   let packages = discover_package_graph current in
   let resolution = Package_resolution.create current in
   let roots_in_scope =
@@ -223,7 +226,10 @@ let format_stdin ?poll extension =
     remove_temporary ();
     raise (Signal_restore.exception_after_restore deferred_signals exn)
 
-let run_files ?poll ~check paths =
+let run_files ?poll ~verbosity ~check paths =
   let bsc = bsc () in
-  let files = if paths = [] then files_in_scope () else paths in
+  let files = if paths = [] then files_in_scope ~verbosity else paths in
+  List.iter
+    (fun file -> Output.trace ~channel:stderr ~verbosity ("Formatting " ^ file))
+    files;
   format_files_with_bsc ?poll ~bsc ~check files

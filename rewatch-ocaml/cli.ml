@@ -3,7 +3,7 @@ type command =
   | Clean of {verbosity: int; folder: string; prod: bool}
   | Watch of build_options
   | Format of format_input
-  | Compiler_args of string
+  | Compiler_args of {verbosity: int; path: string}
 
 and build_options = {
   verbosity: int;
@@ -19,7 +19,7 @@ and build_options = {
 
 and format_input =
   | Format_stdin of string
-  | Format_files of {check: bool; paths: string list}
+  | Format_files of {verbosity: int; check: bool; paths: string list}
 
 open Cmdliner
 open Cmdliner.Term.Syntax
@@ -161,12 +161,12 @@ let format_term =
   in
   let files = Arg.(value & pos_all string [] & info [] ~docv:"FILES") in
   Term.term_result
-    (let+ _verbosity = verbosity and+ check and+ stdin and+ files in
+    (let+ verbosity = verbosity and+ check and+ stdin and+ files in
      match (check, stdin, files) with
      | true, Some _, _ -> Error (`Msg "--stdin conflicts with --check")
      | _, Some _, _ :: _ -> Error (`Msg "files conflict with --stdin")
      | _, Some extension, [] -> Ok (Format (Format_stdin extension))
-     | _, None, paths -> Ok (Format (Format_files {check; paths})))
+     | _, None, paths -> Ok (Format (Format_files {verbosity; check; paths})))
 
 let compiler_args_term =
   let path =
@@ -175,8 +175,8 @@ let compiler_args_term =
       & pos 0 (some string) None
       & info [] ~docv:"PATH" ~doc:"ReScript source file (.res or .resi).")
   in
-  let+ _verbosity = verbosity and+ path in
-  Compiler_args path
+  let+ verbosity = verbosity and+ path in
+  Compiler_args {verbosity; path}
 
 let exits =
   [

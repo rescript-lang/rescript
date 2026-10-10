@@ -80,6 +80,8 @@ These are intentional:
 - A failing `--after-build` command fails the build. On Unix, hooks inherit
   redirected stdin but not an interactive terminal, because they run in their
   own process group.
+- `format -v` and `compiler-args -v` write their logs to stderr, so stdout
+  remains formatted source or JSON. Rust writes them to stdout.
 - OpenTelemetry export is not implemented.
 
 ## Platforms

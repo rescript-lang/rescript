@@ -1,5 +1,5 @@
-val debug : verbosity:int -> string -> unit
-val trace : verbosity:int -> string -> unit
+val debug : ?channel:out_channel -> verbosity:int -> string -> unit
+val trace : ?channel:out_channel -> verbosity:int -> string -> unit
 val trace_enabled : int -> bool
 
 module Progress : sig

@@ -13,4 +13,5 @@ val format_files_with_bsc :
   unit
 
 val format_stdin : ?poll:(unit -> unit) -> string -> unit
-val run_files : ?poll:(unit -> unit) -> check:bool -> string list -> unit
+val run_files :
+  ?poll:(unit -> unit) -> verbosity:int -> check:bool -> string list -> unit

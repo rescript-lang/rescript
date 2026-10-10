@@ -1,1 +1,1 @@
-val run : string -> string
+val run : verbosity:int -> string -> string
