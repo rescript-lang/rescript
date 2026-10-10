@@ -16,9 +16,8 @@ let publication_tests _context =
         ["cmi"; "cmj"; "cmt"];
       File_util.ensure_dir (Filename.concat ocaml_dir "Ns.cmj");
       let namespace_task =
-        Compiler_process.namespace_task ~bsc:"unused" ~runtime:"unused"
-          ~build_dir ~ocaml_dir ~entry:None ~package_dirty:true ~force:false
-          "Ns" []
+        Compiler_process.namespace_task ~runtime:"unused" ~build_dir ~ocaml_dir
+          ~entry:None ~package_dirty:true ~force:false "Ns" []
         |> Option.get
       in
       let result =
@@ -52,18 +51,16 @@ let publication_tests _context =
         ["cmi"; "cmj"; "cmt"; "mlmap"];
       check
         (Option.is_some
-           (Compiler_process.namespace_task ~bsc:"unused" ~runtime:"unused"
-              ~build_dir ~ocaml_dir ~entry:None ~package_dirty:false
-              ~force:false "Ns" []))
+           (Compiler_process.namespace_task ~runtime:"unused" ~build_dir
+              ~ocaml_dir ~entry:None ~package_dirty:false ~force:false "Ns" []))
         "a published namespace map that differs from membership is rebuilt";
       Test_support.write_file
         (Filename.concat ocaml_dir "Ns.mlmap")
         "randjbuildsystem\n";
       check
         (Option.is_some
-           (Compiler_process.namespace_task ~bsc:"unused" ~runtime:"unused"
-              ~build_dir ~ocaml_dir ~entry:None ~package_dirty:false ~force:true
-              "Ns" []))
+           (Compiler_process.namespace_task ~runtime:"unused" ~build_dir
+              ~ocaml_dir ~entry:None ~package_dirty:false ~force:true "Ns" []))
         "retained namespace publication dirtiness forces a retry")
 
 let restore_environment name previous =
@@ -81,9 +78,8 @@ let domain_ppx_cancellation_test _context =
         ^ " --ppx-wait " ^ Filename.quote marker
       in
       let job =
-        Process.
+        Compiler_process.
           {
-            program = "<embedded compiler>";
             cwd = root;
             args =
               [
@@ -155,15 +151,14 @@ let domain_execution_test _context =
           let jobs =
             List.map
               (fun name ->
-                Process.
+                Compiler_process.
                   {
-                    program = "<embedded compiler>";
                     cwd = root;
                     args = ["-bs-ast"; "-o"; name ^ ".ast"; name ^ ".res"];
                   })
               ["First"; "Second"]
           in
-          let results = Compiler_process.run_jobs jobs in
+          let results = Compiler_process.run_requests jobs in
           List.iter
             (fun result -> check (Process.succeeded result) result.stderr)
             results;
@@ -180,9 +175,8 @@ let domain_execution_test _context =
           in
           let ppx_result =
             Compiler_process.run
-              Process.
+              Compiler_process.
                 {
-                  program = "<embedded compiler>";
                   cwd = root;
                   args =
                     [

@@ -30,9 +30,11 @@ export RESCRIPT_RUNTIME="$PWD/packages/@rescript/runtime"
 _build/default/rewatch-ocaml/rescript_ocaml.exe build path/to/project
 ```
 
-Builds use the embedded compiler, so `RESCRIPT_BSC_EXE` no longer affects
-them. Only `rescript format` still runs `bsc.exe` (found next to
-`rescript.exe`, or at `RESCRIPT_BSC_EXE`).
+Builds and `rescript format` use the embedded compiler, so
+`RESCRIPT_BSC_EXE` only affects Rust rewatch (`rescript-rust`). The
+`bsc.exe` next to `rescript.exe` is still recorded in
+`lib/bs/compiler-info.json`, where editor tooling looks for the platform
+binaries.
 
 Linux release builds use dune's `static` profile, so the published executable
 does not depend on the runner's libc. The version lives in

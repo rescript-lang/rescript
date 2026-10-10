@@ -5,7 +5,9 @@ type result = {
   cycle: Module_graph.cycle_info option;
 }
 
-let bsc_path () = "<embedded compiler>"
+let bundled_bsc_path () =
+  try Toolchain.bundled_bsc ~cwd:(Sys.getcwd ()) ~executable:Sys.executable_name
+  with Toolchain.Error message -> raise (Error message)
 
 let runtime_path root =
   try Toolchain.runtime ~find_package:(Project_context.dependency_path root)
@@ -13,7 +15,6 @@ let runtime_path root =
 
 let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     ~(attempt : Build_attempt.t) ~parse_step ~on_cleanup =
-  let bsc = bsc_path () in
   let workspace_config = Project_context.workspace_config_for root_config in
   let package_plans =
     Package_graph.discover ~root_config ~workspace_config ~prod ~features
@@ -23,7 +24,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   let runtime = runtime_path root_config.root in
   let source_map_args = Compiler_args.source_map_args workspace_config ~watch in
   let compiler_context =
-    Compiler_info.make_context ~compiler_path:bsc
+    Compiler_info.make_context ~compiler_path:(bundled_bsc_path ())
       ~compiler_identity:Compiler_process.build_identity ~runtime_path:runtime
       ~source_map_args
       ~inherited_compiler_args:
@@ -184,9 +185,9 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   let parse_results =
     parse_entries
     |> List.map (fun ((package : Package_plan.t), path, _) ->
-        Compiler_process.parse_job ~bsc ~build_dir:package.build_dir
+        Compiler_process.parse_request ~build_dir:package.build_dir
           ~config:package.compile_config path)
-    |> Compiler_process.run_jobs ?poll:attempt.process_poll
+    |> Compiler_process.run_requests ?poll:attempt.process_poll
          ~on_complete:parse_completed
   in
   let failed_parse_paths = Hashtbl.create 8 in

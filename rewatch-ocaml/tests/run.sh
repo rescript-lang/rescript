@@ -5,7 +5,6 @@ port="$1"
 port_directory=$(CDPATH= cd -- "$(dirname "$port")" && pwd)
 port="$port_directory/$(basename "$port")"
 root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
-: "${RESCRIPT_BSC_EXE:=$root/_build/default/compiler/bsc/rescript_compiler_main.exe}"
 : "${RESCRIPT_RUNTIME:=$root/packages/@rescript/runtime}"
 windows_posix_shell=false
 case $(uname -s) in
@@ -38,10 +37,9 @@ file_link_if_supported() {
   fi
 }
 if $windows_posix_shell; then
-  RESCRIPT_BSC_EXE=$(native_path "$RESCRIPT_BSC_EXE")
   RESCRIPT_RUNTIME=$(native_path "$RESCRIPT_RUNTIME")
 fi
-export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
+export RESCRIPT_RUNTIME
 work="$root/tmp/rewatch-ocaml/test-$$"
 mkdir -p "$work"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/basic"
@@ -494,11 +492,25 @@ for namespace_dependency_name in ns-one ns-two; do
     "$external_namespace/node_modules/$namespace_dependency_name"
 done
 
-if [ -x "$port_directory/bsc.exe" ]; then
-  env -u RESCRIPT_BSC_EXE "$port" build "$packaged_basic" \
-    >"$packaged_basic/build.log"
-  test -f "$packaged_basic/src/A.mjs"
-fi
+# Builds use the embedded compiler, but editor tooling finds bsc.exe and the
+# other platform binaries through compiler-info.json, so it must record the
+# bsc.exe shipped next to the executable.
+"$port" build "$packaged_basic" >"$packaged_basic/build.log"
+test -f "$packaged_basic/src/A.mjs"
+COMPILER_INFO=$(native_path "$packaged_basic/lib/bs/compiler-info.json") \
+  EXPECTED_BSC=$(native_path "$port_directory/bsc.exe") node -e '
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const info = JSON.parse(fs.readFileSync(process.env.COMPILER_INFO, "utf8"));
+  const expected = path.join(
+    fs.realpathSync(path.dirname(process.env.EXPECTED_BSC)),
+    "bsc.exe",
+  );
+  if (path.relative(info.bsc_path, expected) !== "") {
+    console.error(`compiler-info.json bsc_path ${info.bsc_path}, expected ${expected}`);
+    process.exit(1);
+  }
+'
 
 mkdir -p "$runtime_discovery/node_modules/@rescript/runtime"
 runtime_path=$(CDPATH= cd -- \

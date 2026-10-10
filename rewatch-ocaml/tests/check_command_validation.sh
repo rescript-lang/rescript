@@ -551,23 +551,17 @@ require_both_errors_contain() {
   fi
 }
 
+# Rust needs RESCRIPT_BSC_EXE to exist; OCaml builds and formats with the
+# embedded compiler and ignores it.
 run_missing_bsc_case() {
   name=$1
-  expected_ocaml=$2
-  shift 2
+  shift
   RESCRIPT_BSC_EXE="$work/missing-bsc" run_both "$@"
   if [ "$(classify "$rust_status")" != panic ] || \
-    [ "$(classify "$ocaml_status")" != "$expected_ocaml" ]; then
-    printf '%s: expected Rust=panic/OCaml=%s, got Rust=%s/OCaml=%s\n' \
-      "$name" "$expected_ocaml" "$rust_status" "$ocaml_status" >&2
+    [ "$(classify "$ocaml_status")" != accept ]; then
+    printf '%s: expected Rust=panic/OCaml=accept, got Rust=%s/OCaml=%s\n' \
+      "$name" "$rust_status" "$ocaml_status" >&2
     dump_both
-    exit 1
-  fi
-  if [ "$expected_ocaml" = reject ] && \
-    ! grep -F 'RESCRIPT_BSC_EXE points to missing path' \
-      "$work/ocaml.err" >/dev/null; then
-    echo "$name: OCaml did not report the stale compiler path" >&2
-    cat "$work/ocaml.out" "$work/ocaml.err" >&2
     exit 1
   fi
   checked=$((checked + 1))
@@ -824,8 +818,8 @@ run_case compiler-args-extension accept reject compiler-args "$project/src/A.txt
 run_case compiler-args-missing panic reject compiler-args "$project/src/Missing.res"
 run_case compiler-args-no-project panic reject compiler-args "$work/orphan/A.res"
 
-run_missing_bsc_case build-missing-bsc accept build "$project"
-run_missing_bsc_case format-missing-bsc reject format "$project/src/A.res"
+run_missing_bsc_case build-missing-bsc build "$project"
+run_missing_bsc_case format-missing-bsc format "$project/src/A.res"
 RESCRIPT_BSC_EXE="$work/missing-bsc" run_both clean "$work/clean-missing-bsc"
 if [ "$(classify "$rust_status")" != panic ] || [ "$ocaml_status" -ne 0 ] || \
   [ -e "$work/clean-missing-bsc/lib/bs/marker" ]; then
