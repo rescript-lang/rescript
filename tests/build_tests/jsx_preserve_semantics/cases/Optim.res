@@ -50,7 +50,7 @@ let inlinedDynProps = () => {
 let inlinedDynPropsResult = inlinedDynProps()
 
 // Element used through an inlined helper
-let wrap = x => <section> x </section>
+let wrap = x => <section>{x}</section>
 let wrapped = wrap(<span />)
 
 // Element returned from a switch

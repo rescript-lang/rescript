@@ -75,4 +75,4 @@ module ArrayProps = {
 let arrayProps = <ArrayProps first="a" second="b" />
 
 // Prop value that is an await-free conditional element
-let condChild = <div> {cond.contents ? <span /> : React.null} </div>
+let condChild = <div>{cond.contents ? <span /> : React.null}</div>

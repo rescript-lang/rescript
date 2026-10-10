@@ -23,3 +23,5 @@ let elementWithConditionalChildren = <div>
         React.null
     }}
 </div>
+let commentOnly = <div>{/* no child */}</div>
+let commentsBetweenElements = <div>{/* before */}<span />{/* after */}</div>

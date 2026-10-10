@@ -284,7 +284,7 @@ apply({
   a
 })
 
-let x = {<div> child </div>}
+let x = {<div>{child}</div>}
 
 // not valid jsx
 let x = {@JSX child}
@@ -319,5 +319,5 @@ let x = {
 }
 
 // string constant should be printed correct
-<> {"\n"->React.string} </>
-<> {"\""->React.string} </>
+<>{"\n"->React.string}</>
+<>{"\""->React.string}</>

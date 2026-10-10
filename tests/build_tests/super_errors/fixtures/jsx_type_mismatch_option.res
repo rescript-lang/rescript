@@ -15,4 +15,4 @@ module React = {
   @module("react/jsx-runtime") external jsxFragment: component<fragmentProps> = "Fragment"
 }
 
-let x = <> {None} </>
+let x = <>{None}</>
