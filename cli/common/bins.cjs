@@ -37,7 +37,9 @@ try {
   );
 }
 
-// The platform package's entry (bin.js) sits next to its bin directory.
+// The platform package's entry (bin.js) sits next to its bin directory. It
+// exports the same paths for tools that import it directly, such as
+// rescript-vscode, so keep the two lists in sync.
 const binDir = path.join(path.dirname(binPackageEntry), "bin");
 
 exports.binDir = binDir;
