@@ -58,6 +58,7 @@
 #### :house: Internal
 
 - Make `dict` an abstract type instead of a record with a hidden field. https://github.com/rescript-lang/rescript/pull/8752
+- Remove dead code from the compiler and rewatch. https://github.com/rescript-lang/rescript/pull/8756
 - Represent dict patterns with a dedicated `Tpat_dict` typed tree node. https://github.com/rescript-lang/rescript/pull/8751
 - Represent dict patterns with a dedicated `Ppat_dict` node. https://github.com/rescript-lang/rescript/pull/8749
 - Represent dict literals with dedicated `Pexp_dict` and `Texp_dict` nodes. https://github.com/rescript-lang/rescript/pull/8746
