@@ -66,32 +66,4 @@ let max_int_option (x : int option) y =
    failwith (loc ^ " Not supported yet")
 *)
 
-let rec int_of_string_aux s acc off len =
-  if off >= len then acc
-  else
-    let d = Char.code (String.unsafe_get s off) - 48 in
-    if d >= 0 && d <= 9 then int_of_string_aux s ((10 * acc) + d) (off + 1) len
-    else -1
 (* error *)
-
-let nat_of_string_exn (s : string) =
-  let acc = int_of_string_aux s 0 0 (String.length s) in
-  if acc < 0 then invalid_arg s else acc
-
-(** return index *)
-let parse_nat_of_string (s : string) (cursor : int ref) =
-  let current = !cursor in
-  assert (current >= 0);
-  let acc = ref 0 in
-  let s_len = String.length s in
-  let todo = ref true in
-  let cur = ref current in
-  while !todo && !cursor < s_len do
-    let d = Char.code (String.unsafe_get s !cur) - 48 in
-    if d >= 0 && d <= 9 then (
-      acc := (10 * !acc) + d;
-      incr cur)
-    else todo := false
-  done;
-  cursor := !cur;
-  !acc

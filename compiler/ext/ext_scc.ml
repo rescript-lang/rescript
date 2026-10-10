@@ -94,8 +94,3 @@ let graph e =
     if Array.unsafe_get index_array i < 0 then scc i
   done;
   output
-
-let graph_check v =
-  let v = graph v in
-  ( Int_vec_vec.length v,
-    Int_vec_vec.fold_left (fun acc x -> Vec_int.length x :: acc) [] v )

@@ -37,11 +37,7 @@ val get_extension_maybe : string -> string
 
 val new_extension : string -> string -> string
 
-val chop_all_extensions_maybe : string -> string
-
 (* OCaml specific abstraction*)
 val module_name : string -> string
 
 type module_info = {module_name: string; case: bool}
-
-val as_module : basename:string -> module_info option

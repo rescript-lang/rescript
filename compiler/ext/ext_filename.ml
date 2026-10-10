@@ -37,17 +37,6 @@ let get_extension_maybe name =
   in
   search_dot name (name_len - 1) name_len
 
-let chop_all_extensions_maybe name =
-  let rec search_dot i last =
-    if i < 0 || is_dir_sep (String.unsafe_get name i) then
-      match last with
-      | None -> name
-      | Some i -> String.sub name 0 i
-    else if String.unsafe_get name i = '.' then search_dot (i - 1) (Some i)
-    else search_dot (i - 1) last
-  in
-  search_dot (String.length name - 1) None
-
 let new_extension name (ext : string) =
   let rec search_dot name i ext =
     if i < 0 || is_dir_sep (String.unsafe_get name i) then name ^ ext
@@ -79,46 +68,3 @@ let module_name name =
   search_dot (name_len - 1) name
 
 type module_info = {module_name: string; case: bool}
-
-let rec valid_module_name_aux name off len =
-  if off >= len then true
-  else
-    let c = String.unsafe_get name off in
-    match c with
-    | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '\'' | '.' | '[' | ']' ->
-      valid_module_name_aux name (off + 1) len
-    | _ -> false
-
-type state = Invalid | Upper | Lower
-
-let valid_module_name name len =
-  if len = 0 then Invalid
-  else
-    let c = String.unsafe_get name 0 in
-    match c with
-    | 'A' .. 'Z' -> if valid_module_name_aux name 1 len then Upper else Invalid
-    | 'a' .. 'z' | '0' .. '9' | '_' | '[' | ']' ->
-      if valid_module_name_aux name 1 len then Lower else Invalid
-    | _ -> Invalid
-
-let as_module ~basename =
-  let rec search_dot i name name_len =
-    if i < 0 then
-      (* Input e.g, [a_b] *)
-      match valid_module_name name name_len with
-      | Invalid -> None
-      | Upper -> Some {module_name = name; case = true}
-      | Lower ->
-        Some {module_name = Ext_string.capitalize_ascii name; case = false}
-    else if String.unsafe_get name i = '.' then
-      (*Input e.g, [A_b] *)
-      match valid_module_name name i with
-      | Invalid -> None
-      | Upper ->
-        Some {module_name = Ext_string.capitalize_sub name i; case = true}
-      | Lower ->
-        Some {module_name = Ext_string.capitalize_sub name i; case = false}
-    else search_dot (i - 1) name name_len
-  in
-  let name_len = String.length basename in
-  search_dot (name_len - 1) basename name_len
