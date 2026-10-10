@@ -22,6 +22,25 @@ let resolve_program ~path_separator ~executable_extensions ~search_directories
             if executable_is_usable candidate then Some candidate else None))
     |> Option.value ~default:program
 
+(* A lock records the PID of the rescript process that owns it. A PID that has
+   since been reused by an unrelated process must not keep the lock alive, so
+   only the names of the build-system executables count: the packaged OCaml
+   and Rust implementations and the dune development executable. Linux
+   truncates process names to 15 bytes, so a truncated name also matches. *)
+let lock_owner_names = ["rescript"; "rescript-rust"; "rescript_ocaml"]
+
+let is_lock_owner_name name =
+  let name = String.lowercase_ascii name in
+  let without_extension =
+    if Filename.check_suffix name ".exe" then Filename.chop_suffix name ".exe"
+    else name
+  in
+  List.mem without_extension lock_owner_names
+  || String.length name >= 15
+     && List.exists
+          (fun owner -> String.starts_with ~prefix:name (owner ^ ".exe"))
+          lock_owner_names
+
 let process_is_active ~probe value =
   try
     let pid = int_of_string value in

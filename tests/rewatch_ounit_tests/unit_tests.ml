@@ -516,6 +516,34 @@ let platform_tests _context =
     = Platform_windows.Process_absent)
     "Windows tasklist output rejects a different process ID";
   check
+    (Platform_windows.tasklist_probe ~pid:123
+       {|"rescript-editor-analysis.exe","123","Console","1","10,000 K"|}
+    = Platform_windows.Process_absent)
+    "Windows tasklist output rejects other ReScript tools";
+  List.iter
+    (fun name ->
+      check
+        (Platform_common.is_lock_owner_name name)
+        (name ^ " can own a build lock"))
+    [
+      "rescript";
+      "RESCRIPT.EXE";
+      "rescript-rust.exe";
+      "rescript_ocaml.exe";
+      "rescript-rust.e";
+    ];
+  List.iter
+    (fun name ->
+      check
+        (not (Platform_common.is_lock_owner_name name))
+        (name ^ " cannot own a build lock"))
+    [
+      "rescript-editor-analysis.exe";
+      "rescript-tools.exe";
+      "node";
+      "rescript-legacy";
+    ];
+  check
     (Platform_windows.tasklist_probe ~pid:123 "tasklist failed"
     = Platform_windows.Malformed_output)
     "malformed Windows tasklist output is inconclusive";
@@ -851,9 +879,7 @@ let lock_tests _context =
             (not (Sys.file_exists lock))
             "releasing a build lock twice is harmless");
       check (not (Sys.file_exists lock)) "released build lock is removed";
-      let owner_executable =
-        Filename.concat lock_root "rescript-lock-owner.exe"
-      in
+      let owner_executable = Filename.concat lock_root "rescript.exe" in
       File_util.copy_existing_file ~ensure_parent:false test_executable
         owner_executable;
       if not Sys.win32 then Unix.chmod owner_executable 0o755;
