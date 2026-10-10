@@ -17,8 +17,8 @@ let dependent_is_allowed allowed_dependents dependent =
     ~some:(fun allowed -> List.mem dependent allowed)
     allowed_dependents
 
-let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
-    ~(attempt : Build_attempt.t) =
+let discover ~(root_config : Config.t) ~(workspace_config : Config.t) ~prod
+    ~features ~warn_error ~filter ~(attempt : Build_attempt.t) =
   let resolution = Package_resolution.create root_config in
   let unallowed_dependencies = ref [] in
   let discovered =
@@ -115,22 +115,10 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
           ~display_root:root_config.root
       in
       let modules = discovery.modules in
-      let owns_outputs =
-        root <> root_config.root && Compiler_info.owns_outputs config
-      in
       let compile_config =
         let config = with_gentype_source_dirs discovery.gentype_dirs config in
-        let inherited = Config.with_root_options config root_config in
-        let output_config =
-          if owns_outputs then
-            {
-              inherited with
-              package_specs = config.package_specs;
-              suffix = config.suffix;
-            }
-          else inherited
-        in
-        output_config |> Compiler_args.with_local_warning_policy ~is_local
+        Config.with_root_options config workspace_config
+        |> Compiler_args.with_local_warning_policy ~is_local
       in
       let build_dir = Build_artifacts.lib_path root "bs" in
       let ocaml_dir = Build_artifacts.lib_path root "ocaml" in
@@ -146,7 +134,6 @@ let discover ~(root_config : Config.t) ~prod ~features ~warn_error ~filter
           {
             name = discovered_package.name;
             root;
-            build_owner = (if owns_outputs then root else root_config.root);
             is_local;
             config;
             compile_config;

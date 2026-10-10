@@ -1,5 +1,4 @@
 type context = {
-  build_root: string;
   bsc_path: string;
   bsc_hash: string;
   runtime_path: string;
@@ -21,7 +20,6 @@ and package_output_spec = {
 val package_output_specs : Config.t -> package_output_spec list
 
 val make_context :
-  build_root:string ->
   bsc_path:string ->
   runtime_path:string ->
   source_map_args:string list ->
@@ -29,9 +27,7 @@ val make_context :
   package_output_specs:package_output_spec list ->
   context
 
-val for_package : context -> build_root:string -> Config.t -> context
-
-val owns_outputs : Config.t -> bool
+val for_package : context -> Config.t -> context
 
 val changed_package_output_specs :
   context -> Config.t -> package_output_spec list option

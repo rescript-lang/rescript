@@ -15,19 +15,21 @@ let runtime_path root =
 let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     ~(attempt : Build_attempt.t) ~parse_step ~on_cleanup =
   let bsc = bsc_path () in
+  let workspace_config = Project_context.workspace_config_for root_config in
   let package_plans =
-    Package_graph.discover ~root_config ~prod ~features ~warn_error ~filter
-      ~attempt
+    Package_graph.discover ~root_config ~workspace_config ~prod ~features
+      ~warn_error ~filter ~attempt
   in
   Module_graph.validate_visible_namespaces ~root_config package_plans;
   let runtime = runtime_path root_config.root in
-  let source_map_args = Compiler_args.source_map_args root_config ~watch in
+  let source_map_args = Compiler_args.source_map_args workspace_config ~watch in
   let compiler_context =
-    Compiler_info.make_context ~build_root:root_config.root ~bsc_path:bsc
-      ~runtime_path:runtime ~source_map_args
+    Compiler_info.make_context ~bsc_path:bsc ~runtime_path:runtime
+      ~source_map_args
       ~inherited_compiler_args:
-        (root_config.jsx_args @ root_config.experimental_args)
-      ~package_output_specs:(Compiler_info.package_output_specs root_config)
+        (workspace_config.jsx_args @ workspace_config.experimental_args)
+      ~package_output_specs:
+        (Compiler_info.package_output_specs workspace_config)
   in
   let previous_compile_assets =
     package_plans
@@ -70,8 +72,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   List.iter
     (fun (package : Package_plan.t) ->
       let package_context =
-        Compiler_info.for_package compiler_context
-          ~build_root:package.build_owner package.compile_config
+        Compiler_info.for_package compiler_context package.compile_config
       in
       if Compiler_info.needs_clean package_context package.config then (
         Compiler_info.changed_package_output_specs package_context

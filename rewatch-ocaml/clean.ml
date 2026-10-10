@@ -8,7 +8,8 @@ type package = {
 (* The complete cleanup plan is validated before deletion starts so a malformed
    dependency cannot leave only the packages visited before it partially
    cleaned. The resulting order remains dependency-first for progress output. *)
-let prepare ~(root_config : Config.t) ~resolution ~seen ~prod ~is_local =
+let prepare ~(root_config : Config.t) ~(workspace_config : Config.t) ~resolution
+    ~seen ~prod ~is_local =
   Package_diagnostics.validate_metadata root_config;
   let packages = ref [] in
   let rec visit (config : Config.t) ~is_local =
@@ -17,33 +18,26 @@ let prepare ~(root_config : Config.t) ~resolution ~seen ~prod ~is_local =
       Hashtbl.add seen root ();
       Package_diagnostics.report_missing_sources
         ~is_root:(root = root_config.root) config;
-      (* A consumer clean owns dependencies previously built in this build
-         context, but not an independently built package's published tree. *)
-      let owns_outputs =
-        root <> root_config.root && Compiler_info.owns_outputs config
+      let dependencies = Package_traversal.requests ~prod ~is_local config in
+      let resolved_dependencies =
+        List.map
+          (fun request ->
+            Package_traversal.resolve resolution ~package_root:root request)
+          dependencies
       in
-      if not owns_outputs then (
-        let dependencies = Package_traversal.requests ~prod ~is_local config in
-        let resolved_dependencies =
-          List.map
-            (fun request ->
-              Package_traversal.resolve resolution ~package_root:root request)
-            dependencies
-        in
-        List.iter
-          (fun (resolved : Package_traversal.resolved) ->
-            visit resolved.dependency.config
-              ~is_local:resolved.dependency.is_local)
-          resolved_dependencies;
-        let implementation_files =
-          Source.discover_for_cleanup config ~prod:(prod || not is_local)
-            ~on_missing:
-              (Package_diagnostics.report_missing_source_folder config)
-        in
-        let output_config = Config.with_root_options config root_config in
-        packages :=
-          {root; name = config.name; output_config; implementation_files}
-          :: !packages))
+      List.iter
+        (fun (resolved : Package_traversal.resolved) ->
+          visit resolved.dependency.config
+            ~is_local:resolved.dependency.is_local)
+        resolved_dependencies;
+      let implementation_files =
+        Source.discover_for_cleanup config ~prod:(prod || not is_local)
+          ~on_missing:(Package_diagnostics.report_missing_source_folder config)
+      in
+      let output_config = Config.with_root_options config workspace_config in
+      packages :=
+        {root; name = config.name; output_config; implementation_files}
+        :: !packages)
   in
   visit root_config ~is_local;
   List.rev !packages
@@ -94,10 +88,11 @@ let run ~poll ~verbosity ~folder ~prod =
     (fun ~release:_ ->
       poll ();
       let root_config = Config.load_root root in
+      let workspace_config = Project_context.workspace_config_for root_config in
       let resolution = Package_resolution.create root_config in
       let cleanup =
-        prepare ~root_config ~resolution ~seen:(Hashtbl.create 32) ~prod
-          ~is_local:true
+        prepare ~root_config ~workspace_config ~resolution
+          ~seen:(Hashtbl.create 32) ~prod ~is_local:true
       in
       let compiler_assets = "compiler assets" in
       let compiler_started = Unix.gettimeofday () in
@@ -109,10 +104,10 @@ let run ~poll ~verbosity ~folder ~prod =
         ~started_at:compiler_started;
       poll ();
       let suffixes =
-        root_config.package_specs
+        workspace_config.package_specs
         |> List.filter_map (fun (spec : Config.package_spec) ->
             if spec.in_source then
-              Some (Config.package_spec_suffix root_config spec)
+              Some (Config.package_spec_suffix workspace_config spec)
             else None)
         |> String.concat ", "
       in

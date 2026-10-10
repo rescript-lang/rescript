@@ -1,5 +1,6 @@
 val discover :
   root_config:Config.t ->
+  workspace_config:Config.t ->
   prod:bool ->
   features:string list option ->
   warn_error:string option ->

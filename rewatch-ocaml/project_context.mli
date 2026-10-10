@@ -7,6 +7,7 @@ val canonical_project_root : string -> string
 
 val nearest_config_path : string -> string option
 
+val workspace_config_for : Config.t -> Config.t
 val workspace_lock_root_for : Config.t -> string
 val workspace_lock_root : string -> string
 val dependency_context : Config.t -> dependency_context

@@ -44,7 +44,11 @@ let is_local_dependency_canonical ~workspace path =
   path_is_within_canonical ~root:workspace path
   && not (contains_component path "node_modules")
 
-let workspace_lock_root_for (current : Config.t) =
+(* A package listed by the nearest parent rescript.json is a monorepo member.
+   The parent then supplies the settings that every package of a build shares
+   (package-specs, suffix, JSX, ...), even when the build starts in the
+   member, so a member build produces the same outputs as a workspace build. *)
+let workspace_config_for (current : Config.t) =
   match nearest_config_path (Filename.dirname current.root) with
   | Some path -> (
     match Config.load path with
@@ -53,9 +57,11 @@ let workspace_lock_root_for (current : Config.t) =
              (fun (dependency : Config.dependency) ->
                dependency.name = current.name)
              (parent.dependencies @ parent.dev_dependencies) ->
-      parent.root
-    | _ -> current.root)
-  | None -> current.root
+      parent
+    | _ -> current)
+  | None -> current
+
+let workspace_lock_root_for current = (workspace_config_for current).root
 
 let workspace_lock_root folder =
   workspace_lock_root_for (Config.load_root folder)

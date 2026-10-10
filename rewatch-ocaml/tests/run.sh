@@ -1996,27 +1996,21 @@ if [ -f "$package_output_dependency/node_modules/dep/src/Dep.js" ]; then
   exit 1
 fi
 
+# The consumer lists the installed dependency, so building the dependency on
+# its own uses the consumer's output settings, as in Rust rewatch. Its outputs
+# and the consumer's imports therefore do not depend on which build ran first.
 "$port" build "$standalone_output/node_modules/dep"
-test -f "$standalone_output/node_modules/dep/src/Dep.js"
+test -f "$standalone_output/node_modules/dep/lib/es6/src/Dep.mjs"
+test ! -f "$standalone_output/node_modules/dep/src/Dep.js"
 "$port" build "$standalone_output"
 test -f "$standalone_output/lib/es6/src/Main.mjs"
-test -f "$standalone_output/node_modules/dep/src/Dep.js"
-test ! -f "$standalone_output/node_modules/dep/lib/es6/src/Dep.mjs"
-node - "$standalone_output/node_modules/dep" <<'EOF'
-const fs = require("fs")
-const path = require("path")
-const dependency = path.resolve(process.argv[2])
-const info = JSON.parse(
-  fs.readFileSync(path.join(dependency, "lib", "bs", "compiler-info.json"), "utf8")
-)
-if (path.resolve(info.build_root) !== dependency) {
-  throw new Error(`standalone dependency ownership changed to ${info.build_root}`)
-}
-EOF
+grep 'from "dep/lib/es6/src/Dep.mjs"' "$standalone_output/lib/es6/src/Main.mjs" \
+  >/dev/null
+test ! -f "$standalone_output/node_modules/dep/src/Dep.js"
 "$port" clean "$standalone_output"
 test ! -d "$standalone_output/lib/bs"
-test -f "$standalone_output/node_modules/dep/lib/bs/compiler-info.json"
-test -f "$standalone_output/node_modules/dep/src/Dep.js"
+test ! -d "$standalone_output/node_modules/dep/lib/bs"
+test ! -f "$standalone_output/node_modules/dep/lib/es6/src/Dep.mjs"
 
 mkdir -p "$external_boundary/project/node_modules"
 directory_link "$external_boundary/project/packages/main" \
@@ -2152,9 +2146,11 @@ test -f "$monorepo/packages/consumer/src/Consumer.js"
 test -f "$monorepo/packages/dep/src/Dep.js"
 "$port" clean "$monorepo"
 test ! -d "$monorepo/lib/ocaml"
-# This package was built directly above, so the later workspace build must not
-# transfer ownership of its outputs to the parent invocation.
-test -d "$monorepo/packages/consumer/lib/ocaml"
+# The consumer was also built directly above. A workspace clean still removes
+# every member's artifacts: outputs do not depend on which build ran first.
+test ! -d "$monorepo/packages/consumer/lib/ocaml"
+test ! -d "$monorepo/packages/dep/lib/ocaml"
+"$port" build "$monorepo/packages/consumer"
 test -d "$monorepo/packages/dep/lib/ocaml"
 "$port" clean "$monorepo/packages/consumer"
 test ! -d "$monorepo/packages/consumer/lib/ocaml"

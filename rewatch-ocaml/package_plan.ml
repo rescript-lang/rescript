@@ -7,7 +7,6 @@ type dependency = {
 type t = {
   name: string;
   root: string;
-  build_owner: string;
   is_local: bool;
   config: Config.t;
   compile_config: Config.t;

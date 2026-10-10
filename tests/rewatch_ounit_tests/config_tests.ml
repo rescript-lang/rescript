@@ -184,8 +184,8 @@ let gentype_discovery_tests =
           ~verbosity:0
       in
       let package =
-        Package_graph.discover ~root_config:config ~prod:false ~features:None
-          ~warn_error:None ~filter:None ~attempt
+        Package_graph.discover ~root_config:config ~workspace_config:config
+          ~prod:false ~features:None ~warn_error:None ~filter:None ~attempt
         |> List.hd
       in
       check
