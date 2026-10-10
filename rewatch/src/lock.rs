@@ -73,29 +73,47 @@ pub enum Lock {
     Error(Error),
 }
 
+/// Besides this executable itself, the build-system executables that may own a
+/// lock: the packaged OCaml and Rust implementations and the OCaml development
+/// executable. Any other process that reuses a lock's PID does not keep the
+/// lock alive.
+const LOCK_OWNER_NAMES: [&str; 3] = ["rescript", "rescript-rust", "rescript_ocaml"];
+
 fn matching_process_name() -> Option<String> {
     std::env::current_exe()
         .ok()
         .and_then(|path| path.file_name().map(|name| name.to_string_lossy().into_owned()))
 }
 
+fn is_lock_owner_name(name: &str, current_process_name: Option<&str>) -> bool {
+    if current_process_name == Some(name) {
+        return true;
+    }
+    let name = name.to_ascii_lowercase();
+    let without_extension = name.strip_suffix(".exe").unwrap_or(&name);
+    LOCK_OWNER_NAMES.contains(&without_extension)
+        // Linux truncates process names to 15 bytes.
+        || (name.len() >= 15
+            && LOCK_OWNER_NAMES
+                .iter()
+                .any(|owner| format!("{owner}.exe").starts_with(&name)))
+}
+
 fn pid_matches_current_process(to_check_pid: u32) -> bool {
     let system = System::new_all();
     let current_process_name = matching_process_name();
+    let current_process_name = current_process_name.as_deref();
 
     system.processes().iter().any(|(pid, process)| {
         if pid.as_u32() != to_check_pid {
             return false;
         }
 
-        match &current_process_name {
-            Some(current_process_name) => process
-                .exe()
-                .file_name()
-                .map(|name| name.to_string_lossy() == current_process_name.as_str())
-                .unwrap_or_else(|| process.name() == current_process_name.as_str()),
-            None => true,
-        }
+        process
+            .exe()
+            .file_name()
+            .map(|name| is_lock_owner_name(&name.to_string_lossy(), current_process_name))
+            .unwrap_or_else(|| is_lock_owner_name(process.name(), current_process_name))
     })
 }
 
@@ -344,6 +362,35 @@ mod tests {
             Lock::Aquired(_) => {}
             _ => panic!("expected stale lock from unrelated process to be ignored"),
         }
+    }
+
+    #[test]
+    fn accepts_only_build_system_executables_as_lock_owners() {
+        for name in [
+            "rescript",
+            "rescript.exe",
+            "RESCRIPT.EXE",
+            "rescript-rust.exe",
+            "rescript_ocaml.exe",
+            "rescript-rust.e",
+        ] {
+            assert!(super::is_lock_owner_name(name, None), "{name} owns locks");
+        }
+        for name in [
+            "rescript-editor-analysis.exe",
+            "rescript-tools.exe",
+            "node",
+            "rescript-legacy",
+        ] {
+            assert!(
+                !super::is_lock_owner_name(name, None),
+                "{name} does not own locks"
+            );
+        }
+        assert!(super::is_lock_owner_name(
+            "rescript-1a2b3c",
+            Some("rescript-1a2b3c")
+        ));
     }
 
     #[test]

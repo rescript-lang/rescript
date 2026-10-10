@@ -1,0 +1,79 @@
+(** An attempt owns all mutable work and reporting state for one build. This
+    boundary lets finalization drain cleanup exactly once while the associated
+    {!Build_session} remains reusable after failures. *)
+
+type freshness_mode = Initialize_freshness | Reuse_freshness
+
+type parse_message = Parse_warning of string | Parse_error of string
+val has_parse_error : parse_message list -> bool
+
+(** Preliminary parsing distinguishes successful new ASTs, failed source text,
+    and deliberately retained ASTs. Keeping these cases explicit prevents a
+    failed parse from being mistaken for an unchanged source. *)
+type preliminary_parse =
+  | Parsed_successfully of {stderr: string}
+  | Parse_failed of {stdout: string; stderr: string}
+  | Use_existing_ast
+
+val preliminary_parse : Process.result -> preliminary_parse
+
+type namespace_job = {job: Process.job; finish: Process.result -> unit}
+type pending_work
+type finalization_state
+
+type t = {
+  freshness_mode: freshness_mode;
+  session: Build_session.t;
+  mutable cleaned: int;
+  mutable previous_asts: int;
+  mutable parsed: int;
+  mutable compiled: int;
+  mutable parse_seconds: float;
+  mutable parse_messages: parse_message list;
+  mutable diagnostics: string list;
+  removed_modules: (string, unit) Hashtbl.t;
+  preliminary_parses: (string, preliminary_parse) Hashtbl.t;
+  blocked_modules: (string, unit) Hashtbl.t;
+  namespace_freshness: (string, float option) Hashtbl.t;
+  package_removed_modules: (string, string list) Hashtbl.t;
+  pending_work: pending_work;
+  finalization: finalization_state;
+  mutable compiler_cleaned: bool;
+  mutable had_warnings: bool;
+  process_poll: (unit -> unit) option;
+  progress: Output.Progress.t;
+  verbosity: int;
+}
+
+val create_full :
+  warning_state:Warning_state.t ->
+  process_poll:(unit -> unit) option ->
+  progress:Output.Progress.t ->
+  verbosity:int ->
+  t
+
+val create_retained :
+  session:Build_session.t ->
+  process_poll:(unit -> unit) option ->
+  progress:Output.Progress.t ->
+  verbosity:int ->
+  t
+
+val register_cleanup : t -> (unit -> unit) -> unit
+val defer_artifact_cleanup : t -> string list -> unit
+
+val set_cleanup_result : t -> string -> Build_artifacts.cleanup_result -> unit
+(** Records the modules this attempt removed from a package, and keeps the
+    package's public output inventory in the session for later attempts. *)
+
+val removed_package_modules : t -> string -> string list
+(** The modules this attempt removed from the package at the given root. *)
+
+val add_namespace_job : t -> namespace_job -> unit
+val take_namespace_jobs : t -> namespace_job list
+val add_compile_candidates : t -> Compiler_scheduler.candidate list -> unit
+val take_compile_candidates : t -> Compiler_scheduler.candidate list
+val mark_log_initialized : t -> string -> unit
+val cleanup_artifacts : t -> unit
+val finalize_logs : t -> unit
+val protect : t -> (unit -> 'a) -> 'a

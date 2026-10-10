@@ -80,6 +80,12 @@ if ! grep -q "Provider.res" "$compiler_log"; then
 fi
 cp "$compiler_log" failed.compiler.log
 
+# Keep timestamp-based freshness from masking a lost dirty bit. Both watcher
+# implementations must remember that Consumer was blocked by Provider's failed
+# implementation when the next rebuild reconstructs the build state.
+test -f lib/ocaml/Consumer.cmt
+node -e 'const fs = require("fs"); const future = new Date(Date.now() + 60000); fs.utimesSync("lib/ocaml/Consumer.cmt", future, future)'
+
 # An atomic replacement makes the watcher reinitialize its build state. The
 # blocked dependent must remain dirty through that full rebuild as well.
 printf 'let value = "recovered"\n' > src/Provider.next

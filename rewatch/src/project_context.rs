@@ -206,10 +206,28 @@ impl ProjectContext {
                 }
             }
         };
-        context.iter().for_each(|pc| {
-            debug!("Created project context {:#?} for \"{}\"", pc, path.display());
-        });
+        context.iter().for_each(|pc| debug!("{}", pc.description()));
         context
+    }
+
+    /// The debug message for a created context. The OCaml implementation
+    /// prints the same text, and tests compare the two.
+    fn description(&self) -> String {
+        let config = &self.current_config;
+        match &self.monorepo_context {
+            Some(MonoRepoContext::MonorepoPackage { parent_config }) => format!(
+                "Created project context for \"{}\" at \"{}\" with parent workspace \"{}\" at \"{}\"",
+                config.name,
+                config.path.display(),
+                parent_config.name,
+                parent_config.path.display()
+            ),
+            None | Some(MonoRepoContext::MonorepoRoot { .. }) => format!(
+                "Created project context for \"{}\" at \"{}\"",
+                config.name,
+                config.path.display()
+            ),
+        }
     }
 
     pub fn get_root_config(&self) -> &Config {
