@@ -178,7 +178,17 @@ let compiler_args_term =
   let+ _verbosity = verbosity and+ path in
   Compiler_args path
 
-let command_info name doc = Cmd.info name ~doc
+let exits =
+  [
+    Cmd.Exit.info 0 ~doc:"on success.";
+    Cmd.Exit.info 1 ~doc:"on build, configuration, or file system errors.";
+    Cmd.Exit.info 2
+      ~doc:"on command-line usage errors and invalid package dependencies.";
+    Cmd.Exit.info 129 ~max:143
+      ~doc:"when interrupted by a signal (128 plus the signal number).";
+  ]
+
+let command_info name doc = Cmd.info name ~doc ~exits
 
 let root =
   let build =
@@ -233,7 +243,7 @@ let root =
            project, use https://github.com/rescript-lang/create-rescript-app.";
       ]
     in
-    Cmd.info "rescript"
+    Cmd.info "rescript" ~exits
       ~version:("rescript " ^ Rewatch_version.version)
       ~doc:"Fast, Simple, Fully Typed JavaScript from the Future" ~man
   in
@@ -360,7 +370,22 @@ let eval argv =
     prerr_endline "invalid UTF-8 in command-line argument";
     Exit 2)
   else
-    match Cmd.eval_value ~catch:false ~argv:(normalize_argv argv) root with
+    (* Cmdliner styles its diagnostics whenever TERM allows it, even when stderr
+       is redirected, and offers no way to override that choice. Capture them
+       and apply the color policy used for all other output. *)
+    let error_buffer = Buffer.create 256 in
+    let err = Stdlib.Format.formatter_of_buffer error_buffer in
+    let result =
+      Cmd.eval_value ~catch:false ~err ~argv:(normalize_argv argv) root
+    in
+    Stdlib.Format.pp_print_flush err ();
+    let errors = Buffer.contents error_buffer in
+    prerr_string
+      (if Output.colors_enabled ~interactive:(Unix.isatty Unix.stderr) then
+         errors
+       else Output.strip_sgr errors);
+    flush stderr;
+    match result with
     | Ok (`Ok command) -> Run command
     | Ok `Help | Ok `Version -> Exit 0
     | Error _ -> Exit 2
