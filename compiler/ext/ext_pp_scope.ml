@@ -23,8 +23,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 (* Stamps seen for one mangled name, each mapped to its printed name.
-   [count] is the number of entries in [stamps], the first suffix to try. *)
-type stamps = {count: int; stamps: string Map_int.t}
+   [next] is the first suffix to try; every suffix below it is assigned or
+   was already taken when skipped. *)
+type stamps = {next: int; stamps: string Map_int.t}
 
 (* [used] holds every printed name in scope. Identifiers may contain [$], so
    a suffixed name like [x$1] can equal another identifier's mangled name;
@@ -34,9 +35,9 @@ type t = {names: stamps Map_string.t; used: Set_string.t}
 let empty : t = {names = Map_string.empty; used = Set_string.empty}
 
 let add_ident ~mangled:name (stamp : int) (cxt : t) : string * t =
-  let {count; stamps} =
+  let {next; stamps} =
     match Map_string.find_opt cxt.names name with
-    | None -> {count = 0; stamps = Map_int.empty}
+    | None -> {next = 0; stamps = Map_int.empty}
     | Some s -> s
   in
   match Map_int.find_opt stamps stamp with
@@ -44,14 +45,14 @@ let add_ident ~mangled:name (stamp : int) (cxt : t) : string * t =
   | None ->
     let rec pick i =
       let str = if i = 0 then name else Printf.sprintf "%s$%d" name i in
-      if Set_string.mem cxt.used str then pick (i + 1) else str
+      if Set_string.mem cxt.used str then pick (i + 1) else (i, str)
     in
-    let str = pick count in
+    let i, str = pick next in
     ( str,
       {
         names =
           Map_string.add cxt.names name
-            {count = count + 1; stamps = Map_int.add stamps stamp str};
+            {next = i + 1; stamps = Map_int.add stamps stamp str};
         used = Set_string.add cxt.used str;
       } )
 
