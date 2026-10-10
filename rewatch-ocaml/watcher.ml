@@ -156,10 +156,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       if not (Watch_snapshot.equal current previous) then (
         let build_scope = Watch_scope.discover ~root ~prod ~features ~filter in
         let before_build = Watch_snapshot.create digest_cache build_scope in
-        let changes =
-          Watch_snapshot.polling_build_changes ~previous ~trigger:current
-            ~before_build
-        in
+        let changes = Watch_snapshot.changes_between previous before_build in
         let rebuild_kind =
           if Watch_snapshot.changes_are_incremental changes then Incremental
           else Full

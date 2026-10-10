@@ -20,24 +20,9 @@ type registration =
     }
   | Registration_failed of {snapshot: entry list; message: string}
 
-let entry_equal first second =
-  first.path = second.path
-  &&
-  match (first.state, second.state) with
-  | File first, File second ->
-    first.modified = second.modified
-    && first.size = second.size
-    && first.digest = second.digest
-  | Dependency_candidate first, Dependency_candidate second ->
-    first.modified = second.modified && first.size = second.size
-  | Missing_dependency_candidate, Missing_dependency_candidate -> true
-  | Unreadable, Unreadable -> true
-  | File _, (Dependency_candidate _ | Missing_dependency_candidate | Unreadable)
-  | Dependency_candidate _, (File _ | Missing_dependency_candidate | Unreadable)
-  | Missing_dependency_candidate, (File _ | Dependency_candidate _ | Unreadable)
-  | Unreadable, (File _ | Dependency_candidate _ | Missing_dependency_candidate)
-    ->
-    false
+(* Entries contain only floats, integers and strings, so structural equality
+   compares every field. Float comparison follows IEEE equality as before. *)
+let entry_equal (first : entry) second = first = second
 
 let equal = List.equal entry_equal
 
@@ -107,7 +92,7 @@ let create ?(on_source_symlink = fun _ -> ()) digest_cache
       | Traversal_coverage.Skip -> acc
       | Traversal_coverage.Visit_current
       | Traversal_coverage.Visit_current_and_descendants
-      | Traversal_coverage.Visit_descendants ->
+      | Traversal_coverage.Visit_descendants -> (
         let visit_current = Traversal_coverage.visits_current admission in
         let visit_descendants =
           Traversal_coverage.visits_descendants admission
@@ -117,77 +102,72 @@ let create ?(on_source_symlink = fun _ -> ()) digest_cache
           | Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> Some []
           | Unix.Unix_error _ | Sys_error _ -> None
         in
-        Option.fold ~none:(unreadable dir acc)
-          ~some:
-            (List.fold_left
-               (fun acc name ->
-                 let path = Filename.concat dir name in
-                 match Unix.lstat path with
-                 | stat -> (
-                   match stat.Unix.st_kind with
-                   | Unix.S_DIR ->
-                     if
-                       (not visit_descendants)
-                       || Native_watcher.is_compiler_artifact_directory path
-                     then acc
-                     else walk source true path acc
-                   | Unix.S_LNK -> (
-                     try
-                       let is_source_name =
-                         Option.is_some (Source.source_kind path)
-                         && matches_source source path
-                       in
-                       (if visit_current && is_source_name then
-                          match Unix.readlink path with
-                          | target ->
-                            let target =
-                              if Filename.is_relative target then
-                                Filename.concat (Filename.dirname path) target
-                              else target
-                            in
-                            let target =
-                              match Platform.canonicalize_path target with
-                              | canonical -> canonical
-                              | exception
-                                  Unix.Unix_error
-                                    ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
-                                target
-                            in
-                            on_source_symlink target
-                          | exception
-                              Unix.Unix_error
-                                ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
-                            ());
-                       match Unix.stat path with
-                       | target -> (
-                         match target.Unix.st_kind with
-                         | Unix.S_DIR when visit_descendants ->
-                           walk source true path acc
-                         | Unix.S_REG when visit_current && is_source_name ->
-                           add_file path target acc
-                         | _ -> acc)
+        match entries with
+        | None -> unreadable dir acc
+        | Some entries ->
+          List.fold_left
+            (fun acc name ->
+              let path = Filename.concat dir name in
+              match Unix.lstat path with
+              | stat -> (
+                match stat.Unix.st_kind with
+                | Unix.S_DIR ->
+                  if
+                    (not visit_descendants)
+                    || Native_watcher.is_compiler_artifact_directory path
+                  then acc
+                  else walk source true path acc
+                | Unix.S_LNK -> (
+                  try
+                    let is_source_name =
+                      Option.is_some (Source.source_kind path)
+                      && matches_source source path
+                    in
+                    (if visit_current && is_source_name then
+                       match Unix.readlink path with
+                       | target ->
+                         let target =
+                           if Filename.is_relative target then
+                             Filename.concat (Filename.dirname path) target
+                           else target
+                         in
+                         let target =
+                           match Platform.canonicalize_path target with
+                           | canonical -> canonical
+                           | exception
+                               Unix.Unix_error
+                                 ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+                             target
+                         in
+                         on_source_symlink target
                        | exception
                            Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
                          ->
-                         acc
-                       | exception (Unix.Unix_error _ | Sys_error _) ->
-                         unreadable path acc
-                     with Unix.Unix_error _ | Sys_error _ ->
-                       unreadable path acc)
-                   | Unix.S_REG
-                     when visit_current
-                          && Option.is_some (Source.source_kind path)
-                          && matches_source source path ->
-                     add_file path stat acc
-                   | _ -> acc)
-                 | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
-                   ->
-                   acc
-                 | exception (Unix.Unix_error _ | Sys_error _) ->
-                   unreadable path acc)
-               acc)
-          entries
-      | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> acc)
+                         ());
+                    match Unix.stat path with
+                    | target -> (
+                      match target.Unix.st_kind with
+                      | Unix.S_DIR when visit_descendants ->
+                        walk source true path acc
+                      | Unix.S_REG when visit_current && is_source_name ->
+                        add_file path target acc
+                      | _ -> acc)
+                    | exception
+                        Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
+                      acc
+                  with Unix.Unix_error _ | Sys_error _ -> unreadable path acc)
+                | Unix.S_REG
+                  when visit_current
+                       && Option.is_some (Source.source_kind path)
+                       && matches_source source path ->
+                  add_file path stat acc
+                | _ -> acc)
+              | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
+                ->
+                acc
+              | exception (Unix.Unix_error _ | Sys_error _) ->
+                unreadable path acc)
+            acc entries))
   in
   let add_control_files acc root =
     Watch_scope.control_file_names
@@ -339,9 +319,6 @@ let update_entries digest_cache previous changes =
             Some entry))
   in
   if Hashtbl.length changed = 0 then Some updated else None
-
-let polling_build_changes ~previous ~trigger ~before_build =
-  if equal trigger previous then [] else changes_between previous before_build
 
 let changes_are_incremental changes =
   changes <> []
