@@ -173,7 +173,9 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lambda.t) :
         let ok_to_inline =
           i >= 0 && no_bounded_variables l2'
           &&
-          let lam_size = Lam_analysis.size l2' in
+          let lam_size =
+            Lam_analysis.size_upto ~limit:Lam_analysis.exit_inline_size l2'
+          in
           (i_occur <= 2 && lam_size < Lam_analysis.exit_inline_size)
           || lam_size < 5
         in
