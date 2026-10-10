@@ -1680,7 +1680,7 @@ and parse_dict_pattern_row p =
 
 and parse_dict_pattern ~start_pos ~attrs (p : Parser.t) =
   let fields =
-    parse_comma_delimited_region p ~grammar:DictRows ~closing:Rbrace
+    parse_comma_delimited_region p ~grammar:PatternDict ~closing:Rbrace
       ~f:parse_dict_pattern_row
   in
   Parser.expect Rbrace p;
