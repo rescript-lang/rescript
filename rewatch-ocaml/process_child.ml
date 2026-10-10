@@ -338,7 +338,11 @@ let signal_running (children : _ running list) =
     in
     ignore (wait_until_deadline children);
     (* Every original process group needs escalation because a direct child can
-       exit while a PPX or helper in its group remains alive. *)
+       exit while a PPX or helper in its group remains alive. Children whose
+       result is published are skipped. A group whose direct child was reaped
+       but whose result is not yet published could in theory have had its ID
+       reused by an unrelated new group in that instant; with sequential PIDs
+       and a window of microseconds this is not a practical concern. *)
     let termination_errors =
       if Platform.escalate_process_groups then signal_all Sys.sigkill
       else graceful_errors
