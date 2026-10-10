@@ -1738,7 +1738,7 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
          so that value declarations which are not used internally but exported
          are not reported as being unused. *)
       Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
-        (Cmt_format.Implementation str) (Some sourcefile) initial_env None;
+        (Cmt_format.Implementation str) (Some sourcefile) initial_env;
       (str, coercion, finalenv, dclsig)
       (* identifier is useless might read from serialized cmi files*))
     else
@@ -1753,26 +1753,24 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
          the value being exported. We can still capture unused
          declarations like "let x = true;; let x = 1;;", because in this
          case, the inferred signature contains only the last declaration. *)
-      (if not !Clflags.dont_write_files then
-         let deprecated = Builtin_attributes.deprecated_of_str ast in
-         let cmi =
-           Env.save_signature ?check_exists ~deprecated simple_sg modulename
-             (outputprefix ^ ".cmi")
-         in
-         Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
-           (Cmt_format.Implementation str) (Some sourcefile) initial_env
-           (Some cmi));
+      if not !Clflags.dont_write_files then (
+        let deprecated = Builtin_attributes.deprecated_of_str ast in
+        ignore
+          (Env.save_signature ?check_exists ~deprecated simple_sg modulename
+             (outputprefix ^ ".cmi"));
+        Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
+          (Cmt_format.Implementation str) (Some sourcefile) initial_env);
       (str, coercion, finalenv, simple_sg)
   with e ->
     Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
       (Cmt_format.Partial_implementation
          (Array.of_list (Cmt_format.get_saved_types ())))
-      (Some sourcefile) initial_env None;
+      (Some sourcefile) initial_env;
     raise e
 
-let save_signature modname tsg outputprefix source_file initial_env cmi =
+let save_signature modname tsg outputprefix source_file initial_env =
   Cmt_format.save_cmt (outputprefix ^ ".cmti") modname
-    (Cmt_format.Interface tsg) (Some source_file) initial_env (Some cmi)
+    (Cmt_format.Interface tsg) (Some source_file) initial_env
 
 (* "Packaging" of several compilation units into one unit
    having them as sub-modules. *)

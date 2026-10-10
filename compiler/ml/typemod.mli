@@ -45,13 +45,7 @@ val type_open_ :
   Path.t * Env.t
 
 val save_signature :
-  string ->
-  Typedtree.signature ->
-  string ->
-  string ->
-  Env.t ->
-  Cmi_format.cmi_infos ->
-  unit
+  string -> Typedtree.signature -> string -> string -> Env.t -> unit
 
 type error =
   | Cannot_apply of module_type
