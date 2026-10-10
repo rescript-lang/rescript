@@ -24,9 +24,6 @@
 
 module P = Ext_pp
 
-(** Avoid to allocate single char string too many times*)
-let array_str1 = Array.init 256 (fun i -> String.make 1 (Char.chr i))
-
 (** For conveting 
 
 *)
@@ -52,6 +49,15 @@ let array_conv =
 
 (* https://mathiasbynens.be/notes/javascript-escapes *)
 let ( +> ) = Ext_buffer.add_string
+
+(* Printable ASCII other than quote and backslash is copied as is. *)
+let needs_escape s =
+  String.exists
+    (function
+      | '"' | '\\' -> true
+      | ' ' .. '~' -> false
+      | _ -> true)
+    s
 
 let escape_to_buffer f (* ?(utf=false)*) s =
   let pp_raw_string f (* ?(utf=false)*) s =
@@ -103,8 +109,7 @@ let escape_to_buffer f (* ?(utf=false)*) s =
         if Uchar.utf_decode_is_valid decoded then (
           let length = Uchar.utf_decode_length decoded in
           for offset = 0 to length - 1 do
-            let byte = String.unsafe_get s (!i + offset) in
-            f +> Array.unsafe_get array_str1 (Char.code byte)
+            Ext_buffer.add_char f (String.unsafe_get s (!i + offset))
           done;
           i := !i + length)
         else
@@ -117,7 +122,7 @@ let escape_to_buffer f (* ?(utf=false)*) s =
         f +> "\\\"";
         incr i (* quote*)
       | _ ->
-        f +> Array.unsafe_get array_str1 (Char.code c);
+        Ext_buffer.add_char f c;
         incr i
     done
   in
@@ -126,11 +131,18 @@ let escape_to_buffer f (* ?(utf=false)*) s =
   f +> "\""
 
 let escape_to_string s =
-  let buf = Ext_buffer.create (String.length s * 2) in
-  escape_to_buffer buf s;
-  Ext_buffer.contents buf
+  if needs_escape s then (
+    let buf = Ext_buffer.create (String.length s * 2) in
+    escape_to_buffer buf s;
+    Ext_buffer.contents buf)
+  else "\"" ^ s ^ "\""
 
-let pp_string f s = P.string f (escape_to_string s)
+let pp_string f s =
+  if needs_escape s then P.string f (escape_to_string s)
+  else (
+    P.string f "\"";
+    P.string f s;
+    P.string f "\"")
 (* let _best_string_quote s =
    let simple = ref 0 in
    let double = ref 0 in
