@@ -172,31 +172,9 @@ let graph_work key dependencies = Process.{key; dependencies; value = key}
 
 let process_cancellation_tests _context =
   let test_executable = test_executable () in
-  let interrupt_requested = ref false in
-  let second_request_started = ref false in
   let completed_request =
     Process.{status = Unix.WEXITED 0; stdout = ""; stderr = ""}
   in
-  let in_process_cancelled =
-    try
-      ignore
-        (Process.run_tasks ~max_jobs:1
-           ~poll:(fun () ->
-             if !interrupt_requested then raise (Process.Interrupted 130))
-           [
-             Process.in_process_task (fun () ->
-                 interrupt_requested := true;
-                 completed_request);
-             Process.in_process_task (fun () ->
-                 second_request_started := true;
-                 completed_request);
-           ]);
-      false
-    with Process.Interrupted 130 -> true
-  in
-  check
-    (in_process_cancelled && not !second_request_started)
-    "an interrupt during an in-process request stops the next request";
   let domain_interrupt_requested = Atomic.make false in
   let second_domain_request_started = Atomic.make false in
   let domain_cancelled =

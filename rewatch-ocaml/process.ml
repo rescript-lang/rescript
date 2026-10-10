@@ -9,7 +9,6 @@ type result = Child.result = {
 type job = Child.job = {program: string; args: string list; cwd: string}
 type task_kind =
   | External of {job: job; env: Spawn.Env.t option}
-  | In_process of (unit -> result)
   | Concurrent of {run: unit -> result; cancel: unit -> unit}
 
 type task = {kind: task_kind; on_result: result -> result}
@@ -36,9 +35,6 @@ let with_completion_notifier ~poll action =
 
 let task ?env ?(on_result = fun result -> result) job =
   {kind = External {job; env}; on_result}
-
-let in_process_task ?(on_result = fun result -> result) run =
-  {kind = In_process run; on_result}
 
 let concurrent_task ~cancel ?(on_result = fun result -> result) run =
   {kind = Concurrent {run; cancel}; on_result}
@@ -139,17 +135,9 @@ let run_concurrent_task pool payload task run cancel =
         List.filter (fun current -> current.id <> active.id) pool.active_actions);
   complete_pool_task pool completion
 
-let run_in_process_task pool payload task run =
-  let completion =
-    try Task_completed (payload, task.on_result (run ()))
-    with exn -> Task_failed (payload, exn)
-  in
-  complete_pool_task pool completion
-
 let run_pool_task pool payload task =
   match task.kind with
   | Concurrent {run; cancel} -> run_concurrent_task pool payload task run cancel
-  | In_process run -> run_in_process_task pool payload task run
   | External {job; env} -> (
     match
       try Ok (Child.launch ?env ~notifier:pool.notifier () job)
@@ -276,14 +264,9 @@ let create_worker_pool ~max_jobs notifier =
     raise exn
 
 let submit_pool_task pool payload task =
-  match task.kind with
-  | In_process run ->
-    (* Sequential in-process work runs on the scheduling domain. *)
-    run_in_process_task pool payload task run
-  | External _ | Concurrent _ ->
-    Child.with_lock pool.mutex (fun () ->
-        Queue.add (payload, task) pool.queued;
-        Condition.signal pool.work_available)
+  Child.with_lock pool.mutex (fun () ->
+      Queue.add (payload, task) pool.queued;
+      Condition.signal pool.work_available)
 
 let await_pool_completion ~poll pool =
   let rec wait generation =
@@ -564,11 +547,6 @@ let run ?poll ~cwd program args = run_one ?poll ~cwd program args
 let run_task ?poll task =
   let result =
     match task.kind with
-    | In_process run ->
-      Option.iter (fun poll -> poll ()) poll;
-      let result = run () in
-      Option.iter (fun poll -> poll ()) poll;
-      result
     | Concurrent {run; cancel = _} -> run ()
     | External {job; env} ->
       run_one ?poll ?env ~cwd:job.cwd job.program job.args
