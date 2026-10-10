@@ -99,6 +99,13 @@ also run `make test-syntax`; use `make test-syntax-roundtrip` when parsing or
 printing changes. Other focused suites are `make test-gentype`,
 `make test-analysis`, `make test-tools`, and `make test-rewatch`.
 
+Root `make test*` suite targets and direct `node scripts/test.js` invocations
+use a per-checkout artifact lock (currently a macOS/Linux prototype). Let a
+waiting invocation wait; do not delete `.rescript-test.lock` or bypass the
+`_locked-*` targets. See [test concurrency](CONTRIBUTING.md#test-concurrency)
+for coverage and limitations. Separate worktrees need their own build outputs
+and dependencies to run independently.
+
 ### Testing Requirements
 
 #### When to Add Tests
