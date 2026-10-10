@@ -14,7 +14,6 @@ let directory_identity ~path:_ metadata =
 
 let canonicalize_path = Unix.realpath
 let executable_extensions ~program:_ = [""]
-let search_directories ~cwd:_ directories = directories
 
 let executable_is_usable candidate =
   try
@@ -28,7 +27,7 @@ let executable_is_usable candidate =
 
 let resolve_program =
   Platform_common.resolve_program ~path_separator ~executable_extensions
-    ~search_directories ~normalize_directory:Fun.id ~executable_is_usable
+    ~normalize_directory:Fun.id ~executable_is_usable
 
 type command = {env: Spawn.Env.t option; program: string; args: string list}
 

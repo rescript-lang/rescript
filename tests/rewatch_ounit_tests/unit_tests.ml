@@ -479,10 +479,8 @@ let platform_tests _context =
             File_util.copy_existing_file ~ensure_parent:true test_executable
               cwd_executable;
             check
-              (Platform.normalize_path_for_comparison
-                 (Platform.resolve_program ~cwd:path_root "current")
-              = Platform.normalize_path_for_comparison cwd_executable)
-              "Windows executable lookup searches cwd with PATHEXT")
+              (Platform.resolve_program ~cwd:path_root "current" = "current")
+              "Windows executable lookup does not search the current directory")
           else
             let literal_directory = Filename.concat path_root "literal " in
             let trimmed_directory = Filename.concat path_root "literal" in
@@ -544,9 +542,10 @@ let platform_tests _context =
       "rescript-legacy";
     ];
   check
-    (Platform_windows.tasklist_probe ~pid:123 "tasklist failed"
-    = Platform_windows.Malformed_output)
-    "malformed Windows tasklist output is inconclusive";
+    (Platform_windows.tasklist_probe ~pid:123
+       "INFO: No tasks are running which match the specified criteria."
+    = Platform_windows.Process_absent)
+    "Windows tasklist's (localized) no-match message means the process is gone";
   check
     (Platform_windows.tasklist_probe ~pid:123 {|"tasklist failed"|}
     = Platform_windows.Malformed_output)
