@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs/promises";
+import path from "node:path";
 import process from "node:process";
 import { parseArgs } from "node:util";
 import semver from "semver";
@@ -48,6 +49,19 @@ export function findFirstReleasedVersion(changelog) {
   return null;
 }
 
+// Fragments left in changes/ were merged after release preparation, so
+// publishing would ship their changes without release notes.
+export async function findPendingFragments(root = ".") {
+  let names;
+  try {
+    names = await fs.readdir(path.join(root, "changes"));
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+  return names.filter(name => name !== "README.md").sort();
+}
+
 export async function validateReleaseFiles(plan) {
   const packageJson = JSON.parse(await fs.readFile("package.json", "utf8"));
   if (packageJson.version !== plan.version) {
@@ -61,6 +75,13 @@ export async function validateReleaseFiles(plan) {
   if (firstReleasedVersion !== plan.version) {
     throw new Error(
       `The first released changelog version is ${firstReleasedVersion ?? "missing"}, expected ${plan.version}.`,
+    );
+  }
+
+  const pendingFragments = await findPendingFragments();
+  if (pendingFragments.length > 0) {
+    throw new Error(
+      `Unreleased changelog fragments remain: ${pendingFragments.join(", ")}. Run yarn changelog:release in a release PR first.`,
     );
   }
 }
