@@ -43,8 +43,6 @@ let executable_extensions ~program =
     |> Option.value ~default:".COM;.EXE;.BAT;.CMD"
     |> String.split_on_char ';'
 
-let search_directories ~cwd directories = cwd :: directories
-
 let executable_is_usable candidate =
   try (Unix.stat candidate).Unix.st_kind = Unix.S_REG
   with Unix.Unix_error _ -> false
@@ -58,8 +56,7 @@ let normalize_path_directory directory =
 
 let resolve_program =
   Platform_common.resolve_program ~path_separator ~executable_extensions
-    ~search_directories ~normalize_directory:normalize_path_directory
-    ~executable_is_usable
+    ~normalize_directory:normalize_path_directory ~executable_is_usable
 
 type command = {env: Spawn.Env.t option; program: string; args: string list}
 
@@ -253,10 +250,12 @@ let parse_tasklist_csv_line line =
 
 type tasklist_probe = Process_found | Process_absent | Malformed_output
 
+(* The probe filters by PID. When nothing matches, tasklist prints a localized
+   informational message instead of CSV rows, so only quoted lines are rows. *)
 let tasklist_probe ~pid output =
   let lines =
     output |> String.trim |> String.split_on_char '\n' |> List.map String.trim
-    |> List.filter (( <> ) "")
+    |> List.filter (String.starts_with ~prefix:"\"")
   in
   let rows = List.map parse_tasklist_csv_line lines in
   let valid_row = function
@@ -264,7 +263,8 @@ let tasklist_probe ~pid output =
       Option.is_some (int_of_string_opt row_pid)
     | Some _ | None -> false
   in
-  if lines = [] || not (List.for_all valid_row rows) then Malformed_output
+  if lines = [] then Process_absent
+  else if not (List.for_all valid_row rows) then Malformed_output
   else if
     List.exists
       (function
@@ -283,7 +283,9 @@ let probe_process ~run pid =
       Filename.concat (Filename.concat root "System32") "tasklist.exe"
     | None -> "tasklist.exe"
   in
-  match run tasklist ["/FO"; "CSV"; "/NH"] with
+  match
+    run tasklist ["/FI"; Printf.sprintf "PID eq %d" pid; "/FO"; "CSV"; "/NH"]
+  with
   | Some (Unix.WEXITED 0, stdout) -> (
     match tasklist_probe ~pid stdout with
     | Process_found | Malformed_output -> true

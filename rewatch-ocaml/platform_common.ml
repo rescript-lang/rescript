@@ -1,5 +1,8 @@
-let resolve_program ~path_separator ~executable_extensions ~search_directories
-    ~normalize_directory ~executable_is_usable ~cwd program =
+(* Like Rust's std::process::Command, the current directory is not searched: a
+   project file named like a tool (cmd.exe, node) must not run in its place. A
+   program in the current directory needs an explicit path. *)
+let resolve_program ~path_separator ~executable_extensions ~normalize_directory
+    ~executable_is_usable ~cwd program =
   if (not (Filename.is_implicit program)) || Filename.dirname program <> "."
   then program
   else
@@ -7,7 +10,7 @@ let resolve_program ~path_separator ~executable_extensions ~search_directories
       Sys.getenv_opt "PATH" |> Option.value ~default:""
       |> String.split_on_char path_separator
     in
-    search_directories ~cwd path_directories
+    path_directories
     |> List.find_map (fun directory ->
         let directory = normalize_directory directory in
         let directory =
