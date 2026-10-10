@@ -62,6 +62,9 @@ These are intentional:
 - `rescript.json` maps that the build system interprets reject duplicate keys
   instead of using the last one.
 - A `namespace-entry` without a namespace is an error.
+- Configuration errors use the compiler-style form `path: message`, and JSON
+  syntax errors use `path:line:column: message`. Messages name the field and
+  the accepted values instead of the parser's internal types.
 - Dependencies are rebuilt when the root's package-specs change. Rust keeps
   their artifacts until `rescript clean`
   ([#8540](https://github.com/rescript-lang/rescript/pull/8540)).

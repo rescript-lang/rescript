@@ -114,7 +114,7 @@ let load path =
   let fields =
     match json with
     | `Assoc fields -> fields
-    | _ -> fail path "configuration must be an object"
+    | _ -> fail path "rescript.json must contain a JSON object"
   in
   reject_duplicate_fields path "configuration" configuration_fields fields;
   let name =
