@@ -1,0 +1,39 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/pattern/dictMissingValue.res:2:13
+
+  1 │ switch x {
+  2 │ | dict{"a": } => ()
+  3 │ | dict{"a": ?} => ()
+  4 │ | {a: } => ()
+
+  I'm not sure what to parse here when looking at "}".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/pattern/dictMissingValue.res:3:14
+
+  1 │ switch x {
+  2 │ | dict{"a": } => ()
+  3 │ | dict{"a": ?} => ()
+  4 │ | {a: } => ()
+  5 │ }
+
+  I'm not sure what to parse here when looking at "}".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/pattern/dictMissingValue.res:4:7
+
+  2 │ | dict{"a": } => ()
+  3 │ | dict{"a": ?} => ()
+  4 │ | {a: } => ()
+  5 │ }
+  6 │ 
+
+  I'm not sure what to parse here when looking at "}".
+
+;;match x with
+  | dict{"a": [%rescript.patternhole ]} -> ()
+  | dict{"a": ?[%rescript.patternhole ]} -> ()
+  | { a = [%rescript.patternhole ] } -> ()

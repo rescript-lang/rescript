@@ -39,6 +39,3 @@ val handle_attributes_as_prim :
 
    return value is of [pval_type, pval_prim, new_attrs]
 *)
-
-val pval_prim_of_option_labels :
-  (bool * string Asttypes.loc) list -> bool -> Parsetree.primitive_repr

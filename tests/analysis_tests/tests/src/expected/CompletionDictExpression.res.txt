@@ -1,0 +1,1075 @@
+Complete src/CompletionDictExpression.res 6:34
+XXX Not found!
+Completable: Cexpression dict<Type[color]>->dictValue
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath dict<Type[color]>
+ContextPath Type[color]
+Path color
+[
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Red",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Red",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Blue",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Blue",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictExpression.res 9:35
+XXX Not found!
+Completable: Cexpression dict<Type[color]>=R->dictValue
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath dict<Type[color]>
+ContextPath Type[color]
+Path color
+[
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Red",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Red",
+    "sortText": "A Red",
+    "tags": []
+  },
+  { "detail": "module RegExp", "kind": 9, "label": "RegExp", "tags": [] },
+  { "detail": "module Result", "kind": 9, "label": "Result", "tags": [] },
+  {
+    "data": {
+      "modulePath": "React",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module React",
+    "kind": 9,
+    "label": "React",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "ReactDOM",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module ReactDOM",
+    "kind": 9,
+    "label": "ReactDOM",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "ReactDOMStyle",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module ReactDOMStyle",
+    "kind": 9,
+    "label": "ReactDOMStyle",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "ReactEvent",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module ReactEvent",
+    "kind": 9,
+    "label": "ReactEvent",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RecModules",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RecModules",
+    "kind": 9,
+    "label": "RecModules",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RecordCompletion",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RecordCompletion",
+    "kind": 9,
+    "label": "RecordCompletion",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RecordRest",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RecordRest",
+    "kind": 9,
+    "label": "RecordRest",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RecoveryOnProp",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RecoveryOnProp",
+    "kind": 9,
+    "label": "RecoveryOnProp",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "References",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module References",
+    "kind": 9,
+    "label": "References",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "ReferencesInner",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module ReferencesInner",
+    "kind": 9,
+    "label": "ReferencesInner",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "ReferencesWithInterface",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module ReferencesWithInterface",
+    "kind": 9,
+    "label": "ReferencesWithInterface",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Rename",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Rename",
+    "kind": 9,
+    "label": "Rename",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RenameWithInterface",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RenameWithInterface",
+    "kind": 9,
+    "label": "RenameWithInterface",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Reprod",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Reprod",
+    "kind": 9,
+    "label": "Reprod",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RescriptReactErrorBoundary",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RescriptReactErrorBoundary",
+    "kind": 9,
+    "label": "RescriptReactErrorBoundary",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RescriptReactRouter",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RescriptReactRouter",
+    "kind": 9,
+    "label": "RescriptReactRouter",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RescriptTools",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RescriptTools",
+    "kind": 9,
+    "label": "RescriptTools",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RescriptTools_Docgen",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RescriptTools_Docgen",
+    "kind": 9,
+    "label": "RescriptTools_Docgen",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RescriptTools_ExtractCodeBlocks",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RescriptTools_ExtractCodeBlocks",
+    "kind": 9,
+    "label": "RescriptTools_ExtractCodeBlocks",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Rxjs",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Rxjs",
+    "kind": 9,
+    "label": "Rxjs",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RxjsCompletion",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RxjsCompletion",
+    "kind": 9,
+    "label": "RxjsCompletion",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictExpression.res 12:45
+XXX Not found!
+Completable: Cexpression dict<Type[color]>=B->dictValue
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath dict<Type[color]>
+ContextPath Type[color]
+Path color
+[
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Blue",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Blue",
+    "sortText": "A Blue",
+    "tags": []
+  },
+  {
+    "detail": "module BigUint64Array",
+    "kind": 9,
+    "label": "BigUint64Array",
+    "tags": []
+  },
+  { "detail": "module Bool", "kind": 9, "label": "Bool", "tags": [] },
+  { "detail": "module Blob", "kind": 9, "label": "Blob", "tags": [] },
+  { "detail": "module BigInt", "kind": 9, "label": "BigInt", "tags": [] },
+  {
+    "detail": "module BigInt64Array",
+    "kind": 9,
+    "label": "BigInt64Array",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt",
+    "kind": 9,
+    "label": "Belt",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_Array",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_Array",
+    "kind": 9,
+    "label": "Belt_Array",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_Float",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_Float",
+    "kind": 9,
+    "label": "Belt_Float",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_HashMap",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_HashMap",
+    "kind": 9,
+    "label": "Belt_HashMap",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_HashMapInt",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_HashMapInt",
+    "kind": 9,
+    "label": "Belt_HashMapInt",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_HashMapString",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_HashMapString",
+    "kind": 9,
+    "label": "Belt_HashMapString",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_HashSet",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_HashSet",
+    "kind": 9,
+    "label": "Belt_HashSet",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_HashSetInt",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_HashSetInt",
+    "kind": 9,
+    "label": "Belt_HashSetInt",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_HashSetString",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_HashSetString",
+    "kind": 9,
+    "label": "Belt_HashSetString",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_Id",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_Id",
+    "kind": 9,
+    "label": "Belt_Id",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_Int",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_Int",
+    "kind": 9,
+    "label": "Belt_Int",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_List",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_List",
+    "kind": 9,
+    "label": "Belt_List",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_Map",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_Map",
+    "kind": 9,
+    "label": "Belt_Map",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_MapDict",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_MapDict",
+    "kind": 9,
+    "label": "Belt_MapDict",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_MapInt",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_MapInt",
+    "kind": 9,
+    "label": "Belt_MapInt",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_MapString",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_MapString",
+    "kind": 9,
+    "label": "Belt_MapString",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_MutableMap",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_MutableMap",
+    "kind": 9,
+    "label": "Belt_MutableMap",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_MutableMapInt",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_MutableMapInt",
+    "kind": 9,
+    "label": "Belt_MutableMapInt",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_MutableMapString",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_MutableMapString",
+    "kind": 9,
+    "label": "Belt_MutableMapString",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_MutableQueue",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_MutableQueue",
+    "kind": 9,
+    "label": "Belt_MutableQueue",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_MutableSet",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_MutableSet",
+    "kind": 9,
+    "label": "Belt_MutableSet",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_MutableSetInt",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_MutableSetInt",
+    "kind": 9,
+    "label": "Belt_MutableSetInt",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_MutableSetString",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_MutableSetString",
+    "kind": 9,
+    "label": "Belt_MutableSetString",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_MutableStack",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_MutableStack",
+    "kind": 9,
+    "label": "Belt_MutableStack",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_Option",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_Option",
+    "kind": 9,
+    "label": "Belt_Option",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_Range",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_Range",
+    "kind": 9,
+    "label": "Belt_Range",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_Result",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_Result",
+    "kind": 9,
+    "label": "Belt_Result",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_Set",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_Set",
+    "kind": 9,
+    "label": "Belt_Set",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_SetDict",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_SetDict",
+    "kind": 9,
+    "label": "Belt_SetDict",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_SetInt",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_SetInt",
+    "kind": 9,
+    "label": "Belt_SetInt",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_SetString",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_SetString",
+    "kind": 9,
+    "label": "Belt_SetString",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_SortArray",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_SortArray",
+    "kind": 9,
+    "label": "Belt_SortArray",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_SortArrayInt",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_SortArrayInt",
+    "kind": 9,
+    "label": "Belt_SortArrayInt",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_SortArrayString",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_SortArrayString",
+    "kind": 9,
+    "label": "Belt_SortArrayString",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_internalAVLset",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_internalAVLset",
+    "kind": 9,
+    "label": "Belt_internalAVLset",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_internalAVLtree",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_internalAVLtree",
+    "kind": 9,
+    "label": "Belt_internalAVLtree",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_internalBuckets",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_internalBuckets",
+    "kind": 9,
+    "label": "Belt_internalBuckets",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_internalBucketsType",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_internalBucketsType",
+    "kind": 9,
+    "label": "Belt_internalBucketsType",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_internalMapInt",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_internalMapInt",
+    "kind": 9,
+    "label": "Belt_internalMapInt",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_internalMapString",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_internalMapString",
+    "kind": 9,
+    "label": "Belt_internalMapString",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_internalSetBuckets",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_internalSetBuckets",
+    "kind": 9,
+    "label": "Belt_internalSetBuckets",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_internalSetInt",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_internalSetInt",
+    "kind": 9,
+    "label": "Belt_internalSetInt",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Belt_internalSetString",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Belt_internalSetString",
+    "kind": 9,
+    "label": "Belt_internalSetString",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "BrokenParserCases",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module BrokenParserCases",
+    "kind": 9,
+    "label": "BrokenParserCases",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictExpression.res 15:43
+XXX Not found!
+Completable: Cexpression dict<array<Type[color]>>=R->dictValue, array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath dict<array<Type[color]>>
+ContextPath array<Type[color]>
+ContextPath Type[color]
+Path color
+[
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Red",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Red",
+    "sortText": "A Red",
+    "tags": []
+  },
+  { "detail": "module RegExp", "kind": 9, "label": "RegExp", "tags": [] },
+  { "detail": "module Result", "kind": 9, "label": "Result", "tags": [] },
+  {
+    "data": {
+      "modulePath": "React",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module React",
+    "kind": 9,
+    "label": "React",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "ReactDOM",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module ReactDOM",
+    "kind": 9,
+    "label": "ReactDOM",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "ReactDOMStyle",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module ReactDOMStyle",
+    "kind": 9,
+    "label": "ReactDOMStyle",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "ReactEvent",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module ReactEvent",
+    "kind": 9,
+    "label": "ReactEvent",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RecModules",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RecModules",
+    "kind": 9,
+    "label": "RecModules",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RecordCompletion",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RecordCompletion",
+    "kind": 9,
+    "label": "RecordCompletion",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RecordRest",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RecordRest",
+    "kind": 9,
+    "label": "RecordRest",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RecoveryOnProp",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RecoveryOnProp",
+    "kind": 9,
+    "label": "RecoveryOnProp",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "References",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module References",
+    "kind": 9,
+    "label": "References",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "ReferencesInner",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module ReferencesInner",
+    "kind": 9,
+    "label": "ReferencesInner",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "ReferencesWithInterface",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module ReferencesWithInterface",
+    "kind": 9,
+    "label": "ReferencesWithInterface",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Rename",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Rename",
+    "kind": 9,
+    "label": "Rename",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RenameWithInterface",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RenameWithInterface",
+    "kind": 9,
+    "label": "RenameWithInterface",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Reprod",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Reprod",
+    "kind": 9,
+    "label": "Reprod",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RescriptReactErrorBoundary",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RescriptReactErrorBoundary",
+    "kind": 9,
+    "label": "RescriptReactErrorBoundary",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RescriptReactRouter",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RescriptReactRouter",
+    "kind": 9,
+    "label": "RescriptReactRouter",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RescriptTools",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RescriptTools",
+    "kind": 9,
+    "label": "RescriptTools",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RescriptTools_Docgen",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RescriptTools_Docgen",
+    "kind": 9,
+    "label": "RescriptTools_Docgen",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RescriptTools_ExtractCodeBlocks",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RescriptTools_ExtractCodeBlocks",
+    "kind": 9,
+    "label": "RescriptTools_ExtractCodeBlocks",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Rxjs",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module Rxjs",
+    "kind": 9,
+    "label": "Rxjs",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RxjsCompletion",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RxjsCompletion",
+    "kind": 9,
+    "label": "RxjsCompletion",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictExpression.res 18:35
+XXX Not found!
+Completable: Cexpression dict<Type[point]>->dictValue, recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath dict<Type[point]>
+ContextPath Type[point]
+Path point
+[
+  {
+    "detail": "int",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nx: int\n```\n\n```rescript\ntype point = {x: int, y: int}\n```"
+    },
+    "kind": 5,
+    "label": "x",
+    "tags": []
+  },
+  {
+    "detail": "int",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ny: int\n```\n\n```rescript\ntype point = {x: int, y: int}\n```"
+    },
+    "kind": 5,
+    "label": "y",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictExpression.res 21:33
+pos_cursor:[21:33] pos_no_white:[21:31] Found expr:[21:11->21:35]
+Pexp_apply ...[21:11->21:22] (...[21:23->21:35])
+Completable: Cexpression CArgument Value[takesColors]($0)->dictValue
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[takesColors]($0)
+ContextPath Value[takesColors]
+Path takesColors
+[
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Red",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Red",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Blue",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Blue",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictExpression.res 24:23
+pos_cursor:[24:23] pos_no_white:[24:22] Found expr:[24:11->24:24]
+Pexp_apply ...[24:11->24:22] (...[24:23->24:24])
+Completable: Cexpression CArgument Value[takesColors]($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[takesColors]($0)
+ContextPath Value[takesColors]
+Path takesColors
+[
+  {
+    "detail": "dict<color>",
+    "insertText": "dict{$0}",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "dict{}",
+    "sortText": "A",
+    "tags": []
+  }
+]
+

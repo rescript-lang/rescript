@@ -374,6 +374,7 @@ and completion_type =
     }
   | Tbool of Query_env.t
   | Tarray of Query_env.t * inner_type
+  | Tdict of Query_env.t * inner_type
   | Tstring of Query_env.t
   | TtypeT of {env: Query_env.t; path: Path.t}
   | Tvariant of {
@@ -616,6 +617,8 @@ module Completable = struct
         source_arity: int;
       }
     | NArray
+    | NDictValue of {optional: bool}
+        (** The pattern or expression of a dict entry, [?P] if [optional] *)
 
   let nested_path_to_string p =
     match p with
@@ -629,11 +632,12 @@ module Completable = struct
       "polyvariantPayload::" ^ constructor_name ^ "($" ^ string_of_int item_num
       ^ ")"
     | NArray -> "array"
+    | NDictValue {optional} -> if optional then "dictValue(?)" else "dictValue"
 
   type context_path =
     | CPString
     | CPArray of context_path option
-    | CPDict
+    | CPDict of context_path option
     | CPInt
     | CPFloat
     | CPBool
@@ -735,7 +739,8 @@ module Completable = struct
     | CPArray (Some ctx_path) ->
       "array<" ^ context_path_to_string ctx_path ^ ">"
     | CPArray None -> "array"
-    | CPDict -> "dict"
+    | CPDict (Some ctx_path) -> "dict<" ^ context_path_to_string ctx_path ^ ">"
+    | CPDict None -> "dict"
     | CPId {path; completion_context} ->
       completion_context_to_string completion_context ^ list path
     | CPField {context_path = cp; field_name = s} ->

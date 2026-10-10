@@ -30,8 +30,3 @@ open Ast_helper
 
 let fuse_all ?(loc = Location.none) (t : t) : item =
   Str.include_ ~loc (Incl.mk ~loc (Mod.structure ~loc t))
-
-let constraint_ ?(loc = Location.none) (stru : t) (sign : Ast_signature.t) =
-  Str.include_ ~loc
-    (Incl.mk ~loc
-       (Mod.constraint_ ~loc (Mod.structure ~loc stru) (Mty.signature ~loc sign)))

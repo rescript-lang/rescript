@@ -10,7 +10,6 @@ val binary_annotations : bool ref
 val noassert : bool ref
 val verbose : bool ref
 val real_paths : bool ref
-val error_size : int ref
 val transparent_modules : bool ref
 val dump_source : bool ref
 val dump_parsetree : bool ref

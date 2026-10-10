@@ -47,6 +47,32 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
            `[None, <com>, None]`) *)
         Some ("", next_expr_path)
       | _ -> None)
+  | Pexp_dict entries -> (
+    (* Complete inside the value of the entry with the cursor, or for the type
+       of the values at an expression hole, e.g. `dict{"a": <com>}` *)
+    let next_expr_path =
+      [Completable.NDictValue {optional = false}] @ expr_path
+    in
+    let values =
+      entries
+      |> List.filter_map (function
+        | Parsetree.Pdict_entry (_, value) -> Some value
+        | Pdict_spread _ -> None)
+    in
+    match
+      values
+      |> List.find_opt (fun value ->
+          value.Parsetree.pexp_loc
+          |> Cursor_position.classify_loc ~pos
+          = HasCursor)
+    with
+    | Some value ->
+      value
+      |> traverse_expr ~expr_path:next_expr_path
+           ~first_char_before_cursor_no_white ~pos
+    | None when List.exists is_expr_hole values ->
+      some_if_has_cursor ("", next_expr_path)
+    | None -> None)
   | Pexp_tuple tuple_items when loc_has_cursor exp.pexp_loc ->
     tuple_items
     |> traverse_expr_tuple_items ~first_char_before_cursor_no_white ~pos

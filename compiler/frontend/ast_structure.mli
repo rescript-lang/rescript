@@ -27,5 +27,3 @@ type item = Parsetree.structure_item
 type t = item list
 
 val fuse_all : ?loc:Ast_helper.loc -> t -> item
-
-val constraint_ : ?loc:Ast_helper.loc -> t -> Ast_signature.t -> item

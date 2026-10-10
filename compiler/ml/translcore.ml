@@ -1450,9 +1450,10 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
     let ll = transl_list expr_list in
     prim ~primitive:Pmakearray ~args:ll e.exp_loc
   | Texp_dict entries -> (
-    (* [%makedict] of the rows ([Primitive_dict.make]), and [Object.assign]
-       of a dict of the rows before the first spread with the spreads and the
-       dicts of the rows between them ([Primitive_dict.spread]) *)
+    (* [%makedict] of the rows ([Primitive_dict.make]), and [Pdict_spread]
+       of a dict of the rows before the first spread, the spreads and the
+       dicts of the rows between them, which compiles to an object literal
+       with spreads *)
     let make rows =
       let row ((key : string loc), value) =
         let ll = [const (Const_string key.txt); transl_exp value] in
