@@ -160,41 +160,6 @@ let install_handles watcher identified_directories =
   | None -> Ok ()
   | Some message -> Error message
 
-let create_with_directory_identity ~directory_identity ~paths =
-  match Luv.Loop.init () with
-  | Error error -> Error (error_message error)
-  | Ok loop -> (
-    match Luv.Timer.init ~loop () with
-    | Error error ->
-      ignore (Luv.Loop.close loop);
-      Error (error_message error)
-    | Ok timer -> (
-      let watcher =
-        {loop; timer; handles = []; changes = []; stopped = false; error = None}
-      in
-      let fail message =
-        try
-          close watcher;
-          Error message
-        with cleanup_error ->
-          Error
-            (Printf.sprintf "%s (native watcher cleanup failed: %s)" message
-               (Printexc.to_string cleanup_error))
-      in
-      match
-        try
-          match
-            identify_directories ~directory_identity (directories_under paths)
-          with
-          | Error _ as error -> error
-          | Ok directories -> install_handles watcher directories
-        with error -> Error (Printexc.to_string error)
-      with
-      | Ok () -> Ok watcher
-      | Error message -> fail message))
-
-let create = create_with_directory_identity ~directory_identity
-
 let wait watcher ~keep_running =
   watcher.stopped <- not (keep_running ());
   (* Events can arrive while refresh closes handles and pumps the libuv loop.
@@ -287,6 +252,38 @@ let refresh_with_directory_identity ~directory_identity watcher ~paths =
       install_handles watcher identified_directories)
 
 let refresh = refresh_with_directory_identity ~directory_identity
+
+(* Creating a watcher refreshes an empty one, so creation and later refreshes
+   install handles the same way. *)
+let create_with_directory_identity ~directory_identity ~paths =
+  match Luv.Loop.init () with
+  | Error error -> Error (error_message error)
+  | Ok loop -> (
+    match Luv.Timer.init ~loop () with
+    | Error error ->
+      ignore (Luv.Loop.close loop);
+      Error (error_message error)
+    | Ok timer -> (
+      let watcher =
+        {loop; timer; handles = []; changes = []; stopped = false; error = None}
+      in
+      let fail message =
+        try
+          close watcher;
+          Error message
+        with cleanup_error ->
+          Error
+            (Printf.sprintf "%s (native watcher cleanup failed: %s)" message
+               (Printexc.to_string cleanup_error))
+      in
+      match
+        try refresh_with_directory_identity ~directory_identity watcher ~paths
+        with error -> Error (Printexc.to_string error)
+      with
+      | Ok () -> Ok watcher
+      | Error message -> fail message))
+
+let create = create_with_directory_identity ~directory_identity
 
 module For_test = struct
   let create_with_directory_identity = create_with_directory_identity
