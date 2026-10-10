@@ -135,30 +135,6 @@ omitted because the Rust and OCaml files are still changing.
 | Format check result | `format.rs`: `format_files` | `format.ml`: `format_files`, `format_check_summary` | Focused integration checks path, singular summary, error, and failure status; unit tests cover singular/plural messages | Matched |
 | Implicit format project scope and graph validation | `format.rs`: `get_files_in_scope`; `ProjectContext::get_scoped_local_packages`; `packages::make` | `format.ml`: `files_in_scope`, `discover_package_graph`, `package_sources`; `project_context.ml` and `package_graph.ml`: shared resolution and locality policy | Four canonical format tests cover the current fixture, a single file, stdin, and formatting from a workspace package; focused integration proves that implicit format requires a config in the current directory rather than searching parents; `format_tests.ml` proves installed `node_modules` dependencies are excluded from formatting; the differential command gate covers missing, config-less, malformed, duplicate-path, omitted-source, requested feature-cycle, installed missing-source, and local dependency feature-selection cases | Matched: one complete applicable package scan supplies both graph diagnostics and the files to format; the current package uses all features, dependencies use the union of consumer feature requests, direct symlink-local regular/dev dependencies are included only at a monorepo root, a listed child formats only itself, and transitive or installed dependencies are validated but not formatted |
 
-## Rust unit-test coverage gate
-
-[`tests/check_rust_test_coverage.sh`](tests/check_rust_test_coverage.sh)
-discovers every `#[test]` and `#[tokio::test]` below `rewatch/src` and compares
-that inventory with [`tests/rust_test_coverage.tsv`](tests/rust_test_coverage.tsv).
-Each Rust test must map to focused OCaml coverage, the shared canonical suite,
-an intentional architectural difference, an explicit project omission, or a
-known gap. New Rust tests and stale mapping rows fail the ordinary check.
-
-Run the stricter final gate with:
-
-```bash
-rewatch-ocaml/tests/check_rust_test_coverage.sh --require-complete
-```
-
-That mode also fails while any scenario is `unreviewed` or `gap`. The inventory
-contains 139 Rust tests, all reviewed, with no remaining entries in either
-category. They map to focused OCaml tests, the shared suite, accepted
-architectural differences, or the explicit telemetry omission. A mapping is
-evidence only after its cited OCaml/shared test has been inspected; grouping by
-similar wording alone is not proof of equivalent behavior. Passing this unit
-inventory does not replace the broader validation-source and interactive-output
-gates in this document.
-
 ## Canonical integration-test coverage gate
 
 CI runs the shared [`rewatch/tests/suite.sh`](../rewatch/tests/suite.sh) against

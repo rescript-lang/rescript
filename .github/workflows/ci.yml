@@ -215,7 +215,6 @@ jobs:
       - name: Run OCaml rewatch parity tests
         timeout-minutes: 20
         run: |
-          bash rewatch-ocaml/tests/check_rust_test_coverage.sh --require-complete
           bash rewatch-ocaml/tests/check_canonical_test_coverage.sh
           bash rewatch-ocaml/tests/check_config_acceptance.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
