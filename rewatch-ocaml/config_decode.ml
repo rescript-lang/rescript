@@ -332,7 +332,7 @@ let parse_package_spec path = function
       | None -> fail path "package-specs entry is missing field \"module\""
       | Some value ->
         fail path
-          (Printf.sprintf "unsupported package module %S"
+          (Printf.sprintf "unsupported package module %s"
              (Yojson.Safe.to_string value))
     in
     let in_source =

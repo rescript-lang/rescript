@@ -45,9 +45,11 @@ val set_dependencies : t -> key:string -> string list -> unit
 
 val mark_dependents_compile_dirty :
   ?visited:(string, unit) Hashtbl.t -> t -> module_ -> unit
-(** Transitive propagation is required because a dependent may publish a
-    byte-identical CMI after recompilation. Marking only direct dependents would
-    then lose pending work below it. *)
+(** Marks the direct source dependents of [module_], looking through namespace
+    maps. Dependents further away are marked only when a dependent's own
+    recompilation publishes a changed CMI ({!record_published_cmi}), because a
+    byte-identical CMI cannot affect them. [visited] is shared across one
+    publication batch so each dependent is visited once. *)
 
 val record_published_cmi :
   ?dirty_propagation:(string, unit) Hashtbl.t ->

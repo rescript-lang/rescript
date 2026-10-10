@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+// @ts-check
+
 import { rescript_exe } from "./common/bins.js";
 import { runBuildSystem } from "./common/runBuildSystem.js";
 
