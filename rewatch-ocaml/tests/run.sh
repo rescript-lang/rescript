@@ -1987,6 +1987,9 @@ test ! -f "$workspace_build_lock"
 "$port" build --features native "$features"
 test -f "$features/native/Native.js"
 
+# dep-union is requested with [web] by consumer, then with all features by
+# consumer's dev-dependency, then with [native] by the root. All features win
+# over a later named request; under --prod (below) the named requests merge.
 "$port" build "$feature_dependencies"
 test -f "$feature_dependencies/packages/dep-union/extra/UnionExtra.js"
 test -f "$feature_dependencies/packages/dep-transitive/native/TransitiveNative.js"

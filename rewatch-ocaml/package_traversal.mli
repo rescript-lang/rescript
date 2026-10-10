@@ -43,11 +43,3 @@ val discover :
   features:string list option ->
   resolution:Package_resolution.t ->
   graph
-
-module For_test : sig
-  val create_feature_requests : unit -> feature_requests
-  val add_feature_request :
-    feature_requests -> string -> string list option -> unit
-  val find_feature_selection :
-    feature_requests -> string -> feature_selection option
-end
