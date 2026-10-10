@@ -163,24 +163,13 @@ let decode_jsx path fields =
       | None -> []
       | Some value -> ["-bs-jsx-module"; string path "jsx.module" value]
     in
-    let mode =
-      match optional_member "mode" jsx with
-      | None -> []
-      | Some (`String (("classic" | "automatic") as value)) ->
-        ["-bs-jsx-mode"; value]
-      | Some _ ->
-        fail path "field \"jsx.mode\" must be \"classic\" or \"automatic\""
-    in
     let preserve =
       match optional_member "preserve" jsx with
       | None | Some (`Bool false) -> []
       | Some (`Bool true) -> ["-bs-jsx-preserve"]
       | Some _ -> fail path "field \"jsx.preserve\" must be a boolean"
     in
-    (match optional_member "v3-dependencies" jsx with
-    | None -> ()
-    | Some value -> ignore (strings path "jsx.v3-dependencies" value));
-    version @ module_ @ mode @ preserve
+    version @ module_ @ preserve
   | Some _ -> fail path "field \"jsx\" must be an object"
 
 (* Returns the compiler arguments and whether source maps are emitted only for

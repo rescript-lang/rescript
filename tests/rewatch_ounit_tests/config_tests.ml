@@ -226,14 +226,12 @@ let gentype_discovery_tests =
 
 let validation_tests =
   with_config_file (fun ~root ~path ->
-      write_file path {|{"name":"jsx-v3","jsx":{"v3-dependencies":true}}|};
-      let rejected =
-        try
-          ignore (Config.load path);
-          false
-        with Config.Error message -> contains message "jsx.v3-dependencies"
-      in
-      check rejected "jsx.v3-dependencies must be an array of strings";
+      write_file path
+        {|{"name":"jsx-obsolete","jsx":{"version":4,"mode":true,"v3-dependencies":"react","mode":"classic"}}|};
+      let config = Config.load path in
+      check
+        (config.jsx_args = ["-bs-jsx"; "4"] && config.diagnostics = [])
+        "obsolete jsx.mode and jsx.v3-dependencies are ignored with any value";
       write_file path
         {|{"name":"namespace-entry-without-namespace","namespace-entry":"Entry"}|};
       let rejected =
@@ -331,7 +329,7 @@ let compiler_argument_tests =
           "name": "argument-order",
           "compiler-flags": ["-open Belt"],
           "warnings": {"number": "+A"},
-          "jsx": {"mode": "automatic"},
+          "jsx": {"version": 4},
           "sourceMap": {"enabled": "always", "mode": "hidden"},
           "gentypeconfig": {},
           "experimental-features": {"LetUnwrap": true}
@@ -340,8 +338,8 @@ let compiler_argument_tests =
       check
         (Compiler_args.parser_flags config
         = [
-            "-bs-jsx-mode";
-            "automatic";
+            "-bs-jsx";
+            "4";
             "-enable-experimental";
             "LetUnwrap";
             "-w";
@@ -353,8 +351,8 @@ let compiler_argument_tests =
       check
         (Compiler_args.compiler_flags ~watch:false config
         = [
-            "-bs-jsx-mode";
-            "automatic";
+            "-bs-jsx";
+            "4";
             "-bs-source-map";
             "hidden";
             "-open";
@@ -431,7 +429,7 @@ let decoder_semantics_tests =
         {|{"name":"duplicate-source","sources":{"dir":"a","dir":"b"}}|};
         {|{"name":"duplicate-spec","package-specs":{"module":"esmodule","module":"commonjs"}}|};
         {|{"name":"duplicate-warning","warnings":{"number":"A","number":"B"}}|};
-        {|{"name":"duplicate-jsx","jsx":{"mode":"classic","mode":"automatic"}}|};
+        {|{"name":"duplicate-jsx","jsx":{"version":4,"version":4}}|};
         {|{"name":"duplicate-gentype","gentypeconfig":{"module":"esmodule","module":"commonjs"}}|};
         {|{"name":"duplicate-post","js-post-build":{"cmd":"true","cmd":"false"}}|};
         {|{"name":"duplicate-dependency","dependencies":[{"name":"a","name":"b"}]}|};

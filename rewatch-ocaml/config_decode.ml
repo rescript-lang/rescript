@@ -63,9 +63,13 @@ let configuration_fields =
 
 let warning_fields = reject_all_duplicates ["number"; "error"]
 
+(* Like Rust rewatch, jsx.mode and jsx.v3-dependencies no longer have any
+   effect: they are accepted with any value and not reported as unknown. *)
 let jsx_fields =
-  reject_all_duplicates
-    ["version"; "module"; "mode"; "v3-dependencies"; "preserve"]
+  {
+    known = ["version"; "module"; "preserve"; "mode"; "v3-dependencies"];
+    duplicate_checked = ["version"; "module"; "preserve"];
+  }
 
 let gentype_fields =
   reject_all_duplicates
