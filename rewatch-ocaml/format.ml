@@ -198,26 +198,13 @@ let format_stdin ?poll extension =
   if extension <> ".res" && extension <> ".resi" then
     raise (Error "--stdin must be .res or .resi");
   let bsc = bsc () in
-  (* The temporary pathname needs a cleanup owner before termination can
-     interrupt the command, otherwise an early signal can leave it behind. *)
-  let deferred_signals = Signal_restore.create ~defer:true in
-  let temporary = ref None in
-  let remove_temporary () =
-    Option.iter
-      (fun path -> try Sys.remove path with Sys_error _ -> ())
-      !temporary
-  in
-  try
-    let path = Filename.temp_file "rescript-format-" extension in
-    temporary := Some path;
-    Fun.protect ~finally:remove_temporary (fun () ->
-        Signal_restore.restore deferred_signals;
-        let contents = read_stdin_interruptibly ?poll () in
-        File_util.write_file path contents;
-        print_string (formatted ?poll ~bsc ~target:"stdin" path))
-  with exn ->
-    remove_temporary ();
-    raise (Signal_restore.exception_after_restore deferred_signals exn)
+  let path = Filename.temp_file "rescript-format-" extension in
+  Fun.protect
+    ~finally:(fun () -> try Sys.remove path with Sys_error _ -> ())
+    (fun () ->
+      let contents = read_stdin_interruptibly ?poll () in
+      File_util.write_file path contents;
+      print_string (formatted ?poll ~bsc ~target:"stdin" path))
 
 let run_files ?poll ~verbosity ~check paths =
   let bsc = bsc () in

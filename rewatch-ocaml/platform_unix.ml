@@ -75,10 +75,6 @@ let rec signal_process_tree ~root_reaped process signal =
    children from outliving the build and leaving its lock behind. *)
 let termination_signals = [Sys.sigint; Sys.sigterm; Sys.sighup; Sys.sigquit]
 
-let defer_termination_signals () =
-  let previous = Unix.sigprocmask Unix.SIG_BLOCK termination_signals in
-  fun () -> ignore (Unix.sigprocmask Unix.SIG_SETMASK previous)
-
 let graceful_termination_signal = Sys.sigterm
 let escalate_process_groups = true
 

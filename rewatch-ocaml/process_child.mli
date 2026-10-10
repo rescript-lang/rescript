@@ -29,7 +29,6 @@ val launch :
   ?stdout_chunk:(bytes -> int -> unit) ->
   ?stderr_chunk:(bytes -> int -> unit) ->
   ?stdin:stdin_policy ->
-  ?defer_signals:bool ->
   notifier:completion_notifier ->
   'a ->
   job ->
@@ -37,10 +36,9 @@ val launch :
 
 val wait_for_running :
   poll:(unit -> unit) ->
-  ?defer_signals:bool ->
   completion_notifier ->
   'a running list ->
-  ('a running * result) * Signal_restore.t
+  'a running * result
 
 val payload : 'a running -> 'a
 val pid : 'a running -> int

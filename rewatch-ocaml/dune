@@ -34,7 +34,7 @@
   package_traversal
   platform_common
   platform
-  signal_restore
+  termination_signals
   traversal_coverage
   process_child
   process

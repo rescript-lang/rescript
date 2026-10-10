@@ -20,7 +20,7 @@ let with_termination_handlers action =
     if exit_code <> 0 then raise (Process.Interrupted exit_code)
   in
   let result =
-    Signal_restore.with_termination_handlers interrupt (fun () -> action ~poll)
+    Termination_signals.with_handlers interrupt (fun () -> action ~poll)
   in
   poll ();
   result

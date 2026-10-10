@@ -94,42 +94,28 @@ let directory_entries path =
 
 let write_file_atomic ?(ensure_parent = true) ?perm path contents =
   if ensure_parent then ensure_dir (Filename.dirname path);
-  (* A temporary file must have a cleanup owner before a watch signal can
-     interrupt the command. Publishing is also signal-deferred so the final
-     path always names either the previous complete file or the replacement. *)
-  let creation_signals = Signal_restore.create ~defer:true in
-  let temporary = ref None in
-  let remove_temporary path =
-    try Sys.remove path with Sys_error _ | Unix.Unix_error _ -> ()
+  let perm =
+    match perm with
+    | Some _ as perm -> perm
+    | None -> (
+      match Unix.stat path with
+      | metadata -> Some metadata.Unix.st_perm
+      | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None)
   in
+  let candidate =
+    Filename.temp_file ~temp_dir:(Filename.dirname path) ".rewatch-write-"
+      ".tmp"
+  in
+  let published = ref false in
   Fun.protect
-    ~finally:(fun () -> Option.iter remove_temporary !temporary)
+    ~finally:(fun () ->
+      if not !published then
+        try Sys.remove candidate with Sys_error _ | Unix.Unix_error _ -> ())
     (fun () ->
-      let candidate, perm =
-        Signal_restore.protect creation_signals (fun () ->
-            let perm =
-              match perm with
-              | Some _ as perm -> perm
-              | None -> (
-                match Unix.stat path with
-                | metadata -> Some metadata.Unix.st_perm
-                | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _)
-                  ->
-                  None)
-            in
-            let candidate =
-              Filename.temp_file ~temp_dir:(Filename.dirname path)
-                ".rewatch-write-" ".tmp"
-            in
-            temporary := Some candidate;
-            (candidate, perm))
-      in
       Option.iter (Unix.chmod candidate) perm;
       write_file candidate contents;
-      let publish_signals = Signal_restore.create ~defer:true in
-      Signal_restore.protect publish_signals (fun () ->
-          Sys.rename candidate path;
-          temporary := None))
+      Sys.rename candidate path;
+      published := true)
 
 (* Callers that already created the destination directory may skip that work,
    avoiding repeated metadata probes when publishing many files. *)
