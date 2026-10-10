@@ -18,8 +18,8 @@ let context ?(inherited_compiler_args = []) root config source_map_args =
   let runtime = Filename.concat root "runtime" in
   if not (Sys.file_exists bsc) then write bsc "compiler-v1";
   File_util.ensure_dir runtime;
-  Compiler_info.make_context ~build_root:root ~bsc_path:bsc
-    ~runtime_path:runtime ~source_map_args ~inherited_compiler_args
+  Compiler_info.make_context ~bsc_path:bsc ~runtime_path:runtime
+    ~source_map_args ~inherited_compiler_args
     ~package_output_specs:(Compiler_info.package_output_specs config)
 
 let tests =
@@ -123,16 +123,16 @@ let tests =
         ]
       in
       let initial =
-        Compiler_info.make_context ~build_root:root ~bsc_path:bsc
-          ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
+        Compiler_info.make_context ~bsc_path:bsc ~runtime_path:runtime
+          ~source_map_args:[] ~inherited_compiler_args:[]
           ~package_output_specs:commonjs
       in
       Compiler_info.write_package initial dependency;
       let marker = File_util.path_of_parts root ["lib"; "ocaml"; "marker"] in
       write marker "keep";
       let changed =
-        Compiler_info.make_context ~build_root:root ~bsc_path:bsc
-          ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
+        Compiler_info.make_context ~bsc_path:bsc ~runtime_path:runtime
+          ~source_map_args:[] ~inherited_compiler_args:[]
           ~package_output_specs:esmodule
       in
       check
@@ -141,49 +141,4 @@ let tests =
       Compiler_info.clean_package dependency;
       check
         (not (Sys.file_exists marker))
-        "package-output mismatches remove compiler artifacts");
-  with_temp_dir (fun root ->
-      let dependency_root = Filename.concat root "dependency" in
-      File_util.ensure_dir dependency_root;
-      let dependency = config dependency_root in
-      let bsc = Filename.concat root "bsc.exe" in
-      let runtime = Filename.concat root "runtime" in
-      write bsc "compiler-v1";
-      File_util.ensure_dir runtime;
-      let standalone =
-        Compiler_info.make_context ~build_root:dependency_root ~bsc_path:bsc
-          ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
-          ~package_output_specs:(Compiler_info.package_output_specs dependency)
-      in
-      Compiler_info.write_package standalone dependency;
-      let consumer_root = Filename.concat root "consumer" in
-      File_util.ensure_dir consumer_root;
-      let consumer_specs =
-        [
-          {
-            Compiler_info.module_format = Config.Commonjs;
-            in_source = false;
-            suffix = ".cjs";
-          };
-        ]
-      in
-      let consumer =
-        Compiler_info.make_context ~build_root:consumer_root ~bsc_path:bsc
-          ~runtime_path:runtime ~source_map_args:[] ~inherited_compiler_args:[]
-          ~package_output_specs:consumer_specs
-      in
-      check
-        (Compiler_info.owns_outputs dependency)
-        "a standalone dependency retains ownership of its outputs";
-      check
-        (Compiler_info.needs_clean consumer dependency)
-        "consumer output specs differ when deliberately applied to the \
-         dependency";
-      check
-        (Compiler_info.changed_package_output_specs consumer dependency
-        = Some (Compiler_info.package_output_specs dependency))
-        "the previous standalone layout remains available for ownership \
-         transfer";
-      check
-        (not (Compiler_info.needs_clean standalone dependency))
-        "standalone dependency metadata remains intact")
+        "package-output mismatches remove compiler artifacts")

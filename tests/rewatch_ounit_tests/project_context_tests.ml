@@ -42,6 +42,14 @@ let tests =
         (Project_context.workspace_lock_root unlisted = unlisted)
         "package.json workspace globs do not enroll unlisted ReScript packages";
       check
+        ((Project_context.workspace_config_for (Config.load_root dependency))
+           .name = "workspace")
+        "a listed member builds with the parent workspace settings";
+      check
+        ((Project_context.workspace_config_for (Config.load_root unlisted)).name
+       = "unlisted")
+        "an unlisted package builds with its own settings";
+      check
         (Project_context.relative_to root root = ".")
         "a root path is represented by the current-directory component";
       check

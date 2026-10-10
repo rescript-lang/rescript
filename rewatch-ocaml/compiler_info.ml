@@ -1,5 +1,4 @@
 type context = {
-  build_root: string;
   bsc_path: string;
   bsc_hash: string;
   runtime_path: string;
@@ -14,7 +13,7 @@ and package_output_spec = {
   suffix: string;
 }
 
-let format_version = "4"
+let format_version = "5"
 
 let package_output_specs (config : Config.t) =
   List.map
@@ -26,10 +25,9 @@ let package_output_specs (config : Config.t) =
       })
     config.package_specs
 
-let make_context ~build_root ~bsc_path ~runtime_path ~source_map_args
+let make_context ~bsc_path ~runtime_path ~source_map_args
     ~inherited_compiler_args ~package_output_specs =
   {
-    build_root;
     bsc_path;
     bsc_hash = Digest.file bsc_path |> Digest.to_hex;
     runtime_path;
@@ -38,8 +36,8 @@ let make_context ~build_root ~bsc_path ~runtime_path ~source_map_args
     package_output_specs;
   }
 
-let for_package context ~build_root config =
-  {context with build_root; package_output_specs = package_output_specs config}
+let for_package context config =
+  {context with package_output_specs = package_output_specs config}
 
 let path root = File_util.path_of_parts root ["lib"; "bs"; "compiler-info.json"]
 
@@ -77,13 +75,6 @@ let package_output_specs_of_json = function
     | _ -> None)
   | _ -> None
 
-let build_root_of_json = function
-  | `Assoc fields -> (
-    match List.assoc_opt "build_root" fields with
-    | Some (`String build_root) -> Some build_root
-    | _ -> None)
-  | _ -> None
-
 let read config =
   try Some (Yojson.Safe.from_file (path config.Config.root))
   with Yojson.Json_error _ | Sys_error _ -> None
@@ -92,7 +83,6 @@ let json context (config : Config.t) =
   `Assoc
     [
       ("version", `String format_version);
-      ("build_root", `String context.build_root);
       ("bsc_path", `String context.bsc_path);
       ("bsc_hash", `String context.bsc_hash);
       ("rescript_config_hash", `String config.file_hash);
@@ -108,15 +98,6 @@ let json context (config : Config.t) =
       );
       ("runtime_path", `String context.runtime_path);
     ]
-
-let same_path left right =
-  Platform.normalize_path_for_comparison left
-  = Platform.normalize_path_for_comparison right
-
-let owns_outputs (config : Config.t) =
-  match Option.bind (read config) build_root_of_json with
-  | Some build_root -> same_path build_root config.root
-  | None -> false
 
 let matches_json context config contents = contents = json context config
 

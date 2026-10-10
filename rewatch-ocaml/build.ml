@@ -307,8 +307,14 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
   in
   let build_lock_root = Project_context.workspace_lock_root_for root_config in
   Output.debug ~verbosity
-    (Printf.sprintf "Created project context Single project: %S at %S for %S"
-       root_config.name root_config.path root_config.root);
+    (if build_lock_root = root_config.root then
+       Printf.sprintf "Created project context for %S at %S" root_config.name
+         root_config.path
+     else
+       Printf.sprintf
+         "Created project context for monorepo package %S at %S with parent \
+          workspace at %S"
+         root_config.name root_config.path build_lock_root);
   let visited = Hashtbl.create 32 in
   let attempt : Build_attempt.t =
     match previous_build request with
@@ -492,8 +498,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
       Build_session.publish_compiler_info attempt.session (fun package ->
           let package_context =
             Compiler_info.for_package context
-              ~build_root:package.Package_plan.build_owner
-              package.compile_config
+              package.Package_plan.compile_config
           in
           Compiler_info.write_package package_context package.config);
       if compilation_kind = One_shot then
