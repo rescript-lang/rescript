@@ -1600,5 +1600,3 @@ let string_of_expression (e : J.expression) =
   let (_ : cxt) = expression ~level:0 Ext_pp_scope.empty f e in
   P.flush f ();
   Buffer.contents buffer
-
-let () = E.string_of_expression := string_of_expression

@@ -340,5 +340,3 @@ val is_null_undefined : ?comment:string -> t -> t
 val make_exception : string -> t
 
 val variadic_args : t list -> t list
-
-val string_of_expression : (t -> string) ref
