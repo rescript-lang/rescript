@@ -83,10 +83,8 @@ val save_cmt :
   (* source file *)
   Env.t ->
   (* initial env *)
-  Cmi_format.cmi_infos option ->
-  (* if a .cmi was generated *)
   unit
-(** [save_cmt filename modname binary_annots sourcefile initial_env cmi]
+(** [save_cmt filename modname binary_annots sourcefile initial_env]
     writes a cmt(i) file.  *)
 
 (* Miscellaneous functions *)

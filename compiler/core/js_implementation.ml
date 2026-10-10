@@ -60,11 +60,10 @@ let after_parsing_sig ppf outputprefix ast =
       Delayed_checks.force_delayed_checks ();
       Warnings.check_fatal ();
       let deprecated = Builtin_attributes.deprecated_of_sig ast in
-      let sg =
-        Env.save_signature ~deprecated sg modulename (outputprefix ^ ".cmi")
-      in
+      ignore
+        (Env.save_signature ~deprecated sg modulename (outputprefix ^ ".cmi"));
       Typemod.save_signature modulename tsg outputprefix !Location.input_name
-        initial_env sg;
+        initial_env;
       process_with_gentype (outputprefix ^ ".cmti"))
 
 let interface ~parser ppf ?outputprefix fname =
