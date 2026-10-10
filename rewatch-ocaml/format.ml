@@ -97,7 +97,7 @@ let files_in_scope ~verbosity =
   in
   Output.debug ~channel:stderr ~verbosity
     (Project_context.describe current
-       ~workspace_root:(Project_context.workspace_lock_root_for current));
+       ~workspace:(Project_context.workspace_config_for current));
   let packages = discover_package_graph current in
   let resolution = Package_resolution.create current in
   let roots_in_scope =

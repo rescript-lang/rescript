@@ -1287,8 +1287,8 @@ rust_permission_details=$(grep -Ec '^dependencies dependencies: (a|b)$' \
 if [ "$rust_permission_details" -ne 1 ] || \
   ! grep -Fx 'root dependencies: a' "$work/ocaml.err.plain" >/dev/null || \
   ! grep -Fx 'root dependencies: b' "$work/ocaml.err.plain" >/dev/null || \
-  ! grep -F 'unallowed_dependents' "$work/rust.err.plain" >/dev/null || \
-  ! grep -F 'config.json' "$work/rust.err.plain" >/dev/null || \
+  ! grep -F 'allowed-dependents' "$work/rust.err.plain" >/dev/null || \
+  ! grep -F 'rescript.json' "$work/rust.err.plain" >/dev/null || \
   ! grep -F 'Update allowed-dependents in the dependency rescript.json files.' \
     "$work/ocaml.err.plain" >/dev/null || [ -s "$work/ocaml.out.plain" ]; then
   echo "Active dependency-permission diagnostics changed unexpectedly" >&2

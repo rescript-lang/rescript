@@ -31,15 +31,9 @@ let run ~verbosity path =
     | Some path -> Config.load path
     | None -> error "could not find a rescript.json parent"
   in
-  let root = Project_context.workspace_lock_root package_config.root in
+  let root_config = Project_context.workspace_config_for package_config in
   Output.debug ~channel:stderr ~verbosity
-    (Project_context.describe package_config ~workspace_root:root);
-  let root_config_path = Config.path_in_root root in
-  let root_config =
-    if root <> package_config.root && Config.exists_in_root root then
-      Config.load root_config_path
-    else package_config
-  in
+    (Project_context.describe package_config ~workspace:root_config);
   let resolution =
     Package_resolution.create
       ~diagnostic_mode:Package_resolution.Suppress_diagnostics root_config

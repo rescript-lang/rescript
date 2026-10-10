@@ -9,7 +9,7 @@ val nearest_config_path : string -> string option
 
 val workspace_config_for : Config.t -> Config.t
 val workspace_lock_root_for : Config.t -> string
-val describe : Config.t -> workspace_root:string -> string
+val describe : Config.t -> workspace:Config.t -> string
 val workspace_lock_root : string -> string
 val dependency_context : Config.t -> dependency_context
 val dependency_is_local_canonical : dependency_context -> string -> bool
