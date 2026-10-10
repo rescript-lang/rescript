@@ -10,7 +10,6 @@ type task
 exception Error of string
 exception Interrupted of int
 
-val decode_utf8_lossy : string -> string
 val succeeded : result -> bool
 val status_string : Unix.process_status -> string
 val default_max_jobs : int

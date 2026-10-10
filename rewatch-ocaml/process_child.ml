@@ -41,7 +41,6 @@ type child_wait = {
 type 'a running = {
   payload: 'a;
   process: Platform.process;
-  pid: int;
   child_wait: child_wait;
 }
 
@@ -75,12 +74,6 @@ type completion_notifier = {
   mutable stopped: bool;
 }
 
-let with_lock mutex action =
-  Mutex.lock mutex;
-  (* Unlocking in the exception path prevents one failed callback from
-     permanently blocking every waiter that shares this notifier. *)
-  Fun.protect ~finally:(fun () -> Mutex.unlock mutex) action
-
 let create_completion_notifier () =
   {
     mutex = Mutex.create ();
@@ -90,16 +83,16 @@ let create_completion_notifier () =
   }
 
 let notify_completion notifier =
-  with_lock notifier.mutex (fun () ->
+  Mutex.protect notifier.mutex (fun () ->
       if not notifier.stopped then (
         notifier.generation <- notifier.generation + 1;
         Condition.broadcast notifier.condition))
 
 let notifier_generation notifier =
-  with_lock notifier.mutex (fun () -> notifier.generation)
+  Mutex.protect notifier.mutex (fun () -> notifier.generation)
 
 let await_notification notifier generation =
-  with_lock notifier.mutex (fun () ->
+  Mutex.protect notifier.mutex (fun () ->
       while notifier.generation = generation && not notifier.stopped do
         Condition.wait notifier.condition notifier.mutex
       done;
@@ -115,7 +108,7 @@ let with_completion_notifier ~ticker_enabled action =
   let rec send_tick () =
     Thread.delay 0.005;
     let continue =
-      with_lock notifier.mutex (fun () ->
+      Mutex.protect notifier.mutex (fun () ->
           if notifier.stopped then false
           else (
             notifier.generation <- notifier.generation + 1;
@@ -128,7 +121,7 @@ let with_completion_notifier ~ticker_enabled action =
     if ticker_enabled then Some (Thread.create send_tick ()) else None
   in
   let stop () =
-    with_lock notifier.mutex (fun () ->
+    Mutex.protect notifier.mutex (fun () ->
         notifier.stopped <- true;
         Condition.broadcast notifier.condition);
     Option.iter Thread.join ticker
@@ -293,7 +286,7 @@ let launch ?env ?stdout_chunk ?stderr_chunk ?(stdin = Null_stdin) ~notifier
     ownership.stderr_write <- None;
     close_noerr stderr_write;
     let child_wait = start_child_wait pid notifier stdout stderr in
-    {payload; process; pid; child_wait}
+    {payload; process; child_wait}
   with exn -> fail_launch ownership exn
 
 let wait_for_running ~poll notifier active =
@@ -373,32 +366,20 @@ let signal_running (children : _ running list) =
            ("Could not terminate a subprocess tree: "
            ^ String.concat "; " (List.map snd errors))))
 
-let release_after_completion (child : _ running) =
-  ignore
-    (Thread.create
-       (fun () ->
-         Thread.join child.child_wait.thread;
-         Platform.release_process child.process)
-       ())
-
 let payload (child : _ running) = child.payload
-let pid (child : _ running) = child.pid
-let await_termination (child : _ running) = Thread.join child.child_wait.thread
-let release (child : _ running) = Platform.release_process child.process
+
+let release_running (child : _ running) =
+  Thread.join child.child_wait.thread;
+  Platform.release_process child.process
+
+let release_after_completion child =
+  ignore (Thread.create release_running child)
 
 let terminate_running (children : _ running list) =
   if children <> [] then (
     try
       signal_running children;
-      List.iter
-        (fun (child : _ running) ->
-          Thread.join child.child_wait.thread;
-          Platform.release_process child.process)
-        children
+      List.iter release_running children
     with exn ->
       List.iter release_after_completion children;
       raise exn)
-
-let release_running (child : _ running) =
-  await_termination child;
-  release child

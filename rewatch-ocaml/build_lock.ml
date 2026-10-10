@@ -1,12 +1,8 @@
 type watch = {path: string; pid: string}
 
-let read_owner_contents = File_util.read_file
-
 let read_owner path =
-  try Some (read_owner_contents path)
+  try Some (File_util.read_file path)
   with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
-
-let read_owner_for_release = read_owner
 
 let valid_owner value =
   match Int64.of_string_opt value with
@@ -102,7 +98,7 @@ let unlink_existing path =
   try Unix.unlink path with Unix.Unix_error (Unix.ENOENT, _, _) -> ()
 
 let release_owned path pid =
-  if read_owner_for_release path = Some pid then unlink_existing path
+  if read_owner path = Some pid then unlink_existing path
 
 type owned_lock = {path: string; pid: string; mutable released: bool}
 
@@ -120,10 +116,9 @@ let with_acquired ~candidate ~path ~pid action =
   | result ->
     release lock;
     result
-  | exception original -> (
-    match release lock with
-    | () -> raise original
-    | exception cleanup_error -> raise cleanup_error)
+  | exception original ->
+    release lock;
+    raise original
 
 let retry_delay poll =
   (try ignore (Unix.select [] [] [] 0.05)

@@ -57,6 +57,9 @@ let () =
           touch_file (Filename.concat root "refill-stalled"));
       print_string name;
       exit 0
+    | "--truncated-utf8-result" ->
+      print_string "Warning \xe2\x80";
+      exit 0
     | "--large-process-result" ->
       let stdout_chunk = String.make 65536 'o' in
       let stderr_chunk = String.make 65536 'e' in
@@ -754,10 +757,11 @@ let graph_and_diagnostic_tests _context =
               (File_util.path_of_parts root ["lib"; "ocaml"; ".compiler.log"]))
            "plain red text")
         "published compiler logs strip ANSI sequences");
-  let truncated_utf8 =
-    "Warning " ^ String.make 1 (Char.chr 0xe2) ^ String.make 1 (Char.chr 0x80)
+  let decoded =
+    (Process.run ~cwd:(Sys.getcwd ()) (test_executable ())
+       ["--truncated-utf8-result"])
+      .stdout
   in
-  let decoded = Process.decode_utf8_lossy truncated_utf8 in
   check
     (String.starts_with ~prefix:"Warning " decoded
     && String.is_valid_utf_8 decoded)
