@@ -20,22 +20,16 @@ type attempt_request =
       changes: Watcher.change list;
     }
 
-(* Build kind controls which persistent markers and diagnostics may be reused.
-   Keeping all four states explicit prevents an initial watch build from being
-   mistaken for either a disposable command or a retained incremental edit. *)
-type compilation_kind = Build_attempt.compilation_kind =
-  | One_shot
-  | Initial_watch
-  | Incremental_watch
-  | Full_watch
+let report_kind = function
+  | One_shot_attempt -> Build_report.One_shot
+  | Initial_watch_attempt -> Build_report.Initial_watch
+  | Full_watch_attempt _ -> Build_report.Full_watch
+  | Retained_watch_attempt _ -> Build_report.Incremental_watch
 
-let compilation_kind = function
-  | One_shot_attempt -> One_shot
-  | Initial_watch_attempt -> Initial_watch
-  | Full_watch_attempt _ -> Full_watch
-  | Retained_watch_attempt _ -> Incremental_watch
-
-let previous_build = function
+(* Only a retained watch attempt reuses the previous build's session. A full
+   watch rebuild starts a new session and uses the previous one only to carry
+   compile dirtiness forward. *)
+let reused_build = function
   | Retained_watch_attempt {previous; changes = _} -> Some previous
   | One_shot_attempt | Initial_watch_attempt | Full_watch_attempt _ -> None
 
@@ -238,7 +232,6 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
 
 let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     ~folder ~prod ~features ~warn_error ~after_build ~filter ~on_state =
-  let compilation_kind = compilation_kind request in
   let started_at = Unix.gettimeofday () in
   let interactive = Unix.isatty Unix.stdout && Unix.isatty Unix.stderr in
   let show_progress = verbosity >= 0 in
@@ -251,16 +244,18 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     Output.Progress.tick progress
   in
   let process_poll = Some poll in
-  let watch = compilation_kind <> One_shot in
-  let is_rebuild = compilation_kind = Incremental_watch in
+  let kind = report_kind request in
+  let one_shot = kind = Build_report.One_shot in
+  let watch = not one_shot in
+  let is_rebuild = kind = Build_report.Incremental_watch in
   let should_write_build_ninja =
-    match compilation_kind with
-    | One_shot | Full_watch -> true
-    | Initial_watch | Incremental_watch -> false
+    match kind with
+    | Build_report.One_shot | Build_report.Full_watch -> true
+    | Build_report.Initial_watch | Build_report.Incremental_watch -> false
   in
   let root = Project_context.canonical_project_root folder in
   let root_config =
-    match previous_build request with
+    match reused_build request with
     | Some previous -> previous.root_config
     | None -> Config.load_root root
   in
@@ -270,7 +265,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     (Project_context.describe root_config ~workspace:workspace_config);
   let visited = Hashtbl.create 32 in
   let attempt : Build_attempt.t =
-    match previous_build request with
+    match reused_build request with
     | Some previous ->
       Build_attempt.create_retained ~session:previous.session ~process_poll
         ~progress ~verbosity
@@ -294,7 +289,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
   on_state {root_config; build_lock_root; session = attempt.session};
   let report =
     Build_report.create ~started_at ~interactive ~show_progress ~colors
-      ~no_timing ~compilation_kind ~attempt
+      ~no_timing ~kind ~attempt
   in
   let build_ninja_written = ref false in
   let write_build_ninja_once () =
@@ -454,16 +449,14 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
               package.Package_plan.compile_config
           in
           Compiler_info.write_package package_context package.config);
-      if compilation_kind = One_shot then
-        Build_report.report_completion report diagnostics;
+      if one_shot then Build_report.report_completion report diagnostics;
       Build_attempt.cleanup_artifacts attempt;
       write_build_ninja_once ();
       release_build_lock ();
       Option.iter
         (fun command -> After_build.run ?poll:process_poll ~root command)
         after_build;
-      if compilation_kind <> One_shot then
-        Build_report.report_completion report diagnostics
+      if not one_shot then Build_report.report_completion report diagnostics
   in
   Build_lock.with_build ~poll build_lock_root
     (fun ~release:release_build_lock ->
@@ -509,7 +502,6 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
     initial_build := false;
     try
       let run request =
-        let compilation_kind = compilation_kind request in
         let attempted = ref None in
         try
           run_with_warning_state ~poll ~warning_state ~request ~no_timing:false
@@ -519,14 +511,14 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
           (* Failed initial and incremental attempts still own useful parsed
              state. Full reconstruction failures do not, because their graph may
              be only partially discovered. *)
-          (match (compilation_kind, !attempted) with
-          | (Initial_watch | Incremental_watch), Some state ->
+          (match (request, !attempted) with
+          | (Initial_watch_attempt | Retained_watch_attempt _), Some state ->
             retained := Some state
-          | Full_watch, Some state
+          | Full_watch_attempt _, Some state
             when Option.is_some (Build_session.prepared state.session) ->
             retained := Some state;
             force_full_rebuild := false
-          | (One_shot | Full_watch), _ | _, None -> ());
+          | (One_shot_attempt | Full_watch_attempt _), _ | _, None -> ());
           raise exn
       in
       let next =
@@ -536,12 +528,11 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
           with Full_rebuild_required ->
             force_full_rebuild := true;
             run (Full_watch_attempt (Some previous)))
-        | Some previous, _, true -> run (Full_watch_attempt (Some previous))
+        | Some previous, _, _ -> run (Full_watch_attempt (Some previous))
         | None, _, _ ->
           run
             (if is_initial then Initial_watch_attempt
              else Full_watch_attempt None)
-        | Some previous, None, false -> run (Full_watch_attempt (Some previous))
       in
       retained := Some next;
       force_full_rebuild := false;
