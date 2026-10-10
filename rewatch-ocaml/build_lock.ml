@@ -120,79 +120,60 @@ let with_acquired ~candidate ~path ~pid action =
     release lock;
     raise original
 
+let acquire ?poll ~name ~prefix ~attempts ~delay ~timeout ~on_live_owner root
+    action =
+  let lock_dir = Filename.concat root "lib" in
+  File_util.ensure_dir lock_dir;
+  let path = Filename.concat lock_dir name in
+  let pid = string_of_int (Platform.current_process_id ()) in
+  with_candidate ~lock_dir prefix pid (fun candidate ->
+      let rec attempt remaining =
+        Option.iter (fun poll -> poll ()) poll;
+        if remaining = 0 then raise (Project_context.Error timeout);
+        if publish ~candidate ~path ~contents:pid then
+          with_acquired ~candidate ~path ~pid action
+        else (
+          (match read_owner path with
+          | Some "" when being_written path -> delay ()
+          | Some owner when owner <> "" && not (valid_owner owner) ->
+            raise (malformed_error ())
+          | Some owner when process_is_active ?poll owner ->
+            on_live_owner ~first_attempt:(remaining = attempts) owner;
+            delay ()
+          | _ -> if not (clear_stale ?poll ~candidate ~pid path) then delay ());
+          attempt (remaining - 1))
+      in
+      attempt attempts)
+
 let retry_delay poll =
   (try ignore (Unix.select [] [] [] 0.05)
    with Unix.Unix_error (Unix.EINTR, _, _) -> ());
   poll ()
 
 let with_build ?(poll = fun () -> ()) root action =
-  let lock_dir = Filename.concat root "lib" in
-  File_util.ensure_dir lock_dir;
-  let path = Filename.concat lock_dir "build.lock" in
-  let pid = string_of_int (Platform.current_process_id ()) in
-  with_candidate ~lock_dir ".build-lock-" pid (fun candidate ->
-      let rec acquire attempts =
-        poll ();
-        if attempts = 0 then
-          raise
-            (Project_context.Error
-               "Timed out waiting for another ReScript build to finish");
-        if publish ~candidate ~path ~contents:pid then
-          with_acquired ~candidate ~path ~pid (fun lock ->
-              action ~release:(fun () -> release lock))
-        else
-          match read_owner path with
-          | Some "" when being_written path ->
-            retry_delay poll;
-            acquire (attempts - 1)
-          | Some owner when owner <> "" && not (valid_owner owner) ->
-            raise (malformed_error ())
-          | Some owner when process_is_active ~poll owner ->
-            if attempts = 1200 then (
-              print_endline "Waiting for other build to finish...";
-              flush stdout);
-            retry_delay poll;
-            acquire (attempts - 1)
-          | _ ->
-            if not (clear_stale ~poll ~candidate ~pid path) then
-              retry_delay poll;
-            acquire (attempts - 1)
-      in
-      acquire 1200)
+  acquire ~poll ~name:"build.lock" ~prefix:".build-lock-" ~attempts:1200
+    ~delay:(fun () -> retry_delay poll)
+    ~timeout:"Timed out waiting for another ReScript build to finish"
+    ~on_live_owner:(fun ~first_attempt _owner ->
+      if first_attempt then (
+        print_endline "Waiting for other build to finish...";
+        flush stdout))
+    root
+    (fun lock -> action ~release:(fun () -> release lock))
 
 let with_watch root action =
-  let lock_dir = Filename.concat root "lib" in
-  File_util.ensure_dir lock_dir;
-  let path = Filename.concat lock_dir "watch.lock" in
-  let pid = string_of_int (Platform.current_process_id ()) in
-  with_candidate ~lock_dir ".watch-lock-" pid (fun candidate ->
-      let rec acquire attempts =
-        if attempts = 0 then
-          raise
-            (Project_context.Error
-               "Timed out recovering a stale ReScript watch lock");
-        if publish ~candidate ~path ~contents:pid then
-          with_acquired ~candidate ~path ~pid (fun _ -> action {path; pid})
-        else
-          match read_owner path with
-          | Some "" when being_written path ->
-            ignore (Unix.select [] [] [] 0.01);
-            acquire (attempts - 1)
-          | Some owner when owner <> "" && not (valid_owner owner) ->
-            raise (malformed_error ())
-          | Some owner when process_is_active owner ->
-            raise
-              (Project_context.Error
-                 (Printf.sprintf
-                    "Could not start Rescript build: A ReScript build is \
-                     already running. The process ID (PID) is %s"
-                    owner))
-          | _ ->
-            if not (clear_stale ~candidate ~pid path) then
-              ignore (Unix.select [] [] [] 0.01);
-            acquire (attempts - 1)
-      in
-      acquire 1000)
+  acquire ~name:"watch.lock" ~prefix:".watch-lock-" ~attempts:1000
+    ~delay:(fun () -> ignore (Unix.select [] [] [] 0.01))
+    ~timeout:"Timed out recovering a stale ReScript watch lock"
+    ~on_live_owner:(fun ~first_attempt:_ owner ->
+      raise
+        (Project_context.Error
+           (Printf.sprintf
+              "Could not start Rescript build: A ReScript build is already \
+               running. The process ID (PID) is %s"
+              owner)))
+    root
+    (fun (lock : owned_lock) -> action {path = lock.path; pid = lock.pid})
 
 let is_owned (watch : watch) = read_owner watch.path = Some watch.pid
 
