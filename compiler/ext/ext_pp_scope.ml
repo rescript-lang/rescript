@@ -22,21 +22,29 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type t = int Map_int.t Map_string.t
+(* Stamps seen for one mangled name, each mapped to its index suffix.
+   [count] is the number of entries in [stamps], which is also the next index. *)
+type stamps = {count: int; stamps: int Map_int.t}
 
 (*
    -- "name" --> int map -- stamp --> index suffix
 *)
+type t = stamps Map_string.t
+
 let empty : t = Map_string.empty
 
 let add_ident ~mangled:name (stamp : int) (cxt : t) : int * t =
   match Map_string.find_opt cxt name with
-  | None -> (0, Map_string.add cxt name (Map_int.add Map_int.empty stamp 0))
-  | Some imap -> (
-    match Map_int.find_opt imap stamp with
+  | None ->
+    ( 0,
+      Map_string.add cxt name
+        {count = 1; stamps = Map_int.add Map_int.empty stamp 0} )
+  | Some {count; stamps} -> (
+    match Map_int.find_opt stamps stamp with
     | None ->
-      let v = Map_int.cardinal imap in
-      (v, Map_string.add cxt name (Map_int.add imap stamp v))
+      ( count,
+        Map_string.add cxt name
+          {count = count + 1; stamps = Map_int.add stamps stamp count} )
     | Some i -> (i, cxt))
 
 (**
@@ -97,6 +105,6 @@ let sub_scope (scope : t) (idents : Set_ident.t) : t =
       let mangled = Ext_ident.convert name in
       match Map_string.find_exn scope mangled with
       | exception Not_found -> assert false
-      | imap ->
+      | stamps ->
         if Map_string.mem acc mangled then acc
-        else Map_string.add acc mangled imap)
+        else Map_string.add acc mangled stamps)
