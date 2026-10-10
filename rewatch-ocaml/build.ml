@@ -558,7 +558,12 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
     ~finally:(fun () ->
       if Warning_state.entries warning_state <> [] then
         match !retained with
-        | Some state ->
-          Build_lock.with_build state.build_lock_root (fun ~release:_ ->
-              remove_compile_warning_freshness warning_state)
+        | Some state -> (
+          (* Best effort: this only makes the next build show the session's
+             warnings again. Exiting must not wait for another build's lock,
+             so give up after about two seconds. *)
+          try
+            Build_lock.with_build ~attempts:40 state.build_lock_root
+              (fun ~release:_ -> remove_compile_warning_freshness warning_state)
+          with Project_context.Error _ -> ())
         | None -> ())
