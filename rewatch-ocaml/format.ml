@@ -36,42 +36,50 @@ let package_sources (package : discovered_package) =
 
 (* Validate the complete package graph before selecting the local files that
    format owns. Scan it with the effective feature selections so dependency
-   diagnostics and the eventual local file set cannot drift apart. *)
+   diagnostics and the eventual local file set cannot drift apart. The
+   resolution is returned so its package metadata diagnostics are reported
+   once. *)
 let discover_package_graph (current : Config.t) =
   let resolution = Package_resolution.create current in
-  Package_diagnostics.validate_metadata current;
   let graph =
     Package_traversal.discover ~root_config:current ~prod:false ~features:None
       ~resolution
   in
-  graph.packages
-  |> List.map (fun (package : Package_traversal.package) ->
-      let config = package.config in
-      let is_local = package.is_local in
-      Package_diagnostics.report_missing_sources
-        ~is_root:(config.root = current.root)
-        config;
-      let features =
-        if config.root = current.root then None
-        else
-          match Package_traversal.find_feature_selection graph config.root with
-          | None | Some Package_traversal.All_features -> None
-          | Some (Package_traversal.Selected_features requested) ->
-            (try ignore (Source.resolve_active_features config requested)
-             with Source.Error message ->
-               raise
-                 (Error
-                    (Printf.sprintf "Invalid features for package '%s': %s"
-                       config.name message)));
-            Some requested
-      in
-      let files =
-        Source.discover_files config
-          ~prod:(Package_traversal.source_discovery_prod ~prod:false ~is_local)
-          ~features ~filter:None
-          ~on_missing:(Package_diagnostics.report_missing_source_folder config)
-      in
-      {config; files})
+  let packages =
+    graph.packages
+    |> List.map (fun (package : Package_traversal.package) ->
+        let config = package.config in
+        let is_local = package.is_local in
+        Package_diagnostics.report_missing_sources
+          ~is_root:(config.root = current.root)
+          config;
+        let features =
+          if config.root = current.root then None
+          else
+            match
+              Package_traversal.find_feature_selection graph config.root
+            with
+            | None | Some Package_traversal.All_features -> None
+            | Some (Package_traversal.Selected_features requested) ->
+              (try ignore (Source.resolve_active_features config requested)
+               with Source.Error message ->
+                 raise
+                   (Error
+                      (Printf.sprintf "Invalid features for package '%s': %s"
+                         config.name message)));
+              Some requested
+        in
+        let files =
+          Source.discover_files config
+            ~prod:
+              (Package_traversal.source_discovery_prod ~prod:false ~is_local)
+            ~features ~filter:None
+            ~on_missing:
+              (Package_diagnostics.report_missing_source_folder config)
+        in
+        {config; files})
+  in
+  (resolution, packages)
 
 let files_in_scope ~verbosity =
   let current_directory = Sys.getcwd () in
@@ -98,8 +106,7 @@ let files_in_scope ~verbosity =
   Output.debug ~channel:stderr ~verbosity
     (Project_context.describe current
        ~workspace:(Project_context.workspace_config_for current));
-  let packages = discover_package_graph current in
-  let resolution = Package_resolution.create current in
+  let resolution, packages = discover_package_graph current in
   let roots_in_scope =
     if listed_by_parent then [current.root]
     else
