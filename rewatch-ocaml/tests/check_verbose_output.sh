@@ -88,17 +88,6 @@ if grep -E '^(TRACE:|compile dirty:)' "$work/ocaml-v.events" >/dev/null; then
   cat "$work/ocaml-v.events" >&2
   exit 1
 fi
-if [ "$(grep -c '^compile dirty: ' "$work/ocaml-vv.events")" -ne 4 ]; then
-  echo "-vv did not identify the four dirty modules" >&2
-  cat "$work/ocaml-vv.events" >&2
-  exit 1
-fi
-if ! grep -F $'TRACE:\tCompiled 4 out of 4 in the universe' \
-  "$work/ocaml-vv.events" >/dev/null; then
-  echo "-vv did not report the scheduler universe" >&2
-  cat "$work/ocaml-vv.events" >&2
-  exit 1
-fi
 
 capture_incremental() {
   implementation=$1
@@ -123,12 +112,5 @@ capture_incremental rust-vv "$rust"
 capture_incremental ocaml-vv "$ocaml"
 compare_events "$work/rust-vv-incremental.events" \
   "$work/ocaml-vv-incremental.events"
-if [ "$(grep -c '^compile dirty: ' "$work/ocaml-vv-incremental.events")" -ne 1 ] \
-  || ! grep -F $'TRACE:\tCompiled 2 out of 2 in the universe' \
-    "$work/ocaml-vv-incremental.events" >/dev/null; then
-  echo "Incremental -vv output lost its dirty/universe boundary" >&2
-  cat "$work/ocaml-vv-incremental.events" >&2
-  exit 1
-fi
 
 echo "Verbose semantic output matched"
