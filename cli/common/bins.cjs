@@ -4,28 +4,18 @@
 // The lookup is synchronous so that tools.cjs, the CommonJS entry of
 // `rescript/tools`, can load it; bins.js re-exports these values for ES modules.
 
+const os = require("node:os");
 const path = require("node:path");
+const { getTarget } = require("./platform.cjs");
 
 const minimumNodeVersion = "20.11.0";
 
-// Windows on ARM runs the x64 toolchain through the operating system's x64
-// emulation, so ARM64 Node uses the x64 package.
-const binaryArch =
-  process.platform === "win32" && process.arch === "arm64"
-    ? "x64"
-    : process.arch;
-const target = `${process.platform}-${binaryArch}`;
+const target = getTarget(process.platform, process.arch, os.release());
 
-const supportedPlatforms = [
-  "darwin-arm64",
-  "darwin-x64",
-  "linux-arm64",
-  "linux-x64",
-  "win32-x64",
-];
-
-if (!supportedPlatforms.includes(target)) {
-  throw new Error(`Platform ${target} is not supported!`);
+if (target === undefined) {
+  throw new Error(
+    `Platform ${process.platform}-${process.arch} is not supported!`,
+  );
 }
 
 const binPackageName = `@rescript/${target}`;
