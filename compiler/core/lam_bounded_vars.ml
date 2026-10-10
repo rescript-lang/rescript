@@ -74,7 +74,10 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
     | Some x -> Some (aux x)
   and aux (lam : Lambda.t) : Lambda.t =
     match lam with
-    | Lvar v -> Hash_ident.find_default map v lam
+    | Lvar v -> (
+      match Hash_ident.find_opt map v with
+      | Some lam -> lam
+      | None -> lam)
     | Llet (str, v, l1, l2) ->
       let v = rebind v in
       let l1 = aux l1 in

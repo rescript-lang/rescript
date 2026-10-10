@@ -1,1 +1,1 @@
-include Hash_gen.S with type key = Ident.t
+include Hashtbl.S with type key = Ident.t

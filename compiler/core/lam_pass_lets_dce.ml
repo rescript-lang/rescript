@@ -18,7 +18,10 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
   let used v = (count_var v).times > 0 in
   let rec simplif (lam : Lambda.t) =
     match lam with
-    | Lvar v -> Hash_ident.find_default subst v lam
+    | Lvar v -> (
+      match Hash_ident.find_opt subst v with
+      | Some lam -> lam
+      | None -> lam)
     | Llet ((Strict | Alias | StrictOpt), v, Lvar w, l2) ->
       Hash_ident.add subst v (simplif (Lambda.var w));
       simplif l2
