@@ -267,8 +267,10 @@ jobs:
         run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
+      # The Rust implementation is kept for comparison. One platform runs its
+      # shared suite; the parity steps exercise it on every platform.
       - name: Run Rust rewatch reference tests
-        if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
+        if: matrix.node-target == 'linux-arm64'
         run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe
         shell: bash
 
