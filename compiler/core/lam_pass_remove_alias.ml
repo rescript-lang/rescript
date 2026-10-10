@@ -176,7 +176,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
              })
         when Lam_analysis.lfunction_can_be_inlined m ->
         if Ext_list.same_length ap_args params then
-          if is_a_functor (* && (Set_ident.mem v meta.export_idents) && false *)
+          if is_a_functor (* && (Set_ident.mem meta.export_idents v) && false *)
           then
             (* TODO: check l1 if it is exported,
                if so, maybe not since in that case,
@@ -190,7 +190,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
             let param_map =
               Lam_closure.is_closed_with_map meta.export_idents params body
             in
-            let is_export_id = Set_ident.mem meta.export_idents v in
+            let is_export_id = Set_ident.mem v meta.export_idents in
             match (is_export_id, param_map) with
             | false, (_, param_map) | true, (true, param_map) -> (
               match rec_flag with

@@ -84,11 +84,11 @@ let check ~file ~pass lam =
       check_list_snd cases cxt;
       Option.iter (fun x -> check_staticfails x cxt) default
     | Lstaticraise (i, args) ->
-      if Set_int.mem cxt i then check_list args cxt
+      if Set_int.mem i cxt then check_list args cxt
       else
         failwith (Printf.sprintf "exit %d unbound after %s in %s" i pass file)
     | Lstaticcatch (e1, (j, _vars), e2) ->
-      check_staticfails e1 (Set_int.add cxt j);
+      check_staticfails e1 (Set_int.add j cxt);
       check_staticfails e2 cxt
     | Ltrywith (e1, _exn, e2) ->
       check_staticfails e1 cxt;
