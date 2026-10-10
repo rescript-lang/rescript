@@ -14,7 +14,7 @@
 
 #### :boom: Breaking Change
 
-- The OCaml build system rejects duplicate keys in `rescript.json` maps, a `namespace-entry` without a namespace, and a value after `--no-timing`. https://github.com/rescript-lang/rescript/pull/8653
+- The OCaml build system rejects duplicate keys in `rescript.json` maps, a `namespace-entry` without a namespace, and a value after `--no-timing`. https://github.com/rescript-lang/rescript/pull/8780
 - Record syntax no longer creates or matches dicts, e.g. `let d: dict<int> = {foo: 1}`; it's an error pointing to `dict{...}`. https://github.com/rescript-lang/rescript/pull/8751
 - Remove the call-site `@inlined` attribute, which was parsed but never affected code generation. It is now reported as a misplaced attribute (warning 53). https://github.com/rescript-lang/rescript/pull/8734
 - Remove `@deriving(abstract)` and `@deriving(jsConverter)`. Use record types (with optional fields, mutable fields and `@as` renaming) and polymorphic variants directly instead. https://github.com/rescript-lang/rescript/pull/8729
@@ -23,7 +23,7 @@
 
 #### :rocket: New Feature
 
-- `rescript` now runs a build system rewritten in OCaml; the Rust implementation remains available as `rescript-rust`. https://github.com/rescript-lang/rescript/pull/8653
+- `rescript` now runs a build system rewritten in OCaml; the Rust implementation remains available as `rescript-rust`. https://github.com/rescript-lang/rescript/pull/8780
 #### :bug: Bug fix
 
 - Fix editor completion of values from modules included with `include await M`. https://github.com/rescript-lang/rescript/pull/8770
