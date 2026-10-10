@@ -305,9 +305,10 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     | Some previous -> previous.root_config
     | None -> Config.load_root root
   in
-  let build_lock_root = Project_context.workspace_lock_root_for root_config in
+  let workspace_config = Project_context.workspace_config_for root_config in
+  let build_lock_root = workspace_config.root in
   Output.debug ~verbosity
-    (Project_context.describe root_config ~workspace_root:build_lock_root);
+    (Project_context.describe root_config ~workspace:workspace_config);
   let visited = Hashtbl.create 32 in
   let attempt : Build_attempt.t =
     match previous_build request with
