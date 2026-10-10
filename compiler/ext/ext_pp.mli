@@ -68,7 +68,9 @@ val newline : t -> unit
 
 val at_least_two_lines : t -> unit
 
-val from_channel : out_channel -> t
+val from_channel : ?track_positions:bool -> out_channel -> t
+(** [track_positions] maintains the line and column for {!position},
+    which only source maps need. *)
 
 val from_buffer : Buffer.t -> t
 

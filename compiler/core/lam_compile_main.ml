@@ -444,7 +444,7 @@ let dump_deps_program_with_source_map ?(remove_stale_map = true) ~target_file
   in
   Js_source_map.with_builder builder (fun () ->
       Js_dump_program.pp_deps_program ~output_prefix module_system lambda_output
-        (Ext_pp.from_channel chan));
+        (Ext_pp.from_channel ~track_positions:true chan));
   match !Js_config.source_map with
   | Linked ->
     let json = Js_source_map.json builder in
