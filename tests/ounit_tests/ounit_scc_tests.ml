@@ -190,11 +190,17 @@ let medium_test_cases =
 49 49
 |}
 
-(* Number of components and their sizes *)
+(* Number of components and their sizes, last component first *)
 let graph_check v =
   let v = Ext_scc.graph v in
-  ( Int_vec_vec.length v,
-    Int_vec_vec.fold_left (fun acc x -> Vec_int.length x :: acc) [] v )
+  (List.length v, List.fold_left (fun acc x -> Array.length x :: acc) [] v)
+
+(* [edges] lists the edges in input order; the successors of each node keep
+   that order *)
+let graph_of_edges nodes_num edges =
+  let rev_edges = Array.make nodes_num [] in
+  List.iter (fun (a, b) -> rev_edges.(a) <- b :: rev_edges.(a)) edges;
+  Array.map (fun l -> Array.of_list (List.rev l)) rev_edges
 
 (*
    reference output:
@@ -205,15 +211,21 @@ let handle_lines tiny_test_cases =
   match Ext_string.split tiny_test_cases '\n' with
   | nodes :: _edges :: rest ->
     let nodes_num = int_of_string nodes in
-    let node_array = Array.init nodes_num (fun _ -> Vec_int.empty ()) in
-    Ext_list.iter rest (fun x ->
-        match Ext_string.split x ' ' with
-        | [a; b] ->
-          let a, b = (int_of_string a, int_of_string b) in
-          Vec_int.push node_array.(a) b
-        | _ -> assert false);
-    node_array
+    graph_of_edges nodes_num
+      (List.map
+         (fun x ->
+           match Ext_string.split x ' ' with
+           | [a; b] -> (int_of_string a, int_of_string b)
+           | _ -> assert false)
+         rest)
   | _ -> assert false
+
+let edges_of_input tbl (input : (string * string list) list) =
+  List.concat_map
+    (fun (x, others) ->
+      let idx = String_hash.find_exn tbl x in
+      List.map (fun y -> (idx, String_hash.find_exn tbl y)) others)
+    input
 
 let test (input : (string * string list) list) =
   (* string -> int mapping 
@@ -227,14 +239,7 @@ let test (input : (string * string list) list) =
   in
   input |> List.iter (fun (x, others) -> List.iter add (x :: others));
   let nodes_num = String_hash.length tbl in
-  let node_array = Array.init nodes_num (fun _ -> Vec_int.empty ()) in
-  input
-  |> List.iter (fun (x, others) ->
-      let idx = String_hash.find_exn tbl x in
-      others
-      |> List.iter (fun y ->
-          Vec_int.push node_array.(idx) (String_hash.find_exn tbl y)));
-  graph_check node_array
+  graph_check (graph_of_edges nodes_num (edges_of_input tbl input))
 
 let test2 (input : (string * string list) list) =
   (* string -> int mapping 
@@ -251,17 +256,13 @@ let test2 (input : (string * string list) list) =
   let other_mapping = Array.make nodes_num "" in
   String_hash.iter tbl (fun k v -> other_mapping.(v) <- k);
 
-  let node_array = Array.init nodes_num (fun _ -> Vec_int.empty ()) in
-  input
-  |> List.iter (fun (x, others) ->
-      let idx = String_hash.find_exn tbl x in
-      others
-      |> List.iter (fun y ->
-          Vec_int.push node_array.(idx) (String_hash.find_exn tbl y)));
-  let output = Ext_scc.graph node_array in
+  let output =
+    Ext_scc.graph (graph_of_edges nodes_num (edges_of_input tbl input))
+  in
   output
-  |> Int_vec_vec.map_into_array (fun int_vec ->
-      Vec_int.map_into_array (fun i -> other_mapping.(i)) int_vec)
+  |> List.map (fun component ->
+      Array.map (fun i -> other_mapping.(i)) component)
+  |> Array.of_list
 
 let suites =
   __FILE__
