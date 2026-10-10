@@ -43,41 +43,20 @@ let carry_forward_compile_dirtiness previous next_session next_state =
   match Build_session.prepared previous.session with
   | None -> ()
   | Some previous_prepared ->
-    let matching_sources = Hashtbl.create 32 in
-    Build_session.iter_package_plans next_session (fun _ package ->
-        List.iter
-          (fun (module_ : Source.module_) ->
-            let key =
-              Source.compiler_basename package.compile_config module_.name
-            in
-            let absolute_path =
-              Filename.concat package.root module_.implementation
-            in
-            let normalized_path =
-              Platform.normalize_path_for_comparison absolute_path
-            in
-            match
-              Build_session.find_source_reference previous.session
-                normalized_path
-            with
-            | Some previous_source -> (
-              match
-                Build_session.find_package_plan previous.session
-                  previous_source.package_root
-              with
-              | Some previous_package
-                when previous_source.module_.implementation
-                     = module_.implementation
-                     && Source.compiler_basename previous_package.compile_config
-                          previous_source.module_.name
-                        = key ->
-                Hashtbl.replace matching_sources key ()
-              | Some _ | None -> ())
-            | None -> ())
-          package.modules);
+    (* Module keys are unique within a session, so a key names the same source
+       in both sessions when its package root and source path match. *)
+    let same_source key =
+      match
+        ( Build_session.find_global_module previous.session key,
+          Build_session.find_global_module next_session key )
+      with
+      | Some previous_node, Some next_node ->
+        previous_node.Module_graph.package_root = next_node.package_root
+        && previous_node.source_path = next_node.source_path
+      | Some _, None | None, _ -> false
+    in
     Build_state.carry_forward_compile_dirty
-      ~previous:previous_prepared.build_state ~next:next_state
-      ~same_source:(fun key -> Hashtbl.mem matching_sources key)
+      ~previous:previous_prepared.build_state ~next:next_state ~same_source
 
 type incremental_source = {
   package: Package_plan.t;
