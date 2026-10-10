@@ -22,7 +22,7 @@
 
 #### :rocket: New Feature
 
-- Support Windows on ARM by installing the x64 binaries, which Windows runs through its x64 emulation. https://github.com/rescript-lang/rescript/pull/PRNUMBER
+- Support Windows on ARM by installing the x64 binaries, which Windows runs through its x64 emulation. https://github.com/rescript-lang/rescript/pull/8776
 #### :bug: Bug fix
 
 - Fix JSX preserve mode emitting JSX that means something other than the compiled call, and keep more elements as JSX. https://github.com/rescript-lang/rescript/pull/8754
