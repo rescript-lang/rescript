@@ -659,6 +659,154 @@ let strict_json_tests =
            "rescript.json:3:1: invalid JSON: trailing comma")
         "configuration syntax errors name the file, line, and column")
 
+let semantics_tests =
+  with_config_file (fun ~root ~path ->
+      write_file path {|{"name":"file-casing","namespace":"FileCasing"}|};
+      let file_casing_config = Config.load path in
+      check
+        (Source.compiler_asset_basename file_casing_config "src/produce.res"
+        = "produce-FileCasing")
+        "compiler artifact basename preserves source filename case";
+      write_file path
+        {|{
+          "name": "source-type",
+          "sources": {"dir": "src", "type": "lib"}
+        }|};
+      let config = Config.load path in
+      check
+        (match config.sources with
+        | [source] -> not source.is_dev
+        | _ -> false)
+        "non-dev source type strings are accepted as ordinary sources";
+      write_file path
+        {|{
+          "name": "source-type-inheritance",
+          "sources": {
+            "dir": "src",
+            "subdirs": [{"dir": "test", "type": "dev"}]
+          }
+        }|};
+      let config = Config.load path in
+      check
+        (match config.sources with
+        | [_parent; child] -> not child.is_dev
+        | _ -> false)
+        "an ordinary parent source overrides a nested dev type";
+      write_file path
+        {|{
+          "name": "source-type-inheritance",
+          "sources": {
+            "dir": "src",
+            "type": "dev",
+            "subdirs": [{"dir": "lib", "type": "lib"}]
+          }
+        }|};
+      let config = Config.load path in
+      check
+        (match config.sources with
+        | [_parent; child] -> child.is_dev
+        | _ -> false)
+        "a dev parent source overrides a nested non-dev type";
+      write_file path {|{"name":"default-output","suffix":".mjs"}|};
+      let config = Config.load path in
+      check
+        (match config.package_specs with
+        | [spec] -> Config.package_spec_suffix config spec = ".js"
+        | _ -> false)
+        "package-specs default output suffix is .js";
+      write_file path
+        {|{"name":"legacy-output","package-specs":{"module":"cjs"}}|};
+      let config = Config.load path in
+      check
+        (List.exists
+           (fun message -> contains message "module 'cjs'")
+           config.diagnostics)
+        "legacy package module alias is diagnosed";
+      write_file path
+        {|{
+          "name": "source-map",
+          "sourceMap": {"enabled": "dev", "mode": "linked"}
+        }|};
+      let config = Config.load path in
+      check config.source_map_dev "sourceMap dev mode is parsed";
+      check
+        (contains_adjacent "-bs-source-map" "false"
+           (Compiler_args.compiler_flags ~watch:false config))
+        "sourceMap dev mode is disabled for one-shot builds";
+      check
+        (contains_adjacent "-bs-source-map" "linked"
+           (Compiler_args.compiler_flags ~watch:true config))
+        "sourceMap dev mode is enabled for watch builds";
+      write_file path
+        {|{
+          "name": "source-map",
+          "sourceMap": {"enabled": "always", "mode": "inline"}
+        }|};
+      let config = Config.load path in
+      check (not config.source_map_dev) "sourceMap always mode is parsed";
+      check
+        (contains_adjacent "-bs-source-map" "inline"
+           (Compiler_args.compiler_flags ~watch:false config))
+        "sourceMap always mode is enabled for one-shot builds";
+      Sys.remove path;
+      let legacy_path = Filename.concat root "bsconfig.json" in
+      write_file legacy_path {|{"name":"legacy-config"}|};
+      let config = Config.load_root root in
+      check (config.path = legacy_path) "bsconfig.json is used as a fallback";
+      check
+        (List.exists
+           (fun message -> contains message "filename 'bsconfig.json'")
+           config.diagnostics)
+        "bsconfig.json emits a deprecation diagnostic";
+      write_file path {|{"name":"current-config"}|};
+      let config = Config.load_root root in
+      check (config.path = path)
+        "rescript.json takes precedence over bsconfig.json";
+      write_file path
+        {|{
+          "name": "gentype-defaults",
+          "package-specs": {"module": "commonjs"},
+          "gentypeconfig": {}
+        }|};
+      let config = Config.load path in
+      check
+        (contains_adjacent "-bs-gentype-module" "commonjs" config.gentype_args)
+        "GenType inherits object package module";
+      check
+        (not (List.mem "-bs-gentype-suffix" config.gentype_args))
+        "GenType omits an unconfigured suffix";
+      write_file path
+        {|{"name":"gentype-suffix","suffix":".mjs","gentypeconfig":{}}|};
+      let config = Config.load path in
+      check
+        (contains_adjacent "-bs-gentype-suffix" ".mjs" config.gentype_args)
+        "GenType includes an explicitly configured suffix";
+      write_file path
+        {|{
+          "name": "gentype-shims",
+          "gentypeconfig": {
+            "shims": [" From = First ", "A=B"]
+          }
+        }|};
+      let config = Config.load path in
+      check
+        (contains_adjacent "-bs-gentype-shim" "From=First" config.gentype_args)
+        "legacy GenType shims are trimmed";
+      check
+        (List.length
+           (List.filter (( = ) "-bs-gentype-shim") config.gentype_args)
+        = 2)
+        "legacy GenType shims retain distinct entries";
+      write_file path {|{"name":"unsupported","generators":["legacy"]}|};
+      let config = Config.load path in
+      check
+        (List.exists
+           (fun message ->
+             contains message "field 'generators'"
+             && contains message "is not supported")
+           config.diagnostics)
+        "known unsupported config fields are distinguished from unknown fields")
+
 let tests =
   "config_tests"
   >::: [
@@ -669,4 +817,5 @@ let tests =
          "compiler_jobs" >:: compiler_job_tests;
          "compiler_arguments" >:: compiler_argument_tests;
          "decoder_semantics" >:: decoder_semantics_tests;
+         "semantics" >:: semantics_tests;
        ]
