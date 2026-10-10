@@ -29,10 +29,23 @@ type stamps = {next: int; stamps: string Map_int.t}
 
 (* [used] holds every printed name in scope. Identifiers may contain [$], so
    a suffixed name like [x$1] can equal another identifier's mangled name;
-   new names are checked against [used] instead of being assumed fresh. *)
-type t = {names: stamps Map_string.t; used: Set_string.t}
+   new names are checked against [used] instead of being assumed fresh.
+   [reserved] holds the raw JS names the program refers to (see {!reserve}),
+   which a suffixed name must not capture. *)
+type t = {
+  names: stamps Map_string.t;
+  used: Set_string.t;
+  reserved: Set_string.t;
+}
 
-let empty : t = {names = Map_string.empty; used = Set_string.empty}
+let empty : t =
+  {
+    names = Map_string.empty;
+    used = Set_string.empty;
+    reserved = Set_string.empty;
+  }
+
+let reserve (cxt : t) (reserved : Set_string.t) : t = {cxt with reserved}
 
 let add_ident ~mangled:name (stamp : int) (cxt : t) : string * t =
   let {next; stamps} =
@@ -45,7 +58,10 @@ let add_ident ~mangled:name (stamp : int) (cxt : t) : string * t =
   | None ->
     let rec pick i =
       let str = if i = 0 then name else Printf.sprintf "%s$%d" name i in
-      if Set_string.mem cxt.used str then pick (i + 1) else (i, str)
+      if
+        Set_string.mem cxt.used str || (i > 0 && Set_string.mem cxt.reserved str)
+      then pick (i + 1)
+      else (i, str)
     in
     let i, str = pick next in
     ( str,
@@ -54,6 +70,7 @@ let add_ident ~mangled:name (stamp : int) (cxt : t) : string * t =
           Map_string.add cxt.names name
             {next = i + 1; stamps = Map_int.add stamps stamp str};
         used = Set_string.add cxt.used str;
+        reserved = cxt.reserved;
       } )
 
 (**
@@ -109,7 +126,8 @@ let merge (cxt : t) (set : Set_ident.t) =
    update twice,  once is enough
 *)
 let sub_scope (scope : t) (idents : Set_ident.t) : t =
-  Set_ident.fold idents empty (fun {name} acc ->
+  Set_ident.fold idents {empty with reserved = scope.reserved}
+    (fun {name} acc ->
       let mangled = Ext_ident.convert name in
       match Map_string.find_exn scope.names mangled with
       | exception Not_found -> assert false
@@ -117,6 +135,7 @@ let sub_scope (scope : t) (idents : Set_ident.t) : t =
         if Map_string.mem acc.names mangled then acc
         else
           {
+            acc with
             names = Map_string.add acc.names mangled stamps;
             used =
               Map_int.fold stamps.stamps acc.used (fun _ str used ->

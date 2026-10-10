@@ -50,22 +50,50 @@ function nested(x) {
   ];
 }
 
+globalThis["y$1"] = 100; globalThis["z$2"] = 200; globalThis["w$1"] = 300
+;
+
+let base = 1;
+
+let y = (base << 1);
+
+let y$2 = y + y$1 | 0;
+
+let topShadow = y$2 + y$2 | 0;
+
+let z = (base << 1);
+
+let topSibling;
+
+if (z < 0) {
+  let z$1 = z * 10 | 0;
+  topSibling = z$1 + z$1 | 0;
+} else {
+  let z$3 = z + z$2 | 0;
+  topSibling = z$3 + z$3 | 0;
+}
+
+function fnShadow(w) {
+  let w$2 = w + w$1 | 0;
+  return w$2 + w$2 | 0;
+}
+
 Mocha.describe("Shadow_dollar_test", () => {
   Mocha.test("shadowed names do not collide with $ identifiers", () => {
-    Test_utils.eq("File \"shadow_dollar_test.res\", line 37, characters 7-14", paramCollision(1, v => v * 10 | 0), 30);
-    Test_utils.eq("File \"shadow_dollar_test.res\", line 38, characters 7-14", laterBinding(1), [
+    Test_utils.eq("File \"shadow_dollar_test.res\", line 65, characters 7-14", paramCollision(1, v => v * 10 | 0), 30);
+    Test_utils.eq("File \"shadow_dollar_test.res\", line 66, characters 7-14", laterBinding(1), [
       2,
       20,
       2,
       20
     ]);
-    Test_utils.eq("File \"shadow_dollar_test.res\", line 39, characters 7-14", earlierBinding(1), [
+    Test_utils.eq("File \"shadow_dollar_test.res\", line 67, characters 7-14", earlierBinding(1), [
       2,
       10,
       2,
       10
     ]);
-    Test_utils.eq("File \"shadow_dollar_test.res\", line 40, characters 7-14", nested(1), [
+    Test_utils.eq("File \"shadow_dollar_test.res\", line 68, characters 7-14", nested(1), [
       3,
       [
         2,
@@ -76,6 +104,11 @@ Mocha.describe("Shadow_dollar_test", () => {
       3
     ]);
   });
+  Mocha.test("shadowed names do not capture raw JS names", () => {
+    Test_utils.eq("File \"shadow_dollar_test.res\", line 72, characters 7-14", topShadow, 204);
+    Test_utils.eq("File \"shadow_dollar_test.res\", line 73, characters 7-14", topSibling, 404);
+    Test_utils.eq("File \"shadow_dollar_test.res\", line 74, characters 7-14", fnShadow(1), 602);
+  });
 });
 
 export {
@@ -83,5 +116,11 @@ export {
   laterBinding,
   earlierBinding,
   nested,
+  base,
+  y,
+  topShadow,
+  z,
+  topSibling,
+  fnShadow,
 }
 /*  Not a pure module */
