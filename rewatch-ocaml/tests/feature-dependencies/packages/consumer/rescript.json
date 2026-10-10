@@ -1,0 +1,6 @@
+{
+  "name": "consumer",
+  "sources": "src",
+  "dependencies": [{"name": "dep-union", "features": ["web"]}],
+  "dev-dependencies": ["dep-union"]
+}

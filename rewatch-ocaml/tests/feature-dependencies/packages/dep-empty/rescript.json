@@ -1,0 +1,7 @@
+{
+  "name": "dep-empty",
+  "sources": [
+    "src",
+    {"dir": "optional", "feature": "optional"}
+  ]
+}

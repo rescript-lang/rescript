@@ -74,6 +74,8 @@ jobs:
             dune-profile: release
 
           # Verify that the compiler still builds with the oldest OCaml version we support.
+          # Steps comparing OCaml and Rust rewatch are skipped on this job; the
+          # first linux-x64 job runs them.
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
             node-target: linux-x64
@@ -212,8 +214,64 @@ jobs:
         run: echo "C:\Program Files\Git\bin" >> $GITHUB_PATH
         shell: bash
 
-      - name: Run rewatch tests
-        run: ./rewatch/tests/suite.sh rewatch/target/release/rescript
+      - name: Run OCaml rewatch parity tests
+        if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
+        timeout-minutes: 20
+        run: |
+          bash rewatch-ocaml/tests/check_canonical_test_coverage.sh
+          bash rewatch-ocaml/tests/check_config_acceptance.sh \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+          bash rewatch-ocaml/tests/check_command_validation.sh \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+        shell: bash
+
+      - name: Run OCaml rewatch interactive output tests
+        # Terminal rendering depends on the host OS, not the CPU architecture.
+        # Use the faster ARM runners for one Linux and one macOS check. Windows
+        # does not provide a reliable native equivalent of the `script` PTY.
+        if: matrix.node-target == 'linux-arm64' || matrix.node-target == 'darwin-arm64'
+        timeout-minutes: 15
+        run: |
+          bash rewatch-ocaml/tests/check_interactive_output.sh \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+        shell: bash
+
+      - name: Run OCaml rewatch verbose output tests
+        if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
+        timeout-minutes: 10
+        run: |
+          bash rewatch-ocaml/tests/check_verbose_output.sh \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+        shell: bash
+
+      - name: Run OCaml rewatch unit tests
+        timeout-minutes: 10
+        run: |
+          opam exec -- dune build tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe
+          # Run the executable directly so a stuck test leaves live progress;
+          # dune otherwise buffers the test output until the action exits.
+          opam exec -- ./_build/default/tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe -runner sequential
+        shell: bash
+
+      - name: Run OCaml rewatch focused integration tests
+        timeout-minutes: 30
+        run: |
+          sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+        shell: bash
+
+      - name: Run OCaml rewatch canonical tests
+        run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+        shell: bash
+
+      # The Rust implementation is kept for comparison. One platform runs its
+      # shared suite; the parity steps exercise it on every platform.
+      - name: Run Rust rewatch reference tests
+        if: matrix.node-target == 'linux-arm64'
+        run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe
         shell: bash
 
       - name: Run syntax benchmarks
