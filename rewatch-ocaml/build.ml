@@ -291,11 +291,11 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     Build_report.create ~started_at ~interactive ~show_progress ~colors
       ~no_timing ~kind ~attempt
   in
-  let build_ninja_written = ref false in
-  let write_build_ninja_once () =
-    if should_write_build_ninja && not !build_ninja_written then (
-      write_build_ninja attempt;
-      build_ninja_written := true)
+  (* A build writes the marker once: the failure reports end by raising
+     Reported_failure, and a parse failure is raised before any other outcome
+     writes it. *)
+  let write_build_ninja () =
+    if should_write_build_ninja then write_build_ninja attempt
   in
   let phase_seconds seconds = if no_timing then 0. else seconds in
   let parse_step = Build_report.parse_step report in
@@ -308,7 +308,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     prerr_string output;
     prerr_newline ();
     Build_attempt.cleanup_artifacts attempt;
-    write_build_ninja_once ();
+    write_build_ninja ();
     raise
       (Reported_failure
          ("Incremental build failed. Error: \027[2K\r  Failed to Compile. "
@@ -318,7 +318,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     Build_attempt.finalize_logs attempt;
     Build_report.report_parse_failure report ~output;
     Build_attempt.cleanup_artifacts attempt;
-    write_build_ninja_once ();
+    write_build_ninja ();
     raise
       (Reported_failure
          "Incremental build failed. Error: \027[2K\r  Could not parse Source \
@@ -452,7 +452,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
           Compiler_info.write_package package_context package.config);
       if one_shot then Build_report.report_completion report diagnostics;
       Build_attempt.cleanup_artifacts attempt;
-      write_build_ninja_once ();
+      write_build_ninja ();
       release_build_lock ();
       Option.iter
         (fun command -> After_build.run ?poll:process_poll ~root command)
@@ -462,9 +462,8 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
   Build_lock.with_build ~poll build_lock_root
     (fun ~release:release_build_lock ->
       Build_attempt.protect attempt (fun () ->
-          try execute ~release_build_lock with
-          | Build_failure output -> report_failure ~compile_seconds:0. output
-          | Parse_failure output -> report_parse_failure output));
+          try execute ~release_build_lock
+          with Parse_failure output -> report_parse_failure output));
   {root_config; build_lock_root; session = attempt.session}
 
 let run ~poll ~verbosity ~folder ~prod ~features ~warn_error ~after_build
