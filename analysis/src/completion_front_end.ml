@@ -231,7 +231,7 @@ let rec expr_to_context_path_inner ~(in_jsx_context : bool)
          (match exprs with
          | [] -> None
          | exp :: _ -> expr_to_context_path ~in_jsx_context exp))
-  | Pexp_dict _ -> Some CPDict
+  | Pexp_dict _ -> Some (CPDict None)
   | Pexp_ident {txt = Lident "->"} -> None
   | Pexp_ident {txt; loc} ->
     Some
@@ -511,11 +511,10 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
               :: pattern_path)
             ?context_path)
     | Ppat_dict entries ->
-      Ext_list.iter entries (fun {pdp_key; pdp_pattern} ->
+      Ext_list.iter entries (fun {pdp_pattern; pdp_optional} ->
           scope_pattern
             ~pattern_path:
-              (Completable.NFollowRecordField {field_name = pdp_key.txt}
-              :: pattern_path)
+              (Completable.NDictValue {optional = pdp_optional} :: pattern_path)
             ?context_path pdp_pattern)
     | Ppat_record (fields, _, rest) -> (
       Ext_list.iter fields (fun {lid = fname; x = p} ->
