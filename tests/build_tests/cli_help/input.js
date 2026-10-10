@@ -23,13 +23,13 @@ const cliHelp =
   "\n" +
   "COMMANDS\n" +
   "       build [OPTION]… [FOLDER]\n" +
-  "           Build the project.\n" +
+  "           Build the project (default command).\n" +
   "\n" +
   "       clean [--prod] [--quiet] [--verbose] [OPTION]… [FOLDER]\n" +
-  "           Clean build artifacts.\n" +
+  "           Clean the build artifacts.\n" +
   "\n" +
   "       compiler-args [--quiet] [--verbose] [OPTION]… PATH\n" +
-  "           Print compiler arguments for a ReScript source file.\n" +
+  "           Print the compiler arguments for a ReScript source file.\n" +
   "\n" +
   "       format [OPTION]… [FILES]…\n" +
   "           Format ReScript files.\n" +
@@ -42,32 +42,41 @@ const cliHelp =
   "\n" +
   "ARGUMENTS\n" +
   "       FOLDER (absent=.)\n" +
-  "           Path to the project or subproject containing rescript.json.\n" +
+  "           Path to the project or subproject. This folder must contain a\n" +
+  "           rescript.json file.\n" +
   "\n" +
   "OPTIONS\n" +
   "       -a COMMAND, --after-build=COMMAND\n" +
-  "           Run an additional command after a successful build.\n" +
+  "           Run an additional command after a successful build. E.g., play a\n" +
+  "           sound or run a test suite when done compiling.\n" +
   "\n" +
   "       -f REGEX, --filter=REGEX\n" +
-  "           Filter source files by regular expression.\n" +
+  "           Filter source files by regular expression. E.g., filter out test\n" +
+  "           files for compilation while doing feature work.\n" +
   "\n" +
   "       --features=FEATURES\n" +
-  "           Restrict the current package to comma-separated features.\n" +
+  "           Restrict the current package to a comma-separated set of features.\n" +
+  "           Only source directories tagged with one of these features (plus\n" +
+  "           untagged ones, and features they transitively imply through the\n" +
+  "           top-level features map) are compiled. Omit the flag to build with\n" +
+  "           all features active. Example: --features native,experimental\n" +
   "\n" +
   "       -n, --no-timing\n" +
   "           Disable output timing.\n" +
   "\n" +
   "       --prod\n" +
-  "           Skip development dependencies and sources.\n" +
+  '           Skip dev-dependencies and dev sources (type: "dev").\n' +
   "\n" +
   "       -q, --quiet\n" +
-  "           Decrease logging verbosity.\n" +
+  "           Decrease logging verbosity: hide progress and summary output.\n" +
   "\n" +
   "       -v, --verbose\n" +
-  "           Increase logging verbosity.\n" +
+  "           Increase logging verbosity: -v shows debug and -vv also trace\n" +
+  "           output.\n" +
   "\n" +
   "       --warn-error=WARNINGS\n" +
-  "           Override warning configuration from rescript.json.\n" +
+  "           Override warning configuration from rescript.json. Example:\n" +
+  '           --warn-error "+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110"\n' +
   "\n" +
   "COMMON OPTIONS\n" +
   "       --help[=FMT] (default=auto)\n" +
@@ -93,39 +102,48 @@ const cliHelp =
 
 const buildHelp =
   "NAME\n" +
-  "       rescript-build - Build the project.\n" +
+  "       rescript-build - Build the project (default command).\n" +
   "\n" +
   "SYNOPSIS\n" +
   "       rescript build [OPTION]… [FOLDER]\n" +
   "\n" +
   "ARGUMENTS\n" +
   "       FOLDER (absent=.)\n" +
-  "           Path to the project or subproject containing rescript.json.\n" +
+  "           Path to the project or subproject. This folder must contain a\n" +
+  "           rescript.json file.\n" +
   "\n" +
   "OPTIONS\n" +
   "       -a COMMAND, --after-build=COMMAND\n" +
-  "           Run an additional command after a successful build.\n" +
+  "           Run an additional command after a successful build. E.g., play a\n" +
+  "           sound or run a test suite when done compiling.\n" +
   "\n" +
   "       -f REGEX, --filter=REGEX\n" +
-  "           Filter source files by regular expression.\n" +
+  "           Filter source files by regular expression. E.g., filter out test\n" +
+  "           files for compilation while doing feature work.\n" +
   "\n" +
   "       --features=FEATURES\n" +
-  "           Restrict the current package to comma-separated features.\n" +
+  "           Restrict the current package to a comma-separated set of features.\n" +
+  "           Only source directories tagged with one of these features (plus\n" +
+  "           untagged ones, and features they transitively imply through the\n" +
+  "           top-level features map) are compiled. Omit the flag to build with\n" +
+  "           all features active. Example: --features native,experimental\n" +
   "\n" +
   "       -n, --no-timing\n" +
   "           Disable output timing.\n" +
   "\n" +
   "       --prod\n" +
-  "           Skip development dependencies and sources.\n" +
+  '           Skip dev-dependencies and dev sources (type: "dev").\n' +
   "\n" +
   "       -q, --quiet\n" +
-  "           Decrease logging verbosity.\n" +
+  "           Decrease logging verbosity: hide progress and summary output.\n" +
   "\n" +
   "       -v, --verbose\n" +
-  "           Increase logging verbosity.\n" +
+  "           Increase logging verbosity: -v shows debug and -vv also trace\n" +
+  "           output.\n" +
   "\n" +
   "       --warn-error=WARNINGS\n" +
-  "           Override warning configuration from rescript.json.\n" +
+  "           Override warning configuration from rescript.json. Example:\n" +
+  '           --warn-error "+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110"\n' +
   "\n" +
   "COMMON OPTIONS\n" +
   "       --help[=FMT] (default=auto)\n" +
@@ -154,24 +172,26 @@ const buildHelp =
 
 const cleanHelp =
   "NAME\n" +
-  "       rescript-clean - Clean build artifacts.\n" +
+  "       rescript-clean - Clean the build artifacts.\n" +
   "\n" +
   "SYNOPSIS\n" +
   "       rescript clean [--prod] [--quiet] [--verbose] [OPTION]… [FOLDER]\n" +
   "\n" +
   "ARGUMENTS\n" +
   "       FOLDER (absent=.)\n" +
-  "           Path to the project or subproject containing rescript.json.\n" +
+  "           Path to the project or subproject. This folder must contain a\n" +
+  "           rescript.json file.\n" +
   "\n" +
   "OPTIONS\n" +
   "       --prod\n" +
-  "           Skip development dependencies and sources.\n" +
+  '           Skip dev-dependencies and dev sources (type: "dev").\n' +
   "\n" +
   "       -q, --quiet\n" +
-  "           Decrease logging verbosity.\n" +
+  "           Decrease logging verbosity: hide progress and summary output.\n" +
   "\n" +
   "       -v, --verbose\n" +
-  "           Increase logging verbosity.\n" +
+  "           Increase logging verbosity: -v shows debug and -vv also trace\n" +
+  "           output.\n" +
   "\n" +
   "COMMON OPTIONS\n" +
   "       --help[=FMT] (default=auto)\n" +
@@ -205,18 +225,24 @@ const formatHelp =
   "SYNOPSIS\n" +
   "       rescript format [OPTION]… [FILES]…\n" +
   "\n" +
+  "ARGUMENTS\n" +
+  "       FILES\n" +
+  "           Files to format. If no files are provided, all files are\n" +
+  "           formatted.\n" +
+  "\n" +
   "OPTIONS\n" +
   "       -c, --check\n" +
-  "           Check formatting without modifying files.\n" +
+  "           Check formatting status without applying changes.\n" +
   "\n" +
   "       -q, --quiet\n" +
-  "           Decrease logging verbosity.\n" +
+  "           Decrease logging verbosity: hide progress and summary output.\n" +
   "\n" +
   "       -s EXTENSION, --stdin=EXTENSION\n" +
-  "           Read stdin and write formatted source to stdout.\n" +
+  "           Read the code from stdin and print the formatted code to stdout.\n" +
   "\n" +
   "       -v, --verbose\n" +
-  "           Increase logging verbosity.\n" +
+  "           Increase logging verbosity: -v shows debug and -vv also trace\n" +
+  "           output.\n" +
   "\n" +
   "COMMON OPTIONS\n" +
   "       --help[=FMT] (default=auto)\n" +
@@ -245,7 +271,7 @@ const formatHelp =
 
 const compilerArgsHelp =
   "NAME\n" +
-  "       rescript-compiler-args - Print compiler arguments for a ReScript\n" +
+  "       rescript-compiler-args - Print the compiler arguments for a ReScript\n" +
   "       source file.\n" +
   "\n" +
   "SYNOPSIS\n" +
@@ -257,10 +283,11 @@ const compilerArgsHelp =
   "\n" +
   "OPTIONS\n" +
   "       -q, --quiet\n" +
-  "           Decrease logging verbosity.\n" +
+  "           Decrease logging verbosity: hide progress and summary output.\n" +
   "\n" +
   "       -v, --verbose\n" +
-  "           Increase logging verbosity.\n" +
+  "           Increase logging verbosity: -v shows debug and -vv also trace\n" +
+  "           output.\n" +
   "\n" +
   "COMMON OPTIONS\n" +
   "       --help[=FMT] (default=auto)\n" +
