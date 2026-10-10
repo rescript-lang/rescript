@@ -21,7 +21,7 @@ module String_map : Map.S with type key = string
 type map_tree = Node of String_set.t * bound_map
 and bound_map = map_tree String_map.t
 
-val free_structure_names : String_set.t ref
+val free_structure_names : unit -> String_set.t ref
 
 (* dependencies found by preprocessing tools (plugins) *)
 val open_module : bound_map -> Longident.t -> bound_map

@@ -12,7 +12,7 @@ exception Publication_failure of exn * cmi_change
 
 type publish_result = {stderr: string; cmi_change: cmi_change}
 type namespace_task = {
-  job: Process.job;
+  task: Process.task;
   publish: Process.result -> publish_result;
 }
 type post_build_task = {output: string; task: Process.task}
@@ -36,7 +36,7 @@ val create :
   state:Build_state.module_ ->
   cmi_path:string ->
   prepare:(unit -> unit) ->
-  compile:(source_kind:Source.source_kind -> string -> Process.job) ->
+  compile:(source_kind:Source.source_kind -> string -> Process.task) ->
   publish:
     (source_kind:Source.source_kind ->
     string ->

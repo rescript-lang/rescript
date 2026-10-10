@@ -78,8 +78,10 @@ let run_namespace_jobs (attempt : Build_attempt.t) =
         attempt.parse_seconds +. (Unix.gettimeofday () -. started_at))
     (fun () ->
       let results =
-        Process.run_parallel ?poll:attempt.process_poll
-          (List.map (fun job -> job.Build_attempt.job) jobs)
+        List.map
+          (fun job ->
+            Process.run_task ?poll:attempt.process_poll job.Build_attempt.task)
+          jobs
       in
       List.iter2
         (fun job result -> job.Build_attempt.finish result)
@@ -138,7 +140,6 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
      affected modules' dependency edges in memory. This keeps the long-lived
      graph coherent without rediscovering the package tree. *)
   let sources = incremental_sources previous changes in
-  let bsc = prepared.compiler_context.bsc_path in
   let started_at = Unix.gettimeofday () in
   List.iter
     (fun source ->
@@ -162,10 +163,12 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
          sources)
   in
   let results =
-    Process.run_parallel_map ?poll:attempt.process_poll
-      ~on_complete:parse_completed sources ~job:(fun source ->
-        Compiler_process.parse_job ~bsc ~build_dir:source.package.build_dir
+    sources
+    |> List.map (fun source ->
+        Compiler_process.parse_request ~build_dir:source.package.build_dir
           ~config:source.package.compile_config source.source.relative_path)
+    |> Compiler_process.run_requests ?poll:attempt.process_poll
+         ~on_complete:parse_completed
   in
   let affected_modules = Hashtbl.create (List.length sources) in
   let dependency_updates = ref [] in

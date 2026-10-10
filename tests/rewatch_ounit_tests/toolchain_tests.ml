@@ -18,11 +18,11 @@ let tests =
       let executable = Filename.concat bin "rescript.exe" in
       write_file executable "test executable";
       check
-        (Toolchain.sibling_bsc_candidate ~cwd:root ~executable
+        (Toolchain.bundled_bsc ~cwd:root ~executable
         = Filename.concat bin "bsc.exe")
         "absolute executable paths locate sibling bsc.exe";
       check
-        (Toolchain.sibling_bsc_candidate ~cwd:root
+        (Toolchain.bundled_bsc ~cwd:root
            ~executable:(Filename.concat "bin" "rescript.exe")
         = Filename.concat bin "bsc.exe")
         "relative executable paths locate sibling bsc.exe");

@@ -617,7 +617,10 @@ module String_map = Map.Make (struct
   let compare = compare
 end)
 
-let cookies = ref String_map.empty
+(* Cookies exchanged with external PPXs belong to one compiler request. *)
+let cookies_key = Domain.DLS.new_key (fun () -> ref String_map.empty)
+let cookies () = Domain.DLS.get cookies_key
+let reset_cookies () = cookies () := String_map.empty
 
 module Ppx_context = struct
   open Longident
@@ -649,7 +652,7 @@ module Ppx_context = struct
       x =
         make_list
           (make_pair make_string (fun x -> x))
-          (String_map.bindings !cookies);
+          (String_map.bindings !(cookies ()));
       opt = false;
     }
 
@@ -663,20 +666,24 @@ module Ppx_context = struct
         {lid = lid "tool_name"; x = make_string tool_name; opt = false};
         {
           lid = lid "include_dirs";
-          x = make_list make_string !Clflags.include_dirs;
+          x = make_list make_string !((Clflags.current ()).include_dirs);
           opt = false;
         };
         {
           lid = lid "load_path";
-          x = make_list make_string !Config.load_path;
+          x = make_list make_string (Config.get_load_path ());
           opt = false;
         };
         {
           lid = lid "open_modules";
-          x = make_list make_string !Clflags.open_modules;
+          x = make_list make_string !((Clflags.current ()).open_modules);
           opt = false;
         };
-        {lid = lid "debug"; x = make_bool !Clflags.debug; opt = false};
+        {
+          lid = lid "debug";
+          x = make_bool !((Clflags.current ()).debug);
+          opt = false;
+        };
         get_cookies ();
       ]
     in
@@ -737,13 +744,15 @@ module Ppx_context = struct
             name
       in
       match name with
-      | "include_dirs" -> Clflags.include_dirs := get_list get_string payload
-      | "load_path" -> Config.load_path := get_list get_string payload
-      | "open_modules" -> Clflags.open_modules := get_list get_string payload
-      | "debug" -> Clflags.debug := get_bool payload
+      | "include_dirs" ->
+        (Clflags.current ()).include_dirs := get_list get_string payload
+      | "load_path" -> Config.set_load_path (get_list get_string payload)
+      | "open_modules" ->
+        (Clflags.current ()).open_modules := get_list get_string payload
+      | "debug" -> (Clflags.current ()).debug := get_bool payload
       | "cookies" ->
         let l = get_list (get_pair get_string (fun x -> x)) payload in
-        cookies :=
+        cookies () :=
           List.fold_left
             (fun s (k, v) -> String_map.add k v s)
             String_map.empty l

@@ -9,6 +9,18 @@ let write_file path contents =
     ~finally:(fun () -> close_out_noerr channel)
     (fun () -> output_string channel contents)
 
+let write_ast_header path ~dependencies ~source =
+  File_util.ensure_dir (Filename.dirname path);
+  let channel = open_out_bin path in
+  Fun.protect
+    ~finally:(fun () -> close_out_noerr channel)
+    (fun () ->
+      let dependency_block = "\n" ^ String.concat "\n" dependencies ^ "\n" in
+      output_binary_int channel (String.length dependency_block);
+      output_string channel dependency_block;
+      output_string channel source;
+      output_char channel '\n')
+
 let path root relative =
   relative |> String.split_on_char '/' |> File_util.path_of_parts root
 

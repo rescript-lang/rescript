@@ -17,7 +17,10 @@ let absolute_program ~cwd program =
   if Filename.is_relative resolved then Filename.concat cwd resolved
   else resolved
 
-let sibling_bsc_candidate ~cwd ~executable =
+(* Builds use the embedded compiler. The bsc.exe shipped next to the
+   executable is still recorded in compiler-info.json, where editor tooling
+   looks for bsc.exe and the other platform binaries. *)
+let bundled_bsc ~cwd ~executable =
   let executable = absolute_program ~cwd executable in
   let executable =
     canonical_existing
@@ -25,20 +28,6 @@ let sibling_bsc_candidate ~cwd ~executable =
       executable
   in
   Filename.concat (Filename.dirname executable) "bsc.exe"
-
-let bsc () =
-  let candidate, message =
-    match Sys.getenv_opt "RESCRIPT_BSC_EXE" with
-    | Some path ->
-      (path, fun missing -> "RESCRIPT_BSC_EXE points to missing path " ^ missing)
-    | None ->
-      ( sibling_bsc_candidate ~cwd:(Sys.getcwd ())
-          ~executable:Sys.executable_name,
-        fun missing ->
-          "Could not locate bsc next to the ReScript executable at " ^ missing
-          ^ "; set RESCRIPT_BSC_EXE to override it" )
-  in
-  canonical_existing ~message candidate
 
 let runtime ~find_package =
   match Sys.getenv_opt "RESCRIPT_RUNTIME" with

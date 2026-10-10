@@ -25,11 +25,11 @@ let package_output_specs (config : Config.t) =
       })
     config.package_specs
 
-let make_context ~bsc_path ~runtime_path ~source_map_args
-    ~inherited_compiler_args ~package_output_specs =
+let make_context ~compiler_path ~compiler_identity ~runtime_path
+    ~source_map_args ~inherited_compiler_args ~package_output_specs =
   {
-    bsc_path;
-    bsc_hash = Digest.file bsc_path |> Digest.to_hex;
+    bsc_path = compiler_path;
+    bsc_hash = compiler_identity;
     runtime_path;
     source_map_args;
     inherited_compiler_args;

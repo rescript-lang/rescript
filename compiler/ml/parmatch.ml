@@ -1872,10 +1872,10 @@ module Conv = struct
   open Parsetree
   let mkpat desc = Ast_helper.Pat.mk desc
 
-  let name_counter = ref 0
   let fresh name =
-    let current = !name_counter in
-    name_counter := !name_counter + 1;
+    let state = Compiler_request_state.current () in
+    let current = state.parmatch_name_counter in
+    state.parmatch_name_counter <- current + 1;
     "#$" ^ name ^ string_of_int current
 
   let conv_record_rest (rest : Typedtree.record_pat_rest) =

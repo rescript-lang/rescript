@@ -44,31 +44,6 @@ let tests =
            contains message "Could not write formatted file"
            && contains message path)
         "formatter write failures retain their operation and source path");
-  with_temp_dir (fun root ->
-      write_file (Filename.concat root "rescript.json") "{";
-      let previous_directory = Sys.getcwd () in
-      let previous_bsc = Sys.getenv_opt "RESCRIPT_BSC_EXE" in
-      Unix.chdir root;
-      Unix.putenv "RESCRIPT_BSC_EXE" (Filename.concat root "missing-bsc");
-      let message =
-        Fun.protect
-          ~finally:(fun () ->
-            Unix.chdir previous_directory;
-            match previous_bsc with
-            | Some value -> Unix.putenv "RESCRIPT_BSC_EXE" value
-            | None -> Test_support.unsetenv "RESCRIPT_BSC_EXE")
-          (fun () ->
-            try
-              Format.run_files ~verbosity:0 ~check:false [];
-              None
-            with Format.Error message -> Some message)
-      in
-      check
-        (match message with
-        | Some message ->
-          contains message "RESCRIPT_BSC_EXE points to missing path"
-        | None -> false)
-        "format resolves the compiler before discovering implicit project files");
   if not Sys.win32 then
     with_temp_dir (fun root ->
         let target = Filename.concat root "target.res" in
@@ -88,25 +63,32 @@ let tests =
           && File_util.read_file target = "through hard link")
           "formatting should preserve hard-link identity");
   with_temp_dir (fun root ->
-      let first = Filename.concat root "First.res" in
-      let second = Filename.concat root "Second.res" in
-      write_file first "let first = 1\n";
-      write_file second "let second = 2\n";
-      let previous_root = Sys.getenv_opt "REWATCH_FORMAT_TEST_ROOT" in
-      Unix.putenv "REWATCH_FORMAT_TEST_ROOT" root;
-      Fun.protect
-        ~finally:(fun () ->
-          match previous_root with
-          | Some value -> Unix.putenv "REWATCH_FORMAT_TEST_ROOT" value
-          | None -> Test_support.unsetenv "REWATCH_FORMAT_TEST_ROOT")
-        (fun () ->
-          Format.format_files_with_bsc ~max_jobs:2
-            ~bsc:(Unix.realpath Sys.executable_name)
-            ~check:true [first; second]);
+      let unformatted = Filename.concat root "Unformatted.res" in
+      let formatted = Filename.concat root "Formatted.res" in
+      write_file unformatted "let first=1\n";
+      write_file formatted "let second = 2\n";
       check
-        (Sys.file_exists (first ^ ".started")
-        && Sys.file_exists (second ^ ".started"))
-        "formatter subprocesses overlap rather than running serially");
+        (try
+           Format.format_files ~check:true [unformatted; formatted];
+           false
+         with Format.Error message -> message = "Formatting check failed")
+        "format --check reports a file that needs formatting";
+      check
+        (File_util.read_file unformatted = "let first=1\n")
+        "format --check leaves files unchanged";
+      Format.format_files ~check:false [unformatted; formatted];
+      check
+        (File_util.read_file unformatted = "let first = 1\n"
+        && File_util.read_file formatted = "let second = 2\n")
+        "the embedded formatter rewrites only files that need formatting";
+      check
+        (try
+           write_file unformatted "let =\n";
+           Format.format_files ~check:false [unformatted];
+           false
+         with Format.Error message ->
+           contains message ("Error formatting " ^ unformatted))
+        "syntax errors are reported with the source path");
   with_temp_dir (fun root ->
       let root_source = Test_support.path root "src/App.res" in
       let orphan_interface = Test_support.path root "src/Orphan.resi" in
@@ -118,46 +100,29 @@ let tests =
       write_file
         (Filename.concat root "rescript.json")
         {|{"name":"app","sources":[{"dir":"src","subdirs":true}],"dependencies":["installed"]}|};
-      write_file root_source "let value = 1\n";
-      write_file orphan_interface "let value: int\n";
-      write_file duplicate_one "let value = 1\n";
-      write_file duplicate_two "let value = 2\n";
+      write_file root_source "let value=1\n";
+      write_file orphan_interface "let value:int\n";
+      write_file duplicate_one "let value=1\n";
+      write_file duplicate_two "let value=1\n";
       write_file
         (Test_support.path root "node_modules/installed/rescript.json")
         {|{"name":"installed","sources":["src"]}|};
-      write_file installed_source "let value = 2\n";
+      write_file installed_source "let value=1\n";
       let previous = Sys.getcwd () in
-      let previous_bsc = Sys.getenv_opt "RESCRIPT_BSC_EXE" in
-      let previous_inventory_root =
-        Sys.getenv_opt "REWATCH_FORMAT_INVENTORY_TEST_ROOT"
-      in
-      let marker path =
-        Filename.concat root (Digest.string path |> Digest.to_hex)
-      in
-      Unix.putenv "RESCRIPT_BSC_EXE" (Unix.realpath Sys.executable_name);
-      Unix.putenv "REWATCH_FORMAT_INVENTORY_TEST_ROOT" root;
       Fun.protect
-        ~finally:(fun () ->
-          Unix.chdir previous;
-          (match previous_bsc with
-          | Some value -> Unix.putenv "RESCRIPT_BSC_EXE" value
-          | None -> Test_support.unsetenv "RESCRIPT_BSC_EXE");
-          match previous_inventory_root with
-          | Some value -> Unix.putenv "REWATCH_FORMAT_INVENTORY_TEST_ROOT" value
-          | None -> Test_support.unsetenv "REWATCH_FORMAT_INVENTORY_TEST_ROOT")
+        ~finally:(fun () -> Unix.chdir previous)
         (fun () ->
           Unix.chdir root;
-          Format.run_files ~verbosity:0 ~check:true []);
-      check
-        (Sys.file_exists (marker root_source))
+          Format.run_files ~verbosity:0 ~check:false []);
+      let formatted path = File_util.read_file path = "let value = 1\n" in
+      check (formatted root_source)
         "implicit format includes the current package";
       check
-        (Sys.file_exists (marker orphan_interface))
+        (File_util.read_file orphan_interface = "let value: int\n")
         "implicit format includes an orphan interface";
       check
-        (Sys.file_exists (marker duplicate_one)
-        && Sys.file_exists (marker duplicate_two))
+        (formatted duplicate_one && formatted duplicate_two)
         "implicit format does not impose compilation module uniqueness";
       check
-        (not (Sys.file_exists (marker installed_source)))
+        (File_util.read_file installed_source = "let value=1\n")
         "implicit format does not rewrite installed node_modules dependencies")

@@ -23,3 +23,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 val mapper : Ast_mapper.mapper
+
+val reset : unit -> unit
+(** Reset request-local names generated while expanding built-in extensions. *)

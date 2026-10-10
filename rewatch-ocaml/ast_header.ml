@@ -6,15 +6,14 @@ let read path =
   Fun.protect
     ~finally:(fun () -> close_in_noerr channel)
     (fun () ->
-      (try ignore (input_line channel) with End_of_file -> ());
-      let rec loop dependencies =
-        match input_line channel with
-        | line ->
-          let line = String.trim line in
-          if line = "" then loop dependencies
-          else if Filename.is_relative line then loop (line :: dependencies)
-          else {dependencies = List.rev dependencies; source = Some line}
-        | exception End_of_file ->
-          {dependencies = List.rev dependencies; source = None}
+      (* The first four bytes give the exact length of the newline-delimited
+         dependency block. The following source path can itself be relative;
+         scanning until an absolute path would read the marshalled AST. *)
+      let dependency_length = input_binary_int channel in
+      let dependencies =
+        really_input_string channel dependency_length
+        |> String.split_on_char '\n'
+        |> List.filter (fun name -> name <> "")
       in
-      loop [])
+      let source = try Some (input_line channel) with End_of_file -> None in
+      {dependencies; source})

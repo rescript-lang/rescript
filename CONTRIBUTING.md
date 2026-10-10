@@ -284,13 +284,13 @@ npm link rescript
 
 #### Use Local BSC with Existing ReScript Installation
 
-Alternatively, you can set the `RESCRIPT_BSC_EXE` environment variable to point to your locally compiled `bsc.exe`.
+The `rescript` build system has the compiler built in, so to test a local compiler change, link the local package as shown above.
+
+The Rust build system, `rescript-rust`, still runs `bsc.exe` and accepts the `RESCRIPT_BSC_EXE` environment variable pointing to your locally compiled `bsc.exe`:
 
 ```sh
-RESCRIPT_BSC_EXE=your-rescript-repo/packages/@rescript/darwin-arm64/bin/bsc.exe npx rescript
+RESCRIPT_BSC_EXE=your-rescript-repo/packages/@rescript/darwin-arm64/bin/bsc.exe npx rescript-rust
 ```
-
-This will test the local compiler while still using the build system from the installed Node module.
 
 ### Running Automatic Tests
 

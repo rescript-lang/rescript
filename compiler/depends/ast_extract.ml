@@ -26,7 +26,7 @@
 
 module Set_string = Depend.String_set
 
-(* FIXME: [Clflags.open_modules] seems not to be properly used *)
+(* FIXME: [(Clflags.current ()).open_modules] seems not to be properly used *)
 module S_map = Depend.String_map
 
 let bound_vars = S_map.empty
@@ -34,13 +34,13 @@ let bound_vars = S_map.empty
 type 'a kind = 'a Ml_binary.kind
 
 let read_parse_and_extract (type t) (k : t kind) (ast : t) : Set_string.t =
-  Depend.free_structure_names := Set_string.empty;
-  Ext_ref.protect Clflags.transparent_modules false (fun _ ->
+  Depend.free_structure_names () := Set_string.empty;
+  Ext_ref.protect (Clflags.current ()).transparent_modules false (fun _ ->
       List.iter (* check *)
         (fun modname ->
           ignore @@ Depend.open_module bound_vars (Longident.Lident modname))
-        !Clflags.open_modules;
+        !((Clflags.current ()).open_modules);
       (match k with
       | Ml_binary.Ml -> Depend.add_implementation bound_vars ast
       | Ml_binary.Mli -> Depend.add_signature bound_vars ast);
-      !Depend.free_structure_names)
+      !(Depend.free_structure_names ()))

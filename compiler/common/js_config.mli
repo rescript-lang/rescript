@@ -26,65 +26,45 @@ type jsx_version = Jsx_v4
 type jsx_module = React | Generic of {module_name: string}
 type source_map = No_source_map | Linked | Inline | Hidden
 
-val no_version_header : bool ref
-(** set/get header *)
+type t = {
+  no_version_header: bool ref;  (** Suppress the version header. *)
+  directives: string list ref;
+      (** Directives printed verbatim just after the version header. *)
+  cross_module_inline: bool ref;  (** Cross-module inlining option. *)
+  debug_ir: bool ref;
+      (** Dump intermediate representations and related diagnostics. *)
+  check_lam: bool ref;
+      (** Check Lambda invariants after optimization passes. *)
+  no_builtin_ppx: bool ref;
+  check_div_by_zero: bool ref;
+  syntax_only: bool ref;
+  binary_ast: bool ref;
+  test_ast_conversion: bool ref;
+  debug: bool ref;
+  cmi_only: bool ref;
+  cmj_only: bool ref;
+  force_cmi: bool ref;
+  force_cmj: bool ref;
+  jsx_version: jsx_version option ref;
+  jsx_module: jsx_module ref;
+  js_stdout: bool ref;
+  source_map: source_map ref;
+  source_map_sources_content: bool ref;
+  source_map_root: string ref;
+  all_module_aliases: bool ref;
+  no_stdlib: bool ref;
+  no_export: bool ref;
+  as_pp: bool ref;
+  self_stack: string Stack.t;
+}
 
-val directives : string list ref
-(** directives printed verbatims just after the version header *)
+val current : unit -> t
+(* Mutable settings for the current domain's compiler request. *)
 
-val cross_module_inline : bool ref
-(** cross module inline option *)
-
-val debug_ir : bool ref
-(** dump intermediate representations and related diagnostics *)
-
-val check_lam : bool ref
-(** check Lambda invariants after optimization passes *)
-
-val no_builtin_ppx : bool ref
-(** options for builtin ppx *)
-
-val check_div_by_zero : bool ref
-(** check-div-by-zero option *)
+val with_fresh : (unit -> 'a) -> 'a
+(* Run with default settings and restore the previous request on exit. *)
 
 val tool_name : string
-
-val syntax_only : bool ref
-
-val binary_ast : bool ref
-
-val test_ast_conversion : bool ref
-
-val debug : bool ref
-
-val cmi_only : bool ref
-
-val cmj_only : bool ref
-
-(* stopped after generating cmj *)
-val force_cmi : bool ref
-
-val force_cmj : bool ref
-
-val jsx_version : jsx_version option ref
-
-val jsx_module : jsx_module ref
-
-val jsx_preserve : bool ref
-
-val js_stdout : bool ref
-
-val source_map : source_map ref
-
-val source_map_sources_content : bool ref
-
-val source_map_root : string ref
-
-val all_module_aliases : bool ref
-
-val no_stdlib : bool ref
-
-val no_export : bool ref
 
 val int_of_jsx_version : jsx_version -> int
 
@@ -94,6 +74,4 @@ val jsx_version_of_int : int -> jsx_version option
 
 val jsx_module_of_string : string -> jsx_module
 
-val as_pp : bool ref
-
-val self_stack : string Stack.t
+val reset : unit -> unit

@@ -275,7 +275,7 @@ let compiler_job_tests =
       File_util.ensure_dir (Filename.dirname source);
       write_file source "let value = 1\n";
       let parse_job =
-        Compiler_process.parse_job ~bsc:"bsc" ~build_dir ~config "src/A.res"
+        Compiler_process.parse_request ~build_dir ~config "src/A.res"
       in
       let module_ =
         Source.
@@ -287,7 +287,7 @@ let compiler_job_tests =
           }
       in
       let compile_job =
-        Compiler_process.compile_job ~bsc:"bsc" ~build_dir ~config
+        Compiler_process.compile_request ~build_dir ~config
           ~common_args:
             (Compiler_args.compiler_common_arguments ~config ~runtime:"runtime"
                ~dependency_dirs:[] ~watch:false ~gentype_dependency_args:[])
@@ -299,7 +299,7 @@ let compiler_job_tests =
         | [] -> None
       in
       check
-        (parse_job.Process.cwd = compile_job.Process.cwd
+        (parse_job.Compiler_process.cwd = compile_job.Compiler_process.cwd
         && parse_job.cwd = build_dir)
         "parser and compiler jobs derive the same canonical working directory";
       check

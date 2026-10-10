@@ -37,8 +37,9 @@ module Color = struct
       : Format.formatter_stag_functions)
 
   let setup () =
-    Format.pp_set_mark_tags Format.std_formatter true;
-    Format.pp_set_formatter_stag_functions Format.std_formatter color_functions
+    let formatter = Compiler_request_output.stdout_formatter () in
+    Format.pp_set_mark_tags formatter true;
+    Format.pp_set_formatter_stag_functions formatter color_functions
 
   let error ppf s = Format.fprintf ppf "@{<error>%s@}" s [@@dead "Color.error"]
   let info ppf s = Format.fprintf ppf "@{<info>%s@}" s
@@ -91,11 +92,13 @@ module Loc = struct
 end
 
 let item x =
-  Format.fprintf Format.std_formatter "  ";
-  Format.fprintf Format.std_formatter x
+  let formatter = Compiler_request_output.stdout_formatter () in
+  Format.fprintf formatter "  ";
+  Format.fprintf formatter x
 
 let log_kind body ~color ~loc ~name =
-  Format.fprintf Format.std_formatter "@[<v 2>@,%a@,%a@,%a@]@." color name
-    Loc.print loc body ()
+  Format.fprintf
+    (Compiler_request_output.stdout_formatter ())
+    "@[<v 2>@,%a@,%a@,%a@]@." color name Loc.print loc body ()
 
 let info body ~loc ~name = log_kind body ~color:Color.info ~loc ~name

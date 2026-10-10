@@ -50,15 +50,15 @@ let rewrite_signature (ast : Parsetree.signature) : Parsetree.signature =
   Bs_ast_invariant.iter_warnings_on_sigi ast;
   Ast_config.process_sig ast;
   let ast =
-    match !Js_config.jsx_version with
+    match !((Js_config.current ()).jsx_version) with
     | None -> ast
     | Some jsx_version_ ->
       let open Js_config in
       let jsx_version = int_of_jsx_version jsx_version_ in
-      let jsx_module = string_of_jsx_module !jsx_module in
+      let jsx_module = string_of_jsx_module !((current ()).jsx_module) in
       Jsx_ppx.rewrite_signature ~jsx_version ~jsx_module ast
   in
-  if !Js_config.no_builtin_ppx then ast
+  if !((Js_config.current ()).no_builtin_ppx) then ast
   else
     let result = unsafe_mapper.signature unsafe_mapper ast in
     unconsumed_json_iterator.signature unconsumed_json_iterator result;
@@ -70,15 +70,15 @@ let rewrite_implementation (ast : Parsetree.structure) : Parsetree.structure =
   Bs_ast_invariant.iter_warnings_on_stru ast;
   Ast_config.process_str ast;
   let ast =
-    match !Js_config.jsx_version with
+    match !((Js_config.current ()).jsx_version) with
     | None -> ast
     | Some jsx_version_ ->
       let open Js_config in
       let jsx_version = int_of_jsx_version jsx_version_ in
-      let jsx_module = string_of_jsx_module !jsx_module in
+      let jsx_module = string_of_jsx_module !((current ()).jsx_module) in
       Jsx_ppx.rewrite_implementation ~jsx_version ~jsx_module ast
   in
-  if !Js_config.no_builtin_ppx then ast
+  if !((Js_config.current ()).no_builtin_ppx) then ast
   else
     let result = unsafe_mapper.structure unsafe_mapper ast in
     unconsumed_json_iterator.structure unconsumed_json_iterator result;

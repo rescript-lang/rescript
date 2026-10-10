@@ -8,6 +8,18 @@ let write path contents =
     ~finally:(fun () -> close_out_noerr channel)
     (fun () -> output_string channel contents)
 
+let write_ast path ~dependencies ~source =
+  let channel = open_out_bin path in
+  Fun.protect
+    ~finally:(fun () -> close_out_noerr channel)
+    (fun () ->
+      let dependency_block = "\n" ^ String.concat "\n" dependencies ^ "\n" in
+      output_binary_int channel (String.length dependency_block);
+      output_string channel dependency_block;
+      output_string channel source;
+      output_char channel '\n';
+      output_value channel "Belt_HashSet\nBelt\n")
+
 let with_temp_dir = Test_support.with_temp_dir "rewatch-compile-assets-"
 
 let tests =
@@ -24,19 +36,38 @@ let tests =
       write second "cmt";
       write unrelated "notes";
       write cleanup_only "cmj";
-      write ast ("Caml1999X\nDependency\n" ^ source ^ "\nbinary payload");
+      write_ast ast ~dependencies:["Dependency"] ~source;
+      let relative_ast = Filename.concat root "Relative.iast" in
+      write_ast relative_ast ~dependencies:["Belt_Id"]
+        ~source:"../../src/Relative.resi";
+      let relative_header = Ast_header.read relative_ast in
+      check
+        (relative_header.dependencies = ["Belt_Id"]
+        && relative_header.source = Some "../../src/Relative.resi")
+        "relative source paths terminate the dependency header before the AST";
       Unix.mkdir nested 0o755;
       write (Filename.concat nested "Nested.cmi") "nested";
       let state = Compile_assets.create [root; root] in
       check
         (Compile_assets.files state root
         |> List.sort String.compare
-        = List.sort String.compare [ast; cleanup_only; first; second])
+        = List.sort String.compare
+            [ast; relative_ast; cleanup_only; first; second])
         "the flat cleanup inventory retains only managed compiler assets";
       check
-        (Compile_assets.ast_sources state root
-        = [{Compile_assets.ast_path = ast; source_path = source}])
-        "published ASTs retain their encoded absolute source location";
+        (List.sort
+           (fun first second ->
+             String.compare first.Compile_assets.ast_path
+               second.Compile_assets.ast_path)
+           (Compile_assets.ast_sources state root)
+        = [
+            {Compile_assets.ast_path = ast; source_path = source};
+            {
+              Compile_assets.ast_path = relative_ast;
+              source_path = "../../src/Relative.resi";
+            };
+          ])
+        "published ASTs retain absolute and relative source locations";
       check
         (Compile_assets.ast state source
         |> Option.map (fun entry -> entry.Compile_assets.path)

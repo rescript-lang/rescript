@@ -50,15 +50,16 @@ type t = {
 (* A builder is installed only while source map output is active. When source
    maps are disabled, source_loc_of_loc returns None, so marker calls return
    before reading this state. *)
-let current : t option ref = ref None
+let current = Domain.DLS.new_key (fun () -> ref None)
 
 let source_loc_of_loc (loc : Location.t) =
-  match !Js_config.source_map with
+  match !((Js_config.current ()).source_map) with
   | No_source_map -> None
   | Linked | Inline | Hidden ->
     if loc.loc_ghost || loc.loc_start.pos_cnum < 0 then None else Some loc
 
 let with_builder builder f =
+  let current = Domain.DLS.get current in
   let old = !current in
   current := Some builder;
   Ext_pervasives.finally () ~clean:(fun () -> current := old) f
@@ -72,7 +73,8 @@ let normalize_slashes s =
 
 let absolute_path path =
   if path = "" then path
-  else if Filename.is_relative path then Filename.concat (Sys.getcwd ()) path
+  else if Filename.is_relative path then
+    Filename.concat (Compiler_request_state.cwd ()) path
   else path
 
 let split_path path =
@@ -127,7 +129,7 @@ let load_content filename =
 let add_source builder filename =
   let filename =
     match filename with
-    | "" | "_none_" -> !Location.input_name
+    | "" | "_none_" -> Location.get_input_name ()
     | filename -> filename
   in
   let filename = absolute_path filename in
@@ -200,7 +202,7 @@ let add_mapping builder ~generated_line ~generated_column (loc : Location.t) =
 let mark_source_loc fmt = function
   | None -> ()
   | Some loc -> (
-    match !current with
+    match !(Domain.DLS.get current) with
     | None -> ()
     | Some builder ->
       let generated_line, generated_column = Ext_pp.position fmt in

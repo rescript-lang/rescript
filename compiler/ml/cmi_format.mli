@@ -32,6 +32,8 @@ val input_cmi : in_channel -> cmi_infos
 
 (* read a cmi from a filename, checking the magic *)
 val read_cmi : string -> cmi_infos
+val read_cmi_channel : string -> in_channel -> cmi_infos
+(* Parse an already opened CMI. The caller retains ownership of the channel. *)
 
 (* Error report *)
 

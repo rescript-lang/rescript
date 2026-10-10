@@ -7,8 +7,10 @@ implementation in [`../rewatch`](../rewatch) ships next to it as
 `rescript-rust`, and both are tested with the shared integration suite in
 [`../rewatch/tests`](../rewatch/tests).
 
-The port follows Rust rewatch's architecture and algorithms. Every parse and
-compile runs `bsc` as a separate process.
+The port follows Rust rewatch's architecture and algorithms, but it links the
+compiler in: parses and compiles run in-process on a pool of OCaml domains
+rather than as `bsc` subprocesses (see
+[In-process compilation](#in-process-compilation)).
 
 ## Building and running
 
@@ -20,15 +22,19 @@ make                                     # builds bsc and packages/@rescript/<pl
 dune build rewatch-ocaml/rescript_ocaml.exe   # just this executable
 ```
 
-The packaged `rescript.exe` finds `bsc.exe` next to itself, and the npm
-launcher (`cli/rescript.js`) supplies the runtime path. To run the dune
-executable directly, point it at a compiler and runtime:
+The npm launcher (`cli/rescript.js`) supplies the runtime path. To run the
+dune executable directly, point it at the runtime:
 
 ```sh
-export RESCRIPT_BSC_EXE="$PWD/packages/@rescript/linux-arm64/bin/bsc.exe"
 export RESCRIPT_RUNTIME="$PWD/packages/@rescript/runtime"
 _build/default/rewatch-ocaml/rescript_ocaml.exe build path/to/project
 ```
+
+Builds and `rescript format` use the embedded compiler, so
+`RESCRIPT_BSC_EXE` only affects Rust rewatch (`rescript-rust`). The
+`bsc.exe` next to `rescript.exe` is still recorded in
+`lib/bs/compiler-info.json`, where editor tooling looks for the platform
+binaries.
 
 Linux release builds use dune's `static` profile, so the published executable
 does not depend on the runner's libc. The version lives in
@@ -44,7 +50,8 @@ does not depend on the runner's libc. The version lives in
 | Projects and packages | `project_context` (workspace roots and dependency lookup), `package_resolution`, `package_traversal`, `package_graph`, `package_plan`, `package_diagnostics` |
 | Sources | `source`, `source_filter` (`--filter`), `source_dirs` |
 | Build orchestration | `build` (one build or watch rebuild), `build_preparation`, `build_session` (state kept across watch rebuilds), `build_attempt` (state of one attempt), `build_state`, `build_report` |
-| Parsing and compiling | `package_parse`, `package_compilation`, `compiler_args`, `compiler_process`, `compiler_scheduler`, `compiler_info` (fingerprints that decide when a package is cleaned), `compile_assets`, `module_graph`, `graph` |
+| Parsing and compiling | `package_parse`, `package_compilation`, `compiler_args`, `compiler_process` (logical compiler jobs and their in-process execution), `compiler_execution_mode` (worker count), `compiler_scheduler`, `compiler_info` (fingerprints that decide when a package is cleaned), `compile_assets`, `module_graph`, `graph` |
+| Embedded compiler | `compiler/bsc/rescript_compiler_driver` (one request: argv in, exit code and captured output out), `compiler/ext/compiler_request_state` and `compiler_request_output` (per-request working directory and output capture) |
 | Artifacts | `build_artifacts` (output paths, publication, stale cleanup), `build_freshness`, `clean`, `file_util` |
 | Processes | `process` (worker pool), `process_child` (one child and its pipes), `after_build` |
 | Platform | `platform.mli` implemented by `platform_unix.ml` or `platform_windows.ml` (selected by dune), `windows_job_stubs.c`, `termination_signals`, `build_lock` |
@@ -54,6 +61,24 @@ does not depend on the runner's libc. The version lives in
 Native filesystem notifications only wake the watcher. The snapshot taken
 afterwards decides what changed, so merged, reordered, or dropped events can't
 cause missed rebuilds.
+
+## In-process compilation
+
+Independent parse and compile requests run on a bounded pool of OCaml domains.
+The pool has `min(8, max(1, CPUs - 1))` workers; set `REWATCH_COMPILER_DOMAINS`
+to choose another count (at least one). The main domain schedules dependencies
+and publishes every artifact; workers only run compiler requests.
+
+The driver gives each request fresh compiler state (flags, warnings, caches,
+predefined types, identifier counters) and restores it on every exit, so
+requests on different domains don't interfere and repeated requests produce
+byte-identical artifacts. Compiler output is captured per request instead of
+going to the process's stdout and stderr. The compiler build identity is
+derived from the compiler sources, so compiler changes clean the build while
+rewatch-only changes don't.
+
+External PPXs, `js-post-build` hooks, and `--after-build` remain subprocesses
+under the process owners described below.
 
 ## Differences from Rust rewatch
 

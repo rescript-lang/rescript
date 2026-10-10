@@ -24,6 +24,7 @@
   cli_tests
   compile_assets_tests
   compiler_args_tests
+  compiler_driver_tests
   compiler_info_tests
   compiler_process_tests
   compiler_scheduler_tests
@@ -45,4 +46,6 @@
  (foreign_stubs
   (language c)
   (names test_env_stubs))
+ (flags
+  (:standard -open Rewatch_ocaml_lib))
  (libraries rewatch_ocaml_lib ounit2))

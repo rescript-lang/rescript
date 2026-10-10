@@ -177,7 +177,7 @@ let jsx_printable ~tag ~spread ~props ~(children : J.expression list option)
     ~key ~multi ~fragment =
   (* Cross-module inlining can bring an element from a preserve-mode module
      into one compiled without preserve mode *)
-  !Js_config.jsx_preserve
+  !((Clflags.current ()).jsx_preserve)
   && (is_empty_fragment ~fragment ~spread ~props ~key || is_jsx_tag tag)
   && List.for_all
        (fun (name, _) ->
@@ -914,7 +914,8 @@ and expression_desc cxt ~(level : int) f x : cxt =
               | false, 1 -> Js_op.Lit Literals.tl
               | _ -> Js_op.Lit ("_" ^ string_of_int i)),
               e ))
-          (if !Js_config.debug && not_is_cons then [(name_symbol, E.str p.name)]
+          (if !((Js_config.current ()).debug) && not_is_cons then
+             [(name_symbol, E.str p.name)]
            else [])
       in
       if not_is_cons = false then tails

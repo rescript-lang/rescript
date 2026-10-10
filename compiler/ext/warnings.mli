@@ -98,6 +98,9 @@ val backup : unit -> state
 
 val restore : state -> unit
 
+(* Isolate warning settings and counters for one compiler request. *)
+val with_fresh : (unit -> 'a) -> 'a
+
 val message : t -> string
 
 val number : t -> int

@@ -2,10 +2,6 @@ open OUnit2
 
 let check condition message = assert_bool message condition
 
-module Checked_windows_platform : module type of Platform = Platform_windows
-
-type lazy_job = First | Second
-
 let write_file = Test_support.write_file
 
 let read_file path =
@@ -69,6 +65,14 @@ let () =
       while true do
         ignore (Unix.select [] [] [] 1.)
       done
+    | "--ppx-wait" ->
+      write_file (argument 2) (string_of_int (Unix.getpid ()));
+      Unix.sleepf 30.;
+      exit 0
+    | "--ppx-copy" ->
+      write_file (argument 2) "started";
+      write_file (argument 4) (read_file (argument 3));
+      exit 0
     | "--sleep" ->
       Thread.delay (float_of_string (argument 2));
       exit 0
@@ -86,29 +90,6 @@ let () =
       write_file pending (Unix.getpid () |> string_of_int);
       Unix.rename pending marker;
       exit 0
-    | "-format" -> (
-      if Sys.win32 then set_binary_mode_out stdout true;
-      match
-        ( Sys.getenv_opt "REWATCH_FORMAT_TEST_ROOT",
-          Sys.getenv_opt "REWATCH_FORMAT_INVENTORY_TEST_ROOT" )
-      with
-      | _, Some root ->
-        let source = argument 2 in
-        let marker = Digest.string source |> Digest.to_hex in
-        touch_file (Filename.concat root marker);
-        print_string (read_file source);
-        exit 0
-      | None, None -> ()
-      | Some root, None ->
-        let source = argument 2 in
-        touch_file
-          (Filename.concat root (Filename.basename source ^ ".started"));
-        let first_started = Filename.concat root "First.res.started" in
-        let second_started = Filename.concat root "Second.res.started" in
-        if not (wait_for_file first_started && wait_for_file second_started)
-        then exit 2;
-        print_string (read_file source);
-        exit 0)
     | _ -> ()
 
 let test_executable () = Unix.realpath Sys.executable_name
@@ -141,14 +122,15 @@ let process_parallel_tests _context =
     "parallel subprocess bound follows the available CPUs";
   let completed_indices = ref [] in
   let parallel_results =
-    Process.run_parallel ~max_jobs:2
+    Process.run_tasks ~max_jobs:2
       ~on_complete:(fun index ->
         completed_indices := index :: !completed_indices)
-      [
-        process_job ["--process-result"; "first"; ""; "0"];
-        process_job ["--process-result"; "second"; ""; "0"];
-        process_job ["--process-result"; "third"; ""; "0"];
-      ]
+      (List.map Process.task
+         [
+           process_job ["--process-result"; "first"; ""; "0"];
+           process_job ["--process-result"; "second"; ""; "0"];
+           process_job ["--process-result"; "third"; ""; "0"];
+         ])
   in
   check
     (List.map (fun (result : Process.result) -> result.stdout) parallel_results
@@ -159,8 +141,9 @@ let process_parallel_tests _context =
     "parallel subprocess completion reports every input index once";
   let recycled_handle_results =
     List.init 64 (fun index ->
-        process_job ["--process-result"; string_of_int index; ""; "0"])
-    |> Process.run_parallel ~max_jobs:4
+        Process.task
+          (process_job ["--process-result"; string_of_int index; ""; "0"]))
+    |> Process.run_tasks ~max_jobs:4
   in
   check
     (List.mapi
@@ -169,26 +152,6 @@ let process_parallel_tests _context =
        recycled_handle_results
     |> List.for_all Fun.id)
     "rapid subprocess completion cannot confuse recycled Windows handles";
-  let lazy_root = Filename.temp_file "rewatch-lazy-jobs-" "" in
-  Sys.remove lazy_root;
-  Unix.mkdir lazy_root 0o755;
-  let lazy_results =
-    Fun.protect
-      ~finally:(fun () -> File_util.remove_tree lazy_root)
-      (fun () ->
-        Process.run_parallel_map ~max_jobs:2 [First; Second] ~job:(function
-          | First -> process_job ["--wait-for-release"; lazy_root]
-          | Second ->
-            check
-              (wait_for_file (Filename.concat lazy_root "child-started"))
-              "later job preparation overlaps an already-running child";
-            touch_file (Filename.concat lazy_root "release");
-            process_job ["--process-result"; "second"; ""; "0"]))
-  in
-  check
-    (List.map (fun (result : Process.result) -> result.stdout) lazy_results
-    = [""; "second"])
-    "demand-built subprocess results retain input order";
   let large_result =
     Process.run ~cwd:(Sys.getcwd ()) test_executable ["--large-process-result"]
   in
@@ -199,7 +162,7 @@ let process_parallel_tests _context =
     "stdout and stderr pipes are drained concurrently without truncation";
   let invalid_parallel_bound_rejected =
     try
-      ignore (Process.run_parallel ~max_jobs:0 []);
+      ignore (Process.run_tasks ~max_jobs:0 []);
       false
     with Process.Error _ -> true
   in
@@ -209,6 +172,37 @@ let graph_work key dependencies = Process.{key; dependencies; value = key}
 
 let process_cancellation_tests _context =
   let test_executable = test_executable () in
+  let completed_request =
+    Process.{status = Unix.WEXITED 0; stdout = ""; stderr = ""}
+  in
+  let domain_interrupt_requested = Atomic.make false in
+  let second_domain_request_started = Atomic.make false in
+  let domain_cancelled =
+    try
+      ignore
+        (Process.run_tasks ~max_jobs:1
+           ~poll:(fun () ->
+             if Atomic.get domain_interrupt_requested then
+               raise (Process.Interrupted 130))
+           [
+             Process.concurrent_task
+               ~cancel:(fun () -> ())
+               ~on_result:(fun result ->
+                 Atomic.set domain_interrupt_requested true;
+                 result)
+               (fun () -> completed_request);
+             Process.concurrent_task
+               ~cancel:(fun () -> ())
+               (fun () ->
+                 Atomic.set second_domain_request_started true;
+                 completed_request);
+           ]);
+      false
+    with Process.Interrupted 130 -> true
+  in
+  check
+    (domain_cancelled && not (Atomic.get second_domain_request_started))
+    "an interrupt after a domain request stops the next request";
   let cancellation_polls = ref 0 in
   let dependency_graph_cancelled =
     let exception Cancel in
@@ -267,6 +261,33 @@ let process_cancellation_tests _context =
   in
   check process_cancelled
     "single subprocess cancellation terminates the active process";
+  let concurrent_cancelled = Atomic.make false in
+  let concurrent_started = Atomic.make false in
+  let concurrent_task_cancelled =
+    let exception Cancel in
+    try
+      Process.run_dependency_graph ~max_jobs:1
+        [graph_work "concurrent-cancel" []]
+        ~poll:(fun () -> if Atomic.get concurrent_started then raise Cancel)
+        ~next:(fun _ result ->
+          match result with
+          | Some _ -> None
+          | None ->
+            Some
+              (Process.concurrent_task
+                 ~cancel:(fun () -> Atomic.set concurrent_cancelled true)
+                 (fun () ->
+                   Atomic.set concurrent_started true;
+                   while not (Atomic.get concurrent_cancelled) do
+                     Thread.delay 0.001
+                   done;
+                   Process.{status = Unix.WEXITED 0; stdout = ""; stderr = ""})));
+      false
+    with Cancel -> true
+  in
+  check
+    (concurrent_task_cancelled && Atomic.get concurrent_cancelled)
+    "dependency scheduler cancellation invokes active concurrent-task cleanup";
   if not Sys.win32 then
     Test_support.with_temp_dir "rewatch-descendant-pipe-" (fun root ->
         let marker = Filename.concat root "parent-exiting" in
@@ -360,6 +381,36 @@ let process_dependency_graph_tests _context =
   in
   check parallel_finalizers_completed
     "independent subprocess finalizers run before scheduler dispatch resumes";
+  let concurrent_tasks_entered = Atomic.make 0 in
+  let concurrent_tasks_completed =
+    let exception Tasks_serialized in
+    try
+      Process.run_dependency_graph ~max_jobs:2
+        [graph_work "concurrent-first" []; graph_work "concurrent-second" []]
+        ~next:(fun _ result ->
+          match result with
+          | Some _ -> None
+          | None ->
+            Some
+              (Process.concurrent_task
+                 ~cancel:(fun () -> ())
+                 (fun () ->
+                   ignore (Atomic.fetch_and_add concurrent_tasks_entered 1);
+                   let deadline = Unix.gettimeofday () +. 2. in
+                   while
+                     Atomic.get concurrent_tasks_entered < 2
+                     && Unix.gettimeofday () < deadline
+                   do
+                     Thread.delay 0.001
+                   done;
+                   if Atomic.get concurrent_tasks_entered < 2 then
+                     raise Tasks_serialized;
+                   Process.{status = Unix.WEXITED 0; stdout = ""; stderr = ""})));
+      true
+    with Tasks_serialized -> false
+  in
+  check concurrent_tasks_completed
+    "independent concurrent tasks run on separate scheduler workers";
   let graph_cycle_rejected =
     try
       Process.run_dependency_graph
@@ -583,8 +634,8 @@ let scheduler_tests _context =
         }
       in
       let results =
-        Process.run_parallel ~max_jobs:2
-          [job "first"; job "second"; job "third"]
+        Process.run_tasks ~max_jobs:2
+          (List.map Process.task [job "first"; job "second"; job "third"])
       in
       let _, helper_status = Unix.waitpid [] helper in
       check (helper_status = Unix.WEXITED 0) "scheduler test helper exits";
@@ -597,8 +648,11 @@ let scheduler_tests _context =
         = ["first"; "second"; "third"])
         "dynamically scheduled results retain input order";
       let failure =
-        Process.run_parallel ~max_jobs:1
-          [process_job ["--process-result"; "partial"; "diagnostic"; "7"]]
+        Process.run_tasks ~max_jobs:1
+          [
+            Process.task
+              (process_job ["--process-result"; "partial"; "diagnostic"; "7"]);
+          ]
         |> List.hd
       in
       check
@@ -908,7 +962,6 @@ let lock_tests _context =
       File_util.remove_file lock)
 
 let dependency_validation_tests _context =
-  let test_executable = test_executable () in
   let dependency_root =
     Filename.temp_file "rewatch-ocaml-allowed-dependents-" ""
   in
@@ -925,44 +978,33 @@ let dependency_validation_tests _context =
         (List.fold_left Filename.concat dependency_root
            ["node_modules"; "restricted"; "rescript.json"])
         {|{"name":"restricted","allowed-dependents":["other"]}|};
-      let previous_bsc = Sys.getenv_opt "RESCRIPT_BSC_EXE" in
-      Unix.putenv "RESCRIPT_BSC_EXE" test_executable;
-      Fun.protect
-        ~finally:(fun () ->
-          match previous_bsc with
-          | Some value -> Unix.putenv "RESCRIPT_BSC_EXE" value
-          | None -> Test_support.unsetenv "RESCRIPT_BSC_EXE")
-        (fun () ->
-          let rejected =
-            try
-              Build.run
-                ~poll:(fun () -> ())
-                ~verbosity:0 ~folder:dependency_root ~prod:false ~features:None
-                ~warn_error:None ~after_build:None ~filter:None ~no_timing:false;
-              false
-            with Project_context.Error message ->
-              if
-                Test_support.contains_text message
-                  "app dependencies: restricted"
-              then true
-              else failwith ("unexpected allowed-dependents error: " ^ message)
-          in
-          check rejected "unallowed package dependency is rejected";
-          write_file
-            (Filename.concat dependency_root "rescript.json")
-            {|{"name":"app","dev-dependencies":["restricted"]}|};
-          let rejected =
-            try
-              Build.run
-                ~poll:(fun () -> ())
-                ~verbosity:0 ~folder:dependency_root ~prod:false ~features:None
-                ~warn_error:None ~after_build:None ~filter:None ~no_timing:false;
-              false
-            with Project_context.Error message ->
-              Test_support.contains_text message
-                "app dev-dependencies: restricted"
-          in
-          check rejected "unallowed development dependency is rejected"))
+      let rejected =
+        try
+          Build.run
+            ~poll:(fun () -> ())
+            ~verbosity:0 ~folder:dependency_root ~prod:false ~features:None
+            ~warn_error:None ~after_build:None ~filter:None ~no_timing:false;
+          false
+        with Project_context.Error message ->
+          if Test_support.contains_text message "app dependencies: restricted"
+          then true
+          else failwith ("unexpected allowed-dependents error: " ^ message)
+      in
+      check rejected "unallowed package dependency is rejected";
+      write_file
+        (Filename.concat dependency_root "rescript.json")
+        {|{"name":"app","dev-dependencies":["restricted"]}|};
+      let rejected =
+        try
+          Build.run
+            ~poll:(fun () -> ())
+            ~verbosity:0 ~folder:dependency_root ~prod:false ~features:None
+            ~warn_error:None ~after_build:None ~filter:None ~no_timing:false;
+          false
+        with Project_context.Error message ->
+          Test_support.contains_text message "app dev-dependencies: restricted"
+      in
+      check rejected "unallowed development dependency is rejected")
 
 let tests =
   "unit_tests"

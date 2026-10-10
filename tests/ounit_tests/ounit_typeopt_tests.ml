@@ -13,6 +13,6 @@ let suites =
              (Typeopt.type_cannot_contain_undefined typ Env.empty) );
          ( "builtin integers still omit option wrapping" >:: fun _ ->
            OUnit.assert_equal true
-             (Typeopt.type_cannot_contain_undefined Predef.type_int Env.empty)
-         );
+             (Typeopt.type_cannot_contain_undefined (Predef.type_int ())
+                Env.empty) );
        ]
