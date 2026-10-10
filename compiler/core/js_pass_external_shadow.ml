@@ -28,66 +28,116 @@ module String_set = Set.Make (String)
 
 let global_this = E.js_global "globalThis"
 
-(* Only rewrite for lexical bindings (let-style). *)
-let is_lexical_binding_kind (property : J.property) =
-  match property with
-  | Strict | StrictOpt | Alias -> true
-  | Variable -> false
+(* A reference to a JS global [x] is printed as [x]. If a binding printed as
+   [x] is in scope there, that name refers to the binding instead, so the
+   reference has to go through [globalThis.x]. *)
 
-(* Skip JS globals/keywords and compiler-reserved JS ids. *)
-let should_rewrite_binding (ident : Ident.t) =
-  (not (Ext_ident.is_js ident))
-  && (not (Js_reserved_map.is_js_keyword ident.name))
-  && not (Js_reserved_map.is_js_global ident.name)
+(* The name a binding is printed with. Bindings named like JS keywords or
+   reserved globals are printed with a [$$] prefix, so they shadow nothing. *)
+let add_binding (ident : Ident.t) names =
+  if Ext_ident.is_js ident then names
+  else String_set.add (Ext_ident.convert ident.name) names
+
+(* A JS [let], [const] or function declaration is in scope in its whole block,
+   including before the declaration. *)
+let add_declarations (block : J.block) names =
+  Ext_list.fold_left block names (fun acc (st : J.statement) ->
+      match st.statement_desc with
+      | Variable {ident} -> add_binding ident acc
+      | _ -> acc)
+
+(* The cases of a switch are printed without braces, so they share one scope. *)
+let add_switch_declarations (clauses : (_ * J.case_clause) list)
+    (default : J.block option) names =
+  let names =
+    Ext_list.fold_left clauses names (fun acc (_, c) ->
+        add_declarations c.switch_body acc)
+  in
+  match default with
+  | Some block -> add_declarations block names
+  | None -> names
+
+(* Statically imported modules are toplevel bindings of the generated module
+   ([import * as M from ...] or [let M = require(...)]). *)
+let imported_modules (js : J.program) =
+  let names = ref String_set.empty in
+  let super = Js_record_iter.super in
+  let self =
+    {
+      super with
+      module_id =
+        (fun _ (m : J.module_id) ->
+          if not m.dynamic_import then names := add_binding m.id !names);
+    }
+  in
+  self.program self js;
+  !names
 
 let program (js : J.program) : J.program =
-  let shadowed_globals =
-    Ext_list.fold_left js.block String_set.empty (fun acc (st : J.statement) ->
-        match st.statement_desc with
-        | Variable {ident; property}
-          when is_lexical_binding_kind property && should_rewrite_binding ident
-          ->
-          String_set.add ident.name acc
-        | _ -> acc)
+  (* printed names of the bindings in scope at the current point *)
+  let in_scope = ref (imported_modules js) in
+  let with_bindings add f =
+    let outer = !in_scope in
+    in_scope := add outer;
+    let result = f () in
+    in_scope := outer;
+    result
   in
-  (* Names of the lexical bindings whose initializer is being traversed: a JS
-     global with such a name can't be referenced directly there. *)
-  let enclosing_bindings = ref String_set.empty in
   let super = Js_record_map.super in
   let self =
     {
       super with
+      block =
+        (fun self block ->
+          with_bindings (add_declarations block) (fun () ->
+              super.block self block));
       expression =
         (fun self expr ->
           match expr.expression_desc with
           | Var (Id id)
-            when Ext_ident.is_js id
-                 && String_set.mem id.name !enclosing_bindings ->
+            when Ext_ident.is_js id && String_set.mem id.name !in_scope ->
             E.dot global_this id.name
-          | Static_index (obj, field, pos) ->
-            let obj = self.expression self obj in
-            let obj =
-              match obj.expression_desc with
-              | Var (Id id)
-                when Ext_ident.is_js id
-                     && String_set.mem id.name shadowed_globals ->
-                E.dot global_this id.name
-              | _ -> obj
-            in
-            {expr with expression_desc = Static_index (obj, field, pos)}
+          | Fun {params} ->
+            with_bindings
+              (fun names ->
+                Ext_list.fold_left params names (fun acc p -> add_binding p acc))
+              (fun () -> super.expression self expr)
           | _ -> super.expression self expr);
-      variable_declaration =
-        (fun self (vd : J.variable_declaration) ->
-          match vd with
-          | {ident; value = Some _; property}
-            when is_lexical_binding_kind property
-                 && should_rewrite_binding ident ->
-            let outer = !enclosing_bindings in
-            enclosing_bindings := String_set.add ident.name outer;
-            let vd = super.variable_declaration self vd in
-            enclosing_bindings := outer;
-            vd
-          | _ -> super.variable_declaration self vd);
+      statement =
+        (fun self (st : J.statement) ->
+          match st.statement_desc with
+          | ForRange (_, _, _, ident, _, _)
+          | ForOf (_, ident, _, _)
+          | ForAwaitOf (_, ident, _, _) ->
+            with_bindings (add_binding ident) (fun () ->
+                super.statement self st)
+          (* The cases of a switch are printed without braces, so they share
+             one scope. *)
+          | Int_switch (_, clauses, default) ->
+            with_bindings (add_switch_declarations clauses default) (fun () ->
+                super.statement self st)
+          | String_switch (_, clauses, default) ->
+            with_bindings (add_switch_declarations clauses default) (fun () ->
+                super.statement self st)
+          (* The catch parameter is only in scope in the handler. *)
+          | Try (body, catch, finally) ->
+            let body = self.block self body in
+            let catch =
+              match catch with
+              | None -> None
+              | Some (ident, handler) ->
+                Some
+                  ( ident,
+                    with_bindings (add_binding ident) (fun () ->
+                        self.block self handler) )
+            in
+            let finally =
+              match finally with
+              | None -> None
+              | Some block -> Some (self.block self block)
+            in
+            {st with statement_desc = Try (body, catch, finally)}
+          | _ -> super.statement self st);
     }
   in
   self.program self js

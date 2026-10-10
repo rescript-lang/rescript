@@ -14,7 +14,7 @@ function unary(a) {
 Mocha.test("ppx_apply_test_unary", () => Test_utils.eq("File \"ppx_apply_test.res\", line 12, characters 5-12", 3, 3));
 
 function h(a) {
-  return xx(a);
+  return globalThis.xx(a);
 }
 
 Mocha.describe("Ppx_apply_test", () => {
@@ -24,13 +24,13 @@ Mocha.describe("Ppx_apply_test", () => {
 
 let u = 3;
 
-let xx$1 = 6;
+let xx = 6;
 
 export {
   u,
   nullary,
   unary,
-  xx$1 as xx,
+  xx,
   h,
 }
 /*  Not a pure module */

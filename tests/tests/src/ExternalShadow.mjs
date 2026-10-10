@@ -5,7 +5,7 @@ let X = {};
 
 let process = globalThis.process;
 
-let proc = process;
+let proc = globalThis.process;
 
 let New = {};
 
