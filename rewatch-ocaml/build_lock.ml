@@ -18,6 +18,43 @@ let malformed_error () =
     "Could not start Rescript build: Could not parse lockfile PID\n\
     \  (try removing it and running the command again)"
 
+(* A writer that cannot link creates the lock and then writes its PID, as Rust
+   rewatch always does, so an empty lock is usually still being written. One
+   that stays empty belongs to a writer that died in between. *)
+let being_written path =
+  match Unix.stat path with
+  | stats -> Unix.gettimeofday () -. stats.Unix.st_mtime < 5.0
+  | exception Unix.Unix_error _ -> false
+
+(* Linking a fully written candidate publishes the lock atomically. Some
+   filesystems (FAT, exFAT, and some network or virtual-machine shares) have no
+   hard links; there the lock is created exclusively and then written. Falling
+   back on any other link error is safe because the exclusive create reports
+   the existing lock or the real error itself. *)
+let publish ~candidate ~path ~contents =
+  try
+    Unix.link candidate path;
+    true
+  with
+  | Unix.Unix_error (Unix.EEXIST, _, _) -> false
+  | Unix.Unix_error _ -> (
+    match
+      Unix.openfile path [Unix.O_WRONLY; Unix.O_CREAT; Unix.O_EXCL] 0o644
+    with
+    | exception Unix.Unix_error (Unix.EEXIST, _, _) -> false
+    | descriptor ->
+      (try
+         Fun.protect
+           ~finally:(fun () -> Unix.close descriptor)
+           (fun () ->
+             let length = String.length contents in
+             if Unix.write_substring descriptor contents 0 length <> length then
+               failwith ("short write to " ^ path))
+       with error ->
+         (try Unix.unlink path with Unix.Unix_error _ -> ());
+         raise error);
+      true)
+
 let process_is_active ?poll value =
   Platform.process_is_active value ~run:(fun program args ->
       try
@@ -55,24 +92,26 @@ let with_candidate ~lock_dir prefix pid action =
     raise
       (Signal_restore.exception_after_restore deferred_signals exception_raised)
 
-let clear_stale ?poll ~candidate path =
+let clear_stale ?poll ~candidate ~pid path =
   let takeover = path ^ ".takeover" in
-  try
-    Unix.link candidate takeover;
+  if publish ~candidate ~path:takeover ~contents:pid then (
     Fun.protect
       ~finally:(fun () -> File_util.remove_file_best_effort takeover)
       (fun () ->
         match read_owner path with
+        | Some "" when being_written path -> ()
+        | Some "" -> File_util.remove_file_best_effort path
         | Some owner when not (valid_owner owner) -> raise (malformed_error ())
         | Some owner when process_is_active ?poll owner -> ()
         | Some _ -> File_util.remove_file_best_effort path
         | None -> ());
-    true
-  with Unix.Unix_error (Unix.EEXIST, _, _) ->
+    true)
+  else (
     (match read_owner takeover with
-    | Some owner when process_is_active ?poll owner -> ()
+    | Some "" when being_written takeover -> ()
+    | Some owner when owner <> "" && process_is_active ?poll owner -> ()
     | _ -> File_util.remove_file_best_effort takeover);
-    false
+    false)
 
 let unlink_existing path =
   try Unix.unlink path with Unix.Unix_error (Unix.ENOENT, _, _) -> ()
@@ -87,15 +126,11 @@ let release lock =
     release_owned lock.path lock.pid;
     lock.released <- true)
 
-let attempt_link ~candidate ~path =
+let attempt_link ~candidate ~path ~pid =
   let deferred_signals = Signal_restore.create ~defer:true in
   let linked =
-    try
-      Unix.link candidate path;
-      true
-    with
-    | Unix.Unix_error (Unix.EEXIST, _, _) -> false
-    | exception_raised ->
+    try publish ~candidate ~path ~contents:pid
+    with exception_raised ->
       raise
         (Signal_restore.exception_after_restore deferred_signals
            exception_raised)
@@ -134,14 +169,17 @@ let with_build ?(poll = fun () -> ()) root action =
           raise
             (Project_context.Error
                "Timed out waiting for another ReScript build to finish");
-        let linked, deferred_signals = attempt_link ~candidate ~path in
+        let linked, deferred_signals = attempt_link ~candidate ~path ~pid in
         if linked then
           with_acquired ~candidate ~path ~pid ~deferred_signals (fun lock ->
               action ~release:(fun () -> release lock))
         else (
           Signal_restore.restore deferred_signals;
           match read_owner path with
-          | Some owner when not (valid_owner owner) ->
+          | Some "" when being_written path ->
+            retry_delay poll;
+            acquire (attempts - 1)
+          | Some owner when owner <> "" && not (valid_owner owner) ->
             raise (malformed_error ())
           | Some owner when process_is_active ~poll owner ->
             if attempts = 1200 then (
@@ -150,7 +188,8 @@ let with_build ?(poll = fun () -> ()) root action =
             retry_delay poll;
             acquire (attempts - 1)
           | _ ->
-            if not (clear_stale ~poll ~candidate path) then retry_delay poll;
+            if not (clear_stale ~poll ~candidate ~pid path) then
+              retry_delay poll;
             acquire (attempts - 1))
       in
       acquire 1200)
@@ -166,14 +205,17 @@ let with_watch root action =
           raise
             (Project_context.Error
                "Timed out recovering a stale ReScript watch lock");
-        let linked, deferred_signals = attempt_link ~candidate ~path in
+        let linked, deferred_signals = attempt_link ~candidate ~path ~pid in
         if linked then
           with_acquired ~candidate ~path ~pid ~deferred_signals (fun _ ->
               action {path; pid})
         else (
           Signal_restore.restore deferred_signals;
           match read_owner path with
-          | Some owner when not (valid_owner owner) ->
+          | Some "" when being_written path ->
+            ignore (Unix.select [] [] [] 0.01);
+            acquire (attempts - 1)
+          | Some owner when owner <> "" && not (valid_owner owner) ->
             raise (malformed_error ())
           | Some owner when process_is_active owner ->
             raise
@@ -183,10 +225,14 @@ let with_watch root action =
                      already running. The process ID (PID) is %s"
                     owner))
           | _ ->
-            if not (clear_stale ~candidate path) then
+            if not (clear_stale ~candidate ~pid path) then
               ignore (Unix.select [] [] [] 0.01);
             acquire (attempts - 1))
       in
       acquire 1000)
 
 let is_owned (watch : watch) = read_owner watch.path = Some watch.pid
+
+module For_test = struct
+  let publish = publish
+end

@@ -886,6 +886,28 @@ let lock_tests _context =
       touch_file (Filename.concat lock_root "release");
       ignore (Unix.waitpid [] owner_pid);
       lock_owner_pid := None;
+      File_util.remove_file lock;
+      write_owner lock "";
+      let long_ago = Unix.gettimeofday () -. 60. in
+      Unix.utimes lock long_ago long_ago;
+      Build_lock.with_build lock_root (fun ~release:_ ->
+          check
+            (Build_lock.read_owner lock
+            = Some (string_of_int (Platform.current_process_id ())))
+            "a lock left empty by a writer that died is taken over");
+      let missing_candidate = Filename.concat lock_dir "missing-candidate" in
+      check
+        (Build_lock.For_test.publish ~candidate:missing_candidate ~path:lock
+           ~contents:"123")
+        "a lock is created exclusively when it cannot be linked";
+      check
+        (Build_lock.read_owner lock = Some "123")
+        "the exclusively created lock records its owner";
+      check
+        (not
+           (Build_lock.For_test.publish ~candidate:missing_candidate ~path:lock
+              ~contents:"456"))
+        "exclusive creation does not replace an existing lock";
       File_util.remove_file lock)
 
 let config_tests _context =
