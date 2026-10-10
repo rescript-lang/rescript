@@ -133,7 +133,7 @@ let incremental_sources (previous : retained_build) changes =
   List.rev !sources
 
 let prepare_incremental previous changes (attempt : Build_attempt.t)
-    (prepared : Build_session.prepared) =
+    (prepared : Build_session.prepared) ~parse_step =
   (* A retained edit reparses only the reported paths, then replaces the
      affected modules' dependency edges in memory. This keeps the long-lived
      graph coherent without rediscovering the package tree. *)
@@ -154,7 +154,7 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
       Output.debug ~verbosity:attempt.verbosity
         ("Generating AST for module: " ^ name));
   let parse_completed =
-    Output.Progress.start_grouped attempt.progress ~step:"1/2"
+    Output.Progress.start_grouped attempt.progress ~step:parse_step
       ~symbol:Platform.parse_symbol ~label:"Parsing"
       (List.map
          (fun source ->
@@ -298,13 +298,13 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
       build_ninja_written := true)
   in
   let phase_seconds seconds = if no_timing then 0. else seconds in
-  let parse_step = if is_rebuild then "1/2" else "2/3" in
-  let compile_step = if is_rebuild then "2/2" else "3/3" in
+  let parse_step = Build_report.parse_step report in
+  let compile_step = Build_report.compile_step report in
   let report_failure ~compile_seconds output =
     Build_attempt.finalize_logs attempt;
     if attempt.freshness_mode = Build_attempt.Initialize_freshness then
       Source_dirs.write_build ~root_config attempt.session;
-    Build_report.report report ~success:false ~compile_seconds;
+    Build_report.report_failure report ~compile_seconds;
     prerr_string output;
     prerr_newline ();
     Build_attempt.cleanup_artifacts attempt;
@@ -354,7 +354,8 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
       | Retained_watch_attempt {previous; changes} -> (
         match Build_session.prepared attempt.session with
         | Some prepared ->
-          (prepared, prepare_incremental previous changes attempt prepared)
+          ( prepared,
+            prepare_incremental previous changes attempt prepared ~parse_step )
         | None -> raise Full_rebuild_required)
       | One_shot_attempt | Initial_watch_attempt | Full_watch_attempt _ ->
         let preparation =
