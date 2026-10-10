@@ -24,8 +24,6 @@
 
 type t = Parsetree.core_type
 
-val lift_option_type : t -> t
-
 val is_builtin_rank0_type : string -> bool
 
 val make_obj : loc:Location.t -> Parsetree.object_field list -> t

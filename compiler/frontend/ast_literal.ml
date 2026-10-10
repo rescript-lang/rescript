@@ -22,10 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let predef_prefix_ident : Longident.t = Lident "*predef*"
-
-let predef_option : Longident.t = Ldot (predef_prefix_ident, "option")
-
 module Lid = struct
   type t = Longident.t
 
