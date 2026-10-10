@@ -282,18 +282,18 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     |> String.concat ""
   in
   let parse_failed = Build_attempt.has_parse_error in
-  (* A watch build must retain the attempted state even when later parsing or
-     compilation fails, because its successful ASTs and artifact inventory are
-     needed to recover incrementally on the next edit. Publish ownership before
+  (* A watch build must keep the attempted session even when later parsing or
+     compilation fails, because its successful ASTs and artifact inventory let
+     the next edit rebuild incrementally. Hand the session to the caller before
      any fallible phase starts. *)
   on_state {root_config; build_lock_root; session = attempt.session};
   let report =
     Build_report.create ~started_at ~interactive ~show_progress ~colors
       ~no_timing ~kind ~attempt
   in
-  (* A build writes the marker once: the failure reports end by raising
+  (* Each build reaches this at most once: the failure reports end by raising
      Reported_failure, and a parse failure is raised before any other outcome
-     writes it. *)
+     writes the marker. *)
   let write_build_ninja () =
     if should_write_build_ninja then write_build_ninja attempt
   in
@@ -508,9 +508,10 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
             ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
             ~on_state:(fun state -> attempted := Some state)
         with exn ->
-          (* Failed initial and incremental attempts still own useful parsed
-             state. Full reconstruction failures do not, because their graph may
-             be only partially discovered. *)
+          (* A failed initial or incremental attempt still leaves useful parsed
+             state in its session. A failed full rebuild keeps its session only
+             once preparation finished, because before that its graph may be
+             only partially discovered. *)
           (match (request, !attempted) with
           | (Initial_watch_attempt | Retained_watch_attempt _), Some state ->
             retained := Some state
