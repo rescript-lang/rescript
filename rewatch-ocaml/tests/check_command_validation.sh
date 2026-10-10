@@ -582,6 +582,14 @@ require_same_output() {
     ! cmp -s "$work/rust.err" "$work/ocaml.err"; then
     echo "$name: Rust and OCaml output differ" >&2
     dump_both
+    # Invisible differences such as line endings only show up byte by byte.
+    for stream in out err; do
+      if ! cmp "$work/rust.$stream" "$work/ocaml.$stream" >&2; then
+        printf -- '--- first bytes of std%s (Rust, then OCaml) ---\n' "$stream" >&2
+        head -c 160 "$work/rust.$stream" | od -c >&2
+        head -c 160 "$work/ocaml.$stream" | od -c >&2
+      fi
+    done
     exit 1
   fi
 }

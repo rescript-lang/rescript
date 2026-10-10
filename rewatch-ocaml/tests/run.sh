@@ -629,8 +629,13 @@ printf '%s\n' '{"name":"rescript-name","sources":["src"]}' \
   >"$format_name_mismatch/rescript.json"
 printf '%s\n' '{"name":"package-name"}' >"$format_name_mismatch/package.json"
 printf 'let value = 1\n' >"$format_name_mismatch/src/A.res"
-(cd "$format_name_mismatch" && "$port" format --check \
-  >"$work/format-name-mismatch.out" 2>"$work/format-name-mismatch.err")
+if ! (cd "$format_name_mismatch" && "$port" format --check \
+  >"$work/format-name-mismatch.out" 2>"$work/format-name-mismatch.err"); then
+  echo "format --check failed on a formatted package" >&2
+  cat "$work/format-name-mismatch.out" "$work/format-name-mismatch.err" >&2
+  od -c "$format_name_mismatch/src/A.res" >&2
+  exit 1
+fi
 mismatch_warnings=$(grep -c 'Package name mismatch' "$work/format-name-mismatch.err" || true)
 if [ "$mismatch_warnings" != 1 ]; then
   echo "format reported a package name mismatch $mismatch_warnings times" >&2
