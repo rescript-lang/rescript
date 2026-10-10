@@ -1,6 +1,6 @@
 let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
     ~(prepared_package : Package_plan.compilation) ~(attempt : Build_attempt.t)
-    ~watch ~removed_module_names ~parse_dirty_modules =
+    ~watch ~present_public_outputs ~removed_module_names ~parse_dirty_modules =
   let root = package.root in
   let is_local = package.is_local in
   let config = package.compile_config in
@@ -9,13 +9,6 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
   let build_dir = package.build_dir in
   let ocaml_dir = package.ocaml_dir in
   let modules = package.modules in
-  let cleanup =
-    match Build_attempt.find_cleanup_result attempt root with
-    | Some result -> result
-    | None ->
-      raise
-        (Project_context.Error ("Package cleanup was not prepared for " ^ root))
-  in
   let module_is_dirty module_ (state : Build_state.module_) =
     let global_key = Source.compiler_basename config module_.Source.name in
     let module_name = Source.module_name module_.Source.implementation in
@@ -31,7 +24,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
     let outputs_exist =
       List.for_all
         (fun spec ->
-          Hashtbl.mem cleanup.present_public_outputs
+          Hashtbl.mem present_public_outputs
             (Build_artifacts.generated_js_path config
                module_.Source.implementation spec))
         config.package_specs
@@ -57,7 +50,6 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
          :: Option.to_list module_.Source.interface)
     || (not (Build_state.has_complete_compile_assets state))
     || (not outputs_exist)
-    || List.exists (Hashtbl.mem removed_module_names) raw_dependencies
     || List.exists
          (fun dependency -> Hashtbl.mem attempt.removed_modules dependency)
          raw_dependencies
@@ -101,7 +93,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
             [output; output ^ ".map"]
             |> List.iter (fun path ->
                 if File_util.is_regular_file path then
-                  Hashtbl.replace cleanup.present_public_outputs path ()))
+                  Hashtbl.replace present_public_outputs path ()))
           config.package_specs
     in
     let candidates =

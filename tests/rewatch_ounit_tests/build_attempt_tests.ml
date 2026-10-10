@@ -39,11 +39,13 @@ let output_inventory_survives_without_cleanup_work _context =
       ~progress:(Output.Progress.create ~enabled:false ~color:false)
       ~verbosity:0
   in
-  let cleanup = Build_attempt.find_cleanup_result second "root" |> Option.get in
-  assert_equal [] cleanup.removed_modules;
-  assert_equal 0 cleanup.previous_ast_count;
+  assert_equal ["Old"] (Build_attempt.removed_package_modules first "root");
+  assert_equal [] (Build_attempt.removed_package_modules second "root");
+  let outputs =
+    Build_session.find_public_outputs second.session "root" |> Option.get
+  in
   assert_bool "the stable output inventory is retained"
-    (Hashtbl.mem cleanup.present_public_outputs "src/A.js")
+    (Hashtbl.mem outputs "src/A.js")
 
 let pending_work_is_drained_once _context =
   let attempt = create_full () in

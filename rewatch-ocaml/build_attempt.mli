@@ -44,6 +44,7 @@ type t = {
   preliminary_parses: (string, preliminary_parse) Hashtbl.t;
   blocked_modules: (string, unit) Hashtbl.t;
   namespace_freshness: (string, float option) Hashtbl.t;
+  package_removed_modules: (string, string list) Hashtbl.t;
   pending_work: pending_work;
   finalization: finalization_state;
   mutable compiler_cleaned: bool;
@@ -69,8 +70,14 @@ val create_retained :
 
 val register_cleanup : t -> (unit -> unit) -> unit
 val defer_artifact_cleanup : t -> string list -> unit
+
 val set_cleanup_result : t -> string -> Build_artifacts.cleanup_result -> unit
-val find_cleanup_result : t -> string -> Build_artifacts.cleanup_result option
+(** Records the modules this attempt removed from a package, and keeps the
+    package's public output inventory in the session for later attempts. *)
+
+val removed_package_modules : t -> string -> string list
+(** The modules this attempt removed from the package at the given root. *)
+
 val add_namespace_job : t -> namespace_job -> unit
 val take_namespace_jobs : t -> namespace_job list
 val add_compile_candidates : t -> Compiler_scheduler.candidate list -> unit

@@ -1,21 +1,5 @@
 exception Error = Project_context.Error
 
-let prepare_removed_modules ~(package : Package_plan.t)
-    (attempt : Build_attempt.t) =
-  let cleanup =
-    match Build_attempt.find_cleanup_result attempt package.root with
-    | Some result -> result
-    | None ->
-      raise (Error ("Package cleanup was not prepared for " ^ package.root))
-  in
-  let removed = Hashtbl.create (List.length cleanup.removed_modules) in
-  List.iter
-    (fun module_name ->
-      Hashtbl.replace removed module_name ();
-      Hashtbl.replace attempt.removed_modules module_name ())
-    cleanup.removed_modules;
-  removed
-
 let rec prepare_tree ~seen ~(package : Package_plan.t) ~prepared ~watch
     ~(attempt : Build_attempt.t) =
   let root = package.root in
@@ -44,10 +28,18 @@ let rec prepare_tree ~seen ~(package : Package_plan.t) ~prepared ~watch
     | None ->
       raise (Error ("Package build was not prepared for " ^ package.root))
   in
-  let removed_module_names = prepare_removed_modules ~package attempt in
+  let present_public_outputs =
+    match Build_session.find_public_outputs attempt.session root with
+    | Some outputs -> outputs
+    | None -> raise (Error ("Package cleanup was not prepared for " ^ root))
+  in
+  let removed_module_names = Hashtbl.create 8 in
+  Build_attempt.removed_package_modules attempt root
+  |> List.iter (fun module_name ->
+      Hashtbl.replace removed_module_names module_name ());
   let parse_dirty_modules =
     Package_parse.run ~package ~prepared ~prepared_package ~attempt
       ~removed_module_names
   in
   Package_compilation.prepare ~package ~prepared ~prepared_package ~attempt
-    ~watch ~removed_module_names ~parse_dirty_modules
+    ~watch ~present_public_outputs ~removed_module_names ~parse_dirty_modules

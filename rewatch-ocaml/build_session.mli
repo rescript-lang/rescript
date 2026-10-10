@@ -54,7 +54,6 @@ val mark_module_removed : t -> string -> unit
 val pending_removed_modules : t -> string list
 
 val set_public_outputs : t -> string -> (string, unit) Hashtbl.t -> unit
-val iter_public_outputs :
-  t -> (string -> (string, unit) Hashtbl.t -> unit) -> unit
+val find_public_outputs : t -> string -> (string, unit) Hashtbl.t option
 
 val warning_state : t -> Warning_state.t

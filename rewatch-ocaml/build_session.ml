@@ -143,6 +143,7 @@ let pending_removed_modules session =
 let set_public_outputs session root outputs =
   Hashtbl.replace session.public_outputs root outputs
 
-let iter_public_outputs session f = Hashtbl.iter f session.public_outputs
+let find_public_outputs session root =
+  Hashtbl.find_opt session.public_outputs root
 
 let warning_state session = session.warning_state

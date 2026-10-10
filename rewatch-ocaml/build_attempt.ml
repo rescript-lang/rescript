@@ -33,7 +33,6 @@ type pending_work = {
 }
 
 type finalization_state = {
-  results: (string, Build_artifacts.cleanup_result) Hashtbl.t;
   mutable actions: (unit -> unit) list;
   mutable artifacts: string list;
   initialized_logs: (string, unit) Hashtbl.t;
@@ -55,6 +54,7 @@ type t = {
   preliminary_parses: (string, preliminary_parse) Hashtbl.t;
   blocked_modules: (string, unit) Hashtbl.t;
   namespace_freshness: (string, float option) Hashtbl.t;
+  package_removed_modules: (string, string list) Hashtbl.t;
   pending_work: pending_work;
   finalization: finalization_state;
   mutable compiler_cleaned: bool;
@@ -65,11 +65,6 @@ type t = {
 }
 
 let create ~freshness_mode ~session ~process_poll ~progress ~verbosity =
-  let cleanup_results = Hashtbl.create 32 in
-  Build_session.iter_public_outputs session (fun root present_public_outputs ->
-      Hashtbl.add cleanup_results root
-        Build_artifacts.
-          {removed_modules = []; previous_ast_count = 0; present_public_outputs});
   let removed_modules = Hashtbl.create 16 in
   Build_session.pending_removed_modules session
   |> List.iter (fun name -> Hashtbl.replace removed_modules name ());
@@ -87,10 +82,10 @@ let create ~freshness_mode ~session ~process_poll ~progress ~verbosity =
     preliminary_parses = Hashtbl.create 16;
     blocked_modules = Hashtbl.create 16;
     namespace_freshness = Hashtbl.create 16;
+    package_removed_modules = Hashtbl.create 32;
     pending_work = {namespace_jobs = []; compile_candidates = []};
     finalization =
       {
-        results = cleanup_results;
         actions = [];
         artifacts = [];
         initialized_logs = Hashtbl.create 16;
@@ -133,13 +128,14 @@ let take_cleanup attempt =
   attempt.finalization.artifacts <- [];
   batch
 
-let set_cleanup_result attempt root result =
-  Hashtbl.replace attempt.finalization.results root result;
+let set_cleanup_result attempt root (result : Build_artifacts.cleanup_result) =
+  Hashtbl.replace attempt.package_removed_modules root result.removed_modules;
   Build_session.set_public_outputs attempt.session root
-    result.Build_artifacts.present_public_outputs
+    result.present_public_outputs
 
-let find_cleanup_result attempt root =
-  Hashtbl.find_opt attempt.finalization.results root
+let removed_package_modules attempt root =
+  Hashtbl.find_opt attempt.package_removed_modules root
+  |> Option.value ~default:[]
 
 let add_namespace_job attempt job =
   attempt.pending_work.namespace_jobs <-
