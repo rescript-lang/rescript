@@ -88,10 +88,6 @@ val compare : string -> string -> int
 
 val single_colon : string
 
-val capitalize_ascii : string -> string
-
-val capitalize_sub : string -> int -> string
-
 val uncapitalize_ascii : string -> string
 
 val is_valid_hash_number : string -> bool

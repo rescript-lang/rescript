@@ -144,17 +144,6 @@ let suites =
            Ext_namespace.try_split_module_name "Js-X" =~ Some ("X", "Js");
            Ext_namespace.try_split_module_name "Js_X" =~ None );
          ( __LOC__ >:: fun _ ->
-           let ( =~ ) = OUnit.assert_equal ~printer:(fun x -> x) in
-           let f = Ext_string.capitalize_ascii in
-           f "x" =~ "X";
-           f "X" =~ "X";
-           f "" =~ "";
-           f "abc" =~ "Abc";
-           f "_bc" =~ "_bc";
-           let v = "bc" in
-           f v =~ "Bc";
-           v =~ "bc" );
-         ( __LOC__ >:: fun _ ->
            let k = Ext_modulename.js_id_name_of_hint_name in
            k "xx" =~ "Xx";
            k "react-dom" =~ "ReactDom";
@@ -171,28 +160,34 @@ let suites =
            k "c/d/a--b" =~ "AB";
            k "c/d/ac--" =~ "Ac" );
          ( __LOC__ >:: fun _ ->
-           Ext_string.capitalize_sub "ab-Ns.cmi" 2 =~ "Ab";
-           Ext_string.capitalize_sub "Ab-Ns.cmi" 2 =~ "Ab";
-           Ext_string.capitalize_sub "Ab-Ns.cmi" 3 =~ "Ab-" );
-         ( __LOC__ >:: fun _ ->
            OUnit.assert_equal
              (String.length (Digest.string ""))
              Ext_digest.length );
          ( __LOC__ >:: fun _ ->
-           string_eq (Ext_filename.module_name "a/b/c.d") "C";
-           string_eq (Ext_filename.module_name "a/b/xc.res") "Xc";
-           string_eq (Ext_filename.module_name "a/b/xc.resi") "Xc";
-           string_eq (Ext_filename.module_name "a/b/xc.ml") "Xc";
-           string_eq (Ext_filename.module_name "a/b/xc.mli") "Xc";
+           let module_name = Ext_filename.module_name in
+           string_eq (module_name "a/b/xc") "Xc";
+           string_eq (module_name "a/b/Xc") "Xc";
+           string_eq (module_name "a/b/xc-Ns") "Xc-Ns";
+           string_eq (module_name "a/b/xc.test") "Xc.test";
+           string_eq (module_name "a/b/xc.test-Ns") "Xc.test-Ns";
+           string_eq (module_name "a/b/_app") "_app";
+           string_eq (module_name "a/b/[id]") "[id]";
+           string_eq (module_name "a/b/\xC3\xA9clair") "\xC3\xA9clair";
+           string_eq (module_name "a/b/\xE4\xB8\xAD") "\xE4\xB8\xAD";
            string_eq
-             (Ext_filename.module_name "a/b/xc.generated.mli")
-             "Xc.generated";
-           string_eq
-             (Ext_filename.module_name "a/b/xc.generated.")
-             "Xc.generated";
-           string_eq (Ext_filename.module_name "a/b/xc..") "Xc.";
-           string_eq (Ext_filename.module_name "a/b/Xc..") "Xc.";
-           string_eq (Ext_filename.module_name "a/b/.") "" );
+             (module_name "a/b/\xF0\x9F\x98\x80foo")
+             "\xF0\x9F\x98\x80foo" );
+         ( __LOC__ >:: fun _ ->
+           let case_eq x y =
+             OUnit.assert_bool __LOC__ (Ext_filename.case x = y)
+           in
+           case_eq "a/b/xc" Little;
+           case_eq "a/b/xc.test-Ns" Little;
+           case_eq "a/b/Xc" Upper;
+           case_eq "a/b/_app" Upper;
+           case_eq "a/b/\xE4\xB8\xAD" Upper;
+           case_eq "a/b/\xF0\x9F\x98\x80foo" Upper;
+           case_eq "" Upper );
          ( __LOC__ >:: fun _ ->
            Ext_string.split "" ':' =~ [];
            Ext_string.split "a:b:" ':' =~ ["a"; "b"];

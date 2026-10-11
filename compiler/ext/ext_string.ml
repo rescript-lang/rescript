@@ -128,42 +128,6 @@ let replace_backward_slash (x : string) =
 let compare = Ext_platform_primitives.string_length_based_compare
 let single_colon = ":"
 
-let capitalize_ascii (s : string) : string =
-  if String.length s = 0 then s
-  else
-    let c = String.unsafe_get s 0 in
-    if
-      (c >= 'a' && c <= 'z')
-      || (c >= '\224' && c <= '\246')
-      || (c >= '\248' && c <= '\254')
-    then (
-      let uc = Char.unsafe_chr (Char.code c - 32) in
-      let bytes = Bytes.of_string s in
-      Bytes.unsafe_set bytes 0 uc;
-      Bytes.unsafe_to_string bytes)
-    else s
-
-let capitalize_sub (s : string) len : string =
-  let slen = String.length s in
-  if len < 0 || len > slen then invalid_arg "Ext_string.capitalize_sub"
-  else if len = 0 then ""
-  else
-    let bytes = Bytes.create len in
-    let uc =
-      let c = String.unsafe_get s 0 in
-      if
-        (c >= 'a' && c <= 'z')
-        || (c >= '\224' && c <= '\246')
-        || (c >= '\248' && c <= '\254')
-      then Char.unsafe_chr (Char.code c - 32)
-      else c
-    in
-    Bytes.unsafe_set bytes 0 uc;
-    for i = 1 to len - 1 do
-      Bytes.unsafe_set bytes i (String.unsafe_get s i)
-    done;
-    Bytes.unsafe_to_string bytes
-
 let uncapitalize_ascii = String.uncapitalize_ascii
 
 external ( .![] ) : string -> int -> int = "%string_unsafe_get"
