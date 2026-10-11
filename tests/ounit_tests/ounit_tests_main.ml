@@ -26,6 +26,7 @@ let suites =
       Ounit_object_mutability_tests.suites;
       Ounit_pattern_printer_tests.suites;
       Ounit_js_analyzer_tests.suites;
+      Ounit_external_shadow_tests.suites;
       Ounit_flow_parser_tests.suites;
       Ounit_jsx_loc_tests.suites;
       Ounit_parser_cursor_tests.suites;
