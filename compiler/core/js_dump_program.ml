@@ -67,7 +67,7 @@ let initial_scope (x : J.program) =
       super with
       ident =
         (fun _ id ->
-          if Ext_ident.is_js id then names := Set_string.add !names id.name);
+          if Ext_ident.is_js id then names := Set_string.add id.name !names);
     }
   in
   self.program self x;

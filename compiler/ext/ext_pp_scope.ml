@@ -49,17 +49,17 @@ let reserve (cxt : t) (reserved : Set_string.t) : t = {cxt with reserved}
 
 let add_ident ~mangled:name (stamp : int) (cxt : t) : string * t =
   let {next; stamps} =
-    match Map_string.find_opt cxt.names name with
+    match Map_string.find_opt name cxt.names with
     | None -> {next = 0; stamps = Map_int.empty}
     | Some s -> s
   in
-  match Map_int.find_opt stamps stamp with
+  match Map_int.find_opt stamp stamps with
   | Some str -> (str, cxt)
   | None ->
     let rec pick i =
       let str = if i = 0 then name else Printf.sprintf "%s$%d" name i in
       if
-        Set_string.mem cxt.used str || (i > 0 && Set_string.mem cxt.reserved str)
+        Set_string.mem str cxt.used || (i > 0 && Set_string.mem str cxt.reserved)
       then pick (i + 1)
       else (i, str)
     in
@@ -67,9 +67,10 @@ let add_ident ~mangled:name (stamp : int) (cxt : t) : string * t =
     ( str,
       {
         names =
-          Map_string.add cxt.names name
-            {next = i + 1; stamps = Map_int.add stamps stamp str};
-        used = Set_string.add cxt.used str;
+          Map_string.add name
+            {next = i + 1; stamps = Map_int.add stamp str stamps}
+            cxt.names;
+        used = Set_string.add str cxt.used;
         reserved = cxt.reserved;
       } )
 
@@ -118,26 +119,31 @@ let ident (cxt : t) f (id : Ident.t) : t =
   cxt
 
 let merge (cxt : t) (set : Set_ident.t) =
-  Set_ident.fold set cxt (fun ident acc ->
+  Set_ident.fold
+    (fun ident acc ->
       snd (add_ident ~mangled:(Ext_ident.convert ident.name) ident.stamp acc))
+    set cxt
 
 (* Assume that all idents are already in [scope]
    so both [param/0] and [param/1] are in idents, we don't need
    update twice,  once is enough
 *)
 let sub_scope (scope : t) (idents : Set_ident.t) : t =
-  Set_ident.fold idents {empty with reserved = scope.reserved}
+  Set_ident.fold
     (fun {name} acc ->
       let mangled = Ext_ident.convert name in
-      match Map_string.find_exn scope.names mangled with
+      match Map_string.find mangled scope.names with
       | exception Not_found -> assert false
       | stamps ->
-        if Map_string.mem acc.names mangled then acc
+        if Map_string.mem mangled acc.names then acc
         else
           {
             acc with
-            names = Map_string.add acc.names mangled stamps;
+            names = Map_string.add mangled stamps acc.names;
             used =
-              Map_int.fold stamps.stamps acc.used (fun _ str used ->
-                  Set_string.add used str);
+              Map_int.fold
+                (fun _ str used -> Set_string.add str used)
+                stamps.stamps acc.used;
           })
+    idents
+    {empty with reserved = scope.reserved}
