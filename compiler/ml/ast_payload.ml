@@ -350,6 +350,6 @@ let empty : t = Parsetree.PStr []
 let table_dispatch table (action : action) =
   match action with
   | {txt = name; loc}, y -> (
-    match Map_string.find_exn table name with
+    match Map_string.find name table with
     | fn -> fn y
     | exception _ -> Location.raise_errorf ~loc "%s is not supported" name)
