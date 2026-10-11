@@ -22,20 +22,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type node = Vec_int.t
-
-val graph : Vec_int.t array -> Int_vec_vec.t
-(** Assume input is int array with offset from 0 
-    Typical input 
+val graph : int array array -> int array list
+(** Strongly connected components of a graph whose nodes are [0 .. n - 1],
+    where [n] is the length of the input: element [i] lists the successors of
+    node [i]. For example
     {[
       [|
-        [ 1 ; 2 ]; // 0 -> 1,  0 -> 2 
-                     [ 1 ];   // 0 -> 1 
-          [ 2 ]  // 0 -> 2 
+        [|1; 2|];  (* 0 -> 1, 0 -> 2 *)
+        [|1|];     (* 1 -> 1 *)
+        [|2|];     (* 2 -> 2 *)
       |]
     ]}
-    Note that we can tell how many nodes by calculating 
-    [Array.length] of the input 
-*)
-
-(** Used for unit test *)
+    The components are returned in the order Tarjan's algorithm completes them,
+    which is a reverse topological order: a component comes before every
+    component that refers to it. *)

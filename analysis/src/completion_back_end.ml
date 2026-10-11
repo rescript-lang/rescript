@@ -983,12 +983,36 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
       Completion.create "array" ~env
         ~kind:(Completion.Value (Ctype.newconstr Predef.path_array []));
     ]
-  | CPDict ->
-    if Debug.verbose () then print_endline "[ctx_path]--> CPDict";
+  | CPDict None ->
+    if Debug.verbose () then print_endline "[ctx_path]--> CPDict (no payload)";
     [
       Completion.create "dict" ~env
         ~kind:(Completion.Value (Ctype.newconstr Predef.path_dict []));
     ]
+  | CPDict (Some cp) -> (
+    if Debug.verbose () then print_endline "[ctx_path]--> CPDict (with payload)";
+    match mode with
+    | Regular -> (
+      match
+        cp
+        |> get_completions_for_context_path ~state ~debug ~full ~opens
+             ~raw_opens ~pos ~env ~exact:true ~scope
+        |> completions_get_completion_type ~full ~state
+      with
+      | None -> []
+      | Some (typ, env) ->
+        [
+          Completion.create "dummy" ~env
+            ~kind:
+              (Completion.ExtractedType (Tdict (env, ExtractedType typ), `Type));
+        ])
+    | Pipe ->
+      (* Pipe completion with dict just needs to know that it's a dict, not
+         what inner type it has. *)
+      [
+        Completion.create "dummy" ~env
+          ~kind:(Completion.Value (Ctype.newconstr Predef.path_dict []));
+      ])
   | CPArray (Some cp) -> (
     if Debug.verbose () then
       print_endline "[ctx_path]--> CPArray (with payload)";
@@ -1934,6 +1958,24 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
                   | Pattern _ -> `Type
                   | Expression -> `Value )
             | TypeExpr typ -> Value typ)
+          ~env;
+      ]
+    else []
+  | Tdict (env, typ) as extracted_type ->
+    if Debug.verbose () then print_endline "[complete_typed_value]--> Tdict";
+    if prefix = "" then
+      [
+        create "dict{}" ~includes_snippets:true ~insert_text:"dict{$0}"
+          ~sort_text:"A"
+          ~kind:
+            (match typ with
+            | ExtractedType _ ->
+              ExtractedType
+                ( extracted_type,
+                  match mode with
+                  | Pattern _ -> `Type
+                  | Expression -> `Value )
+            | TypeExpr typ -> Value (Ctype.newconstr Predef.path_dict [typ]))
           ~env;
       ]
     else []

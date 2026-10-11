@@ -1330,12 +1330,24 @@ Path takesExotic
     "detail": "#\"some exotic\"",
     "documentation": {
       "kind": "markdown",
-      "value": "```rescript\n#\"some exotic\"\n```\n\n```rescript\n[#\"some exotic\"]\n```"
+      "value": "```rescript\n#\"some exotic\"\n```\n\n```rescript\n[#dollar$ | #\"some exotic\"]\n```"
     },
     "insertText": "#\"some exotic\"",
     "insertTextFormat": 2,
     "kind": 4,
     "label": "#\"some exotic\"",
+    "tags": []
+  },
+  {
+    "detail": "#dollar$",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#dollar$\n```\n\n```rescript\n[#dollar$ | #\"some exotic\"]\n```"
+    },
+    "insertText": "#dollar$",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "#dollar$",
     "tags": []
   }
 ]

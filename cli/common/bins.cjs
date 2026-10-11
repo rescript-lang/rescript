@@ -8,7 +8,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { getTarget } = require("./platform.cjs");
 
-const minimumNodeVersion = "20.11.0";
+const minimumNodeVersion = "22.0.0";
 
 const target = getTarget(process.platform, process.arch, os.release());
 
@@ -33,7 +33,9 @@ try {
   );
 }
 
-// The platform package's entry (bin.js) sits next to its bin directory.
+// The platform package's entry (bin.js) sits next to its bin directory. It
+// exports the same paths for tools that import it directly, such as
+// rescript-vscode, so keep the two lists in sync.
 const binDir = path.join(path.dirname(binPackageEntry), "bin");
 
 exports.binDir = binDir;

@@ -186,10 +186,7 @@ Mocha.describe("Unboxed_variant_fold_test", () => {
       x: 1
     })));
     Test_utils.eq("File \"unboxed_variant_fold_test.res\", line 183, characters 7-14", "zero", listName(id(/* [] */0)));
-    Test_utils.eq("File \"unboxed_variant_fold_test.res\", line 184, characters 7-14", "list", listName(id({
-      hd: 1,
-      tl: /* [] */0
-    })));
+    Test_utils.eq("File \"unboxed_variant_fold_test.res\", line 184, characters 7-14", "list", listName(id({hd: 1, tl: /* [] */0})));
     Test_utils.eq("File \"unboxed_variant_fold_test.res\", line 185, characters 7-14", bigintName(10n), bigintName(id(10n)));
     Test_utils.eq("File \"unboxed_variant_fold_test.res\", line 186, characters 7-14", "one", wideName(id(1)));
   });

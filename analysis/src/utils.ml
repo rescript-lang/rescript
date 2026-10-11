@@ -250,11 +250,11 @@ let print_maybe_exotic_ident ?(allow_uident = false) txt =
     else if i == 0 then
       match String.unsafe_get txt i with
       | 'A' .. 'Z' when allow_uident -> loop (i + 1)
-      | 'a' .. 'z' | '_' -> loop (i + 1)
+      | 'a' .. 'z' | '_' | '$' -> loop (i + 1)
       | _ -> "\"" ^ txt ^ "\""
     else
       match String.unsafe_get txt i with
-      | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '\'' | '_' -> loop (i + 1)
+      | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '\'' | '_' | '$' -> loop (i + 1)
       | _ -> "\"" ^ txt ^ "\""
   in
   if Res_token.is_keyword_txt txt then "\"" ^ txt ^ "\"" else loop 0

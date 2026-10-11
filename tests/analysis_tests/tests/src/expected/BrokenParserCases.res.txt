@@ -1,15 +1,5 @@
-Complete src/BrokenParserCases.res 2:24
-pos_cursor:[2:24] pos_no_white:[2:23] Found expr:[2:11->2:30]
-Pexp_apply ...[2:11->2:17] (~isOff2:19->2:24=...[2:27->2:29])
-Completable: CnamedArg(Value[someFn], isOff, [isOff])
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-ContextPath Value[someFn]
-Path someFn
-[]
-
-Complete src/BrokenParserCases.res 6:17
-pos_cursor:[6:17] pos_no_white:[6:16] Found pattern:[6:16->6:19]
+Complete src/BrokenParserCases.res 2:17
+pos_cursor:[2:17] pos_no_white:[2:16] Found pattern:[2:16->2:19]
 Completable: Cpattern Value[s]=t
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -17,10 +7,10 @@ ContextPath Value[s]
 Path s
 []
 
-Complete src/BrokenParserCases.res 10:29
-pos_cursor:[10:29] pos_no_white:[10:27] Found pattern:[10:24->10:39]
-pos_cursor:[10:29] pos_no_white:[10:27] Found pattern:[10:24->10:28]
-Ppat_construct None:[10:24->10:28]
+Complete src/BrokenParserCases.res 6:29
+pos_cursor:[6:29] pos_no_white:[6:27] Found pattern:[6:24->6:39]
+pos_cursor:[6:29] pos_no_white:[6:27] Found pattern:[6:24->6:28]
+Ppat_construct None:[6:24->6:28]
 Completable: Cpath Value[None]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib

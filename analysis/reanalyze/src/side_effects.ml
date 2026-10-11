@@ -60,7 +60,7 @@ let rec expr_no_side_effects (expr : Typedtree.expression) =
     entries
     |> List.for_all (function
       | Typedtree.Tdict_entry (_, e) -> e |> expr_no_side_effects
-      (* Object.assign reads the spread dicts *)
+      (* Spreading a dict reads its properties *)
       | Tdict_spread _ -> false)
   | Texp_ifthenelse (e1, e2, eo) ->
     e1 |> expr_no_side_effects && e2 |> expr_no_side_effects

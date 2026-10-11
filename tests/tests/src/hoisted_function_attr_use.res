@@ -8,7 +8,7 @@ let three = Hoisted_function_attr.Three.Inner.Deep.make()
 let threeKeep = Hoisted_function_attr.Three.Inner.Deep.keep()
 
 let keyword = Hoisted_function_attr.Escaped.\"switch"()
-let dollar = Hoisted_function_attr.Escaped.\"$plus"()
+let dollar = Hoisted_function_attr.Escaped.$plus()
 let operator = Hoisted_function_attr.Operator.\"+"()
 
 let nested = Hoisted_function_attr.Ambiguous.B.make()

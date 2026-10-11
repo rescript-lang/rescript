@@ -97,10 +97,7 @@ let effects = {
 };
 
 function record(s) {
-  effects.contents = {
-    hd: s,
-    tl: effects.contents
-  };
+  effects.contents = {hd: s, tl: effects.contents};
 }
 
 record("with field");

@@ -103,6 +103,10 @@ let rec extracted_type_to_string ?(name_only = false) ?(inner = false) =
     "array<" ^ Shared.type_to_string inner_typ ^ ">"
   | Tarray (_, ExtractedType inner_typ) ->
     "array<" ^ extracted_type_to_string ~inner:true inner_typ ^ ">"
+  | Tdict (_, TypeExpr inner_typ) ->
+    "dict<" ^ Shared.type_to_string inner_typ ^ ">"
+  | Tdict (_, ExtractedType inner_typ) ->
+    "dict<" ^ extracted_type_to_string ~inner:true inner_typ ^ ">"
   | Toption (_, TypeExpr inner_typ) ->
     "option<" ^ Shared.type_to_string inner_typ ^ ">"
   | Tresult {ok_type; error_type} ->
@@ -388,6 +392,8 @@ let rec extract_type ?(print_opening_debug = true)
     Some (Tpromise (env, payload_type_expr), type_arg_context)
   | Tconstr (Path.Pident {name = "array"}, [payload_type_expr], _) ->
     Some (Tarray (env, TypeExpr payload_type_expr), type_arg_context)
+  | Tconstr (Path.Pident {name = "dict"}, [payload_type_expr], _) ->
+    Some (Tdict (env, TypeExpr payload_type_expr), type_arg_context)
   | Tconstr (Path.Pident {name = "result"}, [ok_type; error_type], _) ->
     Some (Tresult {env; ok_type; error_type}, type_arg_context)
   | Tconstr (Path.Pident {name = "bool"}, [], _) ->
@@ -827,6 +833,17 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
       |> extract_type ~env ~state ~package:full.package
       |> Utils.Option.flat_map (fun (typ, type_arg_context) ->
           typ |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
+    | NDictValue {optional = true}, Tdict (env, typ) ->
+      (* [?P] matches the value as an option *)
+      Toption (env, typ)
+      |> resolve_nested ?type_arg_context ~env ~state ~full ~nested
+    | NDictValue {optional = false}, Tdict (env, ExtractedType typ) ->
+      typ |> resolve_nested ?type_arg_context ~env ~state ~full ~nested
+    | NDictValue {optional = false}, Tdict (env, TypeExpr typ) ->
+      typ
+      |> extract_type ~env ~state ~package:full.package
+      |> Utils.Option.flat_map (fun (typ, type_arg_context) ->
+          typ |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
     | _ -> None)
 
 let find_type_of_record_field fields ~field_name =
@@ -942,6 +959,15 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~state ~nested
         |> resolve_nested_pattern_path ~env ~state ~full ~nested
       | NArray, Tarray (env, typ) ->
         typ |> resolve_nested_pattern_path ~env ~state ~full ~nested
+      | NDictValue {optional = true}, Tdict (env, TypeExpr typ) ->
+        (* [?P] matches the value as an option *)
+        TypeExpr (Ctype.newconstr Predef.path_option [typ])
+        |> resolve_nested_pattern_path ~env ~state ~full ~nested
+      | NDictValue {optional = true}, Tdict (env, (ExtractedType _ as typ)) ->
+        ExtractedType (Toption (env, typ))
+        |> resolve_nested_pattern_path ~env ~state ~full ~nested
+      | NDictValue {optional = false}, Tdict (env, typ) ->
+        typ |> resolve_nested_pattern_path ~env ~state ~full ~nested
       | _ -> None))
 
 let get_args ~env (t : Types.type_expr) ~full ~state =
@@ -995,6 +1021,8 @@ let rec context_path_from_core_type (core_type : Parsetree.core_type) =
     |> Option.map (fun inner_typ -> Completable.CPOption inner_typ)
   | Ptyp_constr ({txt = Lident "array"}, [inner_typ]) ->
     Some (Completable.CPArray (inner_typ |> context_path_from_core_type))
+  | Ptyp_constr ({txt = Lident "dict"}, [inner_typ]) ->
+    Some (Completable.CPDict (inner_typ |> context_path_from_core_type))
   | Ptyp_constr (lid, _) ->
     Some
       (CPId

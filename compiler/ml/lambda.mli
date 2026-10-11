@@ -289,9 +289,7 @@ type primitive =
      and the primitive arguments contain [value]. The source forms are retained
      for JavaScript output; semantic forms are used by optimizations. *)
   | Ptemplate of template_segment list
-  (* {...target, ...sources}. Kept after all other constant
-     constructors: .cmj files marshal Lambda.t without a version check, so
-     inserting it earlier would shift the tags of existing primitives. *)
+  (* {...target, ...sources} *)
   | Pdict_spread
 
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge

@@ -139,10 +139,7 @@ function stackAllLeft(_v, _s) {
     if (v === undefined) {
       return s;
     }
-    _s = {
-      hd: v,
-      tl: s
-    };
+    _s = {hd: v, tl: s};
     _v = v.l;
     continue;
   };
@@ -307,10 +304,7 @@ function toListAux(_n, _accu) {
     if (n === undefined) {
       return accu;
     }
-    _accu = {
-      hd: n.v,
-      tl: toListAux(n.r, accu)
-    };
+    _accu = {hd: n.v, tl: toListAux(n.r, accu)};
     _n = n.l;
     continue;
   };

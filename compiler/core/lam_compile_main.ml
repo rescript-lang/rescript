@@ -73,12 +73,12 @@ let declare_undeclared_exports (exports : Ident.t list) (block : J.block) :
   let declared =
     Ext_list.fold_left block Set_ident.empty (fun acc (stmt : J.statement) ->
         match stmt.statement_desc with
-        | Variable {ident} -> Set_ident.add acc ident
+        | Variable {ident} -> Set_ident.add ident acc
         | _ -> acc)
   in
   block
   @ Ext_list.filter_map exports (fun id ->
-      if Set_ident.mem declared id then None
+      if Set_ident.mem id declared then None
       else Some (Js_stmt_make.declare_variable ~kind:Strict id))
 
 (** Also need analyze its depenency is pure or not *)
@@ -111,10 +111,10 @@ let js_hoisted_aliases (export_ids : Ident.t list)
     let group_map =
       Ext_list.fold_left groups Map_ident.empty (fun group_map group ->
           match group with
-          | Single (_, id, lam) -> Map_ident.add group_map id lam
+          | Single (_, id, lam) -> Map_ident.add id lam group_map
           | Recursive bindings ->
             Ext_list.fold_left bindings group_map (fun group_map (id, lam) ->
-                Map_ident.add group_map id lam)
+                Map_ident.add id lam group_map)
           | Nop _ -> group_map)
     in
     let rec access loc base fields =
@@ -129,13 +129,13 @@ let js_hoisted_aliases (export_ids : Ident.t list)
     in
     let rec resolve_binding seen = function
       | Lambda.Lvar id as lam -> (
-        if Set_ident.mem seen id then (lam, Some id)
+        if Set_ident.mem id seen then (lam, Some id)
         else
-          match Map_ident.find_opt group_map id with
+          match Map_ident.find_opt id group_map with
           | Some
               ((Lambda.Lvar _ | Lambda.Lprim {primitive = Lambda.Pfield _; _})
                as alias) ->
-            resolve_binding (Set_ident.add seen id) alias
+            resolve_binding (Set_ident.add id seen) alias
           | Some resolved -> (resolved, Some id)
           | None -> (lam, Some id))
       | Lambda.Lprim {primitive = Lambda.Pfield (pos, _); args = [base]} as lam
@@ -172,16 +172,16 @@ let js_hoisted_aliases (export_ids : Ident.t list)
     in
     let exported_modules =
       Ext_list.fold_left export_ids Map_string.empty (fun modules id ->
-          Map_string.add modules id.Ident.name id)
+          Map_string.add id.Ident.name id modules)
     in
     let occupied_names =
       Ext_list.fold_left groups Set_string.empty (fun occupied group ->
           match group with
           | Single (_, id, _) ->
-            Set_string.add occupied (Ext_ident.convert id.Ident.name)
+            Set_string.add (Ext_ident.convert id.Ident.name) occupied
           | Recursive bindings ->
             Ext_list.fold_left bindings occupied (fun occupied (id, _) ->
-                Set_string.add occupied (Ext_ident.convert id.Ident.name))
+                Set_string.add (Ext_ident.convert id.Ident.name) occupied)
           | Nop _ -> occupied)
     in
     fst
@@ -195,9 +195,9 @@ let js_hoisted_aliases (export_ids : Ident.t list)
            in
            match path with
            | top :: fields -> (
-             match Map_string.find_opt exported_modules top with
+             match Map_string.find_opt top exported_modules with
              | Some top_id -> (
-               match Map_ident.find_opt group_map top_id with
+               match Map_ident.find_opt top_id group_map with
                | Some lam -> (
                  match find_path lam fields [] with
                  | Some (access_path, Some target_id, target)
@@ -208,7 +208,7 @@ let js_hoisted_aliases (export_ids : Ident.t list)
                      |> String.concat "$"
                    in
                    let js_name = Ext_ident.convert name in
-                   if Set_string.mem occupied_names js_name then
+                   if Set_string.mem js_name occupied_names then
                      let error_loc =
                        match target with
                        | Lambda.Lfunction {loc} -> loc
@@ -227,7 +227,7 @@ let js_hoisted_aliases (export_ids : Ident.t list)
                          path,
                          name )
                        :: aliases,
-                       Set_string.add occupied_names js_name )
+                       Set_string.add js_name occupied_names )
                  | Some _ | None -> missing_path ())
                | None -> missing_path ())
              | None -> missing_path ())
@@ -242,12 +242,12 @@ let js_hoisted_aliases (export_ids : Ident.t list)
 (** Actually simplify_lets is kind of global optimization since it requires you to know whether
     it's used or not
 *)
-let required_modules (lam : Lambda.t) : Lam_module_ident.Hash_set.t =
+let required_modules (lam : Lambda.t) : unit Lam_module_ident.Hash_set.t =
   let required = Lam_module_ident.Hash_set.create 0 in
   let rec collect (lam : Lambda.t) =
     (match lam with
     | Lglobal_module id ->
-      Lam_module_ident.Hash_set.add required (Lam_module_ident.of_ml id)
+      Lam_module_ident.set_add required (Lam_module_ident.of_ml id)
     | _ -> ());
     Lambda_traverse.iter collect lam
   in
@@ -352,7 +352,7 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
       ->
         ( group :: groups,
           id :: exports,
-          Map_ident.add export_map id lam,
+          Map_ident.add id lam export_map,
           {Js_cmj_format.path; export_name = name} :: hoisted_metadata ))
   in
   let groups = groups @ List.rev hoisted_groups in
@@ -362,12 +362,13 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
       exports = meta.exports @ List.rev hoisted_exports;
       export_idents =
         Ext_list.fold_left hoisted_exports meta.export_idents (fun acc id ->
-            Set_ident.add acc id);
+            Set_ident.add id acc);
     }
   in
   let export_map =
-    Map_ident.fold hoisted_export_map coerced_input.export_map
-      (fun id lam acc -> Map_ident.add acc id lam)
+    Map_ident.fold
+      (fun id lam acc -> Map_ident.add id lam acc)
+      hoisted_export_map coerced_input.export_map
   in
   let () =
     if debug_ir then
@@ -407,11 +408,18 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
     else
       let hard_deps = Js_fold_basic.calculate_hard_dependencies program.block in
       Lam_compile_env.populate_required_modules may_required_modules hard_deps;
-      Ext_list.sort_via_array (Lam_module_ident.Hash_set.to_list hard_deps)
+      Ext_list.sort_via_array
+        (Lam_module_ident.Hash_set.fold
+           (fun id () acc -> id :: acc)
+           hard_deps [])
         (fun id1 id2 ->
-          Ext_string.compare
-            (Lam_module_ident.name id1)
-            (Lam_module_ident.name id2))
+          match
+            Ext_string.compare
+              (Lam_module_ident.name id1)
+              (Lam_module_ident.name id2)
+          with
+          | 0 -> Lam_module_ident.compare_same_name id1 id2
+          | c -> c)
   in
   Warnings.check_fatal ();
   let effect_ =
@@ -419,9 +427,7 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
   in
   let v : Js_cmj_format.t =
     Lam_stats_export.export_to_cmj meta effect_ export_map hoisted_metadata
-      (if Ext_char.is_lower_case (Filename.basename output_prefix).[0] then
-         Little
-       else Upper)
+      (Ext_filename.case output_prefix)
   in
   if not !Clflags.dont_write_files then
     Js_cmj_format.to_file ~check_exists:(not !Js_config.force_cmj)
@@ -444,7 +450,7 @@ let dump_deps_program_with_source_map ?(remove_stale_map = true) ~target_file
   in
   Js_source_map.with_builder builder (fun () ->
       Js_dump_program.pp_deps_program ~output_prefix module_system lambda_output
-        (Ext_pp.from_channel chan));
+        (Ext_pp.from_channel ~track_positions:true chan));
   match !Js_config.source_map with
   | Linked ->
     let json = Js_source_map.json builder in

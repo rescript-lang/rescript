@@ -50,21 +50,16 @@ let new_extension name (ext : string) =
   in
   search_dot name (String.length name - 1) ext
 
-(** TODO: improve efficiency
-    given a path, calcuate its module name 
-    Note that `ocamlc.opt -c aa.xx.mli` gives `aa.xx.cmi`
-    we can not strip all extensions, otherwise
-    we can not tell the difference between "x.cpp.ml" 
-    and "x.ml"
-*)
-let module_name name =
-  let rec search_dot i name =
-    if i < 0 then Ext_string.capitalize_ascii name
-    else if String.unsafe_get name i = '.' then Ext_string.capitalize_sub name i
-    else search_dot (i - 1) name
-  in
-  let name = Filename.basename name in
-  let name_len = String.length name in
-  search_dot (name_len - 1) name
+(* [output_prefix] is the path of a compilation unit's output files without
+   extension, e.g. [src/foo] or [src/foo-Ns]. Only an ASCII first letter is
+   capitalized, so that [case] lets importers restore the file name. *)
+let module_name output_prefix =
+  String.capitalize_ascii (Filename.basename output_prefix)
 
-type module_info = {module_name: string; case: bool}
+let case output_prefix : Ext_js_file_kind.case =
+  let name = Filename.basename output_prefix in
+  if name <> "" then
+    match name.[0] with
+    | 'a' .. 'z' -> Little
+    | _ -> Upper
+  else Upper

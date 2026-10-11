@@ -231,7 +231,7 @@ let rec expr_to_context_path_inner ~(in_jsx_context : bool)
          (match exprs with
          | [] -> None
          | exp :: _ -> expr_to_context_path ~in_jsx_context exp))
-  | Pexp_dict _ -> Some CPDict
+  | Pexp_dict _ -> Some (CPDict None)
   | Pexp_ident {txt = Lident "->"} -> None
   | Pexp_ident {txt; loc} ->
     Some
@@ -511,11 +511,10 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
               :: pattern_path)
             ?context_path)
     | Ppat_dict entries ->
-      Ext_list.iter entries (fun {pdp_key; pdp_pattern} ->
+      Ext_list.iter entries (fun {pdp_pattern; pdp_optional} ->
           scope_pattern
             ~pattern_path:
-              (Completable.NFollowRecordField {field_name = pdp_key.txt}
-              :: pattern_path)
+              (Completable.NDictValue {optional = pdp_optional} :: pattern_path)
             ?context_path pdp_pattern)
     | Ppat_record (fields, _, rest) -> (
       Ext_list.iter fields (fun {lid = fname; x = p} ->
@@ -752,13 +751,23 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
       mbs |> List.iter scope_module_binding;
       mbs |> List.iter (fun b -> iterator.module_binding iterator b);
       processed := true
-    | Pstr_include {pincl_mod = {pmod_desc = med}} -> (
-      match med with
-      | Pmod_ident {txt = lid; loc}
-      | Pmod_apply ({pmod_desc = Pmod_ident {txt = lid; loc}}, _) ->
+    | Pstr_include {pincl_mod} -> (
+      (* [include await M] and [include (await F)(X)] include [M] and [F] *)
+      let without_awaits m = snd (Ast_await.remove_awaits false m) in
+      let included_path =
+        match (without_awaits pincl_mod).pmod_desc with
+        | Pmod_ident lid -> Some lid
+        | Pmod_apply (functor_, _) -> (
+          match (without_awaits functor_).pmod_desc with
+          | Pmod_ident lid -> Some lid
+          | _ -> None)
+        | _ -> None
+      in
+      match included_path with
+      | Some {txt = lid; loc} ->
         let module_name = Longident.flatten lid |> String.concat "." in
         scope := !scope |> Scope.add_include ~name:module_name ~loc
-      | _ -> ())
+      | None -> ())
     | _ -> ());
     if not !processed then
       Ast_iterator.default_iterator.structure_item iterator item

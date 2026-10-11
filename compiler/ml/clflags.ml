@@ -19,8 +19,6 @@ and open_modules = ref [] (* -open *)
 
 and real_paths = ref true (* -short-paths *)
 
-and error_size = ref 400 (* -error-size, in heap words *)
-
 and transparent_modules = ref false (* -trans-mod *)
 let dump_source = ref false (* -dsource *)
 let dump_parsetree = ref false (* -dparsetree *)
