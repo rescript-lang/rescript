@@ -128,9 +128,9 @@ let suites =
              Js_analyzer.free_variables_of_statement
                (record_rest_statement ~source ~field ~rest)
            in
-           OUnit.assert_bool __LOC__ (Set_ident.mem free source);
-           OUnit.assert_bool __LOC__ (not (Set_ident.mem free field));
-           OUnit.assert_bool __LOC__ (not (Set_ident.mem free rest)) );
+           OUnit.assert_bool __LOC__ (Set_ident.mem source free);
+           OUnit.assert_bool __LOC__ (not (Set_ident.mem field free));
+           OUnit.assert_bool __LOC__ (not (Set_ident.mem rest free)) );
          ( __LOC__ >:: fun _ ->
            let param = Ident.create "param" in
            let transformed =

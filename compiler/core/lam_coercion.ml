@@ -106,9 +106,8 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
               export_set =
                 (if id.stamp = original_export_id.stamp then acc.export_set
                  else
-                   Set_ident.add
-                     (Set_ident.remove acc.export_set original_export_id)
-                     id);
+                   Set_ident.add id
+                     (Set_ident.remove original_export_id acc.export_set));
             }
           else
             let newid = Ident.rename original_export_id in
@@ -162,7 +161,7 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
     Ext_list.fold_left reverse_input (result.export_map, result.groups)
       (fun (export_map, acc) x ->
         ( (match x with
-          | Single (_, id, lam) when Set_ident.mem export_set id ->
+          | Single (_, id, lam) when Set_ident.mem id export_set ->
             Map_ident.add export_map id lam
           (* relies on the Invariant that [eoid] can not be bound before
               FIX: such invariant may not hold

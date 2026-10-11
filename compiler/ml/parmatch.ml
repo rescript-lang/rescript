@@ -2302,9 +2302,9 @@ type amb_row = {unseen: pattern list; seen: Set_ident.t list}
 
 let rec do_push r p ps seen k =
   match p.pat_desc with
-  | Tpat_alias (p, x, _) -> do_push (Set_ident.add r x) p ps seen k
+  | Tpat_alias (p, x, _) -> do_push (Set_ident.add x r) p ps seen k
   | Tpat_var (x, _) ->
-    (omega, {unseen = ps; seen = Set_ident.add r x :: seen}) :: k
+    (omega, {unseen = ps; seen = Set_ident.add x r :: seen}) :: k
   | Tpat_or (p1, p2, _) -> do_push r p1 ps seen (do_push r p2 ps seen k)
   | _ -> (p, {unseen = ps; seen = r :: seen}) :: k
 
@@ -2464,7 +2464,7 @@ let all_rhs_idents exp =
     let enter_expression exp =
       match exp.exp_desc with
       | Texp_ident (path, _lid, _descr) ->
-        List.iter (fun id -> ids := Set_ident.add !ids id) (Path.heads path)
+        List.iter (fun id -> ids := Set_ident.add id !ids) (Path.heads path)
       | _ -> ()
 
     (* Very hackish, detect unpack pattern  compilation
@@ -2484,9 +2484,9 @@ let all_rhs_idents exp =
                     ({exp_desc = Texp_ident (Path.Pident id_exp, _, _)}, _);
               },
               _ ) ->
-          assert (Set_ident.mem !ids id_exp);
-          if not (Set_ident.mem !ids id_mod) then
-            ids := Set_ident.remove !ids id_exp
+          assert (Set_ident.mem id_exp !ids);
+          if not (Set_ident.mem id_mod !ids) then
+            ids := Set_ident.remove id_exp !ids
         | _ -> assert false
   end) in
   Iterator.iter_expression exp;

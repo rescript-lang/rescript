@@ -137,7 +137,7 @@ let subst (export_set : Set_ident.t) stats =
              comment = _;
            } as st)
           :: rest -> (
-          let is_export = Set_ident.mem export_set vd.ident in
+          let is_export = Set_ident.mem vd.ident export_set in
           if is_export then self.statement self st :: self.block self rest
           else
             match Hash_ident.find_opt stats vd.ident with
