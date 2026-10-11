@@ -1700,11 +1700,14 @@ cp "$work/watch-filter-rust/src/Include.js" "$work/watch-filter-rust-initial.js"
 printf 'let value = 2\n' >"$work/watch-filter-rust/src/Include.res"
 printf 'let value = 11\n' >"$work/watch-filter-rust/src/Exclude.res"
 wait_for_line_count "$rust_filter_marker" 2
+# A canary for the documented difference: Rust's event filter is inverted, so
+# the excluded edit triggers the rebuild and the included edit is missed. It
+# only warns, because file event backends such as macOS FSEvents can deliver
+# both edits in one batch, and Rust then rebuilds the included source anyway.
 if ! cmp -s "$work/watch-filter-rust-initial.js" \
     "$work/watch-filter-rust/src/Include.js"; then
-  echo "Rust no longer reproduces the inverted watch-filter event behavior" >&2
-  cat "$work/watch-filter-rust.out" "$work/watch-filter-rust.err" >&2
-  exit 1
+  echo "Notice: Rust did not reproduce the inverted watch-filter event behavior" >&2
+  echo "this time; if this persists, Rust fixed it and the difference is stale." >&2
 fi
 terminate_and_wait "$rust_filter_pid" "Rust filter watcher"
 
