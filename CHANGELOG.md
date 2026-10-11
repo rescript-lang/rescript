@@ -65,6 +65,7 @@
 
 #### :house: Internal
 
+- Remove the unused `Packed` and `Partial_class_expr` constructors from the `.cmt` format and bump its magic number. https://github.com/rescript-lang/rescript/pull/8793
 - Make `dict` an abstract type instead of a record with a hidden field. https://github.com/rescript-lang/rescript/pull/8752
 - Remove dead code from the compiler and rewatch. https://github.com/rescript-lang/rescript/pull/8756
 - Represent dict patterns with a dedicated `Tpat_dict` typed tree node. https://github.com/rescript-lang/rescript/pull/8751
