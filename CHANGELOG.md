@@ -51,6 +51,7 @@
 
 #### :nail_care: Polish
 
+- Print list literals with one list cell per line, so their output no longer grows quadratically with their length. https://github.com/rescript-lang/rescript/pull/8794
 - Compile dict spreads to object spread syntax instead of `Object.assign`. https://github.com/rescript-lang/rescript/pull/8747
 - Make compilation slightly faster and stop rewatch from copying files twice for modules with an interface. https://github.com/rescript-lang/rescript/pull/8769
 - Speed up inlining decisions for large functions. https://github.com/rescript-lang/rescript/pull/8771
