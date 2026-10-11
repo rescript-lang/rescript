@@ -57,6 +57,29 @@ let flagName = v =>
   | Str(_) => "str"
   }
 
+// A boolean payload only receives the boolean that is not a literal case.
+@unboxed type answer = | @as(true) Yes2 | Answer(bool)
+let answerName = v =>
+  switch v {
+  | Answer(true) => "answer true"
+  | Yes2 => "yes"
+  | Answer(false) => "answer false"
+  }
+
+@unboxed
+type mixed =
+  | @as(false) Off
+  | @as(null) Unset
+  | Toggle(bool)
+  | Label(string)
+let mixedName = v =>
+  switch v {
+  | Off => "off"
+  | Unset => "unset"
+  | Toggle(b) => b ? "toggle true" : "toggle false"
+  | Label(s) => s
+  }
+
 // @as(1) and a float payload of 1.0 are one JavaScript number.
 @unboxed type num = | @as(1) One2 | F(float)
 let numName = v =>
@@ -165,6 +188,14 @@ describe(__MODULE__, () => {
     eq(__LOC__, optName(Missing), optName(id(Missing)))
     eq(__LOC__, flagName(Str("true")), flagName(id(Str("true"))))
     eq(__LOC__, flagName(Yes), flagName(id(Yes)))
+    eq(__LOC__, answerName(Answer(true)), answerName(id(Answer(true))))
+    eq(__LOC__, answerName(Answer(false)), answerName(id(Answer(false))))
+    eq(__LOC__, answerName(Yes2), answerName(id(Yes2)))
+    eq(__LOC__, mixedName(Toggle(true)), mixedName(id(Toggle(true))))
+    eq(__LOC__, mixedName(Toggle(false)), mixedName(id(Toggle(false))))
+    eq(__LOC__, mixedName(Off), mixedName(id(Off)))
+    eq(__LOC__, mixedName(Unset), mixedName(id(Unset)))
+    eq(__LOC__, mixedName(Label("false")), mixedName(id(Label("false"))))
     eq(__LOC__, numName(F(1.0)), numName(id(F(1.0))))
     eq(__LOC__, numName(F(2.5)), numName(id(F(2.5))))
     eq(__LOC__, numName(One2), numName(id(One2)))
@@ -192,6 +223,11 @@ describe(__MODULE__, () => {
     eq(__LOC__, numberName(Number(1)), "one")
     eq(__LOC__, numberName(Number(2)), "number")
     eq(__LOC__, pureName(I(1)), "int")
+    eq(__LOC__, answerName(Answer(true)), "yes")
+    eq(__LOC__, answerName(Answer(false)), "answer false")
+    eq(__LOC__, mixedName(Toggle(false)), "off")
+    eq(__LOC__, mixedName(Toggle(true)), "toggle true")
+    eq(__LOC__, mixedName(Label("false")), "false")
     eq(__LOC__, numName(F(1.0)), "one")
     eq(__LOC__, pick(C("a")), "lit")
     eq(__LOC__, outerName(W(I2("x"))), "x")
