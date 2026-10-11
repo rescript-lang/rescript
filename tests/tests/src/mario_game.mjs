@@ -1319,26 +1319,17 @@ function kill(collid, ctx) {
         pos_0,
         pos_1
       ];
-      let score = o.score > 0 ? ({
-          hd: make_score(o.score, pos, ctx),
-          tl: /* [] */0
-        }) : /* [] */0;
+      let score = o.score > 0 ? ({hd: make_score(o.score, pos, ctx), tl: /* [] */0}) : /* [] */0;
       let remains;
-      remains = collid._0 === "Goomba" ? ({
-          hd: make$1(undefined, undefined, "GoombaSquish", pos, ctx),
-          tl: /* [] */0
-        }) : /* [] */0;
+      remains = collid._0 === "Goomba" ? ({hd: make$1(undefined, undefined, "GoombaSquish", pos, ctx), tl: /* [] */0}) : /* [] */0;
       return Stdlib_List.concat(score, remains);
     case "Item" :
       let o$1 = collid._2;
       if (collid._0 === "Mushroom") {
-        return {
-          hd: make_score(o$1.score, [
-            o$1.pos.x,
-            o$1.pos.y
-          ], ctx),
-          tl: /* [] */0
-        };
+        return {hd: make_score(o$1.score, [
+          o$1.pos.x,
+          o$1.pos.y
+        ], ctx), tl: /* [] */0};
       } else {
         return /* [] */0;
       }
@@ -1385,19 +1376,7 @@ function kill(collid, ctx) {
         0,
         0.2
       ], "BrickChunkR", pos$1, ctx);
-      return {
-        hd: p1,
-        tl: {
-          hd: p2,
-          tl: {
-            hd: p3,
-            tl: {
-              hd: p4,
-              tl: /* [] */0
-            }
-          }
-        }
-      };
+      return {hd: p1, tl: {hd: p2, tl: {hd: p3, tl: {hd: p4, tl: /* [] */0}}}};
   }
 }
 
@@ -2093,22 +2072,10 @@ function check_collisions(collid, all_collids, state) {
     let acc$1;
     if (o !== undefined) {
       let o2 = new_objs[1];
-      acc$1 = o2 !== undefined ? ({
-          hd: o,
-          tl: {
-            hd: o2,
-            tl: acc
-          }
-        }) : ({
-          hd: o,
-          tl: acc
-        });
+      acc$1 = o2 !== undefined ? ({hd: o, tl: {hd: o2, tl: acc}}) : ({hd: o, tl: acc});
     } else {
       let o$1 = new_objs[1];
-      acc$1 = o$1 !== undefined ? ({
-          hd: o$1,
-          tl: acc
-        }) : acc;
+      acc$1 = o$1 !== undefined ? ({hd: o$1, tl: acc}) : acc;
     }
     _acc = acc$1;
     _cs = cs.tl;
@@ -2149,35 +2116,20 @@ function translate_keys() {
     pressed_keys_left,
     "CLeft"
   ];
-  let ctrls_1 = {
-    hd: [
-      pressed_keys_right,
-      "CRight"
-    ],
-    tl: {
-      hd: [
-        pressed_keys_up,
-        "CUp"
-      ],
-      tl: {
-        hd: [
-          pressed_keys_down,
-          "CDown"
-        ],
-        tl: /* [] */0
-      }
-    }
-  };
-  let ctrls = {
-    hd: ctrls_0,
-    tl: ctrls_1
-  };
+  let ctrls_1 = {hd: [
+    pressed_keys_right,
+    "CRight"
+  ], tl: {hd: [
+    pressed_keys_up,
+    "CUp"
+  ], tl: {hd: [
+    pressed_keys_down,
+    "CDown"
+  ], tl: /* [] */0}}};
+  let ctrls = {hd: ctrls_0, tl: ctrls_1};
   return Stdlib_List.reduceReverse(ctrls, /* [] */0, (a, x) => {
     if (x[0]) {
-      return {
-        hd: x[1],
-        tl: a
-      };
+      return {hd: x[1], tl: a};
     } else {
       return a;
     }
@@ -2210,10 +2162,7 @@ function run_update_collid(state, collid, all_collids) {
   let obj = collid._2;
   let evolved$1 = update_collidable(state, collid, all_collids);
   if (!obj.kill) {
-    collid_objs = {
-      hd: collid,
-      tl: Stdlib_List.concat(collid_objs, evolved$1)
-    };
+    collid_objs = {hd: collid, tl: Stdlib_List.concat(collid_objs, evolved$1)};
   }
   let new_parts = obj.kill ? kill(collid, state.ctx) : /* [] */0;
   particles = Stdlib_List.concat(particles, new_parts);
@@ -2280,10 +2229,7 @@ function update_loop(canvas, param, map_dim) {
       if (part.kill) {
         return;
       }
-      particles = {
-        hd: part,
-        tl: particles
-      };
+      particles = {hd: part, tl: particles};
     });
     fps(canvas, fps$1);
     hud(canvas, state$1.score, state$1.coins);
@@ -2405,16 +2351,13 @@ function convert_list(lst) {
     return /* [] */0;
   }
   let h = lst.hd;
-  return Stdlib_List.concat({
-    hd: [
-      h[0],
-      [
-        h[1][0] * 16,
-        h[1][1] * 16
-      ]
-    ],
-    tl: /* [] */0
-  }, convert_list(lst.tl));
+  return Stdlib_List.concat({hd: [
+    h[0],
+    [
+      h[1][0] * 16,
+      h[1][1] * 16
+    ]
+  ], tl: /* [] */0}, convert_list(lst.tl));
 }
 
 function choose_enemy_typ(typ) {
@@ -2459,10 +2402,7 @@ function avoid_overlap(_lst, currentLst) {
     let t = lst.tl;
     let h = lst.hd;
     if (!mem_loc(h[1], currentLst)) {
-      return Stdlib_List.concat({
-        hd: h,
-        tl: /* [] */0
-      }, avoid_overlap(t, currentLst));
+      return Stdlib_List.concat({hd: h, tl: /* [] */0}, avoid_overlap(t, currentLst));
     }
     _lst = t;
     continue;
@@ -2482,10 +2422,7 @@ function trim_edges(_lst, blockw, blockh) {
     let pixx = blockw * 16;
     let pixy = blockh * 16;
     if (!(cx < 128 || pixx - cx < 528 || cy === 0 || pixy - cy < 48)) {
-      return Stdlib_List.concat({
-        hd: h,
-        tl: /* [] */0
-      }, trim_edges(t, blockw, blockh));
+      return Stdlib_List.concat({hd: h, tl: /* [] */0}, trim_edges(t, blockw, blockh));
     }
     _lst = t;
     continue;
@@ -2496,16 +2433,13 @@ function generate_clouds(cbx, cby, typ, num) {
   if (num === 0) {
     return /* [] */0;
   } else {
-    return Stdlib_List.concat({
-      hd: [
-        typ,
-        [
-          cbx,
-          cby
-        ]
-      ],
-      tl: /* [] */0
-    }, generate_clouds(cbx + 1, cby, typ, num - 1 | 0));
+    return Stdlib_List.concat({hd: [
+      typ,
+      [
+        cbx,
+        cby
+      ]
+    ], tl: /* [] */0}, generate_clouds(cbx + 1, cby, typ, num - 1 | 0));
   }
 }
 
@@ -2521,16 +2455,13 @@ function generate_coins(_block_coord) {
     if (place_coin === 0) {
       let xc = h[1][0];
       let yc = h[1][1];
-      return Stdlib_List.concat({
-        hd: [
-          0,
-          [
-            xc,
-            yc - 16
-          ]
-        ],
-        tl: /* [] */0
-      }, generate_coins(t));
+      return Stdlib_List.concat({hd: [
+        0,
+        [
+          xc,
+          yc - 16
+        ]
+      ], tl: /* [] */0}, generate_coins(t));
     }
     _block_coord = t;
     continue;
@@ -2548,65 +2479,47 @@ function choose_block_pattern(blockw, blockh, cbx, cby, prob) {
   switch (prob) {
     case 0 :
       if (blockw - cbx > 2) {
-        return {
-          hd: [
-            stair_typ,
-            [
-              cbx,
-              cby
-            ]
-          ],
-          tl: {
-            hd: [
-              middle_block,
-              [
-                cbx + 1,
-                cby
-              ]
-            ],
-            tl: {
-              hd: [
-                stair_typ,
-                [
-                  cbx + 2,
-                  cby
-                ]
-              ],
-              tl: /* [] */0
-            }
-          }
-        };
+        return {hd: [
+          stair_typ,
+          [
+            cbx,
+            cby
+          ]
+        ], tl: {hd: [
+          middle_block,
+          [
+            cbx + 1,
+            cby
+          ]
+        ], tl: {hd: [
+          stair_typ,
+          [
+            cbx + 2,
+            cby
+          ]
+        ], tl: /* [] */0}}};
       } else if (blockw - cbx > 1) {
-        return {
-          hd: [
-            block_typ,
-            [
-              cbx,
-              cby
-            ]
-          ],
-          tl: {
-            hd: [
-              block_typ,
-              [
-                cbx + 1,
-                cby
-              ]
-            ],
-            tl: /* [] */0
-          }
-        };
+        return {hd: [
+          block_typ,
+          [
+            cbx,
+            cby
+          ]
+        ], tl: {hd: [
+          block_typ,
+          [
+            cbx + 1,
+            cby
+          ]
+        ], tl: /* [] */0}};
       } else {
-        return {
-          hd: [
-            block_typ,
-            [
-              cbx,
-              cby
-            ]
-          ],
-          tl: /* [] */0
-        };
+        return {hd: [
+          block_typ,
+          [
+            cbx,
+            cby
+          ]
+        ], tl: /* [] */0};
       }
     case 1 :
       let num_clouds = int(5) + 5 | 0;
@@ -2624,38 +2537,26 @@ function choose_block_pattern(blockw, blockh, cbx, cby, prob) {
             cby
           ]
         ];
-        let four_1 = {
-          hd: [
-            stair_typ,
-            [
-              cbx + 1,
-              cby
-            ]
-          ],
-          tl: {
-            hd: [
-              stair_typ,
-              [
-                cbx + 2,
-                cby
-              ]
-            ],
-            tl: {
-              hd: [
-                stair_typ,
-                [
-                  cbx + 3,
-                  cby
-                ]
-              ],
-              tl: /* [] */0
-            }
-          }
-        };
-        let four = {
-          hd: four_0,
-          tl: four_1
-        };
+        let four_1 = {hd: [
+          stair_typ,
+          [
+            cbx + 1,
+            cby
+          ]
+        ], tl: {hd: [
+          stair_typ,
+          [
+            cbx + 2,
+            cby
+          ]
+        ], tl: {hd: [
+          stair_typ,
+          [
+            cbx + 3,
+            cby
+          ]
+        ], tl: /* [] */0}}};
+        let four = {hd: four_0, tl: four_1};
         let three_0 = [
           stair_typ,
           [
@@ -2663,29 +2564,20 @@ function choose_block_pattern(blockw, blockh, cbx, cby, prob) {
             cby - 1
           ]
         ];
-        let three_1 = {
-          hd: [
-            stair_typ,
-            [
-              cbx + 2,
-              cby - 1
-            ]
-          ],
-          tl: {
-            hd: [
-              stair_typ,
-              [
-                cbx + 3,
-                cby - 1
-              ]
-            ],
-            tl: /* [] */0
-          }
-        };
-        let three = {
-          hd: three_0,
-          tl: three_1
-        };
+        let three_1 = {hd: [
+          stair_typ,
+          [
+            cbx + 2,
+            cby - 1
+          ]
+        ], tl: {hd: [
+          stair_typ,
+          [
+            cbx + 3,
+            cby - 1
+          ]
+        ], tl: /* [] */0}};
+        let three = {hd: three_0, tl: three_1};
         let two_0 = [
           stair_typ,
           [
@@ -2693,20 +2585,14 @@ function choose_block_pattern(blockw, blockh, cbx, cby, prob) {
             cby - 2
           ]
         ];
-        let two_1 = {
-          hd: [
-            stair_typ,
-            [
-              cbx + 3,
-              cby - 2
-            ]
-          ],
-          tl: /* [] */0
-        };
-        let two = {
-          hd: two_0,
-          tl: two_1
-        };
+        let two_1 = {hd: [
+          stair_typ,
+          [
+            cbx + 3,
+            cby - 2
+          ]
+        ], tl: /* [] */0};
+        let two = {hd: two_0, tl: two_1};
         let one_0 = [
           stair_typ,
           [
@@ -2714,10 +2600,7 @@ function choose_block_pattern(blockw, blockh, cbx, cby, prob) {
             cby - 3
           ]
         ];
-        let one = {
-          hd: one_0,
-          tl: /* [] */0
-        };
+        let one = {hd: one_0, tl: /* [] */0};
         return Stdlib_List.concat(four, Stdlib_List.concat(three, Stdlib_List.concat(two, one)));
       } else {
         return /* [] */0;
@@ -2731,29 +2614,20 @@ function choose_block_pattern(blockw, blockh, cbx, cby, prob) {
             cby
           ]
         ];
-        let three_1$1 = {
-          hd: [
-            stair_typ,
-            [
-              cbx + 1,
-              cby
-            ]
-          ],
-          tl: {
-            hd: [
-              stair_typ,
-              [
-                cbx + 2,
-                cby
-              ]
-            ],
-            tl: /* [] */0
-          }
-        };
-        let three$1 = {
-          hd: three_0$1,
-          tl: three_1$1
-        };
+        let three_1$1 = {hd: [
+          stair_typ,
+          [
+            cbx + 1,
+            cby
+          ]
+        ], tl: {hd: [
+          stair_typ,
+          [
+            cbx + 2,
+            cby
+          ]
+        ], tl: /* [] */0}};
+        let three$1 = {hd: three_0$1, tl: three_1$1};
         let two_0$1 = [
           stair_typ,
           [
@@ -2761,20 +2635,14 @@ function choose_block_pattern(blockw, blockh, cbx, cby, prob) {
             cby + 1
           ]
         ];
-        let two_1$1 = {
-          hd: [
-            stair_typ,
-            [
-              cbx + 3,
-              cby + 1
-            ]
-          ],
-          tl: /* [] */0
-        };
-        let two$1 = {
-          hd: two_0$1,
-          tl: two_1$1
-        };
+        let two_1$1 = {hd: [
+          stair_typ,
+          [
+            cbx + 3,
+            cby + 1
+          ]
+        ], tl: /* [] */0};
+        let two$1 = {hd: two_0$1, tl: two_1$1};
         let one_0$1 = [
           stair_typ,
           [
@@ -2782,20 +2650,14 @@ function choose_block_pattern(blockw, blockh, cbx, cby, prob) {
             cby + 2
           ]
         ];
-        let one_1 = {
-          hd: [
-            stair_typ,
-            [
-              cbx + 6,
-              cby + 2
-            ]
-          ],
-          tl: /* [] */0
-        };
-        let one$1 = {
-          hd: one_0$1,
-          tl: one_1
-        };
+        let one_1 = {hd: [
+          stair_typ,
+          [
+            cbx + 6,
+            cby + 2
+          ]
+        ], tl: /* [] */0};
+        let one$1 = {hd: one_0$1, tl: one_1};
         return Stdlib_List.concat(three$1, Stdlib_List.concat(two$1, one$1));
       } else if (blockh - cby > 2) {
         let one_0$2 = [
@@ -2805,20 +2667,14 @@ function choose_block_pattern(blockw, blockh, cbx, cby, prob) {
             cby
           ]
         ];
-        let one_1$1 = {
-          hd: [
-            stair_typ,
-            [
-              cbx + 1,
-              cby
-            ]
-          ],
-          tl: /* [] */0
-        };
-        let one$2 = {
-          hd: one_0$2,
-          tl: one_1$1
-        };
+        let one_1$1 = {hd: [
+          stair_typ,
+          [
+            cbx + 1,
+            cby
+          ]
+        ], tl: /* [] */0};
+        let one$2 = {hd: one_0$2, tl: one_1$1};
         let two_0$2 = [
           stair_typ,
           [
@@ -2826,20 +2682,14 @@ function choose_block_pattern(blockw, blockh, cbx, cby, prob) {
             cby - 1
           ]
         ];
-        let two_1$2 = {
-          hd: [
-            stair_typ,
-            [
-              cbx + 4,
-              cby - 1
-            ]
-          ],
-          tl: /* [] */0
-        };
-        let two$2 = {
-          hd: two_0$2,
-          tl: two_1$2
-        };
+        let two_1$2 = {hd: [
+          stair_typ,
+          [
+            cbx + 4,
+            cby - 1
+          ]
+        ], tl: /* [] */0};
+        let two$2 = {hd: two_0$2, tl: two_1$2};
         let three_0$2 = [
           stair_typ,
           [
@@ -2847,115 +2697,82 @@ function choose_block_pattern(blockw, blockh, cbx, cby, prob) {
             cby - 2
           ]
         ];
-        let three_1$2 = {
-          hd: [
-            stair_typ,
-            [
-              cbx + 5,
-              cby - 2
-            ]
-          ],
-          tl: {
-            hd: [
-              stair_typ,
-              [
-                cbx + 6,
-                cby - 2
-              ]
-            ],
-            tl: /* [] */0
-          }
-        };
-        let three$2 = {
-          hd: three_0$2,
-          tl: three_1$2
-        };
+        let three_1$2 = {hd: [
+          stair_typ,
+          [
+            cbx + 5,
+            cby - 2
+          ]
+        ], tl: {hd: [
+          stair_typ,
+          [
+            cbx + 6,
+            cby - 2
+          ]
+        ], tl: /* [] */0}};
+        let three$2 = {hd: three_0$2, tl: three_1$2};
         return Stdlib_List.concat(one$2, Stdlib_List.concat(two$2, three$2));
       } else {
-        return {
-          hd: [
-            stair_typ,
-            [
-              cbx,
-              cby
-            ]
-          ],
-          tl: /* [] */0
-        };
-      }
-    case 4 :
-      if (cby + 3 - blockh === 2) {
-        return {
-          hd: [
-            stair_typ,
-            [
-              cbx,
-              cby
-            ]
-          ],
-          tl: /* [] */0
-        };
-      } else if (cby + 3 - blockh === 1) {
-        return {
-          hd: [
-            stair_typ,
-            [
-              cbx,
-              cby
-            ]
-          ],
-          tl: {
-            hd: [
-              stair_typ,
-              [
-                cbx,
-                cby + 1
-              ]
-            ],
-            tl: /* [] */0
-          }
-        };
-      } else {
-        return {
-          hd: [
-            stair_typ,
-            [
-              cbx,
-              cby
-            ]
-          ],
-          tl: {
-            hd: [
-              stair_typ,
-              [
-                cbx,
-                cby + 1
-              ]
-            ],
-            tl: {
-              hd: [
-                stair_typ,
-                [
-                  cbx,
-                  cby + 2
-                ]
-              ],
-              tl: /* [] */0
-            }
-          }
-        };
-      }
-    case 5 :
-      return {
-        hd: [
-          3,
+        return {hd: [
+          stair_typ,
           [
             cbx,
             cby
           ]
-        ],
-        tl: /* [] */0
-      };
+        ], tl: /* [] */0};
+      }
+    case 4 :
+      if (cby + 3 - blockh === 2) {
+        return {hd: [
+          stair_typ,
+          [
+            cbx,
+            cby
+          ]
+        ], tl: /* [] */0};
+      } else if (cby + 3 - blockh === 1) {
+        return {hd: [
+          stair_typ,
+          [
+            cbx,
+            cby
+          ]
+        ], tl: {hd: [
+          stair_typ,
+          [
+            cbx,
+            cby + 1
+          ]
+        ], tl: /* [] */0}};
+      } else {
+        return {hd: [
+          stair_typ,
+          [
+            cbx,
+            cby
+          ]
+        ], tl: {hd: [
+          stair_typ,
+          [
+            cbx,
+            cby + 1
+          ]
+        ], tl: {hd: [
+          stair_typ,
+          [
+            cbx,
+            cby + 2
+          ]
+        ], tl: /* [] */0}}};
+      }
+    case 5 :
+      return {hd: [
+        3,
+        [
+          cbx,
+          cby
+        ]
+      ], tl: /* [] */0};
     default:
       return Pervasives.failwith("Shouldn't reach here");
   }
@@ -2989,10 +2806,7 @@ function generate_enemies(blockw, blockh, _cbx, _cby, acc) {
           cby * 16
         ]
       ];
-      let enemy = {
-        hd: enemy_0,
-        tl: /* [] */0
-      };
+      let enemy = {hd: enemy_0, tl: /* [] */0};
       return Stdlib_List.concat(enemy, generate_enemies(blockw, blockh, cbx, cby + 1, acc));
     }
     _cby = cby + 1;
@@ -3013,16 +2827,13 @@ function generate_block_enemies(_block_coord) {
     if (place_enemy === 0) {
       let xc = h[1][0];
       let yc = h[1][1];
-      return Stdlib_List.concat({
-        hd: [
-          enemy_typ,
-          [
-            xc,
-            yc - 16
-          ]
-        ],
-        tl: /* [] */0
-      }, generate_block_enemies(t));
+      return Stdlib_List.concat({hd: [
+        enemy_typ,
+        [
+          xc,
+          yc - 16
+        ]
+      ], tl: /* [] */0}, generate_block_enemies(t));
     }
     _block_coord = t;
     continue;
@@ -3082,16 +2893,13 @@ function generate_ground(blockw, blockh, _inc, _acc) {
     }
     if (inc > 10) {
       let skip = int(10);
-      let newacc = Stdlib_List.concat(acc, {
-        hd: [
-          4,
-          [
-            inc * 16,
-            blockh * 16
-          ]
-        ],
-        tl: /* [] */0
-      });
+      let newacc = Stdlib_List.concat(acc, {hd: [
+        4,
+        [
+          inc * 16,
+          blockh * 16
+        ]
+      ], tl: /* [] */0});
       if (skip === 7 && blockw - inc > 32) {
         _inc = inc + 1;
         continue;
@@ -3100,16 +2908,13 @@ function generate_ground(blockw, blockh, _inc, _acc) {
       _inc = inc + 1;
       continue;
     }
-    let newacc$1 = Stdlib_List.concat(acc, {
-      hd: [
-        4,
-        [
-          inc * 16,
-          blockh * 16
-        ]
-      ],
-      tl: /* [] */0
-    });
+    let newacc$1 = Stdlib_List.concat(acc, {hd: [
+      4,
+      [
+        inc * 16,
+        blockh * 16
+      ]
+    ], tl: /* [] */0});
     _acc = newacc$1;
     _inc = inc + 1;
     continue;
@@ -3126,10 +2931,7 @@ function convert_to_block_obj(lst, context) {
     TAG: "SBlock",
     _0: sblock_typ
   }, context, h[1]);
-  return Stdlib_List.concat({
-    hd: ob,
-    tl: /* [] */0
-  }, convert_to_block_obj(lst.tl, context));
+  return Stdlib_List.concat({hd: ob, tl: /* [] */0}, convert_to_block_obj(lst.tl, context));
 }
 
 function convert_to_enemy_obj(lst, context) {
@@ -3142,10 +2944,7 @@ function convert_to_enemy_obj(lst, context) {
     TAG: "SEnemy",
     _0: senemy_typ
   }, context, h[1]);
-  return Stdlib_List.concat({
-    hd: ob,
-    tl: /* [] */0
-  }, convert_to_enemy_obj(lst.tl, context));
+  return Stdlib_List.concat({hd: ob, tl: /* [] */0}, convert_to_enemy_obj(lst.tl, context));
 }
 
 function convert_to_coin_obj(lst, context) {
@@ -3156,10 +2955,7 @@ function convert_to_coin_obj(lst, context) {
     TAG: "SItem",
     _0: "Coin"
   }, context, lst.hd[1]);
-  return Stdlib_List.concat({
-    hd: ob,
-    tl: /* [] */0
-  }, convert_to_coin_obj(lst.tl, context));
+  return Stdlib_List.concat({hd: ob, tl: /* [] */0}, convert_to_coin_obj(lst.tl, context));
 }
 
 function generate_helper(blockw, blockh, cx, cy, context) {
@@ -3180,10 +2976,7 @@ function generate_helper(blockw, blockh, cx, cy, context) {
   let obj_enemy_blocks = convert_to_enemy_obj(undup_enemy_block_locs, context);
   let coin_objects = convert_to_coin_obj(undup_coin_locs, context);
   let obj_panel = generate_panel(context, blockw, blockh);
-  return Stdlib_List.concat(all_blocks, Stdlib_List.concat(obj_converted_enemies, Stdlib_List.concat(coin_objects, Stdlib_List.concat(obj_enemy_blocks, {
-    hd: obj_panel,
-    tl: /* [] */0
-  }))));
+  return Stdlib_List.concat(all_blocks, Stdlib_List.concat(obj_converted_enemies, Stdlib_List.concat(coin_objects, Stdlib_List.concat(obj_enemy_blocks, {hd: obj_panel, tl: /* [] */0}))));
 }
 
 function generate(w, h, context) {
@@ -3239,19 +3032,7 @@ function inc_counter(param) {
 }
 
 function preload(param) {
-  return Stdlib_List.map({
-    hd: "blocks.png",
-    tl: {
-      hd: "items.png",
-      tl: {
-        hd: "enemies.png",
-        tl: {
-          hd: "mario-small.png",
-          tl: /* [] */0
-        }
-      }
-    }
-  }, img_src => {
+  return Stdlib_List.map({hd: "blocks.png", tl: {hd: "items.png", tl: {hd: "enemies.png", tl: {hd: "mario-small.png", tl: /* [] */0}}}}, img_src => {
     let img_src$1 = "sprites/" + img_src;
     let img = document.createElement("img");
     img.src = img_src$1;

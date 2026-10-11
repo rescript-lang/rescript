@@ -24,13 +24,10 @@ function mk(window, $$default) {
 }
 
 function mk2(window, $$default) {
-  return {
-    hd: {
-      window: window,
-      default: $$default
-    },
-    tl: /* [] */0
-  };
+  return {hd: {
+    window: window,
+    default: $$default
+  }, tl: /* [] */0};
 }
 
 function des(v) {

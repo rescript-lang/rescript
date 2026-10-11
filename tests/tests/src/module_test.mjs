@@ -9,13 +9,7 @@ function length(param) {
 }
 
 Mocha.describe("Module_test", () => {
-  Mocha.test("list_length", () => Test_utils.eq("File \"module_test.res\", line 8, characters 31-38", 2, Stdlib_List.length({
-    hd: 1,
-    tl: {
-      hd: 2,
-      tl: /* [] */0
-    }
-  })));
+  Mocha.test("list_length", () => Test_utils.eq("File \"module_test.res\", line 8, characters 31-38", 2, Stdlib_List.length({hd: 1, tl: {hd: 2, tl: /* [] */0}})));
   Mocha.test("length", () => Test_utils.eq("File \"module_test.res\", line 9, characters 26-33", 3, 3));
 });
 

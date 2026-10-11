@@ -83,19 +83,7 @@ Mocha.describe("record_debug_test.res", () => {
   ]));
 });
 
-let h = {
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: {
-        hd: 4,
-        tl: /* [] */0
-      }
-    }
-  }
-};
+let h = {hd: 1, tl: {hd: 2, tl: {hd: 3, tl: {hd: 4, tl: /* [] */0}}}};
 
 let v2 = {
   NAME: "C",

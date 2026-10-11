@@ -38,13 +38,7 @@ let f = Primitive_object.equal;
 
 Mocha.describe("Block_alias_test", () => {
   Mocha.test("block_alias_tests", () => {
-    Test_utils.eq("File \"block_alias_test.res\", line 28, characters 7-14", Stdlib_List.length({
-      hd: 1,
-      tl: {
-        hd: 2,
-        tl: /* [] */0
-      }
-    }), 2);
+    Test_utils.eq("File \"block_alias_test.res\", line 28, characters 7-14", Stdlib_List.length({hd: 1, tl: {hd: 2, tl: /* [] */0}}), 2);
     Test_utils.ok("File \"block_alias_test.res\", line 29, characters 7-14", Primitive_object.equal(v0, {
       TAG: "A",
       _0: 0,

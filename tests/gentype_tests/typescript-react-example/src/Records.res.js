@@ -20,20 +20,11 @@ function coord2d(x, y) {
 let getOpt = Belt_Option.mapWithDefault;
 
 function findAddress(business) {
-  return Belt_Option.mapWithDefault(business.address, /* [] */0, a => ({
-    hd: a,
-    tl: /* [] */0
-  }));
+  return Belt_Option.mapWithDefault(business.address, /* [] */0, a => ({hd: a, tl: /* [] */0}));
 }
 
 function findAllAddresses(businesses) {
-  return Belt_List.toArray(Belt_List.flatten(Belt_List.fromArray(Belt_Array.map(businesses, business => Belt_List.concat(Belt_Option.mapWithDefault(business.address, /* [] */0, a => ({
-    hd: a,
-    tl: /* [] */0
-  })), Belt_Option.mapWithDefault(business.owner, /* [] */0, p => Belt_Option.mapWithDefault(p.address, /* [] */0, a => ({
-    hd: a,
-    tl: /* [] */0
-  }))))))));
+  return Belt_List.toArray(Belt_List.flatten(Belt_List.fromArray(Belt_Array.map(businesses, business => Belt_List.concat(Belt_Option.mapWithDefault(business.address, /* [] */0, a => ({hd: a, tl: /* [] */0})), Belt_Option.mapWithDefault(business.owner, /* [] */0, p => Belt_Option.mapWithDefault(p.address, /* [] */0, a => ({hd: a, tl: /* [] */0}))))))));
 }
 
 function getPayload(param) {
@@ -63,10 +54,7 @@ function getPayloadRecordPlusOne(param) {
 }
 
 function findAddress2(business) {
-  return Belt_Option.mapWithDefault(Primitive_option.fromNullable(business.address2), /* [] */0, a => ({
-    hd: a,
-    tl: /* [] */0
-  }));
+  return Belt_Option.mapWithDefault(Primitive_option.fromNullable(business.address2), /* [] */0, a => ({hd: a, tl: /* [] */0}));
 }
 
 function computeArea3(o) {
