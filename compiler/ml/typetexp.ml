@@ -144,8 +144,7 @@ let find_modtype env loc lid =
   Builtin_attributes.check_deprecated loc decl.mtd_attributes (Path.name path);
   r
 
-let unbound_constructor_error ?from_type env lid =
-  ignore from_type;
+let unbound_constructor_error ?from_type:_ env lid =
   narrow_unbound_lid_error env lid.loc lid.txt (fun lid ->
       Unbound_constructor lid)
 

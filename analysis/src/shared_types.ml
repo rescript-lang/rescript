@@ -191,8 +191,6 @@ module Stamps : sig
   val iter_values : (int -> Types.type_expr Declared.t -> unit) -> t -> unit
   val get_entries : t -> (int * kind) list
 end = struct
-  type 't stamp_map = (int, 't Declared.t) Hashtbl.t
-
   type kind =
     | KType of Type.t Declared.t
     | KValue of Types.type_expr Declared.t

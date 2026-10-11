@@ -754,7 +754,6 @@ let file_for_cmt_infos ~module_name ~uri
   | Interface signature ->
     let structure = for_signature ~name:module_name ~env signature.sig_items in
     {uri; module_name = cmt_modname; stamps = env.stamps; structure}
-  | _ -> File.create module_name uri
 
 let file_for_cmt ~state ~module_name ~cmt ~uri =
   match Hashtbl.find_opt state.cmt_cache cmt with

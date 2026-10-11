@@ -1543,14 +1543,17 @@ let compile output_prefix =
       *)
       let ap_func = appinfo.ap_func in
       let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
-      let[@warning "-8" (* non-exhaustive pattern*)] args_code, fn_code :: args
-          =
-        Ext_list.fold_right (ap_func :: appinfo.ap_args) ([], [])
-          (fun x (args_code, fn_code) ->
-            match compile_lambda new_cxt x with
-            | {block; value = Some b} ->
-              (Ext_list.append block args_code, b :: fn_code)
-            | {value = None} -> assert false)
+      let args_code, fn_code, args =
+        match
+          Ext_list.fold_right (ap_func :: appinfo.ap_args) ([], [])
+            (fun x (args_code, fn_code) ->
+              match compile_lambda new_cxt x with
+              | {block; value = Some b} ->
+                (Ext_list.append block args_code, b :: fn_code)
+              | {value = None} -> assert false)
+        with
+        | args_code, fn_code :: args -> (args_code, fn_code, args)
+        | _, [] -> assert false
       in
       match (ap_func, lambda_cxt.continuation) with
       | ( Lvar fn_id,
@@ -1716,7 +1719,7 @@ let compile output_prefix =
         | Some (obj_code, obj) ->
           cont obj_block arg_block (Some obj_code)
             (E.seq (E.assign (E.dot (E.var obj) property) value) E.unit)))
-    | {primitive = Pjs_object_get _ | Pjs_object_set _; args} -> assert false
+    | {primitive = Pjs_object_get _ | Pjs_object_set _} -> assert false
     | {primitive = Pjs_fn_method; args = args_lambda} -> (
       match args_lambda with
       | [Lfunction {params; body; attr = {return_unit; async}; loc}] ->

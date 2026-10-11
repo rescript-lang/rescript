@@ -12,12 +12,10 @@ end)
 
 (** {2 Types} *)
 
-type t = {
-  files: String_set.t;
+type builder = {
+  mutable files: String_set.t;
   deps: String_set.t File_hash.t; (* from_file -> set of to_files *)
 }
-
-type builder = {mutable files: String_set.t; deps: String_set.t File_hash.t}
 
 (** {2 Builder API} *)
 

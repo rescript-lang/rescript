@@ -503,7 +503,7 @@ let import_source_of_arg (arg : Typedtree.expression) : Lambda.import_source =
     match module_path me with
     | Some path -> of_global_path ~is_module:true arg.exp_loc me.mod_env path
     | None -> unsupported arg.exp_loc)
-  | Texp_ident (_, _, {val_kind = Val_prim ({prim_kind; prim_name} as p)}) -> (
+  | Texp_ident (_, _, {val_kind = Val_prim {prim_kind; prim_name}}) -> (
     match prim_kind with
     | Kind_external
         (Ffi_bs (_, _, {kind = Decl_val {name}; module_; scopes; _})) -> (
@@ -522,9 +522,7 @@ let import_source_of_arg (arg : Typedtree.expression) : Lambda.import_source =
               };
             path = [];
           }
-      | None ->
-        ignore p;
-        unsupported arg.exp_loc)
+      | None -> unsupported arg.exp_loc)
     | _ -> unsupported arg.exp_loc)
   | Texp_ident (path, _, _) -> of_global_path arg.exp_loc arg.exp_env path
   | _ -> unsupported arg.exp_loc
