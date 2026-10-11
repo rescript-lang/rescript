@@ -344,7 +344,11 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types ~(prim_name : string)
     | self :: args ->
       (* PR2162 [self_type] more checks in syntax:
          - should not be [@as] *)
-      let[@warning "-8"] (_self_type :: arg_types) = arg_types in
+      let arg_types =
+        match arg_types with
+        | _self_type :: arg_types -> arg_types
+        | [] -> assert false
+      in
       if splice then
         let args, eff, dynamic = assemble_args_has_splice arg_types args in
         let args = if dynamic then E.variadic_args args else args in

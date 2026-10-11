@@ -204,10 +204,7 @@ function stackAllLeft(_v, _s) {
     if (v === undefined) {
       return s;
     }
-    _s = {
-      hd: v,
-      tl: s
-    };
+    _s = {hd: v, tl: s};
     _v = v.l;
     continue;
   };
@@ -488,13 +485,10 @@ function toListAux(_n, _accu) {
     let v = n.v;
     let l = n.l;
     let r = n.r;
-    _accu = {
-      hd: [
-        k,
-        v
-      ],
-      tl: toListAux(r, accu)
-    };
+    _accu = {hd: [
+      k,
+      v
+    ], tl: toListAux(r, accu)};
     _n = l;
     continue;
   };

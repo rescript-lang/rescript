@@ -43,7 +43,7 @@ let input_cmt_translate_type_declarations ~config ~output_file_relative
       }
       |> Translate_signature.translate_signature ~config ~output_file_relative
            ~resolver ~type_env
-    | Packed _ | Partial_implementation _ | Partial_interface _ -> []
+    | Partial_implementation _ | Partial_interface _ -> []
   in
   translations |> Translation.combine
   |> Translation.add_type_declarations_from_module_equations ~type_env

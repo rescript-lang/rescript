@@ -1,12 +1,12 @@
 /* Avoid @val shadowing: `let process = X.process` must not read itself.
-   The initializer should compile to `globalThis.process`, while other
-   uses of the external stay as plain `process`. */
+   The toplevel `process` binding is in scope in the whole module, so every
+   use of the external compiles to `globalThis.process`. */
 module X = {
   @val external process: unknown = "process"
 }
 
 let process = X.process /* expect `globalThis.process` */
-let proc = X.process /* expect plain `process` */
+let proc = X.process /* expect `globalThis.process` */
 
 /* @new does not have the same shadowing issue because it uses `new URL(...)`. */
 module New = {

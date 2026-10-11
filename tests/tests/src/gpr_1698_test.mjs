@@ -175,25 +175,19 @@ function compare(context, state, _a, _b) {
 
 let a = {
   TAG: "Sum",
-  _0: {
-    hd: {
-      TAG: "Val",
-      _0: {
-        TAG: "Symbol",
-        _0: "a"
-      }
-    },
-    tl: {
-      hd: {
-        TAG: "Val",
-        _0: {
-          TAG: "Natural",
-          _0: 2
-        }
-      },
-      tl: /* [] */0
+  _0: {hd: {
+    TAG: "Val",
+    _0: {
+      TAG: "Symbol",
+      _0: "a"
     }
-  }
+  }, tl: {hd: {
+    TAG: "Val",
+    _0: {
+      TAG: "Natural",
+      _0: 2
+    }
+  }, tl: /* [] */0}}
 };
 
 let b = {

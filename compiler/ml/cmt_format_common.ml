@@ -21,7 +21,6 @@
 open Typedtree
 
 type binary_annots =
-  | Packed of Types.signature * string list
   | Implementation of structure
   | Interface of signature
   | Partial_implementation of binary_part array
@@ -32,7 +31,6 @@ and binary_part =
   | Partial_structure_item of structure_item
   | Partial_expression of expression
   | Partial_pattern of pattern
-  | Partial_class_expr of unit
   | Partial_signature of signature
   | Partial_signature_item of signature_item
   | Partial_module_type of module_type
@@ -86,7 +84,6 @@ let clear_part = function
     Partial_structure_item (cenv.structure_item cenv s)
   | Partial_expression e -> Partial_expression (cenv.expr cenv e)
   | Partial_pattern p -> Partial_pattern (cenv.pat cenv p)
-  | Partial_class_expr () -> assert false
   | Partial_signature s -> Partial_signature (cenv.signature cenv s)
   | Partial_signature_item s ->
     Partial_signature_item (cenv.signature_item cenv s)
@@ -97,7 +94,6 @@ let clear_env binary_annots =
     match binary_annots with
     | Implementation s -> Implementation (cenv.structure cenv s)
     | Interface s -> Interface (cenv.signature cenv s)
-    | Packed _ -> binary_annots
     | Partial_implementation array ->
       Partial_implementation (Array.map clear_part array)
     | Partial_interface array -> Partial_interface (Array.map clear_part array)

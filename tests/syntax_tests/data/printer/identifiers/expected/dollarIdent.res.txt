@@ -1,0 +1,8 @@
+let count$ = signal(0)
+let $count = count$ + 1
+let record$ = {count$, $count}
+let access = record$.count$ + record$.$count
+let _$ = 1
+let _$x = _$ + 1
+let underscore = (~_$) => _$
+let tag = #_$

@@ -22,9 +22,15 @@
 
 #### :rocket: New Feature
 
+- Allow `$` in identifiers, e.g. `let count$ = signal(0)`. https://github.com/rescript-lang/rescript/pull/8791
+
 #### :bug: Bug fix
 
 - Fix parser recovery and editor completion when a record or dict value is missing before a comma, e.g. `{a: , b: 1}`. https://github.com/rescript-lang/rescript/pull/8779
+- Derive module names from file names consistently, fixing files like `Button.test.res` that could not reference `Button`, and `.res`/`.resi` pairs with dotted or non-ASCII names. https://github.com/rescript-lang/rescript/pull/8797
+- Fix references to a `@val` global reading a binding with the same name, e.g. a toplevel `let` declared before them. https://github.com/rescript-lang/rescript/pull/8785
+- Evaluate the unused arguments of an inlined function call in parameter order. https://github.com/rescript-lang/rescript/pull/8786
+- Fix shadowed variables in generated JS colliding with identifiers or external names containing `$`. https://github.com/rescript-lang/rescript/pull/8778
 - Fix editor completion of values from modules included with `include await M`. https://github.com/rescript-lang/rescript/pull/8770
 - Fix editor completion inside dict literals and dict patterns, which suggested untyped values. https://github.com/rescript-lang/rescript/pull/8770
 - Report the required Node.js version 22 when the platform package can't be found. https://github.com/rescript-lang/rescript/pull/8770
@@ -52,12 +58,17 @@
 
 #### :nail_care: Polish
 
+- Print list literals with one list cell per line, so their output no longer grows quadratically with their length. https://github.com/rescript-lang/rescript/pull/8794
 - Compile dict spreads to object spread syntax instead of `Object.assign`. https://github.com/rescript-lang/rescript/pull/8747
 - Make compilation slightly faster and stop rewatch from copying files twice for modules with an interface. https://github.com/rescript-lang/rescript/pull/8769
 - Speed up inlining decisions for large functions. https://github.com/rescript-lang/rescript/pull/8771
 - Speed up the rewriting of JS globals shadowed by local bindings in nested functions. https://github.com/rescript-lang/rescript/pull/8772
 - Speed up dead code elimination of toplevel bindings in large modules. https://github.com/rescript-lang/rescript/pull/8773
 - Make .cmt and .cmti files smaller by no longer embedding a copy of the .cmi. https://github.com/rescript-lang/rescript/pull/8774
+- Use the OCaml standard library's hash tables in the compiler. https://github.com/rescript-lang/rescript/pull/8786
+- Use the OCaml standard library's hash tables for the compiler's hash sets, and always order the imports of a module used both with and without `default` the same way. https://github.com/rescript-lang/rescript/pull/8787
+- Use the OCaml standard library's sets in the compiler. https://github.com/rescript-lang/rescript/pull/8789
+- Use the OCaml standard library's maps in the compiler. https://github.com/rescript-lang/rescript/pull/8790
 - Represent explicit expression braces as `Pexp_braces` in parsetree v1 and format `else` branches consistently with `if` branches. https://github.com/rescript-lang/rescript/pull/8678
 - Omit redundant braces around multi-statement switch case bodies when formatting. https://github.com/rescript-lang/rescript/pull/8677
 - Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662
@@ -66,6 +77,8 @@
 
 #### :house: Internal
 
+- Use one set of OCaml warning flags for the whole repository, including the editor analysis and tools. https://github.com/rescript-lang/rescript/pull/8796
+- Remove the unused `Packed` and `Partial_class_expr` constructors from the `.cmt` format and bump its magic number. https://github.com/rescript-lang/rescript/pull/8793
 - Make `dict` an abstract type instead of a record with a hidden field. https://github.com/rescript-lang/rescript/pull/8752
 - Remove dead code from the compiler and rewatch. https://github.com/rescript-lang/rescript/pull/8756
 - Represent dict patterns with a dedicated `Tpat_dict` typed tree node. https://github.com/rescript-lang/rescript/pull/8751
@@ -82,6 +95,7 @@
 - Remove the unused `pat_record_label` alias from the current parsetree. https://github.com/rescript-lang/rescript/pull/8684
 - Remove the unused `Ppat_open` and `Tpat_open` AST nodes, with current-AST and CMT format bumps. https://github.com/rescript-lang/rescript/pull/8682
 - Represent ternary expressions with a dedicated parsetree node. https://github.com/rescript-lang/rescript/pull/8674
+- Remove the compiler's own growable vector (`Vec`) in favor of plain arrays. https://github.com/rescript-lang/rescript/pull/8784
 
 # 13.0.0-alpha.6
 

@@ -17,48 +17,9 @@ try {
 Mocha.describe("Caml_compare_test", () => {
   Mocha.test("option compare 1", () => Test_utils.eq("File \"caml_compare_test.res\", line 14, characters 7-14", true, Primitive_object.lessthan(undefined, 1)));
   Mocha.test("option compare 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 18, characters 7-14", true, Primitive_object.lessthan(1, 2)));
-  Mocha.test("list compare 1", () => Test_utils.eq("File \"caml_compare_test.res\", line 22, characters 7-14", true, Primitive_object.greaterthan({
-    hd: 1,
-    tl: /* [] */0
-  }, /* [] */0)));
-  Mocha.test("list equal", () => Test_utils.eq("File \"caml_compare_test.res\", line 26, characters 7-14", true, Primitive_object.equal({
-    hd: 1,
-    tl: {
-      hd: 2,
-      tl: {
-        hd: 3,
-        tl: /* [] */0
-      }
-    }
-  }, {
-    hd: 1,
-    tl: {
-      hd: 2,
-      tl: {
-        hd: 3,
-        tl: /* [] */0
-      }
-    }
-  })));
-  Mocha.test("list not equal", () => Test_utils.eq("File \"caml_compare_test.res\", line 30, characters 7-14", true, Primitive_object.greaterthan({
-    hd: 1,
-    tl: {
-      hd: 2,
-      tl: {
-        hd: 3,
-        tl: /* [] */0
-      }
-    }
-  }, {
-    hd: 1,
-    tl: {
-      hd: 2,
-      tl: {
-        hd: 2,
-        tl: /* [] */0
-      }
-    }
-  })));
+  Mocha.test("list compare 1", () => Test_utils.eq("File \"caml_compare_test.res\", line 22, characters 7-14", true, Primitive_object.greaterthan({hd: 1, tl: /* [] */0}, /* [] */0)));
+  Mocha.test("list equal", () => Test_utils.eq("File \"caml_compare_test.res\", line 26, characters 7-14", true, Primitive_object.equal({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}, {hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}})));
+  Mocha.test("list not equal", () => Test_utils.eq("File \"caml_compare_test.res\", line 30, characters 7-14", true, Primitive_object.greaterthan({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}, {hd: 1, tl: {hd: 2, tl: {hd: 2, tl: /* [] */0}}})));
   Mocha.test("custom variant compare", () => Test_utils.eq("File \"caml_compare_test.res\", line 34, characters 7-14", true, Primitive_object.greaterthan([
     {
       TAG: "A",
@@ -126,254 +87,14 @@ Mocha.describe("Caml_compare_test", () => {
     1,
     30
   ], undefined)));
-  Mocha.test("list compare long", () => Test_utils.eq("File \"caml_compare_test.res\", line 54, characters 7-14", true, Primitive_object.lessthan({
-    hd: 2,
-    tl: {
-      hd: 6,
-      tl: {
-        hd: 1,
-        tl: {
-          hd: 1,
-          tl: {
-            hd: 2,
-            tl: {
-              hd: 1,
-              tl: {
-                hd: 4,
-                tl: {
-                  hd: 2,
-                  tl: {
-                    hd: 1,
-                    tl: /* [] */0
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }, {
-    hd: 2,
-    tl: {
-      hd: 6,
-      tl: {
-        hd: 1,
-        tl: {
-          hd: 1,
-          tl: {
-            hd: 2,
-            tl: {
-              hd: 1,
-              tl: {
-                hd: 4,
-                tl: {
-                  hd: 2,
-                  tl: {
-                    hd: 1,
-                    tl: {
-                      hd: 409,
-                      tl: /* [] */0
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  })));
-  Mocha.test("list compare short", () => Test_utils.eq("File \"caml_compare_test.res\", line 58, characters 7-14", true, Primitive_object.lessthan({
-    hd: 1,
-    tl: /* [] */0
-  }, {
-    hd: 1,
-    tl: {
-      hd: 409,
-      tl: /* [] */0
-    }
-  })));
-  Mocha.test("list compare empty", () => Test_utils.eq("File \"caml_compare_test.res\", line 62, characters 7-14", true, Primitive_object.lessthan(/* [] */0, {
-    hd: 409,
-    tl: /* [] */0
-  })));
-  Mocha.test("list compare long 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 66, characters 7-14", true, Primitive_object.greaterthan({
-    hd: 2,
-    tl: {
-      hd: 6,
-      tl: {
-        hd: 1,
-        tl: {
-          hd: 1,
-          tl: {
-            hd: 2,
-            tl: {
-              hd: 1,
-              tl: {
-                hd: 4,
-                tl: {
-                  hd: 2,
-                  tl: {
-                    hd: 1,
-                    tl: {
-                      hd: 409,
-                      tl: /* [] */0
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }, {
-    hd: 2,
-    tl: {
-      hd: 6,
-      tl: {
-        hd: 1,
-        tl: {
-          hd: 1,
-          tl: {
-            hd: 2,
-            tl: {
-              hd: 1,
-              tl: {
-                hd: 4,
-                tl: {
-                  hd: 2,
-                  tl: {
-                    hd: 1,
-                    tl: /* [] */0
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  })));
+  Mocha.test("list compare long", () => Test_utils.eq("File \"caml_compare_test.res\", line 54, characters 7-14", true, Primitive_object.lessthan({hd: 2, tl: {hd: 6, tl: {hd: 1, tl: {hd: 1, tl: {hd: 2, tl: {hd: 1, tl: {hd: 4, tl: {hd: 2, tl: {hd: 1, tl: /* [] */0}}}}}}}}}, {hd: 2, tl: {hd: 6, tl: {hd: 1, tl: {hd: 1, tl: {hd: 2, tl: {hd: 1, tl: {hd: 4, tl: {hd: 2, tl: {hd: 1, tl: {hd: 409, tl: /* [] */0}}}}}}}}}})));
+  Mocha.test("list compare short", () => Test_utils.eq("File \"caml_compare_test.res\", line 58, characters 7-14", true, Primitive_object.lessthan({hd: 1, tl: /* [] */0}, {hd: 1, tl: {hd: 409, tl: /* [] */0}})));
+  Mocha.test("list compare empty", () => Test_utils.eq("File \"caml_compare_test.res\", line 62, characters 7-14", true, Primitive_object.lessthan(/* [] */0, {hd: 409, tl: /* [] */0})));
+  Mocha.test("list compare long 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 66, characters 7-14", true, Primitive_object.greaterthan({hd: 2, tl: {hd: 6, tl: {hd: 1, tl: {hd: 1, tl: {hd: 2, tl: {hd: 1, tl: {hd: 4, tl: {hd: 2, tl: {hd: 1, tl: {hd: 409, tl: /* [] */0}}}}}}}}}}, {hd: 2, tl: {hd: 6, tl: {hd: 1, tl: {hd: 1, tl: {hd: 2, tl: {hd: 1, tl: {hd: 4, tl: {hd: 2, tl: {hd: 1, tl: /* [] */0}}}}}}}}})));
   Mocha.test("option not equal 1", () => Test_utils.eq("File \"caml_compare_test.res\", line 70, characters 7-14", false, false));
   Mocha.test("option not equal 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 74, characters 7-14", false, false));
-  Mocha.test("list not equal long", () => Test_utils.eq("File \"caml_compare_test.res\", line 78, characters 7-14", false, Primitive_object.equal({
-    hd: 2,
-    tl: {
-      hd: 6,
-      tl: {
-        hd: 1,
-        tl: {
-          hd: 1,
-          tl: {
-            hd: 2,
-            tl: {
-              hd: 1,
-              tl: {
-                hd: 4,
-                tl: {
-                  hd: 2,
-                  tl: {
-                    hd: 1,
-                    tl: /* [] */0
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }, {
-    hd: 2,
-    tl: {
-      hd: 6,
-      tl: {
-        hd: 1,
-        tl: {
-          hd: 1,
-          tl: {
-            hd: 2,
-            tl: {
-              hd: 1,
-              tl: {
-                hd: 4,
-                tl: {
-                  hd: 2,
-                  tl: {
-                    hd: 1,
-                    tl: {
-                      hd: 409,
-                      tl: /* [] */0
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  })));
-  Mocha.test("list not equal long 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 82, characters 7-14", false, Primitive_object.equal({
-    hd: 2,
-    tl: {
-      hd: 6,
-      tl: {
-        hd: 1,
-        tl: {
-          hd: 1,
-          tl: {
-            hd: 2,
-            tl: {
-              hd: 1,
-              tl: {
-                hd: 4,
-                tl: {
-                  hd: 2,
-                  tl: {
-                    hd: 1,
-                    tl: {
-                      hd: 409,
-                      tl: /* [] */0
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }, {
-    hd: 2,
-    tl: {
-      hd: 6,
-      tl: {
-        hd: 1,
-        tl: {
-          hd: 1,
-          tl: {
-            hd: 2,
-            tl: {
-              hd: 1,
-              tl: {
-                hd: 4,
-                tl: {
-                  hd: 2,
-                  tl: {
-                    hd: 1,
-                    tl: /* [] */0
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  })));
+  Mocha.test("list not equal long", () => Test_utils.eq("File \"caml_compare_test.res\", line 78, characters 7-14", false, Primitive_object.equal({hd: 2, tl: {hd: 6, tl: {hd: 1, tl: {hd: 1, tl: {hd: 2, tl: {hd: 1, tl: {hd: 4, tl: {hd: 2, tl: {hd: 1, tl: /* [] */0}}}}}}}}}, {hd: 2, tl: {hd: 6, tl: {hd: 1, tl: {hd: 1, tl: {hd: 2, tl: {hd: 1, tl: {hd: 4, tl: {hd: 2, tl: {hd: 1, tl: {hd: 409, tl: /* [] */0}}}}}}}}}})));
+  Mocha.test("list not equal long 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 82, characters 7-14", false, Primitive_object.equal({hd: 2, tl: {hd: 6, tl: {hd: 1, tl: {hd: 1, tl: {hd: 2, tl: {hd: 1, tl: {hd: 4, tl: {hd: 2, tl: {hd: 1, tl: {hd: 409, tl: /* [] */0}}}}}}}}}}, {hd: 2, tl: {hd: 6, tl: {hd: 1, tl: {hd: 1, tl: {hd: 2, tl: {hd: 1, tl: {hd: 4, tl: {hd: 2, tl: {hd: 1, tl: /* [] */0}}}}}}}}})));
   Mocha.test("object compare id", () => Test_utils.eq("File \"caml_compare_test.res\", line 86, characters 7-14", Primitive_object.compare({
     x: 1,
     y: 2
@@ -416,49 +137,25 @@ Mocha.describe("Caml_compare_test", () => {
     x: 0,
     y: 1
   }), 1));
-  Mocha.test("object compare in list", () => Test_utils.eq("File \"caml_compare_test.res\", line 126, characters 7-14", Primitive_object.compare({
-    hd: {
-      x: 1
-    },
-    tl: /* [] */0
-  }, {
-    hd: {
-      x: 2
-    },
-    tl: /* [] */0
-  }), -1));
-  Mocha.test("object compare in list 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 130, characters 7-14", Primitive_object.compare({
-    hd: {
-      x: 2
-    },
-    tl: /* [] */0
-  }, {
-    hd: {
-      x: 1
-    },
-    tl: /* [] */0
-  }), 1));
+  Mocha.test("object compare in list", () => Test_utils.eq("File \"caml_compare_test.res\", line 126, characters 7-14", Primitive_object.compare({hd: {
+    x: 1
+  }, tl: /* [] */0}, {hd: {
+    x: 2
+  }, tl: /* [] */0}), -1));
+  Mocha.test("object compare in list 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 130, characters 7-14", Primitive_object.compare({hd: {
+    x: 2
+  }, tl: /* [] */0}, {hd: {
+    x: 1
+  }, tl: /* [] */0}), 1));
   Mocha.test("object compare with list", () => Test_utils.eq("File \"caml_compare_test.res\", line 134, characters 7-14", Primitive_object.compare({
-    x: {
-      hd: 0,
-      tl: /* [] */0
-    }
+    x: {hd: 0, tl: /* [] */0}
   }, {
-    x: {
-      hd: 1,
-      tl: /* [] */0
-    }
+    x: {hd: 1, tl: /* [] */0}
   }), -1));
   Mocha.test("object compare with list 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 138, characters 7-14", Primitive_object.compare({
-    x: {
-      hd: 1,
-      tl: /* [] */0
-    }
+    x: {hd: 1, tl: /* [] */0}
   }, {
-    x: {
-      hd: 0,
-      tl: /* [] */0
-    }
+    x: {hd: 0, tl: /* [] */0}
   }), 1));
   Mocha.test("object equal id", () => Test_utils.ok("File \"caml_compare_test.res\", line 142, characters 7-14", Primitive_object.equal({
     x: 1,
@@ -488,68 +185,35 @@ Mocha.describe("Caml_compare_test", () => {
   })));
   Mocha.test("object equal size", () => Test_utils.eq("File \"caml_compare_test.res\", line 166, characters 7-14", Primitive_object.equal({x:1}, {x:1, y:2}), false));
   Mocha.test("object equal size 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 170, characters 7-14", Primitive_object.equal({x:1, y:2}, {x:1}), false));
-  Mocha.test("object equal in list", () => Test_utils.eq("File \"caml_compare_test.res\", line 174, characters 7-14", Primitive_object.equal({
-    hd: {
-      x: 1
-    },
-    tl: /* [] */0
-  }, {
-    hd: {
-      x: 2
-    },
-    tl: /* [] */0
-  }), false));
-  Mocha.test("object equal in list 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 178, characters 7-14", Primitive_object.equal({
-    hd: {
-      x: 2
-    },
-    tl: /* [] */0
-  }, {
-    hd: {
-      x: 2
-    },
-    tl: /* [] */0
-  }), true));
+  Mocha.test("object equal in list", () => Test_utils.eq("File \"caml_compare_test.res\", line 174, characters 7-14", Primitive_object.equal({hd: {
+    x: 1
+  }, tl: /* [] */0}, {hd: {
+    x: 2
+  }, tl: /* [] */0}), false));
+  Mocha.test("object equal in list 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 178, characters 7-14", Primitive_object.equal({hd: {
+    x: 2
+  }, tl: /* [] */0}, {hd: {
+    x: 2
+  }, tl: /* [] */0}), true));
   Mocha.test("object equal with list", () => Test_utils.eq("File \"caml_compare_test.res\", line 182, characters 7-14", Primitive_object.equal({
-    x: {
-      hd: 0,
-      tl: /* [] */0
-    }
+    x: {hd: 0, tl: /* [] */0}
   }, {
-    x: {
-      hd: 0,
-      tl: /* [] */0
-    }
+    x: {hd: 0, tl: /* [] */0}
   }), true));
   Mocha.test("object equal with list 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 186, characters 7-14", Primitive_object.equal({
-    x: {
-      hd: 0,
-      tl: /* [] */0
-    }
+    x: {hd: 0, tl: /* [] */0}
   }, {
-    x: {
-      hd: 1,
-      tl: /* [] */0
-    }
+    x: {hd: 1, tl: /* [] */0}
   }), false));
   Mocha.test("object equal no prototype", () => Test_utils.eq("File \"caml_compare_test.res\", line 191, characters 6-13", Primitive_object.equal({x:1}, ((function(){let o = Object.create(null);o.x = 1;return o;})())), true));
-  Mocha.test("null compare 1", () => Test_utils.eq("File \"caml_compare_test.res\", line 198, characters 7-14", Primitive_object.compare(null, {
-    hd: 3,
-    tl: /* [] */0
-  }), -1));
-  Mocha.test("null compare 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 202, characters 7-14", Primitive_object.compare({
-    hd: 3,
-    tl: /* [] */0
-  }, null), 1));
+  Mocha.test("null compare 1", () => Test_utils.eq("File \"caml_compare_test.res\", line 198, characters 7-14", Primitive_object.compare(null, {hd: 3, tl: /* [] */0}), -1));
+  Mocha.test("null compare 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 202, characters 7-14", Primitive_object.compare({hd: 3, tl: /* [] */0}, null), 1));
   Mocha.test("null compare 3", () => Test_utils.eq("File \"caml_compare_test.res\", line 206, characters 7-14", Primitive_object.compare(null, 0), -1));
   Mocha.test("null compare 4", () => Test_utils.eq("File \"caml_compare_test.res\", line 210, characters 7-14", Primitive_object.compare(0, null), 1));
   Mocha.test("undefined compare 1", () => Test_utils.eq("File \"caml_compare_test.res\", line 214, characters 7-14", Primitive_object.compare(undefined, 0), -1));
   Mocha.test("undefined compare 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 218, characters 7-14", Primitive_object.compare(0, undefined), 1));
   Mocha.test("additional option compare 1", () => Test_utils.eq("File \"caml_compare_test.res\", line 222, characters 7-14", true, Primitive_object.greaterthan(1, undefined)));
-  Mocha.test("additional list compare 1", () => Test_utils.eq("File \"caml_compare_test.res\", line 226, characters 7-14", true, Primitive_object.lessthan(/* [] */0, {
-    hd: 1,
-    tl: /* [] */0
-  })));
+  Mocha.test("additional list compare 1", () => Test_utils.eq("File \"caml_compare_test.res\", line 226, characters 7-14", true, Primitive_object.lessthan(/* [] */0, {hd: 1, tl: /* [] */0})));
   Mocha.test("additional option compare 2", () => Test_utils.eq("File \"caml_compare_test.res\", line 230, characters 7-14", false, Primitive_object.greaterthan(undefined, 1)));
   Mocha.test("additional option compare 3", () => Test_utils.eq("File \"caml_compare_test.res\", line 234, characters 7-14", false, Primitive_object.greaterthan(undefined, [
     1,

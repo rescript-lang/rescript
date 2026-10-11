@@ -6,57 +6,33 @@ import * as Test_utils from "./test_utils.mjs";
 import * as Belt_MapInt from "@rescript/belt/lib/es6/src/Belt_MapInt.mjs";
 import * as Belt_MapString from "@rescript/belt/lib/es6/src/Belt_MapString.mjs";
 
-let m = Belt_List.reduceReverse({
-  hd: [
-    10,
-    /* 'a' */97
-  ],
-  tl: {
-    hd: [
-      3,
-      /* 'b' */98
-    ],
-    tl: {
-      hd: [
-        7,
-        /* 'c' */99
-      ],
-      tl: {
-        hd: [
-          20,
-          /* 'd' */100
-        ],
-        tl: /* [] */0
-      }
-    }
-  }
-}, undefined, (acc, param) => Belt_MapInt.set(acc, param[0], param[1]));
+let m = Belt_List.reduceReverse({hd: [
+  10,
+  /* 'a' */97
+], tl: {hd: [
+  3,
+  /* 'b' */98
+], tl: {hd: [
+  7,
+  /* 'c' */99
+], tl: {hd: [
+  20,
+  /* 'd' */100
+], tl: /* [] */0}}}}, undefined, (acc, param) => Belt_MapInt.set(acc, param[0], param[1]));
 
-let s = Belt_List.reduceReverse({
-  hd: [
-    "10",
-    /* 'a' */97
-  ],
-  tl: {
-    hd: [
-      "3",
-      /* 'b' */98
-    ],
-    tl: {
-      hd: [
-        "7",
-        /* 'c' */99
-      ],
-      tl: {
-        hd: [
-          "20",
-          /* 'd' */100
-        ],
-        tl: /* [] */0
-      }
-    }
-  }
-}, undefined, (acc, param) => Belt_MapString.set(acc, param[0], param[1]));
+let s = Belt_List.reduceReverse({hd: [
+  "10",
+  /* 'a' */97
+], tl: {hd: [
+  "3",
+  /* 'b' */98
+], tl: {hd: [
+  "7",
+  /* 'c' */99
+], tl: {hd: [
+  "20",
+  /* 'd' */100
+], tl: /* [] */0}}}}, undefined, (acc, param) => Belt_MapString.set(acc, param[0], param[1]));
 
 Mocha.describe("Map_find_test", () => {
   Mocha.test("int", () => Test_utils.eq("File \"map_find_test.res\", line 24, characters 7-14", Belt_MapInt.get(m, 10), /* 'a' */97));

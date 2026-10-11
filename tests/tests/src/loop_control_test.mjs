@@ -16,10 +16,7 @@ Mocha.describe("Loop_control_test", () => {
       if (i === 5) {
         break;
       }
-      values = {
-        hd: i,
-        tl: values
-      };
+      values = {hd: i, tl: values};
     };
     Test_utils.eq("File \"loop_control_test.res\", line 23, characters 7-14", [
       1,
@@ -35,10 +32,7 @@ Mocha.describe("Loop_control_test", () => {
       let match = i;
       if (match !== 2) {
         if (match !== 5) {
-          values = {
-            hd: i,
-            tl: values
-          };
+          values = {hd: i, tl: values};
         } else {
           break;
         }
@@ -67,10 +61,7 @@ Mocha.describe("Loop_control_test", () => {
         case "stop" :
           break loop_0;
         default:
-          values = {
-            hd: i,
-            tl: values
-          };
+          values = {hd: i, tl: values};
       }
     };
     Test_utils.eq("File \"loop_control_test.res\", line 64, characters 7-14", [
@@ -88,10 +79,7 @@ Mocha.describe("Loop_control_test", () => {
       if (i === 4) {
         break;
       }
-      values = {
-        hd: i,
-        tl: values
-      };
+      values = {hd: i, tl: values};
     }
     Test_utils.eq("File \"loop_control_test.res\", line 82, characters 7-14", [
       0,
@@ -112,10 +100,7 @@ Mocha.describe("Loop_control_test", () => {
       if (i === 1) {
         continue;
       }
-      values = {
-        hd: i,
-        tl: values
-      };
+      values = {hd: i, tl: values};
     }
     Test_utils.eq("File \"loop_control_test.res\", line 111, characters 7-14", [
       0,
@@ -128,10 +113,7 @@ Mocha.describe("Loop_control_test", () => {
     for (let i = 0; i <= 5; ++i) {
       if (i !== 1) {
         if (i !== 4) {
-          values = {
-            hd: i,
-            tl: values
-          };
+          values = {hd: i, tl: values};
         } else {
           break;
         }
@@ -157,10 +139,7 @@ Mocha.describe("Loop_control_test", () => {
         case "stop" :
           break loop_1;
         default:
-          values = {
-            hd: i,
-            tl: values
-          };
+          values = {hd: i, tl: values};
       }
     }
     Test_utils.eq("File \"loop_control_test.res\", line 146, characters 7-14", [
@@ -185,10 +164,7 @@ Mocha.describe("Loop_control_test", () => {
       if (i === 4) {
         break;
       }
-      values = {
-        hd: i,
-        tl: values
-      };
+      values = {hd: i, tl: values};
     }
     Test_utils.eq("File \"loop_control_test.res\", line 164, characters 7-14", [
       0,
@@ -208,10 +184,7 @@ Mocha.describe("Loop_control_test", () => {
       ]) {
       if (i !== 1) {
         if (i !== 4) {
-          values = {
-            hd: i,
-            tl: values
-          };
+          values = {hd: i, tl: values};
         } else {
           break;
         }
@@ -244,10 +217,7 @@ Mocha.describe("Loop_control_test", () => {
         case "stop" :
           break loop_2;
         default:
-          values = {
-            hd: i,
-            tl: values
-          };
+          values = {hd: i, tl: values};
       }
     }
     Test_utils.eq("File \"loop_control_test.res\", line 199, characters 7-14", [

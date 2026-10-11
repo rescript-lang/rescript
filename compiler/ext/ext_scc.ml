@@ -22,42 +22,33 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type node = Vec_int.t
-
-(** 
-   [int] as data for this algorithm
-   Pros:
-   1. Easy to eoncode algorithm (especially given that the capacity of node is known)
-   2. Algorithms itself are much more efficient
-   3. Node comparison semantics is clear
-   4. Easy to print output
-   Cons:
-   1. post processing input data  
-*)
 let min_int (x : int) y = if x < y then x else y
 
-let graph e =
+(* Tarjan's algorithm. Every node is pushed on the stack exactly once, so a
+   fixed array of [Array.length e] elements is enough for it. *)
+let graph (e : int array array) : int array list =
+  let node_count = Array.length e in
   let index = ref 0 in
-  let s = Vec_int.empty () in
+  let stack = Array.make node_count 0 in
+  let stack_len = ref 0 in
+  (* components in the order they are found, newest first *)
+  let output = ref [] in
 
-  let output = Int_vec_vec.empty () in
-  (* collect output *)
-  let node_numes = Array.length e in
-
-  let on_stack_array = Array.make node_numes false in
-  let index_array = Array.make node_numes (-1) in
-  let lowlink_array = Array.make node_numes (-1) in
+  let on_stack_array = Array.make node_count false in
+  let index_array = Array.make node_count (-1) in
+  let lowlink_array = Array.make node_count (-1) in
 
   let rec scc v_data =
     let new_index = !index + 1 in
     index := new_index;
-    Vec_int.push s v_data;
+    Array.unsafe_set stack !stack_len v_data;
+    incr stack_len;
 
     index_array.(v_data) <- new_index;
     lowlink_array.(v_data) <- new_index;
     on_stack_array.(v_data) <- true;
-    let v = e.(v_data) in
-    Vec_int.iter v (fun w_data ->
+    Array.iter
+      (fun w_data ->
         if Array.unsafe_get index_array w_data < 0 then (
           (* not processed *)
           scc w_data;
@@ -70,27 +61,28 @@ let graph e =
           Array.unsafe_set lowlink_array v_data
             (min_int
                (Array.unsafe_get lowlink_array v_data)
-               (Array.unsafe_get lowlink_array w_data)));
+               (Array.unsafe_get lowlink_array w_data)))
+      e.(v_data);
 
     if
       Array.unsafe_get lowlink_array v_data
       = Array.unsafe_get index_array v_data
     then (
       (* start a new scc *)
-      let s_len = Vec_int.length s in
+      let s_len = !stack_len in
       let last_index = ref (s_len - 1) in
-      let u = ref (Vec_int.unsafe_get s !last_index) in
+      let u = ref (Array.unsafe_get stack !last_index) in
       while !u <> v_data do
         Array.unsafe_set on_stack_array !u false;
         last_index := !last_index - 1;
-        u := Vec_int.unsafe_get s !last_index
+        u := Array.unsafe_get stack !last_index
       done;
       on_stack_array.(v_data) <- false;
       (* necessary *)
-      Int_vec_vec.push output
-        (Vec_int.get_and_delete_range s !last_index (s_len - !last_index)))
+      output := Array.sub stack !last_index (s_len - !last_index) :: !output;
+      stack_len := !last_index)
   in
-  for i = 0 to node_numes - 1 do
+  for i = 0 to node_count - 1 do
     if Array.unsafe_get index_array i < 0 then scc i
   done;
-  output
+  List.rev !output

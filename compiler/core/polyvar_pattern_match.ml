@@ -24,13 +24,13 @@
 
 type lam = Lambda.t
 
-type hash_names = (int * string) list
+type names = string list
 
 type input = (int * (string * lam)) list
 
-type output = (hash_names * lam) list
+type output = (names * lam) list
 
-module Coll = Hash.Make (struct
+module Coll = Hashtbl.Make (struct
   type t = lam
 
   let equal = Stdlib.( = )
@@ -38,34 +38,34 @@ module Coll = Hash.Make (struct
   let hash = Hashtbl.hash
 end)
 
-type value = {stamp: int; hash_names_act: hash_names * lam}
+type value = {stamp: int; names_act: names * lam}
 
 let convert (xs : input) : output =
   let coll = Coll.create 63 in
   let os : value list ref = ref [] in
   xs
-  |> List.iteri (fun i (hash, (name, act)) ->
+  |> List.iteri (fun i (_hash, (name, act)) ->
       match Lambda_traverse.make_key act with
-      | None -> os := {stamp = i; hash_names_act = ([(hash, name)], act)} :: !os
-      | Some key ->
-        Coll.add_or_update coll key
-          ~update:(fun ({hash_names_act = hash_names, act} as acc) ->
-            {acc with hash_names_act = ((hash, name) :: hash_names, act)})
-          {hash_names_act = ([(hash, name)], act); stamp = i});
-  let result = Coll.to_list coll (fun _ value -> value) @ !os in
+      | None -> os := {stamp = i; names_act = ([name], act)} :: !os
+      | Some key -> (
+        match Coll.find_opt coll key with
+        | Some ({names_act = names, act} as acc) ->
+          Coll.replace coll key {acc with names_act = (name :: names, act)}
+        | None -> Coll.add coll key {names_act = ([name], act); stamp = i}));
+  let result = Coll.fold (fun _ value acc -> value :: acc) coll !os in
   Ext_list.sort_via_arrayf result
     (fun x y -> compare x.stamp y.stamp)
-    (fun x -> x.hash_names_act)
+    (fun x -> x.names_act)
 
-let or_list (arg : lam) (hash_names : (int * string) list) =
-  match hash_names with
-  | (hash, name) :: rest ->
+let or_list (arg : lam) (names : names) =
+  match names with
+  | name :: rest ->
     let init : lam =
       Lambda.prim ~primitive:(Pintcomp Ceq)
         ~args:[arg; Lambda.const (Lambda.const_polyvar name)]
         Location.none
     in
-    Ext_list.fold_left rest init (fun acc (hash, name) ->
+    Ext_list.fold_left rest init (fun acc name ->
         Lambda.prim ~primitive:Psequor
           ~args:
             [
@@ -79,13 +79,11 @@ let or_list (arg : lam) (hash_names : (int * string) list) =
 
 let make_test_sequence_variant_constant (fail : lam option) (arg : lam)
     (int_lambda_list : (int * (string * lam)) list) : lam =
-  let int_lambda_list : ((int * string) list * lam) list =
-    convert int_lambda_list
-  in
-  match (int_lambda_list, fail) with
+  let names_lambda_list : output = convert int_lambda_list in
+  match (names_lambda_list, fail) with
   | (_, act) :: rest, None | rest, Some act ->
-    Ext_list.fold_right rest act (fun (hash_names, act1) acc ->
-        let predicate : lam = or_list arg hash_names in
+    Ext_list.fold_right rest act (fun (names, act1) acc ->
+        let predicate : lam = or_list arg names in
         Lambda.if_ predicate act1 acc)
   | [], None -> assert false
 

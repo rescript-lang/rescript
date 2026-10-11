@@ -3995,7 +3995,6 @@ and type_function ~async loc attrs env ty_expected_
   in
   let do_init = has_gadts || needs_exhaust_check in
   let lev, env = if do_init && not has_gadts then init_env () else (lev, env) in
-  ignore lev;
   let tparams =
     List.map
       (fun ((p : Parsetree.fun_param), opt_param, pat, ty_arg_c) ->

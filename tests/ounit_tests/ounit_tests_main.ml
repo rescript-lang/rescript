@@ -1,18 +1,13 @@
 let suites =
   OUnit.( >::: ) __FILE__
     [
-      Ounit_vec_test.suites;
       Ounit_json_tests.suites;
       Ounit_scc_tests.suites;
       Ounit_list_test.suites;
-      Ounit_hash_set_tests.suites;
-      Ounit_bal_tree_tests.suites;
       Ounit_hash_stubs_test.suites;
-      Ounit_map_tests.suites;
       Ounit_hashtbl_tests.suites;
       Ounit_string_tests.suites;
       Ounit_string_literal_tests.suites;
-      Ounit_int_vec_tests.suites;
       Ounit_ident_mask_tests.suites;
       Ounit_lid_of_path_tests.suites;
       Ounit_utf8_test.suites;
@@ -29,6 +24,7 @@ let suites =
       Ounit_object_mutability_tests.suites;
       Ounit_pattern_printer_tests.suites;
       Ounit_js_analyzer_tests.suites;
+      Ounit_external_shadow_tests.suites;
       Ounit_flow_parser_tests.suites;
       Ounit_jsx_loc_tests.suites;
       Ounit_parser_cursor_tests.suites;

@@ -411,7 +411,7 @@ let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
       match fn_state with
       | Is_return | No_name _ -> Js_fun_env.get_unbounded env
       | Name_top id | Name_non_top id ->
-        Set_ident.add (Js_fun_env.get_unbounded env) id
+        Set_ident.add id (Js_fun_env.get_unbounded env)
     in
     (* the context will be continued after this function *)
     let outer_cxt = Ext_pp_scope.merge cxt set_env in
@@ -900,6 +900,17 @@ and expression_desc cxt ~(level : int) f x : cxt =
         :: tails
     in
     expression_desc cxt ~level f (Object (E.object_entries objs))
+  | Caml_block ([hd; tl], _, Blk_constructor p) when p.name = Literals.cons ->
+    (* A list cell is printed on one line, so a list literal keeps the same
+       indentation however long it is, instead of nesting one level deeper per
+       element. *)
+    P.cond_paren_group f (level > 1) (fun _ ->
+        P.brace f (fun _ ->
+            let cxt =
+              property_name_and_value cxt f (Js_op.Lit Literals.hd, hd)
+            in
+            comma_sp f;
+            property_name_and_value cxt f (Js_op.Lit Literals.tl, tl)))
   | Caml_block (el, _, Blk_constructor p) ->
     let not_is_cons = p.name <> Literals.cons in
     let {Variant_runtime.tag; tag_name} = p.runtime in

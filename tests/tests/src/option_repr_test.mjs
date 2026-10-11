@@ -93,16 +93,7 @@ let length_8_id = Stdlib_List.fromInitializer(8, x => x);
 let length_10_id = Stdlib_List.fromInitializer(10, x => x);
 
 function f13$1() {
-  return Primitive_object.equal(Stdlib_List.take(length_10_id, 8), {
-    hd: 1,
-    tl: {
-      hd: 2,
-      tl: {
-        hd: 3,
-        tl: /* [] */0
-      }
-    }
-  });
+  return Primitive_object.equal(Stdlib_List.take(length_10_id, 8), {hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}});
 }
 
 console.log(6, undefined);
@@ -151,65 +142,14 @@ Mocha.describe("Option_repr_test", () => {
     Test_utils.ok("File \"option_repr_test.res\", line 120, characters 7-14", Primitive_object.lessthan(undefined, Primitive_option.some(undefined)));
     Test_utils.ok("File \"option_repr_test.res\", line 121, characters 7-14", Primitive_object.greaterthan(Primitive_option.some(undefined), undefined));
   });
-  Mocha.test("option greater than operations", () => Test_utils.ok("File \"option_repr_test.res\", line 125, characters 7-14", Stdlib_List.every({
-    hd: Primitive_object.greaterthan(null, Primitive_option.some(undefined)) && Primitive_object.lessthan(Primitive_option.some(undefined), null),
-    tl: /* [] */0
-  }, x => x)));
+  Mocha.test("option greater than operations", () => Test_utils.ok("File \"option_repr_test.res\", line 125, characters 7-14", Stdlib_List.every({hd: Primitive_object.greaterthan(null, Primitive_option.some(undefined)) && Primitive_object.lessthan(Primitive_option.some(undefined), null), tl: /* [] */0}, x => x)));
   Mocha.test("option less than operations", () => {
     let xs_0 = Primitive_object.lessthan(Primitive_option.some(undefined), 3) && Primitive_object.greaterthan(3, Primitive_option.some(undefined));
-    let xs_1 = {
-      hd: Primitive_object.lessthan(Primitive_option.some(undefined), Primitive_option.some(Primitive_option.some(undefined))) && Primitive_object.greaterthan(Primitive_option.some(Primitive_option.some(undefined)), Primitive_option.some(undefined)),
-      tl: {
-        hd: Primitive_object.lessthan(Primitive_option.some(undefined), "3") && Primitive_object.greaterthan("3", Primitive_option.some(undefined)),
-        tl: {
-          hd: Primitive_object.lessthan(Primitive_option.some(undefined), true) && Primitive_object.greaterthan(true, Primitive_option.some(undefined)),
-          tl: {
-            hd: Primitive_object.lessthan(Primitive_option.some(undefined), false) && Primitive_object.greaterthan(false, Primitive_option.some(undefined)),
-            tl: {
-              hd: Primitive_object.lessthan(false, true) && Primitive_object.greaterthan(true, false),
-              tl: {
-                hd: Primitive_object.lessthan(false, true) && Primitive_object.greaterthan(true, false),
-                tl: {
-                  hd: Primitive_object.lessthan(undefined, Primitive_option.some(undefined)) && Primitive_object.greaterthan(Primitive_option.some(undefined), undefined),
-                  tl: {
-                    hd: Primitive_object.lessthan(undefined, null) && Primitive_object.greaterthan(null, undefined),
-                    tl: {
-                      hd: ltx(undefined, x => x),
-                      tl: {
-                        hd: Primitive_object.lessthan(null, 3) && Primitive_object.greaterthan(3, null),
-                        tl: /* [] */0
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    };
-    let xs = {
-      hd: xs_0,
-      tl: xs_1
-    };
+    let xs_1 = {hd: Primitive_object.lessthan(Primitive_option.some(undefined), Primitive_option.some(Primitive_option.some(undefined))) && Primitive_object.greaterthan(Primitive_option.some(Primitive_option.some(undefined)), Primitive_option.some(undefined)), tl: {hd: Primitive_object.lessthan(Primitive_option.some(undefined), "3") && Primitive_object.greaterthan("3", Primitive_option.some(undefined)), tl: {hd: Primitive_object.lessthan(Primitive_option.some(undefined), true) && Primitive_object.greaterthan(true, Primitive_option.some(undefined)), tl: {hd: Primitive_object.lessthan(Primitive_option.some(undefined), false) && Primitive_object.greaterthan(false, Primitive_option.some(undefined)), tl: {hd: Primitive_object.lessthan(false, true) && Primitive_object.greaterthan(true, false), tl: {hd: Primitive_object.lessthan(false, true) && Primitive_object.greaterthan(true, false), tl: {hd: Primitive_object.lessthan(undefined, Primitive_option.some(undefined)) && Primitive_object.greaterthan(Primitive_option.some(undefined), undefined), tl: {hd: Primitive_object.lessthan(undefined, null) && Primitive_object.greaterthan(null, undefined), tl: {hd: ltx(undefined, x => x), tl: {hd: Primitive_object.lessthan(null, 3) && Primitive_object.greaterthan(3, null), tl: /* [] */0}}}}}}}}}};
+    let xs = {hd: xs_0, tl: xs_1};
     Test_utils.ok("File \"option_repr_test.res\", line 130, characters 6-13", Stdlib_List.every(xs, x => x));
   });
-  Mocha.test("option equality operations", () => Test_utils.ok("File \"option_repr_test.res\", line 149, characters 6-13", Stdlib_List.every({
-    hd: true,
-    tl: {
-      hd: undefined !== null && null !== undefined,
-      tl: {
-        hd: Primitive_object.equal(Primitive_option.some(undefined), Primitive_option.some(undefined)) && Primitive_object.equal(Primitive_option.some(undefined), Primitive_option.some(undefined)),
-        tl: {
-          hd: Primitive_object.equal(Primitive_option.some(Primitive_option.some(undefined)), Primitive_option.some(Primitive_option.some(undefined))) && Primitive_object.equal(Primitive_option.some(Primitive_option.some(undefined)), Primitive_option.some(Primitive_option.some(undefined))),
-          tl: {
-            hd: Primitive_object.notequal(Primitive_option.some(Primitive_option.some(Primitive_option.some(undefined))), Primitive_option.some(Primitive_option.some(undefined))) && Primitive_object.notequal(Primitive_option.some(Primitive_option.some(undefined)), Primitive_option.some(Primitive_option.some(Primitive_option.some(undefined)))),
-            tl: /* [] */0
-          }
-        }
-      }
-    }
-  }, x => x)));
+  Mocha.test("option equality operations", () => Test_utils.ok("File \"option_repr_test.res\", line 149, characters 6-13", Stdlib_List.every({hd: true, tl: {hd: undefined !== null && null !== undefined, tl: {hd: Primitive_object.equal(Primitive_option.some(undefined), Primitive_option.some(undefined)) && Primitive_object.equal(Primitive_option.some(undefined), Primitive_option.some(undefined)), tl: {hd: Primitive_object.equal(Primitive_option.some(Primitive_option.some(undefined)), Primitive_option.some(Primitive_option.some(undefined))) && Primitive_object.equal(Primitive_option.some(Primitive_option.some(undefined)), Primitive_option.some(Primitive_option.some(undefined))), tl: {hd: Primitive_object.notequal(Primitive_option.some(Primitive_option.some(Primitive_option.some(undefined))), Primitive_option.some(Primitive_option.some(undefined))) && Primitive_object.notequal(Primitive_option.some(Primitive_option.some(undefined)), Primitive_option.some(Primitive_option.some(Primitive_option.some(undefined)))), tl: /* [] */0}}}}}, x => x)));
 });
 
 let f7;

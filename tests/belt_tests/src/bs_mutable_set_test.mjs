@@ -148,22 +148,7 @@ Mocha.describe("Bs_mutable_set_test", () => {
     let a3 = match[0];
     Test_utils.ok("File \"bs_mutable_set_test.res\", line 151, characters 7-14", Belt_MutableSetInt.eq(a1, a3));
     Test_utils.ok("File \"bs_mutable_set_test.res\", line 152, characters 7-14", Belt_MutableSetInt.eq(a2, a4));
-    Belt_List.forEach({
-      hd: a0,
-      tl: {
-        hd: a1,
-        tl: {
-          hd: a2,
-          tl: {
-            hd: a3,
-            tl: {
-              hd: a4,
-              tl: /* [] */0
-            }
-          }
-        }
-      }
-    }, Belt_MutableSetInt.checkInvariantInternal);
+    Belt_List.forEach({hd: a0, tl: {hd: a1, tl: {hd: a2, tl: {hd: a3, tl: {hd: a4, tl: /* [] */0}}}}}, Belt_MutableSetInt.checkInvariantInternal);
   });
   Mocha.test("mutable set large scale operations", () => {
     let v = Belt_MutableSetInt.make();

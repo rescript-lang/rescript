@@ -26,10 +26,7 @@ function capturedPair() {
 function initializationOrder() {
   let seen = /* [] */0;
   let initialize = value => {
-    seen = {
-      hd: value,
-      tl: seen
-    };
+    seen = {hd: value, tl: seen};
     return value;
   };
   let pair_left = initialize(1);
@@ -55,10 +52,7 @@ function escapedPair() {
 function fieldUseCleanup() {
   let effects = /* [] */0;
   let mark = value => {
-    effects = {
-      hd: value,
-      tl: effects
-    };
+    effects = {hd: value, tl: effects};
     return value;
   };
   let fields_live = 1;
@@ -77,10 +71,7 @@ function fieldUseCleanup() {
 function overwrittenBeforeRead() {
   let effects = /* [] */0;
   let mark = value => {
-    effects = {
-      hd: value,
-      tl: effects
-    };
+    effects = {hd: value, tl: effects};
     return value;
   };
   let cell = mark(1);
@@ -94,10 +85,7 @@ function overwrittenBeforeRead() {
 function capturedWriteOnly() {
   let effects = /* [] */0;
   let mark = value => {
-    effects = {
-      hd: value,
-      tl: effects
-    };
+    effects = {hd: value, tl: effects};
     return value;
   };
   mark(1);
@@ -108,10 +96,7 @@ function capturedWriteOnly() {
 function uncalledWriteOnlyClosure() {
   let effects = /* [] */0;
   let mark = value => {
-    effects = {
-      hd: value,
-      tl: effects
-    };
+    effects = {hd: value, tl: effects};
     return value;
   };
   mark(1);

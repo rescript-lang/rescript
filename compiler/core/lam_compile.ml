@@ -415,12 +415,15 @@ let compile output_prefix =
             ~return_unit ~async ~one_unit_arg ?directive
             ~immutable_mask:ret.immutable_mask
             (Ext_list.map params (fun x ->
-                 Map_ident.find_default ret.new_params x x))
+                 match Map_ident.find_opt x ret.new_params with
+                 | Some y -> y
+                 | None -> x))
             [
               S.while_ E.true_
-                (Map_ident.fold ret.new_params body_block
+                (Map_ident.fold
                    (fun old new_param acc ->
-                     S.define_variable ~kind:Alias old (E.var new_param) :: acc));
+                     S.define_variable ~kind:Alias old (E.var new_param) :: acc)
+                   ret.new_params body_block);
             ]
         else
           (* TODO:  save computation of length several times *)
@@ -1272,7 +1275,7 @@ let compile output_prefix =
       (lambda_cxt : Lam_compile_context.t) =
     let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
     let emitted_id =
-      if Set_ident.mem (Lambda_traverse.free_variables body) id then id
+      if Set_ident.mem id (Lambda_traverse.free_variables body) then id
       else Ext_ident.create_tmp ~name:"_for_of" ()
     in
     let block =
@@ -1295,7 +1298,7 @@ let compile output_prefix =
       (body : Lambda.t) (lambda_cxt : Lam_compile_context.t) =
     let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
     let emitted_id =
-      if Set_ident.mem (Lambda_traverse.free_variables body) id then id
+      if Set_ident.mem id (Lambda_traverse.free_variables body) then id
       else Ext_ident.create_tmp ~name:"_for_await_of" ()
     in
     let block =
@@ -1540,14 +1543,17 @@ let compile output_prefix =
       *)
       let ap_func = appinfo.ap_func in
       let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
-      let[@warning "-8" (* non-exhaustive pattern*)] args_code, fn_code :: args
-          =
-        Ext_list.fold_right (ap_func :: appinfo.ap_args) ([], [])
-          (fun x (args_code, fn_code) ->
-            match compile_lambda new_cxt x with
-            | {block; value = Some b} ->
-              (Ext_list.append block args_code, b :: fn_code)
-            | {value = None} -> assert false)
+      let args_code, fn_code, args =
+        match
+          Ext_list.fold_right (ap_func :: appinfo.ap_args) ([], [])
+            (fun x (args_code, fn_code) ->
+              match compile_lambda new_cxt x with
+              | {block; value = Some b} ->
+                (Ext_list.append block args_code, b :: fn_code)
+              | {value = None} -> assert false)
+        with
+        | args_code, fn_code :: args -> (args_code, fn_code, args)
+        | _, [] -> assert false
       in
       match (ap_func, lambda_cxt.continuation) with
       | ( Lvar fn_id,
@@ -1579,18 +1585,17 @@ let compile output_prefix =
                 (i + 1, assigns, new_params)
               | _ ->
                 let new_param, m =
-                  match Map_ident.find_opt ret.new_params param with
+                  match Map_ident.find_opt param ret.new_params with
                   | None ->
                     ret.immutable_mask.(i) <- false;
                     let v = Ext_ident.create ("_" ^ param.name) in
-                    (v, Map_ident.add new_params param v)
+                    (v, Map_ident.add param v new_params)
                   | Some v -> (v, new_params)
                 in
                 (i + 1, (new_param, arg) :: assigns, m))
         in
         ret.new_params <-
-          Map_ident.disjoint_merge_exn new_params ret.new_params (fun _ _ _ ->
-              assert false);
+          Map_ident.union (fun _ _ _ -> assert false) new_params ret.new_params;
         let block =
           Ext_list.map_append assigned_params
             [S.continue_ ()]
@@ -1714,7 +1719,7 @@ let compile output_prefix =
         | Some (obj_code, obj) ->
           cont obj_block arg_block (Some obj_code)
             (E.seq (E.assign (E.dot (E.var obj) property) value) E.unit)))
-    | {primitive = Pjs_object_get _ | Pjs_object_set _; args} -> assert false
+    | {primitive = Pjs_object_get _ | Pjs_object_set _} -> assert false
     | {primitive = Pjs_fn_method; args = args_lambda} -> (
       match args_lambda with
       | [Lfunction {params; body; attr = {return_unit; async}; loc}] ->

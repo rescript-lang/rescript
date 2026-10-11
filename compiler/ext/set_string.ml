@@ -22,9 +22,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-include Ext_set.Make (struct
+include Set.Make (struct
   type t = string
 
   let compare = Ext_string.compare
-  let equal = Ext_string.equal
 end)

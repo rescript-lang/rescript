@@ -60,7 +60,7 @@ module type IteratorArgument = sig
   val leave_type_declarations : rec_flag -> unit
 end
 
-module Make_iterator : functor (Iter : IteratorArgument) -> sig
+module Make_iterator : functor (_ : IteratorArgument) -> sig
   val iter_structure : structure -> unit
   val iter_signature : signature -> unit
   val iter_structure_item : structure_item -> unit
@@ -69,6 +69,5 @@ module Make_iterator : functor (Iter : IteratorArgument) -> sig
   val iter_module_type : module_type -> unit
   val iter_pattern : pattern -> unit
 end
-[@@warning "-67"]
 
 module Default_iterator_argument : IteratorArgument

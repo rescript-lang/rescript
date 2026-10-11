@@ -56,17 +56,14 @@ function add_help(speclist) {
   } catch (raw_exn) {
     let exn = Primitive_exceptions.internalToException(raw_exn);
     if (exn.RE_EXN_ID === "Not_found") {
-      add1 = {
-        hd: [
-          "-help",
-          {
-            TAG: "Unit",
-            _0: help_action
-          },
-          " Display this list of options"
-        ],
-        tl: /* [] */0
-      };
+      add1 = {hd: [
+        "-help",
+        {
+          TAG: "Unit",
+          _0: help_action
+        },
+        " Display this list of options"
+      ], tl: /* [] */0};
     } else {
       throw exn;
     }
@@ -78,17 +75,14 @@ function add_help(speclist) {
   } catch (raw_exn$1) {
     let exn$1 = Primitive_exceptions.internalToException(raw_exn$1);
     if (exn$1.RE_EXN_ID === "Not_found") {
-      add2 = {
-        hd: [
-          "--help",
-          {
-            TAG: "Unit",
-            _0: help_action
-          },
-          " Display this list of options"
-        ],
-        tl: /* [] */0
-      };
+      add2 = {hd: [
+        "--help",
+        {
+          TAG: "Unit",
+          _0: help_action
+        },
+        " Display this list of options"
+      ], tl: /* [] */0};
     } else {
       throw exn$1;
     }
