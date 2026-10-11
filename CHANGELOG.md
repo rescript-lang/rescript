@@ -77,6 +77,7 @@
 
 #### :house: Internal
 
+- Remove the S-expression parsetree printer (`res_parser -print sexp`). https://github.com/rescript-lang/rescript/pull/8803
 - Use one set of OCaml warning flags for the whole repository, including the editor analysis and tools. https://github.com/rescript-lang/rescript/pull/8796
 - Remove the unused `Packed` and `Partial_class_expr` constructors from the `.cmt` format and bump its magic number. https://github.com/rescript-lang/rescript/pull/8793
 - Make `dict` an abstract type instead of a record with a hidden field. https://github.com/rescript-lang/rescript/pull/8752
