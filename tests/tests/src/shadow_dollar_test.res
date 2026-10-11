@@ -4,29 +4,29 @@ open Test_utils
 // Shadowed variables get a `$N` suffix in JS; it must not collide with
 // identifiers that already contain `$`.
 
-let paramCollision = (x, \"x$1") => {
-  let x = \"x$1"(x)
-  let y = \"x$1"(2)
+let paramCollision = (x, x$1) => {
+  let x = x$1(x)
+  let y = x$1(2)
   x + y
 }
 
 let laterBinding = x => {
   let x = x + 1
-  let \"x$1" = x * 10
-  (x, \"x$1", x, \"x$1")
+  let x$1 = x * 10
+  (x, x$1, x, x$1)
 }
 
 let earlierBinding = x => {
-  let \"x$1" = x * 10
+  let x$1 = x * 10
   let x = x + 1
-  (x, \"x$1", x, \"x$1")
+  (x, x$1, x, x$1)
 }
 
 let nested = x => {
   let inner = () => {
     let x = x + 1
-    let \"x$1" = x * 10
-    (x, \"x$1", x, \"x$1")
+    let x$1 = x * 10
+    (x, x$1, x, x$1)
   }
   let x = x + 2
   (x, inner(), x)
@@ -48,8 +48,8 @@ let topShadow = {
 
 let z = base * 2
 let topSibling = if z < 0 {
-  let \"z$1" = z * 10
-  \"z$1" + \"z$1"
+  let z$1 = z * 10
+  z$1 + z$1
 } else {
   let z = z + z2
   z + z
