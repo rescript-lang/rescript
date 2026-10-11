@@ -59,6 +59,7 @@
 - Speed up dead code elimination of toplevel bindings in large modules. https://github.com/rescript-lang/rescript/pull/8773
 - Make .cmt and .cmti files smaller by no longer embedding a copy of the .cmi. https://github.com/rescript-lang/rescript/pull/8774
 - Use the OCaml standard library's hash tables in the compiler. https://github.com/rescript-lang/rescript/pull/8786
+- Use the OCaml standard library's hash tables for the compiler's hash sets, and always order the imports of a module used both with and without `default` the same way. https://github.com/rescript-lang/rescript/pull/8787
 - Represent explicit expression braces as `Pexp_braces` in parsetree v1 and format `else` branches consistently with `if` branches. https://github.com/rescript-lang/rescript/pull/8678
 - Omit redundant braces around multi-statement switch case bodies when formatting. https://github.com/rescript-lang/rescript/pull/8677
 - Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662

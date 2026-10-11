@@ -3,16 +3,16 @@
 import * as Vscode from "vscode";
 import * as SomeEs6Module from "some-es6-module";
 import SomeEs6Module$1 from "some-es6-module";
-import OmeEs6Module from "./ome-es6-module";
-import * as OmeEs6Module$1 from "./ome-es6-module";
+import * as OmeEs6Module from "./ome-es6-module";
+import OmeEs6Module$1 from "./ome-es6-module";
 
 let $$default = SomeEs6Module$1;
 
 let default2 = SomeEs6Module.default2;
 
-let oefault = OmeEs6Module;
+let oefault = OmeEs6Module$1;
 
-let oefault2 = OmeEs6Module$1.default2;
+let oefault2 = OmeEs6Module.default2;
 
 let window = Vscode.window;
 

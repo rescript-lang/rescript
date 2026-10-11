@@ -70,4 +70,16 @@ end
 
 module Hash = Hashtbl.Make (Cmp)
 
-module Hash_set = Hash_set.Make (Cmp)
+module Hash_set = Hash
+
+let set_add set id = if not (Hash_set.mem set id) then Hash_set.add set id ()
+
+let compare_same_name (x : t) (y : t) =
+  let rank (x : t) =
+    match x.kind with
+    | Ml -> 0
+    | Runtime -> 1
+    | External {default = false} -> 2
+    | External {default = true} -> 3
+  in
+  compare (rank x) (rank y)

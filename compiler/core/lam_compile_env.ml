@@ -128,7 +128,7 @@ let get_package_path_from_cmj (id : Lam_module_ident.t) :
   let cmj_table = cmj_load_info.cmj_table in
   (cmj_load_info.package_path, cmj_table.package_spec, cmj_table.case)
 
-let add = Lam_module_ident.Hash_set.add
+let add = Lam_module_ident.set_add
 
 (* Conservative interface *)
 let is_pure_module (oid : Lam_module_ident.t) =
@@ -147,9 +147,10 @@ let is_pure_module (oid : Lam_module_ident.t) =
     | Some (External _) -> false)
 
 let populate_required_modules extras
-    (hard_dependencies : Lam_module_ident.Hash_set.t) =
+    (hard_dependencies : unit Lam_module_ident.Hash_set.t) =
   Lam_module_ident.Hash.iter
     (fun id _ -> if not (is_pure_module id) then add hard_dependencies id)
     cached_tbl;
-  Lam_module_ident.Hash_set.iter extras (fun id : unit ->
-      if not (is_pure_module id) then add hard_dependencies id)
+  Lam_module_ident.Hash_set.iter
+    (fun id () -> if not (is_pure_module id) then add hard_dependencies id)
+    extras
