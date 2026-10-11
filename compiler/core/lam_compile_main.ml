@@ -427,9 +427,7 @@ let compile (output_prefix : string) export_idents hoisted (lam : Lambda.t) =
   in
   let v : Js_cmj_format.t =
     Lam_stats_export.export_to_cmj meta effect_ export_map hoisted_metadata
-      (if Ext_char.is_lower_case (Filename.basename output_prefix).[0] then
-         Little
-       else Upper)
+      (Ext_filename.case output_prefix)
   in
   if not !Clflags.dont_write_files then
     Js_cmj_format.to_file ~check_exists:(not !Js_config.force_cmj)

@@ -24,6 +24,7 @@
 
 #### :bug: Bug fix
 
+- Derive module names from file names consistently, fixing files like `Button.test.res` that could not reference `Button`, and `.res`/`.resi` pairs with dotted or non-ASCII names. https://github.com/rescript-lang/rescript/pull/PRNUM
 - Fix references to a `@val` global reading a binding with the same name, e.g. a toplevel `let` declared before them. https://github.com/rescript-lang/rescript/pull/8785
 - Evaluate the unused arguments of an inlined function call in parameter order. https://github.com/rescript-lang/rescript/pull/8786
 - Fix editor completion of values from modules included with `include await M`. https://github.com/rescript-lang/rescript/pull/8770

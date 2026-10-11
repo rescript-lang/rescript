@@ -65,7 +65,7 @@ let add_js_module ?import_attributes
   let id =
     Ident.create
       (match hint_name with
-      | Phint_name hint_name -> Ext_string.capitalize_ascii hint_name
+      | Phint_name hint_name -> String.capitalize_ascii hint_name
       (* make sure the module name is capitalized
          TODO: maybe a warning if the user hint is not good
       *)
