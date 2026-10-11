@@ -259,39 +259,53 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
           native_reconcile watcher new_scope baseline
         else native_loop watcher new_scope symlink_targets registered_snapshot)
   in
-  Termination_signals.with_handlers
-    (fun _ -> stop ())
-    (fun () ->
-      let scope = Watch_scope.discover ~root ~prod ~features ~filter in
-      match Watch_snapshot.create_with_symlink_paths digest_cache scope with
-      | Watch_snapshot.Registration_failed {snapshot; message} ->
-        fallback_to_polling message snapshot
-      | Watch_snapshot.Ready
-          {snapshot = before_build; paths = symlink_paths; targets} -> (
-        ignore targets;
-        (* Install handles before the initial build so an edit made as soon as its
+  (* Like Rust rewatch, announce the shutdown and why before cleaning up. *)
+  let report_exit () =
+    if show_progress then
+      print_endline
+        (if Atomic.get stop_requested then "\nExiting..."
+         else "\nExiting... (lockfile removed)")
+  in
+  let watch () =
+    let scope = Watch_scope.discover ~root ~prod ~features ~filter in
+    match Watch_snapshot.create_with_symlink_paths digest_cache scope with
+    | Watch_snapshot.Registration_failed {snapshot; message} ->
+      fallback_to_polling message snapshot
+    | Watch_snapshot.Ready
+        {snapshot = before_build; paths = symlink_paths; targets} -> (
+      ignore targets;
+      (* Install handles before the initial build so an edit made as soon as its
            output appears cannot land in a blind interval between compilation and
            watcher setup. Snapshot reconciliation below consumes any event queued
            while compiler subprocesses were running. *)
-        match native_create ~paths:(watch_paths scope symlink_paths) with
-        | Error message -> fallback_to_polling message before_build
-        | Ok watcher ->
-          let fallback =
-            Fun.protect
-              (fun () ->
-                ignore (build ~poll ~changes:None);
-                (* The following snapshot is authoritative for changes that arrived
+      match native_create ~paths:(watch_paths scope symlink_paths) with
+      | Error message -> fallback_to_polling message before_build
+      | Ok watcher ->
+        let fallback =
+          Fun.protect
+            (fun () ->
+              ignore (build ~poll ~changes:None);
+              (* The following snapshot is authoritative for changes that arrived
                    during the build. Pump and discard callbacks already queued for
                    that interval so they do not request the same rebuild twice. *)
-                ignore (Native_watcher.drain watcher);
-                native_reconcile watcher scope before_build)
-              ~finally:(fun () -> Native_watcher.close watcher)
-          in
-          Option.iter
-            (fun fallback ->
-              report_native_fallback fallback.message;
-              polling_loop fallback.scope fallback.snapshot)
-            fallback))
+              ignore (Native_watcher.drain watcher);
+              native_reconcile watcher scope before_build)
+            ~finally:(fun () -> Native_watcher.close watcher)
+        in
+        Option.iter
+          (fun fallback ->
+            report_native_fallback fallback.message;
+            polling_loop fallback.scope fallback.snapshot)
+          fallback)
+  in
+  Termination_signals.with_handlers
+    (fun _ -> stop ())
+    (fun () ->
+      match watch () with
+      | () -> report_exit ()
+      | exception Stop ->
+        report_exit ();
+        raise Stop)
 
 let run_with_native_create ~native_create ~report_native_fallback ~root ~prod
     ~features ~filter ~clear_screen ~show_progress ~verbosity ~build =

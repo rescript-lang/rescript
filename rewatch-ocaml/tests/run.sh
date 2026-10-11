@@ -1204,8 +1204,29 @@ if ! wait_for_file "$missing_nested_source/generated/nested/Main.mjs"; then
   cat "$missing_nested_source/watch.log" >&2
   exit 1
 fi
+# Like Rust, the watcher announces why it exits. MSYS cannot deliver a
+# catchable signal, so the signal case is checked on Unix only.
 kill -TERM "$missing_nested_source_pid"
 wait "$missing_nested_source_pid" 2>/dev/null || true
+if ! $windows_posix_shell && \
+  ! grep -F 'Exiting...' "$missing_nested_source/watch.log" >/dev/null; then
+  echo "watch did not report its exit after SIGTERM" >&2
+  cat "$missing_nested_source/watch.log" >&2
+  exit 1
+fi
+"$port" watch "$missing_nested_source" \
+  >"$missing_nested_source/lock-exit.log" 2>&1 &
+lock_exit_pid=$!
+background_pids="$background_pids $lock_exit_pid"
+wait_for_initial_build "$missing_nested_source/lock-exit.log"
+rm -f "$missing_nested_source/lib/watch.lock"
+wait "$lock_exit_pid" 2>/dev/null || true
+if ! grep -F 'Exiting... (lockfile removed)' \
+    "$missing_nested_source/lock-exit.log" >/dev/null; then
+  echo "watch did not report its exit after lib/watch.lock was removed" >&2
+  cat "$missing_nested_source/lock-exit.log" >&2
+  exit 1
+fi
 
 # A successfully published interface must invalidate its dependents even when
 # the corresponding implementation fails and aborts the rest of that build.
