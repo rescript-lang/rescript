@@ -30,6 +30,7 @@
 
 - Fix parser recovery and editor completion when a record or dict value is missing before a comma, e.g. `{a: , b: 1}`. https://github.com/rescript-lang/rescript/pull/8779
 - Derive module names from file names consistently, fixing files like `Button.test.res` that could not reference `Button`, and `.res`/`.resi` pairs with dotted or non-ASCII names. https://github.com/rescript-lang/rescript/pull/8797
+- Fix the formatter printing escaped identifiers starting with `_`, like `\"_'"`, in a form that doesn't parse. https://github.com/rescript-lang/rescript/pull/8795
 - Fix references to a `@val` global reading a binding with the same name, e.g. a toplevel `let` declared before them. https://github.com/rescript-lang/rescript/pull/8785
 - Evaluate the unused arguments of an inlined function call in parameter order. https://github.com/rescript-lang/rescript/pull/8786
 - Fix shadowed variables in generated JS colliding with identifiers or external names containing `$`. https://github.com/rescript-lang/rescript/pull/8778
