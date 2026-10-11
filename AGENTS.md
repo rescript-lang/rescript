@@ -68,6 +68,11 @@ relevant guidance from each.
 ### Commit Standards
 
 - Use DCO sign-off: `Signed-Off-By: Your Name <email>`
+- Put the sign-off in the final paragraph of the message, next to any other
+  trailers such as `Co-Authored-By:`, with no blank line between them. Git only
+  parses the last paragraph as trailers, so a sign-off separated by a blank
+  line doesn't count. Check with
+  `git log -1 --format=%B | git interpret-trailers --parse`.
 - Include appropriate tests with all changes
 - Build must pass before committing
 
