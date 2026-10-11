@@ -100,7 +100,6 @@ let extra_for_cmt ~(iterator : Tast_iterator.iterator)
         | Partial_signature_item str -> iterator.signature_item iterator str
         | Partial_expression expression -> iterator.expr iterator expression
         | Partial_pattern pattern -> iterator.pat iterator pattern
-        | Partial_class_expr _ -> ()
         | Partial_module_type module_type ->
           iterator.module_type iterator module_type
         | Partial_structure _ | Partial_structure_item _ -> ())
