@@ -823,7 +823,7 @@ let rec scan scanner =
     (* peeking 1 char *)
     | '_' -> (
       match peek scanner with
-      | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' -> scan_identifier scanner
+      | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '$' -> scan_identifier scanner
       | _ ->
         next scanner;
         Token.Underscore)
