@@ -549,9 +549,7 @@ type pers_struct = {
   ps_comps: module_components;
   ps_crcs: (string * Digest.t option) list;
   ps_filename: string;
-  ps_flags: pers_flags list;
 }
-[@@warning "-69"]
 
 let persistent_structures =
   (Hashtbl.create 17 : (string, pers_struct option) Hashtbl.t)
@@ -627,7 +625,6 @@ let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
       ps_comps = comps;
       ps_crcs = crcs;
       ps_filename = filename;
-      ps_flags = flags;
     }
   in
   if ps.ps_name <> modname then
@@ -1859,7 +1856,6 @@ let save_signature_with_imports ?check_exists ~deprecated sg modname filename
         ps_comps = comps;
         ps_crcs = (cmi.cmi_name, Some crc) :: imports;
         ps_filename = filename;
-        ps_flags = cmi.cmi_flags;
       }
     in
     save_pers_struct crc ps;

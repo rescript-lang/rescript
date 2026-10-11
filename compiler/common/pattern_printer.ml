@@ -10,8 +10,7 @@ let untype_record_rest (rest : Typedtree.record_pat_rest) :
   let rest_name = rest.rest_name in
   {Parsetree.rest_loc = rest_name.loc; rest_name; rest_type = None}
 
-let[@warning "-4"] is_generated_optional_constructor
-    (lid : Longident.t Location.loc) =
+let is_generated_optional_constructor (lid : Longident.t Location.loc) =
   match lid.txt with
   | Longident.Lident name ->
     String.length name >= 2 && name.[0] = '#' && name.[1] = '$'
@@ -34,7 +33,7 @@ type optional_field_state =
 (* Optional record fields are lowered into an extra option layer; we re-infer
    whether we’re looking at a missing field vs. a present-but-`None` value so
    we can render useful surface syntax in error messages. *)
-let[@warning "-4"] rec classify_optional_field_state pat =
+let rec classify_optional_field_state pat =
   match pat.pat_desc with
   | Tpat_construct (lid, cstr, [])
     when is_generated_optional_constructor lid && cstr.cstr_name = "None" ->
@@ -49,7 +48,7 @@ let[@warning "-4"] rec classify_optional_field_state pat =
 let none_pattern =
   mkpat (Ppat_construct (mknoloc (Longident.Lident "None"), mknoloc []))
 
-let[@warning "-4"] strip_synthetic_some pat =
+let strip_synthetic_some pat =
   match pat.pat_desc with
   | Tpat_construct (lid, cstr, [inner])
     when is_generated_optional_constructor lid && cstr.cstr_name = "Some" ->

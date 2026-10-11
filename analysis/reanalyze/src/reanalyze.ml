@@ -128,10 +128,7 @@ let run_analysis ~dce_config ~cmt_root ~(pipeline : Dce_pipeline.t) ~skip_file
       in
       Timing.time_phase `Solving (fun () ->
           let t0 = Unix.gettimeofday () in
-          let dead_code_issues =
-            Reactive_solver.collect_issues ~t:solver ~config:dce_config
-              ~ann_store
-          in
+          let dead_code_issues = Reactive_solver.collect_issues ~t:solver in
           let t1 = Unix.gettimeofday () in
           (* Optional args issues, for live declarations only *)
           let optional_args_issues =
