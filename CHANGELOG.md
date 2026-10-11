@@ -25,6 +25,7 @@
 #### :bug: Bug fix
 
 - Fix references to a `@val` global reading a binding with the same name, e.g. a toplevel `let` declared before them. https://github.com/rescript-lang/rescript/pull/8785
+- Evaluate the unused arguments of an inlined function call in parameter order. https://github.com/rescript-lang/rescript/pull/8786
 - Fix editor completion of values from modules included with `include await M`. https://github.com/rescript-lang/rescript/pull/8770
 - Fix editor completion inside dict literals and dict patterns, which suggested untyped values. https://github.com/rescript-lang/rescript/pull/8770
 - Report the required Node.js version 22 when the platform package can't be found. https://github.com/rescript-lang/rescript/pull/8770
@@ -58,6 +59,10 @@
 - Speed up the rewriting of JS globals shadowed by local bindings in nested functions. https://github.com/rescript-lang/rescript/pull/8772
 - Speed up dead code elimination of toplevel bindings in large modules. https://github.com/rescript-lang/rescript/pull/8773
 - Make .cmt and .cmti files smaller by no longer embedding a copy of the .cmi. https://github.com/rescript-lang/rescript/pull/8774
+- Use the OCaml standard library's hash tables in the compiler. https://github.com/rescript-lang/rescript/pull/8786
+- Use the OCaml standard library's hash tables for the compiler's hash sets, and always order the imports of a module used both with and without `default` the same way. https://github.com/rescript-lang/rescript/pull/8787
+- Use the OCaml standard library's sets in the compiler. https://github.com/rescript-lang/rescript/pull/8789
+- Use the OCaml standard library's maps in the compiler. https://github.com/rescript-lang/rescript/pull/8790
 - Represent explicit expression braces as `Pexp_braces` in parsetree v1 and format `else` branches consistently with `if` branches. https://github.com/rescript-lang/rescript/pull/8678
 - Omit redundant braces around multi-statement switch case bodies when formatting. https://github.com/rescript-lang/rescript/pull/8677
 - Avoid running `rescript-schema-ppx` and `sury-ppx` on source files without an `@schema` annotation. https://github.com/rescript-lang/rescript/pull/8662
@@ -66,6 +71,7 @@
 
 #### :house: Internal
 
+- Remove the unused `Packed` and `Partial_class_expr` constructors from the `.cmt` format and bump its magic number. https://github.com/rescript-lang/rescript/pull/8793
 - Make `dict` an abstract type instead of a record with a hidden field. https://github.com/rescript-lang/rescript/pull/8752
 - Remove dead code from the compiler and rewatch. https://github.com/rescript-lang/rescript/pull/8756
 - Represent dict patterns with a dedicated `Tpat_dict` typed tree node. https://github.com/rescript-lang/rescript/pull/8751

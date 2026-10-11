@@ -69,7 +69,7 @@ let mark_dead_code (js : J.program) : J.program =
                 Js_analyzer.no_side_effect_expression x
             in
             let () =
-              if Set_ident.mem js.export_set ident then
+              if Set_ident.mem ident js.export_set then
                 Js_op_util.update_used_stats ident_info Exported
             in
             let () =
@@ -101,13 +101,15 @@ let mark_dead_code (js : J.program) : J.program =
     }
   in
   mark_dead.program mark_dead js;
-  Hash_ident.iter ident_use_stats (fun _id (info : meta_info) ->
+  Hash_ident.iter
+    (fun _id (info : meta_info) ->
       match info with
       | Info ({used_stats = Scanning_pure} as info) ->
         Js_op_util.update_used_stats info Dead_pure
       | Info ({used_stats = Scanning_non_pure} as info) ->
         Js_op_util.update_used_stats info Dead_non_pure
-      | _ -> ());
+      | _ -> ())
+    ident_use_stats;
   js
 
 (*

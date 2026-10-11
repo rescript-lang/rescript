@@ -44,6 +44,11 @@
     ]}
     we can bound [x] to [100] in a single step
 *)
+let param_table params new_params =
+  let tbl = Hash_ident.create (List.length params) in
+  List.iter2 (Hash_ident.add tbl) params new_params;
+  tbl
+
 let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
     (body : Lambda.t) (args : Lambda.t list) =
   match Lam_beta_reduce_util.simple_beta_reduce params body args with
@@ -60,7 +65,7 @@ let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
     in
     let new_body =
       Lam_bounded_vars.rewrite
-        (Hash_ident.of_list2 (List.rev params) rev_new_params)
+        (param_table (List.rev params) rev_new_params)
         body
     in
     (* [rest_bindings] is in reverse parameter order; folding left makes the
@@ -92,7 +97,7 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
             ((p, arg) :: rest_bindings, Lambda.var p :: acc)
           | _ ->
             if Lam_analysis.no_side_effects arg then
-              match Map_ident.find_exn map old_param with
+              match Map_ident.find old_param map with
               | stat ->
                 if Lam_var_stats.top_and_used_zero_or_one stat then
                   (rest_bindings, arg :: acc)
@@ -105,7 +110,7 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
     in
     let new_body =
       Lam_bounded_vars.rewrite
-        (Hash_ident.of_list2 (List.rev params) rev_new_params)
+        (param_table (List.rev params) rev_new_params)
         body
     in
     (* See above: fold left so arguments evaluate in call order. *)

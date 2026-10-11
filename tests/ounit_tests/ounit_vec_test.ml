@@ -56,7 +56,7 @@ let suites =
            let v =
              Vec_int.inplace_filter_with
                (fun x -> x mod 2 = 0)
-               ~cb_no:(fun a b -> Set_int.add b a)
+               ~cb_no:(fun a b -> Set_int.add a b)
                Set_int.empty u
            in
            let even, odd =

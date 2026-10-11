@@ -32,8 +32,8 @@ let live_idents (export_set : Set_ident.t) (block : J.block) : Set_ident.t =
   let live = ref Set_ident.empty in
   let worklist = ref [] in
   let mark id =
-    if not (Set_ident.mem !live id) then (
-      live := Set_ident.add !live id;
+    if not (Set_ident.mem id !live) then (
+      live := Set_ident.add id !live;
       worklist := id :: !worklist)
   in
   Ext_list.iter block (fun (st : J.statement) ->
@@ -50,15 +50,15 @@ let live_idents (export_set : Set_ident.t) (block : J.block) : Set_ident.t =
       | Variable {value = None; _} -> ()
       | _ ->
         if not (Js_analyzer.no_side_effect_statement st) then
-          Set_ident.iter (Js_analyzer.free_variables_of_statement st) mark);
-  Set_ident.iter export_set mark;
+          Set_ident.iter mark (Js_analyzer.free_variables_of_statement st));
+  Set_ident.iter mark export_set;
   let rec drain () =
     match !worklist with
     | [] -> ()
     | id :: rest ->
       worklist := rest;
       (match Hash_ident.find_opt deps id with
-      | Some fv -> Set_ident.iter fv mark
+      | Some fv -> Set_ident.iter mark fv
       | None -> ());
       drain ()
   in
@@ -72,7 +72,7 @@ let shake_program (program : J.program) =
     Ext_list.fold_right block [] (fun (st : J.statement) acc ->
         match st.statement_desc with
         | Variable {ident; value; _} -> (
-          if Set_ident.mem really_set ident then st :: acc
+          if Set_ident.mem ident really_set then st :: acc
           else
             match value with
             | None -> acc

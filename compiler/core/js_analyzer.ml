@@ -28,7 +28,7 @@ type idents_stats = {
 }
 
 let add_defined_idents (x : idents_stats) ident =
-  x.defined_idents <- Set_ident.add x.defined_idents ident
+  x.defined_idents <- Set_ident.add ident x.defined_idents
 
 let add_record_rest_field_idents stats fields =
   List.iter
@@ -61,8 +61,8 @@ let free_variables (stats : idents_stats) =
         | Some v -> self.expression self v);
     ident =
       (fun _ id ->
-        if not (Set_ident.mem stats.defined_idents id) then
-          stats.used_idents <- Set_ident.add stats.used_idents id);
+        if not (Set_ident.mem id stats.defined_idents) then
+          stats.used_idents <- Set_ident.add id stats.used_idents);
     expression =
       (fun self exp ->
         match exp.expression_desc with

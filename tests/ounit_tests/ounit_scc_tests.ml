@@ -2,7 +2,7 @@ let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
 let ( =~ ) = OUnit.assert_equal
 
-module String_hash = Hash.Make (struct
+module String_hash = Hashtbl.Make (struct
   type t = string
 
   let equal = Ext_string.equal
@@ -230,10 +230,10 @@ let test (input : (string * string list) list) =
   let node_array = Array.init nodes_num (fun _ -> Vec_int.empty ()) in
   input
   |> List.iter (fun (x, others) ->
-      let idx = String_hash.find_exn tbl x in
+      let idx = String_hash.find tbl x in
       others
       |> List.iter (fun y ->
-          Vec_int.push node_array.(idx) (String_hash.find_exn tbl y)));
+          Vec_int.push node_array.(idx) (String_hash.find tbl y)));
   graph_check node_array
 
 let test2 (input : (string * string list) list) =
@@ -249,15 +249,15 @@ let test2 (input : (string * string list) list) =
   input |> List.iter (fun (x, others) -> List.iter add (x :: others));
   let nodes_num = String_hash.length tbl in
   let other_mapping = Array.make nodes_num "" in
-  String_hash.iter tbl (fun k v -> other_mapping.(v) <- k);
+  String_hash.iter (fun k v -> other_mapping.(v) <- k) tbl;
 
   let node_array = Array.init nodes_num (fun _ -> Vec_int.empty ()) in
   input
   |> List.iter (fun (x, others) ->
-      let idx = String_hash.find_exn tbl x in
+      let idx = String_hash.find tbl x in
       others
       |> List.iter (fun y ->
-          Vec_int.push node_array.(idx) (String_hash.find_exn tbl y)));
+          Vec_int.push node_array.(idx) (String_hash.find tbl y)));
   let output = Ext_scc.graph node_array in
   output
   |> Int_vec_vec.map_into_array (fun int_vec ->

@@ -41,7 +41,7 @@ let values_of_export (meta : Lam_stats.t) (export_map : Lambda.t Map_ident.t) :
                 | NA -> Lam_arity.na
                 | SimpleForm lam -> Lam_arity_analysis.get_arity meta lam))
         | Some _ | None -> (
-          match Map_ident.find_opt export_map x with
+          match Map_ident.find_opt x export_map with
           | Some (Lprim {primitive = Pmakeblock info; args})
             when Lambda.is_immutable_block info ->
             Submodule
@@ -50,7 +50,7 @@ let values_of_export (meta : Lam_stats.t) (export_map : Lambda.t Map_ident.t) :
           | Some _ | None -> single_na)
       in
       let persistent_closed_lambda =
-        let optlam = Map_ident.find_opt export_map x in
+        let optlam = Map_ident.find_opt x export_map in
         match optlam with
         | Some
             (Lconst
@@ -105,7 +105,7 @@ let values_of_export (meta : Lam_stats.t) (export_map : Lambda.t Map_ident.t) :
         let cmj_value : Js_cmj_format.cmj_value =
           {arity; persistent_closed_lambda}
         in
-        Map_string.add acc x.name cmj_value)
+        Map_string.add x.name cmj_value acc)
 
 (* ATTENTION: all runtime modules, if it is not hard required,
    it should be okay to not reference it
