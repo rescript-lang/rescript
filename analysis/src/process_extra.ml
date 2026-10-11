@@ -134,7 +134,6 @@ let extra_for_cmt ~(iterator : Tast_iterator.iterator)
     in
     extra_for_signature_items ~iterator items;
     extra_for_parts parts
-  | _ -> extra_for_structure_items ~iterator []
 
 let add_for_path ~env ~extra path lident loc typ tip =
   let ident_name = Longident.last lident in
