@@ -1411,7 +1411,6 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
   | Texp_field (arg, _, lbl) -> (
     let targ = transl_exp arg in
     match lbl.lbl_repres with
-    | Record_float_unused -> assert false
     | Record_regular ->
       prim
         ~primitive:
@@ -1432,7 +1431,6 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
   | Texp_setfield (arg, _, lbl, newval) ->
     let access =
       match lbl.lbl_repres with
-      | Record_float_unused -> assert false
       | Record_regular ->
         Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl.lbl_runtime_name)
       | Record_inlined _ ->
@@ -1768,7 +1766,6 @@ and transl_record loc env fields repres opt_init_expr =
             | Kept _ ->
               let access =
                 match repres with
-                | Record_float_unused -> assert false
                 | Record_regular ->
                   Pfield (i, Lambda.fld_record lbl.lbl_runtime_name)
                 | Record_inlined _ ->
@@ -1793,7 +1790,6 @@ and transl_record loc env fields repres opt_init_expr =
           if mut = Mutable then raise Not_constant;
           let cl = List.map extract_constant ll in
           match repres with
-          | Record_float_unused -> assert false
           | Record_regular ->
             const (Const_block (Lambda.blk_record (field_shape ()) mut, cl))
           | Record_inlined {name; representation} ->
@@ -1823,7 +1819,6 @@ and transl_record loc env fields repres opt_init_expr =
             prim
               ~primitive:(Pmakeblock (Lambda.blk_record (field_shape ()) mut))
               ~args:ll loc
-          | Record_float_unused -> assert false
           | Record_inlined {name; representation} ->
             let runtime =
               match Variant_runtime.representation representation with
@@ -1870,7 +1865,6 @@ and transl_record loc env fields repres opt_init_expr =
         | Overridden (_lid, expr) ->
           let upd =
             match repres with
-            | Record_float_unused -> assert false
             | Record_regular ->
               Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl.lbl_runtime_name)
             | Record_inlined _ ->

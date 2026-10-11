@@ -1488,7 +1488,6 @@ let make_record_matching loc all_labels def = function
         let lbl = all_labels.(pos) in
         let access =
           match lbl.lbl_repres with
-          | Record_float_unused -> assert false
           | Record_regular ->
             prim
               ~primitive:
