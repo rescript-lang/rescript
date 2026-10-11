@@ -1,0 +1,9 @@
+let count$ = signal 0
+let ($count) = count$ + 1
+let value$$ = { count$; ($count) }
+let update = { value$$ with count$ = ($count) }
+let fn [arity:2]~count$  ~on$count  = count$ + on$count
+let fromRecord = value$$.count$ + value$$.($count)
+let _$ = 1
+let __$x = _$ + 1
+let underscore [arity:1]~_$  = _$

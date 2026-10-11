@@ -22,6 +22,8 @@
 
 #### :rocket: New Feature
 
+- Allow `$` in identifiers, e.g. `let count$ = signal(0)`. https://github.com/rescript-lang/rescript/pull/8791
+
 #### :bug: Bug fix
 
 - Fix references to a `@val` global reading a binding with the same name, e.g. a toplevel `let` declared before them. https://github.com/rescript-lang/rescript/pull/8785
