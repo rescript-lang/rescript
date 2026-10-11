@@ -24,9 +24,9 @@
 
 type env_value =
   | Ml of Js_cmj_format.cmj_load_info
-  | External
+  | External of Ident.t
       (** Also a js file, but this belong to third party 
-      we never load runtime/*.cmj
+      we never load runtime/*.cmj; carries the id it was first bound to
   *)
 
 type ident_info = Js_cmj_format.keyed_cmj_value = {
@@ -78,11 +78,12 @@ let add_js_module ?import_attributes
       dynamic_import;
     }
   in
-  match Lam_module_ident.Hash.find_key_opt cached_tbl lam_module_ident with
+  match Lam_module_ident.Hash.find_opt cached_tbl lam_module_ident with
+  | Some (External old_id) -> old_id
+  | Some (Ml _) -> assert false
   | None ->
-    lam_module_ident +> External;
+    lam_module_ident +> External id;
     id
-  | Some old_key -> old_key.id
 
 let cmj_table_of_module_id ~dynamic_import (module_id : Ident.t) =
   let oid = Lam_module_ident.of_ml ~dynamic_import module_id in
@@ -92,7 +93,7 @@ let cmj_table_of_module_id ~dynamic_import (module_id : Ident.t) =
     oid +> Ml cmj_load_info;
     cmj_load_info.cmj_table
   | Some (Ml {cmj_table}) -> cmj_table
-  | Some External -> assert false
+  | Some (External _) -> assert false
 
 let register_ml_module ~dynamic_import (module_id : Ident.t) : unit =
   ignore (cmj_table_of_module_id ~dynamic_import module_id)
@@ -112,7 +113,7 @@ let get_package_path_from_cmj (id : Lam_module_ident.t) :
   let cmj_load_info =
     match Lam_module_ident.Hash.find_opt cached_tbl id with
     | Some (Ml cmj_load_info) -> cmj_load_info
-    | Some External -> assert false
+    | Some (External _) -> assert false
     (* called by {!Js_name_of_module_id.string_of_module_id}
        can not be External
     *)
@@ -143,11 +144,12 @@ let is_pure_module (oid : Lam_module_ident.t) =
         cmj_load_info.cmj_table.pure
       | exception _ -> false)
     | Some (Ml {cmj_table}) -> cmj_table.pure
-    | Some External -> false)
+    | Some (External _) -> false)
 
 let populate_required_modules extras
     (hard_dependencies : Lam_module_ident.Hash_set.t) =
-  Lam_module_ident.Hash.iter cached_tbl (fun id _ ->
-      if not (is_pure_module id) then add hard_dependencies id);
+  Lam_module_ident.Hash.iter
+    (fun id _ -> if not (is_pure_module id) then add hard_dependencies id)
+    cached_tbl;
   Lam_module_ident.Hash_set.iter extras (fun id : unit ->
       if not (is_pure_module id) then add hard_dependencies id)
