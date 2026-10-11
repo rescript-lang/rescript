@@ -72,6 +72,7 @@
 
 #### :house: Internal
 
+- Use one set of OCaml warning flags for the whole repository, including the editor analysis and tools. https://github.com/rescript-lang/rescript/pull/8796
 - Remove the unused `Packed` and `Partial_class_expr` constructors from the `.cmt` format and bump its magic number. https://github.com/rescript-lang/rescript/pull/8793
 - Make `dict` an abstract type instead of a record with a hidden field. https://github.com/rescript-lang/rescript/pull/8752
 - Remove dead code from the compiler and rewatch. https://github.com/rescript-lang/rescript/pull/8756
