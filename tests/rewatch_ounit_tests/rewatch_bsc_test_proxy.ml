@@ -5,11 +5,26 @@ let getenv name =
 
 let touch path = close_out (open_out_bin path)
 
+(* Parallel compiler calls append to one log. Windows emulates append mode by
+   seeking before each write, so concurrent appends can overwrite each other;
+   an exclusive lock makes each line a single uninterrupted write. *)
 let append_line path line =
-  let channel = open_out_gen [Open_creat; Open_text; Open_append] 0o666 path in
-  output_string channel line;
-  output_char channel '\n';
-  close_out channel
+  let descriptor =
+    Unix.openfile path [Unix.O_WRONLY; Unix.O_CREAT; Unix.O_APPEND] 0o666
+  in
+  Fun.protect
+    ~finally:(fun () -> Unix.close descriptor)
+    (fun () ->
+      Unix.lockf descriptor Unix.F_LOCK 0;
+      let bytes = Bytes.of_string (line ^ "\n") in
+      let rec write offset =
+        if offset < Bytes.length bytes then
+          write
+            (offset
+            + Unix.write descriptor bytes offset (Bytes.length bytes - offset))
+      in
+      ignore (Unix.lseek descriptor 0 Unix.SEEK_END);
+      write 0)
 
 let remove_if_present path = try Sys.remove path with Sys_error _ -> ()
 
