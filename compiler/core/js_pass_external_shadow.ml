@@ -84,6 +84,14 @@ let program (js : J.program) : J.program =
     result
   in
   let super = Js_record_map.super in
+  let map_cases (self : Js_record_map.iter) clauses default =
+    with_bindings (add_switch_declarations clauses default) (fun () ->
+        ( Ext_list.map clauses (fun (key, (c : J.case_clause)) ->
+              (key, {c with switch_body = self.block self c.switch_body})),
+          match default with
+          | None -> None
+          | Some block -> Some (self.block self block) ))
+  in
   let self =
     {
       super with
@@ -112,13 +120,16 @@ let program (js : J.program) : J.program =
             with_bindings (add_binding ident) (fun () ->
                 super.statement self st)
           (* The cases of a switch are printed without braces, so they share
-             one scope. *)
-          | Int_switch (_, clauses, default) ->
-            with_bindings (add_switch_declarations clauses default) (fun () ->
-                super.statement self st)
-          | String_switch (_, clauses, default) ->
-            with_bindings (add_switch_declarations clauses default) (fun () ->
-                super.statement self st)
+             one scope. The discriminant is evaluated before that scope is
+             entered. *)
+          | Int_switch (e, clauses, default) ->
+            let e = self.expression self e in
+            let clauses, default = map_cases self clauses default in
+            {st with statement_desc = Int_switch (e, clauses, default)}
+          | String_switch (e, clauses, default) ->
+            let e = self.expression self e in
+            let clauses, default = map_cases self clauses default in
+            {st with statement_desc = String_switch (e, clauses, default)}
           (* The catch parameter is only in scope in the handler. *)
           | Try (body, catch, finally) ->
             let body = self.block self body in
