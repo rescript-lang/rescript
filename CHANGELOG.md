@@ -22,6 +22,7 @@
 
 #### :rocket: New Feature
 
+- Support Windows 11 on ARM by installing the x64 binaries, which Windows runs through its x64 emulation. https://github.com/rescript-lang/rescript/pull/8776
 - Allow `$` in identifiers, e.g. `let count$ = signal(0)`. https://github.com/rescript-lang/rescript/pull/8791
 
 #### :bug: Bug fix
