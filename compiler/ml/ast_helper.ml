@@ -29,12 +29,6 @@ let default_loc = ref Location.none
 module Const = struct
   let integer ?suffix i = Pconst_integer (i, suffix)
   let int ?suffix i = integer ?suffix (string_of_int i)
-  let int32 ?(suffix = 'l') i = integer ~suffix (Int32.to_string i)
-  let int64 ?(suffix = 'L') i = integer ~suffix (Int64.to_string i)
-  let float ?suffix f = Pconst_float (f, suffix)
-  let char c =
-    let semantic = Char.code c in
-    Pconst_char {source = String_literal.encode_char_source semantic; semantic}
   let string semantic =
     Pconst_string (String_literal.string_from_semantic semantic)
 end
@@ -42,7 +36,6 @@ end
 module Typ = struct
   let mk ?(loc = !default_loc) ?(attrs = []) d =
     {ptyp_desc = d; ptyp_loc = loc; ptyp_attributes = attrs}
-  let attr d a = {d with ptyp_attributes = d.ptyp_attributes @ [a]}
 
   let any ?loc ?attrs () = mk ?loc ?attrs Ptyp_any
   let var ?loc ?attrs a = mk ?loc ?attrs (Ptyp_var a)
@@ -127,7 +120,6 @@ end
 module Pat = struct
   let mk ?(loc = !default_loc) ?(attrs = []) d =
     {ppat_desc = d; ppat_loc = loc; ppat_attributes = attrs}
-  let attr d a = {d with ppat_attributes = d.ppat_attributes @ [a]}
 
   let any ?loc ?attrs () = mk ?loc ?attrs Ppat_any
   let var ?loc ?attrs a = mk ?loc ?attrs (Ppat_var a)
@@ -152,7 +144,6 @@ end
 module Exp = struct
   let mk ?(loc = !default_loc) ?(attrs = []) d =
     {pexp_desc = d; pexp_loc = loc; pexp_attributes = attrs}
-  let attr d a = {d with pexp_attributes = d.pexp_attributes @ [a]}
 
   let braces ?(attrs = []) ~braces_loc e =
     mk ~loc:e.pexp_loc ~attrs (Pexp_braces {expr = e; braces_loc})
@@ -267,7 +258,6 @@ end
 module Mty = struct
   let mk ?(loc = !default_loc) ?(attrs = []) d =
     {pmty_desc = d; pmty_loc = loc; pmty_attributes = attrs}
-  let attr d a = {d with pmty_attributes = d.pmty_attributes @ [a]}
 
   let ident ?loc ?attrs a = mk ?loc ?attrs (Pmty_ident a)
   let alias ?loc ?attrs a = mk ?loc ?attrs (Pmty_alias a)
@@ -281,7 +271,6 @@ end
 module Mod = struct
   let mk ?(loc = !default_loc) ?(attrs = []) d =
     {pmod_desc = d; pmod_loc = loc; pmod_attributes = attrs}
-  let attr d a = {d with pmod_attributes = d.pmod_attributes @ [a]}
 
   let ident ?loc ?attrs x = mk ?loc ?attrs (Pmod_ident x)
   let structure ?loc ?attrs x = mk ?loc ?attrs (Pmod_structure x)
@@ -559,23 +548,6 @@ module Te = struct
     {
       pext_name = name;
       pext_kind = kind;
-      pext_loc = loc;
-      pext_attributes = attrs;
-    }
-
-  let decl ?(loc = !default_loc) ?(attrs = []) ?(args = Pcstr_tuple []) ?res
-      name =
-    {
-      pext_name = name;
-      pext_kind = Pext_decl (args, res);
-      pext_loc = loc;
-      pext_attributes = attrs;
-    }
-
-  let rebind ?(loc = !default_loc) ?(attrs = []) name lid =
-    {
-      pext_name = name;
-      pext_kind = Pext_rebind lid;
       pext_loc = loc;
       pext_attributes = attrs;
     }
