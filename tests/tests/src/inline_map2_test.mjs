@@ -547,13 +547,10 @@ function Make(Ord) {
         return accu;
       }
       _x = x._0;
-      _accu = {
-        hd: [
-          x._1,
-          x._2
-        ],
-        tl: bindings_aux(accu, x._3)
-      };
+      _accu = {hd: [
+        x._1,
+        x._2
+      ], tl: bindings_aux(accu, x._3)};
       continue;
     };
   };
@@ -1170,13 +1167,10 @@ function bindings_aux(_accu, _x) {
       return accu;
     }
     _x = x._0;
-    _accu = {
-      hd: [
-        x._1,
-        x._2
-      ],
-      tl: bindings_aux(accu, x._3)
-    };
+    _accu = {hd: [
+      x._1,
+      x._2
+    ], tl: bindings_aux(accu, x._3)};
     continue;
   };
 }
@@ -1223,31 +1217,19 @@ let IntMap = {
   choose: min_binding
 };
 
-let m = Stdlib_List.reduceReverse({
-  hd: [
-    10,
-    /* 'a' */97
-  ],
-  tl: {
-    hd: [
-      3,
-      /* 'b' */98
-    ],
-    tl: {
-      hd: [
-        7,
-        /* 'c' */99
-      ],
-      tl: {
-        hd: [
-          20,
-          /* 'd' */100
-        ],
-        tl: /* [] */0
-      }
-    }
-  }
-}, "Empty", (acc, param) => add(param[0], param[1], acc));
+let m = Stdlib_List.reduceReverse({hd: [
+  10,
+  /* 'a' */97
+], tl: {hd: [
+  3,
+  /* 'b' */98
+], tl: {hd: [
+  7,
+  /* 'c' */99
+], tl: {hd: [
+  20,
+  /* 'd' */100
+], tl: /* [] */0}}}}, "Empty", (acc, param) => add(param[0], param[1], acc));
 
 function height$1(x) {
   if (typeof x !== "object") {
@@ -1822,13 +1804,10 @@ function bindings_aux$1(_accu, _x) {
       return accu;
     }
     _x = x._0;
-    _accu = {
-      hd: [
-        x._1,
-        x._2
-      ],
-      tl: bindings_aux$1(accu, x._3)
-    };
+    _accu = {hd: [
+      x._1,
+      x._2
+    ], tl: bindings_aux$1(accu, x._3)};
     continue;
   };
 }
@@ -1875,31 +1854,19 @@ let SMap = {
   choose: min_binding$1
 };
 
-let s = Stdlib_List.reduceReverse({
-  hd: [
-    "10",
-    /* 'a' */97
-  ],
-  tl: {
-    hd: [
-      "3",
-      /* 'b' */98
-    ],
-    tl: {
-      hd: [
-        "7",
-        /* 'c' */99
-      ],
-      tl: {
-        hd: [
-          "20",
-          /* 'd' */100
-        ],
-        tl: /* [] */0
-      }
-    }
-  }
-}, "Empty", (acc, param) => add$1(param[0], param[1], acc));
+let s = Stdlib_List.reduceReverse({hd: [
+  "10",
+  /* 'a' */97
+], tl: {hd: [
+  "3",
+  /* 'b' */98
+], tl: {hd: [
+  "7",
+  /* 'c' */99
+], tl: {hd: [
+  "20",
+  /* 'd' */100
+], tl: /* [] */0}}}}, "Empty", (acc, param) => add$1(param[0], param[1], acc));
 
 Mocha.describe("Inline_map2_test", () => {
   Mocha.test("assertion1", () => Test_utils.eq("File \"inline_map2_test.res\", line 478, characters 30-37", find(10, m), /* 'a' */97));

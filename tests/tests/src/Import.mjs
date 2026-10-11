@@ -9,29 +9,11 @@ function eachIntLazy(list, f) {
   return import("@rescript/runtime/lib/es6/Stdlib_List.mjs").then(m => m.forEach).then(each => Promise.resolve(each(list, f)));
 }
 
-eachIntLazy({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-}, n => {
+eachIntLazy({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}, n => {
   console.log("lazy", n);
 });
 
-eachIntAsync({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-}, n => {
+eachIntAsync({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}, n => {
   console.log("async", n);
 });
 

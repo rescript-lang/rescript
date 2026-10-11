@@ -30,204 +30,21 @@ function convert(s) {
 Mocha.describe("Chn_test", () => {
   Mocha.test("Chinese string newline", () => Test_utils.eq("File \"chn_test.res\", line 25, characters 6-13", `你好，
 世界`, `你好，\n世界`));
-  Mocha.test("Convert Chinese characters", () => Test_utils.eq("File \"chn_test.res\", line 34, characters 6-13", convert(`汉字是世界上最美丽的character`), {
-    hd: 27721,
-    tl: {
-      hd: 23383,
-      tl: {
-        hd: 26159,
-        tl: {
-          hd: 19990,
-          tl: {
-            hd: 30028,
-            tl: {
-              hd: 19978,
-              tl: {
-                hd: 26368,
-                tl: {
-                  hd: 32654,
-                  tl: {
-                    hd: 20029,
-                    tl: {
-                      hd: 30340,
-                      tl: {
-                        hd: 99,
-                        tl: {
-                          hd: 104,
-                          tl: {
-                            hd: 97,
-                            tl: {
-                              hd: 114,
-                              tl: {
-                                hd: 97,
-                                tl: {
-                                  hd: 99,
-                                  tl: {
-                                    hd: 116,
-                                    tl: {
-                                      hd: 101,
-                                      tl: {
-                                        hd: 114,
-                                        tl: /* [] */0
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }));
-  Mocha.test("Convert hex escape", () => Test_utils.eq("File \"chn_test.res\", line 60, characters 38-45", convert(`\x3f\x3fa`), {
-    hd: 63,
-    tl: {
-      hd: 63,
-      tl: {
-        hd: 97,
-        tl: /* [] */0
-      }
-    }
-  }));
-  Mocha.test("Convert question marks", () => Test_utils.eq("File \"chn_test.res\", line 61, characters 42-49", convert(`??a`), {
-    hd: 63,
-    tl: {
-      hd: 63,
-      tl: {
-        hd: 97,
-        tl: /* [] */0
-      }
-    }
-  }));
-  Mocha.test("Convert unicode escape", () => Test_utils.eq("File \"chn_test.res\", line 62, characters 42-49", convert(`\u003f\x3fa`), {
-    hd: 63,
-    tl: {
-      hd: 63,
-      tl: {
-        hd: 97,
-        tl: /* [] */0
-      }
-    }
-  }));
-  Mocha.test("Convert rocket emoji with a", () => Test_utils.eq("File \"chn_test.res\", line 64, characters 7-14", convert(`🚀🚀a`), {
-    hd: 128640,
-    tl: {
-      hd: 128640,
-      tl: {
-        hd: 97,
-        tl: /* [] */0
-      }
-    }
-  }));
-  Mocha.test("Convert rocket emoji surrogate with a", () => Test_utils.eq("File \"chn_test.res\", line 67, characters 7-14", convert(`\uD83D\uDE80a`), {
-    hd: 128640,
-    tl: {
-      hd: 97,
-      tl: /* [] */0
-    }
-  }));
-  Mocha.test("Convert rocket emoji surrogate with question", () => Test_utils.eq("File \"chn_test.res\", line 70, characters 7-14", convert(`\uD83D\uDE80\x3f`), {
-    hd: 128640,
-    tl: {
-      hd: 63,
-      tl: /* [] */0
-    }
-  }));
-  Mocha.test("Convert double rocket emoji with a", () => Test_utils.eq("File \"chn_test.res\", line 74, characters 7-14", convert(`\uD83D\uDE80\uD83D\uDE80a`), {
-    hd: 128640,
-    tl: {
-      hd: 128640,
-      tl: {
-        hd: 97,
-        tl: /* [] */0
-      }
-    }
-  }));
+  Mocha.test("Convert Chinese characters", () => Test_utils.eq("File \"chn_test.res\", line 34, characters 6-13", convert(`汉字是世界上最美丽的character`), {hd: 27721, tl: {hd: 23383, tl: {hd: 26159, tl: {hd: 19990, tl: {hd: 30028, tl: {hd: 19978, tl: {hd: 26368, tl: {hd: 32654, tl: {hd: 20029, tl: {hd: 30340, tl: {hd: 99, tl: {hd: 104, tl: {hd: 97, tl: {hd: 114, tl: {hd: 97, tl: {hd: 99, tl: {hd: 116, tl: {hd: 101, tl: {hd: 114, tl: /* [] */0}}}}}}}}}}}}}}}}}}}));
+  Mocha.test("Convert hex escape", () => Test_utils.eq("File \"chn_test.res\", line 60, characters 38-45", convert(`\x3f\x3fa`), {hd: 63, tl: {hd: 63, tl: {hd: 97, tl: /* [] */0}}}));
+  Mocha.test("Convert question marks", () => Test_utils.eq("File \"chn_test.res\", line 61, characters 42-49", convert(`??a`), {hd: 63, tl: {hd: 63, tl: {hd: 97, tl: /* [] */0}}}));
+  Mocha.test("Convert unicode escape", () => Test_utils.eq("File \"chn_test.res\", line 62, characters 42-49", convert(`\u003f\x3fa`), {hd: 63, tl: {hd: 63, tl: {hd: 97, tl: /* [] */0}}}));
+  Mocha.test("Convert rocket emoji with a", () => Test_utils.eq("File \"chn_test.res\", line 64, characters 7-14", convert(`🚀🚀a`), {hd: 128640, tl: {hd: 128640, tl: {hd: 97, tl: /* [] */0}}}));
+  Mocha.test("Convert rocket emoji surrogate with a", () => Test_utils.eq("File \"chn_test.res\", line 67, characters 7-14", convert(`\uD83D\uDE80a`), {hd: 128640, tl: {hd: 97, tl: /* [] */0}}));
+  Mocha.test("Convert rocket emoji surrogate with question", () => Test_utils.eq("File \"chn_test.res\", line 70, characters 7-14", convert(`\uD83D\uDE80\x3f`), {hd: 128640, tl: {hd: 63, tl: /* [] */0}}));
+  Mocha.test("Convert double rocket emoji with a", () => Test_utils.eq("File \"chn_test.res\", line 74, characters 7-14", convert(`\uD83D\uDE80\uD83D\uDE80a`), {hd: 128640, tl: {hd: 128640, tl: {hd: 97, tl: /* [] */0}}}));
   Mocha.test("String length with emoji", () => Test_utils.eq("File \"chn_test.res\", line 77, characters 44-51", `\uD83D\uDE80\0`.length, 3));
   Mocha.test("String get emoji with null", () => Test_utils.eq("File \"chn_test.res\", line 80, characters 7-14", `\uD83D\uDE80\0`.codePointAt(0), 128640));
   Mocha.test("String get rocket emoji", () => Test_utils.eq("File \"chn_test.res\", line 82, characters 43-50", `🚀`.codePointAt(0), 128640));
-  Mocha.test("Convert rocket emoji", () => Test_utils.eq("File \"chn_test.res\", line 84, characters 40-47", convert(`\uD83D\uDE80`), {
-    hd: 128640,
-    tl: /* [] */0
-  }));
-  Mocha.test("Convert double rocket emoji", () => Test_utils.eq("File \"chn_test.res\", line 86, characters 7-14", convert(`\uD83D\uDE80\uD83D\uDE80`), {
-    hd: 128640,
-    tl: {
-      hd: 128640,
-      tl: /* [] */0
-    }
-  }));
-  Mocha.test("Convert whitespace chars", () => Test_utils.eq("File \"chn_test.res\", line 89, characters 7-14", convert(` \b\t\n\v\f\ra`), {
-    hd: 32,
-    tl: {
-      hd: 8,
-      tl: {
-        hd: 9,
-        tl: {
-          hd: 10,
-          tl: {
-            hd: 11,
-            tl: {
-              hd: 12,
-              tl: {
-                hd: 13,
-                tl: {
-                  hd: 97,
-                  tl: /* [] */0
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }));
-  Mocha.test("Convert escaped chars", () => Test_utils.eq("File \"chn_test.res\", line 92, characters 7-14", convert(` \b\t\n\v\f\r"'\\\0a`), {
-    hd: 32,
-    tl: {
-      hd: 8,
-      tl: {
-        hd: 9,
-        tl: {
-          hd: 10,
-          tl: {
-            hd: 11,
-            tl: {
-              hd: 12,
-              tl: {
-                hd: 13,
-                tl: {
-                  hd: 34,
-                  tl: {
-                    hd: 39,
-                    tl: {
-                      hd: 92,
-                      tl: {
-                        hd: 0,
-                        tl: {
-                          hd: 97,
-                          tl: /* [] */0
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }));
+  Mocha.test("Convert rocket emoji", () => Test_utils.eq("File \"chn_test.res\", line 84, characters 40-47", convert(`\uD83D\uDE80`), {hd: 128640, tl: /* [] */0}));
+  Mocha.test("Convert double rocket emoji", () => Test_utils.eq("File \"chn_test.res\", line 86, characters 7-14", convert(`\uD83D\uDE80\uD83D\uDE80`), {hd: 128640, tl: {hd: 128640, tl: /* [] */0}}));
+  Mocha.test("Convert whitespace chars", () => Test_utils.eq("File \"chn_test.res\", line 89, characters 7-14", convert(` \b\t\n\v\f\ra`), {hd: 32, tl: {hd: 8, tl: {hd: 9, tl: {hd: 10, tl: {hd: 11, tl: {hd: 12, tl: {hd: 13, tl: {hd: 97, tl: /* [] */0}}}}}}}}));
+  Mocha.test("Convert escaped chars", () => Test_utils.eq("File \"chn_test.res\", line 92, characters 7-14", convert(` \b\t\n\v\f\r"'\\\0a`), {hd: 32, tl: {hd: 8, tl: {hd: 9, tl: {hd: 10, tl: {hd: 11, tl: {hd: 12, tl: {hd: 13, tl: {hd: 34, tl: {hd: 39, tl: {hd: 92, tl: {hd: 0, tl: {hd: 97, tl: /* [] */0}}}}}}}}}}}}));
 });
 
 export {

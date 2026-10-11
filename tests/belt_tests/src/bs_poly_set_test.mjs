@@ -17,10 +17,7 @@ let IntCmp = Belt_Id.comparable(Primitive_int.compare);
 function testIterToList(xs) {
   let v = /* [] */0;
   Belt_Set.forEach(xs, x => {
-    v = {
-      hd: x,
-      tl: v
-    };
+    v = {hd: x, tl: v};
   });
   return Belt_List.reverse(v);
 }
@@ -28,10 +25,7 @@ function testIterToList(xs) {
 function testIterToList2(xs) {
   let v = /* [] */0;
   Belt_SetDict.forEach(Belt_Set.getData(xs), x => {
-    v = {
-      hd: x,
-      tl: v
-    };
+    v = {hd: x, tl: v};
   });
   return Belt_List.reverse(v);
 }
@@ -174,22 +168,7 @@ Mocha.describe("Bs_poly_set_test", () => {
     Test_utils.eq("File \"bs_poly_set_test.res\", line 138, characters 7-14", Belt_Set.toList(a9), Belt_List.makeBy(800, i => i + 201 | 0));
     Test_utils.eq("File \"bs_poly_set_test.res\", line 139, characters 7-14", Belt_Set.minimum(a8), 0);
     Test_utils.eq("File \"bs_poly_set_test.res\", line 140, characters 7-14", Belt_Set.minimum(a9), 201);
-    Belt_List.forEach({
-      hd: a0,
-      tl: {
-        hd: a1,
-        tl: {
-          hd: a2,
-          tl: {
-            hd: a3,
-            tl: {
-              hd: a4,
-              tl: /* [] */0
-            }
-          }
-        }
-      }
-    }, Belt_Set.checkInvariantInternal);
+    Belt_List.forEach({hd: a0, tl: {hd: a1, tl: {hd: a2, tl: {hd: a3, tl: {hd: a4, tl: /* [] */0}}}}}, Belt_Set.checkInvariantInternal);
   });
   Mocha.test("empty set operations", () => {
     let a = Belt_Set.fromArray([], IntCmp);

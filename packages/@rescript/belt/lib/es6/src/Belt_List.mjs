@@ -37,10 +37,7 @@ function tailOrThrow(x) {
 }
 
 function add(xs, x) {
-  return {
-    hd: x,
-    tl: xs
-  };
+  return {hd: x, tl: xs};
 }
 
 function get(x, n) {
@@ -102,10 +99,7 @@ function partitionAux(p, _cell, _precX, _precY) {
     }
     let t = cell.tl;
     let h = cell.hd;
-    let next = {
-      hd: h,
-      tl: /* [] */0
-    };
+    let next = {hd: h, tl: /* [] */0};
     if (p(h)) {
       precX.tl = next;
       _precX = next;
@@ -128,14 +122,8 @@ function splitAux(_cell, _precX, _precY) {
       return;
     }
     let match = cell.hd;
-    let nextA = {
-      hd: match[0],
-      tl: /* [] */0
-    };
-    let nextB = {
-      hd: match[1],
-      tl: /* [] */0
-    };
+    let nextA = {hd: match[0], tl: /* [] */0};
+    let nextB = {hd: match[1], tl: /* [] */0};
     precX.tl = nextA;
     precY.tl = nextB;
     _precY = nextB;
@@ -152,10 +140,7 @@ function copyAuxCont(_cellX, _prec) {
     if (cellX === 0) {
       return prec;
     }
-    let next = {
-      hd: cellX.hd,
-      tl: /* [] */0
-    };
+    let next = {hd: cellX.hd, tl: /* [] */0};
     prec.tl = next;
     _prec = next;
     _cellX = cellX.tl;
@@ -173,10 +158,7 @@ function copyAuxWitFilter(f, _cellX, _prec) {
     let t = cellX.tl;
     let h = cellX.hd;
     if (f(h)) {
-      let next = {
-        hd: h,
-        tl: /* [] */0
-      };
+      let next = {hd: h, tl: /* [] */0};
       prec.tl = next;
       _prec = next;
       _cellX = t;
@@ -198,10 +180,7 @@ function copyAuxWithFilterIndex(f, _cellX, _prec, _i) {
     let t = cellX.tl;
     let h = cellX.hd;
     if (f(h, i)) {
-      let next = {
-        hd: h,
-        tl: /* [] */0
-      };
+      let next = {hd: h, tl: /* [] */0};
       prec.tl = next;
       _i = i + 1 | 0;
       _prec = next;
@@ -224,10 +203,7 @@ function copyAuxWitFilterMap(f, _cellX, _prec) {
     let t = cellX.tl;
     let h = f(cellX.hd);
     if (h !== undefined) {
-      let next = {
-        hd: Primitive_option.valFromOption(h),
-        tl: /* [] */0
-      };
+      let next = {hd: Primitive_option.valFromOption(h), tl: /* [] */0};
       prec.tl = next;
       _prec = next;
       _cellX = t;
@@ -251,10 +227,7 @@ function removeAssocAuxWithMap(_cellX, x, _prec, f) {
       prec.tl = t;
       return true;
     }
-    let next = {
-      hd: h,
-      tl: /* [] */0
-    };
+    let next = {hd: h, tl: /* [] */0};
     prec.tl = next;
     _prec = next;
     _cellX = t;
@@ -272,19 +245,13 @@ function setAssocAuxWithMap(_cellX, x, k, _prec, eq) {
     let t = cellX.tl;
     let h = cellX.hd;
     if (eq(h[0], x)) {
-      prec.tl = {
-        hd: [
-          x,
-          k
-        ],
-        tl: t
-      };
+      prec.tl = {hd: [
+        x,
+        k
+      ], tl: t};
       return true;
     }
-    let next = {
-      hd: h,
-      tl: /* [] */0
-    };
+    let next = {hd: h, tl: /* [] */0};
     prec.tl = next;
     _prec = next;
     _cellX = t;
@@ -299,10 +266,7 @@ function copyAuxWithMap(_cellX, _prec, f) {
     if (cellX === 0) {
       return;
     }
-    let next = {
-      hd: f(cellX.hd),
-      tl: /* [] */0
-    };
+    let next = {hd: f(cellX.hd), tl: /* [] */0};
     prec.tl = next;
     _prec = next;
     _cellX = cellX.tl;
@@ -321,13 +285,10 @@ function zipAux(_cellX, _cellY, _prec) {
     if (cellY === 0) {
       return;
     }
-    let next = {
-      hd: [
-        cellX.hd,
-        cellY.hd
-      ],
-      tl: /* [] */0
-    };
+    let next = {hd: [
+      cellX.hd,
+      cellY.hd
+    ], tl: /* [] */0};
     prec.tl = next;
     _prec = next;
     _cellY = cellY.tl;
@@ -347,10 +308,7 @@ function copyAuxWithMap2(f, _cellX, _cellY, _prec) {
     if (cellY === 0) {
       return;
     }
-    let next = {
-      hd: f(cellX.hd, cellY.hd),
-      tl: /* [] */0
-    };
+    let next = {hd: f(cellX.hd, cellY.hd), tl: /* [] */0};
     prec.tl = next;
     _prec = next;
     _cellY = cellY.tl;
@@ -367,10 +325,7 @@ function copyAuxWithMapI(f, _i, _cellX, _prec) {
     if (cellX === 0) {
       return;
     }
-    let next = {
-      hd: f(i, cellX.hd),
-      tl: /* [] */0
-    };
+    let next = {hd: f(i, cellX.hd), tl: /* [] */0};
     prec.tl = next;
     _prec = next;
     _cellX = cellX.tl;
@@ -390,10 +345,7 @@ function takeAux(_n, _cell, _prec) {
     if (cell === 0) {
       return false;
     }
-    let cell$1 = {
-      hd: cell.hd,
-      tl: /* [] */0
-    };
+    let cell$1 = {hd: cell.hd, tl: /* [] */0};
     prec.tl = cell$1;
     _prec = cell$1;
     _cell = cell.tl;
@@ -413,10 +365,7 @@ function splitAtAux(_n, _cell, _prec) {
     if (cell === 0) {
       return;
     }
-    let cell$1 = {
-      hd: cell.hd,
-      tl: /* [] */0
-    };
+    let cell$1 = {hd: cell.hd, tl: /* [] */0};
     prec.tl = cell$1;
     _prec = cell$1;
     _cell = cell.tl;
@@ -435,10 +384,7 @@ function take(lst, n) {
   if (lst === 0) {
     return;
   }
-  let cell = {
-    hd: lst.hd,
-    tl: /* [] */0
-  };
+  let cell = {hd: lst.hd, tl: /* [] */0};
   let has = takeAux(n - 1 | 0, lst.tl, cell);
   if (has) {
     return cell;
@@ -480,10 +426,7 @@ function splitAt(lst, n) {
   if (lst === 0) {
     return;
   }
-  let cell = {
-    hd: lst.hd,
-    tl: /* [] */0
-  };
+  let cell = {hd: lst.hd, tl: /* [] */0};
   let rest = splitAtAux(n - 1 | 0, lst.tl, cell);
   if (rest !== undefined) {
     return [
@@ -497,10 +440,7 @@ function concat(xs, ys) {
   if (xs === 0) {
     return ys;
   }
-  let cell = {
-    hd: xs.hd,
-    tl: /* [] */0
-  };
+  let cell = {hd: xs.hd, tl: /* [] */0};
   copyAuxCont(xs.tl, cell).tl = ys;
   return cell;
 }
@@ -509,10 +449,7 @@ function map(xs, f) {
   if (xs === 0) {
     return /* [] */0;
   }
-  let cell = {
-    hd: f(xs.hd),
-    tl: /* [] */0
-  };
+  let cell = {hd: f(xs.hd), tl: /* [] */0};
   copyAuxWithMap(xs.tl, cell, f);
   return cell;
 }
@@ -524,10 +461,7 @@ function zipBy(l1, l2, f) {
   if (l2 === 0) {
     return /* [] */0;
   }
-  let cell = {
-    hd: f(l1.hd, l2.hd),
-    tl: /* [] */0
-  };
+  let cell = {hd: f(l1.hd, l2.hd), tl: /* [] */0};
   copyAuxWithMap2(f, l1.tl, l2.tl, cell);
   return cell;
 }
@@ -536,10 +470,7 @@ function mapWithIndex(xs, f) {
   if (xs === 0) {
     return /* [] */0;
   }
-  let cell = {
-    hd: f(0, xs.hd),
-    tl: /* [] */0
-  };
+  let cell = {hd: f(0, xs.hd), tl: /* [] */0};
   copyAuxWithMapI(f, 1, xs.tl, cell);
   return cell;
 }
@@ -548,17 +479,11 @@ function makeBy(n, f) {
   if (n <= 0) {
     return /* [] */0;
   }
-  let headX = {
-    hd: f(0),
-    tl: /* [] */0
-  };
+  let headX = {hd: f(0), tl: /* [] */0};
   let cur = headX;
   let i = 1;
   while (i < n) {
-    let v = {
-      hd: f(i),
-      tl: /* [] */0
-    };
+    let v = {hd: f(i), tl: /* [] */0};
     cur.tl = v;
     cur = v;
     i = i + 1 | 0;
@@ -570,17 +495,11 @@ function make(n, v) {
   if (n <= 0) {
     return /* [] */0;
   }
-  let headX = {
-    hd: v,
-    tl: /* [] */0
-  };
+  let headX = {hd: v, tl: /* [] */0};
   let cur = headX;
   let i = 1;
   while (i < n) {
-    let v$1 = {
-      hd: v,
-      tl: /* [] */0
-    };
+    let v$1 = {hd: v, tl: /* [] */0};
     cur.tl = v$1;
     cur = v$1;
     i = i + 1 | 0;
@@ -626,10 +545,7 @@ function fromArray(a) {
     if (i < 0) {
       return res;
     }
-    _res = {
-      hd: a[i],
-      tl: res
-    };
+    _res = {hd: a[i], tl: res};
     _i = i - 1 | 0;
     continue;
   };
@@ -655,10 +571,7 @@ function reverseConcat(_l1, _l2) {
     if (l1 === 0) {
       return l2;
     }
-    _l2 = {
-      hd: l1.hd,
-      tl: l2
-    };
+    _l2 = {hd: l1.hd, tl: l2};
     _l1 = l1.tl;
     continue;
   };
@@ -690,10 +603,7 @@ function flatten(_xs) {
     }
     let match = xs.hd;
     if (match !== 0) {
-      let cell = {
-        hd: match.hd,
-        tl: /* [] */0
-      };
+      let cell = {hd: match.hd, tl: /* [] */0};
       flattenAux(copyAuxCont(match.tl, cell), xs.tl);
       return cell;
     }
@@ -728,10 +638,7 @@ function mapReverse(l, f) {
       return accu;
     }
     _xs = xs.tl;
-    _accu = {
-      hd: f(xs.hd),
-      tl: accu
-    };
+    _accu = {hd: f(xs.hd), tl: accu};
     continue;
   };
 }
@@ -826,10 +733,7 @@ function mapReverse2(l1, l2, f) {
     if (l2$1 === 0) {
       return accu;
     }
-    _accu = {
-      hd: f(l1$1.hd, l2$1.hd),
-      tl: accu
-    };
+    _accu = {hd: f(l1$1.hd, l2$1.hd), tl: accu};
     _l2 = l2$1.tl;
     _l1 = l1$1.tl;
     continue;
@@ -1069,10 +973,7 @@ function removeAssoc(xs, x, eq) {
   if (eq(pair[0], x)) {
     return l;
   }
-  let cell = {
-    hd: pair,
-    tl: /* [] */0
-  };
+  let cell = {hd: pair, tl: /* [] */0};
   let removed = removeAssocAuxWithMap(l, x, cell, eq);
   if (removed) {
     return cell;
@@ -1083,40 +984,28 @@ function removeAssoc(xs, x, eq) {
 
 function setAssoc(xs, x, k, eq) {
   if (xs === 0) {
-    return {
-      hd: [
-        x,
-        k
-      ],
-      tl: /* [] */0
-    };
+    return {hd: [
+      x,
+      k
+    ], tl: /* [] */0};
   }
   let l = xs.tl;
   let pair = xs.hd;
   if (eq(pair[0], x)) {
-    return {
-      hd: [
-        x,
-        k
-      ],
-      tl: l
-    };
+    return {hd: [
+      x,
+      k
+    ], tl: l};
   }
-  let cell = {
-    hd: pair,
-    tl: /* [] */0
-  };
+  let cell = {hd: pair, tl: /* [] */0};
   let replaced = setAssocAuxWithMap(l, x, k, cell, eq);
   if (replaced) {
     return cell;
   } else {
-    return {
-      hd: [
-        x,
-        k
-      ],
-      tl: xs
-    };
+    return {hd: [
+      x,
+      k
+    ], tl: xs};
   }
 }
 
@@ -1150,10 +1039,7 @@ function keep(_xs, p) {
     let t = xs.tl;
     let h = xs.hd;
     if (p(h)) {
-      let cell = {
-        hd: h,
-        tl: /* [] */0
-      };
+      let cell = {hd: h, tl: /* [] */0};
       copyAuxWitFilter(p, t, cell);
       return cell;
     }
@@ -1174,10 +1060,7 @@ function keepWithIndex(xs, p) {
     let t = xs$1.tl;
     let h = xs$1.hd;
     if (p(h, i)) {
-      let cell = {
-        hd: h,
-        tl: /* [] */0
-      };
+      let cell = {hd: h, tl: /* [] */0};
       copyAuxWithFilterIndex(p, t, cell, i + 1 | 0);
       return cell;
     }
@@ -1196,10 +1079,7 @@ function keepMap(_xs, p) {
     let t = xs.tl;
     let h = p(xs.hd);
     if (h !== undefined) {
-      let cell = {
-        hd: Primitive_option.valFromOption(h),
-        tl: /* [] */0
-      };
+      let cell = {hd: Primitive_option.valFromOption(h), tl: /* [] */0};
       copyAuxWitFilterMap(p, t, cell);
       return cell;
     }
@@ -1216,14 +1096,8 @@ function partition(l, p) {
     ];
   }
   let h = l.hd;
-  let nextX = {
-    hd: h,
-    tl: /* [] */0
-  };
-  let nextY = {
-    hd: h,
-    tl: /* [] */0
-  };
+  let nextX = {hd: h, tl: /* [] */0};
+  let nextY = {hd: h, tl: /* [] */0};
   let b = p(h);
   partitionAux(p, l.tl, nextX, nextY);
   if (b) {
@@ -1247,14 +1121,8 @@ function unzip(xs) {
     ];
   }
   let match = xs.hd;
-  let cellX = {
-    hd: match[0],
-    tl: /* [] */0
-  };
-  let cellY = {
-    hd: match[1],
-    tl: /* [] */0
-  };
+  let cellX = {hd: match[0], tl: /* [] */0};
+  let cellY = {hd: match[1], tl: /* [] */0};
   splitAux(xs.tl, cellX, cellY);
   return [
     cellX,
@@ -1269,13 +1137,10 @@ function zip(l1, l2) {
   if (l2 === 0) {
     return /* [] */0;
   }
-  let cell = {
-    hd: [
-      l1.hd,
-      l2.hd
-    ],
-    tl: /* [] */0
-  };
+  let cell = {hd: [
+    l1.hd,
+    l2.hd
+  ], tl: /* [] */0};
   zipAux(l1.tl, l2.tl, cell);
   return cell;
 }

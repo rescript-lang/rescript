@@ -6,13 +6,7 @@ let a0 = {
   RE_EXN_ID: "Not_found"
 };
 
-let b = Stdlib_List.length({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: /* [] */0
-  }
-});
+let b = Stdlib_List.length({hd: 1, tl: {hd: 2, tl: /* [] */0}});
 
 let List = {
   size: Stdlib_List.size,

@@ -145,25 +145,7 @@ Test.run([
     30
   ],
   "is: list"
-], Object.is({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-}, {
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-}), eq, false);
+], Object.is({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}, {hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}), eq, false);
 
 Test.run([
   [
@@ -173,25 +155,7 @@ Test.run([
     30
   ],
   "is: list"
-], Primitive_object.equal({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-}, {
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-}), eq, true);
+], Primitive_object.equal({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}, {hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}), eq, true);
 
 Test.run([
   [
@@ -201,25 +165,7 @@ Test.run([
     30
   ],
   "is: list"
-], ({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-}) === ({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-}), eq, false);
+], ({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}) === ({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}), eq, false);
 
 let d = new Date(2000, 1);
 

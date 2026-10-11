@@ -140,10 +140,7 @@ function input_lines(ic, _acc) {
     } catch (exn) {
       return Stdlib_List.reverse(acc);
     }
-    _acc = {
-      hd: line,
-      tl: acc
-    };
+    _acc = {hd: line, tl: acc};
     continue;
   };
 }
