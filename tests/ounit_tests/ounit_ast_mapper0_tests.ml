@@ -1483,19 +1483,24 @@ let test_raw_extension_payloads_roundtrip_through_ast0 _ =
    as labels, marked with [res.dictPattern] in front of its attributes *)
 let test_dict_pattern_through_ast0 _ =
   let key_loc = source_loc 5 8 in
-  let entry key pattern optional =
+  let entry ~key_loc key pattern optional =
     {
       Parsetree.pdp_key = located_string ~loc:key_loc key;
       pdp_pattern = pattern;
       pdp_optional = optional;
     }
   in
+  let x_loc = source_loc 10 11 in
   let dict =
-    Ast_helper.Pat.dict ~loc
+    Ast_helper.Pat.dict ~loc:(source_loc 0 30)
       ~attrs:[attr "user" (Parsetree.PStr [])]
       [
-        entry "a" (Ast_helper.Pat.var ~loc (located_string "x")) false;
-        entry "b-c" (Ast_helper.Pat.any ~loc ()) true;
+        entry ~key_loc "a"
+          (Ast_helper.Pat.var ~loc:x_loc (located_string ~loc:x_loc "x"))
+          false;
+        entry ~key_loc:(source_loc 13 18) "b-c"
+          (Ast_helper.Pat.any ~loc:(source_loc 21 22) ())
+          true;
       ]
   in
   let wire = map_pat_to0 dict in
@@ -1511,17 +1516,10 @@ let test_dict_pattern_through_ast0 _ =
   OUnit.assert_equal ~printer:(String.concat ", ")
     ["res.dictPattern"; "user"]
     (attr_names wire.ppat_attributes);
-  let strip_locs =
-    {Ast_mapper.default_mapper with location = (fun _ _ -> Location.none)}
-  in
-  OUnit.assert_bool "dict pattern roundtrips through ast0"
-    (strip_locs.pat strip_locs (map_pat0 wire) = strip_locs.pat strip_locs dict)
+  (* Locations included *)
+  OUnit.assert_bool "dict pattern roundtrips through ast0" (map_pat0 wire = dict)
 
 let test_dict_literal_through_ast0 _ =
-  let strip_locs =
-    {Ast_mapper.default_mapper with location = (fun _ _ -> Location.none)}
-  in
-  let strip e = strip_locs.expr strip_locs e in
   List.iter
     (fun (source, wire_function) ->
       let parsed =
@@ -1548,9 +1546,8 @@ let test_dict_literal_through_ast0 _ =
         | _ -> assert_failure ("Expected a Primitive_dict call: " ^ source));
         match map_expr0 wire with
         | {pexp_desc = Pexp_dict _} as back ->
-          OUnit.assert_bool
-            (source ^ " roundtrips through ast0")
-            (strip back = strip e)
+          (* Locations included: the parsed literal has real ones *)
+          OUnit.assert_bool (source ^ " roundtrips through ast0") (back = e)
         | _ -> assert_failure ("Expected Pexp_dict back: " ^ source))
       | _ -> assert_failure ("Expected a let binding: " ^ source))
     [
