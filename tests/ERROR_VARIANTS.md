@@ -220,7 +220,6 @@ Source: `type error` in [typecore.ml](../compiler/ml/typecore.ml).
 | `Undefined_method` | ✓ | `super_errors_multi/Cross_module_alias_dot_access`, `undefined_method` | |
 | `Object_field_not_mutable` | ✓ | `object_write_closed_row`, `object_write_alias`, `object_write_after_forgetting`, `object_private_row_write`, `object_private_row_write_through_signature` | Assignment to a field without `@set`. `object_write_alias` pins that promotion is per equivalence class, and `object_write_after_forgetting` pins that a coercion never grants write capability. The private-row fixtures pin that a `Tconstr` row terminator is structurally open but cannot be strengthened: writing through `type t = private {.."x": int}` (directly or via a signature) is rejected, matching `unify_mutability`. |
 | `Private_type` | ✓ | `private_type_construction.res` | |
-| `Private_label` | ✓ | `private_label.res` | |
 | `Not_subtype` | ✓ | `subtype_*.res`, `coercion_arity_mismatch.res`, `dict_show_no_coercion.res`, etc. | |
 | `Abstract_wrong_label` | ✓ | `abstract_wrong_label.res` | Multi-arg function literal where an inner argument label doesn't match the expected arrow's label (e.g. `let f: (~a, ~b) => int = (~a, ~c) => …`). |
 | `Scoping_let_module` | ✓ | `scoping_let_module.res` | |
@@ -559,7 +558,9 @@ warnings still fire.
 
 Fixtures follow the naming convention `warning_<NN>_<description>.res`
 so coverage gaps stay greppable. Warning 11 (`Unused_match`) is covered by
-`warning_11_equivalent_string_patterns.res`.
+`warning_11_equivalent_string_patterns.res`, and warning 111
+(`Bs_private_record_mutation`, a write to a private record field) by
+`private_label.res`.
 
 ### Removed warnings
 
