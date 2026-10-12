@@ -1688,19 +1688,49 @@ for hook_signal in TERM:143 HUP:129 QUIT:131; do
 done
 fi
 
+# One large module keeps an in-process compile running for seconds.
+second_interrupt="$work/second-interrupt"
+mkdir -p "$second_interrupt/src"
+printf '%s\n' '{"name":"second-interrupt","sources":"src","package-specs":{"module":"esmodule","in-source":true}}' \
+  >"$second_interrupt/rescript.json"
+awk 'BEGIN { for (i = 1; i <= 200000; i++) printf "let v%d = (%d, \"%d\")\n", i, i, i }' \
+  >"$second_interrupt/src/Slow.res"
+
+# A second build waits for the first one's build lock and then runs.
+"$port" -vv build "$second_interrupt" >"$second_interrupt/first.log" 2>&1 &
+lock_first_pid=$!
+background_pids="$background_pids $lock_first_pid"
+# Logged when the parsed module is handed to the compiler.
+if ! wait_for_text "$second_interrupt/first.log" 'compile dirty: Slow'; then
+  cat "$second_interrupt/first.log" >&2
+  echo "large module did not reach the compiler" >&2
+  exit 1
+fi
+"$port" build "$second_interrupt" >"$second_interrupt/second.log" 2>&1 &
+lock_second_pid=$!
+background_pids="$background_pids $lock_second_pid"
+wait_for_text "$second_interrupt/second.log" "Waiting for other build to finish"
+test ! -f "$second_interrupt/src/Slow.js"
+if ! wait "$lock_first_pid"; then
+  cat "$second_interrupt/first.log" >&2
+  exit 1
+fi
+if ! wait "$lock_second_pid"; then
+  cat "$second_interrupt/second.log" >&2
+  exit 1
+fi
+test -f "$second_interrupt/src/Slow.js"
+test ! -f "$second_interrupt/lib/build.lock"
+
 # The first termination signal waits for modules compiling in-process; a
-# second one exits at once and still releases the build lock. One large module
-# keeps the compile running for seconds, so exiting within two of them rules
-# out the graceful stop. The second signal has a different type because
-# pending signals of one type are not queued. Threads may handle the two in
-# either order, and the exit status is that of the second one handled.
+# second one exits at once and still releases the build lock. Exiting within
+# two seconds rules out the graceful stop. The second signal has a different
+# type because pending signals of one type are not queued. Threads may handle
+# the two in either order, and the exit status is that of the second one
+# handled.
 if ! $windows_posix_shell; then
-  second_interrupt="$work/second-interrupt"
-  mkdir -p "$second_interrupt/src"
-  printf '%s\n' '{"name":"second-interrupt","sources":"src","package-specs":{"module":"esmodule","in-source":true}}' \
-    >"$second_interrupt/rescript.json"
-  awk 'BEGIN { for (i = 1; i <= 200000; i++) printf "let v%d = (%d, \"%d\")\n", i, i, i }' \
-    >"$second_interrupt/src/Slow.res"
+  printf 'let dirty = 1\n' >>"$second_interrupt/src/Slow.res"
+  rm "$second_interrupt/src/Slow.js"
   "$port" -vv build "$second_interrupt" >"$second_interrupt/build.log" 2>&1 &
   second_interrupt_pid=$!
   background_pids="$background_pids $second_interrupt_pid"
@@ -1726,7 +1756,7 @@ if ! $windows_posix_shell; then
   esac
   if ! $second_interrupt_status_ok || \
     [ -e "$second_interrupt/lib/build.lock" ] || \
-    [ -e "$second_interrupt/src/Slow.mjs" ]; then
+    [ -e "$second_interrupt/src/Slow.js" ]; then
     cat "$second_interrupt/build.log" >&2
     echo "second signal: status $second_interrupt_status, expected 130 or 143 without a lock or output" >&2
     exit 1
