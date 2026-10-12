@@ -1688,6 +1688,45 @@ for hook_signal in TERM:143 HUP:129 QUIT:131; do
 done
 fi
 
+# The first termination signal waits for modules compiling in-process; a
+# second one exits at once and still releases the build lock. One large module
+# keeps the compile running long enough to send both. The second signal has a
+# different type because pending signals of one type are not queued.
+if ! $windows_posix_shell; then
+  second_interrupt="$work/second-interrupt"
+  mkdir -p "$second_interrupt/src"
+  printf '%s\n' '{"name":"second-interrupt","sources":"src","package-specs":{"module":"esmodule","in-source":true}}' \
+    >"$second_interrupt/rescript.json"
+  awk 'BEGIN { for (i = 1; i <= 200000; i++) printf "let v%d = (%d, \"%d\")\n", i, i, i }' \
+    >"$second_interrupt/src/Slow.res"
+  "$port" -vv build "$second_interrupt" >"$second_interrupt/build.log" 2>&1 &
+  second_interrupt_pid=$!
+  background_pids="$background_pids $second_interrupt_pid"
+  # Logged when the parsed module is handed to the compiler.
+  if ! wait_for_text "$second_interrupt/build.log" 'compile dirty: Slow'; then
+    cat "$second_interrupt/build.log" >&2
+    echo "large module did not reach the compiler" >&2
+    exit 1
+  fi
+  kill -INT "$second_interrupt_pid"
+  kill -TERM "$second_interrupt_pid"
+  if ! wait_for_pid_gone "$second_interrupt_pid"; then
+    echo "a second signal did not stop an in-process compile" >&2
+    exit 1
+  fi
+  set +e
+  wait "$second_interrupt_pid"
+  second_interrupt_status=$?
+  set -e
+  if [ "$second_interrupt_status" -ne 143 ] || \
+    [ -e "$second_interrupt/lib/build.lock" ] || \
+    [ -e "$second_interrupt/src/Slow.mjs" ]; then
+    cat "$second_interrupt/build.log" >&2
+    echo "second signal: status $second_interrupt_status, expected 143 without a lock or output" >&2
+    exit 1
+  fi
+fi
+
 # dep-union is requested with [web] by consumer, then with all features by
 # consumer's dev-dependency, then with [native] by the root. All features win
 # over a later named request; under --prod (below) the named requests merge.

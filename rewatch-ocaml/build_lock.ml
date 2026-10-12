@@ -102,13 +102,26 @@ let release_owned path pid =
 
 type owned_lock = {path: string; pid: string; mutable released: bool}
 
+(* The locks this process holds, so an immediate exit can still release them
+   when it bypasses normal unwinding. *)
+let held : owned_lock list Atomic.t = Atomic.make []
+
+let rec update_held change =
+  let current = Atomic.get held in
+  if not (Atomic.compare_and_set held current (change current)) then
+    update_held change
+
 let release lock =
   if not lock.released then (
     release_owned lock.path lock.pid;
-    lock.released <- true)
+    lock.released <- true;
+    update_held (List.filter (fun held -> held != lock)))
+
+let release_held () = List.iter release (Atomic.get held)
 
 let with_acquired ~candidate ~path ~pid action =
   let lock = {path; pid; released = false} in
+  update_held (fun current -> lock :: current);
   match
     unlink_existing candidate;
     action lock
