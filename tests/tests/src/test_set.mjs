@@ -519,10 +519,7 @@ function Make(Ord) {
         return accu;
       }
       _x = x._0;
-      _accu = {
-        hd: x._1,
-        tl: elements_aux(accu, x._2)
-      };
+      _accu = {hd: x._1, tl: elements_aux(accu, x._2)};
       continue;
     };
   };

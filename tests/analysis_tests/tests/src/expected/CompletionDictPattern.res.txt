@@ -1,0 +1,478 @@
+Complete src/CompletionDictPattern.res 8:32
+pos_cursor:[8:32] pos_no_white:[8:31] Found pattern:[8:21->8:33]
+pos_cursor:[8:32] pos_no_white:[8:31] Found pattern:[8:31->8:32]
+Ppat_construct R:[8:31->8:32]
+Completable: Cpattern Value[colors]=R->dictValue
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[colors]
+Path colors
+[
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Red",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Red",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictPattern.res 11:31
+pos_cursor:[11:31] pos_no_white:[11:29] Found pattern:[11:21->11:32]
+Completable: Cpattern Value[colors]->dictValue
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[colors]
+Path colors
+[
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Red",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Red",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Blue",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Blue",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictPattern.res 14:38
+pos_cursor:[14:38] pos_no_white:[14:37] Found pattern:[14:21->14:40]
+pos_cursor:[14:38] pos_no_white:[14:37] Found pattern:[14:32->14:39]
+Ppat_construct Some:[14:32->14:36]
+pos_cursor:[14:38] pos_no_white:[14:37] Found pattern:[14:37->14:38]
+Ppat_construct B:[14:37->14:38]
+Completable: Cpattern Value[colors]=B->dictValue(?), variantPayload::Some($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[colors]
+Path colors
+[
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Blue",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Blue",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictPattern.res 17:32
+pos_cursor:[17:32] pos_no_white:[17:31] Found pattern:[17:21->17:33]
+Completable: Cpattern Value[colors]->dictValue(?)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[colors]
+Path colors
+[
+  {
+    "detail": "color",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype color = Red | Blue\n```"
+    },
+    "kind": 12,
+    "label": "None",
+    "tags": []
+  },
+  {
+    "detail": "color",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(${1:_})",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(Red)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Red)",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(Blue)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Blue)",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictPattern.res 20:41
+pos_cursor:[20:41] pos_no_white:[20:39] Found pattern:[20:21->20:42]
+Completable: Cpattern Value[colors]->dictValue
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[colors]
+Path colors
+[
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Red",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Red",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Blue",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Blue",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictPattern.res 23:32
+pos_cursor:[23:32] pos_no_white:[23:31] Found pattern:[23:21->23:34]
+pos_cursor:[23:32] pos_no_white:[23:31] Found pattern:[23:31->23:33]
+Completable: Cpattern Value[points]->dictValue, recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[points]
+Path points
+[
+  {
+    "detail": "int",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nx: int\n```\n\n```rescript\ntype point = {x: int, y: int}\n```"
+    },
+    "kind": 5,
+    "label": "x",
+    "tags": []
+  },
+  {
+    "detail": "int",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ny: int\n```\n\n```rescript\ntype point = {x: int, y: int}\n```"
+    },
+    "kind": 5,
+    "label": "y",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictPattern.res 26:38
+pos_cursor:[26:38] pos_no_white:[26:36] Found pattern:[26:21->26:40]
+pos_cursor:[26:38] pos_no_white:[26:36] Found pattern:[26:31->26:39]
+Completable: Cpattern Value[points]->dictValue, recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[points]
+Path points
+[
+  {
+    "detail": "int",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ny: int\n```\n\n```rescript\ntype point = {x: int, y: int}\n```"
+    },
+    "kind": 5,
+    "label": "y",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictPattern.res 29:21
+XXX Not found!
+Completable: Cpattern Value[colors]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[colors]
+Path colors
+[
+  {
+    "detail": "dict<color>",
+    "insertText": "dict{$0}",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "dict{}",
+    "sortText": "A",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictPattern.res 32:47
+pos_cursor:[32:47] pos_no_white:[32:46] Found expr:[32:45->32:47]
+Pexp_field [32:45->32:46] _:[32:48->32:47]
+Completable: Cpath Value[p].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[p].""
+ContextPath Value[p]
+Path p
+ContextPath CPatternPath(Value[points])->dictValue
+ContextPath Value[points]
+Path points
+ContextPath Value[p]->
+ContextPath Value[p]
+Path p
+ContextPath CPatternPath(Value[points])->dictValue
+ContextPath Value[points]
+Path points
+CPPipe path_from_env: found:true
+Path CompletionDictPattern.
+Path 
+[
+  {
+    "detail": "int",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nx: int\n```\n\n```rescript\ntype point = {x: int, y: int}\n```"
+    },
+    "kind": 5,
+    "label": "x",
+    "tags": []
+  },
+  {
+    "detail": "int",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ny: int\n```\n\n```rescript\ntype point = {x: int, y: int}\n```"
+    },
+    "kind": 5,
+    "label": "y",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictPattern.res 35:49
+pos_cursor:[35:49] pos_no_white:[35:48] Found expr:[35:46->0:-1]
+Completable: Cpath Value[p]->
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[p]->
+ContextPath Value[p]
+Path p
+ContextPath CPatternPath(Value[points])->dictValue(?)
+ContextPath Value[points]
+Path points
+Path Stdlib.Option.
+Path 
+[
+  {
+    "detail": "option<'a> => 'a",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`getUnsafe(opt)` returns `value` if `opt` is `Some(value)`, otherwise `undefined`.\n\n## Examples\n\n```rescript\nOption.getUnsafe(Some(3)) == 3\nOption.getUnsafe((None: option<int>)) // Returns `undefined`, which is not a valid `int`\n```\n\n## Notes\n\n- This is an unsafe operation. It assumes `value` is not `None`, and may cause undefined behaviour if it is.\n"
+    },
+    "kind": 12,
+    "label": "Option.getUnsafe",
+    "tags": []
+  },
+  {
+    "detail": "(option<'a>, option<'b>, ('a, 'b) => bool) => bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`equal(opt1, opt2, f)` evaluates two optional values for equality with respect to a predicate function `f`. If both `opt1` and `opt2` are `None`, returns `true`.\nIf one of the arguments is `Some(value)` and the other is `None`, returns\n`false`.\nIf arguments are `Some(value1)` and `Some(value2)`, returns the result of\n`f(value1, value2)`, the predicate function `f` must return a bool.\n\n## Examples\n\n```rescript\nlet clockEqual = (a, b) => mod(a, 12) == mod(b, 12)\n\nopen Option\n\nequal(Some(3), Some(15), clockEqual) // true\nequal(Some(3), None, clockEqual) // false\nequal(None, Some(3), clockEqual) // false\nequal(None, None, clockEqual) // true\n```\n"
+    },
+    "kind": 12,
+    "label": "Option.equal",
+    "tags": []
+  },
+  {
+    "detail": "(option<'a>, option<'a>) => option<'a>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`orElse(opt1, opt2)` returns `opt2` if `opt1` is `None`, otherwise `opt1`.\n\n## Examples\n\n```rescript\nOption.orElse(Some(1812), Some(1066)) == Some(1812)\nOption.orElse(None, Some(1066)) == Some(1066)\nOption.orElse(None, None) == None\n```\n"
+    },
+    "kind": 12,
+    "label": "Option.orElse",
+    "tags": []
+  },
+  {
+    "detail": "(option<'a>, 'a => bool) => option<'a>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`filter(opt, f)` applies `f` to `opt`, if `f` returns `true`, then it returns `Some(value)`, otherwise returns `None`.\n\n## Examples\n\n```rescript\nOption.filter(Some(10), x => x > 5) // Some(10)\nOption.filter(Some(4), x => x > 5) // None\nOption.filter(None, x => x > 5) // None\n```\n"
+    },
+    "kind": 12,
+    "label": "Option.filter",
+    "tags": []
+  },
+  {
+    "detail": "(option<'a>, 'a => 'b) => option<'b>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`map(opt, f)` returns `Some(f(value))` if `opt` is `Some(value)`, otherwise `None`.\n\n## Examples\n\n```rescript\nOption.map(Some(3), x => x * x) // Some(9)\nOption.map(None, x => x * x) // None\n```\n"
+    },
+    "kind": 12,
+    "label": "Option.map",
+    "tags": []
+  },
+  {
+    "deprecated": true,
+    "detail": "(option<'a>, ~message: string=?) => 'a",
+    "documentation": {
+      "kind": "markdown",
+      "value": "Deprecated: Use `getOrThrow` instead\n\n\n`getExn(opt, ~message=?)` returns `value` if `opt` is `Some(value)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.\n\n```rescript\nOption.getExn(Some(3)) == 3\n\nswitch Option.getExn(None) {\n| exception _ => assert(true)\n| _ => assert(false)\n}\n\nswitch Option.getExn(None, ~message=\"was None!\") {\n| exception _ => assert(true) // Throws a JsError with the message \"was None!\"\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Throws an error if `opt` is `None`\n"
+    },
+    "kind": 12,
+    "label": "Option.getExn",
+    "tags": [ 1 ]
+  },
+  {
+    "detail": "(\n  option<'a>,\n  option<'b>,\n  ('a, 'b) => Ordering.t,\n) => Ordering.t",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`compare(opt1, opt2, f)` compares two optional values with respect to given `f`.\n\nIf both `opt1` and `opt2` are `None`, it returns `0.`. If the first argument is `Some(value1)` and the second is `None`, returns `1.` (something is greater than nothing).\n\nIf the first argument is `None` and the second is `Some(value2)`, returns `-1.`\n(nothing is less than something).\n\nIf the arguments are `Some(value1)` and `Some(value2)`, returns the result of\n`f(value1, value2)`, `f` takes two arguments and returns `-1.` if the first\nargument is less than the second, `0.` if the arguments are equal, and `1.` if\nthe first argument is greater than the second.\n\n## Examples\n\n```rescript\nlet clockCompare = (a, b) => Int.compare(mod(a, 12), mod(b, 12))\n\nOption.compare(Some(3), Some(15), clockCompare) // 0.\nOption.compare(Some(3), Some(14), clockCompare) // 1.\nOption.compare(Some(2), Some(15), clockCompare) // (-1.)\nOption.compare(None, Some(15), clockCompare) // (-1.)\nOption.compare(Some(14), None, clockCompare) // 1.\nOption.compare(None, None, clockCompare) // 0.\n```\n"
+    },
+    "kind": 12,
+    "label": "Option.compare",
+    "tags": []
+  },
+  {
+    "detail": "option<'a> => unit",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n  `ignore(option)` ignores the provided option and returns unit.\n\n  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)\n  without having to store or process it further.\n"
+    },
+    "kind": 12,
+    "label": "Option.ignore",
+    "tags": []
+  },
+  {
+    "detail": "(option<'a>, ~message: string=?) => 'a",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`getOrThrow(opt, ~message=?)` returns `value` if `opt` is `Some(value)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.\n\n```rescript\nOption.getOrThrow(Some(3)) == 3\n\nswitch Option.getOrThrow(None) {\n| exception _ => assert(true)\n| _ => assert(false)\n}\n\nswitch Option.getOrThrow(None, ~message=\"was None!\") {\n| exception _ => assert(true) // Throws a JsError with the message \"was None!\"\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Throws an error if `opt` is `None`\n"
+    },
+    "kind": 12,
+    "label": "Option.getOrThrow",
+    "tags": []
+  },
+  {
+    "detail": "(option<'a>, 'a) => 'a",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`getOr(opt, default)` returns `value` if `opt` is `Some(value)`, otherwise `default`.\n\n## Examples\n\n```rescript\nOption.getOr(None, \"Banana\") // Banana\nOption.getOr(Some(\"Apple\"), \"Banana\") // Apple\n\nlet greet = (firstName: option<string>) => \"Greetings \" ++ firstName->Option.getOr(\"Anonymous\")\n\nSome(\"Jane\")->greet // \"Greetings Jane\"\nNone->greet // \"Greetings Anonymous\"\n```\n"
+    },
+    "kind": 12,
+    "label": "Option.getOr",
+    "tags": []
+  },
+  {
+    "detail": "(option<'a>, 'b, 'a => 'b) => 'b",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`mapOr(opt, default, f)` returns `f(value)` if `opt` is `Some(value)`, otherwise `default`.\n\n## Examples\n\n```rescript\nlet someValue = Some(3)\nsomeValue->Option.mapOr(0, x => x + 5) // 8\n\nlet noneValue = None\nnoneValue->Option.mapOr(0, x => x + 5) // 0\n```\n"
+    },
+    "kind": 12,
+    "label": "Option.mapOr",
+    "tags": []
+  },
+  {
+    "deprecated": true,
+    "detail": "(option<'a>, 'b, 'a => 'b) => 'b",
+    "documentation": {
+      "kind": "markdown",
+      "value": "Deprecated: Use mapOr instead\n\n"
+    },
+    "kind": 12,
+    "label": "Option.mapWithDefault",
+    "tags": [ 1 ]
+  },
+  {
+    "detail": "option<'a> => bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`isSome(opt)` returns `true` if `opt` is `Some(value)`, otherwise returns `false`.\n\n## Examples\n\n```rescript\nOption.isSome(None) // false\nOption.isSome(Some(1)) // true\n```\n"
+    },
+    "kind": 12,
+    "label": "Option.isSome",
+    "tags": []
+  },
+  {
+    "deprecated": true,
+    "detail": "(option<'a>, 'a) => 'a",
+    "documentation": {
+      "kind": "markdown",
+      "value": "Deprecated: Use getOr instead\n\n"
+    },
+    "kind": 12,
+    "label": "Option.getWithDefault",
+    "tags": [ 1 ]
+  },
+  {
+    "detail": "(option<'a>, 'a => unit) => unit",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`forEach(opt, f)` call `f` on `opt`. if `opt` is `Some(value)`, then if calls\n`f`, otherwise returns `unit`.\n\n## Examples\n\n```rescript\nOption.forEach(Some(\"thing\"), x => Console.log(x)) // logs \"thing\"\nOption.forEach(None, x => Console.log(x)) // returns ()\n```\n"
+    },
+    "kind": 12,
+    "label": "Option.forEach",
+    "tags": []
+  },
+  {
+    "detail": "(option<'a>, 'a => option<'b>) => option<'b>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`flatMap(opt, f)` returns `f(value)` if `opt` is `Some(value)`, otherwise `None`.\n\n## Examples\n\n```rescript\nlet addIfAboveOne = value =>\n  if value > 1 {\n    Some(value + 1)\n  } else {\n    None\n  }\n\nOption.flatMap(Some(2), addIfAboveOne) // Some(3)\nOption.flatMap(Some(-4), addIfAboveOne) // None\nOption.flatMap(None, addIfAboveOne) // None\n```\n"
+    },
+    "kind": 12,
+    "label": "Option.flatMap",
+    "tags": []
+  },
+  {
+    "detail": "option<'a> => bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`isNone(opt)` returns `true` if `opt` is `None`, false otherwise.\n\n## Examples\n\n```rescript\nOption.isNone(None) // true\nOption.isNone(Some(1)) // false\n```\n"
+    },
+    "kind": 12,
+    "label": "Option.isNone",
+    "tags": []
+  }
+]
+

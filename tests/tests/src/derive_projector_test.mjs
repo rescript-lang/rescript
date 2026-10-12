@@ -55,40 +55,25 @@ let v = {
   _0: 3
 };
 
-let h_1 = {
-  hd: {
-    TAG: "D_int",
-    _0: 3
-  },
-  tl: {
-    hd: {
-      TAG: "D_tuple",
-      _0: 3,
-      _1: "hgo"
-    },
-    tl: {
-      hd: {
-        TAG: "D_tweak",
-        _0: [
-          3,
-          "hgo"
-        ]
-      },
-      tl: {
-        hd: {
-          TAG: "NewContent",
-          _0: "3"
-        },
-        tl: /* [] */0
-      }
-    }
-  }
-};
+let h_1 = {hd: {
+  TAG: "D_int",
+  _0: 3
+}, tl: {hd: {
+  TAG: "D_tuple",
+  _0: 3,
+  _1: "hgo"
+}, tl: {hd: {
+  TAG: "D_tweak",
+  _0: [
+    3,
+    "hgo"
+  ]
+}, tl: {hd: {
+  TAG: "NewContent",
+  _0: "3"
+}, tl: /* [] */0}}}};
 
-let h = {
-  hd: "D_empty",
-  tl: h_1
-};
+let h = {hd: "D_empty", tl: h_1};
 
 function xx(param_0) {
   return {

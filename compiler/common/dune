@@ -3,6 +3,4 @@
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (flags
-  (:standard -w +a-9-40-42))
  (libraries syntax))

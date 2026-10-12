@@ -69,6 +69,14 @@ let nil : t = {expression_desc = Null; comment = None; source_loc = None}
 let call ?comment ~info e0 args : t =
   {expression_desc = Call (e0, args, info); comment; source_loc = None}
 
+let jsx ~callee ~tag ~spread ~props ~children ~key ~multi ~fragment : t =
+  {
+    expression_desc =
+      Jsx {callee; tag; spread; props; children; key; multi; fragment};
+    comment = None;
+    source_loc = None;
+  }
+
 let tagged_template ?comment call_expr string_args value_args : t =
   {
     expression_desc = Tagged_template (call_expr, string_args, value_args);
@@ -360,7 +368,7 @@ let dummy_obj ?comment (info : Lambda.tag_info) : t =
   match info with
   | Blk_record _ | Blk_module _ | Blk_constructor _ | Blk_record_inlined _
   | Blk_poly_var | Blk_extension | Blk_record_ext _ ->
-    {comment; source_loc = None; expression_desc = Object (None, [])}
+    {comment; source_loc = None; expression_desc = Object []}
   | Blk_tuple | Blk_module_export _ ->
     {comment; source_loc = None; expression_desc = Array []}
 
@@ -717,8 +725,21 @@ let rec string_append ?comment (e : t) (el : t) : t =
       | _ -> append ())
     | _ -> append ())
 
+let object_entries ?dup properties : J.object_entry list =
+  (match dup with
+    | Some e -> [J.Object_spread e]
+    | None -> [])
+  @ List.map (fun (name, value) -> J.Object_property (name, value)) properties
+
 let obj ?comment ?dup properties : t =
-  {expression_desc = Object (dup, properties); comment; source_loc = None}
+  {
+    expression_desc = Object (object_entries ?dup properties);
+    comment;
+    source_loc = None;
+  }
+
+let obj_entries ?comment entries : t =
+  {expression_desc = Object entries; comment; source_loc = None}
 
 let rec triple_equal ?comment (e0 : t) (e1 : t) : t =
   match (e0.expression_desc, e1.expression_desc) with
@@ -763,9 +784,6 @@ let bin ?comment (op : J.binop) (e0 : t) (e1 : t) : t =
    optimization if [e1 = e2], then and_ e1 e2 -> e2
      be careful for side effect
 *)
-
-let string_of_expression = ref (fun _ -> "")
-let debug = false
 
 (**
   [push_negation e] attempts to simplify a negated expression by pushing the negation
@@ -841,10 +859,6 @@ let simplify_max_depth = 10
   returns [None].
 *)
 let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
-  if debug then
-    Printf.eprintf "%s simplify_and %s %s\n"
-      (String.make (n * 2) ' ')
-      (!string_of_expression e1) (!string_of_expression e2);
   (* Bail out if recursion is too deep to prevent exponential blowup *)
   if n > simplify_max_depth then None
   else
@@ -1161,13 +1175,6 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
         else Some e2
       | _ -> None
     in
-    (if debug then
-       match res with
-       | None -> ()
-       | Some e ->
-         Printf.eprintf "%s = %s\n"
-           (String.make (n * 2) ' ')
-           (!string_of_expression e));
     res
 
 and simplify_and_force ~n (e1 : t) (e2 : t) : t option =
@@ -1198,11 +1205,6 @@ and simplify_and_force ~n (e1 : t) (e2 : t) : t option =
   in the context of OR expressions.
 *)
 and simplify_or_ ~n (e1 : t) (e2 : t) : t option =
-  if debug then
-    Printf.eprintf "%ssimplify_or %s %s\n"
-      (String.make (n * 2) ' ')
-      (!string_of_expression e1) (!string_of_expression e2);
-
   let res =
     match (e1.expression_desc, e2.expression_desc) with
     | Bool true, _ -> Some true_
@@ -1217,13 +1219,6 @@ and simplify_or_ ~n (e1 : t) (e2 : t) : t option =
         | None -> None)
       | _ -> None)
   in
-  (if debug then
-     match res with
-     | None -> ()
-     | Some e ->
-       Printf.eprintf "%s = %s\n"
-         (String.make (n * 2) ' ')
-         (!string_of_expression e));
   res
 
 and simplify_or_force ~n (e1 : t) (e2 : t) : t option =

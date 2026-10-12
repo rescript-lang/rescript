@@ -137,31 +137,19 @@ function add(x, data, tree) {
   }
 }
 
-let m = Stdlib_List.reduceReverse({
-  hd: [
-    10,
-    /* 'a' */97
-  ],
-  tl: {
-    hd: [
-      3,
-      /* 'b' */98
-    ],
-    tl: {
-      hd: [
-        7,
-        /* 'c' */99
-      ],
-      tl: {
-        hd: [
-          20,
-          /* 'd' */100
-        ],
-        tl: /* [] */0
-      }
-    }
-  }
-}, "Empty", (acc, param) => add(param[0], param[1], acc));
+let m = Stdlib_List.reduceReverse({hd: [
+  10,
+  /* 'a' */97
+], tl: {hd: [
+  3,
+  /* 'b' */98
+], tl: {hd: [
+  7,
+  /* 'c' */99
+], tl: {hd: [
+  20,
+  /* 'd' */100
+], tl: /* [] */0}}}}, "Empty", (acc, param) => add(param[0], param[1], acc));
 
 function find(px, _x) {
   while (true) {

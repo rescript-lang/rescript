@@ -163,6 +163,10 @@ let rec pattern_variables : Typedtree.pattern -> Ident.t list =
     match rest with
     | None -> fields
     | Some {rest_ident; _} -> rest_ident :: fields)
+  | Tpat_dict entries ->
+    List.concat_map
+      (fun {Typedtree.tdp_pattern} -> pattern_variables tdp_pattern)
+      entries
   | Tpat_array pats -> List.concat (List.map pattern_variables pats)
   | Tpat_or (l, r, _) -> pattern_variables l @ pattern_variables r
 
@@ -207,9 +211,10 @@ let rec classify_expression : Typedtree.expression -> sd =
     Static
   | Texp_apply {funct = {exp_desc = Texp_ident (_, _, vd)}} when is_ref vd ->
     Static
-  | Texp_apply _ | Texp_match _ | Texp_ifthenelse _ | Texp_object_get _
-  | Texp_object_set _ | Texp_field _ | Texp_assert _ | Texp_try _
-  | Texp_tagged_template _ | Texp_template _ ->
+  (* A dict is built by calls, see [Translcore] *)
+  | Texp_apply _ | Texp_dict _ | Texp_match _ | Texp_ifthenelse _
+  | Texp_object_get _ | Texp_object_set _ | Texp_field _ | Texp_assert _
+  | Texp_try _ | Texp_tagged_template _ | Texp_template _ ->
     Dynamic
 
 let rec expression : Env.env -> Typedtree.expression -> Use.t =
@@ -267,6 +272,11 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
   | Texp_template {values} -> Use.guard (list expression env values)
   | Texp_tuple exprs -> Use.guard (list expression env exprs)
   | Texp_array exprs -> Use.guard (list expression env exprs)
+  | Texp_dict entries ->
+    let entry env = function
+      | Tdict_entry (_, e) | Tdict_spread e -> expression env e
+    in
+    Use.inspect (list entry env entries)
   | Texp_construct (_, desc, exprs) ->
     let access_constructor =
       match desc.cstr_kind with
@@ -282,7 +292,6 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
     let use =
       match rep with
       | Record_unboxed _ -> fun x -> x
-      | Record_float_unused -> assert false
       | Record_regular | Record_inlined _ | Record_extension -> Use.guard
     in
     let field env = function
@@ -460,6 +469,7 @@ and is_destructuring_pattern : Typedtree.pattern -> bool =
   | Tpat_construct (_, _, _) -> true
   | Tpat_variant _ -> true
   | Tpat_record (_, _, _) -> true
+  | Tpat_dict _ -> true
   | Tpat_array _ -> true
   | Tpat_or (l, r, _) ->
     is_destructuring_pattern l || is_destructuring_pattern r

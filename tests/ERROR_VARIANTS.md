@@ -207,10 +207,12 @@ Source: `type error` in [typecore.ml](../compiler/ml/typecore.ml).
 | `Or_pattern_type_clash` | ✓ | `or_pattern_type_clash.res` | |
 | `Multiply_bound_variable` | ✓ | `multiply_bound_variable.res` | |
 | `Orpat_vars` | ✓ | `orpat_vars_unbalanced.res` | |
-| `Expr_type_clash` | ✓ | many `*.res` | Most-fired expression error. Trace-shape sub-cases covered: `if_return_type_mismatch.res` (IfReturn), `string_concat_non_string.res` (StringConcat), `labeled_fn_argument_type_clash.res` (FunctionArgument with explicit label), `math_operator_*.res` (MathOperator family), `ternary_branch_mismatch.res`, `switch_different_types.res`, `try_catch_same_type.res`, `comparison_operator.res`, `array_item_type_mismatch.res`, `array_literal_passed_to_tuple.res`, `if_condition_mismatch.res`, `while_condition.res`, `for_loop_condition.res`, `assert_condition.res`, `function_call_mismatch.res`, `awaiting_non_promise.res`, `maybe_unwrap_option.res`, multiple `jsx_*` fixtures (including `jsx_preserve_external_function.res` for a plain-function external in a JSX component position), `object_literal_for_poly_field.res` (object literal against a polymorphic field annotation). |
+| `Expr_type_clash` | ✓ | many `*.res` | Most-fired expression error. Trace-shape sub-cases covered: `if_return_type_mismatch.res` (IfReturn), `string_concat_non_string.res` (StringConcat), `labeled_fn_argument_type_clash.res` (FunctionArgument with explicit label), `math_operator_*.res` (MathOperator family), `ternary_branch_mismatch.res`, `switch_different_types.res`, `try_catch_same_type.res`, `comparison_operator.res`, `array_item_type_mismatch.res`, `array_literal_passed_to_tuple.res`, `if_condition_mismatch.res`, `while_condition.res`, `for_loop_condition.res`, `assert_condition.res`, `function_call_mismatch.res`, `awaiting_non_promise.res`, `maybe_unwrap_option.res`, multiple `jsx_*` fixtures (including `jsx_preserve_external_function.res` for a plain-function external in a JSX component position), `object_literal_for_poly_field.res` (object literal against a polymorphic field annotation), `dict_spread_type_mismatch.res` (dict spread of an incompatible dict type, located at the spread expression). |
 | `Apply_non_function` | ✓ | `apply_non_function.res` | |
 | `Apply_wrong_label` | ✓ | `apply_wrong_label.res` | |
 | `Label_multiply_defined` | ✓ | `label_multiply_defined_literal.res` | |
+| `Dict_key_multiply_defined` | ✓ | `dict_pattern_duplicate_key.res` | |
+| `Record_syntax_on_dict_type` | ✓ | `dict_record_literal.res`, `dict_record_pattern.res`, `dict_record_update.res` | |
 | `Labels_missing` | ✓ | `missing_label.res`, `missing_labels.res` | |
 | `Label_not_mutable` | ✓ | `label_not_mutable.res` | |
 | `Wrong_name` | ✓ | `wrong_name_record_field.res`, `Cross_record_extra_field` (multi) | |
@@ -449,6 +451,7 @@ Untagged-variant validation errors. Source: `type untagged_error` and `type erro
 | `AtMostOneNumber` | ✓ | `UntaggedAtMostOneNumber.res` | `int` and `float` payloads collide on the number runtime check. |
 | `AtMostOneBigint` | ✓ | `UntaggedAtMostOneBigint.res` | Two bigint payloads. |
 | `AtMostOneBoolean` | ✓ | `UntaggedAtMostOneBoolean.res` | Two boolean payloads. |
+| `UnreachableBoolean` | ✓ | `UntaggedUnreachableBoolean.res` | Boolean payload alongside both `@as(true)` and `@as(false)` cases. |
 | `DuplicateLiteral` | ✓ | `UntaggedDuplicateLiteral.res` | `@as("x")` on two different constructors. |
 | `ConstructorMoreThanOneArg` | ✓ | `UntaggedConstructorMoreThanOneArg.res`, `UntaggedConstructorAttributeMoreThanOneArg.res` | Multiple payload arguments with type-level or constructor-level `@unboxed`. |
 
@@ -548,9 +551,9 @@ PPX/malformed ASTs, or test helper APIs, were retained and reclassified.
 ## Warnings
 
 Warnings are declared in [`compiler/ext/warnings.ml`](../compiler/ext/warnings.ml).
-The default warning set is `+a-4-9-20-41-50-102`
+The default warning set is `+a-4-9-20-41-102`
 ([`compiler/ext/bsc_warnings.ml`](../compiler/ext/bsc_warnings.ml)), so
-warnings 4, 9, 20, 41, 50, and 102 are disabled by default; the rest are
+warnings 4, 9, 20, 41, and 102 are disabled by default; the rest are
 enabled. Fixtures use `-w +A` (everything on) so default-disabled
 warnings still fire.
 

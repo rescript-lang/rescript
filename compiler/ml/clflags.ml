@@ -19,8 +19,6 @@ and open_modules = ref [] (* -open *)
 
 and real_paths = ref true (* -short-paths *)
 
-and error_size = ref 400 (* -error-size, in heap words *)
-
 and transparent_modules = ref false (* -trans-mod *)
 let dump_source = ref false (* -dsource *)
 let dump_parsetree = ref false (* -dparsetree *)
@@ -59,5 +57,6 @@ type mli_status = Mli_exists | Mli_non_exists
 let assume_no_mli = ref Mli_non_exists
 let dont_record_crc_unit : string option ref = ref None
 let bs_gentype = ref false
+let jsx_preserve = ref false
 let no_assert_false = ref false
 let dump_location = ref true

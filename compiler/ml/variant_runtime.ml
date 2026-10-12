@@ -116,7 +116,12 @@ type matching_facts = {
       (** Runtime shapes of constructors represented directly by their
           payload. Tagged object constructors do not appear here. *)
   literal_tags: literal_tag list;
-      (** Runtime values of all nullary constructors. *)
+      (** Runtime values of all nullary constructors. In an untagged variant
+          these may overlap the values of a payload constructor, as in
+          [@as("a") A | S(string)]. Literals are always tested first, so the
+          payload constructor only receives values that are not literals, and
+          [S("a")] matches as [A]: constructor identity is not observable at
+          runtime for such values. *)
   has_null: bool;
   has_undefined: bool;
   has_other_literal: bool;

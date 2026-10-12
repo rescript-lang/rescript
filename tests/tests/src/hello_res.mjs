@@ -2,42 +2,15 @@
 
 import * as Stdlib_List from "@rescript/runtime/lib/es6/Stdlib_List.mjs";
 
-let b = Stdlib_List.length({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-});
+let b = Stdlib_List.length({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}});
 
 let a = b - 1 | 0;
 
 console.log("hello, res");
 
-Stdlib_List.add(/* [] */0, Stdlib_List.length({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-}));
+Stdlib_List.add(/* [] */0, Stdlib_List.length({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}));
 
-Stdlib_List.add(/* [] */0, Stdlib_List.length({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-}));
+Stdlib_List.add(/* [] */0, Stdlib_List.length({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}));
 
 console.log(3);
 

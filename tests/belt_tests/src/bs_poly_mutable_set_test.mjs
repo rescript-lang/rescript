@@ -159,22 +159,7 @@ Mocha.describe("Bs_poly_mutable_set_test", () => {
     let a3 = match[0];
     Test_utils.ok("File \"bs_poly_mutable_set_test.res\", line 150, characters 7-14", Belt_MutableSet.eq(a1, a3));
     Test_utils.ok("File \"bs_poly_mutable_set_test.res\", line 151, characters 7-14", Belt_MutableSet.eq(a2, a4));
-    Belt_List.forEach({
-      hd: a0,
-      tl: {
-        hd: a1,
-        tl: {
-          hd: a2,
-          tl: {
-            hd: a3,
-            tl: {
-              hd: a4,
-              tl: /* [] */0
-            }
-          }
-        }
-      }
-    }, Belt_MutableSet.checkInvariantInternal);
+    Belt_List.forEach({hd: a0, tl: {hd: a1, tl: {hd: a2, tl: {hd: a3, tl: {hd: a4, tl: /* [] */0}}}}}, Belt_MutableSet.checkInvariantInternal);
   });
 });
 

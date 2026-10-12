@@ -1,0 +1,1 @@
+- Allow `rescript clean` to remove generated files when the source module graph is invalid. https://github.com/rescript-lang/rescript/pull/8640
