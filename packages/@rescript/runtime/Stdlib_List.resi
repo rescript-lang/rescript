@@ -759,6 +759,8 @@ let equal: (list<'a>, list<'a>, ('a, 'a) => bool) => bool
 `has(list, element, f)` returns `true` if the list contains at least one
 `element` for which `f` returns \`true'.
 
+Use [`some`](#some) with a predicate instead.
+
 ## Examples
 
 ```rescript
@@ -769,6 +771,7 @@ list{1, 2, 3}->List.has(4, (a, b) => a == b) == false
 list{-1, -2, -3}->List.has(2, (a, b) => abs(a) == abs(b)) == true
 ```
 */
+@deprecated("Use `some` instead")
 let has: (list<'a>, 'b, ('a, 'b) => bool) => bool
 
 /**
