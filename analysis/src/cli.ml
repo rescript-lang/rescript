@@ -198,7 +198,7 @@ let dump_cmt ~state ~rescript_json ~cmt_path =
     match Cmt.full_for_cmt ~module_name ~package ~uri cmt_path with
     | None -> print_null ()
     | Some full ->
-      let content = Cmt_viewer.dump ~full ~filter_for_position:None in
+      let content = Cmt_viewer.dump ~full in
       Printf.printf "%s" content)
 
 let test ~state ~path =

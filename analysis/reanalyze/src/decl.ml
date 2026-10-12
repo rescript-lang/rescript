@@ -40,7 +40,6 @@ type t = {
   pos: Lexing.position;
   pos_end: Lexing.position;
   pos_start: Lexing.position;
-  mutable report: bool;
 }
 
 let is_value decl =
