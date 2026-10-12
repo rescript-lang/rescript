@@ -17,15 +17,18 @@ let f6 = x => f5(x) + 6
 @inline let g3 = x => g2(x) * 2
 let g4 = x => g3(x) + 1
 
+// Read through a ref so the calls below are not evaluated at compile time
+let zero = ref(0)
+
 open Mocha
 open Test_utils
 
 describe(__MODULE__, () => {
   test("chain of small functions", () => {
-    eq(__LOC__, f6(0), 22)
-    eq(__LOC__, f3(1), 8)
+    eq(__LOC__, f6(zero.contents), 22)
+    eq(__LOC__, f3(zero.contents + 1), 8)
   })
   test("chain of @inline functions", () => {
-    eq(__LOC__, g4(1), 17)
+    eq(__LOC__, g4(zero.contents + 1), 17)
   })
 })
