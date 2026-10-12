@@ -20,15 +20,15 @@ function f3(x) {
 }
 
 function f4(x) {
-  return ((f1(x) + 2 | 0) + 3 | 0) + 4 | 0;
+  return ((((x + 1 | 0) + 1 | 0) + 2 | 0) + 3 | 0) + 4 | 0;
 }
 
 function f5(x) {
-  return ((f2(x) + 3 | 0) + 4 | 0) + 5 | 0;
+  return (((((x + 1 | 0) + 1 | 0) + 2 | 0) + 3 | 0) + 4 | 0) + 5 | 0;
 }
 
 function f6(x) {
-  return ((f3(x) + 4 | 0) + 5 | 0) + 6 | 0;
+  return ((((f1(x) + 2 | 0) + 3 | 0) + 4 | 0) + 5 | 0) + 6 | 0;
 }
 
 function g0(x) {
@@ -53,7 +53,7 @@ function g4(x) {
 
 Mocha.describe("Inline_chain_test", () => {
   Mocha.test("chain of small functions", () => {
-    Test_utils.eq("File \"inline_chain_test.res\", line 25, characters 7-14", (f4(0) + 5 | 0) + 6 | 0, 22);
+    Test_utils.eq("File \"inline_chain_test.res\", line 25, characters 7-14", 22, 22);
     Test_utils.eq("File \"inline_chain_test.res\", line 26, characters 7-14", 8, 8);
   });
   Mocha.test("chain of @inline functions", () => Test_utils.eq("File \"inline_chain_test.res\", line 29, characters 7-14", 17, 17));

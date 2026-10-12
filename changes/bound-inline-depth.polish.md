@@ -1,1 +1,1 @@
-- Stop inlining nested calls more than two levels deep, so a chain of small functions that call each other no longer makes compile time and output size grow quadratically. https://github.com/rescript-lang/rescript/pull/8801
+- Stop inlining nested calls more than four levels deep, so a chain of small functions that call each other no longer makes compile time and output size grow quadratically. https://github.com/rescript-lang/rescript/pull/8801

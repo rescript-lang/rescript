@@ -51,7 +51,7 @@ let is_const_some (cst : Lambda.structured_constant) : bool =
    that each call the previous one gets the whole chain inlined into every
    function, which is quadratic in the length of the chain. Functions marked
    [@inline] are always inlined. *)
-let max_inline_depth = 2
+let max_inline_depth = 4
 
 let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
   let inline_depth = ref 0 in
