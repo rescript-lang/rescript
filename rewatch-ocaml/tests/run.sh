@@ -1881,6 +1881,23 @@ fi
 "$port" build "$ppx_filter"
 test -f "$ppx_filter/src/Main.js"
 
+# A failing PPX leaves no temporary AST files behind.
+ppx_cleanup="$work/ppx-temp-cleanup"
+mkdir -p "$ppx_cleanup/src" "$ppx_cleanup/tmp"
+printf '{"name":"ppx-temp-cleanup","sources":"src","ppx-flags":["%s/missing-ppx"]}\n' \
+  "$ppx_cleanup" >"$ppx_cleanup/rescript.json"
+printf 'let value = 1\n' >"$ppx_cleanup/src/A.res"
+if TMPDIR="$ppx_cleanup/tmp" TEMP="$ppx_cleanup/tmp" TMP="$ppx_cleanup/tmp" \
+    "$port" build "$ppx_cleanup" >"$ppx_cleanup/build.log" 2>&1; then
+  echo "a build with a missing PPX succeeded" >&2
+  exit 1
+fi
+if ls "$ppx_cleanup/tmp" | grep -q '^ppx'; then
+  ls "$ppx_cleanup/tmp" >&2
+  echo "a failing PPX left temporary files" >&2
+  exit 1
+fi
+
 "$port" build "$out_of_source"
 test -f "$out_of_source/lib/es6/src/Main.js"
 rm -f "$out_of_source/src/Main.res"
