@@ -143,6 +143,30 @@ let has_await_payload (attrs : t) = Ext_list.exists attrs Ast_await.is_await
 
 type derive_attr = {bs_deriving: Ast_payload.action list option} [@@unboxed]
 
+(* Derivers removed in v13, with the replacement to point to. *)
+let deprecated_deriver_hint = function
+  | "abstract" ->
+    Some
+      "Use a record type instead. Records compile to plain JavaScript objects \
+       and support optional fields (`field?: t`), mutable fields and `@as` \
+       field renaming."
+  | "jsConverter" ->
+    Some
+      "Records already compile to plain JavaScript objects and polymorphic \
+       variants to their (`@as`-renamed) names, so the conversion functions \
+       are no longer needed."
+  | _ -> None
+
+let warn_deprecated_derivers (actions : Ast_payload.action list) =
+  Ext_list.iter actions (fun ({txt = name; loc}, _) ->
+      match deprecated_deriver_hint name with
+      | Some hint ->
+        Location.deprecated loc
+          (Printf.sprintf
+             "@deriving(%s) is deprecated and will be removed in v13. %s" name
+             hint)
+      | None -> ())
+
 let process_derive_type (attrs : t) : derive_attr * t =
   Ext_list.fold_left attrs
     ({bs_deriving = None}, [])
@@ -151,11 +175,9 @@ let process_derive_type (attrs : t) : derive_attr * t =
       | "deriving" -> (
         match st.bs_deriving with
         | None ->
-          ( {
-              bs_deriving =
-                Some (Ast_payload.ident_or_record_as_config loc payload);
-            },
-            acc )
+          let actions = Ast_payload.ident_or_record_as_config loc payload in
+          warn_deprecated_derivers actions;
+          ({bs_deriving = Some actions}, acc)
         | Some _ -> Bs_syntaxerr.err loc Duplicated_bs_deriving)
       | _ -> (st, attr :: acc))
 
