@@ -995,36 +995,55 @@ module Label = Name_choice (struct
   let unbound_name_error = Typetexp.unbound_label_error
 end)
 
-let disambiguate_label_by_ids closed ids labels =
-  let check_ids (lbl, _) =
+(* [ids] are the fields of one record expression or pattern. Whether a
+   candidate label fits them only depends on the label's record type, so the
+   checks are done once per type ([lbl_all] is shared by its labels) rather
+   than for every field, which would be quadratic in the number of fields. *)
+let disambiguate_label_by_ids closed ids =
+  let num_ids = List.length ids in
+  let check_ids lbl_all =
     (* check that all ids are present *)
     let lbls = Hashtbl.create 8 in
-    Array.iter (fun lbl -> Hashtbl.add lbls lbl.lbl_name ()) lbl.lbl_all;
+    Array.iter (fun lbl -> Hashtbl.add lbls lbl.lbl_name ()) lbl_all;
     List.for_all (Hashtbl.mem lbls) ids
   in
-  let mandatory_labels_are_present num_ids lbl =
+  let mandatory_labels_are_present lbl_all =
     (* check that all mandatory labels are present *)
-    let has_optional_labels = Array.exists label_is_optional lbl.lbl_all in
+    let has_optional_labels = Array.exists label_is_optional lbl_all in
     if has_optional_labels then (
       let mandatory_lbls = ref 0 in
-      lbl.lbl_all
+      lbl_all
       |> Array.iter (fun l ->
           if not (label_is_optional l) then incr mandatory_lbls);
       num_ids >= !mandatory_lbls)
-    else num_ids = Array.length lbl.lbl_all
+    else num_ids = Array.length lbl_all
   in
-  let check_closed (lbl, _) =
-    (not closed) || mandatory_labels_are_present (List.length ids) lbl
+  let checked = ref [] in
+  let check lbl_all =
+    match List.assq lbl_all !checked with
+    | result -> result
+    | exception Not_found ->
+      let result =
+        (check_ids lbl_all, (not closed) || mandatory_labels_are_present lbl_all)
+      in
+      checked := (lbl_all, result) :: !checked;
+      result
   in
-  let labels' = Ext_list.filter labels check_ids in
-  if labels' = [] then (false, labels)
-  else
-    let labels'' = Ext_list.filter labels' check_closed in
-    if labels'' = [] then (false, labels') else (true, labels'')
+  fun labels ->
+    let labels' =
+      Ext_list.filter labels (fun (lbl, _) -> fst (check lbl.lbl_all))
+    in
+    if labels' = [] then (false, labels)
+    else
+      let labels'' =
+        Ext_list.filter labels' (fun (lbl, _) -> snd (check lbl.lbl_all))
+      in
+      if labels'' = [] then (false, labels') else (true, labels'')
 
 (* Only issue warnings once per record constructor/pattern *)
 let disambiguate_record_elem_list loc closed env opath record_elem_list =
   let ids = List.map (fun {lid} -> Longident.last lid.txt) record_elem_list in
+  let disambiguate_by_ids = disambiguate_label_by_ids closed ids in
   let w_amb = ref [] in
   let warn loc msg =
     let open Warnings in
@@ -1048,7 +1067,7 @@ let disambiguate_record_elem_list loc closed env opath record_elem_list =
     let ok, labels =
       match opath with
       | Some _ -> (true, scope) (* disambiguate only checks scope *)
-      | _ -> disambiguate_label_by_ids closed ids scope
+      | _ -> disambiguate_by_ids scope
     in
     if ok then Label.disambiguate lid env opath labels ~warn ~scope
     else fst (List.hd labels)
