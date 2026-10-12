@@ -4895,14 +4895,25 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
           let loc = get_loc y in
           loc.loc_start.pos_lnum
         in
-        let lines_between = start_line_y - end_line_x - 1 in
-        (* Comment containers add lines around their comments. Do not mistake
-           those generated lines for blank lines between children on reparse. *)
-        let has_between_comments =
-          has_leading_comments cmt_tbl (get_loc y)
-          || Hashtbl.mem cmt_tbl.trailing (get_loc x)
+        let comments tbl loc =
+          Option.value (Hashtbl.find_opt tbl loc) ~default:[]
         in
-        if lines_between > 0 && not has_between_comments then
+        let end_line, has_blank_line =
+          List.fold_left
+            (fun (end_line, has_blank_line) comment ->
+              (* Container braces occupy lines too, but are not AST children. *)
+              let loc =
+                Option.value
+                  (Comment.jsx_container comment)
+                  ~default:(Comment.loc comment)
+              in
+              ( max end_line loc.loc_end.pos_lnum,
+                has_blank_line || loc.loc_start.pos_lnum > end_line + 1 ))
+            (end_line_x, false)
+            (comments cmt_tbl.trailing (get_loc x)
+            @ comments cmt_tbl.leading (get_loc y))
+        in
+        if has_blank_line || start_line_y > end_line + 1 then
           let doc = Doc.concat [print_expr x; sep; Doc.hard_line] in
           visit (Doc.concat [acc; doc]) rest
         else

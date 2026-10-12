@@ -13,10 +13,13 @@ type t = {
   loc: Location.t;
   mutable prev_tok_end_pos: Lexing.position;
   mutable prev_tok_is_question: bool;
+  mutable jsx_container: Location.t option;
 }
 
 let loc t = t.loc
 let txt t = t.txt
+let jsx_container t = t.jsx_container
+let set_jsx_container t loc = t.jsx_container <- Some loc
 let prev_tok_end_pos t = t.prev_tok_end_pos
 
 let set_prev_tok_end_pos t pos = t.prev_tok_end_pos <- pos
@@ -46,6 +49,7 @@ let make_single_line_comment ~loc txt =
     style = SingleLine;
     prev_tok_end_pos = Lexing.dummy_pos;
     prev_tok_is_question = false;
+    jsx_container = None;
   }
 
 let make_multi_line_comment ~loc ~doc_comment ~standalone txt =
@@ -57,6 +61,7 @@ let make_multi_line_comment ~loc ~doc_comment ~standalone txt =
        else MultiLine);
     prev_tok_end_pos = Lexing.dummy_pos;
     prev_tok_is_question = false;
+    jsx_container = None;
   }
 
 let trim_spaces s =

@@ -148,6 +148,36 @@ let () =
   List.iter
     (fun width ->
       List.iter
+        (fun (opening, closing) ->
+          List.iter
+            (fun (comment, formatted_comment) ->
+              List.iter
+                (fun gap ->
+                  let source =
+                    "let x = " ^ opening ^ "<A /> " ^ comment ^ "\n" ^ gap
+                    ^ "<B />" ^ closing
+                  in
+                  let expected =
+                    "let x =\n  " ^ opening ^ "\n    <A />\n" ^ gap
+                    ^ formatted_comment ^ "\n    <B />\n  " ^ closing ^ "\n"
+                  in
+                  let printed = format ~width (parse source) in
+                  assert (printed = expected);
+                  assert (format ~width (parse printed) = expected))
+                [""; "\n"])
+            [
+              ("// note", "    {\n      // note\n    }");
+              ("/* note */", "    {/* note */}");
+              ("/* a\n * b */", "    {\n      /* a\n       * b */\n    }");
+              ("{// note\n}", "    {\n      // note\n    }");
+              ("{\n// a\n// b\n}", "    {\n      // a\n      // b\n    }");
+              ("{// a\n}\n{// b\n}", "    {\n      // a\n      // b\n    }");
+            ])
+        [("<div>", "</div>"); ("<>", "</>")])
+    [20; 40; 80; 100; 120];
+  List.iter
+    (fun width ->
+      List.iter
         (fun (source, expected) ->
           let printed = format ~width (parse source) in
           assert (printed = expected);

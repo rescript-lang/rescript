@@ -2927,7 +2927,18 @@ and parse_jsx_children p : Parsetree.jsx_children =
       Parser.next p;
       (* Only comment-containing containers are trivia. Keep bare {} as an
          empty record, including when nested inside an expression container. *)
-      if p.comments != comments_before then loop p children
+      if p.comments != comments_before then (
+        let loc = mk_loc start_pos (Parser.position p) in
+        let rec mark_container comments =
+          if comments != comments_before then
+            match comments with
+            | [] -> ()
+            | comment :: rest ->
+              Res_comment.set_jsx_container comment loc;
+              mark_container rest
+        in
+        mark_container p.comments;
+        loop p children)
       else
         let loc = mk_loc start_pos (Parser.position p) in
         let child =

@@ -4,6 +4,11 @@ val to_string : t -> string
 
 val loc : t -> Location.t
 val txt : t -> string
+
+(* The enclosing comment-only JSX container, including its braces. *)
+val jsx_container : t -> Location.t option
+val set_jsx_container : t -> Location.t -> unit
+
 val prev_tok_end_pos : t -> Lexing.position
 
 val set_prev_tok_end_pos : t -> Lexing.position -> unit
