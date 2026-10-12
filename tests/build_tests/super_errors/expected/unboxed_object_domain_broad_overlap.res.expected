@@ -1,0 +1,20 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/unboxed_object_domain_broad_overlap.res[0m:[2m3:19-22[0m
+
+  1 [2m│[0m type a = {kind: string, value: int}
+  2 [2m│[0m type b = {kind: string, value: int}
+  [1;31m3[0m [2m│[0m @unboxed type t = [1;31mA(a)[0m | B(b)
+  4 [2m│[0m 
+
+  Object cases A, B have no valid discriminant.
+  
+  Runtime field "kind" overlaps between cases A and B because string and
+  string cannot be distinguished at runtime. Runtime field "value" overlaps
+  between cases A and B because number and number cannot be distinguished at
+  runtime.
+  
+  Give every object case a required immutable field with the same JavaScript
+  property name and distinguishable runtime values or types. A literal may
+  precede a broader type only when the remaining payload fields have matching
+  runtime names, types, optionality and mutability.

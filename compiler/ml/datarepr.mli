@@ -19,6 +19,13 @@
 open Types
 
 val constructor_has_optional_shape : Types.constructor_description -> bool
+
+val variant_has_optional_shape : Types.constructor_declaration list -> bool
+(** Exactly two constructors named [None] and [Some], in either order, use the
+    special option representation when [None] is nullary and [Some] has one
+    tuple argument or an inline record. Inline records count as one runtime
+    argument regardless of their number of fields. *)
+
 val constructor_case :
   Types.constructor_description -> Variant_runtime.constructor_case
 val constructor_variant :

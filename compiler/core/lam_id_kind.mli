@@ -50,7 +50,7 @@ type boxed_nullable = Undefined | Null | Null_undefined
 type t =
   | Normal_optional of Lambda.t
   | OptionalBlock of Lambda.t * boxed_nullable
-  | ImmutableBlock of element array
+  | ImmutableBlock of Lambda.tag_info * element array
   | MutableBlock of element array
   | Constant of Lambda.structured_constant
   | Module of Ident.t  (** TODO: static module vs first class module *)

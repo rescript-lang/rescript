@@ -190,10 +190,18 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   | Pval_from_option ->
     Js_of_lam_option.val_from_option (Ext_list.singleton_exn args)
   | Pval_from_option_not_nest -> Ext_list.singleton_exn args
-  | Pfield (i, fld_info) ->
-    Js_of_lam_block.field fld_info
-      (Ext_list.singleton_exn args)
-      (Int32.of_int i)
+  | Pfield (i, fld_info) -> (
+    let arg = Ext_list.singleton_exn args in
+    let cached =
+      match (fld_info, arg.expression_desc) with
+      | Fld_record_pattern {field; scope}, J.Var base ->
+        Option.bind (Lambda.str_of_field_info field) (fun name ->
+            Lam_compile_context.find_pattern_field cxt ~scope ~base ~name)
+      | _ -> None
+    in
+    match cached with
+    | Some value -> value
+    | None -> Js_of_lam_block.field fld_info arg (Int32.of_int i))
   (* Invariant depends on runtime *)
   (* Negate boxed int *)
   | Pnegint ->

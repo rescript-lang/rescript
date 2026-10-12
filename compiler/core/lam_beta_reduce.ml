@@ -71,7 +71,7 @@ let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
         | Lprim {primitive = Pmakeblock info; args; _}
           when Lambda.is_immutable_block info ->
           Hash_ident.replace meta.ident_tbl param
-            (Lam_util.kind_of_lambda_block args)
+            (Lam_util.kind_of_lambda_block info args)
         | Lprim {primitive = Psome | Psome_not_nest; args = [v]; _} ->
           Hash_ident.replace meta.ident_tbl param (Normal_optional v)
         | _ -> ());
@@ -115,7 +115,7 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
         | Lprim {primitive = Pmakeblock info; args}
           when Lambda.is_immutable_block info ->
           Hash_ident.replace meta.ident_tbl param
-            (Lam_util.kind_of_lambda_block args)
+            (Lam_util.kind_of_lambda_block info args)
         | Lprim {primitive = Psome | Psome_not_nest; args = [v]} ->
           Hash_ident.replace meta.ident_tbl param (Normal_optional v)
         | _ -> ());

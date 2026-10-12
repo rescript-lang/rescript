@@ -29,6 +29,7 @@ module Instance = struct
     | Map
     | WeakSet
     | WeakMap
+    | TypedArray
   let to_string = function
     | Array -> "Array"
     | ArrayBuffer -> "ArrayBuffer"
@@ -53,6 +54,7 @@ module Instance = struct
     | Map -> "Map"
     | WeakSet -> "WeakSet"
     | WeakMap -> "WeakMap"
+    | TypedArray -> "TypedArray"
 end
 
 (* Type of the runtime representation of an untagged block (case with payload) *)
@@ -66,11 +68,18 @@ type block_type =
   | FunctionType
   | ObjectType
   | UnknownType
+  | ObjectDiscriminant of {
+      field_name: string;
+      domain: value_domain;
+      excluded: value_domain;
+    }
+      (** Appended to preserve existing artifact constructor tags. The domain
+          and exclusions are canonical runtime values. *)
 
-(* The literal value a constructor is represented by: what [@as] states, or
-   the constructor's own name when it states nothing. Unlike [tag_type], this
-   can never describe an inferred untagged payload shape. *)
-type literal_tag =
+and value_domain = {literals: literal_tag list; shapes: block_type list}
+
+(** A declared literal runtime value, rather than an inferred payload shape. *)
+and literal_tag =
   | String of string
   | Int of int
   | Float of string
@@ -154,6 +163,18 @@ let get_layout layout_ref =
        complete"
 
 let constructor_at (layout : layout) position = layout.constructors.(position)
+
+let object_discriminants_compatible case1 case2 =
+  match (case1, case2) with
+  | ( Block (Untagged {block_type = ObjectDiscriminant left}),
+      Block (Untagged {block_type = ObjectDiscriminant right}) ) ->
+    left.field_name = right.field_name
+    && left.domain = right.domain
+    && left.excluded = right.excluded
+  | Block (Untagged {block_type = ObjectDiscriminant _}), _
+  | _, Block (Untagged {block_type = ObjectDiscriminant _}) ->
+    false
+  | _ -> true
 
 let constructor_tag layout position =
   match constructor_at layout position with

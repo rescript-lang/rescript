@@ -1,0 +1,19 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/unboxed_object_domain_typed_array_overlap.res[0m:[2m1:19-54[0m
+
+  [1;31m1[0m [2m│[0m @unboxed type t = [1;31mU8({kind: Uint8Array.t, value: int})[0m | I16({kind: Int1
+    [2m│[0m [1;31m6Array.t, value: int})[0m
+  2 [2m│[0m 
+
+  Object cases U8, I16 have no valid discriminant.
+  
+  Runtime field "kind" overlaps between cases U8 and I16 because TypedArray
+  and TypedArray cannot be distinguished at runtime. Runtime field "value"
+  overlaps between cases U8 and I16 because number and number cannot be
+  distinguished at runtime.
+  
+  Give every object case a required immutable field with the same JavaScript
+  property name and distinguishable runtime values or types. A literal may
+  precede a broader type only when the remaining payload fields have matching
+  runtime names, types, optionality and mutability.

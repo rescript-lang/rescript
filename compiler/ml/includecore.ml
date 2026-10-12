@@ -184,6 +184,7 @@ type type_mismatch =
   | Immediate
   | Tag_name
   | Variant_representation of Ident.t
+  | Object_discriminant of Ident.t
 
 let report_type_mismatch0 first second decl ppf err =
   let pr fmt = Format.fprintf ppf fmt in
@@ -216,6 +217,11 @@ let report_type_mismatch0 first second decl ppf err =
   | Tag_name -> pr "Their @tag annotations differ"
   | Variant_representation s ->
     pr "The internal representations for case %s are not equal" (Ident.name s)
+  | Object_discriminant s ->
+    pr
+      "Case %s has different inferred object discriminants. Both declarations \
+       must use the same runtime field, value domains and exclusions"
+      (Ident.name s)
 
 let report_type_mismatch first second decl ppf =
   List.iter (fun err ->
@@ -264,6 +270,12 @@ and compare_variants ~loc env params1 params2 ~layout1 ~layout2 n
       in
       let r =
         if r <> [] then r
+        else if
+          not
+            (Variant_runtime.object_discriminants_compatible
+               (Variant_runtime.constructor_at layout1 (n - 1))
+               (Variant_runtime.constructor_at layout2 (n - 1)))
+        then [Object_discriminant cd1.cd_id]
         else
           match Ast_untagged_variants.is_nullary_variant cd1.cd_args with
           | true ->

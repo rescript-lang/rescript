@@ -8,9 +8,9 @@ let read block index =
     ~args:[Lambda.var block]
     loc
 
-let write block index value =
+let write ~name block index value =
   Lambda.prim
-    ~primitive:(Psetfield (index, Fld_record_set (string_of_int index)))
+    ~primitive:(Psetfield (index, Fld_record_set name))
     ~args:[Lambda.var block; value]
     loc
 
@@ -73,7 +73,9 @@ let suites =
              ]
            in
            let body =
-             Lambda.seq (write block 1 (read block 0)) (read block 1)
+             Lambda.seq
+               (write ~name:"right" block 1 (read block 0))
+               (read block 1)
            in
            match
              Lam_pass_sroa.replace ~block ~info:pair_info ~initializers body
@@ -103,7 +105,10 @@ let suites =
            let closure =
              Lambda.function_ ~loc ~attr:Lambda.default_function_attribute
                ~params:[]
-               ~body:(Lambda.seq (write block 1 (read block 0)) (read block 1))
+               ~body:
+                 (Lambda.seq
+                    (write ~name:"right" block 1 (read block 0))
+                    (read block 1))
            in
            match
              Lam_pass_sroa.replace ~block ~info:pair_info
@@ -172,7 +177,9 @@ let suites =
          ( "removes write-only storage but preserves effects" >:: fun _ ->
            let block = Ident.create "pair" in
            let body =
-             Lambda.seq (write block 0 debugger) (write block 1 debugger)
+             Lambda.seq
+               (write ~name:"left" block 0 debugger)
+               (write ~name:"right" block 1 debugger)
            in
            match
              Lam_pass_sroa.replace ~block ~info:pair_info
@@ -189,7 +196,7 @@ let suites =
            match
              Lam_pass_sroa.replace ~block ~info:Lambda.ref_tag_info
                ~initializers:[Lambda.const (Lambda.Const_bigint (true, "0"))]
-               (write block 0 bigint_power)
+               (write ~name:"contents" block 0 bigint_power)
            with
            | Some replacement ->
              assert_bool "the value that may raise is still evaluated"
@@ -200,7 +207,8 @@ let suites =
            let block = Ident.create "cell" in
            let closure =
              Lambda.function_ ~loc ~attr:Lambda.default_function_attribute
-               ~params:[] ~body:(write block 0 debugger)
+               ~params:[]
+               ~body:(write ~name:"contents" block 0 debugger)
            in
            match
              Lam_pass_sroa.replace ~block ~info:Lambda.ref_tag_info

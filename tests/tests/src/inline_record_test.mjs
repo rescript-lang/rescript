@@ -100,7 +100,7 @@ Mocha.describe("Inline_record_test", () => {
   });
   Mocha.test("inline record variant switch", () => {
     let tmp;
-    if (A0 === A0) {
+    if (v3.RE_EXN_ID === A0) {
       tmp = 3;
     } else {
       throw {

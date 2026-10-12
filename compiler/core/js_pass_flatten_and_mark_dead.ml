@@ -259,18 +259,23 @@ let subst_map (substitution : J.expression Hash_ident.t) =
               {expression_desc = Number (Int {i; _})} )
         | Static_index ({expression_desc = Var (Id id)}, _, Some i) -> (
           match Hash_ident.find_opt substitution id with
-          | Some {expression_desc = Caml_block (ls, Immutable, _)} -> (
-            (* user program can be wrong, we should not
-               turn a runtime crash into compile time crash : )
-            *)
-            match Ext_list.nth_opt ls (Int32.to_int i) with
+          | Some {expression_desc = Caml_block (contents, Immutable, tag)} -> (
+            (* A static property can be accessed through a compatible record
+               whose source field order differs from this allocation. *)
+            let position =
+              match x.expression_desc with
+              | Static_index (_, name, _) ->
+                Lambda.field_position tag (Int32.to_int i) (Fld_record {name})
+              | _ -> Some (Int32.to_int i)
+            in
+            match Option.bind position (Ext_list.nth_opt contents) with
             | Some
                 ({
                    expression_desc =
                      ( J.Var _ | Number _ | Str _ | Template_literal _
                      | Undefined _ );
-                 } as x) ->
-              x
+                 } as value) ->
+              value
             | None | Some _ -> super.expression self x)
           | Some _ | None -> super.expression self x)
         | Jsx

@@ -1,0 +1,21 @@
+===== Foo.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Iface_object_discriminant_field_mismatch/Foo.res[0m:[2m7:10-43[0m
+
+  5 [2m│[0m type left = {a: leftKind, b: leftTag}
+  6 [2m│[0m type right = {a: rightKind, b: rightTag}
+  [1;31m7[0m [2m│[0m @unboxed [1;31mtype t = Left(left) | Right(right)[0m
+  8 [2m│[0m 
+
+  The implementation /.../fixtures/Iface_object_discriminant_field_mismatch/Foo.res
+  does not match the interface /.../fixtures/Iface_object_discriminant_field_mismatch/foo.cmi:
+  Type declarations do not match:
+    @unboxed type t = Left(left) | Right(right)
+  is not included in
+    @unboxed type t = Left(left) | Right(right)
+  [36m/.../fixtures/Iface_object_discriminant_field_mismatch/Foo.resi[0m:[2m7:10-43[0m:
+    Expected declaration
+  [36m/.../fixtures/Iface_object_discriminant_field_mismatch/Foo.res[0m:[2m7:10-43[0m:
+    Actual declaration
+  Case Left has different inferred object discriminants. Both declarations must use the same runtime field, value domains and exclusions.

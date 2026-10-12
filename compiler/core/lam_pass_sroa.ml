@@ -28,49 +28,57 @@ let valid_field uses index = index >= 0 && index < Array.length uses
    a matched pair: [rewrite] handles exactly the occurrences [analyze] accepts,
    and asserts on the rest. Extending one without the other is a compiler crash
    rather than a type error, so keep their cases in step. *)
-let rec analyze block uses (lam : Lambda.t) =
+let rec analyze ~info block uses (lam : Lambda.t) =
   match lam with
   | Lvar id -> not (Ident.same id block)
   | Lassign (id, value) ->
-    (not (Ident.same id block)) && analyze block uses value
-  | Lprim {primitive = Pfield (index, _); args = [Lvar id]}
-    when Ident.same id block ->
-    if valid_field uses index then (
+    (not (Ident.same id block)) && analyze ~info block uses value
+  | Lprim {primitive = Pfield (index, field_info); args = [Lvar id]}
+    when Ident.same id block -> (
+    match Lambda.field_position info index field_info with
+    | Some index when valid_field uses index ->
       uses.(index).read <- true;
-      true)
-    else false
-  | Lprim {primitive = Psetfield (index, _); args = [Lvar id; value]}
-    when Ident.same id block ->
-    if valid_field uses index then (
+      true
+    | Some _ | None -> false)
+  | Lprim {primitive = Psetfield (index, field_info); args = [Lvar id; value]}
+    when Ident.same id block -> (
+    match Lambda.set_field_position info index field_info with
+    | Some index when valid_field uses index ->
       uses.(index).written <- true;
-      analyze block uses value)
-    else false
+      analyze ~info block uses value
+    | Some _ | None -> false)
   | _ ->
     not
       (Lambda_traverse.shallow_exists
-         (fun child -> not (analyze block uses child))
+         (fun child -> not (analyze ~info block uses child))
          lam)
 
 let discard_value value body =
   if Lam_analysis.no_side_effects value then body else Lambda.seq value body
 
-let rec rewrite block fields uses (lam : Lambda.t) =
+let rec rewrite ~info block fields uses (lam : Lambda.t) =
   match lam with
-  | Lprim {primitive = Pfield (index, _); args = [Lvar id]}
-    when Ident.same id block ->
-    Lambda.var fields.(index)
-  | Lprim {primitive = Psetfield (index, _); args = [Lvar id; value]}
-    when Ident.same id block ->
-    let value = rewrite block fields uses value in
-    if not uses.(index).read then discard_value value Lambda.lambda_unit
-    else Lambda.assign fields.(index) value
+  | Lprim {primitive = Pfield (index, field_info); args = [Lvar id]}
+    when Ident.same id block -> (
+    match Lambda.field_position info index field_info with
+    | Some index -> Lambda.var fields.(index)
+    | None -> assert false)
+  | Lprim {primitive = Psetfield (index, field_info); args = [Lvar id; value]}
+    when Ident.same id block -> (
+    match Lambda.set_field_position info index field_info with
+    | Some index ->
+      let value = rewrite ~info block fields uses value in
+      if not uses.(index).read then discard_value value Lambda.lambda_unit
+      else Lambda.assign fields.(index) value
+    | None -> assert false)
   (* Unreachable: [analyze] rejected the block for both of these, so [replace]
      never reaches the rewrite. They are kept as assertions rather than dropped
      so that a future occurrence form added to [analyze] but not here fails
      loudly instead of silently losing the write. *)
   | Lvar id when Ident.same id block -> assert false
   | Lassign (id, _) when Ident.same id block -> assert false
-  | _ -> Lambda_traverse.shallow_map_sharing (rewrite block fields uses) lam
+  | _ ->
+    Lambda_traverse.shallow_map_sharing (rewrite ~info block fields uses) lam
 
 let fields_for_block block info field_count =
   let fallback () =
@@ -105,10 +113,10 @@ let replace ~block ~info ~initializers body =
     let uses =
       Array.init field_count (fun _ -> {read = false; written = false})
     in
-    if not (analyze block uses body) then None
+    if not (analyze ~info block uses body) then None
     else
       let fields = fields_for_block block info field_count in
-      let body = rewrite block fields uses body in
+      let body = rewrite ~info block fields uses body in
       let rec bind_fields index initializers body =
         match initializers with
         | [] -> body

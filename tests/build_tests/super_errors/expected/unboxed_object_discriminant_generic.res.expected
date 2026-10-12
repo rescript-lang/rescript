@@ -1,0 +1,17 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/unboxed_object_discriminant_generic.res[0m:[2m4:26-36[0m
+
+  2 [2m│[0m type a<'kind> = {kind: 'kind}
+  3 [2m│[0m type b = {kind: ak}
+  [1;31m4[0m [2m│[0m @unboxed type t<'kind> = [1;31mA(a<'kind>)[0m | B(b)
+  5 [2m│[0m 
+
+  Object cases A, B have no valid discriminant.
+  
+  Runtime field "kind" in case A has an unresolved type parameter.
+  
+  Give every object case a required immutable field with the same JavaScript
+  property name and distinguishable runtime values or types. A literal may
+  precede a broader type only when the remaining payload fields have matching
+  runtime names, types, optionality and mutability.

@@ -11,7 +11,7 @@ let message;
 if (person1.TAG === "Teacher") {
   message = "b";
 } else {
-  let tmp = 12345;
+  let tmp = person1.status;
   message = typeof tmp !== "object" || tmp.TAG === "Vacations" ? "a" : "b";
 }
 
@@ -31,20 +31,20 @@ let message$1;
 if (person2.TAG === "Teacher") {
   message$1 = `Hello Jane.`;
 } else {
+  let match = person2.status;
   let name = "Jane";
-  let match = person2.reportCard;
-  if (match.passing) {
-    message$1 = `Congrats ${name}, nice GPA of ${match.gpa.toString()} you got there!`;
+  let match$1 = person2.reportCard;
+  if (match$1.passing) {
+    message$1 = `Congrats ${name}, nice GPA of ${match$1.gpa.toString()} you got there!`;
   } else {
     let exit = 0;
-    let tmp$1 = 12345;
-    if (typeof tmp$1 !== "object") {
-      message$1 = tmp$1 === "Sick" ? `How are you feeling?` : `Good luck next semester ${name}!`;
+    if (typeof match !== "object") {
+      message$1 = match === "Sick" ? `How are you feeling?` : `Good luck next semester ${name}!`;
     } else {
       exit = 1;
     }
     if (exit === 1) {
-      message$1 = person2.reportCard.gpa !== 0.0 ? `Good luck next semester ${name}!` : `Come back in ${(12345)._0.toString()} days!`;
+      message$1 = person2.reportCard.gpa !== 0.0 ? `Good luck next semester ${name}!` : `Come back in ${match._0.toString()} days!`;
     }
   }
 }

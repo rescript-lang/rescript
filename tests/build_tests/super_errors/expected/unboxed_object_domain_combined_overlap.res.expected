@@ -1,0 +1,19 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/unboxed_object_domain_combined_overlap.res[0m:[2m3:19-50[0m
+
+  1 [2m│[0m @unboxed type first = Text(string) | Number(int)
+  2 [2m│[0m @unboxed type second = Flag(bool) | Decimal(float)
+  [1;31m3[0m [2m│[0m @unboxed type t = [1;31mFirst({kind: first, value: int})[0m | Second({kind: secon
+    [2m│[0m [1;31md, reason: string})[0m
+  4 [2m│[0m 
+
+  Object cases First, Second have no valid discriminant.
+  
+  Runtime field "kind" overlaps between cases First and Second because number
+  and number cannot be distinguished at runtime.
+  
+  Give every object case a required immutable field with the same JavaScript
+  property name and distinguishable runtime values or types. A literal may
+  precede a broader type only when the remaining payload fields have matching
+  runtime names, types, optionality and mutability.

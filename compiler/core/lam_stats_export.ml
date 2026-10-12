@@ -32,7 +32,7 @@ let values_of_export (meta : Lam_stats.t) (export_map : Lambda.t Map_ident.t) :
       let arity : Js_cmj_format.arity =
         match Hash_ident.find_opt meta.ident_tbl x with
         | Some (FunctionId {arity; _}) -> Single arity
-        | Some (ImmutableBlock elems) ->
+        | Some (ImmutableBlock (_, elems)) ->
           (* FIXME: field name for dumping*)
           Submodule
             (elems

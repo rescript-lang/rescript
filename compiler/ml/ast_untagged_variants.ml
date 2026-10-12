@@ -2,7 +2,6 @@ open Variant_runtime
 
 type untagged_error =
   | OnlyOneUnknown of string
-  | AtMostOneObject
   | AtMostOneInstance of Instance.t
   | AtMostOneFunction
   | AtMostOneString
@@ -11,6 +10,7 @@ type untagged_error =
   | AtMostOneBoolean
   | DuplicateLiteral of string
   | ConstructorMoreThanOneArg of string
+  | InvalidObjectDiscriminant of string list * string
 type error =
   | InvalidVariantAsAnnotation
   | VariantAsIntegerOutOfRange of string
@@ -35,27 +35,41 @@ let report_error ppf =
     fprintf ppf "Duplicate @as annotation; only one @as is allowed here."
   | InvalidVariantTagAnnotation ->
     fprintf ppf "A variant tag annotation @tag(...) must be a string"
-  | InvalidUntaggedVariantDefinition untagged_variant ->
-    fprintf ppf "This untagged variant definition is invalid: %s"
-      (match untagged_variant with
-      | OnlyOneUnknown name ->
-        "Case " ^ name
-        ^ " has a payload that is not of one of the recognized shapes (object, \
-           array, etc). Then it must be the only case with payloads."
-      | AtMostOneObject -> "At most one case can be an object type."
-      | AtMostOneInstance Array ->
-        "At most one case can be an array or tuple type."
-      | AtMostOneInstance i ->
-        "At most one case can be a " ^ Instance.to_string i ^ " type."
-      | AtMostOneFunction -> "At most one case can be a function type."
-      | AtMostOneString -> "At most one case can be a string type."
-      | AtMostOneBoolean -> "At most one case can be a boolean type."
-      | AtMostOneNumber ->
-        "At most one case can be a number type (int or float)."
-      | AtMostOneBigint -> "At most one case can be a bigint type."
-      | DuplicateLiteral s -> "Duplicate literal " ^ s ^ "."
-      | ConstructorMoreThanOneArg name ->
-        "Constructor " ^ name ^ " has more than one argument.")
+  | InvalidUntaggedVariantDefinition untagged_variant -> (
+    let invalid message =
+      fprintf ppf "This untagged variant definition is invalid: %s" message
+    in
+    match untagged_variant with
+    | OnlyOneUnknown name ->
+      invalid
+        ("Case " ^ name
+       ^ " has a payload that is not of one of the recognized shapes (object, \
+          array, etc). Then it must be the only case with payloads.")
+    | AtMostOneInstance Array ->
+      invalid "At most one case can be an array or tuple type."
+    | AtMostOneInstance i ->
+      invalid ("At most one case can be a " ^ Instance.to_string i ^ " type.")
+    | AtMostOneFunction -> invalid "At most one case can be a function type."
+    | AtMostOneString -> invalid "At most one case can be a string type."
+    | AtMostOneBoolean -> invalid "At most one case can be a boolean type."
+    | AtMostOneNumber ->
+      invalid "At most one case can be a number type (int or float)."
+    | AtMostOneBigint -> invalid "At most one case can be a bigint type."
+    | DuplicateLiteral s -> invalid ("Duplicate literal " ^ s ^ ".")
+    | ConstructorMoreThanOneArg name ->
+      invalid ("Constructor " ^ name ^ " has more than one argument.")
+    | InvalidObjectDiscriminant (constructors, reason) ->
+      fprintf ppf "@[<v>@[<hov>%a@]@,@,@[<hov>%a@]@,@,@[<hov>%a@]@]"
+        pp_print_text
+        ("Object cases "
+        ^ String.concat ", " constructors
+        ^ " have no valid discriminant.")
+        pp_print_text reason pp_print_text
+        "Give every object case a required immutable field with the same \
+         JavaScript property name and distinguishable runtime values or types. \
+         A literal may precede a broader type only when the remaining payload \
+         fields have matching runtime names, types, optionality and \
+         mutability.")
   | TagFieldNameConflict (constructor_name, field_name, runtime_value) ->
     fprintf ppf
       "Constructor \"%s\": the @tag name \"%s\" conflicts with the runtime \
@@ -81,7 +95,7 @@ let untagged = "unboxed"
 
 let block_type_can_be_undefined = function
   | IntType | StringType | FloatType | BigintType | BooleanType | InstanceType _
-  | FunctionType | ObjectType ->
+  | FunctionType | ObjectType | ObjectDiscriminant _ ->
     false
   | UnknownType -> true
 
@@ -215,7 +229,6 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
   let nonstring_literals_blocks = ref String_set.empty in
   let instance_types = Hashtbl.create 1 in
   let function_types = ref 0 in
-  let object_types = ref 0 in
   let string_types = ref 0 in
   let number_types = ref 0 in
   let bigint_types = ref 0 in
@@ -241,8 +254,6 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
     if !unknown_types <> 0 && List.length blocks <> 1 then
       raise
         (Error (loc, InvalidUntaggedVariantDefinition (OnlyOneUnknown name)));
-    if !object_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneObject));
     Hashtbl.iter
       (fun i count ->
         if count > 1 then
@@ -287,7 +298,9 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
         | Untagged {tag; block_type} ->
           (match block_type with
           | UnknownType -> incr unknown_types
-          | ObjectType -> incr object_types
+          | ObjectType | ObjectDiscriminant _ ->
+            (* [Variant_layout] has already validated object discrimination. *)
+            ()
           | InstanceType i ->
             let count =
               Hashtbl.find_opt instance_types i |> Option.value ~default:0
@@ -344,6 +357,7 @@ module Dynamic_checks = struct
     | TagType of tag_type
     | TypeOf of 'a t
     | IsInstanceOf of Instance.t * 'a t
+    | Field of 'a t * string
     | Not of 'a t
     | Expr of 'a
 
@@ -352,6 +366,7 @@ module Dynamic_checks = struct
     | TagType _ -> 1
     | TypeOf x -> 1 + size x
     | IsInstanceOf (_, x) -> 1 + size x
+    | Field (x, _) -> 1 + size x
     | Not x -> 1 + size x
     | Expr _ -> 1
 
@@ -422,9 +437,10 @@ module Dynamic_checks = struct
         typeof e != boolean
       | InstanceType i -> not (is_instance i e)
       | FunctionType -> typeof e != function_
-      | ObjectType when literals_overlaps_with_object () = false ->
+      | (ObjectType | ObjectDiscriminant _)
+        when literals_overlaps_with_object () = false ->
         typeof e != object_
-      | ObjectType (* overlap *) -> e == nil ||| (typeof e != object_)
+      | ObjectType | ObjectDiscriminant _ -> e == nil ||| (typeof e != object_)
       | StringType (* overlap *)
       | IntType (* overlap *)
       | FloatType (* overlap *)
@@ -488,6 +504,36 @@ module Dynamic_checks = struct
     else (* (undefiled + other) || other *)
       typeof e != object_
 
+  (* Domains describe the field's emitted value. Exclusions are declaration-wide,
+     so a partial match retains the same literal and instance precedence. *)
+  let domain_check ~(domain : Variant_runtime.value_domain)
+      ~(excluded : Variant_runtime.value_domain) e =
+    let membership (domain : Variant_runtime.value_domain) =
+      let literal_checks =
+        List.map
+          (fun literal -> e == tag_type (Literal literal))
+          domain.literals
+      in
+      let shape_checks =
+        List.map
+          (function
+            | ObjectType ->
+              typeof e == object_ &&& (e != nil) &&& not (is_instance Array e)
+            | InstanceType instance -> is_instance instance e
+            | ( IntType | FloatType | StringType | BigintType | BooleanType
+              | FunctionType ) as shape ->
+              typeof e == tag_type (Payload_shape shape)
+            | UnknownType | ObjectDiscriminant _ -> assert false)
+          domain.shapes
+      in
+      match literal_checks @ shape_checks with
+      | [] -> tag_type (Literal (Bool false))
+      | first :: rest -> List.fold_left ( ||| ) first rest
+    in
+    let check = membership domain in
+    if excluded.literals = [] && excluded.shapes = [] then check
+    else check &&& not (membership excluded)
+
   let add_runtime_type_check ~tag_type ~has_null_case
       ~(block_cases : block_type list) x y =
     let instances =
@@ -511,6 +557,14 @@ module Dynamic_checks = struct
         in
         not_one_of_the_instances
       else object_case
+    | Payload_shape (ObjectDiscriminant {field_name; domain; excluded}) ->
+      let object_case = typeof y == object_ &&& (y != nil) in
+      let object_case =
+        List.fold_left
+          (fun check instance -> check &&& not (is_instance instance y))
+          object_case instances
+      in
+      object_case &&& domain_check ~domain ~excluded (Field (y, field_name))
     | Payload_shape (InstanceType i) -> is_instance i y
     | Payload_shape UnknownType ->
       (* This should not happen because unknown must be the only non-literal case *)

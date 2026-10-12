@@ -77,9 +77,21 @@ type t = {
   jmp_table: jmp_table;
   meta: Lam_stats.t;
   switch_depth: int;
+  pattern_scope: string option;
+  pattern_fields: (string * J.vident * string * J.expression) list;
   loop_stack: loop_frame list;
   loop_label_counter: int ref;
 }
+
+let find_pattern_field cxt ~scope ~base ~name =
+  Ext_list.find_opt cxt.pattern_fields
+    (fun (match_scope, object_id, field_name, value) ->
+      if
+        scope = match_scope
+        && Js_op_util.same_vident base object_id
+        && name = field_name
+      then Some value
+      else None)
 
 let empty_handler_map = Handler_map.empty
 

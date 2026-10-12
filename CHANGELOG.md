@@ -22,6 +22,8 @@
 
 #### :rocket: New Feature
 
+- Allow unboxed variants to contain multiple named or inline record cases distinguished by a shared required, immutable field's literal values or runtime types. Literal-first precedence requires compatible remaining payloads, with diagnostics for ambiguous or incompatible layouts. <!-- PR link pending -->
+
 #### :bug: Bug fix
 
 - Fix JSX preserve mode emitting JSX that means something other than the compiled call, and keep more elements as JSX. https://github.com/rescript-lang/rescript/pull/8754

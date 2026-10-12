@@ -35,6 +35,8 @@ let compile_group output_prefix (meta : Lam_stats.t) (x : Lam_group.t) :
         jmp_table = Lam_compile_context.empty_handler_map;
         switch_depth = 0;
         loop_stack = [];
+        pattern_scope = None;
+        pattern_fields = [];
         loop_label_counter = ref 0;
         meta;
       }
@@ -46,6 +48,8 @@ let compile_group output_prefix (meta : Lam_stats.t) (x : Lam_group.t) :
         jmp_table = Lam_compile_context.empty_handler_map;
         switch_depth = 0;
         loop_stack = [];
+        pattern_scope = None;
+        pattern_fields = [];
         loop_label_counter = ref 0;
         meta;
       }
@@ -58,6 +62,8 @@ let compile_group output_prefix (meta : Lam_stats.t) (x : Lam_group.t) :
         jmp_table = Lam_compile_context.empty_handler_map;
         switch_depth = 0;
         loop_stack = [];
+        pattern_scope = None;
+        pattern_fields = [];
         loop_label_counter = ref 0;
         meta;
       }

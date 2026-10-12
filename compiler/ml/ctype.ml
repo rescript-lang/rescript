@@ -3603,8 +3603,11 @@ let rec subtype_rec env trace t1 t2 cstrs =
               ~type_representation:type_representation2 ~layout:layout2
           in
           match
-            Variant_coercion.variant_configuration_can_be_coerced configuration1
-              configuration2
+            Result.bind
+              (Variant_coercion.variant_configuration_can_be_coerced
+                 configuration1 configuration2) (fun () ->
+                Variant_coercion.variant_object_discriminants_can_be_coerced
+                  ~layout1 ~layout2 c1 c2)
           with
           | Error issue ->
             ( trace,

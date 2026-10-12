@@ -105,6 +105,18 @@ let constructor_has_optional_shape
     ({cstr_attributes = attrs} : constructor_description) =
   List.exists (fun (x, _) -> x.txt = internal_optional) attrs
 
+let variant_has_optional_shape = function
+  | [
+      {cd_id = none; cd_args = Cstr_tuple []};
+      {cd_id = some; cd_args = Cstr_tuple [_] | Cstr_record _};
+    ]
+  | [
+      {cd_id = some; cd_args = Cstr_tuple [_] | Cstr_record _};
+      {cd_id = none; cd_args = Cstr_tuple []};
+    ] ->
+    Ident.name none = "None" && Ident.name some = "Some"
+  | _ -> false
+
 (* The constructor's entry in its variant's canonical layout *)
 let constructor_case (cstr : constructor_description) =
   match cstr.cstr_kind with
@@ -191,28 +203,14 @@ let constructor_descrs ty_path decl cstrs =
       (cd_id, cstr) :: descr_rem
   in
   let result = describe_constructors 0 cstrs in
-  match result with
-  | [
-      (({Ident.name = "None"} as a_id), ({cstr_args = []} as a_descr));
-      (({Ident.name = "Some"} as b_id), ({cstr_args = [_]} as b_descr));
-    ]
-  | [
-      (({Ident.name = "Some"} as a_id), ({cstr_args = [_]} as a_descr));
-      (({Ident.name = "None"} as b_id), ({cstr_args = []} as b_descr));
-    ] ->
-    [
-      ( a_id,
-        {
-          a_descr with
-          cstr_attributes = optional_shape :: a_descr.cstr_attributes;
-        } );
-      ( b_id,
-        {
-          b_descr with
-          cstr_attributes = optional_shape :: b_descr.cstr_attributes;
-        } );
-    ]
-  | _ -> result
+  if variant_has_optional_shape cstrs then
+    List.map
+      (fun (id, descr) ->
+        ( id,
+          {descr with cstr_attributes = optional_shape :: descr.cstr_attributes}
+        ))
+      result
+  else result
 
 let extension_descr path_ext ext =
   let ty_res =

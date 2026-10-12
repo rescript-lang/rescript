@@ -55,7 +55,7 @@ let rec struct_const ppf = function
          t;
        Format.fprintf ppf ")" *)
 
-let str_of_field_info (fld_info : Lambda.field_dbg_info) =
+let rec str_of_field_info (fld_info : Lambda.field_dbg_info) =
   match fld_info with
   | Fld_module {name}
   | Fld_record {name}
@@ -68,6 +68,7 @@ let str_of_field_info (fld_info : Lambda.field_dbg_info) =
   | Fld_extension -> "ext"
   | Fld_variant -> "var"
   | Fld_cons -> "cons"
+  | Fld_record_pattern {field; scope = _} -> str_of_field_info field
 let print_taginfo ppf = function
   | Blk_extension -> fprintf ppf "ext"
   | Blk_record_ext {fields = ss} ->

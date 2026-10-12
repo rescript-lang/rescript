@@ -1479,7 +1479,7 @@ let matcher_record num_fields p rem =
     record_matching_line num_fields lbl_pat_list @ rem
   | _ -> raise NoMatch
 
-let make_record_matching loc all_labels def = function
+let make_record_matching ~pattern_scope loc all_labels def = function
   | [] -> fatal_error "Matching.make_record_matching"
   | (arg, _mut) :: argl ->
     let rec make_args pos =
@@ -1492,13 +1492,24 @@ let make_record_matching loc all_labels def = function
           | Record_regular ->
             prim
               ~primitive:
-                (Pfield (lbl.lbl_pos, Lambda.fld_record lbl.lbl_runtime_name))
+                (Pfield
+                   ( lbl.lbl_pos,
+                     Fld_record_pattern
+                       {
+                         field = Lambda.fld_record lbl.lbl_runtime_name;
+                         scope = pattern_scope;
+                       } ))
               ~args:[arg] loc
           | Record_inlined _ ->
             prim
               ~primitive:
                 (Pfield
-                   (lbl.lbl_pos, Lambda.fld_record_inline lbl.lbl_runtime_name))
+                   ( lbl.lbl_pos,
+                     Fld_record_pattern
+                       {
+                         field = Lambda.fld_record_inline lbl.lbl_runtime_name;
+                         scope = pattern_scope;
+                       } ))
               ~args:[arg] loc
           | Record_unboxed _ -> arg
           | Record_extension ->
@@ -1506,7 +1517,11 @@ let make_record_matching loc all_labels def = function
               ~primitive:
                 (Pfield
                    ( lbl.lbl_pos + 1,
-                     Lambda.fld_record_extension lbl.lbl_runtime_name ))
+                     Fld_record_pattern
+                       {
+                         field = Lambda.fld_record_extension lbl.lbl_runtime_name;
+                         scope = pattern_scope;
+                       } ))
               ~args:[arg] loc
         in
         let str =
@@ -1520,10 +1535,10 @@ let make_record_matching loc all_labels def = function
     let def = make_default (matcher_record nfields) def in
     {cases = []; args = make_args 0; default = def}
 
-let divide_record all_labels p ctx pm =
+let divide_record ~pattern_scope all_labels p ctx pm =
   let get_args = get_args_record (Array.length all_labels) in
   divide_line (filter_ctx p)
-    (make_record_matching p.pat_loc all_labels)
+    (make_record_matching ~pattern_scope p.pat_loc all_labels)
     get_args p ctx pm
 
 (* Matching against an array pattern *)
@@ -2065,8 +2080,9 @@ let lower_constructor_matching_plan ~loc ~arg = function
     let sw = reintroduce_fail sw in
     hs (switch arg sw)
 
-let make_constructor_matching_plan ~cstr ~(layout : Variant_runtime.layout)
-    ~fail_opt ~num_consts ~num_nonconsts ~tag_lambda_list ~consts ~nonconsts =
+let make_constructor_matching_plan ~pattern_scope ~cstr
+    ~(layout : Variant_runtime.layout) ~fail_opt ~num_consts ~num_nonconsts
+    ~tag_lambda_list ~consts ~nonconsts =
   match (fail_opt, same_actions tag_lambda_list) with
   | None, Some action -> Use_constructor_action action
   | _ -> (
@@ -2107,10 +2123,12 @@ let make_constructor_matching_plan ~cstr ~(layout : Variant_runtime.layout)
           sw_blocks_full = List.length nonconsts >= num_nonconsts;
           sw_blocks = switch_cases nonconsts;
           sw_failaction = fail_opt;
-          sw_dispatch = Switch_variant (Variant_runtime.matching_facts layout);
+          sw_dispatch =
+            Switch_variant_matching
+              (Variant_runtime.matching_facts layout, pattern_scope);
         })
 
-let combine_constructor loc arg ex_pat cstr partial ctx def
+let combine_constructor ~pattern_scope loc arg ex_pat cstr partial ctx def
     (tag_lambda_list, total1, pats) =
   let is_extension =
     match cstr.cstr_kind with
@@ -2173,8 +2191,8 @@ let combine_constructor loc arg ex_pat cstr partial ctx def
     let consts = sort_constructor_cases consts
     and nonconsts = sort_constructor_cases nonconsts in
     let plan =
-      make_constructor_matching_plan ~cstr ~layout ~fail_opt ~num_consts
-        ~num_nonconsts ~tag_lambda_list ~consts ~nonconsts
+      make_constructor_matching_plan ~pattern_scope ~cstr ~layout ~fail_opt
+        ~num_consts ~num_nonconsts ~tag_lambda_list ~consts ~nonconsts
     in
     let lambda1 = lower_constructor_matching_plan ~loc ~arg plan in
     (lambda1, jumps_union local_jumps total1)
@@ -2485,7 +2503,7 @@ let arg_to_var arg cls =
    Output: a lambda term, a jump summary {..., exit number -> context, .. }
 *)
 
-let rec compile_match repr partial ctx m =
+let rec compile_match ~pattern_scope repr partial ctx m =
   match m with
   | {cases = []; args = []} -> comp_exit ctx m
   | {cases = ([], action) :: rem} -> (
@@ -2495,7 +2513,9 @@ let rec compile_match repr partial ctx m =
     match action.guard with
     | None -> (action_body_with ~fail:lambda_unit action, jumps_empty)
     | Some _ ->
-      let fail, total = compile_match None partial ctx {m with cases = rem} in
+      let fail, total =
+        compile_match ~pattern_scope None partial ctx {m with cases = rem}
+      in
       (action_body_with ~fail action, total))
   | {args = (arg, str) :: argl} ->
     let v, newarg = arg_to_var arg m.cases in
@@ -2504,7 +2524,9 @@ let rec compile_match repr partial ctx m =
     in
     let lam, total =
       comp_match_handlers
-        ((if dbg then do_compile_matching_pr else do_compile_matching) repr)
+        ((if dbg then do_compile_matching_pr ~pattern_scope
+          else do_compile_matching ~pattern_scope)
+           repr)
         partial ctx newarg first_match rem
     in
     (bind_check str v arg lam, total)
@@ -2512,7 +2534,7 @@ let rec compile_match repr partial ctx m =
 
 (* verbose version of do_compile_matching, for debug *)
 
-and do_compile_matching_pr repr partial ctx arg x =
+and do_compile_matching_pr ~pattern_scope repr partial ctx arg x =
   prerr_string "COMPILE: ";
   prerr_endline
     (match partial with
@@ -2522,62 +2544,69 @@ and do_compile_matching_pr repr partial ctx arg x =
   pretty_precompiled x;
   prerr_endline "CTX";
   pretty_ctx ctx;
-  let ((_, jumps) as r) = do_compile_matching repr partial ctx arg x in
+  let ((_, jumps) as r) =
+    do_compile_matching ~pattern_scope repr partial ctx arg x
+  in
   prerr_endline "JUMPS";
   pretty_jumps jumps;
   r
 
-and do_compile_matching repr partial ctx arg pmh =
+and do_compile_matching ~pattern_scope repr partial ctx arg pmh =
   match pmh with
   | Pm pm -> (
     let pat = what_is_cases pm.cases in
     match pat.pat_desc with
-    | Tpat_any -> compile_no_test divide_var ctx_rshift repr partial ctx pm
+    | Tpat_any ->
+      compile_no_test ~pattern_scope divide_var ctx_rshift repr partial ctx pm
     | Tpat_tuple patl ->
-      compile_no_test
+      compile_no_test ~pattern_scope
         (divide_tuple (List.length patl) (normalize_pat pat))
         ctx_combine repr partial ctx pm
     | Tpat_record ((_, lbl, _, _) :: _, _, _rest) ->
-      compile_no_test
-        (divide_record lbl.lbl_all (normalize_pat pat))
+      compile_no_test ~pattern_scope
+        (divide_record ~pattern_scope lbl.lbl_all (normalize_pat pat))
         ctx_combine repr partial ctx pm
     | Tpat_constant cst ->
       compile_test
-        (compile_match repr partial)
+        (compile_match ~pattern_scope repr partial)
         partial divide_constant
         (combine_constant pat.pat_loc arg cst partial)
         ctx pm
     | Tpat_construct (_, cstr, _) ->
       compile_test
-        (compile_match repr partial)
+        (compile_match ~pattern_scope repr partial)
         partial divide_constructor
-        (combine_constructor pat.pat_loc arg pat cstr partial)
+        (combine_constructor ~pattern_scope pat.pat_loc arg pat cstr partial)
         ctx pm
     | Tpat_array _ ->
       compile_test
-        (compile_match repr partial)
+        (compile_match ~pattern_scope repr partial)
         partial divide_array
         (combine_array pat.pat_loc arg partial)
         ctx pm
     | Tpat_variant (_, _, row) ->
       compile_test
-        (compile_match repr partial)
+        (compile_match ~pattern_scope repr partial)
         partial (divide_variant !row)
         (combine_variant pat.pat_loc !row arg partial)
         ctx pm
     | _ -> assert false)
   | PmVar {inside = pmh; var_arg = arg} ->
     let lam, total =
-      do_compile_matching repr partial (ctx_lshift ctx) arg pmh
+      do_compile_matching ~pattern_scope repr partial (ctx_lshift ctx) arg pmh
     in
     (lam, jumps_map ctx_rshift total)
   | PmOr {body; handlers} ->
-    let lam, total = compile_match repr partial ctx body in
-    compile_orhandlers (compile_match repr partial) lam total ctx handlers
+    let lam, total = compile_match ~pattern_scope repr partial ctx body in
+    compile_orhandlers
+      (compile_match ~pattern_scope repr partial)
+      lam total ctx handlers
 
-and compile_no_test divide up_ctx repr partial ctx to_match =
+and compile_no_test ~pattern_scope divide up_ctx repr partial ctx to_match =
   let {pm = this_match; ctx = this_ctx} = divide ctx to_match in
-  let lambda, total = compile_match repr partial this_ctx this_match in
+  let lambda, total =
+    compile_match ~pattern_scope repr partial this_ctx this_match
+  in
   (lambda, jumps_map up_ctx total)
 
 (* The entry points *)
@@ -2663,6 +2692,9 @@ let check_total total lambda i handler_fun =
   else staticcatch lambda (i, []) (handler_fun ())
 
 let compile_matching repr handler_fun arg pat_act_list partial =
+  let pattern_scope =
+    Lambda.fresh_pattern_scope ~unit_name:(Env.get_unit_name ())
+  in
   let partial = check_partial pat_act_list partial in
   match partial with
   | Partial -> (
@@ -2675,7 +2707,9 @@ let compile_matching repr handler_fun arg pat_act_list partial =
       }
     in
     try
-      let lambda, total = compile_match repr partial (start_ctx 1) pm in
+      let lambda, total =
+        compile_match ~pattern_scope repr partial (start_ctx 1) pm
+      in
       check_total total lambda raise_num handler_fun
     with Unused -> assert false (* ; handler_fun() *))
   | Total ->
@@ -2686,7 +2720,9 @@ let compile_matching repr handler_fun arg pat_act_list partial =
         default = [];
       }
     in
-    let lambda, total = compile_match repr partial (start_ctx 1) pm in
+    let lambda, total =
+      compile_match ~pattern_scope repr partial (start_ctx 1) pm
+    in
     assert (jumps_is_empty total);
     lambda
 
@@ -2855,15 +2891,20 @@ let flatten_precompiled size args pmh =
    Hence it needs a fourth argument, which it ignores
 *)
 
-let compile_flattened repr partial ctx _ pmh =
+let compile_flattened ~pattern_scope repr partial ctx _ pmh =
   match pmh with
-  | Pm pm -> compile_match repr partial ctx pm
+  | Pm pm -> compile_match ~pattern_scope repr partial ctx pm
   | PmOr {body = b; handlers = hs} ->
-    let lam, total = compile_match repr partial ctx b in
-    compile_orhandlers (compile_match repr partial) lam total ctx hs
+    let lam, total = compile_match ~pattern_scope repr partial ctx b in
+    compile_orhandlers
+      (compile_match ~pattern_scope repr partial)
+      lam total ctx hs
   | PmVar _ -> assert false
 
 let do_for_multiple_match loc paraml pat_act_list partial =
+  let pattern_scope =
+    Lambda.fresh_pattern_scope ~unit_name:(Env.get_unit_name ())
+  in
   let repr = None in
   let partial = check_partial pat_act_list partial in
   let raise_num, pm1 =
@@ -2902,8 +2943,9 @@ let do_for_multiple_match loc paraml pat_act_list partial =
       in
 
       let lam, total =
-        comp_match_handlers (compile_flattened repr) partial (start_ctx size) ()
-          flat_next flat_nexts
+        comp_match_handlers
+          (compile_flattened ~pattern_scope repr)
+          partial (start_ctx size) () flat_next flat_nexts
       in
       List.fold_right2 (bind Strict) idl paraml
         (match partial with
@@ -2912,7 +2954,9 @@ let do_for_multiple_match loc paraml pat_act_list partial =
           assert (jumps_is_empty total);
           lam)
     with Cannot_flatten -> (
-      let lambda, total = compile_match None partial (start_ctx 1) pm1 in
+      let lambda, total =
+        compile_match ~pattern_scope None partial (start_ctx 1) pm1
+      in
       match partial with
       | Partial -> check_total total lambda raise_num (partial_function loc)
       | Total ->

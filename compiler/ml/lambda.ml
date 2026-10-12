@@ -70,6 +70,11 @@ let blk_record_inlined fields name num_nonconst ~runtime mutable_flag =
 let ref_tag_info : tag_info =
   Blk_record {fields = [|("contents", false)|]; mutable_flag = Mutable}
 
+(* Match identities survive CMJ serialization and are refreshed when copied
+   for inlining, independently from runtime variable bindings. *)
+let fresh_pattern_scope ~unit_name =
+  unit_name ^ ":" ^ Ident.unique_toplevel_name (Ident.create "match_scope")
+
 type field_dbg_info =
   | Fld_record of {name: string}
   | Fld_module of {name: string}
@@ -81,6 +86,7 @@ type field_dbg_info =
   | Fld_extension
   | Fld_variant
   | Fld_cons
+  | Fld_record_pattern of {field: field_dbg_info; scope: string}
 
 let fld_record name = Fld_record {name}
 
@@ -99,6 +105,45 @@ let fld_record_inline name = Fld_record_inline {name}
 let fld_record_inline_set name = Fld_record_inline_set name
 
 let fld_record_extension_set name = Fld_record_extension_set name
+
+(* Named record accesses describe JavaScript properties. Their source position
+   can come from another compatible record layout, so folds must resolve the
+   position against the allocation rather than the accessing declaration. *)
+let rec field_position tag index info =
+  let find_name length name_at name =
+    let rec find i =
+      if i = length then None
+      else if name_at i = name then Some i
+      else find (i + 1)
+    in
+    if index >= 0 && index < length && name_at index = name then Some index
+    else find 0
+  in
+  match info with
+  | Fld_record_pattern {field; scope = _} -> field_position tag index field
+  | Fld_record {name} | Fld_record_inline {name} | Fld_record_extension {name}
+    -> (
+    match tag with
+    | Blk_record {fields} | Blk_record_inlined {fields} ->
+      find_name (Array.length fields) (fun i -> fst fields.(i)) name
+    | Blk_record_ext {fields} ->
+      (* Extension blocks store the exception identity before named fields. *)
+      Option.map (( + ) 1)
+        (find_name (Array.length fields) (Array.get fields) name)
+    | Blk_constructor _ | Blk_tuple | Blk_poly_var | Blk_module _
+    | Blk_module_export _ | Blk_extension ->
+      Some index)
+  | Fld_module _ | Fld_tuple | Fld_poly_var_tag | Fld_poly_var_content
+  | Fld_extension | Fld_variant | Fld_cons ->
+    Some index
+
+let set_field_position tag index info =
+  match info with
+  | Fld_record_set name -> field_position tag index (Fld_record {name})
+  | Fld_record_inline_set name ->
+    field_position tag index (Fld_record_inline {name})
+  | Fld_record_extension_set name ->
+    field_position tag index (Fld_record_extension {name})
 
 type immediate_or_pointer = Immediate | Pointer
 
@@ -390,6 +435,7 @@ and switch_key =
 and switch_dispatch =
   | Switch_direct
   | Switch_variant of Variant_runtime.matching_facts
+  | Switch_variant_matching of Variant_runtime.matching_facts * string
 
 and 'a switch = {
   sw_consts_full: bool;
@@ -570,8 +616,9 @@ let eq_primitive_approx (lhs : primitive) (rhs : primitive) =
 (* TOO lazy, here comparison is only approximation*)
 
 (* The source-level name a field access carries, when it has one. *)
-let str_of_field_info (x : field_dbg_info) : string option =
+let rec str_of_field_info (x : field_dbg_info) : string option =
   match x with
+  | Fld_record_pattern {field; scope = _} -> str_of_field_info field
   | Fld_extension | Fld_variant | Fld_cons | Fld_poly_var_tag
   | Fld_poly_var_content | Fld_tuple ->
     None
@@ -831,23 +878,6 @@ let runtime_value_kind (c : structured_constant) =
   | Const_assertfalse ->
     Unknown_value
 
-(* Runtime equality, rather than equality of tags: [@as(1)] and a payload
-   [1.0] are the same JavaScript number. Bigint spellings are not compared;
-   both bigint payloads and bigint constructors are classified as unknown.
-   Integer tags are emitted through [Int32.of_int], just like [Const_int]. *)
-let literal_denotes_same (a : Variant_runtime.literal_tag)
-    (b : Variant_runtime.literal_tag) =
-  match (a, b) with
-  | String x, String y -> x = y
-  | Int x, Int y -> Int32.of_int x = Int32.of_int y
-  | Float x, Float y -> float_of_string x = float_of_string y
-  | Int x, Float y | Float y, Int x ->
-    Int32.to_float (Int32.of_int x) = float_of_string y
-  | Bool x, Bool y -> x = y
-  | Null, Null | Undefined, Undefined -> true
-  | (String _ | Int _ | Float _ | Bool _ | BigInt _ | Null | Undefined), _ ->
-    false
-
 (* Mirror [Dynamic_checks]: literals take precedence; the object case excludes
    arrays when an array case exists. Int and float share one runtime type. *)
 let value_has_block_type ~block_types (kind : value_kind)
@@ -862,10 +892,56 @@ let value_has_block_type ~block_types (kind : value_kind)
     not (List.mem (Variant_runtime.InstanceType Array) block_types)
   | UnknownType, (Is_literal _ | Is_object | Is_array) -> true
   | UnknownType, Unknown_value -> false
+  | ObjectDiscriminant _, _ -> false
   | ( ( IntType | FloatType | StringType | BooleanType | ObjectType | BigintType
       | FunctionType | InstanceType _ ),
       _ ) ->
     false
+
+(* A discriminator is a property of the emitted value, never the source
+   constructor. Preserve dispatch when its runtime representation is unknown. *)
+let constant_object_discriminant cst field_name domain excluded =
+  let membership (domain : Variant_runtime.value_domain) = function
+    | Is_literal literal -> Variant_domain.contains_literal domain literal
+    | Is_object -> List.mem Variant_runtime.ObjectType domain.shapes
+    | Is_array -> List.mem (Variant_runtime.InstanceType Array) domain.shapes
+    | Unknown_value -> false
+  in
+  let field_kind = function
+    | Const_bigint (positive, digits) ->
+      Is_literal (BigInt ((if positive then "" else "-") ^ digits))
+    | Const_constructor {literal = Some (BigInt _ as literal)} ->
+      Is_literal literal
+    | value -> runtime_value_kind value
+  in
+  match cst with
+  | Const_block ((Blk_record {fields} | Blk_record_inlined {fields}), contents)
+    ->
+    let rec find i = function
+      | value :: rest when i < Array.length fields ->
+        let name, optional = fields.(i) in
+        if name = field_name then
+          let kind = field_kind value in
+          match kind with
+          | Unknown_value -> None
+          | (Is_object | Is_array) when optional ->
+            (* Optional fields may be wrapped by the option representation. *)
+            None
+          | Is_literal _ | Is_object | Is_array ->
+            Some (membership domain kind && not (membership excluded kind))
+        else find (i + 1) rest
+      | [] -> None
+      | _ :: _ -> None
+    in
+    find 0 contents
+  | Const_block _ -> None
+  | Const_string _ | Const_int _ | Const_float _ | Const_js_true
+  | Const_js_false | Const_js_null | Const_js_undefined _ | Const_polyvar _
+  | Const_constructor _ ->
+    Some false
+  | Const_char _ | Const_bigint _ | Const_some _ | Const_module_alias
+  | Const_assertfalse ->
+    None
 
 let switch lam (lam_switch : lambda_switch) : t =
   let action_or_switch = function
@@ -893,26 +969,50 @@ let switch lam (lam_switch : lambda_switch) : t =
       | Some literal -> literal
       | None -> Variant_runtime.String tag.name
     in
-    let matches_block = value_has_block_type ~block_types:facts.block_types in
     let kind = runtime_value_kind cst in
+    let matches_block block_type =
+      match block_type with
+      | Variant_runtime.ObjectDiscriminant {field_name; domain; excluded} ->
+        if
+          kind = Is_array
+          && List.mem (Variant_runtime.InstanceType Array) facts.block_types
+        then Some false
+        else constant_object_discriminant cst field_name domain excluded
+      | _ ->
+        Some
+          (value_has_block_type ~block_types:facts.block_types kind block_type)
+    in
     match kind with
     | Unknown_value -> `Undecided
     | Is_literal literal
-      when Ext_list.exists facts.literal_tags (literal_denotes_same literal) ->
+      when Ext_list.exists facts.literal_tags
+             (Variant_domain.literal_equal literal) ->
       (* The literal side wins, exactly as it does at runtime. *)
       find_in lam_switch.sw_consts (function
-        | Constant tag -> literal_denotes_same literal (literal_of_tag tag)
+        | Constant tag ->
+          Variant_domain.literal_equal literal (literal_of_tag tag)
         | Block _ -> false)
     | Is_literal _ | Is_object | Is_array ->
       (* Not a declared literal, so the payload's runtime shape decides. *)
-      if Ext_list.exists facts.block_types (matches_block kind) then
+      if
+        List.exists
+          (fun block_type -> matches_block block_type = None)
+          facts.block_types
+      then `Undecided
+      else if
+        Ext_list.exists facts.block_types (fun block_type ->
+            matches_block block_type = Some true)
+      then
         find_in lam_switch.sw_blocks (function
-          | Block (Untagged {block_type}) -> matches_block kind block_type
+          | Block (Untagged {block_type}) ->
+            matches_block block_type = Some true
           | Constant _ | Block (Tagged _) -> false)
       else `Undecided
   in
   match (lam, lam_switch.sw_dispatch) with
-  | Lconst cst, Switch_variant ({block_types = _ :: _} as facts) -> (
+  | Lconst cst, Switch_variant ({block_types = _ :: _} as facts)
+  | Lconst cst, Switch_variant_matching (({block_types = _ :: _} as facts), _)
+    -> (
     match untagged_action facts cst with
     | `Case action -> action_or_switch action
     | `Undecided -> Lswitch (lam, lam_switch))

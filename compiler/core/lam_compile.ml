@@ -165,6 +165,42 @@ let group_apply ~merge_cases cases callback =
 
 type default_case = Default of Lambda.t | Complete | NonComplete
 
+let exact_string_discriminant = function
+  | Variant_runtime.ObjectDiscriminant {domain; excluded}
+    when domain.shapes = [] && excluded.literals = [] && excluded.shapes = [] ->
+    let rec strings = function
+      | [] -> Some []
+      | Variant_runtime.String value :: rest ->
+        Option.map (fun values -> value :: values) (strings rest)
+      | _ -> None
+    in
+    strings domain.literals
+  | _ -> None
+
+(* One constructor can have several discriminator values. Expand labels after
+   compiling its action so even guarded bodies are emitted exactly once. *)
+let object_discriminant_clauses clauses =
+  List.concat_map
+    (fun (tag, (clause : J.case_clause)) ->
+      match tag with
+      | Variant_runtime.Payload_shape (ObjectDiscriminant _ as shape) ->
+        let values =
+          match exact_string_discriminant shape with
+          | Some values -> values
+          | None -> assert false
+        in
+        let rec expand = function
+          | [] -> assert false
+          | [value] -> [(Variant_runtime.Literal (String value), clause)]
+          | value :: rest ->
+            ( Variant_runtime.Literal (String value),
+              {clause with switch_body = []; should_break = false} )
+            :: expand rest
+        in
+        expand values
+      | Literal _ | Payload_shape _ -> assert false)
+    clauses
+
 let default_action ~saturated failaction =
   match failaction with
   | None -> Complete
@@ -179,9 +215,15 @@ let tag_of_switch_key = function
   | Switch_constructor (Block (Tagged {tag})) ->
     Some (Variant_runtime.to_matchable_tag tag)
 
-let dispatch_info = function
-  | Lambda.Switch_direct -> (Js_dump_lit.tag, [], [], (false, false, false))
-  | Switch_variant
+let dispatch_info dispatch =
+  let facts =
+    match dispatch with
+    | Lambda.Switch_direct -> None
+    | Switch_variant facts | Switch_variant_matching (facts, _) -> Some facts
+  in
+  match facts with
+  | None -> (Js_dump_lit.tag, [], [], (false, false, false))
+  | Some
       {
         Variant_runtime.tag_name;
         block_types;
@@ -194,6 +236,99 @@ let dispatch_info = function
       block_types,
       literal_tags,
       (has_null, has_undefined, has_other_literal) )
+
+let find_pattern_field (cxt : Lam_compile_context.t) object_exp name =
+  match (cxt.pattern_scope, object_exp.J.expression_desc) with
+  | Some scope, J.Var base ->
+    Lam_compile_context.find_pattern_field cxt ~scope ~base ~name
+  | _ -> None
+
+let read_pattern_field cxt object_exp name =
+  match find_pattern_field cxt object_exp name with
+  | Some value -> value
+  | None -> E.dot object_exp name
+
+(* Guarded or-patterns can resume the same match in a staticcatch handler.
+   A handler's dispatcher may disappear while its pattern projections remain.
+   Share those reads only for fields identified by a surviving dispatcher, so
+   unrelated mutable fields retain their reads. Initialize lazily: primitive
+   cases must not read object properties, and each catch invocation starts fresh. *)
+let shared_pattern_fields (cxt : Lam_compile_context.t) body handlers =
+  let discriminants = ref [] in
+  let add_key keys key =
+    if not (List.mem key !keys) then keys := key :: !keys
+  in
+  let rec collect keys (lam : Lambda.t) =
+    match lam with
+    | Lfunction _ | Lwhile _ | Lfor _ | Lfor_of _ | Lfor_await_of _ -> ()
+    | Lswitch (Lvar base, {sw_dispatch = Switch_variant_matching (facts, scope)})
+      ->
+      List.iter
+        (function
+          | Variant_runtime.ObjectDiscriminant {field_name} ->
+            let key = (scope, base, field_name) in
+            add_key discriminants key;
+            add_key keys key
+          | _ -> ())
+        facts.block_types;
+      Lambda_traverse.iter (collect keys) lam
+    | Lprim
+        {
+          primitive = Pfield (_, Fld_record_pattern {field; scope});
+          args = [Lvar base];
+        } ->
+      Option.iter
+        (fun name -> add_key keys (scope, base, name))
+        (Lambda.str_of_field_info field)
+    | _ -> Lambda_traverse.iter (collect keys) lam
+  in
+  let body_keys = ref [] and handler_keys = ref [] in
+  collect body_keys body;
+  List.iter (collect handler_keys) handlers;
+  List.fold_left
+    (fun (cxt, declarations) (scope, base, name) ->
+      if
+        not
+          (List.mem (scope, base, name) !body_keys
+          && List.mem (scope, base, name) !handler_keys)
+      then (cxt, declarations)
+      else
+        let scoped_cxt =
+          {cxt with Lam_compile_context.pattern_scope = Some scope}
+        in
+        let object_exp = E.var base in
+        match find_pattern_field scoped_cxt object_exp name with
+        | Some _ -> (cxt, declarations)
+        | None ->
+          let field_id = Ext_ident.create_tmp () in
+          let loaded_id = Ext_ident.create_tmp () in
+          let field = E.var field_id and loaded = E.var loaded_id in
+          let read =
+            E.econd loaded field
+              (E.seq
+                 (E.assign field (E.dot object_exp name))
+                 (E.seq (E.assign loaded E.true_) field))
+          in
+          let cxt =
+            {
+              cxt with
+              pattern_fields =
+                (scope, J.Id base, name, read) :: cxt.pattern_fields;
+            }
+          in
+          ( cxt,
+            declarations
+            @ [
+                S.declare_variable ~kind:Variable field_id;
+                S.define_variable ~kind:Variable loaded_id E.false_;
+              ] ))
+    (cxt, []) !discriminants
+
+let cache_pattern_field (cxt : Lam_compile_context.t) object_exp name value =
+  match (cxt.pattern_scope, object_exp.J.expression_desc) with
+  | Some scope, J.Var base ->
+    {cxt with pattern_fields = (scope, base, name, value) :: cxt.pattern_fields}
+  | _ -> cxt
 
 let no_effects_const = lazy true
 (* let has_effects_const = lazy false *)
@@ -400,6 +535,8 @@ let compile output_prefix =
             jmp_table = Lam_compile_context.empty_handler_map;
             switch_depth = 0;
             loop_stack = [];
+            pattern_scope = None;
+            pattern_fields = [];
           }
           body
       in
@@ -747,6 +884,15 @@ let compile output_prefix =
     let tag_name, block_cases, literal_cases, has_null_undefined_other =
       dispatch_info sw_dispatch
     in
+    let lambda_cxt =
+      {
+        lambda_cxt with
+        pattern_scope =
+          (match sw_dispatch with
+          | Switch_variant_matching (_, scope) -> Some scope
+          | Switch_direct | Switch_variant _ -> None);
+      }
+    in
     let untagged = block_cases <> [] in
     let compile_whole (cxt : Lam_compile_context.t) =
       match
@@ -781,6 +927,14 @@ let compile output_prefix =
               untagged
               && List.length sw_consts = 0
               && eq_default sw_num_default sw_blocks_default
+              (* Keep literal precedence before reading payload fields:
+                 undefined cannot be read, and strings have numeric fields. *)
+              && not
+                   (List.exists
+                      (function
+                        | Variant_runtime.ObjectDiscriminant _ -> true
+                        | _ -> false)
+                      block_cases)
             then
               let has_null_case = List.mem Variant_runtime.Null literal_cases in
               compile_cases ~untagged ~cxt
@@ -832,6 +986,238 @@ let compile output_prefix =
          ~switch_exp ~default
   and compile_untagged_cases ~cxt ~switch_exp ~default ~block_cases
       ~has_null_case cases =
+    let has_object_discriminants =
+      List.exists
+        (function
+          | Variant_runtime.ObjectDiscriminant _ -> true
+          | _ -> false)
+        block_cases
+    in
+    let needs_domain_dispatch =
+      List.exists
+        (function
+          | Variant_runtime.ObjectDiscriminant _ as shape ->
+            exact_string_discriminant shape = None
+          | _ -> false)
+        block_cases
+    in
+    let compile switch_exp =
+      let common_field =
+        match block_cases with
+        | Variant_runtime.ObjectDiscriminant {field_name} :: rest
+          when (not has_null_case)
+               && List.for_all
+                    (function
+                      | Variant_runtime.ObjectDiscriminant other ->
+                        other.field_name = field_name
+                      | _ -> false)
+                    rest ->
+          Some field_name
+        | _ -> None
+      in
+      match common_field with
+      | _ when needs_domain_dispatch ->
+        compile_domain_untagged_cases ~cxt ~switch_exp ~default ~block_cases
+          ~has_null_case cases
+      | Some field_name -> (
+        let matches tag field =
+          match tag with
+          | Variant_runtime.Payload_shape (ObjectDiscriminant _ as shape) -> (
+            let values =
+              match exact_string_discriminant shape with
+              | Some values -> values
+              | None -> assert false
+            in
+            match values with
+            | [] -> assert false
+            | value :: rest ->
+              List.fold_left
+                (fun check value ->
+                  E.or_ check (E.string_equal field (E.str value)))
+                (E.string_equal field (E.str value))
+                rest)
+          | Literal _ | Payload_shape _ -> assert false
+        in
+        let compile_field ?(cached = false) field =
+          let cxt =
+            if cached then cache_pattern_field cxt switch_exp field_name field
+            else cxt
+          in
+          compile_general_cases ~cxt ~switch_exp:field ~default
+            ~make_exp:E.tag_type
+            ~eq_exp:(fun i x j y ->
+              match (i, j) with
+              | Some tag, _ -> matches tag y
+              | None, Some tag -> matches tag x
+              | None, None -> assert false)
+            ~switch:(fun ?default ?declaration e clauses ->
+              S.string_switch ?default ?declaration e
+                (object_discriminant_clauses clauses))
+            cases
+        in
+        match (cases, default) with
+        | [], _ | [_], Complete -> compile_field (E.dot switch_exp field_name)
+        | _ ->
+          let field_id = Ext_ident.create_tmp () in
+          S.define_variable ~kind:Variable field_id
+            (read_pattern_field cxt switch_exp field_name)
+          :: compile_field ~cached:true (E.var field_id))
+      | None
+        when has_object_discriminants
+             && (List.length cases <= 2 || cxt.pattern_scope <> None) ->
+        (* Small mixed switches use comparisons instead of the field switch.
+           Reuse the guarded domain path so their expanded labels share one read. *)
+        compile_domain_untagged_cases ~cxt ~switch_exp ~default ~block_cases
+          ~has_null_case cases
+      | None ->
+        compile_mixed_untagged_cases ~cxt ~switch_exp ~default ~block_cases
+          ~has_null_case cases
+    in
+    (* Shape checks can inspect a scrutinee several times. Preserve effects
+       even when there are no constant constructors requiring an outer split. *)
+    match switch_exp.expression_desc with
+    | J.Var _ -> compile switch_exp
+    | _ when has_object_discriminants ->
+      let id = Ext_ident.create_tmp () in
+      S.define_variable ~kind:Variable id switch_exp :: compile (E.var id)
+    | _ -> compile switch_exp
+  and compile_domain_untagged_cases ~cxt ~switch_exp ~default ~block_cases
+      ~has_null_case cases =
+    (* A domain can need several predicates. Cache its field once and compile
+       each action once; switch fallthrough grouping is unsafe in an if chain. *)
+    morph_declare_to_assign cxt (fun cxt declaration ->
+        let compile_action lam =
+          compile_lambda cxt lam |> Js_output.output_as_block
+          |> with_block_source_loc lam
+        in
+        let fallback =
+          match default with
+          | Default lam -> compile_action lam
+          | Complete | NonComplete -> []
+        in
+        let object_cases, other_cases =
+          List.partition
+            (function
+              | Variant_runtime.Payload_shape (ObjectDiscriminant _), _ -> true
+              | _ -> false)
+            cases
+        in
+        let rec ordinary_chain = function
+          | [] -> fallback
+          | (tag_type, lam) :: rest ->
+            let check =
+              Ast_untagged_variants.Dynamic_checks.add_runtime_type_check
+                ~tag_type ~has_null_case ~block_cases
+                (Expr (E.tag_type tag_type))
+                (Expr switch_exp)
+              |> E.emit_check
+            in
+            [S.if_ check (compile_action lam) ~else_:(ordinary_chain rest)]
+        in
+        let other_body = ordinary_chain other_cases in
+        let body =
+          match object_cases with
+          | [] -> other_body
+          | (Payload_shape (ObjectDiscriminant {field_name}), _) :: _ ->
+            let field_id = Ext_ident.create_tmp () in
+            let field = E.var field_id in
+            let object_cxt =
+              cache_pattern_field cxt switch_exp field_name field
+            in
+            let compile_object_action lam =
+              compile_lambda object_cxt lam
+              |> Js_output.output_as_block |> with_block_source_loc lam
+            in
+            let object_fallback =
+              match default with
+              | Default lam -> compile_object_action lam
+              | Complete | NonComplete -> []
+            in
+            let rec domain_chain = function
+              | [] -> object_fallback
+              | ( Variant_runtime.Payload_shape
+                    (ObjectDiscriminant {domain; excluded}),
+                  lam )
+                :: rest ->
+                let check =
+                  Ast_untagged_variants.Dynamic_checks.domain_check ~domain
+                    ~excluded (Expr field)
+                  |> E.emit_check
+                in
+                [
+                  S.if_ check
+                    (compile_object_action lam)
+                    ~else_:(domain_chain rest);
+                ]
+              | _ -> assert false
+            in
+            let object_body =
+              S.define_variable ~kind:Variable field_id
+                (read_pattern_field cxt switch_exp field_name)
+              ::
+              (if
+                 List.for_all
+                   (function
+                     | ( Variant_runtime.Payload_shape
+                           (ObjectDiscriminant _ as shape),
+                         _ ) ->
+                       exact_string_discriminant shape <> None
+                     | _ -> false)
+                   object_cases
+               then
+                 compile_general_cases ~cxt:object_cxt ~switch_exp:field
+                   ~default ~make_exp:E.tag_type
+                   ~eq_exp:(fun i x j y ->
+                     let tag, value =
+                       match (i, j) with
+                       | Some tag, _ -> (tag, y)
+                       | None, Some tag -> (tag, x)
+                       | None, None -> assert false
+                     in
+                     match tag with
+                     | Variant_runtime.Payload_shape
+                         (ObjectDiscriminant {domain; excluded}) ->
+                       Ast_untagged_variants.Dynamic_checks.domain_check ~domain
+                         ~excluded (Expr value)
+                       |> E.emit_check
+                     | _ -> assert false)
+                   ~switch:(fun ?default ?declaration e clauses ->
+                     S.string_switch ?default ?declaration e
+                       (object_discriminant_clauses clauses))
+                   object_cases
+               else domain_chain object_cases)
+            in
+            let only_objects =
+              List.for_all
+                (function
+                  | Variant_runtime.ObjectDiscriminant _ -> true
+                  | _ -> false)
+                block_cases
+            in
+            if only_objects && not has_null_case then object_body
+            else
+              let object_guard =
+                List.fold_left
+                  (fun guard -> function
+                    | Variant_runtime.InstanceType instance ->
+                      E.and_ guard
+                        (E.not
+                           (E.emit_check
+                              (IsInstanceOf (instance, Expr switch_exp))))
+                    | _ -> guard)
+                  (E.and_
+                     (E.string_equal (E.typeof switch_exp) (E.str "object"))
+                     (E.not (E.is_null switch_exp)))
+                  block_cases
+              in
+              [S.if_ object_guard object_body ~else_:other_body]
+          | _ -> assert false
+        in
+        match declaration with
+        | None -> body
+        | Some (kind, id) -> S.declare_variable ~kind id :: body)
+  and compile_mixed_untagged_cases ~cxt ~switch_exp ~default ~block_cases
+      ~has_null_case cases =
     let mk_eq (i : Variant_runtime.tag_type option) x j y =
       let check =
         match (i, j) with
@@ -846,7 +1232,8 @@ let compile output_prefix =
       E.emit_check check
     in
     let tag_is_not_typeof = function
-      | Variant_runtime.Payload_shape (InstanceType _) -> true
+      | Variant_runtime.Payload_shape (InstanceType _ | ObjectDiscriminant _) ->
+        true
       | _ -> false
     in
     let clause_is_not_typeof (tag, _) = tag_is_not_typeof tag in
@@ -891,6 +1278,32 @@ let compile output_prefix =
             (E.emit_check (IsInstanceOf (instance_type, Expr e)))
             switch_body
             ~else_:[build_if_chain rest]
+        | (Variant_runtime.Payload_shape (ObjectDiscriminant {field_name}), _)
+          :: _ ->
+          let object_clauses, rest =
+            List.partition
+              (function
+                | Variant_runtime.Payload_shape (ObjectDiscriminant _), _ ->
+                  true
+                | _ -> false)
+              remaining_clauses
+          in
+          let literal_clauses = object_discriminant_clauses object_clauses in
+          let object_guard =
+            List.fold_left
+              (fun guard -> function
+                | Variant_runtime.InstanceType instance ->
+                  E.and_ guard
+                    (E.not (E.emit_check (IsInstanceOf (instance, Expr e))))
+                | _ -> guard)
+              (E.and_
+                 (E.string_equal (E.typeof e) (E.str "object"))
+                 (E.not (E.is_null e)))
+              block_cases
+          in
+          S.if_ object_guard
+            [S.string_switch ?default (E.dot e field_name) literal_clauses]
+            ~else_:[build_if_chain rest]
         | _ -> (
           let typeof_switch () =
             S.string_switch ?default ?declaration (E.typeof e) typeof_clauses
@@ -911,7 +1324,8 @@ let compile output_prefix =
       build_if_chain not_typeof_clauses
     in
     let merge_cases tag1 tag2 =
-      (* only merge typeof cases, as instanceof cases are pulled out into if-then-else *)
+      (* Only merge typeof cases; instance and object-field checks are emitted
+         outside that switch and cannot share its fallthrough bodies. *)
       not (tag_is_not_typeof tag1 || tag_is_not_typeof tag2)
     in
     cases
@@ -1013,90 +1427,101 @@ let compile output_prefix =
   and compile_staticcatch (lam : Lambda.t) (lambda_cxt : Lam_compile_context.t)
       =
     let code_table, body = flatten_nested_caches lam in
-    let exit_id = Ext_ident.create_tmp ~name:"exit" () in
-    match (lambda_cxt.continuation, code_table) with
-    | ( EffectCall
-          (Maybe_tail_is_return (Tail_with_name {in_staticcatch = false}) as
-           tail_type),
-        [code_table] )
-    (* tail position and only one exit code *)
-      when Lam_compile_context.no_static_raise_in_handler code_table ->
-      let jmp_table, handler =
-        Lam_compile_context.add_pseudo_jmp lambda_cxt.jmp_table exit_id
-          code_table
-      in
-      let new_cxt =
-        {
-          lambda_cxt with
-          jmp_table;
-          continuation = EffectCall (in_staticcatch tail_type);
-        }
-      in
+    let lambda_cxt, pattern_declarations =
+      shared_pattern_fields lambda_cxt body
+        (List.map
+           (fun (handler : Lam_compile_context.handler) -> handler.handler)
+           code_table)
+    in
+    let result =
+      let exit_id = Ext_ident.create_tmp ~name:"exit" () in
+      match (lambda_cxt.continuation, code_table) with
+      | ( EffectCall
+            (Maybe_tail_is_return (Tail_with_name {in_staticcatch = false}) as
+             tail_type),
+          [code_table] )
+      (* tail position and only one exit code *)
+        when Lam_compile_context.no_static_raise_in_handler code_table ->
+        let jmp_table, handler =
+          Lam_compile_context.add_pseudo_jmp lambda_cxt.jmp_table exit_id
+            code_table
+        in
+        let new_cxt =
+          {
+            lambda_cxt with
+            jmp_table;
+            continuation = EffectCall (in_staticcatch tail_type);
+          }
+        in
 
-      let lbody = compile_lambda new_cxt body in
-      let declares =
-        Ext_list.map code_table.bindings (fun x ->
-            S.declare_variable ~kind:Variable x)
-      in
-      Js_output.append_output (Js_output.make declares)
-        (Js_output.append_output lbody (compile_lambda lambda_cxt handler))
-    | _ -> (
-      let exit_expr = E.var exit_id in
-      let jmp_table, handlers =
-        Lam_compile_context.add_jmps lambda_cxt.jmp_table exit_id code_table
-      in
-      let handlers =
-        List.map (fun (i, handler) -> (Lambda.Switch_int i, handler)) handlers
-      in
-
-      (* Declaration First, body and handler have the same value *)
-      let declares =
-        S.define_variable ~kind:Variable exit_id E.zero_int_literal
-        (* we should always make it zero here, since [zero] is reserved in our mapping*)
-        :: Ext_list.flat_map code_table (fun {bindings} ->
-            Ext_list.map bindings (fun x -> S.declare_variable ~kind:Variable x))
-      in
-      match lambda_cxt.continuation with
-      (* could be optimized when cases are less than 3 *)
-      | NeedValue _ ->
-        let v = Ext_ident.create_tmp () in
-        let new_cxt = {lambda_cxt with jmp_table; continuation = Assign v} in
         let lbody = compile_lambda new_cxt body in
-        Js_output.append_output
-          (Js_output.make (S.declare_variable ~kind:Variable v :: declares))
-          (Js_output.append_output lbody
-             (Js_output.make
-                (compile_cases ~cxt:new_cxt ~switch_exp:exit_expr handlers)
-                ~value:(E.var v)))
-      | Declare (kind, id) (* declare first this we will do branching*) ->
-        let declares = S.declare_variable ~kind id :: declares in
-        let new_cxt = {lambda_cxt with jmp_table; continuation = Assign id} in
-        let lbody = compile_lambda new_cxt body in
+        let declares =
+          Ext_list.map code_table.bindings (fun x ->
+              S.declare_variable ~kind:Variable x)
+        in
         Js_output.append_output (Js_output.make declares)
-          (Js_output.append_output lbody
-             (Js_output.make
-                (compile_cases ~cxt:new_cxt ~switch_exp:exit_expr handlers)))
-      (* place holder -- tell the compiler that
+          (Js_output.append_output lbody (compile_lambda lambda_cxt handler))
+      | _ -> (
+        let exit_expr = E.var exit_id in
+        let jmp_table, handlers =
+          Lam_compile_context.add_jmps lambda_cxt.jmp_table exit_id code_table
+        in
+        let handlers =
+          List.map (fun (i, handler) -> (Lambda.Switch_int i, handler)) handlers
+        in
+
+        (* Declaration First, body and handler have the same value *)
+        let declares =
+          S.define_variable ~kind:Variable exit_id E.zero_int_literal
+          (* we should always make it zero here, since [zero] is reserved in our mapping*)
+          :: Ext_list.flat_map code_table (fun {bindings} ->
+              Ext_list.map bindings (fun x ->
+                  S.declare_variable ~kind:Variable x))
+        in
+        match lambda_cxt.continuation with
+        (* could be optimized when cases are less than 3 *)
+        | NeedValue _ ->
+          let v = Ext_ident.create_tmp () in
+          let new_cxt = {lambda_cxt with jmp_table; continuation = Assign v} in
+          let lbody = compile_lambda new_cxt body in
+          Js_output.append_output
+            (Js_output.make (S.declare_variable ~kind:Variable v :: declares))
+            (Js_output.append_output lbody
+               (Js_output.make
+                  (compile_cases ~cxt:new_cxt ~switch_exp:exit_expr handlers)
+                  ~value:(E.var v)))
+        | Declare (kind, id) (* declare first this we will do branching*) ->
+          let declares = S.declare_variable ~kind id :: declares in
+          let new_cxt = {lambda_cxt with jmp_table; continuation = Assign id} in
+          let lbody = compile_lambda new_cxt body in
+          Js_output.append_output (Js_output.make declares)
+            (Js_output.append_output lbody
+               (Js_output.make
+                  (compile_cases ~cxt:new_cxt ~switch_exp:exit_expr handlers)))
+        (* place holder -- tell the compiler that
          we don't know if it's complete
       *)
-      | EffectCall tail_type as cont ->
-        let continuation =
-          let new_tail_type = in_staticcatch tail_type in
-          if new_tail_type == tail_type then cont else EffectCall new_tail_type
-        in
-        let new_cxt = {lambda_cxt with jmp_table; continuation} in
-        let lbody = compile_lambda new_cxt body in
-        Js_output.append_output (Js_output.make declares)
-          (Js_output.append_output lbody
-             (Js_output.make
-                (compile_cases ~cxt:new_cxt ~switch_exp:exit_expr handlers)))
-      | Assign _ ->
-        let new_cxt = {lambda_cxt with jmp_table} in
-        let lbody = compile_lambda new_cxt body in
-        Js_output.append_output (Js_output.make declares)
-          (Js_output.append_output lbody
-             (Js_output.make
-                (compile_cases ~cxt:new_cxt ~switch_exp:exit_expr handlers))))
+        | EffectCall tail_type as cont ->
+          let continuation =
+            let new_tail_type = in_staticcatch tail_type in
+            if new_tail_type == tail_type then cont
+            else EffectCall new_tail_type
+          in
+          let new_cxt = {lambda_cxt with jmp_table; continuation} in
+          let lbody = compile_lambda new_cxt body in
+          Js_output.append_output (Js_output.make declares)
+            (Js_output.append_output lbody
+               (Js_output.make
+                  (compile_cases ~cxt:new_cxt ~switch_exp:exit_expr handlers)))
+        | Assign _ ->
+          let new_cxt = {lambda_cxt with jmp_table} in
+          let lbody = compile_lambda new_cxt body in
+          Js_output.append_output (Js_output.make declares)
+            (Js_output.append_output lbody
+               (Js_output.make
+                  (compile_cases ~cxt:new_cxt ~switch_exp:exit_expr handlers))))
+    in
+    Js_output.append_output (Js_output.make pattern_declarations) result
   and compile_sequand (l : Lambda.t) (r : Lambda.t)
       (lambda_cxt : Lam_compile_context.t) =
     if Lam_compile_context.continuation_is_return lambda_cxt.continuation then
@@ -1836,6 +2261,8 @@ let compile output_prefix =
                       jmp_table = Lam_compile_context.empty_handler_map;
                       switch_depth = 0;
                       loop_stack = [];
+                      pattern_scope = None;
+                      pattern_fields = [];
                     }
                     body))))
     | Lapply appinfo -> compile_apply appinfo lambda_cxt

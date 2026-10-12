@@ -1,0 +1,22 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/unboxed_object_domain_literal_payload_overlap.res[0m:[2m5:19-30[0m
+
+  3 [2m│[0m type broad = {kind: string, value: int}
+  4 [2m│[0m type narrow = {kind: special, value: float}
+  [1;31m5[0m [2m│[0m @unboxed type t = [1;31mBroad(broad)[0m | Narrow(narrow)
+  6 [2m│[0m let make = (value: broad) => Broad(value)
+  7 [2m│[0m 
+
+  Object cases Broad, Narrow have no valid discriminant.
+  
+  Runtime field "kind" overlaps between cases Broad and Narrow at literal
+  "special", but field "value" has different types. Literal-first matching
+  requires compatible remaining payload fields. Runtime field "value"
+  overlaps between cases Broad and Narrow because number and number cannot be
+  distinguished at runtime.
+  
+  Give every object case a required immutable field with the same JavaScript
+  property name and distinguishable runtime values or types. A literal may
+  precede a broader type only when the remaining payload fields have matching
+  runtime names, types, optionality and mutability.

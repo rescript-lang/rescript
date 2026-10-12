@@ -73,9 +73,18 @@ type t = {
   jmp_table: jmp_table;
   meta: Lam_stats.t;
   switch_depth: int;
+  pattern_scope: string option;
+      (** Identity of the dispatcher currently being compiled. *)
+  pattern_fields: (string * J.vident * string * J.expression) list;
+      (** Reads keyed by match identity, scrutinee identity and runtime property.
+          Expressions may lazily initialize a slot shared with catch handlers.
+          Function boundaries clear this cache. *)
   loop_stack: loop_frame list;
   loop_label_counter: int ref;
 }
+
+val find_pattern_field :
+  t -> scope:string -> base:J.vident -> name:string -> J.expression option
 
 val empty_handler_map : jmp_table
 val enter_switch : t -> t

@@ -23,6 +23,7 @@ module Instance : sig
     | Map
     | WeakSet
     | WeakMap
+    | TypedArray
 
   val to_string : t -> string
 end
@@ -37,11 +38,18 @@ type block_type =
   | FunctionType
   | ObjectType
   | UnknownType
+  | ObjectDiscriminant of {
+      field_name: string;
+      domain: value_domain;
+      excluded: value_domain;
+    }
+      (** Appended to preserve existing artifact constructor tags. The domain
+          and exclusions are canonical runtime values. *)
 
-(** The literal value a constructor is represented by: what [@as] states, or
-    the constructor's own name when it states nothing. Unlike [tag_type], this
-    can never describe an inferred untagged payload shape. *)
-type literal_tag =
+and value_domain = {literals: literal_tag list; shapes: block_type list}
+
+(** A declared literal runtime value, rather than an inferred payload shape. *)
+and literal_tag =
   | String of string
   | Int of int
   | Float of string
@@ -108,6 +116,13 @@ val get_layout : layout_ref -> layout
 val matching_facts : layout -> matching_facts
 val configuration : layout -> configuration
 val constructor_at : layout -> int -> constructor_case
+
+val object_discriminants_compatible :
+  constructor_case -> constructor_case -> bool
+(** Require identical inferred object dispatch fields and canonical domains and exclusions
+    whenever either case uses object discrimination. Other cases
+    retain their existing compatibility rules. *)
+
 val constructor_tag : layout -> int -> literal_tag option
 val representation : constructor_reference -> constructor_case
 val length : layout -> int

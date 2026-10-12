@@ -27,8 +27,9 @@ module E = Js_exp_make
 let make_block mutable_flag (tag_info : Lambda.tag_info) args =
   E.make_block tag_info args mutable_flag
 
-let field (field_info : Lambda.field_dbg_info) e (i : int32) =
+let rec field (field_info : Lambda.field_dbg_info) e (i : int32) =
   match field_info with
+  | Fld_record_pattern {field = info; scope = _} -> field info e i
   | Fld_tuple ->
     E.array_index_by_int ?comment:(Lambda.str_of_field_info field_info) e i
   | Fld_poly_var_content -> E.poly_var_value_access e

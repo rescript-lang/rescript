@@ -542,23 +542,26 @@ let array_index_by_int ?comment (e : t) (pos : int32) : t =
     }
 
 let record_access (e : t) (name : string) (pos : int32) =
-  match e.expression_desc with
-  | (Array l (* Float i -- should not appear here *) | Caml_block (l, _, _))
-    when no_side_effect e -> (
-    match Ext_list.nth_opt l (Int32.to_int pos) with
-    | Some x -> x
-    | None ->
-      {
-        expression_desc = Static_index (e, name, Some pos);
-        comment = None;
-        source_loc = None;
-      })
-  | _ ->
+  let access () : t =
     {
       expression_desc = Static_index (e, name, Some pos);
       comment = None;
       source_loc = None;
     }
+  in
+  let field =
+    match e.expression_desc with
+    | Caml_block (contents, _, tag) when no_side_effect e ->
+      Option.bind
+        (Lambda.field_position tag (Int32.to_int pos) (Fld_record {name}))
+        (Ext_list.nth_opt contents)
+    | Array contents when no_side_effect e ->
+      Ext_list.nth_opt contents (Int32.to_int pos)
+    | _ -> None
+  in
+  match field with
+  | Some value -> value
+  | None -> access ()
 
 (* The same as {!record_access} except tag*)
 let inline_record_access = record_access
@@ -600,34 +603,24 @@ let poly_var_value_access (e : t) =
       source_loc = None;
     }
 
-let extension_access (e : t) name (pos : int32) : t =
-  match e.expression_desc with
-  | (Array l (* Float i -- should not appear here *) | Caml_block (l, _, _))
-    when no_side_effect e -> (
-    match Ext_list.nth_opt l (Int32.to_int pos) with
-    | Some x -> x
+let extension_access (e : t) name (pos : int32) =
+  match name with
+  | Some name -> record_access e name pos
+  | None -> (
+    let field =
+      match e.expression_desc with
+      | (Array contents | Caml_block (contents, _, _)) when no_side_effect e ->
+        Ext_list.nth_opt contents (Int32.to_int pos)
+      | _ -> None
+    in
+    match field with
+    | Some value -> value
     | None ->
-      let name =
-        match name with
-        | Some n -> n
-        | None -> "_" ^ Int32.to_string pos
-      in
       {
-        expression_desc = Static_index (e, name, Some pos);
+        expression_desc = Static_index (e, "_" ^ Int32.to_string pos, Some pos);
         comment = None;
         source_loc = None;
       })
-  | _ ->
-    let name =
-      match name with
-      | Some n -> n
-      | None -> "_" ^ Int32.to_string pos
-    in
-    {
-      expression_desc = Static_index (e, name, Some pos);
-      comment = None;
-      source_loc = None;
-    }
 
 let assign ?comment e0 e1 : t =
   {expression_desc = Bin (Eq, e0, e1); comment; source_loc = None}
@@ -1393,7 +1386,7 @@ let block_type_name = function
   | FunctionType -> str "function"
   | StringType -> str "string"
   | InstanceType i -> js_global (Variant_runtime.Instance.to_string i)
-  | ObjectType -> str "object"
+  | ObjectType | ObjectDiscriminant _ -> str "object"
   | UnknownType ->
     (* TODO: this should not happen *)
     assert false
@@ -1415,7 +1408,15 @@ let rec emit_check (check : t Ast_untagged_variants.Dynamic_checks.t) =
     in
     bin op (emit_check x) (emit_check y)
   | TypeOf x -> typeof (emit_check x)
+  | Field (x, name) -> dot (emit_check x) name
   | IsInstanceOf (Array, x) -> is_array (emit_check x)
+  | IsInstanceOf (TypedArray, x) ->
+    let value = emit_check x in
+    and_
+      (call ~info:Js_call_info.ml_full_call
+         (dot (js_global "ArrayBuffer") "isView")
+         [value])
+      (not (instanceof value (js_global "DataView")))
   | IsInstanceOf (instance, x) ->
     let instance_name = Variant_runtime.Instance.to_string instance in
     instanceof (emit_check x) (js_global instance_name)

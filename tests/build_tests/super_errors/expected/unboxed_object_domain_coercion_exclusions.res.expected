@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/unboxed_object_domain_coercion_exclusions.res[0m:[2m10:37-53[0m
+
+   8 [2m│[0m   @unboxed type t = Text(text) | Number(number) | Special({kind: specia
+     [2m│[0m l, value: int})
+   9 [2m│[0m }
+  [1;31m10[0m [2m│[0m let convert = (value: Source.t) => ([1;31mvalue :> Target.t[0m)
+  11 [2m│[0m 
+
+  Type Source.t is not a subtype of Target.t 
+
+  Case [1;33mText[0m has different inferred object discriminants in [1;33mSource.t[0m and [1;33mTarget.t[0m. Coercion requires the same runtime field, value domains and exclusions in both variants.

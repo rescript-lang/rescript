@@ -1555,6 +1555,14 @@ let print_variant_configuration_issue ppf
     (issue : Variant_coercion.variant_configuration_issue) ~left_variant_name
     ~right_variant_name =
   match issue with
+  | Object_discriminant_not_matching {constructor_name} ->
+    fprintf ppf
+      "@ Case @{<info>%s@} has different inferred object discriminants in \
+       @{<info>%s@} and @{<info>%s@}. Coercion requires the same runtime \
+       field, value domains and exclusions in both variants."
+      constructor_name
+      (Path.name left_variant_name)
+      (Path.name right_variant_name)
   | Unboxed_config_not_matching {left_unboxed; right_unboxed} ->
     fprintf ppf
       "@ The variants have different @{<info>@unboxed@} configurations.";

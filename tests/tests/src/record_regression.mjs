@@ -94,8 +94,8 @@ pm0 = ir0.TAG === "V0" ? [
     "v0",
     3
   ] : [
-    "v0",
-    undefined
+    ir0.y0,
+    ir0.y1
   ];
 
 let pm1;
@@ -105,9 +105,9 @@ pm1 = ir1.TAG === "V0" ? [
     "v1",
     3
   ] : [
-    "v0",
+    ir1.y0,
     "n/a",
-    "v1"
+    ir1.y1
   ];
 
 let pm2;
@@ -118,10 +118,10 @@ pm2 = ir2.TAG === "V0" ? [
     2,
     3
   ] : [
-    "v0",
+    ir2.y0,
     "n/a",
     0,
-    "v1"
+    ir2.y1
   ];
 
 function inlinedRecord(ir) {

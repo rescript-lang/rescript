@@ -401,7 +401,8 @@ Source: `type type_mismatch` in [includecore.ml](../compiler/ml/includecore.ml).
 | `Field_names` | ✓ | `super_errors_multi/Iface_field_names_mismatch` | Record field names differ at the same position. |
 | `Field_missing` | ✓ | `super_errors_multi/Iface_missing_value` (indirect) | |
 | `Record_representation` | ✓ | `super_errors_multi/Iface_record_representation_mismatch` | Interface declares `@unboxed`; implementation is boxed. |
-| `Unboxed_representation` | ✓ | `super_errors_multi/Iface_unboxed_variant_mismatch` | |
+| `Unboxed_representation` | ✓ | `super_errors_multi/Iface_unboxed_variant_mismatch`, `super_errors_multi/Iface_object_discriminant_mismatch` | |
+| `Object_discriminant` | ✓ | `super_errors_multi/Iface_object_discriminant_field_mismatch` | Interface abstraction changes the shared runtime discriminator field chosen for object cases; inclusion requires matching fields, runtime value domains, and exclusions. |
 | `Immediate` | ✓ | `super_errors_multi/Iface_immediate_mismatch` | Interface adds `@immediate`; implementation manifests a non-immediate (`string`). |
 | `Tag_name` | ✓ | `super_errors_multi/Iface_tag_name_mismatch` | |
 | `Variant_representation` | ✓ | `super_errors_multi/Iface_variant_representation_mismatch` | |
@@ -444,7 +445,7 @@ Untagged-variant validation errors. Source: `type untagged_error` and `type erro
 | Variant | Status | Fixture | Notes |
 |---|---|---|---|
 | `OnlyOneUnknown` | ✓ | `UntaggedOnlyOneUnknown.res` | Abstract payload alongside another payload-carrying case. |
-| `AtMostOneObject` | ✓ | `UntaggedAtMostOneObject.res` | Two record payloads in the same untagged variant. |
+| `InvalidObjectDiscriminant` | ✓ | `UntaggedAtMostOneObject.res`, `unboxed_object_discriminant_{missing,optional,mutable,overlap,nonfinite,generic,array_record,private_payload}.res`, `unboxed_object_domain_{array_tuple_overlap,broad_overlap,combined_overlap,erased_inline_overlap,file_blob_overlap,gadt_field,gadt_field_alias,gadt_inline_overlap,gadt_named_overlap,literal_mutable_overlap,literal_names_overlap,literal_optional_overlap,literal_payload_overlap,literal_sets_overlap,number_overlap,option,option_shape,option_shape_inline,private_field,record_overlap,recursive,recursive_growing,typed_array_overlap,unit_literal_overlap}.res` | Shared required immutable fields need distinguishable runtime domains; overlapping literal and broad scalar domains require compatible remaining payload layouts. Fixtures cover unsupported option/custom option-shaped/generic/private field or payload representations, broad and literal overlaps, and differing payload types, runtime names, optionality, or mutability; Recursive or indefinitely growing erased runtime domains are unsupported. Erased inline wrapper domains also collide with their bare primitive domains. GADT constructor refinements cannot use literal/broad overlap or define discriminator field domains. |
 | `AtMostOneInstance` | ✓ | `UntaggedAtMostOneInstance.res` | Two cases with the same JS instance type (`Date.t` in both). |
 | `AtMostOneFunction` | ✓ | `UntaggedAtMostOneFunction.res` | Two function-typed payloads. |
 | `AtMostOneString` | ✓ | `UntaggedNonUnary*.res` (some sub-cases) | |
@@ -464,6 +465,13 @@ Untagged-variant validation errors. Source: `type untagged_error` and `type erro
 | `InvalidVariantTagAnnotation` | ✓ | `UntaggedInvalidVariantTagAnnotation.res` | `@tag(123)` (non-string payload). |
 | `InvalidUntaggedVariantDefinition` | ✓ | `UntaggedUnknown.res`, `UntaggedNonUnary*.res`, `UntaggedTupleAndArray.res`, `UntaggedImplIntf.res`, etc. | |
 | `TagFieldNameConflict` | ✓ | `UntaggedTagFieldNameConflict.res` | `@tag("kind")` plus inline record field named `kind` on a constructor. |
+
+### Object subtype errors
+
+| Variant | Status | Fixture | Notes |
+|---|---|---|---|
+| `Variant_coercion.Object_discriminant_not_matching` | ✓ | `unboxed_object_discriminant_coercion.res`, `unboxed_object_discriminant_coercion_field.res`, `unboxed_object_domain_coercion_exclusions.res` | Single-object to multiple-object coercion, different inferred runtime fields, or target runtime exclusions that remove part of a source field domain. |
+| `Ctype.Variant_configurations_mismatch` | ✓ | `unboxed_object_discriminant_coercion.res`, `unboxed_object_discriminant_coercion_field.res`, `unboxed_object_domain_coercion_exclusions.res` | Carries the subtype failure produced by the object discriminant compatibility check. |
 
 ---
 

@@ -70,6 +70,11 @@ val blk_record_inlined :
 
 val ref_tag_info : tag_info
 
+val fresh_pattern_scope : unit_name:string -> string
+(** Allocate an identity for one pattern matching compilation. Identities are
+    stable across CMJ serialization; Lambda copies must refresh them together
+    in their field projection and dispatcher metadata. *)
+
 type field_dbg_info =
   | Fld_record of {name: string}
   | Fld_module of {name: string}
@@ -81,6 +86,9 @@ type field_dbg_info =
   | Fld_extension
   | Fld_variant
   | Fld_cons
+  | Fld_record_pattern of {field: field_dbg_info; scope: string}
+      (** A projection emitted by this match, eligible to reuse its cached
+          discriminator. Source action/guard reads retain ordinary descriptors. *)
 
 val fld_record : string -> field_dbg_info
 
@@ -100,6 +108,14 @@ val fld_record_set : string -> set_field_dbg_info
 val fld_record_inline_set : string -> set_field_dbg_info
 
 val fld_record_extension_set : string -> set_field_dbg_info
+
+val field_position : tag_info -> int -> field_dbg_info -> int option
+(** Resolve a named record access against the allocation's emitted field names.
+    Return [None] when that property is absent. Other accesses retain their
+    declared position, which callers must bounds-check against the contents. *)
+
+val set_field_position : tag_info -> int -> set_field_dbg_info -> int option
+(** Resolve writes by the same rule as [field_position]. *)
 
 type immediate_or_pointer = Immediate | Pointer
 
@@ -403,6 +419,7 @@ and switch_key =
 and switch_dispatch =
   | Switch_direct
   | Switch_variant of Variant_runtime.matching_facts
+  | Switch_variant_matching of Variant_runtime.matching_facts * string
 
 and 'a switch = {
   sw_consts_full: bool;

@@ -38,6 +38,7 @@ type type_mismatch =
   | Immediate
   | Tag_name
   | Variant_representation of Ident.t
+  | Object_discriminant of Ident.t
 
 val value_descriptions :
   loc:Location.t ->

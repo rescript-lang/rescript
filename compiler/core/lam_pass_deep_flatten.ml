@@ -26,11 +26,17 @@
    |  Not_eliminatable
    | *)
 
-let rec eliminate_tuple (id : Ident.t) (lam : Lambda.t) acc =
+let rec eliminate_tuple ~info (id : Ident.t) (lam : Lambda.t) acc =
   match lam with
-  | Llet (Alias, v, Lprim {primitive = Pfield (i, _); args = [Lvar tuple]}, e2)
-    when Ident.same tuple id ->
-    eliminate_tuple id e2 (Map_int.add acc i v)
+  | Llet
+      ( Alias,
+        v,
+        Lprim {primitive = Pfield (i, field_info); args = [Lvar tuple]},
+        e2 )
+    when Ident.same tuple id -> (
+    match Lambda.field_position info i field_info with
+    | Some position -> eliminate_tuple ~info id e2 (Map_int.add acc position v)
+    | None -> None)
   (* it is okay to have duplicates*)
   | _ -> if Lam_hit.hit_variable id lam then None else Some (acc, lam)
 (* [groups] are in reverse order *)
@@ -206,7 +212,7 @@ let deep_flatten (lam : Lambda.t) : Lambda.t =
           (Alias | Strict | StrictOpt),
           Lprim {primitive = Pmakeblock info; args} )
         when Lambda.is_immutable_block info -> (
-        match eliminate_tuple id body Map_int.empty with
+        match eliminate_tuple ~info id body Map_int.empty with
         | Some (tuple_mapping, body) ->
           flatten
             (Ext_list.fold_left_with_offset args accux 0 (fun arg acc i ->

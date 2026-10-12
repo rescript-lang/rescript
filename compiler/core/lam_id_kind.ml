@@ -38,7 +38,7 @@ type boxed_nullable = Undefined | Null | Null_undefined
 type t =
   | Normal_optional of Lambda.t (* Some [x] *)
   | OptionalBlock of Lambda.t * boxed_nullable
-  | ImmutableBlock of element array
+  | ImmutableBlock of Lambda.tag_info * element array
   | MutableBlock of element array
   | Constant of Lambda.structured_constant
   | Module of Ident.t  (** TODO: static module vs first class module *)
@@ -62,7 +62,7 @@ let pp = Format.fprintf
 
 let print fmt (kind : t) =
   match kind with
-  | ImmutableBlock arr -> pp fmt "Imm(%d)" (Array.length arr)
+  | ImmutableBlock (_, arr) -> pp fmt "Imm(%d)" (Array.length arr)
   | Normal_optional _ -> pp fmt "Some"
   | OptionalBlock (_, Null) -> pp fmt "?Null"
   | OptionalBlock (_, Undefined) -> pp fmt "?Undefined"

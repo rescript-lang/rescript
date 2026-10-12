@@ -62,6 +62,23 @@
     3. arguments are const or not
 *)
 let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
+  let scopes = ref Map_string.empty in
+  let refresh_scope scope =
+    match Map_string.find_opt !scopes scope with
+    | Some refreshed -> refreshed
+    | None ->
+      let refreshed =
+        Lambda.fresh_pattern_scope ~unit_name:(Env.get_unit_name ())
+      in
+      scopes := Map_string.add !scopes scope refreshed;
+      refreshed
+  in
+  let rec refresh_field = function
+    | Lambda.Fld_record_pattern {field; scope} ->
+      Lambda.Fld_record_pattern
+        {field = refresh_field field; scope = refresh_scope scope}
+    | field -> field
+  in
   let rebind i =
     let i' = Ident.rename i in
     Hash_ident.add map i (Lambda.var i');
@@ -116,6 +133,11 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
     | Lconst _ -> lam
     | Lprim {primitive; args; loc} ->
       (* here it makes sure that global vars are not rebound *)
+      let primitive =
+        match primitive with
+        | Pfield (index, field) -> Lambda.Pfield (index, refresh_field field)
+        | primitive -> primitive
+      in
       Lambda.prim ~primitive ~args:(Ext_list.map args aux) loc
     | Lglobal_module _ -> lam
     | Lapply {ap_func; ap_args; ap_loc} ->
@@ -132,6 +154,12 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
             sw_consts_full;
             sw_dispatch;
           } ) ->
+      let sw_dispatch =
+        match sw_dispatch with
+        | Switch_variant_matching (facts, scope) ->
+          Lambda.Switch_variant_matching (facts, refresh_scope scope)
+        | Switch_direct | Switch_variant _ -> sw_dispatch
+      in
       let l = aux l in
       Lambda.switch l
         {

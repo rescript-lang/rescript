@@ -1,0 +1,22 @@
+===== Foo.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Iface_object_discriminant_mismatch/Foo.res[0m:[2m5:1-34[0m
+
+  3 [2m│[0m type left = {kind: leftKind}
+  4 [2m│[0m type right = {kind: rightKind}
+  [1;31m5[0m [2m│[0m [1;31mtype t = Left(left) | Right(right)[0m
+  6 [2m│[0m 
+
+  The implementation /.../fixtures/Iface_object_discriminant_mismatch/Foo.res
+  does not match the interface /.../fixtures/Iface_object_discriminant_mismatch/foo.cmi:
+  Type declarations do not match:
+    type t = Left(left) | Right(right)
+  is not included in
+    @unboxed type t = Left(left) | Right(right)
+  [36m/.../fixtures/Iface_object_discriminant_mismatch/Foo.resi[0m:[2m5:10-43[0m:
+    Expected declaration
+  [36m/.../fixtures/Iface_object_discriminant_mismatch/Foo.res[0m:[2m5:1-34[0m:
+    Actual declaration
+  Their internal representations differ:
+  the second declaration uses unboxed representation.

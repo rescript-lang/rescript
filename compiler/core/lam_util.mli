@@ -22,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val kind_of_lambda_block : Lambda.t list -> Lam_id_kind.t
+val kind_of_lambda_block : Lambda.tag_info -> Lambda.t list -> Lam_id_kind.t
 
 val field_flatten_get :
   (unit -> Lambda.t) ->

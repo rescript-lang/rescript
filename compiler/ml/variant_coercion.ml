@@ -164,6 +164,33 @@ type variant_configuration_issue =
   | Unboxed_config_not_matching of {left_unboxed: bool; right_unboxed: bool}
   | Tag_name_not_matching of {left_tag: string option; right_tag: string option}
   | Incompatible_constructor_count of {constructor_names: string list}
+  | Object_discriminant_not_matching of {constructor_name: string}
+
+(* Constructor names map cases across subset coercions, whereas layout indices
+   are declaration-local. Preserve the dispatch contract: even
+   ObjectType -> ObjectDiscriminant needs a separate soundness proof. *)
+let variant_object_discriminants_can_be_coerced ~layout1 ~layout2
+    (constructors1 : Types.constructor_declaration list)
+    (constructors2 : Types.constructor_declaration list) =
+  let target = Hashtbl.create (List.length constructors2) in
+  List.iteri
+    (fun position (cstr : Types.constructor_declaration) ->
+      Hashtbl.add target (Ident.name cstr.cd_id) position)
+    constructors2;
+  let rec check position = function
+    | [] -> Ok ()
+    | (cstr : Types.constructor_declaration) :: rest -> (
+      let name = Ident.name cstr.cd_id in
+      match Hashtbl.find_opt target name with
+      | Some target_position
+        when not
+               (Variant_runtime.object_discriminants_compatible
+                  (Variant_runtime.constructor_at layout1 position)
+                  (Variant_runtime.constructor_at layout2 target_position)) ->
+        Error (Object_discriminant_not_matching {constructor_name = name})
+      | None | Some _ -> check (position + 1) rest)
+  in
+  check 0 constructors1
 
 (* Legacy single-payload unboxing is recorded in [type_representation], while
    declaration-wide variant configuration is recorded in the layout. *)

@@ -192,8 +192,8 @@ let element_of_lambda (lam : Lambda.t) : Lam_id_kind.element =
   (* | Lfunction _  *)
   | _ -> NA
 
-let kind_of_lambda_block (xs : Lambda.t list) : Lam_id_kind.t =
-  ImmutableBlock (Ext_list.map_to_array xs (fun x -> element_of_lambda x))
+let kind_of_lambda_block info (xs : Lambda.t list) : Lam_id_kind.t =
+  ImmutableBlock (info, Ext_list.map_to_array xs element_of_lambda)
 
 let field_flatten_get lam v i info (tbl : Lam_id_kind.t Hash_ident.t) : Lambda.t
     =
@@ -203,27 +203,21 @@ let field_flatten_get lam v i info (tbl : Lam_id_kind.t Hash_ident.t) : Lambda.t
       ~primitive:(Pfield (i, info))
       ~args:[Lambda.global_module g]
       Location.none
-  | Some (ImmutableBlock arr) -> (
-    match arr.(i) with
-    | NA -> lam ()
-    | SimpleForm l -> l
-    | exception _ -> lam ())
-  | Some (Constant (Const_block (Blk_record {fields}, ls))) -> (
-    match info with
-    | Fld_record {name} -> (
-      let found = ref None in
-      for i = 0 to Array.length fields - 1 do
-        if fst fields.(i) = name then found := Ext_list.nth_opt ls i
-      done;
-      match !found with
-      | Some c when not (Lambda.const_is_allocating c) -> Lambda.const c
-      | _ -> lam ())
-    | _ -> lam ())
-  | Some (Constant (Const_block (_, ls))) -> (
-    match Ext_list.nth_opt ls i with
-    | None -> lam ()
-    | Some x when not (Lambda.const_is_allocating x) -> Lambda.const x
-    | Some _ -> lam ())
+  | Some (ImmutableBlock (tag, arr)) -> (
+    match Lambda.field_position tag i info with
+    | Some index when index >= 0 && index < Array.length arr -> (
+      match arr.(index) with
+      | NA -> lam ()
+      | SimpleForm l -> l)
+    | Some _ | None -> lam ())
+  | Some (Constant (Const_block (tag, contents))) -> (
+    let field =
+      Option.bind (Lambda.field_position tag i info) (Ext_list.nth_opt contents)
+    in
+    match field with
+    | Some value when not (Lambda.const_is_allocating value) ->
+      Lambda.const value
+    | Some _ | None -> lam ())
   | Some _ | None -> lam ()
 
 let not_function (lam : Lambda.t) =
