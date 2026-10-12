@@ -19,6 +19,7 @@
 #### :nail_care: Polish
 
 - Deprecate `Stdlib_Error` and `Stdlib_Exn` modules in favor of `JsError/JsExn`. https://github.com/rescript-lang/rescript/pull/8404
+- Deprecate `List.has` in favor of `List.some`. https://github.com/rescript-lang/rescript/pull/8807
 
 # 12.3.1
 
