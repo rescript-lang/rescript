@@ -1690,8 +1690,10 @@ fi
 
 # The first termination signal waits for modules compiling in-process; a
 # second one exits at once and still releases the build lock. One large module
-# keeps the compile running long enough to send both. The second signal has a
-# different type because pending signals of one type are not queued.
+# keeps the compile running for seconds, so exiting within two of them rules
+# out the graceful stop. The second signal has a different type because
+# pending signals of one type are not queued. Threads may handle the two in
+# either order, and the exit status is that of the second one handled.
 if ! $windows_posix_shell; then
   second_interrupt="$work/second-interrupt"
   mkdir -p "$second_interrupt/src"
@@ -1710,7 +1712,7 @@ if ! $windows_posix_shell; then
   fi
   kill -INT "$second_interrupt_pid"
   kill -TERM "$second_interrupt_pid"
-  if ! wait_for_pid_gone "$second_interrupt_pid"; then
+  if ! wait_for_pid_gone "$second_interrupt_pid" 20; then
     echo "a second signal did not stop an in-process compile" >&2
     exit 1
   fi
@@ -1718,11 +1720,15 @@ if ! $windows_posix_shell; then
   wait "$second_interrupt_pid"
   second_interrupt_status=$?
   set -e
-  if [ "$second_interrupt_status" -ne 143 ] || \
+  case $second_interrupt_status in
+    130 | 143) second_interrupt_status_ok=true ;;
+    *) second_interrupt_status_ok=false ;;
+  esac
+  if ! $second_interrupt_status_ok || \
     [ -e "$second_interrupt/lib/build.lock" ] || \
     [ -e "$second_interrupt/src/Slow.mjs" ]; then
     cat "$second_interrupt/build.log" >&2
-    echo "second signal: status $second_interrupt_status, expected 143 without a lock or output" >&2
+    echo "second signal: status $second_interrupt_status, expected 130 or 143 without a lock or output" >&2
     exit 1
   fi
 fi
