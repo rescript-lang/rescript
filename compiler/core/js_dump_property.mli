@@ -25,3 +25,6 @@
 val property_access : Ext_pp.t -> string -> unit
 
 val property_key : J.property_name -> string
+
+val obj_property_no_need_quot : string -> bool
+(** Whether [s] can follow a dot in a property access *)

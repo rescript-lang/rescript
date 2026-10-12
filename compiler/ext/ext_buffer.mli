@@ -80,8 +80,4 @@ val output_buffer : out_channel -> t -> unit
 (** [output_buffer oc b] writes the current contents of buffer [b]
     on the output channel [oc]. *)
 
-val not_equal : t -> string -> bool
-
 val add_string_char : t -> string -> char -> unit
-
-val add_char_string : t -> char -> string -> unit

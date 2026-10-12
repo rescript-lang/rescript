@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/dict_pattern_duplicate_key.res[0m:[2m3:18-20[0m
+
+  1 [2m│[0m let f = (d: dict<int>) =>
+  2 [2m│[0m   switch d {
+  [1;31m3[0m [2m│[0m   | dict{"a": 1, [1;31m"a"[0m: 2} => true
+  4 [2m│[0m   | _ => false
+  5 [2m│[0m   }
+
+  The key "a" is matched several times in this dict pattern

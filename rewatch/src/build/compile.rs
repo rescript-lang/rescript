@@ -798,7 +798,6 @@ pub fn compiler_args(
     let root_config = project_context.get_root_config();
     let jsx_args = root_config.get_jsx_args();
     let jsx_module_args = root_config.get_jsx_module_args();
-    let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
     let source_map_args = root_config.get_source_map_args(source_map_command);
     let bsb_project_root = project_context.get_root_path();
@@ -883,7 +882,6 @@ pub fn compiler_args(
         dependency_paths,
         jsx_args,
         jsx_module_args,
-        jsx_mode_args,
         jsx_preserve_args,
         source_map_args,
         bsc_flags.to_owned(),
@@ -1064,16 +1062,20 @@ fn compile_file(
 
             // perhaps we can do this copying somewhere else
             if !is_interface {
-                let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        // because editor tooling doesn't support namespace entries yet
-                        // we just remove the @ for now. This makes sure the editor support
-                        // doesn't break
-                        .join(format!("{basename}.cmi")),
-                    ocaml_build_path_abs.join(format!("{basename}.cmi")),
-                );
+                // With an interface, the .cmi comes from compiling the interface and was
+                // copied then; the implementation is compiled with -bs-read-cmi.
+                if !has_interface {
+                    let _ = std::fs::copy(
+                        package
+                            .get_build_path()
+                            .join(dir)
+                            // because editor tooling doesn't support namespace entries yet
+                            // we just remove the @ for now. This makes sure the editor support
+                            // doesn't break
+                            .join(format!("{basename}.cmi")),
+                        ocaml_build_path_abs.join(format!("{basename}.cmi")),
+                    );
+                }
                 let _ = std::fs::copy(
                     package.get_build_path().join(dir).join(format!("{basename}.cmj")),
                     ocaml_build_path_abs.join(format!("{basename}.cmj")),
@@ -1102,10 +1104,13 @@ fn compile_file(
                 );
             }
 
-            if let SourceType::SourceFile(SourceFile {
-                interface: Some(Interface { path, .. }),
-                ..
-            }) = &module.source_type
+            // The sources and JS are copied once per module, after compiling the
+            // implementation (the interface is compiled first and produces no JS).
+            if !is_interface
+                && let SourceType::SourceFile(SourceFile {
+                    interface: Some(Interface { path, .. }),
+                    ..
+                }) = &module.source_type
             {
                 // we need to copy the source file to the build directory.
                 // editor tools expects the source file in lib/bs for finding the current package
@@ -1124,10 +1129,11 @@ fn compile_file(
                 )
                 .expect("copying source file failed");
             }
-            if let SourceType::SourceFile(SourceFile {
-                implementation: Implementation { path, .. },
-                ..
-            }) = &module.source_type
+            if !is_interface
+                && let SourceType::SourceFile(SourceFile {
+                    implementation: Implementation { path, .. },
+                    ..
+                }) = &module.source_type
             {
                 // we need to copy the source file to the build directory.
                 // editor tools expects the source file in lib/bs for finding the current package
@@ -1149,7 +1155,8 @@ fn compile_file(
 
             // copy js file
             root_config.get_package_specs().iter().for_each(|spec| {
-                if spec.in_source
+                if !is_interface
+                    && spec.in_source
                     && let SourceType::SourceFile(SourceFile {
                         implementation: Implementation { path, .. },
                         ..

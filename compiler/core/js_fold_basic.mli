@@ -24,4 +24,4 @@
 
 (** A module to calculate hard dependency based on JS IR in module [J] *)
 
-val calculate_hard_dependencies : J.block -> Lam_module_ident.Hash_set.t
+val calculate_hard_dependencies : J.block -> unit Lam_module_ident.Hash_set.t

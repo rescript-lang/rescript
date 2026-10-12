@@ -28,13 +28,9 @@ type attrs = attribute list
 (** {1 Constants} *)
 
 module Const : sig
-  val char : char -> constant
   val string : string -> constant
   val integer : ?suffix:char -> string -> constant
   val int : ?suffix:char -> int -> constant
-  val int32 : ?suffix:char -> int32 -> constant
-  val int64 : ?suffix:char -> int64 -> constant
-  val float : ?suffix:char -> string -> constant
 end
 
 (** {1 Core language} *)
@@ -42,7 +38,6 @@ end
 (** Type expressions *)
 module Typ : sig
   val mk : ?loc:loc -> ?attrs:attrs -> core_type_desc -> core_type
-  val attr : core_type -> attribute -> core_type
 
   val any : ?loc:loc -> ?attrs:attrs -> unit -> core_type
   val var : ?loc:loc -> ?attrs:attrs -> string -> core_type
@@ -81,7 +76,6 @@ end
 (** Patterns *)
 module Pat : sig
   val mk : ?loc:loc -> ?attrs:attrs -> pattern_desc -> pattern
-  val attr : pattern -> attribute -> pattern
 
   val any : ?loc:loc -> ?attrs:attrs -> unit -> pattern
   val var : ?loc:loc -> ?attrs:attrs -> str -> pattern
@@ -103,6 +97,7 @@ module Pat : sig
     pattern record_element list ->
     closed_flag ->
     pattern
+  val dict : ?loc:loc -> ?attrs:attrs -> dict_pattern_entry list -> pattern
   val array : ?loc:loc -> ?attrs:attrs -> pattern list -> pattern
   val or_ : ?loc:loc -> ?attrs:attrs -> pattern -> pattern -> pattern
   val constraint_ : ?loc:loc -> ?attrs:attrs -> pattern -> core_type -> pattern
@@ -116,7 +111,6 @@ end
 (** Expressions *)
 module Exp : sig
   val mk : ?loc:loc -> ?attrs:attrs -> expression_desc -> expression
-  val attr : expression -> attribute -> expression
 
   val braces : ?attrs:attrs -> braces_loc:loc -> expression -> expression
   val ident : ?loc:loc -> ?attrs:attrs -> lid -> expression
@@ -172,6 +166,7 @@ module Exp : sig
   val setfield :
     ?loc:loc -> ?attrs:attrs -> expression -> lid -> expression -> expression
   val array : ?loc:loc -> ?attrs:attrs -> expression list -> expression
+  val dict : ?loc:loc -> ?attrs:attrs -> dict_entry list -> expression
   val ifthenelse :
     ?loc:loc ->
     ?attrs:attrs ->
@@ -356,15 +351,6 @@ module Te : sig
     str ->
     extension_constructor_kind ->
     extension_constructor
-
-  val decl :
-    ?loc:loc ->
-    ?attrs:attrs ->
-    ?args:constructor_arguments ->
-    ?res:core_type ->
-    str ->
-    extension_constructor
-  val rebind : ?loc:loc -> ?attrs:attrs -> str -> lid -> extension_constructor
 end
 
 module Jsx : sig
@@ -377,7 +363,6 @@ end
 (** Module type expressions *)
 module Mty : sig
   val mk : ?loc:loc -> ?attrs:attrs -> module_type_desc -> module_type
-  val attr : module_type -> attribute -> module_type
 
   val ident : ?loc:loc -> ?attrs:attrs -> lid -> module_type
   val alias : ?loc:loc -> ?attrs:attrs -> lid -> module_type
@@ -402,7 +387,6 @@ end
 (** Module expressions *)
 module Mod : sig
   val mk : ?loc:loc -> ?attrs:attrs -> module_expr_desc -> module_expr
-  val attr : module_expr -> attribute -> module_expr
 
   val ident : ?loc:loc -> ?attrs:attrs -> lid -> module_expr
   val structure : ?loc:loc -> ?attrs:attrs -> structure -> module_expr

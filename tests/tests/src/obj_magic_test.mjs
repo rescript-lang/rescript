@@ -9,10 +9,7 @@ function is_block(x) {
 
 Mocha.describe("Obj_magic_test", () => {
   Mocha.test("is_block_test1", () => Test_utils.eq("File \"obj_magic_test.res\", line 16, characters 7-14", false, "number" !== "number"));
-  Mocha.test("is_block_test2", () => Test_utils.eq("File \"obj_magic_test.res\", line 19, characters 7-14", true, typeof ({
-    hd: 3,
-    tl: /* [] */0
-  }) !== "number"));
+  Mocha.test("is_block_test2", () => Test_utils.eq("File \"obj_magic_test.res\", line 19, characters 7-14", true, typeof ({hd: 3, tl: /* [] */0}) !== "number"));
   Mocha.test("is_block_test3", () => Test_utils.eq("File \"obj_magic_test.res\", line 22, characters 7-14", true, "string" !== "number"));
   Mocha.test("is_block_test4", () => Test_utils.eq("File \"obj_magic_test.res\", line 25, characters 7-14", false, "number" !== "number"));
 });

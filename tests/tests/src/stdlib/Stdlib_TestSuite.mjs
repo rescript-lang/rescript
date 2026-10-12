@@ -94,6 +94,8 @@ let PatternMatching = Stdlib_DictTests.PatternMatching;
 
 let Has = Stdlib_DictTests.Has;
 
+let PatternKeys = Stdlib_DictTests.PatternKeys;
+
 let supportsIteratorHelpers = Stdlib_IteratorTests.supportsIteratorHelpers;
 
 let _checkIteratorHelperTypes = Stdlib_IteratorTests._checkIteratorHelperTypes;
@@ -215,6 +217,7 @@ export {
   intDict,
   PatternMatching,
   Has,
+  PatternKeys,
   supportsIteratorHelpers,
   _checkIteratorHelperTypes,
   iterator,

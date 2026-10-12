@@ -40,7 +40,7 @@ let shallow_map_sharing (f : t -> t) (lam : t) : t =
     let fn = f ap.ap_func in
     let args = Ext_list.map_sharing ap.ap_args f in
     if fn == ap.ap_func && args == ap.ap_args then lam
-    else apply fn args ap.ap_loc ~ap_transformed_jsx:ap.ap_transformed_jsx
+    else apply fn args ap.ap_loc
   | Lfunction {params; body; attr; loc} ->
     let body' = f body in
     if body' == body then lam else function_ ~loc ~attr ~params ~body:body'
@@ -123,8 +123,7 @@ let make_key e =
     | Lvar id -> ( try Ident.find_same id env with Not_found -> e)
     | Lglobal_module _ | Lconst _ -> e
     | Lapply ap ->
-      apply ~ap_transformed_jsx:ap.ap_transformed_jsx (tr_rec env ap.ap_func)
-        (tr_recs env ap.ap_args) Location.none
+      apply (tr_rec env ap.ap_func) (tr_recs env ap.ap_args) Location.none
     | Llet (Alias, x, ex, e) ->
       (* Ignore aliases -> substitute *)
       let ex = tr_rec env ex in
@@ -211,20 +210,20 @@ let free_ids get l =
   let fv = ref Set_ident.empty in
   let rec free l =
     iter free l;
-    fv := List.fold_left Set_ident.add !fv (get l);
+    fv := List.fold_left (fun acc id -> Set_ident.add id acc) !fv (get l);
     match l with
     | Lfunction {params} ->
-      List.iter (fun param -> fv := Set_ident.remove !fv param) params
-    | Llet (_str, id, _arg, _body) -> fv := Set_ident.remove !fv id
+      List.iter (fun param -> fv := Set_ident.remove param !fv) params
+    | Llet (_str, id, _arg, _body) -> fv := Set_ident.remove id !fv
     | Lletrec (decl, _body) ->
-      List.iter (fun (id, _exp) -> fv := Set_ident.remove !fv id) decl
+      List.iter (fun (id, _exp) -> fv := Set_ident.remove id !fv) decl
     | Lstaticcatch (_e1, (_, vars), _e2) ->
-      List.iter (fun id -> fv := Set_ident.remove !fv id) vars
-    | Ltrywith (_e1, exn, _e2) -> fv := Set_ident.remove !fv exn
-    | Lfor (v, _e1, _e2, _dir, _e3) -> fv := Set_ident.remove !fv v
+      List.iter (fun id -> fv := Set_ident.remove id !fv) vars
+    | Ltrywith (_e1, exn, _e2) -> fv := Set_ident.remove exn !fv
+    | Lfor (v, _e1, _e2, _dir, _e3) -> fv := Set_ident.remove v !fv
     | Lfor_of (v, _e1, _e2) | Lfor_await_of (v, _e1, _e2) ->
-      fv := Set_ident.remove !fv v
-    | Lassign (id, _e) -> fv := Set_ident.add !fv id
+      fv := Set_ident.remove v !fv
+    | Lassign (id, _e) -> fv := Set_ident.add id !fv
     | Lvar _ | Lglobal_module _ | Lconst _ | Lapply _ | Lprim _ | Lswitch _
     | Lstringswitch _ | Lstaticraise _ | Lifthenelse _ | Lsequence _ | Lbreak
     | Lcontinue | Lwhile _ ->

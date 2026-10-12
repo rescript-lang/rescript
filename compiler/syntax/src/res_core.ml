@@ -265,7 +265,6 @@ module Error_messages = struct
 end
 
 let spread_attr = (Location.mknoloc "res.spread", Parsetree.PStr [])
-let dict_spread_attr = (Location.mknoloc "res.dictSpread", Parsetree.PStr [])
 
 (* Emit a deprecation warning when the legacy [(. ...)] uncurried syntax is
    encountered. Uncurried is the default since ReScript v11, so the leading
@@ -1185,7 +1184,7 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
       let end_pos = Parser.end_pos p in
       Parser.next p;
       let loc = mk_loc start_pos end_pos in
-      Ast_helper.Pat.construct ~loc
+      Ast_helper.Pat.construct ~loc ~attrs
         (Location.mkloc (Longident.Lident (Token.to_string token)) loc)
         (Location.mkloc [] loc)
     | Int _ | String _ | Float _ | Codepoint _ | Minus | Plus -> (
@@ -1194,14 +1193,18 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
       | DotDot ->
         Parser.next p;
         let c2 = parse_constant p in
-        Ast_helper.Pat.interval ~loc:(mk_loc start_pos (Parser.position p)) c c2
+        Ast_helper.Pat.interval
+          ~loc:(mk_loc start_pos (Parser.position p))
+          ~attrs c c2
       | _ ->
-        Ast_helper.Pat.constant ~loc:(mk_loc start_pos (Parser.position p)) c)
+        Ast_helper.Pat.constant
+          ~loc:(mk_loc start_pos (Parser.position p))
+          ~attrs c)
     | Backtick ->
       let constant = parse_template_constant ~start_pos ~prefix:None p in
       Ast_helper.Pat.constant
         ~loc:(mk_loc start_pos (Parser.position p))
-        constant
+        ~attrs constant
     | Lparen -> (
       Parser.next p;
       match Parser.peek p with
@@ -1209,7 +1212,7 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
         Parser.next p;
         let loc = mk_loc start_pos (Parser.position p) in
         let lid = Location.mkloc (Longident.Lident "()") loc in
-        Ast_helper.Pat.construct ~loc lid (Location.mkloc [] loc)
+        Ast_helper.Pat.construct ~loc ~attrs lid (Location.mkloc [] loc)
       | _ -> (
         let pat = parse_constrained_pattern p in
         match Parser.peek p with
@@ -1327,6 +1330,11 @@ and skip_tokens_and_maybe_retry p ~is_start_of_grammar =
   then (
     Parser.next p;
     None)
+  else if Parser.peek p = Comma then
+    (* Something is missing before a comma, e.g. the value in [{a: , b: 1}]:
+       leave the comma to the enclosing list instead of skipping to the next
+       row *)
+    None
   else if Recover.should_abort_list_parse p (Parser.peek p) then
     if is_start_of_grammar (Parser.peek p) then (
       Parser.next p;
@@ -1343,6 +1351,8 @@ and skip_tokens_and_maybe_retry p ~is_start_of_grammar =
     if is_start_of_grammar (Parser.peek p) then Some () else None)
 
 (* alias ::= pattern as lident *)
+(* [attrs] were written before [pattern]: with [as], they belong to the alias
+   instead, and [pattern] keeps only its own, e.g. [@b] in [@a (@b x) as z] *)
 and parse_alias_pattern ~attrs pattern p =
   match Parser.peek p with
   | As ->
@@ -1351,7 +1361,15 @@ and parse_alias_pattern ~attrs pattern p =
     let name = Location.mkloc name loc in
     Ast_helper.Pat.alias
       ~loc:{pattern.ppat_loc with loc_end = Parser.position p}
-      ~attrs pattern name
+      ~attrs
+      {
+        pattern with
+        ppat_attributes =
+          List.filter
+            (fun attr -> not (List.memq attr attrs))
+            pattern.ppat_attributes;
+      }
+      name
   | _ -> pattern
 
 (* or ::= pattern | pattern
@@ -1654,23 +1672,25 @@ and parse_dict_pattern_row p =
   | String s ->
     let loc = mk_loc (Parser.start_pos p) (Parser.end_pos p) in
     Parser.next p;
-    let field_name = Location.mkloc (Longident.Lident s) loc in
     Parser.expect Colon p;
     let optional = parse_optional_label p in
     let pat = parse_pattern p in
-    Some {Parsetree.lid = field_name; x = pat; opt = optional}
+    Some
+      {
+        Parsetree.pdp_key = Location.mkloc s loc;
+        pdp_pattern = pat;
+        pdp_optional = optional;
+      }
   | _ -> None
 
 and parse_dict_pattern ~start_pos ~attrs (p : Parser.t) =
   let fields =
-    parse_comma_delimited_region p ~grammar:DictRows ~closing:Rbrace
+    parse_comma_delimited_region p ~grammar:PatternDict ~closing:Rbrace
       ~f:parse_dict_pattern_row
   in
   Parser.expect Rbrace p;
   let loc = mk_loc start_pos (Parser.position p) in
-  Ast_helper.Pat.record ~loc
-    ~attrs:((Location.mknoloc "res.dictPattern", PStr []) :: attrs)
-    fields Open
+  Ast_helper.Pat.dict ~loc ~attrs fields
 
 and parse_array_pattern ~attrs p =
   let start_pos = Parser.start_pos p in
@@ -3316,23 +3336,28 @@ and parse_dict_expr_part p =
   | DotDotDot ->
     Parser.next p;
     let spread_expr = parse_constrained_or_coerced_expr p in
-    Some (`Spread spread_expr)
+    Some (Parsetree.Pdict_spread spread_expr)
   | String s -> (
     let loc = mk_loc (Parser.start_pos p) (Parser.end_pos p) in
     Parser.next p;
-    let field = Location.mkloc (Longident.Lident s) loc in
+    let key = Location.mkloc s loc in
     match Parser.peek p with
     | Colon ->
       Parser.next p;
       let field_expr = parse_expr p in
-      Some (`Row (field, field_expr))
+      Some (Parsetree.Pdict_entry (key, field_expr))
     | Equal ->
       Parser.err ~start_pos:(Parser.start_pos p) ~end_pos:(Parser.end_pos p) p
         (Diagnostics.message Error_messages.dict_field_missing_colon);
       Parser.next p;
       let field_expr = parse_expr p in
-      Some (`Row (field, field_expr))
-    | _ -> Some (`Row (field, Ast_helper.Exp.ident ~loc:field.loc field)))
+      Some (Pdict_entry (key, field_expr))
+    | _ ->
+      Some
+        (Pdict_entry
+           ( key,
+             Ast_helper.Exp.ident ~loc (Location.mkloc (Longident.Lident s) loc)
+           )))
   | _ -> None
 
 and parse_record_expr_with_string_keys ~start_pos first_row p =
@@ -4168,92 +4193,13 @@ and parse_list_expr ~start_pos p =
       [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
 
 and parse_dict_expr ~start_pos p =
-  let parts =
+  let entries =
     parse_comma_delimited_region ~grammar:Grammar.DictRows ~closing:Rbrace
       ~f:parse_dict_expr_part p
   in
   let loc = mk_loc start_pos (Parser.end_pos p) in
-  let to_key_value_pair
-      (record_item : Longident.t Location.loc * Parsetree.expression) =
-    match record_item with
-    | ( {Location.txt = Longident.Lident key; loc = key_loc},
-        ({pexp_loc = value_loc} as value_expr) ) ->
-      Some
-        (Ast_helper.Exp.tuple
-           ~loc:(mk_loc key_loc.loc_start value_loc.loc_end)
-           [
-             Ast_helper.Exp.constant ~loc:key_loc (Ast_helper.Const.string key);
-             value_expr;
-           ])
-    | _ -> None
-  in
-  let dict_rows_loc
-      (rows : (Longident.t Location.loc * Parsetree.expression) list) =
-    match (rows, List.rev rows) with
-    | (first_key, _) :: _, (_, last_expr) :: _ ->
-      mk_loc first_key.loc.loc_start last_expr.pexp_loc.loc_end
-    | _ -> loc
-  in
-  let make_dict_chunk ?loc_override rows =
-    let chunk_loc =
-      match loc_override with
-      | Some loc -> loc
-      | None -> dict_rows_loc rows
-    in
-    let key_value_pairs = List.filter_map to_key_value_pair rows in
-    Ast_helper.Exp.apply ~loc:chunk_loc
-      (Ast_helper.Exp.ident ~loc:chunk_loc
-         (Location.mkloc
-            (Longident.Ldot (Longident.Lident Primitive_modules.dict, "make"))
-            chunk_loc))
-      [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc:chunk_loc key_value_pairs)]
-  in
-  let make_dict_spread target_expr source_parts =
-    let spread_ident =
-      Ast_helper.Exp.ident ~loc ~attrs:[dict_spread_attr]
-        (Location.mkloc
-           (Longident.Ldot (Longident.Lident Primitive_modules.dict, "spread"))
-           loc)
-    in
-    Ast_helper.Exp.apply ~loc spread_ident
-      [
-        (Asttypes.Nolabel, target_expr);
-        ( Asttypes.Nolabel,
-          Ast_helper.Exp.array ~loc
-            (List.map
-               (function
-                 | `Rows rows -> make_dict_chunk rows
-                 | `Spread spread_expr -> spread_expr)
-               source_parts) );
-      ]
-  in
-  let grouped_parts =
-    let rec loop current_rows acc = function
-      | [] ->
-        let acc =
-          match current_rows with
-          | [] -> acc
-          | rows -> `Rows (List.rev rows) :: acc
-        in
-        List.rev acc
-      | `Row row :: rest -> loop (row :: current_rows) acc rest
-      | `Spread spread_expr :: rest ->
-        let acc =
-          match current_rows with
-          | [] -> `Spread spread_expr :: acc
-          | rows -> `Spread spread_expr :: `Rows (List.rev rows) :: acc
-        in
-        loop [] acc rest
-    in
-    loop [] [] parts
-  in
   Parser.expect Rbrace p;
-  match grouped_parts with
-  | [] -> make_dict_chunk ~loc_override:loc []
-  | [`Rows rows] -> make_dict_chunk ~loc_override:loc rows
-  | `Rows target_rows :: source_parts ->
-    make_dict_spread (make_dict_chunk target_rows) source_parts
-  | source_parts -> make_dict_spread (make_dict_chunk []) source_parts
+  Ast_helper.Exp.dict ~loc entries
 
 and parse_array_exp p =
   let start_pos = Parser.start_pos p in

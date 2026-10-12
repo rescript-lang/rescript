@@ -12,12 +12,9 @@ function f(X, xs) {
   });
 }
 
-Stdlib_List.forEach({
-  hd: {
-    x: 3
-  },
-  tl: /* [] */0
-}, x => {
+Stdlib_List.forEach({hd: {
+  x: 3
+}, tl: /* [] */0}, x => {
   console.log(x.x);
 });
 

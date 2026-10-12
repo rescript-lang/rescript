@@ -51,8 +51,9 @@ type t = {
 let pp = Format.fprintf
 
 let pp_ident_tbl fmt (ident_tbl : ident_tbl) =
-  Hash_ident.iter ident_tbl (fun k v ->
-      pp fmt "@[%a -> %a@]@." Ident.print k Lam_id_kind.print v)
+  Hash_ident.iter
+    (fun k v -> pp fmt "@[%a -> %a@]@." Ident.print k Lam_id_kind.print v)
+    ident_tbl
 
 let print fmt (v : t) =
   pp fmt "@[Ident table:@ @[%a@]@]" pp_ident_tbl v.ident_tbl;

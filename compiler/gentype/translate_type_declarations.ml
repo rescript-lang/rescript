@@ -230,7 +230,6 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       match representation with
       | Record_unboxed _ -> true
       | Record_regular | Record_inlined _ | Record_extension -> false
-      | Record_float_unused -> assert false
     in
     let {Translate_type_expr_from_types.dependencies; type_} =
       label_declarations |> translate_label_declarations ~unboxed

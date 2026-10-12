@@ -40,6 +40,8 @@ let inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug =
   let rec process_pattern (pat : Parsetree.pattern) =
     match pat.ppat_desc with
     | Ppat_tuple pl -> pl |> List.iter process_pattern
+    | Ppat_dict entries ->
+      Ext_list.iter entries (fun {pdp_pattern} -> process_pattern pdp_pattern)
     | Ppat_record (fields, _, rest) -> (
       Ext_list.iter fields (fun {x = p} -> process_pattern p);
       match rest with
@@ -57,13 +59,14 @@ let inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug =
       match expr.pexp_desc with
       | Pexp_constant _ | Pexp_tuple _ | Pexp_record _ | Pexp_variant _
       | Pexp_apply _ | Pexp_match _ | Pexp_construct _ | Pexp_ifthenelse _
-      | Pexp_ternary _ | Pexp_array _ | Pexp_ident _ | Pexp_try _
+      | Pexp_ternary _ | Pexp_array _ | Pexp_dict _ | Pexp_ident _ | Pexp_try _
       | Pexp_object_get _ | Pexp_object_set _ | Pexp_field _ | Pexp_open _
       | Pexp_fun _ | Pexp_template _ | Pexp_tagged_template _ ->
         push vb.pvb_pat.ppat_loc Type
       | _ -> ())
     | {pvb_pat = {ppat_desc = Ppat_tuple _}} -> process_pattern vb.pvb_pat
-    | {pvb_pat = {ppat_desc = Ppat_record _}} -> process_pattern vb.pvb_pat
+    | {pvb_pat = {ppat_desc = Ppat_record _ | Ppat_dict _}} ->
+      process_pattern vb.pvb_pat
     | _ -> ());
     Ast_iterator.default_iterator.value_binding iterator vb
   in

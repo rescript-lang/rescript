@@ -154,7 +154,6 @@ and type_kind =
 
 and record_representation =
   | Record_regular (* All fields are boxed / tagged *)
-  | Record_float_unused (* Was: all fields are floats. Now: unused *)
   | Record_unboxed of bool (* Unboxed single-field record, inlined or not *)
   | Record_inlined of
       (* Inlined record *)
@@ -325,7 +324,6 @@ type label_description = {
 let same_record_representation x y =
   match x with
   | Record_regular -> y = Record_regular
-  | Record_float_unused -> y = Record_float_unused
   | Record_inlined {name} -> (
     match y with
     | Record_inlined y -> name = y.name

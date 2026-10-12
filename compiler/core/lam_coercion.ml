@@ -94,8 +94,9 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
         groups = [];
       } (fun (original_export_id : Ident.t) (lam : Lambda.t) (acc : t) ->
         let original_name = original_export_id.name in
-        if not @@ Hash_set_string.check_add tbl original_name then
+        if Hash_set_string.mem tbl original_name then
           Bs_exception.error (Bs_duplicate_exports original_name);
+        Hash_set_string.add tbl original_name ();
         match lam with
         | Lvar id ->
           if Ident.name id = original_name then
@@ -105,9 +106,8 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
               export_set =
                 (if id.stamp = original_export_id.stamp then acc.export_set
                  else
-                   Set_ident.add
-                     (Set_ident.remove acc.export_set original_export_id)
-                     id);
+                   Set_ident.add id
+                     (Set_ident.remove original_export_id acc.export_set));
             }
           else
             let newid = Ident.rename original_export_id in
@@ -116,7 +116,7 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
             {
               acc with
               export_list = newid :: acc.export_list;
-              export_map = Map_ident.add acc.export_map newid lam;
+              export_map = Map_ident.add newid lam acc.export_map;
               groups = Single (kind, newid, lam) :: acc.groups;
             }
         | _ ->
@@ -152,7 +152,7 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
           {
             acc with
             export_list = newid :: acc.export_list;
-            export_map = Map_ident.add acc.export_map newid lam;
+            export_map = Map_ident.add newid lam acc.export_map;
             groups = Single (Strict, newid, lam) :: acc.groups;
           })
   in
@@ -161,8 +161,8 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
     Ext_list.fold_left reverse_input (result.export_map, result.groups)
       (fun (export_map, acc) x ->
         ( (match x with
-          | Single (_, id, lam) when Set_ident.mem export_set id ->
-            Map_ident.add export_map id lam
+          | Single (_, id, lam) when Set_ident.mem id export_set ->
+            Map_ident.add id lam export_map
           (* relies on the Invariant that [eoid] can not be bound before
               FIX: such invariant may not hold
           *)

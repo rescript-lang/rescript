@@ -17,12 +17,10 @@
 
 type t = {stamp: int; name: string; mutable flags: int}
 
-include Identifiable.S with type t := t
-(* Notes:
-   - [equal] compares identifiers by name
-   - [compare x y] is 0 if [same x y] is true.
-   - [compare] compares identifiers by binding location
-*)
+val equal : t -> t -> bool
+(* Compare identifiers by name. *)
+
+val print : Format.formatter -> t -> unit
 
 val create : string -> t
 val create_persistent : string -> t

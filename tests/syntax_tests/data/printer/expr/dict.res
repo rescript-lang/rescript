@@ -83,3 +83,12 @@ let x = dict{
   "bar": 2,
   ...qux /* after qux */,
 }
+
+// Attributes on a dict literal are kept
+let x = @attr dict{"a": 1}
+let x = @attr dict{...foo, "bar": 2}
+let x = (@attr dict{"a": 1})->f
+
+// A dict spread into a dict stays a spread
+let x = dict{...dict{"a": 1}}
+let x = dict{"a": 1, ...dict{"b": 2}}

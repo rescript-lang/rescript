@@ -14,24 +14,12 @@ Mocha.describe("Bs_auto_uncurry_test", () => {
   Mocha.test("callback_test", () => {
     let xs = /* [] */0;
     hi(x => {
-      xs = {
-        hd: x,
-        tl: xs
-      };
+      xs = {hd: x, tl: xs};
     });
     hi(x => {
-      xs = {
-        hd: x,
-        tl: xs
-      };
+      xs = {hd: x, tl: xs};
     });
-    Test_utils.eq("File \"bs_auto_uncurry_test.res\", line 20, characters 7-14", xs, {
-      hd: undefined,
-      tl: {
-        hd: undefined,
-        tl: /* [] */0
-      }
-    });
+    Test_utils.eq("File \"bs_auto_uncurry_test.res\", line 20, characters 7-14", xs, {hd: undefined, tl: {hd: undefined, tl: /* [] */0}});
   });
   Mocha.test("array_operations_test", () => {
     Test_utils.eq("File \"bs_auto_uncurry_test.res\", line 24, characters 7-14", [

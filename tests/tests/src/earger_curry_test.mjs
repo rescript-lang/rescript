@@ -67,10 +67,7 @@ function add5(a0, a1, a2, a3, a4) {
     a3,
     a4
   ]);
-  all_v.contents = {
-    hd: v.contents,
-    tl: all_v.contents
-  };
+  all_v.contents = {hd: v.contents, tl: all_v.contents};
   return (((a0 + a1 | 0) + a2 | 0) + a3 | 0) + a4 | 0;
 }
 
@@ -80,10 +77,7 @@ function f(x) {
 
 function g(x) {
   let u = (a, b) => add5(x, (v.contents = v.contents + 1 | 0, 1), (v.contents = v.contents + 1 | 0, 2), a, b);
-  all_v.contents = {
-    hd: v.contents,
-    tl: all_v.contents
-  };
+  all_v.contents = {hd: v.contents, tl: all_v.contents};
   return u;
 }
 
@@ -100,25 +94,7 @@ Mocha.describe("Earger_curry_test", () => {
   Mocha.test("earger curry b", () => Test_utils.eq("File \"earger_curry_test.res\", line 138, characters 34-41", b, 11));
   Mocha.test("earger curry c", () => Test_utils.eq("File \"earger_curry_test.res\", line 139, characters 34-41", c, 10));
   Mocha.test("earger curry d", () => Test_utils.eq("File \"earger_curry_test.res\", line 140, characters 34-41", d, 11));
-  Mocha.test("earger curry all_v", () => Test_utils.eq("File \"earger_curry_test.res\", line 141, characters 38-45", all_v.contents, {
-    hd: 8,
-    tl: {
-      hd: 6,
-      tl: {
-        hd: 6,
-        tl: {
-          hd: 4,
-          tl: {
-            hd: 4,
-            tl: {
-              hd: 2,
-              tl: /* [] */0
-            }
-          }
-        }
-      }
-    }
-  }));
+  Mocha.test("earger curry all_v", () => Test_utils.eq("File \"earger_curry_test.res\", line 141, characters 38-45", all_v.contents, {hd: 8, tl: {hd: 6, tl: {hd: 6, tl: {hd: 4, tl: {hd: 4, tl: {hd: 2, tl: /* [] */0}}}}}}));
 });
 
 export {

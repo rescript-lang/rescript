@@ -81,7 +81,6 @@ val fold_left_with_offset :
 val filter_map : 'a list -> ('a -> 'b option) -> 'b list
 (** @unused *)
 
-val exclude_with_val : 'a list -> ('a -> bool) -> 'a list option
 (** [excludes p l]
     return a tuple [excluded,newl]
     where [exluded] is true indicates that at least one  
@@ -106,18 +105,12 @@ val split_at_last : 'a list -> 'a list * 'a
 
 val filter_mapi : 'a list -> ('a -> int -> 'b option) -> 'b list
 
-val length_compare : 'a list -> int -> [`Gt | `Eq | `Lt]
-
-val length_ge : 'a list -> int -> bool
-
 (**
 
    {[length xs = length ys + n ]}
    input n should be positive 
    TODO: input checking
 *)
-
-val length_larger_than_n : 'a list -> 'a list -> int -> bool
 
 val rev_map_append : 'a list -> 'b list -> ('a -> 'b) -> 'b list
 (**
@@ -128,8 +121,6 @@ val rev_map_append : 'a list -> 'b list -> ('a -> 'b) -> 'b list
 *)
 
 val flat_map : 'a list -> ('a -> 'b list) -> 'b list
-
-val flat_map_append : 'a list -> 'b list -> ('a -> 'b list) -> 'b list
 
 val stable_group : 'a list -> ('a -> 'a -> bool) -> 'a list list
 (**
@@ -189,8 +180,6 @@ val assoc_by_string : (string * 'a) list -> string -> 'a option -> 'a
     other unbox the [default], 
     otherwise [assert false ]
 *)
-
-val assoc_by_int : (int * 'a) list -> int -> 'a option -> 'a
 
 val nth_opt : 'a list -> int -> 'a option
 

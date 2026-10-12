@@ -30,6 +30,7 @@ type t =
   | PatternList
   | PatternOcamlList
   | PatternRecord
+  | PatternDict
   | TypeDef
   | TypeConstrName
   | TypeParams
@@ -97,6 +98,7 @@ let to_string = function
   | PatternList -> "multiple patterns"
   | PatternOcamlList -> "a list pattern"
   | PatternRecord -> "a record pattern"
+  | PatternDict -> "a dict pattern"
   | ParameterList -> "parameters"
   | StringFieldDeclarations -> "string field declarations"
   | FieldDeclarations -> "field declarations"
@@ -295,6 +297,7 @@ let is_list_element grammar token =
   | PatternMatching -> is_pattern_match_start token
   | PatternOcamlList -> is_pattern_ocaml_list_start token
   | PatternRecord -> is_pattern_record_item_start token
+  | PatternDict -> is_dict_row_start token
   | Attribute -> is_attribute_start token
   | TypeConstraint -> token = Constraint
   | PackageConstraint -> token = And
@@ -312,7 +315,7 @@ let is_list_terminator grammar token =
   | ArgumentList, (Rparen | DotDotDot)
   | TypExprList, (Rparen | Forwardslash | GreaterThan | Equal)
   | ModExprList, Rparen
-  | ( (PatternList | PatternOcamlList | PatternRecord),
+  | ( (PatternList | PatternOcamlList | PatternRecord | PatternDict),
       ( Forwardslash | Rbracket | Rparen | EqualGreater (* pattern matching => *)
       | In (* for expressions *)
       | Equal (* let {x} = foo *) ) )

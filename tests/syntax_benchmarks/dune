@@ -18,8 +18,6 @@
     (= %{system} elf)
     (= %{system} linux_eabihf)
     (= %{system} linux_eabi))))
- (flags
-  (:standard -w +a-4-40-42-70))
  (foreign_stubs
   (language c)
   (names time))

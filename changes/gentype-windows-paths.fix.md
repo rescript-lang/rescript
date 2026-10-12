@@ -1,0 +1,1 @@
+- Fix GenType path resolution hanging on Windows when project paths use different short and canonical forms. https://github.com/rescript-lang/rescript/pull/8639

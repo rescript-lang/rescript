@@ -7,6 +7,4 @@
 
   Missing expression
 
-let x =
-  ((Primitive_dict.spread)[@res.dictSpread ]) (Primitive_dict.make [||])
-    [|([%rescript.exprhole ])|]
+let x = dict{...([%rescript.exprhole ])}

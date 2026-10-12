@@ -100,7 +100,6 @@ let extra_for_cmt ~(iterator : Tast_iterator.iterator)
         | Partial_signature_item str -> iterator.signature_item iterator str
         | Partial_expression expression -> iterator.expr iterator expression
         | Partial_pattern pattern -> iterator.pat iterator pattern
-        | Partial_class_expr _ -> ()
         | Partial_module_type module_type ->
           iterator.module_type iterator module_type
         | Partial_structure _ | Partial_structure_item _ -> ())
@@ -135,7 +134,6 @@ let extra_for_cmt ~(iterator : Tast_iterator.iterator)
     in
     extra_for_signature_items ~iterator items;
     extra_for_parts parts
-  | _ -> extra_for_structure_items ~iterator []
 
 let add_for_path ~env ~extra path lident loc typ tip =
   let ident_name = Longident.last lident in

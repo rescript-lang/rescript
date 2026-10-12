@@ -294,7 +294,7 @@ let rec collect_ids subst bindings p =
       try collect_ids subst bindings (Ident.find_same id bindings)
       with Not_found -> Set_ident.empty
     in
-    Set_ident.add ids id
+    Set_ident.add id ids
   | _ -> Set_ident.empty
 
 let collect_arg_paths mty =
@@ -343,7 +343,7 @@ and remove_aliases_sig env excl sg =
   | Sig_module (id, md, rs) :: rem ->
     let mty =
       match md.md_type with
-      | Mty_alias _ when Set_ident.mem excl id -> md.md_type
+      | Mty_alias _ when Set_ident.mem id excl -> md.md_type
       | mty -> remove_aliases env excl mty
     in
     Sig_module (id, {md with md_type = mty}, rs)

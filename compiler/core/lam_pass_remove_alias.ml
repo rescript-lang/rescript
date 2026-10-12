@@ -46,20 +46,28 @@ let is_const_some (cst : Lambda.structured_constant) : bool =
   | Const_some _ -> true
   | _ -> false
 
+(* How deep inlining may nest: simplifying an inlined body can inline the
+   functions it calls, and so on. Without a bound, a chain of small functions
+   that each call the previous one gets the whole chain inlined into every
+   function, which is quadratic in the length of the chain. Functions marked
+   [@inline] are always inlined. *)
+let max_inline_depth = 4
+
 let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
+  let inline_depth = ref 0 in
   let rec simpl (lam : Lambda.t) : Lambda.t =
     match lam with
-    (* 7432: prevent optimization in JSX preserve mode *)
+    (* Keep a JSX tag like [M.make] as it is: flattening it may give a variable
+       with a lowercase name, which JSX reads as an intrinsic element (#7432) *)
     | Lprim
         {
-          primitive = Pjs_call {prim_name = "jsx" | "jsxs"} as primitive;
-          args = (Lprim {primitive = Pfield (_, _)} as field_arg) :: rest;
+          primitive = Pjsx _ as primitive;
+          args = (Lprim {primitive = Pfield (_, _)} as tag) :: rest;
           loc;
-        }
-      when !Js_config.jsx_preserve ->
+        } ->
       let rest' = Ext_list.map_sharing rest simpl in
       if rest' == rest then lam
-      else Lambda.prim ~primitive ~args:(field_arg :: rest') loc
+      else Lambda.prim ~primitive ~args:(tag :: rest') loc
     | Lprim {primitive = Pfield (i, info) as primitive; args = [arg]; loc} -> (
       (* ATTENTION:
          Main use case, we should detect inline all immutable block .. *)
@@ -150,23 +158,20 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
       | _ ->
         let fn = simpl l1 in
         let args' = Ext_list.map_sharing args simpl in
-        if fn == l1 && args' == args then lam
-        else Lambda.apply fn args' ap_loc ?ap_transformed_jsx:None)
+        if fn == l1 && args' == args then lam else Lambda.apply fn args' ap_loc)
     (* Function inlining interact with other optimizations...
 
        - parameter attributes
        - scope issues
        - code bloat
     *)
-    | Lapply
-        {ap_func = Lvar v as fn; ap_args = args; ap_loc; ap_transformed_jsx}
-      -> (
+    | Lapply {ap_func = Lvar v as fn; ap_args = args; ap_loc} -> (
       (* Check info for always inlining *)
       let ap_args = Ext_list.map_sharing args simpl in
       let[@local] normal () =
         let fn' = simpl fn in
         if fn' == fn && ap_args == args then lam
-        else Lambda.apply fn' ap_args ap_loc ~ap_transformed_jsx
+        else Lambda.apply fn' ap_args ap_loc
       in
       match Hash_ident.find_opt meta.ident_tbl v with
       | Some
@@ -179,7 +184,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
              })
         when Lam_analysis.lfunction_can_be_inlined m ->
         if Ext_list.same_length ap_args params then
-          if is_a_functor (* && (Set_ident.mem v meta.export_idents) && false *)
+          if is_a_functor (* && (Set_ident.mem meta.export_idents v) && false *)
           then
             (* TODO: check l1 if it is exported,
                if so, maybe not since in that case,
@@ -193,7 +198,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
             let param_map =
               Lam_closure.is_closed_with_map meta.export_idents params body
             in
-            let is_export_id = Set_ident.mem meta.export_idents v in
+            let is_export_id = Set_ident.mem v meta.export_idents in
             match (is_export_id, param_map) with
             | false, (_, param_map) | true, (true, param_map) -> (
               match rec_flag with
@@ -207,10 +212,19 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
                       Lam_hit.hit_variable v lam)
                   (*avoid nontermination, e.g, `g(g)`*)
                 then normal ()
-                else
-                  simpl
-                    (Lam_beta_reduce.propagate_beta_reduce_with_map meta
-                       param_map params body ap_args))
+                else if
+                  !inline_depth >= max_inline_depth
+                  && m.attr.inline <> Always_inline
+                then normal ()
+                else (
+                  incr inline_depth;
+                  let inlined =
+                    simpl
+                      (Lam_beta_reduce.propagate_beta_reduce_with_map meta
+                         param_map params body ap_args)
+                  in
+                  decr inline_depth;
+                  inlined))
             | _ -> normal ()
           else normal ()
         else normal ()
