@@ -79,7 +79,16 @@ let fieldCall = key => {
     let get = (regexp, key) => {test: () => regexp->RegExp.test(key)}
   }
   ignore(key)
-  (/a/[key].test())
+  @warning("-26")
+  /a/[key].test()
+}
+
+let attributedPlaceholder = () => {
+  module Array = {
+    let get = (regexp, _index) => (value, suffix) => regexp->RegExp.test(value ++ suffix)
+  }
+  ignore()
+  @warning("-26") /^a$/[0](_, "a")
 }
 
 let division = a => {

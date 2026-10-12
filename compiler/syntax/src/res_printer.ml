@@ -3838,6 +3838,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
   in
   let should_print_its_own_attributes =
     match e.pexp_desc with
+    | Pexp_fun _ when Parsetree_viewer.is_underscore_apply_sugar e -> false
     | Pexp_apply _ | Pexp_fun _ | Pexp_setfield _ | Pexp_ifthenelse _
     | Pexp_ternary _ ->
       true
@@ -5565,6 +5566,13 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
 
 and print_expression_block ~state ~braces expr cmt_tbl =
   let expr = Parsetree_viewer.unwrap_braces expr in
+  (* Attributes can print on earlier lines than the expression itself. Include
+     them when preserving blank lines between statements. *)
+  let statement_loc (expr : Parsetree.expression) =
+    match expr.pexp_attributes with
+    | ({loc}, _) :: _ -> {expr.pexp_loc with loc_start = loc.loc_start}
+    | [] -> expr.pexp_loc
+  in
   let rec collect_rows acc expr =
     match expr.Parsetree.pexp_desc with
     | Parsetree.Pexp_letmodule (mod_name, mod_expr, expr2) ->
@@ -5627,7 +5635,7 @@ and print_expression_block ~state ~braces expr cmt_tbl =
         print_statement_expr ~protect_regexp:(acc <> []) expr1
           (Parens.expr expr1) doc
       in
-      let loc = expr1.pexp_loc in
+      let loc = statement_loc expr1 in
       collect_rows ((loc, expr_doc) :: acc) expr2
     | Pexp_let (rec_flag, value_bindings, expr2) -> (
       let loc =
@@ -5667,7 +5675,7 @@ and print_expression_block ~state ~braces expr cmt_tbl =
         print_statement_expr ~protect_regexp:(acc <> []) expr (Parens.expr expr)
           doc
       in
-      List.rev ((expr.pexp_loc, expr_doc) :: acc)
+      List.rev ((statement_loc expr, expr_doc) :: acc)
   in
   let rows = collect_rows [] expr in
   let block =

@@ -53,6 +53,8 @@ try {
   assert.equal(output.fieldMutation("b", 7), 0);
   assert.equal(output.fieldCall("a"), true);
   assert.equal(output.fieldCall("b"), false);
+  assert.equal(output.attributedPlaceholder()(""), true);
+  assert.equal(output.attributedPlaceholder()("b"), false);
   assert.equal(output.division(24), 4);
   assert.equal(output.floatDivision(24), 4);
 } finally {

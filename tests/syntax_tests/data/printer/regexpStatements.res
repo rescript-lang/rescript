@@ -151,3 +151,11 @@ module FirstNested = {
   open FirstModule
   /afterOpen/->ignore
 }
+
+let attributes = i => {
+  Console.log("before")
+  (@attr ((/a/)[i])(_, "a"))
+  (@attr (((/a/)[i]).foo()))
+  (@attr (/a/ ? 1 : 2))
+  ((@attr /a/) ? 1 : 2)
+}

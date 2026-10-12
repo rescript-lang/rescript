@@ -155,30 +155,6 @@ let () =
   in
   assert (not reparsed.invalid)
 
-let () =
-  List.iter
-    (fun (source, expected) ->
-      let parsed =
-        Res_driver.parse_implementation_from_source
-          ~display_filename:"regexp.res" ~source
-      in
-      assert (not parsed.invalid);
-      let printed =
-        Res_printer.print_implementation ~width:100 parsed.parsetree
-          ~comments:parsed.comments
-      in
-      if printed <> expected then
-        failwith ("Unexpected regexp parentheses:\n" ^ printed))
-    [
-      ("/a/->f", "/a/->f\n");
-      ("type t = int\n/a/->f", "type t = int\n/a/->f\n");
-      ("open M\n/a/->f", "open M\n/a/->f\n");
-      ( "let f = () => {ignore(); (/a/ ? 1 : 2) + 1}",
-        "let f = () => {\n  ignore()\n  (/a/ ? 1 : 2) + 1\n}\n" );
-      ( "let f = () => {ignore(); (@attr /a/)->f}",
-        "let f = () => {\n  ignore()\n  (@attr /a/)->f\n}\n" );
-    ]
-
 module Outcome_printer_tests = struct
   let signature_to_outcome structure =
     Lazy.force Res_outcome_printer.setup;

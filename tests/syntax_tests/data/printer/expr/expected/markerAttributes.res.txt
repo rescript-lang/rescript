@@ -13,7 +13,7 @@ let a = (@JSX x) == y
 let a = (@JSX x) && y
 let a = !(@JSX x)
 let a = (@JSX x).field
-let a = @JSX x ? a : b
+let a = (@JSX x) ? a : b
 
 let b = @res.ternary x
 let b = (@res.ternary x) + 1
@@ -27,8 +27,8 @@ let b = !(@res.ternary x)
 let b = -(@res.ternary x)
 let b = (@res.ternary x).field
 let b = (@res.ternary x)[0]
-let b = @res.ternary x ? a : b
-let b = c ? @res.ternary x : b
+let b = (@res.ternary x) ? a : b
+let b = c ? (@res.ternary x) : b
 let b = f(@res.ternary x)
 let b = [@res.ternary x, y]
 let b = {a: @res.ternary x}
