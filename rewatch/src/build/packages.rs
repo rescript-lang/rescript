@@ -597,14 +597,12 @@ fn read_packages(
     Ok(map)
 }
 
-/// `get_source_files` is essentially a wrapper around `read_structure`, which read a
-/// list of files in a folder to a hashmap of `string` / `fs::Metadata` (file metadata). Reason for
-/// this wrapper is the recursiveness of the `config.json` subfolders. Some sources in config
-/// can be specified as being fully recursive (`{ subdirs: true }`). This wrapper pulls out that
-/// data from the config and pushes it forwards. Another thing is the 'type_', some files / folders
-/// can be marked with the type 'dev'. Which means that they may not be around in the distributed
-/// NPM package. The file reader allows for this, just warns when this happens.
-/// TODO -> Check whether we actually need the `fs::Metadata`
+/// `get_source_files` reads the source files of one source entry of a package's `rescript.json`
+/// with `read_folders`, into a map from file path to `SourceFileMeta` (modification time and
+/// whether the source has the type 'dev'). It reads the folder recursively when the entry is fully
+/// recursive (`{ subdirs: true }`). Sources with the type 'dev' are skipped unless
+/// `build_dev_deps` is set, because they may not be around in the distributed NPM package. A folder
+/// that cannot be read is logged as an error and contributes no files.
 fn get_source_files(
     package_name: &String,
     package_dir: &Path,
