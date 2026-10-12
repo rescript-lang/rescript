@@ -371,8 +371,8 @@ fn read_dependencies(
         // Read all config files in parallel instead of blocking
         .par_iter()
         .map(|package_name| -> Result<Dependency> {
-            let canonical_path =
-                read_dependency(package_name, package_config, project_context).inspect_err(|error| {
+            let canonical_path = read_dependency(package_name, package_config, project_context)
+                .inspect_err(|error| {
                     if show_progress {
                         println!(
                             "{} {} Error building package tree. {}",
@@ -381,6 +381,9 @@ fn read_dependencies(
                             error
                         );
                     }
+                })
+                .with_context(|| {
+                    format!("Could not build package tree reading dependency '{package_name}'")
                 })?;
             let config = read_config(&canonical_path).map_err(|source| DependencyConfigError {
                 package_path: canonical_path.clone(),
