@@ -159,3 +159,15 @@ let attributes = i => {
   (@attr (/a/ ? 1 : 2))
   ((@attr /a/) ? 1 : 2)
 }
+
+let attributeComments = i => {
+  Console.log("before")
+  /* Keep the comment before an attributed statement. */
+
+  @attr
+  /a/[i].foo() // intermediate statement
+  Console.log("after")
+  // Keep the comment before the final attributed statement.
+  @attr
+  /a/[i].foo() /* final statement */
+}
