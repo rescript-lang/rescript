@@ -104,10 +104,16 @@ function versionHeadings(changelog) {
 export function prepareRelease(changelog, version, fragments) {
   const headings = versionHeadings(changelog);
   const first = headings[0];
-  if (!first || first[1] !== `${version} (Unreleased)`) {
+  // A version finalized by an earlier run but not yet published (package.json
+  // has not moved on) can still collect fragments merged in the meantime.
+  const finalized = first?.[1] === version;
+  if (!first || (first[1] !== `${version} (Unreleased)` && !finalized)) {
     throw new Error(
       `Expected first version heading to be ${version} (Unreleased)`,
     );
+  }
+  if (finalized && !fragments.length) {
+    throw new Error(`${version} is already finalized and no fragments remain`);
   }
   const end = headings[1]?.index ?? changelog.length;
   const lines = changelog.slice(first.index, end).split("\n");

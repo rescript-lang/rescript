@@ -58,6 +58,29 @@ test("preserves existing notes and historical releases", () => {
   assert.throws(() => prepareRelease(input, "14.0.0", []));
 });
 
+test("collects late fragments into a finalized, unpublished version", () => {
+  const released = prepareRelease(changelog, "13.0.0", [
+    parseFragment("early.fix.md", note),
+  ]);
+  const late = parseFragment(
+    "late.fix.md",
+    "- Late fix. https://github.com/rescript-lang/rescript/pull/9000",
+  );
+  const output = prepareRelease(released, "13.0.0", [late]);
+  assert.ok(
+    output.includes(`# 13.0.0\n\n${categories.breaking}`),
+    "keeps the finalized heading",
+  );
+  assert.ok(output.includes(`${categories.fix}\n\n${late.text}\n${note}\n`));
+  assert.ok(output.endsWith(historical));
+  assert.throws(() => prepareRelease(released, "13.0.0", []), /finalized/);
+  // Once the next version is opened, late fragments belong to it instead.
+  assert.throws(
+    () => prepareRelease(openSection(released, "13.0.1"), "13.0.0", [late]),
+    /Expected first version heading/,
+  );
+});
+
 test("orders notes newest PR first above existing entries", () => {
   const input = changelog.replace(
     `${categories.fix}\n`,

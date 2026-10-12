@@ -81,7 +81,7 @@ export async function validateReleaseFiles(plan) {
   const pendingFragments = await findPendingFragments();
   if (pendingFragments.length > 0) {
     throw new Error(
-      `Unreleased changelog fragments remain: ${pendingFragments.join(", ")}. Run yarn changelog:release in a release PR first.`,
+      `Unreleased changelog fragments remain: ${pendingFragments.join(", ")}. Run yarn changelog:release to add them to ${plan.version} in a PR labelled changelog:release, merge it, and publish again.`,
     );
   }
 }
