@@ -610,13 +610,16 @@ and expression_desc cxt ~(level : int) f x : cxt =
       let props =
         Ext_list.map props (fun (name, value) -> (Js_op.Lit name, value))
       in
+      let props =
+        match (spread, props @ children_prop) with
+        (* the PPX passes a lone spread itself, not a copy of it *)
+        | Some spread, [] -> spread
+        | spread, props -> E.obj ?dup:spread props
+      in
       (* An explicit undefined key is still passed, as by the call *)
       let key = Option.to_list key in
       expression_desc cxt ~level f
-        (Call
-           ( callee,
-             tag :: E.obj ?dup:spread (props @ children_prop) :: key,
-             Js_call_info.na_full_call ))
+        (Call (callee, tag :: props :: key, Js_call_info.na_full_call))
   | Call (e, el, _info) ->
     P.cond_paren_group f (level > 15) (fun _ ->
         P.group f 0 (fun _ ->
