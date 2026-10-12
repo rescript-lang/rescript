@@ -1330,7 +1330,7 @@ Path takesExotic
     "detail": "#\"some exotic\"",
     "documentation": {
       "kind": "markdown",
-      "value": "```rescript\n#\"some exotic\"\n```\n\n```rescript\n[#dollar$ | #\"some exotic\"]\n```"
+      "value": "```rescript\n#\"some exotic\"\n```\n\n```rescript\n[#\"_\" | #dollar$ | #\"some exotic\"]\n```"
     },
     "insertText": "#\"some exotic\"",
     "insertTextFormat": 2,
@@ -1339,10 +1339,22 @@ Path takesExotic
     "tags": []
   },
   {
+    "detail": "#\"_\"",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#\"_\"\n```\n\n```rescript\n[#\"_\" | #dollar$ | #\"some exotic\"]\n```"
+    },
+    "insertText": "#\"_\"",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "#\"_\"",
+    "tags": []
+  },
+  {
     "detail": "#dollar$",
     "documentation": {
       "kind": "markdown",
-      "value": "```rescript\n#dollar$\n```\n\n```rescript\n[#dollar$ | #\"some exotic\"]\n```"
+      "value": "```rescript\n#dollar$\n```\n\n```rescript\n[#\"_\" | #dollar$ | #\"some exotic\"]\n```"
     },
     "insertText": "#dollar$",
     "insertTextFormat": 2,

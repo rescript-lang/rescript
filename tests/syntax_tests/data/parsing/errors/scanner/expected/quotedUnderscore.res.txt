@@ -1,0 +1,22 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/quotedUnderscore.res:1:5-8
+
+  1 │ let \"_" = 1
+  2 │ let x = f(\"_")
+  3 │ 
+
+  `_` can't be used as a quoted identifier.
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/quotedUnderscore.res:2:11-14
+
+  1 │ let \"_" = 1
+  2 │ let x = f(\"_")
+  3 │ 
+
+  `_` can't be used as a quoted identifier.
+
+let _ = 1
+let x [arity:1]__x = f __x
