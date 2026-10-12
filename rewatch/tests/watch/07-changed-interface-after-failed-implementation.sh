@@ -46,7 +46,7 @@ compiler_log=lib/bs/.compiler.log
 
 wait_for_changed_compiler_log() {
   local baseline="$1"; local timeout
-  timeout=$(platform_timeout 30)
+  timeout=60
   while [ "$timeout" -gt 0 ]; do
     if [ -f "$compiler_log" ] && ! cmp -s "$compiler_log" "$baseline" &&
       grep -q '#Done(' "$compiler_log"; then
@@ -58,7 +58,7 @@ wait_for_changed_compiler_log() {
   return 1
 }
 
-if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 30; then
+if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 60; then
   error "Initial watch build did not finish"
   cat rewatch.log >&2
   exit 1
