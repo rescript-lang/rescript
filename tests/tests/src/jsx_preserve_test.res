@@ -64,7 +64,7 @@ let _container_with_spread_and_repeated_children =
     {...dict{
       ...baseProps->Obj.magic,
       "children": React.string("first"),
-        "children": React.string("second"),
+      "children": React.string("second"),
     }->Obj.magic}
   />
 let _unary_element_with_spread_and_repeated_key =

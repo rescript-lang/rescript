@@ -71,6 +71,30 @@ let x = dict{
   "after": 2,
 }
 
+// runs of rows before, between and after spreads
+let x = dict{
+  "a": 1,
+  "b": 2,
+  ...foo,
+  "c": 3,
+  "d": 4,
+  "e": 5,
+  ...qux,
+  "f": 6,
+  "g": {
+    let g = 7
+    g
+  },
+}
+
+let x = dict{
+  "aaaaaaaaaaaaaaaa": 1,
+  "bbbbbbbbbbbbbbbbbbbbbb": 2,
+  ...foo,
+  "cccccccccccccccc": 3,
+  "dddddd": 4,
+}
+
 let x = dict{
   /* before foo */ ...foo,
   /* before bar */ "bar": 2,

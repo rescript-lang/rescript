@@ -1722,39 +1722,34 @@ and collect_literal_dict_rows (e : Parsetree.expression) =
     List.filter_map tuple_to_row expressions
   | _ -> []
 
-and print_literal_dict_rows ~state ?(leading_line = true)
-    ?(trailing_comma = true) (e : Parsetree.expression) cmt_tbl =
+(* The rows, separated by [","] and a line, without indentation *)
+and print_literal_dict_rows ~state rows cmt_tbl =
+  Doc.join
+    ~sep:(Doc.concat [Doc.text ","; Doc.line])
+    (List.map
+       (fun ((row, e) :
+              (Longident.t Location.loc * Parsetree.expression)
+              * Parsetree.expression) ->
+         let doc = print_bs_object_row ~state row cmt_tbl in
+         print_comments doc cmt_tbl e.pexp_loc)
+       rows)
+
+and print_literal_dict_expr ~state (e : Parsetree.expression) cmt_tbl =
   let rows = collect_literal_dict_rows e in
-  let rows_doc =
-    Doc.join
-      ~sep:(Doc.concat [Doc.text ","; Doc.line])
-      (List.map
-         (fun ((row, e) :
-                (Longident.t Location.loc * Parsetree.expression)
-                * Parsetree.expression) ->
-           let doc = print_bs_object_row ~state row cmt_tbl in
-           print_comments doc cmt_tbl e.pexp_loc)
-         rows)
-  in
+  let rows_doc = print_literal_dict_rows ~state rows cmt_tbl in
   let force_break =
     e.pexp_loc.loc_start.pos_lnum < e.pexp_loc.loc_end.pos_lnum
     || Doc.will_break rows_doc
   in
-  Doc.breakable_group ~force_break
-    (Doc.concat
-       [
-         Doc.indent
-           (Doc.concat
-              [
-                (if rows = [] || not leading_line then Doc.nil else Doc.soft_line);
-                rows_doc;
-              ]);
-         (if rows = [] || not trailing_comma then Doc.nil
-          else Doc.concat [Doc.trailing_comma; Doc.soft_line]);
-       ])
-
-and print_literal_dict_expr ~state (e : Parsetree.expression) cmt_tbl =
-  print_literal_dict_rows ~state e cmt_tbl
+  if rows = [] then Doc.nil
+  else
+    Doc.breakable_group ~force_break
+      (Doc.concat
+         [
+           Doc.indent (Doc.concat [Doc.soft_line; rows_doc]);
+           Doc.trailing_comma;
+           Doc.soft_line;
+         ])
 
 and print_spread_dict_expr ~state parts (expr : Parsetree.expression) cmt_tbl =
   let print_spread_part spread_expr =
@@ -1782,8 +1777,10 @@ and print_spread_dict_expr ~state parts (expr : Parsetree.expression) cmt_tbl =
       (List.map
          (function
            | Parsetree_viewer.DictExprRows rows_expr ->
-             print_literal_dict_rows ~state ~leading_line:false
-               ~trailing_comma:false rows_expr cmt_tbl
+             (* Already indented with the spreads *)
+             print_literal_dict_rows ~state
+               (collect_literal_dict_rows rows_expr)
+               cmt_tbl
            | Parsetree_viewer.DictExprSpread spread_expr ->
              print_spread_part spread_expr)
          parts)
