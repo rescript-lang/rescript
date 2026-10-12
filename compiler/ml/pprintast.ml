@@ -487,6 +487,13 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
     | Ppat_unpack s -> pp f "(module@ %s)@ " s.txt
     | Ppat_type li -> pp f "#%a" longident_loc li
     | Ppat_variant_spread li -> pp f "...%a" longident_loc li
+    | Ppat_dict entries ->
+      let entry f {pdp_key; pdp_pattern; pdp_optional} =
+        pp f "@[<2>%S:@;%s%a@]" pdp_key.txt
+          (if pdp_optional then "?" else "")
+          (pattern1 ctxt) pdp_pattern
+      in
+      pp f "@[<2>dict{%a}@]" (list entry ~sep:",@;") entries
     | Ppat_record (l, closed, rest) -> (
       let longident_x_pattern f {lid = li; x = p; opt} =
         let opt_str = if opt then "?" else "" in
@@ -865,6 +872,13 @@ and simple_expr ctxt f x =
       pp f "@[<0>@[<2>[|%a|]@]@]"
         (list (simple_expr (under_semi ctxt)) ~sep:";")
         l
+    | Pexp_dict entries ->
+      let dict_entry f = function
+        | Pdict_entry (key, e) ->
+          pp f "@[<hov2>%S:@;%a@]" key.txt (simple_expr ctxt) e
+        | Pdict_spread e -> pp f "...%a" (simple_expr ctxt) e
+      in
+      pp f "@[<hv2>dict{%a}@]" (list dict_entry ~sep:",@;") entries
     | Pexp_break -> pp f "break"
     | Pexp_continue -> pp f "continue"
     | Pexp_while (e1, e2) ->

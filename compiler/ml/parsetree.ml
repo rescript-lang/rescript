@@ -201,6 +201,13 @@ and record_pat_rest = {
   rest_type: core_type option;
 }
 
+(* "k": P, or "k": ?P *)
+and dict_pattern_entry = {
+  pdp_key: string loc;
+  pdp_pattern: pattern;
+  pdp_optional: bool;
+}
+
 and pattern_desc =
   | Ppat_any (* _ *)
   | Ppat_var of string loc (* x *)
@@ -247,6 +254,7 @@ and pattern_desc =
        Invariant: n > 0
     *)
   | Ppat_array of pattern list (* [| P1; ...; Pn |] *)
+  | Ppat_dict of dict_pattern_entry list (* dict{"k1": P1, "k2": ?P2} *)
   | Ppat_or of pattern * pattern (* P1 | P2 *)
   | Ppat_constraint of pattern * core_type (* (P : T) *)
   | Ppat_type of Longident.t loc (* #...tconst *)
@@ -344,6 +352,7 @@ and expression_desc =
   | Pexp_field of expression * Longident.t loc (* E.l *)
   | Pexp_setfield of expression * Longident.t loc * expression (* E1.l <- E2 *)
   | Pexp_array of expression list (* [| E1; ...; En |] *)
+  | Pexp_dict of dict_entry list (* dict{"k1": E1, ...E2} *)
   | Pexp_ifthenelse of expression * expression * expression option
     (* if E1 then E2 else E3 *)
   | Pexp_ternary of expression * expression * expression
@@ -413,6 +422,10 @@ and expression_desc =
 
 (* an element of a record pattern or expression *)
 and 'a record_element = {lid: Longident.t loc; x: 'a; opt: bool (* optional *)}
+
+and dict_entry =
+  | Pdict_entry of string loc * expression (* "k": E *)
+  | Pdict_spread of expression (* ...E *)
 
 and jsx_element =
   | Jsx_fragment of jsx_fragment

@@ -112,6 +112,16 @@ let rec print_pattern pattern ~pos ~indentation =
       |> List.map (fun pat -> "," ^ print_pattern pat ~pos ~indentation)
       |> String.concat "")
     ^ ")"
+  | Ppat_dict entries ->
+    "Ppat_dict(\n"
+    ^ (Ext_list.map entries (fun {pdp_key; pdp_pattern} ->
+           add_indentation (indentation + 1)
+           ^ str pdp_key.txt ^ ": "
+           ^ print_pattern pdp_pattern ~pos ~indentation:(indentation + 1))
+      |> String.concat "\n")
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | Ppat_record (fields, _, rest) ->
     "Ppat_record(\n"
     ^ add_indentation (indentation + 1)
@@ -194,6 +204,23 @@ and print_expr_item expr ~pos ~indentation =
       |> List.map (fun expr ->
           expr |> print_expr_item ~pos ~indentation:(indentation + 1))
       |> String.concat ("\n" ^ add_indentation (indentation + 1)))
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
+  | Pexp_dict entries ->
+    "Pexp_dict(\n"
+    ^ (entries
+      |> List.map (fun entry ->
+          add_indentation (indentation + 1)
+          ^
+          match entry with
+          | Parsetree.Pdict_entry (key, expr) ->
+            (key |> print_loc_denominator_loc ~pos)
+            ^ "\"" ^ key.txt ^ "\": "
+            ^ print_expr_item expr ~pos ~indentation:(indentation + 1)
+          | Pdict_spread expr ->
+            "..." ^ print_expr_item expr ~pos ~indentation:(indentation + 1))
+      |> String.concat "\n")
     ^ "\n"
     ^ add_indentation indentation
     ^ ")"

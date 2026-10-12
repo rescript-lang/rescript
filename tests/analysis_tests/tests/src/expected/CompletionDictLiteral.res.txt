@@ -1,0 +1,270 @@
+Complete src/CompletionDictLiteral.res 7:28
+pos_cursor:[7:28] pos_no_white:[7:27] Found expr:[7:11->7:29]
+pos_cursor:[7:28] pos_no_white:[7:27] Found expr:[7:21->7:28]
+Pexp_ident Colors.:[7:21->7:28]
+Completable: Cpath Value[Colors, ""]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Colors, ""]
+Path Colors.
+[
+  { "detail": "string", "kind": 12, "label": "red", "tags": [] },
+  { "detail": "string", "kind": 12, "label": "green", "tags": [] }
+]
+
+Complete src/CompletionDictLiteral.res 10:29
+pos_cursor:[10:29] pos_no_white:[10:28] Found expr:[10:11->10:30]
+pos_cursor:[10:29] pos_no_white:[10:28] Found expr:[10:27->10:29]
+Pexp_ident ba:[10:27->10:29]
+Completable: Cpath Value[ba]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[ba]
+Path ba
+[ { "detail": "dict<string>", "kind": 12, "label": "base", "tags": [] } ]
+
+Complete src/CompletionDictLiteral.res 13:37
+pos_cursor:[13:37] pos_no_white:[13:36] Found expr:[13:11->13:39]
+pos_cursor:[13:37] pos_no_white:[13:36] Found expr:[13:30->13:38]
+Pexp_ident Colors.g:[13:30->13:38]
+Completable: Cpath Value[Colors, g]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Colors, g]
+Path Colors.g
+[ { "detail": "string", "kind": 12, "label": "green", "tags": [] } ]
+
+Complete src/CompletionDictLiteral.res 16:25
+pos_cursor:[16:25] pos_no_white:[16:24] Found expr:[16:11->0:-1]
+Completable: Cpath dict->
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath dict->
+ContextPath dict
+Path Stdlib.Dict.
+Path 
+[
+  {
+    "detail": "(dict<'a>, string) => 'a",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`getUnsafe(dict, key)` Returns the `value` at the provided `key`.\n\nThis is _unsafe_, meaning it will return `undefined` value if `key` does not exist in `dict`.\n\nUse `Dict.getUnsafe` only when you are sure the key exists (i.e. when iterating `Dict.keys` result).\n\n## Examples\n```rescript\nlet dict = dict{\"key1\": \"value1\", \"key2\": \"value2\"}\nlet value = dict->Dict.getUnsafe(\"key1\")\nConsole.log(value) // value1\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.getUnsafe",
+    "tags": []
+  },
+  {
+    "detail": "dict<'a> => array<'a>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`valuesToArray(dictionary)` returns an array of all the values of the dictionary.\n\n## Examples\n```rescript\nlet dict = Dict.make()\ndict->Dict.set(\"someKey\", 1)\ndict->Dict.set(\"someKey2\", 2)\nlet values = dict->Dict.valuesToArray\nConsole.log(values) // Logs `[1, 2]` to the console\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.valuesToArray",
+    "tags": []
+  },
+  {
+    "detail": "(dict<'a>, dict<'a>) => dict<'a>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`concat(dictionary1, dictionary2)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges `dictionary1` and `dictionary2` into a fresh dictionary, and returns the new dictionary.\n\nNeither input dictionary is mutated. If both dictionaries contain the same key, the value from `dictionary2` overwrites the one from `dictionary1`.\n\n## Examples\n```rescript\nlet dict1 = dict{\"firstKey\": 1}\nlet dict2 = dict{\"firstKey\": 2, \"someKey\": 3}\n\nlet merged = dict1->Dict.concat(dict2)\n\ndict1 == dict{\"firstKey\": 1}\nmerged == dict{\"firstKey\": 2, \"someKey\": 3}\n(merged === dict1) == false\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.concat",
+    "tags": []
+  },
+  {
+    "detail": "dict<'a> => array<string>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`keysToArray(dictionary)` returns an array of all the keys of the dictionary.\n\n## Examples\n```rescript\nlet dict = Dict.make()\ndict->Dict.set(\"someKey\", 1)\ndict->Dict.set(\"someKey2\", 2)\nlet keys = dict->Dict.keysToArray\nConsole.log(keys) // Logs `[\"someKey\", \"someKey2\"]` to the console\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.keysToArray",
+    "tags": []
+  },
+  {
+    "detail": "(dict<'a>, string) => unit",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`delete(dictionary, key)` deletes the value at `key`, if it exists.\n\n## Examples\n```rescript\nlet dict = dict{\"someKey\": \"someValue\"}\n\ndict->Dict.delete(\"someKey\")\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.delete",
+    "tags": []
+  },
+  {
+    "detail": "dict<'a> => array<(string, 'a)>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`toArray(dictionary)` returns an array of all the key/value pairs of the dictionary.\n\n## Examples\n```rescript\nlet dict = Dict.make()\ndict->Dict.set(\"someKey\", 1)\ndict->Dict.set(\"someKey2\", 2)\nlet asArray = dict->Dict.toArray\nConsole.log(asArray) // Logs `[[\"someKey\", 1], [\"someKey2\", 2]]` to the console\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.toArray",
+    "tags": []
+  },
+  {
+    "detail": "dict<'a> => int",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`size(dictionary)` returns the number of key/value pairs in the dictionary.\n\n## Examples\n```rescript\nlet dict = Dict.make()\ndict->Dict.size->assertEqual(0)\n\ndict->Dict.set(\"someKey\", 1)\ndict->Dict.set(\"someKey2\", 2)\ndict->Dict.size->assertEqual(2)\n\n// After deleting a key\ndict->Dict.delete(\"someKey\")\ndict->Dict.size->assertEqual(1)\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.size",
+    "tags": []
+  },
+  {
+    "detail": "(dict<'a>, array<dict<'a>>) => dict<'a>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`assignMany(target, sources)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges each dictionary in `sources` into `target`, and returns `target`.\n\nBeware this will *mutate* `target`. Later dictionaries overwrite earlier ones. If you're looking for a fresh merged dictionary instead, check out `Dict.concatMany`.\n\n## Examples\n```rescript\nlet target = dict{\"firstKey\": 1}\nlet result = target->Dict.assignMany([\n  dict{\"someKey\": 2},\n  dict{\"someKey\": 3, \"someKey2\": 4},\n])\n\nresult == dict{\"firstKey\": 1, \"someKey\": 3, \"someKey2\": 4}\n(result === target) == true\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.assignMany",
+    "tags": []
+  },
+  {
+    "detail": "(dict<'a>, array<dict<'a>>) => dict<'a>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`concatMany(target, sources)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges `target` and each dictionary in `sources` into a fresh dictionary, and returns the new dictionary.\n\nNeither `target` nor any dictionary in `sources` is mutated. Later dictionaries overwrite earlier ones when they contain the same key.\n\n## Examples\n```rescript\nlet target = dict{\"firstKey\": 1}\nlet merged = target->Dict.concatMany([\n  dict{\"someKey\": 2},\n  dict{\"someKey\": 3, \"someKey2\": 4},\n])\n\ntarget == dict{\"firstKey\": 1}\nmerged == dict{\"firstKey\": 1, \"someKey\": 3, \"someKey2\": 4}\n(merged === target) == false\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.concatMany",
+    "tags": []
+  },
+  {
+    "detail": "(dict<'a>, ('a, string) => unit) => unit",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`forEachWithKey(dictionary, f)` iterates through all values of the dict, including the key for each value.\n\n## Examples\n```rescript\nlet dict = dict{\"key1\": \"value1\", \"key2\": \"value2\"}\n\ndict->Dict.forEachWithKey((value, key) => {\n  Console.log2(value, key)\n})\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.forEachWithKey",
+    "tags": []
+  },
+  {
+    "detail": "dict<'a> => unit",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n  `ignore(dict)` ignores the provided dict and returns unit.\n\n  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)\n  without having to store or process it further.\n"
+    },
+    "kind": 12,
+    "label": "Dict.ignore",
+    "tags": []
+  },
+  {
+    "detail": "(dict<'a>, string) => option<'a>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\nReturns the value at the provided key, if it exists. Returns an option.\n\n## Examples\n```rescript\nlet dict = dict{\"someKey\": \"someValue\"}\n\nswitch dict->Dict.get(\"someKey\") {\n| None => Console.log(\"Nope, didn't have the key.\")\n| Some(value) => Console.log(value)\n}\n```\n\n## Alternative: Pattern Matching with `dict{}`\n\nFor nested dictionary access, consider using the more concise `dict{}` pattern matching syntax:\n\n```rescript\n// More concise approach using pattern matching\nlet decodeImageUrl = (json: JSON.t) => {\n  switch json {\n  | JSON.Object(dict{\"data\": JSON.Object(dict{\"image_url\": JSON.String(url)})}) => Some(url)\n  | _ => None\n  }\n}\n\n// Alternative using Dict.get\nlet decodeImageUrl = (json: JSON.t) => {\n  switch json {\n  | JSON.Object(obj) =>\n    switch Dict.get(obj, \"data\") {\n    | Some(JSON.Object(data)) =>\n      switch Dict.get(data, \"image_url\") {\n      | Some(JSON.String(url)) => Some(url)\n      | _ => None\n      }\n    | _ => None\n    }\n  | _ => None\n  }\n}\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.get",
+    "tags": []
+  },
+  {
+    "detail": "dict<'a> => dict<'a>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`copy(dictionary)` [shallowly copies](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) the provided dictionary to a new dictionary.\n\n## Examples\n```rescript\nlet dict = dict{\"key1\": \"value1\", \"key2\": \"value2\"}\nlet dict2 = dict->Dict.copy\n\n// Both log `[\"key1\", \"key2\"]` here.\nConsole.log2(dict->Dict.keysToArray, dict2->Dict.keysToArray)\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.copy",
+    "tags": []
+  },
+  {
+    "detail": "(dict<'a>, dict<'a>) => dict<'a>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`assign(dictionary1, dictionary2)` [shallowly](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy) merges dictionary2 into dictionary1, and returns dictionary1.\n\nBeware this will *mutate* dictionary1. If you're looking for a fresh merged dictionary instead, check out `Dict.concat`.\n\n## Examples\n```rescript\nlet dict1 = Dict.make()\ndict1->Dict.set(\"firstKey\", 1)\nConsole.log(dict1->Dict.keysToArray) // Logs `[\"firstKey\"]`\n\nlet dict2 = Dict.make()\ndict2->Dict.set(\"someKey\", 2)\ndict2->Dict.set(\"someKey2\", 3)\n\nlet dict1 = dict1->Dict.assign(dict2)\n\nConsole.log(dict1->Dict.keysToArray) // Logs `[\"firstKey\", \"someKey\", \"someKey2\"]`\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.assign",
+    "tags": []
+  },
+  {
+    "detail": "(dict<'a>, 'a => 'b) => dict<'b>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`mapValues(dictionary, f)` returns a new dictionary with the same keys, and `f` applied to each value in the original dictionary.\n\n## Examples\n\n```rescript\nlet dict = dict{\"key1\": 1, \"key2\": 2}\n\ndict->Dict.mapValues(v => v + 10)->Dict.toArray // [(\"key1\", 11), (\"key2\", 12)]\ndict->Dict.mapValues(v => Int.toString(v))->Dict.toArray // [(\"key1\", \"1\"), (\"key2\", \"2\")]\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.mapValues",
+    "tags": []
+  },
+  {
+    "detail": "(dict<'a>, string) => bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`has(dictionary, \"key\")` returns true if the \"key\" is present in the dictionary.\n\nBe aware that it uses the JavaScript `in` operator under the hood.\n\n## Examples\n\n```rescript\nlet dict = dict{\"key1\": Some(1), \"key2\": None}\n\ndict->Dict.has(\"key1\") == true\ndict->Dict.has(\"key2\") == true\ndict->Dict.has(\"key3\") == false\ndict->Dict.has(\"toString\") == true\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.has",
+    "tags": []
+  },
+  {
+    "detail": "(dict<'a>, string, 'a) => unit",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`set(dictionary, key, value)` sets the value at the provided key to the provided value.\n\n## Examples\n```rescript\nlet dict = Dict.make()\n\ndict->Dict.set(\"someKey\", \"someValue\")\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.set",
+    "tags": []
+  },
+  {
+    "detail": "(dict<'a>, 'a => unit) => unit",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`forEach(dictionary, f)` iterates through all values of the dict.\n\n> Please note that this is *without the keys*, just the values. If you need the key as well, use `Dict.forEachWithKey`.\n\n## Examples\n```rescript\nlet dict = dict{\"key1\": \"value1\", \"key2\": \"value2\"}\n\ndict->Dict.forEach(value => {\n  Console.log(value)\n})\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.forEach",
+    "tags": []
+  },
+  {
+    "detail": "dict<'a> => bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`isEmpty(dictionary)` returns `true` if the dictionary is empty (has no key/value pairs), `false` otherwise.\n\n## Examples\n```rescript\nlet emptyDict = Dict.make()\nemptyDict->Dict.isEmpty->assertEqual(true)\n\nlet dict = Dict.make()\ndict->Dict.set(\"someKey\", 1)\ndict->Dict.isEmpty->assertEqual(false)\n\n// After clearing all keys\ndict->Dict.delete(\"someKey\")\ndict->Dict.isEmpty->assertEqual(true)\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.isEmpty",
+    "tags": []
+  }
+]
+
+Complete src/CompletionDictLiteral.res 19:27
+pos_cursor:[19:27] pos_no_white:[19:26] Found expr:[19:11->19:27]
+Completable: Cpath dict->ge
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath dict->ge
+ContextPath dict
+Path Stdlib.Dict.ge
+Path ge
+[
+  {
+    "detail": "(dict<'a>, string) => 'a",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`getUnsafe(dict, key)` Returns the `value` at the provided `key`.\n\nThis is _unsafe_, meaning it will return `undefined` value if `key` does not exist in `dict`.\n\nUse `Dict.getUnsafe` only when you are sure the key exists (i.e. when iterating `Dict.keys` result).\n\n## Examples\n```rescript\nlet dict = dict{\"key1\": \"value1\", \"key2\": \"value2\"}\nlet value = dict->Dict.getUnsafe(\"key1\")\nConsole.log(value) // value1\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.getUnsafe",
+    "tags": []
+  },
+  {
+    "detail": "(dict<'a>, string) => option<'a>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\nReturns the value at the provided key, if it exists. Returns an option.\n\n## Examples\n```rescript\nlet dict = dict{\"someKey\": \"someValue\"}\n\nswitch dict->Dict.get(\"someKey\") {\n| None => Console.log(\"Nope, didn't have the key.\")\n| Some(value) => Console.log(value)\n}\n```\n\n## Alternative: Pattern Matching with `dict{}`\n\nFor nested dictionary access, consider using the more concise `dict{}` pattern matching syntax:\n\n```rescript\n// More concise approach using pattern matching\nlet decodeImageUrl = (json: JSON.t) => {\n  switch json {\n  | JSON.Object(dict{\"data\": JSON.Object(dict{\"image_url\": JSON.String(url)})}) => Some(url)\n  | _ => None\n  }\n}\n\n// Alternative using Dict.get\nlet decodeImageUrl = (json: JSON.t) => {\n  switch json {\n  | JSON.Object(obj) =>\n    switch Dict.get(obj, \"data\") {\n    | Some(JSON.Object(data)) =>\n      switch Dict.get(data, \"image_url\") {\n      | Some(JSON.String(url)) => Some(url)\n      | _ => None\n      }\n    | _ => None\n    }\n  | _ => None\n  }\n}\n```\n"
+    },
+    "kind": 12,
+    "label": "Dict.get",
+    "tags": []
+  }
+]
+

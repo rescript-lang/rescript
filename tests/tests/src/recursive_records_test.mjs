@@ -71,10 +71,7 @@ rec_cell3.tl = rec_cell3;
 
 function f3(x) {
   let rec_cell3 = {};
-  Primitive_object.updateDummy(rec_cell3, {
-    hd: (x * x | 0) - 6 | 0,
-    tl: rec_cell3
-  });
+  Primitive_object.updateDummy(rec_cell3, {hd: (x * x | 0) - 6 | 0, tl: rec_cell3});
   return rec_cell3;
 }
 

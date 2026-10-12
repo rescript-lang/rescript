@@ -88,16 +88,10 @@ recommended for new projects.
 | --------------- | --------------- | ------ | :----------: |
 | version         | JSX-Version     |        |     [x]      |
 | module          | "react"         |        |     [x]      |
-| mode            | JSX-Mode        |        |     [x]      |
-| v3-dependencies | array of string |        |     [x]      |
 
 ### JSX-Version
 
-enum: 3 | 4
-
-### JSX-Mode
-
-enum: "classic" | "automatic"
+enum: 4
 
 ### Gentype
 

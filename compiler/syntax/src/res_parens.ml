@@ -36,7 +36,7 @@ let call_expr expr =
   | _ -> (
     match expr with
     | {Parsetree.pexp_attributes = attrs}
-      when match Parsetree_viewer.filter_parsing_attrs attrs with
+      when match attrs with
            | _ :: _ -> true
            | [] -> false ->
       Parenthesized
@@ -86,7 +86,7 @@ let unary_expr_operand expr =
   | None -> (
     match expr with
     | {Parsetree.pexp_attributes = attrs}
-      when match Parsetree_viewer.filter_parsing_attrs attrs with
+      when match attrs with
            | _ :: _ -> true
            | [] -> false ->
       Parenthesized
@@ -136,8 +136,7 @@ let binary_expr_operand ~is_lhs expr =
     | {pexp_desc = Pexp_assert _} when is_lhs -> Parenthesized
     | _ when Parsetree_viewer.expr_is_await expr -> Parenthesized
     | {Parsetree.pexp_attributes = attrs} ->
-      if Parsetree_viewer.has_printable_attributes attrs then Parenthesized
-      else Nothing)
+      if attrs <> [] then Parenthesized else Nothing)
 
 let sub_binary_expr_operand parent_operator child_operator =
   let open Parsetree_viewer in
@@ -202,7 +201,7 @@ let assert_or_await_expr_rhs ?(in_await = false) expr =
   | None -> (
     match expr with
     | {Parsetree.pexp_attributes = attrs}
-      when match Parsetree_viewer.filter_parsing_attrs attrs with
+      when match attrs with
            | _ :: _ -> true
            | [] -> false ->
       Parenthesized
@@ -252,7 +251,7 @@ let field_expr expr =
   | None -> (
     match expr with
     | {Parsetree.pexp_attributes = attrs}
-      when match Parsetree_viewer.filter_parsing_attrs attrs with
+      when match attrs with
            | _ :: _ -> true
            | [] -> false ->
       Parenthesized

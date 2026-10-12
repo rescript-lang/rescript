@@ -117,7 +117,7 @@ let add_jmps (m : jmp_table) (exit_id : Ident.t) (code_table : handler list) :
     Ext_list.fold_left_with_offset code_table (m, [])
       (Handler_map.cardinal m + 1)
       (fun {label; handler; bindings} (acc, handlers) order_id ->
-        ( Handler_map.add acc label {exit_id; bindings; order_id},
+        ( Handler_map.add label {exit_id; bindings; order_id} acc,
           (order_id, handler) :: handlers ))
   in
   (map, List.rev handlers)
@@ -125,8 +125,9 @@ let add_jmps (m : jmp_table) (exit_id : Ident.t) (code_table : handler list) :
 let add_pseudo_jmp (m : jmp_table)
     (exit_id : Ident.t) (* TODO not needed, remove it later *)
     (code_table : handler) : jmp_table * Lambda.t =
-  ( Handler_map.add m code_table.label
-      {exit_id; bindings = code_table.bindings; order_id = -1},
+  ( Handler_map.add code_table.label
+      {exit_id; bindings = code_table.bindings; order_id = -1}
+      m,
     code_table.handler )
 
-let find_exn cxt i = Map_int.find_exn cxt.jmp_table i
+let find_exn cxt i = Map_int.find i cxt.jmp_table

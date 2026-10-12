@@ -43,10 +43,7 @@ function read_lines(inc) {
     if (l === undefined) {
       return Stdlib_List.reverse(acc);
     }
-    _acc = {
-      hd: l,
-      tl: acc
-    };
+    _acc = {hd: l, tl: acc};
     continue;
   };
 }
@@ -65,10 +62,7 @@ function read_lines2(inc) {
       }
       throw exn;
     }
-    _acc = {
-      hd: l,
-      tl: acc
-    };
+    _acc = {hd: l, tl: acc};
     continue;
   };
 }
@@ -77,10 +71,7 @@ function read_lines3(inc) {
   let loop = acc => {
     try {
       let l = input_line(inc);
-      return loop({
-        hd: l,
-        tl: acc
-      });
+      return loop({hd: l, tl: acc});
     } catch (raw_exn) {
       let exn = Primitive_exceptions.internalToException(raw_exn);
       if (exn.RE_EXN_ID === "End_of_file") {

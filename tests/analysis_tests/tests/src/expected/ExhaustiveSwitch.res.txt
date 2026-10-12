@@ -44,7 +44,7 @@ Path withSomePol
   {
     "detail": "insert exhaustive switch for value",
     "filterText": "withSomePoly",
-    "insertText": "withSomePoly {\n   | #\"switch\" => ${1:%todo}\n   | #one => ${2:%todo}\n   | #three(_) => ${3:%todo}\n   | #two => ${4:%todo}\n   | #\"exotic ident\" => ${5:%todo}\n   }",
+    "insertText": "withSomePoly {\n   | #count$ => ${1:%todo}\n   | #\"switch\" => ${2:%todo}\n   | #one => ${3:%todo}\n   | #three(_) => ${4:%todo}\n   | #two => ${5:%todo}\n   | #\"exotic ident\" => ${6:%todo}\n   }",
     "insertTextFormat": 2,
     "kind": 15,
     "label": "withSomePoly (exhaustive switch)",

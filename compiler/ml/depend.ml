@@ -174,6 +174,8 @@ let rec add_pattern bv pat =
   | Ppat_construct (c, {txt = args}) ->
     add bv c;
     List.iter (add_pattern bv) args
+  | Ppat_dict entries ->
+    List.iter (fun {pdp_pattern} -> add_pattern bv pdp_pattern) entries
   | Ppat_record (pl, _, rest) ->
     List.iter
       (fun {lid = lbl; x = p} ->
@@ -250,6 +252,11 @@ let rec add_expr bv exp =
     add bv fld;
     add_expr bv e2
   | Pexp_array el -> List.iter (add_expr bv) el
+  | Pexp_dict entries ->
+    List.iter
+      (function
+        | Pdict_entry (_, e) | Pdict_spread e -> add_expr bv e)
+      entries
   | Pexp_ifthenelse (e1, e2, opte3) ->
     add_expr bv e1;
     add_expr bv e2;

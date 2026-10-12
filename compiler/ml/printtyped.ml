@@ -127,7 +127,6 @@ let record_representation i ppf =
   let open Types in
   function
   | Record_regular -> line i ppf "Record_regular\n"
-  | Record_float_unused -> assert false
   | Record_unboxed b -> line i ppf "Record_unboxed %b\n" b
   | Record_inlined {name} -> line i ppf "Record_inlined %s\n" name
   | Record_extension -> line i ppf "Record_extension\n"
@@ -234,6 +233,9 @@ and pattern i ppf x =
       line i ppf "Tpat_record\n";
       list i longident_x_pattern ppf l;
       Option.iter (record_pat_rest i ppf) rest
+    | Tpat_dict l ->
+      line i ppf "Tpat_dict\n";
+      list i dict_pattern_entry ppf l
     | Tpat_array l ->
       line i ppf "Tpat_array\n";
       list i pattern ppf l
@@ -329,6 +331,9 @@ and expression i ppf x =
   | Texp_array l ->
     line i ppf "Texp_array\n";
     list i expression ppf l
+  | Texp_dict l ->
+    line i ppf "Texp_dict\n";
+    list i dict_entry ppf l
   | Texp_ifthenelse (e1, e2, eo) ->
     line i ppf "Texp_ifthenelse\n";
     expression i ppf e1;
@@ -697,6 +702,18 @@ and label_decl i ppf
 and longident_x_pattern i ppf (li, _, p, opt) =
   line i ppf "%a%s\n" fmt_longident li (if opt then "?" else "");
   pattern (i + 1) ppf p
+
+and dict_pattern_entry i ppf {tdp_key; tdp_pattern; tdp_optional} =
+  line i ppf "%S%s\n" tdp_key.txt (if tdp_optional then "?" else "");
+  pattern (i + 1) ppf tdp_pattern
+
+and dict_entry i ppf = function
+  | Tdict_entry (key, e) ->
+    line i ppf "Tdict_entry %S\n" key.txt;
+    expression (i + 1) ppf e
+  | Tdict_spread e ->
+    line i ppf "Tdict_spread\n";
+    expression (i + 1) ppf e
 
 and case i ppf {c_lhs; c_guard; c_rhs} =
   line i ppf "<case>\n";

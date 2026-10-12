@@ -11,5 +11,5 @@ await execBuildOrThrow();
 
 const output = readFileSync(new URL("src/Test.jsx", import.meta.url), "utf8");
 assert.match(output, /import \* as SomeLib from "some-lib"/);
-assert.match(output, /<SomeLib\.Head>\s*\{<div\s*\/>\}\s*<\/SomeLib\.Head>/);
+assert.match(output, /<SomeLib\.Head>\s*<div\s*\/>\s*<\/SomeLib\.Head>/);
 assert.doesNotMatch(output, /=>/);

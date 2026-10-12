@@ -55,13 +55,7 @@ function f() {
 
 List.xx();
 
-Stdlib_List.length({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: /* [] */0
-  }
-});
+Stdlib_List.length({hd: 1, tl: {hd: 2, tl: /* [] */0}});
 
 Stdlib_List.length(/* [] */0);
 

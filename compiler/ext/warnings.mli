@@ -98,8 +98,6 @@ val backup : unit -> state
 
 val restore : state -> unit
 
-val has_warnings : bool ref
-
 val message : t -> string
 
 val number : t -> int

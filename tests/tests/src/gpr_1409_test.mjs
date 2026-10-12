@@ -107,54 +107,18 @@ function keys(xs, ys) {
   return String_set.equal(String_set.of_list(xs), String_set.of_list(Stdlib_List.fromArray(ys)));
 }
 
-Test_utils.eq("File \"gpr_1409_test.res\", line 66, characters 3-10", keys({
-  hd: "hi",
-  tl: /* [] */0
-}, Object.keys(test3(undefined, undefined))), true);
+Test_utils.eq("File \"gpr_1409_test.res\", line 66, characters 3-10", keys({hd: "hi", tl: /* [] */0}, Object.keys(test3(undefined, undefined))), true);
 
-Test_utils.eq("File \"gpr_1409_test.res\", line 68, characters 3-10", keys({
-  hd: "hi",
-  tl: {
-    hd: "_open",
-    tl: /* [] */0
-  }
-}, Object.keys(test3(2, undefined))), true);
+Test_utils.eq("File \"gpr_1409_test.res\", line 68, characters 3-10", keys({hd: "hi", tl: {hd: "_open", tl: /* [] */0}}, Object.keys(test3(2, undefined))), true);
 
-Test_utils.eq("File \"gpr_1409_test.res\", line 70, characters 3-10", keys({
-  hd: "hi",
-  tl: {
-    hd: "_open",
-    tl: {
-      hd: "xx__hi",
-      tl: /* [] */0
-    }
-  }
-}, Object.keys(test3(2, 2))), true);
+Test_utils.eq("File \"gpr_1409_test.res\", line 70, characters 3-10", keys({hd: "hi", tl: {hd: "_open", tl: {hd: "xx__hi", tl: /* [] */0}}}, Object.keys(test3(2, 2))), true);
 
 Mocha.describe("Gpr_1409_test", () => {
   Mocha.test("test1", () => Test_utils.eq("File \"gpr_1409_test.res\", line 74, characters 7-14", b_.foo, "42"));
   Mocha.test("test2", () => Test_utils.eq("File \"gpr_1409_test.res\", line 78, characters 7-14", Object.keys(a_).length, 0));
-  Mocha.test("test3", () => Test_utils.eq("File \"gpr_1409_test.res\", line 82, characters 7-14", keys({
-    hd: "hi",
-    tl: /* [] */0
-  }, Object.keys(test3(undefined, undefined))), true));
-  Mocha.test("test4", () => Test_utils.eq("File \"gpr_1409_test.res\", line 86, characters 7-14", keys({
-    hd: "hi",
-    tl: {
-      hd: "_open",
-      tl: /* [] */0
-    }
-  }, Object.keys(test3(2, undefined))), true));
-  Mocha.test("test5", () => Test_utils.eq("File \"gpr_1409_test.res\", line 91, characters 6-13", keys({
-    hd: "hi",
-    tl: {
-      hd: "_open",
-      tl: {
-        hd: "xx__hi",
-        tl: /* [] */0
-      }
-    }
-  }, Object.keys(test3(2, 2))), true));
+  Mocha.test("test3", () => Test_utils.eq("File \"gpr_1409_test.res\", line 82, characters 7-14", keys({hd: "hi", tl: /* [] */0}, Object.keys(test3(undefined, undefined))), true));
+  Mocha.test("test4", () => Test_utils.eq("File \"gpr_1409_test.res\", line 86, characters 7-14", keys({hd: "hi", tl: {hd: "_open", tl: /* [] */0}}, Object.keys(test3(2, undefined))), true));
+  Mocha.test("test5", () => Test_utils.eq("File \"gpr_1409_test.res\", line 91, characters 6-13", keys({hd: "hi", tl: {hd: "_open", tl: {hd: "xx__hi", tl: /* [] */0}}}, Object.keys(test3(2, 2))), true));
 });
 
 export {

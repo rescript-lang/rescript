@@ -126,10 +126,7 @@ Mocha.describe("For_loop_test", () => {
     let for_9 = () => {
       let v = /* [] */0;
       let collect = x => {
-        v = {
-          hd: x,
-          tl: v
-        };
+        v = {hd: x, tl: v};
       };
       let vv = 0;
       let vv2 = 0;

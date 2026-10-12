@@ -83,10 +83,7 @@ function resize(newSize) {
         };
       } else {
         let ind = hashVal(getId(n._0), getId(n._3), n._1) & newSz_1;
-        newArr[ind] = {
-          hd: n,
-          tl: newArr[ind]
-        };
+        newArr[ind] = {hd: n, tl: newArr[ind]};
         _bucket = bucket.tl;
         continue;
       }
@@ -101,19 +98,13 @@ function resize(newSize) {
 
 function insert(idl, idh, v, ind, bucket, newNode) {
   if (n_items.contents <= sz_1.contents) {
-    htab.contents[ind] = {
-      hd: newNode,
-      tl: bucket
-    };
+    htab.contents[ind] = {hd: newNode, tl: bucket};
     n_items.contents = n_items.contents + 1 | 0;
     return;
   }
   resize((sz_1.contents + sz_1.contents | 0) + 2 | 0);
   let ind$1 = hashVal(idl, idh, v) & sz_1.contents;
-  htab.contents[ind$1] = {
-    hd: newNode,
-    tl: htab.contents[ind$1]
-  };
+  htab.contents[ind$1] = {hd: newNode, tl: htab.contents[ind$1]};
 }
 
 function resetUnique() {

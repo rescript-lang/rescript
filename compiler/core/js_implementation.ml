@@ -12,16 +12,6 @@
 
 (* adapted by rescript from [driver/compile.ml] for convenience    *)
 
-let module_of_filename outputprefix =
-  let basename = Filename.basename outputprefix in
-  let name =
-    try
-      let pos = String.index basename '.' in
-      String.sub basename 0 pos
-    with Not_found -> basename
-  in
-  String.capitalize_ascii name
-
 let fprintf = Format.fprintf
 
 let print_if_pipe ppf flag printer arg =
@@ -48,7 +38,7 @@ let after_parsing_sig ppf outputprefix ast =
       output_value stdout ast);
     if !Js_config.syntax_only then Warnings.check_fatal ()
     else
-      let modulename = module_of_filename outputprefix in
+      let modulename = Ext_filename.module_name outputprefix in
       Lam_compile_env.reset ();
       let initial_env = Res_compmisc.initial_env ~modulename () in
       Env.set_unit_name modulename;
@@ -60,11 +50,10 @@ let after_parsing_sig ppf outputprefix ast =
       Delayed_checks.force_delayed_checks ();
       Warnings.check_fatal ();
       let deprecated = Builtin_attributes.deprecated_of_sig ast in
-      let sg =
-        Env.save_signature ~deprecated sg modulename (outputprefix ^ ".cmi")
-      in
+      ignore
+        (Env.save_signature ~deprecated sg modulename (outputprefix ^ ".cmi"));
       Typemod.save_signature modulename tsg outputprefix !Location.input_name
-        initial_env sg;
+        initial_env;
       process_with_gentype (outputprefix ^ ".cmti"))
 
 let interface ~parser ppf ?outputprefix fname =
@@ -192,7 +181,7 @@ let implementation_map ppf sourcefile =
   seek_in ichan (Ext_digest.length + 1);
   let list_of_modules = Ext_io.rev_lines_of_chann ichan in
   close_in ichan;
-  let ns = Ext_filename.module_name sourcefile in
+  let ns = Ext_filename.module_name (Filename.remove_extension sourcefile) in
   let ml_ast =
     Ext_list.fold_left list_of_modules [] (fun acc line ->
         if Ext_string.is_empty line then acc

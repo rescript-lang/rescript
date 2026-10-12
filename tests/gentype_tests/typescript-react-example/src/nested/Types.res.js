@@ -61,16 +61,7 @@ let optFunction = () => 3;
 
 let ObjectId = {};
 
-let someIntList = {
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-};
+let someIntList = {hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}};
 
 let map = Belt_List.map;
 

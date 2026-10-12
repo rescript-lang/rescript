@@ -67,12 +67,14 @@ let make ~(values : cmj_value Map_string.t) ~hoisted_exports ~effect_
     ~package_spec ~case : t =
   {
     values =
-      Map_string.to_sorted_array_with_f values (fun k v ->
+      Map_string.bindings values
+      |> List.map (fun (k, (v : cmj_value)) ->
           {
             name = k;
             arity = v.arity;
             persistent_closed_lambda = v.persistent_closed_lambda;
-          });
+          })
+      |> Array.of_list;
     hoisted_exports = Array.of_list hoisted_exports;
     pure = effect_ = None;
     package_spec;
@@ -108,7 +110,7 @@ let to_file name ~check_exists (v : t) =
     output_string oc s;
     close_out oc)
 
-let key_comp a b = Map_string.compare_key a b.name
+let key_comp a b = Ext_string.compare a b.name
 
 let not_found key =
   {name = key; arity = single_na; persistent_closed_lambda = None}

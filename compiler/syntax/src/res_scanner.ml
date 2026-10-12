@@ -178,7 +178,7 @@ let scan_identifier scanner =
   let start_off = scanner.offset in
   let rec skip_good_chars scanner =
     match scanner.ch with
-    | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '\'' ->
+    | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '\'' | '$' ->
       next scanner;
       skip_good_chars scanner
     | _ -> ()
@@ -331,6 +331,13 @@ let scan_exotic_identifier scanner =
     scanner.err ~start_pos ~end_pos
       (Diagnostics.message "A quoted identifier can't be empty string.");
     Token.Lident ident)
+  else if name = "_" then (
+    (* `_` is the wildcard and the placeholder of underscore apply sugar;
+       a quoted `_` couldn't be told apart from them. *)
+    let end_pos = position scanner in
+    scanner.err ~start_pos ~end_pos
+      (Diagnostics.message "`_` can't be used as a quoted identifier.");
+    Token.Lident name)
   else if Ext_ident.is_uident name then Token.Lident ident
     (* Exotic ident with uppercase letter should be encoded to avoid confusing in OCaml parsetree *)
   else Token.Lident name
@@ -779,7 +786,7 @@ let rec scan scanner =
   let token =
     match scanner.ch with
     (* peeking 0 char *)
-    | 'A' .. 'Z' | 'a' .. 'z' -> scan_identifier scanner
+    | 'A' .. 'Z' | 'a' .. 'z' | '$' -> scan_identifier scanner
     | '0' .. '9' -> scan_number scanner
     | '`' ->
       next scanner;
@@ -823,7 +830,8 @@ let rec scan scanner =
     (* peeking 1 char *)
     | '_' -> (
       match peek scanner with
-      | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' -> scan_identifier scanner
+      | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '$' ->
+        scan_identifier scanner
       | _ ->
         next scanner;
         Token.Underscore)

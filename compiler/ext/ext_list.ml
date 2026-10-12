@@ -378,26 +378,6 @@ let rec filter_map xs (f : 'a -> 'b option) =
     | None -> filter_map ys f
     | Some z -> z :: filter_map ys f)
 
-let rec exclude (xs : 'a list) (p : 'a -> bool) : 'a list =
-  match xs with
-  | [] -> []
-  | x :: xs -> if p x then exclude xs p else x :: exclude xs p
-
-let rec exclude_with_val l p =
-  match l with
-  | [] -> None
-  | a0 :: xs -> (
-    if p a0 then Some (exclude xs p)
-    else
-      match xs with
-      | [] -> None
-      | a1 :: rest -> (
-        if p a1 then Some (a0 :: exclude rest p)
-        else
-          match exclude_with_val rest p with
-          | None -> None
-          | Some rest -> Some (a0 :: a1 :: rest)))
-
 let rec same_length xs ys =
   match (xs, ys) with
   | [], [] -> true
@@ -507,31 +487,6 @@ let rec flat_map_aux f acc append lx =
     flat_map_aux f new_acc append rest
 
 let flat_map lx f = flat_map_aux f [] [] lx
-
-let flat_map_append lx append f = flat_map_aux f [] append lx
-
-let rec length_compare l n =
-  if n < 0 then `Gt
-  else
-    match l with
-    | _ :: xs -> length_compare xs (n - 1)
-    | [] -> if n = 0 then `Eq else `Lt
-
-let rec length_ge l n =
-  if n > 0 then
-    match l with
-    | _ :: tl -> length_ge tl (n - 1)
-    | [] -> false
-  else true
-
-(**
-   {[length xs = length ys + n ]}
-*)
-let rec length_larger_than_n xs ys n =
-  match (xs, ys) with
-  | _, [] -> length_compare xs n = `Eq
-  | _ :: xs, _ :: ys -> length_larger_than_n xs ys n
-  | [], _ -> false
 
 let rec group (eq : 'a -> 'a -> bool) lst =
   match lst with
@@ -677,14 +632,6 @@ let rec assoc_by_string lst (k : string) def =
     | None -> assert false
     | Some x -> x)
   | (k1, v1) :: rest -> if k1 = k then v1 else assoc_by_string rest k def
-
-let rec assoc_by_int lst (k : int) def =
-  match lst with
-  | [] -> (
-    match def with
-    | None -> assert false
-    | Some x -> x)
-  | (k1, v1) :: rest -> if k1 = k then v1 else assoc_by_int rest k def
 
 let rec nth_aux l n =
   match l with

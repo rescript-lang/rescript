@@ -252,6 +252,17 @@ val call : ?comment:string -> info:Js_call_info.t -> t -> t list -> t
 
 val tagged_template : ?comment:string -> t -> string list -> t list -> t
 
+val jsx :
+  callee:t ->
+  tag:t ->
+  spread:t option ->
+  props:(string * t) list ->
+  children:t list option ->
+  key:t option ->
+  multi:bool ->
+  fragment:bool ->
+  t
+
 val interpolated_template :
   ?comment:string -> Asttypes.template_segment list -> t list -> t
 
@@ -275,7 +286,11 @@ val seq : ?comment:string -> t -> t -> t
 
 val fuse_to_seq : t -> t list -> t
 
+val object_entries : ?dup:J.expression -> J.property_map -> J.object_entry list
+
 val obj : ?comment:string -> ?dup:J.expression -> J.property_map -> t
+
+val obj_entries : ?comment:string -> J.object_entry list -> t
 
 val true_ : t
 
@@ -325,5 +340,3 @@ val is_null_undefined : ?comment:string -> t -> t
 val make_exception : string -> t
 
 val variadic_args : t list -> t list
-
-val string_of_expression : (t -> string) ref
