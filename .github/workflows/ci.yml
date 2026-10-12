@@ -190,6 +190,9 @@ jobs:
       - name: Version Check
         run: yarn constraints
 
+      - name: Test release plan
+        run: yarn test-release-plan
+
       - name: Run tests
         run: node scripts/test.js -all
 
