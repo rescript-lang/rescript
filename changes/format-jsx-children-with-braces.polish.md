@@ -1,0 +1,1 @@
+- Format JSX expression children with explicit braces, preserving comments and blank-line separation, to prepare for future literal text support. Existing unbraced children remain valid syntax. https://github.com/rescript-lang/rescript/pull/8666
