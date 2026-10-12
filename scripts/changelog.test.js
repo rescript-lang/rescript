@@ -74,6 +74,11 @@ test("collects late fragments into a finalized, unpublished version", () => {
   assert.ok(output.includes(`${categories.fix}\n\n${late.text}\n${note}\n`));
   assert.ok(output.endsWith(historical));
   assert.throws(() => prepareRelease(released, "13.0.0", []), /finalized/);
+  // Publish has tagged the version, so its notes are frozen.
+  assert.throws(
+    () => prepareRelease(released, "13.0.0", [late], { tagged: true }),
+    /already been tagged/,
+  );
   // Once the next version is opened, late fragments belong to it instead.
   assert.throws(
     () => prepareRelease(openSection(released, "13.0.1"), "13.0.0", [late]),

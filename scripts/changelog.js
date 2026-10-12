@@ -101,12 +101,27 @@ function versionHeadings(changelog) {
   );
 }
 
-export function prepareRelease(changelog, version, fragments) {
+export function isFinalized(changelog, version) {
+  return versionHeadings(changelog)[0]?.[1] === version;
+}
+
+// Publish pushes the vX tag before publishing and refuses to move it, so a
+// tagged version can no longer take more notes.
+export function releaseTagExists(repositoryUrl, version) {
+  const url = repositoryUrl.replace(/^git\+/, "");
+  return (
+    execFileSync("git", ["ls-remote", "--tags", url, `refs/tags/v${version}`], {
+      encoding: "utf8",
+    }).trim() !== ""
+  );
+}
+
+export function prepareRelease(changelog, version, fragments, { tagged } = {}) {
   const headings = versionHeadings(changelog);
   const first = headings[0];
-  // A version finalized by an earlier run but not yet published (package.json
-  // has not moved on) can still collect fragments merged in the meantime.
-  const finalized = first?.[1] === version;
+  // A version finalized by an earlier run but not yet published can still
+  // collect fragments merged in the meantime.
+  const finalized = isFinalized(changelog, version);
   if (!first || (first[1] !== `${version} (Unreleased)` && !finalized)) {
     throw new Error(
       `Expected first version heading to be ${version} (Unreleased)`,
@@ -114,6 +129,11 @@ export function prepareRelease(changelog, version, fragments) {
   }
   if (finalized && !fragments.length) {
     throw new Error(`${version} is already finalized and no fragments remain`);
+  }
+  if (finalized && tagged) {
+    throw new Error(
+      `${version} has already been tagged for publishing; run yarn changelog:open for the next version first`,
+    );
   }
   const end = headings[1]?.index ?? changelog.length;
   const lines = changelog.slice(first.index, end).split("\n");
@@ -232,7 +252,7 @@ export async function run(command, root = process.cwd()) {
     process.stdout.write(renderFragments(fragments));
     return;
   }
-  const { version } = JSON.parse(
+  const { version, repository } = JSON.parse(
     await fs.readFile(path.join(root, "package.json"), "utf8"),
   );
   const target = path.join(root, "CHANGELOG.md");
@@ -241,7 +261,14 @@ export async function run(command, root = process.cwd()) {
     await fs.writeFile(target, openSection(changelog, version));
     return;
   }
-  await fs.writeFile(target, prepareRelease(changelog, version, fragments));
+  const tagged =
+    fragments.length > 0 &&
+    isFinalized(changelog, version) &&
+    releaseTagExists(repository.url, version);
+  await fs.writeFile(
+    target,
+    prepareRelease(changelog, version, fragments, { tagged }),
+  );
   for (const fragment of fragments) {
     await fs.unlink(path.join(root, "changes", fragment.name));
   }
