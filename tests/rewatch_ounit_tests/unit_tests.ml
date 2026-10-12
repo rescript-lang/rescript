@@ -116,6 +116,20 @@ let test_executable () = Unix.realpath Sys.executable_name
 let process_job args =
   {Process.program = test_executable (); args; cwd = Sys.getcwd ()}
 
+(* Like the compiler and Rust rewatch: the whole stem is the module name, and
+   only an ASCII first letter is capitalized. *)
+let module_name_tests _context =
+  [
+    ("src/foo.res", "Foo");
+    ("src/Foo.resi", "Foo");
+    ("src/foo.test.res", "Foo.test");
+    ("src/_app.res", "_app");
+    ("src/\195\169clair.res", "\195\169clair");
+    ("src/\195\159eta.res", "\195\159eta");
+  ]
+  |> List.iter (fun (path, expected) ->
+      assert_equal ~printer:Fun.id expected (Source.module_name path))
+
 let string_util_tests _context =
   [
     ("", "", true);
@@ -968,6 +982,7 @@ let tests =
   "unit_tests"
   >::: [
          "string_util" >:: string_util_tests;
+         "module_name" >:: module_name_tests;
          "process_parallel" >:: process_parallel_tests;
          "process_cancellation" >:: process_cancellation_tests;
          "process_dependency_graph" >:: process_dependency_graph_tests;
