@@ -1586,7 +1586,7 @@ checked=$((checked + 1))
 
 directory_link "$work/watch-dependency-fallback/packages/dep" \
   "$work/node_modules/dep"
-"$ocaml" watch "$work/watch-dependency-fallback" \
+"$ocaml" -v watch "$work/watch-dependency-fallback" \
   >"$work/watch-dependency-fallback.out" \
   2>"$work/watch-dependency-fallback.err" &
 dependency_fallback_pid=$!
@@ -1595,7 +1595,13 @@ wait_for_text "$work/watch-dependency-fallback.err" \
   "no rescript.json or bsconfig.json"
 mv "$work/watch-dependency-fallback/node_modules/dep" \
   "$work/watch-dependency-fallback/node_modules/dep-disabled"
-wait_for_file "$work/watch-dependency-fallback/src/A.js"
+if ! wait_for_file "$work/watch-dependency-fallback/src/A.js"; then
+  printf '%s\n' '--- watcher stdout ---' >&2
+  cat "$work/watch-dependency-fallback.out" >&2
+  printf '%s\n' '--- watcher stderr ---' >&2
+  cat "$work/watch-dependency-fallback.err" >&2
+  exit 1
+fi
 terminate_and_wait "$dependency_fallback_pid" "dependency-fallback watcher"
 checked=$((checked + 1))
 
