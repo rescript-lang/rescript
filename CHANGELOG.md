@@ -14,6 +14,7 @@
 
 #### :boom: Breaking Change
 
+- `\"_"` is no longer allowed as a quoted identifier, as it couldn't be told apart from the `_` wildcard and placeholder. https://github.com/rescript-lang/rescript/pull/8795
 - Record syntax no longer creates or matches dicts, e.g. `let d: dict<int> = {foo: 1}`; it's an error pointing to `dict{...}`. https://github.com/rescript-lang/rescript/pull/8751
 - Remove the call-site `@inlined` attribute, which was parsed but never affected code generation. It is now reported as a misplaced attribute (warning 53). https://github.com/rescript-lang/rescript/pull/8734
 - Remove `@deriving(abstract)` and `@deriving(jsConverter)`. Use record types (with optional fields, mutable fields and `@as` renaming) and polymorphic variants directly instead. https://github.com/rescript-lang/rescript/pull/8729
@@ -30,6 +31,7 @@
 
 - Fix parser recovery and editor completion when a record or dict value is missing before a comma, e.g. `{a: , b: 1}`. https://github.com/rescript-lang/rescript/pull/8779
 - Derive module names from file names consistently, fixing files like `Button.test.res` that could not reference `Button`, and `.res`/`.resi` pairs with dotted or non-ASCII names. https://github.com/rescript-lang/rescript/pull/8797
+- Fix the formatter printing escaped identifiers starting with `_`, like `\"_'"`, in a form that doesn't parse. https://github.com/rescript-lang/rescript/pull/8795
 - Fix references to a `@val` global reading a binding with the same name, e.g. a toplevel `let` declared before them. https://github.com/rescript-lang/rescript/pull/8785
 - Evaluate the unused arguments of an inlined function call in parameter order. https://github.com/rescript-lang/rescript/pull/8786
 - Fix shadowed variables in generated JS colliding with identifiers or external names containing `$`. https://github.com/rescript-lang/rescript/pull/8778

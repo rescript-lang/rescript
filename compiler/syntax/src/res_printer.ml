@@ -496,7 +496,13 @@ let classify_ident_content ?(allow_uident = false) ?(allow_hyphen = false) txt =
         match String.unsafe_get txt i with
         | '\\' -> UppercaseExoticIdent
         | 'A' .. 'Z' when allow_uident -> loop (i + 1)
-        | 'a' .. 'z' | '_' | '$' -> loop (i + 1)
+        | 'a' .. 'z' | '$' -> loop (i + 1)
+        (* The scanner reads [_] as an identifier only when one of these
+           follows; otherwise it is a wildcard. *)
+        | '_' when len > 1 -> (
+          match String.unsafe_get txt 1 with
+          | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '$' -> loop (i + 1)
+          | _ -> ExoticIdent)
         | _ -> ExoticIdent
       else
         match String.unsafe_get txt i with
@@ -3338,6 +3344,10 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
       let constr = print_longident_location longident_loc cmt_tbl in
       let args = print_expression_args ~state args cmt_tbl in
       Doc.group (Doc.concat [constr; args])
+    | Pexp_ident ({txt = Longident.Lident "_"} as path) ->
+      (* The `_` placeholder of underscore apply sugar, see
+         [Parsetree_viewer.rewrite_underscore_apply]. *)
+      print_comments (Doc.text "_") cmt_tbl path.loc
     | Pexp_ident path -> print_lident_path path cmt_tbl
     | Pexp_tuple exprs ->
       Doc.group
