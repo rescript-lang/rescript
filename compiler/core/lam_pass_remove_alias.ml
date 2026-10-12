@@ -46,7 +46,15 @@ let is_const_some (cst : Lambda.structured_constant) : bool =
   | Const_some _ -> true
   | _ -> false
 
+(* How deep inlining may nest: simplifying an inlined body can inline the
+   functions it calls, and so on. Without a bound, a chain of small functions
+   that each call the previous one gets the whole chain inlined into every
+   function, which is quadratic in the length of the chain. Functions marked
+   [@inline] are always inlined. *)
+let max_inline_depth = 4
+
 let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
+  let inline_depth = ref 0 in
   let rec simpl (lam : Lambda.t) : Lambda.t =
     match lam with
     (* Keep a JSX tag like [M.make] as it is: flattening it may give a variable
@@ -204,10 +212,19 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
                       Lam_hit.hit_variable v lam)
                   (*avoid nontermination, e.g, `g(g)`*)
                 then normal ()
-                else
-                  simpl
-                    (Lam_beta_reduce.propagate_beta_reduce_with_map meta
-                       param_map params body ap_args))
+                else if
+                  !inline_depth >= max_inline_depth
+                  && m.attr.inline <> Always_inline
+                then normal ()
+                else (
+                  incr inline_depth;
+                  let inlined =
+                    simpl
+                      (Lam_beta_reduce.propagate_beta_reduce_with_map meta
+                         param_map params body ap_args)
+                  in
+                  decr inline_depth;
+                  inlined))
             | _ -> normal ()
           else normal ()
         else normal ()
