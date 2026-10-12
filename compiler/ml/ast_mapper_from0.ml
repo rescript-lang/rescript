@@ -745,8 +745,7 @@ module E = struct
     in
     let first_wrapper =
       let rec find = function
-        | ({txt = "res.braces" | "ns.braces"; loc}, _) :: _ ->
-          Some (`Braces loc)
+        | ({txt = "res.braces"; loc}, _) :: _ -> Some (`Braces loc)
         | ({txt = "res.await"}, _) :: _ -> Some `Await
         | _ :: rest -> find rest
         | [] -> None
@@ -760,7 +759,7 @@ module E = struct
            | _ -> false ->
       let outer_attrs0, braces_loc, inner_attrs0 =
         let rec split acc = function
-          | ({Location.txt = "res.braces" | "ns.braces"; loc}, _) :: rest ->
+          | ({Location.txt = "res.braces"; loc}, _) :: rest ->
             (List.rev acc, loc, rest)
           | a :: rest -> split (a :: acc) rest
           | [] -> assert false

@@ -251,7 +251,6 @@ and type_kind =
 
 and record_representation =
   | Record_regular (* All fields are boxed / tagged *)
-  | Record_float_unused (* Was: all fields are floats. Now: unused *)
   | Record_unboxed of bool (* Unboxed single-field record, inlined or not *)
   | Record_inlined of
       (* Inlined record *)

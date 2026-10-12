@@ -551,9 +551,9 @@ PPX/malformed ASTs, or test helper APIs, were retained and reclassified.
 ## Warnings
 
 Warnings are declared in [`compiler/ext/warnings.ml`](../compiler/ext/warnings.ml).
-The default warning set is `+a-4-9-20-41-50-102`
+The default warning set is `+a-4-9-20-41-102`
 ([`compiler/ext/bsc_warnings.ml`](../compiler/ext/bsc_warnings.ml)), so
-warnings 4, 9, 20, 41, 50, and 102 are disabled by default; the rest are
+warnings 4, 9, 20, 41, and 102 are disabled by default; the rest are
 enabled. Fixtures use `-w +A` (everything on) so default-disabled
 warnings still fire.
 
