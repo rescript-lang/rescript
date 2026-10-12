@@ -1,0 +1,1 @@
+- Test `@apply.transforms` in `rescript-tools migrate`. https://github.com/rescript-lang/rescript/pull/8855
