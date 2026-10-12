@@ -68,35 +68,49 @@ let restore_environment name previous =
   | Some value -> Unix.putenv name value
   | None -> Test_support.unsetenv name
 
+(* A request for DomainPpx.res whose PPX writes its PID to [marker] and then
+   waits. *)
+let waiting_ppx_request root marker =
+  Test_support.write_file
+    (Filename.concat root "DomainPpx.res")
+    "let value = 1\n";
+  let ppx_command =
+    Filename.quote (Unix.realpath Sys.executable_name)
+    ^ " --ppx-wait " ^ Filename.quote marker
+  in
+  Compiler_process.
+    {
+      cwd = root;
+      args =
+        [
+          "-nostdlib";
+          "-nopervasives";
+          "-bs-project-root";
+          root;
+          "-bs-package-name";
+          "domain-ppx";
+          "-bs-package-output";
+          "commonjs:.:.js";
+          "-ppx";
+          ppx_command;
+          "DomainPpx.res";
+        ];
+    }
+
+let check_ppx_gone marker =
+  if not Sys.win32 then
+    let pid = File_util.read_file marker |> int_of_string in
+    check
+      (try
+         Unix.kill pid 0;
+         false
+       with Unix.Unix_error (Unix.ESRCH, _, _) -> true)
+      "the domain PPX process is gone when the request returns"
+
 let domain_ppx_cancellation_test _context =
   Test_support.with_temp_dir "rewatch-domain-ppx-cancellation-" (fun root ->
-      let source = Filename.concat root "DomainPpx.res" in
       let marker = Filename.concat root "ppx-started" in
-      Test_support.write_file source "let value = 1\n";
-      let ppx_command =
-        Filename.quote (Unix.realpath Sys.executable_name)
-        ^ " --ppx-wait " ^ Filename.quote marker
-      in
-      let job =
-        Compiler_process.
-          {
-            cwd = root;
-            args =
-              [
-                "-nostdlib";
-                "-nopervasives";
-                "-bs-project-root";
-                root;
-                "-bs-package-name";
-                "domain-ppx-cancellation";
-                "-bs-package-output";
-                "commonjs:.:.js";
-                "-ppx";
-                ppx_command;
-                "DomainPpx.res";
-              ];
-          }
-      in
+      let job = waiting_ppx_request root marker in
       let interrupted =
         try
           ignore
@@ -109,14 +123,28 @@ let domain_ppx_cancellation_test _context =
       in
       check interrupted "domain task cancellation reaches a running PPX";
       check (Sys.file_exists marker) "the domain PPX started";
-      if not Sys.win32 then
-        let pid = File_util.read_file marker |> int_of_string in
-        check
-          (try
-             Unix.kill pid 0;
-             false
-           with Unix.Unix_error (Unix.ESRCH, _, _) -> true)
-          "the domain PPX process is gone when cancellation returns")
+      check_ppx_gone marker)
+
+(* An exception that escapes the compiler fails only its own request: the
+   module fails with exit status 2 and the exception in its output. *)
+let escaped_exception_test _context =
+  Test_support.with_temp_dir "rewatch-escaped-exception-" (fun root ->
+      let marker = Filename.concat root "ppx-started" in
+      let raised = ref false in
+      let poll () =
+        if Sys.file_exists marker && not !raised then (
+          raised := true;
+          failwith "request failed")
+      in
+      let result =
+        Compiler_process.run ~poll (waiting_ppx_request root marker)
+      in
+      check !raised "the exception was raised while the PPX ran";
+      assert_equal (Unix.WEXITED 2) result.status;
+      check
+        (String.ends_with ~suffix:"Failure(\"request failed\")\n" result.stderr)
+        ("the request reports the exception: " ^ result.stderr);
+      check_ppx_gone marker)
 
 let domain_execution_test _context =
   Test_support.with_temp_dir "rewatch-domain-execution-" (fun root ->
@@ -220,5 +248,6 @@ let tests =
   >::: [
          "publication" >:: publication_tests;
          "domain_ppx_cancellation" >:: domain_ppx_cancellation_test;
+         "escaped_exception" >:: escaped_exception_test;
          "domain_execution" >:: domain_execution_test;
        ]
