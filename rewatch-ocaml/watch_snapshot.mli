@@ -27,26 +27,26 @@ type registration =
     }
   | Registration_failed of {snapshot: entry list; message: string}
 
+type digest_cache
+(** Digests of snapshot files, reused while a file's size and times are
+    unchanged and it was last modified well before it was hashed. *)
+
+val create_digest_cache : unit -> digest_cache
+
 val equal : entry list -> entry list -> bool
 
 val create :
   ?on_source_symlink:(string -> unit) ->
-  (string, float * float * int * string) Hashtbl.t ->
+  digest_cache ->
   Watch_scope.t ->
   entry list
 
-val create_with_symlink_paths :
-  (string, float * float * int * string) Hashtbl.t ->
-  Watch_scope.t ->
-  registration
+val create_with_symlink_paths : digest_cache -> Watch_scope.t -> registration
 
 val changes_between : entry list -> entry list -> change list
 
 val update_entries :
-  (string, float * float * int * string) Hashtbl.t ->
-  entry list ->
-  change list ->
-  entry list option
+  digest_cache -> entry list -> change list -> entry list option
 
 val changes_are_incremental : change list -> bool
 
@@ -56,3 +56,8 @@ val reconciliation_baseline :
   entry list ->
   entry list ->
   entry list
+
+module For_test : sig
+  val cache_digest :
+    digest_cache -> string -> Unix.stats -> hashed_at:float -> string -> unit
+end

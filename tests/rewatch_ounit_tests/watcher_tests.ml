@@ -121,7 +121,7 @@ let tests =
   Test_support.with_temp_dir "rewatch-snapshot-update-" (fun root ->
       let source = Filename.concat root "A.res" in
       Test_support.write_file source "let value = 1\n";
-      let digest_cache = Hashtbl.create 1 in
+      let digest_cache = Watch_snapshot.create_digest_cache () in
       let stat = Unix.stat source in
       let previous =
         Watch_snapshot.
@@ -159,6 +159,51 @@ let tests =
            (Watch_snapshot.update_entries digest_cache previous
               [Watch_snapshot.{path = source; kind = Modified}]))
         "a transient snapshot read failure preserves the rebuild baseline");
+  Test_support.with_temp_dir "rewatch-snapshot-racy-" (fun root ->
+      let root = Unix.realpath root in
+      Test_support.write_file
+        (Filename.concat root "rescript.json")
+        {|{"name":"snapshot-racy","sources":"src"}|};
+      Test_support.write_file
+        (Filename.concat (Filename.concat root "src") "A.res")
+        "let value = 1\n";
+      let scope =
+        Watch_scope.discover ~root ~prod:false ~features:None ~filter:None
+      in
+      let source_entry digest_cache =
+        Watch_snapshot.create digest_cache scope
+        |> List.find_map (fun (entry : Watch_snapshot.entry) ->
+            match entry.state with
+            | File {digest} when Filename.basename entry.path = "A.res" ->
+              Some (entry.path, digest)
+            | _ -> None)
+      in
+      (* The cache is keyed by the path as the snapshot spells it. *)
+      let source =
+        match source_entry (Watch_snapshot.create_digest_cache ()) with
+        | Some (path, _) -> path
+        | None -> assert_failure "the snapshot lists the source"
+      in
+      let snapshot_digest digest_cache =
+        Option.map snd (source_entry digest_cache)
+      in
+      let stat = Unix.stat source in
+      let cached ~hashed_at =
+        let digest_cache = Watch_snapshot.create_digest_cache () in
+        Watch_snapshot.For_test.cache_digest digest_cache source stat ~hashed_at
+          "cached";
+        snapshot_digest digest_cache
+      in
+      (* A timestamp tick can hide a same-size rewrite, so a digest computed
+         right after a write is not trusted. *)
+      assert_equal
+        ~printer:(Option.value ~default:"None")
+        (Some (Digest.file source |> Digest.to_hex))
+        (cached ~hashed_at:stat.st_mtime);
+      assert_equal
+        ~printer:(Option.value ~default:"None")
+        (Some "cached")
+        (cached ~hashed_at:(stat.st_mtime +. 10.)));
   let root = Filename.temp_file "rewatch-watcher-lifecycle-" "" in
   Sys.remove root;
   Unix.mkdir root 0o700;

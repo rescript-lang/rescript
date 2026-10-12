@@ -22,7 +22,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
        watch-loop timer observe this flag, so shutdown remains prompt. *)
     Atomic.set stop_requested true
   in
-  let digest_cache = Hashtbl.create 256 in
+  let digest_cache = Watch_snapshot.create_digest_cache () in
   let watch_paths (scope : Watch_scope.t) symlink_paths =
     let paths = scope.paths @ symlink_paths in
     Output.debug ~verbosity

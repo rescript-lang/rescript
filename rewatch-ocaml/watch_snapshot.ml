@@ -20,6 +20,51 @@ type registration =
     }
   | Registration_failed of {snapshot: entry list; message: string}
 
+type cached_digest = {
+  mtime: float;
+  ctime: float;
+  size: int;
+  hashed_at: float;
+  digest: string;
+}
+
+type digest_cache = (string, cached_digest) Hashtbl.t
+
+let create_digest_cache () = Hashtbl.create 256
+
+(* File times can be coarse: Windows advances them in ticks of about 15 ms and
+   reports the creation time as [st_ctime], and some file systems only keep
+   seconds. As with racily clean index entries in version control, a digest is
+   reused only for a file last modified well before the digest was computed,
+   so a same-size rewrite within one tick is still hashed. *)
+let racy_window = 2.
+
+let cache_digest digest_cache path (stat : Unix.stats) ~hashed_at digest =
+  Hashtbl.replace digest_cache path
+    {
+      mtime = stat.st_mtime;
+      ctime = stat.st_ctime;
+      size = stat.st_size;
+      hashed_at;
+      digest;
+    }
+
+let cached_digest digest_cache path (stat : Unix.stats) =
+  match Hashtbl.find_opt digest_cache path with
+  | Some cached
+    when cached.mtime = stat.st_mtime
+         && cached.ctime = stat.st_ctime
+         && cached.size = stat.st_size
+         && stat.st_mtime < cached.hashed_at -. racy_window ->
+    Some cached.digest
+  | _ -> None
+
+let hash_and_cache digest_cache path stat =
+  let hashed_at = Unix.gettimeofday () in
+  let digest = File_util.digest_file path |> Digest.to_hex in
+  cache_digest digest_cache path stat ~hashed_at digest;
+  digest
+
 (* Entries contain only floats, integers and strings, so structural equality
    compares every field. Float comparison follows IEEE equality as before. *)
 let entry_equal (first : entry) second = first = second
@@ -45,16 +90,9 @@ let create ?(on_source_symlink = fun _ -> ()) digest_cache
     Hashtbl.replace seen_files path ();
     (* Native events are only wakeups; a content snapshot decides whether to
        rebuild. Reuse hashes while all cheap identity fields are unchanged. *)
-    match Hashtbl.find_opt digest_cache path with
-    | Some (mtime, ctime, size, digest)
-      when mtime = stat.Unix.st_mtime && ctime = stat.Unix.st_ctime
-           && size = stat.Unix.st_size ->
-      digest
-    | _ ->
-      let digest = File_util.digest_file path |> Digest.to_hex in
-      Hashtbl.replace digest_cache path
-        (stat.Unix.st_mtime, stat.Unix.st_ctime, stat.Unix.st_size, digest);
-      digest
+    match cached_digest digest_cache path stat with
+    | Some digest -> digest
+    | None -> hash_and_cache digest_cache path stat
   in
   let add_file path stat acc =
     try
@@ -294,9 +332,7 @@ let update_entries digest_cache previous changes =
           Hashtbl.remove changed entry.path;
           try
             let stat = Unix.stat entry.path in
-            let digest = File_util.digest_file entry.path |> Digest.to_hex in
-            Hashtbl.replace digest_cache entry.path
-              (stat.Unix.st_mtime, stat.Unix.st_ctime, stat.Unix.st_size, digest);
+            let digest = hash_and_cache digest_cache entry.path stat in
             Some
               {
                 path = entry.path;
@@ -341,3 +377,7 @@ let reconciliation_baseline ~(old_scope : Watch_scope.t) ~new_scope before after
   List.filter (fun entry -> not (shared entry.path)) after
   @ List.filter (fun entry -> shared entry.path) before
   |> List.sort compare
+
+module For_test = struct
+  let cache_digest = cache_digest
+end
