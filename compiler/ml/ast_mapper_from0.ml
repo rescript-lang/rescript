@@ -622,13 +622,6 @@ module E = struct
       | None -> None)
     | _ -> Option.map rows (dict_rows e)
 
-  let has_await_attribute attrs =
-    List.exists
-      (function
-        | {Location.txt = "res.await"}, _ -> true
-        | _ -> false)
-      attrs
-
   let extract_for_of_attribute attrs =
     List.find_map
       (function

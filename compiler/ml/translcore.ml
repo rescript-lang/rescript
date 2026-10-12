@@ -1046,6 +1046,20 @@ let jsx_children ~multi (lbl : label_description) (child : expression) =
       Some children
     | _ -> None
 
+(* How [transl_record] builds a record: by copying the fields of [init] one
+   by one (or with no [init] at all), or by taking a shallow copy of [init]
+   and setting the other fields. JSX props follow the same rule.
+   TODO: More strategies
+   3 + 2 * List.length lbl_expr_list >= size (density) *)
+let record_copies_fields
+    (fields : (label_description * record_label_definition * bool) array)
+    ~(init : expression option) =
+  match init with
+  | None -> true
+  | Some _ ->
+    Array.length fields < 20
+    && not (Array.exists (fun (lbl, _, _) -> lbl.lbl_optional) fields)
+
 let jsx_props_of ~multi (props : expression) =
   match props.exp_desc with
   | Texp_record
@@ -1066,13 +1080,7 @@ let jsx_props_of ~multi (props : expression) =
             Some (lbl, child)
           | Overridden _ | Kept _ -> None)
     in
-    let copy_fields =
-      match init with
-      | None -> true
-      | Some _ ->
-        Array.length fields < 20
-        && not (Array.exists (fun (lbl, _, _) -> lbl.lbl_optional) fields)
-    in
+    let copy_fields = record_copies_fields fields ~init in
     let record children =
       Some (Jsx_props_record {fields; init; copy_fields; children})
     in
@@ -1170,6 +1178,13 @@ let jsx_call env (funct : expression) (p : Primitive.description)
         })
       (jsx_props_of ~multi:jsx_multi props)
 
+(* A primitive applied in place is not translated with [transl_exp], so check
+   its attributes here, in the warning scope [transl_exp] would use *)
+let check_callee_attributes (funct : expression) =
+  Builtin_attributes.warning_scope ~ppwarning:false funct.exp_attributes
+    (fun () ->
+      List.iter (Translattribute.check_attribute funct) funct.exp_attributes)
+
 let rec transl_exp e =
   Builtin_attributes.warning_scope ~ppwarning:false e.exp_attributes (fun () ->
       List.iter (Translattribute.check_attribute e) e.exp_attributes;
@@ -1215,21 +1230,22 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
   | Texp_template {segments; values} ->
     prim ~primitive:(Ptemplate segments) ~args:(transl_list values) e.exp_loc
   | Texp_apply
-      {
-        funct =
-          {exp_desc = Texp_ident (_, _, {val_kind = Val_prim p; val_type})} as
-          funct;
-        args;
-        transformed_jsx = true;
-      }
-    when !Clflags.jsx_preserve
-         && Option.is_some (jsx_call e.exp_env funct p ~val_type args) -> (
-    Builtin_attributes.warning_scope ~ppwarning:false funct.exp_attributes
-      (fun () ->
-        List.iter (Translattribute.check_attribute funct) funct.exp_attributes);
+      ({
+         funct =
+           {exp_desc = Texp_ident (_, _, {val_kind = Val_prim p; val_type})} as
+           funct;
+         args;
+         transformed_jsx = true;
+       } as apply)
+    when !Clflags.jsx_preserve -> (
     match jsx_call e.exp_env funct p ~val_type args with
-    | Some call -> transl_jsx_element e.exp_loc call
-    | None -> assert false)
+    | Some call ->
+      check_callee_attributes funct;
+      transl_jsx_element e.exp_loc call
+    | None ->
+      (* not the shape the PPX produces: translate it as any other call *)
+      transl_exp0
+        {e with exp_desc = Texp_apply {apply with transformed_jsx = false}})
   | Texp_apply
       {
         funct =
@@ -1241,11 +1257,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
       }
     when List.length oargs >= p.prim_arity
          && List.for_all (fun (_, arg) -> arg <> None) oargs -> (
-    (* [funct] is not translated with [transl_exp], so check its attributes
-       here, in the warning scope [transl_exp] would use *)
-    Builtin_attributes.warning_scope ~ppwarning:false funct.exp_attributes
-      (fun () ->
-        List.iter (Translattribute.check_attribute funct) funct.exp_attributes);
+    check_callee_attributes funct;
     let args, args' = cut p.prim_arity oargs in
     let wrap f = if args' = [] then f else transl_apply f args' e.exp_loc in
     let args =
@@ -1741,21 +1753,7 @@ and transl_record loc env fields repres opt_init_expr =
   in
   match (opt_init_expr, repres, fields) with
   | _ -> (
-    let size = Array.length fields in
-    let optional = fields |> Array.exists (fun (ld, _, _) -> ld.lbl_optional) in
-    (* Determine if there are "enough" fields (only relevant if this is a
-       functional-style record update *)
-    let no_init =
-      match opt_init_expr with
-      | None -> true
-      | _ -> false
-    in
-    if
-      no_init || (size < 20 && not optional)
-      (* TODO: More strategies
-         3 + 2 * List.length lbl_expr_list >= size (density)
-      *)
-    then
+    if record_copies_fields fields ~init:opt_init_expr then
       (* Allocate new record with given fields (and remaining fields
          taken from init_expr if any *)
       let init_id = Ident.create "init" in
