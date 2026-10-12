@@ -100,9 +100,84 @@ let () =
       let printed = format original in
       let reparsed = parse printed in
       assert (comment_texts original = comment_texts reparsed);
-      assert (printed = format reparsed))
+      let reprinted = format reparsed in
+      if printed <> reprinted then
+        failwith
+          (Printf.sprintf
+             "Regexp formatting at width %d:\nFIRST:\n%s\nSECOND:\n%s" width
+             printed reprinted))
     [20; 40; 80; 100; 120];
   print_endline "✅ regexp statements round-trip at multiple widths"
+
+(* PPX-generated ## accesses print their receiver before the operator. *)
+let () =
+  let source = "let t = 0\n(/a/[\"member\"])" in
+  let parsed =
+    Res_driver.parse_implementation_from_source ~display_filename:"ppx.res"
+      ~source
+  in
+  assert (not parsed.invalid);
+  let structure =
+    List.map
+      (fun item ->
+        match item.Parsetree.pstr_desc with
+        | Pstr_eval
+            (({pexp_desc = Pexp_object_get (receiver, _)} as expr), attrs) ->
+          let funct =
+            Ast_helper.Exp.ident (Location.mknoloc (Longident.Lident "##"))
+          in
+          let member =
+            Ast_helper.Exp.ident (Location.mknoloc (Longident.Lident "member"))
+          in
+          {
+            item with
+            pstr_desc =
+              Pstr_eval
+                ( {
+                    expr with
+                    pexp_desc =
+                      (Ast_helper.Exp.apply funct
+                         [(Nolabel, receiver); (Nolabel, member)])
+                        .pexp_desc;
+                  },
+                  attrs );
+          }
+        | _ -> item)
+      parsed.parsetree
+  in
+  let printed =
+    Res_printer.print_implementation ~width:100 structure ~comments:[]
+  in
+  assert (printed = "let t = 0\n(/a/[\"member\"])\n");
+  let reparsed =
+    Res_driver.parse_implementation_from_source ~display_filename:"ppx.res"
+      ~source:printed
+  in
+  assert (not reparsed.invalid)
+
+let () =
+  List.iter
+    (fun (source, expected) ->
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"regexp.res" ~source
+      in
+      assert (not parsed.invalid);
+      let printed =
+        Res_printer.print_implementation ~width:100 parsed.parsetree
+          ~comments:parsed.comments
+      in
+      if printed <> expected then
+        failwith ("Unexpected regexp parentheses:\n" ^ printed))
+    [
+      ("/a/->f", "/a/->f\n");
+      ("type t = int\n/a/->f", "type t = int\n/a/->f\n");
+      ("open M\n/a/->f", "open M\n/a/->f\n");
+      ( "let f = () => {ignore(); (/a/ ? 1 : 2) + 1}",
+        "let f = () => {\n  ignore()\n  (/a/ ? 1 : 2) + 1\n}\n" );
+      ( "let f = () => {ignore(); (@attr /a/)->f}",
+        "let f = () => {\n  ignore()\n  (@attr /a/)->f\n}\n" );
+    ]
 
 module Outcome_printer_tests = struct
   let signature_to_outcome structure =

@@ -1,3 +1,11 @@
+/first/->ignore
+
+type firstType = int
+/afterType/->ignore
+
+open FirstModule
+/afterOpen/->ignore
+
 let afterLet = s => {
   let t = s
   (/a/->RegExp.test(t))
@@ -123,4 +131,19 @@ module Nested = {
   (/a/g[0] = 1)
   (/a/[0].foo)
   (/a/g[0].foo = 1)
+}
+
+let parenthesizedOperands = () => {
+  Console.log("before")
+  (/a/ ? 1 : 2) + 1
+  (@attr /a/)->f
+  (/a/->f + 1) * 2
+}
+
+module FirstNested = {
+  /first/->ignore
+  type t = int
+  /afterType/->ignore
+  open FirstModule
+  /afterOpen/->ignore
 }
