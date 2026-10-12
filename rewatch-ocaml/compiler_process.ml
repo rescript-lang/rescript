@@ -51,8 +51,8 @@ let run_in_process ?poll (request : request) =
       stdout = "";
       stderr = "missing compiler input";
     }
-  | input :: reversed_argv ->
-    let result =
+  | input :: reversed_argv -> (
+    match
       Rescript_compiler_driver.run_request ~cwd:request.cwd
         ~argv:(List.rev reversed_argv) ~input
         ~run_external:
@@ -63,12 +63,24 @@ let run_in_process ?poll (request : request) =
                  Process.run ?poll ~cwd:request.cwd command.program command.args
                in
                (exit_code result.status, result.stdout, result.stderr)))
-    in
-    {
-      Process.status = Unix.WEXITED result.exit_code;
-      stdout = result.stdout;
-      stderr = result.stderr;
-    }
+    with
+    | result ->
+      {
+        Process.status = Unix.WEXITED result.exit_code;
+        stdout = result.stdout;
+        stderr = result.stderr;
+      }
+    | exception
+        Compiler_request_output.Failed {error = Process.Interrupted _ as error}
+      ->
+      raise error
+    | exception Compiler_request_output.Failed {error; stdout; stderr} ->
+      (* Keep the warnings written before the failure. *)
+      {
+        Process.status = Unix.WEXITED 2;
+        stdout;
+        stderr = stderr ^ Printexc.to_string error ^ "\n";
+      })
 
 let run ?poll request =
   Option.iter (fun poll -> poll ()) poll;
