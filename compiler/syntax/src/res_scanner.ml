@@ -331,6 +331,13 @@ let scan_exotic_identifier scanner =
     scanner.err ~start_pos ~end_pos
       (Diagnostics.message "A quoted identifier can't be empty string.");
     Token.Lident ident)
+  else if name = "_" then (
+    (* `_` is the wildcard and the placeholder of underscore apply sugar;
+       a quoted `_` couldn't be told apart from them. *)
+    let end_pos = position scanner in
+    scanner.err ~start_pos ~end_pos
+      (Diagnostics.message "`_` can't be used as a quoted identifier.");
+    Token.Lident name)
   else if Ext_ident.is_uident name then Token.Lident ident
     (* Exotic ident with uppercase letter should be encoded to avoid confusing in OCaml parsetree *)
   else Token.Lident name
