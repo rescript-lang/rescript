@@ -1,0 +1,1 @@
+- Add the `allowed-dependents` and `namespace-entry` keys to the `rescript.json` schema, so editors no longer flag them. https://github.com/rescript-lang/rescript/pull/8835

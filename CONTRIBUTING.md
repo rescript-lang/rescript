@@ -346,7 +346,7 @@ Below we will discuss on how to write, build and run these test files.
 ### 1) Write a Mocha Test File
 
 - Create a file `tests/tests/src/feature_abc_test.res`. Make sure to end the file name with `_test.res`.
-- Inside the file, add a mocha test suite. The mocha bindings are defined in `tests/tests/src/mt.res`. To get you started, here is a simple scaffold for a test suite with multiple test cases:
+- Inside the file, add a mocha test suite. The mocha bindings are defined in `tests/tests/src/mocha.res`, the assertion helpers in `tests/tests/src/test_utils.res`. To get you started, here is a simple scaffold for a test suite with multiple test cases:
 
   ```rescript
   open Mocha
@@ -375,8 +375,8 @@ Below we will discuss on how to write, build and run these test files.
 This is usually the file you want to create to test certain compile behavior without running the JS code formally as a test, i.e., when you just want to check that the ReScript code compiles and produces the expected JS code.
 
 - Create your test file `tests/tests/src/my_file_test.res`. Make sure to end the file name with `_test.res`.
-- Build the `.js` artifact: `node scripts/test.js -mocha`.
-- Verify the output, check in the `tests/tests/src/my_file_test.res` and `tests/tests/src/my_file_test.js` to version control. The checked in `.js` file is essential for verifying regressions later on.
+- Build the `.mjs` artifact: `node scripts/test.js -mocha`.
+- Verify the output, check in the `tests/tests/src/my_file_test.res` and `tests/tests/src/my_file_test.mjs` to version control. The checked in `.mjs` file is essential for verifying regressions later on.
 - Eventually check in other relevant files changed during the rebuild (depends on your compiler changes).
 
 ## Contribute to the ReScript Playground Bundle
@@ -417,7 +417,7 @@ After a successful compilation, you will find following files in your project:
 - `packages/playground/packages/@rescript/belt` -> The Belt cmij, packaged separately from the compiler built-ins
 - `packages/playground/packages/*` -> Contains third party deps with cmij.js files (as defined in `packages/playground/rescript.json`)
 
-You can now use the `compiler.js` file either directly by using a `<script src="/path/to/compiler.js"/>` and `<script src="/path/to/packages/compilerCmij.js"/>` inside a html file, use a browser bundler infrastructure to optimize it, or use `nodejs` to run it on a command line:
+You can now use the `compiler.js` file either directly by using a `<script src="/path/to/compiler.js"/>` and `<script src="/path/to/packages/compiler-builtins/cmij.js"/>` inside a html file, use a browser bundler infrastructure to optimize it, or use `nodejs` to run it on a command line:
 
 ```
 $ node

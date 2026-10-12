@@ -240,7 +240,7 @@ Test.run(
 
   Test.run(__POS_OF__("dict spread runs getters"), count.contents, eq, 1)
 
-  // An expression row is evaluated after the spreads before it
+  // A function-call row is evaluated after the spreads before it
   let order = []
   let row = () => {
     order->Array.push(count.contents)

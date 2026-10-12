@@ -144,7 +144,6 @@ dead-code removal candidates; stale entries make both jobs harder.
 Run commands from the repository root:
 
 ```bash
-make watch        # Watch compiler sources
 make artifacts    # Build artifacts and update the artifact list
 make clean        # Clean build outputs
 npm run check     # Lint with Biome

@@ -90,5 +90,5 @@ compiler flags below to compare intermediate forms for a small source file:
 ./cli/bsc.js -drawlambda example.res
 ```
 
-For backend debugging, use [`lam_print.ml`](lam_print.ml) at the relevant
+For backend debugging, use [`printlambda.ml`](../ml/printlambda.ml) at the relevant
 pass boundary and remove temporary output before committing.
