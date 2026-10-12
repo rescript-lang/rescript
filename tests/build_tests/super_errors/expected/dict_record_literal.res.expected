@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/dict_record_literal.res[0m:[2m1:20-35[0m
+
+  [1;31m1[0m [2m│[0m let d: dict<int> = [1;31m{foo: 1, bar: 2}[0m
+  2 [2m│[0m 
+
+  Record syntax can't be used on a dict. Use dict{...} instead, e.g. dict{"foo": ...}.

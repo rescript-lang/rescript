@@ -3,16 +3,7 @@
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
-console.log(JSON.stringify({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-}));
+console.log(JSON.stringify({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}));
 
 console.log("hey");
 

@@ -220,6 +220,9 @@ and pattern i ppf x =
   | Ppat_array l ->
     line i ppf "Ppat_array\n";
     list i pattern ppf l
+  | Ppat_dict l ->
+    line i ppf "Ppat_dict\n";
+    list i dict_pattern_entry ppf l
   | Ppat_or (p1, p2) ->
     line i ppf "Ppat_or\n";
     pattern i ppf p1;
@@ -320,6 +323,9 @@ and expression i ppf x =
   | Pexp_array l ->
     line i ppf "Pexp_array\n";
     list i expression ppf l
+  | Pexp_dict l ->
+    line i ppf "Pexp_dict\n";
+    list i dict_entry ppf l
   | Pexp_ifthenelse (e1, e2, eo) ->
     line i ppf "Pexp_ifthenelse\n";
     expression i ppf e1;
@@ -436,6 +442,14 @@ and expression i ppf x =
     | Some closing_tag ->
       line i ppf "closing_tag =%a\n" fmt_jsx_tag_name
         closing_tag.jsx_closing_container_tag_name)
+
+and dict_entry i ppf = function
+  | Pdict_entry (key, e) ->
+    line i ppf "Pdict_entry %a\n" fmt_string_loc key;
+    expression (i + 1) ppf e
+  | Pdict_spread e ->
+    line i ppf "Pdict_spread\n";
+    expression (i + 1) ppf e
 
 and jsx_children i ppf children =
   line i ppf "jsx_children =\n";
@@ -752,6 +766,10 @@ and label_decl i ppf ({pld_name; pld_mutable; pld_type; pld_loc} as ld) =
   line (i + 1) ppf "%a\n" fmt_mutable_flag pld_mutable;
   line (i + 1) ppf "%a" fmt_string_loc pld_name;
   core_type (i + 1) ppf pld_type
+
+and dict_pattern_entry i ppf {pdp_key; pdp_pattern; pdp_optional} =
+  line i ppf "%a%s\n" fmt_string_loc pdp_key (if pdp_optional then "?" else "");
+  pattern (i + 1) ppf pdp_pattern
 
 and longident_x_pattern i ppf {lid = li; x = p; opt} =
   line i ppf "%a%s\n" fmt_longident_loc li (if opt then "?" else "");

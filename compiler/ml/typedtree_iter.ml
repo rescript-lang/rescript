@@ -197,6 +197,8 @@ end = struct
       | Some pat -> iter_pattern pat)
     | Tpat_record (list, _closed, _rest) ->
       List.iter (fun (_, _, pat, _) -> iter_pattern pat) list
+    | Tpat_dict entries ->
+      List.iter (fun {tdp_pattern} -> iter_pattern tdp_pattern) entries
     | Tpat_array list -> List.iter iter_pattern list
     | Tpat_or (p1, p2, _) ->
       iter_pattern p1;
@@ -262,6 +264,11 @@ end = struct
       iter_expression exp1;
       iter_expression exp2
     | Texp_array list -> List.iter iter_expression list
+    | Texp_dict entries ->
+      List.iter
+        (function
+          | Tdict_entry (_, exp) | Tdict_spread exp -> iter_expression exp)
+        entries
     | Texp_ifthenelse (exp1, exp2, expo) -> (
       iter_expression exp1;
       iter_expression exp2;

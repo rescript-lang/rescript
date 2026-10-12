@@ -24,14 +24,6 @@
 
 type t = Parsetree.core_type
 
-let lift_option_type ({ptyp_loc} as ty : t) : t =
-  {
-    ptyp_desc =
-      Ptyp_constr ({txt = Ast_literal.predef_option; loc = ptyp_loc}, [ty]);
-    ptyp_loc;
-    ptyp_attributes = [];
-  }
-
 open Ast_helper
 
 (* let replace_result (ty : t) (result : t) : t =

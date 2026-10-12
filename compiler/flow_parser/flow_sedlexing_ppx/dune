@@ -5,6 +5,4 @@
  (libraries ppxlib flow_sedlexing)
  (ppx_runtime_libraries flow_sedlexing)
  (preprocess
-  (pps ppxlib.metaquot))
- (flags
-  (:standard -w -9)))
+  (pps ppxlib.metaquot)))

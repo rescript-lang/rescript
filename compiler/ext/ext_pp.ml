@@ -36,40 +36,44 @@ type t = {
   mutable last_new_line: bool;
   mutable line: int;
   mutable column: int; (* only when we print newline, we print the indent *)
+  track_positions: bool;
+      (* [line] and [column] are only maintained for source maps *)
 }
 
 let update_position t s =
-  let len = String.length s in
-  let rec loop i =
-    if i < len then
-      match String.unsafe_get s i with
-      | '\n' ->
-        t.line <- t.line + 1;
-        t.column <- 0;
-        loop (i + 1)
-      | _ ->
-        let decoded = String.get_utf_8_uchar s i in
-        let width = Uchar.utf_decode_length decoded in
-        let utf16_units =
-          if
-            Uchar.utf_decode_is_valid decoded
-            && Uchar.to_int (Uchar.utf_decode_uchar decoded) > 0xffff
-          then 2
-          else 1
-        in
-        t.column <- t.column + utf16_units;
-        loop (i + width)
-  in
-  loop 0
+  if t.track_positions then
+    let len = String.length s in
+    let rec loop i =
+      if i < len then
+        match String.unsafe_get s i with
+        | '\n' ->
+          t.line <- t.line + 1;
+          t.column <- 0;
+          loop (i + 1)
+        | _ ->
+          let decoded = String.get_utf_8_uchar s i in
+          let width = Uchar.utf_decode_length decoded in
+          let utf16_units =
+            if
+              Uchar.utf_decode_is_valid decoded
+              && Uchar.to_int (Uchar.utf_decode_uchar decoded) > 0xffff
+            then 2
+            else 1
+          in
+          t.column <- t.column + utf16_units;
+          loop (i + width)
+    in
+    loop 0
 
 let update_position_char t c =
-  match c with
-  | '\n' ->
-    t.line <- t.line + 1;
-    t.column <- 0
-  | _ -> t.column <- t.column + 1
+  if t.track_positions then
+    match c with
+    | '\n' ->
+      t.line <- t.line + 1;
+      t.column <- 0
+    | _ -> t.column <- t.column + 1
 
-let from_channel chan =
+let from_channel ?(track_positions = false) chan =
   {
     output_string = (fun s -> output_string chan s);
     output_char = (fun c -> output_char chan c);
@@ -78,9 +82,10 @@ let from_channel chan =
     last_new_line = false;
     line = 0;
     column = 0;
+    track_positions;
   }
 
-let from_buffer buf =
+let from_buffer ?(track_positions = false) buf =
   {
     output_string = (fun s -> Buffer.add_string buf s);
     output_char = (fun c -> Buffer.add_char buf c);
@@ -89,6 +94,7 @@ let from_buffer buf =
     last_new_line = false;
     line = 0;
     column = 0;
+    track_positions;
   }
 
 (* If we have [newline] in [s],
@@ -211,4 +217,6 @@ let brace_group st n action = group st n (fun _ -> brace st action)
 
 let flush t () = t.flush ()
 
-let position t = (t.line, t.column)
+let position t =
+  assert t.track_positions;
+  (t.line, t.column)

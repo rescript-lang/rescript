@@ -26,19 +26,7 @@ function f() {
 }
 
 function g() {
-  return Stdlib_List.length({
-    hd: 1,
-    tl: {
-      hd: 2,
-      tl: {
-        hd: 3,
-        tl: {
-          hd: 4,
-          tl: /* [] */0
-        }
-      }
-    }
-  });
+  return Stdlib_List.length({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: {hd: 4, tl: /* [] */0}}}});
 }
 
 function xx() {
@@ -49,13 +37,7 @@ function xx() {
 }
 
 Mocha.describe("Global_module_alias_test", () => {
-  Mocha.test("module alias basic operations", () => Test_utils.eq("File \"global_module_alias_test.res\", line 71, characters 7-14", Stdlib_List.length({
-    hd: 1,
-    tl: {
-      hd: 2,
-      tl: /* [] */0
-    }
-  }), 2));
+  Mocha.test("module alias basic operations", () => Test_utils.eq("File \"global_module_alias_test.res\", line 71, characters 7-14", Stdlib_List.length({hd: 1, tl: {hd: 2, tl: /* [] */0}}), 2));
   Mocha.test("module alias with Make functor", () => {
     v.contents = v.contents + 1 | 0;
     v.contents = v.contents + 1 | 0;
@@ -74,25 +56,10 @@ Mocha.describe("Global_module_alias_test", () => {
   Mocha.test("module alias unpacking", () => Test_utils.eq("File \"global_module_alias_test.res\", line 80, characters 7-14", g(), 4));
   Mocha.test("module alias with functor applications", () => {
     let V = xx();
-    Test_utils.eq("File \"global_module_alias_test.res\", line 85, characters 7-14", V.length({
-      hd: 1,
-      tl: {
-        hd: 2,
-        tl: {
-          hd: 3,
-          tl: /* [] */0
-        }
-      }
-    }), 3);
+    Test_utils.eq("File \"global_module_alias_test.res\", line 85, characters 7-14", V.length({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}), 3);
     Test_utils.eq("File \"global_module_alias_test.res\", line 86, characters 7-14", v.contents, 15);
     let H = f();
-    Test_utils.eq("File \"global_module_alias_test.res\", line 88, characters 7-14", H.length({
-      hd: 1,
-      tl: {
-        hd: 2,
-        tl: /* [] */0
-      }
-    }), 2);
+    Test_utils.eq("File \"global_module_alias_test.res\", line 88, characters 7-14", H.length({hd: 1, tl: {hd: 2, tl: /* [] */0}}), 2);
     Test_utils.eq("File \"global_module_alias_test.res\", line 89, characters 7-14", v.contents, 21);
   });
 });

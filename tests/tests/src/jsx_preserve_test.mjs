@@ -25,7 +25,7 @@ let _multiple_element_children = <div>
 </div>;
 
 let _single_element_fragment = <>
-  {<input />}
+  <input />
 </>;
 
 let _multiple_element_fragment = <>
@@ -55,12 +55,65 @@ let baseProps = {
 };
 
 let _unary_element_with_spread_props = <input
-  {...baseProps} 
+  {...baseProps}
   type={"text"}
 />;
 
+let otherProps = {
+  id: "bar"
+};
+
+let _unary_element_with_props_of_two_spreads = <input
+  {...{...baseProps, ...otherProps}}
+/>;
+
+let _unary_element_with_spread_and_spaced_key = <input
+  {...{
+    ...baseProps,
+    "foo bar": "x"
+  }}
+/>;
+
+let _unary_element_with_spread_and_proto_key = <input
+  {...{
+    ...baseProps,
+    ["__proto__"]: "x"
+  }}
+/>;
+
+let _unary_element_with_spread_and_hyphenated_key = <input
+  {...{
+    ...baseProps,
+    "aria-label": "x"
+  }}
+/>;
+
+let _container_with_spread_and_repeated_children = <div
+  {...{
+    ...baseProps,
+    children: "first",
+    children: "second"
+  }}
+/>;
+
+let _unary_element_with_spread_and_repeated_key = <input
+  {...{
+    ...baseProps,
+    title: "x",
+    title: "y"
+  }}
+/>;
+
+let _unary_element_with_spread_and_key_prop_keyed = <input
+  key={"outer"}
+  {...{
+    ...baseProps,
+    key: "inner"
+  }}
+/>;
+
 let _container_with_spread_props = <div
-  {...baseProps} 
+  {...baseProps}
   className={"barry"}
   title={"barry"}
 >
@@ -80,14 +133,14 @@ let baseChildren = [
 ];
 
 let _unary_element_with_spread_props_keyed = <input
-  key={"barry-key"} 
-  {...baseProps} 
+  key={"barry-key"}
+  {...baseProps}
   type={"text"}
 />;
 
 let _container_with_spread_props_keyed = <div
-  key={"barry-key"} 
-  {...baseProps} 
+  key={"barry-key"}
+  {...baseProps}
   className={"barry"}
   title={"barry"}
 >
@@ -98,7 +151,8 @@ let _container_with_spread_props_keyed = <div
 </div>;
 
 let _unary_element_with_only_spread_props = <input
-  {...baseProps} />;
+  {...baseProps}
+/>;
 
 function QueryClientProvider(props) { return props.children }
 ;
@@ -251,6 +305,14 @@ export {
   _container_element_with_props_and_children,
   baseProps,
   _unary_element_with_spread_props,
+  otherProps,
+  _unary_element_with_props_of_two_spreads,
+  _unary_element_with_spread_and_spaced_key,
+  _unary_element_with_spread_and_proto_key,
+  _unary_element_with_spread_and_hyphenated_key,
+  _container_with_spread_and_repeated_children,
+  _unary_element_with_spread_and_repeated_key,
+  _unary_element_with_spread_and_key_prop_keyed,
   _container_with_spread_props,
   baseChildren,
   _unary_element_with_spread_props_keyed,

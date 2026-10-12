@@ -549,6 +549,79 @@ end
 module E = struct
   (* Value expressions for the core language *)
 
+  (* The rows of [Primitive_dict.make([("a", 1), ...])] *)
+  let dict_rows (e : expression) =
+    match e.pexp_desc with
+    | Pexp_apply
+        ( {
+            pexp_desc = Pexp_ident {txt = Ldot (Lident "Primitive_dict", "make")};
+            pexp_attributes = [];
+          },
+          [
+            ( Asttypes.Noloc.Nolabel,
+              {pexp_desc = Pexp_array items; pexp_attributes = []} );
+          ] ) ->
+      let row = function
+        | {
+            pexp_desc =
+              Pexp_tuple
+                [
+                  {
+                    pexp_desc =
+                      Pexp_constant
+                        (Pconst_string (_, (None | Some ("js" | "*j"))) as key);
+                    pexp_loc = key_loc;
+                    pexp_attributes = [];
+                  };
+                  value;
+                ];
+            pexp_attributes = [];
+          } -> (
+          match map_constant ~loc:key_loc key with
+          | Pt.Pconst_string key ->
+            Some
+              ({txt = String_literal.string_semantic key; loc = key_loc}, value)
+          | _ -> None)
+        | _ -> None
+      in
+      let rows = List.filter_map row items in
+      if List.length rows = List.length items then Some rows else None
+    | _ -> None
+
+  (* The entries of a dict literal encoded as calls, see [Ast_dict] *)
+  let dict_entries (e : expression) =
+    let chunk (e : expression) =
+      match e.pexp_attributes with
+      | [] -> dict_rows e
+      | _ -> None
+    in
+    let rows = List.map (fun row -> `Row row) in
+    match e.pexp_desc with
+    | Pexp_apply
+        ( {
+            pexp_desc =
+              Pexp_ident {txt = Ldot (Lident "Primitive_dict", "spread")};
+            pexp_attributes = [({txt}, PStr [])];
+          },
+          [
+            (Asttypes.Noloc.Nolabel, target);
+            ( Asttypes.Noloc.Nolabel,
+              {pexp_desc = Pexp_array sources; pexp_attributes = []} );
+          ] )
+      when txt = Ast_dict.spread_marker -> (
+      match chunk target with
+      | Some target_rows ->
+        Some
+          (rows target_rows
+          @ List.concat_map
+              (fun source ->
+                match chunk source with
+                | Some source_rows -> rows source_rows
+                | None -> [`Spread source])
+              sources)
+      | None -> None)
+    | _ -> Option.map rows (dict_rows e)
+
   let has_await_attribute attrs =
     List.exists
       (function
@@ -672,8 +745,7 @@ module E = struct
     in
     let first_wrapper =
       let rec find = function
-        | ({txt = "res.braces" | "ns.braces"; loc}, _) :: _ ->
-          Some (`Braces loc)
+        | ({txt = "res.braces"; loc}, _) :: _ -> Some (`Braces loc)
         | ({txt = "res.await"}, _) :: _ -> Some `Await
         | _ :: rest -> find rest
         | [] -> None
@@ -687,7 +759,7 @@ module E = struct
            | _ -> false ->
       let outer_attrs0, braces_loc, inner_attrs0 =
         let rec split acc = function
-          | ({Location.txt = "res.braces" | "ns.braces"; loc}, _) :: rest ->
+          | ({Location.txt = "res.braces"; loc}, _) :: rest ->
             (List.rev acc, loc, rest)
           | a :: rest -> split (a :: acc) rest
           | [] -> assert false
@@ -784,6 +856,15 @@ module E = struct
       fun_ ~loc ~attrs
         [{p_attrs = []; p_lbl = Nolabel; p_default = None; p_pat = pat}]
         body
+    | Pexp_apply _ when Option.is_some (dict_entries e) ->
+      let entries = Option.get (dict_entries e) in
+      dict ~loc ~attrs
+        (List.map
+           (function
+             | `Row (key, value) ->
+               Pt.Pdict_entry (map_loc sub key, sub.expr sub value)
+             | `Spread spread -> Pt.Pdict_spread (sub.expr sub spread))
+           entries)
     | Pexp_apply
         ( {pexp_desc = Pexp_ident {txt = Longident.Lident "#="}},
           [
@@ -1319,6 +1400,32 @@ module P = struct
           ~split_tuple:has_constructor_args arg
       in
       variant ~loc ~attrs l {txt = args; loc = args_loc}
+    | Ppat_record (lpl, Open)
+      when List.exists (fun ({txt}, _) -> txt = "res.dictPattern") attrs
+           && List.for_all
+                (fun (lid, _) ->
+                  match lid.txt with
+                  | Longident.Lident _ -> true
+                  | _ -> false)
+                lpl ->
+      (* A dict pattern, see [Ast_mapper_to0] *)
+      let attrs =
+        List.filter (fun ({txt}, _) -> txt <> "res.dictPattern") attrs
+      in
+      dict ~loc ~attrs
+        (List.map
+           (fun (lid, p) ->
+             let p1 = sub.pat sub p in
+             let optional, attrs =
+               Parsetree0.get_optional_attr p1.ppat_attributes
+             in
+             {
+               Pt.pdp_key =
+                 {txt = Longident.last lid.txt; loc = sub.location sub lid.loc};
+               pdp_pattern = {p1 with ppat_attributes = attrs};
+               pdp_optional = optional;
+             })
+           lpl)
     | Ppat_record (lpl, cf) ->
       let rest, attrs = get_record_rest_attr attrs in
       record ~loc ~attrs ?rest

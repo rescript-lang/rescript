@@ -19,16 +19,12 @@ let output_cmt output_channel cmt =
   output_string output_channel Config.cmt_magic_number;
   output_value output_channel (cmt : cmt_infos)
 
-let save_cmt filename modname binary_annots sourcefile initial_env cmi =
+(* Unlike OCaml, no copy of the .cmi is written in front of the cmt infos:
+   tools read the .cmi itself. *)
+let save_cmt filename modname binary_annots sourcefile initial_env =
   if !Clflags.binary_annotations then
     Misc.output_to_bin_file_directly filename
-      (fun temp_file_name output_channel ->
-        let interface_digest =
-          match cmi with
-          | None -> None
-          | Some cmi ->
-            Some (Cmi_format.output_cmi temp_file_name output_channel cmi)
-        in
+      (fun _temp_file_name output_channel ->
         let cmt =
           {
             cmt_modname = modname;
@@ -44,7 +40,7 @@ let save_cmt filename modname binary_annots sourcefile initial_env cmi =
               (if need_to_clear_env then keep_only_summary initial_env
                else initial_env);
             cmt_imports = List.sort compare (Env.imports ());
-            cmt_interface_digest = interface_digest;
+            cmt_interface_digest = None;
             cmt_use_summaries = need_to_clear_env;
             cmt_extra_info = {deprecated_used = deprecated_uses ()};
           }

@@ -265,9 +265,6 @@ let command ~debug ~emitter ~source ~kind_file =
                 |> List.exists (fun ({Location.txt}, _) -> txt = "res.spread")
               in
               not has_spread_attr
-            (* Dict syntax (`dict{...}`) is converted to `Primitive_dict.make` *)
-            | Ldot (Lident "Primitive_dict", "make") -> false
-            | Lident "Primitive_dict" -> false
             (* Array access (`arr[index]`) is converted to `Array.get` *)
             | Ldot (Lident "Array", "get") -> false
             (* Array mutation (`arr[index]`) is converted to `Array.set` *)

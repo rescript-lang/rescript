@@ -89,7 +89,7 @@ type normalizedConfig = {
   sourceMapRoot: string,
 }
 
-let defaultWarnFlags = "+a-4-9-20-40-41-42-50-61-102-109"
+let defaultWarnFlags = "+a-4-9-20-41-102-109"
 
 let defaultCompilerVersion = Env.viteDefaultCompilerVersion->Option.getOr("local")
 

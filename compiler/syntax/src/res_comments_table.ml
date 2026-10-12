@@ -1399,22 +1399,23 @@ and walk_expression expr t comments =
     attach t.trailing expr.pexp_loc after_expr;
     walk_list (cases |> List.map (fun case -> Case case)) t rest
     (* unary expression: todo use parsetreeviewer *)
-  | Pexp_apply _
-    when Option.is_some
-           (Res_parsetree_viewer.collect_spread_dict_expr_parts expr) -> (
-    match Res_parsetree_viewer.collect_spread_dict_expr_parts expr with
-    | Some parts ->
-      let part_exprs =
-        List.map
-          (function
-            | Res_parsetree_viewer.DictExprRows rows_expr ->
-              Expression rows_expr
-            | Res_parsetree_viewer.DictExprSpread spread_expr ->
-              Expression spread_expr)
-          parts
-      in
-      walk_list part_exprs t comments
-    | None -> assert false)
+  | Pexp_dict entries when Res_parsetree_viewer.dict_has_spread entries ->
+    let part_exprs =
+      List.map
+        (function
+          | Res_parsetree_viewer.DictExprRows rows_expr -> Expression rows_expr
+          | Res_parsetree_viewer.DictExprSpread spread_expr ->
+            Expression spread_expr)
+        (Res_parsetree_viewer.dict_expr_parts ~loc:expr.pexp_loc entries)
+    in
+    walk_list part_exprs t comments
+  | Pexp_dict entries ->
+    walk_list
+      [
+        Expression
+          (Res_parsetree_viewer.dict_expr_rows ~loc:expr.pexp_loc entries);
+      ]
+      t comments
   | Pexp_apply
       {
         funct =
@@ -1488,18 +1489,6 @@ and walk_expression expr t comments =
     walk_list
       [Expression parent_expr; Expression member_expr; Expression target_expr]
       t comments
-  | Pexp_apply
-      {
-        funct =
-          {
-            pexp_desc =
-              Pexp_ident
-                {txt = Longident.Ldot (Lident "Primitive_dict", "make")};
-          };
-        args = [(Nolabel, key_values)];
-      }
-    when Res_parsetree_viewer.is_tuple_array key_values ->
-    walk_list [Expression key_values] t comments
   | Pexp_tagged_template {tag; values} ->
     walk_list (List.map (fun e -> Expression e) (tag :: values)) t comments
   | Pexp_template {values} ->
@@ -2065,6 +2054,13 @@ and walk_pattern pat t comments =
   | Ppat_variant (_label, {txt = args}) ->
     walk_list (List.map (fun pat -> Pattern pat) args) t comments
   | Ppat_type _ | Ppat_variant_spread _ -> ()
+  | Ppat_dict entries ->
+    (* Comments attach to rows as in record patterns *)
+    walk_list
+      (Ext_list.map entries (fun {pdp_key; pdp_pattern} ->
+           PatternRecordRow
+             ({pdp_key with txt = Longident.Lident pdp_key.txt}, pdp_pattern)))
+      t comments
   | Ppat_record (record_rows, _, rest) ->
     let nodes =
       Ext_list.map record_rows (fun {lid; x = p} -> PatternRecordRow (lid, p))

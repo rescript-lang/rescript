@@ -41,8 +41,6 @@ let rename i =
 
 let name i = i.name
 
-let unique_name i = i.name ^ "_" ^ string_of_int i.stamp
-
 let unique_toplevel_name i = i.name ^ "/" ^ string_of_int i.stamp
 
 let persistent i = i.stamp = 0
@@ -222,17 +220,3 @@ let compare x y =
   else
     let c = compare x.name y.name in
     if c <> 0 then c else compare x.flags y.flags
-
-let output oc id = output_string oc (unique_name id)
-let hash i = Char.code i.name.[0] lxor i.stamp
-
-let original_equal = equal
-include Identifiable.Make (struct
-  type nonrec t = t
-  let compare = compare
-  let output = output
-  let print = print
-  let hash = hash
-  let equal = same
-end)
-let equal = original_equal

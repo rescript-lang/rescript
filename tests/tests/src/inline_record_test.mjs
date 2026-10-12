@@ -13,13 +13,7 @@ let v = {
 
 let v1 = {
   TAG: "A1",
-  more: {
-    hd: 1,
-    tl: {
-      hd: 2,
-      tl: /* [] */0
-    }
-  }
+  more: {hd: 1, tl: {hd: 2, tl: /* [] */0}}
 };
 
 function f(x) {

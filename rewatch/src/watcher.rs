@@ -325,6 +325,16 @@ fn cleanup_before_watch_exit(
     build::with_build_lock(path, || clean::cleanup_after_build(build_state));
 }
 
+// Removing lib/watch.lock asks the watcher to quit.
+fn exit_after_lockfile_removed(path: &Path, build_state: &BuildCommandState, show_progress: bool) {
+    cleanup_before_watch_exit(
+        path,
+        build_state,
+        show_progress,
+        "\nExiting... (lockfile removed)",
+    );
+}
+
 struct AsyncWatchArgs<'a> {
     watcher: &'a mut RecommendedWatcher,
     current_watches: Vec<RegisteredWatch>,
@@ -386,12 +396,7 @@ async fn async_watch(
                 .any(|path| path.ends_with(LockKind::Watch.file_name()))
                 && let EventKind::Remove(_) = event.kind
             {
-                cleanup_before_watch_exit(
-                    path,
-                    &build_state,
-                    show_progress,
-                    "\nExiting... (lockfile removed)",
-                );
+                exit_after_lockfile_removed(path, &build_state, show_progress);
                 return Ok(());
             }
 
@@ -628,12 +633,7 @@ async fn async_watch(
                 // The removal event of watch.lock can be lost while watches are re-registered
                 // (some backends restart their event stream), so check the file itself.
                 if !path.join("lib").join(LockKind::Watch.file_name()).exists() {
-                    cleanup_before_watch_exit(
-                        path,
-                        &build_state,
-                        show_progress,
-                        "\nExiting... (lockfile removed)",
-                    );
+                    exit_after_lockfile_removed(path, &build_state, show_progress);
                     return Ok(());
                 }
             }

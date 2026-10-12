@@ -47,6 +47,8 @@ type error =
       label: string;
       jsx_component_info: jsx_prop_error_info option;
     }
+  | Dict_key_multiply_defined of string
+  | Record_syntax_on_dict_type of string
   | Labels_missing of {
       labels: string list;
       jsx_component_info: jsx_prop_error_info option;
@@ -228,6 +230,11 @@ let iter_expression f e =
       expr e;
       module_expr me
     | Pexp_pack me -> module_expr me
+    | Pexp_dict entries ->
+      List.iter
+        (function
+          | Pdict_entry (_, e) | Pdict_spread e -> expr e)
+        entries
     | Pexp_await _ -> assert false (* should be handled earlier *)
     | Pexp_jsx_element _ ->
       raise (Error (e.pexp_loc, Env.empty, Jsx_not_enabled))
@@ -570,7 +577,8 @@ let rec build_as_type env p =
     | Some row ->
       let row = row_repr row in
       newty (Tvariant {row with row_closed = false; row_more = newvar ()}))
-  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_array _ -> p.pat_type
+  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_dict _ | Tpat_array _ ->
+    p.pat_type
 
 let build_or_pat env loc lid =
   let path, decl = Typetexp.find_type env lid.loc lid.txt in
@@ -870,8 +878,6 @@ module Name_choice (Name : sig
   val get_name : t -> string
   val get_type : t -> type_expr
   val get_descrs : Env.type_descriptions -> t list
-
-  val unsafe_do_not_use__add_with_name : t -> string -> t
   val unbound_name_error :
     ?from_type:type_expr -> Env.t -> Longident.t loc -> 'a
 end) =
@@ -886,29 +892,17 @@ struct
   let lookup_from_type env tpath (lid : Longident.t loc) : Name.t =
     let descrs = get_descrs (Env.find_type_descrs tpath env) in
     Env.mark_type_used env (Path.last tpath) (Env.find_type tpath env);
-    if Path.same tpath Predef.path_dict then
-      (* [dict] Handle directing any label lookup to the magic dict field. *)
-      match lid.txt with
-      | Longident.Lident s ->
-        let x =
-          List.find
-            (fun nd -> get_name nd = Dict_type_helpers.dict_magic_field_name)
-            descrs
-        in
-        unsafe_do_not_use__add_with_name x s
-      | _ -> raise Not_found
-    else
-      match lid.txt with
-      | Longident.Lident s -> (
-        try List.find (fun nd -> get_name nd = s) descrs
-        with Not_found ->
-          let names = List.map get_name descrs in
-          raise
-            (Error
-               ( lid.loc,
-                 env,
-                 Wrong_name ("", newvar (), type_kind, tpath, s, names) )))
-      | _ -> raise Not_found
+    match lid.txt with
+    | Longident.Lident s -> (
+      try List.find (fun nd -> get_name nd = s) descrs
+      with Not_found ->
+        let names = List.map get_name descrs in
+        raise
+          (Error
+             ( lid.loc,
+               env,
+               Wrong_name ("", newvar (), type_kind, tpath, s, names) )))
+    | _ -> raise Not_found
 
   let rec unique eq acc = function
     | [] -> List.rev acc
@@ -981,6 +975,15 @@ struct
     lbl
 end
 
+(* Record syntax on a dict, e.g. [let d: dict<int> = {foo: 1}]: point to
+   [dict{...}] *)
+let check_no_record_syntax_on_dict env loc ty (fields : _ record_element list) =
+  match ((expand_head env ty).desc, fields) with
+  | Tconstr (path, _, _), {lid} :: _ when Path.same path Predef.path_dict ->
+    raise
+      (Error (loc, env, Record_syntax_on_dict_type (Longident.last lid.txt)))
+  | _ -> ()
+
 let wrap_disambiguate kind ty f x =
   try f x
   with Error (loc, env, Wrong_name ("", _, tk, tp, name, valid_names)) ->
@@ -991,58 +994,60 @@ module Label = Name_choice (struct
   let type_kind = "record"
   let get_name lbl = lbl.lbl_name
 
-  let unsafe_do_not_use__add_with_name lbl name =
-    (* [dict] This is used in dicts and shouldn't be used anywhere else.
-       It adds a new field to an existing record type, to "fool" the pattern
-       matching into thinking the label exists. *)
-    let l =
-      {
-        lbl with
-        lbl_name = name;
-        lbl_runtime_name = name;
-        lbl_pos = Array.length lbl.lbl_all;
-        lbl_repres = Record_regular;
-      }
-    in
-    let lbl_all_list = Array.to_list lbl.lbl_all @ [l] in
-    let lbl_all = Array.of_list lbl_all_list in
-    lbl_all |> Array.iter (fun lbl -> lbl.lbl_all <- lbl_all);
-    l
   let get_type lbl = lbl.lbl_res
   let get_descrs = snd
   let unbound_name_error = Typetexp.unbound_label_error
 end)
 
-let disambiguate_label_by_ids closed ids labels =
-  let check_ids (lbl, _) =
+(* [ids] are the fields of one record expression or pattern. Whether a
+   candidate label fits them only depends on the label's record type, so the
+   checks are done once per type ([lbl_all] is shared by its labels) rather
+   than for every field, which would be quadratic in the number of fields. *)
+let disambiguate_label_by_ids closed ids =
+  let num_ids = List.length ids in
+  let check_ids lbl_all =
     (* check that all ids are present *)
     let lbls = Hashtbl.create 8 in
-    Array.iter (fun lbl -> Hashtbl.add lbls lbl.lbl_name ()) lbl.lbl_all;
+    Array.iter (fun lbl -> Hashtbl.add lbls lbl.lbl_name ()) lbl_all;
     List.for_all (Hashtbl.mem lbls) ids
   in
-  let mandatory_labels_are_present num_ids lbl =
+  let mandatory_labels_are_present lbl_all =
     (* check that all mandatory labels are present *)
-    let has_optional_labels = Array.exists label_is_optional lbl.lbl_all in
+    let has_optional_labels = Array.exists label_is_optional lbl_all in
     if has_optional_labels then (
       let mandatory_lbls = ref 0 in
-      lbl.lbl_all
+      lbl_all
       |> Array.iter (fun l ->
           if not (label_is_optional l) then incr mandatory_lbls);
       num_ids >= !mandatory_lbls)
-    else num_ids = Array.length lbl.lbl_all
+    else num_ids = Array.length lbl_all
   in
-  let check_closed (lbl, _) =
-    (not closed) || mandatory_labels_are_present (List.length ids) lbl
+  let checked = ref [] in
+  let check lbl_all =
+    match List.assq lbl_all !checked with
+    | result -> result
+    | exception Not_found ->
+      let result =
+        (check_ids lbl_all, (not closed) || mandatory_labels_are_present lbl_all)
+      in
+      checked := (lbl_all, result) :: !checked;
+      result
   in
-  let labels' = Ext_list.filter labels check_ids in
-  if labels' = [] then (false, labels)
-  else
-    let labels'' = Ext_list.filter labels' check_closed in
-    if labels'' = [] then (false, labels') else (true, labels'')
+  fun labels ->
+    let labels' =
+      Ext_list.filter labels (fun (lbl, _) -> fst (check lbl.lbl_all))
+    in
+    if labels' = [] then (false, labels)
+    else
+      let labels'' =
+        Ext_list.filter labels' (fun (lbl, _) -> snd (check lbl.lbl_all))
+      in
+      if labels'' = [] then (false, labels') else (true, labels'')
 
 (* Only issue warnings once per record constructor/pattern *)
 let disambiguate_record_elem_list loc closed env opath record_elem_list =
   let ids = List.map (fun {lid} -> Longident.last lid.txt) record_elem_list in
+  let disambiguate_by_ids = disambiguate_label_by_ids closed ids in
   let w_amb = ref [] in
   let warn loc msg =
     let open Warnings in
@@ -1066,7 +1071,7 @@ let disambiguate_record_elem_list loc closed env opath record_elem_list =
     let ok, labels =
       match opath with
       | Some _ -> (true, scope) (* disambiguate only checks scope *)
-      | _ -> disambiguate_label_by_ids closed ids scope
+      | _ -> disambiguate_by_ids scope
     in
     if ok then Label.disambiguate lid env opath labels ~warn ~scope
     else fst (List.hd labels)
@@ -1187,7 +1192,6 @@ module Constructor = Name_choice (struct
   let get_name cstr = cstr.cstr_name
   let get_type cstr = cstr.cstr_res
 
-  let unsafe_do_not_use__add_with_name _cstr _name = assert false
   let get_descrs = fst
   let unbound_name_error = Typetexp.unbound_constructor_error
 end)
@@ -1239,6 +1243,19 @@ let normalize_constructor_pat_args ~arity {Location.txt = sargs; loc} =
   | [{ppat_desc = Ppat_tuple args}] when arity > 1 -> args
   | _ :: _ :: _ when arity = 1 -> [Ast_helper.Pat.tuple ~loc sargs]
   | sargs -> sargs
+
+(* A constructor of a counter-example rebuilt by [Parmatch.Conv] *)
+let is_from_parmatch (pat : Parsetree.pattern) =
+  match pat.ppat_desc with
+  | Ppat_construct ({txt = Lident s}, _) ->
+    String.length s >= 2 && s.[0] = '#' && s.[1] = '$'
+  | _ -> false
+
+(* The pattern of an optional field: [Some(pat)] *)
+let wrap_some (pat : Parsetree.pattern) =
+  let lid = mknoloc Longident.(Ldot (Lident "*predef*", "Some")) in
+  Ast_helper.Pat.construct ~loc:pat.ppat_loc lid
+    (Location.mkloc [pat] pat.ppat_loc)
 
 (* type_pat propagates the expected type as well as maps for
    constructors and labels.
@@ -1549,20 +1566,49 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     match (sarg, arg_type) with
     | Some p, [ty] -> type_pat p ty (fun p -> k (Some p))
     | _ -> k None)
-  | Ppat_record (lid_sp_list, closed, rest) ->
-    let has_dict_pattern_attr =
-      Dict_type_helpers.has_dict_pattern_attribute sp.ppat_attributes
+  | Ppat_dict entries ->
+    (* An entry matches its key's value as an option, [None] when the key is
+       absent, like an optional record field *)
+    let seen = Hashtbl.create 7 in
+    List.iter
+      (fun {pdp_key} ->
+        if Hashtbl.mem seen pdp_key.txt then
+          raise
+            (Error (pdp_key.loc, !env, Dict_key_multiply_defined pdp_key.txt))
+        else Hashtbl.add seen pdp_key.txt ())
+      entries;
+    let ty_value = newvar () in
+    let ty_option =
+      newty (Tconstr (Predef.path_option, [ty_value], ref Mnil))
     in
+    let type_entry {pdp_key; pdp_pattern; pdp_optional} k =
+      let sarg =
+        if pdp_optional || is_from_parmatch pdp_pattern then pdp_pattern
+        else wrap_some pdp_pattern
+      in
+      type_pat sarg ty_option (fun tdp_pattern ->
+          k {tdp_key = pdp_key; tdp_pattern; tdp_optional = pdp_optional})
+    in
+    map_fold_cont type_entry entries (fun entries ->
+        unify_pat_types loc !env
+          (newty (Tconstr (Predef.path_dict, [ty_value], ref Mnil)))
+          expected_ty;
+        rp k
+          {
+            pat_desc = Tpat_dict entries;
+            pat_loc = loc;
+            pat_extra = [];
+            pat_type = expected_ty;
+            pat_attributes = sp.ppat_attributes;
+            pat_env = !env;
+          })
+  | Ppat_record (lid_sp_list, closed, rest) ->
+    check_no_record_syntax_on_dict !env loc expected_ty lid_sp_list;
     let opath, record_ty =
-      if has_dict_pattern_attr then
-        ( (* [dict] Make sure dict patterns are inferred as actual dicts *)
-          Some (Predef.path_dict, Predef.path_dict),
-          newgenty (Tconstr (Predef.path_dict, [newvar ()], ref Mnil)) )
-      else
-        try
-          let p0, p, _, _ = extract_concrete_record !env expected_ty in
-          (Some (p0, p), expected_ty)
-        with Not_found -> (None, newvar ())
+      try
+        let p0, p, _, _ = extract_concrete_record !env expected_ty in
+        (Some (p0, p), expected_ty)
+      with Not_found -> (None, newvar ())
     in
     let get_jsx_component_error_info =
       get_jsx_component_error_info ~extract_concrete_typedecl opath !env
@@ -1572,17 +1618,10 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
       let exp_optional_attr =
         check_optional_attr !env ld optional pat.ppat_loc
       in
-      let is_from_pamatch =
-        match pat.ppat_desc with
-        | Ppat_construct ({txt = Lident s}, _) ->
-          String.length s >= 2 && s.[0] = '#' && s.[1] = '$'
-        | _ -> false
-      in
-      if label_is_optional ld && (not exp_optional_attr) && not is_from_pamatch
-      then
-        let lid = mknoloc Longident.(Ldot (Lident "*predef*", "Some")) in
-        Ast_helper.Pat.construct ~loc:pat.ppat_loc lid
-          (Location.mkloc [pat] pat.ppat_loc)
+      if
+        label_is_optional ld && (not exp_optional_attr)
+        && not (is_from_parmatch pat)
+      then wrap_some pat
       else pat
     in
     let type_label_pat (label_lid, label, sarg, opt) k =
@@ -2196,6 +2235,7 @@ let iter_ppat f p =
   | Ppat_tuple lst -> List.iter f lst
   | Ppat_exception p | Ppat_alias (p, _) | Ppat_constraint (p, _) -> f p
   | Ppat_record (args, _flag, _rest) -> List.iter (fun {x = p} -> f p) args
+  | Ppat_dict entries -> List.iter (fun {pdp_pattern} -> f pdp_pattern) entries
 
 let contains_polymorphic_variant p =
   let rec loop p =
@@ -2359,10 +2399,6 @@ let extract_function_name funct =
 
 let should_unify_expected_result_before_typing_lowered_apply funct sargs =
   match (extract_function_name funct, sargs) with
-  | ( Some (Longident.Ldot (Longident.Lident "Primitive_dict", "make")),
-      [(Asttypes.Nolabel, {Parsetree.pexp_desc = Parsetree.Pexp_array _})] ) ->
-    (* Dict literals *)
-    true
   | ( Some
         (Longident.Ldot (Longident.Lident "Primitive_promise", "unsafe_async")),
       [(Asttypes.Nolabel, _)] ) ->
@@ -2803,6 +2839,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
           exp_env = env;
         })
   | Pexp_record (lid_sexp_list, None) ->
+    check_no_record_syntax_on_dict env loc ty_expected lid_sexp_list;
     let ty_record, opath, fields, repr_opt =
       match extract_concrete_record env ty_expected with
       | p0, p, fields, repr ->
@@ -2901,7 +2938,9 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       }
   | Pexp_record (lid_sexp_list, Some sexp) ->
     assert (lid_sexp_list <> []);
+    check_no_record_syntax_on_dict env loc ty_expected lid_sexp_list;
     let exp = type_exp ~context:None ~recarg env sexp in
+    check_no_record_syntax_on_dict env loc exp.exp_type lid_sexp_list;
     let ty_record, opath =
       let get_path ty =
         try
@@ -3045,6 +3084,28 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     re
       {
         exp_desc = Texp_array argl;
+        exp_loc = loc;
+        exp_extra = [];
+        exp_type = instance env ty_expected;
+        exp_attributes = sexp.pexp_attributes;
+        exp_env = env;
+      }
+  | Pexp_dict entries ->
+    let dict_type ty = newgenty (Tconstr (Predef.path_dict, [ty], ref Mnil)) in
+    let ty = newgenvar () in
+    unify_exp_types ~context:None loc env (dict_type ty) ty_expected;
+    let entries =
+      List.map
+        (function
+          | Pdict_entry (key, svalue) ->
+            Tdict_entry (key, type_expect ~context:None env svalue ty)
+          | Pdict_spread sspread ->
+            Tdict_spread (type_expect ~context:None env sspread (dict_type ty)))
+        entries
+    in
+    re
+      {
+        exp_desc = Texp_dict entries;
         exp_loc = loc;
         exp_extra = [];
         exp_type = instance env ty_expected;
@@ -3957,7 +4018,6 @@ and type_function ~async loc attrs env ty_expected_
   in
   let do_init = has_gadts || needs_exhaust_check in
   let lev, env = if do_init && not has_gadts then init_env () else (lev, env) in
-  ignore lev;
   let tparams =
     List.map
       (fun ((p : Parsetree.fun_param), opt_param, pat, ty_arg_c) ->
@@ -4016,17 +4076,14 @@ and type_function ~async loc attrs env ty_expected_
 and type_label_access env srecord lid =
   let record = type_exp ~context:None ~recarg:Allowed env srecord in
   let ty_exp = record.exp_type in
+  (match (expand_head env ty_exp).desc with
+  | Tconstr (path, _, _) when Path.same path Predef.path_dict ->
+    (* [someDict.name]: point to [Dict.get] *)
+    raise (Error (lid.loc, env, Field_access_on_dict_type))
+  | _ -> ());
   let opath =
     try
       match extract_concrete_typedecl env ty_exp with
-      | p0, _, {type_attributes}
-        when Path.same p0 Predef.path_dict
-             && Dict_type_helpers.has_dict_attribute type_attributes ->
-        (* [dict] Cover the case when trying to direct field access on a dict, e.g. `someDict.name`.
-           We need to disallow this because the fact that a dict is represented as a single magic
-           field record internally is just an implementation detail, and not intended to be exposed
-           to the user. *)
-        raise (Error (lid.loc, env, Field_access_on_dict_type))
       | p0, p, {type_kind = Type_record _} -> Some (p0, p)
       | _ -> None
     with Not_found -> None
@@ -5124,6 +5181,14 @@ let report_error env loc ppf error =
     fprintf ppf "@,@,You can't pass the same prop more than once."
   | Label_multiply_defined {label} ->
     fprintf ppf "The record field label %s is defined several times" label
+  | Record_syntax_on_dict_type key ->
+    fprintf ppf
+      "Record syntax can't be used on a dict. Use dict{...} instead, e.g. \
+       dict{\"%s\": ...}."
+      key
+  | Dict_key_multiply_defined key ->
+    fprintf ppf "The key \"%s\" is matched several times in this dict pattern"
+      key
   | Labels_missing {labels; jsx_component_info = Some jsx_component_info} ->
     print_component_labels_missing_error ppf labels jsx_component_info
   | Labels_missing {labels} ->

@@ -1,0 +1,1 @@
+- Fix integer range patterns at int32 boundaries and wrapped nondecimal patterns matching incorrect values. https://github.com/rescript-lang/rescript/pull/8717

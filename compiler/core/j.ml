@@ -73,6 +73,11 @@ and for_ident = ident
 and for_direction = Js_op.direction_flag
 and property_map = (property_name * expression) list
 
+(* An entry of an object literal: [k: v] or [...e] *)
+and object_entry =
+  | Object_property of property_name * expression
+  | Object_spread of expression
+
 and record_rest_field = {
   record_rest_label: string;
   record_rest_ident: ident option;
@@ -99,6 +104,24 @@ and expression_desc =
       some primitive  call is translated
       into a plain call, it's better to keep them
   *)
+  | Jsx of {
+      callee: expression;
+      tag: expression;
+      spread: expression option;
+      props: (string * expression) list;
+      children: expression list option;
+      key: expression option;
+      multi: bool;
+      fragment: bool;
+    }
+      (** A JSX element in JSX preserve mode, from [Lambda.Pjsx]. js_dump
+          prints it as JSX when every part can be written in JSX, and
+          otherwise as the call
+          [callee(tag, {...spread, props, children}, key)]. [props] holds
+          runtime names in declaration order, without optional props that are
+          statically [undefined]. With [multi], each child is a separate
+          element of the [children] array. Subexpressions are evaluated in
+          the order [callee], [tag], [spread], [props], [children], [key]. *)
   | Array_index of expression * expression
   (* arr.(i)
      Invariant:
@@ -174,7 +197,7 @@ and expression_desc =
      last step since "|0" can potentially be optimized
   *)
   | Number of number
-  | Object of expression option * property_map
+  | Object of object_entry list
   | Undefined of {is_unit: bool}
   | Null
   | Await of expression
@@ -349,6 +372,7 @@ and deps_program = {
         label;
         finish_ident_expression;
         property_map;
+        object_entry;
         record_rest_field;
         required_modules;
         case_clause;

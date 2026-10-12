@@ -121,6 +121,7 @@ let identify_pexp pexp =
   | Pexp_await _ -> "Pexp_await"
   | Pexp_jsx_element _ -> "Pexp_jsx_element"
   | Pexp_regexp _ -> "Pexp_regexp"
+  | Pexp_dict _ -> "Pexp_dict"
   | Pexp_template _ -> "Pexp_template"
   | Pexp_tagged_template _ -> "Pexp_tagged_template"
 
@@ -140,6 +141,7 @@ let identify_ppat pat =
   | Ppat_constraint _ -> "Ppat_constraint"
   | Ppat_type _ -> "Ppat_type"
   | Ppat_variant_spread _ -> "Ppat_variant_spread"
+  | Ppat_dict _ -> "Ppat_dict"
   | Ppat_unpack _ -> "Ppat_unpack"
   | Ppat_exception _ -> "Ppat_exception"
   | Ppat_extension _ -> "Ppat_extension"
@@ -248,11 +250,17 @@ let print_maybe_exotic_ident ?(allow_uident = false) txt =
     else if i == 0 then
       match String.unsafe_get txt i with
       | 'A' .. 'Z' when allow_uident -> loop (i + 1)
-      | 'a' .. 'z' | '_' -> loop (i + 1)
+      | 'a' .. 'z' | '$' -> loop (i + 1)
+      (* Same as Res_printer.classify_ident_content: a lone [_] or one
+         followed by another character is not scanned as an identifier. *)
+      | '_' when len > 1 -> (
+        match String.unsafe_get txt 1 with
+        | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '$' -> loop (i + 1)
+        | _ -> "\"" ^ txt ^ "\"")
       | _ -> "\"" ^ txt ^ "\""
     else
       match String.unsafe_get txt i with
-      | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '\'' | '_' -> loop (i + 1)
+      | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '\'' | '_' | '$' -> loop (i + 1)
       | _ -> "\"" ^ txt ^ "\""
   in
   if Res_token.is_keyword_txt txt then "\"" ^ txt ^ "\"" else loop 0
