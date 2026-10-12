@@ -131,7 +131,8 @@ let expression_desc : expression_desc fn =
   | Object _x0 ->
     list
       (fun _self -> function
-        | Object_property (_, e) | Object_spread e -> _self.expression _self e)
+        | Object_property (_, e) | Object_spread e | Record_spread e ->
+          _self.expression _self e)
       _self _x0
   | Undefined _ -> ()
   | Null -> ()
