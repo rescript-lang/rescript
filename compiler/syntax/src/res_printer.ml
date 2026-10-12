@@ -3688,10 +3688,12 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
              print_expression_block ~state ~braces:true body cmt_tbl;
            ])
     | Pexp_constraint
-        ( {pexp_desc = Pexp_pack ({pmod_desc = Pmod_constraint _} as mod_expr)},
-          {ptyp_desc = Ptyp_package package_type; ptyp_loc} ) ->
-      (* [module((M: S1): S2)] would parse as a functor, so this keeps the
-         general form [(module((M: S1)): module(S2))] *)
+        ( {pexp_desc = Pexp_pack mod_expr},
+          {ptyp_desc = Ptyp_package package_type; ptyp_loc} )
+      when Parens.mod_pack_constraint mod_expr ->
+      (* [module((M: S1): S2)] and [module(await (await M): S)] would parse as
+         functors, so this keeps the general form
+         [(module((M: S1)): module(S2))] *)
       Doc.concat
         [
           Doc.lparen;
@@ -6095,14 +6097,8 @@ and print_mod_expr ~state mod_expr cmt_tbl =
     | Pmod_await inner ->
       let inner_doc = print_mod_expr ~state inner cmt_tbl in
       let inner_doc =
-        match inner.pmod_desc with
-        (* [await (await M)]: the parser reads one [await] per module *)
-        | Pmod_await _ -> add_mod_expr_parens inner_doc
-        (* The attributes after [await] belong to the await *)
-        | _ when Parsetree_viewer.mod_expr_has_attributes inner ->
-          add_mod_expr_parens inner_doc
-        | _ when Parens.mod_constraint inner -> add_mod_expr_parens inner_doc
-        | _ -> inner_doc
+        if Parens.mod_await_operand inner then add_mod_expr_parens inner_doc
+        else inner_doc
       in
       (* [@attr await M] does not parse: an await's attributes come after
          [await], like a functor's on its first parameter *)

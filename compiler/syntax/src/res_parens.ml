@@ -435,6 +435,24 @@ let mod_constraint mod_expr =
     not (Parsetree_viewer.mod_expr_has_attributes mod_expr)
   | _ -> false
 
+(* The operand of [await] that needs parens: [await (await M)] (the parser
+   reads one [await] per module), [await (@a M)] (the attributes after
+   [await] belong to the await) and [await (M: S)] *)
+let mod_await_operand operand =
+  match operand.Parsetree.pmod_desc with
+  | Pmod_await _ | Pmod_constraint _ -> true
+  | _ -> Parsetree_viewer.mod_expr_has_attributes operand
+
+(* A packed module that the shorthand [module(<mod>: S)] cannot print. After
+   [module(], [await] and attributes, a parenthesised module followed by [:]
+   is read as a functor's parameters, as in [module((M: S1): S2)] or
+   [module(await (await M): S)]. *)
+let mod_pack_constraint mod_expr =
+  match mod_expr.Parsetree.pmod_desc with
+  | Pmod_constraint _ -> true
+  | Pmod_await operand -> mod_await_operand operand
+  | _ -> false
+
 (* An applied module expression that needs parens: [(M: S)(X)],
    [((Y) => M)(X)], [(%ext)(X)], [(await M)(X)], and with attributes, which
    would otherwise apply to the whole application *)
