@@ -14,16 +14,7 @@ Test.run([
     40
   ],
   "includes - present"
-], Stdlib_List.includes({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-}, 2), eq, true);
+], Stdlib_List.includes({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}, 2), eq, true);
 
 Test.run([
   [
@@ -33,16 +24,7 @@ Test.run([
     40
   ],
   "includes - missing"
-], Stdlib_List.includes({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-}, 4), eq, false);
+], Stdlib_List.includes({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}, 4), eq, false);
 
 Test.run([
   [
@@ -58,10 +40,7 @@ let item = {
   language: "ReScript"
 };
 
-let items = {
-  hd: item,
-  tl: /* [] */0
-};
+let items = {hd: item, tl: /* [] */0};
 
 Test.run([
   [

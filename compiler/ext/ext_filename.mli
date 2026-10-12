@@ -37,11 +37,9 @@ val get_extension_maybe : string -> string
 
 val new_extension : string -> string -> string
 
-val chop_all_extensions_maybe : string -> string
-
-(* OCaml specific abstraction*)
 val module_name : string -> string
+(** Module name of the compilation unit with the given output prefix *)
 
-type module_info = {module_name: string; case: bool}
-
-val as_module : basename:string -> module_info option
+val case : string -> Ext_js_file_kind.case
+(** Whether the output prefix starts with a lowercase ASCII letter, i.e. whether
+    [module_name] capitalized it *)

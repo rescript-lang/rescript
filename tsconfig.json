@@ -13,7 +13,7 @@
     "types": ["node"]
   },
   "include": [
-    "cli/*",
+    "cli/**/*",
     "lib_dev/*",
     "scripts/*",
     "packages/**/*",

@@ -78,16 +78,7 @@ Test.run([
   1,
   2,
   3
-], /* [] */0, Stdlib_List.add), eq, {
-  hd: 3,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 1,
-      tl: /* [] */0
-    }
-  }
-});
+], /* [] */0, Stdlib_List.add), eq, {hd: 3, tl: {hd: 2, tl: {hd: 1, tl: /* [] */0}}});
 
 Test.run([
   [
@@ -111,19 +102,7 @@ Test.run([
   1,
   2,
   3
-], /* [] */0, (acc, v, i) => ({
-  hd: v + i | 0,
-  tl: acc
-})), eq, {
-  hd: 5,
-  tl: {
-    hd: 3,
-    tl: {
-      hd: 1,
-      tl: /* [] */0
-    }
-  }
-});
+], /* [] */0, (acc, v, i) => ({hd: v + i | 0, tl: acc})), eq, {hd: 5, tl: {hd: 3, tl: {hd: 1, tl: /* [] */0}}});
 
 Test.run([
   [
@@ -133,10 +112,7 @@ Test.run([
     38
   ],
   "reduceWithIndex - empty"
-], Stdlib_Array.reduceWithIndex([], /* [] */0, (acc, v, i) => ({
-  hd: v + i | 0,
-  tl: acc
-})), eq, /* [] */0);
+], Stdlib_Array.reduceWithIndex([], /* [] */0, (acc, v, i) => ({hd: v + i | 0, tl: acc})), eq, /* [] */0);
 
 Test.run([
   [
@@ -150,16 +126,7 @@ Test.run([
   1,
   2,
   3
-], /* [] */0, Stdlib_List.add), eq, {
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: /* [] */0
-    }
-  }
-});
+], /* [] */0, Stdlib_List.add), eq, {hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}});
 
 Test.run([
   [
@@ -183,19 +150,7 @@ Test.run([
   1,
   2,
   3
-], /* [] */0, (acc, v, i) => ({
-  hd: v + i | 0,
-  tl: acc
-})), eq, {
-  hd: 1,
-  tl: {
-    hd: 3,
-    tl: {
-      hd: 5,
-      tl: /* [] */0
-    }
-  }
-});
+], /* [] */0, (acc, v, i) => ({hd: v + i | 0, tl: acc})), eq, {hd: 1, tl: {hd: 3, tl: {hd: 5, tl: /* [] */0}}});
 
 Test.run([
   [
@@ -205,10 +160,7 @@ Test.run([
     38
   ],
   "reduceWithIndex - empty"
-], Stdlib_Array.reduceRightWithIndex([], /* [] */0, (acc, v, i) => ({
-  hd: v + i | 0,
-  tl: acc
-})), eq, /* [] */0);
+], Stdlib_Array.reduceRightWithIndex([], /* [] */0, (acc, v, i) => ({hd: v + i | 0, tl: acc})), eq, /* [] */0);
 
 Test.run([
   [

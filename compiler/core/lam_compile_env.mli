@@ -89,4 +89,4 @@ val get_package_path_from_cmj :
     [extra] maybe removed if it is pure and not in [hard_dependencies]
 *)
 val populate_required_modules :
-  Lam_module_ident.Hash_set.t -> Lam_module_ident.Hash_set.t -> unit
+  unit Lam_module_ident.Hash_set.t -> unit Lam_module_ident.Hash_set.t -> unit

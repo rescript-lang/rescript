@@ -116,18 +116,18 @@ let with_in_loop (st : state) b =
 let add_loop_mutable_variable (st : state) id =
   {
     st with
-    loop_mutable_values = Set_ident.add st.loop_mutable_values id;
-    mutable_values = Set_ident.add st.mutable_values id;
+    loop_mutable_values = Set_ident.add id st.loop_mutable_values;
+    mutable_values = Set_ident.add id st.mutable_values;
   }
 
 let add_mutable_variable (st : state) id =
-  {st with mutable_values = Set_ident.add st.mutable_values id}
+  {st with mutable_values = Set_ident.add id st.mutable_values}
 
 let add_defined_ident (st : state) id =
-  {st with defined_idents = Set_ident.add st.defined_idents id}
+  {st with defined_idents = Set_ident.add id st.defined_idents}
 
 let add_used_ident (st : state) id =
-  {st with used_idents = Set_ident.add st.used_idents id}
+  {st with used_idents = Set_ident.add id st.used_idents}
 
 let add_defined_idents st ids = List.fold_left add_defined_ident st ids
 
@@ -160,7 +160,7 @@ let record_scope_pass =
           (* mark which param is used *)
           params
           |> List.iteri (fun i v ->
-              if not (Set_ident.mem used_idents' v) then
+              if not (Set_ident.mem v used_idents') then
                 Js_fun_env.mark_unused env i);
           let closured_idents' =
             (* pass param_set down *)
@@ -305,19 +305,19 @@ let record_scope_pass =
         *)
         {
           state with
-          used_idents = Set_ident.add state.used_idents x;
-          defined_idents = Set_ident.add state.defined_idents x;
+          used_idents = Set_ident.add x state.used_idents;
+          defined_idents = Set_ident.add x state.defined_idents;
         });
     for_ident =
       (fun _ state x ->
         {
           state with
-          loop_mutable_values = Set_ident.add state.loop_mutable_values x;
+          loop_mutable_values = Set_ident.add x state.loop_mutable_values;
         });
     ident =
       (fun _ state x ->
-        if Set_ident.mem state.defined_idents x then state
-        else {state with used_idents = Set_ident.add state.used_idents x});
+        if Set_ident.mem x state.defined_idents then state
+        else {state with used_idents = Set_ident.add x state.used_idents});
   }
 
 let program js =

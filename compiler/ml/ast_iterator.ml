@@ -341,6 +341,14 @@ module E = struct
       iter_loc sub lid;
       sub.expr sub e2
     | Pexp_array el -> List.iter (sub.expr sub) el
+    | Pexp_dict entries ->
+      List.iter
+        (function
+          | Pdict_entry (key, e) ->
+            iter_loc sub key;
+            sub.expr sub e
+          | Pdict_spread e -> sub.expr sub e)
+        entries
     | Pexp_ifthenelse (e1, e2, e3) ->
       sub.expr sub e1;
       sub.expr sub e2;
@@ -446,6 +454,12 @@ module P = struct
     | Ppat_variant (_l, {txt = args; loc = args_loc}) ->
       sub.location sub args_loc;
       List.iter (sub.pat sub) args
+    | Ppat_dict entries ->
+      List.iter
+        (fun {pdp_key; pdp_pattern} ->
+          iter_loc sub pdp_key;
+          sub.pat sub pdp_pattern)
+        entries
     | Ppat_record (lpl, _cf, rest) ->
       List.iter
         (fun {lid; x = pat} ->

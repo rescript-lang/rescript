@@ -104,6 +104,7 @@ if (mochaTest) {
       "10000",
       "tests/tests/src/**/*_test.mjs",
       "tests/belt_tests/src/**/*_test.mjs",
+      "tests/cli_tests/*_test.mjs",
       // jsx_preserve_test.mjs contains JSX, which Node cannot load; the
       // file exists to pin the preserved-JSX output.
       "--ignore",

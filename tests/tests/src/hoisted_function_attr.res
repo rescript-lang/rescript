@@ -34,7 +34,7 @@ module Escaped = {
   let \"switch" = () => "keyword"
 
   @res.hoistedFunction
-  let \"$plus" = () => "dollar"
+  let $plus = () => "dollar"
 }
 
 module Operator = {

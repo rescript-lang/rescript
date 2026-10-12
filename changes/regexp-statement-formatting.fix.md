@@ -1,0 +1,1 @@
+- Preserve parentheses around statements that start with a regexp literal, so formatting cannot turn them into division continuing the previous statement. https://github.com/rescript-lang/rescript/pull/8720

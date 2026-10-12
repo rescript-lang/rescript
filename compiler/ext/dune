@@ -1,8 +1,3 @@
-(env
- (_
-  (flags
-   (:standard -w +a-4-42-40-9-48-70))))
-
 ; The browser profile builds the playground compiler; this rule pair generates a module from platform/{native,playground}.
 
 (rule

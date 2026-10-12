@@ -20,12 +20,9 @@ let record_deprecated_used :
     ref =
   ref
     (fun
-      ?deprecated_context
-      ?migration_template
-      ?migration_in_pipe_chain_template
+      ?deprecated_context:_
+      ?migration_template:_
+      ?migration_in_pipe_chain_template:_
       _
       _
-    ->
-      ignore deprecated_context;
-      ignore migration_template;
-      ignore migration_in_pipe_chain_template)
+    -> ())

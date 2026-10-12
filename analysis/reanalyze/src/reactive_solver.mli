@@ -15,8 +15,7 @@ val create :
   config:Dce_config.t ->
   t
 
-val collect_issues :
-  t:t -> config:Dce_config.t -> ann_store:Annotation_store.t -> Issue.t list
+val collect_issues : t:t -> Issue.t list
 (** Collect issues. O(dead_decls + live_decls). *)
 
 val iter_live_decls : t:t -> (Decl.t -> unit) -> unit

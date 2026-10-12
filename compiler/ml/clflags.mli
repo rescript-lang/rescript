@@ -10,7 +10,6 @@ val binary_annotations : bool ref
 val noassert : bool ref
 val verbose : bool ref
 val real_paths : bool ref
-val error_size : int ref
 val transparent_modules : bool ref
 val dump_source : bool ref
 val dump_parsetree : bool ref
@@ -31,5 +30,9 @@ type mli_status = Mli_exists | Mli_non_exists
 val assume_no_mli : mli_status ref
 val dont_record_crc_unit : string option ref
 val bs_gentype : bool ref
+
+val jsx_preserve : bool ref
+
+(* Keep JSX in the output ([-bs-jsx-preserve]); read by translcore *)
 val no_assert_false : bool ref
 val dump_location : bool ref

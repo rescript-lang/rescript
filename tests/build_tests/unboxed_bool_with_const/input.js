@@ -13,7 +13,7 @@ const stderr = normalizeNewlines(stripVTControlCharacters(out.stderr));
 assert.ok(stderr.includes("Main.res:3:3-14"));
 assert.ok(
   stderr.includes(
-    "This untagged variant definition is invalid: At most one case can be a boolean type.",
+    "This untagged variant definition is invalid: Case Bool can never match: both true and false are already cases of this variant.",
   ),
 );
 assert.ok(stderr.includes("Failed to Compile"));

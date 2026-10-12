@@ -8,10 +8,7 @@ function copyAux(_list, _previous) {
     if (list === 0) {
       return previous;
     }
-    let next = {
-      hd: list.hd,
-      tl: /* [] */0
-    };
+    let next = {hd: list.hd, tl: /* [] */0};
     previous.tl = next;
     _previous = next;
     _list = list.tl;
@@ -23,10 +20,7 @@ function concat(left, right) {
   if (left === 0) {
     return right;
   }
-  let result = {
-    hd: left.hd,
-    tl: /* [] */0
-  };
+  let result = {hd: left.hd, tl: /* [] */0};
   copyAux(left.tl, result).tl = right;
   return result;
 }

@@ -299,13 +299,14 @@ pub fn get_basename(path: &Path) -> String {
         .to_string()
 }
 
-/// Capitalizes the first character in s.
+/// Capitalizes the first character in s if it is an ASCII letter, like the compiler's
+/// `Ext_filename.module_name`.
 fn capitalize(s: &str) -> String {
-    let mut c = s.chars();
-    match c.next() {
-        None => String::new(),
-        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    let mut s = s.to_string();
+    if let Some(first) = s.get_mut(0..1) {
+        first.make_ascii_uppercase();
     }
+    s
 }
 
 fn add_suffix(base: &str, namespace: &packages::Namespace) -> String {
@@ -531,4 +532,32 @@ pub fn is_local_package(workspace_path: &Path, canonical_package_path: &Path) ->
         && !canonical_package_path
             .components()
             .any(|c| c.as_os_str() == "node_modules")
+}
+
+#[cfg(test)]
+mod test {
+    use super::file_path_to_module_name;
+    use crate::build::packages::Namespace;
+    use std::path::Path;
+
+    #[test]
+    fn module_name_capitalizes_only_ascii() {
+        let module_name = |path| file_path_to_module_name(Path::new(path), &Namespace::NoNamespace);
+        assert_eq!(module_name("src/foo.res"), "Foo");
+        assert_eq!(module_name("src/Foo.resi"), "Foo");
+        assert_eq!(module_name("src/foo.test.res"), "Foo.test");
+        assert_eq!(module_name("src/_app.res"), "_app");
+        assert_eq!(module_name("src/éclair.res"), "éclair");
+        assert_eq!(module_name("src/ßeta.res"), "ßeta");
+        assert_eq!(module_name("src/中文.res"), "中文");
+    }
+
+    #[test]
+    fn module_name_with_namespace() {
+        let namespace = Namespace::Namespace("MyNs".to_string());
+        assert_eq!(
+            file_path_to_module_name(Path::new("src/foo.test.res"), &namespace),
+            "Foo.test-MyNs"
+        );
+    }
 }

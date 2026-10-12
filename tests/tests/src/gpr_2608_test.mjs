@@ -4,10 +4,7 @@ import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 import * as Stdlib_List from "@rescript/runtime/lib/es6/Stdlib_List.mjs";
 
-let oppHeroes = {
-  hd: 0,
-  tl: /* [] */0
-};
+let oppHeroes = {hd: 0, tl: /* [] */0};
 
 let huntGrootCondition = false;
 

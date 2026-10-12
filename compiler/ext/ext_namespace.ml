@@ -49,26 +49,6 @@ let js_name_of_modulename s (case : Ext_js_file_kind.case) suffix : string =
   in
   change_ext_ns_suffix s suffix
 
-(* https://docs.npmjs.com/files/package.json
-   Some rules:
-   The name must be less than or equal to 214 characters. This includes the scope for scoped packages.
-   The name can't start with a dot or an underscore.
-   New packages must not have uppercase letters in the name.
-   The name ends up being part of a URL, an argument on the command line, and a folder name. Therefore, the name can't contain any non-URL-safe characters.
-*)
-let is_valid_npm_package_name (s : string) =
-  let len = String.length s in
-  len <= 214 (* magic number forced by npm *)
-  && len > 0
-  &&
-  match String.unsafe_get s 0 with
-  | 'a' .. 'z' | '@' ->
-    Ext_string.for_all_from s 1 (fun x ->
-        match x with
-        | 'a' .. 'z' | '0' .. '9' | '_' | '-' -> true
-        | _ -> false)
-  | _ -> false
-
 let namespace_of_package_name (s : string) : string =
   let len = String.length s in
   let buf = Ext_buffer.create len in

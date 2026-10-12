@@ -172,6 +172,12 @@ let pat sub x =
     | Tpat_variant (l, po, rd) -> Tpat_variant (l, opt (sub.pat sub) po, rd)
     | Tpat_record (l, closed, rest) ->
       Tpat_record (List.map (tuple4 id id (sub.pat sub) id) l, closed, rest)
+    | Tpat_dict entries ->
+      Tpat_dict
+        (List.map
+           (fun entry ->
+             {entry with tdp_pattern = sub.pat sub entry.tdp_pattern})
+           entries)
     | Tpat_array l -> Tpat_array (List.map (sub.pat sub) l)
     | Tpat_or (p1, p2, rd) -> Tpat_or (sub.pat sub p1, sub.pat sub p2, rd)
     | Tpat_alias (p, id, s) -> Tpat_alias (sub.pat sub p, id, s)
@@ -237,6 +243,13 @@ let expr sub x =
     | Texp_setfield (exp1, lid, ld, exp2) ->
       Texp_setfield (sub.expr sub exp1, lid, ld, sub.expr sub exp2)
     | Texp_array list -> Texp_array (List.map (sub.expr sub) list)
+    | Texp_dict entries ->
+      Texp_dict
+        (List.map
+           (function
+             | Tdict_entry (key, exp) -> Tdict_entry (key, sub.expr sub exp)
+             | Tdict_spread exp -> Tdict_spread (sub.expr sub exp))
+           entries)
     | Texp_ifthenelse (exp1, exp2, expo) ->
       Texp_ifthenelse
         (sub.expr sub exp1, sub.expr sub exp2, opt (sub.expr sub) expo)

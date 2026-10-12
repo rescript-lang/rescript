@@ -68,6 +68,11 @@ relevant guidance from each.
 ### Commit Standards
 
 - Use DCO sign-off: `Signed-Off-By: Your Name <email>`
+- Put the sign-off in the final paragraph of the message, next to any other
+  trailers such as `Co-Authored-By:`, with no blank line between them. Git only
+  parses the last paragraph as trailers, so a sign-off separated by a blank
+  line doesn't count. Check with
+  `git log -1 --format=%B | git interpret-trailers --parse`.
 - Include appropriate tests with all changes
 - Build must pass before committing
 
@@ -92,7 +97,7 @@ on `master`. CI runs on every PR in the stack.
 
 ## Testing and changelog
 
-**Add a `CHANGELOG.md` entry** for any user-facing change (bug fix, feature, or breaking change). Put it under the matching section of the current `(Unreleased)` version and end the line with the PR link. See [CONTRIBUTING.md](CONTRIBUTING.md). PRs are expected to include one.
+**Add a changelog fragment** `changes/<description>.<category>.md` for any user-facing change (bug fix, feature, or breaking change) instead of editing `CHANGELOG.md`; see [changes/README.md](changes/README.md) for categories and format. Validate with `yarn changelog:check`. Since the PR number is not known yet, open the PR as a draft with the placeholder link `https://github.com/rescript-lang/rescript/pull/XXXX`, then replace it with the real link, amend, push again, and mark the PR ready for review (`gh pr ready`).
 
 For compiler or standard-library changes, run `make test`. For syntax changes,
 also run `make test-syntax`; use `make test-syntax-roundtrip` when parsing or

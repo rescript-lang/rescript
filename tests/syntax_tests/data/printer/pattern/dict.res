@@ -47,3 +47,12 @@ let foo = () => {
   | _ => Console.log("not one")
   }
 }
+
+// A dict pattern is laid out as its own group
+let _ = switch someDict {
+| dict{
+    "a": x,
+    "b": y,
+  } | dict{"c": x, "d": y} => x
+| _ => 0
+}

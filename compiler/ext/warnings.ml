@@ -140,7 +140,7 @@ let letter_all =
 let letter = function
   | 'a' -> letter_all
   | 'b' -> []
-  | 'c' -> [1; 2]
+  | 'c' -> []
   | 'd' -> [3]
   | 'e' -> [4]
   | 'f' -> [5]
@@ -148,20 +148,20 @@ let letter = function
   | 'h' -> []
   | 'i' -> []
   | 'j' -> []
-  | 'k' -> [32; 33; 34; 35; 36; 37; 38; 39]
-  | 'l' -> [6]
-  | 'm' -> [7]
+  | 'k' -> [32; 33; 34; 35; 37; 38; 39]
+  | 'l' -> []
+  | 'm' -> []
   | 'n' -> []
   | 'o' -> []
   | 'p' -> [8]
   | 'q' -> []
   | 'r' -> [9]
-  | 's' -> [10]
+  | 's' -> []
   | 't' -> []
   | 'u' -> [11; 12]
-  | 'v' -> [13]
+  | 'v' -> []
   | 'w' -> []
-  | 'x' -> [14; 15; 16; 17; 18; 19; 20; 21; 22; 23; 24; 30]
+  | 'x' -> [20; 21; 22; 23; 30]
   | 'y' -> [26]
   | 'z' -> [27]
   | _ -> assert false
@@ -460,8 +460,6 @@ let sub_locs = function
     [(def, "Definition"); (use, "Expected signature")]
   | _ -> []
 
-let has_warnings = ref false
-
 let nerrors = ref 0
 
 type reporting_information = {
@@ -475,7 +473,6 @@ let report w =
   match is_active w with
   | false -> `Inactive
   | true ->
-    has_warnings := true;
     if is_error w then incr nerrors;
     `Active
       {
@@ -508,14 +505,10 @@ let descriptions =
     (9, "Missing fields in a record pattern.");
     (11, "Redundant case in a pattern matching (unused match case).");
     (12, "Redundant sub-pattern in a pattern-matching.");
-    (17, "Undeclared virtual method.");
-    (18, "Non-principal type.");
-    (19, "Type without principality.");
     (20, "Unused function argument.");
     (21, "Non-returning statement.");
     (22, "Preprocessor warning.");
     (23, "Useless record \"with\" clause.");
-    (25, "Deprecated: now part of warning 8.");
     ( 26,
       "Suspicious unused variable: unused variable that is bound\n\
       \    with \"let\" or \"as\", and doesn't start with an underscore (\"_\")\n\
@@ -528,12 +521,10 @@ let descriptions =
     ( 30,
       "Two labels or constructors of the same name are defined in two\n\
       \    mutually recursive types." );
-    (31, "A module is linked twice in the same executable.");
     (32, "Unused value declaration.");
     (33, "Unused open statement.");
     (34, "Unused type declaration.");
     (35, "Unused for-loop index.");
-    (36, "Unused ancestor variable.");
     (37, "Unused constructor.");
     (38, "Unused extension constructor.");
     (39, "Unused rec flag.");
@@ -541,16 +532,13 @@ let descriptions =
     (43, "Nonoptional label applied as optional.");
     (44, "Open statement shadows an already defined identifier.");
     (45, "Open statement shadows an already defined label or constructor.");
-    (46, "Error in environment variable.");
     (47, "Illegal attribute payload.");
     (49, "Absent cmi file when looking up module alias.");
     (52, "Fragile constant pattern.");
     (53, "Attribute cannot appear in this context");
     (54, "Attribute used more than once on an expression");
-    (55, "Inlining impossible");
     (56, "Unreachable case in a pattern-matching (based on type information).");
     (57, "Ambiguous or-pattern variables under guard");
-    (59, "Assignment to non-mutable value");
     (60, "Unused module declaration");
     (62, "Type constraint on GADT type declaration");
     (101, "Unused bs attributes");

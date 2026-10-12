@@ -89,3 +89,19 @@ module N = {
   // let _ = l
   //          ^com
 }
+
+module O = {
+  include await M
+
+  // let _ = l
+  //          ^com
+}
+
+module AwaitedFunctor = {
+  type t
+
+  include (await SpriteComp)({type t = t})
+
+  // let _ = addS
+  //             ^com
+}

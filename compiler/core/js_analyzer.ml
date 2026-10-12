@@ -28,7 +28,7 @@ type idents_stats = {
 }
 
 let add_defined_idents (x : idents_stats) ident =
-  x.defined_idents <- Set_ident.add x.defined_idents ident
+  x.defined_idents <- Set_ident.add ident x.defined_idents
 
 let add_record_rest_field_idents stats fields =
   List.iter
@@ -61,8 +61,8 @@ let free_variables (stats : idents_stats) =
         | Some v -> self.expression self v);
     ident =
       (fun _ id ->
-        if not (Set_ident.mem stats.defined_idents id) then
-          stats.used_idents <- Set_ident.add stats.used_idents id);
+        if not (Set_ident.mem id stats.defined_idents) then
+          stats.used_idents <- Set_ident.add id stats.used_idents);
     expression =
       (fun self exp ->
         match exp.expression_desc with
@@ -122,11 +122,12 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
     *)
     Ext_list.for_all xs no_side_effect
   | Optional_block (x, _) -> no_side_effect x
-  | Object (dup, kvs) ->
-    (match dup with
-      | Some e -> no_side_effect e
-      | None -> true)
-    && Ext_list.for_all_snd kvs no_side_effect
+  | Object entries ->
+    Ext_list.for_all entries (function
+      | Object_property (_, e) -> no_side_effect e
+      (* A spread reads the source's properties, which may run getters or
+         proxy traps *)
+      | Object_spread _ -> false)
   | String_append (a, b) | Seq (a, b) -> no_side_effect a && no_side_effect b
   | Length e | Caml_block_tag (e, _) | Typeof e -> no_side_effect e
   | Bin (Eq, _, _) -> false
@@ -150,7 +151,7 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
   | In (prop, obj) -> no_side_effect prop && no_side_effect obj
   | Cond (a, b, c) -> no_side_effect a && no_side_effect b && no_side_effect c
   | Call (fn, [e], _) when is_array_function fn -> no_side_effect e
-  | Call _ | New _ | Raw_js_code _ (* actually true? *) -> false
+  | Call _ | Jsx _ | New _ | Raw_js_code _ (* actually true? *) -> false
   | Await _ -> false
   | Spread _ -> false
   | Record_rest _ -> false
@@ -266,7 +267,7 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
     | _ -> false)
   | Length _ | Is_null_or_undefined _ | String_append _ | Typeof _ | Js_not _
   | Js_bnot _ | In _ | Cond _ | New _ | Fun _ | Json_literal _ | Raw_js_code _
-  | Array _ | Caml_block_tag _ | Object _ | Tagged_template _
+  | Array _ | Caml_block_tag _ | Object _ | Tagged_template _ | Jsx _
   | Interpolated_template _ | Await _ | Record_rest _ ->
     false
   | Spread _ -> false

@@ -1,0 +1,52 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/pattern/missingRowValue.res:2:7
+
+  1 │ switch v {
+  2 │ | {a: , b: 1} => ()
+  3 │ | {a: ?, b: 1} => ()
+  4 │ | dict{"a": , "b": 1} => ()
+
+  I'm not sure what to parse here when looking at ",".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/pattern/missingRowValue.res:3:8
+
+  1 │ switch v {
+  2 │ | {a: , b: 1} => ()
+  3 │ | {a: ?, b: 1} => ()
+  4 │ | dict{"a": , "b": 1} => ()
+  5 │ | dict{"a": ?, "b": 1} => ()
+
+  I'm not sure what to parse here when looking at ",".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/pattern/missingRowValue.res:4:13
+
+  2 │ | {a: , b: 1} => ()
+  3 │ | {a: ?, b: 1} => ()
+  4 │ | dict{"a": , "b": 1} => ()
+  5 │ | dict{"a": ?, "b": 1} => ()
+  6 │ }
+
+  I'm not sure what to parse here when looking at ",".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/pattern/missingRowValue.res:5:14
+
+  3 │ | {a: ?, b: 1} => ()
+  4 │ | dict{"a": , "b": 1} => ()
+  5 │ | dict{"a": ?, "b": 1} => ()
+  6 │ }
+  7 │ 
+
+  I'm not sure what to parse here when looking at ",".
+
+;;match v with
+  | { a = [%rescript.patternhole ]; b = 1 } -> ()
+  | { a? = [%rescript.patternhole ]; b = 1 } -> ()
+  | dict{"a": [%rescript.patternhole ], "b": 1} -> ()
+  | dict{"a": ?[%rescript.patternhole ], "b": 1} -> ()

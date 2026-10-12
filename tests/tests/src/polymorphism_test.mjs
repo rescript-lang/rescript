@@ -6,10 +6,7 @@ function map(f, x) {
     return /* [] */0;
   }
   let r = f(x.hd);
-  return {
-    hd: r,
-    tl: map(f, x.tl)
-  };
+  return {hd: r, tl: map(f, x.tl)};
 }
 
 export {

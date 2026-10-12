@@ -21,20 +21,11 @@ function split(delim, s) {
       }
       let i$p = s.lastIndexOf(delim, x - 1 | 0);
       if (i$p === -1) {
-        return {
-          hd: s.slice(0, x),
-          tl: l
-        };
+        return {hd: s.slice(0, x), tl: l};
       }
       let l_0 = s.slice(i$p + 1 | 0, x);
-      let l$1 = {
-        hd: l_0,
-        tl: l
-      };
-      let l$2 = i$p === 0 ? ({
-          hd: "",
-          tl: l$1
-        }) : l$1;
+      let l$1 = {hd: l_0, tl: l};
+      let l$2 = i$p === 0 ? ({hd: "", tl: l$1}) : l$1;
       _x = i$p;
       _l = l$2;
       continue;
@@ -118,10 +109,7 @@ function compute_update_sequences(all_tickers) {
   let map = Belt_List.reduceReverse(Belt_List.reverse(all_tickers), undefined, (map, ticker) => {
     let tmp = ticker.type_;
     if (typeof tmp !== "object") {
-      return Belt_MapString.set(map, ticker.ticker_name, {
-        hd: ticker,
-        tl: /* [] */0
-      });
+      return Belt_MapString.set(map, ticker.ticker_name, {hd: ticker, tl: /* [] */0});
     }
     let loop = (_up, _map, _ticker) => {
       while (true) {
@@ -135,16 +123,10 @@ function compute_update_sequences(all_tickers) {
           return Belt_MapString.set(map, ticker_name, Belt_List.concat(up, l));
         }
         let match = type_._0;
-        let map$1 = loop({
-          hd: ticker,
-          tl: up
-        }, map, match.lhs);
+        let map$1 = loop({hd: ticker, tl: up}, map, match.lhs);
         _ticker = match.rhs;
         _map = map$1;
-        _up = {
-          hd: ticker,
-          tl: up
-        };
+        _up = {hd: ticker, tl: up};
         continue;
       };
     };
@@ -250,10 +232,7 @@ function process_input_line(ticker_map, all_tickers, line) {
           let match$5 = match$4.tl;
           if (match$5 !== 0 && match$5.tl === 0) {
             return [
-              {
-                hd: make_binary_op(ticker_name, match$4.hd, match$5.hd, "PLUS"),
-                tl: all_tickers
-              },
+              {hd: make_binary_op(ticker_name, match$4.hd, match$5.hd, "PLUS"), tl: all_tickers},
               ticker_map
             ];
           } else {
@@ -267,10 +246,7 @@ function process_input_line(ticker_map, all_tickers, line) {
           let match$7 = match$6.tl;
           if (match$7 !== 0 && match$7.tl === 0) {
             return [
-              {
-                hd: make_binary_op(ticker_name, match$6.hd, match$7.hd, "MINUS"),
-                tl: all_tickers
-              },
+              {hd: make_binary_op(ticker_name, match$6.hd, match$7.hd, "MINUS"), tl: all_tickers},
               ticker_map
             ];
           } else {
@@ -281,15 +257,12 @@ function process_input_line(ticker_map, all_tickers, line) {
             return Pervasives.failwith("Invalid input line");
           } else {
             return [
-              {
-                hd: {
-                  value: undefined,
-                  rank: "Uninitialized",
-                  ticker_name: ticker_name,
-                  type_: "Market"
-                },
-                tl: all_tickers
-              },
+              {hd: {
+                value: undefined,
+                rank: "Uninitialized",
+                ticker_name: ticker_name,
+                type_: "Market"
+              }, tl: all_tickers},
               ticker_map
             ];
           }
@@ -317,34 +290,7 @@ function loop(_lines, _param) {
 
 let Ticker_map;
 
-let lines = {
-  hd: "R|MSFT|S",
-  tl: {
-    hd: "R|IBM|S",
-    tl: {
-      hd: "R|FB|S",
-      tl: {
-        hd: "R|CP1|+|MSFT|IBM",
-        tl: {
-          hd: "R|CP2|-|FB|IBM",
-          tl: {
-            hd: "R|CP12|+|CP1|CP2",
-            tl: {
-              hd: "Q|MSFT|120.",
-              tl: {
-                hd: "Q|IBM|130.",
-                tl: {
-                  hd: "Q|FB|80.",
-                  tl: /* [] */0
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-};
+let lines = {hd: "R|MSFT|S", tl: {hd: "R|IBM|S", tl: {hd: "R|FB|S", tl: {hd: "R|CP1|+|MSFT|IBM", tl: {hd: "R|CP2|-|FB|IBM", tl: {hd: "R|CP12|+|CP1|CP2", tl: {hd: "Q|MSFT|120.", tl: {hd: "Q|IBM|130.", tl: {hd: "Q|FB|80.", tl: /* [] */0}}}}}}}}};
 
 export {
   Util,

@@ -383,8 +383,11 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
         [
           {
             pvb_pat =
-              ( {ppat_desc = Ppat_record _}
-              | {ppat_desc = Ppat_alias ({ppat_desc = Ppat_record _}, _)} ) as p;
+              ( {ppat_desc = Ppat_record _ | Ppat_dict _}
+              | {
+                  ppat_desc =
+                    Ppat_alias ({ppat_desc = Ppat_record _ | Ppat_dict _}, _);
+                } ) as p;
             pvb_expr;
             pvb_constraint = None;
             pvb_attributes;

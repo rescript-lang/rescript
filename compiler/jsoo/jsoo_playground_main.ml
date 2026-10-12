@@ -581,7 +581,9 @@ module Compile = struct
     let print_javascript () =
       Js_dump_program.pp_deps_program ~output_prefix:"" module_system
         lambda_output
-        (Ext_pp.from_buffer buffer)
+        (Ext_pp.from_buffer
+           ~track_positions:(Option.is_some source_map_builder)
+           buffer)
     in
     (match source_map_builder with
     | None -> print_javascript ()

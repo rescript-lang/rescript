@@ -76,14 +76,6 @@ let for_ident : 'a. ('a, for_ident) fn = fun _self arg -> _self.ident _self arg
 
 let for_direction : 'a. ('a, for_direction) fn = unknown
 
-let property_map : 'a. ('a, property_map) fn =
- fun _self st arg ->
-  list
-    (fun _self st (_x0, _x1) ->
-      let st = _self.expression _self st _x1 in
-      st)
-    _self st arg
-
 let expression_desc : 'a. ('a, expression_desc) fn =
  fun _self st -> function
   | Length _x0 -> _self.expression _self st _x0
@@ -129,6 +121,17 @@ let expression_desc : 'a. ('a, expression_desc) fn =
     let st = _self.expression _self st _xo in
     let st = list _self.expression _self st _x2 in
     st
+  | Jsx {callee; tag; spread; props; children; key} ->
+    let st = _self.expression _self st callee in
+    let st = _self.expression _self st tag in
+    let st = option _self.expression _self st spread in
+    let st =
+      list
+        (fun _self st (_name, value) -> _self.expression _self st value)
+        _self st props
+    in
+    let st = option (list _self.expression) _self st children in
+    option _self.expression _self st key
   | Interpolated_template {values} -> list _self.expression _self st values
   | Array_index (_x0, _x1) ->
     let st = _self.expression _self st _x0 in
@@ -162,9 +165,14 @@ let expression_desc : 'a. ('a, expression_desc) fn =
     let st = _self.expression _self st _x0 in
     st
   | Number _ -> st
-  | Object (_x0, _x1) ->
-    let st = option _self.expression _self st _x0 in
-    let st = property_map _self st _x1 in
+  | Object _x0 ->
+    let st =
+      list
+        (fun _self st -> function
+          | Object_property (_, e) | Object_spread e ->
+            _self.expression _self st e)
+        _self st _x0
+    in
     st
   | Undefined _ -> st
   | Null -> st

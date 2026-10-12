@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
-import { createReleasePlan, findFirstReleasedVersion } from "./releasePlan.js";
+import {
+  createReleasePlan,
+  findFirstReleasedVersion,
+  findPendingFragments,
+} from "./releasePlan.js";
 
 test("plans a maintenance release", () => {
   assert.deepEqual(createReleasePlan("12.3.0"), {
@@ -61,4 +68,15 @@ test("ignores unreleased changelog headings", () => {
 # 13.0.0-alpha.5
 `;
   assert.equal(findFirstReleasedVersion(changelog), "13.0.0-alpha.5");
+});
+
+test("finds changelog fragments left unreleased", async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "rescript-release-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  assert.deepEqual(await findPendingFragments(root), []);
+  await fs.mkdir(path.join(root, "changes"));
+  await fs.writeFile(path.join(root, "changes", "README.md"), "");
+  assert.deepEqual(await findPendingFragments(root), []);
+  await fs.writeFile(path.join(root, "changes", "late.fix.md"), "");
+  assert.deepEqual(await findPendingFragments(root), ["late.fix.md"]);
 });

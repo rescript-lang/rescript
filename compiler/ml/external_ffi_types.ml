@@ -133,10 +133,7 @@ let valid_global_name ?loc txt =
         if not (valid_ident s) then
           Location.raise_errorf ?loc "Not a valid global name %s" txt)
 
-(*
-  We loose such check (see #2583),
-  it also helps with the implementation deriving abstract [@as]
-*)
+(* We loose such check (see #2583) *)
 
 let valid_method_name ?loc:_ _txt = ()
 (* if not (valid_ident txt) then

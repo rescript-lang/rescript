@@ -4,22 +4,18 @@
 // The lookup is synchronous so that tools.cjs, the CommonJS entry of
 // `rescript/tools`, can load it; bins.js re-exports these values for ES modules.
 
+const os = require("node:os");
 const path = require("node:path");
+const { getTarget } = require("./platform.cjs");
 
-const minimumNodeVersion = "20.11.0";
+const minimumNodeVersion = "22.0.0";
 
-const target = `${process.platform}-${process.arch}`;
+const target = getTarget(process.platform, process.arch, os.release());
 
-const supportedPlatforms = [
-  "darwin-arm64",
-  "darwin-x64",
-  "linux-arm64",
-  "linux-x64",
-  "win32-x64",
-];
-
-if (!supportedPlatforms.includes(target)) {
-  throw new Error(`Platform ${target} is not supported!`);
+if (target === undefined) {
+  throw new Error(
+    `Platform ${process.platform}-${process.arch} is not supported!`,
+  );
 }
 
 const binPackageName = `@rescript/${target}`;
@@ -37,7 +33,9 @@ try {
   );
 }
 
-// The platform package's entry (bin.js) sits next to its bin directory.
+// The platform package's entry (bin.js) sits next to its bin directory. It
+// exports the same paths for tools that import it directly, such as
+// rescript-vscode, so keep the two lists in sync.
 const binDir = path.join(path.dirname(binPackageEntry), "bin");
 
 exports.binDir = binDir;
