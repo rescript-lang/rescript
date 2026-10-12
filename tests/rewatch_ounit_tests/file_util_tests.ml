@@ -67,6 +67,31 @@ let tests =
       check
         (File_util.files_equal large_source large_copy)
         "streaming copies preserve files spanning multiple buffer reads";
+      (* A copy that fails before writing leaves the previous file alone, and
+         one that fails while writing removes its partial destination, so a
+         truncated .cmi or .cmj is never left for the next build. *)
+      let failed_root = Filename.concat root "failed-copy" in
+      let unreadable = Filename.concat failed_root "unreadable" in
+      let published = Filename.concat failed_root "Published.cmj" in
+      File_util.ensure_dir unreadable;
+      write_file published "previous";
+      let copy_fails source =
+        try
+          File_util.copy_existing_file source published;
+          false
+        with Sys_error _ | Unix.Unix_error _ -> true
+      in
+      check (copy_fails unreadable) "copying a directory fails";
+      check
+        (File_util.read_file published = "previous")
+        "a copy that fails before writing leaves the destination unchanged";
+      (* Reading /proc/self/mem at offset 0 fails after the file opened. *)
+      if Sys.file_exists "/proc/self/mem" then (
+        check (copy_fails "/proc/self/mem") "a failing read fails the copy";
+        check
+          (not (Sys.file_exists published))
+          "a copy that fails while writing removes its partial destination");
+      File_util.remove_tree failed_root;
       let changed_contents = Bytes.of_string large_contents in
       Bytes.set changed_contents (Bytes.length changed_contents - 1) 'x';
       write_file large_copy (Bytes.to_string changed_contents);

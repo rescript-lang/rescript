@@ -117,16 +117,26 @@ let copy_existing_file source destination =
   Fun.protect
     ~finally:(fun () -> close_in_noerr input_channel)
     (fun () ->
+      (* The copy writes in place, like Rust rewatch: replacing the file by a
+         rename would leave stale entries on case-insensitive virtiofs mounts
+         (Docker on macOS) for the compiler's lowercase .cmi lookups. A failed
+         copy removes its partial destination, so the next build publishes it
+         again instead of reading a truncated .cmi or .cmj. *)
       let output_channel = open_out_bin destination in
-      with_output_channel output_channel (fun output_channel ->
-          let buffer = Bytes.create 65_536 in
-          let rec copy () =
-            let count = input input_channel buffer 0 (Bytes.length buffer) in
-            if count > 0 then (
-              output output_channel buffer 0 count;
-              copy ())
-          in
-          copy ()))
+      try
+        with_output_channel output_channel (fun output_channel ->
+            let buffer = Bytes.create 65_536 in
+            let rec copy () =
+              let count = input input_channel buffer 0 (Bytes.length buffer) in
+              if count > 0 then (
+                output output_channel buffer 0 count;
+                copy ())
+            in
+            copy ())
+      with error ->
+        let backtrace = Printexc.get_raw_backtrace () in
+        (try Unix.unlink destination with Unix.Unix_error _ -> ());
+        Printexc.raise_with_backtrace error backtrace)
 
 let copy_optional_existing_file source destination =
   try copy_existing_file source destination
