@@ -1,0 +1,1 @@
+- Give the `rescript_tools_binary_path` build test its own `package.json`, so it catches `#cli/*` imports in user code again, and drop the deleted source folders from the `weird_deps` and `weird_devdeps` fixtures. https://github.com/rescript-lang/rescript/pull/8838
