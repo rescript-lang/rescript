@@ -1060,6 +1060,12 @@ let record_copies_fields
     Array.length fields < 20
     && not (Array.exists (fun (lbl, _, _) -> lbl.lbl_optional) fields)
 
+let is_unboxed_record env ty =
+  match Ctype.extract_concrete_typedecl env ty with
+  | _, _, {type_kind = Type_record (_, Record_unboxed _)} -> true
+  | _ -> false
+  | exception Not_found -> false
+
 let jsx_props_of ~multi (props : expression) =
   match props.exp_desc with
   | Texp_record
@@ -1101,6 +1107,13 @@ let jsx_props_of ~multi (props : expression) =
       match jsx_children ~multi lbl child with
       | Some children -> record (Some children)
       | None -> None))
+  (* an unboxed record is the value of its field, not an object; inline
+     records are never the props *)
+  | Texp_record
+      {representation = Record_unboxed _ | Record_inlined _ | Record_extension}
+    ->
+    None
+  | _ when is_unboxed_record props.exp_env props.exp_type -> None
   | _ -> Some (Jsx_props_spread props)
 
 (* [None] when the call doesn't have the shape the PPX produces; it then

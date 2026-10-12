@@ -1,0 +1,1 @@
+- Fix JSX preserve mode spreading the props of a component whose props type is an `@unboxed` record. https://github.com/rescript-lang/rescript/pull/8847
