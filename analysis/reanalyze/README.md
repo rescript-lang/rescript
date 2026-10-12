@@ -67,7 +67,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for details on the analysis pipeline.
 
 ### Regenerating the checked-in reactive pipeline diagram
 
-`analysis/reanalyze/diagrams/reactive-pipeline-full.mmd` is generated from the live reactive graph printer (`Reactive.to_mermaid()`), and **we check in the non-transitive (`-no-transitive`) variant** because that is where cross-file `hasRefBelow` suppression is relevant (and where reactive invalidation bugs are easiest to spot).
+`analysis/reanalyze/diagrams/reactive-pipeline-full.mmd` is generated from the live reactive graph printer (`Reactive.to_mermaid()`), and **we check in the non-transitive (`-no-transitive`) variant** because that is where cross-file `has_ref_below` suppression is relevant (and where reactive invalidation bugs are easiest to spot).
 
 To regenerate it:
 

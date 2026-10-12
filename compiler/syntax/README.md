@@ -7,8 +7,13 @@ parsetree consumed by `compiler/ml`.
 ## Code map
 
 - [`src/res_scanner.ml`](src/res_scanner.ml) tokenizes source text.
-- [`src/res_parser.ml`](src/res_parser.ml) and
-  [`src/res_grammar.ml`](src/res_grammar.ml) implement parsing and recovery.
+- [`src/res_core.ml`](src/res_core.ml) implements the grammar: parsing and
+  error recovery.
+- [`src/res_parser.ml`](src/res_parser.ml) holds the parser state: the token
+  cursor, lookahead, breadcrumbs and diagnostics.
+- [`src/res_grammar.ml`](src/res_grammar.ml) defines the grammar contexts
+  (breadcrumbs) and the token classes that recovery uses to decide where a
+  construct starts or ends.
 - [`src/res_comment.ml`](src/res_comment.ml) and
   [`src/res_comments_table.ml`](src/res_comments_table.ml) retain and attach
   comments for printing.
