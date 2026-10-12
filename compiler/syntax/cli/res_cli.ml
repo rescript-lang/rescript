@@ -32,15 +32,14 @@ end = struct
      NOT use it in production**!\n\n"
     ^ "Usage:\n  res_parser <options> <file>\n\n" ^ "Examples:\n"
     ^ "  res_parser myFile.res\n" ^ "  res_parser -print ml myFile.res\n"
-    ^ "  res_parser -print sexp -interface myFile.resi\n\n" ^ "Options are:"
+    ^ "  res_parser -print ast -interface myFile.resi\n\n" ^ "Options are:"
 
   let spec =
     [
       ("-recover", Arg.Unit (fun () -> recover := true), "Emit partial ast");
       ( "-print",
         Arg.String (fun txt -> print := txt),
-        "Print either ml, ast, sexp, comments, tokens, doc or res. Default: res"
-      );
+        "Print either ml, ast, comments, tokens, doc or res. Default: res" );
       ( "-width",
         Arg.Int (fun w -> width := w),
         "Specify the line length for the printer (formatter)" );
@@ -77,15 +76,14 @@ module Cli_arg_processor = struct
       match target with
       | "ml" -> Res_driver_ml_printer.print_engine
       | "ast" -> Res_ast_debugger.print_engine
-      | "sexp" -> Res_ast_debugger.sexp_print_engine
       | "comments" -> Res_ast_debugger.comments_print_engine
       | "tokens" -> Res_token_debugger.token_print_engine
       | "res" -> Res_driver.print_engine
       | "doc" -> Res_ast_debugger.doc_print_engine
       | target ->
         print_endline
-          ("-print needs to be either ml, ast, sexp, comments, tokens, doc or \
-            res. You provided " ^ target);
+          ("-print needs to be either ml, ast, comments, tokens, doc or res. \
+            You provided " ^ target);
         exit 1
     in
 
