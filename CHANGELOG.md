@@ -16,6 +16,8 @@
 - `\"_"` is no longer allowed as a quoted identifier, as it couldn't be told apart from the `_` wildcard and placeholder. https://github.com/rescript-lang/rescript/pull/8795
 - Record syntax no longer creates or matches dicts, e.g. `let d: dict<int> = {foo: 1}`; it's an error pointing to `dict{...}`. https://github.com/rescript-lang/rescript/pull/8751
 - Remove the call-site `@inlined` attribute, which was parsed but never affected code generation. It is now reported as a misplaced attribute (warning 53). https://github.com/rescript-lang/rescript/pull/8734
+- Remove the builtin primitives `%obj_is_int`, `%obj_dup`, `%obj_field`, `%array_safe_set`, `%null_to_opt` and `%nullable_to_opt`; custom externals using these names are now rejected. https://github.com/rescript-lang/rescript/pull/8731
+- Remove the `-pp` bsc flag, which had no effect; projects passing it in `bsc-flags` must drop it. https://github.com/rescript-lang/rescript/pull/8731
 - Remove `@deriving(abstract)` and `@deriving(jsConverter)`. Use record types (with optional fields, mutable fields and `@as` renaming) and polymorphic variants directly instead. https://github.com/rescript-lang/rescript/pull/8729
 
 #### :rocket: New Feature
@@ -93,7 +95,7 @@
 - Represent variant spread patterns (`...t`) with a dedicated `Ppat_variant_spread` parsetree node instead of `Ppat_type` with a `res.patVariantSpread` attribute, which remains only in the PPX wire representation. https://github.com/rescript-lang/rescript/pull/8742
 - Remove the obsolete `res.ternary` and `JSX` attributes from the formatter's internal attribute filters and merge the filters into one. https://github.com/rescript-lang/rescript/pull/8740
 - Represent `await` on module expressions with a dedicated `Pmod_await` parsetree node instead of a `res.await` attribute, which remains only in the PPX wire representation. https://github.com/rescript-lang/rescript/pull/8738
-- Remove dead compiler code: warning 24, the `J.String_index` JS IR node, the `Pisint` and `Parraysets` Lambda primitives with their unused `%` primitive names (`%obj_is_int`, `%obj_dup`, `%obj_field`, `%array_safe_set`, `%null_to_opt`, `%nullable_to_opt`), the no-op `-pp` bsc flag and unread `Clflags` fields (`-unsafe` stays accepted as an explicit no-op), and the unused `unit` slot of `Pexp_coerce`. https://github.com/rescript-lang/rescript/pull/8731
+- Remove dead compiler code: warning 24, the `J.String_index` JS IR node, the `Pisint` and `Parraysets` Lambda primitives, unread `Clflags` fields (`-unsafe` stays accepted as an explicit no-op), and the unused `unit` slot of `Pexp_coerce`. https://github.com/rescript-lang/rescript/pull/8731
 - Represent inline record definitions with an explicit parsetree origin while retaining the existing PPX wire representation. https://github.com/rescript-lang/rescript/pull/8686
 - Make expression attributes immutable in the current parsetree, now that editor refactors construct new expression nodes. https://github.com/rescript-lang/rescript/pull/8685
 - Remove the unused `pat_record_label` alias from the current parsetree. https://github.com/rescript-lang/rescript/pull/8684
