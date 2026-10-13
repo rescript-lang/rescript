@@ -1,0 +1,262 @@
+let a =
+  <div>
+    {x}
+    {/* a */}
+  </div>
+let b =
+  <div>
+    {x}
+
+    {/* c */}
+    {y}
+  </div>
+let c =
+  <div>
+    <span />
+    {/* a */}
+
+    <b />
+  </div>
+let d =
+  <div>
+    {/* a */}
+
+    {/* b */}
+    <b />
+  </div>
+let e =
+  <div>
+    {/* a */}
+
+    {/* b */}
+  </div>
+let f =
+  <div>
+    {x}
+    {/* c */}
+    {y}
+  </div>
+let g =
+  <div>
+    <span />
+    {/* c */}
+    {x}
+  </div>
+let h =
+  <div>
+    {/* a */ /* b */}
+    <span />
+  </div>
+let i =
+  <div>
+    {x}
+    {/* a */}
+  </div>
+let j =
+  <div>
+    {
+      /* leading */
+      x
+    }
+  </div>
+let k =
+  <div>
+    {
+      x
+      /* trailing */
+    }
+  </div>
+let l =
+  <div>
+    {x}
+    {/* trailing */}
+  </div>
+let m =
+  <div>
+    {
+      /* leading */
+      x
+    }
+  </div>
+let n =
+  <div>
+    {/* a */ /* b */}
+    <span />
+  </div>
+let o =
+  <div>
+    {
+      /* a */
+
+      /* b */
+    }
+    <span />
+  </div>
+
+let a =
+  <>
+    {x}
+    {/* a */}
+  </>
+let b =
+  <>
+    {x}
+
+    {/* c */}
+    {y}
+  </>
+let c =
+  <>
+    <span />
+    {/* a */}
+
+    <b />
+  </>
+let d =
+  <>
+    {/* a */}
+
+    {/* b */}
+    <b />
+  </>
+let e =
+  <>
+    {/* a */}
+
+    {/* b */}
+  </>
+let f =
+  <>
+    {x}
+    {/* c */}
+    {y}
+  </>
+let g =
+  <>
+    <span />
+    {/* c */}
+    {x}
+  </>
+let h =
+  <>
+    {/* a */ /* b */}
+    <span />
+  </>
+let i =
+  <>
+    {x}
+    {/* a */}
+  </>
+let j =
+  <>
+    {
+      /* leading */
+      x
+    }
+  </>
+let k =
+  <>
+    {
+      x
+      /* trailing */
+    }
+  </>
+let l =
+  <>
+    {x}
+    {/* trailing */}
+  </>
+let m =
+  <>
+    {
+      /* leading */
+      x
+    }
+  </>
+let n =
+  <>
+    {/* a */ /* b */}
+    <span />
+  </>
+let o =
+  <>
+    {
+      /* a */
+
+      /* b */
+    }
+    <span />
+  </>
+
+let spanningContainer =
+  <div>
+    {x}
+    {
+      /* a */
+      /* b */
+    }
+    {y}
+  </div>
+let spanningFragmentContainer =
+  <>
+    {x}
+    {
+      /* a */
+      /* b */
+    }
+    {y}
+  </>
+
+let multilineExpressionComment =
+  <div>
+    {
+      x /* a
+       * b */
+    }
+    {y}
+  </div>
+let leadingExpressionComment =
+  <div>
+    <A />
+    {
+      /* lead */
+      y
+    }
+  </div>
+
+let mixedLeadingContainers =
+  <div>
+    {/* a */}
+    {/* b */}
+    {y}
+  </div>
+let mixedTrailingContainers =
+  <div>
+    {x}
+    {/* b */}
+    {/* a */}
+  </div>
+let mixedLeadingFragmentContainers =
+  <>
+    {/* a */}
+    {/* b */}
+    {y}
+  </>
+let mixedTrailingFragmentContainers =
+  <>
+    {x}
+    {/* b */}
+    {/* a */}
+  </>
+let mixedBetweenContainers =
+  <div>
+    {x /* a */}
+    {/* b */}
+    {/* c */ y}
+  </div>
+let mixedBetweenFragmentContainers =
+  <>
+    {x /* a */}
+    {/* b */}
+    {/* c */ y}
+  </>

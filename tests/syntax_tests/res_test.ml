@@ -77,7 +77,11 @@ let () =
 
 let () =
   let filename = Filename.concat data_dir "printer/expr/jsxChildren.res" in
-  let source = Ext_io.load_file filename in
+  let source =
+    Ext_io.load_file filename
+    ^ Ext_io.load_file
+        (Filename.concat data_dir "printer/expr/jsxChildrenComments.res")
+  in
   let parse source =
     let result =
       Res_driver.parse_implementation_from_source ~display_filename:filename
@@ -92,7 +96,9 @@ let () =
   in
   let comment_texts result =
     List.map
-      (fun comment -> String.trim (Res_comment.txt comment))
+      (fun comment ->
+        Res_comment.txt comment |> String.split_on_char '\n'
+        |> List.map String.trim |> String.concat "\n" |> String.trim)
       result.Res_driver.comments
   in
   (* Compare the expression structure independently of formatting locations and
@@ -158,8 +164,9 @@ let () =
                     ^ "<B />" ^ closing
                   in
                   let expected =
-                    "let x =\n  " ^ opening ^ "\n    <A />\n" ^ gap
-                    ^ formatted_comment ^ "\n    <B />\n  " ^ closing ^ "\n"
+                    "let x =\n  " ^ opening ^ "\n    <A />\n"
+                    ^ formatted_comment ^ "\n" ^ gap ^ "    <B />\n  " ^ closing
+                    ^ "\n"
                   in
                   let printed = format ~width (parse source) in
                   assert (printed = expected);
@@ -171,7 +178,8 @@ let () =
               ("/* a\n * b */", "    {\n      /* a\n       * b */\n    }");
               ("{// note\n}", "    {\n      // note\n    }");
               ("{\n// a\n// b\n}", "    {\n      // a\n      // b\n    }");
-              ("{// a\n}\n{// b\n}", "    {\n      // a\n      // b\n    }");
+              ( "{// a\n}\n{// b\n}",
+                "    {\n      // a\n    }\n    {\n      // b\n    }" );
             ])
         [("<div>", "</div>"); ("<>", "</>")])
     [20; 40; 80; 100; 120];

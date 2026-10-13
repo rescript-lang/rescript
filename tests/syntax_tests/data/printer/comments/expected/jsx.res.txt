@@ -59,13 +59,15 @@ module Cite = {
 <div>
   {
     // Move this child comment inside braces
-    React.string("Hello, World!")
   }
+  {React.string("Hello, World!")}
 </div>
 
 <div>
   {
     // Move this child comment inside braces
+  }
+  {
     // This one is already inside
     React.string("Hello, World!")
   }
@@ -74,6 +76,8 @@ module Cite = {
 <div>
   {
     // Move this block comment inside braces
+  }
+  {
     // This one is already inside
     let x = 1
     let y = 2
@@ -84,11 +88,15 @@ let x =
   <>
     {
       // before a
-      a // after a
     }
+    {a}
     {
+      // after a
       // before b
-      b // after b
+    }
+    {b}
+    {
+      // after b
     }
   </>
 

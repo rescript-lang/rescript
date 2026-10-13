@@ -108,15 +108,20 @@ let x =
 let x = <span>{<Icon />}</span>
 let x =
   <span>
+    {/* before braced JSX */}
+    {<Icon />}
     {
-      /* before braced JSX */ <Icon /> // after braced JSX
+      // after braced JSX
     }
   </span>
 let x =
   <>
     {
       // before braced fragment
-      <>{hello}</> // after braced fragment
+    }
+    {<>{hello}</>}
+    {
+      // after braced fragment
     }
   </>
 
@@ -163,8 +168,9 @@ let x =
   </span>
 let x =
   <span>
+    {hello}
     {
-      hello // already braced child
+      // already braced child
     }
   </span>
 let x =
@@ -185,15 +191,23 @@ let x =
   <span>
     {
       // before a block
+    }
+    {
       let child = hello
-      child // after a block
+      child
+    }
+    {
+      // after a block
     }
   </span>
 let x =
   <span>
     {
       // before a call
-      render(hello) // after a call
+    }
+    {render(hello)}
+    {
+      // after a call
     }
   </span>
 let x =
@@ -201,6 +215,8 @@ let x =
     {
       // before bare child
       hello
+    }
+    {
       // after bare child
     }
   </span>
@@ -295,12 +311,15 @@ let explicitCommentContainers =
   </>
 let adjacentCommentContainers =
   <span>
-    {
-      /* one */
-      /* two */
-    }
+    {/* one */}
+    {/* two */}
   </span>
-let commentBeforeExpression = <span>{/* before */ hello /* after */}</span>
+let commentBeforeExpression =
+  <span>
+    {/* before */}
+    {hello}
+    {/* after */}
+  </span>
 let emptyRecordChild = <span>{{}}</span>
 let wrappedEmptyRecordChild = <span>{{/* record */}}</span>
 
@@ -309,9 +328,12 @@ let mixedStandaloneComments =
     <Icon />
     {
       // before expression
-      hello // after expression
     }
-    {/* before element */}
+    {hello}
+    {
+      // after expression
+      /* before element */
+    }
     <Icon />
     {/* last block */}
   </>

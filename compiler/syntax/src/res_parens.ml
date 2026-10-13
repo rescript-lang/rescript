@@ -347,25 +347,6 @@ let jsx_prop_expr expr =
         Nothing
       | _ -> Parenthesized))
 
-let jsx_child_expr expr =
-  match expr.Parsetree.pexp_desc with
-  | Parsetree.Pexp_let _ | Pexp_sequence _ | Pexp_letexception _
-  | Pexp_letmodule _ | Pexp_open _ ->
-    (* These expressions already print as braced blocks. *)
-    Nothing
-  | Pexp_braces {expr = inner} when Parsetree_viewer.is_block_expr inner ->
-    Nothing
-  | _ -> (
-    let opt_braces, _ = Parsetree_viewer.process_braces expr in
-    match opt_braces with
-    | Some braces_loc -> Braced braces_loc
-    | _ -> (
-      match expr.pexp_desc with
-      | Pexp_jsx_element _ -> Nothing
-      (* JSX child expressions use braces even when the legacy grammar accepts
-         them bare. Records need an outer pair around their own braces. *)
-      | _ -> Parenthesized))
-
 let binary_expr expr =
   let opt_braces, _ = Parsetree_viewer.process_braces expr in
   match opt_braces with

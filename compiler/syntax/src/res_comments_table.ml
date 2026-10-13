@@ -701,11 +701,23 @@ and walk_list : ?prev_node:node -> node list -> t -> Comment.t list -> unit =
     | None ->
       (* first node, all leading comments attach here *)
       attach t.leading curr_loc leading
-    | Some (JsxChild ({pexp_desc = Pexp_jsx_element _} as child))
-      when Res_parens.jsx_child_expr child = Nothing ->
-      (* Standalone containers put their comments on separate lines. Always
-         attach comments between bare JSX elements to the next child so the
-         first format and subsequent parses agree. *)
+    | Some (JsxChild child) ->
+      (* Keep standalone containers together, even when they span lines. *)
+      let rec split = function
+        | comment :: rest
+          when Option.is_none (Comment.jsx_container comment)
+               &&
+               match child.pexp_desc with
+               | Pexp_jsx_element _ | Pexp_braces _ -> false
+               | _ ->
+                 (Comment.loc comment).loc_start.pos_lnum
+                 = child.pexp_loc.loc_end.pos_lnum ->
+          let trailing, leading = split rest in
+          (comment :: trailing, leading)
+        | leading -> ([], leading)
+      in
+      let trailing, leading = split leading in
+      attach t.trailing (get_loc (JsxChild child)) trailing;
       attach t.leading curr_loc leading
     | Some prev_node ->
       let prev_loc = get_loc prev_node in

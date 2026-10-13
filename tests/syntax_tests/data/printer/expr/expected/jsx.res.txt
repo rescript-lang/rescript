@@ -430,6 +430,7 @@ let x =
     {
       // Comment 2
     }
+
     <span
       id="2"
       className="sdf sdfdsf sdfs sdf asdf dsf"
@@ -479,10 +480,10 @@ let moo =
       // c3
     }
     <p>{React.string("moo")}</p>
-
     {
       // c4
     }
+
     <p>{React.string("moo")}</p>
   </div>
 
@@ -498,10 +499,10 @@ let fragmented_moo =
       // c3
     }
     <p>{React.string("moo")}</p>
-
     {
       // c4
     }
+
     <p>{React.string("moo")}</p>
   </>
 
