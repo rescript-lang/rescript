@@ -17,7 +17,7 @@
 - Record syntax no longer creates or matches dicts, e.g. `let d: dict<int> = {foo: 1}`; it's an error pointing to `dict{...}`. https://github.com/rescript-lang/rescript/pull/8751
 - Remove the call-site `@inlined` attribute, which was parsed but never affected code generation. It is now reported as a misplaced attribute (warning 53). https://github.com/rescript-lang/rescript/pull/8734
 - Remove the builtin primitives `%obj_is_int`, `%obj_dup`, `%obj_field`, `%array_safe_set`, `%null_to_opt` and `%nullable_to_opt`; custom externals using these names are now rejected. https://github.com/rescript-lang/rescript/pull/8731
-- Remove the `-pp` bsc flag, which had no effect; projects passing it in `bsc-flags` must drop it. https://github.com/rescript-lang/rescript/pull/8731
+- Remove the `-pp` bsc flag, which had no effect; projects passing it in `compiler-flags` (or the legacy `bsc-flags`) must drop it. https://github.com/rescript-lang/rescript/pull/8731
 - Remove `@deriving(abstract)` and `@deriving(jsConverter)`. Use record types (with optional fields, mutable fields and `@as` renaming) and polymorphic variants directly instead. https://github.com/rescript-lang/rescript/pull/8729
 
 #### :rocket: New Feature
