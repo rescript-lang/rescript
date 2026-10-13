@@ -611,10 +611,8 @@ Then attempt to rebuild your project as you would normally.
 
 ## Contribution Licensing
 
-Since ReScript is distributed under the terms of the [LGPL Version 3](LICENSE), contributions that you make are licensed under the same terms. In order for us to be able to accept your contributions, we will need explicit confirmation from you that you are able and willing to provide them under these terms, and the mechanism we use to do this is called a Developer's Certificate of Origin [DCO](DCO.md). This is very similar to the process used by the Linux(R) kernel, Samba, and many other major open source projects.
+ReScript is distributed under the [LGPL Version 3](LICENSE), and contributions are licensed under the same terms. To confirm that you can contribute under these terms, sign off every commit to certify the [Developer Certificate of Origin](https://developercertificate.org), as the Linux kernel and many other projects do:
 
-To participate under these terms, all that you must do is include a line like the following as the last line of the commit message for each commit in your contribution:
+    Signed-off-by: Random J. Developer <random@developer.example.org>
 
-    Signed-Off-By: Random J. Developer <random@developer.example.org>
-
-You must use your real name (sorry, no pseudonyms, and no anonymous contributions).
+`git commit -s` adds this line. Use your real name. The DCO check on each PR fails if a commit lacks a sign-off; fix it with `git rebase --signoff HEAD~N`, where N is the number of commits in the PR, and force-push.
