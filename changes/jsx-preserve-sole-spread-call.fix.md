@@ -1,0 +1,1 @@
+- Fix JSX preserve mode copying the props of an element with only a spread when it is printed as a call. https://github.com/rescript-lang/rescript/pull/8844

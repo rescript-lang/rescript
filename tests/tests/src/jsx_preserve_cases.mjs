@@ -25,6 +25,12 @@ let lowerExternal = JsxRuntime.jsx(lowerComp, {
   x: 1
 });
 
+let LowerSpread = {};
+
+let lowerSpread = JsxRuntime.jsx(lowerComp, lowerProps());
+
+let lowerSpreadKeyed = JsxRuntime.jsx(lowerComp, lowerProps(), "k");
+
 let base = {
   title: "base"
 };
@@ -108,6 +114,9 @@ export {
   asProp,
   Lower,
   lowerExternal,
+  LowerSpread,
+  lowerSpread,
+  lowerSpreadKeyed,
   base,
   getProps,
   w,
