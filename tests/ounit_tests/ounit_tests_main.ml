@@ -21,6 +21,7 @@ let suites =
       Ounit_bsb_regex_tests.suites;
       Ounit_bsb_pkg_tests.suites;
       Ounit_util_tests.suites;
+      Ounit_integer_constant_tests.suites;
       Ounit_jsx_loc_tests.suites;
       Ounit_analysis_references_tests.suites;
     ]
