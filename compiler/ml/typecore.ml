@@ -2648,9 +2648,9 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     in
     (if should_unify_expected_result_before_typing_lowered_apply funct sargs
      then
-       (* Lowered syntax like dict literals and async wrappers becomes a regular
-          application, so thread the expected result type into the application
-          before typing its arguments. *)
+       (* The async wrapper is lowered to a regular application, so thread the
+          expected result type into the application before typing its
+          arguments. *)
        let _, ty_res =
          filter_arrow_n ~env funct.exp_type
            (List.map (fun _ -> Asttypes.Nolabel) sargs)

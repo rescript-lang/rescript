@@ -418,8 +418,9 @@ let should_inline_rhs_binary_expr rhs =
     true
   | _ -> false
 
-(* Attributes on a module expression print before it and bind less tightly
-   than an application or a constraint *)
+(* Attributes on a module expression bind less tightly than an application or
+   a constraint. Most module expressions print them before themselves, but an
+   await prints them after [await], and a functor on its first parameter. *)
 let mod_expr_has_attributes (mod_expr : Parsetree.module_expr) =
   mod_expr.pmod_attributes <> []
 
