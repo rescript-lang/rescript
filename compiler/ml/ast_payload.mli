@@ -51,9 +51,10 @@ val semantic_string_of_payload : t -> string option
     Other prefixed literals, such as [json], are not semantic strings. *)
 
 val fixed_source_of_payload : t -> string option
-(** Convert a recursively static literal payload to validated JavaScript source.
-    This does not accept calls, spreads, interpolation, or other executable
-    expressions. *)
+(** The JavaScript source of a legacy fixed-value [@as] payload: an integer, a
+    string, a non-interpolated backquoted string, or a non-interpolated [json]
+    template. Callers still validate the [json] source with
+    [Classify_function.is_fixed_literal]. *)
 
 val is_single_int : t -> int option
 

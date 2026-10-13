@@ -392,11 +392,14 @@ type response = {
 }
 
 let fixed_arg_type ({txt = source; loc} : Parsetree.fixed_value) =
-  match Classify_function.classify source with
-  | Js_literal _ ->
+  if Classify_function.is_fixed_literal source then
     External_arg_spec.Arg_cst (External_arg_spec.cst_fixed source)
-  | _ ->
+  else
     Location.raise_errorf ~loc "The %%raw payload must be a JavaScript literal"
+
+(* A fixed argument is always passed, so it has nothing to make optional. *)
+let reject_optional_fixed ({loc} : Parsetree.fixed_value) =
+  Location.raise_errorf ~loc "A %%raw argument cannot be optional"
 
 let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
     (arg_types_ty : Parsetree.arg list) (result_type : Ast_core_type.t) :
@@ -515,7 +518,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
               in
               let obj_arg_type =
                 match fixed with
-                | Some value -> fixed_arg_type value
+                | Some value -> reject_optional_fixed value
                 | None -> get_opt_arg_type ~nolabel:false ty
               in
               match obj_arg_type with
@@ -954,7 +957,7 @@ let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
             | Optional {txt = s} -> (
               let arg_type =
                 match fixed with
-                | Some value -> fixed_arg_type value
+                | Some value -> reject_optional_fixed value
                 | None -> get_opt_arg_type ~nolabel:false ty
               in
               match arg_type with

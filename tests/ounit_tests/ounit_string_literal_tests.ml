@@ -565,6 +565,37 @@ let suites =
            with
            | _ -> OUnit.assert_failure "expected an invalid string escape"
            | exception Location.Error _ -> () );
+         ( "fixed-value payloads become JavaScript sources" >:: fun _ ->
+           let int_payload source =
+             Parsetree.PStr
+               [
+                 Ast_helper.Str.eval
+                   (Ast_helper.Exp.constant (Pconst_integer (source, None)));
+               ]
+           in
+           List.iter
+             (fun (source, expected) ->
+               OUnit.assert_equal ~printer:Ext_obj.dump (Some expected)
+                 (Ast_payload.fixed_source_of_payload (int_payload source)))
+             [
+               ("1", "1");
+               ("0", "0");
+               ("00", "0");
+               ("007", "7");
+               ("-007", "-7");
+               ("1_000", "1000");
+               ("0x1_0", "0x10");
+               ("0o17", "0o17");
+             ];
+           OUnit.assert_equal ~printer:Ext_obj.dump (Some {|"a\n😀"|})
+             (Ast_payload.fixed_source_of_payload
+                (template_payload {|a\n\uD83D\uDE00|}));
+           OUnit.assert_equal ~printer:Ext_obj.dump (Some {|{"answer":42}|})
+             (Ast_payload.fixed_source_of_payload
+                (tagged_payload "json" {|{"answer":42}|}));
+           OUnit.assert_equal ~printer:Ext_obj.dump None
+             (Ast_payload.fixed_source_of_payload
+                (tagged_payload "sql" {|{"answer":42}|})) );
          ( "error extensions accept backquoted messages" >:: fun _ ->
            let extension =
              ( Location.mknoloc "error",

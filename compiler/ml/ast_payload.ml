@@ -78,17 +78,35 @@ let semantic_string_of_payload (x : t) =
 let quote_js_string semantic =
   "\"" ^ String_literal.encode_js_string semantic ^ "\""
 
-let rec fixed_source_of_expression (expression : Parsetree.expression) =
-  let map_all f values =
-    let rec loop acc = function
-      | [] -> Some (List.rev acc)
-      | value :: rest -> (
-        match f value with
-        | Some mapped -> loop (mapped :: acc) rest
-        | None -> None)
-    in
-    loop [] values
+(* Spell a ReScript integer literal as a JavaScript one. Underscore separators
+   need ES2021, and a decimal literal with a leading zero is a legacy octal
+   literal, which strict-mode JavaScript rejects. *)
+let js_integer_source source =
+  let source = String.concat "" (String.split_on_char '_' source) in
+  let sign, digits =
+    if source <> "" && source.[0] = '-' then
+      ("-", String.sub source 1 (String.length source - 1))
+    else ("", source)
   in
+  let length = String.length digits in
+  let has_radix_prefix =
+    length > 1
+    && digits.[0] = '0'
+    &&
+    match digits.[1] with
+    | 'x' | 'X' | 'o' | 'O' | 'b' | 'B' -> true
+    | _ -> false
+  in
+  if has_radix_prefix then sign ^ digits
+  else
+    let rec first_significant i =
+      if i < length - 1 && digits.[i] = '0' then first_significant (i + 1)
+      else i
+    in
+    let start = first_significant 0 in
+    sign ^ String.sub digits start (length - start)
+
+let fixed_source_of_expression (expression : Parsetree.expression) =
   match (unwrap_braces expression).pexp_desc with
   | Pexp_constant (Pconst_string payload) ->
     Some (quote_js_string (String_literal.string_semantic payload))
@@ -96,9 +114,8 @@ let rec fixed_source_of_expression (expression : Parsetree.expression) =
     match String_literal.decode_js_template_escapes source with
     | Some semantic -> Some (quote_js_string semantic)
     | None -> None)
-  | Pexp_constant (Pconst_integer (source, None)) -> Some source
-  | Pexp_constant (Pconst_integer (source, Some 'n')) -> Some (source ^ "n")
-  | Pexp_constant (Pconst_float (source, None)) -> Some source
+  | Pexp_constant (Pconst_integer (source, None)) ->
+    Some (js_integer_source source)
   | Pexp_tagged_template
       {
         tag = {pexp_desc = Pexp_ident {txt = Lident "json"}};
@@ -106,39 +123,6 @@ let rec fixed_source_of_expression (expression : Parsetree.expression) =
         values = [];
       } ->
     Some source
-  | Pexp_construct ({txt = Lident "true"}, {txt = []}) -> Some "true"
-  | Pexp_construct ({txt = Lident "false"}, {txt = []}) -> Some "false"
-  | Pexp_ident {txt = Lident "null"} -> Some "null"
-  | Pexp_ident {txt = Lident "undefined"} -> Some "undefined"
-  | Pexp_array values -> (
-    match map_all fixed_source_of_expression values with
-    | Some values -> Some ("[" ^ String.concat "," values ^ "]")
-    | None -> None)
-  | Pexp_object_literal fields ->
-    let field_source
-        (({txt = name}, value) : string Location.loc * Parsetree.expression) =
-      match fixed_source_of_expression value with
-      | Some value -> Some (quote_js_string name ^ ":" ^ value)
-      | None -> None
-    in
-    begin match map_all field_source fields with
-    | Some fields -> Some ("{" ^ String.concat "," fields ^ "}")
-    | None -> None
-    end
-  | Pexp_record (fields, None) ->
-    let field_source
-        ({lid; x = value; opt} : Parsetree.expression Parsetree.record_element)
-        =
-      if opt then None
-      else
-        match (lid.txt, fixed_source_of_expression value) with
-        | Lident name, Some value -> Some (quote_js_string name ^ ":" ^ value)
-        | Ldot _, _ | _, None -> None
-    in
-    begin match map_all field_source fields with
-    | Some fields -> Some ("{" ^ String.concat "," fields ^ "}")
-    | None -> None
-    end
   | _ -> None
 
 let fixed_source_of_payload (payload : t) =

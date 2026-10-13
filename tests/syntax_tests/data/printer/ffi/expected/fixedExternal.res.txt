@@ -19,6 +19,31 @@
   13 │ @val
   14 │ external legacyString: (@as("img") _, int) => int = "f"
   15 │ 
+  16 │ @val
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/ffi/fixedExternal.res:20:36-38
+
+  18 │ 
+  19 │ @val
+  20 │ external legacyCommented: (/* a */ @as(1) /* b */ _ /* c */, int) => in
+     │ t = "f"
+  21 │ 
+  22 │ @val
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/ffi/fixedExternal.res:23:25-27
+
+  21 │ 
+  22 │ @val
+  23 │ external legacyBraced: (@as({json`[]`}) _, int) => int = "f"
+  24 │ 
 
   deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
 
@@ -36,3 +61,12 @@ external legacyObject: (%raw("{foo: true}"), int) => int = "Object.assign"
 
 @val
 external legacyString: (%raw(`"img"`), int) => int = "f"
+
+@val
+external commented: (/* a */ %raw("1") /* b */, %raw("2") /* c */, int) => int = "f"
+
+@val
+external legacyCommented: (/* a */ %raw("1") /* b */ /* c */, int) => int = "f"
+
+@val
+external legacyBraced: (%raw("[]"), int) => int = "f"

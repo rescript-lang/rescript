@@ -2405,15 +2405,27 @@ and print_type_parameter ?inline_record_definitions ~state parameter cmt_tbl =
         print_typ_expr ?inline_record_definitions ~state typ cmt_tbl,
         typ.ptyp_loc )
     | Parsetree.Parg_fixed {attrs; lbl; value} ->
+      (* The value prints as one unit: comments written inside it, e.g. between
+         [@as(...)] and [_], follow it. *)
+      (match Hashtbl.find_opt cmt_tbl.Comment_table.inside value.loc with
+      | Some inside ->
+        Hashtbl.remove cmt_tbl.inside value.loc;
+        let trailing =
+          Option.value ~default:[] (Hashtbl.find_opt cmt_tbl.trailing value.loc)
+        in
+        Hashtbl.replace cmt_tbl.trailing value.loc (inside @ trailing)
+      | None -> ());
       ( attrs,
         lbl,
-        Doc.group
-          (Doc.concat
-             [
-               Doc.text "%raw(";
-               print_constant (Pconst_raw_source value.txt);
-               Doc.rparen;
-             ]),
+        print_comments
+          (Doc.group
+             (Doc.concat
+                [
+                  Doc.text "%raw(";
+                  print_constant (Pconst_raw_source value.txt);
+                  Doc.rparen;
+                ]))
+          cmt_tbl value.loc,
         value.loc )
   in
   (* Converting .ml code to .res requires processing uncurried attributes *)

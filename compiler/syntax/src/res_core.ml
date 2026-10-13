@@ -288,59 +288,6 @@ type type_parameter = {
   start_pos: Lexing.position;
 }
 
-let is_fixed_value_payload (payload : Parsetree.payload) =
-  match payload with
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ( {
-                  pexp_desc =
-                    Pexp_constant (Pconst_integer (_, None) | Pconst_string _);
-                  _;
-                },
-                _ );
-          _;
-        };
-      ] ->
-    true
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ( {
-                  pexp_desc = Pexp_template {source_segments = [_]; values = []};
-                  _;
-                },
-                _ );
-          _;
-        };
-      ] ->
-    true
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ( {
-                  pexp_desc =
-                    Pexp_tagged_template
-                      {
-                        tag = {pexp_desc = Pexp_ident {txt = Lident "json"}};
-                        raw_sources = [_];
-                        values = [];
-                      };
-                  _;
-                },
-                _ );
-          _;
-        };
-      ] ->
-    true
-  | _ -> false
-
 let source_of_raw_payload (payload : Parsetree.payload) =
   match payload with
   | PStr
@@ -348,16 +295,11 @@ let source_of_raw_payload (payload : Parsetree.payload) =
         {
           pstr_desc =
             Pstr_eval
-              ( {
-                  pexp_desc = Pexp_constant (Pconst_raw_source source);
-                  pexp_loc;
-                  _;
-                },
-                _ );
+              ({pexp_desc = Pexp_constant (Pconst_raw_source source); _}, _);
           _;
         };
       ] ->
-    Some (source, pexp_loc)
+    Some source
   | PStr
       [
         {
@@ -367,14 +309,13 @@ let source_of_raw_payload (payload : Parsetree.payload) =
                   pexp_desc =
                     Pexp_template
                       {source_segments = [{txt = source}]; values = []};
-                  pexp_loc;
                   _;
                 },
                 _ );
           _;
         };
       ] ->
-    Some (source, pexp_loc)
+    Some source
   | PStr _ | PSig _ | PTyp _ | PPat _ -> None
 
 let reject_raw_fixed_extensions p (typ : Parsetree.core_type) =
@@ -415,7 +356,9 @@ let normalize_external_fixed_parameters p (typ : Parsetree.core_type) =
                    _;
                  } as typed_arg) -> (
               match source_of_raw_payload payload with
-              | Some (source, loc) ->
+              | Some source ->
+                (* Span [%raw(...)], so comments next to it stay with it. *)
+                let loc = {id.loc with loc_end = arg_typ.ptyp_loc.loc_end} in
                 Parg_fixed
                   {
                     attrs = typed_arg.attrs @ arg_typ.ptyp_attributes;
@@ -432,13 +375,18 @@ let normalize_external_fixed_parameters p (typ : Parsetree.core_type) =
               let rec find_fixed found rev_attrs = function
                 | [] ->
                   Option.map
-                    (fun (id, payload) -> (id, payload, List.rev rev_attrs))
+                    (fun (id, source) -> (id, source, List.rev rev_attrs))
                     found
                 | (((id : string Location.loc), payload) as attribute) :: rest
-                  ->
-                  if id.txt = "as" && is_fixed_value_payload payload then (
+                  -> (
+                  match
+                    if id.txt = "as" then
+                      Ast_payload.fixed_source_of_payload payload
+                    else None
+                  with
+                  | Some source -> (
                     match found with
-                    | None -> find_fixed (Some (id, payload)) rev_attrs rest
+                    | None -> find_fixed (Some (id, source)) rev_attrs rest
                     | Some _ ->
                       Parser.err ~start_pos:id.loc.loc_start
                         ~end_pos:id.loc.loc_end p
@@ -446,11 +394,11 @@ let normalize_external_fixed_parameters p (typ : Parsetree.core_type) =
                            "A fixed argument can only have one fixed-value @as \
                             annotation");
                       find_fixed found rev_attrs rest)
-                  else find_fixed found (attribute :: rev_attrs) rest
+                  | None -> find_fixed found (attribute :: rev_attrs) rest)
               in
               begin match find_fixed None [] arg_typ.ptyp_attributes with
               | None -> arg
-              | Some (id, payload, remaining_attrs) -> (
+              | Some (id, source, remaining_attrs) ->
                 Parser.warn p id.loc
                   (Warnings.Deprecated
                      ( "The fixed-value `@as(...) _` external argument syntax \
@@ -458,26 +406,14 @@ let normalize_external_fixed_parameters p (typ : Parsetree.core_type) =
                        id.loc,
                        id.loc,
                        false ));
-                let fixed_source =
-                  match Ast_payload.fixed_source_of_payload payload with
-                  | Some source -> Some (source, id.loc)
-                  | None -> None
-                in
-                match fixed_source with
-                | Some (source, loc) ->
-                  Parg_fixed
-                    {
-                      attrs = typed_arg.attrs @ remaining_attrs;
-                      lbl = typed_arg.lbl;
-                      value = {txt = source; loc};
-                    }
-                | None ->
-                  Parser.err ~start_pos:id.loc.loc_start ~end_pos:id.loc.loc_end
-                    p
-                    (Diagnostics.message
-                       "The fixed-value @as payload must be a JavaScript \
-                        literal");
-                  arg)
+                (* Span [@as(...) _], so comments next to it stay with it. *)
+                let loc = {id.loc with loc_end = arg_typ.ptyp_loc.loc_end} in
+                Parg_fixed
+                  {
+                    attrs = typed_arg.attrs @ remaining_attrs;
+                    lbl = typed_arg.lbl;
+                    value = {txt = source; loc};
+                  }
               end
             | Parg_type _ -> arg)
           params

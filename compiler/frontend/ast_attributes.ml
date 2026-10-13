@@ -169,41 +169,12 @@ type as_const_payload = Fixed of string
 
 let as_const (attrs : t) =
   single_as attrs ~decode:(fun ~loc payload ->
-      let is_fixed_value_payload =
-        Ast_payload.is_single_int payload <> None
-        || Ast_payload.semantic_string_of_payload payload <> None
-        ||
-        match Ast_payload.unwrap_payload_expression payload with
-        | PStr
-            [
-              {
-                pstr_desc =
-                  Pstr_eval
-                    ( {
-                        pexp_desc =
-                          Pexp_tagged_template
-                            {
-                              tag =
-                                {pexp_desc = Pexp_ident {txt = Lident "json"}};
-                              raw_sources = [_];
-                              values = [];
-                            };
-                      },
-                      _ );
-              };
-            ] ->
-          true
-        | _ -> false
-      in
-      if not is_fixed_value_payload then
-        Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal;
       match Ast_payload.fixed_source_of_payload payload with
-      | Some source -> (
-        match Classify_function.classify source with
-        | Js_literal _ -> Fixed source
-        | _ ->
-          Location.raise_errorf ~loc
-            "The fixed-value @as payload must be a JavaScript literal")
+      | Some source when Classify_function.is_fixed_literal source ->
+        Fixed source
+      | Some _ ->
+        Location.raise_errorf ~loc
+          "The fixed-value @as payload must be a JavaScript literal"
       | None -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal)
 
 let locg = Location.none
