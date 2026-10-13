@@ -31,6 +31,12 @@ let lowerSpread = JsxRuntime.jsx(lowerComp, lowerProps());
 
 let lowerSpreadKeyed = JsxRuntime.jsx(lowerComp, lowerProps(), "k");
 
+let Unboxed = {};
+
+let unboxedProps = JsxRuntime.jsx(lowerComp, "x");
+
+let unboxedPropsKeyed = JsxRuntime.jsx(lowerComp, "x", "k");
+
 let base = {
   title: "base"
 };
@@ -117,6 +123,9 @@ export {
   LowerSpread,
   lowerSpread,
   lowerSpreadKeyed,
+  Unboxed,
+  unboxedProps,
+  unboxedPropsKeyed,
   base,
   getProps,
   w,

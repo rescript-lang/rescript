@@ -37,6 +37,15 @@ module LowerSpread = {
 let lowerSpread = <LowerSpread {...lowerProps()} />
 let lowerSpreadKeyed = <LowerSpread {...lowerProps()} key="k" />
 
+// An @unboxed props record is its field's value, not an object: printed as
+// the call with that value
+module Unboxed = {
+  @unboxed type props = {title: string}
+  @val external make: React.component<props> = "lowerComp"
+}
+let unboxedProps = <Unboxed title="x" />
+let unboxedPropsKeyed = <Unboxed key="k" title="x" />
+
 // Spreads that aren't variables, with and without a key
 let base: JsxDOM.domProps = {title: "base"}
 let getProps = (): JsxDOM.domProps => {title: "fn"}
