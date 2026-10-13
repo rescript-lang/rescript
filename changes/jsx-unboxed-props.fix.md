@@ -1,0 +1,1 @@
+- Report an error for JSX elements whose props are an `@unboxed` record, which isn't an object and broke at runtime or in JSX preserve mode. https://github.com/rescript-lang/rescript/pull/8857
