@@ -64,8 +64,7 @@ let interface ~parser ppf ?outputprefix fname =
   in
   Res_compmisc.init_path ();
   parser fname
-  |> Cmd_ppx_apply.apply_rewriters ~restore:false ~tool_name:Js_config.tool_name
-       Mli
+  |> Cmd_ppx_apply.apply_rewriters ~tool_name:Js_config.tool_name Mli
   |> Ppx_entry.rewrite_signature
   |> print_if_pipe ppf Clflags.dump_parsetree Printast.interface
   |> print_if_pipe ppf Clflags.dump_source Pprintast.signature
@@ -151,8 +150,7 @@ let implementation ~parser ppf ?outputprefix fname =
   in
   Res_compmisc.init_path ();
   parser fname
-  |> Cmd_ppx_apply.apply_rewriters ~restore:false ~tool_name:Js_config.tool_name
-       Ml
+  |> Cmd_ppx_apply.apply_rewriters ~tool_name:Js_config.tool_name Ml
   |> Ppx_entry.rewrite_implementation
   |> print_if_pipe ppf Clflags.dump_parsetree Printast.implementation
   |> print_if_pipe ppf Clflags.dump_source Pprintast.structure

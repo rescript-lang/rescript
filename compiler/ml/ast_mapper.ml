@@ -612,13 +612,6 @@ let rec extension_of_error {loc; msg; if_highlight; sub} =
        ]
       @ List.map (fun ext -> Str.extension (extension_of_error ext)) sub) )
 
-module String_map = Map.Make (struct
-  type t = string
-  let compare = compare
-end)
-
-let cookies = ref String_map.empty
-
 module Ppx_context = struct
   open Longident
   open Asttypes
@@ -640,18 +633,6 @@ module Ppx_context = struct
     | x :: rest ->
       Exp.construct (lid "::") (Location.mknoloc [f x; make_list f rest])
     | [] -> Exp.construct (lid "[]") (Location.mknoloc [])
-
-  let make_pair f1 f2 (x1, x2) = Exp.tuple [f1 x1; f2 x2]
-
-  let get_cookies () =
-    {
-      lid = lid "cookies";
-      x =
-        make_list
-          (make_pair make_string (fun x -> x))
-          (String_map.bindings !cookies);
-      opt = false;
-    }
 
   let mk fields =
     ( {txt = "ocaml.ppx.context"; loc = Location.none},
@@ -677,98 +658,24 @@ module Ppx_context = struct
           opt = false;
         };
         {lid = lid "debug"; x = make_bool !Clflags.debug; opt = false};
-        get_cookies ();
+        (* The compiler doesn't read back the cookies a PPX sets. *)
+        {lid = lid "cookies"; x = make_list Fun.id []; opt = false};
       ]
     in
     mk fields
-
-  let get_fields = function
-    | PStr
-        [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_record (fields, None)}, [])}]
-      ->
-      fields
-    | _ -> raise_errorf "Internal error: invalid [@@@ocaml.ppx.context] syntax"
-
-  let restore fields =
-    let field name payload =
-      let rec get_string = function
-        | {pexp_desc = Pexp_constant (Pconst_string payload)} ->
-          String_literal.string_semantic payload
-        | _ ->
-          raise_errorf
-            "Internal error: invalid [@@@ocaml.ppx.context { %s }] string \
-             syntax"
-            name
-      and get_bool pexp =
-        match pexp with
-        | {
-         pexp_desc = Pexp_construct ({txt = Longident.Lident "true"}, {txt = []});
-        } ->
-          true
-        | {
-         pexp_desc =
-           Pexp_construct ({txt = Longident.Lident "false"}, {txt = []});
-        } ->
-          false
-        | _ ->
-          raise_errorf
-            "Internal error: invalid [@@@ocaml.ppx.context { %s }] bool syntax"
-            name
-      and get_list elem = function
-        | {
-            pexp_desc =
-              Pexp_construct ({txt = Longident.Lident "::"}, {txt = [exp; rest]});
-          } ->
-          elem exp :: get_list elem rest
-        | {
-            pexp_desc =
-              Pexp_construct ({txt = Longident.Lident "[]"}, {txt = []});
-          } ->
-          []
-        | _ ->
-          raise_errorf
-            "Internal error: invalid [@@@ocaml.ppx.context { %s }] list syntax"
-            name
-      and get_pair f1 f2 = function
-        | {pexp_desc = Pexp_tuple [e1; e2]} -> (f1 e1, f2 e2)
-        | _ ->
-          raise_errorf
-            "Internal error: invalid [@@@ocaml.ppx.context { %s }] pair syntax"
-            name
-      in
-      match name with
-      | "include_dirs" -> Clflags.include_dirs := get_list get_string payload
-      | "load_path" -> Config.load_path := get_list get_string payload
-      | "open_modules" -> Clflags.open_modules := get_list get_string payload
-      | "debug" -> Clflags.debug := get_bool payload
-      | "cookies" ->
-        let l = get_list (get_pair get_string (fun x -> x)) payload in
-        cookies :=
-          List.fold_left
-            (fun s (k, v) -> String_map.add k v s)
-            String_map.empty l
-      | _ -> ()
-    in
-    List.iter
-      (function
-        | {lid = {txt = Lident name}; x} -> field name x
-        | _ -> ())
-      fields
 end
 
 let ppx_context = Ppx_context.make
 
-let drop_ppx_context_str ~restore = function
-  | {pstr_desc = Pstr_attribute ({Location.txt = "ocaml.ppx.context"}, a)}
+let drop_ppx_context_str = function
+  | {pstr_desc = Pstr_attribute ({Location.txt = "ocaml.ppx.context"}, _)}
     :: items ->
-    if restore then Ppx_context.restore (Ppx_context.get_fields a);
     items
   | items -> items
 
-let drop_ppx_context_sig ~restore = function
-  | {psig_desc = Psig_attribute ({Location.txt = "ocaml.ppx.context"}, a)}
+let drop_ppx_context_sig = function
+  | {psig_desc = Psig_attribute ({Location.txt = "ocaml.ppx.context"}, _)}
     :: items ->
-    if restore then Ppx_context.restore (Ppx_context.get_fields a);
     items
   | items -> items
 

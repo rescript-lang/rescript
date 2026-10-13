@@ -116,8 +116,7 @@ let reprint_source_file sourcefile =
         exit 1);
       Res_compmisc.init_path ();
       parse_result.parsetree
-      |> Cmd_ppx_apply.apply_rewriters ~restore:false
-           ~tool_name:Js_config.tool_name Ml
+      |> Cmd_ppx_apply.apply_rewriters ~tool_name:Js_config.tool_name Ml
       |> Ppx_entry.rewrite_implementation
       |> Res_printer.print_implementation ~width:100
            ~comments:parse_result.comments
@@ -132,8 +131,7 @@ let reprint_source_file sourcefile =
         exit 1);
       Res_compmisc.init_path ();
       parse_result.parsetree
-      |> Cmd_ppx_apply.apply_rewriters ~restore:false
-           ~tool_name:Js_config.tool_name Mli
+      |> Cmd_ppx_apply.apply_rewriters ~tool_name:Js_config.tool_name Mli
       |> Ppx_entry.rewrite_signature
       |> Res_printer.print_interface ~width:100 ~comments:parse_result.comments
       |> print_endline
