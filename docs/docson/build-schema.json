@@ -142,8 +142,31 @@
       "type": "string"
     },
     "bs-dependency": {
-      "type": "string",
-      "title": "dependency"
+      "title": "dependency",
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Name of the package"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name of the package"
+            },
+            "features": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Features of the dependency to build, together with the features they imply through its `features` map. When omitted, all of its features are built."
+            }
+          },
+          "required": ["name"],
+          "additionalProperties": false
+        }
+      ]
     },
     "dependencies": {
       "type": "array",
@@ -196,6 +219,10 @@
             "dir": {
               "type": "string",
               "description": "name of the directory"
+            },
+            "feature": {
+              "type": "string",
+              "description": "Only include this directory in the build when this feature is active, directly or implied by another active feature through `features`"
             },
             "type": {
               "enum": ["dev"]
@@ -424,6 +451,16 @@
         "type": "string"
       },
       "description": "Names of the packages that may list this package in their `dependencies` or `dev-dependencies`. When set, the build fails if any other package depends on this one. When omitted, any package may depend on it."
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "description": "Feature declarations: each key is a feature name, and its value lists the other features it implies. Features without implications don't need to be declared; any name used as a source's `feature` is recognized."
     },
     "generators": {
       "type": "array",

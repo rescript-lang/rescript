@@ -2680,4 +2680,81 @@ pub mod tests {
         assert_eq!(qualified.name(), "@a/b");
         assert_eq!(qualified.features().cloned(), Some(vec!["x".to_string()]));
     }
+
+    /// The keys a struct deriving `Deserialize` accepts, as serde's derive lists them: renamed,
+    /// without aliases and skipped fields.
+    fn struct_keys<'de, T: Deserialize<'de>>() -> &'static [&'static str] {
+        struct Keys(Option<&'static [&'static str]>);
+
+        impl<'de> serde::Deserializer<'de> for &mut Keys {
+            type Error = serde::de::value::Error;
+
+            fn deserialize_any<V: serde::de::Visitor<'de>>(self, _: V) -> Result<V::Value, Self::Error> {
+                Err(serde::de::Error::custom("not a struct"))
+            }
+
+            fn deserialize_struct<V: serde::de::Visitor<'de>>(
+                self,
+                _: &'static str,
+                fields: &'static [&'static str],
+                _: V,
+            ) -> Result<V::Value, Self::Error> {
+                self.0 = Some(fields);
+                Err(serde::de::Error::custom("keys recorded"))
+            }
+
+            serde::forward_to_deserialize_any! {
+                bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string bytes byte_buf
+                option unit unit_struct newtype_struct seq tuple tuple_struct map enum identifier
+                ignored_any
+            }
+        }
+
+        let mut keys = Keys(None);
+        let _ = T::deserialize(&mut keys);
+        keys.0.expect("a struct")
+    }
+
+    fn build_schema() -> serde_json::Value {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/docson/build-schema.json");
+        serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap()
+    }
+
+    fn assert_schema_has_keys(properties: &serde_json::Value, keys: &[&str], what: &str) {
+        for key in keys {
+            assert!(
+                properties.get(key).is_some(),
+                "{what} key `{key}` is missing from docs/docson/build-schema.json"
+            );
+        }
+    }
+
+    #[test]
+    fn test_build_schema_lists_config_keys() {
+        let schema = build_schema();
+        // `path` is where the config was read from, set after parsing. The deprecated aliases,
+        // which parsing warns about, are left out of the schema.
+        let not_in_schema = ["path", "bs-dependencies", "bs-dev-dependencies", "bsc-flags"];
+        let config_keys: Vec<&str> = struct_keys::<Config>()
+            .iter()
+            .copied()
+            .filter(|key| !not_in_schema.contains(key))
+            .collect();
+        assert_schema_has_keys(&schema["properties"], &config_keys, "rescript.json");
+        assert_schema_has_keys(
+            &schema["definitions"]["sourceItem"]["oneOf"][0]["properties"],
+            struct_keys::<PackageSource>(),
+            "Source",
+        );
+        assert_schema_has_keys(
+            &schema["definitions"]["bs-dependency"]["oneOf"][1]["properties"],
+            struct_keys::<QualifiedDependency>(),
+            "Dependency",
+        );
+
+        let properties = &schema["properties"];
+        assert_eq!(properties["namespace-entry"]["type"], "string");
+        assert_eq!(properties["allowed-dependents"]["type"], "array");
+        assert_eq!(properties["allowed-dependents"]["items"]["type"], "string");
+    }
 }
