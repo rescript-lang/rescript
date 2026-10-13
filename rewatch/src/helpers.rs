@@ -499,7 +499,8 @@ fn has_rescript_config(path: &Path) -> bool {
     path.join("rescript.json").exists() || path.join("bsconfig.json").exists()
 }
 
-// traverse up the directory tree until we find a config.json, if not return None
+// Traverse up the directory tree, starting at `path_buf`, until we find a directory with a
+// rescript.json or bsconfig.json, and return that directory. If there is none, return None.
 pub fn get_nearest_config(path_buf: &Path) -> Option<PathBuf> {
     let mut current_dir = path_buf.to_owned();
     loop {

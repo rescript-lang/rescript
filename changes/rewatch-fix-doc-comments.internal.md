@@ -1,0 +1,1 @@
+- Rewatch: fix doc comments that contradicted the code. https://github.com/rescript-lang/rescript/pull/8841
