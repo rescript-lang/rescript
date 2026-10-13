@@ -1,0 +1,1 @@
+- Fix external PPXs turning `Primitive_dict.make(...)` calls into dict literals and flattening dict literals spread into dict literals. https://github.com/rescript-lang/rescript/pull/8846

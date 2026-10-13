@@ -549,18 +549,20 @@ end
 module E = struct
   (* Value expressions for the core language *)
 
-  (* The rows of [Primitive_dict.make([("a", 1), ...])] *)
-  let dict_rows (e : expression) =
+  (* The rows of [Primitive_dict.make([("a", 1), ...])], whose [make] carries
+     [marker] *)
+  let dict_rows ~marker (e : expression) =
     match e.pexp_desc with
     | Pexp_apply
         ( {
             pexp_desc = Pexp_ident {txt = Ldot (Lident "Primitive_dict", "make")};
-            pexp_attributes = [];
+            pexp_attributes = [({txt}, PStr [])];
           },
           [
             ( Asttypes.Noloc.Nolabel,
               {pexp_desc = Pexp_array items; pexp_attributes = []} );
-          ] ) ->
+          ] )
+      when txt = marker ->
       let row = function
         | {
             pexp_desc =
@@ -592,7 +594,7 @@ module E = struct
   let dict_entries (e : expression) =
     let chunk (e : expression) =
       match e.pexp_attributes with
-      | [] -> dict_rows e
+      | [] -> dict_rows ~marker:Ast_dict.rows_marker e
       | _ -> None
     in
     let rows = List.map (fun row -> `Row row) in
@@ -620,7 +622,7 @@ module E = struct
                 | None -> [`Spread source])
               sources)
       | None -> None)
-    | _ -> Option.map rows (dict_rows e)
+    | _ -> Option.map rows (dict_rows ~marker:Ast_dict.literal_marker e)
 
   let has_await_attribute attrs =
     List.exists

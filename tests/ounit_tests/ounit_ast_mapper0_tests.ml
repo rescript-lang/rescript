@@ -1543,7 +1543,7 @@ let test_dict_literal_through_ast0 _ =
               _ ) ->
           OUnit.assert_equal ~msg:source wire_function name;
           OUnit.assert_equal ~msg:source ~printer:(String.concat ", ")
-            (if name = "spread" then ["res.dictSpread"] else [])
+            (if name = "spread" then ["res.dictSpread"] else ["res.dict"])
             (attr_names pexp_attributes)
         | _ -> assert_failure ("Expected a Primitive_dict call: " ^ source));
         match map_expr0 wire with
@@ -1559,8 +1559,11 @@ let test_dict_literal_through_ast0 _ =
       ({|dict{"a\"b": 1}|}, "make");
       ("dict{...a}", "spread");
       ({|dict{"a": 1, ...b, "c": 3, ...d}|}, "spread");
+      ({|dict{"a": 1, ...dict{"b": 2}}|}, "spread");
+      ({|dict{...dict{"b": 2, ...dict{}}, "c": 3}|}, "spread");
     ];
-  (* A call a PPX writes, with a semantic string key *)
+  (* A call without the marker, as written in the source or by a PPX, stays a
+     call *)
   let make =
     Ast_helper0.Exp.apply ~loc
       (Ast_helper0.Exp.ident ~loc
@@ -1581,8 +1584,15 @@ let test_dict_literal_through_ast0 _ =
       ]
   in
   match (map_expr0 make).pexp_desc with
-  | Pexp_dict [Pdict_entry ({txt = "k"}, _)] -> ()
-  | _ -> assert_failure "Expected a dict literal from Primitive_dict.make"
+  | Pexp_apply
+      {
+        funct =
+          {
+            pexp_desc = Pexp_ident {txt = Ldot (Lident "Primitive_dict", "make")};
+          };
+      } ->
+    ()
+  | _ -> assert_failure "Expected a call of Primitive_dict.make"
 
 let test_removed_regexp_extension _ =
   List.iter
