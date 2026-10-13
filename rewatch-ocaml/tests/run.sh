@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+. "$(dirname "$0")/test_helpers.sh"
 # Many checks fail silently under set -e; name the failing command where the
 # shell can (bash, which is sh on Windows CI).
 if [ -n "${BASH_VERSION:-}" ]; then
@@ -13,10 +14,6 @@ root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 : "${RESCRIPT_BSC_EXE:=$root/_build/default/compiler/bsc/rescript_compiler_main.exe}"
 : "${RESCRIPT_RUNTIME:=$root/packages/@rescript/runtime}"
 test_proxy="$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe"
-windows_posix_shell=false
-case $(uname -s) in
-  CYGWIN*|MINGW*|MSYS*) windows_posix_shell=true ;;
-esac
 native_path() {
   if $windows_posix_shell; then cygpath -am "$1"; else printf '%s\n' "$1"; fi
 }
@@ -33,29 +30,6 @@ assert_no_test_proxy_processes() {
   elif test -n "$(pgrep -f -- "$test_proxy_pattern" || true)"; then
     echo "rewatch compiler test proxy was left running" >&2
     exit 1
-  fi
-}
-directory_link() {
-  link_target=$1
-  link_path=$2
-  if $windows_posix_shell; then
-    LINK_PATH=$(cygpath -aw "$link_path") TARGET_PATH=$(cygpath -aw "$link_target") \
-      powershell.exe -NoProfile -NonInteractive -Command \
-        '$ErrorActionPreference = "Stop"; $null = New-Item -ItemType Junction -Path $env:LINK_PATH -Target $env:TARGET_PATH'
-  else
-    ln -s "$link_target" "$link_path"
-  fi
-}
-file_link_if_supported() {
-  link_target=$1
-  link_path=$2
-  if $windows_posix_shell; then
-    LINK_PATH=$(cygpath -aw "$link_path") TARGET_PATH=$(cygpath -aw "$link_target") \
-      powershell.exe -NoProfile -NonInteractive -Command \
-        '$ErrorActionPreference = "Stop"; $null = New-Item -ItemType SymbolicLink -Path $env:LINK_PATH -Target $env:TARGET_PATH' \
-        >/dev/null 2>&1
-  else
-    ln -s "$link_target" "$link_path"
   fi
 }
 if $windows_posix_shell; then
@@ -683,19 +657,6 @@ cleanup() {
 background_pids=""
 trap cleanup EXIT
 
-wait_for_file() {
-  file="$1"
-  attempts=0
-  while [ "$attempts" -lt 200 ]; do
-    if [ -f "$file" ]; then
-      return 0
-    fi
-    attempts=$((attempts + 1))
-    sleep 0.1
-  done
-  return 1
-}
-
 obstruct_file_with_directory() {
   path=$1
   attempts=0
@@ -713,35 +674,6 @@ obstruct_file_with_directory() {
 # Waits until a -v watcher logs a watch handle for a path ending in the given
 # extended regular expression. Paths use native separators; trailing space
 # tolerates CRLF output on Windows.
-wait_for_watch() {
-  file="$1"
-  suffix="$2"
-  attempts=0
-  while [ "$attempts" -lt 200 ]; do
-    if grep -Eq "watching \((non-)?recursive\): .*$suffix[[:space:]]*\$" \
-        "$file" 2>/dev/null; then
-      return 0
-    fi
-    attempts=$((attempts + 1))
-    sleep 0.1
-  done
-  return 1
-}
-
-wait_for_text() {
-  file="$1"
-  pattern="$2"
-  attempts=0
-  while [ "$attempts" -lt 200 ]; do
-    if grep -Fq "$pattern" "$file" 2>/dev/null; then
-      return 0
-    fi
-    attempts=$((attempts + 1))
-    sleep 0.1
-  done
-  return 1
-}
-
 wait_for_initial_build() {
   log="$1"
   if ! wait_for_text "$log" 'Finished initial compilation'; then
@@ -788,19 +720,6 @@ wait_for_file_gone() {
   attempts=0
   while [ "$attempts" -lt 200 ]; do
     if [ ! -f "$file" ]; then
-      return 0
-    fi
-    attempts=$((attempts + 1))
-    sleep 0.1
-  done
-  return 1
-}
-
-wait_for_pid_gone() {
-  pid="$1"
-  attempts=0
-  while [ "$attempts" -lt 50 ]; do
-    if ! kill -0 "$pid" 2>/dev/null; then
       return 0
     fi
     attempts=$((attempts + 1))

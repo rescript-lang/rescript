@@ -1,5 +1,6 @@
 #!/bin/bash
 set -eu
+. "$(dirname "$0")/test_helpers.sh"
 
 root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 rust=${1:-$root/rewatch/target/debug/rescript}
@@ -7,10 +8,8 @@ ocaml=${2:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
 rust=$(realpath "$rust")
 ocaml=$(realpath "$ocaml")
 work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-interactive-output-XXXXXX")
-windows_posix_shell=false
 compare_rust_watch_output=true
 case $(uname -s) in
-  CYGWIN*|MINGW*|MSYS*) windows_posix_shell=true ;;
   # Rust's macOS watcher can classify an ordinary source write as one or more
   # structural events and legitimately perform full rebuilds. Linux provides
   # the stable event classification needed for exact incremental comparison;
@@ -33,16 +32,6 @@ command_path() {
 active_script_pid=""
 active_watch_project=""
 active_watch_transcript=""
-wait_for_pid_gone() {
-  pid=$1
-  attempts=${2:-200}
-  while [ "$attempts" -gt 0 ]; do
-    if ! kill -0 "$pid" 2>/dev/null; then return 0; fi
-    attempts=$((attempts - 1))
-    sleep 0.1
-  done
-  return 1
-}
 cleanup() {
   if [ -n "$active_script_pid" ]; then
     if [ -n "$active_watch_project" ]; then
@@ -421,38 +410,6 @@ capture_quiet_clean() {
 echo "Checking quiet interactive cleans..."
 capture_quiet_clean rust "$rust"
 capture_quiet_clean ocaml "$ocaml"
-
-wait_for_text() {
-  path=$1
-  pattern=$2
-  count=$3
-  attempts=0
-  while [ "$attempts" -lt 200 ]; do
-    actual=$(grep -cF "$pattern" "$path" 2>/dev/null || true)
-    actual=${actual:-0}
-    if [ "$actual" -ge "$count" ]; then
-      return 0
-    fi
-    attempts=$((attempts + 1))
-    sleep 0.1
-  done
-  printf 'Timed out waiting for occurrence %s of %s in %s\n' \
-    "$count" "$pattern" "$path" >&2
-  if [ -f "$path" ]; then cat "$path" >&2; fi
-  return 1
-}
-
-wait_for_file() {
-  path=$1
-  attempts=0
-  while [ "$attempts" -lt 200 ]; do
-    if [ -f "$path" ]; then return 0; fi
-    attempts=$((attempts + 1))
-    sleep 0.1
-  done
-  printf 'Timed out waiting for %s\n' "$path" >&2
-  return 1
-}
 
 # Opening an existing source with shell redirection truncates it first. Some
 # native watcher backends report that as a structural change, which correctly

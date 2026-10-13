@@ -1,5 +1,6 @@
 #!/bin/bash
 set -eu
+. "$(dirname "$0")/test_helpers.sh"
 
 root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 rust=${1:-$root/rewatch/target/debug/rescript}
@@ -13,18 +14,14 @@ work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-command-validation-XXXXXX")
 work=$(realpath "$work")
 native_work=$work
 native_short_work=$work
-windows_posix_shell=false
-case $(uname -s) in
-  MINGW*|MSYS*)
-    windows_posix_shell=true
-    native_work=$(cd "$work" && pwd -W)
-    native_user=$(cygpath -w "$USERPROFILE" | tr '\\' '/')
-    native_short_user=$(cygpath -w -s "$USERPROFILE" | tr '\\' '/')
-    native_short_work=${native_work/"$native_user"/"$native_short_user"}
-    bsc_test_proxy=$(cygpath -aw \
-      "$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe")
-    ;;
-esac
+if $windows_posix_shell; then
+  native_work=$(cd "$work" && pwd -W)
+  native_user=$(cygpath -w "$USERPROFILE" | tr '\\' '/')
+  native_short_user=$(cygpath -w -s "$USERPROFILE" | tr '\\' '/')
+  native_short_work=${native_work/"$native_user"/"$native_short_user"}
+  bsc_test_proxy=$(cygpath -aw \
+    "$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe")
+fi
 delete_source_bsc=$bsc_test_proxy
 delete_parse_sources_bsc=$bsc_test_proxy
 delete_ast_bsc=$bsc_test_proxy
@@ -36,29 +33,6 @@ lock_owner_pid() {
     ps -p "$shell_pid" -l | awk 'NR == 2 { print $4 }'
   else
     printf '%s\n' "$shell_pid"
-  fi
-}
-directory_link() {
-  local target=$1
-  local link=$2
-  if $windows_posix_shell; then
-    LINK_PATH=$(cygpath -aw "$link") TARGET_PATH=$(cygpath -aw "$target") \
-      powershell.exe -NoProfile -NonInteractive -Command \
-        '$ErrorActionPreference = "Stop"; $null = New-Item -ItemType Junction -Path $env:LINK_PATH -Target $env:TARGET_PATH'
-  else
-    ln -s "$target" "$link"
-  fi
-}
-file_link_if_supported() {
-  local target=$1
-  local link=$2
-  if $windows_posix_shell; then
-    LINK_PATH=$(cygpath -aw "$link") TARGET_PATH=$(cygpath -aw "$target") \
-      powershell.exe -NoProfile -NonInteractive -Command \
-        '$ErrorActionPreference = "Stop"; $null = New-Item -ItemType SymbolicLink -Path $env:LINK_PATH -Target $env:TARGET_PATH' \
-        >/dev/null 2>&1
-  else
-    ln -s "$target" "$link"
   fi
 }
 command_work=$native_work
@@ -709,65 +683,9 @@ run_multiple_parse_errors_case() {
   checked=$((checked + 1))
 }
 
-wait_for_file() {
-  path=$1
-  attempts=0
-  while [ "$attempts" -lt 150 ] && [ ! -f "$path" ]; do
-    attempts=$((attempts + 1))
-    sleep 0.1
-  done
-  if [ -f "$path" ]; then
-    return 0
-  fi
-  printf 'Timed out waiting for file %s (requested at line %s)\n' \
-    "$path" "${BASH_LINENO[0]:-unknown}" >&2
-  return 1
-}
-
 # Waits until a -v watcher logs a watch handle for a path ending in the given
 # extended regular expression. Paths use native separators; trailing space
 # tolerates CRLF output on Windows.
-wait_for_watch() {
-  path=$1
-  suffix=$2
-  attempts=0
-  while [ "$attempts" -lt 150 ]; do
-    if grep -Eq "watching \((non-)?recursive\): .*$suffix[[:space:]]*\$" \
-        "$path" 2>/dev/null; then
-      return 0
-    fi
-    attempts=$((attempts + 1))
-    sleep 0.1
-  done
-  printf 'Timed out waiting for a watch on %s in %s\n' "$suffix" "$path" >&2
-  if [ -f "$path" ]; then
-    cat "$path" >&2
-  fi
-  return 1
-}
-
-wait_for_text() {
-  path=$1
-  pattern=$2
-  attempts=0
-  while [ "$attempts" -lt 150 ] && \
-    ! grep -F "$pattern" "$path" >/dev/null 2>&1; do
-    attempts=$((attempts + 1))
-    sleep 0.1
-  done
-  if grep -F "$pattern" "$path" >/dev/null 2>&1; then
-    return 0
-  fi
-  printf 'Timed out waiting for %s in %s\n' "$pattern" "$path" >&2
-  if [ -f "$path" ]; then
-    printf '%s\n' '--- observed contents ---' >&2
-    cat "$path" >&2
-  else
-    printf '%s\n' '--- file does not exist ---' >&2
-  fi
-  return 1
-}
-
 wait_for_exit() {
   pid=$1
   attempts=0
