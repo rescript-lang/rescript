@@ -1,2 +1,2 @@
 - Fix integer range patterns at int32 boundaries and wrapped nondecimal patterns matching incorrect values. https://github.com/rescript-lang/rescript/pull/8717
-- Normalize accepted integer patterns to their runtime int32 values before exhaustiveness and redundancy checks. Aliases such as `0xFFFF_FFFF` and `-1` can now produce unused-case warnings or different exhaustiveness results; projects treating these warnings as errors may need to remove redundant cases. Existing host-dependent overflow diagnostics are unchanged. https://github.com/rescript-lang/rescript/pull/8717
+- Integer patterns that alias the same int32 value (e.g. `0xFFFF_FFFF` and `-1`) may now produce unused-case warnings. https://github.com/rescript-lang/rescript/pull/8717
