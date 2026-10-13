@@ -66,69 +66,53 @@ function f_opion(x) {
     if (match$3 === 0) {
       return 0;
     }
-    let match$4 = match$3.hd;
-    if (match$4 === undefined) {
+    if (match$3.hd !== 2) {
       return 0;
     }
-    if (match$4 !== 2) {
+    let match$4 = match$3.tl;
+    if (match$4 === 0) {
       return 0;
     }
-    let match$5 = match$3.tl;
-    if (match$5 === 0) {
+    if (match$4.hd !== 1) {
       return 0;
     }
-    let match$6 = match$5.hd;
-    if (match$6 === undefined) {
-      return 0;
-    }
-    if (match$6 !== 1) {
-      return 0;
-    }
-    let match$7 = match$5.tl;
-    if (match$7 !== 0 && match$7.hd !== undefined) {
+    let match$5 = match$4.tl;
+    if (match$5 !== 0 && match$5.hd !== undefined) {
       return 2;
     } else {
       return 0;
     }
   }
-  let match$8 = x.lo;
+  let match$6 = x.lo;
+  if (match$6 === 0) {
+    return 0;
+  }
+  if (match$6.hd !== undefined) {
+    return 0;
+  }
+  let match$7 = match$6.tl;
+  if (match$7 === 0) {
+    return 0;
+  }
+  if (match$7.hd !== undefined) {
+    return 0;
+  }
+  let match$8 = match$7.tl;
   if (match$8 === 0) {
     return 0;
   }
-  if (match$8.hd !== undefined) {
+  if (match$8.hd !== 2) {
     return 0;
   }
   let match$9 = match$8.tl;
   if (match$9 === 0) {
     return 0;
   }
-  if (match$9.hd !== undefined) {
+  if (match$9.hd !== 1) {
     return 0;
   }
   let match$10 = match$9.tl;
-  if (match$10 === 0) {
-    return 0;
-  }
-  let match$11 = match$10.hd;
-  if (match$11 === undefined) {
-    return 0;
-  }
-  if (match$11 !== 2) {
-    return 0;
-  }
-  let match$12 = match$10.tl;
-  if (match$12 === 0) {
-    return 0;
-  }
-  let match$13 = match$12.hd;
-  if (match$13 === undefined) {
-    return 0;
-  }
-  if (match$13 !== 1) {
-    return 0;
-  }
-  let match$14 = match$12.tl;
-  if (match$14 !== 0 && match$14.hd !== undefined) {
+  if (match$10 !== 0 && match$10.hd !== undefined) {
     return 3;
   } else {
     return 0;
