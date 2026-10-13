@@ -186,7 +186,7 @@ pub fn initialize_build(
     let compiler = get_compiler_info(&project_context)?;
 
     let timing_clean_start = Instant::now();
-    let packages = packages::make(filter, &project_context, show_progress, prod, features.as_ref())?;
+    let packages = packages::make(filter, &project_context, prod, features.as_ref())?;
 
     let source_map_args = project_context
         .get_root_config()

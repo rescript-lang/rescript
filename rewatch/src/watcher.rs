@@ -969,7 +969,7 @@ mod tests {
         std::fs::write(dependency.join("rescript.json"), r#"{"name":"#).unwrap();
 
         let context = ProjectContext::new(&root).unwrap();
-        let error = build::packages::make(&None, &context, false, false, None)
+        let error = build::packages::make(&None, &context, false, None)
             .unwrap_err()
             .context("Could not initialize build");
         assert!(format!("{error:#}").contains("Failed to parse rescript.json"));
@@ -995,7 +995,7 @@ mod tests {
         assert!(paths.contains(&(dependency.clone(), RecursiveMode::Recursive)));
 
         std::fs::write(dependency.join("rescript.json"), r#"{"name":"new-dependency"}"#).unwrap();
-        let recovered = build::packages::make(&None, &context, false, false, None).unwrap();
+        let recovered = build::packages::make(&None, &context, false, None).unwrap();
         assert!(recovered.contains_key("new-dependency"));
     }
 

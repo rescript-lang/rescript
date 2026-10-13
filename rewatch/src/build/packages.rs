@@ -9,7 +9,6 @@ use crate::helpers::emojis::*;
 use crate::project_context::{MonoRepoContext, ProjectContext};
 use ahash::{AHashMap, AHashSet};
 use anyhow::{Context, Result, anyhow};
-use console::style;
 use log::debug;
 use rayon::prelude::*;
 use std::collections::hash_map::Entry;
@@ -318,7 +317,6 @@ fn read_dependencies(
     registered_dependencies_set: &mut AHashSet<String>,
     project_context: &ProjectContext,
     package_config: &Config,
-    show_progress: bool,
     is_local_dep: bool,
     prod: bool,
 ) -> Result<Vec<Dependency>> {
@@ -372,16 +370,6 @@ fn read_dependencies(
         .par_iter()
         .map(|package_name| -> Result<Dependency> {
             let canonical_path = read_dependency(package_name, package_config, project_context)
-                .inspect_err(|error| {
-                    if show_progress {
-                        println!(
-                            "{} {} Error building package tree. {}",
-                            style("[1/2]").bold().dim(),
-                            CROSS,
-                            error
-                        );
-                    }
-                })
                 .with_context(|| {
                     format!("Could not build package tree reading dependency '{package_name}'")
                 })?;
@@ -396,7 +384,6 @@ fn read_dependencies(
                 &mut registered_dependencies_set.to_owned(),
                 project_context,
                 &config,
-                show_progress,
                 is_local_dep,
                 prod,
             )
@@ -567,11 +554,7 @@ This inconsistency will cause issues with package resolution.\n",
     })
 }
 
-fn read_packages(
-    project_context: &ProjectContext,
-    show_progress: bool,
-    prod: bool,
-) -> Result<AHashMap<String, Package>> {
+fn read_packages(project_context: &ProjectContext, prod: bool) -> Result<AHashMap<String, Package>> {
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
 
@@ -591,7 +574,6 @@ fn read_packages(
         &mut registered_dependencies_set,
         project_context,
         &project_context.current_config,
-        show_progress,
         /* is local dep */ true,
         prod,
     )?);
@@ -854,11 +836,10 @@ fn compute_active_features(
 pub fn make(
     filter: &Option<regex::Regex>,
     project_context: &ProjectContext,
-    show_progress: bool,
     prod: bool,
     cli_features: Option<&Vec<String>>,
 ) -> Result<AHashMap<String, Package>> {
-    let mut map = read_packages(project_context, show_progress, prod)?;
+    let mut map = read_packages(project_context, prod)?;
 
     let active_features = compute_active_features(&map, cli_features, prod)?;
 
