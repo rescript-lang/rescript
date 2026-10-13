@@ -73,10 +73,13 @@ and for_ident = ident
 and for_direction = Js_op.direction_flag
 and property_map = (property_name * expression) list
 
-(* An entry of an object literal: [k: v] or [...e] *)
+(* An entry of an object literal: [k: v] or [...e]. [Record_spread] copies a
+   record, whose fields are read like plain data; [Object_spread] spreads any
+   other object, such as a dict, which may run getters or proxy traps. *)
 and object_entry =
   | Object_property of property_name * expression
   | Object_spread of expression
+  | Record_spread of expression
 
 and record_rest_field = {
   record_rest_label: string;

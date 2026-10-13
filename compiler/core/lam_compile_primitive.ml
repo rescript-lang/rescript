@@ -590,7 +590,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
              when List.for_all
                     (function
                       | J.Object_property _ -> true
-                      | Object_spread _ -> false)
+                      | Object_spread _ | Record_spread _ -> false)
                     entries ->
              entries
            | _ -> [J.Object_spread e])

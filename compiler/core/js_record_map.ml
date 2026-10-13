@@ -84,6 +84,9 @@ let object_entry : object_entry fn =
   | Object_spread _x0 ->
     let _x0 = _self.expression _self _x0 in
     Object_spread _x0
+  | Record_spread _x0 ->
+    let _x0 = _self.expression _self _x0 in
+    Record_spread _x0
 
 let expression_desc : expression_desc fn =
  fun _self -> function
