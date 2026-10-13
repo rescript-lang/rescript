@@ -1329,9 +1329,53 @@ let make_constr_matching p def ctx = function
       pat = normalize_pat p;
     }
 
+(* Whether the payload pattern [p] of [Some] can't match the object that
+   represents [Some] of a value like [None] or undefined (see
+   [Primitive_option.some]): it doesn't bind the payload itself, and tests it
+   with a literal comparison or with a type test that an object fails. An
+   untagged case binds its argument only once its type test has passed. *)
+let rec rejects_nested_some p =
+  match p.pat_desc with
+  | Tpat_any | Tpat_constant _ -> true
+  | Tpat_or (p1, p2, _) -> rejects_nested_some p1 && rejects_nested_some p2
+  | Tpat_construct (_, cstr, _) -> (
+    match cstr.cstr_kind with
+    | Ordinary_constructor representation
+      when not (Datarepr.constructor_has_optional_shape cstr) -> (
+      match Variant_runtime.representation representation with
+      | Constant {literal} -> literal <> Some Variant_runtime.Undefined
+      | Block (Untagged {block_type = ObjectType | UnknownType}) -> false
+      | Block (Untagged _) -> true
+      | Block (Tagged _) -> false)
+    | Ordinary_constructor _ | Extension_constructor _ -> false)
+  | _ -> false
+
+(* A [Some] payload whose patterns all reject the representation of a nested
+   [Some] is matched as it is, without checking for that representation *)
+let skip_nested_some_check (cell : cell) =
+  match cell.pm.args with
+  | (Lprim {primitive = Pval_from_option; args = [arg]; loc}, str) :: argl
+    when List.for_all
+           (function
+             | p :: _, _ -> rejects_nested_some p
+             | [], _ -> false)
+           cell.pm.cases ->
+    {
+      cell with
+      pm =
+        {
+          cell.pm with
+          args =
+            (prim ~primitive:Pval_from_option_not_nest ~args:[arg] loc, str)
+            :: argl;
+        };
+    }
+  | _ -> cell
+
 let divide_constructor ctx pm =
   divide make_constr_matching Types.same_constructor get_key_constr
     get_args_constr ctx pm
+  |> List.map (fun (cstr, cell) -> (cstr, skip_nested_some_check cell))
 
 (* Matching against a variant *)
 
@@ -2054,8 +2098,87 @@ type constructor_matching_plan =
   | Switch_on_constructors of Lambda.lambda_switch
       (** General nominal and untagged variant matching. *)
 
+(* Whether [present], the action for a value of the option [arg], starts with a
+   test of that value that takes [absent] for undefined. The presence test of
+   [arg] is then redundant: undefined reaches [absent] either way. *)
+let rec value_test_defaults_on_undefined ~arg ~absent present =
+  let is_value = function
+    | Lprim {primitive = Pval_from_option_not_nest; args = [value]} ->
+      Lambda.eq_approx arg value
+    | e -> Lambda.eq_approx arg e
+  in
+  let is_equality = function
+    | Pboolcomp c
+    | Pintcomp c
+    | Pfloatcomp c
+    | Pbigintcomp c
+    | Pstringcomp c
+    | Pjscomp c ->
+      Some c
+    | _ -> None
+  in
+  (* A constant that undefined is unequal to, even loosely *)
+  let is_defined_constant = function
+    | Lconst
+        ( Const_int _ | Const_char _ | Const_string _ | Const_float _
+        | Const_bigint _ | Const_js_false | Const_js_true ) ->
+      true
+    | _ -> false
+  in
+  let compares_value = function
+    | [a; b] ->
+      (is_value a && is_defined_constant b)
+      || (is_defined_constant a && is_value b)
+    | _ -> false
+  in
+  match present with
+  | Llet
+      ( Alias,
+        id,
+        (Lprim {primitive = Pval_from_option_not_nest; args = [value]} as def),
+        body )
+    when Lambda.eq_approx arg value ->
+    (* The value bound to a name *)
+    value_test_defaults_on_undefined ~arg:(Lambda.var id) ~absent body
+    || value_test_defaults_on_undefined ~arg:def ~absent body
+  | Lswitch (scrutinee, ({sw_failaction = Some fail} as sw)) ->
+    is_value scrutinee
+    && Lambda.eq_approx fail absent
+    && switch_defaults_on_undefined sw
+  | Lstringswitch (scrutinee, _, Some fail) ->
+    is_value scrutinee && Lambda.eq_approx fail absent
+  (* undefined is unequal to every constant *)
+  | Lifthenelse (Lprim {primitive; args}, if_true, if_false)
+    when compares_value args -> (
+    match is_equality primitive with
+    | Some Cneq -> Lambda.eq_approx if_true absent
+    | Some Ceq -> Lambda.eq_approx if_false absent
+    | Some (Clt | Cgt | Cle | Cge) | None -> false)
+  | _ -> false
+
+(* Whether the switch [sw] on an untagged variant takes its default action for
+   undefined: no case matches undefined, and each side of the switch that
+   undefined can reach has the default action *)
+and switch_defaults_on_undefined (sw : lambda_switch) =
+  match sw.sw_dispatch with
+  | Switch_variant {block_types} ->
+    block_types <> []
+    && (not (List.mem Variant_runtime.UnknownType block_types))
+    && (not sw.sw_blocks_full)
+    && (not (sw.sw_consts_full && sw.sw_consts <> []))
+    && List.for_all
+         (function
+           | Switch_constructor (Constant {literal}), _ ->
+             literal <> Some Variant_runtime.Undefined
+           | _ -> true)
+         sw.sw_consts
+  | Switch_direct -> false
+
 let lower_constructor_matching_plan ~loc ~arg = function
   | Use_constructor_action action -> action
+  | Test_payload_presence {test = Is_present_option; absent; present}
+    when value_test_defaults_on_undefined ~arg ~absent present ->
+    present
   | Test_payload_presence {test; absent; present} ->
     let condition =
       match test with
@@ -2465,9 +2588,20 @@ let rec comp_match_handlers comp_fun partial ctx arg first_match next_matchs =
 
 (* To find reasonable names for variables *)
 
+(* A name for the value [pat] matches, also found under an option's [Some] *)
+let id_of_pattern pat =
+  match Typecore.id_of_pattern pat with
+  | Some id -> Some id
+  | None -> (
+    match pat.pat_desc with
+    | Tpat_construct (_, cstr, [payload])
+      when Datarepr.constructor_has_optional_shape cstr ->
+      Typecore.id_of_pattern payload
+    | _ -> None)
+
 let rec name_pattern default = function
   | (pat :: _, _) :: rem -> (
-    match Typecore.id_of_pattern pat with
+    match id_of_pattern pat with
     | Some id -> id
     | None -> name_pattern default rem)
   | _ -> Ident.create default
