@@ -3154,7 +3154,8 @@ and print_if_chain ~state pexp_attributes ifs else_expr cmt_tbl =
                  Doc.space;
                  (let then_expr =
                     match Parsetree_viewer.process_braces then_expr with
-                    (* This case only happens when coming from Reason, we strip braces *)
+                    (* Redundant braces, as in [if c { {y} }]: the branch is
+                       printed in the if's own braces, so these are dropped *)
                     | Some _, expr -> expr
                     | _ -> then_expr
                   in
