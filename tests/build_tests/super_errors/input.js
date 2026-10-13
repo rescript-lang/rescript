@@ -84,7 +84,7 @@ async function runFixture(fixturesDir, fileName) {
 
 // Diagnostics must not depend on the length of the source path. Every
 // fixture also runs from a copy whose directory path is 180 characters long,
-// longer than any checkout path, ending in the same
+// so usually much longer than the in-tree path, ending in the same
 // tests/build_tests/super_errors/fixtures suffix so that
 // postProcessErrorOutput yields the same snapshot text. The directory length
 // is fixed rather than the padding, so the fixture paths stay below Windows'
