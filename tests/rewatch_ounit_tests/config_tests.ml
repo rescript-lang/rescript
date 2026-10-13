@@ -805,6 +805,64 @@ let semantics_tests =
            config.diagnostics)
         "known unsupported config fields are distinguished from unknown fields")
 
+(* The repository's docs/docson/build-schema.json, found from the working
+   directory: dune runs the tests below _build, CI from the repository root. *)
+let build_schema () =
+  let rec find directory =
+    let path =
+      List.fold_left Filename.concat directory
+        ["docs"; "docson"; "build-schema.json"]
+    in
+    if Sys.file_exists path then Yojson.Safe.from_file path
+    else
+      let parent = Filename.dirname directory in
+      if parent = directory then
+        assert_failure "docs/docson/build-schema.json not found"
+      else find parent
+  in
+  find (Sys.getcwd ())
+
+(* Like Rust rewatch's test, the schema documents every field that takes
+   effect, except the deprecated aliases. *)
+let build_schema_tests _context =
+  let open Yojson.Safe.Util in
+  let schema = build_schema () in
+  let assert_has_keys properties keys what =
+    List.iter
+      (fun key ->
+        check
+          (member key properties <> `Null)
+          (Printf.sprintf
+             "%s key `%s` is missing from docs/docson/build-schema.json" what
+             key))
+      keys
+  in
+  let deprecated = List.map fst Config_decode.deprecated_field_aliases in
+  assert_has_keys
+    (member "properties" schema)
+    (Config_decode.supported_fields Config_decode.configuration_fields
+    |> List.filter (fun key -> not (List.mem key deprecated)))
+    "rescript.json";
+  let definition name = schema |> member "definitions" |> member name in
+  let one_of name index =
+    List.nth (definition name |> member "oneOf" |> to_list) index
+    |> member "properties"
+  in
+  assert_has_keys (one_of "sourceItem" 0)
+    (Config_decode.supported_fields Config_decode.source_fields)
+    "Source";
+  assert_has_keys (one_of "bs-dependency" 1)
+    (Config_decode.supported_fields Config_decode.dependency_fields)
+    "Dependency";
+  let properties = member "properties" schema in
+  let type_of value = value |> member "type" |> to_string in
+  assert_equal ~printer:Fun.id "string"
+    (type_of (member "namespace-entry" properties));
+  let allowed_dependents = member "allowed-dependents" properties in
+  assert_equal ~printer:Fun.id "array" (type_of allowed_dependents);
+  assert_equal ~printer:Fun.id "string"
+    (type_of (member "items" allowed_dependents))
+
 let tests =
   "config_tests"
   >::: [
@@ -816,4 +874,5 @@ let tests =
          "compiler_arguments" >:: compiler_argument_tests;
          "decoder_semantics" >:: decoder_semantics_tests;
          "semantics" >:: semantics_tests;
+         "build_schema" >:: build_schema_tests;
        ]

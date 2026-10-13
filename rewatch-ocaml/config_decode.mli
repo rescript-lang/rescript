@@ -7,7 +7,11 @@ val optional_member :
 
 type field_policy
 
+val deprecated_field_aliases : (string * string) list
+val supported_fields : field_policy -> string list
 val configuration_fields : field_policy
+val source_fields : field_policy
+val dependency_fields : field_policy
 val warning_fields : field_policy
 val jsx_fields : field_policy
 val js_post_build_fields : field_policy

@@ -263,11 +263,7 @@ let deprecation_diagnostics path ~name fields =
     (if Filename.basename path = "bsconfig.json" then
        ["  - filename 'bsconfig.json' — rename to 'rescript.json'"]
      else [])
-    @ ([
-         ("bs-dependencies", "dependencies");
-         ("bs-dev-dependencies", "dev-dependencies");
-         ("bsc-flags", "compiler-flags");
-       ]
+    @ (deprecated_field_aliases
       |> List.filter_map (fun (field, replacement) ->
           if Option.is_some (member field fields) then
             Some

@@ -18,6 +18,18 @@ type field_policy = {known: string list; duplicate_checked: string list}
 
 let reject_all_duplicates known = {known; duplicate_checked = known}
 
+(* Fields that take effect, unlike unsupported and no-op legacy fields, which
+   are accepted but ignored. *)
+let supported_fields policy = policy.duplicate_checked
+
+(* Deprecated field names and the fields that replace them. *)
+let deprecated_field_aliases =
+  [
+    ("bs-dependencies", "dependencies");
+    ("bs-dev-dependencies", "dev-dependencies");
+    ("bsc-flags", "compiler-flags");
+  ]
+
 let unsupported_configuration_fields =
   [
     "ignored-dirs";
