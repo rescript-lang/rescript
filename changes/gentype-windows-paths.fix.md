@@ -1,1 +1,1 @@
-- Fix GenType path resolution hanging on Windows when project paths use different short and canonical forms. https://github.com/rescript-lang/rescript/pull/8639
+- Fix GenType path resolution for Windows short paths and POSIX symlinked project paths, and prevent traversal from hanging at a filesystem root. https://github.com/rescript-lang/rescript/pull/8639
