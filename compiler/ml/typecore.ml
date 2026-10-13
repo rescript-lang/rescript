@@ -293,7 +293,12 @@ let type_constant = function
 let constant : Parsetree.constant -> (Asttypes.constant, error) result =
   function
   | Pconst_integer (i, None) -> (
-    try Ok (Const_int (Misc.Int_literal_converter.int i))
+    try
+      (* After the existing host-dependent literal parsing, pattern grouping
+         and intervals must see Lambda's int32 value, so -0xFFFF_FFFF and 1
+         are the same key. This does not change overflow diagnostics. *)
+      let value = Misc.Int_literal_converter.int i in
+      Ok (Const_int (Int32.to_int (Int32.of_int value)))
     with Failure _ -> Error (Literal_overflow "int"))
   | Pconst_integer (i, Some 'n') ->
     let sign, i = Bigint_utils.parse_bigint i in
