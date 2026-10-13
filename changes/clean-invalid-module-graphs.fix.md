@@ -1,1 +1,1 @@
-- Allow `rescript clean` to remove generated files when the source module graph is invalid. https://github.com/rescript-lang/rescript/pull/8640
+- Allow `rescript clean` to remove generated files when the source module graph is invalid, including out-of-source `lib/es6` and `lib/js` outputs in the project and its dependencies. https://github.com/rescript-lang/rescript/pull/8640

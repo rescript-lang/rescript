@@ -374,24 +374,12 @@ pub fn clean(path: &Path, show_progress: bool, plain_output: bool, prod: bool) -
 
     let timing_clean_mjs = Instant::now();
     let root_config = project_context.get_root_config();
-    let suffix_for_print = match root_config.package_specs {
-        None => match &root_config.suffix {
-            None => String::from(".js"),
-            Some(suffix) => suffix.clone(),
-        },
-        Some(_) => root_config
-            .get_package_specs()
-            .into_iter()
-            .filter_map(|spec| {
-                if spec.in_source {
-                    spec.suffix.or_else(|| root_config.suffix.clone())
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<String>>()
-            .join(", "),
-    };
+    let suffix_for_print = root_config
+        .get_package_specs()
+        .iter()
+        .map(|spec| root_config.get_suffix(spec))
+        .collect::<Vec<String>>()
+        .join(", ");
 
     if !plain_output && show_progress {
         print!(
