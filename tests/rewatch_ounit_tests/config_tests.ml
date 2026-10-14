@@ -364,6 +364,18 @@ let compiler_argument_tests =
             "LetUnwrap";
           ])
         "compiler arguments follow Rust phase ordering";
+      check
+        (Compiler_args.parser_flags
+           ~ppx_flags:[["./ppx/local.js"; "--flag"]; ["../shared-ppx"]]
+           config
+        |> List.filter (fun flag -> flag <> "-ppx")
+        |> List.filteri (fun index _ -> index < 2)
+        = [
+            String.concat " "
+              [Filename.concat config.root "./ppx/local.js"; "--flag"];
+            Filename.concat config.root "../shared-ppx";
+          ])
+        "dot-relative PPX paths resolve against the package directory";
       let optional_ppx =
         [
           ["graphql-ppx"];
