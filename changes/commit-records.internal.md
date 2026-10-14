@@ -1,0 +1,1 @@
+- Add commit records, a commit message format that answers recurring review questions, and a semantic diff page rendered from them and linked on each pull request. https://github.com/rescript-lang/rescript/pull/8870

@@ -238,6 +238,17 @@ format: | $(YARN_INSTALL_STAMP)
 checkformat: | $(YARN_INSTALL_STAMP)
 	./scripts/format_check.sh
 
+# Semantic diff: renders the commit records of SEMANTIC_DIFF_BASE..HEAD
+# (scripts/commitRecords.js) to _build/semantic-diff.html and opens it
+
+SEMANTIC_DIFF_BASE ?= master
+
+semantic-diff:
+	mkdir -p _build
+	node scripts/commitRecords.js --out _build/semantic-diff.html --title "$$(git branch --show-current)" $(SEMANTIC_DIFF_BASE)..HEAD
+	@if command -v open >/dev/null; then open _build/semantic-diff.html; \
+	elif command -v xdg-open >/dev/null; then xdg-open _build/semantic-diff.html; fi
+
 # Coverage (bisect_ppx)
 #
 # Requires the pending `bisect_ppx` OCaml 5.5 compatibility patch in your switch:
@@ -371,4 +382,4 @@ clean: clean-lib clean-compiler clean-rewatch clean-coverage
 
 .DEFAULT_GOAL := build
 
-.PHONY: yarn-install build rewatch compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean
+.PHONY: yarn-install build rewatch compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat semantic-diff clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean
