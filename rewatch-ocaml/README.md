@@ -79,6 +79,9 @@ These are intentional:
   own process group.
 - `format -v` and `compiler-args -v` write their logs to stderr, so stdout
   remains formatted source or JSON. Rust writes them to stdout.
+- Watch mode also notices a missing dependency being installed into an
+  existing `node_modules` of an ancestor directory, where the dependency
+  lookup finds it.
 - OpenTelemetry export is not implemented.
 
 ## Platforms

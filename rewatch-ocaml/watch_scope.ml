@@ -105,13 +105,34 @@ let discover ~root ~prod ~features ~filter =
         if parent = directory || directory = package_root then package_root
         else nearest_existing_directory package_root parent
     in
+    let canonical_root = Platform.canonicalize_path root in
+    (* The upward dependency lookup also checks the node_modules of the root's
+       ancestors, so installing a hoisted dependency there must wake the
+       watcher. Only an existing node_modules is watched: watching the
+       ancestors themselves would reach the filesystem root, which some
+       backends watch recursively. *)
+    let in_ancestor_node_modules candidate name =
+      String.length candidate > String.length name + 1
+      && String.ends_with ~suffix:name candidate
+      &&
+      let node_modules =
+        String.sub candidate 0 (String.length candidate - String.length name - 1)
+      in
+      Filename.basename node_modules = "node_modules"
+      && File_util.is_directory node_modules
+      && Project_context.path_is_within_canonical
+           ~root:(Platform.canonicalize_path (Filename.dirname node_modules))
+           canonical_root
+    in
     let watch_unresolved_dependency package_root name =
       Package_resolution.dependency_candidates resolution ~package_root name
       |> List.iter (fun candidate ->
           let existing = nearest_existing_directory root candidate in
           try
             let canonical_existing = Platform.canonicalize_path existing in
-            if Project_context.path_is_within_canonical ~root canonical_existing
+            if
+              Project_context.path_is_within_canonical ~root canonical_existing
+              || in_ancestor_node_modules candidate name
             then (
               unresolved := candidate :: !unresolved;
               (* A shallow ancestor watch is sufficient: each directory creation

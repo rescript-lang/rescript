@@ -27,6 +27,40 @@ let tests =
       check
         (Watch_scope.path_in_scope scope (Filename.concat root "package.json"))
         "malformed package metadata remains in recoverable watch scope");
+  Test_support.with_temp_dir "rewatch-hoisted-dependency-scope-" (fun repo ->
+      let app = Test_support.path repo "packages/app" in
+      Test_support.write_file
+        (Filename.concat app "rescript.json")
+        {|{"name":"app","sources":"src","dependencies":["dep"]}|};
+      let hoisted =
+        Filename.concat (Filename.concat repo "node_modules") "dep"
+      in
+      let discover () =
+        Watch_scope.discover ~root:app ~prod:false ~features:None ~filter:None
+      in
+      check
+        (not (Watch_scope.path_in_scope (discover ()) hoisted))
+        "an ancestor without node_modules is not watched";
+      Unix.mkdir (Filename.concat repo "node_modules") 0o755;
+      let scope = discover () in
+      check
+        (Watch_scope.path_in_scope scope hoisted)
+        "a missing dependency in an ancestor's node_modules stays in scope";
+      check
+        (List.exists
+           (fun (path : Native_watcher.watch_path) ->
+             (not path.recursive)
+             && Project_context.path_is_within_canonical
+                  ~root:(Platform.canonicalize_path path.directory)
+                  (Platform.canonicalize_path
+                     (Filename.concat repo "node_modules"))
+             && Project_context.path_is_within_canonical
+                  ~root:
+                    (Platform.canonicalize_path
+                       (Filename.concat repo "node_modules"))
+                  (Platform.canonicalize_path path.directory))
+           scope.paths)
+        "the ancestor's node_modules is watched shallowly");
   Test_support.with_temp_dir "rewatch-missing-source-scope-" (fun root ->
       Unix.mkdir (Filename.concat root "node_modules") 0o755;
       Test_support.write_file
