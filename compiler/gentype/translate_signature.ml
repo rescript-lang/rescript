@@ -5,7 +5,7 @@ let translate_signature_value ~config ~output_file_relative ~resolver ~type_env
   let {Typedtree.val_attributes; val_desc; val_id; val_loc} =
     value_description
   in
-  if !Debug.translation then
+  if !(Debug.translation ()) then
     Log_.item "Translate Signature Value %s\n" (val_id |> Ident.name);
   let type_expr = val_desc.ctyp_type in
   let add_annotations_to_function type_ = type_ in
@@ -23,7 +23,8 @@ let translate_signature_value ~config ~output_file_relative ~resolver ~type_env
 let rec translate_module_declaration ~config ~output_file_relative ~resolver
     ~type_env ({md_id; md_type} : Typedtree.module_declaration) =
   let name = md_id |> Ident.name in
-  if !Debug.translation then Log_.item "Translate Module Declaration %s\n" name;
+  if !(Debug.translation ()) then
+    Log_.item "Translate Module Declaration %s\n" name;
   let type_env = type_env |> Type_env.new_module ~name in
   match md_type.mty_desc with
   | Tmty_signature signature ->
@@ -52,7 +53,7 @@ let rec translate_module_declaration ~config ~output_file_relative ~resolver
 
 and translate_module_type_declaration ~config ~output_file_relative ~resolver
     ~type_env (module_type_declaration : Typedtree.module_type_declaration) =
-  if !Debug.translation then
+  if !(Debug.translation ()) then
     Log_.item "Translate Module Type Declaration %s\n"
       (module_type_declaration.mtd_id |> Ident.name);
   match module_type_declaration with
@@ -162,7 +163,7 @@ and translate_signature_item ~config ~output_file_relative ~resolver ~type_env
 
 and translate_signature ~config ~output_file_relative ~resolver ~type_env
     signature : Translation.t list =
-  if !Debug.translation then Log_.item "Translate Signature\n";
+  if !(Debug.translation ()) then Log_.item "Translate Signature\n";
   signature.Typedtree.sig_items
   |> List.map
        (translate_signature_item ~config ~output_file_relative ~resolver

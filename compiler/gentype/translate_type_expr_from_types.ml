@@ -691,7 +691,7 @@ let translate_type_expr_from_types ~config ~type_env type_expr =
   let translation =
     type_expr |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
   in
-  if !Debug.dependencies then
+  if !(Debug.dependencies ()) then
     translation.dependencies
     |> List.iter (fun dep ->
         Log_.item "Dependency: %s\n" (dep |> dep_to_string));
@@ -702,7 +702,7 @@ let translate_type_exprs_from_types ~config ~type_env type_exprs =
   let translations =
     type_exprs |> translateTypeExprsFromTypes_ ~config ~type_vars_gen ~type_env
   in
-  if !Debug.dependencies then
+  if !(Debug.dependencies ()) then
     translations
     |> List.iter (fun translation ->
         translation.dependencies

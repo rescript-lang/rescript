@@ -1,0 +1,1 @@
+- Remove the temporary PPX files when a PPX fails or a build is interrupted. https://github.com/rescript-lang/rescript/pull/8864

@@ -33,7 +33,7 @@ let to_method_callback ~async ~newtypes loc (self : Ast_mapper.mapper)
     let self_pat = self.pat self self_pat in
     (match Ast_pat.is_single_variable_pattern_conservative self_pat with
     | None -> Bs_syntaxerr.err self_pat.ppat_loc Bs_this_simple_pattern
-    | Some self -> Stack.push self Js_config.self_stack);
+    | Some self -> Stack.push self (Js_config.current ()).self_stack);
     Bs_syntaxerr.optional_err loc label;
     let rest =
       Ext_list.map rest (fun (p : Parsetree.fun_param) ->
@@ -56,7 +56,7 @@ let to_method_callback ~async ~newtypes loc (self : Ast_mapper.mapper)
         (Ast_helper.Exp.fun_ ~loc ~async ~newtypes mapped_params result)
     in
     let arity_s = string_of_int arity in
-    Stack.pop Js_config.self_stack |> ignore;
+    Stack.pop (Js_config.current ()).self_stack |> ignore;
     Parsetree.Pexp_apply
       {
         funct =

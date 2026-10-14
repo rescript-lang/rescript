@@ -5,10 +5,14 @@ let print_engine =
     {
       print_implementation =
         (fun ~width:_ ~filename:_ ~comments:_ structure ->
-          Printast.implementation Format.std_formatter structure);
+          Printast.implementation
+            (Compiler_request_output.stdout_formatter ())
+            structure);
       print_interface =
         (fun ~width:_ ~filename:_ ~comments:_ signature ->
-          Printast.interface Format.std_formatter signature);
+          Printast.interface
+            (Compiler_request_output.stdout_formatter ())
+            signature);
     }
 
 let comments_print_engine =

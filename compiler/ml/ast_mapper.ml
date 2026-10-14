@@ -644,20 +644,24 @@ module Ppx_context = struct
         {lid = lid "tool_name"; x = make_string tool_name; opt = false};
         {
           lid = lid "include_dirs";
-          x = make_list make_string !Clflags.include_dirs;
+          x = make_list make_string !((Clflags.current ()).include_dirs);
           opt = false;
         };
         {
           lid = lid "load_path";
-          x = make_list make_string !Config.load_path;
+          x = make_list make_string (Config.get_load_path ());
           opt = false;
         };
         {
           lid = lid "open_modules";
-          x = make_list make_string !Clflags.open_modules;
+          x = make_list make_string !((Clflags.current ()).open_modules);
           opt = false;
         };
-        {lid = lid "debug"; x = make_bool !Clflags.debug; opt = false};
+        {
+          lid = lid "debug";
+          x = make_bool !((Clflags.current ()).debug);
+          opt = false;
+        };
         (* The compiler doesn't read back the cookies a PPX sets. *)
         {lid = lid "cookies"; x = make_list Fun.id []; opt = false};
       ]

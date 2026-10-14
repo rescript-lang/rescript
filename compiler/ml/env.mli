@@ -35,7 +35,9 @@ type summary =
 type t
 
 val empty : t
-val initial_safe_string : t
+val initial_safe_string : unit -> t
+val reset_initial_for_request : unit -> unit
+val with_fresh_initial : (unit -> 'a) -> 'a
 
 type type_descriptions = constructor_description list * label_description list
 
@@ -196,6 +198,9 @@ val save_signature :
 val imports : unit -> (string * Digest.t option) list
 
 (* Direct access to the table of imported compilation units with their CRC *)
+
+val crc_units : unit -> Consistbl.t
+val add_import : string -> unit
 
 (* Summaries -- compact representation of an environment, to be
    exported in debugging information. *)

@@ -34,6 +34,7 @@ let suites =
       Ounit_ffi_inclusion_tests.suites;
       Ounit_typeopt_tests.suites;
       Ounit_gentype_tests.suites;
+      Ounit_compiler_request_tests.suites;
     ]
 
 let _ = OUnit.run_test_tt_main suites

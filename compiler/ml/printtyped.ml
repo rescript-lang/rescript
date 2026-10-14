@@ -26,7 +26,7 @@ let fmt_position f l =
       (l.pos_cnum - l.pos_bol)
 
 let fmt_location f loc =
-  if !Clflags.dump_location then (
+  if !((Clflags.current ()).dump_location) then (
     fprintf f "(%a..%a)" fmt_position loc.loc_start fmt_position loc.loc_end;
     if loc.loc_ghost then fprintf f " ghost")
 

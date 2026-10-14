@@ -246,3 +246,8 @@ val iter_type_expr_cstr_args :
   (type_expr -> unit) -> constructor_arguments -> unit
 val map_type_expr_cstr_args :
   (type_expr -> type_expr) -> constructor_arguments -> constructor_arguments
+
+module For_test : sig
+  val memorized_abbrev_count : unit -> int
+  (** The abbreviation expansions memorized on this domain. *)
+end

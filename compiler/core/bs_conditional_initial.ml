@@ -31,13 +31,9 @@ let setup_env () =
   Matching.call_switcher_variant_constr :=
     Polyvar_pattern_match.call_switcher_variant_constr;
   Ctype.variant_is_subtype := Matching_polyfill.variant_is_subtype;
-  Clflags.dump_location := false;
+  (* bsc's defaults, which differ from OCaml's in [Clflags.create]. *)
+  Clflags.reset ();
   Parmatch.print_res_pat := Pattern_printer.print_pattern;
-  (* default true
-     otherwise [bsc -I sc src/hello.ml ] will include current directory to search path
-  *)
-  Clflags.debug := true;
-  Clflags.binary_annotations := true;
   Printtyp.print_res_poly_identifier := Res_printer.polyvar_ident_to_string
 (*; Switch.cut := 100*)
 (* tweakable but not very useful *)

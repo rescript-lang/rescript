@@ -166,7 +166,7 @@ let resolve_module ~(config : Config.t) ~import_extension ~output_file_relative
 
 let resolve_generated_module ~config ~output_file_relative ~resolver module_name
     =
-  if !Debug.module_resolution then
+  if !(Debug.module_resolution ()) then
     Log_.item "Resolve Generated Module: %s\n"
       (module_name |> Module_name.to_string);
   let import_path =
@@ -174,19 +174,19 @@ let resolve_generated_module ~config ~output_file_relative ~resolver module_name
       ~import_extension:(Module_extension.generated_module_extension ~config)
       ~output_file_relative ~resolver ~use_bs_dependencies:true module_name
   in
-  if !Debug.module_resolution then
+  if !(Debug.module_resolution ()) then
     Log_.item "Import Path: %s\n" (import_path |> Import_path.dump);
   import_path
 
 (** Returns the path to import a given Reason module name. *)
 let import_path_for_reason_module_name ~(config : Config.t)
     ~output_file_relative ~resolver module_name =
-  if !Debug.module_resolution then
+  if !(Debug.module_resolution ()) then
     Log_.item "Resolve Reason Module: %s\n"
       (module_name |> Module_name.to_string);
   match config.shims_map |> Module_name_map.find module_name with
   | shim_module_name ->
-    if !Debug.module_resolution then
+    if !(Debug.module_resolution ()) then
       Log_.item "ShimModuleName: %s\n"
         (shim_module_name |> Module_name.to_string);
     let import_extension =
@@ -196,7 +196,7 @@ let import_path_for_reason_module_name ~(config : Config.t)
       resolve_module ~config ~import_extension ~output_file_relative ~resolver
         ~use_bs_dependencies:false shim_module_name
     in
-    if !Debug.module_resolution then
+    if !(Debug.module_resolution ()) then
       Log_.item "Import Path: %s\n" (import_path |> Import_path.dump);
     import_path
   | exception Not_found ->

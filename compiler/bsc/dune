@@ -3,10 +3,19 @@
   (flags
    (:standard -ccopt -static))))
 
+(library
+ (name rescript_compiler_driver)
+ (wrapped false)
+ (modules rescript_compiler_driver)
+ (instrumentation
+  (backend bisect_ppx))
+ (libraries common core depends flow_parser gentype syntax unix))
+
 (executable
  (name rescript_compiler_main)
+ (modules rescript_compiler_main)
  (public_name bsc)
  (package rescript)
  (instrumentation
   (backend bisect_ppx))
- (libraries common core depends flow_parser gentype syntax))
+ (libraries rescript_compiler_driver))
