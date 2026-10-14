@@ -2167,6 +2167,21 @@ if ! $windows_posix_shell; then
     echo "a relative temporary directory kept PPX files" >&2
     exit 1
   fi
+
+  # Standalone bsc -verbose prints each command before running it, so the
+  # command precedes the PPX's own output.
+  verbose_ppx="$work/verbose-ppx"
+  mkdir -p "$verbose_ppx"
+  printf '#!/bin/sh\necho PPX-RAN >&2\ncp "$1" "$2"\n' >"$verbose_ppx/ppx.sh"
+  chmod +x "$verbose_ppx/ppx.sh"
+  printf 'let value = 1\n' >"$verbose_ppx/A.res"
+  (cd "$verbose_ppx" && "$port_directory/bsc.exe" -verbose -ppx "$verbose_ppx/ppx.sh" \
+    -bs-ast -o A A.res >out.log 2>err.log)
+  if [ "$(grep -n '^+ \|PPX-RAN' "$verbose_ppx/err.log" | head -1 | cut -d: -f2 | cut -c1-2)" != "+ " ]; then
+    cat "$verbose_ppx/err.log" >&2
+    echo "bsc -verbose printed a PPX command after the PPX's output" >&2
+    exit 1
+  fi
 fi
 
 "$port" build "$out_of_source"
