@@ -11,3 +11,5 @@ src/*.js
 src/*.mjs
 src/*.cjs
 lib/**/*.res.js
+lib/es6
+lib/js

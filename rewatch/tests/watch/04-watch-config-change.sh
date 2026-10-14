@@ -82,6 +82,16 @@ else
   exit 1
 fi
 
+# The rebuild for the new suffix removes the output with the previous one.
+if ! wait_for_file_gone "./src/Test.mjs" 20; then
+  error "Previous suffix output was not removed after config change"
+  cat rewatch.log
+  replace "s/.res.mjs/.mjs/g" rescript.json
+  git restore --worktree -- ./src/Test.res
+  exit_watcher
+  exit 1
+fi
+
 # Verify the watcher is still running (didn't crash on config change)
 if [ -f lib/watch.lock ]; then
   success "Watcher still running after config change"
@@ -107,9 +117,19 @@ else
   exit 1
 fi
 
-# This test covers watcher reconfiguration, not migration of outputs generated
-# with the previous suffix.
-find . -name "*.res.mjs" -delete 2>/dev/null
+# The rebuild after the restore also removes the outputs with the new suffix.
+timeout=30
+while [ "$timeout" -gt 0 ] && [ -n "$(find . -name '*.res.mjs' -print -quit)" ]; do
+  sleep 1
+  timeout=$((timeout - 1))
+done
+if [ -n "$(find . -name '*.res.mjs' -print -quit)" ]; then
+  error "Outputs with the restored configuration's previous suffix were not removed"
+  find . -name '*.res.mjs'
+  git restore --worktree -- ./src/Test.res
+  exit_watcher
+  exit 1
+fi
 
 if ! exit_watcher; then
   exit 1
