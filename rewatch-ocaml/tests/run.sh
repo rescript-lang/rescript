@@ -1722,46 +1722,69 @@ fi
 test -f "$second_interrupt/src/Slow.js"
 test ! -f "$second_interrupt/lib/build.lock"
 
-# The first termination signal waits for modules compiling in-process; a
-# second one exits at once and still releases the build lock. Exiting within
-# two seconds rules out the graceful stop. The second signal has a different
-# type because pending signals of one type are not queued. Threads may handle
-# the two in either order, and the exit status is that of the second one
-# handled.
+# A stop waits for the modules compiling in-process, and a repeated signal
+# does not cut it short: the npm launcher forwards the Ctrl-C the terminal
+# already delivered. The stop leaves no lock or temporary files, and the next
+# build completes the module.
 if ! $windows_posix_shell; then
   printf 'let dirty = 1\n' >>"$second_interrupt/src/Slow.res"
   rm "$second_interrupt/src/Slow.js"
-  "$port" -vv build "$second_interrupt" >"$second_interrupt/build.log" 2>&1 &
+  mkdir -p "$second_interrupt/tmp"
+  TMPDIR="$second_interrupt/tmp" \
+    "$port" -vv build "$second_interrupt" >"$second_interrupt/build.log" 2>&1 &
   second_interrupt_pid=$!
   background_pids="$background_pids $second_interrupt_pid"
   # Logged when the parsed module is handed to the compiler.
   if ! wait_for_text "$second_interrupt/build.log" 'compile dirty: Slow'; then
-    cat "$second_interrupt/build.log" >&2
     echo "large module did not reach the compiler" >&2
     exit 1
   fi
   kill -INT "$second_interrupt_pid"
-  kill -TERM "$second_interrupt_pid"
-  if ! wait_for_pid_gone "$second_interrupt_pid" 20; then
-    echo "a second signal did not stop an in-process compile" >&2
+  # The forwarded copy arrives a little later, as a separate signal.
+  sleep 0.2
+  kill -INT "$second_interrupt_pid"
+  if ! wait_for_pid_gone "$second_interrupt_pid" 600; then
+    echo "an interrupted in-process compile did not stop" >&2
     exit 1
   fi
   set +e
   wait "$second_interrupt_pid"
   second_interrupt_status=$?
   set -e
-  case $second_interrupt_status in
-    130 | 143) second_interrupt_status_ok=true ;;
-    *) second_interrupt_status_ok=false ;;
-  esac
-  if ! $second_interrupt_status_ok || \
+  if [ "$second_interrupt_status" -ne 130 ] || \
     [ -e "$second_interrupt/lib/build.lock" ] || \
-    [ -e "$second_interrupt/src/Slow.js" ]; then
+    [ -n "$(ls "$second_interrupt/tmp")" ]; then
     cat "$second_interrupt/build.log" >&2
-    echo "second signal: status $second_interrupt_status, expected 130 or 143 without a lock or output" >&2
+    ls "$second_interrupt/tmp" >&2
+    echo "repeated signal: status $second_interrupt_status, expected 130 without a lock or temporary files" >&2
     exit 1
   fi
+  "$port" build "$second_interrupt" >"$second_interrupt/after.log" 2>&1
+  test -f "$second_interrupt/src/Slow.js"
 fi
+
+# A damaged published AST, such as one cut short by a killed build, makes its
+# module parse again instead of failing every later build.
+damaged_ast="$work/damaged-ast"
+mkdir -p "$damaged_ast/src"
+printf '%s\n' '{"name":"damaged-ast","sources":"src","package-specs":{"module":"esmodule","in-source":true}}' \
+  >"$damaged_ast/rescript.json"
+printf 'let value = 1\n' >"$damaged_ast/src/A.res"
+printf 'let value = A.value + 1\n' >"$damaged_ast/src/B.res"
+"$port" build "$damaged_ast" >/dev/null
+for damage in empty garbled; do
+  case $damage in
+    empty) : >"$damaged_ast/lib/ocaml/A.ast" ;;
+    garbled) printf '\377\377\377\377' >"$damaged_ast/lib/ocaml/A.ast" ;;
+  esac
+  if ! "$port" build "$damaged_ast" >"$damaged_ast/$damage.log" 2>&1; then
+    cat "$damaged_ast/$damage.log" >&2
+    echo "a build failed after an $damage published AST" >&2
+    exit 1
+  fi
+  test -s "$damaged_ast/lib/ocaml/A.ast"
+  test -f "$damaged_ast/src/B.js"
+done
 
 # dep-union is requested with [web] by consumer, then with all features by
 # consumer's dev-dependency, then with [native] by the root. All features win

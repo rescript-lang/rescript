@@ -14,10 +14,6 @@ val with_build :
 
 val with_watch : string -> (watch -> 'a) -> 'a
 
-val release_held : unit -> unit
-(** Releases every lock this process holds, for an exit that skips normal
-    unwinding. *)
-
 val is_owned : watch -> bool
 
 module For_test : sig
