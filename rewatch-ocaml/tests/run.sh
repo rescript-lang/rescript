@@ -2052,8 +2052,11 @@ test -f "$dependency/node_modules/dep/src/Dep.js"
 test ! -f "$dependency/src/Main.js"
 test ! -f "$dependency/node_modules/dep/src/Dep.js"
 
+printf 'let extra = 1\n' \
+  > "$package_output_dependency/node_modules/dep/src/Extra.res"
 "$port" build "$package_output_dependency"
 grep 'export {' "$package_output_dependency/node_modules/dep/src/Dep.js" >/dev/null
+test -f "$package_output_dependency/node_modules/dep/src/Extra.js"
 sed 's/"esmodule"/"commonjs"/' \
   "$package_output_dependency/rescript.json" \
   > "$package_output_dependency/rescript.next"
@@ -2069,7 +2072,15 @@ sed -e 's/"commonjs"/"esmodule"/' \
   > "$package_output_dependency/rescript.next"
 mv "$package_output_dependency/rescript.next" \
   "$package_output_dependency/rescript.json"
+# A dependency source deleted in the same build loses its output from the
+# previous package spec too.
+rm "$package_output_dependency/node_modules/dep/src/Extra.res"
 "$port" build "$package_output_dependency"
+if [ -f "$package_output_dependency/node_modules/dep/src/Extra.js" ] \
+  || [ -f "$package_output_dependency/node_modules/dep/lib/es6/src/Extra.mjs" ]; then
+  echo "output of a deleted dependency source was retained" >&2
+  exit 1
+fi
 if [ ! -f "$package_output_dependency/node_modules/dep/lib/es6/src/Dep.mjs" ]; then
   echo "dependency was not rebuilt in its new output location" >&2
   find "$package_output_dependency/node_modules/dep" -type f -print >&2
