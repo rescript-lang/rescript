@@ -108,6 +108,9 @@ These are intentional:
 - Watch mode also notices a missing dependency being installed into an
   existing `node_modules` of an ancestor directory, where the dependency
   lookup finds it.
+- A damaged published AST, such as one cut short by a killed build, makes its
+  module parse again. Rust reads whatever dependency lines it finds in it, and
+  panics if the file can't be read.
 - OpenTelemetry export is not implemented.
 
 ## Platforms
