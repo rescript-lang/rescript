@@ -163,3 +163,13 @@ assert.equal(disabledResult.source_map, undefined);
 assert.doesNotMatch(disabledResult.js_code, /\/\/# sourceMappingURL=/);
 
 console.log("-- Playground source map test complete --");
+
+// Error messages keep their ANSI color codes, which the playground renders,
+// also without a terminal, as in a browser.
+delete process.env.TERM;
+const typeErrorResult = compiler.rescript.compile(`let x: int = "text"`);
+assert.equal(typeErrorResult.type, "type_error");
+assert.match(typeErrorResult.errors[0].fullMsg, /\u001b\[/);
+const syntaxErrorResult = compiler.rescript.compile("let = 1");
+assert.equal(syntaxErrorResult.type, "syntax_error");
+assert.match(syntaxErrorResult.errors[0].fullMsg, /\u001b\[/);
