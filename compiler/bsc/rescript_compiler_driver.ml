@@ -554,6 +554,8 @@ let () =
 
 type result = {exit_code: int; stdout: string; stderr: string}
 
+let build_identity = Rescript_compiler_build_identity.value
+
 (* Request_local gives every request the state of a new compiler process.
    On top of that, a request needs bsc's own defaults, and allocates the shared
    predefined type graphs in a fixed order: lazy first use on different worker
