@@ -220,7 +220,19 @@ let captured_line_endings_tests _context =
     assert_equal ~printer:String.escaped "ppx line\r\nwarning\r\n" stderr)
   else (
     assert_equal ~printer:String.escaped "one\ntwo\n" stdout;
-    assert_equal ~printer:String.escaped "ppx line\r\nwarning\n" stderr)
+    assert_equal ~printer:String.escaped "ppx line\r\nwarning\n" stderr);
+  (* The same holds once stdout is backed by a file, both for output written
+     before the switch and for output written after it. *)
+  let (), stdout, _ =
+    Compiler_request_output.with_capture (fun () ->
+        Compiler_request_output.write_stdout "before\r\nplain\n";
+        ignore (Compiler_request_output.stdout_channel () : out_channel);
+        Compiler_request_output.write_stdout "after\r\n")
+  in
+  let newline = if Sys.win32 then "\r\n" else "\n" in
+  assert_equal ~printer:String.escaped
+    ("before\r\nplain" ^ newline ^ "after\r\n")
+    stdout
 
 (* Readers of compiler artifacts close their file when decoding fails, so a
    long-lived build process does not keep it open. *)
@@ -240,6 +252,37 @@ let failed_decoding_closes_files_tests _context =
           with _ -> ()
         done;
         assert_equal ~printer:string_of_int before (open_files ()))
+
+(* Writers of compiler artifacts close their file when writing fails, as on a
+   full disk. *)
+let failed_writing_closes_files_tests _context =
+  if Sys.file_exists "/proc/self/fd" && Sys.file_exists "/dev/full" then (
+    let open_files () = Array.length (Sys.readdir "/proc/self/fd") in
+    let before = open_files () in
+    let cmj =
+      Js_cmj_format.make ~values:Map_string.empty ~hoisted_exports:[]
+        ~effect_:None ~package_spec:Js_packages_info.empty
+        ~case:Ext_js_file_kind.Little
+    in
+    let cmi =
+      {
+        Cmi_format.cmi_name = "Full";
+        cmi_sign = [];
+        cmi_crcs = [];
+        cmi_flags = [];
+      }
+    in
+    for _ = 1 to 20 do
+      (try Js_cmj_format.to_file "/dev/full" ~check_exists:false cmj
+       with Sys_error _ -> ());
+      (try
+         Binary_ast.write_ast ~sourcefile:"Full.res" ~output:"/dev/full"
+           Binary_ast.Ml []
+       with Sys_error _ -> ());
+      try ignore (Cmi_format.create_cmi "/dev/full" cmi : Digest.t)
+      with Sys_error _ -> ()
+    done;
+    assert_equal ~printer:string_of_int before (open_files ()))
 
 (* GenType finds a module's source relative to the request's working
    directory, not the host process's. *)
@@ -922,6 +965,48 @@ let relative_project_root_tests _context =
         (not (Sys.file_exists "Relative.js"))
         "JavaScript is not written under the host's directory")
 
+(* -e writes its source to a temporary file. With a relative temporary
+   directory, which names a directory under the host's working directory, the
+   file is still found and removed when the request runs elsewhere. *)
+let eval_relative_temp_dir_tests _context =
+  with_temp_dir "rewatch-driver-eval-root-" (fun root ->
+      with_temp_dir "rewatch-driver-eval-host-" (fun host ->
+          let temp = Filename.concat host "tmp" in
+          Unix.mkdir temp 0o755;
+          let previous_cwd = Sys.getcwd () in
+          let previous_temp = Filename.get_temp_dir_name () in
+          Sys.chdir host;
+          Filename.set_temp_dir_name "tmp";
+          let result =
+            Fun.protect
+              ~finally:(fun () ->
+                Filename.set_temp_dir_name previous_temp;
+                Sys.chdir previous_cwd)
+              (fun () ->
+                Rescript_compiler_driver.run_request ~run_external:None
+                  ~cwd:root
+                  ~argv:
+                    [
+                      "-nostdlib";
+                      "-nopervasives";
+                      "-bs-project-root";
+                      root;
+                      "-bs-package-name";
+                      "driver-test";
+                      "-bs-no-version-header";
+                      "-e";
+                    ]
+                  ~input:"let value = 1")
+          in
+          if result.exit_code <> 0 then
+            assert_failure (result.stdout ^ result.stderr);
+          check
+            (not
+               (Array.exists
+                  (fun name -> Filename.check_suffix name ".res")
+                  (Sys.readdir temp)))
+            "the -e source file is removed"))
+
 let recovery_tests _context =
   with_temp_dir "rewatch-driver-recovery-" (fun root ->
       write root "Parse.res" "let value = 1\n";
@@ -1500,6 +1585,8 @@ let suites =
          "lambda_exit_isolation" >:: lambda_exit_isolation_tests;
          "type_node_id_isolation" >:: type_node_id_isolation_tests;
          "relative_project_root" >:: relative_project_root_tests;
+         "failed_writing_closes_files" >:: failed_writing_closes_files_tests;
+         "eval_relative_temp_dir" >:: eval_relative_temp_dir_tests;
          "recovery" >:: recovery_tests;
          "ppx_recovery" >:: ppx_recovery_tests;
          "control_flow_and_output" >:: control_flow_and_output_tests;

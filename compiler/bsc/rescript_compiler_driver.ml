@@ -184,12 +184,22 @@ let set_color_option option =
   | None -> ()
   | Some setting -> (Clflags.current ()).color := Some setting
 
+(* The temporary file is made absolute: a relative temporary directory names a
+   directory under the process's working directory, while a request resolves
+   relative paths against its own. *)
 let eval (s : string) ~suffix =
   let tmpfile = Filename.temp_file "eval" suffix in
-  Ext_io.write_file tmpfile s;
-  anonymous ~rev_args:[tmpfile];
-  if not !((Clflags.current ()).verbose) then
-    try Sys.remove tmpfile with _ -> ()
+  let tmpfile =
+    if Filename.is_relative tmpfile then Filename.concat (Sys.getcwd ()) tmpfile
+    else tmpfile
+  in
+  Fun.protect
+    ~finally:(fun () ->
+      if not !((Clflags.current ()).verbose) then
+        try Sys.remove tmpfile with _ -> ())
+    (fun () ->
+      Ext_io.write_file tmpfile s;
+      anonymous ~rev_args:[tmpfile])
 
 (* let (//) = Filename.concat *)
 
