@@ -213,9 +213,6 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     result
   in
   let record_result (scheduled : scheduled_module) ~source_kind path result =
-    (* Domain tasks only compile. Publication and build-state updates remain on
-       this scheduler domain after their result has been collected. *)
-    let result = publish_compilation scheduled ~source_kind path result in
     let result, publication_error =
       match record_publication scheduled ~source_kind path with
       | Publication_succeeded stderr -> ({result with Process.stderr}, None)
@@ -251,10 +248,14 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
       message;
     Option.is_none message
   in
+  (* The worker that compiled a module also publishes its artifacts, which
+     only touches that module's files: dependents are scheduled after its result
+     is recorded. Build-state updates stay on this scheduler domain. A stop
+     cancels a compile before publication starts, never during it. *)
   let compilation_task (scheduled : scheduled_module) ~source_kind path =
     let task = scheduled.compile ~source_kind path in
     Atomic.set scheduled.publication None;
-    task
+    Process.map_result task (publish_compilation scheduled ~source_kind path)
   in
   let record_post_build_result (scheduled : scheduled_module) output result =
     if Process.succeeded result then (
