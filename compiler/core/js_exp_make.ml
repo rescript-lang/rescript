@@ -1595,10 +1595,18 @@ and float_minus ?comment (e1 : t) (e2 : t) : t =
   | Number (Int {i; _}), Number (Int {i = j; _}) -> int ?comment (Int32.sub i j)
   | _ -> {comment; source_loc = None; expression_desc = Bin (Minus, e1, e2)}
 
-let int32_add ?comment e1 e2 = to_int32 (float_add ?comment e1 e2)
+(* An operand of an int operation is an int32 value, so an identity
+   operation ([x + 0], [x - 0], [x * 1], [x / 1]) is the operand itself. *)
+let int32_add ?comment (e1 : t) (e2 : t) : t =
+  match (e1.expression_desc, e2.expression_desc) with
+  | _, Number (Int {i = 0l}) -> e1
+  | Number (Int {i = 0l}), _ -> e2
+  | _ -> to_int32 (float_add ?comment e1 e2)
 
-let int32_minus ?comment e1 e2 : J.expression =
-  to_int32 (float_minus ?comment e1 e2)
+let int32_minus ?comment (e1 : t) (e2 : t) : J.expression =
+  match e2.expression_desc with
+  | Number (Int {i = 0l}) -> e1
+  | _ -> to_int32 (float_minus ?comment e1 e2)
 
 let float_div ?comment e1 e2 = bin ?comment Div e1 e2
 let float_pow ?comment e1 e2 = bin ?comment Pow e1 e2
@@ -1610,6 +1618,7 @@ let int32_asr ?comment e1 e2 : J.expression =
 let int32_div ~checked ?comment (e1 : t) (e2 : t) : t =
   match (e1.expression_desc, e2.expression_desc) with
   | Length _, Number (Int {i = 2l}) -> int32_asr e1 one_int_literal
+  | _, Number (Int {i = 1l}) -> e1
   | e1_desc, Number (Int {i = i1}) when i1 <> 0l -> (
     match e1_desc with
     | Number (Int {i = i0}) -> int (Int32.div i0 i1)
@@ -1654,6 +1663,9 @@ let int32_mul ?comment (e1 : J.expression) (e2 : J.expression) : J.expression =
   | ( {expression_desc = Number (Int {i = i0}); _},
       {expression_desc = Number (Int {i = i1}); _} ) ->
     int (Int32.mul i0 i1)
+  | e, {expression_desc = Number (Int {i = 1l}); _}
+  | {expression_desc = Number (Int {i = 1l}); _}, e ->
+    e
   | e, {expression_desc = Number (Int {i = i0}); _}
   | {expression_desc = Number (Int {i = i0}); _}, e ->
     let i = is_pos_pow i0 in

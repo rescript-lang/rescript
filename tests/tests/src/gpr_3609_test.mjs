@@ -5,7 +5,7 @@ function func(state) {
   if (typeof state !== "object") {
     return 0;
   } else {
-    return 0 + state._0 | 0;
+    return state._0;
   }
 }
 
