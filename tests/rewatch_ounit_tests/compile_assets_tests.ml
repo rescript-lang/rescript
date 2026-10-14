@@ -45,6 +45,19 @@ let tests =
         (relative_header.dependencies = ["Belt_Id"]
         && relative_header.source = Some "../../src/Relative.resi")
         "relative source paths terminate the dependency header before the AST";
+      (* A damaged header that claims a huge dependency block is rejected
+         without allocating it. *)
+      let damaged = Filename.concat root "Damaged.ast" in
+      write damaged "\x3f\xff\xff\xffshort";
+      let allocated = Gc.allocated_bytes () in
+      let damaged_header = Ast_header.read damaged in
+      check
+        (damaged_header.dependencies = [] && damaged_header.source = None)
+        "a damaged dependency length reads as an empty header";
+      check
+        (Gc.allocated_bytes () -. allocated < 1_000_000.)
+        "a damaged dependency length is not allocated";
+      Sys.remove damaged;
       Unix.mkdir nested 0o755;
       write (Filename.concat nested "Nested.cmi") "nested";
       let state = Compile_assets.create [root; root] in

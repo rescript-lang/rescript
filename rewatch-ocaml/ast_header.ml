@@ -11,6 +11,11 @@ let read path =
          scanning until an absolute path would read the marshalled AST. *)
       let read_header () =
         let dependency_length = input_binary_int channel in
+        (* Checked before allocating: a damaged length can claim gigabytes. *)
+        if
+          dependency_length < 0
+          || dependency_length > in_channel_length channel - pos_in channel
+        then raise End_of_file;
         let dependencies =
           really_input_string channel dependency_length
           |> String.split_on_char '\n'
