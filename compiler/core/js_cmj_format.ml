@@ -110,11 +110,14 @@ let to_file name ~check_exists (v : t) =
   let s = Marshal.to_string v [] in
   let cur_digest = Digest.string s in
   let header = cur_digest in
-  if not (check_exists && for_sure_not_changed name header) then (
+  if not (check_exists && for_sure_not_changed name header) then
     let oc = open_out_bin (Compiler_request_state.resolve_path name) in
-    output_string oc header;
-    output_string oc s;
-    close_out oc)
+    Fun.protect
+      ~finally:(fun () -> close_out_noerr oc)
+      (fun () ->
+        output_string oc header;
+        output_string oc s;
+        close_out oc)
 
 let key_comp a b = Ext_string.compare a b.name
 

@@ -58,9 +58,12 @@ let write_ast (type t) ~(sourcefile : string) ~output (kind : t kind) (pt : t) :
         Ext_buffer.add_string_char buf s magic_sep_char)
     output_set;
   let oc = open_out_bin (Compiler_request_state.resolve_path output) in
-  output_binary_int oc (Ext_buffer.length buf);
-  Ext_buffer.output_buffer oc buf;
-  output_string oc sourcefile;
-  output_char oc '\n';
-  output_value oc pt;
-  close_out oc
+  Fun.protect
+    ~finally:(fun () -> close_out_noerr oc)
+    (fun () ->
+      output_binary_int oc (Ext_buffer.length buf);
+      Ext_buffer.output_buffer oc buf;
+      output_string oc sourcefile;
+      output_char oc '\n';
+      output_value oc pt;
+      close_out oc)

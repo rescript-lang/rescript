@@ -104,10 +104,13 @@ let create_cmi ?check_exists filename (cmi : cmi_infos) =
   | _ ->
     let crcs = (cmi.cmi_name, Some crc) :: cmi.cmi_crcs in
     let oc = open_out_bin (Compiler_request_state.resolve_path filename) in
-    output_string oc content;
-    output_value oc crcs;
-    output_value oc cmi.cmi_flags;
-    close_out oc;
+    Fun.protect
+      ~finally:(fun () -> close_out_noerr oc)
+      (fun () ->
+        output_string oc content;
+        output_value oc crcs;
+        output_value oc cmi.cmi_flags;
+        close_out oc);
     crc
 
 (* Error report *)
