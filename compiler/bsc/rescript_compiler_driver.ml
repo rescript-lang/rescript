@@ -295,8 +295,11 @@ let command_line_flags () : (string * Bsc_args.spec * string) array =
        'lib/cjs', 'amdjs:lib/amdjs', 'es6:lib/es6' " );
     ( "-bs-project-root",
       string_call (fun s ->
-          Ext_path.set_project_root s;
-          Gentype_config.project_root () := s),
+          (* Writers open paths under the root without resolving them against
+             the request's working directory, so make it absolute here. *)
+          let root = Ext_path.absolute_cwd_path s in
+          Ext_path.set_project_root root;
+          Gentype_config.project_root () := root),
       "*internal* Set the project root directory" );
     ( "-bs-ast",
       unit_call (fun _ ->

@@ -892,6 +892,36 @@ let standalone_output_tests _context =
       in
       assert_equal ~printer:string_of_int 0 exit_code)
 
+(* A relative project root names a directory under the request's working
+   directory, not the host process's, for the JavaScript writer too. *)
+let relative_project_root_tests _context =
+  with_temp_dir "rewatch-driver-relative-root-" (fun root ->
+      write root "Relative.res" "let relative = 1\n";
+      let argv =
+        [
+          "-nostdlib";
+          "-nopervasives";
+          "-bs-project-root";
+          ".";
+          "-bs-package-name";
+          "driver-test";
+          "-bs-package-output";
+          "commonjs:.:.js";
+          "-bs-no-version-header";
+        ]
+      in
+      let result =
+        Rescript_compiler_driver.run_request ~run_external:None ~cwd:root ~argv
+          ~input:"Relative.res"
+      in
+      expect_code 0 result;
+      check
+        (Sys.file_exists (Filename.concat root "Relative.js"))
+        "JavaScript is written under the request's directory";
+      check
+        (not (Sys.file_exists "Relative.js"))
+        "JavaScript is not written under the host's directory")
+
 let recovery_tests _context =
   with_temp_dir "rewatch-driver-recovery-" (fun root ->
       write root "Parse.res" "let value = 1\n";
@@ -1469,6 +1499,7 @@ let suites =
          "path_configuration_isolation" >:: path_configuration_isolation_tests;
          "lambda_exit_isolation" >:: lambda_exit_isolation_tests;
          "type_node_id_isolation" >:: type_node_id_isolation_tests;
+         "relative_project_root" >:: relative_project_root_tests;
          "recovery" >:: recovery_tests;
          "ppx_recovery" >:: ppx_recovery_tests;
          "control_flow_and_output" >:: control_flow_and_output_tests;
