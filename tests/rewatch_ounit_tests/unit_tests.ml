@@ -2,6 +2,11 @@ open OUnit2
 
 let check condition message = assert_bool message condition
 
+(* Type-checks the Windows backend against the platform interface on every
+   platform. The library is wrapped, so its Platform module is named in full. *)
+module Checked_windows_platform : module type of Rewatch_ocaml_lib__Platform =
+  Platform_windows
+
 let write_file = Test_support.write_file
 
 let read_file path =

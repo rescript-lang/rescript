@@ -111,6 +111,7 @@ let domain_ppx_cancellation_test _context =
   Test_support.with_temp_dir "rewatch-domain-ppx-cancellation-" (fun root ->
       let marker = Filename.concat root "ppx-started" in
       let job = waiting_ppx_request root marker in
+      let started = Unix.gettimeofday () in
       let interrupted =
         try
           ignore
@@ -121,7 +122,12 @@ let domain_ppx_cancellation_test _context =
           false
         with Process.Interrupted 15 -> true
       in
-      check interrupted "domain task cancellation reaches a running PPX";
+      check interrupted "domain task cancellation is reported";
+      (* The PPX waits 30 s: returning sooner shows that cancellation reached
+         it instead of waiting for it to finish. *)
+      check
+        (Unix.gettimeofday () -. started < 10.)
+        "domain task cancellation reaches a running PPX";
       check (Sys.file_exists marker) "the domain PPX started";
       check_ppx_gone marker)
 

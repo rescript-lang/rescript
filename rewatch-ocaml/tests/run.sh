@@ -1805,6 +1805,129 @@ if ! $windows_posix_shell; then
   fi
 fi
 
+# write_slow_module PATH VALUE: a module whose in-process compile takes a few
+# seconds, so a test can act while it runs. VALUE marks the version.
+write_slow_module() {
+  awk -v value="$2" 'BEGIN {
+    printf "let value = %s\n", value
+    for (i = 1; i <= 60000; i++) printf "let v%d = (%d, \"%d\")\n", i, i, i
+  }' >"$1"
+}
+slow_project() {
+  mkdir -p "$1/src"
+  printf '%s\n' '{"name":"slow","sources":"src","package-specs":{"module":"esmodule","in-source":true}}' \
+    >"$1/rescript.json"
+  write_slow_module "$1/src/Slow.res" 1
+  printf 'let dependent = Slow.value\n' >"$1/src/Dependent.res"
+}
+
+# A signal during compiler work stops the build after the module compiling
+# in-process: its dependent is not compiled, the exit status is the signal's
+# and the lock is released. A closing terminal's SIGHUP and SIGQUIT are handled
+# like SIGTERM.
+if ! $windows_posix_shell; then
+  for interrupt_signal in TERM:143 HUP:129 QUIT:131; do
+    signal_name=${interrupt_signal%%:*}
+    expected_status=${interrupt_signal#*:}
+    interrupt_build="$work/interrupt-build-$signal_name"
+    slow_project "$interrupt_build"
+    "$port" -vv build "$interrupt_build" >"$interrupt_build/build.log" 2>&1 &
+    interrupt_build_pid=$!
+    background_pids="$background_pids $interrupt_build_pid"
+    if ! wait_for_text "$interrupt_build/build.log" 'compile dirty: Slow'; then
+      echo "large module did not reach the compiler before $signal_name" >&2
+      exit 1
+    fi
+    kill "-$signal_name" "$interrupt_build_pid"
+    set +e
+    wait "$interrupt_build_pid"
+    interrupt_build_status=$?
+    set -e
+    if [ "$interrupt_build_status" -ne "$expected_status" ] || \
+      [ -e "$interrupt_build/lib/build.lock" ] || \
+      [ -e "$interrupt_build/src/Dependent.js" ]; then
+      cat "$interrupt_build/build.log" >&2
+      echo "$signal_name during compiler work: status $interrupt_build_status, expected $expected_status without a lock or further compiles" >&2
+      exit 1
+    fi
+  done
+fi
+
+# Removing watch.lock is the shell suite's shutdown protocol. It stops a
+# watcher's compiler work like a signal, before the queued dependent.
+lock_interrupt="$work/lock-interrupt"
+slow_project "$lock_interrupt"
+"$port" -vv watch "$lock_interrupt" >"$lock_interrupt/watch.log" 2>&1 &
+lock_interrupt_pid=$!
+background_pids="$background_pids $lock_interrupt_pid"
+if ! wait_for_text "$lock_interrupt/watch.log" 'compile dirty: Slow'; then
+  echo "large module did not reach the compiler" >&2
+  exit 1
+fi
+remove_file_with_retry "$lock_interrupt/lib/watch.lock"
+if ! wait_for_pid_gone "$lock_interrupt_pid" 600; then
+  echo "watcher did not stop during compiler work after watch.lock removal" >&2
+  exit 1
+fi
+wait "$lock_interrupt_pid" 2>/dev/null || true
+if [ -e "$lock_interrupt/src/Dependent.js" ]; then
+  cat "$lock_interrupt/watch.log" >&2
+  echo "watcher compiled queued modules after watch.lock removal" >&2
+  exit 1
+fi
+
+# An atomic save made while a rebuild compiles causes another build instead of
+# becoming the baseline of the next one.
+atomic_save="$work/atomic-save-rebuild"
+slow_project "$atomic_save"
+"$port" -vv watch "$atomic_save" >"$atomic_save/watch.log" 2>&1 &
+atomic_save_pid=$!
+background_pids="$background_pids $atomic_save_pid"
+if ! wait_for_text "$atomic_save/watch.log" 'Finished initial compilation' 1 1200; then
+  echo "watcher did not finish its initial build" >&2
+  exit 1
+fi
+write_slow_module "$atomic_save/src/Slow.res" 2
+if ! wait_for_text "$atomic_save/watch.log" 'compile dirty: Slow' 2 600; then
+  echo "the edited large module did not reach the compiler" >&2
+  exit 1
+fi
+write_slow_module "$atomic_save/src/Slow.next" 3
+mv "$atomic_save/src/Slow.next" "$atomic_save/src/Slow.res"
+if ! wait_for_text "$atomic_save/src/Slow.js" 'value = 3' 1 1200; then
+  cat "$atomic_save/watch.log" >&2
+  echo "an atomic save during a rebuild was not built" >&2
+  exit 1
+fi
+remove_file_with_retry "$atomic_save/lib/watch.lock"
+wait "$atomic_save_pid" 2>/dev/null || true
+
+# A failed parse stays pending until the source parses: an unrelated edit
+# parses it again and reports the error again, and its old AST is never
+# compiled.
+retained_parse="$work/retained-parse"
+mkdir -p "$retained_parse/src"
+printf '%s\n' '{"name":"retained-parse","sources":"src","package-specs":{"module":"esmodule","in-source":true}}' \
+  >"$retained_parse/rescript.json"
+printf 'let value = 1\n' >"$retained_parse/src/A.res"
+printf 'let other = 1\n' >"$retained_parse/src/B.res"
+REWATCH_COMPILER_CALL_LOG="$retained_parse/calls.log" \
+  "$port" watch "$retained_parse" >"$retained_parse/watch.log" 2>&1 &
+retained_parse_pid=$!
+background_pids="$background_pids $retained_parse_pid"
+wait_for_initial_build "$retained_parse/watch.log"
+printf 'let value =\n' >"$retained_parse/src/A.res"
+wait_for_text "$retained_parse/watch.log" 'This let-binding misses an expression'
+failed_parses=$(grep -c '^parse.*A\.res' "$retained_parse/calls.log")
+printf 'let other = 2\n' >"$retained_parse/src/B.res"
+wait_for_text "$retained_parse/watch.log" 'This let-binding misses an expression' 2
+test "$(grep -c '^parse.*A\.res' "$retained_parse/calls.log")" -gt "$failed_parses"
+grep 'value = 1' "$retained_parse/src/A.js" >/dev/null
+printf 'let value = 2\n' >"$retained_parse/src/A.res"
+wait_for_text "$retained_parse/src/A.js" 'value = 2'
+remove_file_with_retry "$retained_parse/lib/watch.lock"
+wait "$retained_parse_pid" 2>/dev/null || true
+
 # A damaged published AST, such as one cut short by a killed build, makes its
 # module parse again instead of failing every later build.
 damaged_ast="$work/damaged-ast"
