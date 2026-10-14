@@ -6,9 +6,10 @@ val run_request :
   argv:string list ->
   input:string ->
   result
-(** Run one compiler request in the logical working directory. [argv] contains
-    only options; [input] is kept separate so build-system callers cannot
-    accidentally construct a request without a compilation input. Requests may
+(** Run one compiler request in the logical working directory, with the command
+    line [bsc argv input]. [input] is the request's last argument: usually the
+    file to compile, but it can also be the value of a final option, as with
+    [-format]. Requests may
     run concurrently on different domains: their compiler state is
     request-local. Compiler and external-command stdout and stderr are captured
     in the result, including for help, version, formatting, and reprinting
