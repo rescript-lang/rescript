@@ -13,6 +13,9 @@ type t = {
   loc: Location.t;
   mutable prev_tok_end_pos: Lexing.position;
   mutable prev_tok_is_question: bool;
+  (* Checkpoints restore comment lists, not this field. A speculative JSX parse
+     must reproduce this marking on reparse; otherwise defer it until commit or
+     restore it on rollback. *)
   mutable jsx_container: Location.t option;
 }
 
