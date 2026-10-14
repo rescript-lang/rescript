@@ -75,6 +75,9 @@ relevant guidance from each.
   need to.
 - Include appropriate tests with all changes
 - Build must pass before committing
+- Write each commit message as a record in the format of
+  [`.claude/skills/records/SKILL.md`](.claude/skills/records/SKILL.md), and
+  render review pages from records with `node scripts/commitRecords.js`
 
 ### Stacked pull requests
 
