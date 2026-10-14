@@ -2923,6 +2923,8 @@ and parse_jsx_children p : Parsetree.jsx_children =
     | Lbrace when Parser.peek2 p = Rbrace ->
       let start_pos = Parser.start_pos p in
       Parser.next p;
+      (* next commits the consumed token's leading comments. Snapshot after {
+         so consuming } prepends exactly the comments inside the braces. *)
       let comments_before = p.comments in
       Parser.next p;
       (* Only comment-containing containers are trivia. Keep bare {} as an
