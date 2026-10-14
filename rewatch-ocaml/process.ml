@@ -68,7 +68,7 @@ type termination_state =
 
 type pool_active = {
   id: int;
-  child: unit Child.running;
+  child: Child.running;
   mutable cancellation: cancellation_state;
 }
 
@@ -140,7 +140,7 @@ let run_pool_task pool payload task =
   | Concurrent {run; cancel} -> run_concurrent_task pool payload task run cancel
   | External {job; env} -> (
     match
-      try Ok (Child.launch ?env ~notifier:pool.notifier () job)
+      try Ok (Child.launch ?env ~notifier:pool.notifier job)
       with exn -> Error exn
     with
     | Error exn -> complete_pool_task pool (Task_failed (payload, exn))
@@ -534,7 +534,7 @@ let run_tasks ?(max_jobs = default_max_jobs) ?poll ?(on_complete = fun _ -> ())
 let run_one ?poll ?stdout_chunk ?stderr_chunk ?stdin ?env ~cwd program args =
   with_completion_notifier ~poll (fun ~poll notifier ->
       let child =
-        Child.launch ?stdout_chunk ?stderr_chunk ?stdin ?env ~notifier ()
+        Child.launch ?stdout_chunk ?stderr_chunk ?stdin ?env ~notifier
           {program; args; cwd}
       in
       let completion_received = ref false in

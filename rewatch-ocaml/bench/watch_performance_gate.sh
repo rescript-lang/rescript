@@ -156,7 +156,6 @@ start_watcher() {
   else
     setsid env \
       RESCRIPT_BSC_EXE="$counting_bsc" \
-      REWATCH_BSC_PROXY_MODE=counting \
       RESCRIPT_RUNTIME="$runtime" \
       REWATCH_REAL_BSC="$real_bsc" \
       REWATCH_BSC_CALL_LOG="$work_root/$implementation.bsc" \
