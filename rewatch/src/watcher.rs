@@ -462,11 +462,13 @@ async fn async_watch(
                 .filter(|path| matches_filter(path, filter));
             for path in paths {
                 let path_buf = path.to_path_buf();
+                let source_compile_type = compile_type_for_source_event(event.kind, initialization_failed);
+                log::debug!(
+                    "received {:?} for {path:?} -> {source_compile_type:?} (pending: {needs_compile_type:?})",
+                    event.kind
+                );
 
-                match (
-                    needs_compile_type,
-                    compile_type_for_source_event(event.kind, initialization_failed),
-                ) {
+                match (needs_compile_type, source_compile_type) {
                     (
                         CompileType::Incremental | CompileType::None,
                         // Structural changes and edits after failed initialization need a full scan.
@@ -474,10 +476,6 @@ async fn async_watch(
                     ) => {
                         // if we are going to do a full compile, we don't need to bother marking
                         // files dirty because we do a full scan anyway
-                        log::debug!(
-                            "received {:?} while needs_compile_type was {needs_compile_type:?} -> full compile",
-                            event.kind
-                        );
                         needs_compile_type = CompileType::Full;
                     }
 
@@ -488,10 +486,6 @@ async fn async_watch(
                     ) => {
                         // if we are going to compile incrementally, we need to mark the exact files
                         // dirty
-                        log::debug!(
-                            "received {:?} while needs_compile_type was {needs_compile_type:?} -> incremental compile",
-                            event.kind
-                        );
                         if let Ok(canonicalized_path_buf) = path_buf
                             .canonicalize()
                             .map(StrippedVerbatimPath::to_stripped_verbatim_path)

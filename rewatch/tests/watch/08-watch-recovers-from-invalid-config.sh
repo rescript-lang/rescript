@@ -11,12 +11,25 @@ stop_watcher() {
   fi
 }
 
+wait_for_source_retry() {
+  local marker='received Modify.*Test[.]res.* -> Full'
+  wait_for_pattern rewatch.log "$marker" 30 || return 1
+  # Require an initialization failure after the source event, not another config event before it.
+  local preceding_errors
+  preceding_errors=$(awk -v marker="$marker" '
+    $0 ~ marker {exit}
+    /Could not initialize build/ {count++}
+    END {print count + 0}
+  ' rewatch.log)
+  wait_for_pattern_count rewatch.log "Could not initialize build" "$((preceding_errors + 1))" 30
+}
+
 if ! rewatch clean > /dev/null 2>&1; then
   error "Could not clean before watcher recovery test"
   exit 1
 fi
 cp rescript.json rescript.json.watch-recovery.bak
-rewatch_bg watch > rewatch.log 2>&1 &
+rewatch_bg -vv watch > rewatch.log 2>&1 &
 
 if ! wait_for_file "./src/Test.mjs" 20 || ! wait_for_file "lib/watch.lock" 20; then
   error "Initial watch build did not complete"
@@ -47,9 +60,8 @@ if ! wait_for_pattern rewatch.log "Could not initialize build" 30; then
 fi
 
 # A content-only edit must retry initialization instead of compiling with the old config.
-initial_errors=$(grep -c "Could not initialize build" rewatch.log 2> /dev/null || true)
 echo 'let watchRecoveryMarker = "watch-recovery-marker"' >> src/Test.res
-if ! wait_for_pattern_count rewatch.log "Could not initialize build" "$((initial_errors + 1))" 30; then
+if ! wait_for_source_retry; then
   error "Source edit did not retry failed initialization"
   cat rewatch.log
   stop_watcher
