@@ -820,6 +820,13 @@ module App = {
     let status = Signal.make(Loading)
     let compilerInfo: Signal.t<option<CompilerApi.info>> = Signal.make(None)
     let compileResult: Signal.t<option<compileSnapshot>> = Signal.make(None)
+    let lambdaInput = () =>
+      switch Signal.get(compileResult) {
+      | Some({result: Ok(result)}) =>
+        Some({LambdaView.before: result.lambda, after: result.lambdaOptimized})
+      | Some({result: Error(_)}) | None => None
+      }
+    let lambdaVisible = () => Signal.get(activeTab) === Lambda && lambdaInput()->Option.isSome
     let config = Signal.make(CompilerApi.defaultConfig)
     let visibleTabNodes: Signal.t<array<View.node>> = Obj.magic(
       Computed.make(() =>
@@ -1328,27 +1335,23 @@ module App = {
               {View.signalText(() => resultSummary(Signal.get(compileResult)))}
             </div>
             <div class="output-shell">
-              {View.tracked(() => {
-                let selectedTab = Signal.get(activeTab)
-                let snapshot = Signal.get(compileResult)
-                switch (selectedTab, snapshot) {
-                | (Lambda, Some({result: Ok(result)})) =>
-                  <LambdaView
-                    before={result.lambda} after={result.lambdaOptimized} mode={lambdaMode}
-                  />
-                | _ =>
-                  <pre class="output">
-                    {interactiveOutputNode(
-                      snapshot,
+              <LambdaView input={lambdaInput} visible={lambdaVisible} mode={lambdaMode} />
+              <pre class={() => lambdaVisible() ? "output hidden-panel" : "output"}>
+                {View.tracked(() =>
+                  if lambdaVisible() {
+                    View.empty()
+                  } else {
+                    interactiveOutputNode(
+                      Signal.get(compileResult),
                       Signal.get(source),
-                      selectedTab,
+                      Signal.get(activeTab),
                       Signal.get(mappedGeneratedPosition),
                       revealOriginalMapping,
                       () => Signal.set(activeTab, SourceMap),
-                    )}
-                  </pre>
-                }
-              })}
+                    )
+                  }
+                )}
+              </pre>
             </div>
             <Problems compileResult />
           </div>

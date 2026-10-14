@@ -46,7 +46,11 @@ let compare = (before, after) => {
     }
     let rows = n - prefix.contents - suffix.contents
     let columns = m - prefix.contents - suffix.contents
-    if n + m > maxLines || (rows + 1) * (columns + 1) > maxCells {
+
+    // Shared edges appear once in the output, not once for each input.
+    if (
+      n + m - prefix.contents - suffix.contents > maxLines || (rows + 1) * (columns + 1) > maxCells
+    ) {
       TooLarge
     } else {
       // Longest common subsequence on the changed middle only. Keeping the
@@ -151,9 +155,13 @@ let sections = lines => {
       if tail - head <= 3 {
         result->Array.push(Visible(Array.slice(lines, ~start, ~end=end_)))
       } else {
-        result->Array.push(Visible(Array.slice(lines, ~start, ~end=head)))
+        if head > start {
+          result->Array.push(Visible(Array.slice(lines, ~start, ~end=head)))
+        }
         result->Array.push(Collapsed(Array.slice(lines, ~start=head, ~end=tail)))
-        result->Array.push(Visible(Array.slice(lines, ~start=tail, ~end=end_)))
+        if tail < end_ {
+          result->Array.push(Visible(Array.slice(lines, ~start=tail, ~end=end_)))
+        }
       }
     }
   }

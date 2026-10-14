@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { register } from "node:module";
 import test from "node:test";
+import * as Signal from "xote/src/Signal.res.mjs";
 import {
   compare,
   maxCharacters,
@@ -7,6 +9,11 @@ import {
   sections,
 } from "../src/LambdaDiff.res.mjs";
 import * as Inline from "../src/LambdaInlineDiff.res.mjs";
+
+// Match vite.config.js: Xote and the playground use the published v12 runtime.
+register(new URL("./runtime-loader.mjs", import.meta.url));
+const LambdaView = await import("../src/LambdaView.res.mjs");
+const { renderToString } = await import("xote/src/SSR.res.mjs");
 
 function changes(before, after) {
   const result = compare(before, after);
@@ -96,7 +103,7 @@ test("bounds comparison work and output size", () => {
 });
 
 test("trims common edges before applying the comparison budget", () => {
-  const edge = "(unchanged)\n".repeat(2000);
+  const edge = "(unchanged)\n".repeat(5000);
   const lines = changes(`${edge}before\n${edge}`, `${edge}after\n${edge}`);
   assert.equal(lines.filter(line => line.kind !== "Same").length, 2);
 });
@@ -108,6 +115,7 @@ test("collapsed regions preserve every line and keep context around changes", ()
     `${context}\nnew\n${context}\nnew\n${context}`,
   );
   const grouped = sections(lines);
+  assert.ok(grouped.every(section => section._0.length > 0));
   assert.deepEqual(
     grouped.flatMap(section => section._0),
     lines,
@@ -174,6 +182,12 @@ test("inline diff handles token insertion, deletion and repeated tokens", () => 
   assert.deepEqual(changedText(inserted.after[1]), ["42"]);
 });
 
+test("inline alignment prioritizes shared atoms over repeated punctuation", () => {
+  const result = inlineChanges("((a", "a((");
+  assert.deepEqual(changedText(result.before[1]), ["(", "("]);
+  assert.deepEqual(changedText(result.after[1]), ["(", "("]);
+});
+
 test("inline pairing skips unmatched lines in an uneven changed block", () => {
   const result = inlineChanges(
     "(unused z/9)\n  (+ x/1 10)\n  (- y/2 30)",
@@ -238,4 +252,118 @@ test("inline token work is budgeted across blocks and resets for each dump", () 
   assert.ok(Object.keys(result.before).length > 0);
   assert.ok(Object.keys(result.before).length < 30);
   assert.deepEqual(inlineChanges(before, after), result);
+});
+
+test("an oversized candidate block leaves the token budget for later changes", () => {
+  const block = Array.from(
+    { length: 16 },
+    (_, i) => `(apply f/${i} ${"x ".repeat(100)}10)`,
+  ).join("\n");
+  const result = inlineChanges(
+    `${block}\nseparator\n(+ value/1 10)`,
+    `${block.replaceAll("10)", "20)")}\nseparator\n(+ value/1 20)`,
+  );
+  assert.deepEqual(Object.keys(result.before), ["18"]);
+  assert.deepEqual(changedText(result.before[18]), ["10"]);
+  assert.deepEqual(changedText(result.after[18]), ["20"]);
+});
+
+function elements(node) {
+  switch (node.TAG) {
+    case "Element":
+      return [node, ...node.children.flatMap(elements)];
+    case "Fragment":
+      return node._0.flatMap(elements);
+    case "SignalFragment":
+      return Signal.peek(node._0).flatMap(elements);
+    case "LazyComponent":
+      return elements(node._0());
+    case "Keyed":
+      return elements(node.child);
+    default:
+      return [];
+  }
+}
+
+function lambdaView(contextLines = 20) {
+  const context = "unchanged\n".repeat(contextLines);
+  const input = Signal.make({
+    before: `${context}old\n${context}`,
+    after: `${context}new\n${context}`,
+  });
+  const mode = Signal.make("Before");
+  const visible = Signal.make(true);
+  const view = LambdaView.make({
+    input: () => Signal.get(input),
+    mode,
+    visible: () => Signal.get(visible),
+  });
+  const html = () => renderToString(() => view);
+  const diff = () =>
+    elements(view).find(
+      node =>
+        node.tag === "div" &&
+        renderToString(() => node).startsWith('<div class="lambda-diff">'),
+    );
+  return { input, mode, visible, view, html, diff };
+}
+
+test("Lambda view defers diff work and does not render collapsed lines", () => {
+  const { mode, html, diff } = lambdaView(5000);
+  assert.equal(diff(), undefined);
+  Signal.set(mode, "Diff");
+  assert.ok(diff());
+  assert.equal(
+    (html().match(/class="lambda-diff-line(?: |")/g) ?? []).length,
+    8,
+  );
+  assert.equal((html().match(/<details/g) ?? []).length, 2);
+});
+
+test("Lambda view retains its diff across identical compiles and tab switches", () => {
+  const { input, mode, visible, diff } = lambdaView();
+  Signal.set(mode, "Diff");
+  const initial = diff();
+  assert.ok(initial);
+  Signal.set(input, { ...Signal.peek(input) });
+  assert.equal(diff(), initial);
+  Signal.set(mode, "Before");
+  Signal.set(input, { ...Signal.peek(input), after: "changed while hidden" });
+  assert.equal(diff(), initial);
+  Signal.set(mode, "Diff");
+  assert.notEqual(diff(), initial);
+  const changed = diff();
+  Signal.set(visible, false);
+  Signal.set(visible, true);
+  assert.equal(diff(), changed);
+});
+
+test("expanded unchanged regions survive edits to a changed line", () => {
+  const { input, mode, view, html } = lambdaView();
+  Signal.set(mode, "Diff");
+  const summary = elements(view).find(node => node.tag === "summary");
+  const click = summary.events.find(([name]) => name === "click")[1];
+  let prevented = false;
+  click({
+    preventDefault: () => {
+      prevented = true;
+    },
+  });
+  assert.equal(prevented, true);
+  const openDetails = () =>
+    (html().match(/<details[^>]* open(?: |>|=)/g) ?? []).length;
+  assert.equal(openDetails(), 1);
+  Signal.set(input, {
+    ...Signal.peek(input),
+    after: Signal.peek(input).after.replace("new", "edited"),
+  });
+  assert.equal(openDetails(), 1);
+});
+
+test("older bundles retain the optimized Lambda availability notice", () => {
+  const { input, mode, html } = lambdaView();
+  Signal.set(input, { ...Signal.peek(input), after: undefined });
+  Signal.set(mode, "Diff");
+  assert.match(html(), /does not provide optimized Lambda/);
+  assert.doesNotMatch(html(), /class="lambda-diff"/);
 });

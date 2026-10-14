@@ -1,13 +1,14 @@
 // Inline refinement runs only inside consecutive Removed/Added line blocks.
-// For each candidate line pair, an LCS of non-whitespace Lambda tokens marks
+// For each candidate line pair, an LCS prioritizing Lambda atoms marks
 // the shared tokens. Pairing requires shared atoms (not just punctuation) to
 // cover at least half the atom count of the larger line. A second dynamic
 // programming table chooses the highest-scoring order-preserving line pairs,
 // allowing unmatched lines on either side. Unmatched tokens in chosen pairs
 // receive stronger shading; whitespace and the original text stay intact.
 // Oversized or dissimilar pairs keep whole-line highlighting. Token comparison
-// cells share a budget across the entire dump, and block size caps line-pairing
-// work, so this refinement cannot introduce unbounded quadratic comparisons.
+// cells share a budget across the entire dump. Admit whole blocks before doing
+// token comparisons, so an oversized block cannot consume the budget partially
+// and starve later, smaller changes. Block size also caps line-pairing work.
 type part = {text: string, changed: bool}
 type highlights = {before: Dict.t<array<part>>, after: Dict.t<array<part>>}
 type tokens = {all: array<string>, significant: array<string>, atoms: int}
@@ -71,11 +72,10 @@ let compareTokens = (left, right, budget) => {
       let j = ref(m - 1)
       while j.contents >= 0 {
         let cell = i.contents * stride + j.contents
-        table[cell] = if (
-          left.significant->Array.getUnsafe(i.contents) ===
-            right.significant->Array.getUnsafe(j.contents)
-        ) {
-          1 + table->Array.getUnsafe(cell + stride + 1)
+        let token = left.significant->Array.getUnsafe(i.contents)
+        table[cell] = if token === right.significant->Array.getUnsafe(j.contents) {
+          // One shared atom outweighs every possible punctuation match.
+          (isAtom(token) ? maxTokens + 1 : 1) + table->Array.getUnsafe(cell + stride + 1)
         } else {
           Math.Int.max(table->Array.getUnsafe(cell + stride), table->Array.getUnsafe(cell + 1))
         }
@@ -121,6 +121,15 @@ let compareTokens = (left, right, budget) => {
   }
 }
 
+let tokenRows = tokens =>
+  tokens->Array.reduce(0, (sum, tokens) =>
+    sum +
+    switch tokens {
+    | Some({significant, atoms}) if atoms > 0 => Array.length(significant) + 1
+    | Some(_) | None => 0
+    }
+  )
+
 let highlight = (lines: array<LambdaDiff.line>): highlights => {
   let result = {before: Dict.make(), after: Dict.make()}
   let budget = ref(maxCells)
@@ -142,9 +151,9 @@ let highlight = (lines: array<LambdaDiff.line>): highlights => {
         let after = block->Array.filter(line => line.kind === Added)
         let n = Array.length(before)
         let m = Array.length(after)
-        if n > 0 && m > 0 {
-          let left = before->Array.map(line => tokenize(line.text))
-          let right = after->Array.map(line => tokenize(line.text))
+        let left = before->Array.map(line => tokenize(line.text))
+        let right = after->Array.map(line => tokenize(line.text))
+        if n > 0 && m > 0 && tokenRows(left) * tokenRows(right) <= budget.contents {
           let candidates = Array.make(~length=n * m, None)
           for i in 0 to n - 1 {
             for j in 0 to m - 1 {
