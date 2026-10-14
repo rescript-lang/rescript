@@ -5,8 +5,10 @@ type result = {
   cycle: Module_graph.cycle_info option;
 }
 
-let bundled_bsc_path () =
-  try Toolchain.bundled_bsc ~cwd:(Sys.getcwd ()) ~executable:Sys.executable_name
+let bundled_bsc_path root =
+  try
+    Toolchain.bundled_bsc ~cwd:(Sys.getcwd ()) ~executable:Sys.executable_name
+      ~root ~find_package:Project_context.dependency_path
   with Toolchain.Error message -> raise (Error message)
 
 let runtime_path root =
@@ -24,7 +26,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   let runtime = runtime_path root_config.root in
   let source_map_args = Compiler_args.source_map_args workspace_config ~watch in
   let compiler_context =
-    Compiler_info.make_context ~compiler_path:(bundled_bsc_path ())
+    Compiler_info.make_context
+      ~compiler_path:(bundled_bsc_path root_config.root)
       ~compiler_identity:Compiler_process.build_identity ~runtime_path:runtime
       ~source_map_args
       ~inherited_compiler_args:

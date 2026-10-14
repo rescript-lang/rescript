@@ -17,17 +17,60 @@ let absolute_program ~cwd program =
   if Filename.is_relative resolved then Filename.concat cwd resolved
   else resolved
 
+(* The npm package (@rescript/<target>) with the binaries for the platform
+   [system] and [architecture] name, as in cli/common/platform.cjs. Windows on
+   ARM runs the x64 binaries, which are built for amd64. *)
+let platform_package ~system ~architecture =
+  let os =
+    match system with
+    | "linux" -> Some "linux"
+    | "macosx" -> Some "darwin"
+    | "mingw" | "mingw64" | "win32" | "win64" | "cygwin" -> Some "win32"
+    | _ -> None
+  in
+  let arch =
+    match architecture with
+    | "amd64" -> Some "x64"
+    | "arm64" -> Some "arm64"
+    | _ -> None
+  in
+  match (os, arch) with
+  | Some os, Some arch -> Some ("@rescript/" ^ os ^ "-" ^ arch)
+  | _ -> None
+
 (* Builds use the embedded compiler. The bsc.exe shipped next to the
    executable is still recorded in compiler-info.json, where editor tooling
-   looks for bsc.exe and the other platform binaries. *)
-let bundled_bsc ~cwd ~executable =
+   looks for bsc.exe and the other platform binaries. A development build has
+   no bsc.exe next to it, so it records the one in the platform package
+   installed with rescript instead, if there is one. *)
+let bundled_bsc ~cwd ~executable ~root ~find_package =
   let executable = absolute_program ~cwd executable in
   let executable =
     canonical_existing
       ~message:(fun path -> "Could not locate current executable " ^ path)
       executable
   in
-  Filename.concat (Filename.dirname executable) "bsc.exe"
+  let sibling = Filename.concat (Filename.dirname executable) "bsc.exe" in
+  let package_bsc directory =
+    let bsc = Filename.concat (Filename.concat directory "bin") "bsc.exe" in
+    if File_util.exists bsc then Some bsc else None
+  in
+  let platform_bsc name =
+    match find_package root name with
+    | Some directory -> package_bsc directory
+    | None ->
+      (* With pnpm, the platform package is only visible from rescript. *)
+      Option.bind (find_package root "rescript") (fun rescript ->
+          Option.bind (find_package rescript name) package_bsc)
+  in
+  if File_util.exists sibling then sibling
+  else
+    match
+      platform_package ~system:Build_platform.system
+        ~architecture:Build_platform.architecture
+    with
+    | None -> sibling
+    | Some name -> Option.value (platform_bsc name) ~default:sibling
 
 let runtime ~find_package =
   match Sys.getenv_opt "RESCRIPT_RUNTIME" with

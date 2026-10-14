@@ -17,6 +17,15 @@
  (action
   (copy platform_unix.ml platform.ml)))
 
+(rule
+ (target build_platform.ml)
+ (action
+  (with-stdout-to
+   %{target}
+   (progn
+    (echo "let system = \"%{system}\"\n")
+    (echo "let architecture = \"%{architecture}\"\n")))))
+
 (library
  (name rewatch_ocaml_lib)
  (wrapped true)
@@ -70,6 +79,7 @@
   watch_scope
   watch_snapshot
   watcher
+  build_platform
   toolchain
   compiler_info
   source_dirs
