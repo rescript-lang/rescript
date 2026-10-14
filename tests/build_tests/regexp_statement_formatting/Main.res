@@ -8,6 +8,16 @@ let afterExpression = s => {
   (/a/->RegExp.test(s))
 }
 
+let afterOpen = s => {
+  open RegExp
+  /a/->test(s)
+}
+
+let afterModule = s => {
+  module RE = RegExp
+  /a/->RE.test(s)
+}
+
 let intermediate = () => {
   let seen = ref(false)
   (/a/->RegExp.test("a")->(result => seen := result))

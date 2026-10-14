@@ -171,3 +171,30 @@ let attributeComments = i => {
   @attr
   /a/[i].foo() /* final statement */
 }
+
+let afterBlockOpen = () => {
+  let before = 0
+  open Foo
+  (/a/->ignore)
+}
+
+let afterBlockModule = () => {
+  let before = 0
+  module M = Foo
+  (/a/->ignore)
+  (/b/->ignore)
+}
+
+let afterOpenExpression = () => {
+  open Foo
+  Console.log("before")
+  (/a/->ignore)
+}
+
+let beforeStatementAttribute = 0
+@foo (/a/->ignore)
+@res.doc("Keep the documentation attribute.") (/b/->ignore)
+
+let ternaryAttributes = (@condition truth) ? (@yes first) : (@no second)
+let nestedTernaryAttributes = truth ? first : ((@condition other) ? (@yes second) : (@no third))
+(@condition truth) ? (@yes first) : (@no second)

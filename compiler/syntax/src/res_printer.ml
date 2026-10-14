@@ -758,6 +758,7 @@ and print_structure_item ~state ?(protect_regexp = false)
   | Pstr_eval (expr, attrs) ->
     clear_pending ();
     let expr_doc =
+      let protect_regexp = protect_regexp && attrs = [] in
       let doc = print_expression_with_comments ~state expr cmt_tbl in
       print_statement_expr ~protect_regexp expr (Parens.structure_expr expr) doc
     in
@@ -3586,7 +3587,8 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
           Doc.group
             (Doc.concat
                [
-                 print_ternary_operand ~state condition1 cmt_tbl;
+                 print_ternary_operand ~is_condition:true ~state condition1
+                   cmt_tbl;
                  Doc.indent
                    (Doc.concat
                       [
@@ -3604,8 +3606,8 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
                                  [
                                    Doc.line;
                                    Doc.text ": ";
-                                   print_ternary_operand ~state condition
-                                     cmt_tbl;
+                                   print_ternary_operand ~is_condition:true
+                                     ~state condition cmt_tbl;
                                    Doc.line;
                                    Doc.text "? ";
                                    print_ternary_operand ~state consequent
@@ -3947,9 +3949,9 @@ and print_pexp_fun ~state ~in_callback e cmt_tbl =
   | NoCallback -> Doc.group doc
   | FitsOnOneLine | ArgumentsFitOnOneLine -> doc
 
-and print_ternary_operand ~state expr cmt_tbl =
+and print_ternary_operand ?(is_condition = false) ~state expr cmt_tbl =
   let doc = print_expression_with_comments ~state expr cmt_tbl in
-  match Parens.ternary_operand expr with
+  match Parens.ternary_operand ~is_condition expr with
   | Parens.Parenthesized -> add_parens doc
   | Braced braces -> print_braces doc expr braces
   | Nothing -> doc
@@ -5580,7 +5582,7 @@ and print_expression_block ~state ~braces expr cmt_tbl =
     in
     (loc, print_comments doc cmt_tbl expr.pexp_loc)
   in
-  let rec collect_rows acc expr =
+  let rec collect_rows ~protect_regexp acc expr =
     match expr.Parsetree.pexp_desc with
     | Parsetree.Pexp_letmodule (mod_name, mod_expr, expr2) ->
       let name =
@@ -5608,7 +5610,7 @@ and print_expression_block ~state ~braces expr cmt_tbl =
           ]
       in
       let loc = {expr.pexp_loc with loc_end = mod_expr.pmod_loc.loc_end} in
-      collect_rows ((loc, let_module_doc) :: acc) expr2
+      collect_rows ~protect_regexp:false ((loc, let_module_doc) :: acc) expr2
     | Pexp_letexception (extension_constructor, expr2) ->
       let loc =
         let loc =
@@ -5623,7 +5625,7 @@ and print_expression_block ~state ~braces expr cmt_tbl =
       let let_exception_doc =
         print_exception_def ~state extension_constructor cmt_tbl
       in
-      collect_rows ((loc, let_exception_doc) :: acc) expr2
+      collect_rows ~protect_regexp:false ((loc, let_exception_doc) :: acc) expr2
     | Pexp_open (override_flag, longident_loc, expr2) ->
       let open_doc =
         Doc.concat
@@ -5635,14 +5637,15 @@ and print_expression_block ~state ~braces expr cmt_tbl =
           ]
       in
       let loc = {expr.pexp_loc with loc_end = longident_loc.loc.loc_end} in
-      collect_rows ((loc, open_doc) :: acc) expr2
+      collect_rows ~protect_regexp:false ((loc, open_doc) :: acc) expr2
     | Pexp_sequence (expr1, expr2) ->
       let expr_doc =
         let doc = print_expression ~state expr1 cmt_tbl in
-        print_statement_expr ~protect_regexp:(acc <> []) expr1
-          (Parens.expr expr1) doc
+        print_statement_expr ~protect_regexp expr1 (Parens.expr expr1) doc
       in
-      collect_rows (statement_row expr1 expr_doc :: acc) expr2
+      collect_rows ~protect_regexp:true
+        (statement_row expr1 expr_doc :: acc)
+        expr2
     | Pexp_let (rec_flag, value_bindings, expr2) -> (
       let loc =
         let loc =
@@ -5674,16 +5677,15 @@ and print_expression_block ~state ~braces expr cmt_tbl =
       match expr2.pexp_desc with
       | Pexp_construct ({txt = Longident.Lident "()"}, _) ->
         List.rev ((loc, let_doc) :: acc)
-      | _ -> collect_rows ((loc, let_doc) :: acc) expr2)
+      | _ -> collect_rows ~protect_regexp:true ((loc, let_doc) :: acc) expr2)
     | _ ->
       let expr_doc =
         let doc = print_expression ~state expr cmt_tbl in
-        print_statement_expr ~protect_regexp:(acc <> []) expr (Parens.expr expr)
-          doc
+        print_statement_expr ~protect_regexp expr (Parens.expr expr) doc
       in
       List.rev (statement_row expr expr_doc :: acc)
   in
-  let rows = collect_rows [] expr in
+  let rows = collect_rows ~protect_regexp:false [] expr in
   let block =
     print_list ~get_loc:fst ~nodes:rows
       ~print:(fun (_, doc) _ -> doc)

@@ -280,7 +280,7 @@ let field_expr expr =
     | _ when Parsetree_viewer.expr_is_await expr -> Parenthesized
     | _ -> Nothing)
 
-let ternary_operand expr =
+let ternary_operand ?(is_condition = false) expr =
   let opt_braces, _ = Parsetree_viewer.process_braces expr in
   match opt_braces with
   | Some braces_loc -> Braced braces_loc
@@ -291,7 +291,8 @@ let ternary_operand expr =
        Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
     } ->
       Nothing
-    | _ when expr.pexp_attributes <> [] -> Parenthesized
+    (* A leading condition attribute otherwise attaches to the whole statement. *)
+    | _ when is_condition && expr.pexp_attributes <> [] -> Parenthesized
     | {pexp_desc = Pexp_ternary _} -> Parenthesized
     | {pexp_desc = Pexp_constraint _ | Pexp_coerce _} -> Parenthesized
     | _ when Res_parsetree_viewer.is_fun_expr expr -> (
@@ -518,7 +519,7 @@ let rec starts_with_regexp e =
     | _ -> starts_unwrapped (binary_expr_operand ~is_lhs:true lhs) lhs)
   | Pexp_apply {funct} -> starts_unwrapped (call_expr funct) funct
   | Pexp_ternary (condition, _consequent, _alternate) ->
-    starts_unwrapped (ternary_operand condition) condition
+    starts_unwrapped (ternary_operand ~is_condition:true condition) condition
   | Pexp_field (obj, _) | Pexp_setfield (obj, _, _) ->
     starts_unwrapped (field_expr obj) obj
   | Pexp_fun {body} when Parsetree_viewer.is_underscore_apply_sugar e ->

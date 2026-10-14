@@ -40,6 +40,10 @@ try {
   assert.equal(output.afterLet("a"), true);
   assert.equal(output.afterLet("b"), false);
   assert.equal(output.afterExpression("a"), true);
+  assert.equal(output.afterOpen("a"), true);
+  assert.equal(output.afterOpen("b"), false);
+  assert.equal(output.afterModule("a"), true);
+  assert.equal(output.afterModule("b"), false);
   assert.equal(output.intermediate(), true);
   assert.equal(output.bare().test("a"), true);
   assert.equal(output.dotAndWhitespace(" a"), true);
