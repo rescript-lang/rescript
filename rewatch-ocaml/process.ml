@@ -544,15 +544,6 @@ let run_one ?poll ?stdout_chunk ?stderr_chunk ?stdin ?env ~cwd program args =
 
 let run ?poll ~cwd program args = run_one ?poll ~cwd program args
 
-let run_task ?poll task =
-  let result =
-    match task.kind with
-    | Concurrent {run; cancel = _} -> run ()
-    | External {job; env} ->
-      run_one ?poll ?env ~cwd:job.cwd job.program job.args
-  in
-  task.on_result result
-
 let run_streaming ?poll ~cwd program args =
   let write channel bytes count =
     output channel bytes 0 count;

@@ -1763,6 +1763,48 @@ if ! $windows_posix_shell; then
   test -f "$second_interrupt/src/Slow.js"
 fi
 
+# Namespace maps compile on the worker domains, and a stop is noticed between
+# them instead of after the last one.
+if ! $windows_posix_shell; then
+  namespace_stop="$work/namespace-stop"
+  namespace_stop_count=100
+  mkdir -p "$namespace_stop/node_modules"
+  namespace_stop_deps=""
+  for i in $(seq 1 "$namespace_stop_count"); do
+    mkdir -p "$namespace_stop/packages/p$i/src"
+    printf '{"name":"p%d","sources":"src","namespace":true}\n' "$i" \
+      >"$namespace_stop/packages/p$i/rescript.json"
+    printf '{"name":"p%d","version":"1.0.0"}\n' "$i" \
+      >"$namespace_stop/packages/p$i/package.json"
+    printf 'let value = %d\n' "$i" >"$namespace_stop/packages/p$i/src/M.res"
+    directory_link "$namespace_stop/packages/p$i" "$namespace_stop/node_modules/p$i"
+    namespace_stop_deps="$namespace_stop_deps\"p$i\","
+  done
+  printf '{"name":"root","sources":[],"dependencies":[%s]}\n' \
+    "${namespace_stop_deps%,}" >"$namespace_stop/rescript.json"
+  printf '{"name":"root","private":true,"workspaces":["packages/*"]}\n' \
+    >"$namespace_stop/package.json"
+  REWATCH_COMPILER_CALL_LOG="$namespace_stop/calls.log" \
+    "$port" build "$namespace_stop" >"$namespace_stop/build.log" 2>&1 &
+  namespace_stop_pid=$!
+  background_pids="$background_pids $namespace_stop_pid"
+  until grep -q '^namespace' "$namespace_stop/calls.log" 2>/dev/null || \
+    ! kill -0 "$namespace_stop_pid" 2>/dev/null; do
+    :
+  done
+  kill -TERM "$namespace_stop_pid"
+  set +e
+  wait "$namespace_stop_pid"
+  namespace_stop_status=$?
+  set -e
+  namespace_stop_compiled=$(grep -c '^namespace' "$namespace_stop/calls.log")
+  if [ "$namespace_stop_status" -ne 143 ] || \
+    [ "$namespace_stop_compiled" -ge "$namespace_stop_count" ]; then
+    echo "a stop during namespace maps: status $namespace_stop_status after $namespace_stop_compiled of $namespace_stop_count maps" >&2
+    exit 1
+  fi
+fi
+
 # A damaged published AST, such as one cut short by a killed build, makes its
 # module parse again instead of failing every later build.
 damaged_ast="$work/damaged-ast"

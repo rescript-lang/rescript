@@ -78,10 +78,10 @@ let run_namespace_jobs (attempt : Build_attempt.t) =
         attempt.parse_seconds +. (Unix.gettimeofday () -. started_at))
     (fun () ->
       let results =
-        List.map
-          (fun job ->
-            Process.run_task ?poll:attempt.process_poll job.Build_attempt.task)
-          jobs
+        Process.run_tasks
+          ~max_jobs:(Compiler_execution_mode.configured_count ())
+          ?poll:attempt.process_poll
+          (List.map (fun job -> job.Build_attempt.task) jobs)
       in
       List.iter2
         (fun job result -> job.Build_attempt.finish result)

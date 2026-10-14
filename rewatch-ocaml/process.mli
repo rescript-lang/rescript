@@ -49,7 +49,6 @@ val run_tasks :
   result list
 
 val run : ?poll:(unit -> unit) -> cwd:string -> string -> string list -> result
-val run_task : ?poll:(unit -> unit) -> task -> result
 
 val run_streaming :
   ?poll:(unit -> unit) -> cwd:string -> string -> string list -> result
