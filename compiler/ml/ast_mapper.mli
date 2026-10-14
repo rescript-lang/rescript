@@ -114,12 +114,9 @@ val add_ppx_context_sig :
   tool_name:string -> Parsetree.signature -> Parsetree.signature
 (** Same as [add_ppx_context_str], but for signatures. *)
 
-val drop_ppx_context_str :
-  restore:bool -> Parsetree.structure -> Parsetree.structure
-(** Drop the ocaml.ppx.context attribute from a structure.  If
-    [restore] is true, also restore the associated data in the current
-    process. *)
+val drop_ppx_context_str : Parsetree.structure -> Parsetree.structure
+(** Drop the ocaml.ppx.context attribute from a structure. The compiler does
+    not take back any of its data, such as cookies a PPX set. *)
 
-val drop_ppx_context_sig :
-  restore:bool -> Parsetree.signature -> Parsetree.signature
+val drop_ppx_context_sig : Parsetree.signature -> Parsetree.signature
 (** Same as [drop_ppx_context_str], but for signatures. *)

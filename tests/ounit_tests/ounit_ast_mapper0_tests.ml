@@ -28,6 +28,54 @@ let record_pat0 attrs =
 let map_pat0 pat =
   Ast_mapper_from0.default_mapper.pat Ast_mapper_from0.default_mapper pat
 
+(* The [ocaml.ppx.context] attribute a PPX receives. *)
+let ppx_context_fields0 ast0 =
+  match ast0 with
+  | Ml_binary.Impl
+      ({
+         Parsetree0.pstr_desc =
+           Pstr_attribute
+             ( {txt = "ocaml.ppx.context"},
+               PStr
+                 [
+                   {
+                     pstr_desc =
+                       Pstr_eval ({pexp_desc = Pexp_record (fields, None)}, _);
+                   };
+                 ] );
+       }
+      :: _) ->
+    fields
+  | _ -> assert_failure "the structure starts with the PPX context"
+
+let test_ppx_context_on_the_wire _ =
+  let structure =
+    Ast_mapper.add_ppx_context_str ~tool_name:"rescript"
+      [
+        Ast_helper.Str.eval
+          (Ast_helper.Exp.constant (Pconst_integer ("1", None)));
+      ]
+  in
+  let fields =
+    ppx_context_fields0 (Ml_binary.to_ast0 Ml_binary.Ml structure)
+    |> List.map (fun (({txt} : Longident.t Location.loc), value) ->
+        (Longident.last txt, value))
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    [
+      "tool_name";
+      "include_dirs";
+      "load_path";
+      "open_modules";
+      "debug";
+      "cookies";
+    ]
+    (List.map fst fields);
+  (match List.assoc "cookies" fields with
+  | {Parsetree0.pexp_desc = Pexp_construct ({txt = Lident "[]"}, None)} -> ()
+  | _ -> assert_failure "the PPX gets no cookies");
+  OUnit.assert_equal 1 (List.length (Ast_mapper.drop_ppx_context_str structure))
+
 let test_removed_open_pattern_is_rejected_from_ast0 _ =
   let pat =
     Ast_helper0.Pat.open_ ~loc
@@ -2126,4 +2174,5 @@ let suites =
          >:: test_field_runtime_name_keeps_ppx_order_on_the_wire;
          "constructor_runtime_tag_reaches_ast0_as_an_attribute"
          >:: test_constructor_runtime_tag_reaches_ast0_as_an_attribute;
+         "ppx_context_on_the_wire" >:: test_ppx_context_on_the_wire;
        ]
