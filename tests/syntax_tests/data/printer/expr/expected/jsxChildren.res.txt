@@ -110,19 +110,13 @@ let x =
   <span>
     {/* before braced JSX */}
     {<Icon />}
-    {
-      // after braced JSX
-    }
+    {/* after braced JSX */}
   </span>
 let x =
   <>
-    {
-      // before braced fragment
-    }
+    {/* before braced fragment */}
     {<>{hello}</>}
-    {
-      // after braced fragment
-    }
+    {/* after braced fragment */}
   </>
 
 // Narrow layouts should retain every comment and remain stable.
@@ -136,108 +130,61 @@ let x =
   </span>
 let x = <span>{{/* record field */ name: hello}}</span>
 // Child comments and their line breaks stay inside expression braces.
-let x =
-  <span>
-    {
-      hello // bare child
-    }
-  </span>
-let x =
-  <>
-    {
-      hello // bare fragment child
-    }
-  </>
-let x =
-  <span>
-    {
-      user.name // field child
-    }
-  </span>
-let x =
-  <span>
-    {
-      "hello" // string child
-    }
-  </span>
-let x =
-  <span>
-    {
-      {name: hello} // record child
-    }
-  </span>
+let x = <span>{hello /* bare child */}</span>
+let x = <>{hello /* bare fragment child */}</>
+let x = <span>{user.name /* field child */}</span>
+let x = <span>{"hello" /* string child */}</span>
+let x = <span>{{name: hello} /* record child */}</span>
 let x =
   <span>
     {hello}
-    {
-      // already braced child
-    }
+    {/* already braced child */}
   </span>
+let x = <span>{hello /* block comment */ /* line comment */}</span>
 let x =
   <span>
     {
-      hello /* block comment */ // line comment
-    }
-  </span>
-let x =
-  <span>
-    {
-      // before the child
+      /* before the child */
       hello // Contains */ and must remain a line comment.
     }
   </span>
 let x = <>{/* before record */ {name: hello} /* after record */}</>
 let x =
   <span>
-    {
-      // before a block
-    }
+    {/* before a block */}
     {
       let child = hello
       child
     }
-    {
-      // after a block
-    }
+    {/* after a block */}
   </span>
 let x =
   <span>
-    {
-      // before a call
-    }
+    {/* before a call */}
     {render(hello)}
-    {
-      // after a call
-    }
+    {/* after a call */}
   </span>
 let x =
   <span>
     {
-      // before bare child
+      /* before bare child */
       hello
     }
-    {
-      // after bare child
-    }
+    {/* after bare child */}
   </span>
-let x =
-  <span>
-    {
-      hello // trailing inside braces
-    }
-  </span>
+let x = <span>{hello /* trailing inside braces */}</span>
 let x =
   <>
     {
-      // before fragment child
+      /* before fragment child */
       hello
     }
   </>
 let x =
   <span>
     {
-      // before record
-      {name: hello} // after record
+      /* before record */
+      {name: hello} /* after record */
     }
   </span>
 let x =
@@ -253,17 +200,12 @@ let emptyWithLineComment =
     }
   </span>
 let emptyFragmentWithInlineBlockComment = <>{/* inside */}</>
-let emptyFragmentWithInlineLineComment =
-  <>
-    {
-      // inside
-    }
-  </>
+let emptyFragmentWithInlineLineComment = <>{/* inside */}</>
 let emptyFragmentWithMixedComments =
   <>
     {
       /* first */
-      // second
+      /* second */
       /* third */
     }
   </>
@@ -271,27 +213,23 @@ let emptyFragmentWithOutsideComment = <>{/* inside */}</> // outside
 let emptyFragmentWithComments =
   <>
     {
-      // first
+      /* first */
       /* second */
     }
   </>
 let nestedStandaloneComments =
   <div>
-    {
-      // before
-    }
+    {/* before */}
     <span />
     {
-      // after
+      /* after */
       /* between */
     }
     <>
       <Icon />
       {/* nested */}
     </>
-    {
-      // last
-    }
+    {/* last */}
   </div>
 let nestedInlineComments =
   <div>
@@ -326,12 +264,10 @@ let wrappedEmptyRecordChild = <span>{{/* record */}}</span>
 let mixedStandaloneComments =
   <>
     <Icon />
-    {
-      // before expression
-    }
+    {/* before expression */}
     {hello}
     {
-      // after expression
+      /* after expression */
       /* before element */
     }
     <Icon />

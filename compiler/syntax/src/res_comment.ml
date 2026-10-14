@@ -33,6 +33,17 @@ let set_prev_tok_is_question t b = t.prev_tok_is_question <- b
 
 let is_single_line_comment t = t.style = SingleLine
 
+let to_block_if_safe t =
+  let rec contains_delimiter i =
+    i + 1 < String.length t.txt
+    && ((t.txt.[i] = '/' && t.txt.[i + 1] = '*')
+       || (t.txt.[i] = '*' && t.txt.[i + 1] = '/')
+       || contains_delimiter (i + 1))
+  in
+  if is_single_line_comment t && not (contains_delimiter 0) then
+    {t with style = MultiLine}
+  else t
+
 let is_doc_comment t = t.style = DocComment
 
 let is_module_comment t = t.style = ModuleComment

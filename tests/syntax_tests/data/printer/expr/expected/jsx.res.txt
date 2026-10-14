@@ -349,12 +349,12 @@ module App = {
 // leading line comment on braced children should indent nicely
 <div>
   {
-    // comment
+    /* comment */
     content
   }
 
   {
-    // comment
+    /* comment */
     if condition() {
       renderBranch()
     } else {
@@ -416,9 +416,7 @@ let x =
       world()
       world()
     }
-    {
-      // another test
-    }
+    {/* another test */}
     <span
       id="1"
       className="sdf sdfdsf sdfs sdf asdf dsf"
@@ -427,9 +425,7 @@ let x =
       }}
     />
 
-    {
-      // Comment 2
-    }
+    {/* Comment 2 */}
 
     <span
       id="2"
@@ -446,9 +442,7 @@ let x =
         }}
       />
 
-      {
-        // Comment
-      }
+      {/* Comment */}
       <span
         id="2-2"
         className="sdf sdfdsf sdfs sdf asdf dsf"
@@ -471,18 +465,14 @@ let x =
 let moo =
   <div>
     <p>{React.string("moo")}</p>
-    {
-      // c1
-    }
+    {/* c1 */}
     <p>{React.string("moo")}</p>
     {
-      // c2
-      // c3
+      /* c2 */
+      /* c3 */
     }
     <p>{React.string("moo")}</p>
-    {
-      // c4
-    }
+    {/* c4 */}
 
     <p>{React.string("moo")}</p>
   </div>
@@ -490,18 +480,14 @@ let moo =
 let fragmented_moo =
   <>
     <p>{React.string("moo")}</p>
-    {
-      // c1
-    }
+    {/* c1 */}
     <p>{React.string("moo")}</p>
     {
-      // c2
-      // c3
+      /* c2 */
+      /* c3 */
     }
     <p>{React.string("moo")}</p>
-    {
-      // c4
-    }
+    {/* c4 */}
 
     <p>{React.string("moo")}</p>
   </>

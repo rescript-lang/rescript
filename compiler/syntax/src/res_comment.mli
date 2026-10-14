@@ -25,6 +25,9 @@ val is_module_comment : t -> bool
 
 val is_single_line_comment : t -> bool
 
+(* Convert a line comment without block delimiters, without mutating it. *)
+val to_block_if_safe : t -> t
+
 val make_single_line_comment : loc:Location.t -> string -> t
 val make_multi_line_comment :
   loc:Location.t -> doc_comment:bool -> standalone:bool -> string -> t

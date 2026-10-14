@@ -173,56 +173,74 @@ let () =
                   assert (format ~width (parse printed) = expected))
                 [""; "\n"])
             [
-              ("// note", "    {\n      // note\n    }");
+              ("// note", "    {/* note */}");
               ("/* note */", "    {/* note */}");
               ("/* a\n * b */", "    {\n      /* a\n       * b */\n    }");
-              ("{// note\n}", "    {\n      // note\n    }");
-              ("{\n// a\n// b\n}", "    {\n      // a\n      // b\n    }");
-              ( "{// a\n}\n{// b\n}",
-                "    {\n      // a\n    }\n    {\n      // b\n    }" );
+              ("{// note\n}", "    {/* note */}");
+              ("{\n// a\n// b\n}", "    {\n      /* a */\n      /* b */\n    }");
+              ("{// a\n}\n{// b\n}", "    {/* a */}\n    {/* b */}");
             ])
         [("<div>", "</div>"); ("<>", "</>")])
     [20; 40; 80; 100; 120];
   List.iter
+    (fun (source, expected) ->
+      let original = parse source in
+      let styles =
+        List.map Res_comment.is_single_line_comment original.comments
+      in
+      let printed = format ~width:80 original in
+      assert (printed = expected);
+      assert (
+        List.map Res_comment.is_single_line_comment original.comments = styles);
+      assert (format ~width:80 (parse printed) = expected))
+    [
+      ("let x = <>// empty\n</>", "let x = <>{/* empty */}</>\n");
+      ( "let x = <>/* a */ // b\n/* c */</>",
+        "let x =\n\
+        \  <>\n\
+        \    {\n\
+        \      /* a */\n\
+        \      /* b */\n\
+        \      /* c */\n\
+        \    }\n\
+        \  </>\n" );
+      ( "let x = <span> hello // note\n</span>",
+        "let x = <span>{hello /* note */}</span>\n" );
+      ("let x = <> hello // note\n</>", "let x = <>{hello /* note */}</>\n");
+      ( "let x = <span> hello /* block */ // note\n</span>",
+        "let x = <span>{hello /* block */ /* note */}</span>\n" );
+      ( "let x = <span>{hello // inside\n}</span>",
+        "let x = <span>{hello /* inside */}</span>\n" );
+      ( "let x = <div>{// note\n} {value}</div>",
+        "let x =\n  <div>\n    {/* note */}\n    {value}\n  </div>\n" );
+      ( "let x = <span> // before\nhello // contains */\n</span>",
+        "let x =\n\
+        \  <span>\n\
+        \    {\n\
+        \      /* before */\n\
+        \      hello // contains */\n\
+        \    }\n\
+        \  </span>\n" );
+      ("let x = y // outside", "let x = y // outside\n");
+    ];
+  List.iter
     (fun width ->
       List.iter
-        (fun (source, expected) ->
-          let printed = format ~width (parse source) in
-          assert (printed = expected);
-          assert (format ~width (parse printed) = expected))
-        [
-          ( "let x = <>// empty\n</>",
-            "let x =\n  <>\n    {\n      // empty\n    }\n  </>\n" );
-          ( "let x = <>/* a */ // b\n/* c */</>",
-            "let x =\n\
-            \  <>\n\
-            \    {\n\
-            \      /* a */\n\
-            \      // b\n\
-            \      /* c */\n\
-            \    }\n\
-            \  </>\n" );
-          ( "let x = <span> hello // note\n</span>",
-            "let x =\n  <span>\n    {\n      hello // note\n    }\n  </span>\n"
-          );
-          ( "let x = <> hello // note\n</>",
-            "let x =\n  <>\n    {\n      hello // note\n    }\n  </>\n" );
-          ( "let x = <span> hello /* block */ // note\n</span>",
-            "let x =\n\
-            \  <span>\n\
-            \    {\n\
-            \      hello /* block */ // note\n\
-            \    }\n\
-            \  </span>\n" );
-          ( "let x = <span> // before\nhello // contains */\n</span>",
-            "let x =\n\
-            \  <span>\n\
-            \    {\n\
-            \      // before\n\
-            \      hello // contains */\n\
-            \    }\n\
-            \  </span>\n" );
-        ])
+        (fun (opening, closing) ->
+          List.iter
+            (fun text ->
+              let source =
+                "let x = " ^ opening ^ "{//" ^ text ^ "\n}" ^ closing
+              in
+              let expected =
+                "let x =\n  " ^ opening ^ "\n    {\n      //" ^ text
+                ^ "\n    }\n  " ^ closing ^ "\n"
+              in
+              let printed = format ~width (parse source) in
+              assert (printed = expected);
+              assert (format ~width (parse printed) = expected))
+            [" starts /*"; " closes */"; " /* nested */"; " */ before /*"])
+        [("<div>", "</div>"); ("<>", "</>")])
     [20; 40; 80; 100; 120];
   List.iter
     (fun (opening, closing) ->

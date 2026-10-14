@@ -1,1 +1,1 @@
-- Format JSX expression children and standalone comments with braces, preserving comment grouping and blank-line separation, to prepare for future literal text support. Existing unbraced children remain valid syntax. https://github.com/rescript-lang/rescript/pull/8666
+- Wrap JSX expression children and standalone comments in braces to prepare for future literal text support. Preserve comment grouping and blank lines, convert safe line comments to block comments, and keep unbraced children valid. https://github.com/rescript-lang/rescript/pull/8666

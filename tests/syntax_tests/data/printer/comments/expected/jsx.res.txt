@@ -14,11 +14,7 @@ module Cite = {
 
 <A /* comment */ />
 
-<A>
-  {
-    // Comment
-  }
-</A>
+<A>{/* Comment */}</A>
 
 <A
 // comment1
@@ -57,28 +53,22 @@ module Cite = {
 </A>
 
 <div>
-  {
-    // Move this child comment inside braces
-  }
+  {/* Move this child comment inside braces */}
   {React.string("Hello, World!")}
 </div>
 
 <div>
+  {/* Move this child comment inside braces */}
   {
-    // Move this child comment inside braces
-  }
-  {
-    // This one is already inside
+    /* This one is already inside */
     React.string("Hello, World!")
   }
 </div>
 
 <div>
+  {/* Move this block comment inside braces */}
   {
-    // Move this block comment inside braces
-  }
-  {
-    // This one is already inside
+    /* This one is already inside */
     let x = 1
     let y = 2
   }
@@ -86,18 +76,14 @@ module Cite = {
 
 let x =
   <>
-    {
-      // before a
-    }
+    {/* before a */}
     {a}
     {
-      // after a
-      // before b
+      /* after a */
+      /* before b */
     }
     {b}
-    {
-      // after b
-    }
+    {/* after b */}
   </>
 
 let standaloneMultilineComment =

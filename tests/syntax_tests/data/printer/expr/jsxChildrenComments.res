@@ -110,3 +110,27 @@ let mixedLeadingFragmentContainers = <>/* a */ {/* b */} y</>
 let mixedTrailingFragmentContainers = <>x {/* b */} /* a */</>
 let mixedBetweenContainers = <div>x /* a */ {/* b */} /* c */ y</div>
 let mixedBetweenFragmentContainers = <>x /* a */ {/* b */} /* c */ y</>
+
+let safeLineComment = <span>value // note
+</span>
+let safeInnerLineComment = <span>{value // note
+}</span>
+let unsafeOpeningDelimiter = <span>{// starts /*
+}</span>
+let unsafeClosingDelimiter = <span>{// closes */
+}</span>
+let unsafeNestedBlock = <>{// /* nested */
+}</>
+let unsafeReversedDelimiters = <>{// */ before /*
+}</>
+let emptyLineComment = <span>{//
+}</span>
+let starLineComment = <span>{// *
+}</span>
+let slashLineComment = <>{// /
+}</>
+let commentWithLineMarkers = <>{// contains // markers
+}</>
+let commentWithUrl = <>{// https://example.com/a
+}</>
+let outsideComment = value // outside JSX

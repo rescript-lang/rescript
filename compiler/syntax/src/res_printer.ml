@@ -4669,6 +4669,7 @@ and join_jsx_items items =
   loop items
 
 and jsx_comment_items comments =
+  let comments = List.map Comment.to_block_if_safe comments in
   let comment_loc comment =
     Option.value (Comment.jsx_container comment) ~default:(Comment.loc comment)
   in
@@ -4929,6 +4930,17 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
     List.concat_map
       (fun expr ->
         let loc = get_loc expr in
+        List.iter
+          (fun tbl ->
+            List.iter
+              (fun key ->
+                match Hashtbl.find_opt tbl key with
+                | None -> ()
+                | Some comments ->
+                  Hashtbl.replace tbl key
+                    (List.map Comment.to_block_if_safe comments))
+              (if loc = expr.pexp_loc then [loc] else [loc; expr.pexp_loc]))
+          [cmt_tbl.leading; cmt_tbl.trailing];
         let standalone comment =
           Option.is_some (Comment.jsx_container comment)
           ||
