@@ -18,16 +18,11 @@ let key = Domain.DLS.new_key (fun () -> None)
 let current () = Domain.DLS.get key
 let is_active () = Option.is_some (current ())
 
-let write_sink sink text position length =
-  match sink.file with
-  | Some (_, channel) -> output_substring channel text position length
-  | None -> Buffer.add_substring sink.buffer text position length
-
 (* A text-mode channel, like a bsc process's stdout and stderr, writes CRLF
    line endings on Windows. A line that already ends in CRLF, such as a PPX's
    output, keeps it. *)
-let text_mode_line_endings text =
-  if not Sys.win32 then text
+let text_mode_line_endings ~win32 text =
+  if not win32 then text
   else
     let converted = Buffer.create (String.length text) in
     String.iteri
@@ -38,6 +33,30 @@ let text_mode_line_endings text =
       text;
     Buffer.contents converted
 
+(* The inverse, for text written to a text-mode channel, which adds the CR
+   itself: without it, a line that already ends in CRLF would get CR CR LF. *)
+let text_mode_input ~win32 text =
+  if (not win32) || not (String.contains text '\r') then text
+  else
+    let converted = Buffer.create (String.length text) in
+    String.iteri
+      (fun index character ->
+        if
+          not
+            (character = '\r'
+            && index + 1 < String.length text
+            && text.[index + 1] = '\n')
+        then Buffer.add_char converted character)
+      text;
+    Buffer.contents converted
+
+let write_sink sink text position length =
+  match sink.file with
+  | Some (_, channel) ->
+    output_string channel
+      (text_mode_input ~win32:Sys.win32 (String.sub text position length))
+  | None -> Buffer.add_substring sink.buffer text position length
+
 let sink_channel sink =
   match sink.file with
   | Some (_, channel) -> channel
@@ -47,14 +66,16 @@ let sink_channel sink =
     in
     (* Output written so far goes first. The channel is in text mode, so it
        already converts line endings. *)
-    output_string channel (Buffer.contents sink.buffer);
+    output_string channel
+      (text_mode_input ~win32:Sys.win32 (Buffer.contents sink.buffer));
     Buffer.clear sink.buffer;
     sink.file <- Some (path, channel);
     channel
 
 let sink_contents sink =
   match sink.file with
-  | None -> text_mode_line_endings (Buffer.contents sink.buffer)
+  | None ->
+    text_mode_line_endings ~win32:Sys.win32 (Buffer.contents sink.buffer)
   | Some (path, channel) ->
     close_out channel;
     let input = open_in_bin path in
