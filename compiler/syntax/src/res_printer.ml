@@ -381,8 +381,6 @@ let print_comments_before_marker doc (tbl : Comment_table.t) loc marker =
     Hashtbl.replace tbl.trailing loc after_marker;
     print_trailing_comments doc tbl.trailing loc
 
-let is_empty_doc doc = doc = Doc.nil
-
 let print_list ~get_loc ~nodes ~print ?(force_break = false) t =
   let rec loop first_loc_opt prev_loc_opt acc nodes =
     match nodes with
@@ -395,7 +393,7 @@ let print_list ~get_loc ~nodes ~print ?(force_break = false) t =
         | Some comment -> (Comment.loc comment).loc_start
       in
       let raw_doc = print node t in
-      if is_empty_doc raw_doc then loop first_loc_opt prev_loc_opt acc nodes
+      if Doc.is_nil raw_doc then loop first_loc_opt prev_loc_opt acc nodes
       else
         let doc = print_comments raw_doc t loc in
         let acc =
@@ -438,7 +436,7 @@ let print_listi ~get_loc ~nodes ~print ?(ignore_empty_lines = false)
         | Some comment -> (Comment.loc comment).loc_start
       in
       let raw_doc = print node t i in
-      if is_empty_doc raw_doc then loop i first_loc_opt prev_loc_opt acc nodes
+      if Doc.is_nil raw_doc then loop i first_loc_opt prev_loc_opt acc nodes
       else
         let doc = print_comments raw_doc t loc in
         let acc =
@@ -4844,7 +4842,7 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
             if has_children then print_jsx_children ~state children cmt_tbl
             else print_jsx_comment_container cmt_tbl.inside fragment_loc
           in
-          if doc = Doc.nil then doc
+          if Doc.is_nil doc then doc
           else Doc.concat [Doc.indent (Doc.concat [line_sep; doc]); line_sep]);
          closing;
        ])
