@@ -227,21 +227,21 @@ let domain_execution_test _context =
           check
             (Sys.file_exists (Filename.concat root "First.js"))
             "the PPX transformed request still writes JavaScript";
-          Unix.putenv "REWATCH_COMPILER_DOMAINS" "0";
-          check
-            (try
-               ignore (Compiler_execution_mode.configured_count ());
-               false
-             with Invalid_argument _ -> true)
-            "domain counts must be positive";
+          List.iter
+            (fun value ->
+              Unix.putenv "REWATCH_COMPILER_DOMAINS" value;
+              check
+                (try
+                   ignore (Compiler_execution_mode.configured_count ());
+                   false
+                 with Process.Error _ -> true)
+                ("domain count " ^ value ^ " is reported as invalid"))
+            ["0"; "-1"; "abc"];
           Unix.putenv "REWATCH_COMPILER_DOMAINS"
             (string_of_int (Compiler_execution_mode.max_domain_count + 1));
-          check
-            (try
-               ignore (Compiler_execution_mode.configured_count ());
-               false
-             with Invalid_argument _ -> true)
-            "domain counts must honor the scheduler bound"))
+          assert_equal Compiler_execution_mode.max_domain_count
+            (Compiler_execution_mode.configured_count ())
+            ~msg:"domain counts are capped at the scheduler bound"))
 
 let tests =
   "compiler_process_tests"

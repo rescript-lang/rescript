@@ -1950,6 +1950,59 @@ if ls "$ppx_cleanup/tmp" | grep -q '^ppx'; then
   echo "a failing PPX left temporary files" >&2
   exit 1
 fi
+# Compiler output is captured in memory: a build needs no temporary directory.
+no_temp="$work/no-temp-dir"
+mkdir -p "$no_temp/src"
+printf '{"name":"no-temp-dir","sources":"src"}\n' >"$no_temp/rescript.json"
+printf 'let value = 1\n' >"$no_temp/src/A.res"
+if ! TMPDIR="$work/missing-temp" TEMP="$work/missing-temp" TMP="$work/missing-temp" \
+    "$port" build "$no_temp" >"$no_temp/build.log" 2>&1; then
+  cat "$no_temp/build.log" >&2
+  echo "a build failed without a temporary directory" >&2
+  exit 1
+fi
+test -f "$no_temp/src/A.js"
+
+if ! $windows_posix_shell; then
+  # A failing PPX's error is reported with its usual indentation, whatever the
+  # PPX wrote to stderr.
+  ppx_stderr="$work/ppx-stderr"
+  mkdir -p "$ppx_stderr/src"
+  printf '#!/bin/sh\necho "bad ppx: something went wrong" >&2\nexit 1\n' \
+    >"$ppx_stderr/bad-ppx.sh"
+  chmod +x "$ppx_stderr/bad-ppx.sh"
+  printf '{"name":"ppx-stderr","sources":"src","ppx-flags":["%s/bad-ppx.sh"]}\n' \
+    "$ppx_stderr" >"$ppx_stderr/rescript.json"
+  printf 'let value = 1\n' >"$ppx_stderr/src/A.res"
+  if "$port" build "$ppx_stderr" >"$ppx_stderr/build.log" 2>&1 || \
+    ! grep '^  Error while running external preprocessor' \
+      "$ppx_stderr/build.log" >/dev/null; then
+    cat "$ppx_stderr/build.log" >&2
+    echo "a PPX's stderr shifted the following error" >&2
+    exit 1
+  fi
+
+  # A relative temporary directory names one below the build's working
+  # directory; PPX files there are found and removed.
+  relative_temp="$work/relative-temp"
+  mkdir -p "$relative_temp/src" "$relative_temp/tmp"
+  printf '#!/bin/sh\ncp "$1" "$2"\n' >"$relative_temp/copy-ppx.sh"
+  chmod +x "$relative_temp/copy-ppx.sh"
+  printf '{"name":"relative-temp","sources":"src","ppx-flags":["%s/copy-ppx.sh"]}\n' \
+    "$relative_temp" >"$relative_temp/rescript.json"
+  printf 'let value = 1\n' >"$relative_temp/src/A.res"
+  if ! (cd "$relative_temp" && TMPDIR=tmp "$port" build . >build.log 2>&1); then
+    cat "$relative_temp/build.log" >&2
+    echo "a PPX failed with a relative temporary directory" >&2
+    exit 1
+  fi
+  test -f "$relative_temp/src/A.js"
+  if [ -n "$(ls "$relative_temp/tmp")" ] || ls "$relative_temp" | grep -q '^ppx'; then
+    ls "$relative_temp" "$relative_temp/tmp" >&2
+    echo "a relative temporary directory kept PPX files" >&2
+    exit 1
+  fi
+fi
 
 "$port" build "$out_of_source"
 test -f "$out_of_source/lib/es6/src/Main.js"
