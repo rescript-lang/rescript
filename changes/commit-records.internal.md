@@ -1,0 +1,1 @@
+- Add commit records: a commit message format that answers recurring review questions, and `scripts/commitRecords.js`, which renders review pages from them. https://github.com/rescript-lang/rescript/pull/8861
