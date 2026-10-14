@@ -1,0 +1,1 @@
+- Compile integer `x + 0`, `0 + x`, `x - 0`, `x * 1`, `1 * x` and `x / 1` to `x`. https://github.com/rescript-lang/rescript/pull/8871

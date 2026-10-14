@@ -6,27 +6,27 @@ function signMessage(message, key) {
 }
 
 function one(a) {
-  return a + 0 | 0;
+  return a;
 }
 
 function two(a, b) {
-  return (a + b | 0) + 0 | 0;
+  return a + b | 0;
 }
 
 function tree(a, b, c) {
-  return ((a + b | 0) + c | 0) + 0 | 0;
+  return (a + b | 0) + c | 0;
 }
 
 function oneU(a) {
-  return a + 0 | 0;
+  return a;
 }
 
 function twoU(a, b) {
-  return (a + b | 0) + 0 | 0;
+  return a + b | 0;
 }
 
 function treeU(a, b, c) {
-  return ((a + b | 0) + c | 0) + 0 | 0;
+  return (a + b | 0) + c | 0;
 }
 
 function useParam(param) {
