@@ -109,6 +109,12 @@ let create_lazy_resolver ~config ~extensions ~exclude_file =
 let apply ~resolver ~use_bs_dependencies module_name =
   module_name |> Lazy.force resolver.lazy_find ~use_bs_dependencies
 
+let rec path_to_list path =
+  let parent = Filename.dirname path in
+  (* On Windows, the basename of a drive root omits the drive prefix. *)
+  if Filename.basename path = path || parent = path then [path]
+  else (path |> Filename.basename) :: path_to_list parent
+
 (** Resolve a reference to ModuleName, and produce a path suitable for require.
    E.g. require "../foo/bar/ModuleName.ext" where ext is ".res" or ".js". *)
 let resolve_module ~(config : Config.t) ~import_extension ~output_file_relative
@@ -132,12 +138,6 @@ let resolve_module ~(config : Config.t) ~import_extension ~output_file_relative
   in
   if Sys.file_exists module_name_res_file then candidate
   else
-    let rec path_to_list path =
-      let parent = Filename.dirname path in
-      (* On Windows, the basename of a drive root omits the drive prefix. *)
-      if Filename.basename path = path || parent = path then [path]
-      else (path |> Filename.basename) :: path_to_list parent
-    in
     match module_name |> apply ~resolver ~use_bs_dependencies with
     | None -> candidate
     | Some (resolved_module_dir, case, bs_dependencies) ->

@@ -1009,25 +1009,6 @@ impl Config {
         args
     }
 
-    /// Directory containing the `rescript.json` this config was parsed from.
-    fn get_package_root(&self) -> &Path {
-        self.path
-            .parent()
-            .expect("rescript.json path should always have a parent directory")
-    }
-
-    pub fn get_project_root_args(&self) -> Vec<String> {
-        // Package discovery gives the parser a canonical working directory.
-        // Use the same representation here so GenType can strip this prefix,
-        // including when Windows supplied the project through an 8.3 path.
-        let root = self
-            .get_package_root()
-            .canonicalize()
-            .map(helpers::StrippedVerbatimPath::to_stripped_verbatim_path)
-            .unwrap_or_else(|_| self.get_package_root().to_path_buf());
-        vec!["-bs-project-root".to_string(), root.to_string_lossy().to_string()]
-    }
-
     pub fn get_warning_args(&self, is_local_dep: bool, warn_error_override: Option<String>) -> Vec<String> {
         // Ignore warning config for non local dependencies (node_module dependencies)
         if !is_local_dep {
@@ -1590,31 +1571,6 @@ pub mod tests {
         assert!(args.contains(&".mjs".to_string()));
         assert!(args.contains(&"-bs-gentype-dep".to_string()));
         assert!(args.contains(&"@teamwalnut/app".to_string()));
-    }
-
-    #[test]
-    fn test_compiler_project_root_is_canonicalized() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let nested_dir = temp_dir.path().join("nested");
-        fs::create_dir(&nested_dir).unwrap();
-        let config_path = nested_dir.join("..").join("rescript.json");
-        fs::write(
-            temp_dir.path().join("rescript.json"),
-            r#"{"name":"test","gentypeconfig":{}}"#,
-        )
-        .unwrap();
-
-        let config = Config::new(&config_path).unwrap();
-        let expected_root = temp_dir
-            .path()
-            .canonicalize()
-            .map(helpers::StrippedVerbatimPath::to_stripped_verbatim_path)
-            .unwrap()
-            .to_string_lossy()
-            .to_string();
-
-        let project_root_args = config.get_project_root_args();
-        assert_eq!(project_root_args, ["-bs-project-root", &expected_root]);
     }
 
     #[test]
