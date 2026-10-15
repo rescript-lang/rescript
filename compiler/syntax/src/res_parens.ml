@@ -280,7 +280,7 @@ let field_expr expr =
     | _ when Parsetree_viewer.expr_is_await expr -> Parenthesized
     | _ -> Nothing)
 
-let ternary_operand expr =
+let ternary_operand ?(is_condition = false) expr =
   let opt_braces, _ = Parsetree_viewer.process_braces expr in
   match opt_braces with
   | Some braces_loc -> Braced braces_loc
@@ -291,6 +291,8 @@ let ternary_operand expr =
        Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
     } ->
       Nothing
+    (* A leading condition attribute otherwise attaches to the whole statement. *)
+    | _ when is_condition && expr.pexp_attributes <> [] -> Parenthesized
     | {pexp_desc = Pexp_ternary _} -> Parenthesized
     | {pexp_desc = Pexp_constraint _ | Pexp_coerce _} -> Parenthesized
     | _ when Res_parsetree_viewer.is_fun_expr expr -> (
@@ -451,3 +453,57 @@ let pattern_record_row_rhs (pattern : Parsetree.pattern) =
     false
   | Ppat_constraint _ -> true
   | _ -> false
+
+(* Follow the printed left edge, stopping where operand rules add delimiters
+   or attributes add a prefix. *)
+let rec starts_with_regexp e =
+  match e.Parsetree.pexp_desc with
+  | _ when e.pexp_attributes <> [] -> false
+  | Pexp_regexp _ -> true
+  | Pexp_apply
+      {
+        funct =
+          {
+            pexp_desc =
+              Pexp_ident {txt = Lident "##" | Ldot (Lident "Array", "get")};
+          };
+        args = [(Nolabel, parent); (Nolabel, _)];
+      }
+  | Pexp_apply
+      {
+        funct = {pexp_desc = Pexp_ident {txt = Ldot (Lident "Array", "set")}};
+        args = [(Nolabel, parent); (Nolabel, _); (Nolabel, _)];
+      }
+  | Pexp_object_get (parent, _)
+  | Pexp_object_set (parent, _, _) ->
+    starts_unwrapped (unary_expr_operand parent) parent
+  | Pexp_apply
+      {
+        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}};
+        args = [(Nolabel, lhs); (Nolabel, _rhs)];
+      }
+    when Parsetree_viewer.is_binary_expression e -> (
+    match lhs.pexp_desc with
+    | Pexp_apply
+        {
+          funct =
+            {pexp_desc = Pexp_ident {txt = Longident.Lident child_operator}};
+        }
+      when Parsetree_viewer.is_binary_expression lhs ->
+      (not (sub_binary_expr_operand operator child_operator))
+      && starts_with_regexp lhs
+    | Pexp_setfield _ | Pexp_object_set _ -> false
+    | _ -> starts_unwrapped (binary_expr_operand ~is_lhs:true lhs) lhs)
+  | Pexp_apply {funct} -> starts_unwrapped (call_expr funct) funct
+  | Pexp_ternary (condition, _consequent, _alternate) ->
+    starts_unwrapped (ternary_operand ~is_condition:true condition) condition
+  | Pexp_field (obj, _) | Pexp_setfield (obj, _, _) ->
+    starts_unwrapped (field_expr obj) obj
+  | Pexp_fun {body} when Parsetree_viewer.is_underscore_apply_sugar e ->
+    starts_with_regexp body
+  | _ -> false
+
+and starts_unwrapped kind e =
+  match kind with
+  | Nothing -> starts_with_regexp e
+  | Parenthesized | Braced _ -> false

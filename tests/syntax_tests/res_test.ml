@@ -76,6 +76,127 @@ let () =
   print_endline "✅ callback trailing comments are stable at multiple widths"
 
 let () =
+  let filename = Filename.concat data_dir "printer/regexpStatements.res" in
+  let source = Ext_io.load_file filename in
+  let parse source =
+    let result =
+      Res_driver.parse_implementation_from_source ~display_filename:filename
+        ~source
+    in
+    if result.invalid then
+      failwith ("Regexp statements failed to parse:\n" ^ source);
+    result
+  in
+  let original = parse source in
+  let comment_texts result =
+    List.map Res_comment.txt result.Res_driver.comments
+  in
+  List.iter
+    (fun width ->
+      let format result =
+        Res_printer.print_implementation ~width result.Res_driver.parsetree
+          ~comments:result.comments
+      in
+      let printed = format original in
+      let reparsed = parse printed in
+      assert (comment_texts original = comment_texts reparsed);
+      let reprinted = format reparsed in
+      if printed <> reprinted then
+        failwith
+          (Printf.sprintf
+             "Regexp formatting at width %d:\nFIRST:\n%s\nSECOND:\n%s" width
+             printed reprinted))
+    [20; 40; 80; 100; 120];
+  print_endline "✅ regexp statements round-trip at multiple widths"
+
+let () =
+  let without_locations tree =
+    let mapper =
+      {Ast_mapper.default_mapper with location = (fun _ _ -> Location.none)}
+    in
+    mapper.structure mapper tree
+  in
+  let parse source =
+    let result =
+      Res_driver.parse_implementation_from_source
+        ~display_filename:"statement-boundaries.res" ~source
+    in
+    assert (not result.invalid);
+    result
+  in
+  List.iter
+    (fun source ->
+      let original = parse source in
+      List.iter
+        (fun width ->
+          let printed =
+            Res_printer.print_implementation ~width original.parsetree
+              ~comments:original.comments
+          in
+          let reparsed = parse printed in
+          assert (
+            without_locations original.parsetree
+            = without_locations reparsed.parsetree))
+        [20; 40; 80; 100; 120])
+    [
+      "(@condition truth) ? (@yes first) : (@no second)";
+      "let result = (@condition truth) ? (@yes first) : (@no second)";
+      "let result = truth ? first : ((@condition other) ? (@yes second) : (@no \
+       third))";
+      "let f = () => {\nlet before = 0\nopen Foo\n(/a/->ignore)\n}";
+      "let f = () => {\nmodule M = Foo\n(/a/->ignore)\n(/b/->ignore)\n}";
+      "let f = () => {\nopen Foo\nignore()\n(/a/->ignore)\n}";
+      "let before = 0\n@foo (/a/->ignore)";
+    ];
+  print_endline "✅ statement boundary formatting preserves attribute scope"
+
+(* PPX-generated ## accesses print their receiver before the operator. *)
+let () =
+  let source = "let t = 0\n(/a/[\"member\"])" in
+  let parsed =
+    Res_driver.parse_implementation_from_source ~display_filename:"ppx.res"
+      ~source
+  in
+  assert (not parsed.invalid);
+  let structure =
+    List.map
+      (fun item ->
+        match item.Parsetree.pstr_desc with
+        | Pstr_eval
+            (({pexp_desc = Pexp_object_get (receiver, _)} as expr), attrs) ->
+          let funct =
+            Ast_helper.Exp.ident (Location.mknoloc (Longident.Lident "##"))
+          in
+          let member =
+            Ast_helper.Exp.ident (Location.mknoloc (Longident.Lident "member"))
+          in
+          {
+            item with
+            pstr_desc =
+              Pstr_eval
+                ( {
+                    expr with
+                    pexp_desc =
+                      (Ast_helper.Exp.apply funct
+                         [(Nolabel, receiver); (Nolabel, member)])
+                        .pexp_desc;
+                  },
+                  attrs );
+          }
+        | _ -> item)
+      parsed.parsetree
+  in
+  let printed =
+    Res_printer.print_implementation ~width:100 structure ~comments:[]
+  in
+  assert (printed = "let t = 0\n(/a/[\"member\"])\n");
+  let reparsed =
+    Res_driver.parse_implementation_from_source ~display_filename:"ppx.res"
+      ~source:printed
+  in
+  assert (not reparsed.invalid)
+
+let () =
   let filename = Filename.concat data_dir "printer/expr/jsxChildren.res" in
   let source =
     Ext_io.load_file filename
