@@ -289,8 +289,9 @@ let compiler_job_tests =
       let compile_job =
         Compiler_process.compile_request ~build_dir ~config
           ~common_args:
-            (Compiler_args.compiler_common_arguments ~config ~runtime:"runtime"
-               ~dependency_dirs:[] ~watch:false ~gentype_dependency_args:[])
+            (Compiler_args.compiler_common_arguments ~project_root:config.root
+               ~config ~runtime:"runtime" ~dependency_dirs:[] ~watch:false
+               ~gentype_dependency_args:[])
           module_ ~source_kind:Source.Implementation "src/A.res"
       in
       let rec argument_after expected = function
