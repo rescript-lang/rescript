@@ -11,34 +11,14 @@ port="$1"
 port_directory=$(CDPATH= cd -- "$(dirname "$port")" && pwd)
 port="$port_directory/$(basename "$port")"
 root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
-: "${RESCRIPT_BSC_EXE:=$root/_build/default/compiler/bsc/rescript_compiler_main.exe}"
 : "${RESCRIPT_RUNTIME:=$root/packages/@rescript/runtime}"
-test_proxy="$root/_build/default/tests/rewatch_ounit_tests/rewatch_bsc_test_proxy.exe"
 native_path() {
   if $windows_posix_shell; then cygpath -am "$1"; else printf '%s\n' "$1"; fi
 }
-assert_no_test_proxy_processes() {
-  if $windows_posix_shell; then
-    if ! powershell.exe -NoProfile -NonInteractive -Command \
-      'if (Get-Process -Name rewatch_bsc_test_proxy -ErrorAction SilentlyContinue) { exit 1 }'; then
-      echo "rewatch compiler test proxy was left running" >&2
-      powershell.exe -NoProfile -NonInteractive -Command \
-        'Get-Process -Name rewatch_bsc_test_proxy -ErrorAction SilentlyContinue | Format-Table -AutoSize' >&2
-      exit 1
-    fi
-  # Match only this checkout's proxy: other worktrees may run tests concurrently.
-  elif test -n "$(pgrep -f -- "$test_proxy_pattern" || true)"; then
-    echo "rewatch compiler test proxy was left running" >&2
-    exit 1
-  fi
-}
 if $windows_posix_shell; then
-  RESCRIPT_BSC_EXE=$(native_path "$RESCRIPT_BSC_EXE")
   RESCRIPT_RUNTIME=$(native_path "$RESCRIPT_RUNTIME")
-  test_proxy=$(native_path "$test_proxy")
 fi
-test_proxy_pattern=$(printf '%s\n' "$test_proxy" | sed 's/[][\.*^$+?(){}|]/\\&/g')
-export RESCRIPT_BSC_EXE RESCRIPT_RUNTIME
+export RESCRIPT_RUNTIME
 work="$root/tmp/rewatch-ocaml/test-$$"
 mkdir -p "$work"
 cp -R "$root/rewatch-ocaml/tests/basic" "$work/basic"
@@ -125,7 +105,6 @@ for dependency in namespace-one namespace-two; do
     "$work/namespace-collision/node_modules/$dependency"
 done
 cp -R "$root/rewatch-ocaml/tests/source-map" "$work/source-map"
-cp -R "$root/rewatch-ocaml/tests/warning-replay" "$work/warning-replay"
 cp -R "$root/rewatch-ocaml/tests/monorepo" "$work/monorepo"
 basic="$work/basic"
 cleanup_lifecycle="$work/cleanup-lifecycle"
@@ -152,7 +131,6 @@ namespace_entry="$work/namespace-entry"
 qualified_namespace="$work/qualified-namespace"
 namespace_collision="$work/namespace-collision"
 source_map="$work/source-map"
-warning_replay="$work/warning-replay"
 monorepo="$work/monorepo"
 
 package_name_mismatch="$work/package-name-mismatch"
@@ -244,13 +222,6 @@ printf 'let dependent = A.value + 1\n' \
   >"$interface_failure_recovery/src/B.res"
 printf 'let valid = true\n' \
   >"$interface_failure_recovery/src/Broken.res"
-
-atomic_save="$work/atomic-save"
-mkdir -p "$atomic_save/src"
-printf '%s\n' \
-  '{"name":"atomic-save","sources":"src/","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
-  >"$atomic_save/rescript.json"
-printf 'let value = 1\n' >"$atomic_save/src/Main.res"
 
 missing_nested_source="$work/missing-nested-source"
 mkdir -p "$missing_nested_source"
@@ -394,14 +365,6 @@ printf '%s\n' \
   >"$moved_source/rescript.json"
 printf 'let value = 1\n' >"$moved_source/src/A.res"
 
-publication_cmi="$work/publication-cmi"
-mkdir -p "$publication_cmi/src"
-printf '%s\n' \
-  '{"name":"publication-cmi","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
-  >"$publication_cmi/rescript.json"
-printf 'let value = 1\n' >"$publication_cmi/src/A.res"
-printf 'let dependent = A.value + 1\n' >"$publication_cmi/src/B.res"
-
 retained_cycle="$work/retained-cycle"
 mkdir -p "$retained_cycle/src"
 printf '%s\n' \
@@ -409,14 +372,6 @@ printf '%s\n' \
   >"$retained_cycle/rescript.json"
 printf 'let value = 1\n' >"$retained_cycle/src/A.res"
 printf 'let dependent = A.value\n' >"$retained_cycle/src/B.res"
-
-retained_parse="$work/retained-parse"
-mkdir -p "$retained_parse/src"
-printf '%s\n' \
-  '{"name":"retained-parse","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
-  >"$retained_parse/rescript.json"
-printf 'let value = 1\n' >"$retained_parse/src/A.res"
-printf 'let other = 1\n' >"$retained_parse/src/B.res"
 
 initial_failure_freshness="$work/initial-failure-freshness"
 mkdir -p "$initial_failure_freshness/src"
@@ -516,29 +471,25 @@ for namespace_dependency_name in ns-one ns-two; do
     "$external_namespace/node_modules/$namespace_dependency_name"
 done
 
-dev_include_order="$work/dev-include-order"
-mkdir -p "$dev_include_order/src" "$dev_include_order/dev" \
-  "$dev_include_order/node_modules/regular/src" \
-  "$dev_include_order/node_modules/development/src"
-printf '%s\n' \
-  '{"name":"dev-include-root","sources":["src",{"dir":"dev","type":"dev"}],"dependencies":["regular"],"dev-dependencies":["development"]}' \
-  >"$dev_include_order/rescript.json"
-printf 'let value = 1\n' >"$dev_include_order/src/Main.res"
-printf 'let value = 2\n' >"$dev_include_order/dev/Test.res"
-printf '%s\n' '{"name":"regular","sources":"src"}' \
-  >"$dev_include_order/node_modules/regular/rescript.json"
-printf 'let value = 1\n' \
-  >"$dev_include_order/node_modules/regular/src/Regular.res"
-printf '%s\n' '{"name":"development","sources":"src"}' \
-  >"$dev_include_order/node_modules/development/rescript.json"
-printf 'let value = 1\n' \
-  >"$dev_include_order/node_modules/development/src/Development.res"
-
-if [ -x "$port_directory/bsc.exe" ]; then
-  env -u RESCRIPT_BSC_EXE "$port" build "$packaged_basic" \
-    >"$packaged_basic/build.log"
-  test -f "$packaged_basic/src/A.mjs"
-fi
+# Builds use the embedded compiler, but editor tooling finds bsc.exe and the
+# other platform binaries through compiler-info.json, so it must record the
+# bsc.exe shipped next to the executable.
+"$port" build "$packaged_basic" >"$packaged_basic/build.log"
+test -f "$packaged_basic/src/A.mjs"
+COMPILER_INFO=$(native_path "$packaged_basic/lib/bs/compiler-info.json") \
+  EXPECTED_BSC=$(native_path "$port_directory/bsc.exe") node -e '
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const info = JSON.parse(fs.readFileSync(process.env.COMPILER_INFO, "utf8"));
+  const expected = path.join(
+    fs.realpathSync(path.dirname(process.env.EXPECTED_BSC)),
+    "bsc.exe",
+  );
+  if (path.relative(info.bsc_path, expected) !== "") {
+    console.error(`compiler-info.json bsc_path ${info.bsc_path}, expected ${expected}`);
+    process.exit(1);
+  }
+'
 
 mkdir -p "$runtime_discovery/node_modules/@rescript/runtime"
 runtime_path=$(CDPATH= cd -- \
@@ -1200,42 +1151,6 @@ grep 'does not match the interface' \
 grep 'Parsed 0 source files' "$directory_symlink/unchanged.log" >/dev/null
 grep 'Compiled 0 modules' "$directory_symlink/unchanged.log" >/dev/null
 
-# Record the content that triggered a direct event before building it. An
-# atomic replacement made while that build is compiling must cause a second
-# build rather than becoming the post-build snapshot baseline.
-atomic_release="$atomic_save/release"
-atomic_started="$atomic_save/compile-started"
-touch "$atomic_release"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=block-compile \
-  REWATCH_OCAML_RELEASE_FILE="$(native_path "$atomic_release")" \
-  REWATCH_OCAML_COMPILE_STARTED="$(native_path "$atomic_started")" \
-  "$port" watch "$atomic_save" >"$atomic_save/watch.log" 2>&1 &
-atomic_save_pid=$!
-background_pids="$background_pids $atomic_save_pid"
-if ! wait_for_file "$atomic_save/src/Main.mjs"; then
-  cat "$atomic_save/watch.log" >&2
-  exit 1
-fi
-wait_for_initial_build "$atomic_save/watch.log"
-rm "$atomic_release" "$atomic_started"
-printf 'let value = 2\n' >"$atomic_save/src/Main.res"
-if ! wait_for_file "$atomic_started"; then
-  cat "$atomic_save/watch.log" >&2
-  exit 1
-fi
-printf 'let value = 3\n' >"$atomic_save/src/Main.next"
-mv "$atomic_save/src/Main.next" "$atomic_save/src/Main.res"
-touch "$atomic_release"
-if ! wait_for_text "$atomic_save/src/Main.mjs" 'value = 3'; then
-  cat "$atomic_save/watch.log" >&2
-  cat "$atomic_save/src/Main.mjs" >&2
-  exit 1
-fi
-kill -TERM "$atomic_save_pid"
-wait "$atomic_save_pid" 2>/dev/null || true
-
 "$port" watch "$recursive_lib" >"$recursive_lib/watch.log" 2>&1 &
 recursive_lib_pid=$!
 background_pids="$background_pids $recursive_lib_pid"
@@ -1519,38 +1434,6 @@ fi
 kill -TERM "$namespace_repair_pid"
 wait "$namespace_repair_pid" 2>/dev/null || true
 
-publication_destination="$publication_cmi/lib/bs/src/A.res"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=fail-late-publication \
-  REWATCH_FAIL_PUBLICATION="$(native_path "$publication_cmi/fail-publication")" \
-  REWATCH_PUBLICATION_FAILED="$(native_path "$publication_cmi/publication-failed")" \
-  REWATCH_PUBLICATION_DESTINATION="$(native_path "$publication_destination")" \
-  "$port" watch "$publication_cmi" >"$publication_cmi/watch.log" 2>&1 &
-publication_cmi_pid=$!
-background_pids="$background_pids $publication_cmi_pid"
-if ! wait_for_file "$publication_cmi/src/B.mjs"; then
-  cat "$publication_cmi/watch.log" >&2
-  exit 1
-fi
-wait_for_initial_build "$publication_cmi/watch.log"
-touch "$publication_cmi/fail-publication"
-printf 'let value = "changed"\n' >"$publication_cmi/src/A.res"
-if ! wait_for_file "$publication_cmi/publication-failed" || \
-  ! wait_for_text "$publication_cmi/watch.log" 'A.res'; then
-  cat "$publication_cmi/watch.log" >&2
-  exit 1
-fi
-remove_obstruction_directory "$publication_destination"
-rm "$publication_cmi/fail-publication"
-printf 'let value = "changed"\n\n' >"$publication_cmi/src/A.res"
-if ! wait_for_text "$publication_cmi/watch.log" 'This has type:'; then
-  cat "$publication_cmi/watch.log" >&2
-  exit 1
-fi
-kill -TERM "$publication_cmi_pid"
-wait "$publication_cmi_pid" 2>/dev/null || true
-
 "$port" watch "$retained_cycle" >"$retained_cycle/watch.log" 2>&1 &
 retained_cycle_pid=$!
 background_pids="$background_pids $retained_cycle_pid"
@@ -1607,61 +1490,6 @@ if ! wait_for_file "$initial_failure_freshness/lib/ocaml/A.cmi"; then
 fi
 kill -TERM "$initial_failure_freshness_pid"
 wait "$initial_failure_freshness_pid" 2>/dev/null || true
-
-# Failed parses and parser warnings remain pending until the same source parses
-# cleanly. An unrelated edit must not compile an older AST or forget diagnostics.
-retained_parse_log="$retained_parse/watch.log"
-retained_parse_calls="$retained_parse/bsc-calls.log"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=parse-warning-log \
-  REWATCH_BSC_CALL_LOG="$(native_path "$retained_parse_calls")" \
-  REWATCH_PARSE_WARNING_SOURCE=A.res \
-  "$port" watch "$retained_parse" >"$retained_parse_log" 2>&1 &
-retained_parse_pid=$!
-background_pids="$background_pids $retained_parse_pid"
-if ! wait_for_count "$retained_parse_log" REWATCH_PARSE_WARNING 1 || \
-  ! wait_for_file "$retained_parse/src/A.mjs"; then
-  cat "$retained_parse_log" >&2
-  exit 1
-fi
-wait_for_initial_build "$retained_parse_log"
-initial_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
-printf 'let other = 2\n' >"$retained_parse/src/B.res"
-if ! wait_for_count "$retained_parse_log" REWATCH_PARSE_WARNING 2; then
-  cat "$retained_parse_log" >&2
-  exit 1
-fi
-if ! wait_for_count "$retained_parse_calls" '-bs-ast.*A.res' \
-  "$((initial_a_parse_count + 1))"; then
-  cat "$retained_parse_calls" >&2
-  exit 1
-fi
-warning_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
-test "$warning_a_parse_count" -gt "$initial_a_parse_count"
-printf 'let value =\n' >"$retained_parse/src/A.res"
-if ! wait_for_count "$retained_parse_log" \
-  'This let-binding misses an expression' 1; then
-  cat "$retained_parse_log" >&2
-  exit 1
-fi
-failed_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
-printf 'let other = 3\n' >"$retained_parse/src/B.res"
-if ! wait_for_count "$retained_parse_log" \
-  'This let-binding misses an expression' 2; then
-  cat "$retained_parse_log" >&2
-  exit 1
-fi
-retried_a_parse_count=$(grep -c -- '-bs-ast.*A.res' "$retained_parse_calls")
-test "$retried_a_parse_count" -gt "$failed_a_parse_count"
-grep 'value = 1' "$retained_parse/src/A.mjs" >/dev/null
-printf 'let value = 2\n' >"$retained_parse/src/A.res"
-if ! wait_for_text "$retained_parse/src/A.mjs" 'value = 2'; then
-  cat "$retained_parse_log" >&2
-  exit 1
-fi
-kill -TERM "$retained_parse_pid"
-wait "$retained_parse_pid" 2>/dev/null || true
 
 "$port" build "$duplicate_selection" >/dev/null
 "$port" build "$external_duplicate" >"$external_duplicate/build.log" 2>&1
@@ -1733,34 +1561,13 @@ fi
 kill -TERM "$transitive_local_watch_pid"
 wait "$transitive_local_watch_pid" 2>/dev/null || true
 
-dev_include_call_log="$dev_include_order/bsc-calls.log"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=counting \
-  REWATCH_BSC_CALL_LOG="$(native_path "$dev_include_call_log")" \
-  "$port" build "$dev_include_order" >/dev/null
-node - "$dev_include_call_log" \
-  "$dev_include_order/node_modules/development/lib/ocaml" \
-  "$dev_include_order/node_modules/regular/lib/ocaml" <<'EOF'
-const fs = require("fs");
-const [log, development, regular] = process.argv.slice(2);
-const normalize = value => value.replaceAll("\\", "/");
-const command = fs.readFileSync(log, "utf8").split("\n")
-  .find(line => line.includes("Test.ast") && !line.includes("-bs-ast"));
-const normalizedCommand = command === undefined ? "" : normalize(command);
-if (!command || normalizedCommand.indexOf(normalize(development)) < 0 ||
-    normalizedCommand.indexOf(normalize(development)) >
-      normalizedCommand.indexOf(normalize(regular))) {
-  process.exit(1);
-}
-EOF
-
-warning_call_log="$warning_replay/bsc-calls.log"
+# A watch rebuild after an unrelated edit replays warnings from modules it
+# doesn't recompile. Compiler requests are counted at the logical request log.
+cp -R "$root/rewatch-ocaml/tests/warning-replay" "$work/warning-replay"
+warning_replay="$work/warning-replay"
+warning_call_log="$warning_replay/compiler-calls.log"
 warning_watch_log="$warning_replay/watch.log"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=counting \
-  REWATCH_BSC_CALL_LOG="$(native_path "$warning_call_log")" \
+env REWATCH_COMPILER_CALL_LOG="$(native_path "$warning_call_log")" \
   "$port" watch "$warning_replay" >"$warning_watch_log" 2>&1 &
 warning_watch_pid=$!
 background_pids="$background_pids $warning_watch_pid"
@@ -1832,62 +1639,13 @@ stop_watch "$watch_basic" "$watch_restart_pid"
 test ! -f "$watch_basic/lib/watch.lock"
 
 if ! $windows_posix_shell; then
-interrupt_basic="$work/interrupt-basic"
-cp -R "$root/rewatch-ocaml/tests/basic" "$interrupt_basic"
-child_marker="$interrupt_basic/child-started"
-REWATCH_OCAML_CHILD_STARTED="$(native_path "$child_marker")" \
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=slow \
-RESCRIPT_BSC_EXE="$test_proxy" \
-"$port" watch "$interrupt_basic" >"$interrupt_basic/watch.log" 2>&1 &
-interrupt_pid=$!
-background_pids="$background_pids $interrupt_pid"
-attempts=0
-while [ "$attempts" -lt 100 ] && [ ! -f "$child_marker" ]; do
-  attempts=$((attempts + 1))
-  sleep 0.1
-done
-test -f "$child_marker"
-kill -TERM "$interrupt_pid"
-wait "$interrupt_pid"
-test ! -f "$interrupt_basic/lib/watch.lock"
-assert_no_test_proxy_processes
-test -z "$(find "$interrupt_basic" -name '.rewatch-ocaml-*.log' -print)"
-
-# One-shot commands must unwind through the same process and lock owners when
-# the shell terminates them during compiler work. Compiler children run in
-# their own process groups, so a closing terminal's SIGHUP and a SIGQUIT reach
-# only rescript and must be handled like SIGTERM, or the children outlive the
-# build and its lock is left behind.
-for interrupt_signal in TERM:143 HUP:129 QUIT:131; do
-  signal_name=${interrupt_signal%%:*}
-  expected_status=${interrupt_signal#*:}
-  interrupt_build="$work/interrupt-build-$signal_name"
-  cp -R "$root/rewatch-ocaml/tests/basic" "$interrupt_build"
-  build_child_marker="$interrupt_build/child-started"
-  REWATCH_OCAML_CHILD_STARTED="$(native_path "$build_child_marker")" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=slow \
-  RESCRIPT_BSC_EXE="$test_proxy" \
-  "$port" build "$interrupt_build" >"$interrupt_build/build.log" 2>&1 &
-  interrupt_build_pid=$!
-  background_pids="$background_pids $interrupt_build_pid"
-  wait_for_file "$build_child_marker"
-  kill "-$signal_name" "$interrupt_build_pid"
-  set +e
-  wait "$interrupt_build_pid"
-  interrupt_build_status=$?
-  set -e
-  test "$interrupt_build_status" -eq "$expected_status"
-  test ! -f "$interrupt_build/lib/build.lock"
-  assert_no_test_proxy_processes
-  test -z "$(find "$interrupt_build" -name '.rewatch-ocaml-*.log' -print)"
-done
-
-# The same signals must also stop a build while it waits for an external
-# js-post-build hook, which runs in its own process group too. The hook records
-# its pid and then sleeps, so the build is still running when it is signalled;
-# the hook must be gone afterwards and the build lock released.
+# One-shot builds must unwind through the same process and lock owners when
+# the shell terminates them. Compilation runs in process, but a js-post-build
+# hook is still an external child in its own process group, so a closing
+# terminal's SIGHUP and a SIGQUIT reach only rescript and must be handled like
+# SIGTERM, or the hook outlives the build and its lock is left behind. The hook
+# records its pid and then sleeps, so the build is still running when it is
+# signalled.
 for hook_signal in TERM:143 HUP:129 QUIT:131; do
   signal_name=${hook_signal%%:*}
   expected_status=${hook_signal#*:}
@@ -1930,66 +1688,268 @@ for hook_signal in TERM:143 HUP:129 QUIT:131; do
 done
 fi
 
-# Removing watch.lock is the shell-suite shutdown protocol. It must interrupt
-# an in-progress compiler batch just as SIGTERM does, rather than waiting for
-# every queued module to finish.
-lock_interrupt_basic="$work/lock-interrupt-basic"
-cp -R "$root/rewatch-ocaml/tests/basic" "$lock_interrupt_basic"
-lock_child_marker="$lock_interrupt_basic/child-started"
-REWATCH_OCAML_CHILD_STARTED="$(native_path "$lock_child_marker")" \
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=slow \
-RESCRIPT_BSC_EXE="$test_proxy" \
-"$port" watch "$lock_interrupt_basic" \
-  >"$lock_interrupt_basic/watch.log" 2>&1 &
-lock_interrupt_pid=$!
-background_pids="$background_pids $lock_interrupt_pid"
-if ! wait_for_file "$lock_child_marker"; then
-  cat "$lock_interrupt_basic/watch.log" >&2
+# One large module keeps an in-process compile running for seconds.
+second_interrupt="$work/second-interrupt"
+mkdir -p "$second_interrupt/src"
+printf '%s\n' '{"name":"second-interrupt","sources":"src","package-specs":{"module":"esmodule","in-source":true}}' \
+  >"$second_interrupt/rescript.json"
+awk 'BEGIN { for (i = 1; i <= 200000; i++) printf "let v%d = (%d, \"%d\")\n", i, i, i }' \
+  >"$second_interrupt/src/Slow.res"
+
+# A second build waits for the first one's build lock and then runs.
+"$port" -vv build "$second_interrupt" >"$second_interrupt/first.log" 2>&1 &
+lock_first_pid=$!
+background_pids="$background_pids $lock_first_pid"
+# Logged when the parsed module is handed to the compiler.
+if ! wait_for_text "$second_interrupt/first.log" 'compile dirty: Slow'; then
+  cat "$second_interrupt/first.log" >&2
+  echo "large module did not reach the compiler" >&2
   exit 1
 fi
-remove_file_with_retry "$lock_interrupt_basic/lib/watch.lock"
-if ! wait_for_pid_gone "$lock_interrupt_pid"; then
+"$port" build "$second_interrupt" >"$second_interrupt/second.log" 2>&1 &
+lock_second_pid=$!
+background_pids="$background_pids $lock_second_pid"
+wait_for_text "$second_interrupt/second.log" "Waiting for other build to finish"
+test ! -f "$second_interrupt/src/Slow.js"
+if ! wait "$lock_first_pid"; then
+  cat "$second_interrupt/first.log" >&2
+  exit 1
+fi
+if ! wait "$lock_second_pid"; then
+  cat "$second_interrupt/second.log" >&2
+  exit 1
+fi
+test -f "$second_interrupt/src/Slow.js"
+test ! -f "$second_interrupt/lib/build.lock"
+
+# A stop waits for the modules compiling in-process, and a repeated signal
+# does not cut it short: the npm launcher forwards the Ctrl-C the terminal
+# already delivered. The stop leaves no lock or temporary files, and the next
+# build completes the module.
+if ! $windows_posix_shell; then
+  printf 'let dirty = 1\n' >>"$second_interrupt/src/Slow.res"
+  rm "$second_interrupt/src/Slow.js"
+  mkdir -p "$second_interrupt/tmp"
+  TMPDIR="$second_interrupt/tmp" \
+    "$port" -vv build "$second_interrupt" >"$second_interrupt/build.log" 2>&1 &
+  second_interrupt_pid=$!
+  background_pids="$background_pids $second_interrupt_pid"
+  # Logged when the parsed module is handed to the compiler.
+  if ! wait_for_text "$second_interrupt/build.log" 'compile dirty: Slow'; then
+    echo "large module did not reach the compiler" >&2
+    exit 1
+  fi
+  kill -INT "$second_interrupt_pid"
+  # The forwarded copy arrives a little later, as a separate signal.
+  sleep 0.2
+  kill -INT "$second_interrupt_pid"
+  if ! wait_for_pid_gone "$second_interrupt_pid" 600; then
+    echo "an interrupted in-process compile did not stop" >&2
+    exit 1
+  fi
+  set +e
+  wait "$second_interrupt_pid"
+  second_interrupt_status=$?
+  set -e
+  if [ "$second_interrupt_status" -ne 130 ] || \
+    [ -e "$second_interrupt/lib/build.lock" ] || \
+    [ -n "$(ls "$second_interrupt/tmp")" ]; then
+    cat "$second_interrupt/build.log" >&2
+    ls "$second_interrupt/tmp" >&2
+    echo "repeated signal: status $second_interrupt_status, expected 130 without a lock or temporary files" >&2
+    exit 1
+  fi
+  "$port" build "$second_interrupt" >"$second_interrupt/after.log" 2>&1
+  test -f "$second_interrupt/src/Slow.js"
+fi
+
+# Namespace maps compile on the worker domains, and a stop is noticed between
+# them instead of after the last one.
+if ! $windows_posix_shell; then
+  namespace_stop="$work/namespace-stop"
+  namespace_stop_count=100
+  mkdir -p "$namespace_stop/node_modules"
+  namespace_stop_deps=""
+  for i in $(seq 1 "$namespace_stop_count"); do
+    mkdir -p "$namespace_stop/packages/p$i/src"
+    printf '{"name":"p%d","sources":"src","namespace":true}\n' "$i" \
+      >"$namespace_stop/packages/p$i/rescript.json"
+    printf '{"name":"p%d","version":"1.0.0"}\n' "$i" \
+      >"$namespace_stop/packages/p$i/package.json"
+    printf 'let value = %d\n' "$i" >"$namespace_stop/packages/p$i/src/M.res"
+    directory_link "$namespace_stop/packages/p$i" "$namespace_stop/node_modules/p$i"
+    namespace_stop_deps="$namespace_stop_deps\"p$i\","
+  done
+  printf '{"name":"root","sources":[],"dependencies":[%s]}\n' \
+    "${namespace_stop_deps%,}" >"$namespace_stop/rescript.json"
+  printf '{"name":"root","private":true,"workspaces":["packages/*"]}\n' \
+    >"$namespace_stop/package.json"
+  REWATCH_COMPILER_CALL_LOG="$namespace_stop/calls.log" \
+    "$port" build "$namespace_stop" >"$namespace_stop/build.log" 2>&1 &
+  namespace_stop_pid=$!
+  background_pids="$background_pids $namespace_stop_pid"
+  until grep -q '^namespace' "$namespace_stop/calls.log" 2>/dev/null || \
+    ! kill -0 "$namespace_stop_pid" 2>/dev/null; do
+    :
+  done
+  kill -TERM "$namespace_stop_pid"
+  set +e
+  wait "$namespace_stop_pid"
+  namespace_stop_status=$?
+  set -e
+  namespace_stop_compiled=$(grep -c '^namespace' "$namespace_stop/calls.log")
+  if [ "$namespace_stop_status" -ne 143 ] || \
+    [ "$namespace_stop_compiled" -ge "$namespace_stop_count" ]; then
+    echo "a stop during namespace maps: status $namespace_stop_status after $namespace_stop_compiled of $namespace_stop_count maps" >&2
+    exit 1
+  fi
+fi
+
+# write_slow_module PATH VALUE: a module whose in-process compile takes a few
+# seconds, so a test can act while it runs. VALUE marks the version.
+write_slow_module() {
+  awk -v value="$2" 'BEGIN {
+    printf "let value = %s\n", value
+    for (i = 1; i <= 60000; i++) printf "let v%d = (%d, \"%d\")\n", i, i, i
+  }' >"$1"
+}
+slow_project() {
+  mkdir -p "$1/src"
+  printf '%s\n' '{"name":"slow","sources":"src","package-specs":{"module":"esmodule","in-source":true}}' \
+    >"$1/rescript.json"
+  write_slow_module "$1/src/Slow.res" 1
+  printf 'let dependent = Slow.value\n' >"$1/src/Dependent.res"
+}
+
+# A signal during compiler work stops the build after the module compiling
+# in-process: its dependent is not compiled, the exit status is the signal's
+# and the lock is released. A closing terminal's SIGHUP and SIGQUIT are handled
+# like SIGTERM.
+if ! $windows_posix_shell; then
+  for interrupt_signal in TERM:143 HUP:129 QUIT:131; do
+    signal_name=${interrupt_signal%%:*}
+    expected_status=${interrupt_signal#*:}
+    interrupt_build="$work/interrupt-build-$signal_name"
+    slow_project "$interrupt_build"
+    "$port" -vv build "$interrupt_build" >"$interrupt_build/build.log" 2>&1 &
+    interrupt_build_pid=$!
+    background_pids="$background_pids $interrupt_build_pid"
+    if ! wait_for_text "$interrupt_build/build.log" 'compile dirty: Slow'; then
+      echo "large module did not reach the compiler before $signal_name" >&2
+      exit 1
+    fi
+    kill "-$signal_name" "$interrupt_build_pid"
+    set +e
+    wait "$interrupt_build_pid"
+    interrupt_build_status=$?
+    set -e
+    if [ "$interrupt_build_status" -ne "$expected_status" ] || \
+      [ -e "$interrupt_build/lib/build.lock" ] || \
+      [ -e "$interrupt_build/src/Dependent.js" ]; then
+      cat "$interrupt_build/build.log" >&2
+      echo "$signal_name during compiler work: status $interrupt_build_status, expected $expected_status without a lock or further compiles" >&2
+      exit 1
+    fi
+  done
+fi
+
+# Removing watch.lock is the shell suite's shutdown protocol. It stops a
+# watcher's compiler work like a signal, before the queued dependent.
+lock_interrupt="$work/lock-interrupt"
+slow_project "$lock_interrupt"
+"$port" -vv watch "$lock_interrupt" >"$lock_interrupt/watch.log" 2>&1 &
+lock_interrupt_pid=$!
+background_pids="$background_pids $lock_interrupt_pid"
+if ! wait_for_text "$lock_interrupt/watch.log" 'compile dirty: Slow'; then
+  echo "large module did not reach the compiler" >&2
+  exit 1
+fi
+remove_file_with_retry "$lock_interrupt/lib/watch.lock"
+if ! wait_for_pid_gone "$lock_interrupt_pid" 600; then
   echo "watcher did not stop during compiler work after watch.lock removal" >&2
   exit 1
 fi
-wait "$lock_interrupt_pid"
-assert_no_test_proxy_processes
+wait "$lock_interrupt_pid" 2>/dev/null || true
+if [ -e "$lock_interrupt/src/Dependent.js" ]; then
+  cat "$lock_interrupt/watch.log" >&2
+  echo "watcher compiled queued modules after watch.lock removal" >&2
+  exit 1
+fi
 
-lock_basic="$work/lock-basic"
-cp -R "$root/rewatch-ocaml/tests/basic" "$lock_basic"
-rm -rf "$lock_basic/lib"
-rm -f "$lock_basic/src/A.mjs" "$lock_basic/src/B.mjs" \
-  "$lock_basic/src/WithInterface.mjs"
-first_marker="$lock_basic/first-child-started"
-release_marker="$lock_basic/release-first-build"
-REWATCH_OCAML_CHILD_STARTED="$(native_path "$first_marker")" \
-REWATCH_OCAML_RELEASE_FILE="$(native_path "$release_marker")" \
-REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-REWATCH_BSC_PROXY_MODE=slow \
-RESCRIPT_BSC_EXE="$test_proxy" \
-  "$port" build "$lock_basic" >"$lock_basic/first.log" 2>&1 &
-first_build_pid=$!
-background_pids="$background_pids $first_build_pid"
-wait_for_file "$first_marker"
-workspace_build_lock="$lock_basic/lib/build.lock"
-test -f "$workspace_build_lock"
-"$port" build "$lock_basic" >"$lock_basic/second.log" 2>&1 &
-second_build_pid=$!
-background_pids="$background_pids $second_build_pid"
-wait_for_text "$lock_basic/second.log" "Waiting for other build to finish"
-test ! -f "$lock_basic/src/A.mjs"
-touch "$release_marker"
-if ! wait "$first_build_pid"; then
-  cat "$lock_basic/first.log" >&2
+# An atomic save made while a rebuild compiles causes another build instead of
+# becoming the baseline of the next one.
+atomic_save="$work/atomic-save-rebuild"
+slow_project "$atomic_save"
+"$port" -vv watch "$atomic_save" >"$atomic_save/watch.log" 2>&1 &
+atomic_save_pid=$!
+background_pids="$background_pids $atomic_save_pid"
+if ! wait_for_text "$atomic_save/watch.log" 'Finished initial compilation' 1 1200; then
+  echo "watcher did not finish its initial build" >&2
   exit 1
 fi
-if ! wait "$second_build_pid"; then
-  cat "$lock_basic/second.log" >&2
+write_slow_module "$atomic_save/src/Slow.res" 2
+if ! wait_for_text "$atomic_save/watch.log" 'compile dirty: Slow' 2 600; then
+  echo "the edited large module did not reach the compiler" >&2
   exit 1
 fi
-test -f "$lock_basic/src/A.mjs"
-test ! -f "$workspace_build_lock"
+write_slow_module "$atomic_save/src/Slow.next" 3
+mv "$atomic_save/src/Slow.next" "$atomic_save/src/Slow.res"
+if ! wait_for_text "$atomic_save/src/Slow.js" 'value = 3' 1 1200; then
+  cat "$atomic_save/watch.log" >&2
+  echo "an atomic save during a rebuild was not built" >&2
+  exit 1
+fi
+remove_file_with_retry "$atomic_save/lib/watch.lock"
+wait "$atomic_save_pid" 2>/dev/null || true
+
+# A failed parse stays pending until the source parses: an unrelated edit
+# parses it again and reports the error again, and its old AST is never
+# compiled.
+retained_parse="$work/retained-parse"
+mkdir -p "$retained_parse/src"
+printf '%s\n' '{"name":"retained-parse","sources":"src","package-specs":{"module":"esmodule","in-source":true}}' \
+  >"$retained_parse/rescript.json"
+printf 'let value = 1\n' >"$retained_parse/src/A.res"
+printf 'let other = 1\n' >"$retained_parse/src/B.res"
+REWATCH_COMPILER_CALL_LOG="$retained_parse/calls.log" \
+  "$port" watch "$retained_parse" >"$retained_parse/watch.log" 2>&1 &
+retained_parse_pid=$!
+background_pids="$background_pids $retained_parse_pid"
+wait_for_initial_build "$retained_parse/watch.log"
+printf 'let value =\n' >"$retained_parse/src/A.res"
+wait_for_text "$retained_parse/watch.log" 'This let-binding misses an expression'
+failed_parses=$(grep -c '^parse.*A\.res' "$retained_parse/calls.log")
+printf 'let other = 2\n' >"$retained_parse/src/B.res"
+wait_for_text "$retained_parse/watch.log" 'This let-binding misses an expression' 2
+test "$(grep -c '^parse.*A\.res' "$retained_parse/calls.log")" -gt "$failed_parses"
+grep 'value = 1' "$retained_parse/src/A.js" >/dev/null
+printf 'let value = 2\n' >"$retained_parse/src/A.res"
+wait_for_text "$retained_parse/src/A.js" 'value = 2'
+remove_file_with_retry "$retained_parse/lib/watch.lock"
+wait "$retained_parse_pid" 2>/dev/null || true
+
+# A damaged published AST, such as one cut short by a killed build, makes its
+# module parse again instead of failing every later build.
+damaged_ast="$work/damaged-ast"
+mkdir -p "$damaged_ast/src"
+printf '%s\n' '{"name":"damaged-ast","sources":"src","package-specs":{"module":"esmodule","in-source":true}}' \
+  >"$damaged_ast/rescript.json"
+printf 'let value = 1\n' >"$damaged_ast/src/A.res"
+printf 'let value = A.value + 1\n' >"$damaged_ast/src/B.res"
+"$port" build "$damaged_ast" >/dev/null
+for damage in empty garbled; do
+  case $damage in
+    empty) : >"$damaged_ast/lib/ocaml/A.ast" ;;
+    garbled) printf '\377\377\377\377' >"$damaged_ast/lib/ocaml/A.ast" ;;
+  esac
+  if ! "$port" build "$damaged_ast" >"$damaged_ast/$damage.log" 2>&1; then
+    cat "$damaged_ast/$damage.log" >&2
+    echo "a build failed after an $damage published AST" >&2
+    exit 1
+  fi
+  test -s "$damaged_ast/lib/ocaml/A.ast"
+  test -f "$damaged_ast/src/B.js"
+done
 
 # dep-union is requested with [web] by consumer, then with all features by
 # consumer's dev-dependency, then with [native] by the root. All features win
@@ -2139,35 +2099,111 @@ fi
 "$port" build "$ppx_filter"
 test -f "$ppx_filter/src/Main.js"
 
+# A failing PPX leaves no temporary AST files behind.
+ppx_cleanup="$work/ppx-temp-cleanup"
+mkdir -p "$ppx_cleanup/src" "$ppx_cleanup/tmp"
+printf '{"name":"ppx-temp-cleanup","sources":"src","ppx-flags":["%s/missing-ppx"]}\n' \
+  "$ppx_cleanup" >"$ppx_cleanup/rescript.json"
+printf 'let value = 1\n' >"$ppx_cleanup/src/A.res"
+if TMPDIR="$ppx_cleanup/tmp" TEMP="$ppx_cleanup/tmp" TMP="$ppx_cleanup/tmp" \
+    "$port" build "$ppx_cleanup" >"$ppx_cleanup/build.log" 2>&1; then
+  echo "a build with a missing PPX succeeded" >&2
+  exit 1
+fi
+if ls "$ppx_cleanup/tmp" | grep -q '^ppx'; then
+  ls "$ppx_cleanup/tmp" >&2
+  echo "a failing PPX left temporary files" >&2
+  exit 1
+fi
+# Compiler output is captured in memory: a build needs no temporary directory.
+no_temp="$work/no-temp-dir"
+mkdir -p "$no_temp/src"
+printf '{"name":"no-temp-dir","sources":"src"}\n' >"$no_temp/rescript.json"
+printf 'let value = 1\n' >"$no_temp/src/A.res"
+if ! TMPDIR="$work/missing-temp" TEMP="$work/missing-temp" TMP="$work/missing-temp" \
+    "$port" build "$no_temp" >"$no_temp/build.log" 2>&1; then
+  cat "$no_temp/build.log" >&2
+  echo "a build failed without a temporary directory" >&2
+  exit 1
+fi
+test -f "$no_temp/src/A.js"
+
+if ! $windows_posix_shell; then
+  # A failing PPX's error is reported with its usual indentation, whatever the
+  # PPX wrote to stderr.
+  ppx_stderr="$work/ppx-stderr"
+  mkdir -p "$ppx_stderr/src"
+  printf '#!/bin/sh\necho "bad ppx: something went wrong" >&2\nexit 1\n' \
+    >"$ppx_stderr/bad-ppx.sh"
+  chmod +x "$ppx_stderr/bad-ppx.sh"
+  printf '{"name":"ppx-stderr","sources":"src","ppx-flags":["%s/bad-ppx.sh"]}\n' \
+    "$ppx_stderr" >"$ppx_stderr/rescript.json"
+  printf 'let value = 1\n' >"$ppx_stderr/src/A.res"
+  if "$port" build "$ppx_stderr" >"$ppx_stderr/build.log" 2>&1 || \
+    ! grep '^  Error while running external preprocessor' \
+      "$ppx_stderr/build.log" >/dev/null; then
+    cat "$ppx_stderr/build.log" >&2
+    echo "a PPX's stderr shifted the following error" >&2
+    exit 1
+  fi
+
+  # A relative temporary directory names one below the build's working
+  # directory; PPX files there are found and removed.
+  relative_temp="$work/relative-temp"
+  mkdir -p "$relative_temp/src" "$relative_temp/tmp"
+  printf '#!/bin/sh\ncp "$1" "$2"\n' >"$relative_temp/copy-ppx.sh"
+  chmod +x "$relative_temp/copy-ppx.sh"
+  printf '{"name":"relative-temp","sources":"src","ppx-flags":["%s/copy-ppx.sh"]}\n' \
+    "$relative_temp" >"$relative_temp/rescript.json"
+  printf 'let value = 1\n' >"$relative_temp/src/A.res"
+  if ! (cd "$relative_temp" && TMPDIR=tmp "$port" build . >build.log 2>&1); then
+    cat "$relative_temp/build.log" >&2
+    echo "a PPX failed with a relative temporary directory" >&2
+    exit 1
+  fi
+  test -f "$relative_temp/src/A.js"
+  if [ -n "$(ls "$relative_temp/tmp")" ] || ls "$relative_temp" | grep -q '^ppx'; then
+    ls "$relative_temp" "$relative_temp/tmp" >&2
+    echo "a relative temporary directory kept PPX files" >&2
+    exit 1
+  fi
+
+  # Standalone bsc -verbose prints each command before running it, so the
+  # command precedes the PPX's own output.
+  verbose_ppx="$work/verbose-ppx"
+  mkdir -p "$verbose_ppx"
+  printf '#!/bin/sh\necho PPX-RAN >&2\ncp "$1" "$2"\n' >"$verbose_ppx/ppx.sh"
+  chmod +x "$verbose_ppx/ppx.sh"
+  printf 'let value = 1\n' >"$verbose_ppx/A.res"
+  (cd "$verbose_ppx" && "$port_directory/bsc.exe" -verbose -ppx "$verbose_ppx/ppx.sh" \
+    -bs-ast -o A A.res >out.log 2>err.log)
+  if [ "$(grep -n '^+ \|PPX-RAN' "$verbose_ppx/err.log" | head -1 | cut -d: -f2 | cut -c1-2)" != "+ " ]; then
+    cat "$verbose_ppx/err.log" >&2
+    echo "bsc -verbose printed a PPX command after the PPX's output" >&2
+    exit 1
+  fi
+fi
+
 "$port" build "$out_of_source"
 test -f "$out_of_source/lib/es6/src/Main.js"
 rm -f "$out_of_source/src/Main.res"
 "$port" build "$out_of_source"
 test ! -f "$out_of_source/lib/es6/src/Main.js"
 
-namespace_call_log="$namespace/bsc-calls.log"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=counting \
-  REWATCH_BSC_CALL_LOG="$(native_path "$namespace_call_log")" \
-"$port" build "$namespace"
+namespace_call_log="$namespace/compiler-calls.log"
+REWATCH_COMPILER_CALL_LOG="$(native_path "$namespace_call_log")" \
+  "$port" build "$namespace"
 test -f "$namespace/lib/ocaml/A-Widget.cmi"
 test -f "$namespace/src/B.js"
 : > "$namespace_call_log"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=counting \
-  REWATCH_BSC_CALL_LOG="$(native_path "$namespace_call_log")" \
+REWATCH_COMPILER_CALL_LOG="$(native_path "$namespace_call_log")" \
   "$port" build "$namespace"
 if grep -F 'Widget.mlmap' "$namespace_call_log" >/dev/null; then
   echo "unchanged build unexpectedly recompiled its namespace" >&2
   exit 1
 fi
 printf '\nlet changed = 1\n' >> "$namespace/src/B.res"
-env RESCRIPT_BSC_EXE="$test_proxy" \
-  REWATCH_REAL_BSC="$RESCRIPT_BSC_EXE" \
-  REWATCH_BSC_PROXY_MODE=counting \
-  REWATCH_BSC_CALL_LOG="$(native_path "$namespace_call_log")" \
+REWATCH_COMPILER_CALL_LOG="$(native_path "$namespace_call_log")" \
   "$port" build "$namespace"
 grep -F 'Widget.mlmap' "$namespace_call_log" >/dev/null
 

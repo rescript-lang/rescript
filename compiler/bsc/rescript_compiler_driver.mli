@@ -1,5 +1,10 @@
 type result = {exit_code: int; stdout: string; stderr: string}
 
+val build_identity : string
+(** A digest of the compiler implementation linked into this driver. The
+    standalone compiler and embedded callers therefore use the same identity
+    without fingerprinting a separately installed executable. *)
+
 val run_request :
   run_external:(string -> int * string * string) option ->
   cwd:string ->

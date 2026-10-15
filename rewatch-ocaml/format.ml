@@ -23,9 +23,6 @@ let write_file path contents =
        extended attributes that replacing the directory entry could lose. *)
       File_util.write_file path contents)
 
-let bsc () =
-  try Toolchain.bsc () with Toolchain.Error message -> raise (Error message)
-
 type discovered_package = {config: Config.t; files: string list}
 
 let package_sources (package : discovered_package) =
@@ -118,8 +115,11 @@ let files_in_scope ~verbosity =
 let formatting_error target stderr =
   Printf.sprintf "Error formatting %s: %s" target stderr
 
-let formatted ?poll ~bsc ~target path =
-  let result = Process.run ?poll ~cwd:(Sys.getcwd ()) bsc ["-format"; path] in
+let format_request path =
+  Compiler_process.{args = ["-format"; path]; cwd = Sys.getcwd ()}
+
+let formatted ?poll ~target path =
+  let result = Compiler_process.run ?poll (format_request path) in
   if not (Process.succeeded result) then
     raise (Error (formatting_error target result.stderr));
   result.stdout
@@ -128,8 +128,7 @@ let format_check_summary = function
   | 1 -> "The file listed above needs formatting"
   | count -> Printf.sprintf "The %d files listed above need formatting" count
 
-let format_files_with_bsc ?max_jobs ?poll ~bsc ~check files =
-  let cwd = Sys.getcwd () in
+let format_files ?poll ~check files =
   let incorrect = ref 0 in
   let works =
     files
@@ -138,8 +137,7 @@ let format_files_with_bsc ?max_jobs ?poll ~bsc ~check files =
           {key = Printf.sprintf "%08d" index; dependencies = []; value = path})
   in
   let next path = function
-    | None ->
-      Some (Process.task Process.{program = bsc; args = ["-format"; path]; cwd})
+    | None -> Some (Compiler_process.task (format_request path))
     | Some result ->
       if not (Process.succeeded result) then
         raise (Error (formatting_error path result.stderr));
@@ -151,7 +149,9 @@ let format_files_with_bsc ?max_jobs ?poll ~bsc ~check files =
         else write_file path result.stdout;
       None
   in
-  Process.run_dependency_graph ?max_jobs ?poll works ~next;
+  Process.run_dependency_graph
+    ~max_jobs:(Compiler_execution_mode.configured_count ())
+    ?poll works ~next;
   if !incorrect > 0 then (
     prerr_endline (format_check_summary !incorrect);
     raise (Error "Formatting check failed"))
@@ -197,19 +197,17 @@ let read_stdin_interruptibly ?poll () =
 let format_stdin ?poll extension =
   if extension <> ".res" && extension <> ".resi" then
     raise (Error "--stdin must be .res or .resi");
-  let bsc = bsc () in
   let path = Filename.temp_file "rescript-format-" extension in
   Fun.protect
     ~finally:(fun () -> try Sys.remove path with Sys_error _ -> ())
     (fun () ->
       let contents = read_stdin_interruptibly ?poll () in
       File_util.write_file path contents;
-      print_string (formatted ?poll ~bsc ~target:"stdin" path))
+      print_string (formatted ?poll ~target:"stdin" path))
 
 let run_files ?poll ~verbosity ~check paths =
-  let bsc = bsc () in
   let files = if paths = [] then files_in_scope ~verbosity else paths in
   List.iter
     (fun file -> Output.trace ~channel:stderr ~verbosity ("Formatting " ^ file))
     files;
-  format_files_with_bsc ?poll ~bsc ~check files
+  format_files ?poll ~check files

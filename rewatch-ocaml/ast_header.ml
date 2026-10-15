@@ -6,15 +6,27 @@ let read path =
   Fun.protect
     ~finally:(fun () -> close_in_noerr channel)
     (fun () ->
-      (try ignore (input_line channel) with End_of_file -> ());
-      let rec loop dependencies =
-        match input_line channel with
-        | line ->
-          let line = String.trim line in
-          if line = "" then loop dependencies
-          else if Filename.is_relative line then loop (line :: dependencies)
-          else {dependencies = List.rev dependencies; source = Some line}
-        | exception End_of_file ->
-          {dependencies = List.rev dependencies; source = None}
+      (* The first four bytes give the exact length of the newline-delimited
+         dependency block. The following source path can itself be relative;
+         scanning until an absolute path would read the marshalled AST. *)
+      let read_header () =
+        let dependency_length = input_binary_int channel in
+        (* Checked before allocating: a damaged length can claim gigabytes. *)
+        if
+          dependency_length < 0
+          || dependency_length > in_channel_length channel - pos_in channel
+        then raise End_of_file;
+        let dependencies =
+          really_input_string channel dependency_length
+          |> String.split_on_char '\n'
+          |> List.filter (fun name -> name <> "")
+        in
+        let source = try Some (input_line channel) with End_of_file -> None in
+        {dependencies; source}
       in
-      loop [])
+      (* A damaged AST, such as one cut short by a killed build, has no usable
+         header: it ends early or gives an impossible length. Like a missing
+         AST, it makes the module parse again. *)
+      try read_header ()
+      with End_of_file | Invalid_argument _ ->
+        {dependencies = []; source = None})

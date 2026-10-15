@@ -12,7 +12,7 @@ val succeeded : result -> bool
 val status_string : Unix.process_status -> string
 
 type completion_notifier
-type 'a running
+type running
 
 val with_lock : Mutex.t -> (unit -> 'a) -> 'a
 (** Runs the action holding the mutex and releases it on exceptions too. *)
@@ -30,18 +30,13 @@ val launch :
   ?stderr_chunk:(bytes -> int -> unit) ->
   ?stdin:stdin_policy ->
   notifier:completion_notifier ->
-  'a ->
   job ->
-  'a running
+  running
 
 val wait_for_running :
-  poll:(unit -> unit) ->
-  completion_notifier ->
-  'a running list ->
-  'a running * result
+  poll:(unit -> unit) -> completion_notifier -> running list -> running * result
 
-val payload : 'a running -> 'a
-val signal_running : 'a running list -> unit
-val release_after_completion : 'a running -> unit
-val terminate_running : 'a running list -> unit
-val release_running : 'a running -> unit
+val signal_running : running list -> unit
+val release_after_completion : running -> unit
+val terminate_running : running list -> unit
+val release_running : running -> unit

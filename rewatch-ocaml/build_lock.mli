@@ -13,6 +13,7 @@ val with_build :
     ([attempts] times 50 ms). *)
 
 val with_watch : string -> (watch -> 'a) -> 'a
+
 val is_owned : watch -> bool
 
 module For_test : sig

@@ -1,10 +1,21 @@
 val retain_critical_external_warnings : string -> string
-val parse_job :
-  bsc:string -> build_dir:string -> config:Config.t -> string -> Process.job
+val build_identity : string
+
+type request = {args: string list; cwd: string}
+(** A request for the embedded compiler: [bsc]'s arguments, ending with the
+    input file, and the directory it runs in. *)
+
+val parse_request : build_dir:string -> config:Config.t -> string -> request
 val ast_dependencies : build_dir:string -> string -> string list
+val run : ?poll:(unit -> unit) -> request -> Process.result
+val run_requests :
+  ?poll:(unit -> unit) ->
+  ?on_complete:(int -> unit) ->
+  request list ->
+  Process.result list
+val task : request -> Process.task
 
 val namespace_task :
-  bsc:string ->
   runtime:string ->
   build_dir:string ->
   ocaml_dir:string ->
@@ -15,15 +26,14 @@ val namespace_task :
   Source.module_ list ->
   Compiler_scheduler.namespace_task option
 
-val compile_job :
-  bsc:string ->
+val compile_request :
   build_dir:string ->
   config:Config.t ->
   common_args:string list ->
   Source.module_ ->
   source_kind:Source.source_kind ->
   string ->
-  Process.job
+  request
 
 val post_build_tasks :
   Config.t -> string -> Compiler_scheduler.post_build_task list

@@ -38,11 +38,7 @@ type child_wait = {
   outcome: (result, exn) Stdlib.result option Atomic.t;
 }
 
-type 'a running = {
-  payload: 'a;
-  process: Platform.process;
-  child_wait: child_wait;
-}
+type running = {process: Platform.process; child_wait: child_wait}
 
 type launch_ownership = {
   mutable stdin: Unix.file_descr option;
@@ -252,8 +248,8 @@ let fail_launch ownership launch_error =
   in
   raise error
 
-let launch ?env ?stdout_chunk ?stderr_chunk ?(stdin = Null_stdin) ~notifier
-    payload job =
+let launch ?env ?stdout_chunk ?stderr_chunk ?(stdin = Null_stdin) ~notifier job
+    =
   let ownership = empty_launch_ownership () in
   try
     let pipes = Platform_common.create_capture_pipes () in
@@ -291,13 +287,13 @@ let launch ?env ?stdout_chunk ?stderr_chunk ?(stdin = Null_stdin) ~notifier
     ownership.stderr_write <- None;
     close_noerr stderr_write;
     let child_wait = start_child_wait pid notifier stdout stderr in
-    {payload; process; child_wait}
+    {process; child_wait}
   with exn -> fail_launch ownership exn
 
 let wait_for_running ~poll notifier active =
   let rec find_completed = function
     | [] -> None
-    | (child : _ running) :: rest -> (
+    | (child : running) :: rest -> (
       match Atomic.get child.child_wait.outcome with
       | Some outcome -> Some (child, outcome)
       | None -> find_completed rest)
@@ -312,12 +308,12 @@ let wait_for_running ~poll notifier active =
   in
   notifier_generation notifier |> wait
 
-let signal_running (children : _ running list) =
+let signal_running (children : running list) =
   if children <> [] then (
-    let completion_ready (child : _ running) =
+    let completion_ready (child : running) =
       Option.is_some (Atomic.get child.child_wait.outcome)
     in
-    let root_identity_lost (child : _ running) =
+    let root_identity_lost (child : running) =
       Option.is_some (Atomic.get child.child_wait.direct_outcome)
     in
     let signal_all signal =
@@ -375,16 +371,14 @@ let signal_running (children : _ running list) =
            ("Could not terminate a subprocess tree: "
            ^ String.concat "; " (List.map snd errors))))
 
-let payload (child : _ running) = child.payload
-
-let release_running (child : _ running) =
+let release_running (child : running) =
   Thread.join child.child_wait.thread;
   Platform.release_process child.process
 
 let release_after_completion child =
   ignore (Thread.create release_running child)
 
-let terminate_running (children : _ running list) =
+let terminate_running (children : running list) =
   if children <> [] then (
     try
       signal_running children;

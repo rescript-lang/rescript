@@ -45,4 +45,6 @@
  (foreign_stubs
   (language c)
   (names test_env_stubs))
+ (flags
+  (:standard -open Rewatch_ocaml_lib))
  (libraries rewatch_ocaml_lib ounit2))
