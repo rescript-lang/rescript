@@ -11,7 +11,9 @@ let source_error path message =
   error (Printf.sprintf "Could not read source file %s: %s" path message)
 
 (* An absolute path with "." and ".." resolved textually, without following
-   symlinks, like Rust's [to_lexical_absolute]. *)
+   symlinks, like Rust's [to_lexical_absolute]. Rust rebuilds the path from
+   its components, so on Windows every separator becomes a backslash, also
+   after the drive of a path such as [D:/project]. *)
 let lexical_absolute path =
   let path =
     if Filename.is_relative path then Filename.concat (Sys.getcwd ()) path
@@ -26,7 +28,9 @@ let lexical_absolute path =
       Filename.dirname (normalize directory)
     else Filename.concat (normalize directory) base
   in
-  normalize path
+  let path = normalize path in
+  if Sys.win32 then String.map (fun c -> if c = '/' then '\\' else c) path
+  else path
 
 let run ~verbosity path =
   let source =
