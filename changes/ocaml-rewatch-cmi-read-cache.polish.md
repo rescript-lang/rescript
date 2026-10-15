@@ -1,0 +1,1 @@
+- OCaml rewatch: reuse the interfaces a worker has read for later modules while their files are unchanged, which makes builds of projects using the standard library faster. https://github.com/rescript-lang/rescript/pull/8874
