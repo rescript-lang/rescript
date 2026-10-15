@@ -169,7 +169,7 @@ let expression_desc : 'a. ('a, expression_desc) fn =
     let st =
       list
         (fun _self st -> function
-          | Object_property (_, e) | Object_spread e ->
+          | Object_property (_, e) | Object_spread e | Record_spread e ->
             _self.expression _self st e)
         _self st _x0
     in

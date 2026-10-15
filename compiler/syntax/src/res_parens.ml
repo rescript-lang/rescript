@@ -349,47 +349,6 @@ let jsx_prop_expr expr =
         Nothing
       | _ -> Parenthesized))
 
-let jsx_child_expr expr =
-  match expr.Parsetree.pexp_desc with
-  | Parsetree.Pexp_let _ | Pexp_sequence _ | Pexp_letexception _
-  | Pexp_letmodule _ | Pexp_open _ ->
-    Nothing
-  | Pexp_braces {expr = inner} when Parsetree_viewer.is_block_expr inner ->
-    Nothing
-  | _ -> (
-    let opt_braces, _ = Parsetree_viewer.process_braces expr in
-    match opt_braces with
-    | Some braces_loc -> Braced braces_loc
-    | _ -> (
-      match expr with
-      | {
-       Parsetree.pexp_desc =
-         Pexp_constant (Pconst_integer (x, _) | Pconst_float (x, _));
-       pexp_attributes = [];
-      }
-        when starts_with_minus x ->
-        Parenthesized
-      | _ when Parsetree_viewer.expr_is_await expr -> Parenthesized
-      | {
-       Parsetree.pexp_desc =
-         ( Pexp_ident _ | Pexp_constant _ | Pexp_regexp _ | Pexp_field _
-         | Pexp_construct _ | Pexp_variant _ | Pexp_array _ | Pexp_pack _
-         | Pexp_record _ | Pexp_object_literal _ | Pexp_extension _
-         | Pexp_letmodule _ | Pexp_letexception _ | Pexp_open _
-         | Pexp_sequence _ | Pexp_let _ | Pexp_jsx_element _ );
-       pexp_attributes = [];
-      } ->
-        Nothing
-      | {
-       Parsetree.pexp_desc =
-         Pexp_constraint
-           ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
-       pexp_attributes = [];
-      } ->
-        Nothing
-      | {pexp_desc = Pexp_jsx_element _} -> Nothing
-      | _ -> Parenthesized))
-
 let binary_expr expr =
   let opt_braces, _ = Parsetree_viewer.process_braces expr in
   match opt_braces with
@@ -435,6 +394,24 @@ let mod_constraint mod_expr =
   match mod_expr.Parsetree.pmod_desc with
   | Parsetree.Pmod_constraint _ ->
     not (Parsetree_viewer.mod_expr_has_attributes mod_expr)
+  | _ -> false
+
+(* The operand of [await] that needs parens: [await (await M)] (the parser
+   reads one [await] per module), [await (@a M)] (the attributes after
+   [await] belong to the await) and [await (M: S)] *)
+let mod_await_operand operand =
+  match operand.Parsetree.pmod_desc with
+  | Pmod_await _ | Pmod_constraint _ -> true
+  | _ -> Parsetree_viewer.mod_expr_has_attributes operand
+
+(* A packed module that the shorthand [module(<mod>: S)] cannot print. After
+   [module(], [await] and attributes, a parenthesised module followed by [:]
+   is read as a functor's parameters, as in [module((M: S1): S2)] or
+   [module(await (await M): S)]. *)
+let mod_pack_constraint mod_expr =
+  match mod_expr.Parsetree.pmod_desc with
+  | Pmod_constraint _ -> true
+  | Pmod_await operand -> mod_await_operand operand
   | _ -> false
 
 (* An applied module expression that needs parens: [(M: S)(X)],

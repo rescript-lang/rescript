@@ -99,6 +99,7 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
+  | Jsx_unboxed_props of type_expr
   | Tagged_template_non_tag of type_expr
   | Record_rest of Typecore_record_rest.error
 
@@ -292,7 +293,12 @@ let type_constant = function
 let constant : Parsetree.constant -> (Asttypes.constant, error) result =
   function
   | Pconst_integer (i, None) -> (
-    try Ok (Const_int (Misc.Int_literal_converter.int i))
+    try
+      (* After the existing host-dependent literal parsing, pattern grouping
+         and intervals must see Lambda's int32 value, so -0xFFFF_FFFF and 1
+         are the same key. This does not change overflow diagnostics. *)
+      let value = Misc.Int_literal_converter.int i in
+      Ok (Const_int (Int32.to_int (Int32.of_int value)))
     with Failure _ -> Error (Literal_overflow "int"))
   | Pconst_integer (i, Some 'n') ->
     let sign, i = Bigint_utils.parse_bigint i in
@@ -2393,6 +2399,19 @@ let extract_function_name funct =
   | Texp_ident (path, _, _) -> Some (Longident.parse (Path.name path))
   | _ -> None
 
+(* The props of a JSX element, the second argument of the call the JSX PPX
+   produces, must be an object. An @unboxed record is the value of its field. *)
+let check_jsx_props ~loc env
+    (args : (Asttypes.arg_label * expression option) list) =
+  match args with
+  | _ :: (Nolabel, Some props) :: _ -> (
+    match Ctype.extract_concrete_typedecl env props.exp_type with
+    | _, _, {type_kind = Type_record (_, Record_unboxed _)} ->
+      raise (Error (loc, env, Jsx_unboxed_props props.exp_type))
+    | _ -> ()
+    | exception Not_found -> ())
+  | _ -> ()
+
 let should_unify_expected_result_before_typing_lowered_apply funct sargs =
   match (extract_function_name funct, sargs) with
   | ( Some
@@ -2648,9 +2667,9 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     in
     (if should_unify_expected_result_before_typing_lowered_apply funct sargs
      then
-       (* Lowered syntax like dict literals and async wrappers becomes a regular
-          application, so thread the expected result type into the application
-          before typing its arguments. *)
+       (* The async wrapper is lowered to a regular application, so thread the
+          expected result type into the application before typing its
+          arguments. *)
        let _, ty_res =
          filter_arrow_n ~env funct.exp_type
            (List.map (fun _ -> Asttypes.Nolabel) sargs)
@@ -2671,6 +2690,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       | None -> type_application ~context total_app env funct sargs
     in
     end_def ();
+    if transformed_jsx then check_jsx_props ~loc env args;
     unify_var env (newvar ()) funct.exp_type;
 
     let mk_apply funct args =
@@ -5495,6 +5515,14 @@ let report_error env loc ppf error =
     fprintf ppf
       "Cannot compile JSX expression because JSX support is not enabled. Add \
        \"jsx\" settings to rescript.json to enable JSX support."
+  | Jsx_unboxed_props typ ->
+    fprintf ppf
+      "@[<v>The props of this JSX element have type %a, which is an \
+       @{<info>@unboxed@} record.@,\
+       @,\
+       JSX props must be an object, but an @unboxed record is represented by \
+       the value of its only field. Remove @unboxed from the props type.@]"
+      type_expr typ
   | Tagged_template_non_tag typ ->
     fprintf ppf
       "@[<v>This value is used with tagged template (backtick) syntax, but it \

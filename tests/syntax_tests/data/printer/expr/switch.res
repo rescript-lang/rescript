@@ -40,11 +40,11 @@ switch count {
 }
 
 switch route {
-| A => <div> // div tag stays after >
+| A => <div> // comment after the opening tag
     <div> {React.string("First A div")} </div>
     <div> {React.string("Second A div")} </div>
   </div>
-| B => <> // fragment tag stays after <>
+| B => <> // comment after the fragment opener
     <div> {React.string("First B div")} </div>
     <div> {React.string("Second B div")} </div>
   </>

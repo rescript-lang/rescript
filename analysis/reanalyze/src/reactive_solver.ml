@@ -13,7 +13,6 @@
     - incorrect_dead_decls = live decls with @dead annotation (reactive join)
     - dead_module_issues = dead_modules joined with modules_with_reported (reactive join)
     - is_pos_live uses reactive live collection
-    - should_report callback replaces report field mutation (no mutation needed)
     - is_inside_reported_value is per-file only, so files are independent
     - has_ref_below uses on-demand search: O(total_refs) per dead decl (cross-file refs count as "below")
     

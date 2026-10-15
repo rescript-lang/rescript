@@ -12,9 +12,13 @@ use sysinfo::{PidExt, ProcessExt, System, SystemExt};
 use crate::queue::FifoQueue;
 use crate::queue::*;
 
-/* This locking mechanism is meant to never be deleted. Instead, it stores the PID of the process
- * that's running, when trying to aquire a lock, it checks wether that process is still running. If
- * not, it rewrites the lockfile to have its own PID instead. */
+/* A lock is a file in `lib/` that stores the PID of the process holding it. When the lock file
+ * already exists, acquiring the lock checks whether that process is still running. If not, the lock
+ * is stale: the file is removed and the lock is acquired again.
+ *
+ * `build.lock` is deleted with `drop_lock` when the build (or clean) it protects is done, and other
+ * builds wait for that. `watch.lock` is held while the watcher runs and is not deleted when it
+ * exits; deleting it asks the watcher to quit. */
 
 pub enum AwaitLockError {
     Watcher(notify::Error),

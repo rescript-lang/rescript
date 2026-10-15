@@ -211,7 +211,8 @@ let rec classify_expression : Typedtree.expression -> sd =
     Static
   | Texp_apply {funct = {exp_desc = Texp_ident (_, _, vd)}} when is_ref vd ->
     Static
-  (* A dict is built by calls, see [Translcore] *)
+  (* A dict literal is built by the [Pmakedict] and [Pdict_spread] primitives,
+     see [Translcore] *)
   | Texp_apply _ | Texp_dict _ | Texp_match _ | Texp_ifthenelse _
   | Texp_object_get _ | Texp_object_set _ | Texp_field _ | Texp_assert _
   | Texp_try _ | Texp_tagged_template _ | Texp_template _ ->

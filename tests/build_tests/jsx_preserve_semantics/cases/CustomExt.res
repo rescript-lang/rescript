@@ -50,6 +50,6 @@ let fragmentSingle =
   <>
     <span />
   </>
-let emptyFragment = <> </>
+let emptyFragment = <></>
 let component = <Comp title="t" />
 let keyed = <div key="k" />

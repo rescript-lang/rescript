@@ -1,0 +1,1 @@
+- Fix spurious failures when updating the super_errors snapshots, where the long-path runs could compare against snapshots still being rewritten. https://github.com/rescript-lang/rescript/pull/8840

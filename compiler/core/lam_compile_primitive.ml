@@ -590,7 +590,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
              when List.for_all
                     (function
                       | J.Object_property _ -> true
-                      | Object_spread _ -> false)
+                      | Object_spread _ | Record_spread _ -> false)
                     entries ->
              entries
            | _ -> [J.Object_spread e])
@@ -663,7 +663,6 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
         ~callee:(Lam_compile_external_call.jsx_callee jsx_ffi)
         ~tag ~spread ~props ~children ~key ~multi:jsx_multi
         ~fragment:jsx_fragment)
-  (* FIXME, this can be removed later *)
   | Pis_poly_var_block -> E.is_type_object (Ext_list.singleton_exn args)
   | Pduprecord -> (
     match args with

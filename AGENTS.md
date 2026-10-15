@@ -67,12 +67,9 @@ relevant guidance from each.
 
 ### Commit Standards
 
-- Use DCO sign-off: `Signed-Off-By: Your Name <email>`
-- Put the sign-off in the final paragraph of the message, next to any other
-  trailers such as `Co-Authored-By:`, with no blank line between them. Git only
-  parses the last paragraph as trailers, so a sign-off separated by a blank
-  line doesn't count. Check with
-  `git log -1 --format=%B | git interpret-trailers --parse`.
+- Sign off every commit with `Signed-off-by: Your Name <email>` in the final
+  trailer paragraph. The DCO app checks this on every PR, so reviewers don't
+  need to.
 - Include appropriate tests with all changes
 - Build must pass before committing
 
@@ -144,7 +141,6 @@ dead-code removal candidates; stale entries make both jobs harder.
 Run commands from the repository root:
 
 ```bash
-make watch        # Watch compiler sources
 make artifacts    # Build artifacts and update the artifact list
 make clean        # Clean build outputs
 npm run check     # Lint with Biome

@@ -190,6 +190,9 @@ jobs:
       - name: Version Check
         run: yarn constraints
 
+      - name: Type check JS
+        run: yarn typecheck
+
       - name: Test release plan
         run: yarn test-release-plan
 

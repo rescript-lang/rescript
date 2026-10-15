@@ -39,3 +39,12 @@ let elementWithConditionalChildren = ReactDOM.jsx(
     }),
   },
 )
+let commentOnly = ReactDOM.jsx("div", {/* no child */})
+let commentsBetweenElements = ReactDOM.jsx(
+  "div",
+  {
+    /* before */ children: ?ReactDOM.someElement(ReactDOM.jsx("span", {})),
+
+    /* after */
+  },
+)

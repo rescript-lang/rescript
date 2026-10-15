@@ -27,6 +27,9 @@ module N = {
 
   module N2 = await List
   let each = N2.forEach
+
+  module N3 = await (List: ListType)
+  let each = N3.forEach
 }
 
 module M0 = await List
@@ -34,6 +37,9 @@ let each = M0.forEach
 
 module M1 = await List
 let each = M1.forEach
+
+module MConstrained = await (List: ListType)
+let each = MConstrained.forEach
 
 module M2 = N.N1.O
 let each2 = M2.forEach

@@ -22,3 +22,8 @@ let nestedFragments = React.jsxs(
     ]),
   },
 )
+let commentOnly = React.jsx(React.jsxFragment, {}) // no child
+let commentsBetweenElements = React.jsxs(
+  React.jsxFragment /* between */,
+  {children: React.array([ReactDOM.jsx("span", {}), ReactDOM.jsx("span", {})])},
+)

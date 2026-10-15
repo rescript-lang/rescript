@@ -100,7 +100,8 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
       ()
   in
 
-  (* File deps map: (from_file, File_set of to_files) with File_set.union merge *)
+  (* File deps map: (from_file, String_set of to_files) with String_set.union
+     merge *)
   let file_deps_map =
     Reactive.flat_map ~name:"file_deps_map" source
       ~f:(fun _path file_data_opt ->

@@ -127,7 +127,7 @@ type eliminated = Identity | Ignore
    the spread props (if [jsx_spread]), one value per [jsx_props] entry, the
    children ([jsx_children] of them) and the key (if [jsx_key]). *)
 type jsx_element = {
-  jsx_name: string; (* name of the external, for the fallback call *)
+  jsx_name: string; (* name of the external, only printed by [Printlambda] *)
   jsx_ffi: External_ffi_types.external_decl;
   jsx_multi: bool; (* [jsxs]: each child is a separate argument *)
   jsx_fragment: bool; (* the tag is the JSX module's [jsxFragment] *)

@@ -28,6 +28,54 @@ let record_pat0 attrs =
 let map_pat0 pat =
   Ast_mapper_from0.default_mapper.pat Ast_mapper_from0.default_mapper pat
 
+(* The [ocaml.ppx.context] attribute a PPX receives. *)
+let ppx_context_fields0 ast0 =
+  match ast0 with
+  | Ml_binary.Impl
+      ({
+         Parsetree0.pstr_desc =
+           Pstr_attribute
+             ( {txt = "ocaml.ppx.context"},
+               PStr
+                 [
+                   {
+                     pstr_desc =
+                       Pstr_eval ({pexp_desc = Pexp_record (fields, None)}, _);
+                   };
+                 ] );
+       }
+      :: _) ->
+    fields
+  | _ -> assert_failure "the structure starts with the PPX context"
+
+let test_ppx_context_on_the_wire _ =
+  let structure =
+    Ast_mapper.add_ppx_context_str ~tool_name:"rescript"
+      [
+        Ast_helper.Str.eval
+          (Ast_helper.Exp.constant (Pconst_integer ("1", None)));
+      ]
+  in
+  let fields =
+    ppx_context_fields0 (Ml_binary.to_ast0 Ml_binary.Ml structure)
+    |> List.map (fun (({txt} : Longident.t Location.loc), value) ->
+        (Longident.last txt, value))
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    [
+      "tool_name";
+      "include_dirs";
+      "load_path";
+      "open_modules";
+      "debug";
+      "cookies";
+    ]
+    (List.map fst fields);
+  (match List.assoc "cookies" fields with
+  | {Parsetree0.pexp_desc = Pexp_construct ({txt = Lident "[]"}, None)} -> ()
+  | _ -> assert_failure "the PPX gets no cookies");
+  OUnit.assert_equal 1 (List.length (Ast_mapper.drop_ppx_context_str structure))
+
 let test_removed_open_pattern_is_rejected_from_ast0 _ =
   let pat =
     Ast_helper0.Pat.open_ ~loc
@@ -1483,19 +1531,24 @@ let test_raw_extension_payloads_roundtrip_through_ast0 _ =
    as labels, marked with [res.dictPattern] in front of its attributes *)
 let test_dict_pattern_through_ast0 _ =
   let key_loc = source_loc 5 8 in
-  let entry key pattern optional =
+  let entry ~key_loc key pattern optional =
     {
       Parsetree.pdp_key = located_string ~loc:key_loc key;
       pdp_pattern = pattern;
       pdp_optional = optional;
     }
   in
+  let x_loc = source_loc 10 11 in
   let dict =
-    Ast_helper.Pat.dict ~loc
+    Ast_helper.Pat.dict ~loc:(source_loc 0 30)
       ~attrs:[attr "user" (Parsetree.PStr [])]
       [
-        entry "a" (Ast_helper.Pat.var ~loc (located_string "x")) false;
-        entry "b-c" (Ast_helper.Pat.any ~loc ()) true;
+        entry ~key_loc "a"
+          (Ast_helper.Pat.var ~loc:x_loc (located_string ~loc:x_loc "x"))
+          false;
+        entry ~key_loc:(source_loc 13 18) "b-c"
+          (Ast_helper.Pat.any ~loc:(source_loc 21 22) ())
+          true;
       ]
   in
   let wire = map_pat_to0 dict in
@@ -1511,17 +1564,10 @@ let test_dict_pattern_through_ast0 _ =
   OUnit.assert_equal ~printer:(String.concat ", ")
     ["res.dictPattern"; "user"]
     (attr_names wire.ppat_attributes);
-  let strip_locs =
-    {Ast_mapper.default_mapper with location = (fun _ _ -> Location.none)}
-  in
-  OUnit.assert_bool "dict pattern roundtrips through ast0"
-    (strip_locs.pat strip_locs (map_pat0 wire) = strip_locs.pat strip_locs dict)
+  (* Locations included *)
+  OUnit.assert_bool "dict pattern roundtrips through ast0" (map_pat0 wire = dict)
 
 let test_dict_literal_through_ast0 _ =
-  let strip_locs =
-    {Ast_mapper.default_mapper with location = (fun _ _ -> Location.none)}
-  in
-  let strip e = strip_locs.expr strip_locs e in
   List.iter
     (fun (source, wire_function) ->
       let parsed =
@@ -1543,14 +1589,13 @@ let test_dict_literal_through_ast0 _ =
               _ ) ->
           OUnit.assert_equal ~msg:source wire_function name;
           OUnit.assert_equal ~msg:source ~printer:(String.concat ", ")
-            (if name = "spread" then ["res.dictSpread"] else [])
+            (if name = "spread" then ["res.dictSpread"] else ["res.dict"])
             (attr_names pexp_attributes)
         | _ -> assert_failure ("Expected a Primitive_dict call: " ^ source));
         match map_expr0 wire with
         | {pexp_desc = Pexp_dict _} as back ->
-          OUnit.assert_bool
-            (source ^ " roundtrips through ast0")
-            (strip back = strip e)
+          (* Locations included: the parsed literal has real ones *)
+          OUnit.assert_bool (source ^ " roundtrips through ast0") (back = e)
         | _ -> assert_failure ("Expected Pexp_dict back: " ^ source))
       | _ -> assert_failure ("Expected a let binding: " ^ source))
     [
@@ -1559,8 +1604,11 @@ let test_dict_literal_through_ast0 _ =
       ({|dict{"a\"b": 1}|}, "make");
       ("dict{...a}", "spread");
       ({|dict{"a": 1, ...b, "c": 3, ...d}|}, "spread");
+      ({|dict{"a": 1, ...dict{"b": 2}}|}, "spread");
+      ({|dict{...dict{"b": 2, ...dict{}}, "c": 3}|}, "spread");
     ];
-  (* A call a PPX writes, with a semantic string key *)
+  (* A call without the marker, as written in the source or by a PPX, stays a
+     call *)
   let make =
     Ast_helper0.Exp.apply ~loc
       (Ast_helper0.Exp.ident ~loc
@@ -1581,8 +1629,15 @@ let test_dict_literal_through_ast0 _ =
       ]
   in
   match (map_expr0 make).pexp_desc with
-  | Pexp_dict [Pdict_entry ({txt = "k"}, _)] -> ()
-  | _ -> assert_failure "Expected a dict literal from Primitive_dict.make"
+  | Pexp_apply
+      {
+        funct =
+          {
+            pexp_desc = Pexp_ident {txt = Ldot (Lident "Primitive_dict", "make")};
+          };
+      } ->
+    ()
+  | _ -> assert_failure "Expected a call of Primitive_dict.make"
 
 let test_removed_regexp_extension _ =
   List.iter
@@ -2119,4 +2174,5 @@ let suites =
          >:: test_field_runtime_name_keeps_ppx_order_on_the_wire;
          "constructor_runtime_tag_reaches_ast0_as_an_attribute"
          >:: test_constructor_runtime_tag_reaches_ast0_as_an_attribute;
+         "ppx_context_on_the_wire" >:: test_ppx_context_on_the_wire;
        ]

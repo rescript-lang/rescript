@@ -1,0 +1,1 @@
+- Remove unused record copies (`{...r, a: 1}`) again, which were kept since dict spreads compile to object spreads. https://github.com/rescript-lang/rescript/pull/8843

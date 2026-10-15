@@ -1,0 +1,1 @@
+- Add the `allowed-dependents`, `namespace-entry` and `features` keys, a source's `feature` and the object form of dependencies to the `rescript.json` schema, so editors no longer flag them. https://github.com/rescript-lang/rescript/pull/8835

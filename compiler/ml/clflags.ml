@@ -2,7 +2,7 @@ let output_name = ref (None : string option) (* -o *)
 
 and include_dirs = ref ([] : string list) (* -I *)
 
-and debug = ref false (* -g *)
+and debug = ref false (* set in Bs_conditional_initial *)
 
 and nopervasives = ref false (* -nopervasives *)
 
@@ -19,7 +19,7 @@ and open_modules = ref [] (* -open *)
 
 and real_paths = ref true (* -short-paths *)
 
-and transparent_modules = ref false (* -trans-mod *)
+and transparent_modules = ref false (* -no-alias-deps *)
 let dump_source = ref false (* -dsource *)
 let dump_parsetree = ref false (* -dparsetree *)
 

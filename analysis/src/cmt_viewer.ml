@@ -1,23 +1,11 @@
-let dump ~(filter_for_position : (int * int) option) ~full =
+let dump ~full =
   let open Shared_types in
   let open Shared_types.Stamps in
   let buffer = Buffer.create 4096 in
   let printf fmt = Printf.bprintf buffer fmt in
-  let apply_filter =
-    match filter_for_position with
-    | None -> fun _ -> true
-    | Some cursor -> Loc.has_pos ~pos:cursor
-  in
-  (match filter_for_position with
-  | None -> ()
-  | Some (line, col) -> printf "Filtering by cursor %d,%d\n" line col);
-
   printf "file module_name: %s\n\n" full.file.module_name;
 
-  let stamps =
-    full.file.stamps |> get_entries
-    |> List.filter (fun (_, stamp) -> apply_filter (loc_of_kind stamp))
-  in
+  let stamps = full.file.stamps |> get_entries in
 
   let total_stamps = List.length stamps in
   printf "Found %d stamps:\n%s" total_stamps
@@ -76,8 +64,7 @@ let dump ~(filter_for_position : (int * int) option) ~full =
   (* Dump all loc_items (typed nodes) *)
   let loc_items =
     match full.extra with
-    | {loc_items} ->
-      loc_items |> List.filter (fun loc_item -> apply_filter loc_item.loc)
+    | {loc_items} -> loc_items
   in
 
   printf "\nFound %d loc_items (typed nodes):\n\n" (List.length loc_items);

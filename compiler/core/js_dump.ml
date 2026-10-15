@@ -610,13 +610,16 @@ and expression_desc cxt ~(level : int) f x : cxt =
       let props =
         Ext_list.map props (fun (name, value) -> (Js_op.Lit name, value))
       in
+      let props =
+        match (spread, props @ children_prop) with
+        (* the PPX passes a lone spread itself, not a copy of it *)
+        | Some spread, [] -> spread
+        | spread, props -> E.obj ?dup:spread props
+      in
       (* An explicit undefined key is still passed, as by the call *)
       let key = Option.to_list key in
       expression_desc cxt ~level f
-        (Call
-           ( callee,
-             tag :: E.obj ?dup:spread (props @ children_prop) :: key,
-             Js_call_info.na_full_call ))
+        (Call (callee, tag :: props :: key, Js_call_info.na_full_call))
   | Call (e, el, _info) ->
     P.cond_paren_group f (level > 15) (fun _ ->
         P.group f 0 (fun _ ->
@@ -1002,7 +1005,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
     *)
     P.cond_paren_group f (level > 1) (fun _ ->
         let entry cxt f = function
-          | J.Object_spread e ->
+          | J.Object_spread e | Record_spread e ->
             expression ~level:1 cxt f {e with expression_desc = J.Spread e}
           | Object_property (name, value) ->
             property_name_and_value cxt f (name, value)
@@ -1011,7 +1014,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
         if
           List.for_all
             (function
-              | J.Object_spread _ -> true
+              | J.Object_spread _ | Record_spread _ -> true
               | Object_property _ -> false)
             entries
         then P.brace f (fun _ -> iter_lst cxt f entries entry comma_sp)

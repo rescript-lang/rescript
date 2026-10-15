@@ -1,0 +1,1 @@
+- Fix the formatter printing a typed first-class module of a nested or attributed `await` in a form that does not parse. https://github.com/rescript-lang/rescript/pull/8845

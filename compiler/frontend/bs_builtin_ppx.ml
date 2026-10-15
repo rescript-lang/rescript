@@ -789,7 +789,22 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
               };
         }
         :: structure_mapper ~await_context self rest
-      | _ ->
+      | Some (_, imported, Some {pmty_desc = Pmty_ident module_type_lid}) ->
+        (* module M = await (List: ListType) *)
+        let item = self.structure_item self item in
+        {
+          item with
+          pstr_desc =
+            Pstr_module
+              {
+                mb with
+                pmb_expr =
+                  Ast_await.create_await_module_expression ~module_type_lid
+                    mb.pmb_expr imported;
+              };
+        }
+        :: structure_mapper ~await_context self rest
+      | Some (_, _, Some _) | None ->
         self.structure_item self item
         :: structure_mapper ~await_context self rest)
     | Pstr_value (_, vbs) ->

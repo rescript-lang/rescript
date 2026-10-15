@@ -31,8 +31,9 @@ val assume_no_mli : mli_status ref
 val dont_record_crc_unit : string option ref
 val bs_gentype : bool ref
 
+(* Keep JSX in the output ([-bs-jsx-preserve]); read by translcore, and by
+   js_dump through [Js_config] *)
 val jsx_preserve : bool ref
 
-(* Keep JSX in the output ([-bs-jsx-preserve]); read by translcore *)
 val no_assert_false : bool ref
 val dump_location : bool ref
