@@ -10,6 +10,28 @@ let runtime_path resolution package_root =
 let source_error path message =
   error (Printf.sprintf "Could not read source file %s: %s" path message)
 
+(* An absolute path with "." and ".." resolved textually, without following
+   symlinks, like Rust's [to_lexical_absolute]. Rust rebuilds the path from
+   its components, so on Windows every separator becomes a backslash, also
+   after the drive of a path such as [D:/project]. *)
+let lexical_absolute path =
+  let path =
+    if Filename.is_relative path then Filename.concat (Sys.getcwd ()) path
+    else path
+  in
+  let rec normalize path =
+    let directory = Filename.dirname path in
+    let base = Filename.basename path in
+    if directory = path then path
+    else if base = Filename.current_dir_name then normalize directory
+    else if base = Filename.parent_dir_name then
+      Filename.dirname (normalize directory)
+    else Filename.concat (normalize directory) base
+  in
+  let path = normalize path in
+  if Sys.win32 then String.map (fun c -> if c = '/' then '\\' else c) path
+  else path
+
 let run ~verbosity path =
   let source =
     try
@@ -79,8 +101,17 @@ let run ~verbosity path =
                dependency.name config.name))
   in
   let runtime = runtime_path resolution config.root in
+  (* As in Rust rewatch, editors get the project root spelled the way they
+     named the source, for example through a symlink or a Windows short path:
+     they compile the incremental copy of the source under that root. *)
+  let project_root =
+    Project_context.nearest_config_path
+      (Filename.dirname (lexical_absolute path))
+    |> Option.fold ~none:config.root ~some:Filename.dirname
+  in
   let compiler_args =
-    Compiler_args.compiler_arguments ~config ~runtime ~dependency_dirs
+    Compiler_args.compiler_arguments ~project_root ~config ~runtime
+      ~dependency_dirs
       ~module_name:(Source.module_name source)
       ~source_kind ~has_interface ~watch:false ~gentype_dependency_args:[]
       ~path:relative

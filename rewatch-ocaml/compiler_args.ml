@@ -102,14 +102,14 @@ let parser_arguments ~(config : Config.t) ~contents ~path =
         path;
     ]
 
-let compiler_common_arguments ~(config : Config.t) ~runtime ~dependency_dirs
-    ~watch ~gentype_dependency_args =
+let compiler_common_arguments ~project_root ~(config : Config.t) ~runtime
+    ~dependency_dirs ~watch ~gentype_dependency_args =
   ["-I"; Filename.concat Filename.parent_dir_name "ocaml"]
   @ ["-runtime-path"; runtime]
   @ List.concat_map (fun directory -> ["-I"; directory]) dependency_dirs
   @ compiler_flags ~watch config
   @ gentype_dependency_args
-  @ ["-bs-package-name"; config.name; "-bs-project-root"; config.root]
+  @ ["-bs-package-name"; config.name; "-bs-project-root"; project_root]
 
 let compiler_arguments_with_common ~(config : Config.t) ~common_args
     ~module_name ~source_kind ~has_interface ~path =
@@ -130,11 +130,11 @@ let compiler_arguments_with_common ~(config : Config.t) ~common_args
   @ interface_args @ common_args @ output_args
   @ [Source.ast_path path]
 
-let compiler_arguments ~(config : Config.t) ~runtime ~dependency_dirs
-    ~module_name ~source_kind ~has_interface ~watch ~gentype_dependency_args
-    ~path =
+let compiler_arguments ~project_root ~(config : Config.t) ~runtime
+    ~dependency_dirs ~module_name ~source_kind ~has_interface ~watch
+    ~gentype_dependency_args ~path =
   compiler_arguments_with_common ~config
     ~common_args:
-      (compiler_common_arguments ~config ~runtime ~dependency_dirs ~watch
-         ~gentype_dependency_args)
+      (compiler_common_arguments ~project_root ~config ~runtime ~dependency_dirs
+         ~watch ~gentype_dependency_args)
     ~module_name ~source_kind ~has_interface ~path

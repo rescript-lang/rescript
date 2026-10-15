@@ -17,6 +17,7 @@ val parser_arguments :
   config:Config.t -> contents:string -> path:string -> string list
 
 val compiler_arguments :
+  project_root:string ->
   config:Config.t ->
   runtime:string ->
   dependency_dirs:string list ->
@@ -29,6 +30,7 @@ val compiler_arguments :
   string list
 
 val compiler_common_arguments :
+  project_root:string ->
   config:Config.t ->
   runtime:string ->
   dependency_dirs:string list ->

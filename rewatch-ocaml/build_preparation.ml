@@ -242,8 +242,9 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         |> fun (regular, development) -> (List.rev regular, List.rev development)
       in
       let common_args dependency_dirs =
-        Compiler_args.compiler_common_arguments ~config:package.compile_config
-          ~runtime ~dependency_dirs ~watch
+        Compiler_args.compiler_common_arguments
+          ~project_root:package.compile_config.root
+          ~config:package.compile_config ~runtime ~dependency_dirs ~watch
           ~gentype_dependency_args:package.gentype_dependency_args
       in
       Hashtbl.add packages package.root
