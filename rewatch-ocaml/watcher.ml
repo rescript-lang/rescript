@@ -211,8 +211,27 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     | Native_watcher.Failed message ->
       Some {message; scope; snapshot = previous}
     | Native_watcher.Changed events -> (
-      delay 0.05;
-      let events = events @ Native_watcher.drain watcher in
+      (* Collect the rest of the burst an editor's save produces: wait until
+         no event has arrived for [quiet] seconds, at most [limit] seconds in
+         all. Changes arriving later start another build. A clock set back
+         ends the wait too. *)
+      let quiet = 0.01
+      and limit = 0.05 in
+      let started = Unix.gettimeofday () in
+      let rec settle collected last_event =
+        let now = Unix.gettimeofday () in
+        if
+          now -. last_event >= quiet
+          || now -. started >= limit
+          || now < last_event
+        then collected
+        else (
+          delay 0.002;
+          match Native_watcher.drain watcher with
+          | [] -> settle collected last_event
+          | more -> settle (collected @ more) (Unix.gettimeofday ()))
+      in
+      let events = settle events started in
       let direct =
         direct_content_changes watcher scope symlink_targets events
       in

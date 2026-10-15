@@ -1,0 +1,1 @@
+- OCaml rewatch: watch mode starts a rebuild as soon as the burst of events from a save has settled, instead of always waiting 50 ms. https://github.com/rescript-lang/rescript/pull/8873
