@@ -1740,9 +1740,10 @@ if ! $windows_posix_shell; then
     exit 1
   fi
   kill -INT "$second_interrupt_pid"
-  # The forwarded copy arrives a little later, as a separate signal.
+  # The forwarded copy arrives a little later, as a separate signal. On a fast
+  # machine the build may have stopped already; the checks below still apply.
   sleep 0.2
-  kill -INT "$second_interrupt_pid"
+  kill -INT "$second_interrupt_pid" 2>/dev/null || true
   if ! wait_for_pid_gone "$second_interrupt_pid" 600; then
     echo "an interrupted in-process compile did not stop" >&2
     exit 1
