@@ -109,6 +109,13 @@ let write_file_atomic ?(ensure_parent = true) path contents =
       Sys.rename candidate path;
       published := true)
 
+(* Copy and comparison buffers, one set per domain: allocating fresh 64 KiB
+   buffers for every copied or compared file was the largest single source of
+   allocation in a build. Neither function calls the other while it holds the
+   buffers. *)
+let copy_buffer = Domain.DLS.new_key (fun () -> Bytes.create 65_536)
+let compare_buffer = Domain.DLS.new_key (fun () -> Bytes.create 65_536)
+
 let copy_existing_file source destination =
   let input_descriptor =
     Unix.openfile source [Unix.O_RDONLY; Unix.O_CLOEXEC] 0
@@ -125,7 +132,7 @@ let copy_existing_file source destination =
       let output_channel = open_out_bin destination in
       try
         with_output_channel output_channel (fun output_channel ->
-            let buffer = Bytes.create 65_536 in
+            let buffer = Domain.DLS.get copy_buffer in
             let rec copy () =
               let count = input input_channel buffer 0 (Bytes.length buffer) in
               if count > 0 then (
@@ -173,9 +180,8 @@ let files_equal first second =
           Fun.protect
             ~finally:(fun () -> close_in_noerr second_channel)
             (fun () ->
-              let buffer_size = 65_536 in
-              let first_buffer = Bytes.create buffer_size in
-              let second_buffer = Bytes.create buffer_size in
+              let first_buffer = Domain.DLS.get copy_buffer in
+              let second_buffer = Domain.DLS.get compare_buffer in
               let rec read_chunk channel buffer offset =
                 if offset = Bytes.length buffer then offset
                 else
