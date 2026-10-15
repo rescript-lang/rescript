@@ -136,6 +136,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
     };
     let compiler_args = compile::compiler_args(
         &project_context.current_config,
+        &current_package,
         &ast_path,
         relative_filename,
         is_interface,

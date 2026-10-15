@@ -1009,20 +1009,6 @@ impl Config {
         args
     }
 
-    /// Directory containing the `rescript.json` this config was parsed from.
-    fn get_package_root(&self) -> &Path {
-        self.path
-            .parent()
-            .expect("rescript.json path should always have a parent directory")
-    }
-
-    pub fn get_project_root_args(&self) -> Vec<String> {
-        vec![
-            "-bs-project-root".to_string(),
-            self.get_package_root().to_string_lossy().to_string(),
-        ]
-    }
-
     pub fn get_warning_args(&self, is_local_dep: bool, warn_error_override: Option<String>) -> Vec<String> {
         // Ignore warning config for non local dependencies (node_module dependencies)
         if !is_local_dep {
