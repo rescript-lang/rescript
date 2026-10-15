@@ -4,7 +4,7 @@ let print_res ~ignore_parse_errors ~is_interface ~filename =
     let parse_result = Res_driver.parsing_engine.parse_interface ~filename in
     if parse_result.invalid then (
       Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
-      if not ignore_parse_errors then exit 1);
+      if not ignore_parse_errors then raise_notrace Res_driver.Already_reported);
     Res_printer.print_interface ~width:Res_printer.default_print_width
       ~comments:parse_result.comments parse_result.parsetree)
   else
@@ -13,10 +13,10 @@ let print_res ~ignore_parse_errors ~is_interface ~filename =
     in
     if parse_result.invalid then (
       Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
-      if not ignore_parse_errors then exit 1);
+      if not ignore_parse_errors then raise_notrace Res_driver.Already_reported);
     Res_printer.print_implementation ~width:Res_printer.default_print_width
       ~comments:parse_result.comments parse_result.parsetree
-[@@raises exit]
+[@@raises Res_driver.Already_reported]
 
 (* print the given file named input to from "language" to res, general interface exposed by the compiler *)
 let print ?(ignore_parse_errors = false) input =
@@ -25,7 +25,8 @@ let print ?(ignore_parse_errors = false) input =
     len > 0 && String.unsafe_get input (len - 1) = 'i'
   in
   print_res ~ignore_parse_errors ~is_interface ~filename:input
-[@@raises exit]
+[@@raises Res_driver.Already_reported]
 
 (* suppress unused optional arg *)
-let _ = fun s -> print ~ignore_parse_errors:false s [@@raises exit]
+let _ = fun s -> print ~ignore_parse_errors:false s
+[@@raises Res_driver.Already_reported]

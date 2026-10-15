@@ -58,9 +58,7 @@ and may_compats = Parmatch.Compat.compats ~equal_cd
      - Jump summaries: mapping from exit numbers to contexts
 *)
 
-let string_of_lam lam =
-  Printlambda.lambda Format.str_formatter lam;
-  Format.flush_str_formatter ()
+let string_of_lam lam = Format.asprintf "%a" Printlambda.lambda lam
 
 type matrix = pattern list list
 
@@ -434,9 +432,8 @@ let pretty_cases cases =
     (fun (ps, _l) ->
       List.iter
         (fun p ->
-          Parmatch.top_pretty Format.str_formatter p;
           prerr_string " ";
-          prerr_string (Format.flush_str_formatter ()))
+          prerr_string (Format.asprintf "%a" Parmatch.top_pretty p))
         ps;
       (*
       prerr_string " -> " ;

@@ -387,4 +387,4 @@ let serialize (filename : string) (l : Lambda.t) : unit =
   close_out ou;
   Format.set_margin old
 
-let lambda_to_string = Format.asprintf "%a" lambda
+let lambda_to_string l = Format.asprintf "%a" lambda l

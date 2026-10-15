@@ -1,0 +1,1 @@
+- Make compiler requests safe to run repeatedly and in parallel in one process, as a preparation for compiling in-process in the OCaml build system. https://github.com/rescript-lang/rescript/pull/8864

@@ -33,10 +33,8 @@
 
 type value = {mutable used: bool; lambda: Lambda.t}
 
-let param_hash : _ Hash_ident.t = Hash_ident.create 20
-
 (* Sequence the unused arguments before [body], in parameter order *)
-let seq_unused params body =
+let seq_unused param_hash params body =
   List.fold_right
     (fun param acc ->
       let {lambda; used} = Hash_ident.find param_hash param in
@@ -58,6 +56,9 @@ let seq_unused params body =
    ]}
 *)
 let simple_beta_reduce params body args =
+  (* Substitutions and their [used] bits belong to this reduction: compiler
+     requests run concurrently on several domains. *)
+  let param_hash : value Hash_ident.t = Hash_ident.create 20 in
   let exception Not_simple_apply in
   let find_param_exn v opt =
     match Hash_ident.find_opt param_hash v with
@@ -85,13 +86,11 @@ let simple_beta_reduce params body args =
     try
       let new_args = aux_exn [] ap_args in
       let result =
-        seq_unused params (Lambda.prim ~primitive ~args:new_args ap_loc)
+        seq_unused param_hash params
+          (Lambda.prim ~primitive ~args:new_args ap_loc)
       in
-      Hash_ident.clear param_hash;
       Some result
-    with Not_simple_apply ->
-      Hash_ident.clear param_hash;
-      None)
+    with Not_simple_apply -> None)
   | Lapply
       {
         ap_func =
@@ -117,10 +116,9 @@ let simple_beta_reduce params body args =
         | Lvar fn_name -> find_param_exn fn_name f
         | _ -> f
       in
-      let result = seq_unused params (Lambda.apply f new_args ap_loc) in
-      Hash_ident.clear param_hash;
+      let result =
+        seq_unused param_hash params (Lambda.apply f new_args ap_loc)
+      in
       Some result
-    with Not_simple_apply ->
-      Hash_ident.clear param_hash;
-      None)
+    with Not_simple_apply -> None)
   | _ -> None

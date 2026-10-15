@@ -463,18 +463,15 @@ and pretty_dict_entries ppf = function
 
 let top_pretty ppf v = fprintf ppf "@[%a@]@?" pretty_val v
 
-let pretty_pat p =
-  top_pretty Format.str_formatter p;
-  prerr_string (Format.flush_str_formatter ())
+let pretty_pat p = prerr_string (Format.asprintf "%a" top_pretty p)
 
 type matrix = pattern list list
 
 let pretty_line ps =
   List.iter
     (fun p ->
-      top_pretty Format.str_formatter p;
       prerr_string " <";
-      prerr_string (Format.flush_str_formatter ());
+      prerr_string (Format.asprintf "%a" top_pretty p);
       prerr_string ">")
     ps
 
@@ -1839,10 +1836,10 @@ module Conv = struct
   open Parsetree
   let mkpat desc = Ast_helper.Pat.mk desc
 
-  let name_counter = ref 0
   let fresh name =
-    let current = !name_counter in
-    name_counter := !name_counter + 1;
+    let state = Compiler_request_state.current () in
+    let current = state.parmatch_name_counter in
+    state.parmatch_name_counter <- current + 1;
     "#$" ^ name ^ string_of_int current
 
   let conv_record_rest (rest : Typedtree.record_pat_rest) =

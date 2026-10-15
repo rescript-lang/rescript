@@ -6503,4 +6503,4 @@ let print_interface ?(width = default_print_width) (s : Parsetree.signature)
     ~comments =
   Doc.to_string ~width (interface_doc s ~comments) ^ "\n"
 
-let print_structure = print_structure ~state:(State.init ())
+let print_structure s t = print_structure ~state:(State.init ()) s t

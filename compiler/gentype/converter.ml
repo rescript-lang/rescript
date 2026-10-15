@@ -83,7 +83,7 @@ let type_get_inlined ~config ~lookup_id ~type_name_is_interface type0 =
     {a_name; a_type = t_normalized}
   in
   let normalized = type0 |> visit ~visited:String_set.empty in
-  if !Debug.converter then
+  if !(Debug.converter ()) then
     Log_.item "type0:%s \n"
       (type0 |> Emit_type.type_to_string ~config ~type_name_is_interface);
   normalized
