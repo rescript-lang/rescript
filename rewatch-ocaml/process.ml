@@ -347,8 +347,11 @@ let stop_worker_pool ~cancel pool =
     (fun _ -> Child.notify_completion pool.notifier)
     cancellation_error;
   List.iter Domain.join pool.workers;
-  Option.iter raise cancellation_error;
-  Option.iter raise pool.worker_error
+  (* A worker that crashed is the root cause; a failure to cancel the other
+     work is at most a consequence of it. *)
+  match (pool.worker_error, cancellation_error) with
+  | Some exn, _ | None, Some exn -> raise exn
+  | None, None -> ()
 
 let with_worker_pool ~max_jobs notifier action =
   let pool = create_worker_pool ~max_jobs notifier in
