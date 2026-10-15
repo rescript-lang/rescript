@@ -16,8 +16,27 @@ let _element = JsxRuntime.jsx(Jsx_optional_props_test$ComponentWithOptionalProps
   element: JsxRuntime.jsx("div", {})
 });
 
+let _comment_only_host = JsxRuntime.jsx("div", {});
+
+let _comment_only_fragment = JsxRuntime.jsx(JsxRuntime.Fragment, {});
+
+let _comment_single_child = JsxRuntime.jsx("div", {
+  children: JsxRuntime.jsx("span", {})
+});
+
+let _comment_multiple_children = JsxRuntime.jsxs("div", {
+  children: [
+    JsxRuntime.jsx("span", {}),
+    JsxRuntime.jsx("span", {})
+  ]
+});
+
 export {
   ComponentWithOptionalProps,
   _element,
+  _comment_only_host,
+  _comment_only_fragment,
+  _comment_single_child,
+  _comment_multiple_children,
 }
 /* _element Not a pure module */

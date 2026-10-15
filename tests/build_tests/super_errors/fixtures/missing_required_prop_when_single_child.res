@@ -17,7 +17,7 @@ module ReactDOM = {
 module Wrapper = {
   @react.component
   let make = (~value: 'value, ~children: React.element) => {
-    <div> {children} </div>
+    <div>{children}</div>
   }
 }
 
@@ -25,7 +25,7 @@ module SomeComponent = {
   @react.component
   let make = () => {
     <Wrapper>
-      <div> {""->React.string} </div>
+      <div>{""->React.string}</div>
     </Wrapper>
   }
 }

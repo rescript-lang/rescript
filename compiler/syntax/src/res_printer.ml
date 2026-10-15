@@ -82,12 +82,6 @@ let has_leading_line_comment tbl loc =
   | Some comment -> Comment.is_single_line_comment comment
   | None -> false
 
-let get_leading_line_comment_count tbl loc =
-  match Hashtbl.find_opt tbl.Comment_table.leading loc with
-  | Some comments ->
-    List.filter Comment.is_single_line_comment comments |> List.length
-  | None -> 0
-
 let has_trailing_single_line_comment tbl loc =
   match Hashtbl.find_opt tbl.Comment_table.trailing loc with
   | Some (comment :: _) -> Comment.is_single_line_comment comment
@@ -387,8 +381,6 @@ let print_comments_before_marker doc (tbl : Comment_table.t) loc marker =
     Hashtbl.replace tbl.trailing loc after_marker;
     print_trailing_comments doc tbl.trailing loc
 
-let is_empty_doc doc = doc = Doc.nil
-
 let print_list ~get_loc ~nodes ~print ?(force_break = false) t =
   let rec loop first_loc_opt prev_loc_opt acc nodes =
     match nodes with
@@ -401,7 +393,7 @@ let print_list ~get_loc ~nodes ~print ?(force_break = false) t =
         | Some comment -> (Comment.loc comment).loc_start
       in
       let raw_doc = print node t in
-      if is_empty_doc raw_doc then loop first_loc_opt prev_loc_opt acc nodes
+      if Doc.is_nil raw_doc then loop first_loc_opt prev_loc_opt acc nodes
       else
         let doc = print_comments raw_doc t loc in
         let acc =
@@ -444,7 +436,7 @@ let print_listi ~get_loc ~nodes ~print ?(ignore_empty_lines = false)
         | Some comment -> (Comment.loc comment).loc_start
       in
       let raw_doc = print node t i in
-      if is_empty_doc raw_doc then loop i first_loc_opt prev_loc_opt acc nodes
+      if Doc.is_nil raw_doc then loop i first_loc_opt prev_loc_opt acc nodes
       else
         let doc = print_comments raw_doc t loc in
         let acc =
@@ -4658,6 +4650,79 @@ and print_jsx_unary_tag ~state tag_name props expr_loc cmt_tbl =
          closing_tag_doc;
        ])
 
+(* Standalone JSX comments are trivia, not expression children. Keep their
+   delimiters inside braces so future literal text cannot absorb them. *)
+and join_jsx_items items =
+  let rec loop = function
+    | [] -> Doc.nil
+    | [(_, doc)] -> doc
+    | (loc, doc) :: ((next_loc, _) :: _ as rest) ->
+      let separator =
+        if
+          next_loc.Location.loc_start.pos_lnum
+          > loc.Location.loc_end.pos_lnum + 1
+        then Doc.concat [Doc.hard_line; Doc.hard_line]
+        else Doc.hard_line
+      in
+      Doc.concat [doc; separator; loop rest]
+  in
+  loop items
+
+and jsx_comment_items comments =
+  let comments = List.map Comment.to_block_if_safe comments in
+  let comment_loc comment =
+    Option.value (Comment.jsx_container comment) ~default:(Comment.loc comment)
+  in
+  let rec group_comments acc previous = function
+    | comment :: rest
+      when Comment.jsx_container previous = Comment.jsx_container comment
+           && (Option.is_some (Comment.jsx_container comment)
+              || (Comment.loc comment).loc_start.pos_lnum
+                 <= (Comment.loc previous).loc_end.pos_lnum + 1) ->
+      group_comments (comment :: acc) comment rest
+    | rest -> (List.rev acc, rest)
+  in
+  let rec print_comments = function
+    | [] -> Doc.nil
+    | comment :: rest -> (
+      let doc =
+        if Comment.is_single_line_comment comment then
+          Doc.concat [Doc.text ("//" ^ Comment.txt comment); Doc.break_parent]
+        else print_multiline_comment_content (Comment.txt comment)
+      in
+      match rest with
+      | [] -> doc
+      | next :: _ ->
+        let diff =
+          (Comment.loc next).loc_start.pos_lnum
+          - (Comment.loc comment).loc_end.pos_lnum
+        in
+        let sep =
+          if diff > 1 then Doc.concat [Doc.hard_line; Doc.hard_line]
+          else if diff > 0 || Comment.is_single_line_comment comment then
+            Doc.hard_line
+          else Doc.line
+        in
+        Doc.concat [doc; sep; print_comments rest])
+  in
+  let rec loop = function
+    | [] -> []
+    | comment :: rest ->
+      let group, rest = group_comments [comment] comment rest in
+      let loc = comment_loc comment in
+      let last = comment_loc (List.hd (List.rev group)) in
+      ({loc with loc_end = last.loc_end}, add_braces (print_comments group))
+      :: loop rest
+  in
+  loop comments
+
+and print_jsx_comment_container comments_tbl loc =
+  match Hashtbl.find_opt comments_tbl loc with
+  | None -> Doc.nil
+  | Some comments ->
+    Hashtbl.remove comments_tbl loc;
+    join_jsx_items (jsx_comment_items comments)
+
 and print_jsx_container_tag ~state tag_name
     (opening_greater_than : Lexing.position) props
     (children : Parsetree.jsx_children)
@@ -4682,13 +4747,8 @@ and print_jsx_container_tag ~state tag_name
     | [] -> false
   in
   let line_sep = get_line_sep_for_jsx_children children in
-  let print_children children =
-    Doc.concat
-      [
-        Doc.indent
-          (Doc.concat [Doc.line; print_jsx_children ~state children cmt_tbl]);
-        line_sep;
-      ]
+  let indent_children doc =
+    Doc.concat [Doc.indent (Doc.concat [line_sep; doc]); line_sep]
   in
 
   (* comments between the opening and closing tag *)
@@ -4746,9 +4806,12 @@ and print_jsx_container_tag ~state tag_name
               ]);
          Doc.concat
            [
-             (if has_children then print_children children
+             (if has_children then
+                indent_children (print_jsx_children ~state children cmt_tbl)
               else if not has_comments_inside then Doc.soft_line
-              else print_comments_inside cmt_tbl pexp_loc);
+              else
+                indent_children
+                  (print_jsx_comment_container cmt_tbl.inside pexp_loc));
              closing_element_doc;
            ];
        ])
@@ -4776,13 +4839,18 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
     (Doc.concat
        [
          opening;
-         Doc.indent
-           (Doc.concat [Doc.line; print_jsx_children ~state children cmt_tbl]);
-         (if has_children then line_sep else Doc.nil);
+         (let doc =
+            if has_children then print_jsx_children ~state children cmt_tbl
+            else print_jsx_comment_container cmt_tbl.inside fragment_loc
+          in
+          if Doc.is_nil doc then doc
+          else Doc.concat [Doc.indent (Doc.concat [line_sep; doc]); line_sep]);
          closing;
        ])
 
 and get_line_sep_for_jsx_children (children : Parsetree.jsx_children) =
+  (* Single children stay inline when they fit, otherwise indent between the
+     tags. Literal JSX text will need to ignore this formatting whitespace. *)
   if
     List.length children > 1
     || List.exists
@@ -4791,7 +4859,7 @@ and get_line_sep_for_jsx_children (children : Parsetree.jsx_children) =
            | _ -> false)
          children
   then Doc.hard_line
-  else Doc.line
+  else Doc.soft_line
 
 and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
   let open Parsetree in
@@ -4800,59 +4868,144 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
     | None, _ -> expr.pexp_loc
     | Some loc, _ -> loc
   in
-  let sep = get_line_sep_for_jsx_children children in
   let print_expr (expr : Parsetree.expression) =
-    let leading_line_comment_present =
-      has_leading_line_comment cmt_tbl expr.pexp_loc
-    in
-    let expr_doc = print_expression_with_comments ~state expr cmt_tbl in
-    let add_parens_or_braces expr_doc =
-      (* {(20: int)} make sure that we also protect the expression inside *)
-      let inner_doc =
-        if Parens.braced_expr expr then add_parens expr_doc else expr_doc
+    let loc = get_loc expr in
+    match expr.pexp_desc with
+    | Pexp_jsx_element _ -> print_expression_with_comments ~state expr cmt_tbl
+    | _ ->
+      let has_line_comment =
+        has_leading_line_comment cmt_tbl loc
+        || has_any_trailing_line_comment cmt_tbl loc
+        || has_leading_line_comment cmt_tbl expr.pexp_loc
+        || has_any_trailing_line_comment cmt_tbl expr.pexp_loc
       in
-      if leading_line_comment_present then add_braces inner_doc
-      else Doc.concat [Doc.lbrace; inner_doc; Doc.rbrace]
-    in
-    match Parens.jsx_child_expr expr with
-    | Nothing -> print_comments expr_doc cmt_tbl (get_loc expr)
-    | Parenthesized -> add_parens_or_braces expr_doc
-    | Braced braces_loc ->
-      print_comments (add_parens_or_braces expr_doc) cmt_tbl braces_loc
+      let has_comments =
+        has_leading_comments cmt_tbl loc
+        || has_trailing_comments cmt_tbl loc
+        || has_leading_comments cmt_tbl expr.pexp_loc
+        || has_trailing_comments cmt_tbl expr.pexp_loc
+      in
+      (* Consume comments before printing subnodes that may share these
+         locations. Remaining comments belong inside the expression's braces. *)
+      let leading = print_leading_comments Doc.nil cmt_tbl.leading loc in
+      let inner_leading =
+        print_leading_comments Doc.nil cmt_tbl.leading expr.pexp_loc
+      in
+      let inner_trailing =
+        print_trailing_comments Doc.nil cmt_tbl.trailing expr.pexp_loc
+      in
+      let trailing = print_trailing_comments Doc.nil cmt_tbl.trailing loc in
+      let rec print_child_expr expr =
+        match expr.pexp_desc with
+        | Pexp_braces {expr = inner}
+          when Parsetree_viewer.is_block_expr inner && expr.pexp_attributes = []
+          ->
+          print_child_expr inner
+        | Pexp_let _ | Pexp_sequence _ | Pexp_letexception _ | Pexp_letmodule _
+        | Pexp_open _
+          when expr.pexp_attributes = [] ->
+          print_expression_block ~state ~braces:false expr cmt_tbl
+        | _ ->
+          let doc = print_expression_with_comments ~state expr cmt_tbl in
+          if Parens.braced_expr expr then add_parens doc else doc
+      in
+      let expr_doc = print_child_expr expr in
+      let wrap doc =
+        if has_comments || Parsetree_viewer.is_block_expr expr then
+          add_braces doc
+        else Doc.concat [Doc.lbrace; doc; Doc.rbrace]
+      in
+      wrap
+        (Doc.concat
+           [
+             leading;
+             inner_leading;
+             expr_doc;
+             inner_trailing;
+             trailing;
+             (if has_line_comment then Doc.break_parent else Doc.nil);
+           ])
   in
-  match children with
-  | [] -> Doc.nil
-  | children ->
-    let rec visit acc children =
-      match children with
-      | [] -> acc
-      | [x] -> Doc.concat [acc; print_expr x]
-      | x :: (y :: _ as rest) ->
-        let end_line_x =
-          let loc = get_loc x in
-          loc.loc_end.pos_lnum
+  let items =
+    List.concat_map
+      (fun expr ->
+        let loc = get_loc expr in
+        List.iter
+          (fun tbl ->
+            List.iter
+              (fun key ->
+                match Hashtbl.find_opt tbl key with
+                | None -> ()
+                | Some comments ->
+                  Hashtbl.replace tbl key
+                    (List.map Comment.to_block_if_safe comments))
+              (if loc = expr.pexp_loc then [loc] else [loc; expr.pexp_loc]))
+          [cmt_tbl.leading; cmt_tbl.trailing];
+        let standalone comment =
+          Option.is_some (Comment.jsx_container comment)
+          ||
+          match expr.pexp_desc with
+          | Pexp_jsx_element _ -> true
+          | Pexp_braces _ ->
+            let c = Comment.loc comment in
+            c.loc_end.pos_cnum <= loc.loc_start.pos_cnum
+            || c.loc_start.pos_cnum >= loc.loc_end.pos_cnum
+          | _ -> (Comment.loc comment).loc_start.pos_lnum > loc.loc_end.pos_lnum
         in
-        let start_line_y =
-          let loc = get_loc y in
-          loc.loc_start.pos_lnum
+        let extract ~leading tbl key =
+          match Hashtbl.find_opt tbl key with
+          | None -> []
+          | Some comments ->
+            (* Only retain comments adjacent to the expression, so extracting
+               a standalone container cannot reorder intervening comments. *)
+            let rec split = function
+              | comment :: rest when not (standalone comment) ->
+                let inside, outside = split rest in
+                (comment :: inside, outside)
+              | outside -> ([], outside)
+            in
+            let inside, outside =
+              if leading then
+                let inside, outside = split (List.rev comments) in
+                (List.rev inside, List.rev outside)
+              else split comments
+            in
+            if inside = [] then Hashtbl.remove tbl key
+            else Hashtbl.replace tbl key inside;
+            outside
         in
-        let lines_between = start_line_y - end_line_x - 1 in
-        let leading_single_line_comments =
-          get_leading_line_comment_count cmt_tbl (get_loc y)
+        let extract_both ~leading tbl =
+          let outer = extract ~leading tbl loc in
+          if loc = expr.pexp_loc then outer
+          else outer @ extract ~leading tbl expr.pexp_loc
         in
-        (* If there are lines between the jsx elements, we preserve at least one line *)
-        if
-          (* Unless they are all comments *)
-          (* The edge case of comment followed by blank line is not caught here *)
-          lines_between > 0 && not (lines_between = leading_single_line_comments)
-        then
-          let doc = Doc.concat [print_expr x; sep; Doc.hard_line] in
-          visit (Doc.concat [acc; doc]) rest
-        else
-          let doc = Doc.concat [print_expr x; sep] in
-          visit (Doc.concat [acc; doc]) rest
-    in
-    visit Doc.nil children
+        let leading = extract_both ~leading:true cmt_tbl.leading in
+        let trailing = extract_both ~leading:false cmt_tbl.trailing in
+        let item_loc =
+          (* Comments retained inside an expression occupy lines too. *)
+          let loc_start =
+            match get_first_leading_comment cmt_tbl loc with
+            | Some comment -> (Comment.loc comment).loc_start
+            | None -> loc.loc_start
+          in
+          let loc_end =
+            List.fold_left
+              (fun end_pos comment ->
+                let comment_end = (Comment.loc comment).loc_end in
+                if comment_end.pos_cnum > end_pos.Lexing.pos_cnum then
+                  comment_end
+                else end_pos)
+              loc.loc_end
+              (Option.value (Hashtbl.find_opt cmt_tbl.trailing loc) ~default:[])
+          in
+          {loc with loc_start; loc_end}
+        in
+        jsx_comment_items leading
+        @ [(item_loc, print_expr expr)]
+        @ jsx_comment_items trailing)
+      children
+  in
+  join_jsx_items items
 
 and print_jsx_prop ~state prop cmt_tbl =
   let open Parsetree in
