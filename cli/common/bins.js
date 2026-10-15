@@ -7,5 +7,6 @@ export {
   bsc_exe,
   rescript_editor_analysis_exe,
   rescript_exe,
+  rescript_rust_exe,
   rescript_tools_exe,
 } from "./bins.cjs";

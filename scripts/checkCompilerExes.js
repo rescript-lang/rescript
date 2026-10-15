@@ -22,7 +22,14 @@ const syncDir = path.join(
 );
 
 let ok = true;
-for (const exe of ["bsc", "rescript-editor-analysis", "rescript-tools"]) {
+const executables = [
+  "bsc",
+  "rescript-editor-analysis",
+  "rescript-tools",
+  "rescript",
+];
+
+for (const exe of executables) {
   const promoted = path.join(binDir, `${exe}.exe`);
   const built = path.join(syncDir, `${exe}.exe`);
   if (

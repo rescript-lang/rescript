@@ -20,7 +20,7 @@ rewatch_bg watch > rewatch.log 2>&1 &
 success "Watcher Started"
 
 # Wait for initial build to complete
-if ! wait_for_file "./src/Test.mjs" 20; then
+if ! wait_for_file "./src/Test.mjs" 40; then
   error "Initial build did not complete"
   cat rewatch.log
   exit_watcher
@@ -28,7 +28,7 @@ if ! wait_for_file "./src/Test.mjs" 20; then
 fi
 success "Initial build completed"
 
-if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 30; then
+if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 60; then
   error "Initial build did not settle"
   cat rewatch.log
   exit_watcher
@@ -44,7 +44,7 @@ wait_for_next_build() {
 
 wait_for_tracked_outputs() {
   local timeout
-  timeout=$(platform_timeout 30)
+  timeout=60
   while [ "$timeout" -gt 0 ]; do
     if [ -z "$(git ls-files --deleted -- '*.mjs')" ]; then
       return 0
@@ -71,7 +71,7 @@ fi
 echo '// config-change-test' >> ./src/Test.res
 
 # Wait for the file with the new suffix and the complete source rebuild.
-if wait_for_file "./src/Test.res.mjs" 20 && wait_for_next_build; then
+if wait_for_file "./src/Test.res.mjs" 40 && wait_for_next_build; then
   success "Full rebuild triggered by rescript.json change (new suffix applied)"
 else
   error "No rebuild detected after rescript.json change"

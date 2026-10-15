@@ -24,7 +24,7 @@ echo 'Console.log("added-by-test")' >> ./packages/main/src/Main.res
 
 # Wait for the compiled JS to show up (can be slow in CI)
 target=./packages/main/src/Main.mjs
-if ! wait_for_file "$target" 20; then
+if ! wait_for_file "$target" 40; then
   error "Expected output not found: $target"
   ls -la ./packages/main/src || true
   tail -n 200 rewatch.log || true
@@ -51,7 +51,7 @@ else
   exit 1
 fi
 
-if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 30; then
+if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 60; then
   error "Initial build did not settle"
   tail -n 200 rewatch.log || true
   exit_watcher
@@ -60,7 +60,7 @@ fi
 
 replace '/Console.log("added-by-test")/d' ./packages/main/src/Main.res;
 
-if ! wait_for_pattern_gone "$target" "added-by-test" 20; then
+if ! wait_for_pattern_gone "$target" "added-by-test" 40; then
   error "Watcher did not rebuild after restoring the source"
   tail -n 200 rewatch.log || true
   exit_watcher

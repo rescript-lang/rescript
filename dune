@@ -1,4 +1,4 @@
-(dirs compiler tests analysis tools)
+(dirs compiler tests analysis tools rewatch-ocaml)
 
 ; All warnings are enabled, except:
 ; - 4 (fragile-match): wildcard cases are used deliberately.

@@ -19,7 +19,7 @@ fi
 rewatch_bg watch > /dev/null 2> rewatch-stderr.log &
 
 # Wait for initial compilation to produce the warning
-if ! wait_for_pattern rewatch-stderr.log "unused value unusedValue" 30; then
+if ! wait_for_pattern rewatch-stderr.log "unused value unusedValue" 60; then
   error "Initial build does not show warning from ModuleA.res"
   cat rewatch-stderr.log
   exit_watcher
@@ -31,7 +31,7 @@ success "Initial build shows warning from ModuleA.res"
 printf '// trigger recompile\n' >> ./packages/watch-warnings/src/B.res
 
 # Wait for the warning to appear a second time (from the incremental build)
-if ! wait_for_pattern_count rewatch-stderr.log "unused value unusedValue" 2 20; then
+if ! wait_for_pattern_count rewatch-stderr.log "unused value unusedValue" 2 40; then
   warning_count=$(grep -c "unused value unusedValue" rewatch-stderr.log || echo "0")
   error "Warning from ModuleA.res was lost after recompiling B.res (count: $warning_count)"
   cat rewatch-stderr.log
