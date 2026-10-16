@@ -39,7 +39,16 @@ let rec is_obj_literal (x : _ Flow_ast.Expression.t) : bool =
 
 and is_literal_kv (x : _ Flow_ast.Expression.Object.property) =
   match x with
-  | Property (_, Init {value}) -> is_obj_literal value
+  | Property
+      ( _,
+        Init
+          {
+            key =
+              StringLiteral _ | NumberLiteral _ | BigIntLiteral _ | Identifier _;
+            value;
+          } ) ->
+    is_obj_literal value
+  (* A computed key such as [[f()]] runs code. *)
   | _ -> false
 
 let classify_exp (prog : _ Flow_ast.Expression.t) : Js_raw_info.exp =
