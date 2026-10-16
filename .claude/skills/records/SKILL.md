@@ -131,3 +131,6 @@ node scripts/commitRecords.js --out review.html --pr 1234 --title "<PR title>" <
   the description of the work. A pull request description is a rendering of
   its range.
 - Before review or merge: render `master..<branch>` and hand over the page.
+- On GitHub, `.github/workflows/semantic_diff.yml` renders each pull
+  request's range when it is opened or pushed, and comments the page's link
+  (`Semantic diff: https://cdn.rescript-lang.org/semantic-diff/pr-<N>/…`).
