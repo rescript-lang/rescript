@@ -621,7 +621,7 @@ let rec what_is_cases cases =
   | _ -> assert false
 
 (* A few operations on default environments *)
-let as_matrix cases = get_mins le_pats (List.map (fun (ps, _) -> ps) cases)
+let as_matrix cases = get_mins_pats (List.map (fun (ps, _) -> ps) cases)
 
 let cons_default matrix raise_num default =
   match matrix with
@@ -1147,13 +1147,28 @@ let add make_matching_fun division eq_key key patl_action args =
     cell.pm.cases <- [patl_action];
     (key, cell) :: division
 
-let divide make eq_key get_key get_args ctx pm =
+(* Cells whose key is [hashable] are also found by hashing, which must agree
+   with [eq_key]. This keeps a column of many distinct keys linear. *)
+let divide ?(hashable = fun _ -> false) make eq_key get_key get_args ctx pm =
+  let cells = lazy (Hashtbl.create 16) in
   let rec divide_rec = function
-    | (p :: patl, action) :: rem ->
+    | (p :: patl, action) :: rem -> (
       let this_match = divide_rec rem in
-      add (make p pm.default ctx) this_match eq_key (get_key p)
-        (get_args p patl, action)
-        pm.args
+      let key = get_key p in
+      let patl_action = (get_args p patl, action) in
+      if not (hashable key) then
+        add (make p pm.default ctx) this_match eq_key key patl_action pm.args
+      else
+        let cells = Lazy.force cells in
+        match Hashtbl.find_opt cells key with
+        | Some cell ->
+          cell.pm.cases <- patl_action :: cell.pm.cases;
+          this_match
+        | None ->
+          let cell = make p pm.default ctx pm.args in
+          cell.pm.cases <- [patl_action];
+          Hashtbl.add cells key cell;
+          (key, cell) :: this_match)
     | _ -> []
   in
 
@@ -1210,7 +1225,11 @@ let make_constant_matching p def ctx = function
     {pm = {cases = []; args = argl; default = def}; ctx; pat = normalize_pat p}
 
 let divide_constant ctx m =
-  divide make_constant_matching
+  divide
+    ~hashable:(function
+      | Asttypes.Const_int _ | Const_char _ | Const_string _ -> true
+      | Const_float _ | Const_bigint _ -> false)
+    make_constant_matching
     (fun c d -> const_compare c d = 0)
     (get_key_constant "divide")
     get_args_constant ctx m
