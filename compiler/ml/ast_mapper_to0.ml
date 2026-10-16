@@ -1055,14 +1055,7 @@ let default_mapper =
         let prim =
           match pval_prim with
           | None -> []
-          | Some (Prim_name s) -> [s]
-          | Some (Prim_ffi _ | Prim_inline_const _) ->
-            (* External PPXes run before the frontend digests externals, and
-               nothing else crosses this bridge, so a digested external can
-               never legitimately reach it. *)
-            Location.raise_errorf ~loc:pval_loc
-              "External declarations already processed for compilation cannot \
-               be converted for an external PPX"
+          | Some {txt} -> [txt]
         in
         (* v0 has no component node: PPXs see the [@react.component]
            attribute, and [Ast_helper.Val.mk] takes it out again on the way

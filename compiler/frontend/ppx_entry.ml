@@ -40,7 +40,8 @@ let rewrite_signature (ast : Parsetree.signature) : Parsetree.signature =
   else
     let result = unsafe_mapper.signature unsafe_mapper ast in
     (* Keep this check, since the check is not inexpensive*)
-    Bs_ast_invariant.emit_external_warnings_on_signature result;
+    Bs_ast_invariant.emit_external_warnings_on_signature
+      ~resolved_ffi_external:Ast_external.resolved_ffi_external result;
     result
 
 let rewrite_implementation (ast : Parsetree.structure) : Parsetree.structure =
@@ -59,5 +60,6 @@ let rewrite_implementation (ast : Parsetree.structure) : Parsetree.structure =
   else
     let result = unsafe_mapper.structure unsafe_mapper ast in
     (* Keep this check since it is not inexpensive*)
-    Bs_ast_invariant.emit_external_warnings_on_structure result;
+    Bs_ast_invariant.emit_external_warnings_on_structure
+      ~resolved_ffi_external:Ast_external.resolved_ffi_external result;
     result

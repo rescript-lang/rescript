@@ -526,8 +526,9 @@ let default_iterator =
     type_extension = T.iter_type_extension;
     extension_constructor = T.iter_extension_constructor;
     value_description =
-      (fun this ({pval_name; pval_type; pval_prim = _; pval_loc} as vd) ->
+      (fun this ({pval_name; pval_type; pval_prim; pval_loc} as vd) ->
         iter_loc this pval_name;
+        Option.iter (iter_loc this) pval_prim;
         this.typ this pval_type;
         (* An iterator sees the component annotation as the attribute it was
            written as. *)
