@@ -236,8 +236,6 @@ let is_huggable_expression expr =
   | Pexp_constant (Pconst_string payload)
     when is_multiline_text (String_literal.string_source payload) ->
     true
-  | Pexp_constant (Pconst_raw_source source) when is_multiline_text source ->
-    true
   | _ -> false
 
 let is_huggable_rhs expr =

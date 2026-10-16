@@ -641,17 +641,6 @@ let interleave_template_parts sources values =
   in
   loop Doc.nil sources values
 
-let raw_source_fits_double_quotes source =
-  let rec loop index =
-    if index >= String.length source then true
-    else
-      match String.unsafe_get source index with
-      | '"' -> false
-      | '\\' -> index + 1 < String.length source && loop (index + 2)
-      | _ -> loop (index + 1)
-  in
-  loop 0
-
 let print_constant c =
   match c with
   | Parsetree.Pconst_integer (s, suffix) -> (
@@ -665,12 +654,6 @@ let print_constant c =
         print_string_contents (String_literal.string_source payload);
         Doc.text "\"";
       ]
-  | Pconst_raw_source source ->
-    let delimiter =
-      if raw_source_fits_double_quotes source then "\"" else "`"
-    in
-    Doc.concat
-      [Doc.text delimiter; print_string_contents source; Doc.text delimiter]
   | Pconst_char {source} ->
     Doc.concat [Doc.text "'"; Doc.text source; Doc.text "'"]
   | Pconst_float (s, _) -> Doc.text s
@@ -756,6 +739,15 @@ and print_structure_item ~state ?(protect_regexp = false)
   | Pstr_attribute attr ->
     clear_pending ();
     fst (print_attribute ~state ~standalone:true attr cmt_tbl)
+  | Pstr_raw {name_loc; source; attrs} ->
+    clear_pending ();
+    Doc.concat
+      [
+        print_attributes ~state attrs cmt_tbl;
+        print_extension ~state ~at_module_lvl:true
+          (Ast_raw.to_extension ~name:"raw" ~name_loc source)
+          cmt_tbl;
+      ]
   | Pstr_extension (extension, attrs) ->
     clear_pending ();
     Doc.concat
@@ -3548,6 +3540,12 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
            ])
     | Pexp_extension extension ->
       print_extension ~state ~at_module_lvl:false extension cmt_tbl
+    | Pexp_raw {kind; name_loc; source} ->
+      print_extension ~state ~at_module_lvl:false
+        (Ast_raw.to_extension
+           ~name:(Ast_raw.extension_name kind)
+           ~name_loc source)
+        cmt_tbl
     | Pexp_regexp {pattern; flags} -> Doc.text ("/" ^ pattern ^ "/" ^ flags)
     | Pexp_template {source_segments; values} ->
       print_template_literal ~state ~source_segments ~values cmt_tbl

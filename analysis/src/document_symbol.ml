@@ -20,8 +20,7 @@ let get_symbols ~source ~kind_file =
     | Pexp_fun _ -> Lsp.Types.SymbolKind.Function
     | Pexp_braces {expr} -> expr_kind expr
     | Pexp_constraint (e, _) -> expr_kind e
-    | Pexp_constant (Pconst_string _ | Pconst_raw_source _) ->
-      Lsp.Types.SymbolKind.String
+    | Pexp_constant (Pconst_string _) -> Lsp.Types.SymbolKind.String
     | Pexp_template _ -> Lsp.Types.SymbolKind.String
     | Pexp_constant (Pconst_float _ | Pconst_integer _) ->
       Lsp.Types.SymbolKind.Number

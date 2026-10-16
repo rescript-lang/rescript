@@ -1,0 +1,1 @@
+- Fix template payloads of `%raw` and `%ffi` losing their decoding and location when a PPX is used. https://github.com/rescript-lang/rescript/pull/8879

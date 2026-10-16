@@ -1,0 +1,1 @@
+- Represent `%raw`, `%ffi` and `%%raw` with dedicated parsetree nodes. https://github.com/rescript-lang/rescript/pull/8879

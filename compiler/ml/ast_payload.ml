@@ -223,17 +223,26 @@ let raw_as_string_exp_exn ~(kind : Js_raw_info.raw_kind) ?is_function (x : t) :
           };
         ] -> (
       match constant with
-      | Pconst_raw_source source ->
-        Some (source, Bs_flow_ast_utils.flow_deli_offset (Some "js"), expression)
       | Pconst_string payload ->
-        Some (String_literal.string_semantic payload, 0, expression)
+        (* A raw payload is JavaScript source, so the string is taken as
+           written. *)
+        Some
+          ( String_literal.string_source payload,
+            Bs_flow_ast_utils.flow_deli_offset (Some "js"),
+            expression )
       | _ -> None)
     | _ -> None
   in
   match string_expression with
   | Some (str, offset, ({pexp_loc = loc} as expression)) ->
     validate_raw_source ~kind ?is_function ~loc ~offset str;
-    Some {expression with pexp_desc = Pexp_constant (Pconst_raw_source str)}
+    Some
+      {
+        expression with
+        pexp_desc =
+          Pexp_constant
+            (Pconst_string (String_literal.string_from_semantic str));
+      }
   | None -> None
 
 type lid = string Asttypes.loc
