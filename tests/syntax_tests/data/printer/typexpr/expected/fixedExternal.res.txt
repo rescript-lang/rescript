@@ -197,6 +197,8 @@
   34 │ @val external legacyNumbers: (@as(007) _, @as(1_000) _, int) => int = "
      │ f"
   35 │ 
+  36 │ @val external templateSyntax: (@as("${x}") _, @as("a`b") _, @as("\\`") 
+     │ _, int) => int = "f"
 
   deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
 
@@ -210,6 +212,47 @@
   34 │ @val external legacyNumbers: (@as(007) _, @as(1_000) _, int) => int = "
      │ f"
   35 │ 
+  36 │ @val external templateSyntax: (@as("${x}") _, @as("a`b") _, @as("\\`") 
+     │ _, int) => int = "f"
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:36:32-44
+
+  34 │ @val external legacyNumbers: (@as(007) _, @as(1_000) _, int) => int = "
+     │ f"
+  35 │ 
+  36 │ @val external templateSyntax: (@as("${x}") _, @as("a`b") _, @as("\\`") 
+     │ _, int) => int = "f"
+  37 │ 
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:36:47-58
+
+  34 │ @val external legacyNumbers: (@as(007) _, @as(1_000) _, int) => int = "
+     │ f"
+  35 │ 
+  36 │ @val external templateSyntax: (@as("${x}") _, @as("a`b") _, @as("\\`") 
+     │ _, int) => int = "f"
+  37 │ 
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:36:61-72
+
+  34 │ @val external legacyNumbers: (@as(007) _, @as(1_000) _, int) => int = "
+     │ f"
+  35 │ 
+  36 │ @val external templateSyntax: (@as("${x}") _, @as("a`b") _, @as("\\`") 
+     │ _, int) => int = "f"
+  37 │ 
 
   deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
 
@@ -253,3 +296,5 @@ external raw: (%raw("{}"), %raw(`"img"`), ~mode: %raw("[1, 2]"), int) => int = "
 external rawCommented: (/* a */ %raw("1") /* b */, /* c */ %raw("2"), int) => int = "f"
 
 @val external legacyNumbers: (%raw("7"), %raw("1000"), int) => int = "f"
+
+@val external templateSyntax: (%raw(`"\${x}"`), %raw(`"a\`b"`), %raw(`"\\\\\`"`), int) => int = "f"
