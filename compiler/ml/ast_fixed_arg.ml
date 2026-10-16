@@ -2,8 +2,14 @@ open Parsetree
 
 let of_payload (payload : payload) : fixed_value Location.loc option =
   match payload with
-  | PStr [{pstr_desc = Pstr_eval ({pexp_desc; pexp_loc}, _); pstr_loc = loc}]
-    -> (
+  (* A payload with attributes stays an attribute, which keeps them. *)
+  | PStr
+      [
+        {
+          pstr_desc = Pstr_eval ({pexp_desc; pexp_loc; pexp_attributes = []}, []);
+          pstr_loc = loc;
+        };
+      ] -> (
     let fixed txt = Some {Location.txt; loc} in
     match pexp_desc with
     | Pexp_constant (Pconst_integer (source, None)) ->
@@ -13,7 +19,8 @@ let of_payload (payload : payload) : fixed_value Location.loc option =
       fixed (Pfixed_template source)
     | Pexp_tagged_template
         {
-          tag = {pexp_desc = Pexp_ident {txt = Lident "json"}};
+          tag =
+            {pexp_desc = Pexp_ident {txt = Lident "json"}; pexp_attributes = []};
           raw_sources = [source];
           values = [];
         } ->

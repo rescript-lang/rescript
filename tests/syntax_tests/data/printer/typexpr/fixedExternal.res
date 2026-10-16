@@ -20,3 +20,5 @@ external useEffect0: (unit => option<unit => unit>, @as(json`[]`) _) => unit = "
 external commented: (/* a */ @as(1) /* b */ _ /* c */, @as(/* d */ "s") _, int) => int = "f"
 
 type notExternal = (@as(1) _, int) => int
+
+@val external payloadAttributes: (@as(@foo 1) _, @as(@foo json`{}`) _, int) => int = "f"

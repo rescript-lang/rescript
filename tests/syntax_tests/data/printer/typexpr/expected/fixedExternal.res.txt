@@ -26,3 +26,5 @@ external makeOptions: (
 external commented: (/* a */ /* b */ @as(1) _ /* c */, /* d */ @as("s") _, int) => int = "f"
 
 type notExternal = (@as(1) _, int) => int
+
+@val external payloadAttributes: (@as(@foo (1)) _, @as(@foo (json`{}`)) _, int) => int = "f"
