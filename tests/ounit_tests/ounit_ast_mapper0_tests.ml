@@ -305,6 +305,75 @@ let test_fixed_argument_roundtrips_through_ast0 _ =
     OUnit.assert_equal fixed_loc loc
   | _ -> assert_failure "Expected the fixed argument back from ast0"
 
+let test_fixed_argument_locations_go_through_the_mapper _ =
+  let marker = source_loc 100 101 in
+  let int_type =
+    Ast_helper.Typ.constr ~loc (Location.mknoloc (Longident.Lident "int")) []
+  in
+  let fixed (txt : Parsetree.fixed_value) : Parsetree.arg =
+    Parg_fixed
+      {
+        attrs = [];
+        lbl = Nolabel;
+        value = {txt; loc = source_loc 5 9};
+        loc = source_loc 1 12;
+      }
+  in
+  let vd =
+    Ast_helper.Val.mk ~prim:(Parsetree.Prim_name "f") (Location.mknoloc "f")
+      (Ast_helper.Typ.arrow ~loc
+         [
+           fixed (Pfixed_json {txt = "{}"; loc = source_loc 6 8});
+           fixed (Pfixed_int {txt = "1"; loc = source_loc 5 6});
+           Parg_type {attrs = []; lbl = Nolabel; typ = int_type};
+         ]
+         int_type)
+  in
+  let relocate =
+    {Ast_mapper.default_mapper with location = (fun _ _ -> marker)}
+  in
+  (match (relocate.value_description relocate vd).pval_type.ptyp_desc with
+  | Ptyp_arrow {params = [Parg_fixed json; Parg_fixed int; Parg_type _]} ->
+    List.iter
+      (fun (arg_loc, (value : Parsetree.fixed_value Location.loc)) ->
+        OUnit.assert_equal marker arg_loc;
+        OUnit.assert_equal marker value.loc;
+        match value.txt with
+        | Pfixed_int source | Pfixed_template source | Pfixed_json source ->
+          OUnit.assert_equal marker source.loc
+        | Pfixed_string _ -> ())
+      [(json.loc, json.value); (int.loc, int.value)]
+  | _ -> assert_failure "Expected the fixed arguments back");
+  let relocate0 =
+    {Ast_mapper_to0.default_mapper with location = (fun _ _ -> marker)}
+  in
+  let vd0 = relocate0.value_description relocate0 vd in
+  let assert_relocated_v0_fixed (typ : Parsetree0.core_type) =
+    OUnit.assert_equal marker typ.ptyp_loc;
+    match typ.ptyp_attributes with
+    | [
+     ( {txt = "as"; loc = name_loc},
+       PStr [{pstr_loc; pstr_desc = Pstr_eval ({pexp_loc}, [])}] );
+    ] ->
+      OUnit.assert_equal marker name_loc;
+      OUnit.assert_equal marker pstr_loc;
+      OUnit.assert_equal marker pexp_loc
+    | _ -> assert_failure "Expected [_ [@as value]] on the ast0 wire"
+  in
+  match vd0.pval_type.ptyp_desc with
+  | Ptyp_constr
+      ( _,
+        [
+          {
+            ptyp_desc =
+              Ptyp_arrow (_, json0, {ptyp_desc = Ptyp_arrow (_, int0, _)});
+          };
+          _;
+        ] ) ->
+    assert_relocated_v0_fixed json0;
+    assert_relocated_v0_fixed int0
+  | _ -> assert_failure "Expected an external arrow on the ast0 wire"
+
 let test_fixed_argument_is_external_only _ =
   (* A non-external arrow keeps [@as(1) _] as an ordinary argument. *)
   let any_as =
@@ -2291,4 +2360,6 @@ let suites =
          >:: test_fixed_argument_roundtrips_through_ast0;
          "fixed_argument_is_external_only"
          >:: test_fixed_argument_is_external_only;
+         "fixed_argument_locations_go_through_the_mapper"
+         >:: test_fixed_argument_locations_go_through_the_mapper;
        ]

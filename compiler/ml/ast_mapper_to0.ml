@@ -188,11 +188,13 @@ module T = struct
               let as_attr =
                 match value.txt with
                 | Pfixed_json source ->
-                  ( {txt = "as"; loc = as_loc},
+                  ( {txt = "as"; loc = sub.location sub as_loc},
                     Pt.PStr
                       [
-                        Ast_helper0.Str.eval ~loc:value.loc
-                          (Ast_helper0.Exp.constant ~loc:source.loc
+                        Ast_helper0.Str.eval
+                          ~loc:(sub.location sub value.loc)
+                          (Ast_helper0.Exp.constant
+                             ~loc:(sub.location sub source.loc)
                              (Pt.Pconst_string (source.txt, Some "json")));
                       ] )
                 | Pfixed_int _ | Pfixed_string _ | Pfixed_template _ ->
@@ -202,7 +204,7 @@ module T = struct
               ( lbl,
                 attrs,
                 Ast_helper0.Typ.any
-                  ~loc:(Ast_fixed_arg.underscore_loc loc)
+                  ~loc:(sub.location sub (Ast_fixed_arg.underscore_loc loc))
                   ~attrs:[as_attr] () )
           in
           let lbl = Asttypes.to_noloc arg_lbl in

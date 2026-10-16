@@ -104,7 +104,13 @@ module T = struct
       List.iter
         (function
           | Parsetree.Parg_type {typ} -> sub.typ sub typ
-          | Parsetree.Parg_fixed _ -> ())
+          | Parsetree.Parg_fixed {value; loc} -> (
+            sub.location sub loc;
+            sub.location sub value.loc;
+            match value.txt with
+            | Pfixed_int source | Pfixed_template source | Pfixed_json source ->
+              sub.location sub source.loc
+            | Pfixed_string _ -> ()))
         params;
       sub.typ sub ret
     | Ptyp_tuple tyl -> List.iter (sub.typ sub) tyl

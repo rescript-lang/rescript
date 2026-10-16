@@ -104,10 +104,18 @@ module T = struct
              | Parsetree.Parg_type arg ->
                Parsetree.Parg_type {arg with typ = sub.typ sub arg.typ}
              | Parsetree.Parg_fixed arg ->
+               let txt : Parsetree.fixed_value =
+                 match arg.value.txt with
+                 | Pfixed_int source -> Pfixed_int (map_loc sub source)
+                 | Pfixed_string _ as value -> value
+                 | Pfixed_template source ->
+                   Pfixed_template (map_loc sub source)
+                 | Pfixed_json source -> Pfixed_json (map_loc sub source)
+               in
                Parsetree.Parg_fixed
                  {
                    arg with
-                   value = map_loc sub arg.value;
+                   value = {txt; loc = sub.location sub arg.value.loc};
                    loc = sub.location sub arg.loc;
                  })
            params)
