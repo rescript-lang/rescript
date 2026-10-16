@@ -34,7 +34,7 @@ external parseExnWithReviver: (string, (string, t) => t) => t = "JSON.parse"
   migrate: JSON.stringify(%insert.unlabelledArgument(0), ~space=%insert.unlabelledArgument(2)),
 })
 @val
-external stringifyWithIndent: (t, @as(json`null`) _, int) => string = "JSON.stringify"
+external stringifyWithIndent: (t, %raw("null"), int) => string = "JSON.stringify"
 @deprecated({
   reason: "Use `JSON.stringify` with optional parameter instead",
   migrate: JSON.stringify(
@@ -83,7 +83,7 @@ external stringifyAny: ('a, ~replacer: replacer=?, ~space: int=?) => option<stri
 })
 @raises
 @val
-external stringifyAnyWithIndent: ('a, @as(json`null`) _, int) => option<string> = "JSON.stringify"
+external stringifyAnyWithIndent: ('a, %raw("null"), int) => option<string> = "JSON.stringify"
 @deprecated({
   reason: "Use `JSON.stringifyAny` with optional parameter instead",
   migrate: JSON.stringifyAny(

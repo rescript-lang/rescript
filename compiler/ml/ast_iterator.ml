@@ -110,6 +110,7 @@ module T = struct
             match value.txt with
             | Pfixed_int source | Pfixed_template source | Pfixed_json source ->
               sub.location sub source.loc
+            | Pfixed_raw source -> sub.location sub (Ast_raw.source_loc source)
             | Pfixed_string _ -> ()))
         params;
       sub.typ sub ret

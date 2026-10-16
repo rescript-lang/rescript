@@ -31,7 +31,7 @@ module Result: {
   ```
   */
   @get_index
-  external fullMatch: (t, @as(0) _) => string = ""
+  external fullMatch: (t, %raw("0")) => string = ""
 
   /**
   `matches(regExpResult)` returns all matches for `regExpResult`.
@@ -53,7 +53,7 @@ module Result: {
   ```
   */
   @send
-  external matches: (t, @as(1) _) => array<option<string>> = "slice"
+  external matches: (t, %raw("1")) => array<option<string>> = "slice"
   @get external index: t => int = "index"
 
   /**

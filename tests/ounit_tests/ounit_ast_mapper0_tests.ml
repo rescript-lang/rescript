@@ -341,6 +341,8 @@ let test_fixed_argument_locations_go_through_the_mapper _ =
         match value.txt with
         | Pfixed_int source | Pfixed_template source | Pfixed_json source ->
           OUnit.assert_equal marker source.loc
+        | Pfixed_raw source ->
+          OUnit.assert_equal marker (Ast_raw.source_loc source)
         | Pfixed_string _ -> ())
       [(json.loc, json.value); (int.loc, int.value)]
   | _ -> assert_failure "Expected the fixed arguments back");

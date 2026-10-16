@@ -9,7 +9,7 @@ external abs: int => int = "abs"
 external nested: unit => float = "random"
 
 @val
-external jsonArg: (@as({json`[]`}) _, int) => int = "Math.abs"
+external jsonArg: (%raw("[]"), int) => int = "Math.abs"
 
 type choice = | @as(1) First
 

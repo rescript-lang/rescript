@@ -290,24 +290,19 @@ let tyvar_loc f str = pp f "'%s" str.txt
 let string_quot f x = pp f "`%s" x
 
 let rec type_with_label ctxt f arg =
-  let attrs, lbl, typ =
-    match arg with
-    | Parg_type {attrs; lbl; typ} -> (attrs, lbl, typ)
-    | Parg_fixed {attrs; lbl; value; loc} ->
-      (* Printed in its legacy spelling, [_ [@as value]]. *)
-      ( attrs,
-        lbl,
-        Ast_helper.Typ.any ~loc
-          ~attrs:[Ast_fixed_arg.to_attribute ~loc value]
-          () )
+  let label lbl =
+    match lbl with
+    | Nolabel -> ""
+    | Labelled {txt = s} -> s ^ ":"
+    | Optional {txt = s} -> "?" ^ s ^ ":"
   in
-  match lbl with
-  | Nolabel -> pp f "%a%a" (core_type1 ctxt) typ (attributes ctxt) attrs
-  (* otherwise parenthesize *)
-  | Labelled {txt = s} ->
-    pp f "%s:%a%a" s (core_type1 ctxt) typ (attributes ctxt) attrs
-  | Optional {txt = s} ->
-    pp f "?%s:%a%a" s (core_type1 ctxt) typ (attributes ctxt) attrs
+  match arg with
+  | Parg_type {attrs; lbl; typ} ->
+    pp f "%s%a%a" (label lbl) (core_type1 ctxt) typ (attributes ctxt) attrs
+  | Parg_fixed {attrs; lbl; value} ->
+    pp f "%s%%raw(%a)%a" (label lbl) print_quoted_string_with_byte_width
+      (Ast_fixed_arg.js_source value.txt)
+      (attributes ctxt) attrs
 
 and core_type ctxt f x =
   if x.ptyp_attributes <> [] then
