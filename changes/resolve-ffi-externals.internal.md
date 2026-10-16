@@ -1,0 +1,1 @@
+- Keep resolved FFI specifications out of the parsetree, which now holds an external's primitive string as written. https://github.com/rescript-lang/rescript/pull/8728
