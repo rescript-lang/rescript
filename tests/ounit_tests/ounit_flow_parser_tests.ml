@@ -61,6 +61,9 @@ let suites =
                "1n";
                {|"s"|};
                "{}";
+               "0o7";
+               "0";
+               {|"\0"|};
                "{a: [1, null]}";
                "/a/g";
                "undefined";
@@ -72,6 +75,8 @@ let suites =
                OUnit.assert_bool source
                  (not (Classify_function.is_fixed_literal source)))
              [
+               "007";
+               {|"\07"|};
                "{[f()]: 0}";
                {|{["a"]: 0}|};
                "{a: {[f()]: 0}}";
