@@ -32,13 +32,10 @@ or the snapshot file in the diff>
 
 Breaking: <what existing code or tooling stops working, and the migration>
 
-Changelog entry: <the exact bullet of the changes/<name>.<category>.md fragment>
-
 Review: <a question a reviewer raised or will raise, and its answer; repeat>
 
 Area: syntax printer frontend typechecker lambda codegen runtime rewatch
  analysis reanalyze gentype tools playground scripts ci docs tests
-Changelog: breaking | feature | fix | docs | polish | internal | none
 Output: unchanged | changed <which programs>, <evidence>
 Formatting: unchanged | changed <which source shapes>
 Formats: none | <bumped magic numbers: ast cmi cmt cmj>
@@ -61,7 +58,11 @@ Signed-off-by: <Name> <email>
 - **The final block is git trailers**: `Key: value` lines, continuation lines
   indented by one space, nothing after them. `git interpret-trailers --parse`
   must read every key. `Signed-off-by` (DCO) is required on every commit.
-- **Required keys**: `Area`, `Changelog`, `Output`, `Tests`. `Formatting`, `Formats`,
+- **No changelog in the record**: the `changes/<name>.<category>.md`
+  fragment the commit adds is the single source of truth for its changelog
+  category and entry (see `changes/README.md`). The record repeats neither;
+  the review page reads the fragment from the diff.
+- **Required keys**: `Area`, `Output`, `Tests`. `Formatting`, `Formats`,
   `PPX` and `Editor` are required whenever the change touches the syntax
   library, the parsetree, the typed tree or Lambda. Omit the others when they
   do not apply.
@@ -79,7 +80,6 @@ Signed-off-by: <Name> <email>
 | Field | What the record states |
 | --- | --- |
 | `Area` | The layers the change touches. They decide who reviews it and which suites apply; a parsetree or typed-tree change also reaches editor analysis. |
-| `Changelog` + `Changelog entry` | Whether the change is user-facing, and its category: `breaking` when existing code or tooling must adapt, `internal` when nothing user-visible changes. The entry is one short line ending in the PR link, identical to the fragment's bullet. |
 | `Output` + `Before`/`After (js)` | The generated JavaScript for the example before and after, and which existing programs compile differently. `unchanged` holds when no committed generated JS changes, or when a rebuild of the test suites is byte-identical. |
 | `Formatting` + `Before`/`After (rescript)` | Whether `rescript format` rewrites existing code, and whether formatted output parses back to the same tree with its comments. |
 | `Formats` | The magic numbers bumped in `compiler/ext/config.ml`. Any change to the marshaled parsetree, typed tree (`.cmi`, `.cmt`) or `.cmj` layout, constructor order included, bumps the matching number. |
@@ -107,10 +107,13 @@ node scripts/commitRecords.js --out review.html --pr 1234 --title "<PR title>" <
 
 - A revision renders one card. A range renders a summary row, a changelog
   draft grouped by category, its commits as cards, and the files more than
-  one commit (or more than one range) changes.
-- Each card checks the record against its diff: a changelog category with no
-  new `changes/` fragment (or a `Changelog entry` that differs from the
-  fragment's bullet), modified generated `.mjs`, `.cjs` and `.res.js` files under
+  one commit (or more than one range) changes. The changelog category, the
+  entries and the draft come from the `changes/` fragments in the diff: a
+  card shows the fragments its commit adds or changes, and a range's draft
+  shows the fragments the range leaves, in their last version.
+- Each card checks the record against its diff: a `changes/` fragment that
+  `yarn changelog:check` rejects (such as one still carrying the placeholder
+  PR link), an edit to `CHANGELOG.md`, modified generated `.mjs`, `.cjs` and `.res.js` files under
   `Output: unchanged` (new ones from new tests are counted, not flagged), a
   magic number bumped in `compiler/ext/config.ml` that
   `Formats` does not name, a parsetree change with no ast-mapping fixture, a

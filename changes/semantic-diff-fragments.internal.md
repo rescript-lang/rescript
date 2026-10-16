@@ -1,0 +1,1 @@
+- Read the semantic diff page's changelog from the `changes/` fragments, the single source of truth, instead of commit message trailers. https://github.com/rescript-lang/rescript/pull/8881
