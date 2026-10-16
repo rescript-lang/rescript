@@ -32,3 +32,5 @@ external raw: (%raw("{}"), %raw(`"img"`), ~mode: %raw("[1, 2]"), int) => int = "
 external rawCommented: (/* a */ %raw("1") /* b */, %raw(/* c */ "2"), int) => int = "f"
 
 @val external legacyNumbers: (@as(007) _, @as(1_000) _, int) => int = "f"
+
+@val external templateSyntax: (@as("${x}") _, @as("a`b") _, @as("\\`") _, int) => int = "f"
