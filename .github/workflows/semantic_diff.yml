@@ -1,0 +1,108 @@
+name: Semantic Diff
+
+# Renders the commit records of each pull request (scripts/commitRecords.js)
+# as a review page on the CDN and links it from the pull request.
+#
+# A pull request from a branch of this repository runs on pull_request, with
+# its own workflow and renderer. A pull request from a fork runs on
+# pull_request_target, which GitHub takes from the default branch and runs
+# with the repository's secrets: it executes only the default branch's code,
+# and the fork's commits are fetched as git data and never checked out.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  pull_request_target:
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: semantic-diff-${{ github.event_name }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    if: >-
+      github.event.action != 'closed' &&
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name == 'pull_request') ==
+      (github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_TITLE: ${{ github.event.pull_request.title }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - name: Checkout renderer
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      - name: Render semantic diff
+        id: render
+        run: |
+          git fetch --no-tags --filter=blob:none origin "refs/pull/${PR_NUMBER}/head:refs/heads/pr-${PR_NUMBER}"
+          base=$(git merge-base "$BASE_SHA" "pr-${PR_NUMBER}")
+          mkdir -p semantic-diff
+          node scripts/commitRecords.js --out semantic-diff/index.html --pr "$PR_NUMBER" --title "$PR_TITLE" "${base}..pr-${PR_NUMBER}"
+          echo "head=$(git rev-parse --short=9 "pr-${PR_NUMBER}")" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Rclone
+        uses: cometkim/rclone-actions/setup-rclone@main
+
+      - name: Configure Rclone remote
+        uses: cometkim/rclone-actions/configure-remote/s3-provider@main
+        with:
+          name: rescript
+          provider: Cloudflare
+          endpoint: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          access-key-id: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          acl: private
+
+      - name: Upload semantic diff
+        run: rclone copyto --s3-no-check-bucket semantic-diff/index.html "rescript:cdn-assets/semantic-diff/pr-${PR_NUMBER}/index.html"
+
+      # The query string names the rendered commit, so each push gets a URL
+      # that no cache has seen.
+      - name: Comment semantic diff URL
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+          comment-tag: semantic-diff
+          # Each push replaces the comment, so the newest link is the last
+          # comment on the pull request.
+          mode: recreate
+          message: |
+            Semantic diff: https://cdn.rescript-lang.org/semantic-diff/pr-${{ github.event.pull_request.number }}/index.html?v=${{ steps.render.outputs.head }}
+
+  cleanup:
+    if: >-
+      github.event.action == 'closed' &&
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name == 'pull_request') ==
+      (github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: Setup Rclone
+        uses: cometkim/rclone-actions/setup-rclone@main
+
+      - name: Configure Rclone remote
+        uses: cometkim/rclone-actions/configure-remote/s3-provider@main
+        with:
+          name: rescript
+          provider: Cloudflare
+          endpoint: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          access-key-id: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          acl: private
+
+      - name: Delete semantic diff
+        continue-on-error: true
+        run: rclone purge --s3-no-check-bucket "rescript:cdn-assets/semantic-diff/pr-${{ github.event.pull_request.number }}"
