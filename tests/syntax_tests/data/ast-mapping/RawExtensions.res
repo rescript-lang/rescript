@@ -7,6 +7,7 @@ let fn = %ffi("(a) => a + 1")
 let applied = %ffi(`(a, b) => a * b`)(2, 3)
 let attributed = @foo %raw("1")
 let leftAsExtension = %raw({"x"})
+let bracedEscapes = %raw({"\"a\tb\""})
 
 %%raw("var top = 1")
 
