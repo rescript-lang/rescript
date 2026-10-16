@@ -238,6 +238,179 @@ let test_constructor_runtime_tag_reaches_ast0_as_an_attribute _ =
   OUnit.assert_bool "Expected a plain @as attribute on the ast0 wire"
     (has_attr "as" constructor0.pcd_attributes)
 
+let test_fixed_argument_roundtrips_through_ast0 _ =
+  (* [@as(1) _, int] *)
+  let fixed_loc = source_loc 1 9 and value_loc = source_loc 5 6 in
+  let value =
+    {
+      Location.txt = Parsetree.Pfixed_int {txt = "1"; loc = value_loc};
+      loc = value_loc;
+    }
+  in
+  let int_type =
+    Ast_helper.Typ.constr ~loc (Location.mknoloc (Longident.Lident "int")) []
+  in
+  let typ =
+    Ast_helper.Typ.arrow ~loc
+      [
+        Parg_fixed {attrs = []; lbl = Nolabel; value; loc = fixed_loc};
+        Parg_type {attrs = []; lbl = Nolabel; typ = int_type};
+      ]
+      int_type
+  in
+  let vd =
+    Ast_helper.Val.mk ~prim:(Parsetree.Prim_name "f") (Location.mknoloc "f") typ
+  in
+  let vd0 =
+    Ast_mapper_to0.default_mapper.value_description
+      Ast_mapper_to0.default_mapper vd
+  in
+  (* v0 spells a fixed argument [_ [@as 1]], as before it had its own node. *)
+  (match vd0.pval_type.ptyp_desc with
+  | Ptyp_constr (_, [{ptyp_desc = Ptyp_arrow (Nolabel, arg0, _)}; _]) -> (
+    match arg0 with
+    | {
+     ptyp_desc = Ptyp_any;
+     ptyp_attributes =
+       [
+         ( {txt = "as"},
+           PStr
+             [
+               {
+                 pstr_desc =
+                   Pstr_eval
+                     ( {pexp_desc = Pexp_constant (Pconst_integer ("1", None))},
+                       [] );
+               };
+             ] );
+       ];
+    } ->
+      ()
+    | _ -> assert_failure "Expected [_ [@as 1]] on the ast0 wire")
+  | _ -> assert_failure "Expected an external arrow on the ast0 wire");
+  let vd' =
+    Ast_mapper_from0.default_mapper.value_description
+      Ast_mapper_from0.default_mapper vd0
+  in
+  match vd'.pval_type.ptyp_desc with
+  | Ptyp_arrow
+      {
+        params =
+          [
+            Parg_fixed {attrs = []; lbl = Nolabel; value = value'; loc};
+            Parg_type _;
+          ];
+      } ->
+    OUnit.assert_equal value value';
+    OUnit.assert_equal fixed_loc loc
+  | _ -> assert_failure "Expected the fixed argument back from ast0"
+
+let test_fixed_argument_locations_go_through_the_mapper _ =
+  let marker = source_loc 100 101 in
+  let int_type =
+    Ast_helper.Typ.constr ~loc (Location.mknoloc (Longident.Lident "int")) []
+  in
+  let fixed (txt : Parsetree.fixed_value) : Parsetree.arg =
+    Parg_fixed
+      {
+        attrs = [];
+        lbl = Nolabel;
+        value = {txt; loc = source_loc 5 9};
+        loc = source_loc 1 12;
+      }
+  in
+  let vd =
+    Ast_helper.Val.mk ~prim:(Parsetree.Prim_name "f") (Location.mknoloc "f")
+      (Ast_helper.Typ.arrow ~loc
+         [
+           fixed (Pfixed_json {txt = "{}"; loc = source_loc 6 8});
+           fixed (Pfixed_int {txt = "1"; loc = source_loc 5 6});
+           Parg_type {attrs = []; lbl = Nolabel; typ = int_type};
+         ]
+         int_type)
+  in
+  let relocate =
+    {Ast_mapper.default_mapper with location = (fun _ _ -> marker)}
+  in
+  (match (relocate.value_description relocate vd).pval_type.ptyp_desc with
+  | Ptyp_arrow {params = [Parg_fixed json; Parg_fixed int; Parg_type _]} ->
+    List.iter
+      (fun (arg_loc, (value : Parsetree.fixed_value Location.loc)) ->
+        OUnit.assert_equal marker arg_loc;
+        OUnit.assert_equal marker value.loc;
+        match value.txt with
+        | Pfixed_int source | Pfixed_template source | Pfixed_json source ->
+          OUnit.assert_equal marker source.loc
+        | Pfixed_string _ -> ())
+      [(json.loc, json.value); (int.loc, int.value)]
+  | _ -> assert_failure "Expected the fixed arguments back");
+  let relocate0 =
+    {Ast_mapper_to0.default_mapper with location = (fun _ _ -> marker)}
+  in
+  let vd0 = relocate0.value_description relocate0 vd in
+  let assert_relocated_v0_fixed (typ : Parsetree0.core_type) =
+    OUnit.assert_equal marker typ.ptyp_loc;
+    match typ.ptyp_attributes with
+    | [
+     ( {txt = "as"; loc = name_loc},
+       PStr [{pstr_loc; pstr_desc = Pstr_eval ({pexp_loc}, [])}] );
+    ] ->
+      OUnit.assert_equal marker name_loc;
+      OUnit.assert_equal marker pstr_loc;
+      OUnit.assert_equal marker pexp_loc
+    | _ -> assert_failure "Expected [_ [@as value]] on the ast0 wire"
+  in
+  match vd0.pval_type.ptyp_desc with
+  | Ptyp_constr
+      ( _,
+        [
+          {
+            ptyp_desc =
+              Ptyp_arrow (_, json0, {ptyp_desc = Ptyp_arrow (_, int0, _)});
+          };
+          _;
+        ] ) ->
+    assert_relocated_v0_fixed json0;
+    assert_relocated_v0_fixed int0
+  | _ -> assert_failure "Expected an external arrow on the ast0 wire"
+
+let test_fixed_argument_is_external_only _ =
+  (* A non-external arrow keeps [@as(1) _] as an ordinary argument. *)
+  let any_as =
+    Ast_helper.Typ.any ~loc
+      ~attrs:
+        [
+          ( Location.mknoloc "as",
+            Parsetree.PStr
+              [
+                Ast_helper.Str.eval
+                  (Ast_helper.Exp.constant (Pconst_integer ("1", None)));
+              ] );
+        ]
+      ()
+  in
+  let typ =
+    Ast_helper.Typ.arrow ~loc
+      [Parg_type {attrs = []; lbl = Nolabel; typ = any_as}]
+      (Ast_helper.Typ.any ())
+  in
+  let vd = Ast_helper.Val.mk (Location.mknoloc "f") typ in
+  let roundtrip vd =
+    Ast_mapper_from0.default_mapper.value_description
+      Ast_mapper_from0.default_mapper
+      (Ast_mapper_to0.default_mapper.value_description
+         Ast_mapper_to0.default_mapper vd)
+  in
+  (match (roundtrip vd).pval_type.ptyp_desc with
+  | Ptyp_arrow {params = [Parg_type _]} -> ()
+  | _ -> assert_failure "Expected an ordinary argument in a value declaration");
+  match
+    (roundtrip {vd with pval_prim = Some (Parsetree.Prim_name "f")}).pval_type
+      .ptyp_desc
+  with
+  | Ptyp_arrow {params = [Parg_fixed _]} -> ()
+  | _ -> assert_failure "Expected a fixed argument in an external"
+
 let map_expr0 e =
   Ast_mapper_from0.default_mapper.expr Ast_mapper_from0.default_mapper e
 
@@ -1455,12 +1628,20 @@ let test_string_literals_roundtrip_through_ast0 _ =
       (String_literal.string_semantic payload)
   | _ -> assert_failure "Expected a string pattern after ast0 roundtrip");
   let json_expr =
-    Ast_helper.Exp.constant ~loc (Parsetree.Pconst_json {|{"answer":42}|})
+    Ast_helper.Exp.tagged_template ~loc
+      (Ast_helper.Exp.ident ~loc (Location.mkloc (Longident.Lident "json") loc))
+      [located_string {|{"answer":42}|}]
+      []
   in
   (match (map_expr0 (map_expr_to0 json_expr)).pexp_desc with
-  | Pexp_constant (Pconst_json actual) ->
+  | Pexp_tagged_template
+      {
+        tag = {pexp_desc = Pexp_ident {txt = Lident "json"}};
+        raw_sources = [{txt = actual}];
+        values = [];
+      } ->
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") {|{"answer":42}|} actual
-  | _ -> assert_failure "Expected a JSON literal");
+  | _ -> assert_failure "Expected a legacy json tagged template");
   let char_pattern =
     Ast_helper.Pat.constant ~loc
       (Parsetree.Pconst_char {source = {|\u{61}|}; semantic = 0x61})
@@ -2175,4 +2356,10 @@ let suites =
          "constructor_runtime_tag_reaches_ast0_as_an_attribute"
          >:: test_constructor_runtime_tag_reaches_ast0_as_an_attribute;
          "ppx_context_on_the_wire" >:: test_ppx_context_on_the_wire;
+         "fixed_argument_roundtrips_through_ast0"
+         >:: test_fixed_argument_roundtrips_through_ast0;
+         "fixed_argument_is_external_only"
+         >:: test_fixed_argument_is_external_only;
+         "fixed_argument_locations_go_through_the_mapper"
+         >:: test_fixed_argument_locations_go_through_the_mapper;
        ]

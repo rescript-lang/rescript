@@ -47,12 +47,6 @@ type constant =
      legacy three-digit decimal escapes to hexadecimal escapes. Compiler-created
      Payloads are constructed through [String_literal], which validates this
      relationship. *)
-  | Pconst_json of string
-  (* The JavaScript source inside a non-interpolated [json`...`] literal. For
-     example, [@as(json`{"ok": true}`)] stores ["{\"ok\": true}"]. Built-in
-     FFI processing consumes this form in supported external attributes;
-     otherwise the frontend rejects it. The string is JavaScript source, not a
-     decoded ReScript string value. *)
   | Pconst_raw_source of string
   (* JavaScript source carried by a compiler extension such as [raw] or [ffi].
      For example, [%raw("x + 1")] stores ["x + 1"]. The extension
@@ -101,7 +95,24 @@ and core_type = {
   ptyp_attributes: attributes; (* ... [@id1] [@id2] *)
 }
 
-and arg = {attrs: attributes; lbl: arg_label; typ: core_type}
+and arg =
+  | Parg_type of {attrs: attributes; lbl: arg_label; typ: core_type}
+  | Parg_fixed of {
+      attrs: attributes;
+      lbl: arg_label;
+      value: fixed_value loc; (* located at the payload *)
+      loc: Location.t; (* the whole argument, from [@as] to [_] *)
+    }
+(* An external function argument whose value is fixed by the binding and
+   omitted at call sites, written [@as(value) _]. *)
+
+and fixed_value =
+  | Pfixed_int of string loc (* [@as(1)]: the integer literal's source *)
+  | Pfixed_string of String_literal.string_literal (* [@as("s")] *)
+  | Pfixed_template of string loc
+    (* [@as(`s`)]: the source between the backquotes *)
+  | Pfixed_json of string loc
+(* [@as(json`{}`)]: the JavaScript source between the backquotes *)
 
 and core_type_desc =
   | Ptyp_any (*  _ *)

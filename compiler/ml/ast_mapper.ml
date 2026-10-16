@@ -100,7 +100,24 @@ module T = struct
     | Ptyp_arrow {params; ret} ->
       Typ.arrow ~loc ~attrs
         (List.map
-           (fun (arg : Parsetree.arg) -> {arg with typ = sub.typ sub arg.typ})
+           (function
+             | Parsetree.Parg_type arg ->
+               Parsetree.Parg_type {arg with typ = sub.typ sub arg.typ}
+             | Parsetree.Parg_fixed arg ->
+               let txt : Parsetree.fixed_value =
+                 match arg.value.txt with
+                 | Pfixed_int source -> Pfixed_int (map_loc sub source)
+                 | Pfixed_string _ as value -> value
+                 | Pfixed_template source ->
+                   Pfixed_template (map_loc sub source)
+                 | Pfixed_json source -> Pfixed_json (map_loc sub source)
+               in
+               Parsetree.Parg_fixed
+                 {
+                   arg with
+                   value = {txt; loc = sub.location sub arg.value.loc};
+                   loc = sub.location sub arg.loc;
+                 })
            params)
         (sub.typ sub ret)
     | Ptyp_tuple tyl -> Typ.tuple ~loc ~attrs (List.map (sub.typ sub) tyl)

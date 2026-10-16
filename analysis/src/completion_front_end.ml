@@ -210,7 +210,7 @@ let rec expr_to_context_path_inner ~(in_jsx_context : bool)
     (e : Parsetree.expression) =
   match e.pexp_desc with
   | Pexp_braces {expr} -> expr_to_context_path_inner ~in_jsx_context expr
-  | Pexp_constant (Pconst_string _ | Pconst_json _ | Pconst_raw_source _) ->
+  | Pexp_constant (Pconst_string _ | Pconst_raw_source _) ->
     Some Completable.CPString
   | Pexp_template _ -> Some Completable.CPString
   | Pexp_tagged_template {tag} -> (

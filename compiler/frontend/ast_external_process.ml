@@ -66,28 +66,31 @@ let spec_of_ptyp (nolabel : bool) (ptyp : Parsetree.core_type) :
       if nolabel then Extern_unit else Nothing
     | _ -> Nothing)
 
+let arg_cst_of_as_const :
+    Ast_attributes.as_const_payload -> External_arg_spec.attr = function
+  | Int i ->
+    (* This type is used in obj only to construct obj type*)
+    Arg_cst (External_arg_spec.cst_int i)
+  | Str s -> Arg_cst (External_arg_spec.cst_string s)
+  | Json s -> Arg_cst (External_arg_spec.cst_json s)
+
 (* is_optional = false 
 *)
 let refine_arg_type ~(nolabel : bool) (ptyp : Ast_core_type.t) :
     External_arg_spec.attr =
-  if ptyp.ptyp_desc = Ptyp_any then
+  if ptyp.ptyp_desc = Ptyp_any then (
     let ptyp_attrs = ptyp.ptyp_attributes in
     let payload = Ast_attributes.as_const ptyp_attrs in
     match payload with
     | None -> spec_of_ptyp nolabel ptyp
-    | Some cst -> (
+    | Some cst ->
       (* (_[@as ])*)
       (* when ppx start dropping attributes
          we should warn, there is a trade off whether
          we should warn dropped non bs attribute or not
       *)
       Bs_ast_invariant.warn_discarded_unused_attributes ptyp_attrs;
-      match cst with
-      | Int i ->
-        (* This type is used in obj only to construct obj type*)
-        Arg_cst (External_arg_spec.cst_int i)
-      | Str s -> Arg_cst (External_arg_spec.cst_string s)
-      | Json s -> Arg_cst (External_arg_spec.cst_json s))
+      arg_cst_of_as_const cst)
   else (* ([`a|`b] [@string]) *)
     spec_of_ptyp nolabel ptyp
 
@@ -103,14 +106,7 @@ let refine_obj_arg_type ~(nolabel : bool) (ptyp : Ast_core_type.t) :
     Bs_ast_invariant.warn_discarded_unused_attributes ptyp_attrs;
     match payload with
     | None -> Bs_syntaxerr.err ptyp.ptyp_loc Invalid_underscore_type_in_external
-    | Some (Int i) ->
-      (* @as(24) *)
-      (* This type is used in obj only to construct obj type *)
-      Arg_cst (External_arg_spec.cst_int i)
-    | Some (Str s) ->
-      (* @as("foo") *)
-      Arg_cst (External_arg_spec.cst_string s)
-    | Some (Json s) -> Arg_cst (External_arg_spec.cst_json s))
+    | Some cst -> arg_cst_of_as_const cst)
   else (* ([`a|`b] [@string]) *)
     spec_of_ptyp nolabel ptyp
 
@@ -207,7 +203,6 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
     | PStr [] -> prim_name_or_pval_prim
     (* It is okay to have [@@val] without payload *)
     | _ -> (
-      Ast_payload.reject_json_literal_payload payload;
       match Ast_payload.semantic_string_of_payload payload with
       | Some val_name -> {name = val_name; source = Payload}
       | None -> Location.raise_errorf ~loc "Invalid payload")
@@ -403,6 +398,26 @@ type response = {
   no_inline_cross_module: bool;
 }
 
+(* A fixed argument means what [@as(value) _] means, so decode it with the
+   same reader. *)
+let fixed_arg_type
+    ((value, loc) : Parsetree.fixed_value Location.loc * Location.t) =
+  match Ast_attributes.as_const [Ast_fixed_arg.to_attribute ~loc value] with
+  | Some cst -> arg_cst_of_as_const cst
+  | None -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal
+
+(* The label and type of an argument. A fixed argument is typed as its [_], so
+   the checks for [@as(value) _] apply to it unchanged. Its location ends with
+   that [_]. *)
+let arg_parts (arg : Parsetree.arg) =
+  match arg with
+  | Parg_type {attrs; lbl; typ} -> (lbl, attrs, typ, None)
+  | Parg_fixed {attrs; lbl; value; loc} ->
+    ( lbl,
+      attrs,
+      Ast_helper.Typ.any ~loc:(Ast_fixed_arg.underscore_loc loc) (),
+      Some (value, loc) )
+
 let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
     (arg_types_ty : Parsetree.arg list) (result_type : Ast_core_type.t) :
     int * Parsetree.core_type * External_ffi_types.t =
@@ -434,8 +449,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
           param_type
           (arg_labels, (arg_types : Parsetree.arg list), result_types)
         ->
-          let arg_label = param_type.lbl in
-          let ty = param_type.typ in
+          let arg_label, param_attrs, ty, fixed = arg_parts param_type in
           let new_arg_label, new_arg_types, output_tys =
             match arg_label with
             | Nolabel -> (
@@ -449,11 +463,15 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
                   "expect label, optional, or unit here")
             | Labelled {txt = label} -> (
               let field_name =
-                match Ast_attributes.as_string param_type.attrs with
+                match Ast_attributes.as_string param_attrs with
                 | Some alias -> alias
                 | None -> label
               in
-              let obj_arg_type = refine_obj_arg_type ~nolabel:false ty in
+              let obj_arg_type =
+                match fixed with
+                | Some fixed -> fixed_arg_type fixed
+                | None -> refine_obj_arg_type ~nolabel:false ty
+              in
               match obj_arg_type with
               | Ignore ->
                 ( External_arg_spec.empty_kind obj_arg_type,
@@ -506,7 +524,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
                   "%@obj label %s does not support %@unwrap arguments" label)
             | Optional {txt = label} -> (
               let field_name =
-                match Ast_attributes.as_string param_type.attrs with
+                match Ast_attributes.as_string param_attrs with
                 | Some alias -> alias
                 | None -> label
               in
@@ -914,8 +932,7 @@ let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
       Ext_list.fold_right arg_types_ty
         (([], [], 0) : External_arg_spec.params * Parsetree.arg list * int)
         (fun param_type (arg_type_specs, arg_types, i) ->
-          let arg_label = param_type.lbl in
-          let ty = param_type.typ in
+          let arg_label, _, ty, fixed = arg_parts param_type in
           (if i = 0 && splice then
              match arg_label with
              | Optional _ ->
@@ -948,14 +965,22 @@ let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
                   s
               | _ -> (Arg_optional, arg_type, param_type :: arg_types))
             | Labelled _ -> (
-              let arg_type = refine_arg_type ~nolabel:false ty in
+              let arg_type =
+                match fixed with
+                | Some fixed -> fixed_arg_type fixed
+                | None -> refine_arg_type ~nolabel:false ty
+              in
               ( Arg_label,
                 arg_type,
                 match arg_type with
                 | Arg_cst _ -> arg_types
                 | _ -> param_type :: arg_types ))
             | Nolabel -> (
-              let arg_type = refine_arg_type ~nolabel:true ty in
+              let arg_type =
+                match fixed with
+                | Some fixed -> fixed_arg_type fixed
+                | None -> refine_arg_type ~nolabel:true ty
+              in
               ( Arg_empty,
                 arg_type,
                 match arg_type with
@@ -977,7 +1002,9 @@ let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
             (Location.mkloc (Longident.Lident "unit") loc)
             []
         in
-        let unit_arg = {Parsetree.attrs = []; lbl = Nolabel; typ = unit_type} in
+        let unit_arg =
+          Parsetree.Parg_type {attrs = []; lbl = Nolabel; typ = unit_type}
+        in
         ( [unit_arg],
           arg_type_specs
           @ [{External_arg_spec.arg_label = Arg_empty; arg_type = Extern_unit}]

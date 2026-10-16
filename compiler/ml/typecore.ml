@@ -85,7 +85,6 @@ type error =
   | Polyvar_literal_overflow
   | Unknown_literal of string * char
   | Invalid_string_escape_sequence
-  | Json_literal_outside_external
   | Illegal_letrec_pat
   | Empty_record_literal
   | Uncurried_arity_mismatch of {
@@ -338,7 +337,6 @@ let constant : Parsetree.constant -> (Asttypes.constant, error) result =
   | Pconst_char {semantic} -> Ok (Const_char semantic)
   | Pconst_string payload ->
     Ok (Const_string (String_literal.string_semantic payload))
-  | Pconst_json _ -> Error Json_literal_outside_external
   | Pconst_raw_source s -> Ok (Const_string s)
   | Pconst_float (f, None) -> Ok (Const_float f)
   | Pconst_float (f, Some c) -> Error (Unknown_literal (f, c))
@@ -2087,7 +2085,11 @@ let rec approx_type env sty =
     newty
       (Tarrow
          ( List.map
-             (fun ({lbl = p} : Parsetree.arg) ->
+             (fun (arg : Parsetree.arg) ->
+               let p =
+                 match arg with
+                 | Parg_type {lbl} | Parg_fixed {lbl} -> lbl
+               in
                {
                  Types.lbl = p;
                  typ =
@@ -5395,8 +5397,6 @@ let report_error env loc ppf error =
     fprintf ppf "Unknown modifier '%c' for literal %s%c" m n m
   | Invalid_string_escape_sequence ->
     fprintf ppf "Invalid string escape sequence"
-  | Json_literal_outside_external ->
-    fprintf ppf "%s" Ast_payload.json_literal_outside_external_message
   | Illegal_letrec_pat ->
     fprintf ppf "Only variables are allowed as left-hand side of `let rec`"
   | Empty_record_literal ->
