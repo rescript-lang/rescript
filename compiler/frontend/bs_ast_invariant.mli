@@ -34,9 +34,22 @@ val iter_warnings_on_stru : Parsetree.structure -> unit
 
 val iter_warnings_on_sigi : Parsetree.signature -> unit
 
-val emit_external_warnings_on_structure : Parsetree.structure -> unit
+(** These checks see an FFI external in its resolved form, given by
+    [resolved_ffi_external]: the declaration stays as written until type
+    checking, so its argument types still carry the attributes that
+    resolution consumes. *)
 
-val emit_external_warnings_on_signature : Parsetree.signature -> unit
+val emit_external_warnings_on_structure :
+  resolved_ffi_external:
+    (Parsetree.value_description -> Parsetree.value_description) ->
+  Parsetree.structure ->
+  unit
+
+val emit_external_warnings_on_signature :
+  resolved_ffi_external:
+    (Parsetree.value_description -> Parsetree.value_description) ->
+  Parsetree.signature ->
+  unit
 
 val check_removed_ocaml_spellings_on_structure : Parsetree.structure -> unit
 (** Reject the [ocaml.]-prefixed builtin attributes and extensions that are no

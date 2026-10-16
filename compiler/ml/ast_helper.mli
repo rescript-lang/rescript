@@ -307,7 +307,7 @@ module Val : sig
   val mk :
     ?loc:loc ->
     ?attrs:attrs ->
-    ?prim:primitive_repr ->
+    ?prim:str ->
     str ->
     core_type ->
     value_description

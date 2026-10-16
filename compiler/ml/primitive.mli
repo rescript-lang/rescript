@@ -36,11 +36,29 @@ val with_arity :
 
 (* Invariant [List.length d.prim_native_repr_args = d.prim_arity] *)
 
-val parse_declaration :
-  Parsetree.value_description ->
+val make :
+  name:string ->
+  kind:prim_kind ->
   arity:int ->
   from_constructor:bool ->
   description
+
+type resolved_external = {
+  resolved_type: Parsetree.core_type;
+      (** The declared type, rewritten where FFI attributes erase or reshape
+          arguments ([@as] constants, [@ignore], [@obj] results). *)
+  resolved_attributes: Parsetree.attributes;
+      (** The declaration's attributes that resolution did not consume. *)
+  resolved_name: string;
+  resolved_kind: prim_kind;
+}
+(** An [external] declaration after its FFI attributes are applied. *)
+
+val resolve_external :
+  (Parsetree.value_description -> string -> resolved_external) ref
+(** [!resolve_external value_desc prim] resolves an [external] declaration
+    whose primitive string is [prim] during type checking. FFI resolution lives in the frontend, above this library, which
+    registers it before any source is type checked. *)
 
 val print : description -> Outcometree.out_val_decl -> Outcometree.out_val_decl
 

@@ -25,7 +25,7 @@
 val local_external_apply :
   Location.t ->
   ?pval_attributes:Parsetree.attributes ->
-  pval_prim:Parsetree.primitive_repr ->
+  pval_prim:string ->
   pval_type:Parsetree.core_type ->
   ?local_module_name:string ->
   ?local_fun_name:string ->
@@ -42,12 +42,24 @@ val local_external_apply :
    ]}
 *)
 
-val inline_string : string -> Parsetree.primitive_repr
+val inline_const_prim : string
+(** The primitive string of an [@inline] constant's declaration *)
 
-val inline_bool : bool -> Parsetree.primitive_repr
+val inline_const_of_expression :
+  Parsetree.expression -> External_ffi_types.inline_const option
+(** The constant an [@inline] literal denotes, if it is one an [@inline]
+    value can carry *)
 
-val inline_int : int32 -> Parsetree.primitive_repr
+val inline_const_declaration :
+  attr_loc:Location.t ->
+  Parsetree.value_description ->
+  Parsetree.expression ->
+  Parsetree.value_description
+(** [inline_const_declaration ~attr_loc value_desc literal] turns [value_desc]
+    into the [external] the type checker resolves to an inline constant: its
+    primitive is [inline_const_prim] and its only attribute is
+    [@inline(literal)]. *)
 
-val inline_bigint : string -> Parsetree.primitive_repr
-
-val inline_float : string -> Parsetree.primitive_repr
+val inline_const_of_declaration :
+  Parsetree.value_description -> External_ffi_types.inline_const option
+(** The constant of a declaration built by [inline_const_declaration] *)

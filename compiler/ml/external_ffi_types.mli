@@ -40,7 +40,7 @@ type arg_type = External_arg_spec.attr
 type arg_label = External_arg_spec.label
 
 (* The declaration, as the attribute language states it. The backend
-   compiles it directly; digestion validates it with [check_decl]. *)
+   compiles it directly; resolution validates it with [check_decl]. *)
 type module_source =
   | Module_named of external_module_name (* @module("...") payload forms *)
   | Module_itself

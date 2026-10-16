@@ -391,13 +391,6 @@ let check_return_wrapper loc (wrapper : External_ffi_types.return_wrapper)
     if Ast_core_type.is_user_option result_type then wrapper
     else Bs_syntaxerr.err loc Expect_opt_in_bs_return_to_opt
 
-type response = {
-  pval_type: Parsetree.core_type;
-  pval_prim: Parsetree.primitive_repr;
-  pval_attributes: Parsetree.attributes;
-  no_inline_cross_module: bool;
-}
-
 (* A fixed argument means what [@as(value) _] means, so decode it with the
    same reader. *)
 let fixed_arg_type
@@ -906,10 +899,16 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
   | {get_name = Some _} ->
     Location.raise_errorf ~loc "Attribute found that conflicts with %@get"
 
+type resolution = {
+  pval_type: Parsetree.core_type;
+  spec: External_ffi_types.t;
+  pval_attributes: Parsetree.attributes;
+  no_inline_cross_module: bool;
+}
+
 (** Note that the passed [type_annotation] is already processed by visitor pattern before*)
-let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
-    (prim_attributes : Ast_attributes.t) (prim_name : string) :
-    Parsetree.core_type * External_ffi_types.t * Parsetree.attributes * bool =
+let resolve (loc : Location.t) (type_annotation : Parsetree.core_type)
+    (prim_attributes : Ast_attributes.t) (prim_name : string) : resolution =
   let prim_name_with_source = {name = prim_name; source = External} in
   let result_type, arg_types_ty =
     (* Note this assumes external type is syntatic (no abstraction)*)
@@ -925,7 +924,12 @@ let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
     let _arity, new_type, spec =
       process_obj loc external_desc prim_name arg_types_ty result_type
     in
-    (new_type, spec, unused_attrs, false)
+    {
+      pval_type = new_type;
+      spec;
+      pval_attributes = unused_attrs;
+      no_inline_cross_module = false;
+    }
   else
     let splice = external_desc.splice in
     let arg_type_specs, args, arg_type_specs_length =
@@ -1022,21 +1026,12 @@ let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
     let return_wrapper =
       check_return_wrapper loc external_desc.return_wrapper result_type
     in
-    ( (match args with
-      | [] -> result_type
-      | _ -> Ast_helper.Typ.arrow ~loc args result_type),
-      External_ffi_types.ffi_bs arg_type_specs return_wrapper decl,
-      unused_attrs,
-      relative )
-
-let handle_attributes_as_prim (pval_loc : Location.t) (typ : Ast_core_type.t)
-    (attrs : Ast_attributes.t) (prim_name : string) : response =
-  let pval_type, ffi, pval_attributes, no_inline_cross_module =
-    handle_attributes pval_loc typ attrs prim_name
-  in
-  {
-    pval_type;
-    pval_prim = Prim_ffi {name = prim_name; spec = ffi};
-    pval_attributes;
-    no_inline_cross_module;
-  }
+    {
+      pval_type =
+        (match args with
+        | [] -> result_type
+        | _ -> Ast_helper.Typ.arrow ~loc args result_type);
+      spec = External_ffi_types.ffi_bs arg_type_specs return_wrapper decl;
+      pval_attributes = unused_attrs;
+      no_inline_cross_module = relative;
+    }
