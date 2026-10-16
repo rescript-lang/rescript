@@ -115,7 +115,12 @@ let classify ?(check : (Location.t * int) option) (prog : string) :
 
 let is_fixed_literal (source : string) : bool =
   let open Parser_flow in
-  let env = Parser_env.init_env None source in
+  (* The output is strict mode JavaScript, which rejects legacy octal literals
+     and escapes. *)
+  let parse_options =
+    Some {Parser_env.default_parse_options with use_strict = true}
+  in
+  let env = Parser_env.init_env ~parse_options None source in
   match
     do_parse env
       (fun env ->
