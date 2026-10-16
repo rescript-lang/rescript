@@ -9,4 +9,5 @@ const out = await execBuild();
 assert.notEqual(out.status, 0);
 assert.match(out.stderr, /could not build package tree/i);
 assert.match(out.stderr, /dependency 'weird'/i);
+assert.doesNotMatch(out.stdout, /error building package tree/i);
 await execClean();

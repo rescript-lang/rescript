@@ -1,0 +1,2 @@
+- Keep watch mode running after full rebuild initialization fails, retry initialization on source edits, and watch newly added dependencies for configuration fixes. https://github.com/rescript-lang/rescript/pull/8641
+- Dependency resolution and configuration errors now return exit code `1` instead of `2` from `rescript build`, `clean`, and `format`. https://github.com/rescript-lang/rescript/pull/8641
