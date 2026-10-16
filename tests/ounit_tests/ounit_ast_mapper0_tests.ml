@@ -1752,6 +1752,69 @@ let test_raw_source_prints_with_fitting_quotes _ =
   | Pexp_template {source_segments = [{txt = {|"img"|}}]} -> ()
   | _ -> assert_failure "Expected a template"
 
+let test_raw_source_template_fallback_reparses _ =
+  (* A source that needs a template escapes the template's own syntax, so it
+     parses back to the same JavaScript. *)
+  List.iter
+    (fun txt ->
+      let structure =
+        [
+          Ast_helper.Str.value ~loc Nonrecursive
+            [
+              Ast_helper.Vb.mk ~loc
+                (Ast_helper.Pat.var ~loc (Location.mknoloc "v"))
+                (Ast_helper.Exp.raw ~loc ~name_loc:loc Raw_expression
+                   (Raw_string {txt; loc}));
+            ];
+        ]
+      in
+      let printed =
+        Res_printer.print_implementation structure ~comments:[] ~width:80
+      in
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"RawTemplateFallback.res" ~source:printed
+      in
+      match parsed.parsetree with
+      | [
+       {
+         pstr_desc =
+           Pstr_value (_, [{pvb_expr = {pexp_desc = Pexp_raw {source}}}]);
+       };
+      ]
+        when not parsed.invalid ->
+        OUnit.assert_equal ~printer:(Printf.sprintf "%S") txt
+          (Ast_raw.js_source source)
+      | _ -> assert_failure ("Printed raw source does not reparse: " ^ printed))
+    [
+      {|"${x}"|};
+      {|"a`b"|};
+      {|"\"q\" `r` ${s}"|};
+      {|"a\${b}"|};
+      {|"\\`"|};
+      {|"a\n" + "\|};
+      "\"line\\\ncontinued\"";
+    ]
+
+let test_attributed_raw_template_reprints_after_ast0_roundtrip _ =
+  let source = {|let a = %raw(@foo `"x"`)
+let b = %ffi(@foo `(a) => "\`"`)|} in
+  let parsed =
+    Res_driver.parse_implementation_from_source
+      ~display_filename:"AttributedRawTemplate.res" ~source
+  in
+  OUnit.assert_bool "expected valid ReScript source" (not parsed.invalid);
+  let round_tripped =
+    Ast_mapper_from0.default_mapper.structure Ast_mapper_from0.default_mapper
+      (Ast_mapper_to0.default_mapper.structure Ast_mapper_to0.default_mapper
+         parsed.parsetree)
+  in
+  let print structure =
+    Res_printer.print_implementation structure ~comments:[] ~width:80
+  in
+  OUnit.assert_equal ~printer:(Printf.sprintf "%S") (print parsed.parsetree)
+    (print round_tripped)
+
 let assert_raw_extension_payload ~name ~expected expression =
   match expression.Parsetree.pexp_desc with
   | Pexp_raw {kind; source = Raw_string {txt = actual}} ->
@@ -2437,6 +2500,10 @@ let suites =
          >:: test_raw_structure_item_roundtrips_through_ast0;
          "raw_source_prints_with_fitting_quotes"
          >:: test_raw_source_prints_with_fitting_quotes;
+         "raw_source_template_fallback_reparses"
+         >:: test_raw_source_template_fallback_reparses;
+         "attributed_raw_template_reprints_after_ast0_roundtrip"
+         >:: test_attributed_raw_template_reprints_after_ast0_roundtrip;
          "fixed_argument_roundtrips_through_ast0"
          >:: test_fixed_argument_roundtrips_through_ast0;
          "fixed_argument_is_external_only"

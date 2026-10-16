@@ -151,7 +151,7 @@ let is_raw_source_extension = function
   | "raw" | "ffi" -> true
   | _ -> false
 
-(* A braced string is an ordinary expression, so it is mapped as usual. *)
+(* A braced string or a template is mapped as usual. *)
 let map_raw_source_payload sub = function
   | PStr
       [
@@ -168,8 +168,9 @@ let map_raw_source_payload sub = function
         };
       ]
     when not
-           (List.exists (fun ({txt}, _) -> txt = "res.braces") pexp_attributes)
-    ->
+           (has_template_attr pexp_attributes
+           || List.exists (fun ({txt}, _) -> txt = "res.braces") pexp_attributes
+           ) ->
     (* The payload is JavaScript source: keep it as the string's spelling. *)
     let payload =
       match String_literal.string_from_source s with

@@ -65,7 +65,15 @@ let to_extension ~name ~name_loc source : extension =
         else None
       with
       | Some payload -> Ast_helper.Exp.constant ~loc (Pconst_string payload)
-      | None -> Ast_helper.Exp.template ~loc [source] [])
+      | None ->
+        Ast_helper.Exp.template ~loc
+          [
+            {
+              source with
+              txt = String_literal.encode_raw_template_source source.txt;
+            };
+          ]
+          [])
     | Raw_template source -> Ast_helper.Exp.template ~loc [source] []
   in
   ({txt = name; loc = name_loc}, PStr [Ast_helper.Str.eval ~loc expression])
