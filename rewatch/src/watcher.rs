@@ -194,7 +194,14 @@ fn register_watches(
     watch_paths: &[(PathBuf, RecursiveMode)],
 ) -> Vec<RegisteredWatch> {
     let mut registered = Vec::with_capacity(watch_paths.len());
-    for (path, mode) in watch_paths {
+    // Register non-recursive paths first. notify's inotify backend keeps one
+    // recursive flag per directory, set by the last registration that reaches
+    // it, and only watches a folder created later if its parent's flag is
+    // recursive. A non-recursive path inside a recursive one (an overlapping
+    // source folder) must not clear the flag that the recursive one set.
+    let mut ordered: Vec<&(PathBuf, RecursiveMode)> = watch_paths.iter().collect();
+    ordered.sort_by_key(|(_, mode)| *mode == RecursiveMode::Recursive);
+    for (path, mode) in ordered {
         let mode_str = if *mode == RecursiveMode::Recursive {
             "recursive"
         } else {
@@ -216,12 +223,32 @@ fn register_watches(
     registered
 }
 
-/// Brings the registered watches from `current` to `next`, touching only the paths that changed.
+/// Whether `update_watches` registers only the new paths, leaving unchanged watches alone, rather
+/// than registering every path again (see `update_watches` for why this differs per platform).
+const REGISTER_ONLY_NEW_WATCHES: bool = cfg!(target_os = "macos");
+
+/// Brings the registered watches from `current` to `next`, which happens on every full rebuild:
+/// after a `rescript.json` change, but also when a source file is added, removed or renamed.
 ///
-/// Some backends restart their event stream on every `watch`/`unwatch` call (FSEvents on macOS
-/// does), and events that happen during the restart are lost. Leaving unchanged watches alone
-/// avoids those gaps entirely in the common case where a full rebuild keeps the same paths.
-/// Watches whose directory was replaced since registration are registered again.
+/// Stale watches are unwatched first: those whose path is no longer in `next`, and those whose
+/// directory was replaced since it was registered. What happens to the other watches depends on
+/// how the platform's watcher backend (from the `notify` crate) treats overlapping watches:
+///
+/// - **macOS (FSEvents):** every `watch`/`unwatch` call restarts the event stream, and events that
+///   happen during the restart are lost. Each registered path is watched independently, so
+///   unwatching one path never affects another. Only the new paths are registered, so a full
+///   rebuild that keeps the same paths doesn't restart the stream at all.
+///
+/// - **Linux (inotify) and other platforms:** notify keeps one watch per directory, shared by
+///   every registered path that reaches it: overlapping source folders, other spellings of a
+///   folder (`..`, symlinks) and directory symlinks inside a recursive folder. Unwatching a stale
+///   path can therefore also drop a watch that is still needed (#8825). So every path in `next` is
+///   registered again after the unwatches. Registering a directory that is already watched only
+///   updates its existing watch, so watches that weren't dropped keep reporting events without a
+///   gap, and those that were dropped are restored.
+///
+///   Windows takes this path too. It has no stable directory identity, so every watch counts as
+///   stale there and is unwatched and registered again on each full rebuild.
 ///
 /// Returns the watches that are registered afterwards, which excludes paths that failed to register.
 fn update_watches(
@@ -235,6 +262,9 @@ fn update_watches(
     });
     for watch in stale {
         let _ = watcher.unwatch(&watch.path);
+    }
+    if !REGISTER_ONLY_NEW_WATCHES {
+        return register_watches(watcher, next);
     }
     let added: WatchPaths = next
         .iter()
