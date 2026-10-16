@@ -50,4 +50,36 @@ let suites =
              (Classify_function.classify_stmt "// only a comment");
            OUnit.assert_equal Js_raw_info.Js_stmt_unknown
              (Classify_function.classify_stmt "console.log('hello')") );
+         ( "fixed literals are exactly one literal" >:: fun _ ->
+           List.iter
+             (fun source ->
+               OUnit.assert_bool source
+                 (Classify_function.is_fixed_literal source))
+             [
+               "1";
+               "-1";
+               "1n";
+               {|"s"|};
+               "{}";
+               "{a: [1, null]}";
+               "/a/g";
+               "undefined";
+               "true";
+             ];
+           List.iter
+             (fun source ->
+               OUnit.assert_bool source
+                 (not (Classify_function.is_fixed_literal source)))
+             [
+               "1 2";
+               "1) + alert(2";
+               "1; alert(2)";
+               "1, 2";
+               "1 // comment";
+               "/* comment */ 1";
+               "x";
+               "f()";
+               "`t`";
+               "";
+             ] );
        ]

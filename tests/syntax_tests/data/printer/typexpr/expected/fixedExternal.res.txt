@@ -1,30 +1,255 @@
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:2:27-41
+
+  1 │ @val
+  2 │ external unsafeAddStyle: (@as(json`{}`) _, t, {..}) => t = "Object.assig
+    │ n"
+  3 │ 
+  4 │ @module("react")
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:5:53-67
+
+  3 │ 
+  4 │ @module("react")
+  5 │ external useEffect0: (unit => option<unit => unit>, @as(json`[]`) _) => 
+    │ unit = "useEffect"
+  6 │ 
+  7 │ @send external createElement: (document, @as("img") _) => element = "cre
+    │ ateElement"
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:7:42-53
+
+  5 │ external useEffect0: (unit => option<unit => unit>, @as(json`[]`) _) => 
+    │ unit = "useEffect"
+  6 │ 
+  7 │ @send external createElement: (document, @as("img") _) => element = "cre
+    │ ateElement"
+  8 │ 
+  9 │ @val external templateString: (@as(`ab`) _, int) => int = "f"
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:9:32-42
+
+   7 │ @send external createElement: (document, @as("img") _) => element = "cr
+     │ eateElement"
+   8 │ 
+   9 │ @val external templateString: (@as(`ab`) _, int) => int = "f"
+  10 │ 
+  11 │ @val external numbers: (@as(1) _, @as(-1) _, @as(0x10) _, int) => int =
+     │  "f"
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:11:25-32
+
+   9 │ @val external templateString: (@as(`ab`) _, int) => int = "f"
+  10 │ 
+  11 │ @val external numbers: (@as(1) _, @as(-1) _, @as(0x10) _, int) => int =
+     │  "f"
+  12 │ 
+  13 │ @obj external makeOptions: (~objectMode: @as(false) _, ~name: string, ~
+     │ mode: @as("fast") _, unit) => options = ""
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:11:35-43
+
+   9 │ @val external templateString: (@as(`ab`) _, int) => int = "f"
+  10 │ 
+  11 │ @val external numbers: (@as(1) _, @as(-1) _, @as(0x10) _, int) => int =
+     │  "f"
+  12 │ 
+  13 │ @obj external makeOptions: (~objectMode: @as(false) _, ~name: string, ~
+     │ mode: @as("fast") _, unit) => options = ""
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:11:46-56
+
+   9 │ @val external templateString: (@as(`ab`) _, int) => int = "f"
+  10 │ 
+  11 │ @val external numbers: (@as(1) _, @as(-1) _, @as(0x10) _, int) => int =
+     │  "f"
+  12 │ 
+  13 │ @obj external makeOptions: (~objectMode: @as(false) _, ~name: string, ~
+     │ mode: @as("fast") _, unit) => options = ""
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:13:78-90
+
+  11 │ @val external numbers: (@as(1) _, @as(-1) _, @as(0x10) _, int) => int =
+     │  "f"
+  12 │ 
+  13 │ @obj external makeOptions: (~objectMode: @as(false) _, ~name: string, ~
+     │ mode: @as("fast") _, unit) => options = ""
+  14 │ 
+  15 │ @val external single: @as(1) _ => int = "f"
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:15:23-30
+
+  13 │ @obj external makeOptions: (~objectMode: @as(false) _, ~name: string, ~
+     │ mode: @as("fast") _, unit) => options = ""
+  14 │ 
+  15 │ @val external single: @as(1) _ => int = "f"
+  16 │ 
+  17 │ @val external attributes: (@foo @as(1) _, @as(1) @foo _, @as({1}) _, in
+     │ t) => int = "f"
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:17:33-40
+
+  15 │ @val external single: @as(1) _ => int = "f"
+  16 │ 
+  17 │ @val external attributes: (@foo @as(1) _, @as(1) @foo _, @as({1}) _, in
+     │ t) => int = "f"
+  18 │ 
+  19 │ @val
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:17:43-55
+
+  15 │ @val external single: @as(1) _ => int = "f"
+  16 │ 
+  17 │ @val external attributes: (@foo @as(1) _, @as(1) @foo _, @as({1}) _, in
+     │ t) => int = "f"
+  18 │ 
+  19 │ @val
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:17:58-67
+
+  15 │ @val external single: @as(1) _ => int = "f"
+  16 │ 
+  17 │ @val external attributes: (@foo @as(1) _, @as(1) @foo _, @as({1}) _, in
+     │ t) => int = "f"
+  18 │ 
+  19 │ @val
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:20:30-45
+
+  18 │ 
+  19 │ @val
+  20 │ external commented: (/* a */ @as(1) /* b */ _ /* c */, @as(/* d */ "s")
+     │  _, int) => int = "f"
+  21 │ 
+  22 │ type notExternal = (@as(1) _, int) => int
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:20:56-73
+
+  18 │ 
+  19 │ @val
+  20 │ external commented: (/* a */ @as(1) /* b */ _ /* c */, @as(/* d */ "s")
+     │  _, int) => int = "f"
+  21 │ 
+  22 │ type notExternal = (@as(1) _, int) => int
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:34:31-40
+
+  32 │ external rawCommented: (/* a */ %raw("1") /* b */, %raw(/* c */ "2"), i
+     │ nt) => int = "f"
+  33 │ 
+  34 │ @val external legacyNumbers: (@as(007) _, @as(1_000) _, int) => int = "
+     │ f"
+  35 │ 
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/printer/typexpr/fixedExternal.res:34:43-54
+
+  32 │ external rawCommented: (/* a */ %raw("1") /* b */, %raw(/* c */ "2"), i
+     │ nt) => int = "f"
+  33 │ 
+  34 │ @val external legacyNumbers: (@as(007) _, @as(1_000) _, int) => int = "
+     │ f"
+  35 │ 
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
 @val
-external unsafeAddStyle: (@as(json`{}`) _, t, {..}) => t = "Object.assign"
+external unsafeAddStyle: (%raw("{}"), t, {..}) => t = "Object.assign"
 
 @module("react")
-external useEffect0: (unit => option<unit => unit>, @as(json`[]`) _) => unit = "useEffect"
+external useEffect0: (unit => option<unit => unit>, %raw("[]")) => unit = "useEffect"
 
-@send external createElement: (document, @as("img") _) => element = "createElement"
+@send external createElement: (document, %raw(`"img"`)) => element = "createElement"
 
-@val external templateString: (@as(`ab`) _, int) => int = "f"
+@val external templateString: (%raw(`"ab"`), int) => int = "f"
 
-@val external numbers: (@as(1) _, @as(-1) _, @as(0x10) _, int) => int = "f"
+@val external numbers: (%raw("1"), %raw("-1"), %raw("0x10"), int) => int = "f"
 
 @obj
 external makeOptions: (
   ~objectMode: @as(false) _,
   ~name: string,
-  ~mode: @as("fast") _,
+  ~mode: %raw(`"fast"`),
   unit,
 ) => options = ""
 
-@val external single: @as(1) _ => int = "f"
+@val external single: (%raw("1")) => int = "f"
 
-@val external attributes: (@foo @as(1) _, @as(1) @foo _, @as({1}) _, int) => int = "f"
+@val external attributes: (@foo %raw("1"), @foo %raw("1"), %raw("1"), int) => int = "f"
 
 @val
-external commented: (/* a */ /* b */ @as(1) _ /* c */, /* d */ @as("s") _, int) => int = "f"
+external commented: (/* a */ /* b */ %raw("1") /* c */, /* d */ %raw(`"s"`), int) => int = "f"
 
 type notExternal = (@as(1) _, int) => int
 
 @val external payloadAttributes: (@as(@foo (1)) _, @as(@foo (json`{}`)) _, int) => int = "f"
+
+@val
+external raw: (%raw("{}"), %raw(`"img"`), ~mode: %raw("[1, 2]"), int) => int = "f"
+
+@val external singleRaw: (%raw("null")) => int = "f"
+
+@val
+external rawCommented: (/* a */ %raw("1") /* b */, /* c */ %raw("2"), int) => int = "f"
+
+@val external legacyNumbers: (%raw("7"), %raw("1000"), int) => int = "f"

@@ -104,6 +104,24 @@ let classify ?(check : (Location.t * int) option) (prog : string) :
   | Some _, [] | None, [] -> classify_exp prog
   | None, _ :: _ -> Js_exp_unknown
 
+let is_fixed_literal (source : string) : bool =
+  let open Parser_flow in
+  let env = Parser_env.init_env None source in
+  match
+    do_parse env
+      (fun env ->
+        let expression = Parse.expression env in
+        let token = Parser_env.Peek.token env in
+        (* Eating the last token records the comments lexed before it,
+           including those already attached to [expression]. *)
+        Parser_env.Eat.token env;
+        (expression, token, Parser_env.comments env))
+      false
+  with
+  | (expression, Token.T_EOF, []), [] -> is_obj_literal expression
+  | _ -> false
+  | exception _ -> false
+
 let classify_stmt (prog : string) : Js_raw_info.stmt =
   let result = Parser_flow.parse_program false None prog in
   match fst result with

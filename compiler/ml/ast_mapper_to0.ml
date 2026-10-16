@@ -221,22 +221,33 @@ module T = struct
             match arg with
             | Parg_type {attrs; lbl; typ} -> (lbl, attrs, sub.typ sub typ)
             | Parg_fixed {attrs; lbl; value; loc} ->
-              (* v0 spells a fixed argument [_ [@as value]], with [json] as a
-                 [json]-delimited string, as before [json] was an ordinary
-                 tagged template. [@as] and [_] get their own locations, from
-                 which [Ast_fixed_arg] restores the argument's. *)
+              (* v0 spells a fixed argument [_ [@as value]], with JavaScript
+                 source as a [json]-delimited string, as before [%raw] and
+                 before [json] was an ordinary tagged template. [@as] and [_]
+                 get their own locations, from which [Ast_fixed_arg] restores
+                 the argument's. *)
               let as_loc = Ast_fixed_arg.as_name_loc loc in
               let as_attr =
                 match value.txt with
-                | Pfixed_json source ->
+                | (Pfixed_json _ | Pfixed_raw _) as fixed ->
+                  let source, source_loc =
+                    match fixed with
+                    | Pfixed_raw source ->
+                      (Ast_raw.js_source source, Ast_raw.source_loc source)
+                    | Pfixed_json source
+                    | Pfixed_int source
+                    | Pfixed_template source ->
+                      (source.txt, source.loc)
+                    | Pfixed_string _ -> assert false
+                  in
                   ( {txt = "as"; loc = sub.location sub as_loc},
                     Pt.PStr
                       [
                         Ast_helper0.Str.eval
                           ~loc:(sub.location sub value.loc)
                           (Ast_helper0.Exp.constant
-                             ~loc:(sub.location sub source.loc)
-                             (Pt.Pconst_string (source.txt, Some "json")));
+                             ~loc:(sub.location sub source_loc)
+                             (Pt.Pconst_string (source, Some "json")));
                       ] )
                 | Pfixed_int _ | Pfixed_string _ | Pfixed_template _ ->
                   sub.attribute sub
@@ -245,7 +256,7 @@ module T = struct
               ( lbl,
                 attrs,
                 Ast_helper0.Typ.any
-                  ~loc:(sub.location sub (Ast_fixed_arg.underscore_loc loc))
+                  ~loc:(sub.location sub (Ast_fixed_arg.closing_loc loc))
                   ~attrs:[as_attr] () )
           in
           let lbl = Asttypes.to_noloc arg_lbl in
