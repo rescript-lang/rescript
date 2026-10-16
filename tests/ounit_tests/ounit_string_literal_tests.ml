@@ -244,13 +244,36 @@ let assert_tagged_template_location () =
       pexp_loc.loc_end.pos_cnum
   | _ -> OUnit.assert_failure "expected a parsed tagged template"
 
-let assert_invalid_json_interpolation () =
+let assert_json_interpolation_is_a_tagged_template () =
   let result =
     Res_driver.parse_implementation_from_source
       ~display_filename:"StringLiteralTest.res"
       ~source:{|let value = json`head${item}tail`|}
   in
-  OUnit.assert_bool "expected JSON interpolation to be rejected" result.invalid
+  match result.parsetree with
+  | [
+   {
+     pstr_desc =
+       Pstr_value
+         ( _,
+           [
+             {
+               pvb_expr =
+                 {
+                   pexp_desc =
+                     Pexp_tagged_template
+                       {
+                         tag = {pexp_desc = Pexp_ident {txt = Lident "json"}};
+                         raw_sources = [_; _];
+                         values = [_];
+                       };
+                 };
+             };
+           ] );
+   };
+  ] ->
+    ()
+  | _ -> OUnit.assert_failure "expected an ordinary tagged template"
 
 let assert_int_equal expected actual =
   OUnit.assert_equal ~printer:string_of_int expected actual
@@ -354,6 +377,14 @@ let template_payload source =
   Parsetree.PStr
     [Ast_helper.Str.eval (Ast_helper.Exp.template [located_string source] [])]
 
+let tagged_payload tag source =
+  let tag = Ast_helper.Exp.ident (Location.mknoloc (Longident.Lident tag)) in
+  Parsetree.PStr
+    [
+      Ast_helper.Str.eval
+        (Ast_helper.Exp.tagged_template tag [located_string source] []);
+    ]
+
 let suites =
   __FILE__
   >::: [
@@ -441,7 +472,7 @@ let suites =
          >:: fun _ ->
            assert_parsed_template ();
            assert_tagged_template_location ();
-           assert_invalid_json_interpolation () );
+           assert_json_interpolation_is_a_tagged_template () );
          ( "template expression escapes are parser diagnostics" >:: fun _ ->
            List.iter assert_invalid_template_expression
              [{|bad \xZZ escape|}; {|a\1b|}; {|a\01b|}; {|a\8b|}] );
@@ -519,10 +550,7 @@ let suites =
              (Asttypes.Const_string "a\n😀") semantic;
            OUnit.assert_equal ~printer:Ext_obj.dump
              (Ast_helper.Const.string "a\n😀")
-             (Untypeast.constant semantic);
-           OUnit.assert_equal ~printer:Ext_obj.dump
-             (Error Typecore.Json_literal_outside_external)
-             (Typecore.constant (Parsetree.Pconst_json {|{"answer":42}|})) );
+             (Untypeast.constant semantic) );
          ( "constant backquoted attribute strings become semantic" >:: fun _ ->
            OUnit.assert_equal ~printer:Ext_obj.dump (Some "a\n😀")
              (Ast_payload.semantic_string_of_payload
@@ -535,7 +563,7 @@ let suites =
                 ]);
            OUnit.assert_equal ~printer:Ext_obj.dump None
              (Ast_payload.semantic_string_of_payload
-                (string_payload (Pconst_json {|{"answer":42}|})));
+                (tagged_payload "json" {|{"answer":42}|}));
            match
              Ast_payload.semantic_string_of_payload
                (template_payload {|\uD800|})

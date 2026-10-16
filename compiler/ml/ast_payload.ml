@@ -36,25 +36,6 @@ let unwrap_payload_expression (payload : t) =
       [{item with pstr_desc = Pstr_eval (unwrap_braces expression, attrs)}]
   | payload -> payload
 
-let json_literal_outside_external_message =
-  "A `json` literal can only be used in an external attribute such as `@as`"
-
-let reject_json_literal ~loc =
-  Location.raise_errorf ~loc "%s" json_literal_outside_external_message
-
-let reject_json_literal_payload (payload : t) =
-  match unwrap_payload_expression payload with
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ({pexp_desc = Pexp_constant (Pconst_json _); pexp_loc; _}, _);
-        };
-      ] ->
-    reject_json_literal ~loc:pexp_loc
-  | _ -> ()
-
 let semantic_string_of_expression (expression : Parsetree.expression) =
   match unwrap_braces expression with
   | {pexp_desc = Pexp_constant (Pconst_string payload); _} ->

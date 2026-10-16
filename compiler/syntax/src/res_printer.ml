@@ -665,8 +665,6 @@ let print_constant c =
         print_string_contents (String_literal.string_source payload);
         Doc.text "\"";
       ]
-  | Pconst_json source ->
-    Doc.concat [Doc.text "json`"; print_string_contents source; Doc.text "`"]
   | Pconst_raw_source source ->
     let delimiter =
       if raw_source_fits_double_quotes source then "\"" else "`"
@@ -1993,7 +1991,10 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
     in
     match args with
     | [] -> Doc.nil
-    | [{attrs = []; lbl = Nolabel; typ}] ->
+    | [
+     (( Parg_type {attrs = []; lbl = Nolabel}
+      | Parg_fixed {attrs = []; lbl = Nolabel} ) as arg);
+    ] ->
       let has_attrs_before = not (attrs_before = []) in
       let attrs =
         if has_attrs_before then
@@ -2001,12 +2002,16 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
         else Doc.nil
       in
       let typ_doc =
-        let doc =
-          print_typ_expr ?inline_record_definitions ~state typ cmt_tbl
-        in
-        match typ.ptyp_desc with
-        | Ptyp_arrow _ | Ptyp_tuple _ | Ptyp_alias _ -> add_parens doc
-        | _ -> doc
+        match arg with
+        | Parg_type {typ} -> (
+          let doc =
+            print_typ_expr ?inline_record_definitions ~state typ cmt_tbl
+          in
+          match typ.ptyp_desc with
+          | Ptyp_arrow _ | Ptyp_tuple _ | Ptyp_alias _ -> add_parens doc
+          | _ -> doc)
+        | Parg_fixed _ ->
+          print_type_parameter ?inline_record_definitions ~state arg cmt_tbl
       in
       Doc.group
         (Doc.concat
@@ -2398,8 +2403,29 @@ and print_object_field ~state (field : Parsetree.object_field) cmt_tbl =
 (* es6 arrow type arg
  * type t = (~foo: string, ~bar: float=?, unit) => unit
  * i.e. ~foo: string, ~bar: float *)
-and print_type_parameter ?inline_record_definitions ~state {attrs; lbl; typ}
-    cmt_tbl =
+and print_type_parameter ?inline_record_definitions ~state parameter cmt_tbl =
+  let attrs, lbl, value_doc, end_loc =
+    match parameter with
+    | Parsetree.Parg_type {attrs; lbl; typ} ->
+      ( attrs,
+        lbl,
+        print_typ_expr ?inline_record_definitions ~state typ cmt_tbl,
+        typ.ptyp_loc )
+    | Parsetree.Parg_fixed {attrs; lbl; value; loc} ->
+      (* Comments go around [@as(...) _], as for the [_] it is written with. *)
+      let loc = Ast_fixed_arg.underscore_loc loc in
+      let as_doc, _ =
+        print_attribute ~state
+          (Ast_fixed_arg.to_attribute {value with loc = Location.none})
+          cmt_tbl
+      in
+      ( attrs,
+        lbl,
+        print_comments
+          (Doc.group (Doc.concat [as_doc; Doc.space; Doc.text "_"]))
+          cmt_tbl loc,
+        loc )
+  in
   (* Converting .ml code to .res requires processing uncurried attributes *)
   let attrs = print_attributes ~state attrs cmt_tbl in
   let label =
@@ -2415,16 +2441,8 @@ and print_type_parameter ?inline_record_definitions ~state {attrs; lbl; typ}
     | Nolabel | Labelled _ -> Doc.nil
     | Optional _ -> Doc.text "=?"
   in
-  let loc = {(Asttypes.get_lbl_loc lbl) with loc_end = typ.ptyp_loc.loc_end} in
-  let doc =
-    Doc.group
-      (Doc.concat
-         [
-           attrs;
-           label;
-           print_typ_expr ?inline_record_definitions ~state typ cmt_tbl;
-         ])
-  in
+  let loc = {(Asttypes.get_lbl_loc lbl) with loc_end = end_loc.loc_end} in
+  let doc = Doc.group (Doc.concat [attrs; label; value_doc]) in
   (* [loc] ends before [=?]. *)
   print_comments_before_marker doc cmt_tbl loc optional_indicator
 

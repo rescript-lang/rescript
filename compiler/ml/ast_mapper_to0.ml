@@ -81,7 +81,6 @@ let map_constant = function
   | Pconst_string payload ->
     Pconst_string (String_literal.string_source payload, Some "js")
   | Pconst_raw_source s -> Pconst_string (s, Some "js")
-  | Pconst_json s -> Pconst_string (s, Some "json")
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
 
 let template_attr = (Location.mknoloc "res.template", Pt.PStr [])
@@ -177,8 +176,37 @@ module T = struct
         match params with
         | [] -> sub.typ sub ret
         | (arg : Parsetree.arg) :: rest ->
-          let lbl = Asttypes.to_noloc arg.lbl in
-          let arg_attrs = sub.attributes sub arg.attrs in
+          let arg_lbl, arg_attrs, arg_typ0 =
+            match arg with
+            | Parg_type {attrs; lbl; typ} -> (lbl, attrs, sub.typ sub typ)
+            | Parg_fixed {attrs; lbl; value; loc} ->
+              (* v0 spells a fixed argument [_ [@as value]], with [json] as a
+                 [json]-delimited string, as before [json] was an ordinary
+                 tagged template. [@as] and [_] get their own locations, from
+                 which [Ast_fixed_arg] restores the argument's. *)
+              let as_loc = Ast_fixed_arg.as_name_loc loc in
+              let as_attr =
+                match value.txt with
+                | Pfixed_json source ->
+                  ( {txt = "as"; loc = as_loc},
+                    Pt.PStr
+                      [
+                        Ast_helper0.Str.eval ~loc:value.loc
+                          (Ast_helper0.Exp.constant ~loc:source.loc
+                             (Pt.Pconst_string (source.txt, Some "json")));
+                      ] )
+                | Pfixed_int _ | Pfixed_string _ | Pfixed_template _ ->
+                  sub.attribute sub
+                    (Ast_fixed_arg.to_attribute ~loc:as_loc value)
+              in
+              ( lbl,
+                attrs,
+                Ast_helper0.Typ.any
+                  ~loc:(Ast_fixed_arg.underscore_loc loc)
+                  ~attrs:[as_attr] () )
+          in
+          let lbl = Asttypes.to_noloc arg_lbl in
+          let arg_attrs = sub.attributes sub arg_attrs in
           let is_head = List.length rest = arity - 1 in
           let merged_attrs =
             if is_head && attrs <> [] then
@@ -190,10 +218,9 @@ module T = struct
           in
           let arrow_loc =
             if is_head then loc
-            else {loc with loc_start = arg.typ.ptyp_loc.loc_start}
+            else {loc with loc_start = arg_typ0.ptyp_loc.loc_start}
           in
-          arrow ~loc:arrow_loc ~attrs:merged_attrs lbl (sub.typ sub arg.typ)
-            (build rest)
+          arrow ~loc:arrow_loc ~attrs:merged_attrs lbl arg_typ0 (build rest)
       in
       let typ0 = build params in
       let arity_string = "Has_arity" ^ string_of_int arity in

@@ -66,7 +66,6 @@ let fmt_constant f x =
     fprintf f "PConst_string (source=%S, semantic=%S)"
       (String_literal.string_source payload)
       (String_literal.string_semantic payload)
-  | Pconst_json source -> fprintf f "PConst_json %S" source
   | Pconst_raw_source source -> fprintf f "PConst_raw_source %S" source
   | Pconst_float (s, m) -> fprintf f "PConst_float (%s,%a)" s fmt_char_option m
 
@@ -128,6 +127,19 @@ let arg_label_loc i ppf = function
   | Optional {txt = s} -> line i ppf "Optional \"%s\"\n" s
   | Labelled {txt = s} -> line i ppf "Labelled \"%s\"\n" s
 
+let fixed_value i ppf (x : fixed_value) =
+  match x with
+  | Pfixed_int source ->
+    line i ppf "Pfixed_int %s %a\n" source.txt fmt_location source.loc
+  | Pfixed_string payload ->
+    line i ppf "Pfixed_string (source=%S, semantic=%S)\n"
+      (String_literal.string_source payload)
+      (String_literal.string_semantic payload)
+  | Pfixed_template source ->
+    line i ppf "Pfixed_template %S %a\n" source.txt fmt_location source.loc
+  | Pfixed_json source ->
+    line i ppf "Pfixed_json %S %a\n" source.txt fmt_location source.loc
+
 let rec core_type i ppf x =
   line i ppf "core_type %a\n" fmt_location x.ptyp_loc;
   attributes i ppf x.ptyp_attributes;
@@ -139,10 +151,17 @@ let rec core_type i ppf x =
     line i ppf "Ptyp_arrow\n";
     line i ppf "arity = %d\n" (List.length params);
     List.iter
-      (fun (arg : Parsetree.arg) ->
-        arg_label_loc i ppf arg.lbl;
-        attributes i ppf arg.attrs;
-        core_type i ppf arg.typ)
+      (function
+        | Parsetree.Parg_type {attrs; lbl; typ} ->
+          arg_label_loc i ppf lbl;
+          attributes i ppf attrs;
+          core_type i ppf typ
+        | Parsetree.Parg_fixed {attrs; lbl; value; loc} ->
+          arg_label_loc i ppf lbl;
+          attributes i ppf attrs;
+          line i ppf "Parg_fixed %a\n" fmt_location loc;
+          line (i + 1) ppf "value %a\n" fmt_location value.loc;
+          fixed_value (i + 2) ppf value.txt)
       params;
     core_type i ppf ret
   | Ptyp_tuple l ->

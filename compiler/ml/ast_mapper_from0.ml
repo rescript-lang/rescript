@@ -135,7 +135,7 @@ let map_constant ~loc = function
     Pconst_char {source = String_literal.encode_char_source semantic; semantic}
   | Pconst_string (s, Some ("js" | "*j")) -> source_string ~loc s
   | Pconst_string (s, None) -> semantic_string s
-  | Pconst_string (s, Some "json") -> Pconst_json s
+  | Pconst_string (s, Some "json") -> Pconst_raw_source s
   (* Other v0 quotation delimiters are syntax, not part of the string value.
      Tagged ReScript templates are represented as applications before PPX. *)
   | Pconst_string (semantic, Some _) -> semantic_string semantic
@@ -314,7 +314,7 @@ module T = struct
         | None -> ([], attrs)
       in
       Typ.arrow ~loc ~attrs:node_attrs
-        [{attrs = arg_attrs; lbl; typ = sub.typ sub t1}]
+        [Parg_type {attrs = arg_attrs; lbl; typ = sub.typ sub t1}]
         (sub.typ sub t2)
     | Ptyp_tuple tyl -> Typ.tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) -> (
@@ -787,8 +787,11 @@ module E = struct
         ~attrs:(sub.attributes sub await_attrs0)
         inner
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
+    | Pexp_constant (Pconst_string (source, Some "json")) ->
+      let tag = ident ~loc (Location.mkloc (Longident.Lident "json") loc) in
+      tagged_template ~loc ~attrs tag [{txt = source; loc}] []
     | Pexp_constant (Pconst_string (text, delimiter))
-      when has_template_attr attrs && delimiter <> Some "json" ->
+      when has_template_attr attrs ->
       let attrs = remove_template_attr attrs in
       let source = template_source_from0 (text, delimiter) in
       template ~loc ~attrs [{txt = source; loc}] []
@@ -1479,7 +1482,15 @@ let default_mapper =
             Location.raise_errorf ~loc:pval_loc
               "An external declaration can carry only a single primitive string"
         in
-        Val.mk (map_loc this pval_name) (this.typ this pval_type)
+        let typ = this.typ this pval_type in
+        (* Like the parser, read an external's [@as(value) _] arguments as
+           fixed arguments. *)
+        let typ =
+          match prim with
+          | Some _ -> Ast_fixed_arg.normalize_external_type typ
+          | None -> typ
+        in
+        Val.mk (map_loc this pval_name) typ
           ~attrs:(this.attributes this pval_attributes)
           ~loc:(this.location this pval_loc)
           ?prim);

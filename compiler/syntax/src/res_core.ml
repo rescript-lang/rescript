@@ -2442,16 +2442,6 @@ and parse_template_expr ?prefix p =
   in
 
   match prefix with
-  | Some {txt = Longident.Lident "json"; _} -> (
-    match (parts, values) with
-    | [(source, loc, None)], [] ->
-      Ast_helper.Exp.constant ~loc (Pconst_json source)
-    | (source, loc, _) :: _, _ ->
-      Parser.err ~start_pos:template_loc.loc_start ~end_pos:template_loc.loc_end
-        p
-        (Diagnostics.message "`json` literals do not support interpolation");
-      Ast_helper.Exp.constant ~loc (Pconst_json source)
-    | [], _ -> assert false)
   | None ->
     List.iter
       (fun ({Location.txt = source; loc} : string Location.loc) ->
@@ -4309,7 +4299,9 @@ and parse_poly_type_expr ?current_type_name_path ?inline_types_context p =
         let typ = Ast_helper.Typ.var ~loc:var.loc var.txt in
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc typ.Parsetree.ptyp_loc.loc_start (Parser.position p) in
-        Ast_helper.Typ.arrow ~loc [{attrs = []; lbl = Nolabel; typ}] return_type
+        Ast_helper.Typ.arrow ~loc
+          [Parg_type {attrs = []; lbl = Nolabel; typ}]
+          return_type
       | _ -> Ast_helper.Typ.var ~loc:var.loc var.txt)
     | _ -> assert false)
   | _ -> parse_typ_expr ?current_type_name_path ?inline_types_context p
@@ -4735,7 +4727,7 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
        arrow, exactly like its parenthesized form [(~x: t) => u]; it must
        carry the same arity or the two spellings produce types that print
        identically but do not unify. *)
-    Ast_helper.Typ.arrow ~loc [{attrs; lbl; typ}] return_type
+    Ast_helper.Typ.arrow ~loc [Parg_type {attrs; lbl; typ}] return_type
   | DocComment _ -> assert false
   | _ -> (
     let parameters =
@@ -4753,7 +4745,7 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
     let params =
       List.map
         (fun {attrs; label = arg_lbl; typ; start_pos = _} ->
-          {Parsetree.attrs; lbl = arg_lbl; typ})
+          Parsetree.Parg_type {attrs; lbl = arg_lbl; typ})
         parameters
     in
     let loc = mk_loc start_pos (Parser.position p) in
@@ -4826,7 +4818,9 @@ and parse_arrow_type_rest ?current_type_name_path ?inline_types_context
         ?inline_types_context p
     in
     let loc = mk_loc start_pos (Parser.position p) in
-    Ast_helper.Typ.arrow ~loc [{attrs = []; lbl = Nolabel; typ}] return_type
+    Ast_helper.Typ.arrow ~loc
+      [Parg_type {attrs = []; lbl = Nolabel; typ}]
+      return_type
   | _ -> typ
 
 and parse_typ_expr_region p =
@@ -5598,7 +5592,7 @@ and parse_type_equation_or_constr_decl p =
         let loc = mk_loc uident_start_pos (Parser.position p) in
         let arrow_type =
           Ast_helper.Typ.arrow ~loc
-            [{attrs = []; lbl = Nolabel; typ}]
+            [Parg_type {attrs = []; lbl = Nolabel; typ}]
             return_type
         in
         let typ = parse_type_alias p arrow_type in
@@ -6291,6 +6285,7 @@ and parse_external_def ~attrs ~start_pos p =
       in
       let typ_expr =
         parse_external_type_expr ~current_type_name_path ~inline_types_context p
+        |> Ast_fixed_arg.normalize_external_type
       in
       let equal_start = Parser.start_pos p in
       let equal_end = Parser.end_pos p in
