@@ -65,12 +65,16 @@ let suites =
                "/a/g";
                "undefined";
                "true";
+               {|{"a": 1, 2: 3, b: [4]}|};
              ];
            List.iter
              (fun source ->
                OUnit.assert_bool source
                  (not (Classify_function.is_fixed_literal source)))
              [
+               "{[f()]: 0}";
+               {|{["a"]: 0}|};
+               "{a: {[f()]: 0}}";
                "1 2";
                "1) + alert(2";
                "1; alert(2)";
