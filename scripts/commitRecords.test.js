@@ -23,10 +23,7 @@ After (js):
 
 Source: bsc before and after this commit.
 
-Changelog entry: - Compile \`x + 0\` to \`x\`. https://github.com/rescript-lang/rescript/pull/1234
-
 Area: codegen tests
-Changelog: polish
 Output: changed integer + 0; one snapshot
 Formats: none
 Tests: +tests/tests/src/a_test.mjs ~tests/tests/src/b_test.mjs
@@ -93,7 +90,11 @@ test("renders a record and checks it against the diff", async () => {
   has(html, '<span class="ln del">');
   has(html, '<span class="ln add">');
   has(html, '<p class="source"><b>Source</b>');
-  has(html, "Changelog entry matches the line the diff adds");
+  has(html, "Changelog fragment changes/identity.polish.md");
+  has(
+    html,
+    '<div class="entry"><span class="pill cat-polish">💅 Polish</span><span>Compile <code>x + 0</code>',
+  );
   has(html, "1 committed generated JS file changes; 1 new");
   has(html, "Formats: none");
   has(html, "<code>tests/tests/src/</code>");
@@ -115,7 +116,7 @@ test("flags a record that disagrees with its diff", async () => {
         "commit",
         "-q",
         "-m",
-        "Change output\n\nArea: codegen\nChangelog: fix\nOutput: unchanged",
+        "Change output\n\nArea: codegen\nOutput: unchanged",
       );
     },
     ["--pr", "42", "--title", "Fix <output> & more", "HEAD"],
@@ -125,7 +126,6 @@ test("flags a record that disagrees with its diff", async () => {
     '<h1><a href="https://github.com/rescript-lang/rescript/pull/42">#42</a> Fix &lt;output&gt; &amp; more</h1>',
   );
   has(html, "<title>#42 Fix &lt;output&gt; &amp; more · Semantic Diff</title>");
-  has(html, "Changelog: fix, but the diff adds no changelog entry");
   has(html, "Output: unchanged, but 1 committed generated JS file changes");
   has(html, "No Tests trailer");
 });
@@ -142,7 +142,7 @@ test("accepts Tests: none with a reason, and flags it against test files", async
         "commit",
         "-q",
         "-m",
-        "Reword the readme\n\nArea: docs\nChangelog: none\nOutput: unchanged\nTests: none, because only prose changes",
+        "Reword the readme\n\nArea: docs\nOutput: unchanged\nTests: none, because only prose changes",
       );
       await write(dir, { "tests/tests/src/c_test.res": "let x = 1\n" });
       git("add", ".");
@@ -150,7 +150,7 @@ test("accepts Tests: none with a reason, and flags it against test files", async
         "commit",
         "-q",
         "-m",
-        "Add a test\n\nArea: tests\nChangelog: none\nOutput: unchanged\nTests: none, because it is a fixture",
+        "Add a test\n\nArea: tests\nOutput: unchanged\nTests: none, because it is a fixture",
       );
     },
     ["HEAD~2..HEAD"],
@@ -161,4 +161,45 @@ test("accepts Tests: none with a reason, and flags it against test files", async
     '<span class="state same">none</span><span>because only prose changes</span>',
   );
   has(html, "Tests: none, but the diff changes 1 test file");
+  has(html, '<span class="pill cat-none">No changelog</span>');
+});
+
+test("takes the changelog from the fragments a range leaves", async () => {
+  const link = "https://github.com/rescript-lang/rescript/pull";
+  const html = await render(
+    async (git, dir) => {
+      await write(dir, { "CHANGELOG.md": "# Changelog\n" });
+      git("add", ".");
+      git("commit", "-q", "-m", "base");
+      await write(dir, {
+        "changes/crash.fix.md": `- Fix a crash. ${link}/XXXX\n`,
+        "changes/gone.feature.md": `- Add a thing. ${link}/7\n`,
+      });
+      git("add", ".");
+      git("commit", "-q", "-m", "Draft\n\nArea: compiler");
+      await write(dir, {
+        "changes/crash.fix.md": `- Fix a crash\n  in the printer. ${link}/8\n- Fix another. ${link}/8\n`,
+        "CHANGELOG.md": "# Changelog\n\n- Edited.\n",
+      });
+      git("rm", "-q", "changes/gone.feature.md");
+      git("add", ".");
+      git("commit", "-q", "-m", "Link the PR\n\nArea: compiler");
+    },
+    ["HEAD~2..HEAD"],
+  );
+  has(
+    html,
+    "changes/crash.fix.md: replace the placeholder https://github.com/rescript-lang/rescript/pull/XXXX with the PR link",
+  );
+  has(html, "Changelog fragment changes/gone.feature.md");
+  has(
+    html,
+    "Edits CHANGELOG.md; a changes/ fragment carries the entry outside release PRs",
+  );
+  has(html, '<td><span class="pill cat-fix">🐛 Bug fix</span></td>');
+  has(
+    html,
+    '<div><span class="pill cat-fix">🐛 Bug fix</span><ul><li>Fix a crash in the printer. <a href="https://github.com/rescript-lang/rescript/pull/8">#8</a></li><li>Fix another.',
+  );
+  assert.ok(!html.includes("<li>Add a thing."), "deleted fragment in draft");
 });

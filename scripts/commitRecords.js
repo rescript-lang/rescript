@@ -5,7 +5,9 @@
 /* Renders commit records as a review page. A record is a commit message (or a
  * note on refs/notes/records, which takes precedence) in the format of
  * .claude/skills/records/SKILL.md: a subject, prose sections, code sections
- * such as "Before (js):" and git trailers.
+ * such as "Before (js):" and git trailers. The changelog comes from the
+ * changes/<description>.<category>.md fragments the commits add, not from the
+ * record.
  *
  *   node scripts/commitRecords.js --out review.html <rev>...
  *   node scripts/commitRecords.js --out review.html <base>..<branch>...
@@ -15,6 +17,7 @@
 
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
+import { parseFragment } from "./changelog.js";
 
 const REPO_URL = "https://github.com/rescript-lang/rescript";
 
@@ -156,10 +159,12 @@ function codeLines(lines, lang, other, mark) {
 /**
  * @typedef {{ name: string, lang: string, text: string[], block: string[] }} Section
  * @typedef {{ status: string, path: string, added: number, removed: number }} FileChange
+ * @typedef {{ path: string, category: string, text: string, error: string }} Fragment
  * @typedef {{
  *   sha: string, author: string, date: string, subject: string,
  *   sections: Section[], trailers: Map<string, string>, message: string,
- *   coauthors: string[], files: FileChange[], patch: string, noted: boolean
+ *   coauthors: string[], files: FileChange[], fragments: Fragment[],
+ *   patch: string, noted: boolean
  * }} CommitRecord
  */
 
@@ -187,6 +192,49 @@ function pushProse(sections) {
   sections.push(s);
   return s;
 }
+
+/** @param {string} path */
+const isFragment = path =>
+  /^changes\/[^/]+\.md$/.test(path) && path !== "changes/README.md";
+
+/**
+ * The changelog fragments a commit adds or changes, as they stand in its tree.
+ * A fragment that fails validation (such as one with the placeholder PR link)
+ * keeps the category from its name and records the error.
+ * @param {string} rev
+ * @param {FileChange[]} files
+ * @returns {Fragment[]}
+ */
+function fragmentsOf(rev, files) {
+  return files
+    .filter(f => f.status !== "D" && isFragment(f.path))
+    .map(f => {
+      const name = f.path.slice("changes/".length);
+      const content = git(["show", `${rev}:${f.path}`]);
+      try {
+        const { category, text } = parseFragment(name, content);
+        return { path: f.path, category, text, error: "" };
+      } catch (e) {
+        return {
+          path: f.path,
+          category: /\.([a-z]+)\.md$/.exec(name)?.[1] ?? "?",
+          text: content.trim(),
+          error: e instanceof Error ? e.message : String(e),
+        };
+      }
+    });
+}
+
+/**
+ * The bullets of a fragment, without their "- " and with continuation lines
+ * joined.
+ * @param {string} text
+ */
+const bullets = text =>
+  text
+    .split(/\n(?=- )/)
+    .map(b => b.replace(/^-\s+/, "").replace(/\n\s+/g, " "))
+    .filter(Boolean);
 
 /** @param {string} rev */
 function readRecord(rev) {
@@ -296,14 +344,13 @@ function readRecord(rev) {
       ),
     ],
     files: [...files.values()],
+    fragments: fragmentsOf(rev, [...files.values()]),
     patch: git([
       "show",
       "--format=",
       "-U0",
       rev,
       "--",
-      "CHANGELOG.md",
-      "changes",
       "compiler/ext/config.ml",
     ]),
   };
@@ -362,39 +409,17 @@ function checks(r) {
   /** @type {[boolean, string][]} */
   const out = [];
   const has = (/** @type {RegExp} */ re) => r.files.some(f => re.test(f.path));
-  const category = r.trailers.get("Changelog");
-  const changelogTouched = has(/^CHANGELOG\.md$|^changes\/.*\.md$/);
-  if (category !== undefined) {
-    if (category === "none")
-      out.push([
-        !changelogTouched,
-        changelogTouched
-          ? "Changelog: none, but the diff changes the changelog"
-          : "No changelog entry, as recorded",
-      ]);
-    else if (!changelogTouched)
-      out.push([
-        false,
-        `Changelog: ${category}, but the diff adds no changelog entry`,
-      ]);
-    else {
-      const entry = r.sections.find(s => s.name === "Changelog entry");
-      const added = r.patch
-        .split("\n")
-        .filter(l => l.startsWith("+") && !l.startsWith("+++"))
-        .join("\n");
-      const text = entry
-        ? [...entry.text, ...entry.block].join(" ").trim()
-        : "";
-      if (text)
-        out.push(
-          added.replace(/\s+/g, " ").includes(text.replace(/\s+/g, " "))
-            ? [true, "Changelog entry matches the line the diff adds"]
-            : [false, "Changelog entry differs from the line the diff adds"],
-        );
-      else out.push([true, `Changelog: ${category}; the diff adds an entry`]);
-    }
-  } else out.push([false, "No Changelog trailer"]);
+  for (const f of r.fragments)
+    out.push(
+      f.error
+        ? [false, `${f.path}: ${f.error.replace(/^[^:]*: /, "")}`]
+        : [true, `Changelog fragment ${f.path}`],
+    );
+  if (has(/^CHANGELOG\.md$/))
+    out.push([
+      false,
+      "Edits CHANGELOG.md; a changes/ fragment carries the entry outside release PRs",
+    ]);
 
   const testsValue = r.trailers.get("Tests");
   const testFiles = r.files.filter(f =>
@@ -478,9 +503,7 @@ function checks(r) {
 /** @type {Record<string, [string, string]>} */
 const CATEGORIES = {
   breaking: ["💥", "Breaking change"],
-  spec: ["👓", "Spec compliance"],
   feature: ["🚀", "New feature"],
-  bugfix: ["🐛", "Bug fix"],
   fix: ["🐛", "Bug fix"],
   docs: ["📝", "Documentation"],
   polish: ["💅", "Polish"],
@@ -595,7 +618,7 @@ function renderSections(sections) {
   const out = [];
   for (let i = 0; i < sections.length; i++) {
     const s = sections[i];
-    if (["Breaking", "Changelog entry", "Review"].includes(s.name)) continue;
+    if (["Breaking", "Review"].includes(s.name)) continue;
     const next = sections[i + 1];
     if (
       s.name === "Before" &&
@@ -668,7 +691,7 @@ const langName = lang =>
 
 /** @param {CommitRecord} r */
 function card(r) {
-  const category = r.trailers.get("Changelog") ?? "";
+  const categories = [...new Set(r.fragments.map(f => f.category))];
   const pr = (
     r.trailers.get("PR") ??
     /\(#(\d+)\)\s*$/.exec(r.subject)?.[0] ??
@@ -676,14 +699,14 @@ function card(r) {
   ).replace(/\D/g, "");
   const subject = r.subject.replace(/\s*\(#\d+\)\s*$/, "");
   const out = [
-    `<article class="card${category === "breaking" ? " breaking" : ""}" id="c-${r.sha}">`,
+    `<article class="card${categories.includes("breaking") ? " breaking" : ""}" id="c-${r.sha}">`,
   ];
   out.push(
     `<header><div class="meta"><code>${r.sha}</code> · ${esc(r.author)} · ${esc(r.date)}${
       pr ? ` · <a href="${REPO_URL}/pull/${pr}">#${pr} discussion ↗</a>` : ""
     }${r.noted ? ' · <span title="record from refs/notes/records">note</span>' : ""}</div>` +
       `<h3>${inline(subject)}</h3>` +
-      `<div class="chips">${category ? changelogPill(category) : ""}${words(
+      `<div class="chips">${categories.map(changelogPill).join("")}${words(
         r,
         "Area",
       )
@@ -696,10 +719,9 @@ function card(r) {
       `<div class="banner"><strong>Breaking</strong> ${inline([...breaking.text, ...breaking.block].join(" "))}</div>`,
     );
   out.push(renderSections(r.sections));
-  const entry = r.sections.find(s => s.name === "Changelog entry");
-  if (entry)
+  for (const f of r.fragments)
     out.push(
-      `<div class="entry">${category ? changelogPill(category) : ""}<span>${inline([...entry.text, ...entry.block].join(" "))}</span></div>`,
+      `<div class="entry">${changelogPill(f.category)}<span>${bullets(f.text).map(inline).join("<br>")}</span></div>`,
     );
   const reviews = r.sections.filter(s => s.name === "Review");
   if (reviews.length)
@@ -791,16 +813,30 @@ function group(arg) {
   };
 }
 
+/**
+ * The fragments a range leaves in changes/: the last version of each one its
+ * commits add or change, minus those a later commit deletes.
+ * @param {Group} g
+ */
+function rangeFragments(g) {
+  /** @type {Map<string, Fragment>} */
+  const byPath = new Map();
+  for (const r of g.records) {
+    for (const f of r.files) if (f.status === "D") byPath.delete(f.path);
+    for (const f of r.fragments) byPath.set(f.path, f);
+  }
+  return [...byPath.values()];
+}
+
 /** @param {Group[]} groups */
 function summary(groups) {
   const ranges = groups.filter(g => g.range);
   if (!ranges.length) return "";
   const rows = ranges.map(g => {
     const cats = new Map();
-    for (const r of g.records) {
-      const c = r.trailers.get("Changelog") ?? "?";
-      cats.set(c, (cats.get(c) ?? 0) + 1);
-    }
+    for (const f of rangeFragments(g))
+      cats.set(f.category, (cats.get(f.category) ?? 0) + 1);
+    if (!cats.size) cats.set("none", 1);
     const areas = [...new Set(g.records.flatMap(r => words(r, "Area")))];
     const js = g.records.filter(r =>
       /^changed/.test(r.trailers.get("Output") ?? ""),
@@ -840,15 +876,11 @@ function summary(groups) {
   /** @type {Map<string, string[]>} */
   const draft = new Map();
   for (const g of ranges)
-    for (const r of g.records) {
-      const c = r.trailers.get("Changelog");
-      const entry = r.sections.find(s => s.name === "Changelog entry");
-      if (c && c !== "none" && entry)
-        draft.set(c, [
-          ...(draft.get(c) ?? []),
-          [...entry.text, ...entry.block].join(" ").replace(/^-\s+/, ""),
-        ]);
-    }
+    for (const f of rangeFragments(g))
+      draft.set(f.category, [
+        ...(draft.get(f.category) ?? []),
+        ...bullets(f.text),
+      ]);
   const order = Object.keys(CATEGORIES);
   return (
     `<section><h2>Summary</h2><div class="table-wrap"><table><thead><tr><th>Range</th><th>Commits</th><th>Changelog</th><th>Areas</th><th>JS output changes</th><th>Formats</th><th>Failed checks</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>` +
@@ -906,7 +938,7 @@ code { font:12.5px/1.5 var(--mono); background:var(--code-bg); padding:1px 4px; 
 .chips { display:flex; flex-wrap:wrap; gap:6px; align-items:center }
 .chip { font:500 12px/1 var(--body); border:1px solid var(--rule); border-radius:99px; padding:5px 9px; color:var(--muted) }
 .pill { font:600 12px/1 var(--body); padding:6px 10px; border-radius:99px; white-space:nowrap; background:var(--same-bg); color:var(--same) }
-.pill.cat-breaking { background:var(--accent); color:#fff } .pill.cat-bugfix, .pill.cat-fix { background:var(--warn-bg); color:var(--warn) }
+.pill.cat-breaking { background:var(--accent); color:#fff } .pill.cat-fix { background:var(--warn-bg); color:var(--warn) }
 .pill.cat-feature { background:var(--ok-bg); color:var(--ok) } .pill.cat-polish { background:var(--diff-bg); color:var(--diff) }
 .banner { background:var(--accent-soft); border-left:4px solid var(--accent); padding:10px 14px; border-radius:6px; margin:4px 0 }
 .banner strong { color:var(--accent); margin-right:6px; text-transform:uppercase; font-size:12px; letter-spacing:.06em }
