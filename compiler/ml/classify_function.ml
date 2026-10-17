@@ -28,7 +28,11 @@ let rec is_obj_literal (x : _ Flow_ast.Expression.t) : bool =
   | StringLiteral _ | BooleanLiteral _ | NullLiteral _ | NumberLiteral _
   | BigIntLiteral _ | RegExpLiteral _ | ModuleRefLiteral _ ->
     true
-  | Unary {operator = Minus; argument} -> is_obj_literal argument
+  (* Negating anything but a number converts it to a primitive, which can run
+     a [valueOf] method. *)
+  | Unary {operator = Minus; argument = _, (NumberLiteral _ | BigIntLiteral _)}
+    ->
+    true
   | Object {properties} -> Ext_list.for_all properties is_literal_kv
   | Array {elements} ->
     Ext_list.for_all elements (fun x ->
