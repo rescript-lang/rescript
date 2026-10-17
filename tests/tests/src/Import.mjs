@@ -34,18 +34,23 @@ let N1 = {
 
 let N2 = await import("@rescript/runtime/lib/es6/Stdlib_List.mjs");
 
-let N_each = N2.forEach;
+let N3 = await import("@rescript/runtime/lib/es6/Stdlib_List.mjs");
+
+let N_each = N3.forEach;
 
 let N = {
   N0: N0,
   N1: N1,
   N2: N2,
+  N3: N3,
   each: N_each
 };
 
 let M0 = await import("@rescript/runtime/lib/es6/Stdlib_List.mjs");
 
 let M1 = await import("@rescript/runtime/lib/es6/Stdlib_List.mjs");
+
+let MConstrained = await import("@rescript/runtime/lib/es6/Stdlib_List.mjs");
 
 async function f() {
   return (await import("@rescript/runtime/lib/es6/Stdlib_List.mjs")).forEach;
@@ -123,7 +128,7 @@ async function f9(value) {
   }
 }
 
-let each = M1.forEach;
+let each = MConstrained.forEach;
 
 let M2;
 
@@ -137,6 +142,7 @@ export {
   N,
   M0,
   M1,
+  MConstrained,
   each,
   M2,
   each2,

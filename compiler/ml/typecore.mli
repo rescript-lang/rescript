@@ -101,7 +101,6 @@ type error =
   | Polyvar_literal_overflow
   | Unknown_literal of string * char
   | Invalid_string_escape_sequence
-  | Json_literal_outside_external
   | Illegal_letrec_pat
   | Empty_record_literal
   | Uncurried_arity_mismatch of {
@@ -115,6 +114,7 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
+  | Jsx_unboxed_props of type_expr
   | Tagged_template_non_tag of type_expr
   | Record_rest of Typecore_record_rest.error
 

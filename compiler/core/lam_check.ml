@@ -32,14 +32,16 @@ let check ~file ~pass lam =
   let success = ref true in
   let use (id : Ident.t) =
     if not @@ Hash_set_ident.mem defined_variables id then (
-      Format.fprintf Format.err_formatter
+      Format.fprintf
+        (Compiler_request_output.stderr_formatter ())
         "\n[SANITY after %s]:%s/%d used before defined in %s@." pass id.name
         id.stamp file;
       success := false)
   in
   let def (id : Ident.t) =
     if Hash_set_ident.mem defined_variables id then (
-      Format.fprintf Format.err_formatter
+      Format.fprintf
+        (Compiler_request_output.stderr_formatter ())
         "\n[SANITY after %s]:%s/%d bound twice in %s@." pass id.name id.stamp
         file;
       success := false)

@@ -111,7 +111,6 @@ let addDeclaration_ ~config ~decls ~(file : File_context.t) ?pos_end ?pos_start
         pos;
         pos_end;
         pos_start;
-        report = true;
       }
     in
     Declarations.add decls pos decl)

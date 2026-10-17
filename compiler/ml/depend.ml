@@ -54,10 +54,13 @@ let rec lookup_map lid m =
 
 (* Collect free module identifiers in the a.s.t. *)
 
-let free_structure_names = ref String_set.empty
+let free_structure_names_key =
+  Request_local.new_key (fun () -> ref String_set.empty)
+
+let free_structure_names () = Domain.DLS.get free_structure_names_key
 
 let add_names s =
-  free_structure_names := String_set.union s !free_structure_names
+  free_structure_names () := String_set.union s !(free_structure_names ())
 
 let rec add_path bv ?(p = []) = function
   | Lident s ->
@@ -96,7 +99,11 @@ let rec add_type bv ty =
   | Ptyp_any -> ()
   | Ptyp_var _ -> ()
   | Ptyp_arrow {params; ret} ->
-    List.iter (fun arg -> add_type bv arg.typ) params;
+    List.iter
+      (function
+        | Parg_type {typ} -> add_type bv typ
+        | Parg_fixed _ -> ())
+      params;
     add_type bv ret
   | Ptyp_tuple tl -> List.iter (add_type bv) tl
   | Ptyp_constr (c, tl) ->
@@ -162,7 +169,8 @@ let add_type_extension bv te =
   add bv te.ptyext_path;
   List.iter (add_extension_constructor bv) te.ptyext_constructors
 
-let pattern_bv = ref String_map.empty
+let pattern_bv_key = Request_local.new_key (fun () -> ref String_map.empty)
+let pattern_bv () = Domain.DLS.get pattern_bv_key
 
 let rec add_pattern bv pat =
   match pat.ppat_desc with
@@ -192,14 +200,15 @@ let rec add_pattern bv pat =
     add_type bv ty
   | Ppat_variant (_, {txt = args}) -> List.iter (add_pattern bv) args
   | Ppat_type li | Ppat_variant_spread li -> add bv li
-  | Ppat_unpack id -> pattern_bv := String_map.add id.txt bound !pattern_bv
+  | Ppat_unpack id ->
+    pattern_bv () := String_map.add id.txt bound !(pattern_bv ())
   | Ppat_exception p -> add_pattern bv p
   | Ppat_extension e -> handle_extension e
 
 let add_pattern bv pat =
-  pattern_bv := bv;
+  pattern_bv () := bv;
   add_pattern bv pat;
-  !pattern_bv
+  !(pattern_bv ())
 
 let rec add_expr bv exp =
   match exp.pexp_desc with
@@ -311,6 +320,7 @@ let rec add_expr bv exp =
     | Pstr_eval ({pexp_desc = Pexp_construct (c, {txt = []})}, _) -> add bv c
     | _ -> handle_extension e)
   | Pexp_extension e -> handle_extension e
+  | Pexp_raw _ -> ()
   | Pexp_await e -> add_expr bv e
   | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
     add_jsx_children bv children
@@ -390,13 +400,13 @@ and add_module_alias bv l =
       bound (* cannot delay *))
 
 and add_modtype_binding bv mty =
-  if not !Clflags.transparent_modules then add_modtype bv mty;
+  if not !((Clflags.current ()).transparent_modules) then add_modtype bv mty;
   match mty.pmty_desc with
   | Pmty_alias l -> add_module_alias bv l
   | Pmty_signature s -> make_node (add_signature_binding bv s)
   | Pmty_typeof modl -> add_module_binding bv modl
   | _ ->
-    if !Clflags.transparent_modules then add_modtype bv mty;
+    if !((Clflags.current ()).transparent_modules) then add_modtype bv mty;
     bound
 
 and add_signature bv sg = ignore (add_signature_binding bv sg)
@@ -446,7 +456,7 @@ and add_sig_item (bv, m) item =
     (bv, m)
 
 and add_module_binding bv modl =
-  if not !Clflags.transparent_modules then add_module bv modl;
+  if not !((Clflags.current ()).transparent_modules) then add_module bv modl;
   match modl.pmod_desc with
   | Pmod_ident l -> (
     try
@@ -460,7 +470,7 @@ and add_module_binding bv modl =
         bound))
   | Pmod_structure s -> make_node (snd (add_structure_binding bv s))
   | _ ->
-    if !Clflags.transparent_modules then add_module bv modl;
+    if !((Clflags.current ()).transparent_modules) then add_module bv modl;
     bound
 
 and add_module bv modl =
@@ -530,11 +540,12 @@ and add_struct_item (bv, m) item : _ String_map.t * _ String_map.t =
     add_names s;
     let add = String_map.fold String_map.add m' in
     (add bv, add m)
-  | Pstr_attribute _ -> (bv, m)
+  | Pstr_attribute _ | Pstr_raw _ -> (bv, m)
   | Pstr_extension (e, _) ->
     handle_extension e;
     (bv, m)
 
 and add_implementation bv l =
-  if !Clflags.transparent_modules then ignore (add_structure_binding bv l)
+  if !((Clflags.current ()).transparent_modules) then
+    ignore (add_structure_binding bv l)
   else ignore (add_structure bv l)

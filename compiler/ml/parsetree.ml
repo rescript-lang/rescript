@@ -47,17 +47,6 @@ type constant =
      legacy three-digit decimal escapes to hexadecimal escapes. Compiler-created
      Payloads are constructed through [String_literal], which validates this
      relationship. *)
-  | Pconst_json of string
-  (* The JavaScript source inside a non-interpolated [json`...`] literal. For
-     example, [@as(json`{"ok": true}`)] stores ["{\"ok\": true}"]. Built-in
-     FFI processing consumes this form in supported external attributes;
-     otherwise the frontend rejects it. The string is JavaScript source, not a
-     decoded ReScript string value. *)
-  | Pconst_raw_source of string
-  (* JavaScript source carried by a compiler extension such as [raw] or [ffi].
-     For example, [%raw("x + 1")] stores ["x + 1"]. The extension
-     interprets the string as JavaScript source rather than as a ReScript
-     runtime string value. *)
   | Pconst_float of string * char option
 (* 3.4 2e5 1.4e-4
 
@@ -101,7 +90,24 @@ and core_type = {
   ptyp_attributes: attributes; (* ... [@id1] [@id2] *)
 }
 
-and arg = {attrs: attributes; lbl: arg_label; typ: core_type}
+and arg =
+  | Parg_type of {attrs: attributes; lbl: arg_label; typ: core_type}
+  | Parg_fixed of {
+      attrs: attributes;
+      lbl: arg_label;
+      value: fixed_value loc; (* located at the payload *)
+      loc: Location.t; (* the whole argument, from [@as] to [_] *)
+    }
+(* An external function argument whose value is fixed by the binding and
+   omitted at call sites, written [@as(value) _]. *)
+
+and fixed_value =
+  | Pfixed_int of string loc (* [@as(1)]: the integer literal's source *)
+  | Pfixed_string of String_literal.string_literal (* [@as("s")] *)
+  | Pfixed_template of string loc
+    (* [@as(`s`)]: the source between the backquotes *)
+  | Pfixed_json of string loc
+(* [@as(json`{}`)]: the JavaScript source between the backquotes *)
 
 and core_type_desc =
   | Ptyp_any (*  _ *)
@@ -390,6 +396,9 @@ and expression_desc =
        let! open M in E *)
   | Pexp_extension of extension
   (* [%id] *)
+  | Pexp_raw of {kind: raw_kind; name_loc: Location.t; source: raw_source}
+  (* %raw("...") and %ffi("..."): JavaScript source. [name_loc] is the
+     location of [%raw] or [%ffi]. *)
   (* . *)
   | Pexp_await of expression
   | Pexp_jsx_element of jsx_element
@@ -512,9 +521,34 @@ and value_description = {
   pval_name: string loc;
   pval_type: core_type;
   pval_prim: primitive_repr option;
+  pval_jsx_component: jsx_component option;
+      (* The [@react.component] annotation, taken out of the attributes when
+         the description is built. *)
   pval_attributes: attributes; (* ... [@@id1] [@@id2] *)
   pval_loc: Location.t;
 }
+
+(* A JSX component definition: [@react.component], [@jsx.component] or their
+   [componentWithProps] forms on a [let], an [external] or a signature item.
+   The attribute is the surface syntax; this is what it means. The JSX
+   transform reads it, and the printer puts the attribute back where it was
+   written. *)
+and jsx_component = {
+  pjc_kind: jsx_component_kind;
+  pjc_namespace: jsx_component_namespace;
+  pjc_loc: Location.t; (* the attribute's own location *)
+}
+
+and jsx_component_kind =
+  | Pjc_labelled of core_type option
+    (* [@react.component]: the props are the labelled arguments.
+       [@react.component(: t)] makes them share the props type [t]. *)
+  | Pjc_with_props
+(* [@react.componentWithProps]: the function takes a props record *)
+
+(* How the attribute was spelled. Both mean the same; the configured JSX
+   module decides the runtime. *)
+and jsx_component_namespace = Pjc_react | Pjc_jsx
 
 (*
   val x: T                            (prim = None)
@@ -798,7 +832,22 @@ and structure_item_desc =
   | Pstr_include of include_declaration (* include ME *)
   | Pstr_attribute of attribute (* [@@@id] *)
   | Pstr_extension of extension * attributes
-(* [%%id] *)
+  (* [%%id] *)
+  | Pstr_raw of {name_loc: Location.t; source: raw_source; attrs: attributes}
+(* %%raw("..."): JavaScript statements. [name_loc] is the location of
+   [%%raw]. *)
+
+and raw_kind =
+  | Raw_expression (* %raw: any JavaScript expression *)
+  | Raw_function (* %ffi: a JavaScript function *)
+
+and raw_source =
+  | Raw_string of string loc
+    (* %raw("..."): the JavaScript source, which is also the text between the
+       quotes. The location is the string literal's. *)
+  | Raw_template of string loc
+(* %raw(`...`): the template source as written, from which
+   [String_literal.decode_raw_template_source] gives the JavaScript source *)
 
 and value_constraint = {
   pvc_newtypes: string loc list;
@@ -810,6 +859,9 @@ and value_binding = {
   pvb_pat: pattern;
   pvb_expr: expression;
   pvb_constraint: value_constraint option;
+  pvb_jsx_component: jsx_component option;
+      (* The [@react.component] annotation, taken out of the attributes when
+         the binding is built. *)
   pvb_attributes: attributes;
   pvb_loc: Location.t;
 }

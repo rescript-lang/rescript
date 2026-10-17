@@ -1,0 +1,14 @@
+type task<'a> = {mutable result: option<'a>}
+
+let makeTask = executor => {
+  let task = {result: None}
+  executor(value => task.result = Some(value), _ => ())
+  task
+}
+
+let make = executor => makeTask((resolve, reject) => executor(~resolve, ~reject))
+
+let sum = (~a, ~b) => a + b
+
+let add = (~x, ~y, ()) => sum(~a=x, ~b=y)
+

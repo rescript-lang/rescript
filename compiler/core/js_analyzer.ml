@@ -76,23 +76,20 @@ let free_variables (stats : idents_stats) =
         | _ -> super.expression self exp);
   }
 
-let init = {used_idents = Set_ident.empty; defined_idents = Set_ident.empty}
-
-let obj = free_variables init
-
-let clean_up init =
-  init.used_idents <- Set_ident.empty;
-  init.defined_idents <- Set_ident.empty
+(* Each call gets its own accumulator: compiler requests run concurrently on
+   several domains, and a shared one would mix their identifiers. *)
+let free_variables_with walk =
+  let stats =
+    {used_idents = Set_ident.empty; defined_idents = Set_ident.empty}
+  in
+  walk (free_variables stats);
+  Set_ident.diff stats.used_idents stats.defined_idents
 
 let free_variables_of_statement st =
-  clean_up init;
-  obj.statement obj st;
-  Set_ident.diff init.used_idents init.defined_idents
+  free_variables_with (fun obj -> obj.statement obj st)
 
 let free_variables_of_expression st =
-  clean_up init;
-  obj.expression obj st;
-  Set_ident.diff init.used_idents init.defined_idents
+  free_variables_with (fun obj -> obj.expression obj st)
 
 let is_array_function (e : J.expression) =
   match e.expression_desc with
@@ -124,7 +121,7 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
   | Optional_block (x, _) -> no_side_effect x
   | Object entries ->
     Ext_list.for_all entries (function
-      | Object_property (_, e) -> no_side_effect e
+      | Object_property (_, e) | Record_spread e -> no_side_effect e
       (* A spread reads the source's properties, which may run getters or
          proxy traps *)
       | Object_spread _ -> false)

@@ -3,6 +3,20 @@ open OUnit
 let suites =
   "gentype"
   >::: [
+         ( "split relative module paths" >:: fun _ ->
+           assert_equal ["."] (Module_resolver.path_to_list ".");
+           assert_equal ["src"] (Module_resolver.path_to_list "src");
+           assert_equal ["nested"; "src"]
+             (Module_resolver.path_to_list (Filename.concat "src" "nested")) );
+         ( "stop at Windows drive roots" >:: fun _ ->
+           skip_if (not Sys.win32) "Windows drive roots require Windows";
+           List.iter
+             (fun root ->
+               assert_equal [root] (Module_resolver.path_to_list root);
+               assert_equal ["nested"; "src"; root]
+                 (Module_resolver.path_to_list
+                    (Filename.concat root (Filename.concat "src" "nested"))))
+             ["C:\\"; "D:\\"] );
          ( "escape semantic import paths" >:: fun _ ->
            let emit path =
              path |> Import_path.from_string_unsafe |> Import_path.emit

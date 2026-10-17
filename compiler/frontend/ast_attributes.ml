@@ -181,7 +181,17 @@ let as_const (attrs : t) =
                 {
                   pstr_desc =
                     Pstr_eval
-                      ({pexp_desc = Pexp_constant (Pconst_json s); pexp_loc}, _);
+                      ( {
+                          pexp_desc =
+                            Pexp_tagged_template
+                              {
+                                tag =
+                                  {pexp_desc = Pexp_ident {txt = Lident "json"}};
+                                raw_sources = [{txt = s; loc = pexp_loc}];
+                                values = [];
+                              };
+                        },
+                        _ );
                 };
               ] -> (
             (* Check that it is a valid object literal. *)

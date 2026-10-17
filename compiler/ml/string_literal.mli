@@ -61,6 +61,10 @@ val decode_raw_template_source : string -> string
     Backslashes belonging to the embedded JavaScript, such as [\\n], are
     preserved. *)
 
+val encode_raw_template_source : string -> string
+(** The inverse of [decode_raw_template_source]: the template source for the
+    given JavaScript source. *)
+
 val encode_js_string : string -> string
 (** Encode a semantic UTF-8 string as a canonical JavaScript string-literal
     body. *)

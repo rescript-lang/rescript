@@ -351,3 +351,10 @@ let debug t =
   in
   let doc = to_doc t in
   to_string ~width:10 doc |> print_endline
+
+let is_nil doc =
+  match doc with
+  | Nil -> true
+  | Text _ | LineSuffix _ | Concat _ | Indent _ | IfBreaks _ | LineBreak _
+  | Group _ | CustomLayout _ | BreakParent ->
+    false

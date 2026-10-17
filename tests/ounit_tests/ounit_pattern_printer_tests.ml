@@ -35,7 +35,7 @@ let int_pattern n =
   {
     record_rest_pattern with
     Typedtree.pat_desc = Tpat_constant (Const_int n);
-    pat_type = Predef.type_int;
+    pat_type = Predef.type_int ();
   }
 
 let count_label =
@@ -44,7 +44,7 @@ let count_label =
       Types.lbl_name = "count";
       lbl_runtime_name = "count";
       lbl_res = record_type;
-      lbl_arg = Predef.type_int;
+      lbl_arg = Predef.type_int ();
       lbl_mut = Asttypes.Immutable;
       lbl_optional = false;
       lbl_pos = 0;
@@ -81,7 +81,7 @@ let dummy_expr =
     Typedtree.exp_desc = Texp_constant (Const_int 0);
     exp_loc = loc;
     exp_extra = [];
-    exp_type = Predef.type_int;
+    exp_type = Predef.type_int ();
     exp_env = Env.empty;
     exp_attributes = [];
   }

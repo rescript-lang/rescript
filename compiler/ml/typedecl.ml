@@ -1892,6 +1892,10 @@ let parse_arity env _core_type ty =
 let transl_value_decl env loc valdecl =
   let cty = Typetexp.transl_type_scheme env valdecl.pval_type in
   let ty = cty.ctyp_type in
+  (* The typed tree keeps the attributes as written: only the JSX transform
+     reads the component annotation, and a declaration it leaves alone keeps
+     the attribute, as it always has. *)
+  let attributes = Ast_helper.Val.description_attributes valdecl in
   let v =
     match valdecl.pval_prim with
     | None when Env.is_in_signature env ->
@@ -1899,7 +1903,7 @@ let transl_value_decl env loc valdecl =
         val_type = ty;
         val_kind = Val_reg;
         Types.val_loc = loc;
-        val_attributes = valdecl.pval_attributes;
+        val_attributes = attributes;
       }
     | None ->
       (* unreachable: `pval_prim = None` outside a signature can only arise
@@ -1921,7 +1925,7 @@ let transl_value_decl env loc valdecl =
         val_type = ty;
         val_kind = Val_prim prim;
         Types.val_loc = loc;
-        val_attributes = valdecl.pval_attributes;
+        val_attributes = attributes;
       }
   in
   let id, newenv =
@@ -1936,7 +1940,7 @@ let transl_value_decl env loc valdecl =
       val_val = v;
       val_prim = valdecl.pval_prim;
       val_loc = valdecl.pval_loc;
-      val_attributes = valdecl.pval_attributes;
+      val_attributes = attributes;
     }
   in
   (desc, newenv)

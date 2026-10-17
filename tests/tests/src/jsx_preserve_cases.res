@@ -28,6 +28,15 @@ module Lower = {
 }
 let lowerExternal = <Lower x=1 />
 
+// The call passes a lone spread itself, not a copy of it
+module LowerSpread = {
+  type props = {x: int}
+  @val external make: React.component<props> = "lowerComp"
+}
+@val external lowerProps: unit => LowerSpread.props = "lowerProps"
+let lowerSpread = <LowerSpread {...lowerProps()} />
+let lowerSpreadKeyed = <LowerSpread {...lowerProps()} key="k" />
+
 // Spreads that aren't variables, with and without a key
 let base: JsxDOM.domProps = {title: "base"}
 let getProps = (): JsxDOM.domProps => {title: "fn"}

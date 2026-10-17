@@ -1,0 +1,1 @@
+- The OCaml build system rejects duplicate keys in `rescript.json` maps, a `namespace-entry` without a namespace, and a value after `--no-timing`. https://github.com/rescript-lang/rescript/pull/8780

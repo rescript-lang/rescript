@@ -42,6 +42,8 @@ rewrites those nodes as calls to the configured JSX module:
   directly, which supports external components;
 - a lowercase tag is emitted through the configured host-element module;
 - fragments use the configured `jsxFragment` value;
+- comment-only child containers are retained as comments by the parser and do
+  not contribute a child; bare `{}` still denotes an empty record expression;
 - one child becomes a `children` prop and multiple children become an array;
 - keyed elements select the keyed runtime entry point;
 - at most one props spread is accepted, and it must precede explicit props.

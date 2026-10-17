@@ -59,13 +59,8 @@ try {
   if (e$2.RE_EXN_ID === "JsExn") {
     let e$3 = e$2._1;
     let message = Stdlib_Option.map(Stdlib_JsExn.message(e$3), prim => prim.toLowerCase());
-    if (message !== undefined) {
-      if (message === "invalid key : someinvalidkey") {
-        console.log("Caught expected error");
-      } else {
-        console.warn(`Unexpected error message: "${message}"`);
-        throw e$3;
-      }
+    if (message === "invalid key : someinvalidkey") {
+      console.log("Caught expected error");
     } else {
       console.warn(`Unexpected error message: "${message}"`);
       throw e$3;

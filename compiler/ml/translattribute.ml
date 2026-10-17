@@ -21,24 +21,19 @@ let is_inline_attribute (attr : t) =
   | _ -> false
 
 let find_attribute p (attributes : t list) =
-  let inline_attribute, other_attributes = List.partition p attributes in
-  let attr =
-    match inline_attribute with
-    | [] -> None
-    | [attr] -> Some attr
-    | _ :: ({txt; loc}, _) :: _ ->
-      Location.prerr_warning loc (Warnings.Duplicated_attribute txt);
-      None
-  in
-  (attr, other_attributes)
+  match List.filter p attributes with
+  | [] -> None
+  | [attr] -> Some attr
+  | _ :: ({txt; loc}, _) :: _ ->
+    Location.prerr_warning loc (Warnings.Duplicated_attribute txt);
+    None
 
 let get_empty_attribute name attributes =
-  let attr, _ =
+  match
     find_attribute
       (fun (({txt}, _) : Parsetree.attribute) -> txt = name)
       attributes
-  in
-  match attr with
+  with
   | None -> None
   | Some ({loc}, Parsetree.PStr []) -> Some loc
   | Some ({loc}, _) ->
@@ -73,8 +68,7 @@ let parse_inline_attribute (attr : t option) : Lambda.inline_attribute =
       Default_inline)
 
 let get_inline_attribute l =
-  let attr, _ = find_attribute is_inline_attribute l in
-  parse_inline_attribute attr
+  parse_inline_attribute (find_attribute is_inline_attribute l)
 
 let add_inline_attribute (expr : Lambda.t) loc attributes =
   match (expr, get_inline_attribute attributes) with

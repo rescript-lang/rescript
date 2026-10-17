@@ -727,7 +727,7 @@ let rec string_append ?comment (e : t) (el : t) : t =
 
 let object_entries ?dup properties : J.object_entry list =
   (match dup with
-    | Some e -> [J.Object_spread e]
+    | Some e -> [J.Record_spread e]
     | None -> [])
   @ List.map (fun (name, value) -> J.Object_property (name, value)) properties
 

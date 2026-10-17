@@ -20,7 +20,7 @@ module ReactDOM = {
 
 module Wrapper = {
   type props = {value: string}
-  let make = (props: props) => <div> {React.string(props.value)} </div>
+  let make = (props: props) => <div>{React.string(props.value)}</div>
 }
 
 let _ = <Wrapper value="hello" />

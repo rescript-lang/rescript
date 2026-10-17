@@ -36,25 +36,6 @@ let unwrap_payload_expression (payload : t) =
       [{item with pstr_desc = Pstr_eval (unwrap_braces expression, attrs)}]
   | payload -> payload
 
-let json_literal_outside_external_message =
-  "A `json` literal can only be used in an external attribute such as `@as`"
-
-let reject_json_literal ~loc =
-  Location.raise_errorf ~loc "%s" json_literal_outside_external_message
-
-let reject_json_literal_payload (payload : t) =
-  match unwrap_payload_expression payload with
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ({pexp_desc = Pexp_constant (Pconst_json _); pexp_loc; _}, _);
-        };
-      ] ->
-    reject_json_literal ~loc:pexp_loc
-  | _ -> ()
-
 let semantic_string_of_expression (expression : Parsetree.expression) =
   match unwrap_braces expression with
   | {pexp_desc = Pexp_constant (Pconst_string payload); _} ->
@@ -215,6 +196,11 @@ let validate_raw_source ~(kind : Js_raw_info.raw_kind) ?is_function ~loc ~offset
 
 let raw_as_string_exp_exn ~(kind : Js_raw_info.raw_kind) ?is_function (x : t) :
     Parsetree.expression option =
+  let braced =
+    match x with
+    | PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_braces _}, _)}] -> true
+    | _ -> false
+  in
   let string_expression =
     match unwrap_payload_expression x with
     (* TODO also need detect empty phrase case *)
@@ -242,17 +228,30 @@ let raw_as_string_exp_exn ~(kind : Js_raw_info.raw_kind) ?is_function (x : t) :
           };
         ] -> (
       match constant with
-      | Pconst_raw_source source ->
-        Some (source, Bs_flow_ast_utils.flow_deli_offset (Some "js"), expression)
-      | Pconst_string payload ->
+      | Pconst_string payload when braced ->
+        (* A braced payload is an ordinary string expression, so its escapes
+           are decoded. *)
         Some (String_literal.string_semantic payload, 0, expression)
+      | Pconst_string payload ->
+        (* A raw payload is JavaScript source, so the string is taken as
+           written. *)
+        Some
+          ( String_literal.string_source payload,
+            Bs_flow_ast_utils.flow_deli_offset (Some "js"),
+            expression )
       | _ -> None)
     | _ -> None
   in
   match string_expression with
   | Some (str, offset, ({pexp_loc = loc} as expression)) ->
     validate_raw_source ~kind ?is_function ~loc ~offset str;
-    Some {expression with pexp_desc = Pexp_constant (Pconst_raw_source str)}
+    Some
+      {
+        expression with
+        pexp_desc =
+          Pexp_constant
+            (Pconst_string (String_literal.string_from_semantic str));
+      }
   | None -> None
 
 type lid = string Asttypes.loc

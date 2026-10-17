@@ -284,13 +284,13 @@ npm link rescript
 
 #### Use Local BSC with Existing ReScript Installation
 
-Alternatively, you can set the `RESCRIPT_BSC_EXE` environment variable to point to your locally compiled `bsc.exe`.
+The `rescript` build system has the compiler built in, so to test a local compiler change, link the local package as shown above.
+
+The Rust build system, `rescript-rust`, still runs `bsc.exe` and accepts the `RESCRIPT_BSC_EXE` environment variable pointing to your locally compiled `bsc.exe`:
 
 ```sh
-RESCRIPT_BSC_EXE=your-rescript-repo/packages/@rescript/darwin-arm64/bin/bsc.exe npx rescript
+RESCRIPT_BSC_EXE=your-rescript-repo/packages/@rescript/darwin-arm64/bin/bsc.exe npx rescript-rust
 ```
-
-This will test the local compiler while still using the build system from the installed Node module.
 
 ### Running Automatic Tests
 
@@ -346,7 +346,7 @@ Below we will discuss on how to write, build and run these test files.
 ### 1) Write a Mocha Test File
 
 - Create a file `tests/tests/src/feature_abc_test.res`. Make sure to end the file name with `_test.res`.
-- Inside the file, add a mocha test suite. The mocha bindings are defined in `tests/tests/src/mt.res`. To get you started, here is a simple scaffold for a test suite with multiple test cases:
+- Inside the file, add a mocha test suite. The mocha bindings are defined in `tests/tests/src/mocha.res`, the assertion helpers in `tests/tests/src/test_utils.res`. To get you started, here is a simple scaffold for a test suite with multiple test cases:
 
   ```rescript
   open Mocha
@@ -375,8 +375,8 @@ Below we will discuss on how to write, build and run these test files.
 This is usually the file you want to create to test certain compile behavior without running the JS code formally as a test, i.e., when you just want to check that the ReScript code compiles and produces the expected JS code.
 
 - Create your test file `tests/tests/src/my_file_test.res`. Make sure to end the file name with `_test.res`.
-- Build the `.js` artifact: `node scripts/test.js -mocha`.
-- Verify the output, check in the `tests/tests/src/my_file_test.res` and `tests/tests/src/my_file_test.js` to version control. The checked in `.js` file is essential for verifying regressions later on.
+- Build the `.mjs` artifact: `node scripts/test.js -mocha`.
+- Verify the output, check in the `tests/tests/src/my_file_test.res` and `tests/tests/src/my_file_test.mjs` to version control. The checked in `.mjs` file is essential for verifying regressions later on.
 - Eventually check in other relevant files changed during the rebuild (depends on your compiler changes).
 
 ## Contribute to the ReScript Playground Bundle
@@ -417,7 +417,7 @@ After a successful compilation, you will find following files in your project:
 - `packages/playground/packages/@rescript/belt` -> The Belt cmij, packaged separately from the compiler built-ins
 - `packages/playground/packages/*` -> Contains third party deps with cmij.js files (as defined in `packages/playground/rescript.json`)
 
-You can now use the `compiler.js` file either directly by using a `<script src="/path/to/compiler.js"/>` and `<script src="/path/to/packages/compilerCmij.js"/>` inside a html file, use a browser bundler infrastructure to optimize it, or use `nodejs` to run it on a command line:
+You can now use the `compiler.js` file either directly by using a `<script src="/path/to/compiler.js"/>` and `<script src="/path/to/packages/compiler-builtins/cmij.js"/>` inside a html file, use a browser bundler infrastructure to optimize it, or use `nodejs` to run it on a command line:
 
 ```
 $ node
@@ -611,10 +611,8 @@ Then attempt to rebuild your project as you would normally.
 
 ## Contribution Licensing
 
-Since ReScript is distributed under the terms of the [LGPL Version 3](LICENSE), contributions that you make are licensed under the same terms. In order for us to be able to accept your contributions, we will need explicit confirmation from you that you are able and willing to provide them under these terms, and the mechanism we use to do this is called a Developer's Certificate of Origin [DCO](DCO.md). This is very similar to the process used by the Linux(R) kernel, Samba, and many other major open source projects.
+ReScript is distributed under the [LGPL Version 3](LICENSE), and contributions are licensed under the same terms. To confirm that you can contribute under these terms, sign off every commit to certify the [Developer Certificate of Origin](https://developercertificate.org), as the Linux kernel and many other projects do:
 
-To participate under these terms, all that you must do is include a line like the following as the last line of the commit message for each commit in your contribution:
+    Signed-off-by: Random J. Developer <random@developer.example.org>
 
-    Signed-Off-By: Random J. Developer <random@developer.example.org>
-
-You must use your real name (sorry, no pseudonyms, and no anonymous contributions).
+`git commit -s` adds this line. Use your real name. The DCO check on each PR fails if a commit lacks a sign-off; fix it with `git rebase --signoff HEAD~N`, where N is the number of commits in the PR, and force-push.

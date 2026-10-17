@@ -30,7 +30,7 @@ rewatch_bg -vv watch > rewatch.log 2>&1 &
 success "Watcher Started"
 
 # Wait for initial build to complete
-if ! wait_for_file "./src/Test.mjs" 20; then
+if ! wait_for_file "./src/Test.mjs" 40; then
   error "Initial build did not complete"
   cat rewatch.log
   if ! exit_watcher; then

@@ -2,7 +2,7 @@
 
 // @ts-check
 
-// Copy the rewatch exe built by cargo to the platform bin dir.
+// Copy the Rust rewatch reference built by Cargo to the platform bin dir.
 // The dune-built compiler binaries are copied by dune promotion instead
 // (see compiler/sync/dune).
 
@@ -28,17 +28,22 @@ const args = parseArgs({
 const shouldCopyRewatch = args.values.all || args.values.rewatch;
 
 if (shouldCopyRewatch) {
-  copyExe(path.join(rewatchDir, "target", "release"), "rescript");
+  copyExe(
+    path.join(rewatchDir, "target", "release"),
+    "rescript",
+    "rescript-rust",
+  );
 }
 
 /**
  * @param {string} dir
  * @param {string} exe
+ * @param {string} renamed
  */
-function copyExe(dir, exe) {
+function copyExe(dir, exe, renamed) {
   const ext = process.platform === "win32" ? ".exe" : "";
   const src = path.join(dir, exe + ext);
-  const dest = path.join(binDir, `${exe}.exe`);
+  const dest = path.join(binDir, `${renamed}.exe`);
 
   // For some reason, the copy operation fails in Windows CI if the file already exists.
   if (process.platform === "win32" && fs.existsSync(dest)) {

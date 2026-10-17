@@ -24,7 +24,10 @@
 
 (** on 32 bit , there are 16M limitation *)
 let load_file f =
-  Ext_pervasives.finally (open_in_bin f) ~clean:close_in (fun ic ->
+  Ext_pervasives.finally
+    (open_in_bin (Compiler_request_state.resolve_path f))
+    ~clean:close_in
+    (fun ic ->
       let n = in_channel_length ic in
       let s = Bytes.create n in
       really_input ic s 0 n;
@@ -41,5 +44,6 @@ let rev_lines_of_chann chan =
   loop [] chan
 
 let write_file f content =
-  Ext_pervasives.finally ~clean:close_out (open_out_bin f) (fun oc ->
-      output_string oc content)
+  Ext_pervasives.finally ~clean:close_out
+    (open_out_bin (Compiler_request_state.resolve_path f))
+    (fun oc -> output_string oc content)

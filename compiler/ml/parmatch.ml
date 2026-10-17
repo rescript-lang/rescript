@@ -463,18 +463,15 @@ and pretty_dict_entries ppf = function
 
 let top_pretty ppf v = fprintf ppf "@[%a@]@?" pretty_val v
 
-let pretty_pat p =
-  top_pretty Format.str_formatter p;
-  prerr_string (Format.flush_str_formatter ())
+let pretty_pat p = prerr_string (Format.asprintf "%a" top_pretty p)
 
 type matrix = pattern list list
 
 let pretty_line ps =
   List.iter
     (fun p ->
-      top_pretty Format.str_formatter p;
       prerr_string " <";
-      prerr_string (Format.flush_str_formatter ());
+      prerr_string (Format.asprintf "%a" top_pretty p);
       prerr_string ">")
     ps
 
@@ -544,40 +541,7 @@ let all_record_args lbls =
         (fun lbl -> (mknoloc (Longident.Lident "?temp?"), lbl, omega, opt))
         lbl_all
     in
-    List.iter
-      (fun ((id, lbl, pat, o) as x) ->
-        let lbl_is_optional () =
-          match lbl.lbl_repres with
-          | Record_inlined _ -> false
-          | _ -> lbl.lbl_optional
-        in
-        let x =
-          match pat.pat_desc with
-          | Tpat_construct
-              ( {txt = Longident.Ldot (Longident.Lident "*predef*", "Some")},
-                _,
-                [({pat_desc = Tpat_constant _} as c)] )
-            when lbl_is_optional () ->
-            (id, lbl, c, o)
-          | Tpat_construct
-              ( {txt = Longident.Ldot (Longident.Lident "*predef*", "Some")},
-                _,
-                [({pat_desc = Tpat_construct (_, cd, _)} as pat_construct)] )
-            when lbl_is_optional () -> (
-            match cd.cstr_kind with
-            | Extension_constructor _ -> x
-            | Ordinary_constructor representation -> (
-              match Variant_runtime.representation representation with
-              | Block (Untagged {block_type})
-                when not
-                       (Ast_untagged_variants.block_type_can_be_undefined
-                          block_type) ->
-                (id, lbl, pat_construct, o)
-              | Constant _ | Block _ -> x))
-          | _ -> x
-        in
-        t.(lbl.lbl_pos) <- x)
-      lbls;
+    List.iter (fun ((_, lbl, _, _) as x) -> t.(lbl.lbl_pos) <- x) lbls;
     Array.to_list t
 
 (* Build argument list when p2 >= p1, where p1 is a simple pattern *)
@@ -766,26 +730,61 @@ let filter_extra pss =
 *)
 
 let filter_all pat0 pss =
-  let rec insert q qs env =
-    match env with
-    | [] ->
-      let q0 = normalize_pat q in
-      [(q0, [simple_match_args q0 q @ qs])]
-    | ((q0, pss) as c) :: env ->
-      if simple_match q0 q then
-        (q0, (simple_match_args q0 q @ qs) :: pss) :: env
-      else c :: insert q qs env
+  (* The groups, most recently created first. Each row goes to the group
+     whose head [simple_match]es it; there is at most one such group, since a
+     group is only created when no other matches. *)
+  let groups =
+    ref
+      (match pat0.pat_desc with
+      | Tpat_record _ | Tpat_tuple _ -> [(pat0, ref [])]
+      | _ -> [])
+  in
+  (* For int, char and string constants and for polymorphic variants,
+     [simple_match] is equality, so their groups are also found by hashing.
+     This keeps a column of many distinct heads, e.g. an expanded character
+     range, linear instead of quadratic. The tables are only created when needed,
+     as most calls are on small matrices. *)
+  let const_groups = lazy (Hashtbl.create 16) in
+  let variant_groups = lazy (Hashtbl.create 16) in
+  let add_row (q0, rows) q qs =
+    rows := (simple_match_args q0 q @ qs) :: !rows
+  in
+  let new_group q qs =
+    let q0 = normalize_pat q in
+    let group = (q0, ref []) in
+    add_row group q qs;
+    groups := group :: !groups;
+    group
+  in
+  let find_or_add tbl key q qs =
+    let tbl = Lazy.force tbl in
+    match Hashtbl.find_opt tbl key with
+    | Some group -> add_row group q qs
+    | None -> Hashtbl.add tbl key (new_group q qs)
+  in
+  let insert q qs =
+    match q.pat_desc with
+    | Tpat_constant ((Const_int _ | Const_char _ | Const_string _) as c) ->
+      find_or_add const_groups c q qs
+    | Tpat_variant (l, _, _) -> find_or_add variant_groups l q qs
+    | _ -> (
+      match List.find_opt (fun (q0, _) -> simple_match q0 q) !groups with
+      | Some group -> add_row group q qs
+      | None -> ignore (new_group q qs))
   in
 
-  let rec filter_rec env = function
+  let rec filter_rec = function
     | ({pat_desc = Tpat_alias (p, _, _)} :: ps) :: pss ->
-      filter_rec env ((p :: ps) :: pss)
+      filter_rec ((p :: ps) :: pss)
     | ({pat_desc = Tpat_or (p1, p2, _)} :: ps) :: pss ->
-      filter_rec env ((p1 :: ps) :: (p2 :: ps) :: pss)
-    | ({pat_desc = Tpat_any | Tpat_var _} :: _) :: pss -> filter_rec env pss
-    | (p :: ps) :: pss -> filter_rec (insert p ps env) pss
-    | _ -> env
-  and filter_omega env = function
+      filter_rec ((p1 :: ps) :: (p2 :: ps) :: pss)
+    | ({pat_desc = Tpat_any | Tpat_var _} :: _) :: pss -> filter_rec pss
+    | (p :: ps) :: pss ->
+      insert p ps;
+      filter_rec pss
+    | _ -> ()
+  in
+  let rec filter_omega env = function
     | ({pat_desc = Tpat_alias (p, _, _)} :: ps) :: pss ->
       filter_omega env ((p :: ps) :: pss)
     | ({pat_desc = Tpat_or (p1, p2, _)} :: ps) :: pss ->
@@ -800,13 +799,8 @@ let filter_all pat0 pss =
     | [] -> env
   in
 
-  filter_omega
-    (filter_rec
-       (match pat0.pat_desc with
-       | Tpat_record _ | Tpat_tuple _ -> [(pat0, [])]
-       | _ -> [])
-       pss)
-    pss
+  filter_rec pss;
+  filter_omega (List.rev_map (fun (q0, rows) -> (q0, !rows)) !groups) pss
 
 (* Variant related functions *)
 
@@ -1708,6 +1702,49 @@ let get_mins le ps =
   in
   select_rec [] (select_rec [] ps)
 
+(* [get_mins le_pats pss], but faster for many rows starting with distinct
+   constants, e.g. an expanded character range. A row starting with an int,
+   char or string constant can only be covered by rows starting with the same
+   constant or with another kind of pattern, so only those are compared. *)
+let get_mins_pats pss =
+  let key = function
+    | {
+        pat_desc =
+          Tpat_constant ((Const_int _ | Const_char _ | Const_string _) as c);
+      }
+      :: _ ->
+      Some c
+    | _ -> None
+  in
+  (* [select_rec [] pss] of [get_mins le_pats]: drops each row covered by a
+     later row, and reverses the order. *)
+  let select pss =
+    let later = ref [] in
+    let later_by_key = lazy (Hashtbl.create 16) in
+    let later_unkeyed = ref [] in
+    let kept =
+      List.fold_left
+        (fun kept ps ->
+          let below qs = le_pats qs ps in
+          let key = key ps in
+          let dominated =
+            match key with
+            | None -> List.exists below !later
+            | Some c ->
+              List.exists below (Hashtbl.find_all (Lazy.force later_by_key) c)
+              || List.exists below !later_unkeyed
+          in
+          later := ps :: !later;
+          (match key with
+          | None -> later_unkeyed := ps :: !later_unkeyed
+          | Some c -> Hashtbl.add (Lazy.force later_by_key) c ps);
+          if dominated then kept else ps :: kept)
+        [] (List.rev pss)
+    in
+    List.rev kept
+  in
+  select (select pss)
+
 (*
   lub p q is a pattern that matches all values matched by p and q
   may raise Empty, when p and q are not compatible
@@ -1872,10 +1909,10 @@ module Conv = struct
   open Parsetree
   let mkpat desc = Ast_helper.Pat.mk desc
 
-  let name_counter = ref 0
   let fresh name =
-    let current = !name_counter in
-    name_counter := !name_counter + 1;
+    let state = Compiler_request_state.current () in
+    let current = state.parmatch_name_counter in
+    state.parmatch_name_counter <- current + 1;
     "#$" ^ name ^ string_of_int current
 
   let conv_record_rest (rest : Typedtree.record_pat_rest) =
@@ -2153,7 +2190,7 @@ let check_unused pred casel =
       | {c_lhs = q; c_guard} :: rem ->
         let qs = [q] in
         (try
-           let pss = get_mins le_pats (Ext_list.filter pref (compats qs)) in
+           let pss = get_mins_pats (Ext_list.filter pref (compats qs)) in
            (* First look for redundant or partially redundant patterns *)
            let r = every_satisfiables (make_rows pss) (make_row qs) in
            (* Do not warn for unused [pat -> .] *)
@@ -2232,7 +2269,7 @@ let irrefutable pat = le_pat (Dict_pattern.lowering [pat] pat) omega
 
 let check_partial_param do_check_partial do_check_fragile loc casel =
   let pss = initial_matrix casel in
-  let pss = get_mins le_pats pss in
+  let pss = get_mins_pats pss in
   let total = do_check_partial loc casel pss in
   if total = Total && Warnings.is_active (Warnings.Fragile_match "") then
     do_check_fragile loc casel pss;

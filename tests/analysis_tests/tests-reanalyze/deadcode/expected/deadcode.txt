@@ -297,6 +297,11 @@
   Scanning DeadValueTest.cmti Source:DeadValueTest.resi
   addDeclaration_ Value +valueAlive DeadValueTest.resi:1:0 path:DeadValueTest
   addDeclaration_ Value +valueDead DeadValueTest.resi:2:0 path:DeadValueTest
+  Scanning DictLiteralSideEffects.cmt Source:DictLiteralSideEffects.res
+  addDeclaration_ Value +deadNoEffect DictLiteralSideEffects.res:3:4 path:+DictLiteralSideEffects
+  addDeclaration_ Value +deadWithValueEffect DictLiteralSideEffects.res:4:4 path:+DictLiteralSideEffects
+  addDeclaration_ Value +deadWithSpread DictLiteralSideEffects.res:5:4 path:+DictLiteralSideEffects
+  add_value_reference DictLiteralSideEffects.res:5:4 --> DictLiteralSideEffects.res:3:4
   Scanning Docstrings.cmt Source:Docstrings.res
   addDeclaration_ Value +flat Docstrings.res:2:4 path:+Docstrings
   addDeclaration_ Value +signMessage Docstrings.res:12:4 path:+Docstrings
@@ -2202,6 +2207,22 @@
   DeadValueTest.resi:2:1-18
   valueDead is never used
 
+  Warning Dead Module
+  DictLiteralSideEffects.res:0:1
+  DictLiteralSideEffects is a dead module as all its items are dead.
+
+  Warning Dead Value
+  DictLiteralSideEffects.res:3:1-31
+  deadNoEffect is never used
+
+  Warning Dead Value With Side Effects
+  DictLiteralSideEffects.res:4:1-58
+  deadWithValueEffect is never used and could have side effects
+
+  Warning Dead Value With Side Effects
+  DictLiteralSideEffects.res:5:1-50
+  deadWithSpread is never used and could have side effects
+
   Warning Dead Type
   Docstrings.res:61:5
   t.B is a variant case which is never constructed
@@ -3346,4 +3367,4 @@
   VariantsWithPayload.res:96:23-32
   variant1Object.R is a variant case which is never constructed
   
-  Analysis reported 336 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:23, Warning Dead Type:100, Warning Dead Value:179, Warning Dead Value With Side Effects:6, Warning Redundant Optional Argument:7, Warning Unused Argument:18)
+  Analysis reported 340 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:24, Warning Dead Type:100, Warning Dead Value:180, Warning Dead Value With Side Effects:8, Warning Redundant Optional Argument:7, Warning Unused Argument:18)

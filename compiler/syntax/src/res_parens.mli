@@ -1,6 +1,7 @@
 type kind = Parenthesized | Braced of Location.t | Nothing
 
 val expr : Parsetree.expression -> kind
+val starts_with_regexp : Parsetree.expression -> bool
 
 (* Unlike [expr], this does not request parentheses for a top-level coercion.
    Use only where the surrounding grammar delimits the expression, such as call
@@ -20,10 +21,9 @@ val assert_or_await_expr_rhs : ?in_await:bool -> Parsetree.expression -> kind
 
 val field_expr : Parsetree.expression -> kind
 
-val ternary_operand : Parsetree.expression -> kind
+val ternary_operand : ?is_condition:bool -> Parsetree.expression -> kind
 
 val jsx_prop_expr : Parsetree.expression -> kind
-val jsx_child_expr : Parsetree.expression -> kind
 
 val binary_expr : Parsetree.expression -> kind
 val mod_type_functor_return : Parsetree.module_type -> bool
@@ -35,6 +35,8 @@ val call_expr : Parsetree.expression -> kind
 
 val mod_constraint : Parsetree.module_expr -> bool
 val mod_apply_callee : Parsetree.module_expr -> bool
+val mod_await_operand : Parsetree.module_expr -> bool
+val mod_pack_constraint : Parsetree.module_expr -> bool
 
 val mod_expr_parens : Parsetree.module_expr -> bool
 

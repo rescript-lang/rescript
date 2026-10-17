@@ -52,3 +52,5 @@ val will_break : t -> bool
 
 val to_string : width:int -> t -> string
 val debug : t -> unit
+
+val is_nil : t -> bool

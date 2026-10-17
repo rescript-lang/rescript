@@ -11,7 +11,7 @@ let repeatedChildren =
     {...dict{
       ...baseProps->Obj.magic,
       "children": React.string("first"),
-        "children": React.string("second"),
+      "children": React.string("second"),
     }->Obj.magic}
   />
 let repeatedKey =

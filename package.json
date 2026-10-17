@@ -45,6 +45,7 @@
   "bin": {
     "bsc": "cli/bsc.js",
     "rescript": "cli/rescript.js",
+    "rescript-rust": "cli/rescript-rust.js",
     "rescript-tools": "cli/rescript-tools.js"
   },
   "scripts": {
@@ -61,7 +62,8 @@
     "changelog:preview": "node scripts/changelog.js preview",
     "changelog:release": "node scripts/changelog.js release",
     "changelog:open": "node scripts/changelog.js open",
-    "test-changelog": "node --test scripts/changelog.test.js"
+    "test-changelog": "node --test scripts/changelog.test.js",
+    "test-commit-records": "node --test scripts/commitRecords.test.js"
   },
   "files": [
     "CHANGELOG.md",
@@ -72,8 +74,6 @@
     "cli"
   ],
   "exports": {
-    "./lib/es6/*": "./lib/es6/*",
-    "./lib/js/*": "./lib/js/*",
     "./tools": {
       "require": "./cli/common/tools.cjs",
       "default": "./cli/common/tools.js"

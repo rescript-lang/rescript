@@ -1,10 +1,10 @@
-let cmi_magic_number = "Caml1999I036"
+let cmi_magic_number = "Caml1999I038"
 
 (* Magic numbers for marshaled values of the *current* parsetree, whose layout
    changes across compiler versions. *)
-and ast_impl_magic_number = "ResImpl01315"
+and ast_impl_magic_number = "ResImpl01317"
 
-and ast_intf_magic_number = "ResIntf01315"
+and ast_intf_magic_number = "ResIntf01317"
 
 (* Magic numbers of the frozen Parsetree0 (OCaml 4.06) layout used on the
    external-PPX wire. They must never be written in front of a
@@ -13,6 +13,7 @@ and ast0_impl_magic_number = "Caml1999M022"
 
 and ast0_intf_magic_number = "Caml1999N022"
 
-and cmt_magic_number = "Caml1999T043"
+and cmt_magic_number = "Caml1999T045"
 
-let load_path = ref ([] : string list)
+let get_load_path () = (Compiler_request_state.current ()).load_path
+let set_load_path path = (Compiler_request_state.current ()).load_path <- path

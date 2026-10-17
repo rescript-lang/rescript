@@ -9,3 +9,7 @@ let spreads = dict{...a, ...b}
 let attributed = @attr dict{"a": 1}
 let attributedSpread = @attr dict{"a": 1, ...b}
 let nested = dict{"a": dict{"b": 1}}
+let spreadDictLiteral = dict{"a": 1, ...dict{"b": 2}}
+let spreadDictLiterals = dict{...dict{"b": 2}, "c": 3, ...dict{"d": 4, ...dict{}}}
+let userMake = Primitive_dict.make([("a", 1)])
+let userSpread = Primitive_dict.spread(Primitive_dict.make([]), [d])

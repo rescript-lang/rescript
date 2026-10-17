@@ -96,7 +96,7 @@ Read the relevant area guide linked from the [root instructions](../AGENTS.md#ar
 # Raw lambda (unoptimized intermediate representation)
 ./cli/bsc.js -drawlambda myfile.res
 
-# Use lambda printing for debugging (add in compiler/core/lam_print.ml)
+# Use lambda printing for debugging (Printlambda in compiler/ml/printlambda.ml)
 ```
 
 #### Common Debug Scenarios
@@ -139,5 +139,5 @@ The compiler is designed for fast feedback loops and scales to large codebases:
 
 - Remember Lambda IR is the core optimization layer
 - All `lam_*.ml` files process this representation
-- Use `lam_print.ml` for debugging lambda expressions
+- Use `compiler/ml/printlambda.ml` for debugging lambda expressions
 - Test both with and without optimization passes

@@ -80,11 +80,30 @@ let map_constant = function
   | Pconst_char {semantic} -> Pconst_char semantic
   | Pconst_string payload ->
     Pconst_string (String_literal.string_source payload, Some "js")
-  | Pconst_raw_source s -> Pconst_string (s, Some "js")
-  | Pconst_json s -> Pconst_string (s, Some "json")
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
 
 let template_attr = (Location.mknoloc "res.template", Pt.PStr [])
+
+(* v0 spells raw JavaScript as the extension it is written as, with the source
+   in a ["js"]-delimited string. *)
+let raw_extension sub ~name ~name_loc (source : Parsetree.raw_source) :
+    Pt.extension =
+  let constant ~attrs ({txt; loc} : string Location.loc) =
+    Ast_helper0.Exp.constant ~loc:(sub.location sub loc) ~attrs
+      (Pt.Pconst_string (txt, Some "js"))
+  in
+  let expression =
+    match source with
+    | Raw_string source -> constant ~attrs:[] source
+    | Raw_template source -> constant ~attrs:[template_attr] source
+  in
+  ( {txt = name; loc = sub.location sub name_loc},
+    Pt.PStr
+      [
+        Ast_helper0.Str.eval
+          ~loc:(sub.location sub (Ast_raw.payload_loc source))
+          expression;
+      ] )
 
 let add_template_attr attrs =
   if Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.template") then attrs
@@ -177,8 +196,39 @@ module T = struct
         match params with
         | [] -> sub.typ sub ret
         | (arg : Parsetree.arg) :: rest ->
-          let lbl = Asttypes.to_noloc arg.lbl in
-          let arg_attrs = sub.attributes sub arg.attrs in
+          let arg_lbl, arg_attrs, arg_typ0 =
+            match arg with
+            | Parg_type {attrs; lbl; typ} -> (lbl, attrs, sub.typ sub typ)
+            | Parg_fixed {attrs; lbl; value; loc} ->
+              (* v0 spells a fixed argument [_ [@as value]], with [json] as a
+                 [json]-delimited string, as before [json] was an ordinary
+                 tagged template. [@as] and [_] get their own locations, from
+                 which [Ast_fixed_arg] restores the argument's. *)
+              let as_loc = Ast_fixed_arg.as_name_loc loc in
+              let as_attr =
+                match value.txt with
+                | Pfixed_json source ->
+                  ( {txt = "as"; loc = sub.location sub as_loc},
+                    Pt.PStr
+                      [
+                        Ast_helper0.Str.eval
+                          ~loc:(sub.location sub value.loc)
+                          (Ast_helper0.Exp.constant
+                             ~loc:(sub.location sub source.loc)
+                             (Pt.Pconst_string (source.txt, Some "json")));
+                      ] )
+                | Pfixed_int _ | Pfixed_string _ | Pfixed_template _ ->
+                  sub.attribute sub
+                    (Ast_fixed_arg.to_attribute ~loc:as_loc value)
+              in
+              ( lbl,
+                attrs,
+                Ast_helper0.Typ.any
+                  ~loc:(sub.location sub (Ast_fixed_arg.underscore_loc loc))
+                  ~attrs:[as_attr] () )
+          in
+          let lbl = Asttypes.to_noloc arg_lbl in
+          let arg_attrs = sub.attributes sub arg_attrs in
           let is_head = List.length rest = arity - 1 in
           let merged_attrs =
             if is_head && attrs <> [] then
@@ -190,10 +240,9 @@ module T = struct
           in
           let arrow_loc =
             if is_head then loc
-            else {loc with loc_start = arg.typ.ptyp_loc.loc_start}
+            else {loc with loc_start = arg_typ0.ptyp_loc.loc_start}
           in
-          arrow ~loc:arrow_loc ~attrs:merged_attrs lbl (sub.typ sub arg.typ)
-            (build rest)
+          arrow ~loc:arrow_loc ~attrs:merged_attrs lbl arg_typ0 (build rest)
       in
       let typ0 = build params in
       let arity_string = "Has_arity" ^ string_of_int arity in
@@ -381,6 +430,10 @@ module M = struct
     | Pstr_include x -> include_ ~loc (sub.include_declaration sub x)
     | Pstr_extension (x, attrs) ->
       extension ~loc (sub.extension sub x) ~attrs:(sub.attributes sub attrs)
+    | Pstr_raw {name_loc; source; attrs} ->
+      extension ~loc
+        (raw_extension sub ~name:"raw" ~name_loc source)
+        ~attrs:(sub.attributes sub attrs)
     | Pstr_attribute x -> attribute ~loc (sub.attribute sub x)
 end
 
@@ -781,6 +834,9 @@ module E = struct
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Pexp_raw {kind; name_loc; source} ->
+      extension ~loc ~attrs
+        (raw_extension sub ~name:(Ast_raw.extension_name kind) ~name_loc source)
     | Pexp_await e ->
       (* Single v0 attribute slot for two nodes: the await node's own
          attributes go in front of the [res.await] marker, the inner
@@ -959,7 +1015,7 @@ let default_mapper =
     type_extension = T.map_type_extension;
     extension_constructor = T.map_extension_constructor;
     value_description =
-      (fun this {pval_name; pval_type; pval_prim; pval_loc; pval_attributes} ->
+      (fun this ({pval_name; pval_type; pval_prim; pval_loc} as vd) ->
         let prim =
           match pval_prim with
           | None -> []
@@ -972,8 +1028,12 @@ let default_mapper =
               "External declarations already processed for compilation cannot \
                be converted for an external PPX"
         in
+        (* v0 has no component node: PPXs see the [@react.component]
+           attribute, and [Ast_helper.Val.mk] takes it out again on the way
+           back. *)
         Val.mk (map_loc this pval_name) (this.typ this pval_type)
-          ~attrs:(this.attributes this pval_attributes)
+          ~attrs:
+            (this.attributes this (Ast_helper.Val.description_attributes vd))
           ~loc:(this.location this pval_loc)
           ~prim);
     pat = P.map;
@@ -1014,7 +1074,7 @@ let default_mapper =
           ~loc:(this.location this pincl_loc)
           ~attrs:(this.attributes this pincl_attributes));
     value_binding =
-      (fun this {pvb_pat; pvb_expr; pvb_constraint; pvb_attributes; pvb_loc} ->
+      (fun this ({pvb_pat; pvb_expr; pvb_constraint; pvb_loc} as vb) ->
         let loc = this.location this pvb_loc in
         let pvb_pat, pvb_expr =
           match pvb_constraint with
@@ -1040,7 +1100,8 @@ let default_mapper =
             in
             (pat, expr)
         in
-        Vb.mk pvb_pat pvb_expr ~loc ~attrs:(this.attributes this pvb_attributes));
+        Vb.mk pvb_pat pvb_expr ~loc
+          ~attrs:(this.attributes this (Ast_helper.Vb.binding_attributes vb)));
     constructor_declaration =
       (fun this ({pcd_name; pcd_args; pcd_res; pcd_loc} as cd) ->
         Type.constructor (map_loc this pcd_name)

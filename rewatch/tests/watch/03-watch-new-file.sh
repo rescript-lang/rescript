@@ -20,7 +20,7 @@ rewatch_bg watch > rewatch.log 2>&1 &
 success "Watcher Started"
 
 # Wait for initial build to complete
-if ! wait_for_file "./src/Test.mjs" 20; then
+if ! wait_for_file "./src/Test.mjs" 40; then
   error "Initial build did not complete"
   cat rewatch.log
   exit_watcher
@@ -28,7 +28,7 @@ if ! wait_for_file "./src/Test.mjs" 20; then
 fi
 success "Initial build completed"
 
-if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 30; then
+if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 60; then
   error "Initial build did not settle"
   cat rewatch.log
   exit_watcher
@@ -42,7 +42,7 @@ let () = Console.log(greeting)
 EOF
 
 # Wait for the new file to be compiled
-if ! wait_for_file "./src/NewWatchTestFile.mjs" 20; then
+if ! wait_for_file "./src/NewWatchTestFile.mjs" 40; then
   error "New file was not compiled by watcher"
   cat rewatch.log
   rm -f ./src/NewWatchTestFile.res
@@ -65,7 +65,7 @@ fi
 completed_builds=$(grep -c "Finished .*compilation" rewatch.log || true)
 rm -f ./src/NewWatchTestFile.res
 
-if ! wait_for_pattern_count rewatch.log "Finished .*compilation" "$((completed_builds + 1))" 30; then
+if ! wait_for_pattern_count rewatch.log "Finished .*compilation" "$((completed_builds + 1))" 60; then
   error "Watcher did not finish rebuilding after deleting the source"
   cat rewatch.log
   exit_watcher

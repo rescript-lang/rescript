@@ -48,3 +48,9 @@ module Make = /* before parameters */ (
   /* before A */ A /* after A */: /* before X */ X /* after X */,
   /* before B */ B /* after B */: /* before Y */ Y /* after Y */
 )  => ({let a /* inside */ = A.a + B.b}: /* c1 */ Set /* c2 */)
+
+// await on module expressions
+module A = /* a */ await /* b */ M /* c */
+module B = await (/* d */ M: S /* e */)
+include /* f */ await M
+module D = F(/* i */ await /* j */ M)

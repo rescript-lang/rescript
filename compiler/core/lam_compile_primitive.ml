@@ -39,8 +39,10 @@ let ensure_value_unit (st : Lam_compile_context.continuation) e : E.t =
 let get_module_system () =
   let package_info = Js_packages_state.get_packages_info () in
   let module_system =
-    if Js_packages_info.is_empty package_info && !Js_config.js_stdout then
-      [Ext_module_system.Commonjs]
+    if
+      Js_packages_info.is_empty package_info
+      && !((Js_config.current ()).js_stdout)
+    then [Ext_module_system.Commonjs]
     else
       Js_packages_info.map package_info (fun {module_system} -> module_system)
   in
@@ -250,19 +252,23 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     | _ -> assert false)
   | Pdivint -> (
     match args with
-    | [e1; e2] -> E.int32_div ~checked:!Js_config.check_div_by_zero e1 e2
+    | [e1; e2] ->
+      E.int32_div ~checked:!((Js_config.current ()).check_div_by_zero) e1 e2
     | _ -> assert false)
   | Pdivbigint -> (
     match args with
-    | [e1; e2] -> E.bigint_div ~checked:!Js_config.check_div_by_zero e1 e2
+    | [e1; e2] ->
+      E.bigint_div ~checked:!((Js_config.current ()).check_div_by_zero) e1 e2
     | _ -> assert false)
   | Pmodint -> (
     match args with
-    | [e1; e2] -> E.int32_mod ~checked:!Js_config.check_div_by_zero e1 e2
+    | [e1; e2] ->
+      E.int32_mod ~checked:!((Js_config.current ()).check_div_by_zero) e1 e2
     | _ -> assert false)
   | Pmodbigint -> (
     match args with
-    | [e1; e2] -> E.bigint_mod ~checked:!Js_config.check_div_by_zero e1 e2
+    | [e1; e2] ->
+      E.bigint_mod ~checked:!((Js_config.current ()).check_div_by_zero) e1 e2
     | _ -> assert false)
   | Ppowint -> (
     match args with
@@ -590,7 +596,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
              when List.for_all
                     (function
                       | J.Object_property _ -> true
-                      | Object_spread _ -> false)
+                      | Object_spread _ | Record_spread _ -> false)
                     entries ->
              entries
            | _ -> [J.Object_spread e])
@@ -663,7 +669,6 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
         ~callee:(Lam_compile_external_call.jsx_callee jsx_ffi)
         ~tag ~spread ~props ~children ~key ~multi:jsx_multi
         ~fragment:jsx_fragment)
-  (* FIXME, this can be removed later *)
   | Pis_poly_var_block -> E.is_type_object (Ext_list.singleton_exn args)
   | Pduprecord -> (
     match args with

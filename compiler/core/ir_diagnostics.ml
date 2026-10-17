@@ -13,11 +13,12 @@ let remove_stale_artifacts directory =
 
 let create ~output_prefix =
   let directory = output_prefix ^ ".debug-ir" in
-  if Sys.file_exists directory then (
-    if not (Ext_sys.is_directory_no_exn directory) then
+  let physical_directory = Compiler_request_state.resolve_path directory in
+  if Sys.file_exists physical_directory then (
+    if not (Ext_sys.is_directory_no_exn physical_directory) then
       failwith (Printf.sprintf "%s exists and is not a directory" directory);
-    remove_stale_artifacts directory)
-  else Sys.mkdir directory 0o755;
+    remove_stale_artifacts physical_directory)
+  else Sys.mkdir physical_directory 0o755;
   Ext_log.dwarn ~__POS__ "Writing IR diagnostics to %s" directory;
   {directory; next_index = 1}
 
@@ -30,19 +31,19 @@ let next_path diagnostics ~kind ~pass ~extension =
 let dump_lam diagnostics ~pass lam =
   let path = next_path diagnostics ~kind:"lam" ~pass ~extension:".lam" in
   Ext_log.dwarn ~__POS__ "Dumping pass %s to %s" pass path;
-  Printlambda.serialize path lam
+  Printlambda.serialize (Compiler_request_state.resolve_path path) lam
 
 let dump_groups diagnostics groups =
   let path =
     next_path diagnostics ~kind:"lam" ~pass:"groups" ~extension:".lambda"
   in
   Ext_log.dwarn ~__POS__ "Dumping groups to %s" path;
-  Ext_fmt.with_file_as_pp path (fun fmt ->
+  Ext_fmt.with_file_as_pp (Compiler_request_state.resolve_path path) (fun fmt ->
       Format.pp_print_list ~pp_sep:Format.pp_print_newline Lam_group.pp_group
         fmt groups)
 
 let dump_js diagnostics ~pass program =
   let path = next_path diagnostics ~kind:"js" ~pass ~extension:".jsx" in
   Ext_log.dwarn ~__POS__ "Dumping JS pass %s to %s" pass path;
-  Ext_pervasives.with_file_as_chan path (fun channel ->
-      Js_dump_program.dump_program program channel)
+  Ext_pervasives.with_file_as_chan (Compiler_request_state.resolve_path path)
+    (fun channel -> Js_dump_program.dump_program program channel)

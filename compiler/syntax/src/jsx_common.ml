@@ -8,27 +8,30 @@ type jsx_config = {
   mutable has_component: bool;
 }
 
-(* Helper method to look up the [@react.component] attribute *)
-let has_attr (loc, _) =
-  match loc.txt with
-  | "react.component" | "jsx.component" -> true
-  | _ -> false
-
-let has_attr_with_props (loc, _) =
-  match loc.txt with
-  | "react.componentWithProps" | "jsx.componentWithProps" -> true
-  | _ -> false
-
-(* Iterate over the attributes and try to find the [@react.component] attribute *)
-let has_attr_on_binding pred {pvb_attributes} =
-  List.find_opt pred pvb_attributes <> None
-
-let core_type_of_attrs attributes =
-  List.find_map
-    (fun ({txt}, payload) ->
-      match (txt, payload) with
-      | ("react.component" | "jsx.component"), PTyp core_type -> Some core_type
-      | _ -> None)
+(* [Ast_helper] takes the first [@react.component], or failing that the first
+   [@react.componentWithProps], into the binding's or description's component
+   node. One still among the attributes is a second annotation, or one with a
+   payload the node cannot hold; it stays an attribute so that formatting keeps
+   it, and the JSX transform rejects it here. *)
+let reject_leftover_component_attrs attributes =
+  List.iter
+    (fun ((({txt; loc}, _) : attribute) as attr) ->
+      match txt with
+      | "react.component" | "jsx.component" | "react.componentWithProps"
+      | "jsx.componentWithProps" -> (
+        match Ast_helper.Jsx_component.of_attribute attr with
+        | Some _ ->
+          Location.raise_errorf ~loc
+            "A definition can have only one JSX component annotation."
+        | None -> (
+          match txt with
+          | "react.component" | "jsx.component" ->
+            Location.raise_errorf ~loc
+              "@@%s takes no payload, or the props type to share, as in @@%s(: \
+               props)."
+              txt txt
+          | _ -> Location.raise_errorf ~loc "@@%s takes no payload." txt))
+      | _ -> ())
     attributes
 
 let typ_vars_of_core_type {ptyp_desc} =

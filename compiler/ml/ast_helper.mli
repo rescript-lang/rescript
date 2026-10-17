@@ -238,6 +238,13 @@ module Exp : sig
   val open_ :
     ?loc:loc -> ?attrs:attrs -> override_flag -> lid -> expression -> expression
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> expression
+  val raw :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    name_loc:loc ->
+    raw_kind ->
+    raw_source ->
+    expression
   val tagged_template :
     ?loc:loc ->
     ?attrs:attrs ->
@@ -276,6 +283,15 @@ module Exp : sig
     Location.t -> expression list -> expression option -> expression
 end
 
+(** JSX component annotations *)
+module Jsx_component : sig
+  val of_attribute : attribute -> jsx_component option
+  (** The component an attribute such as [@react.component] denotes, if its
+      payload is one the JSX transform understands. *)
+
+  val to_attribute : jsx_component -> attribute
+end
+
 (** Value declarations *)
 module Val : sig
   val mk :
@@ -285,6 +301,12 @@ module Val : sig
     str ->
     core_type ->
     value_description
+  (** A [@react.component] annotation in [attrs] is taken out and becomes
+      [pval_jsx_component]. *)
+
+  val description_attributes : value_description -> attrs
+  (** The attributes as written, with the [@react.component] annotation put
+      back. For printers, which must reproduce the source. *)
 end
 
 (** Type declarations *)
@@ -439,6 +461,8 @@ module Str : sig
   val open_ : ?loc:loc -> open_description -> structure_item
   val include_ : ?loc:loc -> include_declaration -> structure_item
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> structure_item
+  val raw :
+    ?loc:loc -> ?attrs:attrs -> name_loc:loc -> raw_source -> structure_item
   val attribute : ?loc:loc -> attribute -> structure_item
 end
 
@@ -486,4 +510,10 @@ module Vb : sig
     pattern ->
     expression ->
     value_binding
+  (** A [@react.component] annotation in [attrs] is taken out and becomes
+      [pvb_jsx_component]. *)
+
+  val binding_attributes : value_binding -> attrs
+  (** The attributes as written, with the [@react.component] annotation put
+      back. For printers, which must reproduce the source. *)
 end

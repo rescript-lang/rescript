@@ -101,7 +101,17 @@ module T = struct
     match desc with
     | Ptyp_any | Ptyp_var _ -> ()
     | Ptyp_arrow {params; ret} ->
-      List.iter (fun (arg : Parsetree.arg) -> sub.typ sub arg.typ) params;
+      List.iter
+        (function
+          | Parsetree.Parg_type {typ} -> sub.typ sub typ
+          | Parsetree.Parg_fixed {value; loc} -> (
+            sub.location sub loc;
+            sub.location sub value.loc;
+            match value.txt with
+            | Pfixed_int source | Pfixed_template source | Pfixed_json source ->
+              sub.location sub source.loc
+            | Pfixed_string _ -> ()))
+        params;
       sub.typ sub ret
     | Ptyp_tuple tyl -> List.iter (sub.typ sub) tyl
     | Ptyp_constr (lid, tl) ->
@@ -268,6 +278,10 @@ module M = struct
     | Pstr_extension (x, attrs) ->
       sub.extension sub x;
       sub.attributes sub attrs
+    | Pstr_raw {name_loc; source; attrs} ->
+      sub.location sub name_loc;
+      sub.location sub (Ast_raw.source_loc source);
+      sub.attributes sub attrs
     | Pstr_attribute x -> sub.attribute sub x
 end
 
@@ -406,6 +420,9 @@ module E = struct
       iter_loc sub lid;
       sub.expr sub e
     | Pexp_extension x -> sub.extension sub x
+    | Pexp_raw {name_loc; source} ->
+      sub.location sub name_loc;
+      sub.location sub (Ast_raw.source_loc source)
     | Pexp_regexp _ -> ()
     | Pexp_template {values} -> List.iter (sub.expr sub) values
     | Pexp_tagged_template {tag; values} ->
@@ -503,12 +520,12 @@ let default_iterator =
     type_extension = T.iter_type_extension;
     extension_constructor = T.iter_extension_constructor;
     value_description =
-      (fun this
-        {pval_name; pval_type; pval_prim = _; pval_loc; pval_attributes}
-      ->
+      (fun this ({pval_name; pval_type; pval_prim = _; pval_loc} as vd) ->
         iter_loc this pval_name;
         this.typ this pval_type;
-        this.attributes this pval_attributes;
+        (* An iterator sees the component annotation as the attribute it was
+           written as. *)
+        this.attributes this (Ast_helper.Val.description_attributes vd);
         this.location this pval_loc);
     pat = P.iter;
     expr = E.iter;
@@ -546,7 +563,7 @@ let default_iterator =
         this.location this pincl_loc;
         this.attributes this pincl_attributes);
     value_binding =
-      (fun this {pvb_pat; pvb_expr; pvb_constraint; pvb_attributes; pvb_loc} ->
+      (fun this ({pvb_pat; pvb_expr; pvb_constraint; pvb_loc} as vb) ->
         this.pat this pvb_pat;
         Option.iter
           (fun {pvc_newtypes; pvc_type} ->
@@ -555,7 +572,7 @@ let default_iterator =
           pvb_constraint;
         this.expr this pvb_expr;
         this.location this pvb_loc;
-        this.attributes this pvb_attributes);
+        this.attributes this (Ast_helper.Vb.binding_attributes vb));
     constructor_declaration =
       (fun this {pcd_name; pcd_args; pcd_res; pcd_loc; pcd_attributes} ->
         iter_loc this pcd_name;

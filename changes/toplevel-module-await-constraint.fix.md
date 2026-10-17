@@ -1,0 +1,1 @@
+- Fix `module M = await (P: S)` at the top level of a module compiling to a static import of `P`. https://github.com/rescript-lang/rescript/pull/8848

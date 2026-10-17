@@ -2100,10 +2100,14 @@ and parse_atomic_expr p =
     | Lbracket -> parse_array_exp p
     | Lbrace -> parse_braced_or_record_expr p
     | LessThan -> parse_jsx p
-    | Percent ->
-      let extension = parse_extension p in
+    | Percent -> (
+      let (({Location.txt = name; loc = name_loc}, payload) as extension) =
+        parse_extension p
+      in
       let loc = mk_loc start_pos (Parser.position p) in
-      Ast_helper.Exp.extension ~loc extension
+      match (Ast_raw.kind_of_name name, Ast_raw.of_payload payload) with
+      | Some kind, Some source -> Ast_helper.Exp.raw ~loc ~name_loc kind source
+      | _ -> Ast_helper.Exp.extension ~loc extension)
     | Underscore as token ->
       (* This case is for error recovery. Not sure if it's the correct place *)
       Parser.err p (Diagnostics.lident token);
@@ -2442,16 +2446,6 @@ and parse_template_expr ?prefix p =
   in
 
   match prefix with
-  | Some {txt = Longident.Lident "json"; _} -> (
-    match (parts, values) with
-    | [(source, loc, None)], [] ->
-      Ast_helper.Exp.constant ~loc (Pconst_json source)
-    | (source, loc, _) :: _, _ ->
-      Parser.err ~start_pos:template_loc.loc_start ~end_pos:template_loc.loc_end
-        p
-        (Diagnostics.message "`json` literals do not support interpolation");
-      Ast_helper.Exp.constant ~loc (Pconst_json source)
-    | [], _ -> assert false)
   | None ->
     List.iter
       (fun ({Location.txt = source; loc} : string Location.loc) ->
@@ -2920,6 +2914,35 @@ and parse_jsx_children p : Parsetree.jsx_children =
         parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p
       in
       loop p (child :: children)
+    | Lbrace when Parser.peek2 p = Rbrace ->
+      let start_pos = Parser.start_pos p in
+      Parser.next p;
+      (* next commits the consumed token's leading comments. Snapshot after {
+         so consuming } prepends exactly the comments inside the braces. *)
+      let comments_before = p.comments in
+      Parser.next p;
+      (* Only comment-containing containers are trivia. Keep bare {} as an
+         empty record, including when nested inside an expression container. *)
+      if p.comments != comments_before then (
+        let loc = mk_loc start_pos (Parser.position p) in
+        let rec mark_container comments =
+          if comments != comments_before then
+            match comments with
+            | [] -> ()
+            | comment :: rest ->
+              Res_comment.set_jsx_container comment loc;
+              mark_container rest
+        in
+        mark_container p.comments;
+        loop p children)
+      else
+        let loc = mk_loc start_pos (Parser.position p) in
+        let child =
+          parse_primary_expr
+            ~operand:(Ast_helper.Exp.record ~loc [] None)
+            ~no_call:true p
+        in
+        loop p (child :: children)
     | token when Grammar.is_jsx_child_start token ->
       let child =
         parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p
@@ -4280,7 +4303,9 @@ and parse_poly_type_expr ?current_type_name_path ?inline_types_context p =
         let typ = Ast_helper.Typ.var ~loc:var.loc var.txt in
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc typ.Parsetree.ptyp_loc.loc_start (Parser.position p) in
-        Ast_helper.Typ.arrow ~loc [{attrs = []; lbl = Nolabel; typ}] return_type
+        Ast_helper.Typ.arrow ~loc
+          [Parg_type {attrs = []; lbl = Nolabel; typ}]
+          return_type
       | _ -> Ast_helper.Typ.var ~loc:var.loc var.txt)
     | _ -> assert false)
   | _ -> parse_typ_expr ?current_type_name_path ?inline_types_context p
@@ -4706,7 +4731,7 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
        arrow, exactly like its parenthesized form [(~x: t) => u]; it must
        carry the same arity or the two spellings produce types that print
        identically but do not unify. *)
-    Ast_helper.Typ.arrow ~loc [{attrs; lbl; typ}] return_type
+    Ast_helper.Typ.arrow ~loc [Parg_type {attrs; lbl; typ}] return_type
   | DocComment _ -> assert false
   | _ -> (
     let parameters =
@@ -4724,7 +4749,7 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
     let params =
       List.map
         (fun {attrs; label = arg_lbl; typ; start_pos = _} ->
-          {Parsetree.attrs; lbl = arg_lbl; typ})
+          Parsetree.Parg_type {attrs; lbl = arg_lbl; typ})
         parameters
     in
     let loc = mk_loc start_pos (Parser.position p) in
@@ -4797,7 +4822,9 @@ and parse_arrow_type_rest ?current_type_name_path ?inline_types_context
         ?inline_types_context p
     in
     let loc = mk_loc start_pos (Parser.position p) in
-    Ast_helper.Typ.arrow ~loc [{attrs = []; lbl = Nolabel; typ}] return_type
+    Ast_helper.Typ.arrow ~loc
+      [Parg_type {attrs = []; lbl = Nolabel; typ}]
+      return_type
   | _ -> typ
 
 and parse_typ_expr_region p =
@@ -5569,7 +5596,7 @@ and parse_type_equation_or_constr_decl p =
         let loc = mk_loc uident_start_pos (Parser.position p) in
         let arrow_type =
           Ast_helper.Typ.arrow ~loc
-            [{attrs = []; lbl = Nolabel; typ}]
+            [Parg_type {attrs = []; lbl = Nolabel; typ}]
             return_type
         in
         let typ = parse_type_alias p arrow_type in
@@ -6262,6 +6289,7 @@ and parse_external_def ~attrs ~start_pos p =
       in
       let typ_expr =
         parse_external_type_expr ~current_type_name_path ~inline_types_context p
+        |> Ast_fixed_arg.normalize_external_type
       in
       let equal_start = Parser.start_pos p in
       let equal_end = Parser.end_pos p in
@@ -6434,11 +6462,16 @@ and parse_structure_item_region pending_structure_items p =
       parse_newline_or_semicolon_structure p;
       let loc = mk_loc start_pos (Parser.position p) in
       Some (Ast_helper.Str.attribute ~loc attr)
-    | PercentPercent ->
-      let extension = parse_extension ~module_language:true p in
+    | PercentPercent -> (
+      let (({Location.txt = name; loc = name_loc}, payload) as extension) =
+        parse_extension ~module_language:true p
+      in
       parse_newline_or_semicolon_structure p;
       let loc = mk_loc start_pos (Parser.position p) in
-      Some (Ast_helper.Str.extension ~attrs ~loc extension)
+      match (name, Ast_raw.of_payload payload) with
+      | "raw", Some source ->
+        Some (Ast_helper.Str.raw ~attrs ~loc ~name_loc source)
+      | _ -> Some (Ast_helper.Str.extension ~attrs ~loc extension))
     | token when Grammar.is_expr_start token ->
       let position = Parser.position p in
       let exp = parse_expr p in
@@ -7414,37 +7447,6 @@ and parse_extension ?(module_language = false) p =
       (Diagnostics.message
          "The %re extension has been removed. Use a regexp literal such as \
           /abc/i.");
-  let payload =
-    match (attr_id.txt, payload) with
-    | ( ("raw" | "ffi"),
-        Parsetree.PStr
-          [
-            ({
-               pstr_desc =
-                 Pstr_eval
-                   ( ({pexp_desc = Pexp_constant (Pconst_string payload)} as
-                      expression),
-                     eval_attrs );
-             } as item);
-          ] ) ->
-      Parsetree.PStr
-        [
-          {
-            item with
-            pstr_desc =
-              Pstr_eval
-                ( {
-                    expression with
-                    pexp_desc =
-                      Pexp_constant
-                        (Pconst_raw_source
-                           (String_literal.string_source payload));
-                  },
-                  eval_attrs );
-          };
-        ]
-    | _ -> payload
-  in
   (attr_id, payload)
 
 (* module signature on the file level *)

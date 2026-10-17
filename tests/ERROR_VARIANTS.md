@@ -207,7 +207,7 @@ Source: `type error` in [typecore.ml](../compiler/ml/typecore.ml).
 | `Or_pattern_type_clash` | ✓ | `or_pattern_type_clash.res` | |
 | `Multiply_bound_variable` | ✓ | `multiply_bound_variable.res` | |
 | `Orpat_vars` | ✓ | `orpat_vars_unbalanced.res` | |
-| `Expr_type_clash` | ✓ | many `*.res` | Most-fired expression error. Trace-shape sub-cases covered: `if_return_type_mismatch.res` (IfReturn), `string_concat_non_string.res` (StringConcat), `labeled_fn_argument_type_clash.res` (FunctionArgument with explicit label), `math_operator_*.res` (MathOperator family), `ternary_branch_mismatch.res`, `switch_different_types.res`, `try_catch_same_type.res`, `comparison_operator.res`, `array_item_type_mismatch.res`, `array_literal_passed_to_tuple.res`, `if_condition_mismatch.res`, `while_condition.res`, `for_loop_condition.res`, `assert_condition.res`, `function_call_mismatch.res`, `awaiting_non_promise.res`, `maybe_unwrap_option.res`, multiple `jsx_*` fixtures (including `jsx_preserve_external_function.res` for a plain-function external in a JSX component position), `object_literal_for_poly_field.res` (object literal against a polymorphic field annotation), `dict_spread_type_mismatch.res` (dict spread of an incompatible dict type, located at the spread expression). |
+| `Expr_type_clash` | ✓ | many `*.res` | Most-fired expression error. Trace-shape sub-cases covered: `if_return_type_mismatch.res` (IfReturn), `string_concat_non_string.res` (StringConcat), `labeled_fn_argument_type_clash.res` (FunctionArgument with explicit label), `math_operator_constant.res` and `math_operator_float.res` (MathOperator family), `ternary_branch_mismatch.res`, `switch_different_types.res`, `try_catch_same_type.res`, `comparison_operator.res`, `array_item_type_mismatch.res`, `array_literal_passed_to_tuple.res`, `if_condition_mismatch.res`, `while_condition.res`, `for_loop_condition.res`, `assert_condition.res`, `function_call_mismatch.res`, `awaiting_non_promise.res`, `maybe_unwrap_option.res`, multiple `jsx_*` fixtures (including `jsx_preserve_external_function.res` for a plain-function external in a JSX component position), `object_literal_for_poly_field.res` (object literal against a polymorphic field annotation), `dict_spread_type_mismatch.res` (dict spread of an incompatible dict type, located at the spread expression). |
 | `Apply_non_function` | ✓ | `apply_non_function.res` | |
 | `Apply_wrong_label` | ✓ | `apply_wrong_label.res` | |
 | `Label_multiply_defined` | ✓ | `label_multiply_defined_literal.res` | |
@@ -220,7 +220,6 @@ Source: `type error` in [typecore.ml](../compiler/ml/typecore.ml).
 | `Undefined_method` | ✓ | `super_errors_multi/Cross_module_alias_dot_access`, `undefined_method` | |
 | `Object_field_not_mutable` | ✓ | `object_write_closed_row`, `object_write_alias`, `object_write_after_forgetting`, `object_private_row_write`, `object_private_row_write_through_signature` | Assignment to a field without `@set`. `object_write_alias` pins that promotion is per equivalence class, and `object_write_after_forgetting` pins that a coercion never grants write capability. The private-row fixtures pin that a `Tconstr` row terminator is structurally open but cannot be strengthened: writing through `type t = private {.."x": int}` (directly or via a signature) is rejected, matching `unify_mutability`. |
 | `Private_type` | ✓ | `private_type_construction.res` | |
-| `Private_label` | ✓ | `private_label.res` | |
 | `Not_subtype` | ✓ | `subtype_*.res`, `coercion_arity_mismatch.res`, `dict_show_no_coercion.res`, etc. | |
 | `Abstract_wrong_label` | ✓ | `abstract_wrong_label.res` | Multi-arg function literal where an inner argument label doesn't match the expected arrow's label (e.g. `let f: (~a, ~b) => int = (~a, ~c) => …`). |
 | `Scoping_let_module` | ✓ | `scoping_let_module.res` | |
@@ -245,7 +244,6 @@ Source: `type error` in [typecore.ml](../compiler/ml/typecore.ml).
 | `Polyvar_literal_overflow` | ✓ | `polyvar_int_overflow.res`, `polyvar_int_overflow_payload.res`, `polyvar_int_overflow_pattern.res` | |
 | `Unknown_literal` | ✓ | `unknown_literal.res` | |
 | `Invalid_string_escape_sequence` | ☐ | — | Regular source is rejected by the parser; the typer check remains defensive for malformed AST produced by a PPX. `syntaxErrors_invalid_ordinary_template_escape.res` covers the parser diagnostic. |
-| `Json_literal_outside_external` | ✓ | `json_literal_outside_external.res` | Constant `json` payloads are reserved for external attributes such as `@as`. |
 | `Illegal_letrec_pat` | ✓ | `illegal_letrec_pat.res` | |
 | `Empty_record_literal` | ✓ | `empty_record_literal.res` | |
 | `Uncurried_arity_mismatch` | ✓ | `arity_mismatch3.res` etc. | |
@@ -254,6 +252,7 @@ Source: `type error` in [typecore.ml](../compiler/ml/typecore.ml).
 | `Type_params_not_supported` | ✓ | `variant_spread_pattern_type_params.res` | Pattern-level variant spread (`| ...a as v`) where `a` has type params; typedecl path covered by `variant_spread_type_parameters.res`. |
 | `Field_access_on_dict_type` | ✓ | `field_access_on_dict_type.res` | |
 | `Jsx_not_enabled` | ☐ (needs harness flag) | — | typecore.ml, the `Pexp_jsx_element` cases of `iter_expression` and `type_expect_`. Fires when JSX is used without `-bs-jsx N`. The `super_errors` runner hard-codes `-bs-jsx 4` in `bscFlags`; adding a per-fixture opt-out (e.g. a `.opts` sidecar) would expose this. Until then, it's reachable in real code but blocked at the harness level. |
+| `Jsx_unboxed_props` | ✓ | `jsx_unboxed_props.res`, `jsx_unboxed_props_spread.res` | A JSX element whose props have an `@unboxed` record type, given as attributes or as a spread. |
 | `Tagged_template_non_tag` | ✓ | `tagged_template_non_tag.res` | Backtick tagged-template syntax used on a value whose type is not `taggedTemplate<'param, 'output>`. |
 
 ---
@@ -559,7 +558,9 @@ warnings still fire.
 
 Fixtures follow the naming convention `warning_<NN>_<description>.res`
 so coverage gaps stay greppable. Warning 11 (`Unused_match`) is covered by
-`warning_11_equivalent_string_patterns.res`.
+`warning_11_equivalent_string_patterns.res`, and warning 111
+(`Bs_private_record_mutation`, a write to a private record field) by
+`private_label.res`.
 
 ### Removed warnings
 

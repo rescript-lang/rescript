@@ -51,8 +51,6 @@ let print_constant const =
     ^ ", semantic="
     ^ String_literal.string_semantic payload
     ^ ")"
-  | Pconst_json source -> "Pconst_json(" ^ source ^ ")"
-  | Pconst_raw_source source -> "Pconst_raw_source(" ^ source ^ ")"
   | Pconst_float (s, _) -> "Pconst_float(" ^ s ^ ")"
 
 let print_core_type typ ~pos =
@@ -368,7 +366,7 @@ let print_value_binding value ~pos ~indentation =
       ^ ". "
       ^ print_core_type pvc_type ~pos
   in
-  print_attributes value.Parsetree.pvb_attributes
+  print_attributes (Ast_helper.Vb.binding_attributes value)
   ^ "value" ^ ":\n"
   ^ add_indentation (indentation + 1)
   ^ (value.pvb_pat |> print_pattern ~pos ~indentation:(indentation + 1))

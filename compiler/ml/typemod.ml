@@ -1574,6 +1574,9 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr =
       (Tstr_include incl, sg, new_env)
     | Pstr_extension (ext, _attrs) ->
       raise (Error_forward (Builtin_attributes.error_of_extension ext))
+    | Pstr_raw {name_loc} ->
+      (* The built-in PPX lowers raw JavaScript before type checking. *)
+      raise (Error_forward (Ast_raw.uninterpreted ~loc:name_loc "raw"))
     | Pstr_attribute x ->
       Builtin_attributes.warning_attribute x;
       (Tstr_attribute x, [], env)
@@ -1715,10 +1718,10 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
     Delayed_checks.reset_delayed_checks ();
     let str, sg, finalenv = type_structure initial_env ast in
     let simple_sg = simplify_signature sg in
-    let mli_status = !Clflags.assume_no_mli in
+    let mli_status = !((Clflags.current ()).assume_no_mli) in
     if mli_status = Clflags.Mli_exists then (
       let intf_file =
-        try find_in_path_uncap !Config.load_path (modulename ^ ".cmi")
+        try find_in_path_uncap (Config.get_load_path ()) (modulename ^ ".cmi")
         with Not_found ->
           let sourceintf =
             Filename.remove_extension sourcefile ^ Literals.suffix_resi
@@ -1753,7 +1756,7 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
          the value being exported. We can still capture unused
          declarations like "let x = true;; let x = 1;;", because in this
          case, the inferred signature contains only the last declaration. *)
-      if not !Clflags.dont_write_files then (
+      if not !((Clflags.current ()).dont_write_files) then (
         let deprecated = Builtin_attributes.deprecated_of_str ast in
         ignore
           (Env.save_signature ?check_exists ~deprecated simple_sg modulename

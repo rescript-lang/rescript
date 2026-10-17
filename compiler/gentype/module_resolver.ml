@@ -109,6 +109,12 @@ let create_lazy_resolver ~config ~extensions ~exclude_file =
 let apply ~resolver ~use_bs_dependencies module_name =
   module_name |> Lazy.force resolver.lazy_find ~use_bs_dependencies
 
+let rec path_to_list path =
+  let parent = Filename.dirname path in
+  (* On Windows, the basename of a drive root omits the drive prefix. *)
+  if Filename.basename path = path || parent = path then [path]
+  else (path |> Filename.basename) :: path_to_list parent
+
 (** Resolve a reference to ModuleName, and produce a path suitable for require.
    E.g. require "../foo/bar/ModuleName.ext" where ext is ".res" or ".js". *)
 let resolve_module ~(config : Config.t) ~import_extension ~output_file_relative
@@ -132,13 +138,6 @@ let resolve_module ~(config : Config.t) ~import_extension ~output_file_relative
   in
   if Sys.file_exists module_name_res_file then candidate
   else
-    let rec path_to_list path =
-      let is_root = path |> Filename.basename = path in
-      match is_root with
-      | true -> [path]
-      | false ->
-        (path |> Filename.basename) :: (path |> Filename.dirname |> path_to_list)
-    in
     match module_name |> apply ~resolver ~use_bs_dependencies with
     | None -> candidate
     | Some (resolved_module_dir, case, bs_dependencies) ->
@@ -166,7 +165,7 @@ let resolve_module ~(config : Config.t) ~import_extension ~output_file_relative
 
 let resolve_generated_module ~config ~output_file_relative ~resolver module_name
     =
-  if !Debug.module_resolution then
+  if !(Debug.module_resolution ()) then
     Log_.item "Resolve Generated Module: %s\n"
       (module_name |> Module_name.to_string);
   let import_path =
@@ -174,19 +173,19 @@ let resolve_generated_module ~config ~output_file_relative ~resolver module_name
       ~import_extension:(Module_extension.generated_module_extension ~config)
       ~output_file_relative ~resolver ~use_bs_dependencies:true module_name
   in
-  if !Debug.module_resolution then
+  if !(Debug.module_resolution ()) then
     Log_.item "Import Path: %s\n" (import_path |> Import_path.dump);
   import_path
 
 (** Returns the path to import a given Reason module name. *)
 let import_path_for_reason_module_name ~(config : Config.t)
     ~output_file_relative ~resolver module_name =
-  if !Debug.module_resolution then
+  if !(Debug.module_resolution ()) then
     Log_.item "Resolve Reason Module: %s\n"
       (module_name |> Module_name.to_string);
   match config.shims_map |> Module_name_map.find module_name with
   | shim_module_name ->
-    if !Debug.module_resolution then
+    if !(Debug.module_resolution ()) then
       Log_.item "ShimModuleName: %s\n"
         (shim_module_name |> Module_name.to_string);
     let import_extension =
@@ -196,7 +195,7 @@ let import_path_for_reason_module_name ~(config : Config.t)
       resolve_module ~config ~import_extension ~output_file_relative ~resolver
         ~use_bs_dependencies:false shim_module_name
     in
-    if !Debug.module_resolution then
+    if !(Debug.module_resolution ()) then
       Log_.item "Import Path: %s\n" (import_path |> Import_path.dump);
     import_path
   | exception Not_found ->

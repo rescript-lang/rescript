@@ -1,0 +1,8 @@
+{
+  "name": "features",
+  "sources": [
+    "src",
+    {"dir": "native", "feature": "native"}
+  ],
+  "features": {"all": ["native"]}
+}

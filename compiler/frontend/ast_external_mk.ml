@@ -36,6 +36,7 @@ let local_external_apply loc ?(pval_attributes = [])
               pval_type;
               pval_loc = loc;
               pval_prim = Some pval_prim;
+              pval_jsx_component = None;
               pval_attributes;
             };
         ],

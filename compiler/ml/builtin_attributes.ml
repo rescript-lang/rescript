@@ -16,9 +16,7 @@
 open Asttypes
 open Parsetree
 
-let string_of_payload payload =
-  Ast_payload.reject_json_literal_payload payload;
-  Ast_payload.semantic_string_of_payload payload
+let string_of_payload payload = Ast_payload.semantic_string_of_payload payload
 
 let string_of_opt_payload p =
   match string_of_payload p with

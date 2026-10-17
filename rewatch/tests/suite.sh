@@ -15,7 +15,8 @@ export REWATCH_EXECUTABLE
 # Make sure we are in the right directory
 cd $(dirname $0)
 
-if [[ "$REWATCH_EXECUTABLE" == */cli/rescript.js ]]; then
+if [[ "$REWATCH_EXECUTABLE" == */cli/rescript.js ||
+  "$REWATCH_EXECUTABLE" == */cli/rescript-rust.js ]]; then
   echo "Using rewatch CLI script: $REWATCH_EXECUTABLE"
 else
   echo "Using rewatch executable: $REWATCH_EXECUTABLE"
@@ -132,9 +133,13 @@ fi
 ./compile/18-external-dep-uncurried-dot.sh &&
 ./compile/19-utf8-warning.sh &&
 ./compile/20-schedule-independent-modules-after-error.sh &&
+./compile/21-rebuild-dependency-for-package-specs.sh &&
 ./compile/14-no-testrepo-changes.sh &&
 ./compile/15-no-new-files.sh &&
 ./compile/16-snapshots-unchanged.sh &&
+
+# GenType tests
+./gentype/01-gentype-project-root.sh &&
 
 # Watch tests
 ./watch/01-watch-recompile.sh &&
@@ -145,8 +150,9 @@ fi
 ./watch/05-watch-ignores-non-source.sh &&
 ./watch/06-watch-missing-source-folder.sh &&
 ./watch/07-changed-interface-after-failed-implementation.sh &&
-./watch/08-watch-recovers-from-invalid-config.sh &&
-./watch/09-watch-recovers-new-dependency-config.sh &&
+./watch/08-watch-overlapping-source-removed.sh &&
+./watch/09-watch-recovers-from-invalid-config.sh &&
+./watch/10-watch-recovers-new-dependency-config.sh &&
 
 # Lock tests
 ./lock/01-lock-when-watching.sh &&

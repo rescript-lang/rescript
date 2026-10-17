@@ -252,10 +252,6 @@ let constant f = function
   | Pconst_string payload ->
     pp f "{js|%a|js}" print_string_with_byte_width
       (String_literal.string_source payload)
-  | Pconst_json source ->
-    pp f "{json|%a|json}" print_string_with_byte_width source
-  | Pconst_raw_source source ->
-    pp f "{js|%a|js}" print_string_with_byte_width source
   | Pconst_integer (i, None) -> paren (i.[0] = '-') (fun f -> pp f "%s") f i
   | Pconst_integer (i, Some m) ->
     paren (i.[0] = '-') (fun f (i, m) -> pp f "%s%c" i m) f (i, m)
@@ -294,14 +290,24 @@ let tyvar_loc f str = pp f "'%s" str.txt
 let string_quot f x = pp f "`%s" x
 
 let rec type_with_label ctxt f arg =
-  match arg.lbl with
-  | Nolabel ->
-    pp f "%a%a" (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
-    (* otherwise parenthesize *)
+  let attrs, lbl, typ =
+    match arg with
+    | Parg_type {attrs; lbl; typ} -> (attrs, lbl, typ)
+    | Parg_fixed {attrs; lbl; value; loc} ->
+      (* Printed in its legacy spelling, [_ [@as value]]. *)
+      ( attrs,
+        lbl,
+        Ast_helper.Typ.any ~loc
+          ~attrs:[Ast_fixed_arg.to_attribute ~loc value]
+          () )
+  in
+  match lbl with
+  | Nolabel -> pp f "%a%a" (core_type1 ctxt) typ (attributes ctxt) attrs
+  (* otherwise parenthesize *)
   | Labelled {txt = s} ->
-    pp f "%s:%a%a" s (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
+    pp f "%s:%a%a" s (core_type1 ctxt) typ (attributes ctxt) attrs
   | Optional {txt = s} ->
-    pp f "?%s:%a%a" s (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
+    pp f "?%s:%a%a" s (core_type1 ctxt) typ (attributes ctxt) attrs
 
 and core_type ctxt f x =
   if x.ptyp_attributes <> [] then
@@ -781,6 +787,11 @@ and expression ctxt f x =
       in
       pp f "@[<2>`%s@;%a@]" l (simple_expr ctxt) payload
     | Pexp_extension e -> extension ctxt f e
+    | Pexp_raw {kind; name_loc; source} ->
+      extension ctxt f
+        (Ast_raw.to_extension
+           ~name:(Ast_raw.extension_name kind)
+           ~name_loc source)
     | Pexp_await e -> pp f "@[<hov2>await@ %a@]" (simple_expr ctxt) e
     | Pexp_regexp {pattern; flags} -> pp f "/%s/%s" pattern flags
     | Pexp_template {source_segments; values} ->
@@ -1044,7 +1055,8 @@ and signature_item ctxt f x : unit =
   | Psig_value vd ->
     let intro = if vd.pval_prim = None then "val" else "external" in
     pp f "@[<2>%s@ %a@ :@ %a@]%a" intro protect_ident vd.pval_name.txt
-      (value_description ctxt) vd (item_attributes ctxt) vd.pval_attributes
+      (value_description ctxt) vd (item_attributes ctxt)
+      (Ast_helper.Val.description_attributes vd)
   | Psig_typext te -> type_extension ctxt f te
   | Psig_exception ed -> exception_declaration ctxt f ed
   | Psig_module
@@ -1231,7 +1243,8 @@ and binding ctxt f {pvb_pat = p; pvb_expr = x; pvb_constraint; _} =
 and bindings ctxt f (rf, l) =
   let binding kwd rf f x =
     pp f "@[<2>%s %a%a@]%a" kwd rec_flag rf (binding ctxt) x
-      (item_attributes ctxt) x.pvb_attributes
+      (item_attributes ctxt)
+      (Ast_helper.Vb.binding_attributes x)
   in
   match l with
   | [] -> ()
@@ -1288,7 +1301,8 @@ and structure_item ctxt f x =
       md (item_attributes ctxt) attrs
   | Pstr_primitive vd ->
     pp f "@[<hov2>external@ %a@ :@ %a@]%a" protect_ident vd.pval_name.txt
-      (value_description ctxt) vd (item_attributes ctxt) vd.pval_attributes
+      (value_description ctxt) vd (item_attributes ctxt)
+      (Ast_helper.Val.description_attributes vd)
   | Pstr_include incl ->
     pp f "@[<hov2>include@ %a@]%a" (module_expr ctxt) incl.pincl_mod
       (item_attributes ctxt) incl.pincl_attributes
@@ -1313,6 +1327,9 @@ and structure_item ctxt f x =
   | Pstr_extension (e, a) ->
     item_extension ctxt f e;
     item_attributes ctxt f a
+  | Pstr_raw {name_loc; source; attrs} ->
+    item_extension ctxt f (Ast_raw.to_extension ~name:"raw" ~name_loc source);
+    item_attributes ctxt f attrs
 
 and type_param ctxt f (ct, a) =
   pp f "%s%a" (type_variance a) (core_type ctxt) ct

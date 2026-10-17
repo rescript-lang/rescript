@@ -751,6 +751,9 @@ pub fn get_runtime_path_args(
 
 pub fn compiler_args(
     config: &config::Config,
+    // Match the parser's root spelling: canonical during builds, caller-supplied
+    // for compiler-args consumers such as editor incremental type checking.
+    project_root: &Path,
     ast_path: &Path,
     file_path: &Path,
     is_interface: bool,
@@ -833,7 +836,10 @@ pub fn compiler_args(
     };
 
     let package_name_arg = vec!["-bs-package-name".to_string(), config.name.to_owned()];
-    let project_root_args = config.get_project_root_args();
+    let project_root_args = vec![
+        "-bs-project-root".to_string(),
+        project_root.to_string_lossy().to_string(),
+    ];
 
     let implementation_args = if is_interface {
         debug!("Compiling interface file: {}", &module_name);
@@ -1022,6 +1028,7 @@ fn compile_file(
     let current_package_dirs: &[PathBuf] = package.gentype_dirs.as_deref().unwrap_or(&[]);
     let to_mjs_args = compiler_args(
         &package.config,
+        &package.path,
         ast_path,
         implementation_file_path,
         is_interface,
