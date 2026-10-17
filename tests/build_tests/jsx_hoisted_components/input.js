@@ -7,6 +7,7 @@ import { setup } from "#dev/process";
 const { execBuildOrThrow, execClean } = setup(import.meta.dirname);
 const configUrl = new URL("rescript.json", import.meta.url);
 const originalConfig = await readFile(configUrl, "utf8");
+/** @param {string} name */
 const source = name => new URL(`src/${name}.mjs`, import.meta.url);
 
 try {
