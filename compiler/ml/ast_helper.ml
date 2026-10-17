@@ -356,7 +356,7 @@ module Jsx_component = struct
   (* The first [@react.component], or failing that the first
      [@react.componentWithProps]: the JSX transform has always given them
      this precedence. A later one, or one whose payload is not understood, is
-     left in the attributes for the JSX transform to deal with, so that
+     left in the attributes for the JSX transform to reject, so that
      formatting does not drop it. *)
   let take attrs =
     let take_first is_kind =

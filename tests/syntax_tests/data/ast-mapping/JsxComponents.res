@@ -15,8 +15,8 @@ module C = {
 }
 
 module D = {
-  @jsx.componentWithProps @react.component
-  let make = (~x) => React.string(x)
+  @jsx.componentWithProps
+  let make = (props: props) => React.string(props.x)
 }
 
 module E = {

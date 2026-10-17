@@ -55,14 +55,6 @@ let jsx_component_expr config ~loc expr =
     (Exp.ident ~loc {loc; txt = module_access_name config "component"})
     [(Nolabel, expr)]
 
-(* Helper method to filter out any attribute that isn't [@react.component] *)
-let other_attrs_pure (loc, _) =
-  match loc.txt with
-  | "react.component" | "jsx.component" | "react.componentWithProps"
-  | "jsx.componentWithProps" ->
-    false
-  | _ -> true
-
 (* Finds the name of the variable the binding is assigned to, otherwise raises Invalid_argument *)
 let rec get_fn_name binding =
   match binding with
@@ -571,7 +563,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
       {expr with pexp_desc = Pexp_sequence (first, constrain_jsx_return second)}
     | _ -> jsx_element_constraint expr
   in
-  Jsx_common.check_component_payloads binding.pvb_attributes;
+  Jsx_common.reject_leftover_component_attrs binding.pvb_attributes;
   match binding.pvb_jsx_component with
   | Some {pjc_kind = Pjc_labelled core_type_of_attr} ->
     check_multiple_components ~config ~loc:pstr_loc;
@@ -595,7 +587,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
         pvb_constraint = None;
         pvb_loc = empty_loc;
         pvb_jsx_component = None;
-        pvb_attributes = binding.pvb_attributes |> List.filter other_attrs_pure;
       }
     in
     let fn_name = get_fn_name binding.pvb_pat in
@@ -820,13 +811,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
     let new_binding = Some (binding_wrapper full_expression) in
     (Some props_record_type, binding, new_binding)
   | Some {pjc_kind = Pjc_with_props} ->
-    let modified_binding =
-      {
-        binding with
-        pvb_jsx_component = None;
-        pvb_attributes = binding.pvb_attributes |> List.filter other_attrs_pure;
-      }
-    in
+    let modified_binding = {binding with pvb_jsx_component = None} in
     let fn_name = get_fn_name modified_binding.pvb_pat in
     let full_module_name =
       make_module_name file_name config.nested_modules fn_name
@@ -926,7 +911,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
       {
         binding with
         pvb_jsx_component = None;
-        pvb_attributes = binding.pvb_attributes |> List.filter other_attrs_pure;
         pvb_expr = binding_expr |> constrain_jsx_return;
       },
       new_binding )
@@ -956,24 +940,6 @@ let rec collect_prop_types types {ptyp_desc} =
     go types params
   | _ -> types
 
-(* How many [@react.component] and [@react.componentWithProps] annotations a
-   value description carries: the one in its component node, and any left in
-   its attributes. *)
-let count_component_annotations {pval_jsx_component; pval_attributes} =
-  let count is_attr = List.length (List.filter is_attr pval_attributes) in
-  let labelled, with_props =
-    match pval_jsx_component with
-    | Some {pjc_kind = Pjc_labelled _} -> (1, 0)
-    | Some {pjc_kind = Pjc_with_props} -> (0, 1)
-    | None -> (0, 0)
-  in
-  ( labelled + count Jsx_common.is_component_attr,
-    with_props + count Jsx_common.is_component_with_props_attr )
-
-let core_type_of_component = function
-  | Some {pjc_kind = Pjc_labelled core_type} -> core_type
-  | Some {pjc_kind = Pjc_with_props} | None -> None
-
 let transform_structure_item ~config item =
   match item with
   (* external *)
@@ -982,10 +948,10 @@ let transform_structure_item ~config item =
       pstr_desc =
         Pstr_primitive ({pval_attributes; pval_type} as value_description);
     } as pstr -> (
-    Jsx_common.check_component_payloads pval_attributes;
-    match count_component_annotations value_description with
-    | 0, 0 -> [item]
-    | _, 1 ->
+    Jsx_common.reject_leftover_component_attrs pval_attributes;
+    match value_description.pval_jsx_component with
+    | None -> [item]
+    | Some {pjc_kind = Pjc_with_props} ->
       Jsx_common.raise_error ~loc:pstr_loc
         "Components cannot be defined as externals when using \
          @react.componentWithProps.\n\n\
@@ -994,13 +960,10 @@ let transform_structure_item ~config item =
          use the type React.component<props> instead.\n\
          Alternatively, use @react.component for an external definition with \
          labeled arguments."
-    | 1, 0 ->
+    | Some {pjc_kind = Pjc_labelled core_type_of_attr} ->
       check_multiple_components ~config ~loc:pstr_loc;
       check_string_int_attribute_iter.structure_item
         check_string_int_attribute_iter item;
-      let core_type_of_attr =
-        core_type_of_component value_description.pval_jsx_component
-      in
       let typ_vars_of_core_type =
         core_type_of_attr
         |> Option.map Jsx_common.typ_vars_of_core_type
@@ -1038,14 +1001,10 @@ let transform_structure_item ~config item =
                 value_description with
                 pval_type = {pval_type with ptyp_desc = new_external_type};
                 pval_jsx_component = None;
-                pval_attributes = List.filter other_attrs_pure pval_attributes;
               };
         }
       in
-      [props_record_type; new_structure]
-    | _ ->
-      Jsx_common.raise_error ~loc:pstr_loc
-        "Only one JSX component call can exist on a component at one time")
+      [props_record_type; new_structure])
   (* let component = ... *)
   | {pstr_loc; pstr_desc = Pstr_value (rec_flag, value_bindings)} -> (
     let file_name = filename_from_loc pstr_loc in
@@ -1089,16 +1048,15 @@ let transform_signature_item ~config item =
       psig_loc;
       psig_desc = Psig_value ({pval_attributes; pval_type} as psig_desc);
     } as psig -> (
-    Jsx_common.check_component_payloads pval_attributes;
-    match count_component_annotations psig_desc with
-    | 0, _ -> [item]
-    | 1, _ ->
+    Jsx_common.reject_leftover_component_attrs pval_attributes;
+    match psig_desc.pval_jsx_component with
+    (* [@react.componentWithProps] on a signature item has always been left
+       alone. *)
+    | None | Some {pjc_kind = Pjc_with_props} -> [item]
+    | Some {pjc_kind = Pjc_labelled core_type_of_attr} ->
       check_multiple_components ~config ~loc:psig_loc;
       check_string_int_attribute_iter.signature_item
         check_string_int_attribute_iter item;
-      let core_type_of_attr =
-        core_type_of_component psig_desc.pval_jsx_component
-      in
       let typ_vars_of_core_type =
         core_type_of_attr
         |> Option.map Jsx_common.typ_vars_of_core_type
@@ -1136,14 +1094,10 @@ let transform_signature_item ~config item =
                 psig_desc with
                 pval_type = {pval_type with ptyp_desc = new_external_type};
                 pval_jsx_component = None;
-                pval_attributes = List.filter other_attrs_pure pval_attributes;
               };
         }
       in
-      [props_record_type; new_structure]
-    | _ ->
-      Jsx_common.raise_error ~loc:psig_loc
-        "Only one JSX component call can exist on a component at one time")
+      [props_record_type; new_structure])
   | _ -> [item]
 
 (* There appear to be slightly different rules of transformation whether the component is upper-, lowercase or a fragment *)

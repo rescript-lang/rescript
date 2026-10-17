@@ -8,33 +8,30 @@ type jsx_config = {
   mutable has_component: bool;
 }
 
-(* [@react.component] and [@react.componentWithProps] that are still among the
-   attributes: [Ast_helper] takes the first one into the binding's or
-   description's component node and leaves any other. *)
-let is_component_attr (({txt}, _) : attribute) =
-  match txt with
-  | "react.component" | "jsx.component" -> true
-  | _ -> false
-
-let is_component_with_props_attr (({txt}, _) : attribute) =
-  match txt with
-  | "react.componentWithProps" | "jsx.componentWithProps" -> true
-  | _ -> false
-
-(* A component attribute with a payload [Ast_helper] cannot read stays an
-   attribute, so formatting keeps it; reject it here instead of silently
-   ignoring the payload. *)
-let check_component_payloads attributes =
+(* [Ast_helper] takes the first [@react.component], or failing that the first
+   [@react.componentWithProps], into the binding's or description's component
+   node. One still among the attributes is a second annotation, or one with a
+   payload the node cannot hold; it stays an attribute so that formatting keeps
+   it, and the JSX transform rejects it here. *)
+let reject_leftover_component_attrs attributes =
   List.iter
     (fun ((({txt; loc}, _) : attribute) as attr) ->
-      if Ast_helper.Jsx_component.of_attribute attr = None then
-        if is_component_attr attr then
+      match txt with
+      | "react.component" | "jsx.component" | "react.componentWithProps"
+      | "jsx.componentWithProps" -> (
+        match Ast_helper.Jsx_component.of_attribute attr with
+        | Some _ ->
           Location.raise_errorf ~loc
-            "@@%s takes no payload, or the props type to share, as in @@%s(: \
-             props)."
-            txt txt
-        else if is_component_with_props_attr attr then
-          Location.raise_errorf ~loc "@@%s takes no payload." txt)
+            "A definition can have only one JSX component annotation."
+        | None -> (
+          match txt with
+          | "react.component" | "jsx.component" ->
+            Location.raise_errorf ~loc
+              "@@%s takes no payload, or the props type to share, as in @@%s(: \
+               props)."
+              txt txt
+          | _ -> Location.raise_errorf ~loc "@@%s takes no payload." txt))
+      | _ -> ())
     attributes
 
 let typ_vars_of_core_type {ptyp_desc} =

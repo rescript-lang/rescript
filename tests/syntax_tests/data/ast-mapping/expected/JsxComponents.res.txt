@@ -33,15 +33,9 @@ module C = {
 }
 
 module D = {
-  @res.jsxComponentProps
-  type props<'x> = {
-    x: 'x,
-  }
-
-  let make = ({x, _}: props<_>): React.element => React.string(x)
+  let make = (props: props): React.element => React.string(props.x)
   let make = React.component({
-    let \"JsxComponents$D" = (props: props<_>) => make(props)
-
+    let \"JsxComponents$D" = (props: props): React.element => make(props)
     \"JsxComponents$D"
   })
 }
