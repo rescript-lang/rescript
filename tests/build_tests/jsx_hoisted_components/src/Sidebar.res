@@ -1,3 +1,5 @@
+@@directive("'use client';")
+
 module Provider = {
   @react.component
   let make = (~children) => children
@@ -21,7 +23,45 @@ module WithProps = {
 
 module Hidden = {
   @react.component
-  let make = () => React.string("private")
+  let make = (~children=React.string("private")) => children
+}
+
+module WithPrivate = {
+  @react.component
+  let make = (~children) => <Hidden>{children}</Hidden>
+}
+
+module Sidebar = {
+  @react.component
+  let make = (~children) => children
+}
+
+module External = {
+  @react.component @module("./external-component.js")
+  external make: (~children: React.element) => React.element = "default"
+}
+
+module ExternalDebug = {
+  @react.component @module("node:util")
+  external make: (~children: React.element) => React.element = "inspect"
+}
+
+module ExternalManual = {
+  @react.component @module("./external-component.js")
+  external make: (~children: React.element) => React.element = "default"
+}
+
+module ExternalAnnotated = {
+  @react.component @module("node:util")
+  external make: (~children: React.element) => React.element = "inspect"
+}
+
+module HiddenExternal = {
+  @react.component @module("./unused-private-component.js")
+  external make: (~children: React.element) => React.element = "default"
+
+  @module("./jsx-runtime.js") external effect: unit => unit = "effect"
+  effect()
 }
 
 module Memo = {

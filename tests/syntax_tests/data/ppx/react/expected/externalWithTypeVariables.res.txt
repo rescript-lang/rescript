@@ -7,6 +7,6 @@ module V4C = {
     children: 'children,
   }
 
-  @module("c")
+  @res.hoistedComponent @module("c")
   external make: React.component<props<t<'a>, React.element>> = "component"
 }

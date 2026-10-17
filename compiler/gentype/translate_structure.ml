@@ -79,8 +79,28 @@ let remove_value_binding_duplicates structure_items =
 
 let translate_value_binding ~config ~output_file_relative ~resolver ~type_env
     {Typedtree.vb_attributes; vb_expr; vb_pat} : Translation.t =
-  match vb_pat.pat_desc with
-  | Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _) ->
+  match (vb_pat.pat_desc, vb_expr.exp_desc) with
+  | ( _,
+      Texp_letmodule
+        ( _,
+          _,
+          {
+            mod_desc =
+              Tmod_structure
+                {str_items = [{str_desc = Tstr_primitive primitive}]};
+          },
+          _ ) )
+    when Annotation.has_attribute
+           (String.equal "res.hoistedComponent")
+           vb_attributes
+         && Annotation.has_attribute Annotation.tag_is_gentype_import
+              vb_attributes ->
+    (* FFI processing materializes nested external components as values.
+       Keep genType imports attached to the original external declaration. *)
+    {primitive with val_attributes = vb_attributes}
+    |> Translation.translate_primitive ~config ~output_file_relative ~resolver
+         ~type_env
+  | (Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _)), _ ->
     let name = id |> Ident.name |> Ext_ident.unwrap_uppercase_exotic in
     if !(Debug.translation ()) then
       Log_.item "Translate Value Binding %s\n" name;

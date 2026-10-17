@@ -7,6 +7,6 @@ module V4C = {
     ref?: 'ref,
   }
 
-  @module("componentForwardRef")
+  @res.hoistedComponent @module("componentForwardRef")
   external make: React.component<props<string, ReactDOM.Ref.currentDomRef>> = "component"
 }

@@ -7,7 +7,7 @@ module Foo = {
     b: 'b,
   }
 
-  @module("Foo")
+  @res.hoistedComponent @module("Foo")
   external component: React.component<props<int, string>> = "component"
 }
 

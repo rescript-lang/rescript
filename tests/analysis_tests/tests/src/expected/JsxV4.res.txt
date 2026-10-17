@@ -24,6 +24,23 @@ Hover src/JsxV4.res 14:9
   }
 }
 
+Hover src/JsxV4.res 32:8
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nReact.component<External.props<React.element>>\n```\n\n---\n\n```\n \n```\n```rescript\ntype React.component<'props> = Jsx.component<'props>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C13%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype External.props<'children> = {children: 'children}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22JsxV4.res%22%2C28%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C0%2C0%5D)\n"
+  }
+}
+
+Definition src/JsxV4.res 34:8
+{
+  "range": {
+    "end": { "character": 15, "line": 29 },
+    "start": { "character": 11, "line": 29 }
+  },
+  "uri": "file:///JsxV4.res"
+}
+
 Create Interface src/JsxV4.res
 module M4: {
   @react.component
@@ -36,5 +53,9 @@ module MM: {
 module Other: {
   @react.component
   let make: (~name: string) => React.element
+}
+module External: {
+  @react.component
+  let make: (~children: React.element) => React.element
 }
 

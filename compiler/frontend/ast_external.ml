@@ -22,6 +22,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+let is_hoisted_component attrs =
+  Option.is_some
+    (Translattribute.get_empty_attribute "res.hoistedComponent" attrs)
+
 let handle_external_in_sig (self : Ast_mapper.mapper)
     (prim : Parsetree.value_description) (sigi : Parsetree.signature_item) :
     Parsetree.signature_item =
@@ -67,15 +71,44 @@ let handle_external_in_stru (self : Ast_mapper.mapper)
         pval_attributes v
     with
     | {pval_type; pval_prim; pval_attributes; no_inline_cross_module} ->
+      let hoisted_component =
+        no_inline_cross_module && is_hoisted_component pval_attributes
+      in
       let external_result =
         {
           str with
           pstr_desc =
             Pstr_primitive
-              {prim with pval_type; pval_prim = Some pval_prim; pval_attributes};
+              {
+                prim with
+                pval_type;
+                pval_prim = Some pval_prim;
+                pval_attributes =
+                  (if hoisted_component then [] else pval_attributes);
+              };
         }
       in
-      if not no_inline_cross_module then external_result
+      if hoisted_component then
+        (* Relative FFI already exposes an ordinary value across module
+           boundaries. Give that value a binding the hoist registry can track.
+           Other FFI must keep its primitive type for existing interfaces. *)
+        let open Ast_helper in
+        let module_name = Location.mkloc "JsxExternal" loc in
+        Str.value ~loc Nonrecursive
+          [
+            Vb.mk ~loc ~attrs:pval_attributes
+              (Pat.var ~loc prim.pval_name)
+              (Exp.letmodule ~loc
+                 ~attrs:[(Location.mkloc "res.hoistedComponent" loc, PStr [])]
+                 module_name
+                 (Mod.structure ~loc [external_result])
+                 (Exp.ident ~loc
+                    {
+                      txt = Ldot (Lident module_name.txt, prim.pval_name.txt);
+                      loc;
+                    }));
+          ]
+      else if not no_inline_cross_module then external_result
       else
         let open Ast_helper in
         Str.include_ ~loc

@@ -1652,14 +1652,23 @@ and transl_let ~js_hoist rec_flag pat_expr_list body =
   | Nonrecursive ->
     let rec transl = function
       | [] -> body
-      | {vb_pat = pat; vb_expr = expr; vb_attributes = attr; vb_loc} :: rem ->
+      | {vb_pat = pat; vb_expr = expr; vb_attributes = attr; vb_loc} :: rem -> (
         let lam =
           Builtin_attributes.warning_scope ~ppwarning:false attr (fun () ->
               transl_exp expr)
         in
         let lam = Translattribute.add_inline_attribute lam vb_loc attr in
         mark_js_hoisted_pattern ~js_hoist attr pat lam;
-        Matching.for_let pat.pat_loc lam pat (transl rem)
+        let body = transl rem in
+        match pat.pat_desc with
+        | Tpat_var (id, _)
+          when Option.is_some
+                 (Translattribute.get_empty_attribute "res.hoistedComponent"
+                    expr.exp_attributes) ->
+          (* Materialized externals must not introduce an import when unused,
+             just as their original declarations did not. *)
+          Lambda.let_ StrictOpt id lam body
+        | _ -> Matching.for_let pat.pat_loc lam pat body)
     in
     transl pat_expr_list
   | Recursive ->

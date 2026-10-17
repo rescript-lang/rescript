@@ -42,6 +42,14 @@ The module object and its `make` member remain available. Consumers use the
 existing hoisted-export lookup in `.cmj` metadata; no JSX call-site marker or
 additional ReScript signature declaration is needed.
 
+Nested external components are marked in the same way. Relative FFI already
+exposes an ordinary value across module boundaries; FFI processing gives that
+value a binding the hoist registry can track. Both component-annotated and
+manually written external interfaces retain their existing types. Package
+and global FFI remain primitives and keep their existing direct access to
+the foreign component. The marker on the generated expression selects an
+optional Lambda binding, so unused declarations introduce no import.
+
 ## JSX expressions
 
 The parser represents JSX explicitly in the parsetree. The transformation

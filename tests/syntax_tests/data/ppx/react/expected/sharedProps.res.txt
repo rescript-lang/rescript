@@ -51,23 +51,27 @@ module V4A4 = {
 module V4A5 = {
   type props = sharedProps<string>
 
+  @res.hoistedComponent
   external make: React.component<props> = "default"
 }
 
 module V4A6 = {
   type props<'a> = sharedProps<'a>
 
+  @res.hoistedComponent
   external make: React.component<props<_>> = "default"
 }
 
 module V4A7 = {
   type props<'a> = sharedProps<string, 'a>
 
+  @res.hoistedComponent
   external make: React.component<props<_>> = "default"
 }
 
 module V4A8 = {
   type props = sharedProps
 
+  @res.hoistedComponent
   external make: React.component<props> = "default"
 }

@@ -23,6 +23,7 @@ module C4A1 = {
     @as("type") _type: 'T_type,
   }
 
+  @res.hoistedComponent
   external make: React.component<props<string, string>> = "default"
 }
 

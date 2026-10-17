@@ -70,6 +70,7 @@ module E = {
     x: 'x,
   }
 
+  @res.hoistedComponent
   external make: React.component<props<string>> = "default"
 }
 
@@ -79,6 +80,7 @@ module EUncurried = {
     x: 'x,
   }
 
+  @res.hoistedComponent
   external make: React.component<props<string>> = "default"
 }
 

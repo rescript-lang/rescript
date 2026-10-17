@@ -57,16 +57,16 @@ let jsx_component_expr config ~loc expr =
 
 (* The backend adds the JS export after checking the actual exported module
    path. Mark the final component value, including memo/forwardRef wrappers. *)
-let mark_hoisted_component ~(config : Jsx_common.jsx_config) binding =
+let hoisted_component_attributes ~(config : Jsx_common.jsx_config) attrs =
   match config.nested_modules with
-  | [] -> binding
-  | _ :: _ ->
-    {
-      binding with
-      pvb_attributes =
-        (Location.mknoloc "res.hoistedComponent", PStr [])
-        :: binding.pvb_attributes;
-    }
+  | [] -> attrs
+  | _ :: _ -> (Location.mknoloc "res.hoistedComponent", PStr []) :: attrs
+
+let mark_hoisted_component ~config binding =
+  {
+    binding with
+    pvb_attributes = hoisted_component_attributes ~config binding.pvb_attributes;
+  }
 
 (* Finds the name of the variable the binding is assigned to, otherwise raises Invalid_argument *)
 let rec get_fn_name binding =
@@ -1018,6 +1018,8 @@ let transform_structure_item ~config item =
                 value_description with
                 pval_type = {pval_type with ptyp_desc = new_external_type};
                 pval_jsx_component = None;
+                pval_attributes =
+                  hoisted_component_attributes ~config pval_attributes;
               };
         }
       in

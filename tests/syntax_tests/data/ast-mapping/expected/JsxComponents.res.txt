@@ -49,7 +49,7 @@ module E = {
     x: 'x,
   }
 
-  @module("x")
+  @res.hoistedComponent @module("x")
   external make: React.component<props<string>> = "default"
 }
 

@@ -11,8 +11,11 @@ let MM = {
   make2: make2
 };
 
+let MM$make2 = MM.make2;
+
 export {
   make,
   MM,
+  MM$make2,
 }
 /* make Not a pure module */

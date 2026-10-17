@@ -1,0 +1,21 @@
+@@jsxConfig({version: 4})
+
+module Client: {
+  @res.jsxComponentProps @live
+  type props<'children> = {
+    children: 'children,
+  }
+
+  @module("client")
+  external make: React.component<props<React.element>> = "Client"
+}
+
+module type Client = {
+  @res.jsxComponentProps @live
+  type props<'children> = {
+    children: 'children,
+  }
+
+  @module("client")
+  external make: React.component<props<React.element>> = "Client"
+}

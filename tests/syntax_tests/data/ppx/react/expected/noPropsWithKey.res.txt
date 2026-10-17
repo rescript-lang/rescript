@@ -17,7 +17,7 @@ module V4CB = {
   @res.jsxComponentProps @live
   type props = {}
 
-  @module("c")
+  @res.hoistedComponent @module("c")
   external make: React.component<props> = "component"
 }
 

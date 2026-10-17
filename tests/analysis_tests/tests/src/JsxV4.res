@@ -25,4 +25,14 @@ module Other = {
   let make = (~name) => React.string(name)
 }
 
+module External = {
+  @react.component @module("./client.js")
+  external make: (~children: React.element) => React.element = "default"
+}
+
+ignore(<External>{React.string("child")}</External>)
+//      ^hov
+ignore(<External>{React.string("child")}</External>)
+//      ^def
+
 // ^int
