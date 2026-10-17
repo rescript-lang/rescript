@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/raw_external_arg_optional.res[0m:[2m1:23-31[0m
+
+  [1;31m1[0m [2m│[0m @val external f: (~x: [1;31m%raw("1")[0m=?, unit) => unit = "f"
+  2 [2m│[0m 
+
+  A %raw argument cannot be optional

@@ -341,6 +341,8 @@ let test_fixed_argument_locations_go_through_the_mapper _ =
         match value.txt with
         | Pfixed_int source | Pfixed_template source | Pfixed_json source ->
           OUnit.assert_equal marker source.loc
+        | Pfixed_raw source ->
+          OUnit.assert_equal marker (Ast_raw.source_loc source)
         | Pfixed_string _ -> ())
       [(json.loc, json.value); (int.loc, int.value)]
   | _ -> assert_failure "Expected the fixed arguments back");
@@ -373,6 +375,47 @@ let test_fixed_argument_locations_go_through_the_mapper _ =
     assert_relocated_v0_fixed json0;
     assert_relocated_v0_fixed int0
   | _ -> assert_failure "Expected an external arrow on the ast0 wire"
+
+let test_raw_fixed_argument_survives_ast0 _ =
+  (* v0 has no [%raw]: its source travels as a [json] payload and comes back as
+     a fixed argument with the same JavaScript source. *)
+  let int_type =
+    Ast_helper.Typ.constr ~loc (Location.mknoloc (Longident.Lident "int")) []
+  in
+  let vd =
+    Ast_helper.Val.mk ~prim:(Parsetree.Prim_name "f") (Location.mknoloc "f")
+      (Ast_helper.Typ.arrow ~loc
+         [
+           Parg_fixed
+             {
+               attrs = [];
+               lbl = Nolabel;
+               value =
+                 {
+                   txt =
+                     Pfixed_raw (Raw_string {txt = "{}"; loc = source_loc 6 8});
+                   loc = source_loc 6 8;
+                 };
+               loc = source_loc 1 9;
+             };
+           Parg_type {attrs = []; lbl = Nolabel; typ = int_type};
+         ]
+         int_type)
+  in
+  let vd' =
+    Ast_mapper_from0.default_mapper.value_description
+      Ast_mapper_from0.default_mapper
+      (Ast_mapper_to0.default_mapper.value_description
+         Ast_mapper_to0.default_mapper vd)
+  in
+  match vd'.pval_type.ptyp_desc with
+  | Ptyp_arrow {params = [Parg_fixed {value; loc}; Parg_type _]} ->
+    OUnit.assert_equal
+      ~printer:(fun s -> s)
+      "{}"
+      (Ast_fixed_arg.js_source value.txt);
+    OUnit.assert_equal (source_loc 1 9) loc
+  | _ -> assert_failure "Expected the %raw argument back as a fixed argument"
 
 let test_fixed_argument_is_external_only _ =
   (* A non-external arrow keeps [@as(1) _] as an ordinary argument. *)
@@ -2510,4 +2553,6 @@ let suites =
          >:: test_fixed_argument_is_external_only;
          "fixed_argument_locations_go_through_the_mapper"
          >:: test_fixed_argument_locations_go_through_the_mapper;
+         "raw_fixed_argument_survives_ast0"
+         >:: test_raw_fixed_argument_survives_ast0;
        ]

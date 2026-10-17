@@ -14,7 +14,7 @@ external toFloat: int => float = "%identity"
 
 external fromFloat: float => int = "%intoffloat"
 
-@val external fromString: (string, @as(10) _) => int = "parseInt"
+@val external fromString: (string, %raw("10")) => int = "parseInt"
 
 let fromString = i =>
   switch fromString(i) {
