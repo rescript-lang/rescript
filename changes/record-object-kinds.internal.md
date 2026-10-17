@@ -1,0 +1,1 @@
+- Draw commit records as semantic diffs of the compiler's objects, each kind of object in its own drawing, and extract the exact forms a record abstracts from the compiler with `scripts/recordFacts.js`. https://github.com/rescript-lang/rescript/pull/8882
