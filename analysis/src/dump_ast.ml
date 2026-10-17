@@ -366,7 +366,7 @@ let print_value_binding value ~pos ~indentation =
       ^ ". "
       ^ print_core_type pvc_type ~pos
   in
-  print_attributes value.Parsetree.pvb_attributes
+  print_attributes (Ast_helper.Vb.binding_attributes value)
   ^ "value" ^ ":\n"
   ^ add_indentation (indentation + 1)
   ^ (value.pvb_pat |> print_pattern ~pos ~indentation:(indentation + 1))

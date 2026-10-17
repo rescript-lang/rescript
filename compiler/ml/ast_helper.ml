@@ -325,15 +325,96 @@ module Str = struct
   let attribute ?loc a = mk ?loc (Pstr_attribute a)
 end
 
+(* [@react.component] and its variants are taken out of the attributes when a
+   value binding or value description is built, so every producer - the
+   parser, a ppx, the frozen AST bridge - agrees on what is a component. *)
+module Jsx_component = struct
+  let of_attribute (({txt; loc}, payload) : attribute) =
+    let component pjc_kind pjc_namespace =
+      Some {pjc_kind; pjc_namespace; pjc_loc = loc}
+    in
+    match (txt, payload) with
+    | "react.component", PStr [] -> component (Pjc_labelled None) Pjc_react
+    | "react.component", PTyp typ ->
+      component (Pjc_labelled (Some typ)) Pjc_react
+    | "jsx.component", PStr [] -> component (Pjc_labelled None) Pjc_jsx
+    | "jsx.component", PTyp typ -> component (Pjc_labelled (Some typ)) Pjc_jsx
+    | "react.componentWithProps", PStr [] -> component Pjc_with_props Pjc_react
+    | "jsx.componentWithProps", PStr [] -> component Pjc_with_props Pjc_jsx
+    | _ -> None
+
+  let to_attribute {pjc_kind; pjc_namespace; pjc_loc} : attribute =
+    let namespace =
+      match pjc_namespace with
+      | Pjc_react -> "react"
+      | Pjc_jsx -> "jsx"
+    in
+    match pjc_kind with
+    | Pjc_labelled None ->
+      ({txt = namespace ^ ".component"; loc = pjc_loc}, PStr [])
+    | Pjc_labelled (Some typ) ->
+      ({txt = namespace ^ ".component"; loc = pjc_loc}, PTyp typ)
+    | Pjc_with_props ->
+      ({txt = namespace ^ ".componentWithProps"; loc = pjc_loc}, PStr [])
+
+  (* The first [@react.component], or failing that the first
+     [@react.componentWithProps]: the JSX transform has always given them
+     this precedence. A later one, or one whose payload is not understood, is
+     left in the attributes for the JSX transform to reject, so that
+     formatting does not drop it. *)
+  let take attrs =
+    let take_first is_kind =
+      let rec go seen = function
+        | [] -> (None, attrs)
+        | attr :: rest -> (
+          match of_attribute attr with
+          | Some component when is_kind component.pjc_kind ->
+            (Some component, List.rev_append seen rest)
+          | _ -> go (attr :: seen) rest)
+      in
+      go [] attrs
+    in
+    match
+      take_first (function
+        | Pjc_labelled _ -> true
+        | Pjc_with_props -> false)
+    with
+    | (Some _, _) as found -> found
+    | None, _ ->
+      take_first (function
+        | Pjc_with_props -> true
+        | Pjc_labelled _ -> false)
+
+  (* Inverse of [take], for printers and the frozen AST bridge. Attributes
+     print in source order, so the annotation goes back where it was written.
+     Ppx output has no source position, so all of it ties on [Location.none];
+     the annotation then goes first among the tied, where it is usually
+     written. *)
+  let put_back component attrs =
+    match component with
+    | None -> attrs
+    | Some component ->
+      let written_earlier (({loc}, _) : attribute) =
+        loc.loc_start.pos_cnum < component.pjc_loc.loc_start.pos_cnum
+      in
+      let earlier, later = List.partition written_earlier attrs in
+      earlier @ (to_attribute component :: later)
+end
+
 module Val = struct
   let mk ?(loc = !default_loc) ?(attrs = []) ?prim name typ =
+    let jsx_component, attrs = Jsx_component.take attrs in
     {
       pval_name = name;
       pval_type = typ;
+      pval_jsx_component = jsx_component;
       pval_attributes = attrs;
       pval_loc = loc;
       pval_prim = prim;
     }
+
+  let description_attributes vd =
+    Jsx_component.put_back vd.pval_jsx_component vd.pval_attributes
 end
 
 module Md = struct
@@ -368,13 +449,18 @@ end
 
 module Vb = struct
   let mk ?(loc = !default_loc) ?(attrs = []) ?constraint_ pat expr =
+    let jsx_component, attrs = Jsx_component.take attrs in
     {
       pvb_pat = pat;
       pvb_expr = expr;
       pvb_constraint = constraint_;
+      pvb_jsx_component = jsx_component;
       pvb_attributes = attrs;
       pvb_loc = loc;
     }
+
+  let binding_attributes vb =
+    Jsx_component.put_back vb.pvb_jsx_component vb.pvb_attributes
 end
 
 module Type = struct

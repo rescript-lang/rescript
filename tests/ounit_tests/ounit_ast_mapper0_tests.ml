@@ -797,6 +797,164 @@ let map_value_binding0 vb =
 let to_value_binding0 vb =
   Ast_mapper_to0.default_mapper.value_binding Ast_mapper_to0.default_mapper vb
 
+let attr_names attrs =
+  List.map (fun (({txt} : string Asttypes.loc), _) -> txt) attrs
+
+let make_binding ?(attrs = []) () =
+  Ast_helper.Vb.mk ~loc ~attrs
+    (Ast_helper.Pat.var ~loc (Location.mknoloc "make"))
+    (Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident "x")))
+
+let props_type =
+  Ast_helper.Typ.constr ~loc (Location.mknoloc (Longident.Lident "props")) []
+
+let test_jsx_component_becomes_the_binding_node _ =
+  let vb =
+    make_binding ~attrs:[attr "react.component" (Parsetree.PTyp props_type)] ()
+  in
+  (match vb.pvb_jsx_component with
+  | Some {pjc_kind = Pjc_labelled (Some _); pjc_namespace = Pjc_react} -> ()
+  | _ -> assert_failure "Expected @react.component(: props) as the node");
+  OUnit.assert_equal ~printer:(String.concat ", ") []
+    (attr_names vb.pvb_attributes);
+  let vb0 = to_value_binding0 vb in
+  match vb0.pvb_attributes with
+  | [
+   ( {txt = "react.component"},
+     PTyp {ptyp_desc = Ptyp_constr ({txt = Lident "props"}, [])} );
+  ] ->
+    ()
+  | _ -> assert_failure "Expected @react.component(: props) on the ast0 wire"
+
+(* The first [@react.component] wins over an earlier
+   [@react.componentWithProps], as it always has in the JSX transform; the
+   others stay attributes. *)
+let test_jsx_component_precedence _ =
+  let vb =
+    make_binding
+      ~attrs:
+        [
+          attr "react.componentWithProps" (Parsetree.PStr []);
+          attr "jsx.component" (Parsetree.PStr []);
+          attr "react.component" (Parsetree.PStr []);
+        ]
+      ()
+  in
+  (match vb.pvb_jsx_component with
+  | Some {pjc_kind = Pjc_labelled None; pjc_namespace = Pjc_jsx} -> ()
+  | _ -> assert_failure "Expected @jsx.component as the node");
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["react.componentWithProps"; "react.component"]
+    (attr_names vb.pvb_attributes)
+
+(* A payload the JSX transform does not understand is not dropped: the
+   attribute stays, for the transform to reject and the printer to keep. *)
+let test_jsx_component_with_unknown_payload_stays_an_attribute _ =
+  let payload =
+    Parsetree.PStr
+      [
+        Ast_helper.Str.eval
+          (Ast_helper.Exp.constant
+             (Pconst_string (String_literal.string_from_semantic "x")));
+      ]
+  in
+  let vd =
+    Ast_helper.Val.mk ~loc
+      ~attrs:
+        [
+          attr "react.component" payload;
+          attr "react.componentWithProps" (Parsetree.PTyp props_type);
+        ]
+      (Location.mknoloc "make") props_type
+  in
+  OUnit.assert_bool "Expected no node" (vd.pval_jsx_component = None);
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["react.component"; "react.componentWithProps"]
+    (attr_names vd.pval_attributes)
+
+let test_jsx_component_keeps_its_place_on_the_wire _ =
+  let vb =
+    make_binding
+      ~attrs:
+        [
+          ( located_string ~loc:(source_loc 10 20) "deprecated",
+            Parsetree.PStr [] );
+          ( located_string ~loc:(source_loc 30 40) "react.componentWithProps",
+            Parsetree.PStr [] );
+          (located_string ~loc:(source_loc 50 60) "genType", Parsetree.PStr []);
+        ]
+      ()
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["deprecated"; "react.componentWithProps"; "genType"]
+    (attr_names (to_value_binding0 vb).pvb_attributes)
+
+(* Ppx output carries no source position, so every attribute ties. The
+   annotation goes back first among them, where it is usually written. *)
+let test_jsx_component_from_ppx_goes_first_on_the_wire _ =
+  let vb0 =
+    Ast_helper0.Vb.mk ~loc
+      ~attrs:
+        [
+          (Location.mknoloc "jsx.component", Parsetree0.PStr []);
+          (Location.mknoloc "genType", Parsetree0.PStr []);
+        ]
+      (Ast_helper0.Pat.var ~loc (Location.mknoloc "make"))
+      (Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident "x")))
+  in
+  let vb = map_value_binding0 vb0 in
+  (match vb.pvb_jsx_component with
+  | Some {pjc_kind = Pjc_labelled None; pjc_namespace = Pjc_jsx} -> ()
+  | _ -> assert_failure "Expected the ppx's @jsx.component as the node");
+  OUnit.assert_equal ~printer:(String.concat ", ") ["genType"]
+    (attr_names vb.pvb_attributes);
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["jsx.component"; "genType"]
+    (attr_names (to_value_binding0 vb).pvb_attributes)
+
+(* A mapper sees the attribute and [Vb.mk] takes it out again, so a mapper that
+   only relocates keeps the component. *)
+let test_jsx_component_survives_the_mapper _ =
+  let vb =
+    make_binding ~attrs:[attr "react.componentWithProps" (Parsetree.PStr [])] ()
+  in
+  let mapped =
+    Ast_mapper.default_mapper.value_binding Ast_mapper.default_mapper vb
+  in
+  (match mapped.pvb_jsx_component with
+  | Some {pjc_kind = Pjc_with_props; pjc_namespace = Pjc_react} -> ()
+  | _ -> assert_failure "Expected the mapped binding to keep the node");
+  OUnit.assert_equal ~printer:(String.concat ", ") []
+    (attr_names mapped.pvb_attributes)
+
+let test_jsx_component_on_value_descriptions_through_ast0 _ =
+  let vd =
+    Ast_helper.Val.mk ~loc
+      ~attrs:
+        [
+          attr "module" (Parsetree.PStr []);
+          attr "react.component" (Parsetree.PStr []);
+        ]
+      ~prim:(Prim_name "default") (Location.mknoloc "make") props_type
+  in
+  (match vd.pval_jsx_component with
+  | Some {pjc_kind = Pjc_labelled None} -> ()
+  | _ -> assert_failure "Expected @react.component as the node");
+  let vd0 =
+    Ast_mapper_to0.default_mapper.value_description
+      Ast_mapper_to0.default_mapper vd
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["react.component"; "module"]
+    (attr_names vd0.pval_attributes);
+  let back =
+    Ast_mapper_from0.default_mapper.value_description
+      Ast_mapper_from0.default_mapper vd0
+  in
+  OUnit.assert_bool "Expected the node back" (back.pval_jsx_component <> None);
+  OUnit.assert_equal ~printer:(String.concat ", ") ["module"]
+    (attr_names back.pval_attributes)
+
 let test_value_constraint_roundtrips_through_ast0 _ =
   let newtype = Location.mknoloc "a" in
   let typ =
@@ -2493,6 +2651,19 @@ let suites =
          >:: test_field_runtime_name_keeps_ppx_order_on_the_wire;
          "constructor_runtime_tag_reaches_ast0_as_an_attribute"
          >:: test_constructor_runtime_tag_reaches_ast0_as_an_attribute;
+         "jsx_component_becomes_the_binding_node"
+         >:: test_jsx_component_becomes_the_binding_node;
+         "jsx_component_precedence" >:: test_jsx_component_precedence;
+         "jsx_component_with_unknown_payload_stays_an_attribute"
+         >:: test_jsx_component_with_unknown_payload_stays_an_attribute;
+         "jsx_component_keeps_its_place_on_the_wire"
+         >:: test_jsx_component_keeps_its_place_on_the_wire;
+         "jsx_component_from_ppx_goes_first_on_the_wire"
+         >:: test_jsx_component_from_ppx_goes_first_on_the_wire;
+         "jsx_component_survives_the_mapper"
+         >:: test_jsx_component_survives_the_mapper;
+         "jsx_component_on_value_descriptions_through_ast0"
+         >:: test_jsx_component_on_value_descriptions_through_ast0;
          "ppx_context_on_the_wire" >:: test_ppx_context_on_the_wire;
          "raw_nodes_roundtrip_through_ast0"
          >:: test_raw_nodes_roundtrip_through_ast0;

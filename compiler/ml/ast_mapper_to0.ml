@@ -1015,7 +1015,7 @@ let default_mapper =
     type_extension = T.map_type_extension;
     extension_constructor = T.map_extension_constructor;
     value_description =
-      (fun this {pval_name; pval_type; pval_prim; pval_loc; pval_attributes} ->
+      (fun this ({pval_name; pval_type; pval_prim; pval_loc} as vd) ->
         let prim =
           match pval_prim with
           | None -> []
@@ -1028,8 +1028,12 @@ let default_mapper =
               "External declarations already processed for compilation cannot \
                be converted for an external PPX"
         in
+        (* v0 has no component node: PPXs see the [@react.component]
+           attribute, and [Ast_helper.Val.mk] takes it out again on the way
+           back. *)
         Val.mk (map_loc this pval_name) (this.typ this pval_type)
-          ~attrs:(this.attributes this pval_attributes)
+          ~attrs:
+            (this.attributes this (Ast_helper.Val.description_attributes vd))
           ~loc:(this.location this pval_loc)
           ~prim);
     pat = P.map;
@@ -1070,7 +1074,7 @@ let default_mapper =
           ~loc:(this.location this pincl_loc)
           ~attrs:(this.attributes this pincl_attributes));
     value_binding =
-      (fun this {pvb_pat; pvb_expr; pvb_constraint; pvb_attributes; pvb_loc} ->
+      (fun this ({pvb_pat; pvb_expr; pvb_constraint; pvb_loc} as vb) ->
         let loc = this.location this pvb_loc in
         let pvb_pat, pvb_expr =
           match pvb_constraint with
@@ -1096,7 +1100,8 @@ let default_mapper =
             in
             (pat, expr)
         in
-        Vb.mk pvb_pat pvb_expr ~loc ~attrs:(this.attributes this pvb_attributes));
+        Vb.mk pvb_pat pvb_expr ~loc
+          ~attrs:(this.attributes this (Ast_helper.Vb.binding_attributes vb)));
     constructor_declaration =
       (fun this ({pcd_name; pcd_args; pcd_res; pcd_loc} as cd) ->
         Type.constructor (map_loc this pcd_name)

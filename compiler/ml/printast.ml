@@ -504,7 +504,7 @@ and jsx_props i ppf xs =
 and value_description i ppf x =
   line i ppf "value_description %a %a\n" fmt_string_loc x.pval_name fmt_location
     x.pval_loc;
-  attributes i ppf x.pval_attributes;
+  attributes i ppf (Ast_helper.Val.description_attributes x);
   core_type (i + 1) ppf x.pval_type;
   match x.pval_prim with
   | None -> ()
@@ -824,7 +824,7 @@ and case i ppf {pc_bar; pc_lhs; pc_guard; pc_rhs} =
 
 and value_binding i ppf x =
   line i ppf "<def>\n";
-  attributes (i + 1) ppf x.pvb_attributes;
+  attributes (i + 1) ppf (Ast_helper.Vb.binding_attributes x);
   pattern (i + 1) ppf x.pvb_pat;
   (match x.pvb_constraint with
   | None -> ()

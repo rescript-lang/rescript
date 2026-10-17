@@ -495,6 +495,7 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
                 {
                   value_desc with
                   pval_prim = Some (Ast_external_mk.inline_string semantic);
+                  pval_jsx_component = None;
                   pval_attributes = [];
                 };
           }
@@ -508,6 +509,7 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
                 {
                   value_desc with
                   pval_prim = Some (Ast_external_mk.inline_int s);
+                  pval_jsx_component = None;
                   pval_attributes = [];
                 };
           }
@@ -520,6 +522,7 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
                 {
                   value_desc with
                   pval_prim = Some (Ast_external_mk.inline_bigint s);
+                  pval_jsx_component = None;
                   pval_attributes = [];
                 };
           }
@@ -532,6 +535,7 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
                 {
                   value_desc with
                   pval_prim = Some (Ast_external_mk.inline_float s);
+                  pval_jsx_component = None;
                   pval_attributes = [];
                 };
           }
@@ -545,6 +549,7 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
                 {
                   value_desc with
                   pval_prim = Some (Ast_external_mk.inline_bool (txt = "true"));
+                  pval_jsx_component = None;
                   pval_attributes = [];
                 };
           }
@@ -588,6 +593,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
             pvb_pat = {ppat_desc = Ppat_var pval_name} as pvb_pat;
             pvb_expr;
             pvb_constraint = None;
+            pvb_jsx_component;
             pvb_attributes;
             pvb_loc;
           };
@@ -617,6 +623,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
               pval_name;
               pval_type = Ast_literal.type_string ();
               pval_loc = pvb_loc;
+              pval_jsx_component = None;
               pval_attributes = [];
               pval_prim = Some (Ast_external_mk.inline_string semantic);
             };
@@ -632,6 +639,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
               pval_name;
               pval_type = Ast_literal.type_int ();
               pval_loc = pvb_loc;
+              pval_jsx_component = None;
               pval_attributes = [];
               pval_prim = Some (Ast_external_mk.inline_int s);
             };
@@ -646,6 +654,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
               pval_name;
               pval_type = Ast_literal.type_float;
               pval_loc = pvb_loc;
+              pval_jsx_component = None;
               pval_attributes = [];
               pval_prim = Some (Ast_external_mk.inline_float s);
             };
@@ -662,6 +671,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
               pval_name;
               pval_type = Ast_literal.type_bool ();
               pval_loc = pvb_loc;
+              pval_jsx_component = None;
               pval_attributes = [];
               pval_prim = Some (Ast_external_mk.inline_bool (txt = "true"));
             };
@@ -677,6 +687,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
                   pvb_pat;
                   pvb_expr;
                   pvb_constraint = None;
+                  pvb_jsx_component;
                   pvb_attributes;
                   pvb_loc;
                 };
