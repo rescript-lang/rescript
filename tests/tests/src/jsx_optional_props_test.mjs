@@ -31,6 +31,8 @@ let _comment_multiple_children = JsxRuntime.jsxs("div", {
   ]
 });
 
+let ComponentWithOptionalProps$make = ComponentWithOptionalProps.make;
+
 export {
   ComponentWithOptionalProps,
   _element,
@@ -38,5 +40,6 @@ export {
   _comment_only_fragment,
   _comment_single_child,
   _comment_multiple_children,
+  ComponentWithOptionalProps$make,
 }
 /* _element Not a pure module */

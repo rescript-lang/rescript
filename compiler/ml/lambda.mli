@@ -17,7 +17,14 @@
 
 open Asttypes
 
-type hoisted_function = {binding: Ident.t; path: string list; loc: Location.t}
+type hoisted_function = {
+  binding: Ident.t;
+  path: string list;
+  loc: Location.t;
+  explicit: bool;
+      (** User annotations must be diagnosed when no export can be generated.
+          Automatic component hoists may fall back to normal module access. *)
+}
 
 type tag_info =
   | Blk_constructor of {

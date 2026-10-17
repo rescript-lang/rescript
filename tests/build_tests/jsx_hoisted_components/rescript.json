@@ -1,0 +1,17 @@
+{
+  "name": "jsx-hoisted-components",
+  "sources": ["src"],
+  "namespace": true,
+  "jsx": {
+    "version": 4
+  },
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true,
+    "suffix": ".mjs"
+  },
+  "compiler-flags": ["-check-lam"],
+  "warnings": {
+    "error": "+32+101"
+  }
+}

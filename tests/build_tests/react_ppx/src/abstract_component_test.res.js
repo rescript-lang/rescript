@@ -24,8 +24,14 @@ let GenericRenderProp = {
   make: Abstract_component_test$GenericRenderProp
 };
 
+let GenericRenderProp$make = GenericRenderProp.make;
+
+let PolyVariantLowerBound$make = PolyVariantLowerBound.make;
+
 export {
   PolyVariantLowerBound,
   GenericRenderProp,
+  GenericRenderProp$make,
+  PolyVariantLowerBound$make,
 }
 /* No side effect */

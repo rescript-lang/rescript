@@ -32,6 +32,16 @@ interface expose compatible component types. External components and the
 legacy `componentWithProps` form have separate validation paths; tests for
 these forms live under `tests/build_tests/react_ppx/`.
 
+Nested component value bindings are marked for automatic JS hoisting after
+their wrappers are applied. Translation registers the final value with the
+same backend machinery as `@res.hoistedFunction`. The backend emits a flat
+alias such as `Provider$make` only when the source path still identifies that
+binding in the exported module structure. Hidden paths and naming collisions
+fall back to normal module access without a misplaced-attribute warning.
+The module object and its `make` member remain available. Consumers use the
+existing hoisted-export lookup in `.cmj` metadata; no JSX call-site marker or
+additional ReScript signature declaration is needed.
+
 ## JSX expressions
 
 The parser represents JSX explicitly in the parsetree. The transformation

@@ -20,7 +20,10 @@ let Rec = {
   make: Recursive_component_test$Rec
 };
 
+let Rec$make = Recursive_component_test$Rec;
+
 export {
   Rec,
+  Rec$make,
 }
 /* No side effect */

@@ -17,6 +17,7 @@ module C0 = {
     let b = __b_value
     (React.int(a + b): React.element)
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"DefaultValueProp$C0" = (props: props<_>) => make(props)
     \"DefaultValueProp$C0"
@@ -38,6 +39,7 @@ module C1 = {
     let a = __a_value
     (React.int(a + b): React.element)
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"DefaultValueProp$C1" = (props: props<_>) => make(props)
 
@@ -60,6 +62,7 @@ module C2 = {
     let a = __a_value
     (React.string(a): React.element)
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"DefaultValueProp$C2" = (props: props<_>) => make(props)
 
@@ -85,6 +88,7 @@ module C3 = {
       }: React.element
     )
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"DefaultValueProp$C3" = (props: props<_>) => make(props)
 

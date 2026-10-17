@@ -33,9 +33,15 @@ let Bar = {
   make: Async_jsx$Bar
 };
 
+let Bar$make = Bar.make;
+
+let Foo$make = Foo.make;
+
 export {
   getNow,
   Foo,
   Bar,
+  Bar$make,
+  Foo$make,
 }
 /* react/jsx-runtime Not a pure module */

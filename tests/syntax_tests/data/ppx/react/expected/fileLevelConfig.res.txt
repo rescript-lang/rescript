@@ -9,6 +9,7 @@ module V4A = {
   let make = ({msg, _}: props<_>): Preact.element => {
     Preact.Elements.jsx("div", {children: ?Preact.Elements.someElement({msg->React.string})})
   }
+  @res.hoistedComponent
   let make = Preact.component({
     let \"FileLevelConfig$V4A" = (props: props<_>) => make(props)
 

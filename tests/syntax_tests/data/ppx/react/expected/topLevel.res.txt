@@ -11,6 +11,7 @@ module V4A = {
     Console.log("This function should be named 'TopLevel.react'")
     ReactDOM.jsx("div", {})
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"TopLevel$V4A" = (props: props<_>) => make(props)
 

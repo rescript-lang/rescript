@@ -46,6 +46,7 @@ module Foo = {
       }: React.element
     )
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"UncurriedProps$Foo" = (props: props<_>) => make(props)
 
@@ -58,6 +59,7 @@ module Bar = {
   type props = {}
 
   let make = (_: props): React.element => React.jsx(Foo.make, {callback: {(_, _, _) => ()}})
+  @res.hoistedComponent
   let make = React.component({
     let \"UncurriedProps$Bar" = props => make(props)
 

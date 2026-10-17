@@ -958,24 +958,42 @@ let find_js_hoisted_attr attrs =
    emission. Record the binding and its source path here so later compiler
    stages can add the flat JS export and matching .cmj metadata. *)
 let mark_js_hoisted_pattern ~js_hoist attrs pat lam =
+  let register ~explicit loc =
+    let misplaced () =
+      if explicit then
+        Location.prerr_warning loc
+          (Warnings.Misplaced_attribute hoisted_function_attr_name)
+    in
+    match pat.pat_desc with
+    | Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _) -> (
+      match js_hoist with
+      | Some register ->
+        (* JSX names its function in a local block. Its outer [make] alias
+           is optimized away, so retain the returned binding's identity. *)
+        let rec returned_binding fallback = function
+          | Lvar id -> id
+          | Llet (_, id, value, body) ->
+            let result = returned_binding fallback body in
+            if Ident.same result id then returned_binding id value else result
+          | Lsequence (_, body) -> returned_binding fallback body
+          | _ -> fallback
+        in
+        let binding = if explicit then id else returned_binding id lam in
+        register ~explicit ~name:id.Ident.name binding loc
+      | None -> misplaced ())
+    | _ -> misplaced ()
+  in
   match find_js_hoisted_attr attrs with
-  | None -> ()
   | Some loc -> (
     match lam with
-    | Lfunction _ -> (
-      match pat.pat_desc with
-      | Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _) -> (
-        match js_hoist with
-        | Some register -> register id loc
-        | None ->
-          Location.prerr_warning loc
-            (Warnings.Misplaced_attribute hoisted_function_attr_name))
-      | _ ->
-        Location.prerr_warning loc
-          (Warnings.Misplaced_attribute hoisted_function_attr_name))
+    | Lfunction _ -> register ~explicit:true loc
     | _ ->
       Location.prerr_warning loc
         (Warnings.Misplaced_attribute hoisted_function_attr_name))
+  | None -> (
+    match Translattribute.get_empty_attribute "res.hoistedComponent" attrs with
+    | Some loc -> register ~explicit:false loc
+    | None -> ())
 
 (* JSX preserve mode: a call of a JSX external as the JSX PPX produces it,
    which [transl_jsx_element] turns into [Pjsx]. The JSX module's names

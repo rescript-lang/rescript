@@ -8,6 +8,7 @@ module V4A = {
   }
 
   let make = (type a, {a, b, _}: props<_, _>): React.element => ReactDOM.jsx("div", {})
+  @res.hoistedComponent
   let make = React.component({
     let \"TypeConstraint$V4A" = (props: props<_>) => make(props)
 

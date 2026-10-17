@@ -16,6 +16,7 @@ module Braced = {
   }
 
   let make = ({name, _}: props<_>): React.element => React.string(name)
+  @res.hoistedComponent
   let make = React.component({
     let \"V4$Braced" = (props: props<_>) => make(props)
 
@@ -31,6 +32,7 @@ module AnotherName = {
   }
 
   let anotherName = ({x, _}: props<_>): React.element => React.string(x)
+  @res.hoistedComponent
   let anotherName = React.component({
     let \"V4$AnotherName$anotherName" = (props: props<_>) => anotherName(props)
 
@@ -45,6 +47,7 @@ module Uncurried = {
   }
 
   let make = ({x, _}: props<_>): React.element => React.string(x)
+  @res.hoistedComponent
   let make = React.component({
     let \"V4$Uncurried" = (props: props<_>) => make(props)
 
@@ -86,6 +89,7 @@ module Rec = {
   let rec make = (_: props): React.element => {
     make(({}: props))
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"V4$Rec" = props => make(props)
 
@@ -100,6 +104,7 @@ module Rec1 = {
   let rec make = (_: props): React.element => {
     React.null
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"V4$Rec1" = props => make(props)
 
@@ -116,6 +121,7 @@ module Rec2 = {
   }
 
   and mm = x => make(x)
+  @res.hoistedComponent
   let make = React.component({
     let \"V4$Rec2" = props => make(props)
 

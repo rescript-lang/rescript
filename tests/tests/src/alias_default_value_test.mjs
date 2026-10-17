@@ -91,6 +91,22 @@ let C8 = {
   make: Alias_default_value_test$C8
 };
 
+let C8$make = C8.make;
+
+let C7$make = C7.make;
+
+let C6$make = C6.make;
+
+let C4$make = C4.make;
+
+let C3$make = C3.make;
+
+let C2$make = C2.make;
+
+let C1$make = C1.make;
+
+let C0$make = C0.make;
+
 export {
   C0,
   C1,
@@ -100,5 +116,13 @@ export {
   C6,
   C7,
   C8,
+  C8$make,
+  C7$make,
+  C6$make,
+  C4$make,
+  C3$make,
+  C2$make,
+  C1$make,
+  C0$make,
 }
 /* No side effect */

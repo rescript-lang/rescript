@@ -241,9 +241,9 @@ let js_hoist_handler rootpath =
   | None -> None
   | Some path ->
     Some
-      (fun id loc ->
+      (fun ~explicit ~name id loc ->
         js_hoisted () :=
-          {Lambda.binding = id; path = path @ [id.Ident.name]; loc}
+          {Lambda.binding = id; path = path @ [name]; loc; explicit}
           :: !(js_hoisted ()))
 
 let rec compile_functor mexp coercion root_path loc =

@@ -187,10 +187,11 @@ let js_hoisted_aliases (export_ids : Ident.t list)
     fst
       (Ext_list.fold_left hoisted ([], occupied_names)
          (fun ((aliases, occupied_names) as state) hoisted ->
-           let {Lambda.binding; path; loc} = hoisted in
+           let {Lambda.binding; path; loc; explicit} = hoisted in
            let missing_path () =
-             Location.prerr_warning loc
-               (Warnings.Misplaced_attribute "res.hoistedFunction");
+             if explicit then
+               Location.prerr_warning loc
+                 (Warnings.Misplaced_attribute "res.hoistedFunction");
              state
            in
            match path with
@@ -208,7 +209,9 @@ let js_hoisted_aliases (export_ids : Ident.t list)
                      |> String.concat "$"
                    in
                    let js_name = Ext_ident.convert name in
-                   if Set_string.mem js_name occupied_names then
+                   if Set_string.mem js_name occupied_names && not explicit then
+                     state
+                   else if Set_string.mem js_name occupied_names then
                      let error_loc =
                        match target with
                        | Lambda.Lfunction {loc} -> loc

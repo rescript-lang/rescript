@@ -1,0 +1,1 @@
+- Expose nested JSX component bindings through flat JavaScript exports while preserving normal module access. https://github.com/rescript-lang/rescript/pull/8886

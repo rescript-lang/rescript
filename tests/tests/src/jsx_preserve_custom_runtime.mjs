@@ -40,6 +40,8 @@ let keyed = <div
   <b />
 </div>;
 
+let Comp$make = Comp.make;
+
 export {
   MyJsx,
   Comp,
@@ -48,5 +50,6 @@ export {
   topMemo,
   fragment,
   keyed,
+  Comp$make,
 }
 /* memoComp Not a pure module */

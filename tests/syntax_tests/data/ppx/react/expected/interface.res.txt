@@ -4,6 +4,7 @@ module A = {
     x: 'x,
   }
   let make = ({x, _}: props<_>): React.element => React.string(x)
+  @res.hoistedComponent
   let make = React.component({
     let \"Interface$A" = (props: props<_>) => make(props)
     \"Interface$A"
@@ -15,6 +16,7 @@ module NoProps = {
   type props = {}
 
   let make = (_: props): React.element => ReactDOM.jsx("div", {})
+  @res.hoistedComponent
   let make = React.component({
     let \"Interface$NoProps" = props => make(props)
 

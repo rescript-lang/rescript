@@ -204,6 +204,32 @@ let make$1 = Hooks;
 
 let $$default = Hooks;
 
+let DD$make = DD.make;
+
+let WithChildren$aComponentWithChildren = WithChildren.aComponentWithChildren;
+
+let RenderPropRequiresConversion$make = RenderPropRequiresConversion.make;
+
+let Fun$functionReturningReactElement = Fun.functionReturningReactElement;
+
+let Poly$polymorphicComponent = Poly.polymorphicComponent;
+
+let WithRef$make = WithRef.make;
+
+let WithRename$componentWithRenamedArgs = WithRename.componentWithRenamedArgs;
+
+let NoProps$make = NoProps.make;
+
+let Inner$Inner2$Another$anotherComponent = Inner2.Another.anotherComponent;
+
+let Inner$Inner2$make = Inner2.make;
+
+let Inner$Another$anotherComponent = Another$1.anotherComponent;
+
+let Inner$make = Hooks$Inner;
+
+let Another$anotherComponent = Another.anotherComponent;
+
 export {
   make$1 as make,
   $$default as default,
@@ -219,5 +245,18 @@ export {
   RenderPropRequiresConversion,
   WithChildren,
   DD,
+  DD$make,
+  WithChildren$aComponentWithChildren,
+  RenderPropRequiresConversion$make,
+  Fun$functionReturningReactElement,
+  Poly$polymorphicComponent,
+  WithRef$make,
+  WithRename$componentWithRenamedArgs,
+  NoProps$make,
+  Inner$Inner2$Another$anotherComponent,
+  Inner$Inner2$make,
+  Inner$Another$anotherComponent,
+  Inner$make,
+  Another$anotherComponent,
 }
 /* make Not a pure module */

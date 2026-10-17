@@ -19,7 +19,8 @@
 val transl_exp : Typedtree.expression -> Lambda.t
 
 val transl_let :
-  js_hoist:(Ident.t -> Location.t -> unit) option ->
+  js_hoist:
+    (explicit:bool -> name:string -> Ident.t -> Location.t -> unit) option ->
   Asttypes.rec_flag ->
   Typedtree.value_binding list ->
   Lambda.t ->

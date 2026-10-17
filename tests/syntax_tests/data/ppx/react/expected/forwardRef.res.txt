@@ -29,6 +29,7 @@ module V4A = {
           ]),
         },
       )
+    @res.hoistedComponent
     let make = React.forwardRef({
       let \"ForwardRef$V4A$FancyInput" = (props: props<_>, ref) => make(props, ref)
 
@@ -50,6 +51,7 @@ module V4A = {
       },
     )
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"ForwardRef$V4A" = props => make(props)
 
@@ -86,6 +88,7 @@ module V4AUncurried = {
           ]),
         },
       )
+    @res.hoistedComponent
     let make = React.forwardRef({
       let \"ForwardRef$V4AUncurried$FancyInput" = (props: props<_>, ref) => make(props, ref)
 
@@ -107,6 +110,7 @@ module V4AUncurried = {
       },
     )
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"ForwardRef$V4AUncurried" = props => make(props)
 

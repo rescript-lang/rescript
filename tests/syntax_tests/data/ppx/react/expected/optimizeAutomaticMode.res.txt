@@ -12,6 +12,7 @@ module User = {
   let make = ({doctor, _}: props<_>): React.element => {
     ReactDOM.jsx("h1", {id: "h1", children: ?ReactDOM.someElement({React.string(format(doctor))})})
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"OptimizeAutomaticMode$User" = (props: props<_>) => make(props)
 

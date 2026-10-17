@@ -5,6 +5,7 @@ let f = a => Promise.resolve(a + a)
 module V4A1 = {
   type props = sharedProps
   let make = (props): React.element => React.string(props.x ++ props.y)
+  @res.hoistedComponent
   let make = React.component({
     let \"SharedPropsWithProps$V4A1" = (props): React.element => make(props)
     \"SharedPropsWithProps$V4A1"
@@ -14,6 +15,7 @@ module V4A1 = {
 module V4A2 = {
   type props = sharedProps
   let make = (props: props): React.element => React.string(props.x ++ props.y)
+  @res.hoistedComponent
   let make = React.component({
     let \"SharedPropsWithProps$V4A2" = (props: props): React.element => make(props)
     \"SharedPropsWithProps$V4A2"
@@ -23,6 +25,7 @@ module V4A2 = {
 module V4A3 = {
   type props<'a> = sharedProps<'a>
   let make = ({x, y}: props<_>): React.element => React.string(x ++ y)
+  @res.hoistedComponent
   let make = React.component({
     let \"SharedPropsWithProps$V4A3" = (props: props<_>): React.element => make(props)
     \"SharedPropsWithProps$V4A3"
@@ -32,6 +35,7 @@ module V4A3 = {
 module V4A4 = {
   type props<'a> = sharedProps<string, 'a>
   let make = ({x, y}: props<_>): React.element => React.string(x ++ y)
+  @res.hoistedComponent
   let make = React.component({
     let \"SharedPropsWithProps$V4A4" = (props: props<_>): React.element => make(props)
     \"SharedPropsWithProps$V4A4"
@@ -44,6 +48,7 @@ module V4A5 = {
     let a = await f(a)
     ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})})
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"SharedPropsWithProps$V4A5" = (props: props<_>): React.element => Jsx.promise(make(props))
     \"SharedPropsWithProps$V4A5"
@@ -58,6 +63,7 @@ module V4A6 = {
     | #off => React.string("off")
     }
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"SharedPropsWithProps$V4A6" = (props: props<_>): React.element => Jsx.promise(make(props))
     \"SharedPropsWithProps$V4A6"
@@ -70,6 +76,7 @@ module V4A7 = {
   let make = (props): React.element => {
     React.int(props.count)
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"SharedPropsWithProps$V4A7" =
       @directive("'use memo'") (props): React.element => make(props)

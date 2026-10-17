@@ -109,6 +109,10 @@ let undefinedKey = <div
   key={undefined}
 />;
 
+let Req$make = Req.make;
+
+let AsProp$make = AsProp.make;
+
 export {
   AsProp,
   asProp,
@@ -131,5 +135,7 @@ export {
   copySpread,
   localComp,
   undefinedKey,
+  Req$make,
+  AsProp$make,
 }
 /*  Not a pure module */

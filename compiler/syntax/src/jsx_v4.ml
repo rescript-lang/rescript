@@ -55,6 +55,19 @@ let jsx_component_expr config ~loc expr =
     (Exp.ident ~loc {loc; txt = module_access_name config "component"})
     [(Nolabel, expr)]
 
+(* The backend adds the JS export after checking the actual exported module
+   path. Mark the final component value, including memo/forwardRef wrappers. *)
+let mark_hoisted_component ~(config : Jsx_common.jsx_config) binding =
+  match config.nested_modules with
+  | [] -> binding
+  | _ :: _ ->
+    {
+      binding with
+      pvb_attributes =
+        (Location.mknoloc "res.hoistedComponent", PStr [])
+        :: binding.pvb_attributes;
+    }
+
 (* Finds the name of the variable the binding is assigned to, otherwise raises Invalid_argument *)
 let rec get_fn_name binding =
   match binding with
@@ -808,7 +821,9 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
         pvb_pat = Pat.var {txt = fn_name; loc = Location.none};
       }
     in
-    let new_binding = Some (binding_wrapper full_expression) in
+    let new_binding =
+      Some (mark_hoisted_component ~config (binding_wrapper full_expression))
+    in
     (Some props_record_type, binding, new_binding)
   | Some {pjc_kind = Pjc_with_props} ->
     let modified_binding = {binding with pvb_jsx_component = None} in
@@ -898,7 +913,9 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
     in
 
     let new_binding =
-      Some (make_new_binding ~loc:empty_loc ~full_module_name modified_binding)
+      Some
+        (make_new_binding ~loc:empty_loc ~full_module_name modified_binding
+        |> mark_hoisted_component ~config)
     in
     let binding_expr =
       {

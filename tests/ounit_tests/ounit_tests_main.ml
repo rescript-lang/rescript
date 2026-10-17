@@ -27,6 +27,7 @@ let suites =
       Ounit_external_shadow_tests.suites;
       Ounit_flow_parser_tests.suites;
       Ounit_jsx_loc_tests.suites;
+      Ounit_jsx_hoisting_tests.suites;
       Ounit_parser_cursor_tests.suites;
       Ounit_parser_recovery_tests.suites;
       Ounit_analysis_config_tests.suites;

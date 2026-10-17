@@ -6,6 +6,7 @@ module C0 = {
     type props = {}
 
     let make = (_: props): React.element => React.null
+    @res.hoistedComponent
     let make = React.component({
       let \"DefaultPatternProp$C0$M" = props => make(props)
 
@@ -27,6 +28,7 @@ module C0 = {
     let module(C: S) = __component_value
     (React.jsx(C.make, {}): React.element)
   }
+  @res.hoistedComponent
   let make = React.component({
     let \"DefaultPatternProp$C0" = (props: props<_>) => make(props)
 
