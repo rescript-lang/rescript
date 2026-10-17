@@ -513,12 +513,12 @@ let default_iterator =
     type_extension = T.iter_type_extension;
     extension_constructor = T.iter_extension_constructor;
     value_description =
-      (fun this
-        {pval_name; pval_type; pval_prim = _; pval_loc; pval_attributes}
-      ->
+      (fun this ({pval_name; pval_type; pval_prim = _; pval_loc} as vd) ->
         iter_loc this pval_name;
         this.typ this pval_type;
-        this.attributes this pval_attributes;
+        (* An iterator sees the component annotation as the attribute it was
+           written as. *)
+        this.attributes this (Ast_helper.Val.description_attributes vd);
         this.location this pval_loc);
     pat = P.iter;
     expr = E.iter;
@@ -556,7 +556,7 @@ let default_iterator =
         this.location this pincl_loc;
         this.attributes this pincl_attributes);
     value_binding =
-      (fun this {pvb_pat; pvb_expr; pvb_constraint; pvb_attributes; pvb_loc} ->
+      (fun this ({pvb_pat; pvb_expr; pvb_constraint; pvb_loc} as vb) ->
         this.pat this pvb_pat;
         Option.iter
           (fun {pvc_newtypes; pvc_type} ->
@@ -565,7 +565,7 @@ let default_iterator =
           pvb_constraint;
         this.expr this pvb_expr;
         this.location this pvb_loc;
-        this.attributes this pvb_attributes);
+        this.attributes this (Ast_helper.Vb.binding_attributes vb));
     constructor_declaration =
       (fun this {pcd_name; pcd_args; pcd_res; pcd_loc; pcd_attributes} ->
         iter_loc this pcd_name;

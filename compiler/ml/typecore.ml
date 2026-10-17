@@ -5026,7 +5026,8 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
         {
           vb_pat = p;
           vb_expr = e;
-          vb_attributes = pvb.pvb_attributes;
+          (* As written, like a value description's in [Typedecl]. *)
+          vb_attributes = Ast_helper.Vb.binding_attributes pvb;
           vb_loc = pvb.pvb_loc;
         })
       l spat_sexp_list

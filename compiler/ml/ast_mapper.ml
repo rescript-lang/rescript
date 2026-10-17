@@ -524,9 +524,12 @@ let default_mapper =
     type_extension = T.map_type_extension;
     extension_constructor = T.map_extension_constructor;
     value_description =
-      (fun this {pval_name; pval_type; pval_prim; pval_loc; pval_attributes} ->
+      (fun this ({pval_name; pval_type; pval_prim; pval_loc} as vd) ->
+        (* The component annotation goes back into the attributes so that a
+           mapper sees [@react.component] where it has always been, and
+           [Val.mk] takes it out again. *)
         Val.mk (map_loc this pval_name) (this.typ this pval_type)
-          ~attrs:(this.attributes this pval_attributes)
+          ~attrs:(this.attributes this (Val.description_attributes vd))
           ~loc:(this.location this pval_loc)
           ?prim:pval_prim);
     pat = P.map;
@@ -567,7 +570,7 @@ let default_mapper =
           ~loc:(this.location this pincl_loc)
           ~attrs:(this.attributes this pincl_attributes));
     value_binding =
-      (fun this {pvb_pat; pvb_expr; pvb_constraint; pvb_attributes; pvb_loc} ->
+      (fun this ({pvb_pat; pvb_expr; pvb_constraint; pvb_loc} as vb) ->
         let pvb_pat = this.pat this pvb_pat in
         let constraint_ =
           Option.map
@@ -579,9 +582,11 @@ let default_mapper =
             pvb_constraint
         in
         let pvb_expr = this.expr this pvb_expr in
+        (* As for value descriptions, the component annotation goes back into
+           the attributes and [Vb.mk] takes it out again. *)
         Vb.mk pvb_pat pvb_expr ?constraint_
           ~loc:(this.location this pvb_loc)
-          ~attrs:(this.attributes this pvb_attributes));
+          ~attrs:(this.attributes this (Vb.binding_attributes vb)));
     constructor_declaration =
       (fun this ({pcd_name; pcd_args; pcd_res; pcd_loc} as cd) ->
         Type.constructor (map_loc this pcd_name)

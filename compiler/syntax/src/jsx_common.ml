@@ -8,27 +8,33 @@ type jsx_config = {
   mutable has_component: bool;
 }
 
-(* Helper method to look up the [@react.component] attribute *)
-let has_attr (loc, _) =
-  match loc.txt with
+(* [@react.component] and [@react.componentWithProps] that are still among the
+   attributes: [Ast_helper] takes the first one into the binding's or
+   description's component node and leaves any other. *)
+let is_component_attr (({txt}, _) : attribute) =
+  match txt with
   | "react.component" | "jsx.component" -> true
   | _ -> false
 
-let has_attr_with_props (loc, _) =
-  match loc.txt with
+let is_component_with_props_attr (({txt}, _) : attribute) =
+  match txt with
   | "react.componentWithProps" | "jsx.componentWithProps" -> true
   | _ -> false
 
-(* Iterate over the attributes and try to find the [@react.component] attribute *)
-let has_attr_on_binding pred {pvb_attributes} =
-  List.find_opt pred pvb_attributes <> None
-
-let core_type_of_attrs attributes =
-  List.find_map
-    (fun ({txt}, payload) ->
-      match (txt, payload) with
-      | ("react.component" | "jsx.component"), PTyp core_type -> Some core_type
-      | _ -> None)
+(* A component attribute with a payload [Ast_helper] cannot read stays an
+   attribute, so formatting keeps it; reject it here instead of silently
+   ignoring the payload. *)
+let check_component_payloads attributes =
+  List.iter
+    (fun ((({txt; loc}, _) : attribute) as attr) ->
+      if Ast_helper.Jsx_component.of_attribute attr = None then
+        if is_component_attr attr then
+          Location.raise_errorf ~loc
+            "@@%s takes no payload, or the props type to share, as in @@%s(: \
+             props)."
+            txt txt
+        else if is_component_with_props_attr attr then
+          Location.raise_errorf ~loc "@@%s takes no payload." txt)
     attributes
 
 let typ_vars_of_core_type {ptyp_desc} =

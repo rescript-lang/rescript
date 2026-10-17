@@ -1,0 +1,1 @@
+- Report a JSX component annotation with an unsupported payload, such as `@react.component("x")`, instead of ignoring the payload. https://github.com/rescript-lang/rescript/pull/8884

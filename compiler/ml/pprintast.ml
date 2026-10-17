@@ -1052,7 +1052,8 @@ and signature_item ctxt f x : unit =
   | Psig_value vd ->
     let intro = if vd.pval_prim = None then "val" else "external" in
     pp f "@[<2>%s@ %a@ :@ %a@]%a" intro protect_ident vd.pval_name.txt
-      (value_description ctxt) vd (item_attributes ctxt) vd.pval_attributes
+      (value_description ctxt) vd (item_attributes ctxt)
+      (Ast_helper.Val.description_attributes vd)
   | Psig_typext te -> type_extension ctxt f te
   | Psig_exception ed -> exception_declaration ctxt f ed
   | Psig_module
@@ -1239,7 +1240,8 @@ and binding ctxt f {pvb_pat = p; pvb_expr = x; pvb_constraint; _} =
 and bindings ctxt f (rf, l) =
   let binding kwd rf f x =
     pp f "@[<2>%s %a%a@]%a" kwd rec_flag rf (binding ctxt) x
-      (item_attributes ctxt) x.pvb_attributes
+      (item_attributes ctxt)
+      (Ast_helper.Vb.binding_attributes x)
   in
   match l with
   | [] -> ()
@@ -1296,7 +1298,8 @@ and structure_item ctxt f x =
       md (item_attributes ctxt) attrs
   | Pstr_primitive vd ->
     pp f "@[<hov2>external@ %a@ :@ %a@]%a" protect_ident vd.pval_name.txt
-      (value_description ctxt) vd (item_attributes ctxt) vd.pval_attributes
+      (value_description ctxt) vd (item_attributes ctxt)
+      (Ast_helper.Val.description_attributes vd)
   | Pstr_include incl ->
     pp f "@[<hov2>include@ %a@]%a" (module_expr ctxt) incl.pincl_mod
       (item_attributes ctxt) incl.pincl_attributes

@@ -1312,7 +1312,8 @@ and print_value_description ~state value_description cmt_tbl =
   in
   let attrs =
     print_attributes ~state ~loc:value_description.pval_name.loc
-      value_description.pval_attributes cmt_tbl
+      (Ast_helper.Val.description_attributes value_description)
+      cmt_tbl
   in
   let header = if is_external then "external " else "let " in
   let inline_record_definitions =
@@ -2450,7 +2451,7 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
     i =
   let has_unwrap = ref false in
   let attrs =
-    vb.pvb_attributes
+    Ast_helper.Vb.binding_attributes vb
     |> List.filter_map (function
       | {Asttypes.txt = "let.unwrap"}, _ ->
         has_unwrap := true;

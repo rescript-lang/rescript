@@ -523,9 +523,34 @@ and value_description = {
   pval_name: string loc;
   pval_type: core_type;
   pval_prim: primitive_repr option;
+  pval_jsx_component: jsx_component option;
+      (* The [@react.component] annotation, taken out of the attributes when
+         the description is built. *)
   pval_attributes: attributes; (* ... [@@id1] [@@id2] *)
   pval_loc: Location.t;
 }
+
+(* A JSX component definition: [@react.component], [@jsx.component] or their
+   [componentWithProps] forms on a [let], an [external] or a signature item.
+   The attribute is the surface syntax; this is what it means. The JSX
+   transform reads it, and the printer puts the attribute back where it was
+   written. *)
+and jsx_component = {
+  pjc_kind: jsx_component_kind;
+  pjc_namespace: jsx_component_namespace;
+  pjc_loc: Location.t; (* the attribute's own location *)
+}
+
+and jsx_component_kind =
+  | Pjc_labelled of core_type option
+    (* [@react.component]: the props are the labelled arguments.
+       [@react.component(: t)] makes them share the props type [t]. *)
+  | Pjc_with_props
+(* [@react.componentWithProps]: the function takes a props record *)
+
+(* How the attribute was spelled. Both mean the same; the configured JSX
+   module decides the runtime. *)
+and jsx_component_namespace = Pjc_react | Pjc_jsx
 
 (*
   val x: T                            (prim = None)
@@ -821,6 +846,9 @@ and value_binding = {
   pvb_pat: pattern;
   pvb_expr: expression;
   pvb_constraint: value_constraint option;
+  pvb_jsx_component: jsx_component option;
+      (* The [@react.component] annotation, taken out of the attributes when
+         the binding is built. *)
   pvb_attributes: attributes;
   pvb_loc: Location.t;
 }
