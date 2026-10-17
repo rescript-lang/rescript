@@ -31,5 +31,5 @@ build: ["dune" "build" "-p" name "-j" jobs]
 dev-repo: "git+https://github.com/rescript-lang/luv.git"
 url {
   src:
-    "git+https://github.com/rescript-lang/luv.git#8c12b1accfce5bce12f1818b233028240d5927b6"
+    "git+https://github.com/rescript-lang/luv.git#2094c025da82482a8b71118a87e609f82666a2f6"
 }
