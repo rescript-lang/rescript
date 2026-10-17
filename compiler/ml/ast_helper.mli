@@ -238,6 +238,13 @@ module Exp : sig
   val open_ :
     ?loc:loc -> ?attrs:attrs -> override_flag -> lid -> expression -> expression
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> expression
+  val raw :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    name_loc:loc ->
+    raw_kind ->
+    raw_source ->
+    expression
   val tagged_template :
     ?loc:loc ->
     ?attrs:attrs ->
@@ -439,6 +446,8 @@ module Str : sig
   val open_ : ?loc:loc -> open_description -> structure_item
   val include_ : ?loc:loc -> include_declaration -> structure_item
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> structure_item
+  val raw :
+    ?loc:loc -> ?attrs:attrs -> name_loc:loc -> raw_source -> structure_item
   val attribute : ?loc:loc -> attribute -> structure_item
 end
 

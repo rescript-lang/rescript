@@ -210,8 +210,7 @@ let rec expr_to_context_path_inner ~(in_jsx_context : bool)
     (e : Parsetree.expression) =
   match e.pexp_desc with
   | Pexp_braces {expr} -> expr_to_context_path_inner ~in_jsx_context expr
-  | Pexp_constant (Pconst_string _ | Pconst_raw_source _) ->
-    Some Completable.CPString
+  | Pexp_constant (Pconst_string _) -> Some Completable.CPString
   | Pexp_template _ -> Some Completable.CPString
   | Pexp_tagged_template {tag} -> (
     match expr_to_context_path ~in_jsx_context tag with
@@ -1289,6 +1288,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
         | Pexp_object_literal fields ->
           List.iter (fun (_, e) -> iterator.expr iterator e) fields
         | Pexp_extension ({txt}, _) -> set_result (CextensionNode txt)
+        | Pexp_raw {kind} ->
+          set_result (CextensionNode (Ast_raw.extension_name kind))
         | Pexp_constant _ -> set_result Cnone
         | Pexp_ident lid ->
           let lid_path = flatten_lid_check_dot lid in

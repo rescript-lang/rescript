@@ -1,0 +1,1 @@
+- Fix template and braced payloads of `%raw` and `%ffi` compiling differently when a PPX is used. https://github.com/rescript-lang/rescript/pull/8879

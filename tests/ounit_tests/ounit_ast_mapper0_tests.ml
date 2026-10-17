@@ -1668,21 +1668,159 @@ let test_string_literals_roundtrip_through_ast0 _ =
   assert_string_expr ~expected_source:{|\x61|} ~expected_semantic:"a"
     (map_expr0 (map_expr_to0 source_string))
 
+let test_raw_nodes_roundtrip_through_ast0 _ =
+  (* [%raw("x")] and [%ffi(`y`)] reach v0 as the extensions they are written
+     as, and come back unchanged. *)
+  let string_source : Parsetree.raw_source =
+    Raw_string {txt = "x"; loc = source_loc 5 8}
+  in
+  let template_source : Parsetree.raw_source =
+    Raw_template {txt = "a\\`b"; loc = source_loc 5 10}
+  in
+  let raw kind source =
+    Ast_helper.Exp.raw ~loc:(source_loc 0 12) ~name_loc:(source_loc 0 4) kind
+      source
+  in
+  List.iter
+    (fun (expression : Parsetree.expression) ->
+      let expression0 = map_expr_to0 expression in
+      (match expression0.pexp_desc with
+      | Pexp_extension
+          ( {txt = "raw" | "ffi"; loc = name_loc},
+            PStr
+              [
+                {
+                  pstr_desc =
+                    Pstr_eval
+                      ( {
+                          pexp_desc =
+                            Pexp_constant (Pconst_string (_, Some "js"));
+                        },
+                        [] );
+                };
+              ] ) ->
+        OUnit.assert_equal (source_loc 0 4) name_loc
+      | _ -> assert_failure "Expected a raw extension on the ast0 wire");
+      OUnit.assert_equal expression.pexp_desc (map_expr0 expression0).pexp_desc)
+    [
+      raw Raw_expression string_source;
+      raw Raw_function string_source;
+      raw Raw_expression template_source;
+    ];
+  (* A template keeps its spelling, so its JavaScript is decoded once. *)
+  match
+    (map_expr0 (map_expr_to0 (raw Raw_expression template_source))).pexp_desc
+  with
+  | Pexp_raw {source} ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") "a`b"
+      (Ast_raw.js_source source)
+  | _ -> assert_failure "Expected a raw node"
+
+let test_raw_structure_item_roundtrips_through_ast0 _ =
+  let item =
+    Ast_helper.Str.raw ~loc:(source_loc 0 20) ~name_loc:(source_loc 7 12)
+      ~attrs:[attr "attr" (Parsetree.PStr [])]
+      (Raw_string {txt = "var x"; loc = source_loc 13 20})
+  in
+  let item0 =
+    Ast_mapper_to0.default_mapper.structure_item Ast_mapper_to0.default_mapper
+      item
+  in
+  (match item0.pstr_desc with
+  | Pstr_extension (({txt = "raw"; loc}, PStr [_]), [({txt = "attr"}, _)]) ->
+    OUnit.assert_equal (source_loc 7 12) loc
+  | _ -> assert_failure "Expected a %%raw extension on the ast0 wire");
+  OUnit.assert_equal item.pstr_desc
+    (Ast_mapper_from0.default_mapper.structure_item
+       Ast_mapper_from0.default_mapper item0)
+      .pstr_desc
+
+let test_raw_source_prints_with_fitting_quotes _ =
+  (* A source with a double quote, e.g. from a PPX, prints as a template. *)
+  let payload_desc txt =
+    match
+      Ast_raw.to_extension ~name:"raw" ~name_loc:loc
+        (Raw_string {txt; loc = Location.none})
+    with
+    | _, PStr [{pstr_desc = Pstr_eval ({pexp_desc}, [])}] -> pexp_desc
+    | _ -> assert_failure "Expected a single payload expression"
+  in
+  (match payload_desc "1 + 2" with
+  | Pexp_constant (Pconst_string _) -> ()
+  | _ -> assert_failure "Expected a double-quoted string");
+  match payload_desc {|"img"|} with
+  | Pexp_template {source_segments = [{txt = {|"img"|}}]} -> ()
+  | _ -> assert_failure "Expected a template"
+
+let test_raw_source_template_fallback_reparses _ =
+  (* A source that needs a template escapes the template's own syntax, so it
+     parses back to the same JavaScript. *)
+  List.iter
+    (fun txt ->
+      let structure =
+        [
+          Ast_helper.Str.value ~loc Nonrecursive
+            [
+              Ast_helper.Vb.mk ~loc
+                (Ast_helper.Pat.var ~loc (Location.mknoloc "v"))
+                (Ast_helper.Exp.raw ~loc ~name_loc:loc Raw_expression
+                   (Raw_string {txt; loc}));
+            ];
+        ]
+      in
+      let printed =
+        Res_printer.print_implementation structure ~comments:[] ~width:80
+      in
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"RawTemplateFallback.res" ~source:printed
+      in
+      match parsed.parsetree with
+      | [
+       {
+         pstr_desc =
+           Pstr_value (_, [{pvb_expr = {pexp_desc = Pexp_raw {source}}}]);
+       };
+      ]
+        when not parsed.invalid ->
+        OUnit.assert_equal ~printer:(Printf.sprintf "%S") txt
+          (Ast_raw.js_source source)
+      | _ -> assert_failure ("Printed raw source does not reparse: " ^ printed))
+    [
+      {|"${x}"|};
+      {|"a`b"|};
+      {|"\"q\" `r` ${s}"|};
+      {|"a\${b}"|};
+      {|"\\`"|};
+      {|"a\n" + "\|};
+      "\"line\\\ncontinued\"";
+    ]
+
+let test_attributed_raw_template_reprints_after_ast0_roundtrip _ =
+  let source = {|let a = %raw(@foo `"x"`)
+let b = %ffi(@foo `(a) => "\`"`)|} in
+  let parsed =
+    Res_driver.parse_implementation_from_source
+      ~display_filename:"AttributedRawTemplate.res" ~source
+  in
+  OUnit.assert_bool "expected valid ReScript source" (not parsed.invalid);
+  let round_tripped =
+    Ast_mapper_from0.default_mapper.structure Ast_mapper_from0.default_mapper
+      (Ast_mapper_to0.default_mapper.structure Ast_mapper_to0.default_mapper
+         parsed.parsetree)
+  in
+  let print structure =
+    Res_printer.print_implementation structure ~comments:[] ~width:80
+  in
+  OUnit.assert_equal ~printer:(Printf.sprintf "%S") (print parsed.parsetree)
+    (print round_tripped)
+
 let assert_raw_extension_payload ~name ~expected expression =
   match expression.Parsetree.pexp_desc with
-  | Pexp_extension
-      ( {txt},
-        PStr
-          [
-            {
-              pstr_desc =
-                Pstr_eval
-                  ({pexp_desc = Pexp_constant (Pconst_raw_source actual)}, _);
-            };
-          ] ) ->
-    OUnit.assert_equal name txt;
+  | Pexp_raw {kind; source = Raw_string {txt = actual}} ->
+    OUnit.assert_equal name (Ast_raw.extension_name kind);
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected actual
-  | _ -> assert_failure "Expected a raw extension string payload"
+  | _ -> assert_failure "Expected a raw node with a string payload"
 
 let test_raw_extension_payloads_roundtrip_through_ast0 _ =
   let encoded = {|'\\n'|} in
@@ -2356,6 +2494,16 @@ let suites =
          "constructor_runtime_tag_reaches_ast0_as_an_attribute"
          >:: test_constructor_runtime_tag_reaches_ast0_as_an_attribute;
          "ppx_context_on_the_wire" >:: test_ppx_context_on_the_wire;
+         "raw_nodes_roundtrip_through_ast0"
+         >:: test_raw_nodes_roundtrip_through_ast0;
+         "raw_structure_item_roundtrips_through_ast0"
+         >:: test_raw_structure_item_roundtrips_through_ast0;
+         "raw_source_prints_with_fitting_quotes"
+         >:: test_raw_source_prints_with_fitting_quotes;
+         "raw_source_template_fallback_reparses"
+         >:: test_raw_source_template_fallback_reparses;
+         "attributed_raw_template_reprints_after_ast0_roundtrip"
+         >:: test_attributed_raw_template_reprints_after_ast0_roundtrip;
          "fixed_argument_roundtrips_through_ast0"
          >:: test_fixed_argument_roundtrips_through_ast0;
          "fixed_argument_is_external_only"

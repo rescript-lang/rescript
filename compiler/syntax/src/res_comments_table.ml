@@ -524,6 +524,10 @@ and walk_structure_item si t comments =
     walk_module_type_declaration mod_typ_decl t comments
   | Pstr_attribute attribute -> walk_attribute attribute t comments
   | Pstr_extension (extension, _) -> walk_extension extension t comments
+  | Pstr_raw {name_loc; source} ->
+    walk_extension
+      (Ast_raw.to_extension ~name:"raw" ~name_loc source)
+      t comments
   | Pstr_include include_declaration ->
     walk_include_declaration include_declaration t comments
   | Pstr_exception extension_constructor ->
@@ -1126,6 +1130,12 @@ and walk_expression expr t comments =
            ExprRecordRow (Location.mkloc (Longident.Lident s.txt) s.loc, e)))
       t comments
   | Pexp_extension extension -> walk_extension extension t comments
+  | Pexp_raw {kind; name_loc; source} ->
+    walk_extension
+      (Ast_raw.to_extension
+         ~name:(Ast_raw.extension_name kind)
+         ~name_loc source)
+      t comments
   | Pexp_letexception (extension_constructor, expr2) ->
     let leading, comments = partition_leading_trailing comments expr.pexp_loc in
     attach t.leading

@@ -71,6 +71,10 @@ let map_opt f = function
 
 let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
+let map_raw_source sub : raw_source -> raw_source = function
+  | Raw_string source -> Raw_string (map_loc sub source)
+  | Raw_template source -> Raw_template (map_loc sub source)
+
 module T = struct
   (* Type expressions for the core language *)
 
@@ -287,6 +291,11 @@ module M = struct
     | Pstr_include x -> include_ ~loc (sub.include_declaration sub x)
     | Pstr_extension (x, attrs) ->
       extension ~loc (sub.extension sub x) ~attrs:(sub.attributes sub attrs)
+    | Pstr_raw {name_loc; source; attrs} ->
+      raw ~loc
+        ~name_loc:(sub.location sub name_loc)
+        (map_raw_source sub source)
+        ~attrs:(sub.attributes sub attrs)
     | Pstr_attribute x -> attribute ~loc (sub.attribute sub x)
 end
 
@@ -418,6 +427,11 @@ module E = struct
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Pexp_raw {kind; name_loc; source} ->
+      raw ~loc ~attrs
+        ~name_loc:(sub.location sub name_loc)
+        kind
+        (map_raw_source sub source)
     | Pexp_await e -> await ~loc ~attrs (sub.expr sub e)
     | Pexp_jsx_element
         (Jsx_fragment

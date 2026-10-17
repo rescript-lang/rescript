@@ -2100,10 +2100,14 @@ and parse_atomic_expr p =
     | Lbracket -> parse_array_exp p
     | Lbrace -> parse_braced_or_record_expr p
     | LessThan -> parse_jsx p
-    | Percent ->
-      let extension = parse_extension p in
+    | Percent -> (
+      let (({Location.txt = name; loc = name_loc}, payload) as extension) =
+        parse_extension p
+      in
       let loc = mk_loc start_pos (Parser.position p) in
-      Ast_helper.Exp.extension ~loc extension
+      match (Ast_raw.kind_of_name name, Ast_raw.of_payload payload) with
+      | Some kind, Some source -> Ast_helper.Exp.raw ~loc ~name_loc kind source
+      | _ -> Ast_helper.Exp.extension ~loc extension)
     | Underscore as token ->
       (* This case is for error recovery. Not sure if it's the correct place *)
       Parser.err p (Diagnostics.lident token);
@@ -6458,11 +6462,16 @@ and parse_structure_item_region pending_structure_items p =
       parse_newline_or_semicolon_structure p;
       let loc = mk_loc start_pos (Parser.position p) in
       Some (Ast_helper.Str.attribute ~loc attr)
-    | PercentPercent ->
-      let extension = parse_extension ~module_language:true p in
+    | PercentPercent -> (
+      let (({Location.txt = name; loc = name_loc}, payload) as extension) =
+        parse_extension ~module_language:true p
+      in
       parse_newline_or_semicolon_structure p;
       let loc = mk_loc start_pos (Parser.position p) in
-      Some (Ast_helper.Str.extension ~attrs ~loc extension)
+      match (name, Ast_raw.of_payload payload) with
+      | "raw", Some source ->
+        Some (Ast_helper.Str.raw ~attrs ~loc ~name_loc source)
+      | _ -> Some (Ast_helper.Str.extension ~attrs ~loc extension))
     | token when Grammar.is_expr_start token ->
       let position = Parser.position p in
       let exp = parse_expr p in
@@ -7438,37 +7447,6 @@ and parse_extension ?(module_language = false) p =
       (Diagnostics.message
          "The %re extension has been removed. Use a regexp literal such as \
           /abc/i.");
-  let payload =
-    match (attr_id.txt, payload) with
-    | ( ("raw" | "ffi"),
-        Parsetree.PStr
-          [
-            ({
-               pstr_desc =
-                 Pstr_eval
-                   ( ({pexp_desc = Pexp_constant (Pconst_string payload)} as
-                      expression),
-                     eval_attrs );
-             } as item);
-          ] ) ->
-      Parsetree.PStr
-        [
-          {
-            item with
-            pstr_desc =
-              Pstr_eval
-                ( {
-                    expression with
-                    pexp_desc =
-                      Pexp_constant
-                        (Pconst_raw_source
-                           (String_literal.string_source payload));
-                  },
-                  eval_attrs );
-          };
-        ]
-    | _ -> payload
-  in
   (attr_id, payload)
 
 (* module signature on the file level *)
