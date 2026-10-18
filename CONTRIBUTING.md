@@ -72,6 +72,9 @@ opam init
 # then you need to run `opam update && opam upgrade` first
 opam switch create 5.5.1
 
+# Add the repository's opam overrides (Luv is built from the rescript-lang/luv fork)
+opam repository add rescript-overrides "$PWD/.github/opam-repository"
+
 # Install dev dependencies from OPAM
 opam install . --deps-only --with-test --with-dev-setup -y
 ```
