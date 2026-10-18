@@ -401,7 +401,6 @@ let specialize_comparison
   match () with
   | ()
     when is_base_type env ty Predef.path_int
-         || is_base_type env ty Predef.path_char
          || maybe_pointer_type env ty = Immediate ->
     intcomp
   | () when is_base_type env ty Predef.path_float -> floatcomp

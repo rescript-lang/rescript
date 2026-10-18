@@ -1,0 +1,1 @@
+- Remove the hashing fast paths for switches with many distinct constants, which char ranges no longer need.

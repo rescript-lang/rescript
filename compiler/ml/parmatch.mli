@@ -34,9 +34,6 @@ val all_record_args :
   (Longident.t loc * label_description * pattern * bool) list
 val const_compare : constant -> constant -> int
 
-(* A hash key agreeing with [const_compare]: char constants map to ints. *)
-val const_key : constant -> constant
-
 (* The bounds of an int or char constant or interval pattern *)
 val int_range : pattern -> (int * int) option
 
@@ -59,7 +56,6 @@ val lub : pattern -> pattern -> pattern
 val lubs : pattern list -> pattern list -> pattern list
 
 val get_mins : ('a -> 'a -> bool) -> 'a list -> 'a list
-val get_mins_pats : pattern list list -> pattern list list
 
 (* Those two functions recombine one pattern and its arguments:
    For instance:
