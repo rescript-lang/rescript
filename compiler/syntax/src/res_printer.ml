@@ -3592,14 +3592,8 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
       print_template_literal ~state ~source_segments ~values cmt_tbl
     | Pexp_tagged_template {tag; raw_sources; values} ->
       print_tagged_template_literal ~state ~tag ~raw_sources ~values cmt_tbl
-    | Pexp_apply
-        {funct = e; args = [(Nolabel, {pexp_desc = Pexp_array sub_lists})]}
-      when Parsetree_viewer.is_spread_array e ->
-      print_array_spread_apply ~state sub_lists cmt_tbl
-    | Pexp_apply
-        {funct = e; args = [(Nolabel, {pexp_desc = Pexp_array sub_lists})]}
-      when Parsetree_viewer.is_spread_list e ->
-      print_list_spread_apply ~state sub_lists cmt_tbl
+    | Pexp_spread (kind, elements) ->
+      print_spread_expr ~state kind elements cmt_tbl
     | Pexp_apply _ ->
       if Parsetree_viewer.is_unary_expression e then
         print_unary_expression ~state e cmt_tbl
@@ -4332,130 +4326,49 @@ and print_binary_expression ~state ~force_pipe_breaks
          ])
   | _ -> Doc.nil
 
-and print_array_spread_apply ~state sub_lists cmt_tbl =
-  let make_spread_doc comma_before_spread = function
-    | Some expr ->
-      (* Extract leading comments before dotdotdot *)
+and print_spread_expr ~state kind elements cmt_tbl =
+  let expr_doc expr =
+    let doc = print_expression ~state expr cmt_tbl in
+    match Parens.expr_allowing_coercion expr with
+    | Parens.Parenthesized -> add_parens doc
+    | Braced braces -> print_braces doc expr braces
+    | Nothing -> doc
+  in
+  let element_doc = function
+    | Parsetree.Pspread_item expr ->
+      print_comments (expr_doc expr) cmt_tbl expr.pexp_loc
+    | Pspread expr ->
+      (* The leading comments go before the dots, so they're taken before the
+         expression is printed *)
       let leading_comments_doc =
         print_leading_comments Doc.nil cmt_tbl.Comment_table.leading
-          expr.Parsetree.pexp_loc
+          expr.pexp_loc
       in
-      (* Print expression without leading comments (they're already extracted) *)
       let expr_doc =
-        let doc = print_expression ~state expr cmt_tbl in
-        match Parens.expr_allowing_coercion expr with
-        | Parens.Parenthesized -> add_parens doc
-        | Braced braces -> print_braces doc expr braces
-        | Nothing -> doc
+        print_trailing_comments (expr_doc expr) cmt_tbl.Comment_table.trailing
+          expr.pexp_loc
       in
-      (* Print trailing comments with the expression *)
-      let expr_with_trailing_comments =
-        print_trailing_comments expr_doc cmt_tbl.Comment_table.trailing
-          expr.Parsetree.pexp_loc
-      in
-      Doc.concat
-        [
-          comma_before_spread;
-          leading_comments_doc;
-          Doc.dotdotdot;
-          expr_with_trailing_comments;
-        ]
-    | None -> Doc.nil
-  in
-  let make_sub_list_doc (expressions, spread) =
-    let comma_before_spread =
-      match expressions with
-      | [] -> Doc.nil
-      | _ -> Doc.concat [Doc.text ","; Doc.line]
-    in
-    let spread_doc = make_spread_doc comma_before_spread spread in
-    let expressions_doc =
-      Doc.join
-        ~sep:(Doc.concat [Doc.text ","; Doc.line])
-        (List.map
-           (fun expr ->
-             let doc = print_expression_with_comments ~state expr cmt_tbl in
-             match Parens.expr_allowing_coercion expr with
-             | Parens.Parenthesized -> add_parens doc
-             | Braced braces -> print_braces doc expr braces
-             | Nothing -> doc)
-           expressions)
-    in
-    Doc.concat [expressions_doc; spread_doc]
+      Doc.concat [leading_comments_doc; Doc.dotdotdot; expr_doc]
   in
   Doc.group
     (Doc.concat
        [
-         Doc.lbracket;
+         (match kind with
+         | Spread_array -> Doc.lbracket
+         | Spread_list -> Doc.text "list{");
          Doc.indent
            (Doc.concat
               [
                 Doc.soft_line;
                 Doc.join
                   ~sep:(Doc.concat [Doc.text ","; Doc.line])
-                  (List.map make_sub_list_doc
-                     (List.map Parsetree_viewer.collect_array_expressions
-                        sub_lists));
+                  (List.map element_doc elements);
               ]);
          Doc.trailing_comma;
          Doc.soft_line;
-         Doc.rbracket;
-       ])
-
-and print_list_spread_apply ~state sub_lists cmt_tbl =
-  let make_spread_doc comma_before_spread = function
-    | Some expr ->
-      Doc.concat
-        [
-          comma_before_spread;
-          Doc.dotdotdot;
-          (let doc = print_expression_with_comments ~state expr cmt_tbl in
-           match Parens.expr_allowing_coercion expr with
-           | Parens.Parenthesized -> add_parens doc
-           | Braced braces -> print_braces doc expr braces
-           | Nothing -> doc);
-        ]
-    | None -> Doc.nil
-  in
-  let make_sub_list_doc (expressions, spread) =
-    let comma_before_spread =
-      match expressions with
-      | [] -> Doc.nil
-      | _ -> Doc.concat [Doc.text ","; Doc.line]
-    in
-    let spread_doc = make_spread_doc comma_before_spread spread in
-    Doc.concat
-      [
-        Doc.join
-          ~sep:(Doc.concat [Doc.text ","; Doc.line])
-          (List.map
-             (fun expr ->
-               let doc = print_expression_with_comments ~state expr cmt_tbl in
-               match Parens.expr_allowing_coercion expr with
-               | Parens.Parenthesized -> add_parens doc
-               | Braced braces -> print_braces doc expr braces
-               | Nothing -> doc)
-             expressions);
-        spread_doc;
-      ]
-  in
-  Doc.group
-    (Doc.concat
-       [
-         Doc.text "list{";
-         Doc.indent
-           (Doc.concat
-              [
-                Doc.soft_line;
-                Doc.join
-                  ~sep:(Doc.concat [Doc.text ","; Doc.line])
-                  (List.map make_sub_list_doc
-                     (List.map Parsetree_viewer.collect_list_expressions
-                        sub_lists));
-              ]);
-         Doc.trailing_comma;
-         Doc.soft_line;
-         Doc.rbrace;
+         (match kind with
+         | Spread_array -> Doc.rbracket
+         | Spread_list -> Doc.rbrace);
        ])
 
 (* callExpr(arg1, arg2) *)

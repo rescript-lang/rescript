@@ -1436,6 +1436,14 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
   | Texp_array expr_list ->
     let ll = transl_list expr_list in
     prim ~primitive:Pmakearray ~args:ll e.exp_loc
+  | Texp_spread (kind, parts) ->
+    prim
+      ~primitive:
+        (match kind with
+        | Spread_array -> Parray_spread
+        | Spread_list -> Plist_spread)
+      ~args:[prim ~primitive:Pmakearray ~args:(transl_list parts) e.exp_loc]
+      e.exp_loc
   | Texp_dict entries -> (
     (* [%makedict] of the rows ([Primitive_dict.make]), and [Pdict_spread]
        of a dict of the rows before the first spread, the spreads and the

@@ -222,6 +222,23 @@ and print_expr_item expr ~pos ~indentation =
     ^ "\n"
     ^ add_indentation indentation
     ^ ")"
+  | Pexp_spread (kind, elements) ->
+    (match kind with
+      | Spread_array -> "Pexp_spread(array,\n"
+      | Spread_list -> "Pexp_spread(list,\n")
+    ^ (elements
+      |> List.map (fun element ->
+          add_indentation (indentation + 1)
+          ^
+          match element with
+          | Parsetree.Pspread_item expr ->
+            print_expr_item expr ~pos ~indentation:(indentation + 1)
+          | Pspread expr ->
+            "..." ^ print_expr_item expr ~pos ~indentation:(indentation + 1))
+      |> String.concat "\n")
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | Pexp_match (match_expr, cases) ->
     "Pexp_match("
     ^ print_expr_item match_expr ~pos ~indentation:0

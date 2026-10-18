@@ -52,3 +52,12 @@ let _ = [
   // comment 3
   b, c
 ]
+
+let _ = list{
+  // comment 0
+  ...xs,
+  // comment 1
+  a,
+  /* comment 2 */ ...ys /* comment 3 */,
+  b,
+}

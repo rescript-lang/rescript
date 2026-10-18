@@ -257,14 +257,6 @@ let command ~debug ~emitter ~source ~kind_file =
           (* Don't emit semantic tokens for identifiers not present in source code *)
           let should_emit =
             match lid with
-            (* Collection spreads (`...`) are converted to primitive spread calls
-               with an `@res.spread` decorator. *)
-            | Ldot (Lident ("Primitive_array" | "Primitive_list"), "spread") ->
-              let has_spread_attr =
-                e.pexp_attributes
-                |> List.exists (fun ({Location.txt}, _) -> txt = "res.spread")
-              in
-              not has_spread_attr
             (* Array access (`arr[index]`) is converted to `Array.get` *)
             | Ldot (Lident "Array", "get") -> false
             (* Array mutation (`arr[index]`) is converted to `Array.set` *)
