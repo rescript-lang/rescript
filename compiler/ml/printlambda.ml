@@ -205,6 +205,8 @@ let primitive ppf = function
   | Pmakelist -> fprintf ppf "makelist"
   | Pmakedict -> fprintf ppf "makedict"
   | Pdict_spread -> fprintf ppf "dict.spread"
+  | Parray_spread -> fprintf ppf "array.spread"
+  | Plist_spread -> fprintf ppf "list.spread"
   | Pdict_has -> fprintf ppf "dict.has"
   | Pis_null -> fprintf ppf "is_null"
   | Pis_undefined -> fprintf ppf "is_undefined"

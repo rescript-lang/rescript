@@ -289,6 +289,10 @@ type primitive =
   | Ptemplate of template_segment list
   (* {...target, ...sources} *)
   | Pdict_spread
+  (* [Primitive_array.spread(parts)] and [Primitive_list.spread(parts)], the
+     concatenation of an array of arrays or lists *)
+  | Parray_spread
+  | Plist_spread
 
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 

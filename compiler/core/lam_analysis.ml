@@ -101,7 +101,8 @@ let rec no_side_effects (lam : Lambda.t) : bool =
     (* A spread reads the source's properties, which may run getters or
        proxy traps *)
     | Pdict_spread | Pjs_object_get _ | Pjs_object_set _ | Pdebugger
-    | Pjs_fn_method
+    (* Runtime calls, like the [Lapply] they were parsed into *)
+    | Parray_spread | Plist_spread | Pjs_fn_method
     (* Await promise *)
     | Pawait
     (* TODO *)
