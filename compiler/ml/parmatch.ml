@@ -1140,18 +1140,29 @@ let build_other ext env : Typedtree.pattern =
       _ )
     :: _ ->
     (* Int and char constants and intervals can share a column; the example is
-       the least value from 0 up that no range covers, of the kind of the
-       first pattern. Ranges sorted by lower bound are skipped in one pass. *)
-    let ranges =
-      List.filter_map (fun (q, _) -> int_range q) env
-      |> List.sort (fun (lo1, _) (lo2, _) -> compare lo1 lo2)
+       the least value from 0 up that no range covers, else the greatest one
+       below 0, of the kind of the first pattern. Ranges sorted by a bound are
+       skipped in one pass. *)
+    let ranges = List.filter_map (fun (q, _) -> int_range q) env in
+    let up =
+      List.sort (fun (lo1, _) (lo2, _) -> compare lo1 lo2) ranges
+      |> List.fold_left
+           (fun i (lo, hi) -> if lo <= i && i <= hi then hi + 1 else i)
+           0
     in
-    let other =
-      List.fold_left
-        (fun i (lo, hi) -> if lo <= i && i <= hi then hi + 1 else i)
-        0 ranges
+    let down () =
+      List.sort (fun (_, hi1) (_, hi2) -> compare hi2 hi1) ranges
+      |> List.fold_left
+           (fun i (lo, hi) -> if lo <= i && i <= hi then lo - 1 else i)
+           (-1)
     in
-    make_int_range p other other
+    let int32_max = Int32.to_int Int32.max_int
+    and int32_min = Int32.to_int Int32.min_int in
+    if up <= int32_max then make_int_range p up up
+    else
+      let other = down () in
+      (* Every int is covered; ints are never matched exhaustively *)
+      if other < int32_min then omega else make_int_range p other other
   | (({pat_desc = Tpat_constant (Const_bigint _)} as p), _) :: _ ->
     build_other_constant
       (function
