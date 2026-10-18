@@ -3166,10 +3166,18 @@ and print_expression_args ~state (args : Parsetree.expression list) cmt_tbl =
       ]
 
 (* The operand of [switch], [try], [if], [while] or a loop, which is followed
-   by more code on the same line. A line comment still pending at its end
-   would move after that code, into the block, so the operand goes into
-   parentheses with the comment before the [)]. *)
-and print_operand_before_brace doc =
+   by a block on the same line. A line comment in it breaks the groups around
+   it, so that it stays where it was written; one still pending at the end of
+   the operand would move into the block, so the operand goes into
+   parentheses with the comment before the [)]. A binary expression is left
+   flat: breaking it would print the comment after the operator, where the
+   next format attaches it to the right operand, so its comment goes into the
+   parentheses instead. *)
+and print_operand_before_brace ~expr doc =
+  let doc =
+    if Parsetree_viewer.is_binary_expression expr then doc
+    else Doc.break_before_line_suffixes doc
+  in
   if Doc.has_pending_line_suffix doc then add_operand_parens doc else doc
 
 (* Parentheses around such an operand, or around one that needs them, such as
@@ -3209,7 +3217,7 @@ and print_if_chain ~state pexp_attributes ifs else_expr cmt_tbl =
              Doc.concat
                [
                  if_txt;
-                 print_operand_before_brace (Doc.group condition);
+                 print_operand_before_brace ~expr:if_expr (Doc.group condition);
                  Doc.space;
                  (let then_expr =
                     match Parsetree_viewer.process_braces then_expr with
@@ -3683,7 +3691,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         (Doc.concat
            [
              Doc.text "while ";
-             print_operand_before_brace
+             print_operand_before_brace ~expr:expr1
                (match Parens.expr expr1 with
                | Parens.Parenthesized -> condition
                | _ when Parsetree_viewer.is_block_expr expr1 -> condition
@@ -3701,14 +3709,14 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
              (let doc =
                 print_expression_with_comments ~state from_expr cmt_tbl
               in
-              print_operand_before_brace
+              print_operand_before_brace ~expr:from_expr
                 (match Parens.expr from_expr with
                 | Parens.Parenthesized -> add_operand_parens doc
                 | Braced braces -> print_braces doc from_expr braces
                 | Nothing -> doc));
              print_direction_flag direction_flag;
              (let doc = print_expression_with_comments ~state to_expr cmt_tbl in
-              print_operand_before_brace
+              print_operand_before_brace ~expr:to_expr
                 (match Parens.expr to_expr with
                 | Parens.Parenthesized -> add_operand_parens doc
                 | Braced braces -> print_braces doc to_expr braces
@@ -3726,7 +3734,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
              (let doc =
                 print_expression_with_comments ~state array_expr cmt_tbl
               in
-              print_operand_before_brace
+              print_operand_before_brace ~expr:array_expr
                 (match Parens.expr array_expr with
                 | Parens.Parenthesized -> add_operand_parens doc
                 | Braced braces -> print_braces doc array_expr braces
@@ -3744,7 +3752,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
              (let doc =
                 print_expression_with_comments ~state iterable_expr cmt_tbl
               in
-              print_operand_before_brace
+              print_operand_before_brace ~expr:iterable_expr
                 (match Parens.expr iterable_expr with
                 | Parens.Parenthesized -> add_operand_parens doc
                 | Braced braces -> print_braces doc iterable_expr braces
@@ -3830,7 +3838,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     | Pexp_try (expr, cases, finally) ->
       let expr_doc =
         let doc = print_expression_with_comments ~state expr cmt_tbl in
-        print_operand_before_brace
+        print_operand_before_brace ~expr
           (match Parens.expr expr with
           | Parens.Parenthesized -> add_operand_parens doc
           | Braced braces -> print_braces doc expr braces
@@ -3856,7 +3864,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     | Pexp_match (expr, cases) ->
       let expr_doc =
         let doc = print_expression_with_comments ~state expr cmt_tbl in
-        print_operand_before_brace
+        print_operand_before_brace ~expr
           (match Parens.expr expr with
           | Parens.Parenthesized -> add_operand_parens doc
           | Braced braces -> print_braces doc expr braces

@@ -110,37 +110,55 @@ try (
 
 // An operand printed in its own parentheses keeps the comment inside them
 switch (
-  f(a, b) :> int // c
+  f(
+    a, // c
+    b,
+  ) :> int
 ) {
 | _ => ()
 }
 
 switch (
-  f(a, b): int // c
+  f(
+    a, // c
+    b,
+  ): int
 ) {
 | _ => ()
 }
 
 if (
-  f(a, b) :> bool // c
+  f(
+    a, // c
+    b,
+  ) :> bool
 ) {
   ()
 }
 
 while (
-  f(a, b) :> bool // c
+  f(
+    a, // c
+    b,
+  ) :> bool
 ) {
   ()
 }
 
 for x of (
-  f(a, b) :> array<int> // c
+  f(
+    a, // c
+    b,
+  ) :> array<int>
 ) {
   ()
 }
 
 try (
-  f(a, b) :> int // c
+  f(
+    a, // c
+    b,
+  ) :> int
 ) catch {
 | _ => ()
 }

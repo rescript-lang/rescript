@@ -123,6 +123,24 @@ let rec will_break doc =
   | _ -> false
 
 (* See documentation in interface file *)
+let rec break_before_line_suffixes doc =
+  match doc with
+  | LineSuffix _ -> Concat [doc; BreakParent]
+  | Concat docs -> Concat (List.map break_before_line_suffixes docs)
+  | Indent doc -> Indent (break_before_line_suffixes doc)
+  | Group {should_break; doc} ->
+    Group {should_break; doc = break_before_line_suffixes doc}
+  | IfBreaks {yes; no; broken} ->
+    IfBreaks
+      {
+        yes = break_before_line_suffixes yes;
+        no = break_before_line_suffixes no;
+        broken;
+      }
+  | CustomLayout docs -> CustomLayout (List.map break_before_line_suffixes docs)
+  | Nil | Text _ | LineBreak _ | BreakParent -> doc
+
+(* See documentation in interface file *)
 let has_pending_line_suffix doc =
   (* [pending]: a line suffix is queued; [broken]: the innermost enclosing
      group is printed in break mode, so its line breaks flush the queue. *)

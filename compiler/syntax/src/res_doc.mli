@@ -41,6 +41,13 @@ val tilde : t
 val equal : t
 val trailing_comma : t
 
+val break_before_line_suffixes : t -> t
+(** [break_before_line_suffixes doc] makes every line suffix in [doc] break the
+    groups around it, so that a trailing line comment stays where it was written
+    instead of moving to the end of the line. Use it for a doc that is followed
+    by an opening brace on the same line, where the comment would move into the
+    block. *)
+
 val will_break : t -> bool
 (** [will_break doc] checks whether [doc] contains forced line breaks. For each
     [custom_layout], it only inspects the first alternative.

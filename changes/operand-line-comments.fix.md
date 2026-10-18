@@ -1,0 +1,1 @@
+- Keep a line comment after an item or argument in the operand of `switch`, `try`, `if`, `while` or a loop next to that item when formatting, instead of moving it to the end of the operand.
