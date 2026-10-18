@@ -2,7 +2,7 @@
 # Manual changes might be lost - proceed with caution!
 
 __metadata:
-  version: 8
+  version: 10
   cacheKey: 10c0
 
 "@rescript/belt@portal:../../packages/@rescript/belt::locator=testrepo%40workspace%3A.":
