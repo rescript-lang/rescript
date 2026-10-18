@@ -125,14 +125,17 @@ let int_range p =
     Some (lo, hi)
   | _ -> None
 
-(* A constant or interval for [lo .. hi], of the same kind as [p]. *)
+(* A constant or interval for [lo .. hi], of the same kind as [p]: chars when
+   [p] starts with a char and the bounds can be written as char literals. *)
 let make_int_range p lo hi =
-  let const i =
+  let chars =
+    Uchar.is_valid lo && Uchar.is_valid hi
+    &&
     match p.pat_desc with
-    | Tpat_constant (Const_char _) | Tpat_interval (Const_char _, _) ->
-      Const_char i
-    | _ -> Const_int i
+    | Tpat_constant (Const_char _) | Tpat_interval (Const_char _, _) -> true
+    | _ -> false
   in
+  let const i = if chars then Const_char i else Const_int i in
   let desc =
     if lo = hi then Tpat_constant (const lo)
     else Tpat_interval (const lo, const hi)
