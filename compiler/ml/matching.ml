@@ -2484,9 +2484,18 @@ let as_exit_call lam =
   in
   go Ident.empty lam
 
+let rec raises_exit i lam =
+  match lam with
+  | Lstaticraise (j, _) when j = i -> true
+  | _ -> Lambda_traverse.shallow_exists (raises_exit i) lam
+
 let compile_orhandlers compile_fun lambda1 total1 ctx to_catch =
   let rec do_rec r total_r = function
     | [] -> (r, total_r)
+    | (_, i, _, _) :: rem when not (raises_exit i r) ->
+      (* The or-pattern is unreachable, e.g. after a wildcard. Its handler is
+         not compiled: with a guard and no default, its failure has no exit. *)
+      do_rec r total_r rem
     | (mat, i, vars, pm) :: rem -> (
       try
         let ctx = select_columns mat ctx in
