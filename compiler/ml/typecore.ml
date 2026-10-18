@@ -98,6 +98,7 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
+  | Jsx_component_without_make of Longident.t
   | Jsx_unboxed_props of type_expr
   | Tagged_template_non_tag of type_expr
   | Record_rest of Typecore_record_rest.error
@@ -2530,12 +2531,20 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     {exp with exp_attributes = sexp.pexp_attributes @ exp.exp_attributes}
   | Pexp_ident lid ->
     let path, desc =
-      Typetexp.find_value
-        ?deprecated_context:
-          (match deprecated_context with
-          | None -> Some Reference
-          | v -> v)
-        env lid.loc lid.txt
+      try
+        Typetexp.find_value
+          ?deprecated_context:
+            (match deprecated_context with
+            | None -> Some Reference
+            | v -> v)
+          env lid.loc lid.txt
+      with
+      | Typetexp.Error (_, _, Unbound_value (Ldot (module_lid, "make")))
+      when context = Some JsxComponent
+      ->
+        (* [<Button />] refers to [Button.make]. The module exists (otherwise
+           the lookup reports it as unbound), but it defines no component. *)
+        raise (Error (lid.loc, env, Jsx_component_without_make module_lid))
     in
     let is_recarg =
       match (repr desc.val_type).desc with
@@ -5571,6 +5580,19 @@ let report_error env loc ppf error =
     fprintf ppf
       "Cannot compile JSX expression because JSX support is not enabled. Add \
        \"jsx\" settings to rescript.json to enable JSX support."
+  | Jsx_component_without_make module_lid ->
+    fprintf ppf
+      "@[<v>The module @{<info>%a@} can't be used as a JSX component, because \
+       it doesn't define @{<info>make@}.@,\
+       @,\
+       A component module defines its component as @{<info>make@}, for \
+       example:@,\
+       @,\
+      \  @{<info>@react.component@}@,\
+      \  let make = (~label) => ...@]"
+      longident module_lid;
+    ignore
+      (Typetexp.spellcheck_value ppf env (Longident.Ldot (module_lid, "make")))
   | Jsx_unboxed_props typ ->
     fprintf ppf
       "@[<v>The props of this JSX element have type %a, which is an \

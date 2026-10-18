@@ -64,6 +64,10 @@ exception Error of Location.t * Env.t * error
 
 val report_error : Env.t -> Format.formatter -> error -> unit
 
+val spellcheck_value : Format.formatter -> Env.t -> Longident.t -> bool
+(** Print a hint naming the values in scope whose names are close to the given
+    one. Returns whether it printed one. *)
+
 (* Support for first-class modules. *)
 val transl_modtype_longident :
   (* from Typemod *)
