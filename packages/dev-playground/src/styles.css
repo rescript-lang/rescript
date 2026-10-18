@@ -177,20 +177,6 @@ button {
     box-shadow 120ms ease;
 }
 
-.pane-separator:hover,
-.pane-separator:focus-visible,
-.workspace.is-resizing .pane-separator {
-  background: rgba(230, 72, 79, 0.14);
-}
-
-.pane-separator:hover::before,
-.pane-separator:focus-visible::before,
-.workspace.is-resizing .pane-separator::before {
-  background: var(--fire);
-  opacity: 0.9;
-  box-shadow: 0 0 8px rgba(230, 72, 79, 0.42);
-}
-
 .workspace.is-resizing {
   user-select: none;
 }
@@ -220,6 +206,20 @@ button {
 
 .workspace-rows .pane-separator::before {
   inset: 3px 0;
+}
+
+.pane-separator:hover,
+.pane-separator:focus-visible,
+.workspace.is-resizing .pane-separator {
+  background: rgba(230, 72, 79, 0.14);
+}
+
+.pane-separator:hover::before,
+.pane-separator:focus-visible::before,
+.workspace.is-resizing .pane-separator::before {
+  background: var(--fire);
+  opacity: 0.9;
+  box-shadow: 0 0 8px rgba(230, 72, 79, 0.42);
 }
 
 .column-header {
