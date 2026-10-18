@@ -1,0 +1,7 @@
+pin-depends: [
+  # libuv 1.53.0; https://github.com/rescript-lang/luv
+  [
+    "luv.0.5.14+rescript.1"
+    "git+https://github.com/rescript-lang/luv.git#2094c025da82482a8b71118a87e609f82666a2f6"
+  ]
+]

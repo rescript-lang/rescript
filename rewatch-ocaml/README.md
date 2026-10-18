@@ -123,8 +123,8 @@ These are intentional:
   ends its descendants.
 - **Pipes:** each child's stdout and stderr are drained by reader threads,
   because Windows can't `select` on anonymous pipes.
-- **Watching:** uses libuv through `luv`. `.github/opam-repository` holds a
-  patched luv package for static arm64 musl builds.
+- **Watching:** uses libuv through `luv`. `rescript.opam.template` pins luv
+  to a commit of the rescript-lang/luv fork (libuv 1.53).
 
 The test suite compiles `platform_windows.ml` on every platform, so the Windows
 backend is always type-checked. Its process and Job Object paths only run on

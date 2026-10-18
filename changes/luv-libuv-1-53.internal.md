@@ -1,0 +1,1 @@
+- Build the OCaml rewatch against libuv 1.53.0 via the rescript-lang/luv fork. https://github.com/rescript-lang/rescript/pull/8883
