@@ -1204,20 +1204,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"h3@npm:2.0.1-rc.26":
-  version: 2.0.1-rc.26
-  resolution: "h3@npm:2.0.1-rc.26"
+"h3@npm:2.0.5":
+  version: 2.0.5
+  resolution: "h3@npm:2.0.5"
   dependencies:
-    rou3: "npm:^0.9.1"
-    srvx: "npm:^0.12.4"
+    rou3: "npm:^1.0.0"
+    srvx: "npm:^1.0.6"
   peerDependencies:
-    crossws: ^0.4.9
+    crossws: ^0.4.12
+    ocache: ">=0.3.0"
   peerDependenciesMeta:
     crossws:
       optional: true
+    ocache:
+      optional: true
   bin:
-    h3: bin/h3.mjs
-  checksum: 10c0/92c587ee1b47f2c22ffb64bf4d57ff4b719f425e7e1bf48cdcb242f7ed8eea410ec90c49cc1189992f6fef1732a0546b3bec624873722804cb9af7b6ce1c63d8
+    h3: ./bin/h3.mjs
+  checksum: 10c0/f09d33c03dad3ce76ea3f15cd46f8f39d8c1b44b668b7f4c92dfaa68fb33a58a235fe64a611dec0a8d0f5de6251f3f543f57fe71cc4cca313803cfdf89e41c29
   languageName: node
   linkType: hard
 
@@ -1662,7 +1665,7 @@ __metadata:
     "@rescript/belt": "workspace:^"
     "@rescript/react": "workspace:^"
     "@rollup/plugin-node-resolve": "npm:^16.0.0"
-    h3: "npm:2.0.1-rc.26"
+    h3: "npm:2.0.5"
     rescript: "workspace:^"
     rollup: "npm:^4.32.0"
   languageName: unknown
@@ -1997,10 +2000,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rou3@npm:^0.9.1":
-  version: 0.9.1
-  resolution: "rou3@npm:0.9.1"
-  checksum: 10c0/02e60de87d5da846c68259cde2b9f762373a09bb56935d3118150f3bafa2fec59ee8d0e594be72c0881503eee4bfa34c55099c48adbcd0073f629dd93a4c3b22
+"rou3@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "rou3@npm:1.0.0"
+  checksum: 10c0/c3d84fbb2dc3a1a4513beaac5cfc2f22753ab368bbe891a20dbb1c9f106564f1bc21071516cb771e7c0f0689ba84a841675ae4aeba6794eb82543b6dbb3a655e
   languageName: node
   linkType: hard
 
@@ -2066,12 +2069,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"srvx@npm:^0.12.4":
-  version: 0.12.4
-  resolution: "srvx@npm:0.12.4"
+"srvx@npm:^1.0.6":
+  version: 1.0.6
+  resolution: "srvx@npm:1.0.6"
   bin:
-    srvx: bin/srvx.mjs
-  checksum: 10c0/2a9a0ed86ffd385a77015cc14995d5420befb8f0e42b09d1f49956b9f553e19d777f9d567815f5a34954552ceef98b76193a8fb0e3a41f1f46835888a0c7ed12
+    srvx: ./bin/srvx.mjs
+  checksum: 10c0/6fdda453c495024e1d92953047feba6e36ae13040bf0fe6cb54bd106370e9d0c3613bbd115372d0e670468e368fcd422cbc9aff71f716e1f0516ce6eca764a6e
   languageName: node
   linkType: hard
 
