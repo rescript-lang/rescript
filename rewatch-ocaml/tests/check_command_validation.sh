@@ -1517,6 +1517,14 @@ for implementation in rust ocaml; do
   fi
   normalize_project_path "$work/quiet-watch-$implementation.err" \
     "$work/quiet-watch-$implementation.err.norm" "$quiet_watch_project"
+  # macOS and Windows can report one write as several change events, and each
+  # rebuild reports the parse error again. Compare the distinct reports only.
+  node -e '
+    const fs = require("fs");
+    const blocks = fs.readFileSync(process.argv[1], "utf8").split(/^(?=Error in )/m);
+    const distinct = blocks.filter((block, i) => block !== blocks[i - 1]);
+    fs.writeFileSync(process.argv[1], distinct.join(""));
+  ' "$work/quiet-watch-$implementation.err.norm"
 done
 if ! cmp -s "$work/quiet-watch-rust.err.norm" \
   "$work/quiet-watch-ocaml.err.norm"; then
