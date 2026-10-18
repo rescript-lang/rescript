@@ -44,3 +44,7 @@ let x = list{
   superLoooooooooooooooooooooooooooooongIiiiiiiiiideeeentifieeeeeeeeeeeeeeeeer,
   ...superLoooooooooooooooooooooooooooooongListHere,
 }
+
+let x = list{...list{1, 2}, ...xs}
+let x = list{...xs, ...list{}, 1}
+let x = @attr list{...xs, 1}

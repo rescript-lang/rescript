@@ -704,6 +704,12 @@ module E = struct
          into *)
       sub.expr sub
         (Ast_dict.to_calls ~loc:e.pexp_loc ~attrs:e.pexp_attributes entries)
+    | Pexp_spread (kind, elements) ->
+      (* v0 has no spread literals: they're the calls they used to be parsed
+         into *)
+      sub.expr sub
+        (Ast_spread.to_call ~loc:e.pexp_loc ~attrs:e.pexp_attributes kind
+           elements)
     | Pexp_ifthenelse (e1, e2, e3) ->
       ifthenelse ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
         (map_opt (sub.expr sub) e3)

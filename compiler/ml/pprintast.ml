@@ -899,6 +899,17 @@ and simple_expr ctxt f x =
         | Pdict_spread e -> pp f "...%a" (simple_expr ctxt) e
       in
       pp f "@[<hv2>dict{%a}@]" (list dict_entry ~sep:",@;") entries
+    | Pexp_spread (kind, elements) ->
+      let element f = function
+        | Pspread_item e -> simple_expr ctxt f e
+        | Pspread e -> pp f "...%a" (simple_expr ctxt) e
+      in
+      let opening, closing =
+        match kind with
+        | Spread_array -> ("[", "]")
+        | Spread_list -> ("list{", "}")
+      in
+      pp f "@[<hv2>%s%a%s@]" opening (list element ~sep:",@;") elements closing
     | Pexp_break -> pp f "break"
     | Pexp_continue -> pp f "continue"
     | Pexp_while (e1, e2) ->

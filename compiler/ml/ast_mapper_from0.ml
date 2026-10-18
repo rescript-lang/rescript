@@ -678,6 +678,47 @@ module E = struct
       | None -> None)
     | _ -> Option.map rows (dict_rows ~marker:Ast_dict.literal_marker e)
 
+  (* The kind and elements of an array or list literal with spreads encoded as
+     a call, see [Ast_spread] *)
+  let spread_elements (e : expression) =
+    let generated (e : expression) =
+      e.pexp_loc.loc_ghost && e.pexp_attributes = []
+    in
+    let rec list_part (e : expression) =
+      match e.pexp_desc with
+      | Pexp_construct
+          ( {txt = Lident "::"},
+            Some {pexp_desc = Pexp_tuple [item; tail]; pexp_attributes = []} )
+        when generated e ->
+        `Item item :: list_part tail
+      | Pexp_construct ({txt = Lident "[]"}, None) when generated e -> []
+      | _ -> [`Spread e]
+    in
+    let array_part (e : expression) =
+      match e.pexp_desc with
+      | Pexp_array items when generated e ->
+        List.map (fun item -> `Item item) items
+      | _ -> [`Spread e]
+    in
+    match e.pexp_desc with
+    | Pexp_apply
+        ( {
+            pexp_desc = Pexp_ident {txt = Ldot (Lident module_name, "spread")};
+            pexp_attributes = [({txt}, PStr [])];
+          },
+          [
+            ( Asttypes.Noloc.Nolabel,
+              {pexp_desc = Pexp_array parts; pexp_attributes = []} );
+          ] )
+      when txt = Ast_spread.marker -> (
+      match Ast_spread.kind_of_module_name module_name with
+      | Some Spread_array ->
+        Some (Pt.Spread_array, List.concat_map array_part parts)
+      | Some Spread_list ->
+        Some (Pt.Spread_list, List.concat_map list_part parts)
+      | None -> None)
+    | _ -> None
+
   let extract_for_of_attribute attrs =
     List.find_map
       (function
@@ -932,6 +973,14 @@ module E = struct
                Pt.Pdict_entry (map_loc sub key, sub.expr sub value)
              | `Spread spread -> Pt.Pdict_spread (sub.expr sub spread))
            entries)
+    | Pexp_apply _ when Option.is_some (spread_elements e) ->
+      let kind, elements = Option.get (spread_elements e) in
+      spread ~loc ~attrs kind
+        (List.map
+           (function
+             | `Item item -> Pt.Pspread_item (sub.expr sub item)
+             | `Spread spread -> Pt.Pspread (sub.expr sub spread))
+           elements)
     | Pexp_apply
         ( {pexp_desc = Pexp_ident {txt = Longident.Lident "#="}},
           [

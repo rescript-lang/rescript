@@ -264,8 +264,6 @@ module Error_messages = struct
     "Spreading JSX children is no longer supported."
 end
 
-let spread_attr = (Location.mknoloc "res.spread", Parsetree.PStr [])
-
 (* Emit a deprecation warning when the legacy [(. ...)] uncurried syntax is
    encountered. Uncurried is the default since ReScript v11, so the leading
    dot is no longer meaningful; we still accept it so dependencies on older
@@ -4184,62 +4182,32 @@ and parse_tuple_expr ~first ~start_pos p =
   let loc = mk_loc start_pos (Parser.position p) in
   Ast_helper.Exp.tuple ~loc exprs
 
-and parse_spread_expr_region_with_loc p =
-  let start_pos = Parser.position p in
+and parse_spread_element_region p =
   match Parser.peek p with
   | DotDotDot ->
     Parser.next p;
-    let expr = parse_constrained_or_coerced_expr p in
-    Some (true, expr, start_pos, Parser.position p)
+    Some (Parsetree.Pspread (parse_constrained_or_coerced_expr p))
   | token when Grammar.is_expr_start token ->
-    Some
-      (false, parse_constrained_or_coerced_expr p, start_pos, Parser.position p)
+    Some (Parsetree.Pspread_item (parse_constrained_or_coerced_expr p))
   | _ -> None
 
 and parse_list_expr ~start_pos p =
-  let split_by_spread exprs =
-    List.fold_left
-      (fun acc curr ->
-        match (curr, acc) with
-        | (true, expr, start_pos, end_pos), _ ->
-          (* find a spread expression, prepend a new sublist *)
-          ([], Some expr, start_pos, end_pos) :: acc
-        | ( (false, expr, start_pos, _endPos),
-            (no_spreads, spread, _accStartPos, acc_end_pos) :: acc ) ->
-          (* find a non-spread expression, and the accumulated is not empty,
-           * prepend to the first sublist, and update the loc of the first sublist *)
-          (expr :: no_spreads, spread, start_pos, acc_end_pos) :: acc
-        | (false, expr, start_pos, end_pos), [] ->
-          (* find a non-spread expression, and the accumulated is empty *)
-          [([expr], None, start_pos, end_pos)])
-      [] exprs
-  in
-  let make_sub_expr = function
-    | exprs, Some spread, start_pos, end_pos ->
-      Ast_helper.Exp.make_list_expression (mk_loc start_pos end_pos) exprs
-        (Some spread)
-    | exprs, None, start_pos, end_pos ->
-      Ast_helper.Exp.make_list_expression (mk_loc start_pos end_pos) exprs None
-  in
-  let list_exprs_rev =
-    parse_comma_delimited_reversed_list p ~grammar:Grammar.ListExpr
-      ~closing:Rbrace ~f:parse_spread_expr_region_with_loc
+  let elements =
+    parse_comma_delimited_region p ~grammar:Grammar.ListExpr ~closing:Rbrace
+      ~f:parse_spread_element_region
   in
   Parser.expect Rbrace p;
   let loc = mk_loc start_pos (Parser.position p) in
-  match split_by_spread list_exprs_rev with
-  | [] -> Ast_helper.Exp.make_list_expression loc [] None
-  | [(exprs, Some spread, _, _)] ->
-    Ast_helper.Exp.make_list_expression loc exprs (Some spread)
-  | [(exprs, None, _, _)] -> Ast_helper.Exp.make_list_expression loc exprs None
-  | exprs ->
-    let list_exprs = List.map make_sub_expr exprs in
-    Ast_helper.Exp.apply ~loc
-      (Ast_helper.Exp.ident ~loc ~attrs:[spread_attr]
-         (Location.mkloc
-            (Longident.Ldot (Longident.Lident Primitive_modules.list, "spread"))
-            loc))
-      [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
+  (* Items, possibly followed by a spread, are a chain of [::] *)
+  let rec items_and_tail acc = function
+    | [] -> Some (List.rev acc, None)
+    | [Parsetree.Pspread tail] -> Some (List.rev acc, Some tail)
+    | Parsetree.Pspread_item item :: rest -> items_and_tail (item :: acc) rest
+    | Pspread _ :: _ -> None
+  in
+  match items_and_tail [] elements with
+  | Some (items, tail) -> Ast_helper.Exp.make_list_expression loc items tail
+  | None -> Ast_helper.Exp.spread ~loc Spread_list elements
 
 and parse_dict_expr ~start_pos p =
   let entries =
@@ -4253,56 +4221,22 @@ and parse_dict_expr ~start_pos p =
 and parse_array_exp p =
   let start_pos = Parser.start_pos p in
   Parser.expect Lbracket p;
-  let split_by_spread exprs =
-    List.fold_left
-      (fun acc curr ->
-        match (curr, acc) with
-        | (true, expr, start_pos, end_pos), _ ->
-          (* find a spread expression, prepend a new sublist *)
-          ([], Some expr, start_pos, end_pos) :: acc
-        | ( (false, expr, start_pos, _endPos),
-            (no_spreads, spread, _accStartPos, acc_end_pos) :: acc ) ->
-          (* find a non-spread expression, and the accumulated is not empty,
-           * prepend to the first sublist, and update the loc of the first sublist *)
-          (expr :: no_spreads, spread, start_pos, acc_end_pos) :: acc
-        | (false, expr, start_pos, end_pos), [] ->
-          (* find a non-spread expression, and the accumulated is empty *)
-          [([expr], None, start_pos, end_pos)])
-      [] exprs
-  in
-  let list_exprs_rev =
-    parse_comma_delimited_reversed_list p ~grammar:Grammar.ExprList
-      ~closing:Rbracket ~f:parse_spread_expr_region_with_loc
+  let elements =
+    parse_comma_delimited_region p ~grammar:Grammar.ExprList ~closing:Rbracket
+      ~f:parse_spread_element_region
   in
   Parser.expect Rbracket p;
   let loc = mk_loc start_pos (Parser.position p) in
-  let collect_exprs = function
-    | [], Some spread, _startPos, _endPos -> [spread]
-    | exprs, Some spread, _startPos, _endPos ->
-      let els = Ast_helper.Exp.array ~loc exprs in
-      [els; spread]
-    | exprs, None, _startPos, _endPos ->
-      let els = Ast_helper.Exp.array ~loc exprs in
-      [els]
+  let items =
+    List.filter_map
+      (function
+        | Parsetree.Pspread_item item -> Some item
+        | Pspread _ -> None)
+      elements
   in
-  match split_by_spread list_exprs_rev with
-  | [] -> Ast_helper.Exp.array ~loc:(mk_loc start_pos (Parser.position p)) []
-  | [(exprs, None, _, _)] ->
-    Ast_helper.Exp.array ~loc:(mk_loc start_pos (Parser.position p)) exprs
-  | exprs ->
-    let xs = List.map collect_exprs exprs in
-    let list_exprs =
-      List.fold_right
-        (fun exprs1 acc ->
-          List.fold_right (fun expr1 acc1 -> expr1 :: acc1) exprs1 acc)
-        xs []
-    in
-    Ast_helper.Exp.apply ~loc
-      (Ast_helper.Exp.ident ~loc ~attrs:[spread_attr]
-         (Location.mkloc
-            (Longident.Ldot (Longident.Lident Primitive_modules.array, "spread"))
-            loc))
-      [(Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
+  if List.length items = List.length elements then
+    Ast_helper.Exp.array ~loc items
+  else Ast_helper.Exp.spread ~loc Spread_array elements
 
 (* TODO: check attributes in the case of poly type vars,
  * might be context dependend: parseFieldDeclaration (see ocaml) *)

@@ -283,6 +283,11 @@ let iter_expression f e =
         (function
           | Pdict_entry (_, e) | Pdict_spread e -> expr e)
         entries
+    | Pexp_spread (_, elements) ->
+      List.iter
+        (function
+          | Pspread_item e | Pspread e -> expr e)
+        elements
     | Pexp_await _ -> assert false (* should be handled earlier *)
     | Pexp_jsx_element _ ->
       raise (Error (e.pexp_loc, Env.empty, Jsx_not_enabled))
@@ -3221,6 +3226,30 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     re
       {
         exp_desc = Texp_dict entries;
+        exp_loc = loc;
+        exp_extra = [];
+        exp_type = instance env ty_expected;
+        exp_attributes = sexp.pexp_attributes;
+        exp_env = env;
+      }
+  | Pexp_spread (kind, elements) ->
+    let container_type ty =
+      match kind with
+      | Spread_array -> Predef.type_array ty
+      | Spread_list -> newgenty (Tconstr (Predef.path_list, [ty], ref Mnil))
+    in
+    let ty = newgenvar () in
+    unify_exp_types ~context:None loc env (container_type ty) ty_expected;
+    (* The items are typed in the array and list literals they're grouped
+       into *)
+    let parts =
+      List.map
+        (fun spart -> type_expect ~context:None env spart (container_type ty))
+        (Ast_spread.parts kind elements)
+    in
+    re
+      {
+        exp_desc = Texp_spread (kind, parts);
         exp_loc = loc;
         exp_extra = [];
         exp_type = instance env ty_expected;
