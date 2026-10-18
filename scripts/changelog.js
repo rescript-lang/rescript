@@ -19,6 +19,7 @@ export const placeholderLink =
 const trailingPrLinks = new RegExp(
   `${prLink.source}(?:\\s+${prLink.source})*$`,
 );
+const repositoryUrl = "https://github.com/rescript-lang/rescript";
 
 export function parseFragment(name, content) {
   const match = /^([a-z0-9][a-z0-9-]*)\.([a-z]+)\.md$/.exec(name);
@@ -37,7 +38,6 @@ export function parseFragment(name, content) {
   const invalid = bullets.some(
     bullet =>
       !/^- \S/.test(bullet) ||
-      !trailingPrLinks.test(bullet) ||
       bullet
         .split("\n")
         .slice(1)
@@ -45,13 +45,67 @@ export function parseFragment(name, content) {
   );
   if (!text || invalid) {
     throw new Error(
-      `${name}: expected Markdown bullets ending with PR links (indent continuation lines by two spaces)`,
+      `${name}: expected Markdown bullets (indent continuation lines by two spaces)`,
     );
   }
-  const pr = Math.max(
-    ...[...text.matchAll(new RegExp(prLink, "g"))].map(link => Number(link[1])),
+  const links = [...text.matchAll(new RegExp(prLink, "g"))].map(link =>
+    Number(link[1]),
   );
-  return { name, category: match[2], text, pr };
+  // A bullet without a link gets the link of the pull request that added the
+  // fragment when the release is prepared.
+  const unlinked = bullets.some(bullet => !trailingPrLinks.test(bullet));
+  const pr = links.length ? Math.max(...links) : null;
+  return { name, category: match[2], text, pr, unlinked };
+}
+
+// The pull request that added a fragment, from the subject of the squash
+// commit that added it ("... (#1234)"). Rebase merges and merge commits carry
+// no such subject, which is why pull requests are squash-merged.
+export function addedByPullRequest(root, name) {
+  const subjects = execFileSync(
+    "git",
+    ["log", "--diff-filter=A", "--format=%s", "--", `changes/${name}`],
+    { cwd: root, encoding: "utf8" },
+  )
+    .split("\n")
+    .filter(Boolean);
+  // The most recent addition, in case an earlier fragment had the same name.
+  const match = /\(#([1-9]\d*)\)\s*$/.exec(subjects[0] ?? "");
+  return match ? Number(match[1]) : null;
+}
+
+// Appends the link of the pull request that added the fragment to each bullet
+// without one.
+export function linkFragment(fragment, pullRequestOf) {
+  if (!fragment.unlinked) return fragment;
+  const pr = pullRequestOf(fragment.name);
+  if (!pr) {
+    throw new Error(
+      `changes/${fragment.name}: no PR link, and the commit that added it does not name its pull request; add the link to the fragment`,
+    );
+  }
+  const text = fragment.text
+    .split(/\n(?=- )/)
+    .map(bullet =>
+      trailingPrLinks.test(bullet)
+        ? bullet
+        : `${bullet} ${repositoryUrl}/pull/${pr}`,
+    )
+    .join("\n");
+  return {
+    ...fragment,
+    text,
+    pr: Math.max(pr, fragment.pr ?? 0),
+    unlinked: false,
+  };
+}
+
+// What the release will write for a fragment: linked once its pull request is
+// merged, and as written before that.
+export function previewFragment(fragment, pullRequestOf) {
+  if (!fragment.unlinked) return fragment;
+  const pr = pullRequestOf(fragment.name);
+  return pr ? linkFragment(fragment, () => pr) : fragment;
 }
 
 export async function readFragments(root) {
@@ -76,12 +130,17 @@ export async function readFragments(root) {
   return fragments;
 }
 
-// Newest PR first, matching the order of existing CHANGELOG.md entries.
+// Newest PR first, matching the order of existing CHANGELOG.md entries. A
+// fragment without a link yet belongs to an unmerged pull request, so it comes
+// first.
 function categoryNotes(fragments, category) {
+  const order = fragment => fragment.pr ?? Number.POSITIVE_INFINITY;
   return fragments
     .filter(fragment => fragment.category === category)
     .sort(
-      (a, b) => b.pr - a.pr || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0),
+      (a, b) =>
+        Math.sign(order(b) - order(a) || 0) ||
+        (a.name < b.name ? -1 : a.name > b.name ? 1 : 0),
     )
     .map(fragment => fragment.text);
 }
@@ -217,7 +276,11 @@ export function checkPullRequest(files, pullRequest) {
   }
 }
 
-export async function run(command, root = process.cwd()) {
+export async function run(
+  command,
+  root = process.cwd(),
+  pullRequestOf = name => addedByPullRequest(root, name),
+) {
   if (!["check", "preview", "release", "open"].includes(command)) {
     throw new Error(
       "Usage: node scripts/changelog.js check|preview|release|open",
@@ -245,11 +308,19 @@ export async function run(command, root = process.cwd()) {
         files.push({ status: diff[i], name: diff[i + 1] });
       }
       checkPullRequest(files, pullRequest);
+    } else if (process.env.GITHUB_EVENT_NAME === "push") {
+      // Once merged, every fragment must resolve to its pull request, so a
+      // merge without "(#N)" in its subject fails here rather than at release.
+      for (const fragment of fragments) linkFragment(fragment, pullRequestOf);
     }
     return;
   }
   if (command === "preview") {
-    process.stdout.write(renderFragments(fragments));
+    process.stdout.write(
+      renderFragments(
+        fragments.map(fragment => previewFragment(fragment, pullRequestOf)),
+      ),
+    );
     return;
   }
   const { version, repository } = JSON.parse(
@@ -261,13 +332,16 @@ export async function run(command, root = process.cwd()) {
     await fs.writeFile(target, openSection(changelog, version));
     return;
   }
+  const linked = fragments.map(fragment =>
+    linkFragment(fragment, pullRequestOf),
+  );
   const tagged =
-    fragments.length > 0 &&
+    linked.length > 0 &&
     isFinalized(changelog, version) &&
     releaseTagExists(repository.url, version);
   await fs.writeFile(
     target,
-    prepareRelease(changelog, version, fragments, { tagged }),
+    prepareRelease(changelog, version, linked, { tagged }),
   );
   for (const fragment of fragments) {
     await fs.unlink(path.join(root, "changes", fragment.name));

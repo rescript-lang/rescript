@@ -1,0 +1,1 @@
+- Fragments no longer need a PR link; the release adds it from the squash commit that merged the fragment.

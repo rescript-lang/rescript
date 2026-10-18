@@ -3,10 +3,12 @@
 Add a unique `<description>.<category>.md` file for each change that needs release notes. For example, `fix-watcher-recovery.fix.md`:
 
 ```markdown
-- Recover blocked dependents after a failed build. https://github.com/rescript-lang/rescript/pull/8667
+- Recover blocked dependents after a failed build.
 ```
 
-The PR number is only known once the PR exists, so open it as a draft with the placeholder link `https://github.com/rescript-lang/rescript/pull/XXXX`, replace the placeholder with the real link, amend and push again, then mark the PR ready for review. The changelog check fails while the placeholder remains. Each file may contain multiple bullets in the same category. Indent wrapped lines by two spaces; each bullet ends with one or more PR links.
+Each file may contain multiple bullets in the same category. Indent wrapped lines by two spaces.
+
+A bullet needs no PR link: `yarn changelog:release` appends the link of the pull request that added the fragment, taken from the subject of its squash commit (`... (#8667)`). Pull requests are therefore squash-merged, keeping the `(#N)` GitHub adds to the title. A bullet may still end with explicit PR links, for example for a change spanning several pull requests, and those are kept as written. After each push to `master`, the changelog check fails if a fragment without a link cannot be traced to its pull request; add the link to that fragment.
 
 | Category | Section |
 | --- | --- |
