@@ -100,6 +100,14 @@ export function linkFragment(fragment, pullRequestOf) {
   };
 }
 
+// What the release will write for a fragment: linked once its pull request is
+// merged, and as written before that.
+export function previewFragment(fragment, pullRequestOf) {
+  if (!fragment.unlinked) return fragment;
+  const pr = pullRequestOf(fragment.name);
+  return pr ? linkFragment(fragment, () => pr) : fragment;
+}
+
 export async function readFragments(root) {
   const directory = path.join(root, "changes");
   const entries = await fs.readdir(directory, { withFileTypes: true });
@@ -308,7 +316,11 @@ export async function run(
     return;
   }
   if (command === "preview") {
-    process.stdout.write(renderFragments(fragments));
+    process.stdout.write(
+      renderFragments(
+        fragments.map(fragment => previewFragment(fragment, pullRequestOf)),
+      ),
+    );
     return;
   }
   const { version, repository } = JSON.parse(

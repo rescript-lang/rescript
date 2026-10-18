@@ -13,6 +13,7 @@ import {
   parseFragment,
   placeholderLink,
   prepareRelease,
+  previewFragment,
   readFragments,
   renderFragments,
   run,
@@ -247,11 +248,26 @@ test("links bullets without a link to the pull request that added them", () => {
   );
 });
 
-test("orders fragments without a link first in previews", () => {
-  const linked = parseFragment("a.fix.md", note);
-  const unlinked = parseFragment("b.fix.md", "- Not merged yet.");
+test("previews merged fragments with their links, newest PR first", () => {
+  const numbers = { "a.fix.md": 10, "b.fix.md": 30, "c.fix.md": null };
+  const fragments = [
+    parseFragment("a.fix.md", "- Older."),
+    parseFragment("b.fix.md", "- Newer."),
+    parseFragment("c.fix.md", "- Not merged yet."),
+    parseFragment(
+      "d.fix.md",
+      "- Linked. https://github.com/rescript-lang/rescript/pull/20",
+    ),
+  ].map(fragment => previewFragment(fragment, name => numbers[name]));
   assert.ok(
-    renderFragments([linked, unlinked]).includes(`- Not merged yet.\n${note}`),
+    renderFragments(fragments).includes(
+      [
+        "- Not merged yet.",
+        "- Newer. https://github.com/rescript-lang/rescript/pull/30",
+        "- Linked. https://github.com/rescript-lang/rescript/pull/20",
+        "- Older. https://github.com/rescript-lang/rescript/pull/10",
+      ].join("\n"),
+    ),
   );
 });
 
