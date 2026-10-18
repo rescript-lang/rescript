@@ -673,6 +673,7 @@ jobs:
       - build-compiler
       - pkg-pr-new
       - api-docs
+      - test-devcontainer
       - test-installation-npm
       - test-installation-pnpm
     runs-on: ubuntu-26.04
