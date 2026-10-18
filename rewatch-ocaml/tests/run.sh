@@ -1593,8 +1593,12 @@ stop_watch "$warning_replay" "$warning_watch_pid"
 if ! $windows_posix_shell; then
   lock_holder="$work/lock-holder/rescript"
   mkdir -p "$work/lock-holder"
-  cp "$(command -v sleep)" "$lock_holder"
-  "$lock_holder" 60 &
+  # The lock owner check reads the executable name, so the holder must be a
+  # real executable named rescript. A copied sleep does not work where it is
+  # a multi-call coreutils binary (uutils on Ubuntu 26.04), and bash runs a
+  # loop in its own process instead of exec'ing it.
+  cp "$(command -v bash)" "$lock_holder"
+  "$lock_holder" -c 'while :; do sleep 1; done' &
   lock_holder_pid=$!
   background_pids="$background_pids $lock_holder_pid"
   exit_watch_log="$warning_replay/exit-watch.log"
