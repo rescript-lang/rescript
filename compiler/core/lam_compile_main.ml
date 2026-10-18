@@ -101,12 +101,15 @@ let no_side_effects (rest : Lam_group.t list) : string option =
         if not @@ Lam_analysis.no_side_effects lam then Some ""
         else None (* TODO :*))
 
-(* Materialize JS-hoisted values as root-level aliases and exports. The source
-   value still lives at its normal module path, but downstream tools can import
-   the flat name directly when the .cmj metadata marks it as hoisted. *)
-let js_hoisted_aliases (export_ids : Ident.t list)
-    (hoisted : Lambda.hoisted_function list) (groups : Lam_group.t list) =
-  if hoisted = [] then []
+(* Export every nested [make] of the final signature under its flat name, see
+   [Translmod.flat_make_paths]. When the module field holds a toplevel
+   binding, the alias names that binding ([let A$B$make = make]), which
+   bundlers can drop when it is unused; otherwise it reads the value through
+   the module objects. The paths carry the runtime field positions, which a
+   coerced module block shares with its signature. *)
+let flat_make_aliases (export_ids : Ident.t list)
+    (paths : (int * string) list list) (groups : Lam_group.t list) =
+  if paths = [] then []
   else
     let group_map =
       Ext_list.fold_left groups Map_ident.empty (fun group_map group ->
@@ -127,48 +130,33 @@ let js_hoisted_aliases (export_ids : Ident.t list)
              ~args:[base] loc)
           fields
     in
-    let rec resolve_binding seen = function
-      | Lambda.Lvar id as lam -> (
-        if Set_ident.mem id seen then (lam, Some id)
-        else
-          match Map_ident.find_opt id group_map with
-          | Some
-              ((Lambda.Lvar _ | Lambda.Lprim {primitive = Lambda.Pfield _; _})
-               as alias) ->
-            resolve_binding (Set_ident.add id seen) alias
-          | Some resolved -> (resolved, Some id)
-          | None -> (lam, Some id))
-      | Lambda.Lprim {primitive = Lambda.Pfield (pos, _); args = [base]} as lam
-        -> (
-        match fst (resolve_binding seen base) with
-        | Lambda.Lprim {primitive = Lambda.Pmakeblock (Blk_module _); args} -> (
-          match List.nth_opt args pos with
-          | Some field -> resolve_binding seen field
-          | None -> (lam, None))
-        | _ -> (lam, None))
-      | lam -> (lam, None)
+    (* The fields of the module block [lam] evaluates to, if it is known. *)
+    let rec block_fields seen (lam : Lambda.t) =
+      match lam with
+      | Lvar id when not (Set_ident.mem id seen) -> (
+        match Map_ident.find_opt id group_map with
+        | Some lam -> block_fields (Set_ident.add id seen) lam
+        | None -> None)
+      | Lprim {primitive = Pmakeblock (Blk_module names); args} ->
+        Some (names, args)
+      | Lprim {primitive = Pfield (pos, Fld_module {name}); args = [base]} -> (
+        match field seen base (pos, name) with
+        | Some lam -> block_fields seen lam
+        | None -> None)
+      | _ -> None
+    and field seen lam (pos, name) =
+      match block_fields seen lam with
+      | Some (names, args) when List.nth_opt names pos = Some name ->
+        List.nth_opt args pos
+      | Some _ | None -> None
     in
-    let resolve seen lam = fst (resolve_binding seen lam) in
-    let rec find_field name pos fields args =
-      match (fields, args) with
-      | field :: _, arg :: _ when field = name -> Some (pos, arg)
-      | _ :: fields, _ :: args -> find_field name (pos + 1) fields args
-      | [], [] -> None
-      | _ -> invalid_arg "find_field"
-    in
-    let rec find_path lam fields positions =
+    let rec target lam fields =
       match fields with
-      | [] ->
-        let target, binding_id = resolve_binding Set_ident.empty lam in
-        Some (List.rev positions, binding_id, target)
-      | field :: fields -> (
-        match resolve Set_ident.empty lam with
-        | Lambda.Lprim {primitive = Lambda.Pmakeblock (Blk_module names); args}
-          -> (
-          match find_field field 0 names args with
-          | Some (pos, arg) -> find_path arg fields ((pos, field) :: positions)
-          | None -> None)
-        | _ -> None)
+      | [] -> Some lam
+      | step :: fields -> (
+        match field Set_ident.empty lam step with
+        | Some lam -> target lam fields
+        | None -> None)
     in
     let exported_modules =
       Ext_list.fold_left export_ids Map_string.empty (fun modules id ->
@@ -184,54 +172,37 @@ let js_hoisted_aliases (export_ids : Ident.t list)
                 Set_string.add (Ext_ident.convert id.Ident.name) occupied)
           | Nop _ -> occupied)
     in
-    fst
-      (Ext_list.fold_left hoisted ([], occupied_names)
-         (fun ((aliases, occupied_names) as state) hoisted ->
-           let {Lambda.binding; path; loc} = hoisted in
-           let missing_path () =
-             Location.prerr_warning loc
-               (Warnings.Misplaced_attribute "res.hoistedFunction");
-             state
-           in
+    let loc = Location.in_file (Location.get_input_name ()) in
+    List.rev @@ fst
+    @@ Ext_list.fold_left paths ([], occupied_names)
+         (fun (aliases, occupied_names) path ->
+           let names = List.map snd path in
+           let name = Translmod.flat_export_name names in
+           let js_name = Ext_ident.convert name in
+           if Set_string.mem js_name occupied_names then
+             Location.raise_errorf ~loc
+               "Cannot export `%s` as `%s` because that name is already used \
+                by a top-level binding."
+               (String.concat "." names) name;
            match path with
-           | top :: fields -> (
+           | (_, top) :: fields -> (
              match Map_string.find_opt top exported_modules with
-             | Some top_id -> (
-               match Map_ident.find_opt top_id group_map with
-               | Some lam -> (
-                 match find_path lam fields [] with
-                 | Some (access_path, Some target_id, target)
-                   when Ident.same binding target_id ->
-                   let name =
-                     path
-                     |> List.map Ext_ident.unwrap_uppercase_exotic
-                     |> String.concat "$"
-                   in
-                   let js_name = Ext_ident.convert name in
-                   if Set_string.mem js_name occupied_names then
-                     let error_loc =
-                       match target with
-                       | Lambda.Lfunction {loc} -> loc
-                       | _ -> loc
-                     in
-                     Location.raise_errorf ~loc:error_loc
-                       "Cannot hoist this function as `%s` because that name \
-                        is already used by a top-level binding."
-                       name
-                   else
-                     let alias_id = Ident.create name in
-                     let alias = access loc (Lambda.var top_id) access_path in
-                     ( ( Lam_group.Single (Alias, alias_id, alias),
-                         alias_id,
-                         alias,
-                         path,
-                         name )
-                       :: aliases,
-                       Set_string.add js_name occupied_names )
-                 | Some _ | None -> missing_path ())
-               | None -> missing_path ())
-             | None -> missing_path ())
-           | [] -> missing_path ()))
+             | Some top_id ->
+               let alias =
+                 match target (Lambda.var top_id) fields with
+                 | Some (Lvar id) when Map_ident.mem id group_map ->
+                   Lambda.var id
+                 | Some _ | None -> access loc (Lambda.var top_id) fields
+               in
+               let alias_id = Ident.create name in
+               ( (Lam_group.Single (Alias, alias_id, alias), alias_id, alias)
+                 :: aliases,
+                 Set_string.add js_name occupied_names )
+             | None ->
+               Location.raise_errorf ~loc
+                 "Internal error: no export for module `%s` of `%s`." top
+                 (String.concat "." names))
+           | [] -> assert false)
 
 (* The other compilation units this one refers to. Conversion used to drop
    [Lglobal_module] references and have module analysis add them back (see
@@ -254,7 +225,8 @@ let required_modules (lam : Lambda.t) : unit Lam_module_ident.Hash_set.t =
   collect lam;
   required
 
-let compile ?on_optimized_lambda (output_prefix : string) export_idents hoisted
+let compile ?on_optimized_lambda (output_prefix : string) export_idents
+    flat_make_paths
     (lam : Lambda.t) =
   let debug_ir = !((Js_config.current ()).debug_ir) in
   let diagnostics =
@@ -347,32 +319,26 @@ let compile ?on_optimized_lambda (output_prefix : string) export_idents hoisted
   let maybe_pure = no_side_effects groups in
   (* Add the generated alias groups before JS lowering so regular export
      printing, tree shaking, and .cmj metadata all see the flat runtime value. *)
-  let hoisted_aliases = js_hoisted_aliases meta.exports hoisted groups in
-  let hoisted_groups, hoisted_exports, hoisted_export_map, hoisted_metadata =
-    Ext_list.fold_left hoisted_aliases ([], [], Map_ident.empty, [])
-      (fun
-        (groups, exports, export_map, hoisted_metadata)
-        (group, id, lam, path, name)
-      ->
-        ( group :: groups,
-          id :: exports,
-          Map_ident.add id lam export_map,
-          {Js_cmj_format.path; export_name = name} :: hoisted_metadata ))
+  let flat_aliases = flat_make_aliases meta.exports flat_make_paths groups in
+  let flat_groups, flat_exports, flat_export_map =
+    Ext_list.fold_left flat_aliases ([], [], Map_ident.empty)
+      (fun (groups, exports, export_map) (group, id, lam) ->
+        (group :: groups, id :: exports, Map_ident.add id lam export_map))
   in
-  let groups = groups @ List.rev hoisted_groups in
+  let groups = groups @ List.rev flat_groups in
   let meta =
     {
       meta with
-      exports = meta.exports @ List.rev hoisted_exports;
+      exports = meta.exports @ List.rev flat_exports;
       export_idents =
-        Ext_list.fold_left hoisted_exports meta.export_idents (fun acc id ->
+        Ext_list.fold_left flat_exports meta.export_idents (fun acc id ->
             Set_ident.add id acc);
     }
   in
   let export_map =
     Map_ident.fold
       (fun id lam acc -> Map_ident.add id lam acc)
-      hoisted_export_map coerced_input.export_map
+      flat_export_map coerced_input.export_map
   in
   let () =
     if debug_ir then
@@ -430,7 +396,7 @@ let compile ?on_optimized_lambda (output_prefix : string) export_idents hoisted
     Lam_stats_export.get_dependent_module_effect maybe_pure external_module_ids
   in
   let v : Js_cmj_format.t =
-    Lam_stats_export.export_to_cmj meta effect_ export_map hoisted_metadata
+    Lam_stats_export.export_to_cmj meta effect_ export_map
       (Ext_filename.case output_prefix)
   in
   if not !((Clflags.current ()).dont_write_files) then

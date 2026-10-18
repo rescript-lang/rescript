@@ -255,16 +255,10 @@ let compile output_prefix =
 
        Pfield "make" (Pfield "B" (Pfield "A" (Lglobal_module Other)))
 
-     Normal compilation does not look up the full path.  It only queries the
-     first field, "A", and then emits the remaining fields as JS property
-     access: Other.A.B.make.  The "A" lookup may include Submodule arity data,
-     but it does not say whether A.B.make has a separate root-level export.
-
-     Hoisted functions need that extra question. For them, query the separate
-     hoisted-values table with an unambiguous key for source path A.B.make. If
-     present, the table returns the root-level JS export name, for example
-     A$B$make. Normal export metadata still lives in the regular .cmj values
-     table. *)
+     Every nested [make] is also exported under a flat name (see
+     [Translmod.flat_make_paths]), so it is read as Other.A$B$make rather
+     than through the module objects. Other reads query only the first field,
+     "A", and emit the remaining fields as JS property access. *)
   let rec extract_field_path segments primitive args =
     match (primitive, args) with
     | Lambda.Pfield (_, Fld_module {name}), [Lambda.Lprim {primitive; args; _}]
@@ -274,12 +268,12 @@ let compile output_prefix =
       Some (id, name :: segments)
     | _ -> None
   in
-  let hoisted_external_field_name primitive args =
+  let flat_make_field_name primitive args =
     match extract_field_path [] primitive args with
-    | Some (id, (_ :: _ :: _ as segments)) ->
-      Lam_compile_env.find_hoisted_external_export id segments
-      |> Option.map (fun name -> (id, name))
-    | Some (_, ([] | [_])) | None -> None
+    | Some (id, (_ :: _ :: _ as segments)) when Ext_list.last segments = "make"
+      ->
+      Some (id, Translmod.flat_export_name segments)
+    | Some _ | None -> None
   in
   let rec compile_external_field (* Like [List.empty]*)
       (lamba_cxt : Lam_compile_context.t) (id : Ident.t) name : Js_output.t =
@@ -1633,11 +1627,11 @@ let compile output_prefix =
     in
     match prim_info with
     | {primitive = Pfield (_, Fld_module _); _} -> (
-      match hoisted_external_field_name prim_info.primitive prim_info.args with
-      | Some (id, hoisted_name) ->
+      match flat_make_field_name prim_info.primitive prim_info.args with
+      | Some (id, flat_name) ->
         Js_output.output_of_expression lambda_cxt.continuation
           ~no_effects:no_effects_const
-          (E.ml_var_dot id hoisted_name)
+          (E.ml_var_dot id flat_name)
       | None -> (
         match prim_info with
         | {primitive = Pfield (_, fld_info); args = [Lglobal_module id]; _} -> (

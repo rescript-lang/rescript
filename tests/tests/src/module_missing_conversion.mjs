@@ -40,9 +40,12 @@ let u = [Stdlib_String];
 
 let hh = "x".length;
 
+let XX$make = Stdlib_Array.make;
+
 export {
   XX,
   u,
   hh,
+  XX$make,
 }
 /* hh Not a pure module */

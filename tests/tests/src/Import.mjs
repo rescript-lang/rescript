@@ -134,6 +134,22 @@ let M2;
 
 let each2 = O.forEach;
 
+let M$make = M.make;
+
+let N$N0$make = N0.make;
+
+let N$N1$O$make = N1.O.make;
+
+let N$N2$make = N2.make;
+
+let N$N3$make = N3.make;
+
+let M0$make = M0.make;
+
+let M1$make = M1.make;
+
+let MConstrained$make = MConstrained.make;
+
 export {
   eachIntAsync,
   eachIntLazy,
@@ -156,5 +172,13 @@ export {
   f7,
   f8,
   f9,
+  M$make,
+  N$N0$make,
+  N$N1$O$make,
+  N$N2$make,
+  N$N3$make,
+  M0$make,
+  M1$make,
+  MConstrained$make,
 }
 /*  Not a pure module */

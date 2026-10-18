@@ -82,6 +82,8 @@ let a4 = a0;
 
 let a5 = a0;
 
+let List$make = Stdlib_List.make;
+
 export {
   a0,
   a1,
@@ -90,5 +92,6 @@ export {
   a4,
   a5,
   List,
+  List$make,
 }
 /* b Not a pure module */

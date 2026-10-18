@@ -1,5 +1,6 @@
+let make = () => "top"
+
 module One = {
-  @res.hoistedFunction
   let make = () => "one"
 
   let keep = () => "one-keep"
@@ -9,7 +10,6 @@ module Two = {
   let keep = () => "two-keep"
 
   module Inner = {
-    @res.hoistedFunction
     let make = () => "two"
 
     let keep = () => "two-inner-keep"
@@ -21,7 +21,6 @@ module Three = {
     let keep = () => "three-inner-keep"
 
     module Deep = {
-      @res.hoistedFunction
       let make = () => "three"
 
       let keep = () => "three-deep-keep"
@@ -29,32 +28,17 @@ module Three = {
   }
 }
 
-module Escaped = {
-  @res.hoistedFunction
-  let \"switch" = () => "keyword"
-
-  @res.hoistedFunction
-  let $plus = () => "dollar"
-}
-
-module Operator = {
-  @res.hoistedFunction
-  let \"+" = () => "operator"
-}
-
 module Ambiguous = {
   module B = {
-    @res.hoistedFunction
     let make = () => "nested"
   }
 
-  let \"B$make" = () => "exotic"
+  let \"B$make" = () => "exotic-value"
 }
 
 module rec RecursiveA: {
   let make: unit => string
 } = {
-  @res.hoistedFunction
   let make = () => RecursiveB.value()
 }
 and RecursiveB: {
@@ -63,19 +47,30 @@ and RecursiveB: {
   let value = () => "recursive"
 }
 
-module Typed = {
-  @res.hoistedFunction
-  let make: unit => string = () => "typed"
-}
-
 module Coerced: {
   let make: unit => string
 } = {
   let hidden = () => "coerced"
 
-  @res.hoistedFunction
   let make = () => hidden()
 }
+
+module Rebound = {
+  let make = () => "rebound"
+  let make = Some(make)
+}
+
+module Make = (
+  X: {
+    let value: string
+  },
+) => {
+  let make = () => X.value
+}
+
+module Applied = Make({
+  let value = "applied"
+})
 
 module Included = {
   include One

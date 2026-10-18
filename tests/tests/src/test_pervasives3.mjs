@@ -71,8 +71,11 @@ let Pervasives$1 = {
 
 let v = Stdlib_List.concat;
 
+let Pervasives$make = Stdlib_List.make;
+
 export {
   Pervasives$1 as Pervasives,
   v,
+  Pervasives$make,
 }
 /* No side effect */

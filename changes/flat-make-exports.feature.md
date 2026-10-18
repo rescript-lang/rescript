@@ -1,0 +1,1 @@
+- Export every nested `make` as a flat value such as `A$B$make` and read it that way from other modules, so nested JSX components work as React Server Components client references.

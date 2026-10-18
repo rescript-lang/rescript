@@ -45,26 +45,14 @@ type keyed_cmj_value = {
 
 type keyed_cmj_values = keyed_cmj_value array
 
-type hoisted_export = {
-  path: string list;  (** Exact source-level module path segments. *)
-  export_name: string;
-      (** Flattened compiler name for the export, before JS identifier
-          conversion: the emitted export applies [Ext_ident.convert] to it
-          (a hoisted [Operator.\"+"] is stored as [Operator$+] and exported
-          as [Operator$$plus]), and so must any consumer that reconstructs
-          the JS export name. *)
-}
-
 type t = {
   values: keyed_cmj_values;
-  hoisted_exports: hoisted_export array;
   pure: bool;
   package_spec: Js_packages_info.t;
   case: Ext_js_file_kind.case;
 }
 
-let make ~(values : cmj_value Map_string.t) ~hoisted_exports ~effect_
-    ~package_spec ~case : t =
+let make ~(values : cmj_value Map_string.t) ~effect_ ~package_spec ~case : t =
   {
     values =
       Map_string.bindings values
@@ -75,7 +63,6 @@ let make ~(values : cmj_value Map_string.t) ~hoisted_exports ~effect_
             persistent_closed_lambda = v.persistent_closed_lambda;
           })
       |> Array.of_list;
-    hoisted_exports = Array.of_list hoisted_exports;
     pure = effect_ = None;
     package_spec;
     case;
@@ -172,13 +159,6 @@ let binary_search (sorted : keyed_cmj_values) (key : string) : keyed_cmj_value =
 let query_by_name (cmj_table : t) name : keyed_cmj_value =
   let values = cmj_table.values in
   binary_search values name
-
-let find_hoisted_export (cmj_table : t) path =
-  Array.find_map
-    (fun value ->
-      if List.equal Ext_string.equal value.path path then Some value.export_name
-      else None)
-    cmj_table.hoisted_exports
 
 type path = string
 

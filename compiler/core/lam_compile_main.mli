@@ -31,7 +31,7 @@ val compile :
   ?on_optimized_lambda:(Lambda.t -> unit) ->
   string ->
   Ident.t list ->
-  Lambda.hoisted_function list ->
+  (int * string) list list ->
   Lambda.t ->
   J.deps_program
 (** For toplevel, [filename] is [""] which is the same as

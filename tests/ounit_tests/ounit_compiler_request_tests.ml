@@ -260,9 +260,8 @@ let failed_writing_closes_files_tests _context =
     let open_files () = Array.length (Sys.readdir "/proc/self/fd") in
     let before = open_files () in
     let cmj =
-      Js_cmj_format.make ~values:Map_string.empty ~hoisted_exports:[]
-        ~effect_:None ~package_spec:Js_packages_info.empty
-        ~case:Ext_js_file_kind.Little
+      Js_cmj_format.make ~values:Map_string.empty ~effect_:None
+        ~package_spec:Js_packages_info.empty ~case:Ext_js_file_kind.Little
     in
     let cmi =
       {

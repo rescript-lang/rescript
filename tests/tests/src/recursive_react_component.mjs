@@ -50,11 +50,23 @@ let ShadowedByNestedParameter = {
 
 let make$1 = Recursive_react_component;
 
+let ShadowedSelfReference$make = Recursive_react_component$ShadowedSelfReference;
+
+let Leaf$make = Recursive_react_component$Leaf;
+
+let ShadowedByLocalLet$make = Recursive_react_component$ShadowedByLocalLet;
+
+let ShadowedByNestedParameter$make = Recursive_react_component$ShadowedByNestedParameter;
+
 export {
   make$1 as make,
   ShadowedSelfReference,
   Leaf,
   ShadowedByLocalLet,
   ShadowedByNestedParameter,
+  ShadowedSelfReference$make,
+  Leaf$make,
+  ShadowedByLocalLet$make,
+  ShadowedByNestedParameter$make,
 }
 /* react Not a pure module */

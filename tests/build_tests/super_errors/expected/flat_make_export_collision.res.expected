@@ -1,0 +1,5 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/flat_make_export_collision.res[0m
+
+  Cannot export `A.B.make` as `A$B$make` because that name is already used by a top-level binding.

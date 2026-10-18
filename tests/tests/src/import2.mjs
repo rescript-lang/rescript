@@ -8,7 +8,7 @@ let b = A;
 
 let c = import("./export_keyword.mjs").then(m => m.$$case);
 
-let d = import("./hoisted_function_attr.mjs").then(m => m.Operator$$plus);
+let d = import("./flat_make_export.mjs").then(m => m.Two$Inner$make);
 
 export {
   a,

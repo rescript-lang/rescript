@@ -16,14 +16,16 @@
 (* Translation from typed abstract syntax to lambda terms,
    for the module language *)
 
-type implementation = {
-  lambda: Lambda.t;
-  exports: Ident.t list;
-  hoisted_functions: Lambda.hoisted_function list;
-}
+type implementation = {lambda: Lambda.t; exports: Ident.t list}
 
 val transl_implementation :
   string -> Typedtree.structure * Typedtree.module_coercion -> implementation
+
+val flat_make_paths : Env.t -> Types.signature -> (int * string) list list
+(** The nested [make] values of a compilation unit's final signature, which
+    are also exported under [flat_export_name] of their path. *)
+
+val flat_export_name : string list -> string
 
 type error
 (* exception Error of Location.t * error *)

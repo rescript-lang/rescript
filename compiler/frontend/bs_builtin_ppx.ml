@@ -60,20 +60,11 @@ type mapper = Ast_mapper.mapper
 
 let default_mapper = Ast_mapper.default_mapper
 
-let mark_hoisted_function_attributes (bindings : Parsetree.value_binding list) =
-  Ext_list.iter bindings (fun {pvb_attributes} ->
-      Ext_list.iter pvb_attributes (fun (({txt}, _) as attr) ->
-          if txt = "res.hoistedFunction" then
-            Used_attributes.mark_used_attribute attr))
-
 (* [Ast_mapper.default_mapper.expr], with non-recursive binding groups
    routed through tuple/module-record pattern flattening ([let rec] groups
    only admit variable patterns, so they map per binding). Every fallback in
    [expr_mapper] funnels through here, so the flattening applies uniformly. *)
 let default_expr_mapper (self : mapper) (e : Parsetree.expression) =
-  (match e.pexp_desc with
-  | Pexp_let (_, bindings, _) -> mark_hoisted_function_attributes bindings
-  | _ -> ());
   match e.pexp_desc with
   | Pexp_let (Nonrecursive, vbs, body) ->
     {
@@ -559,9 +550,6 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
 
 let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
     Parsetree.structure_item =
-  (match str.pstr_desc with
-  | Pstr_value (_, bindings) -> mark_hoisted_function_attributes bindings
-  | _ -> ());
   match str.pstr_desc with
   | Pstr_value (_, vbs)
     when List.exists
