@@ -167,6 +167,8 @@ module Exp : sig
     ?loc:loc -> ?attrs:attrs -> expression -> lid -> expression -> expression
   val array : ?loc:loc -> ?attrs:attrs -> expression list -> expression
   val dict : ?loc:loc -> ?attrs:attrs -> dict_entry list -> expression
+  val spread :
+    ?loc:loc -> ?attrs:attrs -> spread_kind -> spread_element list -> expression
   val ifthenelse :
     ?loc:loc ->
     ?attrs:attrs ->

@@ -62,6 +62,8 @@ let rec expr_no_side_effects (expr : Typedtree.expression) =
       | Typedtree.Tdict_entry (_, e) -> e |> expr_no_side_effects
       (* Spreading a dict reads its properties *)
       | Tdict_spread _ -> false)
+  (* A call of the runtime's [spread] *)
+  | Texp_spread _ -> false
   | Texp_ifthenelse (e1, e2, eo) ->
     e1 |> expr_no_side_effects && e2 |> expr_no_side_effects
     && eo |> expr_opt_no_side_effects

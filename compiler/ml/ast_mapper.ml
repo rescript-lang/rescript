@@ -375,6 +375,13 @@ module E = struct
                Pdict_entry (map_loc sub key, sub.expr sub e)
              | Pdict_spread e -> Pdict_spread (sub.expr sub e))
            entries)
+    | Pexp_spread (kind, elements) ->
+      spread ~loc ~attrs kind
+        (List.map
+           (function
+             | Pspread_item e -> Pspread_item (sub.expr sub e)
+             | Pspread e -> Pspread (sub.expr sub e))
+           elements)
     | Pexp_ifthenelse (e1, e2, e3) ->
       ifthenelse ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
         (map_opt (sub.expr sub) e3)

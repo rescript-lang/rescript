@@ -239,6 +239,9 @@ and expression_desc =
       expression * Longident.t loc * label_description * expression
   | Texp_array of expression list
   | Texp_dict of dict_entry list
+  | Texp_spread of Parsetree.spread_kind * expression list
+    (* An array or list literal with spreads: the arrays or lists it
+       concatenates, see [Ast_spread] *)
   | Texp_ifthenelse of expression * expression * expression option
   | Texp_sequence of expression * expression
   | Texp_break

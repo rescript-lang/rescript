@@ -2116,6 +2116,100 @@ let test_dict_literal_through_ast0 _ =
     ()
   | _ -> assert_failure "Expected a call of Primitive_dict.make"
 
+(* On the v0 wire, array and list literals with spreads are the calls they used
+   to be parsed into, see [Ast_spread]. They come back as [Pexp_spread]. *)
+let test_spread_literal_through_ast0 _ =
+  List.iter
+    (fun (source, wire_module) ->
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"Spread.res" ~source:("let x = " ^ source)
+      in
+      match parsed.parsetree with
+      | [{pstr_desc = Pstr_value (_, [{pvb_expr = e}])}] when not parsed.invalid
+        -> (
+        let wire = map_expr_to0 e in
+        (match wire.pexp_desc with
+        | Parsetree0.Pexp_apply
+            ( {
+                pexp_desc =
+                  Pexp_ident {txt = Longident.Ldot (Lident name, "spread")};
+                pexp_attributes;
+              },
+              _ ) ->
+          OUnit.assert_equal ~msg:source wire_module name;
+          OUnit.assert_equal ~msg:source ~printer:(String.concat ", ")
+            ["res.spread"]
+            (attr_names pexp_attributes)
+        | _ -> assert_failure ("Expected a spread call: " ^ source));
+        match map_expr0 wire with
+        | {pexp_desc = Pexp_spread _} as back ->
+          (* Locations included: the parsed literal has real ones *)
+          OUnit.assert_bool (source ^ " roundtrips through ast0") (back = e)
+        | _ -> assert_failure ("Expected Pexp_spread back: " ^ source))
+      | _ -> assert_failure ("Expected a let binding: " ^ source))
+    [
+      ("[...a]", "Primitive_array");
+      ("[1, ...a, 2, 3, ...b, 4]", "Primitive_array");
+      ("[...[1, 2], 3, ...[]]", "Primitive_array");
+      ("[...[...a, 1], ...a]", "Primitive_array");
+      ("@attr [1, ...(a: array<int>)]", "Primitive_array");
+      ("list{...a, 1}", "Primitive_list");
+      ("list{1, ...a, 2, 3, ...b}", "Primitive_list");
+      ("list{...list{1, 2}, ...a}", "Primitive_list");
+      ("list{...list{...a, 1}, ...a, 2}", "Primitive_list");
+    ];
+  (* A call built by a PPX: parts that aren't ghost array literals are spreads,
+     which concatenates the same arrays *)
+  let spread_call parts =
+    Ast_helper0.Exp.apply ~loc
+      (Ast_helper0.Exp.ident ~loc
+         ~attrs:[attr "res.spread" (Parsetree0.PStr [])]
+         (located_string
+            (Longident.Ldot (Longident.Lident "Primitive_array", "spread"))))
+      [(Asttypes.Noloc.Nolabel, Ast_helper0.Exp.array ~loc parts)]
+  in
+  let one =
+    Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_integer ("1", None))
+  in
+  let a = Ast_helper0.Exp.ident ~loc (located_string (Longident.Lident "a")) in
+  (match
+     (map_expr0
+        (spread_call [Ast_helper0.Exp.array ~loc:(source_loc 0 3) [one]; a]))
+       .pexp_desc
+   with
+  | Pexp_spread
+      ( Spread_array,
+        [
+          Pspread {pexp_desc = Pexp_array [_]};
+          Pspread {pexp_desc = Pexp_ident _};
+        ] ) ->
+    ()
+  | _ -> assert_failure "Expected the spreads of [1] and a");
+  (match
+     (map_expr0 (spread_call [Ast_helper0.Exp.array ~loc [one]; a])).pexp_desc
+   with
+  | Pexp_spread
+      ( Spread_array,
+        [
+          Pspread_item {pexp_desc = Pexp_constant _};
+          Pspread {pexp_desc = Pexp_ident _};
+        ] ) ->
+    ()
+  | _ -> assert_failure "Expected the item 1 and the spread of a");
+  (* Without the marker, it stays a call *)
+  match
+    (map_expr0
+       (Ast_helper0.Exp.apply ~loc
+          (Ast_helper0.Exp.ident ~loc
+             (located_string
+                (Longident.Ldot (Longident.Lident "Primitive_array", "spread"))))
+          [(Asttypes.Noloc.Nolabel, Ast_helper0.Exp.array ~loc [a])]))
+      .pexp_desc
+  with
+  | Pexp_apply _ -> ()
+  | _ -> assert_failure "Expected a call of Primitive_array.spread"
+
 let test_removed_regexp_extension _ =
   List.iter
     (fun source ->
@@ -2682,6 +2776,7 @@ let suites =
          "variant_spread_pattern_through_ast0"
          >:: test_variant_spread_pattern_through_ast0;
          "dict_literal_through_ast0" >:: test_dict_literal_through_ast0;
+         "spread_literal_through_ast0" >:: test_spread_literal_through_ast0;
          "dict_pattern_through_ast0" >:: test_dict_pattern_through_ast0;
          "inline_record_definition_roundtrips_through_ast0"
          >:: test_inline_record_definition_roundtrips_through_ast0;
