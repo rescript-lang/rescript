@@ -484,16 +484,6 @@ function checks(r) {
       ),
       "v0 PPX bridge changes; ast-mapping fixture or mapper unit test in the diff",
     ]);
-  const newFixtures = r.files.filter(
-    f =>
-      f.status === "A" &&
-      /^tests\/build_tests\/super_errors[^/]*\/fixtures\//.test(f.path),
-  );
-  if (newFixtures.length)
-    out.push([
-      has(/^tests\/ERROR_VARIANTS\.md$/) || r.trailers.has("Errors"),
-      `${newFixtures.length} new super_errors fixture${newFixtures.length === 1 ? "" : "s"}; ERROR_VARIANTS.md ${has(/^tests\/ERROR_VARIANTS\.md$/) ? "updated" : r.trailers.has("Errors") ? "unchanged, as the Errors trailer states" : "unchanged"}`,
-    ]);
   return out;
 }
 
@@ -608,7 +598,6 @@ const FACTS = [
   "Formats",
   "PPX",
   "Editor",
-  "Errors",
   "Tests",
   "Measured",
 ];

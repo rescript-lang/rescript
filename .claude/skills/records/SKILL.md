@@ -41,7 +41,6 @@ Formatting: unchanged | changed <which source shapes>
 Formats: none | <bumped magic numbers: ast cmi cmt cmj>
 PPX: unchanged | <effect on the frozen v0 PPX wire>
 Editor: unchanged | <effect on completion, hover, hints; fixtures>
-Errors: <ERROR_VARIANTS.md rows added, removed or relinked>
 Tests: +added/path ~updated/path -removed/path | none, because <reason>
 Measured: <quantity before -> after, and what produced it>; ...
 PR: #<number>
@@ -85,7 +84,6 @@ Signed-off-by: <Name> <email>
 | `Formats` | The magic numbers bumped in `compiler/ext/config.ml`. Any change to the marshaled parsetree, typed tree (`.cmi`, `.cmt`) or `.cmj` layout, constructor order included, bumps the matching number. |
 | `PPX` | The effect on the frozen v0 PPX wire: `parsetree0.ml` is unchanged, and a change to the v0 mapping comes with an ast-mapping fixture. |
 | `Editor` | Completion, hover and inlay hints on new or changed nodes, and the analysis fixtures that cover them. |
-| `Errors` | The `tests/ERROR_VARIANTS.md` rows added, removed or relinked for changed error variants or fixtures. |
 | `Tests` | The tests added, changed or removed, each observing the effect the record claims, so that it fails without the change. `none, because …` gives the reason when no test changes. |
 | `Measured` | Performance before and after, with the input and the command that produced each number. |
 | `Breaking` | What existing code or tooling stops working, and the migration. |
@@ -117,8 +115,7 @@ node scripts/commitRecords.js --out review.html --pr 1234 --title "<PR title>" <
   `Output: unchanged` (new ones from new tests are counted, not flagged), a
   magic number bumped in `compiler/ext/config.ml` that
   `Formats` does not name, a parsetree change with no ast-mapping fixture, a
-  new `super_errors` fixture with no `ERROR_VARIANTS.md` change, a missing
-  `Tests` trailer, `Tests: none` on a diff that changes tests. A failed
+  missing `Tests` trailer, `Tests: none` on a diff that changes tests. A failed
   check is shown on the card. The DCO app checks `Signed-off-by`.
 - The page is one self-contained HTML file: no script, no external data
   (fonts fall back to system faces), light and dark themes, phone width.
