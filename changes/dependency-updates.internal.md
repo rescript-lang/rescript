@@ -1,0 +1,1 @@
+- Update actions/setup-node to v7, Biome to 2.5.15, rollup to 4.64.9 and several transitive npm dependencies. https://github.com/rescript-lang/rescript/pull/XXXX
