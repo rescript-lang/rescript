@@ -188,7 +188,7 @@ end = struct
     | Tpat_any -> ()
     | Tpat_var _ -> ()
     | Tpat_alias (pat1, _, _) -> iter_pattern pat1
-    | Tpat_constant _ -> ()
+    | Tpat_constant _ | Tpat_interval _ -> ()
     | Tpat_tuple list -> List.iter iter_pattern list
     | Tpat_construct (_, _, args) -> List.iter iter_pattern args
     | Tpat_variant (_, pato, _) -> (

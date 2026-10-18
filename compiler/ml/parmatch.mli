@@ -37,6 +37,13 @@ val const_compare : constant -> constant -> int
 (* A hash key agreeing with [const_compare]: char constants map to ints. *)
 val const_key : constant -> constant
 
+(* The bounds of an int or char constant or interval pattern *)
+val int_range : pattern -> (int * int) option
+
+(* An int or char constant or interval for the given bounds, of the kind and
+   type of the pattern *)
+val make_int_range : pattern -> int -> int -> pattern
+
 val le_pat : pattern -> pattern -> bool
 val le_pats : pattern list -> pattern list -> bool
 

@@ -9,7 +9,9 @@ open Typedtree
 let rec contains_dict p =
   match p.pat_desc with
   | Tpat_dict _ -> true
-  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_variant (_, None, _) -> false
+  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_interval _
+  | Tpat_variant (_, None, _) ->
+    false
   | Tpat_alias (p, _, _) | Tpat_variant (_, Some p, _) -> contains_dict p
   | Tpat_tuple ps | Tpat_construct (_, _, ps) | Tpat_array ps ->
     List.exists contains_dict ps

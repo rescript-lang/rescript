@@ -7,6 +7,14 @@ function isCjk(c) {
   return !(c > 40959 || c < 19968);
 }
 
+function isCodePoint(c) {
+  if (c >= 0) {
+    return c < 1114112;
+  } else {
+    return false;
+  }
+}
+
 function classify(c) {
   if (c >= 95) {
     if (c < 123) {
@@ -37,28 +45,149 @@ function classify(c) {
   }
 }
 
+function overlap(c) {
+  if (c > 109 || c < 97) {
+    if (c > 122 || c < 110) {
+      return "other";
+    } else {
+      return "h-z";
+    }
+  } else if (c !== 101) {
+    return "a-m";
+  } else {
+    return "e";
+  }
+}
+
+function guarded(c, allow) {
+  if (c >= 110) {
+    if (c >= 123 || !allow) {
+      return "other";
+    } else {
+      return "allowed";
+    }
+  } else if (c >= 97) {
+    if (allow) {
+      return "allowed";
+    } else {
+      return "a-m";
+    }
+  } else {
+    return "other";
+  }
+}
+
+function grid(a, b) {
+  let exit = 0;
+  if (a >= 97) {
+    if (a >= 65536) {
+      if (a >= 1114112) {
+        exit = 2;
+      } else if (b >= 65536 && b < 1114112) {
+        return 4;
+      }
+    } else if (a >= 100) {
+      exit = 2;
+    } else {
+      if (!(b > 122 || b < 120)) {
+        return 1;
+      }
+      exit = 2;
+    }
+  } else {
+    exit = 2;
+  }
+  if (exit === 2 && !(a > 100 || a < 98)) {
+    return 2;
+  }
+  if (b >= 99) {
+    if (b !== 121) {
+      return 5;
+    } else {
+      return 3;
+    }
+  } else if (b >= 97) {
+    return 3;
+  } else {
+    return 5;
+  }
+}
+
+function option(c) {
+  if (c !== undefined) {
+    if (c > 57 || c < 48) {
+      return "other";
+    } else {
+      return "digit";
+    }
+  } else {
+    return "none";
+  }
+}
+
 Mocha.describe("Char_range_test", () => {
   Mocha.test("large range", () => {
-    Test_utils.eq("File \"char_range_test.res\", line 23, characters 7-14", false, false);
-    Test_utils.eq("File \"char_range_test.res\", line 24, characters 7-14", true, true);
-    Test_utils.eq("File \"char_range_test.res\", line 25, characters 7-14", true, true);
-    Test_utils.eq("File \"char_range_test.res\", line 26, characters 7-14", true, true);
-    Test_utils.eq("File \"char_range_test.res\", line 27, characters 7-14", false, false);
+    Test_utils.eq("File \"char_range_test.res\", line 62, characters 7-14", false, false);
+    Test_utils.eq("File \"char_range_test.res\", line 63, characters 7-14", true, true);
+    Test_utils.eq("File \"char_range_test.res\", line 64, characters 7-14", true, true);
+    Test_utils.eq("File \"char_range_test.res\", line 65, characters 7-14", true, true);
+    Test_utils.eq("File \"char_range_test.res\", line 66, characters 7-14", false, false);
+    Test_utils.eq("File \"char_range_test.res\", line 67, characters 7-14", true, true);
+    Test_utils.eq("File \"char_range_test.res\", line 68, characters 7-14", true, true);
+    Test_utils.eq("File \"char_range_test.res\", line 69, characters 7-14", true, true);
+    Test_utils.eq("File \"char_range_test.res\", line 70, characters 7-14", false, false);
+    Test_utils.eq("File \"char_range_test.res\", line 71, characters 7-14", false, false);
   });
   Mocha.test("several ranges", () => {
-    Test_utils.eq("File \"char_range_test.res\", line 31, characters 7-14", classify(/* 'q' */113), "lower");
-    Test_utils.eq("File \"char_range_test.res\", line 32, characters 7-14", classify(/* 'Q' */81), "upper");
-    Test_utils.eq("File \"char_range_test.res\", line 33, characters 7-14", classify(/* '7' */55), "word");
-    Test_utils.eq("File \"char_range_test.res\", line 34, characters 7-14", classify(/* '_' */95), "word");
-    Test_utils.eq("File \"char_range_test.res\", line 35, characters 7-14", classify(/* 'ō' */333), "bmp");
-    Test_utils.eq("File \"char_range_test.res\", line 36, characters 7-14", classify(/* '￿' */65535), "bmp");
-    Test_utils.eq("File \"char_range_test.res\", line 37, characters 7-14", classify(/* '𐀀' */65536), "other");
-    Test_utils.eq("File \"char_range_test.res\", line 38, characters 7-14", classify(/* '!' */33), "other");
+    Test_utils.eq("File \"char_range_test.res\", line 75, characters 7-14", classify(/* 'q' */113), "lower");
+    Test_utils.eq("File \"char_range_test.res\", line 76, characters 7-14", classify(/* 'Q' */81), "upper");
+    Test_utils.eq("File \"char_range_test.res\", line 77, characters 7-14", classify(/* '7' */55), "word");
+    Test_utils.eq("File \"char_range_test.res\", line 78, characters 7-14", classify(/* '_' */95), "word");
+    Test_utils.eq("File \"char_range_test.res\", line 79, characters 7-14", classify(/* 'ō' */333), "bmp");
+    Test_utils.eq("File \"char_range_test.res\", line 80, characters 7-14", classify(/* '￿' */65535), "bmp");
+    Test_utils.eq("File \"char_range_test.res\", line 81, characters 7-14", classify(/* '𐀀' */65536), "other");
+    Test_utils.eq("File \"char_range_test.res\", line 82, characters 7-14", classify(/* '!' */33), "other");
+  });
+  Mocha.test("overlapping ranges", () => {
+    Test_utils.eq("File \"char_range_test.res\", line 86, characters 7-14", overlap(/* 'a' */97), "a-m");
+    Test_utils.eq("File \"char_range_test.res\", line 87, characters 7-14", overlap(/* 'e' */101), "e");
+    Test_utils.eq("File \"char_range_test.res\", line 88, characters 7-14", overlap(/* 'h' */104), "a-m");
+    Test_utils.eq("File \"char_range_test.res\", line 89, characters 7-14", overlap(/* 'm' */109), "a-m");
+    Test_utils.eq("File \"char_range_test.res\", line 90, characters 7-14", overlap(/* 'n' */110), "h-z");
+    Test_utils.eq("File \"char_range_test.res\", line 91, characters 7-14", overlap(/* 'z' */122), "h-z");
+    Test_utils.eq("File \"char_range_test.res\", line 92, characters 7-14", overlap(/* '{' */123), "other");
+  });
+  Mocha.test("guards", () => {
+    Test_utils.eq("File \"char_range_test.res\", line 96, characters 7-14", guarded(/* 'c' */99, true), "allowed");
+    Test_utils.eq("File \"char_range_test.res\", line 97, characters 7-14", guarded(/* 'c' */99, false), "a-m");
+    Test_utils.eq("File \"char_range_test.res\", line 98, characters 7-14", guarded(/* 'q' */113, false), "other");
+    Test_utils.eq("File \"char_range_test.res\", line 99, characters 7-14", guarded(/* 'Q' */81, true), "other");
+  });
+  Mocha.test("several columns", () => {
+    Test_utils.eq("File \"char_range_test.res\", line 103, characters 7-14", grid(/* 'a' */97, /* 'y' */121), 1);
+    Test_utils.eq("File \"char_range_test.res\", line 104, characters 7-14", grid(/* 'c' */99, /* 'z' */122), 1);
+    Test_utils.eq("File \"char_range_test.res\", line 105, characters 7-14", grid(/* 'd' */100, /* 'z' */122), 2);
+    Test_utils.eq("File \"char_range_test.res\", line 106, characters 7-14", grid(/* 'b' */98, /* 'b' */98), 2);
+    Test_utils.eq("File \"char_range_test.res\", line 107, characters 7-14", grid(/* 'e' */101, /* 'b' */98), 3);
+    Test_utils.eq("File \"char_range_test.res\", line 108, characters 7-14", grid(/* 'e' */101, /* 'y' */121), 3);
+    Test_utils.eq("File \"char_range_test.res\", line 109, characters 7-14", grid(/* '😀' */128512, /* '😀' */128512), 4);
+    Test_utils.eq("File \"char_range_test.res\", line 110, characters 7-14", grid(/* '😀' */128512, /* 'q' */113), 5);
+    Test_utils.eq("File \"char_range_test.res\", line 111, characters 7-14", grid(/* 'e' */101, /* 'q' */113), 5);
+  });
+  Mocha.test("option", () => {
+    Test_utils.eq("File \"char_range_test.res\", line 115, characters 7-14", option(/* '5' */53), "digit");
+    Test_utils.eq("File \"char_range_test.res\", line 116, characters 7-14", option(/* 'x' */120), "other");
+    Test_utils.eq("File \"char_range_test.res\", line 117, characters 7-14", option(undefined), "none");
   });
 });
 
 export {
   isCjk,
+  isCodePoint,
   classify,
+  overlap,
+  guarded,
+  grid,
+  option,
 }
 /*  Not a pure module */

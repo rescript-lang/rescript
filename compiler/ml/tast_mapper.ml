@@ -165,7 +165,7 @@ let pat sub x =
   let pat_extra = List.map (tuple3 extra id id) x.pat_extra in
   let pat_desc =
     match x.pat_desc with
-    | (Tpat_any | Tpat_var _ | Tpat_constant _) as d -> d
+    | (Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_interval _) as d -> d
     | Tpat_tuple l -> Tpat_tuple (List.map (sub.pat sub) l)
     | Tpat_construct (loc, cd, l) ->
       Tpat_construct (loc, cd, List.map (sub.pat sub) l)

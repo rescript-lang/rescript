@@ -601,7 +601,8 @@ let rec build_as_type env p =
     | Some row ->
       let row = row_repr row in
       newty (Tvariant {row with row_closed = false; row_more = newvar ()}))
-  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_dict _ | Tpat_array _ ->
+  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_interval _ | Tpat_dict _
+  | Tpat_array _ ->
     p.pat_type
 
 let build_or_pat env loc lid =
@@ -1423,20 +1424,17 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
         pat_env = !env;
       }
   | Ppat_interval (Pconst_char {semantic = c1}, Pconst_char {semantic = c2}) ->
-    let open Ast_helper.Pat in
-    let gloc = {loc with Location.loc_ghost = true} in
-    let char semantic =
-      Pconst_char
-        {source = String_literal.encode_char_source semantic; semantic}
-    in
-    let rec loop c1 c2 =
-      if c1 = c2 then constant ~loc:gloc (char c1)
-      else or_ ~loc:gloc (constant ~loc:gloc (char c1)) (loop (c1 + 1) c2)
-    in
-    let p = if c1 <= c2 then loop c1 c2 else loop c2 c1 in
-    let p = {p with ppat_loc = loc} in
-    type_pat ~explode:0 p expected_ty k
-    (* TODO: record 'extra' to remember about interval *)
+    let lo = Const_char (min c1 c2) and hi = Const_char (max c1 c2) in
+    unify_pat_types loc !env (type_constant lo) expected_ty;
+    rp k
+      {
+        pat_desc = (if c1 = c2 then Tpat_constant lo else Tpat_interval (lo, hi));
+        pat_loc = loc;
+        pat_extra = [];
+        pat_type = expected_ty;
+        pat_attributes = sp.ppat_attributes;
+        pat_env = !env;
+      }
   | Ppat_interval _ -> raise (Error (loc, !env, Invalid_interval))
   | Ppat_tuple spl ->
     assert (List.length spl >= 2);

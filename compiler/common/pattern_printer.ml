@@ -66,6 +66,8 @@ let untype typed =
     | Tpat_or (pa, pb, _) -> mkpat (Ppat_or (loop pa, loop pb))
     | Tpat_any | Tpat_var _ -> mkpat Ppat_any
     | Tpat_constant c -> mkpat (Ppat_constant (Untypeast.constant c))
+    | Tpat_interval (c1, c2) ->
+      mkpat (Ppat_interval (Untypeast.constant c1, Untypeast.constant c2))
     | Tpat_alias (p, _, _) -> loop p
     | Tpat_tuple lst -> mkpat (Ppat_tuple (List.map loop lst))
     | Tpat_construct (cstr_lid, cstr, lst) ->
@@ -109,9 +111,9 @@ let untype typed =
         | Tpat_construct (_, cstr, [value]) when cstr.cstr_name = "Some" ->
           Some
             {pdp_key = tdp_key; pdp_pattern = loop value; pdp_optional = false}
-        | Tpat_var _ | Tpat_alias _ | Tpat_constant _ | Tpat_tuple _
-        | Tpat_construct _ | Tpat_variant _ | Tpat_record _ | Tpat_dict _
-        | Tpat_array _ | Tpat_or _ ->
+        | Tpat_var _ | Tpat_alias _ | Tpat_constant _ | Tpat_interval _
+        | Tpat_tuple _ | Tpat_construct _ | Tpat_variant _ | Tpat_record _
+        | Tpat_dict _ | Tpat_array _ | Tpat_or _ ->
           Some
             {
               pdp_key = tdp_key;
