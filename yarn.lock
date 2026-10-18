@@ -234,9 +234,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/darwin-arm64@npm:12.3.0":
-  version: 12.3.0
-  resolution: "@rescript/darwin-arm64@npm:12.3.0"
+"@rescript/darwin-arm64@npm:12.3.1":
+  version: 12.3.1
+  resolution: "@rescript/darwin-arm64@npm:12.3.1"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
@@ -247,9 +247,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/darwin-x64@npm:12.3.0":
-  version: 12.3.0
-  resolution: "@rescript/darwin-x64@npm:12.3.0"
+"@rescript/darwin-x64@npm:12.3.1":
+  version: 12.3.1
+  resolution: "@rescript/darwin-x64@npm:12.3.1"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
@@ -260,9 +260,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/linux-arm64@npm:12.3.0":
-  version: 12.3.0
-  resolution: "@rescript/linux-arm64@npm:12.3.0"
+"@rescript/linux-arm64@npm:12.3.1":
+  version: 12.3.1
+  resolution: "@rescript/linux-arm64@npm:12.3.1"
   conditions: os=linux & cpu=arm64
   languageName: node
   linkType: hard
@@ -273,9 +273,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/linux-x64@npm:12.3.0":
-  version: 12.3.0
-  resolution: "@rescript/linux-x64@npm:12.3.0"
+"@rescript/linux-x64@npm:12.3.1":
+  version: 12.3.1
+  resolution: "@rescript/linux-x64@npm:12.3.1"
   conditions: os=linux & cpu=x64
   languageName: node
   linkType: hard
@@ -294,10 +294,10 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/runtime@npm:12.3.0":
-  version: 12.3.0
-  resolution: "@rescript/runtime@npm:12.3.0"
-  checksum: 10c0/6d7b58078cec4444a3abd50fdb2ef35dfcc155c45cf824219dbc20180caef1aa891b10f4edf0c13396f7438023014eff0ab9289c9c8fae31d1a6e9d3849924a4
+"@rescript/runtime@npm:12.3.1":
+  version: 12.3.1
+  resolution: "@rescript/runtime@npm:12.3.1"
+  checksum: 10c0/3180be5907a9d3698f82d676b7f4070628df323a7af0a50d1f0a0ba191a9fd1094dd40ced43e646bcd50f615f1f7038cb060e21dce42ece239556460e1c57357
   languageName: node
   linkType: hard
 
@@ -309,9 +309,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/win32-x64@npm:12.3.0":
-  version: 12.3.0
-  resolution: "@rescript/win32-x64@npm:12.3.0"
+"@rescript/win32-x64@npm:12.3.1":
+  version: 12.3.1
+  resolution: "@rescript/win32-x64@npm:12.3.1"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -1037,8 +1037,8 @@ __metadata:
   resolution: "dev-playground@workspace:packages/dev-playground"
   dependencies:
     "@jridgewell/trace-mapping": "npm:^0.3.31"
-    "@rescript/runtime": "npm:12.3.0"
-    rescript: "npm:12.3.0"
+    "@rescript/runtime": "npm:12.3.1"
+    rescript: "npm:12.3.1"
     vite: "npm:^8.0.14"
     xote: "npm:7.1.0"
   languageName: unknown
@@ -1753,16 +1753,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"rescript@npm:12.3.0":
-  version: 12.3.0
-  resolution: "rescript@npm:12.3.0"
+"rescript@npm:12.3.1":
+  version: 12.3.1
+  resolution: "rescript@npm:12.3.1"
   dependencies:
-    "@rescript/darwin-arm64": "npm:12.3.0"
-    "@rescript/darwin-x64": "npm:12.3.0"
-    "@rescript/linux-arm64": "npm:12.3.0"
-    "@rescript/linux-x64": "npm:12.3.0"
-    "@rescript/runtime": "npm:12.3.0"
-    "@rescript/win32-x64": "npm:12.3.0"
+    "@rescript/darwin-arm64": "npm:12.3.1"
+    "@rescript/darwin-x64": "npm:12.3.1"
+    "@rescript/linux-arm64": "npm:12.3.1"
+    "@rescript/linux-x64": "npm:12.3.1"
+    "@rescript/runtime": "npm:12.3.1"
+    "@rescript/win32-x64": "npm:12.3.1"
   dependenciesMeta:
     "@rescript/darwin-arm64":
       optional: true
@@ -1780,7 +1780,7 @@ __metadata:
     rescript: cli/rescript.js
     rescript-legacy: cli/rescript-legacy.js
     rescript-tools: cli/rescript-tools.js
-  checksum: 10c0/f16231ef95bb4371e531485c33dfd9227cbddc079c06dab9a8395d444b5e8a8cfb844e018667dfaf36465138eb832cf219f6f71c7c37b65621a5fe0db781809c
+  checksum: 10c0/c802cfe06a93b19b22c940d6b15e000090c3b0facb44f50671662cb78ccbb66022d03553ce764dc270e40c1264752cfbf17b8ae62c7b02a8a929c59388a220f6
   languageName: node
   linkType: hard
 
