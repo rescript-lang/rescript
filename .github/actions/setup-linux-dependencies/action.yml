@@ -23,9 +23,27 @@ runs:
         read -ra packages <<< "$PACKAGES"
         mapfile -t packages < <(printf '%s\n' "${packages[@]}" | sort -u)
 
+        candidate() {
+          local output
+          output="$(apt-cache policy "$1" 2>&1)" || {
+            echo "apt-cache policy $1 failed with exit code $?:" >&2
+            printf '%s\n' "$output" >&2
+            return 1
+          }
+          awk '/Candidate:/ { print $2; exit }' <<< "$output"
+        }
+
+        # A runner image may ship without package lists, in which case no
+        # candidate resolves until the lists are fetched.
+        updated=false
         resolved_packages=()
         for package in "${packages[@]}"; do
-          version="$(apt-cache policy "$package" | awk '/Candidate:/ { print $2; exit }')"
+          version="$(candidate "$package")" || version=""
+          if [[ ( -z "$version" || "$version" == "(none)" ) && "$updated" == false ]]; then
+            sudo apt-get update
+            updated=true
+            version="$(candidate "$package")" || version=""
+          fi
           if [[ -z "$version" || "$version" == "(none)" ]]; then
             echo "Unable to resolve an APT candidate for $package" >&2
             exit 1
