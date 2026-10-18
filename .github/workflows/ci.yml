@@ -662,3 +662,24 @@ jobs:
           node src/BeltTest.mjs
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
+
+  # The single CI check that the master ruleset requires. Matrix job names
+  # contain runner labels, so requiring this job instead keeps the ruleset
+  # unchanged when runners or jobs change. It runs even when a needed job fails
+  # or the run is cancelled, because a skipped required check counts as passed.
+  ci-ok:
+    if: ${{ always() }}
+    needs:
+      - build-compiler
+      - pkg-pr-new
+      - api-docs
+      - test-installation-npm
+      - test-installation-pnpm
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Check that all needed jobs succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "$NEEDS"
+          jq -e 'all(.[]; .result == "success")' <<< "$NEEDS" > /dev/null
