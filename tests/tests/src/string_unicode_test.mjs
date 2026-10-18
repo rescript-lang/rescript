@@ -10,14 +10,16 @@ console.log(`你好`);
 console.log("你好");
 
 function f(x) {
-  if (x !== 333) {
-    if (x >= 256) {
+  if (x >= 256) {
+    if (x !== 333) {
       return 3;
     } else {
-      return 0;
+      return 2;
     }
+  } else if (x >= 0) {
+    return 0;
   } else {
-    return 2;
+    return 3;
   }
 }
 

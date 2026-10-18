@@ -1330,7 +1330,9 @@ let rec find_root_type_id ~full ~env ~state (t : Types.type_expr) =
       then
         Some
           (if debug then Printf.printf "[find_root_type_id] returning builtin\n";
-           Path.name path)
+           (* [char] is an alias of [int] *)
+           if Path.same path Predef.path_char then Path.name Predef.path_int
+           else Path.name path)
       else None)
   | _ -> None
 
@@ -1396,7 +1398,7 @@ let completion_path_from_maybe_builtin path =
   | Some ("list", _) -> Some ["Stdlib"; "List"]
   | Some ("result", _) -> Some ["Stdlib"; "Result"]
   | Some ("dict", _) -> Some ["Stdlib"; "Dict"]
-  | Some ("char", _) -> Some ["Stdlib"; "Char"]
+  | Some ("char", _) -> Some ["Stdlib"; "Int"]
   | _ -> (
     match path |> Utils.expand_path |> List.rev with
     | [main_module; "t"] when String.starts_with ~prefix:"Stdlib_" main_module

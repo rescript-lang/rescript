@@ -434,9 +434,8 @@ let common_initial_env add_type add_extension empty_env =
 
 let build_initial_env add_type add_exception empty_env =
   let common = common_initial_env add_type add_exception empty_env in
-  let decl_type_char =
-    {decl_abstr with type_manifest = Some (type_int ()); type_private = Private}
-  in
+  (* [char] is an alias of [int]: a char literal is its code point. *)
+  let decl_type_char = {decl_abstr with type_manifest = Some (type_int ())} in
   add_type ident_char decl_type_char common
 
 let () =

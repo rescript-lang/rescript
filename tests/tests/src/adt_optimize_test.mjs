@@ -24,9 +24,6 @@ function f_0(x) {
 }
 
 function f2(x) {
-  if (x >= 3) {
-    return "T003";
-  }
   switch (x) {
     case 0 :
       return "T000";
@@ -34,6 +31,8 @@ function f2(x) {
       return "T001";
     case 2 :
       return "T002";
+    default:
+      return "T003";
   }
 }
 

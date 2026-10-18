@@ -1147,28 +1147,30 @@ let add make_matching_fun division eq_key key patl_action args =
     cell.pm.cases <- [patl_action];
     (key, cell) :: division
 
-(* Cells whose key is [hashable] are also found by hashing, which must agree
-   with [eq_key]. This keeps a column of many distinct keys linear. *)
-let divide ?(hashable = fun _ -> false) make eq_key get_key get_args ctx pm =
+(* Cells whose key has a [hash_key] are also found by hashing on it, which
+   must agree with [eq_key]. This keeps a column of many distinct keys
+   linear. *)
+let divide ?(hash_key = fun _ -> None) make eq_key get_key get_args ctx pm =
   let cells = lazy (Hashtbl.create 16) in
   let rec divide_rec = function
     | (p :: patl, action) :: rem -> (
       let this_match = divide_rec rem in
       let key = get_key p in
       let patl_action = (get_args p patl, action) in
-      if not (hashable key) then
+      match hash_key key with
+      | None ->
         add (make p pm.default ctx) this_match eq_key key patl_action pm.args
-      else
+      | Some hkey -> (
         let cells = Lazy.force cells in
-        match Hashtbl.find_opt cells key with
+        match Hashtbl.find_opt cells hkey with
         | Some cell ->
           cell.pm.cases <- patl_action :: cell.pm.cases;
           this_match
         | None ->
           let cell = make p pm.default ctx pm.args in
           cell.pm.cases <- [patl_action];
-          Hashtbl.add cells key cell;
-          (key, cell) :: this_match)
+          Hashtbl.add cells hkey cell;
+          (key, cell) :: this_match))
     | _ -> []
   in
 
@@ -1226,9 +1228,10 @@ let make_constant_matching p def ctx = function
 
 let divide_constant ctx m =
   divide
-    ~hashable:(function
-      | Asttypes.Const_int _ | Const_char _ | Const_string _ -> true
-      | Const_float _ | Const_bigint _ -> false)
+    ~hash_key:(function
+      | (Asttypes.Const_int _ | Const_char _ | Const_string _) as c ->
+        Some (Parmatch.const_key c)
+      | Const_float _ | Const_bigint _ -> None)
     make_constant_matching
     (fun c d -> const_compare c d = 0)
     (get_key_constant "divide")
@@ -1999,11 +2002,12 @@ let combine_constant loc arg cst partial ctx def
   let fail, local_jumps = mk_failaction_neg partial ctx def in
   let lambda1 =
     match (cst : Asttypes.constant) with
-    | Const_int _ ->
+    | Const_int _ | Const_char _ ->
+      (* [char] is an alias of [int], so a column can mix both. *)
       let int_lambda_list =
         List.map
           (function
-            | Asttypes.Const_int n, l -> (n, l)
+            | (Asttypes.Const_int n | Const_char n), l -> (n, l)
             | _ -> assert false)
           const_lambda_list
       in
@@ -2011,15 +2015,6 @@ let combine_constant loc arg cst partial ctx def
          Otherwise the upper fail interval starts at 2147483648, which wraps
          when converted to a Lambda integer constant. *)
       call_switcher fail arg int32_low int32_high int_lambda_list
-    | Const_char _ ->
-      let int_lambda_list =
-        List.map
-          (function
-            | Asttypes.Const_char c, l -> (c, l)
-            | _ -> assert false)
-          const_lambda_list
-      in
-      call_switcher fail arg 0 max_int int_lambda_list
     | Const_string _ ->
       (* Note as the bytecode compiler may resort to dichotomic search,
          the clauses of stringswitch  are sorted with duplicates removed.

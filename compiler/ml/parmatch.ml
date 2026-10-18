@@ -155,8 +155,7 @@ let all_coherent column =
       | _ -> false)
     | Tpat_constant c1, Tpat_constant c2 -> (
       match (c1, c2) with
-      | Const_char _, Const_char _
-      | Const_int _, Const_int _
+      | (Const_char _ | Const_int _), (Const_char _ | Const_int _)
       | Const_bigint _, Const_bigint _
       | Const_float _, Const_float _
       | Const_string _, Const_string _ ->
@@ -270,7 +269,15 @@ let const_compare x y =
   | Const_bigint (s1, b1), Const_bigint (s2, b2) ->
     Bigint_utils.compare (s1, b1) (s2, b2)
   | Const_string s1, Const_string s2 -> String.compare s1 s2
+  | (Const_char i1 | Const_int i1), (Const_char i2 | Const_int i2) ->
+    compare i1 i2
   | _, _ -> compare x y
+
+(* [char] is an alias of [int], so a char constant and an int constant with the
+   same value match the same values. Hash tables of constants use this key. *)
+let const_key = function
+  | Const_char i -> Const_int i
+  | c -> c
 
 let records_args l1 l2 =
   (* Invariant: fields are already sorted by Typecore.type_record_elem_list *)
@@ -765,7 +772,7 @@ let filter_all pat0 pss =
   let insert q qs =
     match q.pat_desc with
     | Tpat_constant ((Const_int _ | Const_char _ | Const_string _) as c) ->
-      find_or_add const_groups c q qs
+      find_or_add const_groups (const_key c) q qs
     | Tpat_variant (l, _, _) -> find_or_add variant_groups l q qs
     | _ -> (
       match List.find_opt (fun (q0, _) -> simple_match q0 q) !groups with
@@ -1058,21 +1065,18 @@ let build_other ext env : Typedtree.pattern =
         (fun p_res pat ->
           make_pat (Tpat_or (pat, p_res, None)) p.pat_type p.pat_env)
         pat other_pats)
-  | (({pat_desc = Tpat_constant (Const_int _)} as p), _) :: _ ->
+  | (({pat_desc = Tpat_constant ((Const_int _ | Const_char _) as c)} as p), _)
+    :: _ ->
+    (* Int and char constants can share a column; the example takes the kind
+       of the first one. *)
     build_other_constant
       (function
-        | Tpat_constant (Const_int i) -> i
+        | Tpat_constant (Const_int i | Const_char i) -> i
         | _ -> assert false)
-      (function
-        | i -> Tpat_constant (Const_int i))
-      0 succ p env
-  | (({pat_desc = Tpat_constant (Const_char _)} as p), _) :: _ ->
-    build_other_constant
-      (function
-        | Tpat_constant (Const_char i) -> i
-        | _ -> assert false)
-      (function
-        | i -> Tpat_constant (Const_char i))
+      (fun i ->
+        match c with
+        | Const_char _ -> Tpat_constant (Const_char i)
+        | _ -> Tpat_constant (Const_int i))
       0 succ p env
   | (({pat_desc = Tpat_constant (Const_bigint _)} as p), _) :: _ ->
     build_other_constant
@@ -1713,7 +1717,7 @@ let get_mins_pats pss =
           Tpat_constant ((Const_int _ | Const_char _ | Const_string _) as c);
       }
       :: _ ->
-      Some c
+      Some (const_key c)
     | _ -> None
   in
   (* [select_rec [] pss] of [get_mins le_pats]: drops each row covered by a
