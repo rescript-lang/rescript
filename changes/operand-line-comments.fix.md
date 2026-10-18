@@ -1,0 +1,1 @@
+- Fix the formatter moving a line comment in the operand of `switch`, `try`, `if`, `while` or a loop into the block that follows, which changed it again on every format.

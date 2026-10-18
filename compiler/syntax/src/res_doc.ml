@@ -122,6 +122,35 @@ let rec will_break doc =
   | IfBreaks {yes; no} -> will_break yes || will_break no
   | _ -> false
 
+(* See documentation in interface file *)
+let rec break_before_line_suffixes doc =
+  match doc with
+  | LineSuffix _ -> Concat [doc; BreakParent]
+  | Concat docs -> Concat (List.map break_before_line_suffixes docs)
+  | Indent doc -> Indent (break_before_line_suffixes doc)
+  | Group {should_break; doc} ->
+    Group {should_break; doc = break_before_line_suffixes doc}
+  | IfBreaks {yes; no; broken} ->
+    IfBreaks
+      {
+        yes = break_before_line_suffixes yes;
+        no = break_before_line_suffixes no;
+        broken;
+      }
+  | CustomLayout docs -> CustomLayout (List.map break_before_line_suffixes docs)
+  | Nil | Text _ | LineBreak _ | BreakParent -> doc
+
+(* See documentation in interface file *)
+let rec has_ungrouped_line_suffix doc =
+  match doc with
+  | LineSuffix _ -> true
+  | Concat docs | CustomLayout docs ->
+    List.exists has_ungrouped_line_suffix docs
+  | Indent doc -> has_ungrouped_line_suffix doc
+  | IfBreaks {yes; no} ->
+    has_ungrouped_line_suffix yes || has_ungrouped_line_suffix no
+  | Group _ | Nil | Text _ | LineBreak _ | BreakParent -> false
+
 let join ~sep docs =
   let rec loop acc sep docs =
     match docs with
