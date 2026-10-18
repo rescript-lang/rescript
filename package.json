@@ -95,11 +95,11 @@
     "@rescript/win32-x64": "workspace:packages/@rescript/win32-x64"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.5",
+    "@biomejs/biome": "2.5.15",
     "@types/node": "^26.1.1",
     "@types/semver": "^7.7.0",
     "@yarnpkg/types": "^4.0.1",
-    "mocha": "11.7.6",
+    "mocha": "12.0.3",
     "semver": "^7.7.2",
     "typescript": "6.0.3"
   },
@@ -117,6 +117,6 @@
     "tests/commonjs_tests",
     "scripts/res"
   ],
-  "packageManager": "yarn@4.12.0",
+  "packageManager": "yarn@4.18.1",
   "preferUnplugged": true
 }

@@ -2,7 +2,7 @@
   "name": "rescript-tests",
   "private": true,
   "dependencies": {
-    "@babel/code-frame": "^7.29.7",
+    "@babel/code-frame": "^8.0.6",
     "@rescript/react": "workspace:^",
     "rescript": "workspace:^"
   },
