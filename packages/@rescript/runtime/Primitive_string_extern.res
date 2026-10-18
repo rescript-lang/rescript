@@ -6,4 +6,4 @@
 
 external length: string => int = "%string_length"
 
-@send external getChar: (string, int) => option<char> = "codePointAt"
+@send external getChar: (string, int) => option<int> = "codePointAt"
