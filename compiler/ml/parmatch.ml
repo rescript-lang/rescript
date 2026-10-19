@@ -325,12 +325,6 @@ let const_compare x y =
     compare i1 i2
   | _, _ -> compare x y
 
-(* [char] is an alias of [int], so a char constant and an int constant with the
-   same value match the same values. Hash tables of constants use this key. *)
-let const_key = function
-  | Const_char i -> Const_int i
-  | c -> c
-
 let records_args l1 l2 =
   (* Invariant: fields are already sorted by Typecore.type_record_elem_list *)
   let rec combine r1 r2 l1 l2 =
@@ -804,22 +798,14 @@ let filter_extra pss =
 
 let filter_all pat0 pss =
   (* The groups, most recently created first. Each row goes to the group
-     whose head [simple_match]es it; there is at most one such group, since a
-     group is only created when no other matches. *)
+     whose head matches it; there is at most one such group, since a group is
+     only created when no other matches. *)
   let groups =
     ref
       (match pat0.pat_desc with
       | Tpat_record _ | Tpat_tuple _ -> [(pat0, ref [])]
       | _ -> [])
   in
-  (* For int, char and string constants and for polymorphic variants,
-     [simple_match] is equality, so their groups are also found by hashing.
-     This keeps a column of many distinct heads, e.g. an expanded character
-     range, linear instead of quadratic. The tables are only created when needed,
-     as most calls are on small matrices. *)
-  let const_groups = lazy (Hashtbl.create 16) in
-  let interval_groups = lazy (Hashtbl.create 16) in
-  let variant_groups = lazy (Hashtbl.create 16) in
   let add_row (q0, rows) q qs =
     rows := (simple_match_args q0 q @ qs) :: !rows
   in
@@ -830,24 +816,17 @@ let filter_all pat0 pss =
     groups := group :: !groups;
     group
   in
-  let find_or_add tbl key q qs =
-    let tbl = Lazy.force tbl in
-    match Hashtbl.find_opt tbl key with
-    | Some group -> add_row group q qs
-    | None -> Hashtbl.add tbl key (new_group q qs)
+  (* Int and char ranges are grouped by equal bounds, not by containment as
+     [simple_match] does, so that [build_other] sees every range. *)
+  let same_head q0 q =
+    match (int_range q0, int_range q) with
+    | Some r0, Some r -> r0 = r
+    | _ -> simple_match q0 q
   in
   let insert q qs =
-    match q.pat_desc with
-    | Tpat_constant ((Const_int _ | Const_char _ | Const_string _) as c) ->
-      find_or_add const_groups (const_key c) q qs
-    | Tpat_interval (c1, c2) ->
-      (* Grouped by equal bounds; [build_other] then sees every interval. *)
-      find_or_add interval_groups (const_key c1, const_key c2) q qs
-    | Tpat_variant (l, _, _) -> find_or_add variant_groups l q qs
-    | _ -> (
-      match List.find_opt (fun (q0, _) -> simple_match q0 q) !groups with
-      | Some group -> add_row group q qs
-      | None -> ignore (new_group q qs))
+    match List.find_opt (fun (q0, _) -> same_head q0 q) !groups with
+    | Some group -> add_row group q qs
+    | None -> ignore (new_group q qs)
   in
 
   let rec filter_rec = function
@@ -1842,49 +1821,6 @@ let get_mins le ps =
   in
   select_rec [] (select_rec [] ps)
 
-(* [get_mins le_pats pss], but faster for many rows starting with distinct
-   constants, e.g. an expanded character range. A row starting with an int,
-   char or string constant can only be covered by rows starting with the same
-   constant or with another kind of pattern, so only those are compared. *)
-let get_mins_pats pss =
-  let key = function
-    | {
-        pat_desc =
-          Tpat_constant ((Const_int _ | Const_char _ | Const_string _) as c);
-      }
-      :: _ ->
-      Some (const_key c)
-    | _ -> None
-  in
-  (* [select_rec [] pss] of [get_mins le_pats]: drops each row covered by a
-     later row, and reverses the order. *)
-  let select pss =
-    let later = ref [] in
-    let later_by_key = lazy (Hashtbl.create 16) in
-    let later_unkeyed = ref [] in
-    let kept =
-      List.fold_left
-        (fun kept ps ->
-          let below qs = le_pats qs ps in
-          let key = key ps in
-          let dominated =
-            match key with
-            | None -> List.exists below !later
-            | Some c ->
-              List.exists below (Hashtbl.find_all (Lazy.force later_by_key) c)
-              || List.exists below !later_unkeyed
-          in
-          later := ps :: !later;
-          (match key with
-          | None -> later_unkeyed := ps :: !later_unkeyed
-          | Some c -> Hashtbl.add (Lazy.force later_by_key) c ps);
-          if dominated then kept else ps :: kept)
-        [] (List.rev pss)
-    in
-    List.rev kept
-  in
-  select (select pss)
-
 (*
   lub p q is a pattern that matches all values matched by p and q
   may raise Empty, when p and q are not compatible
@@ -2340,7 +2276,7 @@ let check_unused pred casel =
       | {c_lhs = q; c_guard} :: rem ->
         let qs = [q] in
         (try
-           let pss = get_mins_pats (Ext_list.filter pref (compats qs)) in
+           let pss = get_mins le_pats (Ext_list.filter pref (compats qs)) in
            (* First look for redundant or partially redundant patterns *)
            let r = every_satisfiables (make_rows pss) (make_row qs) in
            (* Do not warn for unused [pat -> .] *)
@@ -2419,7 +2355,7 @@ let irrefutable pat = le_pat (Dict_pattern.lowering [pat] pat) omega
 
 let check_partial_param do_check_partial do_check_fragile loc casel =
   let pss = initial_matrix casel in
-  let pss = get_mins_pats pss in
+  let pss = get_mins le_pats pss in
   let total = do_check_partial loc casel pss in
   if total = Total && Warnings.is_active (Warnings.Fragile_match "") then
     do_check_fragile loc casel pss;

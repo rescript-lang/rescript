@@ -631,7 +631,7 @@ let rec what_is_cases cases =
   | _ -> assert false
 
 (* A few operations on default environments *)
-let as_matrix cases = get_mins_pats (List.map (fun (ps, _) -> ps) cases)
+let as_matrix cases = get_mins le_pats (List.map (fun (ps, _) -> ps) cases)
 
 let cons_default matrix raise_num default =
   match matrix with
@@ -1168,30 +1168,13 @@ let add make_matching_fun division eq_key key patl_action args =
     cell.pm.cases <- [patl_action];
     (key, cell) :: division
 
-(* Cells whose key has a [hash_key] are also found by hashing on it, which
-   must agree with [eq_key]. This keeps a column of many distinct keys
-   linear. *)
-let divide ?(hash_key = fun _ -> None) make eq_key get_key get_args ctx pm =
-  let cells = lazy (Hashtbl.create 16) in
+let divide make eq_key get_key get_args ctx pm =
   let rec divide_rec = function
-    | (p :: patl, action) :: rem -> (
+    | (p :: patl, action) :: rem ->
       let this_match = divide_rec rem in
-      let key = get_key p in
-      let patl_action = (get_args p patl, action) in
-      match hash_key key with
-      | None ->
-        add (make p pm.default ctx) this_match eq_key key patl_action pm.args
-      | Some hkey -> (
-        let cells = Lazy.force cells in
-        match Hashtbl.find_opt cells hkey with
-        | Some cell ->
-          cell.pm.cases <- patl_action :: cell.pm.cases;
-          this_match
-        | None ->
-          let cell = make p pm.default ctx pm.args in
-          cell.pm.cases <- [patl_action];
-          Hashtbl.add cells hkey cell;
-          (key, cell) :: this_match))
+      add (make p pm.default ctx) this_match eq_key (get_key p)
+        (get_args p patl, action)
+        pm.args
     | _ -> []
   in
 
@@ -1342,12 +1325,7 @@ let divide_constant ctx m =
   match column_int_ranges m with
   | Some ranges -> divide_constant_ranges ranges ctx m
   | None ->
-    divide
-      ~hash_key:(function
-        | ((Asttypes.Const_int _ | Const_char _ | Const_string _) as c), _ ->
-          Some (Parmatch.const_key c)
-        | (Const_float _ | Const_bigint _), _ -> None)
-      make_constant_matching
+    divide make_constant_matching
       (fun (c, _) (d, _) -> const_compare c d = 0)
       (get_key_constant "divide")
       get_args_constant ctx m
