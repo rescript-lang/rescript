@@ -280,6 +280,29 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
         case.c_rhs |> iter_expr self)
   in
   let is_throw s = s = "Pervasives.raise" || s = "Pervasives.throw" in
+  (* [/] and [mod] are listed in [Exn_lib] as throwing [Division_by_zero].
+     They cannot throw when the divisor is a non-zero literal, as in [x / 10]. *)
+  let is_division s =
+    s = "Pervasives./" || s = "Pervasives.mod" || s = "Stdlib./"
+    || s = "Stdlib.mod"
+  in
+  let is_non_zero_constant (c : Asttypes.constant) =
+    match c with
+    | Const_int n -> n <> 0
+    | Const_float s -> (
+      match float_of_string_opt s with
+      | Some f -> f <> 0.
+      | None -> false)
+    | Const_bigint (_, digits) ->
+      String.exists (fun c -> c >= '1' && c <= '9') digits
+    | Const_char _ | Const_string _ -> false
+  in
+  let divides_by_non_zero_constant args =
+    match args with
+    | [_; (_, Some {Typedtree.exp_desc = Texp_constant c})] ->
+      is_non_zero_constant c
+    | _ -> false
+  in
   let throw_args args =
     match args with
     | [(_, Some {Typedtree.exp_desc = Texp_construct ({txt}, _, _)})] ->
@@ -345,7 +368,8 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
         let exceptions = args |> throw_args in
         current_events :=
           {Event.exceptions; loc; kind = Throws} :: !current_events
-      else e |> iter_expr self;
+      else if not (is_division callee_name && divides_by_non_zero_constant args)
+      then e |> iter_expr self;
       args |> List.iter (fun (_, e_opt) -> e_opt |> iter_expr_opt self)
     | Texp_match (e, cases_ok, cases_exn, partial) ->
       let cases = cases_ok @ cases_exn in
