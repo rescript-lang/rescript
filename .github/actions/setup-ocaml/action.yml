@@ -75,6 +75,8 @@ runs:
         COMPILER: ${{ inputs.compiler }}
         DEPENDENCY_FLAGS: ${{ inputs.dependency-flags }}
         OS: ${{ inputs.os }}
+      # 3.9.0 is the ocaml/setup-ocaml version below. Update both together:
+      # Dependabot bumps only the `uses:` line, and a cache hit skips that step.
       run: |
         dependency_flags_key="${DEPENDENCY_FLAGS//--/}"
         dependency_flags_key="${dependency_flags_key// /_}"
