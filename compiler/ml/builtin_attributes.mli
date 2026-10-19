@@ -40,6 +40,10 @@ val check_deprecated_inclusion :
   string ->
   unit
 val deprecated_of_attrs : Parsetree.attributes -> string option
+
+val deprecated_attributes : Parsetree.attributes -> Parsetree.attributes
+(** The [deprecated] attributes in a list *)
+
 val deprecated_of_sig : Parsetree.signature -> string option
 val deprecated_of_str : Parsetree.structure -> string option
 

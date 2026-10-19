@@ -1398,11 +1398,33 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr =
       let () =
         if rec_flag = Recursive then Rec_check.check_recursive_bindings defs
       in
+      (* The environment keeps let-bound values without attributes, so uses
+         in this module do not warn. The signature carries their [deprecated]
+         attributes, so uses from other modules do. *)
+      let deprecated =
+        List.concat_map
+          (fun (vb : value_binding) ->
+            match Builtin_attributes.deprecated_attributes vb.vb_attributes with
+            | [] -> []
+            | attrs ->
+              List.map (fun id -> (id, attrs)) (pat_bound_idents vb.vb_pat))
+          defs
+      in
       (* Note: Env.find_value does not trigger the value_used event. Values
          will be marked as being used during the signature inclusion test. *)
       ( Tstr_value (rec_flag, defs),
         List.map
-          (fun id -> Sig_value (id, Env.find_value (Pident id) newenv))
+          (fun id ->
+            let vd = Env.find_value (Pident id) newenv in
+            let vd =
+              match
+                List.find_opt (fun (id', _) -> Ident.same id id') deprecated
+              with
+              | None -> vd
+              | Some (_, attrs) ->
+                {vd with val_attributes = attrs @ vd.val_attributes}
+            in
+            Sig_value (id, vd))
           (let_bound_idents defs),
         newenv )
     | Pstr_primitive sdesc ->
