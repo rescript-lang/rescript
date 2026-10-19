@@ -75,7 +75,7 @@ let tests =
     [
       ("linux", "amd64", Some "@rescript/linux-x64");
       ("linux", "arm64", Some "@rescript/linux-arm64");
-      ("macosx", "amd64", Some "@rescript/darwin-x64");
+      ("macosx", "amd64", None);
       ("macosx", "arm64", Some "@rescript/darwin-arm64");
       ("mingw64", "amd64", Some "@rescript/win32-x64");
       ("win64", "amd64", Some "@rescript/win32-x64");

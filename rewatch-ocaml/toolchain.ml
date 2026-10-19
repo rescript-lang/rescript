@@ -19,7 +19,8 @@ let absolute_program ~cwd program =
 
 (* The npm package (@rescript/<target>) with the binaries for the platform
    [system] and [architecture] name, as in cli/common/platform.cjs. Windows on
-   ARM runs the x64 binaries, which are built for amd64. *)
+   ARM runs the x64 binaries, which are built for amd64. Intel Macs have no
+   package since ReScript 13. *)
 let platform_package ~system ~architecture =
   let os =
     match system with
@@ -35,6 +36,7 @@ let platform_package ~system ~architecture =
     | _ -> None
   in
   match (os, arch) with
+  | Some "darwin", Some "x64" -> None
   | Some os, Some arch -> Some ("@rescript/" ^ os ^ "-" ^ arch)
   | _ -> None
 

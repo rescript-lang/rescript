@@ -232,12 +232,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rescript/darwin-x64@workspace:packages/@rescript/darwin-x64":
-  version: 0.0.0-use.local
-  resolution: "@rescript/darwin-x64@workspace:packages/@rescript/darwin-x64"
-  languageName: unknown
-  linkType: soft
-
 "@rescript/linux-arm64@npm:12.3.1":
   version: 12.3.1
   resolution: "@rescript/linux-arm64@npm:12.3.1"
@@ -1487,7 +1481,6 @@ __metadata:
   dependencies:
     "@biomejs/biome": "npm:2.5.15"
     "@rescript/darwin-arm64": "workspace:packages/@rescript/darwin-arm64"
-    "@rescript/darwin-x64": "workspace:packages/@rescript/darwin-x64"
     "@rescript/linux-arm64": "workspace:packages/@rescript/linux-arm64"
     "@rescript/linux-x64": "workspace:packages/@rescript/linux-x64"
     "@rescript/runtime": "workspace:packages/@rescript/runtime"
@@ -1500,8 +1493,6 @@ __metadata:
     typescript: "npm:6.0.3"
   dependenciesMeta:
     "@rescript/darwin-arm64":
-      optional: true
-    "@rescript/darwin-x64":
       optional: true
     "@rescript/linux-arm64":
       optional: true

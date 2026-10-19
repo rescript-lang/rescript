@@ -841,19 +841,6 @@
     "bin/rescript.exe",
     "package.json"
   ],
-  "@rescript/darwin-x64": [
-    "RE_LICENSE.md",
-    "THIRD_PARTY_NOTICES_REWATCH.md",
-    "bin.d.ts",
-    "bin.js",
-    "bin/.gitkeep",
-    "bin/bsc.exe",
-    "bin/rescript-editor-analysis.exe",
-    "bin/rescript-rust.exe",
-    "bin/rescript-tools.exe",
-    "bin/rescript.exe",
-    "package.json"
-  ],
   "@rescript/linux-arm64": [
     "RE_LICENSE.md",
     "THIRD_PARTY_NOTICES_REWATCH.md",

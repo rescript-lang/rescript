@@ -43,33 +43,6 @@
  (enabled_if
   (and
    (<> %{profile} browser)
-   (= %{system} macosx)
-   (= %{architecture} amd64)))
- (targets
-  bsc.exe
-  rescript-editor-analysis.exe
-  rescript-tools.exe
-  rescript.exe)
- (deps
-  ../bsc/rescript_compiler_main.exe
-  ../../analysis/bin/main.exe
-  ../../tools/bin/main.exe
-  ../../rewatch-ocaml/rescript_ocaml.exe)
- (mode
-  (promote
-   (until-clean)
-   (into ../../packages/@rescript/darwin-x64/bin)))
- (action
-  (progn
-   (run strip -o bsc.exe ../bsc/rescript_compiler_main.exe)
-   (run strip -o rescript-editor-analysis.exe ../../analysis/bin/main.exe)
-   (run strip -o rescript-tools.exe ../../tools/bin/main.exe)
-   (run strip -o rescript.exe ../../rewatch-ocaml/rescript_ocaml.exe))))
-
-(rule
- (enabled_if
-  (and
-   (<> %{profile} browser)
    (= %{system} linux)
    (= %{architecture} arm64)))
  (targets
