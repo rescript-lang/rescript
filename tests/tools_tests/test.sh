@@ -77,6 +77,24 @@ for file in src/migrate/NoMigration.{res,resi}; do
   fi
 done
 
+# Test that migrate refuses a source that changed since the last build
+for stale_file in src/migrate/FileToMigrate.res src/migrate/DeprecatedStuff.resi; do
+  stale_backup="$(mktemp)"
+  cp "$stale_file" "$stale_backup"
+  echo "// changed after the build" >> "$stale_file"
+  if stale_output="$(../../_build/install/default/bin/rescript-tools migrate "$stale_file" --stdout 2>&1)"; then
+    cp "$stale_backup" "$stale_file"
+    echo "Expected migrate to fail for a stale build of $stale_file" >&2
+    exit 1
+  fi
+  cp "$stale_backup" "$stale_file"
+  rm "$stale_backup"
+  if [[ "$stale_output" != *"build artifacts are out of date"* ]]; then
+    echo "Unexpected migrate error for a stale build of $stale_file: $stale_output" >&2
+    exit 1
+  fi
+done
+
 # Move migrated files to expected directory so they can be compiled in the project
 for file in src/migrate/StdlibMigration_*.res; do
   expected_file="src/expected/$(basename $file).expected"
