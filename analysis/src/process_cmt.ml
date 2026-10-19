@@ -535,7 +535,9 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
         |> List.iter (fun {Typedtree.tdp_pattern} ->
             handle_pattern [] tdp_pattern)
       | Tpat_variant (_, Some p, _) -> handle_pattern [] p
-      | Tpat_variant (_, None, _) | Tpat_any | Tpat_constant _ -> ()
+      | Tpat_variant (_, None, _) | Tpat_any | Tpat_constant _ | Tpat_interval _
+        ->
+        ()
     in
     List.iter
       (fun {Typedtree.vb_pat; vb_attributes} ->

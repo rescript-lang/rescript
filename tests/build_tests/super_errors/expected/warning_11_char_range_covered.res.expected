@@ -1,0 +1,11 @@
+
+  [1;33mWarning number 11[0m
+  [36m/.../fixtures/warning_11_char_range_covered.res[0m:[2m6:5-14[0m
+
+  4 [2m┆[0m | 'a' .. 'm' => 1
+  5 [2m┆[0m | 'n' .. 'z' => 2
+  [1;33m6[0m [2m┆[0m | [1;33m'c' .. 'x'[0m => 3
+  7 [2m┆[0m | _ => 4
+  8 [2m┆[0m }
+
+  this match case is unused.

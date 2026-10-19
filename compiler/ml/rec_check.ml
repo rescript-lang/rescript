@@ -151,7 +151,7 @@ let rec pattern_variables : Typedtree.pattern -> Ident.t list =
   | Tpat_any -> []
   | Tpat_var (id, _) -> [id]
   | Tpat_alias (pat, id, _) -> id :: pattern_variables pat
-  | Tpat_constant _ -> []
+  | Tpat_constant _ | Tpat_interval _ -> []
   | Tpat_tuple pats -> List.concat (List.map pattern_variables pats)
   | Tpat_construct (_, _, pats) -> List.concat (List.map pattern_variables pats)
   | Tpat_variant (_, Some pat, _) -> pattern_variables pat
@@ -465,7 +465,7 @@ and is_destructuring_pattern : Typedtree.pattern -> bool =
   | Tpat_any -> false
   | Tpat_var (_, _) -> false
   | Tpat_alias (pat, _, _) -> is_destructuring_pattern pat
-  | Tpat_constant _ -> true
+  | Tpat_constant _ | Tpat_interval _ -> true
   | Tpat_tuple _ -> true
   | Tpat_construct (_, _, _) -> true
   | Tpat_variant _ -> true

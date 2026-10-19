@@ -72,6 +72,10 @@ and pattern_desc =
   | Tpat_var of Ident.t * string loc  (** x *)
   | Tpat_alias of pattern * Ident.t * string loc  (** P as a *)
   | Tpat_constant of constant  (** 1, 'a', "true", 1.0, 1l, 1L, 1n *)
+  | Tpat_interval of constant * constant
+      (** 'a' .. 'z'
+
+          Both bounds are int or char constants, the first one lower. *)
   | Tpat_tuple of pattern list
       (** (P1, ..., Pn)
 

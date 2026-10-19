@@ -124,7 +124,7 @@ let pat sub {pat_extra; pat_desc; pat_env; _} =
   match pat_desc with
   | Tpat_any -> ()
   | Tpat_var _ -> ()
-  | Tpat_constant _ -> ()
+  | Tpat_constant _ | Tpat_interval _ -> ()
   | Tpat_tuple l -> List.iter (sub.pat sub) l
   | Tpat_construct (_, _, l) -> List.iter (sub.pat sub) l
   | Tpat_variant (_, po, _) -> Option.iter (sub.pat sub) po
