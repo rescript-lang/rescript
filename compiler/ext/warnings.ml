@@ -34,8 +34,8 @@ type t =
   | Partial_application (*  5 *)
   | Partial_match of string (*  8 *)
   | Non_closed_record_pattern of string (*  9 *)
-  | Unused_match (* 11 *)
-  | Unused_pat (* 12 *)
+  | Unused_match of string (* 11 *)
+  | Unused_pat of string (* 12 *)
   | Unused_argument (* 20 *)
   | Nonreturning_statement (* 21 *)
   | Preprocessor of string (* 22 *)
@@ -88,8 +88,8 @@ let number = function
   | Partial_application -> 5
   | Partial_match _ -> 8
   | Non_closed_record_pattern _ -> 9
-  | Unused_match -> 11
-  | Unused_pat -> 12
+  | Unused_match _ -> 11
+  | Unused_pat _ -> 12
   | Unused_argument -> 20
   | Nonreturning_statement -> 21
   | Preprocessor _ -> 22
@@ -297,8 +297,10 @@ let message = function
   | Non_closed_record_pattern s ->
     "the following labels are not bound in this record pattern: " ^ s
     ^ "\nEither bind these labels explicitly or add ', _' to the pattern."
-  | Unused_match -> "this match case is unused."
-  | Unused_pat -> "this sub-pattern is unused."
+  | Unused_match "" -> "this match case is unused."
+  | Unused_match reason -> "this match case is unused.\n  " ^ reason
+  | Unused_pat "" -> "this sub-pattern is unused."
+  | Unused_pat reason -> "this sub-pattern is unused.\n  " ^ reason
   | Unused_argument -> "this argument will not be used by the function."
   | Nonreturning_statement ->
     "This statement does not continue execution; following code is unreachable."
