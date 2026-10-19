@@ -25,6 +25,9 @@ open Printf
 
 let dbg = false
 
+let int32_low = Int32.to_int Int32.min_int
+let int32_high = Int32.to_int Int32.max_int
+
 (* See Peyton-Jones, ``The Implementation of functional programming
    languages'', chapter 5. *)
 (*
@@ -1941,7 +1944,10 @@ let combine_constant loc arg cst partial ctx def
             | _ -> assert false)
           const_lambda_list
       in
-      call_switcher fail arg min_int max_int int_lambda_list
+      (* Match intervals must use ReScript's int32 bounds, not the host's.
+         Otherwise the upper fail interval starts at 2147483648, which wraps
+         when converted to a Lambda integer constant. *)
+      call_switcher fail arg int32_low int32_high int_lambda_list
     | Const_char _ ->
       let int_lambda_list =
         List.map
@@ -2177,20 +2183,20 @@ let combine_constructor loc arg ex_pat cstr partial ctx def
 
 let make_test_sequence_variant_constant fail arg int_lambda_list =
   let _, (cases, actions) =
-    as_interval fail min_int max_int
+    as_interval fail int32_low int32_high
       (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list)
   in
   Switch.test_sequence arg cases actions
 
 let call_switcher_variant_constant fail arg int_lambda_list =
-  call_switcher fail arg min_int max_int
+  call_switcher fail arg int32_low int32_high
     (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list)
 
 let call_switcher_variant_constr loc fail arg int_lambda_list =
   let v = Ident.create "variant" in
   let_ Alias v
     (prim ~primitive:(Pfield (0, Fld_poly_var_tag)) ~args:[arg] loc)
-    (call_switcher fail (var v) min_int max_int
+    (call_switcher fail (var v) int32_low int32_high
        (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list))
 
 let call_switcher_variant_constant :
