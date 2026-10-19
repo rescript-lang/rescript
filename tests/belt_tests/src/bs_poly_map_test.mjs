@@ -153,7 +153,6 @@ Mocha.describe("Bs_poly_map_test", () => {
     let v3 = Belt_Map.update(v1, 10, inc);
     let v4 = Belt_Map.update(v3, -10, inc);
     let match = Belt_Map.split(v3, 5000);
-    let pres = match[1];
     let match$1 = match[0];
     let match$2 = Belt_Map.get(v3, 10);
     Test_utils.ok("File \"bs_poly_map_test.res\", line 163, characters 6-13", match$2 === 11);
@@ -163,7 +162,7 @@ Mocha.describe("Bs_poly_map_test", () => {
     Test_utils.ok("File \"bs_poly_map_test.res\", line 177, characters 6-13", match$4 === 0);
     Test_utils.ok("File \"bs_poly_map_test.res\", line 183, characters 7-14", Belt_Map.isEmpty(Belt_Map.remove(Belt_Map.make(Icmp), 0)));
     Test_utils.ok("File \"bs_poly_map_test.res\", line 184, characters 7-14", Belt_Map.isEmpty(Belt_Map.removeMany(Belt_Map.make(Icmp), [0])));
-    Test_utils.ok("File \"bs_poly_map_test.res\", line 186, characters 6-13", pres === 5000);
+    Test_utils.ok("File \"bs_poly_map_test.res\", line 186, characters 6-13", match[1] === 5000);
     Test_utils.ok("File \"bs_poly_map_test.res\", line 192, characters 7-14", Belt_Array.eq(Belt_Map.keysToArray(match$1[0]), Belt_Array.makeBy(5000, i => i), (a, b) => a === b));
     Test_utils.ok("File \"bs_poly_map_test.res\", line 193, characters 7-14", Belt_Array.eq(Belt_Map.keysToArray(match$1[1]), Belt_Array.makeBy(5000, i => 5001 + i | 0), (a, b) => a === b));
     let v7 = Belt_Map.remove(v3, 5000);
