@@ -35,7 +35,10 @@ type color =
   | Hex(superLongTypeName, superLongTypeName, superLongTypeName, superLongTypeName)
 
 type node<_, 'value> =
-  | Root({mutable value: 'value, mutable updatedTime: float}): node<root, 'value>
+  | Root({
+      mutable value: 'value,
+      mutable updatedTime: float,
+    }): node<root, 'value>
   | Derived({
       mutable cachedValue: 'value,
       parent: node<_, 'value>,
