@@ -34,6 +34,9 @@ val all_record_args :
   (Longident.t loc * label_description * pattern * bool) list
 val const_compare : constant -> constant -> int
 
+(* A hash key agreeing with [const_compare]: char constants map to ints. *)
+val const_key : constant -> constant
+
 val le_pat : pattern -> pattern -> bool
 val le_pats : pattern list -> pattern list -> bool
 
