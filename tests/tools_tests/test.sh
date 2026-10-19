@@ -62,6 +62,16 @@ for file in src/migrate/*.{res,resi}; do
   fi
 done
 
+# Migrating a file in place must leave it untouched when no migration applies
+for file in src/migrate/NoMigration.{res,resi}; do
+  before="$(cksum < "$file")"
+  ../../_build/install/default/bin/rescript-tools migrate "$file" > /dev/null
+  if [ "$(cksum < "$file")" != "$before" ]; then
+    echo "Expected migrate to leave $file unchanged" >&2
+    exit 1
+  fi
+done
+
 # Move migrated files to expected directory so they can be compiled in the project
 for file in src/migrate/StdlibMigration_*.res; do
   expected_file="src/expected/$(basename $file).expected"
