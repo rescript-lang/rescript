@@ -27,6 +27,10 @@ Mocha.describe("Flat_make_export_test", () => {
     Test_utils.eq("File \"flat_make_export_test.res\", line 25, characters 7-14", Flat_make_export_use.included, "one");
     Test_utils.eq("File \"flat_make_export_test.res\", line 26, characters 7-14", Flat_make_export_use.aliased, "one");
   });
+  Mocha.test("a binding hidden by the interface does not clash", () => {
+    Test_utils.eq("File \"flat_make_export_test.res\", line 30, characters 7-14", Flat_make_export_use.hidden, 1);
+    Test_utils.eq("File \"flat_make_export_test.res\", line 31, characters 7-14", Flat_make_export_use.hiddenBoth, 3);
+  });
 });
 
 /*  Not a pure module */

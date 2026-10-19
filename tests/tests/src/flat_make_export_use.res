@@ -17,3 +17,5 @@ let rebound = Flat_make_export.Rebound.make
 let applied = Flat_make_export.Applied.make()
 let included = Flat_make_export.Included.make()
 let aliased = Flat_make_export.Aliased.make()
+let hidden = Flat_make_export_hidden.A.B.make()
+let hiddenBoth = Flat_make_export_hidden.both()

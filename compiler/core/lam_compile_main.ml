@@ -162,15 +162,10 @@ let flat_make_aliases (export_ids : Ident.t list)
       Ext_list.fold_left export_ids Map_string.empty (fun modules id ->
           Map_string.add id.Ident.name id modules)
     in
+    (* Only export names can clash: the printer renames other bindings. *)
     let occupied_names =
-      Ext_list.fold_left groups Set_string.empty (fun occupied group ->
-          match group with
-          | Single (_, id, _) ->
-            Set_string.add (Ext_ident.convert id.Ident.name) occupied
-          | Recursive bindings ->
-            Ext_list.fold_left bindings occupied (fun occupied (id, _) ->
-                Set_string.add (Ext_ident.convert id.Ident.name) occupied)
-          | Nop _ -> occupied)
+      Ext_list.fold_left export_ids Set_string.empty (fun occupied id ->
+          Set_string.add (Ext_ident.convert id.Ident.name) occupied)
     in
     let loc = Location.in_file (Location.get_input_name ()) in
     List.rev @@ fst
@@ -181,8 +176,8 @@ let flat_make_aliases (export_ids : Ident.t list)
            let js_name = Ext_ident.convert name in
            if Set_string.mem js_name occupied_names then
              Location.raise_errorf ~loc
-               "Cannot export `%s` as `%s` because that name is already used \
-                by a top-level binding."
+               "Cannot export `%s` as `%s` because that name is already \
+                exported."
                (String.concat "." names) name;
            match path with
            | (_, top) :: fields -> (

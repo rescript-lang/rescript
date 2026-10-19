@@ -25,4 +25,9 @@ describe(__MODULE__, () => {
     eq(__LOC__, Flat_make_export_use.included, "one")
     eq(__LOC__, Flat_make_export_use.aliased, "one")
   })
+
+  test("a binding hidden by the interface does not clash", () => {
+    eq(__LOC__, Flat_make_export_use.hidden, 1)
+    eq(__LOC__, Flat_make_export_use.hiddenBoth, 3)
+  })
 })
