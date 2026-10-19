@@ -43,8 +43,19 @@ type nonrec t = private {
   x: int ;
   y: int }
 type nonrec t = {
-  x: int }
+  x: int }[@@attr ]
 type nonrec t = {
-  x: int }
-type nonrec t = ..
-type nonrec t = ..
+  x: int }[@@attr ][@@res.doc {js|doc before record|js}]
+type nonrec t = ..[@@attr ]
+type nonrec t = ..[@@attr ][@@res.doc {js|doc before open|js}]
+type t.x = {
+  y: int }
+and t = {
+  x: t.x }[@@attr ]
+type nonrec t = M.t = {
+  x: int }[@@attr ]
+type nonrec 'a t = {
+  x: 'a }[@@attr ]
+type nonrec t = int
+and u = {
+  x: int }[@@attr ]

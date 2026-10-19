@@ -16,3 +16,13 @@ type t = string
 @attrWithSuperLongIdentifeirName
 @attrWithSuperLongIdentifeirName
 type t = string
+
+// attributes in front of a record or `..` move to the declaration
+@schema @s.strict
+type t = {
+  email: string,
+  name: string,
+}
+/** doc */
+@attr type t = {x: int}
+@attr type t = ..
