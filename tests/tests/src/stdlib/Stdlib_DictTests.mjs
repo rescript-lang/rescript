@@ -576,18 +576,20 @@ let Has = {
 
 function classify(d) {
   let match = d.a;
-  if (match !== undefined) {
-    if (match !== 1) {
-      if (match !== 2 || d.b === undefined) {
+  if (match !== 1) {
+    if (match !== 2) {
+      if (match !== undefined) {
         return "other";
       } else {
-        return "two with b";
+        return "no a";
       }
+    } else if (d.b !== undefined) {
+      return "two with b";
     } else {
-      return "one";
+      return "other";
     }
   } else {
-    return "no a";
+    return "one";
   }
 }
 

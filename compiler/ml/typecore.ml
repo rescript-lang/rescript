@@ -198,7 +198,7 @@ let iter_expression f e =
     f e;
     match e.pexp_desc with
     | Pexp_braces {expr = inner} -> expr inner
-    | Pexp_extension _ (* we don't iterate under extension point *) | Pexp_raw _
+    | Pexp_extension _ (* we don't iterate under extension point *)
     | Pexp_ident _ | Pexp_constant _ ->
       ()
     | Pexp_fun {params; body} ->
@@ -289,8 +289,7 @@ let iter_expression f e =
     | Pstr_eval (e, _) -> expr e
     | Pstr_value (_, pel) -> List.iter binding pel
     | Pstr_primitive _ | Pstr_type _ | Pstr_typext _ | Pstr_exception _
-    | Pstr_modtype _ | Pstr_open _ | Pstr_attribute _ | Pstr_extension _
-    | Pstr_raw _ ->
+    | Pstr_modtype _ | Pstr_open _ | Pstr_attribute _ | Pstr_extension _ ->
       ()
     | Pstr_include {pincl_mod = me} | Pstr_module {pmb_expr = me} ->
       module_expr me
@@ -325,12 +324,7 @@ let type_constant = function
 let constant : Parsetree.constant -> (Asttypes.constant, error) result =
   function
   | Pconst_integer (i, None) -> (
-    try
-      (* After the existing host-dependent literal parsing, pattern grouping
-         and intervals must see Lambda's int32 value, so -0xFFFF_FFFF and 1
-         are the same key. This does not change overflow diagnostics. *)
-      let value = Misc.Int_literal_converter.int i in
-      Ok (Const_int (Int32.to_int (Int32.of_int value)))
+    try Ok (Const_int (Misc.Int_literal_converter.int i))
     with Failure _ -> Error (Literal_overflow "int"))
   | Pconst_integer (i, Some 'n') ->
     let sign, i = Bigint_utils.parse_bigint i in
@@ -339,6 +333,7 @@ let constant : Parsetree.constant -> (Asttypes.constant, error) result =
   | Pconst_char {semantic} -> Ok (Const_char semantic)
   | Pconst_string payload ->
     Ok (Const_string (String_literal.string_semantic payload))
+  | Pconst_raw_source s -> Ok (Const_string s)
   | Pconst_float (f, None) -> Ok (Const_float f)
   | Pconst_float (f, Some c) -> Error (Unknown_literal (f, c))
 
@@ -1762,11 +1757,8 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
         in
         pattern_variables_ref () := p1_variables;
         module_variables_ref () := p1_module_variables;
-        (* Without variables there is nothing to rename. Skipping the copy
-           keeps nested or-patterns, e.g. expanded character ranges, linear. *)
-        let p2 = if alpha_env = [] then p2 else alpha_pat alpha_env p2 in
         {
-          pat_desc = Tpat_or (p1, p2, None);
+          pat_desc = Tpat_or (p1, alpha_pat alpha_env p2, None);
           pat_loc = loc;
           pat_extra = [];
           pat_type = expected_ty;
@@ -3708,11 +3700,6 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     | _ -> raise (Error (loc, env, Invalid_extension_constructor_payload)))
   | Pexp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
-  | Pexp_raw {kind; name_loc} ->
-    (* The built-in PPX lowers raw JavaScript before type checking. *)
-    raise
-      (Error_forward
-         (Ast_raw.uninterpreted ~loc:name_loc (Ast_raw.extension_name kind)))
   | Pexp_await _ -> (* should be handled earlier *) assert false
   | Pexp_jsx_element _ ->
     raise (Error (sexp.pexp_loc, Env.empty, Jsx_not_enabled))

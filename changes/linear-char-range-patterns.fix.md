@@ -1,1 +1,0 @@
-- Fix quadratic compile time and memory of large character range patterns, and speed up switches over many constants. https://github.com/rescript-lang/rescript/pull/8868

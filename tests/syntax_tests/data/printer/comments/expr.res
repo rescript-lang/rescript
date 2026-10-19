@@ -354,22 +354,3 @@ let c = {
   // foo
   bar: "foo"
 }
-
-// dict literals with spreads
-let d = dict{
-  // before the spread
-  ...base,
-  // first row after a spread
-  "a": 1,
-}
-
-let e = dict{
-  // first row before a spread
-  "x": 0,
-  "y": 0, // trailing
-  ...base,
-  // first row of a run
-  "a": 1,
-  "b": 2, // trailing
-  // after the last row
-}

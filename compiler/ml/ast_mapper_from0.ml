@@ -135,7 +135,7 @@ let map_constant ~loc = function
     Pconst_char {source = String_literal.encode_char_source semantic; semantic}
   | Pconst_string (s, Some ("js" | "*j")) -> source_string ~loc s
   | Pconst_string (s, None) -> semantic_string s
-  | Pconst_string (s, Some "json") -> source_string ~loc s
+  | Pconst_string (s, Some "json") -> Pconst_raw_source s
   (* Other v0 quotation delimiters are syntax, not part of the string value.
      Tagged ReScript templates are represented as applications before PPX. *)
   | Pconst_string (semantic, Some _) -> semantic_string semantic
@@ -151,7 +151,6 @@ let is_raw_source_extension = function
   | "raw" | "ffi" -> true
   | _ -> false
 
-(* A braced string or a template is mapped as usual. *)
 let map_raw_source_payload sub = function
   | PStr
       [
@@ -166,22 +165,12 @@ let map_raw_source_payload sub = function
                 eval_attributes );
           pstr_loc;
         };
-      ]
-    when not
-           (has_template_attr pexp_attributes
-           || List.exists (fun ({txt}, _) -> txt = "res.braces") pexp_attributes
-           ) ->
-    (* The payload is JavaScript source: keep it as the string's spelling. *)
-    let payload =
-      match String_literal.string_from_source s with
-      | Some payload -> payload
-      | None -> String_literal.string_from_semantic s
-    in
+      ] ->
     let expression =
       Ast_helper.Exp.constant
         ~loc:(sub.location sub pexp_loc)
         ~attrs:(sub.attributes sub pexp_attributes)
-        (Pt.Pconst_string payload)
+        (Pt.Pconst_raw_source s)
     in
     Some
       (Pt.PStr
@@ -191,30 +180,6 @@ let map_raw_source_payload sub = function
              ~attrs:(sub.attributes sub eval_attributes)
              expression;
          ])
-  | _ -> None
-
-(* The source of a plain v0 [%raw], [%ffi] or [%%raw] payload: a string, or a
-   template marked as such. Other payloads stay extensions. *)
-let raw_source_from0 sub = function
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ( {
-                  pexp_desc = Pexp_constant (Pconst_string (s, delimiter));
-                  pexp_loc;
-                  pexp_attributes;
-                },
-                [] );
-        };
-      ] -> (
-    let loc = sub.location sub pexp_loc in
-    match pexp_attributes with
-    | [] -> Some (Pt.Raw_string {txt = s; loc})
-    | attrs when has_template_attr attrs && remove_template_attr attrs = [] ->
-      Some (Pt.Raw_template {txt = template_source_from0 (s, delimiter); loc})
-    | _ -> None)
   | _ -> None
 
 let for_of_attr_name = "_res.for_of"
@@ -576,14 +541,6 @@ module M = struct
     | Pstr_class_type () ->
       failwith "Pstr_class_type is no longer present in ReScript"
     | Pstr_include x -> include_ ~loc (sub.include_declaration sub x)
-    | Pstr_extension ((({txt = "raw"} as name), payload), attrs)
-      when raw_source_from0 sub payload <> None -> (
-      match raw_source_from0 sub payload with
-      | Some source ->
-        raw ~loc
-          ~name_loc:(sub.location sub name.loc)
-          source ~attrs:(sub.attributes sub attrs)
-      | None -> assert false)
     | Pstr_extension (x, attrs) ->
       extension ~loc (sub.extension sub x) ~attrs:(sub.attributes sub attrs)
     | Pstr_attribute x -> attribute ~loc (sub.attribute sub x)
@@ -1381,11 +1338,7 @@ module E = struct
             pattern flags
         | _ -> malformed ~loc:(sub.location sub source_loc))
       | _ -> malformed ~loc)
-    | Pexp_extension (({txt = name; loc = name_loc}, payload) as x) -> (
-      match (Ast_raw.kind_of_name name, raw_source_from0 sub payload) with
-      | Some kind, Some source ->
-        raw ~loc ~attrs ~name_loc:(sub.location sub name_loc) kind source
-      | _ -> extension ~loc ~attrs (sub.extension sub x))
+    | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
     | Pexp_unreachable -> assert false
 end
 

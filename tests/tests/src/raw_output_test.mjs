@@ -12,13 +12,7 @@ console.log(1);
 var issue6236 = `${"hello"}`;
 ;
 
-let bracedRaw = "braced";
-
-var bracedItem = "item";
-;
-
 export {
   mk,
-  bracedRaw,
 }
 /*  Not a pure module */

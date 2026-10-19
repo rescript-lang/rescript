@@ -80,30 +80,10 @@ let map_constant = function
   | Pconst_char {semantic} -> Pconst_char semantic
   | Pconst_string payload ->
     Pconst_string (String_literal.string_source payload, Some "js")
+  | Pconst_raw_source s -> Pconst_string (s, Some "js")
   | Pconst_float (s, suffix) -> Pconst_float (s, suffix)
 
 let template_attr = (Location.mknoloc "res.template", Pt.PStr [])
-
-(* v0 spells raw JavaScript as the extension it is written as, with the source
-   in a ["js"]-delimited string. *)
-let raw_extension sub ~name ~name_loc (source : Parsetree.raw_source) :
-    Pt.extension =
-  let constant ~attrs ({txt; loc} : string Location.loc) =
-    Ast_helper0.Exp.constant ~loc:(sub.location sub loc) ~attrs
-      (Pt.Pconst_string (txt, Some "js"))
-  in
-  let expression =
-    match source with
-    | Raw_string source -> constant ~attrs:[] source
-    | Raw_template source -> constant ~attrs:[template_attr] source
-  in
-  ( {txt = name; loc = sub.location sub name_loc},
-    Pt.PStr
-      [
-        Ast_helper0.Str.eval
-          ~loc:(sub.location sub (Ast_raw.payload_loc source))
-          expression;
-      ] )
 
 let add_template_attr attrs =
   if Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.template") then attrs
@@ -430,10 +410,6 @@ module M = struct
     | Pstr_include x -> include_ ~loc (sub.include_declaration sub x)
     | Pstr_extension (x, attrs) ->
       extension ~loc (sub.extension sub x) ~attrs:(sub.attributes sub attrs)
-    | Pstr_raw {name_loc; source; attrs} ->
-      extension ~loc
-        (raw_extension sub ~name:"raw" ~name_loc source)
-        ~attrs:(sub.attributes sub attrs)
     | Pstr_attribute x -> attribute ~loc (sub.attribute sub x)
 end
 
@@ -834,9 +810,6 @@ module E = struct
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
-    | Pexp_raw {kind; name_loc; source} ->
-      extension ~loc ~attrs
-        (raw_extension sub ~name:(Ast_raw.extension_name kind) ~name_loc source)
     | Pexp_await e ->
       (* Single v0 attribute slot for two nodes: the await node's own
          attributes go in front of the [res.await] marker, the inner

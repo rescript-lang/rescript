@@ -194,8 +194,6 @@ module Exp = struct
   let pack ?loc ?attrs a = mk ?loc ?attrs (Pexp_pack a)
   let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_open (a, b, c))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pexp_extension a)
-  let raw ?loc ?attrs ~name_loc kind source =
-    mk ?loc ?attrs (Pexp_raw {kind; name_loc; source})
   let regexp ?loc ?attrs pattern flags =
     mk ?loc ?attrs (Pexp_regexp {pattern; flags})
   let template ?loc ?attrs source_segments values =
@@ -320,8 +318,6 @@ module Str = struct
   let open_ ?loc a = mk ?loc (Pstr_open a)
   let include_ ?loc a = mk ?loc (Pstr_include a)
   let extension ?loc ?(attrs = []) a = mk ?loc (Pstr_extension (a, attrs))
-  let raw ?loc ?(attrs = []) ~name_loc source =
-    mk ?loc (Pstr_raw {name_loc; source; attrs})
   let attribute ?loc a = mk ?loc (Pstr_attribute a)
 end
 

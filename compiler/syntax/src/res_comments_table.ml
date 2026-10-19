@@ -445,7 +445,6 @@ type node =
   | Pattern of Parsetree.pattern
   | PatternRecordRest of Parsetree.record_pat_rest
   | PatternRecordRow of Longident.t Asttypes.loc * Parsetree.pattern
-  | PatternDictRow of Parsetree.dict_pattern_entry
   | RowField of Parsetree.row_field
   | SignatureItem of Parsetree.signature_item
   | StructureItem of Parsetree.structure_item
@@ -485,8 +484,6 @@ let get_loc node =
   | Pattern p -> p.ppat_loc
   | PatternRecordRest rest -> rest.rest_loc
   | PatternRecordRow (li, p) -> {li.loc with loc_end = p.ppat_loc.loc_end}
-  | PatternDictRow {pdp_key; pdp_pattern} ->
-    {pdp_key.loc with loc_end = pdp_pattern.ppat_loc.loc_end}
   | RowField rf -> (
     match rf with
     | Parsetree.Rtag ({loc}, _, _, _) -> loc
@@ -524,10 +521,6 @@ and walk_structure_item si t comments =
     walk_module_type_declaration mod_typ_decl t comments
   | Pstr_attribute attribute -> walk_attribute attribute t comments
   | Pstr_extension (extension, _) -> walk_extension extension t comments
-  | Pstr_raw {name_loc; source} ->
-    walk_extension
-      (Ast_raw.to_extension ~name:"raw" ~name_loc source)
-      t comments
   | Pstr_include include_declaration ->
     walk_include_declaration include_declaration t comments
   | Pstr_exception extension_constructor ->
@@ -682,7 +675,6 @@ and walk_node node tbl comments =
   | Pattern p -> walk_pattern p tbl comments
   | PatternRecordRest rest -> walk_pattern_record_rest rest tbl comments
   | PatternRecordRow (li, p) -> walk_pattern_record_row (li, p) tbl comments
-  | PatternDictRow row -> walk_pattern_dict_row row tbl comments
   | RowField rf -> walk_row_field rf tbl comments
   | SignatureItem si -> walk_signature_item si tbl comments
   | StructureItem si -> walk_structure_item si tbl comments
@@ -1130,12 +1122,6 @@ and walk_expression expr t comments =
            ExprRecordRow (Location.mkloc (Longident.Lident s.txt) s.loc, e)))
       t comments
   | Pexp_extension extension -> walk_extension extension t comments
-  | Pexp_raw {kind; name_loc; source} ->
-    walk_extension
-      (Ast_raw.to_extension
-         ~name:(Ast_raw.extension_name kind)
-         ~name_loc source)
-      t comments
   | Pexp_letexception (extension_constructor, expr2) ->
     let leading, comments = partition_leading_trailing comments expr.pexp_loc in
     attach t.leading
@@ -1440,17 +1426,12 @@ and walk_expression expr t comments =
     walk_list (cases |> List.map (fun case -> Case case)) t rest
     (* unary expression: todo use parsetreeviewer *)
   | Pexp_dict entries when Res_parsetree_viewer.dict_has_spread entries ->
-    (* The rows themselves, not the array of each run of rows, which the
-       printer does not print comments for *)
     let part_exprs =
-      List.concat_map
+      List.map
         (function
-          | Res_parsetree_viewer.DictExprRows {pexp_desc = Pexp_array rows} ->
-            List.map (fun row -> Expression row) rows
-          | Res_parsetree_viewer.DictExprRows rows_expr ->
-            [Expression rows_expr]
+          | Res_parsetree_viewer.DictExprRows rows_expr -> Expression rows_expr
           | Res_parsetree_viewer.DictExprSpread spread_expr ->
-            [Expression spread_expr])
+            Expression spread_expr)
         (Res_parsetree_viewer.dict_expr_parts ~loc:expr.pexp_loc entries)
     in
     walk_list part_exprs t comments
@@ -2061,13 +2042,14 @@ and walk_pattern pat t comments =
     walk_list (List.map (fun pat -> Pattern pat) pats) t rest
   | Ppat_variant (_label, {txt = args}) ->
     walk_list (List.map (fun pat -> Pattern pat) args) t comments
-  | Ppat_type ident | Ppat_variant_spread ident ->
-    let leading, trailing = partition_leading_trailing comments ident.loc in
-    attach t.leading ident.loc leading;
-    attach t.trailing ident.loc trailing
-  | Ppat_dict [] -> attach t.inside pat.ppat_loc comments
+  | Ppat_type _ | Ppat_variant_spread _ -> ()
   | Ppat_dict entries ->
-    walk_list (Ext_list.map entries (fun row -> PatternDictRow row)) t comments
+    (* Comments attach to rows as in record patterns *)
+    walk_list
+      (Ext_list.map entries (fun {pdp_key; pdp_pattern} ->
+           PatternRecordRow
+             ({pdp_key with txt = Longident.Lident pdp_key.txt}, pdp_pattern)))
+      t comments
   | Ppat_record (record_rows, _, rest) ->
     let nodes =
       Ext_list.map record_rows (fun {lid; x = p} -> PatternRecordRow (lid, p))
@@ -2157,18 +2139,6 @@ and walk_pattern_record_row row t comments =
     attach t.leading pattern.ppat_loc leading;
     walk_pattern pattern t inside;
     attach t.trailing pattern.ppat_loc trailing
-
-(* Unlike a record row, a dict row is never punned: [dict{"a": a}] keeps its
-   key, so comments around the key stay on the key *)
-and walk_pattern_dict_row {pdp_key = key; pdp_pattern = pattern} t comments =
-  let before_key, after_key = partition_leading_trailing comments key.loc in
-  attach t.leading key.loc before_key;
-  let after_key, rest = partition_adjacent_trailing key.loc after_key in
-  attach t.trailing key.loc after_key;
-  let leading, inside, trailing = partition_by_loc rest pattern.ppat_loc in
-  attach t.leading pattern.ppat_loc leading;
-  walk_pattern pattern t inside;
-  attach t.trailing pattern.ppat_loc trailing
 
 and walk_row_field (row_field : Parsetree.row_field) t comments =
   match row_field with

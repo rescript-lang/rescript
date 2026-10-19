@@ -6,14 +6,14 @@ function decodeJsonTest() {
   let json = {"someProp":{"otherProp": null, "thirdProp": [true, false]}};
   let decodedCorrectly;
   if (typeof json === "object" && json !== null && !Array.isArray(json)) {
-    let dict = json["someProp"];
-    if (typeof dict === "object" && dict !== null && !Array.isArray(dict)) {
-      let match = dict["thirdProp"];
-      if (Array.isArray(match) && match.length === 2) {
-        let match$1 = match[0];
-        if (match$1 === true) {
-          let match$2 = match[1];
-          decodedCorrectly = match$2 === false;
+    let match = json["someProp"];
+    if (typeof match === "object" && match !== null && !Array.isArray(match)) {
+      let match$1 = match["thirdProp"];
+      if (Array.isArray(match$1) && match$1.length === 2) {
+        let match$2 = match$1[0];
+        if (match$2 === true) {
+          let match$3 = match$1[1];
+          decodedCorrectly = match$3 === false;
         } else {
           decodedCorrectly = false;
         }

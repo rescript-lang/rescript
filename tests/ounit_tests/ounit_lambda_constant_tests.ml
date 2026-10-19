@@ -191,32 +191,6 @@ let suites =
   __FILE__
   >::: switch_tests
        @ [
-           ( "integer pattern constants agree with Lambda" >:: fun _ ->
-             List.iter
-               (fun (literal, expected) ->
-                 match Typecore.constant (Pconst_integer (literal, None)) with
-                 | Ok (Asttypes.Const_int value as typed) ->
-                   expected =~ value;
-                   Lambda.Const_int (Int32.of_int expected)
-                   =~ Lambda.const_of_typed typed
-                 | _ ->
-                   assert_failure ("integer literal was rejected: " ^ literal))
-               [
-                 ("-0xFFFF_FFFF", 1);
-                 ("0xFFFF_FFFF", -1);
-                 ("2147483647", 2147483647);
-                 ("-2147483648", -2147483648);
-               ] );
-           ( "overflow parsing keeps its existing host limits" >:: fun _ ->
-             let result =
-               Typecore.constant (Pconst_integer ("2147483649", None))
-             in
-             if Sys.int_size > 32 then
-               Ok (Asttypes.Const_int (-2147483647)) =~ result
-             else Error (Typecore.Literal_overflow "int") =~ result;
-             Error (Typecore.Literal_overflow "int")
-             =~ Typecore.constant
-                  (Pconst_integer ("999999999999999999999999999", None)) );
            ( "record array layout" >:: fun _ ->
              List.iter
                (fun (fields, expected) ->

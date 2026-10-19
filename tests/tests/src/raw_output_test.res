@@ -18,7 +18,3 @@ Console.log((() => 1)())
 %%raw(`
 var issue6236 = \`\${"hello"}\`;
 `)
-
-// A braced string payload is an ordinary string, so its escapes are decoded.
-let bracedRaw = %raw({"\"braced\""})
-%%raw({"var bracedItem = \"item\";"})

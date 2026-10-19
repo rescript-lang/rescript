@@ -117,7 +117,6 @@ let identify_pexp pexp =
   | Pexp_assert _ -> "Pexp_assert"
   | Pexp_pack _ -> "Pexp_pack"
   | Pexp_extension _ -> "Pexp_extension"
-  | Pexp_raw _ -> "Pexp_raw"
   | Pexp_open _ -> "Pexp_open"
   | Pexp_await _ -> "Pexp_await"
   | Pexp_jsx_element _ -> "Pexp_jsx_element"

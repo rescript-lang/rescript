@@ -1574,9 +1574,6 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr =
       (Tstr_include incl, sg, new_env)
     | Pstr_extension (ext, _attrs) ->
       raise (Error_forward (Builtin_attributes.error_of_extension ext))
-    | Pstr_raw {name_loc} ->
-      (* The built-in PPX lowers raw JavaScript before type checking. *)
-      raise (Error_forward (Ast_raw.uninterpreted ~loc:name_loc "raw"))
     | Pstr_attribute x ->
       Builtin_attributes.warning_attribute x;
       (Tstr_attribute x, [], env)

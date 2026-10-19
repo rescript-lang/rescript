@@ -1,2 +1,0 @@
-- Fix integer range patterns at int32 boundaries and wrapped nondecimal patterns matching incorrect values. https://github.com/rescript-lang/rescript/pull/8717
-- Integer patterns that alias the same int32 value (e.g. `0xFFFF_FFFF` and `-1`) may now produce unused-case warnings. https://github.com/rescript-lang/rescript/pull/8717

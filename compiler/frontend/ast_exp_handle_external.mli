@@ -30,14 +30,3 @@ val handle_raw : Location.t -> Ast_payload.t -> Parsetree.expression
 
 val handle_raw_structure :
   Location.t -> Ast_payload.t -> Parsetree.structure_item
-
-val handle_raw_node :
-  loc:Location.t ->
-  Parsetree.raw_kind ->
-  Parsetree.raw_source ->
-  Parsetree.expression
-(** Lower [%raw] or [%ffi], located at [loc]. *)
-
-val handle_raw_structure_node :
-  loc:Location.t -> Parsetree.raw_source -> Parsetree.structure_item
-(** Lower [%%raw], located at [loc]. *)

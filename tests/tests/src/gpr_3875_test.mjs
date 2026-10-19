@@ -16,13 +16,27 @@ let Xx = {
 };
 
 function compilerBug(a, b, c, f) {
-  if (a !== "x" && b !== "x") {
-    if (c) {
-      result.contents = "No x, c is true";
-    } else {
-      result.contents = "No x, c is false";
+  let exit = 0;
+  if (a !== "x") {
+    exit = 2;
+  }
+  if (exit === 2) {
+    if (b === undefined) {
+      if (c) {
+        result.contents = "No x, c is true";
+      } else {
+        result.contents = "No x, c is false";
+      }
+      return;
     }
-    return;
+    if (b !== "x") {
+      if (c) {
+        result.contents = "No x, c is true";
+      } else {
+        result.contents = "No x, c is false";
+      }
+      return;
+    }
   }
   if (f()) {
     result.contents = "Some x, f returns true";

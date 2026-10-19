@@ -106,7 +106,7 @@ let unary_expr_operand expr =
      pexp_desc =
        ( Pexp_assert _ | Pexp_fun _ | Pexp_constraint _ | Pexp_coerce _
        | Pexp_setfield _ | Pexp_extension _ (* readability? maybe remove *)
-       | Pexp_raw _ | Pexp_object_literal _ (* ({"a": 1})["a"] *)
+       | Pexp_object_literal _ (* ({"a": 1})["a"] *)
        | Pexp_object_set _ (* (o["x"] = v)["y"] *) | Pexp_match _ | Pexp_try _
        | Pexp_while _ | Pexp_for _ | Pexp_for_of _ | Pexp_for_await_of _
        | Pexp_ifthenelse _ | Pexp_ternary _ );
@@ -271,10 +271,9 @@ let field_expr expr =
     | {
      pexp_desc =
        ( Pexp_assert _ | Pexp_extension _ (* %extension.x vs (%extension).x *)
-       | Pexp_raw _ | Pexp_regexp _
-       | Pexp_object_literal _ (* ({"a": 1})["a"] *) | Pexp_fun _
-       | Pexp_constraint _ | Pexp_coerce _ | Pexp_setfield _ | Pexp_match _
-       | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_for_of _
+       | Pexp_regexp _ | Pexp_object_literal _ (* ({"a": 1})["a"] *)
+       | Pexp_fun _ | Pexp_constraint _ | Pexp_coerce _ | Pexp_setfield _
+       | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_for_of _
        | Pexp_for_await_of _ | Pexp_ifthenelse _ | Pexp_ternary _ );
     } ->
       Parenthesized
@@ -335,9 +334,9 @@ let jsx_prop_expr expr =
        Parsetree.pexp_desc =
          ( Pexp_ident _ | Pexp_constant _ | Pexp_field _ | Pexp_construct _
          | Pexp_variant _ | Pexp_array _ | Pexp_pack _ | Pexp_record _
-         | Pexp_object_literal _ | Pexp_extension _ | Pexp_raw _
-         | Pexp_letmodule _ | Pexp_letexception _ | Pexp_open _
-         | Pexp_sequence _ | Pexp_let _ | Pexp_tuple _ );
+         | Pexp_object_literal _ | Pexp_extension _ | Pexp_letmodule _
+         | Pexp_letexception _ | Pexp_open _ | Pexp_sequence _ | Pexp_let _
+         | Pexp_tuple _ );
        pexp_attributes = [];
       } ->
         Nothing

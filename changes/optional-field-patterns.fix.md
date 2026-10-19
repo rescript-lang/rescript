@@ -1,1 +1,0 @@
-- Fix a compiler crash and wrong code for matches that test an optional record field or dict key both for a value (`{x: 1}`) and for presence (`{x: ?None}`, `{x: ?Some(v)}`), and for untagged variant cases on an optional field. https://github.com/rescript-lang/rescript/pull/8842

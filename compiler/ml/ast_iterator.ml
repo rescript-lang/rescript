@@ -278,10 +278,6 @@ module M = struct
     | Pstr_extension (x, attrs) ->
       sub.extension sub x;
       sub.attributes sub attrs
-    | Pstr_raw {name_loc; source; attrs} ->
-      sub.location sub name_loc;
-      sub.location sub (Ast_raw.source_loc source);
-      sub.attributes sub attrs
     | Pstr_attribute x -> sub.attribute sub x
 end
 
@@ -420,9 +416,6 @@ module E = struct
       iter_loc sub lid;
       sub.expr sub e
     | Pexp_extension x -> sub.extension sub x
-    | Pexp_raw {name_loc; source} ->
-      sub.location sub name_loc;
-      sub.location sub (Ast_raw.source_loc source)
     | Pexp_regexp _ -> ()
     | Pexp_template {values} -> List.iter (sub.expr sub) values
     | Pexp_tagged_template {tag; values} ->
