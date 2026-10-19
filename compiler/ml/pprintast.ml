@@ -252,8 +252,6 @@ let constant f = function
   | Pconst_string payload ->
     pp f "{js|%a|js}" print_string_with_byte_width
       (String_literal.string_source payload)
-  | Pconst_raw_source source ->
-    pp f "{js|%a|js}" print_string_with_byte_width source
   | Pconst_integer (i, None) -> paren (i.[0] = '-') (fun f -> pp f "%s") f i
   | Pconst_integer (i, Some m) ->
     paren (i.[0] = '-') (fun f (i, m) -> pp f "%s%c" i m) f (i, m)
@@ -789,6 +787,11 @@ and expression ctxt f x =
       in
       pp f "@[<2>`%s@;%a@]" l (simple_expr ctxt) payload
     | Pexp_extension e -> extension ctxt f e
+    | Pexp_raw {kind; name_loc; source} ->
+      extension ctxt f
+        (Ast_raw.to_extension
+           ~name:(Ast_raw.extension_name kind)
+           ~name_loc source)
     | Pexp_await e -> pp f "@[<hov2>await@ %a@]" (simple_expr ctxt) e
     | Pexp_regexp {pattern; flags} -> pp f "/%s/%s" pattern flags
     | Pexp_template {source_segments; values} ->
@@ -1324,6 +1327,9 @@ and structure_item ctxt f x =
   | Pstr_extension (e, a) ->
     item_extension ctxt f e;
     item_attributes ctxt f a
+  | Pstr_raw {name_loc; source; attrs} ->
+    item_extension ctxt f (Ast_raw.to_extension ~name:"raw" ~name_loc source);
+    item_attributes ctxt f attrs
 
 and type_param ctxt f (ct, a) =
   pp f "%s%a" (type_variance a) (core_type ctxt) ct

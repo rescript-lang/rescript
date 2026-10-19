@@ -143,7 +143,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
                Parg_type {attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()};
              ]
              (Ast_helper.Typ.any ()))
-        [Ast_helper.Exp.constant ~loc (Pconst_raw_source source)]
+        [Ast_helper.Exp.constant ~loc (Ast_helper.Const.string source)]
     in
     Ast_helper.Exp.constraint_ ~loc
       ~attrs:(self.attributes self e.pexp_attributes)
@@ -151,6 +151,8 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
       (Ast_comb.to_regexp_type loc)
   | Pexp_extension extension ->
     Ast_exp_extension.handle_extension e self extension
+  | Pexp_raw {kind; name_loc; source} ->
+    Ast_exp_handle_external.handle_raw_node ~loc:name_loc kind source
   | Pexp_constant (Pconst_integer (s, Some 'l')) ->
     {e with pexp_desc = Pexp_constant (Pconst_integer (s, None))}
   (* End rewriting *)
@@ -762,6 +764,9 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
     match item.pstr_desc with
     | Pstr_extension (({txt = "raw"; loc}, payload), _attrs) ->
       Ast_exp_handle_external.handle_raw_structure loc payload
+      :: structure_mapper ~await_context self rest
+    | Pstr_raw {name_loc; source} ->
+      Ast_exp_handle_external.handle_raw_structure_node ~loc:name_loc source
       :: structure_mapper ~await_context self rest
     (* | Pstr_extension (({txt = "i"}, _),_)
        ->

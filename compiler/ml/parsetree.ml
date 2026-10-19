@@ -47,11 +47,6 @@ type constant =
      legacy three-digit decimal escapes to hexadecimal escapes. Compiler-created
      Payloads are constructed through [String_literal], which validates this
      relationship. *)
-  | Pconst_raw_source of string
-  (* JavaScript source carried by a compiler extension such as [raw] or [ffi].
-     For example, [%raw("x + 1")] stores ["x + 1"]. The extension
-     interprets the string as JavaScript source rather than as a ReScript
-     runtime string value. *)
   | Pconst_float of string * char option
 (* 3.4 2e5 1.4e-4
 
@@ -401,6 +396,9 @@ and expression_desc =
        let! open M in E *)
   | Pexp_extension of extension
   (* [%id] *)
+  | Pexp_raw of {kind: raw_kind; name_loc: Location.t; source: raw_source}
+  (* %raw("...") and %ffi("..."): JavaScript source. [name_loc] is the
+     location of [%raw] or [%ffi]. *)
   (* . *)
   | Pexp_await of expression
   | Pexp_jsx_element of jsx_element
@@ -834,7 +832,22 @@ and structure_item_desc =
   | Pstr_include of include_declaration (* include ME *)
   | Pstr_attribute of attribute (* [@@@id] *)
   | Pstr_extension of extension * attributes
-(* [%%id] *)
+  (* [%%id] *)
+  | Pstr_raw of {name_loc: Location.t; source: raw_source; attrs: attributes}
+(* %%raw("..."): JavaScript statements. [name_loc] is the location of
+   [%%raw]. *)
+
+and raw_kind =
+  | Raw_expression (* %raw: any JavaScript expression *)
+  | Raw_function (* %ffi: a JavaScript function *)
+
+and raw_source =
+  | Raw_string of string loc
+    (* %raw("..."): the JavaScript source, which is also the text between the
+       quotes. The location is the string literal's. *)
+  | Raw_template of string loc
+(* %raw(`...`): the template source as written, from which
+   [String_literal.decode_raw_template_source] gives the JavaScript source *)
 
 and value_constraint = {
   pvc_newtypes: string loc list;

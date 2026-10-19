@@ -198,7 +198,7 @@ let iter_expression f e =
     f e;
     match e.pexp_desc with
     | Pexp_braces {expr = inner} -> expr inner
-    | Pexp_extension _ (* we don't iterate under extension point *)
+    | Pexp_extension _ (* we don't iterate under extension point *) | Pexp_raw _
     | Pexp_ident _ | Pexp_constant _ ->
       ()
     | Pexp_fun {params; body} ->
@@ -289,7 +289,8 @@ let iter_expression f e =
     | Pstr_eval (e, _) -> expr e
     | Pstr_value (_, pel) -> List.iter binding pel
     | Pstr_primitive _ | Pstr_type _ | Pstr_typext _ | Pstr_exception _
-    | Pstr_modtype _ | Pstr_open _ | Pstr_attribute _ | Pstr_extension _ ->
+    | Pstr_modtype _ | Pstr_open _ | Pstr_attribute _ | Pstr_extension _
+    | Pstr_raw _ ->
       ()
     | Pstr_include {pincl_mod = me} | Pstr_module {pmb_expr = me} ->
       module_expr me
@@ -338,7 +339,6 @@ let constant : Parsetree.constant -> (Asttypes.constant, error) result =
   | Pconst_char {semantic} -> Ok (Const_char semantic)
   | Pconst_string payload ->
     Ok (Const_string (String_literal.string_semantic payload))
-  | Pconst_raw_source s -> Ok (Const_string s)
   | Pconst_float (f, None) -> Ok (Const_float f)
   | Pconst_float (f, Some c) -> Error (Unknown_literal (f, c))
 
@@ -3708,6 +3708,11 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     | _ -> raise (Error (loc, env, Invalid_extension_constructor_payload)))
   | Pexp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
+  | Pexp_raw {kind; name_loc} ->
+    (* The built-in PPX lowers raw JavaScript before type checking. *)
+    raise
+      (Error_forward
+         (Ast_raw.uninterpreted ~loc:name_loc (Ast_raw.extension_name kind)))
   | Pexp_await _ -> (* should be handled earlier *) assert false
   | Pexp_jsx_element _ ->
     raise (Error (sexp.pexp_loc, Env.empty, Jsx_not_enabled))

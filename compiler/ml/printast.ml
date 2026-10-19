@@ -66,7 +66,6 @@ let fmt_constant f x =
     fprintf f "PConst_string (source=%S, semantic=%S)"
       (String_literal.string_source payload)
       (String_literal.string_semantic payload)
-  | Pconst_raw_source source -> fprintf f "PConst_raw_source %S" source
   | Pconst_float (s, m) -> fprintf f "PConst_float (%s,%a)" s fmt_char_option m
 
 let fmt_mutable_flag f x =
@@ -139,6 +138,13 @@ let fixed_value i ppf (x : fixed_value) =
     line i ppf "Pfixed_template %S %a\n" source.txt fmt_location source.loc
   | Pfixed_json source ->
     line i ppf "Pfixed_json %S %a\n" source.txt fmt_location source.loc
+
+let raw_source i ppf (source : raw_source) =
+  match source with
+  | Raw_string {txt; loc} ->
+    line i ppf "Raw_string %S %a\n" txt fmt_location loc
+  | Raw_template {txt; loc} ->
+    line i ppf "Raw_template %S %a\n" txt fmt_location loc
 
 let rec core_type i ppf x =
   line i ppf "core_type %a\n" fmt_location x.ptyp_loc;
@@ -413,6 +419,11 @@ and expression i ppf x =
   | Pexp_open (ovf, m, e) ->
     line i ppf "Pexp_open %a \"%a\"\n" fmt_override_flag ovf fmt_longident_loc m;
     expression i ppf e
+  | Pexp_raw {kind; name_loc; source} ->
+    line i ppf "Pexp_raw \"%s\" %a\n"
+      (Ast_raw.extension_name kind)
+      fmt_location name_loc;
+    raw_source i ppf source
   | Pexp_extension (s, arg) ->
     line i ppf "Pexp_extension \"%s\"\n" s.txt;
     payload i ppf arg
@@ -746,6 +757,10 @@ and structure_item i ppf x =
     line i ppf "Pstr_include";
     attributes i ppf incl.pincl_attributes;
     module_expr i ppf incl.pincl_mod
+  | Pstr_raw {name_loc; source; attrs} ->
+    line i ppf "Pstr_raw %a\n" fmt_location name_loc;
+    attributes i ppf attrs;
+    raw_source i ppf source
   | Pstr_extension ((s, arg), attrs) ->
     line i ppf "Pstr_extension \"%s\"\n" s.txt;
     attributes i ppf attrs;

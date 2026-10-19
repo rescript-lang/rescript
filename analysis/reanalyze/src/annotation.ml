@@ -61,7 +61,8 @@ let rec get_attribute_payload check_text (attributes : Typedtree.attributes) =
       match payload with
       | PStr [] -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_eval (expr, _)} :: _) -> expr |> from_expr
-      | PStr ({pstr_desc = Pstr_extension _} :: _) -> Some UnrecognizedPayload
+      | PStr ({pstr_desc = Pstr_extension _ | Pstr_raw _} :: _) ->
+        Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_value _} :: _) -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_primitive _} :: _) -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_type _} :: _) -> Some UnrecognizedPayload
