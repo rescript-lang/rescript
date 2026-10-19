@@ -125,16 +125,15 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
       match path with
       | [] -> import
       | [name] -> wrap_then import (ml_export_name name)
-      | _ :: _ :: _ ->
-        (* a nested [make] is importable through its flat export, see
-           [Translmod.flat_make_paths] *)
-        if Ext_list.last path = "make" then
-          wrap_then import (ml_export_name (Translmod.flat_export_name path))
-        else
+      | _ :: _ :: _ -> (
+        (* a nested [make] is importable through its flat export *)
+        match Translmod.flat_make_name path with
+        | Some name -> wrap_then import (ml_export_name name)
+        | None ->
           Location.raise_errorf ~loc
             "Invalid argument: Dynamic import requires a module or module \
              value that is a file as argument. Passing a value or local module \
-             is not allowed.")
+             is not allowed."))
     | Import_external
         {module_ = {bundle; module_bind_name; import_attributes}; path} -> (
       let default = path = ["default"] in

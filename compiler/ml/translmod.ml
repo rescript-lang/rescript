@@ -442,22 +442,17 @@ let _ = Translcore.transl_module := transl_module
 
 (* Compile an implementation *)
 
-type implementation = {lambda: Lambda.t; exports: Ident.t list}
-
-let transl_implementation module_name (str, cc) =
-  export_identifiers () := [];
-  let module_id = Ident.create_persistent module_name in
-  let body, _ = transl_struct Location.none [] cc (global_path module_id) str in
-  {lambda = body; exports = !(export_identifiers ())}
-
 (* Nested [make] values are also exported under a flat name such as
    [A$B$make]: React Server Components can only pass a client module's
    top-level exports to the client, so [Lib.A.B.make] must not be reached
    through the module object. Producer and consumer derive these paths from
    the signature alone, so consumers are rebuilt exactly when the set
-   changes. Each path element pairs the runtime field position (counted as
-   in [Env]) with the source name. *)
-let flat_make_paths env (sg : Types.signature) =
+   changes. *)
+type flat_make_step = {pos: int; name: string}
+
+type flat_make_path = flat_make_step list
+
+let flat_make_paths env (sg : Types.signature) : flat_make_path list =
   let rec of_signature env rev_path sg acc =
     let env = Env.add_signature sg env in
     fst
@@ -468,7 +463,7 @@ let flat_make_paths env (sg : Types.signature) =
            | Sig_value (id, _) ->
              let acc =
                if rev_path <> [] && Ident.name id = "make" then
-                 List.rev ((pos, "make") :: rev_path) :: acc
+                 List.rev ({pos; name = "make"} :: rev_path) :: acc
                else acc
              in
              (acc, pos + 1)
@@ -477,7 +472,9 @@ let flat_make_paths env (sg : Types.signature) =
              let acc =
                match Mtype.scrape env md_type with
                | Mty_signature sg ->
-                 of_signature env ((pos, Ident.name id) :: rev_path) sg acc
+                 of_signature env
+                   ({pos; name = Ident.name id} :: rev_path)
+                   sg acc
                | Mty_ident _ | Mty_alias _ | Mty_functor _ -> acc
              in
              (acc, pos + 1)
@@ -486,8 +483,29 @@ let flat_make_paths env (sg : Types.signature) =
   in
   List.rev (of_signature env [] sg [])
 
+type implementation = {
+  lambda: Lambda.t;
+  exports: Ident.t list;
+  flat_make_paths: flat_make_path list;
+}
+
+let transl_implementation module_name final_env signature (str, cc) =
+  export_identifiers () := [];
+  let module_id = Ident.create_persistent module_name in
+  let body, _ = transl_struct Location.none [] cc (global_path module_id) str in
+  {
+    lambda = body;
+    exports = !(export_identifiers ());
+    flat_make_paths = flat_make_paths final_env signature;
+  }
+
 let flat_export_name path =
   path |> List.map Ext_ident.unwrap_uppercase_exotic |> String.concat "$"
+
+let flat_make_name path =
+  match path with
+  | _ :: _ :: _ when Ext_list.last path = "make" -> Some (flat_export_name path)
+  | _ -> None
 
 (* Build the list of value identifiers defined by a toplevel structure
    (excluding primitive declarations). *)

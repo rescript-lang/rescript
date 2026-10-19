@@ -102,13 +102,13 @@ let no_side_effects (rest : Lam_group.t list) : string option =
         else None (* TODO :*))
 
 (* Export every nested [make] of the final signature under its flat name, see
-   [Translmod.flat_make_paths]. When the module field holds a toplevel
+   [Translmod.implementation]. When the module field holds a toplevel
    binding, the alias names that binding ([let A$B$make = make]), which
    bundlers can drop when it is unused; otherwise it reads the value through
    the module objects. The paths carry the runtime field positions, which a
    coerced module block shares with its signature. *)
 let flat_make_aliases (export_ids : Ident.t list)
-    (paths : (int * string) list list) (groups : Lam_group.t list) =
+    (paths : Translmod.flat_make_path list) (groups : Lam_group.t list) =
   if paths = [] then []
   else
     let group_map =
@@ -123,7 +123,7 @@ let flat_make_aliases (export_ids : Ident.t list)
     let rec access loc base fields =
       match fields with
       | [] -> base
-      | (pos, name) :: fields ->
+      | {Translmod.pos; name} :: fields ->
         access loc
           (Lambda.prim
              ~primitive:(Lambda.Pfield (pos, Lambda.Fld_module {name}))
@@ -140,11 +140,11 @@ let flat_make_aliases (export_ids : Ident.t list)
       | Lprim {primitive = Pmakeblock (Blk_module names); args} ->
         Some (names, args)
       | Lprim {primitive = Pfield (pos, Fld_module {name}); args = [base]} -> (
-        match field seen base (pos, name) with
+        match field seen base {Translmod.pos; name} with
         | Some lam -> block_fields seen lam
         | None -> None)
       | _ -> None
-    and field seen lam (pos, name) =
+    and field seen lam {Translmod.pos; name} =
       match block_fields seen lam with
       | Some (names, args) when List.nth_opt names pos = Some name ->
         List.nth_opt args pos
@@ -171,7 +171,7 @@ let flat_make_aliases (export_ids : Ident.t list)
     List.rev @@ fst
     @@ Ext_list.fold_left paths ([], occupied_names)
          (fun (aliases, occupied_names) path ->
-           let names = List.map snd path in
+           let names = List.map (fun {Translmod.name} -> name) path in
            let name = Translmod.flat_export_name names in
            let js_name = Ext_ident.convert name in
            if Set_string.mem js_name occupied_names then
@@ -180,7 +180,7 @@ let flat_make_aliases (export_ids : Ident.t list)
                 exported."
                (String.concat "." names) name;
            match path with
-           | (_, top) :: fields -> (
+           | {name = top} :: fields -> (
              match Map_string.find_opt top exported_modules with
              | Some top_id ->
                let alias =
@@ -189,9 +189,7 @@ let flat_make_aliases (export_ids : Ident.t list)
                    Lambda.var id
                  | Some _ | None -> access loc (Lambda.var top_id) fields
                in
-               let alias_id = Ident.create name in
-               ( (Lam_group.Single (Alias, alias_id, alias), alias_id, alias)
-                 :: aliases,
+               ( (Ident.create name, alias) :: aliases,
                  Set_string.add js_name occupied_names )
              | None ->
                Location.raise_errorf ~loc
@@ -220,9 +218,9 @@ let required_modules (lam : Lambda.t) : unit Lam_module_ident.Hash_set.t =
   collect lam;
   required
 
-let compile ?on_optimized_lambda (output_prefix : string) export_idents
-    flat_make_paths
-    (lam : Lambda.t) =
+let compile ?on_optimized_lambda (output_prefix : string)
+    ({lambda = lam; exports = export_idents; flat_make_paths} :
+      Translmod.implementation) =
   let debug_ir = !((Js_config.current ()).debug_ir) in
   let diagnostics =
     if debug_ir then Some (Ir_diagnostics.create ~output_prefix) else None
@@ -315,25 +313,23 @@ let compile ?on_optimized_lambda (output_prefix : string) export_idents
   (* Add the generated alias groups before JS lowering so regular export
      printing, tree shaking, and .cmj metadata all see the flat runtime value. *)
   let flat_aliases = flat_make_aliases meta.exports flat_make_paths groups in
-  let flat_groups, flat_exports, flat_export_map =
-    Ext_list.fold_left flat_aliases ([], [], Map_ident.empty)
-      (fun (groups, exports, export_map) (group, id, lam) ->
-        (group :: groups, id :: exports, Map_ident.add id lam export_map))
+  let flat_exports = List.map fst flat_aliases in
+  let groups =
+    groups
+    @ List.map (fun (id, lam) -> Lam_group.Single (Alias, id, lam)) flat_aliases
   in
-  let groups = groups @ List.rev flat_groups in
   let meta =
     {
       meta with
-      exports = meta.exports @ List.rev flat_exports;
+      exports = meta.exports @ flat_exports;
       export_idents =
         Ext_list.fold_left flat_exports meta.export_idents (fun acc id ->
             Set_ident.add id acc);
     }
   in
   let export_map =
-    Map_ident.fold
-      (fun id lam acc -> Map_ident.add id lam acc)
-      flat_export_map coerced_input.export_map
+    Ext_list.fold_left flat_aliases coerced_input.export_map
+      (fun acc (id, lam) -> Map_ident.add id lam acc)
   in
   let () =
     if debug_ir then

@@ -256,7 +256,7 @@ let compile output_prefix =
        Pfield "make" (Pfield "B" (Pfield "A" (Lglobal_module Other)))
 
      Every nested [make] is also exported under a flat name (see
-     [Translmod.flat_make_paths]), so it is read as Other.A$B$make rather
+     [Translmod.implementation]), so it is read as Other.A$B$make rather
      than through the module objects. Other reads query only the first field,
      "A", and emit the remaining fields as JS property access. *)
   let rec extract_field_path segments primitive args =
@@ -270,10 +270,9 @@ let compile output_prefix =
   in
   let flat_make_field_name primitive args =
     match extract_field_path [] primitive args with
-    | Some (id, (_ :: _ :: _ as segments)) when Ext_list.last segments = "make"
-      ->
-      Some (id, Translmod.flat_export_name segments)
-    | Some _ | None -> None
+    | Some (id, segments) ->
+      Translmod.flat_make_name segments |> Option.map (fun name -> (id, name))
+    | None -> None
   in
   let rec compile_external_field (* Like [List.empty]*)
       (lamba_cxt : Lam_compile_context.t) (id : Ident.t) name : Js_output.t =
