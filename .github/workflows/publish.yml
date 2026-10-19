@@ -137,10 +137,10 @@ jobs:
           path: packages/playground
 
       - name: Setup Rclone
-        uses: cometkim/rclone-actions/setup-rclone@main
+        uses: cometkim/rclone-actions/setup-rclone@8d9c6b95341f7698609deee65c3d62af42893288 # main, 2025-06-18
 
       - name: Configure Rclone remote
-        uses: cometkim/rclone-actions/configure-remote/s3-provider@main
+        uses: cometkim/rclone-actions/configure-remote/s3-provider@8d9c6b95341f7698609deee65c3d62af42893288 # main, 2025-06-18
         with:
           name: rescript
           provider: Cloudflare
