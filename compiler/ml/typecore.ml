@@ -1762,8 +1762,11 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
         in
         pattern_variables_ref () := p1_variables;
         module_variables_ref () := p1_module_variables;
+        (* Without variables there is nothing to rename. Skipping the copy
+           keeps nested or-patterns, e.g. expanded character ranges, linear. *)
+        let p2 = if alpha_env = [] then p2 else alpha_pat alpha_env p2 in
         {
-          pat_desc = Tpat_or (p1, alpha_pat alpha_env p2, None);
+          pat_desc = Tpat_or (p1, p2, None);
           pat_loc = loc;
           pat_extra = [];
           pat_type = expected_ty;
