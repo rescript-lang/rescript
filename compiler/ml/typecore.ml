@@ -1423,19 +1423,35 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
         pat_attributes = sp.ppat_attributes;
         pat_env = !env;
       }
-  | Ppat_interval (Pconst_char {semantic = c1}, Pconst_char {semantic = c2}) ->
-    let lo = Const_char (min c1 c2) and hi = Const_char (max c1 c2) in
-    unify_pat_types loc !env (type_constant lo) expected_ty;
-    rp k
-      {
-        pat_desc = (if c1 = c2 then Tpat_constant lo else Tpat_interval (lo, hi));
-        pat_loc = loc;
-        pat_extra = [];
-        pat_type = expected_ty;
-        pat_attributes = sp.ppat_attributes;
-        pat_env = !env;
-      }
-  | Ppat_interval _ -> raise (Error (loc, !env, Invalid_interval))
+  | Ppat_interval (c1, c2) -> (
+    (* [char] is an alias of [int], so bounds may mix both *)
+    let bound c =
+      match constant_or_raise !env loc c with
+      | (Const_int i | Const_char i) as c -> Some (i, c)
+      | Const_string _ | Const_float _ | Const_bigint _ -> None
+    in
+    match (bound c1, bound c2) with
+    | Some b1, Some b2 ->
+      let (i1, lo), (i2, hi) =
+        if fst b1 <= fst b2 then (b1, b2) else (b2, b1)
+      in
+      let ty =
+        match (lo, hi) with
+        | Const_char _, Const_char _ -> type_constant lo
+        | _ -> instance_def (Predef.type_int ())
+      in
+      unify_pat_types loc !env ty expected_ty;
+      rp k
+        {
+          pat_desc =
+            (if i1 = i2 then Tpat_constant lo else Tpat_interval (lo, hi));
+          pat_loc = loc;
+          pat_extra = [];
+          pat_type = expected_ty;
+          pat_attributes = sp.ppat_attributes;
+          pat_env = !env;
+        }
+    | _ -> raise (Error (loc, !env, Invalid_interval)))
   | Ppat_tuple spl ->
     assert (List.length spl >= 2);
     let spl_ann = List.map (fun p -> (p, newvar ())) spl in
@@ -5369,7 +5385,7 @@ let report_error env loc ppf error =
        prefix in this pattern.@]"
       name Printtyp.path tpath
   | Invalid_interval ->
-    fprintf ppf "@[Only character intervals are supported in patterns.@]"
+    fprintf ppf "@[Only int and char intervals are supported in patterns.@]"
   | Invalid_for_loop_index ->
     fprintf ppf "@[Invalid for-loop index: only variables and _ are allowed.@]"
   | No_value_clauses ->

@@ -1,0 +1,13 @@
+
+  [1;33mWarning number 8[0m
+  [36m/.../fixtures/warning_8_mixed_range_example.res[0m:[2m4:3-6:3[0m
+
+  2 [2m│[0m // example is a negative int, not a char.
+  3 [2m│[0m let f = x =>
+  [1;33m4[0m [2m│[0m   [1;33mswitch x {[0m
+  [1;33m5[0m [2m│[0m [1;33m  | '\x00' .. 0x7FFFFFFF => 1[0m
+  [1;33m6[0m [2m│[0m [1;33m  }[0m
+  7 [2m│[0m 
+
+  You forgot to handle a possible case here, for example: 
+  | -1
