@@ -2870,6 +2870,9 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
       Doc.concat [Doc.text "..."; print_ident_path ident cmt_tbl]
     | Ppat_type ident ->
       Doc.concat [Doc.text "#..."; print_ident_path ident cmt_tbl]
+    | Ppat_dict [] ->
+      Doc.concat
+        [Doc.text "dict{"; print_comments_inside cmt_tbl p.ppat_loc; Doc.rbrace]
     | Ppat_dict rows ->
       (* Its own group, as when it was a record pattern with an attribute *)
       Doc.group
@@ -3088,7 +3091,10 @@ and print_pattern_dict_row ~state
     if opt then Doc.concat [Doc.text "?"; doc] else doc
   in
   let lbl_doc =
-    Doc.concat [Doc.text "\""; print_longident (Lident key.txt); Doc.text "\""]
+    print_comments
+      (Doc.concat
+         [Doc.text "\""; print_longident (Lident key.txt); Doc.text "\""])
+      cmt_tbl key.loc
   in
   let doc =
     Doc.group
