@@ -17,7 +17,7 @@ else ifeq ($(UNAME_S),Darwin)
 	ifeq ($(UNAME_M),arm64)
 		RESCRIPT_PLATFORM := darwin-arm64
 	else
-		RESCRIPT_PLATFORM := darwin-x64
+		$(error Intel Macs are not supported anymore, use ReScript 12)
 	endif
 else ifeq ($(UNAME_S),Linux)
 	ifeq ($(UNAME_M),aarch64)

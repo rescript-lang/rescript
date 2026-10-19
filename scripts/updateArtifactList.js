@@ -122,7 +122,6 @@ for (const pkg of ["rescript", "@rescript/runtime", "@rescript/belt"]) {
 
 for (const pkg of [
   "@rescript/darwin-arm64",
-  "@rescript/darwin-x64",
   "@rescript/linux-arm64",
   "@rescript/linux-x64",
   "@rescript/win32-x64",
