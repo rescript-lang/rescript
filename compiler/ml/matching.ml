@@ -2592,13 +2592,31 @@ let as_exit_call lam =
   in
   go Ident.empty lam
 
+(* Adds the static exits [lam] jumps to to [raised]. Exits cannot leave a
+   function, so function bodies are skipped. *)
+let rec add_raised_exits raised lam =
+  match lam with
+  | Lfunction _ -> ()
+  | Lstaticraise (i, _) ->
+    Hashtbl.replace raised i ();
+    Lambda_traverse.iter (add_raised_exits raised) lam
+  | _ -> Lambda_traverse.iter (add_raised_exits raised) lam
+
 let compile_orhandlers compile_fun lambda1 total1 ctx to_catch =
+  (* The exits of the match and of the handlers compiled so far *)
+  let raised = Hashtbl.create 16 in
+  add_raised_exits raised lambda1;
   let rec do_rec r total_r = function
     | [] -> (r, total_r)
+    | (_, i, _, _) :: rem when not (Hashtbl.mem raised i) ->
+      (* The or-pattern is unreachable, e.g. after a wildcard. Its handler is
+         not compiled: with a guard and no default, its failure has no exit. *)
+      do_rec r total_r rem
     | (mat, i, vars, pm) :: rem -> (
       try
         let ctx = select_columns mat ctx in
         let handler_i, total_i = compile_fun ctx pm in
+        add_raised_exits raised handler_i;
         match as_exit_call r with
         | Some (j, args) ->
           if i = j then
