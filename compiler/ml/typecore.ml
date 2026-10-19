@@ -4418,9 +4418,20 @@ and type_application ~context total_app env funct (sargs : sargs) :
         List.map (fun (l1, _) -> {Types.lbl = l1; typ = newvar ()}) sargs
       in
       let ty_ret = newvar () in
+      (* A fresh type variable as function type usually means the function
+         never returns (e.g. [failwith("x")(1)]), so the arguments are
+         unused. A JS object method read through an open object type
+         ([obj["m"]] with [obj: {..}]) also gets a fresh variable, but it is
+         an ordinary JS method that receives its arguments. *)
+      let is_object_method =
+        match funct.exp_desc with
+        | Texp_object_get _ -> true
+        | _ -> false
+      in
       if
         ty_fun.level >= ty_ret.level
-        && not (is_identity_coercion funct.exp_desc)
+        && (not (is_identity_coercion funct.exp_desc))
+        && not is_object_method
       then
         List.iter
           (fun (_, sarg1) ->
