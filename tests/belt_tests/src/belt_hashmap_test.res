@@ -43,4 +43,37 @@ describe(__MODULE__, () => {
     eq(__LOC__, N.size(v), 98_000)
     ok(__LOC__, A.every(I.range(2_001, 100_000), x => N.has(v, x)))
   })
+
+  test("getWithDefault and getOrThrow", () => {
+    let v = N.fromArray(~id=module(Y), [(1, 10), (2, 20)])
+    eq(__LOC__, N.getWithDefault(v, 1, 0), 10)
+    eq(__LOC__, N.getWithDefault(v, 3, 0), 0)
+    eq(__LOC__, N.getOrThrow(v, 2), 20)
+    throws(__LOC__, () => N.getOrThrow(v, 3)->ignore)
+  })
+
+  test("getWithDefault and getOrThrow with colliding keys", () => {
+    module Collide = unpack(Belt.Id.hashable(~eq=intEq, ~hash=(_: int) => 0))
+    let v = N.make(~id=module(Collide), ~hintSize=4)
+    for i in 0 to 9 {
+      N.set(v, i, i * 10)
+    }
+    ok(__LOC__, A.every(I.range(0, 9), i => N.getWithDefault(v, i, -1) == i * 10))
+    ok(__LOC__, A.every(I.range(0, 9), i => N.getOrThrow(v, i) == i * 10))
+    eq(__LOC__, N.getWithDefault(v, 10, -1), -1)
+    throws(__LOC__, () => N.getOrThrow(v, 10)->ignore)
+  })
+
+  test("Int and String getWithDefault and getOrThrow", () => {
+    let i = Belt.HashMap.Int.fromArray([(1, "a"), (2, "b")])
+    eq(__LOC__, Belt.HashMap.Int.getWithDefault(i, 2, "z"), "b")
+    eq(__LOC__, Belt.HashMap.Int.getWithDefault(i, 3, "z"), "z")
+    eq(__LOC__, Belt.HashMap.Int.getOrThrow(i, 1), "a")
+    throws(__LOC__, () => Belt.HashMap.Int.getOrThrow(i, 3)->ignore)
+    let s = Belt.HashMap.String.fromArray([("a", 1), ("b", 2)])
+    eq(__LOC__, Belt.HashMap.String.getWithDefault(s, "b", 0), 2)
+    eq(__LOC__, Belt.HashMap.String.getWithDefault(s, "c", 0), 0)
+    eq(__LOC__, Belt.HashMap.String.getOrThrow(s, "a"), 1)
+    throws(__LOC__, () => Belt.HashMap.String.getOrThrow(s, "c")->ignore)
+  })
 })
