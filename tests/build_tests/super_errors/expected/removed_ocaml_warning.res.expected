@@ -1,9 +1,0 @@
-
-  [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/removed_ocaml_warning.res[0m:[2m1:1-15[0m
-
-  [1;31m1[0m [2m│[0m [1;31m@@ocaml.warning[0m("-32")
-  2 [2m│[0m 
-  3 [2m│[0m let x = 1
-
-  `@ocaml.warning` is no longer supported, use `@warning` instead.
