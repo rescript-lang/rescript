@@ -23,9 +23,9 @@ let renderLine = (highlights, line: LambdaDiff.line) => {
   }
   let number = number => number->Option.map(value => Int.toString(value))->Option.getOr("")
   <span class={className}>
-    <span class="lambda-diff-number" ariaHidden=true> {View.text(number(line.before))} </span>
-    <span class="lambda-diff-number" ariaHidden=true> {View.text(number(line.after))} </span>
-    <span class="lambda-diff-marker"> {View.text(marker)} </span>
+    <span class="lambda-diff-number" ariaHidden=true>{View.text(number(line.before))}</span>
+    <span class="lambda-diff-number" ariaHidden=true>{View.text(number(line.after))}</span>
+    <span class="lambda-diff-marker">{View.text(marker)}</span>
     <span class="lambda-diff-text">
       {switch LambdaInlineDiff.forLine(highlights, line) {
       | None => View.text(line.text)
@@ -33,7 +33,7 @@ let renderLine = (highlights, line: LambdaDiff.line) => {
         View.fragment(
           parts->Array.map(part =>
             part.changed
-              ? <span class="lambda-diff-token"> {View.text(part.text)} </span>
+              ? <span class="lambda-diff-token">{View.text(part.text)}</span>
               : View.text(part.text)
           ),
         )
@@ -49,9 +49,7 @@ let renderLines = (highlights, lines) =>
 let renderDiff = (contextState, result) =>
   switch result {
   | LambdaDiff.Identical =>
-    <p class="lambda-notice">
-      {View.text("No changes in the printed Lambda after optimization.")}
-    </p>
+    <p class="lambda-notice">{View.text("No changes in the printed Lambda after optimization.")}</p>
   | TooLarge =>
     <p class="lambda-notice">
       {View.text(
@@ -65,7 +63,7 @@ let renderDiff = (contextState, result) =>
     let occurrences = Dict.make()
     let sections = LambdaDiff.sections(lines)->Array.map(section =>
       switch section {
-      | Visible(lines) => <pre class="lambda-diff-block"> {renderLines(highlights, lines)} </pre>
+      | Visible(lines) => <pre class="lambda-diff-block">{renderLines(highlights, lines)}</pre>
       | Collapsed(lines) =>
         let text = lines->Array.map(line => line.text)->Array.join("\n")
         let occurrence = Dict.get(occurrences, text)->Option.getOr(0)
@@ -90,7 +88,7 @@ let renderDiff = (contextState, result) =>
           </summary>
           {View.tracked(() =>
             Signal.get(expanded)
-              ? <pre class="lambda-diff-block"> {renderLines(highlights, lines)} </pre>
+              ? <pre class="lambda-diff-block">{renderLines(highlights, lines)}</pre>
               : View.empty()
           )}
         </details>
@@ -117,12 +115,41 @@ let make = (~input: unit => option<input>, ~visible, ~mode: Signal.t<mode>) => {
         "This compiler bundle does not provide optimized Lambda. Select a compiler with playground API v9 or newer.",
       )}
     </p>
+  let shownInput = ref(None)
+  let panelInput = Computed.make(() => {
+    if visible() {
+      shownInput := input()
+    }
+    shownInput.contents
+  })
+  let diffInput = Signal.make(None)
+  let wasActive = ref(false)
+  Effect.run(() => {
+    let active = visible() && Signal.get(mode) === Diff
+    let entering = active && !wasActive.contents
+    wasActive := active
+    if active {
+      let current = input()
+      if entering {
+        // Opening Diff is immediate; edits wait for a short pause in typing.
+        Signal.set(diffInput, current)
+        None
+      } else if sameInput(Signal.peek(diffInput), current) {
+        None
+      } else {
+        let timer = Window.setTimeout(() => Signal.set(diffInput, current), 200)
+        Some(() => Window.clearTimeout(timer))
+      }
+    } else {
+      None
+    }
+  })
   // Cache the complete rendered diff by text, including inline highlights and
   // sections. Hidden tabs keep their last result and defer new comparison work.
   let cached = ref((None, View.empty()))
   let difference = Computed.make(() => {
     let (previous, rendered) = cached.contents
-    let current = visible() && Signal.get(mode) === Diff ? input() : previous
+    let current = Signal.get(diffInput)
     if sameInput(previous, current) {
       rendered
     } else {
@@ -152,12 +179,14 @@ let make = (~input: unit => option<input>, ~visible, ~mode: Signal.t<mode>) => {
       )}
     </div>
     <pre class={() => Signal.get(mode) === Before ? "output" : "output hidden-panel"}>
-      {View.signalText(() => input()->Option.map(value => value.before)->Option.getOr(""))}
+      {View.signalText(() =>
+        Signal.get(panelInput)->Option.map(value => value.before)->Option.getOr("")
+      )}
     </pre>
     <div class={() => Signal.get(mode) === After ? "" : "hidden-panel"}>
       {View.tracked(() =>
-        switch input()->Option.flatMap(value => value.after) {
-        | Some(after) => <pre class="output"> {View.text(after)} </pre>
+        switch Signal.get(panelInput)->Option.flatMap(value => value.after) {
+        | Some(after) => <pre class="output">{View.text(after)}</pre>
         | None => unavailable()
         }
       )}

@@ -1,1 +1,1 @@
-- Add before/after optimization views and inline diffs to the developer playground's Lambda tab, with optimized Lambda output in playground API v9. https://github.com/rescript-lang/rescript/pull/8636
+- Add before/after optimization views and inline diffs to the developer playground's Lambda tab, with optimized Lambda output in playground API v9, deferred hidden-panel updates, and debounced comparisons while editing. https://github.com/rescript-lang/rescript/pull/8636

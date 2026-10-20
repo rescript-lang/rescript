@@ -338,8 +338,60 @@ test("Lambda view retains its diff across identical compiles and tab switches", 
   assert.equal(diff(), changed);
 });
 
-test("expanded unchanged regions survive edits to a changed line", () => {
-  const { input, mode, view, html } = lambdaView();
+test("Lambda panels retain their text while hidden and catch up when shown", () => {
+  const { input, visible, html } = lambdaView();
+  assert.match(html(), /old/);
+  Signal.set(visible, false);
+  Signal.set(input, { before: "hidden before", after: "hidden after" });
+  assert.doesNotMatch(html(), /hidden before|hidden after/);
+  assert.match(html(), /old/);
+  Signal.set(visible, true);
+  assert.match(html(), /hidden before/);
+  assert.match(html(), /hidden after/);
+});
+
+test("Lambda Diff debounces edits and renders the latest comparison", t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { input, mode, diff } = lambdaView();
+  Signal.set(mode, "Diff");
+  const initial = diff();
+  Signal.set(input, { ...Signal.peek(input), after: "first edit" });
+  t.mock.timers.tick(199);
+  assert.equal(diff(), initial);
+  Signal.set(input, { ...Signal.peek(input), after: "latest edit" });
+  t.mock.timers.tick(199);
+  assert.equal(diff(), initial);
+  t.mock.timers.tick(1);
+  assert.notEqual(diff(), initial);
+  const html = renderToString(() => diff());
+  assert.match(html, /latest edit/);
+  assert.doesNotMatch(html, /first edit/);
+});
+
+test("leaving Lambda Diff cancels pending work and reopening catches up", t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  for (const hidePanel of [false, true]) {
+    const { input, mode, visible, diff } = lambdaView();
+    Signal.set(mode, "Diff");
+    const initial = diff();
+    Signal.set(input, { ...Signal.peek(input), after: "pending edit" });
+    if (hidePanel) Signal.set(visible, false);
+    else Signal.set(mode, "Before");
+    t.mock.timers.tick(200);
+    assert.equal(diff(), initial);
+    if (hidePanel) Signal.set(visible, true);
+    else Signal.set(mode, "Diff");
+    assert.notEqual(diff(), initial);
+    assert.match(
+      renderToString(() => diff()),
+      /pending edit/,
+    );
+  }
+});
+
+test("expanded unchanged regions survive edits to a changed line", t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { input, mode, view, html, diff } = lambdaView();
   Signal.set(mode, "Diff");
   const summary = elements(view).find(node => node.tag === "summary");
   const click = summary.events.find(([name]) => name === "click")[1];
@@ -353,10 +405,13 @@ test("expanded unchanged regions survive edits to a changed line", () => {
   const openDetails = () =>
     (html().match(/<details[^>]* open(?: |>|=)/g) ?? []).length;
   assert.equal(openDetails(), 1);
+  const initial = diff();
   Signal.set(input, {
     ...Signal.peek(input),
     after: Signal.peek(input).after.replace("new", "edited"),
   });
+  t.mock.timers.tick(200);
+  assert.notEqual(diff(), initial);
   assert.equal(openDetails(), 1);
 });
 
