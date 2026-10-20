@@ -62,8 +62,13 @@ for file in src/migrate/*.{res,resi}; do
   fi
 done
 
-# Migrating a file in place must leave it untouched when no migration applies
+# Migrating a file in place must leave it untouched when no migration applies,
+# and --stdout must print it byte for byte
 for file in src/migrate/NoMigration.{res,resi}; do
+  if ! cmp -s "$file" "src/expected/$(basename $file).expected"; then
+    echo "Expected migrate --stdout to print $file unchanged" >&2
+    exit 1
+  fi
   before="$(cksum < "$file")"
   ../../_build/install/default/bin/rescript-tools migrate "$file" > /dev/null
   if [ "$(cksum < "$file")" != "$before" ]; then

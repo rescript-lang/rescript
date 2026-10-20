@@ -5,4 +5,3 @@ let   add = (a, b) =>   a + b
 
 let numbers = [1,2,3]->Array.map(x => add(x, 1))
 let other = DeprecatedStuff.Constants.otherThing
-
