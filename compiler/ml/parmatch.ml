@@ -2435,7 +2435,10 @@ let check_shadowed_payloads casel =
   (dead_cases, fun p -> List.mem p.pat_loc !reported)
 
 let check_unused pred casel =
-  if Warnings.is_active (Warnings.Unused_match "") then
+  let unused_match = Warnings.is_active (Warnings.Unused_match "") in
+  (* Shadowed payloads are reported as warning 11 or 12, so they are checked
+     when either is active; the usefulness analysis below only when 11 is. *)
+  if unused_match || Warnings.is_active (Warnings.Unused_pat "") then
     let casel = lower_cases casel in
     let dead_cases, already_reported = check_shadowed_payloads casel in
     let rec do_rec pref = function
@@ -2509,7 +2512,7 @@ let check_unused pred casel =
         if c_guard <> None then do_rec pref rem else do_rec ([q] :: pref) rem
     in
 
-    do_rec [] casel
+    if unused_match then do_rec [] casel
 
 (*********************************)
 (* Exported irrefutability tests *)
