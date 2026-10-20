@@ -28,7 +28,6 @@ val type_array : type_expr -> type_expr
 val type_iterable : type_expr -> type_expr
 val type_async_iterable : type_expr -> type_expr
 val type_bigint : unit -> type_expr
-val type_extension_constructor : unit -> type_expr
 
 val reset_for_request : unit -> unit
 val with_fresh : (unit -> 'a) -> 'a

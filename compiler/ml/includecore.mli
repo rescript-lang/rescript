@@ -58,12 +58,7 @@ val type_declarations :
   type_mismatch list
 
 val extension_constructors :
-  loc:Location.t ->
-  Env.t ->
-  Ident.t ->
-  extension_constructor ->
-  extension_constructor ->
-  bool
+  Env.t -> Ident.t -> extension_constructor -> extension_constructor -> bool
 
 val report_type_mismatch :
   string -> string -> string -> Format.formatter -> type_mismatch list -> unit

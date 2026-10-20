@@ -51,7 +51,6 @@ type error =
   | Invalid_attribute of string
   | Bad_immediate_attribute
   | Bad_unboxed_attribute of string
-  | Boxed_and_unboxed
   | Nonrec_gadt
   | Variant_runtime_representation_mismatch of Variant_coercion.variant_error
   | Variant_spread_fail of Variant_type_spread.variant_type_spread_error
@@ -61,12 +60,8 @@ open Typedtree
 exception Error of Location.t * error
 
 let get_representation_from_attributes sdecl =
-  let unboxed = Builtin_attributes.has_unboxed sdecl.ptype_attributes in
-  let boxed = Builtin_attributes.has_boxed sdecl.ptype_attributes in
-  match (boxed, unboxed) with
-  | true, true -> raise (Error (sdecl.ptype_loc, Boxed_and_unboxed))
-  | true, false | false, false -> Boxed
-  | false, true -> Unboxed
+  if Builtin_attributes.has_unboxed sdecl.ptype_attributes then Unboxed
+  else Boxed
 
 (* Enter all declared types in the environment as abstract types *)
 
@@ -2289,8 +2284,6 @@ let report_error ppf = function
       "non-pointer types like int or bool"
   | Bad_unboxed_attribute msg ->
     fprintf ppf "@[This type cannot be unboxed because@ %s.@]" msg
-  | Boxed_and_unboxed ->
-    fprintf ppf "@[A type cannot be boxed and unboxed at the same time.@]"
   | Nonrec_gadt ->
     fprintf ppf "@[GADT case syntax cannot be used in a 'nonrec' block.@]"
   | Variant_runtime_representation_mismatch

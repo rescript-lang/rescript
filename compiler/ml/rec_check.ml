@@ -206,8 +206,7 @@ let rec classify_expression : Typedtree.expression -> sd =
   | Texp_ident _ | Texp_for _ | Texp_for_of _ | Texp_for_await_of _
   | Texp_constant _ | Texp_tuple _ | Texp_array _ | Texp_construct _
   | Texp_variant _ | Texp_record _ | Texp_object_literal _ | Texp_setfield _
-  | Texp_while _ | Texp_pack _ | Texp_function _ | Texp_extension_constructor _
-  | Texp_break | Texp_continue ->
+  | Texp_while _ | Texp_pack _ | Texp_function _ | Texp_break | Texp_continue ->
     Static
   | Texp_apply {funct = {exp_desc = Texp_ident (_, _, vd)}} when is_ref vd ->
     Static
@@ -337,7 +336,6 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
         env params
     in
     Use.delay (expression env body)
-  | Texp_extension_constructor _ -> Use.empty
 
 and option : 'a. (Env.env -> 'a -> Use.t) -> Env.env -> 'a option -> Use.t =
  fun f env -> value_default (f env) ~default:Use.empty

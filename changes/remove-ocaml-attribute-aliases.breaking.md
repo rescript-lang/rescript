@@ -1,0 +1,1 @@
+- Remove the OCaml attribute spellings `@ocaml.deprecated`, `@ocaml.unboxed`, `@ocaml.immediate`, `@ocaml.warnerror`, `@ocaml.boxed`, `@ocaml.deprecated_mutable` and `@ocaml.text`, the attributes `@boxed` and `@deprecated_mutable`, and the `%extension_constructor` extension.

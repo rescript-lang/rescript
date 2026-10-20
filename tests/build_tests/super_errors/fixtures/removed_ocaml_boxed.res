@@ -1,2 +1,2 @@
-@unboxed @boxed
+@ocaml.boxed
 type t = One(int)

@@ -78,8 +78,6 @@ let rec expr_no_side_effects (expr : Typedtree.expression) =
   | Texp_object_set _ -> false
   | Texp_letexception (_ec, e) -> e |> expr_no_side_effects
   | Texp_pack _ -> false
-  | Texp_extension_constructor _ when true -> true
-  | _ -> (* on ocaml 4.08: Texp_letop | Texp_open *) true
 
 and expr_opt_no_side_effects eo =
   match eo with

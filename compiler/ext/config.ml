@@ -13,7 +13,7 @@ and ast0_impl_magic_number = "Caml1999M022"
 
 and ast0_intf_magic_number = "Caml1999N022"
 
-and cmt_magic_number = "Caml1999T046"
+and cmt_magic_number = "Caml1999T047"
 
 let get_load_path () = (Compiler_request_state.current ()).load_path
 let set_load_path path = (Compiler_request_state.current ()).load_path <- path

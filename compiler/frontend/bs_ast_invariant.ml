@@ -29,11 +29,29 @@
 let is_checked_attribute txt =
   match txt with
   | "as" | "config" | "ignore" | "int" | "optional" | "res.hoistedFunction"
-  | "string" | "unwrap" ->
+  | "string" | "unwrap"
+  (* No longer interpreted, so these always warn as unused. *)
+  | "boxed" | "deprecated_mutable" ->
     true
   | _ -> false
 
+(* OCaml spellings of builtin attributes the compiler used to accept. *)
+let removed_ocaml_attribute txt =
+  match txt with
+  | "ocaml.deprecated" -> Some "use `@deprecated` instead."
+  | "ocaml.unboxed" -> Some "use `@unboxed` instead."
+  | "ocaml.immediate" -> Some "use `@immediate` instead."
+  | "ocaml.warnerror" -> Some "use `@warnerror` instead."
+  | "ocaml.boxed" -> Some "remove it: types are boxed unless marked `@unboxed`."
+  | "ocaml.deprecated_mutable" -> Some "remove it."
+  | "ocaml.text" -> Some "use a doc comment instead."
+  | _ -> None
+
 let warn_unused_attribute ((({txt; loc} as sloc), _) : Parsetree.attribute) =
+  (match removed_ocaml_attribute txt with
+  | Some hint ->
+    Location.raise_errorf ~loc "`@%s` is no longer supported, %s" txt hint
+  | None -> ());
   if
     is_checked_attribute txt && (not loc.loc_ghost)
     && not (Used_attributes.is_used_attribute sloc)

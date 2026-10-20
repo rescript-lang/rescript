@@ -1,0 +1,25 @@
+
+  [1;31mWarning number 101[0m (configured as error) 
+  [36m/.../fixtures/unused_boxed_deprecated_mutable.res[0m:[2m1:1-6[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@boxed[0m
+  2 [2m│[0m type t = One(int)
+  3 [2m│[0m 
+
+  Unused attribute: @boxed
+This attribute has no effect here.
+For example, some attributes are only meaningful in externals.
+
+
+
+  [1;31mWarning number 101[0m (configured as error) 
+  [36m/.../fixtures/unused_boxed_deprecated_mutable.res[0m:[2m4:11-29[0m
+
+  2 [2m│[0m type t = One(int)
+  3 [2m│[0m 
+  [1;31m4[0m [2m│[0m type r = {[1;31m@deprecated_mutable[0m mutable x: int}
+  5 [2m│[0m 
+
+  Unused attribute: @deprecated_mutable
+This attribute has no effect here.
+For example, some attributes are only meaningful in externals.
