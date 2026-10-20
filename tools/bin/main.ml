@@ -75,7 +75,7 @@ let main () =
     match
       (Tools.Migrate.migrate ~entry_point_file:file ~output_mode, output_mode)
     with
-    | Ok content, `Stdout -> print_endline content
+    | Ok content, `Stdout -> print_string content
     | result, `File -> log_and_exit result
     | Error e, _ -> log_and_exit (Error e))
   | "migrate-all" :: root :: _opts -> (

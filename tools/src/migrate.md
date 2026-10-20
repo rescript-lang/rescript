@@ -7,6 +7,7 @@ This document captures what the migration framework currently supports, based on
 - Targets: `*.res` and `*.resi` files.
 - Requires build artifacts for the file’s module (CMT/CMTI). If not found, migration aborts with an error message asking to build the project.
 - Output modes: write back to file or print to stdout.
+- Files where no migration applies are left untouched (and printed as is to stdout); only migrated files are reprinted.
 
 ## Deprecation Sources
 

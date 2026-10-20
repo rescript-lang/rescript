@@ -774,10 +774,16 @@ let migrate ~entry_point_file ~output_mode =
         let ast_transformed =
           apply_transforms.structure apply_transforms ast_mapped
         in
-        Ok
-          ( Res_printer.print_implementation
-              ~width:Res_printer.default_print_width ast_transformed ~comments,
-            source )
+        (* Only reprint when a migration changed the AST, so that files
+           without migrations keep their formatting. *)
+        if ast_transformed = parsetree then Ok (None, source)
+        else
+          Ok
+            ( Some
+                (Res_printer.print_implementation
+                   ~width:Res_printer.default_print_width ast_transformed
+                   ~comments),
+              source )
     else if Filename.check_suffix path ".resi" then
       let parser = Res_driver.parsing_engine.parse_interface in
       let {Res_driver.parsetree = signature; comments; source} =
@@ -794,7 +800,8 @@ let migrate ~entry_point_file ~output_mode =
       | Some {cmt_extra_info = {deprecated_used}} ->
         let mapper = make_mapper deprecated_used in
         let ast_mapped = mapper.signature mapper signature in
-        Ok (Res_printer.print_interface ast_mapped ~comments, source)
+        if ast_mapped = signature then Ok (None, source)
+        else Ok (Some (Res_printer.print_interface ast_mapped ~comments), source)
     else
       Error
         (Printf.sprintf
@@ -803,7 +810,7 @@ let migrate ~entry_point_file ~output_mode =
   in
   match result with
   | Error e -> Error e
-  | Ok (contents, source) when contents <> source -> (
+  | Ok (Some contents, source) when contents <> source -> (
     match output_mode with
     | `Stdout -> Ok contents
     | `File ->
@@ -811,7 +818,7 @@ let migrate ~entry_point_file ~output_mode =
       Printf.fprintf oc "%s" contents;
       close_out oc;
       Ok (Filename.basename path ^ ": File migrated successfully"))
-  | Ok (contents, _) -> (
+  | Ok (_, source) -> (
     match output_mode with
-    | `Stdout -> Ok contents
+    | `Stdout -> Ok source
     | `File -> Ok (Filename.basename path ^ ": File did not need migration"))

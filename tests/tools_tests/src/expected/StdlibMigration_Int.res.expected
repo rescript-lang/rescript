@@ -5,4 +5,3 @@ let result4 = Int.shiftLeft(1, 2)
 let result5 = Int.shiftRightUnsigned(1, 2)
 let result6 = Int.shiftRight(1, 2)
 let result7 = Int.bitwiseNot(0)
-

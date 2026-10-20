@@ -1,0 +1,1 @@
+- Make `rescript-tools migrate` leave files untouched when no migration applies instead of reformatting them.
