@@ -1550,17 +1550,43 @@ and transl_cases cases = List.map transl_case cases
 
 and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
   let lapply ap_func ap_args = apply ap_func ap_args loc in
+  (* A partial application creates a function. Its callee and arguments are
+     bound outside that function, so they are evaluated once, where the
+     application is, and an await in them stays in the enclosing function. *)
+  let rec is_module_path (lam : Lambda.t) =
+    match lam with
+    | Lvar _ | Lglobal_module _ -> true
+    | Lprim {primitive = Pfield (_, Fld_module _); args = [m]} ->
+      is_module_path m
+    | _ -> false
+  in
+  let protect defs name lam =
+    match lam with
+    | Lvar _ | Lconst _
+    (* Creating a closure, reading an external value or reading a module's
+       value does nothing else, so evaluating it on each call is the same as
+       evaluating it once. Keeping these in place keeps the function a known
+       one that can be inlined. *)
+    | Lfunction _
+    | Lprim
+        {
+          primitive = Pjs_call {ffi = {kind = Decl_val _; effective_arity = 0}};
+          args = [];
+        } ->
+      lam
+    | _ when is_module_path lam -> lam
+    | _ ->
+      let id = Ident.create name in
+      defs := (id, lam) :: !defs;
+      var id
+  in
+  let bind_protected defs body =
+    List.fold_left (fun body (id, lam) -> let_ Strict id lam body) body !defs
+  in
   let rec build_apply lam args = function
     | (None, optional) :: l ->
       let defs = ref [] in
-      let protect name lam =
-        match lam with
-        | Lvar _ | Lconst _ -> lam
-        | _ ->
-          let id = Ident.create name in
-          defs := (id, lam) :: !defs;
-          var id
-      in
+      let protect = protect defs in
       let args, args' =
         if List.for_all (fun (_, opt) -> opt) args then ([], args)
         else (args, [])
@@ -1577,7 +1603,7 @@ and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
           function_ ~loc ~attr:default_function_attribute ~params:[id_arg]
             ~body:lam
       in
-      List.fold_left (fun body (id, lam) -> let_ Strict id lam body) body !defs
+      bind_protected defs body
     | (Some arg, optional) :: l -> build_apply lam ((arg, optional) :: args) l
     | [] -> lapply lam (List.rev_map fst args)
   in
@@ -1585,9 +1611,11 @@ and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
   | Some arity ->
     let extra_arity = arity - List.length sargs in
     let none_ids = ref [] in
+    let defs = ref [] in
+    let lam = protect defs "func" lam in
     let args =
       Ext_list.filter_map sargs (function
-        | _, Some e -> Some (transl_exp e)
+        | _, Some e -> Some (protect defs "arg" (transl_exp e))
         | _, None ->
           let id_arg = Ident.create "none" in
           none_ids := id_arg :: !none_ids;
@@ -1599,9 +1627,10 @@ and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
     let extra_args = Ext_list.map extra_ids (fun id -> var id) in
     let ap_args = args @ extra_args in
     let l0 = apply lam ap_args loc in
-    function_ ~loc ~attr:default_function_attribute
-      ~params:(List.rev_append !none_ids extra_ids)
-      ~body:l0
+    bind_protected defs
+      (function_ ~loc ~attr:default_function_attribute
+         ~params:(List.rev_append !none_ids extra_ids)
+         ~body:l0)
   | _ ->
     (build_apply lam []
        (List.map

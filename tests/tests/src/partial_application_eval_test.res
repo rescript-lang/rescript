@@ -1,0 +1,55 @@
+open Mocha
+open Test_utils
+
+@module("mocha")
+external testAsync: (string, unit => promise<unit>) => unit = "test"
+
+let add = (a, b, c) => a + b + c
+
+describe(__MODULE__, () => {
+  test("arguments are evaluated once", () => {
+    let calls = ref(0)
+    let next = () => {
+      calls := calls.contents + 1
+      calls.contents
+    }
+    let h = add(next(), ...)
+    eq(__LOC__, 1, calls.contents)
+    eq(__LOC__, 4, h(1, 2))
+    eq(__LOC__, 4, h(1, 2))
+    eq(__LOC__, 1, calls.contents)
+  })
+
+  test("the callee is evaluated once", () => {
+    let calls = ref(0)
+    let getAdd = () => {
+      calls := calls.contents + 1
+      add
+    }
+    let h = getAdd()(1, ...)
+    ignore(h(2, 3))
+    ignore(h(2, 3))
+    eq(__LOC__, 1, calls.contents)
+  })
+
+  test("callee and arguments are evaluated left to right", () => {
+    let log = []
+    let getAdd = () => {
+      log->Array.push("callee")
+      add
+    }
+    let arg = (name, value) => {
+      log->Array.push(name)
+      value
+    }
+    let h = getAdd()(arg("a", 1), arg("b", 2), ...)
+    eq(__LOC__, ["callee", "a", "b"], log)
+    eq(__LOC__, 6, h(3))
+  })
+
+  testAsync("an awaited argument stays in the async function", async () => {
+    let h = add(await Promise.resolve(1), ...)
+    eq(__LOC__, 4, h(1, 2))
+    eq(__LOC__, 6, h(2, 3))
+  })
+})
