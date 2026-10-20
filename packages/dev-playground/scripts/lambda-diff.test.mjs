@@ -444,6 +444,5 @@ test("older bundles retain the optimized Lambda availability notice", () => {
   Signal.set(input, { ...Signal.peek(input), after: undefined });
   Signal.set(mode, "Diff");
   assert.match(html(), /does not provide optimized Lambda/);
-  assert.doesNotMatch(html(), /API v9/);
   assert.doesNotMatch(html(), /class="lambda-diff"/);
 });

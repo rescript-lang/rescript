@@ -54,7 +54,6 @@
  * v7: Added debug dump output APIs for developer playground tooling.
  * v8: Added genType and source map configuration and compilation outputs.
  * *)
-(* Optional debug-output fields are detected by presence, without an API bump. *)
 let api_version = "8"
 
 module Js = Js_of_ocaml.Js
