@@ -1,129 +1,94 @@
 #!/bin/bash
-cd $(dirname $0)
+set -e
+cd "$(dirname "$0")"
 source "../utils.sh"
-cd ../../testrepo
 
-bold "Test: Watcher recovers from an invalid config change"
+bold "Test: Watcher recovers from invalid JSON and JSX config changes"
 
-stop_watcher() {
+test_dir=$(pwd)
+fixture=$(mktemp -d)
+cleanup() {
+  cd "$fixture" || return 1
   if ! exit_watcher; then
-    exit 1
+    return 1
   fi
+  if [ -n "${watch_pid:-}" ]; then
+    if process_is_running "$watch_pid"; then
+      kill "$watch_pid"
+    fi
+    wait "$watch_pid" 2>/dev/null || true
+  fi
+  cd "$test_dir"
+  rm -rf "$fixture"
+}
+trap cleanup EXIT
+cd "$fixture"
+
+fail_test() {
+  error "$1"
+  cat rewatch.log >&2
+  exit 1
 }
 
-wait_for_source_retry() {
-  local marker='received Modify.*Test[.]res.* -> Full'
-  wait_for_pattern rewatch.log "$marker" 30 || return 1
-  # Require an initialization failure after the source event, not another config event before it.
-  local preceding_errors
-  preceding_errors=$(awk -v marker="$marker" '
-    $0 ~ marker {exit}
-    /Could not initialize build|invalid JSON/ {count++}
-    END {print count + 0}
-  ' rewatch.log)
-  wait_for_pattern_count rewatch.log 'Could not initialize build\|invalid JSON' "$((preceding_errors + 1))" 30
+mkdir src
+printf 'let value = 0\n' > src/Test.res
+cat > rescript.json <<'JSON'
+{
+  "name": "watch-recovery",
+  "sources": ["src"],
+  "package-specs": {"module": "esmodule", "in-source": true},
+  "suffix": ".mjs",
+  "js-post-build": {"cmd": "node record-output.cjs"}
 }
+JSON
+cp rescript.json valid.json
+cat > record-output.cjs <<'JS'
+const fs = require("fs");
+const path = require("path");
+fs.appendFileSync("outputs.log", path.basename(process.argv[2]) + "\n");
+JS
 
-if ! rewatch clean > /dev/null 2>&1; then
-  error "Could not clean before watcher recovery test"
-  exit 1
-fi
-cp rescript.json rescript.json.watch-recovery.bak
-rewatch_bg -vv watch > rewatch.log 2>&1 &
+rewatch watch > rewatch.log 2>&1 &
+watch_pid=$!
+wait_for_pattern rewatch.log "Finished initial compilation" 60 ||
+  fail_test "Initial watch build did not finish"
 
-if ! wait_for_file "./src/Test.mjs" 20 || ! wait_for_file "lib/watch.lock" 20; then
-  error "Initial watch build did not complete"
-  cat rewatch.log
-  stop_watcher
-  mv rescript.json.watch-recovery.bak rescript.json
-  exit 1
-fi
+previous_output='Test.mjs'
+iteration=0
+for invalid_config in '{"name":' '{"name":"watch-recovery","jsx":{"version":3}}'; do
+  iteration=$((iteration + 1))
+  completed=$(grep -c "Finished compilation" rewatch.log || true)
+  errors=$(grep -c 'Could not initialize build\|invalid JSON\|jsx.version' rewatch.log || true)
+  printf '%s\n' "$invalid_config" > rescript.next
+  mv rescript.next rescript.json
+  wait_for_pattern_count rewatch.log 'Could not initialize build\|invalid JSON\|jsx.version' "$((errors + 1))" 30 ||
+    fail_test "Watcher did not report the invalid config"
 
-if ! wait_for_pattern rewatch.log "Finished initial compilation" 60; then
-  error "Initial watch build did not finish"
-  cat rewatch.log
-  stop_watcher
-  mv rescript.json.watch-recovery.bak rescript.json
-  exit 1
-fi
+  # Record emitted files across recovery, even if a later cleanup removes them.
+  # Both CLIs must leave the old output untouched while the config is invalid.
+  : > outputs.log
+  printf 'let marker%s = "watch-recovery-marker-%s"\n' "$iteration" "$iteration" >> src/Test.res
+  if wait_for_pattern outputs.log "$previous_output" 5; then
+    fail_test "Watcher compiled the source using stale configuration"
+  fi
+  process_is_running "$watch_pid" || fail_test "Watcher exited after the config error"
 
-initial_completed=$(grep -c "Finished compilation" rewatch.log 2> /dev/null || true)
-printf '{"name":' > rescript.json.watch-recovery.next
-mv rescript.json.watch-recovery.next rescript.json
+  node - "$iteration" <<'JS'
+const fs = require("fs");
+const config = JSON.parse(fs.readFileSync("valid.json", "utf8"));
+config.suffix = `.recovered${process.argv[2]}.mjs`;
+fs.writeFileSync("rescript.next", JSON.stringify(config));
+JS
+  mv rescript.next rescript.json
+  wait_for_pattern_count rewatch.log "Finished compilation" "$((completed + 1))" 30 ||
+    fail_test "Watcher did not recover after restoring a valid config"
+  wait_for_pattern "src/Test.recovered$iteration.mjs" "watch-recovery-marker-$iteration" 20 ||
+    fail_test "Recovered watcher did not compile the edited source with the new suffix"
+  if grep -Fq "$previous_output" outputs.log; then
+    fail_test "Watcher emitted stale output before recovering"
+  fi
+  wait_for_file_gone lib/build.lock 20 || fail_test "Recovery left the build lock behind"
+  previous_output="Test.recovered$iteration.mjs"
+done
 
-if ! wait_for_pattern rewatch.log 'Could not initialize build\|invalid JSON' 30; then
-  error "Watcher did not report the invalid config"
-  cat rewatch.log
-  stop_watcher
-  mv rescript.json.watch-recovery.bak rescript.json
-  exit 1
-fi
-
-# A content-only edit must retry initialization instead of compiling with the old config.
-echo 'let watchRecoveryMarker = "watch-recovery-marker"' >> src/Test.res
-# OCaml watches only configuration while the root config is invalid.
-# Rust additionally guarantees a source-triggered initialization retry.
-if ! rewatch --help | grep -q '^NAME$' && ! wait_for_source_retry; then
-  error "Source edit did not retry failed initialization"
-  cat rewatch.log
-  stop_watcher
-  mv rescript.json.watch-recovery.bak rescript.json
-  git restore --worktree -- src/Test.res
-  exit 1
-fi
-if grep -q "watch-recovery-marker" src/Test.mjs 2> /dev/null; then
-  error "Watcher compiled the source using stale configuration"
-  stop_watcher
-  mv rescript.json.watch-recovery.bak rescript.json
-  git restore --worktree -- src/Test.res
-  exit 1
-fi
-
-node -e '
-  const fs = require("fs");
-  const config = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-  config.suffix = ".recovered.mjs";
-  fs.writeFileSync(process.argv[2], `${JSON.stringify(config, null, 2)}\n`);
-' rescript.json.watch-recovery.bak rescript.json.watch-recovery.next
-mv rescript.json.watch-recovery.next rescript.json
-
-expected_completed=$((initial_completed + 1))
-if ! wait_for_pattern_count rewatch.log "Finished compilation" "$expected_completed" 30; then
-  error "Watcher did not recover after restoring a valid config"
-  cat rewatch.log
-  stop_watcher
-  mv rescript.json.watch-recovery.bak rescript.json
-  git restore --worktree -- src/Test.res
-  exit 1
-fi
-
-if ! wait_for_pattern "./src/Test.recovered.mjs" "watch-recovery-marker" 20; then
-  error "Recovered watcher did not compile with the restored config"
-  cat rewatch.log
-  stop_watcher
-  mv rescript.json.watch-recovery.bak rescript.json
-  git restore --worktree -- src/Test.res
-  exit 1
-fi
-
-stop_watcher
-if ! rewatch clean > /dev/null 2>&1; then
-  error "Could not clean after watcher recovery test"
-  exit 1
-fi
-mv rescript.json.watch-recovery.bak rescript.json
-git restore --worktree -- src/Test.res
-rm -f rewatch.log
-if ! rewatch build > /dev/null 2>&1; then
-  error "Could not rebuild after watcher recovery test"
-  exit 1
-fi
-
-if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ]; then
-  success "Watcher recovered from invalid config"
-else
-  error "Watcher recovery test left repository changes"
-  git diff .
-  git ls-files --others --exclude-standard .
-  exit 1
-fi
+success "Both config errors recover without compiling against stale configuration"

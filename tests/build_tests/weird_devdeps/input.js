@@ -6,8 +6,8 @@ import { setup } from "#dev/process";
 const { execBuild, execClean } = setup(import.meta.dirname);
 
 const out = await execBuild();
-assert.notEqual(out.status, 0);
+assert.equal(out.status, 2);
 assert.match(out.stderr, /could not build package tree/i);
 assert.match(out.stderr, /dependency 'weird'/i);
-assert.doesNotMatch(out.stdout, /error building package tree/i);
+assert.match(out.stderr, /at path '.*weird_devdeps'/i);
 await execClean();

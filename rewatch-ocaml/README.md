@@ -105,8 +105,6 @@ These are intentional:
   own process group.
 - `format -v` and `compiler-args -v` write their logs to stderr, so stdout
   remains formatted source or JSON. Rust writes them to stdout.
-- Dependency resolution failures and invalid dependency configurations from
-  `build`, `clean`, and `format` return exit code `2` here and `1` in Rust.
 - While the root configuration is invalid, only configuration changes trigger
   recovery attempts here. Rust also retries initialization on watched source edits.
 - Watch mode also notices a missing dependency being installed into an

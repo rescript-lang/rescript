@@ -282,27 +282,27 @@ pub fn read_dependency(
     Ok(canonical_path)
 }
 
-/// Retain the resolved directory even when its config cannot be read, so watch mode can
-/// observe a correction to a dependency that was absent from the previous build state.
+/// Retain dependency context for CLI exit codes and recovery watches after config errors.
 #[derive(Debug)]
-pub struct DependencyConfigError {
-    pub package_path: PathBuf,
-    source: anyhow::Error,
+pub struct DependencyError {
+    pub package_path: Option<PathBuf>,
+    package_name: String,
+    root_path: PathBuf,
 }
 
-impl fmt::Display for DependencyConfigError {
+impl fmt::Display for DependencyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Could not read dependency config at {}",
-            self.package_path.display()
+            "Could not build package tree {} '{}' at path '{}'. Error",
+            if self.package_path.is_some() {
+                "for"
+            } else {
+                "reading dependency"
+            },
+            self.package_name,
+            self.root_path.display()
         )
-    }
-}
-
-impl error::Error for DependencyConfigError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        Some(self.source.as_ref())
     }
 }
 
@@ -369,14 +369,15 @@ fn read_dependencies(
         // Read all config files in parallel instead of blocking
         .par_iter()
         .map(|package_name| -> Result<Dependency> {
+            let dependency_error = |package_path| DependencyError {
+                package_path,
+                package_name: package_name.clone(),
+                root_path: project_context.get_root_path().to_path_buf(),
+            };
             let canonical_path = read_dependency(package_name, package_config, project_context)
-                .with_context(|| {
-                    format!("Could not build package tree reading dependency '{package_name}'")
-                })?;
-            let config = read_config(&canonical_path).map_err(|source| DependencyConfigError {
-                package_path: canonical_path.clone(),
-                source,
-            })?;
+                .with_context(|| dependency_error(None))?;
+            let config = read_config(&canonical_path)
+                .with_context(|| dependency_error(Some(canonical_path.clone())))?;
 
             let is_local_dep = is_local_dependency(project_context, package_name, &canonical_path);
 
@@ -834,10 +835,19 @@ fn compute_active_features(
 pub fn make(
     filter: &Option<regex::Regex>,
     project_context: &ProjectContext,
+    show_progress: bool,
     prod: bool,
     cli_features: Option<&Vec<String>>,
 ) -> Result<AHashMap<String, Package>> {
-    let mut map = read_packages(project_context, prod)?;
+    let mut map = read_packages(project_context, prod).inspect_err(|_| {
+        if show_progress {
+            println!(
+                "{} {} Error building package tree.",
+                console::style("[1/2]").bold().dim(),
+                CROSS
+            );
+        }
+    })?;
 
     let active_features = compute_active_features(&map, cli_features, prod)?;
 

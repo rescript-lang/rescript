@@ -1,83 +1,78 @@
 #!/bin/bash
-cd $(dirname $0)
+set -e
+cd "$(dirname "$0")"
 source "../utils.sh"
-cd ../../testrepo
 
 bold "Test: Watcher recovers when only a newly added dependency config is fixed"
 
-dependency_config=packages/standalone/rescript.json
-
-stop_and_restore() {
+test_dir=$(pwd)
+fixture=$(mktemp -d)
+cleanup() {
+  cd "$fixture" || return 1
   if ! exit_watcher; then
     return 1
   fi
-  mv rescript.json.watch-dependency.bak rescript.json
-  mv "$dependency_config.watch-dependency.bak" "$dependency_config"
-  rm -f rewatch.log
-  if ! rewatch build > /dev/null 2>&1; then
-    error "Could not rebuild testrepo after dependency recovery test"
-    return 1
+  if [ -n "${watch_pid:-}" ]; then
+    if process_is_running "$watch_pid"; then
+      kill "$watch_pid"
+    fi
+    wait "$watch_pid" 2>/dev/null || true
   fi
-  # The root no longer depends on standalone; restore its artifacts with its own build.
-  if ! (cd packages/standalone && rewatch build > /dev/null 2>&1); then
-    error "Could not rebuild standalone after dependency recovery test"
-    return 1
-  fi
+  cd "$test_dir"
+  rm -rf "$fixture"
 }
+trap cleanup EXIT
+cd "$fixture"
 
 fail_test() {
   error "$1"
-  cat rewatch.log
-  if ! stop_and_restore; then
-    exit 1
-  fi
+  cat rewatch.log >&2
   exit 1
 }
 
-if ! rewatch clean > /dev/null 2>&1; then
-  error "Could not clean before dependency recovery test"
-  exit 1
-fi
-cp rescript.json rescript.json.watch-dependency.bak
-cp "$dependency_config" "$dependency_config.watch-dependency.bak"
-rewatch_bg watch > rewatch.log 2>&1 &
+node <<'JS'
+const fs = require("fs");
+const path = require("path");
+const config = name => ({
+  name,
+  sources: ["src"],
+  "package-specs": {module: "esmodule", "in-source": true},
+  suffix: ".mjs",
+});
+fs.mkdirSync("src");
+fs.writeFileSync("src/Main.res", "let value = 0\n");
+fs.writeFileSync("rescript.json", JSON.stringify(config("watch-dependency")));
+fs.mkdirSync("packages/new-dependency/src", {recursive: true});
+fs.writeFileSync("packages/new-dependency/src/Dep.res", "let value = 1\n");
+fs.writeFileSync("packages/new-dependency/package.json", JSON.stringify({name: "new-dependency", version: "1.0.0"}));
+fs.writeFileSync("valid-dependency.json", JSON.stringify(config("new-dependency")));
+fs.writeFileSync("packages/new-dependency/rescript.json", '{"name":');
+fs.mkdirSync("node_modules");
+fs.symlinkSync(path.resolve("packages/new-dependency"), "node_modules/new-dependency", "junction");
+JS
 
-if ! wait_for_file "lib/watch.lock" 20 || ! wait_for_pattern rewatch.log "Finished initial compilation" 60; then
+rewatch watch > rewatch.log 2>&1 &
+watch_pid=$!
+wait_for_pattern rewatch.log "Finished initial compilation" 60 ||
   fail_test "Initial watch build did not finish"
-fi
-initial_completed=$(grep -c "Finished compilation" rewatch.log 2> /dev/null || true)
+completed=$(grep -c "Finished compilation" rewatch.log || true)
 
-# Standalone is installed but absent from the root's original ReScript dependency graph.
-printf '{"name":' > "$dependency_config.watch-dependency.next"
-mv "$dependency_config.watch-dependency.next" "$dependency_config"
-node -e '
-  const fs = require("fs");
-  const config = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-  config.dependencies.push("@testrepo/standalone");
-  fs.writeFileSync(process.argv[2], `${JSON.stringify(config, null, 2)}\n`);
-' rescript.json rescript.json.watch-dependency.next
-mv rescript.json.watch-dependency.next rescript.json
-
-if ! wait_for_pattern rewatch.log 'Could not read dependency config.*standalone\|Could not build package tree for.*standalone' 30; then
+node <<'JS'
+const fs = require("fs");
+const config = JSON.parse(fs.readFileSync("rescript.json", "utf8"));
+config.dependencies = ["new-dependency"];
+fs.writeFileSync("rescript.next", JSON.stringify(config));
+JS
+mv rescript.next rescript.json
+wait_for_pattern rewatch.log "Could not build package tree for 'new-dependency'" 30 ||
   fail_test "Watcher did not report the newly added dependency's invalid config"
-fi
 
-# Only fix the new dependency. Its directory must have a recovery watch by this point.
-cp "$dependency_config.watch-dependency.bak" "$dependency_config.watch-dependency.next"
-mv "$dependency_config.watch-dependency.next" "$dependency_config"
-if ! wait_for_pattern_count rewatch.log "Finished compilation" "$((initial_completed + 1))" 30; then
-  fail_test "Watcher did not recover after fixing only the new dependency's config"
-fi
+# Only fix the dependency: its directory must have a recovery watch by now.
+cp valid-dependency.json packages/new-dependency/rescript.next
+mv packages/new-dependency/rescript.next packages/new-dependency/rescript.json
+wait_for_pattern_count rewatch.log "Finished compilation" "$((completed + 1))" 30 ||
+  fail_test "Watcher did not recover after fixing only the dependency config"
+wait_for_file packages/new-dependency/src/Dep.mjs 20 ||
+  fail_test "Recovered watcher did not compile the new dependency"
 
-if ! stop_and_restore; then
-  exit 1
-fi
-
-if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ]; then
-  success "Watcher recovered after the new dependency config was fixed"
-else
-  error "Dependency recovery test left repository changes"
-  git diff .
-  git ls-files --others --exclude-standard .
-  exit 1
-fi
+success "Watcher recovered after only the new dependency config was fixed"

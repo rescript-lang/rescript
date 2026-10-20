@@ -518,19 +518,19 @@ require_same_output() {
 
 require_both_errors_contain() {
   local name=$1
-  local implementation fragment native_fragment native_short_fragment
-  for implementation in rust ocaml; do
-    if [ "$implementation" = rust ]; then fragment=$2; else fragment=${3:-$2}; fi
-    native_fragment=${fragment/"$work"/"$native_work"}
-    native_short_fragment=${fragment/"$work"/"$native_short_work"}
-    if ! { grep -F "$fragment" "$work/$implementation.err" >/dev/null || \
-        tr '\\' '/' <"$work/$implementation.err" | grep -F "$native_fragment" >/dev/null || \
-        tr '\\' '/' <"$work/$implementation.err" | grep -F "$native_short_fragment" >/dev/null; }; then
-      printf '%s: expected %s error to contain %s\n' "$name" "$implementation" "$fragment" >&2
-      dump_both
-      exit 1
-    fi
-  done
+  local fragment=$2
+  local native_fragment=${fragment/"$work"/"$native_work"}
+  local native_short_fragment=${fragment/"$work"/"$native_short_work"}
+  if ! { grep -F "$fragment" "$work/rust.err" >/dev/null || \
+      tr '\\' '/' <"$work/rust.err" | grep -F "$native_fragment" >/dev/null || \
+      tr '\\' '/' <"$work/rust.err" | grep -F "$native_short_fragment" >/dev/null; } || \
+    ! { grep -F "$fragment" "$work/ocaml.err" >/dev/null || \
+      tr '\\' '/' <"$work/ocaml.err" | grep -F "$native_fragment" >/dev/null || \
+      tr '\\' '/' <"$work/ocaml.err" | grep -F "$native_short_fragment" >/dev/null; }; then
+    printf '%s: expected both errors to contain %s\n' "$name" "$fragment" >&2
+    dump_both
+    exit 1
+  fi
 }
 
 # Rust needs RESCRIPT_BSC_EXE to exist; OCaml builds and formats with the
@@ -1190,16 +1190,19 @@ if ! grep -F \
   cat "$work/ocaml.out" "$work/ocaml.err" >&2
   exit 1
 fi
-run_case build-missing-dependency reject exit2 build "$work/missing-dependency"
+run_case build-missing-dependency exit2 exit2 build "$work/missing-dependency"
 require_both_errors_contain build-missing-dependency \
-  "Could not build package tree reading dependency 'absent'"
-run_case build-configless-dependency reject exit2 build "$work/configless-dependency"
+  "Could not build package tree reading dependency 'absent' at path '$work/missing-dependency'. Error:"
+if ! grep -F 'Error building package tree.' "$work/rust.out" >/dev/null; then
+  echo "Missing dependency did not report package-tree progress" >&2
+  dump_both
+  exit 1
+fi
+run_case build-configless-dependency exit2 exit2 build "$work/configless-dependency"
 require_both_errors_contain build-configless-dependency \
-  "Could not read dependency config at $work/configless-dependency/node_modules/no-config" \
   "Could not build package tree for 'no-config' at path '$work/configless-dependency'. Error:"
-run_case build-malformed-dependency reject exit2 build "$work/malformed-dependency"
+run_case build-malformed-dependency exit2 exit2 build "$work/malformed-dependency"
 require_both_errors_contain build-malformed-dependency \
-  "Could not read dependency config at $work/malformed-dependency/node_modules/bad-config" \
   "Could not build package tree for 'bad-config' at path '$work/malformed-dependency'. Error:"
 run_case build-duplicate-dependency accept accept build "$work/duplicate-dependency"
 duplicate_warning='Duplicated package: shared ./node_modules/shared (chosen) vs ./node_modules/a/node_modules/shared in ./node_modules/a'
@@ -1522,9 +1525,9 @@ if ! cmp -s "$work/quiet-watch-rust.err.norm" \
 fi
 checked=$((checked + 1))
 
-run_case clean-missing-dependency reject exit2 clean "$work/missing-dependency"
-run_case clean-configless-dependency reject exit2 clean "$work/configless-dependency"
-run_case clean-malformed-dependency reject exit2 clean "$work/malformed-dependency"
+run_case clean-missing-dependency exit2 exit2 clean "$work/missing-dependency"
+run_case clean-configless-dependency exit2 exit2 clean "$work/configless-dependency"
+run_case clean-malformed-dependency exit2 exit2 clean "$work/malformed-dependency"
 run_both clean "$work/clean-duplicate-{impl}"
 if [ "$(classify "$rust_status")" != reject ] || [ "$ocaml_status" -ne 0 ] || \
   [ ! -e "$work/clean-duplicate-rust/src/one/A.js" ] || \
@@ -1542,8 +1545,8 @@ set +e
 "$rust" watch "$work/missing-dependency" >"$work/rust.out" 2>"$work/rust.err"
 rust_status=$?
 set -e
-if [ "$rust_status" -ne 1 ]; then
-  echo "watch-missing-dependency: expected Rust exit 1, got $rust_status" >&2
+if [ "$rust_status" -ne 2 ]; then
+  echo "watch-missing-dependency: expected Rust exit 2, got $rust_status" >&2
   cat "$work/rust.out" "$work/rust.err" >&2
   exit 1
 fi
@@ -1574,11 +1577,11 @@ printf '{"name":"missing-dependency","sources":["src"],"dependencies":["absent"]
   >"$work/missing-dependency/rescript.json"
 checked=$((checked + 1))
 run_case --cwd "$work/missing-dependency" \
-  format-missing-dependency reject exit2 format
+  format-missing-dependency exit2 exit2 format
 run_case --cwd "$work/configless-dependency" \
-  format-configless-dependency reject exit2 format
+  format-configless-dependency exit2 exit2 format
 run_case --cwd "$work/malformed-dependency" \
-  format-malformed-dependency reject exit2 format
+  format-malformed-dependency exit2 exit2 format
 if [ -e "$work/missing-dependency/lib/build.lock" ] || \
   [ -e "$work/missing-dependency/lib/watch.lock" ]; then
   echo "OCaml dependency failures left a build or watch lock behind" >&2

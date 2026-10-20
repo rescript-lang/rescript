@@ -303,10 +303,11 @@ fn watch_paths_after_initialization_error(current: &[RegisteredWatch], error: &a
         .iter()
         .map(|watch| (watch.path.clone(), watch.mode))
         .collect();
-    if let Some(error) = error.downcast_ref::<build::packages::DependencyConfigError>()
-        && !next.iter().any(|(path, _)| *path == error.package_path)
+    if let Some(error) = error.downcast_ref::<build::packages::DependencyError>()
+        && let Some(package_path) = &error.package_path
+        && !next.iter().any(|(path, _)| path == package_path)
     {
-        next.push((error.package_path.clone(), RecursiveMode::NonRecursive));
+        next.push((package_path.clone(), RecursiveMode::NonRecursive));
     }
     next
 }
@@ -993,7 +994,7 @@ mod tests {
         std::fs::write(dependency.join("rescript.json"), r#"{"name":"#).unwrap();
 
         let context = ProjectContext::new(&root).unwrap();
-        let error = build::packages::make(&None, &context, false, None)
+        let error = build::packages::make(&None, &context, false, false, None)
             .unwrap_err()
             .context("Could not initialize build");
         assert!(format!("{error:#}").contains("Failed to parse rescript.json"));
@@ -1019,7 +1020,7 @@ mod tests {
         assert!(paths.contains(&(dependency.clone(), RecursiveMode::Recursive)));
 
         std::fs::write(dependency.join("rescript.json"), r#"{"name":"new-dependency"}"#).unwrap();
-        let recovered = build::packages::make(&None, &context, false, None).unwrap();
+        let recovered = build::packages::make(&None, &context, false, false, None).unwrap();
         assert!(recovered.contains_key("new-dependency"));
     }
 
