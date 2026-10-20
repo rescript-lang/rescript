@@ -80,6 +80,7 @@ module CompileResult = {
   @get external parsetree: compileResult => option<string> = "parsetree"
   @get external typedtree: compileResult => option<string> = "typedtree"
   @get external lambda: compileResult => option<string> = "lambda"
+  @get external lambdaOptimized: compileResult => option<string> = "lambda_optimized"
   @get external gentype: compileResult => option<string> = "gentype"
   @get external sourceMap: compileResult => option<string> = "source_map"
   @get external errors: compileResult => option<array<diagnostic>> = "errors"

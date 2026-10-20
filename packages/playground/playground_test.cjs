@@ -173,3 +173,24 @@ assert.match(typeErrorResult.errors[0].fullMsg, /\u001b\[/);
 const syntaxErrorResult = compiler.rescript.compile("let = 1");
 assert.equal(syntaxErrorResult.type, "syntax_error");
 assert.match(syntaxErrorResult.errors[0].fullMsg, /\u001b\[/);
+
+assert.equal(rescript_compiler.api_version, "9");
+const lambdaSource = "let compute = x => { let unused = x + 1; x }";
+const lambdaResult = compiler.rescript.compileWithDebug(lambdaSource);
+assert.equal(lambdaResult.type, "success");
+assert.match(lambdaResult.lambda, /unused\//);
+assert.equal(typeof lambdaResult.lambda_optimized, "string");
+assert.doesNotMatch(lambdaResult.lambda_optimized, /unused\//);
+assert.match(lambdaResult.lambda_optimized, /function x\/\d+ x\/\d+/);
+
+const regularLambdaResult = compiler.rescript.compile(lambdaSource);
+assert.equal(regularLambdaResult.type, "success");
+assert.equal(regularLambdaResult.js_code, lambdaResult.js_code);
+assert.equal(regularLambdaResult.lambda_optimized, undefined);
+
+const nextLambdaResult = compiler.rescript.compileWithDebug("let answer = 42");
+assert.equal(nextLambdaResult.type, "success");
+assert.equal(nextLambdaResult.lambda_optimized.trim(), "(makeblock module/exports 42)");
+assert.doesNotMatch(nextLambdaResult.lambda_optimized, /compute/);
+
+console.log("-- Playground optimized Lambda test complete --");
