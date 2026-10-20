@@ -62,6 +62,9 @@ let rec deprecated_of_attrs = function
   | ({txt = "deprecated"; _}, p) :: _ -> Some (string_of_opt_payload p)
   | _ :: tl -> deprecated_of_attrs tl
 
+let deprecated_attributes attrs =
+  List.filter (fun ({txt}, _) -> txt = "deprecated") attrs
+
 let rec deprecated_of_attrs_with_migrate = function
   | [] -> None
   | ({txt = "deprecated"; _}, payload) :: _ -> (

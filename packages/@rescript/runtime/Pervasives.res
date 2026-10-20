@@ -25,10 +25,10 @@ external throw: exn => 'a = "%raise"
 })
 external raise: exn => 'a = "%raise"
 
-@deprecated("Use custom exception instead")
+@deprecated("Use a custom exception or `JsError.throwWithMessage` instead.")
 let failwith = s => throw(Failure(s))
 
-@deprecated("Use custom exception instead")
+@deprecated("Use a custom exception or `JsError.throwWithMessage` instead.")
 let invalid_arg = s => throw(Invalid_argument(s))
 
 @deprecated("Use custom exception instead") exception Exit
