@@ -112,7 +112,7 @@ let make = (~input: unit => option<input>, ~visible, ~mode: Signal.t<mode>) => {
   let unavailable = () =>
     <p class="lambda-notice">
       {View.text(
-        "This compiler bundle does not provide optimized Lambda. Select a compiler with playground API v9 or newer.",
+        "This compiler bundle does not provide optimized Lambda. Select a newer compiler bundle.",
       )}
     </p>
   let panelInput = Signal.make(None)

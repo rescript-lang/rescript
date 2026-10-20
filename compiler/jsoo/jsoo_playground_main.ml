@@ -53,9 +53,8 @@
  * v6: Added `config.experimental_features` and `config.jsx_preserve_mode` to the BundleConfig.
  * v7: Added debug dump output APIs for developer playground tooling.
  * v8: Added genType and source map configuration and compilation outputs.
- * v9: Added optimized Lambda output to debug compilation.
  * *)
-let api_version = "9"
+let api_version = "8"
 
 module Js = Js_of_ocaml.Js
 
