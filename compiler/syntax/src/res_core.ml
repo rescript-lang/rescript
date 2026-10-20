@@ -5393,12 +5393,12 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
   in
   let kind, attrs =
     match Parser.peek p with
-    | Bar | Uident _ | DocComment _ ->
+    | Bar | Uident _ ->
       (Parsetree.Ptype_variant (parse_type_constructor_declarations p), [])
-    | At -> (
-      (* Attributes can prefix either a variant (constructor list), a record, or an
-         open/extensible variant marker (`..`). Peek past attributes and any doc
-         comments to decide which kind it is. *)
+    | At | DocComment _ -> (
+      (* Attributes and doc comments can prefix either a variant (constructor
+         list), a record, or an open/extensible variant marker (`..`). Peek past
+         them to decide which kind it is. *)
       let after_attrs =
         Parser.lookahead p (fun state ->
             ignore (parse_attributes state);
@@ -6074,8 +6074,14 @@ and parse_type_equation_and_representation ?current_type_name_path
       in
       (manifest, priv, kind, [])
     | Private -> parse_private_eq_or_repr p
-    | Bar | DotDot | DocComment _ ->
+    | Bar | DotDot ->
       let priv, kind, attrs = parse_type_representation p in
+      (None, priv, kind, attrs)
+    | DocComment _ ->
+      let priv, kind, attrs =
+        parse_type_representation ?current_type_name_path ?inline_types_context
+          p
+      in
       (None, priv, kind, attrs)
     | At -> (
       (* Attributes can start a representation (variant/record/open variant) or a manifest.

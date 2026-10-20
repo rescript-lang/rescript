@@ -26,3 +26,23 @@ type t = {
 /** doc */
 @attr type t = {x: int}
 @attr type t = ..
+/** doc */
+type t = {x: int}
+/** doc */
+type t = ..
+/** doc */
+@attr type t = {x: int}
+/** doc */
+@attr @attr2 type t = ..
+/** doc */
+@outer
+type t = {/* c1 */ /* c2 */ x: int} // trail
+type t =
+  /** doc */
+  | A
+  | B
+type t =
+  /** doc */
+  | A
+  /** doc2 */
+  | B
