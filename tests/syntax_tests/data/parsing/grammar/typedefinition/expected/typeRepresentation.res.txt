@@ -59,3 +59,24 @@ type nonrec 'a t = {
 type nonrec t = int
 and u = {
   x: int }[@@attr ]
+type nonrec t = {
+  x: int }[@@res.doc {js|doc before record|js}]
+type nonrec t = ..[@@res.doc {js|doc before open|js}]
+type nonrec t = {
+  x: int }[@@res.doc {js|doc|js}][@@attr ]
+type nonrec t = ..[@@attr ][@@res.doc {js|doc|js}][@@attr2 ]
+type t.x = {
+  y: int }
+and t = {
+  x: t.x }[@@res.doc {js|doc|js}]
+type nonrec t = private {
+  x: int }[@@res.doc {js|doc|js}]
+type nonrec t =
+  | A [@res.doc {js|doc|js}]
+  | B 
+type nonrec t =
+  | A [@res.doc {js|doc|js}]
+  | B [@res.doc {js|doc2|js}]
+type nonrec t =
+  | A [@res.doc {js|doc|js}][@attr ]
+  | B 

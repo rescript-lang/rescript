@@ -18,3 +18,11 @@ type t = @s.strict {
 }
 type t = @attr /** doc */ {x: int}
 type t = @attr ..
+type t = /** doc */ {x: int}
+type t = /** doc */ ..
+type t = /** doc */ @attr {x: int}
+type t = @attr /** doc */ @attr2 ..
+@outer
+type t = /* c1 */ /** doc */ /* c2 */ {x: int} // trail
+type t = /** doc */ A | B
+type t = | /** doc */ A | /** doc2 */ B
