@@ -38,9 +38,9 @@ val protect_refs : ref_and_value list -> (unit -> 'a) -> 'a
     even if [f] raises an exception. *)
 
 val find_in_path_uncap : string list -> string -> string
-(* Same, but search also for uncapitalized name, i.e.
+(* Search the path for name, then for its uncapitalized form, i.e.
    if name is Foo.ml, allow /path/Foo.ml and /path/foo.ml
-   to match. *)
+   to match, preferring the former. *)
 
 val remove_file : string -> unit
 (* Delete the given file if it exists. Never raise an error. *)
