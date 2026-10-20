@@ -1665,14 +1665,14 @@ and print_type_param ~state (param : Parsetree.core_type * Asttypes.variance)
   in
   Doc.concat [printed_variance; print_typ_expr ~state typ cmt_tbl]
 
+and get_field_start_line (ld : Parsetree.label_declaration) =
+  (* For spread fields (...), use the type location instead of pld_loc
+     because pld_loc may incorrectly include preceding whitespace *)
+  if ld.pld_name.txt = "..." then ld.pld_type.ptyp_loc.loc_start.pos_lnum
+  else ld.pld_loc.loc_start.pos_lnum
+
 and print_record_declaration ?check_break_from_loc ?inline_record_definitions
     ?record_loc ~state (lds : Parsetree.label_declaration list) cmt_tbl =
-  let get_field_start_line (ld : Parsetree.label_declaration) =
-    (* For spread fields (...), use the type location instead of pld_loc
-       because pld_loc may incorrectly include preceding whitespace *)
-    if ld.pld_name.txt = "..." then ld.pld_type.ptyp_loc.loc_start.pos_lnum
-    else ld.pld_loc.loc_start.pos_lnum
-  in
   let force_break =
     match (check_break_from_loc, record_loc, lds) with
     | Some loc, _, _ -> loc.Location.loc_start.pos_lnum < loc.loc_end.pos_lnum
@@ -1855,8 +1855,8 @@ and print_constructor_declaration2 ~state i
     print_comments doc cmt_tbl cd.pcd_name.loc
   in
   let constr_args =
-    print_constructor_arguments ~is_dot_dot_dot ~state ~indent:true cd.pcd_args
-      cmt_tbl
+    print_constructor_arguments ~is_dot_dot_dot ~name_loc:cd.pcd_name.loc ~state
+      ~indent:true cd.pcd_args cmt_tbl
   in
   let gadt =
     match cd.pcd_res with
@@ -1879,8 +1879,8 @@ and print_constructor_declaration2 ~state i
            ]);
     ]
 
-and print_constructor_arguments ?(is_dot_dot_dot = false) ~state ~indent
-    (cd_args : Parsetree.constructor_arguments) cmt_tbl =
+and print_constructor_arguments ?(is_dot_dot_dot = false) ~name_loc ~state
+    ~indent (cd_args : Parsetree.constructor_arguments) cmt_tbl =
   match cd_args with
   | Pcstr_tuple [] -> Doc.nil
   | Pcstr_tuple types ->
@@ -1929,7 +1929,15 @@ and print_constructor_arguments ?(is_dot_dot_dot = false) ~state ~indent
           Doc.rparen;
         ]
     in
-    Doc.group (if indent then Doc.indent args else args)
+    (* Like a record type declaration, keep the inline record multiline when
+       the first field starts on a later line than the constructor name. *)
+    let force_break =
+      match lds with
+      | first :: _ ->
+        name_loc.Location.loc_end.pos_lnum < get_field_start_line first
+      | [] -> false
+    in
+    Doc.breakable_group ~force_break (if indent then Doc.indent args else args)
 
 and print_label_declaration ?inline_record_definitions ~state
     (ld : Parsetree.label_declaration) cmt_tbl =
@@ -6449,7 +6457,9 @@ and print_exception_def ~state (constr : Parsetree.extension_constructor)
       in
       Doc.concat
         [
-          print_constructor_arguments ~state ~indent:false args cmt_tbl; gadt_doc;
+          print_constructor_arguments ~name_loc:constr.pext_name.loc ~state
+            ~indent:false args cmt_tbl;
+          gadt_doc;
         ]
   in
   let name =
@@ -6489,7 +6499,9 @@ and print_extension_constructor ~state
       in
       Doc.concat
         [
-          print_constructor_arguments ~state ~indent:false args cmt_tbl; gadt_doc;
+          print_constructor_arguments ~name_loc:constr.pext_name.loc ~state
+            ~indent:false args cmt_tbl;
+          gadt_doc;
         ]
   in
   let name =
