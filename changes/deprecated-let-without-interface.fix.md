@@ -1,1 +1,1 @@
-- Warn when another module uses a `@deprecated` `let` binding from a module without an interface file.
+- Warn when another module uses a `@deprecated` `let` binding from a module without an interface file. As a result, `failwith` and `invalid_arg`, deprecated since v12, now emit their deprecation warning when used.
