@@ -226,7 +226,13 @@ namespace	false	accept	{"name":"config-shape","namespace":false}
 namespace	true	accept	{"name":"scope/config-shape","namespace":true}
 namespace	string-true	accept	{"name":"scope/config-shape","namespace":"true"}
 namespace	custom	accept	{"name":"config-shape","namespace":"custom-name"}
-namespace	empty-string	accept	{"name":"config-shape","namespace":""}
+namespace	empty-string	reject	{"name":"config-shape","namespace":""}
+namespace	scoped-package	accept	{"name":"@scope/my-pkg","namespace":true}
+namespace	underscore-package	reject	{"name":"_","namespace":true}
+namespace	digit-package	reject	{"name":"123","namespace":true}
+namespace	underscore-string	reject	{"name":"config-shape","namespace":"_ns"}
+namespace	digit-string-entry	reject	{"name":"config-shape","namespace":"1st","namespace-entry":"Entry"}
+namespace	underscore-without-namespace	accept	{"name":"_"}
 namespace	entry	accept	{"name":"config-shape","namespace":true,"namespace-entry":"Entry"}
 namespace	null-entry	accept	{"name":"config-shape","namespace":true,"namespace-entry":null}
 namespace	boolean-outer	reject	{"name":"config-shape","namespace":1}

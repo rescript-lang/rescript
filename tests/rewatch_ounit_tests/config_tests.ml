@@ -249,6 +249,17 @@ let validation_tests =
         with Config.Error message -> contains message "jsx.version"
       in
       check rejected "unsupported JSX versions are rejected without panicking";
+      write_file path {|{"name":"_","namespace":true}|};
+      let rejected =
+        try
+          ignore (Config.load path);
+          false
+        with Config.Error message ->
+          message
+          = path
+            ^ {|: namespace "_" derived from package name "_" is not a valid module name; set "namespace" to a valid module name or rename the package|}
+      in
+      check rejected "a namespace must be a valid module name";
       write_file path
         {|{"name":"internal-path","path":"ignored","gentypeconfig":{}}|};
       let alias_dir = Filename.concat root "alias" in

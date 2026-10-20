@@ -27,6 +27,7 @@ val strings : string -> string -> Yojson.Safe.t -> string list
 val namespace_from_package_name : string -> string
 val pascal_case : string -> string
 val is_upper_flat_case : string -> bool
+val is_module_name : string -> bool
 val compiler_flags : string -> string -> Yojson.Safe.t -> string list
 
 val dependency_alias :

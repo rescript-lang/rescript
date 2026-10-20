@@ -212,6 +212,20 @@ let is_upper_flat_case value =
   String.concat "" (List.map String.uppercase_ascii (pascal_case_words value))
   = value
 
+(* A module name as the ReScript scanner reads an upper-case identifier
+   (compiler/syntax/src/res_scanner.ml): an ASCII capital, then letters,
+   digits, '_', '\'' and '$'. *)
+let is_module_name value =
+  value <> ""
+  && (match value.[0] with
+    | 'A' .. 'Z' -> true
+    | _ -> false)
+  && String.for_all
+       (function
+         | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '\'' | '$' -> true
+         | _ -> false)
+       value
+
 let compiler_flags path field = function
   | `List values ->
     values
