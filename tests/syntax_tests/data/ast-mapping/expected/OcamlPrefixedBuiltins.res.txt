@@ -1,0 +1,6 @@
+@@warning("-32")
+@@ppwarning("lint warning")
+
+%%error("ppx error")
+
+let x = @warning("-3") %error("nested")

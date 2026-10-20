@@ -16,11 +16,11 @@
 (* Support for some of the builtin attributes:
 
    deprecated
-   error / ocaml.error
-   ppwarning / ocaml.ppwarning
-   warning / ocaml.warning
+   error
+   ppwarning
+   warning
    warnerror
-   warn_on_literal_pattern / ocaml.warn_on_literal_pattern
+   warn_on_literal_pattern
    immediate
    unboxed
 *)
@@ -47,11 +47,10 @@ val error_of_extension : Parsetree.extension -> Location.error
 
 val warning_attribute : ?ppwarning:bool -> Parsetree.attribute -> unit
 (** Apply warning settings from the specified attribute.
-      "warning"/"ocaml.warning" and "warnerror" are processed and other
-      attributes are ignored.
+      "warning" and "warnerror" are processed and other attributes are
+      ignored.
 
-      Also implement ppwarning/ocaml.ppwarning (unless ~ppwarning:false is
-      passed).
+      Also implement ppwarning (unless ~ppwarning:false is passed).
   *)
 
 val warning_scope :

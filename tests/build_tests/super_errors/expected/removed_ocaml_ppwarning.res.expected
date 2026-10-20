@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/removed_ocaml_ppwarning.res[0m:[2m1:9-24[0m
+
+  [1;31m1[0m [2m│[0m let x = [1;31m@ocaml.ppwarning[0m("check this") 1
+  2 [2m│[0m 
+
+  `@ocaml.ppwarning` is no longer supported, use `@ppwarning` instead.

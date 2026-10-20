@@ -382,10 +382,7 @@ let common_initial_env add_type add_extension empty_env =
         ext_loc = Location.none;
         ext_attributes =
           [
-            ( {
-                Asttypes.txt = "ocaml.warn_on_literal_pattern";
-                loc = Location.none;
-              },
+            ( {Asttypes.txt = "warn_on_literal_pattern"; loc = Location.none},
               Parsetree.PStr [] );
           ];
         ext_is_exception = true;

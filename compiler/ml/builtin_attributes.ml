@@ -25,7 +25,7 @@ let string_of_opt_payload p =
 
 let rec error_of_extension ext =
   match ext with
-  | {txt = ("ocaml.error" | "error") as txt; loc}, p -> (
+  | {txt = "error" as txt; loc}, p -> (
     let rec sub_from inner =
       match inner with
       | {pstr_desc = Pstr_extension (ext, _)} :: rest ->
@@ -148,11 +148,9 @@ let warning_attribute ?(ppwarning = true) =
         (Warnings.Attribute_payload (txt, "A single string literal is expected"))
   in
   function
-  | {txt = ("ocaml.warning" | "warning") as txt; loc}, payload ->
-    process loc txt false payload
+  | {txt = "warning" as txt; loc}, payload -> process loc txt false payload
   | {txt = "warnerror" as txt; loc}, payload -> process loc txt true payload
-  | {txt = "ocaml.ppwarning" | "ppwarning"}, (PStr [{pstr_loc; _}] as payload)
-    when ppwarning -> (
+  | {txt = "ppwarning"}, (PStr [{pstr_loc; _}] as payload) when ppwarning -> (
     match string_of_payload payload with
     | Some s -> Location.prerr_warning pstr_loc (Warnings.Preprocessor s)
     | None -> ())
@@ -171,9 +169,7 @@ let warning_scope ?ppwarning attrs f =
 
 let warn_on_literal_pattern =
   List.exists (function
-    | {txt = "ocaml.warn_on_literal_pattern" | "warn_on_literal_pattern"; _}, _
-      ->
-      true
+    | {txt = "warn_on_literal_pattern"; _}, _ -> true
     | _ -> false)
 
 let immediate =
