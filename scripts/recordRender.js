@@ -25,13 +25,14 @@ export const esc = s =>
 
 /**
  * How a form is drawn.
- * @typedef {"math" | "tree" | "matrix" | "mapping" | "rescript" | "js" | "lambda" | "text"} Drawing
+ * @typedef {"math" | "tree" | "matrix" | "mapping" | "rescript" | "js" | "lambda" | "text" | "report"} Drawing
  */
 
 /**
  * Each form's drawing, by the name a `Before (<form>):` or `After (<form>):`
  * block gives it: a compiler's printed tree or code, a diagnostic, or a
- * hand-written typing rule, clause matrix or representation mapping. A form
+ * hand-written typing rule, clause matrix or representation mapping, or
+ * reanalyze's report. A form
  * of another name is drawn as text.
  * @type {Record<string, Drawing>}
  */
@@ -47,6 +48,7 @@ const FORMS = {
   rule: "math",
   matrix: "matrix",
   representation: "mapping",
+  reanalyze: "report",
 };
 
 /**
@@ -337,8 +339,12 @@ const indentOf = l => /^ */.exec(l)?.[0].length ?? 0;
  */
 const codeHtml = (lines, draw) => draw(lines.join("\n")).split("\n");
 
+/** An elision line, `…` and any text, marking lines left out. @param {string} l */
+const elided = l => l.trimStart().startsWith("…");
+
 /**
- * Lines of code, each drawn by `draw`, the marked ones shaded.
+ * Lines of code, each drawn by `draw`, the marked ones shaded and the
+ * elisions muted.
  * @param {string[]} lines
  * @param {(code: string) => string} draw
  * @param {Marks} [marks]
@@ -346,7 +352,15 @@ const codeHtml = (lines, draw) => draw(lines.join("\n")).split("\n");
 function codeLines(lines, draw, marks = {}) {
   return `<pre class="code">${codeHtml(lines, draw)
     .map((l, i) =>
-      line(l, indentOf(lines[i] ?? ""), marks.marked?.has(i) ? marks.mark : ""),
+      line(
+        l,
+        indentOf(lines[i] ?? ""),
+        elided(lines[i] ?? "")
+          ? "elide"
+          : marks.marked?.has(i)
+            ? marks.mark
+            : "",
+      ),
     )
     .join("")}</pre>`;
 }
@@ -751,7 +765,7 @@ function treeRows(lines) {
  */
 const tree = lines =>
   `<pre class="code tree">${treeRows(lines)
-    .map(r => line(r.html, r.indent))
+    .map(r => line(r.html, r.indent, elided(lines[r.i]) ? "elide" : ""))
     .join("")}</pre>`;
 
 /**
@@ -845,6 +859,236 @@ const mappingLines = (lines, width) =>
     return `${highlight(m[0].padEnd(width), "rescript")} <span class="to">↦</span> ${highlight(m[1], "js")}`;
   });
 
+// ---------------------------------------------------------------------------
+// Reanalyze reports
+
+/** A finding's location line: `File.res:3:5-11`. */
+const LOCATION = /^\S+:\d+:\d+(?:-\d+(?::\d+)?)?$/;
+
+/** An elision paragraph of a report: `…` or `...`, then any text. */
+const REPORT_ELISION = /^\s*(?:…|\.\.\.)/;
+
+/**
+ * One entry of a reanalyze report: a finding (its analysis, location and
+ * message lines), an elision marking findings left out, or any other
+ * paragraph, such as the closing count. `key` is the entry's text, its
+ * identity across versions.
+ * @typedef {{ key: string, analysis?: string, location?: string, elision?: boolean, message: string[] }} ReportEntry
+ */
+
+/**
+ * A reanalyze report as reanalyze prints it: paragraphs separated by blank
+ * lines, each finding an analysis line, a location line and its message
+ * lines. A paragraph starting with `…` or `...` is an elision.
+ * @param {string[]} lines
+ * @returns {ReportEntry[]}
+ */
+const reportEntries = lines =>
+  groups(lines).map(g => {
+    const ls = dedent(g);
+    const key = ls.map(l => l.trimEnd()).join("\n");
+    if (REPORT_ELISION.test(ls[0])) return { key, elision: true, message: ls };
+    return ls.length >= 2 && LOCATION.test(ls[1].trim())
+      ? {
+          key,
+          analysis: ls[0].trim(),
+          location: ls[1].trim(),
+          message: dedent(ls.slice(2)),
+        }
+      : { key, message: ls };
+  });
+
+/**
+ * The analysis every finding of the reports names, when they all name the
+ * same one, or "".
+ * @param {string[][]} reports
+ */
+function sharedAnalysis(reports) {
+  const names = new Set(
+    reports.flatMap(r =>
+      reportEntries(r).flatMap(e => (e.analysis ? [e.analysis] : [])),
+    ),
+  );
+  return names.size === 1 ? [...names][0] : "";
+}
+
+/**
+ * A finding's message: attributes such as `@throws(Not_found)` marked, and
+ * the locations it cites muted.
+ * @param {string} s
+ */
+const reportMessage = s =>
+  esc(s)
+    .replace(/@[\w.]+(?:\([^()]*\))?/g, '<span class="a">$&</span>')
+    .replace(
+      /\(([^\s()]+:\d+:\d+(?:-\d+)?)\)/g,
+      '(<span class="ref">$1</span>)',
+    );
+
+/**
+ * How a report entry is drawn: its shading, its grid cell, its message
+ * with the changed words marked, and whether a finding shows its analysis.
+ * @typedef {{ cls?: string, style?: string, marked?: string, tagged?: boolean }} EntryStyle
+ */
+
+/**
+ * One entry of a report drawn: a finding as its analysis tagged, its
+ * location and its message; an elision muted; another paragraph as its
+ * lines.
+ * @param {ReportEntry} e
+ * @param {EntryStyle} [how]
+ */
+function reportEntry(
+  e,
+  { cls = "", style = "", marked = "", tagged = true } = {},
+) {
+  const msg = `<div class="msg">${marked || e.message.map(e.elision ? esc : reportMessage).join("\n")}</div>`;
+  const tag = tagged ? `<span class="tag">${esc(e.analysis ?? "")}</span>` : "";
+  const body = e.analysis
+    ? `<div class="where">${tag}<code class="loc">${esc(e.location ?? "")}</code></div>${msg}`
+    : msg;
+  const kind = e.analysis ? "" : e.elision ? " elide" : " note";
+  return `<div class="finding${kind}${cls ? ` ${cls}` : ""}"${style ? ` style="${style}"` : ""}>${body}</div>`;
+}
+
+/**
+ * A reanalyze report drawn as its entries, one a row.
+ * @param {string[]} lines
+ * @param {boolean} [tagged] whether each finding shows its analysis
+ */
+const report = (lines, tagged = true) =>
+  `<div class="report">${reportEntries(lines)
+    .map(e => reportEntry(e, { tagged }))
+    .join("")}</div>`;
+
+/**
+ * Two notes' texts with the words each lacks from the other marked, as
+ * the message of each.
+ * @param {ReportEntry} b
+ * @param {ReportEntry} a
+ * @returns {[string, string]}
+ */
+function noteWords(b, a) {
+  const words = (/** @type {ReportEntry} */ e) =>
+    e.message
+      .join("\n")
+      .split(/(\s+|[()[\]:,])/)
+      .filter(Boolean);
+  const wb = words(b);
+  const wa = words(a);
+  const pairs = matchLines(wb, wa, w => w);
+  const draw = (
+    /** @type {string[]} */ ws,
+    /** @type {Set<number>} */ kept,
+    /** @type {"add" | "del"} */ mark,
+  ) =>
+    ws
+      .map((w, n) =>
+        kept.has(n) || !w.trim()
+          ? reportMessage(w)
+          : `<span class="${mark}">${esc(w)}</span>`,
+      )
+      .join("");
+  return [
+    draw(wb, new Set(pairs.map(p => p[0])), "del"),
+    draw(wa, new Set(pairs.map(p => p[1])), "add"),
+  ];
+}
+
+/**
+ * Two reanalyze reports side by side, the findings aligned by identity. A
+ * run of findings in both reports is one row, "N unchanged findings", that
+ * opens to show them, each facing itself. A finding one report lacks has
+ * its own row, facing a gap, shaded removed in Before and added in After.
+ * A note that changes, such as the closing count, faces its other version
+ * on one row, the words that differ marked. Elisions align like notes,
+ * muted and unshaded. Between two unchanged entries, the removed findings
+ * come first, then the added ones, then the elisions and the changed
+ * notes, so that a narrow screen, which stacks the cells in one column and
+ * hides the After copy of each unchanged entry and the gaps, reads the
+ * pair as a unified diff.
+ * @param {string[]} b
+ * @param {string[]} a
+ * @param {boolean} [tagged] whether each finding shows its analysis
+ */
+function reportRows(b, a, tagged = true) {
+  const before = reportEntries(b);
+  const after = reportEntries(a);
+  const pairs = matchLines(
+    before.map(e => e.key),
+    after.map(e => e.key),
+    k => k,
+  );
+  const entry = (
+    /** @type {ReportEntry} */ e,
+    /** @type {number} */ r,
+    /** @type {1 | 2} */ c,
+    cls = "",
+    marked = "",
+  ) => reportEntry(e, { cls, style: `--r:${r};--c:${c}`, marked, tagged });
+  const gap = (/** @type {number} */ r, /** @type {1 | 2} */ c) =>
+    `<div class="finding gap" style="--r:${r};--c:${c}"></div>`;
+  /** @type {string[]} */
+  const out = [];
+  /** @type {ReportEntry[]} The current run of unchanged findings. */
+  let same = [];
+  let r = 1;
+  const collapse = () => {
+    if (!same.length) return;
+    const n = same.length;
+    const rows = same
+      .map((e, k) => entry(e, k + 1, 1) + entry(e, k + 1, 2, "dup"))
+      .join("");
+    out.push(
+      `<details class="same" style="--r:${r++}"><summary>${n} unchanged finding${n === 1 ? "" : "s"}</summary><div class="report rows-report">${rows}</div></details>`,
+    );
+    same = [];
+  };
+  /** The entries of both sides that `keep` selects, paired in order. */
+  const pairUp = (
+    /** @type {ReportEntry[]} */ dels,
+    /** @type {ReportEntry[]} */ adds,
+    /** @type {(e: ReportEntry) => boolean} */ keep,
+  ) => {
+    const d = dels.filter(keep);
+    const a = adds.filter(keep);
+    return d
+      .slice(0, a.length)
+      .map((e, k) => /** @type {[ReportEntry, ReportEntry]} */ ([e, a[k]]));
+  };
+  let i = 0;
+  let j = 0;
+  for (const [x, y] of [...pairs, [before.length, after.length]]) {
+    const dels = before.slice(i, x);
+    const adds = after.slice(j, y);
+    if (dels.length || adds.length) collapse();
+    const elisions = pairUp(dels, adds, e => !!e.elision);
+    const notes = pairUp(dels, adds, e => !e.analysis && !e.elision);
+    const paired = new Set([...elisions, ...notes].flat());
+    for (const e of dels.filter(e => !paired.has(e)))
+      out.push(entry(e, r, 1, e.elision ? "" : "del"), gap(r++, 2));
+    for (const e of adds.filter(e => !paired.has(e)))
+      out.push(gap(r, 1), entry(e, r++, 2, e.elision ? "" : "add"));
+    for (const [eb, ea] of elisions)
+      out.push(entry(eb, r, 1), entry(ea, r++, 2));
+    for (const [nb, na] of notes) {
+      const [mb, ma] = noteWords(nb, na);
+      out.push(entry(nb, r, 1, "mod", mb), entry(na, r++, 2, "mod", ma));
+    }
+    if (x < before.length) {
+      if (before[x].analysis) same.push(before[x]);
+      else {
+        collapse();
+        out.push(entry(before[x], r, 1), entry(after[y], r++, 2, "dup"));
+      }
+    }
+    i = x + 1;
+    j = y + 1;
+  }
+  collapse();
+  return `<div class="report rows-report">${out.join("")}</div>`;
+}
+
 /**
  * Prose: paragraphs separated by blank lines; lines indented by 4 spaces or
  * more past the paragraphs are a ReScript code block.
@@ -888,6 +1132,7 @@ const DRAW = {
   js: (lines, marks) => code(lines, "js", marks),
   lambda: (lines, marks) => code(lines, "lambda", marks),
   text: lines => `<div class="text">${codeLines(lines, esc)}</div>`,
+  report: lines => report(lines),
 };
 
 /**
@@ -967,7 +1212,7 @@ function forms(parts) {
     .map(e => {
       if (typeof e === "string") return e;
       const drawing = FORMS[e.form] ?? "text";
-      const tag = `<h5 class="form"><span class="lang">${esc(e.form)}</span></h5>`;
+      const { before, after } = e;
       // A version's text on its heading line captions the block under it,
       // or is the version itself when no block follows.
       const hasBlock = (/** @type {Section} */ s) =>
@@ -976,9 +1221,16 @@ function forms(parts) {
         s && hasBlock(s) && s.text.length ? inline(s.text.join(" ")) : "";
       const lines = (/** @type {Section} */ s) =>
         hasBlock(s) ? dedent(s.block) : s.text;
+      // The analysis all of a report's findings name tags the form once.
+      const shared =
+        drawing === "report"
+          ? sharedAnalysis([before, after].flatMap(s => (s ? [lines(s)] : [])))
+          : "";
+      const tag = `<h5 class="form"><span class="lang">${esc(e.form)}</span>${shared ? ` <span class="tag">${esc(shared)}</span>` : ""}</h5>`;
+      const draw = (/** @type {string[]} */ ls) =>
+        drawing === "report" ? report(ls, !shared) : DRAW[drawing](ls);
       const one = (/** @type {string[]} */ ls, /** @type {string} */ label) =>
-        `<figure class="one"><figcaption class="vlabel">${label}</figcaption>${DRAW[drawing](ls)}</figure>`;
-      const { before, after } = e;
+        `<figure class="one"><figcaption class="vlabel">${label}</figcaption>${draw(ls)}</figure>`;
       const label = (
         /** @type {string} */ name,
         /** @type {string[]} */ caps,
@@ -995,7 +1247,7 @@ function forms(parts) {
           tag +
           (b.length && b.join("\n") === a.join("\n")
             ? one(a, label("Before and After are equal", caps))
-            : versions(drawing, b, a, caps))
+            : versions(drawing, b, a, caps, !shared))
         );
       }
       const only = /** @type {Section} */ (before ?? after);
@@ -1024,16 +1276,19 @@ const LINED = new Set([
  * version's label. A drawing of lines (a tree, code, text, a matrix, a
  * mapping) is drawn as rows: a line common to both versions faces itself,
  * and the lines between are padded so that the next common line faces
- * itself again. Typing rules and rewrites are drawn as two figures side by
- * side, the changed parts shaded: premises, conclusions, rule names and
+ * itself again. A reanalyze report is drawn as rows of findings, aligned
+ * by identity (`reportRows`). Typing rules and rewrites are drawn as two
+ * figures side by side, the changed parts shaded: premises, conclusions, rule names and
  * formulas; a rewrite's terms, each compared with the term at its position,
  * and its side conditions.
  * @param {Drawing} drawing
  * @param {string[]} b
  * @param {string[]} a
  * @param {[string, string]} [captions]
+ * @param {boolean} [tagged] whether each finding of a report shows its
+ *   analysis
  */
-function versions(drawing, b, a, captions = ["", ""]) {
+function versions(drawing, b, a, captions = ["", ""], tagged = true) {
   const head = (
     /** @type {string} */ label,
     /** @type {string} */ caption,
@@ -1043,6 +1298,8 @@ function versions(drawing, b, a, captions = ["", ""]) {
   const isCode =
     drawing === "rescript" || drawing === "js" || drawing === "lambda";
   const rewrite = isCode && [...b, ...a].some(l => l.includes("⇝"));
+  if (drawing === "report")
+    return `<div class="pair">${head("Before", captions[0], "div")}${head("After", captions[1], "div")}${reportRows(b, a, tagged)}</div>`;
   if (LINED.has(drawing) && !rewrite)
     return `<div class="pair">${head("Before", captions[0], "div")}${head("After", captions[1], "div")}${pairRows(drawing, b, a)}</div>`;
   const atoms = drawing === "math" ? mathAtoms : codeAtoms;
@@ -1115,16 +1372,19 @@ function pairRows(drawing, b, a) {
   for (let n = 0; n < rows.length; ) {
     const row = rows[n];
     if (row.same) {
-      out.push(at(n + 2, 1, left[row.a ?? 0], ""));
-      out.push(at(n + 2, 2, right[row.b ?? 0], "dup"));
+      const elide = elided(before[row.a ?? 0]) ? " elide" : "";
+      out.push(at(n + 2, 1, left[row.a ?? 0], elide.trim()));
+      out.push(at(n + 2, 2, right[row.b ?? 0], `dup${elide}`));
       n++;
       continue;
     }
     let end = n;
     while (end < rows.length && !rows[end].same) end++;
     const run = rows.slice(n, end);
+    // A changed line is shaded, an elision muted.
     /** @param {number | null} k @param {string[]} ls @param {string} cls */
-    const mark = (k, ls, cls) => (k !== null && ls[k].trim() ? cls : "");
+    const mark = (k, ls, cls) =>
+      k === null || !ls[k].trim() ? "" : elided(ls[k]) ? "elide" : cls;
     for (const [k, x] of run.entries())
       out.push(
         at(
@@ -1327,6 +1587,24 @@ code.m-code { font:13px/1.5 var(--mono); background:var(--surface); border:1px s
 .below { display:flex; flex-direction:column; gap:6px; margin-top:12px; padding-top:10px; border-top:1px solid var(--rule) }
 .banner { background:var(--del); border-left:4px solid var(--accent); padding:8px 14px; border-radius:6px } .banner strong { color:var(--accent); margin-right:6px; text-transform:uppercase; font-size:12px; letter-spacing:.06em }
 ul.review { margin:0; padding-left:18px } ul.review li { margin:2px 0 }
+.report { display:flex; flex-direction:column; gap:4px; margin:4px 0 }
+.finding { background:var(--surface); border:1px solid var(--rule); border-radius:6px; padding:6px 12px; min-width:0 }
+.finding.note { color:var(--muted) }
+.finding.add { background:var(--add); border-left:3px solid var(--ok) } .finding.del { background:var(--del); border-left:3px solid var(--accent) }
+.finding.mod .add { background:var(--add); color:var(--ok); border-radius:3px } .finding.mod .del { background:var(--del); color:var(--accent); border-radius:3px }
+.finding.gap { border:1px dashed var(--rule); background:repeating-linear-gradient(135deg, var(--code-bg) 0 5px, transparent 5px 8px) }
+.where { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; margin-bottom:2px }
+.tag { font:600 10.5px/1 var(--body); letter-spacing:.04em; padding:4px 7px; border-radius:4px; color:var(--warn); background:var(--warn-bg) }
+.loc { background:none; padding:0; color:var(--t) }
+.msg { white-space:pre-wrap; overflow-wrap:anywhere; font-size:14px } .note .msg { font:12.5px/1.6 var(--mono) }
+.msg .ref { font:12px/1.5 var(--mono); color:var(--muted) }
+.rows-report { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:6px 10px }
+.rows-report > .finding { grid-row:var(--r); grid-column:var(--c) }
+.finding.elide { color:var(--muted); background:none; border-style:dashed } .ln.elide, .ln.elide * { color:var(--muted) }
+.rows-report > .same { grid-row:var(--r); grid-column:1 / -1 }
+.same > summary { cursor:pointer; color:var(--muted); font-size:12.5px; padding:4px 12px; border:1px dashed var(--rule); border-radius:6px }
+.same[open] > summary { margin-bottom:6px }
 pre, code, .rows { font-variant-ligatures:none }
 @media (max-width:720px) { .versions, .rewrite, .rows { grid-template-columns:minmax(0,1fr) }
-  .pair { display:block } .pair > .vlabel { display:inline-block; margin-right:14px } .rows > span { grid-row:auto; grid-column:1 } .rows > .dup, .rows > .gap { display:none } .rewrite .to { justify-self:center } .card { padding:16px } }`;
+  .pair { display:block } .pair > .vlabel { display:inline-block; margin-right:14px } .rows > span { grid-row:auto; grid-column:1 } .rows > .dup, .rows > .gap { display:none }
+  .rows-report { grid-template-columns:minmax(0,1fr) } .rows-report > .finding, .rows-report > .same { grid-row:auto; grid-column:1 } .rows-report > .dup, .rows-report > .gap { display:none } .rewrite .to { justify-self:center } .card { padding:16px } }`;

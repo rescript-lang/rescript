@@ -670,3 +670,153 @@ ${SIGNED}
   has(html, '<span class="stamp">/1002</span>');
   has(html, '<span class="p">#raw_expr</span>');
 });
+
+const DIVIDE = `Exception Analysis
+Division.res:1:5-10
+divide might throw Division_by_zero (Division.res:1:27) and is not annotated with @throws(Division_by_zero)`;
+const DIVIDE_BY = `Exception Analysis
+Division.res:2:5-12
+divideBy might throw Division_by_zero (Division.res:2:37) and is not annotated with @throws(Division_by_zero)`;
+
+const DEAD = `Warning Dead Value
+DeadTest.res:3:1-10
+deadValue is never used`;
+
+test("a reanalyze report draws its findings aligned by identity, one analysis tagging the form", async () => {
+  const html = await renderOne(`Skip literal divisors
+
+Reanalyze modified (division):
+Before (reanalyze):
+${indented(`\n${DIVIDE}\n\n${DIVIDE_BY}`, "      ")}
+After (reanalyze):
+${indented(`\n${DIVIDE_BY}`, "      ")}
+
+${SIGNED}
+`);
+  has(
+    html,
+    '<h5 class="form"><span class="lang">reanalyze</span> <span class="tag">Exception Analysis</span></h5>',
+  );
+  has(html, '<div class="report rows-report">');
+  has(
+    html,
+    '<div class="finding del" style="--r:1;--c:1"><div class="where"><code class="loc">Division.res:1:5-10</code></div><div class="msg">divide might throw Division_by_zero (<span class="ref">Division.res:1:27</span>) and is not annotated with <span class="a">@throws(Division_by_zero)</span></div></div>',
+  );
+  has(html, '<div class="finding gap" style="--r:1;--c:2"></div>');
+  has(
+    html,
+    '<details class="same" style="--r:2"><summary>1 unchanged finding</summary><div class="report rows-report"><div class="finding" style="--r:1;--c:1"><div class="where"><code class="loc">Division.res:2:5-12</code>',
+  );
+  has(html, '<div class="finding dup" style="--r:1;--c:2">');
+  assert.equal(html.split('<div class="finding del"').length - 1, 1);
+  lacks(html, '<div class="finding add"');
+  lacks(html, '<div class="where"><span class="tag">');
+});
+
+test("an added finding is shaded added, and findings of several analyses keep their tags", async () => {
+  const html = await renderOne(`Report dead values
+
+Reanalyze modified (dead code):
+Before (reanalyze):
+${indented(`${DIVIDE}\n\nAnalysis reported 1 issues`, "    ")}
+After (reanalyze):
+${indented(`${DEAD}\n\n${DIVIDE}\n\nAnalysis reported 2 issues (Warning Dead Value:1)`, "    ")}
+
+Reanalyze added (termination):
+After (reanalyze):
+    Error Termination
+    TestCyberTruck.res:29:28-39
+    Possible infinite loop when calling alwaysLoop
+    CallStack:
+      1 alwaysLoop (TestCyberTruck.res:29)
+
+${SIGNED}
+`);
+  has(html, '<h5 class="form"><span class="lang">reanalyze</span></h5>');
+  has(
+    html,
+    '<div class="finding add" style="--r:1;--c:2"><div class="where"><span class="tag">Warning Dead Value</span><code class="loc">DeadTest.res:3:1-10</code></div><div class="msg">deadValue is never used</div></div>',
+  );
+  has(html, '<div class="finding gap" style="--r:1;--c:1"></div>');
+  has(
+    html,
+    '<summary>1 unchanged finding</summary><div class="report rows-report"><div class="finding" style="--r:1;--c:1"><div class="where"><span class="tag">Exception Analysis</span>',
+  );
+  has(
+    html,
+    '<div class="finding note mod" style="--r:3;--c:1"><div class="msg">Analysis reported <span class="del">1</span> issues</div></div>',
+  );
+  has(
+    html,
+    '<div class="finding note mod" style="--r:3;--c:2"><div class="msg">Analysis reported <span class="add">2</span> issues <span class="add">(</span>',
+  );
+  has(
+    html,
+    '<h5 class="form"><span class="lang">reanalyze</span> <span class="tag">Error Termination</span></h5><figure class="one"><figcaption class="vlabel">After</figcaption><div class="report"><div class="finding"><div class="where"><code class="loc">TestCyberTruck.res:29:28-39</code></div><div class="msg">Possible infinite loop when calling alwaysLoop\nCallStack:\n  1 alwaysLoop (TestCyberTruck.res:29)</div></div></div></figure>',
+  );
+});
+
+test("a run of unchanged findings is one row, and a changed count is one row", async () => {
+  const html = await renderOne(`Skip literal divisors
+
+Reanalyze modified (division):
+Before (reanalyze):
+${indented(`\n${DIVIDE}\n\n${DIVIDE_BY}\n\n${DIVIDE_BY.replaceAll("divideBy", "divideTo")}\n\nAnalysis reported 3 issues (Exception Analysis:3)`, "      ")}
+After (reanalyze):
+${indented(`\n${DIVIDE_BY}\n\n${DIVIDE_BY.replaceAll("divideBy", "divideTo")}\n\nAnalysis reported 2 issues (Exception Analysis:2)`, "      ")}
+
+${SIGNED}
+`);
+  has(
+    html,
+    '<details class="same" style="--r:2"><summary>2 unchanged findings</summary>',
+  );
+  has(html, '<div class="finding" style="--r:2;--c:1"><div class="where">');
+  has(html, '<div class="finding dup" style="--r:2;--c:2"><div class="where">');
+  has(html, "divideTo might throw");
+  assert.equal(html.split('<details class="same"').length - 1, 1);
+  has(
+    html,
+    '<div class="finding note mod" style="--r:3;--c:1"><div class="msg">Analysis reported <span class="del">3</span> issues (Exception Analysis:<span class="del">3</span>)</div></div>',
+  );
+  has(
+    html,
+    '<div class="finding note mod" style="--r:3;--c:2"><div class="msg">Analysis reported <span class="add">2</span> issues (Exception Analysis:<span class="add">2</span>)</div></div>',
+  );
+  lacks(html, '<div class="finding note del"');
+  lacks(html, '<div class="finding note add"');
+  has(
+    html,
+    ".finding { background:var(--surface); border:1px solid var(--rule); border-radius:6px;",
+  );
+});
+
+test("an elision in a report is a muted row, and in code a muted line", async () => {
+  const html = await renderOne(`Skip literal divisors
+
+Reanalyze modified (division):
+Before (reanalyze):
+${indented(`${DIVIDE}\n\n… 4 more like this\n\n${DIVIDE_BY}`, "    ")}
+After (reanalyze):
+${indented(`${DIVIDE_BY}`, "    ")}
+
+JS modified (division):
+Before (js):
+    let a = 1;
+    …
+After (js):
+    let a = 2;
+    … 3 more lines
+
+${SIGNED}
+`);
+  has(
+    html,
+    '<div class="finding elide" style="--r:2;--c:1"><div class="msg">… 4 more like this</div></div>',
+  );
+  has(html, '<div class="finding gap" style="--r:2;--c:2"></div>');
+  lacks(html, "finding elide del");
+  has(html, '<span class="ln elide" style="--r:3;--c:1;--i:0">…</span>');
+  has(html, '<span class="ln elide" style="--r:3;--c:2;--i:0">… ');
+  has(html, '<span class="ln del" style="--r:2;--c:1;--i:0">');
+});
