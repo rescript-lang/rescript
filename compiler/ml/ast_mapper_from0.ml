@@ -226,6 +226,16 @@ let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 let record_rest_attr_name = "_res.record_rest"
 let constructor_args_attr_name = "_res.constructor_args"
 
+(* PPXs built on OCaml tooling spell builtin attributes and extensions with an
+   [ocaml.] prefix: ppxlib reports errors as [%ocaml.error] and lint warnings
+   as [@@@ocaml.ppwarning]. The compiler reads only the bare names. *)
+let bare_builtin_name (name : string Location.loc) =
+  match name.txt with
+  | "ocaml.error" -> {name with txt = "error"}
+  | "ocaml.warning" -> {name with txt = "warning"}
+  | "ocaml.ppwarning" -> {name with txt = "ppwarning"}
+  | _ -> name
+
 let has_explicit_arity_attr (attrs : Pt.attributes) =
   List.exists
     (function
@@ -1669,8 +1679,10 @@ let default_mapper =
             | None -> this.payload this payload
           else this.payload this payload
         in
-        (map_loc this s, payload));
-    attribute = (fun this (s, e) -> (map_loc this s, this.payload this e));
+        (map_loc this (bare_builtin_name s), payload));
+    attribute =
+      (fun this (s, e) ->
+        (map_loc this (bare_builtin_name s), this.payload this e));
     attributes = (fun this l -> List.map (this.attribute this) l);
     payload =
       (fun this -> function

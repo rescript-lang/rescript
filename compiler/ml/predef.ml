@@ -59,8 +59,6 @@ and ident_bigint = ident_create "bigint"
 
 and ident_string = ident_create "string"
 
-and ident_extension_constructor = ident_create "extension_constructor"
-
 and ident_unknown = ident_create "unknown"
 
 and ident_promise = ident_create "promise"
@@ -110,8 +108,6 @@ and path_string = Pident ident_string
 
 and path_unkonwn = Pident ident_unknown
 
-and path_extension_constructor = Pident ident_extension_constructor
-
 and path_promise = Pident ident_promise
 
 and path_tagged_template = Pident ident_tagged_template
@@ -153,10 +149,6 @@ let type_string () = Domain.DLS.get type_string_key
 let type_unknown_key = predefined_type path_unkonwn
 let type_unknown () = Domain.DLS.get type_unknown_key
 
-let type_extension_constructor_key = predefined_type path_extension_constructor
-let type_extension_constructor () =
-  Domain.DLS.get type_extension_constructor_key
-
 let predefined_types =
   [
     (type_int_key, path_int);
@@ -168,7 +160,6 @@ let predefined_types =
     (type_bigint_key, path_bigint);
     (type_string_key, path_string);
     (type_unknown_key, path_unkonwn);
-    (type_extension_constructor_key, path_extension_constructor);
   ]
 
 let reset_for_request () =
@@ -391,10 +382,7 @@ let common_initial_env add_type add_extension empty_env =
         ext_loc = Location.none;
         ext_attributes =
           [
-            ( {
-                Asttypes.txt = "ocaml.warn_on_literal_pattern";
-                loc = Location.none;
-              },
+            ( {Asttypes.txt = "warn_on_literal_pattern"; loc = Location.none},
               Parsetree.PStr [] );
           ];
         ext_is_exception = true;
@@ -407,7 +395,6 @@ let common_initial_env add_type add_extension empty_env =
   |> add_type ident_bigint decl_abstr
   |> add_type ident_string decl_abstr
   |> add_type ident_unit decl_unit
-  |> add_type ident_extension_constructor decl_abstr
   |> add_type ident_exn decl_exn
   |> add_type ident_option decl_option
   |> add_type ident_result decl_result

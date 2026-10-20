@@ -286,7 +286,6 @@ let expr sub x =
       Texp_letexception (sub.extension_constructor sub cd, sub.expr sub exp)
     | Texp_assert exp -> Texp_assert (sub.expr sub exp)
     | Texp_pack mexpr -> Texp_pack (sub.module_expr sub mexpr)
-    | Texp_extension_constructor _ as e -> e
   in
   {x with exp_extra; exp_desc; exp_env}
 

@@ -2547,6 +2547,77 @@ let test_error_extension_backquoted_strings _ =
   OUnit.assert_equal ~printer:(Printf.sprintf "%S") "highlighted\nmessage"
     error.if_highlight
 
+(* Attribute and extension names a mapped tree carries, payloads included. *)
+let builtin_names_of iterate =
+  let names = ref [] in
+  let iterator =
+    {
+      Ast_iterator.default_iterator with
+      attribute =
+        (fun self ((name, _) as attr) ->
+          names := name.Location.txt :: !names;
+          Ast_iterator.default_iterator.attribute self attr);
+      extension =
+        (fun self ((name, _) as ext) ->
+          names := name.Location.txt :: !names;
+          Ast_iterator.default_iterator.extension self ext);
+    }
+  in
+  iterate iterator;
+  List.sort_uniq compare !names
+
+let test_ocaml_prefixed_builtins_arrive_bare _ =
+  let string0 s =
+    Parsetree0.PStr
+      [
+        Ast_helper0.Str.eval ~loc
+          (Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_string (s, None)));
+      ]
+  in
+  let error0 = (Location.mknoloc "ocaml.error", string0 "ppx error") in
+  let warning0 = attr "ocaml.warning" (string0 "-32") in
+  let structure0 =
+    [
+      Ast_helper0.Str.attribute ~loc
+        (attr "ocaml.ppwarning" (string0 "lint warning"));
+      Ast_helper0.Str.extension ~loc error0;
+      Ast_helper0.Str.type_ ~loc Asttypes.Recursive
+        [Ast_helper0.Type.mk ~loc ~attrs:[warning0] (Location.mknoloc "t")];
+      Ast_helper0.Str.eval ~loc ~attrs:[warning0]
+        (Ast_helper0.Exp.extension ~loc
+           ~attrs:
+             [
+               attr "nested"
+                 (Parsetree0.PStr [Ast_helper0.Str.extension ~loc error0]);
+             ]
+           error0);
+    ]
+  in
+  let signature0 =
+    [
+      Ast_helper0.Sig.attribute ~loc warning0;
+      Ast_helper0.Sig.extension ~loc error0;
+    ]
+  in
+  let structure =
+    Ast_mapper_from0.default_mapper.structure Ast_mapper_from0.default_mapper
+      structure0
+  in
+  let signature =
+    Ast_mapper_from0.default_mapper.signature Ast_mapper_from0.default_mapper
+      signature0
+  in
+  let show names = String.concat ", " names in
+  OUnit.assert_equal ~printer:show
+    ["error"; "nested"; "ppwarning"; "warning"]
+    (builtin_names_of (fun it -> it.structure it structure));
+  OUnit.assert_equal ~printer:show ["error"; "warning"]
+    (builtin_names_of (fun it -> it.signature it signature))
+
+let test_extension_of_error_is_bare _ =
+  let name, _ = Ast_mapper.extension_of_error (Location.error ~loc "boom") in
+  OUnit.assert_equal ~printer:Fun.id "error" name.txt
+
 let suites =
   __FILE__
   >::: [
@@ -2665,6 +2736,9 @@ let suites =
          "jsx_component_on_value_descriptions_through_ast0"
          >:: test_jsx_component_on_value_descriptions_through_ast0;
          "ppx_context_on_the_wire" >:: test_ppx_context_on_the_wire;
+         "ocaml_prefixed_builtins_arrive_bare"
+         >:: test_ocaml_prefixed_builtins_arrive_bare;
+         "extension_of_error_is_bare" >:: test_extension_of_error_is_bare;
          "raw_nodes_roundtrip_through_ast0"
          >:: test_raw_nodes_roundtrip_through_ast0;
          "raw_structure_item_roundtrips_through_ast0"

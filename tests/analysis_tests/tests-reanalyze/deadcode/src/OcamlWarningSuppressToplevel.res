@@ -1,4 +1,4 @@
-@@ocaml.warning("-32")
+@@warning("-32")
 
 let suppressed1 = 1
 let suppressed2 = 2

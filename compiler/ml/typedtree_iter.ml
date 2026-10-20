@@ -309,8 +309,7 @@ end = struct
       iter_extension_constructor cd;
       iter_expression exp
     | Texp_assert exp -> iter_expression exp
-    | Texp_pack mexpr -> iter_module_expr mexpr
-    | Texp_extension_constructor _ -> ());
+    | Texp_pack mexpr -> iter_module_expr mexpr);
     Iter.leave_expression exp
 
   and iter_package_type pack =

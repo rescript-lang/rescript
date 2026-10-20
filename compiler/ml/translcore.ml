@@ -1402,8 +1402,6 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
         prim ~primitive:(Pmakeblock Blk_extension)
           ~args:(Transl_path.transl_extension_path e.exp_env path :: ll)
           e.exp_loc)
-  | Texp_extension_constructor (_, path) ->
-    Transl_path.transl_extension_path e.exp_env path
   | Texp_variant (l, arg) -> (
     match arg with
     | None -> const (const_polyvar l)

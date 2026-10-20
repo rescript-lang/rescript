@@ -77,8 +77,6 @@ type error =
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
   | Inlined_record_expected
-  | Invalid_extension_constructor_payload
-  | Not_an_extension_constructor
   | Break_outside_loop
   | Continue_outside_loop
   | Literal_overflow of string
@@ -3130,8 +3128,6 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     if label.lbl_private = Private && is_private_record_field env label then
       Location.prerr_warning lid.loc
         (Warnings.Bs_private_record_mutation (Longident.last lid.txt));
-    Builtin_attributes.check_deprecated_mutable lid.loc label.lbl_attributes
-      (Longident.last lid.txt);
     rue
       {
         exp_desc = Texp_setfield (record, label_loc, label, newval);
@@ -3694,32 +3690,6 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         (Texp_open (ovf, path, lid, newenv), loc, sexp.pexp_attributes)
         :: exp.exp_extra;
     }
-  | Pexp_extension
-      ( {txt = "ocaml.extension_constructor" | "extension_constructor"; _},
-        payload ) -> (
-    match payload with
-    | PStr
-        [
-          {
-            pstr_desc =
-              Pstr_eval ({pexp_desc = Pexp_construct (lid, {txt = []}); _}, _);
-          };
-        ] ->
-      let path =
-        match (Typetexp.find_constructor env lid.loc lid.txt).cstr_kind with
-        | Extension_constructor path -> path
-        | _ -> raise (Error (lid.loc, env, Not_an_extension_constructor))
-      in
-      rue
-        {
-          exp_desc = Texp_extension_constructor (lid, path);
-          exp_loc = loc;
-          exp_extra = [];
-          exp_type = instance_def (Predef.type_extension_constructor ());
-          exp_attributes = sexp.pexp_attributes;
-          exp_env = env;
-        }
-    | _ -> raise (Error (loc, env, Invalid_extension_constructor_payload)))
   | Pexp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
   | Pexp_raw {kind; name_loc} ->
@@ -5405,11 +5375,6 @@ let report_error env loc ppf error =
        destructuring it first"
   | Inlined_record_expected ->
     fprintf ppf "@[This constructor expects an inlined record argument.@]"
-  | Invalid_extension_constructor_payload ->
-    fprintf ppf
-      "Invalid [%%extension_constructor] payload, a constructor is expected."
-  | Not_an_extension_constructor ->
-    fprintf ppf "This constructor is not an extension constructor."
   | Break_outside_loop ->
     fprintf ppf "`break` can only be used directly inside a loop body."
   | Continue_outside_loop ->

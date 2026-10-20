@@ -73,9 +73,9 @@ let type_declarations ~loc env ?(old_env = env) cxt subst id decl1 decl2 =
 
 (* Inclusion between extension constructors *)
 
-let extension_constructors ~loc env cxt subst id ext1 ext2 =
+let extension_constructors env cxt subst id ext1 ext2 =
   let ext2 = Subst.extension_constructor subst ext2 in
-  if Includecore.extension_constructors ~loc env id ext1 ext2 then ()
+  if Includecore.extension_constructors env id ext1 ext2 then ()
   else raise (Error [(cxt, env, Extension_constructors (id, ext1, ext2))])
 
 (* Expand a module type identifier when possible *)
@@ -381,7 +381,7 @@ and signature_components ~loc old_env env cxt subst paired =
     type_declarations ~loc ~old_env env cxt subst id1 tydecl1 tydecl2;
     comps_rec rem
   | (Sig_typext (id1, ext1, _), Sig_typext (_id2, ext2, _), pos) :: rem ->
-    extension_constructors ~loc env cxt subst id1 ext1 ext2;
+    extension_constructors env cxt subst id1 ext1 ext2;
     (pos, Tcoerce_none) :: comps_rec rem
   | (Sig_module (id1, mty1, _), Sig_module (_id2, mty2, _), pos) :: rem ->
     let cc = module_declarations ~loc env cxt subst id1 mty1 mty2 in

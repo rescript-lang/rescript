@@ -223,7 +223,7 @@ let report_type_mismatch first second decl ppf =
       else
         Format.fprintf ppf "@ %a." (report_type_mismatch0 first second decl) err)
 
-let rec compare_constructor_arguments ~loc env cstr params1 params2 arg1 arg2 =
+let rec compare_constructor_arguments env cstr params1 params2 arg1 arg2 =
   match (arg1, arg2) with
   | Types.Cstr_tuple arg1, Types.Cstr_tuple arg2 ->
     if List.length arg1 <> List.length arg2 then [Field_arity cstr]
@@ -233,7 +233,7 @@ let rec compare_constructor_arguments ~loc env cstr params1 params2 arg1 arg2 =
     then []
     else [Field_type cstr]
   | Types.Cstr_record l1, Types.Cstr_record l2 ->
-    compare_records env ~loc params1 params2 0 l1 l2
+    compare_records env params1 params2 0 l1 l2
   | _ -> [Field_type cstr]
 
 and compare_variants ~loc env params1 params2 ~layout1 ~layout2 n
@@ -254,12 +254,12 @@ and compare_variants ~loc env params1 params2 ~layout1 ~layout2 n
         match (cd1.cd_res, cd2.cd_res) with
         | Some r1, Some r2 ->
           if Ctype.equal env true [r1] [r2] then
-            compare_constructor_arguments ~loc env cd1.cd_id [r1] [r2]
-              cd1.cd_args cd2.cd_args
+            compare_constructor_arguments env cd1.cd_id [r1] [r2] cd1.cd_args
+              cd2.cd_args
           else [Field_type cd1.cd_id]
         | Some _, None | None, Some _ -> [Field_type cd1.cd_id]
         | _ ->
-          compare_constructor_arguments ~loc env cd1.cd_id params1 params2
+          compare_constructor_arguments env cd1.cd_id params1 params2
             cd1.cd_args cd2.cd_args
       in
       let r =
@@ -278,7 +278,7 @@ and compare_variants ~loc env params1 params2 ~layout1 ~layout2 n
         compare_variants ~loc env params1 params2 ~layout1 ~layout2 (n + 1) rem1
           rem2)
 
-and compare_records ~loc env params1_ params2_ n_
+and compare_records env params1_ params2_ n_
     (labels1_ : Types.label_declaration list)
     (labels2_ : Types.label_declaration list) =
   (* First try a fast path that checks if all the fields at once are consistent.
@@ -292,15 +292,12 @@ and compare_records ~loc env params1_ params2_ n_
       else []
     | [], l :: _ -> [Field_missing (true, l.Types.ld_id)]
     | l :: _, [] -> [Field_missing (false, l.Types.ld_id)]
-    | ld1 :: rem1, ld2 :: rem2 ->
+    | ld1 :: rem1, ld2 :: rem2 -> (
       if Ident.name ld1.ld_id <> Ident.name ld2.ld_id then
         [Field_names (n, ld1.ld_id.name, ld2.ld_id.name)]
       else if ld1.ld_mutable <> ld2.ld_mutable then [Field_mutable ld1.ld_id]
       else if ld1.ld_optional <> ld2.ld_optional then [Field_optional ld1.ld_id]
-      else (
-        Builtin_attributes.check_deprecated_mutable_inclusion ~def:ld1.ld_loc
-          ~use:ld2.ld_loc loc ld1.ld_attributes ld2.ld_attributes
-          (Ident.name ld1.ld_id);
+      else
         let name1 = Record_runtime.declaration_name ld1 in
         let name2 = Record_runtime.declaration_name ld2 in
         match name1 <> name2 with
@@ -411,7 +408,7 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
                 cstrs1 cstrs2
             | Type_record (labels1, rep1), Type_record (labels2, rep2) ->
               let err =
-                compare_records ~loc env decl1.type_params decl2.type_params 1
+                compare_records env decl1.type_params decl2.type_params 1
                   labels1 labels2
               in
               if err <> [] || rep1 = rep2 then err
@@ -466,7 +463,7 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
 
 (* Inclusion between extension constructors *)
 
-let extension_constructors ~loc env id ext1 ext2 =
+let extension_constructors env id ext1 ext2 =
   let usage =
     if ext1.ext_private = Private || ext2.ext_private = Public then Env.Positive
     else Env.Privatize
@@ -486,8 +483,8 @@ let extension_constructors ~loc env id ext1 ext2 =
       (ty2 :: ext2.ext_type_params)
   then
     if
-      compare_constructor_arguments ~loc env (Ident.create "")
-        ext1.ext_type_params ext2.ext_type_params ext1.ext_args ext2.ext_args
+      compare_constructor_arguments env (Ident.create "") ext1.ext_type_params
+        ext2.ext_type_params ext1.ext_args ext2.ext_args
       = []
     then
       if

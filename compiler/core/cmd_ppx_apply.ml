@@ -108,6 +108,7 @@ let apply_rewriters_str ~tool_name ast =
       Ml_binary.ast0_roundtrip Ml_binary.Ml ast
     else ast
   | ppxs ->
+    Bs_ast_invariant.check_removed_ocaml_spellings_on_structure ast;
     ast
     |> Ast_mapper.add_ppx_context_str ~tool_name
     |> rewrite Ml ppxs |> Ml_binary.ast0_to_structure
@@ -120,6 +121,7 @@ let apply_rewriters_sig ~tool_name ast =
       Ml_binary.ast0_roundtrip Ml_binary.Mli ast
     else ast
   | ppxs ->
+    Bs_ast_invariant.check_removed_ocaml_spellings_on_signature ast;
     ast
     |> Ast_mapper.add_ppx_context_sig ~tool_name
     |> rewrite Mli ppxs |> Ml_binary.ast0_to_signature

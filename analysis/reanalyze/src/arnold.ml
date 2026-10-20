@@ -1033,12 +1033,8 @@ module Compile = struct
     | Texp_pack _ ->
       not_implemented "Texp_pack";
       assert false
-    | Texp_extension_constructor _ when true ->
-      not_implemented "Texp_extension_constructor";
-      assert false
-    | _ ->
-      (* ocaml 4.08: Texp_letop(_) | Texp_open(_) *)
-      not_implemented "Texp_letop(_) | Texp_open(_)";
+    | Texp_break | Texp_continue ->
+      not_implemented "Texp_break | Texp_continue";
       assert false
 
   and expression_opt ~ctx e_opt =
