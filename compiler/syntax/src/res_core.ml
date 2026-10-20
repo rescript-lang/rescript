@@ -2321,11 +2321,14 @@ and parse_operand_expr ~context p =
     (* we need to be careful when we're in a ternary true branch:
        `condition ? ternary-true-branch : false-branch`
        Arrow expressions could be of the form: `async (): int => stuff()`
-       But if we're in a ternary, the `:` of the ternary takes precedence
+       But if we're in a ternary, the `:` of the ternary takes precedence.
+       Like other arrows, none starts in a guard or a condition, where
+       `async(x) =>` is a call followed by the case's `=>`.
     *)
-      when is_es6_arrow_expression
-             ~in_ternary:(context = TernaryTrueBranchExpr)
-             p ->
+      when context != WhenExpr
+           && is_es6_arrow_expression
+                ~in_ternary:(context = TernaryTrueBranchExpr)
+                p ->
       let arrow_attrs = !attrs in
       let () = attrs := [] in
       parse_async_arrow_expression ~arrow_attrs p

@@ -42,3 +42,10 @@ let attr2 =  @a async (type a) => (type b c, x) => 3
 let attr3 =  @a  (type a) => async (type b c, x) => 3
 let attr4 =  @a  (type a) => @b async (type b c, x) => 3
 let attr5 : int =  @a @b async (type a, type b c) => (x:a) => x
+
+// A guard calling a function named async is a call, not an async arrow
+let guarded = v =>
+  switch v {
+  | Some(x) if async(x) => async () => x
+  | _ => async () => 0
+  }
