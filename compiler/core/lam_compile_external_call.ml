@@ -223,8 +223,9 @@ let translate_scoped_module_val
       E.external_var_field ?import_attributes ~external_name:bundle ~field:fn
         ~default id
     | x :: rest ->
-      (* TODO: what happens when scope contains "default" ?*)
-      let default = false in
+      (* A leading "default" scope is the module's default export: import
+         it as such, like [external x: t = "default"] *)
+      let default = x = "default" in
       let id =
         Lam_compile_env.add_js_module ?import_attributes module_bind_name bundle
           default ~dynamic_import:false
