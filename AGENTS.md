@@ -77,7 +77,7 @@ relevant guidance from each.
 - Build must pass before committing
 - Write each commit message as a record in the format of
   [`.claude/skills/records/SKILL.md`](.claude/skills/records/SKILL.md), and
-  render review pages from records with `node scripts/commitRecords.js`
+  render review pages from records with `make semantic-diff`
 
 ### Stacked pull requests
 
@@ -100,7 +100,7 @@ on `master`. CI runs on every PR in the stack.
 
 ## Testing and changelog
 
-**Add a changelog fragment** `changes/<description>.<category>.md` for any user-facing change (bug fix, feature, or breaking change) instead of editing `CHANGELOG.md`; see [changes/README.md](changes/README.md) for categories and format. Validate with `yarn changelog:check`. Since the PR number is not known yet, open the PR as a draft with the placeholder link `https://github.com/rescript-lang/rescript/pull/XXXX`, then replace it with the real link, amend, push again, and mark the PR ready for review (`gh pr ready`).
+**Add a changelog fragment** `changes/<description>.<category>.md` for any user-facing change (bug fix, feature, or breaking change) instead of editing `CHANGELOG.md`; see [changes/README.md](changes/README.md) for categories and format. Validate with `yarn changelog:check`. Fragments need no PR link: the release adds it from the squash commit that merged the fragment.
 
 For compiler or standard-library changes, run `make test`. For syntax changes,
 also run `make test-syntax`; use `make test-syntax-roundtrip` when parsing or
@@ -124,23 +124,6 @@ printing changes. Other focused suites are `make test-gentype`,
 4. **Build tests** (`tests/build_tests/`) - Error cases and edge cases
 5. **Type tests** (`tests/build_tests/super_errors/`) - Single-file type checking errors
 6. **Multi-file error tests** (`tests/build_tests/super_errors_multi/`) - Cross-module errors that need separate `.res` / `.resi` files
-
-#### Error variant catalog
-
-[`tests/ERROR_VARIANTS.md`](tests/ERROR_VARIANTS.md) is a per-module
-catalog of every error and warning variant the compiler can emit, with
-each entry mapped to a fixture (or a documented reason it's unreachable).
-
-**When adding or removing an error variant**, also update the catalog:
-
-1. Add (or remove) the row in the relevant module section.
-2. Set the status (`✓` covered / `⚠` unreachable / `☐` TODO).
-3. If covered, link the fixture path; if unreachable, note the reason.
-
-**When adding or removing a fixture**, update the corresponding row's
-`Fixture` and status columns so the catalog stays in sync with the test
-suite. The catalog is the primary tool for finding coverage gaps and
-dead-code removal candidates; stale entries make both jobs harder.
 
 ## Additional development commands
 

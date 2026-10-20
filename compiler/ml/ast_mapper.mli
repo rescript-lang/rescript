@@ -99,7 +99,7 @@ val default_mapper : mapper
 (** {1 Convenience functions to write mappers} *)
 
 val extension_of_error : Location.error -> extension
-(** Encode an error into an 'ocaml.error' extension node which can be
+(** Encode an error into an 'error' extension node which can be
     inserted in a generated Parsetree.  The compiler will be
     responsible for reporting the error. *)
 

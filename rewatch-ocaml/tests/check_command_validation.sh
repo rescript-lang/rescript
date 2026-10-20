@@ -747,17 +747,17 @@ run_case compiler-args-no-project panic reject compiler-args "$work/orphan/A.res
 run_missing_bsc_case build-missing-bsc build "$project"
 run_missing_bsc_case format-missing-bsc format "$project/src/A.res"
 RESCRIPT_BSC_EXE="$work/missing-bsc" run_both clean "$work/clean-missing-bsc"
-if [ "$(classify "$rust_status")" != panic ] || [ "$ocaml_status" -ne 0 ] || \
+if [ "$rust_status" -ne 0 ] || [ "$ocaml_status" -ne 0 ] || \
   [ -e "$work/clean-missing-bsc/lib/bs/marker" ]; then
-  echo "clean-missing-bsc: expected Rust panic and successful OCaml cleanup" >&2
+  echo "clean-missing-bsc: expected both implementations to clean without a compiler" >&2
   dump_both
   exit 1
 fi
 checked=$((checked + 1))
 run_both --unset RESCRIPT_RUNTIME clean "$work/clean-missing-runtime"
-if [ "$(classify "$rust_status")" != reject ] || [ "$ocaml_status" -ne 0 ] || \
+if [ "$rust_status" -ne 0 ] || [ "$ocaml_status" -ne 0 ] || \
   [ -e "$work/clean-missing-runtime/lib/bs/marker" ]; then
-  echo "clean-missing-runtime: expected Rust rejection and successful OCaml cleanup" >&2
+  echo "clean-missing-runtime: expected both implementations to clean without a runtime" >&2
   dump_both
   exit 1
 fi
@@ -1513,6 +1513,14 @@ for implementation in rust ocaml; do
   fi
   normalize_project_path "$work/quiet-watch-$implementation.err" \
     "$work/quiet-watch-$implementation.err.norm" "$quiet_watch_project"
+  # macOS and Windows can report one write as several change events, and each
+  # rebuild reports the parse error again. Compare the distinct reports only.
+  node -e '
+    const fs = require("fs");
+    const blocks = fs.readFileSync(process.argv[1], "utf8").split(/^(?=Error in )/m);
+    const distinct = blocks.filter((block, i) => block !== blocks[i - 1]);
+    fs.writeFileSync(process.argv[1], distinct.join(""));
+  ' "$work/quiet-watch-$implementation.err.norm"
 done
 if ! cmp -s "$work/quiet-watch-rust.err.norm" \
   "$work/quiet-watch-ocaml.err.norm"; then
@@ -1529,9 +1537,9 @@ run_case clean-missing-dependency exit2 exit2 clean "$work/missing-dependency"
 run_case clean-configless-dependency exit2 exit2 clean "$work/configless-dependency"
 run_case clean-malformed-dependency exit2 exit2 clean "$work/malformed-dependency"
 run_both clean "$work/clean-duplicate-{impl}"
-if [ "$(classify "$rust_status")" != reject ] || [ "$ocaml_status" -ne 0 ] || \
-  [ ! -e "$work/clean-duplicate-rust/src/one/A.js" ] || \
-  [ ! -e "$work/clean-duplicate-rust/src/two/A.js" ] || \
+if [ "$rust_status" -ne 0 ] || [ "$ocaml_status" -ne 0 ] || \
+  [ -e "$work/clean-duplicate-rust/src/one/A.js" ] || \
+  [ -e "$work/clean-duplicate-rust/src/two/A.js" ] || \
   [ -e "$work/clean-duplicate-rust/lib/bs/marker" ] || \
   [ -e "$work/clean-duplicate-ocaml/src/one/A.js" ] || \
   [ -e "$work/clean-duplicate-ocaml/src/two/A.js" ] || \

@@ -1,0 +1,5 @@
+let   add: (int, int) =>   int
+
+
+let numbers: array<int>
+let other: array<int>

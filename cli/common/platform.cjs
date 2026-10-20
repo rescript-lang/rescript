@@ -5,7 +5,6 @@
 
 const supportedTargets = [
   "darwin-arm64",
-  "darwin-x64",
   "linux-arm64",
   "linux-x64",
   "win32-x64",
@@ -33,6 +32,18 @@ function getTarget(platform, arch, osRelease) {
 }
 
 /**
+ * @param {string} platform `process.platform`
+ * @param {string} arch `process.arch`
+ * @returns {string} the error for a platform without a target
+ */
+function unsupportedPlatformMessage(platform, arch) {
+  if (platform === "darwin" && arch === "x64") {
+    return "Intel Macs are not supported anymore. Use ReScript 12.";
+  }
+  return `Platform ${platform}-${arch} is not supported!`;
+}
+
+/**
  * @param {string} osRelease
  */
 function windowsBuild(osRelease) {
@@ -41,3 +52,4 @@ function windowsBuild(osRelease) {
 }
 
 exports.getTarget = getTarget;
+exports.unsupportedPlatformMessage = unsupportedPlatformMessage;

@@ -93,8 +93,6 @@ type error =
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
   | Inlined_record_expected
-  | Invalid_extension_constructor_payload
-  | Not_an_extension_constructor
   | Break_outside_loop
   | Continue_outside_loop
   | Literal_overflow of string
@@ -114,6 +112,7 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
+  | Jsx_component_without_make of Longident.t
   | Jsx_unboxed_props of type_expr
   | Tagged_template_non_tag of type_expr
   | Record_rest of Typecore_record_rest.error

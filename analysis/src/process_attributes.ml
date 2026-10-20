@@ -4,8 +4,7 @@ open Shared_types
 let rec find_doc_attribute attributes =
   match attributes with
   | [] -> None
-  | ({Asttypes.txt = "ocaml.doc" | "ocaml.text" | "ns.doc" | "res.doc"}, payload)
-    :: rest -> (
+  | ({Asttypes.txt = "ocaml.doc" | "ns.doc" | "res.doc"}, payload) :: rest -> (
     match Ast_payload.semantic_string_of_payload payload with
     | Some doc -> Some doc
     | None -> find_doc_attribute rest)

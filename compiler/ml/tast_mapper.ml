@@ -165,7 +165,7 @@ let pat sub x =
   let pat_extra = List.map (tuple3 extra id id) x.pat_extra in
   let pat_desc =
     match x.pat_desc with
-    | (Tpat_any | Tpat_var _ | Tpat_constant _) as d -> d
+    | (Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_interval _) as d -> d
     | Tpat_tuple l -> Tpat_tuple (List.map (sub.pat sub) l)
     | Tpat_construct (loc, cd, l) ->
       Tpat_construct (loc, cd, List.map (sub.pat sub) l)
@@ -286,7 +286,6 @@ let expr sub x =
       Texp_letexception (sub.extension_constructor sub cd, sub.expr sub exp)
     | Texp_assert exp -> Texp_assert (sub.expr sub exp)
     | Texp_pack mexpr -> Texp_pack (sub.module_expr sub mexpr)
-    | Texp_extension_constructor _ as e -> e
   in
   {x with exp_extra; exp_desc; exp_env}
 

@@ -6,8 +6,11 @@ updates:
     schedule:
       interval: "weekly"
 
-  # Manage GitHub Actions dependencies
+  # Manage GitHub Actions dependencies in the workflows and in the composite
+  # actions under .github/actions
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories:
+      - "/"
+      - "/.github/actions/*"
     schedule:
       interval: "weekly"

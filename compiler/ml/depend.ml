@@ -90,7 +90,7 @@ let addmodule bv lid = add_path bv lid.txt
 
 let handle_extension ext =
   match (fst ext).txt with
-  | "error" | "ocaml.error" ->
+  | "error" ->
     raise (Location.Error (Builtin_attributes.error_of_extension ext))
   | _ -> ()
 
@@ -313,12 +313,6 @@ let rec add_expr bv exp =
   | Pexp_open (_ovf, m, e) ->
     let bv = open_module bv m.txt in
     add_expr bv e
-  | Pexp_extension
-      (( {txt = "ocaml.extension_constructor" | "extension_constructor"; _},
-         PStr [item] ) as e) -> (
-    match item.pstr_desc with
-    | Pstr_eval ({pexp_desc = Pexp_construct (c, {txt = []})}, _) -> add bv c
-    | _ -> handle_extension e)
   | Pexp_extension e -> handle_extension e
   | Pexp_raw _ -> ()
   | Pexp_await e -> add_expr bv e

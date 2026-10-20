@@ -15,12 +15,12 @@ env:
 
 jobs:
   coverage:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     permissions:
       actions: write # For build cache overwriting
       id-token: write # For CodeCov OIDC
     env:
-      OS: ubuntu-24.04-arm
+      OS: ubuntu-26.04-arm
       OCAML_COMPILER: 5.5.1
       RUST_TARGET: aarch64-unknown-linux-gnu
     steps:

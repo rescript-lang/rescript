@@ -1,0 +1,1 @@
+- genType refers to values and modules named like JS keywords or globals by the names the compiler gives them in JS, such as `$$delete`.

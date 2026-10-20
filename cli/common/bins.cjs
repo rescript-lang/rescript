@@ -6,16 +6,14 @@
 
 const os = require("node:os");
 const path = require("node:path");
-const { getTarget } = require("./platform.cjs");
+const { getTarget, unsupportedPlatformMessage } = require("./platform.cjs");
 
 const minimumNodeVersion = "22.0.0";
 
 const target = getTarget(process.platform, process.arch, os.release());
 
 if (target === undefined) {
-  throw new Error(
-    `Platform ${process.platform}-${process.arch} is not supported!`,
-  );
+  throw new Error(unsupportedPlatformMessage(process.platform, process.arch));
 }
 
 const binPackageName = `@rescript/${target}`;

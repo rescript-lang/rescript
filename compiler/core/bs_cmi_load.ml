@@ -50,6 +50,6 @@ let load_cmi ~unit_name : Env.Persistent_signature.t option =
           | exception Unix.Unix_error (error, _, _) ->
             raise (Sys_error (path ^ ": " ^ Unix.error_message error)))
       in
-      try_names (if lower_name = name then [name] else [lower_name; name])
+      try_names (if lower_name = name then [name] else [name; lower_name])
   in
   find (Config.get_load_path ())

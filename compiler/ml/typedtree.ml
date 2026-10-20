@@ -52,6 +52,7 @@ and pattern_desc =
   | Tpat_var of Ident.t * string loc
   | Tpat_alias of pattern * Ident.t * string loc
   | Tpat_constant of constant
+  | Tpat_interval of constant * constant
   | Tpat_tuple of pattern list
   | Tpat_construct of Longident.t loc * constructor_description * pattern list
   | Tpat_variant of label * pattern option * row_desc ref
@@ -141,7 +142,6 @@ and expression_desc =
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
   | Texp_pack of module_expr
-  | Texp_extension_constructor of Longident.t loc * Path.t
   (* Keep new expression constructors at the end. CMT files are marshalled by
      runtime constructor tag, so inserting constructors before existing ones
      breaks analysis when it reads CMTs produced by older compiler versions. *)
@@ -473,7 +473,7 @@ let iter_pattern_desc f = function
   | Tpat_or (p1, p2, _) ->
     f p1;
     f p2
-  | Tpat_any | Tpat_var _ | Tpat_constant _ -> ()
+  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_interval _ -> ()
 
 let map_pattern_desc f d =
   match d with
@@ -491,7 +491,9 @@ let map_pattern_desc f d =
   | Tpat_array pats -> Tpat_array (List.map f pats)
   | Tpat_variant (x1, Some p1, x2) -> Tpat_variant (x1, Some (f p1), x2)
   | Tpat_or (p1, p2, path) -> Tpat_or (f p1, f p2, path)
-  | Tpat_var _ | Tpat_constant _ | Tpat_any | Tpat_variant (_, None, _) -> d
+  | Tpat_var _ | Tpat_constant _ | Tpat_interval _ | Tpat_any
+  | Tpat_variant (_, None, _) ->
+    d
 
 (* List the identifiers bound by a pattern or a let *)
 

@@ -12,4 +12,3 @@ let a2 = JSON.stringifyAnyWithReplacer(1, (_k, v) => v)
 let a3 = JSON.stringifyAnyWithReplacerAndIndent(1, (_k, v) => v, 2)
 let a4 = JSON.stringifyAnyWithFilter(1, ["a"])
 let a5 = JSON.stringifyAnyWithFilterAndIndent(1, ["a"], 2)
-

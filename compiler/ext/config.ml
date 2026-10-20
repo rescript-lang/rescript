@@ -1,4 +1,4 @@
-let cmi_magic_number = "Caml1999I038"
+let cmi_magic_number = "Caml1999I039"
 
 (* Magic numbers for marshaled values of the *current* parsetree, whose layout
    changes across compiler versions. *)
@@ -13,7 +13,7 @@ and ast0_impl_magic_number = "Caml1999M022"
 
 and ast0_intf_magic_number = "Caml1999N022"
 
-and cmt_magic_number = "Caml1999T045"
+and cmt_magic_number = "Caml1999T047"
 
 let get_load_path () = (Compiler_request_state.current ()).load_path
 let set_load_path path = (Compiler_request_state.current ()).load_path <- path

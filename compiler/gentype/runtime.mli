@@ -6,6 +6,9 @@ type module_access_path =
   | Dot of module_access_path * module_item
 
 val default : string
+val js_field_name : string -> string
+val js_export_name : string -> string
+val ts_binding_name : string -> string
 val emit_module_access_path : config:Config.t -> module_access_path -> string
 
 val new_module_item : name:string -> module_item

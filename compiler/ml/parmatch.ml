@@ -116,6 +116,55 @@ let zero = make_pat (Tpat_constant (Const_int 0)) Ctype.none Env.empty
    when an "incoherence" is not detected by this check.
 *)
 
+(* The values matched by an int or char constant or interval, as bounds. *)
+let int_range p =
+  match p.pat_desc with
+  | Tpat_constant (Const_int i | Const_char i) -> Some (i, i)
+  | Tpat_interval
+      ((Const_int lo | Const_char lo), (Const_int hi | Const_char hi)) ->
+    Some (lo, hi)
+  | _ -> None
+
+(* A constant or interval for [lo .. hi], of the same kind as [p]: chars when
+   [p] starts with a char and the bounds can be written as char literals. *)
+let make_int_range p lo hi =
+  let chars =
+    Uchar.is_valid lo && Uchar.is_valid hi
+    &&
+    match p.pat_desc with
+    | Tpat_constant (Const_char _) | Tpat_interval (Const_char _, _) -> true
+    | _ -> false
+  in
+  let const i = if chars then Const_char i else Const_int i in
+  let desc =
+    if lo = hi then Tpat_constant (const lo)
+    else Tpat_interval (const lo, const hi)
+  in
+  {p with pat_desc = desc; pat_extra = []}
+
+(* Splits interval [q] at the bounds of the ranges in [column], so that each
+   piece is either inside or outside each of them. A constant is one piece. *)
+let split_int_range q column =
+  match (q.pat_desc, int_range q) with
+  | Tpat_interval _, Some (lo, hi) ->
+    let cuts =
+      List.fold_left
+        (fun cuts p ->
+          match int_range p with
+          | Some (a, b) ->
+            let cuts = if lo < a && a <= hi then a :: cuts else cuts in
+            if b < hi && lo <= b then (b + 1) :: cuts else cuts
+          | None -> cuts)
+        [] column
+      |> List.sort_uniq compare
+    in
+    let rec pieces lo = function
+      | [] -> [make_int_range q lo hi]
+      | c :: cuts -> make_int_range q lo (c - 1) :: pieces c cuts
+    in
+    pieces lo cuts
+  | _ -> [q]
+
 let simplify_head_pat p k =
   let rec simplify_head_pat p k =
     match p.pat_desc with
@@ -155,8 +204,7 @@ let all_coherent column =
       | _ -> false)
     | Tpat_constant c1, Tpat_constant c2 -> (
       match (c1, c2) with
-      | Const_char _, Const_char _
-      | Const_int _, Const_int _
+      | (Const_char _ | Const_int _), (Const_char _ | Const_int _)
       | Const_bigint _, Const_bigint _
       | Const_float _, Const_float _
       | Const_string _, Const_string _ ->
@@ -165,6 +213,9 @@ let all_coherent column =
           | Const_string _ ),
           _ ) ->
         false)
+    | (Tpat_constant _ | Tpat_interval _), (Tpat_constant _ | Tpat_interval _)
+      ->
+      int_range hp1 <> None && int_range hp2 <> None
     | Tpat_tuple l1, Tpat_tuple l2 -> List.length l1 = List.length l2
     | ( Tpat_record ((_, lbl1, _, _) :: _, _, _),
         Tpat_record ((_, lbl2, _, _) :: _, _, _) ) ->
@@ -270,6 +321,8 @@ let const_compare x y =
   | Const_bigint (s1, b1), Const_bigint (s2, b2) ->
     Bigint_utils.compare (s1, b1) (s2, b2)
   | Const_string s1, Const_string s2 -> String.compare s1 s2
+  | (Const_char i1 | Const_int i1), (Const_char i2 | Const_int i2) ->
+    compare i1 i2
   | _, _ -> compare x y
 
 let records_args l1 l2 =
@@ -308,6 +361,11 @@ module Compat = struct
     | Tpat_variant (l1, op1, _), Tpat_variant (l2, op2, _) ->
       l1 = l2 && ocompat ~equal_cd op1 op2
     | Tpat_constant c1, Tpat_constant c2 -> const_compare c1 c2 = 0
+    | (Tpat_constant _ | Tpat_interval _), (Tpat_constant _ | Tpat_interval _)
+      -> (
+      match (int_range p, int_range q) with
+      | Some (lo1, hi1), Some (lo2, hi2) -> lo1 <= hi2 && lo2 <= hi1
+      | _ -> false)
     | Tpat_tuple ps, Tpat_tuple qs -> compats ~equal_cd ps qs
     | Tpat_record (l1, _, _), Tpat_record (l2, _, _) ->
       let ps, qs = records_args l1 l2 in
@@ -390,6 +448,8 @@ let rec pretty_val ppf v =
     | Tpat_any -> fprintf ppf "_"
     | Tpat_var (x, _) -> fprintf ppf "%s" (Ident.name x)
     | Tpat_constant c -> fprintf ppf "%s" (pretty_const c)
+    | Tpat_interval (c1, c2) ->
+      fprintf ppf "%s .. %s" (pretty_const c1) (pretty_const c2)
     | Tpat_tuple vs -> fprintf ppf "@[(%a)@]" (pretty_vals ",") vs
     | Tpat_construct (_, cstr, []) -> fprintf ppf "%s" cstr.cstr_name
     | Tpat_construct (_, cstr, [w]) ->
@@ -508,6 +568,13 @@ let simple_match p1 p2 =
     Types.same_constructor c1 c2
   | Tpat_variant (l1, _, _), Tpat_variant (l2, _, _) -> l1 = l2
   | Tpat_constant c1, Tpat_constant c2 -> const_compare c1 c2 = 0
+  | (Tpat_constant _ | Tpat_interval _), (Tpat_constant _ | Tpat_interval _)
+    -> (
+    (* [p1] is a piece of a column split by [split_int_range], so it is either
+       inside or outside [p2] *)
+    match (int_range p1, int_range p2) with
+    | Some (lo1, hi1), Some (lo2, hi2) -> lo2 <= lo1 && hi1 <= hi2
+    | _ -> false)
   | Tpat_record _, Tpat_record _ -> true
   | Tpat_tuple p1s, Tpat_tuple p2s | Tpat_array p1s, Tpat_array p2s ->
     List.length p1s = List.length p2s
@@ -570,7 +637,7 @@ let rec simple_match_args p1 p2 =
 
 let rec normalize_pat q =
   match q.pat_desc with
-  | Tpat_any | Tpat_constant _ -> q
+  | Tpat_any | Tpat_constant _ | Tpat_interval _ -> q
   | Tpat_var _ -> make_pat Tpat_any q.pat_type q.pat_env
   | Tpat_alias (p, _, _) -> normalize_pat p
   | Tpat_tuple args ->
@@ -678,7 +745,7 @@ let do_set_args erase_mutable q r =
   | {pat_desc = Tpat_array omegas} ->
     let args, rest = read_args omegas r in
     make_pat (Tpat_array args) q.pat_type q.pat_env :: rest
-  | {pat_desc = Tpat_constant _ | Tpat_any} ->
+  | {pat_desc = Tpat_constant _ | Tpat_interval _ | Tpat_any} ->
     q :: r (* case any is used in matching.ml *)
   | _ -> fatal_error "Parmatch.set_args"
 
@@ -731,21 +798,14 @@ let filter_extra pss =
 
 let filter_all pat0 pss =
   (* The groups, most recently created first. Each row goes to the group
-     whose head [simple_match]es it; there is at most one such group, since a
-     group is only created when no other matches. *)
+     whose head matches it; there is at most one such group, since a group is
+     only created when no other matches. *)
   let groups =
     ref
       (match pat0.pat_desc with
       | Tpat_record _ | Tpat_tuple _ -> [(pat0, ref [])]
       | _ -> [])
   in
-  (* For int, char and string constants and for polymorphic variants,
-     [simple_match] is equality, so their groups are also found by hashing.
-     This keeps a column of many distinct heads, e.g. an expanded character
-     range, linear instead of quadratic. The tables are only created when needed,
-     as most calls are on small matrices. *)
-  let const_groups = lazy (Hashtbl.create 16) in
-  let variant_groups = lazy (Hashtbl.create 16) in
   let add_row (q0, rows) q qs =
     rows := (simple_match_args q0 q @ qs) :: !rows
   in
@@ -756,21 +816,17 @@ let filter_all pat0 pss =
     groups := group :: !groups;
     group
   in
-  let find_or_add tbl key q qs =
-    let tbl = Lazy.force tbl in
-    match Hashtbl.find_opt tbl key with
-    | Some group -> add_row group q qs
-    | None -> Hashtbl.add tbl key (new_group q qs)
+  (* Int and char ranges are grouped by equal bounds, not by containment as
+     [simple_match] does, so that [build_other] sees every range. *)
+  let same_head q0 q =
+    match (int_range q0, int_range q) with
+    | Some r0, Some r -> r0 = r
+    | _ -> simple_match q0 q
   in
   let insert q qs =
-    match q.pat_desc with
-    | Tpat_constant ((Const_int _ | Const_char _ | Const_string _) as c) ->
-      find_or_add const_groups c q qs
-    | Tpat_variant (l, _, _) -> find_or_add variant_groups l q qs
-    | _ -> (
-      match List.find_opt (fun (q0, _) -> simple_match q0 q) !groups with
-      | Some group -> add_row group q qs
-      | None -> ignore (new_group q qs))
+    match List.find_opt (fun (q0, _) -> same_head q0 q) !groups with
+    | Some group -> add_row group q qs
+    | None -> ignore (new_group q qs)
   in
 
   let rec filter_rec = function
@@ -890,7 +946,7 @@ let full_match closing env =
            (fun (tag, f) ->
              Btype.row_field_repr f = Rabsent || List.mem tag fields)
            row.row_fields
-  | ({pat_desc = Tpat_constant _}, _) :: _ -> false
+  | ({pat_desc = Tpat_constant _ | Tpat_interval _}, _) :: _ -> false
   | ({pat_desc = Tpat_tuple _}, _) :: _ -> true
   | ({pat_desc = Tpat_record _}, _) :: _ -> true
   | ({pat_desc = Tpat_array _}, _) :: _ -> false
@@ -913,8 +969,8 @@ let should_extend ext env =
         let path = get_type_path p.pat_type p.pat_env in
         Path.same path ext
       | Tpat_construct (_, {cstr_kind = Extension_constructor _}, _) -> false
-      | Tpat_constant _ | Tpat_tuple _ | Tpat_variant _ | Tpat_record _
-      | Tpat_array _ ->
+      | Tpat_constant _ | Tpat_interval _ | Tpat_tuple _ | Tpat_variant _
+      | Tpat_record _ | Tpat_array _ ->
         false
       | Tpat_any | Tpat_var _ | Tpat_alias _ | Tpat_or _ | Tpat_dict _ ->
         assert false))
@@ -1058,22 +1114,34 @@ let build_other ext env : Typedtree.pattern =
         (fun p_res pat ->
           make_pat (Tpat_or (pat, p_res, None)) p.pat_type p.pat_env)
         pat other_pats)
-  | (({pat_desc = Tpat_constant (Const_int _)} as p), _) :: _ ->
-    build_other_constant
-      (function
-        | Tpat_constant (Const_int i) -> i
-        | _ -> assert false)
-      (function
-        | i -> Tpat_constant (Const_int i))
-      0 succ p env
-  | (({pat_desc = Tpat_constant (Const_char _)} as p), _) :: _ ->
-    build_other_constant
-      (function
-        | Tpat_constant (Const_char i) -> i
-        | _ -> assert false)
-      (function
-        | i -> Tpat_constant (Const_char i))
-      0 succ p env
+  | ( ({pat_desc = Tpat_constant (Const_int _ | Const_char _) | Tpat_interval _}
+       as p),
+      _ )
+    :: _ ->
+    (* Int and char constants and intervals can share a column; the example is
+       the least value from 0 up that no range covers, else the greatest one
+       below 0, of the kind of the first pattern. Ranges sorted by a bound are
+       skipped in one pass. *)
+    let ranges = List.filter_map (fun (q, _) -> int_range q) env in
+    let up =
+      List.sort (fun (lo1, _) (lo2, _) -> compare lo1 lo2) ranges
+      |> List.fold_left
+           (fun i (lo, hi) -> if lo <= i && i <= hi then hi + 1 else i)
+           0
+    in
+    let down () =
+      List.sort (fun (_, hi1) (_, hi2) -> compare hi2 hi1) ranges
+      |> List.fold_left
+           (fun i (lo, hi) -> if lo <= i && i <= hi then lo - 1 else i)
+           (-1)
+    in
+    let int32_max = Int32.to_int Int32.max_int
+    and int32_min = Int32.to_int Int32.min_int in
+    if up <= int32_max then make_int_range p up up
+    else
+      let other = down () in
+      (* Every int is covered; ints are never matched exhaustively *)
+      if other < int32_min then omega else make_int_range p other other
   | (({pat_desc = Tpat_constant (Const_bigint _)} as p), _) :: _ ->
     build_other_constant
       (function
@@ -1130,7 +1198,9 @@ let build_other ext env : Typedtree.pattern =
 let rec has_instance p =
   match p.pat_desc with
   | Tpat_variant (l, _, r) when is_absent l r -> false
-  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_variant (_, None, _) -> true
+  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_interval _
+  | Tpat_variant (_, None, _) ->
+    true
   | Tpat_alias (p, _, _) | Tpat_variant (_, Some p, _) -> has_instance p
   | Tpat_or (p1, p2, _) -> has_instance p1 || has_instance p2
   | Tpat_construct (_, _, ps) | Tpat_tuple ps | Tpat_array ps ->
@@ -1184,10 +1254,14 @@ let rec satisfiable pss qs =
           else satisfiable (filter_extra pss) qs)
     | {pat_desc = Tpat_variant (l, _, r)} :: _ when is_absent l r -> false
     | q :: qs ->
-      if not (all_coherent (q :: simplified_first_col pss)) then false
+      let column = simplified_first_col pss in
+      if not (all_coherent (q :: column)) then false
       else
         let q0 = discr_pat q pss in
-        satisfiable (filter_one q0 pss) (simple_match_args q0 q @ qs))
+        List.exists
+          (fun q0 ->
+            satisfiable (filter_one q0 pss) (simple_match_args q0 q @ qs))
+          (split_int_range q0 column))
 
 (* Also return the remaining cases, to enable GADT handling
 
@@ -1232,11 +1306,15 @@ let rec satisfiables pss qs =
             | _ -> wild omega))
     | {pat_desc = Tpat_variant (l, _, r)} :: _ when is_absent l r -> []
     | q :: qs ->
-      if not (all_coherent (q :: simplified_first_col pss)) then []
+      let column = simplified_first_col pss in
+      if not (all_coherent (q :: column)) then []
       else
         let q0 = discr_pat q pss in
-        List.map (set_args q0)
-          (satisfiables (filter_one q0 pss) (simple_match_args q0 q @ qs)))
+        List.concat_map
+          (fun q0 ->
+            List.map (set_args q0)
+              (satisfiables (filter_one q0 pss) (simple_match_args q0 q @ qs)))
+          (split_int_range q0 column))
 
 (*
   Now another satisfiable function that additionally
@@ -1549,6 +1627,37 @@ let union_res r1 r2 =
   | _, Used -> r1
   | Upartial u1, Upartial u2 -> Upartial (u1 @ u2)
 
+(* An interval split into pieces is used when one of its pieces is. An
+   or-pattern below it is unused when every used piece reports it unused. *)
+let pieces_res rs =
+  let used =
+    List.filter
+      (function
+        | Unused -> false
+        | _ -> true)
+      rs
+  in
+  if used = [] then Unused
+  else if
+    List.exists
+      (function
+        | Used -> true
+        | _ -> false)
+      used
+  then Used
+  else
+    let partials =
+      List.map
+        (function
+          | Upartial u -> u
+          | _ -> [])
+        used
+    in
+    match partials with
+    | [] -> Used
+    | u :: us ->
+      Upartial (List.filter (fun p -> List.for_all (List.memq p) us) u)
+
 (* propose or pats for expansion *)
 let extract_elements qs =
   let rec do_rec seen = function
@@ -1627,16 +1736,21 @@ let rec every_satisfiables pss qs =
     | Tpat_variant (l, _, r) when is_absent l r ->
       (* Ah Jacques... *)
       Unused
-    | _ ->
+    | _ -> (
       (* standard case, filter matrix *)
       (* The handling of incoherent matrices is kept in line with
                 [satisfiable] *)
-      if not (all_coherent (uq :: simplified_first_usefulness_col pss)) then
-        Unused
+      let column = simplified_first_usefulness_col pss in
+      if not (all_coherent (uq :: column)) then Unused
       else
         let q0 = discr_pat q pss in
-        every_satisfiables (filter_one q0 pss)
-          {qs with active = simple_match_args q0 q @ rem})
+        let piece q0 =
+          every_satisfiables (filter_one q0 pss)
+            {qs with active = simple_match_args q0 q @ rem}
+        in
+        match split_int_range q0 column with
+        | [q0] -> piece q0
+        | q0s -> pieces_res (List.map piece q0s)))
 
 (*
   This function ``every_both'' performs the usefulness check
@@ -1674,6 +1788,11 @@ let rec le_pat p q =
   | Tpat_alias (p, _, _), _ -> le_pat p q
   | _, Tpat_alias (q, _, _) -> le_pat p q
   | Tpat_constant c1, Tpat_constant c2 -> const_compare c1 c2 = 0
+  | (Tpat_constant _ | Tpat_interval _), (Tpat_constant _ | Tpat_interval _)
+    -> (
+    match (int_range p, int_range q) with
+    | Some (lo1, hi1), Some (lo2, hi2) -> lo1 <= lo2 && hi2 <= hi1
+    | _ -> false)
   | Tpat_construct (_, c1, ps), Tpat_construct (_, c2, qs) ->
     Types.same_constructor c1 c2 && le_pats ps qs
   | Tpat_variant (l1, Some p1, _), Tpat_variant (l2, Some p2, _) ->
@@ -1702,49 +1821,6 @@ let get_mins le ps =
   in
   select_rec [] (select_rec [] ps)
 
-(* [get_mins le_pats pss], but faster for many rows starting with distinct
-   constants, e.g. an expanded character range. A row starting with an int,
-   char or string constant can only be covered by rows starting with the same
-   constant or with another kind of pattern, so only those are compared. *)
-let get_mins_pats pss =
-  let key = function
-    | {
-        pat_desc =
-          Tpat_constant ((Const_int _ | Const_char _ | Const_string _) as c);
-      }
-      :: _ ->
-      Some c
-    | _ -> None
-  in
-  (* [select_rec [] pss] of [get_mins le_pats]: drops each row covered by a
-     later row, and reverses the order. *)
-  let select pss =
-    let later = ref [] in
-    let later_by_key = lazy (Hashtbl.create 16) in
-    let later_unkeyed = ref [] in
-    let kept =
-      List.fold_left
-        (fun kept ps ->
-          let below qs = le_pats qs ps in
-          let key = key ps in
-          let dominated =
-            match key with
-            | None -> List.exists below !later
-            | Some c ->
-              List.exists below (Hashtbl.find_all (Lazy.force later_by_key) c)
-              || List.exists below !later_unkeyed
-          in
-          later := ps :: !later;
-          (match key with
-          | None -> later_unkeyed := ps :: !later_unkeyed
-          | Some c -> Hashtbl.add (Lazy.force later_by_key) c ps);
-          if dominated then kept else ps :: kept)
-        [] (List.rev pss)
-    in
-    List.rev kept
-  in
-  select (select pss)
-
 (*
   lub p q is a pattern that matches all values matched by p and q
   may raise Empty, when p and q are not compatible
@@ -1759,6 +1835,12 @@ let rec lub p q =
   | Tpat_or (p1, p2, _), _ -> orlub p1 p2 q
   | _, Tpat_or (q1, q2, _) -> orlub q1 q2 p (* Thanks god, lub is commutative *)
   | Tpat_constant c1, Tpat_constant c2 when const_compare c1 c2 = 0 -> p
+  | (Tpat_constant _ | Tpat_interval _), (Tpat_constant _ | Tpat_interval _)
+    -> (
+    match (int_range p, int_range q) with
+    | Some (lo1, hi1), Some (lo2, hi2) when max lo1 lo2 <= min hi1 hi2 ->
+      make_int_range p (max lo1 lo2) (min hi1 hi2)
+    | _ -> raise Empty)
   | Tpat_tuple ps, Tpat_tuple qs ->
     let rs = lubs ps qs in
     make_pat (Tpat_tuple rs) p.pat_type p.pat_env
@@ -1939,6 +2021,8 @@ module Conv = struct
         mkpat (Ppat_var nm)
       | Tpat_any | Tpat_var _ -> mkpat Ppat_any
       | Tpat_constant c -> mkpat (Ppat_constant (Untypeast.constant c))
+      | Tpat_interval (c1, c2) ->
+        mkpat (Ppat_interval (Untypeast.constant c1, Untypeast.constant c2))
       | Tpat_alias (p, _, _) -> loop p
       | Tpat_tuple lst -> mkpat (Ppat_tuple (List.map loop lst))
       | Tpat_construct (cstr_lid, cstr, lst) ->
@@ -2131,7 +2215,9 @@ let rec collect_paths_from_pat r p =
     List.fold_left collect_paths_from_pat
       (if extendable_path path then add_path path r else r)
       ps
-  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_variant (_, None, _) -> r
+  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_interval _
+  | Tpat_variant (_, None, _) ->
+    r
   | Tpat_tuple ps
   | Tpat_array ps
   | Tpat_construct (_, {cstr_kind = Extension_constructor _}, ps) ->
@@ -2190,7 +2276,7 @@ let check_unused pred casel =
       | {c_lhs = q; c_guard} :: rem ->
         let qs = [q] in
         (try
-           let pss = get_mins_pats (Ext_list.filter pref (compats qs)) in
+           let pss = get_mins le_pats (Ext_list.filter pref (compats qs)) in
            (* First look for redundant or partially redundant patterns *)
            let r = every_satisfiables (make_rows pss) (make_row qs) in
            (* Do not warn for unused [pat -> .] *)
@@ -2269,7 +2355,7 @@ let irrefutable pat = le_pat (Dict_pattern.lowering [pat] pat) omega
 
 let check_partial_param do_check_partial do_check_fragile loc casel =
   let pss = initial_matrix casel in
-  let pss = get_mins_pats pss in
+  let pss = get_mins le_pats pss in
   let total = do_check_partial loc casel pss in
   if total = Total && Warnings.is_active (Warnings.Fragile_match "") then
     do_check_fragile loc casel pss;

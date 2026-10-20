@@ -17,9 +17,11 @@ let absolute_program ~cwd program =
   if Filename.is_relative resolved then Filename.concat cwd resolved
   else resolved
 
-(* The npm package (@rescript/<target>) with the binaries for the platform
-   [system] and [architecture] name, as in cli/common/platform.cjs. Windows on
-   ARM runs the x64 binaries, which are built for amd64. *)
+(* The npm package (@rescript/<target>) with the binaries for a platform, as in
+   cli/common/platform.cjs. [system] and [architecture] are the names OCaml
+   uses for the platform this executable was built for, where x64 is "amd64".
+   Windows on ARM needs no case of its own: it runs the win32-x64 binaries.
+   Intel Macs have no package since ReScript 13. *)
 let platform_package ~system ~architecture =
   let os =
     match system with
@@ -35,6 +37,7 @@ let platform_package ~system ~architecture =
     | _ -> None
   in
   match (os, arch) with
+  | Some "darwin", Some "x64" -> None
   | Some os, Some arch -> Some ("@rescript/" ^ os ^ "-" ^ arch)
   | _ -> None
 

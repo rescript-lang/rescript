@@ -401,7 +401,6 @@ let specialize_comparison
   match () with
   | ()
     when is_base_type env ty Predef.path_int
-         || is_base_type env ty Predef.path_char
          || maybe_pointer_type env ty = Immediate ->
     intcomp
   | () when is_base_type env ty Predef.path_float -> floatcomp
@@ -1403,8 +1402,6 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
         prim ~primitive:(Pmakeblock Blk_extension)
           ~args:(Transl_path.transl_extension_path e.exp_env path :: ll)
           e.exp_loc)
-  | Texp_extension_constructor (_, path) ->
-    Transl_path.transl_extension_path e.exp_env path
   | Texp_variant (l, arg) -> (
     match arg with
     | None -> const (const_polyvar l)

@@ -36,14 +36,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-24.04 # x64
+          - os: ubuntu-26.04 # x64
             ocaml_compiler: ocaml-variants.5.5.1+options,ocaml-option-static
             upload_binaries: true
             upload_libs: true
             node-target: linux-x64
             rust-target: x86_64-unknown-linux-musl
             dune-profile: static
-          - os: ubuntu-24.04-arm # ARM
+          - os: ubuntu-26.04-arm # ARM
             ocaml_compiler: ocaml-variants.5.5.1+options,ocaml-option-static
             upload_binaries: true
             # Build the playground compiler and run the benchmarks on the fastest runner
@@ -53,13 +53,7 @@ jobs:
             node-target: linux-arm64
             rust-target: aarch64-unknown-linux-musl
             dune-profile: static
-          - os: macos-15-intel # x64
-            ocaml_compiler: 5.5.1
-            upload_binaries: true
-            node-target: darwin-x64
-            rust-target: x86_64-apple-darwin
-            dune-profile: release
-          - os: macos-15 # ARM
+          - os: macos-26 # ARM
             ocaml_compiler: 5.5.1
             upload_binaries: true
             node-target: darwin-arm64
@@ -75,7 +69,8 @@ jobs:
 
           # Verify that the compiler still builds with the oldest OCaml version we support.
           # Steps comparing OCaml and Rust rewatch are skipped on this job; the
-          # first linux-x64 job runs them.
+          # first linux-x64 job runs them. OCaml 5.0 does not build with GCC 15
+          # (C23 by default), so this job stays on Ubuntu 24.04.
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
             node-target: linux-x64
@@ -397,7 +392,7 @@ jobs:
     needs:
       - build-compiler
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       pages: write
@@ -449,7 +444,7 @@ jobs:
       - build-compiler
     outputs:
       commit_sha: ${{ steps.publish.outputs.sha }}
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -482,7 +477,7 @@ jobs:
   api-docs:
     needs:
       - build-compiler
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     steps:
       - name: Checkout rescript-lang.org
         uses: actions/checkout@v7
@@ -519,7 +514,7 @@ jobs:
           yarn build
 
   test-devcontainer:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -536,10 +531,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-15-intel
-          - os: macos-15
-          - os: ubuntu-24.04
-          - os: ubuntu-24.04-arm
+          - os: macos-26
+          - os: ubuntu-26.04
+          - os: ubuntu-26.04-arm
           - os: windows-2025
     runs-on: ${{ matrix.os }}
     steps:
@@ -602,10 +596,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-15-intel
-          - os: macos-15
-          - os: ubuntu-24.04
-          - os: ubuntu-24.04-arm
+          - os: macos-26
+          - os: ubuntu-26.04
+          - os: ubuntu-26.04-arm
           - os: windows-2025
     runs-on: ${{ matrix.os }}
     steps:
@@ -661,3 +654,25 @@ jobs:
           node src/BeltTest.mjs
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
+
+  # The single CI check that the master ruleset requires. Matrix job names
+  # contain runner labels, so requiring this job instead keeps the ruleset
+  # unchanged when runners or jobs change. It runs even when a needed job fails
+  # or the run is cancelled, because a skipped required check counts as passed.
+  ci-ok:
+    if: ${{ always() }}
+    needs:
+      - build-compiler
+      - pkg-pr-new
+      - api-docs
+      - test-devcontainer
+      - test-installation-npm
+      - test-installation-pnpm
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Check that all needed jobs succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "$NEEDS"
+          jq -e 'all(.[]; .result == "success")' <<< "$NEEDS" > /dev/null

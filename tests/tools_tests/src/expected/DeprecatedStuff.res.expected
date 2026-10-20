@@ -9,4 +9,3 @@ module Constants = {
 }
 
 let deprecatedThing = [1, 2]
-

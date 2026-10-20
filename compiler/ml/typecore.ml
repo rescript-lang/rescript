@@ -77,8 +77,6 @@ type error =
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
   | Inlined_record_expected
-  | Invalid_extension_constructor_payload
-  | Not_an_extension_constructor
   | Break_outside_loop
   | Continue_outside_loop
   | Literal_overflow of string
@@ -98,6 +96,7 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
+  | Jsx_component_without_make of Longident.t
   | Jsx_unboxed_props of type_expr
   | Tagged_template_non_tag of type_expr
   | Record_rest of Typecore_record_rest.error
@@ -600,7 +599,8 @@ let rec build_as_type env p =
     | Some row ->
       let row = row_repr row in
       newty (Tvariant {row with row_closed = false; row_more = newvar ()}))
-  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_dict _ | Tpat_array _ ->
+  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_interval _ | Tpat_dict _
+  | Tpat_array _ ->
     p.pat_type
 
 let build_or_pat env loc lid =
@@ -1421,22 +1421,35 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
         pat_attributes = sp.ppat_attributes;
         pat_env = !env;
       }
-  | Ppat_interval (Pconst_char {semantic = c1}, Pconst_char {semantic = c2}) ->
-    let open Ast_helper.Pat in
-    let gloc = {loc with Location.loc_ghost = true} in
-    let char semantic =
-      Pconst_char
-        {source = String_literal.encode_char_source semantic; semantic}
+  | Ppat_interval (c1, c2) -> (
+    (* [char] is an alias of [int], so bounds may mix both *)
+    let bound c =
+      match constant_or_raise !env loc c with
+      | (Const_int i | Const_char i) as c -> Some (i, c)
+      | Const_string _ | Const_float _ | Const_bigint _ -> None
     in
-    let rec loop c1 c2 =
-      if c1 = c2 then constant ~loc:gloc (char c1)
-      else or_ ~loc:gloc (constant ~loc:gloc (char c1)) (loop (c1 + 1) c2)
-    in
-    let p = if c1 <= c2 then loop c1 c2 else loop c2 c1 in
-    let p = {p with ppat_loc = loc} in
-    type_pat ~explode:0 p expected_ty k
-    (* TODO: record 'extra' to remember about interval *)
-  | Ppat_interval _ -> raise (Error (loc, !env, Invalid_interval))
+    match (bound c1, bound c2) with
+    | Some b1, Some b2 ->
+      let (i1, lo), (i2, hi) =
+        if fst b1 <= fst b2 then (b1, b2) else (b2, b1)
+      in
+      let ty =
+        match (lo, hi) with
+        | Const_char _, Const_char _ -> type_constant lo
+        | _ -> instance_def (Predef.type_int ())
+      in
+      unify_pat_types loc !env ty expected_ty;
+      rp k
+        {
+          pat_desc =
+            (if i1 = i2 then Tpat_constant lo else Tpat_interval (lo, hi));
+          pat_loc = loc;
+          pat_extra = [];
+          pat_type = expected_ty;
+          pat_attributes = sp.ppat_attributes;
+          pat_env = !env;
+        }
+    | _ -> raise (Error (loc, !env, Invalid_interval)))
   | Ppat_tuple spl ->
     assert (List.length spl >= 2);
     let spl_ann = List.map (fun p -> (p, newvar ())) spl in
@@ -2530,12 +2543,20 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     {exp with exp_attributes = sexp.pexp_attributes @ exp.exp_attributes}
   | Pexp_ident lid ->
     let path, desc =
-      Typetexp.find_value
-        ?deprecated_context:
-          (match deprecated_context with
-          | None -> Some Reference
-          | v -> v)
-        env lid.loc lid.txt
+      try
+        Typetexp.find_value
+          ?deprecated_context:
+            (match deprecated_context with
+            | None -> Some Reference
+            | v -> v)
+          env lid.loc lid.txt
+      with
+      | Typetexp.Error (_, _, Unbound_value (Ldot (module_lid, "make")))
+      when context = Some JsxComponent
+      ->
+        (* [<Button />] refers to [Button.make]. The module exists (otherwise
+           the lookup reports it as unbound), but it defines no component. *)
+        raise (Error (lid.loc, env, Jsx_component_without_make module_lid))
     in
     let is_recarg =
       match (repr desc.val_type).desc with
@@ -3107,8 +3128,6 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     if label.lbl_private = Private && is_private_record_field env label then
       Location.prerr_warning lid.loc
         (Warnings.Bs_private_record_mutation (Longident.last lid.txt));
-    Builtin_attributes.check_deprecated_mutable lid.loc label.lbl_attributes
-      (Longident.last lid.txt);
     rue
       {
         exp_desc = Texp_setfield (record, label_loc, label, newval);
@@ -3671,32 +3690,6 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         (Texp_open (ovf, path, lid, newenv), loc, sexp.pexp_attributes)
         :: exp.exp_extra;
     }
-  | Pexp_extension
-      ( {txt = "ocaml.extension_constructor" | "extension_constructor"; _},
-        payload ) -> (
-    match payload with
-    | PStr
-        [
-          {
-            pstr_desc =
-              Pstr_eval ({pexp_desc = Pexp_construct (lid, {txt = []}); _}, _);
-          };
-        ] ->
-      let path =
-        match (Typetexp.find_constructor env lid.loc lid.txt).cstr_kind with
-        | Extension_constructor path -> path
-        | _ -> raise (Error (lid.loc, env, Not_an_extension_constructor))
-      in
-      rue
-        {
-          exp_desc = Texp_extension_constructor (lid, path);
-          exp_loc = loc;
-          exp_extra = [];
-          exp_type = instance_def (Predef.type_extension_constructor ());
-          exp_attributes = sexp.pexp_attributes;
-          exp_env = env;
-        }
-    | _ -> raise (Error (loc, env, Invalid_extension_constructor_payload)))
   | Pexp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
   | Pexp_raw {kind; name_loc} ->
@@ -5362,7 +5355,7 @@ let report_error env loc ppf error =
        prefix in this pattern.@]"
       name Printtyp.path tpath
   | Invalid_interval ->
-    fprintf ppf "@[Only character intervals are supported in patterns.@]"
+    fprintf ppf "@[Only int and char intervals are supported in patterns.@]"
   | Invalid_for_loop_index ->
     fprintf ppf "@[Invalid for-loop index: only variables and _ are allowed.@]"
   | No_value_clauses ->
@@ -5382,11 +5375,6 @@ let report_error env loc ppf error =
        destructuring it first"
   | Inlined_record_expected ->
     fprintf ppf "@[This constructor expects an inlined record argument.@]"
-  | Invalid_extension_constructor_payload ->
-    fprintf ppf
-      "Invalid [%%extension_constructor] payload, a constructor is expected."
-  | Not_an_extension_constructor ->
-    fprintf ppf "This constructor is not an extension constructor."
   | Break_outside_loop ->
     fprintf ppf "`break` can only be used directly inside a loop body."
   | Continue_outside_loop ->
@@ -5571,6 +5559,19 @@ let report_error env loc ppf error =
     fprintf ppf
       "Cannot compile JSX expression because JSX support is not enabled. Add \
        \"jsx\" settings to rescript.json to enable JSX support."
+  | Jsx_component_without_make module_lid ->
+    fprintf ppf
+      "@[<v>The module @{<info>%a@} can't be used as a JSX component, because \
+       it doesn't define @{<info>make@}.@,\
+       @,\
+       A component module defines its component as @{<info>make@}, for \
+       example:@,\
+       @,\
+      \  @{<info>@react.component@}@,\
+      \  let make = (~label) => ...@]"
+      longident module_lid;
+    ignore
+      (Typetexp.spellcheck_value ppf env (Longident.Ldot (module_lid, "make")))
   | Jsx_unboxed_props typ ->
     fprintf ppf
       "@[<v>The props of this JSX element have type %a, which is an \

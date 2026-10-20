@@ -124,7 +124,7 @@ let pat sub {pat_extra; pat_desc; pat_env; _} =
   match pat_desc with
   | Tpat_any -> ()
   | Tpat_var _ -> ()
-  | Tpat_constant _ -> ()
+  | Tpat_constant _ | Tpat_interval _ -> ()
   | Tpat_tuple l -> List.iter (sub.pat sub) l
   | Tpat_construct (_, _, l) -> List.iter (sub.pat sub) l
   | Tpat_variant (_, po, _) -> Option.iter (sub.pat sub) po
@@ -223,7 +223,6 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
     sub.expr sub exp
   | Texp_assert exp -> sub.expr sub exp
   | Texp_pack mexpr -> sub.module_expr sub mexpr
-  | Texp_extension_constructor _ -> ()
 
 let package_type sub {pack_fields; _} =
   List.iter (fun (_, p) -> sub.typ sub p) pack_fields

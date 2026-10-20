@@ -1,15 +1,19 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
+  addedByPullRequest,
   categories,
   checkPullRequest,
+  linkFragment,
   openSection,
   parseFragment,
   placeholderLink,
   prepareRelease,
+  previewFragment,
   readFragments,
   renderFragments,
   run,
@@ -26,8 +30,8 @@ test("validates category names and bullet content", () => {
     ["recovery.bugfix.md", note],
     ["recovery.md", note],
     ["recovery.fix.md", ""],
-    ["recovery.fix.md", "- Missing link"],
     ["recovery.fix.md", `Heading\n${note}`],
+    ["recovery.fix.md", "- Bad\ncontinuation"],
   ]) {
     assert.throws(() => parseFragment(name, content));
   }
@@ -215,6 +219,121 @@ test("validates before mutation, sorts fragments, consumes only on release", asy
   await run("release", root);
   assert.deepEqual(await fs.readdir(path.join(root, "changes")), ["README.md"]);
   await assert.rejects(run("release", root));
+});
+
+test("links bullets without a link to the pull request that added them", () => {
+  const fragment = parseFragment(
+    "recovery.fix.md",
+    "- Fix recovery\n  after errors.\n- Fix formatting. https://github.com/rescript-lang/rescript/pull/7",
+  );
+  assert.equal(fragment.unlinked, true);
+  assert.equal(fragment.pr, 7);
+  const linked = linkFragment(fragment, () => 42);
+  assert.equal(
+    linked.text,
+    "- Fix recovery\n  after errors. https://github.com/rescript-lang/rescript/pull/42\n- Fix formatting. https://github.com/rescript-lang/rescript/pull/7",
+  );
+  assert.equal(linked.pr, 42);
+  const plain = parseFragment("plain.fix.md", "- Fix recovery.");
+  assert.equal(plain.pr, null);
+  assert.equal(
+    linkFragment(parseFragment("linked.fix.md", note), () => {
+      throw new Error("not looked up");
+    }).text,
+    note,
+  );
+  assert.throws(
+    () => linkFragment(plain, () => null),
+    /changes\/plain\.fix\.md: no PR link/,
+  );
+});
+
+test("previews merged fragments with their links, newest PR first", () => {
+  const numbers = { "a.fix.md": 10, "b.fix.md": 30, "c.fix.md": null };
+  const fragments = [
+    parseFragment("a.fix.md", "- Older."),
+    parseFragment("b.fix.md", "- Newer."),
+    parseFragment("c.fix.md", "- Not merged yet."),
+    parseFragment(
+      "d.fix.md",
+      "- Linked. https://github.com/rescript-lang/rescript/pull/20",
+    ),
+  ].map(fragment => previewFragment(fragment, name => numbers[name]));
+  assert.ok(
+    renderFragments(fragments).includes(
+      [
+        "- Not merged yet.",
+        "- Newer. https://github.com/rescript-lang/rescript/pull/30",
+        "- Linked. https://github.com/rescript-lang/rescript/pull/20",
+        "- Older. https://github.com/rescript-lang/rescript/pull/10",
+      ].join("\n"),
+    ),
+  );
+});
+
+test("releases fragments without a link with their pull request's link", async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "rescript-changelog-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await fs.mkdir(path.join(root, "changes"));
+  await fs.writeFile(
+    path.join(root, "package.json"),
+    JSON.stringify({ version: "13.0.0" }),
+  );
+  await fs.writeFile(path.join(root, "CHANGELOG.md"), changelog);
+  await fs.writeFile(path.join(root, "changes", "old.fix.md"), note);
+  await fs.writeFile(path.join(root, "changes", "new.fix.md"), "- New fix.");
+  await fs.writeFile(path.join(root, "changes", "lost.fix.md"), "- Lost.");
+  const numbers = { "new.fix.md": 9000, "lost.fix.md": null };
+  await assert.rejects(
+    run("release", root, name => numbers[name]),
+    /changes\/lost\.fix\.md/,
+  );
+  assert.equal(
+    await fs.readFile(path.join(root, "CHANGELOG.md"), "utf8"),
+    changelog,
+  );
+  await fs.unlink(path.join(root, "changes", "lost.fix.md"));
+  await run("release", root, name => numbers[name]);
+  assert.ok(
+    (await fs.readFile(path.join(root, "CHANGELOG.md"), "utf8")).includes(
+      `${categories.fix}\n\n- New fix. https://github.com/rescript-lang/rescript/pull/9000\n${note}\n`,
+    ),
+  );
+});
+
+test("finds the pull request in the subject of the commit that added a fragment", async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "rescript-changelog-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const git = (...args) =>
+    execFileSync("git", args, {
+      cwd: root,
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: "a",
+        GIT_AUTHOR_EMAIL: "a@example.com",
+        GIT_COMMITTER_NAME: "a",
+        GIT_COMMITTER_EMAIL: "a@example.com",
+      },
+    });
+  git("init", "-q");
+  await fs.mkdir(path.join(root, "changes"));
+  const commit = async (name, subject) => {
+    await fs.writeFile(path.join(root, "changes", name), "- Note.");
+    git("add", ".");
+    git("commit", "-q", "-m", subject);
+  };
+  await commit("squashed.fix.md", "Fix recovery (#123)");
+  await commit("rebased.fix.md", "Fix formatting");
+  assert.equal(addedByPullRequest(root, "squashed.fix.md"), 123);
+  assert.equal(addedByPullRequest(root, "rebased.fix.md"), null);
+  assert.equal(addedByPullRequest(root, "missing.fix.md"), null);
+  // A later edit by another pull request does not change who added it.
+  await fs.writeFile(
+    path.join(root, "changes", "squashed.fix.md"),
+    "- Edited.",
+  );
+  git("commit", "-q", "-am", "Reword (#456)");
+  assert.equal(addedByPullRequest(root, "squashed.fix.md"), 123);
 });
 
 test("preview groups categories without consuming fragments", () => {

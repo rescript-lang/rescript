@@ -14,7 +14,7 @@ on:
 jobs:
   release-plan:
     name: Plan release from ${{ github.ref_name }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       version: ${{ steps.plan.outputs.version }}
       npm-tag: ${{ steps.plan.outputs.npm-tag }}
@@ -77,7 +77,7 @@ jobs:
       contents: write
       id-token: write
     environment: npm-release
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -137,10 +137,10 @@ jobs:
           path: packages/playground
 
       - name: Setup Rclone
-        uses: cometkim/rclone-actions/setup-rclone@main
+        uses: cometkim/rclone-actions/setup-rclone@8d9c6b95341f7698609deee65c3d62af42893288 # main, 2025-06-18
 
       - name: Configure Rclone remote
-        uses: cometkim/rclone-actions/configure-remote/s3-provider@main
+        uses: cometkim/rclone-actions/configure-remote/s3-provider@8d9c6b95341f7698609deee65c3d62af42893288 # main, 2025-06-18
         with:
           name: rescript
           provider: Cloudflare

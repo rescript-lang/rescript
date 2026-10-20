@@ -8,4 +8,3 @@ let shift1 = Array.shift([1, 2, 3])
 let shift2 = [1, 2, 3]->Array.shift
 
 let deprecatedThing1 = DeprecatedStuff.Constants.otherThing
-

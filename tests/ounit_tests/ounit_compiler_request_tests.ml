@@ -1077,6 +1077,58 @@ let ppx_recovery_tests _context =
         (contains_text repaired.stderr "+ rewatch-test-ppx")
         "direct verbose output is returned through the request boundary")
 
+(* The PPX bridge renames a PPX's [ocaml.warning] to [warning], so source
+   spelled that way must be rejected before an external PPX sees it. *)
+let ppx_removed_ocaml_spelling_tests _context =
+  with_temp_dir "rewatch-driver-ppx-ocaml-" (fun root ->
+      let identity_ppx command =
+        let quote = if String.contains command '\'' then '\'' else '"' in
+        match String.split_on_char quote command with
+        | _program :: input :: _separator :: output :: _ ->
+          copy_existing_file input output;
+          (0, "", "")
+        | _ -> (2, "", "could not decode test PPX command")
+      in
+      let run input =
+        Rescript_compiler_driver.run_request ~cwd:root
+          ~argv:
+            [
+              "-nostdlib";
+              "-nopervasives";
+              "-bs-project-root";
+              root;
+              "-bs-package-name";
+              "driver-test";
+              "-bs-package-output";
+              "commonjs:.:.js";
+              "-ppx";
+              "identity-ppx";
+            ]
+          ~input ~run_external:(Some identity_ppx)
+      in
+      write root "Impl.res" "@@ocaml.warning(\"-32\")\nlet value = 1\n";
+      let impl = run "Impl.res" in
+      expect_code 2 impl;
+      check
+        (contains_text impl.stderr
+           "`@ocaml.warning` is no longer supported, use `@warning` instead.")
+        "@@ocaml.warning in an implementation is rejected before the PPX";
+      write root "Intf.resi"
+        "let value: int\n@ocaml.ppwarning(\"x\")\nlet other: int\n";
+      let intf = run "Intf.resi" in
+      expect_code 2 intf;
+      check
+        (contains_text intf.stderr "`@ocaml.ppwarning` is no longer supported")
+        "@ocaml.ppwarning in an interface is rejected before the PPX";
+      write root "Error.res" "let value = %ocaml.error(\"boom\")\n";
+      let error = run "Error.res" in
+      expect_code 2 error;
+      check
+        (contains_text error.stderr "`%ocaml.error` is no longer supported")
+        "%ocaml.error is rejected before the PPX";
+      write root "Bare.res" "@@warning(\"-32\")\nlet value = 1\n";
+      expect_code 0 (run "Bare.res"))
+
 let control_flow_and_output_tests _context =
   with_temp_dir "rewatch-driver-control-" (fun root ->
       let process_cwd = Sys.getcwd () in
@@ -1589,6 +1641,7 @@ let suites =
          "eval_relative_temp_dir" >:: eval_relative_temp_dir_tests;
          "recovery" >:: recovery_tests;
          "ppx_recovery" >:: ppx_recovery_tests;
+         "ppx_removed_ocaml_spelling" >:: ppx_removed_ocaml_spelling_tests;
          "control_flow_and_output" >:: control_flow_and_output_tests;
          "state_boundary" >:: state_boundary_tests;
          "package_and_load_path_isolation"

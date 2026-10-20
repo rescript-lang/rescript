@@ -188,7 +188,7 @@ end = struct
     | Tpat_any -> ()
     | Tpat_var _ -> ()
     | Tpat_alias (pat1, _, _) -> iter_pattern pat1
-    | Tpat_constant _ -> ()
+    | Tpat_constant _ | Tpat_interval _ -> ()
     | Tpat_tuple list -> List.iter iter_pattern list
     | Tpat_construct (_, _, args) -> List.iter iter_pattern args
     | Tpat_variant (_, pato, _) -> (
@@ -309,8 +309,7 @@ end = struct
       iter_extension_constructor cd;
       iter_expression exp
     | Texp_assert exp -> iter_expression exp
-    | Texp_pack mexpr -> iter_module_expr mexpr
-    | Texp_extension_constructor _ -> ());
+    | Texp_pack mexpr -> iter_module_expr mexpr);
     Iter.leave_expression exp
 
   and iter_package_type pack =

@@ -91,7 +91,6 @@ These are intentional:
 - Configuration errors use the compiler-style form `path: message`, and JSON
   syntax errors use `path:line:column: message`. Messages name the field and
   the accepted values instead of the parser's internal types.
-- `rescript clean` also removes out-of-source JavaScript outputs.
 - The CLI uses Cmdliner:
   - help is rendered as a man page;
   - `--no-timing` takes no value;
@@ -125,8 +124,8 @@ These are intentional:
   ends its descendants.
 - **Pipes:** each child's stdout and stderr are drained by reader threads,
   because Windows can't `select` on anonymous pipes.
-- **Watching:** uses libuv through `luv`. `.github/opam-repository` holds a
-  patched luv package for static arm64 musl builds.
+- **Watching:** uses libuv through `luv`. `rescript.opam.template` pins luv
+  to a commit of the rescript-lang/luv fork (libuv 1.53).
 
 The test suite compiles `platform_windows.ml` on every platform, so the Windows
 backend is always type-checked. Its process and Job Object paths only run on

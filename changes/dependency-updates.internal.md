@@ -1,0 +1,1 @@
+- Update Yarn to 4.18.1, mocha to 12, Biome to 2.5.15, actions/setup-node to v7 and other development dependencies, resolving all open Dependabot security alerts. https://github.com/rescript-lang/rescript/pull/8890

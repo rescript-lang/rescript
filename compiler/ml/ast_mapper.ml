@@ -640,7 +640,7 @@ let default_mapper =
   }
 
 let rec extension_of_error {loc; msg; if_highlight; sub} =
-  ( {loc; txt = "ocaml.error"},
+  ( {loc; txt = "error"},
     PStr
       ([
          Str.eval (Exp.constant (Const.string msg));

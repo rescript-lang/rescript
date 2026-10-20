@@ -785,6 +785,8 @@ let super_spellcheck ppf fold env lid =
   | Longident.Lident s -> did_you_mean ppf (fun _ -> choices None s)
   | Longident.Ldot (r, s) -> did_you_mean ppf (fun _ -> choices (Some r) s)
 
+let spellcheck_value ppf env lid = super_spellcheck ppf Env.fold_values env lid
+
 let spellcheck ppf fold env lid =
   let choices ~path name =
     let env = fold (fun x xs -> x :: xs) path env [] in
@@ -890,7 +892,7 @@ let report_error env ppf = function
     | other_ident ->
       Format.fprintf ppf "The value %a can't be found" Printtyp.longident
         other_ident);
-    let did_spellcheck = super_spellcheck ppf Env.fold_values env lid in
+    let did_spellcheck = spellcheck_value ppf env lid in
     (* For cases such as when the user refers to something that's a value with 
       a lowercase identifier in JS but a module in ReScript.
       

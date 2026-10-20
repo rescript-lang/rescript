@@ -182,6 +182,16 @@ let ctx_matcher p =
         (p, args @ rem)
       | Tpat_any -> (p, omegas @ rem)
       | _ -> raise NoMatch)
+  | (Tpat_constant _ | Tpat_interval _) when Parmatch.int_range p <> None -> (
+    fun (* [p] is a piece of a split column; values matched by a context range
+       that overlaps it may reach it. *)
+          q
+      rem
+    ->
+      match q.pat_desc with
+      | (Tpat_constant _ | Tpat_interval _) when may_compat p q -> (p, rem)
+      | Tpat_any -> (p, rem)
+      | _ -> raise NoMatch)
   | Tpat_constant cst -> (
     fun q rem ->
       match q.pat_desc with
@@ -621,7 +631,7 @@ let rec what_is_cases cases =
   | _ -> assert false
 
 (* A few operations on default environments *)
-let as_matrix cases = get_mins_pats (List.map (fun (ps, _) -> ps) cases)
+let as_matrix cases = get_mins le_pats (List.map (fun (ps, _) -> ps) cases)
 
 let cons_default matrix raise_num default =
   match matrix with
@@ -661,7 +671,8 @@ let rec extract_vars r p =
   | Tpat_array pats -> List.fold_left extract_vars r pats
   | Tpat_variant (_, Some p, _) -> extract_vars r p
   | Tpat_or (p, _, _) -> extract_vars r p
-  | Tpat_constant _ | Tpat_any | Tpat_variant (_, None, _) -> r
+  | Tpat_constant _ | Tpat_interval _ | Tpat_any | Tpat_variant (_, None, _) ->
+    r
 
 exception Cannot_flatten
 
@@ -701,7 +712,7 @@ let pat_as_constr = function
   | _ -> fatal_error "Matching.pat_as_constr"
 
 let group_constant = function
-  | {pat_desc = Tpat_constant _} -> true
+  | {pat_desc = Tpat_constant _ | Tpat_interval _} -> true
   | _ -> false
 
 and group_constructor = function
@@ -731,7 +742,7 @@ and group_array = function
 let get_group p =
   match p.pat_desc with
   | Tpat_any -> group_var
-  | Tpat_constant _ -> group_constant
+  | Tpat_constant _ | Tpat_interval _ -> group_constant
   | Tpat_construct _ -> group_constructor
   | Tpat_tuple _ -> group_tuple
   | Tpat_record _ -> group_record
@@ -739,9 +750,19 @@ let get_group p =
   | Tpat_variant (_, _, _) -> group_variant
   | _ -> fatal_error "Matching.get_group"
 
-let is_or p =
+(* A row starting with an or-pattern. An interval is precompiled like an
+   or-pattern of its values when the rest of its row tests something: that is
+   then compiled once, in a handler, instead of once per piece of the column. *)
+let is_or p ps =
   match p.pat_desc with
   | Tpat_or _ -> true
+  | Tpat_interval _ ->
+    List.exists
+      (fun q ->
+        match q.pat_desc with
+        | Tpat_any | Tpat_var _ -> false
+        | _ -> true)
+      ps
   | _ -> false
 
 (* Conditions for appending to the Or matrix *)
@@ -752,7 +773,7 @@ and condb (act : action) ps qs = act.guard = None && Parmatch.le_pats qs ps
 let or_ok p ps l =
   List.for_all
     (function
-      | ({pat_desc = Tpat_or _} as q) :: qs, act -> conda p q || condb act ps qs
+      | q :: qs, act when is_or q qs -> conda p q || condb act ps qs
       | _ -> true)
     l
 
@@ -772,7 +793,7 @@ let rec get_equiv p l =
 let insert_or_append p ps act ors no =
   let rec attempt seen = function
     | ((q :: qs, act_q) as cl) :: rem ->
-      if is_or q then
+      if is_or q qs then
         if may_compat p q then
           if
             Set_ident.is_empty (extract_vars Set_ident.empty p)
@@ -858,7 +879,7 @@ let rec split_or argo cls args def =
     | [] -> cons_next (List.rev before) (List.rev ors) (List.rev no)
     | ((p :: ps, act) as cl) :: rem ->
       if up_ok cl no then
-        if is_or p then
+        if is_or p ps then
           let ors, no = insert_or_append p ps act ors no in
           do_split before ors no rem
         else if up_ok cl ors then do_split (cl :: before) ors no rem
@@ -1067,7 +1088,7 @@ and precompile_or argo cls ors args def k =
   | [] -> split_constr cls args def k
   | _ ->
     let rec do_cases = function
-      | (({pat_desc = Tpat_or _} as orp) :: patl, action) :: rem ->
+      | (orp :: patl, action) :: rem when is_or orp patl ->
         let others, rem = get_equiv orp rem in
         let orpm =
           {
@@ -1147,28 +1168,13 @@ let add make_matching_fun division eq_key key patl_action args =
     cell.pm.cases <- [patl_action];
     (key, cell) :: division
 
-(* Cells whose key is [hashable] are also found by hashing, which must agree
-   with [eq_key]. This keeps a column of many distinct keys linear. *)
-let divide ?(hashable = fun _ -> false) make eq_key get_key get_args ctx pm =
-  let cells = lazy (Hashtbl.create 16) in
+let divide make eq_key get_key get_args ctx pm =
   let rec divide_rec = function
-    | (p :: patl, action) :: rem -> (
+    | (p :: patl, action) :: rem ->
       let this_match = divide_rec rem in
-      let key = get_key p in
-      let patl_action = (get_args p patl, action) in
-      if not (hashable key) then
-        add (make p pm.default ctx) this_match eq_key key patl_action pm.args
-      else
-        let cells = Lazy.force cells in
-        match Hashtbl.find_opt cells key with
-        | Some cell ->
-          cell.pm.cases <- patl_action :: cell.pm.cases;
-          this_match
-        | None ->
-          let cell = make p pm.default ctx pm.args in
-          cell.pm.cases <- [patl_action];
-          Hashtbl.add cells key cell;
-          (key, cell) :: this_match)
+      add (make p pm.default ctx) this_match eq_key (get_key p)
+        (get_args p patl, action)
+        pm.args
     | _ -> []
   in
 
@@ -1200,16 +1206,32 @@ let divide_line make_ctx make get_args pat ctx pm =
    new  ``pattern_matching'' records.
 *)
 
-let rec matcher_const cst p rem =
+(* The key of a constant column is a range of constants: [(c, c)] for a
+   constant [c], and the bounds of a piece of a split interval column. *)
+let int_key = function
+  | ( (Asttypes.Const_int lo | Const_char lo),
+      (Asttypes.Const_int hi | Const_char hi) ) ->
+    Some (lo, hi)
+  | _ -> None
+
+let rec matcher_const ((c1, c2) as key) p rem =
   match p.pat_desc with
   | Tpat_or (p1, p2, _) -> (
-    try matcher_const cst p1 rem with NoMatch -> matcher_const cst p2 rem)
-  | Tpat_constant c1 when const_compare c1 cst = 0 -> rem
+    try matcher_const key p1 rem with NoMatch -> matcher_const key p2 rem)
+  | (Tpat_constant _ | Tpat_interval _) when Parmatch.int_range p <> None -> (
+    match (int_key key, Parmatch.int_range p) with
+    | Some (lo, hi), Some (a, b) ->
+      if a <= lo && hi <= b then rem
+      else if b < lo || hi < a then raise NoMatch
+      else fatal_error "Matching.matcher_const: range across a piece"
+    | _ -> raise NoMatch)
+  | Tpat_constant c when const_compare c c1 = 0 && const_compare c c2 = 0 -> rem
   | Tpat_any -> rem
   | _ -> raise NoMatch
 
 let get_key_constant caller = function
-  | {pat_desc = Tpat_constant cst} -> cst
+  | {pat_desc = Tpat_constant cst} -> (cst, cst)
+  | {pat_desc = Tpat_interval (lo, hi)} -> (lo, hi)
   | p ->
     prerr_endline ("BAD: " ^ caller);
     pretty_pat p;
@@ -1224,15 +1246,89 @@ let make_constant_matching p def ctx = function
     and ctx = filter_ctx p ctx in
     {pm = {cases = []; args = argl; default = def}; ctx; pat = normalize_pat p}
 
+(* The int and char ranges of the first column of the cases and of the default
+   matrices, when one of them is an interval. *)
+let column_int_ranges m =
+  let has_interval = ref false in
+  let rec heads p acc =
+    match p.pat_desc with
+    | Tpat_alias (p, _, _) -> heads p acc
+    | Tpat_or (p1, p2, _) -> heads p1 (heads p2 acc)
+    | _ -> (
+      (match p.pat_desc with
+      | Tpat_interval _ -> has_interval := true
+      | _ -> ());
+      match Parmatch.int_range p with
+      | Some r -> r :: acc
+      | None -> acc)
+  in
+  let rows acc pss =
+    List.fold_left
+      (fun acc -> function
+        | p :: _ -> heads p acc
+        | [] -> acc)
+      acc pss
+  in
+  let ranges = rows [] (List.map fst m.cases) in
+  let ranges =
+    List.fold_left (fun acc (pss, _) -> rows acc pss) ranges m.default
+  in
+  if !has_interval then Some ranges else None
+
+(* Divides a column with intervals into pieces cut at the bounds of all its
+   ranges, so that each range covers whole pieces. A case goes to every piece
+   its head covers; the number of pieces depends on the number of patterns,
+   not on the width of the ranges. *)
+let divide_constant_ranges ranges ctx m =
+  let cuts =
+    List.fold_left (fun acc (lo, hi) -> lo :: (hi + 1) :: acc) [] ranges
+    |> List.sort_uniq compare |> Array.of_list
+  in
+  let n = Array.length cuts - 1 in
+  let index x =
+    (* position of [x] in [cuts] *)
+    let rec search lo hi =
+      let mid = (lo + hi) / 2 in
+      if cuts.(mid) = x then mid
+      else if cuts.(mid) < x then search (mid + 1) hi
+      else search lo (mid - 1)
+    in
+    search 0 n
+  in
+  let rows = Array.make n [] and heads = Array.make n None in
+  List.iter
+    (fun (patl, action) ->
+      match patl with
+      | p :: patl -> (
+        match Parmatch.int_range p with
+        | Some (lo, hi) ->
+          for i = index lo to index (hi + 1) - 1 do
+            rows.(i) <- (get_args_constant p patl, action) :: rows.(i);
+            if heads.(i) = None then heads.(i) <- Some p
+          done
+        | None -> ignore (get_key_constant "divide" p))
+      | [] -> fatal_error "Matching.divide_constant_ranges")
+    m.cases;
+  let cells = ref [] in
+  for i = n - 1 downto 0 do
+    match heads.(i) with
+    | Some p ->
+      let p = Parmatch.make_int_range p cuts.(i) (cuts.(i + 1) - 1) in
+      let cell = make_constant_matching p m.default ctx m.args in
+      cell.pm.cases <- List.rev rows.(i);
+      cells := (get_key_constant "divide" p, cell) :: !cells
+    | None -> ()
+  done;
+  !cells
+
 let divide_constant ctx m =
-  divide
-    ~hashable:(function
-      | Asttypes.Const_int _ | Const_char _ | Const_string _ -> true
-      | Const_float _ | Const_bigint _ -> false)
-    make_constant_matching
-    (fun c d -> const_compare c d = 0)
-    (get_key_constant "divide")
-    get_args_constant ctx m
+  match column_int_ranges m with
+  | Some ranges -> divide_constant_ranges ranges ctx m
+  | None ->
+    divide make_constant_matching
+      (fun (c, _) (d, _) -> const_compare c d = 0)
+      (get_key_constant "divide")
+      get_args_constant ctx m
 
 (* Matching against a constructor *)
 
@@ -1352,7 +1448,7 @@ let make_constr_matching p def ctx = function
    untagged case binds its argument only once its type test has passed. *)
 let rec rejects_nested_some p =
   match p.pat_desc with
-  | Tpat_any | Tpat_constant _ -> true
+  | Tpat_any | Tpat_constant _ | Tpat_interval _ -> true
   | Tpat_or (p1, p2, _) -> rejects_nested_some p1 && rejects_nested_some p2
   | Tpat_construct (_, cstr, _) -> (
     match cstr.cstr_kind with
@@ -1813,19 +1909,22 @@ open Switch
 
 let rec last def = function
   | [] -> def
-  | [(x, _)] -> x
+  | [(_, x, _)] -> x
   | _ :: rem -> last def rem
 
 let get_edges low high l =
   match l with
   | [] -> (low, high)
-  | (x, _) :: _ -> (x, last high l)
+  | (x, _, _) :: _ -> (x, last high l)
 
 let as_interval_canfail fail low high l =
   let store = Store_exp.mk_store () in
 
-  let do_store _tag act =
-    let i = store.act_store act in
+  (* The action of a range [i .. j] is used for each of its values. Storing it
+     as shared emits it once, as an expanded range sharing the action of each
+     value used to; copies would declare its variables twice. *)
+  let do_store _tag i j act =
+    let i = if i < j then store.act_store_shared act else store.act_store act in
     (*
     eprintf "STORE [%s] %i %s\n" tag i (string_of_lam act) ;
 *)
@@ -1836,37 +1935,37 @@ let as_interval_canfail fail low high l =
     | [] ->
       if cur_high = high then [(cur_low, cur_high, cur_act)]
       else [(cur_low, cur_high, cur_act); (cur_high + 1, high, 0)]
-    | (i, act_i) :: rem as all ->
-      let act_index = do_store "NO" act_i in
+    | (i, j, act_i) :: rem as all ->
+      let act_index = do_store "NO" i j act_i in
       if cur_high + 1 = i then
-        if act_index = cur_act then nofail_rec cur_low i cur_act rem
-        else if act_index = 0 then (cur_low, i - 1, cur_act) :: fail_rec i i rem
-        else (cur_low, i - 1, cur_act) :: nofail_rec i i act_index rem
+        if act_index = cur_act then nofail_rec cur_low j cur_act rem
+        else if act_index = 0 then (cur_low, i - 1, cur_act) :: fail_rec i j rem
+        else (cur_low, i - 1, cur_act) :: nofail_rec i j act_index rem
       else if act_index = 0 then
         (cur_low, cur_high, cur_act)
         :: fail_rec (cur_high + 1) (cur_high + 1) all
       else
         (cur_low, cur_high, cur_act)
         :: (cur_high + 1, i - 1, 0)
-        :: nofail_rec i i act_index rem
+        :: nofail_rec i j act_index rem
   and fail_rec cur_low cur_high = function
     | [] -> [(cur_low, cur_high, 0)]
-    | (i, act_i) :: rem ->
-      let index = do_store "YES" act_i in
-      if index = 0 then fail_rec cur_low i rem
-      else (cur_low, i - 1, 0) :: nofail_rec i i index rem
+    | (i, j, act_i) :: rem ->
+      let index = do_store "YES" i j act_i in
+      if index = 0 then fail_rec cur_low j rem
+      else (cur_low, i - 1, 0) :: nofail_rec i j index rem
   in
 
   let init_rec = function
     | [] -> [(low, high, 0)]
-    | (i, act_i) :: rem ->
-      let index = do_store "INIT" act_i in
-      if index = 0 then fail_rec low i rem
-      else if low < i then (low, i - 1, 0) :: nofail_rec i i index rem
-      else nofail_rec i i index rem
+    | (i, j, act_i) :: rem ->
+      let index = do_store "INIT" i j act_i in
+      if index = 0 then fail_rec low j rem
+      else if low < i then (low, i - 1, 0) :: nofail_rec i j index rem
+      else nofail_rec i j index rem
   in
 
-  assert (do_store "FAIL" fail = 0);
+  assert (do_store "FAIL" 0 0 fail = 0);
   (* fail has action index 0 *)
   let r = init_rec l in
   (Array.of_list r, store)
@@ -1875,28 +1974,30 @@ let as_interval_nofail l =
   let store = Store_exp.mk_store () in
   let rec some_hole = function
     | [] | [_] -> false
-    | (i, _) :: ((j, _) :: _ as rem) -> j > i + 1 || some_hole rem
+    | (_, i, _) :: ((j, _, _) :: _ as rem) -> j > i + 1 || some_hole rem
   in
   let rec i_rec cur_low cur_high cur_act = function
     | [] -> [(cur_low, cur_high, cur_act)]
-    | (i, act) :: rem ->
-      let act_index = store.act_store act in
-      if act_index = cur_act then i_rec cur_low i cur_act rem
-      else (cur_low, cur_high, cur_act) :: i_rec i i act_index rem
+    | (i, j, act) :: rem ->
+      let act_index =
+        if i < j then store.act_store_shared act else store.act_store act
+      in
+      if act_index = cur_act then i_rec cur_low j cur_act rem
+      else (cur_low, cur_high, cur_act) :: i_rec i j act_index rem
   in
   let inters =
     match l with
-    | (i, act) :: rem ->
+    | (i, j, act) :: rem ->
       let act_index =
         (* In case there is some hole and that a switch is emitted,
            action 0 will be used as the action of unreachable
            cases (cf. switch.ml, make_switch).
            Hence, this action will be shared *)
-        if some_hole rem then store.act_store_shared act
+        if some_hole rem || i < j then store.act_store_shared act
         else store.act_store act
       in
       assert (act_index = 0);
-      i_rec i i act_index rem
+      i_rec i j act_index rem
     | _ -> assert false
   in
 
@@ -1907,16 +2008,26 @@ let sort_int_lambda_list l =
     (fun (i1, _) (i2, _) -> if i1 < i2 then -1 else if i2 < i1 then 1 else 0)
     l
 
-let as_interval fail low high l =
-  let l = sort_int_lambda_list l in
+(* [l] maps disjoint ranges [lo .. hi] to actions *)
+let as_interval_ranges fail low high l =
+  let l = List.sort (fun (i1, _, _) (i2, _, _) -> compare i1 i2) l in
   ( get_edges low high l,
     match fail with
     | None -> as_interval_nofail l
     | Some act -> as_interval_canfail act low high l )
 
-let call_switcher fail arg low high int_lambda_list =
-  let edges, (cases, actions) = as_interval fail low high int_lambda_list in
+let as_interval fail low high l =
+  as_interval_ranges fail low high (List.map (fun (i, act) -> (i, i, act)) l)
+
+let call_switcher_ranges fail arg low high range_lambda_list =
+  let edges, (cases, actions) =
+    as_interval_ranges fail low high range_lambda_list
+  in
   Switch.zyva edges arg cases actions
+
+let call_switcher fail arg low high int_lambda_list =
+  call_switcher_ranges fail arg low high
+    (List.map (fun (i, act) -> (i, i, act)) int_lambda_list)
 
 let rec list_as_pat = function
   | [] -> fatal_error "Matching.list_as_pat"
@@ -1999,33 +2110,30 @@ let combine_constant loc arg cst partial ctx def
   let fail, local_jumps = mk_failaction_neg partial ctx def in
   let lambda1 =
     match (cst : Asttypes.constant) with
-    | Const_int _ ->
-      let int_lambda_list =
+    | Const_int _ | Const_char _ ->
+      (* [char] is an alias of [int], so a column can mix both. Its keys are
+         ranges. *)
+      let range_lambda_list =
         List.map
-          (function
-            | Asttypes.Const_int n, l -> (n, l)
-            | _ -> assert false)
+          (fun (key, l) ->
+            match int_key key with
+            | Some (lo, hi) -> (lo, hi, l)
+            | None -> assert false)
           const_lambda_list
       in
       (* Match intervals must use ReScript's int32 bounds, not the host's.
          Otherwise the upper fail interval starts at 2147483648, which wraps
          when converted to a Lambda integer constant. *)
-      call_switcher fail arg int32_low int32_high int_lambda_list
-    | Const_char _ ->
-      let int_lambda_list =
-        List.map
-          (function
-            | Asttypes.Const_char c, l -> (c, l)
-            | _ -> assert false)
-          const_lambda_list
-      in
-      call_switcher fail arg 0 max_int int_lambda_list
+      call_switcher_ranges fail arg int32_low int32_high range_lambda_list
     | Const_string _ ->
       (* Note as the bytecode compiler may resort to dichotomic search,
          the clauses of stringswitch  are sorted with duplicates removed.
          This partly applies to the native code compiler, which requires
          no duplicates *)
-      let const_lambda_list = sort_lambda_list const_lambda_list in
+      let const_lambda_list =
+        sort_lambda_list
+          (List.map (fun ((c, _), l) -> (c, l)) const_lambda_list)
+      in
       let sw =
         List.map
           (fun (c, act) ->
@@ -2038,10 +2146,10 @@ let combine_constant loc arg cst partial ctx def
       hs (stringswitch arg sw fail)
     | Const_float _ ->
       make_test_sequence loc fail (Pfloatcomp Cneq) (Pfloatcomp Clt) arg
-        const_lambda_list
+        (List.map (fun ((c, _), l) -> (c, l)) const_lambda_list)
     | Const_bigint _ ->
       make_test_sequence loc fail (Pbigintcomp Cneq) (Pbigintcomp Clt) arg
-        const_lambda_list
+        (List.map (fun ((c, _), l) -> (c, l)) const_lambda_list)
   in
   (lambda1, jumps_union local_jumps total)
 
@@ -2484,13 +2592,31 @@ let as_exit_call lam =
   in
   go Ident.empty lam
 
+(* Adds the static exits [lam] jumps to to [raised]. Exits cannot leave a
+   function, so function bodies are skipped. *)
+let rec add_raised_exits raised lam =
+  match lam with
+  | Lfunction _ -> ()
+  | Lstaticraise (i, _) ->
+    Hashtbl.replace raised i ();
+    Lambda_traverse.iter (add_raised_exits raised) lam
+  | _ -> Lambda_traverse.iter (add_raised_exits raised) lam
+
 let compile_orhandlers compile_fun lambda1 total1 ctx to_catch =
+  (* The exits of the match and of the handlers compiled so far *)
+  let raised = Hashtbl.create 16 in
+  add_raised_exits raised lambda1;
   let rec do_rec r total_r = function
     | [] -> (r, total_r)
+    | (_, i, _, _) :: rem when not (Hashtbl.mem raised i) ->
+      (* The or-pattern is unreachable, e.g. after a wildcard. Its handler is
+         not compiled: with a guard and no default, its failure has no exit. *)
+      do_rec r total_r rem
     | (mat, i, vars, pm) :: rem -> (
       try
         let ctx = select_columns mat ctx in
         let handler_i, total_i = compile_fun ctx pm in
+        add_raised_exits raised handler_i;
         match as_exit_call r with
         | Some (j, args) ->
           if i = j then
@@ -2696,7 +2822,7 @@ and do_compile_matching repr partial ctx arg pmh =
       compile_no_test
         (divide_record lbl.lbl_all (normalize_pat pat))
         ctx_combine repr partial ctx pm
-    | Tpat_constant cst ->
+    | Tpat_constant cst | Tpat_interval (cst, _) ->
       compile_test
         (compile_match repr partial)
         partial divide_constant
@@ -2768,7 +2894,8 @@ let find_in_pat pred =
     | Tpat_dict entries ->
       List.exists (fun {tdp_pattern} -> find_rec tdp_pattern) entries
     | Tpat_or (p, q, _) -> find_rec p || find_rec q
-    | Tpat_constant _ | Tpat_var _ | Tpat_any | Tpat_variant (_, None, _) ->
+    | Tpat_constant _ | Tpat_interval _ | Tpat_var _ | Tpat_any
+    | Tpat_variant (_, None, _) ->
       false
   in
   find_rec
@@ -2783,8 +2910,8 @@ let have_mutable_field p =
         | Immutable -> false)
       lps
   | Tpat_alias _ | Tpat_variant _ | Tpat_tuple _ | Tpat_construct _
-  | Tpat_dict _ | Tpat_array _ | Tpat_or _ | Tpat_constant _ | Tpat_var _
-  | Tpat_any ->
+  | Tpat_dict _ | Tpat_array _ | Tpat_or _ | Tpat_constant _ | Tpat_interval _
+  | Tpat_var _ | Tpat_any ->
     false
 
 let is_mutable p = find_in_pat have_mutable_field p

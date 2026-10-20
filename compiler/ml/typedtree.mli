@@ -72,6 +72,10 @@ and pattern_desc =
   | Tpat_var of Ident.t * string loc  (** x *)
   | Tpat_alias of pattern * Ident.t * string loc  (** P as a *)
   | Tpat_constant of constant  (** 1, 'a', "true", 1.0, 1l, 1L, 1n *)
+  | Tpat_interval of constant * constant
+      (** 'a' .. 'z'
+
+          Both bounds are int or char constants, the first one lower. *)
   | Tpat_tuple of pattern list
       (** (P1, ..., Pn)
 
@@ -254,7 +258,6 @@ and expression_desc =
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
   | Texp_pack of module_expr
-  | Texp_extension_constructor of Longident.t loc * Path.t
   (* Keep new expression constructors at the end. CMT files are marshalled by
      runtime constructor tag, so inserting constructors before existing ones
      breaks analysis when it reads CMTs produced by older compiler versions. *)

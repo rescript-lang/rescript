@@ -24,4 +24,3 @@ module Constants: {
   migrate: DeprecatedStuff.Constants.otherThing,
 })
 let deprecatedThing: array<int>
-

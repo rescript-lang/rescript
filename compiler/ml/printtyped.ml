@@ -220,6 +220,8 @@ and pattern i ppf x =
       line i ppf "Tpat_alias \"%a\"\n" fmt_ident s;
       pattern i ppf p
     | Tpat_constant c -> line i ppf "Tpat_constant %a\n" fmt_constant c
+    | Tpat_interval (c1, c2) ->
+      line i ppf "Tpat_interval %a .. %a\n" fmt_constant c1 fmt_constant c2
     | Tpat_tuple l ->
       line i ppf "Tpat_tuple\n";
       list i pattern ppf l
@@ -408,8 +410,6 @@ and expression i ppf x =
   | Texp_pack me ->
     line i ppf "Texp_pack";
     module_expr i ppf me
-  | Texp_extension_constructor (li, _) ->
-    line i ppf "Texp_extension_constructor %a" fmt_longident li
 
 and value_description i ppf x =
   line i ppf "value_description %a %a\n" fmt_ident x.val_id fmt_location

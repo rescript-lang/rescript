@@ -1,0 +1,1 @@
+- Update Binaryen to 133 in CI, pin cometkim/rclone-actions to a commit, and let Dependabot update the actions used by composite actions.

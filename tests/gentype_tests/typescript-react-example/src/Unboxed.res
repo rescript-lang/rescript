@@ -1,4 +1,4 @@
-@genType @ocaml.unboxed
+@genType @unboxed
 type v1 = A(int)
 
 @genType @unboxed
@@ -9,7 +9,7 @@ type v2 = A(int)
 @genType @unboxed
 type r1 = {x: int}
 
-@genType @ocaml.unboxed
+@genType @unboxed
 type r2 = B({g: string})
 
 @genType let r2Test = (x: r2) => x

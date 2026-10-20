@@ -71,7 +71,11 @@ let () =
         ignore (Unix.select [] [] [] 1.)
       done
     | "--ppx-wait" ->
-      write_file (argument 2) (string_of_int (Unix.getpid ()));
+      (* Tests poll for the marker and then read the PID, so it appears only
+         once complete. *)
+      let marker = argument 2 in
+      write_file (marker ^ ".tmp") (string_of_int (Unix.getpid ()));
+      Sys.rename (marker ^ ".tmp") marker;
       Unix.sleepf 30.;
       exit 0
     | "--ppx-copy" ->

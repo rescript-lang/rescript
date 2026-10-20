@@ -1,0 +1,1 @@
+- Upgrade opam to 2.6.1 in the devcontainer. https://github.com/rescript-lang/rescript/pull/8889

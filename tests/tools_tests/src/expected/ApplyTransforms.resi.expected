@@ -19,4 +19,3 @@ let makeTask: ((int => unit, string => unit) => unit) => task<int>
 let add: (~x: int, ~y: int, unit) => int
 
 let sum: (~a: int, ~b: int) => int
-

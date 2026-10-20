@@ -11,4 +11,3 @@ let b1 = Lazy.isEvaluated(lazy1)
 
 let p = Promise.resolve(5)
 let _ = Promise.ignore(p)
-

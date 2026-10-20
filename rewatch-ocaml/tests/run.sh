@@ -1593,8 +1593,12 @@ stop_watch "$warning_replay" "$warning_watch_pid"
 if ! $windows_posix_shell; then
   lock_holder="$work/lock-holder/rescript"
   mkdir -p "$work/lock-holder"
-  cp "$(command -v sleep)" "$lock_holder"
-  "$lock_holder" 60 &
+  # The lock owner check reads the executable name, so the holder must be a
+  # real executable named rescript. A copied sleep does not work where it is
+  # a multi-call coreutils binary (uutils on Ubuntu 26.04), and bash runs a
+  # loop in its own process instead of exec'ing it.
+  cp "$(command -v bash)" "$lock_holder"
+  "$lock_holder" -c 'while :; do sleep 1; done' &
   lock_holder_pid=$!
   background_pids="$background_pids $lock_holder_pid"
   exit_watch_log="$warning_replay/exit-watch.log"
@@ -1919,10 +1923,25 @@ background_pids="$background_pids $retained_parse_pid"
 wait_for_initial_build "$retained_parse/watch.log"
 printf 'let value =\n' >"$retained_parse/src/A.res"
 wait_for_text "$retained_parse/watch.log" 'This let-binding misses an expression'
+# Windows can report one write as several change events, and each one starts
+# a rebuild that parses A and reports its error again. Wait until those
+# rebuilds are over, so that the counts only grow from the edit of B.
 failed_parses=$(grep -c '^parse.*A\.res' "$retained_parse/calls.log")
+quiet_polls=0
+while [ "$quiet_polls" -lt 10 ]; do
+  sleep 0.1
+  parses=$(grep -c '^parse.*A\.res' "$retained_parse/calls.log")
+  if [ "$parses" = "$failed_parses" ]; then
+    quiet_polls=$((quiet_polls + 1))
+  else
+    failed_parses=$parses
+    quiet_polls=0
+  fi
+done
+reported_errors=$(grep -c 'This let-binding misses an expression' "$retained_parse/watch.log")
 printf 'let other = 2\n' >"$retained_parse/src/B.res"
-wait_for_text "$retained_parse/watch.log" 'This let-binding misses an expression' 2
-test "$(grep -c '^parse.*A\.res' "$retained_parse/calls.log")" -gt "$failed_parses"
+wait_for_count "$retained_parse/calls.log" '^parse.*A\.res' $((failed_parses + 1))
+wait_for_text "$retained_parse/watch.log" 'This let-binding misses an expression' $((reported_errors + 1))
 grep 'value = 1' "$retained_parse/src/A.js" >/dev/null
 printf 'let value = 2\n' >"$retained_parse/src/A.res"
 wait_for_text "$retained_parse/src/A.js" 'value = 2'

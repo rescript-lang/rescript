@@ -30,24 +30,20 @@ runs:
       if: runner.os != 'Windows'
       shell: bash
       env:
-        BINARYEN_VERSION: "131"
+        BINARYEN_VERSION: "133"
       run: |
         case "$RUNNER_OS-$RUNNER_ARCH" in
           Linux-X64)
             platform=x86_64-linux
-            checksum=b5bf1f0eaf17c63ee588ff7a5954dc8f6ce2c26989051c66f24dfe9ece3e46db
+            checksum=2dc9c7813f5375db93d96ead4b78222fcc3e2677bbb832297af4797782a37489
             ;;
           Linux-ARM64)
             platform=aarch64-linux
-            checksum=ba991f677edd9a21d2bc96c0144bc8ac5b112d4d98a3eb266e075e22e557df2a
-            ;;
-          macOS-X64)
-            platform=x86_64-macos
-            checksum=d209fadd8a894bdaf3bd3612a23c32a0af184d2f4a979b8c789e6e4f6a4de883
+            checksum=89c07ea56faf38d0fbecf36ca8ec0721756716185f265b568e133d427f299bf8
             ;;
           macOS-ARM64)
             platform=arm64-macos
-            checksum=e441b48dc22163d209b4f05e44dc7210909b01237642b6c9ae48fd710a3ef83e
+            checksum=ad66da82ac13f163e424b1643f16c6dfcccc98b5966296b43e52d3cab04f84a8
             ;;
           *)
             echo "Unsupported Binaryen platform: $RUNNER_OS-$RUNNER_ARCH" >&2
@@ -79,10 +75,12 @@ runs:
         COMPILER: ${{ inputs.compiler }}
         DEPENDENCY_FLAGS: ${{ inputs.dependency-flags }}
         OS: ${{ inputs.os }}
+      # 3.9.0 is the ocaml/setup-ocaml version below. Update both together:
+      # Dependabot bumps only the `uses:` line, and a cache hit skips that step.
       run: |
         dependency_flags_key="${DEPENDENCY_FLAGS//--/}"
         dependency_flags_key="${dependency_flags_key// /_}"
-        dependency_hash="${{ hashFiles('*.opam', '.github/opam-repository/repo', '.github/opam-repository/packages/**') }}"
+        dependency_hash="${{ hashFiles('*.opam') }}"
         key="$CACHE_PREFIX-$OS-3.9.0-$COMPILER-$dependency_flags_key-$dependency_hash"
         echo "value=${key//,/-}" >> "$GITHUB_OUTPUT"
         echo "setup-version=3.9.0" >> "$GITHUB_OUTPUT"
@@ -131,7 +129,6 @@ runs:
       env:
         DEPENDENCY_FLAGS: ${{ inputs.dependency-flags }}
       run: |
-        opam repository add rescript-overrides "$GITHUB_WORKSPACE/.github/opam-repository"
         read -ra dependency_flags <<< "$DEPENDENCY_FLAGS"
         if [[ "$RUNNER_OS" == "Windows" ]]; then
           export AR=x86_64-w64-mingw32-ar

@@ -13,4 +13,3 @@ let n3 = Null.mapOr(Null.make(3), 0, x => x)
 let nb1 = Nullable.getOrThrow(Nullable.make(3))
 let nb2 = Nullable.getOr(Nullable.null, 0)
 let nb3 = Nullable.mapOr(Nullable.make(3), 0, x => x)
-
