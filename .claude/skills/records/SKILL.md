@@ -1,136 +1,162 @@
 ---
 name: records
-description: Commit records and review pages for the ReScript compiler repository. Use when committing a change, when an agent reports its work, and when someone asks to review a commit, a pull request or a branch. Every commit message is a structured record that answers the questions ReScript reviewers ask; review pages are rendered from records with scripts/commitRecords.js, never written by hand.
+description: Commit records and Semantic Diff pages for the ReScript compiler repository. Use when committing a change, when an agent reports its work, and when someone asks to review a commit, a pull request or a branch. A commit message describes what the commit changes in the form suited to it (trees, code, diagnostics, typing rules, clause matrices, representations) Before and After; scripts/commitRecords.js renders the messages as a Semantic Diff page, one card per commit drawing its message.
 ---
 
-# Commit records and review pages
+# Commit records
 
-A **record** is a commit message whose body has named prose sections and
-whose last block is git trailers. Its fields are the questions reviewers of
-this repository ask on pull requests, answered before they are asked. A
-review page is rendered from records: one card per commit, and for a range a
-summary, a changelog draft and the files more than one commit changes.
+A record is a commit message that describes what the commit changes, each
+change in the form suited to what it changes: a parse tree or typed tree as
+the tree before and after, Lambda and generated JavaScript as code before
+and after, a diagnostic as its text, a typing rule as an inference rule,
+the match compiler's split as a clause matrix, a runtime representation as
+a mapping. `scripts/commitRecords.js` renders records as a Semantic Diff
+page, one card per commit, drawing each form in its own way, Before and
+After side by side.
 
-## The record
+## The message
 
 ```
-<subject: present tense, what the compiler or tool now does>
+<subject: what the compiler or tool does, present tense>
 
-<one paragraph: the change at the level of the language or the tool>
+Why:
+    <the problem the change solves>
 
-Example (rescript):
-    <the ReScript source that shows the change, at most 15 lines>
+AST modified (raw extensions):
+Example:
+    let f = %raw(`(a) => a`)
+Before (parse):
+    structure_item
+      Pstr_value Nonrec
+        <def>
+          pattern
+            Ppat_var "f"
+          expression
+            Pexp_extension "raw"
+After (parse):
+    structure_item
+      Pstr_value Nonrec
+        <def>
+          pattern
+            Ppat_var "f"
+          expression
+            Pexp_raw "raw"
+            Raw_template "(a) => a"
 
-Before (js):
-    <generated JavaScript before, for that source>
-
-After (js):
-    <generated JavaScript after>
-
-Source: <how the Before/After JavaScript was produced: compiler and revision,
-or the snapshot file in the diff>
-
+Review: <a question a reviewer asks, and its answer>
 Breaking: <what existing code or tooling stops working, and the migration>
 
-Review: <a question a reviewer raised or will raise, and its answer; repeat>
-
-Area: syntax printer frontend typechecker lambda codegen runtime rewatch
- analysis reanalyze gentype tools playground scripts ci docs tests
-Output: unchanged | changed <which programs>, <evidence>
-Formatting: unchanged | changed <which source shapes>
-Formats: none | <bumped magic numbers: ast cmi cmt cmj>
-PPX: unchanged | <effect on the frozen v0 PPX wire>
-Editor: unchanged | <effect on completion, hover, hints; fixtures>
-Tests: +added/path ~updated/path -removed/path | none, because <reason>
-Measured: <quantity before -> after, and what produced it>; ...
-PR: #<number>
-Signed-off-by: <Name> <email>
+Signed-off-by: Name <email>
 ```
 
-- **Prose sections** are a line `Name:` or `Name (lang):` followed by text or
-  a block indented by 4 spaces. `lang` is `rescript`, `js`, `ts`, `sh`,
-  `rust`, `ocaml` or `text`; the renderer highlights ReScript and JavaScript.
-  `Before` and `After` sections of one language render side by side with
-  changed lines marked. Use `Before (rescript)` / `After (rescript)` for a
-  formatter change and `Diagnostic (text)` for compiler output. Any other
-  name is allowed and renders as prose or code.
-- **The final block is git trailers**: `Key: value` lines, continuation lines
-  indented by one space, nothing after them. `git interpret-trailers --parse`
-  must read every key. `Signed-off-by` (DCO) is required on every commit.
-- **No changelog in the record**: the `changes/<name>.<category>.md`
-  fragment the commit adds is the single source of truth for its changelog
-  category and entry (see `changes/README.md`). The record repeats neither;
-  the review page reads the fragment from the diff.
-- **Required keys**: `Area`, `Output`, `Tests`. `Formatting`, `Formats`,
-  `PPX` and `Editor` are required whenever the change touches the syntax
-  library, the parsetree, the typed tree or Lambda. Omit the others when they
-  do not apply.
-- **Wording** follows the writing rules: present facts, positive statements,
-  claims as strong as their evidence, every number labelled by what produced
-  it. A JavaScript `Before`/`After` pair says where it came from in a
-  `Source:` paragraph (compiler run, or a snapshot file in the diff).
-- **Lists in trailers**: `Measured` separates items with `; `
-  (outside parentheses); each item renders on its own line. `Output` and the
-  other state trailers start with their state word (`unchanged`, `changed`,
-  `none`), followed by the detail.
+- The subject and `Signed-off-by` are required. The message ends with its
+  trailers, git's `Key: value` lines (`Co-Authored-By:`, `Fixes:` or any
+  other one-word key), `Signed-off-by` last; the page lists the
+  `Co-Authored-By` names and draws no other trailer. Every section is
+  optional.
+- A section starts at a line `Why:`, `Review:`, `Breaking:`, an object
+  block's heading, an `Example:` alone on its line, or a `Before (<form>):`
+  or `After (<form>):` heading, and holds the text after its colon and the
+  block indented by 4 spaces or more under it; a blank line ends a section
+  that holds only text. `Review:` repeats, one question each. Every other
+  line is prose, and a block indented by 4 spaces outside a section is
+  ReScript code. Tabs count as 4 columns.
+- An **object block** is a heading `<Kind> added|modified|removed (<object>):`,
+  the kind one capitalised word naming the object, then an optional
+  `Example:` with a ReScript program indented by 4 spaces, then the
+  object's forms, each version a `Before (<form>):` or `After (<form>):`
+  heading with its content indented by 4 spaces. Text after the colon of a
+  `Before`/`After` heading captions the block under it, or is the version
+  itself when no block follows (`After (js): return x;`). A heading that
+  leaves out the object's parentheses is drawn as its action and kind.
+- A block draws the versions it has: a form with both versions side by
+  side, or once, with the captions, when the two are equal; a form with
+  one version across the block under its version's label. Trees, code,
+  text, matrices and mappings are drawn on aligned rows, a line common to
+  both versions facing itself and the changed lines shaded; typing rules
+  and rewrites are drawn as two figures side by side, the changed parts
+  shaded: premises, conclusions, rule names and formulas, and each term of
+  a rewrite against the term at its position.
+- The changelog entry is the `changes/<name>.<category>.md` fragment the
+  commit adds (`changes/README.md`).
 
-## What each field states
+## Kinds
 
-| Field | What the record states |
+The table lists the common kinds.
+
+| Kind | Object |
 | --- | --- |
-| `Area` | The layers the change touches. They decide who reviews it and which suites apply; a parsetree or typed-tree change also reaches editor analysis. |
-| `Output` + `Before`/`After (js)` | The generated JavaScript for the example before and after, and which existing programs compile differently. `unchanged` holds when no committed generated JS changes, or when a rebuild of the test suites is byte-identical. |
-| `Formatting` + `Before`/`After (rescript)` | Whether `rescript format` rewrites existing code, and whether formatted output parses back to the same tree with its comments. |
-| `Formats` | The magic numbers bumped in `compiler/ext/config.ml`. Any change to the marshaled parsetree, typed tree (`.cmi`, `.cmt`) or `.cmj` layout, constructor order included, bumps the matching number. |
-| `PPX` | The effect on the frozen v0 PPX wire: `parsetree0.ml` is unchanged, and a change to the v0 mapping comes with an ast-mapping fixture. |
-| `Editor` | Completion, hover and inlay hints on new or changed nodes, and the analysis fixtures that cover them. |
-| `Tests` | The tests added, changed or removed, each observing the effect the record claims, so that it fails without the change. `none, because …` gives the reason when no test changes. |
-| `Measured` | Performance before and after, with the input and the command that produced each number. |
-| `Breaking` | What existing code or tooling stops working, and the migration. |
-| `Review` | Questions a reviewer raised or will raise, with their answers. |
-| `PR` | The pull request; the renderer links it. |
-| `Signed-off-by` | The DCO sign-off, with the commit author's name and email, as the last trailer. |
+| `AST` | a parsetree node |
+| `Typedtree` | a typed tree node |
+| `Typing` | a typing rule |
+| `Matching` | the pattern match compiler's split |
+| `Lambda` | a Lambda term or pass |
+| `JS` | generated JavaScript |
+| `Diagnostic` | an error or warning |
+| `Format` | the formatter's output |
+| `Representation` | how a value is represented in JavaScript |
+
+## Forms
+
+| Form | Content | Drawn as |
+| --- | --- | --- |
+| `parse` | the parse tree | tree |
+| `expanded` | the parse tree after the built-in PPX | tree |
+| `typed` | the typed tree | tree |
+| `lambda` | Lambda | highlighted code |
+| `js` | the generated JavaScript | highlighted code |
+| `rescript` | ReScript source, such as the formatter's output | highlighted code |
+| `diagnostic` | what the compiler reports | text |
+| `text` | any text | text |
+| `rule` | inference rules and formulas | inference rule |
+| `matrix` | a clause matrix | matrix |
+| `representation` | how ReScript values map to JavaScript | mapping |
+
+- A tree is indented lines, two spaces a level, as the compiler prints it:
+  `bsc -bs-no-builtin-ppx -only-parse -dparsetree file.res` prints the
+  parse tree, `bsc -only-parse -dparsetree` the expanded one, and
+  `bsc -dtypedtree` the typed tree.
+- Code is highlighted in its language; `bsc -drawlambda` prints the Lambda.
+  Code can be a rewrite: each `⇝` separates the code before it from the
+  code after it (`lhs ⇝ rhs` or a chain `a ⇝ b ⇝ c` on one line, or `⇝`
+  alone on a line), and `label: formula` lines after the last term are its
+  side conditions.
+- A `rule` group is premises, a bar of `─` with the rule's name in
+  parentheses, and the conclusion; any other group is formulas, one a
+  line. Groups are separated by blank lines, side-by-side formulas by three
+  or more spaces. One-letter names, with their primes, are italic
+  variables, `_x`, `_{…}` and `^{…}` sub- and superscripts, and `code` in
+  backticks is ReScript.
+- A `matrix` is one row a line, columns three or more spaces apart, each
+  cell a pattern; `label: text` lines are notes under it.
+- A `representation` is `ReScript ↦ JavaScript` lines; `label: text` lines
+  are notes among them.
+- A form of another name is drawn as text.
+
+## When to add a block
+
+A commit gets one object block for each object it changes, with the
+smallest example that shows the change. A refactor, a test, a script or a
+review fix is a subject and a line or two of prose.
 
 ## Rendering
 
 ```sh
-node scripts/commitRecords.js --out review.html <rev>...
-node scripts/commitRecords.js --out review.html <base>..<branch>...
-node scripts/commitRecords.js --fragment --out part.html <rev>...
-node scripts/commitRecords.js --out review.html --pr 1234 --title "<PR title>" <base>..<branch>
+make semantic-diff     # master..HEAD to _build/semantic-diff.html, opened
+node scripts/commitRecords.js --out page.html [--pr <number>] [--title <text>] \
+  <rev | base..tip>...
 ```
 
-- `--pr` and `--title` head the page with the pull request's number (linked)
-  and title; without them the page is headed "Semantic Diff".
+- `--pr` and `--title` head the page with the pull request.
+  `.github/workflows/semantic_diff.yml` renders each pull request's range
+  and comments the page's link.
+- In prose, `#1234` and full pull request and issue URLs link as `#1234`,
+  and the 9-character short sha of a commit on the page links to its card.
 
-- A revision renders one card. A range renders a summary row, a changelog
-  draft grouped by category, its commits as cards, and the files more than
-  one commit (or more than one range) changes. The changelog category, the
-  entries and the draft come from the `changes/` fragments in the diff: a
-  card shows the fragments its commit adds or changes, and a range's draft
-  shows the fragments the range leaves, in their last version.
-- Each card checks the record against its diff: a `changes/` fragment that
-  `yarn changelog:check` rejects (such as one still carrying the placeholder
-  PR link), an edit to `CHANGELOG.md`, modified generated `.mjs`, `.cjs` and `.res.js` files under
-  `Output: unchanged` (new ones from new tests are counted, not flagged), a
-  magic number bumped in `compiler/ext/config.ml` that
-  `Formats` does not name, a parsetree change with no ast-mapping fixture, a
-  missing `Tests` trailer, `Tests: none` on a diff that changes tests. A failed
-  check is shown on the card. The DCO app checks `Signed-off-by`.
-- The page is one self-contained HTML file: no script, no external data
-  (fonts fall back to system faces), light and dark themes, phone width.
-  `--fragment` omits the document skeleton for embedding.
-- A note on `refs/notes/records` replaces the commit message's record. Use it
-  for commits that exist already (history, a squash merge) and for review
-  outcomes added later; a new commit carries its record in its message.
+## What the page shows
 
-## When to use
-
-- Every commit an agent makes carries a record in its message.
-- An agent's report lists its commits and the rendered page; the records are
-  the description of the work. A pull request description is a rendering of
-  its range.
-- Before review or merge: render `master..<branch>` and hand over the page.
-- On GitHub, `.github/workflows/semantic_diff.yml` renders each pull
-  request's range when it is opened or pushed, and comments the page's link
-  (`Semantic diff: https://cdn.rescript-lang.org/semantic-diff/pr-<N>/…`).
+The page is the heading, then a card per commit. A card shows the commit's
+short sha, author and date, the pull request a `(#1234)` at the end of the
+subject names, and the message drawn: the subject, the prose, each object
+block with its example and forms, the `Breaking:` sections as banners, the
+`Review:` sections as a list, and the co-authors.
