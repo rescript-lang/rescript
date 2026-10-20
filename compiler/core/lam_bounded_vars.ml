@@ -154,6 +154,10 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
       let v = rebind v in
       let l2 = aux l2 in
       Lambda.try_ l1 v l2
+    | Ltryfinally (l1, l2) ->
+      let l1 = aux l1 in
+      let l2 = aux l2 in
+      Lambda.try_finally l1 l2
     | Lifthenelse (l1, l2, l3) ->
       let l1 = aux l1 in
       let l2 = aux l2 in

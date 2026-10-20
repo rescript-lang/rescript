@@ -42,7 +42,8 @@ let rec source_loc_of_lam (lam : Lambda.t) =
     | None -> source_loc_of_lam body)
   | Lletrec (_, body) | Lsequence (_, body) -> source_loc_of_lam body
   | Lifthenelse (_, then_, _) -> source_loc_of_lam then_
-  | Lstaticcatch (body, _, _) | Ltrywith (body, _, _) -> source_loc_of_lam body
+  | Lstaticcatch (body, _, _) | Ltrywith (body, _, _) | Ltryfinally (body, _) ->
+    source_loc_of_lam body
   | Lstringswitch (_, cases, default) -> (
     match cases with
     | (_, body) :: _ -> source_loc_of_lam body
@@ -1345,16 +1346,37 @@ let compile output_prefix =
    }
    ]}
 *)
-  and compile_trywith lam id catch (lambda_cxt : Lam_compile_context.t) =
+  and compile_try lam (catch : (Ident.t * Lambda.t) option)
+      (finally : Lambda.t option) (lambda_cxt : Lam_compile_context.t) =
     let aux (with_context : Lam_compile_context.t)
         (body_context : Lam_compile_context.t) =
       (* should_return is passed down
-         #1701, try should prevent tailcall *)
+         #1701, try should prevent tailcall.
+         A finally block runs after the catch handler, so the handler is not
+         in tail position either. *)
+      let with_context =
+        match finally with
+        | None -> with_context
+        | Some _ -> body_context
+      in
       [
         S.try_
           (Js_output.output_as_block (compile_lambda body_context lam))
-          ~with_:
-            (id, Js_output.output_as_block (compile_lambda with_context catch));
+          ?with_:
+            (Option.map
+               (fun (id, catch) ->
+                 ( id,
+                   Js_output.output_as_block (compile_lambda with_context catch)
+                 ))
+               catch)
+          ?finally:
+            (Option.map
+               (fun finally ->
+                 Js_output.output_as_block
+                   (compile_lambda
+                      {lambda_cxt with continuation = EffectCall Not_tail}
+                      finally))
+               finally);
       ]
     in
     match lambda_cxt.continuation with
@@ -1943,8 +1965,11 @@ let compile output_prefix =
       compile_for_await_of id iterable body lambda_cxt
     | Lassign (id, lambda) -> compile_assign id lambda lambda_cxt
     | Ltrywith (lam, id, catch) ->
-      (* generate documentation *)
-      compile_trywith lam id catch lambda_cxt
+      compile_try lam (Some (id, catch)) None lambda_cxt
+    | Ltryfinally (Ltrywith (lam, id, catch), finally) ->
+      compile_try lam (Some (id, catch)) (Some finally) lambda_cxt
+    | Ltryfinally (lam, finally) ->
+      compile_try lam None (Some finally) lambda_cxt
   in
 
   (compile_recursive_lets, compile_lambda)

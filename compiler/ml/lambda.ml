@@ -356,6 +356,7 @@ type t =
   | Lstaticraise of int * t list
   | Lstaticcatch of t * (int * Ident.t list) * t
   | Ltrywith of t * Ident.t * t
+  | Ltryfinally of t * t
   | Lifthenelse of t * t * t
   | Lsequence of t * t
   | Lbreak
@@ -682,6 +683,7 @@ let letrec bindings body : t = Lletrec (bindings, body)
 let staticraise i args : t = Lstaticraise (i, args)
 let staticcatch body catch handler : t = Lstaticcatch (body, catch, handler)
 let try_ body id handler : t = Ltrywith (body, id, handler)
+let try_finally body finally : t = Ltryfinally (body, finally)
 let break : t = Lbreak
 let continue : t = Lcontinue
 let while_ cond body : t = Lwhile (cond, body)
@@ -775,7 +777,7 @@ let rec eq_approx (l1 : t) (l2 : t) =
     | _ -> false)
   | Lfunction _
   | Llet (_, _, _, _)
-  | Lletrec _ | Lswitch _ | Lstaticcatch _ | Ltrywith _
+  | Lletrec _ | Lswitch _ | Lstaticcatch _ | Ltrywith _ | Ltryfinally _
   | Lfor (_, _, _, _, _)
   | Lfor_of (_, _, _)
   | Lfor_await_of (_, _, _) ->

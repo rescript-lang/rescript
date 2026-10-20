@@ -111,6 +111,7 @@ let add_template_attr attrs =
 
 let for_of_attr_name = "_res.for_of"
 let for_await_of_attr_name = "_res.for_await_of"
+let finally_attr_name = "_res.finally"
 let ppx_context_string_attr_name = "_res.ppx_context_string"
 
 let has_ppx_context_string_attr attrs =
@@ -652,7 +653,17 @@ module E = struct
            args)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
-    | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
+    | Pexp_try (e, pel, finally) ->
+      let attrs =
+        match finally with
+        | None -> attrs
+        | Some finally ->
+          sub.attribute sub
+            ( Location.mkloc finally_attr_name finally.pexp_loc,
+              PPat (Ast_helper.Pat.any (), Some finally) )
+          :: attrs
+      in
+      try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
     | Pexp_construct (lid, {txt = args; loc = args_loc}) ->
       let lid = map_loc sub lid in

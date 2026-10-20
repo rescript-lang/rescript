@@ -95,6 +95,8 @@ type error =
   | Inlined_record_expected
   | Break_outside_loop
   | Continue_outside_loop
+  | Break_out_of_finally
+  | Continue_out_of_finally
   | Literal_overflow of string
   | Polyvar_literal_overflow
   | Unknown_literal of string * char

@@ -319,10 +319,15 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
   | Texp_letexception (_, e) -> expression env e
   | Texp_assert e -> Use.inspect (expression env e)
   | Texp_pack m -> modexp env m
-  | Texp_try (e, cases) ->
+  | Texp_try (e, cases, finally) ->
     (* This is more permissive than the old check. *)
     let case env {Typedtree.c_rhs} = expression env c_rhs in
-    Use.join (expression env e) (list case env cases)
+    let finally =
+      match finally with
+      | None -> Use.empty
+      | Some finally -> Use.discard (expression env finally)
+    in
+    Use.join (Use.join (expression env e) (list case env cases)) finally
   | Texp_function {params; body} ->
     let env =
       List.fold_left

@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/break_out_of_finally.res[0m:[2m6:7-11[0m
+
+  4 [2m┆[0m     ()
+  5 [2m┆[0m   } finally {
+  [1;31m6[0m [2m┆[0m     [1;31mbreak[0m
+  7 [2m┆[0m   }
+  8 [2m┆[0m }
+
+  `break` cannot leave a `finally` block. Only a loop inside the block can be broken out of.

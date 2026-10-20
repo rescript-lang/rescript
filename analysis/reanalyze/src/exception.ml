@@ -394,18 +394,23 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
             kind = Throws;
           }
           :: !current_events
-    | Texp_try (e, cases) ->
-      let exceptions =
-        cases
-        |> List.map (fun case -> case.Typedtree.c_lhs.pat_desc)
-        |> exceptions_of_patterns
-      in
-      let old_events = !current_events in
-      current_events := [];
-      e |> iter_expr self;
-      current_events :=
-        {Event.exceptions; loc; kind = Catches !current_events} :: old_events;
-      cases |> iter_cases self
+    | Texp_try (e, cases, finally) ->
+      (* Catches with no exceptions means a catch-all, so a try without catch
+         cases must not record one. *)
+      if cases <> [] then (
+        let exceptions =
+          cases
+          |> List.map (fun case -> case.Typedtree.c_lhs.pat_desc)
+          |> exceptions_of_patterns
+        in
+        let old_events = !current_events in
+        current_events := [];
+        e |> iter_expr self;
+        current_events :=
+          {Event.exceptions; loc; kind = Catches !current_events} :: old_events)
+      else e |> iter_expr self;
+      cases |> iter_cases self;
+      finally |> iter_expr_opt self
     | _ -> super.expr self expr |> ignore);
     (if is_does_no_throw then
        let nested_events = !current_events in

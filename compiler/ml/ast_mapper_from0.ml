@@ -219,6 +219,7 @@ let raw_source_from0 sub = function
 
 let for_of_attr_name = "_res.for_of"
 let for_await_of_attr_name = "_res.for_await_of"
+let finally_attr_name = "_res.finally"
 
 let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
@@ -694,6 +695,21 @@ module E = struct
         | _ -> None)
       attrs
 
+  let extract_finally_attribute attrs =
+    List.find_map
+      (function
+        | {Location.txt}, Pt.PPat (_, Some expr) when txt = finally_attr_name ->
+          Some expr
+        | _ -> None)
+      attrs
+
+  let remove_finally_attribute attrs =
+    List.filter
+      (function
+        | {Location.txt}, _ when txt = finally_attr_name -> false
+        | _ -> true)
+      attrs
+
   let remove_for_of_attribute attrs =
     List.filter
       (function
@@ -1099,7 +1115,10 @@ module E = struct
            l)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
-    | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
+    | Pexp_try (e, pel) ->
+      let finally = extract_finally_attribute attrs in
+      let attrs = remove_finally_attribute attrs in
+      try_ ~loc ~attrs ?finally (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
     (* <></> *)
     | Pexp_construct ({txt = Longident.Lident "[]" | Longident.Lident "::"}, _)

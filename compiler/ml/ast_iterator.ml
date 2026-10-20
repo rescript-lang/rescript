@@ -329,9 +329,10 @@ module E = struct
     | Pexp_match (e, pel) ->
       sub.expr sub e;
       sub.cases sub pel
-    | Pexp_try (e, pel) ->
+    | Pexp_try (e, pel, finally) ->
       sub.expr sub e;
-      sub.cases sub pel
+      sub.cases sub pel;
+      iter_opt (sub.expr sub) finally
     | Pexp_tuple el -> List.iter (sub.expr sub) el
     | Pexp_construct (lid, {txt = args; loc = args_loc}) ->
       iter_loc sub lid;

@@ -55,7 +55,7 @@ and no_bounded_variables (l : Lambda.t) =
   | Lfunction {body; params} -> params = [] && no_bounded_variables body
   | Lfor _ -> false
   | Lfor_of _ | Lfor_await_of _ -> false
-  | Ltrywith _ -> false
+  | Ltrywith _ | Ltryfinally _ -> false
   | Llet _ -> false
   | Lletrec (decl, body) -> decl = [] && no_bounded_variables body
 

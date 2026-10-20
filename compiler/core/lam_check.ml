@@ -92,7 +92,7 @@ let check ~file ~pass lam =
     | Lstaticcatch (e1, (j, _vars), e2) ->
       check_staticfails e1 (Set_int.add j cxt);
       check_staticfails e2 cxt
-    | Ltrywith (e1, _exn, e2) ->
+    | Ltrywith (e1, _, e2) | Ltryfinally (e1, e2) ->
       check_staticfails e1 cxt;
       check_staticfails e2 cxt
     | Lifthenelse (e1, e2, e3) -> check_list [e1; e2; e3] cxt
@@ -141,6 +141,9 @@ let check ~file ~pass lam =
     | Ltrywith (e1, exn, e2) ->
       iter e1;
       def exn;
+      iter e2
+    | Ltryfinally (e1, e2) ->
+      iter e1;
       iter e2
     | Lifthenelse (e1, e2, e3) ->
       iter e1;

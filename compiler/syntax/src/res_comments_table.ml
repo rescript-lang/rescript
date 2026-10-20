@@ -1012,6 +1012,24 @@ and walk_value_binding vb t comments =
     let comments = walk_pattern vb.pvb_pat comments in
     walk_expression_after vb.pvb_pat.ppat_loc vb.pvb_expr comments
 
+(* Walks the scrutinee of a switch or the body of a try, and returns the
+   comments after it. *)
+and walk_switch_or_try_head (expr : Parsetree.expression) t comments =
+  let before, inside, after = partition_by_loc comments expr.pexp_loc in
+  let after =
+    if is_block_expr expr then (
+      let after_expr, rest = partition_adjacent_trailing expr.pexp_loc after in
+      walk_expression expr t (List.concat [before; inside; after_expr]);
+      rest)
+    else (
+      attach t.leading expr.pexp_loc before;
+      walk_expression expr t inside;
+      after)
+  in
+  let after_expr, rest = partition_adjacent_trailing expr.pexp_loc after in
+  attach t.trailing expr.pexp_loc after_expr;
+  rest
+
 and walk_expression expr t comments =
   let open Location in
   let walk_apply_expr call_expr arguments t comments =
@@ -1421,23 +1439,37 @@ and walk_expression expr t comments =
     attach t.leading mod_expr.pmod_loc before;
     walk_module_expr mod_expr t inside;
     attach t.trailing mod_expr.pmod_loc after
-  | Pexp_match (expr, cases) | Pexp_try (expr, cases) ->
-    let before, inside, after = partition_by_loc comments expr.pexp_loc in
-    let after =
-      if is_block_expr expr then (
-        let after_expr, rest =
-          partition_adjacent_trailing expr.pexp_loc after
-        in
-        walk_expression expr t (List.concat [before; inside; after_expr]);
-        rest)
-      else (
-        attach t.leading expr.pexp_loc before;
-        walk_expression expr t inside;
-        after)
-    in
-    let after_expr, rest = partition_adjacent_trailing expr.pexp_loc after in
-    attach t.trailing expr.pexp_loc after_expr;
+  | Pexp_match (expr, cases) | Pexp_try (expr, cases, None) ->
+    let rest = walk_switch_or_try_head expr t comments in
     walk_list (cases |> List.map (fun case -> Case case)) t rest
+  | Pexp_try (expr, cases, Some finally) ->
+    let before_finally, inside, after =
+      partition_by_loc comments finally.pexp_loc
+    in
+    let rest = walk_switch_or_try_head expr t before_finally in
+    (* The finally location starts at its first expression, so comments
+       between the cases and that expression lead the finally block. *)
+    let rest =
+      match (cases, List.rev cases) with
+      | first :: _, last :: _ ->
+        let cases_loc =
+          {first.pc_lhs.ppat_loc with loc_end = last.pc_rhs.pexp_loc.loc_end}
+        in
+        let before, inside, after = partition_by_loc rest cases_loc in
+        let after_cases, rest = partition_adjacent_trailing cases_loc after in
+        walk_list
+          (cases |> List.map (fun case -> Case case))
+          t
+          (List.concat [before; inside; after_cases]);
+        rest
+      | _ -> rest
+    in
+    attach t.leading finally.pexp_loc rest;
+    if is_block_expr finally then
+      walk_expression finally t (List.concat [inside; after])
+    else (
+      walk_expression finally t inside;
+      attach t.trailing finally.pexp_loc after)
     (* unary expression: todo use parsetreeviewer *)
   | Pexp_dict entries when Res_parsetree_viewer.dict_has_spread entries ->
     (* The rows themselves, not the array of each run of rows, which the

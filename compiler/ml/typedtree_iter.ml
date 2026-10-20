@@ -241,9 +241,10 @@ end = struct
       iter_expression exp;
       iter_cases list1;
       iter_cases list2
-    | Texp_try (exp, list) ->
+    | Texp_try (exp, list, finally) ->
       iter_expression exp;
-      iter_cases list
+      iter_cases list;
+      Option.iter iter_expression finally
     | Texp_tuple list -> List.iter iter_expression list
     | Texp_construct (_, _, args) -> List.iter iter_expression args
     | Texp_variant (_label, expo) -> (

@@ -40,6 +40,7 @@ let exists_var (p : Ident.t -> bool) (l : Lambda.t) : bool =
     | Lassign (id, e) -> p id || hit e
     | Lstaticcatch (e1, _, e2)
     | Ltrywith (e1, _, e2)
+    | Ltryfinally (e1, e2)
     | Lsequence (e1, e2)
     | Lwhile (e1, e2)
     | Lfor_of (_, e1, e2)
