@@ -73,7 +73,8 @@ Signed-off-by: Name <email>
   side, or once, with the captions, when the two are equal; a form with
   one version across the block under its version's label. Trees, code,
   text, matrices and mappings are drawn on aligned rows, a line common to
-  both versions facing itself and the changed lines shaded; typing rules
+  both versions facing itself and the changed lines shaded; reanalyze
+  reports are drawn as rows of findings, aligned the same way; typing rules
   and rewrites are drawn as two figures side by side, the changed parts
   shaded: premises, conclusions, rule names and formulas, and each term of
   a rewrite against the term at its position.
@@ -95,6 +96,7 @@ The table lists the common kinds.
 | `Diagnostic` | an error or warning |
 | `Format` | the formatter's output |
 | `Representation` | how a value is represented in JavaScript |
+| `Reanalyze` | reanalyze's findings for a program |
 
 ## Forms
 
@@ -111,7 +113,16 @@ The table lists the common kinds.
 | `rule` | inference rules and formulas | inference rule |
 | `matrix` | a clause matrix | matrix |
 | `representation` | how ReScript values map to JavaScript | mapping |
+| `reanalyze` | the report exactly as reanalyze prints it | findings |
 
+- A form holds a representative selection of the output, enough to see
+  what changes and what stays; an example shows only the cases that
+  matter. A line `…`, alone or followed by text such as
+  `… 4 more like this`, marks the lines left out and is drawn muted.
+- The forms are the output for the example as shown, so the locations and
+  names in them point into the example. Forms taken from a larger file,
+  such as a test fixture, name that file in a caption, for example
+  `Before (reanalyze): tests/…/Division.res`.
 - A tree is indented lines, two spaces a level, as the compiler prints it:
   `bsc -bs-no-builtin-ppx -only-parse -dparsetree file.res` prints the
   parse tree, `bsc -only-parse -dparsetree` the expanded one, and
@@ -131,6 +142,21 @@ The table lists the common kinds.
   cell a pattern; `label: text` lines are notes under it.
 - A `representation` is `ReScript ↦ JavaScript` lines; `label: text` lines
   are notes among them.
+- A `reanalyze` report is findings separated by blank lines, each an
+  analysis line, a location line and the message. A report shows, for
+  example, one finding that disappears, one that stays and the closing
+  line with the totals, and a paragraph `…` stands for the findings left
+  out. Each finding is a row: the analysis tagged, the location, the
+  message; an analysis that every finding names tags the form once.
+  Before and After align findings by their text: a run of findings in
+  both reports is one row that opens to show them, a finding one report
+  lacks faces a gap, and a note that changes, such as the closing count,
+  faces its other version with the differing words marked. In a built
+  project such as
+  `tests/analysis_tests/tests-reanalyze/deadcode` (`yarn build` there),
+  `dune exec rescript-tools -- reanalyze -exception -ci -suppress src -unsuppress src/<dir>`
+  prints the exception analysis's report for the files under `src/<dir>`;
+  `-dce` and `-termination` select the other analyses.
 - A form of another name is drawn as text.
 
 ## When to add a block
