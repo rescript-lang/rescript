@@ -13,9 +13,7 @@ cleanup() {
     return 1
   fi
   if [ -n "${watch_pid:-}" ]; then
-    if process_is_running "$watch_pid"; then
-      kill "$watch_pid" 2>/dev/null || true
-    fi
+    kill "$watch_pid" 2>/dev/null || true
     wait "$watch_pid" 2>/dev/null || true
   fi
   cd "$test_dir"

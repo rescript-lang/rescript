@@ -13,9 +13,7 @@ cleanup() {
     return 1
   fi
   if [ -n "${watch_pid:-}" ]; then
-    if process_is_running "$watch_pid"; then
-      kill "$watch_pid" 2>/dev/null || true
-    fi
+    kill "$watch_pid" 2>/dev/null || true
     wait "$watch_pid" 2>/dev/null || true
   fi
   cd "$test_dir"
@@ -71,7 +69,7 @@ for invalid_config in '{"name":' '{"name":"watch-recovery","jsx":{"version":3}}'
   if wait_for_pattern outputs.log "$previous_output" 5; then
     fail_test "Watcher compiled the source using stale configuration"
   fi
-  process_is_running "$watch_pid" || fail_test "Watcher exited after the config error"
+  process_is_running "$(cat lib/watch.lock)" || fail_test "Watcher exited after the config error"
 
   node - "$iteration" <<'JS'
 const fs = require("fs");
