@@ -174,7 +174,7 @@ const syntaxErrorResult = compiler.rescript.compile("let = 1");
 assert.equal(syntaxErrorResult.type, "syntax_error");
 assert.match(syntaxErrorResult.errors[0].fullMsg, /\u001b\[/);
 
-assert.equal(rescript_compiler.api_version, "9");
+assert.equal(rescript_compiler.api_version, "8");
 const lambdaSource = "let compute = x => { let unused = x + 1; x }";
 const lambdaResult = compiler.rescript.compileWithDebug(lambdaSource);
 assert.equal(lambdaResult.type, "success");
