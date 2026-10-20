@@ -47,11 +47,20 @@ let removed_ocaml_attribute txt =
   | "ocaml.ppwarning" -> Some "use `@ppwarning` instead."
   | _ -> None
 
-let warn_unused_attribute ((({txt; loc} as sloc), _) : Parsetree.attribute) =
-  (match removed_ocaml_attribute txt with
+let check_removed_ocaml_attribute (({txt; loc}, _) : Parsetree.attribute) =
+  match removed_ocaml_attribute txt with
   | Some hint ->
     Location.raise_errorf ~loc "`@%s` is no longer supported, %s" txt hint
-  | None -> ());
+  | None -> ()
+
+let check_removed_ocaml_extension (({txt; loc}, _) : Parsetree.extension) =
+  if txt = "ocaml.error" then
+    Location.raise_errorf ~loc
+      "`%%ocaml.error` is no longer supported, use `%%error` instead."
+
+let warn_unused_attribute
+    ((({txt; loc} as sloc), _) as attr : Parsetree.attribute) =
+  check_removed_ocaml_attribute attr;
   if
     is_checked_attribute txt && (not loc.loc_ghost)
     && not (Used_attributes.is_used_attribute sloc)
@@ -90,10 +99,8 @@ let emit_external_warnings : iterator =
         super.type_declaration self ptyp);
     attribute = (fun _ attr -> warn_unused_attribute attr);
     extension =
-      (fun self (({txt; loc}, _) as ext) ->
-        if txt = "ocaml.error" then
-          Location.raise_errorf ~loc
-            "`%%ocaml.error` is no longer supported, use `%%error` instead.";
+      (fun self ext ->
+        check_removed_ocaml_extension ext;
         super.extension self ext);
     structure_item =
       (fun self str_item ->
@@ -193,3 +200,25 @@ let emit_external_warnings_on_structure (stru : Parsetree.structure) =
 
 let emit_external_warnings_on_signature (sigi : Parsetree.signature) =
   emit_external_warnings.signature emit_external_warnings sigi
+
+(* The PPX bridge renames the [ocaml.]-prefixed builtins a PPX emits to their
+   bare names, so source written with them is checked before it reaches the
+   bridge. *)
+let removed_ocaml_spellings : iterator =
+  {
+    super with
+    attribute =
+      (fun self attr ->
+        check_removed_ocaml_attribute attr;
+        super.attribute self attr);
+    extension =
+      (fun self ext ->
+        check_removed_ocaml_extension ext;
+        super.extension self ext);
+  }
+
+let check_removed_ocaml_spellings_on_structure (stru : Parsetree.structure) =
+  removed_ocaml_spellings.structure removed_ocaml_spellings stru
+
+let check_removed_ocaml_spellings_on_signature (sigi : Parsetree.signature) =
+  removed_ocaml_spellings.signature removed_ocaml_spellings sigi
