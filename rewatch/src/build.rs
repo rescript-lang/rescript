@@ -292,11 +292,17 @@ impl fmt::Display for IncrementalBuildError {
 }
 
 pub fn with_build_lock<T>(path: &Path, f: impl FnOnce() -> T) -> T {
+    struct BuildLock<'a>(&'a str);
+    impl Drop for BuildLock<'_> {
+        fn drop(&mut self) {
+            let _ = drop_lock(LockKind::Build, self.0);
+        }
+    }
+
     let build_folder = path.to_string_lossy().to_string();
-    let _lock = get_lock_or_exit(LockKind::Build, &build_folder);
-    let result = f();
-    let _lock = drop_lock(LockKind::Build, &build_folder);
-    result
+    get_lock_or_exit(LockKind::Build, &build_folder);
+    let _lock = BuildLock(&build_folder);
+    f()
 }
 
 #[instrument(name = "build.incremental", skip_all, fields(module_count = build_state.modules.len()))]
@@ -731,6 +737,18 @@ mod tests {
             !build_lock_path.exists(),
             "build lock should be removed after guarded work returns an error"
         );
+    }
+
+    #[test]
+    fn with_build_lock_drops_lock_after_panic() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_folder = temp_dir.path();
+        let result = std::panic::catch_unwind(|| {
+            with_build_lock(project_folder, || panic!("failed"));
+        });
+
+        assert!(result.is_err());
+        assert!(!project_folder.join("lib/build.lock").exists());
     }
 
     #[test]

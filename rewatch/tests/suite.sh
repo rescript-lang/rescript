@@ -104,6 +104,8 @@ fi
 ./watch/06-watch-missing-source-folder.sh &&
 ./watch/07-changed-interface-after-failed-implementation.sh &&
 ./watch/08-watch-overlapping-source-removed.sh &&
+./watch/09-watch-recovers-from-invalid-config.sh &&
+./watch/10-watch-recovers-new-dependency-config.sh &&
 
 # Lock tests
 ./lock/01-lock-when-watching.sh &&

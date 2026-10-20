@@ -1193,6 +1193,11 @@ fi
 run_case build-missing-dependency exit2 exit2 build "$work/missing-dependency"
 require_both_errors_contain build-missing-dependency \
   "Could not build package tree reading dependency 'absent' at path '$work/missing-dependency'. Error:"
+if ! grep -F 'Error building package tree.' "$work/rust.out" >/dev/null; then
+  echo "Missing dependency did not report package-tree progress" >&2
+  dump_both
+  exit 1
+fi
 run_case build-configless-dependency exit2 exit2 build "$work/configless-dependency"
 require_both_errors_contain build-configless-dependency \
   "Could not build package tree for 'no-config' at path '$work/configless-dependency'. Error:"
@@ -1224,55 +1229,46 @@ if ! grep -F "$duplicate_warning" "$work/rust.err.norm" >/dev/null || \
   exit 1
 fi
 
-"$rust" watch "$work/watch-config-rust" \
-  >"$work/watch-rust.out" 2>"$work/watch-rust.err" &
-rust_watch_pid=$!
-background_pids="$background_pids $rust_watch_pid"
-wait_for_file "$work/watch-config-rust/src/A.js"
-wait_for_text "$work/watch-config-rust/lib/ocaml/.compiler.log" "#Done("
-printf '{ invalid json\n' >"$work/watch-config-rust/rescript.json"
-wait_for_text "$work/watch-rust.err" "Could not initialize build"
-wait_for_exit "$rust_watch_pid"
-set +e
-wait "$rust_watch_pid"
-rust_watch_status=$?
-set -e
-if [ "$rust_watch_status" -ne 101 ]; then
-  printf 'watch-invalid-config-rebuild: expected Rust panic exit 101, got %s\n' \
-    "$rust_watch_status" >&2
-  cat "$work/watch-rust.out" "$work/watch-rust.err" >&2
-  exit 1
-fi
-
-"$ocaml" watch "$work/watch-config-ocaml" \
-  >"$work/watch-ocaml.out" 2>"$work/watch-ocaml.err" &
-ocaml_watch_pid=$!
-background_pids="$background_pids $ocaml_watch_pid"
-wait_for_file "$work/watch-config-ocaml/src/A.js"
-wait_for_text "$work/watch-config-ocaml/lib/ocaml/.compiler.log" "#Done("
-printf '{ invalid json\n' >"$work/watch-config-ocaml/rescript.json"
-wait_for_text "$work/watch-ocaml.err" "invalid JSON"
-if ! kill -0 "$ocaml_watch_pid" 2>/dev/null; then
-  echo "OCaml watcher exited after a recoverable config error" >&2
-  cat "$work/watch-ocaml.out" "$work/watch-ocaml.err" >&2
-  exit 1
-fi
-printf '{"name":"watch-config","sources":["src"],"dependencies":["definitely-missing-dep"]}\n' \
-  >"$work/watch-config-ocaml/rescript.json"
-wait_for_text "$work/watch-ocaml.err" "definitely-missing-dep"
-if ! kill -0 "$ocaml_watch_pid" 2>/dev/null; then
-  echo "OCaml watcher exited after a recoverable dependency error" >&2
-  cat "$work/watch-ocaml.out" "$work/watch-ocaml.err" >&2
-  exit 1
-fi
-printf '{"name":"watch-config","sources":["src"],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}\n' \
-  >"$work/watch-config-ocaml/rescript.json"
-wait_for_file "$work/watch-config-ocaml/src/A.mjs"
-wait_for_file "$work/watch-config-ocaml/lib/bs/build.ninja"
-if ! terminate_and_wait "$ocaml_watch_pid" "recoverable-config watcher"; then
-  cat "$work/watch-ocaml.out" "$work/watch-ocaml.err" >&2
-  exit 1
-fi
+for implementation in rust ocaml; do
+  if [ "$implementation" = rust ]; then
+    executable=$rust
+    config_error="Could not initialize build"
+  else
+    executable=$ocaml
+    config_error="invalid JSON"
+  fi
+  watch_project="$work/watch-config-$implementation"
+  watch_out="$work/watch-$implementation.out"
+  watch_err="$work/watch-$implementation.err"
+  "$executable" watch "$watch_project" >"$watch_out" 2>"$watch_err" &
+  watch_pid=$!
+  background_pids="$background_pids $watch_pid"
+  wait_for_file "$watch_project/src/A.js"
+  wait_for_text "$watch_project/lib/ocaml/.compiler.log" "#Done("
+  printf '{ invalid json\n' >"$watch_project/rescript.json"
+  wait_for_text "$watch_err" "$config_error"
+  if ! kill -0 "$watch_pid" 2>/dev/null; then
+    echo "$implementation watcher exited after a recoverable config error" >&2
+    cat "$watch_out" "$watch_err" >&2
+    exit 1
+  fi
+  printf '{"name":"watch-config","sources":["src"],"dependencies":["definitely-missing-dep"]}\n' \
+    >"$watch_project/rescript.json"
+  wait_for_text "$watch_err" "definitely-missing-dep"
+  if ! kill -0 "$watch_pid" 2>/dev/null; then
+    echo "$implementation watcher exited after a recoverable dependency error" >&2
+    cat "$watch_out" "$watch_err" >&2
+    exit 1
+  fi
+  printf '{"name":"watch-config","sources":["src"],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}\n' \
+    >"$watch_project/rescript.json"
+  wait_for_file "$watch_project/src/A.mjs"
+  wait_for_file "$watch_project/lib/bs/build.ninja"
+  if ! terminate_and_wait "$watch_pid" "$implementation recoverable-config watcher"; then
+    cat "$watch_out" "$watch_err" >&2
+    exit 1
+  fi
+done
 checked=$((checked + 1))
 
 retained_graph_marker="$work/watch-retained-graph/after-build.log"

@@ -815,6 +815,14 @@ impl Config {
         config.handle_deprecations()?;
         config.unknown_fields = unknown_fields;
 
+        if let Some(version) = config.jsx.as_ref().and_then(|jsx| jsx.version)
+            && version != 4
+        {
+            return Err(anyhow!(
+                "JSX version {version} is unsupported; jsx.version must be 4"
+            ));
+        }
+
         Ok(config)
     }
 
@@ -865,10 +873,9 @@ impl Config {
     pub fn get_jsx_args(&self) -> Vec<String> {
         match self.jsx.to_owned() {
             Some(jsx) => match jsx.version {
-                Some(version) if version == 4 => {
+                Some(version) => {
                     vec!["-bs-jsx".to_string(), version.to_string()]
                 }
-                Some(version) => panic!("JSX version {version} is unsupported"),
                 None => vec![],
             },
             None => vec![],
@@ -1670,6 +1677,12 @@ pub mod tests {
         "#;
         let config = serde_json::from_str::<Config>(json).unwrap();
         assert!(config.get_gentype_args(&[], None, &[]).is_empty());
+    }
+
+    #[test]
+    fn test_unsupported_jsx_version_is_a_config_error() {
+        let error = Config::new_from_json_string(r#"{"name":"test","jsx":{"version":3}}"#).unwrap_err();
+        assert!(error.to_string().contains("JSX version 3 is unsupported"));
     }
 
     #[test]
