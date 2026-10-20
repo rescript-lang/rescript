@@ -29,9 +29,7 @@
 let is_checked_attribute txt =
   match txt with
   | "as" | "config" | "ignore" | "int" | "optional" | "res.hoistedFunction"
-  | "string" | "unwrap"
-  (* No longer interpreted, so these always warn as unused. *)
-  | "boxed" | "deprecated_mutable" ->
+  | "string" | "unwrap" ->
     true
   | _ -> false
 
