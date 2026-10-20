@@ -116,12 +116,15 @@ let make = (~input: unit => option<input>, ~visible, ~mode: Signal.t<mode>) => {
       )}
     </p>
   let shownInput = ref(None)
-  let panelInput = Computed.make(() => {
-    if visible() {
-      shownInput := input()
-    }
-    shownInput.contents
-  })
+  let panelInput = Computed.make(
+    ~equals=(left, right) => left === right,
+    () => {
+      if visible() {
+        shownInput := input()
+      }
+      shownInput.contents
+    },
+  )
   let diffInput = Signal.make(None)
   let wasActive = ref(false)
   Effect.run(() => {

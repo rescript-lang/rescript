@@ -350,6 +350,30 @@ test("Lambda panels retain their text while hidden and catch up when shown", () 
   assert.match(html(), /hidden after/);
 });
 
+test("Lambda panels reuse their snapshot across repeated compile errors", () => {
+  const result = Signal.make({
+    lambda: { before: "before", after: "after" },
+  });
+  const view = LambdaView.make({
+    input: () => Signal.get(result).lambda,
+    visible: () => Signal.get(result).lambda !== undefined,
+    mode: Signal.make("Before"),
+  });
+  const afterPanel = () => elements(view).filter(node => node.tag === "pre")[1];
+  const initial = afterPanel();
+  assert.ok(initial);
+  for (let compile = 0; compile < 2; compile++) {
+    Signal.set(result, { lambda: undefined });
+    assert.equal(afterPanel(), initial);
+  }
+  Signal.set(result, { lambda: { before: "fixed", after: "recovered" } });
+  assert.notEqual(afterPanel(), initial);
+  assert.match(
+    renderToString(() => view),
+    /recovered/,
+  );
+});
+
 test("Lambda Diff debounces edits and renders the latest comparison", t => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const { input, mode, diff } = lambdaView();
