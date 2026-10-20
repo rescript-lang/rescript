@@ -115,16 +115,13 @@ let make = (~input: unit => option<input>, ~visible, ~mode: Signal.t<mode>) => {
         "This compiler bundle does not provide optimized Lambda. Select a compiler with playground API v9 or newer.",
       )}
     </p>
-  let shownInput = ref(None)
-  let panelInput = Computed.make(
-    ~equals=(left, right) => left === right,
-    () => {
-      if visible() {
-        shownInput := input()
-      }
-      shownInput.contents
-    },
-  )
+  let panelInput = Signal.make(None)
+  Effect.run(() => {
+    if visible() {
+      Signal.set(panelInput, input())
+    }
+    None
+  })
   let diffInput = Signal.make(None)
   let wasActive = ref(false)
   Effect.run(() => {
