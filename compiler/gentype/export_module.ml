@@ -46,7 +46,7 @@ and export_module_item_to_fields =
          let field_for_type =
            {
              mutable_ = Mutable;
-             name_js = field_name;
+             name_js = Runtime.js_field_name field_name;
              optional = Mandatory;
              type_ = type_for_type;
              doc_string;
@@ -116,13 +116,13 @@ let emit_all_module_items ~config ~emitters ~file_name
          if !(Debug.code_items ()) then Log_.item "EmitModule %s @." module_name;
          let emitted_module_item =
            Module_name.for_inner_module ~file_name
-             ~inner_module_name:module_name
+             ~inner_module_name:(Runtime.js_export_name module_name)
            |> Module_name.to_string
          in
          emitted_module_item
          |> Emit_type.emit_export_const ~doc_string ~early:false ~config
-              ~emitters ~name:module_name ~type_:type_for_type
-              ~type_name_is_interface:(fun _ -> false))
+              ~emitters ~name:(Runtime.ts_binding_name module_name)
+              ~type_:type_for_type ~type_name_is_interface:(fun _ -> false))
        export_module_items
 
 let extend_export_modules ~(module_items_emitter : export_module_items)
@@ -130,4 +130,5 @@ let extend_export_modules ~(module_items_emitter : export_module_items)
   resolved_name |> Resolved_name.to_list
   |> extend_export_module_items ~export_module_items:module_items_emitter ~type_
        ~doc_string
-       ~value_name:(resolved_name |> Resolved_name.to_string)
+       ~value_name:
+         (resolved_name |> Resolved_name.to_string |> Runtime.ts_binding_name)

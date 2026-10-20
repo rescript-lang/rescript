@@ -272,7 +272,7 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
     let name =
       match original_name = default with
       | true -> Runtime.default
-      | false -> resolved_name_str
+      | false -> resolved_name_str |> Runtime.ts_binding_name
     in
     let module Hook_type = struct
       type t = {
