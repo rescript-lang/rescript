@@ -108,15 +108,39 @@ let decode_namespace path ~name fields =
     optional_member "namespace-entry" fields
     |> Option.map (string path "namespace-entry")
   in
+  (* The namespace becomes a module, so a name the scanner cannot read as one
+     is rejected here instead of producing unusable compiler arguments. *)
+  let module_name ~source ~fix namespace =
+    if is_module_name namespace then namespace
+    else
+      fail path
+        (Printf.sprintf
+           "namespace \"%s\" derived from %s is not a valid module name; set \
+            \"namespace\" to a valid module name%s"
+           namespace source fix)
+  in
+  let from_package_name () =
+    namespace_from_package_name name
+    |> module_name
+         ~source:(Printf.sprintf "package name \"%s\"" name)
+         ~fix:" or rename the package"
+  in
+  let from_value value namespace =
+    module_name
+      ~source:(Printf.sprintf "\"namespace\" value \"%s\"" value)
+      ~fix:"" namespace
+  in
   let namespace_name =
     match optional_member "namespace" fields with
     | None | Some (`Bool false) -> None
-    | Some (`Bool true) -> Some (namespace_from_package_name name)
-    | Some (`String "true") -> Some (namespace_from_package_name name)
-    | Some (`String value) when is_upper_flat_case value -> Some value
+    | Some (`Bool true) -> Some (from_package_name ())
+    | Some (`String "true") -> Some (from_package_name ())
+    | Some (`String value) when is_upper_flat_case value ->
+      Some (from_value value value)
     | Some (`String value) when Option.is_some namespace_entry ->
-      Some (pascal_case value)
-    | Some (`String value) -> Some (namespace_from_package_name value)
+      Some (from_value value (pascal_case value))
+    | Some (`String value) ->
+      Some (from_value value (namespace_from_package_name value))
     | Some _ -> fail path "field \"namespace\" must be a boolean or string"
   in
   match (namespace_entry, namespace_name) with
