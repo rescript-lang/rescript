@@ -91,7 +91,6 @@ These are intentional:
 - Configuration errors use the compiler-style form `path: message`, and JSON
   syntax errors use `path:line:column: message`. Messages name the field and
   the accepted values instead of the parser's internal types.
-- `rescript clean` also removes out-of-source JavaScript outputs.
 - The CLI uses Cmdliner:
   - help is rendered as a man page;
   - `--no-timing` takes no value;
