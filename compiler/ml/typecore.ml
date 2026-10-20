@@ -2467,6 +2467,13 @@ let should_unify_expected_result_before_typing_lowered_apply funct sargs =
 
 type targs = (Asttypes.arg_label * Typedtree.expression option) list
 
+(* The type of the most recent object field read if that read added the field
+   to an open object row ([obj["m"]] with [obj: {..}]), [None] after any other
+   read. [type_application] compares it with its callee's type to tell such a
+   JS method, whose type is a fresh variable, from a callee that never
+   returns. *)
+let open_row_field_read : type_expr option ref = ref None
+
 (* Eliminate an object-field scheme for a read. A declared field payload is
    wrapped in [Tpoly]: an empty binder list needs ordinary instantiation, while
    a nonempty list needs polymorphic instantiation. An inferred field whose
@@ -3554,11 +3561,22 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       }
   | Pexp_object_get (e, ({txt = met} as met_loc)) -> (
     let obj = type_exp ~context:None env e in
+    (* An object type without the field gets it from its open row (or the
+       lookup fails). An object whose type is still a variable, such as
+       [failwith("x")], does not count. *)
+    let adds_field_to_row =
+      match (expand_head env obj.exp_type).desc with
+      | Tobject fields ->
+        let fields, _ = Ctype.flatten_fields fields in
+        not (List.exists (fun (f : Ctype.field_info) -> f.f_name = met) fields)
+      | _ -> false
+    in
     try
       (* Lookup constrains an open object row to contain the field, without
          requiring or adding write capability. *)
       let typ = filter_method env met obj.exp_type in
       let typ = object_field_use_type env typ in
+      open_row_field_read := if adds_field_to_row then Some typ else None;
       rue
         {
           exp_desc = Texp_object_get (obj, met_loc);
@@ -4420,12 +4438,13 @@ and type_application ~context total_app env funct (sargs : sargs) :
       let ty_ret = newvar () in
       (* A fresh type variable as function type usually means the function
          never returns (e.g. [failwith("x")(1)]), so the arguments are
-         unused. A JS object method read through an open object type
-         ([obj["m"]] with [obj: {..}]) also gets a fresh variable, but it is
-         an ordinary JS method that receives its arguments. *)
+         unused. A JS object method that the read added to an open object
+         row ([obj["m"]] with [obj: {..}]) also gets a fresh variable, but it
+         is an ordinary JS method that receives its arguments. The callee's
+         read is the last one typed, so [open_row_field_read] belongs to it. *)
       let is_object_method =
-        match funct.exp_desc with
-        | Texp_object_get _ -> true
+        match (funct.exp_desc, !open_row_field_read) with
+        | Texp_object_get _, Some ty -> repr ty == repr funct.exp_type
         | _ -> false
       in
       if
