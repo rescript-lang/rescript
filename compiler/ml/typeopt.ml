@@ -103,15 +103,12 @@ let rec cannot_contain_undefined ~visiting (typ : Types.type_expr)
             && ((not payload_is_unboxed)
                ||
                match cd.cd_args with
-               | Cstr_tuple [t] ->
-                 Ast_untagged_variants.type_is_builtin_object t
-                 || cannot_contain_undefined ~visiting t env
+               | Cstr_tuple [t] -> cannot_contain_undefined ~visiting t env
                | Cstr_tuple [] -> true
                | Cstr_tuple (_ :: _ :: _) ->
                  true (* Not actually possible for an unboxed payload. *)
                | Cstr_record [{ld_type = t}] ->
-                 Ast_untagged_variants.type_is_builtin_object t
-                 || cannot_contain_undefined ~visiting t env
+                 cannot_contain_undefined ~visiting t env
                | Cstr_record ([] | _ :: _ :: _) -> true)
             && all_cases_cannot_contain_undefined (position + 1) rest
         in

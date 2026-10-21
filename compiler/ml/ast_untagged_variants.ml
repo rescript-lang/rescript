@@ -358,47 +358,6 @@ let check_runtime_annotation ~loc ~is_abstract_or_abbreviation
              RuntimeAnnotationOnRepresentedType
                (runtime_attribute_name annotation) ))
 
-let type_is_builtin_object (t : Types.type_expr) =
-  match t.desc with
-  | Tconstr (Path.Pident ident, [_], _) when Ident.name ident = "dict" -> true
-  | Tconstr (path, _, _) ->
-    let name = Path.name path in
-    name = "Stdlib.Dict.t" || name = "Stdlib_Dict.t"
-  | _ -> false
-
-let type_to_instanceof_backed_obj (t : Types.type_expr) =
-  let cls name = Some (Instance.Class {name; ancestors = []}) in
-  match t.desc with
-  | Tconstr (path, _, _) when Path.same path Predef.path_promise ->
-    cls "Promise"
-  | Tconstr (path, _, _) when Path.same path Predef.path_array ->
-    Some Instance.Array
-  | Tconstr (path, _, _) -> (
-    match Path.name path with
-    | "Stdlib_ArrayBuffer.t" -> cls "ArrayBuffer"
-    | "Stdlib.BigInt64Array.t" -> cls "BigInt64Array"
-    | "Stdlib.BigUint64Array.t" -> cls "BigUint64Array"
-    | "Stdlib.DataView.t" -> cls "DataView"
-    | "Stdlib_Date.t" -> cls "Date"
-    | "Stdlib.Float32Array.t" -> cls "Float32Array"
-    | "Stdlib.Float64Array.t" -> cls "Float64Array"
-    | "Stdlib.Int16Array.t" -> cls "Int16Array"
-    | "Stdlib.Int32Array.t" -> cls "Int32Array"
-    | "Stdlib.Int8Array.t" -> cls "Int8Array"
-    | "Stdlib_RegExp.t" -> cls "RegExp"
-    | "Stdlib.Uint16Array.t" -> cls "Uint16Array"
-    | "Stdlib.Uint32Array.t" -> cls "Uint32Array"
-    | "Stdlib.Uint8Array.t" -> cls "Uint8Array"
-    | "Stdlib.Uint8ClampedArray.t" -> cls "Uint8ClampedArray"
-    | "Stdlib_File.t" -> cls "File"
-    | "Stdlib_Blob.t" -> cls "Blob"
-    | "Stdlib.Set.t" -> cls "Set"
-    | "Stdlib.Map.t" -> cls "Map"
-    | "Stdlib.WeakSet.t" -> cls "WeakSet"
-    | "Stdlib.WeakMap.t" -> cls "WeakMap"
-    | _ -> None)
-  | _ -> None
-
 let process_tag_name (attrs : Parsetree.attributes) =
   let st = ref None in
   Ext_list.iter attrs (fun ({txt; loc}, payload) ->
