@@ -23,6 +23,10 @@ type source_kind = Implementation | Interface
 
 val source_kind : string -> source_kind option
 val module_name : string -> string
+
+val without_current_dir_segments : string -> string
+(** [path] without its "." segments: "./src/./A.res" is "src/A.res". *)
+
 val namespace_members : entry:string option -> module_ list -> module_ list
 
 val duplicate_error :
