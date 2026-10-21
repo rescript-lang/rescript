@@ -2469,9 +2469,9 @@ type targs = (Asttypes.arg_label * Typedtree.expression option) list
 
 (* The type of the most recent object field read if that read added the field
    to an open object row ([obj["m"]] with [obj: {..}]), [None] after any other
-   read. [type_application] compares it with its callee's type to tell such a
-   JS method, whose type is a fresh variable, from a callee that never
-   returns. *)
+   read. Only the [Pexp_apply] case reads it: it resets it before typing the
+   callee and checks it right after, where it is only meaningful when the
+   callee itself is such a read. *)
 let open_row_field_read : type_expr option ref = ref None
 
 (* Eliminate an object-field scheme for a read. A declared field payload is
@@ -2722,8 +2722,18 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     assert (sargs <> []);
     begin_def ();
     (* one more level for non-returning functions *)
+    open_row_field_read := None;
     let funct =
       type_exp ~deprecated_context:FunctionCall ~context:None env sfunct
+    in
+    (* Whether the callee is a JS object method that its read added to an open
+       object row ([obj["m"]] with [obj: {..}]). Its type is a fresh variable
+       like that of a callee that never returns, but the method receives its
+       arguments, so [type_application] must not report them as unused. *)
+    let open_row_method =
+      match (funct.exp_desc, !open_row_field_read) with
+      | Texp_object_get _, Some ty -> repr ty == repr funct.exp_type
+      | _ -> false
     in
     (if should_unify_expected_result_before_typing_lowered_apply funct sargs
      then
@@ -2747,7 +2757,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     let args, ty_res, fully_applied =
       match translate_unified_ops env funct sargs with
       | Some (targs, result_type) -> (targs, result_type, true)
-      | None -> type_application ~context total_app env funct sargs
+      | None ->
+        type_application ~context ~open_row_method total_app env funct sargs
     in
     end_def ();
     if transformed_jsx then check_jsx_props ~loc env args;
@@ -4406,8 +4417,8 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
     | _ -> None)
   | _ -> None
 
-and type_application ~context total_app env funct (sargs : sargs) :
-    targs * Types.type_expr * bool =
+and type_application ~context ~open_row_method total_app env funct
+    (sargs : sargs) : targs * Types.type_expr * bool =
   match sargs with
   (* Special case for ignore: avoid discarding warning *)
   | [(Nolabel, sarg)] when is_ignore ~env funct ->
@@ -4440,17 +4451,12 @@ and type_application ~context total_app env funct (sargs : sargs) :
          never returns (e.g. [failwith("x")(1)]), so the arguments are
          unused. A JS object method that the read added to an open object
          row ([obj["m"]] with [obj: {..}]) also gets a fresh variable, but it
-         is an ordinary JS method that receives its arguments. The callee's
-         read is the last one typed, so [open_row_field_read] belongs to it. *)
-      let is_object_method =
-        match (funct.exp_desc, !open_row_field_read) with
-        | Texp_object_get _, Some ty -> repr ty == repr funct.exp_type
-        | _ -> false
-      in
+         is an ordinary JS method that receives its arguments
+         ([open_row_method]). *)
       if
         ty_fun.level >= ty_ret.level
         && (not (is_identity_coercion funct.exp_desc))
-        && not is_object_method
+        && not open_row_method
       then
         List.iter
           (fun (_, sarg1) ->
