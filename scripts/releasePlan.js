@@ -3,6 +3,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import semver from "semver";
 
@@ -139,7 +140,10 @@ async function main() {
   console.log(JSON.stringify(plan, null, 2));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
   main().catch(error => {
     console.error(error.message || error);
     process.exitCode = 1;
