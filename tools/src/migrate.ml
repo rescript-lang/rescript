@@ -742,6 +742,26 @@ let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
   in
   mapper
 
+(* The deprecation locations in the .cmt refer to the source it was compiled
+   from. Applying them to a source that changed since (for example one that
+   was already migrated) rewrites the wrong code, so refuse stale artifacts. *)
+let load_deprecated_used ~state ~path =
+  match Cmt.load_cmt_infos_from_path ~state ~path with
+  | None ->
+    Error
+      (Printf.sprintf
+         "error: failed to run migration for %s because build artifacts could \
+          not be found. try to build the project"
+         path)
+  | Some {cmt_source_digest = Some digest}
+    when not (Digest.equal digest (Digest.file path)) ->
+    Error
+      (Printf.sprintf
+         "error: failed to run migration for %s because build artifacts are \
+          out of date. rebuild the project and run the migration again"
+         path)
+  | Some {cmt_extra_info = {deprecated_used}} -> Ok deprecated_used
+
 let migrate ~entry_point_file ~output_mode =
   let path =
     match Filename.is_relative entry_point_file with
@@ -753,14 +773,9 @@ let migrate ~entry_point_file ~output_mode =
     if Filename.check_suffix path ".res" then
       let parser = Res_driver.parsing_engine.parse_implementation in
       let {Res_driver.parsetree; comments; source} = parser ~filename:path in
-      match Cmt.load_cmt_infos_from_path ~state ~path with
-      | None ->
-        Error
-          (Printf.sprintf
-             "error: failed to run migration for %s because build artifacts \
-              could not be found. try to build the project"
-             path)
-      | Some {cmt_extra_info = {deprecated_used}} ->
+      match load_deprecated_used ~state ~path with
+      | Error e -> Error e
+      | Ok deprecated_used ->
         let mapper = make_mapper deprecated_used in
         let ast_mapped = mapper.structure mapper parsetree in
         (* Second pass: apply any post-migration transforms signaled via @apply.transforms *)
@@ -790,14 +805,9 @@ let migrate ~entry_point_file ~output_mode =
         parser ~filename:path
       in
 
-      match Cmt.load_cmt_infos_from_path ~state ~path with
-      | None ->
-        Error
-          (Printf.sprintf
-             "error: failed to run migration for %s because build artifacts \
-              could not be found. try to build the project"
-             path)
-      | Some {cmt_extra_info = {deprecated_used}} ->
+      match load_deprecated_used ~state ~path with
+      | Error e -> Error e
+      | Ok deprecated_used ->
         let mapper = make_mapper deprecated_used in
         let ast_mapped = mapper.signature mapper signature in
         if ast_mapped = signature then Ok (None, source)
