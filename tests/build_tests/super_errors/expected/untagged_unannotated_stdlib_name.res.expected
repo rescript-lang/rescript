@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/untagged_unannotated_stdlib_name.res[0m:[2m8:10-28[0m
+
+  6 [2m│[0m 
+  7 [2m│[0m @unboxed
+  [1;31m8[0m [2m│[0m type t = [1;31mDate(Stdlib_Date.t)[0m | Text(string)
+  9 [2m│[0m 
+
+  This untagged variant definition is invalid: Case Date has a payload that is not of one of the recognized shapes (object, array, etc). Then it must be the only case with payloads.
