@@ -50,6 +50,11 @@ describe(__MODULE__, () => {
     ok(__LOC__, h(0) === h(0))
   })
 
+  test("a constant tuple argument is created once", () => {
+    let h = first((1, 2), ...)
+    ok(__LOC__, h(0) === h(0))
+  })
+
   test("an external value is read once", () => {
     let h = add(partialApplicationValue, ...)
     eq(__LOC__, 3, h(1, 1))

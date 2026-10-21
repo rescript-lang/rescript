@@ -1562,11 +1562,12 @@ and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
   in
   let protect defs name lam =
     match lam with
-    | Lconst _ -> lam
-    (* A variable or a module's value reads the same on each call, so it stays
-       in place and keeps the function a known one that can be inlined. A
-       closure does not: each evaluation is a new one. Nor does an external
-       value, which can be reassigned or be a getter. *)
+    (* A variable, a module's value or a constant that allocates nothing reads
+       the same on each call, so it stays in place and keeps the function a
+       known one that can be inlined. A closure or a constant block does not:
+       each evaluation is a new one. Nor does an external value, which can be
+       reassigned or be a getter. *)
+    | Lconst c when not (Lambda.const_is_allocating c) -> lam
     | _ when is_module_path lam -> lam
     | _ ->
       let id = Ident.create name in
