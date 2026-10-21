@@ -41,3 +41,6 @@ let guarded [arity:1]v =
   match v with
   | Some x when async x -> (async fun [arity:1]() -> x)
   | _ -> (async fun [arity:1]() -> 0)
+let scrutinee = match async fun [arity:1]() -> 1 with | _ -> 0
+let parenthesizedGuard [arity:1]v =
+  match v with | Some x when x -> 1 | _ -> 0
