@@ -1,4 +1,4 @@
-@notUndefined
+@instanceOf("ArrayBuffer")
 type t
 
 @new external make: int => t = "ArrayBuffer"

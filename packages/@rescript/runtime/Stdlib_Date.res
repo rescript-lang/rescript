@@ -1,4 +1,4 @@
-@notUndefined
+@instanceOf("Date")
 type t
 
 type msSinceEpoch = float

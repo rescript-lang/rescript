@@ -7,7 +7,7 @@ Compiles to a regular JavaScript Symbol.
 /**
 Type representing a Symbol.
 */
-@notUndefined
+@typeOf("symbol")
 type t
 
 /**
