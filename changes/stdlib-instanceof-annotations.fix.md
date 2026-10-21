@@ -1,0 +1,1 @@
+- An untagged variant with both `Blob` and `File` cases matches files as `File`, whatever the order of its cases. `File.t` is now a private abbreviation of `Blob.t`, and `JsError.t`, `Symbol.t` and the `Intl` classes can be untagged variant cases.

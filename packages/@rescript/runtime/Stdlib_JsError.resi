@@ -5,7 +5,7 @@ See [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/
 */
 
 /** Represents a JavaScript error. */
-@notUndefined
+@instanceOf("Error")
 type t
 
 /**

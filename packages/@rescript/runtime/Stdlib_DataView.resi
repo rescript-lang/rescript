@@ -13,7 +13,7 @@ See [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 /**
 Type representing a DataView.
 */
-@notUndefined
+@instanceOf("DataView")
 type t
 
 /**

@@ -1,4 +1,4 @@
-@notUndefined
+@instanceOf("Map")
 type t<'k, 'v>
 
 external asIterable: t<'k, 'v> => Stdlib_Iterable.t<('k, 'v)> = "%identity"
