@@ -54,6 +54,7 @@ Mocha.describe("Partial_application_eval_test", () => {
     Test_utils.eq("File \"partial_application_eval_test.res\", line 55, characters 7-14", 3, add(arg, 1, 1));
     Test_utils.eq("File \"partial_application_eval_test.res\", line 56, characters 7-14", 3, add(arg, 1, 1));
   });
+  Mocha.test("a partial application of values stays polymorphic", () => Test_utils.eq("File \"partial_application_eval_test.res\", line 61, characters 7-14", 2, 2));
   Mocha.test("callee and arguments are evaluated left to right", () => {
     let log = [];
     let getAdd = () => {
@@ -67,17 +68,17 @@ Mocha.describe("Partial_application_eval_test", () => {
     let func = getAdd();
     let arg$1 = arg("a", 1);
     let arg$2 = arg("b", 2);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 70, characters 7-14", [
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 75, characters 7-14", [
       "callee",
       "a",
       "b"
     ], log);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 71, characters 7-14", 6, func(arg$1, arg$2, 3));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 76, characters 7-14", 6, func(arg$1, arg$2, 3));
   });
   Mocha.test("an awaited argument stays in the async function", async () => {
     let arg = await Promise.resolve(1);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 76, characters 7-14", 4, add(arg, 1, 2));
-    return Test_utils.eq("File \"partial_application_eval_test.res\", line 77, characters 7-14", 6, add(arg, 2, 3));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 81, characters 7-14", 4, add(arg, 1, 2));
+    return Test_utils.eq("File \"partial_application_eval_test.res\", line 82, characters 7-14", 6, add(arg, 2, 3));
   });
 });
 

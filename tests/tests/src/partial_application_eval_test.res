@@ -56,6 +56,11 @@ describe(__MODULE__, () => {
     eq(__LOC__, 3, h(1, 1))
   })
 
+  test("a partial application of values stays polymorphic", () => {
+    let one = first(1, ...)
+    eq(__LOC__, 2, one("ignored") + one(0))
+  })
+
   test("callee and arguments are evaluated left to right", () => {
     let log = []
     let getAdd = () => {
