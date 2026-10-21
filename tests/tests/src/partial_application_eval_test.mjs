@@ -2,6 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
+import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 
 function add(a, b, c) {
   return (a + b | 0) + c | 0;
@@ -56,12 +57,16 @@ Mocha.describe("Partial_application_eval_test", () => {
     ];
     Test_utils.ok("File \"partial_application_eval_test.res\", line 55, characters 7-14", arg === arg);
   });
+  Mocha.test("a nested None argument is created once", () => {
+    let arg = Primitive_option.some(undefined);
+    Test_utils.ok("File \"partial_application_eval_test.res\", line 60, characters 7-14", arg === arg);
+  });
   Mocha.test("an external value is read once", () => {
     let arg = partialApplicationValue;
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 60, characters 7-14", 3, add(arg, 1, 1));
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 61, characters 7-14", 3, add(arg, 1, 1));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 65, characters 7-14", 3, add(arg, 1, 1));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 66, characters 7-14", 3, add(arg, 1, 1));
   });
-  Mocha.test("a partial application of values stays polymorphic", () => Test_utils.eq("File \"partial_application_eval_test.res\", line 66, characters 7-14", 2, 2));
+  Mocha.test("a partial application of values stays polymorphic", () => Test_utils.eq("File \"partial_application_eval_test.res\", line 71, characters 7-14", 2, 2));
   Mocha.test("callee and arguments are evaluated left to right", () => {
     let log = [];
     let getAdd = () => {
@@ -75,17 +80,17 @@ Mocha.describe("Partial_application_eval_test", () => {
     let func = getAdd();
     let arg$1 = arg("a", 1);
     let arg$2 = arg("b", 2);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 80, characters 7-14", [
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 85, characters 7-14", [
       "callee",
       "a",
       "b"
     ], log);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 81, characters 7-14", 6, func(arg$1, arg$2, 3));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 86, characters 7-14", 6, func(arg$1, arg$2, 3));
   });
   Mocha.test("an awaited argument stays in the async function", async () => {
     let arg = await Promise.resolve(1);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 86, characters 7-14", 4, add(arg, 1, 2));
-    return Test_utils.eq("File \"partial_application_eval_test.res\", line 87, characters 7-14", 6, add(arg, 2, 3));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 91, characters 7-14", 4, add(arg, 1, 2));
+    return Test_utils.eq("File \"partial_application_eval_test.res\", line 92, characters 7-14", 6, add(arg, 2, 3));
   });
 });
 

@@ -55,6 +55,11 @@ describe(__MODULE__, () => {
     ok(__LOC__, h(0) === h(0))
   })
 
+  test("a nested None argument is created once", () => {
+    let h = first(Some(None), ...)
+    ok(__LOC__, h(0) === h(0))
+  })
+
   test("an external value is read once", () => {
     let h = add(partialApplicationValue, ...)
     eq(__LOC__, 3, h(1, 1))
