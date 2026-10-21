@@ -72,7 +72,9 @@ function add5(a0, a1, a2, a3, a4) {
 }
 
 function f(x) {
-  return (extra, extra$1) => add5(x, (v.contents = v.contents + 1 | 0, 1), (v.contents = v.contents + 1 | 0, 2), extra, extra$1);
+  v.contents = v.contents + 1 | 0;
+  v.contents = v.contents + 1 | 0;
+  return (extra, extra$1) => add5(x, 1, 2, extra, extra$1);
 }
 
 function g(x) {

@@ -58,8 +58,10 @@ function testRaise$1() {
 
 let l$1 = Stdlib_List.map({hd: 1, tl: {hd: 2, tl: /* [] */0}}, x => x + 1 | 0);
 
+let arg = {hd: 1, tl: {hd: 2, tl: /* [] */0}};
+
 function partial$1(extra) {
-  return Stdlib_List.map({hd: 1, tl: {hd: 2, tl: /* [] */0}}, extra);
+  return Stdlib_List.map(arg, extra);
 }
 
 let ll$1 = partial$1(x => x + 1 | 0);

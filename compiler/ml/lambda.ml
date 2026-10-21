@@ -580,10 +580,22 @@ let str_of_field_info (x : field_dbg_info) : string option =
 let is_immutable_block (info : tag_info) =
   mutable_flag_of_tag_info info = Immutable
 
-(* A constant that has to be built at run time rather than shared. *)
+(* The number of [Some] around a none, as in [Some (Some None)], or [-1] if
+   [c] is not a nested none. *)
+let rec const_some_none_depth (c : structured_constant) : int =
+  match c with
+  | Const_some v ->
+    let depth = const_some_none_depth v in
+    if depth < 0 then depth else depth + 1
+  | Const_module_alias | Const_js_undefined _ -> 0
+  | _ -> -1
+
+(* A constant that has to be built at run time rather than shared. A [Some]
+   around a (nested) none is emitted as a new optional block, see
+   [Lam_compile_const.translate_some]. *)
 let rec const_is_allocating (c : structured_constant) : bool =
   match c with
-  | Const_some t -> const_is_allocating t
+  | Const_some t -> const_some_none_depth t >= 0 || const_is_allocating t
   | Const_block _ -> true
   | Const_js_null | Const_js_undefined _ | Const_js_true | Const_js_false
   | Const_int _ | Const_assertfalse | Const_constructor _ | Const_char _

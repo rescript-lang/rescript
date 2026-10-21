@@ -2023,11 +2023,12 @@ let rec is_nonexpansive exp =
   | Texp_apply {funct = {exp_desc}; args; _} when is_component_identity exp_desc
     ->
     List.for_all is_nonexpansive_opt (List.map snd args)
-  | Texp_apply {partial = true; _} ->
-    (* ReScript partial applications (`foo(args, ...)`) lower to wrapper
-       functions in codegen, so creating the partial itself is nonexpansive
-       like an explicit lambda. *)
-    true
+  | Texp_apply {partial = true; funct; args} ->
+    (* A partial application (`foo(args, ...)`) evaluates its callee and
+       supplied arguments once, when it is created, and the resulting function
+       shares them, so it is nonexpansive only when they are. *)
+    is_nonexpansive funct
+    && List.for_all is_nonexpansive_opt (List.map snd args)
   | Texp_apply {funct = e; args = (_, None) :: el} ->
     is_nonexpansive e && List.for_all is_nonexpansive_opt (List.map snd el)
   | Texp_match (e, cases, [], _) ->

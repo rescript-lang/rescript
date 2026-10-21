@@ -34,8 +34,12 @@ function generic_basename(is_dir_sep, current_dir_name, name) {
   }
 }
 
+function arg(s, i) {
+  return s[i] === "/";
+}
+
 function basename(extra) {
-  return generic_basename((s, i) => s[i] === "/", "", extra);
+  return generic_basename(arg, "", extra);
 }
 
 Mocha.describe("Inline_regression_test", () => {

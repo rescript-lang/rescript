@@ -15,6 +15,7 @@ let suites =
       Ounit_rec_check_tests.suites;
       Ounit_lambda_constant_tests.suites;
       Ounit_lambda_traverse_tests.suites;
+      Ounit_partial_application_tests.suites;
       Ounit_deep_flatten_tests.suites;
       Ounit_exits_tests.suites;
       Ounit_lam_size_tests.suites;

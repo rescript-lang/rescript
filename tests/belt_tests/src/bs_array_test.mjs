@@ -50,13 +50,13 @@ Mocha.describe("Bs_array_test", () => {
         1
       ], 2);
     });
-    let f = extra => Belt_Array.getExn([
+    let arg = [
       0,
       1
-    ], extra);
+    ];
     Test_utils.ok("File \"bs_array_test.res\", line 28, characters 6-13", Primitive_object.equal([
-      f(0),
-      f(1)
+      Belt_Array.getExn(arg, 0),
+      Belt_Array.getExn(arg, 1)
     ], [
       0,
       1
