@@ -2519,8 +2519,10 @@ type targs = (Asttypes.arg_label * Typedtree.expression option) list
    to an open object row ([obj["m"]] with [obj: {..}]), [None] after any other
    read. Only the [Pexp_apply] case reads it: it resets it before typing the
    callee and checks it right after, where it is only meaningful when the
-   callee itself is such a read. *)
-let open_row_field_read : type_expr option ref = ref None
+   callee itself is such a read. Request-local, so requests type-checked
+   concurrently on other domains cannot overwrite it in between. *)
+let open_row_field_read : type_expr option ref Request_local.key =
+  Request_local.new_key (fun () -> ref None)
 
 (* Eliminate an object-field scheme for a read. A declared field payload is
    wrapped in [Tpoly]: an empty binder list needs ordinary instantiation, while
@@ -2790,7 +2792,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     assert (sargs <> []);
     begin_def ();
     (* one more level for non-returning functions *)
-    open_row_field_read := None;
+    Request_local.get open_row_field_read := None;
     let funct =
       type_exp ~deprecated_context:FunctionCall ~context:None env sfunct
     in
@@ -2799,7 +2801,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
        like that of a callee that never returns, but the method receives its
        arguments, so [type_application] must not report them as unused. *)
     let open_row_method =
-      match (funct.exp_desc, !open_row_field_read) with
+      match (funct.exp_desc, !(Request_local.get open_row_field_read)) with
       | Texp_object_get _, Some ty -> repr ty == repr funct.exp_type
       | _ -> false
     in
@@ -3699,7 +3701,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
          requiring or adding write capability. *)
       let typ = filter_method env met obj.exp_type in
       let typ = object_field_use_type env typ in
-      open_row_field_read := if adds_field_to_row then Some typ else None;
+      Request_local.get open_row_field_read
+      := if adds_field_to_row then Some typ else None;
       rue
         {
           exp_desc = Texp_object_get (obj, met_loc);
