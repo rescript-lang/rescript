@@ -1,6 +1,9 @@
 open Mocha
 open Test_utils
 
+@module("mocha")
+external testAsync: (string, unit => promise<unit>) => unit = "test"
+
 describe(__MODULE__, () => {
   test("nested make values are read through flat exports", () => {
     eq(__LOC__, Flat_make_export_use.top, "top")
@@ -24,6 +27,15 @@ describe(__MODULE__, () => {
     eq(__LOC__, Flat_make_export_use.applied, "applied")
     eq(__LOC__, Flat_make_export_use.included, "one")
     eq(__LOC__, Flat_make_export_use.aliased, "one")
+  })
+
+  test("re-exported modules read the flat exports", () => {
+    eq(__LOC__, Flat_make_export_use.reexported, "two")
+    eq(__LOC__, Flat_make_export_use.reexportedDeep, "three")
+  })
+
+  testAsync("awaited modules read the flat exports", async () => {
+    eq(__LOC__, await Flat_make_export_use.awaited(), ("two", "three"))
   })
 
   test("a binding hidden by the interface does not clash", () => {

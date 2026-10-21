@@ -102,9 +102,13 @@ let no_side_effects (rest : Lam_group.t list) : string option =
         else None (* TODO :*))
 
 (* Export every nested [make] of the final signature under its flat name, see
-   [Translmod.implementation]. When the module field holds a toplevel
-   binding, the alias names that binding ([let A$B$make = make]), which
-   bundlers can drop when it is unused; otherwise it reads the value through
+   [Translmod.implementation]. The alias resolves the source path through
+   toplevel aliases and known module blocks. When that ends at a toplevel
+   binding, the alias names it ([let A$B$make = make]), which bundlers can
+   drop when it is unused. When it ends at a module of another compilation
+   unit, possibly awaited, the alias reads that unit's flat export
+   ([let A$make = Other.B$make]), so a re-exported client component never
+   reads [make] from a client reference. Otherwise it reads the value through
    the module objects. The paths carry the runtime field positions, which a
    coerced module block shares with its signature. *)
 let flat_make_aliases (export_ids : Ident.t list)
@@ -130,33 +134,40 @@ let flat_make_aliases (export_ids : Ident.t list)
              ~args:[base] loc)
           fields
     in
-    (* The fields of the module block [lam] evaluates to, if it is known. *)
-    let rec block_fields seen (lam : Lambda.t) =
+    (* Reads only toplevel bindings and other compilation units, so it can be
+       evaluated again in the alias. *)
+    let rec is_path (lam : Lambda.t) =
+      match lam with
+      | Lvar id -> Map_ident.mem id group_map
+      | Lglobal_module _ -> true
+      | Lprim {primitive = Pfield (_, Fld_module _); args = [base]} ->
+        is_path base
+      | _ -> false
+    in
+    (* Follows toplevel bindings that hold a module or an alias, and reads of
+       known module block fields. *)
+    let rec resolve seen (lam : Lambda.t) =
       match lam with
       | Lvar id when not (Set_ident.mem id seen) -> (
         match Map_ident.find_opt id group_map with
-        | Some lam -> block_fields (Set_ident.add id seen) lam
-        | None -> None)
-      | Lprim {primitive = Pmakeblock (Blk_module names); args} ->
-        Some (names, args)
-      | Lprim {primitive = Pfield (pos, Fld_module {name}); args = [base]} -> (
-        match field seen base {Translmod.pos; name} with
-        | Some lam -> block_fields seen lam
-        | None -> None)
-      | _ -> None
-    and field seen lam {Translmod.pos; name} =
-      match block_fields seen lam with
-      | Some (names, args) when List.nth_opt names pos = Some name ->
-        List.nth_opt args pos
-      | Some _ | None -> None
-    in
-    let rec target lam fields =
-      match fields with
-      | [] -> Some lam
-      | step :: fields -> (
-        match field Set_ident.empty lam step with
-        | Some lam -> target lam fields
-        | None -> None)
+        | Some
+            (( Lvar _ | Lglobal_module _
+             | Lprim {primitive = Pfield (_, Fld_module _) | Pmakeblock _} ) as
+             bound) ->
+          resolve (Set_ident.add id seen) bound
+        | Some _ | None -> lam)
+      | Lprim
+          {
+            primitive = Pfield (pos, Fld_module {name}) as primitive;
+            args = [base];
+            loc;
+          } -> (
+        match resolve seen base with
+        | Lprim {primitive = Pmakeblock (Blk_module names); args}
+          when List.nth_opt names pos = Some name ->
+          resolve seen (List.nth args pos)
+        | base -> Lambda.prim ~primitive ~args:[base] loc)
+      | _ -> lam
     in
     let exported_modules =
       Ext_list.fold_left export_ids Map_string.empty (fun modules id ->
@@ -183,12 +194,9 @@ let flat_make_aliases (export_ids : Ident.t list)
            | {name = top} :: fields -> (
              match Map_string.find_opt top exported_modules with
              | Some top_id ->
-               let alias =
-                 match target (Lambda.var top_id) fields with
-                 | Some (Lvar id) when Map_ident.mem id group_map ->
-                   Lambda.var id
-                 | Some _ | None -> access loc (Lambda.var top_id) fields
-               in
+               let read = access loc (Lambda.var top_id) fields in
+               let resolved = resolve Set_ident.empty read in
+               let alias = if is_path resolved then resolved else read in
                ( (Ident.create name, alias) :: aliases,
                  Set_string.add js_name occupied_names )
              | None ->
@@ -196,6 +204,36 @@ let flat_make_aliases (export_ids : Ident.t list)
                  "Internal error: no export for module `%s` of `%s`." top
                  (String.concat "." names))
            | [] -> assert false)
+
+let is_awaited_unit (lam : Lambda.t) =
+  match lam with
+  | Lprim
+      {
+        primitive = Pawait;
+        args = [Lprim {primitive = Pimport (Import_module {path = []})}];
+      } ->
+    true
+  | _ -> false
+
+(* See [Lam_stats.awaited_units]. *)
+let awaited_units (groups : Lam_group.t list) =
+  let units = ref Set_ident.empty in
+  let rec collect (lam : Lambda.t) =
+    (match lam with
+    | Llet (_, id, bound, _) when is_awaited_unit bound ->
+      units := Set_ident.add id !units
+    | _ -> ());
+    Lambda_traverse.iter collect lam
+  in
+  Ext_list.iter groups (fun group ->
+      match group with
+      | Single (_, id, lam) ->
+        if is_awaited_unit lam then units := Set_ident.add id !units;
+        collect lam
+      | Recursive bindings ->
+        Ext_list.iter bindings (fun (_, lam) -> collect lam)
+      | Nop lam -> collect lam);
+  !units
 
 (* The other compilation units this one refers to. Conversion used to drop
    [Lglobal_module] references and have module analysis add them back (see
@@ -321,6 +359,7 @@ let compile ?on_optimized_lambda (output_prefix : string)
   let meta =
     {
       meta with
+      awaited_units = awaited_units groups;
       exports = meta.exports @ flat_exports;
       export_idents =
         Ext_list.fold_left flat_exports meta.export_idents (fun acc id ->

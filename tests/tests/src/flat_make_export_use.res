@@ -19,3 +19,11 @@ let included = Flat_make_export.Included.make()
 let aliased = Flat_make_export.Aliased.make()
 let hidden = Flat_make_export_hidden.A.B.make()
 let hiddenBoth = Flat_make_export_hidden.both()
+let reexported = Flat_make_export_reexport.Inner.make()
+let reexportedDeep = Flat_make_export_reexport.Deep.Deep.make()
+
+let awaited = async () => {
+  module Lib = await Flat_make_export
+  module Inner = Lib.Three.Inner
+  (Lib.Two.Inner.make(), Inner.Deep.make())
+}

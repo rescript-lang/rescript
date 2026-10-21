@@ -257,21 +257,28 @@ let compile output_prefix =
 
      Every nested [make] is also exported under a flat name (see
      [Translmod.implementation]), so it is read as Other.A$B$make rather
-     than through the module objects. Other reads query only the first field,
-     "A", and emit the remaining fields as JS property access. *)
-  let rec extract_field_path segments primitive args =
+     than through the module objects. The same holds below a local bound to
+     the awaited module, [let d = await import(Other)]. Other reads query
+     only the first field, "A", and emit the remaining fields as JS property
+     access. *)
+  let rec extract_field_path awaited_units segments primitive args =
     match (primitive, args) with
     | Lambda.Pfield (_, Fld_module {name}), [Lambda.Lprim {primitive; args; _}]
       ->
-      extract_field_path (name :: segments) primitive args
+      extract_field_path awaited_units (name :: segments) primitive args
     | Lambda.Pfield (_, Fld_module {name}), [Lambda.Lglobal_module id] ->
-      Some (id, name :: segments)
+      Some (E.ml_var_dot id, name :: segments)
+    | Lambda.Pfield (_, Fld_module {name}), [Lambda.Lvar id]
+      when Set_ident.mem id awaited_units ->
+      Some (E.dot (E.var id), name :: segments)
     | _ -> None
   in
-  let flat_make_field_name primitive args =
-    match extract_field_path [] primitive args with
-    | Some (id, segments) ->
-      Translmod.flat_make_name segments |> Option.map (fun name -> (id, name))
+  let flat_make_field (lambda_cxt : Lam_compile_context.t) primitive args =
+    match
+      extract_field_path lambda_cxt.meta.awaited_units [] primitive args
+    with
+    | Some (read, segments) ->
+      Translmod.flat_make_name segments |> Option.map read
     | None -> None
   in
   let rec compile_external_field (* Like [List.empty]*)
@@ -1626,11 +1633,10 @@ let compile output_prefix =
     in
     match prim_info with
     | {primitive = Pfield (_, Fld_module _); _} -> (
-      match flat_make_field_name prim_info.primitive prim_info.args with
-      | Some (id, flat_name) ->
+      match flat_make_field lambda_cxt prim_info.primitive prim_info.args with
+      | Some read ->
         Js_output.output_of_expression lambda_cxt.continuation
-          ~no_effects:no_effects_const
-          (E.ml_var_dot id flat_name)
+          ~no_effects:no_effects_const read
       | None -> (
         match prim_info with
         | {primitive = Pfield (_, fld_info); args = [Lglobal_module id]; _} -> (

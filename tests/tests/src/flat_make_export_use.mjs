@@ -2,6 +2,7 @@
 
 import * as Flat_make_export from "./flat_make_export.mjs";
 import * as Flat_make_export_hidden from "./flat_make_export_hidden.mjs";
+import * as Flat_make_export_reexport from "./flat_make_export_reexport.mjs";
 
 let top = Flat_make_export.make();
 
@@ -37,6 +38,18 @@ let hidden = Flat_make_export_hidden.A$B$make();
 
 let hiddenBoth = Flat_make_export_hidden.both();
 
+let reexported = Flat_make_export_reexport.Inner$make();
+
+let reexportedDeep = Flat_make_export_reexport.Deep$Deep$make();
+
+async function awaited() {
+  let Lib = await import("./flat_make_export.mjs");
+  return [
+    Lib.Two$Inner$make(),
+    Lib.Three$Inner$Deep$make()
+  ];
+}
+
 export {
   top,
   one,
@@ -55,5 +68,8 @@ export {
   aliased,
   hidden,
   hiddenBoth,
+  reexported,
+  reexportedDeep,
+  awaited,
 }
 /* top Not a pure module */

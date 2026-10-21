@@ -2,6 +2,7 @@
 
 import * as JsxRuntime from "react/jsx-runtime";
 import * as Nested_component_producer$ReactPpxTests from "./nested_component_producer.res.js";
+import * as Nested_component_reexport$ReactPpxTests from "./nested_component_reexport.res.js";
 
 function Nested_component_consumer(props) {
   return JsxRuntime.jsxs(Nested_component_producer$ReactPpxTests.Provider$make, {
@@ -20,9 +21,52 @@ function Nested_component_consumer(props) {
   });
 }
 
+let reexported = JsxRuntime.jsx(Nested_component_reexport$ReactPpxTests.Provider$make, {
+  children: JsxRuntime.jsx(Nested_component_reexport$ReactPpxTests.Menu$Item$make, {
+    children: null
+  })
+});
+
+async function awaited() {
+  let Producer = await import("./nested_component_producer.res.js");
+  return JsxRuntime.jsx(Producer.Provider$make, {
+    children: JsxRuntime.jsx(Producer.Menu$Item$make, {
+      children: null
+    })
+  });
+}
+
+let AwaitedProducer = await import("./nested_component_producer.res.js");
+
+let awaitedTop = JsxRuntime.jsx(AwaitedProducer.Provider$make, {
+  children: null
+});
+
 let make = Nested_component_consumer;
+
+let AwaitedProducer$Provider$make = AwaitedProducer.Provider$make;
+
+let AwaitedProducer$Trigger$make = AwaitedProducer.Trigger$make;
+
+let AwaitedProducer$Menu$Item$make = AwaitedProducer.Menu$Item$make;
+
+let AwaitedProducer$Ext$make = AwaitedProducer.Ext$make;
+
+let AwaitedProducer$RecA$make = AwaitedProducer.RecA$make;
+
+let AwaitedProducer$RecB$make = AwaitedProducer.RecB$make;
 
 export {
   make,
+  reexported,
+  awaited,
+  AwaitedProducer,
+  awaitedTop,
+  AwaitedProducer$Provider$make,
+  AwaitedProducer$Trigger$make,
+  AwaitedProducer$Menu$Item$make,
+  AwaitedProducer$Ext$make,
+  AwaitedProducer$RecA$make,
+  AwaitedProducer$RecB$make,
 }
-/* react/jsx-runtime Not a pure module */
+/* reexported Not a pure module */

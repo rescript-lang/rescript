@@ -7,29 +7,37 @@ import * as Flat_make_export_use from "./flat_make_export_use.mjs";
 
 Mocha.describe("Flat_make_export_test", () => {
   Mocha.test("nested make values are read through flat exports", () => {
-    Test_utils.eq("File \"flat_make_export_test.res\", line 6, characters 7-14", Flat_make_export_use.top, "top");
-    Test_utils.eq("File \"flat_make_export_test.res\", line 7, characters 7-14", Flat_make_export_use.one, "one");
-    Test_utils.eq("File \"flat_make_export_test.res\", line 8, characters 7-14", Flat_make_export_use.two, "two");
-    Test_utils.eq("File \"flat_make_export_test.res\", line 9, characters 7-14", Flat_make_export_use.three, "three");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 9, characters 7-14", Flat_make_export_use.top, "top");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 10, characters 7-14", Flat_make_export_use.one, "one");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 11, characters 7-14", Flat_make_export_use.two, "two");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 12, characters 7-14", Flat_make_export_use.three, "three");
   });
   Mocha.test("other values keep their module path", () => {
-    Test_utils.eq("File \"flat_make_export_test.res\", line 13, characters 7-14", Flat_make_export_use.oneKeep, "one-keep");
-    Test_utils.eq("File \"flat_make_export_test.res\", line 14, characters 7-14", Flat_make_export_use.twoKeep, "two-inner-keep");
-    Test_utils.eq("File \"flat_make_export_test.res\", line 15, characters 7-14", Flat_make_export_use.threeKeep, "three-deep-keep");
-    Test_utils.eq("File \"flat_make_export_test.res\", line 16, characters 7-14", Flat_make_export_use.exoticValue, "exotic-value");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 16, characters 7-14", Flat_make_export_use.oneKeep, "one-keep");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 17, characters 7-14", Flat_make_export_use.twoKeep, "two-inner-keep");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 18, characters 7-14", Flat_make_export_use.threeKeep, "three-deep-keep");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 19, characters 7-14", Flat_make_export_use.exoticValue, "exotic-value");
   });
   Mocha.test("flat names follow the signature, not the implementation", () => {
-    Test_utils.eq("File \"flat_make_export_test.res\", line 20, characters 7-14", Flat_make_export_use.nested, "nested");
-    Test_utils.eq("File \"flat_make_export_test.res\", line 21, characters 7-14", Flat_make_export_use.recursive, "recursive");
-    Test_utils.eq("File \"flat_make_export_test.res\", line 22, characters 7-14", Flat_make_export_use.coerced, "coerced");
-    Test_utils.eq("File \"flat_make_export_test.res\", line 23, characters 7-14", Stdlib_Option.map(Flat_make_export_use.rebound, f => f()), "rebound");
-    Test_utils.eq("File \"flat_make_export_test.res\", line 24, characters 7-14", Flat_make_export_use.applied, "applied");
-    Test_utils.eq("File \"flat_make_export_test.res\", line 25, characters 7-14", Flat_make_export_use.included, "one");
-    Test_utils.eq("File \"flat_make_export_test.res\", line 26, characters 7-14", Flat_make_export_use.aliased, "one");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 23, characters 7-14", Flat_make_export_use.nested, "nested");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 24, characters 7-14", Flat_make_export_use.recursive, "recursive");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 25, characters 7-14", Flat_make_export_use.coerced, "coerced");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 26, characters 7-14", Stdlib_Option.map(Flat_make_export_use.rebound, f => f()), "rebound");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 27, characters 7-14", Flat_make_export_use.applied, "applied");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 28, characters 7-14", Flat_make_export_use.included, "one");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 29, characters 7-14", Flat_make_export_use.aliased, "one");
   });
+  Mocha.test("re-exported modules read the flat exports", () => {
+    Test_utils.eq("File \"flat_make_export_test.res\", line 33, characters 7-14", Flat_make_export_use.reexported, "two");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 34, characters 7-14", Flat_make_export_use.reexportedDeep, "three");
+  });
+  Mocha.test("awaited modules read the flat exports", async () => Test_utils.eq("File \"flat_make_export_test.res\", line 38, characters 7-14", await Flat_make_export_use.awaited(), [
+    "two",
+    "three"
+  ]));
   Mocha.test("a binding hidden by the interface does not clash", () => {
-    Test_utils.eq("File \"flat_make_export_test.res\", line 30, characters 7-14", Flat_make_export_use.hidden, 1);
-    Test_utils.eq("File \"flat_make_export_test.res\", line 31, characters 7-14", Flat_make_export_use.hiddenBoth, 3);
+    Test_utils.eq("File \"flat_make_export_test.res\", line 42, characters 7-14", Flat_make_export_use.hidden, 1);
+    Test_utils.eq("File \"flat_make_export_test.res\", line 43, characters 7-14", Flat_make_export_use.hiddenBoth, 3);
   });
 });
 

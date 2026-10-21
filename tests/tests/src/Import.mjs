@@ -138,7 +138,7 @@ let M$make = M.make;
 
 let N$N0$make = N0.make;
 
-let N$N1$O$make = N1.O.make;
+let N$N1$O$make = O.make;
 
 let N$N2$make = N2.make;
 

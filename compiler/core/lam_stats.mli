@@ -36,6 +36,10 @@ type t = {
       (** we don't need count arities for all identifiers, for identifiers
       for sure it's not a function, there is no need to count them
   *)
+  awaited_units: Set_ident.t;
+      (** Locals bound to an awaited compilation unit,
+          [let d = await import(Unit)]: reads of nested [make] values through
+          them use the flat exports too. *)
 }
 
 val print : Format.formatter -> t -> unit
