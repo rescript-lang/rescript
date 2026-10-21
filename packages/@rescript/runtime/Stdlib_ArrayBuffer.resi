@@ -6,7 +6,7 @@ See: [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Ref
 /**
 Type representing an ArrayBuffer object used to represent a generic raw binary data buffer.
 */
-@notUndefined
+@instanceOf("ArrayBuffer")
 type t
 
 /**

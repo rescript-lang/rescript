@@ -1,6 +1,6 @@
 /** The `Uint32Array` typed array represents an array of 32-bit unsigned integers in platform byte order. See [Uint32Array on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint32Array)
 */
-@editor.completeFrom(Stdlib.TypedArray)
+@editor.completeFrom(Stdlib.TypedArray) @instanceOf("Uint32Array")
 type t = Stdlib_TypedArray.t<int>
 
 module Constants = {

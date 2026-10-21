@@ -1,4 +1,4 @@
-@notUndefined
+@instanceOf("Set")
 type t<'a>
 
 external asIterable: t<'a> => Stdlib_Iterable.t<'a> = "%identity"
