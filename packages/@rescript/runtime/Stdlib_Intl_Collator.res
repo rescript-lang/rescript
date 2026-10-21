@@ -1,4 +1,4 @@
-@notUndefined
+@instanceOf("Intl.Collator")
 type t
 
 type usage = [#sort | #search]

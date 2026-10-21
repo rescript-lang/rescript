@@ -1,4 +1,4 @@
-@notUndefined
+@instanceOf("DataView")
 type t
 
 @new
