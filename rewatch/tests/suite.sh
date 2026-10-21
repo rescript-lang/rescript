@@ -87,6 +87,7 @@ fi
 ./compile/19-utf8-warning.sh &&
 ./compile/20-schedule-independent-modules-after-error.sh &&
 ./compile/21-rebuild-dependency-for-package-specs.sh &&
+./compile/23-root-source-dir-rebuild.sh &&
 ./compile/14-no-testrepo-changes.sh &&
 ./compile/15-no-new-files.sh &&
 ./compile/16-snapshots-unchanged.sh &&

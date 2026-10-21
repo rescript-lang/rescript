@@ -12,10 +12,15 @@ let relative_output_directory path (spec : Config.package_spec) =
 
 let generated_js_path (config : Config.t) path (spec : Config.package_spec) =
   let output_dir = relative_output_directory path spec in
+  let output =
+    Filename.remove_extension (Filename.basename path)
+    ^ Config.package_spec_suffix config spec
+  in
+  (* An in-source output beside a module of the package root is "A.js", as
+     the source inventory spells it, not "./A.js". *)
   Filename.concat config.root
-    (Filename.concat output_dir
-       (Filename.remove_extension (Filename.basename path)
-       ^ Config.package_spec_suffix config spec))
+    (if output_dir = Filename.current_dir_name then output
+     else Filename.concat output_dir output)
 
 let published_ast_path ~ocaml_dir source =
   Filename.concat ocaml_dir (Filename.basename (Source.ast_path source))

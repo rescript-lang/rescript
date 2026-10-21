@@ -81,6 +81,22 @@ let interface_mismatch_error implementation interface =
         different path names or different cases: `%s` vs `%s`"
        implementation interface)
 
+(* [path] without its "." segments, so a file found below source dir "." or
+   "./src" has the path bsc records for it, "A.res" or "src/A.res". Cleanup and
+   freshness match modules to their ASTs and outputs by these paths: a
+   "./A.res" matched no AST, and a "./ui/U.js" in the inventory of "." matched
+   no module's output, so each build removed them and rebuilt the module. *)
+let rec without_current_dir_segments path =
+  let directory = Filename.dirname path in
+  let base = Filename.basename path in
+  if directory = path || path = Filename.current_dir_name then path
+  else if base = Filename.current_dir_name then
+    without_current_dir_segments directory
+  else
+    match without_current_dir_segments directory with
+    | directory when directory = Filename.current_dir_name -> base
+    | directory -> Filename.concat directory base
+
 (* A package source tree has three consumers with deliberately different
    recursion rules. Compilation follows directory links and honors source
    activation/subdirs; cleanup inventories every real descendant but treats
@@ -134,7 +150,11 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
           | Some kind ->
             candidates :=
               {
-                file = {path = relative_path; modified = metadata.Unix.st_mtime};
+                file =
+                  {
+                    path = without_current_dir_segments relative_path;
+                    modified = metadata.Unix.st_mtime;
+                  };
                 kind;
                 is_dev = source.is_dev;
               }
@@ -143,7 +163,9 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
       List.iter
         (fun name ->
           let relative_path = Filename.concat relative name in
-          let absolute_path = Filename.concat root relative_path in
+          let absolute_path =
+            Filename.concat root (without_current_dir_segments relative_path)
+          in
           match Unix.lstat absolute_path with
           | metadata -> (
             match metadata.Unix.st_kind with
