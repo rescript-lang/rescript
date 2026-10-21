@@ -1,0 +1,11 @@
+
+  [1;33mWarning number 3[0m
+  [36m/.../fixtures/react_componentWithProps_payload.res[0m:[2m12:3-27[0m
+
+  10 [2m│[0m 
+  11 [2m│[0m module C = {
+  [1;33m12[0m [2m│[0m   [1;33m@react.componentWithProps[0m(: props)
+  13 [2m│[0m   let make = (props: props) => React.string(props.label)
+  14 [2m│[0m }
+
+  deprecated: @react.componentWithProps takes no payload. The payload has no effect; remove it.
