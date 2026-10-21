@@ -7,11 +7,11 @@ let binding_lambda ~name source =
       ~display_filename:"PartialApplication.res" ~source
   in
   OUnit.assert_bool "source parses" (not parsed.invalid);
-  let typed, _, _ =
+  let typed, signature, env =
     Typemod.type_structure (Env.initial_safe_string ()) parsed.parsetree
   in
   let implementation =
-    Translmod.transl_implementation "PartialApplication"
+    Translmod.transl_implementation "PartialApplication" env signature
       (typed, Typedtree.Tcoerce_none)
   in
   let found = ref None in
