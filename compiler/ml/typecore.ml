@@ -418,6 +418,27 @@ let unify_exp_types ~context loc env ty expected_ty =
   with Unify trace ->
     raise (Error (loc, env, Expr_type_clash {trace; context}))
 
+(* Like [unify_exp_types], but a private abbreviation such as [Generator.t]
+   also unifies through its expansion, as an explicit [:>] would. A failure
+   reports the type as written. *)
+let unify_exp_types_through_private ~context loc env ty expected_ty =
+  let snapshot = Btype.snapshot () and levels = Ctype.save_levels () in
+  let restore () =
+    Btype.backtrack snapshot;
+    Ctype.set_levels levels
+  in
+  try unify_exp_types ~context loc env ty expected_ty
+  with Error (_, _, Expr_type_clash _) as error -> (
+    restore ();
+    let expanded = Ctype.expand_head_opt env ty in
+    if Btype.repr expanded == Btype.repr (Ctype.expand_head env ty) then
+      raise error
+    else
+      try unify_exp_types ~context loc env expanded expected_ty
+      with Error (_, _, Expr_type_clash _) ->
+        restore ();
+        raise error)
+
 (* level at which to create the local type declarations *)
 let get_newtype_level () =
   match !(newtype_level_ref ()) with
@@ -3321,7 +3342,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       let collection = type_exp ~context:None env scollection in
       let iterable_state = (Btype.snapshot (), Ctype.save_levels ()) in
       try
-        unify_exp_types ~context:None scollection.pexp_loc env
+        unify_exp_types_through_private ~context:None scollection.pexp_loc env
           collection.exp_type
           (Predef.type_iterable ty_elem);
         collection
@@ -3379,8 +3400,11 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
   | Pexp_for_await_of (param, scollection, sbody) ->
     let ty_elem = newvar () in
     let collection =
-      type_expect ~context:None env scollection
-        (Predef.type_async_iterable ty_elem)
+      let collection = type_exp ~context:None env scollection in
+      unify_exp_types_through_private ~context:None scollection.pexp_loc env
+        collection.exp_type
+        (Predef.type_async_iterable ty_elem);
+      collection
     in
     let id, new_env =
       match param.ppat_desc with
