@@ -1,0 +1,1 @@
+- Accept a payload on `@react.componentWithProps` again, as in 12.x, with a deprecation warning: it never had an effect.
