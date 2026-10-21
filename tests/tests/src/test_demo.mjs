@@ -55,8 +55,7 @@ function g1(x, y) {
 let x = 14;
 
 function v(extra) {
-  let xx = 6;
-  return (xx + extra | 0) + 7 | 0;
+  return (6 + extra | 0) + 7 | 0;
 }
 
 let nil = "Nil";
