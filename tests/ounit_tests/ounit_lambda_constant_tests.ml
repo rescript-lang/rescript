@@ -294,11 +294,11 @@ let suites =
                        ];
                    ]
                  in
-                 let typed, _, _ =
+                 let typed, signature, env =
                    Typemod.type_structure (Env.initial_safe_string ()) structure
                  in
                  let implementation =
-                   Translmod.transl_implementation "RegexpTest"
+                   Translmod.transl_implementation "RegexpTest" env signature
                      (typed, Typedtree.Tcoerce_none)
                  in
                  let sources = ref [] in

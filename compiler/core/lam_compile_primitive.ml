@@ -120,21 +120,15 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
       Lam_compile_env.register_ml_module ~dynamic_import:true module_;
       let import = import_of_path (import_path oid) in
       (* the single source of truth for ML export names: a binding named
-         [case] is exported as [$$case], and a hoisted [Operator.\"+"] whose
-         cmj metadata stores the raw flattened name [Operator$+] is
-         exported as [Operator$$plus] *)
+         [case] is exported as [$$case] *)
       let ml_export_name = Js_dump_import_export.js_export_name in
       match path with
       | [] -> import
       | [name] -> wrap_then import (ml_export_name name)
       | _ :: _ :: _ -> (
-        (* a nested path is importable when the target is a hoisted
-           root-level export; the cmj knows *)
-        match
-          Lam_compile_env.find_hoisted_external_export ~dynamic_import:true
-            module_ path
-        with
-        | Some hoisted_name -> wrap_then import (ml_export_name hoisted_name)
+        (* a nested [make] is importable through its flat export *)
+        match Translmod.flat_make_name path with
+        | Some name -> wrap_then import (ml_export_name name)
         | None ->
           Location.raise_errorf ~loc
             "Invalid argument: Dynamic import requires a module or module \

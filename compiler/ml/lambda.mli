@@ -17,8 +17,6 @@
 
 open Asttypes
 
-type hoisted_function = {binding: Ident.t; path: string list; loc: Location.t}
-
 type tag_info =
   | Blk_constructor of {
       name: string;

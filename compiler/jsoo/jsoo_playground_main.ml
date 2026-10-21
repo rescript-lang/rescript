@@ -658,17 +658,14 @@ module Compile = struct
       (* default *)
       let ast = impl str in
       let ast = Ppx_entry.rewrite_implementation ast in
-      let typed_tree =
-        let a, b, _, signature =
-          Typemod.type_implementation_more modulename modulename modulename env
-            ast
-        in
-        (* finalenv := c ; *)
-        types_signature := signature;
-        (a, b)
+      let structure, coercion, finalenv, signature =
+        Typemod.type_implementation_more modulename modulename modulename env
+          ast
       in
-      let {Translmod.lambda; exports; hoisted_functions} =
-        Translmod.transl_implementation modulename typed_tree
+      types_signature := signature;
+      let typed_tree = (structure, coercion) in
+      let ({Translmod.lambda} as implementation) =
+        Translmod.transl_implementation modulename finalenv signature typed_tree
       in
       let optimized_lambda = ref None in
       let on_optimized_lambda =
@@ -680,8 +677,7 @@ module Compile = struct
         else None
       in
       let lambda_output =
-        Lam_compile_main.compile ?on_optimized_lambda "" exports
-          hoisted_functions lambda
+        Lam_compile_main.compile ?on_optimized_lambda "" implementation
       in
       let js_code, source_map =
         render_javascript ~module_system ~filename ~source:str ~source_map_mode

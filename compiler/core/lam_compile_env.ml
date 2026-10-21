@@ -106,11 +106,6 @@ let query_external_id_info ?(dynamic_import = false) (module_id : Ident.t)
   let cmj_table = cmj_table_of_module_id ~dynamic_import module_id in
   Js_cmj_format.query_by_name cmj_table name
 
-let find_hoisted_external_export ?(dynamic_import = false) (module_id : Ident.t)
-    (path : string list) : string option =
-  let cmj_table = cmj_table_of_module_id ~dynamic_import module_id in
-  Js_cmj_format.find_hoisted_export cmj_table path
-
 let get_package_path_from_cmj (id : Lam_module_ident.t) :
     string * Js_packages_info.t * Ext_js_file_kind.case =
   let cmj_load_info =

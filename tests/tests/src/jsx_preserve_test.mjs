@@ -308,6 +308,20 @@ let _comment_multiple_children = <div>
 
 let make$2 = Jsx_preserve_test;
 
+let Icon$make = Jsx_preserve_test$Icon;
+
+let B$make = Jsx_preserve_test$B;
+
+let MyWeirdComponent$make = Jsx_preserve_test$MyWeirdComponent;
+
+let ComponentWithOptionalProps$make = Jsx_preserve_test$ComponentWithOptionalProps;
+
+let X$make = Jsx_preserve_test$X;
+
+let Y$make = make;
+
+let ContextProvider$make = make$1;
+
 export {
   Icon,
   _single_element_child,
@@ -352,5 +366,12 @@ export {
   _comment_only_fragment,
   _comment_single_child,
   _comment_multiple_children,
+  Icon$make,
+  B$make,
+  MyWeirdComponent$make,
+  ComponentWithOptionalProps$make,
+  X$make,
+  Y$make,
+  ContextProvider$make,
 }
 /* _single_element_child Not a pure module */

@@ -146,6 +146,8 @@ function a18(prim0, prim1) {
 
 let f = Stdlib_List.concat;
 
+let Pervasives$make = Stdlib_List.make;
+
 export {
   Pervasives$1 as Pervasives,
   f,
@@ -168,5 +170,6 @@ export {
   a16,
   a17,
   a18,
+  Pervasives$make,
 }
 /* No side effect */

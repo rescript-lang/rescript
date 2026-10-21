@@ -61,19 +61,8 @@ type keyed_cmj_value = {
   persistent_closed_lambda: Lambda.t option;
 }
 
-type hoisted_export = {
-  path: string list;  (** Exact source-level module path segments. *)
-  export_name: string;
-      (** Flattened compiler name for the export, before JS identifier
-          conversion: the emitted export applies [Ext_ident.convert] to it
-          (a hoisted [Operator.\"+"] is stored as [Operator$+] and exported
-          as [Operator$$plus]), and so must any consumer that reconstructs
-          the JS export name. *)
-}
-
 type t = {
   values: keyed_cmj_value array;
-  hoisted_exports: hoisted_export array;
   pure: bool;
   package_spec: Js_packages_info.t;
   case: Ext_js_file_kind.case;
@@ -81,15 +70,12 @@ type t = {
 
 val make :
   values:cmj_value Map_string.t ->
-  hoisted_exports:hoisted_export list ->
   effect_:effect_ ->
   package_spec:Js_packages_info.t ->
   case:Ext_js_file_kind.case ->
   t
 
 val query_by_name : t -> string -> keyed_cmj_value
-
-val find_hoisted_export : t -> string list -> string option
 
 val single_na : arity
 

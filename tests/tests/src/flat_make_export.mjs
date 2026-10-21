@@ -2,6 +2,10 @@
 
 
 function make() {
+  return "top";
+}
+
+function make$1() {
   return "one";
 }
 
@@ -10,7 +14,7 @@ function keep() {
 }
 
 let One = {
-  make: make,
+  make: make$1,
   keep: keep
 };
 
@@ -18,7 +22,7 @@ function keep$1() {
   return "two-keep";
 }
 
-function make$1() {
+function make$2() {
   return "two";
 }
 
@@ -27,7 +31,7 @@ function keep$2() {
 }
 
 let Inner = {
-  make: make$1,
+  make: make$2,
   keep: keep$2
 };
 
@@ -40,7 +44,7 @@ function keep$3() {
   return "three-inner-keep";
 }
 
-function make$2() {
+function make$3() {
   return "three";
 }
 
@@ -49,7 +53,7 @@ function keep$4() {
 }
 
 let Deep = {
-  make: make$2,
+  make: make$3,
   keep: keep$4
 };
 
@@ -62,37 +66,16 @@ let Three = {
   Inner: Inner$1
 };
 
-function $$switch() {
-  return "keyword";
-}
-
-function $plus() {
-  return "dollar";
-}
-
-let Escaped = {
-  $$switch: $$switch,
-  $plus: $plus
-};
-
-function $plus$1() {
-  return "operator";
-}
-
-let Operator = {
-  $plus: $plus$1
-};
-
-function make$3() {
+function make$4() {
   return "nested";
 }
 
 let B = {
-  make: make$3
+  make: make$4
 };
 
 function B$make() {
-  return "exotic";
+  return "exotic-value";
 }
 
 let Ambiguous = {
@@ -108,19 +91,11 @@ let RecursiveB = {
   value: value
 };
 
-function make$4() {
+function make$5() {
   return "recursive";
 }
 
 let RecursiveA = {
-  make: make$4
-};
-
-function make$5() {
-  return "typed";
-}
-
-let Typed = {
   make: make$5
 };
 
@@ -132,55 +107,76 @@ let Coerced = {
   make: make$6
 };
 
+function make$7() {
+  return "rebound";
+}
+
+let Rebound = {
+  make: make$7
+};
+
+function Make(X) {
+  let make = () => X.value;
+  return {
+    make: make
+  };
+}
+
+function make$8() {
+  return "applied";
+}
+
+let Applied = {
+  make: make$8
+};
+
 let Included = {
-  make: make,
+  make: make$1,
   keep: keep
 };
 
 let Aliased;
 
-let Coerced$make = Coerced.make;
+let One$make = make$1;
 
-let Typed$make = Typed.make;
+let Two$Inner$make = make$2;
 
-let RecursiveA$make = RecursiveA.make;
+let Three$Inner$Deep$make = make$3;
 
-let Ambiguous$B$make = B.make;
+let Ambiguous$B$make = make$4;
 
-let Operator$$plus = Operator.$plus;
+let RecursiveA$make = make$5;
 
-let Escaped$$plus = $plus;
+let Coerced$make = make$6;
 
-let Escaped$switch = $$switch;
+let Rebound$make = Rebound.make;
 
-let Three$Inner$Deep$make = Three.Inner.Deep.make;
+let Applied$make = make$8;
 
-let Two$Inner$make = Inner.make;
-
-let One$make = make;
+let Included$make = make$1;
 
 export {
+  make,
   One,
   Two,
   Three,
-  Escaped,
-  Operator,
   Ambiguous,
   RecursiveA,
   RecursiveB,
-  Typed,
   Coerced,
+  Rebound,
+  Make,
+  Applied,
   Included,
   Aliased,
-  Coerced$make,
-  Typed$make,
-  RecursiveA$make,
-  Ambiguous$B$make,
-  Operator$$plus,
-  Escaped$$plus,
-  Escaped$switch,
-  Three$Inner$Deep$make,
-  Two$Inner$make,
   One$make,
+  Two$Inner$make,
+  Three$Inner$Deep$make,
+  Ambiguous$B$make,
+  RecursiveA$make,
+  Coerced$make,
+  Rebound$make,
+  Applied$make,
+  Included$make,
 }
 /* No side effect */
