@@ -1,30 +1,16 @@
 module Instance : sig
-  type t =
-    | Array
-    | ArrayBuffer
-    | BigInt64Array
-    | BigUint64Array
-    | Blob
-    | DataView
-    | Date
-    | File
-    | Float32Array
-    | Float64Array
-    | Int16Array
-    | Int32Array
-    | Int8Array
-    | Promise
-    | RegExp
-    | Uint16Array
-    | Uint32Array
-    | Uint8Array
-    | Uint8ClampedArray
-    | Set
-    | Map
-    | WeakSet
-    | WeakMap
+  (** A JavaScript class whose instances a value is recognized by:
+      [name] is the global constructor's path, such as ["Date"] or
+      ["Intl.Locale"], and [ancestors] are the paths of its superclasses that
+      are declared too, nearest first. Arrays are recognized by
+      [Array.isArray] instead. *)
+  type t = Array | Class of {name: string; ancestors: string list}
 
   val to_string : t -> string
+
+  val is_subclass : t -> of_:t -> bool
+  (** Whether every instance of the first is an instance of [of_] too, without
+      the two being the same class. *)
 end
 
 type block_type =
@@ -34,6 +20,7 @@ type block_type =
   | BigintType
   | BooleanType
   | InstanceType of Instance.t
+  | SymbolType
   | FunctionType
   | ObjectType
   | UnknownType

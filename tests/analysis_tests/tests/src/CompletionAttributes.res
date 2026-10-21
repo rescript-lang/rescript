@@ -42,3 +42,12 @@
 
 // type withTag = | @as("t") A | B
 //                     ^com
+
+// @instanc
+//         ^com
+
+// @typeO
+//       ^com
+
+// @notUnd
+//        ^com

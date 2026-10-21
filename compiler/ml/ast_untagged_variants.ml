@@ -9,6 +9,7 @@ type untagged_error =
   | AtMostOneNumber
   | AtMostOneBigint
   | AtMostOneBoolean
+  | AtMostOneSymbol
   | UnreachableBoolean of string
   | DuplicateLiteral of string
   | ConstructorMoreThanOneArg of string
@@ -19,6 +20,10 @@ type error =
   | InvalidVariantTagAnnotation
   | InvalidUntaggedVariantDefinition of untagged_error
   | TagFieldNameConflict of string * string * string
+  | InvalidInstanceOf
+  | InvalidTypeOf of string
+  | ConflictingRuntimeAnnotations
+  | RuntimeAnnotationOnRepresentedType of string
 exception Error of Location.t * error
 
 let report_error ppf =
@@ -47,10 +52,11 @@ let report_error ppf =
       | AtMostOneInstance Array ->
         "At most one case can be an array or tuple type."
       | AtMostOneInstance i ->
-        "At most one case can be a " ^ Instance.to_string i ^ " type."
+        "At most one case can be an instance of " ^ Instance.to_string i ^ "."
       | AtMostOneFunction -> "At most one case can be a function type."
       | AtMostOneString -> "At most one case can be a string type."
       | AtMostOneBoolean -> "At most one case can be a boolean type."
+      | AtMostOneSymbol -> "At most one case can be a symbol type."
       | UnreachableBoolean name ->
         "Case " ^ name
         ^ " can never match: both true and false are already cases of this \
@@ -67,6 +73,22 @@ let report_error ppf =
        value of inline record field \"%s\". Use a different @tag name or \
        rename the field."
       constructor_name runtime_value field_name
+  | InvalidInstanceOf ->
+    fprintf ppf
+      "@instanceOf expects the name of a global class, such as \
+       @instanceOf(\"Date\") or @instanceOf(\"Intl.Locale\")."
+  | InvalidTypeOf name ->
+    fprintf ppf
+      "@typeOf expects one of \"string\", \"number\", \"bigint\", \"boolean\", \
+       \"symbol\", \"function\" or \"object\"%s."
+      (if name = "" then "" else ", not \"" ^ name ^ "\"")
+  | ConflictingRuntimeAnnotations ->
+    fprintf ppf "A type can have either @instanceOf or @typeOf, not both."
+  | RuntimeAnnotationOnRepresentedType attribute ->
+    fprintf ppf
+      "@%s can only be used on abstract types and type abbreviations, whose \
+       runtime representation it describes."
+      attribute
 
 (*
   Type of the runtime representation of a tag.
@@ -86,7 +108,7 @@ let untagged = "unboxed"
 
 let block_type_can_be_undefined = function
   | IntType | StringType | FloatType | BigintType | BooleanType | InstanceType _
-  | FunctionType | ObjectType ->
+  | SymbolType | FunctionType | ObjectType ->
     false
   | UnknownType -> true
 
@@ -147,6 +169,85 @@ let report_constructor_more_than_one_arg ~loc ~name =
     (Error
        (loc, InvalidUntaggedVariantDefinition (ConstructorMoreThanOneArg name)))
 
+(* What [@instanceOf] or [@typeOf] on a type declaration states about the
+   runtime representation of its values. *)
+type runtime_annotation =
+  | Instance_of of string  (** instances of the global class at this path *)
+  | Type_of of block_type  (** values with this [typeof] *)
+
+let instance_of = "instanceOf"
+let type_of = "typeOf"
+
+let is_class_path name =
+  let is_start = function
+    | 'A' .. 'Z' | 'a' .. 'z' | '_' | '$' -> true
+    | _ -> false
+  in
+  let is_part = function
+    | '0' .. '9' -> true
+    | c -> is_start c
+  in
+  let is_identifier segment =
+    segment <> "" && is_start segment.[0] && String.for_all is_part segment
+  in
+  match String.split_on_char '.' name with
+  | global :: properties ->
+    (* Properties may be named like keywords, the global may not *)
+    is_identifier global
+    && (not (Js_reserved_map.is_js_keyword global))
+    && List.for_all is_identifier properties
+  | [] -> false
+
+let block_type_of_typeof = function
+  | "string" -> Some StringType
+  | "number" -> Some FloatType
+  | "bigint" -> Some BigintType
+  | "boolean" -> Some BooleanType
+  | "symbol" -> Some SymbolType
+  | "function" -> Some FunctionType
+  | "object" -> Some ObjectType
+  | _ -> None
+
+(* The [@instanceOf] or [@typeOf] annotation in [attrs], validated. Only
+   [Typedecl] passes [~loc]; later readers see attributes it accepted. *)
+let process_runtime_annotation ?(loc = Location.none)
+    (attrs : Parsetree.attributes) =
+  let annotation_of ({Location.txt; loc = attr_loc}, payload) =
+    let loc = if attr_loc = Location.none then loc else attr_loc in
+    if txt = instance_of then
+      match Ast_payload.semantic_string_of_payload payload with
+      | Some name when is_class_path name -> Some (Instance_of name)
+      | _ -> raise (Error (loc, InvalidInstanceOf))
+    else if txt = type_of then
+      match Ast_payload.semantic_string_of_payload payload with
+      | Some name -> (
+        match block_type_of_typeof name with
+        | Some block_type -> Some (Type_of block_type)
+        | None -> raise (Error (loc, InvalidTypeOf name)))
+      | None -> raise (Error (loc, InvalidTypeOf ""))
+    else None
+  in
+  match Ext_list.filter_map attrs annotation_of with
+  | [] -> None
+  | [annotation] -> Some annotation
+  | _ :: _ :: _ -> raise (Error (loc, ConflictingRuntimeAnnotations))
+
+(* Checks the runtime annotations of a declaration whose kind is
+   [is_abstract_or_abbreviation]. *)
+let check_runtime_annotation ~loc ~is_abstract_or_abbreviation
+    (attrs : Parsetree.attributes) =
+  match process_runtime_annotation ~loc attrs with
+  | None -> ()
+  | Some annotation ->
+    if not is_abstract_or_abbreviation then
+      raise
+        (Error
+           ( loc,
+             RuntimeAnnotationOnRepresentedType
+               (match annotation with
+               | Instance_of _ -> instance_of
+               | Type_of _ -> type_of) ))
+
 let type_is_builtin_object (t : Types.type_expr) =
   match t.desc with
   | Tconstr (Path.Pident ident, [_], _) when Ident.name ident = "dict" -> true
@@ -156,33 +257,35 @@ let type_is_builtin_object (t : Types.type_expr) =
   | _ -> false
 
 let type_to_instanceof_backed_obj (t : Types.type_expr) =
+  let cls name = Some (Instance.Class {name; ancestors = []}) in
   match t.desc with
   | Tconstr (path, _, _) when Path.same path Predef.path_promise ->
-    Some Instance.Promise
-  | Tconstr (path, _, _) when Path.same path Predef.path_array -> Some Array
+    cls "Promise"
+  | Tconstr (path, _, _) when Path.same path Predef.path_array ->
+    Some Instance.Array
   | Tconstr (path, _, _) -> (
     match Path.name path with
-    | "Stdlib_ArrayBuffer.t" -> Some ArrayBuffer
-    | "Stdlib.BigInt64Array.t" -> Some BigInt64Array
-    | "Stdlib.BigUint64Array.t" -> Some BigUint64Array
-    | "Stdlib.DataView.t" -> Some DataView
-    | "Stdlib_Date.t" -> Some Date
-    | "Stdlib.Float32Array.t" -> Some Float32Array
-    | "Stdlib.Float64Array.t" -> Some Float64Array
-    | "Stdlib.Int16Array.t" -> Some Int16Array
-    | "Stdlib.Int32Array.t" -> Some Int32Array
-    | "Stdlib.Int8Array.t" -> Some Int8Array
-    | "Stdlib_RegExp.t" -> Some RegExp
-    | "Stdlib.Uint16Array.t" -> Some Uint16Array
-    | "Stdlib.Uint32Array.t" -> Some Uint32Array
-    | "Stdlib.Uint8Array.t" -> Some Uint8Array
-    | "Stdlib.Uint8ClampedArray.t" -> Some Uint8ClampedArray
-    | "Stdlib_File.t" -> Some File
-    | "Stdlib_Blob.t" -> Some Blob
-    | "Stdlib.Set.t" -> Some Set
-    | "Stdlib.Map.t" -> Some Map
-    | "Stdlib.WeakSet.t" -> Some WeakSet
-    | "Stdlib.WeakMap.t" -> Some WeakMap
+    | "Stdlib_ArrayBuffer.t" -> cls "ArrayBuffer"
+    | "Stdlib.BigInt64Array.t" -> cls "BigInt64Array"
+    | "Stdlib.BigUint64Array.t" -> cls "BigUint64Array"
+    | "Stdlib.DataView.t" -> cls "DataView"
+    | "Stdlib_Date.t" -> cls "Date"
+    | "Stdlib.Float32Array.t" -> cls "Float32Array"
+    | "Stdlib.Float64Array.t" -> cls "Float64Array"
+    | "Stdlib.Int16Array.t" -> cls "Int16Array"
+    | "Stdlib.Int32Array.t" -> cls "Int32Array"
+    | "Stdlib.Int8Array.t" -> cls "Int8Array"
+    | "Stdlib_RegExp.t" -> cls "RegExp"
+    | "Stdlib.Uint16Array.t" -> cls "Uint16Array"
+    | "Stdlib.Uint32Array.t" -> cls "Uint32Array"
+    | "Stdlib.Uint8Array.t" -> cls "Uint8Array"
+    | "Stdlib.Uint8ClampedArray.t" -> cls "Uint8ClampedArray"
+    | "Stdlib_File.t" -> cls "File"
+    | "Stdlib_Blob.t" -> cls "Blob"
+    | "Stdlib.Set.t" -> cls "Set"
+    | "Stdlib.Map.t" -> cls "Map"
+    | "Stdlib.WeakSet.t" -> cls "WeakSet"
+    | "Stdlib.WeakMap.t" -> cls "WeakMap"
     | _ -> None)
   | _ -> None
 
@@ -224,6 +327,7 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
   let number_types = ref 0 in
   let bigint_types = ref 0 in
   let boolean_types = ref 0 in
+  let symbol_types = ref 0 in
   let unknown_types = ref 0 in
   let add_string_literal ~is_const ~loc s =
     let set =
@@ -248,7 +352,7 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
     if !object_types > 1 then
       raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneObject));
     Hashtbl.iter
-      (fun i count ->
+      (fun _ (i, count) ->
         if count > 1 then
           raise
             (Error (loc, InvalidUntaggedVariantDefinition (AtMostOneInstance i))))
@@ -263,6 +367,8 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
       raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBigint));
     if !boolean_types > 1 then
       raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBoolean));
+    if !symbol_types > 1 then
+      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneSymbol));
     ()
   in
   let check_literal ~is_const ~loc (tag : tag) =
@@ -288,10 +394,15 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
           | UnknownType -> incr unknown_types
           | ObjectType -> incr object_types
           | InstanceType i ->
+            (* A class is identified by its name *)
+            let name = Instance.to_string i in
             let count =
-              Hashtbl.find_opt instance_types i |> Option.value ~default:0
+              match Hashtbl.find_opt instance_types name with
+              | Some (_, count) -> count
+              | None -> 0
             in
-            Hashtbl.replace instance_types i (count + 1)
+            Hashtbl.replace instance_types name (i, count + 1)
+          | SymbolType -> incr symbol_types
           | FunctionType -> incr function_types
           | IntType | FloatType -> incr number_types
           | BigintType -> incr bigint_types
@@ -385,6 +496,8 @@ module Dynamic_checks = struct
 
   let boolean = Payload_shape BooleanType |> tag_type
 
+  let symbol = Payload_shape SymbolType |> tag_type
+
   let ( == ) x y = bin EqEqEq x y
   let ( != ) x y = bin NotEqEq x y
   let ( ||| ) x y = bin Or x y
@@ -433,6 +546,7 @@ module Dynamic_checks = struct
       | BooleanType when literals_overlaps_with_boolean () = false ->
         typeof e != boolean
       | InstanceType i -> not (is_instance i e)
+      | SymbolType -> typeof e != symbol
       | FunctionType -> typeof e != function_
       | ObjectType when literals_overlaps_with_object () = false ->
         typeof e != object_
@@ -500,6 +614,15 @@ module Dynamic_checks = struct
     else (* (undefiled + other) || other *)
       typeof e != object_
 
+  (* An instance of the case's class [i] that is not an instance of a subclass
+     of [i] that is a case of its own: [instanceof] holds for superclasses
+     too. *)
+  let is_case_instance ~(instances : Instance.t list) i y =
+    Ext_list.fold_left instances (is_instance i y) (fun check other ->
+        if Instance.is_subclass other ~of_:i then
+          check &&& not (is_instance other y)
+        else check)
+
   let add_runtime_type_check ~tag_type ~has_null_case
       ~(block_cases : block_type list) x y =
     let instances =
@@ -510,7 +633,7 @@ module Dynamic_checks = struct
     match tag_type with
     | Payload_shape
         ( IntType | StringType | FloatType | BigintType | BooleanType
-        | FunctionType ) ->
+        | SymbolType | FunctionType ) ->
       typeof y == x
     | Payload_shape ObjectType ->
       let object_case =
@@ -523,7 +646,7 @@ module Dynamic_checks = struct
         in
         not_one_of_the_instances
       else object_case
-    | Payload_shape (InstanceType i) -> is_instance i y
+    | Payload_shape (InstanceType i) -> is_case_instance ~instances i y
     | Payload_shape UnknownType ->
       (* This should not happen because unknown must be the only non-literal case *)
       assert false

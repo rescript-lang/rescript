@@ -885,13 +885,20 @@ let compile output_prefix =
       let needs_array_guard =
         has_object_typeof && type_has_array_case && not clauses_have_array_case
       in
+      let instances =
+        Ext_list.filter_map block_cases (function
+          | Variant_runtime.InstanceType i -> Some i
+          | _ -> None)
+      in
       let rec build_if_chain remaining_clauses =
         match remaining_clauses with
         | ( Variant_runtime.Payload_shape (InstanceType instance_type),
             {J.switch_body} )
           :: rest ->
           S.if_
-            (E.emit_check (IsInstanceOf (instance_type, Expr e)))
+            (E.emit_check
+               (Ast_untagged_variants.Dynamic_checks.is_case_instance ~instances
+                  instance_type (Expr e)))
             switch_body
             ~else_:[build_if_chain rest]
         | _ -> (

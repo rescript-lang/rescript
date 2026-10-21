@@ -5,54 +5,16 @@
    each declaration. *)
 
 module Instance = struct
-  type t =
-    | Array
-    | ArrayBuffer
-    | BigInt64Array
-    | BigUint64Array
-    | Blob
-    | DataView
-    | Date
-    | File
-    | Float32Array
-    | Float64Array
-    | Int16Array
-    | Int32Array
-    | Int8Array
-    | Promise
-    | RegExp
-    | Uint16Array
-    | Uint32Array
-    | Uint8Array
-    | Uint8ClampedArray
-    | Set
-    | Map
-    | WeakSet
-    | WeakMap
+  type t = Array | Class of {name: string; ancestors: string list}
+
   let to_string = function
     | Array -> "Array"
-    | ArrayBuffer -> "ArrayBuffer"
-    | BigInt64Array -> "BigInt64Array"
-    | BigUint64Array -> "BigUint64Array"
-    | Blob -> "Blob"
-    | DataView -> "DataView"
-    | Date -> "Date"
-    | File -> "File"
-    | Float32Array -> "Float32Array"
-    | Float64Array -> "Float64Array"
-    | Int16Array -> "Int16Array"
-    | Int32Array -> "Int32Array"
-    | Int8Array -> "Int8Array"
-    | Promise -> "Promise"
-    | RegExp -> "RegExp"
-    | Uint16Array -> "Uint16Array"
-    | Uint32Array -> "Uint32Array"
-    | Uint8Array -> "Uint8Array"
-    | Uint8ClampedArray -> "Uint8ClampedArray"
-    | Set -> "Set"
-    | Map -> "Map"
-    | WeakSet -> "WeakSet"
-    | WeakMap -> "WeakMap"
+    | Class {name} -> name
+
+  let is_subclass t ~of_ =
+    match (t, of_) with
+    | Class {ancestors}, Class {name} -> List.mem name ancestors
+    | (Array | Class _), _ -> false
 end
 
 (* Type of the runtime representation of an untagged block (case with payload) *)
@@ -63,6 +25,7 @@ type block_type =
   | BigintType
   | BooleanType
   | InstanceType of Instance.t
+  | SymbolType
   | FunctionType
   | ObjectType
   | UnknownType

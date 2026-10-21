@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/instance_of_keyword.res[0m:[2m1:1-11[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@instanceOf[0m("class") type t
+  2 [2m│[0m 
+
+  @instanceOf expects the name of a global class, such as @instanceOf("Date") or @instanceOf("Intl.Locale").
