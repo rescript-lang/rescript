@@ -1,0 +1,1 @@
+@typeOf("undefined") type t
