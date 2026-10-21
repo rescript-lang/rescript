@@ -7,7 +7,7 @@ function scaled(extra) {
   let label = "value: ";
   let a = 1 * 2.5 + -1;
   let b = extra * 2.5 - -1;
-  let c = true ? b - a : a - b;
+  let c = b - a;
   return label + (c + a * b).toString();
 }
 
@@ -15,6 +15,15 @@ function intsApplied(extra) {
   let s = (2 + (-3 * extra | 0) | 0) - 7 | 0;
   let t = (s * -3 | 0) + (7 * 2 | 0) | 0;
   return 10n + BigInt((s * t | 0) + -3 | 0);
+}
+
+function logged(extra) {
+  let out = [];
+  let line = "quiet " + extra.toString();
+  out.push(line);
+  out.push("done");
+  out.push("brief");
+  return out;
 }
 
 function count() {
@@ -33,14 +42,20 @@ function count() {
 }
 
 Mocha.describe("Inline_constant_args_test", () => {
-  Mocha.test("float, bool and string constants", () => Test_utils.eq("File \"inline_constant_args_test.res\", line 42, characters 7-14", "value: 13.5", scaled(2)));
-  Mocha.test("int and bigint constants", () => Test_utils.eq("File \"inline_constant_args_test.res\", line 45, characters 7-14", -777n, intsApplied(3)));
-  Mocha.test("reassigned parameter", () => Test_utils.eq("File \"inline_constant_args_test.res\", line 48, characters 7-14", 55, count()));
+  Mocha.test("float, bool and string constants", () => Test_utils.eq("File \"inline_constant_args_test.res\", line 62, characters 7-14", "value: 13.5", scaled(2)));
+  Mocha.test("int and bigint constants", () => Test_utils.eq("File \"inline_constant_args_test.res\", line 65, characters 7-14", -777n, intsApplied(3)));
+  Mocha.test("bool constant conditions", () => Test_utils.eq("File \"inline_constant_args_test.res\", line 68, characters 7-14", [
+    "quiet 4",
+    "done",
+    "brief"
+  ], logged(4)));
+  Mocha.test("reassigned parameter", () => Test_utils.eq("File \"inline_constant_args_test.res\", line 71, characters 7-14", 55, count()));
 });
 
 export {
   scaled,
   intsApplied,
+  logged,
   count,
 }
 /*  Not a pure module */

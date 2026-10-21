@@ -33,13 +33,29 @@
 *)
 
 module S = Js_stmt_make
-(* module E = Js_exp_make *)
+module E = Js_exp_make
 
 let super = Js_record_map.super
 
+(* The truth value of a condition that is a parameter replaced by a boolean or
+   integer constant, or its negation. Only such conditions are decided while
+   substituting: the substitution is what made them constant. *)
+let rec substituted_truth (consts : J.expression Map_ident.t) (e : J.expression)
+    =
+  match e.expression_desc with
+  | Var (Id id) -> (
+    match Map_ident.find_opt id consts with
+    | Some {expression_desc = Bool b} -> Some b
+    | Some {expression_desc = Number (Int {i})} -> Some (i <> 0l)
+    | _ -> None)
+  | Js_not e -> Option.map not (substituted_truth consts e)
+  | _ -> None
+
 (* [vars] maps a parameter to the variable argument that replaces it, [consts]
    to the constant argument that replaces it. Both apply only to parameters
-   that are never assigned, so every occurrence of such a parameter is a read. *)
+   that are never assigned, so every occurrence of such a parameter is a read.
+   A conditional whose condition becomes a constant keeps only the branch it
+   takes, and the negation of such a condition becomes a boolean. *)
 let substitute_arguments (vars : Ident.t Map_ident.t)
     (consts : J.expression Map_ident.t) =
   {
@@ -56,7 +72,24 @@ let substitute_arguments (vars : Ident.t Map_ident.t)
           match Map_ident.find_opt id consts with
           | Some c -> c
           | None -> super.expression self e)
+        | Cond (pred, ifso, ifnot) -> (
+          match substituted_truth consts pred with
+          | Some truth -> self.expression self (if truth then ifso else ifnot)
+          | None -> super.expression self e)
+        | Js_not pred -> (
+          match substituted_truth consts pred with
+          | Some truth -> E.bool (not truth)
+          | None -> super.expression self e)
         | _ -> super.expression self e);
+    statement =
+      (fun self st ->
+        match st.statement_desc with
+        | If (pred, ifso, ifnot) -> (
+          match substituted_truth consts pred with
+          | Some truth ->
+            S.block (self.block self (if truth then ifso else ifnot))
+          | None -> super.statement self st)
+        | _ -> super.statement self st);
   }
 
 (* Constants that are as cheap to repeat as the variable they replace: they

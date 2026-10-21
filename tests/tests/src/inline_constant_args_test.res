@@ -26,6 +26,26 @@ let intsApplied = {
   ints(-3, 7, 10n, 2, ...)
 }
 
+// A condition on a constant argument keeps only the branch it takes.
+let logged = {
+  let log = (verbose, prefix, x) => {
+    let out = []
+    if verbose {
+      let line = prefix ++ Int.toString(x)
+      out->Array.push(line)
+    } else {
+      let line = "quiet " ++ Int.toString(x)
+      out->Array.push(line)
+    }
+    if !verbose {
+      out->Array.push("done")
+    }
+    out->Array.push(verbose ? "verbose" : "brief")
+    out
+  }
+  log(false, "x = ", ...)
+}
+
 // [n] is reassigned by the loop, so the constant must stay bound.
 let count = () => {
   let rec loop = (n, acc) =>
@@ -43,6 +63,9 @@ describe(__MODULE__, () => {
   })
   test("int and bigint constants", () => {
     eq(__LOC__, -777n, intsApplied(3))
+  })
+  test("bool constant conditions", () => {
+    eq(__LOC__, ["quiet 4", "done", "brief"], logged(4))
   })
   test("reassigned parameter", () => {
     eq(__LOC__, 55, count())
