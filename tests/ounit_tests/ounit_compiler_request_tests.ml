@@ -1398,6 +1398,38 @@ let concurrent_jsx_diagnostic_tests _context =
         assert_equal right_expected.stderr (Domain.join right).stderr
       done)
 
+(* Calls of open JS object methods mark their callee in request-local typing
+   state. Another request typing applications at the same time must not
+   overwrite that mark, which would report the method's arguments as unused
+   (warning 20, off by default and enabled here). *)
+let concurrent_open_object_method_tests _context =
+  with_temp_dir "rewatch-driver-open-method-" (fun root ->
+      let source =
+        "@get external obj: string => {..} = \"obj\"\n"
+        ^ String.concat ""
+            (List.init 200 (fun i ->
+                 Printf.sprintf "let v%d = obj(\"e\")[\"m\"](\"a\", \"b\")\n" i))
+      in
+      let setup name =
+        let directory = Filename.concat root name in
+        ensure_dir directory;
+        write directory "Calls.res" source;
+        fun () -> snd (run directory ~extra:["-w"; "+20"] "Calls.res")
+      in
+      let left_request = setup "left" in
+      let right_request = setup "right" in
+      let expect_clean result =
+        expect_code 0 result;
+        assert_equal ~printer:Fun.id "" result.Rescript_compiler_driver.stderr
+      in
+      expect_clean (left_request ());
+      for _ = 1 to 5 do
+        let left = Domain.spawn left_request in
+        let right = Domain.spawn right_request in
+        expect_clean (Domain.join left);
+        expect_clean (Domain.join right)
+      done)
+
 (* Exercise concurrent compiler requests without the process-worker boundary. *)
 let concurrent_request_isolation_tests _context =
   with_temp_dir "rewatch-driver-domains-" (fun root ->
@@ -1599,6 +1631,7 @@ let suites =
          "concurrent_diagnostic_recovery"
          >:: concurrent_diagnostic_recovery_tests;
          "concurrent_jsx_diagnostic" >:: concurrent_jsx_diagnostic_tests;
+         "concurrent_open_object_method" >:: concurrent_open_object_method_tests;
          "concurrent_request_isolation" >:: concurrent_request_isolation_tests;
          "concurrent_async_context" >:: concurrent_async_context_tests;
        ]
