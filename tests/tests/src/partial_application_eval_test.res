@@ -19,6 +19,11 @@ Object.defineProperty(globalThis, "partialApplicationValue", {
 `)
 @val external partialApplicationValue: int = "partialApplicationValue"
 
+// At the top level, the bound argument is captured by the function only.
+let topLevelTuple = first((1, 2), ...)
+let topLevelNone = first(Some(None), ...)
+let topLevelNestedNone = first(Some(Some(None)), ...)
+
 describe(__MODULE__, () => {
   test("arguments are evaluated once", () => {
     let calls = ref(0)
@@ -58,6 +63,14 @@ describe(__MODULE__, () => {
   test("a nested None argument is created once", () => {
     let h = first(Some(None), ...)
     ok(__LOC__, h(0) === h(0))
+    let h = first(Some(Some(None)), ...)
+    ok(__LOC__, h(0) === h(0))
+  })
+
+  test("a top-level partial application creates its arguments once", () => {
+    ok(__LOC__, topLevelTuple(0) === topLevelTuple(0))
+    ok(__LOC__, topLevelNone(0) === topLevelNone(0))
+    ok(__LOC__, topLevelNestedNone(0) === topLevelNestedNone(0))
   })
 
   test("an external value is read once", () => {

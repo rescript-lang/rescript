@@ -580,24 +580,28 @@ let str_of_field_info (x : field_dbg_info) : string option =
 let is_immutable_block (info : tag_info) =
   mutable_flag_of_tag_info info = Immutable
 
+(* The number of [Some] around a none, as in [Some (Some None)], or [-1] if
+   [c] is not a nested none. *)
+let rec const_some_none_depth (c : structured_constant) : int =
+  match c with
+  | Const_some v ->
+    let depth = const_some_none_depth v in
+    if depth < 0 then depth else depth + 1
+  | Const_module_alias | Const_js_undefined _ -> 0
+  | _ -> -1
+
 (* A constant that has to be built at run time rather than shared. A [Some]
-   whose payload is [None], directly or through further [Some]s, is a fresh
-   marker object at run time (see [Lam_compile_const.translate_some]). *)
+   around a (nested) none is emitted as a new optional block, see
+   [Lam_compile_const.translate_some]. *)
 let rec const_is_allocating (c : structured_constant) : bool =
   match c with
-  | Const_some t -> some_payload_is_allocating t
+  | Const_some t -> const_some_none_depth t >= 0 || const_is_allocating t
   | Const_block _ -> true
   | Const_js_null | Const_js_undefined _ | Const_js_true | Const_js_false
   | Const_int _ | Const_assertfalse | Const_constructor _ | Const_char _
   | Const_string _ | Const_float _ | Const_bigint _ | Const_polyvar _
   | Const_module_alias ->
     false
-
-and some_payload_is_allocating (payload : structured_constant) : bool =
-  match payload with
-  | Const_js_undefined _ | Const_module_alias -> true
-  | Const_some t -> some_payload_is_allocating t
-  | _ -> const_is_allocating payload
 
 let rec const_eq_approx (x : structured_constant) (y : structured_constant) =
   match x with

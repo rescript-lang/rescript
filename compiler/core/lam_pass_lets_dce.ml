@@ -32,7 +32,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
       match (count_var v, l1) with
       | {times = 0; _}, _ -> simplif l2
       | {times = 1; captured = false}, _
-      | {times = 1; captured = true}, (Lconst _ | Lvar _)
+      | {times = 1; captured = true}, Lvar _
       | ( _,
           ( Lconst
               ( Const_int _ | Const_assertfalse | Const_constructor _
@@ -45,6 +45,12 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
          do constant folding independently
       *)
         ->
+        Hash_ident.add subst v (simplif l1);
+        simplif l2
+      (* A captured constant is moved into the closure only when it allocates
+         nothing: a block would be a new one on each call. *)
+      | {times = 1; captured = true}, Lconst c
+        when not (Lambda.const_is_allocating c) ->
         Hash_ident.add subst v (simplif l1);
         simplif l2
       | _, Lconst (Const_string s) ->
