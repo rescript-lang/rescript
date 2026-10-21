@@ -65,7 +65,14 @@ let add_names s =
 let rec add_path bv ?(p = []) = function
   | Lident s ->
     let free =
-      try lookup_free (s :: p) bv with Not_found -> String_set.singleton s
+      try lookup_free (s :: p) bv
+      with Not_found -> (
+        (* Also record [S.M] for a qualified free path: when [S] is the
+           namespace of the module's own package, the build system resolves
+           [M] in that namespace, which [S] alone cannot tell it. *)
+        match p with
+        | [] -> String_set.singleton s
+        | m :: _ -> String_set.of_list [s; s ^ "." ^ m])
     in
     add_names free
   | Ldot (l, s) -> add_path bv ~p:(s :: p) l
