@@ -1562,18 +1562,11 @@ and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
   in
   let protect defs name lam =
     match lam with
-    | Lvar _ | Lconst _
-    (* Creating a closure, reading an external value or reading a module's
-       value does nothing else, so evaluating it on each call is the same as
-       evaluating it once. Keeping these in place keeps the function a known
-       one that can be inlined. *)
-    | Lfunction _
-    | Lprim
-        {
-          primitive = Pjs_call {ffi = {kind = Decl_val _; effective_arity = 0}};
-          args = [];
-        } ->
-      lam
+    | Lconst _ -> lam
+    (* A variable or a module's value reads the same on each call, so it stays
+       in place and keeps the function a known one that can be inlined. A
+       closure does not: each evaluation is a new one. Nor does an external
+       value, which can be reassigned or be a getter. *)
     | _ when is_module_path lam -> lam
     | _ ->
       let id = Ident.create name in

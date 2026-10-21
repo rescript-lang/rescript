@@ -5,6 +5,19 @@ open Test_utils
 external testAsync: (string, unit => promise<unit>) => unit = "test"
 
 let add = (a, b, c) => a + b + c
+let first = (x, _y) => x
+
+%%raw(`
+let partialReads = 0
+Object.defineProperty(globalThis, "partialApplicationValue", {
+  get() {
+    partialReads += 1
+    return partialReads
+  },
+  configurable: true,
+})
+`)
+@val external partialApplicationValue: int = "partialApplicationValue"
 
 describe(__MODULE__, () => {
   test("arguments are evaluated once", () => {
@@ -30,6 +43,17 @@ describe(__MODULE__, () => {
     ignore(h(2, 3))
     ignore(h(2, 3))
     eq(__LOC__, 1, calls.contents)
+  })
+
+  test("a closure argument is created once", () => {
+    let h = first(x => x + 1, ...)
+    ok(__LOC__, h(0) === h(0))
+  })
+
+  test("an external value is read once", () => {
+    let h = add(partialApplicationValue, ...)
+    eq(__LOC__, 3, h(1, 1))
+    eq(__LOC__, 3, h(1, 1))
   })
 
   test("callee and arguments are evaluated left to right", () => {

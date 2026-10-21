@@ -7,6 +7,20 @@ function add(a, b, c) {
   return (a + b | 0) + c | 0;
 }
 
+function first(x, _y) {
+  return x;
+}
+
+let partialReads = 0
+Object.defineProperty(globalThis, "partialApplicationValue", {
+  get() {
+    partialReads += 1
+    return partialReads
+  },
+  configurable: true,
+})
+;
+
 Mocha.describe("Partial_application_eval_test", () => {
   Mocha.test("arguments are evaluated once", () => {
     let calls = 0;
@@ -15,10 +29,10 @@ Mocha.describe("Partial_application_eval_test", () => {
       return calls;
     };
     let arg = next();
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 17, characters 7-14", 1, calls);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 18, characters 7-14", 4, add(arg, 1, 2));
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 19, characters 7-14", 4, add(arg, 1, 2));
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 20, characters 7-14", 1, calls);
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 30, characters 7-14", 1, calls);
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 31, characters 7-14", 4, add(arg, 1, 2));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 32, characters 7-14", 4, add(arg, 1, 2));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 33, characters 7-14", 1, calls);
   });
   Mocha.test("the callee is evaluated once", () => {
     let calls = 0;
@@ -29,7 +43,16 @@ Mocha.describe("Partial_application_eval_test", () => {
     let func = getAdd();
     func(1, 2, 3);
     func(1, 2, 3);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 32, characters 7-14", 1, calls);
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 45, characters 7-14", 1, calls);
+  });
+  Mocha.test("a closure argument is created once", () => {
+    let arg = x => x + 1 | 0;
+    Test_utils.ok("File \"partial_application_eval_test.res\", line 50, characters 7-14", arg === arg);
+  });
+  Mocha.test("an external value is read once", () => {
+    let arg = partialApplicationValue;
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 55, characters 7-14", 3, add(arg, 1, 1));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 56, characters 7-14", 3, add(arg, 1, 1));
   });
   Mocha.test("callee and arguments are evaluated left to right", () => {
     let log = [];
@@ -44,21 +67,22 @@ Mocha.describe("Partial_application_eval_test", () => {
     let func = getAdd();
     let arg$1 = arg("a", 1);
     let arg$2 = arg("b", 2);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 46, characters 7-14", [
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 70, characters 7-14", [
       "callee",
       "a",
       "b"
     ], log);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 47, characters 7-14", 6, func(arg$1, arg$2, 3));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 71, characters 7-14", 6, func(arg$1, arg$2, 3));
   });
   Mocha.test("an awaited argument stays in the async function", async () => {
     let arg = await Promise.resolve(1);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 52, characters 7-14", 4, add(arg, 1, 2));
-    return Test_utils.eq("File \"partial_application_eval_test.res\", line 53, characters 7-14", 6, add(arg, 2, 3));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 76, characters 7-14", 4, add(arg, 1, 2));
+    return Test_utils.eq("File \"partial_application_eval_test.res\", line 77, characters 7-14", 6, add(arg, 2, 3));
   });
 });
 
 export {
   add,
+  first,
 }
 /*  Not a pure module */
