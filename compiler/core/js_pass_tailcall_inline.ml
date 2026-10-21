@@ -37,15 +37,35 @@ module S = Js_stmt_make
 
 let super = Js_record_map.super
 
-let substitue_variables (map : Ident.t Map_ident.t) =
+(* [vars] maps a parameter to the variable argument that replaces it, [consts]
+   to the constant argument that replaces it. Both apply only to parameters
+   that are never assigned, so every occurrence of such a parameter is a read. *)
+let substitute_arguments (vars : Ident.t Map_ident.t)
+    (consts : J.expression Map_ident.t) =
   {
     super with
     ident =
       (fun _ id ->
-        match Map_ident.find_opt id map with
+        match Map_ident.find_opt id vars with
         | Some id -> id
         | None -> id);
+    expression =
+      (fun self e ->
+        match e.expression_desc with
+        | Var (Id id) -> (
+          match Map_ident.find_opt id consts with
+          | Some c -> c
+          | None -> super.expression self e)
+        | _ -> super.expression self e);
   }
+
+(* Constants that are as cheap to repeat as the variable they replace: they
+   allocate nothing, have no side effect, and print short. The Lambda inliner
+   substitutes the same kinds of constants for let-bound variables. *)
+let is_substitutable_constant (e : J.expression) =
+  match e.expression_desc with
+  | Number _ | Bool _ | Undefined _ | Null -> true
+  | _ -> false
 
 (* 1. recursive value ? let rec x = 1 :: x
     non-terminating
@@ -66,23 +86,28 @@ let substitue_variables (map : Ident.t Map_ident.t) =
 
 let inline_call (immutable_list : bool list) params (args : J.expression list)
     processed_blocks =
-  let map, block =
+  let substitute param (arg : J.expression) (vars, consts, acc) =
+    match arg.expression_desc with
+    | Var (Id id) -> (Map_ident.add param id vars, consts, acc)
+    | _ when is_substitutable_constant arg ->
+      (vars, Map_ident.add param arg consts, acc)
+    | _ -> (vars, consts, S.define_variable ~kind:Variable param arg :: acc)
+  in
+  let vars, consts, block =
     if immutable_list = [] then
-      Ext_list.fold_right2 params args (Map_ident.empty, processed_blocks)
-        (fun param arg (map, acc) ->
-          match arg.expression_desc with
-          | Var (Id id) -> (Map_ident.add param id map, acc)
-          | _ -> (map, S.define_variable ~kind:Variable param arg :: acc))
+      Ext_list.fold_right2 params args
+        (Map_ident.empty, Map_ident.empty, processed_blocks)
+        substitute
     else
       Ext_list.fold_right3 params args immutable_list
-        (Map_ident.empty, processed_blocks) (fun param arg mask (map, acc) ->
-          match (mask, arg.expression_desc) with
-          | true, Var (Id id) -> (Map_ident.add param id map, acc)
-          | _ -> (map, S.define_variable ~kind:Variable param arg :: acc))
+        (Map_ident.empty, Map_ident.empty, processed_blocks)
+        (fun param arg mask ((vars, consts, acc) as state) ->
+          if mask then substitute param arg state
+          else (vars, consts, S.define_variable ~kind:Variable param arg :: acc))
   in
-  if Map_ident.is_empty map then block
+  if Map_ident.is_empty vars && Map_ident.is_empty consts then block
   else
-    let obj = substitue_variables map in
+    let obj = substitute_arguments vars consts in
     obj.block obj block
 
 (** There is a side effect when traversing dead code, since 

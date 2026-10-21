@@ -6,9 +6,8 @@ import * as Test_utils from "./test_utils.mjs";
 function f() {
   let v = 0;
   let acc = 0;
-  let n = 10;
   while (true) {
-    if (v > n) {
+    if (v > 10) {
       return acc;
     }
     acc = acc + v | 0;
