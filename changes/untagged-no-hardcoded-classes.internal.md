@@ -1,0 +1,1 @@
+- Untagged variants recognize stdlib classes only through their `@instanceOf` annotations; the compiler's list of stdlib type names is gone.

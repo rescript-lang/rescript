@@ -128,34 +128,26 @@ let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
   match declared_block_type ~env t with
   | Some _ as declared -> declared
   | None -> (
-    (* First check the original (unexpanded) type for typed arrays and other instance types *)
-    match type_to_instanceof_backed_obj t with
-    | Some instance_type -> Some (InstanceType instance_type)
-    | None -> (
-      (* If original type didn't match, expand and try standard checks *)
-      let expanded_t = Ctype.expand_head env t in
-      match expanded_t with
-      | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_string ->
-        Some StringType
-      | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_int ->
-        Some IntType
-      | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_float ->
-        Some FloatType
-      | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bigint ->
-        Some BigintType
-      | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bool ->
-        Some BooleanType
-      | {desc = Tarrow _} -> Some FunctionType
-      | {desc = Tconstr _} as expanded_t when type_is_builtin_object expanded_t
-        ->
-        Some ObjectType
-      | {desc = Tconstr _} as expanded_t
-        when type_to_instanceof_backed_obj expanded_t |> Option.is_some -> (
-        match type_to_instanceof_backed_obj expanded_t with
-        | None -> None
-        | Some instance_type -> Some (InstanceType instance_type))
-      | {desc = Ttuple _} -> Some (InstanceType Array)
-      | _ -> None))
+    (* Builtin types have no declaration to annotate *)
+    match (Ctype.expand_head env t).desc with
+    | Tconstr (path, _, _) when Path.same path Predef.path_string ->
+      Some StringType
+    | Tconstr (path, _, _) when Path.same path Predef.path_int -> Some IntType
+    | Tconstr (path, _, _) when Path.same path Predef.path_float ->
+      Some FloatType
+    | Tconstr (path, _, _) when Path.same path Predef.path_bigint ->
+      Some BigintType
+    | Tconstr (path, _, _) when Path.same path Predef.path_bool ->
+      Some BooleanType
+    | Tconstr (path, _, _) when Path.same path Predef.path_dict ->
+      Some ObjectType
+    | Tconstr (path, _, _) when Path.same path Predef.path_array ->
+      Some (InstanceType Array)
+    | Tconstr (path, _, _) when Path.same path Predef.path_promise ->
+      Some (InstanceType (Class {name = "Promise"; ancestors = []}))
+    | Ttuple _ -> Some (InstanceType Array)
+    | Tarrow _ -> Some FunctionType
+    | _ -> None)
 
 let get_block_type ~env (cstr : Types.constructor_declaration) : block_type =
   match cstr.cd_args with
