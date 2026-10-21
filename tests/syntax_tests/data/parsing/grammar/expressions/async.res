@@ -49,3 +49,15 @@ let guarded = v =>
   | Some(x) if async(x) => async () => x
   | _ => async () => 0
   }
+
+// Outside guards, async arrows parse wherever expressions do
+let scrutinee = switch async () => 1 {
+| _ => 0
+}
+
+// A parenthesized guard is not an arrow either
+let parenthesizedGuard = v =>
+  switch v {
+  | Some(x) if (x) => 1
+  | _ => 0
+  }
