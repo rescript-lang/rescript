@@ -36,6 +36,7 @@ export function createReleasePlan(version, currentStable = false) {
     currentStable,
     npmTag,
     publishTag: currentStable ? null : npmTag,
+    websiteBranch: `v${parsedVersion.major}`,
   };
 }
 
@@ -112,6 +113,7 @@ async function main() {
       `git-tag=${plan.gitTag}`,
       `npm-tag=${plan.npmTag}`,
       `publish-tag=${plan.publishTag ?? ""}`,
+      `website-branch=${plan.websiteBranch}`,
     ].join("\n");
     await fs.appendFile(values["github-output"], `${output}\n`);
   }
@@ -125,6 +127,7 @@ async function main() {
       `| Version | \`${plan.version}\` |`,
       `| Git tag | \`${plan.gitTag}\` |`,
       `| npm tag | \`${plan.npmTag}\` |`,
+      `| Website branch | \`${plan.websiteBranch}\` |`,
       `| Source commit | \`${process.env.GITHUB_SHA ?? "local"}\` |`,
       "",
       "The protected `npm-release` job publishes this plan after approval.",
