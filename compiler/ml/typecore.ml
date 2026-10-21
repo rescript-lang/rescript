@@ -2006,7 +2006,8 @@ let rec is_nonexpansive exp =
     (* A partial application (`foo(args, ...)`) evaluates its callee and
        supplied arguments once, when it is created, and the resulting function
        shares them, so it is nonexpansive only when they are. *)
-    is_nonexpansive funct && List.for_all is_nonexpansive_opt (List.map snd args)
+    is_nonexpansive funct
+    && List.for_all is_nonexpansive_opt (List.map snd args)
   | Texp_apply {funct = e; args = (_, None) :: el} ->
     is_nonexpansive e && List.for_all is_nonexpansive_opt (List.map snd el)
   | Texp_match (e, cases, [], _) ->
