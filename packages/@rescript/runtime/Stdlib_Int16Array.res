@@ -1,6 +1,6 @@
 /** The `Int16Array` typed array represents an array of twos-complement 16-bit signed integers in platform byte order. See [Int16Array on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int16Array)
 */
-@editor.completeFrom(Stdlib.TypedArray)
+@editor.completeFrom(Stdlib.TypedArray) @instanceOf("Int16Array")
 type t = Stdlib_TypedArray.t<int>
 
 module Constants = {

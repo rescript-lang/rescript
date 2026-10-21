@@ -517,7 +517,7 @@ async function classifyAll(t) {
     console.log(t.name);
     return;
   }
-  if (t instanceof Blob) {
+  if (t instanceof Blob && !(t instanceof File)) {
     console.log(t.size);
     return;
   }

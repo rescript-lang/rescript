@@ -1,4 +1,4 @@
-@notUndefined
+@instanceOf("Intl.ListFormat")
 type t
 
 type listType = [
