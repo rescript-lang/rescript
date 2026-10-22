@@ -201,7 +201,7 @@ function someWithVariable(v) {
 }
 
 function someWithBlob(v) {
-  return Primitive_option.some(v);
+  return v;
 }
 
 function someWithDate(v) {
@@ -361,7 +361,7 @@ Mocha.describe("Untagged_variants_spec_test", () => {
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 328, characters 7-14", someWithUndefined("a"), "a");
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 331, characters 7-14", someWithOpaque(undefined) === undefined, false);
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 332, characters 7-14", someWithVariable(undefined) === undefined, false);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 333, characters 7-14", someWithBlob(undefined) === undefined, false);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 333, characters 7-14", someWithBlob(undefined) === undefined, true);
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 334, characters 7-14", someWithDate(undefined) === undefined, true);
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 335, characters 7-14", someWithRecord(undefined) === undefined, true);
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 336, characters 7-14", someWithInlineRecord(undefined) === undefined, false);
