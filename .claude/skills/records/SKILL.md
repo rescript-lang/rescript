@@ -49,11 +49,25 @@ Breaking: <what existing code or tooling stops working, and the migration>
 Signed-off-by: Name <email>
 ```
 
-- The subject and `Signed-off-by` are required. The message ends with its
-  trailers, git's `Key: value` lines (`Co-Authored-By:`, `Fixes:` or any
-  other one-word key), `Signed-off-by` last; the page lists the
-  `Co-Authored-By` names and draws no other trailer. Every section is
-  optional.
+A commit without object blocks, such as a script change, is its subject
+and a line or two of prose:
+
+```
+Draw handles starting with a digit as code in the comment
+
+GitHub usernames may start with a digit, so `@0x` in a commit message
+would have mentioned a user; the comment now draws it as code as well.
+
+Signed-off-by: Name <email>
+```
+
+- The subject, a description and `Signed-off-by` are required: the
+  description says why the commit is made, as a line or two of prose or
+  a `Why:` section, and object blocks then show what it changes. Every
+  other section is optional. The message ends with its trailers, git's
+  `Key: value` lines (`Co-Authored-By:`, `Fixes:` or any other one-word
+  key), `Signed-off-by` last; the page lists the `Co-Authored-By` names
+  and draws no other trailer.
 - A section starts at a line `Why:`, `Review:`, `Breaking:`, an object
   block's heading, an `Example:` alone on its line, or a `Before (<form>):`
   or `After (<form>):` heading, and holds the text after its colon and the
@@ -159,11 +173,13 @@ The table lists the common kinds.
   `-dce` and `-termination` select the other analyses.
 - A form of another name is drawn as text.
 
-## When to add a block
+## What a commit holds
 
-A commit gets one object block for each object it changes, with the
+Every commit says why it is made. A commit that changes what the compiler
+or a tool does gets one object block for each object it changes, with the
 smallest example that shows the change. A refactor, a test, a script or a
-review fix is a subject and a line or two of prose.
+review fix needs no block, only its subject and a line or two of prose; a
+review fix names the finding it answers.
 
 ## Rendering
 
