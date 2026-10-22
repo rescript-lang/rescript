@@ -7,10 +7,13 @@ name: Semantic Diff
 # when the pull request is opened or reopened or its branch is force-pushed.
 #
 # A pull request from a branch of this repository runs on pull_request, with
-# its own workflow and renderer. A pull request from a fork runs on
-# pull_request_target, which GitHub takes from the default branch and runs
-# with the repository's secrets: it executes only the default branch's code,
-# and the fork's commits are fetched as git data and never checked out.
+# the workflow and renderer of its merge into the base branch: GitHub takes
+# the workflow from that merge, so the renderer comes from it too, and a
+# branch made before the workflow changed still gets matching scripts. A
+# pull request from a fork runs on pull_request_target, which GitHub takes
+# from the default branch and runs with the repository's secrets: it
+# executes only the default branch's code, and the fork's commits are
+# fetched as git data and never checked out.
 #
 # Pages are never deleted, so the links in the comments stay valid after a
 # pull request is merged or closed.
@@ -46,7 +49,7 @@ jobs:
       - name: Checkout renderer
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.pull_request.base.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.sha || github.event.pull_request.base.sha }}
           fetch-depth: 0
           filter: blob:none
           persist-credentials: false
