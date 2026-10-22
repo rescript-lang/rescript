@@ -298,7 +298,19 @@ The payload arms compile in one of two forms.
   followed by `!(x instanceof C)` for every class case.
 - **Three or more arms**: an `if` chain of the instance checks, in the
   declaration order of the cases, then one `switch (typeof x)` over the other
-  arms.
+  arms. When a variant has class cases (not only arrays), the arms of
+  primitive kinds (string, number, bigint, boolean, symbol) come first, in an
+  outer `switch (typeof x)` whose default holds the rest; a class instance is
+  never a primitive, so this changes no outcome:
+
+  ```js
+  switch (typeof x) {
+    case "string": ...
+    default:
+      if (x instanceof Date) { ... }
+      else switch (typeof x) { case "object": ... }
+  }
+  ```
 
 In both forms a value of an instance case never lands in the object or
 function case. A class check is followed by `!(x instanceof D)` for every
@@ -367,8 +379,9 @@ Recognition trusts the type. A value that belongs to no case is not rejected:
 A value from another JavaScript realm fails every `instanceof` check and is
 recognized the same way (by the semantics of `instanceof`; not tested):
 recognition is local to a realm. A class that does not exist where the
-`switch` runs makes its check throw, for every value: the instance checks
-precede the `typeof` checks, so primitives reach them too.
+`switch` runs makes its check throw for every value that reaches it: in the
+`switch` form, objects, functions and primitives outside every case; in the
+two-arm form, every value when the class arm is declared first.
 
 - Implementation: `lam_compile.ml:compile_general_cases` (a complete match
   emits no check for its last clause).
@@ -545,6 +558,5 @@ had to answer, and the answers of rule 5:
 9. **Globals.** A shadowed class is read through `globalThis`. A missing
    class throws when the check runs (rule 10).
 
-Still open: a class imported from a module cannot be named; the `typeof`
-checks could precede the instance checks, so that a missing class affects
-only objects; and the typed arrays share one type (#8955).
+Still open: a class imported from a module cannot be named, and the typed
+arrays share one type (#8955).

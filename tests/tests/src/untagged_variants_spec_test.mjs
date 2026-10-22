@@ -52,39 +52,40 @@ function aliasDictName(v) {
 }
 
 function instanceName(v) {
-  if (v instanceof Date) {
-    return "Date";
-  }
-  if (v instanceof RegExp) {
-    return "RegExp";
-  }
-  if (v instanceof Promise) {
-    return "Promise";
-  }
-  if (v instanceof Map) {
-    return "Map";
-  }
-  if (v instanceof Set) {
-    return "Set";
-  }
-  if (v instanceof WeakMap) {
-    return "WeakMap";
-  }
-  if (v instanceof WeakSet) {
-    return "WeakSet";
-  }
-  if (v instanceof ArrayBuffer) {
-    return "ArrayBuffer";
-  }
-  if (v instanceof DataView) {
-    return "DataView";
-  }
-  if (v instanceof Float64Array) {
-    return "Float64Array";
-  }
   switch (typeof v) {
     case "string" :
       return "string";
+    default:
+      if (v instanceof Date) {
+        return "Date";
+      }
+      if (v instanceof RegExp) {
+        return "RegExp";
+      }
+      if (v instanceof Promise) {
+        return "Promise";
+      }
+      if (v instanceof Map) {
+        return "Map";
+      }
+      if (v instanceof Set) {
+        return "Set";
+      }
+      if (v instanceof WeakMap) {
+        return "WeakMap";
+      }
+      if (v instanceof WeakSet) {
+        return "WeakSet";
+      }
+      if (v instanceof ArrayBuffer) {
+        return "ArrayBuffer";
+      }
+      if (v instanceof DataView) {
+        return "DataView";
+      }
+      if (v instanceof Float64Array) {
+        return "Float64Array";
+      }
   }
 }
 

@@ -1,0 +1,1 @@
+- Test the primitive cases of an untagged variant before its class checks, so that strings and numbers skip `instanceof` and a class missing at run time no longer throws for them.

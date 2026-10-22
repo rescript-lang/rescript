@@ -437,25 +437,32 @@ let ComplexPattern = {
 };
 
 async function getUserName(u) {
-  if (u instanceof Promise) {
-    return (await u).name;
-  }
   switch (typeof u) {
-    case "object" :
-      return u.name;
     case "string" :
       return u;
+    default:
+      if (u instanceof Promise) {
+        return (await u).name;
+      }
+      switch (typeof u) {
+        case "object" :
+          return u.name;
+      }
   }
 }
 
 async function awaitUser(u) {
-  if (u instanceof Promise) {
-    return (await u).name;
-  }
   switch (typeof u) {
-    case "object" :
     case "string" :
       return "dummy";
+    default:
+      if (u instanceof Promise) {
+        return (await u).name;
+      }
+      switch (typeof u) {
+        case "object" :
+          return "dummy";
+      }
   }
 }
 
@@ -473,21 +480,24 @@ async function classify$10(a) {
     console.log(12);
     return;
   } else {
-    if (Array.isArray(a)) {
-      console.log(a.join("-"));
-      return;
-    }
-    if (a instanceof Promise) {
-      console.log(await a);
-      return;
-    }
     switch (typeof a) {
       case "string" :
         console.log(a);
         return;
-      case "object" :
-        console.log(a.userName);
-        return;
+      default:
+        if (Array.isArray(a)) {
+          console.log(a.join("-"));
+          return;
+        }
+        if (a instanceof Promise) {
+          console.log(await a);
+          return;
+        }
+        switch (typeof a) {
+          case "object" :
+            console.log(a.userName);
+            return;
+        }
     }
   }
 }
@@ -497,105 +507,108 @@ let Arr = {
 };
 
 async function classifyAll(t) {
-  if (Array.isArray(t)) {
-    console.log(t.join("-"));
-    return;
-  }
-  if (t instanceof Promise) {
-    console.log(await t);
-    return;
-  }
-  if (t instanceof Date) {
-    console.log(t.toString());
-    return;
-  }
-  if (t instanceof RegExp) {
-    console.log(t.test("test"));
-    return;
-  }
-  if (t instanceof File) {
-    console.log(t.name);
-    return;
-  }
-  if (t instanceof Blob && !(t instanceof File)) {
-    console.log(t.size);
-    return;
-  }
-  if (t instanceof ArrayBuffer) {
-    console.log("ArrayBuffer");
-    return;
-  }
-  if (t instanceof Int8Array) {
-    console.log("Int8Array");
-    return;
-  }
-  if (t instanceof Int16Array) {
-    console.log("Int16Array");
-    return;
-  }
-  if (t instanceof Int32Array) {
-    console.log("Int32Array");
-    return;
-  }
-  if (t instanceof Uint8Array) {
-    console.log("Uint8Array");
-    return;
-  }
-  if (t instanceof Uint8ClampedArray) {
-    console.log("Uint8ClampedArray");
-    return;
-  }
-  if (t instanceof Uint16Array) {
-    console.log("Uint16Array");
-    return;
-  }
-  if (t instanceof Uint32Array) {
-    console.log("Uint32Array");
-    return;
-  }
-  if (t instanceof Float32Array) {
-    console.log("Float32Array");
-    return;
-  }
-  if (t instanceof Float64Array) {
-    console.log("Float64Array");
-    return;
-  }
-  if (t instanceof BigInt64Array) {
-    console.log("BigInt64Array");
-    return;
-  }
-  if (t instanceof BigUint64Array) {
-    console.log("BigUint64Array");
-    return;
-  }
-  if (t instanceof DataView) {
-    console.log("DataView");
-    return;
-  }
-  if (t instanceof Set) {
-    console.log("Set");
-    return;
-  }
-  if (t instanceof Map) {
-    console.log("Map");
-    return;
-  }
-  if (t instanceof WeakSet) {
-    console.log("WeakSet");
-    return;
-  }
-  if (t instanceof WeakMap) {
-    console.log("WeakMap");
-    return;
-  }
   switch (typeof t) {
     case "string" :
       console.log(t);
       return;
-    case "object" :
-      console.log(t.userName);
-      return;
+    default:
+      if (Array.isArray(t)) {
+        console.log(t.join("-"));
+        return;
+      }
+      if (t instanceof Promise) {
+        console.log(await t);
+        return;
+      }
+      if (t instanceof Date) {
+        console.log(t.toString());
+        return;
+      }
+      if (t instanceof RegExp) {
+        console.log(t.test("test"));
+        return;
+      }
+      if (t instanceof File) {
+        console.log(t.name);
+        return;
+      }
+      if (t instanceof Blob && !(t instanceof File)) {
+        console.log(t.size);
+        return;
+      }
+      if (t instanceof ArrayBuffer) {
+        console.log("ArrayBuffer");
+        return;
+      }
+      if (t instanceof Int8Array) {
+        console.log("Int8Array");
+        return;
+      }
+      if (t instanceof Int16Array) {
+        console.log("Int16Array");
+        return;
+      }
+      if (t instanceof Int32Array) {
+        console.log("Int32Array");
+        return;
+      }
+      if (t instanceof Uint8Array) {
+        console.log("Uint8Array");
+        return;
+      }
+      if (t instanceof Uint8ClampedArray) {
+        console.log("Uint8ClampedArray");
+        return;
+      }
+      if (t instanceof Uint16Array) {
+        console.log("Uint16Array");
+        return;
+      }
+      if (t instanceof Uint32Array) {
+        console.log("Uint32Array");
+        return;
+      }
+      if (t instanceof Float32Array) {
+        console.log("Float32Array");
+        return;
+      }
+      if (t instanceof Float64Array) {
+        console.log("Float64Array");
+        return;
+      }
+      if (t instanceof BigInt64Array) {
+        console.log("BigInt64Array");
+        return;
+      }
+      if (t instanceof BigUint64Array) {
+        console.log("BigUint64Array");
+        return;
+      }
+      if (t instanceof DataView) {
+        console.log("DataView");
+        return;
+      }
+      if (t instanceof Set) {
+        console.log("Set");
+        return;
+      }
+      if (t instanceof Map) {
+        console.log("Map");
+        return;
+      }
+      if (t instanceof WeakSet) {
+        console.log("WeakSet");
+        return;
+      }
+      if (t instanceof WeakMap) {
+        console.log("WeakMap");
+        return;
+      }
+      switch (typeof t) {
+        case "object" :
+          console.log(t.userName);
+          return;
+      }
   }
 }
 
@@ -631,16 +644,20 @@ function shareEquivalentStringActions(x) {
 }
 
 function can_merge(x) {
-  if (Array.isArray(x)) {
-    return "do not merge";
-  }
-  if (x instanceof Date) {
-    return "do not merge";
-  }
   switch (typeof x) {
     case "boolean" :
-    case "object" :
       return "merge";
+    default:
+      if (Array.isArray(x)) {
+        return "do not merge";
+      }
+      if (x instanceof Date) {
+        return "do not merge";
+      }
+      switch (typeof x) {
+        case "object" :
+          return "merge";
+      }
   }
 }
 
@@ -665,26 +682,29 @@ function shareAlphaEquivalentStringActions(value) {
 }
 
 function preserveDiscriminatorGroups(x) {
-  if (Array.isArray(x)) {
-    while (keepGoing()) {
-      sideEffect();
-    };
-    return;
-  }
-  if (x instanceof Date) {
-    while (keepGoing()) {
-      sideEffect();
-    };
-    return;
-  }
   switch (typeof x) {
     case "boolean" :
       return;
-    case "object" :
-      while (keepGoing()) {
-        sideEffect();
-      };
-      return;
+    default:
+      if (Array.isArray(x)) {
+        while (keepGoing()) {
+          sideEffect();
+        };
+        return;
+      }
+      if (x instanceof Date) {
+        while (keepGoing()) {
+          sideEffect();
+        };
+        return;
+      }
+      switch (typeof x) {
+        case "object" :
+          while (keepGoing()) {
+            sideEffect();
+          };
+          return;
+      }
   }
 }
 

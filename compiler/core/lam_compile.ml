@@ -878,9 +878,33 @@ let compile output_prefix =
       | _ -> false
     in
     let clause_is_not_typeof (tag, _) = tag_is_not_typeof tag in
+    let tag_is_primitive = function
+      | Variant_runtime.Payload_shape
+          (NumberType | StringType | BigintType | BooleanType | SymbolType) ->
+        true
+      | _ -> false
+    in
+    (* Only class checks can throw (when the class is missing), so arrays,
+       recognized by [Array.isArray], keep the shorter form *)
+    let has_class_case =
+      List.exists
+        (function
+          | Variant_runtime.InstanceType (Class _) -> true
+          | _ -> false)
+        block_cases
+    in
     let switch ?default ?declaration e clauses =
       let not_typeof_clauses, typeof_clauses =
         List.partition clause_is_not_typeof clauses
+      in
+      (* A class instance is never a primitive, so the primitive kinds can be
+         tested first: their values then skip the instance checks, which
+         throw when a class is missing at run time *)
+      let primitive_clauses, typeof_clauses =
+        if (not has_class_case) || not_typeof_clauses = [] then
+          ([], typeof_clauses)
+        else
+          List.partition (fun (tag, _) -> tag_is_primitive tag) typeof_clauses
       in
       let has_object_typeof =
         List.exists
@@ -927,7 +951,12 @@ let compile output_prefix =
             ~else_:[build_if_chain rest]
         | _ -> (
           let typeof_switch () =
-            S.string_switch ?default ?declaration (E.typeof e) typeof_clauses
+            match (primitive_clauses, typeof_clauses) with
+            | _ :: _, [] -> S.block (Option.value default ~default:[])
+            | _ :: _, _ :: _ ->
+              S.string_switch ?default (E.typeof e) typeof_clauses
+            | [], _ ->
+              S.string_switch ?default ?declaration (E.typeof e) typeof_clauses
           in
           let guards =
             (if needs_null_guard then [E.is_null e] else [])
@@ -946,11 +975,18 @@ let compile output_prefix =
           | Some guard, None -> S.if_ (E.not guard) [typeof_switch ()]
           | None, _ -> typeof_switch ())
       in
-      build_if_chain not_typeof_clauses
+      match primitive_clauses with
+      | [] -> build_if_chain not_typeof_clauses
+      | _ ->
+        S.string_switch ?declaration (E.typeof e) primitive_clauses
+          ~default:[build_if_chain not_typeof_clauses]
     in
     let merge_cases tag1 tag2 =
-      (* only merge typeof cases, as instanceof cases are pulled out into if-then-else *)
-      not (tag_is_not_typeof tag1 || tag_is_not_typeof tag2)
+      (* only merge typeof cases, as instanceof cases are pulled out into
+         if-then-else. With instance cases, the primitive kinds are tested in
+         a switch of their own, so they share bodies only among themselves *)
+      (not (tag_is_not_typeof tag1 || tag_is_not_typeof tag2))
+      && ((not has_class_case) || tag_is_primitive tag1 = tag_is_primitive tag2)
     in
     cases
     |> compile_general_cases ~make_exp:E.tag_type ~eq_exp:mk_eq ~cxt ~switch
