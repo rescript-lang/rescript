@@ -312,7 +312,7 @@ describe(__MODULE__, () => {
     // distinct from `None`, an unboxed one does not.
     eq(__LOC__, someWithOpaque(OPaque(raw(Nullable.undefined))) == None, false)
     eq(__LOC__, someWithVariable(Var(raw(Nullable.undefined))) == None, false)
-    eq(__LOC__, someWithBlob(BBlob(raw(Nullable.undefined))) == None, false)
+    eq(__LOC__, someWithBlob(BBlob(raw(Nullable.undefined))) == None, true)
     eq(__LOC__, someWithDate(DDate(raw(Nullable.undefined))) == None, true)
   })
 

@@ -170,8 +170,21 @@ through `globalThis` (#8785). The compiler trusts the annotations, as it
 trusts the type of an external: a value that is not what its type declares is
 recognized by what it is (rule 10).
 
+The stdlib annotates the types of the classes it binds:
+
+| Type | Annotation |
+| --- | --- |
+| `Date.t`, `RegExp.t`, `ArrayBuffer.t`, `DataView.t`, `Map.t`, `Set.t`, `WeakMap.t`, `WeakSet.t`, `Blob.t` | `@instanceOf` the class of the same name |
+| `File.t`, a private abbreviation of `Blob.t` | `@instanceOf("File")`, a subclass of `Blob` |
+| `JsError.t` | `@instanceOf("Error")` |
+| `Intl.Collator.t`, `Intl.DateTimeFormat.t`, `Intl.ListFormat.t`, `Intl.Locale.t`, `Intl.NumberFormat.t`, `Intl.PluralRules.t`, `Intl.RelativeTimeFormat.t`, `Intl.Segmenter.t` | `@instanceOf("Intl.Collator")` and so on |
+| `Int8Array.t` and the other typed arrays, public abbreviations of `TypedArray.t<_>` | `@instanceOf` the class of the same name |
+| `Symbol.t` | `@typeOf("symbol")` |
+
 Types without annotations are recognized from a fixed list of type names in
-`ast_untagged_variants.ml:type_to_instanceof_backed_obj`. The predefined
+`ast_untagged_variants.ml:type_to_instanceof_backed_obj`. Every listed stdlib
+type is annotated, so the list only covers other types printed with one of
+these paths. The predefined
 `promise<_>` and `array<_>` are matched by path; the others by the printed
 path of the type:
 
@@ -184,8 +197,8 @@ path of the type:
 | `Int8Array.t`, `Uint8Array.t`, `Uint8ClampedArray.t`, `Int16Array.t`, `Uint16Array.t`, `Int32Array.t`, `Uint32Array.t`, `Float32Array.t`, `Float64Array.t`, `BigInt64Array.t`, `BigUint64Array.t` | the class of the same name |
 
 The listed classes have no superclasses. The typed-array types are
-abbreviations of one type, `TypedArray.t<_>`, and are told apart only by the
-name as written.
+abbreviations of one type, `TypedArray.t<_>`, and are told apart only by
+their annotations, which are read on the name as written (Known bugs).
 
 - Implementation: `variant_layout.ml:runtime_annotations`,
   `declared_block_type`, `check_manifest_annotation`;
@@ -195,9 +208,10 @@ name as written.
   `variant_runtime.ml:Instance`; `js_exp_make.ml:class_constructor`.
 - Tests: `spec_test` rules 4 and 5;
   `tests/tests/src/untagged_runtime_annotations_test.res`,
-  `untagged_runtime_annotations_shadow_test.res`; the fixtures above,
+  `untagged_runtime_annotations_shadow_test.res`,
+  `untagged_file_blob_test.res`; the fixtures above,
   `UntaggedAtMostOneInstance.res`, `UntaggedTupleAndArray.res`.
-- Shaped by #6296, #6383, #6396, #7788, #8009, #8950. Related: #7147.
+- Shaped by #6296, #6383, #6396, #7788, #8009, #8950, #8948. Related: #7147.
 
 ### 6. Well-formedness
 
@@ -378,12 +392,13 @@ An `@as(null)` case does not prevent unboxing; `Some(N)` is `null`.
 | `@as(null) WNull \| WString(string)` | `v` |
 | `@as(undefined) WUndefined \| WUString(string)` | `Primitive_option.some(v)` |
 | `@as("n") ONone \| OPaque(opaque)` | `Primitive_option.some(v)` |
-| `BBlob(Blob.t) \| BString(string)` | `Primitive_option.some(v)` |
+| `BBlob(Blob.t) \| BString(string)` | `v` |
 | `DDate(Date.t) \| DString(string)` | `v` |
 
-The stdlib marks `Date.t`, `RegExp.t`, `Map.t`, `Set.t`, `WeakMap.t`,
-`WeakSet.t`, `ArrayBuffer.t`, `DataView.t`, the typed arrays and other
-abstract types `@notUndefined`; `Blob.t` and `File.t` are not marked.
+The stdlib's annotated types (rule 5) cannot hold `undefined`. It marks the
+JSX element and component types, `Iterator.t`, `AsyncIterator.t`,
+`TypedArray.t`, `Intl.Segments.t`, `Intl.NumberFormat.Grouping.t` and
+`Lazy.t` with `@notUndefined`.
 
 Rule 5 keeps an annotated abbreviation from claiming this of a type that can
 hold `undefined`.
@@ -476,18 +491,9 @@ Console.log2(x == None, mk(U) == None)           // true false
 `Const_constructor`, including one whose literal is `undefined`; that this is
 the cause is conjectured, not established.
 
-**Overlapping instance classes follow declaration order** (#8938).
-
-```rescript
-@unboxed type b = B(Blob.t) | F(File.t)
-let f = v => switch v { | B(_) => "blob" | F(_) => "file" }
-Console.log(f(F(%raw(`new File(["x"], "a.txt")`))))   // blob
-```
-
-A `File` is a `Blob`, and the `Blob` check runs first.
-
-**Typed arrays are classified by the name as written.** The typed-array types
-are one type, so a value of one can be wrapped in the case of another.
+**Typed arrays share one type** (#8955). The typed-array types are public
+abbreviations of `TypedArray.t<_>`, each annotated with its class, so a value
+of one can be wrapped in the case of another.
 
 ```rescript
 @unboxed type ta = I8(Int8Array.t) | U8(Uint8Array.t)

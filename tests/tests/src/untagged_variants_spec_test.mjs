@@ -199,7 +199,7 @@ function someWithVariable(v) {
 }
 
 function someWithBlob(v) {
-  return Primitive_option.some(v);
+  return v;
 }
 
 function someWithDate(v) {
@@ -342,7 +342,7 @@ Mocha.describe("Untagged_variants_spec_test", () => {
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 310, characters 7-14", someWithUndefined("a"), "a");
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 313, characters 7-14", someWithOpaque(undefined) === undefined, false);
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 314, characters 7-14", someWithVariable(undefined) === undefined, false);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 315, characters 7-14", someWithBlob(undefined) === undefined, false);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 315, characters 7-14", someWithBlob(undefined) === undefined, true);
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 316, characters 7-14", someWithDate(undefined) === undefined, true);
   });
   Mocha.test("rule 13: @notUndefined unboxes option of a variant holding the type", () => {
