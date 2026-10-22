@@ -1,7 +1,8 @@
 name: Semantic Diff
 
 # Renders the commit records of each pull request (scripts/commitRecords.js)
-# as a review page on the CDN and links it from the pull request.
+# as a review page on the CDN, and comments them on the pull request as
+# Markdown (scripts/recordMarkdown.js) with the page's link.
 #
 # A pull request from a branch of this repository runs on pull_request, with
 # its own workflow and renderer. A pull request from a fork runs on
@@ -44,13 +45,15 @@ jobs:
           persist-credentials: false
 
       - name: Render semantic diff
-        id: render
         run: |
           git fetch --no-tags --filter=blob:none origin "refs/pull/${PR_NUMBER}/head:refs/heads/pr-${PR_NUMBER}"
           base=$(git merge-base "$BASE_SHA" "pr-${PR_NUMBER}")
+          head=$(git rev-parse --short=9 "pr-${PR_NUMBER}")
+          # The query string names the rendered commit, so each push gets a
+          # URL that no cache has seen.
+          url="https://cdn.rescript-lang.org/semantic-diff/pr-${PR_NUMBER}/index.html?v=${head}"
           mkdir -p semantic-diff
-          node scripts/commitRecords.js --out semantic-diff/index.html --pr "$PR_NUMBER" --title "$PR_TITLE" "${base}..pr-${PR_NUMBER}"
-          echo "head=$(git rev-parse --short=9 "pr-${PR_NUMBER}")" >> "$GITHUB_OUTPUT"
+          node scripts/commitRecords.js --out semantic-diff/index.html --markdown semantic-diff/comment.md --url "$url" --pr "$PR_NUMBER" --title "$PR_TITLE" "${base}..pr-${PR_NUMBER}"
 
       - name: Setup Rclone
         uses: cometkim/rclone-actions/setup-rclone@8d9c6b95341f7698609deee65c3d62af42893288 # main, 2025-06-18
@@ -68,18 +71,15 @@ jobs:
       - name: Upload semantic diff
         run: rclone copyto --s3-no-check-bucket semantic-diff/index.html "rescript:cdn-assets/semantic-diff/pr-${PR_NUMBER}/index.html"
 
-      # The query string names the rendered commit, so each push gets a URL
-      # that no cache has seen.
-      - name: Comment semantic diff URL
+      - name: Comment semantic diff
         uses: thollander/actions-comment-pull-request@v3
         with:
           pr-number: ${{ github.event.pull_request.number }}
           comment-tag: semantic-diff
-          # Each push replaces the comment, so the newest link is the last
-          # comment on the pull request.
+          # Each push replaces the comment, so the newest semantic diff is
+          # the last comment on the pull request.
           mode: recreate
-          message: |
-            Semantic diff: https://cdn.rescript-lang.org/semantic-diff/pr-${{ github.event.pull_request.number }}/index.html?v=${{ steps.render.outputs.head }}
+          file-path: semantic-diff/comment.md
 
   cleanup:
     if: >-

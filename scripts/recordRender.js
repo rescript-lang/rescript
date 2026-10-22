@@ -36,7 +36,7 @@ export const esc = s =>
  * of another name is drawn as text.
  * @type {Record<string, Drawing>}
  */
-const FORMS = {
+export const FORMS = {
   parse: "tree",
   expanded: "tree",
   typed: "tree",
@@ -55,11 +55,11 @@ const FORMS = {
  * An object block's heading: `<Kind> <added|modified|removed> (<object>)`,
  * the kind one word, the object's parentheses optional.
  */
-const BLOCK =
+export const BLOCK =
   /^([A-Z][A-Za-z]*) (added|modified|removed)(?: \(((?:[^()]|\([^()]*\))*)\))?$/;
 
 /** A section an object block holds: its example or one version of a form. */
-const PART = /^(?:Example|(Before|After) \(([a-z]+)\))$/;
+export const PART = /^(?:Example|(Before|After) \(([a-z]+)\))$/;
 
 // ---------------------------------------------------------------------------
 // Records
@@ -113,7 +113,7 @@ const untab = l =>
   });
 
 /** Whether a line is indented by 4 spaces or more. @param {string} l */
-const isIndented = l => /^ {4,}\S/.test(l);
+export const isIndented = l => /^ {4,}\S/.test(l);
 
 /**
  * A record's subject, sections and trailers. A section starts at a line
@@ -259,7 +259,7 @@ function highlight(code, lang) {
  * @param {(line: string) => string} key
  * @returns {[number, number][]}
  */
-function matchLines(a, b, key) {
+export function matchLines(a, b, key) {
   const x = a.map(key);
   const y = b.map(key);
   /** @type {number[][]} */
@@ -292,7 +292,7 @@ function matchLines(a, b, key) {
  * @param {string[]} b
  * @returns {{ a: number | null, b: number | null, same: boolean }[]}
  */
-function alignLines(a, b) {
+export function alignLines(a, b) {
   /** @type {{ a: number | null, b: number | null, same: boolean }[]} */
   const rows = [];
   let i = 0;
@@ -340,7 +340,7 @@ const indentOf = l => /^ */.exec(l)?.[0].length ?? 0;
 const codeHtml = (lines, draw) => draw(lines.join("\n")).split("\n");
 
 /** An elision line, `…` and any text, marking lines left out. @param {string} l */
-const elided = l => l.trimStart().startsWith("…");
+export const elided = l => l.trimStart().startsWith("…");
 
 /**
  * Lines of code, each drawn by `draw`, the marked ones shaded and the
@@ -366,7 +366,7 @@ function codeLines(lines, draw, marks = {}) {
 }
 
 /** A note line of a drawing: `label: text`. */
-const NOTE = /^\s*[a-z][\w ]{0,20}:\s/;
+export const NOTE = /^\s*[a-z][\w ]{0,20}:\s/;
 
 /**
  * The parts of a figure (a typing rule or a rewrite) that a Before/After
@@ -382,7 +382,7 @@ const NOTE = /^\s*[a-z][\w ]{0,20}:\s/;
  * @param {Atom[]} b
  * @returns {[Set<number>, Set<number>]}
  */
-function atomDiff(a, b) {
+export function atomDiff(a, b) {
   const del = new Set();
   const add = new Set();
   for (const slot of new Set([...a, ...b].map(x => x.slot))) {
@@ -555,7 +555,7 @@ const inline = s =>
  * `_{…}`, `^{…}`), a name, or any other character.
  * @param {string} text
  */
-const mathTokens = text =>
+export const mathTokens = text =>
   text.matchAll(
     /(?<code>`[^`]+`)|(?<script>_\{[^{}]*\}|\^\{[^{}]*\}|_[A-Za-z0-9Ͱ-Ͽ]+)|(?<name>[A-Za-zͰ-Ͽ][A-Za-z0-9Ͱ-Ͽ'′]*)|[\s\S]/g,
   );
@@ -585,7 +585,7 @@ function math(text) {
 }
 
 /** A line's parts: runs of three or more spaces separate side-by-side formulas. @param {string} line */
-const parts = line =>
+export const parts = line =>
   line
     .trim()
     .split(/\s{3,}/)
@@ -595,7 +595,7 @@ const parts = line =>
  * The groups of a block's lines separated by blank lines.
  * @param {string[]} block
  */
-function groups(block) {
+export function groups(block) {
   /** @type {string[][]} */
   const out = [[]];
   for (const line of block) {
@@ -618,7 +618,7 @@ function groups(block) {
  * @param {string[]} block
  * @returns {MathGroup[]}
  */
-const mathGroups = block =>
+export const mathGroups = block =>
   groups(block).map(g => {
     const bar = g.findIndex(l => /^\s*─{3,}/.test(l));
     if (bar < 0) return { rows: g.map(parts) };
@@ -635,7 +635,7 @@ const mathGroups = block =>
  * @param {string[]} block
  * @returns {Atom[]}
  */
-const mathAtoms = block =>
+export const mathAtoms = block =>
   mathGroups(block).flatMap(g =>
     "rows" in g
       ? g.rows.flat().map(text => ({ slot: "formula", text }))
@@ -693,7 +693,7 @@ function rules(block, marks = {}) {
  * of a list stand one level deeper than the node owning it.
  * @param {string} l
  */
-const treeLine = l => l.trim() !== "" && !/^\s*[[\]]\s*$/.test(l);
+export const treeLine = l => l.trim() !== "" && !/^\s*[[\]]\s*$/.test(l);
 
 /**
  * One node of a tree: `label: Node …` shows its label muted; constructors
@@ -772,7 +772,7 @@ const tree = lines =>
  * The cells of a clause matrix's rows: columns three or more spaces apart.
  * @param {string} l
  */
-const cellsOf = l => (NOTE.test(l) ? [] : parts(l));
+export const cellsOf = l => (NOTE.test(l) ? [] : parts(l));
 
 /**
  * A clause matrix of the match compiler: one row a line, columns three or
@@ -804,6 +804,22 @@ function matrix(lines) {
 }
 
 /**
+ * The width of each column of a clause matrix's rows.
+ * @param {string[]} lines
+ * @returns {number[]}
+ */
+export const columnWidths = lines =>
+  lines
+    .map(cellsOf)
+    .reduce(
+      (w, ps) =>
+        Array.from({ length: Math.max(w.length, ps.length) }, (_, c) =>
+          Math.max(w[c] ?? 0, ps[c]?.length ?? 0),
+        ),
+      /** @type {number[]} */ ([]),
+    );
+
+/**
  * The lines of a clause matrix for aligned rows: each cell padded to its
  * column's width in `widths`, the columns three spaces apart; a note drawn
  * as a side condition.
@@ -823,7 +839,7 @@ const matrixLines = (lines, widths) =>
  * A representation mapping's line split at its `↦`, or null for a note.
  * @param {string} l
  */
-const mapsTo = l => {
+export const mapsTo = l => {
   const at = l.indexOf("↦");
   return at < 0 ? null : [l.slice(0, at).trim(), l.slice(at + 1).trim()];
 };
@@ -843,6 +859,13 @@ function mapping(lines) {
     })
     .join("")}</div>`;
 }
+
+/**
+ * The width of a representation mapping's ReScript side.
+ * @param {string[]} lines
+ */
+export const mappingWidth = lines =>
+  Math.max(0, ...lines.map(l => mapsTo(l)?.[0].length ?? 0));
 
 /**
  * The lines of a representation mapping for aligned rows: the ReScript side
@@ -883,7 +906,7 @@ const REPORT_ELISION = /^\s*(?:…|\.\.\.)/;
  * @param {string[]} lines
  * @returns {ReportEntry[]}
  */
-const reportEntries = lines =>
+export const reportEntries = lines =>
   groups(lines).map(g => {
     const ls = dedent(g);
     const key = ls.map(l => l.trimEnd()).join("\n");
@@ -1091,10 +1114,12 @@ function reportRows(b, a, tagged = true) {
 
 /**
  * Prose: paragraphs separated by blank lines; lines indented by 4 spaces or
- * more past the paragraphs are a ReScript code block.
+ * more past the paragraphs are a ReScript code block. Each chunk is a code
+ * block's lines, dedented, or a paragraph as one line.
  * @param {string[]} lines
+ * @returns {{ code: boolean, lines: string[] }[]}
  */
-function prose(lines) {
+export function proseChunks(lines) {
   /** @type {{ code: boolean, lines: string[] }[]} */
   const chunks = [];
   for (const l of lines) {
@@ -1107,15 +1132,30 @@ function prose(lines) {
       last.lines.push(l);
     else chunks.push({ code, lines: [l] });
   }
-  return `<div class="prose">${chunks
+  return chunks
     .filter(c => c.lines.some(l => l.trim()))
     .map(c =>
       c.code
-        ? codeLines(dedent(c.lines), t => highlight(t, "rescript"))
-        : `<p>${inline(c.lines.join(" ").replace(/\s+/g, " ").trim())}</p>`,
+        ? { code: true, lines: dedent(c.lines) }
+        : {
+            code: false,
+            lines: [c.lines.join(" ").replace(/\s+/g, " ").trim()],
+          },
+    );
+}
+
+/**
+ * Prose drawn (`proseChunks`).
+ * @param {string[]} lines
+ */
+const prose = lines =>
+  `<div class="prose">${proseChunks(lines)
+    .map(c =>
+      c.code
+        ? codeLines(c.lines, t => highlight(t, "rescript"))
+        : `<p>${inline(c.lines[0])}</p>`,
     )
     .join("")}</div>`;
-}
 
 /**
  * Each drawing's function, given the lines of one version and, for the
@@ -1139,7 +1179,7 @@ const DRAW = {
  * Lines without their common indentation and trailing blank lines.
  * @param {string[]} lines
  */
-function dedent(lines) {
+export function dedent(lines) {
   const indents = lines
     .filter(l => l.trim())
     .map(l => /^ */.exec(l)?.[0].length ?? 0);
@@ -1182,6 +1222,38 @@ function section(s, parts) {
 }
 
 /**
+ * One entry of an object block: its example program, or a form with the
+ * versions written.
+ * @typedef {{ example: string[] } | { form: string, before?: Section, after?: Section }} FormEntry
+ */
+
+/**
+ * The entries of the sections an object block holds, in order: an
+ * `Example:` program, or a form, its `Before` and `After` sections paired.
+ * @param {Section[]} parts
+ * @returns {FormEntry[]}
+ */
+export function formEntries(parts) {
+  /** @type {FormEntry[]} */
+  const out = [];
+  for (const p of parts) {
+    const [, which, form = ""] = PART.exec(p.name) ?? [];
+    if (!which) {
+      out.push({ example: [...p.text, ...dedent(p.block)] });
+      continue;
+    }
+    const side = which === "Before" ? "before" : "after";
+    let entry = out.find(e => "form" in e && e.form === form && !e[side]);
+    if (!entry || "example" in entry) {
+      entry = { form };
+      out.push(entry);
+    }
+    entry[side] = p;
+  }
+  return out;
+}
+
+/**
  * The sections an object block holds, in order: its `Example:` program,
  * then each form, the form's name over its drawing. A form with both
  * versions is drawn Before and After as aligned rows, or once when they are
@@ -1190,27 +1262,9 @@ function section(s, parts) {
  * @param {Section[]} parts
  */
 function forms(parts) {
-  /** @type {(string | { form: string, before?: Section, after?: Section })[]} */
-  const out = [];
-  for (const p of parts) {
-    const [, which, form = ""] = PART.exec(p.name) ?? [];
-    if (!which) {
-      out.push(code([...p.text, ...dedent(p.block)], "rescript"));
-      continue;
-    }
-    const side = which === "Before" ? "before" : "after";
-    let entry = out.find(
-      e => typeof e !== "string" && e.form === form && !e[side],
-    );
-    if (!entry || typeof entry === "string") {
-      entry = { form };
-      out.push(entry);
-    }
-    entry[side] = p;
-  }
-  return out
+  return formEntries(parts)
     .map(e => {
-      if (typeof e === "string") return e;
+      if ("example" in e) return code(e.example, "rescript");
       const drawing = FORMS[e.form] ?? "text";
       const { before, after } = e;
       // A version's text on its heading line captions the block under it,
@@ -1328,16 +1382,8 @@ function pairRows(drawing, b, a) {
   const before = isTree ? b.filter(treeLine) : b;
   const after = isTree ? a.filter(treeLine) : a;
   const both = [...b, ...a];
-  const widths = both
-    .map(cellsOf)
-    .reduce(
-      (w, ps) =>
-        Array.from({ length: Math.max(w.length, ps.length) }, (_, c) =>
-          Math.max(w[c] ?? 0, ps[c]?.length ?? 0),
-        ),
-      /** @type {number[]} */ ([]),
-    );
-  const width = Math.max(0, ...both.map(l => mapsTo(l)?.[0].length ?? 0));
+  const widths = columnWidths(both);
+  const width = mappingWidth(both);
   /** @param {string[]} ls @returns {string[]} */
   const html = ls =>
     drawing === "text"
@@ -1417,7 +1463,8 @@ function pairRows(drawing, b, a) {
  * follow it.
  * @param {Section[]} sections
  */
-function drawSections(sections) {
+export function sectionGroups(sections) {
+  /** @type {{ section: Section, parts: Section[] }[]} */
   const out = [];
   for (let i = 0; i < sections.length; i++) {
     const s = sections[i];
@@ -1425,16 +1472,28 @@ function drawSections(sections) {
     const parts = leading ? [s] : [];
     while (sections[i + 1] && PART.test(sections[i + 1].name))
       parts.push(sections[++i]);
-    out.push(section(leading ? { name: "", text: [], block: [] } : s, parts));
+    out.push({
+      section: leading ? { name: "", text: [], block: [] } : s,
+      parts,
+    });
   }
-  return out.join("\n");
+  return out;
 }
+
+/**
+ * The sections of a record drawn in order.
+ * @param {Section[]} sections
+ */
+const drawSections = sections =>
+  sectionGroups(sections)
+    .map(g => section(g.section, g.parts))
+    .join("\n");
 
 // ---------------------------------------------------------------------------
 // Cards
 
 /** The sections drawn below the changes. */
-const BELOW = new Set(["Breaking", "Review"]);
+export const BELOW = new Set(["Breaking", "Review"]);
 
 /**
  * A commit's card: its identity, then its message drawn.
