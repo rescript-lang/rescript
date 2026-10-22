@@ -819,3 +819,46 @@ ${SIGNED}
   has(html, '<span class="ln elide" style="--r:3;--c:2;--i:0">… ');
   has(html, '<span class="ln del" style="--r:2;--c:1;--i:0">');
 });
+
+test("--since leaves the comment the commits a push added, the page every commit", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "commit-records-"));
+  const git = (/** @type {string[]} */ ...a) =>
+    execFileSync("git", a, { cwd: dir, encoding: "utf8" }).trim();
+  git("init", "-q", "-b", "main");
+  git("config", "user.name", "A Person");
+  git("config", "user.email", "a@example.com");
+  await commit(git, dir, { "a.txt": "a\n" }, "base");
+  await commit(git, dir, {}, `First change\n\n${SIGNED}`);
+  const before = git("rev-parse", "HEAD");
+  await commit(git, dir, {}, `Second change\n\n${SIGNED}`);
+  const out = path.join(dir, "page.html");
+  const md = path.join(dir, "comment.md");
+  const run = (/** @type {string} */ since) => {
+    const r = spawnSync(
+      "node",
+      [
+        script,
+        "--out",
+        out,
+        "--markdown",
+        md,
+        "--since",
+        since,
+        "HEAD~2..HEAD",
+      ],
+      { cwd: dir, encoding: "utf8" },
+    );
+    assert.equal(r.status, 0, r.stderr);
+  };
+  run(before);
+  const comment = await fs.readFile(md, "utf8");
+  has(comment, "1 new commit");
+  has(comment, "Second change");
+  lacks(comment, "First change");
+  const html = await fs.readFile(out, "utf8");
+  has(html, "First change");
+  has(html, "Second change");
+  await fs.rm(md);
+  run("HEAD");
+  await assert.rejects(fs.access(md));
+});

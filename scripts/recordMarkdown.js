@@ -420,13 +420,17 @@ export function commitMarkdown(r, full) {
  * The comment: a heading linking the page, then each commit. Past the
  * budget, the commits with the most characters are drawn without their
  * forms, and if that is not enough, the last commits are left to the page.
+ * `fresh` counts the commits as new ones, those a push added.
  * @param {Group[]} groups
- * @param {{ url?: string, budget?: number }} [options]
+ * @param {{ url?: string, budget?: number, fresh?: boolean }} [options]
  */
-export function commentMarkdown(groups, { url = "", budget = BUDGET } = {}) {
+export function commentMarkdown(
+  groups,
+  { url = "", budget = BUDGET, fresh = false } = {},
+) {
   const records = groups.flatMap(g => g.records);
   const n = records.length;
-  const head = `### Semantic Diff\n\n${n} commit${n === 1 ? "" : "s"}${url ? ` · [Full page](${url})` : ""}`;
+  const head = `### Semantic Diff\n\n${n}${fresh ? " new" : ""} commit${n === 1 ? "" : "s"}${url ? ` · [Full page](${url})` : ""}`;
   const drawn = records.map(r => commitMarkdown(r, true));
   const size = () => drawn.reduce((t, d) => t + d.length + 2, head.length);
   const order = drawn
