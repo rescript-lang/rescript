@@ -50,6 +50,13 @@ type literal_tag =
   | Null
   | Undefined
 
+val literal_value_key : literal_tag -> string
+(** A key that two literals share exactly when they are the same JavaScript
+    value, as [===] compares them: ints are emitted as 32-bit numbers, so
+    [1], [1.0] and [4294967297] share one, while [1n] is a bigint. *)
+
+val same_literal_value : literal_tag -> literal_tag -> bool
+
 (** Information used to recognize a constructor during matching. A literal
     identifies a constant or an object's tag; a payload shape identifies a
     value represented directly by its payload. *)
