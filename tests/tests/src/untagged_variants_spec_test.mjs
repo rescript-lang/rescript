@@ -312,7 +312,7 @@ Mocha.describe("Untagged_variants_spec_test", () => {
   });
   Mocha.test("rule 8: an int case receives any number", () => {
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 285, characters 7-14", intOrStringName(id(1)), "int");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 286, characters 7-14", "int", "int");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 286, characters 7-14", intOrStringName(id(1.5)), "int");
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 287, characters 7-14", intOrStringName(id("1")), "string");
   });
   Mocha.test("rule 9: null and arrays are not objects", () => {

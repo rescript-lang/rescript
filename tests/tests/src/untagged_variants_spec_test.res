@@ -283,7 +283,7 @@ describe(__MODULE__, () => {
 
   test("rule 8: an int case receives any number", () => {
     eq(__LOC__, intOrStringName(id(I(1))), "int")
-    eq(__LOC__, intOrStringName(raw(1.5)), "int")
+    eq(__LOC__, intOrStringName(raw(id(1.5))), "int")
     eq(__LOC__, intOrStringName(id(S("1"))), "string")
   })
 
