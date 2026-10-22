@@ -1508,7 +1508,7 @@ function card(r) {
     [...s.text, ...s.block.map(l => l.trim())].join(" ").trim();
   const out = [
     `<article class="card${breaking.length ? " breaking" : ""}" id="c-${esc(r.sha)}">`,
-    `<header><div class="meta"><code>${esc(r.sha)}</code> · ${esc(r.author)}${r.date ? ` · ${esc(r.date)}` : ""}${
+    `<header><div class="meta"><code>${esc(r.sha)}</code> · ${esc(r.author)}${r.coauthors.length ? ` with ${esc(r.coauthors.join(", "))}` : ""}${r.date ? ` · ${esc(r.date)}` : ""}${
       pr ? ` · <a href="${REPO_URL}/pull/${pr}">#${pr}</a>` : ""
     }</div><h3>${inline(subject)}</h3></header>`,
   ];
@@ -1525,8 +1525,6 @@ function card(r) {
         .join("")}</ul>`,
     );
   if (below.length) out.push(`<div class="below">${below.join("\n")}</div>`);
-  if (r.coauthors.length)
-    out.push(`<div class="meta">with ${esc(r.coauthors.join(" · "))}</div>`);
   out.push("</article>");
   return out.join("\n");
 }

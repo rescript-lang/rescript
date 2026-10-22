@@ -132,9 +132,8 @@ test("a minimal record draws its identity and subject", async () => {
   has(html, "<h3>Fix a typo</h3>");
   assert.match(
     html,
-    /<div class="meta"><code>[0-9a-f]{9}<\/code> · A Person · [A-Z][a-z]{2} \d{2}, \d{4} · <a href="https:\/\/github.com\/rescript-lang\/rescript\/pull\/7">#7<\/a><\/div>/,
+    /<div class="meta"><code>[0-9a-f]{9}<\/code> · A Person with B Person · [A-Z][a-z]{2} \d{2}, \d{4} · <a href="https:\/\/github.com\/rescript-lang\/rescript\/pull\/7">#7<\/a><\/div>/,
   );
-  has(html, '<div class="meta">with B Person</div>');
   lacks(html, '<div class="below">');
   lacks(html, "Signed-off-by");
   lacks(html, "Co-Authored-By");
@@ -446,7 +445,7 @@ test("Breaking and Review sections right above the sign-off are drawn", async ()
   );
   has(html, '<article class="card breaking"');
   has(html, '<ul class="review"><li>Is -bs-x still read? No.</li></ul>');
-  has(html, '<div class="meta">with B Person</div>');
+  has(html, "</code> · A Person with B Person · ");
   lacks(html, "Signed-off-by");
 });
 
@@ -493,7 +492,7 @@ test("trailers of any key end the message and are not drawn", async () => {
   const html = await renderOne(
     `Fix a thing\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_x\n${SIGNED}\n`,
   );
-  has(html, '<div class="meta">with Claude Opus 5.5</div>');
+  has(html, " · A Person with Claude Opus 5.5 · ");
   lacks(html, "Claude-Session");
   lacks(html, "session_x");
   lacks(html, '<section class="block');

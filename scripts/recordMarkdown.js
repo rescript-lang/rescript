@@ -399,7 +399,7 @@ export function commitMarkdown(r, full) {
     [...s.text, ...s.block.map(l => l.trim())].join(" ").trim();
   const out = [
     `<details open><summary><b>${inlineHtml(subject)}</b></summary>`,
-    `<sub>${esc(r.sha)} · ${inline(r.author)}${r.date ? ` · ${esc(r.date)}` : ""}${pr ? ` · #${pr}` : ""}</sub>`,
+    `<sub>${esc(r.sha)} · ${inline(r.author)}${r.coauthors.length ? ` with ${inline(r.coauthors.join(", "))}` : ""}${r.date ? ` · ${esc(r.date)}` : ""}${pr ? ` · #${pr}` : ""}</sub>`,
     ...sectionGroups(r.sections.filter(s => !BELOW.has(s.name))).map(g =>
       section(g.section, g.parts, full),
     ),
@@ -412,8 +412,6 @@ export function commitMarkdown(r, full) {
     out.push(
       `**Review**\n\n${reviews.map(s => `- ${inline(joined(s))}`).join("\n")}`,
     );
-  if (r.coauthors.length)
-    out.push(`<sub>with ${inline(r.coauthors.join(" · "))}</sub>`);
   out.push("</details>");
   return out.filter(Boolean).join("\n\n");
 }

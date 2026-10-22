@@ -75,7 +75,7 @@ ${SIGNED}
     md,
     "<details open><summary><b>Represent raw extensions as their own node</b></summary>",
   );
-  has(md, "<sub>aaaaaaaa0 · A Person · Oct 22, 2026 · #12</sub>");
+  has(md, "<sub>aaaaaaaa0 · A Person with B Person · Oct 22, 2026 · #12</sub>");
   has(md, "> **Why**\n>\n> A raw extension carries JavaScript.");
   has(md, "**AST modified** (raw extensions)");
   has(md, "```rescript\nlet f = %raw(`(a) => a`)\n```");
@@ -86,7 +86,7 @@ ${SIGNED}
   );
   has(md, "> [!CAUTION]\n> **Breaking:** PPXs must match Pexp\\_raw.");
   has(md, "**Review**\n\n- Does a PPX still see it? Yes.");
-  has(md, "<sub>with B Person</sub>\n\n</details>");
+  has(md, "Yes.\n\n</details>");
   assert.ok(!md.includes("Signed-off-by"));
 });
 
