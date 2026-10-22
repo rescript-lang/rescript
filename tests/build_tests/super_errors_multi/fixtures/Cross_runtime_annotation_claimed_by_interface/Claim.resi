@@ -1,0 +1,1 @@
+@typeOf("string") type t
