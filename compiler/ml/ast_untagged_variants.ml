@@ -14,6 +14,15 @@ type untagged_error =
   | DuplicateLiteral of string
   | SameLiteralValue of string * string
   | ConstructorMoreThanOneArg of string
+
+(* Why a syntactically valid [@instanceOf] path is still not accepted *)
+and unsupported_class =
+  | Through_global_this
+  | Every_value_of of string  (** names the [@typeOf] that says the same *)
+  | Wrapper_of of string  (** names the [@typeOf] of the wrapped primitive *)
+  | Array_class
+  | Not_a_class
+
 type error =
   | InvalidVariantAsAnnotation
   | VariantAsIntegerOutOfRange of string
@@ -23,9 +32,14 @@ type error =
   | TagFieldNameConflict of string * string * string
   | UnboxedOnConstructor of {constructor: string; single_field_record: bool}
   | InvalidInstanceOf
+  | UnsupportedInstanceOf of string * unsupported_class
   | InvalidTypeOf of string
   | ConflictingRuntimeAnnotations
   | RuntimeAnnotationOnRepresentedType of string
+  | RuntimeAnnotationOnUnrelatedType of string
+  | RuntimeAnnotationContradictsManifest of string * string
+  | SubclassOfPublicAbbreviation of string * string
+  | ClassTwiceInChain of string
 exception Error of Location.t * error
 
 let report_error ppf =
@@ -94,6 +108,30 @@ let report_error ppf =
     fprintf ppf
       "@instanceOf expects the name of a global class, such as \
        @instanceOf(\"Date\") or @instanceOf(\"Intl.Locale\")."
+  | UnsupportedInstanceOf (name, reason) -> (
+    match reason with
+    | Through_global_this ->
+      fprintf ppf
+        "Write @instanceOf(\"%s\") without \"globalThis.\": the compiler reads \
+         the class through globalThis itself where a local binding shadows it."
+        (String.concat "." (List.tl (String.split_on_char '.' name)))
+    | Every_value_of type_of ->
+      fprintf ppf
+        "Every %s is an instance of %s, so @instanceOf(\"%s\") cannot tell \
+         cases apart. Use @typeOf(\"%s\") instead."
+        type_of name name type_of
+    | Wrapper_of type_of ->
+      fprintf ppf
+        "Values of type %s are primitives, not instances of %s. Use \
+         @typeOf(\"%s\") instead."
+        type_of name type_of
+    | Array_class ->
+      fprintf ppf
+        "Arrays are recognized by Array.isArray. Use array<_> as the payload \
+         type instead of @instanceOf(\"Array\")."
+    | Not_a_class ->
+      fprintf ppf "%s is not a class, so it cannot be used with @instanceOf."
+        name)
   | InvalidTypeOf name ->
     fprintf ppf
       "@typeOf expects one of \"string\", \"number\", \"bigint\", \"boolean\", \
@@ -106,6 +144,27 @@ let report_error ppf =
       "@%s can only be used on abstract types and type abbreviations, whose \
        runtime representation it describes."
       attribute
+  | RuntimeAnnotationOnUnrelatedType attribute ->
+    fprintf ppf
+      "@%s on a type abbreviation must describe an abstract type, or a type \
+       with the same annotation. The abbreviated type already has a runtime \
+       representation the compiler knows, or can be undefined."
+      attribute
+  | RuntimeAnnotationContradictsManifest (outer, inner) ->
+    fprintf ppf
+      "This annotation, %s, contradicts the abbreviated type's annotation, %s."
+      outer inner
+  | SubclassOfPublicAbbreviation (name, ancestor) ->
+    fprintf ppf
+      "A subclass must be a private abbreviation: write `= private ...` so \
+       that instances of %s cannot be used as instances of %s without a \
+       coercion."
+      ancestor name
+  | ClassTwiceInChain name ->
+    fprintf ppf
+      "%s appears twice in this chain of abbreviations, so it would be its own \
+       superclass."
+      name
 
 (*
   Type of the runtime representation of a tag.
@@ -181,6 +240,28 @@ type runtime_annotation =
 let instance_of = "instanceOf"
 let type_of = "typeOf"
 
+(* The reason a global that is a valid path is still not a class to recognize
+   values by. Classes nested in namespaces, such as [Intl.Locale], are not
+   checked. *)
+let unsupported_class name =
+  match String.split_on_char '.' name with
+  | "globalThis" :: _ :: _ -> Some Through_global_this
+  | [global] -> (
+    match global with
+    | "Object" -> Some (Every_value_of "object")
+    | "Function" -> Some (Every_value_of "function")
+    | "Array" -> Some Array_class
+    | "String" -> Some (Wrapper_of "string")
+    | "Number" -> Some (Wrapper_of "number")
+    | "Boolean" -> Some (Wrapper_of "boolean")
+    | "BigInt" -> Some (Wrapper_of "bigint")
+    | "Symbol" -> Some (Wrapper_of "symbol")
+    | "globalThis" | "undefined" | "NaN" | "Infinity" | "Math" | "JSON"
+    | "Reflect" | "Atomics" | "Intl" | "Proxy" ->
+      Some Not_a_class
+    | _ -> None)
+  | _ -> None
+
 let is_class_path name =
   let is_start = function
     | 'A' .. 'Z' | 'a' .. 'z' | '_' | '$' -> true
@@ -211,6 +292,24 @@ let block_type_of_typeof = function
   | "object" -> Some ObjectType
   | _ -> None
 
+let runtime_attribute_name = function
+  | Instance_of _ -> instance_of
+  | Type_of _ -> type_of
+
+let typeof_name = function
+  | StringType -> "string"
+  | IntType | FloatType -> "number"
+  | BigintType -> "bigint"
+  | BooleanType -> "boolean"
+  | SymbolType -> "symbol"
+  | FunctionType -> "function"
+  | ObjectType | InstanceType _ | UnknownType -> "object"
+
+let runtime_annotation_to_string = function
+  | Instance_of name -> Printf.sprintf "@%s(\"%s\")" instance_of name
+  | Type_of block_type ->
+    Printf.sprintf "@%s(\"%s\")" type_of (typeof_name block_type)
+
 (* The [@instanceOf] or [@typeOf] annotation in [attrs], validated. Only
    [Typedecl] passes [~loc]; later readers see attributes it accepted. *)
 let process_runtime_annotation ?(loc = Location.none)
@@ -219,7 +318,11 @@ let process_runtime_annotation ?(loc = Location.none)
     let loc = if attr_loc = Location.none then loc else attr_loc in
     if txt = instance_of then
       match Ast_payload.semantic_string_of_payload payload with
-      | Some name when is_class_path name -> Some (Instance_of name)
+      | Some name when is_class_path name -> (
+        match unsupported_class name with
+        | None -> Some (Instance_of name)
+        | Some reason ->
+          raise (Error (loc, UnsupportedInstanceOf (name, reason))))
       | _ -> raise (Error (loc, InvalidInstanceOf))
     else if txt = type_of then
       match Ast_payload.semantic_string_of_payload payload with
@@ -247,9 +350,7 @@ let check_runtime_annotation ~loc ~is_abstract_or_abbreviation
         (Error
            ( loc,
              RuntimeAnnotationOnRepresentedType
-               (match annotation with
-               | Instance_of _ -> instance_of
-               | Type_of _ -> type_of) ))
+               (runtime_attribute_name annotation) ))
 
 let type_is_builtin_object (t : Types.type_expr) =
   match t.desc with
@@ -647,22 +748,21 @@ module Dynamic_checks = struct
         | InstanceType i -> Some i
         | _ -> None)
     in
+    (* Instances of a class can be objects or functions, so the cases of
+       those kinds exclude the class cases *)
+    let not_one_of_the_instances case =
+      Ext_list.fold_right instances case (fun i x ->
+          x &&& not (is_instance i y))
+    in
     match tag_type with
     | Payload_shape
         ( IntType | StringType | FloatType | BigintType | BooleanType
-        | SymbolType | FunctionType ) ->
+        | SymbolType ) ->
       typeof y == x
+    | Payload_shape FunctionType -> not_one_of_the_instances (typeof y == x)
     | Payload_shape ObjectType ->
-      let object_case =
-        if has_null_case then typeof y == x &&& (y != nil) else typeof y == x
-      in
-      if instances <> [] then
-        let not_one_of_the_instances =
-          Ext_list.fold_right instances object_case (fun i x ->
-              x &&& not (is_instance i y))
-        in
-        not_one_of_the_instances
-      else object_case
+      not_one_of_the_instances
+        (if has_null_case then typeof y == x &&& (y != nil) else typeof y == x)
     | Payload_shape (InstanceType i) -> is_case_instance ~instances i y
     | Payload_shape UnknownType ->
       (* This should not happen because unknown must be the only non-literal case *)
