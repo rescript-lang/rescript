@@ -203,6 +203,7 @@ test("prose escapes markup and draws attributes and mentions as code", () => {
   );
   assert.equal(inline("# not a heading"), "\\# not a heading");
   assert.equal(inline("1. not a list"), "1\\. not a list");
+  assert.equal(inline("thanks @0x, @9"), "thanks `@0x`, `@9`");
   assert.equal(inline("mail a@example.com"), "mail a@example.com");
 });
 

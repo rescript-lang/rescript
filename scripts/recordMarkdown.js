@@ -49,7 +49,7 @@ export const BUDGET = 60000;
  * @param {string} s
  */
 const spans = s =>
-  s.split(/(`[^`]+`|(?<![\w@`])@{1,2}[A-Za-z_][\w.]*(?:\([^()`\s]*\))?)/);
+  s.split(/(`[^`]+`|(?<![\w@`])@{1,2}\w[\w.]*(?:\([^()`\s]*\))?)/);
 
 /**
  * Prose as Markdown: code spans kept, attributes drawn as code, the
