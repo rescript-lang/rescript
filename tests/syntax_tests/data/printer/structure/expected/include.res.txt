@@ -8,6 +8,7 @@ include (
   {
     @val @module("react")
     external createElementInternalHack: 'a = "createElement"
+
     @send
     external apply: ('theFunction, 'theContext, 'arguments) => 'returnTypeOfTheFunction = "apply"
 

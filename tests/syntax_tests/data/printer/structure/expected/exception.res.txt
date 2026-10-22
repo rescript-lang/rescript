@@ -8,10 +8,12 @@ exception ExitEarly({@attr "jsExit": int, @attr "code": int})
 exception ExitEarly({"jsExit": int})
 exception ExitEarly({"jsExit": int}, {"code": int})
 exception ExitEarly({"jsExit": int}, int, {"code": int})
+
 exception ExitEarly(
   {@attr "jsExit": int, @attr "code": int},
   {@attr "jsExit": int, @attr "code": int},
 )
+
 exception ExitJsStyle({..})
 exception ExitJsStyle({.."code": int})
 exception ExitJsStyle({.."code": int})
@@ -33,8 +35,10 @@ exception GadtExit(int): exit<int>
 
 /** doc comment */
 exception ExitEarly({x: int})
+
 /** doc comment */
 exception ExitEarly({x: int, y: string})
+
 /** doc comment */
 exception ExitEarlyWithManyFields({
   firstFieldName: int,

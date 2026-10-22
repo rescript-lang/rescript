@@ -1,5 +1,6 @@
 type t = Option.t<string>
 type t = Mod.Sub.t<a, b, c>
+
 type t = Mod.Sub.t<
   soooooLoooooong,
   soooooLoooooong,
@@ -19,6 +20,7 @@ type t = Mod.Sub.t<
   b,
   c,
 >
+
 type t = Mod.Sub.t<
   Mod.Sub.t<soooooLoooooong, soooooLoooooong, soooooLoooooong, soooooLoooooong, soooooLoooooong>,
   Nested.Module.t<string, float>,
@@ -45,6 +47,7 @@ let t: list<
 > = x
 
 type t = Option.t<(tupleTyp1, tupleTyp2, tupleTyp3)>
+
 type t = Option.t<(
   tupleTyp1,
   tupleTyp2,
@@ -57,6 +60,7 @@ type t = Option.t<(
   tupleTyp3,
   tupleTyp3,
 )>
+
 let t: Option.t<(
   tupleTyp1,
   tupleTyp2,

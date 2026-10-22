@@ -1,0 +1,28 @@
+type t
+let a: int
+type r = {
+  x: int,
+}
+let b: int
+// a comment does not count
+let c: int
+/** Documented */
+let d: int
+module M: {
+  let x: int
+}
+let e: int
+module Nested: {
+  let a: int
+  let b: int
+  type r = {
+    x: int,
+  }
+  let c: int
+}
+@genType
+let attributed1: int
+@genType
+let attributed2: int
+@val external inline1: int = "inline1"
+@val external inline2: int = "inline2"

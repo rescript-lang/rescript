@@ -2,7 +2,7 @@
   {
     "id": "FormatDocstringsTest2.testResi",
     "name": "testResi",
-    "code": "type x = int\nlet x: int => string\nmodule M: {\n  let ff: string => int\n}"
+    "code": "type x = int\nlet x: int => string\n\nmodule M: {\n  let ff: string => int\n}"
   },
   {
     "id": "FormatDocstringsTest2.testPipes",

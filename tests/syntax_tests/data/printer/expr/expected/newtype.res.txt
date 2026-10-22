@@ -6,6 +6,7 @@ let f = (type t u v, xs: list<(t, u, v)>) => ()
 let f = @attr (type t u v, xs: list<(t, u, v)>) => ()
 let f = (type t u v s w z, xs: list<(t, u, v)>, ys: list<(s, w, z)>) => ()
 let f = @attr (type t u v, @attr2 type s w z, xs: list<(t, u, v)>, ys: list<(s, w, z)>) => ()
+
 let f = (
   @attr type t,
   @attr type s,

@@ -8,5 +8,6 @@ exception Exit = Ns.Lib.Terminate
 
 /** doc comment */
 exception ExitEarly({x: int})
+
 /** doc comment */
 exception ExitEarly({x: int, y: string})

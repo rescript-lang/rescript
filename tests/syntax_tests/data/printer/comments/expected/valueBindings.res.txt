@@ -3,6 +3,7 @@ let x = 1
 
 // leading snd value-binding
 and y = 2
+
 /* leading snd value-binding */
 
 let walkList: 'node. unit = comments => {

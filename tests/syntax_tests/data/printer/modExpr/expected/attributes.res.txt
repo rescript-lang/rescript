@@ -1,8 +1,10 @@
 module A = @attr F
 module B = @attr {}
+
 module C = @attr {
   let x = 1
 }
+
 module D = @a @b F
 
 // on a functor application, its functor, or an argument
@@ -12,12 +14,15 @@ module H = @attr F(A, B)
 module I = (@attr F(A))(B)
 module J = F(@attr X)
 module Q = F(@attr {})
+
 include @attr F({
   type t = int
 })
+
 include (@attr F)({
   type t = int
 })
+
 include F(@attr {
   type t = int
 })
