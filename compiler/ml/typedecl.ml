@@ -1612,6 +1612,11 @@ let transl_type_decl env rec_flag sdecl_list =
         | Type_abstract | Type_record _ | Type_open -> (id, decl))
       decls
   in
+  List.iter2
+    (fun sdecl (_, decl) ->
+      Variant_layout.check_manifest_annotation ~loc:sdecl.ptype_loc ~env:newenv
+        decl)
+    sdecl_list decls;
   List.iter2 (check_constraints ~type_record_as_object newenv) sdecl_list decls;
   (* Name recursion *)
   let decls =
@@ -2019,6 +2024,7 @@ let transl_with_constraint env id row_path orig_decl sdecl =
   (match Ctype.closed_type_decl decl with
   | None -> ()
   | Some ty -> raise (Error (sdecl.ptype_loc, Unbound_type_var (ty, decl))));
+  Variant_layout.check_manifest_annotation ~loc:sdecl.ptype_loc ~env decl;
   let decl = name_recursion sdecl id decl in
   let type_variance =
     compute_variance_decl env true decl

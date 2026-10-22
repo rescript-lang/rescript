@@ -6,6 +6,7 @@ class Animal {}
 class Dog extends Animal {}
 globalThis.UntaggedAnimal = Animal
 globalThis.UntaggedDog = Dog
+globalThis.UntaggedCallable = class Callable extends Function {}
 `)
 
 @instanceOf("UntaggedAnimal") type animal
@@ -93,6 +94,41 @@ let localeKind = locale =>
   | Tag(tag) => tag
   }
 
+// A phantom type hierarchy declares subclasses with public abbreviations that
+// are strict instances of their superclass type
+type nodeLike<'a>
+@instanceOf("UntaggedAnimal") type animalLike<'a> = nodeLike<'a>
+type _dog<'a>
+@instanceOf("UntaggedDog") type dogLike<'a> = animalLike<_dog<'a>>
+type _base
+@new external makePhantomAnimal: unit => animalLike<_base> = "UntaggedAnimal"
+@new external makePhantomDog: unit => dogLike<_base> = "UntaggedDog"
+
+@unboxed
+type phantomPet = PhantomAnimal(animalLike<_base>) | PhantomDog(dogLike<_base>)
+
+let describePhantom = pet =>
+  switch pet {
+  | PhantomAnimal(_) => "animal"
+  | PhantomDog(_) => "dog"
+  }
+
+// Instances of a class can be functions
+@instanceOf("UntaggedCallable") type callable
+@new external makeCallable: unit => callable = "UntaggedCallable"
+
+@unboxed
+type handler = Function(int => int) | Callable(callable)
+
+let handlerKind = handler =>
+  switch handler {
+  | Callable(_) => "callable"
+  | Function(_) => "function"
+  }
+
+@unboxed
+type boxedAnimal = BoxedAnimal(animal)
+
 describe(__MODULE__, () => {
   test("a subclass case is not taken for its superclass", () => {
     eq(__LOC__, "animal", describePet(Animal(makeAnimal())))
@@ -138,5 +174,16 @@ describe(__MODULE__, () => {
   test("an annotated type is not wrapped in an option", () => {
     let animal = makeAnimal()
     ok(__LOC__, Obj.magic(Some(animal)) === animal)
+    ok(__LOC__, Obj.magic(Some(BoxedAnimal(animal))) === animal)
+  })
+
+  test("a phantom type hierarchy", () => {
+    eq(__LOC__, "animal", describePhantom(PhantomAnimal(makePhantomAnimal())))
+    eq(__LOC__, "dog", describePhantom(PhantomDog(makePhantomDog())))
+  })
+
+  test("a function case excludes class instances", () => {
+    eq(__LOC__, "callable", handlerKind(Callable(makeCallable())))
+    eq(__LOC__, "function", handlerKind(Function(x => x)))
   })
 })

@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/runtime_annotation_on_type_variable.res[0m:[2m1:19-33[0m
+
+  [1;31m1[0m [2m│[0m @typeOf("object") [1;31mtype t<'a> = 'a[0m
+  2 [2m│[0m 
+
+  @typeOf on a type abbreviation must describe an abstract type, or a type with the same annotation. The abbreviated type already has a runtime representation the compiler knows, or can be undefined.
