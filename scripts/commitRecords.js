@@ -109,7 +109,12 @@ if (options.markdown) {
   if (shown.some(g => g.records.length)) {
     writeFileSync(
       options.markdown,
-      commentMarkdown(shown, { url: options.url, fresh: !!since }),
+      commentMarkdown(shown, {
+        url: options.url,
+        total: since
+          ? groups.reduce((n, g) => n + g.records.length, 0)
+          : undefined,
+      }),
     );
     console.log(options.markdown);
   }

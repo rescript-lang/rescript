@@ -852,7 +852,7 @@ test("--since leaves the comment the commits a push added, the page every commit
   };
   run(before);
   const comment = await fs.readFile(md, "utf8");
-  has(comment, "1 new commit");
+  has(comment, "1 new commit (2 total)");
   has(comment, "Second change");
   lacks(comment, "First change");
   const html = await fs.readFile(out, "utf8");
