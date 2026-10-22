@@ -11,12 +11,15 @@ name: Semantic Diff
 # pull_request_target, which GitHub takes from the default branch and runs
 # with the repository's secrets: it executes only the default branch's code,
 # and the fork's commits are fetched as git data and never checked out.
+#
+# Pages are never deleted, so the links in the comments stay valid after a
+# pull request is merged or closed.
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened]
   pull_request_target:
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened]
 
 concurrency:
   group: semantic-diff-${{ github.event_name }}-${{ github.event.pull_request.number }}
@@ -25,7 +28,6 @@ concurrency:
 jobs:
   render:
     if: >-
-      github.event.action != 'closed' &&
       github.actor != 'dependabot[bot]' &&
       (github.event_name == 'pull_request') ==
       (github.event.pull_request.head.repo.full_name == github.repository)
@@ -97,29 +99,3 @@ jobs:
           comment-tag: semantic-diff-${{ steps.render.outputs.head }}
           mode: upsert
           file-path: semantic-diff/comment.md
-
-  cleanup:
-    if: >-
-      github.event.action == 'closed' &&
-      github.actor != 'dependabot[bot]' &&
-      (github.event_name == 'pull_request') ==
-      (github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: ubuntu-26.04
-    permissions: {}
-    steps:
-      - name: Setup Rclone
-        uses: cometkim/rclone-actions/setup-rclone@8d9c6b95341f7698609deee65c3d62af42893288 # main, 2025-06-18
-
-      - name: Configure Rclone remote
-        uses: cometkim/rclone-actions/configure-remote/s3-provider@8d9c6b95341f7698609deee65c3d62af42893288 # main, 2025-06-18
-        with:
-          name: rescript
-          provider: Cloudflare
-          endpoint: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
-          access-key-id: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
-          secret-access-key: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
-          acl: private
-
-      - name: Delete semantic diff
-        continue-on-error: true
-        run: rclone purge --s3-no-check-bucket "rescript:cdn-assets/semantic-diff/pr-${{ github.event.pull_request.number }}"
