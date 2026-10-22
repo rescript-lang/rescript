@@ -326,10 +326,8 @@ let print_leading_comments node tbl loc =
         else if diff > 1 then Doc.concat [Doc.hard_line; Doc.hard_line]
         else Doc.hard_line
       in
-      let doc =
-        Doc.group
-          (Doc.concat [Doc.concat (List.rev (cmt_doc :: acc)); separator; node])
-      in
+      let comments = Doc.concat (List.rev (separator :: cmt_doc :: acc)) in
+      let doc = Doc.group (Doc.concat [Doc.comment comments; node]) in
       doc
     | comment :: (next_comment :: _comments as rest) ->
       let cmt_doc = print_leading_comment ~next_comment comment in
@@ -387,7 +385,9 @@ let print_comments_before_marker doc (tbl : Comment_table.t) loc marker =
     Hashtbl.replace tbl.trailing loc after_marker;
     print_trailing_comments doc tbl.trailing loc
 
-let print_list ~get_loc ~nodes ~print ?(force_break = false) t =
+(* [~space_multiline] adds a blank line next to nodes printed on several lines *)
+let print_list ~get_loc ~nodes ~print ?(force_break = false)
+    ?(space_multiline = false) t =
   let rec loop first_loc_opt prev_loc_opt acc nodes =
     match nodes with
     | [] -> (first_loc_opt, prev_loc_opt, Doc.concat (List.rev acc))
@@ -403,12 +403,14 @@ let print_list ~get_loc ~nodes ~print ?(force_break = false) t =
       else
         let doc = print_comments raw_doc t loc in
         let acc =
-          match prev_loc_opt with
-          | None -> [doc]
-          | Some prev_loc ->
+          match (prev_loc_opt, acc) with
+          | None, _ | _, [] -> [doc]
+          | Some prev_loc, prev_doc :: _ ->
             let sep =
               if start_pos.pos_lnum - prev_loc.Location.loc_end.pos_lnum > 1
               then Doc.concat [Doc.hard_line; Doc.hard_line]
+              else if space_multiline then
+                Doc.item_separator ~prev:prev_doc ~next:doc
               else Doc.hard_line
             in
             doc :: sep :: acc
@@ -690,7 +692,7 @@ let rec print_structure ~state (s : Parsetree.structure) t =
   | [] -> print_comments_inside_file t
   | structure ->
     let previous_can_continue = ref false in
-    print_list
+    print_list ~space_multiline:true
       ~get_loc:(fun s -> s.Parsetree.pstr_loc)
       ~nodes:structure
       ~print:(fun item cmt_tbl ->
@@ -1108,7 +1110,7 @@ and print_signature ~state signature cmt_tbl =
   match signature with
   | [] -> print_comments_inside_file cmt_tbl
   | signature ->
-    print_list
+    print_list ~space_multiline:true
       ~get_loc:(fun s -> s.Parsetree.psig_loc)
       ~nodes:signature
       ~print:(print_signature_item ~state)

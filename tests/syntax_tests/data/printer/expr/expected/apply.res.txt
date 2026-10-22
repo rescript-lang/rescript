@@ -20,6 +20,7 @@ let cmp = rbt.compare2(Array.getUnsafe(old, oldIter.contents), longerNode.longVa
 let uncurriedUnit = apply()
 
 let coordinate = make2dCoordinate({x: 1, y: 2})
+
 let coordinate = make3dCoordinate({
   ...base,
   field1: thisIsAPrettyLongNameHere,
@@ -28,6 +29,7 @@ let coordinate = make3dCoordinate({
 })
 
 let coordinate = make2dCoordinateArray([x, y])
+
 let coordinate = make3dCoordinateArray([
   thisIsAPrettyLongNameHere,
   thisIsAPrettyLongNameHere,
@@ -35,6 +37,7 @@ let coordinate = make3dCoordinateArray([
 ])
 
 let coordinate = make2dCoordinateTuple((x, y))
+
 let coordinate = make3dCoordinateTuple((
   thisIsAPrettyLongNameHere,
   thisIsAPrettyLongNameHere,
@@ -42,6 +45,7 @@ let coordinate = make3dCoordinateTuple((
 ))
 
 let coordinate = make2dCoordinateList(list{x, y})
+
 let coordinate = make3dCoordinateList(list{
   thisIsAPrettyLongNameHere,
   thisIsAPrettyLongNameHere,
@@ -50,6 +54,7 @@ let coordinate = make3dCoordinateList(list{
 })
 
 let coordinate = makeJsCoordinate({"x": 1, "y": 1})
+
 let user = makeJsUser({
   "name": "steve",
   "age": 32,
@@ -67,27 +72,35 @@ document.createElementWithOptions("div", elementProps(~onClick=_ => Console.log(
 
 f(1)
 f([1, 2, 3])
+
 f([
   suuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuperLong,
   suuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuperLong,
   suuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuperLong,
 ])
+
 f((1, 2, 3))
 f({"a": 1})
 f(list{1})
+
 f(`
  template
  string
 `)
+
 f(`single line`)
+
 f("
  template
  string
 ")
+
 f({
   expr
 })
+
 f({expr})
+
 f({
   exception Exit
   throw(Exit)

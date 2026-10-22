@@ -26,6 +26,7 @@ let paymentMessage =
     : "There was an issue with the payment.  Please contact support."
 
 let record = truth ? {x: 1, y: 2} : {x: 3, y: 5}
+
 let record = truth
   ? {
       thisIsASuperLongFieldHere: loooooooooooooongIdentifier,
@@ -37,6 +38,7 @@ let record = truth
     }
 
 let arr = truth ? [1, 2, 3, 4] : [4, 5, 6, 7]
+
 let arr = truth
   ? [
       thisIsASuperLongIdentifieeeeeeeer,
@@ -50,6 +52,7 @@ let arr = truth
     ]
 
 let lst = truth ? list{1, 2, 3, 4} : list{4, 5, 6, 7}
+
 let lst = truth
   ? list{
       thisIsASuperLongIdentifieeeeeeeer,
@@ -63,6 +66,7 @@ let lst = truth
     }
 
 let construct = truth ? Constructor(1, 2, 3, 4) : Constructor(4, 5, 6, 7)
+
 let construct = truth
   ? Constructor(
       thisIsASuperLongIdentifieeeeeeeer,
@@ -86,6 +90,7 @@ let x = truth
       let b = 2
       a + b
     }
+
 let x = truth
   ? {
       let a = 1
@@ -99,6 +104,7 @@ let x = truth
     }
 
 let x = truth ? create(a, b) : create(b, c)
+
 let x = truth
   ? create(
       thisIsASuperLongIdentifieeeeeeeer,
@@ -110,7 +116,9 @@ let x = truth
       thisIsASuperLongIdentifieeeeeeeer2,
       thisIsASuperLongIdentifieeeeeeeer3,
     )
+
 let x = truth ? create(a, b) : create(b, c)
+
 let x = truth
   ? create(
       thisIsASuperLongIdentifieeeeeeeer,
@@ -150,6 +158,7 @@ let x = exceptionLike
     }
 
 let tuple = truth ? (1, 2, 3, 4) : (4, 5, 6, 7)
+
 let tuple = truth
   ? (
       thisIsASuperLongIdentifieeeeeeeer,
@@ -163,11 +172,13 @@ let tuple = truth
     )
 
 let x = condition1 ? node.left : node.right
+
 let x = condition1
   ? nodeWithVeryLooooooooooooooooongNameHere.left
   : nodeWithVeryLooooooooooooooooongNameHere.right
 
 let x = condition ? node.left = Some(newNode) : node.right = Some(newNode)
+
 let x = condition1
   ? nodeWithVeryLooooooooooooooooongNameHere.left = Some(newNode)
   : nodeWithVeryLooooooooooooooooongNameHere.right = Some(newNode)
@@ -183,6 +194,7 @@ let x = condition1
     } else {
       ()
     }
+
 let () = condition1
   ? {
       sideEffect()
@@ -200,6 +212,7 @@ let () = condition1
   : while true {
       doOtherThing()
     }
+
 let () = condition1
   ? for i in 0 to 10 {
       ()
@@ -219,9 +232,11 @@ let () = condition
       exception Exit
       throw(Exit)
     }
+
 let () = condition ? foo() : assert(false)
 
 let x = condition ? module(Foo) : module(Int: Number)
+
 let x = condition
   ? module(ModuleWithVeryLooooooooooooooooongNameHere)
   : module(ModuleWithVeryLooooooooooooooooongNameHereInt: Number)
@@ -235,10 +250,12 @@ let x = condition
       open React
       render()
     }
+
 let x = condition ? %eval("console.log") : %eval("console.err")
 let x = condition ? %eval("consoooooooooooooooooooooole.log") : %eval("consoleeeeeeeeeeeeeee.err")
 
 let jsObj = condition ? {"x": 1, "y": 2} : {"x": 20, "y": 100}
+
 let jsObj = truth
   ? {
       "thisIsASuperLongFieldHere": loooooooooooooongIdentifier,

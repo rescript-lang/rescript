@@ -11,6 +11,7 @@ let id = (x: [> #Red | #Green | #Blue]) => x
 let upper = (x: [< #Red | #Green]) => true
 type point = [#Point(float, float)]
 type \"type" = [#"Point🗿"(\"let", float)]
+
 type shape = [
   | #Rectangle(point, point)
   | #Circle(point, float)
@@ -78,6 +79,7 @@ module type Conjunctive = {
 
   let f: [< #T([< u2]) & ([< u2]) & ([< u1])] => unit
   let g: [< #S & ([< u2]) & ([< u2]) & ([< u1])] => unit
+
   let g: [<
     | #"Exotic-S+" & ([< #"Exotic-u2+"]) & ([< #"Exotic-u2-"]) & ([< #"Exotic-u1+++"])
   ] => unit
@@ -92,6 +94,7 @@ type currencyPoly = [
 
 // should not break, user wrote it on one line
 type currencyPoly = [#USD | #CAD | #EUR]
+
 //
 // should break, line length exceeded
 type currencyPoly = [
@@ -126,6 +129,7 @@ type foo = [
 
 // doc comments on inherited polyvariant types
 type rgb = [#Red | #Green | #Blue]
+
 type color = [
   | /** Primary colors from RGB */ rgb
   /** A warm color */

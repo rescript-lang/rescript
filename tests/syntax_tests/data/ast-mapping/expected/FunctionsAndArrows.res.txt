@@ -7,6 +7,7 @@ let id = x => x
 
 // labeled, optional, and default parameters
 let labeled = (~x, ~y) => x - y
+
 let optional = (~x=?, ~y=1, z) => {
   switch x {
   | Some(x) => x + y + z

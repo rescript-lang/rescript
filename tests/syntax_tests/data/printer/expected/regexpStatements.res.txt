@@ -191,8 +191,10 @@ let afterOpenExpression = () => {
 }
 
 let beforeStatementAttribute = 0
+
 @foo
 /a/->ignore
+
 /**Keep the documentation attribute.*/
 /b/->ignore
 

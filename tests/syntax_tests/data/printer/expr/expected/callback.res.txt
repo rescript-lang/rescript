@@ -1,5 +1,6 @@
 array->Array.forEach(((value, height)) => add(rbt, value, ~height)->ignore)
 someArray->Array.forEach(((value, height)) => add(rbt, value, ~height)->ignore)
+
 someArraaaaaaayWithAVeryLooooooooooooooooooooooooooooooooooooooongName->Array.forEach(((
   value,
   height,
@@ -14,9 +15,11 @@ let make = (arr, ~compare) => {
 Thing.map(foo, (arg1, arg2) => MyModuleBlah.toList(argument))
 Thing.map(foo, bar, baz, (aaaaaaaaaaarg1, aaaaarg2) => MyModuleBlah.toList(argument))
 Thing.map(fooooooooooooooooooo, bar, baz, (abc, z) => MyModuleBlah.toList(argument))
+
 Thing.map(fooooooooooooooooooo, baaaaaaaaaaaaaaaaaar, baaaaaaaaaaaaaaaaaaaaaaaaaz, (abc, z) =>
   MyModuleBlah.toList(argument)
 )
+
 Fooooooooooooooooooo.baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(baaaz, quuuuux =>
   something(here)
 )
@@ -119,6 +122,7 @@ Thing.map(
   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg3,
   ~fn=(param1, parm2) => doStuff(param1, parm2),
 )
+
 Thing.map(
   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg1,
   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg2,
@@ -135,6 +139,7 @@ Thing.map(~fn=?(arg1, arg2) => MyModuleBlah.toList(argument), foo)
 Thing.map(~fn=(arg1, arg2) => {
   MyModuleBlah.toList(argument)
 }, longArgument, veryLooooongArgument)
+
 Thing.map(~fn=?(arg1, arg2) => {
   MyModuleBlah.toList(argument)
 }, longArgument, veryLooooongArgument)
@@ -146,6 +151,7 @@ Thing.map(
   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg3,
   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg4,
 )
+
 Thing.map(
   ~fn=?(param1, parm2) => doStuff(param1, parm2),
   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg2,

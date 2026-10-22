@@ -1,8 +1,10 @@
 @attr type t = float
+
 @attr
 type t = float
 
 @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr type t = int
+
 @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr
 type t = int
 
@@ -11,6 +13,7 @@ type t = int
 @attrWithSuperLongIdentifeirName
 @attrWithSuperLongIdentifeirName
 type t = string
+
 @attrWithSuperLongIdentifeirName
 @attrWithSuperLongIdentifeirName
 @attrWithSuperLongIdentifeirName

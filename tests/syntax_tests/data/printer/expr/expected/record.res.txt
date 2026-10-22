@@ -1,4 +1,5 @@
 let coord = {x: 3.13, y: 3.14}
+
 let record = {
   firstField: superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
   secondField: superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
@@ -11,6 +12,7 @@ let forceBreak = {
 }
 
 let withSpread = {...initialState, time: nextTime}
+
 let withSpreadAndForceBreak = {
   ...initialState,
   time: nextTime,
@@ -25,6 +27,7 @@ let withSpreadAndNaturalBreak = {
 
 let x = @attr {x: 1, y: 2}
 let x = @attr {...initialState, superLongName: 1, superLongName: 2, superLongName: 5}
+
 let x =
   @attr {...initialState, superLongName: 1, superLongName: 2, superLongName: 5, superLongName: 20}
 
@@ -32,11 +35,13 @@ let x =
 let user = {name: (ceo.name: string)}
 // braces should be preserved on rhs
 let user = {name: {ceo.name}}
+
 let user = {
   name: {
     ceo.name
   },
 }
+
 // braced + constrained expr
 let user = {name: {(ceo.name: string)}}
 
@@ -58,20 +63,24 @@ let r = {
   // b
   b,
 }
+
 let r = {
   a, // a
   b, // b
 }
+
 let r = {
   /* a */
   a,
   /* b */
   b,
 }
+
 let r = {
   a /* a */,
   b /* b */,
 }
+
 let r = {a /* a */, b /* b */}
 
 let r = {x: ?None, y: ?None, z: ?(None: tt)}
@@ -122,13 +131,16 @@ let optParen = {x: 3, y: ?(() => 3)}
 let optParen = {x: 3, y: ?-3}
 
 let x = {a: 2}
+
 let x = {
   a: 2,
   bbbbbbbbbbbbbbbbbbbbb: 22222222222,
   ccccccccccccccccccccc: 22222222222222222,
   ddddddddddddddddddddd: 2222222222222,
 }
+
 let x = {a: 2}
+
 let x = {
   a: 2,
 }

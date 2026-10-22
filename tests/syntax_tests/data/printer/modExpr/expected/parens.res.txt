@@ -9,6 +9,7 @@ let e2 = (module(await (@a X)): module(S))
 let e3 = (module(await (X: S1)): module(S2))
 let e4 = (module(await @a (await X)): module(S))
 let e5 = module(await @a X: S)
+
 let f = () => {
   module M: T = (X: S)
   ()

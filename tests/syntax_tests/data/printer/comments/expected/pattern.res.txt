@@ -23,6 +23,7 @@ let /* here */ Black /* there */ = color
 let /* here */ Black(/* inside */) /* there */ = color
 let Black(/* inside */ /* inside2 */) = color
 let Black(/* inside */ /* inside2 */ /* inside 3 */) = color
+
 let Black(
   // singleLineComment
 ) = color

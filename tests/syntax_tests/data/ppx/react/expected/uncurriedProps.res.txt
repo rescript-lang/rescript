@@ -1,4 +1,5 @@
 @@jsxConfig({version: 4})
+
 @res.jsxComponentProps
 type props<'a> = {
   a?: 'a,
@@ -12,6 +13,7 @@ let make = ({a: ?__a, _}: props<unit => unit>) => {
   let a: unit => unit = __a_value
   (React.null: React.element)
 }
+
 let make = React.component({
   let \"UncurriedProps" = (props: props<_>) => make(props)
 
@@ -46,6 +48,7 @@ module Foo = {
       }: React.element
     )
   }
+
   let make = React.component({
     let \"UncurriedProps$Foo" = (props: props<_>) => make(props)
 
@@ -58,6 +61,7 @@ module Bar = {
   type props = {}
 
   let make = (_: props): React.element => React.jsx(Foo.make, {callback: {(_, _, _) => ()}})
+
   let make = React.component({
     let \"UncurriedProps$Bar" = props => make(props)
 
