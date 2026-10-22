@@ -1,0 +1,78 @@
+name: Semantic Diff Viewer
+
+# Publishes the Semantic Diff viewer (scripts/recordViewer.html), which draws
+# the commit records of any pull request, range or commit in the browser,
+# reading them from GitHub's API:
+#
+#   https://cdn.rescript-lang.org/semantic-diff/view/index.html?pr=<number>
+#
+# A push to master publishes it there. A pull request from a branch of this
+# repository that changes it publishes its own version under
+# semantic-diff/view/pr-<number>/ and comments that address, so the change
+# can be tried before it lands; a fork's pull request publishes nothing.
+
+on:
+  push:
+    branches: [master]
+    paths: &viewer
+      - scripts/recordViewer.html
+      - scripts/recordViewer.js
+      - scripts/recordRender.js
+      - .github/workflows/semantic_diff_viewer.yml
+  pull_request:
+    paths: *viewer
+  workflow_dispatch:
+
+concurrency:
+  group: semantic-diff-viewer-${{ github.event.pull_request.number || 'master' }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      DIR: semantic-diff/view${{ github.event_name == 'pull_request' && format('/pr-{0}', github.event.pull_request.number) || '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Rclone
+        uses: cometkim/rclone-actions/setup-rclone@8d9c6b95341f7698609deee65c3d62af42893288 # main, 2025-06-18
+
+      - name: Configure Rclone remote
+        uses: cometkim/rclone-actions/configure-remote/s3-provider@8d9c6b95341f7698609deee65c3d62af42893288 # main, 2025-06-18
+        with:
+          name: rescript
+          provider: Cloudflare
+          endpoint: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          access-key-id: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          acl: private
+
+      # The page and its modules are revalidated within five minutes, so a
+      # new version reaches readers soon after it is published.
+      - name: Upload viewer
+        run: |
+          upload() {
+            rclone copyto --s3-no-check-bucket --header-upload "Cache-Control: max-age=300" "scripts/$1" "rescript:cdn-assets/${DIR}/$2"
+          }
+          upload recordViewer.html index.html
+          upload recordViewer.js recordViewer.js
+          upload recordRender.js recordRender.js
+
+      - name: Comment viewer address
+        if: github.event_name == 'pull_request'
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+          comment-tag: semantic-diff-viewer
+          message: |
+            Semantic Diff viewer of this pull request: https://cdn.rescript-lang.org/${{ env.DIR }}/index.html?pr=${{ github.event.pull_request.number }}
