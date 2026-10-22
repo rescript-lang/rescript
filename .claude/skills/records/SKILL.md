@@ -68,11 +68,12 @@ Signed-off-by: Name <email>
   `Key: value` lines (`Co-Authored-By:`, `Fixes:` or any other one-word
   key), `Signed-off-by` last; the page lists the `Co-Authored-By` names
   and draws no other trailer.
-- A section starts at a line `Why:`, `Review:`, `Breaking:`, an object
-  block's heading, an `Example:` alone on its line, or a `Before (<form>):`
-  or `After (<form>):` heading, and holds the text after its colon and the
-  block indented by 4 spaces or more under it; a blank line ends a section
-  that holds only text. `Review:` repeats, one question each. Every other
+- A section starts at a line `Why:`, `Review:` or `Breaking:` that no
+  paragraph of prose runs onto (a blank line or another section above it),
+  an object block's heading, an `Example:` alone on its line, or a
+  `Before (<form>):` or `After (<form>):` heading, and holds the text after
+  its colon and the block indented by 4 spaces or more under it; a blank
+  line ends a section that holds only text. `Review:` repeats, one question each. Every other
   line is prose, and a block indented by 4 spaces outside a section is
   ReScript code. Tabs count as 4 columns.
 - An **object block** is a heading `<Kind> added|modified|removed (<object>):`,

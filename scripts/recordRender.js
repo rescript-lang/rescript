@@ -118,10 +118,11 @@ export const isIndented = l => /^ {4,}\S/.test(l);
 /**
  * A record's subject, sections and trailers. A section starts at a line
  * `Name:`, where the name is an object block's heading, a version heading,
- * `Why`, `Review` or `Breaking`, or `Example` alone on its line; it holds
- * the text after its colon and the lines indented by 4 spaces under it. A
- * blank line ends a section that holds only text. Unnamed sections hold the
- * paragraphs and indented blocks between.
+ * `Why`, `Review` or `Breaking` outside a paragraph of prose, or `Example`
+ * alone on its line; it holds the text after its colon and the lines
+ * indented by 4 spaces under it. A blank line ends a section that holds
+ * only text. Unnamed sections hold the paragraphs and indented blocks
+ * between.
  * @param {string} text
  */
 function parseMessage(text) {
@@ -140,11 +141,15 @@ function parseMessage(text) {
   for (const line of lines.slice(1, end)) {
     const head = /^(\S(?:[^:]|\([^()]*\))*):(?:\s+(.*))?$/.exec(line);
     const name = head?.[1] ?? "";
+    // `Why:`, `Review:` or `Breaking:` that prose wraps onto a line of its
+    // paragraph continues the paragraph.
+    const inParagraph =
+      current && !current.name && current.text.length && !current.block.length;
     if (
       head &&
       (BLOCK.test(name) ||
         (PART.test(name) && !(name === "Example" && head[2])) ||
-        NAMED.has(name))
+        (NAMED.has(name) && !inParagraph))
     ) {
       current = { name, text: head[2] ? [head[2]] : [], block: [] };
       sections.push(current);

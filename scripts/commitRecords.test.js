@@ -427,6 +427,18 @@ test("a line with a colon is prose unless it names a section", async () => {
   lacks(html, '<h4 class="change">');
 });
 
+test("a section's name wrapped onto a line of a paragraph is prose", async () => {
+  const html = await renderOne(
+    `Require a description\n\nIt requires prose or a\nWhy: section, and an example.\nWhy: alone after a blank line is a section.\n\nWhy: Here it is.\n\n${SIGNED}\n`,
+  );
+  has(
+    html,
+    "<p>It requires prose or a Why: section, and an example. Why: alone after a blank line is a section.</p>",
+  );
+  assert.equal(html.split('<section class="block k-why">').length - 1, 1);
+  has(html, "<p>Here it is.</p>");
+});
+
 test("a character literal with a Unicode escape is one string token", async () => {
   const html = await renderOne(
     `Match a range\n\nExample:\n    switch c { | '\\u{100}' .. '\\u{1100}' => 1 | _ => 0 }\n\n${SIGNED}\n`,
