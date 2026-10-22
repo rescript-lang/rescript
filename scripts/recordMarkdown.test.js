@@ -69,7 +69,7 @@ ${SIGNED}
   );
   has(
     md,
-    "### Semantic Diff\n\n1 commit, drawn from its message; [side by side on the page](https://cdn.example/pr-12/index.html?v=1).",
+    "### Semantic Diff\n\n1 commit · [Full page](https://cdn.example/pr-12/index.html?v=1)",
   );
   has(
     md,

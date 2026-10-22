@@ -426,7 +426,7 @@ export function commitMarkdown(r, full) {
 export function commentMarkdown(groups, { url = "", budget = BUDGET } = {}) {
   const records = groups.flatMap(g => g.records);
   const n = records.length;
-  const head = `### Semantic Diff\n\n${n} commit${n === 1 ? "" : "s"}, drawn from ${n === 1 ? "its message" : "their messages"}${url ? `; [side by side on the page](${url})` : ""}.`;
+  const head = `### Semantic Diff\n\n${n} commit${n === 1 ? "" : "s"}${url ? ` · [Full page](${url})` : ""}`;
   const drawn = records.map(r => commitMarkdown(r, true));
   const size = () => drawn.reduce((t, d) => t + d.length + 2, head.length);
   const order = drawn
