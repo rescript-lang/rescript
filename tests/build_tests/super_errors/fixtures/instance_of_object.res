@@ -1,0 +1,1 @@
+@instanceOf("Object") type t
