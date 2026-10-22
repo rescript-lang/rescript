@@ -39,10 +39,14 @@ let scrape env ty = (scrape_ty env ty).desc
 *)
 let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
   (* A value declared to be a class instance or to have a [typeof] other than
-     "undefined" is not undefined *)
+     "undefined" is not undefined. The payload of an [@unboxed] wrapper is
+     declared only after scraping. *)
   Option.is_some (Variant_layout.declared_block_type ~env typ)
   ||
-  match scrape env typ with
+  let scraped = scrape_ty env typ in
+  Option.is_some (Variant_layout.declared_block_type ~env scraped)
+  ||
+  match scraped.desc with
   | Tconstr (p, _, _) -> (
     (* all built in types could not inhabit none-like values:
        int, char, float, bool, unit, exn, array, list, nativeint,

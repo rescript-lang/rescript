@@ -40,10 +40,9 @@ let runtime_annotations ~env (t : Types.type_expr) =
   in
   collect ~previous:None t
 
-(* The block type the outermost annotation of [t] states. A class's
-   ancestors are the classes annotated further down the chain. *)
-let declared_block_type ~env t =
-  match runtime_annotations ~env t with
+(* The block type the outermost of [annotations] states. A class's ancestors
+   are the classes annotated further down the chain. *)
+let block_type_of_annotations = function
   | Instance_of name :: rest ->
     let ancestors =
       List.filter_map
@@ -55,6 +54,59 @@ let declared_block_type ~env t =
     Some (InstanceType (Class {name; ancestors}))
   | Type_of block_type :: _ -> Some block_type
   | [] -> None
+
+let declared_block_type ~env t =
+  block_type_of_annotations (runtime_annotations ~env t)
+
+(* An annotation on an abbreviation is a claim about the abbreviated type, so
+   it must agree with what the compiler knows about that type. It can refine
+   an abstract type, restate the annotation the abbreviated type has, or, on a
+   private abbreviation, declare a subclass of the class annotated there.
+   Anything else, such as [@typeOf("string") type t = option<string>], would
+   let two spellings of one type be recognized differently, and would make
+   [Some(None)] of a type that can be undefined indistinguishable from
+   [None]. *)
+let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
+  match
+    (process_runtime_annotation decl.type_attributes, decl.type_manifest)
+  with
+  | None, _ | Some _, None -> ()
+  | Some outer, Some manifest -> (
+    let error err = raise (Error (loc, err)) in
+    match (outer, runtime_annotations ~env manifest) with
+    | _, [] -> (
+      let is_abstract path =
+        match Env.find_type path env with
+        | {type_kind = Type_abstract; type_manifest = None} -> true
+        | _ -> false
+        | exception Not_found -> false
+      in
+      match (Ctype.expand_head_opt env manifest).desc with
+      | Tconstr (path, _, _)
+        when Predef.type_is_builtin_path_but_option path = Predef.NA
+             && is_abstract path ->
+        ()
+      | _ ->
+        error (RuntimeAnnotationOnUnrelatedType (runtime_attribute_name outer)))
+    | Type_of block_type, Type_of inner :: _ when block_type = inner -> ()
+    | Instance_of name, Instance_of inner :: _ when name = inner -> ()
+    | Instance_of name, (Instance_of ancestor :: _ as chain) ->
+      (* A public abbreviation is the same type as the superclass, unless it
+         is a strict instance of it, as in the phantom type hierarchy
+         [type element<'a> = node<_element<'a>>] *)
+      let same_type =
+        match (Btype.repr manifest).desc with
+        | Tconstr (_, args, _) -> List.for_all Btype.is_Tvar args
+        | _ -> true
+      in
+      if decl.type_private = Public && same_type then
+        error (SubclassOfPublicAbbreviation (name, ancestor))
+      else if List.mem outer chain then error (ClassTwiceInChain name)
+    | (Instance_of _ | Type_of _), inner :: _ ->
+      error
+        (RuntimeAnnotationContradictsManifest
+           ( runtime_annotation_to_string outer,
+             runtime_annotation_to_string inner )))
 
 let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
   match declared_block_type ~env t with
