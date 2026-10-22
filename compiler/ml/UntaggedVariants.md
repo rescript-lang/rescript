@@ -448,16 +448,26 @@ values are never `undefined`. It affects only rule 12: `option` of the type,
 and of an untagged variant with a payload of the type, is unboxed. It does not
 make the type a recognized payload kind (rule 4). On any other type
 declaration it is an error, "@notUndefined can only be used on abstract
-types". Interface inclusion does not compare it. `@instanceOf` and `@typeOf`
-(rule 5) imply it.
+types". `@instanceOf` and `@typeOf` (rule 5) imply it.
+
+When an interface declares a type `@notUndefined`, its implementation must be
+a type that cannot hold `undefined` either, or an abstract type, which has no
+representation to contradict it. `type t = option<int>` under
+`@notUndefined type t` is an error: "Their runtime representations
+differ: the second declaration is @notUndefined, but the first declaration
+can hold undefined". The same holds
+for functor arguments and `with type` constraints.
 
 - Implementation: `typedecl.ml:transl_declaration`;
   `ast_untagged_variants.ml:has_not_undefined`;
   `variant_layout.ml:declaration_shape`;
-  `typeopt.ml:type_cannot_contain_undefined`.
-- Tests: `spec_test` rule 13; fixture `invalid_attribute_not_undefined.res`;
+  `typeopt.ml:type_cannot_contain_undefined`;
+  `includemod.ml:not_undefined_mismatch`.
+- Tests: `spec_test` rule 13; fixtures `invalid_attribute_not_undefined.res`,
+  `not_undefined_functor_argument.res`;
+  `tests/build_tests/super_errors_multi/fixtures/Cross_not_undefined_option_implementation`;
   `tests/build_tests/not_undefined_attribute`.
-- Shaped by #7458, #7464.
+- Shaped by #7458, #7464, #8964.
 
 ### 14. `@tag` and interfaces
 
@@ -532,8 +542,8 @@ had to answer, and the answers of rule 5:
 4. **The unchecked branch** stays the contract (rule 10).
 5. **Realms.** Recognition is local to a realm (rule 10).
 6. **Interfaces and functors** compare declared classes and kinds, and the
-   payload kinds of untagged cases (rule 14). They still do not compare
-   `@notUndefined`.
+   payload kinds of untagged cases (rule 14), and `@notUndefined` against
+   the implementation (rule 13).
 7. **Implied `@notUndefined`.** A declared class or kind implies it, and
    rule 5 rejects annotations on abbreviations of types that can hold
    `undefined`.

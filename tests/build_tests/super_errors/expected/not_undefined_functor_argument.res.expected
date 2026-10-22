@@ -1,0 +1,31 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/not_undefined_functor_argument.res[0m:[2m9:23-11:1[0m
+
+   7 [2m│[0m }
+   8 [2m│[0m 
+   [1;31m9[0m [2m│[0m module Applied = Make([1;31m{[0m
+  [1;31m10[0m [2m│[0m [1;31m  type t = option<int>[0m
+  [1;31m11[0m [2m│[0m [1;31m}[0m)
+  12 [2m│[0m 
+
+  Signature mismatch:
+  Modules do not match:
+    {
+  type t = option<int>
+}
+  is not included in
+    {
+  type t
+}
+  Type declarations do not match:
+    type t = option<int>
+  is not included in
+    type t
+  [36m/.../fixtures/not_undefined_functor_argument.res[0m:[2m3:19-24[0m:
+    Expected declaration
+  [36m/.../fixtures/not_undefined_functor_argument.res[0m:[2m10:3-22[0m:
+    Actual declaration
+  Their runtime representations differ:
+  the second declaration is @notUndefined,
+  but the first declaration can hold undefined.

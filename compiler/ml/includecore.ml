@@ -185,6 +185,7 @@ type type_mismatch =
   | Tag_name
   | Variant_representation of Ident.t
   | Runtime_annotation of string * string
+  | Not_undefined
 
 let report_type_mismatch0 first second decl ppf err =
   let pr fmt = Format.fprintf ppf fmt in
@@ -217,6 +218,11 @@ let report_type_mismatch0 first second decl ppf err =
   | Tag_name -> pr "Their @tag annotations differ"
   | Variant_representation s ->
     pr "The internal representations for case %s are not equal" (Ident.name s)
+  | Not_undefined ->
+    pr
+      "Their runtime representations differ:@ %s %s is @notUndefined,@ but %s \
+       %s can hold undefined"
+      second decl first decl
   | Runtime_annotation (declared1, declared2) ->
     pr
       "Their runtime representations differ:@ %s %s states %s,@ %s %s states %s"
