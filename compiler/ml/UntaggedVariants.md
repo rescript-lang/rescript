@@ -90,29 +90,31 @@ into one kind:
 | a function type | function | `typeof x === "function"` |
 | a record (not `@unboxed`), an inline record, `dict<_>` | object | `typeof x === "object"` |
 | `array<_>`, a tuple | instance `Array` | `Array.isArray(x)` |
-| a type declared with `@instanceOf("C")`, or listed in rule 5 | instance `C` | `x instanceof C` |
+| a type declared with `@instanceOf("C")` (rule 5) | instance `C` | `x instanceof C` |
+| `promise<_>` | instance `Promise` | `x instanceof Promise` |
 | a type declared with `@typeOf("k")` | kind `k` | `typeof x === "k"` |
 | anything else: an abstract type, a type variable, a variant, `list<_>`, an `@unboxed` record | unknown | no check |
 
 The annotations of rule 5 are read first, on the type as written and on each
-type it abbreviates. Then the list of rule 5 is consulted on the type as
-written, and then the payload type is classified after expanding
-abbreviations (`type myDate = Date.t` is an instance case). `@typeOf("number")`
+type it abbreviates. Otherwise the payload type is classified after expanding
+abbreviations: `type ints = array<int>` is an array case, and `type name =
+string` a string case. A type is never recognized by its name. `@typeOf("number")`
 is the number kind, and `@typeOf("symbol")` is a kind of its own, with no
 builtin payload type. `@notUndefined` on an abstract type leaves it unknown.
 
 - Implementation: `variant_layout.ml:get_block_type_from_typ`,
-  `get_block_type`, `declared_block_type`;
-  `ast_untagged_variants.ml:type_is_builtin_object`.
+  `get_block_type`, `declared_block_type`.
 - Tests: `spec_test` rules 4 (`kinds`, `tuples`, `aliasDict`, `instances`,
   `unknown`); fixtures `UntaggedConstructorMoreThanOneArg.res`,
   `UntaggedConstructorAttributeMoreThanOneArg.res`, `UntaggedNonUnary1.res`,
   `UntaggedNonUnary2.res` ("Constructor A has more than one argument."),
-  `UntaggedUnknown.res` (`list<float>` is unknown);
-  `tests/tests/src/untagged_runtime_annotations_test.res`.
+  `UntaggedUnknown.res` (`list<float>` is unknown),
+  `untagged_unannotated_stdlib_name.res` (a type named like a stdlib class
+  is unknown); `tests/tests/src/untagged_runtime_annotations_test.res`,
+  `untagged_builtin_alias_test.res`.
 - Shaped by #6121, #6208, #6219, #6279, #6368, #6394, #6550, #6670.
 
-### 5. Declared and listed instance types
+### 5. Declared instance types
 
 `@instanceOf("C")` on a type declares that its values are instances of the
 global class at the path `C`, such as `"Date"` or `"Intl.Locale"`.
@@ -181,37 +183,22 @@ The stdlib annotates the types of the classes it binds:
 | `Int8Array.t` and the other typed arrays, public abbreviations of `TypedArray.t<_>` | `@instanceOf` the class of the same name |
 | `Symbol.t` | `@typeOf("symbol")` |
 
-Types without annotations are recognized from a fixed list of type names in
-`ast_untagged_variants.ml:type_to_instanceof_backed_obj`. Every listed stdlib
-type is annotated, so the list only covers other types printed with one of
-these paths. The predefined
-`promise<_>` and `array<_>` are matched by path; the others by the printed
-path of the type:
-
-| Type | Class |
-| --- | --- |
-| `promise<_>` | `Promise` |
-| `array<_>` | `Array` (checked with `Array.isArray`) |
-| `Date.t`, `RegExp.t`, `File.t`, `Blob.t`, `ArrayBuffer.t`, `DataView.t` | the class of the same name |
-| `Set.t`, `Map.t`, `WeakSet.t`, `WeakMap.t` | the class of the same name |
-| `Int8Array.t`, `Uint8Array.t`, `Uint8ClampedArray.t`, `Int16Array.t`, `Uint16Array.t`, `Int32Array.t`, `Uint32Array.t`, `Float32Array.t`, `Float64Array.t`, `BigInt64Array.t`, `BigUint64Array.t` | the class of the same name |
-
-The listed classes have no superclasses. The typed-array types are
-abbreviations of one type, `TypedArray.t<_>`, and are told apart only by
-their annotations, which are read on the name as written (Known bugs).
+The typed-array types are abbreviations of one type, `TypedArray.t<_>`, and
+are told apart only by their annotations, which are read on the name as
+written (Known bugs).
 
 - Implementation: `variant_layout.ml:runtime_annotations`,
   `declared_block_type`, `check_manifest_annotation`;
   `ast_untagged_variants.ml:process_runtime_annotation`, `unsupported_class`,
-  `check_runtime_annotation`,
-  `type_to_instanceof_backed_obj`;
+  `check_runtime_annotation`;
   `variant_runtime.ml:Instance`; `js_exp_make.ml:class_constructor`.
 - Tests: `spec_test` rules 4 and 5;
   `tests/tests/src/untagged_runtime_annotations_test.res`,
   `untagged_runtime_annotations_shadow_test.res`,
   `untagged_file_blob_test.res`; the fixtures above,
   `UntaggedAtMostOneInstance.res`, `UntaggedTupleAndArray.res`.
-- Shaped by #6296, #6383, #6396, #7788, #8009, #8950, #8948. Related: #7147.
+- Shaped by #6296, #6383, #6396, #7788, #8009, #8950, #8948, #8949.
+  Related: #7147.
 
 ### 6. Well-formedness
 
@@ -517,8 +504,8 @@ had to answer, and the answers of rule 5:
 7. **Implied `@notUndefined`.** A declared class or kind implies it, and
    rule 5 rejects annotations on abbreviations of types that can hold
    `undefined`.
-8. **Abbreviations.** Annotations are read along the chain of abbreviations;
-   the list of rule 5 is still read on the name as written.
+8. **Abbreviations.** Annotations are read along the chain of abbreviations,
+   and a type is never recognized by its name.
 9. **Globals.** A shadowed class is read through `globalThis`. A missing
    class throws when the check runs (rule 10).
 
