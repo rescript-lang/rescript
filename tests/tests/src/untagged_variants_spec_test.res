@@ -194,6 +194,22 @@ type opaque
 @inline(never) let someWithBlob = (v: withBlob): option<withBlob> => Some(v)
 @unboxed type withDate = DDate(Date.t) | DString(string)
 @inline(never) let someWithDate = (v: withDate): option<withDate> => Some(v)
+// A record payload holds `undefined` only through the field of an `@unboxed`
+// record or of a one-field inline record.
+type record = {y: option<int>}
+@unboxed type withRecord = RRecord(record) | RString(string)
+@inline(never) let someWithRecord = (v: withRecord): option<withRecord> => Some(v)
+@unboxed type withInlineRecord = INone | IRecord({x: option<int>})
+@inline(never)
+let someWithInlineRecord = (v: withInlineRecord): option<withInlineRecord> => Some(v)
+@unboxed type unboxedOption = {x: option<int>}
+@unboxed type withUnboxedOption = | @as("n") UONone | UOption(unboxedOption)
+@inline(never)
+let someWithUnboxedOption = (v: withUnboxedOption): option<withUnboxedOption> => Some(v)
+@unboxed type unboxedString = {s: string}
+@unboxed type withUnboxedString = | @as("n") USNone | UString(unboxedString)
+@inline(never)
+let someWithUnboxedString = (v: withUnboxedString): option<withUnboxedString> => Some(v)
 
 // Rule 13: `@notUndefined` on an abstract type.
 @notUndefined type defined
@@ -314,6 +330,10 @@ describe(__MODULE__, () => {
     eq(__LOC__, someWithVariable(Var(raw(Nullable.undefined))) == None, false)
     eq(__LOC__, someWithBlob(BBlob(raw(Nullable.undefined))) == None, false)
     eq(__LOC__, someWithDate(DDate(raw(Nullable.undefined))) == None, true)
+    eq(__LOC__, someWithRecord(RRecord(raw(Nullable.undefined))) == None, true)
+    eq(__LOC__, someWithInlineRecord(raw(Nullable.undefined)) == None, false)
+    eq(__LOC__, someWithUnboxedOption(UOption(raw(Nullable.undefined))) == None, false)
+    eq(__LOC__, someWithUnboxedString(UString(raw(Nullable.undefined))) == None, true)
   })
 
   test("rule 13: @notUndefined unboxes option of a variant holding the type", () => {

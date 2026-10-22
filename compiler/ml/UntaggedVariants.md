@@ -277,7 +277,9 @@ as `Primitive_option.some(v)` otherwise. An untagged variant cannot hold
 
 | Payload type | Holds `undefined` |
 | --- | --- |
-| `string`, `int`, `float`, `bool`, `bigint`, a function, a tuple, a record | no |
+| `string`, `int`, `float`, `bool`, `bigint`, a function, a tuple, a record without `@unboxed` | no |
+| an inline record with two or more fields | no |
+| an `@unboxed` record, an inline record with one field | as the type of its field |
 | an abstract type with `@notUndefined` (rule 13) | no |
 | an abstract type without it, a type variable, `option<_>` | yes |
 | a type whose declaration is not on the load path | yes |
@@ -291,6 +293,10 @@ An `@as(null)` case does not prevent unboxing; `Some(N)` is `null`.
 | `@as("n") ONone \| OPaque(opaque)` | `Primitive_option.some(v)` |
 | `BBlob(Blob.t) \| BString(string)` | `Primitive_option.some(v)` |
 | `DDate(Date.t) \| DString(string)` | `v` |
+| `RRecord(record) \| RString(string)` with `type record = {y: option<int>}` | `v` |
+| `INone \| IRecord({x: option<int>})` | `Primitive_option.some(v)` |
+| `@as("n") UONone \| UOption(unboxedOption)` with `@unboxed type unboxedOption = {x: option<int>}` | `Primitive_option.some(v)` |
+| `@as("n") USNone \| UString(unboxedString)` with `@unboxed type unboxedString = {s: string}` | `v` |
 
 The stdlib marks `Date.t`, `RegExp.t`, `Map.t`, `Set.t`, `WeakMap.t`,
 `WeakSet.t`, `ArrayBuffer.t`, `DataView.t`, the typed arrays and other

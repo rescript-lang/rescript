@@ -206,165 +206,185 @@ function someWithDate(v) {
   return v;
 }
 
+function someWithRecord(v) {
+  return v;
+}
+
+function someWithInlineRecord(v) {
+  return Primitive_option.some(v);
+}
+
+function someWithUnboxedOption(v) {
+  return Primitive_option.some(v);
+}
+
+function someWithUnboxedString(v) {
+  return v;
+}
+
 function someWithDefined(v) {
   return v;
 }
 
 Mocha.describe("Untagged_variants_spec_test", () => {
   Mocha.test("rule 1: @unboxed on one constructor of a tagged variant", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 208, characters 7-14", id(3), 3);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 209, characters 7-14", id({
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 224, characters 7-14", id(3), 3);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 225, characters 7-14", id({
       TAG: "MB",
       x: 1
     }), {
       TAG: "MB",
       x: 1
     });
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 210, characters 7-14", id("MC"), "MC");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 211, characters 7-14", mixedName(id(3)), "MA");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 212, characters 7-14", mixedName(id({
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 226, characters 7-14", id("MC"), "MC");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 227, characters 7-14", mixedName(id(3)), "MA");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 228, characters 7-14", mixedName(id({
       TAG: "MB",
       x: 1
     })), "MB");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 213, characters 7-14", mixedName(id("MC")), "MC");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 229, characters 7-14", mixedName(id("MC")), "MC");
   });
   Mocha.test("rule 2: representation of each case", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 217, characters 7-14", id("Named"), "Named");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 218, characters 7-14", id("s"), "s");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 219, characters 7-14", id(1), 1);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 220, characters 7-14", id(2.5), 2.5);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 221, characters 7-14", id(3n), 3n);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 222, characters 7-14", id(true), true);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 223, characters 7-14", id(null), null);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 224, characters 7-14", id(undefined), undefined);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 225, characters 7-14", id({
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 233, characters 7-14", id("Named"), "Named");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 234, characters 7-14", id("s"), "s");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 235, characters 7-14", id(1), 1);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 236, characters 7-14", id(2.5), 2.5);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 237, characters 7-14", id(3n), 3n);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 238, characters 7-14", id(true), true);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 239, characters 7-14", id(null), null);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 240, characters 7-14", id(undefined), undefined);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 241, characters 7-14", id({
       x: 1
     }), {
       x: 1
     });
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 226, characters 7-14", id({
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 242, characters 7-14", id({
       x: 1
     }), {
       x: 1
     });
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 227, characters 7-14", id("v"), "v");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 243, characters 7-14", id("v"), "v");
   });
   Mocha.test("rule 4: typeof kinds", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 231, characters 7-14", kindName(id("a")), "string");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 232, characters 7-14", kindName(id(1.5)), "number");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 233, characters 7-14", kindName(id(1n)), "bigint");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 234, characters 7-14", kindName(id(false)), "bool");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 235, characters 7-14", kindName(id(x => x)), "function");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 236, characters 7-14", kindName(id({
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 247, characters 7-14", kindName(id("a")), "string");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 248, characters 7-14", kindName(id(1.5)), "number");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 249, characters 7-14", kindName(id(1n)), "bigint");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 250, characters 7-14", kindName(id(false)), "bool");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 251, characters 7-14", kindName(id(x => x)), "function");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 252, characters 7-14", kindName(id({
       x: 1
     })), "object");
   });
   Mocha.test("rule 4: tuples are array cases, dicts are object cases", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 240, characters 7-14", tupleName(id([
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 256, characters 7-14", tupleName(id([
       1,
       "a"
     ])), "array");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 241, characters 7-14", tupleName(id({
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 257, characters 7-14", tupleName(id({
       a: 1
     })), "object");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 242, characters 7-14", aliasDictName(id({
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 258, characters 7-14", aliasDictName(id({
       a: 1
     })), "object");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 243, characters 7-14", aliasDictName(id([1])), "array");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 259, characters 7-14", aliasDictName(id([1])), "array");
   });
   Mocha.test("rules 4 and 5: instance cases", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 247, characters 7-14", instanceName(id(new Date())), "Date");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 248, characters 7-14", instanceName(id(/a/)), "RegExp");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 249, characters 7-14", instanceName(id(Promise.resolve(1))), "Promise");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 250, characters 7-14", instanceName(id(new Map())), "Map");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 251, characters 7-14", instanceName(id(new Set())), "Set");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 252, characters 7-14", instanceName(id(new WeakMap())), "WeakMap");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 253, characters 7-14", instanceName(id(new WeakSet())), "WeakSet");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 263, characters 7-14", instanceName(id(new Date())), "Date");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 264, characters 7-14", instanceName(id(/a/)), "RegExp");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 265, characters 7-14", instanceName(id(Promise.resolve(1))), "Promise");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 266, characters 7-14", instanceName(id(new Map())), "Map");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 267, characters 7-14", instanceName(id(new Set())), "Set");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 268, characters 7-14", instanceName(id(new WeakMap())), "WeakMap");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 269, characters 7-14", instanceName(id(new WeakSet())), "WeakSet");
     let buffer = new ArrayBuffer(8);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 255, characters 7-14", instanceName(id(buffer)), "ArrayBuffer");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 256, characters 7-14", instanceName(id(new DataView(buffer))), "DataView");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 257, characters 7-14", instanceName(id(new Float64Array([1.0]))), "Float64Array");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 258, characters 7-14", instanceName(id("a")), "string");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 271, characters 7-14", instanceName(id(buffer)), "ArrayBuffer");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 272, characters 7-14", instanceName(id(new DataView(buffer))), "DataView");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 273, characters 7-14", instanceName(id(new Float64Array([1.0]))), "Float64Array");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 274, characters 7-14", instanceName(id("a")), "string");
   });
   Mocha.test("rule 4: the unknown case receives every non-literal value", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 262, characters 7-14", unknownName(id(null)), "null");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 263, characters 7-14", unknownName(id("none")), "none");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 264, characters 7-14", unknownName(id({hd: 1, tl: /* [] */0})), "list");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 265, characters 7-14", unknownName(id(/* [] */0)), "list");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 278, characters 7-14", unknownName(id(null)), "null");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 279, characters 7-14", unknownName(id("none")), "none");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 280, characters 7-14", unknownName(id({hd: 1, tl: /* [] */0})), "list");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 281, characters 7-14", unknownName(id(/* [] */0)), "list");
   });
   Mocha.test("rule 7: a payload value equal to a literal is that literal's case", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 269, characters 7-14", overlapStringName(id("a")), "LitA");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 270, characters 7-14", overlapStringName(id("b")), "AnyString");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 271, characters 7-14", overlapNumberName(id(1)), "LitOne");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 272, characters 7-14", overlapNumberName(id(2)), "AnyInt");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 273, characters 7-14", overlapBoolName(id(true)), "LitTrue");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 274, characters 7-14", overlapBoolName(id(false)), "AnyBool");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 275, characters 7-14", overlapNullName(id(null)), "LitNull");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 276, characters 7-14", overlapNullName(id({
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 285, characters 7-14", overlapStringName(id("a")), "LitA");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 286, characters 7-14", overlapStringName(id("b")), "AnyString");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 287, characters 7-14", overlapNumberName(id(1)), "LitOne");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 288, characters 7-14", overlapNumberName(id(2)), "AnyInt");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 289, characters 7-14", overlapBoolName(id(true)), "LitTrue");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 290, characters 7-14", overlapBoolName(id(false)), "AnyBool");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 291, characters 7-14", overlapNullName(id(null)), "LitNull");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 292, characters 7-14", overlapNullName(id({
       x: 1
     })), "AnyObject");
   });
   Mocha.test("rule 8: instance checks precede typeof checks", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 280, characters 7-14", objectFirstName(id(new Date())), "Date");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 281, characters 7-14", objectFirstName(id({
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 296, characters 7-14", objectFirstName(id(new Date())), "Date");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 297, characters 7-14", objectFirstName(id({
       x: 1
     })), "object");
   });
   Mocha.test("rule 8: an int case receives any number", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 285, characters 7-14", intOrStringName(id(1)), "int");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 286, characters 7-14", intOrStringName(id(1.5)), "int");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 287, characters 7-14", intOrStringName(id("1")), "string");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 301, characters 7-14", intOrStringName(id(1)), "int");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 302, characters 7-14", intOrStringName(id(1.5)), "int");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 303, characters 7-14", intOrStringName(id("1")), "string");
   });
   Mocha.test("rule 9: null and arrays are not objects", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 291, characters 7-14", guardedName(id([])), "array");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 292, characters 7-14", guardedName(id(null)), "null");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 293, characters 7-14", guardedName(id({
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 307, characters 7-14", guardedName(id([])), "array");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 308, characters 7-14", guardedName(id(null)), "null");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 309, characters 7-14", guardedName(id({
       x: 1
     })), "object");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 294, characters 7-14", guardedObjectOnly(id([])), "other");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 295, characters 7-14", guardedObjectOnly(id(null)), "other");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 296, characters 7-14", guardedObjectOnly(id({
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 310, characters 7-14", guardedObjectOnly(id([])), "other");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 311, characters 7-14", guardedObjectOnly(id(null)), "other");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 312, characters 7-14", guardedObjectOnly(id({
       x: 1
     })), "object");
   });
   Mocha.test("rule 10: a value outside every case lands in the unchecked branch", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 300, characters 7-14", intOrStringName(true), "string");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 301, characters 7-14", twoInstancesName({
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 316, characters 7-14", intOrStringName(true), "string");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 317, characters 7-14", twoInstancesName({
       x: 1
     }), "RegExp");
     let thenable = ({then: (resolve) => resolve(1)});
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 303, characters 7-14", promiseOrFloatName(thenable), "float");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 319, characters 7-14", promiseOrFloatName(thenable), "float");
   });
   Mocha.test("rule 12: option of an untagged variant", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 307, characters 7-14", someWithNull(null), null);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 308, characters 7-14", someWithNull(null) === undefined, false);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 309, characters 7-14", someWithUndefined(id(undefined)) === undefined, false);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 310, characters 7-14", someWithUndefined("a"), "a");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 313, characters 7-14", someWithOpaque(undefined) === undefined, false);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 314, characters 7-14", someWithVariable(undefined) === undefined, false);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 315, characters 7-14", someWithBlob(undefined) === undefined, false);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 316, characters 7-14", someWithDate(undefined) === undefined, true);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 323, characters 7-14", someWithNull(null), null);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 324, characters 7-14", someWithNull(null) === undefined, false);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 325, characters 7-14", someWithUndefined(id(undefined)) === undefined, false);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 326, characters 7-14", someWithUndefined("a"), "a");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 329, characters 7-14", someWithOpaque(undefined) === undefined, false);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 330, characters 7-14", someWithVariable(undefined) === undefined, false);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 331, characters 7-14", someWithBlob(undefined) === undefined, false);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 332, characters 7-14", someWithDate(undefined) === undefined, true);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 333, characters 7-14", someWithRecord(undefined) === undefined, true);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 334, characters 7-14", someWithInlineRecord(undefined) === undefined, false);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 335, characters 7-14", someWithUnboxedOption(undefined) === undefined, false);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 336, characters 7-14", someWithUnboxedString(undefined) === undefined, true);
   });
   Mocha.test("rule 13: @notUndefined unboxes option of a variant holding the type", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 320, characters 7-14", someWithDefined(undefined) === undefined, true);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 321, characters 7-14", someWithDefined(5), 5);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 340, characters 7-14", someWithDefined(undefined) === undefined, true);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 341, characters 7-14", someWithDefined(5), 5);
   });
   Mocha.test("rule 14: @tag and @as on a tagged variant", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 325, characters 7-14", id({
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 345, characters 7-14", id({
       kind: "TA",
       x: 1
     }), {
       kind: "TA",
       x: 1
     });
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 326, characters 7-14", id({
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 346, characters 7-14", id({
       kind: "bee",
       y: 1
     }), {
       kind: "bee",
       y: 1
     });
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 327, characters 7-14", id("TC"), "TC");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 347, characters 7-14", id("TC"), "TC");
   });
 });
 
@@ -392,6 +412,10 @@ export {
   someWithVariable,
   someWithBlob,
   someWithDate,
+  someWithRecord,
+  someWithInlineRecord,
+  someWithUnboxedOption,
+  someWithUnboxedString,
   someWithDefined,
 }
 /*  Not a pure module */
