@@ -1,0 +1,1 @@
+- Document the rules of untagged variants in `compiler/ml/UntaggedVariants.md`, with tests pinning them.
