@@ -1556,7 +1556,7 @@ export function pageBody(groups, { pr = "", title = "" } = {}) {
     pr || title
       ? `<p class="kicker">Semantic <span>Diff</span></p><h1>${pr ? `<a href="${REPO_URL}/pull/${esc(pr)}">#${esc(pr)}</a> ` : ""}${inline(title)}</h1>`
       : `<h1 class="brand">Semantic <span>Diff</span></h1>`;
-  return `<main><header>${h1}<p class="lede">${commits} commit${commits === 1 ? "" : "s"}, drawn from ${commits === 1 ? "its message" : "their messages"}.</p></header>
+  return `<main><header>${h1}<p class="lede">${commits} commit${commits === 1 ? "" : "s"}</p></header>
 ${groups
   .map(
     g =>
