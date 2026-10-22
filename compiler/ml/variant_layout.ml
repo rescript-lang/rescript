@@ -58,6 +58,22 @@ let block_type_of_annotations = function
 let declared_block_type ~env t =
   block_type_of_annotations (runtime_annotations ~env t)
 
+(* The block type a declaration states, through its own annotation or the
+   ones of the type it abbreviates. *)
+let declaration_block_type ~env (decl : Types.type_declaration) =
+  let own = process_runtime_annotation decl.type_attributes in
+  let inner =
+    match decl.type_manifest with
+    | Some manifest -> runtime_annotations ~env manifest
+    | None -> []
+  in
+  let inner =
+    match inner with
+    | annotation :: rest when Some annotation = own -> rest
+    | _ -> inner
+  in
+  block_type_of_annotations (Option.to_list own @ inner)
+
 (* An annotation on an abbreviation is a claim about the abbreviated type, so
    it must agree with what the compiler knows about that type. It can refine
    an abstract type, restate the annotation the abbreviated type has, or, on a
