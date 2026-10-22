@@ -1,0 +1,22 @@
+===== Classes.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_runtime_annotation_hidden_superclass/Classes.res[0m:[2m2:20-44[0m
+
+  1 [2m│[0m @instanceOf("Animal") type animal
+  [1;31m2[0m [2m│[0m @instanceOf("Dog") [1;31mtype dog = private animal[0m
+  3 [2m│[0m 
+
+  The implementation /.../fixtures/Cross_runtime_annotation_hidden_superclass/Classes.res
+  does not match the interface /.../fixtures/Cross_runtime_annotation_hidden_superclass/classes.cmi:
+  Type declarations do not match:
+    type dog = animal
+  is not included in
+    type dog
+  [36m/.../fixtures/Cross_runtime_annotation_hidden_superclass/Classes.resi[0m:[2m2:20-27[0m:
+    Expected declaration
+  [36m/.../fixtures/Cross_runtime_annotation_hidden_superclass/Classes.res[0m:[2m2:20-44[0m:
+    Actual declaration
+  Their runtime representations differ:
+  the first declaration states instances of Dog, a subclass of Animal,
+  the second declaration states instances of Dog.
