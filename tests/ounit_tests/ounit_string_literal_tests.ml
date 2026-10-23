@@ -775,7 +775,9 @@ let suites =
              OUnit.assert_failure
                "expected Array.isArray simplification to remain active");
            let open Ast_untagged_variants.Dynamic_checks in
-           let date = Variant_runtime.Instance.Date in
+           let date =
+             Variant_runtime.Instance.Class {name = "Date"; ancestors = []}
+           in
            assert_js_global ~expected:"Date"
              (Js_exp_make.emit_check
                 (TagType (Variant_runtime.Payload_shape (InstanceType date))));

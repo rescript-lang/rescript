@@ -387,6 +387,9 @@ let transl_declaration ~type_record_as_object env sdecl id =
             ( sdecl.ptype_loc,
               Invalid_attribute
                 "@notUndefined can only be used on abstract types" )));
+  Ast_untagged_variants.check_runtime_annotation ~loc:sdecl.ptype_loc
+    ~is_abstract_or_abbreviation:(sdecl.ptype_kind = Ptype_abstract)
+    sdecl.ptype_attributes;
 
   (* Bind type parameters *)
   reset_type_variables ();

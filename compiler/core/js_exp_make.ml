@@ -1399,14 +1399,25 @@ let literal_tag = function
   | Null -> nil
   | Undefined -> undefined
 
+(* The constructor of a class at a global path such as "Intl.Locale": a
+   global with properties, so that a binding that shadows the global's name
+   is noticed. *)
+let class_constructor (instance : Variant_runtime.Instance.t) =
+  match
+    String.split_on_char '.' (Variant_runtime.Instance.to_string instance)
+  with
+  | [] -> assert false
+  | global :: properties -> List.fold_left dot (js_global global) properties
+
 (* The [typeof] string an untagged payload answers to. *)
 let block_type_name = function
   | Variant_runtime.IntType | FloatType -> str "number"
   | BigintType -> str "bigint"
   | BooleanType -> str "boolean"
+  | SymbolType -> str "symbol"
   | FunctionType -> str "function"
   | StringType -> str "string"
-  | InstanceType i -> js_global (Variant_runtime.Instance.to_string i)
+  | InstanceType i -> class_constructor i
   | ObjectType -> str "object"
   | UnknownType ->
     (* TODO: this should not happen *)
@@ -1431,8 +1442,7 @@ let rec emit_check (check : t Ast_untagged_variants.Dynamic_checks.t) =
   | TypeOf x -> typeof (emit_check x)
   | IsInstanceOf (Array, x) -> is_array (emit_check x)
   | IsInstanceOf (instance, x) ->
-    let instance_name = Variant_runtime.Instance.to_string instance in
-    instanceof (emit_check x) (js_global instance_name)
+    instanceof (emit_check x) (class_constructor instance)
   | Not x -> not (emit_check x)
   | Expr x -> x
 

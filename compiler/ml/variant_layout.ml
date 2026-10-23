@@ -8,34 +8,86 @@
 open Variant_runtime
 open Ast_untagged_variants
 
+(* The [@instanceOf] and [@typeOf] annotations of [t] and of the types it
+   abbreviates, outermost first. The type as written can carry one, and so can
+   each level of a chain of private abbreviations that models a class
+   hierarchy, such as [@instanceOf("File") type t = private Blob.t]. *)
+let runtime_annotations ~env (t : Types.type_expr) =
+  let rec collect ~previous (t : Types.type_expr) =
+    match (Btype.repr t).desc with
+    | Tconstr (path, _, _) ->
+      let here =
+        match Env.find_type path env with
+        | {type_attributes} -> process_runtime_annotation type_attributes
+        | exception Not_found -> None
+      in
+      (* A module alias makes [M.t] an abbreviation of the original [t] with
+         the same attributes, so an annotation repeating the one just seen is
+         the same declaration again *)
+      let here, previous =
+        match here with
+        | Some _ when here = previous -> (None, previous)
+        | Some _ -> (here, here)
+        | None -> (None, previous)
+      in
+      let rest =
+        match Ctype.try_expand_once_opt env t with
+        | expanded -> collect ~previous expanded
+        | exception Ctype.Cannot_expand -> []
+      in
+      Option.to_list here @ rest
+    | _ -> []
+  in
+  collect ~previous:None t
+
+(* The block type the outermost annotation of [t] states. A class's
+   ancestors are the classes annotated further down the chain. *)
+let declared_block_type ~env t =
+  match runtime_annotations ~env t with
+  | Instance_of name :: rest ->
+    let ancestors =
+      List.filter_map
+        (function
+          | Instance_of ancestor when ancestor <> name -> Some ancestor
+          | Instance_of _ | Type_of _ -> None)
+        rest
+    in
+    Some (InstanceType (Class {name; ancestors}))
+  | Type_of block_type :: _ -> Some block_type
+  | [] -> None
+
 let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
-  (* First check the original (unexpanded) type for typed arrays and other instance types *)
-  match type_to_instanceof_backed_obj t with
-  | Some instance_type -> Some (InstanceType instance_type)
+  match declared_block_type ~env t with
+  | Some _ as declared -> declared
   | None -> (
-    (* If original type didn't match, expand and try standard checks *)
-    let expanded_t = Ctype.expand_head env t in
-    match expanded_t with
-    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_string ->
-      Some StringType
-    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_int ->
-      Some IntType
-    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_float ->
-      Some FloatType
-    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bigint ->
-      Some BigintType
-    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bool ->
-      Some BooleanType
-    | {desc = Tarrow _} -> Some FunctionType
-    | {desc = Tconstr _} as expanded_t when type_is_builtin_object expanded_t ->
-      Some ObjectType
-    | {desc = Tconstr _} as expanded_t
-      when type_to_instanceof_backed_obj expanded_t |> Option.is_some -> (
-      match type_to_instanceof_backed_obj expanded_t with
-      | None -> None
-      | Some instance_type -> Some (InstanceType instance_type))
-    | {desc = Ttuple _} -> Some (InstanceType Array)
-    | _ -> None)
+    (* First check the original (unexpanded) type for typed arrays and other instance types *)
+    match type_to_instanceof_backed_obj t with
+    | Some instance_type -> Some (InstanceType instance_type)
+    | None -> (
+      (* If original type didn't match, expand and try standard checks *)
+      let expanded_t = Ctype.expand_head env t in
+      match expanded_t with
+      | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_string ->
+        Some StringType
+      | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_int ->
+        Some IntType
+      | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_float ->
+        Some FloatType
+      | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bigint ->
+        Some BigintType
+      | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bool ->
+        Some BooleanType
+      | {desc = Tarrow _} -> Some FunctionType
+      | {desc = Tconstr _} as expanded_t when type_is_builtin_object expanded_t
+        ->
+        Some ObjectType
+      | {desc = Tconstr _} as expanded_t
+        when type_to_instanceof_backed_obj expanded_t |> Option.is_some -> (
+        match type_to_instanceof_backed_obj expanded_t with
+        | None -> None
+        | Some instance_type -> Some (InstanceType instance_type))
+      | {desc = Ttuple _} -> Some (InstanceType Array)
+      | _ -> None))
 
 let get_block_type ~env (cstr : Types.constructor_declaration) : block_type =
   match cstr.cd_args with
