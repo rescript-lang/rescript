@@ -102,7 +102,7 @@ module Parse = struct
           let r =
             specs
             |> List.map (fun spec ->
-                   package_spec_to_yojson spec |> Yojson.Safe.pretty_to_string)
+                package_spec_to_yojson spec |> Yojson.Safe.pretty_to_string)
             |> String.concat ", "
           in
           Printf.sprintf "package_specs=Some(%s)" r |> print_endline

@@ -1,5 +1,5 @@
 (**
- * `startsWith(string, prefix)`
+ * `starts_with s prefix`
  * true if the string starts with the prefix
  *)
 let starts_with s prefix =
@@ -83,6 +83,7 @@ let flatten_long_ident ?(jsx = false) ?(cut_at_offset = None) lid =
 
 let identify_pexp pexp =
   match pexp with
+  | Parsetree.Pexp_braces _ -> "Pexp_braces"
   | Parsetree.Pexp_ident _ -> "Pexp_ident"
   | Pexp_constant _ -> "Pexp_constant"
   | Pexp_let _ -> "Pexp_let"
@@ -98,6 +99,7 @@ let identify_pexp pexp =
   | Pexp_setfield _ -> "Pexp_setfield"
   | Pexp_array _ -> "Pexp_array"
   | Pexp_ifthenelse _ -> "Pexp_ifthenelse"
+  | Pexp_ternary _ -> "Pexp_ternary"
   | Pexp_sequence _ -> "Pexp_sequence"
   | Pexp_break -> "Pexp_break"
   | Pexp_continue -> "Pexp_continue"
@@ -107,16 +109,22 @@ let identify_pexp pexp =
   | Pexp_for_await_of _ -> "Pexp_for_await_of"
   | Pexp_constraint _ -> "Pexp_constraint"
   | Pexp_coerce _ -> "Pexp_coerce"
-  | Pexp_send _ -> "Pexp_send"
+  | Pexp_object_get _ -> "Pexp_object_get"
+  | Pexp_object_set _ -> "Pexp_object_set"
+  | Pexp_object_literal _ -> "Pexp_object_literal"
   | Pexp_letmodule _ -> "Pexp_letmodule"
   | Pexp_letexception _ -> "Pexp_letexception"
   | Pexp_assert _ -> "Pexp_assert"
-  | Pexp_newtype _ -> "Pexp_newtype"
   | Pexp_pack _ -> "Pexp_pack"
   | Pexp_extension _ -> "Pexp_extension"
+  | Pexp_raw _ -> "Pexp_raw"
   | Pexp_open _ -> "Pexp_open"
   | Pexp_await _ -> "Pexp_await"
   | Pexp_jsx_element _ -> "Pexp_jsx_element"
+  | Pexp_regexp _ -> "Pexp_regexp"
+  | Pexp_dict _ -> "Pexp_dict"
+  | Pexp_template _ -> "Pexp_template"
+  | Pexp_tagged_template _ -> "Pexp_tagged_template"
 
 let identify_ppat pat =
   match pat with
@@ -133,10 +141,11 @@ let identify_ppat pat =
   | Ppat_or _ -> "Ppat_or"
   | Ppat_constraint _ -> "Ppat_constraint"
   | Ppat_type _ -> "Ppat_type"
+  | Ppat_variant_spread _ -> "Ppat_variant_spread"
+  | Ppat_dict _ -> "Ppat_dict"
   | Ppat_unpack _ -> "Ppat_unpack"
   | Ppat_exception _ -> "Ppat_exception"
   | Ppat_extension _ -> "Ppat_extension"
-  | Ppat_open _ -> "Ppat_open"
 
 let rec skip_white text i =
   if i < 0 then 0
@@ -144,9 +153,6 @@ let rec skip_white text i =
     match text.[i] with
     | ' ' | '\n' | '\r' | '\t' -> skip_white text (i - 1)
     | _ -> i
-
-let has_braces attributes =
-  attributes |> List.exists (fun (loc, _) -> loc.Location.txt = "res.braces")
 
 let rec unwrap_if_option (t : Types.type_expr) =
   match t.desc with
@@ -156,18 +162,12 @@ let rec unwrap_if_option (t : Types.type_expr) =
   | _ -> t
 
 let is_jsx_component (vb : Parsetree.value_binding) =
-  vb.pvb_attributes
-  |> List.exists (function
-       | {Location.txt = "react.component" | "jsx.component"}, _payload -> true
-       | _ -> false)
+  match vb.pvb_jsx_component with
+  | Some {pjc_kind = Pjc_labelled _} -> true
+  | Some {pjc_kind = Pjc_with_props} | None -> false
 
 let check_name name ~prefix ~exact =
   if exact then name = prefix else starts_with name prefix
-
-let rec get_unqualified_name txt =
-  match txt with
-  | Longident.Lident field_name -> field_name
-  | Ldot (t, _) -> get_unqualified_name t
 
 let indent n text =
   let spaces = String.make n ' ' in
@@ -241,23 +241,6 @@ let rec flatten_any_namespace_in_path path =
       (* Namespaces are in reverse order, so "URL-RescriptBun" where RescriptBun is the namespace. *)
       (parts |> List.rev) @ flatten_any_namespace_in_path tail
     else head :: flatten_any_namespace_in_path tail
-
-let print_maybe_exotic_ident ?(allow_uident = false) txt =
-  let len = String.length txt in
-
-  let rec loop i =
-    if i == len then txt
-    else if i == 0 then
-      match String.unsafe_get txt i with
-      | 'A' .. 'Z' when allow_uident -> loop (i + 1)
-      | 'a' .. 'z' | '_' -> loop (i + 1)
-      | _ -> "\"" ^ txt ^ "\""
-    else
-      match String.unsafe_get txt i with
-      | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '\'' | '_' -> loop (i + 1)
-      | _ -> "\"" ^ txt ^ "\""
-  in
-  if Res_token.is_keyword_txt txt then "\"" ^ txt ^ "\"" else loop 0
 
 let find_package_json root =
   let path = Uri.to_path root in

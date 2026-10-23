@@ -23,25 +23,48 @@ let predef_exn_flag = 2
 
 (* A stamp of 0 denotes a persistent identifier *)
 
-let currentstamp = ref 0
+type counter_state = {mutable currentstamp: int; mutable reinit_level: int}
+
+let counter_key =
+  Domain.DLS.new_key (fun () -> {currentstamp = 0; reinit_level = -1})
+
+let counter () = Domain.DLS.get counter_key
+
+(* Captured after the compiler's predefined identifiers and static module
+   values have been initialized. Requests may reuse stamps only within their
+   isolated environments. *)
+let request_baseline = Atomic.make None
+let capture_request_baseline () =
+  Atomic.set request_baseline (Some (counter ()).currentstamp)
+
+let with_fresh action =
+  let previous = counter () in
+  let baseline =
+    match Atomic.get request_baseline with
+    | Some baseline -> baseline
+    | None -> previous.currentstamp
+  in
+  Domain.DLS.set counter_key {currentstamp = baseline; reinit_level = baseline};
+  Fun.protect action ~finally:(fun () -> Domain.DLS.set counter_key previous)
 
 let create s =
-  incr currentstamp;
-  {name = s; stamp = !currentstamp; flags = 0}
+  let state = counter () in
+  state.currentstamp <- state.currentstamp + 1;
+  {name = s; stamp = state.currentstamp; flags = 0}
 
 let create_predef_exn s =
-  incr currentstamp;
-  {name = s; stamp = !currentstamp; flags = predef_exn_flag}
+  let state = counter () in
+  state.currentstamp <- state.currentstamp + 1;
+  {name = s; stamp = state.currentstamp; flags = predef_exn_flag}
 
 let create_persistent s = {name = s; stamp = 0; flags = global_flag}
 
 let rename i =
-  incr currentstamp;
-  {i with stamp = !currentstamp}
+  let state = counter () in
+  state.currentstamp <- state.currentstamp + 1;
+  {i with stamp = state.currentstamp}
 
 let name i = i.name
-
-let unique_name i = i.name ^ "_" ^ string_of_int i.stamp
 
 let unique_toplevel_name i = i.name ^ "/" ^ string_of_int i.stamp
 
@@ -54,14 +77,15 @@ let same ({stamp; name} : t) i2 =
 
 let binding_time i = i.stamp
 
-let current_time () = !currentstamp
-let set_current_time t = currentstamp := max !currentstamp t
-
-let reinit_level = ref (-1)
+let current_time () = (counter ()).currentstamp
+let set_current_time t =
+  let state = counter () in
+  state.currentstamp <- max state.currentstamp t
 
 let reinit () =
-  if !reinit_level < 0 then reinit_level := !currentstamp
-  else currentstamp := !reinit_level
+  let state = counter () in
+  if state.reinit_level < 0 then state.reinit_level <- state.currentstamp
+  else state.currentstamp <- state.reinit_level
 
 let hide i = {i with stamp = -1}
 
@@ -115,8 +139,8 @@ let balance l d r =
     match l with
     | Node (ll, ld, lr, _)
       when (match ll with
-           | Empty -> 0
-           | Node (_, _, _, h) -> h)
+             | Empty -> 0
+             | Node (_, _, _, h) -> h)
            >=
            match lr with
            | Empty -> 0
@@ -129,8 +153,8 @@ let balance l d r =
     match r with
     | Node (rl, rd, rr, _)
       when (match rr with
-           | Empty -> 0
-           | Node (_, _, _, h) -> h)
+             | Empty -> 0
+             | Node (_, _, _, h) -> h)
            >=
            match rl with
            | Empty -> 0
@@ -222,17 +246,3 @@ let compare x y =
   else
     let c = compare x.name y.name in
     if c <> 0 then c else compare x.flags y.flags
-
-let output oc id = output_string oc (unique_name id)
-let hash i = Char.code i.name.[0] lxor i.stamp
-
-let original_equal = equal
-include Identifiable.Make (struct
-  type nonrec t = t
-  let compare = compare
-  let output = output
-  let print = print
-  let hash = hash
-  let equal = same
-end)
-let equal = original_equal

@@ -22,19 +22,4 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(** [non_exn_protect ref value f] assusme [f()] 
-    would not raise
-*)
-
-val non_exn_protect : 'a ref -> 'a -> (unit -> 'b) -> 'b
-
 val protect : 'a ref -> 'a -> (unit -> 'b) -> 'b
-
-val protect2 : 'a ref -> 'b ref -> 'a -> 'b -> (unit -> 'c) -> 'c
-
-val non_exn_protect2 : 'a ref -> 'b ref -> 'a -> 'b -> (unit -> 'c) -> 'c
-(** [non_exn_protect2 refa refb va vb f ]
-    assume [f ()] would not raise
-*)
-
-val protect_list : ('a ref * 'a) list -> (unit -> 'b) -> 'b

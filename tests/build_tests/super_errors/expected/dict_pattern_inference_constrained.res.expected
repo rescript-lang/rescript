@@ -5,8 +5,8 @@
   2 [2m┆[0m switch dict {
   3 [2m┆[0m | dict{"one": 1} =>
   [1;31m4[0m [2m┆[0m   let _: dict<string> = [1;31mdict[0m
-  5 [2m┆[0m   Js.log("one")
-  6 [2m┆[0m | _ => Js.log("not one")
+  5 [2m┆[0m   Console.log("one")
+  6 [2m┆[0m | _ => Console.log("not one")
 
   This has type: [1;31mdict<int>[0m
   But it's expected to have type: [1;33mdict<string>[0m

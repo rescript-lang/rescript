@@ -53,7 +53,7 @@ let generateFeedback = (reviewChecklist, selection, feedback, updateFeedbackCB) 
     ->Array.to_list
     ->List.flatten
     ->Array.of_list
-    ->Js.Array.joinWith("\n\n")))
+    ->Array.joinUnsafe("\n\n")))
   updateFeedbackCB(newFeedback)
 }
 let checklistItemCheckedClasses = (itemIndex, selection) =>

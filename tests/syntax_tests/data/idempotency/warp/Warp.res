@@ -72,20 +72,20 @@ let send:
         | Types.ResponseType.TextResponse(_) =>
           onLoad(
             Belt.Result.Ok(
-              Types.ResponseType.TextResponse(xhr->Warp_XHR.responseText->Js.Nullable.toOption),
+              Types.ResponseType.TextResponse(xhr->Warp_XHR.responseText->Nullable.toOption),
             ),
           )
         | Types.ResponseType.JSONResponse(_) =>
           onLoad(
             Belt.Result.Ok(
-              Types.ResponseType.JSONResponse(xhr->Warp_XHR.responseJson->Js.Nullable.toOption),
+              Types.ResponseType.JSONResponse(xhr->Warp_XHR.responseJson->Nullable.toOption),
             ),
           )
         | Types.ResponseType.DocumentResponse(_) =>
           onLoad(
             Belt.Result.Ok(
               Types.ResponseType.DocumentResponse(
-                xhr->Warp_XHR.responseDocument->Js.Nullable.toOption,
+                xhr->Warp_XHR.responseDocument->Nullable.toOption,
               ),
             ),
           )
@@ -93,7 +93,7 @@ let send:
           onLoad(
             Belt.Result.Ok(
               Types.ResponseType.ArrayBufferResponse(
-                xhr->Warp_XHR.responseArrayBuffer->Js.Nullable.toOption,
+                xhr->Warp_XHR.responseArrayBuffer->Nullable.toOption,
               ),
             ),
           )
@@ -116,14 +116,14 @@ let send:
         | Types.ResponseType.TextResponse(_) =>
           onLoad(
             Belt.Result.Ok(
-              Types.ResponseType.TextResponse(xhr->Warp_XHR.responseText->Js.Nullable.toOption),
+              Types.ResponseType.TextResponse(xhr->Warp_XHR.responseText->Nullable.toOption),
             ),
             xhr->Warp_XHR.status,
           )
         | Types.ResponseType.JSONResponse(_) =>
           onLoad(
             Belt.Result.Ok(
-              Types.ResponseType.JSONResponse(xhr->Warp_XHR.responseJson->Js.Nullable.toOption),
+              Types.ResponseType.JSONResponse(xhr->Warp_XHR.responseJson->Nullable.toOption),
             ),
             xhr->Warp_XHR.status,
           )
@@ -131,7 +131,7 @@ let send:
           onLoad(
             Belt.Result.Ok(
               Types.ResponseType.DocumentResponse(
-                xhr->Warp_XHR.responseDocument->Js.Nullable.toOption,
+                xhr->Warp_XHR.responseDocument->Nullable.toOption,
               ),
             ),
             xhr->Warp_XHR.status,
@@ -140,7 +140,7 @@ let send:
           onLoad(
             Belt.Result.Ok(
               Types.ResponseType.ArrayBufferResponse(
-                xhr->Warp_XHR.responseArrayBuffer->Js.Nullable.toOption,
+                xhr->Warp_XHR.responseArrayBuffer->Nullable.toOption,
               ),
             ),
             xhr->Warp_XHR.status,

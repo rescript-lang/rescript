@@ -28,7 +28,7 @@ type idents_stats = {
 }
 
 let add_defined_idents (x : idents_stats) ident =
-  x.defined_idents <- Set_ident.add x.defined_idents ident
+  x.defined_idents <- Set_ident.add ident x.defined_idents
 
 let add_record_rest_field_idents stats fields =
   List.iter
@@ -61,8 +61,8 @@ let free_variables (stats : idents_stats) =
         | Some v -> self.expression self v);
     ident =
       (fun _ id ->
-        if not (Set_ident.mem stats.defined_idents id) then
-          stats.used_idents <- Set_ident.add stats.used_idents id);
+        if not (Set_ident.mem id stats.defined_idents) then
+          stats.used_idents <- Set_ident.add id stats.used_idents);
     expression =
       (fun self exp ->
         match exp.expression_desc with
@@ -76,36 +76,42 @@ let free_variables (stats : idents_stats) =
         | _ -> super.expression self exp);
   }
 
-let init = {used_idents = Set_ident.empty; defined_idents = Set_ident.empty}
-
-let obj = free_variables init
-
-let clean_up init =
-  init.used_idents <- Set_ident.empty;
-  init.defined_idents <- Set_ident.empty
+(* Each call gets its own accumulator: compiler requests run concurrently on
+   several domains, and a shared one would mix their identifiers. *)
+let free_variables_with walk =
+  let stats =
+    {used_idents = Set_ident.empty; defined_idents = Set_ident.empty}
+  in
+  walk (free_variables stats);
+  Set_ident.diff stats.used_idents stats.defined_idents
 
 let free_variables_of_statement st =
-  clean_up init;
-  obj.statement obj st;
-  Set_ident.diff init.used_idents init.defined_idents
+  free_variables_with (fun obj -> obj.statement obj st)
 
 let free_variables_of_expression st =
-  clean_up init;
-  obj.expression obj st;
-  Set_ident.diff init.used_idents init.defined_idents
+  free_variables_with (fun obj -> obj.expression obj st)
+
+let is_array_function (e : J.expression) =
+  match e.expression_desc with
+  | Static_index
+      ({expression_desc = Var (Id ({name = "Array"} as ident))}, "isArray", None)
+    ->
+    Ext_ident.is_js ident
+  | _ -> false
 
 let rec no_side_effect_expression_desc (x : J.expression_desc) =
   match x with
   | Undefined _ | Null | Bool _ | Var _ -> true
   | Fun _ -> true
   | Number _ -> true (* Can be refined later *)
+  | Json_literal _ -> true
   | Static_index (obj, (_name : string), (_pos : int32 option)) ->
     no_side_effect obj
-  | String_index (a, b) | Array_index (a, b) ->
-    no_side_effect a && no_side_effect b
+  | Array_index (a, b) -> no_side_effect a && no_side_effect b
   | Is_null_or_undefined b -> no_side_effect b
-  | Str _ -> true
-  | Array (xs, _mutable_flag) | Caml_block (xs, _mutable_flag, _, _) ->
+  | Str _ | Template_literal _ -> true
+  | Interpolated_template {values} -> Ext_list.for_all values no_side_effect
+  | Array xs | Caml_block (xs, _, _) ->
     (* create [immutable] block,
         does not really mean that this opreation itself is [pure].
 
@@ -113,24 +119,36 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
     *)
     Ext_list.for_all xs no_side_effect
   | Optional_block (x, _) -> no_side_effect x
-  | Object (dup, kvs) ->
-    (match dup with
-    | Some e -> no_side_effect e
-    | None -> true)
-    && Ext_list.for_all_snd kvs no_side_effect
+  | Object entries ->
+    Ext_list.for_all entries (function
+      | Object_property (_, e) | Record_spread e -> no_side_effect e
+      (* A spread reads the source's properties, which may run getters or
+         proxy traps *)
+      | Object_spread _ -> false)
   | String_append (a, b) | Seq (a, b) -> no_side_effect a && no_side_effect b
-  | Length (e, _) | Caml_block_tag (e, _) | Typeof e -> no_side_effect e
-  | Bin (op, a, b) -> op <> Eq && no_side_effect a && no_side_effect b
-  | Tagged_template (call_expr, strings, values) ->
-    no_side_effect call_expr
-    && Ext_list.for_all strings no_side_effect
-    && Ext_list.for_all values no_side_effect
+  | Length e | Caml_block_tag (e, _) | Typeof e -> no_side_effect e
+  | Bin (Eq, _, _) -> false
+  | Bin (((Pow | Div | Mod) as op), a, b) ->
+    (* On BigInt operands these throw: [**] on a negative exponent, [/] and
+       [%] on a zero divisor. The operand types are not known here, so only a
+       literal right operand that cannot throw is taken as pure. *)
+    let safe_literal =
+      match b.expression_desc with
+      | Number (BigInt {positive; value}) ->
+        if op = Pow then positive else value <> "0"
+      | Number (Int {i}) -> op = Pow || i <> 0l
+      | Number (Float _) -> true
+      | _ -> false
+    in
+    safe_literal && no_side_effect a
+  | Bin (_, a, b) -> no_side_effect a && no_side_effect b
+  | Tagged_template (call_expr, _, values) ->
+    no_side_effect call_expr && Ext_list.for_all values no_side_effect
   | Js_not e | Js_bnot e -> no_side_effect e
   | In (prop, obj) -> no_side_effect prop && no_side_effect obj
   | Cond (a, b, c) -> no_side_effect a && no_side_effect b && no_side_effect c
-  | Call ({expression_desc = Str {txt = "Array.isArray"}}, [e], _) ->
-    no_side_effect e
-  | FlatCall _ | Call _ | New _ | Raw_js_code _ (* actually true? *) -> false
+  | Call (fn, [e], _) when is_array_function fn -> no_side_effect e
+  | Call _ | Jsx _ | New _ | Raw_js_code _ (* actually true? *) -> false
   | Await _ -> false
   | Spread _ -> false
   | Record_rest _ -> false
@@ -196,10 +214,6 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
       false (* conservative *)
      | _ -> false
      end *)
-  | String_index (a0, a1) -> (
-    match y0 with
-    | String_index (b0, b1) -> eq_expression a0 b0 && eq_expression a1 b1
-    | _ -> false)
   | Array_index (a0, a1) -> (
     match y0 with
     | Array_index (b0, b1) -> eq_expression a0 b0 && eq_expression a1 b1
@@ -218,9 +232,13 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
     | Bin (op1, a1, b1) ->
       op0 = op1 && eq_expression a0 a1 && eq_expression b0 b1
     | _ -> false)
-  | Str {delim = a0; txt = b0} -> (
+  | Str a0 -> (
     match y0 with
-    | Str {delim = a1; txt = b1} -> a0 = a1 && b0 = b1
+    | Str a1 -> a0 = a1
+    | _ -> false)
+  | Template_literal segment0 -> (
+    match y0 with
+    | Template_literal segment1 -> segment0 = segment1
     | _ -> false)
   | Static_index (e0, p0, off0) -> (
     match y0 with
@@ -239,15 +257,15 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
     match y0 with
     | Optional_block (a1, b1) -> b0 = b1 && eq_expression a0 a1
     | _ -> false)
-  | Caml_block (ls0, flag0, tag0, _) -> (
+  | Caml_block (ls0, flag0, info0) -> (
     match y0 with
-    | Caml_block (ls1, flag1, tag1, _) ->
-      eq_expression_list ls0 ls1 && flag0 = flag1 && eq_expression tag0 tag1
+    | Caml_block (ls1, flag1, info1) ->
+      eq_expression_list ls0 ls1 && flag0 = flag1 && info0 = info1
     | _ -> false)
   | Length _ | Is_null_or_undefined _ | String_append _ | Typeof _ | Js_not _
-  | Js_bnot _ | In _ | Cond _ | FlatCall _ | New _ | Fun _ | Raw_js_code _
-  | Array _ | Caml_block_tag _ | Object _ | Tagged_template _ | Await _
-  | Record_rest _ ->
+  | Js_bnot _ | In _ | Cond _ | New _ | Fun _ | Json_literal _ | Raw_js_code _
+  | Array _ | Caml_block_tag _ | Object _ | Tagged_template _ | Jsx _
+  | Interpolated_template _ | Await _ | Record_rest _ ->
     false
   | Spread _ -> false
 
@@ -281,7 +299,7 @@ let rev_flatten_seq (x : J.expression) =
   let rec aux acc (x : J.expression) : J.block =
     match x.expression_desc with
     | Seq (a, b) -> aux (aux acc a) b
-    | _ -> {statement_desc = Exp x; comment = None} :: acc
+    | _ -> {statement_desc = Exp x; comment = None; source_loc = None} :: acc
   in
   aux [] x
 
@@ -311,8 +329,8 @@ let rev_toplevel_flatten block =
    | Array_index (a,b) -> is_constant a && is_constant b
    | Str (b,_) -> b
    | Number _ -> true (* Can be refined later *)
-   | Array (xs,_mutable_flag)  -> Ext_list.for_all xs  is_constant
-   | Caml_block(xs, Immutable, tag, _)
+   | Array xs -> Ext_list.for_all xs is_constant
+   | Caml_block(xs, Immutable, _)
     -> Ext_list.for_all xs is_constant && is_constant tag
    | Bin (_op, a, b) ->
     is_constant a && is_constant b
@@ -320,6 +338,6 @@ let rev_toplevel_flatten block =
 
 let rec is_okay_to_duplicate (e : J.expression) =
   match e.expression_desc with
-  | Var _ | Bool _ | Str _ | Number _ -> true
+  | Var _ | Bool _ | Str _ | Template_literal _ | Number _ -> true
   | Static_index (e, _s, _off) -> is_okay_to_duplicate e
   | _ -> false

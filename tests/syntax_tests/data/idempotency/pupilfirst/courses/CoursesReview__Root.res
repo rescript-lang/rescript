@@ -19,7 +19,7 @@ type state = {
   filterString: string,
   sortBy: sortBy,
   sortDirection: [#Ascending | #Descending],
-  reloadAt: Js.Date.t,
+  reloadAt: Date.t,
 }
 
 type action =
@@ -48,7 +48,7 @@ let reducer = (state, action) =>
       ...state,
       pendingSubmissions: Unloaded,
       reviewedSubmissions: Unloaded,
-      reloadAt: Js.Date.make(),
+      reloadAt: Date.make(),
     }
   | SetSubmissions(submissions, selectedTab, hasNextPage, endCursor, totalCount) =>
     let filter = Submissions.makeFilter(state.selectedLevel, state.selectedCoach)
@@ -115,9 +115,8 @@ let reducer = (state, action) =>
       state.pendingSubmissions
       ->Submissions.toArray
       ->Array.append(state.reviewedSubmissions->Submissions.toArray)
-      ->Js.Array.find(indexSubmission =>
-        indexSubmission->IndexSubmission.id == OverlaySubmission.id(overlaySubmission)
-      )
+      ->Array.find(indexSubmission =>
+        indexSubmission->IndexSubmission.id == OverlaySubmission.id(overlaySubmission))
       ->OptionUtils.mapWithDefault(
         indexSubmission => indexSubmission->IndexSubmission.statusEq(overlaySubmission),
         true,
@@ -129,7 +128,7 @@ let reducer = (state, action) =>
           ...state,
           pendingSubmissions: Unloaded,
           reviewedSubmissions: Unloaded,
-          reloadAt: Js.Date.make(),
+          reloadAt: Date.make(),
         }
   }
 
@@ -145,7 +144,7 @@ let computeInitialState = currentTeamCoach => {
     criterionType: #Number,
   },
   sortDirection: #Descending,
-  reloadAt: Js.Date.make(),
+  reloadAt: Date.make(),
 }
 
 let openOverlay = (submissionId, event) => {
@@ -208,22 +207,20 @@ module Multiselect = MultiselectDropdown.Make(Selectable)
 let unselected = (levels, coaches, currentCoachId, state) => {
   let unselectedLevels =
     levels
-    ->Js.Array.filter(level =>
+    ->Array.filter(level =>
       state.selectedLevel->OptionUtils.mapWithDefault(
         selectedLevel => level->Level.id != (selectedLevel->Level.id),
         true,
-      )
-    )
+      ))
     ->Array.map(Selectable.level)
 
   let unselectedCoaches =
     coaches
-    ->Js.Array.filter(coach =>
+    ->Array.filter(coach =>
       state.selectedCoach->OptionUtils.mapWithDefault(
         selectedCoach => coach->Coach.id != Coach.id(selectedCoach),
         true,
-      )
-    )
+      ))
     ->Array.map(coach => Selectable.assignedToCoach(coach, currentCoachId))
 
   unselectedLevels->Array.append(unselectedCoaches)
@@ -299,15 +296,14 @@ let filterSubmissions = (selectedLevel, selectedCoach, submissions) => {
   let levelFiltered =
     selectedLevel->OptionUtils.mapWithDefault(
       level =>
-        submissions->Js.Array.filter(l => l->IndexSubmission.levelId == (level->Level.id)),
+        submissions->Array.filter(l => l->IndexSubmission.levelId == (level->Level.id)),
       submissions,
     )
 
   selectedCoach->OptionUtils.mapWithDefault(
     coach =>
-      levelFiltered->Js.Array.filter(l =>
-        l->IndexSubmission.coachIds->Array.mem(coach->Coach.id)
-      ),
+      levelFiltered->Array.filter(l =>
+        l->IndexSubmission.coachIds->Array.mem(coach->Coach.id)),
     levelFiltered,
   )
 }

@@ -18,8 +18,10 @@ let get_symbols ~source ~kind_file =
   let rec expr_kind (exp : Parsetree.expression) =
     match exp.pexp_desc with
     | Pexp_fun _ -> Lsp.Types.SymbolKind.Function
+    | Pexp_braces {expr} -> expr_kind expr
     | Pexp_constraint (e, _) -> expr_kind e
     | Pexp_constant (Pconst_string _) -> Lsp.Types.SymbolKind.String
+    | Pexp_template _ -> Lsp.Types.SymbolKind.String
     | Pexp_constant (Pconst_float _ | Pconst_integer _) ->
       Lsp.Types.SymbolKind.Number
     | Pexp_constant _ -> Lsp.Types.SymbolKind.Constant
@@ -30,11 +32,11 @@ let get_symbols ~source ~kind_file =
     | Ptype_variant constr_decls ->
       constr_decls
       |> List.iter (fun (cd : Parsetree.constructor_declaration) ->
-             add_symbol cd.pcd_name.txt cd.pcd_loc EnumMember)
+          add_symbol cd.pcd_name.txt cd.pcd_loc EnumMember)
     | Ptype_record label_decls ->
       label_decls
       |> List.iter (fun (ld : Parsetree.label_declaration) ->
-             add_symbol ld.pld_name.txt ld.pld_loc Property)
+          add_symbol ld.pld_name.txt ld.pld_loc Property)
     | _ -> ()
   in
   let process_type_declaration (td : Parsetree.type_declaration) =
@@ -116,16 +118,11 @@ let get_symbols ~source ~kind_file =
   in
 
   (if kind_file = Files.Res then
-     let parser =
-       Res_driver.parsing_engine.parse_implementation_from_source
-         ~for_printer:false
-     in
+     let parser = Res_driver.parsing_engine.parse_implementation_from_source in
      let {Res_driver.parsetree = structure} = parser ~source in
      iterator.structure iterator structure |> ignore
    else
-     let parser =
-       Res_driver.parsing_engine.parse_interface_from_source ~for_printer:false
-     in
+     let parser = Res_driver.parsing_engine.parse_interface_from_source in
      let {Res_driver.parsetree = signature} = parser ~source in
      iterator.signature iterator signature |> ignore);
   let is_inside

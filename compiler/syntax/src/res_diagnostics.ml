@@ -9,6 +9,7 @@ type category =
       token: Token.t;
     }
   | Message of string
+  | LazyMessage of string Lazy.t
   | Uident of Token.t
   | Lident of Token.t
   | UnclosedString
@@ -47,7 +48,7 @@ let explain t =
       let token = Token.to_string t in
       "`" ^ token ^ "` is a reserved keyword."
     | _ ->
-      "At this point, I'm looking for an uppercased name like `Belt` or `Array`"
+      "At this point, I'm looking for an uppercased name like `Array` or `Math`"
     )
   | Lident current_token -> (
     match current_token with
@@ -61,6 +62,7 @@ let explain t =
     | Underscore -> "`_` isn't a valid name."
     | _ -> "I'm expecting a lowercase name like `user or `age`")
   | Message txt -> txt
+  | LazyMessage txt -> Lazy.force txt
   | UnclosedString -> "This string is missing a double quote at the end"
   | UnclosedTemplate ->
     "Did you forget to close this template expression with a backtick?"
@@ -131,8 +133,8 @@ let explain t =
 
 let make ~start_pos ~end_pos category = {start_pos; end_pos; category}
 
-let print_report ?(custom_intro = None) ?(formatter = Format.err_formatter)
-    diagnostics src =
+let print_report ?(custom_intro = None)
+    ?(formatter = Compiler_request_output.stderr_formatter ()) diagnostics src =
   let rec print diagnostics src =
     match diagnostics with
     | [] -> ()
@@ -197,3 +199,4 @@ let unclosed_comment = UnclosedComment
 let unclosed_template = UnclosedTemplate
 let unknown_uchar code = UnknownUchar code
 let message txt = Message txt
+let lazy_message txt = LazyMessage txt

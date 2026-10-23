@@ -72,10 +72,10 @@ function Alias_default_value_test$C7(props) {
   let username = props.username;
   let count = props.count;
   let times = count !== 1 ? (
-      count !== 2 ? String(count) + " times" : "twice"
+      count !== 2 ? count.toString() + " times" : "twice"
     ) : "once";
   let name = username !== undefined && username !== "" ? username : "Anonymous";
-  return `Hello ` + name + `, you clicked me ` + times;
+  return `Hello ${name}, you clicked me ` + times;
 }
 
 let C7 = {
@@ -91,6 +91,22 @@ let C8 = {
   make: Alias_default_value_test$C8
 };
 
+let C0$make = Alias_default_value_test$C0;
+
+let C1$make = Alias_default_value_test$C1;
+
+let C2$make = Alias_default_value_test$C2;
+
+let C3$make = Alias_default_value_test$C3;
+
+let C4$make = Alias_default_value_test$C4;
+
+let C6$make = Alias_default_value_test$C6;
+
+let C7$make = Alias_default_value_test$C7;
+
+let C8$make = Alias_default_value_test$C8;
+
 export {
   C0,
   C1,
@@ -100,5 +116,13 @@ export {
   C6,
   C7,
   C8,
+  C0$make,
+  C1$make,
+  C2$make,
+  C3$make,
+  C4$make,
+  C6$make,
+  C7$make,
+  C8$make,
 }
 /* No side effect */

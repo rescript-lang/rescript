@@ -11,7 +11,7 @@ let make = (~clickAction=() => (), ~isMobile=false) => {
   let displayNameStr = UserProvider.displayNameToString(displayName)
 
   let userAddressLowerCase = switch currentUser {
-  | Some(currentUser) => currentUser->Js.String.toLowerCase //TODO - check with zuck this cant be a 3box name name
+  | Some(currentUser) => currentUser->String.toLowerCase //TODO - check with zuck this cant be a 3box name name
   | _ => CONSTANTS.nullEthAddress
   }
 
@@ -20,7 +20,7 @@ let make = (~clickAction=() => (), ~isMobile=false) => {
   let profileImage: string =
     \">>="(
       \"<$>"(\">>="(\">>="(optProfile, a => a.image), img => img->Array.get(0)), a => a.contentUrl),
-      content => Js.Dict.get(content, "/"),
+      content => Dict.get(content, "/"),
     )->Option.mapWithDefault(Blockie.makeBlockie(userAddressLowerCase), hash =>
       "https://ipfs.infura.io/ipfs/" ++ hash
     )

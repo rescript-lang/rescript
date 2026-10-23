@@ -10,17 +10,17 @@ type rec rule =
 let rec ruleToDict = (dict, rule) => {
   switch rule {
   | D(name, value) if name == "content" =>
-    dict->Js.Dict.set(name, Js.Json.string(value == "" ? "\"\"" : value))
-  | D(name, value) => dict->Js.Dict.set(name, Js.Json.string(value))
-  | S(name, ruleset) => dict->Js.Dict.set(name, toJson(ruleset))
-  | PseudoClass(name, ruleset) => dict->Js.Dict.set(":" ++ name, toJson(ruleset))
+    dict->Dict.set(name, JSON.string(value == "" ? "\"\"" : value))
+  | D(name, value) => dict->Dict.set(name, JSON.string(value))
+  | S(name, ruleset) => dict->Dict.set(name, toJson(ruleset))
+  | PseudoClass(name, ruleset) => dict->Dict.set(":" ++ name, toJson(ruleset))
   | PseudoClassParam(name, param, ruleset) =>
-    dict->Js.Dict.set(":" ++ (name ++ ("(" ++ (param ++ ")"))), toJson(ruleset))
+    dict->Dict.set(":" ++ (name ++ ("(" ++ (param ++ ")"))), toJson(ruleset))
   }
   dict
 }
 
-and toJson = rules => rules->Belt.Array.reduce(Js.Dict.empty(), ruleToDict)->Js.Json.object_
+and toJson = rules => rules->Belt.Array.reduce(Dict.make(), ruleToDict)->JSON.object_
 
 module Make = (CssImplementation: Css_Core.CssImplementationIntf) => {
   let merge = (stylenames) => CssImplementation.mergeStyles(stylenames)
@@ -30,11 +30,11 @@ module Make = (CssImplementation: Css_Core.CssImplementationIntf) => {
   let style = (rules) => CssImplementation.make(rules->toJson)
 
   let global = (selector, rules) =>
-    CssImplementation.injectRule([(selector, toJson(rules))]->Js.Dict.fromArray->Js.Json.object_)
+    CssImplementation.injectRule([(selector, toJson(rules))]->Dict.fromArray->JSON.object_)
 
   let keyframes = (frames) =>
-    CssImplementation.makeKeyFrames(frames->Belt.Array.reduceU(Js.Dict.empty(), (dict, (stop, rules)) => {
-        Js.Dict.set(dict, Js.Int.toString(stop) ++ "%", toJson(rules))
+    CssImplementation.makeKeyFrames(frames->Belt.Array.reduceU(Dict.make(), (dict, (stop, rules)) => {
+        Dict.set(dict, Int.toString(stop) ++ "%", toJson(rules))
         dict
       }),
     )
@@ -46,7 +46,7 @@ let join = (strings, separator) =>
   )
 
 module Converter = {
-  let string_of_time = t => Js.Int.toString(t) ++ "ms"
+  let string_of_time = t => Int.toString(t) ++ "ms"
 
   let string_of_content = x =>
     switch x {
@@ -397,7 +397,7 @@ let flex = x => D(
   "flex",
   switch x {
   | #...Flex.t as f => Flex.toString(f)
-  | #num(n) => Js.Float.toString(n)
+  | #num(n) => Float.toString(n)
   },
 )
 
@@ -410,9 +410,9 @@ let flexDirection = x => D(
   },
 )
 
-let flexGrow = x => D("flexGrow", Js.Float.toString(x))
+let flexGrow = x => D("flexGrow", Float.toString(x))
 
-let flexShrink = x => D("flexShrink", Js.Float.toString(x))
+let flexShrink = x => D("flexShrink", Float.toString(x))
 
 let flexWrap = x => D(
   "flexWrap",
@@ -490,18 +490,18 @@ let gridAutoFlow = x => D(
 
 let gridColumn = (start, end') => D(
   "gridColumn",
-  Js.Int.toString(start) ++ (" / " ++ Js.Int.toString(end')),
+  Int.toString(start) ++ (" / " ++ Int.toString(end')),
 )
 
 let gridColumnGap = x => D("gridColumnGap", string_of_column_gap(x))
 
-let gridColumnStart = n => D("gridColumnStart", Js.Int.toString(n))
+let gridColumnStart = n => D("gridColumnStart", Int.toString(n))
 
-let gridColumnEnd = n => D("gridColumnEnd", Js.Int.toString(n))
+let gridColumnEnd = n => D("gridColumnEnd", Int.toString(n))
 
 let gridRow = (start, end') => D(
   "gridRow",
-  Js.Int.toString(start) ++ (" / " ++ Js.Int.toString(end')),
+  Int.toString(start) ++ (" / " ++ Int.toString(end')),
 )
 
 let gridGap = x => D(
@@ -524,9 +524,9 @@ let gridRowGap = x => D(
   },
 )
 
-let gridRowEnd = n => D("gridRowEnd", Js.Int.toString(n))
+let gridRowEnd = n => D("gridRowEnd", Int.toString(n))
 
-let gridRowStart = n => D("gridRowStart", Js.Int.toString(n))
+let gridRowStart = n => D("gridRowStart", Int.toString(n))
 
 let height = x => D(
   "height",
@@ -705,7 +705,7 @@ let objectFit = x => D(
 
 let objectPosition = x => D("objectPosition", string_of_backgroundposition(x))
 
-let opacity = x => D("opacity", Js.Float.toString(x))
+let opacity = x => D("opacity", Float.toString(x))
 
 let outline = (size, style, color) => D(
   "outline",
@@ -982,7 +982,7 @@ let wordSpacing = x => D(
 
 let wordWrap = overflowWrap
 
-let zIndex = x => D("zIndex", Js.Int.toString(x))
+let zIndex = x => D("zIndex", Int.toString(x))
 
 /* Selectors */
 
@@ -1023,8 +1023,8 @@ module Nth = {
     switch x {
     | #odd => "odd"
     | #even => "even"
-    | #n(x) => Js.Int.toString(x) ++ "n"
-    | #add(x, y) => Js.Int.toString(x) ++ ("n+" ++ Js.Int.toString(y))
+    | #n(x) => Int.toString(x) ++ "n"
+    | #add(x, y) => Int.toString(x) ++ ("n+" ++ Int.toString(y))
     }
 }
 let nthChild = (x, rules) => PseudoClassParam("nth-child", Nth.toString(x), rules)
@@ -1362,9 +1362,9 @@ let square = #square
 
 let flex3 = (~grow, ~shrink, ~basis) => D(
   "flex",
-  Js.Float.toString(grow) ++
+  Float.toString(grow) ++
   (" " ++
-  (Js.Float.toString(shrink) ++
+  (Float.toString(shrink) ++
   (" " ++
   switch basis {
   | #...FlexBasis.t as b => FlexBasis.toString(b)
@@ -1379,30 +1379,30 @@ let flexBasis = x => D(
   },
 )
 
-let order = x => D("order", Js.Int.toString(x))
+let order = x => D("order", Int.toString(x))
 
 let string_of_minmax = x =>
   switch x {
   | #auto => "auto"
   | #calc(#add, a, b) => "calc(" ++ (Length.toString(a) ++ (" + " ++ (Length.toString(b) ++ ")")))
   | #calc(#sub, a, b) => "calc(" ++ (Length.toString(a) ++ (" - " ++ (Length.toString(b) ++ ")")))
-  | #ch(x) => Js.Float.toString(x) ++ "ch"
-  | #cm(x) => Js.Float.toString(x) ++ "cm"
-  | #em(x) => Js.Float.toString(x) ++ "em"
-  | #ex(x) => Js.Float.toString(x) ++ "ex"
-  | #mm(x) => Js.Float.toString(x) ++ "mm"
-  | #percent(x) => Js.Float.toString(x) ++ "%"
-  | #pt(x) => Js.Int.toString(x) ++ "pt"
-  | #px(x) => Js.Int.toString(x) ++ "px"
-  | #pxFloat(x) => Js.Float.toString(x) ++ "px"
-  | #rem(x) => Js.Float.toString(x) ++ "rem"
-  | #vh(x) => Js.Float.toString(x) ++ "vh"
-  | #vmax(x) => Js.Float.toString(x) ++ "vmax"
-  | #vmin(x) => Js.Float.toString(x) ++ "vmin"
-  | #vw(x) => Js.Float.toString(x) ++ "vw"
-  | #fr(x) => Js.Float.toString(x) ++ "fr"
-  | #inch(x) => Js.Float.toString(x) ++ "in"
-  | #pc(x) => Js.Float.toString(x) ++ "pc"
+  | #ch(x) => Float.toString(x) ++ "ch"
+  | #cm(x) => Float.toString(x) ++ "cm"
+  | #em(x) => Float.toString(x) ++ "em"
+  | #ex(x) => Float.toString(x) ++ "ex"
+  | #mm(x) => Float.toString(x) ++ "mm"
+  | #percent(x) => Float.toString(x) ++ "%"
+  | #pt(x) => Int.toString(x) ++ "pt"
+  | #px(x) => Int.toString(x) ++ "px"
+  | #pxFloat(x) => Float.toString(x) ++ "px"
+  | #rem(x) => Float.toString(x) ++ "rem"
+  | #vh(x) => Float.toString(x) ++ "vh"
+  | #vmax(x) => Float.toString(x) ++ "vmax"
+  | #vmin(x) => Float.toString(x) ++ "vmin"
+  | #vw(x) => Float.toString(x) ++ "vw"
+  | #fr(x) => Float.toString(x) ++ "fr"
+  | #inch(x) => Float.toString(x) ++ "in"
+  | #pc(x) => Float.toString(x) ++ "pc"
   | #zero => "0"
   | #minContent => "min-content"
   | #maxContent => "max-content"
@@ -1414,23 +1414,23 @@ let string_of_dimension = x =>
   | #none => "none"
   | #calc(#add, a, b) => "calc(" ++ (Length.toString(a) ++ (" + " ++ (Length.toString(b) ++ ")")))
   | #calc(#sub, a, b) => "calc(" ++ (Length.toString(a) ++ (" - " ++ (Length.toString(b) ++ ")")))
-  | #ch(x) => Js.Float.toString(x) ++ "ch"
-  | #cm(x) => Js.Float.toString(x) ++ "cm"
-  | #em(x) => Js.Float.toString(x) ++ "em"
-  | #ex(x) => Js.Float.toString(x) ++ "ex"
-  | #mm(x) => Js.Float.toString(x) ++ "mm"
-  | #percent(x) => Js.Float.toString(x) ++ "%"
-  | #pt(x) => Js.Int.toString(x) ++ "pt"
-  | #px(x) => Js.Int.toString(x) ++ "px"
-  | #pxFloat(x) => Js.Float.toString(x) ++ "px"
-  | #rem(x) => Js.Float.toString(x) ++ "rem"
-  | #vh(x) => Js.Float.toString(x) ++ "vh"
-  | #vmax(x) => Js.Float.toString(x) ++ "vmax"
-  | #vmin(x) => Js.Float.toString(x) ++ "vmin"
-  | #vw(x) => Js.Float.toString(x) ++ "vw"
-  | #fr(x) => Js.Float.toString(x) ++ "fr"
-  | #inch(x) => Js.Float.toString(x) ++ "in"
-  | #pc(x) => Js.Float.toString(x) ++ "pc"
+  | #ch(x) => Float.toString(x) ++ "ch"
+  | #cm(x) => Float.toString(x) ++ "cm"
+  | #em(x) => Float.toString(x) ++ "em"
+  | #ex(x) => Float.toString(x) ++ "ex"
+  | #mm(x) => Float.toString(x) ++ "mm"
+  | #percent(x) => Float.toString(x) ++ "%"
+  | #pt(x) => Int.toString(x) ++ "pt"
+  | #px(x) => Int.toString(x) ++ "px"
+  | #pxFloat(x) => Float.toString(x) ++ "px"
+  | #rem(x) => Float.toString(x) ++ "rem"
+  | #vh(x) => Float.toString(x) ++ "vh"
+  | #vmax(x) => Float.toString(x) ++ "vmax"
+  | #vmin(x) => Float.toString(x) ++ "vmin"
+  | #vw(x) => Float.toString(x) ++ "vw"
+  | #fr(x) => Float.toString(x) ++ "fr"
+  | #inch(x) => Float.toString(x) ++ "in"
+  | #pc(x) => Float.toString(x) ++ "pc"
   | #zero => "0"
   | #fitContent => "fit-content"
   | #minContent => "min-content"
@@ -1455,23 +1455,23 @@ let gridLengthToJs = x =>
   | #auto => "auto"
   | #calc(#add, a, b) => "calc(" ++ (Length.toString(a) ++ (" + " ++ (Length.toString(b) ++ ")")))
   | #calc(#sub, a, b) => "calc(" ++ (Length.toString(a) ++ (" - " ++ (Length.toString(b) ++ ")")))
-  | #ch(x) => Js.Float.toString(x) ++ "ch"
-  | #cm(x) => Js.Float.toString(x) ++ "cm"
-  | #em(x) => Js.Float.toString(x) ++ "em"
-  | #ex(x) => Js.Float.toString(x) ++ "ex"
-  | #mm(x) => Js.Float.toString(x) ++ "mm"
-  | #percent(x) => Js.Float.toString(x) ++ "%"
-  | #pt(x) => Js.Int.toString(x) ++ "pt"
-  | #px(x) => Js.Int.toString(x) ++ "px"
-  | #pxFloat(x) => Js.Float.toString(x) ++ "px"
-  | #rem(x) => Js.Float.toString(x) ++ "rem"
-  | #vh(x) => Js.Float.toString(x) ++ "vh"
-  | #inch(x) => Js.Float.toString(x) ++ "in"
-  | #pc(x) => Js.Float.toString(x) ++ "pc"
-  | #vmax(x) => Js.Float.toString(x) ++ "vmax"
-  | #vmin(x) => Js.Float.toString(x) ++ "vmin"
-  | #vw(x) => Js.Float.toString(x) ++ "vw"
-  | #fr(x) => Js.Float.toString(x) ++ "fr"
+  | #ch(x) => Float.toString(x) ++ "ch"
+  | #cm(x) => Float.toString(x) ++ "cm"
+  | #em(x) => Float.toString(x) ++ "em"
+  | #ex(x) => Float.toString(x) ++ "ex"
+  | #mm(x) => Float.toString(x) ++ "mm"
+  | #percent(x) => Float.toString(x) ++ "%"
+  | #pt(x) => Int.toString(x) ++ "pt"
+  | #px(x) => Int.toString(x) ++ "px"
+  | #pxFloat(x) => Float.toString(x) ++ "px"
+  | #rem(x) => Float.toString(x) ++ "rem"
+  | #vh(x) => Float.toString(x) ++ "vh"
+  | #inch(x) => Float.toString(x) ++ "in"
+  | #pc(x) => Float.toString(x) ++ "pc"
+  | #vmax(x) => Float.toString(x) ++ "vmax"
+  | #vmin(x) => Float.toString(x) ++ "vmin"
+  | #vw(x) => Float.toString(x) ++ "vw"
+  | #fr(x) => Float.toString(x) ++ "fr"
   | #zero => "0"
   | #minContent => "min-content"
   | #maxContent => "max-content"
@@ -1544,20 +1544,20 @@ type filter = [
 let string_of_filter = x =>
   switch x {
   | #blur(v) => "blur(" ++ (Length.toString(v) ++ ")")
-  | #brightness(v) => "brightness(" ++ (Js.Float.toString(v) ++ "%)")
-  | #contrast(v) => "contrast(" ++ (Js.Float.toString(v) ++ "%)")
+  | #brightness(v) => "brightness(" ++ (Float.toString(v) ++ "%)")
+  | #contrast(v) => "contrast(" ++ (Float.toString(v) ++ "%)")
   | #dropShadow(a, b, c, d) =>
     "drop-shadow(" ++
     (Length.toString(a) ++
     (" " ++
     (Length.toString(b) ++
     (" " ++ (Length.toString(c) ++ (" " ++ (Color.toString(d) ++ ")")))))))
-  | #grayscale(v) => "grayscale(" ++ (Js.Float.toString(v) ++ "%)")
+  | #grayscale(v) => "grayscale(" ++ (Float.toString(v) ++ "%)")
   | #hueRotate(v) => "hue-rotate(" ++ (Angle.toString(v) ++ ")")
-  | #invert(v) => "invert(" ++ (Js.Float.toString(v) ++ "%)")
-  | #opacity(v) => "opacity(" ++ (Js.Float.toString(v) ++ "%)")
-  | #saturate(v) => "saturate(" ++ (Js.Float.toString(v) ++ "%)")
-  | #sepia(v) => "sepia(" ++ (Js.Float.toString(v) ++ "%)")
+  | #invert(v) => "invert(" ++ (Float.toString(v) ++ "%)")
+  | #opacity(v) => "opacity(" ++ (Float.toString(v) ++ "%)")
+  | #saturate(v) => "saturate(" ++ (Float.toString(v) ++ "%)")
+  | #sepia(v) => "sepia(" ++ (Float.toString(v) ++ "%)")
   | #none => "none"
   | #...Url.t as u => Url.toString(u)
   | #...Var.t as va => Var.toString(va)
@@ -1684,7 +1684,7 @@ let backgroundSize = x => D(
 )
 
 let fontFace = (~fontFamily, ~src, ~fontStyle=?, ~fontWeight=?, ~fontDisplay=?, ()) => {
-  let fontStyle = Js.Option.map((value) => FontStyle.toString(value), fontStyle)
+  let fontStyle = Option.map((value) => FontStyle.toString(value), fontStyle)
   let src =
     src
     ->Belt.Array.map(x =>
@@ -1871,7 +1871,7 @@ module SVG = {
     | #...Types.Url.t as u => Types.Url.toString(u)
     },
   )
-  let fillOpacity = opacity => D("fillOpacity", Js.Float.toString(opacity))
+  let fillOpacity = opacity => D("fillOpacity", Float.toString(opacity))
   let fillRule = x => D(
     "fillRule",
     switch x {
@@ -1888,8 +1888,8 @@ module SVG = {
     },
   )
   let strokeWidth = x => D("strokeWidth", Length.toString(x))
-  let strokeOpacity = opacity => D("strokeOpacity", Js.Float.toString(opacity))
-  let strokeMiterlimit = x => D("strokeMiterlimit", Js.Float.toString(x))
+  let strokeOpacity = opacity => D("strokeOpacity", Float.toString(opacity))
+  let strokeMiterlimit = x => D("strokeMiterlimit", Float.toString(x))
   let strokeLinecap = x => D(
     "strokeLinecap",
     switch x {
@@ -1908,5 +1908,5 @@ module SVG = {
     },
   )
   let stopColor = x => D("stopColor", string_of_color(x))
-  let stopOpacity = x => D("stopOpacity", Js.Float.toString(x))
+  let stopOpacity = x => D("stopOpacity", Float.toString(x))
 }

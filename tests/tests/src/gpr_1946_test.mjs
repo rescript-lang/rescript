@@ -36,15 +36,11 @@ Test_utils.eq("File \"gpr_1946_test.res\", line 24, characters 3-10", [
   f(h)["123_456"]
 ]);
 
-console.log(({
-    _5: 3
-  }).TAG);
-
 Mocha.describe("Gpr_1946_test", () => {
-  Mocha.test("test1", () => Test_utils.eq("File \"gpr_1946_test.res\", line 29, characters 7-14", ({
+  Mocha.test("test1", () => Test_utils.eq("File \"gpr_1946_test.res\", line 28, characters 7-14", ({
     _5: 3
   })._5, 3));
-  Mocha.test("test2", () => Test_utils.eq("File \"gpr_1946_test.res\", line 33, characters 7-14", [
+  Mocha.test("test2", () => Test_utils.eq("File \"gpr_1946_test.res\", line 32, characters 7-14", [
     2,
     3
   ], [

@@ -1,0 +1,1 @@
+- Find compiled files under the module's name as written before its uncapitalized form, so error messages on case-insensitive file systems show `ABC.cmi` instead of `aBC.cmi`.

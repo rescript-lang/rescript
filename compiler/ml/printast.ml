@@ -26,7 +26,7 @@ let fmt_position with_name f l =
     fprintf f "%s[%d,%d+%d]" fname l.pos_lnum l.pos_bol (l.pos_cnum - l.pos_bol)
 
 let fmt_location f loc =
-  if !Clflags.dump_location then (
+  if !((Clflags.current ()).dump_location) then (
     let p_2nd_name = loc.loc_start.pos_fname <> loc.loc_end.pos_fname in
     fprintf f "(%a..%a)" (fmt_position true) loc.loc_start
       (fmt_position p_2nd_name) loc.loc_end;
@@ -60,10 +60,12 @@ let fmt_char_option f = function
 let fmt_constant f x =
   match x with
   | Pconst_integer (i, m) -> fprintf f "PConst_int (%s,%a)" i fmt_char_option m
-  | Pconst_char c -> fprintf f "PConst_char %02x" c
-  | Pconst_string (s, None) -> fprintf f "PConst_string(%S,None)" s
-  | Pconst_string (s, Some delim) ->
-    fprintf f "PConst_string (%S,Some %S)" s delim
+  | Pconst_char {source; semantic} ->
+    fprintf f "PConst_char(source=%S, semantic=%02x)" source semantic
+  | Pconst_string payload ->
+    fprintf f "PConst_string (source=%S, semantic=%S)"
+      (String_literal.string_source payload)
+      (String_literal.string_semantic payload)
   | Pconst_float (s, m) -> fprintf f "PConst_float (%s,%a)" s fmt_char_option m
 
 let fmt_mutable_flag f x =
@@ -124,6 +126,26 @@ let arg_label_loc i ppf = function
   | Optional {txt = s} -> line i ppf "Optional \"%s\"\n" s
   | Labelled {txt = s} -> line i ppf "Labelled \"%s\"\n" s
 
+let fixed_value i ppf (x : fixed_value) =
+  match x with
+  | Pfixed_int source ->
+    line i ppf "Pfixed_int %s %a\n" source.txt fmt_location source.loc
+  | Pfixed_string payload ->
+    line i ppf "Pfixed_string (source=%S, semantic=%S)\n"
+      (String_literal.string_source payload)
+      (String_literal.string_semantic payload)
+  | Pfixed_template source ->
+    line i ppf "Pfixed_template %S %a\n" source.txt fmt_location source.loc
+  | Pfixed_json source ->
+    line i ppf "Pfixed_json %S %a\n" source.txt fmt_location source.loc
+
+let raw_source i ppf (source : raw_source) =
+  match source with
+  | Raw_string {txt; loc} ->
+    line i ppf "Raw_string %S %a\n" txt fmt_location loc
+  | Raw_template {txt; loc} ->
+    line i ppf "Raw_template %S %a\n" txt fmt_location loc
+
 let rec core_type i ppf x =
   line i ppf "core_type %a\n" fmt_location x.ptyp_loc;
   attributes i ppf x.ptyp_attributes;
@@ -131,15 +153,22 @@ let rec core_type i ppf x =
   match x.ptyp_desc with
   | Ptyp_any -> line i ppf "Ptyp_any\n"
   | Ptyp_var s -> line i ppf "Ptyp_var %s\n" s
-  | Ptyp_arrow {arg; ret; arity} ->
+  | Ptyp_arrow {params; ret} ->
     line i ppf "Ptyp_arrow\n";
-    let () =
-      match arity with
-      | None -> ()
-      | Some n -> line i ppf "arity = %d\n" n
-    in
-    arg_label_loc i ppf arg.lbl;
-    core_type i ppf arg.typ;
+    line i ppf "arity = %d\n" (List.length params);
+    List.iter
+      (function
+        | Parsetree.Parg_type {attrs; lbl; typ} ->
+          arg_label_loc i ppf lbl;
+          attributes i ppf attrs;
+          core_type i ppf typ
+        | Parsetree.Parg_fixed {attrs; lbl; value; loc} ->
+          arg_label_loc i ppf lbl;
+          attributes i ppf attrs;
+          line i ppf "Parg_fixed %a\n" fmt_location loc;
+          line (i + 1) ppf "value %a\n" fmt_location value.loc;
+          fixed_value (i + 2) ppf value.txt)
+      params;
     core_type i ppf ret
   | Ptyp_tuple l ->
     line i ppf "Ptyp_tuple\n";
@@ -199,12 +228,12 @@ and pattern i ppf x =
   | Ppat_tuple l ->
     line i ppf "Ppat_tuple\n";
     list i pattern ppf l
-  | Ppat_construct (li, po) ->
+  | Ppat_construct (li, {txt = po}) ->
     line i ppf "Ppat_construct %a\n" fmt_longident_loc li;
-    option i pattern ppf po
-  | Ppat_variant (l, po) ->
+    list i pattern ppf po
+  | Ppat_variant (l, {txt = args}) ->
     line i ppf "Ppat_variant \"%s\"\n" l;
-    option i pattern ppf po
+    list i pattern ppf args
   | Ppat_record (l, c, rest) -> (
     line i ppf "Ppat_record %a\n" fmt_closed_flag c;
     list i longident_x_pattern ppf l;
@@ -216,6 +245,9 @@ and pattern i ppf x =
   | Ppat_array l ->
     line i ppf "Ppat_array\n";
     list i pattern ppf l
+  | Ppat_dict l ->
+    line i ppf "Ppat_dict\n";
+    list i dict_pattern_entry ppf l
   | Ppat_or (p1, p2) ->
     line i ppf "Ppat_or\n";
     pattern i ppf p1;
@@ -227,12 +259,12 @@ and pattern i ppf x =
   | Ppat_type li ->
     line i ppf "Ppat_type\n";
     longident_loc i ppf li
+  | Ppat_variant_spread li ->
+    line i ppf "Ppat_variant_spread\n";
+    longident_loc i ppf li
   | Ppat_unpack s -> line i ppf "Ppat_unpack %a\n" fmt_string_loc s
   | Ppat_exception p ->
     line i ppf "Ppat_exception\n";
-    pattern i ppf p
-  | Ppat_open (m, p) ->
-    line i ppf "Ppat_open \"%a\"\n" fmt_longident_loc m;
     pattern i ppf p
   | Ppat_extension (s, arg) ->
     line i ppf "Ppat_extension \"%s\"\n" s.txt;
@@ -243,24 +275,40 @@ and expression i ppf x =
   attributes i ppf x.pexp_attributes;
   let i = i + 1 in
   match x.pexp_desc with
+  | Pexp_braces {expr = inner; braces_loc} ->
+    line i ppf "Pexp_braces\n";
+    line (i + 1) ppf "braces_loc %a\n" fmt_location braces_loc;
+    expression i ppf inner
   | Pexp_ident li -> line i ppf "Pexp_ident %a\n" fmt_longident_loc li
+  | Pexp_object_literal fields ->
+    line i ppf "Pexp_object_literal\n";
+    List.iter
+      (fun ((s : string Asttypes.loc), e) ->
+        line i ppf "field \"%s\"\n" s.txt;
+        expression i ppf e)
+      fields
   | Pexp_constant c -> line i ppf "Pexp_constant %a\n" fmt_constant c
   | Pexp_let (rf, l, e) ->
     line i ppf "Pexp_let %a\n" fmt_rec_flag rf;
     list i value_binding ppf l;
     expression i ppf e
-  | Pexp_fun {arg_label = l; default = eo; lhs = p; rhs = e; arity; async} ->
+  | Pexp_fun {newtypes; params; body; async} ->
     line i ppf "Pexp_fun\n";
     let () = if async then line i ppf "async\n" in
-    let () =
-      match arity with
-      | None -> ()
-      | Some arity -> line i ppf "arity:%d\n" arity
-    in
-    arg_label_loc i ppf l;
-    option i expression ppf eo;
-    pattern i ppf p;
-    expression i ppf e
+    line i ppf "arity:%d\n" (List.length params);
+    List.iter
+      (fun ((name : string loc), attrs) ->
+        attributes i ppf attrs;
+        line i ppf "newtype \"%s\"\n" name.txt)
+      newtypes;
+    List.iter
+      (fun {p_attrs; p_lbl; p_default; p_pat} ->
+        attributes i ppf p_attrs;
+        arg_label_loc i ppf p_lbl;
+        option i expression ppf p_default;
+        pattern i ppf p_pat)
+      params;
+    expression i ppf body
   | Pexp_apply {funct = e; args = l; partial; transformed_jsx} ->
     line i ppf "Pexp_apply\n";
     if partial then line i ppf "partial\n";
@@ -278,12 +326,12 @@ and expression i ppf x =
   | Pexp_tuple l ->
     line i ppf "Pexp_tuple\n";
     list i expression ppf l
-  | Pexp_construct (li, eo) ->
+  | Pexp_construct (li, {txt = args}) ->
     line i ppf "Pexp_construct %a\n" fmt_longident_loc li;
-    option i expression ppf eo
-  | Pexp_variant (l, eo) ->
+    list i expression ppf args
+  | Pexp_variant (l, {txt = args}) ->
     line i ppf "Pexp_variant \"%s\"\n" l;
-    option i expression ppf eo
+    list i expression ppf args
   | Pexp_record (l, eo) ->
     line i ppf "Pexp_record\n";
     list i longident_x_expression ppf l;
@@ -300,11 +348,19 @@ and expression i ppf x =
   | Pexp_array l ->
     line i ppf "Pexp_array\n";
     list i expression ppf l
+  | Pexp_dict l ->
+    line i ppf "Pexp_dict\n";
+    list i dict_entry ppf l
   | Pexp_ifthenelse (e1, e2, eo) ->
     line i ppf "Pexp_ifthenelse\n";
     expression i ppf e1;
     expression i ppf e2;
     option i expression ppf eo
+  | Pexp_ternary (e1, e2, e3) ->
+    line i ppf "Pexp_ternary\n";
+    expression i ppf e1;
+    expression i ppf e2;
+    expression i ppf e3
   | Pexp_sequence (e1, e2) ->
     line i ppf "Pexp_sequence\n";
     expression i ppf e1;
@@ -335,12 +391,16 @@ and expression i ppf x =
     line i ppf "Pexp_constraint\n";
     expression i ppf e;
     core_type i ppf ct
-  | Pexp_coerce (e, (), cto2) ->
+  | Pexp_coerce (e, cto2) ->
     line i ppf "Pexp_coerce\n";
     expression i ppf e;
     core_type i ppf cto2
-  | Pexp_send (e, s) ->
-    line i ppf "Pexp_send \"%s\"\n" s.txt;
+  | Pexp_object_set (e, s, v) ->
+    line i ppf "Pexp_object_set \"%s\"\n" s.txt;
+    expression i ppf e;
+    expression i ppf v
+  | Pexp_object_get (e, s) ->
+    line i ppf "Pexp_object_get \"%s\"\n" s.txt;
     expression i ppf e
   | Pexp_letmodule (s, me, e) ->
     line i ppf "Pexp_letmodule %a\n" fmt_string_loc s;
@@ -353,18 +413,35 @@ and expression i ppf x =
   | Pexp_assert e ->
     line i ppf "Pexp_assert\n";
     expression i ppf e
-  | Pexp_newtype (s, e) ->
-    line i ppf "Pexp_newtype \"%s\"\n" s.txt;
-    expression i ppf e
   | Pexp_pack me ->
     line i ppf "Pexp_pack\n";
     module_expr i ppf me
   | Pexp_open (ovf, m, e) ->
     line i ppf "Pexp_open %a \"%a\"\n" fmt_override_flag ovf fmt_longident_loc m;
     expression i ppf e
+  | Pexp_raw {kind; name_loc; source} ->
+    line i ppf "Pexp_raw \"%s\" %a\n"
+      (Ast_raw.extension_name kind)
+      fmt_location name_loc;
+    raw_source i ppf source
   | Pexp_extension (s, arg) ->
     line i ppf "Pexp_extension \"%s\"\n" s.txt;
     payload i ppf arg
+  | Pexp_regexp {pattern; flags} ->
+    line i ppf "Pexp_regexp %S %S\n" pattern flags
+  | Pexp_template {source_segments; values} ->
+    line i ppf "Pexp_template\n";
+    List.iter
+      (fun {Asttypes.txt} -> line (i + 1) ppf "source_segment %S\n" txt)
+      source_segments;
+    List.iter (expression (i + 1) ppf) values
+  | Pexp_tagged_template {tag; raw_sources; values} ->
+    line i ppf "Pexp_tagged_template\n";
+    expression (i + 1) ppf tag;
+    List.iter
+      (fun {Asttypes.txt} -> line (i + 1) ppf "raw_source %S\n" txt)
+      raw_sources;
+    List.iter (expression (i + 1) ppf) values
   | Pexp_await e ->
     line i ppf "Pexp_await\n";
     expression i ppf e
@@ -388,13 +465,22 @@ and expression i ppf x =
          }) -> (
     line i ppf "Pexp_jsx_container_element %a\n" fmt_jsx_tag_name name;
     jsx_props i ppf props;
-    if !Clflags.dump_location then line i ppf "> %a\n" (fmt_position false) gt;
+    if !((Clflags.current ()).dump_location) then
+      line i ppf "> %a\n" (fmt_position false) gt;
     jsx_children i ppf children;
     match closing_tag with
     | None -> ()
     | Some closing_tag ->
       line i ppf "closing_tag =%a\n" fmt_jsx_tag_name
         closing_tag.jsx_closing_container_tag_name)
+
+and dict_entry i ppf = function
+  | Pdict_entry (key, e) ->
+    line i ppf "Pdict_entry %a\n" fmt_string_loc key;
+    expression (i + 1) ppf e
+  | Pdict_spread e ->
+    line i ppf "Pdict_spread\n";
+    expression (i + 1) ppf e
 
 and jsx_children i ppf children =
   line i ppf "jsx_children =\n";
@@ -418,9 +504,15 @@ and jsx_props i ppf xs =
 and value_description i ppf x =
   line i ppf "value_description %a %a\n" fmt_string_loc x.pval_name fmt_location
     x.pval_loc;
-  attributes i ppf x.pval_attributes;
+  attributes i ppf (Ast_helper.Val.description_attributes x);
   core_type (i + 1) ppf x.pval_type;
-  list (i + 1) string ppf x.pval_prim
+  match x.pval_prim with
+  | None -> ()
+  | Some (Prim_name s) -> string (i + 1) ppf s
+  | Some (Prim_ffi {name}) ->
+    string (i + 1) ppf name;
+    line (i + 1) ppf "<ffi spec>\n"
+  | Some (Prim_inline_const _) -> line (i + 1) ppf "<inline const>\n"
 
 and type_parameter i ppf (x, _variance) = core_type i ppf x
 
@@ -436,6 +528,10 @@ and type_declaration i ppf x =
   line i ppf "ptype_kind =\n";
   type_kind (i + 1) ppf x.ptype_kind;
   line i ppf "ptype_private = %a\n" fmt_private_flag x.ptype_private;
+  (match x.ptype_origin with
+  | Declared -> ()
+  | Inline_record_definition ->
+    line i ppf "ptype_origin = Inline_record_definition\n");
   line i ppf "ptype_manifest =\n";
   option (i + 1) core_type ppf x.ptype_manifest
 
@@ -614,6 +710,9 @@ and module_expr i ppf x =
   | Pmod_extension (s, arg) ->
     line i ppf "Pmod_extension \"%s\"\n" s.txt;
     payload i ppf arg
+  | Pmod_await me ->
+    line i ppf "Pmod_await\n";
+    module_expr i ppf me
 
 and structure i ppf x = list i structure_item ppf x
 
@@ -658,6 +757,10 @@ and structure_item i ppf x =
     line i ppf "Pstr_include";
     attributes i ppf incl.pincl_attributes;
     module_expr i ppf incl.pincl_mod
+  | Pstr_raw {name_loc; source; attrs} ->
+    line i ppf "Pstr_raw %a\n" fmt_location name_loc;
+    attributes i ppf attrs;
+    raw_source i ppf source
   | Pstr_extension ((s, arg), attrs) ->
     line i ppf "Pstr_extension \"%s\"\n" s.txt;
     attributes i ppf attrs;
@@ -681,11 +784,10 @@ and core_type_x_core_type_x_location i ppf (ct1, ct2, l) =
   core_type (i + 1) ppf ct1;
   core_type (i + 1) ppf ct2
 
-and constructor_decl i ppf
-    {pcd_name; pcd_args; pcd_res; pcd_loc; pcd_attributes} =
+and constructor_decl i ppf ({pcd_name; pcd_args; pcd_res; pcd_loc} as cd) =
   line i ppf "%a\n" fmt_location pcd_loc;
   line (i + 1) ppf "%a\n" fmt_string_loc pcd_name;
-  attributes i ppf pcd_attributes;
+  attributes i ppf (Ast_helper.Type.constructor_attributes cd);
   constructor_arguments (i + 1) ppf pcd_args;
   option (i + 1) core_type ppf pcd_res
 
@@ -693,13 +795,16 @@ and constructor_arguments i ppf = function
   | Pcstr_tuple l -> list i core_type ppf l
   | Pcstr_record l -> list i label_decl ppf l
 
-and label_decl i ppf {pld_name; pld_mutable; pld_type; pld_loc; pld_attributes}
-    =
+and label_decl i ppf ({pld_name; pld_mutable; pld_type; pld_loc} as ld) =
   line i ppf "%a\n" fmt_location pld_loc;
-  attributes i ppf pld_attributes;
+  attributes i ppf (Ast_helper.Type.field_attributes ld);
   line (i + 1) ppf "%a\n" fmt_mutable_flag pld_mutable;
   line (i + 1) ppf "%a" fmt_string_loc pld_name;
   core_type (i + 1) ppf pld_type
+
+and dict_pattern_entry i ppf {pdp_key; pdp_pattern; pdp_optional} =
+  line i ppf "%a%s\n" fmt_string_loc pdp_key (if pdp_optional then "?" else "");
+  pattern (i + 1) ppf pdp_pattern
 
 and longident_x_pattern i ppf {lid = li; x = p; opt} =
   line i ppf "%a%s\n" fmt_longident_loc li (if opt then "?" else "");
@@ -719,8 +824,16 @@ and case i ppf {pc_bar; pc_lhs; pc_guard; pc_rhs} =
 
 and value_binding i ppf x =
   line i ppf "<def>\n";
-  attributes (i + 1) ppf x.pvb_attributes;
+  attributes (i + 1) ppf (Ast_helper.Vb.binding_attributes x);
   pattern (i + 1) ppf x.pvb_pat;
+  (match x.pvb_constraint with
+  | None -> ()
+  | Some {pvc_newtypes; pvc_type} ->
+    line (i + 1) ppf "<constraint>\n";
+    List.iter
+      (fun {txt} -> line (i + 2) ppf "newtype \"%s\"\n" txt)
+      pvc_newtypes;
+    core_type (i + 2) ppf pvc_type);
   expression (i + 1) ppf x.pvb_expr
 
 and longident_x_expression i ppf {lid = li; x = e; opt} =
@@ -734,10 +847,12 @@ and label_x_expression i ppf (l, e) =
 
 and label_x_bool_x_core_type_list i ppf x =
   match x with
-  | Rtag (l, attrs, b, ctl) ->
+  | Rtag (l, attrs, b, groups) ->
     line i ppf "Rtag \"%s\" %s\n" l.txt (string_of_bool b);
     attributes (i + 1) ppf attrs;
-    list (i + 1) core_type ppf ctl
+    list (i + 1)
+      (fun i ppf {txt = types} -> list i core_type ppf types)
+      ppf groups
   | Rinherit ct ->
     line i ppf "Rinherit\n";
     core_type (i + 1) ppf ct

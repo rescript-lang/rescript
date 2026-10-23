@@ -100,14 +100,14 @@ let array = a => a[2]
 let id = x => x
 
 let tryChar = v => {
-  try ignore(id(Char.chr(v))) catch {
+  try ignore(id(String.fromCharCode(v))) catch {
   | _ => ()
   }
   42
 }
 
 @throws(Not_found)
-let throwAtAt = () => \"@@"(throw, Not_found)
+let throwAtAt = () => throw(Not_found)
 
 @throws(Not_found)
 let throwPipe = throw(Not_found)
@@ -116,7 +116,7 @@ let throwPipe = throw(Not_found)
 let throwArrow = Not_found->throw
 
 @throws(JsExn)
-let bar = () => Js.Json.parseExn("!!!")
+let bar = () => JSON.parseOrThrow("!!!")
 
 let severalCases = cases =>
   switch cases {

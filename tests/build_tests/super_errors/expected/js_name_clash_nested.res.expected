@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/js_name_clash_nested.res[0m:[2m3:7-15[0m
+
+  1 [2m│[0m module M = {
+  2 [2m│[0m   let default = 1
+  [1;31m3[0m [2m│[0m   let [1;31m$$default[0m = 2
+  4 [2m│[0m }
+  5 [2m│[0m 
+
+  This value has the same JavaScript name $$default
+  as the value at [1m[36m/.../fixtures/js_name_clash_nested.res[0m:[2m2:7-13[0m[0m.
+  Rename one of them.

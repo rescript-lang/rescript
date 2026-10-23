@@ -45,6 +45,11 @@ function p_is_int_test(x) {
   }
 }
 
+let u = {
+  NAME: "b",
+  VAL: 2
+};
+
 Mocha.describe("Poly_variant_test", () => {
   Mocha.test("poly variant string marshalling", () => {
     Test_utils.eq("File \"poly_variant_test.res\", line 70, characters 7-14", vv, [
@@ -68,10 +73,7 @@ Mocha.describe("Poly_variant_test", () => {
   Mocha.test("poly variant function application", () => Test_utils.eq("File \"poly_variant_test.res\", line 76, characters 7-14", v, "on_closed"));
   Mocha.test("poly variant pattern matching", () => {
     Test_utils.eq("File \"poly_variant_test.res\", line 80, characters 7-14", 2, 2);
-    Test_utils.eq("File \"poly_variant_test.res\", line 81, characters 7-14", 3, p_is_int_test({
-      NAME: "b",
-      VAL: 2
-    }));
+    Test_utils.eq("File \"poly_variant_test.res\", line 81, characters 7-14", 3, p_is_int_test(u));
   });
   Mocha.test("emoji poly variant conversion", () => {
     Test_utils.eq("File \"poly_variant_test.res\", line 85, characters 7-14", "🚀", "🚀");

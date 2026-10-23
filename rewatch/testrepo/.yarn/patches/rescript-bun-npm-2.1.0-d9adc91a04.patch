@@ -1,7 +1,25 @@
 diff --git a/src/Bun.res b/src/Bun.res
-index c5dbb6b991d19dd138aec65e4208ff4aec194e3c..2c313b1ff7c08f71aa64159ed430bd1872786f14 100644
+index c5dbb6b991d19dd138aec65e4208ff4aec194e3c..35ec921f3cefce21746eedbfc5bb2361ba1209f7 100644
 --- a/src/Bun.res
 +++ b/src/Bun.res
+@@ -327,7 +327,7 @@ module BunFile = {
+   @get
+   external size: t => float = "size"
+ 
+-  external asBlob: t => Js.Blob.t = "%identity"
++  external asBlob: t => Stdlib.Blob.t = "%identity"
+ }
+ 
+ type tlsOptions = {
+@@ -646,7 +646,7 @@ external fileFromArrayBuffer: (ArrayBuffer.t, ~options: Blob.blobPropertyBag=?)
+ external fileFromFileDescriptor: (fileDescriptor, ~options: Blob.blobPropertyBag=?) => BunFile.t =
+   "Bun.file"
+ 
+-external fileFromFile: (Js.File.t, ~options: Blob.blobPropertyBag=?) => BunFile.t = "Bun.file"
++external fileFromFile: (Stdlib.File.t, ~options: Blob.blobPropertyBag=?) => BunFile.t = "Bun.file"
+ 
+ /**
+   * Synchronously resolve a `moduleId` as though it were imported from `parent`
 @@ -3159,7 +3159,7 @@ module Glob = {
     * ```
     */
@@ -68,7 +86,7 @@ index a71a6648ed36cb57849fc77a050117da8d6e438f..a253551552458d668d8ace7013f9ee16
 +@send external values: t => IteratorObject.t<string, unit, unknown> = "entries"
  @send external forEach: (t, (string, string, t) => unit) => unit = "forEach"
 diff --git a/src/Globals.res b/src/Globals.res
-index 8a19eb175c173d06fc19686f3f7171210960a6b8..d001c984dc2109ef89d2a8964a6e3856adbd2a93 100644
+index 8a19eb175c173d06fc19686f3f7171210960a6b8..60b2f0a5a5c92f9718fd2a825e5632bc2cbec028 100644
 --- a/src/Globals.res
 +++ b/src/Globals.res
 @@ -145,9 +145,9 @@ module Headers = {
@@ -84,6 +102,23 @@ index 8a19eb175c173d06fc19686f3f7171210960a6b8..d001c984dc2109ef89d2a8964a6e3856
    @send external forEach: (t, (string, string, t) => unit) => unit = "forEach"
  
    /**
+@@ -192,14 +192,14 @@ module FormData = {
+ 
+   @new external make: unit => t = "FormData"
+ 
+-  @unboxed type formDataEntryValue = String(string) | File(Js.File.t)
++  @unboxed type formDataEntryValue = String(string) | File(Stdlib.File.t)
+   @unboxed type formDataValueResult = | ...formDataEntryValue | @as(null) Null
+ 
+   @send external get: (t, string) => formDataValueResult = "get"
+   @send external getAll: (t, string) => array<formDataEntryValue> = "getAll"
+ 
+   @unboxed
+-  type stringOrBlob = String(string) | Blob(Js.Blob.t)
++  type stringOrBlob = String(string) | Blob(Stdlib.Blob.t)
+ 
+   /**
+    * Appends a new value onto an existing key inside a FormData object, or adds
 @@ -222,9 +222,10 @@ module FormData = {
    @send external delete: (t, string) => unit = "delete"
    @send external has: (t, string) => bool = "has"
@@ -109,6 +144,24 @@ index 8a19eb175c173d06fc19686f3f7171210960a6b8..d001c984dc2109ef89d2a8964a6e3856
  
    @new
    external make: (
+@@ -504,7 +507,7 @@ module TransformStream = {
+ }
+ 
+ module Blob = {
+-  type t = Js.Blob.t
++  type t = Stdlib.Blob.t
+ 
+   /**
+    * Create a new view **without 🚫 copying** the underlying data.
+@@ -577,7 +580,7 @@ module Blob = {
+ }
+ 
+ module File = {
+-  type t = Js.File.t
++  type t = Stdlib.File.t
+ 
+   /**
+    * Create a new view **without 🚫 copying** the underlying data.
 @@ -689,15 +692,15 @@ module URLSearchParams = {
  
    /** Returns an iterator allowing to go through all entries of the key/value pairs. */
@@ -163,3 +216,27 @@ index 5260b585d144bd1a51074f5f3811501ba4efc47e..8e2cbdc5b5ab1e3516be81b56dd952bf
      removed: bool,
      /** Whether the element is explicitly self-closing, e.g. `<foo />` */
      selfClosing: bool,
+diff --git a/src/Redis.res b/src/Redis.res
+index 2327cdbe8f9c02709d5f3cd4ac3c48644ee155c1..6f19c405d80486a1b3b492cc6ec236ea60933ec8 100644
+--- a/src/Redis.res
++++ b/src/Redis.res
+@@ -7,7 +7,7 @@ module RedisClient = {
+   type keyLike =
+     | String(string)
+     | ArrayBufferView(Types.ArrayBufferView.t)
+-    | Blob(Js.Blob.t)
++    | Blob(Stdlib.Blob.t)
+ 
+   type redisOptions = {
+     connectionTimeout?: int,
+diff --git a/src/Timers.res b/src/Timers.res
+index 76d8dd579740d5a1b0d21b2818093b06061f031f..b6e40acd97b1e52b44a18725619da86e7bed6441 100644
+--- a/src/Timers.res
++++ b/src/Timers.res
+@@ -29,5 +29,5 @@ module Promises = {
+   external setImmediate: 'a => promise<'a> = "setImmediate"
+   // setInterval is not a promise, it's an async iterator
+   // @module("node:timers/promises")
+-  // external setInterval: (int, 'a) => Js.Promise.t<'a> = "setTimeout"
++  // external setInterval: (int, 'a) => promise<'a> = "setTimeout"
+ }

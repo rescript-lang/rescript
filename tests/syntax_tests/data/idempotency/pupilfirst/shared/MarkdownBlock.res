@@ -1,7 +1,7 @@
 %raw(`require("./MarkdownBlock.css")`)
 
 let randomId = () => {
-  let randomComponent = Js.Math.random()->Js.Float.toString->Js.String.substr(~from=2)
+  let randomComponent = Math.random()->Float.toString->String.substr(~from=2)
   "markdown-block-" ++ randomComponent
 }
 

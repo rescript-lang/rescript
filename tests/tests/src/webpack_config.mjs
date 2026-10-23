@@ -4,7 +4,7 @@ import * as List from "List";
 import * as List$1 from "reactV";
 import * as List$2 from "reactX";
 import * as Local from "./local";
-import * as Belt_List from "@rescript/runtime/lib/es6/Belt_List.mjs";
+import * as Stdlib_List from "@rescript/runtime/lib/es6/Stdlib_List.mjs";
 import * as WebpackConfigJs from "../../../webpack.config.js";
 import * as WebpackMiddlewareConfigJs from "../../../webpack.middleware.config.js";
 
@@ -55,15 +55,9 @@ function f() {
 
 List.xx();
 
-Belt_List.length({
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: /* [] */0
-  }
-});
+Stdlib_List.length({hd: 1, tl: {hd: 2, tl: /* [] */0}});
 
-Belt_List.length(/* [] */0);
+Stdlib_List.length(/* [] */0);
 
 function ff(prim) {
   return Local.ff();

@@ -7,7 +7,7 @@ let decode = json => {
   open Json.Decode
   {
     id: json->field("id", string),
-    endsAt: json->field("endsAt", nullable(string))->Js.Null.toOption,
+    endsAt: json->field("endsAt", nullable(string))->Null.toOption,
   }
 }
 

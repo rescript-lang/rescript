@@ -8,4 +8,5 @@ let compFF = Completion.ff
 
 @react.component
 let make = (~name) => React.string(name)
+let bracedAdd = {(x, y) => x + y}
 //^cle

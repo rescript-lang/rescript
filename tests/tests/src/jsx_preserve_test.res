@@ -11,12 +11,12 @@ module Icon = {
 
 let _single_element_child =
   <div>
-    <h1> {React.string("Hello, world!")} </h1>
+    <h1>{React.string("Hello, world!")}</h1>
   </div>
 
 let _multiple_element_children =
   <div>
-    <h1> {React.string("Hello, world!")} </h1>
+    <h1>{React.string("Hello, world!")}</h1>
     <Icon />
   </div>
 
@@ -34,7 +34,7 @@ let _multiple_element_fragment =
 let _unary_element_with_props = <input type_="text" className="foo" />
 
 let _container_element_with_props_and_children =
-  <div title="foo" className="foo"> {React.string("Hello, world!")} </div>
+  <div title="foo" className="foo">{React.string("Hello, world!")}</div>
 
 let baseProps: JsxDOM.domProps = {
   title: "foo",
@@ -43,6 +43,36 @@ let baseProps: JsxDOM.domProps = {
 
 let _unary_element_with_spread_props = <input {...baseProps} type_="text" />
 
+// Props that are a dict are spread as one object, whatever its keys
+let otherProps: JsxDOM.domProps = {
+  id: "bar",
+}
+let _unary_element_with_props_of_two_spreads =
+  <input {...dict{...baseProps->Obj.magic, ...otherProps->Obj.magic}->Obj.magic} />
+
+// including keys that aren't JSX attribute names
+let _unary_element_with_spread_and_spaced_key =
+  <input {...dict{...baseProps->Obj.magic, "foo bar": "x"}->Obj.magic} />
+let _unary_element_with_spread_and_proto_key =
+  <input {...dict{...baseProps->Obj.magic, "__proto__": "x"}->Obj.magic} />
+let _unary_element_with_spread_and_hyphenated_key =
+  <input {...dict{...baseProps->Obj.magic, "aria-label": "x"}->Obj.magic} />
+
+// and repeated keys, where the last one wins
+let _container_with_spread_and_repeated_children =
+  <div
+    {...dict{
+      ...baseProps->Obj.magic,
+      "children": React.string("first"),
+      "children": React.string("second"),
+    }->Obj.magic}
+  />
+let _unary_element_with_spread_and_repeated_key =
+  <input {...dict{...baseProps->Obj.magic, "title": "x", "title": "y"}->Obj.magic} />
+// and a "key" property next to the key attribute
+let _unary_element_with_spread_and_key_prop_keyed =
+  <input {...dict{...baseProps->Obj.magic, "key": "inner"}->Obj.magic} key="outer" />
+
 let _container_with_spread_props =
   <div {...baseProps} title="barry" className="barry">
     {React.string("Hello, world!")}
@@ -50,8 +80,8 @@ let _container_with_spread_props =
   </div>
 
 let baseChildren = React.array([
-  <span> {React.string("Hello, world!")} </span>,
-  <span> {React.string("Hello, world!")} </span>,
+  <span>{React.string("Hello, world!")}</span>,
+  <span>{React.string("Hello, world!")}</span>,
 ])
 
 let _unary_element_with_spread_props_keyed = <input {...baseProps} type_="text" key="barry-key" />
@@ -77,7 +107,7 @@ module A = {
 module B = {
   @react.component
   let make = () => {
-    <p> {React.string("Hello, world!")} </p>
+    <p>{React.string("Hello, world!")}</p>
   }
 }
 
@@ -108,7 +138,7 @@ let _large_component =
     <strong title="foo" className="bar" tabIndex={1} onClick={_ => ()} onMouseDown={_ => ()}>
       {React.string("Hello, world!")}
     </strong>
-    <p> {React.int(5)} </p>
+    <p>{React.int(5)}</p>
   </div>
 
 module ComponentWithOptionalProps = {
@@ -124,9 +154,9 @@ let _optional_props = <ComponentWithOptionalProps i=1 s="test" element={<div />}
 
 let _props_with_hyphen = <label ariaLabel={"close sidebar"} dataTestId="test" />
 
-let _empty_fragment = <> </>
+let _empty_fragment = <></>
 
-let _fragment = <> {Jsx.string("Hello, world!")} </>
+let _fragment = <>{Jsx.string("Hello, world!")}</>
 
 let _youtube_iframe =
   <iframe
@@ -167,5 +197,20 @@ module ContextProvider = {
 
 @react.component
 let make = (~children) => {
-  <ContextProvider value=42> {children} </ContextProvider>
+  <ContextProvider value=42>{children}</ContextProvider>
 }
+
+let _comment_only_host = <div>{/* no children prop */}</div>
+let _comment_only_fragment = <>{/* no children */}</>
+let _comment_single_child =
+  <div>
+    {/* before */}
+    <span />
+    {/* after */}
+  </div>
+let _comment_multiple_children =
+  <div>
+    <span />
+    {/* between */}
+    <span />
+  </div>

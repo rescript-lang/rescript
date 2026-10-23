@@ -1,4 +1,4 @@
-@ocaml.doc("
+@res.doc("
   * Wrap JS values to be used from Reason
   ")
 @genType.import("./MyMath")
@@ -30,7 +30,7 @@ let roundedNumber = round(1.8)
 let areaValue = area({x: 3, y: None})
 
 module AbsoluteValue = {
-  @genType.import(("./MyMath", "AbsoluteValue"))
+  @genType.import({("./MyMath", "AbsoluteValue")})
   type t = {"getAbs": (unit) => int}
 
   /* This is untyped */
@@ -82,4 +82,3 @@ type myNum
 
 @genType.import("./MyMath")
 type polyType<'a>
-

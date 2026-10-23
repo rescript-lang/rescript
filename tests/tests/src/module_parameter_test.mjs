@@ -22,7 +22,7 @@ function v(x) {
 
 Mocha.describe("Module_parameter_test", () => {
   Mocha.test("const", () => Test_utils.eq("File \"module_parameter_test.res\", line 24, characters 7-14", 1, v0));
-  Mocha.test("other", () => Test_utils.eq("File \"module_parameter_test.res\", line 28, characters 7-14", 3, v("abc")));
+  Mocha.test("other", () => Test_utils.eq("File \"module_parameter_test.res\", line 28, characters 7-14", 3, "abc".length));
 });
 
 export {

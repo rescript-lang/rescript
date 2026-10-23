@@ -43,6 +43,8 @@ function preserveRefIdentity(x) {
   return x;
 }
 
+let R$make = make;
+
 export {
   create,
   access,
@@ -53,5 +55,6 @@ export {
   set,
   destroysRefIdentity,
   preserveRefIdentity,
+  R$make,
 }
 /* No side effect */

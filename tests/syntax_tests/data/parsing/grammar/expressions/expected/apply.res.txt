@@ -3,7 +3,7 @@
 ;;foo (fun [arity:1]_ -> bla) blaz
 ;;foo (fun [arity:1]_ -> bla) (fun [arity:1]_ -> blaz)
 ;;List.map (fun [arity:1]x -> x + 1) myList
-;;List.reduce (fun [arity:2]acc -> fun curr -> acc + curr) 0 myList
+;;List.reduce (fun [arity:2]acc curr -> acc + curr) 0 myList
 let unitUncurried = apply ()
 ;;call ~a:(a : int)
 ;;call (~~~ a)

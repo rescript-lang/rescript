@@ -8,12 +8,11 @@ let result = t => t.result
 let make = (~title, ~result) => {title: title, result: result}
 
 let makeFromJs = data =>
-  data->Js.Array.map(rc =>
+  data->Array.map(rc =>
     make(
       ~title=rc["title"],
       ~result=rc["result"]->CoursesReview__ReviewChecklistResult.makeFromJs,
-    )
-  )
+    ))
 
 let empty = () => [make(~title="", ~result=[CoursesReview__ReviewChecklistResult.empty()])]
 
@@ -35,7 +34,7 @@ let appendEmptyChecklistItem = t =>
   )
 
 let deleteResultItem = (index, t) =>
-  make(~title=t.title, ~result=t.result->Js.Array.filteri((_el, i) => i != index))
+  make(~title=t.title, ~result=t.result->Array.filterWithIndex((_el, i) => i != index))
 
 let trim = t => {
   title: t.title->String.trim,

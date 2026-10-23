@@ -48,8 +48,6 @@ val from_name : string -> t
 
 val is_empty : t -> bool
 
-val dump_packages_info : Format.formatter -> t -> unit
-
 val add_npm_package_path : t -> string -> t
 (** used by command line option 
     e.g [-bs-package-output commonjs:xx/path]
@@ -65,8 +63,6 @@ type info_query =
   | Package_script
   | Package_not_found
   | Package_found of package_found_info
-
-val get_output_dir : t -> package_dir:string -> module_system -> string
 
 val query_package_infos : t -> module_system -> info_query
 (** Note here we compare the package info by order

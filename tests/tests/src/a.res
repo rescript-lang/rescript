@@ -20,8 +20,6 @@ include (
       let add = (x, y) => x + y
     })
 
-    open Belt
-
     include List
     module N = List
     let v = N.length

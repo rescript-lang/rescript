@@ -49,10 +49,19 @@ let componentWithPropsElement = React.createElement(Recursive_explicit_component
   foo: 1
 });
 
+let SelfCreateElement$make = Recursive_explicit_component_test$SelfCreateElement;
+
+let RawSiblingCreateElement$make = Recursive_explicit_component_test$RawSiblingCreateElement;
+
+let ComponentWithProps$make = Recursive_explicit_component_test$ComponentWithProps;
+
 export {
   SelfCreateElement,
   RawSiblingCreateElement,
   ComponentWithProps,
   componentWithPropsElement,
+  SelfCreateElement$make,
+  RawSiblingCreateElement$make,
+  ComponentWithProps$make,
 }
 /* componentWithPropsElement Not a pure module */

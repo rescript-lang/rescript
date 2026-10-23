@@ -1,7 +1,7 @@
 (** Reactive dead code solver.
     
     Reactive pipeline: decls + live → dead_decls, live_decls
-    Issue generation uses DeadCommon.reportDeclaration for correct filtering.
+    Issue generation uses Dead_common.report_declaration for correct filtering.
     
     O(dead_decls + live_decls), not O(all_decls). *)
 
@@ -15,8 +15,7 @@ val create :
   config:Dce_config.t ->
   t
 
-val collect_issues :
-  t:t -> config:Dce_config.t -> ann_store:Annotation_store.t -> Issue.t list
+val collect_issues : t:t -> Issue.t list
 (** Collect issues. O(dead_decls + live_decls). *)
 
 val iter_live_decls : t:t -> (Decl.t -> unit) -> unit

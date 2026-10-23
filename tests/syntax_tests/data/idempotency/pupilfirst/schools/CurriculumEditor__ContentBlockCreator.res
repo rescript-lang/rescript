@@ -96,7 +96,7 @@ let handleGraphqlCreateResponse = (aboveContentBlock, send, addContentBlockCB, c
   | None => send(ToggleSaving)
   }
 
-  Js.Promise.resolve()
+  Promise.resolve()
 }
 
 let createMarkdownContentBlock = (target, aboveContentBlock, send, addContentBlockCB) => {
@@ -105,7 +105,7 @@ let createMarkdownContentBlock = (target, aboveContentBlock, send, addContentBlo
   let targetId = target->Target.id
   CreateMarkdownContentBlock.make(~targetId, ~aboveContentBlockId?, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(result =>
+  ->Promise.then(result =>
     handleGraphqlCreateResponse(
       aboveContentBlock,
       send,
@@ -113,9 +113,9 @@ let createMarkdownContentBlock = (target, aboveContentBlock, send, addContentBlo
       result["createMarkdownContentBlock"]["contentBlock"],
     )
   )
-  ->Js.Promise.catch(_ => {
+  ->Promise.catch(_ => {
     send(FailedToCreate)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }
@@ -298,7 +298,7 @@ let embedUrlRegexes = [
   /https:\/\/.*youtu\.be/,
 ]
 
-let validEmbedUrl = url => Belt.Array.some(embedUrlRegexes, regex => regex->Js.Re.test_(url))
+let validEmbedUrl = url => Belt.Array.some(embedUrlRegexes, regex => regex->RegExp.test(url))
 
 let onEmbedFormSave = (target, aboveContentBlock, url, send, addContentBlockCB, event) => {
   event->ReactEvent.Mouse.preventDefault
@@ -312,7 +312,7 @@ let onEmbedFormSave = (target, aboveContentBlock, url, send, addContentBlockCB, 
 
     CreateEmbedContentBlock.make(~targetId, ~aboveContentBlockId?, ~url, ())
     ->GraphqlQuery.sendQuery
-    ->Js.Promise.then_(result =>
+    ->Promise.then(result =>
       handleGraphqlCreateResponse(
         aboveContentBlock,
         send,
@@ -320,9 +320,9 @@ let onEmbedFormSave = (target, aboveContentBlock, url, send, addContentBlockCB, 
         result["createEmbedContentBlock"]["contentBlock"],
       )
     )
-    ->Js.Promise.catch(_ => {
+    ->Promise.catch(_ => {
       send(FailedToCreate)
-      Js.Promise.resolve()
+      Promise.resolve()
     })
     ->ignore
   } else {

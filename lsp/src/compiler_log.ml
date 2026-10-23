@@ -374,12 +374,12 @@ end = struct
           let entries =
             paths
             |> List.map (fun filepath ->
-                   {
-                     path = filepath_of_path filepath;
-                     kind = Circular_dependency;
-                     message;
-                     range = None;
-                   })
+                {
+                  path = filepath_of_path filepath;
+                  kind = Circular_dependency;
+                  message;
+                  range = None;
+                })
           in
           loop (next_i + 1) (List.rev_append entries acc)
         else if starts_with "FAILED: dependency cycle:" trimmed then
@@ -388,12 +388,12 @@ end = struct
           let entries =
             paths
             |> List.map (fun filepath ->
-                   {
-                     path = filepath_of_path filepath;
-                     kind = Circular_dependency;
-                     message;
-                     range = None;
-                   })
+                {
+                  path = filepath_of_path filepath;
+                  kind = Circular_dependency;
+                  message;
+                  range = None;
+                })
           in
           loop (i + 1) (List.rev_append entries acc)
         else loop (i + 1) acc
@@ -516,24 +516,24 @@ let%expect_test "parse log" =
   let print_logs logs =
     logs
     |> List.iter (fun (entry : Parse.diagnostic_entry) ->
-           let path =
-             match entry.path with
-             | Parse.Relative_path p -> Printf.sprintf "Relative_path(%s)" p
-             | Full_path p -> Printf.sprintf "Full_path(%s)" p
-           in
-           print_endline
-             ((match entry.kind with
-              | Syntax_error -> "Syntax_error"
-              | Warning {number; configured_as_error} ->
-                if configured_as_error then
-                  Printf.sprintf "Warning %d (configured as error)" number
-                else Printf.sprintf "Warning %d" number
-              | Unknown -> "Unknown"
-              | Circular_dependency -> "Circular_dependency"
-              | Common_error -> "Common_error")
-             ^ " - " ^ path);
-           diagnostic_of_entry entry |> print_endline;
-           print_newline ())
+        let path =
+          match entry.path with
+          | Parse.Relative_path p -> Printf.sprintf "Relative_path(%s)" p
+          | Full_path p -> Printf.sprintf "Full_path(%s)" p
+        in
+        print_endline
+          ((match entry.kind with
+             | Syntax_error -> "Syntax_error"
+             | Warning {number; configured_as_error} ->
+               if configured_as_error then
+                 Printf.sprintf "Warning %d (configured as error)" number
+               else Printf.sprintf "Warning %d" number
+             | Unknown -> "Unknown"
+             | Circular_dependency -> "Circular_dependency"
+             | Common_error -> "Common_error")
+          ^ " - " ^ path);
+        diagnostic_of_entry entry |> print_endline;
+        print_newline ())
   in
   let example_log_1 =
     {|

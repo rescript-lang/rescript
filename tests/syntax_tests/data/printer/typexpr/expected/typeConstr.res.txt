@@ -79,6 +79,6 @@ let t: @attrs list<{"age": int}> = x
 external color: @attr colour<'t> = "c_color"
 
 @send @return(nullable)
-external getAttribute: (Js.t<'a>, string) => option<string> = "getAttribute"
+external getAttribute: ({..}, string) => option<string> = "getAttribute"
 
-let dangerousHtml: string => Js.t<'a> = html => {"__html": html}
+let dangerousHtml: string => {..} = html => {"__html": html}

@@ -19,7 +19,7 @@ let white_table_side_effects =
 let path_is_whitelisted_for_side_effects path =
   path
   |> Dce_path.on_ok_path ~when_contains_apply:false ~f:(fun s ->
-         Hashtbl.mem (Lazy.force white_table_side_effects) s)
+      Hashtbl.mem (Lazy.force white_table_side_effects) s)
 
 let rec expr_no_side_effects (expr : Typedtree.expression) =
   match expr.exp_desc with
@@ -38,7 +38,7 @@ let rec expr_no_side_effects (expr : Typedtree.expression) =
   | Texp_let (_, vbs, e) ->
     vbs
     |> List.for_all (fun (vb : Typedtree.value_binding) ->
-           vb.vb_expr |> expr_no_side_effects)
+        vb.vb_expr |> expr_no_side_effects)
     && e |> expr_no_side_effects
   | Texp_record {fields; extended_expression} ->
     fields |> Array.for_all field_no_side_effects
@@ -56,6 +56,12 @@ let rec expr_no_side_effects (expr : Typedtree.expression) =
   | Texp_field (e, _lid, _ld) -> e |> expr_no_side_effects
   | Texp_setfield _ -> false
   | Texp_array el -> el |> List.for_all expr_no_side_effects
+  | Texp_dict entries ->
+    entries
+    |> List.for_all (function
+      | Typedtree.Tdict_entry (_, e) -> e |> expr_no_side_effects
+      (* Spreading a dict reads its properties *)
+      | Tdict_spread _ -> false)
   | Texp_ifthenelse (e1, e2, eo) ->
     e1 |> expr_no_side_effects && e2 |> expr_no_side_effects
     && eo |> expr_opt_no_side_effects
@@ -64,12 +70,14 @@ let rec expr_no_side_effects (expr : Typedtree.expression) =
   | Texp_for (_id, _pat, e1, e2, _dir, e3) ->
     e1 |> expr_no_side_effects && e2 |> expr_no_side_effects
     && e3 |> expr_no_side_effects
-  | Texp_for_of _ | Texp_for_await_of _ -> false
-  | Texp_send _ -> false
+  | Texp_template {values} -> values |> List.for_all expr_no_side_effects
+  | Texp_for_of _ | Texp_for_await_of _ | Texp_tagged_template _ -> false
+  | Texp_object_literal fields ->
+    fields |> List.for_all (fun (_name, e) -> e |> expr_no_side_effects)
+  | Texp_object_get _ -> false
+  | Texp_object_set _ -> false
   | Texp_letexception (_ec, e) -> e |> expr_no_side_effects
   | Texp_pack _ -> false
-  | Texp_extension_constructor _ when true -> true
-  | _ -> (* on ocaml 4.08: Texp_letop | Texp_open *) true
 
 and expr_opt_no_side_effects eo =
   match eo with

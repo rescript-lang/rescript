@@ -22,11 +22,11 @@ let reducer = (state, action) =>
   | FailToDelete => {...state, deleting: false}
   | FinishDeleting(author) => {
       deleting: false,
-      authors: state.authors->Js.Array.filter(a => a->Author.id != (author->Author.id)),
+      authors: state.authors->Array.filter(a => a->Author.id != (author->Author.id)),
     }
   | AddAuthor(author) => {
       ...state,
-      authors: state.authors->Js.Array.concat([author]),
+      authors: state.authors->Array.concat([author]),
     }
   | UpdateAuthor(author) => {
       ...state,
@@ -54,18 +54,18 @@ let removeCourseAuthor = (send, author, event) => {
 
       DeleteCourseAuthorQuery.make(~id=author->Author.id, ())
       ->GraphqlQuery.sendQuery
-      ->Js.Promise.then_(response => {
+      ->Promise.then(response => {
         if response["deleteCourseAuthor"]["success"] {
           send(FinishDeleting(author))
         } else {
           send(FailToDelete)
         }
 
-        Js.Promise.resolve()
+        Promise.resolve()
       })
-      ->Js.Promise.catch(_ => {
+      ->Promise.catch(_ => {
         send(FailToDelete)
-        Js.Promise.resolve()
+        Promise.resolve()
       })
       ->ignore
     },

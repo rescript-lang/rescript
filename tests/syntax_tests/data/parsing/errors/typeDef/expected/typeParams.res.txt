@@ -3,7 +3,7 @@
   syntax_tests/data/parsing/errors/typeDef/typeParams.res:1:10-13
 
   1 │ type node('a) = {
-  2 │   _value: Js.Nullable.value<'a>
+  2 │   _value: Nullable.t<'a>
   3 │ }
 
   Type parameters require angle brackets:
@@ -58,7 +58,7 @@
   Type params start with a singlequote: 'foo
 
 type nonrec 'a node = {
-  _value: 'a Js.Nullable.value }
+  _value: 'a Nullable.t }
 type nonrec ('from, 'for) derivedNode =
   {
   mutable value: 'to_ ;

@@ -13,8 +13,11 @@ let Foo = {
   make: make
 };
 
+let Foo$make = make;
+
 export {
   React,
   Foo,
+  Foo$make,
 }
 /* No side effect */

@@ -1,1 +1,20 @@
-(dirs compiler tests analysis tools lsp)
+(dirs compiler tests analysis tools rewatch-ocaml lsp)
+
+; All warnings are enabled, except:
+; - 4 (fragile-match): wildcard cases are used deliberately.
+; - 9 (missing-record-field-pattern): record patterns omit the trailing `; _`.
+; - 30 (duplicate-definitions): mutually recursive records may share field
+;   names.
+; - 40, 41, 42 (name-out-of-scope, ambiguous-name, disambiguated-name):
+;   constructors and fields are selected by type-directed disambiguation.
+; - 44, 45 (open-shadow-identifier, open-shadow-label-constructor): local
+;   opens may shadow names.
+; - 48 (eliminated-optional-arguments): functions with optional arguments may
+;   be passed as values.
+; - 70 (missing-mli): not every module needs an interface.
+; Dune's default flags disable all of these except 9 as well.
+
+(env
+ (_
+  (flags
+   (:standard -w +a-4-9-30-40-41-42-44-45-48-70))))

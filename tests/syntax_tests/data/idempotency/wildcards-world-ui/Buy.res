@@ -99,7 +99,7 @@ module Buy = {
 
     let currentPriceEth = Web3Utils.fromWeiBNToEth(currentPriceWei)
     let currentPriceFloat = Float.fromString(currentPriceEth)->defaultZeroF
-    let currentPriceFloatWithMinimum = Js.Math.max_float(currentPriceFloat, 0.005)
+    let currentPriceFloatWithMinimum = Math.max(currentPriceFloat, 0.005)
     let defaultPriceValue = toFixedWithPrecisionNoTrailingZeros(
       currentPriceFloatWithMinimum *. 1.5,
       ~digits=2,
@@ -129,7 +129,7 @@ module Buy = {
           numerator,
           denominator,
         ),
-        Js.Math.max_float(0., maxAvailableDeposit->float_of_string)->Js.Float.toString,
+        Math.max(0., maxAvailableDeposit->float_of_string)->Float.toString,
       )
     }
 
@@ -175,7 +175,7 @@ module Buy = {
         value,
       )
       if didUpdate {
-        let patronage = Js.Float.toString(Float.fromString(value)->defaultZeroF *. ratio)
+        let patronage = Float.toString(Float.fromString(value)->defaultZeroF *. ratio)
         setPatronage(_ => patronage)
         let timeInSeconds = calculateDepositDuration(
           deposit->Web3Utils.toWeiFromEth,
@@ -198,7 +198,7 @@ module Buy = {
     //     );
     //   if (didUpdate) {
     //     let price =
-    //       Js.Float.toString(
+    //       Float.toString(
     //         Float.fromString(value)->defaultZeroF *. ratioInverse,
     //       );
     //     setInitialPrice(_ => price);
@@ -243,7 +243,7 @@ module Buy = {
     }
 
     let openTransak = _ => {
-      Js.log(Config.Transak.getConfig(~chain, web3Context))
+      Console.log(Config.Transak.getConfig(~chain, web3Context))
       let transak = Transak.new_(Config.Transak.getConfig(~chain, web3Context))
       transak->Transak.init()
     }
@@ -341,7 +341,7 @@ let make = (~chain, ~tokenId) => {
     | Some(maticState) =>
       switch maticState.error {
       | Some(error) =>
-        Js.log2("matic state fetch error", error)
+        Console.log2("matic state fetch error", error)
         <p>
           {"Error: Unable to get matic state - please try again or contact the Wildcards Team."->React.string}
         </p>

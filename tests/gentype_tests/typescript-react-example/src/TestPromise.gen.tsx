@@ -13,4 +13,4 @@ export type toPayload = { readonly result: string };
 
 export const convert: (p:Promise<fromPayload>) => Promise<toPayload> = TestPromiseJS.convert as any;
 
-export const barx: (x:(undefined | Promise<(undefined | string)>), _2:void) => boolean = TestPromiseJS.barx as any;
+export const barx: (x:(undefined | Promise<(undefined | string)>), param:void) => boolean = TestPromiseJS.barx as any;

@@ -1,18 +1,15 @@
-let unitsCommands = state.units->Js.Array2.mapi(({
+let unitsCommands = state.units->Array.mapWithIndex(({
   unit: targetUnit,
   coordinates: targetCoordinates,
 }, i) => {
   // n^2
   let res = []
-  state.units->Js.Array2.forEachi(({
+  state.units->Array.forEachWithIndex(({
     unit: unitThatMightBeAttacking,
     coordinates: unitThatMightBeAttackingCoordinates,
   }, j) => {
     if i !== j {
-      switch Js.Array2.unsafe_get(
-        unitThatMightBeAttacking.timeline,
-        unitThatMightBeAttacking.currentFrame,
-      ).effect {
+      switch Array.getUnsafe(unitThatMightBeAttacking.timeline, unitThatMightBeAttacking.currentFrame).effect {
       | Some(UnitAttack({damage, hitBox: _})) =>
         let unitThatMightBeAttackingHitBox_ = Unit.hitBox(unitThatMightBeAttacking)
         let unitThatMightBeAttackingHitBox = {
@@ -41,9 +38,9 @@ let unitsCommands = state.units->Js.Array2.mapi(({
             ),
             coordinates: {x: sparksX, y: sparksY, z: 0.},
           }
-          particlesToAdd->Js.Array2.push(spark)->ignore
+          particlesToAdd->Array.push(spark)->ignore
 
-          res->Js.Array2.push(Unit.CommandAttacked({damage: damage}))->ignore
+          res->Array.push(Unit.CommandAttacked({damage: damage}))->ignore
         }
       | _ => ()
       }

@@ -1,6 +1,6 @@
 let test = (value, url) => {
-  let tester = Js.Re.fromString(value)
-  url->Js.Re.test_(tester)
+  let tester = RegExp.fromString(value)
+  url->RegExp.test(tester)
 }
 
 let iconClass = url =>

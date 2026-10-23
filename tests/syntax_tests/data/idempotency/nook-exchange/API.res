@@ -3,7 +3,7 @@ let makeAuthenticatedPostRequest = (~url, ~bodyJson, ~sessionId) =>
     url,
     Fetch.RequestInit.make(
       ~method_=Post,
-      ~body=Fetch.BodyInit.make(Js.Json.stringify(Json.Encode.object_(bodyJson))),
+      ~body=Fetch.BodyInit.make(JSON.stringify(Json.Encode.object_(bodyJson))),
       ~headers=Fetch.HeadersInit.make({
         "X-Client-Version": Constants.gitCommitRef,
         "Content-Type": "application/json",
@@ -27,7 +27,7 @@ let setItemStatus = (~userId, ~sessionId, ~itemId, ~variant, ~status) =>
       },
       ~sessionId,
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 
 let setItemStatusBatch = (~sessionId, ~items: array<(int, int)>, ~status) => {
@@ -38,7 +38,7 @@ let setItemStatusBatch = (~sessionId, ~items: array<(int, int)>, ~status) => {
       Fetch.RequestInit.make(
         ~method_=Post,
         ~body=Fetch.BodyInit.make(
-          Js.Json.stringify({
+          JSON.stringify({
             open Json.Encode
             object_(list{
               ("items", array(tuple2(int, int), items)),
@@ -56,7 +56,7 @@ let setItemStatusBatch = (~sessionId, ~items: array<(int, int)>, ~status) => {
         (),
       ),
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 }
 
@@ -69,7 +69,7 @@ let setItemNote = (~userId, ~sessionId, ~itemId, ~variant, ~note) =>
       ~bodyJson=list{("note", Json.Encode.string(note)), ("userId", Json.Encode.string(userId))},
       ~sessionId,
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 
 let setItemPriority = (~sessionId, ~itemId, ~variant, ~isPriority) =>
@@ -81,7 +81,7 @@ let setItemPriority = (~sessionId, ~itemId, ~variant, ~isPriority) =>
       ~bodyJson=list{("isPriority", Json.Encode.bool(isPriority))},
       ~sessionId,
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 
 let importItems = (~sessionId, ~updates: array<((int, int), User.itemStatus)>) =>
@@ -101,7 +101,7 @@ let importItems = (~sessionId, ~updates: array<((int, int), User.itemStatus)>) =
       },
       ~sessionId,
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 
 let removeItem = (~userId, ~sessionId, ~itemId, ~variant) => {
@@ -115,7 +115,7 @@ let removeItem = (~userId, ~sessionId, ~itemId, ~variant) => {
       Fetch.RequestInit.make(
         ~method_=Delete,
         ~body=Fetch.BodyInit.make(
-          Js.Json.stringify(Json.Encode.object_(list{("userId", Json.Encode.string(userId))})),
+          JSON.stringify(Json.Encode.object_(list{("userId", Json.Encode.string(userId))})),
         ),
         ~headers=Fetch.HeadersInit.make({
           "X-Client-Version": Constants.gitCommitRef,
@@ -127,7 +127,7 @@ let removeItem = (~userId, ~sessionId, ~itemId, ~variant) => {
         (),
       ),
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 }
 
@@ -139,7 +139,7 @@ let removeItems = (~sessionId, ~items: array<(int, int)>) => {
       Fetch.RequestInit.make(
         ~method_=Delete,
         ~body=Fetch.BodyInit.make(
-          Js.Json.stringify({
+          JSON.stringify({
             open Json.Encode
             object_(list{("items", array(tuple2(int, int), items))})
           }),
@@ -154,7 +154,7 @@ let removeItems = (~sessionId, ~items: array<(int, int)>) => {
         (),
       ),
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 }
 
@@ -168,7 +168,7 @@ let updateProfileText = (~userId, ~sessionId, ~profileText) =>
       },
       ~sessionId,
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 
 let updateSetting = (~userId, ~sessionId, ~settingKey, ~settingValue) => {
@@ -179,7 +179,7 @@ let updateSetting = (~userId, ~sessionId, ~settingKey, ~settingValue) => {
       Fetch.RequestInit.make(
         ~method_=Patch,
         ~body=Fetch.BodyInit.make(
-          Js.Json.stringify(
+          JSON.stringify(
             Json.Encode.object_(list{
               ("key", Json.Encode.string(settingKey)),
               ("value", settingValue),
@@ -197,7 +197,7 @@ let updateSetting = (~userId, ~sessionId, ~settingKey, ~settingValue) => {
         (),
       ),
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 }
 
@@ -210,20 +210,20 @@ let patchMe = (~userId, ~sessionId, ~username, ~newPassword, ~email, ~oldPasswor
       Fetch.RequestInit.make(
         ~method_=Patch,
         ~body=Fetch.BodyInit.make(
-          Js.Json.stringify(
-            Js.Json.object_(
-              Js.Dict.fromArray(
+          JSON.stringify(
+            JSON.object_(
+              Dict.fromArray(
                 Array.keepMap(
                   [
-                    Option.map(username, username => ("username", Js.Json.string(username))),
+                    Option.map(username, username => ("username", JSON.string(username))),
                     Option.map(newPassword, newPassword => (
                       "password",
-                      Js.Json.string(newPassword),
+                      JSON.string(newPassword),
                     )),
-                    Option.map(email, email => ("email", Js.Json.string(email))),
+                    Option.map(email, email => ("email", JSON.string(email))),
                     Option.map(oldPassword, oldPassword => (
                       "oldPassword",
-                      Js.Json.string(oldPassword),
+                      JSON.string(oldPassword),
                     )),
                   ],
                   x => x,
@@ -242,7 +242,7 @@ let patchMe = (~userId, ~sessionId, ~username, ~newPassword, ~email, ~oldPasswor
         (),
       ),
     )
-    Promise.resolved(response)
+    Promise.resolve(response)
   })
 }
 
@@ -262,7 +262,7 @@ let getUserLists = (~sessionId) => {
         (),
       ),
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 }
 
@@ -274,7 +274,7 @@ let createItemList = (~sessionId, ~items: array<(int, int)>) => {
       Fetch.RequestInit.make(
         ~method_=Post,
         ~body=Fetch.BodyInit.make(
-          Js.Json.stringify({
+          JSON.stringify({
             open Json.Encode
             object_(list{("items", array(tuple2(int, int), items))})
           }),
@@ -289,7 +289,7 @@ let createItemList = (~sessionId, ~items: array<(int, int)>) => {
         (),
       ),
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 }
 
@@ -309,7 +309,7 @@ let cloneItemList = (~sessionId, ~listId) => {
         (),
       ),
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 }
 
@@ -321,7 +321,7 @@ let updateItemList = (~sessionId, ~listId, ~title=?, ~items: option<array<(int, 
       Fetch.RequestInit.make(
         ~method_=Patch,
         ~body=Fetch.BodyInit.make(
-          Js.Json.stringify({
+          JSON.stringify({
             open Json.Encode
             object_(
               Belt.List.keepMap(
@@ -344,7 +344,7 @@ let updateItemList = (~sessionId, ~listId, ~title=?, ~items: option<array<(int, 
         (),
       ),
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 }
 
@@ -364,7 +364,7 @@ let deleteItemList = (~sessionId, ~listId) => {
         (),
       ),
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 }
 
@@ -383,7 +383,7 @@ let getItemList = (~listId: string) => {
         (),
       ),
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 }
 
@@ -404,11 +404,11 @@ let followUser = (~userId, ~sessionId) =>
       ),
     )
     if Fetch.Response.status(response) < 300 {
-      Promise.resolved(Ok())
+      Promise.resolve(Ok())
     } else {
       %Repromise.JsExn({
         let text = Fetch.Response.text(response)
-        Promise.resolved(Error(text))
+        Promise.resolve(Error(text))
       })
     }
   })
@@ -430,11 +430,11 @@ let unfollowUser = (~userId, ~sessionId) =>
       ),
     )
     if Fetch.Response.status(response) < 300 {
-      Promise.resolved(Ok())
+      Promise.resolve(Ok())
     } else {
       %Repromise.JsExn({
         let text = Fetch.Response.text(response)
-        Promise.resolved(Error(text))
+        Promise.resolve(Error(text))
       })
     }
   })
@@ -454,7 +454,7 @@ let getFolloweesItem = (~sessionId, ~itemId) =>
         (),
       ),
     )
-    Promise.resolved(response)
+    Promise.resolve(response)
   })
 
 let connectDiscordAccount = (~sessionId, ~code) =>
@@ -464,7 +464,7 @@ let connectDiscordAccount = (~sessionId, ~code) =>
       Fetch.RequestInit.make(
         ~method_=Post,
         ~body=Fetch.BodyInit.make(
-          Js.Json.stringify(Json.Encode.object_(list{("code", Js.Json.string(code))})),
+          JSON.stringify(Json.Encode.object_(list{("code", JSON.string(code))})),
         ),
         ~headers=Fetch.HeadersInit.make({
           "X-Client-Version": Constants.gitCommitRef,
@@ -476,7 +476,7 @@ let connectDiscordAccount = (~sessionId, ~code) =>
         (),
       ),
     )
-    Promise.resolved(response)
+    Promise.resolve(response)
   })
 
 let removeAllItems = (~sessionId) =>
@@ -495,7 +495,7 @@ let removeAllItems = (~sessionId) =>
         (),
       ),
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })
 
 let deleteAccount = (~sessionId, ~userId) =>
@@ -514,5 +514,5 @@ let deleteAccount = (~sessionId, ~userId) =>
         (),
       ),
     )
-    Promise.resolved(responseResult)
+    Promise.resolve(responseResult)
   })

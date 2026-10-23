@@ -81,7 +81,7 @@ const f64: Float64Array = S.idFloat64Array(new Float64Array());
 const bi64: BigInt64Array = S.idBigInt64Array(new BigInt64Array(2));
 const bu64: BigUint64Array = S.idBigUint64Array(new BigUint64Array(2));
 
-// Symbol (may not be mapped yet)
+// Symbol
 const sym: symbol = S.idSymbol(Symbol("x"));
 
 // Iterator / AsyncIterator / Ordering

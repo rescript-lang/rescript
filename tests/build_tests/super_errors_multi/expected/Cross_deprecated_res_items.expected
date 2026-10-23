@@ -1,0 +1,48 @@
+===== User.res =====
+
+  [1;33mWarning number 3[0m
+  [36m/.../fixtures/Cross_deprecated_res_items/User.res[0m:[2m1:9-19[0m
+
+  [1;33m1[0m [2m│[0m let a = [1;33mLegacy.oldF[0m(1)
+  2 [2m│[0m let b = Legacy.compute(1)
+  3 [2m│[0m let c = Legacy.OldM.v
+
+  deprecated: Legacy.oldF
+  Use newF instead
+
+
+  [1;33mWarning number 3[0m
+  [36m/.../fixtures/Cross_deprecated_res_items/User.res[0m:[2m2:9-22[0m
+
+  1 [2m│[0m let a = Legacy.oldF(1)
+  [1;33m2[0m [2m│[0m let b = [1;33mLegacy.compute[0m(1)
+  3 [2m│[0m let c = Legacy.OldM.v
+  4 [2m│[0m let d: Legacy.oldT = 1
+
+  deprecated: Legacy.compute
+  Use computeNew instead
+
+
+  [1;33mWarning number 3[0m
+  [36m/.../fixtures/Cross_deprecated_res_items/User.res[0m:[2m3:9-21[0m
+
+  1 [2m│[0m let a = Legacy.oldF(1)
+  2 [2m│[0m let b = Legacy.compute(1)
+  [1;33m3[0m [2m│[0m let c = [1;33mLegacy.OldM.v[0m
+  4 [2m│[0m let d: Legacy.oldT = 1
+  5 [2m│[0m 
+
+  deprecated: module Legacy.OldM
+Use NewM instead
+
+
+  [1;33mWarning number 3[0m
+  [36m/.../fixtures/Cross_deprecated_res_items/User.res[0m:[2m4:8-18[0m
+
+  2 [2m│[0m let b = Legacy.compute(1)
+  3 [2m│[0m let c = Legacy.OldM.v
+  [1;33m4[0m [2m│[0m let d: [1;33mLegacy.oldT[0m = 1
+  5 [2m│[0m 
+
+  deprecated: Legacy.oldT
+  Use newT instead

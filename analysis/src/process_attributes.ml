@@ -2,45 +2,37 @@ open Shared_types
 
 (* TODO should I hang on to location? *)
 let rec find_doc_attribute attributes =
-  let open Parsetree in
   match attributes with
   | [] -> None
-  | ( {Asttypes.txt = "ocaml.doc" | "ocaml.text" | "ns.doc" | "res.doc"},
-      PStr
-        [
-          {
-            pstr_desc =
-              Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string (doc, _))}, _);
-          };
-        ] )
-    :: _ ->
-    Some doc
+  | ({Asttypes.txt = "res.doc"}, payload) :: rest -> (
+    match Ast_payload.semantic_string_of_payload payload with
+    | Some doc -> Some doc
+    | None -> find_doc_attribute rest)
   | _ :: rest -> find_doc_attribute rest
 
 let rec find_deprecated_attribute attributes =
   let open Parsetree in
   match attributes with
   | [] -> None
-  | ( {Asttypes.txt = "deprecated"},
-      PStr [{pstr_desc = Pstr_eval ({pexp_desc = expr}, _)}] )
+  | ({Asttypes.txt = "deprecated"}, PStr [{pstr_desc = Pstr_eval (expr, _)}])
     :: _ -> (
-    match expr with
-    (* Simple deprecated attr @deprecated("message") *)
-    | Pexp_constant (Pconst_string (_msg, _)) -> Some _msg
-    (* deprecated attr with record *)
-    | Pexp_record (fields, _) ->
-      let reason = ref "" in
-
-      fields
-      |> List.iter (fun {lid = {txt}; x} ->
-             match (txt, x) with
-             | ( Lident "reason",
-                 {pexp_desc = Pexp_constant (Pconst_string (msg, _))} ) ->
-               reason := msg
-             | _ -> ());
-
-      Some !reason
-    | _ -> None)
+    match Ast_payload.semantic_string_of_expression expr with
+    | Some msg -> Some msg
+    | None -> (
+      match (Ast_payload.unwrap_braces expr).pexp_desc with
+      (* deprecated attr with record *)
+      | Pexp_record (fields, _) ->
+        let reason = ref "" in
+        fields
+        |> List.iter (fun {lid = {txt}; x} ->
+            match txt with
+            | Lident "reason" -> (
+              match Ast_payload.semantic_string_of_expression x with
+              | Some msg -> reason := msg
+              | None -> ())
+            | _ -> ());
+        Some !reason
+      | _ -> None))
   | ({Asttypes.txt = "deprecated"}, _) :: _ -> Some ""
   | _ :: rest -> find_deprecated_attribute rest
 
@@ -68,17 +60,17 @@ let rec find_editor_complete_from_attribute ?(module_paths = []) attributes =
       PStr [{pstr_desc = Pstr_eval (payload_expr, _)}] )
     :: rest ->
     let items =
-      match payload_expr with
+      match Ast_payload.unwrap_braces payload_expr with
       | {pexp_desc = Pexp_array items} -> items
       | p -> [p]
     in
     let module_paths_from_array =
       items
       |> List.filter_map (fun item ->
-             match item.Parsetree.pexp_desc with
-             | Pexp_construct ({txt = path}, None) ->
-               Some (Utils.flatten_long_ident path)
-             | _ -> None)
+          match (Ast_payload.unwrap_braces item).Parsetree.pexp_desc with
+          | Pexp_construct ({txt = path}, {txt = []}) ->
+            Some (Utils.flatten_long_ident path)
+          | _ -> None)
     in
     find_editor_complete_from_attribute
       ~module_paths:(module_paths_from_array @ module_paths)

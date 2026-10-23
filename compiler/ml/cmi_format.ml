@@ -35,49 +35,34 @@ let input_cmi ic =
   let flags = input_value ic in
   {cmi_name = name; cmi_sign = sign; cmi_crcs = crcs; cmi_flags = flags}
 
-let read_cmi filename =
-  let ic = open_in_bin filename in
+let read_cmi_channel filename ic =
   try
     let buffer =
       really_input_string ic (String.length Config.cmi_magic_number)
     in
-    if buffer <> Config.cmi_magic_number then (
-      close_in ic;
-      let pre_len = String.length Config.cmi_magic_number - 3 in
-      if
-        String.sub buffer 0 pre_len
-        = String.sub Config.cmi_magic_number 0 pre_len
-      then
-        let msg =
-          if buffer < Config.cmi_magic_number then "an older" else "a newer"
-        in
-        raise (Error (Wrong_version_interface (filename, msg)))
-      else raise (Error (Not_an_interface filename)));
+    (if buffer <> Config.cmi_magic_number then
+       let pre_len = String.length Config.cmi_magic_number - 3 in
+       if
+         String.sub buffer 0 pre_len
+         = String.sub Config.cmi_magic_number 0 pre_len
+       then
+         let msg =
+           if buffer < Config.cmi_magic_number then "an older" else "a newer"
+         in
+         raise (Error (Wrong_version_interface (filename, msg)))
+       else raise (Error (Not_an_interface filename)));
     let cmi = input_cmi ic in
-    close_in ic;
     cmi
-  with
-  | End_of_file | Failure _ ->
-    close_in ic;
-    raise (Error (Corrupted_interface filename))
-  | Error e ->
-    close_in ic;
-    raise (Error e)
+  with End_of_file | Failure _ -> raise (Error (Corrupted_interface filename))
 
-let output_cmi filename oc cmi =
-  (* beware: the provided signature must have been substituted for saving *)
-  output_string oc Config.cmi_magic_number;
-  output_value oc (cmi.cmi_name, cmi.cmi_sign);
-  flush oc;
-  let crc = Digest.file filename in
-  let crcs = (cmi.cmi_name, Some crc) :: cmi.cmi_crcs in
-  output_value oc crcs;
-  output_value oc cmi.cmi_flags;
-  crc
+let read_cmi filename =
+  let ic = open_in_bin (Compiler_request_state.resolve_path filename) in
+  Fun.protect
+    (fun () -> read_cmi_channel filename ic)
+    ~finally:(fun () -> close_in_noerr ic)
 
-(* This function is also called by [save_cmt] as cmi_format is subset of
-       cmt_format, so dont close the channel yet
-*)
+(* Writes the .cmi file, keeping an existing one with the same contents
+   when [check_exists] is given *)
 let create_cmi ?check_exists filename (cmi : cmi_infos) =
   (* beware: the provided signature must have been substituted for saving *)
   let content =
@@ -86,8 +71,10 @@ let create_cmi ?check_exists filename (cmi : cmi_infos) =
   in
   let crc = Digest.string content in
   let cmi_infos =
-    if check_exists <> None && Sys.file_exists filename then
-      Some (read_cmi filename)
+    if
+      check_exists <> None
+      && Sys.file_exists (Compiler_request_state.resolve_path filename)
+    then Some (read_cmi filename)
     else None
   in
   match cmi_infos with
@@ -104,11 +91,14 @@ let create_cmi ?check_exists filename (cmi : cmi_infos) =
     crc
   | _ ->
     let crcs = (cmi.cmi_name, Some crc) :: cmi.cmi_crcs in
-    let oc = open_out_bin filename in
-    output_string oc content;
-    output_value oc crcs;
-    output_value oc cmi.cmi_flags;
-    close_out oc;
+    let oc = open_out_bin (Compiler_request_state.resolve_path filename) in
+    Fun.protect
+      ~finally:(fun () -> close_out_noerr oc)
+      (fun () ->
+        output_string oc content;
+        output_value oc crcs;
+        output_value oc cmi.cmi_flags;
+        close_out oc);
     crc
 
 (* Error report *)

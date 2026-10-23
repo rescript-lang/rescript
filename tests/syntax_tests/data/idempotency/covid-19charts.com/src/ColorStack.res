@@ -28,7 +28,7 @@ let colors = [
 
 let initialColors = {
   let stack = Stack.make()
-  Js.Array.forEach(color => Stack.push(stack, color), colors)
+  Array.forEach(colors, color => Stack.push(stack, color))
   stack
 }
 
@@ -41,10 +41,10 @@ let popColor = colorQueue =>
 let make = (~locations) => {
   let colors = Stack.copy(initialColors)
   {
-    associations: Js.Array.reduce((associations, location) => {
+    associations: Array.reduce(locations, Map.empty, (associations, location) => {
       let color = popColor(colors)
       Map.set(associations, location, color)
-    }, Map.empty, locations),
+    }),
     colors: colors,
   }
 }

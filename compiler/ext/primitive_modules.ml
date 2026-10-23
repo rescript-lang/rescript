@@ -34,6 +34,8 @@ let string = "Primitive_string"
 
 let array = "Primitive_array"
 
+let list = "Primitive_list"
+
 let dict = "Primitive_dict"
 
 let object_ = "Primitive_object"
@@ -48,8 +50,6 @@ let hash = "Primitive_hash"
 
 let exceptions = "Primitive_exceptions"
 
-let curry = "Primitive_curry"
-
-let util = "Primitive_util"
+let js_extern = "Primitive_js_extern"
 
 let pervasives = "Pervasives"

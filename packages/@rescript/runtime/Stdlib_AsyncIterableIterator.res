@@ -1,4 +1,4 @@
-type t<'yield, 'return, 'next> = Stdlib_AsyncIterable.t<'yield>
+type t<+'yield, +'return, -'next> = Stdlib_AsyncIterable.t<'yield>
 
 let make: (unit => promise<Stdlib_Iterator.result<'yield, 'return>>) => t<
   'yield,

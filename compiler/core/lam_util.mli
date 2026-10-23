@@ -22,16 +22,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val kind_of_lambda_block : Lam.t list -> Lam_id_kind.t
+val kind_of_lambda_block : Lambda.t list -> Lam_id_kind.t
 
 val field_flatten_get :
-  (unit -> Lam.t) ->
+  (unit -> Lambda.t) ->
   Ident.t ->
   int ->
   Lambda.field_dbg_info ->
   Lam_stats.ident_tbl ->
-  Lam.t
-(** [field_flattern_get cb v i tbl]
+  Lambda.t
+(** [field_flatten_get cb v i tbl]
     try to remove the indirection of [v.(i)] by inlining when [v]
     is a known block, 
     if not, it will call [cb ()].
@@ -52,11 +52,14 @@ val field_flatten_get :
 val alias_ident_or_global :
   Lam_stats.t -> Ident.t -> Ident.t -> Lam_id_kind.t -> unit
 
-val refine_let : kind:Lam_compat.let_kind -> Ident.t -> Lam.t -> Lam.t -> Lam.t
+val refine_let :
+  ?original:Lambda.t ->
+  kind:Lambda.let_kind ->
+  Ident.t ->
+  Lambda.t ->
+  Lambda.t ->
+  Lambda.t
+(** [original] is the binding being rebuilt, when there is one. It is returned
+    unchanged if no refinement applies. *)
 
-val dump : string -> Lam.t -> unit
-(** [dump] when {!Js_config.is_same_file}*)
-
-val not_function : Lam.t -> bool
-
-val is_function : Lam.t -> bool
+val not_function : Lambda.t -> bool

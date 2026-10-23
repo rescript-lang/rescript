@@ -147,7 +147,7 @@ module UserDetails = {
         \"<$>"(\">>="(\">>="(optProfile, a => a.image), img => img->Array.get(0)), a =>
           a.contentUrl
         ),
-        content => Js.Dict.get(content, "/"),
+        content => Dict.get(content, "/"),
       )->Option.mapWithDefault(Blockie.makeBlockie(userAddress), hash =>
         "https://ipfs.infura.io/ipfs/" ++ hash
       )
@@ -390,7 +390,7 @@ module UserDetails = {
 
 @react.component
 let make = (~chain, ~userAddress: string) => {
-  let userAddressLowerCase = userAddress->Js.String.toLowerCase
+  let userAddressLowerCase = userAddress->String.toLowerCase
   let patronQuery = QlHooks.useQueryPatron(~chain=Client.MainnetQuery, userAddressLowerCase)
   let userInfoContext = UserProvider.useUserInfoContext()
   let reloadUser = forceReload => userInfoContext.update(userAddressLowerCase, forceReload) // double check that data is loaded.

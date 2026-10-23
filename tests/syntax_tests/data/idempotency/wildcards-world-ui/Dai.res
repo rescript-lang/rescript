@@ -1,6 +1,6 @@
 type daiContract
 @send
-external getNonce: (daiContract, Web3.ethAddress) => Js.Promise.t<BN.t> = "getNonce"
+external getNonce: (daiContract, Web3.ethAddress) => Promise.t<BN.t> = "getNonce"
 
 @new @module("ethers")
 external getContract: (Web3.ethAddress, Web3.abi, Web3.web3Library) => daiContract = "Contract"

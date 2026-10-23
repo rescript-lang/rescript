@@ -1,4 +1,4 @@
-let f = a => Js.Promise.resolve(a + a)
+let f = a => Promise.resolve(a + a)
 
 module C0 = {
   @react.component
@@ -16,4 +16,12 @@ module C1 = {
     | #off => React.string("off")
     }
   }
+}
+
+module Braced = {
+  @react.component
+  let make = {async (~a) => {
+    let a = await f(a)
+    <div> {React.int(a)} </div>
+  }}
 }

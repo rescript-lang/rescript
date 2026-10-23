@@ -50,7 +50,7 @@ let make = (~min=50, ~max=250, ~meterSuffix=?) => {
       />
     </div>
     <div className="meter text-4xl font-bold text-gray-600 mt-4">
-      {values[0]->Js.Int.toString->string} {meterSuffix->Belt.Option.getWithDefault(null)}
+      {values[0]->Int.toString->string} {meterSuffix->Belt.Option.getWithDefault(null)}
     </div>
   </div>
 }

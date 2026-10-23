@@ -1,12 +1,15 @@
 
 
 import * as Primitive_option from "./Primitive_option.mjs";
+import * as Primitive_exceptions from "./Primitive_exceptions.mjs";
 
 function fromException(exn) {
   if (exn.RE_EXN_ID === "JsExn") {
     return Primitive_option.some(exn._1);
   }
 }
+
+let anyToExnInternal = Primitive_exceptions.internalToException;
 
 let getOrUndefined = (fieldName => t => (t && typeof t[fieldName] === "string" ? t[fieldName] : undefined));
 
@@ -20,6 +23,7 @@ let fileName = getOrUndefined("fileName");
 
 export {
   fromException,
+  anyToExnInternal,
   stack,
   message,
   name,

@@ -48,4 +48,3 @@ let catchingExnErrorWithSwitch = switch someThrowingJsCode() {
 let catchingExnErrorWithTryCatch = try {someThrowingJsCode()} catch {
 | JsExn(e) => e->JsExn.message
 }
-

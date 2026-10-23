@@ -11,8 +11,8 @@ let Rgb(rrrrrrrrrrrrrrrrrrrrrrrrr, ggggggggggggggggggggggggg, bbbbbbbbbbbbbbbbbb
 let Units((), (), ()) = 1
 
 switch truth {
-| true => Js.log("true")
-| false => Js.log("false")
+| true => Console.log("true")
+| false => Console.log("false")
 }
 
 switch sphere->intersect(~ray) {

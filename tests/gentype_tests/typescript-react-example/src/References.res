@@ -6,7 +6,7 @@
 
 @genType let update = r => r.contents = r.contents + 1
 
-// Abstract version of references: works when conversion is required.
+// Abstract version of references, exported as an opaque type.
 
 module R: {
   @genType type t<'a>
@@ -31,8 +31,6 @@ let make = R.make
 
 type requiresConversion = {x: int}
 
-// Careful: conversion makes a copy and destroys the reference identity.
 @genType let destroysRefIdentity = (x: ref<requiresConversion>) => x
 
-// Using abstract references preserves the identity.
 @genType let preserveRefIdentity = (x: R.t<requiresConversion>) => x

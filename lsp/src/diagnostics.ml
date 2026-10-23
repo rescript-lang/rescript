@@ -89,9 +89,9 @@ let%expect_test "get_all merges diagnostics from every source" =
   in
   get_all t |> Uri_map.find uri
   |> List.iter (fun (diagnostic : Diagnostic.t) ->
-         match diagnostic.message with
-         | `String message -> print_endline message
-         | `MarkupContent {value} -> print_endline value);
+      match diagnostic.message with
+      | `String message -> print_endline message
+      | `MarkupContent {value} -> print_endline value);
   [%expect {|
     syntax
     compiler
@@ -107,11 +107,11 @@ let send ?(include_syntax = true) ?(force_publish_uris = [])
     diagnostics;
   force_publish_uris
   |> List.iter (fun uri ->
-         (* A URI excluded from this push may still have diagnostics retained
+      (* A URI excluded from this push may still have diagnostics retained
             from an earlier push. Publish an empty list when ownership changes
             so the client does not combine that stale result with pull data. *)
-         if (not (should_publish uri)) || not (Uri_map.mem uri diagnostics) then
-           t.send (PublishDiagnosticsParams.create ~uri ~diagnostics:[] ()))
+      if (not (should_publish uri)) || not (Uri_map.mem uri diagnostics) then
+        t.send (PublishDiagnosticsParams.create ~uri ~diagnostics:[] ()))
 
 let%expect_test "send can reserve an open document for pull diagnostics" =
   let open_uri = Uri.of_path "/workspace/Open.res" in
@@ -190,26 +190,26 @@ let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
   let diagnostics_sanitized =
     diagnostics
     |> List.filter_map (fun (entry : Compiler_log.Parse.diagnostic_entry) ->
-           let uri =
-             match entry.path with
-             | Compiler_log.Parse.Relative_path p ->
-               Uri.of_path (Filename.concat workspace_root_path p)
-             | Full_path p -> Uri.of_path p
-           in
+        let uri =
+          match entry.path with
+          | Compiler_log.Parse.Relative_path p ->
+            Uri.of_path (Filename.concat workspace_root_path p)
+          | Full_path p -> Uri.of_path p
+        in
 
-           match entry.kind with
-           | Syntax_error ->
-             if
-               include_syntax
-               && Option.is_none (Document_store.get_opt ~uri doc_store)
-             then Some (uri, diagnostic_of_entry uri entry)
-             else None
-           | Circular_dependency ->
-             if not include_non_syntax then None
-             else Some (uri, diagnostic_of_entry uri entry)
-           | Warning _ | Common_error | Unknown ->
-             if not include_non_syntax then None
-             else Some (uri, diagnostic_of_entry uri entry))
+        match entry.kind with
+        | Syntax_error ->
+          if
+            include_syntax
+            && Option.is_none (Document_store.get_opt ~uri doc_store)
+          then Some (uri, diagnostic_of_entry uri entry)
+          else None
+        | Circular_dependency ->
+          if not include_non_syntax then None
+          else Some (uri, diagnostic_of_entry uri entry)
+        | Warning _ | Common_error | Unknown ->
+          if not include_non_syntax then None
+          else Some (uri, diagnostic_of_entry uri entry))
   in
 
   diagnostics_sanitized
@@ -274,10 +274,10 @@ let collect_diagnostics_from_log_using_source_dirs workspace_root fs =
   in
   build_roots
   |> List.filter_map (fun build_root ->
-         let compiler_log_path =
-           workspace_root_path /+ build_root /+ Constants.compiler_log
-         in
-         Fs.load ~fs compiler_log_path)
+      let compiler_log_path =
+        workspace_root_path /+ build_root /+ Constants.compiler_log
+      in
+      Fs.load ~fs compiler_log_path)
   |> diagnostics_from_completed_logs
 
 let%expect_test "only completed compiler logs form a diagnostics snapshot" =
@@ -316,18 +316,18 @@ let%expect_test "compiler syntax diagnostics don't clear type diagnostics" =
   let print t =
     diagnostics t
     |> Uri_map.iter (fun uri diagnostics ->
-           let messages =
-             diagnostics
-             |> List.map (fun (diagnostic : Diagnostic.t) ->
-                    match diagnostic.message with
-                    | `String message -> message
-                    | `MarkupContent {value} -> value)
-           in
-           Printf.printf "%s: %s\n"
-             (Filename.basename (Uri.to_path uri))
-             (match messages with
-             | [] -> "<empty>"
-             | messages -> String.concat ", " messages))
+        let messages =
+          diagnostics
+          |> List.map (fun (diagnostic : Diagnostic.t) ->
+              match diagnostic.message with
+              | `String message -> message
+              | `MarkupContent {value} -> value)
+        in
+        Printf.printf "%s: %s\n"
+          (Filename.basename (Uri.to_path uri))
+          (match messages with
+          | [] -> "<empty>"
+          | messages -> String.concat ", " messages))
   in
   let doc_store = Document_store.make () in
   let t = make ~diagnostics:(empty ()) ~send:(fun _ -> ()) in

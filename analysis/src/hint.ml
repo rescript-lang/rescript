@@ -13,8 +13,6 @@ let loc_item_to_type_hint ~state ~full:{file; package} loc_item =
       | Const_char _ -> "char"
       | Const_string _ -> "string"
       | Const_float _ -> "float"
-      | Const_int32 _ -> "int32"
-      | Const_int64 _ -> "int64"
       | Const_bigint _ -> "bigint")
   | Typed (_, t, loc_kind) ->
     let from_type typ =
@@ -42,6 +40,8 @@ let inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug =
   let rec process_pattern (pat : Parsetree.pattern) =
     match pat.ppat_desc with
     | Ppat_tuple pl -> pl |> List.iter process_pattern
+    | Ppat_dict entries ->
+      Ext_list.iter entries (fun {pdp_pattern} -> process_pattern pdp_pattern)
     | Ppat_record (fields, _, rest) -> (
       Ext_list.iter fields (fun {x = p} -> process_pattern p);
       match rest with
@@ -53,31 +53,26 @@ let inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug =
   in
   let value_binding (iterator : Ast_iterator.iterator)
       (vb : Parsetree.value_binding) =
+    let expr = Res_parsetree_viewer.unwrap_braces vb.pvb_expr in
     (match vb with
-    | {
-     pvb_pat = {ppat_desc = Ppat_var _};
-     pvb_expr =
-       {
-         pexp_desc =
-           ( Pexp_constant _ | Pexp_tuple _ | Pexp_record _ | Pexp_variant _
-           | Pexp_apply _ | Pexp_match _ | Pexp_construct _ | Pexp_ifthenelse _
-           | Pexp_array _ | Pexp_ident _ | Pexp_try _ | Pexp_send _
-           | Pexp_field _ | Pexp_open _
-           | Pexp_fun {arity = Some _} );
-       };
-    } ->
-      push vb.pvb_pat.ppat_loc Type
+    | {pvb_pat = {ppat_desc = Ppat_var _}; pvb_constraint = None} -> (
+      match expr.pexp_desc with
+      | Pexp_constant _ | Pexp_tuple _ | Pexp_record _ | Pexp_variant _
+      | Pexp_apply _ | Pexp_match _ | Pexp_construct _ | Pexp_ifthenelse _
+      | Pexp_ternary _ | Pexp_array _ | Pexp_dict _ | Pexp_ident _ | Pexp_try _
+      | Pexp_object_get _ | Pexp_object_set _ | Pexp_field _ | Pexp_open _
+      | Pexp_fun _ | Pexp_template _ | Pexp_tagged_template _ ->
+        push vb.pvb_pat.ppat_loc Type
+      | _ -> ())
     | {pvb_pat = {ppat_desc = Ppat_tuple _}} -> process_pattern vb.pvb_pat
-    | {pvb_pat = {ppat_desc = Ppat_record _}} -> process_pattern vb.pvb_pat
+    | {pvb_pat = {ppat_desc = Ppat_record _ | Ppat_dict _}} ->
+      process_pattern vb.pvb_pat
     | _ -> ());
     Ast_iterator.default_iterator.value_binding iterator vb
   in
   let iterator = {Ast_iterator.default_iterator with value_binding} in
   (if kind_file = Files.Res then
-     let parser =
-       Res_driver.parsing_engine.parse_implementation_from_source
-         ~for_printer:false
-     in
+     let parser = Res_driver.parsing_engine.parse_implementation_from_source in
      let {Res_driver.parsetree = structure} = parser ~source in
      iterator.structure iterator structure |> ignore);
   match full with
@@ -86,30 +81,30 @@ let inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug =
     let result =
       !hints
       |> List.filter_map (fun ((range : Lsp.Types.Range.t), hint_kind) ->
-             match
-               References.get_loc_item ~full
-                 ~pos:(range.start.line, range.start.character + 1)
-                 ~debug
-             with
-             | None -> None
-             | Some loc_item -> (
-               let position =
-                 Lsp.Types.Position.create ~line:range.start.line
-                   ~character:range.end_.character
-               in
-               match loc_item_to_type_hint loc_item ~state ~full with
-               | Some label -> (
-                 let kind = inlay_kind_to_lsp_inlay_hint hint_kind in
-                 let label = ": " ^ label in
-                 let result =
-                   Lsp.Types.InlayHint.create ~position ~kind ~paddingLeft:true
-                     ~paddingRight:false ~label:(`String label) ()
-                 in
-                 match max_length with
-                 | Some value ->
-                   if String.length label > value then None else Some result
-                 | None -> Some result)
-               | None -> None))
+          match
+            References.get_loc_item ~full
+              ~pos:(range.start.line, range.start.character + 1)
+              ~debug
+          with
+          | None -> None
+          | Some loc_item -> (
+            let position =
+              Lsp.Types.Position.create ~line:range.start.line
+                ~character:range.end_.character
+            in
+            match loc_item_to_type_hint loc_item ~state ~full with
+            | Some label -> (
+              let kind = inlay_kind_to_lsp_inlay_hint hint_kind in
+              let label = ": " ^ label in
+              let result =
+                Lsp.Types.InlayHint.create ~position ~kind ~paddingLeft:true
+                  ~paddingRight:false ~label:(`String label) ()
+              in
+              match max_length with
+              | Some value ->
+                if String.length label > value then None else Some result
+              | None -> Some result)
+            | None -> None))
     in
     Some result
 
@@ -124,11 +119,10 @@ let code_lens ~source ~kind_file ~full ~debug =
   let value_binding (iterator : Ast_iterator.iterator)
       (vb : Parsetree.value_binding) =
     (match vb with
-    | {
-     pvb_pat = {ppat_desc = Ppat_var _; ppat_loc};
-     pvb_expr = {pexp_desc = Pexp_fun _};
-    } ->
-      push ppat_loc
+    | {pvb_pat = {ppat_desc = Ppat_var _; ppat_loc}; pvb_constraint = None} -> (
+      match (Res_parsetree_viewer.unwrap_braces vb.pvb_expr).pexp_desc with
+      | Pexp_fun _ -> push ppat_loc
+      | _ -> ())
     | _ -> ());
     Ast_iterator.default_iterator.value_binding iterator vb
   in
@@ -136,10 +130,7 @@ let code_lens ~source ~kind_file ~full ~debug =
   (* We only print code lenses in implementation files. This is because they'd be redundant in interface files,
      where the definition itself will be the same thing as what would've been printed in the code lens. *)
   (if kind_file = Files.Res then
-     let parser =
-       Res_driver.parsing_engine.parse_implementation_from_source
-         ~for_printer:false
-     in
+     let parser = Res_driver.parsing_engine.parse_implementation_from_source in
      let {Res_driver.parsetree = structure} = parser ~source in
      iterator.structure iterator structure |> ignore);
   match full with
@@ -148,23 +139,23 @@ let code_lens ~source ~kind_file ~full ~debug =
     let result =
       !lenses
       |> List.filter_map (fun (range : Lsp.Types.Range.t) ->
-             match
-               References.get_loc_item ~full
-                 ~pos:(range.start.line, range.start.character + 1)
-                 ~debug
-             with
-             | Some {loc_type = Typed (_, type_expr, _)} ->
-               (* Code lenses can run commands. An empty command string means we just want the editor
+          match
+            References.get_loc_item ~full
+              ~pos:(range.start.line, range.start.character + 1)
+              ~debug
+          with
+          | Some {loc_type = Typed (_, type_expr, _)} ->
+            (* Code lenses can run commands. An empty command string means we just want the editor
                    to print the text, not link to running a command. *)
-               let command =
-                 Lsp.Types.Command.create
-                   ~command:""
-                     (* Print the type with a huge line width, because the code lens always prints on a
+            let command =
+              Lsp.Types.Command.create
+                ~command:""
+                  (* Print the type with a huge line width, because the code lens always prints on a
                        single line in the editor. *)
-                   ~title:(type_expr |> Shared.type_to_string ~line_width:400)
-                   ()
-               in
-               Some (Lsp.Types.CodeLens.create ~range ~command ())
-             | _ -> None)
+                ~title:(type_expr |> Shared.type_to_string ~line_width:400)
+                ()
+            in
+            Some (Lsp.Types.CodeLens.create ~range ~command ())
+          | _ -> None)
     in
     Some result

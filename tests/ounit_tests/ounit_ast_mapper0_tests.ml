@@ -3,6 +3,15 @@ let assert_failure = OUnit.assert_failure
 
 let loc = Location.none
 
+let located_string ?(loc = loc) txt = {Location.txt; loc}
+
+let source_loc start_cnum end_cnum =
+  {
+    Location.loc_start = {Lexing.dummy_pos with pos_cnum = start_cnum};
+    loc_end = {Lexing.dummy_pos with pos_cnum = end_cnum};
+    loc_ghost = false;
+  }
+
 let attr name payload = ({Location.txt = name; loc}, payload)
 
 let has_attr name attrs =
@@ -18,6 +27,63 @@ let record_pat0 attrs =
 
 let map_pat0 pat =
   Ast_mapper_from0.default_mapper.pat Ast_mapper_from0.default_mapper pat
+
+(* The [ocaml.ppx.context] attribute a PPX receives. *)
+let ppx_context_fields0 ast0 =
+  match ast0 with
+  | Ml_binary.Impl
+      ({
+         Parsetree0.pstr_desc =
+           Pstr_attribute
+             ( {txt = "ocaml.ppx.context"},
+               PStr
+                 [
+                   {
+                     pstr_desc =
+                       Pstr_eval ({pexp_desc = Pexp_record (fields, None)}, _);
+                   };
+                 ] );
+       }
+      :: _) ->
+    fields
+  | _ -> assert_failure "the structure starts with the PPX context"
+
+let test_ppx_context_on_the_wire _ =
+  let structure =
+    Ast_mapper.add_ppx_context_str ~tool_name:"rescript"
+      [
+        Ast_helper.Str.eval
+          (Ast_helper.Exp.constant (Pconst_integer ("1", None)));
+      ]
+  in
+  let fields =
+    ppx_context_fields0 (Ml_binary.to_ast0 Ml_binary.Ml structure)
+    |> List.map (fun (({txt} : Longident.t Location.loc), value) ->
+        (Longident.last txt, value))
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    [
+      "tool_name";
+      "include_dirs";
+      "load_path";
+      "open_modules";
+      "debug";
+      "cookies";
+    ]
+    (List.map fst fields);
+  (match List.assoc "cookies" fields with
+  | {Parsetree0.pexp_desc = Pexp_construct ({txt = Lident "[]"}, None)} -> ()
+  | _ -> assert_failure "the PPX gets no cookies");
+  OUnit.assert_equal 1 (List.length (Ast_mapper.drop_ppx_context_str structure))
+
+let test_removed_open_pattern_is_rejected_from_ast0 _ =
+  let pat =
+    Ast_helper0.Pat.open_ ~loc
+      (located_string (Longident.Lident "Module"))
+      (Ast_helper0.Pat.any ~loc ())
+  in
+  OUnit.assert_raises (Failure "Ppat_open is no longer present in ReScript")
+    (fun () -> ignore (map_pat0 pat))
 
 let test_public_record_rest_attr_is_not_internal _ =
   let pat =
@@ -67,13 +133,2626 @@ let test_record_rest_roundtrips_through_ast0 _ =
     ()
   | _ -> assert_failure "Expected record rest after ast0 roundtrip"
 
+(* The ast-mapping fixtures show that a field's [@as] survives the roundtrip.
+   What they cannot show is the shape it travels in: an external ppx reads the
+   frozen AST, so the runtime name has to reach it as an ordinary [@as]
+   attribute and not under some name of the bridge's own choosing. *)
+let test_field_runtime_name_reaches_ast0_as_an_attribute _ =
+  let as_attr =
+    attr "as"
+      (Parsetree.PStr
+         [
+           Ast_helper.Str.eval
+             (Ast_helper.Exp.constant
+                (Pconst_string (String_literal.string_from_semantic "renamed")));
+         ])
+  in
+  let field =
+    Ast_helper.Type.field ~loc ~attrs:[as_attr] (located_string "a")
+      (Ast_helper.Typ.constr ~loc (located_string (Longident.Lident "int")) [])
+  in
+  OUnit.assert_bool "Expected the @as attribute to become the field"
+    (field.pld_runtime_name <> None);
+  let field0 =
+    Ast_mapper_to0.default_mapper.label_declaration
+      Ast_mapper_to0.default_mapper field
+  in
+  OUnit.assert_bool "Expected a plain @as attribute on the ast0 wire"
+    (has_attr "as" field0.pld_attributes)
+
+(* A ppx reads the attribute list in order, so the one taken out has to go back
+   where it was written rather than at the front. *)
+(* Ppx output carries no source position, so every attribute ties. The rename
+   goes back last among them, the order a ppx writing [@dead @as("x")] gave. *)
+let test_field_runtime_name_keeps_ppx_order_on_the_wire _ =
+  let field =
+    Ast_helper.Type.field ~loc:Location.none
+      ~attrs:
+        [
+          (Location.mknoloc "dead", Parsetree.PStr []);
+          ( Location.mknoloc "as",
+            Parsetree.PStr
+              [
+                Ast_helper.Str.eval
+                  (Ast_helper.Exp.constant
+                     (Pconst_string (String_literal.string_from_semantic "wire")));
+              ] );
+        ]
+      (Location.mknoloc "a")
+      (Ast_helper.Typ.constr (Location.mknoloc (Longident.Lident "int")) [])
+  in
+  let field0 =
+    Ast_mapper_to0.default_mapper.label_declaration
+      Ast_mapper_to0.default_mapper field
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ") ["dead"; "as"]
+    (List.map
+       (fun (({txt} : string Asttypes.loc), _) -> txt)
+       field0.pld_attributes)
+
+let test_field_runtime_name_keeps_its_place_on_the_wire _ =
+  let earlier = source_loc 10 20 and as_loc = source_loc 30 40 in
+  let field =
+    Ast_helper.Type.field ~loc
+      ~attrs:
+        [
+          (located_string ~loc:earlier "dead", Parsetree.PStr []);
+          ( located_string ~loc:as_loc "as",
+            Parsetree.PStr
+              [
+                Ast_helper.Str.eval
+                  (Ast_helper.Exp.constant
+                     (Pconst_string (String_literal.string_from_semantic "wire")));
+              ] );
+        ]
+      (located_string "a")
+      (Ast_helper.Typ.constr ~loc (located_string (Longident.Lident "int")) [])
+  in
+  let field0 =
+    Ast_mapper_to0.default_mapper.label_declaration
+      Ast_mapper_to0.default_mapper field
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ") ["dead"; "as"]
+    (List.map
+       (fun (({txt} : string Asttypes.loc), _) -> txt)
+       field0.pld_attributes)
+
+let test_constructor_runtime_tag_reaches_ast0_as_an_attribute _ =
+  let as_attr =
+    attr "as"
+      (Parsetree.PStr
+         [
+           Ast_helper.Str.eval
+             (Ast_helper.Exp.constant (Pconst_integer ("7", None)));
+         ])
+  in
+  let constructor =
+    Ast_helper.Type.constructor ~loc ~attrs:[as_attr] (located_string "Seven")
+  in
+  OUnit.assert_bool "Expected the @as attribute to become the runtime tag"
+    (constructor.pcd_runtime_tag <> None);
+  let constructor0 =
+    Ast_mapper_to0.default_mapper.constructor_declaration
+      Ast_mapper_to0.default_mapper constructor
+  in
+  OUnit.assert_bool "Expected a plain @as attribute on the ast0 wire"
+    (has_attr "as" constructor0.pcd_attributes)
+
+let test_fixed_argument_roundtrips_through_ast0 _ =
+  (* [@as(1) _, int] *)
+  let fixed_loc = source_loc 1 9 and value_loc = source_loc 5 6 in
+  let value =
+    {
+      Location.txt = Parsetree.Pfixed_int {txt = "1"; loc = value_loc};
+      loc = value_loc;
+    }
+  in
+  let int_type =
+    Ast_helper.Typ.constr ~loc (Location.mknoloc (Longident.Lident "int")) []
+  in
+  let typ =
+    Ast_helper.Typ.arrow ~loc
+      [
+        Parg_fixed {attrs = []; lbl = Nolabel; value; loc = fixed_loc};
+        Parg_type {attrs = []; lbl = Nolabel; typ = int_type};
+      ]
+      int_type
+  in
+  let vd =
+    Ast_helper.Val.mk ~prim:(Parsetree.Prim_name "f") (Location.mknoloc "f") typ
+  in
+  let vd0 =
+    Ast_mapper_to0.default_mapper.value_description
+      Ast_mapper_to0.default_mapper vd
+  in
+  (* v0 spells a fixed argument [_ [@as 1]], as before it had its own node. *)
+  (match vd0.pval_type.ptyp_desc with
+  | Ptyp_constr (_, [{ptyp_desc = Ptyp_arrow (Nolabel, arg0, _)}; _]) -> (
+    match arg0 with
+    | {
+     ptyp_desc = Ptyp_any;
+     ptyp_attributes =
+       [
+         ( {txt = "as"},
+           PStr
+             [
+               {
+                 pstr_desc =
+                   Pstr_eval
+                     ( {pexp_desc = Pexp_constant (Pconst_integer ("1", None))},
+                       [] );
+               };
+             ] );
+       ];
+    } ->
+      ()
+    | _ -> assert_failure "Expected [_ [@as 1]] on the ast0 wire")
+  | _ -> assert_failure "Expected an external arrow on the ast0 wire");
+  let vd' =
+    Ast_mapper_from0.default_mapper.value_description
+      Ast_mapper_from0.default_mapper vd0
+  in
+  match vd'.pval_type.ptyp_desc with
+  | Ptyp_arrow
+      {
+        params =
+          [
+            Parg_fixed {attrs = []; lbl = Nolabel; value = value'; loc};
+            Parg_type _;
+          ];
+      } ->
+    OUnit.assert_equal value value';
+    OUnit.assert_equal fixed_loc loc
+  | _ -> assert_failure "Expected the fixed argument back from ast0"
+
+let test_fixed_argument_locations_go_through_the_mapper _ =
+  let marker = source_loc 100 101 in
+  let int_type =
+    Ast_helper.Typ.constr ~loc (Location.mknoloc (Longident.Lident "int")) []
+  in
+  let fixed (txt : Parsetree.fixed_value) : Parsetree.arg =
+    Parg_fixed
+      {
+        attrs = [];
+        lbl = Nolabel;
+        value = {txt; loc = source_loc 5 9};
+        loc = source_loc 1 12;
+      }
+  in
+  let vd =
+    Ast_helper.Val.mk ~prim:(Parsetree.Prim_name "f") (Location.mknoloc "f")
+      (Ast_helper.Typ.arrow ~loc
+         [
+           fixed (Pfixed_json {txt = "{}"; loc = source_loc 6 8});
+           fixed (Pfixed_int {txt = "1"; loc = source_loc 5 6});
+           Parg_type {attrs = []; lbl = Nolabel; typ = int_type};
+         ]
+         int_type)
+  in
+  let relocate =
+    {Ast_mapper.default_mapper with location = (fun _ _ -> marker)}
+  in
+  (match (relocate.value_description relocate vd).pval_type.ptyp_desc with
+  | Ptyp_arrow {params = [Parg_fixed json; Parg_fixed int; Parg_type _]} ->
+    List.iter
+      (fun (arg_loc, (value : Parsetree.fixed_value Location.loc)) ->
+        OUnit.assert_equal marker arg_loc;
+        OUnit.assert_equal marker value.loc;
+        match value.txt with
+        | Pfixed_int source | Pfixed_template source | Pfixed_json source ->
+          OUnit.assert_equal marker source.loc
+        | Pfixed_string _ -> ())
+      [(json.loc, json.value); (int.loc, int.value)]
+  | _ -> assert_failure "Expected the fixed arguments back");
+  let relocate0 =
+    {Ast_mapper_to0.default_mapper with location = (fun _ _ -> marker)}
+  in
+  let vd0 = relocate0.value_description relocate0 vd in
+  let assert_relocated_v0_fixed (typ : Parsetree0.core_type) =
+    OUnit.assert_equal marker typ.ptyp_loc;
+    match typ.ptyp_attributes with
+    | [
+     ( {txt = "as"; loc = name_loc},
+       PStr [{pstr_loc; pstr_desc = Pstr_eval ({pexp_loc}, [])}] );
+    ] ->
+      OUnit.assert_equal marker name_loc;
+      OUnit.assert_equal marker pstr_loc;
+      OUnit.assert_equal marker pexp_loc
+    | _ -> assert_failure "Expected [_ [@as value]] on the ast0 wire"
+  in
+  match vd0.pval_type.ptyp_desc with
+  | Ptyp_constr
+      ( _,
+        [
+          {
+            ptyp_desc =
+              Ptyp_arrow (_, json0, {ptyp_desc = Ptyp_arrow (_, int0, _)});
+          };
+          _;
+        ] ) ->
+    assert_relocated_v0_fixed json0;
+    assert_relocated_v0_fixed int0
+  | _ -> assert_failure "Expected an external arrow on the ast0 wire"
+
+let test_fixed_argument_is_external_only _ =
+  (* A non-external arrow keeps [@as(1) _] as an ordinary argument. *)
+  let any_as =
+    Ast_helper.Typ.any ~loc
+      ~attrs:
+        [
+          ( Location.mknoloc "as",
+            Parsetree.PStr
+              [
+                Ast_helper.Str.eval
+                  (Ast_helper.Exp.constant (Pconst_integer ("1", None)));
+              ] );
+        ]
+      ()
+  in
+  let typ =
+    Ast_helper.Typ.arrow ~loc
+      [Parg_type {attrs = []; lbl = Nolabel; typ = any_as}]
+      (Ast_helper.Typ.any ())
+  in
+  let vd = Ast_helper.Val.mk (Location.mknoloc "f") typ in
+  let roundtrip vd =
+    Ast_mapper_from0.default_mapper.value_description
+      Ast_mapper_from0.default_mapper
+      (Ast_mapper_to0.default_mapper.value_description
+         Ast_mapper_to0.default_mapper vd)
+  in
+  (match (roundtrip vd).pval_type.ptyp_desc with
+  | Ptyp_arrow {params = [Parg_type _]} -> ()
+  | _ -> assert_failure "Expected an ordinary argument in a value declaration");
+  match
+    (roundtrip {vd with pval_prim = Some (Parsetree.Prim_name "f")}).pval_type
+      .ptyp_desc
+  with
+  | Ptyp_arrow {params = [Parg_fixed _]} -> ()
+  | _ -> assert_failure "Expected a fixed argument in an external"
+
+let map_expr0 e =
+  Ast_mapper_from0.default_mapper.expr Ast_mapper_from0.default_mapper e
+
+let to_expr0 e =
+  Ast_mapper_to0.default_mapper.expr Ast_mapper_to0.default_mapper e
+
+let test_ternary_roundtrips_through_ast0 _ =
+  let ident name =
+    Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident name))
+  in
+  let ternary =
+    Ast_helper.Exp.ternary ~loc
+      ~attrs:
+        [attr "before" (Parsetree.PStr []); attr "after" (Parsetree.PStr [])]
+      (ident "condition") (ident "consequent") (ident "alternate")
+  in
+  let wire = to_expr0 ternary in
+  (match wire.pexp_desc with
+  | Parsetree0.Pexp_ifthenelse (_, _, Some _) -> ()
+  | _ -> assert_failure "Expected a v0 if-then-else with an else branch");
+  let attr_names attrs = List.map (fun ({Location.txt}, _) -> txt) attrs in
+  OUnit.assert_equal
+    ["res.ternary"; "before"; "after"]
+    (attr_names wire.pexp_attributes);
+  let round_tripped = map_expr0 wire in
+  (match round_tripped.pexp_desc with
+  | Parsetree.Pexp_ternary (_, _, _) -> ()
+  | _ -> assert_failure "Expected a ternary after the v0 roundtrip");
+  OUnit.assert_equal ["before"; "after"]
+    (attr_names round_tripped.pexp_attributes)
+
+let test_v0_ternary_marker_preserves_other_attribute_order _ =
+  let ident name =
+    Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident name))
+  in
+  let wire =
+    Ast_helper0.Exp.ifthenelse ~loc
+      ~attrs:
+        [
+          attr "before" (Parsetree0.PStr []);
+          attr "res.ternary" (Parsetree0.PStr []);
+          attr "after" (Parsetree0.PStr []);
+        ]
+      (ident "condition") (ident "consequent")
+      (Some (ident "alternate"))
+  in
+  let mapped = map_expr0 wire in
+  match mapped.pexp_desc with
+  | Parsetree.Pexp_ternary (_, _, _) ->
+    OUnit.assert_equal ["before"; "after"]
+      (List.map (fun ({Location.txt}, _) -> txt) mapped.pexp_attributes)
+  | _ -> assert_failure "Expected a ternary from the v0 marker"
+
+let test_v0_if_without_alternate_stays_if _ =
+  let ident name =
+    Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident name))
+  in
+  let wire =
+    Ast_helper0.Exp.ifthenelse ~loc
+      ~attrs:[attr "res.ternary" (Parsetree0.PStr [])]
+      (ident "condition") (ident "consequent") None
+  in
+  let mapped = map_expr0 wire in
+  match mapped.pexp_desc with
+  | Parsetree.Pexp_ifthenelse (_, _, None) ->
+    OUnit.assert_bool "Malformed legacy marker must be preserved"
+      (has_attr "res.ternary" mapped.pexp_attributes)
+  | _ -> assert_failure "A missing alternate cannot form a ternary"
+let test_braces_roundtrip_through_ast0 _ =
+  let inner_loc = source_loc 10 11 in
+  let inner_braces_loc = source_loc 8 13 in
+  let outer_braces_loc = source_loc 6 15 in
+  let inner =
+    Ast_helper.Exp.ident ~loc:inner_loc
+      ~attrs:[attr "inner" (Parsetree.PStr [])]
+      (located_string ~loc:inner_loc (Longident.Lident "x"))
+  in
+  let expr =
+    Ast_helper.Exp.braces ~braces_loc:outer_braces_loc
+      ~attrs:[attr "outer" (Parsetree.PStr [])]
+      (Ast_helper.Exp.braces ~braces_loc:inner_braces_loc inner)
+  in
+  let expr0 =
+    Ast_mapper_to0.default_mapper.expr Ast_mapper_to0.default_mapper expr
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["outer"; "res.braces"; "res.braces"; "inner"]
+    (List.map
+       (fun (({txt} : string Location.loc), _) -> txt)
+       expr0.pexp_attributes);
+  let roundtrip = map_expr0 expr0 in
+  match roundtrip.pexp_desc with
+  | Parsetree.Pexp_braces
+      {
+        braces_loc = outer_loc;
+        expr =
+          {
+            pexp_desc =
+              Pexp_braces
+                {
+                  braces_loc = mapped_inner_braces_loc;
+                  expr = {pexp_desc = Pexp_ident _; pexp_loc; pexp_attributes};
+                };
+            pexp_attributes = inner_braces_attrs;
+          };
+      } ->
+    OUnit.assert_equal ~msg:"outer braces location" outer_braces_loc outer_loc;
+    OUnit.assert_equal ~msg:"inner braces location" inner_braces_loc
+      mapped_inner_braces_loc;
+    OUnit.assert_equal ~msg:"expression location" inner_loc pexp_loc;
+    OUnit.assert_bool "outer attribute retained"
+      (has_attr "outer" roundtrip.pexp_attributes);
+    OUnit.assert_equal ~msg:"middle node attributes" [] inner_braces_attrs;
+    OUnit.assert_bool "inner attribute retained"
+      (has_attr "inner" pexp_attributes)
+  | _ ->
+    assert_failure "Expected two structural brace nodes after ast0 roundtrip"
+
+let attr_names attrs = List.map (fun ({Location.txt}, _) -> txt) attrs
+
+let to_mod0 m =
+  Ast_mapper_to0.default_mapper.module_expr Ast_mapper_to0.default_mapper m
+
+let map_mod0 m =
+  Ast_mapper_from0.default_mapper.module_expr Ast_mapper_from0.default_mapper m
+
+let test_module_await_roundtrips_through_ast0 _ =
+  let await_loc = source_loc 11 22 in
+  let inner_loc = source_loc 17 22 in
+  let inner =
+    Ast_helper.Mod.ident ~loc:inner_loc
+      ~attrs:[attr "inner" (Parsetree.PStr [])]
+      (located_string ~loc:inner_loc (Longident.Lident "List"))
+  in
+  let wire =
+    to_mod0
+      (Ast_helper.Mod.await ~loc:await_loc
+         ~attrs:[attr "outer" (Parsetree.PStr [])]
+         inner)
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["inner"; "res.await"; "outer"]
+    (attr_names wire.pmod_attributes);
+  match map_mod0 wire with
+  | {
+   pmod_desc =
+     Pmod_await
+       {pmod_desc = Pmod_ident _; pmod_loc = mapped_inner_loc; pmod_attributes};
+   pmod_loc = mapped_await_loc;
+   pmod_attributes = await_attributes;
+  } ->
+    OUnit.assert_equal ~msg:"await location" await_loc mapped_await_loc;
+    OUnit.assert_equal ~msg:"inner location" inner_loc mapped_inner_loc;
+    OUnit.assert_equal ["outer"] (attr_names await_attributes);
+    OUnit.assert_equal ["inner"] (attr_names pmod_attributes)
+  | _ -> assert_failure "Expected Pmod_await after the ast0 roundtrip"
+
+let test_expression_await_location_through_ast0 _ =
+  let await_loc = source_loc 0 9 in
+  let inner_loc = source_loc 6 9 in
+  let inner =
+    Ast_helper.Exp.ident ~loc:inner_loc
+      ~attrs:[attr "inner" (Parsetree.PStr [])]
+      (located_string ~loc:inner_loc (Longident.Lident "p"))
+  in
+  let wire =
+    to_expr0
+      (Ast_helper.Exp.await ~loc:await_loc
+         ~attrs:[attr "outer" (Parsetree.PStr [])]
+         inner)
+  in
+  match map_expr0 wire with
+  | {
+   pexp_desc =
+     Pexp_await
+       {pexp_desc = Pexp_ident _; pexp_loc = mapped_inner_loc; pexp_attributes};
+   pexp_loc = mapped_await_loc;
+   pexp_attributes = await_attributes;
+  } ->
+    OUnit.assert_equal ~msg:"await location" await_loc mapped_await_loc;
+    OUnit.assert_equal ~msg:"inner location" inner_loc mapped_inner_loc;
+    OUnit.assert_equal ["outer"] (attr_names await_attributes);
+    OUnit.assert_equal ["inner"] (attr_names pexp_attributes)
+  | _ -> assert_failure "Expected Pexp_await after the ast0 roundtrip"
+
+let test_v0_await_marker_without_location _ =
+  let node_loc = source_loc 4 8 in
+  let wire =
+    Ast_helper0.Mod.ident ~loc:node_loc
+      ~attrs:[attr "res.await" (Parsetree0.PStr [])]
+      (located_string ~loc:node_loc (Longident.Lident "List"))
+  in
+  match map_mod0 wire with
+  | {pmod_desc = Pmod_await {pmod_desc = Pmod_ident _}; pmod_loc} ->
+    OUnit.assert_equal ~msg:"falls back to the node location" node_loc pmod_loc
+  | _ -> assert_failure "Expected Pmod_await from a v0 res.await marker"
+
+(* [(@warning("-3") (await List): ListT)] can come from a PPX through the v0
+   bridge; the imported module must keep the await node's attributes *)
+let test_dynamic_import_keeps_await_attributes _ =
+  let module_expr =
+    Ast_helper.Mod.constraint_ ~loc
+      (Ast_helper.Mod.await ~loc
+         ~attrs:[attr "warning" (Parsetree.PStr [])]
+         (Ast_helper.Mod.ident ~loc (located_string (Longident.Lident "List"))))
+      (Ast_helper.Mty.ident ~loc (located_string (Longident.Lident "ListT")))
+  in
+  let imported =
+    match Ast_await.awaited_module_path module_expr with
+    | Some (_, imported, _) ->
+      Ast_await.create_await_module_expression
+        ~module_type_lid:(located_string (Longident.Lident "ListT"))
+        module_expr imported
+    | None -> assert_failure "Expected an awaited module path"
+  in
+  match imported.pmod_desc with
+  | Pmod_unpack
+      {
+        pexp_desc =
+          Pexp_apply
+            {
+              args =
+                [
+                  ( _,
+                    {
+                      pexp_desc =
+                        Pexp_apply
+                          {
+                            args =
+                              [
+                                ( _,
+                                  {
+                                    pexp_desc =
+                                      Pexp_constraint
+                                        ( {
+                                            pexp_desc =
+                                              Pexp_pack
+                                                {
+                                                  pmod_desc =
+                                                    Pmod_constraint
+                                                      ( {
+                                                          pmod_desc =
+                                                            Pmod_ident _;
+                                                          pmod_attributes;
+                                                        },
+                                                        _ );
+                                                };
+                                          },
+                                          _ );
+                                  } );
+                              ];
+                          };
+                    } );
+                ];
+            };
+      } ->
+    OUnit.assert_equal ["warning"] (attr_names pmod_attributes)
+  | _ -> assert_failure "Expected unpack(await import(module(List: ListT)))"
+
+(* The v0 encoding of module [await] keeps the attribute order that PPXs saw
+   when [await] was only the [res.await] attribute: the module's own
+   attributes, the marker, then those written after [await] or around the
+   await. Decoding it gives back the parsed module expression. *)
+let test_module_await_v0_attribute_order _ =
+  let strip_locs =
+    {Ast_mapper.default_mapper with location = (fun _ _ -> Location.none)}
+  in
+  List.iter
+    (fun (source, expected) ->
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"ModuleAwait.res"
+          ~source:("module X = F(" ^ source ^ ")")
+      in
+      match parsed.parsetree with
+      | [
+       {pstr_desc = Pstr_module {pmb_expr = {pmod_desc = Pmod_apply (_, me)}}};
+      ]
+        when not parsed.invalid ->
+        let wire = to_mod0 me in
+        OUnit.assert_equal ~msg:source ~printer:(String.concat ", ") expected
+          (attr_names wire.pmod_attributes);
+        OUnit.assert_bool
+          (source ^ " roundtrips through ast0")
+          (strip_locs.module_expr strip_locs (map_mod0 wire)
+          = strip_locs.module_expr strip_locs me)
+      | _ -> assert_failure ("Expected a functor application: " ^ source))
+    [
+      ("await @b (@a M)", ["a"; "res.await"; "b"]);
+      ("@c (await @b M)", ["res.await"; "b"; "c"]);
+      ("@c (await (@a M))", ["a"; "res.await"; "c"]);
+      ("await @b (await @a M)", ["res.await"; "a"; "res.await"; "b"]);
+      ("await (@a (await M))", ["res.await"; "a"; "res.await"]);
+    ]
+
+(* [await (await M)], [await (await (M: S))] and [(await (await M): S)] are
+   dynamic imports like their single-await forms *)
+let test_nested_awaits_are_dynamic_imports _ =
+  let await m = Ast_helper.Mod.await ~loc m in
+  let path =
+    Ast_helper.Mod.ident ~loc (located_string (Longident.Lident "M"))
+  in
+  let mty = Ast_helper.Mty.ident ~loc (located_string (Longident.Lident "S")) in
+  let constrained m = Ast_helper.Mod.constraint_ ~loc m mty in
+  let recognized ~constrained:expected_constrained me =
+    match Ast_await.awaited_module_path me with
+    | Some ({txt = Longident.Lident "M"}, _, mty) ->
+      Option.is_some mty = expected_constrained
+    | _ -> false
+  in
+  OUnit.assert_bool "await (await M)"
+    (recognized ~constrained:false (await (await path)));
+  OUnit.assert_bool "await (await (M: S))"
+    (recognized ~constrained:true (await (await (constrained path))));
+  OUnit.assert_bool "(await (await M): S)"
+    (recognized ~constrained:true (constrained (await (await path))));
+  OUnit.assert_bool "await ((await M): S)"
+    (recognized ~constrained:true (await (constrained (await path))));
+  OUnit.assert_bool "M without await"
+    (Option.is_none (Ast_await.awaited_module_path (constrained path)))
+
+let test_inline_record_definition_roundtrips_through_ast0 _ =
+  let name = located_string "person.details" in
+  let field =
+    Ast_helper.Type.field ~loc (located_string "name")
+      (Ast_helper.Typ.constr ~loc
+         (located_string (Longident.Lident "string"))
+         [])
+  in
+  let decl =
+    Ast_helper.Type.mk ~loc ~origin:Parsetree.Inline_record_definition
+      ~kind:(Parsetree.Ptype_record [field])
+      ~attrs:[attr "other" (Parsetree.PStr [])]
+      name
+  in
+  let wire =
+    Ast_mapper_to0.default_mapper.type_declaration Ast_mapper_to0.default_mapper
+      decl
+  in
+  OUnit.assert_bool "inline record marker reaches the v0 wire"
+    (has_attr "res.inlineRecordDefinition" wire.ptype_attributes);
+  let roundtrip =
+    Ast_mapper_from0.default_mapper.type_declaration
+      Ast_mapper_from0.default_mapper wire
+  in
+  OUnit.assert_equal Parsetree.Inline_record_definition roundtrip.ptype_origin;
+  OUnit.assert_bool "other attributes survive the bridge"
+    (has_attr "other" roundtrip.ptype_attributes);
+  OUnit.assert_bool "the v0 marker is decoded into the origin field"
+    (not (has_attr "res.inlineRecordDefinition" roundtrip.ptype_attributes))
+
+let test_this_on_braced_function_reaches_builtin_ppx _ =
+  let function_expr =
+    Ast_helper.Exp.fun_
+      [
+        Ast_helper.Exp.fun_param Asttypes.Nolabel
+          (Ast_helper.Pat.var ~loc (Location.mknoloc "self"));
+      ]
+      (Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident "self")))
+  in
+  let expression =
+    Ast_helper.Exp.braces ~braces_loc:loc
+      ~attrs:[attr "this" (Parsetree.PStr []); attr "other" (Parsetree.PStr [])]
+      function_expr
+  in
+  let roundtrip =
+    map_expr0
+      (Ast_mapper_to0.default_mapper.expr Ast_mapper_to0.default_mapper
+         expression)
+  in
+  let mapped = Bs_builtin_ppx.mapper.expr Bs_builtin_ppx.mapper roundtrip in
+  match mapped.pexp_desc with
+  | Parsetree.Pexp_braces {expr = {pexp_desc = Pexp_apply _}} ->
+    OUnit.assert_bool "other attribute stays on braces"
+      (has_attr "other" mapped.pexp_attributes);
+    OUnit.assert_bool "@this was consumed by the function mapper"
+      (not (has_attr "this" mapped.pexp_attributes))
+  | _ -> assert_failure "Expected @this to lower to a method callback"
+
+let map_value_binding0 vb =
+  Ast_mapper_from0.default_mapper.value_binding Ast_mapper_from0.default_mapper
+    vb
+
+let to_value_binding0 vb =
+  Ast_mapper_to0.default_mapper.value_binding Ast_mapper_to0.default_mapper vb
+
+let attr_names attrs =
+  List.map (fun (({txt} : string Asttypes.loc), _) -> txt) attrs
+
+let make_binding ?(attrs = []) () =
+  Ast_helper.Vb.mk ~loc ~attrs
+    (Ast_helper.Pat.var ~loc (Location.mknoloc "make"))
+    (Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident "x")))
+
+let props_type =
+  Ast_helper.Typ.constr ~loc (Location.mknoloc (Longident.Lident "props")) []
+
+let test_jsx_component_becomes_the_binding_node _ =
+  let vb =
+    make_binding ~attrs:[attr "react.component" (Parsetree.PTyp props_type)] ()
+  in
+  (match vb.pvb_jsx_component with
+  | Some {pjc_kind = Pjc_labelled (Some _); pjc_namespace = Pjc_react} -> ()
+  | _ -> assert_failure "Expected @react.component(: props) as the node");
+  OUnit.assert_equal ~printer:(String.concat ", ") []
+    (attr_names vb.pvb_attributes);
+  let vb0 = to_value_binding0 vb in
+  match vb0.pvb_attributes with
+  | [
+   ( {txt = "react.component"},
+     PTyp {ptyp_desc = Ptyp_constr ({txt = Lident "props"}, [])} );
+  ] ->
+    ()
+  | _ -> assert_failure "Expected @react.component(: props) on the ast0 wire"
+
+(* The first [@react.component] wins over an earlier
+   [@react.componentWithProps], as it always has in the JSX transform; the
+   others stay attributes. *)
+let test_jsx_component_precedence _ =
+  let vb =
+    make_binding
+      ~attrs:
+        [
+          attr "react.componentWithProps" (Parsetree.PStr []);
+          attr "jsx.component" (Parsetree.PStr []);
+          attr "react.component" (Parsetree.PStr []);
+        ]
+      ()
+  in
+  (match vb.pvb_jsx_component with
+  | Some {pjc_kind = Pjc_labelled None; pjc_namespace = Pjc_jsx} -> ()
+  | _ -> assert_failure "Expected @jsx.component as the node");
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["react.componentWithProps"; "react.component"]
+    (attr_names vb.pvb_attributes)
+
+(* A payload the JSX transform does not understand is not dropped: the
+   attribute stays, for the transform to reject and the printer to keep. *)
+let test_jsx_component_with_unknown_payload_stays_an_attribute _ =
+  let payload =
+    Parsetree.PStr
+      [
+        Ast_helper.Str.eval
+          (Ast_helper.Exp.constant
+             (Pconst_string (String_literal.string_from_semantic "x")));
+      ]
+  in
+  let vd =
+    Ast_helper.Val.mk ~loc
+      ~attrs:
+        [
+          attr "react.component" payload;
+          attr "react.componentWithProps" (Parsetree.PTyp props_type);
+        ]
+      (Location.mknoloc "make") props_type
+  in
+  OUnit.assert_bool "Expected no node" (vd.pval_jsx_component = None);
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["react.component"; "react.componentWithProps"]
+    (attr_names vd.pval_attributes)
+
+let test_jsx_component_keeps_its_place_on_the_wire _ =
+  let vb =
+    make_binding
+      ~attrs:
+        [
+          ( located_string ~loc:(source_loc 10 20) "deprecated",
+            Parsetree.PStr [] );
+          ( located_string ~loc:(source_loc 30 40) "react.componentWithProps",
+            Parsetree.PStr [] );
+          (located_string ~loc:(source_loc 50 60) "genType", Parsetree.PStr []);
+        ]
+      ()
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["deprecated"; "react.componentWithProps"; "genType"]
+    (attr_names (to_value_binding0 vb).pvb_attributes)
+
+(* Ppx output carries no source position, so every attribute ties. The
+   annotation goes back first among them, where it is usually written. *)
+let test_jsx_component_from_ppx_goes_first_on_the_wire _ =
+  let vb0 =
+    Ast_helper0.Vb.mk ~loc
+      ~attrs:
+        [
+          (Location.mknoloc "jsx.component", Parsetree0.PStr []);
+          (Location.mknoloc "genType", Parsetree0.PStr []);
+        ]
+      (Ast_helper0.Pat.var ~loc (Location.mknoloc "make"))
+      (Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident "x")))
+  in
+  let vb = map_value_binding0 vb0 in
+  (match vb.pvb_jsx_component with
+  | Some {pjc_kind = Pjc_labelled None; pjc_namespace = Pjc_jsx} -> ()
+  | _ -> assert_failure "Expected the ppx's @jsx.component as the node");
+  OUnit.assert_equal ~printer:(String.concat ", ") ["genType"]
+    (attr_names vb.pvb_attributes);
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["jsx.component"; "genType"]
+    (attr_names (to_value_binding0 vb).pvb_attributes)
+
+(* A mapper sees the attribute and [Vb.mk] takes it out again, so a mapper that
+   only relocates keeps the component. *)
+let test_jsx_component_survives_the_mapper _ =
+  let vb =
+    make_binding ~attrs:[attr "react.componentWithProps" (Parsetree.PStr [])] ()
+  in
+  let mapped =
+    Ast_mapper.default_mapper.value_binding Ast_mapper.default_mapper vb
+  in
+  (match mapped.pvb_jsx_component with
+  | Some {pjc_kind = Pjc_with_props; pjc_namespace = Pjc_react} -> ()
+  | _ -> assert_failure "Expected the mapped binding to keep the node");
+  OUnit.assert_equal ~printer:(String.concat ", ") []
+    (attr_names mapped.pvb_attributes)
+
+let test_jsx_component_on_value_descriptions_through_ast0 _ =
+  let vd =
+    Ast_helper.Val.mk ~loc
+      ~attrs:
+        [
+          attr "module" (Parsetree.PStr []);
+          attr "react.component" (Parsetree.PStr []);
+        ]
+      ~prim:(Prim_name "default") (Location.mknoloc "make") props_type
+  in
+  (match vd.pval_jsx_component with
+  | Some {pjc_kind = Pjc_labelled None} -> ()
+  | _ -> assert_failure "Expected @react.component as the node");
+  let vd0 =
+    Ast_mapper_to0.default_mapper.value_description
+      Ast_mapper_to0.default_mapper vd
+  in
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["react.component"; "module"]
+    (attr_names vd0.pval_attributes);
+  let back =
+    Ast_mapper_from0.default_mapper.value_description
+      Ast_mapper_from0.default_mapper vd0
+  in
+  OUnit.assert_bool "Expected the node back" (back.pval_jsx_component <> None);
+  OUnit.assert_equal ~printer:(String.concat ", ") ["module"]
+    (attr_names back.pval_attributes)
+
+let test_value_constraint_roundtrips_through_ast0 _ =
+  let newtype = Location.mknoloc "a" in
+  let typ =
+    Ast_helper.Typ.constr ~loc (Location.mknoloc (Longident.Lident "a")) []
+  in
+  let constraint_ = {Parsetree.pvc_newtypes = [newtype]; pvc_type = typ} in
+  let vb =
+    Ast_helper.Vb.mk ~loc ~constraint_
+      (Ast_helper.Pat.var ~loc (Location.mknoloc "f"))
+      (Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident "x")))
+  in
+  let vb0 = to_value_binding0 vb in
+  (match (vb0.pvb_pat.ppat_desc, vb0.pvb_expr.pexp_desc) with
+  | ( Parsetree0.Ppat_constraint
+        (_, {ptyp_desc = Ptyp_poly ([{txt = "a"}], {ptyp_desc = Ptyp_var "a"})}),
+      Pexp_newtype
+        ( {txt = "a"},
+          {
+            pexp_desc =
+              Pexp_constraint
+                (_, {ptyp_desc = Ptyp_constr ({txt = Lident "a"}, [])});
+          } ) ) ->
+    ()
+  | _ ->
+    assert_failure
+      "Expected the locally abstract value constraint's v0 wrapper encoding");
+  let mismatched_vb0 =
+    match vb0.pvb_expr.pexp_desc with
+    | Pexp_newtype (name, expr) ->
+      {
+        vb0 with
+        pvb_expr =
+          {
+            vb0.pvb_expr with
+            pexp_desc = Pexp_newtype ({name with txt = "b"}, expr);
+          };
+      }
+    | _ -> assert_failure "Expected a leading legacy newtype"
+  in
+  let mismatched_vb = map_value_binding0 mismatched_vb0 in
+  (match
+     ( mismatched_vb.pvb_pat.ppat_desc,
+       mismatched_vb.pvb_expr.pexp_desc,
+       mismatched_vb.pvb_constraint )
+   with
+  | Ppat_constraint _, Pexp_extension extension, None ->
+    let error = Builtin_attributes.error_of_extension extension in
+    OUnit.assert_equal
+      "A PPX returned a locally abstract type wrapper that does not enclose a \
+       ReScript function. This v0 AST form is not supported."
+      error.msg
+  | _ -> assert_failure "A mismatched v0 wrapper structure must become an error");
+  let vb = map_value_binding0 vb0 in
+  match (vb.pvb_pat.ppat_desc, vb.pvb_expr.pexp_desc, vb.pvb_constraint) with
+  | ( Ppat_var {txt = "f"},
+      Pexp_ident {txt = Lident "x"},
+      Some
+        {
+          pvc_newtypes = [{txt = "a"}];
+          pvc_type = {ptyp_desc = Ptyp_constr ({txt = Lident "a"}, [])};
+        } ) ->
+    ()
+  | _ ->
+    assert_failure "Expected the structural value constraint after roundtrip"
+
+(* A PPX can emit OCaml-style [function | p -> e]; the bridge must desugar it
+   to [fun x -> match x with | p -> e] rather than crash. *)
+let test_function_cases_desugar_to_fun_match _ =
+  let case0 =
+    {
+      Parsetree0.pc_lhs = Ast_helper0.Pat.any ~loc ();
+      pc_guard = None;
+      pc_rhs =
+        Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_integer ("1", None));
+    }
+  in
+  let expr = map_expr0 (Ast_helper0.Exp.function_ ~loc [case0]) in
+  match expr.pexp_desc with
+  | Parsetree.Pexp_fun
+      {
+        params =
+          [
+            {
+              p_lbl = Nolabel;
+              p_default = None;
+              p_pat = {ppat_desc = Ppat_var {txt = param}};
+            };
+          ];
+        body =
+          {
+            pexp_desc =
+              Pexp_match ({pexp_desc = Pexp_ident {txt = Lident scrutinee}}, [_]);
+          };
+      } ->
+    OUnit.assert_equal ~msg:"scrutinee is the introduced parameter" param
+      scrutinee
+  | _ -> assert_failure "Expected fun x -> match x with ... after desugaring"
+
+let map_expr_to0 e =
+  Ast_mapper_to0.default_mapper.expr Ast_mapper_to0.default_mapper e
+
+let map_pat_to0 p =
+  Ast_mapper_to0.default_mapper.pat Ast_mapper_to0.default_mapper p
+
+let attr_names attrs = List.map (fun ({Location.txt}, _) -> txt) attrs
+
+(* v0 has no variant spread pattern: [...t] is [#...t] with a
+   [res.patVariantSpread] marker in front of its own attributes, as the
+   parser used to produce it *)
+let test_variant_spread_pattern_through_ast0 _ =
+  let spread_loc = source_loc 2 8 in
+  let lid = located_string ~loc:(source_loc 5 8) (Longident.Lident "t") in
+  let spread =
+    Ast_helper.Pat.variant_spread ~loc:spread_loc
+      ~attrs:[attr "user" (Parsetree.PStr [])]
+      lid
+  in
+  let wire = map_pat_to0 spread in
+  (match wire.ppat_desc with
+  | Parsetree0.Ppat_type {txt = Longident.Lident "t"} -> ()
+  | _ -> assert_failure "Expected Ppat_type on the v0 wire");
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["res.patVariantSpread"; "user"]
+    (attr_names wire.ppat_attributes);
+  (match map_pat0 wire with
+  | {
+   ppat_desc = Ppat_variant_spread {txt = Longident.Lident "t"; loc};
+   ppat_loc;
+   ppat_attributes;
+  } ->
+    OUnit.assert_equal ~msg:"pattern location" spread_loc ppat_loc;
+    OUnit.assert_equal ~msg:"type location" lid.loc loc;
+    OUnit.assert_equal ["user"] (attr_names ppat_attributes)
+  | _ -> assert_failure "Expected Ppat_variant_spread after the ast0 roundtrip");
+  (* [#...t] stays a polymorphic variant type pattern *)
+  let poly = Ast_helper.Pat.type_ ~loc lid in
+  match map_pat0 (map_pat_to0 poly) with
+  | {ppat_desc = Ppat_type _; ppat_attributes = []} -> ()
+  | _ -> assert_failure "Expected Ppat_type without attributes"
+
+let test_attributed_constructor_payloads_through_ast0 _ =
+  let payload_loc = source_loc 10 30 in
+  let payload_attrs = [attr "ppx.payload" (Parsetree0.PStr [])] in
+  let node_attrs = [attr "ppx.node" (Parsetree0.PStr [])] in
+  let expr_payload =
+    Ast_helper0.Exp.tuple ~loc:payload_loc ~attrs:payload_attrs
+      [
+        Ast_helper0.Exp.constant ~loc:(source_loc 12 13)
+          (Parsetree0.Pconst_integer ("1", None));
+        Ast_helper0.Exp.constant ~loc:(source_loc 15 16)
+          (Parsetree0.Pconst_integer ("2", None));
+      ]
+  in
+  let pat_payload =
+    Ast_helper0.Pat.tuple ~loc:payload_loc ~attrs:payload_attrs
+      [
+        Ast_helper0.Pat.var ~loc:(source_loc 12 13) (located_string "x");
+        Ast_helper0.Pat.var ~loc:(source_loc 15 16) (located_string "y");
+      ]
+  in
+  List.iter
+    (fun (polyvariant, marker) ->
+      let attrs = attr marker (Parsetree0.PStr []) :: node_attrs in
+      let expr0, pat0 =
+        if polyvariant then
+          ( Ast_helper0.Exp.variant ~loc ~attrs "Pair" (Some expr_payload),
+            Ast_helper0.Pat.variant ~loc ~attrs "Pair" (Some pat_payload) )
+        else
+          let lid = Location.mknoloc (Longident.Lident "Pair") in
+          ( Ast_helper0.Exp.construct ~loc ~attrs lid (Some expr_payload),
+            Ast_helper0.Pat.construct ~loc ~attrs lid (Some pat_payload) )
+      in
+      let expr = map_expr0 expr0 in
+      let pat = map_pat0 pat0 in
+      (match (expr.pexp_desc, pat.ppat_desc) with
+      | Pexp_construct (_, {txt = [e]; loc}), Ppat_construct (_, {txt = [p]})
+      | Pexp_variant (_, {txt = [e]; loc}), Ppat_variant (_, {txt = [p]}) ->
+        OUnit.assert_equal payload_loc loc;
+        OUnit.assert_equal expr_payload (map_expr_to0 e);
+        OUnit.assert_equal pat_payload (map_pat_to0 p)
+      | _ -> assert_failure "Expected attributed payload tuples to survive");
+      (* Only our bridge marker is consumed; legacy arity attributes remain. *)
+      let attrs =
+        if marker = "_res.constructor_args" then node_attrs else attrs
+      in
+      let encoded_expr = map_expr_to0 expr in
+      let encoded_pat = map_pat_to0 pat in
+      OUnit.assert_equal {expr0 with pexp_attributes = attrs} encoded_expr;
+      OUnit.assert_equal {pat0 with ppat_attributes = attrs} encoded_pat;
+      OUnit.assert_equal encoded_expr (map_expr_to0 (map_expr0 encoded_expr));
+      OUnit.assert_equal encoded_pat (map_pat_to0 (map_pat0 encoded_pat)))
+    [
+      (false, "_res.constructor_args");
+      (true, "_res.constructor_args");
+      (false, "explicit_arity");
+      (false, "ocaml.explicit_arity");
+    ]
+
+let test_list_constructor_wire_shape _ =
+  let lid name = Location.mknoloc (Longident.Lident name) in
+  List.iter
+    (fun (attrs, payload_attrs) ->
+      let expr0 =
+        List.fold_right
+          (fun value tail ->
+            Ast_helper0.Exp.construct ~loc ~attrs (lid "::")
+              (Some
+                 (Ast_helper0.Exp.tuple ~loc ~attrs:payload_attrs
+                    [
+                      Ast_helper0.Exp.constant ~loc
+                        (Parsetree0.Pconst_integer (value, None));
+                      tail;
+                    ])))
+          ["1"; "2"]
+          (Ast_helper0.Exp.construct ~loc (lid "[]") None)
+      in
+      let pat0 =
+        List.fold_right
+          (fun name tail ->
+            Ast_helper0.Pat.construct ~loc ~attrs (lid "::")
+              (Some
+                 (Ast_helper0.Pat.tuple ~loc ~attrs:payload_attrs
+                    [Ast_helper0.Pat.var ~loc (Location.mknoloc name); tail])))
+          ["head"; "next"]
+          (Ast_helper0.Pat.construct ~loc (lid "[]") None)
+      in
+      let expr = map_expr0 expr0 in
+      let pat = map_pat0 pat0 in
+      (match (payload_attrs, expr.pexp_desc, pat.ppat_desc) with
+      | ( [],
+          Pexp_construct (_, {txt = [_; _]}),
+          Ppat_construct (_, {txt = [_; _]}) ) ->
+        ()
+      | ( _ :: _,
+          Pexp_construct (_, {txt = [{pexp_desc = Pexp_tuple [_; _]}]}),
+          Ppat_construct (_, {txt = [{ppat_desc = Ppat_tuple [_; _]}]}) ) ->
+        ()
+      | _ ->
+        assert_failure "Attributed cons payloads must retain their tuple node");
+      OUnit.assert_equal ~msg:"list expression wire shape and attributes" expr0
+        (map_expr_to0 expr);
+      OUnit.assert_equal ~msg:"list pattern wire shape and attributes" pat0
+        (map_pat_to0 pat);
+      let structure =
+        [
+          Ast_helper.Str.value ~loc Nonrecursive [Ast_helper.Vb.mk ~loc pat expr];
+        ]
+      in
+      ignore (Typemod.type_structure (Env.initial_safe_string ()) structure);
+      let printed =
+        Res_printer.print_implementation structure ~comments:[] ~width:80
+      in
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"ListPayloadAttributes.res" ~source:printed
+      in
+      OUnit.assert_bool "attributed list payloads remain printable"
+        (not parsed.invalid);
+      ignore (Format.asprintf "%a" Pprintast.structure structure))
+    (let attrs = [attr "public_attr" (Parsetree0.PStr [])] in
+     [([], []); (attrs, []); ([], attrs); (attrs, attrs)])
+
+let test_constructor_args_roundtrip_through_ast0 _ =
+  let int_expr value =
+    Ast_helper.Exp.constant ~loc (Parsetree.Pconst_integer (value, None))
+  in
+  let int_pat value =
+    Ast_helper.Pat.constant ~loc (Parsetree.Pconst_integer (value, None))
+  in
+  let lid = Location.mknoloc (Longident.Lident "Pair") in
+  let expr =
+    Ast_helper.Exp.construct ~loc lid
+      (Location.mkloc [int_expr "1"; int_expr "2"] loc)
+  in
+  let expr0 = map_expr_to0 expr in
+  (match expr0.pexp_desc with
+  | Parsetree0.Pexp_construct (_, Some {pexp_desc = Pexp_tuple [_; _]}) ->
+    OUnit.assert_bool "multiple arguments carry bridge metadata"
+      (has_attr "_res.constructor_args" expr0.pexp_attributes)
+  | _ -> assert_failure "Expected a tuple-encoded v0 constructor payload");
+  let expr = map_expr0 expr0 in
+  (match expr.pexp_desc with
+  | Parsetree.Pexp_construct (_, {txt = [_; _]}) ->
+    OUnit.assert_bool "bridge metadata is removed"
+      (not (has_attr "_res.constructor_args" expr.pexp_attributes))
+  | _ -> assert_failure "Expected two constructor arguments after roundtrip");
+  let tuple_expr = Ast_helper.Exp.tuple ~loc [int_expr "1"; int_expr "2"] in
+  let expr =
+    Ast_helper.Exp.construct ~loc lid (Location.mkloc [tuple_expr] loc)
+  in
+  let expr0 = map_expr_to0 expr in
+  OUnit.assert_equal
+    ~msg:"a single tuple argument does not carry bridge metadata" []
+    expr0.pexp_attributes;
+  let expr = map_expr0 expr0 in
+  OUnit.assert_equal ~msg:"tuple roundtrip preserves empty attributes" []
+    expr.pexp_attributes;
+  (match expr.pexp_desc with
+  | Parsetree.Pexp_construct (_, {txt = [{pexp_desc = Pexp_tuple [_; _]}]}) ->
+    ()
+  | _ -> assert_failure "Expected one tuple argument after roundtrip");
+  let pat =
+    Ast_helper.Pat.construct ~loc lid
+      (Location.mkloc [int_pat "1"; int_pat "2"] loc)
+  in
+  let pat0 = map_pat_to0 pat in
+  (match pat0.ppat_desc with
+  | Parsetree0.Ppat_construct (_, Some {ppat_desc = Ppat_tuple [_; _]}) ->
+    OUnit.assert_bool "pattern arguments carry bridge metadata"
+      (has_attr "_res.constructor_args" pat0.ppat_attributes)
+  | _ -> assert_failure "Expected a tuple-encoded v0 constructor pattern");
+  match (map_pat0 pat0).ppat_desc with
+  | Parsetree.Ppat_construct (_, {txt = [_; _]}) -> ()
+  | _ -> assert_failure "Expected two pattern arguments after roundtrip"
+
+let check_args_keep_parentheses_location_in_ast0 sources =
+  List.iter
+    (fun source ->
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"VariantArgsLocation.res" ~source
+      in
+      let pat, expr =
+        match parsed.parsetree with
+        | [{pstr_desc = Pstr_value (_, [{pvb_pat; pvb_expr}])}] ->
+          (pvb_pat, pvb_expr)
+        | _ -> assert_failure "Expected one constructor binding"
+      in
+      let pattern_start = String.index source '(' in
+      let pattern_end = 1 + String.index_from source pattern_start ')' in
+      let expression_start = String.index_from source pattern_end '(' in
+      let expression_end = 1 + String.index_from source expression_start ')' in
+      OUnit.assert_equal [] pat.ppat_attributes;
+      OUnit.assert_equal [] expr.pexp_attributes;
+      let check ?(offset = 0) (pat : Parsetree0.pattern)
+          (expr : Parsetree0.expression) =
+        let assert_loc start finish {Location.loc_start; loc_end} =
+          OUnit.assert_equal (start + offset) loc_start.pos_cnum;
+          OUnit.assert_equal (finish + offset) loc_end.pos_cnum
+        in
+        (match pat.ppat_desc with
+        | Ppat_construct (_, Some {ppat_desc = Ppat_tuple _; ppat_loc})
+        | Ppat_variant (_, Some {ppat_desc = Ppat_tuple _; ppat_loc}) ->
+          assert_loc pattern_start pattern_end ppat_loc
+        | _ -> assert_failure "Expected v0 constructor pattern tuple");
+        match expr.pexp_desc with
+        | Pexp_construct (_, Some {pexp_desc = Pexp_tuple _; pexp_loc})
+        | Pexp_variant (_, Some {pexp_desc = Pexp_tuple _; pexp_loc}) ->
+          assert_loc expression_start expression_end pexp_loc
+        | _ -> assert_failure "Expected v0 constructor expression tuple"
+      in
+      let pat0 = map_pat_to0 pat in
+      let expr0 = map_expr_to0 expr in
+      check pat0 expr0;
+      check (map_pat_to0 (map_pat0 pat0)) (map_expr_to0 (map_expr0 expr0));
+      let shift_loc _ (loc : Location.t) =
+        {
+          loc with
+          loc_start =
+            {loc.loc_start with pos_cnum = loc.loc_start.pos_cnum + 100};
+          loc_end = {loc.loc_end with pos_cnum = loc.loc_end.pos_cnum + 100};
+        }
+      in
+      let to0 = {Ast_mapper_to0.default_mapper with location = shift_loc} in
+      check ~offset:100 (to0.pat to0 pat) (to0.expr to0 expr);
+      let from0 = {Ast_mapper_from0.default_mapper with location = shift_loc} in
+      check ~offset:100
+        (map_pat_to0 (from0.pat from0 pat0))
+        (map_expr_to0 (from0.expr from0 expr0)))
+    sources
+
+let test_constructor_args_keep_parentheses_location_in_ast0 _ =
+  check_args_keep_parentheses_location_in_ast0
+    [
+      "let Pair(a, b) = Pair(1, 2)";
+      "let Pair  (a, b) = Pair  (1, 2)";
+      "let Pair /* pattern */ (a, b) = Pair /* expression */ (1, 2)";
+      "let Module.Pair(a,\n b) = Module.Pair(1,\n 2)";
+    ]
+
+let test_polyvariant_args_keep_parentheses_location_in_ast0 _ =
+  check_args_keep_parentheses_location_in_ast0
+    [
+      "let #Pair(a, b) = #Pair(1, 2)";
+      "let #Pair /* pattern */ (a, b) = #Pair /* expression */ (1, 2)";
+      "let #\"quoted label\"(a,\n b) = #\"quoted label\"(1,\n 2)";
+    ]
+
+let test_constructor_argument_locations_through_ast0 _ =
+  let pattern_args_loc (pat : Parsetree.pattern) =
+    match pat.ppat_desc with
+    | Ppat_construct (_, {loc}) | Ppat_variant (_, {loc}) -> loc
+    | _ -> assert_failure "Expected a constructor pattern"
+  in
+  let expression_args_loc (expr : Parsetree.expression) =
+    match expr.pexp_desc with
+    | Pexp_construct (_, {loc}) | Pexp_variant (_, {loc}) -> loc
+    | _ -> assert_failure "Expected a constructor expression"
+  in
+  List.iter
+    (fun source ->
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"ArgumentLocations.res" ~source
+      in
+      OUnit.assert_bool "source parses" (not parsed.invalid);
+      let pat, expr =
+        match parsed.parsetree with
+        | [{pstr_desc = Pstr_value (_, [{pvb_pat; pvb_expr}])}] ->
+          (pvb_pat, pvb_expr)
+        | _ -> assert_failure "Expected a constructor binding"
+      in
+      let pat_loc = pattern_args_loc pat in
+      let expr_loc = expression_args_loc expr in
+      let expected_pat_bridge_loc =
+        match pat.ppat_desc with
+        | Ppat_construct (_, {txt = [arg]}) | Ppat_variant (_, {txt = [arg]}) ->
+          arg.ppat_loc
+        | _ -> pat_loc
+      in
+      let expected_expr_bridge_loc =
+        match expr.pexp_desc with
+        | Pexp_construct (_, {txt = [arg]}) | Pexp_variant (_, {txt = [arg]}) ->
+          arg.pexp_loc
+        | _ -> expr_loc
+      in
+      OUnit.assert_equal ~msg:"v0 uses the payload span for a single argument"
+        expected_pat_bridge_loc
+        (pattern_args_loc (map_pat0 (map_pat_to0 pat)));
+      OUnit.assert_equal ~msg:"v0 uses the payload span for a single argument"
+        expected_expr_bridge_loc
+        (expression_args_loc (map_expr0 (map_expr_to0 expr))))
+    [
+      "let Pair /* pattern */ (a, b) = Pair /* expression */ (1, 2)";
+      "let Pair((a, b)) = Pair((1, 2))";
+      "let Single(a) = Single(1)";
+      "let Unit() = Unit()";
+      "let Empty = Empty";
+      "let #Pair /* pattern */ (a, b) = #Pair /* expression */ (1, 2)";
+      "let #Pair((a, b)) = #Pair((1, 2))";
+      "let #Single(a) = #Single(1)";
+      "let #Unit() = #Unit()";
+      "let #Empty = #Empty";
+    ]
+
+let test_fresh_ast0_constructor_tuple_reprints_without_internal_metadata _ =
+  let int_expr value =
+    Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_integer (value, None))
+  in
+  let expr =
+    map_expr0
+      (Ast_helper0.Exp.construct ~loc
+         (Location.mknoloc (Longident.Lident "Pair"))
+         (Some (Ast_helper0.Exp.tuple ~loc [int_expr "1"; int_expr "2"])))
+  in
+  let pat =
+    map_pat0
+      (Ast_helper0.Pat.construct ~loc
+         (Location.mknoloc (Longident.Lident "Pair"))
+         (Some
+            (Ast_helper0.Pat.tuple ~loc
+               [
+                 Ast_helper0.Pat.var ~loc (Location.mknoloc "a");
+                 Ast_helper0.Pat.var ~loc (Location.mknoloc "b");
+               ])))
+  in
+  OUnit.assert_equal ~msg:"fresh v0 expression needs no internal metadata" []
+    expr.pexp_attributes;
+  OUnit.assert_equal ~msg:"fresh v0 pattern needs no internal metadata" []
+    pat.ppat_attributes;
+  List.iter
+    (fun width ->
+      let printed =
+        Res_printer.print_implementation
+          [
+            Ast_helper.Str.value ~loc Nonrecursive
+              [Ast_helper.Vb.mk ~loc pat expr];
+          ]
+          ~comments:[] ~width
+      in
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"FreshAst0Constructor.res" ~source:printed
+      in
+      match parsed.parsetree with
+      | [
+       {
+         pstr_desc =
+           Pstr_value
+             ( _,
+               [
+                 {
+                   pvb_pat =
+                     {
+                       ppat_desc =
+                         Ppat_construct
+                           (_, {txt = [{ppat_desc = Ppat_tuple [_; _]}]});
+                     };
+                   pvb_expr =
+                     {
+                       pexp_desc =
+                         Pexp_construct
+                           (_, {txt = [{pexp_desc = Pexp_tuple [_; _]}]});
+                     };
+                 };
+               ] );
+       };
+      ] ->
+        ()
+      | _ -> assert_failure "Expected a printed tuple payload")
+    [10; 80]
+
+let test_ast0_explicit_arity_becomes_constructor_args _ =
+  let arg value =
+    Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_integer (value, None))
+  in
+  let expr0 =
+    Ast_helper0.Exp.construct ~loc
+      ~attrs:[attr "ocaml.explicit_arity" (Parsetree0.PStr [])]
+      (Location.mknoloc (Longident.Lident "Pair"))
+      (Some (Ast_helper0.Exp.tuple ~loc [arg "1"; arg "2"]))
+  in
+  match (map_expr0 expr0).pexp_desc with
+  | Parsetree.Pexp_construct (_, {txt = [_; _]}) -> ()
+  | _ -> assert_failure "Expected explicit-arity v0 payload to become arguments"
+
+let test_fresh_ast0_constructor_tuple_defers_arity_to_typechecker _ =
+  let int_expr value =
+    Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_integer (value, None))
+  in
+  let int_pat value =
+    Ast_helper0.Pat.constant ~loc (Parsetree0.Pconst_integer (value, None))
+  in
+  let lid = Location.mknoloc (Longident.Lident "FreshPairForAst0") in
+  let expr =
+    map_expr0
+      (Ast_helper0.Exp.construct ~loc lid
+         (Some (Ast_helper0.Exp.tuple ~loc [int_expr "1"; int_expr "2"])))
+  in
+  let pat =
+    map_pat0
+      (Ast_helper0.Pat.construct ~loc lid
+         (Some (Ast_helper0.Pat.tuple ~loc [int_pat "1"; int_pat "2"])))
+  in
+  OUnit.assert_equal [] expr.pexp_attributes;
+  OUnit.assert_equal [] pat.ppat_attributes;
+  List.iter
+    (fun payload_type ->
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"Ast0ConstructorArgsTest.res"
+          ~source:
+            (Printf.sprintf
+               "type freshPairForAst0 = FreshPairForAst0(%s)\n\
+                let value = FreshPairForAst0(1, 2)\n\
+                let FreshPairForAst0(a, b) = value"
+               payload_type)
+      in
+      let structure =
+        match parsed.parsetree with
+        | [type_item; value_item; pattern_item] ->
+          let value_item =
+            match value_item.pstr_desc with
+            | Pstr_value (rec_flag, [binding]) ->
+              {
+                value_item with
+                pstr_desc =
+                  Pstr_value (rec_flag, [{binding with pvb_expr = expr}]);
+              }
+            | _ -> assert_failure "Expected value binding"
+          in
+          let pattern_item =
+            match pattern_item.pstr_desc with
+            | Pstr_value (rec_flag, [binding]) ->
+              {
+                pattern_item with
+                pstr_desc = Pstr_value (rec_flag, [{binding with pvb_pat = pat}]);
+              }
+            | _ -> assert_failure "Expected pattern binding"
+          in
+          [type_item; value_item; pattern_item]
+        | _ -> assert_failure "Expected type declaration and two value bindings"
+      in
+      ignore (Typemod.type_structure (Env.initial_safe_string ()) structure))
+    ["int, int"; "(int, int)"]
+
+let test_polyvariant_args_roundtrip_through_ast0 _ =
+  let int_expr value =
+    Ast_helper.Exp.constant ~loc (Parsetree.Pconst_integer (value, None))
+  in
+  let int_pat value =
+    Ast_helper.Pat.constant ~loc (Parsetree.Pconst_integer (value, None))
+  in
+  let expr =
+    Ast_helper.Exp.variant ~loc "Pair"
+      (Location.mkloc [int_expr "1"; int_expr "2"] loc)
+  in
+  let expr0 = map_expr_to0 expr in
+  (match expr0.pexp_desc with
+  | Parsetree0.Pexp_variant ("Pair", Some {pexp_desc = Pexp_tuple [_; _]}) ->
+    OUnit.assert_bool "polymorphic variant arguments carry bridge metadata"
+      (has_attr "_res.constructor_args" expr0.pexp_attributes)
+  | _ -> assert_failure "Expected tuple-encoded v0 polymorphic variant payload");
+  (match (map_expr0 expr0).pexp_desc with
+  | Parsetree.Pexp_variant ("Pair", {txt = [_; _]}) -> ()
+  | _ -> assert_failure "Expected two polymorphic variant arguments");
+  let pat =
+    Ast_helper.Pat.variant ~loc "Pair"
+      (Location.mkloc [int_pat "1"; int_pat "2"] loc)
+  in
+  let pat0 = map_pat_to0 pat in
+  (match pat0.ppat_desc with
+  | Parsetree0.Ppat_variant ("Pair", Some {ppat_desc = Ppat_tuple [_; _]}) ->
+    OUnit.assert_bool "polymorphic variant pattern arguments carry metadata"
+      (has_attr "_res.constructor_args" pat0.ppat_attributes)
+  | _ -> assert_failure "Expected tuple-encoded v0 polymorphic variant pattern");
+  (match (map_pat0 pat0).ppat_desc with
+  | Parsetree.Ppat_variant ("Pair", {txt = [_; _]}) -> ()
+  | _ -> assert_failure "Expected two polymorphic variant pattern arguments");
+  let int_type =
+    Ast_helper.Typ.constr ~loc (Location.mknoloc (Longident.Lident "int")) []
+  in
+  let typ =
+    Ast_helper.Typ.variant ~loc
+      [
+        Parsetree.Rtag
+          ( Location.mknoloc "Pair",
+            [],
+            false,
+            [Location.mkloc [int_type; int_type] loc] );
+      ]
+      Closed None
+  in
+  let typ0 =
+    Ast_mapper_to0.default_mapper.typ Ast_mapper_to0.default_mapper typ
+  in
+  (match typ0.ptyp_desc with
+  | Parsetree0.Ptyp_variant
+      ( [Rtag ({txt = "Pair"}, _, false, [{ptyp_desc = Ptyp_tuple [_; _]}])],
+        _,
+        _ ) ->
+    ()
+  | _ -> assert_failure "Expected tuple-encoded v0 polymorphic variant type");
+  let typ =
+    Ast_mapper_from0.default_mapper.typ Ast_mapper_from0.default_mapper typ0
+  in
+  match typ.ptyp_desc with
+  | Parsetree.Ptyp_variant
+      ([Rtag ({txt = "Pair"}, _, false, [{txt = [_; _]}])], _, _) ->
+    ()
+  | _ -> assert_failure "Expected two polymorphic variant type arguments"
+
+let test_polyvariant_type_payload_attributes_through_ast0 _ =
+  let payload_loc = source_loc 10 30 in
+  let marker = attr "_res.constructor_args" (Parsetree0.PStr []) in
+  let before = attr "ppx.before" (Parsetree0.PStr []) in
+  let after = attr "ppx.after" (Parsetree0.PStr []) in
+  let item =
+    Ast_helper0.Typ.constr ~loc:(source_loc 12 15)
+      ~attrs:[attr "ppx.child" (Parsetree0.PStr [])]
+      (Location.mknoloc (Longident.Lident "int"))
+      []
+  in
+  let make_variant payload =
+    Ast_helper0.Typ.variant ~loc:(source_loc 0 32)
+      [Parsetree0.Rtag (located_string "Pair", [before], false, [payload])]
+      Closed None
+  in
+  List.iter
+    (fun payload_attrs ->
+      let payload =
+        Ast_helper0.Typ.tuple ~loc:payload_loc ~attrs:payload_attrs [item; item]
+      in
+      let from0 = Ast_mapper_from0.default_mapper in
+      let to0 = Ast_mapper_to0.default_mapper in
+      let decoded = from0.typ from0 (make_variant payload) in
+      let remaining_attrs =
+        List.filter (fun attribute -> attribute <> marker) payload_attrs
+      in
+      (match decoded.ptyp_desc with
+      | Ptyp_variant ([Rtag (_, _, false, [{loc; txt}])], _, _) -> (
+        OUnit.assert_equal payload_loc loc;
+        match (remaining_attrs, txt) with
+        | [], [_; _] -> ()
+        | _ :: _, [{ptyp_desc = Ptyp_tuple [_; _]; ptyp_attributes}] ->
+          OUnit.assert_bool "bridge marker is consumed"
+            (not (has_attr "_res.constructor_args" ptyp_attributes))
+        | _ -> assert_failure "Expected attributed tuple wrapper to survive")
+      | _ -> assert_failure "Expected a polymorphic variant type");
+      let expected_payload =
+        if remaining_attrs = [] then payload
+        else {payload with ptyp_attributes = remaining_attrs}
+      in
+      let encoded = to0.typ to0 decoded in
+      OUnit.assert_equal
+        ~msg:"preserve payload attributes, children and locations"
+        (make_variant expected_payload)
+        encoded;
+      OUnit.assert_equal ~msg:"a second bridge roundtrip is stable" encoded
+        (to0.typ to0 (from0.typ from0 encoded)))
+    [[marker]; [before; marker]; [marker; after]; [before; marker; after]]
+
+let assert_string_expr ~expected_source ~expected_semantic expr =
+  match expr.Parsetree.pexp_desc with
+  | Pexp_constant (Pconst_string payload) ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_source
+      (String_literal.string_source payload);
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_semantic
+      (String_literal.string_semantic payload)
+  | _ -> assert_failure "Expected a string expression"
+
+let assert_string_pat ~expected_source ~expected_semantic pat =
+  match pat.Parsetree.ppat_desc with
+  | Ppat_constant (Pconst_string payload) ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_source
+      (String_literal.string_source payload);
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected_semantic
+      (String_literal.string_semantic payload)
+  | _ -> assert_failure "Expected a string pattern"
+
+let assert_template_expr ~expected expr =
+  match expr.Parsetree.pexp_desc with
+  | Pexp_template {source_segments = [actual]; values = []} ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected actual.txt
+  | _ -> assert_failure "Expected a template expression"
+
+let test_ast0_strings_convert_to_internal_representation _ =
+  let encoded = {|a\n\uD83D\uDE00|} in
+  let expr0 =
+    Ast_helper0.Exp.constant ~loc
+      (Parsetree0.Pconst_string (encoded, Some "js"))
+  in
+  assert_string_expr ~expected_source:encoded ~expected_semantic:"a\n😀"
+    (map_expr0 expr0);
+  let pat0 =
+    Ast_helper0.Pat.constant ~loc
+      (Parsetree0.Pconst_string (encoded, Some "js"))
+  in
+  assert_string_pat ~expected_source:encoded ~expected_semantic:"a\n😀"
+    (map_pat0 pat0);
+  (* Older compiler-produced ast0 files can contain the processed [*j]
+     delimiter. Decode those directly instead of interpreting them as source
+     text again. *)
+  let legacy_expr0 =
+    Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_string ({|\"|}, Some "*j"))
+  in
+  assert_string_expr ~expected_source:{|\"|} ~expected_semantic:"\""
+    (map_expr0 legacy_expr0);
+  let template_expr0 =
+    Ast_helper0.Exp.constant ~loc
+      ~attrs:[attr "res.template" (Parsetree0.PStr [])]
+      (Parsetree0.Pconst_string (encoded, Some "js"))
+  in
+  assert_template_expr ~expected:encoded (map_expr0 template_expr0);
+  let quoted_expr0 =
+    Ast_helper0.Exp.constant ~loc
+      (Parsetree0.Pconst_string ({|\x61|}, Some "custom"))
+  in
+  assert_string_expr ~expected_source:{|\\x61|} ~expected_semantic:{|\x61|}
+    (map_expr0 quoted_expr0);
+  (* A tagged pattern cannot invoke its tag. Treating its raw contents as a
+     string made json`\x61` collide with the ordinary "\\x61" pattern during
+     string-switch sorting. Reject both known and arbitrary PPX delimiters. *)
+  List.iter
+    (fun tag ->
+      let tagged_pattern0 =
+        Ast_helper0.Pat.constant ~loc
+          (Parsetree0.Pconst_string ({|\x61|}, Some tag))
+      in
+      match map_pat0 tagged_pattern0 with
+      | _ -> assert_failure "Expected the ast0 tagged pattern to be rejected"
+      | exception Location.Error _ -> ())
+    ["custom"; "json"];
+  let invalid_expr0 =
+    Ast_helper0.Exp.constant ~loc
+      (Parsetree0.Pconst_string ({|\uD800|}, Some "js"))
+  in
+  match map_expr0 invalid_expr0 with
+  | _ -> assert_failure "Expected an invalid ast0 string escape"
+  | exception Location.Error _ -> ()
+
+let test_ppx_byte_strings_convert_to_valid_utf8 _ =
+  let byte_string = "a\xff\xc3\xa9" in
+  let expression0 =
+    Ast_helper0.Exp.constant ~loc (Ast_helper0.Const.string byte_string)
+  in
+  match (map_expr0 expression0).pexp_desc with
+  | Pexp_constant (Pconst_string payload) ->
+    let source = String_literal.string_source payload in
+    let semantic = String_literal.string_semantic payload in
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") "aÿé" source;
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") "aÿé" semantic;
+    OUnit.assert_equal ~printer:string_of_int 3
+      (String_literal.utf16_length semantic)
+  | _ -> assert_failure "Expected a normalized PPX string"
+
+let test_string_literals_roundtrip_through_ast0 _ =
+  let semantic = "a\n😀" in
+  let expr = Ast_helper.Exp.constant ~loc (Ast_helper.Const.string semantic) in
+  assert_string_expr ~expected_source:{|a\n😀|} ~expected_semantic:semantic
+    (map_expr0 (map_expr_to0 expr));
+  let encoded = {|a\n\uD83D\uDE00|} in
+  let template_expr =
+    Ast_helper.Exp.template ~loc [located_string encoded] []
+  in
+  let template_expr0 = map_expr_to0 template_expr in
+  (match template_expr0.Parsetree0.pexp_desc with
+  | Pexp_constant (Pconst_string (actual, Some "js")) ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") encoded actual;
+    OUnit.assert_bool "expected the ast0 template marker"
+      (List.mem "res.template" (attr_names template_expr0.pexp_attributes))
+  | _ -> assert_failure "Expected ast0's template string representation");
+  let template_expr = map_expr0 template_expr0 in
+  assert_template_expr ~expected:encoded template_expr;
+  OUnit.assert_bool "the ast0 template marker was consumed"
+    (not (List.mem "res.template" (attr_names template_expr.pexp_attributes)));
+  let template_pat =
+    Ast_helper.Pat.constant ~loc (Ast_helper.Const.string "a\n😀")
+  in
+  let template_pat0 =
+    Ast_mapper_to0.default_mapper.pat Ast_mapper_to0.default_mapper template_pat
+  in
+  OUnit.assert_bool "ordinary string patterns need no ast0 template marker"
+    (not (List.mem "res.template" (attr_names template_pat0.ppat_attributes)));
+  let template_pat = map_pat0 template_pat0 in
+  (match template_pat.ppat_desc with
+  | Ppat_constant (Pconst_string payload) ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") "a\n😀"
+      (String_literal.string_semantic payload)
+  | _ -> assert_failure "Expected a string pattern after ast0 roundtrip");
+  let json_expr =
+    Ast_helper.Exp.tagged_template ~loc
+      (Ast_helper.Exp.ident ~loc (Location.mkloc (Longident.Lident "json") loc))
+      [located_string {|{"answer":42}|}]
+      []
+  in
+  (match (map_expr0 (map_expr_to0 json_expr)).pexp_desc with
+  | Pexp_tagged_template
+      {
+        tag = {pexp_desc = Pexp_ident {txt = Lident "json"}};
+        raw_sources = [{txt = actual}];
+        values = [];
+      } ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") {|{"answer":42}|} actual
+  | _ -> assert_failure "Expected a legacy json tagged template");
+  let char_pattern =
+    Ast_helper.Pat.constant ~loc
+      (Parsetree.Pconst_char {source = {|\u{61}|}; semantic = 0x61})
+  in
+  let char_pattern0 =
+    Ast_mapper_to0.default_mapper.pat Ast_mapper_to0.default_mapper char_pattern
+  in
+  (match char_pattern0.ppat_desc with
+  | Ppat_constant (Pconst_char actual) ->
+    OUnit.assert_equal ~printer:string_of_int 0x61 actual
+  | _ -> assert_failure "Expected an ast0 character literal");
+  (match (map_pat0 char_pattern0).ppat_desc with
+  | Ppat_constant (Pconst_char {source; semantic}) ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") "a" source;
+    OUnit.assert_equal ~printer:string_of_int 0x61 semantic
+  | _ -> assert_failure "Expected a character literal after ast0 roundtrip");
+  let source_string =
+    Ast_helper.Exp.constant ~loc
+      (Parsetree.Pconst_string
+         (match String_literal.string_from_source {|\x61|} with
+         | Some payload -> payload
+         | None -> assert_failure "Expected a valid source string"))
+  in
+  assert_string_expr ~expected_source:{|\x61|} ~expected_semantic:"a"
+    (map_expr0 (map_expr_to0 source_string))
+
+let test_raw_nodes_roundtrip_through_ast0 _ =
+  (* [%raw("x")] and [%ffi(`y`)] reach v0 as the extensions they are written
+     as, and come back unchanged. *)
+  let string_source : Parsetree.raw_source =
+    Raw_string {txt = "x"; loc = source_loc 5 8}
+  in
+  let template_source : Parsetree.raw_source =
+    Raw_template {txt = "a\\`b"; loc = source_loc 5 10}
+  in
+  let raw kind source =
+    Ast_helper.Exp.raw ~loc:(source_loc 0 12) ~name_loc:(source_loc 0 4) kind
+      source
+  in
+  List.iter
+    (fun (expression : Parsetree.expression) ->
+      let expression0 = map_expr_to0 expression in
+      (match expression0.pexp_desc with
+      | Pexp_extension
+          ( {txt = "raw" | "ffi"; loc = name_loc},
+            PStr
+              [
+                {
+                  pstr_desc =
+                    Pstr_eval
+                      ( {
+                          pexp_desc =
+                            Pexp_constant (Pconst_string (_, Some "js"));
+                        },
+                        [] );
+                };
+              ] ) ->
+        OUnit.assert_equal (source_loc 0 4) name_loc
+      | _ -> assert_failure "Expected a raw extension on the ast0 wire");
+      OUnit.assert_equal expression.pexp_desc (map_expr0 expression0).pexp_desc)
+    [
+      raw Raw_expression string_source;
+      raw Raw_function string_source;
+      raw Raw_expression template_source;
+    ];
+  (* A template keeps its spelling, so its JavaScript is decoded once. *)
+  match
+    (map_expr0 (map_expr_to0 (raw Raw_expression template_source))).pexp_desc
+  with
+  | Pexp_raw {source} ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") "a`b"
+      (Ast_raw.js_source source)
+  | _ -> assert_failure "Expected a raw node"
+
+let test_raw_structure_item_roundtrips_through_ast0 _ =
+  let item =
+    Ast_helper.Str.raw ~loc:(source_loc 0 20) ~name_loc:(source_loc 7 12)
+      ~attrs:[attr "attr" (Parsetree.PStr [])]
+      (Raw_string {txt = "var x"; loc = source_loc 13 20})
+  in
+  let item0 =
+    Ast_mapper_to0.default_mapper.structure_item Ast_mapper_to0.default_mapper
+      item
+  in
+  (match item0.pstr_desc with
+  | Pstr_extension (({txt = "raw"; loc}, PStr [_]), [({txt = "attr"}, _)]) ->
+    OUnit.assert_equal (source_loc 7 12) loc
+  | _ -> assert_failure "Expected a %%raw extension on the ast0 wire");
+  OUnit.assert_equal item.pstr_desc
+    (Ast_mapper_from0.default_mapper.structure_item
+       Ast_mapper_from0.default_mapper item0)
+      .pstr_desc
+
+let test_raw_source_prints_with_fitting_quotes _ =
+  (* A source with a double quote, e.g. from a PPX, prints as a template. *)
+  let payload_desc txt =
+    match
+      Ast_raw.to_extension ~name:"raw" ~name_loc:loc
+        (Raw_string {txt; loc = Location.none})
+    with
+    | _, PStr [{pstr_desc = Pstr_eval ({pexp_desc}, [])}] -> pexp_desc
+    | _ -> assert_failure "Expected a single payload expression"
+  in
+  (match payload_desc "1 + 2" with
+  | Pexp_constant (Pconst_string _) -> ()
+  | _ -> assert_failure "Expected a double-quoted string");
+  match payload_desc {|"img"|} with
+  | Pexp_template {source_segments = [{txt = {|"img"|}}]} -> ()
+  | _ -> assert_failure "Expected a template"
+
+let test_raw_source_template_fallback_reparses _ =
+  (* A source that needs a template escapes the template's own syntax, so it
+     parses back to the same JavaScript. *)
+  List.iter
+    (fun txt ->
+      let structure =
+        [
+          Ast_helper.Str.value ~loc Nonrecursive
+            [
+              Ast_helper.Vb.mk ~loc
+                (Ast_helper.Pat.var ~loc (Location.mknoloc "v"))
+                (Ast_helper.Exp.raw ~loc ~name_loc:loc Raw_expression
+                   (Raw_string {txt; loc}));
+            ];
+        ]
+      in
+      let printed =
+        Res_printer.print_implementation structure ~comments:[] ~width:80
+      in
+      let parsed =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"RawTemplateFallback.res" ~source:printed
+      in
+      match parsed.parsetree with
+      | [
+       {
+         pstr_desc =
+           Pstr_value (_, [{pvb_expr = {pexp_desc = Pexp_raw {source}}}]);
+       };
+      ]
+        when not parsed.invalid ->
+        OUnit.assert_equal ~printer:(Printf.sprintf "%S") txt
+          (Ast_raw.js_source source)
+      | _ -> assert_failure ("Printed raw source does not reparse: " ^ printed))
+    [
+      {|"${x}"|};
+      {|"a`b"|};
+      {|"\"q\" `r` ${s}"|};
+      {|"a\${b}"|};
+      {|"\\`"|};
+      {|"a\n" + "\|};
+      "\"line\\\ncontinued\"";
+    ]
+
+let test_attributed_raw_template_reprints_after_ast0_roundtrip _ =
+  let source = {|let a = %raw(@foo `"x"`)
+let b = %ffi(@foo `(a) => "\`"`)|} in
+  let parsed =
+    Res_driver.parse_implementation_from_source
+      ~display_filename:"AttributedRawTemplate.res" ~source
+  in
+  OUnit.assert_bool "expected valid ReScript source" (not parsed.invalid);
+  let round_tripped =
+    Ast_mapper_from0.default_mapper.structure Ast_mapper_from0.default_mapper
+      (Ast_mapper_to0.default_mapper.structure Ast_mapper_to0.default_mapper
+         parsed.parsetree)
+  in
+  let print structure =
+    Res_printer.print_implementation structure ~comments:[] ~width:80
+  in
+  OUnit.assert_equal ~printer:(Printf.sprintf "%S") (print parsed.parsetree)
+    (print round_tripped)
+
+let assert_raw_extension_payload ~name ~expected expression =
+  match expression.Parsetree.pexp_desc with
+  | Pexp_raw {kind; source = Raw_string {txt = actual}} ->
+    OUnit.assert_equal name (Ast_raw.extension_name kind);
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected actual
+  | _ -> assert_failure "Expected a raw node with a string payload"
+
+let test_raw_extension_payloads_roundtrip_through_ast0 _ =
+  let encoded = {|'\\n'|} in
+  List.iter
+    (fun name ->
+      let payload =
+        Parsetree0.PStr
+          [
+            Ast_helper0.Str.eval ~loc
+              (Ast_helper0.Exp.constant ~loc
+                 (Parsetree0.Pconst_string (encoded, Some "js")));
+          ]
+      in
+      let expression0 =
+        Ast_helper0.Exp.extension ~loc (Location.mknoloc name, payload)
+      in
+      let expression = map_expr0 expression0 in
+      assert_raw_extension_payload ~name ~expected:encoded expression;
+      assert_raw_extension_payload ~name ~expected:encoded
+        (map_expr0 (map_expr_to0 expression)))
+    ["raw"; "ffi"]
+
+(* On the v0 wire, dict literals are the calls they used to be parsed into:
+   [Primitive_dict.make] without spreads, [Primitive_dict.spread] marked with
+   [res.dictSpread] with them. They come back as [Pexp_dict]. *)
+(* On the v0 wire, a dict pattern is an open record pattern with string keys
+   as labels, marked with [res.dictPattern] in front of its attributes *)
+let test_dict_pattern_through_ast0 _ =
+  let key_loc = source_loc 5 8 in
+  let entry ~key_loc key pattern optional =
+    {
+      Parsetree.pdp_key = located_string ~loc:key_loc key;
+      pdp_pattern = pattern;
+      pdp_optional = optional;
+    }
+  in
+  let x_loc = source_loc 10 11 in
+  let dict =
+    Ast_helper.Pat.dict ~loc:(source_loc 0 30)
+      ~attrs:[attr "user" (Parsetree.PStr [])]
+      [
+        entry ~key_loc "a"
+          (Ast_helper.Pat.var ~loc:x_loc (located_string ~loc:x_loc "x"))
+          false;
+        entry ~key_loc:(source_loc 13 18) "b-c"
+          (Ast_helper.Pat.any ~loc:(source_loc 21 22) ())
+          true;
+      ]
+  in
+  let wire = map_pat_to0 dict in
+  (match wire.ppat_desc with
+  | Parsetree0.Ppat_record
+      ( [
+          ({txt = Longident.Lident "a"; loc = a_loc}, _);
+          ({txt = Longident.Lident "b-c"}, _);
+        ],
+        Open ) ->
+    OUnit.assert_equal ~msg:"key location" key_loc a_loc
+  | _ -> assert_failure "Expected an open v0 record pattern");
+  OUnit.assert_equal ~printer:(String.concat ", ")
+    ["res.dictPattern"; "user"]
+    (attr_names wire.ppat_attributes);
+  (* Locations included *)
+  OUnit.assert_bool "dict pattern roundtrips through ast0" (map_pat0 wire = dict)
+
+let test_dict_literal_through_ast0 _ =
+  List.iter
+    (fun (source, wire_function) ->
+      let parsed =
+        Res_driver.parse_implementation_from_source ~display_filename:"Dict.res"
+          ~source:("let x = " ^ source)
+      in
+      match parsed.parsetree with
+      | [{pstr_desc = Pstr_value (_, [{pvb_expr = e}])}] when not parsed.invalid
+        -> (
+        let wire = map_expr_to0 e in
+        (match wire.pexp_desc with
+        | Parsetree0.Pexp_apply
+            ( {
+                pexp_desc =
+                  Pexp_ident
+                    {txt = Longident.Ldot (Lident "Primitive_dict", name)};
+                pexp_attributes;
+              },
+              _ ) ->
+          OUnit.assert_equal ~msg:source wire_function name;
+          OUnit.assert_equal ~msg:source ~printer:(String.concat ", ")
+            (if name = "spread" then ["res.dictSpread"] else ["res.dict"])
+            (attr_names pexp_attributes)
+        | _ -> assert_failure ("Expected a Primitive_dict call: " ^ source));
+        match map_expr0 wire with
+        | {pexp_desc = Pexp_dict _} as back ->
+          (* Locations included: the parsed literal has real ones *)
+          OUnit.assert_bool (source ^ " roundtrips through ast0") (back = e)
+        | _ -> assert_failure ("Expected Pexp_dict back: " ^ source))
+      | _ -> assert_failure ("Expected a let binding: " ^ source))
+    [
+      ("dict{}", "make");
+      ({|dict{"a": 1, "b": "x"}|}, "make");
+      ({|dict{"a\"b": 1}|}, "make");
+      ("dict{...a}", "spread");
+      ({|dict{"a": 1, ...b, "c": 3, ...d}|}, "spread");
+      ({|dict{"a": 1, ...dict{"b": 2}}|}, "spread");
+      ({|dict{...dict{"b": 2, ...dict{}}, "c": 3}|}, "spread");
+    ];
+  (* A call without the marker, as written in the source or by a PPX, stays a
+     call *)
+  let make =
+    Ast_helper0.Exp.apply ~loc
+      (Ast_helper0.Exp.ident ~loc
+         (located_string
+            (Longident.Ldot (Longident.Lident "Primitive_dict", "make"))))
+      [
+        ( Asttypes.Noloc.Nolabel,
+          Ast_helper0.Exp.array ~loc
+            [
+              Ast_helper0.Exp.tuple ~loc
+                [
+                  Ast_helper0.Exp.constant ~loc
+                    (Parsetree0.Pconst_string ("k", None));
+                  Ast_helper0.Exp.constant ~loc
+                    (Parsetree0.Pconst_integer ("1", None));
+                ];
+            ] );
+      ]
+  in
+  match (map_expr0 make).pexp_desc with
+  | Pexp_apply
+      {
+        funct =
+          {
+            pexp_desc = Pexp_ident {txt = Ldot (Lident "Primitive_dict", "make")};
+          };
+      } ->
+    ()
+  | _ -> assert_failure "Expected a call of Primitive_dict.make"
+
+let test_removed_regexp_extension _ =
+  List.iter
+    (fun source ->
+      let result =
+        Res_driver.parse_implementation_from_source
+          ~display_filename:"Regexp.res" ~source
+      in
+      OUnit.assert_bool "legacy regexp syntax is rejected" result.invalid;
+      OUnit.assert_equal
+        [
+          "The %re extension has been removed. Use a regexp literal such as \
+           /abc/i.";
+        ]
+        (List.map Res_diagnostics.explain result.diagnostics))
+    ["let re = %re(\"/abc/i\")"; "let re = %re(`/abc/i`)"; "%%re(\"/abc/i\")"]
+
+let test_regexp_parser_locations _ =
+  let source = "let re = /a/g" in
+  let result =
+    Res_driver.parse_implementation_from_source ~display_filename:"Regexp.res"
+      ~source
+  in
+  OUnit.assert_bool "valid regexp" (not result.invalid);
+  match result.parsetree with
+  | [
+   {
+     Parsetree.pstr_desc =
+       Pstr_value
+         ( _,
+           [
+             {
+               pvb_expr =
+                 {
+                   pexp_desc = Pexp_regexp {pattern = "a"; flags = "g"};
+                   pexp_loc;
+                 };
+             };
+           ] );
+   };
+  ] ->
+    OUnit.assert_equal 9 pexp_loc.loc_start.pos_cnum;
+    OUnit.assert_equal 13 pexp_loc.loc_end.pos_cnum
+  | _ -> assert_failure "Expected a located regexp expression"
+
+let test_regexp_roundtrip_through_ast0 _ =
+  let loc = source_loc 10 31 in
+  let attrs = [attr "test.regexp" (Parsetree.PStr [])] in
+  let expression = Ast_helper.Exp.regexp ~loc ~attrs {|a\/[/]\d|} "ig" in
+  let expression0 = map_expr_to0 expression in
+  (match expression0.pexp_desc with
+  | Pexp_extension
+      ( {txt = "re"; loc = name_loc},
+        PStr
+          [
+            {
+              pstr_desc =
+                Pstr_eval
+                  ( {
+                      pexp_desc =
+                        Pexp_constant (Pconst_string (source, Some "js"));
+                      pexp_loc;
+                      pexp_attributes = [];
+                    },
+                    [] );
+              pstr_loc;
+            };
+          ] ) ->
+    OUnit.assert_equal {|/a\/[/]\d/ig|} source;
+    OUnit.assert_equal loc name_loc;
+    OUnit.assert_equal loc pexp_loc;
+    OUnit.assert_equal loc pstr_loc
+  | _ -> assert_failure "Expected the legacy regexp extension wire shape");
+  OUnit.assert_equal expression (map_expr0 expression0)
+
+let regexp_payload0 ?(delimiter = Some "js") source =
+  let outer_loc = source_loc 10 50 in
+  Ast_helper0.Exp.extension ~loc:outer_loc
+    ~attrs:[attr "test.outer" (Parsetree0.PStr [])]
+    ( Location.mkloc "re" (source_loc 11 13),
+      Parsetree0.PStr
+        [
+          Ast_helper0.Str.eval ~loc:(source_loc 14 49)
+            ~attrs:[attr "test.eval" (Parsetree0.PStr [])]
+            (Ast_helper0.Exp.constant ~loc:(source_loc 15 48)
+               ~attrs:[attr "test.payload" (Parsetree0.PStr [])]
+               (Parsetree0.Pconst_string (source, delimiter)));
+        ] )
+
+let test_ppx_regexp_payloads _ =
+  List.iter
+    (fun delimiter ->
+      let expression =
+        map_expr0 (regexp_payload0 ~delimiter {| /a\/[/]\d/ig |})
+      in
+      let expected =
+        Ast_helper.Exp.regexp ~loc:(source_loc 10 50)
+          ~attrs:
+            (List.map
+               (fun name -> attr name (Parsetree.PStr []))
+               ["test.outer"; "test.eval"; "test.payload"])
+          {|a\/[/]\d|} "ig"
+      in
+      OUnit.assert_equal expected expression;
+      OUnit.assert_equal expected (map_expr0 (map_expr_to0 expression)))
+    [None; Some "js"; Some "*j"; Some "quoted"];
+  (* The JS parser's filtered flags must not silently change PPX output. *)
+  match (map_expr0 (regexp_payload0 "/a/zig")).pexp_desc with
+  | Pexp_regexp {pattern = "a"; flags = "zig"} -> ()
+  | _ -> assert_failure "Expected the original regexp flags"
+
+let test_malformed_ppx_regexp_payloads _ =
+  let reject expression0 expected_loc =
+    match map_expr0 expression0 with
+    | _ ->
+      assert_failure
+        "Expected malformed PPX regexp to be rejected at the bridge"
+    | exception Location.Error error ->
+      OUnit.assert_equal expected_loc error.loc;
+      OUnit.assert_equal
+        "A PPX returned a malformed regexp payload. Expected a string \
+         containing one regexp literal."
+        error.msg
+  in
+  List.iter
+    (fun source -> reject (regexp_payload0 source) (source_loc 15 48))
+    ["not a literal"; ""; "/a"; "/[/"; "/a/; other()"; "/a/ + /b/"];
+  reject
+    (Ast_helper0.Exp.extension ~loc (Location.mknoloc "re", Parsetree0.PStr []))
+    loc;
+  reject
+    (Ast_helper0.Exp.extension ~loc
+       ( Location.mknoloc "re",
+         Parsetree0.PStr
+           [
+             Ast_helper0.Str.eval
+               (Ast_helper0.Exp.constant
+                  (Parsetree0.Pconst_integer ("1", None)));
+           ] ))
+    loc;
+  match
+    Ast_mapper_from0.default_mapper.extension Ast_mapper_from0.default_mapper
+      (Location.mkloc "re" (source_loc 1 3), Parsetree0.PStr [])
+  with
+  | _ ->
+    assert_failure "Expected non-expression regexp extension to be rejected"
+  | exception Location.Error error ->
+    OUnit.assert_equal (source_loc 1 3) error.loc;
+    OUnit.assert_equal
+      "A PPX returned a regexp extension outside an expression." error.msg
+
+let test_tagged_templates_roundtrip_through_ast0 _ =
+  let head_loc = source_loc 4 16 in
+  let tail_loc = source_loc 20 25 in
+  let tag =
+    Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident "tag"))
+  in
+  let value = Ast_helper.Exp.constant ~loc (Ast_helper.Const.integer "1") in
+  let expression =
+    Ast_helper.Exp.tagged_template ~loc
+      ~attrs:[attr "keep" (Parsetree.PStr [])]
+      tag
+      [
+        located_string ~loc:head_loc {|raw\unicode|};
+        located_string ~loc:tail_loc " tail";
+      ]
+      [value]
+  in
+  let expression0 = map_expr_to0 expression in
+  OUnit.assert_bool "the frozen AST uses the tagged-template marker"
+    (List.mem "res.taggedTemplate" (attr_names expression0.pexp_attributes));
+  (match expression0.pexp_desc with
+  | Pexp_apply
+      ( _,
+        [
+          (_, {pexp_desc = Pexp_array [head; tail]});
+          (_, {pexp_desc = Pexp_array [_]});
+        ] ) ->
+    OUnit.assert_equal ~printer:Ext_obj.dump [head_loc; tail_loc]
+      [head.pexp_loc; tail.pexp_loc]
+  | _ -> assert_failure "Expected frozen-AST tagged-template arrays");
+  match (map_expr0 expression0).pexp_desc with
+  | Pexp_tagged_template
+      {
+        tag = {pexp_desc = Pexp_ident {txt = Longident.Lident "tag"}};
+        raw_sources;
+        values = [{pexp_desc = Pexp_constant (Pconst_integer ("1", None))}];
+      } ->
+    OUnit.assert_equal ~printer:Ext_obj.dump [{|raw\unicode|}; " tail"]
+      (List.map (fun {Location.txt} -> txt) raw_sources);
+    OUnit.assert_equal ~printer:Ext_obj.dump [head_loc; tail_loc]
+      (List.map (fun (source : string Location.loc) -> source.loc) raw_sources);
+    OUnit.assert_equal ["keep"]
+      (attr_names (map_expr0 expression0).pexp_attributes)
+  | _ -> assert_failure "Expected an explicit tagged template after roundtrip"
+
+let test_ppx_rewritten_tagged_template_segments _ =
+  let semantic = "${value}`\\" in
+  let segment =
+    Ast_helper0.Exp.constant ~loc (Ast_helper0.Const.string semantic)
+  in
+  let tag =
+    Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident "tag"))
+  in
+  let expression0 =
+    Ast_helper0.Exp.apply ~loc
+      ~attrs:[attr "res.taggedTemplate" (Parsetree0.PStr [])]
+      tag
+      [
+        (Nolabel, Ast_helper0.Exp.array ~loc [segment]);
+        (Nolabel, Ast_helper0.Exp.array ~loc []);
+      ]
+  in
+  match (map_expr0 expression0).pexp_desc with
+  | Pexp_tagged_template {raw_sources = [{txt}]} ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|\${value}\`\\|e} txt
+  | _ -> assert_failure "Expected a rewritten tagged template after roundtrip"
+
+let test_ppx_rewritten_template_segments _ =
+  let template_attr = attr "res.template" (Parsetree0.PStr []) in
+  let semantic = "${value}`\\" in
+  let uninterpolated =
+    Ast_helper0.Exp.constant ~loc ~attrs:[template_attr]
+      (Ast_helper0.Const.string semantic)
+  in
+  assert_template_expr ~expected:{e|\${value}\`\\|e} (map_expr0 uninterpolated);
+  let segment semantic =
+    Ast_helper0.Exp.constant ~loc ~attrs:[template_attr]
+      (Ast_helper0.Const.string semantic)
+  in
+  let concat lhs rhs =
+    Ast_helper0.Exp.apply ~loc ~attrs:[template_attr]
+      (Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident "^")))
+      [(Asttypes.Noloc.Nolabel, lhs); (Asttypes.Noloc.Nolabel, rhs)]
+  in
+  let value =
+    Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident "value"))
+  in
+  let interpolated =
+    concat (concat (segment "${head}") value) (segment "`\\")
+  in
+  match (map_expr0 interpolated).pexp_desc with
+  | Pexp_template
+      {
+        source_segments = [{txt = head}; {txt = tail}];
+        values = [{pexp_desc = Pexp_ident {txt = Longident.Lident "value"}}];
+      } ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|\${head}|e} head;
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") {e|\`\\|e} tail
+  | _ -> assert_failure "Expected a rewritten template after roundtrip"
+
+let test_interpolated_templates_roundtrip_through_ast0 _ =
+  let head_loc = source_loc 1 8 in
+  let tail_loc = source_loc 12 16 in
+  let value = Ast_helper.Exp.constant ~loc (Ast_helper.Const.integer "1") in
+  let expression =
+    Ast_helper.Exp.template ~loc
+      ~attrs:[attr "keep" (Parsetree.PStr [])]
+      [
+        located_string ~loc:head_loc {|head\n|};
+        located_string ~loc:tail_loc "tail";
+      ]
+      [value]
+  in
+  let expression0 = map_expr_to0 expression in
+  OUnit.assert_bool "the frozen AST uses the template marker"
+    (List.mem "res.template" (attr_names expression0.pexp_attributes));
+  let rec first_segment (expression : Parsetree0.expression) =
+    match expression.pexp_desc with
+    | Pexp_apply (_, [(_, lhs); (_, _)]) -> first_segment lhs
+    | Pexp_constant (Pconst_string (source, Some actual_delimiter)) ->
+      OUnit.assert_equal "js" actual_delimiter;
+      OUnit.assert_equal {|head\n|} source
+    | _ -> assert_failure "Expected a frozen-AST template segment"
+  in
+  first_segment expression0;
+  let rec segment_locations (expression : Parsetree0.expression) =
+    match expression.pexp_desc with
+    | Pexp_apply (_, [(_, lhs); (_, rhs)]) ->
+      segment_locations lhs @ segment_locations rhs
+    | Pexp_constant (Pconst_string (_, Some "js")) -> [expression.pexp_loc]
+    | _ -> []
+  in
+  OUnit.assert_equal ~printer:Ext_obj.dump [head_loc; tail_loc]
+    (segment_locations expression0);
+  match map_expr0 expression0 with
+  | {
+   pexp_desc =
+     Pexp_template
+       {
+         source_segments;
+         values = [{pexp_desc = Pexp_constant (Pconst_integer ("1", None))}];
+       };
+   pexp_attributes;
+  } ->
+    OUnit.assert_equal ~printer:Ext_obj.dump [{|head\n|}; "tail"]
+      (List.map (fun {Location.txt} -> txt) source_segments);
+    OUnit.assert_equal ~printer:Ext_obj.dump [head_loc; tail_loc]
+      (List.map
+         (fun (source : string Location.loc) -> source.loc)
+         source_segments);
+    OUnit.assert_equal ["keep"] (attr_names pexp_attributes)
+  | _ -> assert_failure "Expected an explicit template after roundtrip"
+
+let test_ast0_json_interpolation_is_rejected _ =
+  let template_attr = attr "res.template" (Parsetree0.PStr []) in
+  let segment source =
+    Ast_helper0.Exp.constant ~loc ~attrs:[template_attr]
+      (Parsetree0.Pconst_string (source, Some "json"))
+  in
+  let concat lhs rhs =
+    Ast_helper0.Exp.apply ~loc ~attrs:[template_attr]
+      (Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident "^")))
+      [(Asttypes.Noloc.Nolabel, lhs); (Asttypes.Noloc.Nolabel, rhs)]
+  in
+  let value =
+    Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_integer ("1", None))
+  in
+  let expression = concat (concat (segment "head") value) (segment "tail") in
+  match map_expr0 expression with
+  | _ -> assert_failure "Expected ast0 JSON interpolation to be rejected"
+  | exception Location.Error _ -> ()
+
+let test_string_source_reprints_after_ast0_roundtrip _ =
+  let source =
+    {|let newline = "\n"
+let slashN = "\\n"
+let quote = "\""
+let slash = "\\"|}
+  in
+  let parsed =
+    Res_driver.parse_implementation_from_source
+      ~display_filename:"StringReprintTest.res" ~source
+  in
+  OUnit.assert_bool "expected valid ReScript source" (not parsed.invalid);
+  let structure0 =
+    Ast_mapper_to0.default_mapper.structure Ast_mapper_to0.default_mapper
+      parsed.parsetree
+  in
+  let round_tripped =
+    Ast_mapper_from0.default_mapper.structure Ast_mapper_from0.default_mapper
+      structure0
+  in
+  let reprinted =
+    Res_printer.print_implementation round_tripped ~comments:[] ~width:80
+  in
+  OUnit.assert_equal ~printer:(Printf.sprintf "%S") (source ^ "\n") reprinted
+
+let test_invalid_utf8_doc_comment_roundtrips_through_ast0 _ =
+  let source = "/** doc " ^ "\xff" ^ " byte */\nlet value = 1" in
+  let parsed =
+    Res_driver.parse_implementation_from_source
+      ~display_filename:"InvalidDocComment.res" ~source
+  in
+  OUnit.assert_bool "expected invalid UTF-8 to be diagnosed" parsed.invalid;
+  OUnit.assert_bool "expected an invalid-code-point diagnostic"
+    (List.exists
+       (fun diagnostic ->
+         Res_diagnostics.explain diagnostic = "Invalid code point")
+       parsed.diagnostics);
+  let structure0 =
+    Ast_mapper_to0.default_mapper.structure Ast_mapper_to0.default_mapper
+      parsed.parsetree
+  in
+  ignore
+    (Ast_mapper_from0.default_mapper.structure Ast_mapper_from0.default_mapper
+       structure0)
+
+(* Function-node attributes such as [@this] must stay node attributes across
+   the v0 bridge: the built-in PPX reads decorators from [pexp_attributes],
+   so a round trip that moves them into [p_attrs] silently disables them. *)
+let test_fun_node_attrs_roundtrip_through_ast0 _ =
+  let fun_expr =
+    Ast_helper.Exp.fun_ ~loc
+      ~attrs:[attr "this" (Parsetree.PStr [])]
+      [
+        Ast_helper.Exp.fun_param Asttypes.Nolabel
+          (Ast_helper.Pat.var ~loc (Location.mknoloc "self"));
+      ]
+      (Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident "self")))
+  in
+  let round_tripped = map_expr0 (map_expr_to0 fun_expr) in
+  match round_tripped.pexp_desc with
+  | Parsetree.Pexp_fun {params = [{p_attrs}]} ->
+    OUnit.assert_equal ~msg:"node attributes survive on the function node"
+      ["this"]
+      (attr_names round_tripped.pexp_attributes);
+    OUnit.assert_equal ~msg:"no attributes leak into p_attrs" []
+      (attr_names p_attrs)
+  | _ -> assert_failure "Expected a function after ast0 roundtrip"
+
+(* The converse split: bridge-populated parameter attributes must come back
+   as [p_attrs], not as function-node attributes. *)
+let test_fun_param_attrs_roundtrip_through_ast0 _ =
+  let fun_expr =
+    Ast_helper.Exp.fun_ ~loc
+      ~attrs:[attr "bar" (Parsetree.PStr [])]
+      [
+        Ast_helper.Exp.fun_param
+          ~attrs:[attr "foo" (Parsetree.PStr [])]
+          Asttypes.Nolabel
+          (Ast_helper.Pat.var ~loc (Location.mknoloc "x"));
+      ]
+      (Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident "x")))
+  in
+  let round_tripped = map_expr0 (map_expr_to0 fun_expr) in
+  match round_tripped.pexp_desc with
+  | Parsetree.Pexp_fun {params = [{p_attrs}]} ->
+    OUnit.assert_equal ~msg:"node attributes stay on the node" ["bar"]
+      (attr_names round_tripped.pexp_attributes);
+    OUnit.assert_equal ~msg:"parameter attributes stay on the parameter" ["foo"]
+      (attr_names p_attrs)
+  | _ -> assert_failure "Expected a function after ast0 roundtrip"
+
+let test_error_extension_backquoted_strings _ =
+  let backquoted_string value =
+    Ast_helper.Str.eval ~loc
+      (Ast_helper.Exp.template ~loc [located_string value] [])
+  in
+  let extension =
+    ( Location.mknoloc "error",
+      Parsetree.PStr
+        [
+          backquoted_string {|plain\nmessage|};
+          backquoted_string {|highlighted\nmessage|};
+        ] )
+  in
+  let error = Builtin_attributes.error_of_extension extension in
+  OUnit.assert_equal ~printer:(Printf.sprintf "%S") "plain\nmessage" error.msg;
+  OUnit.assert_equal ~printer:(Printf.sprintf "%S") "highlighted\nmessage"
+    error.if_highlight
+
+(* Attribute and extension names a mapped tree carries, payloads included. *)
+let builtin_names_of iterate =
+  let names = ref [] in
+  let iterator =
+    {
+      Ast_iterator.default_iterator with
+      attribute =
+        (fun self ((name, _) as attr) ->
+          names := name.Location.txt :: !names;
+          Ast_iterator.default_iterator.attribute self attr);
+      extension =
+        (fun self ((name, _) as ext) ->
+          names := name.Location.txt :: !names;
+          Ast_iterator.default_iterator.extension self ext);
+    }
+  in
+  iterate iterator;
+  List.sort_uniq compare !names
+
+let test_ocaml_prefixed_builtins_arrive_bare _ =
+  let string0 s =
+    Parsetree0.PStr
+      [
+        Ast_helper0.Str.eval ~loc
+          (Ast_helper0.Exp.constant ~loc (Parsetree0.Pconst_string (s, None)));
+      ]
+  in
+  let error0 = (Location.mknoloc "ocaml.error", string0 "ppx error") in
+  let warning0 = attr "ocaml.warning" (string0 "-32") in
+  let structure0 =
+    [
+      Ast_helper0.Str.attribute ~loc
+        (attr "ocaml.ppwarning" (string0 "lint warning"));
+      Ast_helper0.Str.extension ~loc error0;
+      Ast_helper0.Str.type_ ~loc Asttypes.Recursive
+        [Ast_helper0.Type.mk ~loc ~attrs:[warning0] (Location.mknoloc "t")];
+      Ast_helper0.Str.eval ~loc ~attrs:[warning0]
+        (Ast_helper0.Exp.extension ~loc
+           ~attrs:
+             [
+               attr "nested"
+                 (Parsetree0.PStr [Ast_helper0.Str.extension ~loc error0]);
+             ]
+           error0);
+    ]
+  in
+  let signature0 =
+    [
+      Ast_helper0.Sig.attribute ~loc warning0;
+      Ast_helper0.Sig.extension ~loc error0;
+    ]
+  in
+  let structure =
+    Ast_mapper_from0.default_mapper.structure Ast_mapper_from0.default_mapper
+      structure0
+  in
+  let signature =
+    Ast_mapper_from0.default_mapper.signature Ast_mapper_from0.default_mapper
+      signature0
+  in
+  let show names = String.concat ", " names in
+  OUnit.assert_equal ~printer:show
+    ["error"; "nested"; "ppwarning"; "warning"]
+    (builtin_names_of (fun it -> it.structure it structure));
+  OUnit.assert_equal ~printer:show ["error"; "warning"]
+    (builtin_names_of (fun it -> it.signature it signature))
+
+let test_extension_of_error_is_bare _ =
+  let name, _ = Ast_mapper.extension_of_error (Location.error ~loc "boom") in
+  OUnit.assert_equal ~printer:Fun.id "error" name.txt
+
 let suites =
   __FILE__
   >::: [
+         "removed_open_pattern_is_rejected_from_ast0"
+         >:: test_removed_open_pattern_is_rejected_from_ast0;
          "public_record_rest_attr_is_not_internal"
          >:: test_public_record_rest_attr_is_not_internal;
+         "fun_node_attrs_roundtrip_through_ast0"
+         >:: test_fun_node_attrs_roundtrip_through_ast0;
+         "fun_param_attrs_roundtrip_through_ast0"
+         >:: test_fun_param_attrs_roundtrip_through_ast0;
+         "ast0_strings_convert_to_internal_representation"
+         >:: test_ast0_strings_convert_to_internal_representation;
+         "ppx_byte_strings_convert_to_valid_utf8"
+         >:: test_ppx_byte_strings_convert_to_valid_utf8;
+         "string_literals_roundtrip_through_ast0"
+         >:: test_string_literals_roundtrip_through_ast0;
+         "removed_regexp_extension" >:: test_removed_regexp_extension;
+         "regexp_parser_locations" >:: test_regexp_parser_locations;
+         "regexp_roundtrip_through_ast0" >:: test_regexp_roundtrip_through_ast0;
+         "ppx_regexp_payloads" >:: test_ppx_regexp_payloads;
+         "malformed_ppx_regexp_payloads" >:: test_malformed_ppx_regexp_payloads;
+         "raw_extension_payloads_roundtrip_through_ast0"
+         >:: test_raw_extension_payloads_roundtrip_through_ast0;
+         "tagged_templates_roundtrip_through_ast0"
+         >:: test_tagged_templates_roundtrip_through_ast0;
+         "ppx_rewritten_tagged_template_segments"
+         >:: test_ppx_rewritten_tagged_template_segments;
+         "ppx_rewritten_template_segments"
+         >:: test_ppx_rewritten_template_segments;
+         "interpolated_templates_roundtrip_through_ast0"
+         >:: test_interpolated_templates_roundtrip_through_ast0;
+         "ast0_json_interpolation_is_rejected"
+         >:: test_ast0_json_interpolation_is_rejected;
+         "string_source_reprints_after_ast0_roundtrip"
+         >:: test_string_source_reprints_after_ast0_roundtrip;
+         "invalid_utf8_doc_comment_roundtrips_through_ast0"
+         >:: test_invalid_utf8_doc_comment_roundtrips_through_ast0;
          "malformed_internal_record_rest_attr_fails"
          >:: test_malformed_internal_record_rest_attr_fails;
          "record_rest_roundtrips_through_ast0"
          >:: test_record_rest_roundtrips_through_ast0;
+         "ternary_roundtrips_through_ast0"
+         >:: test_ternary_roundtrips_through_ast0;
+         "v0_ternary_marker_preserves_other_attribute_order"
+         >:: test_v0_ternary_marker_preserves_other_attribute_order;
+         "v0_if_without_alternate_stays_if"
+         >:: test_v0_if_without_alternate_stays_if;
+         "braces_roundtrip_through_ast0" >:: test_braces_roundtrip_through_ast0;
+         "module_await_roundtrips_through_ast0"
+         >:: test_module_await_roundtrips_through_ast0;
+         "expression_await_location_through_ast0"
+         >:: test_expression_await_location_through_ast0;
+         "v0_await_marker_without_location"
+         >:: test_v0_await_marker_without_location;
+         "dynamic_import_keeps_await_attributes"
+         >:: test_dynamic_import_keeps_await_attributes;
+         "nested_awaits_are_dynamic_imports"
+         >:: test_nested_awaits_are_dynamic_imports;
+         "module_await_v0_attribute_order"
+         >:: test_module_await_v0_attribute_order;
+         "variant_spread_pattern_through_ast0"
+         >:: test_variant_spread_pattern_through_ast0;
+         "dict_literal_through_ast0" >:: test_dict_literal_through_ast0;
+         "dict_pattern_through_ast0" >:: test_dict_pattern_through_ast0;
+         "inline_record_definition_roundtrips_through_ast0"
+         >:: test_inline_record_definition_roundtrips_through_ast0;
+         "this_on_braced_function_reaches_builtin_ppx"
+         >:: test_this_on_braced_function_reaches_builtin_ppx;
+         "constructor_args_roundtrip_through_ast0"
+         >:: test_constructor_args_roundtrip_through_ast0;
+         "list_constructor_wire_shape" >:: test_list_constructor_wire_shape;
+         "attributed_constructor_payloads_through_ast0"
+         >:: test_attributed_constructor_payloads_through_ast0;
+         "constructor_args_keep_parentheses_location_in_ast0"
+         >:: test_constructor_args_keep_parentheses_location_in_ast0;
+         "constructor_argument_locations_through_ast0"
+         >:: test_constructor_argument_locations_through_ast0;
+         "fresh_ast0_constructor_tuple_reprints_without_internal_metadata"
+         >:: test_fresh_ast0_constructor_tuple_reprints_without_internal_metadata;
+         "ast0_explicit_arity_becomes_constructor_args"
+         >:: test_ast0_explicit_arity_becomes_constructor_args;
+         "fresh_ast0_constructor_tuple_defers_arity_to_typechecker"
+         >:: test_fresh_ast0_constructor_tuple_defers_arity_to_typechecker;
+         "polyvariant_args_roundtrip_through_ast0"
+         >:: test_polyvariant_args_roundtrip_through_ast0;
+         "polyvariant_type_payload_attributes_through_ast0"
+         >:: test_polyvariant_type_payload_attributes_through_ast0;
+         "polyvariant_args_keep_parentheses_location_in_ast0"
+         >:: test_polyvariant_args_keep_parentheses_location_in_ast0;
+         "value_constraint_roundtrips_through_ast0"
+         >:: test_value_constraint_roundtrips_through_ast0;
+         "function_cases_desugar_to_fun_match"
+         >:: test_function_cases_desugar_to_fun_match;
+         "error_extensions_accept_backquoted_strings"
+         >:: test_error_extension_backquoted_strings;
+         "field_runtime_name_reaches_ast0_as_an_attribute"
+         >:: test_field_runtime_name_reaches_ast0_as_an_attribute;
+         "field_runtime_name_keeps_its_place_on_the_wire"
+         >:: test_field_runtime_name_keeps_its_place_on_the_wire;
+         "field_runtime_name_keeps_ppx_order_on_the_wire"
+         >:: test_field_runtime_name_keeps_ppx_order_on_the_wire;
+         "constructor_runtime_tag_reaches_ast0_as_an_attribute"
+         >:: test_constructor_runtime_tag_reaches_ast0_as_an_attribute;
+         "jsx_component_becomes_the_binding_node"
+         >:: test_jsx_component_becomes_the_binding_node;
+         "jsx_component_precedence" >:: test_jsx_component_precedence;
+         "jsx_component_with_unknown_payload_stays_an_attribute"
+         >:: test_jsx_component_with_unknown_payload_stays_an_attribute;
+         "jsx_component_keeps_its_place_on_the_wire"
+         >:: test_jsx_component_keeps_its_place_on_the_wire;
+         "jsx_component_from_ppx_goes_first_on_the_wire"
+         >:: test_jsx_component_from_ppx_goes_first_on_the_wire;
+         "jsx_component_survives_the_mapper"
+         >:: test_jsx_component_survives_the_mapper;
+         "jsx_component_on_value_descriptions_through_ast0"
+         >:: test_jsx_component_on_value_descriptions_through_ast0;
+         "ppx_context_on_the_wire" >:: test_ppx_context_on_the_wire;
+         "ocaml_prefixed_builtins_arrive_bare"
+         >:: test_ocaml_prefixed_builtins_arrive_bare;
+         "extension_of_error_is_bare" >:: test_extension_of_error_is_bare;
+         "raw_nodes_roundtrip_through_ast0"
+         >:: test_raw_nodes_roundtrip_through_ast0;
+         "raw_structure_item_roundtrips_through_ast0"
+         >:: test_raw_structure_item_roundtrips_through_ast0;
+         "raw_source_prints_with_fitting_quotes"
+         >:: test_raw_source_prints_with_fitting_quotes;
+         "raw_source_template_fallback_reparses"
+         >:: test_raw_source_template_fallback_reparses;
+         "attributed_raw_template_reprints_after_ast0_roundtrip"
+         >:: test_attributed_raw_template_reprints_after_ast0_roundtrip;
+         "fixed_argument_roundtrips_through_ast0"
+         >:: test_fixed_argument_roundtrips_through_ast0;
+         "fixed_argument_is_external_only"
+         >:: test_fixed_argument_is_external_only;
+         "fixed_argument_locations_go_through_the_mapper"
+         >:: test_fixed_argument_locations_go_through_the_mapper;
        ]

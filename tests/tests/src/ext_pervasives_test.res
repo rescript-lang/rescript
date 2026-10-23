@@ -40,11 +40,11 @@ let hash_variant = s => {
     accu := 223 * accu.contents + String.codePointAt(s, i)->Option.getUnsafe
   }
   /* reduce to 31 bits */
-  accu := land(accu.contents, lsl(1, 31) - 1)
+  accu := Int.bitwiseAnd(accu.contents, Int.shiftLeft(1, 31) - 1)
 
   /* make it signed for 64 bits architectures */
   if accu.contents > 0x3FFFFFFF {
-    accu.contents - lsl(1, 31)
+    accu.contents - Int.shiftLeft(1, 31)
   } else {
     accu.contents
   }

@@ -1,7 +1,7 @@
 include (
   {
-    module M = Belt.Map.String
-    let v = M.isEmpty(M.empty)
+    module M = Map
+    let v = M.isEmpty(M.make())
   }: {
     let v: bool
   }

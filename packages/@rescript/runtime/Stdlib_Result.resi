@@ -100,7 +100,7 @@ ordinary value.
 ## Examples
 
 ```rescript
-let f = x => sqrt(Int.toFloat(x))
+let f = x => Math.sqrt(Int.toFloat(x))
 
 Result.map(Ok(64), f) == Ok(8.0)
 

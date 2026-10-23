@@ -1,5 +1,5 @@
 open Gentype_common
-module Module_name_map = Map.Make (Module_name)
+module Module_name_map = Config.Module_name_map
 
 let ( +++ ) = Filename.concat
 
@@ -37,35 +37,35 @@ let sourcedirs_to_map ~(config : Config.t) ~extensions ~exclude_file =
   let add_dir ~dir_on_disk ~dir_emitted ~filter ~map =
     dir_on_disk |> Sys.readdir
     |> Array.iter (fun fname ->
-           if fname |> filter then
-             map :=
-               !map
-               |> Module_name_map.add
-                    (fname |> chop_extensions |> Module_name.from_string_unsafe)
-                    dir_emitted)
+        if fname |> filter then
+          map :=
+            !map
+            |> Module_name_map.add
+                 (fname |> chop_extensions |> Module_name.from_string_unsafe)
+                 dir_emitted)
   in
   config.sources
   |> List.iter (fun dir ->
-         let dir_on_disk = config.project_root +++ dir in
-         if Sys.file_exists dir_on_disk && Sys.is_directory dir_on_disk then
-           add_dir ~dir_emitted:dir ~dir_on_disk ~filter:filter_given_extension
-             ~map:file_map);
+      let dir_on_disk = config.project_root +++ dir in
+      if Sys.file_exists dir_on_disk && Sys.is_directory dir_on_disk then
+        add_dir ~dir_emitted:dir ~dir_on_disk ~filter:filter_given_extension
+          ~map:file_map);
   config.bs_dependencies
   |> List.iter (fun package_name ->
-         match Hashtbl.find config.dep_paths package_name with
-         | path ->
-           let root = ["lib"; "bs"] |> List.fold_left ( +++ ) path in
-           let filter file_name =
-             [".cmt"; ".cmti"]
-             |> List.exists (fun ext -> Filename.check_suffix file_name ext)
-           in
-           read_bs_dependencies_dirs ~root
-           |> List.iter (fun dir ->
-                  let dir_on_disk = root +++ dir in
-                  let dir_emitted = package_name +++ dir in
-                  add_dir ~dir_emitted ~dir_on_disk ~filter
-                    ~map:bs_dependencies_file_map)
-         | exception Not_found -> ());
+      match Hashtbl.find config.dep_paths package_name with
+      | path ->
+        let root = ["lib"; "bs"] |> List.fold_left ( +++ ) path in
+        let filter file_name =
+          [".cmt"; ".cmti"]
+          |> List.exists (fun ext -> Filename.check_suffix file_name ext)
+        in
+        read_bs_dependencies_dirs ~root
+        |> List.iter (fun dir ->
+            let dir_on_disk = root +++ dir in
+            let dir_emitted = package_name +++ dir in
+            add_dir ~dir_emitted ~dir_on_disk ~filter
+              ~map:bs_dependencies_file_map)
+      | exception Not_found -> ());
   (!file_map, !bs_dependencies_file_map)
 
 type case = Lowercase | Uppercase
@@ -109,6 +109,12 @@ let create_lazy_resolver ~config ~extensions ~exclude_file =
 let apply ~resolver ~use_bs_dependencies module_name =
   module_name |> Lazy.force resolver.lazy_find ~use_bs_dependencies
 
+let rec path_to_list path =
+  let parent = Filename.dirname path in
+  (* On Windows, the basename of a drive root omits the drive prefix. *)
+  if Filename.basename path = path || parent = path then [path]
+  else (path |> Filename.basename) :: path_to_list parent
+
 (** Resolve a reference to ModuleName, and produce a path suitable for require.
    E.g. require "../foo/bar/ModuleName.ext" where ext is ".res" or ".js". *)
 let resolve_module ~(config : Config.t) ~import_extension ~output_file_relative
@@ -132,13 +138,6 @@ let resolve_module ~(config : Config.t) ~import_extension ~output_file_relative
   in
   if Sys.file_exists module_name_res_file then candidate
   else
-    let rec path_to_list path =
-      let is_root = path |> Filename.basename = path in
-      match is_root with
-      | true -> [path]
-      | false ->
-        (path |> Filename.basename) :: (path |> Filename.dirname |> path_to_list)
-    in
     match module_name |> apply ~resolver ~use_bs_dependencies with
     | None -> candidate
     | Some (resolved_module_dir, case, bs_dependencies) ->
@@ -159,14 +158,14 @@ let resolve_module ~(config : Config.t) ~import_extension ~output_file_relative
       in
       (* e.g. import "../dst/ModuleName.ext" *)
       (match case = Uppercase with
-      | true -> module_name
-      | false -> module_name |> Module_name.uncapitalize)
+        | true -> module_name
+        | false -> module_name |> Module_name.uncapitalize)
       |> Import_path.from_module ~dir:from_output_dir_to_module_dir
            ~import_extension
 
 let resolve_generated_module ~config ~output_file_relative ~resolver module_name
     =
-  if !Debug.module_resolution then
+  if !(Debug.module_resolution ()) then
     Log_.item "Resolve Generated Module: %s\n"
       (module_name |> Module_name.to_string);
   let import_path =
@@ -174,19 +173,19 @@ let resolve_generated_module ~config ~output_file_relative ~resolver module_name
       ~import_extension:(Module_extension.generated_module_extension ~config)
       ~output_file_relative ~resolver ~use_bs_dependencies:true module_name
   in
-  if !Debug.module_resolution then
+  if !(Debug.module_resolution ()) then
     Log_.item "Import Path: %s\n" (import_path |> Import_path.dump);
   import_path
 
 (** Returns the path to import a given Reason module name. *)
 let import_path_for_reason_module_name ~(config : Config.t)
     ~output_file_relative ~resolver module_name =
-  if !Debug.module_resolution then
+  if !(Debug.module_resolution ()) then
     Log_.item "Resolve Reason Module: %s\n"
       (module_name |> Module_name.to_string);
   match config.shims_map |> Module_name_map.find module_name with
   | shim_module_name ->
-    if !Debug.module_resolution then
+    if !(Debug.module_resolution ()) then
       Log_.item "ShimModuleName: %s\n"
         (shim_module_name |> Module_name.to_string);
     let import_extension =
@@ -196,7 +195,7 @@ let import_path_for_reason_module_name ~(config : Config.t)
       resolve_module ~config ~import_extension ~output_file_relative ~resolver
         ~use_bs_dependencies:false shim_module_name
     in
-    if !Debug.module_resolution then
+    if !(Debug.module_resolution ()) then
       Log_.item "Import Path: %s\n" (import_path |> Import_path.dump);
     import_path
   | exception Not_found ->

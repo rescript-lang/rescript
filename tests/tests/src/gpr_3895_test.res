@@ -1,4 +1,4 @@
 let f = re => {
-  let _ = re->Js.Re.exec_("banana")
+  let _ = re->RegExp.exec("banana")
   3
 }

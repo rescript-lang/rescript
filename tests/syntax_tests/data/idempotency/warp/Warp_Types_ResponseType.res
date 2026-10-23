@@ -1,7 +1,7 @@
 type rec payload<'a> =
-  | ArrayBufferResponse(option<Js.Typed_array.ArrayBuffer.t>): payload<
-      option<Js.Typed_array.ArrayBuffer.t>,
+  | ArrayBufferResponse(option<ArrayBuffer.t>): payload<
+      option<ArrayBuffer.t>,
     >
   | DocumentResponse(option<Dom.document>): payload<option<Dom.document>>
-  | JSONResponse(option<Js.Json.t>): payload<option<Js.Json.t>>
+  | JSONResponse(option<JSON.t>): payload<option<JSON.t>>
   | TextResponse(option<string>): payload<option<string>>

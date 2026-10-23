@@ -33,8 +33,6 @@
 
 type mutable_flag = Js_op.mutable_flag
 type binop = Js_op.binop
-type int_op = Js_op.int_op
-type kind = Js_op.kind
 type property = Js_op.property
 type number = Js_op.number
 type ident_info = Js_op.ident_info
@@ -74,8 +72,14 @@ and exception_ident = ident
 and for_ident = ident
 and for_direction = Js_op.direction_flag
 and property_map = (property_name * expression) list
-and length_object = Js_op.length_object
-and delim = External_arg_spec.delim = DNone | DStarJ | DNoQuotes | DBackQuotes
+
+(* An entry of an object literal: [k: v] or [...e]. [Record_spread] copies a
+   record, whose fields are read like plain data; [Object_spread] spreads any
+   other object, such as a dict, which may run getters or proxy traps. *)
+and object_entry =
+  | Object_property of property_name * expression
+  | Object_spread of expression
+  | Record_spread of expression
 
 and record_rest_field = {
   record_rest_label: string;
@@ -83,7 +87,7 @@ and record_rest_field = {
 }
 
 and expression_desc =
-  | Length of expression * length_object
+  | Length of expression
   | Is_null_or_undefined of expression  (** where we use a trick [== null ] *)
   | String_append of expression * expression
   | Bool of bool (* js true/false*)
@@ -98,22 +102,29 @@ and expression_desc =
   | Seq of expression * expression
   | Cond of expression * expression * expression
   | Bin of binop * expression * expression
-  (* [int_op] will guarantee return [int32] bits
-     https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Operators/Bitwise_Operators *)
-  (* | Int32_bin of int_op * expression * expression *)
-  | FlatCall of expression * expression
-  (* f.apply(null,args) -- Fully applied guaranteed
-     TODO: once we know args's shape --
-     if it's know at compile time, we can turn it into
-     f(args[0], args[1], ... )
-  *)
   | Call of expression * expression list * Js_call_info.t
   (* Analysze over J expression is hard since,
       some primitive  call is translated
       into a plain call, it's better to keep them
   *)
-  | String_index of expression * expression
-  (* str.[i])*)
+  | Jsx of {
+      callee: expression;
+      tag: expression;
+      spread: expression option;
+      props: (string * expression) list;
+      children: expression list option;
+      key: expression option;
+      multi: bool;
+      fragment: bool;
+    }
+      (** A JSX element in JSX preserve mode, from [Lambda.Pjsx]. js_dump
+          prints it as JSX when every part can be written in JSX, and
+          otherwise as the call
+          [callee(tag, {...spread, props, children}, key)]. [props] holds
+          runtime names in declaration order, without optional props that are
+          statically [undefined]. With [multi], each child is a separate
+          element of the [children] array. Subexpressions are evaluated in
+          the order [callee], [tag], [spread], [props], [children], [key]. *)
   | Array_index of expression * expression
   (* arr.(i)
      Invariant:
@@ -121,7 +132,20 @@ and expression_desc =
      This can be constructed either in a static way [E.array_index_by_int] or a dynamic way
      [E.array_index]
   *)
-  | Tagged_template of expression * expression list * expression list
+  | Tagged_template of expression * string list * expression list
+      (** A JavaScript tagged template ready for emission. For
+          [sql`id = ${id}`], the first field is the [sql] expression, the
+          second is the raw-source list ["id = "; ""], and the third contains
+          the [id] expression. Segment strings preserve exact raw spelling and
+          may contain invalid escapes. *)
+  | Interpolated_template of {
+      segments: Asttypes.template_segment list;
+      values: expression list;
+    }
+      (** An ordinary interpolated template ready for emission. For
+          [`a ${value}\n`], [segments] retains source and semantic forms of
+          ["a "] and ["\\n"], while [values = [value]]. Unlike
+          [Tagged_template], every segment has a valid decoded value. *)
   | Static_index of expression * string * int32 option
   (* The third argument bool indicates whether we should
      print it as
@@ -133,7 +157,7 @@ and expression_desc =
         All exported declarations have to be OCaml identifiers
      2. Javascript dot (need to be preserved/or using quote)
   *)
-  | New of expression * expression list option (* TODO: option remove *)
+  | New of expression * expression list
   | Var of vident
   | Fun of {
       is_method: bool;
@@ -144,28 +168,39 @@ and expression_desc =
       async: bool;
       directive: string option;
     }
-  | Str of {delim: delim; txt: string}
-  (* A string is UTF-8 encoded, and may contain
-     escape sequences.
-  *)
+  | Str of string
+      (** A decoded runtime string value whose original source spelling no
+          longer needs to be preserved. For example, ["a\\n"] is stored with
+          an actual newline and is emitted using the compiler's chosen quoting
+          and escaping. *)
+  | Template_literal of Asttypes.template_segment
+      (** A non-interpolated ordinary backquoted literal. For [`a\n`], [source]
+          is ["a\\n"] and [semantic] contains an actual newline. [source] is
+          used for JavaScript emission; [semantic] is used for comparisons and
+          optimizations. Both are required because preserving backquoted
+          spelling is an output design goal. Tagged-template segments use
+          [Tagged_template] instead because their escapes need not be valid. *)
+  | Json_literal of string
+      (** Validated JavaScript literal source from a supported external
+          [json`...`] payload. For [json`{"ok": true}`], the string contains
+          [{"ok": true}] as JavaScript source, not as a decoded ReScript
+          string. *)
   | Raw_js_code of Js_raw_info.t
-  (* literally raw JS code 
-  *)
-  | Array of expression list * mutable_flag
+      (** JavaScript source originating from [raw], [ffi], or [re]. For example,
+          [%raw("x + 1")] carries ["x + 1"] together with whether it was
+          validated as an expression, regular expression, or program. It is
+          emitted as code rather than as a JavaScript string value. *)
+  | Array of expression list
   | Optional_block of expression * bool
   (* [true] means [identity] *)
-  | Caml_block of expression list * mutable_flag * expression * tag_info
-  (* The third argument is [tag] , forth is [tag_info] *)
-  (* | Caml_uninitialized_obj of expression * expression *)
-  (* [tag] and [size] tailed  for [Obj.new_block] *)
+  | Caml_block of expression list * mutable_flag * tag_info
   | Caml_block_tag of expression * string (* e.tag *)
-  (* | Caml_block_set_length of expression * expression *)
   (* It will just fetch tag, to make it safe, when creating it,
      we need apply "|0", we don't do it in the
      last step since "|0" can potentially be optimized
   *)
   | Number of number
-  | Object of expression option * property_map
+  | Object of object_entry list
   | Undefined of {is_unit: bool}
   | Null
   | Await of expression
@@ -251,9 +286,10 @@ and case_clause = {
   should_break: bool;
   (* true means break *)
   comment: string option;
+  source_loc: Location.t option;
 }
 
-and string_clause = Ast_untagged_variants.tag_type * case_clause
+and string_clause = Variant_runtime.tag_type * case_clause
 and int_clause = int * case_clause
 and label = string
 
@@ -295,8 +331,17 @@ and statement_desc =
   | Try of block * (exception_ident * block) option * block option
   | Debugger
 
-and expression = {expression_desc: expression_desc; comment: string option}
-and statement = {statement_desc: statement_desc; comment: string option}
+and expression = {
+  expression_desc: expression_desc;
+  comment: string option;
+  source_loc: Location.t option;
+}
+
+and statement = {
+  statement_desc: statement_desc;
+  comment: string option;
+  source_loc: Location.t option;
+}
 
 and variable_declaration = {
   ident: ident;
@@ -324,17 +369,14 @@ and deps_program = {
         int_clause;
         string_clause;
         for_direction;
-        (* exception_ident; *)
-        for_direction;
         expression_desc;
         statement_desc;
         for_ident_expression;
         label;
         finish_ident_expression;
         property_map;
-        length_object;
+        object_entry;
         record_rest_field;
-        (* for_ident; *)
         required_modules;
         case_clause;
       |];

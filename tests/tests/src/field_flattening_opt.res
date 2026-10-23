@@ -15,6 +15,6 @@ module NoOptionalFields = {
 
   let p: pair = ({field: 2}, "")
 
-  let x = fst(p)
-  let y = fst(p)
+  let x = Pair.first(p)
+  let y = Pair.first(p)
 }

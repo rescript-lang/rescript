@@ -49,18 +49,10 @@ val newgenvar : ?name:string -> unit -> type_expr
 val is_Tvar : type_expr -> bool
 val is_Tunivar : type_expr -> bool
 val is_Tconstr : type_expr -> bool
-val dummy_method : label
 val default_mty : module_type option -> module_type
 
 val repr : type_expr -> type_expr
 (* Return the canonical representative of a type. *)
-
-val field_kind_repr : field_kind -> field_kind
-(* Return the canonical representative of an object field
-   kind. *)
-
-val commu_repr : commutable -> commutable
-(* Return the canonical representative of a commutation lock *)
 
 (**** polymorphic variants ****)
 
@@ -126,21 +118,35 @@ val unmark_iterators : type_iterators
 (* Unmark any structure containing types. See [unmark_type] below. *)
 
 val copy_type_desc :
-  ?keep_names:bool -> (type_expr -> type_expr) -> type_desc -> type_desc
-(* Copy on types *)
+  ?keep_names:bool ->
+  ?fresh_mutability:bool ->
+  (type_expr -> type_expr) ->
+  type_desc ->
+  type_desc
+(** Copy one type description, using the supplied function to copy children.
+
+    Run this operation inside [with_copy_session]. By default, object-field
+    mutability classes are duplicated when the field's row ends in a generic
+    variable and shared otherwise. [fresh_mutability:true] instead gives the
+    result classes which are independent from the source, while preserving
+    class sharing among fields copied in the same session. *)
 
 val copy_row :
   (type_expr -> type_expr) -> bool -> row_desc -> bool -> type_expr -> row_desc
-val copy_kind : field_kind -> field_kind
 
 val save_desc : type_expr -> type_desc -> unit
-(* Save a type description *)
+(** Record a temporary change to a source type description in the current copy
+    session. The session restores the description when it ends. *)
 
-val dup_kind : field_kind option ref -> unit
-(* Save a None field_kind, and make it point to a fresh Fvar *)
+val with_copy_session : (unit -> 'a) -> 'a
+(** Run a graph-copy operation with scoped temporary state.
 
-val cleanup_types : unit -> unit
-(* Restore type descriptions *)
+    The scope is nestable and restores its own source-graph changes on normal
+    return and on exceptions. Repeated low-level copy calls in one scope share
+    copy memos. An inner operation can reuse a copied node through an outer
+    [Tsubst] mark; if it independently duplicates a mutability class, that
+    duplicate belongs to the inner scope. Each scope restores only changes it
+    owns. This restoration is separate from the [snapshot]/[backtrack] trail. *)
 
 val lowest_level : int
 (* Marked type: ty.level < lowest_level *)
@@ -153,9 +159,6 @@ val mark_type : type_expr -> unit
 
 val mark_type_node : type_expr -> unit
 (* Mark a type node (but not its sons) *)
-
-val mark_type_params : type_expr -> unit
-(* Mark the sons of a type node *)
 
 val unmark_type : type_expr -> unit
 val unmark_type_decl : type_declaration -> unit
@@ -217,14 +220,18 @@ val link_type : type_expr -> type_expr -> unit
    value if there is an active snapshot *)
 
 val set_level : type_expr -> int -> unit
-val set_name :
-  (Path.t * type_expr list) option ref ->
-  (Path.t * type_expr list) option ->
-  unit
 val set_row_field : row_field option ref -> row_field -> unit
 val set_univar : type_expr option ref -> type_expr -> unit
-val set_kind : field_kind option ref -> field_kind -> unit
-val set_commu : commutable ref -> commutable -> unit
+
+(* Logged (backtrackable) update of a terminal mutability cell: promotion
+   ([Mutability_value Mutable]) or an equivalence-class merge
+   ([Mutability_link]). Resolve the first argument with
+   [mutability_ref_repr] before calling. *)
+val set_mutability : field_mutability ref -> field_mutability -> unit
+
+(* Terminal cell of a link chain / its semantic value. *)
+val mutability_ref_repr : field_mutability ref -> field_mutability ref
+val mutability_repr : field_mutability ref -> Asttypes.mutable_flag
 val set_typeset : Type_set.t ref -> Type_set.t -> unit
 (* Set references, logging the old value *)
 
@@ -232,7 +239,6 @@ val log_type : type_expr -> unit
 (* Log the old value of a type, before modifying it by hand *)
 
 (**** Forward declarations ****)
-val print_raw : (Format.formatter -> type_expr -> unit) ref
 
 val iter_type_expr_kind : (type_expr -> unit) -> type_kind -> unit
 
@@ -240,3 +246,8 @@ val iter_type_expr_cstr_args :
   (type_expr -> unit) -> constructor_arguments -> unit
 val map_type_expr_cstr_args :
   (type_expr -> type_expr) -> constructor_arguments -> constructor_arguments
+
+module For_test : sig
+  val memorized_abbrev_count : unit -> int
+  (** The abbreviation expansions memorized on this domain. *)
+end

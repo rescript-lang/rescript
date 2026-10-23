@@ -23,7 +23,8 @@ let asJsExn: exn => option<t> = exn =>
 type error
 @new external makeError: string => error = "Error"
 
-external anyToExnInternal: 'a => exn = "%wrap_exn"
+let anyToExnInternal = (x: 'a): exn =>
+  Primitive_exceptions.internalToException((Obj.magic(x): unknown))
 
 let raiseError = str => throw((Obj.magic((makeError(str): error)): exn))
 

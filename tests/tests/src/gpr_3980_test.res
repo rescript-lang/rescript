@@ -8,7 +8,7 @@ let _ = switch Some(1) {
   | 1 => {name: "hi", age: 1}
   | 2 => {
       name: "bye",
-      age: Js.Math.floor(1.),
+      age: Math.Int.floor(1.),
     }
   | _ => assert(false)
   }

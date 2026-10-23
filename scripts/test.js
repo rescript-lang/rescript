@@ -5,6 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import {
   buildTestDir,
+  commonjsTestDir,
   compilerTestDir,
   docstringTestDir,
   ounitTestBin,
@@ -64,7 +65,29 @@ if (formatTest) {
 
 if (ounitTest) {
   if (process.platform === "win32") {
-    console.log("Skipping OUnit tests on Windows");
+    // GenType's drive-root regression needs the native Windows Filename module.
+    const binary = path.join(
+      projectDir,
+      "_build/default/tests/ounit_tests/ounit_tests_main.exe",
+    );
+    const { stdout } = await execBin(binary, ["-list-test"], {
+      shell: false,
+      throwOnFail: true,
+    });
+    const tests = stdout
+      .split(/\r?\n/)
+      .filter(test => test.includes(":gentype:"));
+    if (tests.length === 0) {
+      throw new Error("No GenType unit tests found");
+    }
+    await execBin(
+      binary,
+      tests.flatMap(test => ["-only-test", test]),
+      {
+        stdio: "inherit",
+        shell: false,
+      },
+    );
   } else {
     await execBin(ounitTestBin, [], {
       stdio: "inherit",
@@ -73,10 +96,27 @@ if (ounitTest) {
 }
 
 if (mochaTest) {
+  const beltPackageDir = path.join(projectDir, "packages/@rescript/belt");
+  const beltTestDir = path.join(projectDir, "tests/belt_tests");
+
   // No need to clean beforehand, rewatch detects changes to the compiler binary
   // and rebuilds automatically in that case.
   await execBuild([], {
     cwd: compilerTestDir,
+    stdio: "inherit",
+  });
+  // The CommonJS tests clean their dependencies, including Belt. Force a full
+  // rebuild so repeated test runs don't rely on stale dependency artifacts.
+  await execClean([], {
+    cwd: beltPackageDir,
+    stdio: "inherit",
+  });
+  await execBuild([], {
+    cwd: beltPackageDir,
+    stdio: "inherit",
+  });
+  await execBuild([], {
+    cwd: beltTestDir,
     stdio: "inherit",
   });
 
@@ -85,9 +125,10 @@ if (mochaTest) {
       "-t",
       "10000",
       "tests/tests/src/**/*_test.mjs",
-      // Ignore the preserve_jsx_test.mjs file.
-      // I can't run because Mocha doesn't support jsx.
-      // We also want to keep the output as is.
+      "tests/belt_tests/src/**/*_test.mjs",
+      "tests/cli_tests/*_test.mjs",
+      // jsx_preserve_test.mjs contains JSX, which Node cannot load; the
+      // file exists to pin the preserved-JSX output.
       "--ignore",
       "tests/tests/src/jsx_preserve_test.mjs",
     ],
@@ -108,7 +149,10 @@ if (mochaTest) {
   });
 
   // CommonJS tests
-  const commonjsTestDir = path.join(projectDir, "tests/commonjs_tests");
+  await execClean([], {
+    cwd: commonjsTestDir,
+    stdio: "inherit",
+  });
   await execBuild([], {
     cwd: commonjsTestDir,
     stdio: "inherit",

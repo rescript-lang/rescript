@@ -27,6 +27,14 @@ module L = Js_dump_lit
 
 let default_export = "default"
 
+(* The emitted export name of an ML binding: JS identifier conversion, with
+   the ES default export kept literal. Every site that emits, reads, or
+   reconstructs an ML module's export name must agree with this - the
+   qualified-access printer in [Js_dump] and the dynamic-import emitter in
+   [Lam_compile_primitive] included. *)
+let js_export_name name =
+  if name = default_export then name else Ext_ident.convert name
+
 let es_module = ("__esModule", "true")
 (* Exports printer *)
 
@@ -45,12 +53,12 @@ let exports cxt f (idents : Ident.t list) =
   let outer_cxt, reversed_list =
     Ext_list.fold_left idents (cxt, []) (fun (cxt, acc) id ->
         let id_name = id.name in
-        let s = Ext_ident.convert id_name in
+        let s = js_export_name id_name in
         let str, cxt = Ext_pp_scope.str_of_ident cxt id in
         ( cxt,
           if id_name = default_export then
             (* TODO check how it will affect AMDJS*)
-            es_module :: (default_export, str) :: acc
+            es_module :: (s, str) :: acc
           else (s, str) :: acc ))
   in
   P.at_least_two_lines f;
@@ -77,11 +85,9 @@ let esmodule_export cxt f (idents : Ident.t list) =
     let outer_cxt, reversed_list =
       Ext_list.fold_left idents (cxt, []) (fun (cxt, acc) id ->
           let id_name = id.name in
-          let s = Ext_ident.convert id_name in
+          let s = js_export_name id_name in
           let str, cxt = Ext_pp_scope.str_of_ident cxt id in
-          ( cxt,
-            if id_name = default_export then (default_export, str) :: acc
-            else (s, str) :: acc ))
+          (cxt, (s, str) :: acc))
     in
     P.string f L.export;
     P.space f;
@@ -130,19 +136,16 @@ let dump_import_attributes f
     P.space f;
     P.string f "with";
     P.space f;
-    let total = Hashtbl.length import_attributes in
-    let idx = ref 1 in
+    let total = List.length import_attributes in
     P.brace_group f 0 (fun _ ->
         import_attributes
-        |> Hashtbl.iter (fun key value ->
-               Js_dump_string.pp_string f key;
-               P.string f L.colon_space;
-               Js_dump_string.pp_string f value;
-               let should_add_comma = !idx < total in
-               if should_add_comma then (
-                 P.string f L.comma;
-                 P.space f);
-               idx := !idx + 1))
+        |> List.iteri (fun idx (key, value) ->
+            Js_dump_string.pp_string f key;
+            P.string f L.colon_space;
+            Js_dump_string.pp_string f value;
+            if idx < total - 1 then (
+              P.string f L.comma;
+              P.space f)))
 
 (** ES6 module style imports *)
 let imports cxt f

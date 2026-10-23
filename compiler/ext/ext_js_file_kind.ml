@@ -23,4 +23,4 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 type case = Upper | Little
 
-type t = {case: case; suffix: string} [@@warning "-69"]
+type t = {case: case; suffix: string}

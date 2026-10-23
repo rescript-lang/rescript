@@ -56,15 +56,15 @@ external browserLanguage: string = "language"
 
 let browserLanguage = if browserLanguage == "de" {
   #German
-} else if Js.String.toLowerCase(browserLanguage) == "es-es" {
+} else if String.toLowerCase(browserLanguage) == "es-es" {
   #SpanishEurope
-} else if browserLanguage->Js.String.startsWith("es") {
+} else if browserLanguage->String.startsWith("es") {
   #SpanishAmerica
-} else if Js.String.toLowerCase(browserLanguage) == "fr-ca" {
+} else if String.toLowerCase(browserLanguage) == "fr-ca" {
   #FrenchAmerica
-} else if browserLanguage->Js.String.startsWith("fr") {
+} else if browserLanguage->String.startsWith("fr") {
   #FrenchEurope
-} else if browserLanguage->Js.String.startsWith("it") {
+} else if browserLanguage->String.startsWith("it") {
   #Italian
 } else if browserLanguage == "ja" {
   #Japanese
@@ -72,13 +72,13 @@ let browserLanguage = if browserLanguage == "de" {
   #Korean
 } else if browserLanguage == "nl" {
   #Dutch
-} else if browserLanguage->Js.String.startsWith("ru") {
+} else if browserLanguage->String.startsWith("ru") {
   #Russian
-} else if Js.String.toLowerCase(browserLanguage) == "zh-cn" {
+} else if String.toLowerCase(browserLanguage) == "zh-cn" {
   #ChineseSimplified
-} else if browserLanguage->Js.String.startsWith("zh") {
+} else if browserLanguage->String.startsWith("zh") {
   #ChineseTraditional
-} else if Js.String.toLowerCase(browserLanguage) == "en-gb" {
+} else if String.toLowerCase(browserLanguage) == "en-gb" {
   #EnglishEurope
 } else {
   #English

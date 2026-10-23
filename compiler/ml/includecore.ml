@@ -49,7 +49,7 @@ let value_descriptions ~loc env name (vd1 : Types.value_description)
     | Val_prim p1, Val_prim p2 ->
       let p1 = normalize_primitive ~env vd1.val_type p1 in
       let p2 = normalize_primitive ~env vd2.val_type p2 in
-      if !Primitive.coerce p1 p2 then Tcoerce_none else raise Dont_match
+      if Primitive.coercible p1 p2 then Tcoerce_none else raise Dont_match
     | Val_prim p, _ ->
       let pc =
         {
@@ -91,8 +91,8 @@ let type_manifest env ty1 params1 ty2 params2 priv2 =
     let row1 = Btype.row_repr row1 and row2 = Btype.row_repr row2 in
     Ctype.equal env true (ty1 :: params1) (row2.row_more :: params2)
     && (match row1.row_more with
-       | {desc = Tvar _ | Tconstr _ | Tnil} -> true
-       | _ -> false)
+      | {desc = Tvar _ | Tconstr _ | Tnil} -> true
+      | _ -> false)
     &&
     let r1, r2, pairs =
       Ctype.merge_row_fields row1.row_fields row2.row_fields
@@ -125,21 +125,31 @@ let type_manifest env ty1 params1 ty2 params2 priv2 =
     &&
     let tl1, tl2 = List.split !to_equal in
     Ctype.equal env true tl1 tl2
-  | Tobject (fi1, _), Tobject (fi2, _)
-    when is_absrow env (snd (Ctype.flatten_fields fi2)) ->
+  | Tobject fi1, Tobject fi2 when is_absrow env (snd (Ctype.flatten_fields fi2))
+    ->
     let fields2, rest2 = Ctype.flatten_fields fi2 in
     Ctype.equal env true (ty1 :: params1) (rest2 :: params2)
     &&
     let fields1, rest1 = Ctype.flatten_fields fi1 in
     (match rest1 with
-    | {desc = Tnil | Tvar _ | Tconstr _} -> true
-    | _ -> false)
+      | {desc = Tnil | Tvar _ | Tconstr _} -> true
+      | _ -> false)
     &&
     let pairs, _miss1, miss2 = Ctype.associate_fields fields1 fields2 in
     miss2 = []
+    (* The signature must not grant write capability the implementation
+          lacks; an implementation's settable field may be abstracted to a
+          read-only one. *)
+    && List.for_all
+         (fun ((f1 : Ctype.field_info), (f2 : Ctype.field_info)) ->
+           match Btype.mutability_repr f2.f_mut with
+           | Mutable -> Btype.mutability_repr f1.f_mut = Asttypes.Mutable
+           | Immutable -> true)
+         pairs
     &&
     let tl1, tl2 =
-      List.split (List.map (fun (_, _, t1, _, t2) -> (t1, t2)) pairs)
+      List.split
+        (List.map (fun (f1, f2) -> (f1.Ctype.f_typ, f2.Ctype.f_typ)) pairs)
     in
     Ctype.equal env true (params1 @ tl1) (params2 @ tl2)
   | _ ->
@@ -147,10 +157,10 @@ let type_manifest env ty1 params1 ty2 params2 priv2 =
       Ctype.equal env true (ty1 :: params1) (ty2 :: params2)
       || priv2 = Private
          &&
-         try
-           check_super
-             (Ctype.try_expand_once_opt env (Ctype.expand_head env ty1))
-         with Ctype.Cannot_expand -> false
+           try
+             check_super
+               (Ctype.try_expand_once_opt env (Ctype.expand_head env ty1))
+           with Ctype.Cannot_expand -> false
     in
     check_super ty1
 
@@ -213,7 +223,7 @@ let report_type_mismatch first second decl ppf =
       else
         Format.fprintf ppf "@ %a." (report_type_mismatch0 first second decl) err)
 
-let rec compare_constructor_arguments ~loc env cstr params1 params2 arg1 arg2 =
+let rec compare_constructor_arguments env cstr params1 params2 arg1 arg2 =
   match (arg1, arg2) with
   | Types.Cstr_tuple arg1, Types.Cstr_tuple arg2 ->
     if List.length arg1 <> List.length arg2 then [Field_arity cstr]
@@ -223,10 +233,10 @@ let rec compare_constructor_arguments ~loc env cstr params1 params2 arg1 arg2 =
     then []
     else [Field_type cstr]
   | Types.Cstr_record l1, Types.Cstr_record l2 ->
-    compare_records env ~loc params1 params2 0 l1 l2
+    compare_records env params1 params2 0 l1 l2
   | _ -> [Field_type cstr]
 
-and compare_variants ~loc env params1 params2 n
+and compare_variants ~loc env params1 params2 ~layout1 ~layout2 n
     (cstrs1 : Types.constructor_declaration list)
     (cstrs2 : Types.constructor_declaration list) =
   match (cstrs1, cstrs2) with
@@ -244,12 +254,12 @@ and compare_variants ~loc env params1 params2 n
         match (cd1.cd_res, cd2.cd_res) with
         | Some r1, Some r2 ->
           if Ctype.equal env true [r1] [r2] then
-            compare_constructor_arguments ~loc env cd1.cd_id [r1] [r2]
-              cd1.cd_args cd2.cd_args
+            compare_constructor_arguments env cd1.cd_id [r1] [r2] cd1.cd_args
+              cd2.cd_args
           else [Field_type cd1.cd_id]
         | Some _, None | None, Some _ -> [Field_type cd1.cd_id]
         | _ ->
-          compare_constructor_arguments ~loc env cd1.cd_id params1 params2
+          compare_constructor_arguments env cd1.cd_id params1 params2
             cd1.cd_args cd2.cd_args
       in
       let r =
@@ -257,20 +267,18 @@ and compare_variants ~loc env params1 params2 n
         else
           match Ast_untagged_variants.is_nullary_variant cd1.cd_args with
           | true ->
-            let tag_type1 =
-              Ast_untagged_variants.process_tag_type cd1.cd_attributes
-            in
-            let tag_type2 =
-              Ast_untagged_variants.process_tag_type cd2.cd_attributes
-            in
+            let tag_type1 = Variant_runtime.constructor_tag layout1 (n - 1) in
+            let tag_type2 = Variant_runtime.constructor_tag layout2 (n - 1) in
             if tag_type1 <> tag_type2 then [Variant_representation cd1.cd_id]
             else []
           | false -> r
       in
       if r <> [] then r
-      else compare_variants ~loc env params1 params2 (n + 1) rem1 rem2)
+      else
+        compare_variants ~loc env params1 params2 ~layout1 ~layout2 (n + 1) rem1
+          rem2)
 
-and compare_records ~loc env params1_ params2_ n_
+and compare_records env params1_ params2_ n_
     (labels1_ : Types.label_declaration list)
     (labels2_ : Types.label_declaration list) =
   (* First try a fast path that checks if all the fields at once are consistent.
@@ -284,22 +292,17 @@ and compare_records ~loc env params1_ params2_ n_
       else []
     | [], l :: _ -> [Field_missing (true, l.Types.ld_id)]
     | l :: _, [] -> [Field_missing (false, l.Types.ld_id)]
-    | ld1 :: rem1, ld2 :: rem2 ->
+    | ld1 :: rem1, ld2 :: rem2 -> (
       if Ident.name ld1.ld_id <> Ident.name ld2.ld_id then
         [Field_names (n, ld1.ld_id.name, ld2.ld_id.name)]
       else if ld1.ld_mutable <> ld2.ld_mutable then [Field_mutable ld1.ld_id]
       else if ld1.ld_optional <> ld2.ld_optional then [Field_optional ld1.ld_id]
-      else (
-        Builtin_attributes.check_deprecated_mutable_inclusion ~def:ld1.ld_loc
-          ~use:ld2.ld_loc loc ld1.ld_attributes ld2.ld_attributes
-          (Ident.name ld1.ld_id);
-        let field_mismatch =
-          !Builtin_attributes.check_bs_attributes_inclusion
-            ld1.ld_attributes ld2.ld_attributes (Ident.name ld1.ld_id)
-        in
-        match field_mismatch with
-        | Some (a, b) -> [Field_names (n, a, b)]
-        | None ->
+      else
+        let name1 = Record_runtime.declaration_name ld1 in
+        let name2 = Record_runtime.declaration_name ld2 in
+        match name1 <> name2 with
+        | true -> [Field_names (n, name1, name2)]
+        | false ->
           let current_field_consistent =
             if fast then true
             else
@@ -342,17 +345,19 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
     if err <> [] then err
     else
       let err =
-        let untagged1 =
-          Ast_untagged_variants.process_untagged decl1.type_attributes
+        let is_unboxed decl =
+          match decl.type_kind with
+          | Type_variant (_, layout_ref) ->
+            let layout = Variant_runtime.get_layout layout_ref in
+            let {Variant_runtime.unboxed} =
+              Variant_coercion.runtime_configuration
+                ~type_representation:decl.type_representation ~layout
+            in
+            unboxed
+          | Type_abstract | Type_record _ | Type_open ->
+            decl.type_representation = Unboxed
         in
-        let untagged2 =
-          Ast_untagged_variants.process_untagged decl2.type_attributes
-        in
-        match
-          ( decl2.type_kind,
-            decl1.type_unboxed.unboxed || untagged1,
-            decl2.type_unboxed.unboxed || untagged2 )
-        with
+        match (decl2.type_kind, is_unboxed decl1, is_unboxed decl2) with
         | Type_abstract, _, _ -> []
         | _, true, false -> [Unboxed_representation false]
         | _, false, true -> [Unboxed_representation true]
@@ -361,12 +366,19 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
       if err <> [] then err
       else
         let err =
-          let tag1 =
-            Ast_untagged_variants.process_tag_name decl1.type_attributes
+          let tag_name decl =
+            match decl.type_kind with
+            | Type_variant (_, layout_ref) ->
+              let layout = Variant_runtime.get_layout layout_ref in
+              let configuration : Variant_runtime.configuration =
+                Variant_coercion.runtime_configuration
+                  ~type_representation:decl.type_representation ~layout
+              in
+              configuration.tag_name
+            | Type_abstract | Type_record _ | Type_open -> None
           in
-          let tag2 =
-            Ast_untagged_variants.process_tag_name decl2.type_attributes
-          in
+          let tag1 = tag_name decl1 in
+          let tag2 = tag_name decl2 in
           if tag1 <> tag2 then [Tag_name] else err
         in
         if err <> [] then err
@@ -374,7 +386,8 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
           let err =
             match (decl1.type_kind, decl2.type_kind) with
             | _, Type_abstract -> []
-            | Type_variant cstrs1, Type_variant cstrs2 ->
+            | ( Type_variant (cstrs1, layout_ref1),
+                Type_variant (cstrs2, layout_ref2) ) ->
               let mark cstrs usage name decl =
                 List.iter
                   (fun c ->
@@ -390,10 +403,12 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
               mark cstrs1 usage name decl1;
               if equality then mark cstrs2 Env.Positive (Ident.name id) decl2;
               compare_variants ~loc env decl1.type_params decl2.type_params 1
+                ~layout1:(Variant_runtime.get_layout layout_ref1)
+                ~layout2:(Variant_runtime.get_layout layout_ref2)
                 cstrs1 cstrs2
             | Type_record (labels1, rep1), Type_record (labels2, rep2) ->
               let err =
-                compare_records ~loc env decl1.type_params decl2.type_params 1
+                compare_records env decl1.type_params decl2.type_params 1
                   labels1 labels2
               in
               if err <> [] || rep1 = rep2 then err
@@ -448,7 +463,7 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
 
 (* Inclusion between extension constructors *)
 
-let extension_constructors ~loc env id ext1 ext2 =
+let extension_constructors env id ext1 ext2 =
   let usage =
     if ext1.ext_private = Private || ext2.ext_private = Public then Env.Positive
     else Env.Privatize
@@ -468,8 +483,8 @@ let extension_constructors ~loc env id ext1 ext2 =
       (ty2 :: ext2.ext_type_params)
   then
     if
-      compare_constructor_arguments ~loc env (Ident.create "")
-        ext1.ext_type_params ext2.ext_type_params ext1.ext_args ext2.ext_args
+      compare_constructor_arguments env (Ident.create "") ext1.ext_type_params
+        ext2.ext_type_params ext1.ext_args ext2.ext_args
       = []
     then
       if

@@ -81,24 +81,24 @@ let getPayloadRecordPlusOne = ({payload}): record => {
 @genType
 type business2 = {
   name: string,
-  owner: Js.Nullable.t<person>,
-  address2: Js.Nullable.t<string>,
+  owner: nullable<person>,
+  address2: nullable<string>,
 }
 
 @genType
 let findAddress2 = (business: business2): list<string> =>
-  business.address2->Js.Nullable.toOption->getOpt(list{}, a => list{a})
+  business.address2->Stdlib.Nullable.toOption->getOpt(list{}, a => list{a})
 
 @genType
 let someBusiness2 = {
   name: "SomeBusiness",
-  owner: Js.Nullable.null,
-  address2: Js.Nullable.null,
+  owner: Stdlib.Nullable.null,
+  address2: Stdlib.Nullable.null,
 }
 
 @genType
-let computeArea3 = (o: {"x": int, "y": int, "z": Js.Nullable.t<int>}) =>
-  o["x"] * o["y"] * o["z"]->Js.Nullable.toOption->Option.mapWithDefault(1, n => n)
+let computeArea3 = (o: {"x": int, "y": int, "z": nullable<int>}) =>
+  o["x"] * o["y"] * o["z"]->Stdlib.Nullable.toOption->Option.mapWithDefault(1, n => n)
 
 @genType
 let computeArea4 = (o: {"x": int, "y": int, "z": option<int>}) =>

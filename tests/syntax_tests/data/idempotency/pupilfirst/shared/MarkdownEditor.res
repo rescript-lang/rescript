@@ -182,14 +182,14 @@ let updateTextareaAfterDelay = (state, cursorPosition) => {
 
   switch state.mode {
   | Windowed(_) =>
-    Js.Global.setTimeout(() => TextareaAutosize.update(state.id), renderDelay)->ignore
+    setTimeout(() => TextareaAutosize.update(state.id), renderDelay)->ignore
   | Fullscreen(_) => () // Autosizing is turned off in full-screen mode.
   }
 
   open Webapi.Dom
   switch document->Document.getElementById(state.id) {
   | Some(element) =>
-    Js.Global.setTimeout(
+    setTimeout(
       () =>
         element
         ->DomUtils.Element.unsafeToHtmlInputElement
@@ -364,7 +364,7 @@ let handleUploadFileResponse = (oldValue, state, send, onChange, json) => {
     finalizeChange(~oldValue, ~newValue, ~state, ~send, ~onChange)
     send(FinishUploading)
   } else {
-    send(SetUploadError(Some("Failed to attach file! " ++ (errors->Js.Array.joinWith(", ")))))
+    send(SetUploadError(Some("Failed to attach file! " ++ (errors->Array.joinUnsafe(", ")))))
   }
 }
 

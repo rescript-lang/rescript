@@ -30,7 +30,6 @@ mv lib-ocaml packages/@rescript/runtime/lib/ocaml
 
 # @rescript/{target}
 chmod +x binaries-*/*.exe
-mv -f binaries-darwin-x64/* "packages/@rescript/darwin-x64/bin"
 mv -f binaries-darwin-arm64/* "packages/@rescript/darwin-arm64/bin"
 mv -f binaries-linux-x64/* "packages/@rescript/linux-x64/bin"
 mv -f binaries-linux-arm64/* "packages/@rescript/linux-arm64/bin"

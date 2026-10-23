@@ -1,7 +1,11 @@
+(* Source paths are relative to the compiler request's working directory,
+   which differs from the process's when the compiler runs in-process. *)
+let exists path = Sys.file_exists (Compiler_request_state.resolve_path path)
+
 let rec interface items =
   match items with
   | {Typedtree.sig_loc} :: rest -> (
-    match not (Sys.file_exists sig_loc.loc_start.pos_fname) with
+    match not (exists sig_loc.loc_start.pos_fname) with
     | true -> interface rest
     | false -> Some sig_loc.loc_start.pos_fname)
   | [] -> None
@@ -9,14 +13,15 @@ let rec interface items =
 let rec implementation items =
   match items with
   | {Typedtree.str_loc} :: rest -> (
-    match not (Sys.file_exists str_loc.loc_start.pos_fname) with
+    match not (exists str_loc.loc_start.pos_fname) with
     | true -> implementation rest
     | false -> Some str_loc.loc_start.pos_fname)
   | [] -> None
 
 let transform_to_absolute_path (path : string option) =
   let transform path =
-    if Filename.is_relative path then Filename.concat (Sys.getcwd ()) path
+    if Filename.is_relative path then
+      Filename.concat (Compiler_request_state.cwd ()) path
     else path
   in
   Option.map transform path

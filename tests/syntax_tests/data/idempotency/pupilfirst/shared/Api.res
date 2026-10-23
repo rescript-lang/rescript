@@ -9,7 +9,7 @@ let acceptOrRejectResponse = response =>
   if Fetch.Response.ok(response) || Fetch.Response.status(response) == 422 {
     response->Fetch.Response.json
   } else {
-    Js.Promise.reject(UnexpectedResponse(response->Fetch.Response.status))
+    Promise.reject(UnexpectedResponse(response->Fetch.Response.status))
   }
 
 let handleResponseError = error => {
@@ -36,13 +36,13 @@ let handleResponseJSON = (json, responseCB, errorCB) => {
 }
 
 let handleResponse = (responseCB, errorCB, promise) => {
-  open Js.Promise
+  open Promise
   promise
   ->then_(response => acceptOrRejectResponse(response))
   ->then_(json => handleResponseJSON(json, responseCB, errorCB)->resolve)
   ->catch(error => {
     errorCB()
-    Js.log(error)
+    Console.log(error)
     handleResponseError(error->handleApiError)->resolve
   })
   ->ignore
@@ -53,7 +53,7 @@ let sendPayload = (url, payload, responseCB, errorCB, method_) =>
     url,
     Fetch.RequestInit.make(
       ~method_,
-      ~body=Fetch.BodyInit.make(Js.Json.stringify(Js.Json.object_(payload))),
+      ~body=Fetch.BodyInit.make(JSON.stringify(JSON.object_(payload))),
       ~headers=Fetch.HeadersInit.make({"Content-Type": "application/json"}),
       ~credentials=Fetch.SameOrigin,
       (),

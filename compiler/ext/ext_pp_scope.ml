@@ -22,34 +22,60 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type t = int Map_int.t Map_string.t
+(* Stamps seen for one mangled name, each mapped to its printed name.
+   [next] is the first suffix to try; every suffix below it is assigned or
+   was already taken when skipped. *)
+type stamps = {next: int; stamps: string Map_int.t}
 
-(*
-   -- "name" --> int map -- stamp --> index suffix
-*)
-let empty : t = Map_string.empty
+(* [used] holds every printed name in scope. Identifiers may contain [$], so
+   a suffixed name like [x$1] can equal another identifier's mangled name;
+   new names are checked against [used] instead of being assumed fresh.
+   [reserved] holds the raw JS names the program refers to (see {!reserve}),
+   which a suffixed name must not capture. *)
+type t = {
+  names: stamps Map_string.t;
+  used: Set_string.t;
+  reserved: Set_string.t;
+}
 
-let rec print fmt v =
-  Format.fprintf fmt "@[<v>{";
-  Map_string.iter v (fun k m ->
-      Format.fprintf fmt "%s: @[%a@],@ " k print_int_map m);
-  Format.fprintf fmt "}@]"
+let empty : t =
+  {
+    names = Map_string.empty;
+    used = Set_string.empty;
+    reserved = Set_string.empty;
+  }
 
-and print_int_map fmt m =
-  Map_int.iter m (fun k v -> Format.fprintf fmt "%d - %d" k v)
+let reserve (cxt : t) (reserved : Set_string.t) : t = {cxt with reserved}
 
-let add_ident ~mangled:name (stamp : int) (cxt : t) : int * t =
-  match Map_string.find_opt cxt name with
-  | None -> (0, Map_string.add cxt name (Map_int.add Map_int.empty stamp 0))
-  | Some imap -> (
-    match Map_int.find_opt imap stamp with
-    | None ->
-      let v = Map_int.cardinal imap in
-      (v, Map_string.add cxt name (Map_int.add imap stamp v))
-    | Some i -> (i, cxt))
+let add_ident ~mangled:name (stamp : int) (cxt : t) : string * t =
+  let {next; stamps} =
+    match Map_string.find_opt name cxt.names with
+    | None -> {next = 0; stamps = Map_int.empty}
+    | Some s -> s
+  in
+  match Map_int.find_opt stamp stamps with
+  | Some str -> (str, cxt)
+  | None ->
+    let rec pick i =
+      let str = if i = 0 then name else Printf.sprintf "%s$%d" name i in
+      if
+        Set_string.mem str cxt.used || (i > 0 && Set_string.mem str cxt.reserved)
+      then pick (i + 1)
+      else (i, str)
+    in
+    let i, str = pick next in
+    ( str,
+      {
+        names =
+          Map_string.add name
+            {next = i + 1; stamps = Map_int.add stamp str stamps}
+            cxt.names;
+        used = Set_string.add str cxt.used;
+        reserved = cxt.reserved;
+      } )
 
 (**
-   same as {!Js_dump.ident} except it generates a string instead of doing the printing
+   same as {!ident} except it generates a string instead of doing the printing
    For fast/debug mode, we can generate the name as 
        [Printf.sprintf "%s$%d" name id.stamp] which is 
        not relevant to the context       
@@ -62,8 +88,6 @@ let add_ident ~mangled:name (stamp : int) (cxt : t) : int * t =
        However, this means we loose the ability of dynamic loading, is it a big 
        deal? we can fix this by a scanning first, since we already know which 
        modules are global
-
-       check [test/test_global_print.ml] for regression
    - collision
       It is obvious that for the same identifier that they 
       print the same name.
@@ -87,8 +111,7 @@ let str_of_ident (cxt : t) (id : Ident.t) : string * t =
   else
     let id_name = id.name in
     let name = Ext_ident.convert id_name in
-    let i, new_cxt = add_ident ~mangled:name id.stamp cxt in
-    ((if i == 0 then name else Printf.sprintf "%s$%d" name i), new_cxt)
+    add_ident ~mangled:name id.stamp cxt
 
 let ident (cxt : t) f (id : Ident.t) : t =
   let str, cxt = str_of_ident cxt id in
@@ -96,18 +119,31 @@ let ident (cxt : t) f (id : Ident.t) : t =
   cxt
 
 let merge (cxt : t) (set : Set_ident.t) =
-  Set_ident.fold set cxt (fun ident acc ->
+  Set_ident.fold
+    (fun ident acc ->
       snd (add_ident ~mangled:(Ext_ident.convert ident.name) ident.stamp acc))
+    set cxt
 
 (* Assume that all idents are already in [scope]
    so both [param/0] and [param/1] are in idents, we don't need
    update twice,  once is enough
 *)
 let sub_scope (scope : t) (idents : Set_ident.t) : t =
-  Set_ident.fold idents empty (fun {name} acc ->
+  Set_ident.fold
+    (fun {name} acc ->
       let mangled = Ext_ident.convert name in
-      match Map_string.find_exn scope mangled with
+      match Map_string.find mangled scope.names with
       | exception Not_found -> assert false
-      | imap ->
-        if Map_string.mem acc mangled then acc
-        else Map_string.add acc mangled imap)
+      | stamps ->
+        if Map_string.mem mangled acc.names then acc
+        else
+          {
+            acc with
+            names = Map_string.add mangled stamps acc.names;
+            used =
+              Map_int.fold
+                (fun _ str used -> Set_string.add str used)
+                stamps.stamps acc.used;
+          })
+    idents
+    {empty with reserved = scope.reserved}

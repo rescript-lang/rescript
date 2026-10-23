@@ -1,0 +1,1 @@
+- Represent `@react.component`, `@jsx.component` and their `componentWithProps` forms with a dedicated parsetree node. https://github.com/rescript-lang/rescript/pull/8884

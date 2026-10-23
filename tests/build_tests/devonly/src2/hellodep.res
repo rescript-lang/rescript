@@ -1,1 +1,1 @@
-Js.log(Hello.v)
+Console.log(Hello.v)

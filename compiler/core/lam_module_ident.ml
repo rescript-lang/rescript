@@ -24,8 +24,6 @@
 
 type t = J.module_id = {id: Ident.t; kind: Js_op.kind; dynamic_import: bool}
 
-let id x = x.id
-
 let of_ml ?(dynamic_import = false) id = {id; kind = Ml; dynamic_import}
 
 let of_runtime id = {id; kind = Runtime; dynamic_import = false}
@@ -64,12 +62,24 @@ module Cmp = struct
     match x.kind with
     | External {name = x_kind; _} ->
       (* The hash collision is rare? *)
-      Bs_hash_stubs.hash_string x_kind
+      Ext_platform_primitives.hash_string x_kind
     | Ml | Runtime ->
       let x_id = x.id in
-      Bs_hash_stubs.hash_stamp_and_name x_id.stamp x_id.name
+      Ext_platform_primitives.hash_stamp_and_name x_id.stamp x_id.name
 end
 
-module Hash = Hash.Make (Cmp)
+module Hash = Hashtbl.Make (Cmp)
 
-module Hash_set = Hash_set.Make (Cmp)
+module Hash_set = Hash
+
+let set_add set id = if not (Hash_set.mem set id) then Hash_set.add set id ()
+
+let compare_same_name (x : t) (y : t) =
+  let rank (x : t) =
+    match x.kind with
+    | Ml -> 0
+    | Runtime -> 1
+    | External {default = false} -> 2
+    | External {default = true} -> 3
+  in
+  compare (rank x) (rank y)

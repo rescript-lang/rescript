@@ -116,6 +116,55 @@ let zero = make_pat (Tpat_constant (Const_int 0)) Ctype.none Env.empty
    when an "incoherence" is not detected by this check.
 *)
 
+(* The values matched by an int or char constant or interval, as bounds. *)
+let int_range p =
+  match p.pat_desc with
+  | Tpat_constant (Const_int i | Const_char i) -> Some (i, i)
+  | Tpat_interval
+      ((Const_int lo | Const_char lo), (Const_int hi | Const_char hi)) ->
+    Some (lo, hi)
+  | _ -> None
+
+(* A constant or interval for [lo .. hi], of the same kind as [p]: chars when
+   [p] starts with a char and the bounds can be written as char literals. *)
+let make_int_range p lo hi =
+  let chars =
+    Uchar.is_valid lo && Uchar.is_valid hi
+    &&
+    match p.pat_desc with
+    | Tpat_constant (Const_char _) | Tpat_interval (Const_char _, _) -> true
+    | _ -> false
+  in
+  let const i = if chars then Const_char i else Const_int i in
+  let desc =
+    if lo = hi then Tpat_constant (const lo)
+    else Tpat_interval (const lo, const hi)
+  in
+  {p with pat_desc = desc; pat_extra = []}
+
+(* Splits interval [q] at the bounds of the ranges in [column], so that each
+   piece is either inside or outside each of them. A constant is one piece. *)
+let split_int_range q column =
+  match (q.pat_desc, int_range q) with
+  | Tpat_interval _, Some (lo, hi) ->
+    let cuts =
+      List.fold_left
+        (fun cuts p ->
+          match int_range p with
+          | Some (a, b) ->
+            let cuts = if lo < a && a <= hi then a :: cuts else cuts in
+            if b < hi && lo <= b then (b + 1) :: cuts else cuts
+          | None -> cuts)
+        [] column
+      |> List.sort_uniq compare
+    in
+    let rec pieces lo = function
+      | [] -> [make_int_range q lo hi]
+      | c :: cuts -> make_int_range q lo (c - 1) :: pieces c cuts
+    in
+    pieces lo cuts
+  | _ -> [q]
+
 let simplify_head_pat p k =
   let rec simplify_head_pat p k =
     match p.pat_desc with
@@ -141,22 +190,32 @@ let all_coherent column =
     | (Tpat_var _ | Tpat_alias _ | Tpat_or _), _
     | _, (Tpat_var _ | Tpat_alias _ | Tpat_or _) ->
       assert false
-    | Tpat_construct (_, c, _), Tpat_construct (_, c', _) ->
-      c.cstr_consts = c'.cstr_consts && c.cstr_nonconsts = c'.cstr_nonconsts
+    | Tpat_construct _, Tpat_construct _ -> (
+      (* Simplification of or- and GADT-refined patterns can produce columns
+         mixing constructors of different types; such columns are incoherent
+         and excluded from the analysis. Compare the declared types. *)
+      let head_path p =
+        match (Ctype.expand_head p.pat_env p.pat_type).desc with
+        | Tconstr (path, _, _) -> Some path
+        | _ -> None
+      in
+      match (head_path hp1, head_path hp2) with
+      | Some path1, Some path2 -> Path.same path1 path2
+      | _ -> false)
     | Tpat_constant c1, Tpat_constant c2 -> (
       match (c1, c2) with
-      | Const_char _, Const_char _
-      | Const_int _, Const_int _
-      | Const_int32 _, Const_int32 _
-      | Const_int64 _, Const_int64 _
+      | (Const_char _ | Const_int _), (Const_char _ | Const_int _)
       | Const_bigint _, Const_bigint _
       | Const_float _, Const_float _
       | Const_string _, Const_string _ ->
         true
-      | ( ( Const_char _ | Const_int _ | Const_int32 _ | Const_int64 _
-          | Const_bigint _ | Const_float _ | Const_string _ ),
+      | ( ( Const_char _ | Const_int _ | Const_bigint _ | Const_float _
+          | Const_string _ ),
           _ ) ->
         false)
+    | (Tpat_constant _ | Tpat_interval _), (Tpat_constant _ | Tpat_interval _)
+      ->
+      int_range hp1 <> None && int_range hp2 <> None
     | Tpat_tuple l1, Tpat_tuple l2 -> List.length l1 = List.length l2
     | ( Tpat_record ((_, lbl1, _, _) :: _, _, _),
         Tpat_record ((_, lbl2, _, _) :: _, _, _) ) ->
@@ -261,11 +320,13 @@ let const_compare x y =
     compare (float_of_string f1) (float_of_string f2)
   | Const_bigint (s1, b1), Const_bigint (s2, b2) ->
     Bigint_utils.compare (s1, b1) (s2, b2)
-  | Const_string (s1, _), Const_string (s2, _) -> String.compare s1 s2
+  | Const_string s1, Const_string s2 -> String.compare s1 s2
+  | (Const_char i1 | Const_int i1), (Const_char i2 | Const_int i2) ->
+    compare i1 i2
   | _, _ -> compare x y
 
 let records_args l1 l2 =
-  (* Invariant: fields are already sorted by Typecore.type_label_a_list *)
+  (* Invariant: fields are already sorted by Typecore.type_record_elem_list *)
   let rec combine r1 r2 l1 l2 =
     match (l1, l2) with
     | [], [] -> (List.rev r1, List.rev r2)
@@ -300,6 +361,11 @@ module Compat = struct
     | Tpat_variant (l1, op1, _), Tpat_variant (l2, op2, _) ->
       l1 = l2 && ocompat ~equal_cd op1 op2
     | Tpat_constant c1, Tpat_constant c2 -> const_compare c1 c2 = 0
+    | (Tpat_constant _ | Tpat_interval _), (Tpat_constant _ | Tpat_interval _)
+      -> (
+      match (int_range p, int_range q) with
+      | Some (lo1, hi1), Some (lo2, hi2) -> lo1 <= hi2 && lo2 <= hi1
+      | _ -> false)
     | Tpat_tuple ps, Tpat_tuple qs -> compats ~equal_cd ps qs
     | Tpat_record (l1, _, _), Tpat_record (l2, _, _) ->
       let ps, qs = records_args l1 l2 in
@@ -321,11 +387,9 @@ module Compat = struct
     | _, _ -> false
 end
 
-let equal_tag c1 c2 = Types.equal_tag c1.cstr_tag c2.cstr_tag
+let compat = Compat.compat ~equal_cd:Types.same_constructor
 
-let compat = Compat.compat ~equal_cd:equal_tag
-
-and compats = Compat.compats ~equal_cd:equal_tag
+and compats = Compat.compats ~equal_cd:Types.same_constructor
 
 (* Due to (potential) rebinding, two extension constructors
    of the same arity type may equal *)
@@ -364,10 +428,8 @@ let pretty_const c =
   match c with
   | Const_int i -> Printf.sprintf "%d" i
   | Const_char i -> Printf.sprintf "%s" (Pprintast.string_of_int_as_char i)
-  | Const_string (s, _) -> Printf.sprintf "%S" s
+  | Const_string s -> Printf.sprintf "%S" s
   | Const_float f -> Printf.sprintf "%s" f
-  | Const_int32 i -> Printf.sprintf "%ldl" i
-  | Const_int64 i -> Printf.sprintf "%LdL" i
   | Const_bigint (sign, i) ->
     Printf.sprintf "%s" (Bigint_utils.to_string sign i)
 
@@ -380,14 +442,14 @@ let rec pretty_val ppf v =
     | Tpat_constraint _ ->
       fprintf ppf "@[(%a : _)@]" pretty_val {v with pat_extra = rem}
     | Tpat_type _ ->
-      fprintf ppf "@[(# %a)@]" pretty_val {v with pat_extra = rem}
-    | Tpat_open _ ->
       fprintf ppf "@[(# %a)@]" pretty_val {v with pat_extra = rem})
   | [] -> (
     match v.pat_desc with
     | Tpat_any -> fprintf ppf "_"
     | Tpat_var (x, _) -> fprintf ppf "%s" (Ident.name x)
     | Tpat_constant c -> fprintf ppf "%s" (pretty_const c)
+    | Tpat_interval (c1, c2) ->
+      fprintf ppf "%s .. %s" (pretty_const c1) (pretty_const c2)
     | Tpat_tuple vs -> fprintf ppf "@[(%a)@]" (pretty_vals ",") vs
     | Tpat_construct (_, cstr, []) -> fprintf ppf "%s" cstr.cstr_name
     | Tpat_construct (_, cstr, [w]) ->
@@ -410,6 +472,8 @@ let rec pretty_val ppf v =
       | (_, _lbl, _, _) :: _q ->
         let elision_mark _ = () in
         fprintf ppf "@[{%a%t}@]" pretty_lvals filtered_lvs elision_mark)
+    | Tpat_dict entries ->
+      fprintf ppf "@[dict{%a}@]" pretty_dict_entries entries
     | Tpat_array vs -> fprintf ppf "@[[%a]@]" (pretty_vals ",") vs
     | Tpat_alias (v, x, _) ->
       fprintf ppf "@[(%a@ as %a)@]" pretty_val v Ident.print x
@@ -449,20 +513,25 @@ and pretty_lvals ppf = function
   | (_, lbl, v, _) :: rest ->
     fprintf ppf "%s: %a,@ %a" lbl.lbl_name pretty_val v pretty_lvals rest
 
+and pretty_dict_entries ppf = function
+  | [] -> ()
+  | [{tdp_key; tdp_pattern}] ->
+    fprintf ppf "%S: %a" tdp_key.txt pretty_val tdp_pattern
+  | {tdp_key; tdp_pattern} :: rest ->
+    fprintf ppf "%S: %a,@ %a" tdp_key.txt pretty_val tdp_pattern
+      pretty_dict_entries rest
+
 let top_pretty ppf v = fprintf ppf "@[%a@]@?" pretty_val v
 
-let pretty_pat p =
-  top_pretty Format.str_formatter p;
-  prerr_string (Format.flush_str_formatter ())
+let pretty_pat p = prerr_string (Format.asprintf "%a" top_pretty p)
 
 type matrix = pattern list list
 
 let pretty_line ps =
   List.iter
     (fun p ->
-      top_pretty Format.str_formatter p;
       prerr_string " <";
-      prerr_string (Format.flush_str_formatter ());
+      prerr_string (Format.asprintf "%a" top_pretty p);
       prerr_string ">")
     ps
 
@@ -479,13 +548,33 @@ let pretty_matrix (pss : matrix) =
 (* Utilities for matching   *)
 (****************************)
 
+let rec get_variant_constructors env ty =
+  match (Ctype.repr ty).desc with
+  | Tconstr (path, _, _) -> (
+    try
+      match Env.find_type path env with
+      | {type_kind = Type_variant _} -> fst (Env.find_type_descrs path env)
+      | {type_manifest = Some _} ->
+        get_variant_constructors env
+          (Ctype.expand_head_once env (clean_copy ty))
+      | _ -> fatal_error "Parmatch.get_variant_constructors"
+    with Not_found -> fatal_error "Parmatch.get_variant_constructors")
+  | _ -> fatal_error "Parmatch.get_variant_constructors"
+
 (* Check top matching *)
 let simple_match p1 p2 =
   match (p1.pat_desc, p2.pat_desc) with
   | Tpat_construct (_, c1, _), Tpat_construct (_, c2, _) ->
-    Types.equal_tag c1.cstr_tag c2.cstr_tag
+    Types.same_constructor c1 c2
   | Tpat_variant (l1, _, _), Tpat_variant (l2, _, _) -> l1 = l2
   | Tpat_constant c1, Tpat_constant c2 -> const_compare c1 c2 = 0
+  | (Tpat_constant _ | Tpat_interval _), (Tpat_constant _ | Tpat_interval _)
+    -> (
+    (* [p1] is a piece of a column split by [split_int_range], so it is either
+       inside or outside [p2] *)
+    match (int_range p1, int_range p2) with
+    | Some (lo1, hi1), Some (lo2, hi2) -> lo2 <= lo1 && hi1 <= hi2
+    | _ -> false)
   | Tpat_record _, Tpat_record _ -> true
   | Tpat_tuple p1s, Tpat_tuple p2s | Tpat_array p1s, Tpat_array p2s ->
     List.length p1s = List.length p2s
@@ -497,7 +586,7 @@ let record_arg p =
   match p.pat_desc with
   | Tpat_any -> []
   | Tpat_record (args, _, _rest) -> args
-  | _ -> fatal_error "Parmatch.as_record"
+  | _ -> fatal_error "Parmatch.record_arg"
 
 (* Raise Not_found when pos is not present in arg *)
 let get_field pos arg =
@@ -519,47 +608,7 @@ let all_record_args lbls =
         (fun lbl -> (mknoloc (Longident.Lident "?temp?"), lbl, omega, opt))
         lbl_all
     in
-    List.iter
-      (fun ((id, lbl, pat, o) as x) ->
-        let lbl_is_optional () =
-          match lbl.lbl_repres with
-          | Record_inlined _ -> false
-          | _ -> lbl.lbl_optional
-        in
-        let x =
-          match pat.pat_desc with
-          | Tpat_construct
-              ( {txt = Longident.Ldot (Longident.Lident "*predef*", "Some")},
-                _,
-                [({pat_desc = Tpat_constant _} as c)] )
-            when lbl_is_optional () ->
-            (id, lbl, c, o)
-          | Tpat_construct
-              ( {txt = Longident.Ldot (Longident.Lident "*predef*", "Some")},
-                _,
-                [({pat_desc = Tpat_construct (_, cd, _)} as pat_construct)] )
-            when lbl_is_optional () -> (
-            let cdecl =
-              Ast_untagged_variants
-              .constructor_declaration_from_constructor_description
-                ~env:pat.pat_env cd
-            in
-            match cdecl with
-            | None -> x
-            | Some cstr -> (
-              match
-                Ast_untagged_variants.get_block_type ~env:pat.pat_env cstr
-              with
-              | Some block_type
-                when not
-                       (Ast_untagged_variants.block_type_can_be_undefined
-                          block_type) ->
-                (id, lbl, pat_construct, o)
-              | _ -> x))
-          | _ -> x
-        in
-        t.(lbl.lbl_pos) <- x)
-      lbls;
+    List.iter (fun ((_, lbl, _, _) as x) -> t.(lbl.lbl_pos) <- x) lbls;
     Array.to_list t
 
 (* Build argument list when p2 >= p1, where p1 is a simple pattern *)
@@ -588,7 +637,7 @@ let rec simple_match_args p1 p2 =
 
 let rec normalize_pat q =
   match q.pat_desc with
-  | Tpat_any | Tpat_constant _ -> q
+  | Tpat_any | Tpat_constant _ | Tpat_interval _ -> q
   | Tpat_var _ -> make_pat Tpat_any q.pat_type q.pat_env
   | Tpat_alias (p, _, _) -> normalize_pat p
   | Tpat_tuple args ->
@@ -609,6 +658,7 @@ let rec normalize_pat q =
            rest ))
       q.pat_type q.pat_env
   | Tpat_or _ -> fatal_error "Parmatch.normalize_pat"
+  | Tpat_dict _ -> fatal_error "Parmatch.normalize_pat: dict pattern"
 
 (*
   Build normalized (cf. supra) discriminating pattern,
@@ -695,7 +745,7 @@ let do_set_args erase_mutable q r =
   | {pat_desc = Tpat_array omegas} ->
     let args, rest = read_args omegas r in
     make_pat (Tpat_array args) q.pat_type q.pat_env :: rest
-  | {pat_desc = Tpat_constant _ | Tpat_any} ->
+  | {pat_desc = Tpat_constant _ | Tpat_interval _ | Tpat_any} ->
     q :: r (* case any is used in matching.ml *)
   | _ -> fatal_error "Parmatch.set_args"
 
@@ -747,26 +797,50 @@ let filter_extra pss =
 *)
 
 let filter_all pat0 pss =
-  let rec insert q qs env =
-    match env with
-    | [] ->
-      let q0 = normalize_pat q in
-      [(q0, [simple_match_args q0 q @ qs])]
-    | ((q0, pss) as c) :: env ->
-      if simple_match q0 q then
-        (q0, (simple_match_args q0 q @ qs) :: pss) :: env
-      else c :: insert q qs env
+  (* The groups, most recently created first. Each row goes to the group
+     whose head matches it; there is at most one such group, since a group is
+     only created when no other matches. *)
+  let groups =
+    ref
+      (match pat0.pat_desc with
+      | Tpat_record _ | Tpat_tuple _ -> [(pat0, ref [])]
+      | _ -> [])
+  in
+  let add_row (q0, rows) q qs =
+    rows := (simple_match_args q0 q @ qs) :: !rows
+  in
+  let new_group q qs =
+    let q0 = normalize_pat q in
+    let group = (q0, ref []) in
+    add_row group q qs;
+    groups := group :: !groups;
+    group
+  in
+  (* Int and char ranges are grouped by equal bounds, not by containment as
+     [simple_match] does, so that [build_other] sees every range. *)
+  let same_head q0 q =
+    match (int_range q0, int_range q) with
+    | Some r0, Some r -> r0 = r
+    | _ -> simple_match q0 q
+  in
+  let insert q qs =
+    match List.find_opt (fun (q0, _) -> same_head q0 q) !groups with
+    | Some group -> add_row group q qs
+    | None -> ignore (new_group q qs)
   in
 
-  let rec filter_rec env = function
+  let rec filter_rec = function
     | ({pat_desc = Tpat_alias (p, _, _)} :: ps) :: pss ->
-      filter_rec env ((p :: ps) :: pss)
+      filter_rec ((p :: ps) :: pss)
     | ({pat_desc = Tpat_or (p1, p2, _)} :: ps) :: pss ->
-      filter_rec env ((p1 :: ps) :: (p2 :: ps) :: pss)
-    | ({pat_desc = Tpat_any | Tpat_var _} :: _) :: pss -> filter_rec env pss
-    | (p :: ps) :: pss -> filter_rec (insert p ps env) pss
-    | _ -> env
-  and filter_omega env = function
+      filter_rec ((p1 :: ps) :: (p2 :: ps) :: pss)
+    | ({pat_desc = Tpat_any | Tpat_var _} :: _) :: pss -> filter_rec pss
+    | (p :: ps) :: pss ->
+      insert p ps;
+      filter_rec pss
+    | _ -> ()
+  in
+  let rec filter_omega env = function
     | ({pat_desc = Tpat_alias (p, _, _)} :: ps) :: pss ->
       filter_omega env ((p :: ps) :: pss)
     | ({pat_desc = Tpat_or (p1, p2, _)} :: ps) :: pss ->
@@ -781,13 +855,8 @@ let filter_all pat0 pss =
     | [] -> env
   in
 
-  filter_omega
-    (filter_rec
-       (match pat0.pat_desc with
-       | Tpat_record _ | Tpat_tuple _ -> [(pat0, [])]
-       | _ -> [])
-       pss)
-    pss
+  filter_rec pss;
+  filter_omega (List.rev_map (fun (q0, rows) -> (q0, !rows)) !groups) pss
 
 (* Variant related functions *)
 
@@ -845,9 +914,12 @@ let row_of_pat pat =
 
 let full_match closing env =
   match env with
-  | ({pat_desc = Tpat_construct (_, c, _)}, _) :: _ ->
-    if c.cstr_consts < 0 then false (* extensions *)
-    else List.length env = c.cstr_consts + c.cstr_nonconsts
+  | ({pat_desc = Tpat_construct (_, c, _)}, _) :: _ -> (
+    match c.cstr_kind with
+    | Extension_constructor _ -> false
+    | Ordinary_constructor {variant} ->
+      List.length env
+      = Variant_runtime.length (Variant_runtime.get_layout variant))
   | (({pat_desc = Tpat_variant _} as p), _) :: _ ->
     let fields =
       List.map
@@ -874,12 +946,14 @@ let full_match closing env =
            (fun (tag, f) ->
              Btype.row_field_repr f = Rabsent || List.mem tag fields)
            row.row_fields
-  | ({pat_desc = Tpat_constant _}, _) :: _ -> false
+  | ({pat_desc = Tpat_constant _ | Tpat_interval _}, _) :: _ -> false
   | ({pat_desc = Tpat_tuple _}, _) :: _ -> true
   | ({pat_desc = Tpat_record _}, _) :: _ -> true
   | ({pat_desc = Tpat_array _}, _) :: _ -> false
-  | ({pat_desc = Tpat_any | Tpat_var _ | Tpat_alias _ | Tpat_or _}, _) :: _ | []
-    ->
+  | ( {pat_desc = Tpat_any | Tpat_var _ | Tpat_alias _ | Tpat_or _ | Tpat_dict _},
+      _ )
+    :: _
+  | [] ->
     assert false
 
 (* Written as a non-fragile matching, PR#7451 originated from a fragile matching below. *)
@@ -891,41 +965,15 @@ let should_extend ext env =
     | [] -> assert false
     | (p, _) :: _ -> (
       match p.pat_desc with
-      | Tpat_construct
-          (_, {cstr_tag = Cstr_constant _ | Cstr_block _ | Cstr_unboxed}, _) ->
+      | Tpat_construct (_, {cstr_kind = Ordinary_constructor _}, _) ->
         let path = get_type_path p.pat_type p.pat_env in
         Path.same path ext
-      | Tpat_construct (_, {cstr_tag = Cstr_extension _}, _) -> false
-      | Tpat_constant _ | Tpat_tuple _ | Tpat_variant _ | Tpat_record _
-      | Tpat_array _ ->
+      | Tpat_construct (_, {cstr_kind = Extension_constructor _}, _) -> false
+      | Tpat_constant _ | Tpat_interval _ | Tpat_tuple _ | Tpat_variant _
+      | Tpat_record _ | Tpat_array _ ->
         false
-      | Tpat_any | Tpat_var _ | Tpat_alias _ | Tpat_or _ -> assert false))
-
-module Constructor_tag_hashtbl = Hashtbl.Make (struct
-  type t = Types.constructor_tag
-  let hash = Hashtbl.hash
-  let equal = Types.equal_tag
-end)
-
-(* complement constructor tags *)
-let complete_tags nconsts nconstrs tags =
-  let seen_const = Array.make nconsts false
-  and seen_constr = Array.make nconstrs false in
-  List.iter
-    (function
-      | Cstr_constant i -> seen_const.(i) <- true
-      | Cstr_block i -> seen_constr.(i) <- true
-      | _ -> assert false)
-    tags;
-  let r = Constructor_tag_hashtbl.create (nconsts + nconstrs) in
-  for i = 0 to nconsts - 1 do
-    if not seen_const.(i) then
-      Constructor_tag_hashtbl.add r (Cstr_constant i) ()
-  done;
-  for i = 0 to nconstrs - 1 do
-    if not seen_constr.(i) then Constructor_tag_hashtbl.add r (Cstr_block i) ()
-  done;
-  r
+      | Tpat_any | Tpat_var _ | Tpat_alias _ | Tpat_or _ | Tpat_dict _ ->
+        assert false))
 
 (* build a pattern from a constructor list *)
 let pat_of_constr ex_pat cstr =
@@ -955,7 +1003,7 @@ let pats_of_type ?(always = false) env ty =
   | Tconstr (path, _, _) -> (
     try
       match (Env.find_type path env).type_kind with
-      | Type_variant cl
+      | Type_variant (cl, _)
         when always
              || List.length cl = 1
              || List.for_all (fun cd -> cd.Types.cd_res <> None) cl ->
@@ -975,31 +1023,17 @@ let pats_of_type ?(always = false) env ty =
   | Ttuple tl -> [make_pat (Tpat_tuple (omegas (List.length tl))) ty env]
   | _ -> [omega]
 
-let rec get_variant_constructors env ty =
-  match (Ctype.repr ty).desc with
-  | Tconstr (path, _, _) -> (
-    try
-      match Env.find_type path env with
-      | {type_kind = Type_variant _} -> fst (Env.find_type_descrs path env)
-      | {type_manifest = Some _} ->
-        get_variant_constructors env
-          (Ctype.expand_head_once env (clean_copy ty))
-      | _ -> fatal_error "Parmatch.get_variant_constructors"
-    with Not_found -> fatal_error "Parmatch.get_variant_constructors")
-  | _ -> fatal_error "Parmatch.get_variant_constructors"
-
-(* Sends back a pattern that complements constructor tags all_tag *)
-let complete_constrs p all_tags =
+(* Sends back the constructors of p's type matched by none of seen_constrs *)
+let complete_constrs p seen_constrs =
   let c =
     match p.pat_desc with
     | Tpat_construct (_, c, _) -> c
     | _ -> assert false
   in
-  let not_tags = complete_tags c.cstr_consts c.cstr_nonconsts all_tags in
   let constrs = get_variant_constructors p.pat_env c.cstr_res in
   let others =
     Ext_list.filter constrs (fun cnstr ->
-        Constructor_tag_hashtbl.mem not_tags cnstr.cstr_tag)
+        not (List.exists (Types.same_constructor cnstr) seen_constrs))
   in
   let const, nonconst =
     List.partition (fun cnstr -> cnstr.cstr_arity = 0) others
@@ -1008,13 +1042,13 @@ let complete_constrs p all_tags =
 
 let build_other_constrs env p =
   match p.pat_desc with
-  | Tpat_construct (_, {cstr_tag = Cstr_constant _ | Cstr_block _}, _) ->
-    let get_tag = function
-      | {pat_desc = Tpat_construct (_, c, _)} -> c.cstr_tag
-      | _ -> fatal_error "Parmatch.get_tag"
+  | Tpat_construct (_, {cstr_kind = Ordinary_constructor _}, _) ->
+    let get_constr = function
+      | {pat_desc = Tpat_construct (_, c, _)} -> c
+      | _ -> fatal_error "Parmatch.get_constr"
     in
-    let all_tags = List.map (fun (p, _) -> get_tag p) env in
-    pat_of_constrs p (complete_constrs p all_tags)
+    let seen_constrs = List.map (fun (p, _) -> get_constr p) env in
+    pat_of_constrs p (complete_constrs p seen_constrs)
   | _ -> extra_pat
 
 (* Auxiliary for build_other *)
@@ -1036,7 +1070,8 @@ let some_other_tag = "<some other tag>"
 
 let build_other ext env : Typedtree.pattern =
   match env with
-  | ({pat_desc = Tpat_construct (lid, {cstr_tag = Cstr_extension _}, _)}, _)
+  | ( {pat_desc = Tpat_construct (lid, {cstr_kind = Extension_constructor _}, _)},
+      _ )
     :: _ ->
     (* let c = {c with cstr_name = "*extension*"} in *)
     (* PR#7330 *)
@@ -1079,38 +1114,34 @@ let build_other ext env : Typedtree.pattern =
         (fun p_res pat ->
           make_pat (Tpat_or (pat, p_res, None)) p.pat_type p.pat_env)
         pat other_pats)
-  | (({pat_desc = Tpat_constant (Const_int _)} as p), _) :: _ ->
-    build_other_constant
-      (function
-        | Tpat_constant (Const_int i) -> i
-        | _ -> assert false)
-      (function
-        | i -> Tpat_constant (Const_int i))
-      0 succ p env
-  | (({pat_desc = Tpat_constant (Const_char _)} as p), _) :: _ ->
-    build_other_constant
-      (function
-        | Tpat_constant (Const_char i) -> i
-        | _ -> assert false)
-      (function
-        | i -> Tpat_constant (Const_char i))
-      0 succ p env
-  | (({pat_desc = Tpat_constant (Const_int32 _)} as p), _) :: _ ->
-    build_other_constant
-      (function
-        | Tpat_constant (Const_int32 i) -> i
-        | _ -> assert false)
-      (function
-        | i -> Tpat_constant (Const_int32 i))
-      0l Int32.succ p env
-  | (({pat_desc = Tpat_constant (Const_int64 _)} as p), _) :: _ ->
-    build_other_constant
-      (function
-        | Tpat_constant (Const_int64 i) -> i
-        | _ -> assert false)
-      (function
-        | i -> Tpat_constant (Const_int64 i))
-      0L Int64.succ p env
+  | ( ({pat_desc = Tpat_constant (Const_int _ | Const_char _) | Tpat_interval _}
+       as p),
+      _ )
+    :: _ ->
+    (* Int and char constants and intervals can share a column; the example is
+       the least value from 0 up that no range covers, else the greatest one
+       below 0, of the kind of the first pattern. Ranges sorted by a bound are
+       skipped in one pass. *)
+    let ranges = List.filter_map (fun (q, _) -> int_range q) env in
+    let up =
+      List.sort (fun (lo1, _) (lo2, _) -> compare lo1 lo2) ranges
+      |> List.fold_left
+           (fun i (lo, hi) -> if lo <= i && i <= hi then hi + 1 else i)
+           0
+    in
+    let down () =
+      List.sort (fun (_, hi1) (_, hi2) -> compare hi2 hi1) ranges
+      |> List.fold_left
+           (fun i (lo, hi) -> if lo <= i && i <= hi then lo - 1 else i)
+           (-1)
+    in
+    let int32_max = Int32.to_int Int32.max_int
+    and int32_min = Int32.to_int Int32.min_int in
+    if up <= int32_max then make_int_range p up up
+    else
+      let other = down () in
+      (* Every int is covered; ints are never matched exhaustively *)
+      if other < int32_min then omega else make_int_range p other other
   | (({pat_desc = Tpat_constant (Const_bigint _)} as p), _) :: _ ->
     build_other_constant
       (function
@@ -1123,10 +1154,10 @@ let build_other ext env : Typedtree.pattern =
   | (({pat_desc = Tpat_constant (Const_string _)} as p), _) :: _ ->
     build_other_constant
       (function
-        | Tpat_constant (Const_string (s, _)) -> String.length s
+        | Tpat_constant (Const_string s) -> String_literal.utf16_length s
         | _ -> assert false)
       (function
-        | i -> Tpat_constant (Const_string (String.make i '*', None)))
+        | i -> Tpat_constant (Const_string (String.make i '*')))
       0 succ p env
   | (({pat_desc = Tpat_constant (Const_float _)} as p), _) :: _ ->
     build_other_constant
@@ -1167,13 +1198,17 @@ let build_other ext env : Typedtree.pattern =
 let rec has_instance p =
   match p.pat_desc with
   | Tpat_variant (l, _, r) when is_absent l r -> false
-  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_variant (_, None, _) -> true
+  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_interval _
+  | Tpat_variant (_, None, _) ->
+    true
   | Tpat_alias (p, _, _) | Tpat_variant (_, Some p, _) -> has_instance p
   | Tpat_or (p1, p2, _) -> has_instance p1 || has_instance p2
   | Tpat_construct (_, _, ps) | Tpat_tuple ps | Tpat_array ps ->
     has_instances ps
   | Tpat_record (lps, _, _rest) ->
     has_instances (List.map (fun (_, _, x, _) -> x) lps)
+  | Tpat_dict entries ->
+    has_instances (List.map (fun {tdp_pattern} -> tdp_pattern) entries)
 
 and has_instances = function
   | [] -> true
@@ -1219,10 +1254,14 @@ let rec satisfiable pss qs =
           else satisfiable (filter_extra pss) qs)
     | {pat_desc = Tpat_variant (l, _, r)} :: _ when is_absent l r -> false
     | q :: qs ->
-      if not (all_coherent (q :: simplified_first_col pss)) then false
+      let column = simplified_first_col pss in
+      if not (all_coherent (q :: column)) then false
       else
         let q0 = discr_pat q pss in
-        satisfiable (filter_one q0 pss) (simple_match_args q0 q @ qs))
+        List.exists
+          (fun q0 ->
+            satisfiable (filter_one q0 pss) (simple_match_args q0 q @ qs))
+          (split_int_range q0 column))
 
 (* Also return the remaining cases, to enable GADT handling
 
@@ -1267,11 +1306,15 @@ let rec satisfiables pss qs =
             | _ -> wild omega))
     | {pat_desc = Tpat_variant (l, _, r)} :: _ when is_absent l r -> []
     | q :: qs ->
-      if not (all_coherent (q :: simplified_first_col pss)) then []
+      let column = simplified_first_col pss in
+      if not (all_coherent (q :: column)) then []
       else
         let q0 = discr_pat q pss in
-        List.map (set_args q0)
-          (satisfiables (filter_one q0 pss) (simple_match_args q0 q @ qs)))
+        List.concat_map
+          (fun q0 ->
+            List.map (set_args q0)
+              (satisfiables (filter_one q0 pss) (simple_match_args q0 q @ qs)))
+          (split_int_range q0 column))
 
 (*
   Now another satisfiable function that additionally
@@ -1284,15 +1327,6 @@ type 'a result =
   | Rnone (* No matching value *)
   | Rsome of 'a (* This matching value *)
 
-(*
-let rec try_many  f = function
-  | [] -> Rnone
-  | (p,pss)::rest ->
-      match f (p,pss) with
-      | Rnone -> try_many  f rest
-      | r -> r
-*)
-
 let rappend r1 r2 =
   match (r1, r2) with
   | Rnone, _ -> r2
@@ -1303,68 +1337,6 @@ let rec try_many_gadt f = function
   | [] -> Rnone
   | (p, pss) :: rest -> rappend (f (p, pss)) (try_many_gadt f rest)
 
-(*
-let rec exhaust ext pss n = match pss with
-| []    ->  Rsome (omegas n)
-| []::_ ->  Rnone
-| pss   ->
-    let q0 = discr_pat omega pss in
-    begin match filter_all q0 pss with
-          (* first column of pss is made of variables only *)
-    | [] ->
-        begin match exhaust ext (filter_extra pss) (n-1) with
-        | Rsome r -> Rsome (q0::r)
-        | r -> r
-      end
-    | constrs ->
-        let try_non_omega (p,pss) =
-          if is_absent_pat p then
-            Rnone
-          else
-            match
-              exhaust
-                ext pss (List.length (simple_match_args p omega) + n - 1)
-            with
-            | Rsome r -> Rsome (set_args p r)
-            | r       -> r in
-        if
-          full_match true false constrs && not (should_extend ext constrs)
-        then
-          try_many try_non_omega constrs
-        else
-          (*
-             D = filter_extra pss is the default matrix
-             as it is included in pss, one can avoid
-             recursive calls on specialized matrices,
-             Essentially :
-             * D exhaustive => pss exhaustive
-             * D non-exhaustive => we have a non-filtered value
-          *)
-          let r =  exhaust ext (filter_extra pss) (n-1) in
-          match r with
-          | Rnone -> Rnone
-          | Rsome r ->
-              try
-                Rsome (build_other ext constrs::r)
-              with
-      (* cannot occur, since constructors don't make a full signature *)
-              | Empty -> fatal_error "Parmatch.exhaust"
-    end
-
-let combinations f lst lst' =
-  let rec iter2 x =
-    function
-        [] -> []
-      | y :: ys ->
-          f x y :: iter2 x ys
-  in
-  let rec iter =
-    function
-        [] -> []
-      | x :: xs -> iter2 x lst' @ iter xs
-  in
-  iter lst
-*)
 (*
 let print_pat pat =
   let rec string_of_pat pat =
@@ -1531,7 +1503,7 @@ let rec pressure_variants tdefs = function
 (* Yet another satisfiable function *)
 
 (*
-   This time every_satisfiable pss qs checks the
+   This time every_satisfiables pss qs checks the
    utility of every expansion of qs.
    Expansion means expansion of or-patterns inside qs
 *)
@@ -1655,6 +1627,37 @@ let union_res r1 r2 =
   | _, Used -> r1
   | Upartial u1, Upartial u2 -> Upartial (u1 @ u2)
 
+(* An interval split into pieces is used when one of its pieces is. An
+   or-pattern below it is unused when every used piece reports it unused. *)
+let pieces_res rs =
+  let used =
+    List.filter
+      (function
+        | Unused -> false
+        | _ -> true)
+      rs
+  in
+  if used = [] then Unused
+  else if
+    List.exists
+      (function
+        | Used -> true
+        | _ -> false)
+      used
+  then Used
+  else
+    let partials =
+      List.map
+        (function
+          | Upartial u -> u
+          | _ -> [])
+        used
+    in
+    match partials with
+    | [] -> Used
+    | u :: us ->
+      Upartial (List.filter (fun p -> List.for_all (List.memq p) us) u)
+
 (* propose or pats for expansion *)
 let extract_elements qs =
   let rec do_rec seen = function
@@ -1733,21 +1736,26 @@ let rec every_satisfiables pss qs =
     | Tpat_variant (l, _, r) when is_absent l r ->
       (* Ah Jacques... *)
       Unused
-    | _ ->
+    | _ -> (
       (* standard case, filter matrix *)
       (* The handling of incoherent matrices is kept in line with
                 [satisfiable] *)
-      if not (all_coherent (uq :: simplified_first_usefulness_col pss)) then
-        Unused
+      let column = simplified_first_usefulness_col pss in
+      if not (all_coherent (uq :: column)) then Unused
       else
         let q0 = discr_pat q pss in
-        every_satisfiables (filter_one q0 pss)
-          {qs with active = simple_match_args q0 q @ rem})
+        let piece q0 =
+          every_satisfiables (filter_one q0 pss)
+            {qs with active = simple_match_args q0 q @ rem}
+        in
+        match split_int_range q0 column with
+        | [q0] -> piece q0
+        | q0s -> pieces_res (List.map piece q0s)))
 
 (*
   This function ``every_both'' performs the usefulness check
   of or-pat q1|q2.
-  The trick is to call every_satisfied twice with
+  The trick is to call every_satisfiables twice with
   current active columns restricted to q1 and q2,
   That way,
   - others orpats in qs.ors will not get expanded.
@@ -1780,8 +1788,13 @@ let rec le_pat p q =
   | Tpat_alias (p, _, _), _ -> le_pat p q
   | _, Tpat_alias (q, _, _) -> le_pat p q
   | Tpat_constant c1, Tpat_constant c2 -> const_compare c1 c2 = 0
+  | (Tpat_constant _ | Tpat_interval _), (Tpat_constant _ | Tpat_interval _)
+    -> (
+    match (int_range p, int_range q) with
+    | Some (lo1, hi1), Some (lo2, hi2) -> lo1 <= lo2 && hi2 <= hi1
+    | _ -> false)
   | Tpat_construct (_, c1, ps), Tpat_construct (_, c2, qs) ->
-    Types.equal_tag c1.cstr_tag c2.cstr_tag && le_pats ps qs
+    Types.same_constructor c1 c2 && le_pats ps qs
   | Tpat_variant (l1, Some p1, _), Tpat_variant (l2, Some p2, _) ->
     l1 = l2 && le_pat p1 p2
   | Tpat_variant (l1, None, _r1), Tpat_variant (l2, None, _) -> l1 = l2
@@ -1822,11 +1835,17 @@ let rec lub p q =
   | Tpat_or (p1, p2, _), _ -> orlub p1 p2 q
   | _, Tpat_or (q1, q2, _) -> orlub q1 q2 p (* Thanks god, lub is commutative *)
   | Tpat_constant c1, Tpat_constant c2 when const_compare c1 c2 = 0 -> p
+  | (Tpat_constant _ | Tpat_interval _), (Tpat_constant _ | Tpat_interval _)
+    -> (
+    match (int_range p, int_range q) with
+    | Some (lo1, hi1), Some (lo2, hi2) when max lo1 lo2 <= min hi1 hi2 ->
+      make_int_range p (max lo1 lo2) (min hi1 hi2)
+    | _ -> raise Empty)
   | Tpat_tuple ps, Tpat_tuple qs ->
     let rs = lubs ps qs in
     make_pat (Tpat_tuple rs) p.pat_type p.pat_env
   | Tpat_construct (lid, c1, ps1), Tpat_construct (_, c2, ps2)
-    when Types.equal_tag c1.cstr_tag c2.cstr_tag ->
+    when Types.same_constructor c1 c2 ->
     let rs = lubs ps1 ps2 in
     make_pat (Tpat_construct (lid, c1, rs)) p.pat_type p.pat_env
   | Tpat_variant (l1, Some p1, row), Tpat_variant (l2, Some p2, _) when l1 = l2
@@ -1876,6 +1895,7 @@ and lubs ps qs =
 (* Apply pressure to variants *)
 
 let pressure_variants tdefs patl =
+  let patl = List.map (Dict_pattern.lowering patl) patl in
   let pss = List.map (fun p -> [p; omega]) patl in
   ignore (pressure_variants (Some tdefs) pss)
 
@@ -1957,15 +1977,24 @@ let check_partial_all v casel =
 (* Exhaustiveness check *)
 (************************)
 
+(* A lowered dict pattern: a record pattern of the [dict] type *)
+let is_dict_pattern (p : Typedtree.pattern) =
+  match p.pat_desc with
+  | Tpat_record _ -> (
+    match (Ctype.expand_head p.pat_env p.pat_type).desc with
+    | Tconstr (path, _, _) -> Path.same path Predef.path_dict
+    | _ -> false)
+  | _ -> false
+
 (* conversion from Typedtree.pattern to Parsetree.pattern list *)
 module Conv = struct
   open Parsetree
   let mkpat desc = Ast_helper.Pat.mk desc
 
-  let name_counter = ref 0
   let fresh name =
-    let current = !name_counter in
-    name_counter := !name_counter + 1;
+    let state = Compiler_request_state.current () in
+    let current = state.parmatch_name_counter in
+    state.parmatch_name_counter <- current + 1;
     "#$" ^ name ^ string_of_int current
 
   let conv_record_rest (rest : Typedtree.record_pat_rest) =
@@ -1992,22 +2021,51 @@ module Conv = struct
         mkpat (Ppat_var nm)
       | Tpat_any | Tpat_var _ -> mkpat Ppat_any
       | Tpat_constant c -> mkpat (Ppat_constant (Untypeast.constant c))
+      | Tpat_interval (c1, c2) ->
+        mkpat (Ppat_interval (Untypeast.constant c1, Untypeast.constant c2))
       | Tpat_alias (p, _, _) -> loop p
       | Tpat_tuple lst -> mkpat (Ppat_tuple (List.map loop lst))
       | Tpat_construct (cstr_lid, cstr, lst) ->
         let id = fresh cstr.cstr_name in
         let lid = {cstr_lid with txt = Longident.Lident id} in
         Hashtbl.add constrs id cstr;
-        let arg =
-          match List.map loop lst with
-          | [] -> None
-          | [p] -> Some p
-          | lst -> Some (mkpat (Ppat_tuple lst))
-        in
-        mkpat (Ppat_construct (lid, arg))
+        mkpat (Ppat_construct (lid, Location.mknoloc (List.map loop lst)))
       | Tpat_variant (label, p_opt, _row_desc) ->
-        let arg = Misc.may_map loop p_opt in
-        mkpat (Ppat_variant (label, arg))
+        let args =
+          match p_opt with
+          | None -> []
+          | Some p -> [loop p]
+        in
+        mkpat (Ppat_variant (label, Location.mknoloc args))
+      | Tpat_record (subpatterns, _, _) when is_dict_pattern pat ->
+        (* Its labels are the keys, in order of appearance in the match *)
+        let subpatterns =
+          List.sort
+            (fun (_, lbl1, _, _) (_, lbl2, _, _) ->
+              compare lbl1.lbl_pos lbl2.lbl_pos)
+            subpatterns
+        in
+        mkpat
+          (Ppat_dict
+             (List.map
+                (fun (_, lbl, p, optional) ->
+                  {
+                    pdp_key = mknoloc lbl.lbl_name;
+                    pdp_pattern = loop p;
+                    pdp_optional = optional;
+                  })
+                subpatterns))
+      | Tpat_dict entries ->
+        mkpat
+          (Ppat_dict
+             (List.map
+                (fun {tdp_key; tdp_pattern; tdp_optional} ->
+                  {
+                    pdp_key = tdp_key;
+                    pdp_pattern = loop tdp_pattern;
+                    pdp_optional = tdp_optional;
+                  })
+                entries))
       | Tpat_record (subpatterns, _closed_flag, rest) ->
         let fields =
           List.map
@@ -2037,15 +2095,14 @@ let contains_extension pat =
 let contains_dict_pattern pat =
   let r = ref false in
   let rec loop p =
-    if Dict_type_helpers.has_dict_pattern_attribute p.pat_attributes then
-      r := true
+    if is_dict_pattern p then r := true
     else Typedtree.iter_pattern_desc loop p.pat_desc
   in
   loop pat;
   !r
 
 let rec opaque_dict_patterns pat =
-  if Dict_type_helpers.has_dict_pattern_attribute pat.pat_attributes then
+  if is_dict_pattern pat then
     {pat with pat_desc = Tpat_any; pat_extra = []; pat_attributes = []}
   else
     {
@@ -2130,11 +2187,6 @@ let do_check_partial ?partial_match_warning_hint ?pred exhaust loc casel pss =
         Partial)
     | _ -> fatal_error "Parmatch.check_partial")
 
-(*
-let do_check_partial_normal loc casel pss =
-  do_check_partial exhaust loc casel pss
- *)
-
 let do_check_partial_gadt ?partial_match_warning_hint pred loc casel pss =
   do_check_partial ?partial_match_warning_hint ~pred exhaust_gadt loc casel pss
 
@@ -2158,19 +2210,24 @@ let extendable_path path =
 
 let rec collect_paths_from_pat r p =
   match p.pat_desc with
-  | Tpat_construct
-      (_, {cstr_tag = Cstr_constant _ | Cstr_block _ | Cstr_unboxed}, ps) ->
+  | Tpat_construct (_, {cstr_kind = Ordinary_constructor _}, ps) ->
     let path = get_type_path p.pat_type p.pat_env in
     List.fold_left collect_paths_from_pat
       (if extendable_path path then add_path path r else r)
       ps
-  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_variant (_, None, _) -> r
+  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_interval _
+  | Tpat_variant (_, None, _) ->
+    r
   | Tpat_tuple ps
   | Tpat_array ps
-  | Tpat_construct (_, {cstr_tag = Cstr_extension _}, ps) ->
+  | Tpat_construct (_, {cstr_kind = Extension_constructor _}, ps) ->
     List.fold_left collect_paths_from_pat r ps
   | Tpat_record (lps, _, _rest) ->
     List.fold_left (fun r (_, _, p, _) -> collect_paths_from_pat r p) r lps
+  | Tpat_dict entries ->
+    List.fold_left
+      (fun r {tdp_pattern} -> collect_paths_from_pat r tdp_pattern)
+      r entries
   | Tpat_variant (_, Some p, _) | Tpat_alias (p, _, _) ->
     collect_paths_from_pat r p
   | Tpat_or (p1, p2, _) ->
@@ -2201,15 +2258,19 @@ let do_check_fragile_param exhaust loc casel pss =
           | Rsome _ -> ())
         exts)
 
-(*let do_check_fragile_normal = do_check_fragile_param exhaust*)
 let do_check_fragile_gadt = do_check_fragile_param exhaust_gadt
 
 (********************************)
 (* Exported unused clause check *)
 (********************************)
 
+let lower_cases casel =
+  let lower = Dict_pattern.lowering (List.map (fun c -> c.c_lhs) casel) in
+  List.map (fun c -> {c with c_lhs = lower c.c_lhs}) casel
+
 let check_unused pred casel =
   if Warnings.is_active Warnings.Unused_match then
+    let casel = lower_cases casel in
     let rec do_rec pref = function
       | [] -> ()
       | {c_lhs = q; c_guard} :: rem ->
@@ -2266,9 +2327,9 @@ let check_unused pred casel =
            | Upartial ps ->
              ps
              |> List.filter (fun p ->
-                    not (Variant_type_spread.is_pat_from_variant_spread_attr p))
+                 not (Variant_type_spread.is_pat_from_variant_spread_attr p))
              |> List.iter (fun p ->
-                    Location.prerr_warning p.pat_loc Warnings.Unused_pat)
+                 Location.prerr_warning p.pat_loc Warnings.Unused_pat)
            | Used -> ()
          with Empty | Not_found | NoGuard -> assert false);
 
@@ -2281,32 +2342,7 @@ let check_unused pred casel =
 (* Exported irrefutability tests *)
 (*********************************)
 
-let irrefutable pat = le_pat pat omega
-
-let inactive ~partial pat =
-  match partial with
-  | Partial -> false
-  | Total ->
-    let rec loop pat =
-      match pat.pat_desc with
-      | Tpat_array _ -> false
-      | Tpat_any | Tpat_var _ | Tpat_variant (_, None, _) -> true
-      | Tpat_constant c -> (
-        match c with
-        | Const_string _ -> true (*Config.safe_string*)
-        | Const_int _ | Const_char _ | Const_float _ | Const_int32 _
-        | Const_int64 _ | Const_bigint _ ->
-          true)
-      | Tpat_tuple ps | Tpat_construct (_, _, ps) ->
-        List.for_all (fun p -> loop p) ps
-      | Tpat_alias (p, _, _) | Tpat_variant (_, Some p, _) -> loop p
-      | Tpat_record (ldps, _, _rest) ->
-        List.for_all
-          (fun (_, lbl, p, _) -> lbl.lbl_mut = Immutable && loop p)
-          ldps
-      | Tpat_or (p, q, _) -> loop p && loop q
-    in
-    loop pat
+let irrefutable pat = le_pat (Dict_pattern.lowering [pat] pat) omega
 
 (*********************************)
 (* Exported exhaustiveness check *)
@@ -2325,12 +2361,8 @@ let check_partial_param do_check_partial do_check_fragile loc casel =
     do_check_fragile loc casel pss;
   total
 
-(*let check_partial =
-    check_partial_param
-      do_check_partial_normal
-      do_check_fragile_normal*)
-
 let check_partial_gadt ?partial_match_warning_hint pred loc casel =
+  let casel = lower_cases casel in
   check_partial_param
     (do_check_partial_gadt ?partial_match_warning_hint pred)
     do_check_fragile_gadt loc casel
@@ -2381,23 +2413,21 @@ let check_partial_gadt ?partial_match_warning_hint pred loc casel =
    to a specific guard.
 *)
 
-module Id_set = Set.Make (Ident)
-
-let pattern_vars p = Id_set.of_list (Typedtree.pat_bound_idents p)
+let pattern_vars p = Set_ident.of_list (Typedtree.pat_bound_idents p)
 
 (* Row for ambiguous variable search,
    unseen is the traditional pattern row,
    seen   is a list of position bindings *)
 
-type amb_row = {unseen: pattern list; seen: Id_set.t list}
+type amb_row = {unseen: pattern list; seen: Set_ident.t list}
 
 (* Push binding variables now *)
 
 let rec do_push r p ps seen k =
   match p.pat_desc with
-  | Tpat_alias (p, x, _) -> do_push (Id_set.add x r) p ps seen k
+  | Tpat_alias (p, x, _) -> do_push (Set_ident.add x r) p ps seen k
   | Tpat_var (x, _) ->
-    (omega, {unseen = ps; seen = Id_set.add x r :: seen}) :: k
+    (omega, {unseen = ps; seen = Set_ident.add x r :: seen}) :: k
   | Tpat_or (p1, p2, _) -> do_push r p1 ps seen (do_push r p2 ps seen k)
   | _ -> (p, {unseen = ps; seen = r :: seen}) :: k
 
@@ -2405,7 +2435,7 @@ let rec push_vars = function
   | [] -> []
   | {unseen = []} :: _ -> assert false
   | {unseen = p :: ps; seen} :: rem ->
-    do_push Id_set.empty p ps seen (push_vars rem)
+    do_push Set_ident.empty p ps seen (push_vars rem)
 
 let collect_stable = function
   | [] -> assert false
@@ -2413,11 +2443,11 @@ let collect_stable = function
     let rec c_rec xss = function
       | [] -> xss
       | {seen = yss; _} :: rem ->
-        let xss = List.map2 Id_set.inter xss yss in
+        let xss = List.map2 Set_ident.inter xss yss in
         c_rec xss rem
     in
     let inters = c_rec xss rem in
-    List.fold_left Id_set.union Id_set.empty inters
+    List.fold_left Set_ident.union Set_ident.empty inters
 
 (*********************************************)
 (* Filtering utilities for our specific rows *)
@@ -2516,8 +2546,8 @@ let rec do_stable rs =
       (* If the first column is incoherent, then all the variables of this
          matrix are stable. *)
       List.fold_left
-        (fun acc (_, {seen; _}) -> List.fold_left Id_set.union acc seen)
-        Id_set.empty rs
+        (fun acc (_, {seen; _}) -> List.fold_left Set_ident.union acc seen)
+        Set_ident.empty rs
     else
       (* If the column is ill-typed but deemed coherent, we might spuriously
          warn about some variables being unstable.
@@ -2527,7 +2557,7 @@ let rec do_stable rs =
       | [] -> do_stable (List.map snd rs)
       | (_, rs) :: env ->
         List.fold_left
-          (fun xs (_, rs) -> Id_set.inter xs (do_stable rs))
+          (fun xs (_, rs) -> Set_ident.inter xs (do_stable rs))
           (do_stable rs) env)
 
 let stable p = do_stable [{unseen = [p]; seen = []}]
@@ -2551,13 +2581,13 @@ let stable p = do_stable [{unseen = [p]; seen = []}]
 *)
 
 let all_rhs_idents exp =
-  let ids = ref Id_set.empty in
+  let ids = ref Set_ident.empty in
   let module Iterator = Typedtree_iter.Make_iterator (struct
     include Typedtree_iter.Default_iterator_argument
     let enter_expression exp =
       match exp.exp_desc with
       | Texp_ident (path, _lid, _descr) ->
-        List.iter (fun id -> ids := Id_set.add id !ids) (Path.heads path)
+        List.iter (fun id -> ids := Set_ident.add id !ids) (Path.heads path)
       | _ -> ()
 
     (* Very hackish, detect unpack pattern  compilation
@@ -2577,8 +2607,9 @@ let all_rhs_idents exp =
                     ({exp_desc = Texp_ident (Path.Pident id_exp, _, _)}, _);
               },
               _ ) ->
-          assert (Id_set.mem id_exp !ids);
-          if not (Id_set.mem id_mod !ids) then ids := Id_set.remove id_exp !ids
+          assert (Set_ident.mem id_exp !ids);
+          if not (Set_ident.mem id_mod !ids) then
+            ids := Set_ident.remove id_exp !ids
         | _ -> assert false
   end) in
   Iterator.iter_expression exp;
@@ -2589,17 +2620,18 @@ let check_ambiguous_bindings =
   let warn0 = Ambiguous_pattern [] in
   fun cases ->
     if is_active warn0 then
+      let cases = lower_cases cases in
       List.iter
         (fun case ->
           match case with
           | {c_guard = None; _} -> ()
           | {c_lhs = p; c_guard = Some g; _} ->
-            let all = Id_set.inter (pattern_vars p) (all_rhs_idents g) in
-            if not (Id_set.is_empty all) then
+            let all = Set_ident.inter (pattern_vars p) (all_rhs_idents g) in
+            if not (Set_ident.is_empty all) then
               let st = stable p in
-              let ambiguous = Id_set.diff all st in
-              if not (Id_set.is_empty ambiguous) then
-                let pps = Id_set.elements ambiguous |> List.map Ident.name in
+              let ambiguous = Set_ident.diff all st in
+              if not (Set_ident.is_empty ambiguous) then
+                let pps = Set_ident.elements ambiguous |> List.map Ident.name in
                 let warn = Ambiguous_pattern pps in
                 Location.prerr_warning p.pat_loc warn)
         cases

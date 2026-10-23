@@ -28,7 +28,7 @@ let reducer = (_state, action) =>
   }
 
 let updateUrl = (send, typingCB, event) => {
-  let value = ReactEvent.Form.target(event)["value"]->Js.String.trim
+  let value = ReactEvent.Form.target(event)["value"]->String.trim
   typingCB(value->String.length > 0)
   send(UpdateUrl(value))
 }

@@ -80,9 +80,9 @@ let _DYNAMIC_DRAW: int = 35048
 @send external createBuffer: glT => bufferT = "createBuffer"
 @send external deleteBuffer: (glT, bufferT) => unit = "deleteBuffer"
 @send external bindBuffer: (glT, int, bufferT) => unit = "bindBuffer"
-@send external bufferData: (glT, int, Js.Typed_array.Uint16Array.t, int) => unit = "bufferData"
+@send external bufferData: (glT, int, Uint16Array.t, int) => unit = "bufferData"
 @send
-external bufferFloatData: (glT, int, Js.Typed_array.Float32Array.t, int) => unit = "bufferData"
+external bufferFloatData: (glT, int, Float32Array.t, int) => unit = "bufferData"
 @send external createProgram: glT => programT = "createProgram"
 @send external linkProgram: (glT, programT) => unit = "linkProgram"
 @send external useProgram: (glT, programT) => unit = "useProgram"

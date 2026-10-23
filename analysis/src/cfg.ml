@@ -1,5 +1,3 @@
-let debug_follow_ctx_path = ref false
-
 let is_doc_gen_from_compiler = ref false
 
 let in_incremental_typechecking_mode =

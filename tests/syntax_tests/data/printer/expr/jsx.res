@@ -125,7 +125,7 @@ let x =
     }
     onClick={event => handleClick(event)}
     onClick={(event1, event2, event3) => {
-      Js.log("debug click")
+      Console.log("debug click")
       handleClick(event)
     }}
     onClick={(aaaaaaaaaaaaaaarg1, aaaaaaaaaaaaaaaaaaaaaaarg2, aaaaaaaaaaaaaaarg3) => {
@@ -196,7 +196,7 @@ let x =
     }
     {event => handleClick(event)}
     {(event1, event2, event3) => {
-      Js.log("debug click")
+      Console.log("debug click")
       handleClick(event)
     }}
     {(aaaaaaaaaaaaaaarg1, aaaaaaaaaaaaaaaaaaaaaaarg2, aaaaaaaaaaaaaaarg3) => {
@@ -275,9 +275,9 @@ let x = <MyComponent sidebar=<div> test </div> nav=<Navbar /> />
 </div>
 
 // https://github.com/rescript-lang/syntax/issues/113
-<div>  {Js.log(a <= 10)} </div>
-<div> <div> {Js.log(a <= 10)} </div> </div>
-<div> <div onClick={_ => Js.log(a <= 10) }> <div> {Js.log(a <= 10)} </div> </div> </div>
+<div>  {Console.log(a <= 10)} </div>
+<div> <div> {Console.log(a <= 10)} </div> </div>
+<div> <div onClick={_ => Console.log(a <= 10) }> <div> {Console.log(a <= 10)} </div> </div> </div>
 
 module App = {
   @react.component

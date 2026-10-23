@@ -1,0 +1,1 @@
+- Add tests for dict literals in reanalyze, comments around module `await`, and locations in the dict v0 AST bridge. https://github.com/rescript-lang/rescript/pull/8856

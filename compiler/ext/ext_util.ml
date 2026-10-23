@@ -33,14 +33,6 @@ let rec power_2_above x n =
   else if x * 2 > Sys.max_array_length then x
   else power_2_above (x * 2) n
 
-let stats_to_string
-    ({num_bindings; num_buckets; max_bucket_length; bucket_histogram} :
-      Hashtbl.statistics) =
-  Printf.sprintf "bindings: %d,buckets: %d, longest: %d, hist:[%s]" num_bindings
-    num_buckets max_bucket_length
-    (String.concat ","
-       (Array.to_list (Array.map string_of_int bucket_histogram)))
-
 let string_of_int_as_char (i : int) : string =
   if i <= 255 && i >= 0 then Format.asprintf "%C" (Char.unsafe_chr i)
   else
@@ -56,6 +48,7 @@ let string_of_int_as_char (i : int) : string =
         let s = (Bytes.create [@doesNotRaise]) 1 in
         Bytes.unsafe_set s 0 c;
         Bytes.unsafe_to_string s
-      | _ -> Ext_utf8.encode_codepoint i
+      | _ when Uchar.is_valid i -> Ext_utf8.encode_codepoint i
+      | _ -> Printf.sprintf "\\u{%X}" i
     in
     Printf.sprintf "\'%s\'" str

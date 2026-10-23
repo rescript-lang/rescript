@@ -8,7 +8,7 @@ Type representing an array of value `'a`.
 */
 type t<'a> = array<'a>
 
-type arrayLike<'a>
+type arrayLike<+'a>
 
 /**
 `asIterable(array)` views `array` as an `Iterable.t`.
@@ -424,7 +424,7 @@ See [`Array.sort`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 
 ```rescript
 let array = [3, 2, 1]
-array->Array.sort((a, b) => float(a - b))
+array->Array.sort((a, b) => Int.toFloat(a - b))
 array == [1, 2, 3]
 ```
 */
@@ -609,7 +609,8 @@ See [`Array.flat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 external flat: array<array<'a>> => array<'a> = "flat"
 
 /**
-`includes(array, item)` checks whether `array` includes `item`, by doing a [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality).
+`includes(array, item)` checks whether `array` includes `item` using
+[SameValueZero equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Equality_comparisons_and_sameness#same-value-zero_equality).
 
 See [`Array.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes) on MDN.
 
@@ -618,8 +619,9 @@ See [`Array.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 ```rescript
 [1, 2]->Array.includes(1) == true
 [1, 2]->Array.includes(3) == false
+[Float.Constants.nan]->Array.includes(Float.Constants.nan) == true
 
-[{"language": "ReScript"}]->Array.includes({"language": "ReScript"}) == false // false, because of strict equality
+[{"language": "ReScript"}]->Array.includes({"language": "ReScript"}) == false // false, because objects compare by reference
 ```
 */
 @send
@@ -1328,29 +1330,6 @@ for index in 0 to array->Array.length - 1 {
 external getUnsafe: (array<'a>, int) => 'a = "%array_unsafe_get"
 
 /**
-`unsafe_get(array, index)` returns the element at `index` of `array`.
-
-This is _unsafe_, meaning it will return `undefined` value if `index` does not exist in `array`.
-
-Use `Array.unsafe_get` only when you are sure the `index` exists (i.e. when using for-loop).
-
-## Examples
-
-```rescript
-let array = [1, 2, 3]
-for index in 0 to array->Array.length - 1 {
-  let value = array->Array.unsafe_get(index)
-  Console.log(value)
-}
-```
-*/
-@deprecated({
-  reason: "Use getUnsafe instead. This will be removed in v13",
-  migrate: Array.getUnsafe(),
-})
-external unsafe_get: (array<'a>, int) => 'a = "%array_unsafe_get"
-
-/**
 `setUnsafe(array, index, item)` sets the provided `item` at `index` of `array`.
 
 Beware this will *mutate* the array, and is *unsafe*.
@@ -1688,7 +1667,7 @@ See [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaS
 ```rescript
 let array = [5, 6, 7]
 let iterator: IteratorObject.t<(int, int), unit, unknown> = array->Array.entries
-iterator->IteratorObject.toArray == [(0, 5), (1, 6), (2, 7)]
+iterator->IteratorObject.asIterable->Array.fromIterable == [(0, 5), (1, 6), (2, 7)]
 ```
 */
 @send
@@ -1704,7 +1683,7 @@ See [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ```rescript
 let array = [5, 6, 7]
 let iterator: IteratorObject.t<int, unit, unknown> = array->Array.values
-iterator->IteratorObject.toArray == [5, 6, 7]
+iterator->IteratorObject.asIterable->Array.fromIterable == [5, 6, 7]
 ```
  */
 @send

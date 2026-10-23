@@ -2,33 +2,26 @@ open Gentype_common
 
 let rec addAnnotationsToTypes_ ~config ~(expr : Typedtree.expression)
     (arg_types : arg_type list) =
-  match (expr.exp_desc, expr.exp_type.desc, arg_types) with
-  | Texp_function {arg_label; param; case = {c_rhs}}, _, {a_type} :: next_types
-    ->
-    let next_types1 =
-      next_types |> addAnnotationsToTypes_ ~config ~expr:c_rhs
+  match expr.exp_desc with
+  | Texp_function {params; body} ->
+    let rec zip (params : Typedtree.function_param list)
+        (arg_types : arg_type list) =
+      match (params, arg_types) with
+      | ( {fp_lbl; fp_param; fp_has_default} :: rest_params,
+          {a_type} :: rest_types ) ->
+        let a_name =
+          match fp_lbl with
+          | Optional {txt = l} when fp_has_default ->
+            (* the compiled parameter is a synthetic option carrier; show the
+               label instead *)
+            l
+          | _ -> Ident.name fp_param
+        in
+        {a_name; a_type} :: zip rest_params rest_types
+      | [], rest -> rest |> addAnnotationsToTypes_ ~config ~expr:body
+      | _, [] -> []
     in
-    let a_name = Ident.name param in
-    let _ = Printtyped.implementation in
-    let a_name =
-      if a_name = "*opt*" then
-        match arg_label with
-        | Optional {txt = l} -> l
-        | _ -> "" (* should not happen *)
-      else a_name
-    in
-    {a_name; a_type} :: next_types1
-  | ( Texp_apply
-        {funct = {exp_desc = Texp_ident (path, _, _)}; args = [(_, Some expr1)]},
-      _,
-      _ ) -> (
-    match path |> Translate_type_expr_from_types.path_to_list |> List.rev with
-    | ["Js"; "Internal"; fn_mk]
-      when (* Uncurried function definition uses Js.Internal.fn_mkX(...) *)
-           String.length fn_mk >= 5
-           && (String.sub fn_mk 0 5 [@doesNotRaise]) = "fn_mk" ->
-      arg_types |> addAnnotationsToTypes_ ~config ~expr:expr1
-    | _ -> arg_types)
+    zip params arg_types
   | _ -> arg_types
 
 and add_annotations_to_types ~config ~(expr : Typedtree.expression)
@@ -42,24 +35,8 @@ and add_annotations_to_types ~config ~(expr : Typedtree.expression)
     (* Underscore "_" appears as "param", can occur more than once *)
     arg_types
     |> List.mapi (fun i {a_name; a_type} ->
-           {a_name = a_name ^ "_" ^ string_of_int i; a_type})
+        {a_name = a_name ^ "_" ^ string_of_int i; a_type})
   else arg_types
-
-and add_annotations_to_fields ~config (expr : Typedtree.expression)
-    (fields : fields) (arg_types : arg_type list) =
-  match (expr.exp_desc, fields, arg_types) with
-  | _, [], _ -> ([], arg_types |> add_annotations_to_types ~config ~expr)
-  | Texp_function {case = {c_rhs}}, field :: next_fields, _ ->
-    let next_fields1, types1 =
-      add_annotations_to_fields ~config c_rhs next_fields arg_types
-    in
-    let name =
-      Translate_type_declarations.rename_record_field
-        ~attributes:expr.exp_attributes ~name:field.name_js
-    in
-    ({field with name_js = name} :: next_fields1, types1)
-  | _ -> (fields, arg_types)
-[@@live]
 
 (** Recover from expr the renaming annotations on named arguments. *)
 let add_annotations_to_function_type ~config (expr : Typedtree.expression)
@@ -105,7 +82,8 @@ let translate_value_binding ~config ~output_file_relative ~resolver ~type_env
   match vb_pat.pat_desc with
   | Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _) ->
     let name = id |> Ident.name |> Ext_ident.unwrap_uppercase_exotic in
-    if !Debug.translation then Log_.item "Translate Value Binding %s\n" name;
+    if !(Debug.translation ()) then
+      Log_.item "Translate Value Binding %s\n" name;
     let module_item = Runtime.new_module_item ~name in
     type_env |> Type_env.update_module_item ~module_item;
     if
@@ -133,10 +111,10 @@ let rec remove_duplicate_value_bindings
     let value_bindings_filtered =
       value_bindings
       |> List.filter (fun value_binding ->
-             match value_binding with
-             | {Typedtree.vb_pat = {pat_desc = Tpat_var (id, _)}} ->
-               not (bound_in_rest |> String_set.mem (id |> Ident.name))
-             | _ -> true)
+          match value_binding with
+          | {Typedtree.vb_pat = {pat_desc = Tpat_var (id, _)}} ->
+            not (bound_in_rest |> String_set.mem (id |> Ident.name))
+          | _ -> true)
     in
     let bound =
       value_bindings
@@ -163,7 +141,7 @@ let rec translate_module_binding ~(config : Gentype_config.t)
     ({mb_id; mb_expr; mb_attributes} : Typedtree.module_binding) : Translation.t
     =
   let name = mb_id |> Ident.name in
-  if !Debug.translation then Log_.item "Translate Module Binding %s\n" name;
+  if !(Debug.translation ()) then Log_.item "Translate Module Binding %s\n" name;
   let module_item = Runtime.new_module_item ~name in
   let config = mb_attributes |> Annotation.update_config_for_module ~config in
   type_env |> Type_env.update_module_item ~module_item;
@@ -358,9 +336,9 @@ and translate_structure_item ~config ~output_file_relative ~resolver ~type_env
 
 and translate_structure ~config ~output_file_relative ~resolver ~type_env
     structure : Translation.t list =
-  if !Debug.translation then Log_.item "Translate Structure\n";
+  if !(Debug.translation ()) then Log_.item "Translate Structure\n";
   structure.Typedtree.str_items |> remove_value_binding_duplicates
   |> List.map (fun struct_item ->
-         struct_item
-         |> translate_structure_item ~config ~output_file_relative ~resolver
-              ~type_env)
+      struct_item
+      |> translate_structure_item ~config ~output_file_relative ~resolver
+           ~type_env)

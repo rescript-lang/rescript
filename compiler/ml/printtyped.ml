@@ -26,7 +26,7 @@ let fmt_position f l =
       (l.pos_cnum - l.pos_bol)
 
 let fmt_location f loc =
-  if !Clflags.dump_location then (
+  if !((Clflags.current ()).dump_location) then (
     fprintf f "(%a..%a)" fmt_position loc.loc_start fmt_position loc.loc_end;
     if loc.loc_ghost then fprintf f " ghost")
 
@@ -51,12 +51,8 @@ let fmt_constant f x =
   match x with
   | Const_int i -> fprintf f "Const_int %d" i
   | Const_char c -> fprintf f "Const_char %02x" c
-  | Const_string (s, None) -> fprintf f "Const_string(%S,None)" s
-  | Const_string (s, Some delim) ->
-    fprintf f "Const_string (%S,Some %S)" s delim
+  | Const_string s -> fprintf f "Const_string(%S)" s
   | Const_float s -> fprintf f "Const_float %s" s
-  | Const_int32 i -> fprintf f "Const_int32 %ld" i
-  | Const_int64 i -> fprintf f "Const_int64 %Ld" i
   | Const_bigint (sign, i) ->
     fprintf f "Const_bigint %s" (Bigint_utils.to_string sign i)
 
@@ -131,9 +127,8 @@ let record_representation i ppf =
   let open Types in
   function
   | Record_regular -> line i ppf "Record_regular\n"
-  | Record_float_unused -> assert false
   | Record_unboxed b -> line i ppf "Record_unboxed %b\n" b
-  | Record_inlined {tag = i} -> line i ppf "Record_inlined %d\n" i
+  | Record_inlined {name} -> line i ppf "Record_inlined %s\n" name
   | Record_extension -> line i ppf "Record_extension\n"
 
 let attributes i ppf l =
@@ -151,11 +146,14 @@ let rec core_type i ppf x =
   match x.ctyp_desc with
   | Ttyp_any -> line i ppf "Ttyp_any\n"
   | Ttyp_var s -> line i ppf "Ttyp_var %s\n" s
-  | Ttyp_arrow (arg, ret, _) ->
+  | Ttyp_arrow (params, ret) ->
     line i ppf "Ttyp_arrow\n";
-    arg_label i ppf arg.lbl;
-    attributes i ppf arg.attrs;
-    core_type i ppf arg.typ;
+    List.iter
+      (fun (arg : Typedtree.arg) ->
+        arg_label i ppf arg.lbl;
+        attributes i ppf arg.attrs;
+        core_type i ppf arg.typ)
+      params;
     core_type i ppf ret
   | Ttyp_tuple l ->
     line i ppf "Ttyp_tuple\n";
@@ -214,10 +212,6 @@ and pattern i ppf x =
     line i ppf "Tpat_type %a\n" fmt_path id;
     attributes i ppf attrs;
     pattern i ppf {x with pat_extra = rem}
-  | (Tpat_open (id, _, _), _, attrs) :: rem ->
-    line i ppf "Tpat_open \"%a\"\n" fmt_path id;
-    attributes i ppf attrs;
-    pattern i ppf {x with pat_extra = rem}
   | [] -> (
     match x.pat_desc with
     | Tpat_any -> line i ppf "Tpat_any\n"
@@ -226,6 +220,8 @@ and pattern i ppf x =
       line i ppf "Tpat_alias \"%a\"\n" fmt_ident s;
       pattern i ppf p
     | Tpat_constant c -> line i ppf "Tpat_constant %a\n" fmt_constant c
+    | Tpat_interval (c1, c2) ->
+      line i ppf "Tpat_interval %a .. %a\n" fmt_constant c1 fmt_constant c2
     | Tpat_tuple l ->
       line i ppf "Tpat_tuple\n";
       list i pattern ppf l
@@ -239,6 +235,9 @@ and pattern i ppf x =
       line i ppf "Tpat_record\n";
       list i longident_x_pattern ppf l;
       Option.iter (record_pat_rest i ppf) rest
+    | Tpat_dict l ->
+      line i ppf "Tpat_dict\n";
+      list i dict_pattern_entry ppf l
     | Tpat_array l ->
       line i ppf "Tpat_array\n";
       list i pattern ppf l
@@ -253,15 +252,13 @@ and expression_extra i ppf x attrs =
     line i ppf "Texp_constraint\n";
     attributes i ppf attrs;
     core_type i ppf ct
-  | Texp_coerce cto2 ->
+  | Texp_coerce {source_type; target} ->
     line i ppf "Texp_coerce\n";
     attributes i ppf attrs;
-    core_type i ppf cto2
+    line i ppf "source %a\n" Printtyp.type_expr source_type;
+    core_type i ppf target
   | Texp_open (ovf, m, _, _) ->
     line i ppf "Texp_open %a \"%a\"\n" fmt_override_flag ovf fmt_path m;
-    attributes i ppf attrs
-  | Texp_newtype s ->
-    line i ppf "Texp_newtype \"%s\"\n" s;
     attributes i ppf attrs
 
 and expression i ppf x =
@@ -281,16 +278,17 @@ and expression i ppf x =
     line i ppf "Texp_let %a\n" fmt_rec_flag rf;
     list i value_binding ppf l;
     expression i ppf e
-  | Texp_function
-      {arg_label = p; arity; async; param; case = case_; partial = _} ->
+  | Texp_function {params; body; async} ->
     line i ppf "Texp_function\n";
     if async then line i ppf "async\n";
-    (match arity with
-    | Some arity -> line i ppf "arity: %d\n" arity
-    | None -> ());
-    line i ppf "%a" Ident.print param;
-    arg_label i ppf p;
-    case i ppf case_
+    line i ppf "arity: %d\n" (List.length params);
+    List.iter
+      (fun {fp_lbl; fp_param; fp_pat} ->
+        line i ppf "%a" Ident.print fp_param;
+        arg_label i ppf fp_lbl;
+        pattern i ppf fp_pat)
+      params;
+    expression i ppf body
   | Texp_apply {funct = e; args = l; partial} ->
     if partial then line i ppf "partial\n";
     line i ppf "Texp_apply\n";
@@ -335,6 +333,9 @@ and expression i ppf x =
   | Texp_array l ->
     line i ppf "Texp_array\n";
     list i expression ppf l
+  | Texp_dict l ->
+    line i ppf "Texp_dict\n";
+    list i dict_entry ppf l
   | Texp_ifthenelse (e1, e2, eo) ->
     line i ppf "Texp_ifthenelse\n";
     expression i ppf e1;
@@ -363,10 +364,38 @@ and expression i ppf x =
     line i ppf "Texp_for_await_of \"%a\"\n" fmt_ident s;
     expression i ppf e1;
     expression i ppf e2
-  | Texp_send (e, Tmeth_name s, eo) ->
-    line i ppf "Texp_send \"%s\"\n" s;
+  | Texp_template {segments; values} ->
+    line i ppf "Texp_template segments=%a\n"
+      (Format.pp_print_list
+         ~pp_sep:(fun ppf () -> Format.fprintf ppf ", ")
+         (fun ppf segment ->
+           Format.fprintf ppf "{source=%S; semantic=%S}"
+             (String_literal.template_source segment)
+             (String_literal.template_semantic segment)))
+      segments;
+    List.iter (expression i ppf) values
+  | Texp_tagged_template {tag; raw_sources; values} ->
+    line i ppf "Texp_tagged_template raw_sources=%a\n"
+      (Format.pp_print_list
+         ~pp_sep:(fun ppf () -> Format.fprintf ppf ", ")
+         (fun ppf source -> Format.fprintf ppf "%S" source))
+      raw_sources;
+    expression i ppf tag;
+    List.iter (expression i ppf) values
+  | Texp_object_get (e, s) ->
+    line i ppf "Texp_object_get \"%s\"\n" s.txt;
+    expression i ppf e
+  | Texp_object_set (e, s, v) ->
+    line i ppf "Texp_object_set \"%s\"\n" s.txt;
     expression i ppf e;
-    option i expression ppf eo
+    expression i ppf v
+  | Texp_object_literal fields ->
+    line i ppf "Texp_object_literal\n";
+    List.iter
+      (fun ((s : string Asttypes.loc), e) ->
+        line i ppf "field \"%s\"\n" s.txt;
+        expression i ppf e)
+      fields
   | Texp_letmodule (s, _, me, e) ->
     line i ppf "Texp_letmodule \"%a\"\n" fmt_ident s;
     module_expr i ppf me;
@@ -381,15 +410,19 @@ and expression i ppf x =
   | Texp_pack me ->
     line i ppf "Texp_pack";
     module_expr i ppf me
-  | Texp_extension_constructor (li, _) ->
-    line i ppf "Texp_extension_constructor %a" fmt_longident li
 
 and value_description i ppf x =
   line i ppf "value_description %a %a\n" fmt_ident x.val_id fmt_location
     x.val_loc;
   attributes i ppf x.val_attributes;
   core_type (i + 1) ppf x.val_desc;
-  list (i + 1) string ppf x.val_prim
+  match x.val_prim with
+  | None -> ()
+  | Some (Prim_name s) -> string (i + 1) ppf s
+  | Some (Prim_ffi {name}) ->
+    string (i + 1) ppf name;
+    line (i + 1) ppf "<ffi spec>\n"
+  | Some (Prim_inline_const _) -> line (i + 1) ppf "<inline const>\n"
 
 and type_parameter i ppf (x, _variance) = core_type i ppf x
 
@@ -618,11 +651,26 @@ and core_type_x_core_type_x_location i ppf (ct1, ct2, l) =
   core_type (i + 1) ppf ct1;
   core_type (i + 1) ppf ct2
 
+and fmt_runtime_tag f (tag : Variant_runtime.literal_tag) =
+  match tag with
+  | String s -> fprintf f "String %S" s
+  | Int i -> fprintf f "Int %d" i
+  | Float s -> fprintf f "Float %s" s
+  | BigInt s -> fprintf f "BigInt %s" s
+  | Bool b -> fprintf f "Bool %b" b
+  | Null -> fprintf f "Null"
+  | Undefined -> fprintf f "Undefined"
+
 and constructor_decl i ppf
-    {cd_id; cd_name = _; cd_args; cd_res; cd_loc; cd_attributes} =
+    {cd_id; cd_name = _; cd_runtime_tag; cd_args; cd_res; cd_loc; cd_attributes}
+    =
   line i ppf "%a\n" fmt_location cd_loc;
   line (i + 1) ppf "%a\n" fmt_ident cd_id;
   attributes i ppf cd_attributes;
+  (* As for a field's rename above: a field, so printed as one. *)
+  (match cd_runtime_tag with
+  | Some tag -> line (i + 1) ppf "runtime_tag %a\n" fmt_runtime_tag tag
+  | None -> ());
   constructor_arguments (i + 1) ppf cd_args;
   option (i + 1) core_type ppf cd_res
 
@@ -631,9 +679,22 @@ and constructor_arguments i ppf = function
   | Cstr_record l -> list i label_decl ppf l
 
 and label_decl i ppf
-    {ld_id; ld_name = _; ld_mutable; ld_type; ld_loc; ld_attributes} =
+    {
+      ld_id;
+      ld_name = _;
+      ld_runtime_name;
+      ld_mutable;
+      ld_type;
+      ld_loc;
+      ld_attributes;
+    } =
   line i ppf "%a\n" fmt_location ld_loc;
   attributes i ppf ld_attributes;
+  (* The rename is a field rather than an attribute, so print it as one: the
+     dump would otherwise show a renamed field exactly like a plain one. *)
+  (match ld_runtime_name with
+  | Some name -> line (i + 1) ppf "runtime_name %S\n" name
+  | None -> ());
   line (i + 1) ppf "%a\n" fmt_mutable_flag ld_mutable;
   line (i + 1) ppf "%a" fmt_ident ld_id;
   core_type (i + 1) ppf ld_type
@@ -641,6 +702,18 @@ and label_decl i ppf
 and longident_x_pattern i ppf (li, _, p, opt) =
   line i ppf "%a%s\n" fmt_longident li (if opt then "?" else "");
   pattern (i + 1) ppf p
+
+and dict_pattern_entry i ppf {tdp_key; tdp_pattern; tdp_optional} =
+  line i ppf "%S%s\n" tdp_key.txt (if tdp_optional then "?" else "");
+  pattern (i + 1) ppf tdp_pattern
+
+and dict_entry i ppf = function
+  | Tdict_entry (key, e) ->
+    line i ppf "Tdict_entry %S\n" key.txt;
+    expression (i + 1) ppf e
+  | Tdict_spread e ->
+    line i ppf "Tdict_spread\n";
+    expression (i + 1) ppf e
 
 and case i ppf {c_lhs; c_guard; c_rhs} =
   line i ppf "<case>\n";

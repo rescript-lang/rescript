@@ -37,7 +37,7 @@ let make = (~submitVoteFunction: float => unit, ~maxVote: float) => {
     {React.array(
       [1., 2., 3., 4., 5.]->Array.map(x => {
         let disabled = x >= maxVote
-        <Rimble.Box key={x->Js.Float.toString} width=[1., 0.32]>
+        <Rimble.Box key={x->Float.toString} width=[1., 0.32]>
           <Rimble.Button
             className={
               open Css

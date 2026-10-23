@@ -39,10 +39,7 @@ let variant_unwrap (row_fields : Parsetree.row_field list) : bool =
 let spec_of_ptyp (nolabel : bool) (ptyp : Parsetree.core_type) :
     External_arg_spec.attr =
   let ptyp_desc = ptyp.ptyp_desc in
-  match
-    Ast_attributes.iter_process_bs_string_int_unwrap_uncurry
-      ptyp.ptyp_attributes
-  with
+  match Ast_attributes.arg_encoding ptyp.ptyp_attributes with
   | `String -> (
     match ptyp_desc with
     | Ptyp_variant (row_fields, Closed, None) ->
@@ -69,27 +66,31 @@ let spec_of_ptyp (nolabel : bool) (ptyp : Parsetree.core_type) :
       if nolabel then Extern_unit else Nothing
     | _ -> Nothing)
 
+let arg_cst_of_as_const :
+    Ast_attributes.as_const_payload -> External_arg_spec.attr = function
+  | Int i ->
+    (* This type is used in obj only to construct obj type*)
+    Arg_cst (External_arg_spec.cst_int i)
+  | Str s -> Arg_cst (External_arg_spec.cst_string s)
+  | Json s -> Arg_cst (External_arg_spec.cst_json s)
+
 (* is_optional = false 
 *)
 let refine_arg_type ~(nolabel : bool) (ptyp : Ast_core_type.t) :
     External_arg_spec.attr =
-  if ptyp.ptyp_desc = Ptyp_any then
+  if ptyp.ptyp_desc = Ptyp_any then (
     let ptyp_attrs = ptyp.ptyp_attributes in
-    let payload = Ast_attributes.iter_process_bs_string_or_int_as ptyp_attrs in
+    let payload = Ast_attributes.as_const ptyp_attrs in
     match payload with
     | None -> spec_of_ptyp nolabel ptyp
-    | Some cst -> (
+    | Some cst ->
       (* (_[@as ])*)
       (* when ppx start dropping attributes
          we should warn, there is a trade off whether
          we should warn dropped non bs attribute or not
       *)
       Bs_ast_invariant.warn_discarded_unused_attributes ptyp_attrs;
-      match cst with
-      | Int i ->
-        (* This type is used in obj only to construct obj type*)
-        Arg_cst (External_arg_spec.cst_int i)
-      | Str (i, delim) -> Arg_cst (External_arg_spec.cst_string i delim))
+      arg_cst_of_as_const cst)
   else (* ([`a|`b] [@string]) *)
     spec_of_ptyp nolabel ptyp
 
@@ -97,7 +98,7 @@ let refine_obj_arg_type ~(nolabel : bool) (ptyp : Ast_core_type.t) :
     External_arg_spec.attr =
   if ptyp.ptyp_desc = Ptyp_any then (
     let ptyp_attrs = ptyp.ptyp_attributes in
-    let payload = Ast_attributes.iter_process_bs_string_or_int_as ptyp_attrs in
+    let payload = Ast_attributes.as_const ptyp_attrs in
     (* when ppx start dropping attributes
        we should warn, there is a trade off whether
        we should warn dropped non bs attribute or not
@@ -105,13 +106,7 @@ let refine_obj_arg_type ~(nolabel : bool) (ptyp : Ast_core_type.t) :
     Bs_ast_invariant.warn_discarded_unused_attributes ptyp_attrs;
     match payload with
     | None -> Bs_syntaxerr.err ptyp.ptyp_loc Invalid_underscore_type_in_external
-    | Some (Int i) ->
-      (* @as(24) *)
-      (* This type is used in obj only to construct obj type *)
-      Arg_cst (External_arg_spec.cst_int i)
-    | Some (Str (s, delim)) ->
-      (* @as("foo") *)
-      Arg_cst (External_arg_spec.cst_string s delim))
+    | Some cst -> arg_cst_of_as_const cst)
   else (* ([`a|`b] [@string]) *)
     spec_of_ptyp nolabel ptyp
 
@@ -208,8 +203,8 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
     | PStr [] -> prim_name_or_pval_prim
     (* It is okay to have [@@val] without payload *)
     | _ -> (
-      match Ast_payload.is_single_string payload with
-      | Some (val_name, _) -> {name = val_name; source = Payload}
+      match Ast_payload.semantic_string_of_payload payload with
+      | Some val_name -> {name = val_name; source = Payload}
       | None -> Location.raise_errorf ~loc "Invalid payload")
   in
 
@@ -219,7 +214,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
         let bundle =
           "./"
           ^ Ext_filename.new_extension
-              (Filename.basename !Location.input_name)
+              (Filename.basename (Location.get_input_name ()))
               ".gen"
         in
         ( attr :: attrs,
@@ -245,7 +240,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                 call_name = Some (name_from_payload_or_prim ~loc payload);
               }
           | "module" -> (
-            match payload with
+            match Ast_payload.unwrap_payload_expression payload with
             | PStr
                 [
                   {
@@ -258,12 +253,15 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
               let from_name = ref None in
               let with_ = ref None in
               Ext_list.iter fields (fun {lid = l; x = exp} ->
-                  match (l, exp.pexp_desc) with
-                  | {txt = Lident "from"}, Pexp_constant (Pconst_string (s, _))
-                    ->
-                    from_name := Some s
-                  | {txt = Lident "with"}, Pexp_record (fields, _) ->
-                    with_ := Some fields
+                  match l with
+                  | {txt = Lident "from"} -> (
+                    match Ast_payload.semantic_string_of_expression exp with
+                    | Some name -> from_name := Some name
+                    | None -> ())
+                  | {txt = Lident "with"} -> (
+                    match (Ast_payload.unwrap_braces exp).pexp_desc with
+                    | Pexp_record (fields, _) -> with_ := Some fields
+                    | _ -> ())
                   | _ -> ());
               match (!from_name, !with_) with
               | None, _ ->
@@ -280,8 +278,8 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
               | Some from_name, Some with_fields ->
                 let import_attributes_from_record =
                   Ext_list.filter_map with_fields (fun {lid = l; x = exp} ->
-                      match exp.pexp_desc with
-                      | Pexp_constant (Pconst_string (s, _)) -> (
+                      match Ast_payload.semantic_string_of_expression exp with
+                      | Some s -> (
                         match l.txt with
                         | Longident.Lident "type_" -> Some ("type", s)
                         | Longident.Lident txt -> Some (txt, s)
@@ -292,12 +290,6 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                         Location.raise_errorf ~loc:exp.pexp_loc
                           "Only string values are allowed here.")
                 in
-                let import_attributes =
-                  Hashtbl.create (List.length import_attributes_from_record)
-                in
-                import_attributes_from_record
-                |> List.iter (fun (key, value) ->
-                       Hashtbl.replace import_attributes key value);
                 {
                   st with
                   external_module_name =
@@ -305,7 +297,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                       {
                         bundle = from_name;
                         module_bind_name = Phint_nothing;
-                        import_attributes = Some import_attributes;
+                        import_attributes = Some import_attributes_from_record;
                       };
                 })
             | _ -> (
@@ -394,22 +386,37 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
 let check_return_wrapper loc (wrapper : External_ffi_types.return_wrapper)
     result_type =
   match wrapper with
-  | Return_identity -> wrapper
-  | Return_unset ->
-    if Ast_core_type.is_unit result_type then Return_replaced_with_unit
-    else wrapper
+  | Return_identity | Return_unset -> wrapper
   | Return_null_to_opt | Return_null_undefined_to_opt ->
     if Ast_core_type.is_user_option result_type then wrapper
     else Bs_syntaxerr.err loc Expect_opt_in_bs_return_to_opt
-  | Return_replaced_with_unit -> assert false
-(* Not going to happen from user input*)
 
 type response = {
   pval_type: Parsetree.core_type;
-  pval_prim: string list;
+  pval_prim: Parsetree.primitive_repr;
   pval_attributes: Parsetree.attributes;
   no_inline_cross_module: bool;
 }
+
+(* A fixed argument means what [@as(value) _] means, so decode it with the
+   same reader. *)
+let fixed_arg_type
+    ((value, loc) : Parsetree.fixed_value Location.loc * Location.t) =
+  match Ast_attributes.as_const [Ast_fixed_arg.to_attribute ~loc value] with
+  | Some cst -> arg_cst_of_as_const cst
+  | None -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal
+
+(* The label and type of an argument. A fixed argument is typed as its [_], so
+   the checks for [@as(value) _] apply to it unchanged. Its location ends with
+   that [_]. *)
+let arg_parts (arg : Parsetree.arg) =
+  match arg with
+  | Parg_type {attrs; lbl; typ} -> (lbl, attrs, typ, None)
+  | Parg_fixed {attrs; lbl; value; loc} ->
+    ( lbl,
+      attrs,
+      Ast_helper.Typ.any ~loc:(Ast_fixed_arg.underscore_loc loc) (),
+      Some (value, loc) )
 
 let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
     (arg_types_ty : Parsetree.arg list) (result_type : Ast_core_type.t) :
@@ -442,8 +449,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
           param_type
           (arg_labels, (arg_types : Parsetree.arg list), result_types)
         ->
-          let arg_label = param_type.lbl in
-          let ty = param_type.typ in
+          let arg_label, param_attrs, ty, fixed = arg_parts param_type in
           let new_arg_label, new_arg_types, output_tys =
             match arg_label with
             | Nolabel -> (
@@ -457,13 +463,15 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
                   "expect label, optional, or unit here")
             | Labelled {txt = label} -> (
               let field_name =
-                match
-                  Ast_attributes.iter_process_bs_string_as param_type.attrs
-                with
+                match Ast_attributes.as_string param_attrs with
                 | Some alias -> alias
                 | None -> label
               in
-              let obj_arg_type = refine_obj_arg_type ~nolabel:false ty in
+              let obj_arg_type =
+                match fixed with
+                | Some fixed -> fixed_arg_type fixed
+                | None -> refine_obj_arg_type ~nolabel:false ty
+              in
               match obj_arg_type with
               | Ignore ->
                 ( External_arg_spec.empty_kind obj_arg_type,
@@ -516,9 +524,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
                   "%@obj label %s does not support %@unwrap arguments" label)
             | Optional {txt = label} -> (
               let field_name =
-                match
-                  Ast_attributes.iter_process_bs_string_as param_type.attrs
-                with
+                match Ast_attributes.as_string param_attrs with
                 | Some alias -> alias
                 | None -> label
               in
@@ -593,14 +599,20 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
     in
 
     ( List.length args,
-      Ast_helper.Typ.arrows ~loc args result,
+      (match args with
+      | [] -> result
+      | _ -> Ast_helper.Typ.arrow ~loc args result),
       External_ffi_types.ffi_obj_create arg_kinds )
   | _ -> Location.raise_errorf ~loc "Attribute found that conflicts with %@obj"
 
-let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
+let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
     (prim_name_or_pval_prim : bundle_source) (arg_type_specs_length : int)
-    arg_types_ty (arg_type_specs : External_arg_spec.params) :
-    External_ffi_types.external_spec =
+    (arg_type_specs : External_arg_spec.params) :
+    External_ffi_types.external_decl =
+  let mk ?module_ ?(scopes = []) ?(variadic = false) kind :
+      External_ffi_types.external_decl =
+    {kind; module_; scopes; variadic; effective_arity = arg_type_specs_length}
+  in
   match st with
   | {
    set_index = true;
@@ -618,8 +630,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    return_wrapper = _;
    mk_obj = _;
   } ->
-    if arg_type_specs_length = 3 then
-      Js_set_index {js_set_index_scopes = scopes}
+    if arg_type_specs_length = 3 then mk ~scopes Decl_set_index
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@set_index (arity of 3)"
@@ -642,8 +653,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    mk_obj = _;
    return_wrapper = _;
   } ->
-    if arg_type_specs_length = 2 then
-      Js_get_index {js_get_index_scopes = scopes}
+    if arg_type_specs_length = 2 then mk ~scopes Decl_get_index
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@get_index (arity expected 2 : while %d)"
@@ -652,7 +662,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
     Bs_syntaxerr.err loc
       (Conflict_ffi_attribute "Attribute found that conflicts with @get_index")
   | {
-   module_as_val = Some external_module_name;
+   module_as_val = Some _;
    get_index = false;
    val_name;
    new_name;
@@ -668,15 +678,18 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    return_wrapper = _;
    mk_obj = _;
   } -> (
-    match (arg_types_ty, new_name, val_name) with
-    | [], None, _ -> Js_module_as_var external_module_name
-    | _, None, _ -> Js_module_as_fn {splice; external_module_name}
-    | _, Some _, Some _ ->
+    let module_ = External_ffi_types.Module_itself in
+    match (new_name, val_name) with
+    | None, _ ->
+      mk ~module_ ~variadic:splice
+        (Decl_val {name = prim_name_or_pval_prim.name})
+    | Some _, Some _ ->
       Bs_syntaxerr.err loc
         (Conflict_ffi_attribute "Attribute found that conflicts with @module.")
-    | _, Some {source = External; name = _}, None ->
-      Js_module_as_class external_module_name
-    | _, Some {source = Payload; name = _}, None ->
+    | Some {source = External; name = _}, None ->
+      mk ~module_ ~variadic:splice
+        (Decl_new {name = prim_name_or_pval_prim.name})
+    | Some {source = Payload; name = _}, None ->
       Location.raise_errorf ~loc
         "Incorrect FFI attribute found: (%@new should not carry a payload here)"
     )
@@ -709,16 +722,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    (* mk_obj is always false *)
    return_wrapper = _;
   } ->
-    let name = prim_name_or_pval_prim.name in
-    if arg_type_specs_length = 0 then
-      (*
-         {[
-           external ff : int -> int [@bs] = "" [@@module "xx"]
-         ]}
-         FIXME: splice is not supported here
-      *)
-      Js_var {name; external_module_name = None; scopes}
-    else Js_call {splice; name; external_module_name = None; scopes}
+    mk ~scopes ~variadic:splice (Decl_val {name = prim_name_or_pval_prim.name})
   | {
    call_name = Some {name; source = _};
    splice;
@@ -735,15 +739,13 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    mk_obj = _;
    return_wrapper = _;
   } ->
-    if arg_type_specs_length = 0 then
-      (*
-           {[
-             external ff : int -> int = "" [@@module "xx"]
-           ]}
-        *)
-      Js_var {name; external_module_name; scopes}
-      (*FIXME: splice is not supported here *)
-    else Js_call {splice; name; external_module_name; scopes}
+    mk
+      ?module_:
+        (Option.map
+           (fun m -> External_ffi_types.Module_named m)
+           external_module_name)
+      ~scopes ~variadic:splice
+      (Decl_val {name})
   | {call_name = Some _} ->
     Bs_syntaxerr.err loc
       (Conflict_ffi_attribute "Attribute found that conflicts with @val")
@@ -763,13 +765,13 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    splice = false;
    scopes;
   } ->
-    (*
-         if no_arguments -->
-               {[
-                 external ff : int = "" [@@val]
-               ]}
-      *)
-    Js_var {name; external_module_name; scopes}
+    mk
+      ?module_:
+        (Option.map
+           (fun m -> External_ffi_types.Module_named m)
+           external_module_name)
+      ~scopes
+      (Decl_val {name})
   | {val_name = Some _} ->
     Bs_syntaxerr.err loc
       (Conflict_ffi_attribute "Attribute found that conflicts with @val")
@@ -789,15 +791,13 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    mk_obj = _;
    return_wrapper = _;
   } ->
-    let name = prim_name_or_pval_prim.name in
-    if arg_type_specs_length = 0 then
-      (*
-         {[
-           external ff : int = "" [@@module "xx"]
-         ]}
-      *)
-      Js_var {name; external_module_name; scopes}
-    else Js_call {splice; name; external_module_name; scopes}
+    mk
+      ?module_:
+        (Option.map
+           (fun m -> External_ffi_types.Module_named m)
+           external_module_name)
+      ~scopes ~variadic:splice
+      (Decl_val {name = prim_name_or_pval_prim.name})
   | {
    val_send = Some {name; source = _};
    splice;
@@ -825,7 +825,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
     | {arg_type = Arg_cst _; arg_label = _} :: _ ->
       Location.raise_errorf ~loc
         "Ill defined attribute %@send(first argument can't be const)"
-    | _ :: _ -> Js_send {splice; name; js_send_scopes = scopes})
+    | _ :: _ -> mk ~scopes ~variadic:splice (Decl_send {name}))
   | {val_send = Some _} ->
     Location.raise_errorf ~loc
       "You used a FFI attribute that can't be used with %@send"
@@ -845,7 +845,13 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    mk_obj = _;
    return_wrapper = _;
   } ->
-    Js_new {name; external_module_name; splice; scopes}
+    mk
+      ?module_:
+        (Option.map
+           (fun m -> External_ffi_types.Module_named m)
+           external_module_name)
+      ~scopes ~variadic:splice
+      (Decl_new {name})
   | {new_name = Some _} ->
     Bs_syntaxerr.err loc
       (Conflict_ffi_attribute "Attribute found that conflicts with @new")
@@ -865,8 +871,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    return_wrapper = _;
    scopes;
   } ->
-    if arg_type_specs_length = 2 then
-      Js_set {js_set_scopes = scopes; js_set_name = name}
+    if arg_type_specs_length = 2 then mk ~scopes (Decl_set {name})
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@set (two args required)"
@@ -894,7 +899,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
       | [{arg_type = Extern_unit}] ->
         Location.raise_errorf ~loc
           "Ill defined attribute %@get (unit argument is not allowed)"
-      | _ -> Js_get {js_get_name = name; js_get_scopes = scopes}
+      | _ -> mk ~scopes (Decl_get {name})
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@get (only one argument)"
@@ -902,18 +907,10 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
     Location.raise_errorf ~loc "Attribute found that conflicts with %@get"
 
 (** Note that the passed [type_annotation] is already processed by visitor pattern before*)
-let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
+let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
     (prim_attributes : Ast_attributes.t) (prim_name : string) :
     Parsetree.core_type * External_ffi_types.t * Parsetree.attributes * bool =
   let prim_name_with_source = {name = prim_name; source = External} in
-  let type_annotation, build_uncurried_type =
-    match type_annotation with
-    | {ptyp_desc = Ptyp_arrow {arity = Some _}} ->
-      ( type_annotation,
-        fun ~arity (x : Parsetree.core_type) ->
-          Ast_uncurried.uncurried_type ~arity x )
-    | _ -> (type_annotation, fun ~arity:_ x -> x)
-  in
   let result_type, arg_types_ty =
     (* Note this assumes external type is syntatic (no abstraction)*)
     Ast_core_type.list_of_arrow type_annotation
@@ -925,18 +922,17 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
   in
   if external_desc.mk_obj then
     (* warn unused attributes here ? *)
-    let arity, new_type, spec =
+    let _arity, new_type, spec =
       process_obj loc external_desc prim_name arg_types_ty result_type
     in
-    (build_uncurried_type ~arity new_type, spec, unused_attrs, false)
+    (new_type, spec, unused_attrs, false)
   else
     let splice = external_desc.splice in
     let arg_type_specs, args, arg_type_specs_length =
       Ext_list.fold_right arg_types_ty
         (([], [], 0) : External_arg_spec.params * Parsetree.arg list * int)
         (fun param_type (arg_type_specs, arg_types, i) ->
-          let arg_label = param_type.lbl in
-          let ty = param_type.typ in
+          let arg_label, _, ty, fixed = arg_parts param_type in
           (if i = 0 && splice then
              match arg_label with
              | Optional _ ->
@@ -969,14 +965,22 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
                   s
               | _ -> (Arg_optional, arg_type, param_type :: arg_types))
             | Labelled _ -> (
-              let arg_type = refine_arg_type ~nolabel:false ty in
+              let arg_type =
+                match fixed with
+                | Some fixed -> fixed_arg_type fixed
+                | None -> refine_arg_type ~nolabel:false ty
+              in
               ( Arg_label,
                 arg_type,
                 match arg_type with
                 | Arg_cst _ -> arg_types
                 | _ -> param_type :: arg_types ))
             | Nolabel -> (
-              let arg_type = refine_arg_type ~nolabel:true ty in
+              let arg_type =
+                match fixed with
+                | Some fixed -> fixed_arg_type fixed
+                | None -> refine_arg_type ~nolabel:true ty
+              in
               ( Arg_empty,
                 arg_type,
                 match arg_type with
@@ -998,62 +1002,41 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
             (Location.mkloc (Longident.Lident "unit") loc)
             []
         in
-        let unit_arg = {Parsetree.attrs = []; lbl = Nolabel; typ = unit_type} in
+        let unit_arg =
+          Parsetree.Parg_type {attrs = []; lbl = Nolabel; typ = unit_type}
+        in
         ( [unit_arg],
           arg_type_specs
           @ [{External_arg_spec.arg_label = Arg_empty; arg_type = Extern_unit}]
         )
       | _ -> (args, arg_type_specs)
     in
-    let ffi : External_ffi_types.external_spec =
-      external_desc_of_non_obj loc external_desc prim_name_with_source
-        arg_type_specs_length arg_types_ty arg_type_specs
+    let decl : External_ffi_types.external_decl =
+      external_decl_of_non_obj loc external_desc prim_name_with_source
+        arg_type_specs_length arg_type_specs
     in
-    let relative = External_ffi_types.check_ffi ~loc ffi in
+    let relative = External_ffi_types.check_decl ~loc decl ~prim_name in
     (* result type can not be labeled *)
     (* currently we don't process attributes of
        return type, in the future we may *)
     let return_wrapper =
       check_return_wrapper loc external_desc.return_wrapper result_type
     in
-    ( Ast_helper.Typ.arrows ~loc args result_type,
-      External_ffi_types.ffi_bs arg_type_specs return_wrapper ffi,
+    ( (match args with
+      | [] -> result_type
+      | _ -> Ast_helper.Typ.arrow ~loc args result_type),
+      External_ffi_types.ffi_bs arg_type_specs return_wrapper decl,
       unused_attrs,
       relative )
 
-let encode_attributes_as_string (pval_loc : Location.t) (typ : Ast_core_type.t)
+let handle_attributes_as_prim (pval_loc : Location.t) (typ : Ast_core_type.t)
     (attrs : Ast_attributes.t) (prim_name : string) : response =
   let pval_type, ffi, pval_attributes, no_inline_cross_module =
     handle_attributes pval_loc typ attrs prim_name
   in
   {
     pval_type;
-    pval_prim = [prim_name; External_ffi_types.to_string ffi];
+    pval_prim = Prim_ffi {name = prim_name; spec = ffi};
     pval_attributes;
     no_inline_cross_module;
   }
-
-let pval_prim_of_labels (labels : string Asttypes.loc list) =
-  let arg_kinds =
-    Ext_list.fold_right labels
-      ([] : External_arg_spec.obj_params)
-      (fun p arg_kinds ->
-        let obj_arg_label = External_arg_spec.obj_label p.txt in
-        {obj_arg_type = Nothing; obj_arg_label} :: arg_kinds)
-  in
-  External_ffi_types.ffi_obj_as_prims arg_kinds
-
-let pval_prim_of_option_labels (labels : (bool * string Asttypes.loc) list)
-    (ends_with_unit : bool) =
-  let arg_kinds =
-    Ext_list.fold_right labels
-      (if ends_with_unit then [External_arg_spec.empty_kind Extern_unit] else [])
-      (fun (is_option, p) arg_kinds ->
-        let label_name = p.txt in
-        let obj_arg_label =
-          if is_option then External_arg_spec.optional false label_name
-          else External_arg_spec.obj_label label_name
-        in
-        {obj_arg_type = Nothing; obj_arg_label} :: arg_kinds)
-  in
-  External_ffi_types.ffi_obj_as_prims arg_kinds

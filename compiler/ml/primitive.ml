@@ -18,45 +18,62 @@
 open Misc
 open Parsetree
 
+type prim_kind =
+  | Kind_intrinsic
+  | Kind_external of External_ffi_types.t
+  | Kind_inline_const of External_ffi_types.inline_const
+
 type description = {
-  prim_name: string; (* Name of primitive  or C function *)
+  prim_name: string;
+      (* Name of the intrinsic or the external's JS name; "" for inline
+         constants and object creation *)
   prim_arity: int; (* Number of arguments *)
   prim_alloc: bool; (* Does it allocates or raise? *)
-  prim_native_name: string; (* Name of C function for the nat. code gen. *)
+  prim_kind: prim_kind;
   prim_from_constructor: bool;
       (* Is it from a type constructor instead of a concrete function type? *)
-  transformed_jsx: bool;
 }
-
-let set_transformed_jsx d ~transformed_jsx = {d with transformed_jsx}
 
 let with_arity d ~arity ~from_constructor =
   {d with prim_arity = arity; prim_from_constructor = from_constructor}
 
-let coerce : (description -> description -> bool) ref =
-  ref (fun (p1 : description) (p2 : description) -> p1 = p2)
+(* Can an implementation's primitive satisfy an interface's during signature
+   inclusion? The specs must be equal, up to the widening rule in
+   [External_ffi_types.inclusion_compatible]. *)
+let coercible (impl : description) (intf : description) =
+  impl.prim_name = intf.prim_name
+  && impl.prim_arity = intf.prim_arity
+  && impl.prim_kind = intf.prim_kind
+  ||
+  match (impl.prim_kind, intf.prim_kind) with
+  | Kind_external impl_ffi, Kind_external intf_ffi ->
+    External_ffi_types.inclusion_compatible impl_ffi intf_ffi
+  | _ -> false
 
-let parse_declaration valdecl ~arity ~from_constructor =
-  let name, native_name =
+let parse_declaration (valdecl : Parsetree.value_description) ~arity
+    ~from_constructor =
+  let name, kind =
     match valdecl.pval_prim with
-    | name :: name2 :: _ -> (name, name2)
-    | name :: _ -> (name, "")
-    | [] -> fatal_error "Primitive.parse_declaration"
+    | Some (Prim_name name) -> (name, Kind_intrinsic)
+    | Some (Prim_ffi {name; spec}) -> (name, Kind_external spec)
+    | Some (Prim_inline_const c) -> ("", Kind_inline_const c)
+    | None -> fatal_error "Primitive.parse_declaration"
   in
   {
     prim_name = name;
     prim_arity = arity;
     prim_alloc = true;
-    prim_native_name = native_name;
+    prim_kind = kind;
     prim_from_constructor = from_constructor;
-    transformed_jsx = false;
   }
 
 open Outcometree
 
 let print p osig_val_decl =
-  let prims =
-    if p.prim_native_name <> "" then [p.prim_name; p.prim_native_name]
-    else [p.prim_name]
+  let repr : Parsetree.primitive_repr =
+    match p.prim_kind with
+    | Kind_intrinsic -> Prim_name p.prim_name
+    | Kind_external spec -> Prim_ffi {name = p.prim_name; spec}
+    | Kind_inline_const c -> Prim_inline_const c
   in
-  {osig_val_decl with oval_prims = prims; oval_attributes = []}
+  {osig_val_decl with oval_prim = Some repr; oval_attributes = []}

@@ -110,19 +110,16 @@ let view_expr x =
   match x.pexp_desc with
   | Pexp_construct ({txt = Lident "()"; _}, _) -> `tuple
   | Pexp_construct ({txt = Lident "[]"; _}, _) -> `nil
-  | Pexp_construct ({txt = Lident "::"; _}, Some _) ->
+  | Pexp_construct ({txt = Lident "::"; _}, {txt = [_; _]}) ->
     let rec loop exp acc =
       match exp with
       | {
-       pexp_desc = Pexp_construct ({txt = Lident "[]"; _}, _);
+       pexp_desc = Pexp_construct ({txt = Lident "[]"; _}, {txt = []});
        pexp_attributes = [];
       } ->
         (List.rev acc, true)
       | {
-       pexp_desc =
-         Pexp_construct
-           ( {txt = Lident "::"; _},
-             Some {pexp_desc = Pexp_tuple [e1; e2]; pexp_attributes = []} );
+       pexp_desc = Pexp_construct ({txt = Lident "::"; _}, {txt = [e1; e2]});
        pexp_attributes = [];
       } ->
         loop e2 (e1 :: acc)
@@ -130,7 +127,7 @@ let view_expr x =
     in
     let ls, b = loop x [] in
     if b then `list ls else `cons ls
-  | Pexp_construct (x, None) -> `simple x.txt
+  | Pexp_construct (x, {txt = []}) -> `simple x.txt
   | _ -> `normal
 
 let is_simple_construct : construct -> bool = function
@@ -243,10 +240,18 @@ let longident_loc f x = pp f "%a" longident x.txt
 
 let string_of_int_as_char i = Ext_util.string_of_int_as_char i
 
+(* Keep layout stable across OCaml <5.4 (byte width) and >=5.4 (Unicode scalar width). *)
+let print_string_with_byte_width f s = Format.pp_print_as f (String.length s) s
+
+let print_quoted_string_with_byte_width f s =
+  let quoted = Printf.sprintf "%S" s in
+  print_string_with_byte_width f quoted
+
 let constant f = function
-  | Pconst_char i -> pp f "%s" (string_of_int_as_char i)
-  | Pconst_string (i, None) -> pp f "%S" i
-  | Pconst_string (i, Some delim) -> pp f "{%s|%s|%s}" delim i delim
+  | Pconst_char {source} -> pp f "'%s'" source
+  | Pconst_string payload ->
+    pp f "{js|%a|js}" print_string_with_byte_width
+      (String_literal.string_source payload)
   | Pconst_integer (i, None) -> paren (i.[0] = '-') (fun f -> pp f "%s") f i
   | Pconst_integer (i, Some m) ->
     paren (i.[0] = '-') (fun f (i, m) -> pp f "%s%c" i m) f (i, m)
@@ -279,20 +284,30 @@ let private_flag f = function
   | Public -> ()
   | Private -> pp f "private@ "
 
-let constant_string f s = pp f "%S" s
+let constant_string = print_quoted_string_with_byte_width
 let tyvar f str = pp f "'%s" str
 let tyvar_loc f str = pp f "'%s" str.txt
 let string_quot f x = pp f "`%s" x
 
 let rec type_with_label ctxt f arg =
-  match arg.lbl with
-  | Nolabel ->
-    pp f "%a%a" (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
-    (* otherwise parenthesize *)
+  let attrs, lbl, typ =
+    match arg with
+    | Parg_type {attrs; lbl; typ} -> (attrs, lbl, typ)
+    | Parg_fixed {attrs; lbl; value; loc} ->
+      (* Printed in its legacy spelling, [_ [@as value]]. *)
+      ( attrs,
+        lbl,
+        Ast_helper.Typ.any ~loc
+          ~attrs:[Ast_fixed_arg.to_attribute ~loc value]
+          () )
+  in
+  match lbl with
+  | Nolabel -> pp f "%a%a" (core_type1 ctxt) typ (attributes ctxt) attrs
+  (* otherwise parenthesize *)
   | Labelled {txt = s} ->
-    pp f "%s:%a%a" s (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
+    pp f "%s:%a%a" s (core_type1 ctxt) typ (attributes ctxt) attrs
   | Optional {txt = s} ->
-    pp f "?%s:%a%a" s (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
+    pp f "?%s:%a%a" s (core_type1 ctxt) typ (attributes ctxt) attrs
 
 and core_type ctxt f x =
   if x.ptyp_attributes <> [] then
@@ -301,12 +316,16 @@ and core_type ctxt f x =
       (attributes ctxt) x.ptyp_attributes
   else
     match x.ptyp_desc with
-    | Ptyp_arrow {arg; ret; arity} ->
-      pp f "@[<2>%a@;->@;%a%s@]" (* FIXME remove parens later *)
-        (type_with_label ctxt) arg (core_type ctxt) ret
-        (match arity with
-        | None -> ""
-        | Some n -> " (a:" ^ string_of_int n ^ ")")
+    | Ptyp_arrow {params; ret} ->
+      (* printed in the legacy curried style, with the arity trailing *)
+      let rec args f = function
+        | [] -> ()
+        | arg :: rest ->
+          pp f "%a@;->@;" (type_with_label ctxt) arg;
+          args f rest
+      in
+      pp f "@[<2>%a%a (a:%d)@]" args params (core_type ctxt) ret
+        (List.length params)
     | Ptyp_alias (ct, s) -> pp f "@[<2>%a@;as@;'%s@]" (core_type1 ctxt) ct s
     | Ptyp_poly ([], ct) -> core_type ctxt f ct
     | Ptyp_poly (sl, ct) ->
@@ -339,7 +358,15 @@ and core_type1 ctxt f x =
     | Ptyp_variant (l, closed, low) ->
       let type_variant_helper f x =
         match x with
-        | Rtag (l, attrs, _, ctl) ->
+        | Rtag (l, attrs, _, groups) ->
+          let ctl =
+            List.map
+              (fun {loc; txt = args} ->
+                match args with
+                | [arg] -> arg
+                | args -> Ast_helper.Typ.tuple ~loc args)
+              groups
+          in
           pp f "@[<2>%a%a@;%a@]" string_quot l.txt
             (fun f l ->
               match l with
@@ -369,6 +396,8 @@ and core_type1 ctxt f x =
         low
     | Ptyp_object (l, o) ->
       let core_field_type f = function
+        | Otag (l, [], ct) ->
+          pp f "@[<hov2>%s: %a@;<2 0>@]" l.txt (core_type ctxt) ct
         | Otag (l, attrs, ct) ->
           pp f "@[<hov2>%s: %a@ %a@ @]" l.txt (core_type ctxt) ct
             (attributes ctxt) attrs (* Cf #7200 *)
@@ -423,10 +452,7 @@ and pattern ctxt f x =
 and pattern1 ctxt (f : Format.formatter) (x : pattern) : unit =
   let rec pattern_list_helper f = function
     | {
-        ppat_desc =
-          Ppat_construct
-            ( {txt = Lident "::"; _},
-              Some {ppat_desc = Ppat_tuple [pat1; pat2]; _} );
+        ppat_desc = Ppat_construct ({txt = Lident "::"; _}, {txt = [pat1; pat2]});
         ppat_attributes = [];
       } ->
       pp f "%a::%a" (simple_pattern ctxt) pat1 pattern_list_helper pat2 (*RA*)
@@ -435,19 +461,25 @@ and pattern1 ctxt (f : Format.formatter) (x : pattern) : unit =
   if x.ppat_attributes <> [] then pattern ctxt f x
   else
     match x.ppat_desc with
-    | Ppat_variant (l, Some p) ->
-      pp f "@[<2>`%s@;%a@]" l (simple_pattern ctxt) p
+    | Ppat_variant (l, {txt = args}) when args <> [] ->
+      let payload =
+        match args with
+        | [arg] -> arg
+        | args -> Ast_helper.Pat.tuple ~loc:x.ppat_loc args
+      in
+      pp f "@[<2>`%s@;%a@]" l (simple_pattern ctxt) payload
     | Ppat_construct ({txt = Lident ("()" | "[]"); _}, _) ->
       simple_pattern ctxt f x
-    | Ppat_construct (({txt; _} as li), po) -> (
-      if
-        (* FIXME The third field always false *)
-        txt = Lident "::"
-      then pp f "%a" pattern_list_helper x
+    | Ppat_construct (({txt; _} as li), {txt = po}) -> (
+      if txt = Lident "::" && List.length po = 2 then
+        pp f "%a" pattern_list_helper x
       else
         match po with
-        | Some x -> pp f "%a@;%a" longident_loc li (simple_pattern ctxt) x
-        | None -> pp f "%a" longident_loc li)
+        | [] -> pp f "%a" longident_loc li
+        | [x] -> pp f "%a@;%a" longident_loc li (simple_pattern ctxt) x
+        | patterns ->
+          let tuple = Ast_helper.Pat.tuple ~loc:x.ppat_loc patterns in
+          pp f "%a@;%a" longident_loc li (simple_pattern ctxt) tuple)
     | _ -> simple_pattern ctxt f x
 
 and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
@@ -460,6 +492,14 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
     | Ppat_array l -> pp f "@[<2>[|%a|]@]" (list (pattern1 ctxt) ~sep:";") l
     | Ppat_unpack s -> pp f "(module@ %s)@ " s.txt
     | Ppat_type li -> pp f "#%a" longident_loc li
+    | Ppat_variant_spread li -> pp f "...%a" longident_loc li
+    | Ppat_dict entries ->
+      let entry f {pdp_key; pdp_pattern; pdp_optional} =
+        pp f "@[<2>%S:@;%s%a@]" pdp_key.txt
+          (if pdp_optional then "?" else "")
+          (pattern1 ctxt) pdp_pattern
+      in
+      pp f "@[<2>dict{%a}@]" (list entry ~sep:",@;") entries
     | Ppat_record (l, closed, rest) -> (
       let longident_x_pattern f {lid = li; x = p; opt} =
         let opt_str = if opt then "?" else "" in
@@ -489,22 +529,11 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
       pp f "@[<1>(%a)@]" (list ~sep:",@;" (pattern1 ctxt)) l (* level1*)
     | Ppat_constant c -> pp f "%a" constant c
     | Ppat_interval (c1, c2) -> pp f "%a..%a" constant c1 constant c2
-    | Ppat_variant (l, None) -> pp f "`%s" l
+    | Ppat_variant (l, {txt = []}) -> pp f "`%s" l
     | Ppat_constraint (p, ct) ->
       pp f "@[<2>(%a@;:@;%a)@]" (pattern1 ctxt) p (core_type ctxt) ct
     | Ppat_exception p -> pp f "@[<2>exception@;%a@]" (pattern1 ctxt) p
     | Ppat_extension e -> extension ctxt f e
-    | Ppat_open (lid, p) ->
-      let with_paren =
-        match p.ppat_desc with
-        | Ppat_array _ | Ppat_record _
-        | Ppat_construct ({txt = Lident ("()" | "[]"); _}, _) ->
-          false
-        | _ -> true
-      in
-      pp f "@[<2>%a.%a @]" longident_loc lid
-        (paren with_paren @@ pattern1 ctxt)
-        p
     | _ -> paren true (pattern ctxt) f x
 
 and label_exp ctxt f (l, opt, p) =
@@ -618,20 +647,29 @@ and expression ctxt f x =
     | (Pexp_fun _ | Pexp_match _ | Pexp_try _ | Pexp_sequence _)
       when ctxt.pipe || ctxt.semi ->
       paren true (expression reset_ctxt) f x
-    | (Pexp_ifthenelse _ | Pexp_sequence _) when ctxt.ifthenelse ->
+    | (Pexp_ifthenelse _ | Pexp_ternary _ | Pexp_sequence _)
+      when ctxt.ifthenelse ->
       paren true (expression reset_ctxt) f x
     | (Pexp_let _ | Pexp_letmodule _ | Pexp_open _ | Pexp_letexception _)
       when ctxt.semi ->
       paren true (expression reset_ctxt) f x
-    | Pexp_fun {arg_label = l; default = e0; lhs = p; rhs = e; arity; async} ->
-      let arity_str =
-        match arity with
-        | None -> ""
-        | Some arity -> "[arity:" ^ string_of_int arity ^ "]"
-      in
+    | Pexp_fun {newtypes; params; body; async} ->
+      let arity_str = "[arity:" ^ string_of_int (List.length params) ^ "]" in
       let async_str = if async then "async " else "" in
-      pp f "@[<2>%sfun@;%s%a->@;%a@]" async_str arity_str (label_exp ctxt)
-        (l, e0, p) (expression ctxt) e
+      let rec pp_newtypes f = function
+        | [] -> ()
+        | ((name : string Location.loc), nt_attrs) :: rest ->
+          pp f "%a(type %s)@;" (attributes ctxt) nt_attrs name.txt;
+          pp_newtypes f rest
+      in
+      let rec pp_params f = function
+        | [] -> ()
+        | {p_lbl; p_default; p_pat} :: rest ->
+          pp f "%a" (label_exp ctxt) (p_lbl, p_default, p_pat);
+          pp_params f rest
+      in
+      pp f "@[<2>%sfun@;%a%s%a->@;%a@]" async_str pp_newtypes newtypes arity_str
+        pp_params params (expression ctxt) body
     | Pexp_match (e, l) ->
       pp f "@[<hv0>@[<hv0>@[<2>match %a@]@ with@]%a@]" (expression reset_ctxt) e
         (case_list ctxt) l
@@ -691,12 +729,18 @@ and expression ctxt f x =
               (* reset here only because [function,match,try,sequence]
                  are lower priority *)
             (e, l) partial_str)
-    | Pexp_construct (li, Some eo) when not (is_simple_construct (view_expr x))
-      -> (
+    | Pexp_construct (li, {txt = args})
+      when args <> [] && not (is_simple_construct (view_expr x)) -> (
       (* Not efficient FIXME*)
       match view_expr x with
       | `cons ls -> list (simple_expr ctxt) f ls ~sep:"@;::@;"
-      | `normal -> pp f "@[<2>%a@;%a@]" longident_loc li (simple_expr ctxt) eo
+      | `normal ->
+        let arg =
+          match args with
+          | [arg] -> arg
+          | args -> Ast_helper.Exp.tuple ~loc:x.pexp_loc args
+        in
+        pp f "@[<2>%a@;%a@]" longident_loc li (simple_expr ctxt) arg
       | _ -> assert false)
     | Pexp_setfield (e1, li, e2) ->
       pp f "@[<2>%a.%a@ <-@ %a@]" (simple_expr ctxt) e1 longident_loc li
@@ -713,6 +757,9 @@ and expression ctxt f x =
           | Some x -> pp f "@;@[<2>else@;%a@]" (expression (under_semi ctxt)) x
           | None -> () (* pp f "()" *))
         eo
+    | Pexp_ternary (condition, consequent, alternate) ->
+      pp f "@[<2>%a@ ?@ %a@ :@ %a@]" (simple_expr ctxt) condition
+        (expression reset_ctxt) consequent (expression reset_ctxt) alternate
     | Pexp_sequence _ ->
       let rec sequence_helper acc = function
         | {pexp_desc = Pexp_sequence (e1, e2); pexp_attributes = []} ->
@@ -732,9 +779,41 @@ and expression ctxt f x =
     | Pexp_open (ovf, lid, e) ->
       pp f "@[<2>let open%s %a in@;%a@]" (override ovf) longident_loc lid
         (expression ctxt) e
-    | Pexp_variant (l, Some eo) -> pp f "@[<2>`%s@;%a@]" l (simple_expr ctxt) eo
+    | Pexp_variant (l, {txt = args}) when args <> [] ->
+      let payload =
+        match args with
+        | [arg] -> arg
+        | args -> Ast_helper.Exp.tuple ~loc:x.pexp_loc args
+      in
+      pp f "@[<2>`%s@;%a@]" l (simple_expr ctxt) payload
     | Pexp_extension e -> extension ctxt f e
+    | Pexp_raw {kind; name_loc; source} ->
+      extension ctxt f
+        (Ast_raw.to_extension
+           ~name:(Ast_raw.extension_name kind)
+           ~name_loc source)
     | Pexp_await e -> pp f "@[<hov2>await@ %a@]" (simple_expr ctxt) e
+    | Pexp_regexp {pattern; flags} -> pp f "/%s/%s" pattern flags
+    | Pexp_template {source_segments; values} ->
+      let rec parts f (source_segments, values) =
+        match (source_segments, values) with
+        | [{txt = source}], [] -> pp f "%s" source
+        | {txt = source} :: source_segments, value :: values ->
+          pp f "%s${%a}%a" source (expression ctxt) value parts
+            (source_segments, values)
+        | _ -> assert false
+      in
+      pp f "`%a`" parts (source_segments, values)
+    | Pexp_tagged_template {tag; raw_sources; values} ->
+      let rec parts f (sources, values) =
+        match (sources, values) with
+        | [{txt = source}], [] -> pp f "%s" source
+        | {txt = source} :: sources, value :: values ->
+          pp f "%s${%a}%a" source (expression ctxt) value parts (sources, values)
+        | _ -> assert false
+      in
+      pp f "%a`%a`" (simple_expr ctxt) tag parts (raw_sources, values)
+    | Pexp_braces {expr = inner} -> pp f "{%a}" (expression ctxt) inner
     | _ -> expression1 ctxt f x
 
 and expression1 ctxt f x =
@@ -747,7 +826,16 @@ and expression2 ctxt f x =
     match x.pexp_desc with
     | Pexp_field (e, li) ->
       pp f "@[<hov2>%a.%a@]" (simple_expr ctxt) e longident_loc li
-    | Pexp_send (e, s) -> pp f "@[<hov2>%a#%s@]" (simple_expr ctxt) e s.txt
+    | Pexp_object_get (e, s) ->
+      pp f "@[<hov2>%a[\"%s\"]@]" (simple_expr ctxt) e s.txt
+    | Pexp_object_set (e, s, v) ->
+      pp f "@[<hov2>%a[\"%s\"] =@ %a@]" (simple_expr ctxt) e s.txt
+        (expression ctxt) v
+    | Pexp_object_literal fields ->
+      pp f "@[<hov2>{%a}@]"
+        (list ~sep:",@ " (fun f ((s : string Asttypes.loc), e) ->
+             pp f "@[<hov2>\"%s\":@ %a@]" s.txt (expression ctxt) e))
+        fields
     | _ -> simple_expr ctxt f x
 
 and simple_expr ctxt f x =
@@ -768,15 +856,13 @@ and simple_expr ctxt f x =
     (* | `Prefix _ | `Infix _ -> pp f "( %a )" longident_loc li) *)
     | Pexp_constant c -> constant f c
     | Pexp_pack me -> pp f "(module@;%a)" (module_expr ctxt) me
-    | Pexp_newtype (lid, e) ->
-      pp f "fun@;(type@;%s)@;->@;%a" lid.txt (expression ctxt) e
     | Pexp_tuple l ->
       pp f "@[<hov2>(%a)@]" (list (simple_expr ctxt) ~sep:",@;") l
     | Pexp_constraint (e, ct) ->
-      pp f "(%a : %a)" (expression ctxt) e (core_type ctxt) ct
-    | Pexp_coerce (e, (), ct) ->
+      pp f "(%a :@ %a)" (expression ctxt) e (core_type ctxt) ct
+    | Pexp_coerce (e, ct) ->
       pp f "(%a :> %a)" (expression ctxt) e (core_type ctxt) ct
-    | Pexp_variant (l, None) -> pp f "`%s" l
+    | Pexp_variant (l, {txt = []}) -> pp f "`%s" l
     | Pexp_record (l, eo) ->
       let longident_x_expression f {lid = li; x = e; opt} =
         let opt_str = if opt then "?" else "" in
@@ -797,6 +883,13 @@ and simple_expr ctxt f x =
       pp f "@[<0>@[<2>[|%a|]@]@]"
         (list (simple_expr (under_semi ctxt)) ~sep:";")
         l
+    | Pexp_dict entries ->
+      let dict_entry f = function
+        | Pdict_entry (key, e) ->
+          pp f "@[<hov2>%S:@;%a@]" key.txt (simple_expr ctxt) e
+        | Pdict_spread e -> pp f "...%a" (simple_expr ctxt) e
+      in
+      pp f "@[<hv2>dict{%a}@]" (list dict_entry ~sep:",@;") entries
     | Pexp_break -> pp f "break"
     | Pexp_continue -> pp f "continue"
     | Pexp_while (e1, e2) ->
@@ -887,8 +980,14 @@ and value_description ctxt f x =
            but they're already printed by the callers this method *)
   pp f "@[<hov2>%a%a@]" (core_type ctxt) x.pval_type
     (fun f x ->
-      if x.pval_prim <> [] then
-        pp f "@ =@ %a" (list constant_string) x.pval_prim)
+      match x.pval_prim with
+      | None -> ()
+      | Some (Prim_name s) -> pp f "@ =@ %a" constant_string s
+      | Some (Prim_ffi {name}) ->
+        pp f "@ =@ %a@ %a" constant_string name constant_string
+          "#rescript-external"
+      | Some (Prim_inline_const _) ->
+        pp f "@ =@ %a" constant_string "#rescript-inline")
     x
 
 and extension ctxt f (s, e) = pp f "@[<2>[%%%s@ %a]@]" s.txt (payload ctxt) e
@@ -954,9 +1053,10 @@ and signature_item ctxt f x : unit =
   match x.psig_desc with
   | Psig_type (rf, l) -> type_def_list ctxt f (rf, l)
   | Psig_value vd ->
-    let intro = if vd.pval_prim = [] then "val" else "external" in
+    let intro = if vd.pval_prim = None then "val" else "external" in
     pp f "@[<2>%s@ %a@ :@ %a@]%a" intro protect_ident vd.pval_name.txt
-      (value_description ctxt) vd (item_attributes ctxt) vd.pval_attributes
+      (value_description ctxt) vd (item_attributes ctxt)
+      (Ast_helper.Val.description_attributes vd)
   | Psig_typext te -> type_extension ctxt f te
   | Psig_exception ed -> exception_declaration ctxt f ed
   | Psig_module
@@ -1027,6 +1127,7 @@ and module_expr ctxt f x =
       (* Cf: #7200 *)
     | Pmod_unpack e -> pp f "(val@ %a)" (expression ctxt) e
     | Pmod_extension e -> extension ctxt f e
+    | Pmod_await me -> pp f "await@ %a" (module_expr ctxt) me
 
 and structure ctxt f x = list ~sep:"@\n" (structure_item ctxt) f x
 
@@ -1050,28 +1151,33 @@ and payload ctxt f = function
     expression ctxt f e
 
 (* transform [f = fun g h -> ..] to [f g h = ... ] could be improved *)
-and binding ctxt f {pvb_pat = p; pvb_expr = x; _} =
+and binding ctxt f {pvb_pat = p; pvb_expr = x; pvb_constraint; _} =
   (* .pvb_attributes have already been printed by the caller, #bindings *)
   let rec pp_print_pexp_function f x =
     if x.pexp_attributes <> [] then pp f "=@;%a" (expression ctxt) x
     else
       match x.pexp_desc with
-      | Pexp_fun
-          {arg_label = label; default = eo; lhs = p; rhs = e; arity; async} ->
-        let arity_str =
-          match arity with
-          | None -> ""
-          | Some arity -> "[arity:" ^ string_of_int arity ^ "]"
-        in
+      | Pexp_fun {newtypes; params; body; async} ->
+        let arity_str = "[arity:" ^ string_of_int (List.length params) ^ "]" in
         let async_str = if async then "async " else "" in
-        if label = Nolabel then
-          pp f "%s%s%a@ %a" async_str arity_str (simple_pattern ctxt) p
-            pp_print_pexp_function e
-        else
-          pp f "%s%s%a@ %a" async_str arity_str (label_exp ctxt) (label, eo, p)
-            pp_print_pexp_function e
-      | Pexp_newtype (str, e) ->
-        pp f "(type@ %s)@ %a" str.txt pp_print_pexp_function e
+        let rec pp_newtypes f = function
+          | [] -> ()
+          | ((name : string Location.loc), nt_attrs) :: rest ->
+            pp f "%a(type@ %s)@ " (attributes ctxt) nt_attrs name.txt;
+            pp_newtypes f rest
+        in
+        let pp_param f {p_lbl; p_default; p_pat} =
+          if p_lbl = Nolabel then simple_pattern ctxt f p_pat
+          else label_exp ctxt f (p_lbl, p_default, p_pat)
+        in
+        let rec pp_params f = function
+          | [] -> ()
+          | param :: rest ->
+            pp f "%a@ " pp_param param;
+            pp_params f rest
+        in
+        pp f "%s%a%s%a%a" async_str pp_newtypes newtypes arity_str pp_params
+          params pp_print_pexp_function body
       | _ -> pp f "=@;%a" (expression ctxt) x
   in
   let tyvars_str tyvars = List.map (fun v -> v.txt) tyvars in
@@ -1088,15 +1194,12 @@ and binding ctxt f {pvb_pat = p; pvb_expr = x; _} =
         Some (pat, args_tyvars, rt)
       | _ -> None
     in
-    let rec gadt_exp tyvars e =
+    let gadt_exp =
       match e with
-      | {pexp_desc = Pexp_newtype (tyvar, e); pexp_attributes = []} ->
-        gadt_exp (tyvar :: tyvars) e
       | {pexp_desc = Pexp_constraint (e, ct); pexp_attributes = []} ->
-        Some (List.rev tyvars, e, ct)
+        Some ([], e, ct)
       | _ -> None
     in
-    let gadt_exp = gadt_exp [] e in
     match (gadt_pattern, gadt_exp) with
     | Some (p, pt_tyvars, pt_ct), Some (e_tyvars, e, e_ct)
       when tyvars_str pt_tyvars = tyvars_str e_tyvars ->
@@ -1104,37 +1207,44 @@ and binding ctxt f {pvb_pat = p; pvb_expr = x; _} =
       if ety = pt_ct then Some (p, pt_tyvars, e_ct, e) else None
     | _ -> None
   in
-  if x.pexp_attributes <> [] then
-    pp f "%a@;=@;%a" (pattern ctxt) p (expression ctxt) x
-  else
-    match is_desugared_gadt p x with
-    | Some (p, [], ct, e) ->
-      pp f "%a@;: %a@;=@;%a" (simple_pattern ctxt) p (core_type ctxt) ct
-        (expression ctxt) e
-    | Some (p, tyvars, ct, e) ->
-      pp f "%a@;: type@;%a.@;%a@;=@;%a" (simple_pattern ctxt) p
-        (list pp_print_string ~sep:"@;")
-        (tyvars_str tyvars) (core_type ctxt) ct (expression ctxt) e
-    | None -> (
-      match p with
-      | {ppat_desc = Ppat_constraint (p, ty); ppat_attributes = []} -> (
-        (* special case for the first*)
-        match ty with
-        | {ptyp_desc = Ptyp_poly _; ptyp_attributes = []} ->
-          pp f "%a@;:@;%a@;=@;%a" (simple_pattern ctxt) p (core_type ctxt) ty
-            (expression ctxt) x
-        | _ ->
-          pp f "(%a@;:@;%a)@;=@;%a" (simple_pattern ctxt) p (core_type ctxt) ty
-            (expression ctxt) x)
-      | {ppat_desc = Ppat_var _; ppat_attributes = []} ->
-        pp f "%a@ %a" (simple_pattern ctxt) p pp_print_pexp_function x
-      | _ -> pp f "%a@;=@;%a" (pattern ctxt) p (expression ctxt) x)
+  match pvb_constraint with
+  | Some {pvc_newtypes; pvc_type} ->
+    pp f "%a@;: type@;%a.@;%a@;=@;%a" (simple_pattern ctxt) p
+      (list pp_print_string ~sep:"@;")
+      (tyvars_str pvc_newtypes) (core_type ctxt) pvc_type (expression ctxt) x
+  | None -> (
+    if x.pexp_attributes <> [] then
+      pp f "%a@;=@;%a" (pattern ctxt) p (expression ctxt) x
+    else
+      match is_desugared_gadt p x with
+      | Some (p, [], ct, e) ->
+        pp f "%a@;: %a@;=@;%a" (simple_pattern ctxt) p (core_type ctxt) ct
+          (expression ctxt) e
+      | Some (p, tyvars, ct, e) ->
+        pp f "%a@;: type@;%a.@;%a@;=@;%a" (simple_pattern ctxt) p
+          (list pp_print_string ~sep:"@;")
+          (tyvars_str tyvars) (core_type ctxt) ct (expression ctxt) e
+      | None -> (
+        match p with
+        | {ppat_desc = Ppat_constraint (p, ty); ppat_attributes = []} -> (
+          (* special case for the first*)
+          match ty with
+          | {ptyp_desc = Ptyp_poly _; ptyp_attributes = []} ->
+            pp f "%a@;:@;%a@;=@;%a" (simple_pattern ctxt) p (core_type ctxt) ty
+              (expression ctxt) x
+          | _ ->
+            pp f "(%a@;:@;%a)@;=@;%a" (simple_pattern ctxt) p (core_type ctxt)
+              ty (expression ctxt) x)
+        | {ppat_desc = Ppat_var _; ppat_attributes = []} ->
+          pp f "%a@ %a" (simple_pattern ctxt) p pp_print_pexp_function x
+        | _ -> pp f "%a@;=@;%a" (pattern ctxt) p (expression ctxt) x))
 
 (* [in] is not printed *)
 and bindings ctxt f (rf, l) =
   let binding kwd rf f x =
     pp f "@[<2>%s %a%a@]%a" kwd rec_flag rf (binding ctxt) x
-      (item_attributes ctxt) x.pvb_attributes
+      (item_attributes ctxt)
+      (Ast_helper.Vb.binding_attributes x)
   in
   match l with
   | [] -> ()
@@ -1191,7 +1301,8 @@ and structure_item ctxt f x =
       md (item_attributes ctxt) attrs
   | Pstr_primitive vd ->
     pp f "@[<hov2>external@ %a@ :@ %a@]%a" protect_ident vd.pval_name.txt
-      (value_description ctxt) vd (item_attributes ctxt) vd.pval_attributes
+      (value_description ctxt) vd (item_attributes ctxt)
+      (Ast_helper.Val.description_attributes vd)
   | Pstr_include incl ->
     pp f "@[<hov2>include@ %a@]%a" (module_expr ctxt) incl.pincl_mod
       (item_attributes ctxt) incl.pincl_attributes
@@ -1216,6 +1327,9 @@ and structure_item ctxt f x =
   | Pstr_extension (e, a) ->
     item_extension ctxt f e;
     item_attributes ctxt f a
+  | Pstr_raw {name_loc; source; attrs} ->
+    item_extension ctxt f (Ast_raw.to_extension ~name:"raw" ~name_loc source);
+    item_attributes ctxt f attrs
 
 and type_param ctxt f (ct, a) =
   pp f "%s%a" (type_variance a) (core_type ctxt) ct
@@ -1246,7 +1360,8 @@ and record_declaration ctxt f lbls =
   let type_record_field f pld =
     pp f "@[<2>%a%s%a:@;%a@;%a@]" mutable_flag pld.pld_mutable pld.pld_name.txt
       optional_flag pld.pld_optional (core_type ctxt) pld.pld_type
-      (attributes ctxt) pld.pld_attributes
+      (attributes ctxt)
+      (Ast_helper.Type.field_attributes pld)
   in
   pp f "{@\n%a}" (list type_record_field ~sep:";@\n") lbls
 
@@ -1269,7 +1384,10 @@ and type_declaration ctxt f x =
   let constructor_declaration f pcd =
     pp f "|@;";
     constructor_declaration ctxt f
-      (pcd.pcd_name.txt, pcd.pcd_args, pcd.pcd_res, pcd.pcd_attributes)
+      ( pcd.pcd_name.txt,
+        pcd.pcd_args,
+        pcd.pcd_res,
+        Ast_helper.Type.constructor_attributes pcd )
   in
   let repr f =
     let intro f = if x.ptype_manifest = None then () else pp f "@;=" in
@@ -1365,21 +1483,6 @@ and label_x_expression_param ctxt f (l, e) =
     if Some lbl = simple_name then pp f "~%s" lbl
     else pp f "~%s:%a" lbl (simple_expr ctxt) e
 
-let expression f x = pp f "@[%a@]" (expression reset_ctxt) x
-
-let string_of_expression x =
-  ignore (flush_str_formatter ());
-  let f = str_formatter in
-  expression f x;
-  flush_str_formatter ()
-
-let string_of_structure x =
-  ignore (flush_str_formatter ());
-  let f = str_formatter in
-  structure reset_ctxt f x;
-  flush_str_formatter ()
-
-let core_type = core_type reset_ctxt
 let pattern = pattern reset_ctxt
 let signature = signature reset_ctxt
 let structure = structure reset_ctxt

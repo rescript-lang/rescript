@@ -42,12 +42,12 @@ let decode = json => {
     imageUrl: json->field("imageUrl", string),
     email: json->field("email", string),
     title: json->field("title", string),
-    linkedinUrl: json->field("linkedinUrl", nullable(string))->Js.Null.toOption,
+    linkedinUrl: json->field("linkedinUrl", nullable(string))->Null.toOption,
     public: json->field("public", bool),
-    connectLink: json->field("connectLink", nullable(string))->Js.Null.toOption,
+    connectLink: json->field("connectLink", nullable(string))->Null.toOption,
     exited: json->field("exited", bool),
-    imageFileName: json->field("imageFileName", nullable(string))->Js.Null.toOption,
-    affiliation: json->field("affiliation", nullable(string))->Js.Null.toOption,
+    imageFileName: json->field("imageFileName", nullable(string))->Null.toOption,
+    affiliation: json->field("affiliation", nullable(string))->Null.toOption,
   }
 }
 

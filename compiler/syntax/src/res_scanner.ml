@@ -2,8 +2,6 @@ module Diagnostics = Res_diagnostics
 module Token = Res_token
 module Comment = Res_comment
 
-type mode = Diamond
-
 (* We hide the implementation detail of the scanner reading character. Our char
    will also contain the special -1 value to indicate end-of-file. This isn't
    ideal; we should clean this up *)
@@ -24,20 +22,7 @@ type t = {
       (* current number of utf16 code units since line start *)
   mutable line_offset: int; (* current line offset *)
   mutable lnum: int; (* current line number *)
-  mutable mode: mode list;
 }
-
-let set_diamond_mode scanner = scanner.mode <- Diamond :: scanner.mode
-
-let pop_mode scanner mode =
-  match scanner.mode with
-  | m :: ms when m = mode -> scanner.mode <- ms
-  | _ -> ()
-
-let in_diamond_mode scanner =
-  match scanner.mode with
-  | Diamond :: _ -> true
-  | _ -> false
 
 let position scanner =
   Lexing.
@@ -89,10 +74,16 @@ let _printDebug ~start_pos ~end_pos scanner token =
 let next scanner =
   let next_offset = scanner.offset + 1 in
   let utf16len =
-    match Ext_utf8.classify scanner.ch with
-    | Single _ | Invalid -> 1
-    | Leading (n, _) -> ( (((n + 1) / 2) [@doesNotRaise]))
-    | Cont _ -> 0
+    let byte = Char.code scanner.ch in
+    if byte land 0xc0 = 0x80 then 0
+    else if byte < 0x80 then 1
+    else
+      let decoded = String.get_utf_8_uchar scanner.src scanner.offset in
+      if
+        Uchar.utf_decode_is_valid decoded
+        && Uchar.to_int (Uchar.utf_decode_uchar decoded) > 0xffff
+      then 2
+      else 1
   in
   let newline =
     scanner.ch = '\n'
@@ -148,7 +139,6 @@ let peek_char scanner target_char =
   in
   skip_whitespace_and_check scanner.offset
 
-let peek_minus scanner = peek_char scanner '-'
 let peek_slash scanner = peek_char scanner '/'
 
 let make ~filename src =
@@ -161,7 +151,6 @@ let make ~filename src =
     offset16 = 0;
     line_offset = 0;
     lnum = 1;
-    mode = [];
   }
 
 (* generic helpers *)
@@ -189,7 +178,7 @@ let scan_identifier scanner =
   let start_off = scanner.offset in
   let rec skip_good_chars scanner =
     match scanner.ch with
-    | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '\'' ->
+    | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '\'' | '$' ->
       next scanner;
       skip_good_chars scanner
     | _ -> ()
@@ -342,12 +331,24 @@ let scan_exotic_identifier scanner =
     scanner.err ~start_pos ~end_pos
       (Diagnostics.message "A quoted identifier can't be empty string.");
     Token.Lident ident)
+  else if name = "_" then (
+    (* `_` is the wildcard and the placeholder of underscore apply sugar;
+       a quoted `_` couldn't be told apart from them. *)
+    let end_pos = position scanner in
+    scanner.err ~start_pos ~end_pos
+      (Diagnostics.message "`_` can't be used as a quoted identifier.");
+    Token.Lident name)
   else if Ext_ident.is_uident name then Token.Lident ident
     (* Exotic ident with uppercase letter should be encoded to avoid confusing in OCaml parsetree *)
   else Token.Lident name
 
 let scan_string_escape_sequence ~start_pos scanner =
-  let scan ~n ~base ~max =
+  let invalid_unicode_code_point () =
+    let pos = position scanner in
+    let msg = "escape sequence is invalid unicode code point" in
+    scanner.err ~start_pos ~end_pos:pos (Diagnostics.message msg)
+  in
+  let scan_digits ~n ~base =
     let rec loop n x =
       if n == 0 then x
       else
@@ -364,11 +365,11 @@ let scan_string_escape_sequence ~start_pos scanner =
           let () = next scanner in
           loop (n - 1) ((x * base) + d)
     in
-    let x = loop n 0 in
-    if x > max || (0xD800 <= x && x < 0xE000) then
-      let pos = position scanner in
-      let msg = "escape sequence is invalid unicode code point" in
-      scanner.err ~start_pos ~end_pos:pos (Diagnostics.message msg)
+    loop n 0
+  in
+  let scan ~n ~base ~max =
+    let x = scan_digits ~n ~base in
+    if x > max || (0xD800 <= x && x < 0xE000) then invalid_unicode_code_point ()
   in
   match scanner.ch with
   (* \ already consumed *)
@@ -390,30 +391,41 @@ let scan_string_escape_sequence ~start_pos scanner =
       (* unicode code point escape sequence: '\u{7A}', one or more hex digits *)
       next scanner;
       let x = ref 0 in
+      let has_digit = ref false in
       while
         match scanner.ch with
         | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> true
         | _ -> false
       do
-        x := (!x * 16) + digit_value scanner.ch;
+        has_digit := true;
+        let digit = digit_value scanner.ch in
+        x :=
+          if !x > (Res_utf8.max - digit) / 16 then Res_utf8.max + 1
+          else (!x * 16) + digit;
         next scanner
       done;
       (* consume '}' in '\u{7A}' *)
       match scanner.ch with
-      | '}' -> next scanner
-      | _ -> ())
-    | _ -> scan ~n:4 ~base:16 ~max:Res_utf8.max)
+      | '}' ->
+        if (not !has_digit) || !x > Res_utf8.max || (0xD800 <= !x && !x < 0xE000)
+        then invalid_unicode_code_point ();
+        next scanner
+      | _ -> invalid_unicode_code_point ())
+    | _ ->
+      let high = scan_digits ~n:4 ~base:16 in
+      if 0xD800 <= high && high <= 0xDBFF then
+        if scanner.ch = '\\' && peek scanner = 'u' then (
+          next scanner;
+          next scanner;
+          let low = scan_digits ~n:4 ~base:16 in
+          if low >= 0 && (low < 0xDC00 || low > 0xDFFF) then
+            invalid_unicode_code_point ())
+        else invalid_unicode_code_point ()
+      else if high > Res_utf8.max || (0xDC00 <= high && high <= 0xDFFF) then
+        invalid_unicode_code_point ())
   | _ ->
     (* unknown escape sequence
      * TODO: we should warn the user here. Let's not make it a hard error for now, for reason compat *)
-    (*
-      let pos = position scanner in
-      let msg =
-        if ch == -1 then "unclosed escape sequence"
-        else "unknown escape sequence"
-      in
-      scanner.err ~startPos ~endPos:pos (Diagnostics.message msg)
-     *)
     ()
 
 let scan_string scanner =
@@ -560,8 +572,13 @@ let scan_escape scanner =
   (* TODO: do we know it's \' ? *)
   Token.Codepoint {c = codepoint; original = contents}
 
-let scan_regex scanner =
+let scan_regex ~start_pos:opening_pos ~prefix_length scanner =
   let start_pos = position scanner in
+  (* The normal token is / or /.; restart at its ASCII opening delimiter. *)
+  scanner.offset <- scanner.offset - prefix_length;
+  scanner.offset16 <- opening_pos.Lexing.pos_cnum - opening_pos.pos_bol;
+  scanner.ch <- '/';
+  next scanner;
   let buf = Buffer.create 0 in
   let first_char_offset = scanner.offset in
   let last_offset_in_buf = ref first_char_offset in
@@ -605,7 +622,10 @@ let scan_regex scanner =
     | ch when ch == '\n' || ch == hacky_eof_char ->
       let end_pos = position scanner in
       scanner.err ~start_pos ~end_pos (Diagnostics.message "unterminated regex");
-      ("", "")
+      let pattern =
+        result ~first_char_offset ~last_char_offset:scanner.offset
+      in
+      (pattern, "")
     | '\\' ->
       next scanner;
       next scanner;
@@ -622,7 +642,7 @@ let scan_regex scanner =
   in
   let pattern, flags = scan () in
   let end_pos = position scanner in
-  (start_pos, end_pos, Token.Regex (pattern, flags))
+  (opening_pos, end_pos, Token.Regex (pattern, flags))
 
 let scan_single_line_comment scanner =
   let start_off = scanner.offset in
@@ -691,9 +711,6 @@ let scan_multi_line_comment scanner =
 let scan_template_literal_token scanner =
   let start_off = scanner.offset in
 
-  (* if starting } here, consume it *)
-  if scanner.ch == '}' then next scanner;
-
   let start_pos = position scanner in
 
   let rec scan () =
@@ -743,6 +760,25 @@ let scan_template_literal_token scanner =
   let end_pos = position scanner in
   (start_pos, end_pos, token)
 
+(* Leave >= and shift operators to the expression parser so type-argument
+   delimiters need no scanner mode. Consume an immediately adjacent suffix
+   without skipping whitespace or scanning the next operand. *)
+let scan_binary_operator scanner token =
+  match (token, scanner.ch) with
+  | Token.LessThan, '<' ->
+    next scanner;
+    Token.LeftShift
+  | GreaterThan, '=' ->
+    next scanner;
+    Token.GreaterEqual
+  | GreaterThan, '>' ->
+    next scanner;
+    if scanner.ch = '>' then (
+      next scanner;
+      Token.RightShiftUnsigned)
+    else Token.RightShift
+  | _ -> token
+
 let rec scan scanner =
   skip_whitespace scanner;
   let start_pos = position scanner in
@@ -750,7 +786,7 @@ let rec scan scanner =
   let token =
     match scanner.ch with
     (* peeking 0 char *)
-    | 'A' .. 'Z' | 'a' .. 'z' -> scan_identifier scanner
+    | 'A' .. 'Z' | 'a' .. 'z' | '$' -> scan_identifier scanner
     | '0' .. '9' -> scan_number scanner
     | '`' ->
       next scanner;
@@ -794,7 +830,8 @@ let rec scan scanner =
     (* peeking 1 char *)
     | '_' -> (
       match peek scanner with
-      | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' -> scan_identifier scanner
+      | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '$' ->
+        scan_identifier scanner
       | _ ->
         next scanner;
         Token.Underscore)
@@ -912,30 +949,11 @@ let rec scan scanner =
       | _ ->
         next scanner;
         Token.Plus)
-    | '>' when not (in_diamond_mode scanner) -> (
-      match peek scanner with
-      | '=' ->
-        next2 scanner;
-        Token.GreaterEqual
-      | '>' -> (
-        match peek2 scanner with
-        | '>' ->
-          next3 scanner;
-          Token.RightShiftUnsigned
-        | _ ->
-          next2 scanner;
-          Token.RightShift)
-      | _ ->
-        next scanner;
-        Token.GreaterThan)
     | '>' ->
       next scanner;
       Token.GreaterThan
     | '<' -> (
       match peek scanner with
-      | '<' when not (in_diamond_mode scanner) ->
-        next2 scanner;
-        Token.LeftShift
       | '=' ->
         next2 scanner;
         Token.LessEqual
@@ -1033,7 +1051,6 @@ let rec scan scanner =
       token
   in
   let end_pos = position scanner in
-  (* _printDebug ~startPos ~endPos scanner token; *)
   (start_pos, end_pos, token)
 
 (* misc helpers used elsewhere *)
@@ -1048,7 +1065,7 @@ let is_binary_op src start_cnum end_cnum =
     assert (end_cnum >= 0);
     assert (start_cnum > 0 && start_cnum < String.length src);
     let left_ok = is_whitespace (String.unsafe_get src (start_cnum - 1)) in
-    (* we need some stronger confidence that endCnum is ok *)
+    (* we need some stronger confidence that end_cnum is ok *)
     let right_ok =
       end_cnum >= String.length src
       || is_whitespace (String.unsafe_get src end_cnum)

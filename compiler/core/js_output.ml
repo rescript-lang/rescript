@@ -140,5 +140,3 @@ let append_output (x : t) (y : t) : t =
 (* Fold right is more efficient *)
 let concat (xs : t list) : t =
   Ext_list.fold_right xs dummy (fun x acc -> append_output x acc)
-
-let to_string x = Js_dump.string_of_block (output_as_block x)

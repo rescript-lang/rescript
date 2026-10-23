@@ -18,6 +18,19 @@
 
 open Typedtree
 
+let reverse_of_list = function
+  | [] -> [||]
+  | hd :: tl ->
+    let len = List.length tl in
+    let a = Array.make (len + 1) hd in
+    let rec fill i = function
+      | [] -> a
+      | hd :: tl ->
+        Array.unsafe_set a i hd;
+        fill (i - 1) tl
+    in
+    fill (len - 1) tl
+
 type error = Fragile_pattern_in_toplevel
 
 exception Error of Location.t * error
@@ -45,7 +58,7 @@ let field_path path field : Path.t option =
 (* Compile type extensions *)
 
 let transl_type_extension env rootpath (tyext : Typedtree.type_extension) body :
-    Lambda.lambda =
+    Lambda.t =
   List.fold_right
     (fun ext body ->
       let lam =
@@ -53,78 +66,72 @@ let transl_type_extension env rootpath (tyext : Typedtree.type_extension) body :
           (field_path rootpath ext.ext_id)
           ext
       in
-      Lambda.Llet (Strict, Pgenval, ext.ext_id, lam, body))
+      Lambda.let_ Strict ext.ext_id lam body)
     tyext.tyext_constructors body
 
 (* Compile a coercion *)
 
 let rec apply_coercion loc strict (restr : Typedtree.module_coercion) arg =
+  if !((Clflags.current ()).dump_coercions) then
+    Format.fprintf
+      (Compiler_request_output.stderr_formatter ())
+      "@[<2>apply_coercion@ %a@]@." Includemod.print_coercion restr;
   match restr with
   | Tcoerce_none -> arg
   | Tcoerce_structure (pos_cc_list, id_pos_list, runtime_fields) ->
     Lambda.name_lambda strict arg (fun id ->
         let get_field_name name pos =
-          Lambda.Lprim (Pfield (pos, Fld_module {name}), [Lvar id], loc)
+          Lambda.prim
+            ~primitive:(Pfield (pos, Fld_module {name}))
+            ~args:[Lambda.var id]
+            loc
         in
         let lam =
-          Lambda.Lprim
-            ( Pmakeblock (Blk_module runtime_fields),
-              Ext_list.map2 pos_cc_list runtime_fields (fun (pos, cc) name ->
-                  apply_coercion loc Alias cc
-                    (Lprim (Pfield (pos, Fld_module {name}), [Lvar id], loc))),
-              loc )
+          Lambda.prim ~primitive:(Pmakeblock (Blk_module runtime_fields))
+            ~args:
+              (Ext_list.map2 pos_cc_list runtime_fields (fun (pos, cc) name ->
+                   apply_coercion loc Alias cc
+                     (Lambda.prim
+                        ~primitive:(Pfield (pos, Fld_module {name}))
+                        ~args:[Lambda.var id]
+                        loc)))
+            loc
         in
         wrap_id_pos_list loc id_pos_list get_field_name lam)
   | Tcoerce_functor (cc_arg, cc_res) ->
     let param = Ident.create "funarg" in
-    let carg = apply_coercion loc Alias cc_arg (Lvar param) in
+    let carg = apply_coercion loc Alias cc_arg (Lambda.var param) in
     apply_coercion_result loc strict arg param carg cc_res
   | Tcoerce_primitive {pc_loc; pc_desc; pc_env; pc_type} ->
-    Translcore.transl_primitive pc_loc pc_desc pc_env pc_type
+    Translcore.transl_primitive pc_loc pc_desc pc_env pc_type ~val_type:pc_type
   | Tcoerce_alias (path, cc) ->
     Lambda.name_lambda strict arg (fun _ ->
-        apply_coercion loc Alias cc (Lambda.transl_normal_path path))
+        apply_coercion loc Alias cc (Transl_path.transl_normal_path path))
 
 and apply_coercion_result loc strict funct param arg cc_res =
   Lambda.name_lambda strict funct (fun id ->
-      Lfunction
-        {
-          params = [param];
-          attr = {Lambda.default_function_attribute with is_a_functor = true};
-          loc;
-          body =
-            apply_coercion loc Strict cc_res
-              (Lapply
-                 {
-                   ap_loc = loc;
-                   ap_func = Lvar id;
-                   ap_args = [arg];
-                   ap_inlined = Default_inline;
-                   ap_transformed_jsx = false;
-                 });
-        })
+      Lambda.function_ ~loc
+        ~attr:{Lambda.default_function_attribute with is_a_functor = true}
+        ~params:[param]
+        ~body:
+          (apply_coercion loc Strict cc_res
+             (Lambda.apply (Lambda.var id) [arg] loc)))
 
 and wrap_id_pos_list loc id_pos_list get_field lam =
-  let fv = Lambda.free_variables lam in
-  (*Format.eprintf "%a@." Printlambda.lambda lam;
-    IdentSet.iter (fun id -> Format.eprintf "%a " Ident.print id) fv;
-    Format.eprintf "@.";*)
+  let fv = Lambda_traverse.free_variables lam in
   let lam, s =
     List.fold_left
       (fun (lam, s) (id', pos, c) ->
-        if Lambda.Ident_set.mem id' fv then
+        if Set_ident.mem id' fv then
           let id'' = Ident.create (Ident.name id') in
-          ( Lambda.Llet
-              ( Alias,
-                Pgenval,
-                id'',
-                apply_coercion loc Alias c (get_field (Ident.name id') pos),
-                lam ),
-            Ident.add id' (Lambda.Lvar id'') s )
+          ( Lambda.let_ Alias id''
+              (apply_coercion loc Alias c (get_field (Ident.name id') pos))
+              lam,
+            Ident.add id' (Lambda.var id'') s )
         else (lam, s))
       (lam, Ident.empty) id_pos_list
   in
-  if s == Ident.empty then lam else Lambda.subst_lambda s lam
+  if s == Ident.empty then lam else Lambda_traverse.subst_lambda s lam
 
 (* Compose two coercions
    apply_coercion c1 (apply_coercion c2 e) behaves like
@@ -159,19 +166,6 @@ let rec compose_coercions c1 c2 =
     Tcoerce_functor (compose_coercions arg2 arg1, compose_coercions res1 res2)
   | c1, Tcoerce_alias (path, c2) -> Tcoerce_alias (path, compose_coercions c1 c2)
   | _, _ -> Misc.fatal_error "Translmod.compose_coercions"
-
-(*
-let apply_coercion a b c =
-  Format.eprintf "@[<2>apply_coercion@ %a@]@." Includemod.print_coercion b;
-  apply_coercion a b c
-
-let compose_coercions c1 c2 =
-  let c3 = compose_coercions c1 c2 in
-  let open Includemod in
-  Format.eprintf "@[<2>compose_coercions@ (%a)@ (%a) =@ %a@]@."
-    print_coercion c1 print_coercion c2 print_coercion c3;
-  c3
-*)
 
 (* Record the primitive declarations occurring in the module compiled *)
 
@@ -221,7 +215,11 @@ let get_functor_params mexp coercion root_path =
     ((param, loc, arg_coercion), body, path, res_coercion, inline_attribute)
   | _ -> assert false
 
-let export_identifiers : Ident.t list ref = ref []
+(* Translation can overlap on compiler domains. Each request owns the export
+   accumulator until [transl_implementation] returns it. *)
+let export_identifiers_key = Request_local.new_key (fun () -> ref [])
+let export_identifiers () : Ident.t list ref =
+  Domain.DLS.get export_identifiers_key
 
 let rec compile_functor mexp coercion root_path loc =
   let functor_param, body, body_path, res_coercion, inline_attribute =
@@ -230,30 +228,33 @@ let rec compile_functor mexp coercion root_path loc =
   (* cf. [transl_module] *)
   let param, loc_, arg_coercion = functor_param in
   let param' = Ident.rename param in
-  let arg = apply_coercion loc_ Alias arg_coercion (Lvar param') in
+  let arg = apply_coercion loc_ Alias arg_coercion (Lambda.var param') in
   let body =
-    Lambda.Llet
-      (Alias, Pgenval, param, arg, transl_module res_coercion body_path body)
+    Lambda.let_ Alias param arg (transl_module res_coercion body_path body)
   in
-  Lambda.Lfunction
-    {
-      params = [param'];
-      attr =
-        {
-          inline = inline_attribute;
-          is_a_functor = true;
-          return_unit = false;
-          async = false;
-          one_unit_arg = false;
-          directive = None;
-        };
-      loc;
-      body;
-    }
+  Lambda.function_ ~loc
+    ~attr:
+      {
+        inline = inline_attribute;
+        is_a_functor = true;
+        return_unit = false;
+        async = false;
+        one_unit_arg = false;
+        directive = None;
+      }
+    ~params:[param'] ~body
 
-(* Compile a module expression *)
+(* Compile a module expression, in the warning scope of its attributes like
+   [Translcore.transl_exp] *)
 and transl_module cc rootpath mexp =
-  List.iter (Translattribute.check_attribute_on_module mexp) mexp.mod_attributes;
+  Builtin_attributes.warning_scope ~ppwarning:false mexp.mod_attributes
+    (fun () ->
+      List.iter
+        (Translattribute.check_attribute_on_module mexp)
+        mexp.mod_attributes;
+      transl_module0 cc rootpath mexp)
+
+and transl_module0 cc rootpath mexp =
   let loc = mexp.mod_loc in
   match mexp.mod_type with
   | Mty_alias (Mta_absent, _) ->
@@ -262,22 +263,15 @@ and transl_module cc rootpath mexp =
     match mexp.mod_desc with
     | Tmod_ident (path, _) ->
       apply_coercion loc Strict cc
-        (Lambda.transl_module_path ~loc mexp.mod_env path)
+        (Transl_path.transl_module_path ~loc mexp.mod_env path)
     | Tmod_structure str -> fst (transl_struct loc [] cc rootpath str)
     | Tmod_functor _ -> compile_functor mexp cc rootpath loc
     | Tmod_apply (funct, arg, ccarg) ->
-      let inlined_attribute, funct =
-        Translattribute.get_and_remove_inlined_attribute_on_module funct
-      in
       apply_coercion loc Strict cc
-        (Lapply
-           {
-             ap_loc = loc;
-             ap_func = transl_module Tcoerce_none None funct;
-             ap_args = [transl_module ccarg None arg];
-             ap_inlined = inlined_attribute;
-             ap_transformed_jsx = false;
-           })
+        (Lambda.apply
+           (transl_module Tcoerce_none None funct)
+           [transl_module ccarg None arg]
+           loc)
     | Tmod_constraint (arg, _, _, ccarg) ->
       transl_module (compose_coercions cc ccarg) rootpath arg
     | Tmod_unpack (arg, _) ->
@@ -296,16 +290,17 @@ and transl_structure loc fields cc rootpath final_env = function
         List.fold_left
           (fun acc id ->
             if is_top_root_path then
-              export_identifiers := id :: !export_identifiers;
-            Lambda.Lvar id :: acc)
+              export_identifiers () := id :: !(export_identifiers ());
+            Lambda.var id :: acc)
           [] fields
       in
-      ( Lambda.Lprim
-          ( Pmakeblock
-              (if is_top_root_path then Blk_module_export !export_identifiers
-               else Blk_module (List.rev_map (fun id -> id.Ident.name) fields)),
-            block_fields,
-            loc ),
+      ( Lambda.prim
+          ~primitive:
+            (Pmakeblock
+               (if is_top_root_path then
+                  Blk_module_export !(export_identifiers ())
+                else Blk_module (List.rev_map (fun id -> id.Ident.name) fields)))
+          ~args:block_fields loc,
         List.length fields )
     | Tcoerce_structure (pos_cc_list, id_pos_list, runtime_fields) ->
       (* Do not ignore id_pos_list ! *)
@@ -314,11 +309,9 @@ and transl_structure loc fields cc rootpath final_env = function
           fields;
         Format.eprintf "@]@.";*)
       assert (List.length runtime_fields = List.length pos_cc_list);
-      let v = Ext_array.reverse_of_list fields in
-      let get_field pos = Lambda.Lvar v.(pos)
-      and ids =
-        List.fold_right Lambda.Ident_set.add fields Lambda.Ident_set.empty
-      in
+      let v = reverse_of_list fields in
+      let get_field pos = Lambda.var v.(pos)
+      and ids = Set_ident.of_list fields in
       let get_field_name _name = get_field in
       let result =
         List.fold_right
@@ -326,25 +319,27 @@ and transl_structure loc fields cc rootpath final_env = function
             match cc with
             | Tcoerce_primitive p ->
               if is_top rootpath then
-                export_identifiers := p.pc_id :: !export_identifiers;
+                export_identifiers () := p.pc_id :: !(export_identifiers ());
               Translcore.transl_primitive p.pc_loc p.pc_desc p.pc_env p.pc_type
+                ~val_type:p.pc_type
               :: code
             | _ ->
               if is_top rootpath then
-                export_identifiers := v.(pos) :: !export_identifiers;
+                export_identifiers () := v.(pos) :: !(export_identifiers ());
               apply_coercion loc Strict cc (get_field pos) :: code)
           pos_cc_list []
       in
       let lam =
-        Lambda.Lprim
-          ( Pmakeblock
-              (if is_top_root_path then Blk_module_export !export_identifiers
-               else Blk_module runtime_fields),
-            result,
-            loc )
+        Lambda.prim
+          ~primitive:
+            (Pmakeblock
+               (if is_top_root_path then
+                  Blk_module_export !(export_identifiers ())
+                else Blk_module runtime_fields))
+          ~args:result loc
       and id_pos_list =
         Ext_list.filter id_pos_list (fun (id, _, _) ->
-            not (Lambda.Ident_set.mem id ids))
+            not (Set_ident.mem id ids))
       in
       ( wrap_id_pos_list loc id_pos_list get_field_name lam,
         List.length pos_cc_list )
@@ -353,7 +348,7 @@ and transl_structure loc fields cc rootpath final_env = function
     match item.str_desc with
     | Tstr_eval (expr, _) ->
       let body, size = transl_structure loc fields cc rootpath final_env rem in
-      (Lsequence (Translcore.transl_exp expr, body), size)
+      (Lambda.seq (Translcore.transl_exp expr) body, size)
     | Tstr_value (rec_flag, pat_expr_list) ->
       let ext_fields = rev_let_bound_idents pat_expr_list @ fields in
       let body, size =
@@ -382,12 +377,9 @@ and transl_structure loc fields cc rootpath final_env = function
       let body, size =
         transl_structure loc (id :: fields) cc rootpath final_env rem
       in
-      ( Llet
-          ( Strict,
-            Pgenval,
-            id,
-            Translcore.transl_extension_constructor item.str_env path ext,
-            body ),
+      ( Lambda.let_ Strict id
+          (Translcore.transl_extension_constructor item.str_env path ext)
+          body,
         size )
     | Tstr_module mb as s ->
       let id = mb.mb_id in
@@ -403,7 +395,7 @@ and transl_structure loc fields cc rootpath final_env = function
         Translattribute.add_inline_attribute module_body mb.mb_loc
           mb.mb_attributes
       in
-      (Llet (pure_module mb.mb_expr, Pgenval, id, module_body, body), size)
+      (Lambda.let_ (pure_module mb.mb_expr) id module_body body, size)
     | Tstr_recmodule bindings ->
       let ext_fields =
         List.rev_append (List.map (fun mb -> mb.mb_id) bindings) fields
@@ -426,24 +418,18 @@ and transl_structure loc fields cc rootpath final_env = function
         | [] -> transl_structure loc newfields cc rootpath final_env rem
         | id :: ids ->
           let body, size = rebind_idents (pos + 1) (id :: newfields) ids in
-          ( Llet
-              ( Alias,
-                Pgenval,
-                id,
-                Lprim
-                  ( Pfield (pos, Fld_module {name = Ident.name id}),
-                    [Lvar mid],
-                    incl.incl_loc ),
-                body ),
+          ( Lambda.let_ Alias id
+              (Lambda.prim
+                 ~primitive:(Pfield (pos, Fld_module {name = Ident.name id}))
+                 ~args:[Lambda.var mid]
+                 incl.incl_loc)
+              body,
             size )
       in
       let body, size = rebind_idents 0 fields ids in
-      ( Llet
-          ( pure_module modl,
-            Pgenval,
-            mid,
-            transl_module Tcoerce_none None modl,
-            body ),
+      ( Lambda.let_ (pure_module modl) mid
+          (transl_module Tcoerce_none None modl)
+          body,
         size )
     | Tstr_primitive _ | Tstr_type _ | Tstr_modtype _ | Tstr_open _
     | Tstr_attribute _ ->
@@ -456,11 +442,70 @@ let _ = Translcore.transl_module := transl_module
 
 (* Compile an implementation *)
 
-let transl_implementation module_name (str, cc) =
-  export_identifiers := [];
+(* Nested [make] values are also exported under a flat name such as
+   [A$B$make]: React Server Components can only pass a client module's
+   top-level exports to the client, so [Lib.A.B.make] must not be reached
+   through the module object. Producer and consumer derive these paths from
+   the signature alone, so consumers are rebuilt exactly when the set
+   changes. *)
+type flat_make_step = {pos: int; name: string}
+
+type flat_make_path = flat_make_step list
+
+let flat_make_paths env (sg : Types.signature) : flat_make_path list =
+  let rec of_signature env rev_path sg acc =
+    let env = Env.add_signature sg env in
+    fst
+      (List.fold_left
+         (fun (acc, pos) (item : Types.signature_item) ->
+           match item with
+           | Sig_value (_, {val_kind = Val_prim _}) -> (acc, pos)
+           | Sig_value (id, _) ->
+             let acc =
+               if rev_path <> [] && Ident.name id = "make" then
+                 List.rev ({pos; name = "make"} :: rev_path) :: acc
+               else acc
+             in
+             (acc, pos + 1)
+           | Sig_typext _ -> (acc, pos + 1)
+           | Sig_module (id, {md_type}, _) ->
+             let acc =
+               match Mtype.scrape env md_type with
+               | Mty_signature sg ->
+                 of_signature env
+                   ({pos; name = Ident.name id} :: rev_path)
+                   sg acc
+               | Mty_ident _ | Mty_alias _ | Mty_functor _ -> acc
+             in
+             (acc, pos + 1)
+           | Sig_type _ | Sig_modtype _ -> (acc, pos))
+         (acc, 0) sg)
+  in
+  List.rev (of_signature env [] sg [])
+
+type implementation = {
+  lambda: Lambda.t;
+  exports: Ident.t list;
+  flat_make_paths: flat_make_path list;
+}
+
+let transl_implementation module_name final_env signature (str, cc) =
+  export_identifiers () := [];
   let module_id = Ident.create_persistent module_name in
   let body, _ = transl_struct Location.none [] cc (global_path module_id) str in
-  (body, !export_identifiers)
+  {
+    lambda = body;
+    exports = !(export_identifiers ());
+    flat_make_paths = flat_make_paths final_env signature;
+  }
+
+let flat_export_name path =
+  path |> List.map Ext_ident.unwrap_uppercase_exotic |> String.concat "$"
+
+let flat_make_name path =
+  match path with
+  | _ :: _ :: _ when Ext_list.last path = "make" -> Some (flat_export_name path)
+  | _ -> None
 
 (* Build the list of value identifiers defined by a toplevel structure
    (excluding primitive declarations). *)

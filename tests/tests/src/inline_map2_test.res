@@ -459,21 +459,19 @@ module IntMap = Make({
 
 let empty = IntMap.empty
 
-let m = Belt.List.reduceReverse(list{(10, 'a'), (3, 'b'), (7, 'c'), (20, 'd')}, empty, (
-  acc,
-  (k, v),
-) => IntMap.add(k, v, acc))
+let m = List.reduceReverse(list{(10, 'a'), (3, 'b'), (7, 'c'), (20, 'd')}, empty, (acc, (k, v)) =>
+  IntMap.add(k, v, acc)
+)
 
 module SMap = Make({
   type t = string
   let compare = (x: t, y) => compare(x, y)
 })
 
-let s = Belt.List.reduceReverse(
-  list{("10", 'a'), ("3", 'b'), ("7", 'c'), ("20", 'd')},
-  SMap.empty,
-  (acc, (k, v)) => SMap.add(k, v, acc),
-)
+let s = List.reduceReverse(list{("10", 'a'), ("3", 'b'), ("7", 'c'), ("20", 'd')}, SMap.empty, (
+  acc,
+  (k, v),
+) => SMap.add(k, v, acc))
 @val("console.log") external log: 'a => unit = ""
 
 describe(__MODULE__, () => {

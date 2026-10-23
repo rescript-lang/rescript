@@ -23,8 +23,8 @@ let local_platform_bin name =
   let packages_dir = source_root () // "packages" // "@rescript" in
   ["linux-x64"; "linux-arm64"; "darwin-x64"; "darwin-arm64"; "win32-x64"]
   |> List.find_map (fun platform ->
-         let path = packages_dir // platform // "bin" // bin_name in
-         if Sys.file_exists path then Some path else None)
+      let path = packages_dir // platform // "bin" // bin_name in
+      if Sys.file_exists path then Some path else None)
   |> Option.value ~default:bin_name
 
 let with_chdir dir f =

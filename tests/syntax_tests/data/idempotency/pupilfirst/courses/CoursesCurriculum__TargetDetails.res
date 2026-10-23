@@ -48,12 +48,12 @@ let decode = json => {
     quizQuestions: json->field("quizQuestions", list(CoursesCurriculum__QuizQuestion.decode)),
     contentBlocks: json->field("contentBlocks", list(ContentBlock.decode)),
     communities: json->field("communities", list(CoursesCurriculum__Community.decode)),
-    linkToComplete: json->field("linkToComplete", nullable(string))->Js.Null.toOption,
+    linkToComplete: json->field("linkToComplete", nullable(string))->Null.toOption,
     evaluated: json->field("evaluated", bool),
     grading: json->field("grading", list(CoursesCurriculum__Grade.decode)),
     completionInstructions: json
     ->field("completionInstructions", nullable(string))
-    ->Js.Null.toOption,
+    ->Null.toOption,
     navigation: json->field("navigation", decodeNavigation),
     checklist: json->field("checklist", array(TargetChecklistItem.decode)),
   }

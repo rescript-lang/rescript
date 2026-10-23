@@ -109,25 +109,25 @@ let serializeSort = (~sort, ~defaultSort) =>
 let serialize = (~filters, ~defaultSort, ~pageOffset) => {
   let p = []
   switch serializeSort(~sort=filters.sort, ~defaultSort) {
-  | Some(param) => p->Js.Array.push(param)->ignore
+  | Some(param) => p->Array.push(param)->ignore
   | None => ()
   }
   if filters.text != "" {
-    p->Js.Array.push(("q", filters.text))->ignore
+    p->Array.push(("q", filters.text))->ignore
   }
   switch filters.mask {
-  | Some(Orderable) => p->Js.Array.push(("orderable", ""))->ignore
-  | Some(NotOrderable) => p->Js.Array.push(("not-orderable", ""))->ignore
-  | Some(Craftable) => p->Js.Array.push(("craftable", ""))->ignore
+  | Some(Orderable) => p->Array.push(("orderable", ""))->ignore
+  | Some(NotOrderable) => p->Array.push(("not-orderable", ""))->ignore
+  | Some(Craftable) => p->Array.push(("craftable", ""))->ignore
   | None => ()
   }
   switch filters.category {
-  | Some(category) => p->Js.Array.push(("c", category))->ignore
+  | Some(category) => p->Array.push(("c", category))->ignore
   | None => ()
   }
-  if Js.Array.length(filters.exclude) > 0 {
+  if Array.length(filters.exclude) > 0 {
     p
-    ->Js.Array.push((
+    ->Array.push((
       "e",
       filters.exclude->Belt.Array.map(exclude =>
         switch exclude {
@@ -135,12 +135,12 @@ let serialize = (~filters, ~defaultSort, ~pageOffset) => {
         | CanCraft => "can-craft"
         | Wishlist => "wishlist"
         }
-      )->Js.Array.joinWith(","),
+      )->Array.joinUnsafe(","),
     ))
     ->ignore
   }
   if pageOffset != 0 {
-    p->Js.Array.push(("p", string_of_int(pageOffset + 1)))->ignore
+    p->Array.push(("p", string_of_int(pageOffset + 1)))->ignore
   }
   p
 }
@@ -172,7 +172,7 @@ let fromUrlSearch = (~urlSearch, ~defaultSort) => {
         ? Some(NotOrderable)
         : None,
       category: Option.flatMap(searchParams->get("c"), category =>
-        if Item.validCategoryStrings->Js.Array.includes(category) {
+        if Item.validCategoryStrings->Array.includes(category) {
           Some(category)
         } else {
           None
@@ -180,7 +180,7 @@ let fromUrlSearch = (~urlSearch, ~defaultSort) => {
       ),
       exclude: switch searchParams->get("e") {
       | Some(e) =>
-        (e->Js.String.split(","))
+        (e->String.split(","))
           ->Belt.Array.keepMap(fragment =>
             switch fragment {
             | "wishlist" => Some(Wishlist)
@@ -199,30 +199,30 @@ let fromUrlSearch = (~urlSearch, ~defaultSort) => {
 
 let doesItemMatchCategory = (~item: Item.t, ~category: string) =>
   switch category {
-  | "furniture" => Item.furnitureCategories->Js.Array.includes(item.category)
-  | "clothing" => Item.clothingCategories->Js.Array.includes(item.category)
+  | "furniture" => Item.furnitureCategories->Array.includes(item.category)
+  | "clothing" => Item.clothingCategories->Array.includes(item.category)
   | "recipes" => Item.isRecipe(~item)
   | category => item.category == category
   }
 
 let removeAccents = str =>
-  str->Js.String.normalizeByForm("NFD")->Js.String.replaceByRe(/[\u0300-\u036f]/g, "")
+  str->String.normalizeByForm("NFD")->String.replaceRegExp(/[\u0300-\u036f]/g, "")
 
 let doesItemMatchFilters = (~item: Item.t, ~filters: t) =>
   switch filters.text {
   | "" => true
   | text =>
-    let textLower = Js.String.toLowerCase(text)
+    let textLower = String.toLowerCase(text)
     switch item.source {
-    | Some(source) => textLower == Js.String.toLowerCase(source)
+    | Some(source) => textLower == String.toLowerCase(source)
     | None => false
     } || {
       let fragments =
-        (textLower->Js.String.splitByRe(/[\s-]+/))->Belt.Array.keepMap(x => x)
+        (textLower->String.splitByRegExp(/[\s-]+/))->Belt.Array.keepMap(x => x)
       fragments->Belt.Array.every(fragment =>
-        Js.String.toLowerCase(Item.getName(item))
+        String.toLowerCase(Item.getName(item))
         ->removeAccents
-        ->Js.String.includes(removeAccents(fragment)) || item.tags->Js.Array.includes(fragment)
+        ->String.includes(removeAccents(fragment)) || item.tags->Array.includes(fragment)
       )
     }
   } &&
@@ -240,7 +240,7 @@ let doesItemMatchFilters = (~item: Item.t, ~filters: t) =>
 let compareArrays = (a, b) => {
   let rv = ref(None)
   let i = ref(0)
-  while i.contents < Js.Array.length(a) && rv.contents === None {
+  while i.contents < Array.length(a) && rv.contents === None {
     if a[i.contents] < b[i.contents] {
       rv := Some(-1)
     } else if a[i.contents] > b[i.contents] {
@@ -253,9 +253,9 @@ let compareArrays = (a, b) => {
 
 let compareItemsABC = (a: Item.t, b: Item.t) => {
   // hack to sort "wooden-" before "wooden "
-  let aName = Item.getName(a)->Js.String.replaceByRe(/-/g, " ")
-  let bName = Item.getName(b)->Js.String.replaceByRe(/-/g, " ")
-  int_of_float(Js.String.localeCompare(bName, aName))
+  let aName = Item.getName(a)->String.replaceRegExp(/-/g, " ")
+  let bName = Item.getName(b)->String.replaceRegExp(/-/g, " ")
+  int_of_float(String.localeCompare(aName, bName))
 }
 let compareItemsSellPriceDesc = (a: Item.t, b: Item.t) =>
   compareArrays(
@@ -316,21 +316,21 @@ let getUserItemSort = (~prioritizeViewerStatuses: array<User.itemStatus>=[], ~so
         [
           switch UserStore.getItem(~itemId=aId, ~variation=aVariant) {
           | Some(aUserItem) =>
-            prioritizeViewerStatuses->Js.Array.includes(aUserItem.status) ? -1. : 0.
+            prioritizeViewerStatuses->Array.includes(aUserItem.status) ? -1. : 0.
           | None => 0.
           },
           -.Belt.Option.getWithDefault(aPriorityTimestamp, 0.),
-          Item.categories->Js.Array.indexOf(aItem.category)->float_of_int,
+          Item.categories->Array.indexOf(aItem.category)->float_of_int,
           float_of_int(compareItemsABC(aItem, bItem)),
         ],
         [
           switch UserStore.getItem(~itemId=bId, ~variation=bVariant) {
           | Some(bUserItem) =>
-            prioritizeViewerStatuses->Js.Array.includes(bUserItem.status) ? -1. : 0.
+            prioritizeViewerStatuses->Array.includes(bUserItem.status) ? -1. : 0.
           | None => 0.
           },
           -.Belt.Option.getWithDefault(bPriorityTimestamp, 0.),
-          Item.categories->Js.Array.indexOf(bItem.category)->float_of_int,
+          Item.categories->Array.indexOf(bItem.category)->float_of_int,
           0.,
         ],
       )
@@ -356,7 +356,7 @@ let getUserItemSort = (~prioritizeViewerStatuses: array<User.itemStatus>=[], ~so
           switch (aUserItem.note, bUserItem.note) {
           | ("", _) => 1
           | (_, "") => -1
-          | (a, b) => int_of_float(a->Js.String.localeCompare(b))
+          | (a, b) => int_of_float(a->String.localeCompare(b))
           },
           compareItemsABC(aItem, bItem),
         ],
@@ -386,7 +386,7 @@ module Pager = {
           "Showing " ++
           (string_of_int(pageOffset * numResultsPerPage + 1) ++
           (" - " ++
-          (string_of_int(Js.Math.min_int((pageOffset + 1) * numResultsPerPage, numResults)) ++
+          (string_of_int(Math.Int.min((pageOffset + 1) * numResultsPerPage, numResults)) ++
           (" of " ++ string_of_int(numResults))))),
         )}
         {pageOffset < (numResults - 1) / numResultsPerPage
@@ -486,7 +486,7 @@ module CategoryButtons = {
       {renderButton("clothing")}
       <select
         value={switch filters.category {
-        | Some(category) => selectCategories->Js.Array.includes(category) ? category : ""
+        | Some(category) => selectCategories->Array.includes(category) ? category : ""
         | None => ""
         }}
         onChange={e => {
@@ -506,7 +506,7 @@ module CategoryButtons = {
           Cn.ifTrue(
             CategoryStyles.selectSelected,
             switch filters.category {
-            | Some(category) => selectCategories->Js.Array.includes(category)
+            | Some(category) => selectCategories->Array.includes(category)
             | None => false
             },
           ),
@@ -562,7 +562,7 @@ module AdvancedFilter = {
         if checked {
           onChange({
             ...filters,
-            exclude: if filters.exclude->Js.Array.includes(excludable) {
+            exclude: if filters.exclude->Array.includes(excludable) {
               filters.exclude
             } else {
               filters.exclude->Belt.Array.concat([excludable])
@@ -585,7 +585,7 @@ module AdvancedFilter = {
               <input
                 type_="checkbox"
                 value="catalog"
-                checked={filters.exclude->Js.Array.includes(Catalog)}
+                checked={filters.exclude->Array.includes(Catalog)}
                 onChange={onChangeCheckbox(Catalog)}
               />
             </label>
@@ -596,7 +596,7 @@ module AdvancedFilter = {
               <input
                 type_="checkbox"
                 value="can-craft"
-                checked={filters.exclude->Js.Array.includes(CanCraft)}
+                checked={filters.exclude->Array.includes(CanCraft)}
                 onChange={onChangeCheckbox(CanCraft)}
               />
             </label>
@@ -607,7 +607,7 @@ module AdvancedFilter = {
               <input
                 type_="checkbox"
                 value="wishlist"
-                checked={filters.exclude->Js.Array.includes(Wishlist)}
+                checked={filters.exclude->Array.includes(Wishlist)}
                 onChange={onChangeCheckbox(Wishlist)}
               />
             </label>
@@ -769,7 +769,7 @@ let make = (
   ~className=?,
   (),
 ) => {
-  let inputTextRef = React.useRef(Js.Nullable.null)
+  let inputTextRef = React.useRef(Nullable.null)
   let updateTextTimeoutRef = React.useRef(None)
   React.useEffect1(() => {
     {
@@ -782,7 +782,7 @@ let make = (
     Some(
       () => {
         switch React.Ref.current(updateTextTimeoutRef) {
-        | Some(updateTextTimeout) => Js.Global.clearTimeout(updateTextTimeout)
+        | Some(updateTextTimeout) => clearTimeout(updateTextTimeout)
         | None => ()
         }
         React.Ref.setCurrent(updateTextTimeoutRef, None)
@@ -798,12 +798,12 @@ let make = (
       | "Escape" =>
         let url = ReasonReactRouter.dangerouslyGetInitialUrl()
         // don't trigger if ItemDetailOverlay is shown
-        if !(url.hash->Js.Re.test_(/i(-?\d+)(:(\d+))?/g)) {
+        if !(url.hash->RegExp.test(/i(-?\d+)(:(\d+))?/g)) {
           onChange({...filters, text: ""})
         }
       | "/" =>
         if !isInputActiveElement() {
-          Js.Global.setTimeout(
+          setTimeout(
             () =>
               Utils.getElementForDomRef(inputTextRef)
               ->unsafeAsHtmlInputElement
@@ -827,10 +827,10 @@ let make = (
         onChange={e => {
           let value = ReactEvent.Form.target(e)["value"]
           switch React.Ref.current(updateTextTimeoutRef) {
-          | Some(updateTextTimeout) => Js.Global.clearTimeout(updateTextTimeout)
+          | Some(updateTextTimeout) => clearTimeout(updateTextTimeout)
           | None => ()
           }
-          React.Ref.setCurrent(updateTextTimeoutRef, Some(Js.Global.setTimeout(() => {
+          React.Ref.setCurrent(updateTextTimeoutRef, Some(setTimeout(() => {
                 React.Ref.setCurrent(updateTextTimeoutRef, None)
                 onChange({...filters, text: value})
               }, 500)))

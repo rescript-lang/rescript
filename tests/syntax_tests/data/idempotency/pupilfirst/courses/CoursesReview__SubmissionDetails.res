@@ -63,7 +63,7 @@ let decodeJs = details =>
     ~levelId=details["levelId"],
     ~targetEvaluationCriteriaIds=details["targetEvaluationCriteriaIds"],
     ~inactiveStudents=details["inactiveStudents"],
-    ~evaluationCriteria=details["evaluationCriteria"]->Js.Array.map(ec =>
+    ~evaluationCriteria=details["evaluationCriteria"]->Array.map(ec =>
       EvaluationCriterion.make(
         ~id=ec["id"],
         ~name=ec["name"],
@@ -72,8 +72,7 @@ let decodeJs = details =>
         ~gradesAndLabels=ec["gradeLabels"]->Array.map(gradeAndLabel =>
           GradeLabel.makeFromJs(gradeAndLabel)
         ),
-      )
-    ),
+      )),
     ~reviewChecklist=details["reviewChecklist"]->ReviewChecklistItem.makeFromJs,
     ~coachIds=details["coachIds"],
   )
@@ -81,7 +80,7 @@ let decodeJs = details =>
 let updateSubmission = (submission, t) => {
   ...t,
   submissions: t.submissions
-  ->Js.Array.filter(s => s->OverlaySubmission.id != (submission->OverlaySubmission.id))
+  ->Array.filter(s => s->OverlaySubmission.id != (submission->OverlaySubmission.id))
   ->Array.append([submission]),
 }
 
@@ -93,7 +92,7 @@ let makeIndexSubmission = (overlaySubmission, t) =>
     ~levelId=t.levelId,
     ~userNames=t.students
     ->Array.map(student => student->CoursesReview__Student.name)
-    ->Js.Array.joinWith(", "),
+    ->Array.joinUnsafe(", "),
     ~status=Some(
       IndexSubmission.makeStatus(
         ~passedAt=overlaySubmission->OverlaySubmission.passedAt,

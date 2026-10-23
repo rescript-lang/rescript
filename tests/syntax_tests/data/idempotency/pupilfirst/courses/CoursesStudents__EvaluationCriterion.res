@@ -19,6 +19,5 @@ let make = (~id, ~name, ~maxGrade, ~passGrade) => {
 }
 
 let makeFromJs = ecData =>
-  ecData->Js.Array.map(ec =>
-    make(~id=ec["id"], ~name=ec["name"], ~maxGrade=ec["maxGrade"], ~passGrade=ec["passGrade"])
-  )
+  ecData->Array.map(ec =>
+    make(~id=ec["id"], ~name=ec["name"], ~maxGrade=ec["maxGrade"], ~passGrade=ec["passGrade"]))

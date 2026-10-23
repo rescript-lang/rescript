@@ -1,0 +1,11 @@
+
+  [1;33mWarning number 11[0m
+  [36m/.../fixtures/warning_11_equivalent_string_patterns.res[0m:[2m4:5-10[0m
+
+  2 [2m┆[0m switch value {
+  3 [2m┆[0m | "a" => 1
+  [1;33m4[0m [2m┆[0m | [1;33m"\x61"[0m => 2
+  5 [2m┆[0m | _ => 3
+  6 [2m┆[0m }
+
+  this match case is unused.

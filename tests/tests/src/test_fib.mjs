@@ -10,7 +10,7 @@ function fib(x) {
 }
 
 function fib2(x) {
-  if (x !== 2 && x !== 1) {
+  if (x !== 1 && x !== 2) {
     return fib2(x - 1 | 0) + fib2(x - 2 | 0) | 0;
   } else {
     return 1;

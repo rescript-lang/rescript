@@ -59,7 +59,7 @@ and find_in_module ~(env : Query_env.t) module_ path =
       | Some {item} -> find_in_module ~env item full_path)
 
 let rec resolve_path ~state ~env ~path ~package =
-  Log.log ("resolvePath path:" ^ path_to_string path);
+  Log.log ("resolve_path path:" ^ path_to_string path);
   match resolve_path_inner ~env ~path with
   | None -> None
   | Some result -> (
@@ -67,7 +67,7 @@ let rec resolve_path ~state ~env ~path ~package =
     | `Local (env, name) -> Some (env, name)
     | `Global (module_name, full_path) -> (
       Log.log
-        ("resolvePath Global path:" ^ path_to_string full_path ^ " module:"
+        ("resolve_path Global path:" ^ path_to_string full_path ^ " module:"
        ^ module_name);
       match Process_cmt.file_for_module ~state ~package module_name with
       | None -> None

@@ -11,6 +11,8 @@ throw {
   Error: new Error()
 };
 
+let A;
+
 export {
   A,
 }

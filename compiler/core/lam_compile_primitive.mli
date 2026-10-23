@@ -25,13 +25,13 @@
 (** Primitive compilation  *)
 
 (* The entry point of compile primitives
-   Note it will call {!Lam_compile_external_call.translate} for c stubs compilation
+   Note it will call {!Lam_compile_external_call.translate_ffi} for external calls
 *)
 
 val translate :
   string ->
   Location.t ->
   Lam_compile_context.t ->
-  Lam_primitive.t ->
+  Lambda.primitive ->
   J.expression list ->
   J.expression

@@ -1,0 +1,16 @@
+{
+  "name": "rescript-tools-binary-path",
+  "sources": "src",
+  "package-specs": [
+    {
+      "module": "esmodule",
+      "in-source": true,
+      "suffix": ".mjs"
+    },
+    {
+      "module": "commonjs",
+      "in-source": true,
+      "suffix": ".cjs"
+    }
+  ]
+}

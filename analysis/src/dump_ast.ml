@@ -42,14 +42,15 @@ let print_attributes attributes =
 let print_constant const =
   match const with
   | Parsetree.Pconst_integer (s, _) -> "Pconst_integer(" ^ s ^ ")"
-  | Pconst_char c -> "Pconst_char(" ^ String.make 1 (Char.chr c) ^ ")"
-  | Pconst_string (s, delim) ->
-    let delim =
-      match delim with
-      | None -> ""
-      | Some delim -> delim ^ " "
-    in
-    "Pconst_string(" ^ delim ^ s ^ delim ^ ")"
+  | Pconst_char {source; semantic} ->
+    "Pconst_char(source=" ^ source ^ ", semantic=" ^ string_of_int semantic
+    ^ ")"
+  | Pconst_string payload ->
+    "Pconst_string(source="
+    ^ String_literal.string_source payload
+    ^ ", semantic="
+    ^ String_literal.string_semantic payload
+    ^ ")"
   | Pconst_float (s, _) -> "Pconst_float(" ^ s ^ ")"
 
 let print_core_type typ ~pos =
@@ -95,19 +96,29 @@ let rec print_pattern pattern ~pos ~indentation =
   | Ppat_var ({txt} as loc) ->
     "Ppat_var(" ^ (loc |> print_loc_denominator_loc ~pos) ^ txt ^ ")"
   | Ppat_constant const -> "Ppat_constant(" ^ print_constant const ^ ")"
-  | Ppat_construct (({txt} as loc), maybe_pat) ->
+  | Ppat_construct (({txt} as loc), {txt = patterns}) ->
     "Ppat_construct("
     ^ (loc |> print_loc_denominator_loc ~pos)
     ^ (Utils.flatten_long_ident txt |> ident |> str)
-    ^ (match maybe_pat with
-      | None -> ""
-      | Some pat -> "," ^ print_pattern pat ~pos ~indentation)
+    ^ (patterns
+      |> List.map (fun pat -> "," ^ print_pattern pat ~pos ~indentation)
+      |> String.concat "")
     ^ ")"
-  | Ppat_variant (label, maybe_pat) ->
+  | Ppat_variant (label, {txt = patterns}) ->
     "Ppat_variant(" ^ str label
-    ^ (match maybe_pat with
-      | None -> ""
-      | Some pat -> "," ^ print_pattern pat ~pos ~indentation)
+    ^ (patterns
+      |> List.map (fun pat -> "," ^ print_pattern pat ~pos ~indentation)
+      |> String.concat "")
+    ^ ")"
+  | Ppat_dict entries ->
+    "Ppat_dict(\n"
+    ^ (Ext_list.map entries (fun {pdp_key; pdp_pattern} ->
+           add_indentation (indentation + 1)
+           ^ str pdp_key.txt ^ ": "
+           ^ print_pattern pdp_pattern ~pos ~indentation:(indentation + 1))
+      |> String.concat "\n")
+    ^ "\n"
+    ^ add_indentation indentation
     ^ ")"
   | Ppat_record (fields, _, rest) ->
     "Ppat_record(\n"
@@ -135,8 +146,8 @@ let rec print_pattern pattern ~pos ~indentation =
     "Ppat_tuple(\n"
     ^ (patterns
       |> List.map (fun pattern ->
-             add_indentation (indentation + 2)
-             ^ (pattern |> print_pattern ~pos ~indentation:(indentation + 2)))
+          add_indentation (indentation + 2)
+          ^ (pattern |> print_pattern ~pos ~indentation:(indentation + 2)))
       |> String.concat ",\n")
     ^ "\n"
     ^ add_indentation indentation
@@ -175,13 +186,39 @@ and print_expr_item expr ~pos ~indentation =
   ^ (expr.pexp_loc |> print_loc_denominator ~pos)
   ^
   match expr.Parsetree.pexp_desc with
+  | Pexp_braces {expr = inner; braces_loc} ->
+    "Pexp_braces("
+    ^ print_loc_denominator braces_loc ~pos
+    ^ "\n"
+    ^ add_indentation (indentation + 1)
+    ^ print_expr_item inner ~pos ~indentation:(indentation + 1)
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
   | Pexp_array exprs ->
     "Pexp_array(\n"
     ^ add_indentation (indentation + 1)
     ^ (exprs
       |> List.map (fun expr ->
-             expr |> print_expr_item ~pos ~indentation:(indentation + 1))
+          expr |> print_expr_item ~pos ~indentation:(indentation + 1))
       |> String.concat ("\n" ^ add_indentation (indentation + 1)))
+    ^ "\n"
+    ^ add_indentation indentation
+    ^ ")"
+  | Pexp_dict entries ->
+    "Pexp_dict(\n"
+    ^ (entries
+      |> List.map (fun entry ->
+          add_indentation (indentation + 1)
+          ^
+          match entry with
+          | Parsetree.Pdict_entry (key, expr) ->
+            (key |> print_loc_denominator_loc ~pos)
+            ^ "\"" ^ key.txt ^ "\": "
+            ^ print_expr_item expr ~pos ~indentation:(indentation + 1)
+          | Pdict_spread expr ->
+            "..." ^ print_expr_item expr ~pos ~indentation:(indentation + 1))
+      |> String.concat "\n")
     ^ "\n"
     ^ add_indentation indentation
     ^ ")"
@@ -191,8 +228,8 @@ and print_expr_item expr ~pos ~indentation =
     ^ ")\n"
     ^ (cases
       |> List.mapi (fun case_num case ->
-             print_case case ~pos ~case_num:(case_num + 1)
-               ~indentation:(indentation + 1))
+          print_case case ~pos ~case_num:(case_num + 1)
+            ~indentation:(indentation + 1))
       |> String.concat "\n")
   | Pexp_ident {txt} ->
     "Pexp_ident:" ^ (Utils.flatten_long_ident txt |> Shared_types.ident)
@@ -219,30 +256,30 @@ and print_expr_item expr ~pos ~indentation =
     ^ "args:\n"
     ^ (args
       |> List.map (fun arg ->
-             add_indentation (indentation + 2)
-             ^ print_label arg.label ~pos ^ "=\n"
-             ^ add_indentation (indentation + 3)
-             ^ print_expr_item arg.exp ~pos ~indentation:(indentation + 3))
+          add_indentation (indentation + 2)
+          ^ print_label arg.label ~pos ^ "=\n"
+          ^ add_indentation (indentation + 3)
+          ^ print_expr_item arg.exp ~pos ~indentation:(indentation + 3))
       |> String.concat ",\n")
     ^ "\n"
     ^ add_indentation indentation
     ^ ")"
   | Pexp_constant constant -> "Pexp_constant(" ^ print_constant constant ^ ")"
-  | Pexp_construct (({txt} as loc), maybe_expr) ->
+  | Pexp_construct (({txt} as loc), {txt = exprs}) ->
     "Pexp_construct("
     ^ (loc |> print_loc_denominator_loc ~pos)
     ^ (Utils.flatten_long_ident txt |> ident |> str)
-    ^ (match maybe_expr with
-      | None -> ""
-      | Some expr -> ", " ^ print_expr_item expr ~pos ~indentation)
+    ^ (exprs
+      |> List.map (fun expr -> ", " ^ print_expr_item expr ~pos ~indentation)
+      |> String.concat "")
     ^ ")"
-  | Pexp_variant (label, maybe_expr) ->
+  | Pexp_variant (label, {txt = exprs}) ->
     "Pexp_variant(" ^ str label
-    ^ (match maybe_expr with
-      | None -> ""
-      | Some expr -> "," ^ print_expr_item expr ~pos ~indentation)
+    ^ (exprs
+      |> List.map (fun expr -> "," ^ print_expr_item expr ~pos ~indentation)
+      |> String.concat "")
     ^ ")"
-  | Pexp_fun {arg_label = arg; lhs = pattern; rhs = next_expr} ->
+  | Pexp_fun {params = {p_lbl = arg; p_pat = pattern} :: _; body = next_expr} ->
     "Pexp_fun(\n"
     ^ add_indentation (indentation + 1)
     ^ "arg: "
@@ -264,6 +301,23 @@ and print_expr_item expr ~pos ~indentation =
     ^ ")"
   | Pexp_extension (({txt} as loc), _) ->
     "Pexp_extension(%" ^ (loc |> print_loc_denominator_loc ~pos) ^ txt ^ ")"
+  | Pexp_regexp {pattern; flags} ->
+    "Pexp_regexp(/" ^ pattern ^ "/" ^ flags ^ ")"
+  | Pexp_template {source_segments; values} ->
+    "Pexp_template(source_segments=["
+    ^ String.concat ", " (List.map (fun {Asttypes.txt} -> txt) source_segments)
+    ^ "], values=["
+    ^ String.concat ", "
+        (List.map (fun value -> print_expr_item value ~pos ~indentation) values)
+    ^ "])"
+  | Pexp_tagged_template {tag; raw_sources; values} ->
+    "Pexp_tagged_template(tag="
+    ^ print_expr_item tag ~pos ~indentation
+    ^ ", sources="
+    ^ string_of_int (List.length raw_sources)
+    ^ ", values="
+    ^ string_of_int (List.length values)
+    ^ ")"
   | Pexp_assert expr ->
     "Pexp_assert(" ^ print_expr_item expr ~pos ~indentation ^ ")"
   | Pexp_field (exp, loc) ->
@@ -289,8 +343,8 @@ and print_expr_item expr ~pos ~indentation =
     "Pexp_tuple(\n"
     ^ (exprs
       |> List.map (fun expr ->
-             add_indentation (indentation + 2)
-             ^ (expr |> print_expr_item ~pos ~indentation:(indentation + 2)))
+          add_indentation (indentation + 2)
+          ^ (expr |> print_expr_item ~pos ~indentation:(indentation + 2)))
       |> String.concat ",\n")
     ^ "\n"
     ^ add_indentation indentation
@@ -298,11 +352,25 @@ and print_expr_item expr ~pos ~indentation =
   | v -> Printf.sprintf "<unimplemented_pexp_desc: %s>" (Utils.identify_pexp v)
 
 let print_value_binding value ~pos ~indentation =
-  print_attributes value.Parsetree.pvb_attributes
+  let constraint_ =
+    match value.Parsetree.pvb_constraint with
+    | None -> ""
+    | Some {pvc_newtypes; pvc_type} ->
+      "\n"
+      ^ add_indentation indentation
+      ^ "constraint: type "
+      ^ (pvc_newtypes
+        |> List.map (fun ({Location.txt} as name) ->
+            (name |> print_loc_denominator_loc ~pos) ^ txt)
+        |> String.concat " ")
+      ^ ". "
+      ^ print_core_type pvc_type ~pos
+  in
+  print_attributes (Ast_helper.Vb.binding_attributes value)
   ^ "value" ^ ":\n"
   ^ add_indentation (indentation + 1)
   ^ (value.pvb_pat |> print_pattern ~pos ~indentation:(indentation + 1))
-  ^ "\n"
+  ^ constraint_ ^ "\n"
   ^ add_indentation indentation
   ^ "expr:\n"
   ^ add_indentation (indentation + 1)
@@ -343,7 +411,7 @@ let print_struct_item struct_item ~pos ~source =
         | Nonrecursive -> "")
       ^ (values
         |> List.map (fun value ->
-               add_indentation 1 ^ print_value_binding value ~pos ~indentation:1)
+            add_indentation 1 ^ print_value_binding value ~pos ~indentation:1)
         |> String.concat ",\n")
       ^ "\n)"
     | _ -> "<structure_item_not_implemented>")
@@ -351,8 +419,7 @@ let print_struct_item struct_item ~pos ~source =
 
 let dump ~current_file ~pos =
   let {Res_driver.parsetree = structure; source} =
-    Res_driver.parsing_engine.parse_implementation ~for_printer:true
-      ~filename:current_file
+    Res_driver.parsing_engine.parse_implementation ~filename:current_file
   in
 
   print_endline

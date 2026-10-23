@@ -7,8 +7,6 @@
  *
  * In general it represent messages to show results or errors to the user. *)
 
-val parenthesized_ident : string -> bool [@@live]
-
 val setup : unit lazy_t [@@live]
 
 (* Needed for e.g. the playground to print typedtree data *)

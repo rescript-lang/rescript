@@ -50,7 +50,7 @@ async function extractDocFromFile(file) {
     let e = Primitive_exceptions.internalToException(raw_e);
     if (e.RE_EXN_ID === "JsExn") {
       console.error(e._1);
-      return Stdlib_JsError.panic(`Failed to extract code blocks from ` + file);
+      return Stdlib_JsError.panic(`Failed to extract code blocks from ${file}`);
     }
     throw e;
   }
@@ -58,25 +58,30 @@ async function extractDocFromFile(file) {
 
 let batchSize = Nodeos.cpus().length;
 
-let runtimePath = Nodepath.join("packages", "@rescript", "runtime");
+let docPaths = [
+  Nodepath.join("packages", "@rescript", "runtime"),
+  Nodepath.join("packages", "@rescript", "belt", "src")
+];
 
 async function extractExamples() {
-  let files = Nodefs.readdirSync(runtimePath);
-  let docFiles = files.filter(f => {
-    if (f.startsWith("Js") || f.startsWith("RescriptTools")) {
-      return false;
-    } else if (f.endsWith(".resi")) {
-      return true;
-    } else if (f.endsWith(".res")) {
-      return !files.includes(f + "i");
-    } else {
-      return false;
-    }
+  let docFiles = docPaths.flatMap(docPath => {
+    let files = Nodefs.readdirSync(docPath);
+    return files.filter(f => {
+      if (f.startsWith("Js") || f.startsWith("RescriptTools")) {
+        return false;
+      } else if (f.endsWith(".resi")) {
+        return true;
+      } else if (f.endsWith(".res")) {
+        return !files.includes(f + "i");
+      } else {
+        return false;
+      }
+    }).map(f => Nodepath.join(docPath, f));
   });
-  console.log(`Extracting examples from ` + docFiles.length.toString() + ` runtime files...`);
+  console.log(`Extracting examples from ${docFiles.length.toString()} runtime and Belt files...`);
   let examples = [];
-  await ArrayUtils.forEachAsyncInBatches(docFiles, batchSize, async f => {
-    let doc = await extractDocFromFile(Nodepath.join(runtimePath, f));
+  await ArrayUtils.forEachAsyncInBatches(docFiles, batchSize, async file => {
+    let doc = await extractDocFromFile(file);
     examples.push(...doc.filter(d => d.code.includes("assertEqual(")));
   });
   examples.sort((a, b) => Primitive_string.compare(a.id, b.id));
@@ -105,23 +110,23 @@ async function main() {
         }
       });
       if (ignoreExample) {
-        console.warn(`Ignoring ` + example.id + ` tests. Not supported by Node ` + nodeVersion.toString());
+        console.warn(`Ignoring ${example.id} tests. Not supported by Node ${nodeVersion.toString()}`);
         return;
       }
       let code = example.code;
       if (code.length === 0) {
         return;
       } else if (code.includes("await")) {
-        return `testAsync("` + example.name + `", async () => {
+        return `testAsync("${example.name}", async () => {
   module Test = {
-    ` + code + `
+    ${code}
   }
   ()
 })`;
       } else {
-        return `test("` + example.name + `", () => {
+        return `test("${example.name}", () => {
   module Test = {
-    ` + code + `
+    ${code}
   }
   ()
 })`;
@@ -130,8 +135,8 @@ async function main() {
     if (codeExamples.length === 0) {
       return;
     }
-    let content = `describe("` + key + `", () => {
-` + codeExamples.join("\n") + `
+    let content = `describe("${key}", () => {
+${codeExamples.join("\n")}
  })`;
     output.push(content);
   });
@@ -140,7 +145,7 @@ async function main() {
   let fileContent = `open Mocha
 @@warning("-32-34-60-37-109-3-44")
 
-` + output.join("\n");
+${output.join("\n")}`;
   return await Promises.writeFile(filepath, fileContent);
 }
 

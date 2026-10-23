@@ -17,13 +17,21 @@ type constructor = {
   payload?: constructorPayload,
 }
 
-type rec typeInSignature = {
-  path: string,
-  genericTypeParameters: array<typeInSignature>,
+@tag("kind")
+type rec typeInSignature =
+  | @as("constructor") Constructor({path: string, genericTypeParameters: array<typeInSignature>})
+  | @as("variable") Variable({name: string, weak: bool})
+  | @as("tuple") Tuple({elements: array<typeInSignature>})
+  | @as("function") Function({parameters: array<signatureParameter>, returnType: typeInSignature})
+  | @as("rendered") Rendered({signature: string})
+and signatureParameter = {
+  label?: string,
+  optional: bool,
+  @as("type") type_: typeInSignature,
 }
 
 type signatureDetails = {
-  parameters: array<typeInSignature>,
+  parameters: array<signatureParameter>,
   returnType: typeInSignature,
 }
 

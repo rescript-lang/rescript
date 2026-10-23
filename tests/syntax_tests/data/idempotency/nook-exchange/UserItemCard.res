@@ -249,7 +249,7 @@ let make = (
       : <>
           {switch userItem {
           | Some(userItem) =>
-            if userItem.note->Js.String.length > 0 {
+            if userItem.note->String.length > 0 {
               <div className=Styles.userNote> {Emoji.parseText(userItem.note)} </div>
             } else {
               React.null

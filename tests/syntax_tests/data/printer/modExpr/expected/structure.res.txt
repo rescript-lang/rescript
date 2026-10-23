@@ -52,8 +52,7 @@ module M3: {
   include M'
 }
 
-module G0: (X: {}) =>
-{
+module G0: (X: {}) => {
   module N': {
     let x: int
   }

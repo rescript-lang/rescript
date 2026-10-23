@@ -36,7 +36,7 @@ external make: (
   | #stepBefore
   | #stepAfter
   ]=?,
-  ~dataKey: Config.dataItem => Js.null<yValue>,
+  ~dataKey: Config.dataItem => null<yValue>,
   ~stroke: string=?,
   ~strokeWidth: float=?,
   ~strokeDasharray: string=?,

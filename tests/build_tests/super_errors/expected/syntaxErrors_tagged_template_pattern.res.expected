@@ -1,0 +1,11 @@
+
+  [1;31mSyntax error![0m
+  [36m/.../fixtures/syntaxErrors_tagged_template_pattern.res[0m:[2m3:5-14[0m
+
+  1 [2m│[0m let classify = value =>
+  2 [2m│[0m   switch value {
+  [1;31m3[0m [2m│[0m   | [1;31mjson`\x61`[0m => 1
+  4 [2m│[0m   | _ => 2
+  5 [2m│[0m   }
+
+  Tagged template literals are not supported in patterns

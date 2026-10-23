@@ -91,7 +91,7 @@ let make = () => {
   let urlState = Router.useUrlState()
 
   // TODO: add code that scrolls to the correct height on mobile (to buy etc).
-  // let ref = React.useRef(Js.Nullable.null);
+  // let ref = React.useRef(Nullable.null);
   // ref.current.scrollHeight;
   // ReactDOMRe.Ref.domRef(ref);
   /* ref={ReactDOMRe.Ref.domRef(ref)} */

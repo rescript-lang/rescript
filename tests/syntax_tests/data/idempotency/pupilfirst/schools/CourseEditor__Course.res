@@ -14,7 +14,7 @@ type t = {
   id: string,
   name: string,
   description: string,
-  endsAt: option<Js.Date.t>,
+  endsAt: option<Date.t>,
   about: option<string>,
   publicSignup: bool,
   thumbnail: option<Image.t>,

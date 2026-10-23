@@ -151,7 +151,7 @@ let rec pattern_variables : Typedtree.pattern -> Ident.t list =
   | Tpat_any -> []
   | Tpat_var (id, _) -> [id]
   | Tpat_alias (pat, id, _) -> id :: pattern_variables pat
-  | Tpat_constant _ -> []
+  | Tpat_constant _ | Tpat_interval _ -> []
   | Tpat_tuple pats -> List.concat (List.map pattern_variables pats)
   | Tpat_construct (_, _, pats) -> List.concat (List.map pattern_variables pats)
   | Tpat_variant (_, Some pat, _) -> pattern_variables pat
@@ -163,6 +163,10 @@ let rec pattern_variables : Typedtree.pattern -> Ident.t list =
     match rest with
     | None -> fields
     | Some {rest_ident; _} -> rest_ident :: fields)
+  | Tpat_dict entries ->
+    List.concat_map
+      (fun {Typedtree.tdp_pattern} -> pattern_variables tdp_pattern)
+      entries
   | Tpat_array pats -> List.concat (List.map pattern_variables pats)
   | Tpat_or (l, r, _) -> pattern_variables l @ pattern_variables r
 
@@ -201,14 +205,16 @@ let rec classify_expression : Typedtree.expression -> sd =
     classify_expression e
   | Texp_ident _ | Texp_for _ | Texp_for_of _ | Texp_for_await_of _
   | Texp_constant _ | Texp_tuple _ | Texp_array _ | Texp_construct _
-  | Texp_variant _ | Texp_record _ | Texp_setfield _ | Texp_while _
-  | Texp_pack _ | Texp_function _ | Texp_extension_constructor _ | Texp_break
-  | Texp_continue ->
+  | Texp_variant _ | Texp_record _ | Texp_object_literal _ | Texp_setfield _
+  | Texp_while _ | Texp_pack _ | Texp_function _ | Texp_break | Texp_continue ->
     Static
   | Texp_apply {funct = {exp_desc = Texp_ident (_, _, vd)}} when is_ref vd ->
     Static
-  | Texp_apply _ | Texp_match _ | Texp_ifthenelse _ | Texp_send _ | Texp_field _
-  | Texp_assert _ | Texp_try _ ->
+  (* A dict literal is built by the [Pmakedict] and [Pdict_spread] primitives,
+     see [Translcore] *)
+  | Texp_apply _ | Texp_dict _ | Texp_match _ | Texp_ifthenelse _
+  | Texp_object_get _ | Texp_object_set _ | Texp_field _ | Texp_assert _
+  | Texp_try _ | Texp_tagged_template _ | Texp_template _ ->
     Dynamic
 
 let rec expression : Env.env -> Typedtree.expression -> Use.t =
@@ -260,18 +266,25 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
   | Texp_apply {funct = e; args} ->
     let arg env (_, eo) = option expression env eo in
     Use.(join (inspect (expression env e)) (inspect (list arg env args)))
+  | Texp_tagged_template {tag; values} ->
+    Use.(
+      join (inspect (expression env tag)) (inspect (list expression env values)))
+  | Texp_template {values} -> Use.guard (list expression env values)
   | Texp_tuple exprs -> Use.guard (list expression env exprs)
   | Texp_array exprs -> Use.guard (list expression env exprs)
+  | Texp_dict entries ->
+    let entry env = function
+      | Tdict_entry (_, e) | Tdict_spread e -> expression env e
+    in
+    Use.inspect (list entry env entries)
   | Texp_construct (_, desc, exprs) ->
     let access_constructor =
-      match desc.cstr_tag with
-      | Cstr_extension pth -> Use.inspect (path env pth)
+      match desc.cstr_kind with
+      | Extension_constructor pth -> Use.inspect (path env pth)
       | _ -> Use.empty
     in
     let use =
-      match desc.cstr_tag with
-      | Cstr_unboxed -> fun x -> x
-      | Cstr_constant _ | Cstr_block _ | Cstr_extension _ -> Use.guard
+      if Datarepr.constructor_is_unboxed desc then fun x -> x else Use.guard
     in
     Use.join access_constructor (use (list expression env exprs))
   | Texp_variant (_, eo) -> Use.guard (option expression env eo)
@@ -279,7 +292,6 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
     let use =
       match rep with
       | Record_unboxed _ -> fun x -> x
-      | Record_float_unused -> assert false
       | Record_regular | Record_inlined _ | Record_extension -> Use.guard
     in
     let field env = function
@@ -298,9 +310,11 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
     Use.(join (discard (expression env e1)) (expression env e2))
   | Texp_while (e1, e2) ->
     Use.(join (inspect (expression env e1)) (discard (expression env e2)))
-  | Texp_send (e1, _, eo) ->
-    Use.(
-      join (inspect (expression env e1)) (inspect (option expression env eo)))
+  | Texp_object_get (e1, _) -> Use.inspect (expression env e1)
+  | Texp_object_set (e1, _, e2) ->
+    Use.(join (inspect (expression env e1)) (inspect (expression env e2)))
+  | Texp_object_literal fields ->
+    Use.inspect (list (fun env (_, e) -> expression env e) env fields)
   | Texp_field (e, _, _) -> Use.(inspect (expression env e))
   | Texp_letexception (_, e) -> expression env e
   | Texp_assert e -> Use.inspect (expression env e)
@@ -309,9 +323,19 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
     (* This is more permissive than the old check. *)
     let case env {Typedtree.c_rhs} = expression env c_rhs in
     Use.join (expression env e) (list case env cases)
-  | Texp_function {case = case_} ->
-    Use.delay (list (case ~scrutinee:Use.empty) env [case_])
-  | Texp_extension_constructor _ -> Use.empty
+  | Texp_function {params; body} ->
+    let env =
+      List.fold_left
+        (fun env {Typedtree.fp_pat} ->
+          let ty =
+            if is_destructuring_pattern fp_pat then Use.inspect Use.empty
+            else Use.discard Use.empty
+          in
+          let vars = pattern_variables fp_pat in
+          List.fold_left (fun env id -> Ident.add id ty env) env vars)
+        env params
+    in
+    Use.delay (expression env body)
 
 and option : 'a. (Env.env -> 'a -> Use.t) -> Env.env -> 'a option -> Use.t =
  fun f env -> value_default (f env) ~default:Use.empty
@@ -439,11 +463,12 @@ and is_destructuring_pattern : Typedtree.pattern -> bool =
   | Tpat_any -> false
   | Tpat_var (_, _) -> false
   | Tpat_alias (pat, _, _) -> is_destructuring_pattern pat
-  | Tpat_constant _ -> true
+  | Tpat_constant _ | Tpat_interval _ -> true
   | Tpat_tuple _ -> true
   | Tpat_construct (_, _, _) -> true
   | Tpat_variant _ -> true
   | Tpat_record (_, _, _) -> true
+  | Tpat_dict _ -> true
   | Tpat_array _ -> true
   | Tpat_or (l, r, _) ->
     is_destructuring_pattern l || is_destructuring_pattern r

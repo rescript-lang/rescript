@@ -214,7 +214,7 @@ module Invariants = struct
           assert_
             (removed_targets = expected_removed
             && has_new_edge = expected_has_new)
-            "ReactiveFixpoint.apply invariant failed: inconsistent edge_change")
+            "Reactive_fixpoint.apply invariant failed: inconsistent edge_change")
         edge_changes
 
   let assert_deleted_nodes_closed ~current ~deleted_nodes ~old_successors =
@@ -224,14 +224,14 @@ module Invariants = struct
       Hashtbl.iter
         (fun k () ->
           assert_ (Hashtbl.mem current k)
-            "ReactiveFixpoint.apply invariant failed: deleted node not in \
+            "Reactive_fixpoint.apply invariant failed: deleted node not in \
              current";
           List.iter
             (fun succ ->
               if Hashtbl.mem current succ then
                 assert_
                   (Hashtbl.mem deleted_nodes succ)
-                  "ReactiveFixpoint.apply invariant failed: deleted closure \
+                  "Reactive_fixpoint.apply invariant failed: deleted closure \
                    broken")
             (old_successors k))
         deleted_nodes
@@ -243,8 +243,8 @@ module Invariants = struct
       Hashtbl.iter (fun k () -> Hashtbl.remove expected k) deleted_nodes;
       assert_
         (set_equal expected current)
-        "ReactiveFixpoint.apply invariant failed: current != pre_current minus \
-         deleted")
+        "Reactive_fixpoint.apply invariant failed: current != pre_current \
+         minus deleted")
 
   let assert_no_supported_deleted_left ~deleted_nodes ~current ~supported =
     (* Invariant: [k in deleted_nodes \\ current => not (supported k)]. *)
@@ -254,8 +254,8 @@ module Invariants = struct
           if not (Hashtbl.mem current k) then
             assert_
               (not (supported k))
-              "ReactiveFixpoint.apply invariant failed: supported deleted node \
-               left behind")
+              "Reactive_fixpoint.apply invariant failed: supported deleted \
+               node left behind")
         deleted_nodes
 
   let assert_removal_output_matches ~output_entries ~deleted_nodes ~current =
@@ -272,7 +272,7 @@ module Invariants = struct
         output_entries;
       assert_
         (set_equal expected actual)
-        "ReactiveFixpoint.apply invariant failed: removal output mismatch")
+        "Reactive_fixpoint.apply invariant failed: removal output mismatch")
 
   let assert_final_fixpoint_and_delta ~compute_reachable ~t ~pre_current
       ~output_entries =
@@ -283,8 +283,8 @@ module Invariants = struct
       let reachable = compute_reachable t in
       assert_
         (set_equal reachable t.current)
-        "ReactiveFixpoint.apply invariant failed: current is not a fixed-point \
-         closure";
+        "Reactive_fixpoint.apply invariant failed: current is not a \
+         fixed-point closure";
 
       let expected_adds = Hashtbl.create (Hashtbl.length t.current) in
       let expected_removes = Hashtbl.create (Hashtbl.length pre_current) in
@@ -313,7 +313,7 @@ module Invariants = struct
       if not (adds_ok && removes_ok) then
         failwith
           (Printf.sprintf
-             "ReactiveFixpoint.apply invariant failed: output delta mismatch \
+             "Reactive_fixpoint.apply invariant failed: output delta mismatch \
               (pre=%d final=%d output=%d expected_adds=%d actual_adds=%d \
               expected_removes=%d actual_removes=%d)"
              (Hashtbl.length pre_current)

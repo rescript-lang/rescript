@@ -88,7 +88,7 @@ let find_component (lookup : ?loc:_ -> _) make_error env loc lid =
   try
     match lid with
     | Longident.Ldot (Longident.Lident "*predef*", s) ->
-      lookup ~loc (Longident.Lident s) Env.initial_safe_string
+      lookup ~loc (Longident.Lident s) (Env.initial_safe_string ())
     | _ -> lookup ~loc lid env
   with
   | Not_found -> narrow_unbound_lid_error env loc lid make_error
@@ -144,8 +144,7 @@ let find_modtype env loc lid =
   Builtin_attributes.check_deprecated loc decl.mtd_attributes (Path.name path);
   r
 
-let unbound_constructor_error ?from_type env lid =
-  ignore from_type;
+let unbound_constructor_error ?from_type:_ env lid =
   narrow_unbound_lid_error env lid.loc lid.txt (fun lid ->
       Unbound_constructor lid)
 
@@ -178,6 +177,7 @@ let create_package_mty fake loc env (p, l) =
             ptype_kind = Ptype_abstract;
             ptype_private = Asttypes.Public;
             ptype_manifest = (if fake then None else Some t);
+            ptype_origin = Declared;
             ptype_attributes = [];
             ptype_loc = loc;
           }
@@ -189,21 +189,37 @@ let create_package_mty fake loc env (p, l) =
 
 (* Translation of type expressions *)
 
-let type_variables = ref (Tbl.empty : (string, type_expr) Tbl.t)
-let univars = ref ([] : (string * type_expr) list)
-let pre_univars = ref ([] : type_expr list)
-let used_variables = ref (Tbl.empty : (string, type_expr * Location.t) Tbl.t)
+type variable_refs = {
+  type_variables_ref: (string, type_expr) Tbl.t ref;
+  univars_ref: (string * type_expr) list ref;
+  used_variables_ref: (string, type_expr * Location.t) Tbl.t ref;
+}
+
+(* These tables describe the type variables being translated by this request.
+   Sharing them across domains can make a valid interface report an unbound
+   type parameter when another translation clears its table. *)
+let variable_refs =
+  Request_local.new_key (fun () ->
+      {
+        type_variables_ref = ref Tbl.empty;
+        univars_ref = ref [];
+        used_variables_ref = ref Tbl.empty;
+      })
+
+let type_variables () = (Domain.DLS.get variable_refs).type_variables_ref
+let univars () = (Domain.DLS.get variable_refs).univars_ref
+let used_variables () = (Domain.DLS.get variable_refs).used_variables_ref
 
 let reset_type_variables () =
   reset_global_level ();
   Ctype.reset_reified_var_counter ();
-  type_variables := Tbl.empty
+  type_variables () := Tbl.empty
 
-let narrow () = (increase_global_level (), !type_variables)
+let narrow () = (increase_global_level (), !(type_variables ()))
 
 let widen (gl, tv) =
   restore_global_level gl;
-  type_variables := tv
+  type_variables () := tv
 
 let strict_ident c = c = '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 
@@ -231,11 +247,11 @@ let transl_type_param env styp =
       try
         if name <> "" && name.[0] = '_' then
           raise (Error (loc, Env.empty, Invalid_variable_name ("'" ^ name)));
-        ignore (Tbl.find name !type_variables);
+        ignore (Tbl.find name !(type_variables ()));
         raise Already_bound
       with Not_found ->
         let v = new_global_var ~name () in
-        type_variables := Tbl.add name v !type_variables;
+        type_variables () := Tbl.add name v !(type_variables ());
         v
     in
     {
@@ -253,10 +269,7 @@ let transl_type_param env styp =
   Builtin_attributes.warning_scope styp.ptyp_attributes (fun () ->
       transl_type_param env styp)
 
-let new_pre_univar ?name () =
-  let v = newvar ?name () in
-  pre_univars := v :: !pre_univars;
-  v
+let new_pre_univar ?name () = newvar ?name ()
 
 let rec swap_list = function
   | x :: y :: l -> y :: x :: swap_list l
@@ -292,30 +305,51 @@ and transl_type_aux env policy styp =
     let ty =
       if name <> "" && name.[0] = '_' then
         raise (Error (styp.ptyp_loc, env, Invalid_variable_name ("'" ^ name)));
-      try instance env (List.assoc name !univars)
+      try instance env (List.assoc name !(univars ()))
       with Not_found -> (
-        try instance env (fst (Tbl.find name !used_variables))
+        try instance env (fst (Tbl.find name !(used_variables ())))
         with Not_found ->
           let v =
             if policy = Univars then new_pre_univar ~name ()
             else newvar ~name ()
           in
-          used_variables := Tbl.add name (v, styp.ptyp_loc) !used_variables;
+          used_variables () :=
+            Tbl.add name (v, styp.ptyp_loc) !(used_variables ());
           v)
     in
     ctyp (Ttyp_var name) ty
-  | Ptyp_arrow {arg; ret; arity} ->
-    let lbl = arg.lbl in
-    let cty1 = transl_type env policy arg.typ in
-    let cty2 = transl_type env policy ret in
-    let ty1 = cty1.ctyp_type in
-    let ty1 =
-      if Btype.is_optional lbl then
-        newty (Tconstr (Predef.path_option, [ty1], ref Mnil))
-      else ty1
+  | Ptyp_arrow {params; ret} ->
+    let cparams =
+      List.map
+        (function
+          | Parsetree.Parg_type {attrs; lbl; typ} ->
+            let cty = transl_type env policy typ in
+            let ty =
+              if Btype.is_optional lbl then
+                newty (Tconstr (Predef.path_option, [cty.ctyp_type], ref Mnil))
+              else cty.ctyp_type
+            in
+            (attrs, lbl, cty, ty)
+          | Parsetree.Parg_fixed {loc} ->
+            (* External processing removes fixed arguments before typing. *)
+            Location.raise_errorf ~loc
+              "Fixed arguments are only allowed in external declarations")
+        params
     in
-    let ty = newty (Tarrow ({lbl; typ = ty1}, cty2.ctyp_type, Cok, arity)) in
-    ctyp (Ttyp_arrow ({attrs = arg.attrs; lbl; typ = cty1}, cty2, arity)) ty
+    let cty2 = transl_type env policy ret in
+    let ty =
+      newty
+        (Tarrow
+           ( List.map (fun (_, lbl, _, ty1) -> {Types.lbl; typ = ty1}) cparams,
+             cty2.ctyp_type ))
+    in
+    ctyp
+      (Ttyp_arrow
+         ( List.map
+             (fun (attrs, lbl, cty1, _) -> {Typedtree.attrs; lbl; typ = cty1})
+             cparams,
+           cty2 ))
+      ty
   | Ptyp_tuple stl ->
     assert (List.length stl >= 2);
     let ctys = List.map (transl_type env policy) stl in
@@ -361,9 +395,9 @@ and transl_type_aux env policy styp =
     let cty =
       try
         let t =
-          try List.assoc alias !univars
+          try List.assoc alias !(univars ())
           with Not_found ->
-            instance env (fst (Tbl.find alias !used_variables))
+            instance env (fst (Tbl.find alias !(used_variables ())))
         in
         let ty = transl_type env policy st in
         (try unify_var env t ty.ctyp_type
@@ -373,7 +407,8 @@ and transl_type_aux env policy styp =
         ty
       with Not_found ->
         let t = newvar () in
-        used_variables := Tbl.add alias (t, styp.ptyp_loc) !used_variables;
+        used_variables () :=
+          Tbl.add alias (t, styp.ptyp_loc) !(used_variables ());
         let ty = transl_type env policy st in
         (try unify_var env t ty.ctyp_type
          with Unify trace ->
@@ -418,8 +453,16 @@ and transl_type_aux env policy styp =
       with Not_found -> Hashtbl.add hfields l (l, f)
     in
     let add_field = function
-      | Rtag (l, attrs, c, stl) ->
+      | Rtag (l, attrs, c, groups) ->
         name := None;
+        let stl =
+          List.map
+            (fun {loc; txt = args} ->
+              match args with
+              | [arg] -> arg
+              | args -> Ast_helper.Typ.tuple ~loc args)
+            groups
+        in
         let tl =
           Builtin_attributes.warning_scope attrs (fun () ->
               List.map (transl_type env policy) stl)
@@ -503,11 +546,11 @@ and transl_type_aux env policy styp =
     let vars = List.map (fun v -> v.txt) vars in
     begin_def ();
     let new_univars = List.map (fun name -> (name, newvar ~name ())) vars in
-    let old_univars = !univars in
-    univars := new_univars @ !univars;
+    let old_univars = !(univars ()) in
+    univars () := new_univars @ !(univars ());
     let cty = transl_type env policy st in
     let ty = cty.ctyp_type in
-    univars := old_univars;
+    univars () := old_univars;
     end_def ();
     generalize ty;
     let ty_list =
@@ -529,7 +572,7 @@ and transl_type_aux env policy styp =
   | Ptyp_package (p, l) ->
     let l, mty = create_package_mty true styp.ptyp_loc env (p, l) in
     let z = narrow () in
-    let mty = !transl_modtype env mty in
+    ignore (!transl_modtype env mty);
     widen z;
     let ptys = List.map (fun (s, pty) -> (s, transl_type env policy pty)) l in
     let path = !transl_modtype_longident styp.ptyp_loc env p.txt in
@@ -540,15 +583,7 @@ and transl_type_aux env policy styp =
              List.map (fun (s, _pty) -> s.txt) l,
              List.map (fun (_, cty) -> cty.ctyp_type) ptys ))
     in
-    ctyp
-      (Ttyp_package
-         {
-           pack_path = path;
-           pack_type = mty.mty_type;
-           pack_fields = ptys;
-           pack_txt = p;
-         })
-      ty
+    ctyp (Ttyp_package {pack_path = path; pack_fields = ptys}) ty
   | Ptyp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
 
@@ -557,15 +592,28 @@ and transl_poly_type env policy t =
 
 and transl_fields env policy o fields =
   let hfields = Hashtbl.create 17 in
-  let add_typed_field loc l ty =
+  let add_typed_field loc l ty mut =
     try
-      let ty' = Hashtbl.find hfields l in
+      let ty', _ = Hashtbl.find hfields l in
+      (* When duplicate declarations of a field are collapsed, preserve
+         [Mutable] if any declaration has [@set]. *)
+      if mut = Asttypes.Mutable then
+        Hashtbl.replace hfields l (ty', Asttypes.Mutable);
       if equal env false [ty] [ty'] then ()
       else
         try unify env ty ty'
         with Unify _trace ->
           raise (Error (loc, env, Method_mismatch (l, ty, ty')))
-    with Not_found -> Hashtbl.add hfields l ty
+    with Not_found -> Hashtbl.add hfields l (ty, mut)
+  in
+  let field_mutability (attrs : Parsetree.attributes) =
+    if
+      List.exists
+        (fun (({txt}, payload) : Parsetree.attribute) ->
+          txt = "set" && payload = Parsetree.PStr [])
+        attrs
+    then Asttypes.Mutable
+    else Asttypes.Immutable
   in
   let add_field = function
     | Otag (s, a, ty1) ->
@@ -574,7 +622,7 @@ and transl_fields env policy o fields =
             transl_poly_type env policy ty1)
       in
       let field = OTtag (s, a, ty1) in
-      add_typed_field ty1.ctyp_loc s.txt ty1.ctyp_type;
+      add_typed_field ty1.ctyp_loc s.txt ty1.ctyp_type (field_mutability a);
       field
     | Oinherit sty -> (
       let cty = transl_type env policy sty in
@@ -585,12 +633,13 @@ and transl_fields env policy o fields =
       in
       let t = expand_head env cty.ctyp_type in
       match (t, nm) with
-      | {desc = Tobject ({desc = (Tfield _ | Tnil) as tf}, _)}, _ ->
-        if opened_object t then
+      | {desc = Tobject {desc = (Tfield _ | Tnil) as tf}}, _ ->
+        if object_row_is_structurally_open t then
           raise (Error (sty.ptyp_loc, env, Opened_object nm));
         let rec iter_add = function
-          | Tfield (s, _k, ty1, ty2) ->
-            add_typed_field sty.ptyp_loc s ty1;
+          | Tfield {name = s; mutability; typ = ty1; rest = ty2} ->
+            add_typed_field sty.ptyp_loc s ty1
+              (Btype.mutability_repr mutability);
             iter_add ty2.desc
           | Tnil -> ()
           | _ -> assert false
@@ -602,7 +651,7 @@ and transl_fields env policy o fields =
       | _ -> raise (Error (sty.ptyp_loc, env, Not_an_object t)))
   in
   let object_fields = List.map add_field fields in
-  let fields = Hashtbl.fold (fun s ty l -> (s, ty) :: l) hfields [] in
+  let fields = Hashtbl.fold (fun s f l -> (s, f) :: l) hfields [] in
   let ty_init =
     match (o, policy) with
     | Closed, _ -> newty Tnil
@@ -611,7 +660,15 @@ and transl_fields env policy o fields =
   in
   let ty =
     List.fold_left
-      (fun ty (s, ty') -> newty (Tfield (s, Fpresent, ty', ty)))
+      (fun ty (s, (ty', mut)) ->
+        newty
+          (Tfield
+             {
+               name = s;
+               mutability = ref (Mutability_value mut);
+               typ = ty';
+               rest = ty;
+             }))
       ty_init fields
   in
   (ty, object_fields)
@@ -659,15 +716,15 @@ let globalize_used_variables env fixed =
           Btype.backtrack snap;
           false
       then (
-        try r := (loc, v, Tbl.find name !type_variables) :: !r
+        try r := (loc, v, Tbl.find name !(type_variables ())) :: !r
         with Not_found ->
           if fixed && Btype.is_Tvar (repr ty) then
             raise (Error (loc, env, Unbound_type_variable ("'" ^ name)));
           let v2 = new_global_var () in
           r := (loc, v, v2) :: !r;
-          type_variables := Tbl.add name v2 !type_variables))
-    !used_variables;
-  used_variables := Tbl.empty;
+          type_variables () := Tbl.add name v2 !(type_variables ())))
+    !(used_variables ());
+  used_variables () := Tbl.empty;
   fun () ->
     List.iter
       (function
@@ -677,16 +734,16 @@ let globalize_used_variables env fixed =
       !r
 
 let transl_simple_type env fixed styp =
-  univars := [];
-  used_variables := Tbl.empty;
+  univars () := [];
+  used_variables () := Tbl.empty;
   let typ = transl_type env (if fixed then Fixed else Extensible) styp in
   globalize_used_variables env fixed ();
   make_fixed_univars typ.ctyp_type;
   typ
 
 let transl_simple_type_delayed env styp =
-  univars := [];
-  used_variables := Tbl.empty;
+  univars () := [];
+  used_variables () := Tbl.empty;
   let typ = transl_type env Extensible styp in
   make_fixed_univars typ.ctyp_type;
   (typ, globalize_used_variables env false)
@@ -727,6 +784,8 @@ let super_spellcheck ppf fold env lid =
   match lid with
   | Longident.Lident s -> did_you_mean ppf (fun _ -> choices None s)
   | Longident.Ldot (r, s) -> did_you_mean ppf (fun _ -> choices (Some r) s)
+
+let spellcheck_value ppf env lid = super_spellcheck ppf Env.fold_values env lid
 
 let spellcheck ppf fold env lid =
   let choices ~path name =
@@ -833,7 +892,7 @@ let report_error env ppf = function
     | other_ident ->
       Format.fprintf ppf "The value %a can't be found" Printtyp.longident
         other_ident);
-    let did_spellcheck = super_spellcheck ppf Env.fold_values env lid in
+    let did_spellcheck = spellcheck_value ppf env lid in
     (* For cases such as when the user refers to something that's a value with 
       a lowercase identifier in JS but a module in ReScript.
       
@@ -864,7 +923,7 @@ let report_error env ppf = function
         "@[@{<info>The module or file %a can't be found.@}@,\
          @,\
          Are you trying to use the standard library's Str?@ If you're \
-         compiling to JavaScript,@ use @{<info>Js.Re@} instead.@ Otherwise, \
+         compiling to JavaScript,@ use @{<info>RegExp@} instead.@ Otherwise, \
          add str.cma to your ocamlc/ocamlopt command.@]"
         Printtyp.longident lid
     | lid ->

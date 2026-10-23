@@ -1,0 +1,243 @@
+{
+  "name": "DocgenSignatureDetails",
+  "docstrings": [],
+  "source": {
+    "filepath": "src/DocgenSignatureDetails.resi",
+    "line": 1,
+    "col": 1
+  },
+  "items": [
+    {
+      "id": "DocgenSignatureDetails.labeledOptional",
+      "kind": "value",
+      "name": "labeledOptional",
+      "signature": "let labeledOptional: (\n  ~required: 'a,\n  ~optional: array<'a>=?,\n) => result<'a, string>",
+      "docstrings": [
+        "Labeled and optional parameters keep their parameter metadata."
+      ],
+      "source": {
+        "filepath": "src/DocgenSignatureDetails.resi",
+        "line": 2,
+        "col": 1
+      },
+      "detail": {
+        "kind": "signature",
+        "details": {
+          "parameters": [
+            {
+              "label": "required",
+              "optional": false,
+              "type": { "kind": "variable", "name": "a", "weak": false }
+            },
+            {
+              "label": "optional",
+              "optional": true,
+              "type": {
+                "kind": "constructor",
+                "path": "array",
+                "genericTypeParameters": [
+                  { "kind": "variable", "name": "a", "weak": false }
+                ]
+              }
+            }
+          ],
+          "returnType": {
+            "kind": "constructor",
+            "path": "result",
+            "genericTypeParameters": [
+              { "kind": "variable", "name": "a", "weak": false },
+              {
+                "kind": "constructor",
+                "path": "string",
+                "genericTypeParameters": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "DocgenSignatureDetails.takesCallback",
+      "kind": "value",
+      "name": "takesCallback",
+      "signature": "let takesCallback: ('a => string) => bool",
+      "docstrings": [
+        "A callback remains one parameter instead of becoming outer parameters."
+      ],
+      "source": {
+        "filepath": "src/DocgenSignatureDetails.resi",
+        "line": 5,
+        "col": 1
+      },
+      "detail": {
+        "kind": "signature",
+        "details": {
+          "parameters": [
+            {
+              "optional": false,
+              "type": {
+                "kind": "function",
+                "parameters": [
+                  {
+                    "optional": false,
+                    "type": {
+                      "kind": "variable",
+                      "name": "a",
+                      "weak": false
+                    }
+                  }
+                ],
+                "returnType": {
+                  "kind": "constructor",
+                  "path": "string",
+                  "genericTypeParameters": []
+                }
+              }
+            }
+          ],
+          "returnType": {
+            "kind": "constructor",
+            "path": "bool",
+            "genericTypeParameters": []
+          }
+        }
+      }
+    },
+    {
+      "id": "DocgenSignatureDetails.returnsTuple",
+      "kind": "value",
+      "name": "returnsTuple",
+      "signature": "let returnsTuple: int => (string, int)",
+      "docstrings": [ "A tuple remains one return-type node." ],
+      "source": {
+        "filepath": "src/DocgenSignatureDetails.resi",
+        "line": 8,
+        "col": 1
+      },
+      "detail": {
+        "kind": "signature",
+        "details": {
+          "parameters": [
+            {
+              "optional": false,
+              "type": {
+                "kind": "constructor",
+                "path": "int",
+                "genericTypeParameters": []
+              }
+            }
+          ],
+          "returnType": {
+            "kind": "tuple",
+            "elements": [
+              {
+                "kind": "constructor",
+                "path": "string",
+                "genericTypeParameters": []
+              },
+              {
+                "kind": "constructor",
+                "path": "int",
+                "genericTypeParameters": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "DocgenSignatureDetails.returnsFunction",
+      "kind": "value",
+      "name": "returnsFunction",
+      "signature": "let returnsFunction: int => string => bool",
+      "docstrings": [
+        "A returned function remains nested in the return type."
+      ],
+      "source": {
+        "filepath": "src/DocgenSignatureDetails.resi",
+        "line": 11,
+        "col": 1
+      },
+      "detail": {
+        "kind": "signature",
+        "details": {
+          "parameters": [
+            {
+              "optional": false,
+              "type": {
+                "kind": "constructor",
+                "path": "int",
+                "genericTypeParameters": []
+              }
+            }
+          ],
+          "returnType": {
+            "kind": "function",
+            "parameters": [
+              {
+                "optional": false,
+                "type": {
+                  "kind": "constructor",
+                  "path": "string",
+                  "genericTypeParameters": []
+                }
+              }
+            ],
+            "returnType": {
+              "kind": "constructor",
+              "path": "bool",
+              "genericTypeParameters": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "DocgenSignatureDetails.takesVariant",
+      "kind": "value",
+      "name": "takesVariant",
+      "signature": "let takesVariant: [#count(int) | #enabled] => unit",
+      "docstrings": [
+        "Less common type forms remain visible through an explicit fallback."
+      ],
+      "source": {
+        "filepath": "src/DocgenSignatureDetails.resi",
+        "line": 14,
+        "col": 1
+      },
+      "detail": {
+        "kind": "signature",
+        "details": {
+          "parameters": [
+            {
+              "optional": false,
+              "type": {
+                "kind": "rendered",
+                "signature": "[#count(int) | #enabled]"
+              }
+            }
+          ],
+          "returnType": {
+            "kind": "constructor",
+            "path": "unit",
+            "genericTypeParameters": []
+          }
+        }
+      }
+    },
+    {
+      "id": "DocgenSignatureDetails.constant",
+      "kind": "value",
+      "name": "constant",
+      "signature": "let constant: int",
+      "docstrings": [
+        "Non-functions do not receive function signature details."
+      ],
+      "source": {
+        "filepath": "src/DocgenSignatureDetails.resi",
+        "line": 17,
+        "col": 1
+      }
+    }
+  ]
+}

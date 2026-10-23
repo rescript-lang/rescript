@@ -32,7 +32,7 @@ let decode = json => {
     review: json->field("review", bool),
     author: json->field("author", bool),
     enableLeaderboard: json->field("enableLeaderboard", bool),
-    thumbnailUrl: json->field("thumbnailUrl", nullable(string))->Js.Null.toOption,
+    thumbnailUrl: json->field("thumbnailUrl", nullable(string))->Null.toOption,
     linkedCommunities: json->field("linkedCommunities", array(string)),
     ended: json->field("ended", bool),
   }

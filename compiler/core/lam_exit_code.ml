@@ -23,17 +23,17 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 let has_exit_code lam exits =
-  let rec aux (lam : Lam.t) =
+  let rec aux (lam : Lambda.t) =
     match lam with
     | Lfunction _ -> false
     (* static exit can not cross function boundary *)
     | Lstaticraise (p, _) when exits p -> true
-    | _ -> Lam_iter.inner_exists lam aux
+    | _ -> Lambda_traverse.shallow_exists aux lam
   in
   aux lam
 
-let rec has_exit (lam : Lam.t) =
+let rec has_exit (lam : Lambda.t) =
   match lam with
   | Lfunction _ -> false
   | Lstaticraise (_, _) -> true
-  | _ -> Lam_iter.inner_exists lam has_exit
+  | _ -> Lambda_traverse.shallow_exists has_exit lam

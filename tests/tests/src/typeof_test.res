@@ -2,47 +2,47 @@ open Mocha
 open Test_utils
 
 let string_or_number = (type t, x) => {
-  let ty = Js.Types.classify(x)
+  let ty = Type.Classify.classify(x)
   switch ty {
-  | JSString(v) =>
+  | String(v) =>
     Console.log(v ++ "hei")
     true /* type check */
-  | JSNumber(v) =>
+  | Number(v) =>
     Console.log(v +. 3.)
     true /* type check */
-  | JSUndefined => false
-  | JSNull => false
-  | JSFalse | JSTrue => false
-  | JSFunction(_) =>
+  | Undefined => false
+  | Null => false
+  | Bool(_) => false
+  | Function(_) =>
     Console.log("Function")
     false
-  | JSObject(_) => false
-  | JSSymbol(_) => false
-  | JSBigInt(v) =>
-    v->Js.BigInt.toString->Console.log
+  | Object(_) => false
+  | Symbol(_) => false
+  | BigInt(v) =>
+    v->BigInt.toString->Console.log
     true
   }
 }
 
 describe(__MODULE__, () => {
   test("int_type", () => {
-    eq(__LOC__, Js.typeof(3), "number")
+    eq(__LOC__, Type.typeof(3), #number)
   })
 
   test("string_type", () => {
-    eq(__LOC__, Js.typeof("x"), "string")
+    eq(__LOC__, Type.typeof("x"), #string)
   })
 
   test("number_gadt_test", () => {
-    eq(__LOC__, Js.Types.test(3, Number), true)
+    eq(__LOC__, Type.typeof(3), #number)
   })
 
   test("boolean_gadt_test", () => {
-    eq(__LOC__, Js.Types.test(true, Boolean), true)
+    eq(__LOC__, Type.typeof(true), #boolean)
   })
 
   test("undefined_gadt_test", () => {
-    eq(__LOC__, Js.Types.test(Js.undefined, Undefined), true)
+    eq(__LOC__, Type.typeof(undefined), #undefined)
   })
 
   test("string_on_number1", () => {
@@ -58,18 +58,18 @@ describe(__MODULE__, () => {
   })
 
   test("string_gadt_test", () => {
-    eq(__LOC__, Js.Types.test("3", String), true)
+    eq(__LOC__, Type.typeof("3"), #string)
   })
 
   test("string_gadt_test_neg", () => {
-    eq(__LOC__, Js.Types.test(3, String), false)
+    eq(__LOC__, Type.typeof(3) == #string, false)
   })
 
   test("function_gadt_test", () => {
-    eq(__LOC__, Js.Types.test(x => x, Function), true)
+    eq(__LOC__, Type.typeof(x => x), #function)
   })
 
   test("object_gadt_test", () => {
-    eq(__LOC__, Js.Types.test({"x": 3}, Object), true)
+    eq(__LOC__, Type.typeof({"x": 3}), #object)
   })
 })

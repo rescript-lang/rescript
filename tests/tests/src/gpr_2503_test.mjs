@@ -2,6 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
+import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 
 function makeWrapper(foo, param) {
@@ -43,11 +44,11 @@ function makeWrapper4(foo, param) {
 
 Mocha.describe("Gpr_2503_test", () => {
   Mocha.test("gpr_2503 polymorphic variant optional parameter test", () => {
-    Test_utils.ok("File \"gpr_2503_test.res\", line 39, characters 7-14", "a" === makeWrapper3("a", undefined).foo);
-    Test_utils.ok("File \"gpr_2503_test.res\", line 40, characters 7-14", undefined === makeWrapper3(undefined, undefined).foo);
-    Test_utils.ok("File \"gpr_2503_test.res\", line 41, characters 7-14", "a" === makeWrapper4(1, undefined).foo);
-    Test_utils.ok("File \"gpr_2503_test.res\", line 42, characters 7-14", "b" === makeWrapper4(11, undefined).foo);
-    Test_utils.ok("File \"gpr_2503_test.res\", line 43, characters 7-14", undefined === makeWrapper4(111, undefined).foo);
+    Test_utils.ok("File \"gpr_2503_test.res\", line 41, characters 7-14", Primitive_object.equal(makeWrapper3("a", undefined).foo, "a"));
+    Test_utils.ok("File \"gpr_2503_test.res\", line 42, characters 7-14", makeWrapper3(undefined, undefined).foo === undefined);
+    Test_utils.ok("File \"gpr_2503_test.res\", line 43, characters 7-14", Primitive_object.equal(makeWrapper4(1, undefined).foo, "a"));
+    Test_utils.ok("File \"gpr_2503_test.res\", line 44, characters 7-14", Primitive_object.equal(makeWrapper4(11, undefined).foo, "b"));
+    Test_utils.ok("File \"gpr_2503_test.res\", line 45, characters 7-14", makeWrapper4(111, undefined).foo === undefined);
   });
 });
 

@@ -10,7 +10,7 @@ let decode = json => {
   {
     name: json->field("name", string),
     levelId: json->field("levelId", string),
-    accessEndsAt: json->field("accessEndsAt", nullable(string))->Js.Null.toOption,
+    accessEndsAt: json->field("accessEndsAt", nullable(string))->Null.toOption,
   }
 }
 

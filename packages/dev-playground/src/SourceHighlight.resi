@@ -1,1 +1,1 @@
-let render: string => array<Node.node>
+let render: (string, ~activeLine: int) => array<View.node>

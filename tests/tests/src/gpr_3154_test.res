@@ -1,21 +1,26 @@
 open Mocha
 open Test_utils
 
-module J = Js.Dict
+let get = (dict, key) =>
+  if Dict.has(dict, key) {
+    Some(Dict.getUnsafe(dict, key))
+  } else {
+    None
+  }
 
 describe(__MODULE__, () => {
-  test("Js.Dict None value handling", () => {
-    let d = Js.Dict.empty()
-    J.set(d, "foo", None)
-    switch J.get(d, "foo") {
+  test("Dict None value handling", () => {
+    let d = Dict.make()
+    Dict.set(d, "foo", None)
+    switch get(d, "foo") {
     | Some(None) => ok(__LOC__, true)
     | _ => ok(__LOC__, false)
     }
   })
 
-  test("Js.Dict get with None", () => {
-    let d0 = Js.Dict.empty()
-    J.set(d0, "foo", None)
-    eq(__LOC__, J.get(d0, "foo"), Some(None))
+  test("Dict get with None", () => {
+    let d0 = Dict.make()
+    Dict.set(d0, "foo", None)
+    eq(__LOC__, get(d0, "foo"), Some(None))
   })
 })

@@ -468,7 +468,7 @@ while {
 
   // bar
 } {
-  Js.log("test")
+  Console.log("test")
 }
 
 let multiply = (/* c0 */ m1 /* c1 */, /* c2 */ m2 /* c3 */) => {
@@ -502,7 +502,7 @@ switch x {
 
 let catch = 34
 
-let promiseCatch = x => Js.Promise.catch(x)
+let promiseCatch = x => Promise.catch(x)
 
 // aggregating intersections
 let () = {

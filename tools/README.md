@@ -2,8 +2,10 @@
 
 ## Install
 
+The `rescript` package provides the `rescript-tools` executable:
+
 ```sh
-npm install --save-dev @rescript/tools
+npm install --save-dev rescript
 ```
 
 ## CLI Usage
@@ -32,15 +34,17 @@ rescript-tools doc src/EntryPointLibFile.res > doc.json
 rescript-tools reanalyze --help
 ```
 
+## Contributor documentation
+
+- [Migration framework capabilities](src/migrate.md)
+- [Reanalyze architecture](../analysis/reanalyze/README.md)
+
 ## Decode JSON
 
-Add to `bs-dev-dependencies`:
-
-```json
-"dev-dependencies": ["@rescript/tools"]
-```
+`RescriptTools.Docgen` in the standard library (`@rescript/runtime`)
+decodes the JSON that `rescript-tools doc` prints:
 
 ```rescript
-// Read JSON file and parse with `Js.Json.parseExn`
+// Read JSON file and parse with `JSON.parseOrThrow`
 json->RescriptTools.Docgen.decodeFromJson
 ```

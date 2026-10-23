@@ -19,6 +19,4 @@
   String interpolation is not supported in pattern matching.
 
 ;;et
-;;foo =
-    (fun [arity:1]x ->
-       match x with | (("")[@res.template ]) -> [%rescript.exprhole ])
+;;foo = (fun [arity:1]x -> match x with | {js||js} -> [%rescript.exprhole ])

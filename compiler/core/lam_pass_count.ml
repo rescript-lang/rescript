@@ -36,28 +36,13 @@ let absorb_info (x : used_info) (y : used_info) =
     x.times <- x0 + y0;
     if captured then x.captured <- true
 
-let pp_info fmt (x : used_info) =
-  Format.fprintf fmt "(<captured:%b>:%d)" x.captured x.times
-
-let pp_occ_tbl fmt tbl =
-  Hash_ident.iter tbl (fun k v ->
-      Format.fprintf fmt "@[%a@ %a@]@." Ident.print k pp_info v)
-
-(* The global table [occ] associates to each let-bound identifier
-   the number of its uses (as a reference):
-   - 0 if never used
-   - 1 if used exactly once in and not under a lambda or within a loop
-   - when under a lambda,
-   - it's probably a closure
-   - within a loop
-   - update reference,
-       niether is good for inlining
-   - > 1 if used several times or under a lambda or within a loop.
-     The local table [bv] associates to each locally-let-bound variable
-     its reference count, as above.  [bv] is enriched at let bindings
-     but emptied when crossing lambdas and loops. *)
+(* The global table [occ] records each let-bound identifier's number of uses and
+   whether it is captured by a function or loop. The local table [bv] tracks
+   locally let-bound variables and is reset when crossing functions and loops,
+   so uses of outer bindings are marked as captured. The optimizer uses the
+   captured flag to restrict inlining without inflating the occurrence count. *)
 let collect_occurs lam : occ_tbl =
-  let occ : occ_tbl = Hash_ident.create 83 in
+  let occ : occ_tbl = Hash_ident.create 16 in
 
   (* Current use count of a variable. *)
   let used v =
@@ -70,17 +55,17 @@ let collect_occurs lam : occ_tbl =
   let bind_var bv ident =
     let r = dummy_info () in
     Hash_ident.add occ ident r;
-    Map_ident.add bv ident r
+    Map_ident.add ident r bv
   in
 
   (* Record a use of a variable *)
   let add_one_use bv ident =
-    match Map_ident.find_opt bv ident with
+    match Map_ident.find_opt ident bv with
     | Some r -> r.times <- r.times + 1
     | None -> (
       (* ident is not locally bound, therefore this is a use under a lambda
-         or within a loop.  Increase use count by 2 -- enough so
-         that single-use optimizations will not apply. *)
+         or within a loop. Mark it as captured so that single-use
+         optimizations only apply when moving the value is safe. *)
       match Hash_ident.find_opt occ ident with
       | Some r -> absorb_info r {times = 1; captured = true}
       | None ->
@@ -94,12 +79,12 @@ let collect_occurs lam : occ_tbl =
       | None -> dummy_info ()
       | Some v -> v
     in
-    match Map_ident.find_opt bv ident with
+    match Map_ident.find_opt ident bv with
     | Some r -> absorb_info r n
     | None -> (
       (* ident is not locally bound, therefore this is a use under a lambda
-         or within a loop.  Increase use count by 2 -- enough so
-         that single-use optimizations will not apply. *)
+         or within a loop. Mark it as captured so that single-use
+         optimizations only apply when moving the value is safe. *)
       match Hash_ident.find_opt occ ident with
       | Some r -> absorb_info r {n with captured = true}
       | None ->
@@ -107,7 +92,7 @@ let collect_occurs lam : occ_tbl =
         ())
   in
 
-  let rec count (bv : local_tbl) (lam : Lam.t) =
+  let rec count (bv : local_tbl) (lam : Lambda.t) =
     match lam with
     | Lfunction {body = l} -> count Map_ident.empty l
     (* when entering a function local [bv]
@@ -154,10 +139,6 @@ let collect_occurs lam : occ_tbl =
       when Ext_list.same_length params args
            && Lam_analysis.lfunction_can_be_inlined lfunction ->
       count bv (Lam_beta_reduce.no_names_beta_reduce params body args)
-    (* | Lapply{fn = Lfunction{function_kind = Tupled; params; body}; *)
-    (*          args = [Lprim {primitive = Pmakeblock _;  args; _}]; _} *)
-    (*   when  Ext_list.same_length params  args -> *)
-    (*   count bv (Lam_beta_reduce.beta_reduce   params body args) *)
     | Lapply {ap_func = l1; ap_args = ll; _} ->
       count bv l1;
       List.iter (count bv) ll

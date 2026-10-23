@@ -35,8 +35,8 @@ let loadContentBlocks = (targetId, send, version) => {
 
   ContentBlock.Query.make(~targetId, ~targetVersionId?, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(result => {
-    let contentBlocks = result["contentBlocks"]->Js.Array.map(ContentBlock.makeFromJs)
+  ->Promise.then(result => {
+    let contentBlocks = result["contentBlocks"]->Array.map(ContentBlock.makeFromJs)
 
     let versions = result["versions"]->Version.makeArrayFromJs
 
@@ -46,7 +46,7 @@ let loadContentBlocks = (targetId, send, version) => {
     }
     send(LoadContent(contentBlocks, versions, selectedVersion))
 
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }
@@ -58,9 +58,9 @@ let createTargetVersion = (targetId, targetVersion, send) => {
 
   CreateTargetVersionMutation.make(~targetVersionId, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(_result => {
+  ->Promise.then(_result => {
     loadContentBlocks(targetId, send, None)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }
@@ -76,7 +76,7 @@ let versionText = version =>
 let showDropdown = (versions, selectedVersion, loadContentBlocksCB) => {
   let contents =
     versions
-    ->Js.Array.filter(version => version != selectedVersion)
+    ->Array.filter(version => version != selectedVersion)
     ->Array.map(version => {
       let id = version->Version.id
 

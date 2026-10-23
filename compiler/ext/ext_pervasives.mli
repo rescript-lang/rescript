@@ -25,8 +25,6 @@
 (** Extension to standard library [Pervavives] module, safe to open 
 *)
 
-external reraise : exn -> 'a = "%raise"
-
 val finally : 'a -> clean:('a -> unit) -> ('a -> 'b) -> 'b
 
 (* val try_it : (unit -> 'a) ->  unit  *)
@@ -47,7 +45,3 @@ val max_int_option : int option -> int option -> int option
 (* val hash_variant : string -> int *)
 
 (* val todo : string -> 'a *)
-
-val nat_of_string_exn : string -> int
-
-val parse_nat_of_string : string -> int ref -> int

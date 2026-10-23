@@ -34,6 +34,13 @@ val all_record_args :
   (Longident.t loc * label_description * pattern * bool) list
 val const_compare : constant -> constant -> int
 
+(* The bounds of an int or char constant or interval pattern *)
+val int_range : pattern -> (int * int) option
+
+(* An int or char constant or interval for the given bounds, of the kind and
+   type of the pattern *)
+val make_int_range : pattern -> int -> int -> pattern
+
 val le_pat : pattern -> pattern -> bool
 val le_pats : pattern list -> pattern list -> bool
 
@@ -59,7 +66,7 @@ val set_args_erase_mutable : pattern -> pattern list -> pattern list
 
 val pat_of_constr : pattern -> constructor_description -> pattern
 val complete_constrs :
-  pattern -> constructor_tag list -> constructor_description list
+  pattern -> constructor_description list -> constructor_description list
 val ppat_of_type :
   Env.t ->
   type_expr ->
@@ -87,11 +94,6 @@ val check_unused :
 
 (* Irrefutability tests *)
 val irrefutable : pattern -> bool
-
-val inactive : partial:partial -> pattern -> bool
-(** An inactive pattern is a pattern, matching against which can be duplicated, erased or
-    delayed without change in observable behavior of the program.  Patterns containing
-    (lazy _) subpatterns or reads of mutable fields are active. *)
 
 (* Ambiguous bindings *)
 val check_ambiguous_bindings : case list -> unit

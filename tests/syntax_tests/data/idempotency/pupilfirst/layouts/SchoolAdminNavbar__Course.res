@@ -16,4 +16,4 @@ let decode = json => {
 }
 
 let sort = courses =>
-  courses->List.sort((c1, c2) => Js.String.localeCompare(c2->name, c1->name)->int_of_float)
+  courses->List.sort((c1, c2) => String.localeCompare(c1->name, c2->name)->int_of_float)

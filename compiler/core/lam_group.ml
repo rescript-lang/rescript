@@ -24,23 +24,23 @@
 
 (** This is not a recursive type definition *)
 type t =
-  | Single of Lam_compat.let_kind * Ident.t * Lam.t
-  | Recursive of (Ident.t * Lam.t) list
-  | Nop of Lam.t
+  | Single of Lambda.let_kind * Ident.t * Lambda.t
+  | Recursive of (Ident.t * Lambda.t) list
+  | Nop of Lambda.t
 
-let single (kind : Lam_compat.let_kind) id (body : Lam.t) =
+let single (kind : Lambda.let_kind) id (body : Lambda.t) =
   match (kind, body) with
   | (Strict | StrictOpt), (Lvar _ | Lconst _) -> Single (Alias, id, body)
   | _ -> Single (kind, id, body)
 
-let nop_cons (x : Lam.t) acc =
+let nop_cons (x : Lambda.t) acc =
   match x with
   | Lvar _ | Lconst _ | Lfunction _ -> acc
   | _ -> Nop x :: acc
 
 (* let pp = Format.fprintf *)
 
-let str_of_kind (kind : Lam_compat.let_kind) =
+let str_of_kind (kind : Lambda.let_kind) =
   match kind with
   | Alias -> "a"
   | Strict -> ""
@@ -51,11 +51,11 @@ let pp_group fmt (x : t) =
   match x with
   | Single (kind, id, lam) ->
     Format.fprintf fmt "@[let@ %a@ =%s@ @[<hv>%a@]@ @]" Ident.print id
-      (str_of_kind kind) Lam_print.lambda lam
+      (str_of_kind kind) Printlambda.lambda lam
   | Recursive lst ->
     List.iter
       (fun (id, lam) ->
         Format.fprintf fmt "@[let %a@ =r@ %a@ @]" Ident.print id
-          Lam_print.lambda lam)
+          Printlambda.lambda lam)
       lst
-  | Nop lam -> Lam_print.lambda fmt lam
+  | Nop lam -> Printlambda.lambda fmt lam

@@ -1,12 +1,11 @@
 open Mocha
 open Test_utils
-open Belt
 
 module N = List
 
 module V = Ext_pervasives_test.LargeFile
 
-module J = Js.Json
+module J = JSON
 
 module type X = module type of List
 

@@ -1,4 +1,4 @@
-@ocaml.doc("
+@res.doc("
   * Wrap component MyBanner to be used from Reason.
   ")
 @genType

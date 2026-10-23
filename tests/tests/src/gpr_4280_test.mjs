@@ -32,10 +32,7 @@ function fn(authState, route) {
     }
     if (exit === 2) {
       console.log(authState.VAL);
-      div({
-        hd: string("VerifyEmail"),
-        tl: /* [] */0
-      }, undefined);
+      div({hd: string("VerifyEmail"), tl: /* [] */0}, undefined);
       return 2;
     }
   } else {
@@ -48,27 +45,18 @@ function fn(authState, route) {
       }
     } else {
       if (route === "SignUp" || route === "SignIn" || route === "Invite" || route === "PasswordReset") {
-        div({
-          hd: string("LoggedOut"),
-          tl: /* [] */0
-        }, undefined);
+        div({hd: string("LoggedOut"), tl: /* [] */0}, undefined);
         return 1;
       }
       exit$1 = 2;
     }
     if (exit$1 === 2) {
-      div({
-        hd: string("Redirect"),
-        tl: /* [] */0
-      }, undefined);
+      div({hd: string("Redirect"), tl: /* [] */0}, undefined);
       return 3;
     }
   }
   console.log(onboardingRoute);
-  div({
-    hd: string("Onboarding"),
-    tl: /* [] */0
-  }, undefined);
+  div({hd: string("Onboarding"), tl: /* [] */0}, undefined);
   return 0;
 }
 

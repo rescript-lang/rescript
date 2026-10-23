@@ -22,19 +22,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(** [is_closed_by map lam]
-    return [true] if all unbound variables
-    belongs to the given [map] *)
-(* val is_closed_by : Set_ident.t -> Lam.t -> bool *)
-
-val is_closed : Lam.t -> bool
+val is_closed : Lambda.t -> bool
 
 val is_closed_with_map :
-  Set_ident.t -> Ident.t list -> Lam.t -> bool * Lam_var_stats.stats Map_ident.t
+  Set_ident.t ->
+  Ident.t list ->
+  Lambda.t ->
+  bool * Lam_var_stats.stats Map_ident.t
 (** The output is mostly used in betat reduction *)
 
 val free_variables :
   Set_ident.t ->
   Lam_var_stats.stats Map_ident.t ->
-  Lam.t ->
+  Lambda.t ->
   Lam_var_stats.stats Map_ident.t

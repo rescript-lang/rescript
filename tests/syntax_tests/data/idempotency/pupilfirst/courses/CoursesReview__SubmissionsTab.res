@@ -99,7 +99,7 @@ let getSubmissions = (
     (),
   )
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     response["submissions"]["nodes"]->updateSubmissions(
       setState,
       response["submissions"]["pageInfo"]["endCursor"],
@@ -109,7 +109,7 @@ let getSubmissions = (
       selectedTab,
       updateSubmissionsCB,
     )
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

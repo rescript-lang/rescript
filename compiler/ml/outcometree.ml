@@ -13,51 +13,30 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* Module [Outcometree]: results displayed by the toplevel *)
+(* Module [Outcometree]: printable representation of types and
+   signature items *)
 
-(* These types represent messages that the toplevel displays as normal
-   results or errors. The real displaying is customisable using the hooks:
-      [Toploop.print_out_value]
-      [Toploop.print_out_type]
-      [Toploop.print_out_sig_item]
-      [Toploop.print_out_phrase] *)
+(* [Printtyp] builds these trees. They are printed through the hooks
+   [Oprint.out_type], [Oprint.out_sig_item],
+   [Oprint.out_signature] and related refs, which bsc sets to the ReScript
+   printer through [Res_outcome_printer.setup]. *)
 
 type out_ident =
   | Oide_apply of out_ident * out_ident
   | Oide_dot of out_ident * string
   | Oide_ident of string
 
-type out_string = Ostr_string | Ostr_bytes
-
 type out_attribute = {oattr_name: string}
-
-type out_value =
-  | Oval_array of out_value list
-  | Oval_char of char
-  | Oval_constr of out_ident * out_value list
-  | Oval_ellipsis
-  | Oval_float of float
-  | Oval_int of int
-  | Oval_int32 of int32
-  | Oval_int64 of int64
-  | Oval_nativeint of nativeint
-  | Oval_list of out_value list
-  | Oval_printer of (Format.formatter -> unit)
-  | Oval_record of (out_ident * out_value) list
-  | Oval_string of string * int * out_string (* string, size-to-print, kind *)
-  | Oval_stuff of string
-  | Oval_tuple of out_value list
-  | Oval_variant of string * out_value option
 
 type out_type =
   | Otyp_abstract
   | Otyp_open
   | Otyp_alias of out_type * string
-  | Otyp_arrow of string * out_type * out_type * Asttypes.arity
-  | Otyp_class of bool * out_ident * out_type list
+  | Otyp_arrow of (Asttypes.Noloc.arg_label * out_type) list * out_type
   | Otyp_constr of out_ident * out_type list
   | Otyp_manifest of out_type * out_type
-  | Otyp_object of (string * out_type) list * bool option
+  | Otyp_object of (string * bool * out_type) list * bool option
+    (* fields are (name, mutable, type) *)
   | Otyp_record of (string * bool * bool * out_type) list
   | Otyp_stuff of string
   | Otyp_sum of (string * out_type list * out_type option * string option) list
@@ -72,15 +51,6 @@ and out_variant =
   | Ovar_fields of (string * bool * out_type list) list
   | Ovar_typ of out_type
 
-type out_class_type =
-  | Octy_constr of out_ident * out_type list
-  | Octy_arrow of string * out_type * out_class_type
-  | Octy_signature of out_type option * out_class_sig_item list
-and out_class_sig_item =
-  | Ocsg_constraint of out_type * out_type
-  | Ocsg_method of string * bool * bool * out_type
-  | Ocsg_value of string * bool * bool * out_type
-
 type out_module_type =
   | Omty_abstract
   | Omty_functor of string * out_module_type option * out_module_type
@@ -88,18 +58,6 @@ type out_module_type =
   | Omty_signature of out_sig_item list
   | Omty_alias of out_ident
 and out_sig_item =
-  | Osig_class of
-      bool
-      * string
-      * (string * (bool * bool)) list
-      * out_class_type
-      * out_rec_status
-  | Osig_class_type of
-      bool
-      * string
-      * (string * (bool * bool)) list
-      * out_class_type
-      * out_rec_status
   | Osig_typext of out_extension_constructor * out_ext_status
   | Osig_modtype of string * out_module_type
   | Osig_module of string * out_module_type * out_rec_status
@@ -134,13 +92,8 @@ and out_type_extension = {
 and out_val_decl = {
   oval_name: string;
   oval_type: out_type;
-  oval_prims: string list;
+  oval_prim: Parsetree.primitive_repr option;
   oval_attributes: out_attribute list;
 }
 and out_rec_status = Orec_not | Orec_first | Orec_next
 and out_ext_status = Oext_first | Oext_next | Oext_exception
-
-type out_phrase =
-  | Ophr_eval of out_value * out_type
-  | Ophr_signature of (out_sig_item * out_value option) list
-  | Ophr_exception of (exn * out_value)

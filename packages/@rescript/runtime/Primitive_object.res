@@ -5,7 +5,6 @@
  */
 
 module Array = Primitive_array_extern
-module Js = Primitive_js_extern
 
 type t = Primitive_object_extern.t
 
@@ -15,6 +14,7 @@ let repr = Primitive_object_extern.repr
 let magic = Primitive_object_extern.magic
 let tag = Primitive_object_extern.tag
 let size = Primitive_object_extern.size
+let typeof = Primitive_js_extern.typeof
 
 module O = {
   @val external isArray: 'a => bool = "Array.isArray"
@@ -60,8 +60,8 @@ let rec compare = (a: t, b: t): int =>
     0
   } else {
     /* front and formoest, we do not compare function values */
-    let a_type = Js.typeof(a)
-    let b_type = Js.typeof(b)
+    let a_type = typeof(a)
+    let b_type = typeof(b)
     switch (a_type, b_type) {
     | ("undefined", _) => -1
     | (_, "undefined") => 1
@@ -82,27 +82,27 @@ let rec compare = (a: t, b: t): int =>
     | ("number", "number") =>
       Pervasives.compare((magic(a): float), (magic(b): float))
     | ("number", _) =>
-      if b === repr(Js.null) || Primitive_option.isNested(b) {
+      if b === repr(Primitive_js_extern.null) || Primitive_option.isNested(b) {
         1
       } else {
         /* Some (Some ..) < x */
         -1
       } /* Integer < Block in OCaml runtime GPR #1195, except Some.. */
     | (_, "number") =>
-      if a === repr(Js.null) || Primitive_option.isNested(a) {
+      if a === repr(Primitive_js_extern.null) || Primitive_option.isNested(a) {
         -1
       } else {
         1
       }
     | _ =>
-      if a === repr(Js.null) {
+      if a === repr(Primitive_js_extern.null) {
         /* [b] could not be null otherwise would equal */
         if Primitive_option.isNested(b) {
           1
         } else {
           -1
         }
-      } else if b === repr(Js.null) {
+      } else if b === repr(Primitive_js_extern.null) {
         if Primitive_option.isNested(a) {
           -1
         } else {
@@ -230,7 +230,7 @@ let rec equal = (a: t, b: t): bool =>
   if a === b {
     true
   } else {
-    let a_type = Js.typeof(a)
+    let a_type = typeof(a)
     if (
       a_type == "string" ||
         (a_type == "number" ||
@@ -240,7 +240,7 @@ let rec equal = (a: t, b: t): bool =>
     ) {
       false
     } else {
-      let b_type = Js.typeof(b)
+      let b_type = typeof(b)
       if a_type == "function" || b_type == "function" {
         throw(Invalid_argument("equal: functional value"))
       } /* first, check using reference equality */
@@ -262,7 +262,7 @@ let rec equal = (a: t, b: t): bool =>
             if O.isArray(a) {
               aux_equal_length((magic(a): array<t>), (magic(b): array<t>), 0, len_a)
             } else if %raw(`a instanceof Date && b instanceof Date`) {
-              !(Js.gt(a, b) || Js.lt(a, b))
+              !(Primitive_js_extern.gt(a, b) || Primitive_js_extern.lt(a, b))
             } else {
               aux_obj_equal(a, b)
             }
@@ -302,7 +302,7 @@ and aux_obj_equal = (a: t, b: t) => {
 }
 
 @inline
-let isNumberOrBigInt = a => Js.typeof(a) == "number" || Js.typeof(a) == "bigint"
+let isNumberOrBigInt = a => typeof(a) == "number" || typeof(a) == "bigint"
 
 @inline
 let canNumericCompare = (a, b) => isNumberOrBigInt(a) && isNumberOrBigInt(b)

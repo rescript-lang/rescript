@@ -398,7 +398,7 @@ let make = (~compare) => {size: 0, root: None, compare}
 
 let makeWith = (array, ~compare) => {
   let rbt = make(~compare)
-  array->Js.Array2.forEach(((value, height)) => add(rbt, value, ~height)->ignore)
+  array->Array.forEach(((value, height)) => add(rbt, value, ~height)->ignore)
   rbt
 }
 
@@ -564,7 +564,7 @@ let onChangedVisible = (
   let new = oldNewVisible.old
 
   new
-  ->Js.Array2.removeCountInPlace(~pos=0, ~count=new->Js.Array2.length)
+  ->Array.splice(~start=0, ~remove=new->Array.length, ~insert=[])
   ->ignore
   oldNewVisible.old = old
   oldNewVisible.new = new
@@ -578,21 +578,21 @@ let onChangedVisible = (
   let first = firstVisibleNode(rbt.root, top)
   let last = lastVisibleNode(rbt.root, bottom)
 
-  let oldLen = old->Js.Array2.length
+  let oldLen = old->Array.length
   let oldIter = ref(0)
   iterateWithY(~inclusive=true, first, last, (node, y_) => {
     let y = y_ +. anchorDelta
     if y >= 0.0 {
       while (
         oldIter.contents < oldLen &&
-          rbt.compare(Js.Array2.unsafe_get(old, oldIter.contents), node.value) < 0
+          rbt.compare(Array.getUnsafe(old, oldIter.contents), node.value) < 0
       ) {
-        disappear(Js.Array2.unsafe_get(old, oldIter.contents))
+        disappear(Array.getUnsafe(old, oldIter.contents))
         oldIter.contents = oldIter.contents + 1
       }
-      new->Js.Array2.push(node.value)->ignore
+      new->Array.push(node.value)->ignore
       if oldIter.contents < oldLen {
-        let cmp = rbt.compare(Js.Array2.unsafe_get(old, oldIter.contents), node.value)
+        let cmp = rbt.compare(Array.getUnsafe(old, oldIter.contents), node.value)
         if cmp == 0 {
           remained(node, y)
           oldIter.contents = oldIter.contents + 1
@@ -605,7 +605,7 @@ let onChangedVisible = (
     }
   })
   while oldIter.contents < oldLen {
-    disappear(Js.Array2.unsafe_get(old, oldIter.contents))
+    disappear(Array.getUnsafe(old, oldIter.contents))
     oldIter.contents = oldIter.contents + 1
   }
 }

@@ -1,12 +1,19 @@
 let f = (type t, xs: list<t>) => ()
 let f = @attr (type t, xs: list<t>) => ()
 let f = (type t s, xs: list<t>, ys: list<s>) => ()
-let f = @attr @attr2 (type t s, xs: list<t>, ys: list<s>) => ()
+let f = @attr (type t, @attr2 type s, xs: list<t>, ys: list<s>) => ()
 let f = (type t u v, xs: list<(t, u, v)>) => ()
 let f = @attr (type t u v, xs: list<(t, u, v)>) => ()
 let f = (type t u v s w z, xs: list<(t, u, v)>, ys: list<(s, w, z)>) => ()
-let f = @attr @attr2 (type t u v s w z, xs: list<(t, u, v)>, ys: list<(s, w, z)>) => ()
-let f = @attr @attr @attr @attr (type t s u v w, xs: list<(t, s)>, ys: list<(u, v, w)>) => ()
+let f = @attr (type t u v, @attr2 type s w z, xs: list<(t, u, v)>, ys: list<(s, w, z)>) => ()
+let f = (
+  @attr type t,
+  @attr type s,
+  @attr type u,
+  @attr type v w,
+  xs: list<(t, s)>,
+  ys: list<(u, v, w)>,
+) => ()
 
 let mk_formatting_gen:
   type a b c d e f. formatting_gen<a, b, c, d, e, f> => Parsetree.expression =
@@ -18,3 +25,8 @@ let mk_formatting_gen:
 let cancel_and_collect_callbacks:
    'a 'u 'c. (list<packed_callbacks>, promise<'a, 'u, 'c>) => list<packed_callbacks> =
   (type x, callbacks_accumulator, p: promise<_, _, c>) => ()
+
+// type parameters written between term parameters are hoisted to the front
+let g = (type t, x, y: t) => y
+let g = (@attr type t u v, x: int, y: t, z: v) => (y, z)
+let g = (type /* c1 */ t /* c2 */, /* before */ x, y: t) => y

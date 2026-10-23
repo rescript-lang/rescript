@@ -54,9 +54,9 @@ let handleResponseCB = (submitCB, state, json) => {
 let saveStudents = (state, send, courseId, responseCB, event) => {
   event->ReactEvent.Mouse.preventDefault
   send(SetSaving(true))
-  let payload = Js.Dict.empty()
-  Js.Dict.set(payload, "authenticity_token", AuthenticityToken.fromHead()->Js.Json.string)
-  Js.Dict.set(
+  let payload = Dict.make()
+  Dict.set(payload, "authenticity_token", AuthenticityToken.fromHead()->JSON.string)
+  Dict.set(
     payload,
     "students",
     state.studentsToAdd->{
@@ -112,9 +112,8 @@ let reducer = (state, action) =>
     }
   | RemoveStudentInfo(studentInfo) => {
       ...state,
-      studentsToAdd: state.studentsToAdd->Js.Array.filter(s =>
-        StudentInfo.email(s) !== StudentInfo.email(studentInfo)
-      ),
+      studentsToAdd: state.studentsToAdd->Array.filter(s =>
+        StudentInfo.email(s) !== StudentInfo.email(studentInfo)),
     }
   | SetSaving(saving) => {...state, saving: saving}
   }
@@ -155,17 +154,16 @@ let studentCard = (studentInfo, send) =>
 let teamNames = studentsToAdd =>
   studentsToAdd
   ->Array.map(student => student->StudentInfo.teamName)
-  ->Js.Array.filter(teamName => teamName->OptionUtils.mapWithDefault(_ => true, false))
+  ->Array.filter(teamName => teamName->OptionUtils.mapWithDefault(_ => true, false))
   ->ArrayUtils.distinct
 
 let findStudentsInTeam = (teamName, studentsToAdd) =>
-  studentsToAdd->Js.Array.filter(s => s->StudentInfo.teamName == teamName)
+  studentsToAdd->Array.filter(s => s->StudentInfo.teamName == teamName)
 
 let loneStudents = (studentsToAdd, send) => {
   let students =
-    studentsToAdd->Js.Array.filter(s =>
-      s->StudentInfo.teamName->OptionUtils.mapWithDefault(_ => false, true)
-    )
+    studentsToAdd->Array.filter(s =>
+      s->StudentInfo.teamName->OptionUtils.mapWithDefault(_ => false, true))
   students->ArrayUtils.isNotEmpty
     ? <div>
         {students

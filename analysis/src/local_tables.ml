@@ -27,39 +27,39 @@ let create () =
 let populate_values ~env local_tables =
   env.Query_env.file.stamps
   |> Stamps.iter_values (fun _ declared ->
-         Hashtbl.replace local_tables.value_table
-           (declared.name.txt, declared.name.loc |> Loc.start)
-           declared)
+      Hashtbl.replace local_tables.value_table
+        (declared.name.txt, declared.name.loc |> Loc.start)
+        declared)
 
 let populate_included_values ~env local_tables =
   env.Query_env.file.stamps
   |> Stamps.iter_values (fun _ declared ->
-         match declared.module_path with
-         | Module_path.IncludedModule (source, _) ->
-           let path = Path.name source in
-           let declared = {declared with item = (path, declared.item)} in
-           Hashtbl.replace local_tables.included_value_table
-             (declared.name.txt, declared.name.loc |> Loc.start)
-             declared
-         | _ -> ())
+      match declared.module_path with
+      | Module_path.IncludedModule (source, _) ->
+        let path = Path.name source in
+        let declared = {declared with item = (path, declared.item)} in
+        Hashtbl.replace local_tables.included_value_table
+          (declared.name.txt, declared.name.loc |> Loc.start)
+          declared
+      | _ -> ())
 
 let populate_constructors ~env local_tables =
   env.Query_env.file.stamps
   |> Stamps.iter_constructors (fun _ declared ->
-         Hashtbl.replace local_tables.constructor_table
-           (declared.name.txt, declared.extent_loc |> Loc.start)
-           declared)
+      Hashtbl.replace local_tables.constructor_table
+        (declared.name.txt, declared.extent_loc |> Loc.start)
+        declared)
 
 let populate_types ~env local_tables =
   env.Query_env.file.stamps
   |> Stamps.iter_types (fun _ declared ->
-         Hashtbl.replace local_tables.types_table
-           (declared.name.txt, declared.name.loc |> Loc.start)
-           declared)
+      Hashtbl.replace local_tables.types_table
+        (declared.name.txt, declared.name.loc |> Loc.start)
+        declared)
 
 let populate_modules ~env local_tables =
   env.Query_env.file.stamps
   |> Stamps.iter_modules (fun _ declared ->
-         Hashtbl.replace local_tables.modules_table
-           (declared.name.txt, declared.extent_loc |> Loc.start)
-           declared)
+      Hashtbl.replace local_tables.modules_table
+        (declared.name.txt, declared.extent_loc |> Loc.start)
+        declared)

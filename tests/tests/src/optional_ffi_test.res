@@ -11,7 +11,7 @@ function hey(x, y) {
 
 let counter = ref(0)
 let side_effect = x => {
-  incr(x)
+  x.contents = x.contents + 1
   x.contents
 }
 
@@ -21,7 +21,7 @@ let bug_to_fix2 = (f, x) => xx(~x=?f(x), ~y=3, ()) /* : [f x] is done once */
 
 let counter2 = ref(0)
 let side_effect2 = x => {
-  incr(x)
+  x.contents = x.contents + 1
   Some(x.contents)
 }
 
@@ -43,7 +43,7 @@ describe(__MODULE__, () => {
     let v = bug_to_fix(side_effect, counter)
     let pair = ((v, counter.contents), (4, 1))
     let v2 = bug_to_fix2(side_effect2, counter2)
-    let pair2 = ((v2, counter.contents), (4, 1))
+    let pair2 = ((v2, counter2.contents), (4, 1))
     /* Console.log (pair,pair2) */
     eq(__LOC__, pair, ((4, 1), (4, 1)))
     eq(__LOC__, pair2, ((4, 1), (4, 1)))

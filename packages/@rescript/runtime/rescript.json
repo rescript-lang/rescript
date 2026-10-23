@@ -30,7 +30,6 @@
     "-bs-no-version-header",
     "-bs-no-check-div-by-zero",
     "-bs-cross-module-opt",
-    "-unsafe",
     "-w -3+50",
     "-warn-error A"
   ]

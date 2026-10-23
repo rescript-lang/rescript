@@ -17,7 +17,6 @@
 
 open Asttypes
 open Types
-open Format
 
 val is_nonexpansive : Typedtree.expression -> bool
 
@@ -26,33 +25,17 @@ val type_binding :
   Env.t ->
   rec_flag ->
   Parsetree.value_binding list ->
-  Annot.ident option ->
   Typedtree.value_binding list * Env.t
 val type_expression :
   context:Error_message_utils.type_clash_context option ->
   Env.t ->
   Parsetree.expression ->
   Typedtree.expression
-val check_partial :
-  ?lev:int ->
-  ?partial_match_warning_hint:string ->
-  Env.t ->
-  type_expr ->
-  Location.t ->
-  Typedtree.case list ->
-  Typedtree.partial
 val type_exp :
   Env.t ->
   Parsetree.expression ->
   context:Error_message_utils.type_clash_context option ->
   Typedtree.expression
-val type_approx : Env.t -> Parsetree.expression -> type_expr
-
-val option_some : Typedtree.expression -> Typedtree.expression
-val option_none : type_expr -> Location.t -> Typedtree.expression
-val extract_option_type : Env.t -> type_expr -> type_expr
-val iter_pattern : (Typedtree.pattern -> unit) -> Typedtree.pattern -> unit
-val generalizable : int -> type_expr -> bool
 
 val id_of_pattern : Typedtree.pattern -> Ident.t option
 val name_pattern : string -> Typedtree.case list -> Ident.t
@@ -80,6 +63,8 @@ type error =
       label: string;
       jsx_component_info: Error_message_utils.jsx_prop_error_info option;
     }
+  | Dict_key_multiply_defined of string
+  | Record_syntax_on_dict_type of string
   | Labels_missing of {
       labels: string list;
       jsx_component_info: Error_message_utils.jsx_prop_error_info option;
@@ -89,14 +74,13 @@ type error =
   | Name_type_mismatch of
       string * Longident.t * (Path.t * Path.t) * (Path.t * Path.t) list
   | Undefined_method of type_expr * string * string list option
+  | Object_field_not_mutable of type_expr * string
   | Private_type of type_expr
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
-  | Too_many_arguments of bool * type_expr
   | Abstract_wrong_label of arg_label * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
-  | Incoherent_label_order
   | Less_general of string * (type_expr * type_expr) list
   | Modules_not_allowed
   | Cannot_infer_signature
@@ -109,12 +93,12 @@ type error =
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
   | Inlined_record_expected
-  | Invalid_extension_constructor_payload
-  | Not_an_extension_constructor
   | Break_outside_loop
   | Continue_outside_loop
   | Literal_overflow of string
+  | Polyvar_literal_overflow
   | Unknown_literal of string * char
+  | Invalid_string_escape_sequence
   | Illegal_letrec_pat
   | Empty_record_literal
   | Uncurried_arity_mismatch of {
@@ -128,13 +112,14 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
+  | Jsx_component_without_make of Longident.t
+  | Jsx_unboxed_props of type_expr
   | Tagged_template_non_tag of type_expr
   | Record_rest of Typecore_record_rest.error
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
 
-val report_error : Env.t -> Location.t -> formatter -> error -> unit
 (* Deprecated.  Use Location.{error_of_exn, report_error}. *)
 
 (* Forward declaration, to be filled in by Typemod.type_module *)

@@ -124,7 +124,7 @@ module Decode = {
 }
 
 let fetchTopStories = (page, callback) => {
-  open Js.Promise
+  open Promise
   Fetch.fetch(topStoriesUrl(page))
   ->then_(Fetch.Response.json)
   ->then_(json =>
@@ -141,7 +141,7 @@ let fetchTopStories = (page, callback) => {
 } /* TODO: error handling */
 
 let fetchStoryWithComments = (id, callback) => {
-  open Js.Promise
+  open Promise
   Fetch.fetch(storyUrl(id))
   ->then_(Fetch.Response.json)
   ->then_(json =>

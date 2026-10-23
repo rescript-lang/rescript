@@ -34,7 +34,7 @@ external createEventNonIEBrowsers: string => Dom.event = "createEvent"
 external initEventNonIEBrowsers: (Dom.event, string, bool, bool) => unit = "initEvent"
 
 let safeMakeEvent = eventName =>
-  if Js.typeof(event) == "function" {
+  if typeof(event) == "function" {
     makeEventIE11Compatible(eventName)
   } else {
     let event = createEventNonIEBrowsers("Event")
@@ -68,13 +68,13 @@ let path = () =>
     | "/" => list{}
     | raw =>
       /* remove the preceeding /, which every pathname seems to have */
-      let raw = Js.String.sliceToEnd(~from=1, raw)
+      let raw = String.slice(~start=1, raw)
       /* remove the trailing /, which some pathnames might have. Ugh */
-      let raw = switch Js.String.get(raw, Js.String.length(raw) - 1) {
-      | "/" => Js.String.slice(~from=0, ~to_=-1, raw)
+      let raw = switch String.get(raw, String.length(raw) - 1) {
+      | "/" => String.slice(~start=0, ~end=-1, raw)
       | _ => raw
       }
-      raw->Js.String.split("/")->arrayToList
+      raw->String.split("/")->arrayToList
     }
   }
 let hash = () =>
@@ -87,7 +87,7 @@ let hash = () =>
     | raw =>
       /* remove the preceeding #, which every hash seems to have.
        Why is this even included in location.hash?? */
-      raw->Js.String.sliceToEnd(~from=1)
+      raw->String.slice(~start=1)
     }
   }
 let search = () =>
@@ -99,7 +99,7 @@ let search = () =>
     | "?" => ""
     | raw =>
       /* remove the preceeding ?, which every search seems to have. */
-      raw->Js.String.sliceToEnd(~from=1)
+      raw->String.slice(~start=1)
     }
   }
 let push = path =>

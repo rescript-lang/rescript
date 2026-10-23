@@ -239,7 +239,7 @@ module Catching = {
       wasCalled := true
     })
     ->then(v => {
-      Test.run(__POS_OF__("value should be 5"), v, equal, 10)
+      Test.run(__POS_OF__("value should be 10"), v, equal, 10)
       Test.run(__POS_OF__("finally should have been called"), wasCalled.contents, equal, true)
       resolve()
     })

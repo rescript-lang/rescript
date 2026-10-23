@@ -28,33 +28,73 @@ module L = struct
   let indent_str = "  "
 end
 
-let indent_length = String.length L.indent_str
-
 type t = {
   output_string: string -> unit;
   output_char: char -> unit;
   flush: unit -> unit;
   mutable indent_level: int;
   mutable last_new_line: bool;
-      (* only when we print newline, we print the indent *)
+  mutable line: int;
+  mutable column: int; (* only when we print newline, we print the indent *)
+  track_positions: bool;
+      (* [line] and [column] are only maintained for source maps *)
 }
 
-let from_channel chan =
+let update_position t s =
+  if t.track_positions then
+    let len = String.length s in
+    let rec loop i =
+      if i < len then
+        match String.unsafe_get s i with
+        | '\n' ->
+          t.line <- t.line + 1;
+          t.column <- 0;
+          loop (i + 1)
+        | _ ->
+          let decoded = String.get_utf_8_uchar s i in
+          let width = Uchar.utf_decode_length decoded in
+          let utf16_units =
+            if
+              Uchar.utf_decode_is_valid decoded
+              && Uchar.to_int (Uchar.utf_decode_uchar decoded) > 0xffff
+            then 2
+            else 1
+          in
+          t.column <- t.column + utf16_units;
+          loop (i + width)
+    in
+    loop 0
+
+let update_position_char t c =
+  if t.track_positions then
+    match c with
+    | '\n' ->
+      t.line <- t.line + 1;
+      t.column <- 0
+    | _ -> t.column <- t.column + 1
+
+let from_channel ?(track_positions = false) chan =
   {
     output_string = (fun s -> output_string chan s);
     output_char = (fun c -> output_char chan c);
     flush = (fun _ -> flush chan);
     indent_level = 0;
     last_new_line = false;
+    line = 0;
+    column = 0;
+    track_positions;
   }
 
-let from_buffer buf =
+let from_buffer ?(track_positions = false) buf =
   {
     output_string = (fun s -> Buffer.add_string buf s);
     output_char = (fun c -> Buffer.add_char buf c);
     flush = (fun _ -> ());
     indent_level = 0;
     last_new_line = false;
+    line = 0;
+    column = 0;
+    track_positions;
   }
 
 (* If we have [newline] in [s],
@@ -63,34 +103,41 @@ let from_buffer buf =
 *)
 let string t s =
   t.output_string s;
+  update_position t s;
   t.last_new_line <- false
 
 let newline t =
   if not t.last_new_line then (
     t.output_char '\n';
+    update_position_char t '\n';
     for _ = 0 to t.indent_level - 1 do
-      t.output_string L.indent_str
+      t.output_string L.indent_str;
+      update_position t L.indent_str
     done;
     t.last_new_line <- true)
 
 let at_least_two_lines t =
-  if not t.last_new_line then t.output_char '\n';
+  if not t.last_new_line then (
+    t.output_char '\n';
+    update_position_char t '\n');
   t.output_char '\n';
+  update_position_char t '\n';
   for _ = 0 to t.indent_level - 1 do
-    t.output_string L.indent_str
+    t.output_string L.indent_str;
+    update_position t L.indent_str
   done;
   t.last_new_line <- true
 
 let force_newline t =
   t.output_char '\n';
+  update_position_char t '\n';
   for _ = 0 to t.indent_level - 1 do
-    t.output_string L.indent_str
+    t.output_string L.indent_str;
+    update_position t L.indent_str
   done;
   t.last_new_line <- true
 
 let space t = string t L.space
-
-let nspace t n = string t (String.make n ' ')
 
 let group t i action =
   if i = 0 then action ()
@@ -169,3 +216,7 @@ let brace_group st n action = group st n (fun _ -> brace st action)
    t.indent_level <- t.indent_level + n *)
 
 let flush t () = t.flush ()
+
+let position t =
+  assert t.track_positions;
+  (t.line, t.column)

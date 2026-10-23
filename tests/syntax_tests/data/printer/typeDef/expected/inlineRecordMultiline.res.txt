@@ -1,0 +1,53 @@
+// An inline record stays multiline when the source had a line break after `{`
+exception Foo({
+  name: string,
+  msg: string,
+})
+
+exception Bar({name: string, msg: string})
+
+@attr
+exception Baz({
+  x: int,
+})
+
+type t =
+  | A({
+      name: string,
+      msg: string,
+    })
+  | B({name: string})
+
+type u =
+  | A({
+      name: string,
+      msg: string,
+    })
+
+type v = A({name: string, msg: string}) | B
+
+type spread =
+  | A({...r, y: int})
+  | B({
+      ...r,
+      y: int,
+    })
+
+type rec gadt<_> =
+  | Gadt({
+      x: int,
+    }): gadt<int>
+
+type ext = ..
+type ext +=
+  | C({
+    name: string,
+    msg: string,
+  })
+  | D({name: string})
+
+module type S = {
+  exception E({
+    x: int,
+  })
+}

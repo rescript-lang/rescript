@@ -45,7 +45,7 @@ let onlyUpdateValueIfInRangeFloat = (min, max, currentValue, updateFunction, val
   | None =>
     // If the new value is empty, set it to the minimum
     if value == "" {
-      (min->Js.Float.toString, true)
+      (min->Float.toString, true)
     } else {
       (currentValue, false)
     }

@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/dynamic_import_first_class.res[0m:[2m1:11-33[0m
+
+  [1;31m1[0m [2m│[0m let imp = [1;31mPrimitive_module.import[0m
+  2 [2m│[0m 
+
+  Dynamic import must be applied directly to a module or a value from another module; it cannot be used as a first-class value.

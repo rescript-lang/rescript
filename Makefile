@@ -17,7 +17,7 @@ else ifeq ($(UNAME_S),Darwin)
 	ifeq ($(UNAME_M),arm64)
 		RESCRIPT_PLATFORM := darwin-arm64
 	else
-		RESCRIPT_PLATFORM := darwin-x64
+		$(error Intel Macs are not supported anymore, use ReScript 12)
 	endif
 else ifeq ($(UNAME_S),Linux)
 	ifeq ($(UNAME_M),aarch64)
@@ -41,6 +41,7 @@ endef
 
 BIN_DIR := packages/@rescript/$(RESCRIPT_PLATFORM)/bin
 RUNTIME_DIR := packages/@rescript/runtime
+BELT_DIR := packages/@rescript/belt
 DUNE_BIN_DIR = ./_build/install/default/bin
 
 # Build stamps
@@ -56,6 +57,8 @@ COMPILER_BUILD_STAMP := _build/log
 # after running `yarn workspace @rescript/runtime build`, which now runs `touch`
 # as part of its build script.
 RUNTIME_BUILD_STAMP := packages/@rescript/runtime/.buildstamp
+# Belt workspace touches this stamp after building against the runtime.
+BELT_BUILD_STAMP := packages/@rescript/belt/.buildstamp
 
 # Default target
 
@@ -74,8 +77,10 @@ $(YARN_INSTALL_STAMP): $(YARN_INSTALL_SOURCES)
 
 # Rewatch
 
-REWATCH_SOURCES = $(shell find rewatch/src -name '*.rs') rewatch/Cargo.toml rewatch/Cargo.lock rewatch/rust-toolchain.toml
+REWATCH_SOURCES = $(shell find rewatch/src -name '*.rs') rewatch/Cargo.toml rewatch/Cargo.lock
 RESCRIPT_EXE = $(BIN_DIR)/rescript.exe
+RESCRIPT_RUST_EXE := $(BIN_DIR)/rescript-rust.exe
+PACKAGED_RUST_EXE := $(RESCRIPT_RUST_EXE)
 ifdef CI
 	REWATCH_PROFILE := release
 	REWATCH_CARGO_FLAGS := --release
@@ -85,41 +90,43 @@ else
 endif
 REWATCH_TARGET := rewatch/target/$(REWATCH_PROFILE)/rescript$(PLATFORM_EXE_EXT)
 
-rewatch: $(RESCRIPT_EXE)
+rewatch: $(PACKAGED_RUST_EXE)
 
-$(RESCRIPT_EXE): $(REWATCH_TARGET)
+$(PACKAGED_RUST_EXE): $(REWATCH_TARGET)
 	$(call COPY_EXE,$<,$@)
 
 $(REWATCH_TARGET): $(REWATCH_SOURCES)
 	cargo build --manifest-path rewatch/Cargo.toml $(REWATCH_CARGO_FLAGS)
 
 clean-rewatch:
-	cargo clean --manifest-path rewatch/Cargo.toml && rm -rf rewatch/target && rm -f $(RESCRIPT_EXE)
+	cargo clean --manifest-path rewatch/Cargo.toml && rm -rf rewatch/target && rm -f $(PACKAGED_RUST_EXE)
 
 # Compiler
 
-COMPILER_SOURCE_DIRS := compiler tests analysis tools lsp
-COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.dune' -o -name dune -o -name dune-project \))
-COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools rescript-language-server
+COMPILER_SOURCE_DIRS := compiler tests analysis tools rewatch-ocaml lsp
+COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.c' -o -name '*.h' -o -name '*.dune' -o -name dune -o -name dune-project \))
+COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools rescript
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
-COMPILER_DUNE_BINS := $(addsuffix $(PLATFORM_EXE_EXT),$(addprefix $(DUNE_BIN_DIR)/,$(COMPILER_BIN_NAMES)))
 
 compiler: $(COMPILER_EXES)
 
-define MAKE_COMPILER_COPY_RULE
-$(BIN_DIR)/$(1).exe: $(DUNE_BIN_DIR)/$(1)$(PLATFORM_EXE_EXT)
-	$$(call COPY_EXE,$$<,$$@)
-endef
-
-$(foreach bin,$(COMPILER_BIN_NAMES),$(eval $(call MAKE_COMPILER_COPY_RULE,$(bin))))
-
-# "touch" after dune build to make sure that the binaries' timestamps are updated
-# even if the actual content of the sources hasn't changed.
+# The compiler binaries in $(BIN_DIR) are produced by dune itself: the
+# promotion rules in compiler/sync/dune copy (and strip) them into the
+# platform npm package on every `dune build`, comparing content so unchanged
+# binaries are not rewritten. Make only needs to know that running dune
+# produces them.
 $(COMPILER_BUILD_STAMP): $(COMPILER_SOURCES)
 	dune build
-	@$(foreach bin,$(COMPILER_DUNE_BINS),touch $(bin);)
 
-$(COMPILER_DUNE_BINS): $(COMPILER_BUILD_STAMP) ;
+$(COMPILER_EXES): $(COMPILER_BUILD_STAMP)
+	@cmp -s $@ _build/default/compiler/sync/$(@F) || { \
+	  rm -f _build/default/compiler/sync/$(@F); dune build; }
+	@cmp -s $@ _build/default/compiler/sync/$(@F) || { \
+	  echo "Error: $@ is missing or does not match the dune build output."; \
+	  echo "Dune promotion did not produce it; check that this platform is"; \
+	  echo "covered by a rule in compiler/sync/dune."; \
+	  exit 1; }
+	@test -x $@ || chmod 755 $@
 
 clean-compiler:
 	dune clean && rm -f $(COMPILER_EXES) $(COMPILER_BUILD_STAMP)
@@ -127,15 +134,20 @@ clean-compiler:
 # Runtime / stdlib
 
 RUNTIME_SOURCES := $(shell find $(RUNTIME_DIR) -path '$(RUNTIME_DIR)/lib' -prune -o -type f \( -name '*.res' -o -name '*.resi' -o -name 'rescript.json' \) -print)
+BELT_SOURCES := $(shell find $(BELT_DIR) -path '$(BELT_DIR)/lib' -prune -o -type f \( -name '*.res' -o -name '*.resi' -o -name 'rescript.json' \) -print)
 
-lib: $(RUNTIME_BUILD_STAMP)
+lib: $(RUNTIME_BUILD_STAMP) $(BELT_BUILD_STAMP)
 
 $(RUNTIME_BUILD_STAMP): $(RUNTIME_SOURCES) $(COMPILER_EXES) $(RESCRIPT_EXE) | $(YARN_INSTALL_STAMP)
 	yarn workspace @rescript/runtime build
 
+$(BELT_BUILD_STAMP): $(BELT_SOURCES) $(RUNTIME_BUILD_STAMP) $(COMPILER_EXES) $(RESCRIPT_EXE) | $(YARN_INSTALL_STAMP)
+	yarn workspace @rescript/belt build
+
 clean-lib:
+	yarn workspace @rescript/belt rescript clean
 	yarn workspace @rescript/runtime rescript clean
-	rm -f $(RUNTIME_BUILD_STAMP)
+	rm -f $(RUNTIME_BUILD_STAMP) $(BELT_BUILD_STAMP)
 
 # Artifact list
 
@@ -212,7 +224,7 @@ $(PLAYGROUND_BUILD_STAMP): $(COMPILER_SOURCES)
 # Creates all the relevant core and third party cmij files to side-load together with the playground bundle
 playground-cmijs: $(PLAYGROUND_CMI_BUILD_STAMP)
 
-$(PLAYGROUND_CMI_BUILD_STAMP): $(RUNTIME_BUILD_STAMP)
+$(PLAYGROUND_CMI_BUILD_STAMP): $(RUNTIME_BUILD_STAMP) $(BELT_BUILD_STAMP)
 	yarn workspace playground build
 
 playground-test: playground
@@ -240,12 +252,22 @@ format: | $(YARN_INSTALL_STAMP)
 checkformat: | $(YARN_INSTALL_STAMP)
 	./scripts/format_check.sh
 
+# Semantic diff: renders the commit records of SEMANTIC_DIFF_BASE..HEAD
+# (scripts/commitRecords.js) to _build/semantic-diff.html and opens it
+
+SEMANTIC_DIFF_BASE ?= master
+
+semantic-diff:
+	mkdir -p _build
+	node scripts/commitRecords.js --out _build/semantic-diff.html --title "$$(git branch --show-current)" $(SEMANTIC_DIFF_BASE)..HEAD
+	@if command -v open >/dev/null; then open _build/semantic-diff.html; \
+	elif command -v xdg-open >/dev/null; then xdg-open _build/semantic-diff.html; fi
+
 # Coverage (bisect_ppx)
 #
-# Requires the `bisect_ppx` opam package (>= 2.8.0) in your switch:
-#   opam install bisect_ppx
-# or pull it in via the rescript dev-setup deps:
-#   opam install . --deps-only --with-dev-setup
+# Requires the pending `bisect_ppx` OCaml 5.5 compatibility patch in your switch:
+#   opam pin add bisect_ppx \
+#     git+https://github.com/patricoferris/bisect_ppx.git#7061d643ff492b0045796357ee6917ded21fb1f0
 #
 # Quick start:
 #   make coverage         # run full test suite, generate report
@@ -284,10 +306,13 @@ COVERAGE_TEST_ENV := BISECT_FILE=$(COVERAGE_BISECT_PREFIX) BISECT_SILENT=YES
 .PHONY: coverage-build
 coverage-build: | $(YARN_INSTALL_STAMP)
 	dune build --instrument-with bisect_ppx
-	@$(foreach bin,$(COMPILER_DUNE_BINS),touch $(bin);)
-	@$(foreach bin,$(COMPILER_BIN_NAMES), \
+	@$(foreach bin,$(filter-out rescript,$(COMPILER_BIN_NAMES)), \
 		cp $(DUNE_BIN_DIR)/$(bin)$(PLATFORM_EXE_EXT) $(BIN_DIR)/$(bin).exe && \
 		chmod 755 $(BIN_DIR)/$(bin).exe;)
+ifneq ($(OS),Windows_NT)
+	cp _build/default/rewatch-ocaml/rescript_ocaml.exe $(RESCRIPT_EXE)
+	chmod 755 $(RESCRIPT_EXE)
+endif
 
 .PHONY: coverage-prepare
 coverage-prepare: clean-coverage coverage-build
@@ -369,9 +394,6 @@ clean-tests: clean-gentype
 
 clean: clean-lib clean-compiler clean-rewatch clean-coverage
 
-dev-container:
-	docker build -t rescript-dev-container docker
-
 .DEFAULT_GOAL := build
 
-.PHONY: yarn-install build rewatch compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container
+.PHONY: yarn-install build rewatch compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-rewatch-rust test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat semantic-diff clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean

@@ -1,0 +1,1 @@
+- Editor completion shows the polymorphic variant labels `#644` and `#""` as the formatter prints them, instead of `#"644"` and `#`.

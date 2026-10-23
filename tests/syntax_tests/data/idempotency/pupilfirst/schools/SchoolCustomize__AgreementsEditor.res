@@ -65,7 +65,7 @@ let handleUpdateAgreement = (
 
   UpdateSchoolStringQuery.make(~key=kind->kindToKey, ~value=state.agreement, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(result =>
+  ->Promise.then(result =>
     switch result["updateSchoolString"]["errors"] {
     | [] =>
       Notification.success("Done!", kindToString(kind) ++ " has been updated.")
@@ -74,8 +74,8 @@ let handleUpdateAgreement = (
       | TermsOfUse => updateTermsOfUseCB(state.agreement)
       }
       send(DoneUpdating)
-      Js.Promise.resolve()
-    | errors => Js.Promise.reject(UpdateSchoolStringErrorHandler.Errors(errors))
+      Promise.resolve()
+    | errors => Promise.reject(UpdateSchoolStringErrorHandler.Errors(errors))
     }
   )
   ->UpdateSchoolStringErrorHandler.catch(() => send(ErrorOccured))

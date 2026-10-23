@@ -40,13 +40,13 @@ let updateName = (send, name) => {
 let saveDisabled = state => state.hasNameError || (!state.dirty || state.saving)
 
 let setPayload = (authenticityToken, state) => {
-  let payload = Js.Dict.empty()
+  let payload = Dict.make()
   let milestone = state.milestone == true ? "true" : "false"
-  Js.Dict.set(payload, "authenticity_token", authenticityToken->Js.Json.string)
-  Js.Dict.set(payload, "archived", state.isArchived->Js.Json.boolean)
-  Js.Dict.set(payload, "name", state.name->Js.Json.string)
-  Js.Dict.set(payload, "description", state.description->Js.Json.string)
-  Js.Dict.set(payload, "milestone", milestone->Js.Json.string)
+  Dict.set(payload, "authenticity_token", authenticityToken->JSON.string)
+  Dict.set(payload, "archived", state.isArchived->JSON.boolean)
+  Dict.set(payload, "name", state.name->JSON.string)
+  Dict.set(payload, "description", state.description->JSON.string)
+  Dict.set(payload, "milestone", milestone->JSON.string)
   payload
 }
 

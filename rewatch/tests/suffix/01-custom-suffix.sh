@@ -6,7 +6,6 @@ cd ../../testrepo
 bold "Test: It should support custom suffixes"
 
 # Clean Repo
-sleep 1
 error_output=$(rewatch clean 2>&1)
 if [ $? -eq 0 ];
 then

@@ -23,21 +23,21 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 module Set_string = Ast_extract.Set_string
-(** Synced up with module {!Bsb_helper_depfile_gen} *)
 
 type 'a kind = 'a Ml_binary.kind =
   | Ml : Parsetree.structure kind
   | Mli : Parsetree.signature kind
 
 let read_ast_exn (type t) ~fname (_ : t kind) : t =
-  let ic = open_in_bin fname in
-  let dep_size = input_binary_int ic in
-  seek_in ic (pos_in ic + dep_size);
-  let sourcefile = input_line ic in
-  Location.set_input_name sourcefile;
-  let ast = input_value ic in
-  close_in ic;
-  ast
+  let ic = open_in_bin (Compiler_request_state.resolve_path fname) in
+  Fun.protect
+    ~finally:(fun () -> close_in_noerr ic)
+    (fun () ->
+      let dep_size = input_binary_int ic in
+      seek_in ic (pos_in ic + dep_size);
+      let sourcefile = input_line ic in
+      Location.set_input_name sourcefile;
+      input_value ic)
 
 let magic_sep_char = '\n'
 
@@ -57,10 +57,13 @@ let write_ast (type t) ~(sourcefile : string) ~output (kind : t kind) (pt : t) :
         (* filter *predef* *)
         Ext_buffer.add_string_char buf s magic_sep_char)
     output_set;
-  let oc = open_out_bin output in
-  output_binary_int oc (Ext_buffer.length buf);
-  Ext_buffer.output_buffer oc buf;
-  output_string oc sourcefile;
-  output_char oc '\n';
-  output_value oc pt;
-  close_out oc
+  let oc = open_out_bin (Compiler_request_state.resolve_path output) in
+  Fun.protect
+    ~finally:(fun () -> close_out_noerr oc)
+    (fun () ->
+      output_binary_int oc (Ext_buffer.length buf);
+      Ext_buffer.output_buffer oc buf;
+      output_string oc sourcefile;
+      output_char oc '\n';
+      output_value oc pt;
+      close_out oc)

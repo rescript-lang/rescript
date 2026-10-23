@@ -25,18 +25,18 @@ type authU = {loginU: unit => string}
 
 @genType let callback2U = auth => auth.loginU()
 
-@genType let sumU = (n, m) => Js.log4("sumU 2nd arg", m, "result", n + m)
+@genType let sumU = (n, m) => Console.log4("sumU 2nd arg", m, "result", n + m)
 
-@genType let sumU2 = n => m => Js.log4("sumU2 2nd arg", m, "result", n + m)
+@genType let sumU2 = n => m => Console.log4("sumU2 2nd arg", m, "result", n + m)
 
 @genType
 let sumCurried = n => {
-  Js.log2("sumCurried 1st arg", n)
-  m => Js.log4("sumCurried 2nd arg", m, "result", n + m)
+  Console.log2("sumCurried 1st arg", n)
+  m => Console.log4("sumCurried 2nd arg", m, "result", n + m)
 }
 
 @genType
 let sumLblCurried = (s: string, ~n) => {
-  Js.log3(s, "sumLblCurried 1st arg", n)
-  (~m) => Js.log4("sumLblCurried 2nd arg", m, "result", n + m)
+  Console.log3(s, "sumLblCurried 1st arg", n)
+  (~m) => Console.log4("sumLblCurried 2nd arg", m, "result", n + m)
 }

@@ -16,28 +16,26 @@
 (* Translation from typed abstract syntax to lambda terms,
    for the core language *)
 
-val transl_exp : Typedtree.expression -> Lambda.lambda
+val transl_exp : Typedtree.expression -> Lambda.t
 
 val transl_let :
-  Asttypes.rec_flag ->
-  Typedtree.value_binding list ->
-  Lambda.lambda ->
-  Lambda.lambda
+  Asttypes.rec_flag -> Typedtree.value_binding list -> Lambda.t -> Lambda.t
 
 val transl_primitive :
   Location.t ->
   Primitive.description ->
   Env.t ->
   Types.type_expr ->
-  Lambda.lambda
+  val_type:Types.type_expr ->
+  Lambda.t
 
 val transl_extension_constructor :
-  Env.t -> Path.t option -> Typedtree.extension_constructor -> Lambda.lambda
+  Env.t -> Path.t option -> Typedtree.extension_constructor -> Lambda.t
 
 (* Forward declaration -- to be filled in by Translmod.transl_module *)
 val transl_module :
   (Typedtree.module_coercion ->
   Path.t option ->
   Typedtree.module_expr ->
-  Lambda.lambda)
+  Lambda.t)
   ref

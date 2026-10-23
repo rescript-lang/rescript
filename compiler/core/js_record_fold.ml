@@ -60,9 +60,6 @@ let module_id : 'a. ('a, module_id) fn =
   let st = _self.ident _self st _x0 in
   st
 
-let required_modules : 'a. ('a, required_modules) fn =
- fun _self st arg -> list _self.module_id _self st arg
-
 let vident : 'a. ('a, vident) fn =
  fun _self st -> function
   | Id _x0 ->
@@ -79,22 +76,9 @@ let for_ident : 'a. ('a, for_ident) fn = fun _self arg -> _self.ident _self arg
 
 let for_direction : 'a. ('a, for_direction) fn = unknown
 
-let property_map : 'a. ('a, property_map) fn =
- fun _self st arg ->
-  list
-    (fun _self st (_x0, _x1) ->
-      let st = _self.expression _self st _x1 in
-      st)
-    _self st arg
-
-let length_object : 'a. ('a, length_object) fn = unknown
-
 let expression_desc : 'a. ('a, expression_desc) fn =
  fun _self st -> function
-  | Length (_x0, _x1) ->
-    let st = _self.expression _self st _x0 in
-    let st = length_object _self st _x1 in
-    st
+  | Length _x0 -> _self.expression _self st _x0
   | Is_null_or_undefined _x0 ->
     let st = _self.expression _self st _x0 in
     st
@@ -129,23 +113,26 @@ let expression_desc : 'a. ('a, expression_desc) fn =
     let st = _self.expression _self st _x1 in
     let st = _self.expression _self st _x2 in
     st
-  | FlatCall (_x0, _x1) ->
-    let st = _self.expression _self st _x0 in
-    let st = _self.expression _self st _x1 in
-    st
   | Call (_x0, _x1, _x2) ->
     let st = _self.expression _self st _x0 in
     let st = list _self.expression _self st _x1 in
     st
   | Tagged_template (_xo, _x1, _x2) ->
     let st = _self.expression _self st _xo in
-    let st = list _self.expression _self st _x1 in
     let st = list _self.expression _self st _x2 in
     st
-  | String_index (_x0, _x1) ->
-    let st = _self.expression _self st _x0 in
-    let st = _self.expression _self st _x1 in
-    st
+  | Jsx {callee; tag; spread; props; children; key} ->
+    let st = _self.expression _self st callee in
+    let st = _self.expression _self st tag in
+    let st = option _self.expression _self st spread in
+    let st =
+      list
+        (fun _self st (_name, value) -> _self.expression _self st value)
+        _self st props
+    in
+    let st = option (list _self.expression) _self st children in
+    option _self.expression _self st key
+  | Interpolated_template {values} -> list _self.expression _self st values
   | Array_index (_x0, _x1) ->
     let st = _self.expression _self st _x0 in
     let st = _self.expression _self st _x1 in
@@ -155,12 +142,7 @@ let expression_desc : 'a. ('a, expression_desc) fn =
     st
   | New (_x0, _x1) ->
     let st = _self.expression _self st _x0 in
-    let st =
-      option
-        (fun _self st arg -> list _self.expression _self st arg)
-        _self st _x1
-    in
-    st
+    list _self.expression _self st _x1
   | Var _x0 ->
     let st = _self.vident _self st _x0 in
     st
@@ -169,24 +151,28 @@ let expression_desc : 'a. ('a, expression_desc) fn =
     let st = _self.block _self st body in
     st
   | Str _ -> st
+  | Template_literal _ -> st
+  | Json_literal _ -> st
   | Raw_js_code _ -> st
-  | Array (_x0, _x1) ->
-    let st = list _self.expression _self st _x0 in
-    st
+  | Array _x0 -> list _self.expression _self st _x0
   | Optional_block (_x0, _x1) ->
     let st = _self.expression _self st _x0 in
     st
-  | Caml_block (_x0, _x1, _x2, _x3) ->
+  | Caml_block (_x0, _x1, _x2) ->
     let st = list _self.expression _self st _x0 in
-    let st = _self.expression _self st _x2 in
     st
   | Caml_block_tag (_x0, _tag) ->
     let st = _self.expression _self st _x0 in
     st
   | Number _ -> st
-  | Object (_x0, _x1) ->
-    let st = option _self.expression _self st _x0 in
-    let st = property_map _self st _x1 in
+  | Object _x0 ->
+    let st =
+      list
+        (fun _self st -> function
+          | Object_property (_, e) | Object_spread e | Record_spread e ->
+            _self.expression _self st e)
+        _self st _x0
+    in
     st
   | Undefined _ -> st
   | Null -> st
@@ -207,7 +193,8 @@ let finish_ident_expression : 'a. ('a, finish_ident_expression) fn =
  fun _self arg -> _self.expression _self arg
 
 let case_clause : 'a. ('a, case_clause) fn =
- fun _self st {switch_body = _x0; should_break = _x1; comment = _x2} ->
+ fun _self st
+     {switch_body = _x0; should_break = _x1; comment = _x2; source_loc = _x3} ->
   let st = _self.block _self st _x0 in
   st
 
@@ -291,12 +278,12 @@ let statement_desc : 'a. ('a, statement_desc) fn =
   | Debugger -> st
 
 let expression : 'a. ('a, expression) fn =
- fun _self st {expression_desc = _x0; comment = _x1} ->
+ fun _self st {expression_desc = _x0; comment = _x1; source_loc = _x2} ->
   let st = expression_desc _self st _x0 in
   st
 
 let statement : 'a. ('a, statement) fn =
- fun _self st {statement_desc = _x0; comment = _x1} ->
+ fun _self st {statement_desc = _x0; comment = _x1; source_loc = _x2} ->
   let st = statement_desc _self st _x0 in
   st
 
@@ -312,12 +299,6 @@ let block : 'a. ('a, block) fn =
 let program : 'a. ('a, program) fn =
  fun _self st {block = _x0; exports = _x1; export_set = _x2} ->
   let st = _self.block _self st _x0 in
-  st
-
-let deps_program : 'a. ('a, deps_program) fn =
- fun _self st {program = _x0; modules = _x1; side_effect = _x2} ->
-  let st = _self.program _self st _x0 in
-  let st = required_modules _self st _x1 in
   st
 
 let super : 'state iter =

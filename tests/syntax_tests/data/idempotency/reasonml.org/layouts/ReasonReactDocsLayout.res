@@ -128,7 +128,7 @@ let make = (~components=Markdown.default, ~children) => {
 
   let activeToc: option<Toc.t> = {
     open Belt.Option
-    Js.Dict.get(tocData, route)->map(data => {
+    Dict.get(tocData, route)->map(data => {
       let title = data["title"]
       let entries = Belt.Array.map(data["headers"], header => {
         Toc.header: header["name"],

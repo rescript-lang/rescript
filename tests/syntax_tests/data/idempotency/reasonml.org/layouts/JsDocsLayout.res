@@ -10,7 +10,7 @@ let indexData: dict<{
 }> = %raw("require('../index_data/js_api_index.json')")
 
 // Retrieve package.json to access the version of bs-platform.
-let package: Js.t<{"dependencies": {"bs-platform": string}}> = %raw("require('../package.json')")
+let package: {..} = %raw("require('../package.json')")
 
 module Sidebar = SidebarLayout.Sidebar
 module UrlPath = SidebarLayout.UrlPath
@@ -166,7 +166,7 @@ module Docs = {
     // Gather data for the CollapsibleSection
     let headers = {
       open Belt.Option
-      Js.Dict.get(indexData, route)
+      Dict.get(indexData, route)
       ->map(data =>
         data["headers"]->Belt.Array.map(header => (header["name"], "#" ++ header["href"]))
       )
@@ -175,7 +175,7 @@ module Docs = {
 
     let moduleName = {
       open Belt.Option
-      Js.Dict.get(indexData, route)->map(data => data["moduleName"])->getWithDefault("?")
+      Dict.get(indexData, route)->map(data => data["moduleName"])->getWithDefault("?")
     }
 
     let (isSidebarOpen, setSidebarOpen) = React.useState(_ => false)

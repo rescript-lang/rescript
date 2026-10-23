@@ -2,6 +2,13 @@ let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
 let ( =~ ) = OUnit.assert_equal
 
+module String_hash = Hashtbl.Make (struct
+  type t = string
+
+  let equal = Ext_string.equal
+  let hash = Ext_platform_primitives.hash_string
+end)
+
 let tiny_test_cases =
   {|
 13
@@ -182,6 +189,19 @@ let medium_test_cases =
 49 22
 49 49
 |}
+
+(* Number of components and their sizes, last component first *)
+let graph_check v =
+  let v = Ext_scc.graph v in
+  (List.length v, List.fold_left (fun acc x -> Array.length x :: acc) [] v)
+
+(* [edges] lists the edges in input order; the successors of each node keep
+   that order *)
+let graph_of_edges nodes_num edges =
+  let rev_edges = Array.make nodes_num [] in
+  List.iter (fun (a, b) -> rev_edges.(a) <- b :: rev_edges.(a)) edges;
+  Array.map (fun l -> Array.of_list (List.rev l)) rev_edges
+
 (*
    reference output:
    http://algs4.cs.princeton.edu/42digraph/KosarajuSharirSCC.java.html
@@ -191,94 +211,69 @@ let handle_lines tiny_test_cases =
   match Ext_string.split tiny_test_cases '\n' with
   | nodes :: _edges :: rest ->
     let nodes_num = int_of_string nodes in
-    let node_array = Array.init nodes_num (fun _ -> Vec_int.empty ()) in
-    Ext_list.iter rest (fun x ->
-        match Ext_string.split x ' ' with
-        | [a; b] ->
-          let a, b = (int_of_string a, int_of_string b) in
-          Vec_int.push node_array.(a) b
-        | _ -> assert false);
-    node_array
+    graph_of_edges nodes_num
+      (List.map
+         (fun x ->
+           match Ext_string.split x ' ' with
+           | [a; b] -> (int_of_string a, int_of_string b)
+           | _ -> assert false)
+         rest)
   | _ -> assert false
 
-let read_file file =
-  let in_chan = open_in_bin file in
-  let nodes_sum = int_of_string (input_line in_chan) in
-  let node_array = Array.init nodes_sum (fun _ -> Vec_int.empty ()) in
-  let rec aux () =
-    match input_line in_chan with
-    | exception End_of_file -> ()
-    | x ->
-      (match Ext_string.split x ' ' with
-      | [a; b] ->
-        let a, b = (int_of_string a, int_of_string b) in
-        Vec_int.push node_array.(a) b
-      | _ -> (* assert false  *) ());
-      aux ()
-  in
-  print_endline "read data into memory";
-  aux ();
-  fst (Ext_scc.graph_check node_array)
-(* 25 *)
+let edges_of_input tbl (input : (string * string list) list) =
+  List.concat_map
+    (fun (x, others) ->
+      let idx = String_hash.find tbl x in
+      List.map (fun y -> (idx, String_hash.find tbl y)) others)
+    input
 
 let test (input : (string * string list) list) =
   (* string -> int mapping 
   *)
-  let tbl = Hash_string.create 32 in
+  let tbl = String_hash.create 32 in
   let idx = ref 0 in
   let add x =
-    if not (Hash_string.mem tbl x) then (
-      Hash_string.add tbl x !idx;
+    if not (String_hash.mem tbl x) then (
+      String_hash.add tbl x !idx;
       incr idx)
   in
   input |> List.iter (fun (x, others) -> List.iter add (x :: others));
-  let nodes_num = Hash_string.length tbl in
-  let node_array = Array.init nodes_num (fun _ -> Vec_int.empty ()) in
-  input
-  |> List.iter (fun (x, others) ->
-         let idx = Hash_string.find_exn tbl x in
-         others
-         |> List.iter (fun y ->
-                Vec_int.push node_array.(idx) (Hash_string.find_exn tbl y)));
-  Ext_scc.graph_check node_array
+  let nodes_num = String_hash.length tbl in
+  graph_check (graph_of_edges nodes_num (edges_of_input tbl input))
 
 let test2 (input : (string * string list) list) =
   (* string -> int mapping 
   *)
-  let tbl = Hash_string.create 32 in
+  let tbl = String_hash.create 32 in
   let idx = ref 0 in
   let add x =
-    if not (Hash_string.mem tbl x) then (
-      Hash_string.add tbl x !idx;
+    if not (String_hash.mem tbl x) then (
+      String_hash.add tbl x !idx;
       incr idx)
   in
   input |> List.iter (fun (x, others) -> List.iter add (x :: others));
-  let nodes_num = Hash_string.length tbl in
+  let nodes_num = String_hash.length tbl in
   let other_mapping = Array.make nodes_num "" in
-  Hash_string.iter tbl (fun k v -> other_mapping.(v) <- k);
+  String_hash.iter (fun k v -> other_mapping.(v) <- k) tbl;
 
-  let node_array = Array.init nodes_num (fun _ -> Vec_int.empty ()) in
-  input
-  |> List.iter (fun (x, others) ->
-         let idx = Hash_string.find_exn tbl x in
-         others
-         |> List.iter (fun y ->
-                Vec_int.push node_array.(idx) (Hash_string.find_exn tbl y)));
-  let output = Ext_scc.graph node_array in
+  let output =
+    Ext_scc.graph (graph_of_edges nodes_num (edges_of_input tbl input))
+  in
   output
-  |> Int_vec_vec.map_into_array (fun int_vec ->
-         Vec_int.map_into_array (fun i -> other_mapping.(i)) int_vec)
+  |> List.map (fun component ->
+      Array.map (fun i -> other_mapping.(i)) component)
+  |> Array.of_list
 
 let suites =
   __FILE__
   >::: [
          ( __LOC__ >:: fun _ ->
            OUnit.assert_equal
-             (fst @@ Ext_scc.graph_check (handle_lines tiny_test_cases))
+             (fst @@ graph_check (handle_lines tiny_test_cases))
              5 );
          ( __LOC__ >:: fun _ ->
            OUnit.assert_equal
-             (fst @@ Ext_scc.graph_check (handle_lines medium_test_cases))
+             (fst @@ graph_check (handle_lines medium_test_cases))
              10 );
          ( __LOC__ >:: fun _ ->
            OUnit.assert_equal
@@ -359,11 +354,6 @@ let suites =
                   ("3", ["4"]);
                 ])
              (3, [3; 1; 1]) );
-         (* http://algs4.cs.princeton.edu/42digraph/largeDG.txt *)
-         (* __LOC__ >:: begin fun _ -> *)
-         (*   OUnit.assert_equal (read_file "largeDG.txt") 25 *)
-         (* end *)
-         (* ; *)
          ( __LOC__ >:: fun _ ->
            OUnit.assert_equal
              (test2

@@ -1,4 +1,17 @@
-let f = a => Js.Promise.resolve(a + a)
+
+  Warning number 3
+  syntax_tests/data/ppx/react/sharedPropsWithProps.res:63:3-27
+
+  61 │ 
+  62 │   // The payload has no effect; it is accepted with a deprecation warni
+     │ ng.
+  63 │   @react.componentWithProps(: props)
+  64 │   let make = props => React.string(props.x)
+  65 │ }
+
+  deprecated: @react.componentWithProps takes no payload. The payload has no effect; remove it.
+
+let f = a => Promise.resolve(a + a)
 
 @@jsxConfig({version: 4})
 
@@ -40,9 +53,9 @@ module V4A4 = {
 
 module V4A5 = {
   type props<'a> = {a: 'a}
-  let make = async ({a}: props<_>) => {
+  let make = async ({a}: props<_>): React.element => {
     let a = await f(a)
-    (ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})}): React.element)
+    ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})})
   }
   let make = React.component({
     let \"SharedPropsWithProps$V4A5" = (props: props<_>): React.element => Jsx.promise(make(props))
@@ -74,5 +87,16 @@ module V4A7 = {
     let \"SharedPropsWithProps$V4A7" =
       @directive("'use memo'") (props): React.element => make(props)
     \"SharedPropsWithProps$V4A7"
+  })
+}
+
+module V4A8 = {
+  type props = {x: string}
+
+  // The payload has no effect; it is accepted with a deprecation warning.
+  let make = (props): React.element => React.string(props.x)
+  let make = React.component({
+    let \"SharedPropsWithProps$V4A8" = (props): React.element => make(props)
+    \"SharedPropsWithProps$V4A8"
   })
 }

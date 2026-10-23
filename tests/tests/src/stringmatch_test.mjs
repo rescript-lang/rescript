@@ -21,7 +21,7 @@ if (tst01("") !== 0) {
   };
 }
 
-if (tst01("\x00\x00\x00\x03") !== 1) {
+if (tst01("\0\0\0\x03") !== 1) {
   throw {
     RE_EXN_ID: "Assert_failure",
     _1: [
@@ -33,7 +33,7 @@ if (tst01("\x00\x00\x00\x03") !== 1) {
   };
 }
 
-if (tst01("\x00\x00\x00\x00\x00\x00\x00\x07") !== 1) {
+if (tst01("\0\0\0\0\0\0\0\x07") !== 1) {
   throw {
     RE_EXN_ID: "Assert_failure",
     _1: [
@@ -115,7 +115,7 @@ if (tst02("B") !== 3) {
   };
 }
 
-if (tst02("\x00\x00\x00\x00\x00\x00\x00\x07") !== 3) {
+if (tst02("\0\0\0\0\0\0\0\x07") !== 3) {
   throw {
     RE_EXN_ID: "Assert_failure",
     _1: [
@@ -127,7 +127,7 @@ if (tst02("\x00\x00\x00\x00\x00\x00\x00\x07") !== 3) {
   };
 }
 
-if (tst02("\x00\x00\x00\x03") !== 3) {
+if (tst02("\0\0\0\x03") !== 3) {
   throw {
     RE_EXN_ID: "Assert_failure",
     _1: [

@@ -2,6 +2,11 @@
 @react.component
 let make = (~x: string, ~y: string) => React.string(x ++ y)
 
+module Braced = {
+  @react.component
+  let make = {(~name) => React.string(name)}
+}
+
 module AnotherName = {
   // Component with another name than "make"
   @react.component

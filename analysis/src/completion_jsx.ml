@@ -223,12 +223,11 @@ let get_jsx_labels ~component_path ~find_type_of_value ~package ~state =
             } ) ->
         label_decls
         |> List.map (fun (ld : Types.label_declaration) ->
-               let name = Ident.name ld.ld_id in
-               let t =
-                 ld.ld_type
-                 |> Type_utils.instantiate_type ~type_params ~type_args
-               in
-               (name, t, env))
+            let name = Ident.name ld.ld_id in
+            let t =
+              ld.ld_type |> Type_utils.instantiate_type ~type_params ~type_args
+            in
+            (name, t, env))
       | _ -> []
     in
     let rec get_labels (t : Types.type_expr) =
@@ -246,7 +245,7 @@ let get_jsx_labels ~component_path ~find_type_of_value ~package ~state =
         | Some (path, type_args) -> get_fields ~path ~type_args
         | None -> [])
       | Tarrow
-          ({lbl = Nolabel; typ = {desc = Tconstr (path, type_args, _)}}, _, _, _)
+          ({lbl = Nolabel; typ = {desc = Tconstr (path, type_args, _)}} :: _, _)
         when Path.last path = "props" ->
         get_fields ~path ~type_args
       | Tconstr (cl_path, [{desc = Tconstr (path, type_args, _)}; _], _)
@@ -254,7 +253,7 @@ let get_jsx_labels ~component_path ~find_type_of_value ~package ~state =
              && Path.last path = "props" ->
         (* JSX V4 external or interface *)
         get_fields ~path ~type_args
-      | Tarrow ({lbl = Nolabel; typ}, _, _, _) -> (
+      | Tarrow ({lbl = Nolabel; typ} :: _, _) -> (
         (* Component without the JSX PPX, like a make fn taking a hand-written
            type props. *)
         let rec dig_to_constr typ =
@@ -284,32 +283,6 @@ type jsx_props = {
   props: prop list;
   children_start: (int * int) option;
 }
-
-(**
-<div muted= />
-
-This is a special case for JSX props, where the above code is parsed
-as <div muted=//, a regexp literal. We leverage that fact to trigger completion
-for the JSX prop value.
-
-This code is safe because we also check that the location of the expression is broken,
-which only happens when the expression is a parse error/not complete.
-*)
-let is_regexp_jsx_heuristic_expr expr =
-  match expr.Parsetree.pexp_desc with
-  | Pexp_extension
-      ( {txt = "re"},
-        PStr
-          [
-            {
-              pstr_desc =
-                Pstr_eval
-                  ({pexp_desc = Pexp_constant (Pconst_string ("//", _))}, _);
-            };
-          ] )
-    when expr.pexp_loc |> Loc.end_ = (Location.none |> Loc.end_) ->
-    true
-  | _ -> false
 
 let find_jsx_props_completable ~jsx_props ~end_pos ~pos_before_cursor
     ~first_char_before_cursor_no_white ~char_at_cursor ~pos_after_comp_name =
@@ -344,8 +317,11 @@ let find_jsx_props_completable ~jsx_props ~end_pos ~pos_before_cursor
           print_endline
             "[jsx_props_completable]--> Cursor between the prop name and expr \
              assigned";
-        match (first_char_before_cursor_no_white, prop.exp) with
-        | Some '=', {pexp_desc = Pexp_ident {txt = Lident txt}} ->
+        match
+          ( first_char_before_cursor_no_white,
+            (Res_parsetree_viewer.unwrap_braces prop.exp).pexp_desc )
+        with
+        | Some '=', Pexp_ident {txt = Lident txt} ->
           if Debug.verbose () then
             Printf.printf
               "[jsx_props_completable]--> Heuristic for empty JSX prop expr \
@@ -393,14 +369,9 @@ let find_jsx_props_completable ~jsx_props ~end_pos ~pos_before_cursor
       else if prop.exp.pexp_loc |> Loc.end_ = (Location.none |> Loc.end_) then (
         if Debug.verbose () then
           print_endline "[jsx_props_completable]--> Loc is broken";
-        if
-          Completion_expressions.is_expr_hole prop.exp
-          || is_regexp_jsx_heuristic_expr prop.exp
-        then (
+        if Completion_expressions.is_expr_hole prop.exp then (
           if Debug.verbose () then
-            print_endline
-              "[jsx_props_completable]--> Expr was expr hole or regexp literal \
-               heuristic";
+            print_endline "[jsx_props_completable]--> Expr was expr hole";
           Some
             (Cexpression
                {
@@ -470,28 +441,28 @@ let extract_jsx_props ~(comp_name : Longident.t Location.loc) ~props ~children =
   let props =
     props
     |> List.map (function
-         | JSXPropPunning (_, name) ->
-           {
-             name = name.txt;
-             pos_start = Loc.start name.loc;
-             pos_end = Loc.end_ name.loc;
-             exp =
-               Ast_helper.Exp.ident ~loc:name.loc
-                 {txt = Longident.Lident name.txt; loc = name.loc};
-           }
-         | JSXPropValue (name, _, value) ->
-           {
-             name = name.txt;
-             pos_start = Loc.start name.loc;
-             pos_end = Loc.end_ name.loc;
-             exp = value;
-           }
-         | JSXPropSpreading (loc, expr) ->
-           {
-             name = "_spreadProps";
-             pos_start = Loc.start loc;
-             pos_end = Loc.end_ loc;
-             exp = expr;
-           })
+      | JSXPropPunning (_, name) ->
+        {
+          name = name.txt;
+          pos_start = Loc.start name.loc;
+          pos_end = Loc.end_ name.loc;
+          exp =
+            Ast_helper.Exp.ident ~loc:name.loc
+              {txt = Longident.Lident name.txt; loc = name.loc};
+        }
+      | JSXPropValue (name, _, value) ->
+        {
+          name = name.txt;
+          pos_start = Loc.start name.loc;
+          pos_end = Loc.end_ name.loc;
+          exp = value;
+        }
+      | JSXPropSpreading (loc, expr) ->
+        {
+          name = "_spreadProps";
+          pos_start = Loc.start loc;
+          pos_end = Loc.end_ loc;
+          exp = expr;
+        })
   in
   {comp_name; props; children_start}

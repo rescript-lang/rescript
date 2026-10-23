@@ -3,9 +3,11 @@
 
 console.log(3);
 
-let v = console.log(3);
+console.log(3);
 
 let u;
+
+let v;
 
 export {
   u,

@@ -1,4 +1,4 @@
-(** State map for computed OptionalArgs.
+(** State map for computed Optional_args.
     Maps declaration position to final state after all calls/combines. *)
 
 type t = Optional_args.t Pos_hash.t

@@ -1,4 +1,4 @@
-()->Js.Dict.empty->Js.Dict.set("hi", "hello")
+()->Dict.make->Dict.set("hi", "hello")
 
 type u = {mutable x: int}
 

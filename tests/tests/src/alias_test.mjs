@@ -3,16 +3,14 @@
 
 let a10 = "hello world";
 
-let a20 = a10 + "not";
+let a20 = "hello worldnot";
 
 let v = a20[0] === "h" ? 1 : 2;
 
-let a21 = a20 + a20;
-
-let a22 = "test " + (a21 + "hello");
+let a21 = "hello worldnothello worldnot";
 
 function ff() {
-  return "cool " + a22;
+  return "cool test hello worldnothello worldnothello";
 }
 
 let a23 = ff();

@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/untagged_literal_same_int32.res[0m:[2m1:30-48[0m
+
+  [1;31m1[0m [2m│[0m @unboxed type t = | @as(1) A [1;31m| @as(4294967297) B[0m
+  2 [2m│[0m 
+
+  This untagged variant definition is invalid: The literal 4294967297 is the same JavaScript value as 1.

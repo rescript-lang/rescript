@@ -6,7 +6,7 @@ open Test_utils
 let v = ref(3)
 
 let update = () => {
-  incr(v)
+  v.contents = v.contents + 1
   true
 }
 

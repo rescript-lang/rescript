@@ -1,12 +1,12 @@
 type status = {
-  passedAt: option<Js.Date.t>,
+  passedAt: option<Date.t>,
   feedbackSent: bool,
 }
 
 type t = {
   id: string,
   title: string,
-  createdAt: Js.Date.t,
+  createdAt: Date.t,
   levelId: string,
   userNames: string,
   status: option<status>,
@@ -40,7 +40,7 @@ let sortArray = (sortDirection, submissions) => {
     )
   switch sortDirection {
   | #Descending => sortDescending
-  | #Ascending => sortDescending->Js.Array.reverseInPlace
+  | #Ascending => sortDescending->Array.toReversed
   }
 }
 
@@ -57,7 +57,7 @@ let make = (~id, ~title, ~createdAt, ~levelId, ~userNames, ~status, ~coachIds) =
 let makeStatus = (~passedAt, ~feedbackSent) => {passedAt: passedAt, feedbackSent: feedbackSent}
 
 let decodeJs = details =>
-  details->Js.Array.map(s =>
+  details->Array.map(s =>
     switch s {
     | Some(submission) =>
       let status =
@@ -80,8 +80,7 @@ let decodeJs = details =>
         ),
       }
     | None => list{}
-    }
-  )
+    })
 
 let replace = (e, l) => l->Array.map(s => s.id == e.id ? e : s)
 

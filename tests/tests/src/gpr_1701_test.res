@@ -1,5 +1,3 @@
-open Belt
-
 exception Foo
 
 let rec test = n =>

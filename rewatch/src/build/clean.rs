@@ -1,12 +1,11 @@
 use super::build_types::*;
 use super::packages;
-use crate::build;
 use crate::build::packages::Package;
 use crate::config::Config;
 use crate::helpers;
 use crate::helpers::emojis::*;
 use crate::project_context::ProjectContext;
-use ahash::AHashSet;
+use ahash::{AHashMap, AHashSet};
 use anyhow::Result;
 use console::style;
 use rayon::prelude::*;
@@ -33,11 +32,16 @@ fn remove_iast(package: &packages::Package, source_file: &Path) {
     ));
 }
 
-fn remove_mjs_file(source_file: &Path, suffix: &str) {
-    let _ = std::fs::remove_file(source_file.with_extension(
+pub(crate) fn remove_js_file(source_file: &Path, suffix: &str) {
+    let js_file = source_file.with_extension(
         // suffix.to_string includes the ., so we need to remove it
         &suffix[1..],
-    ));
+    );
+    let _ = std::fs::remove_file(&js_file);
+
+    let mut map_file = js_file.into_os_string();
+    map_file.push(".map");
+    let _ = std::fs::remove_file(PathBuf::from(map_file));
 }
 
 fn remove_compile_asset(package: &packages::Package, source_file: &Path, extension: &str) {
@@ -55,7 +59,7 @@ fn remove_compile_asset(package: &packages::Package, source_file: &Path, extensi
     ));
 }
 
-pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
+fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     // optimization
     // only issue cmti if there is an interfacce file
     for extension in &["cmj", "cmi", "cmt", "cmti"] {
@@ -63,41 +67,40 @@ pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     }
 }
 
-fn clean_source_files(build_state: &BuildState, root_config: &Config) {
-    // get all rescript file locations
-    let rescript_file_locations = build_state
-        .modules
-        .values()
-        .filter_map(|module| match &module.source_type {
-            SourceType::SourceFile(source_file) => {
-                build_state.packages.get(&module.package_name).map(|package| {
-                    root_config
-                        .get_package_specs()
-                        .into_iter()
-                        .filter_map(|spec| {
-                            if spec.in_source {
-                                Some((
-                                    package.path.join(&source_file.implementation.path),
-                                    match spec.suffix {
-                                        None => root_config.get_suffix(&spec),
-                                        Some(suffix) => suffix,
-                                    },
-                                ))
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<(PathBuf, String)>>()
-                })
+fn clean_source_files(packages: &AHashMap<String, Package>, root_config: &Config) {
+    let mut rescript_file_locations = Vec::new();
+    for package in packages.values() {
+        let Some(source_files) = &package.source_files else {
+            continue;
+        };
+        for source_file in source_files.keys().filter(|source_file| {
+            source_file
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(helpers::is_implementation_file)
+        }) {
+            for spec in root_config.get_package_specs() {
+                let output_base = if spec.in_source {
+                    package.path.join(source_file)
+                } else {
+                    package
+                        .path
+                        .join("lib")
+                        .join(spec.get_out_of_source_dir())
+                        .join(source_file)
+                };
+                let suffix = match &spec.suffix {
+                    None => root_config.get_suffix(&spec),
+                    Some(suffix) => suffix.clone(),
+                };
+                rescript_file_locations.push((output_base, suffix));
             }
-            _ => None,
-        })
-        .flatten()
-        .collect::<Vec<(PathBuf, String)>>();
+        }
+    }
 
     rescript_file_locations
         .par_iter()
-        .for_each(|(rescript_file_location, suffix)| remove_mjs_file(rescript_file_location, suffix));
+        .for_each(|(rescript_file_location, suffix)| remove_js_file(rescript_file_location, suffix));
 }
 
 // TODO: change to scan_previous_build => CompileAssetsState
@@ -140,7 +143,7 @@ pub fn cleanup_previous_build(
                 .get(package_name)
                 .expect("Could not find package");
             remove_compile_assets(package, res_file_location);
-            remove_mjs_file(res_file_location, suffix);
+            remove_js_file(res_file_location, suffix);
             remove_iast(package, res_file_location);
             remove_ast(package, res_file_location);
             match helpers::get_extension(ast_file_path).as_str() {
@@ -337,7 +340,6 @@ pub fn cleanup_after_build(build_state: &BuildCommandState) {
 #[instrument(name = "clean.clean", skip_all)]
 pub fn clean(path: &Path, show_progress: bool, plain_output: bool, prod: bool) -> Result<()> {
     let project_context = ProjectContext::new(path)?;
-    let compiler_info = build::get_compiler_info(&project_context)?;
     // `clean` always acts on the full set of source directories regardless of which features are
     // active. We explicitly pass `None` so every tagged source folder is included and its
     // artifacts can be removed, even for features the user hasn't enabled for this build.
@@ -371,27 +373,13 @@ pub fn clean(path: &Path, show_progress: bool, plain_output: bool, prod: bool) -
     }
 
     let timing_clean_mjs = Instant::now();
-    let mut build_state = BuildState::new(project_context, packages, compiler_info);
-    packages::parse_packages(&mut build_state)?;
-    let root_config = build_state.get_root_config();
-    let suffix_for_print = match root_config.package_specs {
-        None => match &root_config.suffix {
-            None => String::from(".js"),
-            Some(suffix) => suffix.clone(),
-        },
-        Some(_) => root_config
-            .get_package_specs()
-            .into_iter()
-            .filter_map(|spec| {
-                if spec.in_source {
-                    spec.suffix.or_else(|| root_config.suffix.clone())
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<String>>()
-            .join(", "),
-    };
+    let root_config = project_context.get_root_config();
+    let suffix_for_print = root_config
+        .get_package_specs()
+        .iter()
+        .map(|spec| root_config.get_suffix(spec))
+        .collect::<Vec<String>>()
+        .join(", ");
 
     if !plain_output && show_progress {
         print!(
@@ -403,7 +391,7 @@ pub fn clean(path: &Path, show_progress: bool, plain_output: bool, prod: bool) -
         let _ = std::io::stdout().flush();
     }
 
-    clean_source_files(&build_state, root_config);
+    clean_source_files(&packages, root_config);
     let timing_clean_mjs_elapsed = timing_clean_mjs.elapsed();
 
     if !plain_output && show_progress {

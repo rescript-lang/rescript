@@ -1,0 +1,23 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/removedReExtension.res:1:14-16
+
+  1 │ let legacy = %re("/abc/i")
+  2 │ let backquoted = %re(`/abc/i`)
+  3 │ let literal = /abc/i
+
+  The %re extension has been removed. Use a regexp literal such as /abc/i.
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/removedReExtension.res:2:18-20
+
+  1 │ let legacy = %re("/abc/i")
+  2 │ let backquoted = %re(`/abc/i`)
+  3 │ let literal = /abc/i
+
+  The %re extension has been removed. Use a regexp literal such as /abc/i.
+
+let legacy = [%re {js|/abc/i|js}]
+let backquoted = [%re `/abc/i`]
+let literal = /abc/i

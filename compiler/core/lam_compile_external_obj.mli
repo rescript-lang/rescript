@@ -22,13 +22,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(** Compile ocaml external function call to JS IR. *)
-
-(** 
-    This module define how the FFI (via `external`) works with attributes. 
-    Note it will route to {!Lam_compile_global} 
-    for compiling normal functions without attributes.
-*)
+(** Compiles the labelled arguments of an object-creating external to a JS
+    object literal. *)
 
 val assemble_obj_args :
   External_arg_spec.obj_params -> J.expression list -> J.block * J.expression

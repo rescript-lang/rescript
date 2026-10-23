@@ -1,0 +1,1 @@
+- Remove the unused cursor filter of the editor analysis `.cmt` dump and the unused `report` field of reanalyze declarations. https://github.com/rescript-lang/rescript/pull/8852

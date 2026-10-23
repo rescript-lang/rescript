@@ -2,15 +2,16 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
+import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.mjs";
 import * as Ident_mangles from "./ident_mangles.mjs";
 
 Mocha.describe("Key_word_property_plus_test", () => {
-  Mocha.test("keyword property plus with reduce", () => Test_utils.eq("File \"key_word_property_plus_test.res\", line 7, characters 6-13", [
+  Mocha.test("keyword property plus with reduce", () => Test_utils.eq("File \"key_word_property_plus_test.res\", line 7, characters 6-13", Stdlib_Array.reduce([
     1,
     2,
     3,
     4
-  ].reduce((x, y) => x + y | 0, 0), ((Ident_mangles.$$__dirname + Ident_mangles.$$__filename | 0) + Ident_mangles.$$exports | 0) + Ident_mangles.$$require | 0));
+  ], 0, (x, y) => x + y | 0), ((Ident_mangles.$$__dirname + Ident_mangles.$$__filename | 0) + Ident_mangles.$$exports | 0) + Ident_mangles.$$require | 0));
 });
 
 /*  Not a pure module */

@@ -49,7 +49,8 @@ type arity = Single of Lam_arity.t | Submodule of Lam_arity.t array
 
 type cmj_value = {
   arity: arity;
-  persistent_closed_lambda: Lam.t option; (* Either constant or closed functor *)
+  persistent_closed_lambda: Lambda.t option;
+      (* Either constant or closed functor *)
 }
 
 type effect_ = string option
@@ -57,7 +58,7 @@ type effect_ = string option
 type keyed_cmj_value = {
   name: string;
   arity: arity;
-  persistent_closed_lambda: Lam.t option;
+  persistent_closed_lambda: Lambda.t option;
 }
 
 type t = {
@@ -79,10 +80,6 @@ val query_by_name : t -> string -> keyed_cmj_value
 val single_na : arity
 
 val from_file : string -> t
-
-val from_file_with_digest : string -> t * Digest.t
-
-val from_string : string -> t
 
 (*
    Note writing the file if its content is not changed

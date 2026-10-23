@@ -501,7 +501,7 @@ module Make = (Ord: OrderedType) => {
         }
       }
 
-    fst(sub(Belt.List.length(l), l))
+    Pair.first(sub(List.length(l), l))
   }
 
   let of_list = l =>
@@ -512,7 +512,7 @@ module Make = (Ord: OrderedType) => {
     | list{x0, x1, x2} => add(x2, add(x1, singleton(x0)))
     | list{x0, x1, x2, x3} => add(x3, add(x2, add(x1, singleton(x0))))
     | list{x0, x1, x2, x3, x4} => add(x4, add(x3, add(x2, add(x1, singleton(x0)))))
-    | _ => of_sorted_list(l->Belt.List.sort(Ord.compare))
+    | _ => of_sorted_list(l->List.sort((a, b) => Ord.compare(a, b)->Int.toFloat))
     }
 }
 module N = {

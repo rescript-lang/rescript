@@ -71,14 +71,14 @@ let getTeams = (courseId, cursor, updateTeamsCB, teams, filter, setLoadingCB, lo
   | (None, None, None) => CourseTeamsQuery.make(~courseId, ~tags, ~sortBy, ())
   }
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     response["courseTeams"]["nodes"]->updateTeams(
       updateTeamsCB,
       response["courseTeams"]["pageInfo"]["endCursor"],
       response["courseTeams"]["pageInfo"]["hasNextPage"],
       teams,
     )
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

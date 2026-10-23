@@ -23,9 +23,6 @@ let tag_is_as s = s = "as"
 let tag_is_int s = s = "int"
 let tag_is_string s = s = "string"
 
-let tag_is_tag s = s = "tag"
-
-let tag_is_unboxed s = s = "unboxed" || s = "ocaml.unboxed"
 let tag_is_gentype_import s = s = "genType.import" || s = "gentype.import"
 let tag_is_gentype_opaque s = s = "genType.opaque" || s = "gentype.opaque"
 
@@ -42,29 +39,32 @@ let tag_is_intern_local s = s = "internal.local"
 
 let rec get_attribute_payload check_text (attributes : Typedtree.attributes) =
   let rec from_expr (expr : Parsetree.expression) =
-    match expr with
-    | {pexp_desc = Pexp_constant (Pconst_string (s, _))} ->
-      Some (StringPayload s)
-    | {pexp_desc = Pexp_constant (Pconst_integer (n, _))} -> Some (IntPayload n)
-    | {pexp_desc = Pexp_constant (Pconst_float (s, _))} -> Some (FloatPayload s)
-    | {
-     pexp_desc = Pexp_construct ({txt = Lident (("true" | "false") as s)}, _);
-     _;
-    } ->
-      Some (BoolPayload (s = "true"))
-    | {pexp_desc = Pexp_tuple exprs} ->
-      let payloads =
-        exprs |> List.rev
-        |> List.fold_left
-             (fun payloads expr ->
-               match expr |> from_expr with
-               | Some payload -> payload :: payloads
-               | None -> payloads)
-             []
-      in
-      Some (TuplePayload payloads)
-    | {pexp_desc = Pexp_ident {txt}} -> Some (IdentPayload txt)
-    | _ -> None
+    match Ast_payload.semantic_string_of_expression expr with
+    | Some s -> Some (StringPayload s)
+    | None -> (
+      match Ast_payload.unwrap_braces expr with
+      | {pexp_desc = Pexp_constant (Pconst_integer (n, _))} ->
+        Some (IntPayload n)
+      | {pexp_desc = Pexp_constant (Pconst_float (s, _))} ->
+        Some (FloatPayload s)
+      | {
+       pexp_desc = Pexp_construct ({txt = Lident (("true" | "false") as s)}, _);
+       _;
+      } ->
+        Some (BoolPayload (s = "true"))
+      | {pexp_desc = Pexp_tuple exprs} ->
+        let payloads =
+          exprs |> List.rev
+          |> List.fold_left
+               (fun payloads expr ->
+                 match expr |> from_expr with
+                 | Some payload -> payload :: payloads
+                 | None -> payloads)
+               []
+        in
+        Some (TuplePayload payloads)
+      | {pexp_desc = Pexp_ident {txt}} -> Some (IdentPayload txt)
+      | _ -> None)
   in
   match attributes with
   | [] -> None
@@ -73,7 +73,8 @@ let rec get_attribute_payload check_text (attributes : Typedtree.attributes) =
       match payload with
       | PStr [] -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_eval (expr, _)} :: _) -> expr |> from_expr
-      | PStr ({pstr_desc = Pstr_extension _} :: _) -> Some UnrecognizedPayload
+      | PStr ({pstr_desc = Pstr_extension _ | Pstr_raw _} :: _) ->
+        Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_value _} :: _) -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_primitive _} :: _) -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_type _} :: _) -> Some UnrecognizedPayload
@@ -146,11 +147,6 @@ let get_attribute_import_renaming attributes =
       _ ) ->
     (Some import_string, Some rename_string)
   | _ -> (None, gentype_as_renaming)
-
-let get_tag attributes =
-  match attributes |> get_attribute_payload tag_is_tag with
-  | Some (_, StringPayload s) -> Some s
-  | _ -> None
 
 let get_doc_payload attributes =
   let doc_payload = attributes |> get_attribute_payload tag_is_doc in

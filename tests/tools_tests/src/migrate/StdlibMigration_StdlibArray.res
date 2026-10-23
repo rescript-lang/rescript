@@ -17,4 +17,4 @@ let f1 = [1, 2, 3, 4]->Array.sliceToEnd(~start=2)
 
 let g1 = [1, 2]->Array.lastIndexOfFrom(1, 1)
 
-let h1 = [1, 2]->Array.unsafe_get(1)
+let h1 = [1, 2]->Array.getUnsafe(1)

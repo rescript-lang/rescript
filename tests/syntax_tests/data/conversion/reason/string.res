@@ -30,7 +30,7 @@ let var1 = "three"
 let var2 = "a string"
 
 switch (var1, var2) {
-| (`3`, `a string`) => Js.log("worked")
-| (` test with \` \${here} \``, _) => Js.log("escapes ` and ${")
-| _ => Js.log("didn't match")
+| (`3`, `a string`) => Console.log("worked")
+| (` test with \` \${here} \``, _) => Console.log("escapes ` and ${")
+| _ => Console.log("didn't match")
 }

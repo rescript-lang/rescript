@@ -3,4 +3,4 @@ let main = async () => {
   Test.run(__POS_OF__("dynamic import - Int tests - eq"), 1, eq, 1)
 }
 
-main->ignore
+main()->ignore

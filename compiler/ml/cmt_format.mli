@@ -15,24 +15,15 @@
 
 (** cmt and cmti files format. *)
 
-(** The layout of a cmt file is as follows:
-      <cmt> := \{<cmi>\} <cmt magic> \{cmt infos\} \{<source info>\}
-    where <cmi> is the cmi file format:
-      <cmi> := <cmi magic> <cmi info>.
-    More precisely, the optional <cmi> part must be present if and only if
-    the file is:
-    - a cmti, or
-    - a cmt, for a ml file which has no corresponding mli (hence no
-    corresponding cmti).
+(** A cmt or cmti file is <cmt magic> <cmt infos>; the signature is read
+    from the .cmi file.
 
-    Thus, we provide a common reading function for cmi and cmt(i)
-    files which returns an option for each of the three parts: cmi
-    info, cmt info, source info. *)
+    [read] accepts cmi, cmt and cmti files and returns the cmi info of a cmi
+    file and the cmt info of a cmt or cmti file. *)
 
 open Typedtree
 
 type binary_annots =
-  | Packed of Types.signature * string list
   | Implementation of structure
   | Interface of signature
   | Partial_implementation of binary_part array
@@ -43,7 +34,6 @@ and binary_part =
   | Partial_structure_item of structure_item
   | Partial_expression of expression
   | Partial_pattern of pattern
-  | Partial_class_expr of unit
   | Partial_signature of signature
   | Partial_signature_item of signature_item
   | Partial_module_type of module_type
@@ -58,10 +48,9 @@ type cmt_infos = {
   cmt_sourcefile: string option;
   cmt_builddir: string;
   cmt_loadpath: string list;
-  cmt_source_digest: string option;
+  cmt_source_digest: Digest.t option;
   cmt_initial_env: Env.t;
   cmt_imports: (string * Digest.t option) list;
-  cmt_interface_digest: Digest.t option;
   cmt_use_summaries: bool;
   cmt_extra_info: Cmt_utils.cmt_extra_info;
 }
@@ -70,15 +59,9 @@ type error = Not_a_typedtree of string
 
 exception Error of error
 
-val read : string -> Cmi_format.cmi_infos option * cmt_infos option
-(** [read filename] opens filename, and extract both the cmi_infos, if
-    it exists, and the cmt_infos, if it exists. Thus, it can be used
-    with .cmi, .cmt and .cmti files.
-
-    .cmti files always contain a cmi_infos at the beginning. .cmt files
-    only contain a cmi_infos at the beginning if there is no associated
-    .cmti file.
-*)
+val set_args : string array -> unit
+(** Set the logical compiler arguments recorded in subsequently written CMT
+    files. Long-lived compiler hosts set this at each request boundary. *)
 
 val read_cmt : string -> cmt_infos
 val read_cmi : string -> Cmi_format.cmi_infos
@@ -93,15 +76,11 @@ val save_cmt :
   (* source file *)
   Env.t ->
   (* initial env *)
-  Cmi_format.cmi_infos option ->
-  (* if a .cmi was generated *)
   unit
-(** [save_cmt filename modname binary_annots sourcefile initial_env cmi]
+(** [save_cmt filename modname binary_annots sourcefile initial_env]
     writes a cmt(i) file.  *)
 
 (* Miscellaneous functions *)
-
-val read_magic_number : in_channel -> string
 
 val clear : unit -> unit
 
@@ -111,23 +90,3 @@ val set_saved_types : binary_part list -> unit
 
 val record_value_dependency :
   Types.value_description -> Types.value_description -> unit
-
-val record_deprecated_used :
-  ?deprecated_context:Cmt_utils.deprecated_used_context ->
-  ?migration_template:Parsetree.expression ->
-  ?migration_in_pipe_chain_template:Parsetree.expression ->
-  Location.t ->
-  string ->
-  unit
-
-(*
-
-  val is_magic_number : string -> bool
-  val read : in_channel -> Env.cmi_infos option * t
-  val write_magic_number : out_channel -> unit
-  val write : out_channel -> t -> unit
-
-  val find : string list -> string -> string
-  val read_signature : 'a -> string -> Types.signature * 'b list * 'c list
-
-*)

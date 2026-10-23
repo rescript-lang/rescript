@@ -4,11 +4,11 @@ module String_map = Map.Make (String)
 module String_set = Set.Make (String)
 module Int_set = Set.Make (Int)
 
-(* Public API: migrate ~entryPointFile ~outputMode *)
+(* Public API: migrate ~entry_point_file ~output_mode *)
 
 let is_unit_expr (e : Parsetree.expression) =
   match e.pexp_desc with
-  | Pexp_construct ({txt = Lident "()"}, None) -> true
+  | Pexp_construct ({txt = Lident "()"}, {txt = []}) -> true
   | _ -> false
 
 module Insert_ext = struct
@@ -26,18 +26,15 @@ module Insert_ext = struct
   let placeholder_of_expr = function
     | {
         Parsetree.pexp_desc =
-          Pexp_extension
-            ( {txt},
-              PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_constant c}, _)}]
-            );
+          Pexp_extension ({txt}, PStr [{pstr_desc = Pstr_eval (expression, _)}]);
       } ->
       if txt = ext_labelled then
-        match c with
-        | Pconst_string (name, _) -> Some (Labelled name)
-        | _ -> None
+        Option.map
+          (fun name -> Labelled name)
+          (Ast_payload.semantic_string_of_expression expression)
       else if txt = ext_unlabelled then
-        match c with
-        | Pconst_integer (s, _) -> (
+        match expression.pexp_desc with
+        | Pexp_constant (Pconst_integer (s, _)) -> (
           match int_of_string_opt s with
           | Some i -> Some (Unlabelled i)
           | None -> None)
@@ -57,9 +54,9 @@ module Expr_utils = struct
     match e.pexp_desc with
     | Pexp_apply {funct = {pexp_desc = Pexp_ident {txt = Lident "->"}}; _} ->
       true
-    | Pexp_construct (_, Some e)
+    | Pexp_construct (_, {txt = [e]})
     | Pexp_constraint (e, _)
-    | Pexp_coerce (e, _, _)
+    | Pexp_coerce (e, _)
     | Pexp_let (_, _, e)
     | Pexp_sequence (e, _)
     | Pexp_letmodule (_, _, e)
@@ -83,11 +80,7 @@ module Mapper_utils = struct
           [
             {pstr_desc = Parsetree.Pstr_eval ({pexp_desc = Pexp_array elems}, _)};
           ] ->
-        elems
-        |> List.filter_map (fun (e : Parsetree.expression) ->
-               match e.pexp_desc with
-               | Pexp_constant (Pconst_string (s, _)) -> Some s
-               | _ -> None)
+        elems |> List.filter_map Ast_payload.semantic_string_of_expression
       | _ -> []
 
     let apply_names (names : string list) (e : Parsetree.expression) :
@@ -151,12 +144,12 @@ module Mapper_utils = struct
     let idx = ref 0 in
     source_args
     |> List.iter (fun (lbl, arg) ->
-           match lbl with
-           | Asttypes.Nolabel ->
-             Hashtbl.replace unlabelled !idx arg;
-             incr idx
-           | Asttypes.Labelled {txt} | Optional {txt} ->
-             Hashtbl.replace labelled txt arg);
+        match lbl with
+        | Asttypes.Nolabel ->
+          Hashtbl.replace unlabelled !idx arg;
+          incr idx
+        | Asttypes.Labelled {txt} | Optional {txt} ->
+          Hashtbl.replace labelled txt arg);
     (labelled, unlabelled)
 
   (* Replace placeholders anywhere inside an expression using the given
@@ -190,11 +183,11 @@ module Mapper_utils = struct
   let build_labelled_args_map (template_args : args) =
     template_args
     |> List.filter_map (fun (label, arg) ->
-           match (label, Insert_ext.placeholder_of_expr arg) with
-           | ( (Asttypes.Labelled {txt = label} | Optional {txt = label}),
-               Some (Insert_ext.Labelled arg_name) ) ->
-             Some (arg_name, label)
-           | _ -> None)
+        match (label, Insert_ext.placeholder_of_expr arg) with
+        | ( (Asttypes.Labelled {txt = label} | Optional {txt = label}),
+            Some (Insert_ext.Labelled arg_name) ) ->
+          Some (arg_name, label)
+        | _ -> None)
     |> List.fold_left
          (fun map (k, v) -> String_map.add k v map)
          String_map.empty
@@ -209,9 +202,9 @@ module Mapper_utils = struct
      (e.g. `lhs -> f(args)`), adjust drop positions accordingly at the call site.
 
      Returns:
-     - template_args_to_insert: args to append to the final call
-     - labelled_names_to_drop: names of labelled source args consumed
-     - unlabelled_positions_to_drop: 0-based indices of unlabelled source args to drop
+     - args_to_insert: args to append to the final call
+     - labelled_to_drop: names of labelled source args consumed
+     - unlabelled_to_drop: 0-based indices of unlabelled source args to drop
   *)
   type template_resolution = {
     args_to_insert: args;
@@ -273,16 +266,16 @@ module Mapper_utils = struct
   let rename_labels (source_args : args) ~labelled_args_map =
     source_args
     |> List.map (fun (label, arg) ->
-           match label with
-           | Asttypes.Labelled ({loc; txt} as l) -> (
-             match String_map.find_opt txt labelled_args_map with
-             | Some mapped -> (Asttypes.Labelled {loc; txt = mapped}, arg)
-             | None -> (Asttypes.Labelled l, arg))
-           | Optional ({loc; txt} as l) -> (
-             match String_map.find_opt txt labelled_args_map with
-             | Some mapped -> (Optional {loc; txt = mapped}, arg)
-             | None -> (Optional l, arg))
-           | _ -> (label, arg))
+        match label with
+        | Asttypes.Labelled ({loc; txt} as l) -> (
+          match String_map.find_opt txt labelled_args_map with
+          | Some mapped -> (Asttypes.Labelled {loc; txt = mapped}, arg)
+          | None -> (Asttypes.Labelled l, arg))
+        | Optional ({loc; txt} as l) -> (
+          match String_map.find_opt txt labelled_args_map with
+          | Some mapped -> (Optional {loc; txt = mapped}, arg)
+          | None -> (Optional l, arg))
+        | _ -> (label, arg))
 
   let apply_migration_template mapper (template_args : args)
       (source_args : args) =
@@ -555,47 +548,47 @@ let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
   let deprecated_function_calls =
     deprecated_used
     |> List.filter (fun (d : Cmt_utils.deprecated_used) ->
-           match d.context with
-           | Some FunctionCall -> true
-           | _ -> false)
+        match d.context with
+        | Some FunctionCall -> true
+        | _ -> false)
   in
   let loc_to_deprecated_fn_call =
     Hashtbl.create (List.length deprecated_function_calls)
   in
   deprecated_function_calls
   |> List.iter (fun ({Cmt_utils.source_loc} as d) ->
-         Hashtbl.replace loc_to_deprecated_fn_call source_loc d);
+      Hashtbl.replace loc_to_deprecated_fn_call source_loc d);
 
   let deprecated_references =
     deprecated_used
     |> List.filter (fun (d : Cmt_utils.deprecated_used) ->
-           match d.context with
-           | Some Reference -> true
-           | _ -> false)
+        match d.context with
+        | Some Reference -> true
+        | _ -> false)
   in
   let loc_to_deprecated_reference =
     Hashtbl.create (List.length deprecated_references)
   in
   deprecated_references
   |> List.iter (fun ({Cmt_utils.source_loc} as d) ->
-         Hashtbl.replace loc_to_deprecated_reference source_loc d);
+      Hashtbl.replace loc_to_deprecated_reference source_loc d);
 
   let deprecated_constructor_constructors =
     deprecated_used
     |> List.filter_map (fun (d : Cmt_utils.deprecated_used) ->
-           match d.migration_template with
-           | Some template -> (
-             match Constructor_replace.of_template template with
-             | Some target -> Some (d.source_loc, target)
-             | None -> None)
-           | None -> None)
+        match d.migration_template with
+        | Some template -> (
+          match Constructor_replace.of_template template with
+          | Some target -> Some (d.source_loc, target)
+          | None -> None)
+        | None -> None)
   in
   let loc_to_deprecated_constructor_constructor =
     Hashtbl.create (List.length deprecated_constructor_constructors)
   in
   deprecated_constructor_constructors
   |> List.iter (fun (loc, target) ->
-         Hashtbl.replace loc_to_deprecated_constructor_constructor loc target);
+      Hashtbl.replace loc_to_deprecated_constructor_constructor loc target);
 
   let find_constructor_target ~loc ~lid_loc =
     match Hashtbl.find_opt loc_to_deprecated_constructor_constructor loc with
@@ -616,20 +609,20 @@ let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
       (Cmt_utils.deprecated_used * Parsetree.core_type) list =
     deprecated_used
     |> List.filter_map (fun (d : Cmt_utils.deprecated_used) ->
-           match d.migration_template with
-           | Some e -> (
-             match Type_replace.core_type_of_expr_extension e with
-             | Some ct -> Some (d, ct)
-             | None -> None)
-           | None -> None)
+        match d.migration_template with
+        | Some e -> (
+          match Type_replace.core_type_of_expr_extension e with
+          | Some ct -> Some (d, ct)
+          | None -> None)
+        | None -> None)
   in
   let find_type_replace_template (loc : Location.t) : Parsetree.core_type option
       =
     type_replace_deprecations
     |> List.find_map (fun ((d : Cmt_utils.deprecated_used), ct) ->
-           if loc_contains loc d.source_loc || loc_contains d.source_loc loc
-           then Some ct
-           else None)
+        if loc_contains loc d.source_loc || loc_contains d.source_loc loc then
+          Some ct
+        else None)
   in
 
   let mapper =
@@ -684,7 +677,12 @@ let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
           | {pexp_desc = Pexp_construct (lid, arg); pexp_loc} -> (
             match find_constructor_target ~loc:pexp_loc ~lid_loc:lid.loc with
             | Some {Constructor_replace.lid; attrs} ->
-              let arg = Option.map (mapper.expr mapper) arg in
+              let arg =
+                {
+                  Location.txt = List.map (mapper.expr mapper) arg.txt;
+                  loc = mapper.location mapper arg.loc;
+                }
+              in
               let replaced = {exp with pexp_desc = Pexp_construct (lid, arg)} in
               Mapper_utils.Apply_transforms.attach_to_replacement ~attrs
                 replaced
@@ -730,7 +728,12 @@ let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
           | {ppat_desc = Ppat_construct (lid, arg); ppat_loc} -> (
             match find_constructor_target ~loc:ppat_loc ~lid_loc:lid.loc with
             | Some {Constructor_replace.lid; attrs} ->
-              let arg = Option.map (mapper.pat mapper) arg in
+              let arg =
+                {
+                  Location.txt = List.map (mapper.pat mapper) arg.txt;
+                  loc = mapper.location mapper arg.loc;
+                }
+              in
               let replaced = {pat with ppat_desc = Ppat_construct (lid, arg)} in
               Mapper_utils.Apply_transforms.attach_attrs_to_pat ~attrs replaced
             | None -> Ast_mapper.default_mapper.pat mapper pat)
@@ -738,6 +741,26 @@ let make_mapper (deprecated_used : Cmt_utils.deprecated_used list) =
     }
   in
   mapper
+
+(* The deprecation locations in the .cmt refer to the source it was compiled
+   from. Applying them to a source that changed since (for example one that
+   was already migrated) rewrites the wrong code, so refuse stale artifacts. *)
+let load_deprecated_used ~state ~path =
+  match Cmt.load_cmt_infos_from_path ~state ~path with
+  | None ->
+    Error
+      (Printf.sprintf
+         "error: failed to run migration for %s because build artifacts could \
+          not be found. try to build the project"
+         path)
+  | Some {cmt_source_digest = Some digest}
+    when not (Digest.equal digest (Digest.file path)) ->
+    Error
+      (Printf.sprintf
+         "error: failed to run migration for %s because build artifacts are \
+          out of date. rebuild the project and run the migration again"
+         path)
+  | Some {cmt_extra_info = {deprecated_used}} -> Ok deprecated_used
 
 let migrate ~entry_point_file ~output_mode =
   let path =
@@ -748,18 +771,11 @@ let migrate ~entry_point_file ~output_mode =
   let state = Shared_types.create_state () in
   let result =
     if Filename.check_suffix path ".res" then
-      let parser =
-        Res_driver.parsing_engine.parse_implementation ~for_printer:true
-      in
+      let parser = Res_driver.parsing_engine.parse_implementation in
       let {Res_driver.parsetree; comments; source} = parser ~filename:path in
-      match Cmt.load_cmt_infos_from_path ~state ~path with
-      | None ->
-        Error
-          (Printf.sprintf
-             "error: failed to run migration for %s because build artifacts \
-              could not be found. try to build the project"
-             path)
-      | Some {cmt_extra_info = {deprecated_used}} ->
+      match load_deprecated_used ~state ~path with
+      | Error e -> Error e
+      | Ok deprecated_used ->
         let mapper = make_mapper deprecated_used in
         let ast_mapped = mapper.structure mapper parsetree in
         (* Second pass: apply any post-migration transforms signaled via @apply.transforms *)
@@ -773,29 +789,29 @@ let migrate ~entry_point_file ~output_mode =
         let ast_transformed =
           apply_transforms.structure apply_transforms ast_mapped
         in
-        Ok
-          ( Res_printer.print_implementation
-              ~width:Res_printer.default_print_width ast_transformed ~comments,
-            source )
+        (* Only reprint when a migration changed the AST, so that files
+           without migrations keep their formatting. *)
+        if ast_transformed = parsetree then Ok (None, source)
+        else
+          Ok
+            ( Some
+                (Res_printer.print_implementation
+                   ~width:Res_printer.default_print_width ast_transformed
+                   ~comments),
+              source )
     else if Filename.check_suffix path ".resi" then
-      let parser =
-        Res_driver.parsing_engine.parse_interface ~for_printer:true
-      in
+      let parser = Res_driver.parsing_engine.parse_interface in
       let {Res_driver.parsetree = signature; comments; source} =
         parser ~filename:path
       in
 
-      match Cmt.load_cmt_infos_from_path ~state ~path with
-      | None ->
-        Error
-          (Printf.sprintf
-             "error: failed to run migration for %s because build artifacts \
-              could not be found. try to build the project"
-             path)
-      | Some {cmt_extra_info = {deprecated_used}} ->
+      match load_deprecated_used ~state ~path with
+      | Error e -> Error e
+      | Ok deprecated_used ->
         let mapper = make_mapper deprecated_used in
         let ast_mapped = mapper.signature mapper signature in
-        Ok (Res_printer.print_interface ast_mapped ~comments, source)
+        if ast_mapped = signature then Ok (None, source)
+        else Ok (Some (Res_printer.print_interface ast_mapped ~comments), source)
     else
       Error
         (Printf.sprintf
@@ -804,7 +820,7 @@ let migrate ~entry_point_file ~output_mode =
   in
   match result with
   | Error e -> Error e
-  | Ok (contents, source) when contents <> source -> (
+  | Ok (Some contents, source) when contents <> source -> (
     match output_mode with
     | `Stdout -> Ok contents
     | `File ->
@@ -812,7 +828,7 @@ let migrate ~entry_point_file ~output_mode =
       Printf.fprintf oc "%s" contents;
       close_out oc;
       Ok (Filename.basename path ^ ": File migrated successfully"))
-  | Ok (contents, _) -> (
+  | Ok (_, source) -> (
     match output_mode with
-    | `Stdout -> Ok contents
+    | `Stdout -> Ok source
     | `File -> Ok (Filename.basename path ^ ": File did not need migration"))

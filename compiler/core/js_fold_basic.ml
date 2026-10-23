@@ -22,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let add_lam_module_ident = Lam_module_ident.Hash_set.add
+let add_lam_module_ident = Lam_module_ident.set_add
 
 let create = Lam_module_ident.Hash_set.create
 
@@ -47,20 +47,3 @@ let calculate_hard_dependencies block =
   let obj = count_hard_dependencies hard_dependencies in
   obj.block obj block;
   hard_dependencies
-
-(*
-   Given a set of [variables], count which variables  [lam] will depend on
-   Invariant:
-   [variables] are parameters which means immutable so that [Call] 
-   will not depend [variables]
-
-*)
-(* let depends_j (lam : J.expression) (variables : Set_ident.t) =
-   let v = ref Set_ident.empty in
-   let add id =
-    if Set_ident.mem variables id then
-      v := Set_ident.add !v id
-   in
-   ignore @@ (new count_deps add ) # expression lam ;
-   !v
-*)

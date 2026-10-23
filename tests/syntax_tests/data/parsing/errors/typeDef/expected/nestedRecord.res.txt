@@ -11,11 +11,10 @@
   Only one inline record definition is allowed per record field. This defines more than one inline record.
 
 type options.extra = {
-  name: (options.extra.name, options.extra.name) result }[@@res.inlineRecordDefinition
-                                                           ]
+  name: (options.extra.name, options.extra.name) result }
 and options.extra.name = {
-  second: bool }[@@res.inlineRecordDefinition ]
+  second: bool }
 and options.extra.name = {
-  first: bool }[@@res.inlineRecordDefinition ]
+  first: bool }
 and options = {
   extra?: options.extra }

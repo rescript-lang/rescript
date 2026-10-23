@@ -1,0 +1,104 @@
+name: Semantic Diff
+
+# Renders the commit records of each pull request (scripts/commitRecords.js)
+# as a review page on the CDN, and comments them on the pull request as
+# Markdown (scripts/recordMarkdown.js) with the page's link. The page holds
+# every commit; the comment holds the commits a push added, or every commit
+# when the pull request is opened or reopened or its branch is force-pushed.
+#
+# A pull request from a branch of this repository runs on pull_request, with
+# the workflow and renderer of its merge into the base branch: GitHub takes
+# the workflow from that merge, so the renderer comes from it too, and a
+# branch made before the workflow changed still gets matching scripts. A
+# pull request from a fork runs on pull_request_target, which GitHub takes
+# from the default branch and runs with the repository's secrets: it
+# executes only the default branch's code, and the fork's commits are
+# fetched as git data and never checked out.
+#
+# Pages are never deleted, so the links in the comments stay valid after a
+# pull request is merged or closed.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: semantic-diff-${{ github.event_name }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name == 'pull_request') ==
+      (github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_TITLE: ${{ github.event.pull_request.title }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      # The head before a push; empty when the pull request is opened or
+      # reopened.
+      BEFORE_SHA: ${{ github.event.action == 'synchronize' && github.event.before || '' }}
+    steps:
+      - name: Checkout renderer
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.sha || github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      - name: Render semantic diff
+        id: render
+        run: |
+          git fetch --no-tags --filter=blob:none origin "refs/pull/${PR_NUMBER}/head:refs/heads/pr-${PR_NUMBER}"
+          base=$(git merge-base "$BASE_SHA" "pr-${PR_NUMBER}")
+          head=$(git rev-parse --short=9 "pr-${PR_NUMBER}")
+          # The query string names the rendered commit, so each push gets a
+          # URL that no cache has seen.
+          url="https://cdn.rescript-lang.org/semantic-diff/pr-${PR_NUMBER}/index.html?v=${head}"
+          # A push that keeps the previous head adds commits on top of it:
+          # the comment holds those. After a force push the previous head is
+          # no ancestor (nor, from a fork, fetched), and the comment holds
+          # every commit.
+          since=()
+          if [ -n "$BEFORE_SHA" ] && git merge-base --is-ancestor "$BEFORE_SHA" "pr-${PR_NUMBER}" 2>/dev/null; then
+            since=(--since "$BEFORE_SHA")
+          fi
+          mkdir -p semantic-diff
+          node scripts/commitRecords.js --out semantic-diff/index.html --markdown semantic-diff/comment.md "${since[@]}" --url "$url" --pr "$PR_NUMBER" --title "$PR_TITLE" "${base}..pr-${PR_NUMBER}"
+          echo "head=${head}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Rclone
+        uses: cometkim/rclone-actions/setup-rclone@8d9c6b95341f7698609deee65c3d62af42893288 # main, 2025-06-18
+
+      - name: Configure Rclone remote
+        uses: cometkim/rclone-actions/configure-remote/s3-provider@8d9c6b95341f7698609deee65c3d62af42893288 # main, 2025-06-18
+        with:
+          name: rescript
+          provider: Cloudflare
+          endpoint: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          access-key-id: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          acl: private
+
+      - name: Upload semantic diff
+        run: rclone copyto --s3-no-check-bucket semantic-diff/index.html "rescript:cdn-assets/semantic-diff/pr-${PR_NUMBER}/index.html"
+
+      # A push that adds only merge commits writes no comment.
+      - name: Comment semantic diff
+        if: hashFiles('semantic-diff/comment.md') != ''
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+          # Each push gets its own comment, so the comments of earlier pushes
+          # stay; a re-run of the same head updates its comment.
+          comment-tag: semantic-diff-${{ steps.render.outputs.head }}
+          mode: upsert
+          file-path: semantic-diff/comment.md

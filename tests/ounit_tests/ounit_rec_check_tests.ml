@@ -1,7 +1,7 @@
 let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
 let loc = Location.none
-let typ = Predef.type_unit
+let typ = Predef.type_unit ()
 
 let val_desc =
   {Types.val_type = typ; val_kind = Val_reg; val_loc = loc; val_attributes = []}

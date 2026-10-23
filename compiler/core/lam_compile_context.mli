@@ -41,7 +41,7 @@ type return_label = {
 
 type value = {exit_id: Ident.t; bindings: Ident.t list; order_id: int}
 
-type let_kind = Lam_compat.let_kind
+type let_kind = Lambda.let_kind
 type loop_frame = {mutable label: J.label option}
 
 type tail = {label: return_label option; in_staticcatch: bool}
@@ -82,13 +82,16 @@ val enter_switch : t -> t
 val push_loop : t -> t * loop_frame
 val ensure_loop_label : t -> loop_frame -> J.label
 
-type handler = {label: jbl_label; handler: Lam.t; bindings: Ident.t list}
+type handler = {label: jbl_label; handler: Lambda.t; bindings: Ident.t list}
 
 val no_static_raise_in_handler : handler -> bool
 
 val add_jmps :
-  jmp_table -> Ident.t -> handler list -> jmp_table * (jbl_label * Lam.t) list
+  jmp_table ->
+  Ident.t ->
+  handler list ->
+  jmp_table * (jbl_label * Lambda.t) list
 
-val add_pseudo_jmp : jmp_table -> Ident.t -> handler -> jmp_table * Lam.t
+val add_pseudo_jmp : jmp_table -> Ident.t -> handler -> jmp_table * Lambda.t
 
 val find_exn : t -> jbl_label -> value

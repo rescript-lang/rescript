@@ -1,5 +1,5 @@
-/* TODO: create a special type 
-   ['a Js.prop_set] for better error message
+/* TODO: create a special property-setter type
+   for a better error message
 */
 let test_set = x => x["length__aux"] = 3
 

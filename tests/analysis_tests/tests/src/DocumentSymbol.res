@@ -1,7 +1,7 @@
 module MyList = Belt.List
 
 module Dep: {
-  @ocaml.doc("Some doc comment") @deprecated("Use customDouble instead")
+  @res.doc("Some doc comment") @deprecated("Use customDouble instead")
   let customDouble: int => int
 } = {
   let customDouble = foo => foo * 2
@@ -30,5 +30,7 @@ module O = {
 }
 
 let zzz = 11
+let templateString = `hello ${zzz->Int.toString}`
+let bracedFunction = {x => x + 1}
 
 //^doc

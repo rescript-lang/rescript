@@ -14,7 +14,7 @@ module Make: Css_Core.CssImplementationIntf =>
   let keyframes: list<(int, list<rule>)> => animationName
 }
 
-let toJson: list<rule> => Js.Json.t
+let toJson: list<rule> => JSON.t
 
 let important: rule => rule
 let label: string => rule

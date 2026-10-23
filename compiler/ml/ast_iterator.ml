@@ -80,9 +80,13 @@ module T = struct
   (* Type expressions for the core language *)
 
   let row_field sub = function
-    | Rtag (_, attrs, _, tl) ->
+    | Rtag (_, attrs, _, groups) ->
       sub.attributes sub attrs;
-      List.iter (sub.typ sub) tl
+      List.iter
+        (fun {loc; txt} ->
+          sub.location sub loc;
+          List.iter (sub.typ sub) txt)
+        groups
     | Rinherit t -> sub.typ sub t
 
   let object_field sub = function
@@ -96,8 +100,18 @@ module T = struct
     sub.attributes sub attrs;
     match desc with
     | Ptyp_any | Ptyp_var _ -> ()
-    | Ptyp_arrow {arg; ret} ->
-      sub.typ sub arg.typ;
+    | Ptyp_arrow {params; ret} ->
+      List.iter
+        (function
+          | Parsetree.Parg_type {typ} -> sub.typ sub typ
+          | Parsetree.Parg_fixed {value; loc} -> (
+            sub.location sub loc;
+            sub.location sub value.loc;
+            match value.txt with
+            | Pfixed_int source | Pfixed_template source | Pfixed_json source ->
+              sub.location sub source.loc
+            | Pfixed_string _ -> ()))
+        params;
       sub.typ sub ret
     | Ptyp_tuple tyl -> List.iter (sub.typ sub) tyl
     | Ptyp_constr (lid, tl) ->
@@ -243,6 +257,7 @@ module M = struct
       sub.module_type sub mty
     | Pmod_unpack e -> sub.expr sub e
     | Pmod_extension x -> sub.extension sub x
+    | Pmod_await m -> sub.module_expr sub m
 
   let iter_structure_item sub {pstr_loc = loc; pstr_desc = desc} =
     sub.location sub loc;
@@ -262,6 +277,10 @@ module M = struct
     | Pstr_include x -> sub.include_declaration sub x
     | Pstr_extension (x, attrs) ->
       sub.extension sub x;
+      sub.attributes sub attrs
+    | Pstr_raw {name_loc; source; attrs} ->
+      sub.location sub name_loc;
+      sub.location sub (Ast_raw.source_loc source);
       sub.attributes sub attrs
     | Pstr_attribute x -> sub.attribute sub x
 end
@@ -284,15 +303,26 @@ module E = struct
     sub.location sub loc;
     sub.attributes sub attrs;
     match desc with
+    | Pexp_braces {expr; braces_loc} ->
+      sub.location sub braces_loc;
+      sub.expr sub expr
     | Pexp_ident x -> iter_loc sub x
     | Pexp_constant _ -> ()
     | Pexp_let (_r, vbs, e) ->
       List.iter (sub.value_binding sub) vbs;
       sub.expr sub e
-    | Pexp_fun {default = def; lhs = p; rhs = e} ->
-      iter_opt (sub.expr sub) def;
-      sub.pat sub p;
-      sub.expr sub e
+    | Pexp_fun {newtypes; params; body} ->
+      List.iter
+        (fun (name, attrs) ->
+          iter_loc sub name;
+          sub.attributes sub attrs)
+        newtypes;
+      List.iter
+        (fun {p_default; p_pat} ->
+          iter_opt (sub.expr sub) p_default;
+          sub.pat sub p_pat)
+        params;
+      sub.expr sub body
     | Pexp_apply {funct = e; args = l} ->
       sub.expr sub e;
       List.iter (iter_snd (sub.expr sub)) l
@@ -303,10 +333,13 @@ module E = struct
       sub.expr sub e;
       sub.cases sub pel
     | Pexp_tuple el -> List.iter (sub.expr sub) el
-    | Pexp_construct (lid, arg) ->
+    | Pexp_construct (lid, {txt = args; loc = args_loc}) ->
       iter_loc sub lid;
-      iter_opt (sub.expr sub) arg
-    | Pexp_variant (_lab, eo) -> iter_opt (sub.expr sub) eo
+      sub.location sub args_loc;
+      List.iter (sub.expr sub) args
+    | Pexp_variant (_lab, {txt = args; loc = args_loc}) ->
+      sub.location sub args_loc;
+      List.iter (sub.expr sub) args
     | Pexp_record (l, eo) ->
       List.iter
         (fun {lid; x = exp} ->
@@ -322,10 +355,22 @@ module E = struct
       iter_loc sub lid;
       sub.expr sub e2
     | Pexp_array el -> List.iter (sub.expr sub) el
+    | Pexp_dict entries ->
+      List.iter
+        (function
+          | Pdict_entry (key, e) ->
+            iter_loc sub key;
+            sub.expr sub e
+          | Pdict_spread e -> sub.expr sub e)
+        entries
     | Pexp_ifthenelse (e1, e2, e3) ->
       sub.expr sub e1;
       sub.expr sub e2;
       iter_opt (sub.expr sub) e3
+    | Pexp_ternary (e1, e2, e3) ->
+      sub.expr sub e1;
+      sub.expr sub e2;
+      sub.expr sub e3
     | Pexp_sequence (e1, e2) ->
       sub.expr sub e1;
       sub.expr sub e2
@@ -346,13 +391,22 @@ module E = struct
       sub.pat sub p;
       sub.expr sub e1;
       sub.expr sub e2
-    | Pexp_coerce (e, (), t2) ->
+    | Pexp_coerce (e, t2) ->
       sub.expr sub e;
       sub.typ sub t2
     | Pexp_constraint (e, t) ->
       sub.expr sub e;
       sub.typ sub t
-    | Pexp_send (e, _s) -> sub.expr sub e
+    | Pexp_object_get (e, _s) -> sub.expr sub e
+    | Pexp_object_set (e, _s, v) ->
+      sub.expr sub e;
+      sub.expr sub v
+    | Pexp_object_literal fields ->
+      List.iter
+        (fun (s, e) ->
+          iter_loc sub s;
+          sub.expr sub e)
+        fields
     | Pexp_letmodule (s, me, e) ->
       iter_loc sub s;
       sub.module_expr sub me;
@@ -361,12 +415,19 @@ module E = struct
       sub.extension_constructor sub cd;
       sub.expr sub e
     | Pexp_assert e -> sub.expr sub e
-    | Pexp_newtype (_s, e) -> sub.expr sub e
     | Pexp_pack me -> sub.module_expr sub me
     | Pexp_open (_ovf, lid, e) ->
       iter_loc sub lid;
       sub.expr sub e
     | Pexp_extension x -> sub.extension sub x
+    | Pexp_raw {name_loc; source} ->
+      sub.location sub name_loc;
+      sub.location sub (Ast_raw.source_loc source)
+    | Pexp_regexp _ -> ()
+    | Pexp_template {values} -> List.iter (sub.expr sub) values
+    | Pexp_tagged_template {tag; values} ->
+      sub.expr sub tag;
+      List.iter (sub.expr sub) values
     | Pexp_await e -> sub.expr sub e
     | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
       iter_jsx_children sub children
@@ -403,10 +464,19 @@ module P = struct
     | Ppat_constant _ -> ()
     | Ppat_interval _ -> ()
     | Ppat_tuple pl -> List.iter (sub.pat sub) pl
-    | Ppat_construct (l, p) ->
+    | Ppat_construct (l, {txt = args; loc = args_loc}) ->
       iter_loc sub l;
-      iter_opt (sub.pat sub) p
-    | Ppat_variant (_l, p) -> iter_opt (sub.pat sub) p
+      sub.location sub args_loc;
+      List.iter (sub.pat sub) args
+    | Ppat_variant (_l, {txt = args; loc = args_loc}) ->
+      sub.location sub args_loc;
+      List.iter (sub.pat sub) args
+    | Ppat_dict entries ->
+      List.iter
+        (fun {pdp_key; pdp_pattern} ->
+          iter_loc sub pdp_key;
+          sub.pat sub pdp_pattern)
+        entries
     | Ppat_record (lpl, _cf, rest) ->
       List.iter
         (fun {lid; x = pat} ->
@@ -425,13 +495,10 @@ module P = struct
     | Ppat_constraint (p, t) ->
       sub.pat sub p;
       sub.typ sub t
-    | Ppat_type s -> iter_loc sub s
+    | Ppat_type s | Ppat_variant_spread s -> iter_loc sub s
     | Ppat_unpack s -> iter_loc sub s
     | Ppat_exception p -> sub.pat sub p
     | Ppat_extension x -> sub.extension sub x
-    | Ppat_open (lid, p) ->
-      iter_loc sub lid;
-      sub.pat sub p
 end
 
 (* Now, a generic AST mapper, to be extended to cover all kinds and
@@ -453,12 +520,12 @@ let default_iterator =
     type_extension = T.iter_type_extension;
     extension_constructor = T.iter_extension_constructor;
     value_description =
-      (fun this
-        {pval_name; pval_type; pval_prim = _; pval_loc; pval_attributes}
-      ->
+      (fun this ({pval_name; pval_type; pval_prim = _; pval_loc} as vd) ->
         iter_loc this pval_name;
         this.typ this pval_type;
-        this.attributes this pval_attributes;
+        (* An iterator sees the component annotation as the attribute it was
+           written as. *)
+        this.attributes this (Ast_helper.Val.description_attributes vd);
         this.location this pval_loc);
     pat = P.iter;
     expr = E.iter;
@@ -496,11 +563,16 @@ let default_iterator =
         this.location this pincl_loc;
         this.attributes this pincl_attributes);
     value_binding =
-      (fun this {pvb_pat; pvb_expr; pvb_attributes; pvb_loc} ->
+      (fun this ({pvb_pat; pvb_expr; pvb_constraint; pvb_loc} as vb) ->
         this.pat this pvb_pat;
+        Option.iter
+          (fun {pvc_newtypes; pvc_type} ->
+            List.iter (iter_loc this) pvc_newtypes;
+            this.typ this pvc_type)
+          pvb_constraint;
         this.expr this pvb_expr;
         this.location this pvb_loc;
-        this.attributes this pvb_attributes);
+        this.attributes this (Ast_helper.Vb.binding_attributes vb));
     constructor_declaration =
       (fun this {pcd_name; pcd_args; pcd_res; pcd_loc; pcd_attributes} ->
         iter_loc this pcd_name;

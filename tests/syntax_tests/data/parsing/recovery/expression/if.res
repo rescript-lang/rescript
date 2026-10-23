@@ -1,1 +1,1 @@
-if (foo == bar) Js.log("if-branch") else Js.log("else-branch")
+if (foo == bar) Console.log("if-branch") else Console.log("else-branch")

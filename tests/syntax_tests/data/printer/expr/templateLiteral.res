@@ -56,10 +56,10 @@ let s = `${(s: string)}`
 
 `my ${language.name} is ` ++ `Bond, ${jamesbond.firstName}.`
 `my ${language.name} is ` ++ `${jamesbond.lastName}. James Bond.`
-(`my ${language.name} is ` ++ `Bond, ${jamesbond.firstName}.`)->Js.log
-(`my ${name} is ` ++ `Bond`)->Js.log
+(`my ${language.name} is ` ++ `Bond, ${jamesbond.firstName}.`)->Console.log
+(`my ${name} is ` ++ `Bond`)->Console.log
 `my ${kitchen.quality} kitched` ++ ` is ${language.big} ` ++ ` of the ${kitchen.things}.` 
-json`null`->Js.log
+json`null`->Console.log
 a ++ ` x ` ++ b
 a ++ (` x ` ++ b)
 

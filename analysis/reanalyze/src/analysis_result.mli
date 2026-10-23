@@ -9,17 +9,11 @@ type t
 val empty : t
 (** Empty result with no issues *)
 
-val add_issue : t -> Issue.t -> t
-(** Add a single issue to the result *)
-
 val add_issues : t -> Issue.t list -> t
 (** Add multiple issues to the result *)
 
 val get_issues : t -> Issue.t list
 (** Get all issues in order they were added *)
-
-val issue_count : t -> int
-(** Count of issues *)
 
 (** {2 Issue constructors} *)
 

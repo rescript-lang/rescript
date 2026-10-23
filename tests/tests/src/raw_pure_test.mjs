@@ -4,7 +4,7 @@
 */
 // hello
 
-import * as Belt_List from "@rescript/runtime/lib/es6/Belt_List.mjs";
+import * as Stdlib_List from "@rescript/runtime/lib/es6/Stdlib_List.mjs";
 
 let x0 = null;
 
@@ -22,7 +22,7 @@ function f(x) {
   return x;
 }
 
-let hh = Belt_List.length;
+let hh = Stdlib_List.length;
 
 export {
   x0,

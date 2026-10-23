@@ -2,7 +2,7 @@
 
 import * as Test_char from "./test_char.mjs";
 
-let v = Test_char.caml_is_printable(/* 'a' */97);
+let v = Test_char.caml_is_printable("a");
 
 export {
   v,

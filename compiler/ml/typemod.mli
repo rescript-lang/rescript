@@ -18,12 +18,8 @@
 open Types
 open Format
 
-val type_module : Env.t -> Parsetree.module_expr -> Typedtree.module_expr
 val type_structure :
-  Env.t ->
-  Parsetree.structure ->
-  Location.t ->
-  Typedtree.structure * Types.signature * Env.t
+  Env.t -> Parsetree.structure -> Typedtree.structure * Types.signature * Env.t
 val type_toplevel_phrase :
   Env.t -> Parsetree.structure -> Typedtree.structure * Types.signature * Env.t
 
@@ -39,7 +35,7 @@ val type_implementation_more :
   Typedtree.structure * Typedtree.module_coercion * Env.t * Types.signature
 
 val transl_signature : Env.t -> Parsetree.signature -> Typedtree.signature
-val check_nongen_schemes : Env.t -> Types.signature -> unit
+val check_js_names : toplevel:bool -> Types.signature -> unit
 val type_open_ :
   ?used_slot:bool ref ->
   ?toplevel:bool ->
@@ -48,18 +44,9 @@ val type_open_ :
   Location.t ->
   Longident.t Asttypes.loc ->
   Path.t * Env.t
-val simplify_signature : signature -> signature
-
-val path_of_module : Typedtree.module_expr -> Path.t option
 
 val save_signature :
-  string ->
-  Typedtree.signature ->
-  string ->
-  string ->
-  Env.t ->
-  Cmi_format.cmi_infos ->
-  unit
+  string -> Typedtree.signature -> string -> string -> Env.t -> unit
 
 type error =
   | Cannot_apply of module_type
@@ -74,6 +61,7 @@ type error =
   | With_changes_module_alias of Longident.t * Ident.t * Path.t
   | With_cannot_remove_constrained_type
   | Repeated_name of string * string * Warnings.loc
+  | Js_name_clash of string * string * string * Warnings.loc
   | Non_generalizable of type_expr
   | Non_generalizable_module of module_type
   | Interface_not_compiled of string

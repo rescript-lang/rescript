@@ -12,9 +12,9 @@ module Color: {
 
 @send external map: (array<'a>, 'a => 'b) => array<'b> = "map"
 @send external filter: (array<'a>, 'a => 'b) => array<'b> = "filter"
-list{1, 2, 3}->map(a => a + 1)->filter(a => modulo(a, 2) == 0)->Js.log
+list{1, 2, 3}->map(a => a + 1)->filter(a => modulo(a, 2) == 0)->Console.log
 
 type t
 @new external make: unit => t = "DOMParser"
 
-Js.log(make()->parseHtmlFromString("sdsd"))
+Console.log(make()->parseHtmlFromString("sdsd"))

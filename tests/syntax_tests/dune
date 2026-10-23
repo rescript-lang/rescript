@@ -9,6 +9,4 @@
  (package rescript)
  (enabled_if
   (<> %{profile} browser))
- (flags
-  (:standard -w +a-40-42-70))
  (libraries syntax core))

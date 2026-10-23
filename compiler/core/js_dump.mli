@@ -25,7 +25,4 @@ val statements : bool -> Ext_pp_scope.t -> Ext_pp.t -> J.block -> Ext_pp_scope.t
     Called by module {!Js_dump_program}
 *)
 
-val string_of_block : J.block -> string
-(** 2 functions Only used for debugging *)
-
 val string_of_expression : J.expression -> string

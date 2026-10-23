@@ -25,7 +25,7 @@
 module E = Js_exp_make
 
 (* Parrayref(u|s) *)
-let make_array mt args = E.array mt args
+let make_array args = E.array args
 
 let set_array e e0 e1 = E.assign (E.array_index e e0) e1
 

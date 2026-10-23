@@ -1,6 +1,6 @@
 {
   "name": "rescript",
-  "version": "13.0.0-alpha.6",
+  "version": "13.0.0-alpha.7",
   "description": "ReScript toolchain",
   "type": "module",
   "keywords": [
@@ -26,7 +26,6 @@
     "Cristiano Calcagno (https://github.com/cristianoc)",
     "Dmitry Zakharov (https://github.com/DZakh)",
     "Florian Hammerschmidt (https://github.com/fhammerschmidt)",
-    "Florian Verdonck (https://github.com/nojaf)",
     "Gabriel Nordeborn (https://github.com/zth)",
     "Hyeseong Kim (https://github.com/cometkim)",
     "Jaap Frolich (https://github.com/jfrolich)",
@@ -46,6 +45,7 @@
   "bin": {
     "bsc": "cli/bsc.js",
     "rescript": "cli/rescript.js",
+    "rescript-rust": "cli/rescript-rust.js",
     "rescript-tools": "cli/rescript-tools.js"
   },
   "scripts": {
@@ -56,9 +56,14 @@
     "check": "biome check --no-errors-on-unmatched .",
     "check:all": "biome check .",
     "format": "biome check --no-errors-on-unmatched . --fix",
-    "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html",
     "typecheck": "tsc",
-    "apidocs:generate": "yarn workspace @utils/scripts apidocs:generate"
+    "apidocs:generate": "yarn workspace @utils/scripts apidocs:generate",
+    "changelog:check": "node scripts/changelog.js check",
+    "changelog:preview": "node scripts/changelog.js preview",
+    "changelog:release": "node scripts/changelog.js release",
+    "changelog:open": "node scripts/changelog.js open",
+    "test-changelog": "node --test scripts/changelog.test.js",
+    "test-commit-records": "node --test scripts/commitRecords.test.js scripts/recordMarkdown.test.js"
   },
   "files": [
     "CHANGELOG.md",
@@ -69,8 +74,10 @@
     "cli"
   ],
   "exports": {
-    "./lib/es6/*": "./lib/es6/*",
-    "./lib/js/*": "./lib/js/*",
+    "./tools": {
+      "require": "./cli/common/tools.cjs",
+      "default": "./cli/common/tools.js"
+    },
     "./package.json": "./package.json"
   },
   "imports": {
@@ -82,18 +89,16 @@
   },
   "optionalDependencies": {
     "@rescript/darwin-arm64": "workspace:packages/@rescript/darwin-arm64",
-    "@rescript/darwin-x64": "workspace:packages/@rescript/darwin-x64",
     "@rescript/linux-arm64": "workspace:packages/@rescript/linux-arm64",
     "@rescript/linux-x64": "workspace:packages/@rescript/linux-x64",
     "@rescript/win32-x64": "workspace:packages/@rescript/win32-x64"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.3",
+    "@biomejs/biome": "2.5.15",
     "@types/node": "^26.1.1",
     "@types/semver": "^7.7.0",
     "@yarnpkg/types": "^4.0.1",
-    "mocha": "11.7.6",
-    "nyc": "18.0.0",
+    "mocha": "12.0.3",
     "semver": "^7.7.2",
     "typescript": "6.0.3"
   },
@@ -104,6 +109,7 @@
     "tests/dependencies/**",
     "tests/analysis_tests/**",
     "tests/docstring_tests",
+    "tests/belt_tests",
     "tests/gentype_tests/**",
     "tests/tests",
     "tests/tools_tests",
@@ -111,6 +117,6 @@
     "tests/lsp_tests/**",
     "scripts/res"
   ],
-  "packageManager": "yarn@4.12.0",
+  "packageManager": "yarn@4.18.1",
   "preferUnplugged": true
 }

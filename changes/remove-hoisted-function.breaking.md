@@ -1,0 +1,1 @@
+- Remove `@res.hoistedFunction`, which nested `make` flat exports replace; other nested functions are no longer exported flat.

@@ -1,7 +1,5 @@
 module String_map = Map.Make (String)
 
-let t_equals t1 t2 = t1.Types.level = t2.Types.level && t1.id = t2.id
-
 let substitute_types ~type_map (t : Types.type_expr) =
   if String_map.is_empty type_map then t
   else
@@ -22,14 +20,20 @@ let substitute_types ~type_map (t : Types.type_expr) =
       | Tsubst t -> {t with desc = Tsubst (loop t)}
       | Tvariant rd -> {t with desc = Tvariant (row_desc rd)}
       | Tnil -> t
-      | Tarrow (arg, ret, c, arity) ->
+      | Tarrow (params, ret) ->
         {
           t with
-          desc = Tarrow ({arg with typ = loop arg.typ}, loop ret, c, arity);
+          desc =
+            Tarrow
+              ( List.map
+                  (fun (arg : Types.arg) -> {arg with typ = loop arg.typ})
+                  params,
+                loop ret );
         }
       | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
-      | Tobject (t, r) -> {t with desc = Tobject (loop t, r)}
-      | Tfield (n, k, t1, t2) -> {t with desc = Tfield (n, k, loop t1, loop t2)}
+      | Tobject t -> {t with desc = Tobject (loop t)}
+      | Tfield f ->
+        {t with desc = Tfield {f with typ = loop f.typ; rest = loop f.rest}}
       | Tpoly (t, []) -> loop t
       | Tpoly (t, tl) -> {t with desc = Tpoly (loop t, tl |> List.map loop)}
       | Tpackage (p, l, tl) ->
@@ -68,9 +72,9 @@ let substitute_type_vars (type_vars : (string * Types.type_expr) list)
 let has_type_spread (lbls : Typedtree.label_declaration list) =
   lbls
   |> List.exists (fun (l : Typedtree.label_declaration) ->
-         match l with
-         | {ld_name = {txt = "..."}} -> true
-         | _ -> false)
+      match l with
+      | {ld_name = {txt = "..."}} -> true
+      | _ -> false)
 
 let extract_type_vars (type_params : Types.type_expr list)
     (typ : Types.type_expr) =
@@ -86,9 +90,9 @@ let extract_type_vars (type_params : Types.type_expr list)
     let paired_type_vars = List.combine type_params applied_type_vars in
     paired_type_vars
     |> List.filter_map (fun (t, applied_tvar) ->
-           match t.Types.desc with
-           | Tvar (Some tname) -> Some (tname, applied_tvar)
-           | _ -> None)
+        match t.Types.desc with
+        | Tvar (Some tname) -> Some (tname, applied_tvar)
+        | _ -> None)
   else []
 
 let expand_labels_with_type_spreads (env : Env.t)
@@ -108,6 +112,7 @@ let expand_labels_with_type_spreads (env : Env.t)
       {
         ld_id = l.ld_id;
         ld_name = {txt = Ident.name l.ld_id; loc = l.ld_loc};
+        ld_runtime_name = l.ld_runtime_name;
         ld_mutable = l.ld_mutable;
         ld_optional = l.ld_optional;
         ld_type =
@@ -129,7 +134,7 @@ let expand_labels_with_type_spreads (env : Env.t)
             ( fst acc @ Ext_list.map fields (fun l -> mk_lbl l ld_type type_vars),
               snd acc
               @ Ext_list.map fields (fun l ->
-                    {l with ld_type = substitute_type_vars type_vars l.ld_type})
+                  {l with ld_type = substitute_type_vars type_vars l.ld_type})
             )
             rest rest'
         | _ -> None

@@ -33,7 +33,8 @@ set->Set.add("Fine name") // Inferred as Set.t<string>
 ```
 
 ## Alternatives
-A JavaScript `Set` is mutable. If you're looking for an immutable alternative, check out `Belt.Set`.
+A JavaScript `Set` is mutable. For an immutable alternative, install the separate
+`@rescript/belt` package and check out `Belt.Set`.
 */
 @new
 external make: unit => t<'a> = "Set"

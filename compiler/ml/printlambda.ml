@@ -15,48 +15,33 @@
 
 open Format
 open Asttypes
-open Primitive
 open Lambda
 
 let rec struct_const ppf = function
-  | Const_base (Const_int n) -> fprintf ppf "%i" n
-  | Const_base (Const_char i) ->
-    fprintf ppf "%s" (Pprintast.string_of_int_as_char i)
-  | Const_base (Const_string (s, _)) -> fprintf ppf "%S" s
-  | Const_immstring s -> fprintf ppf "#%S" s
-  | Const_base (Const_float f) -> fprintf ppf "%s" f
-  | Const_base (Const_int32 n) -> fprintf ppf "%lil" n
-  | Const_base (Const_int64 n) -> fprintf ppf "%LiL" n
-  | Const_base (Const_bigint (sign, n)) ->
-    fprintf ppf "%sn" (Bigint_utils.to_string sign n)
-  | Const_pointer (n, _) -> fprintf ppf "%ia" n
+  | Const_int n -> fprintf ppf "%ld" n
+  | Const_char i -> fprintf ppf "%s" (Pprintast.string_of_int_as_char i)
+  | Const_string s -> fprintf ppf "%S" s
+  | Const_float f -> fprintf ppf "%s" f
+  | Const_bigint (sign, n) -> fprintf ppf "%sn" (Bigint_utils.to_string sign n)
+  | Const_constructor {name} -> fprintf ppf "%s" name
+  | Const_polyvar name -> fprintf ppf "`%s" name
+  | Const_module_alias -> fprintf ppf "module_alias"
+  | Const_assertfalse -> fprintf ppf "assertfalse"
+  | Const_js_null -> fprintf ppf "null"
+  | Const_some c -> fprintf ppf "some(%a)" struct_const c
+  | Const_js_undefined {is_unit = true} -> fprintf ppf "unit"
+  | Const_js_undefined {is_unit = false} -> fprintf ppf "undefined"
   | Const_block (tag_info, []) ->
-    let tag = Lambda.tag_of_tag_info tag_info in
-    fprintf ppf "[%i]" tag
+    let tag = Lambda.tag_label_of_tag_info tag_info in
+    fprintf ppf "[%s]" tag
   | Const_block (tag_info, sc1 :: scl) ->
-    let tag = Lambda.tag_of_tag_info tag_info in
+    let tag = Lambda.tag_label_of_tag_info tag_info in
     let sconsts ppf scl =
       List.iter (fun sc -> fprintf ppf "@ %a" struct_const sc) scl
     in
-    fprintf ppf "@[<1>[%i:@ @[%a%a@]]@]" tag struct_const sc1 sconsts scl
-  | Const_false -> fprintf ppf "false"
-  | Const_true -> fprintf ppf "true"
-
-let value_kind = function
-  | Pgenval -> ""
-
-(* let field_kind = function
-   | Pgenval -> "*"
-   | Pintval -> "int"
-   | Pfloatval -> "float"
-   | Pboxedintval bi -> boxed_integer_name bi *)
-
-let string_of_loc_kind = function
-  | Loc_FILE -> "loc_FILE"
-  | Loc_LINE -> "loc_LINE"
-  | Loc_MODULE -> "loc_MODULE"
-  | Loc_POS -> "loc_POS"
-  | Loc_LOC -> "loc_LOC"
+    fprintf ppf "@[<1>[%s:@ @[%a%a@]]@]" tag struct_const sc1 sconsts scl
+  | Const_js_false -> fprintf ppf "false"
+  | Const_js_true -> fprintf ppf "true"
 
 (* let block_shape ppf shape = match shape with
    | None | Some [] -> ()
@@ -90,42 +75,60 @@ let print_taginfo ppf = function
   | Blk_tuple -> fprintf ppf "tuple"
   | Blk_constructor {name; num_nonconst} ->
     fprintf ppf "%s/%i" name num_nonconst
-  | Blk_poly_var name -> fprintf ppf "`%s" name
+  | Blk_poly_var -> fprintf ppf "polyvar"
   | Blk_record {fields = ss} ->
     fprintf ppf "[%s]" (String.concat ";" (List.map fst (Array.to_list ss)))
   | Blk_module ss -> fprintf ppf "[%s]" (String.concat ";" ss)
-  | Blk_some -> fprintf ppf "some"
-  | Blk_some_not_nested -> fprintf ppf "some_not_nested"
   | Blk_module_export _ -> fprintf ppf "module/exports"
   | Blk_record_inlined {fields = ss} ->
     fprintf ppf "[%s]" (String.concat ";" (List.map fst (Array.to_list ss)))
 
+(* Every comparison prints its operand kind, so [Pintcomp], [Pjscomp],
+   [Pstringcomp] and friends stay distinguishable. *)
+let comparison ppf kind (cmp : Lambda.comparison) =
+  let op =
+    match cmp with
+    | Ceq -> "=="
+    | Cneq -> "!="
+    | Clt -> "<"
+    | Cle -> "<="
+    | Cgt -> ">"
+    | Cge -> ">="
+  in
+  fprintf ppf "%s[%s]" op kind
+
 let primitive ppf = function
-  | Pidentity -> fprintf ppf "id"
-  | Pignore -> fprintf ppf "ignore"
   | Pdebugger -> fprintf ppf "debugger"
   | Ptypeof -> fprintf ppf "typeof"
-  | Pnull -> fprintf ppf "null"
-  | Pundefined -> fprintf ppf "undefined"
-  | Pfn_arity -> fprintf ppf "fn.length"
-  | Prevapply -> fprintf ppf "revapply"
-  | Pdirapply -> fprintf ppf "dirapply"
-  | Ploc kind -> fprintf ppf "%s" (string_of_loc_kind kind)
-  | Pgetglobal id -> fprintf ppf "global %a" Ident.print id
-  | Pmakeblock taginfo -> fprintf ppf "makeblock %a" print_taginfo taginfo
+  | Psome -> fprintf ppf "some"
+  | Psome_not_nest -> fprintf ppf "some_not_nest"
+  | Pmakeblock taginfo ->
+    let what =
+      if Lambda.mutable_flag_of_tag_info taginfo = Immutable then "makeblock"
+      else "makemutable"
+    in
+    fprintf ppf "%s %a" what print_taginfo taginfo
   | Pfield (n, fld) -> fprintf ppf "field:%s/%i" (str_of_field_info fld) n
   | Psetfield (n, _) -> fprintf ppf "setfield %i" n
   | Pduprecord -> fprintf ppf "duprecord"
   | Precord_rest excluded ->
     fprintf ppf "record_rest(%s)" (String.concat ", " excluded)
-  | Pccall p -> fprintf ppf "%s" p.prim_name
-  | Praise k -> fprintf ppf "%s" (Lambda.raise_kind k)
-  | Pobjcomp Ceq -> fprintf ppf "=="
-  | Pobjcomp Cneq -> fprintf ppf "!="
-  | Pobjcomp Clt -> fprintf ppf "<"
-  | Pobjcomp Cle -> fprintf ppf "<="
-  | Pobjcomp Cgt -> fprintf ppf ">"
-  | Pobjcomp Cge -> fprintf ppf ">="
+  | Pjs_call {prim_name} -> fprintf ppf "js_call[%s]" prim_name
+  | Pjsx {jsx_name; jsx_multi; jsx_fragment; jsx_spread; jsx_props; jsx_key} ->
+    fprintf ppf "jsx[%s%s%s%s%s%s]" jsx_name
+      (if jsx_multi then " multi" else "")
+      (if jsx_fragment then " fragment" else "")
+      (if jsx_spread then " spread" else "")
+      (String.concat ""
+         (List.map
+            (fun (name, optional) -> " " ^ name ^ if optional then "?" else "")
+            jsx_props))
+      (if jsx_key then " key" else "")
+  | Pjs_object_create _ -> fprintf ppf "js_obj_create"
+  | Pjs_object_get name -> fprintf ppf "js_object_get[%s]" name
+  | Pjs_object_set name -> fprintf ppf "js_object_set[%s]" name
+  | Praise -> fprintf ppf "raise"
+  | Pobjcomp cmp -> comparison ppf "obj" cmp
   | Pobjorder -> fprintf ppf "compare"
   | Pobjmin -> fprintf ppf "min"
   | Pobjmax -> fprintf ppf "max"
@@ -134,12 +137,7 @@ let primitive ppf = function
   | Psequand -> fprintf ppf "&&"
   | Psequor -> fprintf ppf "||"
   | Pnot -> fprintf ppf "not"
-  | Pboolcomp Ceq -> fprintf ppf "=="
-  | Pboolcomp Cneq -> fprintf ppf "!="
-  | Pboolcomp Clt -> fprintf ppf "<"
-  | Pboolcomp Cle -> fprintf ppf "<="
-  | Pboolcomp Cgt -> fprintf ppf ">"
-  | Pboolcomp Cge -> fprintf ppf ">="
+  | Pboolcomp cmp -> comparison ppf "bool" cmp
   | Pboolorder -> fprintf ppf "compare"
   | Pboolmin -> fprintf ppf "min"
   | Pboolmax -> fprintf ppf "max"
@@ -157,33 +155,20 @@ let primitive ppf = function
   | Plslint -> fprintf ppf "lsl"
   | Plsrint -> fprintf ppf "lsr"
   | Pasrint -> fprintf ppf "asr"
-  | Pintcomp Ceq -> fprintf ppf "=="
-  | Pintcomp Cneq -> fprintf ppf "!="
-  | Pintcomp Clt -> fprintf ppf "<"
-  | Pintcomp Cle -> fprintf ppf "<="
-  | Pintcomp Cgt -> fprintf ppf ">"
-  | Pintcomp Cge -> fprintf ppf ">="
+  | Pintcomp cmp -> comparison ppf "int" cmp
   | Pintorder -> fprintf ppf "compare"
   | Pintmin -> fprintf ppf "min"
   | Pintmax -> fprintf ppf "max"
-  | Poffsetint n -> fprintf ppf "%i+" n
-  | Poffsetref n -> fprintf ppf "+:=%i" n
   | Pintoffloat -> fprintf ppf "int_of_float"
   | Pfloatofint -> fprintf ppf "float_of_int"
   | Pnegfloat -> fprintf ppf "~-."
-  | Pabsfloat -> fprintf ppf "abs."
   | Paddfloat -> fprintf ppf "+."
   | Psubfloat -> fprintf ppf "-."
   | Pmulfloat -> fprintf ppf "*."
   | Pdivfloat -> fprintf ppf "/."
   | Pmodfloat -> fprintf ppf "mod"
   | Ppowfloat -> fprintf ppf "**"
-  | Pfloatcomp Ceq -> fprintf ppf "==."
-  | Pfloatcomp Cneq -> fprintf ppf "!=."
-  | Pfloatcomp Clt -> fprintf ppf "<."
-  | Pfloatcomp Cle -> fprintf ppf "<=."
-  | Pfloatcomp Cgt -> fprintf ppf ">."
-  | Pfloatcomp Cge -> fprintf ppf ">=."
+  | Pfloatcomp cmp -> comparison ppf "float" cmp
   | Pfloatorder -> fprintf ppf "compare"
   | Pfloatmin -> fprintf ppf "min"
   | Pfloatmax -> fprintf ppf "max"
@@ -200,73 +185,54 @@ let primitive ppf = function
   | Pasrbigint -> fprintf ppf "asr"
   | Pdivbigint -> fprintf ppf "/"
   | Pmodbigint -> fprintf ppf "mod"
-  | Pbigintcomp Ceq -> fprintf ppf "==,"
-  | Pbigintcomp Cneq -> fprintf ppf "!=,"
-  | Pbigintcomp Clt -> fprintf ppf "<,"
-  | Pbigintcomp Cle -> fprintf ppf "<=,"
-  | Pbigintcomp Cgt -> fprintf ppf ">,"
-  | Pbigintcomp Cge -> fprintf ppf ">=,"
+  | Pbigintcomp cmp -> comparison ppf "bigint" cmp
   | Pbigintorder -> fprintf ppf "compare"
   | Pbigintmin -> fprintf ppf "min"
   | Pbigintmax -> fprintf ppf "max"
   | Pstringlength -> fprintf ppf "string.length"
   | Pstringrefu -> fprintf ppf "string.unsafe_get"
   | Pstringrefs -> fprintf ppf "string.get"
-  | Pstringcomp Ceq -> fprintf ppf "=="
-  | Pstringcomp Cneq -> fprintf ppf "!="
-  | Pstringcomp Clt -> fprintf ppf "<"
-  | Pstringcomp Cle -> fprintf ppf "<="
-  | Pstringcomp Cgt -> fprintf ppf ">"
-  | Pstringcomp Cge -> fprintf ppf ">="
+  | Pstringcomp cmp -> comparison ppf "string" cmp
   | Pstringorder -> fprintf ppf "compare"
   | Pstringmin -> fprintf ppf "min"
   | Pstringmax -> fprintf ppf "max"
   | Pstringadd -> fprintf ppf "string.concat"
   | Parraylength -> fprintf ppf "array.length"
-  | Pmakearray Mutable -> fprintf ppf "makearray"
-  | Pmakearray Immutable -> fprintf ppf "makearray_imm"
+  | Pmakearray -> fprintf ppf "makearray"
   | Parrayrefu -> fprintf ppf "array.unsafe_get"
   | Parraysetu -> fprintf ppf "array.unsafe_set"
   | Parrayrefs -> fprintf ppf "array.get"
-  | Parraysets -> fprintf ppf "array.set"
-  | Pmakelist Mutable -> fprintf ppf "makelist"
-  | Pmakelist Immutable -> fprintf ppf "makelist_imm"
+  | Pmakelist -> fprintf ppf "makelist"
   | Pmakedict -> fprintf ppf "makedict"
+  | Pdict_spread -> fprintf ppf "dict.spread"
   | Pdict_has -> fprintf ppf "dict.has"
-  | Pisint -> fprintf ppf "isint"
-  | Pisout -> fprintf ppf "isout"
-  | Pisnullable -> fprintf ppf "isnullable"
+  | Pis_null -> fprintf ppf "is_null"
+  | Pis_undefined -> fprintf ppf "is_undefined"
+  | Pis_null_undefined -> fprintf ppf "isnullable"
   | Pcreate_extension s -> fprintf ppf "extension[%s]" s
-  | Pextension_slot_eq -> fprintf ppf "#extension_slot_eq"
-  | Pwrap_exn -> fprintf ppf "wrap_exn"
   | Pawait -> fprintf ppf "await"
-  | Pimport -> fprintf ppf "import"
+  | Pimport (Import_module {module_; path}) ->
+    fprintf ppf "import[%s]" (String.concat "." (Ident.name module_ :: path))
+  | Pimport (Import_external {module_ = {bundle}; path}) ->
+    fprintf ppf "import[%s]" (String.concat "." (bundle :: path))
   | Pinit_mod -> fprintf ppf "#init_mod"
   | Pupdate_mod -> fprintf ppf "#update_mod"
   | Phash -> fprintf ppf "hash"
   | Phash_mixint -> fprintf ppf "hash_mix_int"
   | Phash_mixstring -> fprintf ppf "hash_mix_string"
   | Phash_finalmix -> fprintf ppf "hash_final_mix"
-  | Pcurry_apply i -> fprintf ppf "apply[%d]" i
-  | Pjscomp Ceq -> fprintf ppf "=="
-  | Pjscomp Cneq -> fprintf ppf "!="
-  | Pjscomp Clt -> fprintf ppf "<"
-  | Pjscomp Cle -> fprintf ppf "<="
-  | Pjscomp Cgt -> fprintf ppf ">"
-  | Pjscomp Cge -> fprintf ppf ">="
+  | Pjscomp cmp -> comparison ppf "js" cmp
   | Pnull_to_opt -> fprintf ppf "null_to_opt"
-  | Pnullable_to_opt -> fprintf ppf "nullable_to_opt"
+  | Pnull_undefined_to_opt -> fprintf ppf "nullable_to_opt"
   | Pis_not_none -> fprintf ppf "#is_not_none"
   | Pval_from_option -> fprintf ppf "#val_from_option"
   | Pval_from_option_not_nest -> fprintf ppf "#val_from_option_not_nest"
   | Pis_poly_var_block -> fprintf ppf "#is_poly_var_block"
-  | Pjs_raw_expr -> fprintf ppf "#raw_expr"
-  | Pjs_raw_stmt -> fprintf ppf "#raw_stmt"
-  | Pjs_fn_make arity -> fprintf ppf "#fn_mk(%d)" arity
-  | Pjs_fn_make_unit -> fprintf ppf "#fn_mk_unit"
+  | Praw_js_code _ -> fprintf ppf "raw_js_code"
   | Pjs_fn_method -> fprintf ppf "#fn_method"
   (* Debug-only dump, exercised solely under -drawlambda/-dlambda. *)
-  | Ptagged_template -> fprintf ppf "#tagged_template" [@coverage off]
+  | Ptagged_template _ -> fprintf ppf "#tagged_template" [@coverage off]
+  | Ptemplate _ -> fprintf ppf "#template" [@coverage off]
 
 let function_attribute ppf {inline; is_a_functor; return_unit} =
   if is_a_functor then fprintf ppf "is_a_functor@ ";
@@ -276,25 +242,20 @@ let function_attribute ppf {inline; is_a_functor; return_unit} =
   | Always_inline -> fprintf ppf "always_inline@ "
   | Never_inline -> fprintf ppf "never_inline@ "
 
-let apply_inlined_attribute ppf = function
-  | Default_inline -> ()
-  | Always_inline -> fprintf ppf " always_inline"
-  | Never_inline -> fprintf ppf " never_inline"
-
 let rec lam ppf = function
   | Lvar id -> Ident.print ppf id
+  | Lglobal_module id -> fprintf ppf "global %a" Ident.print id
   | Lconst cst -> struct_const ppf cst
   | Lapply ap ->
     let lams ppf largs = List.iter (fun l -> fprintf ppf "@ %a" lam l) largs in
-    fprintf ppf "@[<2>(apply@ %a%a%a)@]" lam ap.ap_func lams ap.ap_args
-      apply_inlined_attribute ap.ap_inlined
+    fprintf ppf "@[<2>(apply@ %a%a)@]" lam ap.ap_func lams ap.ap_args
   | Lfunction {params; body; attr} ->
     let pr_params ppf params =
       List.iter (fun param -> fprintf ppf "@ %a" Ident.print param) params
     in
     fprintf ppf "@[<2>(function%a@ %a%a)@]" pr_params params function_attribute
       attr lam body
-  | Llet (str, k, id, arg, body) ->
+  | Llet (str, id, arg, body) ->
     let kind = function
       | Alias -> "a"
       | Strict -> ""
@@ -302,14 +263,13 @@ let rec lam ppf = function
       | Variable -> "v"
     in
     let rec letbody = function
-      | Llet (str, k, id, arg, body) ->
-        fprintf ppf "@ @[<2>%a =%s%s@ %a@]" Ident.print id (kind str)
-          (value_kind k) lam arg;
+      | Llet (str, id, arg, body) ->
+        fprintf ppf "@ @[<2>%a =%s@ %a@]" Ident.print id (kind str) lam arg;
         letbody body
       | expr -> expr
     in
-    fprintf ppf "@[<2>(let@ @[<hv 1>(@[<2>%a =%s%s@ %a@]" Ident.print id
-      (kind str) (value_kind k) lam arg;
+    fprintf ppf "@[<2>(let@ @[<hv 1>(@[<2>%a =%s@ %a@]" Ident.print id
+      (kind str) lam arg;
     let expr = letbody body in
     fprintf ppf ")@]@ %a)@]" lam expr
   | Lletrec (id_arg_list, body) ->
@@ -323,21 +283,32 @@ let rec lam ppf = function
     in
     fprintf ppf "@[<2>(letrec@ (@[<hv 1>%a@])@ %a)@]" bindings id_arg_list lam
       body
-  | Lprim (prim, largs, _) ->
+  | Lprim {primitive = prim; args = largs; loc = _} ->
     let lams ppf largs = List.iter (fun l -> fprintf ppf "@ %a" lam l) largs in
     fprintf ppf "@[<2>(%a%a)@]" primitive prim lams largs
-  | Lswitch (larg, sw, _loc) ->
+  | Lswitch (larg, sw) ->
     let switch ppf sw =
       let spc = ref false in
       List.iter
-        (fun (n, l) ->
+        (fun (key, l) ->
           if !spc then fprintf ppf "@ " else spc := true;
-          fprintf ppf "@[<hv 1>case int %i:@ %a@]" n lam l)
+          match key with
+          | Switch_int ordinal ->
+            fprintf ppf "@[<hv 1>case int %i:@ %a@]" ordinal lam l
+          | Switch_constructor (Constant {name}) ->
+            fprintf ppf "@[<hv 1>case constructor %S:@ %a@]" name lam l
+          | Switch_constructor (Block _) -> assert false)
         sw.sw_consts;
       List.iter
-        (fun (n, l) ->
+        (fun (key, l) ->
           if !spc then fprintf ppf "@ " else spc := true;
-          fprintf ppf "@[<hv 1>case tag %i:@ %a@]" n lam l)
+          match key with
+          | Switch_int ordinal ->
+            fprintf ppf "@[<hv 1>case tag %i:@ %a@]" ordinal lam l
+          | Switch_constructor
+              (Block (Tagged {tag = {name}} | Untagged {tag = {name}})) ->
+            fprintf ppf "@[<hv 1>case constructor %S:@ %a@]" name lam l
+          | Switch_constructor (Constant _) -> assert false)
         sw.sw_blocks;
       match sw.sw_failaction with
       | None -> ()
@@ -350,7 +321,7 @@ let rec lam ppf = function
       | None -> "switch*"
       | _ -> "switch")
       lam larg switch sw
-  | Lstringswitch (arg, cases, default, _) ->
+  | Lstringswitch (arg, cases, default) ->
     let switch ppf cases =
       let spc = ref false in
       List.iter
@@ -399,12 +370,21 @@ let rec lam ppf = function
       iterable lam body
   | Lassign (id, expr) ->
     fprintf ppf "@[<2>(assign@ %a@ %a)@]" Ident.print id lam expr
-  | Lsend (name, obj, _) -> fprintf ppf "@[<2>(send%s@ %a@ )@]" name lam obj
 
 and sequence ppf = function
   | Lsequence (l1, l2) -> fprintf ppf "%a@ %a" sequence l1 sequence l2
   | l -> lam ppf l
 
-let structured_constant = struct_const
-
 let lambda = lam
+
+let serialize (filename : string) (l : Lambda.t) : unit =
+  let ou = open_out filename in
+  let old = Format.get_margin () in
+  Format.set_margin 10000;
+  let fmt = Format.formatter_of_out_channel ou in
+  lambda fmt l;
+  Format.pp_print_flush fmt ();
+  close_out ou;
+  Format.set_margin old
+
+let lambda_to_string l = Format.asprintf "%a" lambda l

@@ -5,11 +5,6 @@ let is_expr_hole exp =
   | Pexp_extension ({txt = "rescript.exprhole"}, _) -> true
   | _ -> false
 
-let is_expr_tuple expr =
-  match expr.Parsetree.pexp_desc with
-  | Pexp_tuple _ -> true
-  | _ -> false
-
 let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
     ~first_char_before_cursor_no_white =
   let loc_has_cursor loc = loc |> Cursor_position.loc_has_cursor ~pos in
@@ -17,16 +12,18 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
     if loc_has_cursor exp.pexp_loc then Some v else None
   in
   match exp.pexp_desc with
-  | Pexp_ident {txt = Lident txt} when Utils.has_braces exp.pexp_attributes ->
-    (* An ident with braces attribute corresponds to for example `{n}`.
-       Looks like a record but is parsed as an ident with braces. *)
+  | Pexp_braces {expr = {pexp_desc = Pexp_ident {txt = Lident txt}}} ->
+    (* `{n}` looks like a record but contains an identifier. *)
     some_if_has_cursor
       (txt, [Completable.NRecordBody {seen_fields = []}] @ expr_path)
+  | Pexp_braces {expr} ->
+    traverse_expr expr ~expr_path ~pos ~first_char_before_cursor_no_white
   | Pexp_ident {txt = Lident txt} -> some_if_has_cursor (txt, expr_path)
   | Pexp_construct ({txt = Lident "()"}, _) -> some_if_has_cursor ("", expr_path)
-  | Pexp_construct ({txt = Lident txt}, None) ->
+  | Pexp_construct ({txt = Lident txt}, {txt = []}) ->
     some_if_has_cursor (txt, expr_path)
-  | Pexp_variant (label, None) -> some_if_has_cursor ("#" ^ label, expr_path)
+  | Pexp_variant (label, {txt = []}) ->
+    some_if_has_cursor ("#" ^ label, expr_path)
   | Pexp_array array_patterns -> (
     let next_expr_path = [Completable.NArray] @ expr_path in
     (* No fields but still has cursor = empty completion *)
@@ -36,9 +33,9 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
       let array_item_with_cursor =
         array_patterns
         |> List.find_map (fun e ->
-               e
-               |> traverse_expr ~expr_path:next_expr_path
-                    ~first_char_before_cursor_no_white ~pos)
+            e
+            |> traverse_expr ~expr_path:next_expr_path
+                 ~first_char_before_cursor_no_white ~pos)
       in
 
       match (array_item_with_cursor, loc_has_cursor exp.pexp_loc) with
@@ -50,6 +47,32 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
            `[None, <com>, None]`) *)
         Some ("", next_expr_path)
       | _ -> None)
+  | Pexp_dict entries -> (
+    (* Complete inside the value of the entry with the cursor, or for the type
+       of the values at an expression hole, e.g. `dict{"a": <com>}` *)
+    let next_expr_path =
+      [Completable.NDictValue {optional = false}] @ expr_path
+    in
+    let values =
+      entries
+      |> List.filter_map (function
+        | Parsetree.Pdict_entry (_, value) -> Some value
+        | Pdict_spread _ -> None)
+    in
+    match
+      values
+      |> List.find_opt (fun value ->
+          value.Parsetree.pexp_loc
+          |> Cursor_position.classify_loc ~pos
+          = HasCursor)
+    with
+    | Some value ->
+      value
+      |> traverse_expr ~expr_path:next_expr_path
+           ~first_char_before_cursor_no_white ~pos
+    | None when List.exists is_expr_hole values ->
+      some_if_has_cursor ("", next_expr_path)
+    | None -> None)
   | Pexp_tuple tuple_items when loc_has_cursor exp.pexp_loc ->
     tuple_items
     |> traverse_expr_tuple_items ~first_char_before_cursor_no_white ~pos
@@ -108,7 +131,8 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
         match first_char_before_cursor_no_white with
         | None -> ()
         | Some c ->
-          Printf.printf "[traverse_expr] firstCharBeforeCursorNoWhite: %c.\n" c);
+          Printf.printf
+            "[traverse_expr] first_char_before_cursor_no_white: %c.\n" c);
 
       (* Figure out if we're completing for a new field.
          If the cursor is inside of the record body, but no field has the cursor,
@@ -122,97 +146,81 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
       | _ -> None))
   | Pexp_construct
       ( {txt},
-        Some {pexp_loc; pexp_desc = Pexp_construct ({txt = Lident "()"}, _)} )
+        {
+          txt = [{pexp_loc; pexp_desc = Pexp_construct ({txt = Lident "()"}, _)}];
+        } )
     when loc_has_cursor pexp_loc ->
     (* Empty payload with cursor, like: Test(<com>) *)
     Some
       ( "",
         [
           Completable.NVariantPayload
-            {constructor_name = Utils.get_unqualified_name txt; item_num = 0};
+            {
+              constructor_name = Longident.last txt;
+              item_num = 0;
+              source_arity = 1;
+            };
         ]
         @ expr_path )
-  | Pexp_construct ({txt}, Some e)
-    when pos >= (e.pexp_loc |> Loc.end_)
-         && first_char_before_cursor_no_white = Some ','
-         && is_expr_tuple e = false ->
-    (* Empty payload with trailing ',', like: Test(true, <com>) *)
-    Some
-      ( "",
-        [
-          Completable.NVariantPayload
-            {constructor_name = Utils.get_unqualified_name txt; item_num = 1};
-        ]
-        @ expr_path )
-  | Pexp_construct ({txt}, Some {pexp_loc; pexp_desc = Pexp_tuple tuple_items})
-    when loc_has_cursor pexp_loc ->
-    tuple_items
+  | Pexp_construct ({txt}, {txt = args}) when loc_has_cursor exp.pexp_loc ->
+    args
     |> traverse_expr_tuple_items ~first_char_before_cursor_no_white ~pos
          ~next_expr_path:(fun item_num ->
            [
              Completable.NVariantPayload
-               {constructor_name = Utils.get_unqualified_name txt; item_num};
+               {
+                 constructor_name = Longident.last txt;
+                 item_num;
+                 source_arity = List.length args;
+               };
            ]
            @ expr_path)
          ~result_from_found_item_num:(fun item_num ->
            [
              Completable.NVariantPayload
                {
-                 constructor_name = Utils.get_unqualified_name txt;
+                 constructor_name = Longident.last txt;
                  item_num = item_num + 1;
+                 source_arity = List.length args;
                };
            ]
            @ expr_path)
-  | Pexp_construct ({txt}, Some p) when loc_has_cursor exp.pexp_loc ->
-    p
-    |> traverse_expr ~first_char_before_cursor_no_white ~pos
-         ~expr_path:
-           ([
-              Completable.NVariantPayload
-                {
-                  constructor_name = Utils.get_unqualified_name txt;
-                  item_num = 0;
-                };
-            ]
-           @ expr_path)
   | Pexp_variant
-      (txt, Some {pexp_loc; pexp_desc = Pexp_construct ({txt = Lident "()"}, _)})
+      ( txt,
+        {
+          txt = [{pexp_loc; pexp_desc = Pexp_construct ({txt = Lident "()"}, _)}];
+        } )
     when loc_has_cursor pexp_loc ->
     (* Empty payload with cursor, like: #test(<com>) *)
     Some
       ( "",
-        [Completable.NPolyvariantPayload {constructor_name = txt; item_num = 0}]
+        [
+          Completable.NPolyvariantPayload
+            {constructor_name = txt; item_num = 0; source_arity = 1};
+        ]
         @ expr_path )
-  | Pexp_variant (txt, Some e)
-    when pos >= (e.pexp_loc |> Loc.end_)
-         && first_char_before_cursor_no_white = Some ','
-         && is_expr_tuple e = false ->
-    (* Empty payload with trailing ',', like: #test(true, <com>) *)
-    Some
-      ( "",
-        [Completable.NPolyvariantPayload {constructor_name = txt; item_num = 1}]
-        @ expr_path )
-  | Pexp_variant (txt, Some {pexp_loc; pexp_desc = Pexp_tuple tuple_items})
-    when loc_has_cursor pexp_loc ->
-    tuple_items
+  | Pexp_variant (txt, {txt = args}) when loc_has_cursor exp.pexp_loc ->
+    args
     |> traverse_expr_tuple_items ~first_char_before_cursor_no_white ~pos
          ~next_expr_path:(fun item_num ->
-           [Completable.NPolyvariantPayload {constructor_name = txt; item_num}]
+           [
+             Completable.NPolyvariantPayload
+               {
+                 constructor_name = txt;
+                 item_num;
+                 source_arity = List.length args;
+               };
+           ]
            @ expr_path)
          ~result_from_found_item_num:(fun item_num ->
            [
              Completable.NPolyvariantPayload
-               {constructor_name = txt; item_num = item_num + 1};
+               {
+                 constructor_name = txt;
+                 item_num = item_num + 1;
+                 source_arity = List.length args;
+               };
            ]
-           @ expr_path)
-  | Pexp_variant (txt, Some p) when loc_has_cursor exp.pexp_loc ->
-    p
-    |> traverse_expr ~first_char_before_cursor_no_white ~pos
-         ~expr_path:
-           ([
-              Completable.NPolyvariantPayload
-                {constructor_name = txt; item_num = 0};
-            ]
            @ expr_path)
   | _ -> None
 
@@ -222,10 +230,10 @@ and traverse_expr_tuple_items tuple_items ~next_expr_path
   let item_with_cursor =
     tuple_items
     |> List.find_map (fun e ->
-           item_num := !item_num + 1;
-           e
-           |> traverse_expr ~expr_path:(next_expr_path !item_num)
-                ~first_char_before_cursor_no_white ~pos)
+        item_num := !item_num + 1;
+        e
+        |> traverse_expr ~expr_path:(next_expr_path !item_num)
+             ~first_char_before_cursor_no_white ~pos)
   in
   match (item_with_cursor, first_char_before_cursor_no_white) with
   | None, Some ',' ->
@@ -234,7 +242,7 @@ and traverse_expr_tuple_items tuple_items ~next_expr_path
     let pos_num = ref (-1) in
     tuple_items
     |> List.iteri (fun index e ->
-           if pos >= Loc.start e.Parsetree.pexp_loc then pos_num := index);
+        if pos >= Loc.start e.Parsetree.pexp_loc then pos_num := index);
     if !pos_num > -1 then Some ("", result_from_found_item_num !pos_num)
     else None
   | v, _ -> v
@@ -288,28 +296,7 @@ let complete_constructor_payload ~pos_before_cursor
   with
   | None -> None
   | Some (prefix, nested) ->
-    (* The nested path must start with the constructor name found, plus
-       the target argument number for the constructor. We translate to
-       that here, because we need to account for multi arg constructors
-       being represented as tuples. *)
-    let nested =
-      match List.rev nested with
-      | Completable.NTupleItem {item_num} :: rest ->
-        [
-          Completable.NVariantPayload
-            {constructor_name = Longident.last constructor_lid.txt; item_num};
-        ]
-        @ rest
-      | nested ->
-        [
-          Completable.NVariantPayload
-            {
-              constructor_name = Longident.last constructor_lid.txt;
-              item_num = 0;
-            };
-        ]
-        @ nested
-    in
+    let nested = List.rev nested in
     let variant_ctx_path =
       Completable.CTypeAtPos
         {constructor_lid.loc with loc_start = constructor_lid.loc.loc_end}

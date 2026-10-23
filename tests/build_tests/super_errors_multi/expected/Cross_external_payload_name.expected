@@ -1,0 +1,18 @@
+===== Payload.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_external_payload_name/Payload.res[0m:[2m1:1-39[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@val("foo") external f: int => int = ""[0m
+  2 [2m│[0m 
+
+  The implementation /.../fixtures/Cross_external_payload_name/Payload.res
+  does not match the interface /.../fixtures/Cross_external_payload_name/payload.cmi:
+  Values do not match:
+    @val("foo") external f: int => int = ""
+  is not included in
+    @val("bar") external f: int => int = ""
+  [36m/.../fixtures/Cross_external_payload_name/Payload.resi[0m:[2m1:1-39[0m:
+    Expected declaration
+  [36m/.../fixtures/Cross_external_payload_name/Payload.res[0m:[2m1:1-39[0m:
+    Actual declaration

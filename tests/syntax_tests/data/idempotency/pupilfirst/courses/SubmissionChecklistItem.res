@@ -33,7 +33,7 @@ let make = (~title, ~result, ~status) => {title: title, result: result, status: 
 let makeFile = (~name, ~url, ~id) => {name: name, url: url, id: id}
 
 let makeFiles = data =>
-  data->Js.Array.map(a => makeFile(~url=a["url"], ~name=a["title"], ~id=a["id"]))
+  data->Array.map(a => makeFile(~url=a["url"], ~name=a["title"], ~id=a["id"]))
 
 let makeResult = (result, kind, files) =>
   switch kind {
@@ -62,13 +62,12 @@ let makeStatus = data =>
   }
 
 let makeArrayFromJs = (files, checklist) =>
-  checklist->Js.Array.map(c =>
+  checklist->Array.map(c =>
     make(
       ~title=c["title"],
       ~result=makeResult(c["result"], c["kind"], makeFiles(files)),
       ~status=makeStatus(c["status"]),
-    )
-  )
+    ))
 
 let decodeFile = json => {
   open Json.Decode

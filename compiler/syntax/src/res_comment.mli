@@ -4,15 +4,29 @@ val to_string : t -> string
 
 val loc : t -> Location.t
 val txt : t -> string
+
+(* The enclosing comment-only JSX container, including its braces. *)
+val jsx_container : t -> Location.t option
+val set_jsx_container : t -> Location.t -> unit
+
 val prev_tok_end_pos : t -> Lexing.position
 
 val set_prev_tok_end_pos : t -> Lexing.position -> unit
+
+(* Whether the token before the comment is [?], e.g. the end of the [=?] of an
+   optional parameter. *)
+val prev_tok_is_question : t -> bool
+
+val set_prev_tok_is_question : t -> bool -> unit
 
 val is_doc_comment : t -> bool
 
 val is_module_comment : t -> bool
 
 val is_single_line_comment : t -> bool
+
+(* Convert a line comment without block delimiters, without mutating it. *)
+val to_block_if_safe : t -> t
 
 val make_single_line_comment : loc:Location.t -> string -> t
 val make_multi_line_comment :

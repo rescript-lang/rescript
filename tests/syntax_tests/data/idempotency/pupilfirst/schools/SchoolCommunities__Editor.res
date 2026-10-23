@@ -159,7 +159,7 @@ let handleQuery = (
         (),
       )
       ->GraphqlQuery.sendQuery
-      ->Js.Promise.then_(response =>
+      ->Promise.then(response =>
         switch response["updateCommunity"] {
         | #CommunityId(communityId) =>
           send(FinishSaving)
@@ -168,8 +168,8 @@ let handleQuery = (
             handleConnections(communityId, connections, courseIds),
           )
           Notification.success("Success", "Community updated successfully.")
-          Js.Promise.resolve()
-        | #Errors(errors) => Js.Promise.reject(UpdateCommunityErrorHandler.Errors(errors))
+          Promise.resolve()
+        | #Errors(errors) => Promise.reject(UpdateCommunityErrorHandler.Errors(errors))
         }
       )
       ->UpdateCommunityErrorHandler.catch(() => send(FailSaving))
@@ -177,7 +177,7 @@ let handleQuery = (
     | None =>
       CreateCommunityQuery.make(~name, ~targetLinkable, ~courseIds, ())
       ->GraphqlQuery.sendQuery
-      ->Js.Promise.then_(response =>
+      ->Promise.then(response =>
         switch response["createCommunity"] {
         | #CommunityId(communityId) =>
           send(FinishSaving)
@@ -186,8 +186,8 @@ let handleQuery = (
             handleConnections(communityId, connections, courseIds),
           )
           Notification.success("Success", "Community created successfully.")
-          Js.Promise.resolve()
-        | #Errors(errors) => Js.Promise.reject(CreateCommunityErrorHandler.Errors(errors))
+          Promise.resolve()
+        | #Errors(errors) => Promise.reject(CreateCommunityErrorHandler.Errors(errors))
         }
       )
       ->CreateCommunityErrorHandler.catch(() => send(FailSaving))
@@ -214,7 +214,7 @@ module CourseSelector = MultiselectInline.Make(Selectable)
 let selectedCourses = (~invert=false, courses, selectedCourseIds) =>
   courses
   ->Array.of_list
-  ->Js.Array.filter(course => {
+  ->Array.filter(course => {
     let condition = selectedCourseIds->Belt.Set.String.has(course->Course.id)
     invert ? !condition : condition
   })

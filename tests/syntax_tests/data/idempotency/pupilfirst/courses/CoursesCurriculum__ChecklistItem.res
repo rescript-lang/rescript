@@ -112,10 +112,10 @@ let validResponse = (response, allowBlank) => {
 let validChecklist = checklist =>
   checklist
   ->Array.map(c => validResponse(c, true))
-  ->Js.Array.filter(c => !c)
+  ->Array.filter(c => !c)
   ->ArrayUtils.isEmpty
 
-let validResonses = responses => responses->Js.Array.filter(c => validResponse(c, false))
+let validResonses = responses => responses->Array.filter(c => validResponse(c, false))
 
 let encode = t => {
   open Json.Encode
@@ -135,12 +135,11 @@ let encodeArray = checklist =>
 
 let makeFiles = checklist =>
   checklist
-  ->Js.Array.find(c =>
+  ->Array.find(c =>
     switch c.result {
     | Files(_files) => true
     | _anyOtherResult => false
-    }
-  )
+    })
   ->OptionUtils.mapWithDefault(c =>
     switch c.result {
     | Files(files) => files

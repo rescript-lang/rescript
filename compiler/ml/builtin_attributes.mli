@@ -15,16 +15,14 @@
 
 (* Support for some of the builtin attributes:
 
-   ocaml.deprecated
-   ocaml.error
-   ocaml.ppwarning
-   ocaml.warning
-   ocaml.warnerror
-   ocaml.explicit_arity (for camlp4/camlp5)
-   ocaml.warn_on_literal_pattern
-   ocaml.deprecated_mutable
-   ocaml.immediate
-   ocaml.boxed / ocaml.unboxed
+   deprecated
+   error
+   ppwarning
+   warning
+   warnerror
+   warn_on_literal_pattern
+   immediate
+   unboxed
 *)
 
 val check_deprecated :
@@ -42,38 +40,21 @@ val check_deprecated_inclusion :
   string ->
   unit
 val deprecated_of_attrs : Parsetree.attributes -> string option
+
+val deprecated_attributes : Parsetree.attributes -> Parsetree.attributes
+(** The [deprecated] attributes in a list *)
+
 val deprecated_of_sig : Parsetree.signature -> string option
 val deprecated_of_str : Parsetree.structure -> string option
 
-val check_deprecated_mutable :
-  Location.t -> Parsetree.attributes -> string -> unit
-val check_deprecated_mutable_inclusion :
-  def:Location.t ->
-  use:Location.t ->
-  Location.t ->
-  Parsetree.attributes ->
-  Parsetree.attributes ->
-  string ->
-  unit
-
-val check_bs_attributes_inclusion :
-  (Parsetree.attributes ->
-  Parsetree.attributes ->
-  string ->
-  (string * string) option)
-  ref
-
-val check_duplicated_labels :
-  (Parsetree.label_declaration list -> string Asttypes.loc option) ref
 val error_of_extension : Parsetree.extension -> Location.error
 
 val warning_attribute : ?ppwarning:bool -> Parsetree.attribute -> unit
 (** Apply warning settings from the specified attribute.
-      "ocaml.warning"/"ocaml.warnerror" (and variants without the prefix)
-      are processed and other attributes are ignored.
+      "warning" and "warnerror" are processed and other attributes are
+      ignored.
 
-      Also implement ocaml.ppwarning (unless ~ppwarning:false is
-      passed).
+      Also implement ppwarning (unless ~ppwarning:false is passed).
   *)
 
 val warning_scope :
@@ -89,9 +70,7 @@ val warning_scope :
   *)
 
 val warn_on_literal_pattern : Parsetree.attributes -> bool
-val explicit_arity : Parsetree.attributes -> bool
 
 val immediate : Parsetree.attributes -> bool
 
 val has_unboxed : Parsetree.attributes -> bool
-val has_boxed : Parsetree.attributes -> bool

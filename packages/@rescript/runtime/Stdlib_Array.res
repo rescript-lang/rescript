@@ -1,12 +1,10 @@
 type t<'a> = array<'a>
-type arrayLike<'a>
+type arrayLike<+'a>
 
 @new external makeUninitializedUnsafe: int => array<'a> = "Array"
 @set external truncateToLengthUnsafe: (array<'a>, int) => unit = "length"
 external getUnsafe: (array<'a>, int) => 'a = "%array_unsafe_get"
 external setUnsafe: (array<'a>, int, 'a) => unit = "%array_unsafe_set"
-
-external unsafe_get: (array<'a>, int) => 'a = "%array_unsafe_get"
 
 external asIterable: array<'a> => Stdlib_Iterable.t<'a> = "%identity"
 

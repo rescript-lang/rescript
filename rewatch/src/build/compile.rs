@@ -440,7 +440,11 @@ pub fn compile(
     rayon::in_place_scope(|scope| {
         let mut in_flight: usize = 0;
         loop {
-            while in_flight < capacity && !has_errors {
+            // Keep dispatching work that was already independent of any
+            // failed module. Otherwise diagnostics vary with worker count:
+            // a warning-producing module may or may not have started before
+            // an unrelated error finishes.
+            while in_flight < capacity {
                 let Some(work) = ready_heap.pop() else { break };
                 let module_name = work.module_name.clone();
                 let is_dirty = dirty_set.contains(&module_name);
@@ -462,10 +466,6 @@ pub fn compile(
             }
 
             if in_flight == 0 {
-                if !ready_heap.is_empty() {
-                    // Errors suppressed new spawns; nothing left to drain.
-                    break;
-                }
                 if completed.len() < compile_universe_count && !has_errors {
                     stalled = true;
                 }
@@ -475,7 +475,8 @@ pub fn compile(
             let Ok(msg) = rx.recv() else { break };
             in_flight -= 1;
 
-            if msg.result.is_err() || msg.interface_result.as_ref().is_some_and(|r| r.is_err()) {
+            let failed = msg.result.is_err() || msg.interface_result.as_ref().is_some_and(|r| r.is_err());
+            if failed {
                 has_errors = true;
             }
 
@@ -493,16 +494,21 @@ pub fn compile(
                 if !compile_universe.contains(dep) {
                     continue;
                 }
+                // A successful interface can replace the CMI even when its
+                // implementation fails. Keep dependents dirty for recovery,
+                // but do not release them until the module succeeds.
                 if !is_clean {
                     dirty_set.insert(dep.clone());
                 }
-                let count = pending_deps.get_mut(dep).unwrap();
-                *count -= 1;
-                if *count == 0 && !completed.contains(dep) {
-                    ready_heap.push(WorkUnit {
-                        priority: priorities[dep],
-                        module_name: dep.clone(),
-                    });
+                if !failed {
+                    let count = pending_deps.get_mut(dep).unwrap();
+                    *count -= 1;
+                    if *count == 0 && !completed.contains(dep) {
+                        ready_heap.push(WorkUnit {
+                            priority: priorities[dep],
+                            module_name: dep.clone(),
+                        });
+                    }
                 }
             }
         }
@@ -523,9 +529,9 @@ pub fn compile(
     let mut num_compiled_modules = 0;
 
     // Persist propagated dirtiness back onto build_state. Modules that were
-    // marked dirty (because a predecessor's cmi changed) but never scheduled
-    // — e.g. the first compile error aborted further dispatch — must keep
-    // compile_dirty = true so the next incremental build recompiles them.
+    // marked dirty (because a predecessor's cmi changed) but blocked by a
+    // failed prerequisite must keep compile_dirty = true so the next
+    // incremental build recompiles them.
     // Successful recompiles in the result loop below override this back to
     // false for the modules that actually ran.
     for name in &dirty_set {
@@ -745,6 +751,9 @@ pub fn get_runtime_path_args(
 
 pub fn compiler_args(
     config: &config::Config,
+    // Match the parser's root spelling: canonical during builds, caller-supplied
+    // for compiler-args consumers such as editor incremental type checking.
+    project_root: &Path,
     ast_path: &Path,
     file_path: &Path,
     is_interface: bool,
@@ -759,6 +768,7 @@ pub fn compiler_args(
     is_local_dep: bool,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     warn_error_override: Option<String>,
+    source_map_command: config::SourceMapCommand,
     // Pre-expanded source directories for the current package (used by gentype).
     // Pass an empty slice when unavailable (e.g. the compiler-args CLI command).
     current_package_dirs: &[PathBuf],
@@ -791,8 +801,8 @@ pub fn compiler_args(
     let root_config = project_context.get_root_config();
     let jsx_args = root_config.get_jsx_args();
     let jsx_module_args = root_config.get_jsx_module_args();
-    let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
+    let source_map_args = root_config.get_source_map_args(source_map_command);
     let bsb_project_root = project_context.get_root_path();
     let dep_paths: Vec<(String, PathBuf)> = if config.gentype_config.is_some() {
         let resolved = packages.as_ref().map(|pkgs| {
@@ -826,7 +836,10 @@ pub fn compiler_args(
     };
 
     let package_name_arg = vec!["-bs-package-name".to_string(), config.name.to_owned()];
-    let project_root_args = config.get_project_root_args();
+    let project_root_args = vec![
+        "-bs-project-root".to_string(),
+        project_root.to_string_lossy().to_string(),
+    ];
 
     let implementation_args = if is_interface {
         debug!("Compiling interface file: {}", &module_name);
@@ -875,8 +888,8 @@ pub fn compiler_args(
         dependency_paths,
         jsx_args,
         jsx_module_args,
-        jsx_mode_args,
         jsx_preserve_args,
+        source_map_args,
         bsc_flags.to_owned(),
         warning_args,
         gentype_arg,
@@ -1015,6 +1028,7 @@ fn compile_file(
     let current_package_dirs: &[PathBuf] = package.gentype_dirs.as_deref().unwrap_or(&[]);
     let to_mjs_args = compiler_args(
         &package.config,
+        &package.path,
         ast_path,
         implementation_file_path,
         is_interface,
@@ -1024,6 +1038,7 @@ fn compile_file(
         is_type_dev,
         package.is_local_dep,
         warn_error_override,
+        build_state.source_map_command,
         current_package_dirs,
     )?;
 
@@ -1054,16 +1069,20 @@ fn compile_file(
 
             // perhaps we can do this copying somewhere else
             if !is_interface {
-                let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        // because editor tooling doesn't support namespace entries yet
-                        // we just remove the @ for now. This makes sure the editor support
-                        // doesn't break
-                        .join(format!("{basename}.cmi")),
-                    ocaml_build_path_abs.join(format!("{basename}.cmi")),
-                );
+                // With an interface, the .cmi comes from compiling the interface and was
+                // copied then; the implementation is compiled with -bs-read-cmi.
+                if !has_interface {
+                    let _ = std::fs::copy(
+                        package
+                            .get_build_path()
+                            .join(dir)
+                            // because editor tooling doesn't support namespace entries yet
+                            // we just remove the @ for now. This makes sure the editor support
+                            // doesn't break
+                            .join(format!("{basename}.cmi")),
+                        ocaml_build_path_abs.join(format!("{basename}.cmi")),
+                    );
+                }
                 let _ = std::fs::copy(
                     package.get_build_path().join(dir).join(format!("{basename}.cmj")),
                     ocaml_build_path_abs.join(format!("{basename}.cmj")),
@@ -1092,10 +1111,13 @@ fn compile_file(
                 );
             }
 
-            if let SourceType::SourceFile(SourceFile {
-                interface: Some(Interface { path, .. }),
-                ..
-            }) = &module.source_type
+            // The sources and JS are copied once per module, after compiling the
+            // implementation (the interface is compiled first and produces no JS).
+            if !is_interface
+                && let SourceType::SourceFile(SourceFile {
+                    interface: Some(Interface { path, .. }),
+                    ..
+                }) = &module.source_type
             {
                 // we need to copy the source file to the build directory.
                 // editor tools expects the source file in lib/bs for finding the current package
@@ -1114,10 +1136,11 @@ fn compile_file(
                 )
                 .expect("copying source file failed");
             }
-            if let SourceType::SourceFile(SourceFile {
-                implementation: Implementation { path, .. },
-                ..
-            }) = &module.source_type
+            if !is_interface
+                && let SourceType::SourceFile(SourceFile {
+                    implementation: Implementation { path, .. },
+                    ..
+                }) = &module.source_type
             {
                 // we need to copy the source file to the build directory.
                 // editor tools expects the source file in lib/bs for finding the current package
@@ -1139,7 +1162,8 @@ fn compile_file(
 
             // copy js file
             root_config.get_package_specs().iter().for_each(|spec| {
-                if spec.in_source
+                if !is_interface
+                    && spec.in_source
                     && let SourceType::SourceFile(SourceFile {
                         implementation: Implementation { path, .. },
                         ..
@@ -1156,6 +1180,20 @@ fn compile_file(
 
                     if source.exists() {
                         let _ = std::fs::copy(&source, &destination).expect("copying source file failed");
+                    }
+
+                    let mut source_map = source.clone().into_os_string();
+                    source_map.push(".map");
+                    let source_map = PathBuf::from(source_map);
+                    let mut destination_map = destination.clone().into_os_string();
+                    destination_map.push(".map");
+                    let destination_map = PathBuf::from(destination_map);
+
+                    if source_map.exists() {
+                        let _ = std::fs::copy(&source_map, &destination_map)
+                            .expect("copying source map file failed");
+                    } else {
+                        let _ = std::fs::remove_file(&destination_map);
                     }
                 }
             });
@@ -1443,7 +1481,12 @@ mod tests {
             runtime_path: temp_dir.path().join("runtime"),
         };
 
-        let mut build_state = BuildState::new(test_project_context(temp_dir.path()), packages, compiler);
+        let mut build_state = BuildState::new(
+            test_project_context(temp_dir.path()),
+            packages,
+            compiler,
+            config::SourceMapCommand::Build,
+        );
         build_state.insert_module(module_name, module);
         logs::initialize(&build_state.packages);
         build_state

@@ -1,0 +1,24 @@
+@val
+external unsafeAddStyle: (@as(json`{}`) _, t, {..}) => t = "Object.assign"
+
+@module("react")
+external useEffect0: (unit => option<unit => unit>, @as(json`[]`) _) => unit = "useEffect"
+
+@send external createElement: (document, @as("img") _) => element = "createElement"
+
+@val external templateString: (@as(`ab`) _, int) => int = "f"
+
+@val external numbers: (@as(1) _, @as(-1) _, @as(0x10) _, int) => int = "f"
+
+@obj external makeOptions: (~objectMode: @as(false) _, ~name: string, ~mode: @as("fast") _, unit) => options = ""
+
+@val external single: @as(1) _ => int = "f"
+
+@val external attributes: (@foo @as(1) _, @as(1) @foo _, @as({1}) _, int) => int = "f"
+
+@val
+external commented: (/* a */ @as(1) /* b */ _ /* c */, @as(/* d */ "s") _, int) => int = "f"
+
+type notExternal = (@as(1) _, int) => int
+
+@val external payloadAttributes: (@as(@foo 1) _, @as(@foo json`{}`) _, int) => int = "f"

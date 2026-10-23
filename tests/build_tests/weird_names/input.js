@@ -20,6 +20,9 @@ const files = [
   "[slug_or_ID].res",
   "404.res",
   "utils.test.res",
+  "demo.test.res",
+  "page.client.res",
+  "中文.res",
 ];
 
 for (const f of files) {

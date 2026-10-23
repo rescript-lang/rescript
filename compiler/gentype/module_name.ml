@@ -9,8 +9,8 @@ let sanitize_id s =
     then
       s
       |> String.map (function
-           | '.' | '[' | ']' -> '_'
-           | c -> c)
+        | '.' | '[' | ']' -> '_'
+        | c -> c)
     else s
   in
   if s <> "" && (s.[0] [@doesNotRaise]) >= 'A' && (s.[0] [@doesNotRaise]) <= 'z'

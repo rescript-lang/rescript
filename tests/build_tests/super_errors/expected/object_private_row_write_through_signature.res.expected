@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_private_row_write_through_signature.res[0m:[2m8:26-35[0m
+
+  6 [2m│[0m   type t = private {.."x": int}
+  7 [2m│[0m }
+  [1;31m8[0m [2m│[0m let mutate = (o: M.t) => [1;31mo["x"] = 1[0m
+  9 [2m│[0m 
+
+  This expression has type M.t
+  The field x is not settable. Only fields annotated with @set, e.g. {@set "x": int}, can be assigned.

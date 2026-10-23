@@ -14,19 +14,19 @@ type u3 = (int, string, int) => string
 let uncurried0 = (()) => ""
 
 @genType
-let uncurried1 = (x) => x -> string_of_int
+let uncurried1 = (x) => Int.toString(x)
 
 @genType
-let uncurried2 = (x, y) => (x -> string_of_int) ++ y
+let uncurried2 = (x, y) => Int.toString(x) ++ y
 
 @genType
-let uncurried3 = (x, y, z) => (x -> string_of_int) ++ (y ++ (z -> string_of_int))
+let uncurried3 = (x, y, z) => Int.toString(x) ++ (y ++ Int.toString(z))
 
 @genType
-let curried3 = (x, y, z) => (x -> string_of_int) ++ (y ++ (z -> string_of_int))
+let curried3 = (x, y, z) => Int.toString(x) ++ (y ++ Int.toString(z))
 
 @genType
-let callback = cb => cb() -> string_of_int
+let callback = cb => Int.toString(cb())
 
 type auth = {login: unit => string}
 type authU = {loginU: (unit) => string}
@@ -38,20 +38,19 @@ let callback2 = auth => auth.login()
 let callback2U = auth => auth.loginU()
 
 @genType
-let sumU = (n, m) => Js.log4("sumU 2nd arg", m, "result", n + m)
+let sumU = (n, m) => Console.log4("sumU 2nd arg", m, "result", n + m)
 
 @genType
-let sumU2 = (n, m) => Js.log4("sumU2 2nd arg", m, "result", n + m)
+let sumU2 = (n, m) => Console.log4("sumU2 2nd arg", m, "result", n + m)
 
 @genType
 let sumCurried = n => {
-  Js.log2("sumCurried 1st arg", n)
-  m => Js.log4("sumCurried 2nd arg", m, "result", n + m)
+  Console.log2("sumCurried 1st arg", n)
+  m => Console.log4("sumCurried 2nd arg", m, "result", n + m)
 }
 
 @genType
 let sumLblCurried = (s: string, ~n) => {
-  Js.log3(s, "sumLblCurried 1st arg", n)
-  (~m) => Js.log4("sumLblCurried 2nd arg", m, "result", n + m)
+  Console.log3(s, "sumLblCurried 1st arg", n)
+  (~m) => Console.log4("sumLblCurried 2nd arg", m, "result", n + m)
 }
-

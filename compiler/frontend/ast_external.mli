@@ -23,13 +23,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 val handle_external_in_sig :
-  Bs_ast_mapper.mapper ->
+  Ast_mapper.mapper ->
   Parsetree.value_description ->
   Parsetree.signature_item ->
   Parsetree.signature_item
 
 val handle_external_in_stru :
-  Bs_ast_mapper.mapper ->
+  Ast_mapper.mapper ->
   Parsetree.value_description ->
   Parsetree.structure_item ->
   Parsetree.structure_item

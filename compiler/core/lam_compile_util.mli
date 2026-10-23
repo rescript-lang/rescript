@@ -24,6 +24,6 @@
 
 (** Some utilities for lambda compilation*)
 
-val jsop_of_comp : Lam_compat.comparison -> Js_op.binop
+val jsop_of_comp : Lambda.comparison -> Js_op.binop
 
-val runtime_of_comp : Lam_compat.comparison -> string
+val runtime_of_comp : Lambda.comparison -> string

@@ -14,9 +14,9 @@ let createApplicant = (courseId, email, name, setSaving, setViewEmailSent, event
 
   CreateApplicantQuery.make(~courseId, ~email, ~name, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     response["createApplicant"]["success"] ? setViewEmailSent() : setSaving(_ => false)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

@@ -52,22 +52,22 @@ end = struct
     let res = ref [] in
     lines
     |> List.iteri (fun line_idx line ->
-           let state = ref Search in
-           for i = 0 to String.length line - 1 do
-             let ch = line.[i] in
-             match (!state, ch) with
-             | Search, '@' -> state := Collect i
-             | Collect attr_offset, ' ' ->
-               res := make_attr line_idx attr_offset i line :: !res;
-               state := Search
-             | Search, _ | Collect _, _ -> ()
-           done;
+        let state = ref Search in
+        for i = 0 to String.length line - 1 do
+          let ch = line.[i] in
+          match (!state, ch) with
+          | Search, '@' -> state := Collect i
+          | Collect attr_offset, ' ' ->
+            res := make_attr line_idx attr_offset i line :: !res;
+            state := Search
+          | Search, _ | Collect _, _ -> ()
+        done;
 
-           match !state with
-           | Collect attr_offset ->
-             res :=
-               make_attr line_idx attr_offset (String.length line) line :: !res
-           | _ -> ());
+        match !state with
+        | Collect attr_offset ->
+          res :=
+            make_attr line_idx attr_offset (String.length line) line :: !res
+        | _ -> ());
     !res |> List.rev
 
   let contains attribute_for_search t =
@@ -82,15 +82,15 @@ end = struct
       let res = ref [] in
       t
       |> List.iter (fun attr ->
-             let {line; offset; name} = attr in
+          let {line; offset; name} = attr in
 
-             if line <> !prev_line then (
-               res := !buffer :: !res;
-               buffer := "";
-               prev_line := line);
+          if line <> !prev_line then (
+            res := !buffer :: !res;
+            buffer := "";
+            prev_line := line);
 
-             let indent = String.make (offset - String.length !buffer) ' ' in
-             buffer := !buffer ^ indent ^ name);
+          let indent = String.make (offset - String.length !buffer) ' ' in
+          buffer := !buffer ^ indent ^ name);
       res := !buffer :: !res;
       !res |> List.rev |> String.concat "\n"
 end
@@ -121,10 +121,8 @@ let print_signature ~extractor ~signature =
     in
     match typ.desc with
     | Tarrow
-        ( {typ = {desc = Tconstr (Path.Pident props_id, type_args, _)}},
-          ret_type,
-          _,
-          _ )
+        ( {typ = {desc = Tconstr (Path.Pident props_id, type_args, _)}} :: _,
+          ret_type )
       when Ident.name props_id = "props" ->
       Some (type_args, ret_type)
     | Tconstr
@@ -160,24 +158,23 @@ let print_signature ~extractor ~signature =
           | Some x -> x
           | None -> assert false
         in
-        let rec mk_fun_type (label_decls : Types.label_declaration list) =
-          match label_decls with
-          | [] -> ret_type
-          | label_decl :: rest ->
-            let prop_type =
-              Type_utils.instantiate_type ~type_params ~type_args
-                label_decl.ld_type
-            in
-            let lbl_name = label_decl.ld_id |> Ident.name in
-            let lbl =
-              if label_decl.ld_optional then
-                Asttypes.Optional {txt = lbl_name; loc = Location.none}
-              else Asttypes.Labelled {txt = lbl_name; loc = Location.none}
-            in
-            {
-              ret_type with
-              desc = Tarrow ({lbl; typ = prop_type}, mk_fun_type rest, Cok, None);
-            }
+        let mk_fun_type (label_decls : Types.label_declaration list) =
+          let params =
+            label_decls
+            |> List.map (fun (label_decl : Types.label_declaration) ->
+                let prop_type =
+                  Type_utils.instantiate_type ~type_params ~type_args
+                    label_decl.ld_type
+                in
+                let lbl_name = label_decl.ld_id |> Ident.name in
+                let lbl =
+                  if label_decl.ld_optional then
+                    Asttypes.Optional {txt = lbl_name; loc = Location.none}
+                  else Asttypes.Labelled {txt = lbl_name; loc = Location.none}
+                in
+                {Types.lbl; typ = prop_type})
+          in
+          {ret_type with desc = Tarrow (params, ret_type)}
         in
         let fun_type =
           if List.length label_decls = 0 (* No props *) then
@@ -186,7 +183,7 @@ let print_signature ~extractor ~signature =
             in
             {
               ret_type with
-              desc = Tarrow ({lbl = Nolabel; typ = t_unit}, ret_type, Cok, None);
+              desc = Tarrow ([{Types.lbl = Nolabel; typ = t_unit}], ret_type);
             }
           else mk_fun_type label_decls
         in
@@ -225,7 +222,7 @@ let print_signature ~extractor ~signature =
       in
       process_signature ~indent rest
     | Sig_value (id, ({val_kind = Val_prim prim; val_loc} as vd)) :: items
-      when prim.prim_native_name <> "" && prim.prim_native_name.[0] = '\132' ->
+      when prim.prim_kind <> Primitive.Kind_intrinsic ->
       (* Rescript primitive name, e.g. @val external ... *)
       let lines =
         let pos_start, pos_end = Loc.range val_loc in
@@ -284,13 +281,13 @@ let print_signature ~extractor ~signature =
       Buffer.add_string buf "(";
       args
       |> List.iter (fun (id, mto) ->
-             Buffer.add_string buf ("\n" ^ indent ^ "  ");
-             (match mto with
-             | None -> Buffer.add_string buf (Ident.name id)
-             | Some mt ->
-               Buffer.add_string buf (Ident.name id ^ ": ");
-               process_module_type ~indent:(indent ^ "  ") mt);
-             Buffer.add_string buf ",");
+          Buffer.add_string buf ("\n" ^ indent ^ "  ");
+          (match mto with
+          | None -> Buffer.add_string buf (Ident.name id)
+          | Some mt ->
+            Buffer.add_string buf (Ident.name id ^ ": ");
+            process_module_type ~indent:(indent ^ "  ") mt);
+          Buffer.add_string buf ",");
       if args <> [] then Buffer.add_string buf ("\n" ^ indent);
       Buffer.add_string buf (") =>\n" ^ indent);
       process_module_type ~indent ret_mt

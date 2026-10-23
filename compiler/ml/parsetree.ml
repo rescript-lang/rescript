@@ -24,12 +24,29 @@ type constant =
      Suffixes [g-z][G-Z] are accepted by the parser.
      Suffixes except 'l', 'L' are rejected by the typechecker
   *)
-  | Pconst_char of int
-  (* 'c' *)
-  | Pconst_string of string * string option
-  (* "constant"
-     {delim|other constant|delim}
-  *)
+  | Pconst_char of {source: string; semantic: int}
+  (* An ordinary character literal.
+
+     [source] is the text between the single quotes, as produced by the scanner,
+     and is retained for printing. [semantic] is the decoded Unicode code point
+     used by typing and matching. For example, ['\u{1F600}'] produces
+     [{source = "\\u{1F600}"; semantic = 0x1F600}].
+
+     Compiler-created literals use [String_literal.encode_char_source] to derive
+     a canonical [source] from [semantic]. *)
+  | Pconst_string of String_literal.string_literal
+  (* An ordinary double-quoted string literal.
+
+     [source] is the text between the quotes, as produced by the scanner, and is
+     retained for printing. [semantic] is the decoded runtime string used by
+     typing, matching, and optimizations. For example, ["a\\n"] produces
+     a payload whose source is ["a\\n"] and whose semantic value contains an
+     actual newline.
+
+     The scanner preserves user-written escape spelling except that it rewrites
+     legacy three-digit decimal escapes to hexadecimal escapes. Compiler-created
+     Payloads are constructed through [String_literal], which validates this
+     relationship. *)
   | Pconst_float of string * char option
 (* 3.4 2e5 1.4e-4
 
@@ -73,16 +90,33 @@ and core_type = {
   ptyp_attributes: attributes; (* ... [@id1] [@id2] *)
 }
 
-and arg = {attrs: attributes; lbl: arg_label; typ: core_type}
+and arg =
+  | Parg_type of {attrs: attributes; lbl: arg_label; typ: core_type}
+  | Parg_fixed of {
+      attrs: attributes;
+      lbl: arg_label;
+      value: fixed_value loc; (* located at the payload *)
+      loc: Location.t; (* the whole argument, from [@as] to [_] *)
+    }
+(* An external function argument whose value is fixed by the binding and
+   omitted at call sites, written [@as(value) _]. *)
+
+and fixed_value =
+  | Pfixed_int of string loc (* [@as(1)]: the integer literal's source *)
+  | Pfixed_string of String_literal.string_literal (* [@as("s")] *)
+  | Pfixed_template of string loc
+    (* [@as(`s`)]: the source between the backquotes *)
+  | Pfixed_json of string loc
+(* [@as(json`{}`)]: the JavaScript source between the backquotes *)
 
 and core_type_desc =
   | Ptyp_any (*  _ *)
   | Ptyp_var of string (* 'a *)
-  | Ptyp_arrow of {arg: arg; ret: core_type; arity: arity}
-    (* T1 -> T2       Simple
-       ~l:T1 -> T2    Labelled
-       ?l:T1 -> T2    Optional
-    *)
+  | Ptyp_arrow of {params: arg list; ret: core_type}
+    (* (T1, ~l:T2, ?l:T3) => T       n-ary uncurried function type.
+       The function's arity is [List.length params]; a function returning
+       another function is a nested [Ptyp_arrow] in [ret].
+       Invariant: params <> [] (a zero-argument function takes [unit]). *)
   | Ptyp_tuple of core_type list
     (* T1 * ... * Tn
 
@@ -134,21 +168,27 @@ and package_type = Longident.t loc * (Longident.t loc * core_type) list
        *)
 
 and row_field =
-  | Rtag of label loc * attributes * bool * core_type list
+  | Rtag of label loc * attributes * bool * variant_type_args list
     (* [`A]                   ( true,  [] )
-        [`A of T]              ( false, [T] )
-        [`A of T1 & .. & Tn]   ( false, [T1;...Tn] )
-        [`A of & T1 & .. & Tn] ( true,  [T1;...Tn] )
+        [`A of T]              ( false, [{txt = [T]}] )
+        [`A of T1 & .. & Tn]   ( false, [{txt = [T1]};...;{txt = [Tn]}] )
+        [`A of & T1 & .. & Tn] ( true,  [{txt = [T1]};...;{txt = [Tn]}] )
+
+       Each inner list records the syntactic arity of one payload group:
+       #A(T1, ..., Tn)         [T1; ...; Tn]
+       #A((T1, ..., Tn))       [Ptyp_tuple [T1; ...; Tn]]
 
        - The 2nd field is true if the tag contains a
          constant (empty) constructor.
        - '&' occurs when several types are used for the same constructor
          (see 4.2 in the manual)
 
-       - TODO: switch to a record representation, and keep location
+       - TODO: switch to a record representation
     *)
   | Rinherit of core_type
 (* [ T ] *)
+
+and variant_type_args = core_type list loc
 
 and object_field =
   | Otag of label loc * attributes * core_type
@@ -167,6 +207,13 @@ and record_pat_rest = {
   rest_type: core_type option;
 }
 
+(* "k": P, or "k": ?P *)
+and dict_pattern_entry = {
+  pdp_key: string loc;
+  pdp_pattern: pattern;
+  pdp_optional: bool;
+}
+
 and pattern_desc =
   | Ppat_any (* _ *)
   | Ppat_var of string loc (* x *)
@@ -181,14 +228,27 @@ and pattern_desc =
 
        Invariant: n >= 2
     *)
-  | Ppat_construct of Longident.t loc * pattern option
-    (* C                None
-       C P              Some P
-       C (P1, ..., Pn)  Some (Ppat_tuple [P1; ...; Pn])
+  | Ppat_construct of Longident.t loc * pattern list loc
+    (* C                  []
+       C(P)               [P]
+       C(P1, ..., Pn)     [P1; ...; Pn]
+       C((P1, ..., Pn))   [Ppat_tuple [P1; ...; Pn]]
+
+       The list's location spans the argument parentheses, including both
+       delimiters. For constructors without parentheses or generated nodes,
+       use the enclosing node's location. The v0 bridge uses the payload's
+       location when the original parentheses span is unavailable.
+
+       This list preserves syntax, not the declared constructor arity.
+       Type checking normalizes tuple grouping using the resolved constructor.
     *)
-  | Ppat_variant of label * pattern option
-    (* `A             (None)
-       `A P           (Some P)
+  | Ppat_variant of label * pattern list loc
+    (* #A                  []
+       #A(P)               [P]
+       #A(P1, ..., Pn)     [P1; ...; Pn]
+       #A((P1, ..., Pn))   [Ppat_tuple [P1; ...; Pn]]
+
+       Argument locations follow Ppat_construct.
     *)
   | Ppat_record of
       pattern record_element list * closed_flag * record_pat_rest option
@@ -200,9 +260,11 @@ and pattern_desc =
        Invariant: n > 0
     *)
   | Ppat_array of pattern list (* [| P1; ...; Pn |] *)
+  | Ppat_dict of dict_pattern_entry list (* dict{"k1": P1, "k2": ?P2} *)
   | Ppat_or of pattern * pattern (* P1 | P2 *)
   | Ppat_constraint of pattern * core_type (* (P : T) *)
-  | Ppat_type of Longident.t loc (* #tconst *)
+  | Ppat_type of Longident.t loc (* #...tconst *)
+  | Ppat_variant_spread of Longident.t loc (* ...tconst *)
   | Ppat_unpack of string loc
     (* (module P)
        Note: (module P : S) is represented as
@@ -210,20 +272,18 @@ and pattern_desc =
     *)
   | Ppat_exception of pattern (* exception P *)
   | Ppat_extension of extension (* [%id] *)
-  | Ppat_open of Longident.t loc * pattern
-(* M.(P) *)
-
-and pat_record_label = Longident.t loc * pattern * bool (* optional *)
 
 (* Value expressions *)
 and expression = {
   pexp_desc: expression_desc;
   pexp_loc: Location.t;
-  (* Hack: made pexp_attributes mutable for use in analysis exe. Please do not use elsewhere! *)
-  mutable pexp_attributes: attributes; (* ... [@id1] [@id2] *)
+  pexp_attributes: attributes; (* ... [@id1] [@id2] *)
 }
 
 and expression_desc =
+  | Pexp_braces of {expr: expression; braces_loc: Location.t}
+    (* Explicit braces around an expression. [pexp_loc] stays on the enclosed
+       expression; [braces_loc] covers the delimiters for printing. *)
   | Pexp_ident of Longident.t loc (* x
        M.x
     *)
@@ -233,23 +293,22 @@ and expression_desc =
        let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
     *)
   | Pexp_fun of {
-      arg_label: arg_label;
-      default: expression option;
-      lhs: pattern;
-      rhs: expression;
-      arity: arity;
+      newtypes: (string loc * attributes) list;
+      params: fun_param list;
+      body: expression;
       async: bool;
     }
-    (* fun P -> E1                          (Simple, None)
-       fun ~l:P -> E1                       (Labelled l, None)
-       fun ?l:P -> E1                       (Optional l, None)
-       fun ?l:(P = E0) -> E1                (Optional l, Some E0)
+    (* (type t, P1, ~l:P2, ?l:P3=E0) => E   n-ary uncurried function.
+       The function's arity is [List.length params]; a function returning
+       another function is a nested [Pexp_fun] in [body].
+       [newtypes] are the function's locally abstract types, each with its
+       own attributes; the parser hoists them in front of the value
+       parameters.
 
        Notes:
-       - If E0 is provided, only Optional is allowed.
-       - "fun P1 P2 .. Pn -> E1" is represented as nested Pexp_fun.
+       - A default expression is only allowed on Optional parameters.
        - "let f P = E" is represented using Pexp_fun.
-    *)
+       - Invariant: params <> [] (a zero-argument function takes [unit]). *)
   | Pexp_apply of {
       funct: expression;
       args: (arg_label * expression) list;
@@ -271,14 +330,24 @@ and expression_desc =
 
        Invariant: n >= 2
     *)
-  | Pexp_construct of Longident.t loc * expression option
-    (* C                None
-       C E              Some E
-       C (E1, ..., En)  Some (Pexp_tuple[E1;...;En])
+  | Pexp_construct of Longident.t loc * expression list loc
+    (* C                  []
+       C(E)               [E]
+       C(E1, ..., En)     [E1; ...; En]
+       C((E1, ..., En))   [Pexp_tuple [E1; ...; En]]
+
+       Argument locations follow Ppat_construct.
+
+       This list preserves syntax, not the declared constructor arity.
+       Type checking normalizes tuple grouping using the resolved constructor.
     *)
-  | Pexp_variant of label * expression option
-    (* `A             (None)
-       `A E           (Some E)
+  | Pexp_variant of label * expression list loc
+    (* #A                  []
+       #A(E)               [E]
+       #A(E1, ..., En)     [E1; ...; En]
+       #A((E1, ..., En))   [Pexp_tuple [E1; ...; En]]
+
+       Argument locations follow Ppat_construct.
     *)
   | Pexp_record of expression record_element list * expression option
     (* { l1=P1; ...; ln=Pn }     (None)
@@ -289,8 +358,11 @@ and expression_desc =
   | Pexp_field of expression * Longident.t loc (* E.l *)
   | Pexp_setfield of expression * Longident.t loc * expression (* E1.l <- E2 *)
   | Pexp_array of expression list (* [| E1; ...; En |] *)
+  | Pexp_dict of dict_entry list (* dict{"k1": E1, ...E2} *)
   | Pexp_ifthenelse of expression * expression * expression option
     (* if E1 then E2 else E3 *)
+  | Pexp_ternary of expression * expression * expression
+    (* E1 ? E2 : E3. All three operands are required. *)
   | Pexp_sequence of expression * expression (* E1; E2 *)
   | Pexp_break (* break *)
   | Pexp_continue (* continue *)
@@ -300,10 +372,11 @@ and expression_desc =
        for i = E1 downto E2 do E3 done  (flag = Downto)
     *)
   | Pexp_constraint of expression * core_type (* (E : T) *)
-  | Pexp_coerce of expression * unit * core_type
-    (* (E :> T)        (None, T)
-         *)
-  | Pexp_send of expression * label loc (*  E # m *)
+  | Pexp_coerce of expression * core_type (* (E :> T) *)
+  | Pexp_object_get of expression * label loc (* obj["x"] *)
+  | Pexp_object_set of expression * label loc * expression (* obj["x"] = v *)
+  | Pexp_object_literal of (label loc * expression) list
+    (* {"a": 1, "b": true} *)
   | Pexp_letmodule of string loc * module_expr * expression
     (* let module M = ME in E *)
   | Pexp_letexception of extension_constructor * expression
@@ -312,7 +385,6 @@ and expression_desc =
     (* assert E
        Note: "assert false" is treated in a special way by the
        type-checker. *)
-  | Pexp_newtype of string loc * expression (* fun (type t) -> E *)
   | Pexp_pack of module_expr
     (* (module ME)
 
@@ -324,16 +396,45 @@ and expression_desc =
        let! open M in E *)
   | Pexp_extension of extension
   (* [%id] *)
+  | Pexp_raw of {kind: raw_kind; name_loc: Location.t; source: raw_source}
+  (* %raw("...") and %ffi("..."): JavaScript source. [name_loc] is the
+     location of [%raw] or [%ffi]. *)
   (* . *)
   | Pexp_await of expression
   | Pexp_jsx_element of jsx_element
   | Pexp_for_of of pattern * expression * expression
     (* for pattern of array_expr do body_expr *)
   | Pexp_for_await_of of pattern * expression * expression
-(* for await pattern of iterable_expr do body_expr *)
+  (* for await pattern of iterable_expr do body_expr *)
+  | Pexp_regexp of {pattern: string; flags: string}
+  (* Literal source without delimiters; escapes and flag order are preserved.
+     Validation happens during frontend lowering, not AST construction. *)
+  | Pexp_template of {source_segments: string loc list; values: expression list}
+  (* An ordinary backquoted expression. [source_segments] contains the validated
+     text between and around the interpolations, including escape spelling;
+     [values] contains the interpolated expressions. For example, [`plain`]
+     produces [{source_segments = [{txt = "plain"; loc}]; values = []}], while
+     [`hello ${name}!`] produces
+     [{source_segments = [{txt = "hello "; loc}; {txt = "!"; loc}]; values =
+     [name]}]. Each segment retains its source location, and there is always one
+     more source segment than value. *)
+  | Pexp_tagged_template of {
+      tag: expression;
+      raw_sources: string loc list;
+      values: expression list;
+    }
+(* A JavaScript tagged template. For example, [sql`id = ${id}`] produces the
+   expression [sql] as [tag], located strings ["id = "; ""] as [raw_sources],
+   and [values = [id]]. There is always one more raw source than value. Each raw
+   source keeps its exact escape spelling and source location, and may contain
+   an invalid escape, as JavaScript permits for tagged templates. *)
 
 (* an element of a record pattern or expression *)
 and 'a record_element = {lid: Longident.t loc; x: 'a; opt: bool (* optional *)}
+
+and dict_entry =
+  | Pdict_entry of string loc * expression (* "k": E *)
+  | Pdict_spread of expression (* ...E *)
 
 and jsx_element =
   | Jsx_fragment of jsx_fragment
@@ -408,19 +509,62 @@ and case = {
   pc_rhs: expression;
 }
 
+and fun_param = {
+  p_attrs: attributes;
+  p_lbl: arg_label;
+  p_default: expression option; (* ~l=E0 default; only for Optional labels *)
+  p_pat: pattern;
+}
+
 (* Value descriptions *)
 and value_description = {
   pval_name: string loc;
   pval_type: core_type;
-  pval_prim: string list;
+  pval_prim: primitive_repr option;
+  pval_jsx_component: jsx_component option;
+      (* The [@react.component] annotation, taken out of the attributes when
+         the description is built. *)
   pval_attributes: attributes; (* ... [@@id1] [@@id2] *)
   pval_loc: Location.t;
 }
 
+(* A JSX component definition: [@react.component], [@jsx.component] or their
+   [componentWithProps] forms on a [let], an [external] or a signature item.
+   The attribute is the surface syntax; this is what it means. The JSX
+   transform reads it, and the printer puts the attribute back where it was
+   written. *)
+and jsx_component = {
+  pjc_kind: jsx_component_kind;
+  pjc_namespace: jsx_component_namespace;
+  pjc_loc: Location.t; (* the attribute's own location *)
+}
+
+and jsx_component_kind =
+  | Pjc_labelled of core_type option
+    (* [@react.component]: the props are the labelled arguments.
+       [@react.component(: t)] makes them share the props type [t]. *)
+  | Pjc_with_props
+(* [@react.componentWithProps]: the function takes a props record *)
+
+(* How the attribute was spelled. Both mean the same; the configured JSX
+   module decides the runtime. *)
+and jsx_component_namespace = Pjc_react | Pjc_jsx
+
 (*
-  val x: T                            (prim = [])
-  external x: T = "s1" ... "sn"       (prim = ["s1";..."sn"])
+  val x: T                            (prim = None)
+  external x: T = "s"                 (prim = Some _)
 *)
+and primitive_repr =
+  | Prim_name of string
+    (* as written in the source: an intrinsic ("%identity", "#raw_expr")
+         or the not-yet-digested JS name of an FFI external *)
+  | Prim_ffi of {name: string; spec: External_ffi_types.t}
+    (* produced by the frontend digestion of an FFI external's
+       attributes; never observed by external PPXes, which run before
+       digestion *)
+  | Prim_inline_const of External_ffi_types.inline_const
+(* an [@inline(<literal>)] value declaration: a compile-time constant,
+   not an FFI; produced by digestion like [Prim_ffi] *)
 
 (* Type declarations *)
 and type_declaration = {
@@ -432,9 +576,14 @@ and type_declaration = {
   ptype_kind: type_kind;
   ptype_private: private_flag; (* = private ... *)
   ptype_manifest: core_type option; (* = T *)
+  ptype_origin: type_declaration_origin;
   ptype_attributes: attributes; (* ... [@@id1] [@@id2] *)
   ptype_loc: Location.t;
 }
+
+(* Inline records in field and external types are lifted to named declarations
+   for type checking. Keep their source origin separate from user attributes. *)
+and type_declaration_origin = Declared | Inline_record_definition
 
 (*
   type t                     (abstract, no manifest)
@@ -454,6 +603,12 @@ and type_kind =
 
 and label_declaration = {
   pld_name: string loc;
+  pld_runtime_name: String_literal.string_literal loc option;
+      (* The [@as("...")] rename, taken out of the attributes when the field is
+         built. The attribute is the surface syntax; this is what it means.
+         The literal keeps its source spelling, and the location is the
+         attribute's own, so the printer can put it back exactly as it was
+         written. *)
   pld_mutable: mutable_flag;
   pld_optional: bool;
   pld_type: core_type;
@@ -468,11 +623,24 @@ and label_declaration = {
 *)
 and constructor_declaration = {
   pcd_name: string loc;
+  pcd_runtime_tag: constructor_tag loc option;
+      (* The [@as(...)] runtime tag, taken out of the attributes when the
+         constructor is built. The literal retains the source information
+         needed to print the attribute back where it was written. *)
   pcd_args: constructor_arguments;
   pcd_res: core_type option;
   pcd_loc: Location.t;
   pcd_attributes: attributes; (* C of ... [@id1] [@id2] *)
 }
+
+and constructor_tag =
+  | Pct_string of String_literal.string_literal
+  | Pct_int of string
+  | Pct_float of string
+  | Pct_bigint of string
+  | Pct_bool of bool
+  | Pct_null
+  | Pct_undefined
 
 and constructor_arguments =
   | Pcstr_tuple of core_type list
@@ -632,8 +800,10 @@ and module_expr_desc =
   | Pmod_apply of module_expr * module_expr (* ME1(ME2) *)
   | Pmod_constraint of module_expr * module_type (* (ME : MT) *)
   | Pmod_unpack of expression (* (val E) *)
-  | Pmod_extension of extension
-(* [%id] *)
+  | Pmod_extension of extension (* [%id] *)
+  | Pmod_await of module_expr
+(* await ME: a dynamic import when ME is a module path, possibly
+   constrained; elsewhere it has no effect *)
 
 and structure = structure_item list
 
@@ -662,11 +832,36 @@ and structure_item_desc =
   | Pstr_include of include_declaration (* include ME *)
   | Pstr_attribute of attribute (* [@@@id] *)
   | Pstr_extension of extension * attributes
-(* [%%id] *)
+  (* [%%id] *)
+  | Pstr_raw of {name_loc: Location.t; source: raw_source; attrs: attributes}
+(* %%raw("..."): JavaScript statements. [name_loc] is the location of
+   [%%raw]. *)
+
+and raw_kind =
+  | Raw_expression (* %raw: any JavaScript expression *)
+  | Raw_function (* %ffi: a JavaScript function *)
+
+and raw_source =
+  | Raw_string of string loc
+    (* %raw("..."): the JavaScript source, which is also the text between the
+       quotes. The location is the string literal's. *)
+  | Raw_template of string loc
+(* %raw(`...`): the template source as written, from which
+   [String_literal.decode_raw_template_source] gives the JavaScript source *)
+
+and value_constraint = {
+  pvc_newtypes: string loc list;
+  (* Nonempty for parser-produced [let x: type a. t = e] bindings. *)
+  pvc_type: core_type;
+}
 
 and value_binding = {
   pvb_pat: pattern;
   pvb_expr: expression;
+  pvb_constraint: value_constraint option;
+  pvb_jsx_component: jsx_component option;
+      (* The [@react.component] annotation, taken out of the attributes when
+         the binding is built. *)
   pvb_attributes: attributes;
   pvb_loc: Location.t;
 }

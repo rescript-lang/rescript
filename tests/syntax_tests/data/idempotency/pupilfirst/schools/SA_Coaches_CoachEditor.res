@@ -95,7 +95,7 @@ let updateTitle = (send, title) => send(UpdateTitle(title, title->nameOrTitleInv
 
 let updateLinkedInUrl = (send, linkedinUrl) => {
   let regex = /(https?)?:?(\/\/)?(([w]{3}||\w\w)\.)?linkedin.com(\w+:{0,1}\w*@)?(\S+)(:([0-9])+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/
-  let hasError = linkedinUrl->String.length < 1 ? false : !Js.Re.test_(regex, linkedinUrl)
+  let hasError = linkedinUrl->String.length < 1 ? false : !RegExp.test(regex, linkedinUrl)
   send(UpdateLinkedInUrl(linkedinUrl, hasError))
 }
 
@@ -209,7 +209,7 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
         open Json.Decode
         field("error", nullable(string))
       }
-      ->Js.Null.toOption
+      ->Null.toOption
     switch error {
     | Some(err) =>
       send(UpdateSaving)
@@ -226,7 +226,7 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
     | Some(_coach) => Fetch.Patch
     | None => Fetch.Post
     }
-    open Js.Promise
+    open Promise
     Fetch.fetchWithInit(
       endPoint,
       Fetch.RequestInit.make(
@@ -240,7 +240,7 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
       if Fetch.Response.ok(response) || Fetch.Response.status(response) == 422 {
         response->Fetch.Response.json
       } else {
-        Js.Promise.reject(UnexpectedResponse(response->Fetch.Response.status))
+        Promise.reject(UnexpectedResponse(response->Fetch.Response.status))
       }
     )
     ->then_(json => handleResponseJSON(json)->resolve)

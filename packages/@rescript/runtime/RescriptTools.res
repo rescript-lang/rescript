@@ -12,5 +12,5 @@ You can use this when you're already running a JS process and want to avoid the 
 let stringifiedJson = ChildProcess.execFileSync(RescriptTools.binaryPath, ["-v"])
 ```
 */
-@module("#cli/bins")
-external binaryPath: string = "rescript_tools_exe"
+@module("rescript/tools")
+external binaryPath: string = "binaryPath"

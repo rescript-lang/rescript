@@ -67,9 +67,3 @@ let toString = ({major, minor, patch, preRelease}) => {
     `${mainVersion}-${identifier}`
   }
 }
-
-let tryGetMajorString = (versionStr: string) =>
-  switch versionStr->parse {
-  | None => versionStr // fallback to given version if it cannot be parsed
-  | Some({major}) => "v" ++ major->Int.toString
-  }

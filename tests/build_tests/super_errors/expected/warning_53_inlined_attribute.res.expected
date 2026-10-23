@@ -1,0 +1,35 @@
+
+  [1;33mWarning number 53[0m
+  [36m/.../fixtures/warning_53_inlined_attribute.res[0m:[2m7:10-17[0m
+
+  5 [2m│[0m 
+  6 [2m│[0m external id: int => int = "%identity"
+  [1;33m7[0m [2m│[0m let c = ([1;33m@inlined[0m id)(3)
+  8 [2m│[0m let d = (@warning("-53") @inlined id)(4)
+  9 [2m│[0m 
+
+  the @inlined attribute cannot appear in this context
+
+
+  [1;33mWarning number 53[0m
+  [36m/.../fixtures/warning_53_inlined_attribute.res[0m:[2m4:9-16[0m
+
+  2 [2m│[0m 
+  3 [2m│[0m let a = (@inlined f)(1)
+  [1;33m4[0m [2m│[0m let b = [1;33m@inlined[0m f(2)
+  5 [2m│[0m 
+  6 [2m│[0m external id: int => int = "%identity"
+
+  the @inlined attribute cannot appear in this context
+
+
+  [1;33mWarning number 53[0m
+  [36m/.../fixtures/warning_53_inlined_attribute.res[0m:[2m3:10-17[0m
+
+  1 [2m│[0m let f = x => x + 1
+  2 [2m│[0m 
+  [1;33m3[0m [2m│[0m let a = ([1;33m@inlined[0m f)(1)
+  4 [2m│[0m let b = @inlined f(2)
+  5 [2m│[0m 
+
+  the @inlined attribute cannot appear in this context

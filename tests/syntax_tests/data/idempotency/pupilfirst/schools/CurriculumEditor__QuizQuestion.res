@@ -31,7 +31,7 @@ let newAnswerOption = (id, t) => {
 
 let removeAnswerOption = (id, t) => {
   let newAnswerOptions =
-    t.answerOptions->Js.Array.filter(a => a->CurriculumEditor__AnswerOption.id !== id)
+    t.answerOptions->Array.filter(a => a->CurriculumEditor__AnswerOption.id !== id)
   {...t, answerOptions: newAnswerOptions}
 }
 
@@ -54,18 +54,16 @@ let markAsCorrect = (id, t) => {
 }
 
 let isValidQuizQuestion = t => {
-  let validQuestion = t.question->Js.String.trim->Js.String.length >= 1
+  let validQuestion = t.question->String.trim->String.length >= 1
   let hasZeroInvalidAnswerOptions =
     t.answerOptions
-    ->Js.Array.filter(answerOption =>
-      answerOption->CurriculumEditor__AnswerOption.isValidAnswerOption != true
-    )
+    ->Array.filter(answerOption =>
+      answerOption->CurriculumEditor__AnswerOption.isValidAnswerOption != true)
     ->ArrayUtils.isEmpty
   let hasOnlyOneCorrectAnswerOption =
     t.answerOptions
-    ->Js.Array.filter(answerOption =>
-      answerOption->CurriculumEditor__AnswerOption.correctAnswer == true
-    )
+    ->Array.filter(answerOption =>
+      answerOption->CurriculumEditor__AnswerOption.correctAnswer == true)
     ->Array.length == 1
   validQuestion && (hasZeroInvalidAnswerOptions && hasOnlyOneCorrectAnswerOption)
 }

@@ -13,6 +13,10 @@ type info = {
   warnFlags: string,
   jsxPreserveMode: bool,
   experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
+  gentypeEnabled: bool,
+  sourceMapMode: PlaygroundConfig.sourceMapMode,
+  sourceMapSourcesContent: bool,
+  sourceMapRoot: string,
   libraries: array<string>,
 }
 
@@ -21,7 +25,9 @@ type success = {
   parsetree: string,
   typedtree: string,
   lambda: string,
-  lam: string,
+  lambdaOptimized: option<string>,
+  gentype: option<string>,
+  sourceMap: option<string>,
   warnings: array<string>,
   time: float,
 }

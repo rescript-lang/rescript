@@ -13,7 +13,10 @@ let H = {
   make: make
 };
 
+let H$make = make;
+
 export {
   H,
+  H$make,
 }
 /* No side effect */

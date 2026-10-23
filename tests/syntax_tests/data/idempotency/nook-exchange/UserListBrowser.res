@@ -111,7 +111,7 @@ let getNumResultsPerPage = (~viewportWidth) =>
   }
 
 let userItemsHasOneWithStatus = (~userItems, ~status) =>
-  userItems->Js.Dict.values->Belt.Array.someU((item: User.item) => item.status == status)
+  userItems->Dict.valuesToArray->Belt.Array.someU((item: User.item) => item.status == status)
 
 module BulkActions = {
   module Styles = {
@@ -141,7 +141,7 @@ module BulkActions = {
   @react.component
   let make = (~filteredItems, ~list: ViewingList.t) => {
     let (showPopup, setShowPopup) = React.useState(() => false)
-    let reference = React.useRef(Js.Nullable.null)
+    let reference = React.useRef(Nullable.null)
 
     <>
       <a
@@ -170,7 +170,7 @@ module BulkActions = {
               ]),
             }
             render={_ => {
-              let numItems = Js.Array.length(filteredItems)
+              let numItems = Array.length(filteredItems)
               let itemsString = string_of_int(numItems) ++ (" item" ++ (numItems !== 1 ? "s" : ""))
               <div className=Styles.bulkActionsButtons>
                 <div className=Styles.note>
@@ -277,7 +277,7 @@ let make = (~user: User.t, ~list: ViewingList.t, ~url: ReasonReactRouter.url, ~m
   let userItems = React.useMemo2(
     () =>
       user.items
-      ->Js.Dict.entries
+      ->Dict.toArray
       ->Belt.Array.keepMapU(((itemKey, item: User.item)) =>
         ViewingList.doesUserItemStatusMatchViewingList(item.status, list)
           ? User.fromItemKey(~key=itemKey)->Belt.Option.map(x => (x, item))
@@ -344,7 +344,7 @@ let make = (~user: User.t, ~list: ViewingList.t, ~url: ReasonReactRouter.url, ~m
     )
     userItems->Belt.Array.keep((((itemId, _), _)) =>
       ItemFilters.doesItemMatchFilters(~item=Item.getItem(~itemId), ~filters)
-    )->Js.Array.sortInPlaceWith((aUserItem, bUserItem) => sortFn(aUserItem, bUserItem))
+    )->Array.toSorted((a, b) => Ordering.fromInt(((aUserItem, bUserItem) => sortFn(aUserItem, bUserItem))(a, b)))
   }, (userItems, filters))
   let numResults = filteredItems->Belt.Array.length
 
@@ -375,7 +375,7 @@ let make = (~user: User.t, ~list: ViewingList.t, ~url: ReasonReactRouter.url, ~m
       React.null
     }
 
-  let rootRef = React.useRef(Js.Nullable.null)
+  let rootRef = React.useRef(Nullable.null)
   React.useEffect0(() => {
     if TemporaryState.state.contents == Some(FromProfileBrowser) {
       TemporaryState.state := None
@@ -414,7 +414,7 @@ let make = (~user: User.t, ~list: ViewingList.t, ~url: ReasonReactRouter.url, ~m
             {React.string(j`This list includes your For Trade and Can Craft items. You can also add catalog-only items.`)}
           </div>
         : React.null}
-      {Js.Array.length(userItems) > 8
+      {Array.length(userItems) > 8
         ? <div className={Cn.make(list{ItemBrowser.Styles.filterBar, Styles.filterBar})}>
             <ItemFilters
               userItemIds filters isViewingSelf=me onChange={filters => setFilters(filters)}
@@ -509,10 +509,10 @@ let make = (~user: User.t, ~list: ViewingList.t, ~url: ReasonReactRouter.url, ~m
       </div>
       {!showMini
         ? <div className=Styles.bottomBar>
-            {me && Js.Array.length(filteredItems) >= 3
+            {me && Array.length(filteredItems) >= 3
               ? <BulkActions filteredItems list />
               : React.null}
-            {Js.Array.length(filteredItems) > numResultsPerPage
+            {Array.length(filteredItems) > numResultsPerPage
               ? <div className=ItemBrowser.Styles.bottomFilterBar>
                   <ItemFilters.Pager
                     numResults

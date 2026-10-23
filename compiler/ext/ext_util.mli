@@ -24,6 +24,4 @@
 
 val power_2_above : int -> int -> int
 
-val stats_to_string : Hashtbl.statistics -> string
-
 val string_of_int_as_char : int -> string

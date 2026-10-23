@@ -1,45 +1,16 @@
 open Parsetree
 
-let arrow_type ?(max_arity = max_int) ct =
-  let has_as_attr attrs =
-    Ext_list.exists attrs (fun (x, _) -> x.Asttypes.txt = "as")
-  in
-  let rec process attrs_before acc typ max_arity =
-    match typ with
-    | _ when max_arity < 0 -> (attrs_before, List.rev acc, typ)
-    | {ptyp_desc = Ptyp_arrow {arity = Some _; arg = {attrs = []}}}
-      when acc <> [] ->
-      (attrs_before, List.rev acc, typ)
-    | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel; attrs = []} as arg; ret}}
-      ->
-      process attrs_before (arg :: acc) ret (max_arity - 1)
-    | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}}; ptyp_attributes = _attrs}
-      as return_type ->
-      let args = List.rev acc in
-      (attrs_before, args, return_type)
-    | {
-     ptyp_desc = Ptyp_arrow {arg = {lbl = Labelled _ | Optional _} as arg; ret};
-     ptyp_attributes = _attrs;
-    } ->
-      (* Res_core.parse_es6_arrow_type has a workaround that removed an extra arity for the function if the
-         argument is a Ptyp_any with @as attribute i.e. ~x: @as(`{prop: value}`) _.
+let argument_loc (lbl, (arg : Parsetree.expression)) =
+  match lbl with
+  | Asttypes.Labelled {loc} | Optional {loc} ->
+    {loc with loc_end = arg.pexp_loc.loc_end}
+  | Nolabel -> arg.pexp_loc
 
-         When this case is encountered we add that missing arity so the arrow is printed properly.
-      *)
-      let arity =
-        match arg.typ with
-        | {ptyp_desc = Ptyp_any; ptyp_attributes = attrs1}
-          when has_as_attr attrs1 ->
-          max_arity
-        | _ -> max_arity - 1
-      in
-      process attrs_before (arg :: acc) ret arity
-    | typ -> (attrs_before, List.rev acc, typ)
-  in
+let arrow_type ct =
   match ct with
-  | {ptyp_desc = Ptyp_arrow _; ptyp_attributes = attrs1} as typ ->
-    process attrs1 [] {typ with ptyp_attributes = []} max_arity
-  | typ -> process [] [] typ max_arity
+  | {ptyp_desc = Ptyp_arrow {params; ret}; ptyp_attributes = attrs} ->
+    (attrs, params, ret)
+  | typ -> ([], [], typ)
 
 let functor_type modtype =
   let rec process acc modtype =
@@ -54,43 +25,10 @@ let functor_type modtype =
   in
   process [] modtype
 
-let has_await_attribute attrs =
-  List.exists
-    (function
-      | {Location.txt = "res.await"}, _ -> true
-      | _ -> false)
-    attrs
-
 let expr_is_await e =
   match e.pexp_desc with
   | Pexp_await _ -> true
   | _ -> false
-
-let has_inline_record_definition_attribute attrs =
-  List.exists
-    (function
-      | {Location.txt = "res.inlineRecordDefinition"}, _ -> true
-      | _ -> false)
-    attrs
-
-let has_res_pat_variant_spread_attribute attrs =
-  List.exists
-    (function
-      | {Location.txt = "res.patVariantSpread"}, _ -> true
-      | _ -> false)
-    attrs
-
-let has_dict_pattern_attribute attrs =
-  attrs
-  |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
-         txt = "res.dictPattern")
-  |> Option.is_some
-
-let has_dict_spread_attribute attrs =
-  attrs
-  |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
-         txt = "res.dictSpread")
-  |> Option.is_some
 
 type dict_expr_part =
   | DictExprRows of Parsetree.expression
@@ -105,9 +43,10 @@ let collect_list_expressions expr =
   let rec collect acc expr =
     match expr.pexp_desc with
     | Pexp_construct ({txt = Longident.Lident "[]"}, _) -> (List.rev acc, None)
+    | Pexp_construct ({txt = Longident.Lident "::"}, {txt = hd :: [tail]})
     | Pexp_construct
         ( {txt = Longident.Lident "::"},
-          Some {pexp_desc = Pexp_tuple (hd :: [tail])} ) ->
+          {txt = [{pexp_desc = Pexp_tuple [hd; tail]}]} ) ->
       collect (hd :: acc) tail
     | _ -> (List.rev acc, Some expr)
   in
@@ -118,10 +57,15 @@ let rewrite_underscore_apply expr =
   match expr.pexp_desc with
   | Pexp_fun
       {
-        arg_label = Nolabel;
-        default = None;
-        lhs = {ppat_desc = Ppat_var {txt = "__x"}};
-        rhs = {pexp_desc = Pexp_apply {funct = call_expr; args}} as e;
+        params =
+          [
+            {
+              p_lbl = Nolabel;
+              p_default = None;
+              p_pat = {ppat_desc = Ppat_var {txt = "__x"}};
+            };
+          ];
+        body = {pexp_desc = Pexp_apply {funct = call_expr; args}} as e;
       } ->
     let new_args =
       List.map
@@ -175,10 +119,15 @@ let rewrite_underscore_apply_in_pipe expr =
   match expr.pexp_desc with
   | Pexp_fun
       {
-        arg_label = Nolabel;
-        default = None;
-        lhs = {ppat_desc = Ppat_var {txt = "__x"}};
-        rhs = {pexp_desc = Pexp_apply {funct; args}} as e;
+        params =
+          [
+            {
+              p_lbl = Nolabel;
+              p_default = None;
+              p_pat = {ppat_desc = Ppat_var {txt = "__x"}};
+            };
+          ];
+        body = {pexp_desc = Pexp_apply {funct; args}} as e;
       } -> (
     match args with
     | first_arg :: rest_args when is_underscore_arg first_arg ->
@@ -210,74 +159,56 @@ type fun_param_kind =
     }
   | NewTypes of {attrs: Parsetree.attributes; locs: string Asttypes.loc list}
 
+(* Turns the function's newtypes into printable groups: a new group starts
+   at each attribute-bearing newtype, matching how the parser distributes
+   group attributes. *)
+let group_newtypes newtypes =
+  List.fold_left
+    (fun groups ((name : string Asttypes.loc), attrs) ->
+      match groups with
+      | (gattrs, locs) :: rest when attrs = [] ->
+        (gattrs, locs @ [name]) :: rest
+      | _ -> (attrs, [name]) :: groups)
+    [] newtypes
+  |> List.rev
+
 let fun_expr expr_ =
-  let async = Ast_async.dig_async_payload_from_function expr_ in
-  let rec collect_params ~n_fun ~params expr =
-    match expr with
-    | {
-     pexp_desc =
-       Pexp_fun
-         {
-           arg_label = lbl;
-           default = default_expr;
-           lhs = pattern;
-           rhs = return_expr;
-           arity;
-         };
-     pexp_attributes = attrs;
-    }
-      when arity = None || n_fun = 0 ->
-      let parameter = Parameter {attrs; lbl; default_expr; pat = pattern} in
-      collect_params ~n_fun:(n_fun + 1) ~params:(parameter :: params)
-        return_expr
-    | _ -> (async, List.rev params, expr)
+  let params_of_fun params =
+    List.map
+      (fun {p_attrs; p_lbl; p_default; p_pat} ->
+        Parameter
+          {attrs = p_attrs; lbl = p_lbl; default_expr = p_default; pat = p_pat})
+      params
   in
-  (* Turns (type t, type u, type z) into "type t u z" *)
-  let rec collect_new_types acc return_expr =
-    match return_expr with
-    | {pexp_desc = Pexp_newtype (string_loc, return_expr)} ->
-      collect_new_types (string_loc :: acc) return_expr
-    | return_expr -> (List.rev acc, return_expr)
+  let newtype_params newtypes =
+    group_newtypes newtypes
+    |> List.map (fun (attrs, locs) -> NewTypes {attrs; locs})
   in
   match expr_ with
-  | {pexp_desc = Pexp_newtype (string_loc, rest)} ->
-    let string_locs, return_expr = collect_new_types [string_loc] rest in
-    let param = NewTypes {attrs = []; locs = string_locs} in
-    collect_params ~n_fun:0 ~params:[param] return_expr
-  | _ -> collect_params ~n_fun:0 ~params:[] {expr_ with pexp_attributes = []}
+  | {pexp_desc = Pexp_fun {newtypes; params; body; async}} ->
+    (async, newtype_params newtypes @ params_of_fun params, body)
+  | _ -> (false, [], expr_)
 
-let process_braces_attr expr =
-  match expr.pexp_attributes with
-  | (({txt = "res.braces" | "ns.braces"}, _) as attr) :: attrs ->
-    (Some attr, {expr with pexp_attributes = attrs})
+let process_braces expr =
+  match expr.pexp_desc with
+  | Pexp_braces {expr = inner; braces_loc} -> (Some braces_loc, inner)
   | _ -> (None, expr)
 
-let filter_parsing_attrs attrs =
-  List.filter
-    (fun attr ->
-      match attr with
-      | ( {
-            Location.txt =
-              ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.template" | "res.taggedTemplate"
-              | "res.patVariantSpread" | "res.dictPattern" | "res.dictSpread"
-              | "res.inlineRecordDefinition" );
-          },
-          _ ) ->
-        false
-      | _ -> true)
-    attrs
+let rec unwrap_braces expr =
+  match expr.pexp_desc with
+  | Pexp_braces {expr = inner} -> unwrap_braces inner
+  | _ -> expr
 
 let is_block_expr expr =
-  match expr.pexp_desc with
+  match (unwrap_braces expr).pexp_desc with
   | Pexp_letmodule _ | Pexp_letexception _ | Pexp_let _ | Pexp_open _
   | Pexp_sequence _ ->
     true
   | _ -> false
 
 let is_braced_expr expr =
-  match process_braces_attr expr with
-  | Some _, _ -> true
+  match expr.pexp_desc with
+  | Pexp_braces _ -> true
   | _ -> false
 
 let is_multiline_text txt =
@@ -296,28 +227,27 @@ let is_multiline_text txt =
 let is_huggable_expression expr =
   match expr.pexp_desc with
   | Pexp_array _ | Pexp_tuple _
-  | Pexp_constant (Pconst_string (_, Some _))
+  | Pexp_constant (Pconst_char _)
+  | Pexp_template {values = []}
   | Pexp_construct ({txt = Longident.Lident ("::" | "[]")}, _)
-  | Pexp_extension ({txt = "obj"}, _)
-  | Pexp_record _ ->
+  | Pexp_object_literal _ | Pexp_record _ | Pexp_braces _ ->
     true
   | _ when is_block_expr expr -> true
-  | _ when is_braced_expr expr -> true
-  | Pexp_constant (Pconst_string (txt, None)) when is_multiline_text txt -> true
+  | Pexp_constant (Pconst_string payload)
+    when is_multiline_text (String_literal.string_source payload) ->
+    true
   | _ -> false
 
 let is_huggable_rhs expr =
   match expr.pexp_desc with
-  | Pexp_array _ | Pexp_tuple _
-  | Pexp_extension ({txt = "obj"}, _)
-  | Pexp_record _ ->
+  | Pexp_array _ | Pexp_tuple _ | Pexp_object_literal _ | Pexp_record _
+  | Pexp_braces _ ->
     true
-  | _ when is_braced_expr expr -> true
   | _ -> false
 
 let is_huggable_pattern pattern =
   match pattern.ppat_desc with
-  | Ppat_array _ | Ppat_tuple _ | Ppat_record _ | Ppat_variant _
+  | Ppat_array _ | Ppat_tuple _ | Ppat_record _ | Ppat_dict _ | Ppat_variant _
   | Ppat_construct _ ->
     true
   | _ -> false
@@ -399,44 +329,6 @@ let flattenable_operators parent_operator child_operator =
       && is_equality_operator child_operator)
   else false
 
-let rec has_if_let_attribute attrs =
-  match attrs with
-  | [] -> false
-  | ({Location.txt = "res.iflet"}, _) :: _ -> true
-  | _ :: attrs -> has_if_let_attribute attrs
-
-let is_if_let_expr expr =
-  match expr with
-  | {pexp_attributes = attrs; pexp_desc = Pexp_match _}
-    when has_if_let_attribute attrs ->
-    true
-  | _ -> false
-
-let has_attributes attrs =
-  List.exists
-    (fun attr ->
-      match attr with
-      | ( {
-            Location.txt =
-              ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.template" | "res.inlineRecordDefinition" );
-          },
-          _ ) ->
-        false
-      (* Remove the fragile pattern warning for iflet expressions *)
-      | ( {Location.txt = "warning"},
-          PStr
-            [
-              {
-                pstr_desc =
-                  Pstr_eval
-                    ({pexp_desc = Pexp_constant (Pconst_string ("-4", None))}, _);
-              };
-            ] ) ->
-        not (has_if_let_attribute attrs)
-      | _ -> true)
-    attrs
-
 let is_array_access expr =
   match expr.pexp_desc with
   | Pexp_apply
@@ -452,68 +344,28 @@ let is_array_access expr =
     true
   | _ -> false
 
-type if_condition_kind =
-  | If of Parsetree.expression
-  | IfLet of Parsetree.pattern * Parsetree.expression
-
 let collect_if_expressions expr =
   let rec collect acc expr =
     let expr_loc = expr.pexp_loc in
     match expr.pexp_desc with
     | Pexp_ifthenelse (if_expr, then_expr, Some else_expr) ->
-      collect ((expr_loc, If if_expr, then_expr) :: acc) else_expr
+      collect ((expr_loc, if_expr, then_expr) :: acc) else_expr
     | Pexp_ifthenelse (if_expr, then_expr, (None as else_expr)) ->
-      let ifs = List.rev ((expr_loc, If if_expr, then_expr) :: acc) in
+      let ifs = List.rev ((expr_loc, if_expr, then_expr) :: acc) in
       (ifs, else_expr)
-    | Pexp_match
-        ( condition,
-          [
-            {pc_lhs = pattern; pc_guard = None; pc_rhs = then_expr};
-            {
-              pc_rhs =
-                {pexp_desc = Pexp_construct ({txt = Longident.Lident "()"}, _)};
-            };
-          ] )
-      when is_if_let_expr expr ->
-      let ifs =
-        List.rev ((expr_loc, IfLet (pattern, condition), then_expr) :: acc)
-      in
-      (ifs, None)
-    | Pexp_match
-        ( condition,
-          [
-            {pc_lhs = pattern; pc_guard = None; pc_rhs = then_expr};
-            {pc_rhs = else_expr};
-          ] )
-      when is_if_let_expr expr ->
-      collect
-        ((expr_loc, IfLet (pattern, condition), then_expr) :: acc)
-        else_expr
     | _ -> (List.rev acc, Some expr)
   in
   collect [] expr
 
-let rec has_ternary_attribute attrs =
-  match attrs with
-  | [] -> false
-  | ({Location.txt = "res.ternary"}, _) :: _ -> true
-  | _ :: attrs -> has_ternary_attribute attrs
-
 let is_ternary_expr expr =
-  match expr with
-  | {pexp_attributes = attrs; pexp_desc = Pexp_ifthenelse _}
-    when has_ternary_attribute attrs ->
-    true
+  match expr.pexp_desc with
+  | Pexp_ternary _ -> true
   | _ -> false
 
 let collect_ternary_parts expr =
   let rec collect acc expr =
     match expr with
-    | {
-     pexp_attributes = attrs;
-     pexp_desc = Pexp_ifthenelse (condition, consequent, Some alternate);
-    }
-      when has_ternary_attribute attrs ->
+    | {pexp_desc = Pexp_ternary (condition, consequent, alternate)} ->
       collect ((condition, consequent) :: acc) alternate
     | alternate -> (List.rev acc, alternate)
   in
@@ -525,31 +377,6 @@ let parameters_should_hug parameters =
     when is_huggable_pattern pat ->
     true
   | _ -> false
-
-let filter_ternary_attributes attrs =
-  List.filter
-    (fun attr ->
-      match attr with
-      | {Location.txt = "res.ternary"}, _ -> false
-      | _ -> true)
-    attrs
-
-let filter_fragile_match_attributes attrs =
-  List.filter
-    (fun attr ->
-      match attr with
-      | ( {Location.txt = "warning"},
-          PStr
-            [
-              {
-                pstr_desc =
-                  Pstr_eval
-                    ({pexp_desc = Pexp_constant (Pconst_string ("-4", _))}, _);
-              };
-            ] ) ->
-        false
-      | _ -> true)
-    attrs
 
 let should_indent_binary_expr expr =
   let same_precedence_sub_expression operator sub_expression =
@@ -577,66 +404,52 @@ let should_indent_binary_expr expr =
   }
     when is_binary_operator operator ->
     is_equality_operator operator
-    || (not (same_precedence_sub_expression operator lhs))
-    || operator = ":="
+    || not (same_precedence_sub_expression operator lhs)
   | _ -> false
 
 let should_inline_rhs_binary_expr rhs =
-  match rhs.pexp_desc with
+  match (unwrap_braces rhs).pexp_desc with
   | Parsetree.Pexp_constant _ | Pexp_let _ | Pexp_letmodule _
   | Pexp_letexception _ | Pexp_sequence _ | Pexp_open _ | Pexp_ifthenelse _
-  | Pexp_for _ | Pexp_for_of _ | Pexp_for_await_of _ | Pexp_while _ | Pexp_try _
-  | Pexp_array _ | Pexp_record _ ->
+  | Pexp_ternary _ | Pexp_for _ | Pexp_for_of _ | Pexp_for_await_of _
+  | Pexp_while _ | Pexp_try _ | Pexp_array _ | Pexp_record _ ->
     true
   | _ -> false
 
-let is_printable_attribute attr =
-  match attr with
-  | ( {
-        Location.txt =
-          ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
-          | "res.template" | "res.taggedTemplate" | "res.ternary"
-          | "res.inlineRecordDefinition" | "res.dictSpread" );
-      },
-      _ ) ->
-    false
-  | _ -> true
+(* Attributes on a module expression bind less tightly than an application or
+   a constraint. Most module expressions print them before themselves, but an
+   await prints them after [await], and a functor on its first parameter. *)
+let mod_expr_has_attributes (mod_expr : Parsetree.module_expr) =
+  mod_expr.pmod_attributes <> []
 
-let has_printable_attributes attrs = List.exists is_printable_attribute attrs
-
-let filter_printable_attributes attrs = List.filter is_printable_attribute attrs
-
-let partition_printable_attributes attrs =
-  List.partition is_printable_attribute attrs
+let is_doc_comment_attribute ((id, payload) : Parsetree.attribute) =
+  match (id, payload) with
+  | ( {txt = "res.doc"},
+      PStr
+        [
+          {
+            pstr_desc =
+              Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string _)}, _);
+          };
+        ] ) ->
+    true
+  | _ -> false
 
 let partition_doc_comment_attributes attrs =
-  List.partition
-    (fun ((id, payload) : Parsetree.attribute) ->
-      match (id, payload) with
-      | ( {txt = "res.doc"},
-          PStr
-            [
-              {
-                pstr_desc =
-                  Pstr_eval
-                    ({pexp_desc = Pexp_constant (Pconst_string (_, _))}, _);
-              };
-            ] ) ->
-        true
-      | _ -> false)
-    attrs
+  List.partition is_doc_comment_attribute attrs
 
-let is_fun_newtype expr =
+let rec is_fun_expr expr =
   match expr.pexp_desc with
-  | Pexp_fun _ | Pexp_newtype _ -> true
+  | Pexp_fun _ -> true
+  | Pexp_braces {expr} -> is_fun_expr expr
   | _ -> false
 
 let requires_special_callback_printing_last_arg args =
   let rec loop args =
     match args with
     | [] -> false
-    | [(_, expr)] when is_fun_newtype expr -> true
-    | (_, expr) :: _ when is_fun_newtype expr -> false
+    | [(_, expr)] when is_fun_expr expr -> true
+    | (_, expr) :: _ when is_fun_expr expr -> false
     | _ :: rest -> loop rest
   in
   loop args
@@ -645,18 +458,22 @@ let requires_special_callback_printing_first_arg args =
   let rec loop args =
     match args with
     | [] -> true
-    | (_, expr) :: _ when is_fun_newtype expr -> false
+    | (_, expr) :: _ when is_fun_expr expr -> false
     | _ :: rest -> loop rest
   in
   match args with
-  | [(_, expr)] when is_fun_newtype expr -> false
-  | (_, expr) :: rest when is_fun_newtype expr -> loop rest
+  | [(_, expr)] when is_fun_expr expr -> false
+  | (_, expr) :: rest when is_fun_expr expr -> loop rest
   | _ -> false
 
 let mod_expr_apply mod_expr =
   let rec loop acc mod_expr =
     match mod_expr with
-    | {pmod_desc = Pmod_apply (next, arg)} -> loop (arg :: acc) next
+    (* An inner application with attributes is kept as the callee, so the
+       printer can parenthesize it with its attributes *)
+    | {pmod_desc = Pmod_apply (next, arg)} as apply
+      when acc = [] || not (mod_expr_has_attributes apply) ->
+      loop (arg :: acc) next
     | _ -> (acc, mod_expr)
   in
   loop [] mod_expr
@@ -677,45 +494,21 @@ let mod_expr_functor mod_expr =
 let rec collect_patterns_from_list_construct acc pattern =
   let open Parsetree in
   match pattern.ppat_desc with
+  | Ppat_construct ({txt = Longident.Lident "::"}, {txt = [pat; rest]})
   | Ppat_construct
-      ({txt = Longident.Lident "::"}, Some {ppat_desc = Ppat_tuple [pat; rest]})
-    ->
+      ( {txt = Longident.Lident "::"},
+        {txt = [{ppat_desc = Ppat_tuple [pat; rest]}]} ) ->
     collect_patterns_from_list_construct (pat :: acc) rest
   | _ -> (List.rev acc, pattern)
 
-let has_template_literal_attr attrs =
-  List.exists
-    (fun attr ->
-      match attr with
-      | {Location.txt = "res.template"}, _ -> true
-      | _ -> false)
-    attrs
-
-let has_tagged_template_literal_attr attrs =
-  List.exists
-    (fun attr ->
-      match attr with
-      | {Location.txt = "res.taggedTemplate"}, _ -> true
-      | _ -> false)
-    attrs
-
 let is_template_literal expr =
   match expr.pexp_desc with
-  | Pexp_apply
-      {
-        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "++"}};
-        args = [(Nolabel, _); (Nolabel, _)];
-      }
-    when has_template_literal_attr expr.pexp_attributes ->
-    true
-  | Pexp_constant (Pconst_string (_, Some "")) -> true
-  | Pexp_constant _ when has_template_literal_attr expr.pexp_attributes -> true
+  | Pexp_template _ -> true
   | _ -> false
 
 let is_tagged_template_literal expr =
-  match expr with
-  | {pexp_desc = Pexp_apply _; pexp_attributes = attrs} ->
-    has_tagged_template_literal_attr attrs
+  match expr.pexp_desc with
+  | Pexp_tagged_template _ -> true
   | _ -> false
 
 let has_spread_attr attrs =
@@ -726,89 +519,45 @@ let has_spread_attr attrs =
       | _ -> false)
     attrs
 
-let is_spread_belt_list_concat expr =
+let is_spread_list expr =
   match expr.pexp_desc with
   | Pexp_ident
-      {
-        txt =
-          Longident.Ldot
-            (Longident.Ldot (Longident.Lident "Belt", "List"), "concatMany");
-      } ->
+      {txt = Longident.Ldot (Longident.Lident "Primitive_list", "spread")} ->
     has_spread_attr expr.pexp_attributes
   | _ -> false
 
-let is_spread_belt_array_concat expr =
+let is_spread_array expr =
   match expr.pexp_desc with
   | Pexp_ident
-      {
-        txt =
-          Longident.Ldot
-            (Longident.Ldot (Longident.Lident "Belt", "Array"), "concatMany");
-      } ->
+      {txt = Longident.Ldot (Longident.Lident "Primitive_array", "spread")} ->
     has_spread_attr expr.pexp_attributes
   | _ -> false
 
-let is_tuple_array (expr : Parsetree.expression) =
-  let is_plain_tuple (expr : Parsetree.expression) =
-    match expr with
-    | {pexp_desc = Pexp_tuple _} -> true
-    | _ -> false
-  in
-  match expr with
-  | {pexp_desc = Pexp_array items} -> List.for_all is_plain_tuple items
-  | _ -> false
+let dict_has_spread entries =
+  List.exists
+    (function
+      | Parsetree.Pdict_spread _ -> true
+      | Pdict_entry _ -> false)
+    entries
 
-let collect_spread_dict_expr_parts expr =
-  let extract_literal_dict_rows (expr : Parsetree.expression) =
-    match expr with
-    | {
-     pexp_desc =
-       Pexp_apply
-         {
-           funct =
-             {
-               pexp_desc =
-                 Pexp_ident
-                   {txt = Longident.Ldot (Lident "Primitive_dict", "make")};
-             };
-           args = [(Nolabel, key_values)];
-         };
-    }
-      when is_tuple_array key_values ->
-      Some key_values
-    | _ -> None
-  in
-  let is_empty_tuple_array (expr : Parsetree.expression) =
-    match expr.pexp_desc with
-    | Pexp_array [] -> true
-    | _ -> false
-  in
-  match expr with
-  | {
-   pexp_desc =
-     Pexp_apply
-       {
-         funct =
-           {
-             pexp_desc =
-               Pexp_ident
-                 {txt = Longident.Ldot (Lident "Primitive_dict", "spread")};
-             pexp_attributes;
-           };
-         args =
-           [(Nolabel, target_expr); (Nolabel, {pexp_desc = Pexp_array sources})];
-       };
-  }
-    when has_dict_spread_attribute pexp_attributes ->
-    let to_part expr =
-      match extract_literal_dict_rows expr with
-      | Some rows_expr ->
-        if is_empty_tuple_array rows_expr then None
-        else Some (DictExprRows rows_expr)
-      | None -> Some (DictExprSpread expr)
-    in
-    Some (List.filter_map to_part (target_expr :: sources))
-  | _ -> None
+(* The rows of a dict literal without spreads as the array
+   [[("a", 1), ...]], which the printer prints, see [Ast_dict] *)
+let dict_expr_rows ~loc entries =
+  Ast_dict.rows_array ~loc
+    (List.filter_map
+       (function
+         | Parsetree.Pdict_entry (key, value) -> Some (key, value)
+         | Pdict_spread _ -> None)
+       entries)
+
+(* The parts of a dict literal with spreads: the spreads, and such arrays for
+   the rows between them *)
+let dict_expr_parts ~loc entries =
+  Ast_dict.parts entries
+  |> List.map (function
+    | Ast_dict.Rows rows ->
+      DictExprRows (Ast_dict.rows_array ~loc:(Ast_dict.rows_loc ~loc rows) rows)
+    | Spread spread -> DictExprSpread spread)
 
 (* Blue | Red | Green -> [Blue; Red; Green] *)
 let collect_or_pattern_chain pat =
@@ -822,8 +571,8 @@ let collect_or_pattern_chain pat =
 let is_single_pipe_expr expr =
   (* handles:
    *   x
-   *   ->Js.Dict.get("wm-property")
-   *   ->Option.flatMap(Js.Json.decodeString)
+   *   ->Dict.get("wm-property")
+   *   ->Option.flatMap(JSON.decodeString)
    *   ->Option.flatMap(x =>
    *     switch x {
    *     | "like-of" => Some(#like)
@@ -856,10 +605,15 @@ let is_underscore_apply_sugar expr =
   match expr.pexp_desc with
   | Pexp_fun
       {
-        arg_label = Nolabel;
-        default = None;
-        lhs = {ppat_desc = Ppat_var {txt = "__x"}};
-        rhs = {pexp_desc = Pexp_apply _};
+        params =
+          [
+            {
+              p_lbl = Nolabel;
+              p_default = None;
+              p_pat = {ppat_desc = Ppat_var {txt = "__x"}};
+            };
+          ];
+        body = {pexp_desc = Pexp_apply _};
       } ->
     true
   | _ -> false

@@ -10,6 +10,24 @@ We tried to keep the installation process as simple as possible. In case you are
 
 Happy hacking!
 
+## Repository guides
+
+This document covers repository-wide setup and workflow. Start with the guide
+for the compiler area you are changing:
+
+- [parser, printer, and JSX transformation](compiler/syntax/README.md)
+- [type checker and typed tree](compiler/ml/README.md)
+- [Lambda, Lam, and JavaScript generation](compiler/core/README.md)
+- [editor analysis](analysis/README.md)
+- [build system](rewatch/README.md)
+- [`rescript-tools`](tools/README.md)
+
+Public language and library documentation belongs on the
+[ReScript website](https://github.com/rescript-association/rescript-lang.org).
+The guides in this repository document its current implementation and
+contributor workflows. Detailed caller contracts belong in module interfaces;
+algorithm and representation invariants belong beside their implementation.
+
 ## Setup
 
 > Most of our contributors are working on Apple machines, so all our instructions are currently macOS / Linux centric. Contributions for Windows development welcome!
@@ -33,6 +51,8 @@ git clone --depth 1 https://github.com/rescript-lang/rescript.git
 
 This will only consume less than 50MB.
 
+[.gitattributes](.gitattributes) checks out every text file with LF line endings, which the committed snapshots and formatters expect on every platform. It also marks the Yarn release and the copied test dependencies in `tests/dependencies` as vendored, which leaves them out of GitHub's language statistics.
+
 ## Installation
 
 ### A. Manual installation
@@ -48,9 +68,9 @@ opam init
 
 # Any recent OCaml version works as a development compiler
 # Can also create local switch with opam switch create
-# If you get "No compiler matching `5.3.0' found" error,
+# If you get "No compiler matching `5.5.1' found" error,
 # then you need to run `opam update && opam upgrade` first
-opam switch create 5.3.0
+opam switch create 5.5.1
 
 # Install dev dependencies from OPAM
 opam install . --deps-only --with-test --with-dev-setup -y
@@ -100,6 +120,21 @@ Run the `Dev Containers: Rebuild and Reopen in Container` action to get started.
 
 You can also open this dev container with [GitHub Codespaces](https://github.com/features/codespaces/).
 
+Alternatively, install the [Dev Container CLI](https://github.com/devcontainers/cli) through npm:
+
+```sh
+npm install -g @devcontainers/cli
+```
+
+Then create the development container and open a shell in it:
+
+```sh
+devcontainer up --workspace-folder .
+devcontainer exec --workspace-folder . zsh
+```
+
+Use the Dev Container tooling rather than building `.devcontainer/Dockerfile` directly. The tooling installs the features declared in `devcontainer.json`, including Node.js, and runs the post-create command. A plain `docker build` does not apply these features or lifecycle commands.
+
 ## Building the Compiler
 
 Main targets:
@@ -147,9 +182,62 @@ make checkformat
 
 ## Adding new Files to the Npm Packages
 
-To make sure that no files are added to or removed from the `rescript` or `@rescript/runtime` npm package inadvertently, an artifact list is kept at `packages/artifacts.json`. During CI build, it is verified that only the files that are listed there are actually included in the npm packages.
+To make sure that no files are added to or removed from the `rescript`, `@rescript/runtime`, or `@rescript/belt` npm package inadvertently, an artifact list is kept at `packages/artifacts.json`. During CI build, it is verified that only the files that are listed there are actually included in the npm packages.
 
 After adding a new file to the repository that should go into one of the npm packages - e.g., a new stdlib module -, run `make artifacts`.
+
+## Adding a New npm Package
+
+npm trusted publishing can only be configured after a package exists in the
+registry. Before the package's first real release, create it with a minimal
+`0.0.0` version under a temporary `bootstrap` tag. This keeps `latest` and the
+normal release tags unchanged. The npm account used for these commands needs
+write access to the package scope and two-factor authentication enabled. Run
+`npm login` first if the account is not already authenticated locally.
+
+Run the following outside the repository, replacing `@rescript/example` with
+the new package name:
+
+```sh
+bootstrap_dir="$(mktemp -d)"
+cd "$bootstrap_dir"
+
+npm init --yes
+npm pkg set \
+  name="@rescript/example" \
+  version="0.0.0" \
+  license="MIT" \
+  repository.type="git" \
+  repository.url="git+https://github.com/rescript-lang/rescript.git"
+
+npm publish \
+  --access public \
+  --tag bootstrap \
+  --provenance=false
+```
+
+Then use npm 11.15 or newer to authorize this repository's protected publish
+job as the package's trusted publisher:
+
+```sh
+npm trust github @rescript/example \
+  --file publish.yml \
+  --repository rescript-lang/rescript \
+  --environment npm-release \
+  --allow-publish \
+  --yes
+```
+
+The normal `Publish` workflow can now publish the package with provenance. Once
+the first real version has been published successfully, remove the temporary
+tag:
+
+```sh
+npm dist-tag rm @rescript/example bootstrap
+```
+
+The `0.0.0` version remains in npm's immutable package history but is not
+selected by `latest` or any of the repository's release tags.
 
 ## Test the compiler
 
@@ -196,13 +284,13 @@ npm link rescript
 
 #### Use Local BSC with Existing ReScript Installation
 
-Alternatively, you can set the `RESCRIPT_BSC_EXE` environment variable to point to your locally compiled `bsc.exe`.
+The `rescript` build system has the compiler built in, so to test a local compiler change, link the local package as shown above.
+
+The Rust build system, `rescript-rust`, still runs `bsc.exe` and accepts the `RESCRIPT_BSC_EXE` environment variable pointing to your locally compiled `bsc.exe`:
 
 ```sh
-RESCRIPT_BSC_EXE=your-rescript-repo/packages/@rescript/darwin-arm64/bin/bsc.exe npx rescript
+RESCRIPT_BSC_EXE=your-rescript-repo/packages/@rescript/darwin-arm64/bin/bsc.exe npx rescript-rust
 ```
-
-This will test the local compiler while still using the build system from the installed Node module.
 
 ### Running Automatic Tests
 
@@ -258,7 +346,7 @@ Below we will discuss on how to write, build and run these test files.
 ### 1) Write a Mocha Test File
 
 - Create a file `tests/tests/src/feature_abc_test.res`. Make sure to end the file name with `_test.res`.
-- Inside the file, add a mocha test suite. The mocha bindings are defined in `tests/tests/src/mt.res`. To get you started, here is a simple scaffold for a test suite with multiple test cases:
+- Inside the file, add a mocha test suite. The mocha bindings are defined in `tests/tests/src/mocha.res`, the assertion helpers in `tests/tests/src/test_utils.res`. To get you started, here is a simple scaffold for a test suite with multiple test cases:
 
   ```rescript
   open Mocha
@@ -287,8 +375,8 @@ Below we will discuss on how to write, build and run these test files.
 This is usually the file you want to create to test certain compile behavior without running the JS code formally as a test, i.e., when you just want to check that the ReScript code compiles and produces the expected JS code.
 
 - Create your test file `tests/tests/src/my_file_test.res`. Make sure to end the file name with `_test.res`.
-- Build the `.js` artifact: `node scripts/test.js -mocha`.
-- Verify the output, check in the `tests/tests/src/my_file_test.res` and `tests/tests/src/my_file_test.js` to version control. The checked in `.js` file is essential for verifying regressions later on.
+- Build the `.mjs` artifact: `node scripts/test.js -mocha`.
+- Verify the output, check in the `tests/tests/src/my_file_test.res` and `tests/tests/src/my_file_test.mjs` to version control. The checked in `.mjs` file is essential for verifying regressions later on.
 - Eventually check in other relevant files changed during the rebuild (depends on your compiler changes).
 
 ## Contribute to the ReScript Playground Bundle
@@ -296,6 +384,20 @@ This is usually the file you want to create to test certain compile behavior wit
 The "Playground bundle" is a JS version of the ReScript compiler; including all necessary dependency files (stdlib / belt etc). It is useful for building tools where you want to compile and execute arbitrary ReScript code in the browser.
 
 The ReScript source code is compiled with a tool called [JSOO (js_of_ocaml)](https://ocsigen.org/js_of_ocaml/latest/manual/overview), which uses OCaml bytecode to compile to JavaScript and is part of the bigger OCaml ecosystem.
+
+### Platform-specific compiler modules
+
+Within `compiler/`, the Dune `browser` profile specifically means the
+playground compiler. A few modules have implementations under
+`platform/native/` and `platform/playground/`; mutually exclusive rules in the
+owning `dune` file copy the appropriate implementation into the build directory
+as an ordinary `.ml` module. Other profiles select the native implementation.
+
+Consequently, a generated filename such as `ext_platform_primitives.ml` may
+appear in a compiler stack trace even though it is not present in the source
+tree. Its source is the corresponding file below `platform/native/` or
+`platform/playground/` in the same compiler directory. Keep both
+implementations API-compatible when changing one of these modules.
 
 ### Building the Bundle
 
@@ -310,11 +412,12 @@ Note that building the cmijs is based on the dependencies defined in `packages/p
 
 After a successful compilation, you will find following files in your project:
 
-- `playground/compiler.js` -> This is the ReScript compiler, which binds the ReScript API to the `window` object.
-- `playground/packages/compiler-builtins` -> The compiler base cmij containing all the relevant core modules (`Js`, `Belt`, `Pervasives`, etc.)
-- `playground/packages/*` -> Contains third party deps with cmij.js files (as defined in `packages/playground/rescript.json`)
+- `packages/playground/compiler.js` -> This is the ReScript compiler, which binds the ReScript API to the `window` object.
+- `packages/playground/packages/compiler-builtins` -> The compiler base cmij containing the runtime and standard-library modules
+- `packages/playground/packages/@rescript/belt` -> The Belt cmij, packaged separately from the compiler built-ins
+- `packages/playground/packages/*` -> Contains third party deps with cmij.js files (as defined in `packages/playground/rescript.json`)
 
-You can now use the `compiler.js` file either directly by using a `<script src="/path/to/compiler.js"/>` and `<script src="/path/to/packages/compilerCmij.js"/>` inside a html file, use a browser bundler infrastructure to optimize it, or use `nodejs` to run it on a command line:
+You can now use the `compiler.js` file either directly by using a `<script src="/path/to/compiler.js"/>` and `<script src="/path/to/packages/compiler-builtins/cmij.js"/>` inside a html file, use a browser bundler infrastructure to optimize it, or use `nodejs` to run it on a command line:
 
 ```
 $ node
@@ -324,6 +427,18 @@ $ node
 > let result = rescript.compile(`Console.log(${rescript.version})`);
 > eval(result.js_code);
 ```
+
+### Lambda debug outputs
+
+`comp.rescript.compileWithDebug(source)` returns `lambda` before the backend's
+Lambda optimization passes and `lambda_optimized` after the whole-term passes,
+before export grouping and JavaScript lowering. Both use the same Lambda printer
+so their text can be compared directly. JavaScript lowering performs further
+transformations; this snapshot is not the final JavaScript IR.
+
+Regular `comp.rescript.compile(source)` does not capture these debug outputs.
+Older bundles do not provide `lambda_optimized`; detect this optional field's
+presence rather than inferring support from the API version.
 
 ### Testing the Playground bundle
 
@@ -407,7 +522,7 @@ Adding a new entry there requires re-running the analysis tests. Follow these st
 
 (If a `make` command fails, consider using the [DevContainer](#b-devcontainer).)
 
-Finally, add a line to [CHANGELOG.md](CHANGELOG.md), using the `#### :nail_care: Polish` section.
+Finally, add a `changes/<description>.polish.md` fragment following [the changelog instructions](changes/README.md).
 
 ## Code structure
 
@@ -469,7 +584,7 @@ The repository's `npm-release` GitHub environment should have required reviewers
 To build a new version and release it on NPM, follow these steps:
 
 1. Verify that the version number is already set correctly for the release. (It should have been incremented after releasing the previous version.)
-1. Create a PR to update `CHANGELOG.md`, removing the "(Unreleased)" for the version to be released.
+1. Run `yarn changelog:preview` to review pending notes, then `yarn changelog:release` to collect fragments into `CHANGELOG.md`, remove "(Unreleased)", and delete consumed fragments. Create a PR containing these changes, review the combined release notes, and apply the `changelog:release` label. Existing unreleased entries are preserved. If more fragments are merged before publishing, the `Publish` workflow refuses to run; repeat this step to add them to the same version. Don't run `yarn changelog:release` while a `Publish` run is in progress: it could add notes for changes that the run is not publishing.
 1. Once that PR is merged and built successfully, run the `Publish` workflow from the GitHub Actions tab. Use the "Run workflow" branch dropdown to select the release branch (normally `master`, or the relevant maintenance branch) and indicate whether this is the current stable release. The version is read from that branch's `package.json`, and the npm tag is derived automatically:
    - A current stable release is published as `latest`.
    - A stable maintenance release for an older major is published as `latest-<major>`, for example `latest-12`.
@@ -482,7 +597,7 @@ To build a new version and release it on NPM, follow these steps:
 1. Create a PR with the following changes to prepare for development of the next version:
    - Increment the `EXPECTED_VERSION` number in `yarn.config.cjs` for the next version.
    - Run `yarn constraints --fix` to take that version number over into other files.
-   - Update `CHANGELOG.md` and add an entry for the next version, e.g., "10.0.0-beta.2 (Unreleased)"
+   - Run `yarn changelog:open` to add the empty "(Unreleased)" section for the next version to `CHANGELOG.md`, and apply the `changelog:release` label to the PR.
 
 ## Debugging issues from CI builds
 
@@ -508,10 +623,8 @@ Then attempt to rebuild your project as you would normally.
 
 ## Contribution Licensing
 
-Since ReScript is distributed under the terms of the [LGPL Version 3](LICENSE), contributions that you make are licensed under the same terms. In order for us to be able to accept your contributions, we will need explicit confirmation from you that you are able and willing to provide them under these terms, and the mechanism we use to do this is called a Developer's Certificate of Origin [DCO](DCO.md). This is very similar to the process used by the Linux(R) kernel, Samba, and many other major open source projects.
+ReScript is distributed under the [LGPL Version 3](LICENSE), and contributions are licensed under the same terms. To confirm that you can contribute under these terms, sign off every commit to certify the [Developer Certificate of Origin](https://developercertificate.org), as the Linux kernel and many other projects do:
 
-To participate under these terms, all that you must do is include a line like the following as the last line of the commit message for each commit in your contribution:
+    Signed-off-by: Random J. Developer <random@developer.example.org>
 
-    Signed-Off-By: Random J. Developer <random@developer.example.org>
-
-You must use your real name (sorry, no pseudonyms, and no anonymous contributions).
+`git commit -s` adds this line. Use your real name. The DCO check on each PR fails if a commit lacks a sign-off; fix it with `git rebase --signoff HEAD~N`, where N is the number of commits in the PR, and force-push.

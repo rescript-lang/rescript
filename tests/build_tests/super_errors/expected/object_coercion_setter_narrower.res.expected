@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_coercion_setter_narrower.res[0m:[2m8:32-54[0m
+
+  6 [2m│[0m type wide = {"a": int, "b": int}
+  7 [2m│[0m type narrow = {"a": int}
+  [1;31m8[0m [2m│[0m let p = (o: {.."x": wide}) => ([1;31mo :> {@set "x": narrow}[0m)
+  9 [2m│[0m 
+
+  Type {..@set "x": wide} is not a subtype of {@set "x": narrow} 
+  Type wide = {"a": int, "b": int} is not compatible with type
+    narrow = {"a": int} 
+  
+  The second object is expected to have a field [1;33m"b"[0m of type [1;33mint[0m, but it does not.

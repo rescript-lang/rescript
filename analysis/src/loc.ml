@@ -21,9 +21,3 @@ let range_of_loc (loc : t) =
   let start = loc |> start |> mk_position in
   let end_ = loc |> end_ |> mk_position in
   Lsp.Types.Range.create ~start ~end_
-
-let is_inside (x : t) (y : t) =
-  x.loc_start.pos_cnum >= y.loc_start.pos_cnum
-  && x.loc_end.pos_cnum <= y.loc_end.pos_cnum
-  && x.loc_start.pos_lnum >= y.loc_start.pos_lnum
-  && x.loc_end.pos_lnum <= y.loc_end.pos_lnum

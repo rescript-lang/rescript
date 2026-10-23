@@ -1,0 +1,22 @@
+===== Importattrs.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_external_import_attrs/Importattrs.res[0m:[2m1:1-2:30[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@module({from: "somepkg", with: {type_: "json", \"some-identifier": "nop[0m
+    [2m│[0m [1;31me"}})[0m
+  [1;31m2[0m [2m│[0m [1;31mexternal data: int = "default"[0m
+  3 [2m│[0m 
+
+  The implementation /.../fixtures/Cross_external_import_attrs/Importattrs.res
+  does not match the interface /.../fixtures/Cross_external_import_attrs/importattrs.cmi:
+  Values do not match:
+    @val @module({from: "somepkg", with: {type_: "json", \"some-identifier": "nope"}}) external data: int =
+  "default"
+  is not included in
+    @val @module({from: "somepkg", with: {type_: "json", \"some-identifier": "yep"}}) external data: int =
+  "default"
+  [36m/.../fixtures/Cross_external_import_attrs/Importattrs.resi[0m:[2m1:1-2:30[0m:
+    Expected declaration
+  [36m/.../fixtures/Cross_external_import_attrs/Importattrs.res[0m:[2m1:1-2:30[0m:
+    Actual declaration

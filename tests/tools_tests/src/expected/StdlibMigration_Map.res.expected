@@ -1,3 +1,0 @@
-// Type alias migration for Js.Map.t
-external m: Map.t<int, string> = "m"
-

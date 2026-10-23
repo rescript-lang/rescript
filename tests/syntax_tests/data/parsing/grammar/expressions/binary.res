@@ -49,4 +49,4 @@ let _ = {
 }
 
 library.getBalance(account)
-->Promise.Js.catch(_ => {Promise.resolved(None)})
+->Promise.catch(_ => {Promise.resolve(None)})

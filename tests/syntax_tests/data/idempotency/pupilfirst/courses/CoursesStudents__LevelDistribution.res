@@ -6,7 +6,7 @@ let str = React.string
 let stylingForLevelPills = percentageStudents => {
   let emptyStyle = ReactDOMRe.Style.make()
   let styleWithWidth = ReactDOMRe.Style.make(
-    ~width=(percentageStudents->Js.Float.toString) ++ "%",
+    ~width=(percentageStudents->Float.toString) ++ "%",
     (),
   )
   if 0.0 <= percentageStudents && percentageStudents < 5.0 {
@@ -34,7 +34,7 @@ let make = (~levels, ~selectLevelCB) => {
         className="w-full pt-8 max-w-3xl mx-auto hidden md:block">
         <div className="flex w-full border bg-gray-100 rounded font-semibold ">
           {levels
-          ->Js.Array.filter(level => Level.number(level) != 0)
+          ->Array.filter(level => Level.number(level) != 0)
           ->Level.sort
           ->Array.map(level => {
             let percentageStudents = Level.percentageStudents(level, totalStudentsInCourse)
@@ -47,7 +47,7 @@ let make = (~levels, ~selectLevelCB) => {
                   ? <p> {"Teams: " ++ string_of_int(Level.teamsInLevel(level))->str} </p>
                   : React.null}
                 <p>
-                  {"Percentage: " ++ Js.Float.toFixedWithPrecision(percentageStudents, ~digits=1)
+                  {"Percentage: " ++ Float.toFixedWithPrecision(percentageStudents, ~digits=1)
                     ->str}
                 </p>
               </div>

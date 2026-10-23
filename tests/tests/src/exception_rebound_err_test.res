@@ -1,6 +1,5 @@
 open Mocha
 open Test_utils
-open Js
 
 exception A(int)
 exception B
@@ -8,7 +7,7 @@ exception C(int, int)
 
 let test_js_error4 = () =>
   try {
-    ignore(Js.Json.parseExn(` {"x"}`))
+    ignore(JSON.parseOrThrow(` {"x"}`))
     1
   } catch {
   | Not_found => 2

@@ -42,11 +42,8 @@ let run ~uri ~(state : State.t) =
   let document_has_syntax_error =
     let engine = Res_driver.parsing_engine in
     match kind_file with
-    | Res ->
-      (engine.parse_implementation_from_source ~for_printer:false ~source)
-        .invalid
-    | Resi ->
-      (engine.parse_interface_from_source ~for_printer:false ~source).invalid
+    | Res -> (engine.parse_implementation_from_source ~source).invalid
+    | Resi -> (engine.parse_interface_from_source ~source).invalid
     | _ -> assert false
   in
 

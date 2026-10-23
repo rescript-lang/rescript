@@ -44,8 +44,13 @@
     ]}
     we can bound [x] to [100] in a single step
 *)
+let param_table params new_params =
+  let tbl = Hash_ident.create (List.length params) in
+  List.iter2 (Hash_ident.add tbl) params new_params;
+  tbl
+
 let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
-    (body : Lam.t) (args : Lam.t list) =
+    (body : Lambda.t) (args : Lambda.t list) =
   match Lam_beta_reduce_util.simple_beta_reduce params body args with
   | Some x -> x
   | None ->
@@ -56,16 +61,20 @@ let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
           | Lconst _ | Lvar _ -> (rest_bindings, arg :: acc)
           | _ ->
             let p = Ident.rename old_param in
-            ((p, arg) :: rest_bindings, Lam.var p :: acc))
+            ((p, arg) :: rest_bindings, Lambda.var p :: acc))
     in
     let new_body =
       Lam_bounded_vars.rewrite
-        (Hash_ident.of_list2 (List.rev params) rev_new_params)
+        (param_table (List.rev params) rev_new_params)
         body
     in
-    Ext_list.fold_right rest_bindings new_body (fun (param, arg) l ->
+    (* [rest_bindings] is in reverse parameter order; folding left makes the
+       first parameter's binding outermost, so arguments evaluate in call
+       order. *)
+    Ext_list.fold_left rest_bindings new_body (fun l (param, arg) ->
         (match arg with
-        | Lprim {primitive = Pmakeblock (_, _, Immutable); args; _} ->
+        | Lprim {primitive = Pmakeblock info; args; _}
+          when Lambda.is_immutable_block info ->
           Hash_ident.replace meta.ident_tbl param
             (Lam_util.kind_of_lambda_block args)
         | Lprim {primitive = Psome | Psome_not_nest; args = [v]; _} ->
@@ -85,28 +94,31 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
           | Lconst _ | Lvar _ -> (rest_bindings, arg :: acc)
           | Lglobal_module _ ->
             let p = Ident.rename old_param in
-            ((p, arg) :: rest_bindings, Lam.var p :: acc)
+            ((p, arg) :: rest_bindings, Lambda.var p :: acc)
           | _ ->
             if Lam_analysis.no_side_effects arg then
-              match Map_ident.find_exn map old_param with
+              match Map_ident.find old_param map with
               | stat ->
                 if Lam_var_stats.top_and_used_zero_or_one stat then
                   (rest_bindings, arg :: acc)
                 else
                   let p = Ident.rename old_param in
-                  ((p, arg) :: rest_bindings, Lam.var p :: acc)
+                  ((p, arg) :: rest_bindings, Lambda.var p :: acc)
             else
               let p = Ident.rename old_param in
-              ((p, arg) :: rest_bindings, Lam.var p :: acc))
+              ((p, arg) :: rest_bindings, Lambda.var p :: acc))
     in
     let new_body =
       Lam_bounded_vars.rewrite
-        (Hash_ident.of_list2 (List.rev params) rev_new_params)
+        (param_table (List.rev params) rev_new_params)
         body
     in
-    Ext_list.fold_right rest_bindings new_body (fun (param, (arg : Lam.t)) l ->
+    (* See above: fold left so arguments evaluate in call order. *)
+    Ext_list.fold_left rest_bindings new_body
+      (fun l (param, (arg : Lambda.t)) ->
         (match arg with
-        | Lprim {primitive = Pmakeblock (_, _, Immutable); args} ->
+        | Lprim {primitive = Pmakeblock info; args}
+          when Lambda.is_immutable_block info ->
           Hash_ident.replace meta.ident_tbl param
             (Lam_util.kind_of_lambda_block args)
         | Lprim {primitive = Psome | Psome_not_nest; args = [v]} ->

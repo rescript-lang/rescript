@@ -29,7 +29,7 @@ type t = J.expression
 
     The better signature might be 
     {[
-      J.expresssion -> Js_output.t
+      J.expression -> Js_output.t
     ]}
     for exmaple
     {[
@@ -45,12 +45,7 @@ val var : ?comment:string -> J.ident -> t
 
 val js_global : ?comment:string -> string -> t
 
-val runtime_var_dot : ?comment:string -> string -> string -> t
-
-(* val runtime_var_vid : string -> string -> J.vident *)
-
-val ml_var_dot :
-  ?comment:string -> ?dynamic_import:bool -> Ident.t -> string -> t
+val ml_var_dot : ?comment:string -> Ident.t -> string -> t
 (** [ml_var_dot ocaml_module name]
 *)
 
@@ -73,7 +68,7 @@ val external_var :
   Ident.t ->
   t
 
-val ml_module_as_var : ?comment:string -> ?dynamic_import:bool -> Ident.t -> t
+val ml_module_as_var : ?comment:string -> Ident.t -> t
 
 val runtime_call :
   string ->
@@ -84,18 +79,11 @@ val runtime_call :
   (* args *)
   t
 
-val pure_runtime_call :
-  string ->
-  (* module_name *)
-  string ->
-  (* fn_name *)
-  t list ->
-  (* args *)
-  t
+val str : ?comment:string -> string -> t
 
-val runtime_ref : string -> string -> t
+val template_literal : ?comment:string -> Asttypes.template_segment -> t
 
-val str : ?delim:J.delim -> ?comment:string -> string -> t
+val json_literal : ?comment:string -> string -> t
 
 val record_rest : ?comment:string -> J.record_rest_field list -> t -> t
 
@@ -129,19 +117,11 @@ val bigint : ?comment:string -> bool -> string -> t
 
 val float : ?comment:string -> string -> t
 
-(* val empty_string_literal : t  *)
 (* TODO: we can do hash consing for small integers *)
 val zero_int_literal : t
-
-(* val one_int_literal : t *)
 val zero_float_lit : t
 
 val zero_bigint_literal : t
-
-val is_out : ?comment:string -> t -> t -> t
-(** [is_out e range] is equivalent to [e > range or e <0]
-
-*)
 
 val dot : ?comment:string -> t -> string -> t
 
@@ -151,22 +131,11 @@ val array_length : ?comment:string -> t -> t
 
 val string_length : ?comment:string -> t -> t
 
-val function_length : ?comment:string -> t -> t
-
 val string_append : ?comment:string -> t -> t -> t
 (**
    When in ES6 mode, we can use Symbol to guarantee its uniquess,
    we can not tag [js] object, since it can be frozen 
 *)
-
-(* val var_dot : ?comment:string -> Ident.t -> string -> t *)
-
-(* val bind_var_call : ?comment:string -> Ident.t -> string -> t list -> t  *)
-
-(* val bind_call : ?comment:string -> J.expression -> string -> J.expression list -> t *)
-(* val js_global_dot : ?comment:string -> string -> string -> t *)
-
-val string_index : ?comment:string -> t -> t -> t
 
 val array_index : ?comment:string -> t -> t -> t
 
@@ -190,26 +159,15 @@ val poly_var_value_access : t -> t
 
 val extension_assign : t -> int32 -> string -> t -> t
 
-val assign_by_int : ?comment:string -> t -> int32 -> t -> t
-(** 
-    [assign_by_int  e i v]
-    if the expression [e] is a temporay block 
-    which has no side effect,
-    write to it does not really make sense, 
-    optimize it away *)
-
-val assign_by_exp : t -> t -> t -> t
-
 val assign : ?comment:string -> t -> t -> t
 
-val tag_type : Ast_untagged_variants.tag_type -> t
+val literal_tag : Variant_runtime.literal_tag -> t
+val tag_type : Variant_runtime.tag_type -> t
 
 val emit_check : t Ast_untagged_variants.Dynamic_checks.t -> t
 
 val triple_equal : ?comment:string -> t -> t -> t
 (* TODO: reduce [triple_equal] use *)
-
-val float_equal : ?comment:string -> t -> t -> t
 
 val int_equal : ?comment:string -> t -> t -> t
 
@@ -221,39 +179,26 @@ val eq_null_undefined_boolean : ?comment:string -> t -> t -> t
 
 val neq_null_undefined_boolean : ?comment:string -> t -> t -> t
 
-val is_type_number : ?comment:string -> t -> t
-
 val is_int_tag : ?has_null_undefined_other:bool * bool * bool -> t -> t
 
 val is_a_literal_case :
-  literal_cases:Ast_untagged_variants.tag_type list ->
-  block_cases:Ast_untagged_variants.block_type list ->
+  literal_cases:Variant_runtime.literal_tag list ->
+  block_cases:Variant_runtime.block_type list ->
   t ->
   t
-
-val is_type_string : ?comment:string -> t -> t
 
 val is_type_object : t -> t
 
 val typeof : ?comment:string -> t -> t
-val instanceof : ?comment:string -> t -> t -> t
 val is_array : t -> t
 
 val to_int32 : ?comment:string -> t -> t
 
-val unchecked_int32_add : ?comment:string -> t -> t -> t
-
 val int32_add : ?comment:string -> t -> t -> t
-
-val offset : t -> int -> t
-
-val unchecked_int32_minus : ?comment:string -> t -> t -> t
 
 val int32_minus : ?comment:string -> t -> t -> t
 
 val int32_mul : ?comment:string -> t -> t -> t
-
-val unchecked_int32_mul : ?comment:string -> t -> t -> t
 
 val int32_div : checked:bool -> ?comment:string -> t -> t -> t
 
@@ -281,41 +226,49 @@ val float_mul : ?comment:string -> t -> t -> t
 
 val float_div : ?comment:string -> t -> t -> t
 
-val float_notequal : ?comment:string -> t -> t -> t
-
 val float_mod : ?comment:string -> t -> t -> t
 
 val float_pow : ?comment:string -> t -> t -> t
 
-val int_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
+val int_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
 
-val bool_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
+val bool_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
 
-val string_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
-
-val float_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
+val string_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
 
 val bigint_op : ?comment:string -> Js_op.binop -> t -> t -> t
 
-val bigint_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
+val bigint_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
 
 val bigint_div : checked:bool -> ?comment:string -> t -> t -> t
 
 val bigint_mod : checked:bool -> ?comment:string -> t -> t -> t
 
-val js_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
+val js_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
 
 val not : t -> t
 
 val call : ?comment:string -> info:Js_call_info.t -> t -> t list -> t
 
-val flat_call : ?comment:string -> t -> t -> t
+val tagged_template : ?comment:string -> t -> string list -> t list -> t
 
-val tagged_template : ?comment:string -> t -> t list -> t list -> t
+val jsx :
+  callee:t ->
+  tag:t ->
+  spread:t option ->
+  props:(string * t) list ->
+  children:t list option ->
+  key:t option ->
+  multi:bool ->
+  fragment:bool ->
+  t
+
+val interpolated_template :
+  ?comment:string -> Asttypes.template_segment list -> t list -> t
 
 val new_ : ?comment:string -> J.expression -> J.expression list -> t
 
-val array : ?comment:string -> J.mutable_flag -> J.expression list -> t
+val array : ?comment:string -> J.expression list -> t
 
 val optional_block : J.expression -> J.expression
 
@@ -323,8 +276,6 @@ val optional_not_nest_block : J.expression -> J.expression
 
 val make_block :
   ?comment:string ->
-  J.expression ->
-  (* tag *)
   J.tag_info ->
   (* tag_info *)
   J.expression list ->
@@ -335,7 +286,11 @@ val seq : ?comment:string -> t -> t -> t
 
 val fuse_to_seq : t -> t list -> t
 
+val object_entries : ?dup:J.expression -> J.property_map -> J.object_entry list
+
 val obj : ?comment:string -> ?dup:J.expression -> J.property_map -> t
+
+val obj_entries : ?comment:string -> J.object_entry list -> t
 
 val true_ : t
 
@@ -365,8 +320,7 @@ val in_ : t -> t -> t
 
 (** we don't expose a general interface, since a general interface is generally not safe *)
 
-val dummy_obj : ?comment:string -> Lam_tag_info.t -> t
-(** used combined with [caml_update_dummy]*)
+val dummy_obj : ?comment:string -> Lambda.tag_info -> t
 
 val of_block : ?comment:string -> ?e:J.expression -> J.statement list -> t
 (** convert a block to expresion by using IIFE *)
@@ -386,5 +340,3 @@ val is_null_undefined : ?comment:string -> t -> t
 val make_exception : string -> t
 
 val variadic_args : t list -> t list
-
-val string_of_expression : (t -> string) ref

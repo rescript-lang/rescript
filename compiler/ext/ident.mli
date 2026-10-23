@@ -17,19 +17,16 @@
 
 type t = {stamp: int; name: string; mutable flags: int}
 
-include Identifiable.S with type t := t
-(* Notes:
-   - [equal] compares identifiers by name
-   - [compare x y] is 0 if [same x y] is true.
-   - [compare] compares identifiers by binding location
-*)
+val equal : t -> t -> bool
+(* Compare identifiers by name. *)
+
+val print : Format.formatter -> t -> unit
 
 val create : string -> t
 val create_persistent : string -> t
 val create_predef_exn : string -> t
 val rename : t -> t
 val name : t -> string
-val unique_name : t -> string
 val unique_toplevel_name : t -> string
 val persistent : t -> bool
 val same : t -> t -> bool
@@ -54,6 +51,13 @@ val binding_time : t -> int
 val current_time : unit -> int
 val set_current_time : int -> unit
 val reinit : unit -> unit
+
+val capture_request_baseline : unit -> unit
+(* Call once after predefined identifiers are initialized, before compiler
+   requests can overlap. *)
+
+val with_fresh : (unit -> 'a) -> 'a
+(* Give one request its own stamp counter and restore the prior counter. *)
 
 type 'a tbl
 (* Association tables from identifiers to type 'a. *)

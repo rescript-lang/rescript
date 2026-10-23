@@ -35,16 +35,16 @@ switch count {
 // Block
 | 6 => {
     let _ = 123
-    Js.Console.log("Must be block")
+    Console.log("Must be block")
   }
 }
 
 switch route {
-| A => <div> // div tag stays after >
+| A => <div> // comment after the opening tag
     <div> {React.string("First A div")} </div>
     <div> {React.string("Second A div")} </div>
   </div>
-| B => <> // fragment tag stays after <>
+| B => <> // comment after the fragment opener
     <div> {React.string("First B div")} </div>
     <div> {React.string("Second B div")} </div>
   </>
@@ -56,4 +56,19 @@ switch x {
     let _ = 2
   } // no blank line below
 | B => ()
+}
+
+switch value {
+| A => {
+    // Keep this comment with the first statement.
+    let local = 1
+    local
+  }
+| B =>
+  let local = 2
+  local
+| C => {
+    foo()
+    {bar()}
+  }
 }

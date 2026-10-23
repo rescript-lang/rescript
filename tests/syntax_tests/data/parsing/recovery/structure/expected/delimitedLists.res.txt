@@ -1,0 +1,83 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/structure/delimitedLists.res:1:26
+
+  1 │ type nested = pair<option(<node<int>>), string>
+  2 │ 
+  3 │ type fields = {
+
+  Type parameters require angle brackets:
+  option<node<int>>
+
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/structure/delimitedLists.res:4:3
+
+  2 │ 
+  3 │ type fields = {
+  4 │   [first: int, second: string],
+  5 │   last: bool,
+  6 │ }
+
+  I'm not sure what to parse here when looking at "[".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/structure/delimitedLists.res:8:17
+
+   6 │ }
+   7 │ 
+   8 │ type parameters<{'a, 'b}, 'c> = ('a, 'b, 'c)
+   9 │ 
+  10 │ let {(first, second), last} = value
+
+  I'm not sure what to parse here when looking at "{".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/structure/delimitedLists.res:10:6
+
+   8 │ type parameters<{'a, 'b}, 'c> = ('a, 'b, 'c)
+   9 │ 
+  10 │ let {(first, second), last} = value
+  11 │ 
+  12 │ type missingCloser = {
+
+  I'm not sure what to parse here when looking at "(".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/structure/delimitedLists.res:13:3
+
+  11 │ 
+  12 │ type missingCloser = {
+  13 │   (field: int
+  14 │ }
+  15 │ 
+
+  I'm not sure what to parse here when looking at "(".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/structure/delimitedLists.res:16:26
+
+  14 │ }
+  15 │ 
+  16 │ type unexpectedCloser = {] field: int}
+  17 │ 
+  18 │ let after = 1
+
+  I'm not sure what to parse here when looking at "]".
+
+type nonrec nested = (int node option, string) pair
+type nonrec fields = {
+  first: int ;
+  second: string ;
+  last: bool }
+type nonrec ('a, 'b, 'c) parameters = ('a * 'b * 'c)
+let { first; second; last } = value
+type nonrec missingCloser = {
+  field: int }
+type nonrec unexpectedCloser = {
+  field: int }
+let after = 1

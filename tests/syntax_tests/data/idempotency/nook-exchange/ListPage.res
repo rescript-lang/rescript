@@ -248,10 +248,10 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
           ~eventName="Item List Page Viewed",
           ~eventProperties={
             "listId": listId,
-            "numItems": Js.Array.length(list.itemIds),
+            "numItems": Array.length(list.itemIds),
           },
         )
-        Promise.resolved()
+        Promise.resolve()
       })
     })->ignore
     None
@@ -265,7 +265,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
 
   let onTitleSubmit = e => {
     ReactEvent.Form.preventDefault(e)
-    let editTitle = editTitle->Js.String.slice(~from=0, ~to_=48)
+    let editTitle = editTitle->String.slice(~start=0, ~end=48)
     QuicklistStore.updateListTitle(~listId, ~title=Some(editTitle))->ignore
     setList(list =>
       list->Belt.Option.map(((list, username)) => (
@@ -390,13 +390,13 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
       </div>
       {switch list {
       | Some((list, _)) =>
-        if Js.Array.length(list.itemIds) >= 4 {
+        if Array.length(list.itemIds) >= 4 {
           <ItemFilters.SortSelector
             sort
             onChange={sort => {
               let p = []
               switch ItemFilters.serializeSort(~sort, ~defaultSort=ListTimeAdded) {
-              | Some(param) => p->Js.Array.push(param)->ignore
+              | Some(param) => p->Array.push(param)->ignore
               | None => ()
               }
               let urlSearchParams = Webapi.Url.URLSearchParams.makeWithArray(p)
@@ -423,7 +423,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
                   "view": "list",
                   "listId": listId,
                   "numItems": switch list {
-                  | Some((list, _)) => Js.Array.length(list.itemIds)
+                  | Some((list, _)) => Array.length(list.itemIds)
                   | None => 0
                   },
                 },
@@ -450,7 +450,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
                   "view": "grid",
                   "listId": listId,
                   "numItems": switch list {
-                  | Some((list, _)) => Js.Array.length(list.itemIds)
+                  | Some((list, _)) => Array.length(list.itemIds)
                   | None => 0
                   },
                 },
@@ -468,7 +468,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
           <span className=Styles.gridIcon /> {React.string("Grid")}
         </button>
         {switch list {
-        | Some((list, _)) => Js.Array.length(list.itemIds) > 8
+        | Some((list, _)) => Array.length(list.itemIds) > 8
         | None => false
         }
           ? <button
@@ -481,7 +481,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
                       "view": "thumbnail",
                       "listId": listId,
                       "numItems": switch list {
-                      | Some((list, _)) => Js.Array.length(list.itemIds)
+                      | Some((list, _)) => Array.length(list.itemIds)
                       | None => 0
                       },
                     },
@@ -504,7 +504,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
     {switch list {
     | Some((list, _)) =>
       <div>
-        {if Js.Array.length(list.itemIds) > 0 {
+        {if Array.length(list.itemIds) > 0 {
           <div
             className={switch viewMode {
             | Grid => Styles.grid
@@ -515,17 +515,17 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
             ->(sort !== ListTimeAdded
               ? x => {
                   let sortFn = ItemFilters.getSort(~sort)
-                  x->Js.Array.sortInPlaceWith(((aItemId, aVariant), (bItemId, bVariant)) => {
+                  x->Array.toSorted((a, b) => Ordering.fromInt((((aItemId, aVariant), (bItemId, bVariant)) => {
                     let aItem = Item.getItem(~itemId=aItemId)
                     let bItem = Item.getItem(~itemId=bItemId)
                     switch sortFn(aItem, bItem) {
                     | 0 => aVariant - bVariant
                     | y => y
                     }
-                  })
+                  })(a, b)))
                 }
               : x => x)
-            ->Js.Array.mapi(((itemId, variant), i) =>
+            ->Array.mapWithIndex(((itemId, variant), i) =>
               switch viewMode {
               | Grid =>
                 <UserItemCard
@@ -541,8 +541,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
                   itemId variation=variant key={string_of_int(i)}
                 />
               | List => <ListRow itemId variant key={string_of_int(i)} />
-              }
-            )
+              })
             ->React.array}
           </div>
         } else {
@@ -550,7 +549,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
         }}
         <div className=Styles.listFooter>
           {
-            let numItems = Js.Array.length(list.itemIds)
+            let numItems = Array.length(list.itemIds)
             if numItems > 8 {
               <div className=Styles.numItems>
                 {React.string(string_of_int(numItems) ++ " items")}
@@ -584,10 +583,10 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
                           ~eventProperties={
                             "listId": listId,
                             "newListId": newListId,
-                            "numItems": Js.Array.length(list.itemIds),
+                            "numItems": Array.length(list.itemIds),
                           },
                         )
-                        Promise.resolved()
+                        Promise.resolve()
                       })
                     })->ignore
                   }}
@@ -613,7 +612,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
                             )
                             UserStore.handleServerResponse("/item-lists/delete", response)
                             ReasonReactRouter.push("/lists")
-                            Promise.resolved()
+                            Promise.resolve()
                           })->ignore,
                         (),
                       )

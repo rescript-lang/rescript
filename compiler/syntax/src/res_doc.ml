@@ -70,8 +70,6 @@ let question = Text "?"
 let tilde = Text "~"
 let equal = Text "="
 let trailing_comma = if_breaks comma nil
-let double_quote = Text "\""
-
 let propagate_forced_breaks doc =
   let rec walk doc =
     match doc with
@@ -331,7 +329,7 @@ let debug t =
         | Classic -> "Classic"
         | Soft -> "Soft"
         | Hard -> "Hard"
-        | Literal -> "Liteal"
+        | Literal -> "Literal"
       in
       text ("LineBreak(" ^ break_txt ^ ")")
     | Group {should_break; doc} ->
@@ -353,4 +351,10 @@ let debug t =
   in
   let doc = to_doc t in
   to_string ~width:10 doc |> print_endline
-[@@live]
+
+let is_nil doc =
+  match doc with
+  | Nil -> true
+  | Text _ | LineSuffix _ | Concat _ | Indent _ | IfBreaks _ | LineBreak _
+  | Group _ | CustomLayout _ | BreakParent ->
+    false

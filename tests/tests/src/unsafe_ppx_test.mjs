@@ -5,7 +5,7 @@ import * as Pervasives from "@rescript/runtime/lib/es6/Pervasives.mjs";
 import * as Test_utils from "./test_utils.mjs";
 import * as Ffi_js_test from "./ffi_js_test.mjs";
 
-let x = "\\x01\\x02\\x03";
+let x = "\x01\x02\x03";
 
 let max = Math.max;
 

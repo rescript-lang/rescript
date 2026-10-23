@@ -258,26 +258,24 @@ function equal(a, b) {
     } else if ((a instanceof Date && b instanceof Date)) {
       return !(a > b || a < b);
     } else {
-      let result = {
-        contents: true
-      };
+      let result = true;
       let do_key_a = key => {
-        if (!Object.prototype.hasOwnProperty.call(b, key)) {
-          result.contents = false;
+        if (Object.prototype.hasOwnProperty.call(b, key)) {
           return;
         }
+        result = false;
       };
       let do_key_b = key => {
-        if (!Object.prototype.hasOwnProperty.call(a, key) || !equal(b[key], a[key])) {
-          result.contents = false;
+        if (Object.prototype.hasOwnProperty.call(a, key) && equal(b[key], a[key])) {
           return;
         }
+        result = false;
       };
       for_in(a, do_key_a);
-      if (result.contents) {
+      if (result) {
         for_in(b, do_key_b);
       }
-      return result.contents;
+      return result;
     }
   } else {
     return false;

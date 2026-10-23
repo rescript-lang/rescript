@@ -29,8 +29,21 @@
       "detail": {
         "kind": "signature",
         "details": {
-          "parameters": [ { "path": "unit", "genericTypeParameters": [] } ],
-          "returnType": { "path": "t", "genericTypeParameters": [] }
+          "parameters": [
+            {
+              "optional": false,
+              "type": {
+                "kind": "constructor",
+                "path": "unit",
+                "genericTypeParameters": []
+              }
+            }
+          ],
+          "returnType": {
+            "kind": "constructor",
+            "path": "t",
+            "genericTypeParameters": []
+          }
         }
       }
     },
@@ -72,9 +85,20 @@
             "kind": "signature",
             "details": {
               "parameters": [
-                { "path": "unit", "genericTypeParameters": [] }
+                {
+                  "optional": false,
+                  "type": {
+                    "kind": "constructor",
+                    "path": "unit",
+                    "genericTypeParameters": []
+                  }
+                }
               ],
-              "returnType": { "path": "t", "genericTypeParameters": [] }
+              "returnType": {
+                "kind": "constructor",
+                "path": "t",
+                "genericTypeParameters": []
+              }
             }
           }
         }
@@ -95,8 +119,17 @@
       "detail": {
         "kind": "signature",
         "details": {
-          "parameters": [],
-          "returnType": { "path": "unit", "genericTypeParameters": [] }
+          "parameters": [
+            {
+              "optional": false,
+              "type": { "kind": "variable", "name": "a", "weak": false }
+            }
+          ],
+          "returnType": {
+            "kind": "constructor",
+            "path": "unit",
+            "genericTypeParameters": []
+          }
         }
       }
     }

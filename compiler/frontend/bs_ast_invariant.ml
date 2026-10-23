@@ -22,26 +22,49 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(** Warning unused bs attributes
+(** Warn about unused compiler attributes.
     Note if we warn `deriving` too, 
     it may fail third party ppxes
 *)
-let is_bs_attribute txt =
+let is_checked_attribute txt =
   match txt with
-  | "as" | "config" | "ignore" | "int" | "optional" | "string" | "unwrap" ->
+  | "as" | "config" | "ignore" | "int" | "optional" | "res.hoistedFunction"
+  | "string" | "unwrap" ->
     true
   | _ -> false
 
-let warn_unused_attribute ((({txt; loc} as sloc), _) : Parsetree.attribute) =
+(* OCaml spellings of builtin attributes the compiler used to accept. *)
+let removed_ocaml_attribute txt =
+  match txt with
+  | "ocaml.deprecated" -> Some "use `@deprecated` instead."
+  | "ocaml.unboxed" -> Some "use `@unboxed` instead."
+  | "ocaml.immediate" -> Some "use `@immediate` instead."
+  | "ocaml.warnerror" -> Some "use `@warnerror` instead."
+  | "ocaml.boxed" -> Some "remove it: types are boxed unless marked `@unboxed`."
+  | "ocaml.deprecated_mutable" -> Some "remove it."
+  | "ocaml.text" -> Some "use a doc comment instead."
+  | "ocaml.warning" -> Some "use `@warning` instead."
+  | "ocaml.ppwarning" -> Some "use `@ppwarning` instead."
+  | _ -> None
+
+let check_removed_ocaml_attribute (({txt; loc}, _) : Parsetree.attribute) =
+  match removed_ocaml_attribute txt with
+  | Some hint ->
+    Location.raise_errorf ~loc "`@%s` is no longer supported, %s" txt hint
+  | None -> ()
+
+let check_removed_ocaml_extension (({txt; loc}, _) : Parsetree.extension) =
+  if txt = "ocaml.error" then
+    Location.raise_errorf ~loc
+      "`%%ocaml.error` is no longer supported, use `%%error` instead."
+
+let warn_unused_attribute
+    ((({txt; loc} as sloc), _) as attr : Parsetree.attribute) =
+  check_removed_ocaml_attribute attr;
   if
-    is_bs_attribute txt && (not loc.loc_ghost)
+    is_checked_attribute txt && (not loc.loc_ghost)
     && not (Used_attributes.is_used_attribute sloc)
-  then
-    (*
-         dump_used_attributes Format.err_formatter;
-       dump_attribute Format.err_formatter attr ;
-    *)
-    Location.prerr_warning loc (Bs_unused_attribute txt)
+  then Location.prerr_warning loc (Bs_unused_attribute txt)
 
 let warn_discarded_unused_attributes (attrs : Parsetree.attributes) =
   if attrs <> [] then Ext_list.iter attrs warn_unused_attribute
@@ -75,6 +98,10 @@ let emit_external_warnings : iterator =
             "built-in type `%s` can not be redefined " txt;
         super.type_declaration self ptyp);
     attribute = (fun _ attr -> warn_unused_attribute attr);
+    extension =
+      (fun self ext ->
+        check_removed_ocaml_extension ext;
+        super.extension self ext);
     structure_item =
       (fun self str_item ->
         match str_item.pstr_desc with
@@ -89,27 +116,27 @@ let emit_external_warnings : iterator =
     expr =
       (fun self ({pexp_loc = loc} as a) ->
         match a.pexp_desc with
-        | Pexp_constant const -> check_constant loc const
-        | Pexp_variant (s, None) when Ext_string.is_valid_hash_number s -> (
-          try ignore (Ext_string.hash_number_as_i32_exn s : int32)
-          with _ ->
-            Location.raise_errorf ~loc
-              "Integer literal exceeds int32 range. Use float or BigInt if \
-               larger values are required.")
+        | Pexp_constant const ->
+          check_constant loc const;
+          self.attributes self a.pexp_attributes
         | _ -> super.expr self a);
     label_declaration =
       (fun self lbl ->
-        Ext_list.iter lbl.pld_attributes (fun attr ->
-            match attr with
-            | {txt = "as"}, _ -> Used_attributes.mark_used_attribute attr
-            | _ -> ());
+        (* A field's [@as] is taken out of its attributes when it names the
+           field, so one still here is either a second one, which the type
+           checker rejects, or a payload that is not a name. The first is
+           reported already; the second is reported by nothing else, so let it
+           warn as the unused attribute it is. *)
+        Ext_list.iter lbl.pld_attributes
+          (fun (({txt}, payload) as attr : Parsetree.attribute) ->
+            if
+              txt = "as"
+              && Ast_payload.string_literal_of_payload payload <> None
+            then Used_attributes.mark_used_attribute attr);
         super.label_declaration self lbl);
     constructor_declaration =
       (fun self ({pcd_name = {txt; loc}} as ctr) ->
-        let _ =
-          Ast_untagged_variants.process_tag_type
-            ctr.pcd_attributes (* mark @as used in variant cases *)
-        in
+        ignore (Ast_untagged_variants.process_constructor_tag ctr);
         (match txt with
         | "false" | "true" | "()" ->
           Location.raise_errorf ~loc "%s can not be redefined " txt
@@ -118,7 +145,7 @@ let emit_external_warnings : iterator =
     value_description =
       (fun self v ->
         match v with
-        | ({pval_loc; pval_prim = [byte_name]; pval_type} :
+        | ({pval_loc; pval_prim = Some (Prim_name byte_name); pval_type} :
             Parsetree.value_description) -> (
           match byte_name with
           | ("%identity" | "%component_identity")
@@ -142,7 +169,9 @@ let emit_external_warnings : iterator =
     pat =
       (fun self (pat : Parsetree.pattern) ->
         match pat.ppat_desc with
-        | Ppat_constant constant -> check_constant pat.ppat_loc constant
+        | Ppat_constant constant ->
+          check_constant pat.ppat_loc constant;
+          self.attributes self pat.ppat_attributes
         | _ -> super.pat self pat);
   }
 
@@ -171,3 +200,25 @@ let emit_external_warnings_on_structure (stru : Parsetree.structure) =
 
 let emit_external_warnings_on_signature (sigi : Parsetree.signature) =
   emit_external_warnings.signature emit_external_warnings sigi
+
+(* The PPX bridge renames the [ocaml.]-prefixed builtins a PPX emits to their
+   bare names, so source written with them is checked before it reaches the
+   bridge. *)
+let removed_ocaml_spellings : iterator =
+  {
+    super with
+    attribute =
+      (fun self attr ->
+        check_removed_ocaml_attribute attr;
+        super.attribute self attr);
+    extension =
+      (fun self ext ->
+        check_removed_ocaml_extension ext;
+        super.extension self ext);
+  }
+
+let check_removed_ocaml_spellings_on_structure (stru : Parsetree.structure) =
+  removed_ocaml_spellings.structure removed_ocaml_spellings stru
+
+let check_removed_ocaml_spellings_on_signature (sigi : Parsetree.signature) =
+  removed_ocaml_spellings.signature removed_ocaml_spellings sigi

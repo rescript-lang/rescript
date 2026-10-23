@@ -20,3 +20,8 @@ let cancel_and_collect_callbacks:
   (list<packed_callbacks>, promise<'a, 'u, 'c>) => list<packed_callbacks>
  =
   (type x, callbacks_accumulator, p: promise<_, _, c>) => ();
+
+// type parameters written between term parameters are hoisted to the front
+let g = (x, type t, y: t) => y
+let g = (x: int, @attr type t u, y: t, type v, z: v) => (y, z)
+let g = (/* before */ x, type /* c1 */ t /* c2 */, y: t) => y

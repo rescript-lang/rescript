@@ -13,7 +13,7 @@ while (continuePrefix.contents && aPrefixLen.contents && bPrefixLen.contents && 
 
 // uncurried attribute shouldn't result in parens
 while (
-  rbt.compare(Js.Array2.unsafe_get(old, oldIter.contents), node.value) < 0
+  rbt.compare(Array.getUnsafe(old, oldIter.contents), node.value) < 0
 ) {
   ()
 }
@@ -178,8 +178,8 @@ let x = a && true && true
 let x = a && {let a = true; let b = true; a || b}
 let x = a && {let a = true; let b = true; a || b} && {let a = true; let b = true; a || b}
 
-let x = a && x => x->Js.log
-let x = a && (x => x->Js.log) && x => x->Js.log
+let x = a && x => x->Console.log
+let x = a && (x => x->Console.log) && x => x->Console.log
 
 let x = a && !b
 let x = a && !b && !c
@@ -280,27 +280,27 @@ let x = (true ? 0 : 1) + (false ? 1 : 0) +  (false ? 1 : 0)
 
 while (
   oldIter.contents < oldLen &&
-    rbt.compare(Js.Array2.unsafe_get(old, oldIter.contents),
+    rbt.compare(Array.getUnsafe(old, oldIter.contents),
       node.value,
     )
 ) {
-  disappear(Js.Array2.unsafe_get(old, oldIter.contents))
+  disappear(Array.getUnsafe(old, oldIter.contents))
   oldIter.contents = oldIter.contents + 1
 }
 
  while (
     oldIter.contents < oldLen &&
-      rbt.compare(Js.Array2.unsafe_get(old, oldIter.contents),
+      rbt.compare(Array.getUnsafe(old, oldIter.contents),
         node.value,
       ) < 0
   ) {
-    disappear(Js.Array2.unsafe_get(old, oldIter.contents))
+    disappear(Array.getUnsafe(old, oldIter.contents))
     oldIter.contents = oldIter.contents + 1
   }
 
 let x =
   oldIter.contents < oldLen &&
-  rbt.compare(Js.Array2.unsafe_get(old, oldIter.contents), node.value) < veryLongIdentifier;
+  rbt.compare(Array.getUnsafe(old, oldIter.contents), node.value) < veryLongIdentifier;
 
 // should be formatted on one line, i.e. NOT break
 let fullCircle = 2. *. pi
@@ -361,9 +361,9 @@ foo :=
   )->Array.of_list->ReasonReact.array} </div>
 
 let aggregateTotal = (forecast, ~audienceType) =>
-  Js.Nullable.toOption(forecast["audiences"])
+  Nullable.toOption(forecast["audiences"])
   ->Option.flatMap(item =>
-    Js.Dict.get(item, audienceType)
+    Dict.get(item, audienceType)
   )
   ->Option.map(item => {
     pages: item["reach"]["pages"],
@@ -376,7 +376,7 @@ React.useEffect4(
     switch (context.library, context.account) {
     | (Some(library), Some(account)) =>
       library.getBalance(account)
-      ->Promise.Js.catch(_ => {Promise.resolved(None)})
+      ->Promise.catch(_ => {Promise.resolve(None)})
       ->Promise.get(newBalance => {
           dispatch(
             LoadAddress(

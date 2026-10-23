@@ -1,0 +1,6 @@
+let values = Belt.Array.make(3, 42)
+
+switch Belt.Array.get(values, 1) {
+| Some(42) => Console.log("Belt runtime dependency resolved")
+| _ => JsError.throwWithMessage("Unexpected Belt.Array result")
+}

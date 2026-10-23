@@ -8,5 +8,5 @@ const { execBuild, execClean } = setup(import.meta.dirname);
 
 const output = await execBuild();
 const stderr = stripVTControlCharacters(output.stderr);
-assert.match(stderr, /M is exported twice/);
+assert.match(stderr, /This module has the same JavaScript name M/);
 await execClean();

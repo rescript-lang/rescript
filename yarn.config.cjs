@@ -14,7 +14,7 @@ const execPromise = util.promisify(exec);
  * @param {Yarn.Constraints.Context} ctx
  */
 async function enforceCompilerMeta({ Yarn }) {
-  const EXPECTED_VERSION = "13.0.0-alpha.6";
+  const EXPECTED_VERSION = "13.0.0-alpha.7";
 
   for (const workspace of Yarn.workspaces()) {
     const { ident } = workspace.pkg;
@@ -38,7 +38,6 @@ async function enforceCompilerMeta({ Yarn }) {
         "Cristiano Calcagno (https://github.com/cristianoc)",
         "Dmitry Zakharov (https://github.com/DZakh)",
         "Florian Hammerschmidt (https://github.com/fhammerschmidt)",
-        "Florian Verdonck (https://github.com/nojaf)",
         "Gabriel Nordeborn (https://github.com/zth)",
         "Hyeseong Kim (https://github.com/cometkim)",
         "Jaap Frolich (https://github.com/jfrolich)",
@@ -52,27 +51,28 @@ async function enforceCompilerMeta({ Yarn }) {
     }
   }
 
-  const { compilerVersionFile } = await import("#dev/paths");
-  const versionFile = await fs.readFile(compilerVersionFile, "utf8");
   const versionPattern = /^let version = "(?<version>[^"]+)"$/m;
-
-  if (process.argv.includes("--fix")) {
-    await fs.writeFile(
-      compilerVersionFile,
-      versionFile.replace(
-        versionPattern,
-        `let version = "${EXPECTED_VERSION}"`,
-      ),
-    );
-  } else {
-    const versionMatch = versionFile.match(versionPattern);
-    const foundVersion = versionMatch?.groups?.version;
-    if (foundVersion !== EXPECTED_VERSION) {
-      Yarn.workspace().error(
-        `compiler/common/bs_version.ml file need to be fixed; expected ${EXPECTED_VERSION}, found ${foundVersion}.`,
+  /** @param {string} path */
+  async function enforceMlVersionFile(path) {
+    const content = await fs.readFile(path, "utf8");
+    if (process.argv.includes("--fix")) {
+      await fs.writeFile(
+        path,
+        content.replace(versionPattern, `let version = "${EXPECTED_VERSION}"`),
       );
+    } else {
+      const foundVersion = content.match(versionPattern)?.groups?.version;
+      if (foundVersion !== EXPECTED_VERSION) {
+        Yarn.workspace().error(
+          `${path} file need to be fixed; expected ${EXPECTED_VERSION}, found ${foundVersion}.`,
+        );
+      }
     }
   }
+
+  const { compilerVersionFile } = await import("#dev/paths");
+  await enforceMlVersionFile(compilerVersionFile);
+  await enforceMlVersionFile("rewatch-ocaml/rewatch_version.ml");
 
   const rewatchCargoFile = "rewatch/Cargo.toml";
   const rewatchCargoContent = await fs.readFile(rewatchCargoFile, "utf8");

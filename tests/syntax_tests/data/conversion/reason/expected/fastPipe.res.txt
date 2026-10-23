@@ -15,8 +15,8 @@ let x = @attr ((@attr2 a)->f(b)->c(d))
 Route.urlToRoute(url)->ChangeView->self.send
 
 let aggregateTotal = (forecast, ~audienceType) =>
-  Js.Nullable.toOption(forecast["audiences"])
-  ->Option.flatMap(item => Js.Dict.get(item, audienceType))
+  Nullable.toOption(forecast["audiences"])
+  ->Option.flatMap(item => Dict.get(item, audienceType))
   ->Option.map(item => {
     pages: item["reach"]["pages"],
     views: item["reach"]["views"],

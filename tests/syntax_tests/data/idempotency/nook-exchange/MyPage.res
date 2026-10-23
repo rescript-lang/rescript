@@ -65,7 +65,7 @@ module ProfileTextarea = {
     let (isEditing, setIsEditing) = React.useState(() => false)
     let (profileText, setProfileText) = React.useState(() => user.profileText)
 
-    let textareaRef = React.useRef(Js.Nullable.null)
+    let textareaRef = React.useRef(Nullable.null)
     React.useEffect1(() => {
       if isEditing {
         open Webapi.Dom
@@ -157,11 +157,11 @@ let make = (~user: User.t, ~urlRest, ~url) => {
     {switch list {
     | Some(list) => <UserListBrowser user list url me=true />
     | None =>
-      if user.items->Js.Dict.keys->Js.Array.length > 0 {
+      if user.items->Dict.keysToArray->Array.length > 0 {
         <UserProfileBrowser
           username=user.username
           userItems={user.items
-          ->Js.Dict.entries
+          ->Dict.toArray
           ->Belt.Array.mapU(((itemKey, item)) => (
             Belt.Option.getExn(User.fromItemKey(~key=itemKey)),
             item,

@@ -192,20 +192,20 @@ let discover_subpackages_and_populate ~workspace_root
   | None -> ());
 
   (match resolve_node_modules_paths with
-  | Some node_modules_paths ->
-    node_modules_paths
-    |> List.iter (fun node_module_path ->
-           let uri = Uri.of_path node_module_path in
-           match
-             Analysis.Packages.new_bs_package ~root_path:node_module_path
-           with
-           | Some package ->
-             Hashtbl.add analysis_state.root_for_uri uri package.root_path;
-             Hashtbl.add analysis_state.packages_by_root package.root_path
-               package
-           | None -> ());
-    ()
-  | None -> ())
+    | Some node_modules_paths ->
+      node_modules_paths
+      |> List.iter (fun node_module_path ->
+          let uri = Uri.of_path node_module_path in
+          match
+            Analysis.Packages.new_bs_package ~root_path:node_module_path
+          with
+          | Some package ->
+            Hashtbl.add analysis_state.root_for_uri uri package.root_path;
+            Hashtbl.add analysis_state.packages_by_root package.root_path
+              package
+          | None -> ());
+      ()
+    | None -> ())
   |> ignore
 
 let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
@@ -228,13 +228,13 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
   let compiler_config =
     analysis_state.packages_by_root |> Hashtbl.to_seq
     |> Seq.filter_map (fun (root_path, _) ->
-           match Compiler_config.parse ~root:root_path ~fs:state.fs with
-           | Ok config -> Some (Uri.of_path root_path, config)
-           | Error _ ->
-             (* NOTE: Surface malformed package configs to the client. We ignore
+        match Compiler_config.parse ~root:root_path ~fs:state.fs with
+        | Ok config -> Some (Uri.of_path root_path, config)
+        | Error _ ->
+          (* NOTE: Surface malformed package configs to the client. We ignore
                 them for now so initialization can continue with any remaining
                 valid packages. *)
-             None)
+          None)
     |> Compiler_config.Uri_map.of_seq
   in
 
@@ -607,14 +607,14 @@ let on_notification notification (server : State.t Server.t) =
     let watchers =
       [WatchKind.Create; Change; Delete]
       |> List.map (fun kind ->
-             FileSystemWatcher.create
-               ~kind
-                 (* NOTE: Clients dont send notification `workspace/didChangeWatchedFiles`
+          FileSystemWatcher.create
+            ~kind
+              (* NOTE: Clients dont send notification `workspace/didChangeWatchedFiles`
                     when pattern is a relative path `lib/bs/.compiler.log` of full path
                     `{workspace_root}/lib/bs/.compiler.log`. The glob should start with `**`
                   *)
-               ~globPattern:(`Pattern ("**/lib/bs/" ^ Constants.compiler_log))
-               ())
+            ~globPattern:(`Pattern ("**/lib/bs/" ^ Constants.compiler_log))
+            ())
     in
 
     let registerOptions =

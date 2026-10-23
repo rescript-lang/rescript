@@ -1,0 +1,1 @@
+- Import the default export, instead of the module namespace, for `@module` externals whose `@scope` starts with `"default"`.

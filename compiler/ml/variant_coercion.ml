@@ -6,12 +6,12 @@ type variant_runtime_representation_issue =
   | Mismatched_as_payload of {
       constructor_name: string;
       expected_typename: Path.t;
-      as_payload: Ast_untagged_variants.tag_type option;
+      as_payload: Variant_runtime.literal_tag option;
     }
   | As_payload_not_elgible_for_coercion of {
       constructor_name: string;
       expected_typename: Path.t;
-      as_payload: Ast_untagged_variants.tag_type;
+      as_payload: Variant_runtime.literal_tag;
     }
   | Inline_record_cannot_be_coerced of {constructor_name: string}
   | Cannot_coerce_non_unboxed_with_payload of {
@@ -42,11 +42,12 @@ let variant_has_case_covering_type
 
 (* Checks if every case of the variant has the same runtime representation as the target type. *)
 let variant_has_same_runtime_representation_as_target ~(target_path : Path.t)
-    ~unboxed (constructors : Types.constructor_declaration list) =
+    ~unboxed ~layout (constructors : Types.constructor_declaration list) =
   (* Helper function to check if a constructor has the same runtime representation as the target type *)
-  let has_same_runtime_representation (c : Types.constructor_declaration) =
+  let has_same_runtime_representation position
+      (c : Types.constructor_declaration) =
     let args = c.cd_args in
-    let as_payload = Ast_untagged_variants.process_tag_type c.cd_attributes in
+    let as_payload = Variant_runtime.constructor_tag layout position in
 
     match args with
     | Cstr_tuple [{desc = Tconstr (p, [], _)}] when unboxed ->
@@ -71,48 +72,27 @@ let variant_has_same_runtime_representation_as_target ~(target_path : Path.t)
     | Cstr_tuple [] -> (
       (* Check that @as payloads match with the target path to coerce to.
            No @as means the default encoding, which is string *)
-      match as_payload with
-      | None | Some (String _) ->
-        if Path.same target_path Predef.path_string then None
-        else
-          Some
-            (Mismatched_as_payload
-               {
-                 constructor_name = Ident.name c.cd_id;
-                 expected_typename = target_path;
-                 as_payload;
-               })
-      | Some (Int _) ->
-        if Path.same target_path Predef.path_int then None
-        else
-          Some
-            (Mismatched_as_payload
-               {
-                 constructor_name = Ident.name c.cd_id;
-                 expected_typename = target_path;
-                 as_payload;
-               })
-      | Some (Float _) ->
-        if Path.same target_path Predef.path_float then None
-        else
-          Some
-            (Mismatched_as_payload
-               {
-                 constructor_name = Ident.name c.cd_id;
-                 expected_typename = target_path;
-                 as_payload;
-               })
-      | Some (BigInt _) ->
-        if Path.same target_path Predef.path_bigint then None
-        else
-          Some
-            (Mismatched_as_payload
-               {
-                 constructor_name = Ident.name c.cd_id;
-                 expected_typename = target_path;
-                 as_payload;
-               })
-      | Some ((Null | Undefined | Bool _ | Untagged _) as as_payload) ->
+      (* Each literal kind coerces to exactly one predefined type; the kinds
+         with no such type cannot be coerced at all. *)
+      let coercion =
+        match as_payload with
+        | None | Some (String _) -> `Coerces_to Predef.path_string
+        | Some (Int _) -> `Coerces_to Predef.path_int
+        | Some (Float _) -> `Coerces_to Predef.path_float
+        | Some (BigInt _) -> `Coerces_to Predef.path_bigint
+        | Some ((Null | Undefined | Bool _) as payload) -> `Not_eligible payload
+      in
+      match coercion with
+      | `Coerces_to path when Path.same target_path path -> None
+      | `Coerces_to _ ->
+        Some
+          (Mismatched_as_payload
+             {
+               constructor_name = Ident.name c.cd_id;
+               expected_typename = target_path;
+               as_payload;
+             })
+      | `Not_eligible as_payload ->
         Some
           (As_payload_not_elgible_for_coercion
              {
@@ -132,16 +112,27 @@ let variant_has_same_runtime_representation_as_target ~(target_path : Path.t)
         (Inline_record_cannot_be_coerced {constructor_name = Ident.name c.cd_id})
   in
 
-  List.filter_map has_same_runtime_representation constructors
+  List.mapi has_same_runtime_representation constructors
+  |> List.filter_map Fun.id
 
 let can_try_coerce_variant_to_primitive
     ((_, p, typedecl) : Path.t * Path.t * Types.type_declaration) =
   match typedecl with
-  | {type_kind = Type_variant constructors; type_params = []; type_attributes}
+  | {
+   type_kind = Type_variant (constructors, layout_ref);
+   type_params = [];
+   type_representation;
+  }
     when not (Path.same p Predef.path_bool) ->
     (* bool is represented as a variant internally, so we need to account for that *)
     (* TODO(subtype-errors) Report about bool? *)
-    Some (p, constructors, type_attributes |> Ast_untagged_variants.has_untagged)
+    let layout = Variant_runtime.get_layout layout_ref in
+    Some
+      ( p,
+        constructors,
+        layout,
+        type_representation = Unboxed
+        || (Variant_runtime.configuration layout).unboxed )
   | _ -> None
 
 let can_try_coerce_variant_to_primitive_opt p =
@@ -149,12 +140,8 @@ let can_try_coerce_variant_to_primitive_opt p =
   | None -> None
   | Some p -> can_try_coerce_variant_to_primitive p
 
-let variant_representation_matches (c1_attrs : Parsetree.attributes)
-    (c2_attrs : Parsetree.attributes) =
-  match
-    ( Ast_untagged_variants.process_tag_type c1_attrs,
-      Ast_untagged_variants.process_tag_type c2_attrs )
-  with
+let variant_representation_matches tag1 tag2 =
+  match (tag1, tag2) with
   | None, None -> true
   | Some s1, Some s2 when s1 = s2 -> true
   | _ -> false
@@ -178,13 +165,18 @@ type variant_configuration_issue =
   | Tag_name_not_matching of {left_tag: string option; right_tag: string option}
   | Incompatible_constructor_count of {constructor_names: string list}
 
-let variant_configuration_can_be_coerced (a1 : Parsetree.attributes)
-    (a2 : Parsetree.attributes) =
+(* Legacy single-payload unboxing is recorded in [type_representation], while
+   declaration-wide variant configuration is recorded in the layout. *)
+let runtime_configuration ~type_representation ~layout =
+  let ({Variant_runtime.unboxed} as configuration) =
+    Variant_runtime.configuration layout
+  in
+  {configuration with unboxed = type_representation = Types.Unboxed || unboxed}
+
+let variant_configuration_can_be_coerced (c1 : Variant_runtime.configuration)
+    (c2 : Variant_runtime.configuration) =
   let unboxed =
-    match
-      ( Ast_untagged_variants.process_untagged a1,
-        Ast_untagged_variants.process_untagged a2 )
-    with
+    match (c1.unboxed, c2.unboxed) with
     | true, true | false, false -> Ok ()
     | left, right ->
       Error
@@ -192,10 +184,7 @@ let variant_configuration_can_be_coerced (a1 : Parsetree.attributes)
            {left_unboxed = left; right_unboxed = right})
   in
   let tag =
-    match
-      ( Ast_untagged_variants.process_tag_name a1,
-        Ast_untagged_variants.process_tag_name a2 )
-    with
+    match (c1.tag_name, c2.tag_name) with
     | Some tag1, Some tag2 when tag1 = tag2 -> Ok ()
     | None, None -> Ok ()
     | tag1, tag2 ->
@@ -241,59 +230,50 @@ let variant_configuration_can_be_coerced_raises ~is_spread_context ~left_loc
               error = TagName {left_tag; right_tag};
             }))
 
-let can_coerce_polyvariant_to_variant ~row_fields ~variant_constructors
-    ~type_attributes =
+let can_coerce_polyvariant_to_variant ~row_fields ~variant_constructors ~layout
+    ~unboxed =
   let polyvariant_runtime_representations =
     row_fields
     |> List.filter_map (fun (label, (field : Types.row_field)) ->
-           (* Check that there's no payload in the polyvariant *)
-           match field with
-           | Rpresent None -> Some label
-           | _ -> None)
+        (* Check that there's no payload in the polyvariant *)
+        match field with
+        | Rpresent None -> Some label
+        | _ -> None)
   in
   if List.length polyvariant_runtime_representations <> List.length row_fields
   then
     (* Error: At least one polyvariant constructor has a payload. Cannot have payloads. *)
     Error `PolyvariantConstructorHasPayload
-  else
-    let is_unboxed = Ast_untagged_variants.has_untagged type_attributes in
-    if
-      List.for_all
-        (fun polyvariant_value ->
-          variant_constructors
-          |> List.exists (fun (c : Types.constructor_declaration) ->
-                 let constructor_name = Ident.name c.cd_id in
-                 match
-                   Ast_untagged_variants.process_tag_type c.cd_attributes
-                 with
-                 | Some (String as_runtime_string) ->
-                   (* `@as("")`, does the configured string match the polyvariant value? *)
-                   as_runtime_string = polyvariant_value
-                 | Some _ ->
-                   (* Any other `@as` can't match since it's by definition not a string *)
-                   false
-                 | None -> (
-                   (* No `@as` means the runtime representation will be the constructor
+  else if
+    List.for_all
+      (fun polyvariant_value ->
+        variant_constructors
+        |> List.mapi (fun position (c : Types.constructor_declaration) ->
+            let constructor_name = Ident.name c.cd_id in
+            match Variant_runtime.constructor_tag layout position with
+            | Some (String as_runtime_string) ->
+              (* `@as("")`, does the configured string match the polyvariant value? *)
+              as_runtime_string = polyvariant_value
+            | Some _ ->
+              (* Any other `@as` can't match since it's by definition not a string *)
+              false
+            | None -> (
+              (* No `@as` means the runtime representation will be the constructor
                       name as a string.
 
                       However, there's a special case with unboxed types where there's a
                       string catch-all case. In that case, any polyvariant will match,
                       since the catch-all case will match any string. *)
-                   match (is_unboxed, c.cd_args) with
-                   | true, Cstr_tuple [{desc = Tconstr (p, _, _)}] ->
-                     Path.same p Predef.path_string
-                   | _ -> polyvariant_value = constructor_name)))
-        polyvariant_runtime_representations
-    then Ok ()
-    else Error `Unknown
+              match (unboxed, c.cd_args) with
+              | true, Cstr_tuple [{desc = Tconstr (p, _, _)}] ->
+                Path.same p Predef.path_string
+              | _ -> polyvariant_value = constructor_name))
+        |> List.exists Fun.id)
+      polyvariant_runtime_representations
+  then Ok ()
+  else Error `Unknown
 
 let type_is_variant (typ : (Path.t * Path.t * Types.type_declaration) option) =
   match typ with
   | Some (_, _, {type_kind = Type_variant _; _}) -> true
   | _ -> false
-
-let has_res_pat_variant_spread_attribute attrs =
-  attrs
-  |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
-         txt = "res.patVariantSpread")
-  |> Option.is_some

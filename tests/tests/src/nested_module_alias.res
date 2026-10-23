@@ -1,7 +1,7 @@
-module L = Belt.List
+module L = List
 
 let v = x => {
-  module H = Belt.List
+  module H = List
   module U = L
   (H.length(x), U.length(x))
 }

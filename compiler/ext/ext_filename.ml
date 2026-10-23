@@ -28,14 +28,6 @@ let is_dir_sep_win_cygwin c = c = '/' || c = '\\' || c = ':'
 
 let is_dir_sep = if Sys.unix then is_dir_sep_unix else is_dir_sep_win_cygwin
 
-let chop_extension_maybe name =
-  let rec search_dot i =
-    if i < 0 || is_dir_sep (String.unsafe_get name i) then name
-    else if String.unsafe_get name i = '.' then String.sub name 0 i
-    else search_dot (i - 1)
-  in
-  search_dot (String.length name - 1)
-
 let get_extension_maybe name =
   let name_len = String.length name in
   let rec search_dot name i name_len =
@@ -44,17 +36,6 @@ let get_extension_maybe name =
     else search_dot name (i - 1) name_len
   in
   search_dot name (name_len - 1) name_len
-
-let chop_all_extensions_maybe name =
-  let rec search_dot i last =
-    if i < 0 || is_dir_sep (String.unsafe_get name i) then
-      match last with
-      | None -> name
-      | Some i -> String.sub name 0 i
-    else if String.unsafe_get name i = '.' then search_dot (i - 1) (Some i)
-    else search_dot (i - 1) last
-  in
-  search_dot (String.length name - 1) None
 
 let new_extension name (ext : string) =
   let rec search_dot name i ext =
@@ -69,64 +50,16 @@ let new_extension name (ext : string) =
   in
   search_dot name (String.length name - 1) ext
 
-(** TODO: improve efficiency
-    given a path, calcuate its module name 
-    Note that `ocamlc.opt -c aa.xx.mli` gives `aa.xx.cmi`
-    we can not strip all extensions, otherwise
-    we can not tell the difference between "x.cpp.ml" 
-    and "x.ml"
-*)
-let module_name name =
-  let rec search_dot i name =
-    if i < 0 then Ext_string.capitalize_ascii name
-    else if String.unsafe_get name i = '.' then Ext_string.capitalize_sub name i
-    else search_dot (i - 1) name
-  in
-  let name = Filename.basename name in
-  let name_len = String.length name in
-  search_dot (name_len - 1) name
+(* [output_prefix] is the path of a compilation unit's output files without
+   extension, e.g. [src/foo] or [src/foo-Ns]. Only an ASCII first letter is
+   capitalized, so that [case] lets importers restore the file name. *)
+let module_name output_prefix =
+  String.capitalize_ascii (Filename.basename output_prefix)
 
-type module_info = {module_name: string; case: bool}
-
-let rec valid_module_name_aux name off len =
-  if off >= len then true
-  else
-    let c = String.unsafe_get name off in
-    match c with
-    | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '\'' | '.' | '[' | ']' ->
-      valid_module_name_aux name (off + 1) len
-    | _ -> false
-
-type state = Invalid | Upper | Lower
-
-let valid_module_name name len =
-  if len = 0 then Invalid
-  else
-    let c = String.unsafe_get name 0 in
-    match c with
-    | 'A' .. 'Z' -> if valid_module_name_aux name 1 len then Upper else Invalid
-    | 'a' .. 'z' | '0' .. '9' | '_' | '[' | ']' ->
-      if valid_module_name_aux name 1 len then Lower else Invalid
-    | _ -> Invalid
-
-let as_module ~basename =
-  let rec search_dot i name name_len =
-    if i < 0 then
-      (* Input e.g, [a_b] *)
-      match valid_module_name name name_len with
-      | Invalid -> None
-      | Upper -> Some {module_name = name; case = true}
-      | Lower ->
-        Some {module_name = Ext_string.capitalize_ascii name; case = false}
-    else if String.unsafe_get name i = '.' then
-      (*Input e.g, [A_b] *)
-      match valid_module_name name i with
-      | Invalid -> None
-      | Upper ->
-        Some {module_name = Ext_string.capitalize_sub name i; case = true}
-      | Lower ->
-        Some {module_name = Ext_string.capitalize_sub name i; case = false}
-    else search_dot (i - 1) name name_len
-  in
-  let name_len = String.length basename in
-  search_dot (name_len - 1) basename name_len
+let case output_prefix : Ext_js_file_kind.case =
+  let name = Filename.basename output_prefix in
+  if name <> "" then
+    match name.[0] with
+    | 'a' .. 'z' -> Little
+    | _ -> Upper
+  else Upper

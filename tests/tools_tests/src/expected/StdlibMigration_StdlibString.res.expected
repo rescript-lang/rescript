@@ -35,4 +35,3 @@ let r3 =
     ~offset as _,
     ~input as _,
   ) => group1 ++ group2 ++ group3)
-

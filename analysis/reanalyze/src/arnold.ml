@@ -5,8 +5,6 @@ let print_pos ppf (pos : Lexing.position) =
     (file |> Filename.basename)
     line
 
-module String_set = Set.Make (String)
-
 (** Type Definitions *)
 module Function_name = struct
   type t = string
@@ -60,10 +58,10 @@ module Function_call = struct
         function_args =
           t.function_args
           |> List.map (fun (arg : Function_args.arg) ->
-                 {
-                   arg with
-                   function_name = arg.function_name |> substitute_name ~sub;
-                 });
+              {
+                arg with
+                function_name = arg.function_name |> substitute_name ~sub;
+              });
       }
 
   let no_args function_name = {function_name; function_args = []}
@@ -283,8 +281,8 @@ end = struct
 
   let to_string x =
     ((match x.some with
-     | None -> []
-     | Some p -> ["some: " ^ Progress.to_string p])
+       | None -> []
+       | Some p -> ["some: " ^ Progress.to_string p])
     @
     match x.none with
     | None -> []
@@ -492,11 +490,11 @@ module Function_table = struct
     in
     definitions
     |> List.iteri (fun i (function_name, kind, body) ->
-           Format.fprintf ppf "@,@{<dim>%d@} @{<info>%s%s@}: %s" (i + 1)
-             function_name (Kind.to_string kind)
-             (match body with
-             | Some command -> Command.to_string command
-             | None -> "None"));
+        Format.fprintf ppf "@,@{<dim>%d@} @{<info>%s%s@}: %s" (i + 1)
+          function_name (Kind.to_string kind)
+          (match body with
+          | Some command -> Command.to_string command
+          | None -> "None"));
     Format.fprintf ppf "@]"
 
   let dump tbl = Format.fprintf Format.std_formatter "%a@." print tbl
@@ -535,7 +533,8 @@ module Find_functions_called = struct
     let super = Tast_mapper.default in
     let expr (self : Tast_mapper.mapper) (e : Typedtree.expression) =
       (match e.exp_desc with
-      | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}} ->
+      | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}}
+      | Texp_tagged_template {tag = {exp_desc = Texp_ident (callee, _, _)}} ->
         let function_name = Path.name callee in
         callees := !callees |> String_set.add function_name
       | _ -> ());
@@ -546,7 +545,7 @@ module Find_functions_called = struct
   let find_callees (expression : Typedtree.expression) =
     let is_function =
       match expression.exp_desc with
-      | Texp_function {arity = None} -> true
+      | Texp_function _ -> true
       | _ -> false
     in
     let callees = ref String_set.empty in
@@ -630,25 +629,24 @@ module Extend_function_table = struct
         let function_name = Path.name callee in
         args
         |> List.iter (fun ((arg_label : Asttypes.arg_label), arg_opt) ->
-               match (arg_label, arg_opt |> extract_labelled_argument) with
-               | Labelled {txt = label}, Some (path, loc)
-                 when path
-                      |> Function_table.is_in_function_in_table ~function_table
-                 ->
-                 function_table
-                 |> Function_table.add_label_to_kind ~function_name ~label;
-                 if config.Dce_config.cli.debug then
-                   Log_.warning ~for_stats:false ~loc
-                     (Termination
-                        {
-                          termination = TerminationAnalysisInternal;
-                          message =
-                            Format.asprintf
-                              "@{<info>%s@} is parametric \
-                               ~@{<info>%s@}=@{<info>%s@}"
-                              function_name label (Path.name path);
-                        })
-               | _ -> ())
+            match (arg_label, arg_opt |> extract_labelled_argument) with
+            | Labelled {txt = label}, Some (path, loc)
+              when path
+                   |> Function_table.is_in_function_in_table ~function_table ->
+              function_table
+              |> Function_table.add_label_to_kind ~function_name ~label;
+              if config.Dce_config.cli.debug then
+                Log_.warning ~for_stats:false ~loc
+                  (Termination
+                     {
+                       termination = TerminationAnalysisInternal;
+                       message =
+                         Format.asprintf
+                           "@{<info>%s@} is parametric \
+                            ~@{<info>%s@}=@{<info>%s@}"
+                           function_name label (Path.name path);
+                     })
+            | _ -> ())
       | _ -> ());
       super.expr self e
     in
@@ -680,50 +678,47 @@ module Check_expression_well_formed = struct
         let function_name = Path.name function_path in
         args
         |> List.iter (fun ((arg_label : Asttypes.arg_label), arg_opt) ->
-               match
-                 arg_opt |> Extend_function_table.extract_labelled_argument
-               with
-               | Some (path, loc) -> (
-                 match arg_label with
-                 | Labelled {txt = label} -> (
-                   if
-                     function_table
-                     |> Function_table.function_get_kind_of_label ~function_name
-                          ~label
-                     <> None
-                   then ()
-                   else
-                     match
-                       Hashtbl.find_opt value_bindings_table function_name
-                     with
-                     | Some (_pos, (body : Typedtree.expression), _)
-                       when path
-                            |> Function_table.is_in_function_in_table
-                                 ~function_table ->
-                       let in_table =
-                         function_path
+            match
+              arg_opt |> Extend_function_table.extract_labelled_argument
+            with
+            | Some (path, loc) -> (
+              match arg_label with
+              | Labelled {txt = label} -> (
+                if
+                  function_table
+                  |> Function_table.function_get_kind_of_label ~function_name
+                       ~label
+                  <> None
+                then ()
+                else
+                  match Hashtbl.find_opt value_bindings_table function_name with
+                  | Some (_pos, (body : Typedtree.expression), _)
+                    when path
                          |> Function_table.is_in_function_in_table
-                              ~function_table
-                       in
-                       if not in_table then
-                         function_table
-                         |> Function_table.add_function ~function_name;
-                       function_table
-                       |> Function_table.add_label_to_kind ~function_name ~label;
-                       if config.Dce_config.cli.debug then
-                         Log_.warning ~for_stats:false ~loc:body.exp_loc
-                           (Termination
-                              {
-                                termination = TerminationAnalysisInternal;
-                                message =
-                                  Format.asprintf
-                                    "Extend Function Table with @{<info>%s@} \
-                                     as parametric ~@{<info>%s@}=@{<info>%s@}"
-                                    function_name label (Path.name path);
-                              })
-                     | _ -> check_ident ~path ~loc)
-                 | Optional _ | Nolabel -> check_ident ~path ~loc)
-               | _ -> ());
+                              ~function_table ->
+                    let in_table =
+                      function_path
+                      |> Function_table.is_in_function_in_table ~function_table
+                    in
+                    if not in_table then
+                      function_table
+                      |> Function_table.add_function ~function_name;
+                    function_table
+                    |> Function_table.add_label_to_kind ~function_name ~label;
+                    if config.Dce_config.cli.debug then
+                      Log_.warning ~for_stats:false ~loc:body.exp_loc
+                        (Termination
+                           {
+                             termination = TerminationAnalysisInternal;
+                             message =
+                               Format.asprintf
+                                 "Extend Function Table with @{<info>%s@} as \
+                                  parametric ~@{<info>%s@}=@{<info>%s@}"
+                                 function_name label (Path.name path);
+                           })
+                  | _ -> check_ident ~path ~loc)
+              | Optional _ | Nolabel -> check_ident ~path ~loc)
+            | _ -> ());
         e
       | _ -> super.expr self e
     in
@@ -778,14 +773,14 @@ module Compile = struct
           let args_from_kind =
             inner_function_definition.kind
             |> List.map (fun (entry : Kind.entry) ->
-                   ( Asttypes.Labelled {txt = entry.label; loc = Location.none},
-                     Some
-                       {
-                         expr with
-                         exp_desc =
-                           Texp_ident
-                             (Path.Pident (Ident.create entry.label), l, vd);
-                       } ))
+                ( Asttypes.Labelled {txt = entry.label; loc = Location.none},
+                  Some
+                    {
+                      expr with
+                      exp_desc =
+                        Texp_ident
+                          (Path.Pident (Ident.create entry.label), l, vd);
+                    } ))
           in
           ( Path.Pident (Ident.create inner_function_name),
             args_from_kind @ args_to_extend )
@@ -802,9 +797,9 @@ module Compile = struct
           let arg_opt =
             args
             |> List.find_opt (fun arg ->
-                   match arg with
-                   | Asttypes.Labelled {txt = s}, Some _ -> s = label
-                   | _ -> false)
+                match arg with
+                | Asttypes.Labelled {txt = s}, Some _ -> s = label
+                | _ -> false)
           in
           let arg_opt =
             match arg_opt with
@@ -871,6 +866,13 @@ module Compile = struct
         | None -> expr |> expression ~ctx |> eval_args ~args ~ctx)
     | Texp_apply {funct = expr; args} ->
       expr |> expression ~ctx |> eval_args ~args ~ctx
+    | Texp_tagged_template {tag; values} ->
+      let args =
+        List.map (fun value -> (Asttypes.Nolabel, Some value)) values
+      in
+      tag |> expression ~ctx |> eval_args ~args ~ctx
+    | Texp_template {values} ->
+      values |> List.map (expression ~ctx) |> Command.sequence
     | Texp_let
         ( Recursive,
           [{vb_pat = {pat_desc = Tpat_var (id, _); pat_loc}; vb_expr}],
@@ -909,7 +911,7 @@ module Compile = struct
       let commands =
         (value_bindings
         |> List.map (fun (vb : Typedtree.value_binding) ->
-               vb.vb_expr |> expression ~ctx))
+            vb.vb_expr |> expression ~ctx))
         @ [in_expr |> expression ~ctx]
       in
       Command.sequence commands
@@ -937,7 +939,7 @@ module Compile = struct
         let open Command in
         c +++ ConstrOption Rnone
       | _ -> c)
-    | Texp_function {case = case_} -> case ~ctx case_
+    | Texp_function {body} -> body |> expression ~ctx
     | Texp_match (e, cases_ok, cases_exn, _partial)
       when not
              (cases_exn
@@ -988,6 +990,11 @@ module Compile = struct
       [e1; e2] |> List.map (expression ~ctx) |> Command.unordered_sequence
     | Texp_tuple expressions | Texp_array expressions ->
       expressions |> List.map (expression ~ctx) |> Command.unordered_sequence
+    | Texp_dict entries ->
+      entries
+      |> List.map (function Typedtree.Tdict_entry (_, e) | Tdict_spread e ->
+          expression ~ctx e)
+      |> Command.unordered_sequence
     | Texp_assert _ -> Command.nothing
     | Texp_try (e, cases) ->
       let c_e = e |> expression ~ctx in
@@ -1007,9 +1014,16 @@ module Compile = struct
     | Texp_for_await_of (_id, _pat, e1, e2) ->
       let open Command in
       expression ~ctx e1 +++ expression ~ctx e2
-    | Texp_send _ ->
-      not_implemented "Texp_send";
-      assert false
+    | Texp_object_literal fields ->
+      (* Fields are emitted and evaluated in source order *)
+      fields
+      |> List.map (fun (_name, e) -> e |> expression ~ctx)
+      |> Command.sequence
+    | Texp_object_get (e, _) -> e |> expression ~ctx
+    | Texp_object_set (e1, _, e2) ->
+      (* Receiver first, then the assigned value *)
+      let open Command in
+      expression ~ctx e1 +++ expression ~ctx e2
     | Texp_letmodule _ ->
       not_implemented "Texp_letmodule";
       assert false
@@ -1019,12 +1033,8 @@ module Compile = struct
     | Texp_pack _ ->
       not_implemented "Texp_pack";
       assert false
-    | Texp_extension_constructor _ when true ->
-      not_implemented "Texp_extension_constructor";
-      assert false
-    | _ ->
-      (* ocaml 4.08: Texp_letop(_) | Texp_open(_) *)
-      not_implemented "Texp_letop(_) | Texp_open(_)";
+    | Texp_break | Texp_continue ->
+      not_implemented "Texp_break | Texp_continue";
       assert false
 
   and expression_opt ~ctx e_opt =
@@ -1081,9 +1091,9 @@ module Call_stack = struct
     in
     frames
     |> List.iter (fun ((function_call : Function_call.t), i, pos) ->
-           Format.fprintf ppf "\n    @{<dim>%d@} %s (%a)" i
-             (Function_call.to_string function_call)
-             print_pos pos)
+        Format.fprintf ppf "\n    @{<dim>%d@} %s (%a)" i
+          (Function_call.to_string function_call)
+          print_pos pos)
 end
 
 module Eval = struct
@@ -1175,7 +1185,7 @@ module Eval = struct
           in
           cache
           |> update_cache ~config ~function_call ~loc ~state:state_after_call;
-          (* Invariant: run should restore the callStack *)
+          (* Invariant: run should restore the call_stack *)
           call_stack |> Call_stack.remove_function_call ~function_call;
           let trace = Trace.Tcall (call, state_after_call.progress) in
           {state_after_call with trace})
@@ -1235,9 +1245,9 @@ module Eval = struct
       let states =
         commands
         |> List.map (fun c ->
-               c
-               |> run ~config ~cache ~call_stack ~function_args ~function_table
-                    ~made_progress_on ~state:state_no_trace)
+            c
+            |> run ~config ~cache ~call_stack ~function_args ~function_table
+                 ~made_progress_on ~state:state_no_trace)
       in
       State.seq state (states |> State.unordered_sequence)
     | Nondet commands ->
@@ -1246,9 +1256,9 @@ module Eval = struct
       let states =
         commands
         |> List.map (fun c ->
-               c
-               |> run ~config ~cache ~call_stack ~function_args ~function_table
-                    ~made_progress_on ~state:state_no_trace)
+            c
+            |> run ~config ~cache ~call_stack ~function_args ~function_table
+                 ~made_progress_on ~state:state_no_trace)
       in
       State.seq state (states |> State.nondet)
     | SwitchOption {function_call; loc; some; none} -> (
@@ -1314,8 +1324,8 @@ let progress_functions_from_attributes attributes =
       | Some (TuplePayload l) ->
         l
         |> List.filter_map (function
-             | Annotation.IdentPayload lid -> Some (lid_to_string lid)
-             | _ -> None)
+          | Annotation.IdentPayload lid -> Some (lid_to_string lid)
+          | _ -> None)
       | _ -> [])
   else None
 
@@ -1325,14 +1335,12 @@ let traverse_ast ~config ~value_bindings_table =
     (* Update the table of value bindings for variables *)
     value_bindings
     |> List.iter (fun (vb : Typedtree.value_binding) ->
-           match vb.vb_pat.pat_desc with
-           | Tpat_var (id, {loc = {loc_start = pos}}) ->
-             let callees =
-               lazy (Find_functions_called.find_callees vb.vb_expr)
-             in
-             Hashtbl.replace value_bindings_table (Ident.name id)
-               (pos, vb.vb_expr, callees)
-           | _ -> ());
+        match vb.vb_pat.pat_desc with
+        | Tpat_var (id, {loc = {loc_start = pos}}) ->
+          let callees = lazy (Find_functions_called.find_callees vb.vb_expr) in
+          Hashtbl.replace value_bindings_table (Ident.name id)
+            (pos, vb.vb_expr, callees)
+        | _ -> ());
     let progress_functions, functions_to_analyze =
       if rec_flag = Asttypes.Nonrecursive then (String_set.empty, [])
       else
@@ -1385,17 +1393,17 @@ let traverse_ast ~config ~value_bindings_table =
       in
       recursive_definitions
       |> List.iter (fun (function_name, _body) ->
-             function_table |> Function_table.add_function ~function_name);
+          function_table |> Function_table.add_function ~function_name);
       recursive_definitions
       |> List.iter (fun (_, body) ->
-             body
-             |> Extend_function_table.run ~config ~function_table
-                  ~progress_functions ~value_bindings_table);
+          body
+          |> Extend_function_table.run ~config ~function_table
+               ~progress_functions ~value_bindings_table);
       recursive_definitions
       |> List.iter (fun (_, body) ->
-             body
-             |> Check_expression_well_formed.run ~config ~function_table
-                  ~value_bindings_table);
+          body
+          |> Check_expression_well_formed.run ~config ~function_table
+               ~value_bindings_table);
       function_table
       |> Hashtbl.iter
            (fun
@@ -1425,13 +1433,13 @@ let traverse_ast ~config ~value_bindings_table =
       let cache = Eval.create_cache () in
       functions_to_analyze
       |> List.iter (fun (function_name, loc) ->
-             function_name
-             |> Eval.analyze_function ~config ~cache ~function_table ~loc);
+          function_name
+          |> Eval.analyze_function ~config ~cache ~function_table ~loc);
       Stats.new_recursive_functions
         ~num_functions:(Hashtbl.length function_table));
     value_bindings
     |> List.iter (fun value_binding ->
-           super.value_binding self value_binding |> ignore);
+        super.value_binding self value_binding |> ignore);
     (rec_flag, value_bindings)
   in
   {super with Tast_mapper.value_bindings}

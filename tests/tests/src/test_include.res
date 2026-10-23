@@ -1,6 +1,4 @@
-open Belt
-
-module N = Belt.List
+module N = List
 let v = N.length
 
 module type OrderedType = {

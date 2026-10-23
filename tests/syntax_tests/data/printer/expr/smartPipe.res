@@ -12,13 +12,13 @@ let myFunc = (strA, strB) => strA ++ strB
 ->myFunc("expr3")->myFunc("expr4")
 
 myPromise->Promise.then(v => {
-  Js.log(v)
+  Console.log(v)
   Promise.resolve(v)
 })
 
 myPromise
 ->Promise.then(v => {
-  Js.log(v)
+  Console.log(v)
   Promise.resolve(v)
 })
 

@@ -232,7 +232,7 @@ impl PackageSpec {
         self.module == PackageModule::CommonJs
     }
 
-    pub fn get_suffix(&self) -> Option<String> {
+    fn get_suffix(&self) -> Option<String> {
         self.suffix.to_owned()
     }
 }
@@ -259,27 +259,104 @@ pub enum NamespaceConfig {
 
 #[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub enum JsxMode {
-    Classic,
-    Automatic,
-}
-
-#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
-#[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum JsxModule {
     React,
     Other(String),
 }
 
+/// Config fields that no longer have any effect. They are dropped silently instead of being
+/// reported as unknown, so that existing configs keep building without warnings.
+const OBSOLETE_FIELDS: &[&str] = &["jsx.mode", "jsx.v3-dependencies"];
+
 #[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct JsxSpecs {
     pub version: Option<i32>,
     pub module: Option<JsxModule>,
-    pub mode: Option<JsxMode>,
-    #[serde(rename = "v3-dependencies")]
-    pub v3_dependencies: Option<Vec<String>>,
     pub preserve: Option<bool>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum SourceMapConfig {
+    Disabled,
+    Options(SourceMapOptions),
+}
+
+impl<'de> Deserialize<'de> for SourceMapConfig {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        match value {
+            serde_json::Value::Bool(false) => Ok(SourceMapConfig::Disabled),
+            serde_json::Value::Bool(true) => Err(DeError::custom(
+                "sourceMap true is unsupported; use an object such as { \"enabled\": \"dev\", \"mode\": \"linked\" } or false",
+            )),
+            serde_json::Value::Object(_) => SourceMapOptions::deserialize(value)
+                .map(SourceMapConfig::Options)
+                .map_err(DeError::custom),
+            _ => Err(DeError::custom(
+                "sourceMap must be false or an object with enabled and mode fields",
+            )),
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum SourceMapEnabled {
+    Dev,
+    Always,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum SourceMapMode {
+    Linked,
+    Inline,
+    Hidden,
+}
+
+impl<'de> Deserialize<'de> for SourceMapMode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        match value.as_str() {
+            "linked" => Ok(SourceMapMode::Linked),
+            "inline" => Ok(SourceMapMode::Inline),
+            "hidden" => Ok(SourceMapMode::Hidden),
+            _ => Err(DeError::custom(format!(
+                "sourceMap.mode must be one of linked, inline, hidden, got {value:?}"
+            ))),
+        }
+    }
+}
+
+impl SourceMapMode {
+    fn as_str(self) -> &'static str {
+        match self {
+            SourceMapMode::Linked => "linked",
+            SourceMapMode::Inline => "inline",
+            SourceMapMode::Hidden => "hidden",
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceMapOptions {
+    pub enabled: SourceMapEnabled,
+    pub mode: SourceMapMode,
+    pub sources_content: Option<bool>,
+    pub source_root: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum SourceMapCommand {
+    Build,
+    Watch,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -291,7 +368,7 @@ pub enum GenTypeModule {
 }
 
 impl GenTypeModule {
-    pub fn as_str(&self) -> &'static str {
+    fn as_str(&self) -> &'static str {
         match self {
             GenTypeModule::CommonJs => "commonjs",
             GenTypeModule::EsModule => "esmodule",
@@ -310,7 +387,7 @@ pub enum GenTypeModuleResolution {
 }
 
 impl GenTypeModuleResolution {
-    pub fn as_str(&self) -> &'static str {
+    fn as_str(&self) -> &'static str {
         match self {
             GenTypeModuleResolution::Node => "node",
             GenTypeModuleResolution::Node16 => "node16",
@@ -488,6 +565,8 @@ pub struct Config {
 
     pub namespace: Option<NamespaceConfig>,
     pub jsx: Option<JsxSpecs>,
+    #[serde(rename = "sourceMap")]
+    pub source_map: Option<SourceMapConfig>,
     #[serde(rename = "experimental-features")]
     pub experimental_features: Option<HashMap<ExperimentalFeature, bool>>,
     #[serde(rename = "gentypeconfig")]
@@ -631,6 +710,16 @@ fn namespace_from_package_name(package_name: &str) -> String {
     buf
 }
 
+/// A module name as the ReScript scanner reads an upper-case identifier
+/// (compiler/syntax/src/res_scanner.ml): an ASCII capital, then letters,
+/// digits, '_', '\'' and '$'.
+fn is_module_name(name: &str) -> bool {
+    name.starts_with(|c: char| c.is_ascii_uppercase())
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '\'' | '$'))
+}
+
 impl Config {
     /// Try to convert a config from a certain path to a config struct
     pub fn new(path: &Path) -> Result<Self> {
@@ -638,11 +727,38 @@ impl Config {
             fs::read_to_string(path).map_err(|e| anyhow!("Could not read '{}': {}", path.display(), e))?;
         let mut config = Config::new_from_json_string(&read)?;
         config.set_path(path.to_path_buf())?;
+        config.validate_namespace()?;
         Ok(config)
     }
 
+    /// The namespace becomes a module, so a name the scanner cannot read as one
+    /// is rejected here instead of producing unusable compiler arguments.
+    fn validate_namespace(&self) -> Result<()> {
+        let namespace = match self.get_namespace() {
+            packages::Namespace::NoNamespace => return Ok(()),
+            packages::Namespace::Namespace(namespace)
+            | packages::Namespace::NamespaceWithEntry { namespace, .. } => namespace,
+        };
+        if is_module_name(&namespace) {
+            return Ok(());
+        }
+        let (source, fix) = match &self.namespace {
+            Some(NamespaceConfig::String(value)) if value != "true" => {
+                (format!("\"namespace\" value \"{value}\""), "")
+            }
+            _ => (
+                format!("package name \"{}\"", self.name),
+                " or rename the package",
+            ),
+        };
+        Err(anyhow!(
+            "{}: namespace \"{namespace}\" derived from {source} is not a valid module name; set \"namespace\" to a valid module name{fix}",
+            self.path.display()
+        ))
+    }
+
     /// Try to convert a config from a string to a config struct
-    pub fn new_from_json_string(config_str: &str) -> Result<Self> {
+    fn new_from_json_string(config_str: &str) -> Result<Self> {
         let raw_value = serde_json::from_str::<serde_json::Value>(config_str).ok();
         if let Some(value) = raw_value.as_ref() {
             validate_package_specs_value(value)?;
@@ -652,16 +768,26 @@ impl Config {
         let mut tracker = serde_path_to_error::Track::new();
         let path_deserializer = serde_path_to_error::Deserializer::new(&mut deserializer, &mut tracker);
         let mut unknown_fields = Vec::new();
-        let mut config: Config =
-            serde_ignored::deserialize(path_deserializer, |path| unknown_fields.push(path.to_string()))
-                .map_err(|err: serde_json::Error| {
-                    let path = tracker.path().to_string();
-                    if path.is_empty() {
-                        anyhow!("Failed to parse rescript.json: {err}")
-                    } else {
-                        anyhow!("Failed to parse rescript.json at {path}: {err}")
-                    }
-                })?;
+        let mut config: Config = serde_ignored::deserialize(path_deserializer, |path| {
+            let path = path.to_string();
+            // Paths contain a `?` segment for each `Option`, e.g. `jsx.?.mode`.
+            let field = path
+                .split('.')
+                .filter(|segment| *segment != "?")
+                .collect::<Vec<_>>()
+                .join(".");
+            if !OBSOLETE_FIELDS.contains(&field.as_str()) {
+                unknown_fields.push(path)
+            }
+        })
+        .map_err(|err: serde_json::Error| {
+            let path = tracker.path().to_string();
+            if path.is_empty() {
+                anyhow!("Failed to parse rescript.json: {err}")
+            } else {
+                anyhow!("Failed to parse rescript.json at {path}: {err}")
+            }
+        })?;
 
         if let Some(value) = raw_value.as_ref().and_then(|v| v.as_object()) {
             for (raw_key, warning) in [
@@ -688,6 +814,14 @@ impl Config {
 
         config.handle_deprecations()?;
         config.unknown_fields = unknown_fields;
+
+        if let Some(version) = config.jsx.as_ref().and_then(|jsx| jsx.version)
+            && version != 4
+        {
+            return Err(anyhow!(
+                "JSX version {version} is unsupported; jsx.version must be 4"
+            ));
+        }
 
         Ok(config)
     }
@@ -739,29 +873,12 @@ impl Config {
     pub fn get_jsx_args(&self) -> Vec<String> {
         match self.jsx.to_owned() {
             Some(jsx) => match jsx.version {
-                Some(version) if version == 4 => {
+                Some(version) => {
                     vec!["-bs-jsx".to_string(), version.to_string()]
                 }
-                Some(version) => panic!("JSX version {version} is unsupported"),
                 None => vec![],
             },
             None => vec![],
-        }
-    }
-
-    pub fn get_jsx_mode_args(&self) -> Vec<String> {
-        match self.jsx.to_owned() {
-            Some(jsx) => match jsx.mode {
-                Some(JsxMode::Classic) => {
-                    vec!["-bs-jsx-mode".to_string(), "classic".to_string()]
-                }
-                Some(JsxMode::Automatic) => {
-                    vec!["-bs-jsx-mode".to_string(), "automatic".to_string()]
-                }
-
-                None => vec![],
-            },
-            _ => vec![],
         }
     }
 
@@ -787,6 +904,51 @@ impl Config {
                 _ => vec![],
             },
             _ => vec![],
+        }
+    }
+
+    pub fn get_source_map_args(&self, command: SourceMapCommand) -> Vec<String> {
+        let mut args = Vec::new();
+
+        if let Some(source_map) = &self.source_map {
+            match source_map {
+                SourceMapConfig::Disabled => {
+                    args.extend(["-bs-source-map".to_string(), "false".to_string()]);
+                }
+                SourceMapConfig::Options(options) => {
+                    let Some(mode) = self.effective_source_map_mode(command) else {
+                        return vec!["-bs-source-map".to_string(), "false".to_string()];
+                    };
+
+                    args.extend(["-bs-source-map".to_string(), mode.as_str().to_string()]);
+
+                    if let Some(sources_content) = options.sources_content {
+                        args.extend([
+                            "-bs-source-map-sources-content".to_string(),
+                            sources_content.to_string(),
+                        ]);
+                    }
+
+                    if let Some(source_root) = &options.source_root {
+                        args.extend(["-bs-source-map-root".to_string(), source_root.to_string()]);
+                    }
+                }
+            }
+        }
+
+        args
+    }
+
+    fn effective_source_map_mode(&self, command: SourceMapCommand) -> Option<SourceMapMode> {
+        match &self.source_map {
+            Some(SourceMapConfig::Options(options)) => {
+                let source_map_enabled = match options.enabled {
+                    SourceMapEnabled::Dev => command == SourceMapCommand::Watch,
+                    SourceMapEnabled::Always => true,
+                };
+                source_map_enabled.then_some(options.mode)
+            }
+            _ => None,
         }
     }
 
@@ -889,20 +1051,6 @@ impl Config {
             args.push(root.to_string_lossy().to_string());
         }
         args
-    }
-
-    /// Directory containing the `rescript.json` this config was parsed from.
-    pub fn get_package_root(&self) -> &Path {
-        self.path
-            .parent()
-            .expect("rescript.json path should always have a parent directory")
-    }
-
-    pub fn get_project_root_args(&self) -> Vec<String> {
-        vec![
-            "-bs-project-root".to_string(),
-            self.get_package_root().to_string_lossy().to_string(),
-        ]
     }
 
     pub fn get_warning_args(&self, is_local_dep: bool, warn_error_override: Option<String>) -> Vec<String> {
@@ -1284,6 +1432,7 @@ pub mod tests {
             compiler_flags: None,
             namespace: None,
             jsx: None,
+            source_map: None,
             gentype_config: None,
             js_post_build: None,
             editor: None,
@@ -1531,6 +1680,12 @@ pub mod tests {
     }
 
     #[test]
+    fn test_unsupported_jsx_version_is_a_config_error() {
+        let error = Config::new_from_json_string(r#"{"name":"test","jsx":{"version":3}}"#).unwrap_err();
+        assert!(error.to_string().contains("JSX version 3 is unsupported"));
+    }
+
+    #[test]
     fn test_other_jsx_module() {
         let json = r#"
         {
@@ -1552,8 +1707,6 @@ pub mod tests {
             JsxSpecs {
                 version: None,
                 module: Some(JsxModule::Other(String::from("Voby.JSX"))),
-                mode: None,
-                v3_dependencies: None,
                 preserve: None,
             },
         );
@@ -1579,10 +1732,206 @@ pub mod tests {
             JsxSpecs {
                 version: Some(4),
                 module: None,
-                mode: None,
-                v3_dependencies: None,
                 preserve: Some(true),
             },
+        );
+    }
+
+    #[test]
+    fn test_source_map_args() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "sourceMap": {
+                "enabled": "always",
+                "mode": "linked",
+                "sourcesContent": true,
+                "sourceRoot": "webpack://testrepo/"
+            }
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(
+            config.get_source_map_args(SourceMapCommand::Build),
+            vec![
+                "-bs-source-map",
+                "linked",
+                "-bs-source-map-sources-content",
+                "true",
+                "-bs-source-map-root",
+                "webpack://testrepo/",
+            ]
+        );
+        assert_eq!(
+            config.effective_source_map_mode(SourceMapCommand::Build),
+            Some(SourceMapMode::Linked)
+        );
+    }
+
+    #[test]
+    fn test_source_map_dev_args_only_in_watch() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "sourceMap": {
+                "enabled": "dev",
+                "mode": "linked",
+                "sourcesContent": true
+            }
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(
+            config.get_source_map_args(SourceMapCommand::Build),
+            vec!["-bs-source-map", "false",]
+        );
+        assert_eq!(config.effective_source_map_mode(SourceMapCommand::Build), None);
+        assert_eq!(
+            config.get_source_map_args(SourceMapCommand::Watch),
+            vec![
+                "-bs-source-map",
+                "linked",
+                "-bs-source-map-sources-content",
+                "true",
+            ]
+        );
+        assert_eq!(
+            config.effective_source_map_mode(SourceMapCommand::Watch),
+            Some(SourceMapMode::Linked)
+        );
+    }
+
+    #[test]
+    fn test_source_map_false_args() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "sourceMap": false
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(
+            config.get_source_map_args(SourceMapCommand::Build),
+            vec!["-bs-source-map", "false",]
+        );
+        assert_eq!(config.effective_source_map_mode(SourceMapCommand::Build), None);
+    }
+
+    #[test]
+    fn test_source_map_rejects_true_for_nested_config() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "sourceMap": true
+        }
+        "#;
+
+        let error = serde_json::from_str::<Config>(json).unwrap_err();
+        assert!(
+            error.to_string().contains("sourceMap true is unsupported"),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn test_source_map_requires_enabled() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "sourceMap": {
+                "mode": "linked"
+            }
+        }
+        "#;
+
+        let error = serde_json::from_str::<Config>(json).unwrap_err();
+        assert!(
+            error.to_string().contains("missing field `enabled`"),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn test_source_map_inline_args() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "sourceMap": {
+                "enabled": "always",
+                "mode": "inline",
+                "sourcesContent": false
+            }
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(
+            config.get_source_map_args(SourceMapCommand::Build),
+            vec![
+                "-bs-source-map",
+                "inline",
+                "-bs-source-map-sources-content",
+                "false",
+            ]
+        );
+        assert_eq!(
+            config.effective_source_map_mode(SourceMapCommand::Build),
+            Some(SourceMapMode::Inline)
+        );
+    }
+
+    #[test]
+    fn test_source_map_hidden_args() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "sourceMap": {
+                "enabled": "always",
+                "mode": "hidden"
+            }
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(
+            config.get_source_map_args(SourceMapCommand::Build),
+            vec!["-bs-source-map", "hidden",]
+        );
+        assert_eq!(
+            config.effective_source_map_mode(SourceMapCommand::Build),
+            Some(SourceMapMode::Hidden)
+        );
+    }
+
+    #[test]
+    fn test_source_map_rejects_external_mode() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "sourceMap": {
+                "enabled": "always",
+                "mode": "external"
+            }
+        }
+        "#;
+
+        let error = serde_json::from_str::<Config>(json).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("sourceMap.mode must be one of linked, inline, hidden"),
+            "unexpected error: {error}"
         );
     }
 
@@ -1781,6 +2130,28 @@ pub mod tests {
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
         assert_eq!(config.get_unknown_fields(), vec!["some-new-field".to_string()]);
+        assert!(config.get_unsupported_fields().is_empty());
+    }
+
+    #[test]
+    fn test_obsolete_fields_are_ignored() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "jsx": {
+                "version": 4,
+                "mode": "automatic",
+                "v3-dependencies": ["some-dep"]
+            }
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert!(config.get_unknown_fields().is_empty());
         assert!(config.get_unsupported_fields().is_empty());
     }
 
@@ -2116,6 +2487,22 @@ pub mod tests {
     }
 
     #[test]
+    fn test_invalid_namespace_module_name() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join("rescript.json");
+        std::fs::write(&path, r#"{ "name": "_", "namespace": true }"#).expect("write");
+
+        let error = Config::new(&path).unwrap_err().to_string();
+        assert_eq!(
+            error,
+            format!(
+                "{}: namespace \"_\" derived from package name \"_\" is not a valid module name; set \"namespace\" to a valid module name or rename the package",
+                path.display()
+            )
+        );
+    }
+
+    #[test]
     fn test_bsconfig_json_filename_deprecation() {
         let tmp = tempfile::tempdir().expect("tempdir");
         let path = tmp.path().join("bsconfig.json");
@@ -2344,5 +2731,82 @@ pub mod tests {
         });
         assert_eq!(qualified.name(), "@a/b");
         assert_eq!(qualified.features().cloned(), Some(vec!["x".to_string()]));
+    }
+
+    /// The keys a struct deriving `Deserialize` accepts, as serde's derive lists them: renamed,
+    /// without aliases and skipped fields.
+    fn struct_keys<'de, T: Deserialize<'de>>() -> &'static [&'static str] {
+        struct Keys(Option<&'static [&'static str]>);
+
+        impl<'de> serde::Deserializer<'de> for &mut Keys {
+            type Error = serde::de::value::Error;
+
+            fn deserialize_any<V: serde::de::Visitor<'de>>(self, _: V) -> Result<V::Value, Self::Error> {
+                Err(serde::de::Error::custom("not a struct"))
+            }
+
+            fn deserialize_struct<V: serde::de::Visitor<'de>>(
+                self,
+                _: &'static str,
+                fields: &'static [&'static str],
+                _: V,
+            ) -> Result<V::Value, Self::Error> {
+                self.0 = Some(fields);
+                Err(serde::de::Error::custom("keys recorded"))
+            }
+
+            serde::forward_to_deserialize_any! {
+                bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string bytes byte_buf
+                option unit unit_struct newtype_struct seq tuple tuple_struct map enum identifier
+                ignored_any
+            }
+        }
+
+        let mut keys = Keys(None);
+        let _ = T::deserialize(&mut keys);
+        keys.0.expect("a struct")
+    }
+
+    fn build_schema() -> serde_json::Value {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/docson/build-schema.json");
+        serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap()
+    }
+
+    fn assert_schema_has_keys(properties: &serde_json::Value, keys: &[&str], what: &str) {
+        for key in keys {
+            assert!(
+                properties.get(key).is_some(),
+                "{what} key `{key}` is missing from docs/docson/build-schema.json"
+            );
+        }
+    }
+
+    #[test]
+    fn test_build_schema_lists_config_keys() {
+        let schema = build_schema();
+        // `path` is where the config was read from, set after parsing. The deprecated aliases,
+        // which parsing warns about, are left out of the schema.
+        let not_in_schema = ["path", "bs-dependencies", "bs-dev-dependencies", "bsc-flags"];
+        let config_keys: Vec<&str> = struct_keys::<Config>()
+            .iter()
+            .copied()
+            .filter(|key| !not_in_schema.contains(key))
+            .collect();
+        assert_schema_has_keys(&schema["properties"], &config_keys, "rescript.json");
+        assert_schema_has_keys(
+            &schema["definitions"]["sourceItem"]["oneOf"][0]["properties"],
+            struct_keys::<PackageSource>(),
+            "Source",
+        );
+        assert_schema_has_keys(
+            &schema["definitions"]["bs-dependency"]["oneOf"][1]["properties"],
+            struct_keys::<QualifiedDependency>(),
+            "Dependency",
+        );
+
+        let properties = &schema["properties"];
+        assert_eq!(properties["namespace-entry"]["type"], "string");
+        assert_eq!(properties["allowed-dependents"]["type"], "array");
+        assert_eq!(properties["allowed-dependents"]["items"]["type"], "string");
     }
 }

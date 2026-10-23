@@ -58,9 +58,6 @@ let ident : ident fn = unknown
 let module_id : module_id fn =
  fun _self {id = _x0; kind = _x1} -> _self.ident _self _x0
 
-let required_modules : required_modules fn =
- fun _self arg -> list _self.module_id _self arg
-
 let vident : vident fn =
  fun _self -> function
   | Id _x0 -> _self.ident _self _x0
@@ -73,17 +70,9 @@ let for_ident : for_ident fn = fun _self arg -> _self.ident _self arg
 
 let for_direction : for_direction fn = unknown
 
-let property_map : property_map fn =
- fun _self arg ->
-  list (fun _self (_x0, _x1) -> _self.expression _self _x1) _self arg
-
-let length_object : length_object fn = unknown
-
 let expression_desc : expression_desc fn =
  fun _self -> function
-  | Length (_x0, _x1) ->
-    _self.expression _self _x0;
-    length_object _self _x1
+  | Length _x0 -> _self.expression _self _x0
   | Is_null_or_undefined _x0 -> _self.expression _self _x0
   | String_append (_x0, _x1) ->
     _self.expression _self _x0;
@@ -105,42 +94,46 @@ let expression_desc : expression_desc fn =
   | Bin (_x0, _x1, _x2) ->
     _self.expression _self _x1;
     _self.expression _self _x2
-  | FlatCall (_x0, _x1) ->
-    _self.expression _self _x0;
-    _self.expression _self _x1
   | Call (_x0, _x1, _x2) ->
     _self.expression _self _x0;
     list _self.expression _self _x1
   | Tagged_template (_x0, _x1, _x2) ->
     _self.expression _self _x0;
-    list _self.expression _self _x1;
     list _self.expression _self _x2
-  | String_index (_x0, _x1) ->
-    _self.expression _self _x0;
-    _self.expression _self _x1
+  | Jsx {callee; tag; spread; props; children; key} ->
+    _self.expression _self callee;
+    _self.expression _self tag;
+    option _self.expression _self spread;
+    list (fun _self (_name, value) -> _self.expression _self value) _self props;
+    option (list _self.expression) _self children;
+    option _self.expression _self key
+  | Interpolated_template {values} -> list _self.expression _self values
   | Array_index (_x0, _x1) ->
     _self.expression _self _x0;
     _self.expression _self _x1
   | Static_index (_x0, _x1, _x2) -> _self.expression _self _x0
   | New (_x0, _x1) ->
     _self.expression _self _x0;
-    option (fun _self arg -> list _self.expression _self arg) _self _x1
+    list _self.expression _self _x1
   | Var _x0 -> _self.vident _self _x0
   | Fun {params; body} ->
     list _self.ident _self params;
     _self.block _self body
   | Str _ -> ()
+  | Template_literal _ -> ()
+  | Json_literal _ -> ()
   | Raw_js_code _ -> ()
-  | Array (_x0, _x1) -> list _self.expression _self _x0
+  | Array _x0 -> list _self.expression _self _x0
   | Optional_block (_x0, _x1) -> _self.expression _self _x0
-  | Caml_block (_x0, _x1, _x2, _x3) ->
-    list _self.expression _self _x0;
-    _self.expression _self _x2
+  | Caml_block (_x0, _x1, _x2) -> list _self.expression _self _x0
   | Caml_block_tag (_x0, _tag) -> _self.expression _self _x0
   | Number _ -> ()
-  | Object (_x0, _x1) ->
-    option _self.expression _self _x0;
-    property_map _self _x1
+  | Object _x0 ->
+    list
+      (fun _self -> function
+        | Object_property (_, e) | Object_spread e | Record_spread e ->
+          _self.expression _self e)
+      _self _x0
   | Undefined _ -> ()
   | Null -> ()
   | Await _x0 -> _self.expression _self _x0
@@ -154,7 +147,8 @@ let finish_ident_expression : finish_ident_expression fn =
  fun _self arg -> _self.expression _self arg
 
 let case_clause : case_clause fn =
- fun _self {switch_body = _x0; should_break = _x1; comment = _x2} ->
+ fun _self
+     {switch_body = _x0; should_break = _x1; comment = _x2; source_loc = _x3} ->
   _self.block _self _x0
 
 let string_clause : string_clause fn =
@@ -211,10 +205,12 @@ let statement_desc : statement_desc fn =
   | Debugger -> ()
 
 let expression : expression fn =
- fun _self {expression_desc = _x0; comment = _x1} -> expression_desc _self _x0
+ fun _self {expression_desc = _x0; comment = _x1; source_loc = _x2} ->
+  expression_desc _self _x0
 
 let statement : statement fn =
- fun _self {statement_desc = _x0; comment = _x1} -> statement_desc _self _x0
+ fun _self {statement_desc = _x0; comment = _x1; source_loc = _x2} ->
+  statement_desc _self _x0
 
 let variable_declaration : variable_declaration fn =
  fun _self {ident = _x0; value = _x1; property = _x2; ident_info = _x3} ->
@@ -226,11 +222,6 @@ let block : block fn = fun _self arg -> list _self.statement _self arg
 let program : program fn =
  fun _self {block = _x0; exports = _x1; export_set = _x2} ->
   _self.block _self _x0
-
-let deps_program : deps_program fn =
- fun _self {program = _x0; modules = _x1; side_effect = _x2} ->
-  _self.program _self _x0;
-  required_modules _self _x1
 
 let super : iter =
   {

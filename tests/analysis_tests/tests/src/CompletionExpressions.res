@@ -263,7 +263,7 @@ let arr = ["hello"]
 // arr->Belt.Array.map()
 //                     ^com
 
-type exoticPolyvariant = [#"some exotic"]
+type exoticPolyvariant = [#"some exotic" | #dollar$ | #"_" | #644 | #""]
 
 let takesExotic = (e: exoticPolyvariant) => {
   ignore(e)

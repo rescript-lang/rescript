@@ -32,7 +32,7 @@ let make = React.forwardRef((
     ?onMouseLeave
     ?onFocus
     ?onBlur
-    ref=?{Belt.Option.map(Js.Nullable.toOption(forwardedRef), forwardedRef =>
+    ref=?{Belt.Option.map(Nullable.toOption(forwardedRef), forwardedRef =>
       ReactDOMRe.Ref.domRef(forwardedRef)
     )}
     onClick

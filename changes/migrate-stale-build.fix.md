@@ -1,0 +1,1 @@
+- Make `rescript-tools migrate` refuse a file that changed since its last build instead of migrating it with stale locations.

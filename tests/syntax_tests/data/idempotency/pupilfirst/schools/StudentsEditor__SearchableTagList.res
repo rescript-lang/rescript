@@ -11,8 +11,8 @@ let search = (state, send, allowNewTags, selectedTags, unselectedTags, addTagCB)
   // Remove all excess space characters from the user input.
   let normalizedString =
     state
-    ->Js.String.trim
-    ->Js.String.replaceByRe(Js.Re.fromStringWithFlags("\\s+", ~flags="g"), " ")
+    ->String.trim
+    ->String.replaceRegExp(RegExp.fromStringWithFlags("\\s+", ~flags="g"), " ")
 
   switch normalizedString {
   | "" => []
@@ -36,9 +36,8 @@ let search = (state, send, allowNewTags, selectedTags, unselectedTags, addTagCB)
     }
     let searchResults =
       unselectedTags
-      ->Js.Array.filter(tag =>
-        tag->String.lowercase_ascii->Js.String.includes(searchString->String.lowercase_ascii)
-      )
+      ->Array.filter(tag =>
+        tag->String.lowercase_ascii->String.includes(searchString->String.lowercase_ascii))
       ->ArrayUtils.copyAndSort(String.compare)
       ->Array.map(tag =>
         <span

@@ -1,28 +1,15 @@
 let s = {js|some unicode é £ |js}
 let s =
   match foo with
-  | (({js|bar|js})[@res.template ]) -> {js|bar|js}
+  | {js|bar|js} -> {js|bar|js}
   | {js|foo|js} -> {js|foo|js}
   | _ -> {js|baz|js}
-let s = (({js|你好，
-世界|js})[@res.template ])
-let s = (({js|"|js})[@res.template ])
-let s = (({js|foo|js})[@res.template ])
-let s =
-  (((((({js|foo |js})[@res.template ]) ++ bar)[@res.template ]) ++
-      (({js| baz|js})[@res.template ]))
-  [@res.template ])
-let s =
-  (((((({js|some unicode é |js})[@res.template ]) ++ bar)[@res.template ])
-      ++ (({js| £ |js})[@res.template ]))
-  [@res.template ])
-let s = ((x [|(({js|foo|js})[@res.template ])|] [||])[@res.taggedTemplate ])
-let s =
-  ((x [|(({js|foo |js})[@res.template ]);(({js| baz|js})[@res.template ])|]
-      [|bar|])
-  [@res.taggedTemplate ])
-let s =
-  ((x
-      [|(({js|some unicode é |js})[@res.template ]);(({js| £ |js})
-        [@res.template ])|] [|bar|])
-  [@res.taggedTemplate ])
+let s = `你好，
+世界`
+let s = `"`
+let s = `foo`
+let s = `foo ${bar} baz`
+let s = `some unicode é ${bar} £ `
+let s = x`foo`
+let s = x`foo ${bar} baz`
+let s = x`some unicode é ${bar} £ `

@@ -12,7 +12,7 @@ module V4C: {
 
   module ForwardRef: {
     @react.component
-    let make: (~ref: React.ref<Js.Nullable.t<inputRef>>=?) => React.element
+    let make: (~ref: React.ref<nullable<inputRef>>=?) => React.element
   }
 }
 
@@ -28,7 +28,7 @@ module V4CUncurried: {
 
   module ForwardRef: {
     @react.component
-    let make: (~ref: React.ref<Js.Nullable.t<inputRef>>=?) => React.element
+    let make: (~ref: React.ref<nullable<inputRef>>=?) => React.element
   }
 }
 
@@ -46,7 +46,7 @@ module V4A: {
 
   module ForwardRef: {
     @react.component
-    let make: (~ref: React.ref<Js.Nullable.t<inputRef>>=?) => React.element
+    let make: (~ref: React.ref<nullable<inputRef>>=?) => React.element
   }
 }
 
@@ -62,6 +62,6 @@ module V4AUncurried: {
 
   module ForwardRef: {
     @react.component
-    let make: (~ref: React.ref<Js.Nullable.t<inputRef>>=?) => React.element
+    let make: (~ref: React.ref<nullable<inputRef>>=?) => React.element
   }
 }

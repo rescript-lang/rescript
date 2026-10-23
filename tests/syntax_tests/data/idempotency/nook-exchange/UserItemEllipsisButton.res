@@ -47,7 +47,7 @@ module Styles = {
 @react.component
 let make = (~item: Item.t, ~userItem: User.item, ~variation, ~className) => {
   let me = UserStore.useMe()->Belt.Option.getExn
-  let ellipsisButtonRef = React.useRef(Js.Nullable.null)
+  let ellipsisButtonRef = React.useRef(Nullable.null)
   let (showEllipsisMenu, setShowEllipsisMenu) = React.useState(() => false)
 
   <>

@@ -21,7 +21,7 @@ function test_endian_string(x) {
   return 33;
 }
 
-let v = test_endian_string(1);
+let v = 33;
 
 let Test = {
   test_endian_string: test_endian_string,
@@ -33,4 +33,4 @@ export {
   ExtUnix,
   Test,
 }
-/* v Not a pure module */
+/* No side effect */

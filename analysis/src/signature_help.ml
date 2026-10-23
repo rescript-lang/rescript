@@ -10,28 +10,28 @@ let docs_for_label type_expr ~file ~state ~package ~supports_markdown_links =
   let type_definitions =
     types
     |> List.map (fun {Hover.decl; name; env; loc; path} ->
-           let link_to_type_definition_str =
-             if supports_markdown_links then
-               Markdown.go_to_definition_text ~env ~pos:loc.Warnings.loc_start
-             else ""
-           in
-           (* Since printing the whole name via its path can get quite long, and
+        let link_to_type_definition_str =
+          if supports_markdown_links then
+            Markdown.go_to_definition_text ~env ~pos:loc.Warnings.loc_start
+          else ""
+        in
+        (* Since printing the whole name via its path can get quite long, and
               we're short on space for the signature help, we'll only print the
               fully "qualified" type name if we must (ie if several types we're
               displaying have the same name). *)
-           let multiple_types_have_this_name =
-             type_names
-             |> List.filter (fun type_name -> type_name = name)
-             |> List.length > 1
-           in
-           let type_name =
-             if multiple_types_have_this_name then
-               path |> Shared_types.path_ident_to_string
-             else name
-           in
-           Markdown.code_block
-             (Shared.decl_to_string ~print_name_as_is:true type_name decl)
-           ^ link_to_type_definition_str)
+        let multiple_types_have_this_name =
+          type_names
+          |> List.filter (fun type_name -> type_name = name)
+          |> List.length > 1
+        in
+        let type_name =
+          if multiple_types_have_this_name then
+            path |> Shared_types.path_ident_to_string
+          else name
+        in
+        Markdown.code_block
+          (Shared.decl_to_string ~print_name_as_is:true type_name decl)
+        ^ link_to_type_definition_str)
   in
   type_definitions |> String.concat "\n"
 
@@ -103,48 +103,50 @@ let find_function_type ~debug ~source ~kind_file ~pos ~full ~state =
         Some (args, docstring, type_expr, package, env, file)
       | _ -> None))
 
-(* Extracts all parameters from a parsed function signature *)
+(* Extracts all parameters from a parsed function signature. The result type
+   is not entered: a returned function's parameters cannot be passed at this
+   call site. *)
 let extract_parameters ~signature ~type_str_for_parser ~label_prefix_len =
   match signature with
-  | [{Parsetree.psig_desc = Psig_value {pval_type = expr}}]
-    when match expr.ptyp_desc with
-         | Ptyp_arrow _ -> true
-         | _ -> false ->
-    let rec extract_params expr params =
-      match expr with
-      | {
-       (* Gotcha: functions with multiple arugments are modelled as a series of single argument functions. *)
-       Parsetree.ptyp_desc = Ptyp_arrow {arg; ret = next_function_expr};
-       ptyp_loc;
-      } ->
-        let start_offset =
-          ptyp_loc |> Loc.start
-          |> Pos.position_to_offset type_str_for_parser
-          |> Option.get
-        in
-        let end_offset =
-          arg.typ.ptyp_loc |> Loc.end_
-          |> Pos.position_to_offset type_str_for_parser
-          |> Option.get
-        in
-        (* The AST locations does not account for "=?" of optional arguments, so add that to the offset here if needed. *)
-        let end_offset =
-          match arg.lbl with
-          | Asttypes.Optional _ -> end_offset + 2
-          | _ -> end_offset
-        in
-        extract_params next_function_expr
-          (params
-          @ [
-              ( arg.lbl,
-                (* Remove the label prefix offset here, since we're not showing
-                   that to the end user. *)
-                start_offset - label_prefix_len,
-                end_offset - label_prefix_len );
-            ])
-      | _ -> params
-    in
-    extract_params expr []
+  | [
+   {
+     Parsetree.psig_desc =
+       Psig_value {pval_type = {ptyp_desc = Ptyp_arrow {params = args}}};
+   };
+  ] ->
+    List.filter_map
+      (function
+        | Parsetree.Parg_fixed _ -> None
+        | Parsetree.Parg_type {lbl; typ; _} ->
+          let start_loc =
+            (* For a labeled argument the label precedes the type. *)
+            match lbl with
+            | Asttypes.Labelled {loc} | Optional {loc} -> loc |> Loc.start
+            | Nolabel -> typ.ptyp_loc |> Loc.start
+          in
+          let start_offset =
+            start_loc
+            |> Pos.position_to_offset type_str_for_parser
+            |> Option.get
+          in
+          let end_offset =
+            typ.ptyp_loc |> Loc.end_
+            |> Pos.position_to_offset type_str_for_parser
+            |> Option.get
+          in
+          (* The AST locations does not account for "=?" of optional arguments, so add that to the offset here if needed. *)
+          let end_offset =
+            match lbl with
+            | Asttypes.Optional _ -> end_offset + 2
+            | _ -> end_offset
+          in
+          Some
+            ( lbl,
+              (* Remove the label prefix offset here, since we're not
+               showing that to the end user. *)
+              start_offset - label_prefix_len,
+              end_offset - label_prefix_len ))
+      args
   | _ -> []
 
 (* Finds what parameter is active, if any *)
@@ -160,23 +162,23 @@ let find_active_parameter ~arg_at_cursor ~args =
     let index = ref 0 in
     args
     |> List.find_map (fun (label, _) ->
-           match label with
-           | Asttypes.Nolabel when !index = unlabelled_argument_index ->
-             Some !index
-           | _ ->
-             index := !index + 1;
-             None)
+        match label with
+        | Asttypes.Nolabel when !index = unlabelled_argument_index ->
+          Some !index
+        | _ ->
+          index := !index + 1;
+          None)
   | Some (Labelled name) ->
     let index = ref 0 in
     args
     |> List.find_map (fun (label, _) ->
-           match label with
-           | (Asttypes.Labelled {txt = label_name} | Optional {txt = label_name})
-             when label_name = name ->
-             Some !index
-           | _ ->
-             index := !index + 1;
-             None)
+        match label with
+        | (Asttypes.Labelled {txt = label_name} | Optional {txt = label_name})
+          when label_name = name ->
+          Some !index
+        | _ ->
+          index := !index + 1;
+          None)
 
 type constructor_info = {
   docstring: string list;
@@ -236,9 +238,9 @@ let find_constructor_args ~full ~env ~state ~constructor_name loc =
     | Some (Tvariant {constructors}, _) ->
       constructors
       |> List.find_opt (fun (c : Constructor.t) ->
-             c.cname.txt = constructor_name)
+          c.cname.txt = constructor_name)
       |> Option.map (fun (c : Constructor.t) ->
-             {docstring = c.docstring; name = c.cname.txt; args = c.args})
+          {docstring = c.docstring; name = c.cname.txt; args = c.args})
     | _ -> None)
   | _ -> None
 
@@ -259,6 +261,19 @@ let signature_help ~debug ~source ~kind_file ~pos
       in
       let loc_has_cursor loc =
         loc |> Cursor_position.loc_has_cursor ~pos:pos_before_cursor
+      in
+      let constructor_arg_index locations =
+        let rec loop index = function
+          | [] -> -1
+          | [_] -> index
+          | loc :: (next :: _ as rest) ->
+            if pos_before_cursor < Loc.end_ loc then index
+            else if pos_before_cursor < Loc.start next then
+              if first_char_before_cursor_no_white = Some ',' then index + 1
+              else index
+            else loop (index + 1) rest
+        in
+        loop 0 locations
       in
       let supports_markdown_links = true in
       let result = ref None in
@@ -305,44 +320,43 @@ let signature_help ~debug ~source ~kind_file ~pos
           let argAtCursor_ =
             extracted_args
             |> List.find_map (fun arg ->
-                   match arg.label with
-                   | None ->
-                     let current_unlabelled_arg_count = !unlabelled_arg_count in
-                     unlabelled_arg_count := current_unlabelled_arg_count + 1;
-                     (* An argument without a label is just the expression, so we can use that. *)
-                     if loc_has_cursor arg.exp.pexp_loc then
-                       Some (Unlabelled current_unlabelled_arg_count)
-                     else (
-                       (* If this unlabelled arg doesn't have the cursor, record
+                match arg.label with
+                | None ->
+                  let current_unlabelled_arg_count = !unlabelled_arg_count in
+                  unlabelled_arg_count := current_unlabelled_arg_count + 1;
+                  (* An argument without a label is just the expression, so we can use that. *)
+                  if loc_has_cursor arg.exp.pexp_loc then
+                    Some (Unlabelled current_unlabelled_arg_count)
+                  else (
+                    (* If this unlabelled arg doesn't have the cursor, record
                           it as the last seen unlabelled arg before the
                           cursor.*)
-                       if pos_before_cursor >= (arg.exp.pexp_loc |> Loc.start)
-                       then
-                         last_unlabelled_arg_before_cursor :=
-                           current_unlabelled_arg_count;
-                       None)
-                   | Some {name; pos_start; pos_end} -> (
-                     (* Check for the label identifier itself having the cursor *)
-                     match
-                       pos
-                       |> Cursor_position.classify_positions ~pos_start ~pos_end
-                     with
-                     | HasCursor -> Some (Labelled name)
-                     | NoCursor | EmptyLoc -> (
-                       (* If we're not in the label, check the exp. Either the exp
+                    if pos_before_cursor >= (arg.exp.pexp_loc |> Loc.start) then
+                      last_unlabelled_arg_before_cursor :=
+                        current_unlabelled_arg_count;
+                    None)
+                | Some {name; pos_start; pos_end} -> (
+                  (* Check for the label identifier itself having the cursor *)
+                  match
+                    pos
+                    |> Cursor_position.classify_positions ~pos_start ~pos_end
+                  with
+                  | HasCursor -> Some (Labelled name)
+                  | NoCursor | EmptyLoc -> (
+                    (* If we're not in the label, check the exp. Either the exp
                           exists and has the cursor. Or the exp is a parser recovery
                           node, in which case we assume that the parser recovery
                           indicates that the cursor was here. *)
-                       match
-                         ( arg.exp.pexp_desc,
-                           arg.exp.pexp_loc
-                           |> Cursor_position.classify_loc
-                                ~pos:pos_before_cursor )
-                       with
-                       | Pexp_extension ({txt = "rescript.exprhole"}, _), _
-                       | _, HasCursor ->
-                         Some (Labelled name)
-                       | _ -> None)))
+                    match
+                      ( arg.exp.pexp_desc,
+                        arg.exp.pexp_loc
+                        |> Cursor_position.classify_loc ~pos:pos_before_cursor
+                      )
+                    with
+                    | Pexp_extension ({txt = "rescript.exprhole"}, _), _
+                    | _, HasCursor ->
+                      Some (Labelled name)
+                    | _ -> None)))
           in
 
           match argAtCursor_ with
@@ -404,29 +418,28 @@ let signature_help ~debug ~source ~kind_file ~pos
           in
           set_result
             (exp.pexp_loc, `FunctionCall (arg_at_cursor, exp, extracted_args))
-        | {pexp_desc = Pexp_construct (lid, Some payload_exp); pexp_loc}
-          when loc_has_cursor payload_exp.pexp_loc
-               || Completion_expressions.is_expr_hole payload_exp
-                  && loc_has_cursor pexp_loc ->
+        | {
+         pexp_desc = Pexp_construct (lid, {txt = payload_exps; loc = args_loc});
+        }
+          when payload_exps <> [] && loc_has_cursor args_loc ->
           (* Constructor payloads *)
-          set_result (lid.loc, `ConstructorExpr (lid, payload_exp))
+          set_result (lid.loc, `ConstructorExpr (lid, payload_exps))
         | _ -> ());
         Ast_iterator.default_iterator.expr iterator expr
       in
       let pat (iterator : Ast_iterator.iterator) (pat : Parsetree.pattern) =
         (match pat with
-        | {ppat_desc = Ppat_construct (lid, Some payload_pat)}
-          when loc_has_cursor payload_pat.ppat_loc ->
+        | {
+         ppat_desc = Ppat_construct (lid, {txt = payload_pats; loc = args_loc});
+        }
+          when payload_pats <> [] && loc_has_cursor args_loc ->
           (* Constructor payloads *)
-          set_result (lid.loc, `ConstructorPat (lid, payload_pat))
+          set_result (lid.loc, `ConstructorPat (lid, payload_pats))
         | _ -> ());
         Ast_iterator.default_iterator.pat iterator pat
       in
       let iterator = {Ast_iterator.default_iterator with expr; pat} in
-      let parser =
-        Res_driver.parsing_engine.parse_implementation_from_source
-          ~for_printer:false
-      in
+      let parser = Res_driver.parsing_engine.parse_implementation_from_source in
       let {Res_driver.parsetree = structure} = parser ~source in
       iterator.structure iterator structure |> ignore;
       (* Handle function application, if found *)
@@ -439,7 +452,7 @@ let signature_help ~debug ~source ~kind_file ~pos
         with
         | Some (args, docstring, type_expr, package, _env, file) ->
           if debug then
-            Printf.printf "argAtCursor: %s\n"
+            Printf.printf "arg_at_cursor: %s\n"
               (match arg_at_cursor with
               | None -> "none"
               | Some (Labelled name) -> "~" ^ name
@@ -456,7 +469,7 @@ let signature_help ~debug ~source ~kind_file ~pos
           let fn_type_str = Shared.type_to_string type_expr in
           let type_str_for_parser = label_prefix ^ fn_type_str in
           let {Res_driver.parsetree = signature} =
-            Res_driver.parse_interface_from_source ~for_printer:false
+            Res_driver.parse_interface_from_source
               ~display_filename:"<missing-file>" ~source:type_str_for_parser
           in
 
@@ -467,7 +480,7 @@ let signature_help ~debug ~source ~kind_file ~pos
             Printf.printf "extracted params: \n%s\n"
               (parameters
               |> List.map (fun (_, start, end_) ->
-                     String.sub fn_type_str start (end_ - start))
+                  String.sub fn_type_str start (end_ - start))
               |> list);
 
           (* Figure out the active parameter *)
@@ -477,41 +490,40 @@ let signature_help ~debug ~source ~kind_file ~pos
           let parameters_information =
             parameters
             |> List.map (fun (arg_label, start, end_) ->
-                   let param_arg_count = !param_unlabelled_arg_count in
-                   param_unlabelled_arg_count := param_arg_count + 1;
-                   let unlabelled_arg_count = ref 0 in
-                   let documentation =
-                     match
-                       args
-                       |> List.find_opt (fun (lbl, _) ->
-                              let arg_count = !unlabelled_arg_count in
-                              unlabelled_arg_count := arg_count + 1;
-                              match (lbl, arg_label) with
-                              | ( Asttypes.Optional {txt = l1},
-                                  Asttypes.Optional {txt = l2} )
-                                when l1 = l2 ->
-                                true
-                              | Labelled {txt = l1}, Labelled {txt = l2}
-                                when l1 = l2 ->
-                                true
-                              | Nolabel, Nolabel
-                                when param_arg_count = arg_count ->
-                                true
-                              | _ -> false)
-                     with
-                     | None ->
-                       Lsp.Types.MarkupContent.create
-                         ~kind:Lsp.Types.MarkupKind.Markdown ~value:""
-                     | Some (_, label_typ_expr) ->
-                       Lsp.Types.MarkupContent.create
-                         ~kind:Lsp.Types.MarkupKind.Markdown
-                         ~value:
-                           (docs_for_label ~supports_markdown_links ~file ~state
-                              ~package label_typ_expr)
-                   in
-                   Lsp.Types.ParameterInformation.create
-                     ~label:(`Offset (start, end_))
-                     ~documentation:(`MarkupContent documentation) ())
+                let param_arg_count = !param_unlabelled_arg_count in
+                param_unlabelled_arg_count := param_arg_count + 1;
+                let unlabelled_arg_count = ref 0 in
+                let documentation =
+                  match
+                    args
+                    |> List.find_opt (fun (lbl, _) ->
+                        let arg_count = !unlabelled_arg_count in
+                        unlabelled_arg_count := arg_count + 1;
+                        match (lbl, arg_label) with
+                        | ( Asttypes.Optional {txt = l1},
+                            Asttypes.Optional {txt = l2} )
+                          when l1 = l2 ->
+                          true
+                        | Labelled {txt = l1}, Labelled {txt = l2} when l1 = l2
+                          ->
+                          true
+                        | Nolabel, Nolabel when param_arg_count = arg_count ->
+                          true
+                        | _ -> false)
+                  with
+                  | None ->
+                    Lsp.Types.MarkupContent.create
+                      ~kind:Lsp.Types.MarkupKind.Markdown ~value:""
+                  | Some (_, label_typ_expr) ->
+                    Lsp.Types.MarkupContent.create
+                      ~kind:Lsp.Types.MarkupKind.Markdown
+                      ~value:
+                        (docs_for_label ~supports_markdown_links ~file ~state
+                           ~package label_typ_expr)
+                in
+                Lsp.Types.ParameterInformation.create
+                  ~label:(`Offset (start, end_))
+                  ~documentation:(`MarkupContent documentation) ())
           in
           let signatures =
             Lsp.Types.SignatureInformation.create ~label:fn_type_str
@@ -572,20 +584,20 @@ let signature_help ~debug ~source ~kind_file ~pos
                   (`InlineRecord
                      (fields
                      |> List.map (fun (field : field) ->
-                            let start_offset = !offset in
-                            let arg_text =
-                              Printf.sprintf "%s%s: %s" field.fname.txt
-                                (if field.optional then "?" else "")
-                                (Shared.type_to_string
-                                   (if field.optional then
-                                      Utils.unwrap_if_option field.typ
-                                    else field.typ))
-                            in
-                            let end_offset =
-                              start_offset + String.length arg_text
-                            in
-                            offset := end_offset + String.length ", ";
-                            (arg_text, field, (start_offset, end_offset)))))
+                         let start_offset = !offset in
+                         let arg_text =
+                           Printf.sprintf "%s%s: %s" field.fname.txt
+                             (if field.optional then "?" else "")
+                             (Shared.type_to_string
+                                (if field.optional then
+                                   Utils.unwrap_if_option field.typ
+                                 else field.typ))
+                         in
+                         let end_offset =
+                           start_offset + String.length arg_text
+                         in
+                         offset := end_offset + String.length ", ";
+                         (arg_text, field, (start_offset, end_offset)))))
               | Args [(typ, _)] ->
                 Some
                   (`SingleArg
@@ -598,17 +610,16 @@ let signature_help ~debug ~source ~kind_file ~pos
                   (`TupleArg
                      (args
                      |> List.map (fun (typ, _) ->
-                            let start_offset = !offset in
-                            let arg_text = typ |> Shared.type_to_string in
-                            let end_offset =
-                              start_offset + String.length arg_text
-                            in
-                            offset := end_offset + String.length ", ";
-                            ( arg_text,
-                              docs_for_label ~file:full.file
-                                ~package:full.package ~supports_markdown_links
-                                ~state typ,
-                              (start_offset, end_offset) ))))
+                         let start_offset = !offset in
+                         let arg_text = typ |> Shared.type_to_string in
+                         let end_offset =
+                           start_offset + String.length arg_text
+                         in
+                         offset := end_offset + String.length ", ";
+                         ( arg_text,
+                           docs_for_label ~file:full.file ~package:full.package
+                             ~supports_markdown_links ~state typ,
+                           (start_offset, end_offset) ))))
             in
             let label =
               constructor.name ^ "("
@@ -627,22 +638,27 @@ let signature_help ~debug ~source ~kind_file ~pos
                   |> String.concat ", ")
               ^ ")"
             in
+            let constructor_has_multiple_args =
+              match arg_parts with
+              | Some (`TupleArg (_ :: _ :: _)) -> true
+              | _ -> false
+            in
             let active_parameter =
               match cs with
-              | `ConstructorExpr (_, {pexp_desc = Pexp_tuple items}) -> (
-                let idx = ref 0 in
-                let tuple_item_with_cursor =
-                  items
-                  |> List.find_map (fun (item : Parsetree.expression) ->
-                         let current_index = !idx in
-                         idx := current_index + 1;
-                         if loc_has_cursor item.pexp_loc then Some current_index
-                         else None)
-                in
-                match tuple_item_with_cursor with
-                | None -> -1
-                | Some i -> i)
-              | `ConstructorExpr (_, {pexp_desc = Pexp_record (fields, _)}) -> (
+              | `ConstructorExpr (_, [{pexp_desc = Pexp_tuple tuple_items}])
+                when constructor_has_multiple_args ->
+                constructor_arg_index
+                  (List.map
+                     (fun (item : Parsetree.expression) -> item.pexp_loc)
+                     tuple_items)
+              | `ConstructorExpr (_, items) when constructor_has_multiple_args
+                ->
+                constructor_arg_index
+                  (List.map
+                     (fun (item : Parsetree.expression) -> item.pexp_loc)
+                     items)
+              | `ConstructorExpr (_, [{pexp_desc = Pexp_record (fields, _)}])
+                -> (
                 let field_name_with_cursor =
                   fields
                   |> List.find_map
@@ -663,30 +679,27 @@ let signature_help ~debug ~source ~kind_file ~pos
                   let field_index = ref (-1) in
                   fields
                   |> List.iter (fun (_, field, _) ->
-                         idx := !idx + 1;
-                         let current_index = !idx in
-                         if field_name = field.fname.txt then
-                           field_index := current_index
-                         else ());
+                      idx := !idx + 1;
+                      let current_index = !idx in
+                      if field_name = field.fname.txt then
+                        field_index := current_index
+                      else ());
                   !field_index
                 | _ -> -1)
-              | `ConstructorExpr (_, expr) when loc_has_cursor expr.pexp_loc ->
-                0
-              | `ConstructorPat (_, {ppat_desc = Ppat_tuple items}) -> (
-                let idx = ref 0 in
-                let tuple_item_with_cursor =
-                  items
-                  |> List.find_map (fun (item : Parsetree.pattern) ->
-                         let current_index = !idx in
-                         idx := current_index + 1;
-                         if loc_has_cursor item.ppat_loc then Some current_index
-                         else None)
-                in
-                match tuple_item_with_cursor with
-                | None -> -1
-                | Some i -> i)
-              | `ConstructorPat (_, {ppat_desc = Ppat_record (fields, _, _rest)})
-                -> (
+              | `ConstructorExpr (_, _ :: _) -> 0
+              | `ConstructorPat (_, [{ppat_desc = Ppat_tuple tuple_items}])
+                when constructor_has_multiple_args ->
+                constructor_arg_index
+                  (List.map
+                     (fun (item : Parsetree.pattern) -> item.ppat_loc)
+                     tuple_items)
+              | `ConstructorPat (_, items) when constructor_has_multiple_args ->
+                constructor_arg_index
+                  (List.map
+                     (fun (item : Parsetree.pattern) -> item.ppat_loc)
+                     items)
+              | `ConstructorPat
+                  (_, [{ppat_desc = Ppat_record (fields, _, _rest)}]) -> (
                 let field_name_with_cursor =
                   fields
                   |> List.find_map
@@ -707,14 +720,14 @@ let signature_help ~debug ~source ~kind_file ~pos
                   let field_index = ref (-1) in
                   fields
                   |> List.iter (fun (_, field, _) ->
-                         idx := !idx + 1;
-                         let current_index = !idx in
-                         if field_name = field.fname.txt then
-                           field_index := current_index
-                         else ());
+                      idx := !idx + 1;
+                      let current_index = !idx in
+                      if field_name = field.fname.txt then
+                        field_index := current_index
+                      else ());
                   !field_index
                 | _ -> -1)
-              | `ConstructorPat (_, pat) when loc_has_cursor pat.ppat_loc -> 0
+              | `ConstructorPat (_, _ :: _) -> 0
               | _ -> -1
             in
 
@@ -746,21 +759,6 @@ let signature_help ~debug ~source ~kind_file ~pos
                   ()
                 :: (fields
                    |> List.map (fun (_, (field : field), (start, end_)) ->
-                          Lsp.Types.ParameterInformation.create
-                            ~label:
-                              (`Offset (base_offset + start, base_offset + end_))
-                            ~documentation:
-                              (`MarkupContent
-                                 (Lsp.Types.MarkupContent.create
-                                    ~kind:Lsp.Types.MarkupKind.Markdown
-                                    ~value:
-                                      (field.docstring |> String.concat "\n")))
-                            ()))
-              | Some (`TupleArg items) ->
-                (* Account for leading '(' *)
-                let base_offset = constructor_name_length + 1 in
-                items
-                |> List.map (fun (_, docstring, (start, end_)) ->
                        Lsp.Types.ParameterInformation.create
                          ~label:
                            (`Offset (base_offset + start, base_offset + end_))
@@ -768,8 +766,21 @@ let signature_help ~debug ~source ~kind_file ~pos
                            (`MarkupContent
                               (Lsp.Types.MarkupContent.create
                                  ~kind:Lsp.Types.MarkupKind.Markdown
-                                 ~value:docstring))
-                         ())
+                                 ~value:(field.docstring |> String.concat "\n")))
+                         ()))
+              | Some (`TupleArg items) ->
+                (* Account for leading '(' *)
+                let base_offset = constructor_name_length + 1 in
+                items
+                |> List.map (fun (_, docstring, (start, end_)) ->
+                    Lsp.Types.ParameterInformation.create
+                      ~label:(`Offset (base_offset + start, base_offset + end_))
+                      ~documentation:
+                        (`MarkupContent
+                           (Lsp.Types.MarkupContent.create
+                              ~kind:Lsp.Types.MarkupKind.Markdown
+                              ~value:docstring))
+                      ())
             in
             let signatures =
               Lsp.Types.SignatureInformation.create ~label ~parameters:params

@@ -146,6 +146,8 @@ These checks add significant overhead and are intended for testing and validatio
 
 The algorithm was evaluated using a replay-based benchmark. The workload replays 56 sequential commits from a real project (Hyperindex), with invariant assertions and metrics collection enabled throughout. For each commit, the script runs the incremental (server-backed) analysis and a cold baseline that recomputes the full analysis from scratch (with `RESCRIPT_REANALYZE_NO_SERVER=1`), comparing both for timing and failure behavior.
 
+[hyperindex_replay_build_times.sh](experiments/hyperindex_replay_build_times.sh) reruns this evaluation. It takes the path of a Hyperindex checkout that has the `benchmark/rescript-baseline` and `benchmark/rescript-followup` branches (overridable with `START_REF` and `END_REF`).
+
 Average change size per commit: 1.3 files, 5.9 insertions, 47.2 deletions (range: 1–5 changed files per commit).
 
 ### Results

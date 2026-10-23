@@ -22,9 +22,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(* This file was used to read reason ast
-   and part of parsing binary ast
-*)
+(* The kind (structure or signature) of an AST, and conversion between
+   Parsetree and the frozen Parsetree0 that PPX executables read and write *)
 type _ kind = Ml : Parsetree.structure kind | Mli : Parsetree.signature kind
 
 type ast0 = Impl of Parsetree0.structure | Intf of Parsetree0.signature

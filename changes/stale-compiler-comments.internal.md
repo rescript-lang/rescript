@@ -1,0 +1,1 @@
+- Fix stale comments in the compiler and the `Private_label` entry of the error variant catalog. https://github.com/rescript-lang/rescript/pull/8851
