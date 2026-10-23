@@ -442,6 +442,32 @@ export function commitMarkdown(r, full, change = "") {
 }
 
 /**
+ * The changelog entries as a list, each bullet led by its entry's emoji, in
+ * at most `room` characters: the comment shortens commits to fit its
+ * budget but not the changelog, so entries past the room are counted, not
+ * drawn.
+ * @param {ChangelogEntry[]} changelog
+ * @param {number} room
+ */
+function changelogList(changelog, room) {
+  if (!changelog.length) return "No changelog entry.";
+  const drawn = [];
+  let size = 0;
+  for (const e of changelog) {
+    const lines = unmentioned(e.text).replace(/^- /gm, `- ${e.emoji} `);
+    size += lines.length + 1;
+    if (size > room) break;
+    drawn.push(lines);
+  }
+  const left = changelog.length - drawn.length;
+  if (left)
+    drawn.push(
+      `\n<sub>${left}${drawn.length ? " more" : ""} changelog entr${left === 1 ? "y" : "ies"} under \`changes/\`.</sub>`,
+    );
+  return drawn.join("\n");
+}
+
+/**
  * The comment: a heading linking the page (`url`), in its title and as "Full
  * page", then each commit. Past the budget, the commits with the most
  * characters are drawn without their forms, and if that is not enough, the
@@ -469,12 +495,7 @@ export function commentMarkdown(
   const breakingEntry = changelog?.some(e => e.category === "breaking");
   const head = [
     changelog && "### Changelog",
-    changelog &&
-      (changelog.length
-        ? changelog
-            .map(e => unmentioned(e.text).replace(/^- /gm, `- ${e.emoji} `))
-            .join("\n")
-        : "No changelog entry."),
+    changelog && changelogList(changelog, budget / 4),
     changelog &&
       breakingCommits &&
       !breakingEntry &&

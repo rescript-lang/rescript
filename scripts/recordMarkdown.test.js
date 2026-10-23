@@ -295,3 +295,30 @@ test("the heading lists the changelog entries and notes a breaking mismatch", ()
     "<sub>:boom: A changelog entry is a breaking change, but no commit says what it breaks (`Breaking:`).</sub>",
   );
 });
+
+test("past a quarter of the budget, changelog entries are counted, not drawn", () => {
+  const entry = (/** @type {number} */ k) => ({
+    category: "fix",
+    emoji: ":bug:",
+    text: `- Fix ${k}: ${"x".repeat(300)}`,
+  });
+  const md = comment([`Fix\n\n${SIGNED}\n`], {
+    budget: 4000,
+    changelog: Array.from({ length: 20 }, (_, k) => entry(k)),
+  });
+  assert.ok(md.length <= 4000, `${md.length}`);
+  has(md, "- :bug: Fix 0:");
+  assert.ok(!md.includes("Fix 3:"));
+  has(
+    md,
+    "<sub>17 more changelog entries under `changes/`.</sub>\n\n### Semantic Diff",
+  );
+  const huge = comment([`Fix\n\n${SIGNED}\n`], {
+    budget: 4000,
+    changelog: [
+      { category: "fix", emoji: ":bug:", text: `- ${"y".repeat(5000)}` },
+    ],
+  });
+  assert.ok(huge.length <= 4000, `${huge.length}`);
+  has(huge, "<sub>1 changelog entry under `changes/`.</sub>");
+});
