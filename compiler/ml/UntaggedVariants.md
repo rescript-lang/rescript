@@ -149,10 +149,15 @@ The type checker rejects an untagged variant, with
 | an unknown case beside another case with a payload | Case A has a payload that is not of one of the recognized shapes ... | `UntaggedOnlyOneUnknown.res`, `UntaggedUnknown.res` |
 | a `bool` case when both `true` and `false` are literal cases | Case B can never match ... | `UntaggedUnreachableBoolean.res` |
 | two nullary cases with the same literal | Duplicate literal x. | `UntaggedDuplicateLiteral.res` |
+| two nullary cases whose literals are spelled differently but are the same JavaScript value | The literal 1.0 is the same JavaScript value as 1. | `untagged_literal_same_number.res`, `untagged_literal_same_int32.res`, `untagged_literal_same_bigint.res` |
 
 Literals are compared per kind: string literals with each other (a case
 without `@as` counts as its name), and all other literals with each other by
-their spelling. The duplicate-literal check applies to every variant, tagged
+the JavaScript value they denote, as the `===` of a `switch` compares them.
+An int is the 32-bit number it is emitted as (rule 3), so `1`, `1.0` and
+`4294967297` are one number, and so are `0` and `-0.`; `1n` is a bigint and
+differs from `1`, and `001n` is `1n`. Constant folding (rule 11) compares
+literals the same way. The duplicate-literal check applies to every variant, tagged
 or not; in a tagged variant it also compares the `@as` tags of the cases with
 a payload.
 
@@ -161,10 +166,12 @@ A literal may equal a value of a payload case: `@as("a") A | S(string)`,
 `@as(true) A | B(bool)` are accepted. Rule 7 says which case such a value
 belongs to.
 
-- Implementation: `ast_untagged_variants.ml:check_invariant`.
-- Tests: the fixtures above; `TaggedDuplicateLiteral.res`,
+- Implementation: `ast_untagged_variants.ml:check_invariant`,
+  `variant_runtime.ml:literal_value_key`.
+- Tests: the fixtures above; `tests/tests/src/unboxed_variant_fold_test.res`
+  (a number and a bigint literal with the same digits); `TaggedDuplicateLiteral.res`,
   `multiple_tag_1.res`, `multiple_tag_2.res` (tagged variants).
-- Shaped by #6128, #6136, #7441, #8777.
+- Shaped by #6128, #6136, #7441, #8777, #8953.
 
 ### 7. Literal cases are tested first
 
@@ -348,21 +355,6 @@ cases with a payload (see Known bugs).
 
 Each was observed with the compiler built from this tree; the programs are
 compiled with `bsc` and run in Node 25.
-
-**Numeric literals are compared by spelling.** Rule 6 compares `1` and `1.0`,
-and `1` and `4294967297`, as different literals, while they are one
-JavaScript number.
-
-```rescript
-@unboxed type t = | @as(1) A | @as(1.0) B
-let name = v => switch v { | A => "A" | B => "B" }
-@inline(never) let id = x => x
-Console.log2(name(B), name(id(B)))   // B A
-```
-
-The declaration is accepted; `B` is `1` at run time and matches as `A`, while
-the folded `name(B)` returns `"B"`. With `@as(4294967297) B`, `name(id(B))`
-returns `"A"` as well.
 
 **`Some` of a constant `undefined` case is `None`.** Rule 12 boxes `Some(v)`
 for a variant with an `@as(undefined)` case, but a constant argument skips

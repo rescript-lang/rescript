@@ -841,18 +841,7 @@ let runtime_value_kind (c : structured_constant) =
    [1.0] are the same JavaScript number. Bigint spellings are not compared;
    both bigint payloads and bigint constructors are classified as unknown.
    Integer tags are emitted through [Int32.of_int], just like [Const_int]. *)
-let literal_denotes_same (a : Variant_runtime.literal_tag)
-    (b : Variant_runtime.literal_tag) =
-  match (a, b) with
-  | String x, String y -> x = y
-  | Int x, Int y -> Int32.of_int x = Int32.of_int y
-  | Float x, Float y -> float_of_string x = float_of_string y
-  | Int x, Float y | Float y, Int x ->
-    Int32.to_float (Int32.of_int x) = float_of_string y
-  | Bool x, Bool y -> x = y
-  | Null, Null | Undefined, Undefined -> true
-  | (String _ | Int _ | Float _ | Bool _ | BigInt _ | Null | Undefined), _ ->
-    false
+let literal_denotes_same = Variant_runtime.same_literal_value
 
 (* Mirror [Dynamic_checks]: literals take precedence; the object case excludes
    arrays when an array case exists. Int and float share one runtime type. *)

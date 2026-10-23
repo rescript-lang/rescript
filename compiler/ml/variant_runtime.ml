@@ -79,6 +79,25 @@ type literal_tag =
   | Null
   | Undefined
 
+(* [-0.] and [0.] are equal for [===]; [%h] is exact for every other number *)
+let number_key x = "number:" ^ if x = 0. then "0" else Printf.sprintf "%h" x
+
+let literal_value_key = function
+  | Int i -> number_key (Int32.to_float (Int32.of_int i))
+  | Float f -> (
+    match float_of_string_opt f with
+    | Some x -> number_key x
+    | None -> "number:" ^ f)
+  | BigInt i ->
+    let positive, digits = Bigint_utils.parse_bigint i in
+    "bigint:" ^ Bigint_utils.to_string (positive || digits = "0") digits
+  | Bool b -> if b then "true" else "false"
+  | Null -> "null"
+  | Undefined -> "undefined"
+  | String s -> "string:" ^ s
+
+let same_literal_value a b = literal_value_key a = literal_value_key b
+
 (** Information used to recognize a constructor during matching. A literal
     identifies a constant or an object's tag; a payload shape identifies a
     value represented directly by its payload. *)
