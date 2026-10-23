@@ -694,7 +694,16 @@ let rec print_out_sig_item_doc ?(print_name_as_is = false)
             private_doc;
             print_record_declaration_doc ~inline:false record;
           ]
-      | typ -> Doc.concat [Doc.text " = "; print_out_type_doc typ]
+      | Otyp_manifest (manifest, typ) ->
+        Doc.concat
+          [
+            Doc.text " = ";
+            print_out_type_doc manifest;
+            Doc.text " = ";
+            private_doc;
+            print_out_type_doc typ;
+          ]
+      | typ -> Doc.concat [Doc.text " = "; private_doc; print_out_type_doc typ]
     in
     let constraints =
       match out_type_decl.otype_cstrs with

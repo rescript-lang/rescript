@@ -1,0 +1,20 @@
+===== Priv.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_private_abbreviation_mismatch/Priv.res[0m:[2m3:1-10[0m
+
+  1 [2m│[0m type a
+  2 [2m│[0m type b
+  [1;31m3[0m [2m│[0m [1;31mtype t = b[0m
+  4 [2m│[0m 
+
+  The implementation /.../fixtures/Cross_private_abbreviation_mismatch/Priv.res
+  does not match the interface /.../fixtures/Cross_private_abbreviation_mismatch/priv.cmi:
+  Type declarations do not match:
+    type t = b
+  is not included in
+    type t = private a
+  [36m/.../fixtures/Cross_private_abbreviation_mismatch/Priv.resi[0m:[2m2:1-18[0m:
+    Expected declaration
+  [36m/.../fixtures/Cross_private_abbreviation_mismatch/Priv.res[0m:[2m3:1-10[0m:
+    Actual declaration
