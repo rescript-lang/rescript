@@ -863,7 +863,7 @@ let value_has_block_type ~block_types (kind : value_kind)
   | UnknownType, (Is_literal _ | Is_object | Is_array) -> true
   | UnknownType, Unknown_value -> false
   | ( ( IntType | FloatType | StringType | BooleanType | ObjectType | BigintType
-      | FunctionType | InstanceType _ ),
+      | SymbolType | FunctionType | InstanceType _ ),
       _ ) ->
     false
 

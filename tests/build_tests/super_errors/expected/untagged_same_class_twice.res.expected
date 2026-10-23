@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/untagged_same_class_twice.res[0m:[2m5:25-34[0m
+
+  3 [2m│[0m 
+  4 [2m│[0m @unboxed
+  [1;31m5[0m [2m│[0m type t = Animal(animal) [1;31m| Pet(pet)[0m
+  6 [2m│[0m 
+
+  This untagged variant definition is invalid: At most one case can be an instance of Animal.

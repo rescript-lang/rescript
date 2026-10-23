@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/runtime_annotation_on_record.res[0m:[2m1:21-37[0m
+
+  [1;31m1[0m [2m│[0m @instanceOf("Date") [1;31mtype t = {x: int}[0m
+  2 [2m│[0m 
+
+  @instanceOf can only be used on abstract types and type abbreviations, whose runtime representation it describes.
