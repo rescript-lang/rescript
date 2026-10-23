@@ -325,7 +325,7 @@ Resolved opens 1 Stdlib
     "detail": "",
     "documentation": {
       "kind": "markdown",
-      "value": "The `@instanceOf` decorator states that the values of an abstract type are instances of a global JavaScript class. Such a type can be the payload of an untagged variant case, which is then recognized with `instanceof`, and is never `undefined`, like with `@notUndefined`.\n\nA private abbreviation of another annotated type declares a subclass, so that the subclass case is checked first.\n\nExample usage:\n```rescript\n@instanceOf(\"Blob\")\ntype blob\n\n@instanceOf(\"File\")\ntype file = private blob\n```"
+      "value": "The `@instanceOf` decorator states that the values of an abstract type are instances of a global JavaScript class. Such a type can be the payload of an untagged variant case, which is then recognized with `instanceof`, and is never `undefined`, like with `@notUndefined`.\n\nA private abbreviation of another annotated type declares a subclass. A case of the superclass then excludes the instances of a subclass that is a case too, whatever the order of the cases.\n\nExample usage:\n```rescript\n@instanceOf(\"Blob\")\ntype blob\n\n@instanceOf(\"File\")\ntype file = private blob\n```"
     },
     "insertText": "instanceOf(\"$0\")",
     "insertTextFormat": 2,

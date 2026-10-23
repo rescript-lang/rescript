@@ -101,16 +101,23 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
     let error err = raise (Error (loc, err)) in
     match (outer, recognized_as ~env manifest) with
     | _, None -> (
-      let is_abstract path =
+      (* A functor parameter's type and a locally abstract type are abstract
+         only here: they stand for whatever type they are instantiated with *)
+      let refinable path =
         match Env.find_type path env with
-        | {type_kind = Type_abstract; type_manifest = None} -> true
+        | {type_kind = Type_abstract; type_manifest = None; type_newtype_level}
+          ->
+          if type_newtype_level <> None || Env.is_functor_arg path env then
+            error
+              (RuntimeAnnotationOnTypeParameter (runtime_attribute_name outer))
+          else true
         | _ -> false
         | exception Not_found -> false
       in
       match (Ctype.expand_head_opt env manifest).desc with
       | Tconstr (path, _, _)
         when Predef.type_is_builtin_path_but_option path = Predef.NA
-             && is_abstract path ->
+             && refinable path ->
         ()
       | _ ->
         error (RuntimeAnnotationOnUnrelatedType (runtime_attribute_name outer)))
@@ -118,18 +125,25 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
     | Instance_of name, Some (InstanceType (Class {name = inner}))
       when name = inner ->
       ()
-    | Instance_of name, Some (InstanceType (Class {name = ancestor; ancestors}))
-      ->
+    | Instance_of name, Some ((InstanceType (Class _) | ObjectType) as inner) ->
       (* A public abbreviation is the same type as the superclass, unless it
          is a strict instance of it, as in the phantom type hierarchy
-         [type element<'a> = node<_element<'a>>] *)
+         [type element<'a> = node<_element<'a>>]. The arguments are read after
+         expansion, where the superclass type is reached. *)
       let same_type =
-        match (Btype.repr manifest).desc with
+        match (Ctype.expand_head_opt env manifest).desc with
         | Tconstr (_, args, _) -> List.for_all Btype.is_Tvar args
         | _ -> true
       in
+      let superclass, ancestors =
+        match inner with
+        | InstanceType (Class {name = ancestor; ancestors}) ->
+          (ancestor, ancestor :: ancestors)
+        (* Every class instance is an object *)
+        | _ -> ("Object", [])
+      in
       if decl.type_private = Public && same_type then
-        error (SubclassOfPublicAbbreviation (name, ancestor))
+        error (SubclassOfPublicAbbreviation (name, superclass))
       else if List.mem name ancestors then error (ClassTwiceInChain name)
     | (Instance_of _ | Type_of _), Some inner ->
       error
