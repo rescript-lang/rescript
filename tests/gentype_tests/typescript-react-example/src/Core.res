@@ -35,6 +35,9 @@ let taggedTemplate1 = (x: TaggedTemplate.t<string, string>) => x
 let date1 = (x: Date.t) => x
 
 @genType
+let char0 = (x: char) => x
+
+@genType
 let bigint0 = (x: bigint) => x
 
 @genType
