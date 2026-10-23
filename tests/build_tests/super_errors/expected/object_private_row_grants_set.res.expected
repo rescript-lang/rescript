@@ -12,16 +12,16 @@
   Signature mismatch:
   Modules do not match:
     {
-  type t = {.."x": int}
+  type t = private {.."x": int}
 }
   is not included in
     {
-  type t = {..@set "x": int}
+  type t = private {..@set "x": int}
 }
   Type declarations do not match:
-    type t = {.."x": int}
+    type t = private {.."x": int}
   is not included in
-    type t = {..@set "x": int}
+    type t = private {..@set "x": int}
   [36m/.../fixtures/object_private_row_grants_set.res[0m:[2m6:3-36[0m:
     Expected declaration
   [36m/.../fixtures/object_private_row_grants_set.res[0m:[2m8:3-31[0m:

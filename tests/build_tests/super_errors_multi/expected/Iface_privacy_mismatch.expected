@@ -9,7 +9,7 @@
   The implementation /.../fixtures/Iface_privacy_mismatch/Foo.res
   does not match the interface /.../fixtures/Iface_privacy_mismatch/foo.cmi:
   Type declarations do not match:
-    type t = int
+    type t = private int
   is not included in
     type t = int
   [36m/.../fixtures/Iface_privacy_mismatch/Foo.resi[0m:[2m1:1-12[0m:
