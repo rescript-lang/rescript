@@ -67,7 +67,7 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
   in
   match (path |> path_to_list |> List.rev, params_translation) with
   | ["bool"], [] -> {dependencies = []; type_ = boolean_t}
-  | ["int"], [] -> {dependencies = []; type_ = number_t}
+  | (["int"] | ["char"]), [] -> {dependencies = []; type_ = number_t}
   | ["float"], [] -> {dependencies = []; type_ = number_t}
   | (["string"] | ["Stdlib"; "String"; "t"]), [] ->
     {dependencies = []; type_ = string_t}
