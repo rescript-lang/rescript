@@ -37,11 +37,15 @@ Run commands from the repository root:
 
 ```sh
 make rewatch
-make test-rewatch
+make test-rewatch-rust
 cargo test --manifest-path rewatch/Cargo.toml
 cargo clippy --manifest-path rewatch/Cargo.toml --all-targets --all-features
 cargo fmt --check --manifest-path rewatch/Cargo.toml
 ```
+
+`make test-rewatch-rust` builds this implementation and runs the integration
+suite against it; `make test-rewatch` runs the same suite against `rescript`,
+the OCaml implementation.
 
 The integration suite is [`tests/suite.sh`](tests/suite.sh). It creates and
 modifies projects under `testrepo/`; use its helpers for portable path and file

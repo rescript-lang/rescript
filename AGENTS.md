@@ -105,7 +105,8 @@ on `master`. CI runs on every PR in the stack.
 For compiler or standard-library changes, run `make test`. For syntax changes,
 also run `make test-syntax`; use `make test-syntax-roundtrip` when parsing or
 printing changes. Other focused suites are `make test-gentype`,
-`make test-analysis`, `make test-tools`, and `make test-rewatch`.
+`make test-analysis`, `make test-tools`, `make test-rewatch` (OCaml build
+system), and `make test-rewatch-rust` (Rust build system).
 
 ### Testing Requirements
 
