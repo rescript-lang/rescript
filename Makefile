@@ -188,6 +188,9 @@ test-gentype: lib
 test-rewatch: lib
 	./rewatch/tests/suite.sh $(RESCRIPT_EXE)
 
+test-rewatch-rust: lib rewatch
+	./rewatch/tests/suite.sh $(RESCRIPT_RUST_EXE)
+
 test-all: test test-gentype test-analysis test-tools test-rewatch
 
 # Playground
@@ -382,4 +385,4 @@ clean: clean-lib clean-compiler clean-rewatch clean-coverage
 
 .DEFAULT_GOAL := build
 
-.PHONY: yarn-install build rewatch compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat semantic-diff clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean
+.PHONY: yarn-install build rewatch compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-rewatch-rust test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat semantic-diff clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean
