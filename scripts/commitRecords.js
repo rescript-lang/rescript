@@ -11,13 +11,15 @@
  *   node scripts/commitRecords.js --out review.html <base>..<tip>...
  *   --pr <number> and --title <text> head the page with the pull request.
  *   --markdown <file> also draws the records as the pull request's comment
- *   (scripts/recordMarkdown.js), linking the page at --url <url>. With
+ *   (scripts/recordMarkdown.js), linking the page at --url <url>.
+ *   --logins <file>, lines `<sha> <login>`, names the GitHub accounts of
+ *   the commits' authors, drawn in place of their names. With
  *   --previous <rev>, the pull request's head before the last push, the
  *   comment marks the commits that push added or whose message it edited.
  */
 
 import { execFileSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { commentMarkdown } from "./recordMarkdown.js";
 import { CSS, esc, pageBody, pageTitle, parseRecord } from "./recordRender.js";
 
@@ -57,6 +59,7 @@ function readRecord(rev) {
   const record = parseRecord({
     sha: show("--format=%h", "--abbrev=9").trim(),
     author: show("--format=%an").trim(),
+    login: logins.get(show("--format=%H").trim()),
     date: utc(new Date(show("--format=%aI").trim())),
     message: show("--format=%B"),
   });
@@ -131,9 +134,15 @@ const options = {};
 const targets = [];
 for (let i = 0; i < args.length; i++) {
   if (
-    ["--out", "--pr", "--title", "--markdown", "--url", "--previous"].includes(
-      args[i],
-    ) &&
+    [
+      "--out",
+      "--pr",
+      "--title",
+      "--markdown",
+      "--url",
+      "--previous",
+      "--logins",
+    ].includes(args[i]) &&
     i + 1 < args.length
   )
     options[args[i].slice(2)] = args[++i];
@@ -142,10 +151,18 @@ for (let i = 0; i < args.length; i++) {
 const outFile = options.out;
 if (!outFile) {
   console.error(
-    "usage: commitRecords.js --out <page.html> [--pr <number>] [--title <text>] [--markdown <comment.md> [--url <page url>] [--previous <rev>]] <rev | base..tip>...",
+    "usage: commitRecords.js --out <page.html> [--pr <number>] [--title <text>] [--markdown <comment.md> [--url <page url>] [--previous <rev>]] [--logins <file>] <rev | base..tip>...",
   );
   process.exit(1);
 }
+/** The GitHub logins of the commits' authors, by full sha. */
+const logins = new Map(
+  (options.logins ? readFileSync(options.logins, "utf8") : "")
+    .split("\n")
+    .map(l => l.trim().split(/\s+/))
+    .filter(f => f.length === 2)
+    .map(([sha, login]) => [sha, login]),
+);
 const heading = {
   pr: (options.pr ?? "").replace(/\D/g, ""),
   title: options.title ?? "",
