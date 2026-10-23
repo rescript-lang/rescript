@@ -564,6 +564,13 @@
   "additionalProperties": false,
   "required": ["name", "sources"],
   "dependencies": {
-    "namespace-entry": ["namespace"]
+    "namespace-entry": {
+      "required": ["namespace"],
+      "properties": {
+        "namespace": {
+          "not": { "enum": [false] }
+        }
+      }
+    }
   }
 }
