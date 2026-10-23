@@ -440,8 +440,11 @@ declaration it is an error, "@notUndefined can only be used on abstract
 types". `@instanceOf` and `@typeOf` (rule 5) imply it.
 
 When an interface declares a type `@notUndefined`, its implementation must be
-a type that cannot hold `undefined` either, or an abstract type, which has no
-representation to contradict it. `type t = option<int>` under
+a type that cannot hold `undefined` either, or a type whose representation
+the compiler does not see, which has none to contradict it: an abstract type,
+also through an abbreviation such as `type t = Dom.element`, or a JavaScript
+object type. The type of a functor parameter or a locally abstract type
+stands for another type and does not count as abstract. `type t = option<int>` under
 `@notUndefined type t` is an error: "Their runtime representations
 differ: the second declaration is @notUndefined, but the first declaration
 can hold undefined". The same holds
@@ -453,7 +456,8 @@ for functor arguments and `with type` constraints.
   `typeopt.ml:type_cannot_contain_undefined`;
   `includemod.ml:not_undefined_mismatch`.
 - Tests: `spec_test` rule 13; fixtures `invalid_attribute_not_undefined.res`,
-  `not_undefined_functor_argument.res`;
+  `not_undefined_functor_argument.res`, `not_undefined_functor_parameter.res`;
+  `tests/tests/src/not_undefined_interface_test.res`;
   `tests/build_tests/super_errors_multi/fixtures/Cross_not_undefined_option_implementation`;
   `tests/build_tests/not_undefined_attribute`.
 - Shaped by #7458, #7464, #8964.
