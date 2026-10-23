@@ -27,6 +27,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v7
         with:
+          cache: yarn
           node-version: 22
-      - run: node --test scripts/changelog.test.js
+      # The scripts import semver. Package builds aren't needed for them.
+      - run: yarn install --immutable --mode=skip-build
+      - run: node --test scripts/changelog.test.js scripts/magicNumbers.test.js
       - run: node scripts/changelog.js check
