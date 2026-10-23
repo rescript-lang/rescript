@@ -18,13 +18,15 @@ function add5(extra) {
   return 5 + extra | 0;
 }
 
+let arg = hook;
+
 function addHookPartial(extra) {
-  addHook(hook, extra);
+  addHook(arg, extra);
 }
 
-addHook(hook, _x => {});
+addHookPartial(_x => {});
 
-addHook(hook, _x => {});
+addHookPartial(_x => {});
 
 export {
   f,
@@ -32,4 +34,4 @@ export {
   add5,
   addHookPartial,
 }
-/*  Not a pure module */
+/* arg Not a pure module */

@@ -7,7 +7,7 @@ module MyList = List
 //        ^com
 
 module Dep: {
-  @ocaml.doc("Some doc comment") @deprecated("Use customDouble instead")
+  @res.doc("Some doc comment") @deprecated("Use customDouble instead")
   let customDouble: int => int
 } = {
   let customDouble = foo => foo * 2

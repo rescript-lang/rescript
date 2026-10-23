@@ -1,0 +1,1 @@
+- Reject `@as` literals of one variant that are the same JavaScript value, such as `@as(1)` and `@as(1.0)`, and accept `@as(1)` beside `@as(1n)`.

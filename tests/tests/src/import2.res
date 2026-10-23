@@ -5,7 +5,5 @@ let b = Import_external.makeA
  the emitted export (`case` is exported as `$$case`) */
 let c = import(Export_keyword.case)
 
-/* hoisted export names also go through JS identifier conversion:
-   the cmj stores the raw flattened name (Operator$+), the module exports
-   the converted one (Operator$$plus) */
-let d = import(Hoisted_function_attr.Operator.\"+")
+/* a nested make is imported through its flat export */
+let d = import(Flat_make_export.Two.Inner.make)

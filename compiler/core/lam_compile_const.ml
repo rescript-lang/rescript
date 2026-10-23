@@ -24,18 +24,13 @@
 
 module E = Js_exp_make
 
-(** return [val < 0] if not nested [Some (Some (Some None))]*)
-let rec is_some_none_aux (x : Lambda.structured_constant) acc =
-  match x with
-  | Const_some v -> is_some_none_aux v (acc + 1)
-  | Const_module_alias | Const_js_undefined _ -> acc
-  | _ -> -1
-
 let rec nested_some_none n none =
   if n = 0 then none else nested_some_none (n - 1) (E.optional_block none)
 
 let rec translate_some (x : Lambda.structured_constant) : J.expression =
-  let depth = is_some_none_aux x 0 in
+  (* Keep in sync with [Lambda.const_is_allocating]: a nested none is a new
+     optional block. *)
+  let depth = Lambda.const_some_none_depth x in
   if depth < 0 then E.optional_not_nest_block (translate x)
   else
     nested_some_none depth

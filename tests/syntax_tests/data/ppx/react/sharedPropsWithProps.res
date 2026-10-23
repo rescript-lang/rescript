@@ -55,3 +55,11 @@ module V4A7 = {
     React.int(props.count)
   }
 }
+
+module V4A8 = {
+  type props = {x: string}
+
+  // The payload has no effect; it is accepted with a deprecation warning.
+  @react.componentWithProps(: props)
+  let make = props => React.string(props.x)
+}

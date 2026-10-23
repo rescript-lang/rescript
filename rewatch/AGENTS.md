@@ -72,13 +72,13 @@ cargo fmt --check --manifest-path rewatch/Cargo.toml
 cargo build --manifest-path rewatch/Cargo.toml --release
 
 # Or use the Makefile shortcuts
-make rewatch          # Build rewatch
-make test-rewatch     # Run integration tests
+make rewatch            # Build rewatch
+make test-rewatch-rust  # Build rewatch and run the integration tests against it
 ```
 
 **Note**: The rewatch project is located in the `rewatch/` directory with its own `Cargo.toml` file. All cargo commands should be run from the project root using the `--manifest-path rewatch/Cargo.toml` flag, as shown in the CI workflow.
 
-**Integration Tests**: The `make test-rewatch` command runs bash-based integration tests located in `rewatch/tests/suite.sh`. These tests use the `rewatch/testrepo/` directory as a test workspace with various package configurations to verify rewatch's behavior across different scenarios.
+**Integration Tests**: The `make test-rewatch-rust` command runs bash-based integration tests located in `rewatch/tests/suite.sh` against the Rust binary, `rescript-rust`. `make test-rewatch` runs the same suite against `rescript`, the OCaml implementation in `rewatch-ocaml/`, so it neither rebuilds nor tests this code. These tests use the `rewatch/testrepo/` directory as a test workspace with various package configurations to verify rewatch's behavior across different scenarios.
 
 **Running Individual Integration Tests**: You can run individual test scripts directly by setting up the environment manually:
 

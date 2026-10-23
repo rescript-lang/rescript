@@ -11,6 +11,7 @@ type untagged_error =
   | AtMostOneBoolean
   | UnreachableBoolean of string
   | DuplicateLiteral of string
+  | SameLiteralValue of string * string
   | ConstructorMoreThanOneArg of string
 type error =
   | InvalidVariantAsAnnotation
@@ -26,8 +27,8 @@ let report_error ppf =
   function
   | InvalidVariantAsAnnotation ->
     fprintf ppf
-      "A variant case annotation @as(...) must be a string, integer, boolean, \
-       null, or undefined."
+      "A variant case annotation @as(...) must be a string, integer, float, \
+       bigint, boolean, null, or undefined."
   | VariantAsIntegerOutOfRange value ->
     fprintf ppf
       "The integer %s in this variant case's @as annotation is out of range."
@@ -59,6 +60,9 @@ let report_error ppf =
         "At most one case can be a number type (int or float)."
       | AtMostOneBigint -> "At most one case can be a bigint type."
       | DuplicateLiteral s -> "Duplicate literal " ^ s ^ "."
+      | SameLiteralValue (literal, earlier) ->
+        "The literal " ^ literal ^ " is the same JavaScript value as " ^ earlier
+        ^ "."
       | ConstructorMoreThanOneArg name ->
         "Constructor " ^ name ^ " has more than one argument.")
   | TagFieldNameConflict (constructor_name, field_name, runtime_value) ->
@@ -83,12 +87,6 @@ let literal_tag_to_user_visible_string = function
   | Undefined -> "undefined"
 
 let untagged = "unboxed"
-
-let block_type_can_be_undefined = function
-  | IntType | StringType | FloatType | BigintType | BooleanType | InstanceType _
-  | FunctionType | ObjectType ->
-    false
-  | UnknownType -> true
 
 let has_untagged (attrs : Parsetree.attributes) =
   Ext_list.exists attrs (function {txt}, _ -> txt = untagged)
@@ -210,13 +208,18 @@ let is_nullary_variant (x : Types.constructor_arguments) =
   | Types.Cstr_tuple [] -> true
   | _ -> false
 
+(* A literal's JavaScript value, which a [switch] compares with [===]. Ints
+   are emitted as 32-bit numbers, so [1], [1.0] and [4294967297] are one
+   number, while [1n] is a bigint. *)
 let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
     ~(blocks : (Location.t * block) list) =
   let module String_set = Set.Make (String) in
+  let module String_map = Map.Make (String) in
   let string_literals_consts = ref String_set.empty in
   let string_literals_blocks = ref String_set.empty in
-  let nonstring_literals_consts = ref String_set.empty in
-  let nonstring_literals_blocks = ref String_set.empty in
+  (* Keyed by [literal_key], with the spelling of the literal *)
+  let nonstring_literals_consts = ref String_map.empty in
+  let nonstring_literals_blocks = ref String_map.empty in
   let instance_types = Hashtbl.create 1 in
   let function_types = ref 0 in
   let object_types = ref 0 in
@@ -233,13 +236,21 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
       raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)));
     set := String_set.add s !set
   in
-  let add_nonstring_literal ~is_const ~loc s =
-    let set =
+  let add_nonstring_literal ~is_const ~loc literal s =
+    let map =
       if is_const then nonstring_literals_consts else nonstring_literals_blocks
     in
-    if String_set.mem s !set then
-      raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)));
-    set := String_set.add s !set
+    let key = Variant_runtime.literal_value_key literal in
+    (match String_map.find_opt key !map with
+    | Some earlier when earlier = s ->
+      raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)))
+    | Some earlier ->
+      raise
+        (Error
+           ( loc,
+             InvalidUntaggedVariantDefinition (SameLiteralValue (s, earlier)) ))
+    | None -> ());
+    map := String_map.add key s !map
   in
   let invariant loc name =
     if !unknown_types <> 0 && List.length blocks <> 1 then
@@ -269,13 +280,19 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
     match tag.literal with
     | None -> add_string_literal ~is_const ~loc tag.name
     | Some (String s) -> add_string_literal ~is_const ~loc s
-    | Some (Int i) -> add_nonstring_literal ~is_const ~loc (string_of_int i)
-    | Some (Float f) -> add_nonstring_literal ~is_const ~loc f
-    | Some (BigInt i) -> add_nonstring_literal ~is_const ~loc i
-    | Some (Bool b) ->
-      add_nonstring_literal ~is_const ~loc (if b then "true" else "false")
-    | Some Null -> add_nonstring_literal ~is_const ~loc "null"
-    | Some Undefined -> add_nonstring_literal ~is_const ~loc "undefined"
+    | Some (Int i as literal) ->
+      add_nonstring_literal ~is_const ~loc literal (string_of_int i)
+    | Some (Float f as literal) ->
+      add_nonstring_literal ~is_const ~loc literal f
+    | Some (BigInt i as literal) ->
+      add_nonstring_literal ~is_const ~loc literal (i ^ "n")
+    | Some (Bool b as literal) ->
+      add_nonstring_literal ~is_const ~loc literal
+        (if b then "true" else "false")
+    | Some (Null as literal) ->
+      add_nonstring_literal ~is_const ~loc literal "null"
+    | Some (Undefined as literal) ->
+      add_nonstring_literal ~is_const ~loc literal "undefined"
   in
 
   Ext_list.rev_iter consts (fun (loc, literal) ->
@@ -300,8 +317,8 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
                payload only receives the booleans that are not literal cases.
                A partial overlap is allowed, like for strings and numbers. *)
             if
-              String_set.mem "true" !nonstring_literals_consts
-              && String_set.mem "false" !nonstring_literals_consts
+              String_map.mem "true" !nonstring_literals_consts
+              && String_map.mem "false" !nonstring_literals_consts
             then
               raise
                 (Error

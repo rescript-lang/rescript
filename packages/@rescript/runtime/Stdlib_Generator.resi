@@ -10,7 +10,7 @@ See [`Generator`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 /**
 Type representing a generator object.
 */
-type t<'yield, 'return, 'next> = private Stdlib_Iterable.t<'yield>
+type t<+'yield, +'return, -'next> = private Stdlib_Iterable.t<'yield>
 
 /**
 `asIterator(generator)` views `generator` as an `Iterator.t`.

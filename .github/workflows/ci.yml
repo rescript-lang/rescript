@@ -51,6 +51,7 @@ jobs:
             build_playground: true
             generate_api_docs: true
             benchmarks: true
+            test_commit_records: true
             node-target: linux-arm64
             rust-target: aarch64-unknown-linux-musl
             dune-profile: static
@@ -193,6 +194,10 @@ jobs:
 
       - name: Test release plan
         run: yarn test-release-plan
+
+      - name: Test commit records
+        if: matrix.test_commit_records
+        run: yarn test-commit-records
 
       - name: Run tests
         run: node scripts/test.js -all

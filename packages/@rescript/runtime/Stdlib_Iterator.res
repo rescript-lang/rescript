@@ -1,7 +1,7 @@
 @notUndefined
-type t<'yield, 'return, 'next>
+type t<+'yield, +'return, -'next>
 
-type rawResult<'yield, 'return>
+type rawResult<+'yield, +'return>
 
 @tag("done")
 type result<'yield, 'return> =

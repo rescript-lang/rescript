@@ -3060,6 +3060,12 @@ let Main = {
   preload: preload
 };
 
+let Sprite$make = make;
+
+let Particle$make = make$1;
+
+let Viewport$make = make$3;
+
 export {
   Random,
   Actors,
@@ -3072,5 +3078,8 @@ export {
   Director,
   Procedural_generator,
   Main,
+  Sprite$make,
+  Particle$make,
+  Viewport$make,
 }
 /*  Not a pure module */

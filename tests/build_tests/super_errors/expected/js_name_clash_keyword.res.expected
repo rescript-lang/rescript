@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/js_name_clash_keyword.res[0m:[2m2:5-12[0m
+
+  1 [2m│[0m let delete = 1
+  [1;31m2[0m [2m│[0m let [1;31m$$delete[0m = 2
+  3 [2m│[0m 
+
+  This value has the same JavaScript name $$delete
+  as the value at [1m[36m/.../fixtures/js_name_clash_keyword.res[0m:[2m1:5-10[0m[0m.
+  Rename one of them.

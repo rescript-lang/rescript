@@ -51,6 +51,8 @@ export const taggedTemplate1: (x:((strings:TemplateStringsArray, ...values:strin
 
 export const date1: (x:Date) => Date = CoreJS.date1 as any;
 
+export const char0: (x:number) => number = CoreJS.char0 as any;
+
 export const bigint0: (x:bigint) => bigint = CoreJS.bigint0 as any;
 
 export const stdlibBigInt: (x:bigint) => bigint = CoreJS.stdlibBigInt as any;

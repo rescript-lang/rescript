@@ -31,6 +31,10 @@ For module inclusion and signature compatibility, start with
 [`includecore.mli`](includecore.mli), [`includemod.mli`](includemod.mli), and
 [`mtype.mli`](mtype.mli).
 
+[`UntaggedVariants.md`](UntaggedVariants.md) states the rules of untagged
+(`@unboxed`) variants: payload kinds, run-time recognition, well-formedness,
+and the interaction with `option`.
+
 ## Main data and operations
 
 [`types.mli`](types.mli)

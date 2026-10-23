@@ -1,7 +1,7 @@
 @notUndefined
-type t<'yield, 'return, 'next>
+type t<+'yield, +'return, -'next>
 
-type rawResult<'yield, 'return>
+type rawResult<+'yield, +'return>
 
 type result<'yield, 'return> = Stdlib_Iterator.result<'yield, 'return>
 

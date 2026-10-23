@@ -563,6 +563,11 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
       {expr with pexp_desc = Pexp_sequence (first, constrain_jsx_return second)}
     | _ -> jsx_element_constraint expr
   in
+  let pvb_jsx_component, pvb_attributes =
+    Jsx_common.take_component_with_props_payload binding.pvb_jsx_component
+      binding.pvb_attributes
+  in
+  let binding = {binding with pvb_jsx_component; pvb_attributes} in
   Jsx_common.reject_leftover_component_attrs binding.pvb_attributes;
   match binding.pvb_jsx_component with
   | Some {pjc_kind = Pjc_labelled core_type_of_attr} ->
@@ -948,8 +953,12 @@ let transform_structure_item ~config item =
       pstr_desc =
         Pstr_primitive ({pval_attributes; pval_type} as value_description);
     } as pstr -> (
+    let pval_jsx_component, pval_attributes =
+      Jsx_common.take_component_with_props_payload
+        value_description.pval_jsx_component pval_attributes
+    in
     Jsx_common.reject_leftover_component_attrs pval_attributes;
-    match value_description.pval_jsx_component with
+    match pval_jsx_component with
     | None -> [item]
     | Some {pjc_kind = Pjc_with_props} ->
       Jsx_common.raise_error ~loc:pstr_loc
@@ -1048,8 +1057,12 @@ let transform_signature_item ~config item =
       psig_loc;
       psig_desc = Psig_value ({pval_attributes; pval_type} as psig_desc);
     } as psig -> (
+    let pval_jsx_component, pval_attributes =
+      Jsx_common.take_component_with_props_payload psig_desc.pval_jsx_component
+        pval_attributes
+    in
     Jsx_common.reject_leftover_component_attrs pval_attributes;
-    match psig_desc.pval_jsx_component with
+    match pval_jsx_component with
     (* [@react.componentWithProps] on a signature item has always been left
        alone. *)
     | None | Some {pjc_kind = Pjc_with_props} -> [item]

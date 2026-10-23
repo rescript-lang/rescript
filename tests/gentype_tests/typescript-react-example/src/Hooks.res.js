@@ -204,6 +204,18 @@ let make$1 = Hooks;
 
 let $$default = Hooks;
 
+let Inner$make = Hooks$Inner;
+
+let Inner$Inner2$make = Hooks$Inner$Inner2;
+
+let NoProps$make = Hooks$NoProps;
+
+let WithRef$make = make;
+
+let RenderPropRequiresConversion$make = Hooks$RenderPropRequiresConversion;
+
+let DD$make = Hooks$DD;
+
 export {
   make$1 as make,
   $$default as default,
@@ -219,5 +231,11 @@ export {
   RenderPropRequiresConversion,
   WithChildren,
   DD,
+  Inner$make,
+  Inner$Inner2$make,
+  NoProps$make,
+  WithRef$make,
+  RenderPropRequiresConversion$make,
+  DD$make,
 }
 /* make Not a pure module */

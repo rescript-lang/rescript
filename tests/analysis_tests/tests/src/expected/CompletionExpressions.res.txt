@@ -1327,10 +1327,22 @@ ContextPath Value[takesExotic]
 Path takesExotic
 [
   {
+    "detail": "#\"\"",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#\"\"\n```\n\n```rescript\n[#\"\" | #644 | #\"_\" | #dollar$ | #\"some exotic\"]\n```"
+    },
+    "insertText": "#\"\"",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "#\"\"",
+    "tags": []
+  },
+  {
     "detail": "#\"some exotic\"",
     "documentation": {
       "kind": "markdown",
-      "value": "```rescript\n#\"some exotic\"\n```\n\n```rescript\n[#\"_\" | #dollar$ | #\"some exotic\"]\n```"
+      "value": "```rescript\n#\"some exotic\"\n```\n\n```rescript\n[#\"\" | #644 | #\"_\" | #dollar$ | #\"some exotic\"]\n```"
     },
     "insertText": "#\"some exotic\"",
     "insertTextFormat": 2,
@@ -1342,7 +1354,7 @@ Path takesExotic
     "detail": "#\"_\"",
     "documentation": {
       "kind": "markdown",
-      "value": "```rescript\n#\"_\"\n```\n\n```rescript\n[#\"_\" | #dollar$ | #\"some exotic\"]\n```"
+      "value": "```rescript\n#\"_\"\n```\n\n```rescript\n[#\"\" | #644 | #\"_\" | #dollar$ | #\"some exotic\"]\n```"
     },
     "insertText": "#\"_\"",
     "insertTextFormat": 2,
@@ -1354,12 +1366,24 @@ Path takesExotic
     "detail": "#dollar$",
     "documentation": {
       "kind": "markdown",
-      "value": "```rescript\n#dollar$\n```\n\n```rescript\n[#\"_\" | #dollar$ | #\"some exotic\"]\n```"
+      "value": "```rescript\n#dollar$\n```\n\n```rescript\n[#\"\" | #644 | #\"_\" | #dollar$ | #\"some exotic\"]\n```"
     },
     "insertText": "#dollar$",
     "insertTextFormat": 2,
     "kind": 4,
     "label": "#dollar$",
+    "tags": []
+  },
+  {
+    "detail": "#644",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\n#644\n```\n\n```rescript\n[#\"\" | #644 | #\"_\" | #dollar$ | #\"some exotic\"]\n```"
+    },
+    "insertText": "#644",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "#644",
     "tags": []
   }
 ]

@@ -928,10 +928,6 @@ let print_out_module_type fmt out_module_type =
   Format.pp_print_string fmt
     (Doc.to_string ~width:80 (print_out_module_type_doc out_module_type))
 
-let print_out_type_extension fmt type_extension =
-  Format.pp_print_string fmt
-    (Doc.to_string ~width:80 (print_out_type_extension_doc type_extension))
-
 (* Not supported in ReScript *)
 (* Oprint.out_class_type *)
 let setup =
@@ -939,5 +935,4 @@ let setup =
     (Oprint.out_type := print_out_type;
      Oprint.out_module_type := print_out_module_type;
      Oprint.out_sig_item := print_out_sig_item;
-     Oprint.out_signature := print_out_signature;
-     Oprint.out_type_extension := print_out_type_extension)
+     Oprint.out_signature := print_out_signature)

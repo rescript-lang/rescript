@@ -28,10 +28,10 @@
    2. all variables are of right scope
 *)
 let check ~file ~pass lam =
-  let defined_variables = Hash_set_ident.create 1000 in
+  let defined_variables = Hash_ident.create 1000 in
   let success = ref true in
   let use (id : Ident.t) =
-    if not @@ Hash_set_ident.mem defined_variables id then (
+    if not @@ Hash_ident.mem defined_variables id then (
       Format.fprintf
         (Compiler_request_output.stderr_formatter ())
         "\n[SANITY after %s]:%s/%d used before defined in %s@." pass id.name
@@ -39,13 +39,13 @@ let check ~file ~pass lam =
       success := false)
   in
   let def (id : Ident.t) =
-    if Hash_set_ident.mem defined_variables id then (
+    if Hash_ident.mem defined_variables id then (
       Format.fprintf
         (Compiler_request_output.stderr_formatter ())
         "\n[SANITY after %s]:%s/%d bound twice in %s@." pass id.name id.stamp
         file;
       success := false)
-    else Hash_set_ident.add defined_variables id ()
+    else Hash_ident.add defined_variables id ()
   in
   let rec check_list xs (cxt : Set_int.t) =
     Ext_list.iter xs (fun x -> check_staticfails x cxt)

@@ -17,8 +17,6 @@
 
 open Asttypes
 
-type hoisted_function = {binding: Ident.t; path: string list; loc: Location.t}
-
 type tag_info =
   | Blk_constructor of {
       name: string;
@@ -434,6 +432,8 @@ val lambda_unit : t
 val str_of_field_info : field_dbg_info -> string option
 
 val is_immutable_block : tag_info -> bool
+
+val const_some_none_depth : structured_constant -> int
 
 val const_is_allocating : structured_constant -> bool
 

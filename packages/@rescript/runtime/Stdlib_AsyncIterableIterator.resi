@@ -10,7 +10,7 @@ See [`AsyncIterator`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 /**
 Type representing an async iterable iterator.
 */
-type t<'yield, 'return, 'next> = private Stdlib_AsyncIterable.t<'yield>
+type t<+'yield, +'return, -'next> = private Stdlib_AsyncIterable.t<'yield>
 
 /**
 `make(nextFn)` creates an async iterable iterator from a function returning the next result.

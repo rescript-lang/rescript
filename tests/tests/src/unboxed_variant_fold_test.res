@@ -154,6 +154,15 @@ let wideName = value =>
   | WideInt(_) => "int"
   }
 
+// A number and a bigint with the same digits are different values.
+@unboxed type numberOrBigint = | @as(1) NumberOne | @as(1n) BigintOne | Other(string)
+let numberOrBigintName = value =>
+  switch value {
+  | NumberOne => "number"
+  | BigintOne => "bigint"
+  | Other(s) => s
+  }
+
 @inline(never) let id = x => x
 
 // Nonconstant scalar payloads are passed through; inline records remain objects.
@@ -236,5 +245,12 @@ describe(__MODULE__, () => {
     eq(__LOC__, listName(Values(list{})), "zero")
     eq(__LOC__, bigintName(Wrapped(DecimalTen)), "one")
     eq(__LOC__, wideName(WideInt(1)), "one")
+    eq(__LOC__, numberOrBigintName(BigintOne), "bigint")
+  })
+
+  test("a number and a bigint literal with the same digits", () => {
+    eq(__LOC__, numberOrBigintName(id(NumberOne)), "number")
+    eq(__LOC__, numberOrBigintName(id(BigintOne)), "bigint")
+    eq(__LOC__, numberOrBigintName(id(Other("x"))), "x")
   })
 })

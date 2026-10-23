@@ -61,20 +61,35 @@ let may_map = Stdlib.Option.map
 
 (* File functions *)
 
-let find_in_path_uncap path name =
+(* In each directory of [path], try [name] as written before its uncapitalized
+   form: on a case-insensitive file system both match, and the result is shown
+   in error messages and used in generated import paths. [f] gets each
+   candidate and returns the first result found. *)
+let find_map_in_path_uncap path name f =
   let uname = String.uncapitalize_ascii name in
   let rec try_dir = function
-    | [] -> raise Not_found
-    | dir :: rem ->
-      let fullname = Filename.concat dir name
-      and ufullname = Filename.concat dir uname in
-      if Sys.file_exists (Compiler_request_state.resolve_path fullname) then
-        fullname
-      else if Sys.file_exists (Compiler_request_state.resolve_path ufullname)
-      then ufullname
-      else try_dir rem
+    | [] -> None
+    | dir :: rem -> (
+      match f (Filename.concat dir name) with
+      | Some _ as found -> found
+      | None when uname = name -> try_dir rem
+      | None -> (
+        match f (Filename.concat dir uname) with
+        | Some _ as found -> found
+        | None -> try_dir rem))
   in
   try_dir path
+
+let find_in_path_uncap_opt path name =
+  find_map_in_path_uncap path name (fun fullname ->
+      if Sys.file_exists (Compiler_request_state.resolve_path fullname) then
+        Some fullname
+      else None)
+
+let find_in_path_uncap path name =
+  match find_in_path_uncap_opt path name with
+  | Some fullname -> fullname
+  | None -> raise Not_found
 
 let remove_file filename =
   let filename = Compiler_request_state.resolve_path filename in

@@ -33,10 +33,22 @@ let V4A3 = {
   make: Jsxv4_newtype$V4A3
 };
 
+let V4A$make = Jsxv4_newtype$V4A;
+
+let V4A1$make = Jsxv4_newtype$V4A1;
+
+let V4A2$make = Jsxv4_newtype$V4A2;
+
+let V4A3$make = Jsxv4_newtype$V4A3;
+
 export {
   V4A,
   V4A1,
   V4A2,
   V4A3,
+  V4A$make,
+  V4A1$make,
+  V4A2$make,
+  V4A3$make,
 }
 /* No side effect */

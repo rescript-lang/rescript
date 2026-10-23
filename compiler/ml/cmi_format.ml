@@ -61,20 +61,8 @@ let read_cmi filename =
     (fun () -> read_cmi_channel filename ic)
     ~finally:(fun () -> close_in_noerr ic)
 
-let output_cmi filename oc cmi =
-  (* beware: the provided signature must have been substituted for saving *)
-  output_string oc Config.cmi_magic_number;
-  output_value oc (cmi.cmi_name, cmi.cmi_sign);
-  flush oc;
-  let crc = Digest.file (Compiler_request_state.resolve_path filename) in
-  let crcs = (cmi.cmi_name, Some crc) :: cmi.cmi_crcs in
-  output_value oc crcs;
-  output_value oc cmi.cmi_flags;
-  crc
-
-(* This function is also called by [save_cmt] as cmi_format is subset of
-       cmt_format, so dont close the channel yet
-*)
+(* Writes the .cmi file, keeping an existing one with the same contents
+   when [check_exists] is given *)
 let create_cmi ?check_exists filename (cmi : cmi_infos) =
   (* beware: the provided signature must have been substituted for saving *)
   let content =

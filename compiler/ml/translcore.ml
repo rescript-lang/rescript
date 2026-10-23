@@ -948,34 +948,6 @@ let extract_directive_for_fn exp =
       if txt = "directive" then Ast_payload.semantic_string_of_payload payload
       else None)
 
-let hoisted_function_attr_name = "res.hoistedFunction"
-
-let find_js_hoisted_attr attrs =
-  Translattribute.get_empty_attribute hoisted_function_attr_name attrs
-
-(* A value binding's source attributes are not carried all the way to JS
-   emission. Record the binding and its source path here so later compiler
-   stages can add the flat JS export and matching .cmj metadata. *)
-let mark_js_hoisted_pattern ~js_hoist attrs pat lam =
-  match find_js_hoisted_attr attrs with
-  | None -> ()
-  | Some loc -> (
-    match lam with
-    | Lfunction _ -> (
-      match pat.pat_desc with
-      | Tpat_var (id, _) | Tpat_alias ({pat_desc = Tpat_any}, id, _) -> (
-        match js_hoist with
-        | Some register -> register id loc
-        | None ->
-          Location.prerr_warning loc
-            (Warnings.Misplaced_attribute hoisted_function_attr_name))
-      | _ ->
-        Location.prerr_warning loc
-          (Warnings.Misplaced_attribute hoisted_function_attr_name))
-    | _ ->
-      Location.prerr_warning loc
-        (Warnings.Misplaced_attribute hoisted_function_attr_name))
-
 (* JSX preserve mode: a call of a JSX external as the JSX PPX produces it,
    which [transl_jsx_element] turns into [Pjsx]. The JSX module's names
    ([jsx], [jsxs], [jsxKeyed], [jsxsKeyed], [jsxFragment]) are fixed by the
@@ -1195,7 +1167,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
     Transl_path.transl_value_path ~loc:e.exp_loc e.exp_env path
   | Texp_constant cst -> const (const_of_typed cst)
   | Texp_let (rec_flag, pat_expr_list, body) ->
-    transl_let ~js_hoist:None rec_flag pat_expr_list (transl_exp body)
+    transl_let rec_flag pat_expr_list (transl_exp body)
   | Texp_function {params = fparams; body; async} ->
     let directive = extract_directive_for_fn e in
     let params, lbody, return_unit = transl_function e.exp_loc fparams body in
@@ -1550,17 +1522,37 @@ and transl_cases cases = List.map transl_case cases
 
 and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
   let lapply ap_func ap_args = apply ap_func ap_args loc in
+  (* A partial application creates a function. Its callee and arguments are
+     bound outside that function, so they are evaluated once, where the
+     application is, and an await in them stays in the enclosing function. *)
+  let rec is_module_path (lam : Lambda.t) =
+    match lam with
+    | Lvar _ | Lglobal_module _ -> true
+    | Lprim {primitive = Pfield (_, Fld_module _); args = [m]} ->
+      is_module_path m
+    | _ -> false
+  in
+  let protect defs name lam =
+    match lam with
+    (* A variable, a module's value or a constant that allocates nothing reads
+       the same on each call, so it stays in place and keeps the function a
+       known one that can be inlined. A closure or a constant block does not:
+       each evaluation is a new one. Nor does an external value, which can be
+       reassigned or be a getter. *)
+    | Lconst c when not (Lambda.const_is_allocating c) -> lam
+    | _ when is_module_path lam -> lam
+    | _ ->
+      let id = Ident.create name in
+      defs := (id, lam) :: !defs;
+      var id
+  in
+  let bind_protected defs body =
+    List.fold_left (fun body (id, lam) -> let_ Strict id lam body) body !defs
+  in
   let rec build_apply lam args = function
     | (None, optional) :: l ->
       let defs = ref [] in
-      let protect name lam =
-        match lam with
-        | Lvar _ | Lconst _ -> lam
-        | _ ->
-          let id = Ident.create name in
-          defs := (id, lam) :: !defs;
-          var id
-      in
+      let protect = protect defs in
       let args, args' =
         if List.for_all (fun (_, opt) -> opt) args then ([], args)
         else (args, [])
@@ -1577,7 +1569,7 @@ and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
           function_ ~loc ~attr:default_function_attribute ~params:[id_arg]
             ~body:lam
       in
-      List.fold_left (fun body (id, lam) -> let_ Strict id lam body) body !defs
+      bind_protected defs body
     | (Some arg, optional) :: l -> build_apply lam ((arg, optional) :: args) l
     | [] -> lapply lam (List.rev_map fst args)
   in
@@ -1585,9 +1577,11 @@ and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
   | Some arity ->
     let extra_arity = arity - List.length sargs in
     let none_ids = ref [] in
+    let defs = ref [] in
+    let lam = protect defs "func" lam in
     let args =
       Ext_list.filter_map sargs (function
-        | _, Some e -> Some (transl_exp e)
+        | _, Some e -> Some (protect defs "arg" (transl_exp e))
         | _, None ->
           let id_arg = Ident.create "none" in
           none_ids := id_arg :: !none_ids;
@@ -1599,9 +1593,10 @@ and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
     let extra_args = Ext_list.map extra_ids (fun id -> var id) in
     let ap_args = args @ extra_args in
     let l0 = apply lam ap_args loc in
-    function_ ~loc ~attr:default_function_attribute
-      ~params:(List.rev_append !none_ids extra_ids)
-      ~body:l0
+    bind_protected defs
+      (function_ ~loc ~attr:default_function_attribute
+         ~params:(List.rev_append !none_ids extra_ids)
+         ~body:l0)
   | _ ->
     (build_apply lam []
        (List.map
@@ -1626,7 +1621,7 @@ and transl_function loc (params : function_param list) body =
         fp_partial,
       return_unit )
 
-and transl_let ~js_hoist rec_flag pat_expr_list body =
+and transl_let rec_flag pat_expr_list body =
   match rec_flag with
   | Nonrecursive ->
     let rec transl = function
@@ -1637,7 +1632,6 @@ and transl_let ~js_hoist rec_flag pat_expr_list body =
               transl_exp expr)
         in
         let lam = Translattribute.add_inline_attribute lam vb_loc attr in
-        mark_js_hoisted_pattern ~js_hoist attr pat lam;
         Matching.for_let pat.pat_loc lam pat (transl rem)
     in
     transl pat_expr_list
@@ -1657,7 +1651,6 @@ and transl_let ~js_hoist rec_flag pat_expr_list body =
           (fun () -> transl_exp expr)
       in
       let lam = Translattribute.add_inline_attribute lam vb_loc vb_attributes in
-      mark_js_hoisted_pattern ~js_hoist vb_attributes pat lam;
       (id, lam)
     in
     Lambda_scc.bind_rec (Ext_list.map pat_expr_list transl_case) body

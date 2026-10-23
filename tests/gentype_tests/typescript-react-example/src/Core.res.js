@@ -50,6 +50,10 @@ function date1(x) {
   return x;
 }
 
+function char0(x) {
+  return x;
+}
+
 function bigint0(x) {
   return x;
 }
@@ -119,6 +123,7 @@ export {
   taggedTemplate0,
   taggedTemplate1,
   date1,
+  char0,
   bigint0,
   stdlibBigInt,
   regexp1,

@@ -48,6 +48,7 @@ let after_parsing_sig ppf outputprefix ast =
       if !((Clflags.current ()).dump_typedtree) then
         fprintf ppf "%a@." Printtyped.interface tsg;
       let sg = tsg.sig_type in
+      Typemod.check_js_names ~toplevel:true sg;
       ignore (Includemod.signatures initial_env sg sg);
       Delayed_checks.force_delayed_checks ();
       Warnings.check_fatal ();
@@ -129,7 +130,7 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
       Lam_compile_env.reset ();
       let env = Res_compmisc.initial_env ~modulename () in
       Env.set_unit_name modulename;
-      let typedtree, coercion, _, _ =
+      let typedtree, coercion, finalenv, signature =
         Typemod.type_implementation_more
           ?check_exists:
             (if !((Js_config.current ()).force_cmi) then None else Some ())
@@ -141,13 +142,14 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
         Printtyped.implementation_with_coercion typedtree_coercion;
       (if !((Js_config.current ()).cmi_only) then Warnings.check_fatal ()
        else
-         let {Translmod.lambda; exports; hoisted_functions} =
-           Translmod.transl_implementation modulename typedtree_coercion
+         let implementation =
+           Translmod.transl_implementation modulename finalenv signature
+             typedtree_coercion
          in
+         print_if ppf (Clflags.current ()).dump_rawlambda Printlambda.lambda
+           implementation.lambda;
          let js_program =
-           print_if_pipe ppf (Clflags.current ()).dump_rawlambda
-             Printlambda.lambda lambda
-           |> Lam_compile_main.compile outputprefix exports hoisted_functions
+           Lam_compile_main.compile outputprefix implementation
          in
          if not !((Js_config.current ()).cmj_only) then
            Lam_compile_main.lambda_as_module js_program outputprefix);

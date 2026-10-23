@@ -1,0 +1,1 @@
+- genType emits `char` as the TypeScript type `number` instead of `char`, which TypeScript does not know.

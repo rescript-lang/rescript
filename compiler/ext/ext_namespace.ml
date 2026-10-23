@@ -33,13 +33,6 @@ let rec rindex_rec s i =
 let change_ext_ns_suffix name ext =
   let i = rindex_rec name (String.length name - 1) in
   if i < 0 then name ^ ext else String.sub name 0 i ^ ext
-(* FIXME: micro-optimizaiton*)
-
-let try_split_module_name name =
-  let len = String.length name in
-  let i = rindex_rec name (len - 1) in
-  if i < 0 then None
-  else Some (String.sub name (i + 1) (len - i - 1), String.sub name 0 i)
 
 let js_name_of_modulename s (case : Ext_js_file_kind.case) suffix : string =
   let s =

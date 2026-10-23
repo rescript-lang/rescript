@@ -1,4 +1,4 @@
-type t<'yield, 'return, 'next> = Stdlib_Iterable.t<'yield>
+type t<+'yield, +'return, -'next> = Stdlib_Iterable.t<'yield>
 
 type result<'yield, 'return> = Stdlib_Iterator.result<'yield, 'return>
 

@@ -46,7 +46,6 @@ let save_cmt filename modname binary_annots sourcefile initial_env =
               (if need_to_clear_env then keep_only_summary initial_env
                else initial_env);
             cmt_imports = List.sort compare (Env.imports ());
-            cmt_interface_digest = None;
             cmt_use_summaries = need_to_clear_env;
             cmt_extra_info = {deprecated_used = deprecated_uses ()};
           }

@@ -1,0 +1,16 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/partial_application_value_restriction.res[0m:[2m6:30-33[0m
+
+  4 [2m│[0m let h = first([], ...)
+  5 [2m│[0m let ints: array<int> = h(0)
+  [1;31m6[0m [2m│[0m let strings: array<string> = [1;31mh(0)[0m
+  7 [2m│[0m 
+
+  This has type: [1;31marray<int>[0m
+  But it's expected to have type: [1;33marray<string>[0m
+  
+  The incompatible parts:
+    [1;31mint[0m vs [1;33mstring[0m
+  
+  You can convert [1;33mint[0m to [1;33mstring[0m with [1;33mInt.toString[0m.

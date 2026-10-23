@@ -13,8 +13,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type hoisted_function = {binding: Ident.t; path: string list; loc: Location.t}
-
 type tag_info =
   | Blk_constructor of {
       name: string;
@@ -580,10 +578,22 @@ let str_of_field_info (x : field_dbg_info) : string option =
 let is_immutable_block (info : tag_info) =
   mutable_flag_of_tag_info info = Immutable
 
-(* A constant that has to be built at run time rather than shared. *)
+(* The number of [Some] around a none, as in [Some (Some None)], or [-1] if
+   [c] is not a nested none. *)
+let rec const_some_none_depth (c : structured_constant) : int =
+  match c with
+  | Const_some v ->
+    let depth = const_some_none_depth v in
+    if depth < 0 then depth else depth + 1
+  | Const_module_alias | Const_js_undefined _ -> 0
+  | _ -> -1
+
+(* A constant that has to be built at run time rather than shared. A [Some]
+   around a (nested) none is emitted as a new optional block, see
+   [Lam_compile_const.translate_some]. *)
 let rec const_is_allocating (c : structured_constant) : bool =
   match c with
-  | Const_some t -> const_is_allocating t
+  | Const_some t -> const_some_none_depth t >= 0 || const_is_allocating t
   | Const_block _ -> true
   | Const_js_null | Const_js_undefined _ | Const_js_true | Const_js_false
   | Const_int _ | Const_assertfalse | Const_constructor _ | Const_char _
@@ -831,18 +841,7 @@ let runtime_value_kind (c : structured_constant) =
    [1.0] are the same JavaScript number. Bigint spellings are not compared;
    both bigint payloads and bigint constructors are classified as unknown.
    Integer tags are emitted through [Int32.of_int], just like [Const_int]. *)
-let literal_denotes_same (a : Variant_runtime.literal_tag)
-    (b : Variant_runtime.literal_tag) =
-  match (a, b) with
-  | String x, String y -> x = y
-  | Int x, Int y -> Int32.of_int x = Int32.of_int y
-  | Float x, Float y -> float_of_string x = float_of_string y
-  | Int x, Float y | Float y, Int x ->
-    Int32.to_float (Int32.of_int x) = float_of_string y
-  | Bool x, Bool y -> x = y
-  | Null, Null | Undefined, Undefined -> true
-  | (String _ | Int _ | Float _ | Bool _ | BigInt _ | Null | Undefined), _ ->
-    false
+let literal_denotes_same = Variant_runtime.same_literal_value
 
 (* Mirror [Dynamic_checks]: literals take precedence; the object case excludes
    arrays when an array case exists. Int and float share one runtime type. *)

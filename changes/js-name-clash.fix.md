@@ -1,0 +1,1 @@
+- Report an error when two bindings of a module get the same JavaScript name, such as `delete` and `$$delete`, instead of emitting a duplicate or overwritten export.

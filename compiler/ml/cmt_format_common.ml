@@ -48,7 +48,6 @@ type cmt_infos = {
   cmt_source_digest: Digest.t option;
   cmt_initial_env: Env.t;
   cmt_imports: (string * Digest.t option) list;
-  cmt_interface_digest: Digest.t option;
   cmt_use_summaries: bool;
   cmt_extra_info: Cmt_utils.cmt_extra_info;
 }
@@ -103,13 +102,8 @@ exception Error of error
 
 let input_cmt ic = (input_value ic : cmt_infos)
 
-(** [read filename] opens filename, and extract both the cmi_infos, if
-    it exists, and the cmt_infos, if it exists. Thus, it can be used
-    with .cmi, .cmt and .cmti files.
-
-    The compiler no longer writes a cmi_infos in front of the cmt_infos in
-    .cmt and .cmti files, but files from older compilers may contain one.
-*)
+(** [read filename] reads a .cmi file as its cmi_infos, or a .cmt or .cmti
+    file as its cmt_infos. *)
 let read filename =
   (*  Printf.fprintf stderr "Cmt_format.read %s\n%!" filename; *)
   let ic = open_in_bin (Compiler_request_state.resolve_path filename) in
@@ -118,17 +112,7 @@ let read filename =
     let cmi, cmt =
       if magic_number = Config.cmt_magic_number then (None, Some (input_cmt ic))
       else if magic_number = Config.cmi_magic_number then
-        let cmi = Cmi_format.input_cmi ic in
-        let cmt =
-          try
-            let magic_number = read_magic_number ic in
-            if magic_number = Config.cmt_magic_number then
-              let cmt = input_cmt ic in
-              Some cmt
-            else None
-          with _ -> None
-        in
-        (Some cmi, cmt)
+        (Some (Cmi_format.input_cmi ic), None)
       else raise (Cmi_format.Error (Cmi_format.Not_an_interface filename))
     in
     close_in ic;

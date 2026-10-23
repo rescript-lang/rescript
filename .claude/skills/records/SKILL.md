@@ -49,16 +49,31 @@ Breaking: <what existing code or tooling stops working, and the migration>
 Signed-off-by: Name <email>
 ```
 
-- The subject and `Signed-off-by` are required. The message ends with its
-  trailers, git's `Key: value` lines (`Co-Authored-By:`, `Fixes:` or any
-  other one-word key), `Signed-off-by` last; the page lists the
-  `Co-Authored-By` names and draws no other trailer. Every section is
-  optional.
-- A section starts at a line `Why:`, `Review:`, `Breaking:`, an object
-  block's heading, an `Example:` alone on its line, or a `Before (<form>):`
-  or `After (<form>):` heading, and holds the text after its colon and the
-  block indented by 4 spaces or more under it; a blank line ends a section
-  that holds only text. `Review:` repeats, one question each. Every other
+A commit without object blocks, such as a script change, is its subject
+and a line or two of prose:
+
+```
+Draw handles starting with a digit as code in the comment
+
+GitHub usernames may start with a digit, so `@0x` in a commit message
+would have mentioned a user; the comment now draws it as code as well.
+
+Signed-off-by: Name <email>
+```
+
+- The subject, a description and `Signed-off-by` are required: the
+  description says why the commit is made, as a line or two of prose or
+  a `Why:` section, and object blocks then show what it changes. Every
+  other section is optional. The message ends with its trailers, git's
+  `Key: value` lines (`Co-Authored-By:`, `Fixes:` or any other one-word
+  key), `Signed-off-by` last; the page lists the `Co-Authored-By` names
+  and draws no other trailer.
+- A section starts at a line `Why:`, `Review:` or `Breaking:` that no
+  paragraph of prose runs onto (a blank line or another section above it),
+  an object block's heading, an `Example:` alone on its line, or a
+  `Before (<form>):` or `After (<form>):` heading, and holds the text after
+  its colon and the block indented by 4 spaces or more under it; a blank
+  line ends a section that holds only text. `Review:` repeats, one question each. Every other
   line is prose, and a block indented by 4 spaces outside a section is
   ReScript code. Tabs count as 4 columns.
 - An **object block** is a heading `<Kind> added|modified|removed (<object>):`,
@@ -159,11 +174,13 @@ The table lists the common kinds.
   `-dce` and `-termination` select the other analyses.
 - A form of another name is drawn as text.
 
-## When to add a block
+## What a commit holds
 
-A commit gets one object block for each object it changes, with the
+Every commit says why it is made. A commit that changes what the compiler
+or a tool does gets one object block for each object it changes, with the
 smallest example that shows the change. A refactor, a test, a script or a
-review fix is a subject and a line or two of prose.
+review fix needs no block, only its subject and a line or two of prose; a
+review fix names the finding it answers.
 
 ## Rendering
 
@@ -175,14 +192,16 @@ node scripts/commitRecords.js --out page.html [--pr <number>] [--title <text>] \
 
 - `--pr` and `--title` head the page with the pull request.
   `.github/workflows/semantic_diff.yml` renders each pull request's range
-  and comments the page's link.
+  and comments the records as Markdown (`--markdown <file> --url <page>`,
+  scripts/recordMarkdown.js) with the page's link: after a push that keeps
+  the previous head, only the commits it added (`--since <previous head>`).
 - In prose, `#1234` and full pull request and issue URLs link as `#1234`,
   and the 9-character short sha of a commit on the page links to its card.
 
 ## What the page shows
 
 The page is the heading, then a card per commit. A card shows the commit's
-short sha, author and date, the pull request a `(#1234)` at the end of the
-subject names, and the message drawn: the subject, the prose, each object
-block with its example and forms, the `Breaking:` sections as banners, the
-`Review:` sections as a list, and the co-authors.
+short sha, author and co-authors, date, the pull request a `(#1234)` at
+the end of the subject names, and the message drawn: the subject, the
+prose, each object block with its example and forms, the `Breaking:`
+sections as banners, and the `Review:` sections as a list.

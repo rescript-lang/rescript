@@ -132,9 +132,8 @@ test("a minimal record draws its identity and subject", async () => {
   has(html, "<h3>Fix a typo</h3>");
   assert.match(
     html,
-    /<div class="meta"><code>[0-9a-f]{9}<\/code> · A Person · [A-Z][a-z]{2} \d{2}, \d{4} · <a href="https:\/\/github.com\/rescript-lang\/rescript\/pull\/7">#7<\/a><\/div>/,
+    /<div class="meta"><code>[0-9a-f]{9}<\/code> · A Person with B Person · [A-Z][a-z]{2} \d{2}, \d{4} · <a href="https:\/\/github.com\/rescript-lang\/rescript\/pull\/7">#7<\/a><\/div>/,
   );
-  has(html, '<div class="meta">with B Person</div>');
   lacks(html, '<div class="below">');
   lacks(html, "Signed-off-by");
   lacks(html, "Co-Authored-By");
@@ -428,6 +427,18 @@ test("a line with a colon is prose unless it names a section", async () => {
   lacks(html, '<h4 class="change">');
 });
 
+test("a section's name wrapped onto a line of a paragraph is prose", async () => {
+  const html = await renderOne(
+    `Require a description\n\nIt requires prose or a\nWhy: section, and an example.\nWhy: alone after a blank line is a section.\n\nWhy: Here it is.\n\n${SIGNED}\n`,
+  );
+  has(
+    html,
+    "<p>It requires prose or a Why: section, and an example. Why: alone after a blank line is a section.</p>",
+  );
+  assert.equal(html.split('<section class="block k-why">').length - 1, 1);
+  has(html, "<p>Here it is.</p>");
+});
+
 test("a character literal with a Unicode escape is one string token", async () => {
   const html = await renderOne(
     `Match a range\n\nExample:\n    switch c { | '\\u{100}' .. '\\u{1100}' => 1 | _ => 0 }\n\n${SIGNED}\n`,
@@ -446,7 +457,7 @@ test("Breaking and Review sections right above the sign-off are drawn", async ()
   );
   has(html, '<article class="card breaking"');
   has(html, '<ul class="review"><li>Is -bs-x still read? No.</li></ul>');
-  has(html, '<div class="meta">with B Person</div>');
+  has(html, "</code> · A Person with B Person · ");
   lacks(html, "Signed-off-by");
 });
 
@@ -493,7 +504,7 @@ test("trailers of any key end the message and are not drawn", async () => {
   const html = await renderOne(
     `Fix a thing\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_x\n${SIGNED}\n`,
   );
-  has(html, '<div class="meta">with Claude Opus 5.5</div>');
+  has(html, " · A Person with Claude Opus 5.5 · ");
   lacks(html, "Claude-Session");
   lacks(html, "session_x");
   lacks(html, '<section class="block');
@@ -819,4 +830,47 @@ ${SIGNED}
   has(html, '<span class="ln elide" style="--r:3;--c:1;--i:0">…</span>');
   has(html, '<span class="ln elide" style="--r:3;--c:2;--i:0">… ');
   has(html, '<span class="ln del" style="--r:2;--c:1;--i:0">');
+});
+
+test("--since leaves the comment the commits a push added, the page every commit", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "commit-records-"));
+  const git = (/** @type {string[]} */ ...a) =>
+    execFileSync("git", a, { cwd: dir, encoding: "utf8" }).trim();
+  git("init", "-q", "-b", "main");
+  git("config", "user.name", "A Person");
+  git("config", "user.email", "a@example.com");
+  await commit(git, dir, { "a.txt": "a\n" }, "base");
+  await commit(git, dir, {}, `First change\n\n${SIGNED}`);
+  const before = git("rev-parse", "HEAD");
+  await commit(git, dir, {}, `Second change\n\n${SIGNED}`);
+  const out = path.join(dir, "page.html");
+  const md = path.join(dir, "comment.md");
+  const run = (/** @type {string} */ since) => {
+    const r = spawnSync(
+      "node",
+      [
+        script,
+        "--out",
+        out,
+        "--markdown",
+        md,
+        "--since",
+        since,
+        "HEAD~2..HEAD",
+      ],
+      { cwd: dir, encoding: "utf8" },
+    );
+    assert.equal(r.status, 0, r.stderr);
+  };
+  run(before);
+  const comment = await fs.readFile(md, "utf8");
+  has(comment, "1 new commit (2 total)");
+  has(comment, "Second change");
+  lacks(comment, "First change");
+  const html = await fs.readFile(out, "utf8");
+  has(html, "First change");
+  has(html, "Second change");
+  await fs.rm(md);
+  run("HEAD");
+  await assert.rejects(fs.access(md));
 });

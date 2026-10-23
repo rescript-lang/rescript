@@ -9,9 +9,9 @@ module Id = {
   type x = int
 }
 
-@ocaml.doc("This module is commented")
+@res.doc("This module is commented")
 module Dep: {
-  @ocaml.doc("Some doc comment")
+  @res.doc("Some doc comment")
   let customDouble: int => int
 } = {
   let customDouble = foo => foo * 2
@@ -30,7 +30,7 @@ module HoverInsideModuleWithComponent = {
   let make = () => React.null
 }
 
-@ocaml.doc("Doc comment for functionWithTypeAnnotation")
+@res.doc("Doc comment for functionWithTypeAnnotation")
 let functionWithTypeAnnotation: unit => int = () => 1
 //  ^hov
 
@@ -281,3 +281,13 @@ module Arr = Belt.Array
 
 type aliased = variant
 //    ^hov
+
+// Only @res.doc, which doc comments parse to, is a doc comment
+@res.doc("Shown on hover") let resDoc = 1
+//                              ^hov
+
+@ns.doc("Not shown on hover") let nsDoc = 1
+//                                ^hov
+
+@ocaml.doc("Not shown on hover") let ocamlDoc = 1
+//                                   ^hov

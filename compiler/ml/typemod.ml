@@ -34,6 +34,7 @@ type error =
   | With_changes_module_alias of Longident.t * Ident.t * Path.t
   | With_cannot_remove_constrained_type
   | Repeated_name of string * string * Warnings.loc
+  | Js_name_clash of string * string * string * Warnings.loc
   | Non_generalizable of type_expr
   | Non_generalizable_module of module_type
   | Interface_not_compiled of string
@@ -636,6 +637,42 @@ let check_sig_item names loc = function
   | Sig_typext (id, _, _) -> check_typext names loc (Ident.name id)
   | _ -> ()
 
+(* Two runtime components of a module must not get the same JavaScript name:
+   the module's fields, and the exports of a compilation unit, are named by
+   [Ext_ident.convert], which maps both [delete] and [$$delete] to [$$delete]
+   and [\"a-b"] like [a$b]. The exports of a compilation unit keep [default]
+   as written. Values are checked after [simplify_signature], so a value that
+   is shadowed by one of the same name is not a field. *)
+let check_js_names ~toplevel (sg : Types.signature) =
+  let seen = Hashtbl.create 17 in
+  List.iter
+    (fun (item : Types.signature_item) ->
+      let component =
+        match item with
+        | Sig_value (_, {val_kind = Val_prim _}) | Sig_type _ | Sig_modtype _ ->
+          None
+        | Sig_value (id, {val_loc}) -> Some ("value", id, val_loc)
+        | Sig_typext (id, {ext_loc}, _) ->
+          Some ("extension constructor", id, ext_loc)
+        | Sig_module (id, {md_loc}, _) -> Some ("module", id, md_loc)
+      in
+      match component with
+      | None -> ()
+      | Some (kind, id, loc) -> (
+        let name = Ident.name id in
+        let js_name =
+          if toplevel && name = "default" then name else Ext_ident.convert name
+        in
+        match Hashtbl.find_opt seen js_name with
+        | Some (other_kind, other_loc) ->
+          raise
+            (Error
+               ( loc,
+                 Env.empty,
+                 Js_name_clash (kind, other_kind, js_name, other_loc) ))
+        | None -> Hashtbl.add seen js_name (kind, loc)))
+    sg
+
 (* Simplify multiple specifications of a value or an extension in a signature.
    (Other signature components, e.g. types, modules, etc, are checked for
    name uniqueness.)  If multiple specifications with the same name,
@@ -702,6 +739,7 @@ and transl_modtype_aux env smty =
       env loc smty.pmty_attributes
   | Pmty_signature ssg ->
     let sg = transl_signature env ssg in
+    check_js_names ~toplevel:false sg.sig_type;
     mkmty (Tmty_signature sg) (Mty_signature sg.sig_type) env loc
       smty.pmty_attributes
   | Pmty_functor (param, sarg, sres) ->
@@ -1266,6 +1304,7 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
       }
     in
     let sg' = simplify_signature sg in
+    check_js_names ~toplevel:false sg';
     if List.length sg' = List.length sg then md
     else
       wrap_constraint
@@ -1766,7 +1805,8 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
         (Cmt_format.Implementation str) (Some sourcefile) initial_env;
       (str, coercion, finalenv, dclsig)
       (* identifier is useless might read from serialized cmi files*))
-    else
+    else (
+      check_js_names ~toplevel:true simple_sg;
       let coercion =
         Includemod.compunit initial_env sourcefile sg "(inferred signature)"
           simple_sg
@@ -1785,7 +1825,7 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
              (outputprefix ^ ".cmi"));
         Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
           (Cmt_format.Implementation str) (Some sourcefile) initial_env);
-      (str, coercion, finalenv, simple_sg)
+      (str, coercion, finalenv, simple_sg))
   with e ->
     Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
       (Cmt_format.Partial_implementation
@@ -1855,6 +1895,11 @@ let report_error ppf = function
       "@[Multiple definition of the %s name %s @ at @{<loc>%a@}@ @ Names must \
        be unique in a given structure or signature.@]"
       kind name Location.print_loc repeated_loc
+  | Js_name_clash (kind, other_kind, js_name, other_loc) ->
+    fprintf ppf
+      "@[This %s has the same JavaScript name %s@ as the %s at @{<loc>%a@}.@ \
+       Rename one of them.@]"
+      kind js_name other_kind Location.print_loc other_loc
   | Non_generalizable typ ->
     (* modified *)
     fprintf ppf "@[<v>";

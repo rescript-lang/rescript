@@ -109,6 +109,10 @@ let undefinedKey = <div
   key={undefined}
 />;
 
+let AsProp$make = Jsx_preserve_cases$AsProp;
+
+let Req$make = Jsx_preserve_cases$Req;
+
 export {
   AsProp,
   asProp,
@@ -131,5 +135,7 @@ export {
   copySpread,
   localComp,
   undefinedKey,
+  AsProp$make,
+  Req$make,
 }
 /*  Not a pure module */

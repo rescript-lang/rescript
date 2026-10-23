@@ -45,18 +45,6 @@ let is_top (rootpath : Path.t option) =
   | Some (Pident _) -> true
   | _ -> false
 
-let module_path = function
-  | Some path -> (
-    match Path.flatten path with
-    | `Ok (_, segments) -> Some segments
-    | `Contains_apply -> None)
-  | None -> None
-
-let exportable_module_path rootpath =
-  match module_path rootpath with
-  | Some (_ :: _ as path) -> Some path
-  | _ -> None
-
 let functor_path path param : Path.t option =
   match path with
   | None -> None
@@ -228,23 +216,10 @@ let get_functor_params mexp coercion root_path =
   | _ -> assert false
 
 (* Translation can overlap on compiler domains. Each request owns the export
-   and hoisting accumulators until [transl_implementation] returns them. *)
+   accumulator until [transl_implementation] returns it. *)
 let export_identifiers_key = Request_local.new_key (fun () -> ref [])
-let js_hoisted_key = Request_local.new_key (fun () -> ref [])
 let export_identifiers () : Ident.t list ref =
   Domain.DLS.get export_identifiers_key
-let js_hoisted () : Lambda.hoisted_function list ref =
-  Domain.DLS.get js_hoisted_key
-
-let js_hoist_handler rootpath =
-  match exportable_module_path rootpath with
-  | None -> None
-  | Some path ->
-    Some
-      (fun id loc ->
-        js_hoisted () :=
-          {Lambda.binding = id; path = path @ [id.Ident.name]; loc}
-          :: !(js_hoisted ()))
 
 let rec compile_functor mexp coercion root_path loc =
   let functor_param, body, body_path, res_coercion, inline_attribute =
@@ -387,10 +362,7 @@ and transl_structure loc fields cc rootpath final_env = function
             | _ ->
               if not (Parmatch.irrefutable vb_pat) then
                 raise (Error (vb_pat.pat_loc, Fragile_pattern_in_toplevel)));
-      ( Translcore.transl_let
-          ~js_hoist:(js_hoist_handler rootpath)
-          rec_flag pat_expr_list body,
-        size )
+      (Translcore.transl_let rec_flag pat_expr_list body, size)
     | Tstr_typext tyext ->
       let ids = List.map (fun ext -> ext.ext_id) tyext.tyext_constructors in
       let body, size =
@@ -411,10 +383,9 @@ and transl_structure loc fields cc rootpath final_env = function
         size )
     | Tstr_module mb as s ->
       let id = mb.mb_id in
-      let hidden = Typemod.rescript_hide s in
       let body, size =
         transl_structure loc
-          (if hidden then fields else id :: fields)
+          (if Typemod.rescript_hide s then fields else id :: fields)
           cc rootpath final_env rem
       in
       let module_body =
@@ -471,22 +442,70 @@ let _ = Translcore.transl_module := transl_module
 
 (* Compile an implementation *)
 
+(* Nested [make] values are also exported under a flat name such as
+   [A$B$make]: React Server Components can only pass a client module's
+   top-level exports to the client, so [Lib.A.B.make] must not be reached
+   through the module object. Producer and consumer derive these paths from
+   the signature alone, so consumers are rebuilt exactly when the set
+   changes. *)
+type flat_make_step = {pos: int; name: string}
+
+type flat_make_path = flat_make_step list
+
+let flat_make_paths env (sg : Types.signature) : flat_make_path list =
+  let rec of_signature env rev_path sg acc =
+    let env = Env.add_signature sg env in
+    fst
+      (List.fold_left
+         (fun (acc, pos) (item : Types.signature_item) ->
+           match item with
+           | Sig_value (_, {val_kind = Val_prim _}) -> (acc, pos)
+           | Sig_value (id, _) ->
+             let acc =
+               if rev_path <> [] && Ident.name id = "make" then
+                 List.rev ({pos; name = "make"} :: rev_path) :: acc
+               else acc
+             in
+             (acc, pos + 1)
+           | Sig_typext _ -> (acc, pos + 1)
+           | Sig_module (id, {md_type}, _) ->
+             let acc =
+               match Mtype.scrape env md_type with
+               | Mty_signature sg ->
+                 of_signature env
+                   ({pos; name = Ident.name id} :: rev_path)
+                   sg acc
+               | Mty_ident _ | Mty_alias _ | Mty_functor _ -> acc
+             in
+             (acc, pos + 1)
+           | Sig_type _ | Sig_modtype _ -> (acc, pos))
+         (acc, 0) sg)
+  in
+  List.rev (of_signature env [] sg [])
+
 type implementation = {
   lambda: Lambda.t;
   exports: Ident.t list;
-  hoisted_functions: Lambda.hoisted_function list;
+  flat_make_paths: flat_make_path list;
 }
 
-let transl_implementation module_name (str, cc) =
+let transl_implementation module_name final_env signature (str, cc) =
   export_identifiers () := [];
-  js_hoisted () := [];
   let module_id = Ident.create_persistent module_name in
   let body, _ = transl_struct Location.none [] cc (global_path module_id) str in
   {
     lambda = body;
     exports = !(export_identifiers ());
-    hoisted_functions = !(js_hoisted ());
+    flat_make_paths = flat_make_paths final_env signature;
   }
+
+let flat_export_name path =
+  path |> List.map Ext_ident.unwrap_uppercase_exotic |> String.concat "$"
+
+let flat_make_name path =
+  match path with
+  | _ :: _ :: _ when Ext_list.last path = "make" -> Some (flat_export_name path)
+  | _ -> None
 
 (* Build the list of value identifiers defined by a toplevel structure
    (excluding primitive declarations). *)

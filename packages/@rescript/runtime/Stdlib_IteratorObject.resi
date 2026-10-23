@@ -12,7 +12,7 @@ See [`Iterator`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 /**
 Type representing an `IteratorObject` instance.
 */
-type t<'yield, 'return, 'next> = private Stdlib_Iterable.t<'yield>
+type t<+'yield, +'return, -'next> = private Stdlib_Iterable.t<'yield>
 
 /**
 Result returned by `IteratorObject.next`.

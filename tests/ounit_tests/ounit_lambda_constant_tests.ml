@@ -294,11 +294,11 @@ let suites =
                        ];
                    ]
                  in
-                 let typed, _, _ =
+                 let typed, signature, env =
                    Typemod.type_structure (Env.initial_safe_string ()) structure
                  in
                  let implementation =
-                   Translmod.transl_implementation "RegexpTest"
+                   Translmod.transl_implementation "RegexpTest" env signature
                      (typed, Typedtree.Tcoerce_none)
                  in
                  let sources = ref [] in
@@ -331,4 +331,19 @@ let suites =
              with
              | Lambda.Lconst (Lambda.Const_int length) -> 3l =~ length
              | _ -> OUnit.assert_failure "expected a folded string length" );
+           ( "a nested None is an allocating constant" >:: fun _ ->
+             let none = Lambda.Const_js_undefined {is_unit = false} in
+             let some x = Lambda.Const_some x in
+             let int = Lambda.Const_int 1l in
+             List.iter
+               (fun (constant, expected) ->
+                 OUnit.assert_equal ~printer:string_of_bool expected
+                   (Lambda.const_is_allocating constant))
+               [
+                 (some none, true);
+                 (some (some none), true);
+                 (some int, false);
+                 (some (some int), false);
+                 (none, false);
+               ] );
          ]

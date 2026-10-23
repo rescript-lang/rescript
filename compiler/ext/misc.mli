@@ -37,10 +37,18 @@ val protect_refs : ref_and_value list -> (unit -> 'a) -> 'a
     while executing [f]. The previous contents of the references is restored
     even if [f] raises an exception. *)
 
+val find_map_in_path_uncap :
+  string list -> string -> (string -> 'a option) -> 'a option
+(* [find_map_in_path_uncap path name f] applies [f] to the candidates for
+   name in each directory of path, name as written and then its
+   uncapitalized form, i.e. /path/Foo.ml before /path/foo.ml, and returns
+   the first result. *)
+
+val find_in_path_uncap_opt : string list -> string -> string option
+(* The first candidate of [find_map_in_path_uncap] that exists. *)
+
 val find_in_path_uncap : string list -> string -> string
-(* Search the path for name, then for its uncapitalized form, i.e.
-   if name is Foo.ml, allow /path/Foo.ml and /path/foo.ml
-   to match, preferring the former. *)
+(* Like [find_in_path_uncap_opt]; raises [Not_found]. *)
 
 val remove_file : string -> unit
 (* Delete the given file if it exists. Never raise an error. *)
