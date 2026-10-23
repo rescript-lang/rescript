@@ -340,10 +340,19 @@ and compare_records env params1_ params2_ n_
 (* Values are recognized by the class or [typeof] the second declaration
    states, so the first must state the same. Stating nothing hides it. *)
 let compare_runtime_annotations env decl1 decl2 =
-  match Variant_layout.declaration_block_type ~env decl2 with
-  | None -> []
-  | Some _ as declared2 ->
-    let declared1 = Variant_layout.declaration_block_type ~env decl1 in
+  (* The second declaration's shape was resolved in its own environment, so
+     it is what users of the second declaration see *)
+  match decl2.type_shape with
+  | Unstated | Never_undefined -> []
+  | Recognized_as block_type2 ->
+    let declared2 = Some block_type2 in
+    let declared1 =
+      match decl1.type_shape with
+      | Recognized_as block_type1 -> Some block_type1
+      | Never_undefined -> None
+      | Unstated ->
+        Option.bind decl1.type_manifest (Variant_layout.recognized_as ~env)
+    in
     if declared1 = declared2 then []
     else
       [

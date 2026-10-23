@@ -3789,6 +3789,7 @@ and type_newtype ~loc ~env ~name (type_body : Env.t -> Typedtree.expression) =
       type_attributes = [];
       type_immediate = false;
       type_representation = Boxed;
+      type_shape = Unstated;
       type_inlined_types = [];
     }
   in

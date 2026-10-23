@@ -168,6 +168,7 @@ let abstract_type_decl type_manifest : Types.type_declaration =
     type_attributes = [];
     type_immediate = false;
     type_representation = Boxed;
+    type_shape = Unstated;
     type_inlined_types = [];
   }
 

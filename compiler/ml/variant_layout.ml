@@ -8,71 +8,81 @@
 open Variant_runtime
 open Ast_untagged_variants
 
-(* The [@instanceOf] and [@typeOf] annotations of [t] and of the types it
-   abbreviates, outermost first. The type as written can carry one, and so can
-   each level of a chain of private abbreviations that models a class
-   hierarchy, such as [@instanceOf("File") type t = private Blob.t]. *)
-let runtime_annotations ~env (t : Types.type_expr) =
-  let rec collect ~previous (t : Types.type_expr) =
+(* The shape of [t]: the one stated by the first declaration on its expansion
+   chain that states one. Each declaration's shape already includes what the
+   types it abbreviates state, such as a class's superclasses. [fuel] bounds
+   the walk, since a recursive group's shapes are resolved before its
+   abbreviations are checked for cycles. *)
+let value_shape ~env (t : Types.type_expr) : value_shape =
+  let rec walk fuel (t : Types.type_expr) =
     match (Btype.repr t).desc with
-    | Tconstr (path, _, _) ->
-      let here =
-        match Env.find_type path env with
-        | {type_attributes} -> process_runtime_annotation type_attributes
-        | exception Not_found -> None
-      in
-      (* A module alias makes [M.t] an abbreviation of the original [t] with
-         the same attributes, so an annotation repeating the one just seen is
-         the same declaration again *)
-      let here, previous =
-        match here with
-        | Some _ when here = previous -> (None, previous)
-        | Some _ -> (here, here)
-        | None -> (None, previous)
-      in
-      let rest =
+    | Tconstr (path, _, _) when fuel > 0 -> (
+      match Env.find_type path env with
+      | {type_shape = (Never_undefined | Recognized_as _) as shape} -> shape
+      | {type_shape = Unstated} | (exception Not_found) -> (
         match Ctype.try_expand_once_opt env t with
-        | expanded -> collect ~previous expanded
-        | exception Ctype.Cannot_expand -> []
-      in
-      Option.to_list here @ rest
-    | _ -> []
+        | expanded -> walk (fuel - 1) expanded
+        | exception Ctype.Cannot_expand -> Unstated))
+    | _ -> Unstated
   in
-  collect ~previous:None t
+  walk 100 t
 
-(* The block type the outermost of [annotations] states. A class's ancestors
-   are the classes annotated further down the chain. *)
-let block_type_of_annotations = function
-  | Instance_of name :: rest ->
+(* The payload kind [t] is declared to have *)
+let recognized_as ~env t =
+  match value_shape ~env t with
+  | Recognized_as block_type -> Some block_type
+  | Unstated | Never_undefined -> None
+
+(* The shape a declaration states, resolved against what the type it
+   abbreviates states in [env]: a class's superclasses are the classes
+   annotated further down a chain of abbreviations. *)
+let declaration_shape ~env (decl : Types.type_declaration) : value_shape =
+  match process_runtime_annotation decl.type_attributes with
+  | Some (Type_of block_type) -> Recognized_as block_type
+  | Some (Instance_of name) ->
     let ancestors =
-      List.filter_map
-        (function
-          | Instance_of ancestor when ancestor <> name -> Some ancestor
-          | Instance_of _ | Type_of _ -> None)
-        rest
+      match Option.map (recognized_as ~env) decl.type_manifest with
+      | Some (Some (InstanceType (Class {name = inner; ancestors}))) ->
+        (* An annotation repeating the abbreviated type's, as a module alias
+           does, states no new class *)
+        if inner = name then ancestors else inner :: ancestors
+      | Some _ | None -> []
     in
-    Some (InstanceType (Class {name; ancestors}))
-  | Type_of block_type :: _ -> Some block_type
-  | [] -> None
+    Recognized_as (InstanceType (Class {name; ancestors}))
+  | None ->
+    if has_not_undefined decl.type_attributes then Never_undefined else Unstated
 
-let declared_block_type ~env t =
-  block_type_of_annotations (runtime_annotations ~env t)
+(* Resolves the shapes of a group of declarations, which can abbreviate each
+   other. Each round resolves one more level of abbreviation within the
+   group, and a chain inside the group has at most one level per
+   declaration. *)
+let resolve_shapes ~env (decls : (Ident.t * Types.type_declaration) list) =
+  let rec round env decls n =
+    let decls =
+      List.map
+        (fun (id, decl) ->
+          (id, {decl with Types.type_shape = declaration_shape ~env decl}))
+        decls
+    in
+    if n <= 1 then decls
+    else
+      let env =
+        List.fold_left
+          (fun env (id, decl) -> Env.add_type ~check:false id decl env)
+          env decls
+      in
+      round env decls (n - 1)
+  in
+  let env =
+    List.fold_left
+      (fun env (id, decl) -> Env.add_type ~check:false id decl env)
+      env decls
+  in
+  round env decls (List.length decls)
 
-(* The block type a declaration states, through its own annotation or the
-   ones of the type it abbreviates. *)
-let declaration_block_type ~env (decl : Types.type_declaration) =
-  let own = process_runtime_annotation decl.type_attributes in
-  let inner =
-    match decl.type_manifest with
-    | Some manifest -> runtime_annotations ~env manifest
-    | None -> []
-  in
-  let inner =
-    match inner with
-    | annotation :: rest when Some annotation = own -> rest
-    | _ -> inner
-  in
-  block_type_of_annotations (Option.to_list own @ inner)
+let annotation_of_block_type = function
+  | InstanceType (Class {name}) -> Instance_of name
+  | block_type -> Type_of block_type
 
 (* An annotation on an abbreviation is a claim about the abbreviated type, so
    it must agree with what the compiler knows about that type. It can refine
@@ -89,8 +99,8 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
   | None, _ | Some _, None -> ()
   | Some outer, Some manifest -> (
     let error err = raise (Error (loc, err)) in
-    match (outer, runtime_annotations ~env manifest) with
-    | _, [] -> (
+    match (outer, recognized_as ~env manifest) with
+    | _, None -> (
       let is_abstract path =
         match Env.find_type path env with
         | {type_kind = Type_abstract; type_manifest = None} -> true
@@ -104,9 +114,12 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
         ()
       | _ ->
         error (RuntimeAnnotationOnUnrelatedType (runtime_attribute_name outer)))
-    | Type_of block_type, Type_of inner :: _ when block_type = inner -> ()
-    | Instance_of name, Instance_of inner :: _ when name = inner -> ()
-    | Instance_of name, (Instance_of ancestor :: _ as chain) ->
+    | Type_of block_type, Some inner when block_type = inner -> ()
+    | Instance_of name, Some (InstanceType (Class {name = inner}))
+      when name = inner ->
+      ()
+    | Instance_of name, Some (InstanceType (Class {name = ancestor; ancestors}))
+      ->
       (* A public abbreviation is the same type as the superclass, unless it
          is a strict instance of it, as in the phantom type hierarchy
          [type element<'a> = node<_element<'a>>] *)
@@ -117,15 +130,15 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
       in
       if decl.type_private = Public && same_type then
         error (SubclassOfPublicAbbreviation (name, ancestor))
-      else if List.mem outer chain then error (ClassTwiceInChain name)
-    | (Instance_of _ | Type_of _), inner :: _ ->
+      else if List.mem name ancestors then error (ClassTwiceInChain name)
+    | (Instance_of _ | Type_of _), Some inner ->
       error
         (RuntimeAnnotationContradictsManifest
            ( runtime_annotation_to_string outer,
-             runtime_annotation_to_string inner )))
+             runtime_annotation_to_string (annotation_of_block_type inner) )))
 
 let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
-  match declared_block_type ~env t with
+  match recognized_as ~env t with
   | Some _ as declared -> declared
   | None -> (
     (* Builtin types have no declaration to annotate *)

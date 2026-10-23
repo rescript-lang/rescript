@@ -928,6 +928,7 @@ let new_declaration newtype manifest =
     type_attributes = [];
     type_immediate = false;
     type_representation = Boxed;
+    type_shape = Unstated;
     type_inlined_types = [];
   }
 
@@ -4312,6 +4313,7 @@ let nondep_type_decl env mid id is_covariant decl =
         type_attributes = decl.type_attributes;
         type_immediate = decl.type_immediate;
         type_representation = decl.type_representation;
+        type_shape = decl.type_shape;
         type_inlined_types = decl.type_inlined_types;
       })
 
