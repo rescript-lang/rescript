@@ -9,6 +9,7 @@ import {
   checkMagicNumbers,
   configPath,
   incrementMagicNumber,
+  previousRelease,
   previousReleaseTag,
   readMagicNumber,
   releaseMagicNumbers,
@@ -24,6 +25,21 @@ and ast0_impl_magic_number = "Caml1999M022"
 
 and cmt_magic_number = "ResCmt${cmt}"
 `;
+
+test("compares with the highest release below the version", () => {
+  const tags = [
+    "v12.3.1",
+    "v13.0.0-alpha.6",
+    "v12.3.2",
+    "v13.0.0-alpha.7",
+    "vnext",
+    "13.0.0",
+  ];
+  assert.equal(previousRelease(tags, "13.0.0-alpha.7"), "v13.0.0-alpha.6");
+  assert.equal(previousRelease(tags, "13.0.0"), "v13.0.0-alpha.7");
+  assert.equal(previousRelease(tags, "12.3.3"), "v12.3.2");
+  assert.equal(previousRelease(tags, "12.3.1"), null);
+});
 
 test("increments the trailing counter and keeps its width", () => {
   assert.equal(incrementMagicNumber("ResCmi040"), "ResCmi041");
@@ -115,6 +131,14 @@ test("bumps the magic numbers once per release when format sources changed", asy
   assert.equal(await releaseMagicNumbers(root, "1.1.0"), null);
   await commit("compiler/syntax/printer.ml", "let print = ()\n");
   assert.equal(await releaseMagicNumbers(root, "1.1.0"), null);
+  // A merged maintenance branch brings a newer tag of an older line, with
+  // other magic numbers.
+  git("checkout", "-q", "-b", "maintenance", "v1.0.0");
+  await commit(configPath, config("030", "038", "01200"));
+  git("tag", "v0.9.9");
+  git("checkout", "-q", "-");
+  git("merge", "-q", "-s", "ours", "-m", "Merge maintenance", "maintenance");
+  assert.equal(previousReleaseTag(root, "1.1.0"), "v1.0.0");
   // Only committed changes count.
   await write("compiler/ml/types.ml", "type t = A | B\n");
   assert.equal(await releaseMagicNumbers(root, "1.1.0"), null);

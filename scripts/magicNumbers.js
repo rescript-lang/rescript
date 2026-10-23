@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import semver from "semver";
 
 export const configPath = "compiler/ext/config.ml";
 
@@ -54,29 +55,37 @@ export function bumpMagicNumbers(config, previousConfig, sourcesChanged) {
   return output;
 }
 
-// The latest release tag on the current branch, other than the one of the
-// version being released.
+// The highest release tag below the version being released. The nearest tag
+// is not enough: a maintenance branch merged into master brings its newer
+// tags, such as v12.3.2 after v13.0.0-alpha.6, with that line's magic numbers.
+export function previousRelease(tags, version) {
+  let previous = null;
+  for (const tag of tags) {
+    const parsed = tag.startsWith("v") ? semver.parse(tag.slice(1)) : null;
+    if (parsed === null || !semver.lt(parsed, version)) continue;
+    if (previous === null || semver.gt(parsed, previous.parsed)) {
+      previous = { tag, parsed };
+    }
+  }
+  return previous?.tag ?? null;
+}
+
+// The previous release tag among the tags reachable from HEAD.
 export function previousReleaseTag(root, version) {
-  const result = spawnSync(
-    "git",
-    [
-      "describe",
-      "--tags",
-      "--abbrev=0",
-      "--match",
-      "v[0-9]*",
-      "--exclude",
-      `v${version}`,
-      "HEAD",
-    ],
-    { cwd: root, encoding: "utf8" },
-  );
-  if (result.status !== 0) {
+  const result = spawnSync("git", ["tag", "--merged", "HEAD", "--list", "v*"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  const tag =
+    result.status === 0
+      ? previousRelease(result.stdout.split("\n").filter(Boolean), version)
+      : null;
+  if (tag === null) {
     throw new Error(
       `No previous release tag found; fetch the tags (git fetch --tags) first.\n${result.stderr}`,
     );
   }
-  return result.stdout.trim();
+  return tag;
 }
 
 function changedSince(root, tag) {
