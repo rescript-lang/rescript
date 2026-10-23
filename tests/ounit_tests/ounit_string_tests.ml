@@ -135,15 +135,6 @@ let suites =
            Ext_namespace.js_name_of_modulename "AA-b" Upper ".bs.js"
            =~ "AA.bs.js" );
          ( __LOC__ >:: fun _ ->
-           let ( =~ ) =
-             OUnit.assert_equal ~printer:(fun x ->
-                 match x with
-                 | None -> ""
-                 | Some (a, b) -> a ^ "," ^ b)
-           in
-           Ext_namespace.try_split_module_name "Js-X" =~ Some ("X", "Js");
-           Ext_namespace.try_split_module_name "Js_X" =~ None );
-         ( __LOC__ >:: fun _ ->
            let k = Ext_modulename.js_id_name_of_hint_name in
            k "xx" =~ "Xx";
            k "react-dom" =~ "ReactDom";

@@ -28,5 +28,3 @@ let out_sig_item : (Format.formatter -> out_sig_item -> unit) ref =
   ref not_set_up
 let out_signature : (Format.formatter -> out_sig_item list -> unit) ref =
   ref not_set_up
-let out_type_extension : (Format.formatter -> out_type_extension -> unit) ref =
-  ref not_set_up

@@ -508,7 +508,6 @@ module Compile = struct
         cmt_source_digest = None;
         cmt_initial_env = env;
         cmt_imports = [];
-        cmt_interface_digest = None;
         cmt_use_summaries = false;
         cmt_extra_info = {Cmt_utils.deprecated_used = []};
       }

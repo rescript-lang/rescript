@@ -47,4 +47,3 @@
 let defaults_w = "+a-4-9-20-41-102"
 
 let defaults_warn_error = "-a+5+101+109"
-(*TODO: add +10*)
