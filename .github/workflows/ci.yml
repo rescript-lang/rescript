@@ -193,6 +193,12 @@ jobs:
       - name: Test release plan
         run: yarn test-release-plan
 
+      # The semantic diff renderer is platform-independent JavaScript, so one
+      # platform runs its tests.
+      - name: Test commit records
+        if: matrix.node-target == 'linux-arm64'
+        run: yarn test-commit-records
+
       - name: Run tests
         run: node scripts/test.js -all
 
