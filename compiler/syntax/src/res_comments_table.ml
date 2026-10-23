@@ -1461,6 +1461,13 @@ and walk_expression expr t comments =
           (Res_parsetree_viewer.dict_expr_rows ~loc:expr.pexp_loc entries);
       ]
       t comments
+  | Pexp_spread (_, elements) ->
+    walk_list
+      (List.map
+         (function
+           | Parsetree.Pspread_item e | Pspread e -> Expression e)
+         elements)
+      t comments
   | Pexp_apply
       {
         funct =
@@ -1538,30 +1545,8 @@ and walk_expression expr t comments =
     walk_list (List.map (fun e -> Expression e) (tag :: values)) t comments
   | Pexp_template {values} ->
     walk_list (List.map (fun e -> Expression e) values) t comments
-  | Pexp_apply {funct = call_expr; args = arguments} -> (
-    (* Special handling for array spread - treat it like an array *)
-    match call_expr.pexp_desc with
-    | Pexp_ident
-        {txt = Longident.Ldot (Longident.Lident "Primitive_array", "spread")}
-      when List.length arguments = 1 -> (
-      match arguments with
-      | [(_, {pexp_desc = Pexp_array sub_arrays})] ->
-        (* Collect all individual expressions from sub-arrays *)
-        let all_exprs =
-          List.fold_left
-            (fun acc sub_array ->
-              match sub_array.Parsetree.pexp_desc with
-              | Pexp_array exprs -> acc @ exprs
-              | _ -> acc @ [sub_array])
-            [] sub_arrays
-        in
-        walk_list (all_exprs |> List.map (fun e -> Expression e)) t comments
-      | _ ->
-        (* Fallback to regular apply handling *)
-        walk_apply_expr call_expr arguments t comments)
-    | _ ->
-      (* Regular apply handling *)
-      walk_apply_expr call_expr arguments t comments)
+  | Pexp_apply {funct = call_expr; args = arguments} ->
+    walk_apply_expr call_expr arguments t comments
   | Pexp_fun _ -> (
     let _, parameters, return_expr = fun_expr expr in
     let comments =

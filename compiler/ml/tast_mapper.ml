@@ -250,6 +250,8 @@ let expr sub x =
              | Tdict_entry (key, exp) -> Tdict_entry (key, sub.expr sub exp)
              | Tdict_spread exp -> Tdict_spread (sub.expr sub exp))
            entries)
+    | Texp_spread (kind, parts) ->
+      Texp_spread (kind, List.map (sub.expr sub) parts)
     | Texp_ifthenelse (exp1, exp2, expo) ->
       Texp_ifthenelse
         (sub.expr sub exp1, sub.expr sub exp2, opt (sub.expr sub) expo)

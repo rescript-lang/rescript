@@ -273,6 +273,11 @@ let rec add_expr bv exp =
       (function
         | Pdict_entry (_, e) | Pdict_spread e -> add_expr bv e)
       entries
+  | Pexp_spread (_, elements) ->
+    List.iter
+      (function
+        | Pspread_item e | Pspread e -> add_expr bv e)
+      elements
   | Pexp_ifthenelse (e1, e2, opte3) ->
     add_expr bv e1;
     add_expr bv e2;

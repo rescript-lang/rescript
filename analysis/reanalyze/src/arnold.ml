@@ -995,6 +995,8 @@ module Compile = struct
       |> List.map (function Typedtree.Tdict_entry (_, e) | Tdict_spread e ->
           expression ~ctx e)
       |> Command.unordered_sequence
+    | Texp_spread (_, parts) ->
+      parts |> List.map (expression ~ctx) |> Command.unordered_sequence
     | Texp_assert _ -> Command.nothing
     | Texp_try (e, cases) ->
       let c_e = e |> expression ~ctx in

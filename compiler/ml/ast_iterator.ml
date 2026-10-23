@@ -363,6 +363,11 @@ module E = struct
             sub.expr sub e
           | Pdict_spread e -> sub.expr sub e)
         entries
+    | Pexp_spread (_, elements) ->
+      List.iter
+        (function
+          | Pspread_item e | Pspread e -> sub.expr sub e)
+        elements
     | Pexp_ifthenelse (e1, e2, e3) ->
       sub.expr sub e1;
       sub.expr sub e2;

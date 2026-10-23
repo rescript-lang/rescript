@@ -59,9 +59,10 @@ let inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug =
       match expr.pexp_desc with
       | Pexp_constant _ | Pexp_tuple _ | Pexp_record _ | Pexp_variant _
       | Pexp_apply _ | Pexp_match _ | Pexp_construct _ | Pexp_ifthenelse _
-      | Pexp_ternary _ | Pexp_array _ | Pexp_dict _ | Pexp_ident _ | Pexp_try _
-      | Pexp_object_get _ | Pexp_object_set _ | Pexp_field _ | Pexp_open _
-      | Pexp_fun _ | Pexp_template _ | Pexp_tagged_template _ ->
+      | Pexp_ternary _ | Pexp_array _ | Pexp_dict _ | Pexp_spread _
+      | Pexp_ident _ | Pexp_try _ | Pexp_object_get _ | Pexp_object_set _
+      | Pexp_field _ | Pexp_open _ | Pexp_fun _ | Pexp_template _
+      | Pexp_tagged_template _ ->
         push vb.pvb_pat.ppat_loc Type
       | _ -> ())
     | {pvb_pat = {ppat_desc = Ppat_tuple _}} -> process_pattern vb.pvb_pat
