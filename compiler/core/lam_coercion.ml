@@ -83,8 +83,6 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
     (reverse_input : Lam_group.t list) =
   let (original_exports : Ident.t list) = meta.exports in
   let (original_export_set : Set_ident.t) = meta.export_idents in
-  let len = List.length original_exports in
-  let tbl = Hash_set_string.create len in
   let ({export_list; export_set} as result) =
     Ext_list.fold_right2 original_exports lambda_exports
       {
@@ -94,9 +92,6 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
         groups = [];
       } (fun (original_export_id : Ident.t) (lam : Lambda.t) (acc : t) ->
         let original_name = original_export_id.name in
-        if Hash_set_string.mem tbl original_name then
-          Bs_exception.error (Bs_duplicate_exports original_name);
-        Hash_set_string.add tbl original_name ();
         match lam with
         | Lvar id ->
           if Ident.name id = original_name then

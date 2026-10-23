@@ -48,6 +48,7 @@ let after_parsing_sig ppf outputprefix ast =
       if !((Clflags.current ()).dump_typedtree) then
         fprintf ppf "%a@." Printtyped.interface tsg;
       let sg = tsg.sig_type in
+      Typemod.check_js_names ~toplevel:true sg;
       ignore (Includemod.signatures initial_env sg sg);
       Delayed_checks.force_delayed_checks ();
       Warnings.check_fatal ();
