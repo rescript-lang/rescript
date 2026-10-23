@@ -424,7 +424,7 @@
     },
     "namespace-entry": {
       "type": "string",
-      "description": "Name of the module that serves as the entry of a namespaced package. It is compiled without the namespace suffix, so other packages refer to it by its own name, and it opens the namespace to refer to the package's other modules. Only has an effect when `namespace` is enabled."
+      "description": "Name of the module that serves as the entry of a namespaced package. It is compiled without the namespace suffix, so other packages refer to it by its own name, and it opens the namespace to refer to the package's other modules. Requires `namespace`: `rescript` rejects a `namespace-entry` without a namespace."
     },
     "sources": {
       "$ref": "#/definitions/sources",
@@ -562,5 +562,8 @@
     }
   },
   "additionalProperties": false,
-  "required": ["name", "sources"]
+  "required": ["name", "sources"],
+  "dependencies": {
+    "namespace-entry": ["namespace"]
+  }
 }
