@@ -1,0 +1,1 @@
+- Give `.cmi` and `.cmt` files ReScript magic numbers (`ResCmi…`, `ResCmt…`) instead of OCaml-style ones, and bump all magic numbers at release time instead of in pull requests.

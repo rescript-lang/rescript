@@ -35,6 +35,9 @@ let input_cmi ic =
   let flags = input_value ic in
   {cmi_name = name; cmi_sign = sign; cmi_crcs = crcs; cmi_flags = flags}
 
+(* Earlier compilers wrote OCaml-style magic numbers *)
+let legacy_magic_prefix = "Caml1999I"
+
 let read_cmi_channel filename ic =
   try
     let buffer =
@@ -50,6 +53,8 @@ let read_cmi_channel filename ic =
            if buffer < Config.cmi_magic_number then "an older" else "a newer"
          in
          raise (Error (Wrong_version_interface (filename, msg)))
+       else if String.starts_with ~prefix:legacy_magic_prefix buffer then
+         raise (Error (Wrong_version_interface (filename, "an older")))
        else raise (Error (Not_an_interface filename)));
     let cmi = input_cmi ic in
     cmi
@@ -111,8 +116,8 @@ let report_error ppf = function
       filename
   | Wrong_version_interface (filename, older_newer) ->
     fprintf ppf
-      "%a@ is not a compiled interface for this version of OCaml.@.It seems to \
-       be for %s version of OCaml."
+      "%a@ is not a compiled interface for this version of ReScript.@.It seems \
+       to be for %s version of ReScript."
       Location.print_filename filename older_newer
   | Corrupted_interface filename ->
     fprintf ppf "Corrupted compiled interface@ %a" Location.print_filename

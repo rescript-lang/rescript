@@ -1,4 +1,9 @@
-let cmi_magic_number = "Caml1999I040"
+(* Pull requests never change the magic numbers below: [yarn changelog:release]
+   bumps their trailing counters when the format sources changed since the
+   previous release (see scripts/magicNumbers.js). The .cmi and .cmt numbers
+   must have the same length, since a .cmt reader compares its first bytes with
+   both. *)
+let cmi_magic_number = "ResCmi040"
 
 (* Magic numbers for marshaled values of the *current* parsetree, whose layout
    changes across compiler versions. *)
@@ -13,7 +18,7 @@ and ast0_impl_magic_number = "Caml1999M022"
 
 and ast0_intf_magic_number = "Caml1999N022"
 
-and cmt_magic_number = "Caml1999T048"
+and cmt_magic_number = "ResCmt048"
 
 let get_load_path () = (Compiler_request_state.current ()).load_path
 let set_load_path path = (Compiler_request_state.current ()).load_path <- path

@@ -2,6 +2,12 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  checkMagicNumbers,
+  configPath,
+  releaseMagicNumbers,
+  showAt,
+} from "./magicNumbers.js";
 
 export const categories = {
   breaking: "#### :boom: Breaking Change",
@@ -280,6 +286,7 @@ export async function run(
   command,
   root = process.cwd(),
   pullRequestOf = name => addedByPullRequest(root, name),
+  magicNumbersFor = version => releaseMagicNumbers(root, version),
 ) {
   if (!["check", "preview", "release", "open"].includes(command)) {
     throw new Error(
@@ -308,6 +315,11 @@ export async function run(
         files.push({ status: diff[i], name: diff[i + 1] });
       }
       checkPullRequest(files, pullRequest);
+      checkMagicNumbers(
+        showAt(root, pullRequest.base.sha, configPath),
+        await fs.readFile(path.join(root, configPath), "utf8"),
+        pullRequest.labels.map(label => label.name),
+      );
     } else if (process.env.GITHUB_EVENT_NAME === "push") {
       // Once merged, every fragment must resolve to its pull request, so a
       // merge without "(#N)" in its subject fails here rather than at release.
@@ -339,10 +351,12 @@ export async function run(
     linked.length > 0 &&
     isFinalized(changelog, version) &&
     releaseTagExists(repository.url, version);
-  await fs.writeFile(
-    target,
-    prepareRelease(changelog, version, linked, { tagged }),
-  );
+  const released = prepareRelease(changelog, version, linked, { tagged });
+  // The release bumps the magic numbers of the formats that changed, so that
+  // pull requests never touch them.
+  const config = await magicNumbersFor(version);
+  await fs.writeFile(target, released);
+  if (config !== null) await fs.writeFile(path.join(root, configPath), config);
   for (const fragment of fragments) {
     await fs.unlink(path.join(root, "changes", fragment.name));
   }

@@ -11,6 +11,8 @@ commands below are relative to the repository root unless stated otherwise.
   - Add a source fixture exercising the new syntax to `tests/syntax_tests/data/ast-mapping/`. Every file there is run through `res_parser -test-ast-conversion` (which round-trips the parsetree through the frozen v0 AST before printing) as part of `make test-syntax`; the printed output must match the snapshot in its `expected/` directory.
   - For exact-identity invariants (locations, attributes) or the v0 wire shape itself, add cases to `tests/ounit_tests/ounit_ast_mapper0_tests.ml`, which tests `ast_mapper_to0`/`ast_mapper_from0` directly.
 
+- **Don't bump magic numbers** - Changing a serialized type (parsetree, typed tree, `.cmi` signature) needs no edit of the magic numbers in `compiler/ext/config.ml`. `yarn changelog:release` bumps them when `compiler/ml`, `compiler/ext` or `compiler/flow_parser` changed since the previous release, and the changelog check rejects pull requests that bump them.
+
 - **Missing test coverage** - Always add tests for syntax, lambda, and end-to-end behavior
 
 - **Test early and often** - Add tests immediately after modifying each compiler layer to catch problems early, rather than waiting until all changes are complete

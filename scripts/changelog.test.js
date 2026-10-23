@@ -22,6 +22,8 @@ import {
 const note =
   "- Fix recovery. https://github.com/rescript-lang/rescript/pull/8667";
 const historical = "# 12.0.0\n\nOld notes.\n";
+// Bumping the magic numbers needs a checkout of the repository.
+const noMagicNumbers = async () => null;
 const changelog = `# Changelog\n\n# 13.0.0 (Unreleased)\n\n${Object.values(categories).join("\n\n")}\n\n${historical}`;
 
 test("validates category names and bullet content", () => {
@@ -203,7 +205,7 @@ test("validates before mutation, sorts fragments, consumes only on release", asy
   await write("z.fix.md", note);
   await write("a.fix.md", note.replace("recovery", "formatting"));
   await write("bad.unknown.md", note);
-  await assert.rejects(run("release", root));
+  await assert.rejects(run("release", root, undefined, noMagicNumbers));
   assert.equal(
     await fs.readFile(path.join(root, "CHANGELOG.md"), "utf8"),
     changelog,
@@ -216,9 +218,9 @@ test("validates before mutation, sorts fragments, consumes only on release", asy
     (await readFragments(root)).map(fragment => fragment.name),
     ["a.fix.md", "z.fix.md"],
   );
-  await run("release", root);
+  await run("release", root, undefined, noMagicNumbers);
   assert.deepEqual(await fs.readdir(path.join(root, "changes")), ["README.md"]);
-  await assert.rejects(run("release", root));
+  await assert.rejects(run("release", root, undefined, noMagicNumbers));
 });
 
 test("links bullets without a link to the pull request that added them", () => {
@@ -285,7 +287,7 @@ test("releases fragments without a link with their pull request's link", async t
   await fs.writeFile(path.join(root, "changes", "lost.fix.md"), "- Lost.");
   const numbers = { "new.fix.md": 9000, "lost.fix.md": null };
   await assert.rejects(
-    run("release", root, name => numbers[name]),
+    run("release", root, name => numbers[name], noMagicNumbers),
     /changes\/lost\.fix\.md/,
   );
   assert.equal(
@@ -293,7 +295,20 @@ test("releases fragments without a link with their pull request's link", async t
     changelog,
   );
   await fs.unlink(path.join(root, "changes", "lost.fix.md"));
-  await run("release", root, name => numbers[name]);
+  await fs.mkdir(path.join(root, "compiler", "ext"), { recursive: true });
+  await run(
+    "release",
+    root,
+    name => numbers[name],
+    async version => {
+      assert.equal(version, "13.0.0");
+      return "bumped";
+    },
+  );
+  assert.equal(
+    await fs.readFile(path.join(root, "compiler", "ext", "config.ml"), "utf8"),
+    "bumped",
+  );
   assert.ok(
     (await fs.readFile(path.join(root, "CHANGELOG.md"), "utf8")).includes(
       `${categories.fix}\n\n- New fix. https://github.com/rescript-lang/rescript/pull/9000\n${note}\n`,
