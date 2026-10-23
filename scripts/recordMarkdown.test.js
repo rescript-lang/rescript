@@ -67,13 +67,11 @@ ${SIGNED}
     ],
     {
       url: "https://cdn.example/pr-12/index.html?v=1",
-      head: "aaaaaaaa0",
-      updated: "Oct 23, 2026, 11:48 UTC",
     },
   );
   has(
     md,
-    "### [Semantic Diff](https://cdn.example/pr-12/index.html?v=1)\n\n1 commit · aaaaaaaa0 · Oct 23, 2026, 11:48 UTC · [Full page](https://cdn.example/pr-12/index.html?v=1)\n\n<details",
+    "### [Semantic Diff](https://cdn.example/pr-12/index.html?v=1)\n\n1 commit · [Full page](https://cdn.example/pr-12/index.html?v=1)\n\n<details",
   );
   has(
     md,
@@ -265,4 +263,62 @@ test("an assistant co-author is drawn by its short name, others as written", () 
     `Fix it\n\nCo-Authored-By: Claude Sonnet 5.5 <NoReply@Anthropic.com>\nCo-Authored-By: Claude Person <claude@example.com>\nCo-Authored-By: No Email\n${SIGNED}\n`,
   ]);
   has(md, "· A Person + Claude + Claude Person + No Email ·");
+});
+
+test("the heading lists the changelog entries and notes a breaking mismatch", () => {
+  const breaking = `Drop a flag\n\nBreaking: -x is gone.\n\n${SIGNED}\n`;
+  const plain = `Fix a typo\n\n${SIGNED}\n`;
+  const fix = {
+    category: "fix",
+    emoji: ":bug:",
+    text: "- Recover @someone's `@raw` build.\n- Keep **watching**,\n  after errors.",
+  };
+  const md = comment([plain], { changelog: [fix] });
+  has(
+    md,
+    "### Changelog\n\n- :bug: Recover `@someone`'s `@raw` build.\n- :bug: Keep **watching**,\n  after errors.\n\n### Semantic Diff\n\n1 commit\n\n<details",
+  );
+  has(
+    comment([plain], { changelog: [] }),
+    "### Changelog\n\nNo changelog entry.\n\n### Semantic Diff\n\n1 commit\n\n",
+  );
+  assert.ok(comment([plain]).startsWith("### Semantic Diff\n\n1 commit\n\n"));
+  has(
+    comment([breaking], { changelog: [fix] }),
+    "<sub>:boom: A commit says what it breaks (`Breaking:`), but no changelog entry is a breaking change.</sub>\n\n### Semantic Diff",
+  );
+  const boom = { category: "breaking", emoji: ":boom:", text: "- -x is gone." };
+  const both = comment([breaking], { changelog: [boom] });
+  assert.ok(!both.includes("<sub>:boom:"));
+  has(
+    comment([plain], { changelog: [boom] }),
+    "<sub>:boom: A changelog entry is a breaking change, but no commit says what it breaks (`Breaking:`).</sub>",
+  );
+});
+
+test("past a quarter of the budget, changelog entries are counted, not drawn", () => {
+  const entry = (/** @type {number} */ k) => ({
+    category: "fix",
+    emoji: ":bug:",
+    text: `- Fix ${k}: ${"x".repeat(300)}`,
+  });
+  const md = comment([`Fix\n\n${SIGNED}\n`], {
+    budget: 4000,
+    changelog: Array.from({ length: 20 }, (_, k) => entry(k)),
+  });
+  assert.ok(md.length <= 4000, `${md.length}`);
+  has(md, "- :bug: Fix 0:");
+  assert.ok(!md.includes("Fix 3:"));
+  has(
+    md,
+    "<sub>17 more changelog entries under `changes/`.</sub>\n\n### Semantic Diff",
+  );
+  const huge = comment([`Fix\n\n${SIGNED}\n`], {
+    budget: 4000,
+    changelog: [
+      { category: "fix", emoji: ":bug:", text: `- ${"y".repeat(5000)}` },
+    ],
+  });
+  assert.ok(huge.length <= 4000, `${huge.length}`);
+  has(huge, "<sub>1 changelog entry under `changes/`.</sub>");
 });

@@ -36,6 +36,12 @@ import {
 
 /** @import { CommitRecord, Group, Section, FormEntry } from "./recordRender.js" */
 
+/**
+ * A changelog fragment the pull request adds: its category, the category's
+ * emoji as the changelog heads it (`:boom:`), and its Markdown bullets.
+ * @typedef {{ category: string, emoji: string, text: string }} ChangelogEntry
+ */
+
 /** The characters a comment holds at most, with room for the action's tag. */
 export const BUDGET = 60000;
 
@@ -51,6 +57,16 @@ export const BUDGET = 60000;
  */
 const spans = s =>
   s.split(/(`[^`]+`|(?<![\w@`])@{1,2}\w[\w.]*(?:\([^()`\s]*\))?)/);
+
+/**
+ * Markdown kept as written, but for an `@name` outside backticks, drawn as
+ * code so that it notifies no one.
+ * @param {string} s
+ */
+export const unmentioned = s =>
+  spans(s)
+    .map((part, i) => (i % 2 && !part.startsWith("`") ? `\`${part}\`` : part))
+    .join("");
 
 /**
  * Prose as Markdown: code spans kept, attributes drawn as code, the
@@ -426,36 +442,74 @@ export function commitMarkdown(r, full, change = "") {
 }
 
 /**
+ * The changelog entries as a list, each bullet led by its entry's emoji, in
+ * at most `room` characters: the comment shortens commits to fit its
+ * budget but not the changelog, so entries past the room are counted, not
+ * drawn.
+ * @param {ChangelogEntry[]} changelog
+ * @param {number} room
+ */
+function changelogList(changelog, room) {
+  if (!changelog.length) return "No changelog entry.";
+  const drawn = [];
+  let size = 0;
+  for (const e of changelog) {
+    const lines = unmentioned(e.text).replace(/^- /gm, `- ${e.emoji} `);
+    size += lines.length + 1;
+    if (size > room) break;
+    drawn.push(lines);
+  }
+  const left = changelog.length - drawn.length;
+  if (left)
+    drawn.push(
+      `\n<sub>${left}${drawn.length ? " more" : ""} changelog entr${left === 1 ? "y" : "ies"} under \`changes/\`.</sub>`,
+    );
+  return drawn.join("\n");
+}
+
+/**
  * The comment: a heading linking the page (`url`), in its title and as "Full
  * page", then each commit. Past the budget, the commits with the most
  * characters are drawn without their forms, and if that is not enough, the
- * last commits are left to the page. The heading names the commit drawn up
- * to (`head`, which GitHub links) and when (`updated`), since the comment is
- * edited in place on each push; the commits the last push added or edited
- * (`changes`) are marked.
+ * last commits are left to the page. The commits the last push added or
+ * edited (`changes`) are marked.
+ *
+ * The changelog entries the pull request adds (`changelog`, each fragment's
+ * bullets led by its category's emoji) describe it as a whole, as its squash
+ * commit will; a commit's `Breaking:` sections describe that commit. They
+ * come first, under their own heading, which also notes a pull request
+ * whose commits break something while no entry is a breaking change, or
+ * the other way round.
  * @param {Group[]} groups
- * @param {{ url?: string, budget?: number, head?: string, updated?: string, changes?: Map<string, string> }} [options]
+ * @param {{ url?: string, budget?: number, changes?: Map<string, string>, changelog?: ChangelogEntry[] }} [options]
  */
 export function commentMarkdown(
   groups,
-  {
-    url = "",
-    budget = BUDGET,
-    head: tip = "",
-    updated = "",
-    changes = new Map(),
-  } = {},
+  { url = "", budget = BUDGET, changes = new Map(), changelog } = {},
 ) {
   const records = groups.flatMap(g => g.records);
   const n = records.length;
-  const head = `### ${url ? `[Semantic Diff](${url})` : "Semantic Diff"}\n\n${[
-    `${n} commit${n === 1 ? "" : "s"}`,
-    tip,
-    updated,
-    url && `[Full page](${url})`,
+  const breakingCommits = records.filter(r =>
+    r.sections.some(s => s.name === "Breaking"),
+  ).length;
+  const breakingEntry = changelog?.some(e => e.category === "breaking");
+  const head = [
+    changelog && "### Changelog",
+    changelog && changelogList(changelog, budget / 4),
+    changelog &&
+      breakingCommits &&
+      !breakingEntry &&
+      `<sub>:boom: ${breakingCommits === 1 ? "A commit says" : `${breakingCommits} commits say`} what it breaks (\`Breaking:\`), but no changelog entry is a breaking change.</sub>`,
+    breakingEntry &&
+      !breakingCommits &&
+      "<sub>:boom: A changelog entry is a breaking change, but no commit says what it breaks (`Breaking:`).</sub>",
+    `### ${url ? `[Semantic Diff](${url})` : "Semantic Diff"}`,
+    [`${n} commit${n === 1 ? "" : "s"}`, url && `[Full page](${url})`]
+      .filter(Boolean)
+      .join(" · "),
   ]
     .filter(Boolean)
-    .join(" · ")}`;
+    .join("\n\n");
   const change = (/** @type {CommitRecord} */ r) => changes.get(r.sha) ?? "";
   const drawn = records.map(r => commitMarkdown(r, true, change(r)));
   const size = () => drawn.reduce((t, d) => t + d.length + 2, head.length);
