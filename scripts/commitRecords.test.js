@@ -866,6 +866,52 @@ test("--markdown draws every commit into the comment, with the page's link", asy
   has(comment, "Second change");
 });
 
+test("--logins draws an author by the GitHub login, linked, others by name", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "commit-records-"));
+  const git = (/** @type {string[]} */ ...a) =>
+    execFileSync("git", a, { cwd: dir, encoding: "utf8" }).trim();
+  git("init", "-q", "-b", "main");
+  git("config", "user.name", "A Person");
+  git("config", "user.email", "a@example.com");
+  await commit(git, dir, { "a.txt": "a\n" }, "base");
+  await commit(
+    git,
+    dir,
+    {},
+    `Known\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n${SIGNED}`,
+  );
+  const known = git("rev-parse", "HEAD");
+  await commit(git, dir, {}, `Unknown\n\n${SIGNED}`);
+  await commit(git, dir, {}, `Odd login\n\n${SIGNED}`);
+  const odd = git("rev-parse", "HEAD");
+  const logins = path.join(dir, "logins.txt");
+  await fs.writeFile(logins, `${known} a-person\n${odd} bot[bot]\n`);
+  const out = path.join(dir, "page.html");
+  const md = path.join(dir, "comment.md");
+  const r = spawnSync(
+    "node",
+    [
+      script,
+      ...["--out", out, "--markdown", md, "--logins", logins],
+      "HEAD~3..HEAD",
+    ],
+    { cwd: dir, encoding: "utf8" },
+  );
+  assert.equal(r.status, 0, r.stderr);
+  const html = await fs.readFile(out, "utf8");
+  has(
+    html,
+    '</code> · <a href="https://github.com/a-person">a-person</a> + Claude · ',
+  );
+  const comment = await fs.readFile(md, "utf8");
+  has(comment, " · [a-person](https://github.com/a-person) + Claude · ");
+  const card = (/** @type {string} */ subject) =>
+    comment.split("<details").find(d => d.includes(`<b>${subject}</b>`)) ?? "";
+  has(card("Unknown"), " · A Person · ");
+  has(card("Odd login"), " · A Person · ");
+  lacks(comment, "@a-person");
+});
+
 test("--previous marks the commits the last push added or edited", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "commit-records-"));
   const git = (/** @type {string[]} */ ...a) =>

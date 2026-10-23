@@ -406,7 +406,7 @@ export function commitMarkdown(r, full, change = "") {
     [...s.text, ...s.block.map(l => l.trim())].join(" ").trim();
   const out = [
     `<details open><summary>${change ? `${SIGNS[/** @type {keyof typeof SIGNS} */ (change)] ?? ""} ` : ""}<b>${inlineHtml(subject)}</b></summary>`,
-    `<sub>${esc(r.sha)} · ${inline(byline(r))}${r.date ? ` · ${esc(r.date)}` : ""}${pr ? ` · #${pr}` : ""}${change ? ` · ${esc(change)}` : ""}</sub>`,
+    `<sub>${esc(r.sha)} · ${byline(r, inline, (login, url) => `[${login}](${url})`)}${r.date ? ` · ${esc(r.date)}` : ""}${pr ? ` · #${pr}` : ""}${change ? ` · ${esc(change)}` : ""}</sub>`,
     ...sectionGroups(r.sections.filter(s => !BELOW.has(s.name))).map(g =>
       section(g.section, g.parts, full),
     ),

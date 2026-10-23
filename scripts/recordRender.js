@@ -66,7 +66,9 @@ export const PART = /^(?:Example|(Before|After) \(([a-z]+)\))$/;
 
 /**
  * @typedef {{ name: string, text: string[], block: string[] }} Section
- * @typedef {{ sha: string, author: string, date: string, message: string }} CommitInfo
+ * @typedef {{
+ *   sha: string, author: string, login?: string, date: string, message: string
+ * }} CommitInfo
  * @typedef {CommitInfo & {
  *   subject: string, sections: Section[], coauthors: string[]
  * }} CommitRecord
@@ -192,10 +194,21 @@ export function parseRecord(commit) {
 }
 
 /**
- * Who made a commit: its author and co-authors, as `A Person + Claude`.
+ * Who made a commit, as `A Person + Claude`: its author, by the GitHub login
+ * when known, and its co-authors, each name drawn by `name` and the login
+ * as a link to the profile by `profile` (a link, not an `@` mention, which
+ * would notify the user).
  * @param {CommitRecord} r
+ * @param {(name: string) => string} name
+ * @param {(login: string, url: string) => string} profile
  */
-export const byline = r => [r.author, ...r.coauthors].join(" + ");
+export const byline = (r, name, profile) =>
+  [
+    r.login && /^[A-Za-z0-9-]+$/.test(r.login)
+      ? profile(r.login, `https://github.com/${r.login}`)
+      : name(r.author),
+    ...r.coauthors.map(name),
+  ].join(" + ");
 
 // ---------------------------------------------------------------------------
 // Code, highlighted by token
@@ -1530,7 +1543,7 @@ function card(r) {
     [...s.text, ...s.block.map(l => l.trim())].join(" ").trim();
   const out = [
     `<article class="card${breaking.length ? " breaking" : ""}" id="c-${esc(r.sha)}">`,
-    `<header><div class="meta"><code>${esc(r.sha)}</code> · ${esc(byline(r))}${r.date ? ` · ${esc(r.date)}` : ""}${
+    `<header><div class="meta"><code>${esc(r.sha)}</code> · ${byline(r, esc, (login, url) => `<a href="${url}">${login}</a>`)}${r.date ? ` · ${esc(r.date)}` : ""}${
       pr ? ` · <a href="${REPO_URL}/pull/${pr}">#${pr}</a>` : ""
     }</div><h3>${inline(subject)}</h3></header>`,
   ];

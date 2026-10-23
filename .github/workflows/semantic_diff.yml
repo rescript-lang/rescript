@@ -56,6 +56,8 @@ jobs:
           persist-credentials: false
 
       - name: Render semantic diff
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git fetch --no-tags --filter=blob:none origin "refs/pull/${PR_NUMBER}/head:refs/heads/pr-${PR_NUMBER}"
           base=$(git merge-base "$BASE_SHA" "pr-${PR_NUMBER}")
@@ -72,7 +74,13 @@ jobs:
             previous=(--previous "$BEFORE_SHA")
           fi
           mkdir -p semantic-diff
-          node scripts/commitRecords.js --out semantic-diff/index.html --markdown semantic-diff/comment.md "${previous[@]}" --url "$url" --pr "$PR_NUMBER" --title "$PR_TITLE" "${base}..pr-${PR_NUMBER}"
+          # The authors' GitHub logins, which git doesn't know; the API links
+          # a commit to the account its email belongs to. Without them, the
+          # authors are drawn by name.
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/commits?per_page=100" \
+            --jq '.[] | select(.author != null) | "\(.sha) \(.author.login)"' > semantic-diff/logins.txt ||
+            : > semantic-diff/logins.txt
+          node scripts/commitRecords.js --out semantic-diff/index.html --markdown semantic-diff/comment.md "${previous[@]}" --logins semantic-diff/logins.txt --url "$url" --pr "$PR_NUMBER" --title "$PR_TITLE" "${base}..pr-${PR_NUMBER}"
 
       - name: Setup Rclone
         uses: cometkim/rclone-actions/setup-rclone@8d9c6b95341f7698609deee65c3d62af42893288 # main, 2025-06-18
