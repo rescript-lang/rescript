@@ -1,0 +1,1 @@
+- Add `@instanceOf("Class")` and `@typeOf("…")` for abstract types and type abbreviations, so that values of bound JavaScript classes and opaque primitive types can be untagged variant cases. A private abbreviation of another annotated type declares a subclass.
