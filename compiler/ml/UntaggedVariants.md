@@ -71,8 +71,8 @@ is the number `1`.
 - Implementation: `ast_untagged_variants.ml:runtime_tag_of_parsetree`,
   `process_constructor_tag`.
 - Tests: fixtures `UntaggedInvalidVariantAsAnnotation.res`
-  ("A variant case annotation @as(...) must be a string, integer, boolean,
-  null, or undefined."), `VariantAsIntegerOutOfRange.res`,
+  ("A variant case annotation @as(...) must be a string, integer, float,
+  bigint, boolean, null, or undefined."), `VariantAsIntegerOutOfRange.res`,
   `UntaggedDuplicatedBsAs.res`; `spec_test` rule 2;
   `tests/tests/src/unboxed_variant_fold_test.res` (`wide`).
 
@@ -140,7 +140,7 @@ The type checker rejects an untagged variant, with
 | Condition | Reason | Fixture |
 | --- | --- | --- |
 | two object cases | At most one case can be an object type. | `UntaggedAtMostOneObject.res` |
-| two cases of one instance class (arrays and tuples share `Array`) | At most one case can be a C type. | `UntaggedAtMostOneInstance.res`, `UntaggedTupleAndArray.res` |
+| two cases of one instance class (arrays and tuples share `Array`) | At most one case can be a C type; for `Array`, an array or tuple type. | `UntaggedAtMostOneInstance.res`, `UntaggedTupleAndArray.res` |
 | two function cases | At most one case can be a function type. | `UntaggedAtMostOneFunction.res` |
 | two string cases | At most one case can be a string type. | `UntaggedAtMostOneString.res` |
 | two number cases (`int` and `float` count together) | At most one case can be a number type (int or float). | `UntaggedAtMostOneNumber.res` |
