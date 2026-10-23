@@ -18,9 +18,12 @@ expected='module A = {
 let y = 2
 let z = 3'
 
+# The formatter writes CRLF on Windows. $(...) drops the trailing newline, so
+# compare against the input without it.
 without=$(printf '%s' "$input" | "$REWATCH_EXECUTABLE" format --stdin .res)
-# $(...) drops the trailing newline, so compare against the input without it
-if [ $? -ne 0 ] || [ "$without" != "${input%$'\n'}" ]; then
+status=$?
+without=$(printf '%s' "$without" | tr -d '\r')
+if [ $status -ne 0 ] || [ "$without" != "${input%$'\n'}" ]; then
   error "Format changed spacing without the experimental feature"
   echo "$without"
   exit 1
@@ -37,6 +40,7 @@ fs.writeFileSync("rescript.json", JSON.stringify(j,null,2));
 with=$(printf '%s' "$input" | "$REWATCH_EXECUTABLE" format --stdin .res)
 status=$?
 mv rescript.json.bak rescript.json
+with=$(printf '%s' "$with" | tr -d '\r')
 
 if [ $status -ne 0 ] || [ "$with" != "$expected" ]; then
   error "Format did not space multi-line items with MultilineItemSpacing"
