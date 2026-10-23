@@ -403,9 +403,11 @@ export function commitMarkdown(r, full) {
     ...sectionGroups(r.sections.filter(s => !BELOW.has(s.name))).map(g =>
       section(g.section, g.parts, full),
     ),
+    // A quote, not a `[!CAUTION]` alert: GitHub draws alerts only at the top
+    // level of a comment, and inside `<details>` shows the marker as text.
     ...r.sections
       .filter(s => s.name === "Breaking")
-      .map(s => `> [!CAUTION]\n> **Breaking:** ${inline(joined(s))}`),
+      .map(s => `> ⚠️ **Breaking:** ${inline(joined(s))}`),
   ];
   const reviews = r.sections.filter(s => s.name === "Review");
   if (reviews.length)

@@ -84,7 +84,8 @@ ${SIGNED}
     md,
     '`parse`\n\n```diff\n   expression\n-    Pexp_extension "raw"\n+    Pexp_raw "raw"\n```',
   );
-  has(md, "> [!CAUTION]\n> **Breaking:** PPXs must match Pexp\\_raw.");
+  has(md, "> ⚠️ **Breaking:** PPXs must match Pexp\\_raw.");
+  assert.ok(!md.includes("[!"));
   has(md, "**Review**\n\n- Does a PPX still see it? Yes.");
   has(md, "Yes.\n\n</details>");
   assert.ok(!md.includes("Signed-off-by"));
