@@ -1251,6 +1251,34 @@ let ctype_memo_reset_tests _context =
         (Ctype.For_test.previous_env_is_empty ())
         "the expansion environment does not outlive its request")
 
+(* Requests reuse interfaces read by earlier ones while their files are
+   unchanged. *)
+let cmi_read_cache_tests _context =
+  Bs_cmi_load.enable_cache ();
+  with_temp_dir "rewatch-driver-cmi-cache-" (fun root ->
+      let compile input = snd (run root ~extra:["-I"; root] input) in
+      let lib_cmi = Filename.concat root "Lib.cmi" in
+      let age seconds =
+        let time = Unix.gettimeofday () -. seconds in
+        Unix.utimes lib_cmi time time
+      in
+      let cached = Bs_cmi_load.For_test.cached_interfaces in
+      write root "Lib.res" "type t = int\n";
+      expect_code 0 (compile "Lib.res");
+      write root "Use.res" "let value: Lib.t = 1\n";
+      let before = cached () in
+      expect_code 0 (compile "Use.res");
+      check (cached () = before) "a just-written interface is not kept";
+      age 60.;
+      expect_code 0 (compile "Use.res");
+      check (cached () = before + 1) "an older interface is kept";
+      expect_code 0 (compile "Use.res");
+      (* The same size, so only the file's time tells it changed. *)
+      write root "Lib.res" "type u = int\n";
+      expect_code 0 (compile "Lib.res");
+      age 30.;
+      expect_code 2 (compile "Use.res"))
+
 let package_and_load_path_isolation_tests _context =
   with_temp_dir "rewatch-driver-load-roots-" (fun root ->
       let first = Filename.concat root "first" in
@@ -1611,6 +1639,7 @@ let suites =
          "ctype_level_isolation" >:: ctype_level_isolation_tests;
          "free_variable_isolation" >:: free_variable_isolation_tests;
          "ctype_memo_reset" >:: ctype_memo_reset_tests;
+         "cmi_read_cache" >:: cmi_read_cache_tests;
          "shared_type_graph_isolation" >:: shared_type_graph_isolation_tests;
          "dependency_extraction_isolation"
          >:: dependency_extraction_isolation_tests;

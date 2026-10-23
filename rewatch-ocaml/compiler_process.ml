@@ -10,6 +10,9 @@ let retain_critical_external_warnings stderr =
 
 let build_identity = Rescript_compiler_driver.build_identity
 
+(* Later modules compiled on a domain reuse the interfaces earlier ones read. *)
+let () = Bs_cmi_load.enable_cache ()
+
 type request = {args: string list; cwd: string}
 
 let compiler_phase args =
