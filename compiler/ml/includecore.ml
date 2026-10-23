@@ -287,9 +287,11 @@ and compare_variants ~loc env params1 params2 ~layout1 ~layout2 n
             | Block (Tagged {tag = tag1}), Block (Tagged {tag = tag2})
               when tag1.literal <> tag2.literal ->
               [Variant_representation cd1.cd_id]
+            (* An unknown payload in the second declaration is the only
+               payload case and has no check, so any first one agrees *)
             | ( Block (Untagged {block_type = block_type1}),
                 Block (Untagged {block_type = block_type2}) )
-              when block_type1 <> block_type2 ->
+              when block_type1 <> block_type2 && block_type2 <> UnknownType ->
               [Variant_representation cd1.cd_id]
             | _ -> r)
       in

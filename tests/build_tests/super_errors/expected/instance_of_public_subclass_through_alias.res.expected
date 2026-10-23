@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/instance_of_public_subclass_through_alias.res[0m:[2m3:20-42[0m
+
+  1 [2m│[0m @instanceOf("Animal") type animal
+  2 [2m│[0m type phantom<'a> = animal
+  [1;31m3[0m [2m│[0m @instanceOf("Dog") [1;31mtype dog = phantom<int>[0m
+  4 [2m│[0m 
+
+  A subclass must be a private abbreviation: write `= private ...` so that instances of Animal cannot be used as instances of Dog without a coercion.
