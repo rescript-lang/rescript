@@ -15,16 +15,11 @@
 
 (** cmt and cmti files format. *)
 
-(** The layout of a cmt or cmti file is as follows:
-      <cmt> := \{<cmi>\} <cmt magic> \{cmt infos\}
-    where <cmi> is the cmi file format:
-      <cmi> := <cmi magic> <cmi info>.
-    The compiler no longer writes the optional <cmi> part: the signature is
-    read from the .cmi file. Files written by older compilers have it in a
-    cmti, and in the cmt of a module without an interface.
+(** A cmt or cmti file is <cmt magic> <cmt infos>; the signature is read
+    from the .cmi file.
 
-    [read] accepts cmi, cmt and cmti files, with or without the <cmi> part,
-    and returns an option for the cmi info and the cmt info. *)
+    [read] accepts cmi, cmt and cmti files and returns the cmi info of a cmi
+    file and the cmt info of a cmt or cmti file. *)
 
 open Typedtree
 
@@ -56,7 +51,6 @@ type cmt_infos = {
   cmt_source_digest: Digest.t option;
   cmt_initial_env: Env.t;
   cmt_imports: (string * Digest.t option) list;
-  cmt_interface_digest: Digest.t option;
   cmt_use_summaries: bool;
   cmt_extra_info: Cmt_utils.cmt_extra_info;
 }

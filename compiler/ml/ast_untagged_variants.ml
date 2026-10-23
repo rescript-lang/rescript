@@ -88,12 +88,6 @@ let literal_tag_to_user_visible_string = function
 
 let untagged = "unboxed"
 
-let block_type_can_be_undefined = function
-  | IntType | StringType | FloatType | BigintType | BooleanType | InstanceType _
-  | FunctionType | ObjectType ->
-    false
-  | UnknownType -> true
-
 let has_untagged (attrs : Parsetree.attributes) =
   Ext_list.exists attrs (function {txt}, _ -> txt = untagged)
 
