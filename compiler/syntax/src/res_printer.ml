@@ -404,7 +404,6 @@ let print_list ~get_loc ~nodes ~print ?(force_break = false)
         let doc = print_comments raw_doc t loc in
         let acc =
           match (prev_loc_opt, acc) with
-          | None, _ | _, [] -> [doc]
           | Some prev_loc, prev_doc :: _ ->
             let sep =
               if start_pos.pos_lnum - prev_loc.Location.loc_end.pos_lnum > 1
@@ -414,6 +413,7 @@ let print_list ~get_loc ~nodes ~print ?(force_break = false)
               else Doc.hard_line
             in
             doc :: sep :: acc
+          | _ -> [doc]
         in
         let first_loc_opt =
           match first_loc_opt with
