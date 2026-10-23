@@ -37,8 +37,8 @@ let scrape env ty = (scrape_ty env ty).desc
      records the type at the definition type so for ['a option]
      it will always be [Tvar]
 *)
-let rec cannot_contain_undefined ~visiting (typ : Types.type_expr)
-    (env : Env.t) =
+let rec cannot_contain_undefined ~visiting (typ : Types.type_expr) (env : Env.t)
+    =
   (* A value declared to be a class instance or to have a [typeof] other than
      "undefined" is not undefined. The payload of an [@unboxed] wrapper is
      declared only after scraping. *)
