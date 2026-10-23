@@ -9,7 +9,7 @@ const SIGNED = "Signed-off-by: A Person <a@example.com>";
 /**
  * The comment drawn from commit messages, one commit each.
  * @param {string[]} messages
- * @param {{ url?: string, budget?: number }} [options]
+ * @param {Parameters<typeof commentMarkdown>[1]} [options]
  */
 const comment = (messages, options) =>
   commentMarkdown(
@@ -65,11 +65,15 @@ Co-Authored-By: B Person <b@example.com>
 ${SIGNED}
 `,
     ],
-    { url: "https://cdn.example/pr-12/index.html?v=1" },
+    {
+      url: "https://cdn.example/pr-12/index.html?v=1",
+      head: "aaaaaaaa0",
+      updated: "Oct 23, 2026, 11:48 UTC",
+    },
   );
   has(
     md,
-    "### Semantic Diff\n\n1 commit · [Full page](https://cdn.example/pr-12/index.html?v=1)",
+    "### [Semantic Diff](https://cdn.example/pr-12/index.html?v=1)\n\n1 commit · aaaaaaaa0 · Oct 23, 2026, 11:48 UTC · [Full page](https://cdn.example/pr-12/index.html?v=1)\n\n<details",
   );
   has(
     md,

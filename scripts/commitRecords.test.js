@@ -132,7 +132,7 @@ test("a minimal record draws its identity and subject", async () => {
   has(html, "<h3>Fix a typo</h3>");
   assert.match(
     html,
-    /<div class="meta"><code>[0-9a-f]{9}<\/code> · A Person \+ B Person · [A-Z][a-z]{2} \d{2}, \d{4} · <a href="https:\/\/github.com\/rescript-lang\/rescript\/pull\/7">#7<\/a><\/div>/,
+    /<div class="meta"><code>[0-9a-f]{9}<\/code> · A Person \+ B Person · [A-Z][a-z]{2} \d{2}, \d{4}, \d{2}:\d{2} UTC · <a href="https:\/\/github.com\/rescript-lang\/rescript\/pull\/7">#7<\/a><\/div>/,
   );
   lacks(html, '<div class="below">');
   lacks(html, "Signed-off-by");
@@ -855,7 +855,13 @@ test("--markdown draws every commit into the comment, with the page's link", asy
   );
   assert.equal(r.status, 0, r.stderr);
   const comment = await fs.readFile(md, "utf8");
-  has(comment, "2 commits · [Full page](https://cdn.example/pr-1/index.html)");
+  const tip = git("rev-parse", "--short=9", "HEAD");
+  assert.match(
+    comment,
+    new RegExp(
+      `^### \\[Semantic Diff\\]\\(https://cdn\\.example/pr-1/index\\.html\\)\\n\\n2 commits · ${tip} · [A-Z][a-z]{2} \\d\\d, \\d{4}, \\d\\d:\\d\\d UTC · \\[Full page\\]\\(https://cdn\\.example/pr-1/index\\.html\\)\\n\\n<details`,
+    ),
+  );
   has(comment, "First change");
   has(comment, "Second change");
 });

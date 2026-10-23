@@ -420,16 +420,29 @@ export function commitMarkdown(r, full) {
 }
 
 /**
- * The comment: a heading linking the page, then each commit. Past the
- * budget, the commits with the most characters are drawn without their
- * forms, and if that is not enough, the last commits are left to the page.
+ * The comment: a heading linking the page (`url`), in its title and as "Full
+ * page", then each commit. Past the budget, the commits with the most
+ * characters are drawn without their forms, and if that is not enough, the
+ * last commits are left to the page. The heading names the commit drawn up
+ * to (`head`, which GitHub links) and when (`updated`), since the comment is
+ * edited in place on each push.
  * @param {Group[]} groups
- * @param {{ url?: string, budget?: number }} [options]
+ * @param {{ url?: string, budget?: number, head?: string, updated?: string }} [options]
  */
-export function commentMarkdown(groups, { url = "", budget = BUDGET } = {}) {
+export function commentMarkdown(
+  groups,
+  { url = "", budget = BUDGET, head: tip = "", updated = "" } = {},
+) {
   const records = groups.flatMap(g => g.records);
   const n = records.length;
-  const head = `### Semantic Diff\n\n${n} commit${n === 1 ? "" : "s"}${url ? ` · [Full page](${url})` : ""}`;
+  const head = `### ${url ? `[Semantic Diff](${url})` : "Semantic Diff"}\n\n${[
+    `${n} commit${n === 1 ? "" : "s"}`,
+    tip,
+    updated,
+    url && `[Full page](${url})`,
+  ]
+    .filter(Boolean)
+    .join(" · ")}`;
   const drawn = records.map(r => commitMarkdown(r, true));
   const size = () => drawn.reduce((t, d) => t + d.length + 2, head.length);
   const order = drawn

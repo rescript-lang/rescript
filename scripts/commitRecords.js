@@ -29,8 +29,17 @@ const git = args =>
     stdio: ["ignore", "pipe", "ignore"],
   });
 
+const MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ");
+
+/** A time as `Oct 23, 2026, 14:41 UTC`, as the cards and the comment print it. */
+const utc = (/** @type {Date} */ d) => {
+  const two = (/** @type {number} */ n) => String(n).padStart(2, "0");
+  return `${MONTHS[d.getUTCMonth()]} ${two(d.getUTCDate())}, ${d.getUTCFullYear()}, ${two(d.getUTCHours())}:${two(d.getUTCMinutes())} UTC`;
+};
+
 /**
- * The record of one commit: its short hash, author, date and message.
+ * The record of one commit: its short hash, author, author date (in UTC,
+ * to the minute) and message.
  * @param {string} rev
  * @returns {CommitRecord}
  */
@@ -40,7 +49,7 @@ function readRecord(rev) {
   return parseRecord({
     sha: show("--format=%h", "--abbrev=9").trim(),
     author: show("--format=%an").trim(),
-    date: show("--format=%ad", "--date=format:%b %d, %Y").trim(),
+    date: utc(new Date(show("--format=%aI").trim())),
     message: show("--format=%B"),
   });
 }
@@ -85,9 +94,14 @@ const heading = {
 const groups = targets.map(group);
 const body = pageBody(groups, heading);
 if (options.markdown) {
+  const [base, tip] = targets[targets.length - 1].split("..");
   writeFileSync(
     options.markdown,
-    commentMarkdown(groups, { url: options.url }),
+    commentMarkdown(groups, {
+      url: options.url,
+      head: git(["rev-parse", "--short=9", tip ?? base]).trim(),
+      updated: utc(new Date()),
+    }),
   );
   console.log(options.markdown);
 }
