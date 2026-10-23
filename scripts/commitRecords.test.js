@@ -855,15 +855,68 @@ test("--markdown draws every commit into the comment, with the page's link", asy
   );
   assert.equal(r.status, 0, r.stderr);
   const comment = await fs.readFile(md, "utf8");
-  const tip = git("rev-parse", "--short=9", "HEAD");
-  assert.match(
+  has(
     comment,
-    new RegExp(
-      `^### \\[Semantic Diff\\]\\(https://cdn\\.example/pr-1/index\\.html\\)\\n\\n2 commits · ${tip} · [A-Z][a-z]{2} \\d\\d, \\d{4}, \\d\\d:\\d\\d UTC · \\[Full page\\]\\(https://cdn\\.example/pr-1/index\\.html\\)\\n\\n<details`,
-    ),
+    "### Changelog\n\nNo changelog entry.\n\n### [Semantic Diff](https://cdn.example/pr-1/index.html)\n\n2 commits · [Full page](https://cdn.example/pr-1/index.html)\n\n<details",
   );
   has(comment, "First change");
   has(comment, "Second change");
+});
+
+test("the comment lists the changelog entries a range adds, breaking first", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "commit-records-"));
+  const git = (/** @type {string[]} */ ...a) =>
+    execFileSync("git", a, { cwd: dir, encoding: "utf8" }).trim();
+  git("init", "-q", "-b", "main");
+  git("config", "user.name", "A Person");
+  git("config", "user.email", "a@example.com");
+  await commit(
+    git,
+    dir,
+    { "changes/README.md": "readme\n", "changes/old.fix.md": "- Old.\n" },
+    "base",
+  );
+  const base = git("rev-parse", "HEAD");
+  await commit(
+    git,
+    dir,
+    {
+      "changes/watch.fix.md": "- Recover the watcher.\n",
+      "changes/gone.breaking.md": "- Drop -x.\n",
+      "changes/Bad Name.md": "- ?\n",
+      "changes/README.md": "readme, edited\n",
+    },
+    `Fix and break\n\n${SIGNED}`,
+  );
+  // An entry added and then removed again is no entry of the range.
+  await commit(
+    git,
+    dir,
+    { "changes/tmp.polish.md": "- Tmp.\n" },
+    `Add\n\n${SIGNED}`,
+  );
+  git("rm", "-q", "changes/tmp.polish.md");
+  git("commit", "-q", "-m", `Remove\n\n${SIGNED}`);
+  const md = path.join(dir, "comment.md");
+  const r = spawnSync(
+    "node",
+    [
+      script,
+      ...["--out", path.join(dir, "page.html"), "--markdown", md],
+      `${base}..HEAD`,
+    ],
+    { cwd: dir, encoding: "utf8" },
+  );
+  assert.equal(r.status, 0, r.stderr);
+  const comment = await fs.readFile(md, "utf8");
+  has(
+    comment,
+    "### Changelog\n\n- :boom: Drop -x.\n- :bug: Recover the watcher.\n- :grey_question: `Bad Name.md`\n\n",
+  );
+  lacks(comment, "Old.");
+  lacks(comment, "Tmp.");
+  lacks(comment, "readme");
+  has(comment, "but no commit says what it breaks");
 });
 
 test("--logins draws an author by the GitHub login, linked, others by name", async () => {

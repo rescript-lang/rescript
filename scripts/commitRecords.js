@@ -20,10 +20,12 @@
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
+import { categories, parseFragment } from "./changelog.js";
 import { commentMarkdown } from "./recordMarkdown.js";
 import { CSS, esc, pageBody, pageTitle, parseRecord } from "./recordRender.js";
 
 /** @import { CommitRecord, Group } from "./recordRender.js" */
+/** @import { ChangelogEntry } from "./recordMarkdown.js" */
 
 /** @param {string[]} args */
 const git = args =>
@@ -32,6 +34,56 @@ const git = args =>
     maxBuffer: 1 << 28,
     stdio: ["ignore", "pipe", "ignore"],
   });
+
+/**
+ * The changelog entries a range adds or changes: the fragments under
+ * `changes/` that differ between its ends, as the tip has them, breaking
+ * changes first and then in the changelog's order. A fragment that doesn't
+ * parse is drawn by its name; the changelog check reports why.
+ * @param {string} base
+ * @param {string} tip
+ * @returns {ChangelogEntry[]}
+ */
+function changelog(base, tip) {
+  const order = Object.keys(categories);
+  return git([
+    "diff",
+    "--name-only",
+    "--no-renames",
+    "--diff-filter=AM",
+    base,
+    tip,
+    "--",
+    "changes/",
+  ])
+    .split("\n")
+    .filter(f => /^changes\/[^/]+\.md$/.test(f) && f !== "changes/README.md")
+    .map(f => {
+      const name = f.slice("changes/".length);
+      try {
+        const { category, text } = parseFragment(
+          name,
+          git(["show", `${tip}:${f}`]),
+        );
+        const emoji =
+          /:\w+:/.exec(
+            categories[/** @type {keyof typeof categories} */ (category)],
+          )?.[0] ?? "";
+        return { category, emoji, text };
+      } catch {
+        return {
+          category: "",
+          emoji: ":grey_question:",
+          text: `- \`${name}\``,
+        };
+      }
+    })
+    .sort((a, b) => {
+      const rank = (/** @type {ChangelogEntry} */ e) =>
+        e.category ? order.indexOf(e.category) : order.length;
+      return rank(a) - rank(b);
+    });
+}
 
 const MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ");
 
@@ -176,8 +228,7 @@ if (options.markdown) {
     options.markdown,
     commentMarkdown(groups, {
       url: options.url,
-      head: git(["rev-parse", "--short=9", tip ?? base]).trim(),
-      updated: utc(new Date()),
+      ...(tip ? { changelog: changelog(base, tip) } : {}),
       ...(options.previous && tip
         ? marks(records, base, options.previous)
         : {}),
