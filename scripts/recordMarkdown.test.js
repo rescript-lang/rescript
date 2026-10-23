@@ -9,7 +9,7 @@ const SIGNED = "Signed-off-by: A Person <a@example.com>";
 /**
  * The comment drawn from commit messages, one commit each.
  * @param {string[]} messages
- * @param {{ url?: string, budget?: number }} [options]
+ * @param {Parameters<typeof commentMarkdown>[1]} [options]
  */
 const comment = (messages, options) =>
   commentMarkdown(
@@ -65,17 +65,21 @@ Co-Authored-By: B Person <b@example.com>
 ${SIGNED}
 `,
     ],
-    { url: "https://cdn.example/pr-12/index.html?v=1" },
+    {
+      url: "https://cdn.example/pr-12/index.html?v=1",
+      head: "aaaaaaaa0",
+      updated: "Oct 23, 2026, 11:48 UTC",
+    },
   );
   has(
     md,
-    "### Semantic Diff\n\n1 commit · [Full page](https://cdn.example/pr-12/index.html?v=1)",
+    "### [Semantic Diff](https://cdn.example/pr-12/index.html?v=1)\n\n1 commit · aaaaaaaa0 · Oct 23, 2026, 11:48 UTC · [Full page](https://cdn.example/pr-12/index.html?v=1)\n\n<details",
   );
   has(
     md,
     "<details open><summary><b>Represent raw extensions as their own node</b></summary>",
   );
-  has(md, "<sub>aaaaaaaa0 · A Person with B Person · Oct 22, 2026 · #12</sub>");
+  has(md, "<sub>aaaaaaaa0 · A Person + B Person · Oct 22, 2026 · #12</sub>");
   has(md, "> **Why**\n>\n> A raw extension carries JavaScript.");
   has(md, "**AST modified** (raw extensions)");
   has(md, "```rescript\nlet f = %raw(`(a) => a`)\n```");
@@ -231,4 +235,34 @@ ${SIGNED}
   const tiny = comment([small, big, small], { budget: 400 });
   assert.ok(tiny.length <= 500, `${tiny.length}`);
   has(tiny, "more commit");
+});
+
+test("the commits the last push added or edited carry a dot and the word", () => {
+  const message = (/** @type {string} */ subject) =>
+    `${subject}\n\n${SIGNED}\n`;
+  const md = comment([message("Kept"), message("Edited"), message("Added")], {
+    changes: new Map([
+      ["aaaaaaaa1", "edited"],
+      ["aaaaaaaa2", "new"],
+    ]),
+  });
+  has(
+    md,
+    "<summary><b>Kept</b></summary>\n\n<sub>aaaaaaaa0 · A Person · Oct 22, 2026</sub>",
+  );
+  has(
+    md,
+    "<summary>✏️ <b>Edited</b></summary>\n\n<sub>aaaaaaaa1 · A Person · Oct 22, 2026 · edited</sub>",
+  );
+  has(
+    md,
+    "<summary>✨ <b>Added</b></summary>\n\n<sub>aaaaaaaa2 · A Person · Oct 22, 2026 · new</sub>",
+  );
+});
+
+test("an assistant co-author is drawn by its short name, others as written", () => {
+  const md = comment([
+    `Fix it\n\nCo-Authored-By: Claude Sonnet 5.5 <NoReply@Anthropic.com>\nCo-Authored-By: Claude Person <claude@example.com>\nCo-Authored-By: No Email\n${SIGNED}\n`,
+  ]);
+  has(md, "· A Person + Claude + Claude Person + No Email ·");
 });

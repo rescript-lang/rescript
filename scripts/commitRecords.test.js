@@ -132,7 +132,7 @@ test("a minimal record draws its identity and subject", async () => {
   has(html, "<h3>Fix a typo</h3>");
   assert.match(
     html,
-    /<div class="meta"><code>[0-9a-f]{9}<\/code> · A Person with B Person · [A-Z][a-z]{2} \d{2}, \d{4} · <a href="https:\/\/github.com\/rescript-lang\/rescript\/pull\/7">#7<\/a><\/div>/,
+    /<div class="meta"><code>[0-9a-f]{9}<\/code> · A Person \+ B Person · [A-Z][a-z]{2} \d{2}, \d{4}, \d{2}:\d{2} UTC · <a href="https:\/\/github.com\/rescript-lang\/rescript\/pull\/7">#7<\/a><\/div>/,
   );
   lacks(html, '<div class="below">');
   lacks(html, "Signed-off-by");
@@ -457,7 +457,7 @@ test("Breaking and Review sections right above the sign-off are drawn", async ()
   );
   has(html, '<article class="card breaking"');
   has(html, '<ul class="review"><li>Is -bs-x still read? No.</li></ul>');
-  has(html, "</code> · A Person with B Person · ");
+  has(html, "</code> · A Person + B Person · ");
   lacks(html, "Signed-off-by");
 });
 
@@ -504,7 +504,8 @@ test("trailers of any key end the message and are not drawn", async () => {
   const html = await renderOne(
     `Fix a thing\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_x\n${SIGNED}\n`,
   );
-  has(html, " · A Person with Claude Opus 5.5 · ");
+  has(html, " · A Person + Claude · ");
+  lacks(html, "Opus");
   lacks(html, "Claude-Session");
   lacks(html, "session_x");
   lacks(html, '<section class="block');
@@ -832,7 +833,7 @@ ${SIGNED}
   has(html, '<span class="ln del" style="--r:2;--c:1;--i:0">');
 });
 
-test("--since leaves the comment the commits a push added, the page every commit", async () => {
+test("--markdown draws every commit into the comment, with the page's link", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "commit-records-"));
   const git = (/** @type {string[]} */ ...a) =>
     execFileSync("git", a, { cwd: dir, encoding: "utf8" }).trim();
@@ -841,36 +842,66 @@ test("--since leaves the comment the commits a push added, the page every commit
   git("config", "user.email", "a@example.com");
   await commit(git, dir, { "a.txt": "a\n" }, "base");
   await commit(git, dir, {}, `First change\n\n${SIGNED}`);
-  const before = git("rev-parse", "HEAD");
   await commit(git, dir, {}, `Second change\n\n${SIGNED}`);
-  const out = path.join(dir, "page.html");
   const md = path.join(dir, "comment.md");
-  const run = (/** @type {string} */ since) => {
-    const r = spawnSync(
-      "node",
-      [
-        script,
-        "--out",
-        out,
-        "--markdown",
-        md,
-        "--since",
-        since,
-        "HEAD~2..HEAD",
-      ],
-      { cwd: dir, encoding: "utf8" },
-    );
-    assert.equal(r.status, 0, r.stderr);
-  };
-  run(before);
+  const r = spawnSync(
+    "node",
+    [
+      script,
+      ...["--out", path.join(dir, "page.html"), "--markdown", md],
+      ...["--url", "https://cdn.example/pr-1/index.html", "HEAD~2..HEAD"],
+    ],
+    { cwd: dir, encoding: "utf8" },
+  );
+  assert.equal(r.status, 0, r.stderr);
   const comment = await fs.readFile(md, "utf8");
-  has(comment, "1 new commit (2 total)");
+  const tip = git("rev-parse", "--short=9", "HEAD");
+  assert.match(
+    comment,
+    new RegExp(
+      `^### \\[Semantic Diff\\]\\(https://cdn\\.example/pr-1/index\\.html\\)\\n\\n2 commits · ${tip} · [A-Z][a-z]{2} \\d\\d, \\d{4}, \\d\\d:\\d\\d UTC · \\[Full page\\]\\(https://cdn\\.example/pr-1/index\\.html\\)\\n\\n<details`,
+    ),
+  );
+  has(comment, "First change");
   has(comment, "Second change");
-  lacks(comment, "First change");
-  const html = await fs.readFile(out, "utf8");
-  has(html, "First change");
-  has(html, "Second change");
-  await fs.rm(md);
-  run("HEAD");
-  await assert.rejects(fs.access(md));
+});
+
+test("--previous marks the commits the last push added or edited", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "commit-records-"));
+  const git = (/** @type {string[]} */ ...a) =>
+    execFileSync("git", a, { cwd: dir, encoding: "utf8" }).trim();
+  git("init", "-q", "-b", "main");
+  git("config", "user.name", "A Person");
+  git("config", "user.email", "a@example.com");
+  await commit(git, dir, { "a.txt": "a\n" }, "base");
+  const base = git("rev-parse", "HEAD");
+  await commit(git, dir, {}, `Kept\n\n${SIGNED}`);
+  await commit(git, dir, {}, `Edited\n\nFirst words.\n\n${SIGNED}`);
+  await commit(git, dir, {}, `Dropped\n\n${SIGNED}`);
+  const previous = git("rev-parse", "HEAD");
+  // A force push: the last commit dropped, the one below reworded, one added.
+  git("reset", "-q", "--hard", "HEAD~2");
+  await commit(git, dir, {}, `Edited\n\nOther words.\n\n${SIGNED}`);
+  await commit(git, dir, {}, `Added\n\n${SIGNED}`);
+  const md = path.join(dir, "comment.md");
+  const r = spawnSync(
+    "node",
+    [
+      script,
+      ...["--out", path.join(dir, "page.html"), "--markdown", md],
+      ...["--previous", previous, `${base}..HEAD`],
+    ],
+    { cwd: dir, encoding: "utf8" },
+  );
+  assert.equal(r.status, 0, r.stderr);
+  const comment = await fs.readFile(md, "utf8");
+  has(comment, "<summary><b>Kept</b></summary>");
+  const marked = (/** @type {string} */ subject) =>
+    comment.split("<details").find(d => d.includes(`<b>${subject}</b>`)) ?? "";
+  lacks(marked("Kept"), "✨");
+  lacks(marked("Kept"), "✏️");
+  has(marked("Edited"), "<summary>✏️ <b>Edited</b></summary>");
+  has(marked("Edited"), " · edited</sub>");
+  has(marked("Added"), "<summary>✨ <b>Added</b></summary>");
+  has(marked("Added"), " · new</sub>");
 });

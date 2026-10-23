@@ -14,6 +14,7 @@ import {
   atomDiff,
   BELOW,
   BLOCK,
+  byline,
   cellsOf,
   columnWidths,
   dedent,
@@ -386,20 +387,26 @@ function section(s, parts, full) {
   return out.join("\n\n");
 }
 
+/** The sign before a commit's subject that marks what the last push did. */
+const SIGNS = { new: "✨", edited: "✏️" };
+
 /**
  * A commit as a collapsible block: its subject, identity and message drawn;
- * without `full`, its forms are left to the page.
+ * without `full`, its forms are left to the page. A `change` (`new` or
+ * `edited`), what the last push did to it, puts a sign before the subject
+ * and the word in the identity line.
  * @param {CommitRecord} r
  * @param {boolean} full
+ * @param {string} [change]
  */
-export function commitMarkdown(r, full) {
+export function commitMarkdown(r, full, change = "") {
   const pr = /\(#(\d+)\)\s*$/.exec(r.subject)?.[1] ?? "";
   const subject = r.subject.replace(/\s*\(#\d+\)\s*$/, "");
   const joined = (/** @type {Section} */ s) =>
     [...s.text, ...s.block.map(l => l.trim())].join(" ").trim();
   const out = [
-    `<details open><summary><b>${inlineHtml(subject)}</b></summary>`,
-    `<sub>${esc(r.sha)} · ${inline(r.author)}${r.coauthors.length ? ` with ${inline(r.coauthors.join(", "))}` : ""}${r.date ? ` · ${esc(r.date)}` : ""}${pr ? ` · #${pr}` : ""}</sub>`,
+    `<details open><summary>${change ? `${SIGNS[/** @type {keyof typeof SIGNS} */ (change)] ?? ""} ` : ""}<b>${inlineHtml(subject)}</b></summary>`,
+    `<sub>${esc(r.sha)} · ${inline(byline(r))}${r.date ? ` · ${esc(r.date)}` : ""}${pr ? ` · #${pr}` : ""}${change ? ` · ${esc(change)}` : ""}</sub>`,
     ...sectionGroups(r.sections.filter(s => !BELOW.has(s.name))).map(g =>
       section(g.section, g.parts, full),
     ),
@@ -419,29 +426,45 @@ export function commitMarkdown(r, full) {
 }
 
 /**
- * The comment: a heading linking the page, then each commit. Past the
- * budget, the commits with the most characters are drawn without their
- * forms, and if that is not enough, the last commits are left to the page.
- * With `total`, the commits are the new ones a push added to a pull request
- * of `total` commits.
+ * The comment: a heading linking the page (`url`), in its title and as "Full
+ * page", then each commit. Past the budget, the commits with the most
+ * characters are drawn without their forms, and if that is not enough, the
+ * last commits are left to the page. The heading names the commit drawn up
+ * to (`head`, which GitHub links) and when (`updated`), since the comment is
+ * edited in place on each push; the commits the last push added or edited
+ * (`changes`) are marked.
  * @param {Group[]} groups
- * @param {{ url?: string, budget?: number, total?: number }} [options]
+ * @param {{ url?: string, budget?: number, head?: string, updated?: string, changes?: Map<string, string> }} [options]
  */
 export function commentMarkdown(
   groups,
-  { url = "", budget = BUDGET, total } = {},
+  {
+    url = "",
+    budget = BUDGET,
+    head: tip = "",
+    updated = "",
+    changes = new Map(),
+  } = {},
 ) {
   const records = groups.flatMap(g => g.records);
   const n = records.length;
-  const head = `### Semantic Diff\n\n${n}${total === undefined ? "" : " new"} commit${n === 1 ? "" : "s"}${total === undefined || total === n ? "" : ` (${total} total)`}${url ? ` · [Full page](${url})` : ""}`;
-  const drawn = records.map(r => commitMarkdown(r, true));
+  const head = `### ${url ? `[Semantic Diff](${url})` : "Semantic Diff"}\n\n${[
+    `${n} commit${n === 1 ? "" : "s"}`,
+    tip,
+    updated,
+    url && `[Full page](${url})`,
+  ]
+    .filter(Boolean)
+    .join(" · ")}`;
+  const change = (/** @type {CommitRecord} */ r) => changes.get(r.sha) ?? "";
+  const drawn = records.map(r => commitMarkdown(r, true, change(r)));
   const size = () => drawn.reduce((t, d) => t + d.length + 2, head.length);
   const order = drawn
     .map((d, k) => ({ k, length: d.length }))
     .sort((x, y) => y.length - x.length);
   for (const { k } of order) {
     if (size() <= budget) break;
-    drawn[k] = commitMarkdown(records[k], false);
+    drawn[k] = commitMarkdown(records[k], false, change(records[k]));
   }
   let left = 0;
   while (drawn.length && size() > budget) {

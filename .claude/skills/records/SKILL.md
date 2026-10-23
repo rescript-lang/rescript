@@ -193,15 +193,17 @@ node scripts/commitRecords.js --out page.html [--pr <number>] [--title <text>] \
 - `--pr` and `--title` head the page with the pull request.
   `.github/workflows/semantic_diff.yml` renders each pull request's range
   and comments the records as Markdown (`--markdown <file> --url <page>`,
-  scripts/recordMarkdown.js) with the page's link: after a push that keeps
-  the previous head, only the commits it added (`--since <previous head>`).
+  scripts/recordMarkdown.js) with the page's link, one comment that each
+  push updates to hold every commit, marking those the push added or
+  edited (`--previous <previous head>`).
 - In prose, `#1234` and full pull request and issue URLs link as `#1234`,
   and the 9-character short sha of a commit on the page links to its card.
 
 ## What the page shows
 
 The page is the heading, then a card per commit. A card shows the commit's
-short sha, author and co-authors, date, the pull request a `(#1234)` at
-the end of the subject names, and the message drawn: the subject, the
-prose, each object block with its example and forms, the `Breaking:`
-sections as banners, and the `Review:` sections as a list.
+short sha, author and co-authors (an AI assistant by its short name, such
+as Claude), date, the pull request a `(#1234)` at the end of the subject
+names, and the message drawn: the subject, the prose, each object block
+with its example and forms, the `Breaking:` sections as banners, and the
+`Review:` sections as a list.

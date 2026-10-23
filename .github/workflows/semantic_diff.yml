@@ -2,9 +2,10 @@ name: Semantic Diff
 
 # Renders the commit records of each pull request (scripts/commitRecords.js)
 # as a review page on the CDN, and comments them on the pull request as
-# Markdown (scripts/recordMarkdown.js) with the page's link. The page holds
-# every commit; the comment holds the commits a push added, or every commit
-# when the pull request is opened or reopened or its branch is force-pushed.
+# Markdown (scripts/recordMarkdown.js) with the page's link. A pull request
+# has one such comment, which each push updates in place to hold every
+# commit, so the pull request shows its current records in one place; the
+# comment marks the commits the last push added or edited.
 #
 # A pull request from a branch of this repository runs on pull_request, with
 # the workflow and renderer of its merge into the base branch: GitHub takes
@@ -55,7 +56,6 @@ jobs:
           persist-credentials: false
 
       - name: Render semantic diff
-        id: render
         run: |
           git fetch --no-tags --filter=blob:none origin "refs/pull/${PR_NUMBER}/head:refs/heads/pr-${PR_NUMBER}"
           base=$(git merge-base "$BASE_SHA" "pr-${PR_NUMBER}")
@@ -63,17 +63,16 @@ jobs:
           # The query string names the rendered commit, so each push gets a
           # URL that no cache has seen.
           url="https://cdn.rescript-lang.org/semantic-diff/pr-${PR_NUMBER}/index.html?v=${head}"
-          # A push that keeps the previous head adds commits on top of it:
-          # the comment holds those. After a force push the previous head is
-          # no ancestor (nor, from a fork, fetched), and the comment holds
-          # every commit.
-          since=()
-          if [ -n "$BEFORE_SHA" ] && git merge-base --is-ancestor "$BEFORE_SHA" "pr-${PR_NUMBER}" 2>/dev/null; then
-            since=(--since "$BEFORE_SHA")
+          # The comment marks what the push changed against the head before
+          # it. A force push leaves that head on no branch, but GitHub still
+          # serves it by its sha; when it can't be fetched, nothing is marked.
+          previous=()
+          if [ -n "$BEFORE_SHA" ] && { git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null ||
+            git fetch --no-tags --filter=blob:none origin "$BEFORE_SHA" 2>/dev/null; }; then
+            previous=(--previous "$BEFORE_SHA")
           fi
           mkdir -p semantic-diff
-          node scripts/commitRecords.js --out semantic-diff/index.html --markdown semantic-diff/comment.md "${since[@]}" --url "$url" --pr "$PR_NUMBER" --title "$PR_TITLE" "${base}..pr-${PR_NUMBER}"
-          echo "head=${head}" >> "$GITHUB_OUTPUT"
+          node scripts/commitRecords.js --out semantic-diff/index.html --markdown semantic-diff/comment.md "${previous[@]}" --url "$url" --pr "$PR_NUMBER" --title "$PR_TITLE" "${base}..pr-${PR_NUMBER}"
 
       - name: Setup Rclone
         uses: cometkim/rclone-actions/setup-rclone@8d9c6b95341f7698609deee65c3d62af42893288 # main, 2025-06-18
@@ -91,14 +90,12 @@ jobs:
       - name: Upload semantic diff
         run: rclone copyto --s3-no-check-bucket semantic-diff/index.html "rescript:cdn-assets/semantic-diff/pr-${PR_NUMBER}/index.html"
 
-      # A push that adds only merge commits writes no comment.
       - name: Comment semantic diff
-        if: hashFiles('semantic-diff/comment.md') != ''
         uses: thollander/actions-comment-pull-request@v3
         with:
           pr-number: ${{ github.event.pull_request.number }}
-          # Each push gets its own comment, so the comments of earlier pushes
-          # stay; a re-run of the same head updates its comment.
-          comment-tag: semantic-diff-${{ steps.render.outputs.head }}
+          # The pull request's one comment, edited in place on each push;
+          # edits notify no one.
+          comment-tag: semantic-diff
           mode: upsert
           file-path: semantic-diff/comment.md
