@@ -20,7 +20,7 @@
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
-import { categories, parseFragment } from "./changelog.js";
+import { categories, parseFragment } from "./changelogFragments.js";
 import { commentMarkdown } from "./recordMarkdown.js";
 import { CSS, esc, pageBody, pageTitle, parseRecord } from "./recordRender.js";
 

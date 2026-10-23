@@ -3,66 +3,21 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  categories,
+  parseFragment,
+  placeholderLink,
+  trailingPrLinks,
+} from "./changelogFragments.js";
+import {
   checkMagicNumbers,
   configPath,
   releaseMagicNumbers,
   showAt,
 } from "./magicNumbers.js";
 
-export const categories = {
-  breaking: "#### :boom: Breaking Change",
-  feature: "#### :rocket: New Feature",
-  fix: "#### :bug: Bug fix",
-  docs: "#### :memo: Documentation",
-  polish: "#### :nail_care: Polish",
-  internal: "#### :house: Internal",
-};
+export { categories, parseFragment, placeholderLink };
 
-const prLink =
-  /https:\/\/github\.com\/rescript-lang\/rescript(?:-compiler)?\/pull\/([1-9]\d*)/;
-export const placeholderLink =
-  "https://github.com/rescript-lang/rescript/pull/XXXX";
-const trailingPrLinks = new RegExp(
-  `${prLink.source}(?:\\s+${prLink.source})*$`,
-);
 const repositoryUrl = "https://github.com/rescript-lang/rescript";
-
-export function parseFragment(name, content) {
-  const match = /^([a-z0-9][a-z0-9-]*)\.([a-z]+)\.md$/.exec(name);
-  if (!match || !Object.hasOwn(categories, match[2])) {
-    throw new Error(
-      `${name}: expected <description>.<category>.md; allowed categories: ${Object.keys(categories).join(", ")}`,
-    );
-  }
-  const text = content.trim();
-  if (text.includes(placeholderLink)) {
-    throw new Error(
-      `${name}: replace the placeholder ${placeholderLink} with the PR link`,
-    );
-  }
-  const bullets = text.split(/\n(?=- )/);
-  const invalid = bullets.some(
-    bullet =>
-      !/^- \S/.test(bullet) ||
-      bullet
-        .split("\n")
-        .slice(1)
-        .some(line => line && !/^ {2}\S/.test(line)),
-  );
-  if (!text || invalid) {
-    throw new Error(
-      `${name}: expected Markdown bullets (indent continuation lines by two spaces)`,
-    );
-  }
-  const links = [...text.matchAll(new RegExp(prLink, "g"))].map(link =>
-    Number(link[1]),
-  );
-  // A bullet without a link gets the link of the pull request that added the
-  // fragment when the release is prepared.
-  const unlinked = bullets.some(bullet => !trailingPrLinks.test(bullet));
-  const pr = links.length ? Math.max(...links) : null;
-  return { name, category: match[2], text, pr, unlinked };
-}
 
 // The pull request that added a fragment, from the subject of the squash
 // commit that added it ("... (#1234)"). Rebase merges and merge commits carry

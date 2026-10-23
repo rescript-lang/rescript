@@ -114,6 +114,28 @@ Review: Does a PPX still see the extension? Yes: the v0 bridge maps it back,
 ${SIGNED}
 `;
 
+test("the renderer imports no packages: the workflow runs it without node_modules", async () => {
+  const seen = new Set();
+  /** @param {string} file */
+  const visit = async file => {
+    if (seen.has(file)) return;
+    seen.add(file);
+    const source = await fs.readFile(file, "utf8");
+    for (const [, spec] of source.matchAll(
+      /^(?:import|export)\b[^"'`;]*?\bfrom\s+["']([^"']+)["']/gm,
+    )) {
+      assert.ok(
+        spec.startsWith("./") || spec.startsWith("node:"),
+        `${path.basename(file)} imports ${spec}`,
+      );
+      if (spec.startsWith("./"))
+        await visit(path.resolve(path.dirname(file), spec));
+    }
+  };
+  await visit(script);
+  assert.ok(seen.size > 3, [...seen].join(", "));
+});
+
 test("a minimal record draws its identity and subject", async () => {
   const html = await render(
     async (git, dir) => {
