@@ -12,7 +12,6 @@
 
 /* before */ type t = /* before manifest */ string /* after */
 /* before */ type /* before name */ t /* after name */ = /* before manifest */ string /* after */
-
 /* before */ type /* before name */ t /* after name */<
   /* c0 */ 'err /* c1 */,
   /* c2 */ 'success /* c3 */,

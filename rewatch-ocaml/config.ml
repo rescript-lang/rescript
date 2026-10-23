@@ -246,11 +246,11 @@ let decode_experimental_features path fields =
     reject_duplicates path "experimental-features" features;
     features
     |> List.concat_map (fun (name, value) ->
-        if name <> "LetUnwrap" then
+        if not (List.mem name ["LetUnwrap"; "MultilineItemSpacing"]) then
           fail path
             (Printf.sprintf
                "Unknown experimental feature '%s'. Available features: \
-                LetUnwrap"
+                LetUnwrap, MultilineItemSpacing"
                name);
         match value with
         | `Bool true -> ["-enable-experimental"; name]

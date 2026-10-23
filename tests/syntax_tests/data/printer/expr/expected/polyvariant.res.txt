@@ -1,14 +1,11 @@
 let r = #Reducer()
 let r = #Reducer(state, nexState, sideEffect)
-
 let r = #Reducer(
   superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
   superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
   superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
 )
-
 let r = #Reducer([state, nexState, sideEffect])
-
 let r = #Reducer([
   superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
   superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
@@ -45,7 +42,6 @@ let c = #ConstructorWithASuuuuuuuuuuuuuuuperLoooooooooooooooooooooooooooooongIii
 let c = #ConstructorWithASuuuuuuuuuuuuuuuperLoooooooooooooooooooooooooooooongIiiiiiiiiideeeentifieeeeeeeeeeeeeeeeer(list{})
 
 let coordinate = #JsCoord({"x": 1, "y": 1})
-
 let user = #JsUser({
   "name": "steve",
   "age": 32,

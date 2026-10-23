@@ -5,7 +5,6 @@ module Standard = {
   type props = {}
 
   let make = (_: props): React.element => React.string("ok")
-
   let make = React.component({
     let \"ReturnConstraint$Standard" = props => make(props)
 
@@ -18,7 +17,6 @@ module ForwardRef = {
   type props = {}
 
   let make = (_: props, _ref): React.element => ReactDOM.jsx("div", {})
-
   let make = React.forwardRef({
     let \"ReturnConstraint$ForwardRef" = (props, ref) => make(props, ref)
 
@@ -31,7 +29,6 @@ module WithProps = {
 
   let make = (props: props): React.element =>
     ReactDOM.jsx("span", {children: ?ReactDOM.someElement({React.int(props.value)})})
-
   let make = React.component({
     let \"ReturnConstraint$WithProps" = (props: props): React.element => make(props)
     \"ReturnConstraint$WithProps"
@@ -44,7 +41,6 @@ module Async = {
 
   let make = async (_: props): React.element =>
     ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.string("async")})})
-
   let make = React.component({
     let \"ReturnConstraint$Async" = props => Jsx.promise(make(props))
 

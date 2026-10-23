@@ -15,7 +15,6 @@ type state = {
 
 module Styles = {
   open Css
-
   let terminal = style(list{
     margin(10->px),
     backgroundColor("222"->hex),
@@ -27,9 +26,7 @@ module Styles = {
     fontFamily(#custom(Theme.codeFontFamily)),
     unsafe("WebkitOverflowScrolling", "touch"),
   })
-
   let line = style(list{whiteSpace(#preWrap)})
-
   let input = style(list{
     backgroundColor("222"->hex),
     fontFamily(#custom(Theme.codeFontFamily)),
@@ -40,7 +37,6 @@ module Styles = {
     padding(zero),
     outlineStyle(none),
   })
-
   let title = style(list{
     fontSize(48->px),
     fontWeight(extraBold),

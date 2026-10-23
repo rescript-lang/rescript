@@ -2,7 +2,6 @@
 let choose = (condition, yes, no) => condition ? yes : no
 let nested = (first, second, a, b, c) => first ? a : second ? b : c
 let inCondition = (first, second, a, b, c) => (first ? second : false) ? a : b + c
-
 let mixed = (condition, yes, no) =>
   if condition {
     condition ? yes : no

@@ -4,7 +4,6 @@ f.contents = () => {
   doA()
   doB()
 }
-
 f := () => {
   doA()
   doB()
@@ -14,7 +13,6 @@ f.contents = @attr () => {
   doA()
   doB()
 }
-
 f := @attr () => {
   doA()
   doB()
@@ -22,14 +20,11 @@ f := @attr () => {
 
 f := () => doA()
 f := @first @second () => doA()
-
 f := async () => {
   await doA()
   doB()
 }
-
 f := (value: int): int => value + 1
-
 f := (firstArgument, secondArgument, thirdArgument, fourthArgument, fifthArgument) => {
   doA(firstArgument, secondArgument)
   doB(thirdArgument, fourthArgument, fifthArgument)
@@ -41,12 +36,10 @@ f := /* function */ () => {
   doA()
   doB()
 }
-
 f.contents = /* attribute */ @attr () => {
   doA()
   doB()
 }
-
 f := @attr () => {
   doA()
   doB()
@@ -59,7 +52,6 @@ f := {
     doB()
   }
 }
-
 f := (() => doA(): unit => unit)
 
 // Other operators still need parentheses around functions.
@@ -71,6 +63,5 @@ let equal =
         doB()
       }
     )
-
 let left = (() => doA()) == f.contents
 let nested = (f := () => doA())->ignore

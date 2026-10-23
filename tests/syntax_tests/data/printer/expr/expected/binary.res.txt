@@ -31,19 +31,16 @@ let x = foo ++ bar
 let x = 1 + 1
 let x = (a => a + 1) + (b => b + 2)
 let x = -1 + -1
-
 let x = switch z {
 | Red => 1
 }->switch y {
 | Blue => 2
 }
-
 let x = try z catch {
 | Exit => 1
 }->try y catch {
 | Blue => 2
 }
-
 let x =
   if true {
     1
@@ -54,7 +51,6 @@ let x =
   } else {
     3
   }
-
 let x = for i in 0 to 10 {
   ()
 }->for i in 0 to 10 {
@@ -88,7 +84,6 @@ let rotateX = (range / rect.height * refY - range / 2) * getXMultiplication(rect
 let rotateY = (range / rect.width * refX - range / 2) * getYMultiplication(rect.width)
 
 let x = longIdentifier + longIdentifier + longIdentifier
-
 let x =
   longIdentifier +
   longIdentifier +
@@ -96,14 +91,12 @@ let x =
   longIdentifier -
   longIdentifier +
   longIdentifier
-
 let x =
   longIdentifier +
   longIdentifier * longIdentifier +
   longIdentifier -
   longIdentifier +
   longIdentifier
-
 let x =
   longIdentifier +
   longIdentifier * longIdentifier * longIdentifier / longIdentifier +
@@ -116,7 +109,6 @@ let x =
   longIdentifier &&
   longIdentifier &&
   longIdentifier
-
 let x =
   (longIdentifier && longIdentifier) ||
   longIdentifier && longIdentifier ||
@@ -148,7 +140,6 @@ while continuePrefix.contents && aPrefixLen.contents <= aLen && bPrefixLen.conte
   let nextNonwhiteA = nextNonWhiteChar(aStr, 1, aPrefixLen.contents - 1)
   let nextNonwhiteB = nextNonWhiteChar(bStr, 1, bPrefixLen.contents - 1)
 }
-
 let () = {
   let () = sideEffect()
   if (
@@ -214,14 +205,12 @@ let x = a && a.b
 let x = a && x.y && g.h
 let x = a && true
 let x = a && true && true
-
 let x =
   a && {
     let a = true
     let b = true
     a || b
   }
-
 let x =
   a &&
   {
@@ -255,7 +244,6 @@ let x =
   | Blue => "blue"
   | Red => "red"
   }
-
 let x =
   a &&
   switch color {
@@ -304,7 +292,6 @@ let x =
   } else {
     false
   }
-
 let x =
   a &&
   if true {
@@ -322,7 +309,6 @@ let x =
     sideEffect()
     do()
   }
-
 let x =
   a &&
   {
@@ -337,7 +323,6 @@ let x =
   a && while true {
     do()
   }
-
 let x =
   a &&
   while true {
@@ -350,7 +335,6 @@ let x =
   a && for i in 0 to 10 {
     true
   }
-
 let x =
   a &&
   for i in 0 to 10 {
@@ -367,7 +351,6 @@ let x =
     module L = Log
     L.log()
   }
-
 let x =
   a &&
   {
@@ -383,7 +366,6 @@ let x =
     exception Exit
     throw(Exit)
   }
-
 let x =
   a &&
   {
@@ -402,7 +384,6 @@ let x =
     open React
     killPerform()
   }
-
 let x =
   a &&
   {
@@ -481,7 +462,6 @@ x->(y->z)
 x->(y->(z->w))
 
 let x = "z" ++ a->f ++ "x"
-
 let toString = functionArgs => {
   functionArgs == [] ? "" : "<" ++ functionArgs->List.map(argToString)->String.concat(",") ++ ">"
 }
@@ -541,6 +521,5 @@ let make = (~keycap) => <Kbd keycap="Ctrl" /> + <Kbd keycap="Shift" /> + <Kbd ke
 
 // rescript-lang/syntax/issues/499
 (@doesNotRaise [])->Belt.Array.getExn(0)
-
 @doesNotRaise
 []->Belt.Array.getExn(0)

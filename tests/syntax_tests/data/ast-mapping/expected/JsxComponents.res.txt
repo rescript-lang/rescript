@@ -3,9 +3,7 @@ module A = {
   type props<'x> = {
     x: 'x,
   }
-
   let make = ({x, _}: props<_>): React.element => React.string(x)
-
   let make = React.component({
     let \"JsxComponents$A" = (props: props<_>) => make(props)
     \"JsxComponents$A"
@@ -17,7 +15,6 @@ module B = {
 
   /** Doc */
   @deprecated @genType let make = ({x, _}: props): React.element => React.string(x)
-
   /** Doc */
   @deprecated @genType
   let make = React.component({
@@ -29,7 +26,6 @@ module B = {
 
 module C = {
   let make = (props: props): React.element => React.string(props.x)
-
   let make = React.component({
     let \"JsxComponents$C" = (props: props): React.element => make(props)
     \"JsxComponents$C"
@@ -38,7 +34,6 @@ module C = {
 
 module D = {
   let make = (props: props): React.element => React.string(props.x)
-
   let make = React.component({
     let \"JsxComponents$D" = (props: props): React.element => make(props)
     \"JsxComponents$D"
@@ -62,7 +57,6 @@ module F: {
   }
 
   let make: React.component<props<string>>
-
   @jsx.componentWithProps
   let other: props => React.element
 } = {
@@ -72,7 +66,6 @@ module F: {
   }
 
   let make = ({x, _}: props<_>): React.element => React.string(x)
-
   let make = React.component({
     let \"JsxComponents$F" = (props: props<_>) => make(props)
 

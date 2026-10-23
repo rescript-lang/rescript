@@ -25,7 +25,7 @@ if [ $status -eq 0 ]; then
   exit 1
 fi
 
-echo "$out" | grep -q "Unknown experimental feature 'FooBar'. Available features: LetUnwrap"
+echo "$out" | grep -q "Unknown experimental feature 'FooBar'. Available features: LetUnwrap, MultilineItemSpacing"
 if [ $? -ne 0 ]; then
   error "Missing helpful message for unknown experimental feature"
   echo "$out"

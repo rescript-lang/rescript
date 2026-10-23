@@ -67,29 +67,24 @@ let arrayIndex = values[index :> int]
 values[index :> int] = (value :> b)
 let recordSpread = {...value :> b, field: value}
 let bracedOperand = ({value} :> b)
-
 let blockSequence = {
   {
     foo()
     value
   } :> b
 }
-
 let checked = assert(value :> bool)
 (value :> b)
 let ternaryCallback = condition ? (x => (x :> b)) : other
 let piped = (value :> b)->foo
-
 let blockTail = {
   foo()
   (value :> b)
 }
-
 let blockHead = {
   (value :> b)
   foo()
 }
-
 let dictSpread = dict{...value :> dict<b>, "field": value}
 
 // A constrained operand needs parentheses when the coercion is a binding RHS.
@@ -106,11 +101,9 @@ let beforeJsx = () => {
 
 // These grammar positions don't parse a bare trailing coercion.
 let locallyAbstract: type a. a = (value :> a)
-
 let guarded = switch value {
 | _ if (flag :> bool) => value
 }
-
 let jsxSpread = <Component {...(props :> propsType)} />
 
 @attr(? value if (flag :> bool))
@@ -119,7 +112,6 @@ let attributeGuard = value
 // Attribute and extension payloads parse their contents as plain expressions.
 @attr((value :> b))
 let attributePayload = value
-
 let extensionPayload = %extension((value :> b))
 
 // First-class module unpacking also parses a plain expression.

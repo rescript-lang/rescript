@@ -5,7 +5,6 @@ module V4CA = {
   type props = {}
 
   let make = (_: props): React.element => ReactDOM.jsx("div", {})
-
   let make = React.component({
     let \"NoPropsWithKey$V4CA" = props => make(props)
 
@@ -35,7 +34,6 @@ module V4C = {
         ]),
       },
     )
-
   let make = React.component({
     let \"NoPropsWithKey$V4C" = props => make(props)
 

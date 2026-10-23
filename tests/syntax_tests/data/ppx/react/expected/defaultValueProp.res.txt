@@ -4,7 +4,6 @@ module C0 = {
     a?: 'a,
     b?: 'b,
   }
-
   let make = ({a: ?__a, b: ?__b, _}: props<_, _>) => {
     let __a_value = switch __a {
     | Some(a) => a
@@ -18,7 +17,6 @@ module C0 = {
     let b = __b_value
     (React.int(a + b): React.element)
   }
-
   let make = React.component({
     let \"DefaultValueProp$C0" = (props: props<_>) => make(props)
     \"DefaultValueProp$C0"
@@ -40,7 +38,6 @@ module C1 = {
     let a = __a_value
     (React.int(a + b): React.element)
   }
-
   let make = React.component({
     let \"DefaultValueProp$C1" = (props: props<_>) => make(props)
 
@@ -50,7 +47,6 @@ module C1 = {
 
 module C2 = {
   let a = "foo"
-
   @res.jsxComponentProps
   type props<'a> = {
     a?: 'a,
@@ -64,7 +60,6 @@ module C2 = {
     let a = __a_value
     (React.string(a): React.element)
   }
-
   let make = React.component({
     let \"DefaultValueProp$C2" = (props: props<_>) => make(props)
 
@@ -90,7 +85,6 @@ module C3 = {
       }: React.element
     )
   }
-
   let make = React.component({
     let \"DefaultValueProp$C3" = (props: props<_>) => make(props)
 

@@ -1,1 +1,1 @@
-- Format a blank line before and after a top-level or module-level item that spans several lines.
+- Add the experimental feature `MultilineItemSpacing`: with `"experimental-features": {"MultilineItemSpacing": true}`, `rescript format` puts a blank line before and after a module item that spans several lines.

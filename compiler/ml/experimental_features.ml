@@ -1,12 +1,14 @@
-type feature = LetUnwrap
+type feature = LetUnwrap | MultilineItemSpacing
 
 let to_string (f : feature) : string =
   match f with
   | LetUnwrap -> "LetUnwrap"
+  | MultilineItemSpacing -> "MultilineItemSpacing"
 
 let from_string (s : string) : feature option =
   match s with
   | "LetUnwrap" -> Some LetUnwrap
+  | "MultilineItemSpacing" -> Some MultilineItemSpacing
   | _ -> None
 
 module Feature_set = Set.Make (struct

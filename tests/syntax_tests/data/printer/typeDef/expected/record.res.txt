@@ -1,13 +1,11 @@
 type user = {name: string, age: int}
 type result<'success, 'failure> = {ok: 'success, fail: 'failure}
-
 type result<'success1, 'failure1, 'success2, 'failure2, 'success3, 'failure3> = {
   ok: 'success1,
   fail: 'failure2,
 }
 
 type user = {name: string, age: int, a: string, lot: string, more: string, fields: string}
-
 type user<'lotsOfTypeVars, 'lotsOfTypeVars2, 'lotsOfTypeVars3, 'lotsOfTypeVars4> = {
   name: string,
   age: int,
@@ -32,7 +30,6 @@ type user = {
 } constraint 't = string
 
 type t = private {name: string, age: int}
-
 type t = private {
   name: string,
   age: int,
@@ -40,7 +37,6 @@ type t = private {
 
 type t = User.t = private {name: string, age: int}
 type t = @attr User.t = private {name: string, age: int}
-
 type t = User.t = private {
   name: string,
   age: int,

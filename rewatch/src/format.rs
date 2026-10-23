@@ -16,10 +16,11 @@ use clap::ValueEnum;
 #[instrument(name = "format.format", skip_all)]
 pub fn format(stdin_extension: Option<FileExtension>, check: bool, files: Vec<String>) -> Result<()> {
     let bsc_path = helpers::get_bsc();
+    let experimental_args = experimental_args();
 
     match stdin_extension {
         Some(extension) => {
-            format_stdin(&bsc_path, extension)?;
+            format_stdin(&bsc_path, &experimental_args, extension)?;
         }
         None => {
             let files = if files.is_empty() {
@@ -27,11 +28,22 @@ pub fn format(stdin_extension: Option<FileExtension>, check: bool, files: Vec<St
             } else {
                 files
             };
-            format_files(&bsc_path, files, check)?;
+            format_files(&bsc_path, &experimental_args, files, check)?;
         }
     }
 
     Ok(())
+}
+
+/// The experimental features of the current project, such as
+/// MultilineItemSpacing, as bsc flags. They must precede `-format`.
+/// Outside a project, format runs without them.
+fn experimental_args() -> Vec<String> {
+    std::env::current_dir()
+        .ok()
+        .and_then(|dir| project_context::ProjectContext::new(&dir).ok())
+        .map(|context| context.get_root_config().get_experimental_features_args())
+        .unwrap_or_default()
 }
 
 fn get_files_in_scope() -> Result<Vec<String>> {
@@ -59,7 +71,7 @@ fn get_files_in_scope() -> Result<Vec<String>> {
     Ok(files)
 }
 
-fn format_stdin(bsc_exe: &Path, extension: FileExtension) -> Result<()> {
+fn format_stdin(bsc_exe: &Path, experimental_args: &[String], extension: FileExtension) -> Result<()> {
     let extension_value = extension
         .to_possible_value()
         .ok_or(anyhow::anyhow!("Could not get extension arg value"))?;
@@ -71,7 +83,7 @@ fn format_stdin(bsc_exe: &Path, extension: FileExtension) -> Result<()> {
     let temp_path = temp_file.path();
 
     let mut cmd = Command::new(bsc_exe);
-    cmd.arg("-format").arg(temp_path);
+    cmd.args(experimental_args).arg("-format").arg(temp_path);
 
     let output = cmd.output()?;
 
@@ -85,7 +97,7 @@ fn format_stdin(bsc_exe: &Path, extension: FileExtension) -> Result<()> {
     Ok(())
 }
 
-fn format_files(bsc_exe: &Path, files: Vec<String>, check: bool) -> Result<()> {
+fn format_files(bsc_exe: &Path, experimental_args: &[String], files: Vec<String>, check: bool) -> Result<()> {
     let batch_size = 4 * num_cpus::get();
     let incorrectly_formatted_files = AtomicUsize::new(0);
 
@@ -93,7 +105,7 @@ fn format_files(bsc_exe: &Path, files: Vec<String>, check: bool) -> Result<()> {
         batch.iter().try_for_each(|file| {
             let mut cmd = Command::new(bsc_exe);
             // Always get formatted output to stdout for comparison
-            cmd.arg("-format").arg(file);
+            cmd.args(experimental_args).arg("-format").arg(file);
 
             let output = cmd.output()?;
 

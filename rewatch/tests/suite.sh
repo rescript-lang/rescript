@@ -120,6 +120,7 @@ fi
 ./format/02-format-single-file.sh &&
 ./format/03-format-stdin.sh &&
 ./format/04-format-current-project.sh &&
+./format/05-format-experimental-multiline-item-spacing.sh &&
 
 # Clean tests
 ./clean/01-clean-single-project.sh &&

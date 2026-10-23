@@ -23,7 +23,6 @@ let get_age3 = ({age: "100", name: _}) => age2
 let get_age3 = ({age: 1 .. 2, name: _}) => age2
 let get_age3 = ({age: 'a' .. 'z', name: _}) => age2
 let get_age3 = ({age: (a, b, c, d), name: _}) => age2
-
 let get_age3 = ({
   age: (
     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,
@@ -33,11 +32,9 @@ let get_age3 = ({
   ),
   name: _,
 }) => age2
-
 let get_age3 = ({age: Rgb(r, g, b), name: _}) => age2
 let get_age3 = ({age: Rgb({r, g, b}), name: _}) => age2
 let get_age3 = ({age: Rgb({r: red, g: green, b: black}), name: _}) => age2
-
 let get_age3 = ({
   age: Rgb(
     rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr,
@@ -46,7 +43,6 @@ let get_age3 = ({
   ),
   name: _,
 }) => age2
-
 let get_age3 = ({
   age: Rgb({
     r: rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr,
@@ -59,7 +55,6 @@ let get_age3 = ({
 let get_age3 = ({age: #red, name: _}) => age2
 let get_age3 = ({age: #Blue, name: _}) => age2
 let get_age3 = ({age: #Rgb(r, g, b), name: _}) => age2
-
 let get_age3 = ({
   age: #Rgb(
     rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr,
@@ -68,7 +63,6 @@ let get_age3 = ({
   ),
   name: _,
 }) => age2
-
 let get_age3 = ({
   age: #Rgb({
     r: rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr,
@@ -77,9 +71,7 @@ let get_age3 = ({
   }),
   name: _,
 }) => age2
-
 let get_age3 = ({age: {birthDay: day, birthMonth: month}, name: _}) => age2
-
 let get_age3 = ({
   age: {
     birthDay: daaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaay,
@@ -90,7 +82,6 @@ let get_age3 = ({
 
 let get_age3 = ({age: [], name: _}) => age2
 let get_age3 = ({age: [a, b, c, d], name: _}) => age2
-
 let get_age3 = ({
   age: [
     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,
@@ -103,7 +94,6 @@ let get_age3 = ({
 
 let get_age3 = ({age: list{}, name: _}) => age2
 let get_age3 = ({age: list{a, b, c, d}, name: _}) => age2
-
 let get_age3 = ({
   age: list{
     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,
@@ -127,12 +117,10 @@ let get_age3 = ({age: %raw("__GC"), name: _}) => age2
 
 let get_age3 = ({age, _}) => age
 let get_age3 = ({_}) => ""
-
 let get_age3 = () =>
   switch x {
   | {age, _} => age
   }
-
 let get_age3 = () =>
   switch x {
   | {_} => ""

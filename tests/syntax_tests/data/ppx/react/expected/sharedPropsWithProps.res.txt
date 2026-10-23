@@ -18,7 +18,6 @@ let f = a => Promise.resolve(a + a)
 module V4A1 = {
   type props = sharedProps
   let make = (props): React.element => React.string(props.x ++ props.y)
-
   let make = React.component({
     let \"SharedPropsWithProps$V4A1" = (props): React.element => make(props)
     \"SharedPropsWithProps$V4A1"
@@ -28,7 +27,6 @@ module V4A1 = {
 module V4A2 = {
   type props = sharedProps
   let make = (props: props): React.element => React.string(props.x ++ props.y)
-
   let make = React.component({
     let \"SharedPropsWithProps$V4A2" = (props: props): React.element => make(props)
     \"SharedPropsWithProps$V4A2"
@@ -38,7 +36,6 @@ module V4A2 = {
 module V4A3 = {
   type props<'a> = sharedProps<'a>
   let make = ({x, y}: props<_>): React.element => React.string(x ++ y)
-
   let make = React.component({
     let \"SharedPropsWithProps$V4A3" = (props: props<_>): React.element => make(props)
     \"SharedPropsWithProps$V4A3"
@@ -48,7 +45,6 @@ module V4A3 = {
 module V4A4 = {
   type props<'a> = sharedProps<string, 'a>
   let make = ({x, y}: props<_>): React.element => React.string(x ++ y)
-
   let make = React.component({
     let \"SharedPropsWithProps$V4A4" = (props: props<_>): React.element => make(props)
     \"SharedPropsWithProps$V4A4"
@@ -57,12 +53,10 @@ module V4A4 = {
 
 module V4A5 = {
   type props<'a> = {a: 'a}
-
   let make = async ({a}: props<_>): React.element => {
     let a = await f(a)
     ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})})
   }
-
   let make = React.component({
     let \"SharedPropsWithProps$V4A5" = (props: props<_>): React.element => Jsx.promise(make(props))
     \"SharedPropsWithProps$V4A5"
@@ -71,14 +65,12 @@ module V4A5 = {
 
 module V4A6 = {
   type props<'status> = {status: 'status}
-
   let make = async ({status}: props<_>): React.element => {
     switch status {
     | #on => React.string("on")
     | #off => React.string("off")
     }
   }
-
   let make = React.component({
     let \"SharedPropsWithProps$V4A6" = (props: props<_>): React.element => Jsx.promise(make(props))
     \"SharedPropsWithProps$V4A6"
@@ -91,7 +83,6 @@ module V4A7 = {
   let make = (props): React.element => {
     React.int(props.count)
   }
-
   let make = React.component({
     let \"SharedPropsWithProps$V4A7" =
       @directive("'use memo'") (props): React.element => make(props)
@@ -104,7 +95,6 @@ module V4A8 = {
 
   // The payload has no effect; it is accepted with a deprecation warning.
   let make = (props): React.element => React.string(props.x)
-
   let make = React.component({
     let \"SharedPropsWithProps$V4A8" = (props): React.element => make(props)
     \"SharedPropsWithProps$V4A8"

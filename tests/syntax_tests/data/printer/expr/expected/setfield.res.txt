@@ -1,5 +1,4 @@
 user.name = "steve"
-
 config.shouldSkip =
   !filePath.includes(allMlSuffixesCategory) && !filePath.endsWith(allScriptDirectoriesCategory)
 

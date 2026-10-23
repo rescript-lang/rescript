@@ -5,7 +5,6 @@ let /* a */ x /* b */ = /* c */ 1 /* comment 2 */
 
 // comment 4
 let x = 1 /* 5 */
-
 /* 6 */
 
 let f = (
@@ -19,7 +18,6 @@ let f = (
   // 7
   y: 2, // 8
 }
-
 /* **** comment */
 /* ** comment */
 /* comment */
@@ -70,7 +68,6 @@ type variant =
   | X(int) /* End of line on X */
   /* Comment above Y */
   | Y(int) /* End of line on Y */
-
 /* Comment on entire type def for variant */
 
 type rec x = {
@@ -142,14 +139,12 @@ let store_attributes = arg => {
     Temp.logIt(proc_name, ())
   }
 }
-
 3 // -
 3 //-
 
 3 //-
 
 3 /* - */
-
 // **** comment
 /* ** comment */
 @ocaml.doc(" docstring ")
@@ -295,7 +290,6 @@ type t3 = (int, int) // End of line on (int, int)
 type variant =
   | X(int, int) // End of line on X
   | Y(int, int) // End of line on Y
-
 // Comment on entire type def for variant
 
 // Before let
@@ -427,7 +421,6 @@ let result = @ocaml.doc("") (2 + 3)
 // };
 
 let a = ()
-
 for i in 0 to 10 {
   // bla
   a
@@ -441,7 +434,6 @@ type color =
   | Red(int) // After red end of line
   | Black(int) // After black end of line
   | Green(int) // After green end of line
-
 // On next line after color type def
 
 let blahCurriedX = (x, x) =>
@@ -453,7 +445,6 @@ let blahCurriedX = (x, x) =>
   | Black(x) => 0 // After black
   | Green(x) => 0
   } // After second green
-
 // On next line after blahCurriedX def
 
 let name_equal = (x, y) => x == y
@@ -640,7 +631,6 @@ while trueThing {
     // does work
   )
 }
-
 while trueThing {
   f(
     // a
@@ -671,7 +661,6 @@ ignore((_xxx, _yyy) => {
 type tester<'a, 'b> =
   | TwoArgsConstructor('a, 'b)
   | OneTupleArgConstructor(('a, 'b))
-
 let callFunctionTwoArgs = (a, b) => ()
 let callFunctionOneTuple = tuple => ()
 

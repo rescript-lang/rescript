@@ -60,6 +60,17 @@ while read file; do
   $DUNE_BIN_DIR/res_parser -test-ast-conversion -jsx-version 4 $file &> $(exp $file) & maybeWait
 done <temp/files.txt
 
+# printing with an experimental feature: data/experimental/<Feature>/
+function experimentalFlags {
+  case $1 in
+    syntax_tests/data/experimental/*) echo "-enable-experimental $(echo $1 | cut -d/ -f4)" ;;
+  esac
+}
+find syntax_tests/data/experimental -name "*.res" -o -name "*.resi" >temp/files.txt
+while read file; do
+  $DUNE_BIN_DIR/res_parser $(experimentalFlags $file) $file &> $(exp $file) & maybeWait
+done <temp/files.txt
+
 # printing with ppx
 find syntax_tests/data/ppx/react -name "*.res" -o -name "*.resi" >temp/files.txt
 while read file; do
@@ -88,7 +99,7 @@ if [[ $ROUNDTRIP_TEST = 1 ]]; then
   roundtripTestsResult="temp/result.txt"
   touch $roundtripTestsResult
 
-  find syntax_tests/data/{idempotency,printer} -name "*.res" -o -name "*.resi" >temp/files.txt
+  find syntax_tests/data/{idempotency,printer,experimental} -name "*.res" -o -name "*.resi" >temp/files.txt
   while read file; do {
     mkdir -p temp/$(dirname $file)
     rescript1=temp/$file.res
@@ -100,8 +111,9 @@ if [[ $ROUNDTRIP_TEST = 1 ]]; then
     esac
 
     # Format the original file, then format the result again
-    $DUNE_BIN_DIR/res_parser $resIntf -print res $file > $rescript1
-    $DUNE_BIN_DIR/res_parser $resIntf -print res $rescript1 > $rescript2
+    flags="$resIntf $(experimentalFlags $file)"
+    $DUNE_BIN_DIR/res_parser $flags -print res $file > $rescript1
+    $DUNE_BIN_DIR/res_parser $flags -print res $rescript1 > $rescript2
 
     # Check idempotency: formatting the formatted text must not change it
     diff --unified $rescript1 $rescript2

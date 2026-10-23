@@ -1,9 +1,7 @@
 let add = %raw("(a, b) => a + b")
-
 let template = %raw(`function (a) {
   return "x" + a
 }`)
-
 let escaped = %raw(`"a\`b\${c}"`)
 let fn = %ffi("(a) => a + 1")
 let applied = %ffi(`(a, b) => a * b`)(2, 3)

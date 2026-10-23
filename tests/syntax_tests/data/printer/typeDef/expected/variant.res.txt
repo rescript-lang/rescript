@@ -2,32 +2,27 @@ type color = Red | Blue
 type color = Red | Blue | SuperLongColooooooooooooooourName | AnotherSuuuuuuuuuuuuuuperLongName
 
 type color = private Red | Blue
-
 type color =
   private
   | Red
   | Blue
   | Green
-
 type color =
   private
   Red | Blue | SuperLongColooooooooooooooourName | AnotherSuuuuuuuuuuuuuperLongName
 
 type color = Colour.t = private Red | Blue
-
 type color = Colour.t =
   private
   | Red
   | Blue
   | Green
-
 type color = Colour.t =
   private
   Red | Blue | SuperLongColoooooooooooooourName | AnotherSuuuuuuuuuuuuuperLongName
 
 // gadt
 type color = Red: color | Blue: color
-
 type color =
   | Red: color
   | Blue: color
@@ -35,7 +30,6 @@ type color =
   | AnotherSuuuuuuuuuperLongName: color
 
 type color = Rgb(float, float, float) | Hex(int)
-
 type color =
   | Rgb(superLongTypeName, superLongTypeName, superLongTypeName, superLongTypeName)
   | Hex(superLongTypeName, superLongTypeName, superLongTypeName, superLongTypeName)
@@ -121,6 +115,5 @@ type color =
 module S = {
   type s = Five | Six
 }
-
 type aa = One | Two
 type bb = | ...aa | Three | Four | ...S.s

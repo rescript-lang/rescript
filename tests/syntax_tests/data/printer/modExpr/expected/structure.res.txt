@@ -31,7 +31,6 @@ module M7: {
   module N: {
     let x: int
   }
-
   module N' = N
 })
 
@@ -63,10 +62,8 @@ module M6 = {
   module D = {
     let y = 3
   }
-
   module N = {
     let x = 1
   }
-
   module N' = N
 }

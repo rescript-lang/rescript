@@ -17,13 +17,11 @@ let person = {
 let user = {"name": (ceo.name: string)}
 // braces should be preserved on rhs
 let user = {"name": {ceo.name}}
-
 let user = {
   "name": {
     ceo.name
   },
 }
-
 // braced + constrained expr
 let user = {"name": {(ceo.name: string)}}
 

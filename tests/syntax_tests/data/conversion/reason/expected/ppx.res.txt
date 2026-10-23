@@ -10,7 +10,6 @@
     }
   }
 `
-
   {taggedTemplate: false}
 )
 
@@ -22,9 +21,7 @@ module Form = %form(
     @as("form-name")
     formName: string,
   }
-
   type output = input
-
   let validators = {
     name: {
       strategy: OnFirstBlur,

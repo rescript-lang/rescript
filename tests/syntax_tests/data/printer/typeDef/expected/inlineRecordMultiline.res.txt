@@ -39,7 +39,6 @@ type rec gadt<_> =
     }): gadt<int>
 
 type ext = ..
-
 type ext +=
   | C({
     name: string,

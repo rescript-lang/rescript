@@ -26,49 +26,37 @@ type t += private Foo = Bar | Circle = Geo.Circle2
 type t += Foo = Geo.Metry.Bar
 
 @attr type t += @attr1 Foo
-
 @attr
 type t += @attr1 Foo
-
 @attr
 type t += @attr1 Foo | @attr2 Bar
-
 @attr
 type t += @attr1 Foo | @attr2 Bar
 
 @attr
 type t += private @attr1 Foo
-
 @attr
 type t += private @attr1 Foo
-
 @attr
 type t += private @attr1 Foo | @attr2 Bar
-
 @attr
 type t += private @attr1 Foo | @attr2 Bar
 
 @attr
 type t += @attr1 Foo = Bar
-
 @attr
 type t += @attr1 Foo = Bar
-
 @attr
 type t += @attr1 Foo = Foo2 | @attr2 Bar = Bar2
-
 @attr
 type t += @attr1 Foo = Foo2 | @attr2 Bar = Bar2
 
 @attr
 type t += private @attr1 Foo = Foo2
-
 @attr
 type t += private @attr1 Foo = Foo2
-
 @attr
 type t += private @attr1 Foo = Foo2 | @attr2 Bar = Bar2
-
 @attr
 type t += private @attr1 Foo = Foo2 | @attr2 Bar = Bar2
 

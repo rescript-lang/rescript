@@ -3,7 +3,6 @@ module A: {
   type props<'x> = {
     x: 'x,
   }
-
   let make: React.component<props<string>>
 }
 

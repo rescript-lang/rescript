@@ -71,7 +71,6 @@ let x = (/* c0 */ "string" /* c1 */: /* c2 */ string /* c3 */) // after
 let x = /* before */ true /* after */
 let x = /* before */ Red /* after */
 let x = /* before */ Red(/* c0 */ shade /* c1 */) /* after */
-
 let x = /* before */ Red /* after Red */(
   /* c0 */ r /* c1 */,
   /* c2 */ g /* c3 */,
@@ -94,7 +93,6 @@ let x = /* c0 */ list{/* c1 */ a /* c2 */, /* c3 */ b /* c4 */, /* c5 */ c /* c6
 // Pexp_array
 let x = [/* c0 */ a /* c1 */, /* c2 */ b /* c3 */, /* c4 */ c /* c5 */]
 let x = [/* a */]
-
 let x = [
   // test
 ]
@@ -215,7 +213,6 @@ for await /* c0 */ x /* c1 */ of /* c2 */ xs /* c3 */ {
 
 // Pexp_fun
 let f = (/* c0 */ a /* c1 */, /* c2 */ b /* c3 */): /* c4 */ int /* c5 */ => /* c6 */ 20 /* c7 */
-
 let multiply = (/* c0 */ m1 /* c1 */, /* c2 */ m2 /* c3 */) => {
   // here
   open Matrix4D
@@ -239,7 +236,6 @@ let f = (
 ) => ()
 
 let multiply = (type /* c-2 */ t /* c-1 */, /* c0 */ m1 /* c1 */, /* c2 */ m2 /* c3 */) => ()
-
 let multiply = (
   type /* c-4 */ t /* c-3 */ /* c-2 */ s /* c-1 */,
   /* c0 */ m1 /* c1 */,
@@ -277,7 +273,6 @@ f(() => 1)
 f(_ => 1)
 // c2
 f(a => 1)
-
 // c3
 f((~a) =>
   // c4
@@ -316,7 +311,6 @@ Doc.concat(
   rows,
   /* a */
 )
-
 Doc.concat(list{
   privateFlag,
   rows,

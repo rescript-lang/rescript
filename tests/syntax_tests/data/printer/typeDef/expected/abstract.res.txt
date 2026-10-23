@@ -10,7 +10,6 @@ type t = Module.Long.With.Very.VeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeryLongName
 type t = private Module.Long.With.Very.VeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeryLongName.t
 
 type t<'superlongthing, 'superlongthing, 'superlongthing, 'superlongthing, 'superlongthing> = string
-
 type t<
   'superlongthing,
   'superlongthing,

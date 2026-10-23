@@ -29,19 +29,16 @@ let _ = {a}
 let _ = {"constant"}
 
 let _ = {() => Console.log("test")}
-
 let _ = {
   switch b {
   | true => ()
   | false => ()
   }
 }
-
 let _ = switch {b} {
 | true => ()
 | false => ()
 }
-
 let _ = {apply(a, b)}
 let _ = {apply}(a, b)
 
@@ -50,7 +47,6 @@ let _ = {
   | Exit => ()
   }
 }
-
 let _ = try {danger()} catch {
 | Exit => ()
 }
@@ -60,7 +56,6 @@ let _ = {({a}, {b}, {x + y})}
 
 let _ = {Rgb(r, g, b)}
 let _ = Rgb({r}, {g}, {b})
-
 let _ = Rgb(
   {
     r
@@ -75,7 +70,6 @@ let _ = Rgb(
 
 let _ = {{name: "steve", age: 30}}
 let _ = {name: {"steve"}, age: {30}}
-
 let _ = {
   name: {
     "steve"
@@ -92,7 +86,6 @@ let _ = {{user.name}.first}
 
 let _ = {[a, b, c]}
 let _ = [{a}, {b}, {c}]
-
 let _ = [
   {
     a
@@ -107,7 +100,6 @@ let _ = [
 
 let _ = {list{a, b, c}}
 let _ = {list{{a}, {b}, {c}}}
-
 let _ = {
   list{
     {
@@ -134,7 +126,6 @@ let _ = {
     ()
   }
 }
-
 let _ = {
   if {true} {
     ()
@@ -170,15 +161,12 @@ let _ = {
     ()
   }
 }
-
 let _ = while {true} {
   ()
 }
-
 while {/* c0 */ true /* c1 */} {
   ()
 }
-
 while (
   {
     true
@@ -186,7 +174,6 @@ while (
 ) {
   ()
 }
-
 while (
   {
     /* c0 */ true // c1
@@ -200,7 +187,6 @@ let _ = {
     ()
   }
 }
-
 for _ in {
   0
 } to {
@@ -218,7 +204,6 @@ let localToGlobalX = (
 ): coordinate<globalCoordinates> => {
   x +. (Environment.width /. 2. -. centering.x)
 }
-
 map((arr, i): coordinate<globalCoordinates> => {
   x +. (Environment.width /. 2. -. centering.x)
 })
@@ -231,15 +216,12 @@ let _ = {module(ME)}
 let _ = {module(ME: MyMod)}
 
 {myArray}[{0}]
-
 {
   myArray
 }[{
   0
 }]
-
 {myArray}[{0}] = {20}
-
 {
   myArray
 }[{
@@ -254,7 +236,6 @@ myArray[20] = {
 
 {jsObject}["foo"]
 {jsObject}["foo"] = {"bar"}
-
 {jsObject}["foo"] = {
   a + b
 }
@@ -262,11 +243,9 @@ myArray[20] = {
 {
   jsObject
 }["foo"]
-
 {jsObject}["foo"] = {"bar"}
 
 apply({a}, {b}, {c})
-
 apply(
   {
     a
@@ -280,7 +259,6 @@ apply(
 )
 
 Thing.map(foo, (arg1, arg2) => {MyModuleBlah.toList(argument)})
-
 Thing.map({foo}, (arg1, arg2) => {
   MyModuleBlah.toList(argument)
 })
@@ -299,11 +277,9 @@ arr->Belt.Array.map(x => {
 })
 
 apply(~a={a})
-
 apply({
   a
 })
-
 apply({
   a
 })
@@ -335,7 +311,6 @@ let x = {
 }
 
 {a} + {b}
-
 {
   a
 } +

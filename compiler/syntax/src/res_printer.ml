@@ -687,12 +687,15 @@ module State = struct
   let should_break_callback t = t.custom_layout > custom_layout_threshold
 end
 
+let space_multiline () =
+  Experimental_features.is_enabled Experimental_features.MultilineItemSpacing
+
 let rec print_structure ~state (s : Parsetree.structure) t =
   match s with
   | [] -> print_comments_inside_file t
   | structure ->
     let previous_can_continue = ref false in
-    print_list ~space_multiline:true
+    print_list ~space_multiline:(space_multiline ())
       ~get_loc:(fun s -> s.Parsetree.pstr_loc)
       ~nodes:structure
       ~print:(fun item cmt_tbl ->
@@ -1110,7 +1113,7 @@ and print_signature ~state signature cmt_tbl =
   match signature with
   | [] -> print_comments_inside_file cmt_tbl
   | signature ->
-    print_list ~space_multiline:true
+    print_list ~space_multiline:(space_multiline ())
       ~get_loc:(fun s -> s.Parsetree.psig_loc)
       ~nodes:signature
       ~print:(print_signature_item ~state)

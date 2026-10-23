@@ -33,7 +33,6 @@ type taggedUser =
   | Ceo({...user, "age": int, "direction": bool}, {...salary, "taxFraud": bool})
 
 type polyTaggedUser = [#User({...user, "age": int})]
-
 type polyTaggedUser2 = [
   | #User({...user, "age": int})
   | #Ceo({...user, "age": int, "direction": bool}, {...salary, "taxFraud": bool})
@@ -42,7 +41,6 @@ type polyTaggedUser2 = [
 // notice .. and ..., they should have a space
 type u<'a> = {.. ...hi} as 'a
 type u<'a> = {.. ...hi, "superLongFieldName": string, "superLongFieldName22222222222": int} as 'a
-
 type u<'a> = {..
   ...hi,
   "superLongFieldName": string,

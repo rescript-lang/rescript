@@ -10,7 +10,6 @@ module V4A = {
 
   let make = (type a, {a, b, c, _}: props<a, array<option<[#Foo(a)]>>, 'a>): React.element =>
     ReactDOM.jsx("div", {})
-
   let make = React.component({
     let \"Newtype$V4A" = (props: props<_>) => make(props)
 
@@ -28,7 +27,6 @@ module V4A1 = {
 
   let make = (type x y, {a, b, c, _}: props<x, array<y>, 'a>): React.element =>
     ReactDOM.jsx("div", {})
-
   let make = React.component({
     let \"Newtype$V4A1" = (props: props<_>) => make(props)
 
@@ -50,7 +48,6 @@ module V4A2 = {
     module T = unpack(foo)
     ReactDOM.jsx("div", {})
   }
-
   let make = React.component({
     let \"Newtype$V4A2" = (props: props<_>) => make(props)
 
@@ -68,14 +65,12 @@ module V4A3 = {
     module T = unpack(foo: T with type t = a)
     foo
   }
-
   let make = React.component({
     let \"Newtype$V4A3" = (props: props<_>) => make(props)
 
     \"Newtype$V4A3"
   })
 }
-
 @res.jsxComponentProps
 type props<'x, 'q> = {
   x: 'x,
@@ -83,7 +78,6 @@ type props<'x, 'q> = {
 }
 
 let make = ({x, q, _}: props<('a, 'b), 'a>): React.element => [fst(x), q]
-
 let make = React.component({
   let \"Newtype" = (props: props<_>) => make(props)
 
@@ -99,7 +93,6 @@ module Uncurried = {
   }
 
   let make = (type a, {?foo, _}: props<_>): React.element => React.null
-
   let make = React.component({
     let \"Newtype$Uncurried" = (props: props<_>) => make(props)
 

@@ -1,6 +1,5 @@
 type user = {"age": int}
 type user = {"age": int, "name": string}
-
 type user = {
   "age": int,
   "name": string,
@@ -11,7 +10,6 @@ type user = {
 
 type magic = {..}
 type t = {.."age": int}
-
 type magicallyLong = {..
   "age": int,
   "name": string,
@@ -55,7 +53,6 @@ type t = {.}
 type t = private {.}
 
 type t = constr<{.}, {.}, {.}>
-
 type t = {
   hr: React.component<{.}>,
 }

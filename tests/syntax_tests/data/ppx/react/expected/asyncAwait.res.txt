@@ -10,7 +10,6 @@ module C0 = {
     let a = await f(a)
     ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})})
   }
-
   let make = React.component({
     let \"AsyncAwait$C0" = (props: props<_>) => Jsx.promise(make(props))
 
@@ -30,7 +29,6 @@ module C1 = {
     | #off => React.string("off")
     }
   }
-
   let make = React.component({
     let \"AsyncAwait$C1" = (props: props<_>) => Jsx.promise(make(props))
 
@@ -48,7 +46,6 @@ module Braced = {
     let a = await f(a)
     ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})})
   }
-
   let make = React.component({
     let \"AsyncAwait$Braced" = (props: props<_>) => Jsx.promise(make(props))
 

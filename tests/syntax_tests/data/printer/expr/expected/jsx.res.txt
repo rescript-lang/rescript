@@ -21,33 +21,27 @@ let x =
       </F>
     </B>
   </A>
-
 let x =
   <A>
     {children}
     <B />
   </A>
-
 let x =
   <A>
     <B />
     {children}
   </A>
-
 let x = <A>{a}</A>
-
 let x =
   <A>
     {a}
     {b}
   </A>
-
 let x =
   <custom-tag className="container">
     {a}
     <B />
   </custom-tag>
-
 let x =
   <Foo.custom-tag className="container">
     {a}
@@ -308,11 +302,9 @@ let x = <MyComponent sidebar={<div>{test}</div>} nav={<Navbar />} />
 
 // https://github.com/rescript-lang/syntax/issues/113
 <div>{Console.log(a <= 10)}</div>
-
 <div>
   <div>{Console.log(a <= 10)}</div>
 </div>
-
 <div>
   <div onClick={_ => Console.log(a <= 10)}>
     <div>{Console.log(a <= 10)}</div>

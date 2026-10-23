@@ -21,7 +21,6 @@ let x = apply(arg1, arg2).field
 let x = (-1).x
 let x = (!true).x
 let x = (x => print(x)).x
-
 let x = (
   switch x {
   | Blue => ()
@@ -50,7 +49,6 @@ let x = (
 ).x
 
 let x = (assert(false)).x
-
 let x = (
   try sideEffect() catch {
   | Exit => ()

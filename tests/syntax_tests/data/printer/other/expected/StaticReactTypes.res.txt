@@ -1,5 +1,4 @@
 type empty = Empty_
-
 /*
  * Also create another form for splicing in nodes into otherwise fixed length
  * sets.

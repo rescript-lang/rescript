@@ -556,6 +556,10 @@
         "LetUnwrap": {
           "type": "boolean",
           "description": "Enable `let?` syntax."
+        },
+        "MultilineItemSpacing": {
+          "type": "boolean",
+          "description": "Format a blank line before and after a module item that spans several lines."
         }
       },
       "additionalProperties": false

@@ -15,7 +15,6 @@ module C0 = {
     let text = __text_value
     (React.string(text): React.element)
   }
-
   let make = React.component({
     let \"AliasProps$C0" = (props: props<_>) => make(props)
 
@@ -38,7 +37,6 @@ module C1 = {
     let text = __text_value
     (React.string(p ++ text): React.element)
   }
-
   let make = React.component({
     let \"AliasProps$C1" = (props: props<_>) => make(props)
 
@@ -60,7 +58,6 @@ module C2 = {
     let bar = __foo_value
     (React.string(bar): React.element)
   }
-
   let make = React.component({
     let \"AliasProps$C2" = (props: props<_>) => make(props)
 
@@ -93,7 +90,6 @@ module C3 = {
       }: React.element
     )
   }
-
   let make = React.component({
     let \"AliasProps$C3" = (props: props<_>) => make(props)
 
@@ -116,7 +112,6 @@ module C4 = {
     let x = __x_value
     (ReactDOM.jsx("div", {children: ?ReactDOM.someElement(b)}): React.element)
   }
-
   let make = React.component({
     let \"AliasProps$C4" = (props: props<_>) => make(props)
 
@@ -139,7 +134,6 @@ module C5 = {
     let z = __z_value
     (x + y + z: React.element)
   }
-
   let make = React.component({
     let \"AliasProps$C5" = (props: props<_>) => make(props)
 
@@ -154,7 +148,6 @@ module C6 = {
 
     let make: React.component<props>
   }
-
   @res.jsxComponentProps
   type props<'comp, 'x> = {
     comp: 'comp,
@@ -163,7 +156,6 @@ module C6 = {
 
   let make = ({comp: module(Comp: Comp), x: (a, b), _}: props<_, _>): React.element =>
     React.jsx(Comp.make, {})
-
   let make = React.component({
     let \"AliasProps$C6" = (props: props<_>) => make(props)
 

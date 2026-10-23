@@ -18,7 +18,6 @@ let reifyStyle = (type a, x: 'a): (style<a>, a) => {
     type rec constructor
     @val external canvasGradient: constructor = "CanvasGradient" /* internal */
     @val external canvasPattern: constructor = "CanvasPattern" /* internal */
-
     let instanceOf = (
       %raw(`function(x,y) {return +(x instanceof y)}`): ('a, constructor) => bool
     ) /* internal */
