@@ -4,7 +4,8 @@ name: Semantic Diff
 # as a review page on the CDN, and comments them on the pull request as
 # Markdown (scripts/recordMarkdown.js) with the page's link. A pull request
 # has one such comment, which each push updates in place to hold every
-# commit, so the pull request shows its current records in one place.
+# commit, so the pull request shows its current records in one place; the
+# comment marks the commits the last push added or edited.
 #
 # A pull request from a branch of this repository runs on pull_request, with
 # the workflow and renderer of its merge into the base branch: GitHub takes
@@ -42,6 +43,9 @@ jobs:
       PR_NUMBER: ${{ github.event.pull_request.number }}
       PR_TITLE: ${{ github.event.pull_request.title }}
       BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      # The head before a push; empty when the pull request is opened or
+      # reopened.
+      BEFORE_SHA: ${{ github.event.action == 'synchronize' && github.event.before || '' }}
     steps:
       - name: Checkout renderer
         uses: actions/checkout@v7
@@ -59,8 +63,16 @@ jobs:
           # The query string names the rendered commit, so each push gets a
           # URL that no cache has seen.
           url="https://cdn.rescript-lang.org/semantic-diff/pr-${PR_NUMBER}/index.html?v=${head}"
+          # The comment marks what the push changed against the head before
+          # it. A force push leaves that head on no branch, but GitHub still
+          # serves it by its sha; when it can't be fetched, nothing is marked.
+          previous=()
+          if [ -n "$BEFORE_SHA" ] && { git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null ||
+            git fetch --no-tags --filter=blob:none origin "$BEFORE_SHA" 2>/dev/null; }; then
+            previous=(--previous "$BEFORE_SHA")
+          fi
           mkdir -p semantic-diff
-          node scripts/commitRecords.js --out semantic-diff/index.html --markdown semantic-diff/comment.md --url "$url" --pr "$PR_NUMBER" --title "$PR_TITLE" "${base}..pr-${PR_NUMBER}"
+          node scripts/commitRecords.js --out semantic-diff/index.html --markdown semantic-diff/comment.md "${previous[@]}" --url "$url" --pr "$PR_NUMBER" --title "$PR_TITLE" "${base}..pr-${PR_NUMBER}"
 
       - name: Setup Rclone
         uses: cometkim/rclone-actions/setup-rclone@8d9c6b95341f7698609deee65c3d62af42893288 # main, 2025-06-18

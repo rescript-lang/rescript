@@ -237,6 +237,29 @@ ${SIGNED}
   has(tiny, "more commit");
 });
 
+test("the commits the last push added or edited carry a dot and the word", () => {
+  const message = (/** @type {string} */ subject) =>
+    `${subject}\n\n${SIGNED}\n`;
+  const md = comment([message("Kept"), message("Edited"), message("Added")], {
+    changes: new Map([
+      ["aaaaaaaa1", "edited"],
+      ["aaaaaaaa2", "new"],
+    ]),
+  });
+  has(
+    md,
+    "<summary><b>Kept</b></summary>\n\n<sub>aaaaaaaa0 · A Person · Oct 22, 2026</sub>",
+  );
+  has(
+    md,
+    "<summary>✏️ <b>Edited</b></summary>\n\n<sub>aaaaaaaa1 · A Person · Oct 22, 2026 · edited</sub>",
+  );
+  has(
+    md,
+    "<summary>✨ <b>Added</b></summary>\n\n<sub>aaaaaaaa2 · A Person · Oct 22, 2026 · new</sub>",
+  );
+});
+
 test("an assistant co-author is drawn by its short name, others as written", () => {
   const md = comment([
     `Fix it\n\nCo-Authored-By: Claude Sonnet 5.5 <NoReply@Anthropic.com>\nCo-Authored-By: Claude Person <claude@example.com>\nCo-Authored-By: No Email\n${SIGNED}\n`,

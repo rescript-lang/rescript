@@ -387,20 +387,26 @@ function section(s, parts, full) {
   return out.join("\n\n");
 }
 
+/** The sign before a commit's subject that marks what the last push did. */
+const SIGNS = { new: "✨", edited: "✏️" };
+
 /**
  * A commit as a collapsible block: its subject, identity and message drawn;
- * without `full`, its forms are left to the page.
+ * without `full`, its forms are left to the page. A `change` (`new` or
+ * `edited`), what the last push did to it, puts a sign before the subject
+ * and the word in the identity line.
  * @param {CommitRecord} r
  * @param {boolean} full
+ * @param {string} [change]
  */
-export function commitMarkdown(r, full) {
+export function commitMarkdown(r, full, change = "") {
   const pr = /\(#(\d+)\)\s*$/.exec(r.subject)?.[1] ?? "";
   const subject = r.subject.replace(/\s*\(#\d+\)\s*$/, "");
   const joined = (/** @type {Section} */ s) =>
     [...s.text, ...s.block.map(l => l.trim())].join(" ").trim();
   const out = [
-    `<details open><summary><b>${inlineHtml(subject)}</b></summary>`,
-    `<sub>${esc(r.sha)} · ${inline(byline(r))}${r.date ? ` · ${esc(r.date)}` : ""}${pr ? ` · #${pr}` : ""}</sub>`,
+    `<details open><summary>${change ? `${SIGNS[/** @type {keyof typeof SIGNS} */ (change)] ?? ""} ` : ""}<b>${inlineHtml(subject)}</b></summary>`,
+    `<sub>${esc(r.sha)} · ${inline(byline(r))}${r.date ? ` · ${esc(r.date)}` : ""}${pr ? ` · #${pr}` : ""}${change ? ` · ${esc(change)}` : ""}</sub>`,
     ...sectionGroups(r.sections.filter(s => !BELOW.has(s.name))).map(g =>
       section(g.section, g.parts, full),
     ),
@@ -425,13 +431,20 @@ export function commitMarkdown(r, full) {
  * characters are drawn without their forms, and if that is not enough, the
  * last commits are left to the page. The heading names the commit drawn up
  * to (`head`, which GitHub links) and when (`updated`), since the comment is
- * edited in place on each push.
+ * edited in place on each push; the commits the last push added or edited
+ * (`changes`) are marked.
  * @param {Group[]} groups
- * @param {{ url?: string, budget?: number, head?: string, updated?: string }} [options]
+ * @param {{ url?: string, budget?: number, head?: string, updated?: string, changes?: Map<string, string> }} [options]
  */
 export function commentMarkdown(
   groups,
-  { url = "", budget = BUDGET, head: tip = "", updated = "" } = {},
+  {
+    url = "",
+    budget = BUDGET,
+    head: tip = "",
+    updated = "",
+    changes = new Map(),
+  } = {},
 ) {
   const records = groups.flatMap(g => g.records);
   const n = records.length;
@@ -443,14 +456,15 @@ export function commentMarkdown(
   ]
     .filter(Boolean)
     .join(" · ")}`;
-  const drawn = records.map(r => commitMarkdown(r, true));
+  const change = (/** @type {CommitRecord} */ r) => changes.get(r.sha) ?? "";
+  const drawn = records.map(r => commitMarkdown(r, true, change(r)));
   const size = () => drawn.reduce((t, d) => t + d.length + 2, head.length);
   const order = drawn
     .map((d, k) => ({ k, length: d.length }))
     .sort((x, y) => y.length - x.length);
   for (const { k } of order) {
     if (size() <= budget) break;
-    drawn[k] = commitMarkdown(records[k], false);
+    drawn[k] = commitMarkdown(records[k], false, change(records[k]));
   }
   let left = 0;
   while (drawn.length && size() > budget) {

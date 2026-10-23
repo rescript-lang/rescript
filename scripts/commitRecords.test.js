@@ -865,3 +865,43 @@ test("--markdown draws every commit into the comment, with the page's link", asy
   has(comment, "First change");
   has(comment, "Second change");
 });
+
+test("--previous marks the commits the last push added or edited", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "commit-records-"));
+  const git = (/** @type {string[]} */ ...a) =>
+    execFileSync("git", a, { cwd: dir, encoding: "utf8" }).trim();
+  git("init", "-q", "-b", "main");
+  git("config", "user.name", "A Person");
+  git("config", "user.email", "a@example.com");
+  await commit(git, dir, { "a.txt": "a\n" }, "base");
+  const base = git("rev-parse", "HEAD");
+  await commit(git, dir, {}, `Kept\n\n${SIGNED}`);
+  await commit(git, dir, {}, `Edited\n\nFirst words.\n\n${SIGNED}`);
+  await commit(git, dir, {}, `Dropped\n\n${SIGNED}`);
+  const previous = git("rev-parse", "HEAD");
+  // A force push: the last commit dropped, the one below reworded, one added.
+  git("reset", "-q", "--hard", "HEAD~2");
+  await commit(git, dir, {}, `Edited\n\nOther words.\n\n${SIGNED}`);
+  await commit(git, dir, {}, `Added\n\n${SIGNED}`);
+  const md = path.join(dir, "comment.md");
+  const r = spawnSync(
+    "node",
+    [
+      script,
+      ...["--out", path.join(dir, "page.html"), "--markdown", md],
+      ...["--previous", previous, `${base}..HEAD`],
+    ],
+    { cwd: dir, encoding: "utf8" },
+  );
+  assert.equal(r.status, 0, r.stderr);
+  const comment = await fs.readFile(md, "utf8");
+  has(comment, "<summary><b>Kept</b></summary>");
+  const marked = (/** @type {string} */ subject) =>
+    comment.split("<details").find(d => d.includes(`<b>${subject}</b>`)) ?? "";
+  lacks(marked("Kept"), "✨");
+  lacks(marked("Kept"), "✏️");
+  has(marked("Edited"), "<summary>✏️ <b>Edited</b></summary>");
+  has(marked("Edited"), " · edited</sub>");
+  has(marked("Added"), "<summary>✨ <b>Added</b></summary>");
+  has(marked("Added"), " · new</sub>");
+});

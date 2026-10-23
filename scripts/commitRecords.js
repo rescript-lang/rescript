@@ -11,7 +11,9 @@
  *   node scripts/commitRecords.js --out review.html <base>..<tip>...
  *   --pr <number> and --title <text> head the page with the pull request.
  *   --markdown <file> also draws the records as the pull request's comment
- *   (scripts/recordMarkdown.js), linking the page at --url <url>.
+ *   (scripts/recordMarkdown.js), linking the page at --url <url>. With
+ *   --previous <rev>, the pull request's head before the last push, the
+ *   comment marks the commits that push added or whose message it edited.
  */
 
 import { execFileSync } from "node:child_process";
@@ -37,6 +39,12 @@ const utc = (/** @type {Date} */ d) => {
   return `${MONTHS[d.getUTCMonth()]} ${two(d.getUTCDate())}, ${d.getUTCFullYear()}, ${two(d.getUTCHours())}:${two(d.getUTCMinutes())} UTC`;
 };
 
+/** A commit's message, trimmed. @param {string} rev */
+const message = rev => git(["show", "-s", "--format=%B", rev]).trim();
+
+/** The messages of the records read, by short hash. */
+const messages = new Map();
+
 /**
  * The record of one commit: its short hash, author, author date (in UTC,
  * to the minute) and message.
@@ -46,12 +54,61 @@ const utc = (/** @type {Date} */ d) => {
 function readRecord(rev) {
   const show = (/** @type {string[]} */ ...format) =>
     git(["show", "-s", ...format, rev]);
-  return parseRecord({
+  const record = parseRecord({
     sha: show("--format=%h", "--abbrev=9").trim(),
     author: show("--format=%an").trim(),
     date: utc(new Date(show("--format=%aI").trim())),
     message: show("--format=%B"),
   });
+  messages.set(record.sha, message(rev));
+  return record;
+}
+
+/**
+ * What the last push changed, against the head before it: the records it
+ * added (`new`) or whose message it edited under the same subject
+ * (`edited`), by short hash. The previous commits are those of `previous`
+ * that the range's base lacks.
+ * @param {CommitRecord[]} records
+ * @param {string} base
+ * @param {string} previous
+ */
+function lastPush(records, base, previous) {
+  const before = git([
+    "rev-list",
+    "--no-merges",
+    previous,
+    `^${git(["merge-base", base, previous]).trim()}`,
+  ])
+    .split("\n")
+    .filter(Boolean)
+    .map(message);
+  const subject = (/** @type {string} */ m) => m.split("\n")[0];
+  const kept = new Set(before);
+  const subjects = new Set(before.map(subject));
+  /** @type {Map<string, "new" | "edited">} */
+  const changes = new Map();
+  for (const r of records) {
+    const m = messages.get(r.sha) ?? "";
+    if (!kept.has(m))
+      changes.set(r.sha, subjects.has(subject(m)) ? "edited" : "new");
+  }
+  return changes;
+}
+
+/**
+ * The comment's marks of the last push, or none when the previous head
+ * can't be read, so that the comment is still drawn.
+ * @param {CommitRecord[]} records
+ * @param {string} base
+ * @param {string} previous
+ */
+function marks(records, base, previous) {
+  try {
+    return { changes: lastPush(records, base, previous) };
+  } catch {
+    return {};
+  }
 }
 
 /**
@@ -74,7 +131,9 @@ const options = {};
 const targets = [];
 for (let i = 0; i < args.length; i++) {
   if (
-    ["--out", "--pr", "--title", "--markdown", "--url"].includes(args[i]) &&
+    ["--out", "--pr", "--title", "--markdown", "--url", "--previous"].includes(
+      args[i],
+    ) &&
     i + 1 < args.length
   )
     options[args[i].slice(2)] = args[++i];
@@ -83,7 +142,7 @@ for (let i = 0; i < args.length; i++) {
 const outFile = options.out;
 if (!outFile) {
   console.error(
-    "usage: commitRecords.js --out <page.html> [--pr <number>] [--title <text>] [--markdown <comment.md> [--url <page url>]] <rev | base..tip>...",
+    "usage: commitRecords.js --out <page.html> [--pr <number>] [--title <text>] [--markdown <comment.md> [--url <page url>] [--previous <rev>]] <rev | base..tip>...",
   );
   process.exit(1);
 }
@@ -95,12 +154,16 @@ const groups = targets.map(group);
 const body = pageBody(groups, heading);
 if (options.markdown) {
   const [base, tip] = targets[targets.length - 1].split("..");
+  const records = groups.flatMap(g => g.records);
   writeFileSync(
     options.markdown,
     commentMarkdown(groups, {
       url: options.url,
       head: git(["rev-parse", "--short=9", tip ?? base]).trim(),
       updated: utc(new Date()),
+      ...(options.previous && tip
+        ? marks(records, base, options.previous)
+        : {}),
     }),
   );
   console.log(options.markdown);
