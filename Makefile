@@ -189,18 +189,7 @@ test-rewatch: lib
 	./rewatch/tests/suite.sh $(RESCRIPT_EXE)
 
 test-lsp: lib
-	@for dir in tests/lsp_tests/*-workspace/; do \
-			[ -d "$$dir" ] || continue; \
-			echo "Building $${dir%/}..."; \
-			( cd "$$dir" && yarn clean && yarn build ); \
-	done
-	@dune runtest
-	@dune exec -- lsp-tests
-	@if [ -n "$$(git ls-files --modified tests/lsp_tests/**/*.expected)" ]; then \
-    	echo "The lsp_tests snapshot doesn't match. Double check that the output is correct, run 'make test-lsp' and stage the diff"; \
-    	git --no-pager diff tests/lsp_tests/**/*.expected; \
-    	exit 1; \
-    fi \
+	@dune runtest tests/lsp_tests
 
 test-all: test test-gentype test-analysis test-tools test-rewatch test-lsp
 
