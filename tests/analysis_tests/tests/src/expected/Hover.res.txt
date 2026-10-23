@@ -544,3 +544,17 @@ Hover src/Hover.res 281:6
   }
 }
 
+Hover src/Hover.res 285:32
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nint\n```\n---\nShown on hover"
+  }
+}
+
+Hover src/Hover.res 288:34
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
+
+Hover src/Hover.res 291:37
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
+

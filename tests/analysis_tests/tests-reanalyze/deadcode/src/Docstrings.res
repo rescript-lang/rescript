@@ -1,7 +1,7 @@
-@ocaml.doc(" hello ") @genType
+@res.doc(" hello ") @genType
 let flat = 34
 
-@ocaml.doc("
+@res.doc("
   * Sign a message with a key.
   *
   * @param message - A message to be signed

@@ -1,17 +1,17 @@
-@ocaml.doc(" Immutable arrays are covariant. ")
+@res.doc(" Immutable arrays are covariant. ")
 type t<+'a>
 
-@ocaml.doc(" Redefine the [_] syntax, and disable the assignment [_] = _. ")
+@res.doc(" Redefine the [_] syntax, and disable the assignment [_] = _. ")
 module Array: {
   let get: (t<'a>, int) => option<'a>
 }
 
-@ocaml.doc(" Converting from/to normal arrays involves making a copy. ")
+@res.doc(" Converting from/to normal arrays involves making a copy. ")
 let fromArray: array<'a> => t<'a>
 
 let toArray: t<'a> => array<'a>
 
-@ocaml.doc(" Subset of the Belt.Array oprerations that do not mutate the array. ")
+@res.doc(" Subset of the Belt.Array oprerations that do not mutate the array. ")
 let length: t<'a> => int
 
 let size: t<'a> => int
