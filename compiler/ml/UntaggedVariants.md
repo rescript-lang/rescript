@@ -324,7 +324,10 @@ if (v instanceof Animal && !(v instanceof Dog)) { ... }
 A value upcast to the superclass and wrapped in its case lands in the
 subclass case, as a payload equal to a literal lands in the literal's case
 (rule 7). Classes not declared to be related are tested in declaration order.
-`instanceof` consults `Symbol.hasInstance`, which is trusted.
+`instanceof` consults `Symbol.hasInstance`, which is trusted for objects and
+functions. A primitive whose kind is a case of the variant lands in that case
+before any class check runs, even if a class's `Symbol.hasInstance` would
+accept it: the values of a class type are instances, never primitives.
 An `int` case is recognized by `typeof x === "number"` and so receives every
 number, integral or not.
 
