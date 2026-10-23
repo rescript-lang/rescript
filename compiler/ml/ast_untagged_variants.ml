@@ -27,8 +27,8 @@ let report_error ppf =
   function
   | InvalidVariantAsAnnotation ->
     fprintf ppf
-      "A variant case annotation @as(...) must be a string, integer, boolean, \
-       null, or undefined."
+      "A variant case annotation @as(...) must be a string, integer, float, \
+       bigint, boolean, null, or undefined."
   | VariantAsIntegerOutOfRange value ->
     fprintf ppf
       "The integer %s in this variant case's @as annotation is out of range."
