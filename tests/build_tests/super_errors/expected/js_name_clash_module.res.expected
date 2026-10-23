@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/js_name_clash_module.res[0m:[2m2:8-4:1[0m
+
+  1 [2m│[0m exception Foo
+  [1;31m2[0m [2m│[0m module [1;31mFoo = {[0m
+  [1;31m3[0m [2m│[0m [1;31m  let x = 1[0m
+  [1;31m4[0m [2m│[0m [1;31m}[0m
+  5 [2m│[0m 
+
+  This module has the same JavaScript name Foo
+  as the extension constructor at [1m[36m/.../fixtures/js_name_clash_module.res[0m:[2m1:1-13[0m[0m.
+  Rename one of them.

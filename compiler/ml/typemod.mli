@@ -35,6 +35,7 @@ val type_implementation_more :
   Typedtree.structure * Typedtree.module_coercion * Env.t * Types.signature
 
 val transl_signature : Env.t -> Parsetree.signature -> Typedtree.signature
+val check_js_names : toplevel:bool -> Types.signature -> unit
 val type_open_ :
   ?used_slot:bool ref ->
   ?toplevel:bool ->
@@ -60,6 +61,7 @@ type error =
   | With_changes_module_alias of Longident.t * Ident.t * Path.t
   | With_cannot_remove_constrained_type
   | Repeated_name of string * string * Warnings.loc
+  | Js_name_clash of string * string * string * Warnings.loc
   | Non_generalizable of type_expr
   | Non_generalizable_module of module_type
   | Interface_not_compiled of string

@@ -25,7 +25,6 @@
 type error =
   | Cmj_not_found of string
   | Js_not_found of string
-  | Bs_duplicate_exports of string (* gpr_974 *)
   | Missing_ml_dependency of string
   | Dependency_script_module_dependent_not of string
       (** TODO: we need add location handling *)
@@ -47,7 +46,6 @@ let report_error ppf = function
       s
   | Js_not_found s ->
     Format.fprintf ppf "%s not found, needed in script mode " s
-  | Bs_duplicate_exports str -> Format.fprintf ppf "%s is exported twice" str
 
 let () =
   Location.register_error_of_exn (function
