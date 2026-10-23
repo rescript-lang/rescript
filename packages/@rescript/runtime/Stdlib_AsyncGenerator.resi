@@ -10,7 +10,7 @@ See [`AsyncGenerator`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 /**
 Type representing an async generator object.
 */
-type t<'yield, 'return, 'next> = private Stdlib_AsyncIterable.t<'yield>
+type t<+'yield, +'return, -'next> = private Stdlib_AsyncIterable.t<'yield>
 
 /**
 `asAsyncIterable(generator)` views `generator` as an `AsyncIterable.t`.

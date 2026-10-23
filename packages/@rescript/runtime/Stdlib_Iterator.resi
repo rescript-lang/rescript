@@ -15,7 +15,7 @@ Type representing an iterator protocol object.
 - `'next` is the type that can be sent back into `next(value)`
 */
 @notUndefined
-type t<'yield, 'return, 'next>
+type t<+'yield, +'return, -'next>
 
 /**
 Result returned by `Iterator.next`.
@@ -25,7 +25,7 @@ type result<'yield, 'return> =
   | @as(false) Yield({value: 'yield})
   | @as(true) Return({value: 'return})
 
-type rawResult<'yield, 'return>
+type rawResult<+'yield, +'return>
 
 /**
 Low-level raw JavaScript iterator result shape.

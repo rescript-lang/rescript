@@ -14,7 +14,7 @@ See [Iteration protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 /**
 Type representing an iterable iterator.
 */
-type t<'yield, 'return, 'next> = private Stdlib_Iterable.t<'yield>
+type t<+'yield, +'return, -'next> = private Stdlib_Iterable.t<'yield>
 
 /**
 `make(nextFn)` creates an iterable iterator from a function returning the next result.

@@ -1,0 +1,1 @@
+- Iterator and generator types are covariant in their yield and return types and contravariant in their resume type, `Array.arrayLike` is covariant, and `taggedTemplate` is contravariant in its parameters and covariant in its output.

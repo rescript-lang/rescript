@@ -367,7 +367,8 @@ let common_initial_env add_type add_extension empty_env =
       decl_abstr with
       type_params = [tvar1; tvar2];
       type_arity = 2;
-      type_variance = [Variance.full; Variance.full];
+      type_variance =
+        [Variance.conjugate Variance.covariant; Variance.covariant];
     }
   in
 

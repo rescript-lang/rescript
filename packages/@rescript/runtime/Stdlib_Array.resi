@@ -8,7 +8,7 @@ Type representing an array of value `'a`.
 */
 type t<'a> = array<'a>
 
-type arrayLike<'a>
+type arrayLike<+'a>
 
 /**
 `asIterable(array)` views `array` as an `Iterable.t`.
