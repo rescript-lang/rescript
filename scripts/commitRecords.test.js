@@ -832,7 +832,7 @@ ${SIGNED}
   has(html, '<span class="ln del" style="--r:2;--c:1;--i:0">');
 });
 
-test("--since leaves the comment the commits a push added, the page every commit", async () => {
+test("--markdown draws every commit into the comment, with the page's link", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "commit-records-"));
   const git = (/** @type {string[]} */ ...a) =>
     execFileSync("git", a, { cwd: dir, encoding: "utf8" }).trim();
@@ -841,36 +841,20 @@ test("--since leaves the comment the commits a push added, the page every commit
   git("config", "user.email", "a@example.com");
   await commit(git, dir, { "a.txt": "a\n" }, "base");
   await commit(git, dir, {}, `First change\n\n${SIGNED}`);
-  const before = git("rev-parse", "HEAD");
   await commit(git, dir, {}, `Second change\n\n${SIGNED}`);
-  const out = path.join(dir, "page.html");
   const md = path.join(dir, "comment.md");
-  const run = (/** @type {string} */ since) => {
-    const r = spawnSync(
-      "node",
-      [
-        script,
-        "--out",
-        out,
-        "--markdown",
-        md,
-        "--since",
-        since,
-        "HEAD~2..HEAD",
-      ],
-      { cwd: dir, encoding: "utf8" },
-    );
-    assert.equal(r.status, 0, r.stderr);
-  };
-  run(before);
+  const r = spawnSync(
+    "node",
+    [
+      script,
+      ...["--out", path.join(dir, "page.html"), "--markdown", md],
+      ...["--url", "https://cdn.example/pr-1/index.html", "HEAD~2..HEAD"],
+    ],
+    { cwd: dir, encoding: "utf8" },
+  );
+  assert.equal(r.status, 0, r.stderr);
   const comment = await fs.readFile(md, "utf8");
-  has(comment, "1 new commit (2 total)");
+  has(comment, "2 commits · [Full page](https://cdn.example/pr-1/index.html)");
+  has(comment, "First change");
   has(comment, "Second change");
-  lacks(comment, "First change");
-  const html = await fs.readFile(out, "utf8");
-  has(html, "First change");
-  has(html, "Second change");
-  await fs.rm(md);
-  run("HEAD");
-  await assert.rejects(fs.access(md));
 });

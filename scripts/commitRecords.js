@@ -11,9 +11,7 @@
  *   node scripts/commitRecords.js --out review.html <base>..<tip>...
  *   --pr <number> and --title <text> head the page with the pull request.
  *   --markdown <file> also draws the records as the pull request's comment
- *   (scripts/recordMarkdown.js), linking the page at --url <url>. With
- *   --since <rev>, the comment draws only the commits <rev> lacks, and is
- *   not written when there are none.
+ *   (scripts/recordMarkdown.js), linking the page at --url <url>.
  */
 
 import { execFileSync } from "node:child_process";
@@ -67,9 +65,7 @@ const options = {};
 const targets = [];
 for (let i = 0; i < args.length; i++) {
   if (
-    ["--out", "--pr", "--title", "--markdown", "--url", "--since"].includes(
-      args[i],
-    ) &&
+    ["--out", "--pr", "--title", "--markdown", "--url"].includes(args[i]) &&
     i + 1 < args.length
   )
     options[args[i].slice(2)] = args[++i];
@@ -78,7 +74,7 @@ for (let i = 0; i < args.length; i++) {
 const outFile = options.out;
 if (!outFile) {
   console.error(
-    "usage: commitRecords.js --out <page.html> [--pr <number>] [--title <text>] [--markdown <comment.md> [--url <page url>] [--since <rev>]] <rev | base..tip>...",
+    "usage: commitRecords.js --out <page.html> [--pr <number>] [--title <text>] [--markdown <comment.md> [--url <page url>]] <rev | base..tip>...",
   );
   process.exit(1);
 }
@@ -89,35 +85,11 @@ const heading = {
 const groups = targets.map(group);
 const body = pageBody(groups, heading);
 if (options.markdown) {
-  const since = options.since;
-  // The commits of the targets that `since` does not reach.
-  const fresh = new Set(
-    since
-      ? targets.flatMap(t =>
-          git(["rev-list", "--abbrev-commit", "--abbrev=9", t, `^${since}`])
-            .split("\n")
-            .filter(Boolean),
-        )
-      : [],
+  writeFileSync(
+    options.markdown,
+    commentMarkdown(groups, { url: options.url }),
   );
-  const shown = since
-    ? groups.map(g => ({
-        ...g,
-        records: g.records.filter(r => fresh.has(r.sha)),
-      }))
-    : groups;
-  if (shown.some(g => g.records.length)) {
-    writeFileSync(
-      options.markdown,
-      commentMarkdown(shown, {
-        url: options.url,
-        total: since
-          ? groups.reduce((n, g) => n + g.records.length, 0)
-          : undefined,
-      }),
-    );
-    console.log(options.markdown);
-  }
+  console.log(options.markdown);
 }
 const head = `<title>${esc(pageTitle(heading))}</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=STIX+Two+Text:ital,wght@0,400;0,500;1,400&display=swap">
