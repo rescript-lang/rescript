@@ -317,7 +317,7 @@ describe(__MODULE__, () => {
     eq(__LOC__, intOrStringName(raw(true)), "string")
     eq(__LOC__, twoInstancesName(raw({"x": 1})), "RegExp")
     let thenable = %raw(`{then: (resolve) => resolve(1)}`)
-    eq(__LOC__, promiseOrFloatName(raw(thenable)), "float")
+    eq(__LOC__, promiseOrFloatName(raw(thenable)), "promise")
   })
 
   test("rule 12: option of an untagged variant", () => {

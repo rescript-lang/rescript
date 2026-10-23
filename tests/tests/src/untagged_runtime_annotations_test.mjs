@@ -73,10 +73,10 @@ function referenceKind(reference) {
 }
 
 function localeKind(locale) {
-  if (locale instanceof Intl.Locale) {
-    return "locale";
-  } else {
+  if (typeof locale === "string") {
     return locale;
+  } else {
+    return "locale";
   }
 }
 
@@ -97,10 +97,10 @@ function handlerKind(handler) {
 }
 
 function objectOrNameKind(value) {
-  if (value instanceof UntaggedDog) {
-    return "dog";
-  } else {
+  if (typeof value === "string") {
     return value;
+  } else {
+    return "dog";
   }
 }
 

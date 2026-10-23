@@ -176,10 +176,10 @@ function twoInstancesName(v) {
 }
 
 function promiseOrFloatName(v) {
-  if (v instanceof Promise) {
-    return "promise";
-  } else {
+  if (typeof v === "number") {
     return "float";
+  } else {
+    return "promise";
   }
 }
 
@@ -352,7 +352,7 @@ Mocha.describe("Untagged_variants_spec_test", () => {
       x: 1
     }), "RegExp");
     let thenable = ({then: (resolve) => resolve(1)});
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 320, characters 7-14", promiseOrFloatName(thenable), "float");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 320, characters 7-14", promiseOrFloatName(thenable), "promise");
   });
   Mocha.test("rule 12: option of an untagged variant", () => {
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 324, characters 7-14", someWithNull(null), null);

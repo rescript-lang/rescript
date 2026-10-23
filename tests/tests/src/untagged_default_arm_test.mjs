@@ -3,21 +3,29 @@
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
+globalThis.UntaggedAnyValue = class AnyValue {
+  static [Symbol.hasInstance]() { return true }
+}
+;
+
 function id(x) {
   return x;
 }
 
 function objectOrString(value) {
-  if (value instanceof RegExp || value instanceof Date) {
-    return "other";
-  }
   switch (typeof value) {
-    case "object" :
-      return "O";
     case "string" :
       return "S";
     default:
-      return "other";
+      if (value instanceof RegExp || value instanceof Date) {
+        return "other";
+      }
+      switch (typeof value) {
+        case "object" :
+          return "O";
+        default:
+          return "other";
+      }
   }
 }
 
@@ -35,23 +43,58 @@ function textOrRecord(value) {
   }
 }
 
+function twoArmsKind(value) {
+  if (typeof value === "string") {
+    return "name";
+  } else {
+    return "any";
+  }
+}
+
+function withLiteralsKind(value) {
+  if (value !== 1 && value !== 5 && value !== 2 && value !== 4 && value !== 3) {
+    if (typeof value === "string") {
+      return "name";
+    } else {
+      return "any";
+    }
+  }
+  switch (value) {
+    case 1 :
+      return "one";
+    case 2 :
+      return "two";
+    case 3 :
+      return "three";
+    case 4 :
+      return "four";
+    case 5 :
+      return "five";
+  }
+}
+
 Mocha.describe("Untagged_default_arm_test", () => {
   Mocha.test("an instance handled by the default is not an object case", () => {
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 31, characters 7-14", "other", objectOrString(id(new Date())));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 32, characters 7-14", "other", objectOrString(id(/a/)));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 33, characters 7-14", "O", objectOrString(id({
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 71, characters 7-14", "other", objectOrString(id(new Date())));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 72, characters 7-14", "other", objectOrString(id(/a/)));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 73, characters 7-14", "O", objectOrString(id({
       x: 1
     })));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 34, characters 7-14", "S", objectOrString(id("s")));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 35, characters 7-14", "other", objectOrString(id(1)));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 74, characters 7-14", "S", objectOrString(id("s")));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 75, characters 7-14", "other", objectOrString(id(1)));
   });
   Mocha.test("a literal handled by the default is not a string case", () => {
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 39, characters 7-14", "other", textOrRecord(id("lit")));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 40, characters 7-14", "text", textOrRecord(id("lit2")));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 41, characters 7-14", "record", textOrRecord(id({
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 79, characters 7-14", "other", textOrRecord(id("lit")));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 80, characters 7-14", "text", textOrRecord(id("lit2")));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 81, characters 7-14", "record", textOrRecord(id({
       x: 1
     })));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 42, characters 7-14", "other", textOrRecord(id(1)));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 82, characters 7-14", "other", textOrRecord(id(1)));
+  });
+  Mocha.test("primitives skip class checks in the two-arm form", () => Test_utils.eq("File \"untagged_default_arm_test.res\", line 86, characters 7-14", "name", twoArmsKind(id("a"))));
+  Mocha.test("literals skip class checks", () => {
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 90, characters 7-14", "one", withLiteralsKind(id(1)));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 91, characters 7-14", "name", withLiteralsKind(id("a")));
   });
 });
 
@@ -59,5 +102,7 @@ export {
   id,
   objectOrString,
   textOrRecord,
+  twoArmsKind,
+  withLiteralsKind,
 }
 /*  Not a pure module */

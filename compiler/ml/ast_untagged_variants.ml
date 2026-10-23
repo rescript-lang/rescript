@@ -673,8 +673,18 @@ module Dynamic_checks = struct
     let without_literal_cases =
       is_a_literal_case ~literal_cases ~block_cases ~list_literal_cases:false e
     in
-    if size with_literal_cases <= size without_literal_cases then
-      with_literal_cases
+    (* Class checks would run on the literals, which are primitives: a class
+       missing at run time would throw, and a [Symbol.hasInstance] could
+       claim them *)
+    let has_class_case =
+      List.exists
+        (function
+          | InstanceType (Class _) -> true
+          | _ -> false)
+        block_cases
+    in
+    if has_class_case || size with_literal_cases <= size without_literal_cases
+    then with_literal_cases
     else without_literal_cases
 
   let is_int_tag ?(has_null_undefined_other = (false, false, false)) (e : _ t) :

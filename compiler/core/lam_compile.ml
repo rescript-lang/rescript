@@ -897,15 +897,6 @@ let compile output_prefix =
       let not_typeof_clauses, typeof_clauses =
         List.partition clause_is_not_typeof clauses
       in
-      (* A class instance is never a primitive, so the primitive kinds can be
-         tested first: their values then skip the instance checks, which
-         throw when a class is missing at run time *)
-      let primitive_clauses, typeof_clauses =
-        if (not has_class_case) || not_typeof_clauses = [] then
-          ([], typeof_clauses)
-        else
-          List.partition (fun (tag, _) -> tag_is_primitive tag) typeof_clauses
-      in
       let has_object_typeof =
         List.exists
           (function
@@ -913,25 +904,52 @@ let compile output_prefix =
             | _ -> false)
           typeof_clauses
       in
-      (* When there's an ObjectType typeof case, null, arrays and class
-         instances can incorrectly match it (typeof null === typeof [] ===
-         "object"). Guard against them when they should fall through to
-         default: null, and the instance cases without an arm of their own. *)
+      let has_function_typeof =
+        List.exists
+          (function
+            | Variant_runtime.Payload_shape FunctionType, _ -> true
+            | _ -> false)
+          typeof_clauses
+      in
+      (* When there's an ObjectType typeof case, null and arrays can
+         incorrectly match it (typeof null === typeof [] === "object"), and so
+         can class instances, which can be functions too. Guard against the
+         instance cases without an arm of their own, which belong to the
+         default. *)
       let needs_null_guard = has_object_typeof && has_null_case in
       let unmatched_instances =
-        if not has_object_typeof then []
+        Ext_list.filter_map block_cases (function
+          | Variant_runtime.InstanceType instance
+            when not
+                   (List.exists
+                      (function
+                        | Variant_runtime.Payload_shape (InstanceType i), _ ->
+                          i = instance
+                        | _ -> false)
+                      not_typeof_clauses) -> (
+            match instance with
+            | Array -> if has_object_typeof then Some instance else None
+            | Class _ ->
+              if has_object_typeof || has_function_typeof then Some instance
+              else None)
+          | _ -> None)
+      in
+      (* A class instance is never a primitive, so the primitive kinds can be
+         tested first: their values then skip the instance checks and guards,
+         which throw when a class is missing at run time *)
+      let primitive_clauses, typeof_clauses =
+        if
+          (not has_class_case)
+          || not_typeof_clauses = []
+             && not
+                  (List.exists
+                     (function
+                       | Variant_runtime.Instance.Class _ -> true
+                       | Array -> false)
+                     unmatched_instances)
+        then ([], typeof_clauses)
         else
-          Ext_list.filter_map block_cases (function
-            | Variant_runtime.InstanceType instance
-              when not
-                     (List.exists
-                        (function
-                          | Variant_runtime.Payload_shape (InstanceType i), _ ->
-                            i = instance
-                          | _ -> false)
-                        not_typeof_clauses) ->
-              Some instance
-            | _ -> None)
+          List.partition (fun (tag, _) -> tag_is_primitive tag) typeof_clauses
       in
       let instances =
         Ext_list.filter_map block_cases (function
@@ -961,7 +979,10 @@ let compile output_prefix =
           let guards =
             (if needs_null_guard then [E.is_null e] else [])
             @ List.map
-                (fun instance -> E.emit_check (IsInstanceOf (instance, Expr e)))
+                (fun instance ->
+                  E.emit_check
+                    (Ast_untagged_variants.Dynamic_checks.is_instance instance
+                       (Expr e)))
                 unmatched_instances
           in
           let guard =
@@ -987,6 +1008,21 @@ let compile output_prefix =
          a switch of their own, so they share bodies only among themselves *)
       (not (tag_is_not_typeof tag1 || tag_is_not_typeof tag2))
       && ((not has_class_case) || tag_is_primitive tag1 = tag_is_primitive tag2)
+    in
+    (* Two arms are compiled to one check of the first. When it is a class
+       check and the other arm's check is not, check the other arm instead,
+       so that primitives never reach [instanceof] *)
+    let cases =
+      match (cases, default) with
+      | ( [
+            ((Variant_runtime.Payload_shape (InstanceType (Class _)), _) as
+             class_case);
+            ((tag, _) as other_case);
+          ],
+          Complete )
+        when not (tag_is_not_typeof tag) ->
+        [other_case; class_case]
+      | _ -> cases
     in
     cases
     |> compile_general_cases ~make_exp:E.tag_type ~eq_exp:mk_eq ~cxt ~switch
