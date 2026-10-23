@@ -241,8 +241,10 @@ module Document = {
   @val external current: {..} = "document"
   @get external head: {..} => Dom.element = "head"
   @get external body: {..} => Dom.element = "body"
-  @send external createScriptElement: ({..}, @as("script") _) => Dom.element = "createElement"
-  @send external createTextAreaElement: ({..}, @as("textarea") _) => Dom.element = "createElement"
+  // The playground builds with a released compiler, so no fixed arguments here.
+  @send external createElement: ({..}, string) => Dom.element = "createElement"
+  let createScriptElement = document => document->createElement("script")
+  let createTextAreaElement = document => document->createElement("textarea")
   @send @return(nullable)
   external getElementById: ({..}, string) => option<Dom.element> = "getElementById"
   @send external execCommand: ({..}, string) => bool = "execCommand"
@@ -268,7 +270,8 @@ module Location = {
 
 module History = {
   @val @scope(("window", "history"))
-  external replaceState: (@as(json`null`) _, @as("") _, string) => unit = "replaceState"
+  external replaceStateWith: (Null.t<unit>, string, string) => unit = "replaceState"
+  let replaceState = url => replaceStateWith(Null.null, "", url)
 }
 
 module Performance = {

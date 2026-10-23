@@ -399,12 +399,32 @@ type response = {
 }
 
 (* A fixed argument means what [@as(value) _] means, so decode it with the
-   same reader. *)
-let fixed_arg_type
+   same reader. [%raw] is JavaScript source and must be exactly one literal.
+   As for [@as(value) _], attributes such as [@ignore] have no effect next to
+   the value, so they are reported as unused. *)
+let fixed_arg_type ~attrs
     ((value, loc) : Parsetree.fixed_value Location.loc * Location.t) =
-  match Ast_attributes.as_const [Ast_fixed_arg.to_attribute ~loc value] with
-  | Some cst -> arg_cst_of_as_const cst
-  | None -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal
+  let arg_type =
+    match value.txt with
+    | Pfixed_raw source ->
+      let source = Ast_raw.js_source source in
+      if Classify_function.is_fixed_literal source then
+        External_arg_spec.Arg_cst (External_arg_spec.cst_json source)
+      else
+        Location.raise_errorf ~loc:value.loc
+          "The %%raw payload must be a JavaScript literal"
+    | Pfixed_int _ | Pfixed_string _ | Pfixed_template _ | Pfixed_json _ -> (
+      match Ast_attributes.as_const [Ast_fixed_arg.to_attribute ~loc value] with
+      | Some cst -> arg_cst_of_as_const cst
+      | None -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal)
+  in
+  Bs_ast_invariant.warn_discarded_unused_attributes attrs;
+  arg_type
+
+(* A fixed argument is always passed, so it has nothing to make optional. *)
+let reject_optional_fixed
+    ((_, loc) : Parsetree.fixed_value Location.loc * Location.t) =
+  Location.raise_errorf ~loc "A %%raw argument cannot be optional"
 
 (* The label and type of an argument. A fixed argument is typed as its [_], so
    the checks for [@as(value) _] apply to it unchanged. Its location ends with
@@ -415,7 +435,7 @@ let arg_parts (arg : Parsetree.arg) =
   | Parg_fixed {attrs; lbl; value; loc} ->
     ( lbl,
       attrs,
-      Ast_helper.Typ.any ~loc:(Ast_fixed_arg.underscore_loc loc) (),
+      Ast_helper.Typ.any ~loc:(Ast_fixed_arg.closing_loc loc) (),
       Some (value, loc) )
 
 let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
@@ -469,7 +489,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
               in
               let obj_arg_type =
                 match fixed with
-                | Some fixed -> fixed_arg_type fixed
+                | Some fixed -> fixed_arg_type ~attrs:param_attrs fixed
                 | None -> refine_obj_arg_type ~nolabel:false ty
               in
               match obj_arg_type with
@@ -528,7 +548,11 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
                 | Some alias -> alias
                 | None -> label
               in
-              let obj_arg_type = get_opt_arg_type ~nolabel:false ty in
+              let obj_arg_type =
+                match fixed with
+                | Some fixed -> reject_optional_fixed fixed
+                | None -> get_opt_arg_type ~nolabel:false ty
+              in
               match obj_arg_type with
               | Ignore ->
                 ( External_arg_spec.empty_kind obj_arg_type,
@@ -932,7 +956,7 @@ let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
       Ext_list.fold_right arg_types_ty
         (([], [], 0) : External_arg_spec.params * Parsetree.arg list * int)
         (fun param_type (arg_type_specs, arg_types, i) ->
-          let arg_label, _, ty, fixed = arg_parts param_type in
+          let arg_label, param_attrs, ty, fixed = arg_parts param_type in
           (if i = 0 && splice then
              match arg_label with
              | Optional _ ->
@@ -955,7 +979,11 @@ let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
                 new_arg_types ) =
             match arg_label with
             | Optional {txt = s} -> (
-              let arg_type = get_opt_arg_type ~nolabel:false ty in
+              let arg_type =
+                match fixed with
+                | Some fixed -> reject_optional_fixed fixed
+                | None -> get_opt_arg_type ~nolabel:false ty
+              in
               match arg_type with
               | Poly_var _ ->
                 (* ?x:([`x of int ] [@string]) does not make sense *)
@@ -967,7 +995,7 @@ let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
             | Labelled _ -> (
               let arg_type =
                 match fixed with
-                | Some fixed -> fixed_arg_type fixed
+                | Some fixed -> fixed_arg_type ~attrs:param_attrs fixed
                 | None -> refine_arg_type ~nolabel:false ty
               in
               ( Arg_label,
@@ -978,7 +1006,7 @@ let handle_attributes (loc : Location.t) (type_annotation : Parsetree.core_type)
             | Nolabel -> (
               let arg_type =
                 match fixed with
-                | Some fixed -> fixed_arg_type fixed
+                | Some fixed -> fixed_arg_type ~attrs:param_attrs fixed
                 | None -> refine_arg_type ~nolabel:true ty
               in
               ( Arg_empty,

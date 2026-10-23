@@ -10,7 +10,7 @@ let renamed = {
 let u = {
   hi: 2,
   lo: 3,
-  lo2: {hi:-3 },
+  lo2: {hi: -3},
   lo3: -1,
   lo4: -3
 };

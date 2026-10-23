@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/raw_external_arg_not_literal.res[0m:[2m1:24-37[0m
+
+  [1;31m1[0m [2m│[0m @val external f: (%raw([1;31m"1) + alert(2"[0m), int) => unit = "f"
+  2 [2m│[0m 
+
+  The %raw payload must be a JavaScript literal

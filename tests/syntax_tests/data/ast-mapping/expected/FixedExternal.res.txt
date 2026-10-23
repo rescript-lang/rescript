@@ -1,5 +1,93 @@
-@val external json: (@as(json`{"a": [1, 2]}`) _, int) => int = "f"
-@val external strings: (@as("s") _, @as(`t`) _, int) => int = "f"
-@val external labelled: (~mode: @as(1) _, ~other: @as("o") _, int) => int = "f"
-@obj external obj: (~a: @as(1) _, ~b: int, unit) => _ = ""
-@val external single: @as(-1) _ => int = "f"
+
+  Warning number 3
+  syntax_tests/data/ast-mapping/FixedExternal.res:1:22-47
+
+  1 │ @val external json: (@as(json`{"a": [1, 2]}`) _, int) => int = "f"
+  2 │ @val external strings: (@as("s") _, @as(`t`) _, int) => int = "f"
+  3 │ @val external labelled: (~mode: @as(1) _, ~other: @as("o") _, int) => in
+    │ t = "f"
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/ast-mapping/FixedExternal.res:2:25-34
+
+  1 │ @val external json: (@as(json`{"a": [1, 2]}`) _, int) => int = "f"
+  2 │ @val external strings: (@as("s") _, @as(`t`) _, int) => int = "f"
+  3 │ @val external labelled: (~mode: @as(1) _, ~other: @as("o") _, int) => in
+    │ t = "f"
+  4 │ @obj external obj: (~a: @as(1) _, ~b: int, unit) => _ = ""
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/ast-mapping/FixedExternal.res:2:37-46
+
+  1 │ @val external json: (@as(json`{"a": [1, 2]}`) _, int) => int = "f"
+  2 │ @val external strings: (@as("s") _, @as(`t`) _, int) => int = "f"
+  3 │ @val external labelled: (~mode: @as(1) _, ~other: @as("o") _, int) => in
+    │ t = "f"
+  4 │ @obj external obj: (~a: @as(1) _, ~b: int, unit) => _ = ""
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/ast-mapping/FixedExternal.res:3:33-40
+
+  1 │ @val external json: (@as(json`{"a": [1, 2]}`) _, int) => int = "f"
+  2 │ @val external strings: (@as("s") _, @as(`t`) _, int) => int = "f"
+  3 │ @val external labelled: (~mode: @as(1) _, ~other: @as("o") _, int) => in
+    │ t = "f"
+  4 │ @obj external obj: (~a: @as(1) _, ~b: int, unit) => _ = ""
+  5 │ @val external single: @as(-1) _ => int = "f"
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/ast-mapping/FixedExternal.res:3:51-60
+
+  1 │ @val external json: (@as(json`{"a": [1, 2]}`) _, int) => int = "f"
+  2 │ @val external strings: (@as("s") _, @as(`t`) _, int) => int = "f"
+  3 │ @val external labelled: (~mode: @as(1) _, ~other: @as("o") _, int) => in
+    │ t = "f"
+  4 │ @obj external obj: (~a: @as(1) _, ~b: int, unit) => _ = ""
+  5 │ @val external single: @as(-1) _ => int = "f"
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/ast-mapping/FixedExternal.res:4:25-32
+
+  2 │ @val external strings: (@as("s") _, @as(`t`) _, int) => int = "f"
+  3 │ @val external labelled: (~mode: @as(1) _, ~other: @as("o") _, int) => in
+    │ t = "f"
+  4 │ @obj external obj: (~a: @as(1) _, ~b: int, unit) => _ = ""
+  5 │ @val external single: @as(-1) _ => int = "f"
+  6 │ @val external raw: (%raw("{}"), ~mode: %raw(`"img"`), int) => int = "f"
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+
+  Warning number 3
+  syntax_tests/data/ast-mapping/FixedExternal.res:5:23-31
+
+  3 │ @val external labelled: (~mode: @as(1) _, ~other: @as("o") _, int) => in
+    │ t = "f"
+  4 │ @obj external obj: (~a: @as(1) _, ~b: int, unit) => _ = ""
+  5 │ @val external single: @as(-1) _ => int = "f"
+  6 │ @val external raw: (%raw("{}"), ~mode: %raw(`"img"`), int) => int = "f"
+  7 │ 
+
+  deprecated: The fixed-value `@as(...) _` external argument syntax is deprecated. Use `%raw(...)` instead.
+
+@val external json: (%raw(`{"a": [1, 2]}`), int) => int = "f"
+@val external strings: (%raw(`"s"`), %raw(`"t"`), int) => int = "f"
+@val external labelled: (~mode: %raw("1"), ~other: %raw(`"o"`), int) => int = "f"
+@obj external obj: (~a: %raw("1"), ~b: int, unit) => _ = ""
+@val external single: (%raw("-1")) => int = "f"
+@val external raw: (%raw("{}"), ~mode: %raw(`"img"`), int) => int = "f"
