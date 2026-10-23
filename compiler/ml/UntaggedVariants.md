@@ -155,20 +155,27 @@ superclass.
 
 An annotation on an abbreviation must agree with the abbreviated type. It can
 refine an abstract type that is not builtin and has no annotation, or repeat
-the annotation of the abbreviated type. Only a private abbreviation can
-declare a subclass of the class annotated there, or a public one that is a
-strict instance of the superclass type, as in the phantom type hierarchy
+the annotation of the abbreviated type. The type of a functor parameter, of a
+recursive module being defined, and a locally abstract type `(type a)` are
+abstract only where they are declared: they stand for another type, so they
+cannot be refined. Only a private abbreviation can declare a subclass of the
+class annotated there, or of a `@typeOf("object")` type, or a public one that
+is a strict instance of the superclass type after expansion, as in the
+phantom type hierarchy
 `@instanceOf("Element") type elementLike<'a> = nodeLike<_element<'a>>`. A
-public `type dog = animal` would make every animal a dog without a coercion.
+public `type dog = animal` would make every animal a dog without a coercion,
+and so would `type dog = phantom<int>` with `type phantom<'a> = animal`.
 
 | Declaration | Error | Fixture |
 | --- | --- | --- |
 | `@typeOf("string") type t = option<string>`, `type t<'a> = 'a`, an abbreviation of `unit`, a builtin type, a record or a variant | @typeOf on a type abbreviation must describe an abstract type, ... | `runtime_annotation_on_option.res`, `runtime_annotation_on_type_variable.res` |
 | `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym` | This annotation, @typeOf("number"), contradicts the abbreviated type's annotation, @typeOf("symbol"). | `runtime_annotation_contradicts_manifest.res` |
-| `@instanceOf("Dog") type dog = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res` |
+| `@instanceOf("Date") type date = X.t` in a functor of `X`, or over `(type a)` | @instanceOf cannot describe the type of a functor parameter, ... | `instance_of_functor_parameter.res`, `type_of_locally_abstract_type.res` |
+| `@instanceOf("Dog") type dog = animal`, or `= phantom<int>` with `type phantom<'a> = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res`, `instance_of_public_subclass_through_alias.res` |
 | `@instanceOf("Animal") type t = private dog` | Animal appears twice in this chain of abbreviations ... | `instance_of_class_twice_in_chain.res` |
 | `@instanceOf` on a record or variant | @instanceOf can only be used on abstract types and type abbreviations ... | `runtime_annotation_on_record.res` |
 | both annotations | A type can have either @instanceOf or @typeOf, not both. | `runtime_annotation_conflict.res` |
+| one annotation twice | Duplicate @instanceOf annotation; a type can have only one. | `instance_of_duplicate.res` |
 
 The class path is a dot-separated list of identifiers whose first one is not
 a JavaScript keyword. Paths that name no class to recognize values by are
@@ -461,10 +468,12 @@ error.
 
 An interface and its implementation must agree on `@unboxed`, on `@tag`, on
 the literal of every nullary case and of every tagged case with a payload,
-and on the payload kind of every untagged case. The `@as` of an untagged case
-with a payload does not change its representation (rule 2) and is not
-compared. Type declarations in messages print the `@as` of nullary and tagged
-cases.
+and on the payload kind of every untagged case whose kind the interface
+knows. An unknown payload in the interface is its only payload case and is
+not checked, so it agrees with any payload of the implementation
+(`untagged_hidden_payload_test.res`). The `@as` of an untagged case with a
+payload does not change its representation (rule 2) and is not compared.
+Type declarations in messages print the `@as` of nullary and tagged cases.
 
 A type for which an interface states a class or `typeof` (rule 5), through
 its own annotation or the type it abbreviates, must state the same one in the

@@ -303,7 +303,7 @@ You will need this decorator whenever you want to use a JSX component in ReScrip
       [
         {|The `@instanceOf` decorator states that the values of an abstract type are instances of a global JavaScript class. Such a type can be the payload of an untagged variant case, which is then recognized with `instanceof`, and is never `undefined`, like with `@notUndefined`.
 
-A private abbreviation of another annotated type declares a subclass, so that the subclass case is checked first.
+A private abbreviation of another annotated type declares a subclass. A case of the superclass then excludes the instances of a subclass that is a case too, whatever the order of the cases.
 
 Example usage:
 ```rescript

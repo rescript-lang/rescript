@@ -35,6 +35,8 @@ type error =
   | UnsupportedInstanceOf of string * unsupported_class
   | InvalidTypeOf of string
   | ConflictingRuntimeAnnotations
+  | DuplicateRuntimeAnnotation of string
+  | RuntimeAnnotationOnTypeParameter of string
   | RuntimeAnnotationOnRepresentedType of string
   | RuntimeAnnotationOnUnrelatedType of string
   | RuntimeAnnotationContradictsManifest of string * string
@@ -137,6 +139,14 @@ let report_error ppf =
       "@typeOf expects one of \"string\", \"number\", \"bigint\", \"boolean\", \
        \"symbol\", \"function\" or \"object\"%s."
       (if name = "" then "" else ", not \"" ^ name ^ "\"")
+  | DuplicateRuntimeAnnotation attribute ->
+    fprintf ppf "Duplicate @%s annotation; a type can have only one." attribute
+  | RuntimeAnnotationOnTypeParameter attribute ->
+    fprintf ppf
+      "@%s cannot describe the type of a functor parameter, of a recursive \
+       module being defined, or a locally abstract type: such a type stands \
+       for another one, whose values can be anything."
+      attribute
   | ConflictingRuntimeAnnotations ->
     fprintf ppf "A type can have either @instanceOf or @typeOf, not both."
   | RuntimeAnnotationOnRepresentedType attribute ->
@@ -350,7 +360,13 @@ let process_runtime_annotation ?(loc = Location.none)
   match Ext_list.filter_map attrs annotation_of with
   | [] -> None
   | [annotation] -> Some annotation
-  | _ :: _ :: _ -> raise (Error (loc, ConflictingRuntimeAnnotations))
+  | first :: second :: _ ->
+    raise
+      (Error
+         ( loc,
+           if runtime_attribute_name first = runtime_attribute_name second then
+             DuplicateRuntimeAnnotation (runtime_attribute_name first)
+           else ConflictingRuntimeAnnotations ))
 
 (* Checks the runtime annotations of a declaration whose kind is
    [is_abstract_or_abbreviation]. *)

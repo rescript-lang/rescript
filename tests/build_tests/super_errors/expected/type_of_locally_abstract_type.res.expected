@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/type_of_locally_abstract_type.res[0m:[2m3:23-32[0m
+
+  1 [2m│[0m let f = (type a, x: a) => {
+  2 [2m│[0m   module M = {
+  [1;31m3[0m [2m│[0m     @typeOf("object") [1;31mtype o = a[0m
+  4 [2m│[0m   }
+  5 [2m│[0m   x
+
+  @typeOf cannot describe the type of a functor parameter, of a recursive module being defined, or a locally abstract type: such a type stands for another one, whose values can be anything.

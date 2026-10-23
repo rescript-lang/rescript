@@ -129,6 +129,20 @@ let handlerKind = handler =>
 @unboxed
 type boxedAnimal = BoxedAnimal(animal)
 
+// A class declared over a type whose values are objects
+@typeOf("object") type plainObject
+@instanceOf("UntaggedDog") type objectDog = private plainObject
+@new external makeObjectDog: unit => objectDog = "UntaggedDog"
+
+@unboxed
+type objectOrName = ObjectDog(objectDog) | ObjectName(string)
+
+let objectOrNameKind = value =>
+  switch value {
+  | ObjectDog(_) => "dog"
+  | ObjectName(name) => name
+  }
+
 describe(__MODULE__, () => {
   test("a subclass case is not taken for its superclass", () => {
     eq(__LOC__, "animal", describePet(Animal(makeAnimal())))
@@ -185,5 +199,10 @@ describe(__MODULE__, () => {
   test("a function case excludes class instances", () => {
     eq(__LOC__, "callable", handlerKind(Callable(makeCallable())))
     eq(__LOC__, "function", handlerKind(Function(x => x)))
+  })
+
+  test("a class declared over an object type", () => {
+    eq(__LOC__, "dog", objectOrNameKind(ObjectDog(makeObjectDog())))
+    eq(__LOC__, "rex", objectOrNameKind(ObjectName("rex")))
   })
 })

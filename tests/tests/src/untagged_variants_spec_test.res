@@ -2,7 +2,7 @@ open Mocha
 open Test_utils
 
 /***
-Pins the rules stated in compiler/ml/UNTAGGED_VARIANTS.md. Each block names
+Pins the rules stated in compiler/ml/UntaggedVariants.md. Each block names
 the rule it pins. Values are passed through [id], whose [@inline(never)] keeps
 them away from constant folding, so the assertions observe the generated
 dispatch. [raw] injects a JavaScript value a case's type does not describe;
