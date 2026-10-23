@@ -10,6 +10,7 @@ const { bsc } = setup(import.meta.dirname);
 const generatedDir = await fs.mkdtemp(
   path.join(import.meta.dirname, "generated-"),
 );
+/** @param {string} file */
 const compile = file =>
   bsc(["-nostdlib", "-nopervasives", "-I", generatedDir, file], {
     cwd: generatedDir,
@@ -25,7 +26,10 @@ try {
   const magic = contents.subarray(0, 9).toString("latin1");
   assert.match(magic, /^ResCmi\d{3}$/);
 
-  // Replaces the magic number of A.cmi and compiles a module that reads it.
+  /**
+   * Replaces the magic number of A.cmi and compiles a module that reads it.
+   * @param {string} header
+   */
   const readWith = async header => {
     await fs.writeFile(
       cmi,
