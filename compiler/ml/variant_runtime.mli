@@ -25,6 +25,18 @@ type block_type =
   | ObjectType
   | UnknownType
 
+(** What a type declaration states about its values at run time, through
+    [@notUndefined], [@instanceOf] or [@typeOf]. Each level implies the one
+    before: a value recognized as a class instance or [typeof] kind is never
+    [undefined]. *)
+type value_shape =
+  | Unstated
+      (** Nothing: an abbreviation has the shape of the type it abbreviates *)
+  | Never_undefined  (** [@notUndefined] *)
+  | Recognized_as of block_type
+      (** [@instanceOf] or [@typeOf]: a payload of this kind, with the class's
+          declared superclasses *)
+
 (** The literal value a constructor is represented by: what [@as] states, or
     the constructor's own name when it states nothing. Unlike [tag_type], this
     can never describe an inferred untagged payload shape. *)

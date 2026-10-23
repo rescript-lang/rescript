@@ -103,7 +103,7 @@ is the number kind, and `@typeOf("symbol")` is a kind of its own, with no
 builtin payload type. `@notUndefined` on an abstract type leaves it unknown.
 
 - Implementation: `variant_layout.ml:get_block_type_from_typ`,
-  `get_block_type`, `declared_block_type`.
+  `get_block_type`, `recognized_as`.
 - Tests: `spec_test` rules 4 (`kinds`, `tuples`, `aliasDict`, `instances`,
   `unknown`); fixtures `UntaggedConstructorMoreThanOneArg.res`,
   `UntaggedConstructorAttributeMoreThanOneArg.res`, `UntaggedNonUnary1.res`,
@@ -123,18 +123,24 @@ global class at the path `C`, such as `"Date"` or `"Intl.Locale"`.
 `"object"`. A type has at most one of the two, and only abstract types and
 type abbreviations, public or private, can have them.
 
-The classifier reads the annotations of the payload type as written and of
-each type it abbreviates; the outermost one decides. The classes annotated
-further down a chain of abbreviations are the superclasses of the outermost
-one (rule 8):
+When a type is declared, its annotation is resolved into its *shape*, which
+is stored on the declaration: the class with its superclasses, or the
+`typeof` kind (`@notUndefined` gives the shape "never undefined", rule 13).
+The classes annotated further down a chain of abbreviations are the
+superclasses (rule 8):
 
 ```rescript
 @instanceOf("Animal") type animal
 @instanceOf("Dog") type dog = private animal
 ```
 
-A module alias repeats the declarations of the aliased module, so an
-annotation equal to the one just read is not counted again.
+The classifier and every other reader take the shape of the payload type as
+written, or of the first type it abbreviates that states one, so the
+outermost annotation decides. A shape is resolved in the environment the
+type is declared in, so an interface's shape is what its users see, even
+where the implementation knows more (rule 14). An annotation that repeats
+the abbreviated type's, as the declarations of a module alias do, adds no
+superclass.
 
 An annotation on an abbreviation must agree with the abbreviated type. It can
 refine an abstract type that is not builtin and has no annotation, or repeat
@@ -187,8 +193,9 @@ The typed-array types are abbreviations of one type, `TypedArray.t<_>`, and
 are told apart only by their annotations, which are read on the name as
 written (Known bugs).
 
-- Implementation: `variant_layout.ml:runtime_annotations`,
-  `declared_block_type`, `check_manifest_annotation`;
+- Implementation: `types.mli:type_shape`,
+  `variant_runtime.mli:value_shape`; `variant_layout.ml:declaration_shape`,
+  `resolve_shapes`, `value_shape`, `check_manifest_annotation`;
   `ast_untagged_variants.ml:process_runtime_annotation`, `unsupported_class`,
   `check_runtime_annotation`;
   `variant_runtime.ml:Instance`; `js_exp_make.ml:class_constructor`.
@@ -426,7 +433,9 @@ declaration it is an error, "@notUndefined can only be used on abstract
 types". Interface inclusion does not compare it. `@instanceOf` and `@typeOf`
 (rule 5) imply it.
 
-- Implementation: `typedecl.ml:transl_declaration`, `is_not_undefined_attr`;
+- Implementation: `typedecl.ml:transl_declaration`;
+  `ast_untagged_variants.ml:has_not_undefined`;
+  `variant_layout.ml:declaration_shape`;
   `typeopt.ml:type_cannot_contain_undefined`.
 - Tests: `spec_test` rule 13; fixture `invalid_attribute_not_undefined.res`;
   `tests/build_tests/not_undefined_attribute`.
@@ -461,6 +470,7 @@ arguments, `with type` constraints and module type ascriptions.
   `Iface_unboxed_variant_mismatch`, `Iface_tag_name_mismatch`,
   `Iface_variant_representation_mismatch`,
   `Cross_runtime_annotation_hidden_superclass`,
+  `Cross_runtime_annotation_hidden_base`,
   `Cross_runtime_annotation_claimed_by_interface`,
   `Cross_runtime_annotation_functor_argument`; `variant_payload_tag_mismatch.res`.
 - Shaped by #6498, #6513, #6669, #7875, #8956.

@@ -41,10 +41,10 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
   (* A value declared to be a class instance or to have a [typeof] other than
      "undefined" is not undefined. The payload of an [@unboxed] wrapper is
      declared only after scraping. *)
-  Option.is_some (Variant_layout.declared_block_type ~env typ)
+  Variant_layout.value_shape ~env typ <> Unstated
   ||
   let scraped = scrape_ty env typ in
-  Option.is_some (Variant_layout.declared_block_type ~env scraped)
+  Variant_layout.value_shape ~env scraped <> Unstated
   ||
   match scraped.desc with
   | Tconstr (p, _, _) -> (
@@ -61,8 +61,7 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
         (* A transitive dependency's interface may not be on the search path.
            Keep option wrapping when its runtime representation is unknown. *)
         false
-      | {type_kind = Type_abstract; type_attributes} ->
-        List.exists Typedecl.is_not_undefined_attr type_attributes
+      | {type_kind = Type_abstract; type_shape} -> type_shape <> Unstated
       | {type_kind = Type_open} -> false
       | {type_kind = Type_record _} -> true
       | {

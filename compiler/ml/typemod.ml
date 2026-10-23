@@ -330,6 +330,7 @@ let merge_constraint initial_env loc sg constr =
           type_attributes = [];
           type_immediate = false;
           type_representation = Boxed;
+          type_shape = Unstated;
           type_inlined_types = [];
         }
       and id_row = Ident.create (s ^ "#row") in

@@ -215,6 +215,7 @@ let decl_abstr =
     type_attributes = [];
     type_immediate = false;
     type_representation = Boxed;
+    type_shape = Unstated;
     type_inlined_types = [];
   }
 
@@ -352,6 +353,7 @@ let common_initial_env add_type add_extension empty_env =
             };
           ];
       type_representation = Types.Unboxed;
+      type_shape = Unstated;
     }
   and decl_promise =
     let tvar = newgenvar () in
