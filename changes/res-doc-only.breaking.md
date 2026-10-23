@@ -1,0 +1,1 @@
+- Editor hover, completion and `rescript-tools doc` read doc comments only from `/** */` comments (`@res.doc`); the legacy `@ocaml.doc` and `@ns.doc` attributes are no longer shown. Replace them with doc comments.

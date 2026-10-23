@@ -1,4 +1,4 @@
-@ocaml.doc("
+@res.doc("
   * Wrap JS values to be used from Reason
   ")
 @genType.import("./MyMath")
