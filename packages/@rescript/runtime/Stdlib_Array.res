@@ -1,5 +1,5 @@
 type t<'a> = array<'a>
-type arrayLike<'a>
+type arrayLike<+'a>
 
 @new external makeUninitializedUnsafe: int => array<'a> = "Array"
 @set external truncateToLengthUnsafe: (array<'a>, int) => unit = "length"
