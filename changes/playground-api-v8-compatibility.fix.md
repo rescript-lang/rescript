@@ -1,1 +1,0 @@
-- Keep playground compiler API v8 when adding optional optimized Lambda output, preserving compatibility with existing playground clients. https://github.com/rescript-lang/rescript/pull/8930

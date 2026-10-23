@@ -1,1 +1,1 @@
-- Rewatch: keep watching a source folder on Linux when an overlapping recursive source folder is removed from `rescript.json`. https://github.com/rescript-lang/rescript/pull/8839
+- `rescript-rust`: keep watching a source folder on Linux when an overlapping recursive source folder is removed from `rescript.json`. https://github.com/rescript-lang/rescript/pull/8839

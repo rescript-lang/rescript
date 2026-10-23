@@ -1,1 +1,5 @@
 - The OCaml build system rejects duplicate keys in `rescript.json` maps, a `namespace-entry` without a namespace, and a value after `--no-timing`. https://github.com/rescript-lang/rescript/pull/8780
+- `rescript --filter` supports the common subset of regular expression syntax and rejects other constructs, such as `(?i)`. https://github.com/rescript-lang/rescript/pull/8780
+- A failing `--after-build` command fails the build, and on Unix the command no longer gets an interactive terminal. https://github.com/rescript-lang/rescript/pull/8780
+- `rescript format -v` and `rescript compiler-args -v` write their logs to stderr instead of stdout. https://github.com/rescript-lang/rescript/pull/8780
+- `rescript` does not export OpenTelemetry traces; `rescript-rust` still does. https://github.com/rescript-lang/rescript/pull/8780
