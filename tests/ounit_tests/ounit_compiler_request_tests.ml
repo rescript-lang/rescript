@@ -62,7 +62,32 @@ let with_temp_dir prefix action =
   Sys.remove path;
   Unix.mkdir path 0o755;
   let path = Unix.realpath path in
-  Fun.protect ~finally:(fun () -> remove_tree path) (fun () -> action path)
+  (* A failure of the action is reported as it is: removing the directory
+     after it is best effort, so that a cleanup error, such as [ENOTEMPTY]
+     from a domain still writing, does not hide it. *)
+  match action path with
+  | result ->
+    remove_tree path;
+    result
+  | exception error ->
+    let backtrace = Printexc.get_raw_backtrace () in
+    (try remove_tree path with Unix.Unix_error _ | Sys_error _ -> ());
+    Printexc.raise_with_backtrace error backtrace
+
+(* Joins every domain before re-raising the first failure, so that no domain
+   still runs when the caller cleans up after it. *)
+let join_all domains =
+  let results =
+    List.map
+      (fun domain ->
+        match Domain.join domain with
+        | () -> None
+        | exception error -> Some (error, Printexc.get_raw_backtrace ()))
+      domains
+  in
+  match List.find_map Fun.id results with
+  | Some (error, backtrace) -> Printexc.raise_with_backtrace error backtrace
+  | None -> ()
 
 let request_local_counter = Request_local.new_key (fun () -> ref 0)
 
@@ -1596,7 +1621,7 @@ let concurrent_async_context_tests _context =
                  else ["Sync.res"; "Async.res"])
             done)
       in
-      List.init 8 run_domain |> List.iter Domain.join)
+      List.init 8 run_domain |> join_all)
 
 let suites =
   __FILE__
