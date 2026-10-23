@@ -242,29 +242,6 @@ let rec flatten_any_namespace_in_path path =
       (parts |> List.rev) @ flatten_any_namespace_in_path tail
     else head :: flatten_any_namespace_in_path tail
 
-let print_maybe_exotic_ident ?(allow_uident = false) txt =
-  let len = String.length txt in
-
-  let rec loop i =
-    if i == len then txt
-    else if i == 0 then
-      match String.unsafe_get txt i with
-      | 'A' .. 'Z' when allow_uident -> loop (i + 1)
-      | 'a' .. 'z' | '$' -> loop (i + 1)
-      (* Same as Res_printer.classify_ident_content: a lone [_] or one
-         followed by another character is not scanned as an identifier. *)
-      | '_' when len > 1 -> (
-        match String.unsafe_get txt 1 with
-        | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '$' -> loop (i + 1)
-        | _ -> "\"" ^ txt ^ "\"")
-      | _ -> "\"" ^ txt ^ "\""
-    else
-      match String.unsafe_get txt i with
-      | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '\'' | '_' | '$' -> loop (i + 1)
-      | _ -> "\"" ^ txt ^ "\""
-  in
-  if Res_token.is_keyword_txt txt then "\"" ^ txt ^ "\"" else loop 0
-
 let find_package_json root =
   let path = Uri.to_path root in
 

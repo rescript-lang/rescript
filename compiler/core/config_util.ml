@@ -22,27 +22,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(* Try the name as written before its uncapitalized form: on a
-   case-insensitive file system both match, and the result is shown in error
-   messages and used in generated import paths. *)
-let find_in_path_uncap path name =
-  let uname = Ext_string.uncapitalize_ascii name in
-  let rec try_dir = function
-    | [] -> None
-    | dir :: rem ->
-      let fullname = Filename.concat dir name in
-      if Sys.file_exists (Compiler_request_state.resolve_path fullname) then
-        Some fullname
-      else
-        let ufullname = Filename.concat dir uname in
-        if Sys.file_exists (Compiler_request_state.resolve_path ufullname) then
-          Some ufullname
-        else try_dir rem
-  in
-  try_dir path
-
 (* ATTENTION: read the load path after request options have populated it. *)
-let find_opt file = find_in_path_uncap (Config.get_load_path ()) file
+let find_opt file = Misc.find_in_path_uncap_opt (Config.get_load_path ()) file
 
 let output_prefix name =
   match !((Clflags.current ()).output_name) with

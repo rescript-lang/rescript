@@ -476,7 +476,8 @@ let rec extract_type ?(print_opening_debug = true)
           {
             name = label;
             display_name =
-              Utils.print_maybe_exotic_ident ~allow_uident:true label;
+              Res_printer.print_poly_var_ident label
+              |> Res_doc.to_string ~width:80;
             args =
               (* Multiple arguments are represented as a Ttuple, while a single argument is just the type expression itself. *)
               (match field with
