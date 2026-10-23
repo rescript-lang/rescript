@@ -2,10 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [master, 11.0_release]
+    branches: [master, maintenance/*]
 
   pull_request:
-    branches: [master, 11.0_release]
+    branches: [master, maintenance/*]
 
   # Release builds are started by publish.yml after a maintainer indicates
   # whether the package version is current stable. The npm tag is derived from
@@ -32,6 +32,7 @@ jobs:
   build-compiler:
     outputs:
       api-docs-artifact-id: ${{ steps.upload-api-docs.outputs.artifact-id }}
+      website-branch: ${{ steps.api-docs-plan.outputs.website-branch }}
     strategy:
       fail-fast: false
       matrix:
@@ -381,6 +382,11 @@ jobs:
             !packages/@rescript/runtime/lib/ocaml/*.ast
             !packages/@rescript/runtime/lib/ocaml/*.iast
 
+      - name: Select API docs website branch
+        id: api-docs-plan
+        if: ${{ matrix.generate_api_docs }}
+        run: node scripts/releasePlan.js --github-output "$GITHUB_OUTPUT"
+
       - name: Generate API Docs
         if: ${{ matrix.generate_api_docs }}
         run: yarn apidocs:generate
@@ -488,6 +494,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: rescript-lang/rescript-lang.org
+          ref: ${{ needs.build-compiler.outputs.website-branch }}
 
       - name: Download artifacts
         uses: actions/download-artifact@v8

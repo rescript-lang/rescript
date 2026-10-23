@@ -3,6 +3,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import semver from "semver";
 
@@ -36,6 +37,7 @@ export function createReleasePlan(version, currentStable = false) {
     currentStable,
     npmTag,
     publishTag: currentStable ? null : npmTag,
+    websiteBranch: `v${parsedVersion.major}`,
   };
 }
 
@@ -112,6 +114,7 @@ async function main() {
       `git-tag=${plan.gitTag}`,
       `npm-tag=${plan.npmTag}`,
       `publish-tag=${plan.publishTag ?? ""}`,
+      `website-branch=${plan.websiteBranch}`,
     ].join("\n");
     await fs.appendFile(values["github-output"], `${output}\n`);
   }
@@ -125,6 +128,7 @@ async function main() {
       `| Version | \`${plan.version}\` |`,
       `| Git tag | \`${plan.gitTag}\` |`,
       `| npm tag | \`${plan.npmTag}\` |`,
+      `| Website branch | \`${plan.websiteBranch}\` |`,
       `| Source commit | \`${process.env.GITHUB_SHA ?? "local"}\` |`,
       "",
       "The protected `npm-release` job publishes this plan after approval.",
@@ -136,7 +140,10 @@ async function main() {
   console.log(JSON.stringify(plan, null, 2));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
   main().catch(error => {
     console.error(error.message || error);
     process.exitCode = 1;
