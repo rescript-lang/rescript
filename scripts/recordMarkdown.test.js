@@ -75,7 +75,7 @@ ${SIGNED}
     md,
     "<details open><summary><b>Represent raw extensions as their own node</b></summary>",
   );
-  has(md, "<sub>aaaaaaaa0 · A Person with B Person · Oct 22, 2026 · #12</sub>");
+  has(md, "<sub>aaaaaaaa0 · A Person + B Person · Oct 22, 2026 · #12</sub>");
   has(md, "> **Why**\n>\n> A raw extension carries JavaScript.");
   has(md, "**AST modified** (raw extensions)");
   has(md, "```rescript\nlet f = %raw(`(a) => a`)\n```");
@@ -231,4 +231,11 @@ ${SIGNED}
   const tiny = comment([small, big, small], { budget: 400 });
   assert.ok(tiny.length <= 500, `${tiny.length}`);
   has(tiny, "more commit");
+});
+
+test("an assistant co-author is drawn by its short name, others as written", () => {
+  const md = comment([
+    `Fix it\n\nCo-Authored-By: Claude Sonnet 5.5 <NoReply@Anthropic.com>\nCo-Authored-By: Claude Person <claude@example.com>\nCo-Authored-By: No Email\n${SIGNED}\n`,
+  ]);
+  has(md, "· A Person + Claude + Claude Person + No Email ·");
 });

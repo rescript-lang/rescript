@@ -201,7 +201,8 @@ node scripts/commitRecords.js --out page.html [--pr <number>] [--title <text>] \
 ## What the page shows
 
 The page is the heading, then a card per commit. A card shows the commit's
-short sha, author and co-authors, date, the pull request a `(#1234)` at
-the end of the subject names, and the message drawn: the subject, the
-prose, each object block with its example and forms, the `Breaking:`
-sections as banners, and the `Review:` sections as a list.
+short sha, author and co-authors (an AI assistant by its short name, such
+as Claude), date, the pull request a `(#1234)` at the end of the subject
+names, and the message drawn: the subject, the prose, each object block
+with its example and forms, the `Breaking:` sections as banners, and the
+`Review:` sections as a list.

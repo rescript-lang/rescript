@@ -167,8 +167,15 @@ function parseMessage(text) {
 }
 
 /**
+ * AI assistants by the email their `Co-Authored-By:` trailers give, and the
+ * short name drawn for them: the name in the trailer changes with the model
+ * ("Claude Opus 5.5"), the email does not.
+ */
+const ASSISTANTS = new Map([["noreply@anthropic.com", "Claude"]]);
+
+/**
  * A commit's record: its identity and its message, parsed; the co-authors
- * are the names its `Co-Authored-By:` trailers give.
+ * are the names its `Co-Authored-By:` trailers give, an assistant's short.
  * @param {CommitInfo} commit
  * @returns {CommitRecord}
  */
@@ -176,9 +183,19 @@ export function parseRecord(commit) {
   const { subject, sections, trailers } = parseMessage(commit.message);
   const coauthors = trailers
     .filter(l => /^Co-Authored-By:/i.test(l))
-    .map(l => l.replace(/^Co-Authored-By:\s*/i, "").replace(/\s*<[^>]*>/, ""));
+    .map(l => {
+      const [, name, email = ""] =
+        /^Co-Authored-By:\s*(.*?)\s*(?:<([^>]*)>)?\s*$/i.exec(l) ?? [];
+      return ASSISTANTS.get(email.toLowerCase()) ?? name;
+    });
   return { ...commit, subject, sections, coauthors: [...new Set(coauthors)] };
 }
+
+/**
+ * Who made a commit: its author and co-authors, as `A Person + Claude`.
+ * @param {CommitRecord} r
+ */
+export const byline = r => [r.author, ...r.coauthors].join(" + ");
 
 // ---------------------------------------------------------------------------
 // Code, highlighted by token
@@ -1513,7 +1530,7 @@ function card(r) {
     [...s.text, ...s.block.map(l => l.trim())].join(" ").trim();
   const out = [
     `<article class="card${breaking.length ? " breaking" : ""}" id="c-${esc(r.sha)}">`,
-    `<header><div class="meta"><code>${esc(r.sha)}</code> · ${esc(r.author)}${r.coauthors.length ? ` with ${esc(r.coauthors.join(", "))}` : ""}${r.date ? ` · ${esc(r.date)}` : ""}${
+    `<header><div class="meta"><code>${esc(r.sha)}</code> · ${esc(byline(r))}${r.date ? ` · ${esc(r.date)}` : ""}${
       pr ? ` · <a href="${REPO_URL}/pull/${pr}">#${pr}</a>` : ""
     }</div><h3>${inline(subject)}</h3></header>`,
   ];

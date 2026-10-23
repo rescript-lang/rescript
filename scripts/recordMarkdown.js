@@ -14,6 +14,7 @@ import {
   atomDiff,
   BELOW,
   BLOCK,
+  byline,
   cellsOf,
   columnWidths,
   dedent,
@@ -399,7 +400,7 @@ export function commitMarkdown(r, full) {
     [...s.text, ...s.block.map(l => l.trim())].join(" ").trim();
   const out = [
     `<details open><summary><b>${inlineHtml(subject)}</b></summary>`,
-    `<sub>${esc(r.sha)} · ${inline(r.author)}${r.coauthors.length ? ` with ${inline(r.coauthors.join(", "))}` : ""}${r.date ? ` · ${esc(r.date)}` : ""}${pr ? ` · #${pr}` : ""}</sub>`,
+    `<sub>${esc(r.sha)} · ${inline(byline(r))}${r.date ? ` · ${esc(r.date)}` : ""}${pr ? ` · #${pr}` : ""}</sub>`,
     ...sectionGroups(r.sections.filter(s => !BELOW.has(s.name))).map(g =>
       section(g.section, g.parts, full),
     ),
