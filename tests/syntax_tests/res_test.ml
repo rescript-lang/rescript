@@ -637,8 +637,21 @@ module Multiline_item_spacing_test = struct
     assert (Doc.will_break Doc.break_parent);
     assert (Doc.will_break (Doc.comment Doc.hard_line));
     assert (not (Doc.will_break (Doc.comment a)));
-    assert (not (Doc.is_nil separator));
-    assert (not (Doc.is_nil (Doc.comment a)));
+    assert (Doc.is_nil Doc.nil);
+    [
+      a;
+      Doc.line_suffix a;
+      Doc.concat [a; b];
+      Doc.indent a;
+      Doc.trailing_comma;
+      Doc.line;
+      Doc.group a;
+      Doc.custom_layout [a];
+      Doc.break_parent;
+      separator;
+      Doc.comment a;
+    ]
+    |> List.iter (fun doc -> assert (not (Doc.is_nil doc)));
     check "an empty custom layout prints nothing" ~expected:""
       (print (Doc.custom_layout []))
 
