@@ -321,6 +321,9 @@ let describe_declared_block_type = function
     "values whose typeof is \"" ^ typeof_name block_type ^ "\""
   | None -> "no runtime class or typeof"
 
+let has_not_undefined (attrs : Parsetree.attributes) =
+  Ext_list.exists attrs (fun ({txt}, _) -> txt = "notUndefined")
+
 (* The [@instanceOf] or [@typeOf] annotation in [attrs], validated. Only
    [Typedecl] passes [~loc]; later readers see attributes it accepted. *)
 let process_runtime_annotation ?(loc = Location.none)

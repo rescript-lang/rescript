@@ -1087,6 +1087,7 @@ let dummy =
     type_attributes = [];
     type_immediate = false;
     type_representation = Boxed;
+    type_shape = Unstated;
     type_inlined_types = [];
   }
 
