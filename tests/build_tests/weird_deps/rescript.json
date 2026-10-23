@@ -1,15 +1,6 @@
 {
-  "name": "weird_devdeps",
-  "sources": [
-    {
-      "dir": "src",
-      "subdirs": true
-    },
-    {
-      "dir": "test",
-      "type": "dev"
-    }
-  ],
+  "name": "weird_deps",
+  "sources": [],
   "package-specs": {
     "module": "esmodule",
     "in-source": true,

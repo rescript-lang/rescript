@@ -17,3 +17,13 @@ module type Functor = SetLike => (Set with type t = A.t)
 module type B = () => {
 
 }
+
+module type ThisIsAVeryLongFunctorModuleTypeNameThatExceedsTheEightyCharacterLimit = Pattern => {
+  let fmt: event => string
+}
+
+module type SecondVeryLongFunctorModuleTypeNameWithMultipleShortParameters = (A, B) => {
+  let x: int
+}
+
+module type YetAnotherVeryLongFunctorModuleTypeNameHere = SomeVeryLongParameterModuleTypeName => SomeVeryLongResultingModuleTypeName

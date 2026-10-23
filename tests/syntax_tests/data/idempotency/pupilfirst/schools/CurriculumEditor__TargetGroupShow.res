@@ -92,12 +92,12 @@ let make = (
 
     CreateTargetMutation.make(~title, ~targetGroupId, ())
     ->GraphqlQuery.sendQuery
-    ->Js.Promise.then_(response => {
+    ->Promise.then(response => {
       switch response["createTarget"]["target"] {
       | Some(target) => handleResponseCB(target)
       | None => ()
       }
-      Js.Promise.resolve()
+      Promise.resolve()
     })
     ->ignore
   }

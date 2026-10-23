@@ -6,7 +6,7 @@ let f = () => {
       acc
     }
   let len = 10
-  let v = Belt.Array.make(len, 0)
+  let v = Array.make(~length=len, 0)
   for i in 0 to len - 1 {
     v[i] = f(0, i)
   }

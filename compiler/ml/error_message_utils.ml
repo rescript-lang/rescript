@@ -1,10 +1,12 @@
 type extract_concrete_typedecl =
   Env.t -> Types.type_expr -> Path.t * Path.t * Types.type_declaration
 
-let configured_jsx_module : string option ref = ref None
+(* The JSX module affects type-error suggestions for the active request. *)
+let configured_jsx_module_key = Request_local.new_key (fun () -> ref None)
+let configured_jsx_module () = Domain.DLS.get configured_jsx_module_key
 
 let with_configured_jsx_module s =
-  match !configured_jsx_module with
+  match !(configured_jsx_module ()) with
   | None -> s
   | Some module_name -> module_name ^ "." ^ s
 
@@ -91,7 +93,6 @@ type type_clash_context =
     }
   | ArrayValue
   | TaggedTemplateValue
-  | MaybeUnwrapOption
   | IfCondition
   | AssertCondition
   | IfReturn
@@ -189,8 +190,7 @@ let error_expected_type_text ppf type_clash_context =
     fprintf ppf
       "But you're using @{<info>await@} on this expression, so it is expected \
        to be of type:"
-  | Some MaybeUnwrapOption | Some BracedIdent | None ->
-    fprintf ppf "But it's expected to have type:"
+  | Some BracedIdent | None -> fprintf ppf "But it's expected to have type:"
 
 let is_record_type ~(extract_concrete_typedecl : extract_concrete_typedecl) ~env
     ty =
@@ -217,20 +217,55 @@ let is_jsx_component_type ~env ty =
 let get_variant_constructors
     ~(extract_concrete_typedecl : extract_concrete_typedecl) ~env ty =
   match extract_concrete_typedecl env ty with
-  | _, _, {Types.type_kind = Type_variant constructors; _} -> constructors
-  | _ -> []
+  | _, _, {Types.type_kind = Type_variant (constructors, layout_ref); _} ->
+    Some (constructors, Variant_runtime.get_layout layout_ref)
+  | _ -> None
 
 let extract_string_constant text =
   match !Parser.parse_source text with
   | ( [
         {
           Parsetree.pstr_desc =
-            Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string (s, _))}, _);
+            Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string payload)}, _);
         };
       ],
       _ ) ->
-    Some s
+    Some (String_literal.string_semantic payload)
   | _ -> None
+
+let print_object_vs_record_hint ppf ~loc =
+  fprintf ppf
+    "@,\
+     @,\
+     You're passing a @{<error>ReScript object@} where a @{<info>record@} is \
+     expected. Objects are written with quoted keys, and records with unquoted \
+     keys.";
+  let suggested_rewrite =
+    Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
+        match exp.Parsetree.pexp_desc with
+        | Pexp_object_literal fields ->
+          Some
+            (Ast_helper.Exp.record ~loc:exp.pexp_loc
+               (List.map
+                  (fun ((s : string Asttypes.loc), e) ->
+                    {
+                      Parsetree.lid =
+                        {Asttypes.txt = Longident.Lident s.txt; loc = s.loc};
+                      x = e;
+                      opt = false;
+                    })
+                  fields)
+               None)
+        | _ -> None)
+  in
+  fprintf ppf
+    "@,@,Possible solutions: @,- Rewrite the object to a record%s@{<info>%s@}@,"
+    (match suggested_rewrite with
+    | Some _ -> ", like: "
+    | None -> "")
+    (match suggested_rewrite with
+    | Some rewrite -> rewrite
+    | None -> "")
 
 let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     (bottom_aliases : (Types.type_expr * Types.type_expr) option) trace
@@ -407,14 +442,13 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       "\n\n\
       \  Ternaries (@{<info>?@} and @{<info>:@}) must return the same type in \
        both branches."
-  | Some MaybeUnwrapOption, _ ->
-    fprintf ppf
-      "\n\n\
-      \  Possible solutions:\n\
-      \  - Unwrap the option to its underlying value using \
-       `yourValue->Option.getOr(someDefaultValue)`"
   | Some ComparisonOperator, _ ->
     fprintf ppf "\n\n  You can only compare things of the same type."
+  | Some ArrayValue, Some ({desc = Tobject _}, ({Types.desc = Tconstr _} as t1))
+    when is_record_type ~extract_concrete_typedecl ~env t1 ->
+    (* The array-item mismatch is an object-vs-record confusion; give the
+       specific hint rather than the generic array advice. *)
+    print_object_vs_record_hint ppf ~loc
   | Some ArrayValue, _ ->
     fprintf ppf
       "\n\n\
@@ -464,39 +498,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
          @{<info>ignore@} via @{<info>expression->ignore@}\n\n"
   | _, Some ({desc = Tobject _}, ({Types.desc = Tconstr _} as t1))
     when is_record_type ~extract_concrete_typedecl ~env t1 ->
-    fprintf ppf
-      "@,\
-       @,\
-       You're passing a @{<error>ReScript object@} where a @{<info>record@} is \
-       expected. Objects are written with quoted keys, and records with \
-       unquoted keys.";
-
-    let suggested_rewrite =
-      Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
-          match exp.Parsetree.pexp_desc with
-          | Pexp_extension
-              ( {txt = "obj"},
-                PStr
-                  [
-                    {
-                      pstr_desc =
-                        Pstr_eval (({pexp_desc = Pexp_record _} as record), _);
-                    };
-                  ] ) ->
-            Some record
-          | _ -> None)
-    in
-    fprintf ppf
-      "@,\
-       @,\
-       Possible solutions: @,\
-       - Rewrite the object to a record%s@{<info>%s@}@,"
-      (match suggested_rewrite with
-      | Some _ -> ", like: "
-      | None -> "")
-      (match suggested_rewrite with
-      | Some rewrite -> rewrite
-      | None -> "")
+    print_object_vs_record_hint ppf ~loc
   | _, Some ({Types.desc = Tconstr (p1, _, _)}, _)
     when Path.same p1 Predef.path_promise ->
     fprintf ppf "\n\n  - Did you mean to await this promise before using it?\n"
@@ -663,8 +665,15 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       let reprinted =
         Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
             match exp.Parsetree.pexp_desc with
-            | Pexp_constant (Pconst_string (s, _)) ->
-              Some {exp with Parsetree.pexp_desc = Pexp_variant (s, None)}
+            | Pexp_constant (Pconst_string payload) ->
+              Some
+                {
+                  exp with
+                  Parsetree.pexp_desc =
+                    Pexp_variant
+                      ( String_literal.string_semantic payload,
+                        {txt = []; loc = exp.pexp_loc} );
+                }
             | _ -> None)
       in
       match (reprinted, List.mem string_value variant_constructors) with
@@ -685,16 +694,16 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     let target_expr_text = Parser.extract_text_at_loc loc in
     match extract_string_constant target_expr_text with
     | Some string_value -> (
-      let constructors =
-        get_variant_constructors ~extract_concrete_typedecl ~env t2
+      let constructors, layout =
+        Option.get (get_variant_constructors ~extract_concrete_typedecl ~env t2)
       in
       (* Extract runtime representations from constructor declarations *)
       let constructor_mappings =
-        List.filter_map
-          (fun (cd : Types.constructor_declaration) ->
+        List.mapi
+          (fun position (cd : Types.constructor_declaration) ->
             let constructor_name = Ident.name cd.cd_id in
             let runtime_repr =
-              match Ast_untagged_variants.process_tag_type cd.cd_attributes with
+              match Variant_runtime.constructor_tag layout position with
               | Some (String s) -> Some s (* @as("string_value") *)
               | Some _ -> None (* @as with non-string values *)
               | None -> Some constructor_name (* No @as, use constructor name *)
@@ -703,6 +712,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
             | Some repr -> Some (repr, constructor_name)
             | None -> None)
           constructors
+        |> List.filter_map Fun.id
       in
       let matching_constructor =
         List.find_opt
@@ -714,14 +724,14 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
         let reprinted =
           Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
               match exp.Parsetree.pexp_desc with
-              | Pexp_constant (Pconst_string (_, _)) ->
+              | Pexp_constant (Pconst_string _) ->
                 Some
                   {
                     exp with
                     Parsetree.pexp_desc =
                       Pexp_construct
                         ( {txt = Lident constructor_name; loc = exp.pexp_loc},
-                          None );
+                          {txt = []; loc = exp.pexp_loc} );
                   }
               | _ -> None)
         in
@@ -840,15 +850,6 @@ let type_clash_context_for_function_argument ~label type_clash_context sarg0 =
          })
   | type_clash_context -> type_clash_context
 
-let type_clash_context_maybe_option ty_expected ty_res =
-  match (ty_expected, ty_res) with
-  | ( {Types.desc = Tconstr (expected_path, _, _)},
-      {Types.desc = Tconstr (type_path, _, _)} )
-    when Path.same Predef.path_option type_path
-         && Path.same expected_path Predef.path_option = false ->
-    Some MaybeUnwrapOption
-  | _ -> None
-
 let type_clash_context_in_statement sexp =
   match sexp.Parsetree.pexp_desc with
   | Pexp_apply {transformed_jsx = false} -> Some (Statement FunctionCall)
@@ -892,7 +893,7 @@ let get_jsx_component_props
     ~(extract_concrete_typedecl : extract_concrete_typedecl) env ty p =
   match p with
   | Path.Pdot (Path.Pident {Ident.name = jsx_module_name}, "fragmentProps", _)
-    when Some jsx_module_name = !configured_jsx_module ->
+    when Some jsx_module_name = !(configured_jsx_module ()) ->
     Some {props_record_path = p; fields = []; jsx_type = `Fragment}
   | _ -> (
     (* TODO: handle lowercase components using JSXDOM.domProps *)

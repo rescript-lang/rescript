@@ -54,11 +54,7 @@ async function uncurriedIdAsync(x) {
   return x;
 }
 
-let tci = 3;
-
 let tcia = curriedIdAsync(3);
-
-let tui = 3;
 
 let tuia = uncurriedIdAsync(3);
 
@@ -73,6 +69,10 @@ async function nested2() {
 function onSubmit() {
   return React.useCallback(async b => await b);
 }
+
+let tci = 3;
+
+let tui = 3;
 
 export {
   willBeInlined,

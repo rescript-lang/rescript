@@ -1,5 +1,5 @@
 Complete src/CompletionFromModule.res 10:5
-posCursor:[10:5] posNoWhite:[10:4] Found expr:[10:3->10:5]
+pos_cursor:[10:5] pos_no_white:[10:4] Found expr:[10:3->10:5]
 Pexp_field [10:3->10:4] _:[13:0->10:5]
 Completable: Cpath Value[n].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -10,7 +10,7 @@ Path n
 ContextPath Value[n]->
 ContextPath Value[n]
 Path n
-CPPipe pathFromEnv:SomeModule found:true
+CPPipe path_from_env:SomeModule found:true
 Path SomeModule.
 Path 
 [
@@ -44,7 +44,7 @@ Path
 ]
 
 Complete src/CompletionFromModule.res 30:6
-posCursor:[30:6] posNoWhite:[30:5] Found expr:[30:3->30:6]
+pos_cursor:[30:6] pos_no_white:[30:5] Found expr:[30:3->30:6]
 Pexp_field [30:3->30:5] _:[36:0->30:6]
 Completable: Cpath Value[nn].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -55,7 +55,7 @@ Path nn
 ContextPath Value[nn]->
 ContextPath Value[nn]
 Path nn
-CPPipe pathFromEnv:SomeOtherModule found:true
+CPPipe path_from_env:SomeOtherModule found:true
 Path SomeOtherModule.
 Path CompletionFromModule.SomeOtherModule.
 Path 
@@ -157,14 +157,14 @@ Path SomeOthe
 ]
 
 Complete src/CompletionFromModule.res 38:8
-posCursor:[38:8] posNoWhite:[38:7] Found expr:[38:3->0:-1]
+pos_cursor:[38:8] pos_no_white:[38:7] Found expr:[38:3->0:-1]
 Completable: Cpath Value[nnn]->
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[nnn]->
 ContextPath Value[nnn]
 Path nnn
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path CompletionFromModule.
 Path CompletionFromModule.SomeOtherModule.
 Path 
@@ -184,7 +184,7 @@ Path
 ]
 
 Complete src/CompletionFromModule.res 42:8
-posCursor:[42:8] posNoWhite:[42:7] Found expr:[42:3->0:-1]
+pos_cursor:[42:8] pos_no_white:[42:7] Found expr:[42:3->0:-1]
 Completable: Cpath Value[nnn]->
 Raw opens: 1 SomeOtherModule.place holder
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -192,7 +192,7 @@ Resolved opens 2 Stdlib CompletionFromModule
 ContextPath Value[nnn]->
 ContextPath Value[nnn]
 Path nnn
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path CompletionFromModule.
 Path CompletionFromModule.SomeOtherModule.
 Path 

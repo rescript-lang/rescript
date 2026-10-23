@@ -2,9 +2,10 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
+import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.mjs";
 
 Mocha.describe("Bs_string_test", () => {
-  Mocha.test("string split and reduce", () => Test_utils.eq("File \"bs_string_test.res\", line 7, characters 6-13", "ghso ghso g".split(" ").reduce((x, y) => x + ("-" + y), ""), "-ghso-ghso-g"));
+  Mocha.test("string split and reduce", () => Test_utils.eq("File \"bs_string_test.res\", line 7, characters 6-13", Stdlib_Array.reduce("ghso ghso g".split(" "), "", (x, y) => x + ("-" + y)), "-ghso-ghso-g"));
 });
 
 /*  Not a pure module */

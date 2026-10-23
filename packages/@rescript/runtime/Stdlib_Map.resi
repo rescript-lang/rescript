@@ -34,7 +34,8 @@ map->Map.set("lang", "ReScript") // Inferred as Map.t<string, string>
 ```
 
 ## Alternatives
-A JavaScript `Map` is mutable. If you're looking for an immutable alternative, check out`Belt.Map`.
+A JavaScript `Map` is mutable. For an immutable alternative, install the separate
+`@rescript/belt` package and check out `Belt.Map`.
 */
 @new
 external make: unit => t<'k, 'v> = "Map"

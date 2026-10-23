@@ -86,13 +86,13 @@ let make = () => {
   React.useEffect0(() => {
     CoursesQuery.make()
     ->GraphqlQuery.sendQuery
-    ->Js.Promise.then_(result => {
+    ->Promise.then(result => {
       let courses =
         result["courses"]
-        ->Js.Array.map(rawCourse => Course.makeFromJs(rawCourse))
+        ->Array.map(rawCourse => Course.makeFromJs(rawCourse))
         ->Array.to_list
       send(UpdateCourses(courses))
-      Js.Promise.resolve()
+      Promise.resolve()
     })
     ->ignore
 

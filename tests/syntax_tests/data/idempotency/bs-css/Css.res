@@ -11,6 +11,6 @@ include Css_Legacy_Core.Make({
   let makeKeyFrames = (_) => throw(NotImplemented)
 })
 
-external unsafeJsonToStyles: Js.Json.t => ReactDOMRe.Style.t = "%identity"
+external unsafeJsonToStyles: JSON.t => ReactDOMRe.Style.t = "%identity"
 
 let style = rules => rules->toJson->unsafeJsonToStyles

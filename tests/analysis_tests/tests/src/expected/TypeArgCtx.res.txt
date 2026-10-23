@@ -1,7 +1,7 @@
 Complete src/TypeArgCtx.res 7:36
-posCursor:[7:36] posNoWhite:[7:35] Found pattern:[7:26->7:39]
+pos_cursor:[7:36] pos_no_white:[7:35] Found pattern:[7:26->7:39]
 Ppat_construct Ok:[7:26->7:28]
-posCursor:[7:36] posNoWhite:[7:35] Found pattern:[7:29->7:38]
+pos_cursor:[7:36] pos_no_white:[7:35] Found pattern:[7:29->7:38]
 Completable: Cpattern Value[catchResult]->variantPayload::Ok($0), recordField(value)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib

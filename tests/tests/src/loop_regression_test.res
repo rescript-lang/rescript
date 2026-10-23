@@ -10,7 +10,7 @@ let f = () => {
       acc.contents
     } else {
       acc := acc.contents + v.contents
-      incr(v)
+      v.contents = v.contents + 1
       loop(n)
     }
   loop(10)

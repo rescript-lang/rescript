@@ -161,7 +161,7 @@ module UserItemCardMini = {
 }
 
 module Section = {
-  let randomString = () => Js.Math.random()->Js.Float.toString
+  let randomString = () => Math.random()->Float.toString
 
   let getMaxResults = (~viewportWidth) =>
     if viewportWidth >= 1440 {
@@ -213,7 +213,7 @@ module Section = {
           : None,
         ~sort,
       )
-      userItems->Js.Array.sortInPlaceWith((aUserItem, bUserItem) => sortFn(aUserItem, bUserItem))
+      userItems->Array.toSorted((a, b) => Ordering.fromInt(((aUserItem, bUserItem) => sortFn(aUserItem, bUserItem))(a, b)))
     }, [userItems])
     let viewingListUrl =
       "/u/" ++
@@ -224,7 +224,7 @@ module Section = {
       | "" => ""
       | search => "?" ++ search
       })))
-    let numResults = userItems->Js.Array.length
+    let numResults = userItems->Array.length
 
     <div className={Cn.make(list{Styles.root, Cn.ifTrue(Styles.rootMini, showMini)})}>
       <div className=Styles.sectionTitle>
@@ -316,7 +316,7 @@ module Section = {
                   path=viewingListUrl
                   className={Cn.make(list{UserItemCard.Styles.card, Styles.cardSeeAll})}
                   key="link">
-                  {React.string("See all " ++ string_of_int(Js.Array.length(userItems)))}
+                  {React.string("See all " ++ string_of_int(Array.length(userItems)))}
                   <span
                     className={Cn.make(list{
                       Styles.sectionTitleLinkIcon,

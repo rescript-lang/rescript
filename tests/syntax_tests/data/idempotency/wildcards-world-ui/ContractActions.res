@@ -4,7 +4,7 @@ open Ethers
 type txHash = string
 type tx = {
   hash: txHash,
-  wait: (unit) => Promise.Js.t<txResult, txError>,
+  wait: (unit) => Promise.t<txResult>,
 }
 type parsedUnits
 type txOptions = {
@@ -14,16 +14,16 @@ type txOptions = {
 type tokenIdString = string
 type estimateBuy = {
   buy: // (string, parsedUnits, txOptions) =>
-  (string, parsedUnits, parsedUnits, txOptions) => Promise.Js.t<string, string>,
+  (string, parsedUnits, parsedUnits, txOptions) => Promise.t<string>,
 }
 type stewardContract = {
   estimate: estimateBuy,
-  buy: (tokenIdString, parsedUnits, parsedUnits, string, txOptions) => Promise.Js.t<tx, txError>,
-  buyAuction: (tokenIdString, parsedUnits, string, txOptions) => Promise.Js.t<tx, txError>,
-  depositWei: (txOptions) => Promise.Js.t<tx, txError>,
-  withdrawDeposit: (parsedUnits, txOptions) => Promise.Js.t<tx, txError>,
-  _collectPatronagePatron: (string, txOptions) => Promise.Js.t<tx, txError>,
-  changePrice: (tokenIdString, parsedUnits, txOptions) => Promise.Js.t<tx, txError>,
+  buy: (tokenIdString, parsedUnits, parsedUnits, string, txOptions) => Promise.t<tx>,
+  buyAuction: (tokenIdString, parsedUnits, string, txOptions) => Promise.t<tx>,
+  depositWei: (txOptions) => Promise.t<tx>,
+  withdrawDeposit: (parsedUnits, txOptions) => Promise.t<tx>,
+  _collectPatronagePatron: (string, txOptions) => Promise.t<tx>,
+  changePrice: (tokenIdString, parsedUnits, txOptions) => Promise.t<tx>,
 }
 
 type ethersBnFormat
@@ -31,9 +31,9 @@ type ethersBnFormat
 
 type loyaltyTokenContract = {
   // approve(address to, uint256 tokenId)
-  allowance: (Web3.ethAddress, Web3.ethAddress) => Js.Promise.t<ethersBnFormat>,
-  balanceOf: (Web3.ethAddress) => Js.Promise.t<ethersBnFormat>,
-  approve: (Web3.ethAddress, string, txOptions) => Promise.Js.t<tx, txError>,
+  allowance: (Web3.ethAddress, Web3.ethAddress) => Promise.t<ethersBnFormat>,
+  balanceOf: (Web3.ethAddress) => Promise.t<ethersBnFormat>,
+  approve: (Web3.ethAddress, string, txOptions) => Promise.t<tx>,
 }
 
 @new @module("ethers")
@@ -249,7 +249,7 @@ let execDaiPermitMetaTx = (
     userAddress,
     spender,
   )
-  ->Js.Promise.then_(rsvSig => {
+  ->Promise.then(rsvSig => {
     setTxState(_ => SignMetaTx)
     open ContractUtil
     let {r, s, v} = rsvSig
@@ -269,9 +269,9 @@ let execDaiPermitMetaTx = (
 
     web3
     ->Web3.personalSign(messageToSign, userAddress)
-    ->Js.Promise.then_(signature => Js.Promise.resolve((functionSignature, signature)), _)
+    ->Promise.then(signature => Promise.resolve((functionSignature, signature)), _)
   }, _)
-  ->Js.Promise.then_(((functionSignature, signature)) => {
+  ->Promise.then(((functionSignature, signature)) => {
     open ContractUtil
     let {r, s, v} = getEthSig(signature)
     sendMetaTx(
@@ -284,11 +284,11 @@ let execDaiPermitMetaTx = (
         ~userAddress,
         (),
       ),
-    )->Js.Promise.resolve
+    )->Promise.resolve
   }, _)
-  ->Js.Promise.catch(err => {
-    Js.log2("this error was caught", err)
-    Js.Promise.resolve(""->Obj.magic)
+  ->Promise.catch(err => {
+    Console.log2("this error was caught", err)
+    Promise.resolve(""->Obj.magic)
   }, _)
   ->ignore
 
@@ -324,13 +324,13 @@ let handleMetaTxSumbissionState = (
       }
       let maticProvider = Ethers.makeProvider(providerUrl)
 
-      let waitForTx = maticProvider->Ethers.waitForTransaction(txHash)->Promise.Js.toResult
+      let waitForTx = maticProvider->Ethers.waitForTransaction(txHash)->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
 
       waitForTx->Promise.getOk(tx => setTxState(_ => Complete(tx)))
       waitForTx->Promise.getError(error => {
         setTxState(_ => Failed)
-        Js.log("GOT AN ERROR")
-        Js.log(error)
+        Console.log("GOT AN ERROR")
+        Console.log(error)
       })
     } else {
       @warning("-4")
@@ -435,17 +435,17 @@ let useBuy = (
               gasLimit: "500302", //calculateGasMargin(estimatedGasLimit, GAS_MARGIN),
               value: value,
             },
-          )->Promise.Js.toResult
+          )->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
           buyPromise->Promise.getOk(tx => {
             setTxState(_ => SignedAndSubmitted(tx.hash))
-            let txMinedPromise = tx.wait()->Promise.Js.toResult
+            let txMinedPromise = tx.wait()->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
             txMinedPromise->Promise.getOk(txOutcome => {
-              Js.log(txOutcome)
+              Console.log(txOutcome)
               setTxState(_ => Complete(txOutcome))
             })
             txMinedPromise->Promise.getError(error => {
               setTxState(_ => Failed)
-              Js.log(error)
+              Console.log(error)
             })
             ()
           })
@@ -518,8 +518,8 @@ let useBuyAuction = (~chain, animal, library: option<Web3.web3Library>, account,
           )
 
         | _ =>
-          Js.log("something important is null")
-          Js.log3(library, account, maticState)
+          Console.log("something important is null")
+          Console.log3(library, account, maticState)
           ()
         },
       txState,
@@ -541,17 +541,17 @@ let useBuyAuction = (~chain, animal, library: option<Web3.web3Library>, account,
               gasLimit: "500302", //calculateGasMargin(estimatedGasLimit, GAS_MARGIN),
               value: value,
             },
-          )->Promise.Js.toResult
+          )->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
           buyPromise->Promise.getOk(tx => {
             setTxState(_ => SignedAndSubmitted(tx.hash))
-            let txMinedPromise = tx.wait()->Promise.Js.toResult
+            let txMinedPromise = tx.wait()->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
             txMinedPromise->Promise.getOk(txOutcome => {
-              Js.log(txOutcome)
+              Console.log(txOutcome)
               setTxState(_ => Complete(txOutcome))
             })
             txMinedPromise->Promise.getError(error => {
               setTxState(_ => Failed)
-              Js.log(error)
+              Console.log(error)
             })
             ()
           })
@@ -579,17 +579,17 @@ let useRedeemLoyaltyTokens = (patron: string) => {
           gasLimit: "500302", //calculateGasMargin(estimatedGasLimit, GAS_MARGIN),
           value: value,
         },
-      )->Promise.Js.toResult
+      )->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
       claimLoyaltyTokenPromise->Promise.getOk(tx => {
         setTxState(_ => SignedAndSubmitted(tx.hash))
-        let txMinedPromise = tx.wait()->Promise.Js.toResult
+        let txMinedPromise = tx.wait()->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
         txMinedPromise->Promise.getOk(txOutcome => {
-          Js.log(txOutcome)
+          Console.log(txOutcome)
           setTxState(_ => Complete(txOutcome))
         })
         txMinedPromise->Promise.getError(error => {
           setTxState(_ => Failed)
-          Js.log(error)
+          Console.log(error)
         })
         ()
       })
@@ -657,8 +657,8 @@ let useUpdateDeposit = (~chain, library: option<Web3.web3Library>, account, pare
           )
 
         | _ =>
-          Js.log("something important is null")
-          Js.log3(library, account, maticState)
+          Console.log("something important is null")
+          Console.log3(library, account, maticState)
           ()
         },
       txState,
@@ -673,16 +673,16 @@ let useUpdateDeposit = (~chain, library: option<Web3.web3Library>, account, pare
           let updateDepositPromise = steward.depositWei({
             gasLimit: "500302", //calculateGasMargin(estimatedGasLimit, GAS_MARGIN),
             value: value,
-          })->Promise.Js.toResult
+          })->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
           updateDepositPromise->Promise.getOk(tx => {
             setTxState(_ => SignedAndSubmitted(tx.hash))
-            let txMinedPromise = tx.wait()->Promise.Js.toResult
+            let txMinedPromise = tx.wait()->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
             txMinedPromise->Promise.getOk(txOutcome => setTxState(_ => Complete(txOutcome)))
             txMinedPromise->Promise.getError(_error => setTxState(_ => Failed))
             ()
           })
           updateDepositPromise->Promise.getError(error =>
-            Js.log("error processing transaction: " ++ error.message)
+            Console.log("error processing transaction: " ++ error.message)
           )
           ()
         | None => ()
@@ -716,9 +716,9 @@ let useWithdrawDeposit = (~chain, library: option<Web3.web3Library>, account, pa
               from: account,
             })
           }
-          ->Js.Promise.catch(err => {
-            Js.log2("this error was caught", err)
-            Js.Promise.resolve(""->Obj.magic)
+          ->Promise.catch(err => {
+            Console.log2("this error was caught", err)
+            Promise.resolve(""->Obj.magic)
           }, _)
           ->ignore
         | _ => ()
@@ -738,17 +738,17 @@ let useWithdrawDeposit = (~chain, library: option<Web3.web3Library>, account, pa
               gasLimit: "500302", //calculateGasMargin(estimatedGasLimit, GAS_MARGIN),
               value: value,
             },
-          )->Promise.Js.toResult
+          )->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
           updateDepositPromise->Promise.getOk(tx => {
             setTxState(_ => SignedAndSubmitted(tx.hash))
-            let txMinedPromise = tx.wait()->Promise.Js.toResult
+            let txMinedPromise = tx.wait()->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
             txMinedPromise->Promise.getOk(txOutcome => {
-              Js.log(txOutcome)
+              Console.log(txOutcome)
               setTxState(_ => Complete(txOutcome))
             })
             txMinedPromise->Promise.getError(error => {
               setTxState(_ => Failed)
-              Js.log(error)
+              Console.log(error)
             })
             ()
           })
@@ -805,17 +805,17 @@ let useChangePrice = animal => {
             gasLimit: "500302", //calculateGasMargin(estimatedGasLimit, GAS_MARGIN),
             value: value,
           },
-        )->Promise.Js.toResult
+        )->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
         updatePricePromise->Promise.getOk(tx => {
           setTxState(_ => SignedAndSubmitted(tx.hash))
-          let txMinedPromise = tx.wait()->Promise.Js.toResult
+          let txMinedPromise = tx.wait()->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
           txMinedPromise->Promise.getOk(txOutcome => {
-            Js.log(txOutcome)
+            Console.log(txOutcome)
             setTxState(_ => Complete(txOutcome))
           })
           txMinedPromise->Promise.getError(error => {
             setTxState(_ => Failed)
-            Js.log(error)
+            Console.log(error)
           })
           ()
         })

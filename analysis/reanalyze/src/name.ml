@@ -13,8 +13,8 @@ let is_underscore s = s = "_" || s = "+_"
 let starts_with_underscore s =
   s |> String.length >= 2
   &&
-  try s.[0] = '_' || (s.[0] = '+' && s.[1] = '_')
-  with Invalid_argument _ -> false
+    try s.[0] = '_' || (s.[0] = '+' && s.[1] = '_')
+    with Invalid_argument _ -> false
 
 let to_interface s =
   match is_interface s with

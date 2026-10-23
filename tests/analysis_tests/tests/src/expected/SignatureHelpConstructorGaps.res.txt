@@ -1,0 +1,237 @@
+Signature help src/SignatureHelpConstructorGaps.res 2:17
+{
+  "activeParameter": 1,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 1,
+      "label": "Three(string, array<int>)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 6, 12 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 14, 24 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorGaps.res 4:18
+{
+  "activeParameter": 1,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 1,
+      "label": "Three(string, array<int>)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 6, 12 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 14, 24 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorGaps.res 6:19
+{
+  "activeParameter": 1,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 1,
+      "label": "Three(string, array<int>)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 6, 12 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 14, 24 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorGaps.res 8:14
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "Three(string, array<int>)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 6, 12 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 14, 24 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorGaps.res 10:14
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "Unary(string)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 6, 12 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorGaps.res 13:20
+{
+  "activeParameter": 1,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 1,
+      "label": "Three(string, array<int>)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 6, 12 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 14, 24 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorGaps.res 15:17
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "Three(string, array<int>)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 6, 12 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 14, 24 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorGaps.res 19:2
+{
+  "activeParameter": 1,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 1,
+      "label": "Three(string, array<int>)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 6, 12 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 14, 24 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorGaps.res 23:11
+null
+
+Signature help src/SignatureHelpConstructorGaps.res 27:10
+{
+  "activeParameter": 1,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 1,
+      "label": "Three(string, array<int>)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 6, 12 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 14, 24 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorGaps.res 29:11
+{
+  "activeParameter": 1,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 1,
+      "label": "Three(string, array<int>)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 6, 12 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 14, 24 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/SignatureHelpConstructorGaps.res 31:8
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "Unary(string)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 6, 12 ]
+        }
+      ]
+    }
+  ]
+}
+

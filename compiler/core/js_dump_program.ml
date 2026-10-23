@@ -57,13 +57,29 @@ let extract_file_comments (x : J.deps_program) =
   let comments, new_block = extract_block_comments [] x.program.block in
   (comments, {x with program = {x.program with block = new_block}})
 
+(* The initial scope for printing [x], reserving the raw JS names it refers
+   to so that renamed locals can't capture them. *)
+let initial_scope (x : J.program) =
+  let names = ref Set_string.empty in
+  let super = Js_record_iter.super in
+  let self =
+    {
+      super with
+      ident =
+        (fun _ id ->
+          if Ext_ident.is_js id then names := Set_string.add id.name !names);
+    }
+  in
+  self.program self x;
+  Ext_pp_scope.reserve Ext_pp_scope.empty !names
+
 let program f cxt (x : J.program) =
   P.at_least_two_lines f;
   let cxt = Js_dump.statements true cxt f x.block in
   Js_dump_import_export.exports cxt f x.exports
 
 let dump_program (x : J.program) oc =
-  ignore (program (P.from_channel oc) Ext_pp_scope.empty x)
+  ignore (program (P.from_channel oc) (initial_scope x) x)
 
 let[@inline] is_default (x : Js_op.kind) =
   match x with
@@ -74,7 +90,7 @@ let commonjs_program ~output_dir f (x : J.deps_program) =
   P.string f L.strict_directive;
   P.newline f;
   let cxt =
-    Js_dump_import_export.requires L.require Ext_pp_scope.empty f
+    Js_dump_import_export.requires L.require (initial_scope x.program) f
       (* Not be emitted in require statements *)
       (Ext_list.filter_map x.modules (fun x ->
            match x.dynamic_import with
@@ -89,7 +105,7 @@ let commonjs_program ~output_dir f (x : J.deps_program) =
 
 let esmodule_program ~output_dir fmt f (x : J.deps_program) =
   let cxt =
-    Js_dump_import_export.imports Ext_pp_scope.empty f
+    Js_dump_import_export.imports (initial_scope x.program) f
       (* Not be emitted in import statements *)
       (Ext_list.filter_map x.modules (fun x ->
            match x.dynamic_import with
@@ -110,11 +126,11 @@ let esmodule_program ~output_dir fmt f (x : J.deps_program) =
 let pp_deps_program ~(output_prefix : string)
     (kind : Js_packages_info.module_system) (program : J.deps_program)
     (f : Ext_pp.t) =
-  !Js_config.directives
+  !((Js_config.current ()).directives)
   |> List.iter (fun prim ->
-         P.string f prim;
-         P.newline f);
-  if not !Js_config.no_version_header then (
+      P.string f prim;
+      P.newline f);
+  if not !((Js_config.current ()).no_version_header) then (
     P.string f Bs_version.header;
     P.newline f);
 

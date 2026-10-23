@@ -25,24 +25,12 @@ type attrs = attribute list
 
 (** {1 Default locations} *)
 
-val default_loc : loc ref
-(** Default value for all optional location arguments. *)
-
-val with_default_loc : loc -> (unit -> 'a) -> 'a
-(** Set the [default_loc] within the scope of the execution
-        of the provided function. *)
-
 (** {1 Constants} *)
 
 module Const : sig
-  val char : char -> constant
-  val string : ?quotation_delimiter:string -> string -> constant
+  val string : string -> constant
   val integer : ?suffix:char -> string -> constant
   val int : ?suffix:char -> int -> constant
-  val int32 : ?suffix:char -> int32 -> constant
-  val int64 : ?suffix:char -> int64 -> constant
-  val nativeint : ?suffix:char -> nativeint -> constant
-  val float : ?suffix:char -> string -> constant
 end
 
 (** {1 Core language} *)
@@ -50,13 +38,12 @@ end
 (** Type expressions *)
 module Typ : sig
   val mk : ?loc:loc -> ?attrs:attrs -> core_type_desc -> core_type
-  val attr : core_type -> attribute -> core_type
 
   val any : ?loc:loc -> ?attrs:attrs -> unit -> core_type
   val var : ?loc:loc -> ?attrs:attrs -> string -> core_type
-  val arrow :
-    ?loc:loc -> ?attrs:attrs -> arity:arity -> arg -> core_type -> core_type
-  val arrows : ?loc:loc -> ?attrs:attrs -> arg list -> core_type -> core_type
+
+  (* n-ary arrow type; the params list must be non-empty *)
+  val arrow : ?loc:loc -> ?attrs:attrs -> arg list -> core_type -> core_type
   val tuple : ?loc:loc -> ?attrs:attrs -> core_type list -> core_type
   val constr : ?loc:loc -> ?attrs:attrs -> lid -> core_type list -> core_type
   val object_ :
@@ -89,7 +76,6 @@ end
 (** Patterns *)
 module Pat : sig
   val mk : ?loc:loc -> ?attrs:attrs -> pattern_desc -> pattern
-  val attr : pattern -> attribute -> pattern
 
   val any : ?loc:loc -> ?attrs:attrs -> unit -> pattern
   val var : ?loc:loc -> ?attrs:attrs -> str -> pattern
@@ -97,8 +83,13 @@ module Pat : sig
   val constant : ?loc:loc -> ?attrs:attrs -> constant -> pattern
   val interval : ?loc:loc -> ?attrs:attrs -> constant -> constant -> pattern
   val tuple : ?loc:loc -> ?attrs:attrs -> pattern list -> pattern
-  val construct : ?loc:loc -> ?attrs:attrs -> lid -> pattern option -> pattern
-  val variant : ?loc:loc -> ?attrs:attrs -> label -> pattern option -> pattern
+
+  (* Argument lists carry their own locations. Generated nodes must supply
+     an explicit fallback location; see the parsetree location contract. *)
+  val construct :
+    ?loc:loc -> ?attrs:attrs -> lid -> pattern list Location.loc -> pattern
+  val variant :
+    ?loc:loc -> ?attrs:attrs -> label -> pattern list Location.loc -> pattern
   val record :
     ?loc:loc ->
     ?attrs:attrs ->
@@ -106,12 +97,13 @@ module Pat : sig
     pattern record_element list ->
     closed_flag ->
     pattern
+  val dict : ?loc:loc -> ?attrs:attrs -> dict_pattern_entry list -> pattern
   val array : ?loc:loc -> ?attrs:attrs -> pattern list -> pattern
   val or_ : ?loc:loc -> ?attrs:attrs -> pattern -> pattern -> pattern
   val constraint_ : ?loc:loc -> ?attrs:attrs -> pattern -> core_type -> pattern
   val type_ : ?loc:loc -> ?attrs:attrs -> lid -> pattern
+  val variant_spread : ?loc:loc -> ?attrs:attrs -> lid -> pattern
   val unpack : ?loc:loc -> ?attrs:attrs -> str -> pattern
-  val open_ : ?loc:loc -> ?attrs:attrs -> lid -> pattern -> pattern
   val exception_ : ?loc:loc -> ?attrs:attrs -> pattern -> pattern
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> pattern
 end
@@ -119,8 +111,8 @@ end
 (** Expressions *)
 module Exp : sig
   val mk : ?loc:loc -> ?attrs:attrs -> expression_desc -> expression
-  val attr : expression -> attribute -> expression
 
+  val braces : ?attrs:attrs -> braces_loc:loc -> expression -> expression
   val ident : ?loc:loc -> ?attrs:attrs -> lid -> expression
   val constant : ?loc:loc -> ?attrs:attrs -> constant -> expression
   val let_ :
@@ -134,12 +126,13 @@ module Exp : sig
     ?loc:loc ->
     ?attrs:attrs ->
     ?async:bool ->
-    arity:int option ->
-    arg_label ->
-    expression option ->
-    pattern ->
+    ?newtypes:(str * attrs) list ->
+    fun_param list ->
     expression ->
     expression
+
+  val fun_param :
+    ?attrs:attrs -> ?default:expression -> arg_label -> pattern -> fun_param
   val apply :
     ?loc:loc ->
     ?attrs:attrs ->
@@ -152,9 +145,17 @@ module Exp : sig
   val try_ : ?loc:loc -> ?attrs:attrs -> expression -> case list -> expression
   val tuple : ?loc:loc -> ?attrs:attrs -> expression list -> expression
   val construct :
-    ?loc:loc -> ?attrs:attrs -> lid -> expression option -> expression
+    ?loc:loc ->
+    ?attrs:attrs ->
+    lid ->
+    expression list Location.loc ->
+    expression
   val variant :
-    ?loc:loc -> ?attrs:attrs -> label -> expression option -> expression
+    ?loc:loc ->
+    ?attrs:attrs ->
+    label ->
+    expression list Location.loc ->
+    expression
   val record :
     ?loc:loc ->
     ?attrs:attrs ->
@@ -165,12 +166,20 @@ module Exp : sig
   val setfield :
     ?loc:loc -> ?attrs:attrs -> expression -> lid -> expression -> expression
   val array : ?loc:loc -> ?attrs:attrs -> expression list -> expression
+  val dict : ?loc:loc -> ?attrs:attrs -> dict_entry list -> expression
   val ifthenelse :
     ?loc:loc ->
     ?attrs:attrs ->
     expression ->
     expression ->
     expression option ->
+    expression
+  val ternary :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    expression ->
+    expression ->
+    expression ->
     expression
   val sequence :
     ?loc:loc -> ?attrs:attrs -> expression -> expression -> expression
@@ -204,7 +213,18 @@ module Exp : sig
   val coerce : ?loc:loc -> ?attrs:attrs -> expression -> core_type -> expression
   val constraint_ :
     ?loc:loc -> ?attrs:attrs -> expression -> core_type -> expression
-  val send : ?loc:loc -> ?attrs:attrs -> expression -> str -> expression
+  val object_get : ?loc:loc -> ?attrs:attrs -> expression -> str -> expression
+
+  val object_set :
+    ?loc:loc -> ?attrs:attrs -> expression -> str -> expression -> expression
+
+  val object_literal :
+    ?loc:loc -> ?attrs:attrs -> (str * expression) list -> expression
+
+  val regexp : ?loc:loc -> ?attrs:attrs -> string -> string -> expression
+
+  val template :
+    ?loc:loc -> ?attrs:attrs -> str list -> expression list -> expression
   val letmodule :
     ?loc:loc -> ?attrs:attrs -> str -> module_expr -> expression -> expression
   val letexception :
@@ -214,11 +234,24 @@ module Exp : sig
     expression ->
     expression
   val assert_ : ?loc:loc -> ?attrs:attrs -> expression -> expression
-  val newtype : ?loc:loc -> ?attrs:attrs -> str -> expression -> expression
   val pack : ?loc:loc -> ?attrs:attrs -> module_expr -> expression
   val open_ :
     ?loc:loc -> ?attrs:attrs -> override_flag -> lid -> expression -> expression
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> expression
+  val raw :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    name_loc:loc ->
+    raw_kind ->
+    raw_source ->
+    expression
+  val tagged_template :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    expression ->
+    str list ->
+    expression list ->
+    expression
   val jsx_fragment :
     ?loc:loc ->
     ?attrs:attrs ->
@@ -250,15 +283,30 @@ module Exp : sig
     Location.t -> expression list -> expression option -> expression
 end
 
+(** JSX component annotations *)
+module Jsx_component : sig
+  val of_attribute : attribute -> jsx_component option
+  (** The component an attribute such as [@react.component] denotes, if its
+      payload is one the JSX transform understands. *)
+
+  val to_attribute : jsx_component -> attribute
+end
+
 (** Value declarations *)
 module Val : sig
   val mk :
     ?loc:loc ->
     ?attrs:attrs ->
-    ?prim:string list ->
+    ?prim:primitive_repr ->
     str ->
     core_type ->
     value_description
+  (** A [@react.component] annotation in [attrs] is taken out and becomes
+      [pval_jsx_component]. *)
+
+  val description_attributes : value_description -> attrs
+  (** The attributes as written, with the [@react.component] annotation put
+      back. For printers, which must reproduce the source. *)
 end
 
 (** Type declarations *)
@@ -271,24 +319,42 @@ module Type : sig
     ?kind:type_kind ->
     ?priv:private_flag ->
     ?manifest:core_type ->
+    ?origin:type_declaration_origin ->
     str ->
     type_declaration
+
+  val declaration_attributes : type_declaration -> attributes
+  (** Restore the inline-record marker for the frozen v0 PPX tree. *)
 
   val constructor :
     ?loc:loc ->
     ?attrs:attrs ->
     ?args:constructor_arguments ->
     ?res:core_type ->
+    ?runtime_tag:constructor_tag ->
     str ->
     constructor_declaration
+  (** A valid first [@as] in [attrs] is taken out and becomes the runtime tag,
+      unless one is given explicitly. *)
+
+  val constructor_attributes : constructor_declaration -> attrs
+  (** The attributes as written, with the constructor [@as] put back. *)
+
   val field :
     ?loc:loc ->
     ?attrs:attrs ->
     ?mut:mutable_flag ->
     ?optional:bool ->
+    ?runtime_name:string ->
     str ->
     core_type ->
     label_declaration
+  (** [@as("x")] in [attrs] is taken out and becomes the runtime name, unless
+      one is given explicitly. *)
+
+  val field_attributes : label_declaration -> attrs
+  (** The attributes as written, with the [@as] taken out by [field] put back.
+      For printers, which must reproduce the source. *)
 end
 
 (** Type extensions *)
@@ -307,15 +373,6 @@ module Te : sig
     str ->
     extension_constructor_kind ->
     extension_constructor
-
-  val decl :
-    ?loc:loc ->
-    ?attrs:attrs ->
-    ?args:constructor_arguments ->
-    ?res:core_type ->
-    str ->
-    extension_constructor
-  val rebind : ?loc:loc -> ?attrs:attrs -> str -> lid -> extension_constructor
 end
 
 module Jsx : sig
@@ -328,7 +385,6 @@ end
 (** Module type expressions *)
 module Mty : sig
   val mk : ?loc:loc -> ?attrs:attrs -> module_type_desc -> module_type
-  val attr : module_type -> attribute -> module_type
 
   val ident : ?loc:loc -> ?attrs:attrs -> lid -> module_type
   val alias : ?loc:loc -> ?attrs:attrs -> lid -> module_type
@@ -353,7 +409,6 @@ end
 (** Module expressions *)
 module Mod : sig
   val mk : ?loc:loc -> ?attrs:attrs -> module_expr_desc -> module_expr
-  val attr : module_expr -> attribute -> module_expr
 
   val ident : ?loc:loc -> ?attrs:attrs -> lid -> module_expr
   val structure : ?loc:loc -> ?attrs:attrs -> structure -> module_expr
@@ -370,6 +425,7 @@ module Mod : sig
     ?loc:loc -> ?attrs:attrs -> module_expr -> module_type -> module_expr
   val unpack : ?loc:loc -> ?attrs:attrs -> expression -> module_expr
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> module_expr
+  val await : ?loc:loc -> ?attrs:attrs -> module_expr -> module_expr
 end
 
 (** Signature items *)
@@ -405,6 +461,8 @@ module Str : sig
   val open_ : ?loc:loc -> open_description -> structure_item
   val include_ : ?loc:loc -> include_declaration -> structure_item
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> structure_item
+  val raw :
+    ?loc:loc -> ?attrs:attrs -> name_loc:loc -> raw_source -> structure_item
   val attribute : ?loc:loc -> attribute -> structure_item
 end
 
@@ -445,5 +503,17 @@ end
 
 (** Value bindings *)
 module Vb : sig
-  val mk : ?loc:loc -> ?attrs:attrs -> pattern -> expression -> value_binding
+  val mk :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    ?constraint_:value_constraint ->
+    pattern ->
+    expression ->
+    value_binding
+  (** A [@react.component] annotation in [attrs] is taken out and becomes
+      [pvb_jsx_component]. *)
+
+  val binding_attributes : value_binding -> attrs
+  (** The attributes as written, with the [@react.component] annotation put
+      back. For printers, which must reproduce the source. *)
 end

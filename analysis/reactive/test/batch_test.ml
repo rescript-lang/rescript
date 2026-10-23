@@ -55,9 +55,9 @@ let test_batch_fixpoint () =
         incr batch_count;
         entries
         |> List.iter (fun (_, v_opt) ->
-               match v_opt with
-               | Some () -> incr total_added
-               | None -> ())
+            match v_opt with
+            | Some () -> incr total_added
+            | None -> ())
       | Set (_, ()) -> incr total_added
       | Remove _ -> ())
     fp;

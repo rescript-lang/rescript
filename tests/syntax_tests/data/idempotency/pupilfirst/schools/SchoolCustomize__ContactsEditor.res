@@ -46,23 +46,23 @@ let handleUpdateContactDetails = (state, send, updateAddressCB, updateEmailAddre
 
   UpdateContactDetailsQuery.make(~address=state.address, ~emailAddress=state.emailAddress, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(result =>
+  ->Promise.then(result =>
     switch (result["updateAddress"]["errors"], result["updateEmailAddress"]["errors"]) {
     | ([], []) =>
       Notification.success("Done!", "Contact details have been updated.")
       updateAddressCB(state.address)
       updateEmailAddressCB(state.emailAddress)
       send(DoneUpdating)
-      Js.Promise.resolve()
+      Promise.resolve()
     | ([], errors) =>
       Notification.notice("Partial success!", "We were only able to update the address.")
-      Js.Promise.reject(UpdateSchoolStringErrorHandler.Errors(errors))
+      Promise.reject(UpdateSchoolStringErrorHandler.Errors(errors))
     | (errors, []) =>
       Notification.notice("Partial success!", "We were only able to update the email address.")
-      Js.Promise.reject(UpdateSchoolStringErrorHandler.Errors(errors))
+      Promise.reject(UpdateSchoolStringErrorHandler.Errors(errors))
     | (addressErrors, emailAddressErrors) =>
       let errors = addressErrors->Array.append(emailAddressErrors)
-      Js.Promise.reject(UpdateSchoolStringErrorHandler.Errors(errors))
+      Promise.reject(UpdateSchoolStringErrorHandler.Errors(errors))
     }
   )
   ->UpdateSchoolStringErrorHandler.catch(() => send(ErrorOccured))

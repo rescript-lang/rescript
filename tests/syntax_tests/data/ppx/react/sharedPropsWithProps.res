@@ -1,4 +1,4 @@
-let f = a => Js.Promise.resolve(a + a)
+let f = a => Promise.resolve(a + a)
 
 @@jsxConfig({version:4})
 
@@ -54,4 +54,12 @@ module V4A7 = {
   props => {
     React.int(props.count)
   }
+}
+
+module V4A8 = {
+  type props = {x: string}
+
+  // The payload has no effect; it is accepted with a deprecation warning.
+  @react.componentWithProps(: props)
+  let make = props => React.string(props.x)
 }

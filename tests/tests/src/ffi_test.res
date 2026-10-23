@@ -1,9 +1,9 @@
 @val external f: int => int = "xx"
 
 let u = () => f(3)
-let v = Js.Null.empty
+let v = Nullable.null
 
-let (a, b, c, d) = (true, false, Js.Null.empty, Js.Undefined.empty)
+let (a, b, c, d) = (true, false, Nullable.null, Nullable.undefined)
 
 module Textarea = {
   type t

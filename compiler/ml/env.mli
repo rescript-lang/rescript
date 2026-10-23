@@ -35,10 +35,9 @@ type summary =
 type t
 
 val empty : t
-val initial_safe_string : t
-
-val diff : t -> t -> Ident.t list
-val copy_local : from:t -> t -> t
+val initial_safe_string : unit -> t
+val reset_initial_for_request : unit -> unit
+val with_fresh_initial : (unit -> 'a) -> 'a
 
 type type_descriptions = constructor_description list * label_description list
 
@@ -71,7 +70,6 @@ val find_type_expansion_opt :
 (* Find the manifest type information associated to a type for the sake
    of the compiler's type-based optimisations. *)
 val find_modtype_expansion : Path.t -> t -> module_type
-val add_functor_arg : Ident.t -> t -> t
 val is_functor_arg : Path.t -> t -> bool
 val normalize_path : Location.t option -> t -> Path.t -> Path.t
 
@@ -101,7 +99,6 @@ val lookup_all_constructors :
   Longident.t ->
   t ->
   (constructor_description * (unit -> unit)) list
-val lookup_label : ?loc:Location.t -> Longident.t -> t -> label_description
 val lookup_all_labels :
   ?loc:Location.t ->
   Longident.t ->
@@ -164,7 +161,6 @@ val enter_value :
   t ->
   Ident.t * t
 val enter_type : string -> type_declaration -> t -> Ident.t * t
-val enter_extension : string -> extension_constructor -> t -> Ident.t * t
 val enter_module : ?arg:bool -> string -> module_type -> t -> Ident.t * t
 val enter_module_declaration :
   ?arg:bool -> Ident.t -> module_declaration -> t -> t
@@ -194,44 +190,25 @@ val save_signature :
   Cmi_format.cmi_infos
 (* Arguments: signature, module name, file name. *)
 
-val save_signature_with_imports :
-  ?check_exists:unit ->
-  deprecated:string option ->
-  signature ->
-  string ->
-  string ->
-  (string * Digest.t option) list ->
-  Cmi_format.cmi_infos
 (* Arguments: signature, module name, file name,
    imported units with their CRCs. *)
 
 (* Return the CRC of the interface of the given compilation unit *)
 
-val crc_of_unit : string -> Digest.t
-
-(* Return the set of compilation units imported, with their CRC *)
-
 val imports : unit -> (string * Digest.t option) list
 
 (* Direct access to the table of imported compilation units with their CRC *)
 
-val crc_units : Consistbl.t
+val crc_units : unit -> Consistbl.t
 val add_import : string -> unit
 
 (* Summaries -- compact representation of an environment, to be
    exported in debugging information. *)
 
-val summary : t -> summary
-
 (* Return an equivalent environment where all fields have been reset,
-   except the summary. The initial environment can be rebuilt from the
-   summary, using Envaux.env_of_only_summary. *)
+   except the summary. *)
 
 val keep_only_summary : t -> t
-val env_of_only_summary : (summary -> Subst.t -> t) -> t -> t
-
-(* Error report *)
-
 type error =
   | Illegal_renaming of string * string * string
   | Inconsistent_import of string * string * string
@@ -239,10 +216,6 @@ type error =
   | Illegal_value_name of Location.t * string
 
 exception Error of error
-
-open Format
-
-val report_error : formatter -> error -> unit
 
 val mark_value_used : t -> string -> value_description -> unit
 val mark_module_used : t -> string -> Location.t -> unit

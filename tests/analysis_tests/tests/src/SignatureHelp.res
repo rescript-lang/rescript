@@ -157,3 +157,13 @@ let _bbb = Error("err")
 
 let _cc = Some(true)
 //              ^she
+
+let makeAdder = (base: int, offset: int): (int => int) => {
+  let _ = offset
+  x => x + base + offset
+}
+
+// Only makeAdder's own two parameters may be listed; the returned
+// function's parameter belongs to a different call site.
+// let _ = makeAdder(1, 2)
+//                       ^she

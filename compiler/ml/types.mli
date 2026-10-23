@@ -53,8 +53,6 @@ type type_expr = {mutable desc: type_desc; mutable level: int; id: int}
     all other known types.
     Whereas [type_expr] is a pure construct which allows referring to existing
     types.
-
-    Note on mutability: TBD.
  *)
 
 and arg = {lbl: arg_label; typ: type_expr}
@@ -63,36 +61,28 @@ and type_desc =
   | Tvar of string option
       (** [Tvar (Some "a")] ==> ['a] or ['_a]
       [Tvar None]       ==> [_] *)
-  | Tarrow of arg * type_expr * commutable * arity
-      (** [Tarrow (Nolabel,      e1, e2, c)] ==> [e1    -> e2]
-      [Tarrow (Labelled {txt="l"}, e1, e2, c)] ==> [l:e1  -> e2]
-      [Tarrow (Optional {txt="l"}, e1, e2, c)] ==> [?l:e1 -> e2]
-
-      See [commutable] for the last argument. *)
+  | Tarrow of arg list * type_expr
+      (** [Tarrow ([e1; ~l:e2; ?l:e3], ret)] ==> [(e1, ~l:e2, ~l:e3=?) => ret]
+      The n-ary uncurried function type: the arity is the length of the
+      parameter list, and a function returning a function is a nested
+      [Tarrow] in the return type. Invariant: the list is non-empty. *)
   | Ttuple of type_expr list  (** [Ttuple [t1;...;tn]] ==> [(t1 * ... * tn)] *)
   | Tconstr of Path.t * type_expr list * abbrev_memo ref
       (** [Tconstr (`A.B.t', [t1;...;tn], _)] ==> [(t1,...,tn) A.B.t]
       The last parameter keep tracks of known expansions, see [abbrev_memo]. *)
-  | Tobject of type_expr * (Path.t * type_expr list) option ref
-      (** [Tobject (`f1:t1;...;fn: tn', `None')] ==> [< f1: t1; ...; fn: tn >]
+  | Tobject of type_expr
+      (** [Tobject `f1:t1;...;fn: tn'] ==> [{"f1": t1, ..., "fn": tn}]
       f1, fn are represented as a linked list of types using Tfield and Tnil
-      constructors.
-
-      [Tobject (_, `Some (`A.ct', [t1;...;tn]')] ==> [(t1, ..., tn) A.ct].
-      where A.ct is the type of some class.
-
-      There are also special cases for so-called "class-types", cf. [Typeclass]
-      and [Ctype.set_object_name]:
-
-        [Tobject (Tfield(_,_,...(Tfield(_,_,rv)...),
-                         Some(`A.#ct`, [rv;t1;...;tn])]
-             ==> [(t1, ..., tn) #A.ct]
-        [Tobject (_, Some(`A.#ct`, [Tnil;t1;...;tn])] ==> [(t1, ..., tn) A.ct]
-
-      where [rv] is the hidden row variable.
-  *)
-  | Tfield of string * field_kind * type_expr * type_expr
-      (** [Tfield ("foo", Fpresent, t, ts)] ==> [<...; foo : t; ts>] *)
+      constructors, terminated by a row variable when the row is open. *)
+  | Tfield of {
+      name: string;
+      mutability: field_mutability ref;
+      typ: type_expr;
+      rest: type_expr;
+    }
+      (** [Tfield {name = "foo"; mutability; typ; rest}]
+      ==> [{.. "foo": typ, rest}]. [mutability] is a shared cell; inspect its
+      semantic value with [Btype.mutability_repr]. *)
   | Tnil  (** [Tnil] ==> [<...; >] *)
   | Tlink of type_expr  (** Indirection used by unification engine. *)
   | Tsubst of type_expr (* for copying *)
@@ -179,30 +169,15 @@ and abbrev_memo =
   | Mlink of abbrev_memo ref
       (** Abbreviations can be found after this indirection *)
 
-and field_kind = Fvar of field_kind option ref | Fpresent | Fabsent
+(** Assignment capability of an object field.
 
-(** [commutable] is a flag appended to every arrow type.
-
-    When typing an application, if the type of the functional is
-    known, its type is instantiated with [Cok] arrows, otherwise as
-    [Clink (ref Cunknown)].
-
-    When the type is not known, the application will be used to infer
-    the actual type.  This is fragile in presence of labels where
-    there is no principal type.
-
-    Two incompatible applications relying on [Cunknown] arrows will
-    trigger an error.
-
-    let f g =
-      g ~a:() ~b:();
-      g ~b:() ~a:();
-
-    Error: This function is applied to arguments
-    in an order different from other calls.
-    This is only allowed when the real type is known.
-*)
-and commutable = Cok | Cunknown | Clink of commutable ref
+    The semantic value is [Immutable] or [Mutable]. [Mutability_link] is an
+    internal edge between cells which have the same capability, not a third
+    value. Code making a semantic decision must use [Btype.mutability_repr]
+    rather than inspect a cell directly. *)
+and field_mutability =
+  | Mutability_value of Asttypes.mutable_flag
+  | Mutability_link of field_mutability ref
 
 module Type_ops : sig
   type t = type_expr
@@ -211,9 +186,6 @@ module Type_ops : sig
   val hash : t -> int
 end
 
-(* Maps of methods and instance variables *)
-
-module Meths : Map.S with type key = string
 module Vars : Map.S with type key = string
 
 (* Value descriptions *)
@@ -263,7 +235,7 @@ type type_declaration = {
   type_loc: Location.t;
   type_attributes: Parsetree.attributes;
   type_immediate: bool; (* true iff type should not be a pointer *)
-  type_unboxed: unboxed_status;
+  type_representation: type_representation;
   type_inlined_types: type_inlined_type list;
       (** Representation of inlined types, needed for printing *)
 }
@@ -274,25 +246,31 @@ and type_inlined_type =
 and type_kind =
   | Type_abstract
   | Type_record of label_declaration list * record_representation
-  | Type_variant of constructor_declaration list
+  | Type_variant of constructor_declaration list * Variant_runtime.layout_ref
   | Type_open
 
 and record_representation =
   | Record_regular (* All fields are boxed / tagged *)
-  | Record_float_unused (* Was: all fields are floats. Now: unused *)
   | Record_unboxed of bool (* Unboxed single-field record, inlined or not *)
   | Record_inlined of
       (* Inlined record *)
        {
-      tag: int;
       name: string;
-      num_nonconsts: int;
-      attrs: Parsetree.attributes;
+      representation: Variant_runtime.constructor_reference;
     }
   | Record_extension (* Inlined record under extension *)
 
 and label_declaration = {
   ld_id: Ident.t;
+  ld_runtime_name: string option;
+      (* The name the field has at run time, when it differs from [ld_id].
+         Comes from [@as] on the declaration, as its decoded value: two
+         spellings of one name are one name, so this compares by [=] and is
+         stable in the cmi. Note the asymmetry with [ld_attributes] below,
+         which still carries whole parsetree attributes, source spelling
+         included. That is safe only because every reader of an attribute
+         payload goes through a semantic accessor; anything comparing
+         attributes structurally would be comparing keystrokes. *)
   ld_mutable: mutable_flag;
   ld_optional: bool;
   ld_type: type_expr;
@@ -302,6 +280,8 @@ and label_declaration = {
 
 and constructor_declaration = {
   cd_id: Ident.t;
+  cd_runtime_tag: Variant_runtime.literal_tag option;
+      (* The decoded [@as] value of the constructor. *)
   cd_args: constructor_arguments;
   cd_res: type_expr option;
   cd_loc: Location.t;
@@ -312,19 +292,10 @@ and constructor_arguments =
   | Cstr_tuple of type_expr list
   | Cstr_record of label_declaration list
 
-and unboxed_status =
-  private
-  (* This type must be private in order to ensure perfect sharing of the
-     four possible values. Otherwise, ocamlc.byte and ocamlc.opt produce
-     different executables. *) {
-  unboxed: bool;
-  default: bool; (* True for unannotated unboxable types. *)
-}
-
-val unboxed_false_default_false : unboxed_status
-val unboxed_false_default_true : unboxed_status
-val unboxed_true_default_false : unboxed_status
-val unboxed_true_default_true : unboxed_status
+and type_representation = Boxed | Unboxed
+(* Single-payload @unboxed type: the payload is the whole runtime
+         value. Multi-constructor unboxed variants are tracked by their layout,
+         not here. *)
 
 type extension_constructor = {
   ext_type_path: Path.t;
@@ -389,9 +360,7 @@ type constructor_description = {
   cstr_existentials: type_expr list; (* list of existentials *)
   cstr_args: type_expr list; (* Type of the arguments *)
   cstr_arity: int; (* Number of arguments *)
-  cstr_tag: constructor_tag; (* Tag for heap blocks *)
-  cstr_consts: int; (* Number of constant constructors *)
-  cstr_nonconsts: int; (* Number of non-const constructors *)
+  cstr_kind: constructor_kind;
   cstr_generalized: bool; (* Constrained return type? *)
   cstr_private: private_flag; (* Read-only constructor? *)
   cstr_loc: Location.t;
@@ -399,14 +368,21 @@ type constructor_description = {
   cstr_inlined: type_declaration option;
 }
 
-and constructor_tag =
-  | Cstr_constant of int (* Constant constructor (an int) *)
-  | Cstr_block of int (* Regular constructor (a block) *)
-  | Cstr_unboxed (* Constructor of an unboxed type *)
-  | Cstr_extension of Path.t (* Extension constructor *)
+and constructor_kind =
+  | Ordinary_constructor of Variant_runtime.constructor_reference
+    (* Constructor introduced by a variant type declaration. This stable
+       reference addresses its runtime representation directly; the shared
+       variant value also supplies declaration-level matching facts. *)
+  | Extension_constructor of Path.t
+(* Extension constructor, identified by its own path since extension
+         constructors can be rebound *)
 
-(* Constructors are the same *)
-val equal_tag : constructor_tag -> constructor_tag -> bool
+(* Constructor descriptions of a common scrutinee type denote the same
+   constructor: ordinary constructors compare by name (re-exported variants
+   carry a different type path), extension constructors by path. Not a
+   general-purpose identity test across unrelated types. *)
+val same_constructor :
+  constructor_description -> constructor_description -> bool
 
 (* Constructors may be the same, given potential rebinding *)
 val may_equal_constr :
@@ -414,13 +390,18 @@ val may_equal_constr :
 
 type label_description = {
   lbl_name: string; (* Short name *)
+  lbl_runtime_name: string;
+      (* The name the field has at run time: its [@as] payload when it has
+         one, otherwise [lbl_name]. Decided once when the declaration is
+         typed, so no consumer re-reads the attribute. *)
   lbl_res: type_expr; (* Type of the result *)
   lbl_arg: type_expr; (* Type of the argument *)
   lbl_mut: mutable_flag; (* Is this a mutable field? *)
   lbl_optional: bool; (* Is this an optional field? *)
   lbl_pos: int; (* Position in block *)
   mutable lbl_all: label_description array;
-  (* All the labels in this type. This is mutable only because of a specific feature related to dicts, and should not be mutated elsewhere. *)
+  (* All the labels in this type. Mutable only to tie the knot when
+     [Dict_pattern] synthesizes labels; never mutated afterwards. *)
   lbl_repres: record_representation; (* Representation for this record *)
   lbl_private: private_flag; (* Read-only field? *)
   lbl_loc: Location.t;

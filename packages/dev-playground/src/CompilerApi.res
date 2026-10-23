@@ -50,6 +50,10 @@ type info = {
   warnFlags: string,
   jsxPreserveMode: bool,
   experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
+  gentypeEnabled: bool,
+  sourceMapMode: PlaygroundConfig.sourceMapMode,
+  sourceMapSourcesContent: bool,
+  sourceMapRoot: string,
   libraries: array<string>,
 }
 
@@ -58,7 +62,9 @@ type success = {
   parsetree: string,
   typedtree: string,
   lambda: string,
-  lam: string,
+  lambdaOptimized: option<string>,
+  gentype: option<string>,
+  sourceMap: option<string>,
   warnings: array<string>,
   time: float,
 }
@@ -78,9 +84,13 @@ type normalizedConfig = {
   warnFlags: string,
   jsxPreserveMode: bool,
   experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
+  gentypeEnabled: bool,
+  sourceMapMode: PlaygroundConfig.sourceMapMode,
+  sourceMapSourcesContent: bool,
+  sourceMapRoot: string,
 }
 
-let defaultWarnFlags = "+a-4-9-20-40-41-42-50-61-102-109"
+let defaultWarnFlags = "+a-4-9-20-41-102-109"
 
 let defaultCompilerVersion = Env.viteDefaultCompilerVersion->Option.getOr("local")
 
@@ -90,6 +100,10 @@ let defaultConfig: PlaygroundConfig.t = {
   warnFlags: defaultWarnFlags,
   jsxPreserveMode: false,
   experimentalFeatures: [],
+  gentypeEnabled: false,
+  sourceMapMode: Disabled,
+  sourceMapSourcesContent: true,
+  sourceMapRoot: "",
 }
 
 let pathFromBase = relativePath => {
@@ -171,6 +185,14 @@ let isConfiguredVersion = version =>
 let isLoadableVersion = version =>
   version->isConfiguredVersion || version->previewVersionRoot->Option.isSome
 
+// A PR preview URL is reused after every push, while the CDN caches its assets.
+let previewCacheBust = Date.now()->Float.toString
+
+let versionAssetUrl = (version, path) => {
+  let url = `${versionRoot(version)}/${path}`
+  version->isPreviewVersion ? `${url}?cacheBust=${previewCacheBust}` : url
+}
+
 let selectableCompilerVersions = activeVersion =>
   if activeVersion->isConfiguredVersion || !(activeVersion->previewVersionRoot->Option.isSome) {
     availableCompilerVersions
@@ -207,10 +229,14 @@ let applyConfig = (
   ~moduleSystem: PlaygroundConfig.moduleSystem,
   ~warnFlags,
   ~jsxPreserveMode,
+  ~gentypeEnabled,
+  ~sourceMapMode: PlaygroundConfig.sourceMapMode,
+  ~sourceMapSourcesContent,
+  ~sourceMapRoot,
   ~experimentalFeatures: array<PlaygroundConfig.experimentalFeature>,
 ) => {
   if hasFunction(instance, "setModuleSystem") {
-    instance->Instance.setModuleSystem((moduleSystem :> string))
+    instance->Instance.setModuleSystem(moduleSystem :> string)
   }
   if hasFunction(instance, "setWarnFlags") {
     instance->Instance.setWarnFlags(warnFlags === "" ? defaultConfig.warnFlags : warnFlags)
@@ -220,6 +246,18 @@ let applyConfig = (
   }
   if hasFunction(instance, "setJsxPreserveMode") {
     instance->Instance.setJsxPreserveMode(jsxPreserveMode)
+  }
+  if hasFunction(instance, "setGentypeEnabled") {
+    instance->Instance.setGentypeEnabled(gentypeEnabled)
+  }
+  if hasFunction(instance, "setSourceMapMode") {
+    instance->Instance.setSourceMapMode(sourceMapMode->PlaygroundConfig.sourceMapModeCompilerValue)
+  }
+  if hasFunction(instance, "setSourceMapSourcesContent") {
+    instance->Instance.setSourceMapSourcesContent(sourceMapSourcesContent)
+  }
+  if hasFunction(instance, "setSourceMapRoot") {
+    instance->Instance.setSourceMapRoot(sourceMapRoot)
   }
   if hasFunction(instance, "setExperimentalFeatures") {
     instance->Instance.setExperimentalFeatures(
@@ -245,6 +283,16 @@ let experimentalFeaturesFromConfig = configValue =>
   | None => []
   }
 
+let sourceMapModeFromConfig = configValue =>
+  switch configValue->Config.sourceMapMode {
+  | Some(sourceMapMode) =>
+    switch sourceMapMode->PlaygroundConfig.parseSourceMapMode {
+    | Some(sourceMapMode) => sourceMapMode
+    | None => defaultConfig.sourceMapMode
+    }
+  | None => defaultConfig.sourceMapMode
+  }
+
 let normalizeConfig = (configValue: option<compilerConfig>): normalizedConfig =>
   switch configValue {
   | None => {
@@ -252,6 +300,10 @@ let normalizeConfig = (configValue: option<compilerConfig>): normalizedConfig =>
       warnFlags: defaultConfig.warnFlags,
       jsxPreserveMode: false,
       experimentalFeatures: [],
+      gentypeEnabled: defaultConfig.gentypeEnabled,
+      sourceMapMode: defaultConfig.sourceMapMode,
+      sourceMapSourcesContent: defaultConfig.sourceMapSourcesContent,
+      sourceMapRoot: defaultConfig.sourceMapRoot,
     }
   | Some(configValue) => {
       moduleSystem: configValue->moduleSystemFromConfig,
@@ -264,6 +316,19 @@ let normalizeConfig = (configValue: option<compilerConfig>): normalizedConfig =>
       | None => false
       },
       experimentalFeatures: configValue->experimentalFeaturesFromConfig,
+      gentypeEnabled: switch configValue->Config.gentypeEnabled {
+      | Some(gentypeEnabled) => gentypeEnabled
+      | None => defaultConfig.gentypeEnabled
+      },
+      sourceMapMode: configValue->sourceMapModeFromConfig,
+      sourceMapSourcesContent: switch configValue->Config.sourceMapSourcesContent {
+      | Some(sourceMapSourcesContent) => sourceMapSourcesContent
+      | None => defaultConfig.sourceMapSourcesContent
+      },
+      sourceMapRoot: switch configValue->Config.sourceMapRoot {
+      | Some(sourceMapRoot) => sourceMapRoot
+      | None => defaultConfig.sourceMapRoot
+      },
     }
   }
 
@@ -338,9 +403,8 @@ let normalize = (compileOutput, elapsedMs): compileResult => {
     compileOutput->CompileResult.parsetree,
     compileOutput->CompileResult.typedtree,
     compileOutput->CompileResult.lambda,
-    compileOutput->CompileResult.lam,
   ) {
-  | (Some(parsetree), Some(typedtree), Some(lambda), Some(lam)) =>
+  | (Some(parsetree), Some(typedtree), Some(lambda)) =>
     let warnings = switch compileOutput->CompileResult.warnings {
     | Some(warnings) => warnings->Array.map(warningToText)
     | None => []
@@ -351,7 +415,21 @@ let normalize = (compileOutput, elapsedMs): compileResult => {
     | None => ""
     }
 
-    Ok({jsCode, parsetree, typedtree, lambda, lam, warnings, time: elapsedMs})
+    let gentype = compileOutput->CompileResult.gentype
+    let lambdaOptimized = compileOutput->CompileResult.lambdaOptimized
+    let sourceMap = compileOutput->CompileResult.sourceMap
+
+    Ok({
+      jsCode,
+      parsetree,
+      typedtree,
+      lambda,
+      lambdaOptimized,
+      gentype,
+      sourceMap,
+      warnings,
+      time: elapsedMs,
+    })
 
   | _ => Error(failureFromCompileOutput(compileOutput, elapsedMs))
   }
@@ -362,14 +440,29 @@ let loadRuntimeLibraries = async version => {
   switch activeLibraryVersion.contents {
   | Some(activeVersion) if activeVersion === selectedVersion => ()
   | _ =>
-    let root = versionRoot(selectedVersion)
-    let _ = await loadScript(`${root}/compiler-builtins/cmij.js`, ~cache=false)
+    let _ = await loadScript(
+      versionAssetUrl(selectedVersion, "compiler-builtins/cmij.js"),
+      ~cache=false,
+    )
 
     let libraries = try {
-      let _ = await loadScript(`${root}/@rescript/react/cmij.js`, ~cache=false)
-      ["compiler-builtins", "@rescript/react"]
+      let _ = await loadScript(
+        versionAssetUrl(selectedVersion, "@rescript/belt/cmij.js"),
+        ~cache=false,
+      )
+      ["compiler-builtins", "@rescript/belt"]
     } catch {
     | _ => ["compiler-builtins"]
+    }
+
+    let libraries = try {
+      let _ = await loadScript(
+        versionAssetUrl(selectedVersion, "@rescript/react/cmij.js"),
+        ~cache=false,
+      )
+      libraries->Array.concat(["@rescript/react"])
+    } catch {
+    | _ => libraries
     }
 
     loadedLibrariesByVersion->Map.set(selectedVersion, libraries)
@@ -389,8 +482,7 @@ let ensureCompilerApi = async version => {
     await loadRuntimeLibraries(selectedVersion)
     compilerApis->getMapValueOrThrow(selectedVersion, "Compiler API was not cached")
   } else {
-    let root = versionRoot(selectedVersion)
-    await loadScript(`${root}/compiler.js`)
+    await loadScript(versionAssetUrl(selectedVersion, "compiler.js"))
     let api = switch Api.global {
     | Some(api) if hasFunction(api, "make") => api
     | _ => JsError.throwWithMessage("rescript_compiler global was not registered by compiler.js")
@@ -418,6 +510,10 @@ let ensureCompiler = async version => {
       ~moduleSystem=Esmodule,
       ~warnFlags=defaultConfig.warnFlags,
       ~jsxPreserveMode=false,
+      ~gentypeEnabled=defaultConfig.gentypeEnabled,
+      ~sourceMapMode=defaultConfig.sourceMapMode,
+      ~sourceMapSourcesContent=defaultConfig.sourceMapSourcesContent,
+      ~sourceMapRoot=defaultConfig.sourceMapRoot,
       ~experimentalFeatures=[],
     )
 
@@ -470,6 +566,10 @@ let init = async version => {
     warnFlags: config.warnFlags,
     jsxPreserveMode: config.jsxPreserveMode,
     experimentalFeatures: config.experimentalFeatures,
+    gentypeEnabled: config.gentypeEnabled,
+    sourceMapMode: config.sourceMapMode,
+    sourceMapSourcesContent: config.sourceMapSourcesContent,
+    sourceMapRoot: config.sourceMapRoot,
     libraries,
   }
 }
@@ -483,6 +583,10 @@ let compile = async (source, config: PlaygroundConfig.t) => {
     ~moduleSystem=config.moduleSystem,
     ~warnFlags=config.warnFlags,
     ~jsxPreserveMode=config.jsxPreserveMode,
+    ~gentypeEnabled=config.gentypeEnabled,
+    ~sourceMapMode=config.sourceMapMode,
+    ~sourceMapSourcesContent=config.sourceMapSourcesContent,
+    ~sourceMapRoot=config.sourceMapRoot,
     ~experimentalFeatures=config.experimentalFeatures,
   )
 
@@ -507,6 +611,10 @@ let format = async (source, config: PlaygroundConfig.t) => {
     ~moduleSystem=config.moduleSystem,
     ~warnFlags=config.warnFlags,
     ~jsxPreserveMode=config.jsxPreserveMode,
+    ~gentypeEnabled=config.gentypeEnabled,
+    ~sourceMapMode=config.sourceMapMode,
+    ~sourceMapSourcesContent=config.sourceMapSourcesContent,
+    ~sourceMapRoot=config.sourceMapRoot,
     ~experimentalFeatures=config.experimentalFeatures,
   )
 

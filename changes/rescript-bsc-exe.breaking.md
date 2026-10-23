@@ -1,0 +1,1 @@
+- `rescript` compiles with its embedded compiler and ignores `RESCRIPT_BSC_EXE`, which now only affects `rescript-rust`. https://github.com/rescript-lang/rescript/pull/8781

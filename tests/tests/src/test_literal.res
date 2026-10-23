@@ -10,5 +10,3 @@ let long_int_v = [1, 2, 3, 4, 5, 6]
 
 let short_int_v = [1]
 let empty: array<int> = []
-
-/* compile error */

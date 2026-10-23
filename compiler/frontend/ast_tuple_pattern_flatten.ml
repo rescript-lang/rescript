@@ -41,14 +41,39 @@ let rec is_simple_pattern (p : Parsetree.pattern) =
   [ let a = M.N.c
     and b = M.N.d ]
 *)
-let flattern_tuple_pattern_vb (self : Bs_ast_mapper.mapper)
+let flattern_tuple_pattern_vb (self : Ast_mapper.mapper)
     (vb : Parsetree.value_binding) (acc : Parsetree.value_binding list) :
     Parsetree.value_binding list =
   let pvb_pat = self.pat self vb.pvb_pat in
+  let pvb_constraint =
+    Option.map
+      (fun {Parsetree.pvc_newtypes; pvc_type} ->
+        {
+          Parsetree.pvc_newtypes =
+            List.map
+              (fun (name : string Asttypes.loc) ->
+                {name with loc = self.location self name.loc})
+              pvc_newtypes;
+          pvc_type = self.typ self pvc_type;
+        })
+      vb.pvb_constraint
+  in
   let pvb_expr = self.expr self vb.pvb_expr in
   let pvb_attributes = self.attributes self vb.pvb_attributes in
-  match (pvb_pat.ppat_desc, pvb_expr.pexp_desc) with
-  | Ppat_tuple xs, _ when List.for_all is_simple_pattern xs -> (
+  let pvb_jsx_component = vb.pvb_jsx_component in
+  let pvb_expr_desc = (Ast_payload.unwrap_braces pvb_expr).pexp_desc in
+  match (pvb_constraint, pvb_pat.ppat_desc, pvb_expr_desc) with
+  | Some _, _, _ ->
+    {
+      pvb_pat;
+      pvb_expr;
+      pvb_constraint;
+      pvb_jsx_component;
+      pvb_loc = vb.pvb_loc;
+      pvb_attributes;
+    }
+    :: acc
+  | None, Ppat_tuple xs, _ when List.for_all is_simple_pattern xs -> (
     match Ast_open_cxt.destruct_open_tuple pvb_expr [] with
     | Some (wholes, es, tuple_attributes)
       when Ext_list.for_all xs is_simple_pattern && Ext_list.same_length es xs
@@ -59,16 +84,28 @@ let flattern_tuple_pattern_vb (self : Bs_ast_mapper.mapper)
           {
             pvb_pat = pat;
             pvb_expr = Ast_open_cxt.restore_exp exp wholes;
+            pvb_constraint = None;
+            pvb_jsx_component;
             pvb_attributes;
             pvb_loc = vb.pvb_loc;
           }
           :: acc)
-    | _ -> {pvb_pat; pvb_expr; pvb_loc = vb.pvb_loc; pvb_attributes} :: acc)
-  | Ppat_record (_, _, Some rest), Pexp_pack {pmod_desc = Pmod_ident _} ->
+    | _ ->
+      {
+        pvb_pat;
+        pvb_expr;
+        pvb_constraint;
+        pvb_jsx_component;
+        pvb_loc = vb.pvb_loc;
+        pvb_attributes;
+      }
+      :: acc)
+  | None, Ppat_record (_, _, Some rest), Pexp_pack {pmod_desc = Pmod_ident _} ->
     Location.raise_errorf ~loc:rest.rest_loc
       "Record rest patterns are not supported when destructuring modules. Bind \
        the module fields explicitly."
-  | Ppat_record (lid_pats, _, None), Pexp_pack {pmod_desc = Pmod_ident id} ->
+  | None, Ppat_record (lid_pats, _, None), Pexp_pack {pmod_desc = Pmod_ident id}
+    ->
     Ext_list.map_append lid_pats acc (fun {lid; x = pat} ->
         match lid.txt with
         | Lident s ->
@@ -77,16 +114,27 @@ let flattern_tuple_pattern_vb (self : Bs_ast_mapper.mapper)
             pvb_expr =
               Ast_helper.Exp.ident ~loc:lid.loc
                 {lid with txt = Ldot (id.txt, s)};
+            pvb_constraint = None;
+            pvb_jsx_component = None;
             pvb_attributes = [];
             pvb_loc = pat.ppat_loc;
           }
         | _ ->
           Location.raise_errorf ~loc:lid.loc
             "Not supported pattern match on modules")
-  | _ -> {pvb_pat; pvb_expr; pvb_loc = vb.pvb_loc; pvb_attributes} :: acc
+  | _ ->
+    {
+      pvb_pat;
+      pvb_expr;
+      pvb_constraint;
+      pvb_jsx_component;
+      pvb_loc = vb.pvb_loc;
+      pvb_attributes;
+    }
+    :: acc
 
-let value_bindings_mapper (self : Bs_ast_mapper.mapper)
+let value_bindings_mapper (self : Ast_mapper.mapper)
     (vbs : Parsetree.value_binding list) =
-  (* Bs_ast_mapper.default_mapper.value_bindings self  vbs   *)
+  (* Ast_mapper.default_mapper.value_bindings self  vbs   *)
   Ext_list.fold_right vbs [] (fun vb acc ->
       flattern_tuple_pattern_vb self vb acc)

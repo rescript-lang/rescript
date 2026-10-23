@@ -21,13 +21,13 @@ let removeCoachNote = (id, removeNoteCB, setArchiving, event) => {
   } {
     ArchiveCoachNoteMutation.make(~id, ())
     ->GraphqlQuery.sendQuery
-    ->Js.Promise.then_(response => {
+    ->Promise.then(response => {
       if response["archiveCoachNote"]["success"] {
         removeNoteCB(id)
       } else {
         setArchiving(_ => false)
       }
-      Js.Promise.resolve()
+      Promise.resolve()
     })
     ->ignore
   } else {

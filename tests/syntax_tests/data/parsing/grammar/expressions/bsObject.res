@@ -9,10 +9,10 @@ let z = {"\xff": 1, "\u2212": "two", "\0": zero, "\o123": "o123"}
 // don't confuse with start of block expr
 let x = {"age"}
 let x = {"age"[0] } // doesn't make sense in practise
-let x = {"age"->Js.log}
+let x = {"age"->Console.log}
 let x = {"age" ? true : false}
 let x = {
-  "age"->Js.log
+  "age"->Console.log
   let foo = 1
   let bar = 2
   foo + bar

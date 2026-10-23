@@ -25,12 +25,10 @@ function two(x, y) {
   return x + y | 0;
 }
 
-let n = 6;
-
 let Arity = {
   one: one,
   two: two,
-  n: n
+  n: 6
 };
 
 React.useState(() => 0);
@@ -63,14 +61,10 @@ function plus(x, y) {
   return x + y | 0;
 }
 
-let z = 3;
-
 let Pipe = {
   plus: plus,
-  z: z
+  z: 3
 };
-
-let concat = "ab";
 
 async function test() {
   return 12;
@@ -85,6 +79,8 @@ let a = "A";
 let b = "B";
 
 let vv = 10;
+
+let concat = "ab";
 
 let neq = false;
 

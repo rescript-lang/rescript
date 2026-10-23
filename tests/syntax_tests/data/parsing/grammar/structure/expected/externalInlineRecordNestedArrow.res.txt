@@ -1,5 +1,5 @@
 type withTransform.arg0.return.type = {
-  id: string }[@@res.inlineRecordDefinition ]
+  id: string }
 external withTransform :
   (int -> withTransform.arg0.return.type (a:1)) -> unit (a:1) =
     "withTransform"

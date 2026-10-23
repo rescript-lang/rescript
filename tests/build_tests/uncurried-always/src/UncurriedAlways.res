@@ -10,6 +10,6 @@ let w = 3->foo(4)
 
 let a = 3->foo(4)
 
-Js.log(a) // Test automatic uncurried application
+Console.log(a) // Test automatic uncurried application
 
-let _ = Js.Array2.map([1], x => x + 1)
+let _ = Array.map([1], x => x + 1)

@@ -750,7 +750,7 @@ List.equal(list{1, 2, 3}, list{1, 2}, (a, b) => a == b) == false
 
 List.equal(list{1, 2}, list{1, 2}, (a, b) => a == b) == true
 
-List.equal(list{1, 2, 3}, list{-1, -2, -3}, (a, b) => abs(a) == abs(b)) == true
+List.equal(list{1, 2, 3}, list{-1, -2, -3}, (a, b) => Math.Int.abs(a) == Math.Int.abs(b)) == true
 ```
 */
 let equal: (list<'a>, list<'a>, ('a, 'a) => bool) => bool
@@ -759,6 +759,8 @@ let equal: (list<'a>, list<'a>, ('a, 'a) => bool) => bool
 `has(list, element, f)` returns `true` if the list contains at least one
 `element` for which `f` returns \`true'.
 
+Use [`some`](#some) with a predicate instead.
+
 ## Examples
 
 ```rescript
@@ -766,10 +768,31 @@ list{1, 2, 3}->List.has(2, (a, b) => a == b) == true
 
 list{1, 2, 3}->List.has(4, (a, b) => a == b) == false
 
-list{-1, -2, -3}->List.has(2, (a, b) => abs(a) == abs(b)) == true
+list{-1, -2, -3}->List.has(2, (a, b) => Math.Int.abs(a) == Math.Int.abs(b)) == true
 ```
 */
+@deprecated("Use `some` instead")
 let has: (list<'a>, 'b, ('a, 'b) => bool) => bool
+
+/**
+`includes(list, item)` checks whether `list` includes `item` using strict equality.
+
+Object values are only equal when they refer to the same object. `NaN` is not
+equal to itself.
+
+## Examples
+
+```rescript
+list{1, 2}->List.includes(1) == true
+list{1, 2}->List.includes(3) == false
+list{Float.Constants.nan}->List.includes(Float.Constants.nan) == false
+
+let item = {"language": "ReScript"}
+list{item}->List.includes(item) == true
+list{item}->List.includes({"language": "ReScript"}) == false
+```
+*/
+let includes: (list<'a>, 'a) => bool
 
 /**
 `find(list, f)` returns `Some(value)` for the first value in `list` that

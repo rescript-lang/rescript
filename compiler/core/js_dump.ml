@@ -56,7 +56,6 @@ module S = Js_stmt_make
 module L = Js_dump_lit
 
 (* There modules are dynamically inserted in the last stage
-   {Caml_curry}
    {Caml_option}
 
    They can appear anywhere so even if you have a module
@@ -71,26 +70,6 @@ module L = Js_dump_lit
    conservative here.
    (our call Js_fun_env.get_unbounded env) is not precise
 *)
-
-module Curry_gen = struct
-  let pp_curry_dot f =
-    P.string f Primitive_modules.curry;
-    P.string f L.dot
-
-  let pp_optimize_curry (f : P.t) (len : int) =
-    pp_curry_dot f;
-    P.string f "__";
-    P.string f (Printf.sprintf "%d" len)
-
-  let pp_app_any (f : P.t) =
-    pp_curry_dot f;
-    P.string f "app"
-
-  let pp_app (f : P.t) (len : int) =
-    pp_curry_dot f;
-    P.string f "_";
-    P.string f (Printf.sprintf "%d" len)
-end
 
 type cxt = Ext_pp_scope.t
 
@@ -114,12 +93,12 @@ let exn_block_as_obj ~(stack : bool) (el : J.expression list) (ext : J.tag_info)
     | _ -> assert false
   in
   Object
-    ( None,
-      if stack then
-        Ext_list.mapi_append el
-          (fun i e -> (Js_op.Lit (field_name i), e))
-          [(Js_op.Lit "Error", E.new_ (E.js_global "Error") [])]
-      else Ext_list.mapi el (fun i e -> (Js_op.Lit (field_name i), e)) )
+    (E.object_entries
+       (if stack then
+          Ext_list.mapi_append el
+            (fun i e -> (Js_op.Lit (field_name i), e))
+            [(Js_op.Lit "Error", E.new_ (E.js_global "Error") [])]
+        else Ext_list.mapi el (fun i e -> (Js_op.Lit (field_name i), e))))
 
 let rec iter_lst cxt (f : P.t) ls element inter =
   match ls with
@@ -129,6 +108,93 @@ let rec iter_lst cxt (f : P.t) ls element inter =
     let acxt = element cxt f e in
     inter f;
     iter_lst acxt f r element inter
+
+(* JSX preserve mode: a [J.Jsx] element is printed as JSX only when JSX can
+   express it exactly; otherwise it is printed as the call it stands for. *)
+
+let is_jsx_name_char ~dash = function
+  | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '$' -> true
+  | '-' -> dash
+  | _ -> false
+
+(* An attribute name: a JSX identifier, which may contain [-] *)
+let is_jsx_attribute_name name =
+  match name with
+  | "" | "key" | "__proto__" -> false
+  | _ -> (
+    match name.[0] with
+    | 'a' .. 'z' | 'A' .. 'Z' | '_' | '$' ->
+      Ext_string.for_all_from name 1 (is_jsx_name_char ~dash:true)
+    | _ -> false)
+
+(* An element name that JSX reads as a value rather than an intrinsic
+   element: one not starting with a lowercase letter *)
+let is_jsx_value_name name =
+  name <> ""
+  &&
+  match name.[0] with
+  | 'A' .. 'Z' | '_' | '$' ->
+    Ext_string.for_all_from name 1 (is_jsx_name_char ~dash:false)
+  | _ -> false
+
+(* How [vident] prints a variable's name *)
+let printed_ident_name (id : Ident.t) =
+  if Ext_ident.is_js id then id.name else Ext_ident.convert id.name
+
+let rec is_jsx_member_expression (e : J.expression) =
+  match e.expression_desc with
+  | Var _ -> true
+  | Static_index (obj, name, _) ->
+    Js_dump_property.obj_property_no_need_quot
+      (Ext_ident.unwrap_uppercase_exotic name)
+    && is_jsx_member_expression obj
+  | _ -> false
+
+let is_jsx_tag (tag : J.expression) =
+  match tag.expression_desc with
+  | Str name -> (
+    (* an intrinsic element *)
+    match name.[0] with
+    | 'a' .. 'z' -> Ext_string.for_all_from name 1 (is_jsx_name_char ~dash:true)
+    | _ -> false
+    | exception Invalid_argument _ -> false)
+  | Var
+      ( Id id
+      | Qualified ({id}, None)
+      | Qualified ({id; kind = External {default = true}}, _) ) ->
+    is_jsx_value_name (printed_ident_name id)
+  | Var (Qualified ({kind = Ml | Runtime}, Some _)) -> true
+  | Var (Qualified ({kind = External _}, Some name)) ->
+    Js_dump_property.obj_property_no_need_quot
+      (Ext_ident.unwrap_uppercase_exotic name)
+  | Static_index _ -> is_jsx_member_expression tag
+  | _ -> false
+
+let is_empty_fragment ~fragment ~spread ~props ~key =
+  fragment && spread = None && props = [] && key = None
+
+let jsx_printable ~tag ~spread ~props ~(children : J.expression list option)
+    ~key ~multi ~fragment =
+  (* Cross-module inlining can bring an element from a preserve-mode module
+     into one compiled without preserve mode *)
+  !((Clflags.current ()).jsx_preserve)
+  && (is_empty_fragment ~fragment ~spread ~props ~key || is_jsx_tag tag)
+  && List.for_all
+       (fun (name, _) ->
+         is_jsx_attribute_name (Ext_ident.unwrap_uppercase_exotic name))
+       props
+  &&
+  (* JSX makes [children] an array exactly when there are several children *)
+  match children with
+  | None -> true
+  | Some children -> List.length children >= 2 = multi
+
+let rec is_printable_jsx (e : J.expression) =
+  match e.expression_desc with
+  | Jsx {tag; spread; props; children; key; multi; fragment; callee = _} ->
+    jsx_printable ~tag ~spread ~props ~children ~key ~multi ~fragment
+  | Optional_block (e, true) -> is_printable_jsx e
+  | _ -> false
 
 let raw_snippet_exp_simple_enough (s : string) =
   Ext_string.for_all s (fun c ->
@@ -150,40 +216,29 @@ let raw_snippet_exp_simple_enough (s : string) =
 *)
 let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   match e.expression_desc with
-  (* | Caml_uninitialized_obj _  *)
   | Call ({expression_desc = Raw_js_code _}, _, _) -> true
   | Raw_js_code {code_info = Exp _}
   | Fun _
   | Caml_block
       ( _,
         _,
-        _,
-        ( Blk_record _ | Blk_module _ | Blk_poly_var _ | Blk_extension
+        ( Blk_record _ | Blk_module _ | Blk_poly_var | Blk_extension
         | Blk_record_ext _ | Blk_record_inlined _ | Blk_constructor _ ) )
   | Object _ ->
     true
+  | Json_literal _ -> true
   | Raw_js_code {code_info = Stmt _}
   | Length _ | Call _ | Caml_block_tag _ | Seq _ | Static_index _ | Cond _
-  | Bin _ | Is_null_or_undefined _ | String_index _ | Array_index _
-  | String_append _ | Var _ | Undefined _ | Null | Str _ | Array _
-  | Caml_block _ | FlatCall _ | Typeof _ | Number _ | Js_not _ | Js_bnot _
-  | In _ | Bool _ | New _ ->
+  | Bin _ | Is_null_or_undefined _ | Array_index _ | String_append _ | Var _
+  | Undefined _ | Null | Str _ | Template_literal _ | Array _ | Caml_block _
+  | Typeof _ | Number _ | Js_not _ | Js_bnot _ | In _ | Bool _ | New _ ->
     false
   | Await _ -> false
   | Spread _ -> false
-  | Tagged_template _ -> false
+  | Tagged_template _ | Interpolated_template _ | Jsx _ -> false
   | Record_rest _ -> false
   | Optional_block (e, true) when arrow -> exp_need_paren ~arrow e
   | Optional_block _ -> false
-
-(** Print as underscore for unused vars, may not be 
-    needed in the future *)
-(* let ipp_ident cxt f id (un_used : bool) =
-   Ext_pp_scope.ident cxt f (
-    if un_used then
-      Ext_ident.make_unused ()
-    else
-      id) *)
 
 let pp_var_assign cxt f id =
   P.string f L.let_;
@@ -290,12 +345,6 @@ f/122 -->
              else check last bumped id, increase it and register
 *)
 
-(**
-   Turn [function f (x,y) { return a (x,y)} ] into [Curry.__2(a)],
-   The idea is that [Curry.__2] will guess the arity of [a], if it does
-   hit, then there is no cost when passed
-*)
-
 let is_var (b : J.expression) a =
   match b.expression_desc with
   | Var (Id i) -> Ident.same i a
@@ -324,11 +373,7 @@ let default_fn_exp_state = No_name {single_arg = false}
 (* TODO: refactoring
    Note that {!pp_function} could print both statement and expression when [No_name] is given
 *)
-let rec try_optimize_curry cxt f len function_id =
-  Curry_gen.pp_optimize_curry f len;
-  P.paren_group f 1 (fun _ -> expression ~level:1 cxt f function_id)
-
-and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
+let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
     ~fn_state (l : Ident.t list) (b : J.block) (env : Js_fun_env.t) : cxt =
   match b with
   | [
@@ -338,42 +383,35 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
          {
            expression_desc =
              Call
-               ( ({expression_desc = Var v; _} as function_id),
+               ( {expression_desc = Var v; _},
                  ls,
-                 {
-                   arity = (Full | NA) as arity (* see #234*);
-                   (* TODO: need a case to justify it*)
-                   call_info = Call_builtin_runtime | Call_ml;
-                 } );
+                 {call_info = Call_builtin_runtime | Call_ml} );
          };
    };
   ]
-    when (* match such case:
-            {[ function(x,y){ return u(x,y) } ]}
-            it can be optimized in to either [u] or [Curry.__n(u)]
-         *)
+    when (* Eta reduce a wrapper around a saturated call:
+            {[ function(x,y){ return u(x,y) } ]} prints as [u].
+            Only for a ReScript callee of exactly this arity: [Call_na] is an
+            FFI name, where the wrapper truncates extra arguments the JS callee
+            would otherwise see, defers the name's resolution to call time, and
+            keeps it from capturing a local of the same name. *)
          (not is_method) && params_match_call l ls v -> (
-    let optimize len ~p cxt f v =
-      if p then try_optimize_curry cxt f len function_id else vident cxt f v
-    in
-    let len = List.length l in
-    (* length *)
     match fn_state with
     | Name_top i | Name_non_top i ->
       let cxt = pp_var_assign cxt f i in
-      let cxt = optimize len ~p:(arity = NA && len <= 8) cxt f v in
+      let cxt = vident cxt f v in
       semi f;
       cxt
     | Is_return | No_name _ ->
       if fn_state = Is_return then return_sp f;
-      optimize len ~p:(arity = NA && len <= 8) cxt f v)
+      vident cxt f v)
   | _ ->
     let set_env : Set_ident.t =
       (* identifiers will be printed following*)
       match fn_state with
       | Is_return | No_name _ -> Js_fun_env.get_unbounded env
       | Name_top id | Name_non_top id ->
-        Set_ident.add (Js_fun_env.get_unbounded env) id
+        Set_ident.add id (Js_fun_env.get_unbounded env)
     in
     (* the context will be continued after this function *)
     let outer_cxt = Ext_pp_scope.merge cxt set_env in
@@ -463,7 +501,8 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
 and pp_one_case_clause :
     'a. _ -> P.t -> (P.t -> 'a -> unit) -> 'a * J.case_clause -> _ =
  fun cxt f pp_cond
-     (switch_case, ({switch_body; should_break; comment} : J.case_clause)) ->
+     ( switch_case,
+       ({switch_body; should_break; comment; source_loc} : J.case_clause) ) ->
   P.newline f;
   let cxt =
     P.group f 1 (fun _ ->
@@ -471,6 +510,7 @@ and pp_one_case_clause :
             P.string f L.case;
             P.space f;
             pp_comment_option f comment;
+            Js_source_map.mark_source_loc f source_loc;
             pp_cond f switch_case;
             (* could be integer or string *)
             P.space f;
@@ -505,9 +545,7 @@ and vident cxt f (v : J.vident) =
   | Qualified ({id; kind = Ml | Runtime}, Some name) ->
     let cxt = Ext_pp_scope.ident cxt f id in
     P.string f L.dot;
-    P.string f
-      (if name = Js_dump_import_export.default_export then name
-       else Ext_ident.convert name);
+    P.string f (Js_dump_import_export.js_export_name name);
     cxt
   | Qualified ({id; kind = External _}, Some name) ->
     let cxt = Ext_pp_scope.ident cxt f id in
@@ -517,6 +555,7 @@ and vident cxt f (v : J.vident) =
 (* The higher the level, the more likely that inner has to add parens *)
 and expression ~level:l cxt f (exp : J.expression) : cxt =
   pp_comment_option f exp.comment;
+  Js_source_map.mark_source_loc f exp.source_loc;
   expression_desc cxt ~level:l f exp.expression_desc
 
 and expression_desc cxt ~(level : int) f x : cxt =
@@ -533,13 +572,11 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f "(({";
         fields
         |> List.iteri (fun i ({record_rest_label; _} : J.record_rest_field) ->
-               if i > 0 then comma_sp f;
-               let key =
-                 Js_dump_property.property_key (Lit record_rest_label)
-               in
-               P.string f key;
-               P.string f L.colon_space;
-               P.string f ("__unused" ^ string_of_int i));
+            if i > 0 then comma_sp f;
+            let key = Js_dump_property.property_key (Lit record_rest_label) in
+            P.string f key;
+            P.string f L.colon_space;
+            P.string f ("__unused" ^ string_of_int i));
         (match fields with
         | [] -> ()
         | _ -> comma_sp f);
@@ -559,218 +596,78 @@ and expression_desc cxt ~(level : int) f x : cxt =
     (* TODO: dump for comments *)
     pp_function ?directive ~is_method ~return_unit ~async
       ~fn_state:default_fn_exp_state cxt f params body env
-  (* TODO:
-       when [e] is [Js_raw_code] with arity
-       print it in a more precise way
-       It seems the optimizer already did work to make sure
-       {[
-         Call (Raw_js_code (s, Exp i), el, {Full})
-         when Ext_list.length_equal el i
-       ]}
-    *)
-  (* When -bs-preserve-jsx is enabled, we marked each transformed application node throughout the compilation.
-     Here we print the transformed application node into a JSX syntax.
-     The JSX is slightly different from what a user would write,
-     but it is still valid JSX and is usable by tools like ESBuild.
-  *)
-  | Call
-      ( ({
-           expression_desc =
-             J.Var
-               ( Id {name = fn_name}
-               | J.Qualified
-                   ( _,
-                     Some fn_name
-                     (* We care about the function name when it is jsxs,
-                       If this is the case, we need to unpack an array later on *)
-                   ) );
-         } as e),
-        el,
-        {call_transformed_jsx = true} )
-    when !Js_config.jsx_preserve -> (
-    (* We match a JsxRuntime.jsx call *)
-    match el with
-    | [
-     tag;
-     {
-       expression_desc =
-         (* This is the props javascript object *)
-         Caml_block (el, _mutable_flag, _, Lambda.Blk_record {fields});
-     };
-    ] ->
-      (* We extract the props from the javascript object *)
-      let fields =
-        Ext_list.array_list_filter_map fields el (fun (f, opt) x ->
-            match x.expression_desc with
-            | Undefined _ when opt -> None
-            | _ -> Some (f, x))
+  | Jsx {callee; tag; spread; props; children; key; multi; fragment} ->
+    if jsx_printable ~tag ~spread ~props ~children ~key ~multi ~fragment then
+      print_jsx cxt f ~tag ~spread ~props ~children ~key ~fragment
+    else
+      (* not writable as JSX: print the call the element stands for *)
+      let children_prop =
+        match children with
+        | None -> []
+        | Some [child] when not multi -> [(Js_op.Lit "children", child)]
+        | Some children -> [(Js_op.Lit "children", E.array children)]
       in
-      print_jsx cxt ~level f fn_name tag fields
-    | [
-     tag;
-     {
-       expression_desc =
-         Caml_block (el, _mutable_flag, _, Lambda.Blk_record {fields});
-     };
-     key;
-    ] ->
-      (* When a component has a key the matching runtime function call will have a third argument being the key *)
-      let fields =
-        Ext_list.array_list_filter_map fields el (fun (f, opt) x ->
-            match x.expression_desc with
-            | Undefined _ when opt -> None
-            | _ -> Some (f, x))
+      let props =
+        Ext_list.map props (fun (name, value) -> (Js_op.Lit name, value))
       in
-      print_jsx cxt ~level ~key f fn_name tag fields
-    | [tag; ({expression_desc = J.Seq _} as props)] ->
-      (* In the case of prop spreading, the expression will look like:
-           (props.a = "Hello, world!", props)
-           which is equivalent to
-           <tag {...props} a="Hello, world!" />
-
-           We need to extract the props and the spread object.
-         *)
-      let fields, spread_props =
-        let rec visit acc e =
-          match e.J.expression_desc with
-          | J.Seq
-              ( {
-                  J.expression_desc =
-                    J.Bin
-                      ( Js_op.Eq,
-                        {J.expression_desc = J.Static_index (_, name, _)},
-                        value );
-                },
-                rest ) ->
-            visit ((name, value) :: acc) rest
-          | _ -> (List.rev acc, e)
-        in
-        visit [] props
+      let props =
+        match (spread, props @ children_prop) with
+        (* the PPX passes a lone spread itself, not a copy of it *)
+        | Some spread, [] -> spread
+        | spread, props -> E.obj ?dup:spread props
       in
-      print_jsx cxt ~level ~spread_props f fn_name tag fields
-    | [tag; ({expression_desc = J.Seq _} as props); key] ->
-      (* In the case of props + prop spreading and key argument *)
-      let fields, spread_props =
-        let rec visit acc e =
-          match e.J.expression_desc with
-          | J.Seq
-              ( {
-                  J.expression_desc =
-                    J.Bin
-                      ( Js_op.Eq,
-                        {J.expression_desc = J.Static_index (_, name, _)},
-                        value );
-                },
-                rest ) ->
-            visit ((name, value) :: acc) rest
-          | _ -> (List.rev acc, e)
-        in
-        visit [] props
-      in
-      print_jsx cxt ~level ~spread_props ~key f fn_name tag fields
-    | [tag; ({expression_desc = J.Var _} as spread_props)] ->
-      (* All the props are spread *)
-      print_jsx cxt ~level ~spread_props f fn_name tag []
-    | [tag; {expression_desc = J.Object (Some spread, props)}] ->
-      (* Spread props with overrides emitted as a single object literal:
-         {...base, x: 1}
-      *)
-      let fields =
-        List.filter_map
-          (fun (n, x) ->
-            match n with
-            | Js_op.Lit name -> Some (name, x)
-            | Symbol_name -> None)
-          props
-      in
-      print_jsx cxt ~level ~spread_props:spread f fn_name tag fields
-    | [tag; {expression_desc = J.Object (Some spread, props)}; key] ->
-      let fields =
-        List.filter_map
-          (fun (n, x) ->
-            match n with
-            | Js_op.Lit name -> Some (name, x)
-            | Symbol_name -> None)
-          props
-      in
-      print_jsx cxt ~level ~spread_props:spread ~key f fn_name tag fields
-    | _ ->
-      (* This should not happen, we fallback to the general case *)
+      (* An explicit undefined key is still passed, as by the call *)
+      let key = Option.to_list key in
       expression_desc cxt ~level f
-        (Call
-           ( e,
-             el,
-             {call_transformed_jsx = false; arity = Full; call_info = Call_ml}
-           )))
-  | Call (e, el, info) ->
+        (Call (callee, tag :: props :: key, Js_call_info.na_full_call))
+  | Call (e, el, _info) ->
     P.cond_paren_group f (level > 15) (fun _ ->
         P.group f 0 (fun _ ->
-            match (info, el) with
-            | {arity = Full}, _ | _, [] ->
-              let cxt =
-                P.cond_paren_group f
-                  (match e.expression_desc with
-                  | Fun _ -> true
-                  | _ -> false)
-                  (fun () -> expression ~level:15 cxt f e)
-              in
-              P.paren_group f 0 (fun _ ->
-                  match el with
-                  | [
-                   {
-                     expression_desc =
-                       Fun
-                         {
-                           is_method;
-                           params;
-                           body;
-                           env;
-                           return_unit;
-                           async;
-                           directive;
-                         };
-                   };
-                  ] ->
-                    pp_function ?directive ~is_method ~return_unit ~async
-                      ~fn_state:(No_name {single_arg = true})
-                      cxt f params body env
-                  | _ ->
-                    let el =
-                      match el with
-                      | [e] when e.expression_desc = Undefined {is_unit = true}
-                        ->
-                        (* omit passing undefined when the call is f() *)
-                        []
-                      | _ -> el
-                    in
-                    arguments cxt f el)
-            | _, _ ->
-              let len = List.length el in
-              if 1 <= len && len <= 8 then (
-                Curry_gen.pp_app f len;
-                P.paren_group f 0 (fun _ -> arguments cxt f (e :: el)))
-              else (
-                Curry_gen.pp_app_any f;
-                P.paren_group f 0 (fun _ ->
-                    arguments cxt f [e; E.array Mutable el]))))
-  | FlatCall (e, el) ->
-    P.group f 0 (fun _ ->
-        let cxt = expression ~level:15 cxt f e in
-        P.string f L.dot;
-        P.string f L.apply;
-        P.paren_group f 1 (fun _ ->
-            P.string f L.null;
-            comma_sp f;
-            expression ~level:1 cxt f el))
+            let cxt =
+              P.cond_paren_group f
+                (match e.expression_desc with
+                | Fun _ -> true
+                | _ -> false)
+                (fun () -> expression ~level:15 cxt f e)
+            in
+            P.paren_group f 0 (fun _ ->
+                match el with
+                | [
+                 {
+                   expression_desc =
+                     Fun
+                       {
+                         is_method;
+                         params;
+                         body;
+                         env;
+                         return_unit;
+                         async;
+                         directive;
+                       };
+                 };
+                ] ->
+                  pp_function ?directive ~is_method ~return_unit ~async
+                    ~fn_state:(No_name {single_arg = true})
+                    cxt f params body env
+                | _ ->
+                  let el =
+                    match el with
+                    | [e] when e.expression_desc = Undefined {is_unit = true} ->
+                      (* omit passing undefined when the call is f() *)
+                      []
+                    | _ -> el
+                  in
+                  arguments cxt f el)))
   | Tagged_template (call_expr, string_args, value_args) ->
     let cxt = expression cxt ~level f call_expr in
     P.string f "`";
     let rec aux cxt xs ys =
       match (xs, ys) with
       | [], [] -> ()
-      | [{J.expression_desc = Str {txt; _}}], [] -> P.string f txt
-      | {J.expression_desc = Str {txt; _}} :: x_rest, y :: y_rest ->
-        P.string f txt;
+      | [source], [] -> P.string f source
+      | source :: x_rest, y :: y_rest ->
+        P.string f source;
         P.string f "${";
         let cxt = expression cxt ~level f y in
         P.string f "}";
@@ -780,24 +677,32 @@ and expression_desc cxt ~(level : int) f x : cxt =
     aux cxt string_args value_args;
     P.string f "`";
     cxt
-  | String_index (a, b) ->
-    P.group f 1 (fun _ ->
-        let cxt = expression ~level:15 cxt f a in
-        P.string f L.dot;
-        P.string f L.code_point_at;
-        (* FIXME: use code_point_at *)
-        P.paren_group f 1 (fun _ -> expression ~level:0 cxt f b))
-  | Str {delim; txt} ->
-    (*TODO --
-       when utf8-> it will not escape '\\' which is definitely not we want
-    *)
-    let () =
-      match delim with
-      | DStarJ -> P.string f ("\"" ^ txt ^ "\"")
-      | DNoQuotes -> P.string f txt
-      | DNone -> Js_dump_string.pp_string f txt
-      | DBackQuotes -> P.string f ("`" ^ txt ^ "`")
+  | Interpolated_template {segments; values} ->
+    P.string f "`";
+    let rec print_segments cxt segments values =
+      match (segments, values) with
+      | [segment], [] ->
+        P.string f (String_literal.template_source segment);
+        cxt
+      | segment :: segments, value :: values ->
+        P.string f (String_literal.template_source segment);
+        P.string f "${";
+        let cxt = expression cxt ~level:0 f value in
+        P.string f "}";
+        print_segments cxt segments values
+      | _ -> assert false
     in
+    let cxt = print_segments cxt segments values in
+    P.string f "`";
+    cxt
+  | Str txt ->
+    Js_dump_string.pp_string f txt;
+    cxt
+  | Template_literal segment ->
+    P.string f ("`" ^ String_literal.template_source segment ^ "`");
+    cxt
+  | Json_literal source ->
+    P.string f source;
     cxt
   | Raw_js_code {code = s; code_info = info} -> (
     match info with
@@ -902,7 +807,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
         {expression_desc = Bin (EqEqEq, e1, {expression_desc = Undefined _})},
         {expression_desc = Bin (EqEqEq, e2, {expression_desc = Null})} )
     when e1 = e2 ->
-    expression_desc cxt ~level:(level : int) f (Is_null_or_undefined e1)
+    expression_desc cxt ~(level : int) f (Is_null_or_undefined e1)
   | Bin (op, e1, e2) ->
     let out, lft, rght = Js_op_util.op_prec op in
     let need_paren =
@@ -936,7 +841,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f "+";
         P.space f;
         expression ~level:rght cxt f e2)
-  | Array (el, _) -> (
+  | Array el -> (
     (* TODO: simplify for singleton list *)
     match el with
     | [] | [_] -> P.bracket_group f 1 (fun _ -> array_element_list cxt f el)
@@ -945,18 +850,16 @@ and expression_desc cxt ~(level : int) f x : cxt =
     expression ~level cxt f
       (if identity then e
        else E.runtime_call Primitive_modules.option "some" [e])
-  | Caml_block (el, _, _, Blk_module fields) ->
+  | Caml_block (el, _, Blk_module fields) ->
     expression_desc cxt ~level f
       (Object
-         ( None,
-           Ext_list.map_combine fields el (fun x ->
-               Js_op.Lit (Ext_ident.convert x)) ))
+         (E.object_entries
+            (Ext_list.map_combine fields el (fun x ->
+                 Js_op.Lit (Ext_ident.convert x)))))
   (*name convention of Record is slight different from modules*)
-  | Caml_block (el, mutable_flag, _, Blk_record {fields}) ->
-    if
-      Array.length fields <> 0
-      && Ext_array.for_alli fields (fun i (v, _) -> string_of_int i = v)
-    then expression_desc cxt ~level f (Array (el, mutable_flag))
+  | Caml_block (el, _, Blk_record {fields}) ->
+    if Lambda.record_fields_are_array fields then
+      expression_desc cxt ~level f (Array el)
     else
       let fields =
         Ext_list.array_list_filter_map fields el (fun (f, opt) x ->
@@ -964,30 +867,24 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | Undefined _ when opt -> None
             | _ -> Some (Js_op.Lit f, x))
       in
-      expression_desc cxt ~level f (Object (None, fields))
-  | Caml_block (el, _, _, Blk_poly_var _) -> (
+      expression_desc cxt ~level f (Object (E.object_entries fields))
+  | Caml_block (el, _, Blk_poly_var) -> (
     match el with
     | [tag; value] ->
       expression_desc cxt ~level f
         (Object
-           ( None,
-             [
-               (Js_op.Lit Literals.polyvar_hash, tag);
-               (Lit Literals.polyvar_value, value);
-             ] ))
+           (E.object_entries
+              [
+                (Js_op.Lit Literals.polyvar_hash, tag);
+                (Lit Literals.polyvar_value, value);
+              ]))
     | _ -> assert false)
-  | Caml_block (el, _, _, ((Blk_extension | Blk_record_ext _) as ext)) ->
+  | Caml_block (el, _, ((Blk_extension | Blk_record_ext _) as ext)) ->
     expression_desc cxt ~level f (exn_block_as_obj ~stack:false el ext)
-  | Caml_block (el, _, tag, Blk_record_inlined p) ->
-    let untagged = Ast_untagged_variants.process_untagged p.attrs in
+  | Caml_block (el, _, Blk_record_inlined p) ->
     let objs =
       let tails =
         Ext_list.combine_array p.fields el (fun (i, opt) -> (Js_op.Lit i, opt))
-      in
-      let tag_name =
-        match Ast_untagged_variants.process_tag_name p.attrs with
-        | None -> L.tag
-        | Some s -> s
       in
       let tails =
         Ext_list.filter_map tails (fun ((f, optional), x) ->
@@ -995,25 +892,33 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | Undefined _ when optional -> None
             | _ -> Some (f, x))
       in
-      if untagged then tails
-      else
-        ( Js_op.Lit tag_name,
+      match p.runtime with
+      | Untagged _ -> tails
+      | Tagged {tag; tag_name} ->
+        ( Js_op.Lit (Option.value tag_name ~default:L.tag),
           (* TAG:xx for inline records *)
-          match Ast_untagged_variants.process_tag_type p.attrs with
+          match tag.literal with
           | None -> E.str p.name
-          | Some t -> E.tag_type t )
+          | Some t -> E.literal_tag t )
         :: tails
     in
-    expression_desc cxt ~level f (Object (None, objs))
-  | Caml_block (el, _, tag, Blk_constructor p) ->
+    expression_desc cxt ~level f (Object (E.object_entries objs))
+  | Caml_block ([hd; tl], _, Blk_constructor p) when p.name = Literals.cons ->
+    (* A list cell is printed on one line, so a list literal keeps the same
+       indentation however long it is, instead of nesting one level deeper per
+       element. *)
+    P.cond_paren_group f (level > 1) (fun _ ->
+        P.brace f (fun _ ->
+            let cxt =
+              property_name_and_value cxt f (Js_op.Lit Literals.hd, hd)
+            in
+            comma_sp f;
+            property_name_and_value cxt f (Js_op.Lit Literals.tl, tl)))
+  | Caml_block (el, _, Blk_constructor p) ->
     let not_is_cons = p.name <> Literals.cons in
-    let tag_type = Ast_untagged_variants.process_tag_type p.attrs in
-    let untagged = Ast_untagged_variants.process_untagged p.attrs in
-    let tag_name =
-      match Ast_untagged_variants.process_tag_name p.attrs with
-      | None -> L.tag
-      | Some s -> s
-    in
+    let {Variant_runtime.tag; tag_name} = p.runtime in
+    let literal = tag.literal in
+    let tag_name = Option.value tag_name ~default:L.tag in
     let objs =
       let tails =
         Ext_list.mapi_append el
@@ -1023,32 +928,22 @@ and expression_desc cxt ~(level : int) f x : cxt =
               | false, 1 -> Js_op.Lit Literals.tl
               | _ -> Js_op.Lit ("_" ^ string_of_int i)),
               e ))
-          (if !Js_config.debug && (not untagged) && not_is_cons then
+          (if !((Js_config.current ()).debug) && not_is_cons then
              [(name_symbol, E.str p.name)]
            else [])
       in
-      if untagged || (not_is_cons = false && p.num_nonconst = 1) then tails
+      if not_is_cons = false then tails
       else
         ( Js_op.Lit tag_name,
           (* TAG:xx *)
-          match tag_type with
+          match literal with
           | None -> E.str p.name
-          | Some t -> E.tag_type t )
+          | Some t -> E.literal_tag t )
         :: tails
     in
-    let exp =
-      match objs with
-      | [(_, e)] when untagged -> e.expression_desc
-      | _ when untagged -> assert false (* should not happen *)
-      (* TODO: put restriction on the variant definitions allowed, to make sure this never happens. *)
-      | _ -> J.Object (None, objs)
-    in
-    expression_desc cxt ~level f exp
-  | Caml_block (_, _, _, (Blk_module_export _ | Blk_some | Blk_some_not_nested))
-    ->
-    assert false
-  | Caml_block (el, mutable_flag, _tag, Blk_tuple) ->
-    expression_desc cxt ~level f (Array (el, mutable_flag))
+    expression_desc cxt ~level f (J.Object (E.object_entries objs))
+  | Caml_block (_, _, Blk_module_export _) -> assert false
+  | Caml_block (el, _, Blk_tuple) -> expression_desc cxt ~level f (Array el)
   | Caml_block_tag (e, tag) ->
     P.group f 1 (fun _ ->
         let cxt = expression ~level:15 cxt f e in
@@ -1069,23 +964,20 @@ and expression_desc cxt ~(level : int) f x : cxt =
            refer and export
         *)
         cxt)
-  | Length (e, _) ->
+  | Length e ->
     (*Todo: check parens *)
     P.cond_paren_group f (level > 15) (fun _ ->
         let cxt = expression ~level:15 cxt f e in
         P.string f L.dot;
         P.string f L.length;
         cxt)
-  | New (e, el) ->
+  | New (e, args) ->
     P.cond_paren_group f (level > 15) (fun _ ->
         P.group f 0 (fun _ ->
             P.string f L.new_;
             P.space f;
             let cxt = expression ~level:16 cxt f e in
-            P.paren_group f 0 (fun _ ->
-                match el with
-                | Some el -> arguments cxt f el
-                | None -> cxt)))
+            P.paren_group f 0 (fun _ -> arguments cxt f args)))
   | Cond (e, e1, e2) ->
     let action () =
       let cxt = expression ~level:3 cxt f e in
@@ -1104,7 +996,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
       P.group f 1 (fun _ -> expression ~level:3 cxt f e2)
     in
     if level > 2 then P.paren_vgroup f 1 action else action ()
-  | Object (dup, lst) ->
+  | Object entries ->
     (* #1946 object literal is easy to be
        interpreted as block statement
        here we avoid parens in such case
@@ -1113,25 +1005,21 @@ and expression_desc cxt ~(level : int) f x : cxt =
        ]}
     *)
     P.cond_paren_group f (level > 1) (fun _ ->
-        let dup_expression e =
-          expression ~level:1 cxt f {e with expression_desc = J.Spread e}
+        let entry cxt f = function
+          | J.Object_spread e | Record_spread e ->
+            expression ~level:1 cxt f {e with expression_desc = J.Spread e}
+          | Object_property (name, value) ->
+            property_name_and_value cxt f (name, value)
         in
-        if lst = [] then
-          P.brace f (fun _ ->
-              match dup with
-              | Some e -> dup_expression e
-              | _ -> cxt)
-        else
-          P.brace_vgroup f 1 (fun _ ->
-              let cxt =
-                match dup with
-                | Some e ->
-                  let cxt = dup_expression e in
-                  comma_nl f;
-                  cxt
-                | _ -> cxt
-              in
-              property_name_and_value_list cxt f lst))
+        (* Only spreads, e.g. [{...a, ...b}], on one line *)
+        if
+          List.for_all
+            (function
+              | J.Object_spread _ | Record_spread _ -> true
+              | Object_property _ -> false)
+            entries
+        then P.brace f (fun _ -> iter_lst cxt f entries entry comma_sp)
+        else P.brace_vgroup f 1 (fun _ -> iter_lst cxt f entries entry comma_nl))
   | Await e ->
     P.cond_paren_group f (level > 13) (fun _ ->
         P.string f "await ";
@@ -1169,183 +1057,102 @@ and print_indented_list (f : P.t) (parent_expr_level : int) (cxt : cxt)
         (* Initial call to the recursive helper; initial check ensures items is not empty *)
         process_items cxt items)
 
-and print_jsx cxt ?(spread_props : J.expression option)
-    ?(key : J.expression option) ~(level : int) f (fn_name : string)
-    (tag : J.expression) (fields : (string * J.expression) list) : cxt =
-  (* TODO: make fragment detection respect custom JSX runtime modules instead of
-     assuming "JsxRuntime". *)
-  let is_fragment =
-    match tag.expression_desc with
-    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) ->
-      true
-    | _ -> false
-  in
+and print_jsx cxt f ~(tag : J.expression) ~(spread : J.expression option)
+    ~(props : (string * J.expression) list)
+    ~(children : J.expression list option) ~(key : J.expression option)
+    ~(fragment : bool) : cxt =
+  let empty_fragment = is_empty_fragment ~fragment ~spread ~props ~key in
   let print_tag cxt =
     match tag.expression_desc with
-    (* "div" or any other primitive tag *)
-    | J.Str {txt} ->
+    | _ when empty_fragment -> cxt
+    | J.Str txt ->
       P.string f txt;
       cxt
-    (* fragment *)
-    | _ when is_fragment -> cxt
-    (* A user defined component or external component *)
-    | _ -> expression ~level cxt f tag
+    | _ -> expression ~level:15 cxt f tag
   in
-  let children_opt =
-    List.find_map
-      (fun (n, e) ->
-        if n = "children" then
-          if fn_name = "jsxs" then
-            match e.J.expression_desc with
-            | J.Array (xs, _)
-            | J.Optional_block ({expression_desc = J.Array (xs, _)}, _) ->
-              Some xs
-            | _ -> Some [e]
-          else Some [e]
-        else None)
-      fields
-    (* For fragments without children we normalize to an empty list so they
-       print as <></> instead of </> which is invalid JSX. *)
-    |> function
-    | None when is_fragment -> Some []
-    | other -> other
+  (* Fragments without children print as <></>, since </> is invalid *)
+  let children =
+    match children with
+    | None when empty_fragment -> Some []
+    | _ -> children
   in
-  let print_props cxt props =
-    (* If a key is present, should be printed before the spread props,
-    This is to ensure tools like ESBuild use the automatic JSX runtime *)
-    let print_key key cxt =
-      P.string f "key={";
-      let cxt_k = expression ~level:0 cxt f key in
-      P.string f "} ";
-      cxt_k
-    in
-
-    let print_spread_props spread cxt =
-      P.string f "{...";
-      let cxt = expression ~level:0 cxt f spread in
-      P.string f "} ";
-      cxt
-    in
-
-    let print_prop n x ctx =
-      let prop_name = Ext_ident.unwrap_uppercase_exotic n in
-      P.string f prop_name;
-      P.string f "=";
-      P.string f "{";
-      let next_cxt = expression ~level:0 ctx f x in
-      P.string f "}";
-      next_cxt
-    in
-    let printable_props =
-      (match key with
+  let print_attribute name value cxt =
+    P.string f name;
+    P.string f "={";
+    let cxt = expression ~level:1 cxt f value in
+    P.string f "}";
+    cxt
+  in
+  let attributes =
+    (* The key goes before the spread so that tools like esbuild keep using
+       the automatic runtime's jsx() rather than createElement() *)
+    (match key with
       | None -> []
-      | Some k -> [print_key k])
-      @ (match spread_props with
-        | None -> []
-        | Some spread -> [print_spread_props spread])
-      @ List.map (fun (n, x) -> print_prop n x) props
-    in
-    if List.length printable_props = 0 then (
-      match children_opt with
-      | Some _ -> cxt
-      | None ->
-        (* Put a space between the tag name and /> *)
-        P.space f;
-        cxt)
-    else
-      P.group f 1 (fun () ->
-          P.newline f;
-          let rec process_remaining_props acc_cxt printable_props =
-            match printable_props with
-            | [] -> acc_cxt
-            | print_prop :: [] -> print_prop acc_cxt
-            | print_prop :: tail ->
-              let next_cxt = print_prop acc_cxt in
-              P.newline f;
-              process_remaining_props next_cxt tail
-          in
-          process_remaining_props cxt printable_props)
+      | Some key -> [print_attribute "key" key])
+    @ (match spread with
+      | None -> []
+      | Some spread ->
+        [
+          (fun cxt ->
+            P.string f "{...";
+            let cxt = expression ~level:1 cxt f spread in
+            P.string f "}";
+            cxt);
+        ])
+    @ Ext_list.map props (fun (name, value) ->
+        print_attribute (Ext_ident.unwrap_uppercase_exotic name) value)
   in
-
-  let print_one_child expr_level_for_child current_cxt_for_child f_format
-      child_expr =
-    let child_is_jsx_itself =
-      match child_expr.J.expression_desc with
-      | J.Call (_, _, {call_transformed_jsx = is_jsx}) -> is_jsx
-      | _ -> false
-    in
-    if not child_is_jsx_itself then P.string f_format "{";
-    let next_cxt =
-      expression ~level:expr_level_for_child current_cxt_for_child f_format
-        child_expr
-    in
-    if not child_is_jsx_itself then P.string f_format "}";
-    next_cxt
+  let print_child _level cxt f (child : J.expression) =
+    let bare = is_printable_jsx child in
+    if not bare then P.string f "{";
+    let cxt = expression ~level:1 cxt f child in
+    if not bare then P.string f "}";
+    cxt
   in
-
-  let props = List.filter (fun (n, _) -> n <> "children") fields in
-
-  (* Actual printing of JSX element starts here *)
   P.string f "<";
   let cxt = print_tag cxt in
-  let cxt = print_props cxt props in
-  (* print_props handles its own block and updates cxt *)
-
-  let has_multiple_props = List.length props > 0 in
-
-  match children_opt with
+  let cxt =
+    match attributes with
+    | [] ->
+      if children = None then P.space f;
+      cxt
+    | _ ->
+      P.group f 1 (fun () ->
+          Ext_list.fold_left attributes cxt (fun cxt print_attribute ->
+              P.newline f;
+              print_attribute cxt))
+  in
+  if attributes <> [] then P.newline f;
+  match children with
   | None ->
-    (* Self-closing tag *)
-    if has_multiple_props then P.newline f;
     P.string f "/>";
     cxt
   | Some children ->
-    (* Tag with children *)
-    let has_children = List.length children > 0 in
-    (* Newline for ">" only if props themselves were multi-line. Children alone don't push ">" to a new line. *)
-    if has_multiple_props then P.newline f;
     P.string f ">";
-
-    let cxt_after_children =
-      if has_children then
-        (* Only call print_indented_list if there are children *)
-        print_indented_list f level cxt children print_one_child
-      else cxt
-      (* No children, no change to context here, no newlines from children block *)
-    in
-    let cxt = cxt_after_children in
-
-    (* The closing "</tag>" goes on a new line if the opening part was multi-line (due to props)
-       OR if there were actual children printed (which always makes the element multi-line).
-    *)
-    let element_content_was_multiline = has_multiple_props || has_children in
-    if element_content_was_multiline then P.newline f;
-
+    let cxt = print_indented_list f 1 cxt children print_child in
+    if attributes <> [] || children <> [] then P.newline f;
     P.string f "</";
     let cxt = print_tag cxt in
     P.string f ">";
     cxt
 
-and property_name_and_value_list cxt f (l : J.property_map) =
-  iter_lst cxt f l
-    (fun cxt f (pn, e) ->
-      match e.expression_desc with
-      | Var (Id v | Qualified ({id = v; _}, None)) ->
-        let key = Js_dump_property.property_key pn in
-        let str, cxt = Ext_pp_scope.str_of_ident cxt v in
-        let content =
-          (* if key = str then key
-             else *)
-          key ^ L.colon_space ^ str
-        in
-        P.string f content;
-        cxt
-      | _ ->
-        let key = Js_dump_property.property_key pn in
-        P.string f key;
-        P.string f L.colon_space;
-        expression ~level:1 cxt f e)
-    comma_nl
+and property_name_and_value cxt f ((pn, e) : J.property_name * J.expression) =
+  match e.expression_desc with
+  | Var (Id v | Qualified ({id = v; _}, None)) ->
+    let key = Js_dump_property.property_key pn in
+    let str, cxt = Ext_pp_scope.str_of_ident cxt v in
+    let content =
+      (* if key = str then key
+         else *)
+      key ^ L.colon_space ^ str
+    in
+    P.string f content;
+    cxt
+  | _ ->
+    let key = Js_dump_property.property_key pn in
+    P.string f key;
+    P.string f L.colon_space;
+    expression ~level:1 cxt f e
 
 and array_element_list cxt f (el : E.t list) : cxt =
   iter_lst cxt f el (expression ~level:1) comma_nl
@@ -1367,6 +1174,8 @@ and variable_declaration top cxt f (variable : J.variable_declaration) : cxt =
     | _ -> (
       match e.expression_desc with
       | Fun {is_method; params; body; env; return_unit; async; directive} ->
+        pp_comment_option f e.comment;
+        Js_source_map.mark_source_loc f e.source_loc;
         pp_function ?directive ~is_method ~return_unit ~async
           ~fn_state:(if top then Name_top name else Name_non_top name)
           cxt f params body env
@@ -1407,8 +1216,10 @@ and pp_comment_option f comment =
   | None -> ()
   | Some x -> pp_comment f x
 
-and statement top cxt f ({statement_desc = s; comment; _} : J.statement) : cxt =
+and statement top cxt f
+    ({statement_desc = s; comment; source_loc} : J.statement) : cxt =
   pp_comment_option f comment;
+  Js_source_map.mark_source_loc f source_loc;
   statement_desc top cxt f s
 
 and statement_desc top cxt f (s : J.statement_desc) : cxt =
@@ -1432,7 +1243,7 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
       | Some s -> P.string f s
       | None -> ());
       cxt
-    | Str _ -> cxt
+    | Str _ | Template_literal _ | Json_literal _ -> cxt
     | _ ->
       let cxt =
         (if exp_need_paren e then P.paren_group f 1 else P.group f 0) (fun _ ->
@@ -1707,7 +1518,7 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
     let cxt = P.paren_group f 1 (fun _ -> expression ~level:0 cxt f e) in
     P.space f;
     P.brace_vgroup f 1 (fun _ ->
-        let pp_as_value f (tag_type : Ast_untagged_variants.tag_type) =
+        let pp_as_value f (tag_type : Variant_runtime.tag_type) =
           let e = E.tag_type tag_type in
           ignore @@ expression_desc cxt ~level:0 f e.expression_desc
         in
@@ -1724,7 +1535,7 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
   | Throw e ->
     let e =
       match e.expression_desc with
-      | Caml_block (el, _, _, ((Blk_extension | Blk_record_ext _) as ext)) ->
+      | Caml_block (el, _, ((Blk_extension | Blk_record_ext _) as ext)) ->
         {e with expression_desc = exn_block_as_obj ~stack:true el ext}
       | _ -> e
     in
@@ -1798,18 +1609,9 @@ and statements top cxt f b =
     (fun cxt f s -> statement top cxt f s)
     (if top then P.at_least_two_lines else P.newline)
 
-let string_of_block (block : J.block) =
-  let buffer = Buffer.create 50 in
-  let f = P.from_buffer buffer in
-  let (_ : cxt) = statements true Ext_pp_scope.empty f block in
-  P.flush f ();
-  Buffer.contents buffer
-
 let string_of_expression (e : J.expression) =
   let buffer = Buffer.create 50 in
   let f = P.from_buffer buffer in
   let (_ : cxt) = expression ~level:0 Ext_pp_scope.empty f e in
   P.flush f ();
   Buffer.contents buffer
-
-let () = E.string_of_expression := string_of_expression

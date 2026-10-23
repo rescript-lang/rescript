@@ -9,13 +9,13 @@ type t0 += SinglePayload(string) | TuplePayload(int, string)
 let f = x =>
   switch x {
   | Inline_record({x, y}) =>
-    switch Belt.Int.fromString(y) {
+    switch Int.fromString(y) {
     | Some(y) => Some(x + y)
     | _ => None
     }
-  | SinglePayload(v) => Belt.Int.fromString(v)
+  | SinglePayload(v) => Int.fromString(v)
   | TuplePayload(v0, v1) =>
-    switch Belt.Int.fromString(v1) {
+    switch Int.fromString(v1) {
     | Some(v1) => Some(v0 + v1)
     | _ => None
     }

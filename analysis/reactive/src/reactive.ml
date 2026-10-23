@@ -15,7 +15,6 @@ type ('k, 'v) delta =
   | Batch of ('k * 'v option) list
 
 let set k v = (k, Some v)
-let remove k = (k, None)
 
 let delta_to_entries = function
   | Set (k, v) -> [(k, Some v)]
@@ -360,9 +359,9 @@ module Scheduler = struct
         let nodes_with_levels =
           dirty
           |> List.filter_map (fun name ->
-                 match Hashtbl.find_opt Registry.nodes name with
-                 | Some info -> Some (info.Registry.level, name, info)
-                 | None -> None)
+              match Hashtbl.find_opt Registry.nodes name with
+              | Some info -> Some (info.Registry.level, name, info)
+              | None -> None)
         in
 
         let sorted =
@@ -457,8 +456,6 @@ let iter f t = t.iter f
 let get t k = t.get k
 let length t = t.length ()
 let stats t = t.stats
-let level t = t.level
-let name t = t.name
 
 (** {1 Source Collection} *)
 
@@ -875,10 +872,10 @@ let join ~name (left : ('k1, 'v1) t) (right : ('k2, 'v2) t) ~key_of ~f ?merge ()
     let output_entries =
       !all_affected
       |> List.filter_map (fun k3 ->
-             if Hashtbl.mem seen k3 then None
-             else (
-               Hashtbl.replace seen k3 ();
-               recompute_target k3))
+          if Hashtbl.mem seen k3 then None
+          else (
+            Hashtbl.replace seen k3 ();
+            recompute_target k3))
     in
 
     if output_entries <> [] then (
@@ -1010,10 +1007,10 @@ let union ~name (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t
     let output_entries =
       !all_affected
       |> List.filter_map (fun k ->
-             if Hashtbl.mem seen k then None
-             else (
-               Hashtbl.replace seen k ();
-               recompute_target k))
+          if Hashtbl.mem seen k then None
+          else (
+            Hashtbl.replace seen k ();
+            recompute_target k))
     in
 
     if output_entries <> [] then (

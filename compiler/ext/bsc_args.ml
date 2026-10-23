@@ -22,8 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type anon_fun = rev_args:string list -> unit
-
 type string_action =
   | String_call of (string -> unit)
   | String_set of string ref
@@ -39,6 +37,7 @@ type unit_action =
 type spec = Unit_dummy | Unit of unit_action | String of string_action
 
 exception Bad = Arg.Bad
+exception Help of string
 
 let bad_arg s = raise_notrace (Bad s)
 
@@ -52,9 +51,11 @@ let usage_b (buf : Ext_buffer.t) ~usage (speclist : t) =
   buf +> usage;
   buf +> "\nOptions:\n";
   let max_col = ref 0 in
-  Ext_array.iter speclist (fun (key, _, _) ->
+  speclist
+  |> Array.iter (fun (key, _, _) ->
       if String.length key > !max_col then max_col := String.length key);
-  Ext_array.iter speclist (fun (key, _, doc) ->
+  speclist
+  |> Array.iter (fun (key, _, doc) ->
       if not (Ext_string.starts_with doc "*internal*") then (
         buf +> "  ";
         buf +> key;
@@ -83,8 +84,7 @@ let stop_raise ~usage ~(error : error) (speclist : t) =
   (match error with
   | Unknown ("-help" | "--help" | "-h") ->
     usage_b b ~usage speclist;
-    Ext_buffer.output_buffer stdout b;
-    exit 0
+    raise_notrace (Help (Ext_buffer.contents b))
   | Unknown s ->
     b +> "Unknown option \"";
     b +> s;

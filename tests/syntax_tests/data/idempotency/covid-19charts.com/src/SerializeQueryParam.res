@@ -13,7 +13,7 @@ external string: coder<string> = "StringParam"
 @module("serialize-query-params") @val
 external stringArray: coder<array<string>> = "ArrayParam"
 @module("serialize-query-params") @val
-external date: coder<Js.Date.t> = "DateParam"
+external date: coder<Date.t> = "DateParam"
 
 type locationFragments = {
   protocol: string,

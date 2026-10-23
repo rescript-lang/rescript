@@ -30,15 +30,14 @@ let make = (
 ) =>
   if coaches->ArrayUtils.isNotEmpty {
     let listedCoaches =
-      coaches->Array.length <= 4 ? coaches : coaches->Js.Array.slice(~start=0, ~end_=3)
+      coaches->Array.length <= 4 ? coaches : coaches->Array.slice(~start=0, ~end=3)
 
     let otherCoaches = if coaches->Array.length > 4 {
       let names =
         coaches
-        ->Js.Array.sliceFrom(3)
-        ->Js.Array.map(coach =>
-          <div key={coach->UserProxy.userId}> {coach->UserProxy.name->str} </div>
-        )
+        ->Array.slice(~start=3)
+        ->Array.map(coach =>
+          <div key={coach->UserProxy.userId}> {coach->UserProxy.name->str} </div>)
         ->React.array
 
       let count = (coaches->Array.length) - 3

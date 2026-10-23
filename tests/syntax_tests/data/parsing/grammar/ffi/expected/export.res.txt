@@ -28,7 +28,7 @@
   4 │ export type t = int and s = string
   5 │ type t = int and export s = string
   6 │ 
-  7 │ export let callback = _ => Js.log("Clicked")
+  7 │ export let callback = _ => Console.log("Clicked")
 
   Consecutive statements on a line must be separated by ';' or a newline
 
@@ -36,7 +36,7 @@
   Syntax error!
   syntax_tests/data/parsing/grammar/ffi/export.res:10:40-41
 
-   8 │ export callback = _ => Js.log("Clicked")
+   8 │ export callback = _ => Console.log("Clicked")
    9 │ 
   10 │ export let x = "hello world" and export y = 2
   11 │ export x = "hello world" and export y = 2

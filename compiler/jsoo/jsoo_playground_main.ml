@@ -52,8 +52,9 @@
  * v5: Removed .ml support.
  * v6: Added `config.experimental_features` and `config.jsx_preserve_mode` to the BundleConfig.
  * v7: Added debug dump output APIs for developer playground tooling.
+ * v8: Added genType and source map configuration and compilation outputs.
  * *)
-let api_version = "7"
+let api_version = "8"
 
 module Js = Js_of_ocaml.Js
 
@@ -78,6 +79,10 @@ module Bundle_config = struct
     mutable open_modules: string list;
     mutable experimental_features: string list;
     mutable jsx_preserve_mode: bool;
+    mutable gentype_enabled: bool;
+    mutable source_map_mode: Js_config.source_map;
+    mutable source_map_sources_content: bool;
+    mutable source_map_root: string;
   }
 
   let make () =
@@ -88,6 +93,10 @@ module Bundle_config = struct
       open_modules = [];
       experimental_features = [];
       jsx_preserve_mode = false;
+      gentype_enabled = false;
+      source_map_mode = No_source_map;
+      source_map_sources_content = false;
+      source_map_root = "";
     }
 
   let default_filename (lang : Lang.t) = "playground." ^ Lang.to_string lang
@@ -96,6 +105,21 @@ module Bundle_config = struct
     match m with
     | Ext_module_system.Commonjs -> "commonjs"
     | Esmodule -> "esmodule"
+
+  let source_map_of_string value =
+    match String.lowercase_ascii value with
+    | "linked" -> Some Js_config.Linked
+    | "inline" -> Some Inline
+    | "hidden" -> Some Hidden
+    | "false" | "none" | "disabled" -> Some No_source_map
+    | _ -> None
+
+  let string_of_source_map mode =
+    match mode with
+    | Js_config.Linked -> "linked"
+    | Inline -> "inline"
+    | Hidden -> "hidden"
+    | No_source_map -> "false"
 end
 
 type loc_err_info = {
@@ -211,8 +235,8 @@ end
 (* One time setup for all relevant modules *)
 let () =
   Bs_conditional_initial.setup_env ();
-  Clflags.binary_annotations := false;
-  Clflags.color := Some Always;
+  (Clflags.current ()).binary_annotations := false;
+  (Clflags.current ()).color := Some Always;
   Lazy.force Res_outcome_printer.setup
 
 let error_of_exn e =
@@ -231,11 +255,7 @@ module Res_driver = struct
   open Res_driver
 
   (* adds ~src parameter *)
-  let setup ~src ~filename ~for_printer () =
-    let mode =
-      if for_printer then Res_parser.Default else ParseForTypeChecker
-    in
-    Res_parser.make ~mode src filename
+  let setup ~src ~filename = Res_parser.make src filename
 
   (* get full super error message *)
   let diagnostic_to_string ~(src : string) (d : Res_diagnostics.t) =
@@ -249,10 +269,10 @@ module Res_driver = struct
     Location.default_error_reporter ~src:(Some src) Format.str_formatter err;
     Format.flush_str_formatter ()
 
-  let parse_implementation ~sourcefile ~for_printer ~src =
-    Location.input_name := sourcefile;
+  let parse_implementation ~sourcefile ~src =
+    Location.set_input_name sourcefile;
     let parse_result =
-      let engine = setup ~filename:sourcefile ~for_printer ~src () in
+      let engine = setup ~filename:sourcefile ~src in
       let structure = Res_core.parse_implementation engine in
       let invalid, diagnostics =
         match engine.diagnostics with
@@ -260,8 +280,8 @@ module Res_driver = struct
         | _ as diagnostics -> (true, diagnostics)
       in
       {
-        filename = engine.scanner.filename;
-        source = engine.scanner.src;
+        filename = engine.filename;
+        source = engine.source;
         parsetree = structure;
         diagnostics;
         invalid;
@@ -273,18 +293,16 @@ module Res_driver = struct
         let errors =
           parse_result.diagnostics
           |> List.map (fun d ->
-                 let full_msg =
-                   diagnostic_to_string ~src:parse_result.source d
-                 in
-                 let short_msg = Res_diagnostics.explain d in
-                 let loc =
-                   {
-                     Location.loc_start = Res_diagnostics.get_start_pos d;
-                     Location.loc_end = Res_diagnostics.get_end_pos d;
-                     loc_ghost = false;
-                   }
-                 in
-                 {full_msg; short_msg; loc})
+              let full_msg = diagnostic_to_string ~src:parse_result.source d in
+              let short_msg = Res_diagnostics.explain d in
+              let loc =
+                {
+                  Location.loc_start = Res_diagnostics.get_start_pos d;
+                  Location.loc_end = Res_diagnostics.get_end_pos d;
+                  loc_ghost = false;
+                }
+              in
+              {full_msg; short_msg; loc})
           |> List.rev
         in
         raise (RescriptParsingErrors errors)
@@ -294,7 +312,7 @@ end
 
 let rescript_parse ~filename src =
   let structure, _ =
-    Res_driver.parse_implementation ~for_printer:false ~sourcefile:filename ~src
+    Res_driver.parse_implementation ~sourcefile:filename ~src
   in
   structure
 
@@ -475,6 +493,128 @@ module Compile = struct
     List.iter Iter.iter_structure_item structure.str_items;
     Js.array (!acc |> Array.of_list)
 
+  let gentype_output ~module_system ~modulename ~sourcefile structure env =
+    let cmt_annots = Cmt_format.Implementation structure in
+    let input_cmt =
+      {
+        Cmt_format.cmt_modname = modulename;
+        cmt_annots;
+        cmt_value_dependencies = [];
+        cmt_comments = [];
+        cmt_args = [||];
+        cmt_sourcefile = Some sourcefile;
+        cmt_builddir = Sys.getcwd ();
+        cmt_loadpath = Config.get_load_path ();
+        cmt_source_digest = None;
+        cmt_initial_env = env;
+        cmt_imports = [];
+        cmt_use_summaries = false;
+        cmt_extra_info = {Cmt_utils.deprecated_used = []};
+      }
+    in
+    let has_gentype_annotations =
+      Gentype_main.cmt_check_annotations input_cmt
+        ~check_annotation:(fun ~loc:_ attributes ->
+          attributes
+          |> Annotation.get_attribute_payload
+               Annotation.tag_is_one_of_the_gentype_annotations
+          <> None)
+    in
+    if has_gentype_annotations then
+      let module_ =
+        match module_system with
+        | Ext_module_system.Commonjs -> Gentype_config.CommonJS
+        | Esmodule -> ESModule
+      in
+      let project_root = Sys.getcwd () in
+      let config =
+        {
+          Gentype_config.default with
+          module_;
+          platform_lib = "rescript";
+          project_root;
+          bsb_project_root = project_root;
+          suffix = Literals.suffix_js;
+        }
+      in
+      let source_file = sourcefile in
+      let output_file_relative =
+        source_file |> Paths.get_output_file_relative ~config
+      in
+      let file_name =
+        sourcefile |> Filename.basename |> Filename.remove_extension
+        |> Module_name.from_string_unsafe
+      in
+      let resolver =
+        Module_resolver.create_lazy_resolver ~config
+          ~extensions:[".res"; ".shim.ts"] ~exclude_file:(fun _ -> false)
+      in
+      let code_text =
+        input_cmt
+        |> Gentype_main.translate_cmt ~config ~output_file_relative ~resolver
+        |> Emit_js.emit_translation_as_string ~config ~file_name
+             ~output_file_relative ~resolver
+             ~input_cmt_translate_type_declarations:
+               Gentype_main.input_cmt_translate_type_declarations
+      in
+      Emit_type.file_header ~source_file:(Filename.basename source_file)
+      ^ "\n" ^ code_text ^ "\n"
+    else "No @gentype annotations found."
+
+  let render_javascript ~module_system ~filename ~source ~source_map_mode
+      ~source_map_sources_content ~source_map_root lambda_output =
+    let buffer = Buffer.create 1000 in
+    let generated_file =
+      Filename.concat (Sys.getcwd ())
+        (Filename.remove_extension (Filename.basename filename)
+        ^ Literals.suffix_js)
+    in
+    let source_map_builder =
+      match source_map_mode with
+      | Js_config.No_source_map -> None
+      | Linked | Inline | Hidden ->
+        Some
+          (Js_source_map.make ~generated_file ~source_root:source_map_root
+             ~sources_content:source_map_sources_content)
+    in
+    let print_javascript () =
+      Js_dump_program.pp_deps_program ~output_prefix:"" module_system
+        lambda_output
+        (Ext_pp.from_buffer
+           ~track_positions:(Option.is_some source_map_builder)
+           buffer)
+    in
+    (match source_map_builder with
+    | None -> print_javascript ()
+    | Some builder ->
+      let source_file =
+        if Filename.is_relative filename then
+          Filename.concat (Sys.getcwd ()) filename
+        else filename
+      in
+      let source_dir = Filename.dirname source_file in
+      Js_of_ocaml.Sys_js.mount ~path:source_dir (fun ~prefix:_ ~path ->
+          if path = Filename.basename source_file then Some source else None);
+      Ext_pervasives.finally ()
+        ~clean:(fun () -> Js_of_ocaml.Sys_js.unmount ~path:source_dir)
+        (fun () -> Js_source_map.with_builder builder print_javascript));
+    let source_map =
+      match source_map_builder with
+      | None -> None
+      | Some builder ->
+        let json = Js_source_map.json builder in
+        (match source_map_mode with
+        | Linked ->
+          Buffer.add_string buffer
+            (Js_source_map.linked_comment ~map_file:(generated_file ^ ".map"))
+        | Inline ->
+          Buffer.add_string buffer (Js_source_map.inline_comment ~json)
+        | Hidden -> ()
+        | No_source_map -> assert false);
+        Some json
+    in
+    (Buffer.contents buffer, source_map)
+
   let implementation ?(include_debug_outputs = false)
       ~(config : Bundle_config.t) ~lang str =
     let {
@@ -483,6 +623,10 @@ module Compile = struct
       open_modules;
       experimental_features;
       jsx_preserve_mode;
+      gentype_enabled;
+      source_map_mode;
+      source_map_sources_content;
+      source_map_root;
     } =
       config
     in
@@ -492,7 +636,7 @@ module Compile = struct
       let filename = get_filename ~lang config.filename in
       let modulename = "Playground" in
       let impl = rescript_parse ~filename in
-      Clflags.open_modules := open_modules;
+      (Clflags.current ()).open_modules := open_modules;
       (* let env = !Toploop.toplevel_env in *)
       (* Res_compmisc.init_path (); *)
       (* let modulename = module_of_filename ppf sourcefile outputprefix in *)
@@ -502,65 +646,102 @@ module Compile = struct
       (* Question ?? *)
       (* let finalenv = ref Env.empty in *)
       let types_signature = ref [] in
-      Js_config.jsx_version := Some Js_config.Jsx_v4;
-      Js_config.jsx_preserve := jsx_preserve_mode;
+      (Js_config.current ()).jsx_version := Some Js_config.Jsx_v4;
+      (Clflags.current ()).jsx_preserve := jsx_preserve_mode;
+      (Js_config.current ()).source_map := source_map_mode;
+      (Js_config.current ()).source_map_sources_content :=
+        source_map_sources_content;
+      (Js_config.current ()).source_map_root := source_map_root;
       experimental_features
       |> List.iter Experimental_features.enable_from_string;
       (* default *)
       let ast = impl str in
       let ast = Ppx_entry.rewrite_implementation ast in
-      let typed_tree =
-        let a, b, _, signature =
-          Typemod.type_implementation_more modulename modulename modulename env
-            ast
-        in
-        (* finalenv := c ; *)
-        types_signature := signature;
-        (a, b)
+      let structure, coercion, finalenv, signature =
+        Typemod.type_implementation_more modulename modulename modulename env
+          ast
       in
-      typed_tree |> Translmod.transl_implementation modulename
-      |> (* Printlambda.lambda ppf *) fun (lam, exports) ->
-      let buffer = Buffer.create 1000 in
-      let () =
-        Js_dump_program.pp_deps_program ~output_prefix:""
-          (* does not matter here *) module_system
-          (Lam_compile_main.compile "" exports lam)
-          (Ext_pp.from_buffer buffer)
+      types_signature := signature;
+      let typed_tree = (structure, coercion) in
+      let ({Translmod.lambda} as implementation) =
+        Translmod.transl_implementation modulename finalenv signature typed_tree
       in
-      let v = Buffer.contents buffer in
+      let optimized_lambda = ref None in
+      let on_optimized_lambda =
+        if include_debug_outputs then
+          Some
+            (fun lambda ->
+              optimized_lambda :=
+                Some (Printer.to_string Printlambda.lambda lambda))
+        else None
+      in
+      let lambda_output =
+        Lam_compile_main.compile ?on_optimized_lambda "" implementation
+      in
+      let js_code, source_map =
+        render_javascript ~module_system ~filename ~source:str ~source_map_mode
+          ~source_map_sources_content ~source_map_root lambda_output
+      in
       let type_hints = collect_type_hints typed_tree in
+      let source_map_attrs =
+        match source_map with
+        | None -> [||]
+        | Some source_map ->
+          Js.Unsafe.[|("source_map", inject @@ Js.string source_map)|]
+      in
       let attrs =
-        Js.Unsafe.
-          [|
-            ("js_code", inject @@ Js.string v);
-            ( "warnings",
-              inject
-              @@ (!warning_infos
-                 |> Array.map Error_ret.make_warning
-                 |> Js.array |> inject) );
-            ("type_hints", inject @@ type_hints);
-            ("type", inject @@ Js.string "success");
-          |]
+        Array.append
+          Js.Unsafe.
+            [|
+              ("js_code", inject @@ Js.string js_code);
+              ( "warnings",
+                inject
+                @@ (!warning_infos
+                   |> Array.map Error_ret.make_warning
+                   |> Js.array |> inject) );
+              ("type_hints", inject @@ type_hints);
+              ("type", inject @@ Js.string "success");
+            |]
+          source_map_attrs
       in
       if include_debug_outputs then
-        let export_ident_sets = Set_ident.of_list exports in
         let parsetree = Printer.to_string Printast.implementation ast in
         let typedtree =
           Printer.to_string Printtyped.implementation_with_coercion typed_tree
         in
-        let lambda = Printer.to_string Printlambda.lambda lam in
-        let lam, _ = Lam_convert.convert export_ident_sets lam in
-        let lam = Lam_print.lambda_to_string lam in
+        let lambda_output = Printer.to_string Printlambda.lambda lambda in
+        let lam = Printlambda.lambda_to_string lambda in
+        let gentype_attrs =
+          if gentype_enabled then
+            let structure, _ = typed_tree in
+            Js.Unsafe.
+              [|
+                ( "gentype",
+                  inject
+                  @@ Js.string
+                       (gentype_output ~module_system ~modulename
+                          ~sourcefile:filename structure env) );
+              |]
+          else [||]
+        in
         let debug_attrs =
           Js.Unsafe.
             [|
               ("parsetree", inject @@ Js.string parsetree);
               ("typedtree", inject @@ Js.string typedtree);
-              ("lambda", inject @@ Js.string lambda);
+              ("lambda", inject @@ Js.string lambda_output);
               ("lam", inject @@ Js.string lam);
             |]
         in
-        Js.Unsafe.obj (Array.append attrs debug_attrs)
+        let optimized_lambda_attrs =
+          match !optimized_lambda with
+          | None -> [||]
+          | Some output ->
+            Js.Unsafe.[|("lambda_optimized", inject @@ Js.string output)|]
+        in
+        Js.Unsafe.obj
+          (Array.concat
+             [attrs; debug_attrs; gentype_attrs; optimized_lambda_attrs])
       else Js.Unsafe.obj attrs
     with e -> (
       match e with
@@ -574,12 +755,9 @@ module Compile = struct
       let code =
         match (from, to_) with
         | Res, Res ->
-          (* Essentially pretty printing.
-           * IMPORTANT: we need forPrinter:true when parsing code here,
-           * otherwise we will loose some information for the ReScript printer *)
+          (* Essentially pretty printing. *)
           let structure, comments =
-            Res_driver.parse_implementation ~for_printer:true
-              ~sourcefile:filename ~src
+            Res_driver.parse_implementation ~sourcefile:filename ~src
           in
           Res_printer.print_implementation ~width:80 structure ~comments
       in
@@ -595,7 +773,7 @@ module Compile = struct
 end
 
 (* To add a directory to the load path *)
-let dir_directory d = Config.load_path := d :: !Config.load_path
+let dir_directory d = Config.set_load_path (d :: Config.get_load_path ())
 let () = dir_directory "/static"
 
 module Export = struct
@@ -606,12 +784,12 @@ module Export = struct
         ( "compile",
           inject
           @@ Js.wrap_meth_callback (fun _ code ->
-                 Compile.implementation ~config ~lang (Js.to_string code)) );
+              Compile.implementation ~config ~lang (Js.to_string code)) );
         ( "compileWithDebug",
           inject
           @@ Js.wrap_meth_callback (fun _ code ->
-                 Compile.implementation ~include_debug_outputs:true ~config
-                   ~lang (Js.to_string code)) );
+              Compile.implementation ~include_debug_outputs:true ~config ~lang
+                (Js.to_string code)) );
         ("version", inject @@ Js.string Bs_version.version);
       |]
     in
@@ -621,8 +799,8 @@ module Export = struct
           ( "format",
             inject
             @@ Js.wrap_meth_callback (fun _ code ->
-                   Compile.syntax_format ?filename:config.filename ~from:lang
-                     ~to_:lang (Js.to_string code)) );
+                Compile.syntax_format ?filename:config.filename ~from:lang
+                  ~to_:lang (Js.to_string code)) );
         |]
     in
     obj attrs
@@ -661,6 +839,25 @@ module Export = struct
       config.jsx_preserve_mode <- value;
       true
     in
+    let set_gentype_enabled value =
+      config.gentype_enabled <- value;
+      true
+    in
+    let set_source_map_mode value =
+      match Bundle_config.source_map_of_string value with
+      | Some source_map_mode ->
+        config.source_map_mode <- source_map_mode;
+        true
+      | None -> false
+    in
+    let set_source_map_sources_content value =
+      config.source_map_sources_content <- value;
+      true
+    in
+    let set_source_map_root value =
+      config.source_map_root <- value;
+      true
+    in
     let convert_syntax ~(from_lang : string) ~(to_lang : string) (src : string)
         =
       let open Lang in
@@ -687,61 +884,87 @@ module Export = struct
           ( "convertSyntax",
             inject
             @@ Js.wrap_meth_callback (fun _ from_lang to_lang src ->
-                   convert_syntax ~from_lang:(Js.to_string from_lang)
-                     ~to_lang:(Js.to_string to_lang) (Js.to_string src)) );
+                convert_syntax ~from_lang:(Js.to_string from_lang)
+                  ~to_lang:(Js.to_string to_lang) (Js.to_string src)) );
           ( "setModuleSystem",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool (set_module_system (Js.to_string value))) );
+                Js.bool (set_module_system (Js.to_string value))) );
           ( "setFilename",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool (set_filename (Js.to_string value))) );
+                Js.bool (set_filename (Js.to_string value))) );
           ( "setWarnFlags",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool (set_warn_flags (Js.to_string value))) );
+                Js.bool (set_warn_flags (Js.to_string value))) );
           ( "setOpenModules",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool
-                     (set_open_modules
-                        (value |> Js.to_array |> Array.map Js.to_string
-                       |> Array.to_list))) );
+                Js.bool
+                  (set_open_modules
+                     (value |> Js.to_array |> Array.map Js.to_string
+                    |> Array.to_list))) );
           ( "setExperimentalFeatures",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool
-                     (set_experimental_features
-                        (value |> Js.to_array |> Array.map Js.to_string
-                       |> Array.to_list))) );
+                Js.bool
+                  (set_experimental_features
+                     (value |> Js.to_array |> Array.map Js.to_string
+                    |> Array.to_list))) );
           ( "setJsxPreserveMode",
             inject
             @@ Js.wrap_meth_callback (fun _ value ->
-                   Js.bool (set_jsx_preserve_mode (Js.to_bool value))) );
+                Js.bool (set_jsx_preserve_mode (Js.to_bool value))) );
+          ( "setGentypeEnabled",
+            inject
+            @@ Js.wrap_meth_callback (fun _ value ->
+                Js.bool (set_gentype_enabled (Js.to_bool value))) );
+          ( "setSourceMapMode",
+            inject
+            @@ Js.wrap_meth_callback (fun _ value ->
+                Js.bool (set_source_map_mode (Js.to_string value))) );
+          ( "setSourceMapSourcesContent",
+            inject
+            @@ Js.wrap_meth_callback (fun _ value ->
+                Js.bool (set_source_map_sources_content (Js.to_bool value))) );
+          ( "setSourceMapRoot",
+            inject
+            @@ Js.wrap_meth_callback (fun _ value ->
+                Js.bool (set_source_map_root (Js.to_string value))) );
           ( "getConfig",
             inject
             @@ Js.wrap_meth_callback (fun _ ->
-                   Js.Unsafe.(
-                     obj
-                       [|
-                         ( "module_system",
-                           inject
-                           @@ (config.module_system
-                             |> Bundle_config.string_of_module_system
-                             |> Js.string) );
-                         ("warn_flags", inject @@ Js.string config.warn_flags);
-                         ( "jsx_preserve_mode",
-                           inject @@ (config.jsx_preserve_mode |> Js.bool) );
-                         ( "experimental_features",
-                           inject
-                           @@ (config.experimental_features |> Array.of_list
-                             |> Js.array) );
-                         ( "open_modules",
-                           inject
-                           @@ (config.open_modules |> Array.of_list |> Js.array)
-                         );
-                       |])) );
+                Js.Unsafe.(
+                  obj
+                    [|
+                      ( "module_system",
+                        inject
+                        @@ (config.module_system
+                          |> Bundle_config.string_of_module_system |> Js.string
+                           ) );
+                      ("warn_flags", inject @@ Js.string config.warn_flags);
+                      ( "jsx_preserve_mode",
+                        inject @@ (config.jsx_preserve_mode |> Js.bool) );
+                      ( "gentype_enabled",
+                        inject @@ (config.gentype_enabled |> Js.bool) );
+                      ( "source_map_mode",
+                        inject
+                        @@ (config.source_map_mode
+                          |> Bundle_config.string_of_source_map |> Js.string) );
+                      ( "source_map_sources_content",
+                        inject @@ (config.source_map_sources_content |> Js.bool)
+                      );
+                      ( "source_map_root",
+                        inject @@ Js.string config.source_map_root );
+                      ( "experimental_features",
+                        inject
+                        @@ (config.experimental_features |> Array.of_list
+                          |> Js.array) );
+                      ( "open_modules",
+                        inject
+                        @@ (config.open_modules |> Array.of_list |> Js.array) );
+                    |])) );
         |])
 end
 

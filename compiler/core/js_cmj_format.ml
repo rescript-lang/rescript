@@ -29,7 +29,7 @@ type arity = Single of Lam_arity.t | Submodule of Lam_arity.t array
 (* TODO: add a magic number *)
 type cmj_value = {
   arity: arity;
-  persistent_closed_lambda: Lam.t option;
+  persistent_closed_lambda: Lambda.t option;
       (** Either constant or closed functor *)
 }
 
@@ -40,7 +40,7 @@ let single_na = Single Lam_arity.na
 type keyed_cmj_value = {
   name: string;
   arity: arity;
-  persistent_closed_lambda: Lam.t option;
+  persistent_closed_lambda: Lambda.t option;
 }
 
 type keyed_cmj_values = keyed_cmj_value array
@@ -55,40 +55,39 @@ type t = {
 let make ~(values : cmj_value Map_string.t) ~effect_ ~package_spec ~case : t =
   {
     values =
-      Map_string.to_sorted_array_with_f values (fun k v ->
+      Map_string.bindings values
+      |> List.map (fun (k, (v : cmj_value)) ->
           {
             name = k;
             arity = v.arity;
             persistent_closed_lambda = v.persistent_closed_lambda;
-          });
+          })
+      |> Array.of_list;
     pure = effect_ = None;
     package_spec;
     case;
   }
 
 (* Serialization .. *)
+(* Channels are closed also when decoding fails: the compiler can run inside a
+   long-lived build process, which would otherwise keep the file open. *)
 let from_file name : t =
-  let ic = open_in_bin name in
-  let _digest = Digest.input ic in
-  let v : t = input_value ic in
-  close_in ic;
-  v
-
-let from_file_with_digest name : t * Digest.t =
-  let ic = open_in_bin name in
-  let digest = Digest.input ic in
-  let v : t = input_value ic in
-  close_in ic;
-  (v, digest)
-
-let from_string s : t = Marshal.from_string s Ext_digest.length
+  let ic = open_in_bin (Compiler_request_state.resolve_path name) in
+  Fun.protect
+    ~finally:(fun () -> close_in_noerr ic)
+    (fun () ->
+      let _digest = Digest.input ic in
+      (input_value ic : t))
 
 let for_sure_not_changed (name : string) (header : string) =
-  if Sys.file_exists name then (
-    let ic = open_in_bin name in
-    let holder = really_input_string ic Ext_digest.length in
-    close_in ic;
-    holder = header)
+  if Sys.file_exists (Compiler_request_state.resolve_path name) then
+    let ic = open_in_bin (Compiler_request_state.resolve_path name) in
+    Fun.protect
+      ~finally:(fun () -> close_in_noerr ic)
+      (fun () ->
+        match really_input_string ic Ext_digest.length with
+        | holder -> holder = header
+        | exception End_of_file -> false)
   else false
 
 (* This may cause some build system always rebuild
@@ -98,13 +97,16 @@ let to_file name ~check_exists (v : t) =
   let s = Marshal.to_string v [] in
   let cur_digest = Digest.string s in
   let header = cur_digest in
-  if not (check_exists && for_sure_not_changed name header) then (
-    let oc = open_out_bin name in
-    output_string oc header;
-    output_string oc s;
-    close_out oc)
+  if not (check_exists && for_sure_not_changed name header) then
+    let oc = open_out_bin (Compiler_request_state.resolve_path name) in
+    Fun.protect
+      ~finally:(fun () -> close_out_noerr oc)
+      (fun () ->
+        output_string oc header;
+        output_string oc s;
+        close_out oc)
 
-let key_comp (a : string) b = Map_string.compare_key a b.name
+let key_comp a b = Ext_string.compare a b.name
 
 let not_found key =
   {name = key; arity = single_na; persistent_closed_lambda = None}
@@ -117,7 +119,7 @@ let get_result mid_val =
   | None ->
     mid_val
   | Some _ ->
-    if !Js_config.cross_module_inline then mid_val
+    if !((Js_config.current ()).cross_module_inline) then mid_val
     else {mid_val with persistent_closed_lambda = None}
 
 let rec binary_search_aux arr lo hi (key : string) =

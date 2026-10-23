@@ -1,4 +1,4 @@
-@@jsxConfig({version: 4})
+@@jsxConfig({version: 4, module_: `Pre\x61ct`})
 
 module V4A = {
   @react.component

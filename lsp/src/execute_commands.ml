@@ -99,9 +99,7 @@ module Dump_cmt = struct
       let analysis_state = server |> Server.state |> State.analysis_state in
       match Helpers.load_full (Uri.of_string uri) analysis_state with
       | Some full ->
-        let cmt_content =
-          Analysis.Cmt_viewer.dump ~full ~filter_for_position:None
-        in
+        let cmt_content = Analysis.Cmt_viewer.dump ~full in
         let response = `Assoc [("content", `String cmt_content)] in
         Ok (Some response)
       | None ->

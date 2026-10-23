@@ -11,10 +11,7 @@ console.log(InternalDep.value);
 
 let $$Array;
 
-let $$String;
-
 export {
   $$Array,
-  $$String,
 }
 /*  Not a pure module */

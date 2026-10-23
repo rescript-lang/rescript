@@ -5,7 +5,7 @@ open Test_utils
 
 describe(__MODULE__, () => {
   test("epsilon", () => {
-    eq(__LOC__, epsilon_float, v)
+    eq(__LOC__, Float.Constants.epsilon, v)
   })
   test("raw_epsilon", () => {
     eq(__LOC__, 2.220446049250313e-16, v)

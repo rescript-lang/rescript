@@ -28,9 +28,8 @@ let reducer = (state, action) =>
     }
   | RemoveCoach(coachId) => {
       ...state,
-      courseCoaches: state.courseCoaches->Js.Array.filter(courseCoach =>
-        CourseCoach.id(courseCoach) !== coachId
-      ),
+      courseCoaches: state.courseCoaches->Array.filter(courseCoach =>
+        CourseCoach.id(courseCoach) !== coachId),
     }
   | UpdateSaving => {...state, saving: !state.saving}
   }
@@ -61,9 +60,9 @@ let removeCoach = (send, courseId, authenticityToken, coach, event) => {
   } {
     send(UpdateSaving)
     let url = "/school/courses/" ++ (courseId ++ "/delete_coach_enrollment")
-    let payload = Js.Dict.empty()
-    Js.Dict.set(payload, "authenticity_token", authenticityToken->Js.Json.string)
-    Js.Dict.set(payload, "coach_id", coach->CourseCoach.id->Js.Json.string)
+    let payload = Dict.make()
+    Dict.set(payload, "authenticity_token", authenticityToken->JSON.string)
+    Dict.set(payload, "coach_id", coach->CourseCoach.id->JSON.string)
     Api.create(url, payload, handleResponseCB(send), handleErrorCB(send))
   } else {
     ()

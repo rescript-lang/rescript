@@ -2,6 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
+import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.mjs";
 
 function hi (cb){
     cb ();
@@ -11,28 +12,14 @@ function hi (cb){
 
 Mocha.describe("Bs_auto_uncurry_test", () => {
   Mocha.test("callback_test", () => {
-    let xs = {
-      contents: /* [] */0
-    };
+    let xs = /* [] */0;
     hi(x => {
-      xs.contents = {
-        hd: x,
-        tl: xs.contents
-      };
+      xs = {hd: x, tl: xs};
     });
     hi(x => {
-      xs.contents = {
-        hd: x,
-        tl: xs.contents
-      };
+      xs = {hd: x, tl: xs};
     });
-    Test_utils.eq("File \"bs_auto_uncurry_test.res\", line 20, characters 7-14", xs.contents, {
-      hd: undefined,
-      tl: {
-        hd: undefined,
-        tl: /* [] */0
-      }
-    });
+    Test_utils.eq("File \"bs_auto_uncurry_test.res\", line 20, characters 7-14", xs, {hd: undefined, tl: {hd: undefined, tl: /* [] */0}});
   });
   Mocha.test("array_operations_test", () => {
     Test_utils.eq("File \"bs_auto_uncurry_test.res\", line 24, characters 7-14", [
@@ -53,16 +40,16 @@ Mocha.describe("Bs_auto_uncurry_test", () => {
       3,
       4
     ]);
-    Test_utils.eq("File \"bs_auto_uncurry_test.res\", line 26, characters 7-14", [
+    Test_utils.eq("File \"bs_auto_uncurry_test.res\", line 26, characters 7-14", Stdlib_Array.reduce([
       1,
       2,
       3
-    ].reduce((x, y) => x + y | 0, 0), 6);
-    Test_utils.eq("File \"bs_auto_uncurry_test.res\", line 27, characters 7-14", [
+    ], 0, (x, y) => x + y | 0), 6);
+    Test_utils.eq("File \"bs_auto_uncurry_test.res\", line 27, characters 7-14", Stdlib_Array.reduceWithIndex([
       1,
       2,
       3
-    ].reduce((x, y, i) => (x + y | 0) + i | 0, 0), 9);
+    ], 0, (x, y, i) => (x + y | 0) + i | 0), 9);
     Test_utils.eq("File \"bs_auto_uncurry_test.res\", line 28, characters 7-14", [
       1,
       2,

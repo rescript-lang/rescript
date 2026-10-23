@@ -37,3 +37,8 @@
 // let dd = %t
 //            ^com
 
+// type withAs = {@as("wire") a: int}
+//                   ^com
+
+// type withTag = | @as("t") A | B
+//                     ^com

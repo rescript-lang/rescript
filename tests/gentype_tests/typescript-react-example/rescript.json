@@ -1,11 +1,7 @@
 {
   "gentypeconfig": {
-    "language": "typescript",
     "module": "esmodule",
-    "importPath": "relative",
     "shims": {
-      "Js": "Js",
-      "Jsx": "Jsx",
       "JsxEvent": "JsxEvent",
       "Belt": "Belt",
       "RescriptPervasives": "RescriptPervasives"
@@ -18,7 +14,7 @@
   "name": "@tests/gentype-react-example",
   "compiler-flags": [],
   "jsx": { "version": 4 },
-  "dependencies": ["@rescript/react"],
+  "dependencies": ["@rescript/belt", "@rescript/react"],
   "sources": [
     {
       "dir": "src",

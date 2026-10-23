@@ -34,3 +34,10 @@ exception Exit = Terminate
 @onConstructor
 exception Exit = Lib.Terminate 
 exception GadtExit(int): exit<int>
+
+/** doc comment */
+exception ExitEarly({x: int})
+/** doc comment */
+exception ExitEarly({x: int, y: string})
+/** doc comment */
+exception ExitEarlyWithManyFields({firstFieldName: int, secondFieldName: string, thirdFieldName: bool, fourthFieldName: float})

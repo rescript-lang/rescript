@@ -3,6 +3,7 @@
   "sources": {
     "dir": "."
   },
+  "dependencies": ["@rescript/belt"],
   "package-specs": {
     "module": "esmodule",
     "in-source": true

@@ -22,7 +22,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 val compile_recmodule :
-  (Ident.t -> Typedtree.module_expr -> Location.t -> Lambda.lambda) ->
+  (Ident.t -> Typedtree.module_expr -> Location.t -> Lambda.t) ->
   Typedtree.module_binding list ->
-  Lambda.lambda ->
-  Lambda.lambda
+  Lambda.t ->
+  Lambda.t

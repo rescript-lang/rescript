@@ -33,9 +33,9 @@ let studentsInTeam = (students, team) =>
   students->List.filter(student => Student.teamId(student) === Team.id(team))
 
 let markActive = (teams, courseId, responseCB, authenticityToken) => {
-  let payload = Js.Dict.empty()
-  Js.Dict.set(payload, "authenticity_token", authenticityToken->Js.Json.string)
-  Js.Dict.set(
+  let payload = Dict.make()
+  Dict.set(payload, "authenticity_token", authenticityToken->JSON.string)
+  Dict.set(
     payload,
     "team_ids",
     teams

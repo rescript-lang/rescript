@@ -195,27 +195,27 @@ describe(__MODULE__, () => {
   })
 
   test("null compare 1", () => {
-    eq(__LOC__, compare(Js.null, Js.Null.return(list{3})), -1)
+    eq(__LOC__, compare(Null.null, Null.make(list{3})), -1)
   })
 
   test("null compare 2", () => {
-    eq(__LOC__, compare(Js.Null.return(list{3}), Js.null), 1)
+    eq(__LOC__, compare(Null.make(list{3}), Null.null), 1)
   })
 
   test("null compare 3", () => {
-    eq(__LOC__, compare(Js.null, Js.Null.return(0)), -1)
+    eq(__LOC__, compare(Null.null, Null.make(0)), -1)
   })
 
   test("null compare 4", () => {
-    eq(__LOC__, compare(Js.Null.return(0), Js.null), 1)
+    eq(__LOC__, compare(Null.make(0), Null.null), 1)
   })
 
   test("undefined compare 1", () => {
-    eq(__LOC__, compare(Js.Nullable.undefined, Js.Nullable.return(0)), -1)
+    eq(__LOC__, compare(Nullable.undefined, Nullable.make(0)), -1)
   })
 
   test("undefined compare 2", () => {
-    eq(__LOC__, compare(Js.Nullable.return(0), Js.Nullable.undefined), 1)
+    eq(__LOC__, compare(Nullable.make(0), Nullable.undefined), 1)
   })
 
   test("additional option compare 1", () => {

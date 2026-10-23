@@ -182,14 +182,13 @@ end = struct
         match cstr with
         | Tpat_type _ -> ()
         | Tpat_unpack -> ()
-        | Tpat_open _ -> ()
         | Tpat_constraint ct -> iter_core_type ct)
       pat.pat_extra;
     (match pat.pat_desc with
     | Tpat_any -> ()
     | Tpat_var _ -> ()
     | Tpat_alias (pat1, _, _) -> iter_pattern pat1
-    | Tpat_constant _ -> ()
+    | Tpat_constant _ | Tpat_interval _ -> ()
     | Tpat_tuple list -> List.iter iter_pattern list
     | Tpat_construct (_, _, args) -> List.iter iter_pattern args
     | Tpat_variant (_, pato, _) -> (
@@ -198,6 +197,8 @@ end = struct
       | Some pat -> iter_pattern pat)
     | Tpat_record (list, _closed, _rest) ->
       List.iter (fun (_, _, pat, _) -> iter_pattern pat) list
+    | Tpat_dict entries ->
+      List.iter (fun {tdp_pattern} -> iter_pattern tdp_pattern) entries
     | Tpat_array list -> List.iter iter_pattern list
     | Tpat_or (p1, p2, _) ->
       iter_pattern p1;
@@ -216,9 +217,8 @@ end = struct
         | cstr, _, _attrs -> (
           match cstr with
           | Texp_constraint ct -> iter_core_type ct
-          | Texp_coerce cty2 -> iter_core_type cty2
-          | Texp_open _ -> ()
-          | Texp_newtype _ -> ()))
+          | Texp_coerce {target} -> iter_core_type target
+          | Texp_open _ -> ()))
       exp.exp_extra;
     (match exp.exp_desc with
     | Texp_ident _ -> ()
@@ -226,7 +226,9 @@ end = struct
     | Texp_let (rec_flag, list, exp) ->
       iter_bindings rec_flag list;
       iter_expression exp
-    | Texp_function {case; _} -> iter_case case
+    | Texp_function {params; body} ->
+      List.iter (fun {fp_pat} -> iter_pattern fp_pat) params;
+      iter_expression body
     | Texp_apply {funct = exp; args = list} ->
       iter_expression exp;
       List.iter
@@ -262,6 +264,11 @@ end = struct
       iter_expression exp1;
       iter_expression exp2
     | Texp_array list -> List.iter iter_expression list
+    | Texp_dict entries ->
+      List.iter
+        (function
+          | Tdict_entry (_, exp) | Tdict_spread exp -> iter_expression exp)
+        entries
     | Texp_ifthenelse (exp1, exp2, expo) -> (
       iter_expression exp1;
       iter_expression exp2;
@@ -285,11 +292,16 @@ end = struct
     | Texp_for_await_of (_id, _, exp1, exp2) ->
       iter_expression exp1;
       iter_expression exp2
-    | Texp_send (exp, _meth, expo) -> (
+    | Texp_template {values} -> List.iter iter_expression values
+    | Texp_tagged_template {tag; values} ->
+      iter_expression tag;
+      List.iter iter_expression values
+    | Texp_object_get (exp, _) -> iter_expression exp
+    | Texp_object_set (exp, _, v) ->
       iter_expression exp;
-      match expo with
-      | None -> ()
-      | Some exp -> iter_expression exp)
+      iter_expression v
+    | Texp_object_literal fields ->
+      List.iter (fun (_, e) -> iter_expression e) fields
     | Texp_letmodule (_id, _, mexpr, exp) ->
       iter_module_expr mexpr;
       iter_expression exp
@@ -297,8 +309,7 @@ end = struct
       iter_extension_constructor cd;
       iter_expression exp
     | Texp_assert exp -> iter_expression exp
-    | Texp_pack mexpr -> iter_module_expr mexpr
-    | Texp_extension_constructor _ -> ());
+    | Texp_pack mexpr -> iter_module_expr mexpr);
     Iter.leave_expression exp
 
   and iter_package_type pack =
@@ -382,8 +393,8 @@ end = struct
     (match ct.ctyp_desc with
     | Ttyp_any -> ()
     | Ttyp_var _ -> ()
-    | Ttyp_arrow (arg, ret, _) ->
-      iter_core_type arg.typ;
+    | Ttyp_arrow (params, ret) ->
+      List.iter (fun (arg : Typedtree.arg) -> iter_core_type arg.typ) params;
       iter_core_type ret
     | Ttyp_tuple list -> List.iter iter_core_type list
     | Ttyp_constr (_path, _, list) -> List.iter iter_core_type list

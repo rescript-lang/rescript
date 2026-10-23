@@ -67,7 +67,7 @@ let fulls_from_module ~package ~module_name =
     let uris = get_uris paths in
     uris
     |> List.filter_map (fun uri ->
-           full_from_module_uri ~package ~module_name ~uri ~paths)
+        full_from_module_uri ~package ~module_name ~uri ~paths)
 
 let load_full_cmt_from_path ~state ~path =
   let uri = Uri.from_path path in

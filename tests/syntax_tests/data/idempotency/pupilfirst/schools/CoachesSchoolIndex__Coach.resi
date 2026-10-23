@@ -1,6 +1,6 @@
 type t
 
-let decode: Js.Json.t => t
+let decode: JSON.t => t
 
 let name: t => string
 

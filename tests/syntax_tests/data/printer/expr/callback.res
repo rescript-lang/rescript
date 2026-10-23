@@ -1,12 +1,11 @@
-array->Js.Array2.forEach(((value, height)) =>
-  add(rbt, value, ~height)->ignore
-)
-someArray->Js.Array2.forEach(((value, height)) =>  add(rbt, value, ~height)->ignore)
-someArraaaaaaayWithAVeryLooooooooooooooooooooooooooooooooooooooongName->Js.Array2.forEach(((value, height)) =>  add(rbt, value, ~height)->ignore)
+array->Array.forEach(((value, height)) =>
+  add(rbt, value, ~height)->ignore)
+someArray->Array.forEach(((value, height)) =>  add(rbt, value, ~height)->ignore)
+someArraaaaaaayWithAVeryLooooooooooooooooooooooooooooooooooooooongName->Array.forEach(((value, height)) =>  add(rbt, value, ~height)->ignore)
 
 let make = (arr, ~compare) => {
   let rbt = make(~compare)
-  array->Js.Array2.forEach(((value, height)) => add(rbt,value, ~height)->ignore)
+  array->Array.forEach(((value, height)) => add(rbt,value, ~height)->ignore)
   rbt
 }
 
@@ -31,12 +30,11 @@ Fooooooooooooooooooo.baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(
 
 let make = (arr, ~compare) => {
   let rbt = make(~compare)
-  array->Js.Array2.forEach(((value, height)) => add(rbt, value, ~height)->ignore
-  )
+  array->Array.forEach(((value, height)) => add(rbt, value, ~height)->ignore)
   rbt
 }
 
-let tbl = data->Js.Array2.reduce(
+let tbl = data->Array.reduce(
         (map, curr) => {
           let (website, user) = curr
           if map->Belt.Map.String.has(website) {
@@ -55,7 +53,7 @@ let _ = {
   let similarity = (a, b) => {
       // nbr of users in common/number of users who have visited either in total
       let tbl =
-        data->Js.Array2.reduce(
+        data->Array.reduce(
           (map, curr) => {
             let (website, user) = curr
             if map->Belt.Map.String.has(website) {
@@ -183,7 +181,7 @@ foo(_ => {
     | None => ()
     | Some(_) =>
       a := b
-      Js.log("hi")
+      Console.log("hi")
   }
 })
 
@@ -221,19 +219,19 @@ let f = () => {
   </div>
 }
 
-myPromise->Js.Promise.then_(value => {
-  Js.log(value)
-  Js.Promise.resolve(value + 2)
-}, _)->Js.Promise.then_(value => {
-  Js.log(value)
-  Js.Promise.resolve(value + 3)
-}, _)->Js.Promise.catch(err => {
-  Js.log2("Failure!!", err)
-  Js.Promise.resolve(-2)
+myPromise->Promise.then(value => {
+  Console.log(value)
+  Promise.resolve(value + 2)
+}, _)->Promise.then(value => {
+  Console.log(value)
+  Promise.resolve(value + 3)
+}, _)->Promise.catch(err => {
+  Console.log2("Failure!!", err)
+  Promise.resolve(-2)
 }, _)
 
 let decoratorTags =
-    items->Js.Array2.filter(items => {items.category === Decorators})->Belt.Array.map(item => {
+    items->Array.filter(items => {items.category === Decorators})->Belt.Array.map(item => {
       <span className="mr-2" key=item.name> <Tag text={item.name} /> </span>
 })
 
@@ -266,7 +264,7 @@ let make = fn(
     ~e: option<string>=?,
     x
   ) => {
-    Js.log()
+    Console.log()
   }
 )
 
@@ -279,7 +277,7 @@ let make = fn(
     ~e: option<string>,
     x
   ) => {
-    Js.log()
+    Console.log()
   }
 )
 
@@ -292,7 +290,7 @@ let make = fn(
     ~e: optionstring,
     x
   ) => {
-    Js.log()
+    Console.log()
   }
 )
 
@@ -306,15 +304,15 @@ let make = fn(
      foptionstring,
     x
   ) => {
-    Js.log()
+    Console.log()
   }
 )
 
 // comments should not disappear on the pattern 
 let /* a */ decoratorTags /* b */ = items
-  ->Js.Array2.filter(items => {items.category === Decorators})
+  ->Array.filter(items => {items.category === Decorators})
 
-let /* a */ decoratorTags /* b */ = items->Js.Array2.filter(items => {
+let /* a */ decoratorTags /* b */ = items->Array.filter(items => {
   items.category === Decorators
   || items.category === ChristmasLighting
   || items.category === Unknown

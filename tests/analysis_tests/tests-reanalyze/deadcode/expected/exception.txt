@@ -1,12 +1,24 @@
 
 
   Exception Analysis
-  ExternalTest.res:7:5-24
-  bigIntFromStringExn2 might throw JsExn (ExternalTest.res:7:35) and is not annotated with @throws(JsExn)
+  Division.res:11:5-17
+  divByVariable might throw Division_by_zero (Division.res:11:42) and is not annotated with @throws(Division_by_zero)
 
   Exception Analysis
-  ExnA.res:1:5-7
-  bar might throw Not_found (ExnA.res:1:16) and is not annotated with @throws(Not_found)
+  Division.res:13:5-17
+  modByVariable might throw Division_by_zero (Division.res:13:40) and is not annotated with @throws(Division_by_zero)
+
+  Exception Analysis
+  Division.res:15:5-13
+  divByZero might throw Division_by_zero (Division.res:15:30) and is not annotated with @throws(Division_by_zero)
+
+  Exception Analysis
+  Division.res:17:5-13
+  modByZero might throw Division_by_zero (Division.res:17:28) and is not annotated with @throws(Division_by_zero)
+
+  Exception Analysis
+  Division.res:19:5-19
+  divBigIntByZero might throw Division_by_zero (Division.res:19:39) and is not annotated with @throws(Division_by_zero)
 
   Exception Analysis
   Exn.res:1:5-10
@@ -95,5 +107,13 @@
   Exception Analysis
   Exn.res:151:5-21
   onResultPipeWrong might throw Assert_failure (Exn.res:151:50) and is not annotated with @throws(Assert_failure)
+
+  Exception Analysis
+  ExnA.res:1:5-7
+  bar might throw Not_found (ExnA.res:1:16) and is not annotated with @throws(Not_found)
+
+  Exception Analysis
+  ExternalTest.res:7:5-24
+  bigIntFromStringExn2 might throw JsExn (ExternalTest.res:7:35) and is not annotated with @throws(JsExn)
   
-  Analysis reported 24 issues (Exception Analysis:24)
+  Analysis reported 29 issues (Exception Analysis:29)

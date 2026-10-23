@@ -22,15 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(* note we first declare its type is [unit],
-   then [ignore] it, [ignore] is necessary since
-   the js value  maybe not be of type [unit] and
-   we can use [unit] value (though very little chance)
-   sometimes
-*)
-(* val discard_exp_as_unit :
-   Location.t -> Parsetree.expression -> Parsetree.expression *)
-
 val to_undefined_type : Location.t -> Parsetree.core_type -> Parsetree.core_type
 
 val to_regexp_type : Location.t -> Parsetree.core_type

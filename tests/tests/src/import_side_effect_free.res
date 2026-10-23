@@ -1,1 +1,1 @@
-let a = await Js.import(Side_effect_free.a)
+let a = await import(Side_effect_free.a)

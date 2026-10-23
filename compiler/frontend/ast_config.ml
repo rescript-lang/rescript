@@ -27,30 +27,32 @@ type action_table = (Parsetree.expression option -> unit) Map_string.t
 let structural_config_table : action_table ref =
   ref
     (Map_string.singleton "no_export" (fun x ->
-         Js_config.no_export :=
+         (Js_config.current ()).no_export :=
            match x with
            | Some e -> Ast_payload.assert_bool_lit e
            | None -> true))
 
 let add_structure k v =
-  structural_config_table := Map_string.add !structural_config_table k v
+  structural_config_table := Map_string.add k v !structural_config_table
 
 let signature_config_table : action_table ref = ref Map_string.empty
 
 let add_signature k v =
-  signature_config_table := Map_string.add !signature_config_table k v
+  signature_config_table := Map_string.add k v !signature_config_table
 
 let process_directives str =
-  Js_config.directives := [];
+  (Js_config.current ()).directives := [];
   (* Reset: multiple calls possible e.g. with bsc from the command-line *)
   str
   |> List.iter (fun (item : Parsetree.structure_item) ->
-         match item.pstr_desc with
-         | Pstr_attribute ({txt = "directive"}, payload) -> (
-           match Ast_payload.is_single_string payload with
-           | Some (d, _) -> Js_config.directives := !Js_config.directives @ [d]
-           | None -> Bs_syntaxerr.err item.pstr_loc Expect_string_literal)
-         | _ -> ())
+      match item.pstr_desc with
+      | Pstr_attribute ({txt = "directive"}, payload) -> (
+        match Ast_payload.semantic_string_of_payload payload with
+        | Some d ->
+          (Js_config.current ()).directives :=
+            !((Js_config.current ()).directives) @ [d]
+        | None -> Bs_syntaxerr.err item.pstr_loc Expect_string_literal)
+      | _ -> ())
 
 let rec iter_on_config_str (x : Parsetree.structure) =
   match x with

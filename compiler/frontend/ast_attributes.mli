@@ -25,46 +25,32 @@ type attr = Parsetree.attribute
 
 type t = attr list
 
-type ('a, 'b) st = {get: 'a option; set: 'b option}
-
-val process_method_attributes_rev : t -> (bool * bool, [`Get | `No_get]) st * t
-
 type attr_kind = Nothing | Meth_callback of attr
 
 val process_attributes_rev : t -> attr_kind * t
 
 val has_inline_payload : t -> attr option
 
-val has_await_payload : t -> bool
-
 type derive_attr = {bs_deriving: Ast_payload.action list option} [@@unboxed]
 
-val iter_process_bs_string_int_unwrap_uncurry :
-  t -> [`Nothing | `String | `Int | `Ignore | `Unwrap]
+val arg_encoding : t -> [`Nothing | `String | `Int | `Ignore | `Unwrap]
+(** How an external's argument is encoded, from the one of [@string], [@int],
+    [@ignore] and [@unwrap] it carries. *)
 
-val iter_process_bs_string_as : t -> string option
-
-val has_bs_optional : t -> bool
+val as_string : t -> string option
 
 val has_unwrap_attr : t -> bool
 
-val iter_process_bs_int_as : t -> int option
+val as_int : t -> int option
 
-type as_const_payload = Int of int | Str of string * External_arg_spec.delim
-val iter_process_bs_string_or_int_as : t -> as_const_payload option
+type as_const_payload = Int of int | Str of string | Json of string
+val as_const : t -> as_const_payload option
 
 val process_derive_type : t -> derive_attr * t
 
-val get : attr
-
-val get_index : attr
-
-val set : attr
-
 val internal_expansive : attr
-(* val deprecated : string -> attr *)
 
-val rs_externals : t -> string list -> bool
+val rs_externals : t -> Parsetree.primitive_repr option -> bool
 
 val is_gentype : attr -> bool
 

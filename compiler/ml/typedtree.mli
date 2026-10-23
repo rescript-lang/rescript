@@ -16,7 +16,7 @@
 (** Abstract syntax tree after typing *)
 
 (** By comparison with {!Parsetree}:
-    - Every {!Longindent.t} is accompanied by a resolved {!Path.t}.
+    - Every {!Longident.t} is accompanied by a resolved {!Path.t}.
 
 *)
 
@@ -62,7 +62,6 @@ and pat_extra =
                            where [disjunction] is a [Tpat_or _] representing the
                            branches of [tconst].
          *)
-  | Tpat_open of Path.t * Longident.t loc * Env.t
   | Tpat_unpack
       (** (module P)     { pat_desc  = Tpat_var "P"
                            ; pat_extra = (Tpat_unpack, _, _) :: ... }
@@ -73,6 +72,10 @@ and pattern_desc =
   | Tpat_var of Ident.t * string loc  (** x *)
   | Tpat_alias of pattern * Ident.t * string loc  (** P as a *)
   | Tpat_constant of constant  (** 1, 'a', "true", 1.0, 1l, 1L, 1n *)
+  | Tpat_interval of constant * constant
+      (** 'a' .. 'z'
+
+          Both bounds are int or char constants, the first one lower. *)
   | Tpat_tuple of pattern list
       (** (P1, ..., Pn)
 
@@ -98,6 +101,10 @@ and pattern_desc =
 
             Invariant: n > 0 unless this is a rest-only record pattern
          *)
+  | Tpat_dict of dict_pattern_entry list
+      (** dict{"k1": P1, ..., "kn": ?Pn}
+
+            Entries are in source order, and their keys are distinct. *)
   | Tpat_array of pattern list  (** [| P1; ...; Pn |] *)
   | Tpat_or of pattern * pattern * row_desc option
       (** P1 | P2
@@ -105,6 +112,14 @@ and pattern_desc =
             [row_desc] = [Some _] when translating [Ppat_type _],
                          [None] otherwise.
          *)
+
+and dict_pattern_entry = {
+  tdp_key: string loc;
+  tdp_pattern: pattern;
+      (** Matches the key's value as an option, [None] when the key is absent:
+          [Some(P)] for ["k": P], and [P] itself for ["k": ?P] *)
+  tdp_optional: bool;  (** Whether the entry is written ["k": ?P] *)
+}
 
 and expression = {
   exp_desc: expression_desc;
@@ -117,13 +132,23 @@ and expression = {
 
 and exp_extra =
   | Texp_constraint of core_type  (** E : T *)
-  | Texp_coerce of core_type  (** E :> T           [Texp_coerce T]
+  | Texp_coerce of {
+      source_type: type_expr;
+      target: core_type;
+      target_type: type_expr;
+    }
+      (** E :> T           [Texp_coerce {source_type; target; target_type}]
+
+            [target] is T as written. [source_type] is the inferred type of E,
+            which the surface syntax never spells out, and [target_type] is the
+            type of T; both are head-expanded, so a consumer without a typing
+            environment can still relate them - e.g. to pair up the record
+            labels a coercion projects.
          *)
   | Texp_open of override_flag * Path.t * Longident.t loc * Env.t
       (** let open[!] M in    [Texp_open (!, P, M, env)]
                                 where [env] is the environment after opening [P]
          *)
-  | Texp_newtype of string  (** fun (type t) ->  *)
 
 and expression_desc =
   | Texp_ident of Path.t * Longident.t loc * Types.value_description
@@ -136,11 +161,8 @@ and expression_desc =
             let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
          *)
   | Texp_function of {
-      arg_label: arg_label;
-      arity: arity;
-      param: Ident.t;
-      case: case;
-      partial: partial;
+      params: function_param list;
+      body: expression;
       async: bool;
     }
       (** [Pexp_fun] and [Pexp_function] both translate to [Texp_function].
@@ -216,6 +238,7 @@ and expression_desc =
   | Texp_setfield of
       expression * Longident.t loc * label_description * expression
   | Texp_array of expression list
+  | Texp_dict of dict_entry list
   | Texp_ifthenelse of expression * expression * expression option
   | Texp_sequence of expression * expression
   | Texp_break
@@ -228,21 +251,53 @@ and expression_desc =
       * expression
       * direction_flag
       * expression
-  | Texp_send of expression * meth * expression option
+  | Texp_object_get of expression * string Asttypes.loc
+  | Texp_object_set of expression * string Asttypes.loc * expression
+  | Texp_object_literal of (string Asttypes.loc * expression) list
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
   | Texp_pack of module_expr
-  | Texp_extension_constructor of Longident.t loc * Path.t
   (* Keep new expression constructors at the end. CMT files are marshalled by
      runtime constructor tag, so inserting constructors before existing ones
      breaks analysis when it reads CMTs produced by older compiler versions. *)
   | Texp_for_of of Ident.t * Parsetree.pattern * expression * expression
   | Texp_for_await_of of Ident.t * Parsetree.pattern * expression * expression
-
-and meth = Tmeth_name of string
+  (* A typed JavaScript tagged template. For example, [sql`id = ${id}`] stores
+     the typed [sql] expression in [tag], [raw_sources = ["id = "; ""]], and
+     the typed [id] expression in [values]. Raw sources retain their exact
+     spelling and may contain invalid escapes, as JavaScript permits for tagged
+     templates. There is always one more raw source than value. *)
+  | Texp_tagged_template of {
+      tag: expression;
+      raw_sources: string list;
+      values: expression list;
+    }
+  (* A typed ordinary backquoted template. Each segment contains both its
+     validated source spelling and decoded semantic value; [values] contains
+     the typed interpolated expressions. For example, [`a ${value}\n`] has two
+     segments, with the final one represented as
+     [{source = "\\n"; semantic = "\n"}]. There is always one more segment
+     than value. *)
+  | Texp_template of {segments: template_segment list; values: expression list}
 
 and case = {c_lhs: pattern; c_guard: expression option; c_rhs: expression}
+
+and dict_entry =
+  | Tdict_entry of string loc * expression
+  | Tdict_spread of expression
+
+and function_param = {
+  fp_lbl: arg_label;
+  fp_param: Ident.t; (* the name the compiled parameter binds to *)
+  fp_pat: pattern;
+  fp_partial: partial; (* whether [fp_pat] is exhaustive *)
+  fp_has_default: bool;
+      (* optional parameter with a default value. [fp_pat] then binds the
+         option carrier directly to [fp_param] -- a fresh ident named after
+         the label -- and the user's pattern is bound by a let at the head
+         of the body. *)
+}
 
 and record_label_definition =
   | Kept of Types.type_expr
@@ -395,7 +450,6 @@ and open_description = {
   open_path: Path.t;
   open_txt: Longident.t loc;
   open_override: override_flag;
-  open_loc: Location.t;
   open_attributes: attribute list;
 }
 
@@ -429,7 +483,7 @@ and arg = {attrs: attributes; lbl: arg_label; typ: core_type}
 and core_type_desc =
   | Ttyp_any
   | Ttyp_var of string
-  | Ttyp_arrow of arg * core_type * arity
+  | Ttyp_arrow of arg list * core_type
   | Ttyp_tuple of core_type list
   | Ttyp_constr of Path.t * Longident.t loc * core_type list
   | Ttyp_object of object_field list * closed_flag
@@ -441,8 +495,6 @@ and core_type_desc =
 and package_type = {
   pack_path: Path.t;
   pack_fields: (Longident.t loc * core_type) list;
-  pack_type: Types.module_type;
-  pack_txt: Longident.t loc;
 }
 
 and row_field =
@@ -458,7 +510,7 @@ and value_description = {
   val_name: string loc;
   val_desc: core_type;
   val_val: Types.value_description;
-  val_prim: string list;
+  val_prim: Parsetree.primitive_repr option;
   val_loc: Location.t;
   val_attributes: attributes;
 }
@@ -485,6 +537,7 @@ and type_kind =
 and label_declaration = {
   ld_id: Ident.t;
   ld_name: string loc;
+  ld_runtime_name: string option;
   ld_mutable: mutable_flag;
   ld_optional: bool;
   ld_type: core_type;
@@ -495,6 +548,7 @@ and label_declaration = {
 and constructor_declaration = {
   cd_id: Ident.t;
   cd_name: string loc;
+  cd_runtime_tag: Variant_runtime.literal_tag option;
   cd_args: constructor_arguments;
   cd_res: core_type option;
   cd_loc: Location.t;
@@ -507,7 +561,6 @@ and constructor_arguments =
 
 and type_extension = {
   tyext_path: Path.t;
-  tyext_txt: Longident.t loc;
   tyext_params: (core_type * variance) list;
   tyext_constructors: extension_constructor list;
   tyext_private: private_flag;

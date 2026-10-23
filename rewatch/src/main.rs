@@ -122,7 +122,11 @@ fn exit_code(result: Result<()>) -> i32 {
         Ok(()) => 0,
         Err(e) => {
             eprintln!("{:#}", e);
-            1
+            if e.is::<build::packages::DependencyError>() {
+                2
+            } else {
+                1
+            }
         }
     }
 }

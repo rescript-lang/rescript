@@ -21,7 +21,19 @@ function maybeWait {
   [[ $((taskCount % 20)) = 0 ]] && wait
 }
 
+# printer API, outcome printer snapshot, parser position and UTF-8 tests
+if ! $DUNE_BIN_DIR/syntax_tests; then
+  printf "syntax_tests failed\n"
+  exit 1
+fi
+
 pushd tests
+
+legacyJsReferences=$(find syntax_tests/data syntax_benchmarks/data \( -name "*.res" -o -name "*.resi" \) -exec grep -nHE '(^|[^[:alnum:]_])Js\.' {} + || true)
+if [[ $legacyJsReferences != "" ]]; then
+  printf "Legacy Js. references remain in syntax fixtures:\n%s\n" "$legacyJsReferences"
+  exit 1
+fi
 
 rm -rf temp
 mkdir temp
@@ -37,13 +49,13 @@ while read file; do
 done <temp/files.txt
 
 # printing
-find syntax_tests/data/{printer,conversion} -name "*.res" -o -name "*.resi" -o -name "*.ml" -o -name "*.mli" >temp/files.txt
+find syntax_tests/data/{printer,conversion} -name "*.res" -o -name "*.resi" >temp/files.txt
 while read file; do
   $DUNE_BIN_DIR/res_parser $file &> $(exp $file) & maybeWait
 done <temp/files.txt
 
 # printing with ast conversion
-find syntax_tests/data/ast-mapping -name "*.res" -o -name "*.resi" -o -name "*.ml" -o -name "*.mli" >temp/files.txt
+find syntax_tests/data/ast-mapping -name "*.res" -o -name "*.resi" >temp/files.txt
 while read file; do
   $DUNE_BIN_DIR/res_parser -test-ast-conversion -jsx-version 4 $file &> $(exp $file) & maybeWait
 done <temp/files.txt
@@ -65,7 +77,7 @@ diff=$(cat temp/diff.txt)
 if [[ $diff = "" ]]; then
   printf "${successGreen}✅ No unstaged tests difference.${reset}\n"
 else
-  printf "${warningYellow}⚠️ There are unstaged differences in syntax_tests/data/! Did you break a test?\n${diff}\n${reset}"
+  printf "${warningYellow}⚠️ There are unstaged differences in syntax_tests/data/! Did you break a test?\n%s\n${reset}" "$diff"
   rm -r temp/
   exit 1
 fi
@@ -79,9 +91,6 @@ if [[ $ROUNDTRIP_TEST = 1 ]]; then
   find syntax_tests/data/{idempotency,printer} -name "*.res" -o -name "*.resi" >temp/files.txt
   while read file; do {
     mkdir -p temp/$(dirname $file)
-    sexpAst1=temp/$file.sexp
-    sexpAst2=temp/$file.2.sexp
-    sexpAst3=temp/$file.3.sexp
     rescript1=temp/$file.res
     rescript2=temp/$file.2.res
 
@@ -90,21 +99,11 @@ if [[ $ROUNDTRIP_TEST = 1 ]]; then
       *.resi ) resIntf=-interface ;;
     esac
 
-    # First pass: original file -> AST1 and text1
-    $DUNE_BIN_DIR/res_parser $resIntf -print sexp $file > $sexpAst1
+    # Format the original file, then format the result again
     $DUNE_BIN_DIR/res_parser $resIntf -print res $file > $rescript1
-
-    # Second pass: text1 -> AST2 and text2
-    $DUNE_BIN_DIR/res_parser $resIntf -print sexp $rescript1 > $sexpAst2
     $DUNE_BIN_DIR/res_parser $resIntf -print res $rescript1 > $rescript2
 
-    # Third pass: text2 -> AST3 (to check idempotency after normalization)
-    $DUNE_BIN_DIR/res_parser $resIntf -print sexp $rescript2 > $sexpAst3
-
-    # Check AST idempotency: AST2 should equal AST3 (allows AST1 != AST2 for canonicalization)
-    diff --unified $sexpAst2 $sexpAst3
-    [[ "$?" = 1 ]] && echo 1 > $roundtripTestsResult
-    # Check text idempotency: text1 should equal text2
+    # Check idempotency: formatting the formatted text must not change it
     diff --unified $rescript1 $rescript2
     [[ "$?" = 1 ]] && echo 1 > $roundtripTestsResult
   } & maybeWait

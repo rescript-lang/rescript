@@ -16,7 +16,7 @@ module Make = (Error: Error) => {
     }
 
   let catch = (callback, promise) =>
-    promise->Js.Promise.catch(error => {
+    promise->Promise.catch(error => {
       switch error->handler() {
       | Some(_x) => callback()
       | None =>
@@ -26,6 +26,6 @@ module Make = (Error: Error) => {
         )
         callback()
       }
-      Js.Promise.resolve()
+      Promise.resolve()
     })
 }

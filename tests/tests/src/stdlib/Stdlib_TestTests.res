@@ -1,4 +1,6 @@
 let eq = (a, b) => a == b
+let nan = Float.Constants.nan
+let infinity = Float.Constants.positiveInfinity
 
 let bign = BigInt.fromFloat(Float.Constants.maxValue)->Option.getOr(0n)
 let bign = BigInt.add(bign, bign)

@@ -143,3 +143,6 @@ let _x = switch polyvariantOpt {
 | _ => "other"
 //  ^xfm
 }
+
+let bracedIdentity = {value => value}
+//                     ^xfm

@@ -27,9 +27,6 @@ module Type_hash = Hashtbl.Make (Type_ops)
 
 (**** Forward declarations ****)
 
-let print_raw =
-  ref (fun _ -> assert false : Format.formatter -> type_expr -> unit)
-
 (**** Type level management ****)
 
 let generic_level = 100000000
@@ -41,11 +38,10 @@ let pivot_level = (2 * lowest_level) - 1
 
 (**** Some type creators ****)
 
-let new_id = ref (-1)
-
 let newty2 level desc =
-  incr new_id;
-  {desc; level; id = !new_id}
+  let state = Compiler_request_state.current () in
+  state.type_node_id <- state.type_node_id + 1;
+  {desc; level; id = state.type_node_id}
 let newgenty desc = newty2 generic_level desc
 let newgenvar ?name () = newgenty (Tvar name)
 (*
@@ -68,30 +64,36 @@ let is_Tconstr = function
   | {desc = Tconstr _} -> true
   | _ -> false
 
-let dummy_method = "*dummy method*"
 let default_mty = function
   | Some mty -> mty
   | None -> Mty_signature []
 
 (**** Definitions for backtracking ****)
 
+(* The backtracking trail owns semantic changes made while checking a
+   speculative constraint. [log_type] and [set_level] use [last_snapshot] to
+   avoid logging nodes allocated after the active snapshot. Link compression
+   and separately allocated references cannot use that node-id test, so their
+   changes are logged whenever a trail is active. Temporary graph-copy memos
+   are not trail entries; [type_copy_session] below owns and restores them. *)
+
 type change =
   | Ctype of type_expr * type_desc
   | Ccompress of type_expr * type_desc * type_desc
   | Clevel of type_expr * int
-  | Cname of
-      (Path.t * type_expr list) option ref * (Path.t * type_expr list) option
   | Crow of row_field option ref * row_field option
-  | Ckind of field_kind option ref * field_kind option
-  | Ccommu of commutable ref * commutable
+  | Cmutability of field_mutability ref * field_mutability
   | Cuniv of type_expr option ref * type_expr option
   | Ctypeset of Type_set.t ref * Type_set.t
 
 type changes = Change of change * changes ref | Unchanged | Invalid
 
-let trail = Weak.create 1
+(* A type graph and its speculative mutation trail belong to one compiler
+   request. The trail must follow the domain that owns the graph. *)
+let trail = Request_local.new_key (fun () -> Weak.create 1)
 
 let log_change ch =
+  let trail = Domain.DLS.get trail in
   match Weak.get trail 0 with
   | None -> ()
   | Some r ->
@@ -101,14 +103,8 @@ let log_change ch =
 
 (**** Representative of a type ****)
 
-let rec field_kind_repr = function
-  | Fvar {contents = Some kind} -> field_kind_repr kind
-  | kind -> kind
-
 let rec repr_link compress t d = function
   | {desc = Tlink t' as d'} -> repr_link true t d' t'
-  | {desc = Tfield (_, k, _, t') as d'} when field_kind_repr k = Fabsent ->
-    repr_link true t d' t'
   | t' ->
     if compress then (
       log_change (Ccompress (t, t.desc, d));
@@ -118,13 +114,7 @@ let rec repr_link compress t d = function
 let repr t =
   match t.desc with
   | Tlink t' as d -> repr_link false t d t'
-  | Tfield (_, k, _, t') as d when field_kind_repr k = Fabsent ->
-    repr_link false t d t'
   | _ -> t
-
-let rec commu_repr = function
-  | Clink r when !r <> Cunknown -> commu_repr !r
-  | c -> c
 
 let rec row_field_repr_aux tl = function
   | Reither (_, tl', _, {contents = Some fi}) ->
@@ -200,10 +190,10 @@ let proxy ty =
   let ty0 = repr ty in
   match ty0.desc with
   | Tvariant row when not (static_row row) -> row_more row
-  | Tobject (ty, _) ->
+  | Tobject ty ->
     let rec proxy_obj ty =
       match ty.desc with
-      | Tfield (_, _, _, ty) | Tlink ty -> proxy_obj ty
+      | Tfield {rest = ty} | Tlink ty -> proxy_obj ty
       | Tvar _ | Tunivar _ | Tconstr _ -> ty
       | Tnil -> ty0
       | _ -> assert false
@@ -215,11 +205,11 @@ let proxy ty =
 
 let row_of_type t =
   match (repr t).desc with
-  | Tobject (t, _) ->
+  | Tobject t ->
     let rec get_row t =
       let t = repr t in
       match t.desc with
-      | Tfield (_, _, _, t) -> get_row t
+      | Tfield {rest = t} -> get_row t
       | _ -> t
     in
     get_row t
@@ -260,19 +250,16 @@ let rec iter_row f row =
 let iter_type_expr f ty =
   match ty.desc with
   | Tvar _ -> ()
-  | Tarrow ({typ = ty1}, ty2, _, _) ->
-    f ty1;
-    f ty2
+  | Tarrow (params, ret) ->
+    List.iter (fun {typ} -> f typ) params;
+    f ret
   | Ttuple l -> List.iter f l
   | Tconstr (_, l, _) -> List.iter f l
-  | Tobject (ty, {contents = Some (_, p)}) ->
-    f ty;
-    List.iter f p
-  | Tobject (ty, _) -> f ty
+  | Tobject ty -> f ty
   | Tvariant row ->
     iter_row f row;
     f (row_more row)
-  | Tfield (_, _, ty1, ty2) ->
+  | Tfield {typ = ty1; rest = ty2} ->
     f ty1;
     f ty2
   | Tnil -> ()
@@ -318,7 +305,7 @@ let map_type_expr_cstr_args f = function
 
 let iter_type_expr_kind f = function
   | Type_abstract -> ()
-  | Type_variant cstrs ->
+  | Type_variant (cstrs, _) ->
     List.iter
       (fun cd ->
         iter_type_expr_cstr_args f cd.cd_args;
@@ -357,10 +344,7 @@ let type_iterators =
   and it_do_type_expr it ty =
     iter_type_expr (it.it_type_expr it) ty;
     match ty.desc with
-    | Tconstr (p, _, _)
-    | Tobject (_, {contents = Some (p, _)})
-    | Tpackage (p, _, _) ->
-      it.it_path p
+    | Tconstr (p, _, _) | Tpackage (p, _, _) -> it.it_path p
     | Tvariant row -> may (fun (p, _) -> it.it_path p) (row_repr row).row_name
     | _ -> ()
   and it_path _p = () in
@@ -407,14 +391,6 @@ let copy_row f fixed row keep more =
     row_name = name;
   }
 
-let rec copy_kind = function
-  | Fvar {contents = Some k} -> copy_kind k
-  | Fvar _ -> Fvar (ref None)
-  | Fpresent -> Fpresent
-  | Fabsent -> assert false
-
-let copy_commu c = if commu_repr c = Cok then Cok else Clink (ref Cunknown)
-
 (* Since univars may be used as row variables, we need to do some
    encoding during substitution *)
 let rec norm_univar ty =
@@ -424,21 +400,138 @@ let rec norm_univar ty =
   | Ttuple (ty :: _) -> norm_univar ty
   | _ -> assert false
 
-let rec copy_type_desc ?(keep_names = false) f = function
+(* Chase mutability links to the terminal cell. *)
+let rec mutability_ref_repr (r : field_mutability ref) =
+  match !r with
+  | Mutability_link r' -> mutability_ref_repr r'
+  | Mutability_value _ -> r
+
+let mutability_repr r =
+  match !(mutability_ref_repr r) with
+  | Mutability_value flag -> flag
+  | Mutability_link _ -> assert false
+
+type type_copy_session = {
+  mutable saved_desc: (type_expr * type_desc) list;
+  mutable saved_mutabilities: (field_mutability ref * field_mutability) list;
+  mutable new_mutabilities: field_mutability ref list;
+  mutable copy_policy_memo: (int, bool) Hashtbl.t option;
+}
+
+(* A copy session owns temporary writes made to the source graph. [Tsubst]
+   marks live on type nodes and are visible across the active session stack: a
+   nested copy which encounters an outer mark reuses that copied node.
+   Mutability duplication membership is instead per-session; if a nested copy
+   reaches a cell independently, it creates and owns a further duplicate.
+   Several copy calls in one session deliberately share both memo kinds.
+   Session writes are raw writes restored on exit; semantic mutability changes
+   use the backtracking trail instead. *)
+let type_copy_sessions = Request_local.new_key (fun () -> ref [])
+
+let begin_type_copy_session () =
+  let type_copy_sessions = Domain.DLS.get type_copy_sessions in
+  type_copy_sessions :=
+    {
+      saved_desc = [];
+      saved_mutabilities = [];
+      new_mutabilities = [];
+      copy_policy_memo = None;
+    }
+    :: !type_copy_sessions
+
+let current_type_copy_session () =
+  let type_copy_sessions = Domain.DLS.get type_copy_sessions in
+  match !type_copy_sessions with
+  | session :: _ -> session
+  | [] -> assert false
+
+let end_type_copy_session () =
+  let type_copy_sessions = Domain.DLS.get type_copy_sessions in
+  match !type_copy_sessions with
+  | session :: rest ->
+    List.iter (fun (ty, desc) -> ty.desc <- desc) session.saved_desc;
+    List.iter (fun (r, v) -> r := v) session.saved_mutabilities;
+    type_copy_sessions := rest
+  | [] -> assert false
+
+(* Duplicate a mutability class for the current copy session. The source
+   representative temporarily links to the duplicate, so all fields in this
+   session which shared the source class reach the same duplicate. Semantic
+   operations follow representatives and therefore affect the copy while the
+   link is installed; ending the session restores the source cell. *)
+let dup_mutability r =
+  let session = current_type_copy_session () in
+  let r = mutability_ref_repr r in
+  if List.memq r session.new_mutabilities then r
+  else
+    let r' = ref !r in
+    session.new_mutabilities <- r' :: session.new_mutabilities;
+    session.saved_mutabilities <- (r, !r) :: session.saved_mutabilities;
+    r := Mutability_link r';
+    r'
+
+(* Copy policy for an object row, memoized per node so its terminator is
+   classified once per session: duplicate the mutability cells iff the row
+   ends in a generic variable (a scheme instantiation); share them otherwise
+   (a structure-generalized copy, whose occurrences must see promotions). *)
+let row_terminator_generic rest =
+  let session = current_type_copy_session () in
+  let copy_policy_memo =
+    match session.copy_policy_memo with
+    | Some memo -> memo
+    | None ->
+      let memo = Hashtbl.create 17 in
+      session.copy_policy_memo <- Some memo;
+      memo
+  in
+  let rec go t =
+    let t = repr t in
+    match Hashtbl.find_opt copy_policy_memo t.id with
+    | Some b -> b
+    | None ->
+      let b =
+        match t.desc with
+        | Tfield {rest} -> go rest
+        | Tvar _ -> t.level = generic_level
+        | Tsubst t' ->
+          (* Already copied in this session: follow the copy; its fresh
+             terminator is generic exactly when the row is being
+             instantiated. *)
+          go t'
+        | _ -> false
+      in
+      Hashtbl.add copy_policy_memo t.id b;
+      b
+  in
+  go rest
+
+let rec copy_type_desc ?(keep_names = false) ?(fresh_mutability = false) f =
+  function
   | Tvar _ as ty -> if keep_names then ty else Tvar None
-  | Tarrow (arg, ret, c, arity) ->
-    Tarrow ({arg with typ = f arg.typ}, f ret, copy_commu c, arity)
+  | Tarrow (params, ret) ->
+    Tarrow (List.map (fun arg -> {arg with typ = f arg.typ}) params, f ret)
   | Ttuple l -> Ttuple (List.map f l)
   | Tconstr (p, l, _) -> Tconstr (p, List.map f l, ref Mnil)
-  | Tobject (ty, {contents = Some (p, tl)}) ->
-    Tobject (f ty, ref (Some (p, List.map f tl)))
-  | Tobject (ty, _) -> Tobject (f ty, ref None)
+  | Tobject ty -> Tobject (f ty)
   | Tvariant _ -> assert false (* too ambiguous *)
-  | Tfield (p, k, ty1, ty2) ->
-    (* the kind is kept shared *)
-    Tfield (p, field_kind_repr k, f ty1, f ty2)
+  | Tfield f_ ->
+    (* Unless the caller requests an independent graph, the mutability cell
+       follows the row variable's sharing law: instantiating a generalized row
+       (generic terminator) duplicates each cell once per session via
+       [dup_mutability], so aliases within the instance stay correlated while
+       the scheme and sibling instances are untouched; other copies hold the
+       shared representative, so promotions reach every occurrence. Determine
+       this policy before copying either child: recursive copying can install
+       [Tsubst] marks in the row, and OCaml record-field evaluation order must
+       not decide which terminator is classified. *)
+    let mutability =
+      if fresh_mutability || row_terminator_generic f_.rest then
+        dup_mutability f_.mutability
+      else mutability_ref_repr f_.mutability
+    in
+    Tfield {f_ with mutability; typ = f f_.typ; rest = f f_.rest}
   | Tnil -> Tnil
-  | Tlink ty -> copy_type_desc f ty.desc
+  | Tlink ty -> copy_type_desc ~keep_names ~fresh_mutability f ty.desc
   | Tsubst _ -> assert false
   | Tunivar _ as ty -> ty (* always keep the name *)
   | Tpoly (ty, tyl) ->
@@ -448,30 +541,22 @@ let rec copy_type_desc ?(keep_names = false) f = function
 
 (* Utilities for copying *)
 
-let saved_desc = ref []
-(* Saved association of generic nodes with their description. *)
-
-let save_desc ty desc = saved_desc := (ty, desc) :: !saved_desc
-
-let saved_kinds = ref [] (* duplicated kind variables *)
-let new_kinds = ref [] (* new kind variables *)
-let dup_kind r =
-  (match !r with
-  | None -> ()
-  | Some _ -> assert false);
-  if not (List.memq r !new_kinds) then (
-    saved_kinds := r :: !saved_kinds;
-    let r' = ref None in
-    new_kinds := r' :: !new_kinds;
-    r := Some (Fvar r'))
+let save_desc ty desc =
+  let session = current_type_copy_session () in
+  session.saved_desc <- (ty, desc) :: session.saved_desc
 
 (* Restored type descriptions. *)
-let cleanup_types () =
-  List.iter (fun (ty, desc) -> ty.desc <- desc) !saved_desc;
-  List.iter (fun r -> r := None) !saved_kinds;
-  saved_desc := [];
-  saved_kinds := [];
-  new_kinds := []
+let cleanup_types () = end_type_copy_session ()
+
+let with_copy_session f =
+  begin_type_copy_session ();
+  match f () with
+  | result ->
+    cleanup_types ();
+    result
+  | exception exn ->
+    cleanup_types ();
+    raise exn
 
 (* Mark a type. *)
 let rec mark_type ty =
@@ -483,8 +568,6 @@ let rec mark_type ty =
 let mark_type_node ty =
   let ty = repr ty in
   if ty.level >= lowest_level then ty.level <- pivot_level - ty.level
-
-let mark_type_params ty = iter_type_expr mark_type ty
 
 let type_iterators =
   let it_type_expr it ty =
@@ -547,15 +630,17 @@ let rec find_expans priv p1 = function
      | _ -> ()
 *)
 
-let memo = ref []
+let memo = Request_local.new_key (fun () -> ref [])
 (* Contains the list of saved abbreviation expansions. *)
 
 let cleanup_abbrev () =
+  let memo = Domain.DLS.get memo in
   (* Remove all memorized abbreviation expansions. *)
   List.iter (fun abbr -> abbr := Mnil) !memo;
   memo := []
 
 let memorize_abbrev mem priv path v v' =
+  let memo = Domain.DLS.get memo in
   (* Memorize the expansion of an abbreviation. *)
   mem := Mcons (priv, path, v, v', !mem);
   (* check_expans [] v; *)
@@ -628,18 +713,16 @@ let undo_change = function
   | Ctype (ty, desc) -> ty.desc <- desc
   | Ccompress (ty, desc, _) -> ty.desc <- desc
   | Clevel (ty, level) -> ty.level <- level
-  | Cname (r, v) -> r := v
   | Crow (r, v) -> r := v
-  | Ckind (r, v) -> r := v
-  | Ccommu (r, v) -> r := v
+  | Cmutability (r, v) -> r := v
   | Cuniv (r, v) -> r := v
   | Ctypeset (r, v) -> r := v
 
 type snapshot = changes ref * int
-let last_snapshot = ref 0
 
 let log_type ty =
-  if ty.id <= !last_snapshot then log_change (Ctype (ty, ty.desc))
+  if ty.id <= (Compiler_request_state.current ()).type_node_last_snapshot then
+    log_change (Ctype (ty, ty.desc))
 let link_type ty ty' =
   log_type ty;
   let desc = ty.desc in
@@ -663,30 +746,28 @@ let link_type ty ty' =
 (* ; assert (check_memorized_abbrevs ()) *)
 (*  ; check_expans [] ty' *)
 let set_level ty level =
-  if ty.id <= !last_snapshot then log_change (Clevel (ty, ty.level));
+  if ty.id <= (Compiler_request_state.current ()).type_node_last_snapshot then
+    log_change (Clevel (ty, ty.level));
   ty.level <- level
 let set_univar rty ty =
   log_change (Cuniv (rty, !rty));
   rty := Some ty
-let set_name nm v =
-  log_change (Cname (nm, !nm));
-  nm := v
 let set_row_field e v =
   log_change (Crow (e, !e));
   e := Some v
-let set_kind rk k =
-  log_change (Ckind (rk, !rk));
-  rk := Some k
-let set_commu rc c =
-  log_change (Ccommu (rc, !rc));
-  rc := c
+let set_mutability r v =
+  log_change (Cmutability (r, !r));
+  r := v
+
 let set_typeset rs s =
   log_change (Ctypeset (rs, !rs));
   rs := s
 
 let snapshot () =
-  let old = !last_snapshot in
-  last_snapshot := !new_id;
+  let state = Compiler_request_state.current () in
+  let old = state.type_node_last_snapshot in
+  state.type_node_last_snapshot <- state.type_node_id;
+  let trail = Domain.DLS.get trail in
   match Weak.get trail 0 with
   | Some r -> (r, old)
   | None ->
@@ -703,16 +784,17 @@ let rec rev_log accu = function
     rev_log (ch :: accu) d
 
 let backtrack (changes, old) =
+  let state = Compiler_request_state.current () in
   match !changes with
-  | Unchanged -> last_snapshot := old
+  | Unchanged -> state.type_node_last_snapshot <- old
   | Invalid -> failwith "Btype.backtrack"
   | Change _ as change ->
     cleanup_abbrev ();
     let backlog = rev_log [] change in
     List.iter undo_change backlog;
     changes := Unchanged;
-    last_snapshot := old;
-    Weak.set trail 0 (Some changes)
+    state.type_node_last_snapshot <- old;
+    Weak.set (Domain.DLS.get trail) 0 (Some changes)
 
 let rec rev_compress_log log r =
   match !r with
@@ -733,3 +815,7 @@ let undo_compress (changes, _old) =
           r := !next
         | _ -> ())
       log
+
+module For_test = struct
+  let memorized_abbrev_count () = List.length !(Domain.DLS.get memo)
+end

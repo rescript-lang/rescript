@@ -1,3 +1,0 @@
-type r = result<int, string>
-let res: result<int, string> = Ok(1)
-

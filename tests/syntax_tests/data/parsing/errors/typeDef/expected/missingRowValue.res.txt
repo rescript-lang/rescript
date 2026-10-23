@@ -1,0 +1,12 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/missingRowValue.res:1:14
+
+  1 │ type t = {a: , b: int}
+  2 │ 
+
+  I'm missing a type here
+
+type nonrec t = {
+  a: [%rescript.typehole ] ;
+  b: int }

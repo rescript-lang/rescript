@@ -17,7 +17,41 @@ switch (match) {
     version = 3;
 }
 
+function classifyEquivalentEscape(value, selectedCase) {
+  if (value === "a") {
+    if (selectedCase === 0) {
+      return 0;
+    } else if (selectedCase === 1) {
+      return 1;
+    } else if (selectedCase === 2) {
+      return 2;
+    } else if (selectedCase === 3) {
+      return 3;
+    } else {
+      return 4;
+    }
+  } else {
+    return 5;
+  }
+}
+
+function classifyEquivalentSurrogateEscape(value, selectedCase) {
+  if (value === "😀") {
+    if (selectedCase === 0) {
+      return 0;
+    } else if (selectedCase === 1) {
+      return 1;
+    } else {
+      return 2;
+    }
+  } else {
+    return 3;
+  }
+}
+
 export {
   version,
+  classifyEquivalentEscape,
+  classifyEquivalentSurrogateEscape,
 }
 /* match Not a pure module */

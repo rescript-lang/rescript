@@ -15,7 +15,6 @@
 
 (* Inclusion checks for the module language *)
 
-open Misc
 open Path
 open Typedtree
 open Types
@@ -74,9 +73,9 @@ let type_declarations ~loc env ?(old_env = env) cxt subst id decl1 decl2 =
 
 (* Inclusion between extension constructors *)
 
-let extension_constructors ~loc env cxt subst id ext1 ext2 =
+let extension_constructors env cxt subst id ext1 ext2 =
   let ext2 = Subst.extension_constructor subst ext2 in
-  if Includecore.extension_constructors ~loc env id ext1 ext2 then ()
+  if Includecore.extension_constructors env id ext1 ext2 then ()
   else raise (Error [(cxt, env, Extension_constructors (id, ext1, ext2))])
 
 (* Expand a module type identifier when possible *)
@@ -167,7 +166,7 @@ and print_coercion2 ppf (n, c) =
   Format.fprintf ppf "@[%d,@ %a@]" n print_coercion c
 
 and print_coercion3 ppf (i, n, c) =
-  Format.fprintf ppf "@[%s, %d,@ %a@]" (Ident.unique_name i) n print_coercion c
+  Format.fprintf ppf "@[%s, %d,@ %a@]" (Ident.name i) n print_coercion c
 
 (* Simplify a structure coercion *)
 
@@ -382,7 +381,7 @@ and signature_components ~loc old_env env cxt subst paired =
     type_declarations ~loc ~old_env env cxt subst id1 tydecl1 tydecl2;
     comps_rec rem
   | (Sig_typext (id1, ext1, _), Sig_typext (_id2, ext2, _), pos) :: rem ->
-    extension_constructors ~loc env cxt subst id1 ext1 ext2;
+    extension_constructors env cxt subst id1 ext1 ext2;
     (pos, Tcoerce_none) :: comps_rec rem
   | (Sig_module (id1, mty1, _), Sig_module (_id2, mty2, _), pos) :: rem ->
     let cc = module_declarations ~loc env cxt subst id1 mty1 mty2 in
@@ -493,16 +492,64 @@ let show_locs ppf (loc1, loc2) =
   show_loc "Expected declaration" ppf loc2;
   show_loc "Actual declaration" ppf loc1
 
-let include_err ppf = function
+let find_arity_mismatch env ty1 ty2 =
+  let rec loop seen ty1 ty2 =
+    let ty1 = Btype.repr ty1 in
+    let ty2 = Btype.repr ty2 in
+    if List.exists (fun (t1, t2) -> t1 == ty1 && t2 == ty2) seen then None
+    else
+      let seen = (ty1, ty2) :: seen in
+      let ty1 = Btype.repr (Ctype.expand_head env ty1) in
+      let ty2 = Btype.repr (Ctype.expand_head env ty2) in
+      match (ty1.desc, ty2.desc) with
+      | Tarrow (params1, ret1), Tarrow (params2, ret2) ->
+        let arity1 = List.length params1 in
+        let arity2 = List.length params2 in
+        if arity1 <> arity2 then Some (arity1, arity2)
+        else if
+          List.for_all2
+            (fun (arg1 : Types.arg) (arg2 : Types.arg) ->
+              Asttypes.same_arg_label arg1.lbl arg2.lbl)
+            params1 params2
+        then
+          let rec loop_params params1 params2 =
+            match (params1, params2) with
+            | (arg1 : Types.arg) :: params1, arg2 :: params2 -> (
+              match loop seen arg1.typ arg2.typ with
+              | Some _ as mismatch -> mismatch
+              | None -> loop_params params1 params2)
+            | [], [] -> loop seen ret1 ret2
+            | _ -> assert false
+          in
+          loop_params params1 params2
+        else None
+      | _ -> None
+  in
+  loop [] ty1 ty2
+
+let show_arity_mismatch env ppf (d1 : value_description)
+    (d2 : value_description) =
+  match find_arity_mismatch env d1.val_type d2.val_type with
+  | Some (n1, n2) ->
+    let args n =
+      if n = 1 then "1 argument" else string_of_int n ^ " arguments"
+    in
+    fprintf ppf
+      "@\n\
+       @[The implementation contains a function taking %s where the interface \
+       expects one taking %s.@]"
+      (args n1) (args n2)
+  | _ -> ()
+
+let include_symptom env ppf = function
   | Missing_field (id, loc, kind) ->
     fprintf ppf "The %s `%a' is required but not provided" kind ident id;
     show_loc "Expected declaration" ppf loc
   | Value_descriptions (id, d1, d2) ->
-    let curry_kind_1, curry_kind_2 = ("", "") in
     fprintf ppf
-      "@[<hv 2>Values do not match:@ %a%s@;<1 -2>is not included in@ %a%s@]"
-      (value_description id) d1 curry_kind_1 (value_description id) d2
-      curry_kind_2;
+      "@[<hv 2>Values do not match:@ %a@;<1 -2>is not included in@ %a@]"
+      (value_description id) d1 (value_description id) d2;
+    show_arity_mismatch env ppf d1 d2;
     show_locs ppf (d1.val_loc, d2.val_loc)
   | Type_declarations (id, d1, d2, errs) ->
     fprintf ppf "@[<v>@[<hv>%s:@;<1 2>%a@ %s@;<1 2>%a@]%a%a@]"
@@ -584,23 +631,43 @@ let context ppf cxt =
 
 let include_err ppf (cxt, env, err) =
   Printtyp.wrap_printing_env env (fun () ->
-      fprintf ppf "@[<v>%a%a@]" context (List.rev cxt) include_err err)
+      fprintf ppf "@[<v>%a%a@]" context (List.rev cxt) (include_symptom env) err)
 
-let buffer = ref Bytes.empty
+let error_size = 400 (* in heap words *)
+
+(* An error part is big when its heap representation exceeds
+   [error_size] words. Each distinct reachable block counts its header
+   and fields; a block without scannable fields (string, float, custom) or a
+   closure counts its header only. String contents are excluded so that the
+   decision is independent of source file names stored in locations. The walk
+   stops as soon as the limit is exceeded, which bounds the visited list. *)
 let is_big obj =
-  let size = !Clflags.error_size in
-  size > 0
-  &&
-  (if Bytes.length !buffer < size then buffer := Bytes.create size;
-   try
-     ignore (Marshal.to_buffer !buffer 0 size obj []);
-     false
-   with _ -> true)
+  let size = ref 0 in
+  let visited = ref [] in
+  let exception Big in
+  let rec walk (o : Obj.t) =
+    if Obj.is_block o && not (List.memq o !visited) then (
+      visited := o :: !visited;
+      let tag = Obj.tag o in
+      let scan =
+        tag < Obj.no_scan_tag && tag <> Obj.closure_tag && tag <> Obj.infix_tag
+      in
+      size := !size + if scan then 1 + Obj.size o else 1;
+      if !size > error_size then raise_notrace Big;
+      if scan then
+        for i = 0 to Obj.size o - 1 do
+          walk (Obj.field o i)
+        done)
+  in
+  try
+    walk (Obj.repr obj);
+    false
+  with Big -> true
 
 let report_error ppf errs =
   if errs = [] then ()
   else
-    let errs, err = split_last errs in
+    let errs, err = Ext_list.split_at_last errs in
     let pe = ref true in
     let include_err' ppf ((_, _, obj) as err) =
       if not (is_big obj) then fprintf ppf "%a@ " include_err err

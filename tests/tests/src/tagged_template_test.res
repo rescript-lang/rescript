@@ -13,6 +13,13 @@ let id = "5"
 
 let queryWithModule = Pg.sql`SELECT * FROM ${table} WHERE id = ${id}`
 
+// `json` is not reserved: outside the legacy fixed-external parameter shape,
+// it behaves exactly like every other tagged-template identifier.
+@module("./tagged_template_lib.js")
+external json: taggedTemplate<string, string> = "sql"
+
+let jsonTaggedQuery = json`SELECT * FROM ${table}`
+
 // The tag still emits backticks when used through `open` (i.e. once it has
 // crossed the module boundary as a value of the `taggedTemplate` type).
 open Pg
@@ -101,6 +108,10 @@ describe("tagged templates", () => {
     () => eq(__LOC__, queryWithModule, "SELECT * FROM 'users' WHERE id = '5'"),
   )
 
+  test("a tag named json remains an ordinary tagged template", () =>
+    eq(__LOC__, jsonTaggedQuery, "SELECT * FROM 'users'")
+  )
+
   test("with externals, it should return the result of the function", () => eq(__LOC__, length, 52))
 
   test("with a runtime-constructed tag (factory), it should emit tagged-template syntax", () =>
@@ -133,12 +144,23 @@ describe("tagged templates", () => {
     () => eq(__LOC__, greeting, "hello Ada you're 36 years old!"),
   )
 
-  test(
-    "a template literal tagged with json should generate a regular string interpolation for now",
-    () => eq(__LOC__, json`some random ${"string"}`, "some random string"),
-  )
-
   test("a regular string interpolation should continue working", () =>
     eq(__LOC__, `some random ${"string"} interpolation`, "some random string interpolation")
   )
+
+  test("ordinary interpolation evaluates values once from left to right", () => {
+    let calls: array<string> = []
+    let record = value => {
+      calls->Array.push(value)->ignore
+      value
+    }
+    let result = `start ${record("first")} middle ${record("second")} end`
+    eq(__LOC__, result, "start first middle second end")
+    eq(__LOC__, calls, ["first", "second"])
+  })
+
+  test("invalid escapes remain valid in tagged-template segments", () => {
+    let result = rawTag`\unicode`
+    eq(__LOC__, result.raw, ["\\unicode"])
+  })
 })

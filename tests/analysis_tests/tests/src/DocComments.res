@@ -1,4 +1,4 @@
-@ns.doc("  Doc comment with a triple-backquote example
+@res.doc("  Doc comment with a triple-backquote example
   
   ```res example
     let a = 10
@@ -24,7 +24,7 @@ let docComment2 = 12
 //    ^hov
 
 
-@ns.doc("  Doc comment with a triple-backquote example
+@res.doc("  Doc comment with a triple-backquote example
   
   ```res example
     let a = 10

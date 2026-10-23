@@ -21,31 +21,38 @@
   (ocaml
    (>= 5.0.0))
   dune
-  (cppo
-   (= 1.8.0))
-  (flow_parser
-   (= 0.267.0))
+  (ppxlib
+   (>= 0.38.0))
+  (ppx_deriving :build)
+  (ppx_gen_rec :build)
+  wtf8
   (ocamlformat
-   (and :with-test (= 0.27.0)))
+   (and :with-test (= 0.29.0)))
   (yojson
-   (and :with-test (= 3.0.0)))
+   (= 3.0.0))
+  (spawn
+   (= v0.17.0))
+  (cmdliner
+   (= 2.1.1))
+  (luv
+   (= 0.5.14+rescript.1))
+  (re
+   (= 1.14.0))
   (ounit2
    (and :with-test (= 2.2.7)))
   (odoc :with-doc)
   (ocaml-lsp-server
    (and :with-dev-setup (>= 1.23.0)))
-  (bisect_ppx
-   (and :with-dev-setup (>= 2.8.0)))
   (js_of_ocaml
    (and
     (<> :os "win32")
     :with-test
-    (= 6.0.1)))
+    (= 6.4.1)))
   (wasm_of_ocaml-compiler
    (and
     (<> :os "win32")
     :with-test
-    (= 6.0.1)))))
+    (= 6.4.1)))))
 
 (package
  (name analysis)
@@ -53,8 +60,6 @@
  (depends
   (ocaml
    (>= 5.0.0))
-  (cppo
-   (= 1.8.0))
   (odoc :with-doc)
   (lsp
    (>= 1.23.0))
@@ -69,8 +74,6 @@
    (>= 5.0.0))
   (cmarkit
    (>= 0.3.0))
-  (cppo
-   (= 1.8.0))
   analysis
   (yojson
     (= 3.0.0))
@@ -81,7 +84,7 @@
  (synopsis "ReScript LSP")
  (depends
  (ocaml
-  (>= 4.10))
+  (>= 5.0.0))
  (lsp
   (>= 1.22.0))
  (eio
@@ -92,4 +95,4 @@
  dune
  ppx_deriving_yojson
  (ppx_expect
-  (and :with-test (= v0.17.2)))))
+  (and :with-test (= v0.17.3)))))

@@ -39,7 +39,7 @@ let make = (~components=Markdown.default, ~children) => {
 
   let activeToc: option<Toc.t> = {
     open Belt.Option
-    Js.Dict.get(tocData, route)->map(data => {
+    Dict.get(tocData, route)->map(data => {
       let title = data["title"]
       let entries = Belt.Array.map(data["headers"], header => {
         Toc.header: header["name"],
@@ -61,7 +61,7 @@ let make = (~components=Markdown.default, ~children) => {
     Belt.Option.map(urlPath, v => UrlPath.toBreadCrumbs(~prefix=list{}, v))
   }
 
-  Js.log(breadcrumbs)
+  Console.log(breadcrumbs)
 
   let title = "Community"
 

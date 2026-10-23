@@ -1,6 +1,7 @@
 
 
 import * as Primitive_option from "./Primitive_option.mjs";
+import * as Primitive_exceptions from "./Primitive_exceptions.mjs";
 
 let $$Error = "JsExn";
 
@@ -9,6 +10,8 @@ function asJsExn(exn) {
     return Primitive_option.some(exn._1);
   }
 }
+
+let anyToExnInternal = Primitive_exceptions.internalToException;
 
 function raiseError(str) {
   throw new Error(str);
@@ -41,6 +44,7 @@ function raiseUriError(str) {
 export {
   $$Error,
   asJsExn,
+  anyToExnInternal,
   raiseError,
   raiseEvalError,
   raiseRangeError,

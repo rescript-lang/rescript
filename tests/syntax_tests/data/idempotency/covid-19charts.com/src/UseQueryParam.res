@@ -8,7 +8,7 @@ let hook = (makeInitial, ~queryFragment, ~coder) => {
       {
         open Belt.Option
         forEach(
-          flatMap(Js.Dict.get(pathname, queryFragment), coder.SerializeQueryParam.decode),
+          flatMap(Dict.get(pathname, queryFragment), coder.SerializeQueryParam.decode),
           x => setValue(_ => x),
         )
       }
@@ -16,8 +16,8 @@ let hook = (makeInitial, ~queryFragment, ~coder) => {
       React.Ref.setCurrent(isInitialRender, false)
       None
     } else {
-      let obj = Js.Dict.empty()
-      Js.Dict.set(obj, queryFragment, coder.encode(value))
+      let obj = Dict.make()
+      Dict.set(obj, queryFragment, coder.encode(value))
       let {
         SerializeQueryParam.protocol: protocol,
         host,

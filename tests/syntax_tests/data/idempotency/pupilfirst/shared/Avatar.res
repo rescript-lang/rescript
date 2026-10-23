@@ -45,19 +45,19 @@ let colors = [
 
 let initials = name =>
   name
-  ->Js.String.split(" ")
-  ->Js.Array.slice(~start=0, ~end_=2)
-  ->Js.Array.map(word => word->Js.String.slice(~from=0, ~to_=1))
-  ->Js.Array.joinWith("")
+  ->String.split(" ")
+  ->Array.slice(~start=0, ~end=2)
+  ->Array.map(word => word->String.slice(~start=0, ~end=1))
+  ->Array.joinUnsafe("")
 
 let stringToInt = name => {
   let rec aux = (sum, remains) =>
     switch remains {
     | "" => sum
     | remains =>
-      let firstCharacter = remains->Js.String.slice(~from=0, ~to_=1)
-      let remains = remains->Js.String.sliceToEnd(~from=1)
-      aux(sum +. (firstCharacter->Js.String.charCodeAt(0)), remains)
+      let firstCharacter = remains->String.slice(~start=0, ~end=1)
+      let remains = remains->String.slice(~start=1)
+      aux(sum +. (firstCharacter->String.charCodeAt(0)), remains)
     }
 
   aux(0.0, name)->int_of_float

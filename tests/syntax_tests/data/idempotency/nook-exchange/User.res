@@ -52,10 +52,10 @@ let getItemKey = (~itemId: int, ~variation: int) =>
   string_of_int(itemId) ++ ("@@" ++ string_of_int(variation))
 
 let fromItemKey = (~key: string) => {
-  let [itemId, variation] = key->Js.String.split("@@")
-  let itemId = if itemId->Js.String.endsWith("r") {
+  let [itemId, variation] = key->String.split("@@")
+  let itemId = if itemId->String.endsWith("r") {
     Item.itemMap
-    ->Js.Dict.get(itemId->Js.String.slice(~from=0, ~to_=Js.String.length(itemId) - 1))
+    ->Dict.get(itemId->String.slice(~start=0, ~end=String.length(itemId) - 1))
     ->Belt.Option.flatMap(item =>
       switch item.type_ {
       | Item(recipeId) => recipeId
@@ -79,7 +79,7 @@ type t = {
   discordId: option<string>,
 }
 
-let fromAPI = (json: Js.Json.t) => {
+let fromAPI = (json: JSON.t) => {
   open Json.Decode
   {
     id: json->oneOf(list{field("id", string), field("uuid", string)}),
@@ -90,12 +90,12 @@ let fromAPI = (json: Js.Json.t) => {
     | None => None
     },
     items: (json->field("items", dict(itemFromJson)))
-    ->Js.Dict.entries
+    ->Dict.toArray
     ->Belt.Array.keepMap(((itemKey, value)) =>
       Belt.Option.flatMap(value, value =>
         fromItemKey(~key=itemKey)
         ->Belt.Option.flatMap(((itemId, variant)) =>
-          Item.itemMap->Js.Dict.get(string_of_int(itemId))->Belt.Option.map(item => (item, variant))
+          Item.itemMap->Dict.get(string_of_int(itemId))->Belt.Option.map(item => (item, variant))
         )
         ->Belt.Option.map(((item, variant)) => {
           let canonicalVariant = Item.getCanonicalVariant(~item, ~variant)
@@ -103,7 +103,7 @@ let fromAPI = (json: Js.Json.t) => {
         })
       )
     )
-    ->Js.Dict.fromArray,
+    ->Dict.fromArray,
     profileText: json->oneOf(list{
       field("profileText", string),
       field("metadata", json =>

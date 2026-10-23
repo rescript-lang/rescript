@@ -3,11 +3,18 @@ open Test_utils
 
 describe(__LOC__, () => {
   test("JS Null operations", () => {
-    eq(__LOC__, Js.Null.empty, Js.Null.empty)
-    switch Js.Types.classify(Js.Null.empty) {
-    | JSNull => eq(__LOC__, true, true)
+    eq(__LOC__, Null.null, Null.null)
+    switch Null.null->Type.Classify.classify {
+    | Null => eq(__LOC__, true, true)
     | _ => eq(__LOC__, true, false)
     }
-    eq(__LOC__, true, Js.Types.test(Js.Null.empty, Null))
+    eq(
+      __LOC__,
+      true,
+      switch Null.null->Type.Classify.classify {
+      | Null => true
+      | _ => false
+      },
+    )
   })
 })

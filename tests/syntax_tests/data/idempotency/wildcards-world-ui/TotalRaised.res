@@ -21,7 +21,7 @@ let uesTotalPatronage = () => {
 
     let optTotaPatronageUsd =
       optCurrentUsdEthPrice->Belt.Option.flatMap(currentUsdEthPrice => Some(
-        Js.Float.toFixedWithPrecision(
+        Float.toFixedWithPrecision(
           Float.fromString(totalPatronageEth)->mapd(0., a => a) *. currentUsdEthPrice,
           ~digits=2,
         ),

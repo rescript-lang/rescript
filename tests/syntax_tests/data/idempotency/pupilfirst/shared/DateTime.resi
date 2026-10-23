@@ -1,4 +1,4 @@
-type t = Js.Date.t
+type t = Date.t
 
 type format =
   | OnlyDate
@@ -12,4 +12,4 @@ let stingToFormatedTime: (format, string) => string
 
 let randomId: unit => string
 
-let decode: Js.Json.t => t
+let decode: JSON.t => t

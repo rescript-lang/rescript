@@ -222,7 +222,7 @@ module RecipeIcon = {
   @react.component
   let make = (~recipe: Item.recipe, ~isRecipe=?, ~onClick=?, ~className=?, ()) => {
     let (showLayer, setShowLayer) = React.useState(() => false)
-    let iconRef = React.useRef(Js.Nullable.null)
+    let iconRef = React.useRef(Nullable.null)
     let isMountedRef = React.useRef(true)
     React.useEffect0(() => Some(() => React.Ref.setCurrent(isMountedRef, false)))
     <>
@@ -233,8 +233,8 @@ module RecipeIcon = {
           Cn.ifTrue(MetaIconStyles.iconClickable, onClick !== None),
           Cn.unpack(className),
         })}
-        onMouseEnter={_ => Js.Global.setTimeout(() => setShowLayer(_ => true), 10)->ignore}
-        onMouseLeave={_ => Js.Global.setTimeout(() =>
+        onMouseEnter={_ => setTimeout(() => setShowLayer(_ => true), 10)->ignore}
+        onMouseLeave={_ => setTimeout(() =>
             if React.Ref.current(isMountedRef) {
               setShowLayer(_ => false)
             }
@@ -449,7 +449,7 @@ let make = (~item: Item.t, ~isLoggedIn, ~showLogin) => {
   if variation > numVariations {
     setVariation(_ => 0)
   }
-  let variation = Js.Math.min_int(variation, numVariations - 1)
+  let variation = Math.Int.min(variation, numVariations - 1)
   let userItem = UserStore.useItem(~itemId=item.id, ~variation)
 
   let hasQuicklist = QuicklistStore.useHasQuicklist()
@@ -476,7 +476,7 @@ let make = (~item: Item.t, ~isLoggedIn, ~showLogin) => {
       <ItemImage item variant=variation className=Styles.itemImage key={string_of_int(item.id)} />
       {
         let collapsedVariants = Item.getCollapsedVariants(~item)
-        if Js.Array.length(collapsedVariants) === 1 {
+        if Array.length(collapsedVariants) === 1 {
           React.null
         } else {
           <div className={Cn.make(list{Styles.variation})}>

@@ -1,9 +1,6 @@
-(*
-  This is the module that handles turning Reason JSX' agnostic function call into
-  a ReasonReact-specific function call. Aka, this is a macro, using OCaml's ppx
-  facilities; https://whitequark.org/blog/2014/04/16/a-guide-to-extension-
-  points-in-ocaml/
-*)
+(* The built-in JSX transform: rewrites the parsetree's JSX elements and
+   components as calls to the configured JSX module (see ../JSX.md). Version 4,
+   from [jsx_version] or a [@jsxConfig] attribute, is the only transform. *)
 
 val rewrite_implementation :
   jsx_version:int ->

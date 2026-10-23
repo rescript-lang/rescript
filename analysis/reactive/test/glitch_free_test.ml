@@ -149,7 +149,7 @@ let test_multi_level_union () =
   assert (length external_refs = 1);
   Printf.printf "PASSED\n\n"
 
-(** Test: Real pipeline simulation - mimics ReactiveLiveness *)
+(** Test: Real pipeline simulation - mimics Reactive_liveness *)
 let test_real_pipeline_simulation () =
   reset ();
   Printf.printf "=== Test: real pipeline simulation ===\n";

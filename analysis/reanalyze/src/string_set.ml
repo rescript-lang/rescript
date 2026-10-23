@@ -1,3 +1,3 @@
-(** String set. *)
+(** Set of strings. *)
 
 include Set.Make (String)

@@ -36,37 +36,32 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-24.04 # x64
-            ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
+          - os: ubuntu-26.04 # x64
+            ocaml_compiler: ocaml-variants.5.5.1+options,ocaml-option-static
             upload_binaries: true
             upload_libs: true
             node-target: linux-x64
             rust-target: x86_64-unknown-linux-musl
             dune-profile: static
-          - os: ubuntu-24.04-arm # ARM
-            ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
+          - os: ubuntu-26.04-arm # ARM
+            ocaml_compiler: ocaml-variants.5.5.1+options,ocaml-option-static
             upload_binaries: true
             # Build the playground compiler and run the benchmarks on the fastest runner
             build_playground: true
             generate_api_docs: true
             benchmarks: true
+            test_commit_records: true
             node-target: linux-arm64
             rust-target: aarch64-unknown-linux-musl
             dune-profile: static
-          - os: macos-15-intel # x64
-            ocaml_compiler: 5.3.0
-            upload_binaries: true
-            node-target: darwin-x64
-            rust-target: x86_64-apple-darwin
-            dune-profile: release
-          - os: macos-15 # ARM
-            ocaml_compiler: 5.3.0
+          - os: macos-26 # ARM
+            ocaml_compiler: 5.5.1
             upload_binaries: true
             node-target: darwin-arm64
             rust-target: aarch64-apple-darwin
             dune-profile: release
           - os: windows-2025
-            ocaml_compiler: 5.3.0
+            ocaml_compiler: 5.5.1
             upload_binaries: true
             node-target: win32-x64
             rust-target: x86_64-pc-windows-gnu
@@ -168,7 +163,7 @@ jobs:
         with:
           compiler: ${{ matrix.ocaml_compiler }}
           os: ${{ matrix.os }}
-          cache-prefix: opam-env-v8
+          cache-prefix: opam-env-v9
 
       - name: Compiler build state key
         id: compiler-build-state-key
@@ -213,8 +208,8 @@ jobs:
             _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
 
-      - name: Copy compiler exes to platform bin dir
-        run: node scripts/copyExes.js --compiler
+      - name: Verify promoted compiler exes
+        run: node scripts/checkCompilerExes.js
 
       - name: "Syntax: Run tests"
         env:
@@ -230,8 +225,26 @@ jobs:
         run: git diff --exit-code lib/js lib/es6
         working-directory: packages/@rescript/runtime
 
+      - name: Build @rescript/belt
+        run: yarn workspace @rescript/belt build
+        shell: bash
+
+      - name: Check for changes in @rescript/belt/lib
+        run: git diff --exit-code lib/js lib/es6
+        working-directory: packages/@rescript/belt
+
       - name: Version Check
         run: yarn constraints
+
+      - name: Type check JS
+        run: yarn typecheck
+
+      - name: Test release plan
+        run: yarn test-release-plan
+
+      - name: Test commit records
+        if: matrix.test_commit_records
+        run: yarn test-commit-records
 
       - name: Run tests
         run: node scripts/test.js -all
@@ -260,8 +273,64 @@ jobs:
         run: echo "C:\Program Files\Git\bin" >> $GITHUB_PATH
         shell: bash
 
-      - name: Run rewatch tests
-        run: ./rewatch/tests/suite.sh rewatch/target/release/rescript
+      - name: Run OCaml rewatch parity tests
+        if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
+        timeout-minutes: 20
+        run: |
+          bash rewatch-ocaml/tests/check_canonical_test_coverage.sh
+          bash rewatch-ocaml/tests/check_config_acceptance.sh \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+          bash rewatch-ocaml/tests/check_command_validation.sh \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+        shell: bash
+
+      - name: Run OCaml rewatch interactive output tests
+        # Terminal rendering depends on the host OS, not the CPU architecture.
+        # Use the faster ARM runners for one Linux and one macOS check. Windows
+        # does not provide a reliable native equivalent of the `script` PTY.
+        if: matrix.node-target == 'linux-arm64' || matrix.node-target == 'darwin-arm64'
+        timeout-minutes: 15
+        run: |
+          bash rewatch-ocaml/tests/check_interactive_output.sh \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+        shell: bash
+
+      - name: Run OCaml rewatch verbose output tests
+        if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
+        timeout-minutes: 10
+        run: |
+          bash rewatch-ocaml/tests/check_verbose_output.sh \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
+            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+        shell: bash
+
+      - name: Run OCaml rewatch unit tests
+        timeout-minutes: 10
+        run: |
+          opam exec -- dune build tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe
+          # Run the executable directly so a stuck test leaves live progress;
+          # dune otherwise buffers the test output until the action exits.
+          opam exec -- ./_build/default/tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe -runner sequential
+        shell: bash
+
+      - name: Run OCaml rewatch focused integration tests
+        timeout-minutes: 30
+        run: |
+          sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+        shell: bash
+
+      - name: Run OCaml rewatch canonical tests
+        run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+        shell: bash
+
+      # The Rust implementation is kept for comparison. One platform runs its
+      # shared suite; the parity steps exercise it on every platform.
+      - name: Run Rust rewatch reference tests
+        if: matrix.node-target == 'linux-arm64'
+        run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe
         shell: bash
 
       - name: Run syntax benchmarks
@@ -307,6 +376,10 @@ jobs:
       - name: Test playground compiler
         if: matrix.build_playground
         run: yarn workspace playground test
+
+      - name: Test dev playground
+        if: matrix.build_playground
+        run: yarn workspace dev-playground test
 
       - name: Stage PR dev playground compiler bundle
         if: ${{ matrix.build_playground && github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'master' && github.event.pull_request.head.repo.full_name == github.repository }}
@@ -377,7 +450,7 @@ jobs:
     needs:
       - build-compiler
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       pages: write
@@ -429,13 +502,13 @@ jobs:
       - build-compiler
     outputs:
       commit_sha: ${{ steps.publish.outputs.sha }}
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           cache: yarn
           node-version-file: .nvmrc
@@ -457,12 +530,12 @@ jobs:
       - name: Publish packages to pkg.pr.new
         id: publish
         run: |
-          yarn dlx pkg-pr-new publish "." "./packages/@rescript/*"
+          yarn dlx pkg-pr-new publish --yarn "." "./packages/@rescript/*"
 
   api-docs:
     needs:
       - build-compiler
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     steps:
       - name: Checkout rescript-lang.org
         uses: actions/checkout@v7
@@ -487,7 +560,7 @@ jobs:
 
       - name: Use Node.js
         if: steps.diffcheck.outputs.clean == 'false'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           cache: yarn
           node-version-file: .node-version
@@ -499,7 +572,7 @@ jobs:
           yarn build
 
   test-devcontainer:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -516,10 +589,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-15-intel
-          - os: macos-15
-          - os: ubuntu-24.04
-          - os: ubuntu-24.04-arm
+          - os: macos-26
+          - os: ubuntu-26.04
+          - os: ubuntu-26.04-arm
           - os: windows-2025
     runs-on: ${{ matrix.os }}
     steps:
@@ -527,10 +599,10 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           # Run integration tests with the oldest supported node version.
-          node-version: 20
+          node-version: 22
 
       - name: Make test directory
         id: tmp-dir
@@ -549,12 +621,29 @@ jobs:
         run: |
           COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
           npm i --no-audit \
-            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
+            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}" \
+            "https://pkg.pr.new/rescript-lang/rescript/@rescript/runtime@${COMMIT_SHA}" \
+            "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Test installation
-        run: npx rescript -h && npx rescript build && cat src/Test.res.js
+        run: |
+          npx rescript -h
+          npx rescript build
+          cp src/BeltTest.res.txt src/BeltTest.res
+          if npx rescript build; then
+            echo "Belt unexpectedly compiled without being listed as a dependency" >&2
+            exit 1
+          fi
+          cp rescript-with-belt.json rescript.json
+          npx rescript build
+          node src/BeltTest.mjs
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
+
+      - name: Test packaged CLI subcommands and watch shutdown
+        run: node packaged-cli-smoke.mjs
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
@@ -565,10 +654,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-15-intel
-          - os: macos-15
-          - os: ubuntu-24.04
-          - os: ubuntu-24.04-arm
+          - os: macos-26
+          - os: ubuntu-26.04
+          - os: ubuntu-26.04-arm
           - os: windows-2025
     runs-on: ${{ matrix.os }}
     steps:
@@ -578,7 +666,7 @@ jobs:
           version: 10
 
       - name: Use Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           # Run integration tests with the oldest supported node version.
           node-version: 22
@@ -604,45 +692,45 @@ jobs:
           COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
           # pnpm 10 blocks pkg.pr.new's URL-based platform subdependencies unless block-exotic-subdeps is disabled.
           pnpm --config.block-exotic-subdeps=false i \
-            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
+            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}" \
+            "https://pkg.pr.new/rescript-lang/rescript/@rescript/runtime@${COMMIT_SHA}" \
+            "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Test installation
-        run: pnpm rescript -h && pnpm rescript build && cat src/Test.res.js
+        run: |
+          pnpm rescript -h
+          pnpm rescript build
+          cp src/BeltTest.res.txt src/BeltTest.res
+          if pnpm rescript build; then
+            echo "Belt unexpectedly compiled without being listed as a dependency" >&2
+            exit 1
+          fi
+          cp rescript-with-belt.json rescript.json
+          pnpm rescript build
+          node src/BeltTest.mjs
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
-  test-integration-rewatch:
+  # The single CI check that the master ruleset requires. Matrix job names
+  # contain runner labels, so requiring this job instead keeps the ruleset
+  # unchanged when runners or jobs change. It runs even when a needed job fails
+  # or the run is cancelled, because a skipped required check counts as passed.
+  ci-ok:
+    if: ${{ always() }}
     needs:
+      - build-compiler
       - pkg-pr-new
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-15-intel
-          - os: macos-15
-          - os: ubuntu-24.04
-          - os: ubuntu-24.04-arm
-          - os: windows-2025
-    runs-on: ${{ matrix.os }}
+      - api-docs
+      - test-devcontainer
+      - test-installation-npm
+      - test-installation-pnpm
+    runs-on: ubuntu-26.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          # Run integration tests with the oldest supported node version.
-          node-version: 20
-
-      - name: Install ReScript package in rewatch/testrepo
+      - name: Check that all needed jobs succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
         run: |
-          COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
-          yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}"
-        shell: bash
-        working-directory: rewatch/testrepo
-
-      - name: Run rewatch integration tests
-        run: ./rewatch/tests/suite.sh rewatch/testrepo/node_modules/.bin/rescript
-        shell: bash
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "$NEEDS"
+          jq -e 'all(.[]; .result == "success")' <<< "$NEEDS" > /dev/null

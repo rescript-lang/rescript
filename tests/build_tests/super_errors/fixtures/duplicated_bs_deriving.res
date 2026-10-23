@@ -1,2 +1,2 @@
-@deriving(accessors) @deriving(jsConverter)
+@deriving(accessors) @deriving(accessors)
 type t = One | Two

@@ -1,8 +1,10 @@
 // Playground bundle is UMD module
 // It uses `module.exports` in current context, or fallback to `globalThis`
+const assert = require("node:assert/strict");
 const { rescript_compiler } = require("./compiler.js");
 
 require("./packages/compiler-builtins/cmij.js");
+require("./packages/@rescript/belt/cmij.js");
 require("./packages/@rescript/react/cmij.js");
 
 const compiler = rescript_compiler.make();
@@ -36,7 +38,7 @@ const result = compiler.rescript.compile(`
   }
 
   let sum = [1,2,3]
-    ->Array.map(x => x * 2)
+    ->Belt.Array.map(x => x * 2)
     ->Array.reduce(0, (acc, item) => acc + item)
 
 
@@ -75,3 +77,120 @@ if (result.js_code !== "") {
   console.log(result.js_code);
   console.log("-- Playground test complete --");
 }
+
+assert.equal(compiler.setGentypeEnabled(true), true);
+const defaultGentypeResult = compiler.rescript.compileWithDebug(
+  "@genType let answer = 42\n",
+);
+assert.equal(defaultGentypeResult.type, "success");
+assert.match(
+  defaultGentypeResult.gentype,
+  /require\(['"]\.\/playground\.js['"]\)/,
+);
+assert.doesNotMatch(defaultGentypeResult.gentype, /playground\.bs\.js/);
+
+compiler.setFilename("Foo.res");
+const customGentypeResult = compiler.rescript.compileWithDebug(
+  "@genType let answer = 42\n",
+);
+assert.equal(customGentypeResult.type, "success");
+assert.match(customGentypeResult.gentype, /require\(['"]\.\/Foo\.js['"]\)/);
+assert.doesNotMatch(customGentypeResult.gentype, /Playground\.js/);
+assert.equal(compiler.setGentypeEnabled(false), true);
+compiler.setFilename("Playground.res");
+
+console.log("-- Playground gentype filename test complete --");
+
+const sourceMapSource = `let double = value => value * 2
+let result = double(21)
+`;
+
+assert.equal(compiler.setSourceMapMode("linked"), true);
+assert.equal(compiler.setSourceMapSourcesContent(true), true);
+assert.equal(compiler.setSourceMapRoot("rescript://playground/"), true);
+assert.deepEqual(
+  {
+    mode: compiler.getConfig().source_map_mode,
+    sourcesContent: compiler.getConfig().source_map_sources_content,
+    sourceRoot: compiler.getConfig().source_map_root,
+  },
+  {
+    mode: "linked",
+    sourcesContent: true,
+    sourceRoot: "rescript://playground/",
+  },
+);
+
+const linkedResult = compiler.rescript.compile(sourceMapSource);
+assert.equal(linkedResult.type, "success");
+assert.match(
+  linkedResult.js_code,
+  /\/\/# sourceMappingURL=Playground\.js\.map\n$/,
+);
+
+const sourceMap = JSON.parse(linkedResult.source_map);
+assert.equal(sourceMap.version, 3);
+assert.equal(sourceMap.file, "Playground.js");
+assert.equal(sourceMap.sourceRoot, "rescript://playground/");
+assert.ok(
+  sourceMap.sources.some((source) => source.endsWith("Playground.res")),
+);
+assert.ok(sourceMap.sourcesContent.includes(sourceMapSource));
+assert.ok(sourceMap.mappings.length > 0);
+
+assert.equal(compiler.setSourceMapMode("inline"), true);
+const inlineResult = compiler.rescript.compile(sourceMapSource);
+assert.equal(inlineResult.type, "success");
+assert.match(
+  inlineResult.js_code,
+  /\/\/# sourceMappingURL=data:application\/json;base64,[A-Za-z0-9+/=]+\n$/,
+);
+assert.deepEqual(JSON.parse(inlineResult.source_map), sourceMap);
+
+assert.equal(compiler.setSourceMapMode("hidden"), true);
+const hiddenResult = compiler.rescript.compile(sourceMapSource);
+assert.equal(hiddenResult.type, "success");
+assert.doesNotMatch(hiddenResult.js_code, /\/\/# sourceMappingURL=/);
+assert.deepEqual(JSON.parse(hiddenResult.source_map), sourceMap);
+
+assert.equal(compiler.setSourceMapMode("unsupported"), false);
+assert.equal(compiler.getConfig().source_map_mode, "hidden");
+
+assert.equal(compiler.setSourceMapMode("false"), true);
+const disabledResult = compiler.rescript.compile(sourceMapSource);
+assert.equal(disabledResult.type, "success");
+assert.equal(disabledResult.source_map, undefined);
+assert.doesNotMatch(disabledResult.js_code, /\/\/# sourceMappingURL=/);
+
+console.log("-- Playground source map test complete --");
+
+// Error messages keep their ANSI color codes, which the playground renders,
+// also without a terminal, as in a browser.
+delete process.env.TERM;
+const typeErrorResult = compiler.rescript.compile(`let x: int = "text"`);
+assert.equal(typeErrorResult.type, "type_error");
+assert.match(typeErrorResult.errors[0].fullMsg, /\u001b\[/);
+const syntaxErrorResult = compiler.rescript.compile("let = 1");
+assert.equal(syntaxErrorResult.type, "syntax_error");
+assert.match(syntaxErrorResult.errors[0].fullMsg, /\u001b\[/);
+
+assert.equal(rescript_compiler.api_version, "8");
+const lambdaSource = "let compute = x => { let unused = x + 1; x }";
+const lambdaResult = compiler.rescript.compileWithDebug(lambdaSource);
+assert.equal(lambdaResult.type, "success");
+assert.match(lambdaResult.lambda, /unused\//);
+assert.equal(typeof lambdaResult.lambda_optimized, "string");
+assert.doesNotMatch(lambdaResult.lambda_optimized, /unused\//);
+assert.match(lambdaResult.lambda_optimized, /function x\/\d+ x\/\d+/);
+
+const regularLambdaResult = compiler.rescript.compile(lambdaSource);
+assert.equal(regularLambdaResult.type, "success");
+assert.equal(regularLambdaResult.js_code, lambdaResult.js_code);
+assert.equal(regularLambdaResult.lambda_optimized, undefined);
+
+const nextLambdaResult = compiler.rescript.compileWithDebug("let answer = 42");
+assert.equal(nextLambdaResult.type, "success");
+assert.equal(nextLambdaResult.lambda_optimized.trim(), "(makeblock module/exports 42)");
+assert.doesNotMatch(nextLambdaResult.lambda_optimized, /compute/);
+
+console.log("-- Playground optimized Lambda test complete --");

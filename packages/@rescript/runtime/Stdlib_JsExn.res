@@ -6,7 +6,8 @@ let fromException: exn => option<t> = exn =>
   | _ => None
   }
 
-external anyToExnInternal: 'a => exn = "%wrap_exn"
+let anyToExnInternal = (x: 'a): exn =>
+  Primitive_exceptions.internalToException((Obj.magic(x): unknown))
 
 let getOrUndefined: string => t => option<
   string,

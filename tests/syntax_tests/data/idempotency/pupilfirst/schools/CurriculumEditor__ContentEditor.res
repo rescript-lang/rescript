@@ -55,9 +55,8 @@ let reducer = (state, action) =>
     }
   | RemoveContentBlock(contentBlockId) => {
       ...state,
-      contentBlocks: state.contentBlocks->Js.Array.filter(contentBlock =>
-        contentBlock->ContentBlock.id != contentBlockId
-      ),
+      contentBlocks: state.contentBlocks->Array.filter(contentBlock =>
+        contentBlock->ContentBlock.id != contentBlockId),
     }
   | MoveContentBlockUp(contentBlock) => {
       ...state,
@@ -78,14 +77,14 @@ let reducer = (state, action) =>
 let loadContentBlocks = (targetId, send) =>
   ContentBlock.Query.make(~targetId, ())
   ->GraphqlQuery.sendQuery(~notify=true)
-  ->Js.Promise.then_(result => {
-    let contentBlocks = result["contentBlocks"]->Js.Array.map(ContentBlock.makeFromJs)
+  ->Promise.then(result => {
+    let contentBlocks = result["contentBlocks"]->Array.map(ContentBlock.makeFromJs)
 
     let versions = Version.makeArrayFromJs(result["versions"])
 
     send(LoadContent(contentBlocks, versions))
 
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 

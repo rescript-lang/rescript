@@ -111,18 +111,18 @@ let onDelete = (contentBlock, removeContentBlockCB, send, _event) =>
 
     DeleteContentBlockMutation.make(~id, ())
     ->GraphqlQuery.sendQuery
-    ->Js.Promise.then_(result => {
+    ->Promise.then(result => {
       if result["deleteContentBlock"]["success"] {
         removeContentBlockCB(id)
       } else {
         send(FinishSaving)
       }
 
-      Js.Promise.resolve()
+      Promise.resolve()
     })
-    ->Js.Promise.catch(_error => {
+    ->Promise.catch(_error => {
       send(FinishSaving)
-      Js.Promise.resolve()
+      Promise.resolve()
     })
     ->ignore
   })
@@ -144,7 +144,7 @@ let handleUpdateResult = (updateContentBlockCB, setDirtyCB, send, contentBlock) 
     setDirtyCB(false)
   | None => send(FailSaving)
   }
-  Js.Promise.resolve()
+  Promise.resolve()
 }
 
 let updateContentBlockBlock = (
@@ -158,12 +158,12 @@ let updateContentBlockBlock = (
 
   mutation
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(result =>
+  ->Promise.then(result =>
     result->contentBlockExtractor->handleUpdateResult(updateContentBlockCB, setDirtyCB, send)
   )
-  ->Js.Promise.catch(_error => {
+  ->Promise.catch(_error => {
     send(FinishSaving)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

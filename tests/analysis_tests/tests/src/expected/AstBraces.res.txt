@@ -1,0 +1,23 @@
+Dump AST src/AstBraces.res 0:8
+
+Source:
+// let wrapped = {1 + 2}
+//      ^ast
+
+<*>Pstr_value(
+  value:
+    <*>Ppat_var(<*>wrapped)
+  expr:
+    Pexp_braces(
+      Pexp_apply(
+        expr:
+          Pexp_ident:+
+        args:
+          <unlabelled>=
+            Pexp_constant(Pconst_integer(1)),
+          <unlabelled>=
+            Pexp_constant(Pconst_integer(2))
+      )
+    )
+)
+

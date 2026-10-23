@@ -35,20 +35,15 @@ let arity_of_var (meta : Lam_stats.t) (v : Ident.t) =
    We will keep iterating such environment
    If not found, we will return [NA]
 *)
-let rec get_arity (meta : Lam_stats.t) (lam : Lam.t) : Lam_arity.t =
+let rec get_arity (meta : Lam_stats.t) (lam : Lambda.t) : Lam_arity.t =
   match lam with
   | Lvar v -> arity_of_var meta v
   | Lconst _ -> Lam_arity.non_function_arity_info
   | Llet (_, _, _, l) -> get_arity meta l
   | Lprim
-      {
-        primitive = Pfield (_, Fld_module {name});
-        args = [Lglobal_module (id, dynamic_import)];
-        _;
-      } -> (
-    match
-      (Lam_compile_env.query_external_id_info ~dynamic_import id name).arity
-    with
+      {primitive = Pfield (_, Fld_module {name}); args = [Lglobal_module id]; _}
+    -> (
+    match (Lam_compile_env.query_external_id_info id name).arity with
     | Single x -> x
     | Submodule _ -> Lam_arity.na)
   | Lprim
@@ -59,14 +54,12 @@ let rec get_arity (meta : Lam_stats.t) (lam : Lam.t) : Lam_arity.t =
             Lprim
               {
                 primitive = Pfield (_, Fld_module {name});
-                args = [Lglobal_module (id, dynamic_import)];
+                args = [Lglobal_module id];
               };
           ];
         _;
       } -> (
-    match
-      (Lam_compile_env.query_external_id_info ~dynamic_import id name).arity
-    with
+    match (Lam_compile_env.query_external_id_info id name).arity with
     | Submodule subs -> subs.(m) (* TODO: shall we store it as array?*)
     | Single _ -> Lam_arity.na)
   | Lprim {primitive = Praise; _} -> Lam_arity.raise_arity_info
@@ -79,7 +72,7 @@ let rec get_arity (meta : Lam_stats.t) (lam : Lam.t) : Lam_arity.t =
 
       -- Check external c functions ?
       -- it's not true for primitives
-      like caml_set_oo_id  or  Lprim (Pmakeblock , [])
+      like Lprim (Pmakeblock , [])
 
       it seems true that primitive is always fully applied, however,
       it can return a function
@@ -103,7 +96,8 @@ let rec get_arity (meta : Lam_stats.t) (lam : Lam.t) : Lam_arity.t =
         *)
       in
       take xs (List.length args))
-  | Lfunction {arity; body} -> Lam_arity.merge arity (get_arity meta body)
+  | Lfunction {params; body} ->
+    Lam_arity.merge (List.length params) (get_arity meta body)
   | Lswitch
       ( _,
         {
@@ -133,7 +127,7 @@ let rec get_arity (meta : Lam_stats.t) (lam : Lam.t) : Lam_arity.t =
   | Lwhile _ | Lfor _ | Lfor_of _ | Lfor_await_of _ | Lassign _ ->
     Lam_arity.non_function_arity_info
 
-and all_lambdas meta (xs : Lam.t list) =
+and all_lambdas meta (xs : Lambda.t list) =
   match xs with
   | y :: ys ->
     let arity = get_arity meta y in

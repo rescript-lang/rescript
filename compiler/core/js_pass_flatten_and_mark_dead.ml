@@ -69,7 +69,7 @@ let mark_dead_code (js : J.program) : J.program =
                 Js_analyzer.no_side_effect_expression x
             in
             let () =
-              if Set_ident.mem js.export_set ident then
+              if Set_ident.mem ident js.export_set then
                 Js_op_util.update_used_stats ident_info Exported
             in
             let () =
@@ -93,21 +93,23 @@ let mark_dead_code (js : J.program) : J.program =
             | Some {expression_desc = Record_rest (fields, _)} ->
               fields
               |> List.iter (fun (field : J.record_rest_field) ->
-                     match field.record_rest_ident with
-                     | None -> ()
-                     | Some ident ->
-                       add_binding_info ident_use_stats ident_info ident)
+                  match field.record_rest_ident with
+                  | None -> ()
+                  | Some ident ->
+                    add_binding_info ident_use_stats ident_info ident)
             | _ -> ()));
     }
   in
   mark_dead.program mark_dead js;
-  Hash_ident.iter ident_use_stats (fun _id (info : meta_info) ->
+  Hash_ident.iter
+    (fun _id (info : meta_info) ->
       match info with
       | Info ({used_stats = Scanning_pure} as info) ->
         Js_op_util.update_used_stats info Dead_pure
       | Info ({used_stats = Scanning_non_pure} as info) ->
         Js_op_util.update_used_stats info Dead_non_pure
-      | _ -> ());
+      | _ -> ())
+    ident_use_stats;
   js
 
 (*
@@ -196,8 +198,7 @@ let subst_map (substitution : J.expression Hash_ident.t) =
                  Some
                    ({
                       expression_desc =
-                        Caml_block
-                          ((_ :: _ :: _ as ls), Immutable, tag, tag_info);
+                        Caml_block ((_ :: _ :: _ as ls), Immutable, tag_info);
                     } as block);
              } as variable) -> (
           (* If we do this, we should prevent incorrect inlning to inline it into an array :)
@@ -206,7 +207,8 @@ let subst_map (substitution : J.expression Hash_ident.t) =
           let _, e, bindings =
             Ext_list.fold_left ls (0, [], []) (fun (i, e, acc) x ->
                 match x.expression_desc with
-                | Var _ | Number _ | Str _ | J.Bool _ | Undefined _ ->
+                | Var _ | Number _ | Str _ | Template_literal _ | J.Bool _
+                | Undefined _ ->
                   (* TODO: check the optimization *)
                   (i + 1, x :: e, acc)
                 | _ ->
@@ -235,7 +237,7 @@ let subst_map (substitution : J.expression Hash_ident.t) =
           let e =
             {
               block with
-              expression_desc = Caml_block (List.rev e, Immutable, tag, tag_info);
+              expression_desc = Caml_block (List.rev e, Immutable, tag_info);
             }
           in
           let () = add_substitue substitution ident e in
@@ -259,21 +261,41 @@ let subst_map (substitution : J.expression Hash_ident.t) =
               {expression_desc = Number (Int {i; _})} )
         | Static_index ({expression_desc = Var (Id id)}, _, Some i) -> (
           match Hash_ident.find_opt substitution id with
-          | Some {expression_desc = Caml_block (ls, Immutable, _, _)} -> (
+          | Some {expression_desc = Caml_block (ls, Immutable, _)} -> (
             (* user program can be wrong, we should not
                turn a runtime crash into compile time crash : )
             *)
             match Ext_list.nth_opt ls (Int32.to_int i) with
-            (* 7432: prevent optimization in JSX preserve mode *)
-            | Some {expression_desc = J.Var (Id {name = "make"})}
-              when !Js_config.jsx_preserve ->
-              super.expression self x
             | Some
-                ({expression_desc = J.Var _ | Number _ | Str _ | Undefined _} as
-                 x) ->
+                ({
+                   expression_desc =
+                     ( J.Var _ | Number _ | Str _ | Template_literal _
+                     | Undefined _ );
+                 } as x) ->
               x
             | None | Some _ -> super.expression self x)
           | Some _ | None -> super.expression self x)
+        | Jsx
+            ({tag = {expression_desc = Static_index _ | Array_index _}} as jsx)
+          ->
+          (* Keep a JSX tag like [M.make] as it is: the field's value may be a
+             variable with a lowercase name, which JSX reads as an intrinsic
+             element, so js_dump would have to print the call instead (#7432) *)
+          let map = self.expression self in
+          {
+            x with
+            expression_desc =
+              Jsx
+                {
+                  jsx with
+                  callee = map jsx.callee;
+                  spread = Option.map map jsx.spread;
+                  props =
+                    List.map (fun (name, value) -> (name, map value)) jsx.props;
+                  children = Option.map (List.map map) jsx.children;
+                  key = Option.map map jsx.key;
+                };
+          }
         | _ -> super.expression self x);
   }
 

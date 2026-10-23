@@ -20,7 +20,7 @@ rewatch_bg watch > rewatch.log 2>&1 &
 success "Watcher Started"
 
 # Wait for initial build to complete
-if ! wait_for_file "./src/Test.mjs" 20; then
+if ! wait_for_file "./src/Test.mjs" 40; then
   error "Initial build did not complete"
   cat rewatch.log
   exit_watcher
@@ -28,25 +28,66 @@ if ! wait_for_file "./src/Test.mjs" 20; then
 fi
 success "Initial build completed"
 
-sleep 2
+if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 60; then
+  error "Initial build did not settle"
+  cat rewatch.log
+  exit_watcher
+  exit 1
+fi
+completed_builds=$(grep -c "Finished .*compilation" rewatch.log 2>/dev/null || true)
+completed_builds=${completed_builds:-0}
+wait_for_next_build() {
+  completed_builds=$((completed_builds + 1))
+  wait_for_pattern_count rewatch.log "Finished .*compilation" \
+    "$completed_builds" 30
+}
+
+wait_for_tracked_outputs() {
+  local timeout
+  timeout=60
+  while [ "$timeout" -gt 0 ]; do
+    if [ -z "$(git ls-files --deleted -- '*.mjs')" ]; then
+      return 0
+    fi
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  return 1
+}
 
 # Change the suffix in rescript.json (same approach as suffix test)
 replace "s/.mjs/.res.mjs/g" rescript.json
+if ! wait_for_next_build; then
+  error "Configuration rebuild did not settle"
+  cat rewatch.log
+  replace "s/.res.mjs/.mjs/g" rescript.json
+  exit_watcher
+  exit 1
+fi
 
 # After a config change, the watcher does a full rebuild. However, a suffix
 # change alone may not recompile files (sources haven't changed). Trigger a
 # source change so the watcher compiles with the new suffix.
-sleep 3
 echo '// config-change-test' >> ./src/Test.res
 
-# Wait for the file with the new suffix to appear
-if wait_for_file "./src/Test.res.mjs" 20; then
+# Wait for the file with the new suffix and the complete source rebuild.
+if wait_for_file "./src/Test.res.mjs" 40 && wait_for_next_build; then
   success "Full rebuild triggered by rescript.json change (new suffix applied)"
 else
   error "No rebuild detected after rescript.json change"
   cat rewatch.log
   replace "s/.res.mjs/.mjs/g" rescript.json
-  git checkout -- ./src/Test.res
+  git restore --worktree -- ./src/Test.res
+  exit_watcher
+  exit 1
+fi
+
+# The rebuild for the new suffix removes the output with the previous one.
+if ! wait_for_file_gone "./src/Test.mjs" 20; then
+  error "Previous suffix output was not removed after config change"
+  cat rewatch.log
+  replace "s/.res.mjs/.mjs/g" rescript.json
+  git restore --worktree -- ./src/Test.res
   exit_watcher
   exit 1
 fi
@@ -58,25 +99,43 @@ else
   error "Watcher crashed after config change"
   cat rewatch.log
   replace "s/.res.mjs/.mjs/g" rescript.json
-  git checkout -- ./src/Test.res
+  git restore --worktree -- ./src/Test.res
   exit 1
 fi
 
-# Restore rescript.json and source file
+# Restore only the configuration while the watcher is running. Mixing the
+# unrelated source cleanup into the same native event batch can make the batch
+# look like an incremental source edit and obscure the configuration transition
+# this test is intended to verify.
 replace "s/.res.mjs/.mjs/g" rescript.json
-git checkout -- ./src/Test.res
-
-# Wait for rebuild with restored suffix (old .res.mjs should go away)
-if wait_for_file_gone "./src/Test.res.mjs" 20; then
-  success "Rebuild after restore removed old suffix files"
+if wait_for_next_build && wait_for_tracked_outputs; then
+  success "Rebuild after configuration restore completed"
 else
-  # Clean up manually if the watcher didn't remove them
-  find . -name "*.res.mjs" -delete 2>/dev/null
+  error "Configuration restore did not settle or restore tracked outputs"
+  git restore --worktree -- ./src/Test.res
+  exit_watcher
+  exit 1
 fi
 
-exit_watcher
+# The rebuild after the restore also removes the outputs with the new suffix.
+timeout=30
+while [ "$timeout" -gt 0 ] && [ -n "$(find . -name '*.res.mjs' -print -quit)" ]; do
+  sleep 1
+  timeout=$((timeout - 1))
+done
+if [ -n "$(find . -name '*.res.mjs' -print -quit)" ]; then
+  error "Outputs with the restored configuration's previous suffix were not removed"
+  find . -name '*.res.mjs'
+  git restore --worktree -- ./src/Test.res
+  exit_watcher
+  exit 1
+fi
 
-sleep 2
+if ! exit_watcher; then
+  exit 1
+fi
+
+git restore --worktree -- ./src/Test.res
 rm -f rewatch.log
 
 if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];

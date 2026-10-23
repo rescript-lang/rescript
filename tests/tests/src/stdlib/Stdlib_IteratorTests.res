@@ -497,8 +497,10 @@ for await value of asyncIterableForAwaitLoopControl {
   | 1 => continue
   | 3 => break
   | _ =>
-    asyncIterableForAwaitLoopControlValues :=
-      [...asyncIterableForAwaitLoopControlValues.contents, value]
+    asyncIterableForAwaitLoopControlValues := [
+      ...asyncIterableForAwaitLoopControlValues.contents,
+      value,
+    ]
   }
 }
 

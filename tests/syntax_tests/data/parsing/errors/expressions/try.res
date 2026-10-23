@@ -1,4 +1,4 @@
   let parsedPayload =
-    try (Js.Json.parseExn(response)) {
-    | _ => Js.Json.null
+    try (JSON.parseOrThrow(response)) {
+    | _ => JSON.null
     }

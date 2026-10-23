@@ -45,7 +45,7 @@ external fromString: [#always | #auto | #min2] => t = "%identity"
 ## Examples
 
 ```rescript
-Intl.NumberFormat.Grouping.parseJsValue(Js.Json.string("auto")) == Some(#auto)
+Intl.NumberFormat.Grouping.parseJsValue("auto") == Some(#auto)
 ```
 */
 let parseJsValue = value =>

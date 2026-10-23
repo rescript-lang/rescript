@@ -1,1 +1,1 @@
-let () = Js.log(Hello.a + Hello.b)
+let () = Console.log(Hello.a + Hello.b)

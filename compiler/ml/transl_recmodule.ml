@@ -12,34 +12,34 @@ exception Error of Location.t * error
 let undefined_location loc =
   let fname, line, char = Location.get_pos_info loc.Location.loc_start in
   let fname = Filename.basename fname in
-  Lconst
+  const
     (Const_block
-       ( Lambda.Blk_tuple,
-         [
-           Const_base (Const_string (fname, None));
-           Const_base (Const_int line);
-           Const_base (Const_int char);
-         ] ))
-
-let cstr_const = 3
-
-let cstr_non_const = 2
+       (Lambda.Blk_tuple, [const_string fname; const_int line; const_int char]))
 
 let init_shape modl =
   let add_name x id =
-    Const_block (Blk_tuple, [x; Const_base (Const_string (Ident.name id, None))])
+    Const_block (Blk_tuple, [x; const_string (Ident.name id)])
   in
   let module_tag_info : Lambda.tag_info =
-    Blk_constructor {name = "Module"; num_nonconst = 2; tag = 0; attrs = []}
+    Blk_constructor
+      {
+        name = "Module";
+        num_nonconst = 2;
+        runtime = Ast_untagged_variants.generated_block_runtime ~name:"Module";
+      }
   in
   let value_tag_info : Lambda.tag_info =
-    Blk_constructor {name = "value"; num_nonconst = 2; tag = 1; attrs = []}
+    Blk_constructor
+      {
+        name = "value";
+        num_nonconst = 2;
+        runtime = Ast_untagged_variants.generated_block_runtime ~name:"value";
+      }
   in
   let rec init_shape_mod env mty =
     match Mtype.scrape env mty with
     | Mty_ident _ -> raise Not_found
-    | Mty_alias _ ->
-      Const_block (value_tag_info, [Const_pointer (0, Pt_module_alias)])
+    | Mty_alias _ -> Const_block (value_tag_info, [const_module_alias])
     | Mty_signature sg ->
       Const_block
         (module_tag_info, [Const_block (Blk_tuple, init_shape_struct env sg)])
@@ -57,15 +57,8 @@ let init_shape modl =
       let init_v =
         match Ctype.expand_head env ty with
         | t when is_function t ->
-          Const_pointer
-            ( 0,
-              Pt_constructor
-                {
-                  name = "Function";
-                  const = cstr_const;
-                  non_const = cstr_non_const;
-                  attrs = [];
-                } )
+          const_constructor
+            (Ast_untagged_variants.generated_tag ~name:"Function")
         | _ -> raise Not_found
       in
       add_name init_v id :: init_shape_struct env rem
@@ -84,7 +77,7 @@ let init_shape modl =
   try
     Some
       ( undefined_location modl.mod_loc,
-        Lconst (init_shape_mod modl.mod_env modl.mod_type) )
+        const (init_shape_mod modl.mod_env modl.mod_type) )
   with Not_found -> None
 
 type binding_status = Undefined | Inprogress | Defined
@@ -94,7 +87,7 @@ let reorder_rec_bindings bindings =
   and loc = Array.of_list (List.map (fun (_, loc, _, _) -> loc) bindings)
   and init = Array.of_list (List.map (fun (_, _, init, _) -> init) bindings)
   and rhs = Array.of_list (List.map (fun (_, _, _, rhs) -> rhs) bindings) in
-  let fv = Array.map Lambda.free_variables rhs in
+  let fv = Array.map Lambda_traverse.free_variables rhs in
   let num_bindings = Array.length id in
   let status = Array.make num_bindings Undefined in
   let res = ref [] in
@@ -106,7 +99,7 @@ let reorder_rec_bindings bindings =
       if init.(i) = None then (
         status.(i) <- Inprogress;
         for j = 0 to num_bindings - 1 do
-          if Ident_set.mem id.(j) fv.(i) then emit_binding j
+          if Set_ident.mem id.(j) fv.(i) then emit_binding j
         done);
       res := (id.(i), init.(i), rhs.(i)) :: !res;
       status.(i) <- Defined
@@ -119,7 +112,7 @@ let reorder_rec_bindings bindings =
   done;
   List.rev !res
 
-type t = Lambda.lambda
+type t = Lambda.t
 
 (* Utilities for compiling "module rec" definitions *)
 
@@ -129,24 +122,30 @@ type shape = t
 
 type binding = Ident.t * (loc * shape) option * t
 
+(* A shape with no fields: the module has nothing to initialize and nothing to
+   patch, so the runtime dummy and its update are both pointless. The right
+   hand side still has to run for its effects. *)
+let shape_is_empty (shape : Lambda.t) =
+  match shape with
+  | Lambda.Lconst (Const_block (_, [Const_block (_, [])])) -> true
+  | _ -> false
+
 let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
   let rec bind_inits args acc =
     match args with
     | [] -> acc
     | (_id, None, _rhs) :: rem -> bind_inits rem acc
     | (id, Some (loc, shape), _rhs) :: rem ->
-      Lambda.Llet
-        ( Strict,
-          Pgenval,
-          id,
-          Lprim (Pinit_mod, [loc; shape], Location.none),
-          bind_inits rem acc )
+      let init =
+        if shape_is_empty shape then Lambda.lambda_unit
+        else Lambda.prim ~primitive:Pinit_mod ~args:[loc; shape] Location.none
+      in
+      Lambda.let_ Strict id init (bind_inits rem acc)
   in
   let rec bind_strict args acc =
     match args with
     | [] -> acc
-    | (id, None, rhs) :: rem ->
-      Lambda.Llet (Strict, Pgenval, id, rhs, bind_strict rem acc)
+    | (id, None, rhs) :: rem -> Lambda.let_ Strict id rhs (bind_strict rem acc)
     | (_id, Some _, _rhs) :: rem -> bind_strict rem acc
   in
   let rec patch_forwards args =
@@ -154,9 +153,14 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
     | [] -> cont
     | (_id, None, _rhs) :: rem -> patch_forwards rem
     | (id, Some (_loc, shape), rhs) :: rem ->
-      Lsequence
-        ( Lprim (Pupdate_mod, [shape; Lvar id; rhs], Location.none),
-          patch_forwards rem )
+      let patch =
+        if shape_is_empty shape then rhs
+        else
+          Lambda.prim ~primitive:Pupdate_mod
+            ~args:[shape; var id; rhs]
+            Location.none
+      in
+      seq patch (patch_forwards rem)
   in
   bind_inits bindings (bind_strict bindings (patch_forwards bindings))
 
@@ -164,30 +168,30 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
     if the module creation is just a set of function declarations and consts,
     it is good
 *)
-let rec is_function_or_const_block (lam : Lambda.lambda) acc =
+let rec is_function_or_const_block (lam : Lambda.t) acc =
   match lam with
-  | Lprim (Pmakeblock _, args, _) ->
+  | Lprim {primitive = Pmakeblock _; args; loc = _} ->
     Ext_list.for_all args (fun x ->
         match x with
-        | Lvar id -> Set_ident.mem acc id
+        | Lvar id -> Set_ident.mem id acc
         | Lfunction _ | Lconst _ -> true
         | _ -> false)
-  | Llet (_, _, id, Lfunction _, cont) ->
-    is_function_or_const_block cont (Set_ident.add acc id)
+  | Llet (_, id, Lfunction _, cont) ->
+    is_function_or_const_block cont (Set_ident.add id acc)
   | Lletrec (bindings, cont) -> (
     let rec aux_bindings bindings acc =
       match bindings with
       | [] -> Some acc
       | (id, Lambda.Lfunction _) :: rest ->
-        aux_bindings rest (Set_ident.add acc id)
+        aux_bindings rest (Set_ident.add id acc)
       | (_, _) :: _ -> None
     in
     match aux_bindings bindings acc with
     | None -> false
     | Some acc -> is_function_or_const_block cont acc)
-  | Llet (_, _, _, Lconst _, cont) -> is_function_or_const_block cont acc
-  | Llet (_, _, id1, Lvar id2, cont) when Set_ident.mem acc id2 ->
-    is_function_or_const_block cont (Set_ident.add acc id1)
+  | Llet (_, _, Lconst _, cont) -> is_function_or_const_block cont acc
+  | Llet (_, id1, Lvar id2, cont) when Set_ident.mem id2 acc ->
+    is_function_or_const_block cont (Set_ident.add id1 acc)
   | _ -> false
 
 let is_strict_or_all_functions (xs : binding list) =
@@ -230,7 +234,9 @@ let is_strict_or_all_functions (xs : binding list) =
 *)
 let eval_rec_bindings (bindings : binding list) (cont : t) : t =
   if is_strict_or_all_functions bindings then
-    Lambda.Lletrec (Ext_list.map bindings (fun (id, _, rhs) -> (id, rhs)), cont)
+    Lambda_scc.bind_rec
+      (Ext_list.map bindings (fun (id, _, rhs) -> (id, rhs)))
+      cont
   else eval_rec_bindings_aux bindings cont
 
 let compile_recmodule compile_rhs bindings cont =

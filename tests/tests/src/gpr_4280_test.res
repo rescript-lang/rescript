@@ -18,7 +18,7 @@ let fn = (authState, route) =>
   switch (authState, route) {
   | (#Unauthenticated, #Onboarding(onboardingRoute))
   | (#Unverified(_), #Onboarding(onboardingRoute)) =>
-    Js.Console.log(onboardingRoute)
+    Console.log(onboardingRoute)
     div(~children=list{string("Onboarding")}, ())
     0
   | (#Unauthenticated, #SignIn)
@@ -29,7 +29,7 @@ let fn = (authState, route) =>
     1
 
   | (#Unverified(user), _) =>
-    Js.Console.log(user)
+    Console.log(user)
     div(~children=list{string("VerifyEmail")}, ())
     2
   | (#Unauthenticated, _) =>

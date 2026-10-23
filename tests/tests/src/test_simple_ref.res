@@ -3,7 +3,7 @@ include (
     let v = ref(0)
 
     let gen = () => {
-      incr(v)
+      v.contents = v.contents + 1
       v.contents
     }
     let h = ref(0)

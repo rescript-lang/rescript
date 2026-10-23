@@ -27,20 +27,7 @@
    make sure that the distributed files are platform independent
 *)
 
-(*
-   let load_unit_no_file unit_name : Js_cmj_format.cmj_load_info =
-     let file = unit_name ^ Literals.suffix_cmj in
-     match Config_util.find_opt file with
-     | Some f
-       ->
-       {package_path =
-          (** hacking relying on the convention of pkg/lib/ocaml/xx.cmj*)
-          Filename.dirname (Filename.dirname (Filename.dirname f));
-        cmj_table =  Js_cmj_format.from_file f}
-     | None ->
-       Bs_exception.error (Cmj_not_found unit_name) *)
-
-let load_unit_with_file unit_name : Js_cmj_format.cmj_load_info =
+let load_unit unit_name : Js_cmj_format.cmj_load_info =
   let file = unit_name ^ Literals.suffix_cmj in
   match Config_util.find_opt file with
   | Some f ->
@@ -51,9 +38,3 @@ let load_unit_with_file unit_name : Js_cmj_format.cmj_load_info =
       cmj_table = Js_cmj_format.from_file f;
     }
   | None -> Bs_exception.error (Cmj_not_found unit_name)
-
-(* we can disable loading from file for troubleshooting
-   Note in dev mode we still allow loading from file is to
-   make the dev build still function correct
-*)
-let load_unit = ref load_unit_with_file

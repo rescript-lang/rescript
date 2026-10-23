@@ -71,29 +71,19 @@ let c = [
 
 console.log(a, c);
 
+let a$1 = [
+  ``,
+  `a`
+];
+
 Mocha.describe("record_debug_test.res", () => {
-  Mocha.test("private attribute test", () => Test_utils.eq("File \"record_debug_test.res\", line 57, characters 7-14", [
-    ``,
-    `a`
-  ], [
+  Mocha.test("private attribute test", () => Test_utils.eq("File \"record_debug_test.res\", line 57, characters 7-14", a$1, [
     "",
     "a"
   ]));
 });
 
-let h = {
-  hd: 1,
-  tl: {
-    hd: 2,
-    tl: {
-      hd: 3,
-      tl: {
-        hd: 4,
-        tl: /* [] */0
-      }
-    }
-  }
-};
+let h = {hd: 1, tl: {hd: 2, tl: {hd: 3, tl: {hd: 4, tl: /* [] */0}}}};
 
 let v2 = {
   NAME: "C",

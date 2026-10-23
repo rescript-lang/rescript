@@ -1,6 +1,6 @@
 {
   "name": "@rescript/win32-x64",
-  "version": "13.0.0-alpha.6",
+  "version": "13.0.0-alpha.7",
   "description": "ReScript binaries for Windows x86_64",
   "type": "module",
   "license": "(LGPL-3.0-or-later AND MIT)",
@@ -19,7 +19,6 @@
     "Cristiano Calcagno (https://github.com/cristianoc)",
     "Dmitry Zakharov (https://github.com/DZakh)",
     "Florian Hammerschmidt (https://github.com/fhammerschmidt)",
-    "Florian Verdonck (https://github.com/nojaf)",
     "Gabriel Nordeborn (https://github.com/zth)",
     "Hyeseong Kim (https://github.com/cometkim)",
     "Jaap Frolich (https://github.com/jfrolich)",
@@ -36,21 +35,25 @@
       "./bin/bsc.exe",
       "./bin/rescript-editor-analysis.exe",
       "./bin/rescript-tools.exe",
-      "./bin/rescript.exe"
+      "./bin/rescript.exe",
+      "./bin/rescript-rust.exe"
     ]
   },
   "engines": {
-    "node": ">=20.11.0"
+    "node": ">=22"
   },
   "os": [
     "win32"
   ],
   "cpu": [
-    "x64"
+    "x64",
+    "arm64"
   ],
   "files": [
     "bin.js",
     "bin.d.ts",
+    "THIRD_PARTY_NOTICES_REWATCH.md",
+    "RE_LICENSE.md",
     "bin/"
   ],
   "exports": "./bin.js",

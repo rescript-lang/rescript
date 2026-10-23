@@ -3,14 +3,17 @@
 import * as Stdlib_IntTests from "./Stdlib_IntTests.mjs";
 import * as Stdlib_DictTests from "./Stdlib_DictTests.mjs";
 import * as Stdlib_JsonTests from "./Stdlib_JsonTests.mjs";
+import * as Stdlib_ListTests from "./Stdlib_ListTests.mjs";
 import * as Stdlib_TestTests from "./Stdlib_TestTests.mjs";
 import * as Stdlib_ArrayTests from "./Stdlib_ArrayTests.mjs";
 import * as Stdlib_ErrorTests from "./Stdlib_ErrorTests.mjs";
 import * as Stdlib_FloatTests from "./Stdlib_FloatTests.mjs";
 import * as Stdlib_RegExpTest from "./Stdlib_RegExpTest.mjs";
+import * as Stdlib_ImportTests from "./Stdlib_ImportTests.mjs";
 import * as Stdlib_ObjectTests from "./Stdlib_ObjectTests.mjs";
 import * as Stdlib_PromiseTest from "./Stdlib_PromiseTest.mjs";
 import * as Stdlib_ResultTests from "./Stdlib_ResultTests.mjs";
+import * as Stdlib_StringTests from "./Stdlib_StringTests.mjs";
 import * as Stdlib_IteratorTests from "./Stdlib_IteratorTests.mjs";
 import * as Stdlib_NullableTests from "./Stdlib_NullableTests.mjs";
 import * as Stdlib_TypedArrayTests from "./Stdlib_TypedArrayTests.mjs";
@@ -69,6 +72,12 @@ let areSame = Stdlib_TypedArrayTests.areSame;
 
 let o = Stdlib_TypedArrayTests.o;
 
+let nan = Stdlib_FloatTests.nan;
+
+let infinity = Stdlib_FloatTests.infinity;
+
+let neg_infinity = Stdlib_FloatTests.neg_infinity;
+
 let decodeJsonTest = Stdlib_JsonTests.decodeJsonTest;
 
 let shouldHandleNullableValues = Stdlib_NullableTests.shouldHandleNullableValues;
@@ -84,6 +93,8 @@ let intDict = Stdlib_DictTests.intDict;
 let PatternMatching = Stdlib_DictTests.PatternMatching;
 
 let Has = Stdlib_DictTests.Has;
+
+let PatternKeys = Stdlib_DictTests.PatternKeys;
 
 let supportsIteratorHelpers = Stdlib_IteratorTests.supportsIteratorHelpers;
 
@@ -163,7 +174,9 @@ let asyncGeneratorThrowError = Stdlib_IteratorTests.asyncGeneratorThrowError;
 
 let createdAsyncIterableIterator = Stdlib_IteratorTests.createdAsyncIterableIterator;
 
-let eq = Stdlib_RegExpTest.eq;
+let eq = Stdlib_StringTests.eq;
+
+let main = Stdlib_ImportTests.main;
 
 export {
   bign,
@@ -193,6 +206,9 @@ export {
   assertWillThrow,
   areSame,
   o,
+  nan,
+  infinity,
+  neg_infinity,
   decodeJsonTest,
   shouldHandleNullableValues,
   someString,
@@ -201,6 +217,7 @@ export {
   intDict,
   PatternMatching,
   Has,
+  PatternKeys,
   supportsIteratorHelpers,
   _checkIteratorHelperTypes,
   iterator,
@@ -241,5 +258,6 @@ export {
   asyncGeneratorThrowError,
   createdAsyncIterableIterator,
   eq,
+  main,
 }
 /* Stdlib_IntTests Not a pure module */

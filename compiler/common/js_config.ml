@@ -22,40 +22,76 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(** Browser is not set via command line only for internal use *)
-
 type jsx_version = Jsx_v4
 type jsx_module = React | Generic of {module_name: string}
+type source_map = No_source_map | Linked | Inline | Hidden
 
-let no_version_header = ref false
-
-let directives = ref []
-let cross_module_inline = ref false
-let diagnose = ref false
-
-(* let (//) = Filename.concat *)
-
-(* let get_packages_info () = !packages_info *)
-
-let no_builtin_ppx = ref false
 let tool_name = "ReScript"
-let check_div_by_zero = ref true
-let get_check_div_by_zero () = !check_div_by_zero
-let syntax_only = ref false
-let binary_ast = ref false
-let test_ast_conversion = ref false
-let debug = ref false
-let cmi_only = ref false
-let cmj_only = ref false
-let force_cmi = ref false
-let force_cmj = ref false
-let jsx_version = ref None
-let jsx_module = ref React
-let jsx_preserve = ref false
-let js_stdout = ref true
-let all_module_aliases = ref false
-let no_stdlib = ref false
-let no_export = ref false
+
+type t = {
+  no_version_header: bool ref;
+  directives: string list ref;
+  cross_module_inline: bool ref;
+  debug_ir: bool ref;
+  check_lam: bool ref;
+  no_builtin_ppx: bool ref;
+  check_div_by_zero: bool ref;
+  syntax_only: bool ref;
+  binary_ast: bool ref;
+  test_ast_conversion: bool ref;
+  debug: bool ref;
+  cmi_only: bool ref;
+  cmj_only: bool ref;
+  force_cmi: bool ref;
+  force_cmj: bool ref;
+  jsx_version: jsx_version option ref;
+  jsx_module: jsx_module ref;
+  js_stdout: bool ref;
+  source_map: source_map ref;
+  source_map_sources_content: bool ref;
+  source_map_root: string ref;
+  all_module_aliases: bool ref;
+  no_stdlib: bool ref;
+  no_export: bool ref;
+  as_pp: bool ref;
+  self_stack: string Stack.t;
+}
+
+let create () =
+  {
+    no_version_header = ref false;
+    directives = ref [];
+    cross_module_inline = ref false;
+    debug_ir = ref false;
+    check_lam = ref false;
+    no_builtin_ppx = ref false;
+    check_div_by_zero = ref true;
+    syntax_only = ref false;
+    binary_ast = ref false;
+    test_ast_conversion = ref false;
+    debug = ref false;
+    cmi_only = ref false;
+    cmj_only = ref false;
+    force_cmi = ref false;
+    force_cmj = ref false;
+    jsx_version = ref None;
+    jsx_module = ref React;
+    js_stdout = ref true;
+    source_map = ref No_source_map;
+    source_map_sources_content = ref false;
+    source_map_root = ref "";
+    all_module_aliases = ref false;
+    no_stdlib = ref false;
+    no_export = ref false;
+    as_pp = ref false;
+    self_stack = Stack.create ();
+  }
+
+(* Every option, including the stack used by the uncurry transform, belongs to
+   the request's domain. *)
+let key = Request_local.new_key create
+let current () = Domain.DLS.get key
+
 let int_of_jsx_version = function
   | Jsx_v4 -> 4
 
@@ -70,6 +106,3 @@ let jsx_version_of_int = function
 let jsx_module_of_string = function
   | "react" -> React
   | module_name -> Generic {module_name}
-
-let as_pp = ref false
-let self_stack : string Stack.t = Stack.create ()

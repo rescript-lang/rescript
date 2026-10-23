@@ -80,9 +80,9 @@ let getStudentDetails = (studentId, setState, ()) => {
   setState(state => {...state, studentData: Loading})
   StudentDetailsQuery.make(~studentId, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     response["studentDetails"]->updateStudentDetails(setState, studentId)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 
@@ -179,7 +179,7 @@ let averageGradeCharts = (
             />
           </svg>
           <span className="ml-3 text-lg font-semibold">
-            {(grade.grade->Js.Float.toString) ++ ("/" ++ (criterion.maxGrade->string_of_int))
+            {(grade.grade->Float.toString) ++ ("/" ++ (criterion.maxGrade->string_of_int))
               ->str}
           </span>
         </div>
@@ -192,8 +192,8 @@ let averageGradeCharts = (
   ->React.array
 
 let test = (value, url) => {
-  let tester = Js.Re.fromString(value)
-  url->Js.Re.test_(tester)
+  let tester = RegExp.fromString(value)
+  url->RegExp.test(tester)
 }
 
 let socialLinkIconClass = url =>
@@ -260,7 +260,7 @@ let studentLevelClasses = (levelNumber, levelCompleted, currentLevelNumber) => {
 }
 
 let levelProgressBar = (levelId, levels, levelsCompleted) => {
-  let applicableLevels = levels->Js.Array.filter(level => Level.number(level) != 0)
+  let applicableLevels = levels->Array.filter(level => Level.number(level) != 0)
 
   let courseCompleted =
     applicableLevels->Array.for_all(level => levelsCompleted->Array.mem(level->Level.id))

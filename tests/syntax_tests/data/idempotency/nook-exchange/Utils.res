@@ -5,13 +5,13 @@ external objectAssign: (dict<'a>, dict<'a>) => unit = "assign"
 external objectAssignMany: array<dict<'a>> => unit = "assign"
 
 let cloneJsDict = dict => {
-  let clone = Js.Dict.empty()
+  let clone = Dict.make()
   objectAssign(clone, dict)
   clone
 }
 
 let combineJsDict = (dictA, dictB) => {
-  let combined = Js.Dict.empty()
+  let combined = Dict.make()
   objectAssignMany([combined, dictA, dictB])
   combined
 }
@@ -25,19 +25,19 @@ external convertToAny: dict<'a> => any = "%identity"
 let deleteJsDictKey = (dict, key) => _internalDeleteJsDictKey(convertToAny(dict), key)
 
 let getElementForDomRef = domRef =>
-  domRef->React.Ref.current->Js.Nullable.toOption->Belt.Option.getExn
+  domRef->React.Ref.current->Nullable.toOption->Belt.Option.getExn
 
 let capitalizeFirstLetter = input =>
-  Js.String.toUpperCase(Js.String.charAt(0, input)) ++ (input->Js.String.sliceToEnd(~from=1))
+  String.toUpperCase(String.charAt(input, 0)) ++ (input->String.slice(~start=1))
 
 let throttle = (fn, ms) => {
   let timeoutRef = ref(None)
   _ => {
     switch timeoutRef.contents {
-    | Some(timeout) => Js.Global.clearTimeout(timeout)
+    | Some(timeout) => clearTimeout(timeout)
     | None => ()
     }
-    timeoutRef := Some(Js.Global.setTimeout(() => {
+    timeoutRef := Some(setTimeout(() => {
           timeoutRef := None
           fn()
         }, ms))
@@ -67,11 +67,11 @@ let browserSupportsHover = {
 }->mediaQueryListMatches
 
 let getPath = (~url: ReasonReactRouter.url) =>
-  "/" ++ (Belt.List.toArray(url.path)->Js.Array.joinWith("/"))
+  "/" ++ (Belt.List.toArray(url.path)->Array.joinUnsafe("/"))
 
 let getPathWithSearch = (~url: ReasonReactRouter.url) =>
   "/" ++
-  ((Belt.List.toArray(url.path)->Js.Array.joinWith("/")) ++
+  ((Belt.List.toArray(url.path)->Array.joinUnsafe("/")) ++
   switch url.search {
   | "" => ""
   | search => "?" ++ search
@@ -80,7 +80,7 @@ let getPathWithSearch = (~url: ReasonReactRouter.url) =>
 let getItemDetailUrl = (~itemId, ~variant) => {
   let url = ReasonReactRouter.dangerouslyGetInitialUrl()
   "/" ++
-  (Js.Array.joinWith("/", Belt.List.toArray(url.path)) ++
+  (Array.joinUnsafe(Belt.List.toArray(url.path), "/") ++
   (switch url.search {
   | "" => ""
   | search => "?" ++ search

@@ -31,9 +31,15 @@
        other wise the evaluation order is tricky (make sure eval order is correct)
 *)
 
-type value = {mutable used: bool; lambda: Lam.t}
+type value = {mutable used: bool; lambda: Lambda.t}
 
-let param_hash : _ Hash_ident.t = Hash_ident.create 20
+(* Sequence the unused arguments before [body], in parameter order *)
+let seq_unused param_hash params body =
+  List.fold_right
+    (fun param acc ->
+      let {lambda; used} = Hash_ident.find param_hash param in
+      if not used then Lambda.seq lambda acc else acc)
+    params body
 
 (* optimize cases like
    (fun f (a,b){ g (a,b,1)} (e0, e1))
@@ -44,12 +50,15 @@ let param_hash : _ Hash_ident.t = Hash_ident.create 20
    {[
      when Ext_list.for_all2_no_exn
          (fun p a ->
-            match (a : Lam.t) with
+            match (a : Lambda.t) with
             | Lvar a -> Ident.same p a
             | _ -> false ) params args'
    ]}
 *)
 let simple_beta_reduce params body args =
+  (* Substitutions and their [used] bits belong to this reduction: compiler
+     requests run concurrently on several domains. *)
+  let param_hash : value Hash_ident.t = Hash_ident.create 20 in
   let exception Not_simple_apply in
   let find_param_exn v opt =
     match Hash_ident.find_opt param_hash v with
@@ -58,14 +67,14 @@ let simple_beta_reduce params body args =
       exp.lambda
     | None -> opt
   in
-  let rec aux_exn acc (us : Lam.t list) =
+  let rec aux_exn acc (us : Lambda.t list) =
     match us with
     | [] -> List.rev acc
     | (Lvar x as a) :: rest -> aux_exn (find_param_exn x a :: acc) rest
     | (Lconst _ as u) :: rest -> aux_exn (u :: acc) rest
     | _ :: _ -> raise_notrace Not_simple_apply
   in
-  match (body : Lam.t) with
+  match (body : Lambda.t) with
   | Lprim {primitive; args = ap_args; loc = ap_loc}
   (* There is no lambda in primitive *) -> (
     (* catch a special case of primitives *)
@@ -77,23 +86,18 @@ let simple_beta_reduce params body args =
     try
       let new_args = aux_exn [] ap_args in
       let result =
-        Hash_ident.fold param_hash (Lam.prim ~primitive ~args:new_args ap_loc)
-          (fun _param stats acc ->
-            let {lambda; used} = stats in
-            if not used then Lam.seq lambda acc else acc)
+        seq_unused param_hash params
+          (Lambda.prim ~primitive ~args:new_args ap_loc)
       in
-      Hash_ident.clear param_hash;
       Some result
-    with Not_simple_apply ->
-      Hash_ident.clear param_hash;
-      None)
+    with Not_simple_apply -> None)
   | Lapply
       {
         ap_func =
           (Lvar _ | Lprim {primitive = Pfield _; args = [Lglobal_module _]}) as
           f;
         ap_args;
-        ap_info;
+        ap_loc;
       } -> (
     let () =
       List.iter2
@@ -113,14 +117,8 @@ let simple_beta_reduce params body args =
         | _ -> f
       in
       let result =
-        Hash_ident.fold param_hash (Lam.apply f new_args ap_info)
-          (fun _param stat acc ->
-            let {lambda; used} = stat in
-            if not used then Lam.seq lambda acc else acc)
+        seq_unused param_hash params (Lambda.apply f new_args ap_loc)
       in
-      Hash_ident.clear param_hash;
       Some result
-    with Not_simple_apply ->
-      Hash_ident.clear param_hash;
-      None)
+    with Not_simple_apply -> None)
   | _ -> None

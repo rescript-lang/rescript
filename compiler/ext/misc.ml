@@ -18,13 +18,8 @@
 exception Fatal_error
 
 let fatal_error msg =
-  prerr_string ">> Fatal error: ";
-  prerr_endline msg;
+  Compiler_request_output.print_stderr (">> Fatal error: " ^ msg);
   raise Fatal_error
-
-let fatal_errorf fmt = Format.kasprintf fatal_error fmt
-
-(* Exceptions *)
 
 let try_finally work cleanup =
   let result =
@@ -58,80 +53,46 @@ let rec map_end f l1 l2 =
   | [] -> l2
   | hd :: tl -> f hd :: map_end f tl l2
 
-let rec map_left_right f = function
-  | [] -> []
-  | hd :: tl ->
-    let res = f hd in
-    res :: map_left_right f tl
-
-let rec for_all2 pred l1 l2 =
-  match (l1, l2) with
-  | [], [] -> true
-  | hd1 :: tl1, hd2 :: tl2 -> pred hd1 hd2 && for_all2 pred tl1 tl2
-  | _, _ -> false
-
 let rec replicate_list elem n =
   if n <= 0 then [] else elem :: replicate_list elem (n - 1)
-
-let rec list_remove x = function
-  | [] -> []
-  | hd :: tl -> if hd = x then tl else hd :: list_remove x tl
-
-let rec split_last = function
-  | [] -> assert false
-  | [x] -> ([], x)
-  | hd :: tl ->
-    let lst, last = split_last tl in
-    (hd :: lst, last)
 
 let may = Stdlib.Option.iter
 let may_map = Stdlib.Option.map
 
 (* File functions *)
 
-let find_in_path path name =
-  if not (Filename.is_implicit name) then
-    if Sys.file_exists name then name else raise Not_found
-  else
-    let rec try_dir = function
-      | [] -> raise Not_found
-      | dir :: rem ->
-        let fullname = Filename.concat dir name in
-        if Sys.file_exists fullname then fullname else try_dir rem
-    in
-    try_dir path
-
-let find_in_path_rel path name =
-  let rec simplify s =
-    let open Filename in
-    let base = basename s in
-    let dir = dirname s in
-    if dir = s then dir
-    else if base = current_dir_name then simplify dir
-    else concat (simplify dir) base
-  in
-  let rec try_dir = function
-    | [] -> raise Not_found
-    | dir :: rem ->
-      let fullname = simplify (Filename.concat dir name) in
-      if Sys.file_exists fullname then fullname else try_dir rem
-  in
-  try_dir path
-
-let find_in_path_uncap path name =
+(* In each directory of [path], try [name] as written before its uncapitalized
+   form: on a case-insensitive file system both match, and the result is shown
+   in error messages and used in generated import paths. [f] gets each
+   candidate and returns the first result found. *)
+let find_map_in_path_uncap path name f =
   let uname = String.uncapitalize_ascii name in
   let rec try_dir = function
-    | [] -> raise Not_found
-    | dir :: rem ->
-      let fullname = Filename.concat dir name
-      and ufullname = Filename.concat dir uname in
-      if Sys.file_exists ufullname then ufullname
-      else if Sys.file_exists fullname then fullname
-      else try_dir rem
+    | [] -> None
+    | dir :: rem -> (
+      match f (Filename.concat dir name) with
+      | Some _ as found -> found
+      | None when uname = name -> try_dir rem
+      | None -> (
+        match f (Filename.concat dir uname) with
+        | Some _ as found -> found
+        | None -> try_dir rem))
   in
   try_dir path
 
+let find_in_path_uncap_opt path name =
+  find_map_in_path_uncap path name (fun fullname ->
+      if Sys.file_exists (Compiler_request_state.resolve_path fullname) then
+        Some fullname
+      else None)
+
+let find_in_path_uncap path name =
+  match find_in_path_uncap_opt path name with
+  | Some fullname -> fullname
+  | None -> raise Not_found
+
 let remove_file filename =
+  let filename = Compiler_request_state.resolve_path filename in
   try if Sys.file_exists filename then Sys.remove filename
   with Sys_error _msg -> ()
 
@@ -153,43 +114,8 @@ let create_hashtable init =
 
 (* File copy *)
 
-let copy_file ic oc =
-  let buff = Bytes.create 0x1000 in
-  let rec copy () =
-    let n = input ic buff 0 0x1000 in
-    if n = 0 then ()
-    else (
-      output oc buff 0 n;
-      copy ())
-  in
-  copy ()
-
-let copy_file_chunk ic oc len =
-  let buff = Bytes.create 0x1000 in
-  let rec copy n =
-    if n <= 0 then ()
-    else
-      let r = input ic buff 0 (min n 0x1000) in
-      if r = 0 then raise End_of_file
-      else (
-        output oc buff 0 r;
-        copy (n - r))
-  in
-  copy len
-
-let string_of_file ic =
-  let b = Buffer.create 0x10000 in
-  let buff = Bytes.create 0x1000 in
-  let rec copy () =
-    let n = input ic buff 0 0x1000 in
-    if n = 0 then Buffer.contents b
-    else (
-      Buffer.add_subbytes b buff 0 n;
-      copy ())
-  in
-  copy ()
-
 let output_to_bin_file_directly filename fn =
+  let filename = Compiler_request_state.resolve_path filename in
   let oc = open_out_bin filename in
   match fn filename oc with
   | v ->
@@ -199,50 +125,7 @@ let output_to_bin_file_directly filename fn =
     close_out oc;
     raise e
 
-let output_to_file_via_temporary ?(mode = [Open_text]) filename fn =
-  let temp_filename, oc =
-    Filename.open_temp_file ~mode ~perms:0o666
-      ~temp_dir:(Filename.dirname filename)
-      (Filename.basename filename)
-      ".tmp"
-  in
-  (* The 0o666 permissions will be modified by the umask.  It's just
-     like what [open_out] and [open_out_bin] do.
-     With temp_dir = dirname filename, we ensure that the returned
-     temp file is in the same directory as filename itself, making
-     it safe to rename temp_filename to filename later.
-     With prefix = basename filename, we are almost certain that
-     the first generated name will be unique.  A fixed prefix
-     would work too but might generate more collisions if many
-     files are being produced simultaneously in the same directory. *)
-  match fn temp_filename oc with
-  | res -> (
-    close_out oc;
-    try
-      Sys.rename temp_filename filename;
-      res
-    with exn ->
-      remove_file temp_filename;
-      raise exn)
-  | exception exn ->
-    close_out oc;
-    remove_file temp_filename;
-    raise exn
-
 (* Integer operations *)
-
-let rec log2 n = if n <= 1 then 0 else 1 + log2 (n asr 1)
-
-let align n a = if n >= 0 then (n + a - 1) land -a else n land -a
-
-let no_overflow_add a b = a lxor b lor (a lxor lnot (a + b)) < 0
-
-let no_overflow_sub a b = a lxor lnot b lor (b lxor (a - b)) < 0
-
-let no_overflow_mul a b = b <> 0 && a * b / b = a
-
-let no_overflow_lsl a k =
-  0 <= k && k < Sys.word_size && min_int asr k <= a && a <= max_int asr k
 
 module Int_literal_converter = struct
   (* To convert integer literals, allowing max_int + 1 (PR#4210) *)
@@ -250,74 +133,23 @@ module Int_literal_converter = struct
     if String.length str = 0 || str.[0] = '-' then of_string str
     else neg (of_string ("-" ^ str))
   let int s = cvt_int_aux s ( ~- ) int_of_string
-  let int32 s = cvt_int_aux s Int32.neg Int32.of_string
-  let int64 s = cvt_int_aux s Int64.neg Int64.of_string
 end
-
-(* String operations *)
-
-let chop_extensions file =
-  let dirname = Filename.dirname file and basename = Filename.basename file in
-  try
-    let pos = String.index basename '.' in
-    let basename = String.sub basename 0 pos in
-    if Filename.is_implicit file && dirname = Filename.current_dir_name then
-      basename
-    else Filename.concat dirname basename
-  with Not_found -> file
-
-let search_substring pat str start =
-  let rec search i j =
-    if j >= String.length pat then i
-    else if i + j >= String.length str then raise Not_found
-    else if str.[i + j] = pat.[j] then search i (j + 1)
-    else search (i + 1) 0
-  in
-  search start 0
-
-let replace_substring ~before ~after str =
-  let rec search acc curr =
-    match search_substring before str curr with
-    | next ->
-      let prefix = String.sub str curr (next - curr) in
-      search (prefix :: acc) (next + String.length before)
-    | exception Not_found ->
-      let suffix = String.sub str curr (String.length str - curr) in
-      List.rev (suffix :: acc)
-  in
-  String.concat after (search [] 0)
-
-let rev_split_words s =
-  let rec split1 res i =
-    if i >= String.length s then res
-    else
-      match s.[i] with
-      | ' ' | '\t' | '\r' | '\n' -> split1 res (i + 1)
-      | _ -> split2 res i (i + 1)
-  and split2 res i j =
-    if j >= String.length s then String.sub s i (j - i) :: res
-    else
-      match s.[j] with
-      | ' ' | '\t' | '\r' | '\n' ->
-        split1 (String.sub s i (j - i) :: res) (j + 1)
-      | _ -> split2 res i (j + 1)
-  in
-  split1 [] 0
 
 let get_ref r =
   let v = !r in
   r := [];
   v
 
-let fst3 (x, _, _) = x
-let snd3 (_, x, _) = x
-let thd3 (_, _, x) = x
+(** [edit_distance a b cutoff] computes the edit distance between
+    strings [a] and [b]. To help efficiency, it uses a cutoff: if the
+    distance [d] is smaller than [cutoff], it returns [Some d], else
+    [None].
 
-let fst4 (x, _, _, _) = x
-let snd4 (_, x, _, _) = x
-let thd4 (_, _, x, _) = x
-let for4 (_, _, _, x) = x
-
+    The distance algorithm currently used is Damerau-Levenshtein: it
+    computes the number of insertion, deletion, substitution of
+    letters, or swapping of adjacent letters to go from one word to the
+    other. The particular algorithm may change in the future.
+*)
 let edit_distance a b cutoff =
   let la, lb = (String.length a, String.length b) in
   let cutoff =
@@ -391,15 +223,11 @@ let did_you_mean ppf get_choices =
   match get_choices () with
   | [] -> ()
   | choices ->
-    let rest, last = split_last choices in
+    let rest, last = Ext_list.split_at_last choices in
     Format.fprintf ppf "@\nHint: Did you mean %s%s%s?@?"
       (String.concat ", " rest)
       (if rest = [] then "" else " or ")
       last
-
-let cut_at s c =
-  let pos = String.index s c in
-  (String.sub s 0 pos, String.sub s (pos + 1) (String.length s - pos - 1))
 
 module String_set = Set.Make (struct
   type t = string
@@ -454,11 +282,6 @@ module Color = struct
     {warning = [Bold; FG Magenta]; error = [Bold; FG Red]; loc = [Bold]}
 
   let cur_styles = ref default_styles
-  let get_styles () = !cur_styles
-  let set_styles s = cur_styles := s
-
-  (* map a tag to a style, if the tag is known.
-     @raise Not_found otherwise *)
   let style_of_tag s =
     match s with
     | Format.String_tag "error" -> !cur_styles.error
@@ -469,19 +292,20 @@ module Color = struct
     | Format.String_tag "filename" -> [FG Cyan]
     | _ -> raise Not_found
 
-  let color_enabled = ref true
+  let color_key = Request_local.new_key (fun () -> ref true)
+  let color_enabled () = Domain.DLS.get color_key
 
   (* either prints the tag of [s] or delegates to [or_else] *)
   let mark_open_tag ~or_else s =
     try
       let style = style_of_tag s in
-      if !color_enabled then ansi_of_style_l style else ""
+      if !(color_enabled ()) then ansi_of_style_l style else ""
     with Not_found -> or_else s
 
   let mark_close_tag ~or_else s =
     try
       let _ = style_of_tag s in
-      if !color_enabled then ansi_of_style_l [Reset] else ""
+      if !(color_enabled ()) then ansi_of_style_l [Reset] else ""
     with Not_found -> or_else s
 
   (* add color handling to formatter [ppf] *)
@@ -511,24 +335,20 @@ module Color = struct
 
   type setting = Auto | Always | Never
 
-  let setup =
-    let first = ref true in
-    (* initialize only once *)
-    let formatter_l =
+  (* Install shared formatter hooks during module initialization. Their tag
+     callbacks read the calling domain's color setting. *)
+  let () =
+    Format.set_mark_tags true;
+    List.iter set_color_tag_handling
       [Format.std_formatter; Format.err_formatter; Format.str_formatter]
-    in
-    fun o ->
-      if !first then (
-        first := false;
-        Format.set_mark_tags true;
-        List.iter set_color_tag_handling formatter_l;
-        color_enabled :=
-          match o with
-          | Some Always -> true
-          | Some Auto -> should_enable_color ()
-          | Some Never -> false
-          | None -> should_enable_color ());
-      ()
+
+  let setup option =
+    color_enabled () :=
+      match option with
+      | Some Always -> true
+      | Some Auto -> should_enable_color ()
+      | Some Never -> false
+      | None -> should_enable_color ()
 end
 
 let normalise_eol s =
@@ -537,47 +357,3 @@ let normalise_eol s =
     if s.[i] <> '\r' then Buffer.add_char b s.[i]
   done;
   Buffer.contents b
-
-let delete_eol_spaces src =
-  let len_src = String.length src in
-  let dst = Bytes.create len_src in
-  let rec loop i_src i_dst =
-    if i_src = len_src then i_dst
-    else
-      match src.[i_src] with
-      | ' ' | '\t' -> loop_spaces 1 (i_src + 1) i_dst
-      | c ->
-        Bytes.set dst i_dst c;
-        loop (i_src + 1) (i_dst + 1)
-  and loop_spaces spaces i_src i_dst =
-    if i_src = len_src then i_dst
-    else
-      match src.[i_src] with
-      | ' ' | '\t' -> loop_spaces (spaces + 1) (i_src + 1) i_dst
-      | '\n' ->
-        Bytes.set dst i_dst '\n';
-        loop (i_src + 1) (i_dst + 1)
-      | _ ->
-        for n = 0 to spaces do
-          Bytes.set dst (i_dst + n) src.[i_src - spaces + n]
-        done;
-        loop (i_src + 1) (i_dst + spaces + 1)
-  in
-  let stop = loop 0 0 in
-  Bytes.sub_string dst 0 stop
-
-type hook_info = {sourcefile: string}
-
-exception
-  HookExnWrapper of {error: exn; hook_name: string; hook_info: hook_info}
-
-exception HookExn of exn
-
-let raise_direct_hook_exn e = raise (HookExn e)
-
-module type HookSig = sig
-  type t
-
-  val add_hook : string -> (hook_info -> t -> t) -> unit
-  val apply_hooks : hook_info -> t -> t
-end

@@ -1,7 +1,7 @@
 module Token = Res_token
 
 type t =
-  | OpenDescription (* open Belt *)
+  | OpenDescription (* open Array *)
   | ModuleLongIdent (* Foo or Foo.Bar *) [@live]
   | Ternary (* condExpr ? trueExpr : falseExpr *)
   | Es6ArrowExpr
@@ -30,6 +30,7 @@ type t =
   | PatternList
   | PatternOcamlList
   | PatternRecord
+  | PatternDict
   | TypeDef
   | TypeConstrName
   | TypeParams
@@ -97,6 +98,7 @@ let to_string = function
   | PatternList -> "multiple patterns"
   | PatternOcamlList -> "a list pattern"
   | PatternRecord -> "a record pattern"
+  | PatternDict -> "a dict pattern"
   | ParameterList -> "parameters"
   | StringFieldDeclarations -> "string field declarations"
   | FieldDeclarations -> "field declarations"
@@ -281,7 +283,7 @@ let is_list_element grammar token =
   | StringFieldDeclarations -> is_string_field_decl_start token
   | FieldDeclarations -> is_field_decl_start token
   | RecordDecl -> is_record_decl_start token
-  | TypExprList -> is_typ_expr_start token || token = Token.LessThan
+  | TypExprList -> is_typ_expr_start token
   | TypeParams -> is_type_param_start token
   | FunctorArgs -> is_functor_arg_start token
   | ModExprList -> is_mod_expr_start token
@@ -295,6 +297,7 @@ let is_list_element grammar token =
   | PatternMatching -> is_pattern_match_start token
   | PatternOcamlList -> is_pattern_ocaml_list_start token
   | PatternRecord -> is_pattern_record_item_start token
+  | PatternDict -> is_dict_row_start token
   | Attribute -> is_attribute_start token
   | TypeConstraint -> token = Constraint
   | PackageConstraint -> token = And
@@ -312,7 +315,7 @@ let is_list_terminator grammar token =
   | ArgumentList, (Rparen | DotDotDot)
   | TypExprList, (Rparen | Forwardslash | GreaterThan | Equal)
   | ModExprList, Rparen
-  | ( (PatternList | PatternOcamlList | PatternRecord),
+  | ( (PatternList | PatternOcamlList | PatternRecord | PatternDict),
       ( Forwardslash | Rbracket | Rparen | EqualGreater (* pattern matching => *)
       | In (* for expressions *)
       | Equal (* let {x} = foo *) ) )

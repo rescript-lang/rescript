@@ -3,13 +3,16 @@ open Test_utils
 
 @@warning("-107")
 
-let max_int = 2147483647 // 0x80000000
-let min_int = -2147483648 // 0x7FFFFFFF
+let max_int = 2147483647 // 0x7FFFFFFF
+let min_int = -2147483648 // 0x80000000
 
 let hash_variant = s => {
   let accu = ref(0)
   for i in 0 to String.length(s) - 1 {
-    accu := land(223 * accu.contents + String.codePointAt(s, i)->Option.getUnsafe, lsl(1, 31) - 1)
+    accu := Int.bitwiseAnd(
+      223 * accu.contents + String.codePointAt(s, i)->Option.getUnsafe,
+      Int.shiftLeft(1, 31) - 1,
+    )
     /* Here accu is 31 bits, times 223 will not be than 53 bits..
        TODO: we can use `Sys.backend_type` for patching
  */
@@ -19,7 +22,7 @@ let hash_variant = s => {
   /* accu := !accu land (1 lsl 31 - 1); */
   /* make it signed for 64 bits architectures */
   if accu.contents > 0x3FFFFFFF {
-    lor(accu.contents - lsl(1, 31), 0)
+    Int.bitwiseOr(accu.contents - Int.shiftLeft(1, 31), 0)
   } else {
     accu.contents
   }
@@ -31,11 +34,11 @@ let hash_variant2 = s => {
     accu := 223 * accu.contents + String.codePointAt(s, i)->Option.getUnsafe
   }
   /* reduce to 31 bits */
-  accu := land(accu.contents, lsl(1, 31) - 1)
+  accu := Int.bitwiseAnd(accu.contents, Int.shiftLeft(1, 31) - 1)
 
   /* make it signed for 64 bits architectures */
   if accu.contents > 0x3FFFFFFF {
-    accu.contents - lsl(1, 31)
+    accu.contents - Int.shiftLeft(1, 31)
   } else {
     accu.contents
   }
@@ -58,6 +61,10 @@ describe(__MODULE__, () => {
   test("hash_variant_test2", () => eq(__LOC__, hash_variant2("xxyyzxzzyy"), -449896130))
   test("int_literal_flow", () => eq(__LOC__, -1, 0xffffffff))
   test("int_literal_flow2", () => eq(__LOC__, -1, -1))
-  test("float_conversion_test1", () => eq(__LOC__, int_of_float(Js.Float.fromString("3")), 3))
-  test("float_conversion_test2", () => eq(__LOC__, int_of_float(Js.Float.fromString("3.2")), 3))
+  test("float_conversion_test1", () =>
+    eq(__LOC__, Float.fromString("3")->Option.map(Float.toInt), Some(3))
+  )
+  test("float_conversion_test2", () =>
+    eq(__LOC__, Float.fromString("3.2")->Option.map(Float.toInt), Some(3))
+  )
 })

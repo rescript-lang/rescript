@@ -28,11 +28,11 @@ let updateSchoolQuery = (state, send, updateDetailsCB) => {
 
   UpdateSchoolQuery.make(~name=state.name, ~about=state.about, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     response["updateSchool"]["success"]
       ? updateDetailsCB(state.name, optionAbout(state.about))
       : send(UpdateSaving(false))
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

@@ -38,19 +38,19 @@ This means inline is tricky in javascript, here we try to inline [_loop]?
 
 let v = ref(0)
 let count = 10
-let arr = Belt.Array.make(count, _ => ())
+let arr = Array.make(~length=count, _ => ())
 let f = () => {
   let n = ref(0)
   while n.contents < count {
     let j = n.contents
     arr[j] = _ => v := v.contents + j
-    incr(n)
+    n.contents = n.contents + 1
   }
 }
 
 let () = {
   f()
-  arr->Belt.Array.forEach(x => x())
-  v.contents->Js.Int.toString->Console.log
+  arr->Array.forEach(x => x())
+  v.contents->Int.toString->Console.log
   assert(v.contents == 45)
 }

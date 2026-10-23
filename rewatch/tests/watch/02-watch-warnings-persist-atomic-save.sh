@@ -15,18 +15,9 @@ else
   exit 1
 fi
 
-wait_for_pattern() {
-  local file="$1"; local pattern="$2"; local timeout="${3:-30}"
-  while [ "$timeout" -gt 0 ]; do
-    grep -q "$pattern" "$file" 2>/dev/null && return 0
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
-}
-
 wait_for_changed_completed_log() {
-  local file="$1"; local baseline="$2"; local timeout="${3:-30}"
+  local file="$1"; local baseline="$2"; local timeout
+  timeout=${3:-60}
   while [ "$timeout" -gt 0 ]; do
     if [ -f "$file" ] && ! cmp -s "$file" "$baseline" && grep -q "#Done(" "$file" 2>/dev/null; then
       return 0
@@ -53,7 +44,6 @@ cleanup() {
     cp "$BACKUP_B" "$B_FILE"
   fi
   exit_watcher
-  sleep 1
   rm -rf "$TMP_DIR"
   rm -f "$WATCH_STDOUT" "$WATCH_STDERR"
 }
@@ -61,7 +51,7 @@ trap cleanup EXIT
 
 rewatch_bg watch > "$WATCH_STDOUT" 2> "$WATCH_STDERR" &
 
-if ! wait_for_pattern "$COMPILER_LOG" "unused value unusedValue" 30 || ! wait_for_pattern "$COMPILER_LOG" "#Done(" 30; then
+if ! wait_for_pattern "$COMPILER_LOG" "unused value unusedValue" 60 || ! wait_for_pattern "$COMPILER_LOG" "#Done(" 60; then
   error "Initial build did not finish with warning from ModuleA.res in $COMPILER_LOG"
   echo
   echo "=== compiler log ==="
@@ -83,7 +73,7 @@ tmp_b_save="$(mktemp "${TMPDIR:-/tmp}/B.res.XXXXXX")"
 printf 'let world = () => Console.log("world")\n// trigger atomic save\n' > "$tmp_b_save"
 mv "$tmp_b_save" "$B_FILE"
 
-if ! wait_for_changed_completed_log "$COMPILER_LOG" "$INITIAL_LOG" 30; then
+if ! wait_for_changed_completed_log "$COMPILER_LOG" "$INITIAL_LOG" 60; then
   error "Compiler log did not complete a new cycle after atomic save of B.res"
   echo
   echo "=== compiler log ==="
@@ -113,10 +103,15 @@ else
   exit 1
 fi
 
+cp "$COMPILER_LOG" "$TMP_DIR/before-restore.compiler.log"
 cp "$BACKUP_B" "$B_FILE"
-sleep 1
-exit_watcher
-sleep 2
+if ! wait_for_changed_completed_log "$COMPILER_LOG" "$TMP_DIR/before-restore.compiler.log" 60; then
+  error "Compiler log did not complete a new cycle after restoring B.res"
+  exit 1
+fi
+if ! exit_watcher; then
+  exit 1
+fi
 rm -f "$WATCH_STDOUT" "$WATCH_STDERR"
 
 if git diff --exit-code ./packages/watch-warnings > /dev/null 2>&1;

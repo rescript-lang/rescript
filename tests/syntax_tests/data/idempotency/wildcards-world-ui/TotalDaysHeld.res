@@ -22,7 +22,7 @@ let useLoadMostDaysHeldData = () => {
   | {data: Some({patrons}), _} =>
     patrons
     ->Array.map(patron => {
-      let numberOfTokens = patron.tokens->Js.Array.length->string_of_int
+      let numberOfTokens = patron.tokens->Array.length->string_of_int
       let timeElapsed = BN.new_(currentTimestamp)->BN.sub(patron.lastUpdated)
 
       let totalTimeHeldWei =
@@ -30,7 +30,7 @@ let useLoadMostDaysHeldData = () => {
 
       (patron.id, totalTimeHeldWei)
     })
-    ->Js.Array2.sortInPlaceWith(((_, first), (_, second)) => second->BN.cmp(first))
+    ->Array.toSorted((a, b) => Ordering.fromInt((((_, first), (_, second)) => second->BN.cmp(first))(a, b)))
     ->Some
   | _ => None
   }

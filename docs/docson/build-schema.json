@@ -47,6 +47,37 @@
         }
       ]
     },
+    "source-map-spec": {
+      "oneOf": [
+        {
+          "enum": [false],
+          "description": "Disable source map generation."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "enum": ["dev", "always"],
+              "description": "`dev` generates source maps only during watch mode. `always` generates source maps during both build and watch."
+            },
+            "mode": {
+              "enum": ["linked", "inline", "hidden"],
+              "description": "`linked` generates a separate .js.map file and appends a sourceMappingURL comment. `inline` appends the source map as a data URI and does not generate a .js.map file. `hidden` generates a separate .js.map file without appending a sourceMappingURL comment. When `inline` is combined with `sourcesContent: true`, original .res source text is embedded directly into the generated JS."
+            },
+            "sourcesContent": {
+              "type": "boolean",
+              "description": "Include original .res source text in the source map. Default: false."
+            },
+            "sourceRoot": {
+              "type": "string",
+              "description": "Optional sourceRoot value written to the generated source map."
+            }
+          },
+          "required": ["enabled", "mode"],
+          "additionalProperties": false
+        }
+      ]
+    },
     "package-specs": {
       "oneOf": [
         {
@@ -111,8 +142,31 @@
       "type": "string"
     },
     "bs-dependency": {
-      "type": "string",
-      "title": "dependency"
+      "title": "dependency",
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Name of the package"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name of the package"
+            },
+            "features": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Features of the dependency to build, together with the features they imply through its `features` map. When omitted, all of its features are built."
+            }
+          },
+          "required": ["name"],
+          "additionalProperties": false
+        }
+      ]
     },
     "dependencies": {
       "type": "array",
@@ -165,6 +219,10 @@
             "dir": {
               "type": "string",
               "description": "name of the directory"
+            },
+            "feature": {
+              "type": "string",
+              "description": "Only include this directory in the build when this feature is active, directly or implied by another active feature through `features`"
             },
             "type": {
               "enum": ["dev"]
@@ -364,6 +422,10 @@
       "$ref": "#/definitions/namespace-spec",
       "description": "can be true/false or a customized name"
     },
+    "namespace-entry": {
+      "type": "string",
+      "description": "Name of the module that serves as the entry of a namespaced package. It is compiled without the namespace suffix, so other packages refer to it by its own name, and it opens the namespace to refer to the package's other modules. Requires `namespace`: `rescript` rejects a `namespace-entry` without a namespace."
+    },
     "sources": {
       "$ref": "#/definitions/sources",
       "description": "Source code location"
@@ -382,6 +444,23 @@
     "dev-dependencies": {
       "$ref": "#/definitions/dependencies",
       "description": "ReScript dev dependencies of the library, like in package.json. Currently searches in `node_modules`."
+    },
+    "allowed-dependents": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Names of the packages that may list this package in their `dependencies` or `dev-dependencies`. When set, the build fails if any other package depends on this one. When omitted, any package may depend on it."
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "description": "Feature declarations: each key is a feature name, and its value lists the other features it implies. Features without implications don't need to be declared; any name used as a source's `feature` is recognized."
     },
     "generators": {
       "type": "array",
@@ -415,7 +494,7 @@
       "properties": {
         "number": {
           "type": "string",
-          "description": "Default: \"+a-4-9-20-41-50-102\". Go [here](https://rescript-lang.org/docs/manual/latest/warning-numbers) for the meanings of the warning flags"
+          "description": "Default: \"+a-4-9-20-41-102\". Go [here](https://rescript-lang.org/docs/manual/latest/warning-numbers) for the meanings of the warning flags"
         },
         "error": {
           "oneOf": [
@@ -448,6 +527,10 @@
       "$ref": "#/definitions/package-specs",
       "description": "ReScript can currently output to [Commonjs](https://en.wikipedia.org/wiki/CommonJS), and [ES6 modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import)"
     },
+    "sourceMap": {
+      "$ref": "#/definitions/source-map-spec",
+      "description": "Configure Source Map v3 output for generated JavaScript."
+    },
     "bs-external-includes": {
       "type": "array",
       "items": {
@@ -479,5 +562,15 @@
     }
   },
   "additionalProperties": false,
-  "required": ["name", "sources"]
+  "required": ["name", "sources"],
+  "dependencies": {
+    "namespace-entry": {
+      "required": ["namespace"],
+      "properties": {
+        "namespace": {
+          "not": { "enum": [false] }
+        }
+      }
+    }
+  }
 }

@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/dynamic_import_local_value.res[0m:[2m2:16[0m
+
+  1 [2m│[0m let x = 3
+  [1;31m2[0m [2m│[0m let a = import([1;31mx[0m)
+  3 [2m│[0m 
+
+  Invalid argument: Dynamic import requires a module or module value that is a file as argument. Passing a value or local module is not allowed.

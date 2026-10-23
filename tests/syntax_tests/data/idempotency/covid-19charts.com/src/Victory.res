@@ -43,7 +43,7 @@ module Line = {
   type xValue<'a> = XValue('a)
 
   let ofInt = (x: int) => XValue(x)
-  let ofDate = (x: Js.Date.t) => XValue(x)
+  let ofDate = (x: Date.t) => XValue(x)
   let ofString = (x: string) => XValue(x)
 
   @module("victory") @react.component
@@ -61,7 +61,7 @@ module Line = {
 
 module Axis = {
   type tick
-  external tickToDate: tick => Js.Date.t = "%identity"
+  external tickToDate: tick => Date.t = "%identity"
   external tickToInt: tick => int = "%identity"
   @module("victory") @react.component
   external make: (

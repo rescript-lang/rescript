@@ -1,2 +1,1 @@
-**/*.cppo.ml
-**/*.cppo.mli
+compiler/flow_parser/**

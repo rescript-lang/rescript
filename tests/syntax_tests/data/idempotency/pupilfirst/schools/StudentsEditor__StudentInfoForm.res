@@ -30,7 +30,7 @@ let updateName = (send, name) => {
 
 let updateEmail = (send, email) => {
   let regex = /.+@.+\..+/i
-  let hasError = !Js.Re.test_(regex, email)
+  let hasError = !RegExp.test(regex, email)
   send(UpdateEmail(email, hasError))
 }
 
@@ -91,7 +91,7 @@ let reducer = (state, action) =>
     }
   | RemoveTag(tag) => {
       ...state,
-      tagsToApply: state.tagsToApply->Js.Array.filter(t => t != tag),
+      tagsToApply: state.tagsToApply->Array.filter(t => t != tag),
     }
   }
 
@@ -193,7 +193,7 @@ let make = (~addToListCB, ~studentTags, ~emailsToAdd) => {
       <span className="text-xs ml-1"> {"(optional)"->str} </span>
     </div>
     <StudentsEditor__SearchableTagList
-      unselectedTags={studentTags->Js.Array.filter(tag => !(state.tagsToApply->Array.mem(tag)))}
+      unselectedTags={studentTags->Array.filter(tag => !(state.tagsToApply->Array.mem(tag)))}
       selectedTags=state.tagsToApply
       addTagCB={tag => send(AddTag(tag))}
       removeTagCB={tag => send(RemoveTag(tag))}

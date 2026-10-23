@@ -24,7 +24,7 @@ let reifyStyle = (type a, x: 'a): (style<a>, a) => {
   }
 
   (
-    if Js.typeof(x) == "string" {
+    if typeof(x) == "string" {
       Obj.magic(String)
     } else if Internal.instanceOf(x, Internal.canvasGradient) {
       Obj.magic(Gradient)

@@ -5,14 +5,14 @@ module Impl = (
 ) => {
   external asDocument: T.t => Dom.document = "%identity"
 
-  let asHtmlDocument: T.t => Js.null<Dom.htmlDocument> = %raw(`
+  let asHtmlDocument: T.t => null<Dom.htmlDocument> = %raw(`
     function (document) {
       return document.doctype.name === "html" ?  document : null;
     }
   `)
   @deprecated("Will fail if no doctype is defined, consider using unsafeAsHtmlDocument instead")
   let asHtmlDocument: T.t => option<Dom.htmlDocument> = self =>
-    Js.Null.toOption(asHtmlDocument(self))
+    Null.toOption(asHtmlDocument(self))
 
   external unsafeAsHtmlDocument: T.t => Dom.htmlDocument = "%identity"
 

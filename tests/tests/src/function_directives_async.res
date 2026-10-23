@@ -1,6 +1,5 @@
 let f =
-  @directive("'use cache'")
-  async (p1, ~p2, ~p3) => {
+  @directive("'use cache'") async (p1, ~p2, ~p3) => {
     await Promise.make((resolve, _reject) => resolve((p1, p2, p3)))
   }
 

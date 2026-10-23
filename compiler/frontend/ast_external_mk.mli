@@ -25,7 +25,7 @@
 val local_external_apply :
   Location.t ->
   ?pval_attributes:Parsetree.attributes ->
-  pval_prim:string list ->
+  pval_prim:Parsetree.primitive_repr ->
   pval_type:Parsetree.core_type ->
   ?local_module_name:string ->
   ?local_fun_name:string ->
@@ -38,27 +38,16 @@ val local_external_apply :
      let module J = struct 
        external unsafe_expr : pval_type = pval_prim 
      end in 
-     J.unssafe_expr args
+     J.unsafe_expr args
    ]}
 *)
 
-val local_external_obj :
-  Location.t ->
-  ?pval_attributes:Parsetree.attributes ->
-  pval_prim:string list ->
-  pval_type:Parsetree.core_type ->
-  ?local_module_name:string ->
-  ?local_fun_name:string ->
-  (string * Parsetree.expression) list ->
-  (* [ (label, exp )]*)
-  Parsetree.expression_desc
+val inline_string : string -> Parsetree.primitive_repr
 
-val local_extern_cont_to_obj :
-  Location.t ->
-  ?pval_attributes:Parsetree.attributes ->
-  pval_prim:string list ->
-  pval_type:Parsetree.core_type ->
-  ?local_module_name:string ->
-  ?local_fun_name:string ->
-  (Parsetree.expression -> Parsetree.expression) ->
-  Parsetree.expression_desc
+val inline_bool : bool -> Parsetree.primitive_repr
+
+val inline_int : int32 -> Parsetree.primitive_repr
+
+val inline_bigint : string -> Parsetree.primitive_repr
+
+val inline_float : string -> Parsetree.primitive_repr

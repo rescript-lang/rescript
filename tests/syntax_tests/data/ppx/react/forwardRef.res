@@ -8,7 +8,7 @@ module V4A = {
         <input
           type_="text"
           ?className
-          ref=?{Js.Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)}
+          ref=?{Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)}
         />
         children
       </div>
@@ -17,7 +17,7 @@ module V4A = {
 
   @react.component
   let make = () => {
-    let input = React.useRef(Js.Nullable.null)
+    let input = React.useRef(Nullable.null)
 
     <div>
       <FancyInput ref=input> {React.string("Click to focus")} </FancyInput>
@@ -33,7 +33,7 @@ module V4AUncurried = {
         <input
           type_="text"
           ?className
-          ref=?{Js.Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)}
+          ref=?{Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)}
         />
         children
       </div>
@@ -42,7 +42,7 @@ module V4AUncurried = {
 
   @react.component
   let make = () => {
-    let input = React.useRef(Js.Nullable.null)
+    let input = React.useRef(Nullable.null)
 
     <div>
       <FancyInput ref=input> {React.string("Click to focus")} </FancyInput>

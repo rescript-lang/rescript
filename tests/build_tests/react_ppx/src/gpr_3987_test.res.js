@@ -55,10 +55,19 @@ JsxRuntime.jsx(Gpr_3987_test$Gpr3987ReproError, {
   onChange: (param, param$1) => {}
 });
 
+let Gpr3987ReproOk$make = Gpr_3987_test$Gpr3987ReproOk;
+
+let Gpr3987ReproOk2$make = Gpr_3987_test$Gpr3987ReproOk2;
+
+let Gpr3987ReproError$make = Gpr_3987_test$Gpr3987ReproError;
+
 export {
   makeContainer,
   Gpr3987ReproOk,
   Gpr3987ReproOk2,
   Gpr3987ReproError,
+  Gpr3987ReproOk$make,
+  Gpr3987ReproOk2$make,
+  Gpr3987ReproError$make,
 }
 /*  Not a pure module */

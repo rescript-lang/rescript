@@ -11,7 +11,5 @@
   I'm not sure what to parse here when looking at "}".
 
 module InstallerDownload =
-  struct
-    let make [arity:1]() = ((<div />)[@res.braces ])[@@react.component ]
-  end
+  struct let make [arity:1]() = {<div />}[@@react.component ] end
 module LicenseList = struct  end

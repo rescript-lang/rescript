@@ -14,10 +14,10 @@ let steve: {...user, "age": int} = {"name": "Steve", "age": 30}
 let steve = ({"name": "Steve", "age": 30}: {...user, "age": int})
 let steve = {({"name": "Steve", "age": 30}: {...user, "age": int})}
 
-let printFullUser = (steve: {...user, "age": int}) => Js.log(steve)
-let printFullUser = (~user: {...user, "age": int}) => Js.log(steve)
-let printFullUser = (~user: {...user, "age": int}) => Js.log(steve)
-let printFullUser = (~user=steve: {...user, "age": int}) => Js.log(steve)
+let printFullUser = (steve: {...user, "age": int}) => Console.log(steve)
+let printFullUser = (~user: {...user, "age": int}) => Console.log(steve)
+let printFullUser = (~user: {...user, "age": int}) => Console.log(steve)
+let printFullUser = (~user=steve: {...user, "age": int}) => Console.log(steve)
 
 @val
 external steve: {...user, "age": int} = "steve"

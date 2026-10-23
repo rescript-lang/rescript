@@ -24,11 +24,6 @@
 
 module P = Ext_pp
 
-open Ext_utf8
-
-(** Avoid to allocate single char string too many times*)
-let array_str1 = Array.init 256 (fun i -> String.make 1 (Char.chr i))
-
 (** For conveting 
 
 *)
@@ -54,6 +49,15 @@ let array_conv =
 
 (* https://mathiasbynens.be/notes/javascript-escapes *)
 let ( +> ) = Ext_buffer.add_string
+
+(* Printable ASCII other than quote and backslash is copied as is. *)
+let needs_escape s =
+  String.exists
+    (function
+      | '"' | '\\' -> true
+      | ' ' .. '~' -> false
+      | _ -> true)
+    s
 
 let escape_to_buffer f (* ?(utf=false)*) s =
   let pp_raw_string f (* ?(utf=false)*) s =
@@ -100,43 +104,25 @@ let escape_to_buffer f (* ?(utf=false)*) s =
         f +> Array.unsafe_get array_conv (c lsr 4);
         f +> Array.unsafe_get array_conv (c land 0xf);
         incr i
-      | '\128' .. '\255' -> (
-        (* Check if this is part of a valid UTF-8 sequence *)
-        let utf8_byte = classify c in
-        match utf8_byte with
-        | Single _ ->
-          (* Single byte >= 128, escape it *)
+      | '\128' .. '\255' ->
+        let decoded = String.get_utf_8_uchar s !i in
+        if Uchar.utf_decode_is_valid decoded then (
+          let length = Uchar.utf_decode_length decoded in
+          for offset = 0 to length - 1 do
+            Ext_buffer.add_char f (String.unsafe_get s (!i + offset))
+          done;
+          i := !i + length)
+        else
           let c = Char.code c in
           f +> "\\x";
           f +> Array.unsafe_get array_conv (c lsr 4);
           f +> Array.unsafe_get array_conv (c land 0xf);
           incr i
-        | Leading (n, _) ->
-          (* Start of UTF-8 sequence, output the whole sequence as-is *)
-          let rec output_utf8_sequence pos remaining =
-            if remaining > 0 && pos < l then (
-              let byte = String.unsafe_get s pos in
-              f +> Array.unsafe_get array_str1 (Char.code byte);
-              output_utf8_sequence (pos + 1) (remaining - 1))
-          in
-          output_utf8_sequence !i (n + 1);
-          (* Skip the continuation bytes *)
-          i := !i + n + 1
-        | Cont _ ->
-          (* Continuation byte, should be handled as part of Leading case *)
-          incr i
-        | Invalid ->
-          (* Invalid UTF-8 byte, escape it *)
-          let c = Char.code c in
-          f +> "\\x";
-          f +> Array.unsafe_get array_conv (c lsr 4);
-          f +> Array.unsafe_get array_conv (c land 0xf);
-          incr i)
       | '\"' ->
         f +> "\\\"";
         incr i (* quote*)
       | _ ->
-        f +> Array.unsafe_get array_str1 (Char.code c);
+        Ext_buffer.add_char f c;
         incr i
     done
   in
@@ -145,11 +131,18 @@ let escape_to_buffer f (* ?(utf=false)*) s =
   f +> "\""
 
 let escape_to_string s =
-  let buf = Ext_buffer.create (String.length s * 2) in
-  escape_to_buffer buf s;
-  Ext_buffer.contents buf
+  if needs_escape s then (
+    let buf = Ext_buffer.create (String.length s * 2) in
+    escape_to_buffer buf s;
+    Ext_buffer.contents buf)
+  else "\"" ^ s ^ "\""
 
-let pp_string f s = P.string f (escape_to_string s)
+let pp_string f s =
+  if needs_escape s then P.string f (escape_to_string s)
+  else (
+    P.string f "\"";
+    P.string f s;
+    P.string f "\"")
 (* let _best_string_quote s =
    let simple = ref 0 in
    let double = ref 0 in

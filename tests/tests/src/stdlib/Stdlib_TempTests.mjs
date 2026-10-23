@@ -249,7 +249,9 @@ let x = Symbol.for("Foo");
 
 console.log(x);
 
-let array$1 = "foo"[Symbol.iterator]().toArray();
+let it = "foo"[Symbol.iterator]();
+
+let array$1 = Array.from(it);
 
 console.log(array$1);
 
@@ -354,6 +356,7 @@ export {
   set,
   regexp,
   x,
+  it,
   array$1 as array,
   timeout,
   z,

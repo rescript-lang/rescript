@@ -85,10 +85,9 @@ module Unknown = {
     switch x {
     | A => "a"
     | B => "b"
-    | Unknown(v) => {
-        Console.log(x)
-        "Unknown"
-      }
+    | Unknown(v) =>
+      Console.log(x)
+      "Unknown"
     }
 }
 
@@ -167,7 +166,7 @@ module Json = {
 
   /* from js_json.ml
 let classify  (x : t) : tagged_t =
-  let ty = Js.typeof x in
+  let ty = typeof x in
   if ty = "string" then
     JSONString (Obj.magic x)
   else if ty = "number" then
@@ -175,9 +174,9 @@ let classify  (x : t) : tagged_t =
   else if ty = "boolean" then
     if (Obj.magic x) = true then JSONTrue
     else JSONFalse
-  else if (Obj.magic x) == Js.null then
+  else if (Obj.magic x) == Null.null then
     JSONNull
-  else if Js_array2.isArray x  then
+  else if Array.isArray x then
     JSONArray (Obj.magic x)
   else
     JSONObject (Obj.magic x)
@@ -375,7 +374,7 @@ module Arr = {
 
   let classify = async (a: arr) =>
     switch a {
-    | Array(arr) => Console.log(arr->Belt.Array.joinWith("-", x => x))
+    | Array(arr) => Console.log(arr->Array.joinWith("-"))
     | String(s) => Console.log(s)
     | Promise(p) => Console.log(await p)
     | Object({userName}) => Console.log(userName)
@@ -387,8 +386,8 @@ module Arr = {
 module AllInstanceofTypes = {
   type record = {userName: string}
 
-  @get external fileName: Js.File.t => string = "name"
-  @get external blobSize: Js.Blob.t => float = "size"
+  @get external fileName: File.t => string = "name"
+  @get external blobSize: Blob.t => float = "size"
 
   @unboxed
   type t =
@@ -396,10 +395,10 @@ module AllInstanceofTypes = {
     | Array(array<string>)
     | Promise(promise<string>)
     | Object(record)
-    | Date(Js.Date.t)
+    | Date(Date.t)
     | RegExp(Stdlib_RegExp.t)
-    | File(Js.File.t)
-    | Blob(Js.Blob.t)
+    | File(File.t)
+    | Blob(Blob.t)
     | ArrayBuffer(ArrayBuffer.t)
     | Int8Array(Int8Array.t)
     | Int16Array(Int16Array.t)
@@ -423,9 +422,9 @@ module AllInstanceofTypes = {
     | String(s) => Console.log(s)
     | Promise(p) => Console.log(await p)
     | Object({userName}) => Console.log(userName)
-    | Date(date) => Console.log(date->Js.Date.toString)
-    | RegExp(re) => Console.log(re->Js.Re.test_("test"))
-    | Array(arr) => Console.log(arr->Belt.Array.joinWith("-", x => x))
+    | Date(date) => Console.log(date->Date.toString)
+    | RegExp(re) => Console.log(re->RegExp.test("test"))
+    | Array(arr) => Console.log(arr->Array.joinWith("-"))
     | File(file) => Console.log(file->fileName)
     | Blob(blob) => Console.log(blob->blobSize)
     | ArrayBuffer(_) => Console.log("ArrayBuffer")
@@ -449,13 +448,13 @@ module AllInstanceofTypes = {
 }
 
 module Aliased = {
-  type dict = dict<string>
+  type dict = Dict.t<string>
   type fn = unit => option<string>
   @unboxed type t = Object(dict) | String(string) | Function(fn)
 
   let test = (t: t) => {
     switch t {
-    | Object(d) => d->Js.Dict.get("Hello")
+    | Object(d) => d->Dict.get("Hello")
     | String(s) => Some(s)
     | Function(fn) => fn()
     }
@@ -470,14 +469,18 @@ module OnlyOne = {
 module MergeCases = {
   type obj = {name: string}
 
+  @val external sideEffect: unit => int = "sideEffect"
+  @val external keepGoing: unit => bool = "keepGoing"
+
   @unboxed
   type t =
     | Boolean(bool)
     | Object(obj)
     | Array(array<int>)
-    | Date(Js.Date.t)
+    | Date(Date.t)
 
-  let should_not_merge = x =>
+  // Equivalent string actions can be shared before untagged matching is lowered.
+  let shareEquivalentStringActions = x =>
     switch x {
     | Object(_) => "do not merge"
     | Array(_) => "do not merge"
@@ -491,6 +494,38 @@ module MergeCases = {
     | Array(_) => "do not merge"
     | Date(_) => "do not merge"
     | Boolean(_) => "merge"
+    }
+
+  // The actions are alpha-equivalent, not merely identical constants.
+  let shareAlphaEquivalentStringActions = value =>
+    switch value {
+    | 0 =>
+      let result = sideEffect()
+      (result, "shared")
+    | 1 => (sideEffect(), "different")
+    | 2 =>
+      let result = sideEffect()
+      (result, "shared")
+    | _ => (sideEffect(), "fallback")
+    }
+
+  // Keep coverage for late case merging across Array.isArray, instanceof,
+  // and typeof dispatch groups. Lambda.make_key deliberately rejects loops.
+  let preserveDiscriminatorGroups = x =>
+    switch x {
+    | Object(_) =>
+      while keepGoing() {
+        ignore(sideEffect())
+      }
+    | Array(_) =>
+      while keepGoing() {
+        ignore(sideEffect())
+      }
+    | Date(_) =>
+      while keepGoing() {
+        ignore(sideEffect())
+      }
+    | Boolean(_) => ()
     }
 }
 

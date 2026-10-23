@@ -15,7 +15,8 @@ export REWATCH_EXECUTABLE
 # Make sure we are in the right directory
 cd $(dirname $0)
 
-if [[ "$REWATCH_EXECUTABLE" == */cli/rescript.js ]]; then
+if [[ "$REWATCH_EXECUTABLE" == */cli/rescript.js ||
+  "$REWATCH_EXECUTABLE" == */cli/rescript-rust.js ]]; then
   echo "Using rewatch CLI script: $REWATCH_EXECUTABLE"
 else
   echo "Using rewatch executable: $REWATCH_EXECUTABLE"
@@ -37,8 +38,11 @@ if [ -n "$STALE_PIDS" ]; then
 fi
 success "No stale rescript processes found"
 
+# The published ReScript versions model dependency layouts; compilation uses
+# the repository-built compiler and runtime. See ../testrepo/README.md.
 bold "Yarn install"
 (cd ../testrepo && yarn)
+node ./add-belt-dependencies.mjs
 
 bold "Rescript version"
 (cd ../testrepo && ./node_modules/.bin/rescript --version)
@@ -46,8 +50,7 @@ bold "Rescript version"
 # we need to reset the yarn.lock and package.json to the original state
 # so there is not diff in git. The CI will install new ReScript package
 bold "Reset package.json and yarn.lock"
-git checkout ../testrepo/yarn.lock &> /dev/null
-git checkout ../testrepo/package.json &> /dev/null
+git restore --worktree -- ../testrepo/yarn.lock ../testrepo/package.json &> /dev/null
 success "Reset package.json and yarn.lock"
 
 bold "Make sure the testrepo is clean"
@@ -81,9 +84,17 @@ fi
 ./compile/13-no-infinite-loop-with-cycle.sh &&
 ./compile/17-prod-flag.sh &&
 ./compile/18-external-dep-uncurried-dot.sh &&
+./compile/19-utf8-warning.sh &&
+./compile/20-schedule-independent-modules-after-error.sh &&
+./compile/21-rebuild-dependency-for-package-specs.sh &&
+./compile/22-qualified-own-namespace-dependency.sh &&
+./compile/23-root-source-dir-rebuild.sh &&
 ./compile/14-no-testrepo-changes.sh &&
 ./compile/15-no-new-files.sh &&
 ./compile/16-snapshots-unchanged.sh &&
+
+# GenType tests
+./gentype/01-gentype-project-root.sh &&
 
 # Watch tests
 ./watch/01-watch-recompile.sh &&
@@ -93,6 +104,10 @@ fi
 ./watch/04-watch-config-change.sh &&
 ./watch/05-watch-ignores-non-source.sh &&
 ./watch/06-watch-missing-source-folder.sh &&
+./watch/07-changed-interface-after-failed-implementation.sh &&
+./watch/08-watch-overlapping-source-removed.sh &&
+./watch/09-watch-recovers-from-invalid-config.sh &&
+./watch/10-watch-recovers-new-dependency-config.sh &&
 
 # Lock tests
 ./lock/01-lock-when-watching.sh &&
@@ -111,6 +126,8 @@ fi
 ./clean/02-clean-dev-dependencies.sh &&
 ./clean/03-clean-node-modules.sh &&
 ./clean/04-clean-rebuild-no-compiler-update.sh &&
+./clean/05-clean-invalid-module-graph.sh &&
+./clean/06-clean-duplicate-names-across-packages.sh &&
 
 # Experimental tests
 ./experimental/01-experimental-features-emit.sh &&

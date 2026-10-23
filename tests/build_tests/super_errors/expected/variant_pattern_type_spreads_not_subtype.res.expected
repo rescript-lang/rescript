@@ -4,8 +4,8 @@
 
   5 [2m│[0m let lookup = (b: b) =>
   6 [2m│[0m   switch b {
-  [1;31m7[0m [2m│[0m   | ...[1;31mc[0m as c => Js.log(c)
-  8 [2m│[0m   | Four => Js.log("four")
-  9 [2m│[0m   | Five => Js.log("five")
+  [1;31m7[0m [2m│[0m   | ...[1;31mc[0m as c => Console.log(c)
+  8 [2m│[0m   | Four => Console.log("four")
+  9 [2m│[0m   | Five => Console.log("five")
 
   Type c is not a subtype of b

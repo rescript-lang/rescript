@@ -13,9 +13,11 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Lambda
-
 open Format
 
-val structured_constant : formatter -> structured_constant -> unit
-val lambda : formatter -> lambda -> unit
+val lambda : formatter -> Lambda.t -> unit
+
+val serialize : string -> Lambda.t -> unit
+(** Print a term to a file, unwrapped: used for the -debug-ir dumps. *)
+
+val lambda_to_string : Lambda.t -> string

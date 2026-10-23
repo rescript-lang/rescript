@@ -1,5 +1,5 @@
-use crate::build::packages::{Namespace, Package};
-use crate::config::Config;
+use crate::build::packages::Package;
+use crate::config::{Config, SourceMapCommand};
 use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
 use blake3::Hash;
@@ -110,6 +110,7 @@ pub struct BuildState {
     pub deleted_modules: AHashSet<String>,
     pub compiler_info: CompilerInfo,
     pub deps_initialized: bool,
+    pub source_map_command: SourceMapCommand,
 }
 
 /// Extended build state that includes command-line specific overrides.
@@ -126,9 +127,6 @@ pub struct BuildCommandState {
     pub build_state: BuildState,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     pub warn_error_override: Option<String>,
-    // Command-line --features override. `None` means all features are active; `Some(list)`
-    // restricts the root package to those features (and whatever they transitively imply).
-    pub features: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -151,6 +149,7 @@ impl BuildState {
         project_context: ProjectContext,
         packages: AHashMap<String, Package>,
         compiler: CompilerInfo,
+        source_map_command: SourceMapCommand,
     ) -> Self {
         Self {
             project_context,
@@ -160,6 +159,7 @@ impl BuildState {
             deleted_modules: AHashSet::new(),
             compiler_info: compiler,
             deps_initialized: false,
+            source_map_command,
         }
     }
 
@@ -180,22 +180,17 @@ impl BuildCommandState {
         packages: AHashMap<String, Package>,
         compiler: CompilerInfo,
         warn_error_override: Option<String>,
-        features: Option<Vec<String>>,
+        source_map_command: SourceMapCommand,
     ) -> Self {
         Self {
             root_folder,
-            build_state: BuildState::new(project_context, packages, compiler),
+            build_state: BuildState::new(project_context, packages, compiler, source_map_command),
             warn_error_override,
-            features,
         }
     }
 
     pub fn get_warn_error_override(&self) -> Option<String> {
         self.warn_error_override.clone()
-    }
-
-    pub fn get_features(&self) -> Option<Vec<String>> {
-        self.features.clone()
     }
 
     pub fn module_name_package_pairs(&self) -> Vec<(String, String)> {
@@ -227,10 +222,8 @@ impl std::ops::DerefMut for BuildCommandState {
 pub struct AstModule {
     pub module_name: String,
     pub package_name: String,
-    pub namespace: Namespace,
     pub last_modified: SystemTime,
     pub ast_file_path: PathBuf,
-    pub is_root: bool,
     pub suffix: String,
 }
 

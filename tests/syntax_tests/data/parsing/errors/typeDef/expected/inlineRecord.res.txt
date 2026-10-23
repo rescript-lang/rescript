@@ -29,7 +29,7 @@ type nonrec entity =
   reportCard: < passing: bool  ;score: int   >  } 
 type user.address = {
   street: string ;
-  country: string }[@@res.inlineRecordDefinition ]
+  country: string }
 and user = {
   name: string ;
   address: user.address }

@@ -75,7 +75,7 @@ let main () =
     match
       (Tools.Migrate.migrate ~entry_point_file:file ~output_mode, output_mode)
     with
-    | Ok content, `Stdout -> print_endline content
+    | Ok content, `Stdout -> print_string content
     | result, `File -> log_and_exit result
     | Error e, _ -> log_and_exit (Error e))
   | "migrate-all" :: root :: _opts -> (
@@ -97,12 +97,12 @@ let main () =
       let files =
         module_names
         |> List.filter_map (fun mod_name ->
-               Hashtbl.find_opt package.paths_for_module mod_name
-               |> Option.map Analysis.Shared_types.get_src)
+            Hashtbl.find_opt package.paths_for_module mod_name
+            |> Option.map Analysis.Shared_types.get_src)
         |> List.concat
         |> List.filter (fun path ->
-               Filename.check_suffix path ".res"
-               || Filename.check_suffix path ".resi")
+            Filename.check_suffix path ".res"
+            || Filename.check_suffix path ".resi")
       in
       let total = List.length files in
       if total = 0 then log_and_exit (Ok "No source files found to migrate")
@@ -142,7 +142,7 @@ let main () =
       let is_stdout = List.mem "--stdout" args in
       let transform_assert_equal = List.mem "--transform-assert-equal" args in
       let output_mode = if is_stdout then `Stdout else `File in
-      Clflags.color := Some Misc.Color.Never;
+      (Clflags.current ()).color := Some Misc.Color.Never;
       match
         ( Tools.Format_codeblocks.format_code_blocks_in_file ~output_mode
             ~transform_assert_equal ~entry_point_file:path,
@@ -157,7 +157,7 @@ let main () =
     | ["-h"] | ["--help"] -> log_and_exit (Ok extract_codeblocks_help)
     | path :: args ->
       let transform_assert_equal = List.mem "--transform-assert-equal" args in
-      Clflags.color := Some Misc.Color.Never;
+      (Clflags.current ()).color := Some Misc.Color.Never;
 
       (* TODO: Add result/JSON mode *)
       Tools.Extract_codeblocks.extract_codeblocks_from_file
@@ -224,7 +224,7 @@ let main () =
   | ["ppx"; file_in; file_out] ->
     let ic = open_in_bin file_in in
     let magic =
-      really_input_string ic (String.length Config.ast_impl_magic_number)
+      really_input_string ic (String.length Config.ast0_impl_magic_number)
     in
     let loc = input_value ic in
     let ast0 : Parsetree0.structure = input_value ic in

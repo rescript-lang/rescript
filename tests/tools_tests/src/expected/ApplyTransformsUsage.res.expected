@@ -1,0 +1,3 @@
+let task = ApplyTransforms.makeTask((resolve, _) => resolve(1))
+
+let total = ApplyTransforms.sum(~a=1, ~b=2)

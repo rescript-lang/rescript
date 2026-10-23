@@ -15,14 +15,14 @@ Type representing an async iterator protocol object.
 - `'next` is the type that can be sent back into `next(value)`
 */
 @notUndefined
-type t<'yield, 'return, 'next>
+type t<+'yield, +'return, -'next>
 
 /**
 Result returned by `AsyncIterator.next`.
 */
 type result<'yield, 'return> = Stdlib_Iterator.result<'yield, 'return>
 
-type rawResult<'yield, 'return>
+type rawResult<+'yield, +'return>
 
 /**
 Low-level raw JavaScript async iterator result shape.

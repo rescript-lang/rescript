@@ -2,7 +2,7 @@
 external nodeEnv: option<string> = "NODE_ENV"
 @val @scope(("process", "env"))
 external gitCommitRef: option<string> = "COMMIT_REF"
-let gitCommitRef = Belt.Option.getWithDefault(gitCommitRef, "")->Js.String.slice(~from=0, ~to_=8)
+let gitCommitRef = Belt.Option.getWithDefault(gitCommitRef, "")->String.slice(~start=0, ~end=8)
 
 let apiUrl =
   nodeEnv === Some("paul-development") ? "http://localhost:3000" : "https://a.nook.exchange"

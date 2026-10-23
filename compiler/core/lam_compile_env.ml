@@ -24,15 +24,15 @@
 
 type env_value =
   | Ml of Js_cmj_format.cmj_load_info
-  | External
+  | External of Ident.t
       (** Also a js file, but this belong to third party 
-      we never load runtime/*.cmj
+      we never load runtime/*.cmj; carries the id it was first bound to
   *)
 
 type ident_info = Js_cmj_format.keyed_cmj_value = {
   name: string;
   arity: Js_cmj_format.arity;
-  persistent_closed_lambda: Lam.t option;
+  persistent_closed_lambda: Lambda.t option;
 }
 
 (*
@@ -40,20 +40,23 @@ type ident_info = Js_cmj_format.keyed_cmj_value = {
    [ find_in_path_uncap !load_path (name ^ ".cmi")]
 *)
 
-(** It stores module => env_value mapping 
-*)
-let cached_tbl : env_value Lam_module_ident.Hash.t =
-  Lam_module_ident.Hash.create 31
+(* Each compilation owns its module-to-env_value cache: reset in one domain
+   must not erase another domain's imports while it is still compiling. *)
+let cached_tbl_key =
+  Request_local.new_key (fun () : env_value Lam_module_ident.Hash.t ->
+      Lam_module_ident.Hash.create 31)
 
-let ( +> ) = Lam_module_ident.Hash.add cached_tbl
+let cached_tbl () = Domain.DLS.get cached_tbl_key
+
+let ( +> ) id value = Lam_module_ident.Hash.add (cached_tbl ()) id value
 
 (* For each compilation we need reset to make it re-entrant *)
 let reset () =
-  Js_config.no_export := false;
+  (Js_config.current ()).no_export := false;
   (* This is needed in the playground since one no_export can make it true
      In the payground, it seems we need reset more states
   *)
-  Lam_module_ident.Hash.clear cached_tbl
+  Lam_module_ident.Hash.clear (cached_tbl ())
 
 (** We should not provide "#moduleid" as output
     since when we print it in the end, it will 
@@ -65,7 +68,7 @@ let add_js_module ?import_attributes
   let id =
     Ident.create
       (match hint_name with
-      | Phint_name hint_name -> Ext_string.capitalize_ascii hint_name
+      | Phint_name hint_name -> String.capitalize_ascii hint_name
       (* make sure the module name is capitalized
          TODO: maybe a warning if the user hint is not good
       *)
@@ -78,32 +81,37 @@ let add_js_module ?import_attributes
       dynamic_import;
     }
   in
-  match Lam_module_ident.Hash.find_key_opt cached_tbl lam_module_ident with
+  match Lam_module_ident.Hash.find_opt (cached_tbl ()) lam_module_ident with
+  | Some (External old_id) -> old_id
+  | Some (Ml _) -> assert false
   | None ->
-    lam_module_ident +> External;
+    lam_module_ident +> External id;
     id
-  | Some old_key -> old_key.id
+
+let cmj_table_of_module_id ~dynamic_import (module_id : Ident.t) =
+  let oid = Lam_module_ident.of_ml ~dynamic_import module_id in
+  match Lam_module_ident.Hash.find_opt (cached_tbl ()) oid with
+  | None ->
+    let cmj_load_info = Js_cmj_load.load_unit module_id.name in
+    oid +> Ml cmj_load_info;
+    cmj_load_info.cmj_table
+  | Some (Ml {cmj_table}) -> cmj_table
+  | Some (External _) -> assert false
+
+let register_ml_module ~dynamic_import (module_id : Ident.t) : unit =
+  ignore (cmj_table_of_module_id ~dynamic_import module_id)
 
 let query_external_id_info ?(dynamic_import = false) (module_id : Ident.t)
     (name : string) : ident_info =
-  let oid = Lam_module_ident.of_ml ~dynamic_import module_id in
-  let cmj_table =
-    match Lam_module_ident.Hash.find_opt cached_tbl oid with
-    | None ->
-      let cmj_load_info = !Js_cmj_load.load_unit module_id.name in
-      oid +> Ml cmj_load_info;
-      cmj_load_info.cmj_table
-    | Some (Ml {cmj_table}) -> cmj_table
-    | Some External -> assert false
-  in
+  let cmj_table = cmj_table_of_module_id ~dynamic_import module_id in
   Js_cmj_format.query_by_name cmj_table name
 
 let get_package_path_from_cmj (id : Lam_module_ident.t) :
     string * Js_packages_info.t * Ext_js_file_kind.case =
   let cmj_load_info =
-    match Lam_module_ident.Hash.find_opt cached_tbl id with
+    match Lam_module_ident.Hash.find_opt (cached_tbl ()) id with
     | Some (Ml cmj_load_info) -> cmj_load_info
-    | Some External -> assert false
+    | Some (External _) -> assert false
     (* called by {!Js_name_of_module_id.string_of_module_id}
        can not be External
     *)
@@ -111,14 +119,14 @@ let get_package_path_from_cmj (id : Lam_module_ident.t) :
       match id.kind with
       | Runtime | External _ -> assert false
       | Ml ->
-        let cmj_load_info = !Js_cmj_load.load_unit (Lam_module_ident.name id) in
+        let cmj_load_info = Js_cmj_load.load_unit (Lam_module_ident.name id) in
         id +> Ml cmj_load_info;
         cmj_load_info)
   in
   let cmj_table = cmj_load_info.cmj_table in
   (cmj_load_info.package_path, cmj_table.package_spec, cmj_table.case)
 
-let add = Lam_module_ident.Hash_set.add
+let add = Lam_module_ident.set_add
 
 (* Conservative interface *)
 let is_pure_module (oid : Lam_module_ident.t) =
@@ -126,20 +134,21 @@ let is_pure_module (oid : Lam_module_ident.t) =
   | Runtime -> true
   | External _ -> false
   | Ml -> (
-    match Lam_module_ident.Hash.find_opt cached_tbl oid with
+    match Lam_module_ident.Hash.find_opt (cached_tbl ()) oid with
     | None -> (
-      match !Js_cmj_load.load_unit (Lam_module_ident.name oid) with
+      match Js_cmj_load.load_unit (Lam_module_ident.name oid) with
       | cmj_load_info ->
         oid +> Ml cmj_load_info;
         cmj_load_info.cmj_table.pure
       | exception _ -> false)
     | Some (Ml {cmj_table}) -> cmj_table.pure
-    | Some External -> false)
+    | Some (External _) -> false)
 
 let populate_required_modules extras
-    (hard_dependencies : Lam_module_ident.Hash_set.t) =
-  Lam_module_ident.Hash.iter cached_tbl (fun id _ ->
-      if not (is_pure_module id) then add hard_dependencies id);
-  Lam_module_ident.Hash_set.iter extras (fun id : unit ->
-      if not (is_pure_module id) then add hard_dependencies id)
-(* Lam_module_ident.Hash_set.elements hard_dependencies *)
+    (hard_dependencies : unit Lam_module_ident.Hash_set.t) =
+  Lam_module_ident.Hash.iter
+    (fun id _ -> if not (is_pure_module id) then add hard_dependencies id)
+    (cached_tbl ());
+  Lam_module_ident.Hash_set.iter
+    (fun id () -> if not (is_pure_module id) then add hard_dependencies id)
+    extras

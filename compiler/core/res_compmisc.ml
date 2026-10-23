@@ -25,13 +25,13 @@
 let init_path () =
   let stdlib_dir =
     let ( // ) = Filename.concat in
-    !Runtime_package.path // "lib" // "ocaml"
+    Runtime_package.get_path () // "lib" // "ocaml"
   in
-  let dirs = !Clflags.include_dirs in
+  let dirs = !((Clflags.current ()).include_dirs) in
   let exp_dirs = List.map (Misc.expand_directory stdlib_dir) dirs in
-  Config.load_path :=
-    if !Js_config.no_stdlib then exp_dirs
-    else List.rev_append exp_dirs [stdlib_dir];
+  Config.set_load_path
+    (if !((Js_config.current ()).no_stdlib) then exp_dirs
+     else List.rev_append exp_dirs [stdlib_dir]);
   Env.reset_cache ()
 
 (* Return the initial environment in which compilation proceeds. *)
@@ -49,13 +49,14 @@ let initial_env ?modulename () =
   Ident.reinit ();
   let open_modules =
     match modulename with
-    | None -> !Clflags.open_modules
+    | None -> !((Clflags.current ()).open_modules)
     | Some modulename ->
-      !Clflags.open_modules |> List.filter (fun m -> m <> modulename)
+      !((Clflags.current ()).open_modules)
+      |> List.filter (fun m -> m <> modulename)
   in
-  let initial = Env.initial_safe_string in
+  let initial = Env.initial_safe_string () in
   let env =
-    if !Clflags.nopervasives then initial
+    if !((Clflags.current ()).nopervasives) then initial
     else
       initial
       |> open_implicit_module "Pervasives"

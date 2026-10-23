@@ -2,7 +2,7 @@ module PctOrPx = {
   type t
   external px: float => t = "%identity"
   external pct: string => t = "%identity"
-  let pct = float => pct(Js.Float.toString(float) ++ "%")
+  let pct = float => pct(Float.toString(float) ++ "%")
 }
 
 let px = PctOrPx.px
@@ -62,7 +62,7 @@ module Make = (
         | #stepBefore
         | #stepAfter
       ]=?,
-      ~dataKey: Config.dataItem => Js.null<yValue>,
+      ~dataKey: Config.dataItem => null<yValue>,
       ~stroke: string=?,
       ~strokeWidth: float=?,
       ~strokeDasharray: string=?,
@@ -123,7 +123,7 @@ module Make = (
     }
 
     type data = {
-      payload: Js.null<array<payload>>,
+      payload: null<array<payload>>,
       label: string,
       separator: string,
     }

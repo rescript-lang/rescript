@@ -40,7 +40,13 @@ val add_type_function :
 val add_module : Ident.t -> Path.t -> t -> t
 val add_module_path : Path.t -> Path.t -> t -> t
 val add_modtype : Ident.t -> module_type -> t -> t
+
 val for_saving : t -> t
+(** Return a substitution mode for constructing persistent compiler data.
+    Types copied in this mode are independent from the live source graph:
+    object-field mutability classes are fresh, while sharing between fields in
+    the copied result is preserved. *)
+
 val reset_for_saving : unit -> unit
 
 val module_path : t -> Path.t -> Path.t
@@ -54,8 +60,6 @@ val extension_constructor : t -> extension_constructor -> extension_constructor
 val modtype : t -> module_type -> module_type
 val signature : t -> signature -> signature
 val modtype_declaration : t -> modtype_declaration -> modtype_declaration
-val module_declaration : t -> module_declaration -> module_declaration
-val typexp : t -> Types.type_expr -> Types.type_expr
 
 (* A forward reference to be filled in ctype.ml. *)
 val ctype_apply_env_empty :

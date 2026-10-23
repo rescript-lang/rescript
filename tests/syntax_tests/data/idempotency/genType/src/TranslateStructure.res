@@ -14,12 +14,12 @@ let rec addAnnotationsToTypes_ = (~config, ~expr: Typedtree.expression, argTypes
     | list{"Js", "Fn", _arity} => true
     | _ => false
     } =>
-    // let uncurried1: Js.Fn.arity1(_) = {I: x => x->string_of_int};
+    // let uncurried1: function(_) = {I: x => x->string_of_int};
     addAnnotationsToTypes_(~config, ~expr=exprRecord, argTypes)
   | (Texp_apply({exp_desc: Texp_ident(path, _, _)}, list{(_, Some(expr1))}), _, _) =>
     switch path->TranslateTypeExprFromTypes.pathToList->List.rev {
     | list{"Js", "Internal", fn_mk}
-      // Uncurried function definition uses Js.Internal.fn_mkX(...)
+      // Uncurried function definition uses Internal.fn_mkX(...)
       if String.length(fn_mk) >= 5 && String.sub(fn_mk, 0, 5) == "fn_mk" =>
       argTypes->addAnnotationsToTypes_(~config, ~expr=expr1)
     | _ => argTypes

@@ -52,7 +52,7 @@ export type myRecBsAs = {
   readonly jsValid0: string; 
   readonly type: string; 
   readonly "the-key": string; 
-  readonly "with\\\"dquote": string; 
+  readonly "with\"dquote": string; 
   readonly "with'squote": string; 
   readonly "1number": string
 };

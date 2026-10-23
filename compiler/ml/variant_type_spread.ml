@@ -7,9 +7,9 @@ let mk_pat_from_variant_spread_attr () : Parsetree.attribute =
 let is_pat_from_variant_spread_attr pat =
   pat.Typedtree.pat_attributes
   |> List.exists (fun (a : Parsetree.attribute) ->
-         match a with
-         | {txt = "res.patFromVariantSpread"}, PStr [] -> true
-         | _ -> false)
+      match a with
+      | {txt = "res.patFromVariantSpread"}, PStr [] -> true
+      | _ -> false)
 
 type variant_type_spread_error =
   | CouldNotFindType
@@ -42,9 +42,9 @@ let map_constructors ~(sdecl : Parsetree.type_declaration) ~all_constructors env
     in
 
     match type_decl with
-    | {type_kind = Type_variant []} ->
+    | {type_kind = Type_variant ([], _)} ->
       raise (VariantTypeSpreadError (loc.loc, InvalidType))
-    | {type_kind = Type_variant cstrs; type_attributes; type_params} ->
+    | {type_kind = Type_variant (cstrs, _); type_attributes; type_params} ->
       if List.length type_params > 0 then
         raise (VariantTypeSpreadError (loc.loc, HasTypeParams));
 
@@ -86,6 +86,15 @@ let map_constructors ~(sdecl : Parsetree.type_declaration) ~all_constructors env
                     pcd_attributes =
                       mk_constructor_comes_from_spread_attr ()
                       :: cstr.cd_attributes;
+                    pcd_runtime_tag =
+                      Option.map
+                        (fun txt ->
+                          {
+                            Asttypes.txt =
+                              Ast_untagged_variants.parsetree_tag_of_runtime txt;
+                            loc = cstr.cd_loc;
+                          })
+                        cstr.cd_runtime_tag;
                     pcd_loc = cstr.cd_loc;
                     pcd_res = None;
                     (* It's important that we _don't_ fill in pcd_args here, since we have no way to produce
@@ -105,32 +114,32 @@ let expand_variant_spreads (env : Env.t)
     (sdecl_list : Parsetree.type_declaration list) =
   sdecl_list
   |> List.map (fun (sdecl : Parsetree.type_declaration) ->
-         match sdecl with
-         | {ptype_kind = Ptype_variant constructors} ->
-           let has_spread = ref false in
-           let all_constructors = Hashtbl.create (List.length constructors) in
-           constructors
-           |> List.iter (fun (c : Parsetree.constructor_declaration) ->
-                  if c.pcd_name.txt = "..." then has_spread := true
-                  else Hashtbl.add all_constructors c.pcd_name.txt ());
-           if !has_spread = false then sdecl
-           else
-             {
-               sdecl with
-               ptype_kind =
-                 Ptype_variant
-                   (constructors
-                   |> List.map (map_constructors ~all_constructors ~sdecl env)
-                   |> List.concat);
-             }
-         | _ -> sdecl)
+      match sdecl with
+      | {ptype_kind = Ptype_variant constructors} ->
+        let has_spread = ref false in
+        let all_constructors = Hashtbl.create (List.length constructors) in
+        constructors
+        |> List.iter (fun (c : Parsetree.constructor_declaration) ->
+            if c.pcd_name.txt = "..." then has_spread := true
+            else Hashtbl.add all_constructors c.pcd_name.txt ());
+        if !has_spread = false then sdecl
+        else
+          {
+            sdecl with
+            ptype_kind =
+              Ptype_variant
+                (constructors
+                |> List.map (map_constructors ~all_constructors ~sdecl env)
+                |> List.concat);
+          }
+      | _ -> sdecl)
 
 let constructor_is_from_spread (attrs : Parsetree.attributes) =
   attrs
   |> List.exists (fun (a : Parsetree.attribute) ->
-         match a with
-         | {txt = "res.constructor_from_spread"}, PStr [] -> true
-         | _ -> false)
+      match a with
+      | {txt = "res.constructor_from_spread"}, PStr [] -> true
+      | _ -> false)
 
 let remove_is_spread_attribute (attr : Parsetree.attribute) =
   match attr with
@@ -145,65 +154,65 @@ let expand_dummy_constructor_args (sdecl_list : Parsetree.type_declaration list)
     (fun sdecl (_, decl) ->
       match (sdecl, decl) with
       | ( {Parsetree.ptype_kind = Ptype_variant c1},
-          {Types.type_kind = Type_variant c2} ) ->
+          {Types.type_kind = Type_variant (c2, _)} ) ->
         {
           sdecl with
           ptype_kind =
             Ptype_variant
               (c1
               |> List.map (fun (c : Parsetree.constructor_declaration) ->
-                     if constructor_is_from_spread c.pcd_attributes then
-                       match
-                         c2
-                         |> List.find_opt
-                              (fun (cc : Types.constructor_declaration) ->
-                                Ident.name cc.cd_id = c.pcd_name.txt)
-                       with
-                       | None -> c
-                       | Some constructor -> (
-                         match constructor with
-                         | {cd_args = Cstr_record lbls} ->
-                           {
-                             c with
-                             pcd_attributes =
-                               c.pcd_attributes
-                               |> List.filter remove_is_spread_attribute;
-                             pcd_args =
-                               Pcstr_record
-                                 (lbls
-                                 |> List.map
-                                      (fun (l : Types.label_declaration) ->
-                                        {
-                                          Parsetree.pld_name = c.pcd_name;
-                                          pld_mutable = l.ld_mutable;
-                                          pld_loc = l.ld_loc;
-                                          pld_attributes = [];
-                                          pld_optional = l.ld_optional;
-                                          pld_type =
-                                            {
-                                              ptyp_desc = Ptyp_any;
-                                              ptyp_loc = l.ld_loc;
-                                              ptyp_attributes = [];
-                                            };
-                                        }));
-                           }
-                         | {cd_args = Cstr_tuple args} ->
-                           {
-                             c with
-                             pcd_attributes =
-                               c.pcd_attributes
-                               |> List.filter remove_is_spread_attribute;
-                             pcd_args =
-                               Pcstr_tuple
-                                 (args
-                                 |> List.map (fun _t ->
-                                        {
-                                          Parsetree.ptyp_loc = c.pcd_loc;
-                                          ptyp_attributes = [];
-                                          ptyp_desc = Ptyp_any;
-                                        }));
-                           })
-                     else c));
+                  if constructor_is_from_spread c.pcd_attributes then
+                    match
+                      c2
+                      |> List.find_opt
+                           (fun (cc : Types.constructor_declaration) ->
+                             Ident.name cc.cd_id = c.pcd_name.txt)
+                    with
+                    | None -> c
+                    | Some constructor -> (
+                      match constructor with
+                      | {cd_args = Cstr_record lbls} ->
+                        {
+                          c with
+                          pcd_attributes =
+                            c.pcd_attributes
+                            |> List.filter remove_is_spread_attribute;
+                          pcd_args =
+                            Pcstr_record
+                              (lbls
+                              |> List.map (fun (l : Types.label_declaration) ->
+                                  {
+                                    Parsetree.pld_name = c.pcd_name;
+                                    pld_runtime_name = None;
+                                    pld_mutable = l.ld_mutable;
+                                    pld_loc = l.ld_loc;
+                                    pld_attributes = [];
+                                    pld_optional = l.ld_optional;
+                                    pld_type =
+                                      {
+                                        ptyp_desc = Ptyp_any;
+                                        ptyp_loc = l.ld_loc;
+                                        ptyp_attributes = [];
+                                      };
+                                  }));
+                        }
+                      | {cd_args = Cstr_tuple args} ->
+                        {
+                          c with
+                          pcd_attributes =
+                            c.pcd_attributes
+                            |> List.filter remove_is_spread_attribute;
+                          pcd_args =
+                            Pcstr_tuple
+                              (args
+                              |> List.map (fun _t ->
+                                  {
+                                    Parsetree.ptyp_loc = c.pcd_loc;
+                                    ptyp_attributes = [];
+                                    ptyp_desc = Ptyp_any;
+                                  }));
+                        })
+                  else c));
         }
       | _ -> sdecl)
     sdecl_list decls

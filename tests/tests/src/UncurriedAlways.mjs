@@ -5,19 +5,11 @@ function foo(x, y) {
   return x + y | 0;
 }
 
-let z = 7;
-
 function bar(x, y) {
   return x + y | 0;
 }
 
-let b = 7;
-
-let w = 7;
-
-let a = 7;
-
-console.log(a);
+console.log(7);
 
 [1].map(x => x + 1 | 0);
 
@@ -168,7 +160,7 @@ function fn1(a, b, param) {
   return a() + b | 0;
 }
 
-function a$1(__x) {
+function a(__x) {
   return 3;
 }
 
@@ -221,10 +213,10 @@ function f(a, b, c) {
 
 function f2(a, b, c, d, e) {
   let __tuple_internal_obj = a(b);
-  let param_0 = c(__tuple_internal_obj, d);
-  let param_1 = d(__tuple_internal_obj, 1, 2);
-  let param_2 = e(__tuple_internal_obj);
-  return (param_0 + param_1 | 0) + param_2 | 0;
+  let u = c(__tuple_internal_obj, d);
+  let v = d(__tuple_internal_obj, 1, 2);
+  let h = e(__tuple_internal_obj);
+  return (u + v | 0) + h | 0;
 }
 
 function f3$1(foo, x) {
@@ -241,6 +233,12 @@ let Pipe = {
   f3: f3$1,
   f4: f4
 };
+
+let z = 7;
+
+let b = 7;
+
+let w = 7;
 
 export {
   foo,
@@ -261,7 +259,7 @@ export {
   OptMixed,
   fn,
   fn1,
-  a$1 as a,
+  a,
   PartialApplication,
   ReverseApplication,
   Pipe,

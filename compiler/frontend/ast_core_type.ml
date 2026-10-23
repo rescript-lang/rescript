@@ -24,14 +24,6 @@
 
 type t = Parsetree.core_type
 
-let lift_option_type ({ptyp_loc} as ty : t) : t =
-  {
-    ptyp_desc =
-      Ptyp_constr ({txt = Ast_literal.predef_option; loc = ptyp_loc}, [ty]);
-    ptyp_loc;
-    ptyp_attributes = [];
-  }
-
 open Ast_helper
 
 (* let replace_result (ty : t) (result : t) : t =
@@ -48,11 +40,6 @@ open Ast_helper
 let is_builtin_rank0_type txt =
   match txt with
   | "int" | "char" | "float" | "bool" | "unit" | "exn" | "string" -> true
-  | _ -> false
-
-let is_unit (ty : t) =
-  match ty.ptyp_desc with
-  | Ptyp_constr ({txt = Lident "unit"}, []) -> true
   | _ -> false
 
 (* let is_array (ty : t) =
@@ -84,20 +71,6 @@ let is_user_option (ty : t) =
    ]}
    will be recognized as a invalid program
 *)
-let from_labels ~loc arity labels : t =
-  let tyvars =
-    Ext_list.init arity (fun i -> Typ.var ~loc ("a" ^ string_of_int i))
-  in
-  let result_type =
-    Typ.object_ ~loc
-      (Ext_list.map2 labels tyvars (fun x y -> Parsetree.Otag (x, [], y)))
-      Closed
-  in
-  let args =
-    Ext_list.map2 labels tyvars (fun label tyvar ->
-        {Parsetree.attrs = []; lbl = Asttypes.Labelled label; typ = tyvar})
-  in
-  Typ.arrows ~loc args result_type
 
 let make_obj ~loc xs = Typ.object_ ~loc xs Closed
 
@@ -108,51 +81,12 @@ let make_obj ~loc xs = Typ.object_ ~loc xs Closed
    {[ 'a -> ('a. 'a -> 'b) ]}
 
 *)
-let rec get_uncurry_arity_aux (ty : t) acc =
+let is_arity_one (ty : t) =
   match ty.ptyp_desc with
-  | Ptyp_arrow {ret = new_ty} -> get_uncurry_arity_aux new_ty (succ acc)
-  | Ptyp_poly (_, ty) -> get_uncurry_arity_aux ty acc
-  | _ -> acc
-
-(**
-   {[ unit -> 'b ]} return arity 1
-   {[ unit -> 'a1 -> a2']} arity 2
-   {[ 'a1 -> 'a2 -> ... 'aN -> 'b ]} return arity N
-*)
-let get_uncurry_arity (ty : t) =
-  match ty.ptyp_desc with
-  | Ptyp_arrow {ret = rest} -> Some (get_uncurry_arity_aux rest 1)
-  | _ -> None
-
-let get_curry_arity (ty : t) =
-  match ty.ptyp_desc with
-  | Ptyp_arrow {arity = Some arity} -> arity
-  | _ -> get_uncurry_arity_aux ty 0
-
-let is_arity_one ty = get_curry_arity ty = 1
+  | Ptyp_arrow {params = [_]} -> true
+  | _ -> false
 
 let list_of_arrow (ty : t) : t * Parsetree.arg list =
-  let rec aux (ty : t) acc =
-    match ty.ptyp_desc with
-    | Ptyp_arrow {arg; ret; arity} when arity = None || acc = [] ->
-      aux ret (arg :: acc)
-    | Ptyp_poly _ ->
-      (* unreachable: [list_of_arrow] only recurses into an arrow's return
-         (and is only ever called on an external's type annotation), so to get
-         here a [Ptyp_poly] would have to sit in an external's arg/return
-         position. The external type — and every arrow arg/return — is parsed
-         by [parse_typ_expr], which never routes to [parse_poly_type_expr]; an
-         inline `'a. …` there is a plain syntax error ("Did you forget a `=`").
-         [Ptyp_poly] is produced only for record/object field types and
-         signature `val` descriptions, and a field-nested poly is a non-arrow
-         leaf that [list_of_arrow] stops at, never the recursed return. *)
-      assert false
-    | _ -> (ty, List.rev acc)
-  in
-  aux ty []
-
-let add_last_obj (ty : t) (obj : t) =
-  let result, params = list_of_arrow ty in
-  Typ.arrows ~loc:obj.ptyp_loc
-    (params @ [{lbl = Nolabel; typ = obj; attrs = []}])
-    result
+  match ty.ptyp_desc with
+  | Ptyp_arrow {params; ret} -> (ret, params)
+  | _ -> (ty, [])

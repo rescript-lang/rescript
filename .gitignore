@@ -46,7 +46,6 @@ _build_playground
 
 node_modules
 *.dump
-coverage
 _coverage/
 bisect*.coverage
 
@@ -58,7 +57,6 @@ tests/build_tests/*/lib/
 *.so
 tmp/
 tracing*.json
-.nyc_output
 .vscode/launch.json
 .vscode/settings.json
 
@@ -66,12 +64,6 @@ tracing*.json
 _opam
 
 .env
-playground/packages/
-playground/stdlib/
-playground/*.cmj
-playground/*.cmi
-playground/.netrc
-playground/compiler.*js
 packages/dev-playground/dist/
 packages/dev-playground/pages-site/
 packages/dev-playground/lib/
@@ -86,12 +78,6 @@ tests/tools_tests/**/*.res.js
 tests/tools_tests/lib
 tests/analysis_tests*/lib
 tests/analysis_tests/**/*.bs.js
-
-/linux/*.exe
-/linuxarm64/*.exe
-/darwin/*.exe
-/darwinarm64/*.exe
-/win32/*.exe
 
 .yarn/*
 !.yarn/patches

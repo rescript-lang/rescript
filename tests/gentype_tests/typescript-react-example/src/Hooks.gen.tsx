@@ -5,8 +5,6 @@
 
 import * as HooksJS from './Hooks.res.js';
 
-import type {TypedArray2_Uint8Array_t as Js_TypedArray2_Uint8Array_t} from '../src/shims/Js.shim';
-
 export type vehicle = { readonly name: string };
 
 export type props<vehicle> = { readonly vehicle: vehicle };
@@ -91,7 +89,7 @@ export const RenderPropRequiresConversion_make: React.ComponentType<{ readonly r
 
 export const WithChildren_aComponentWithChildren: React.ComponentType<{ readonly vehicle: vehicle; readonly children: React.ReactNode }> = HooksJS.WithChildren.aComponentWithChildren as any;
 
-export const DD_make: React.ComponentType<{ readonly array: Js_TypedArray2_Uint8Array_t; readonly name: string }> = HooksJS.DD.make as any;
+export const DD_make: React.ComponentType<{ readonly array: Uint8Array; readonly name: string }> = HooksJS.DD.make as any;
 
 export const NoProps: { make: React.ComponentType<{}> } = HooksJS.NoProps as any;
 
@@ -132,7 +130,7 @@ export const WithRef: { make: React.ComponentType<{ readonly vehicle: vehicle; r
 
 export const WithChildren: { aComponentWithChildren: React.ComponentType<{ readonly vehicle: vehicle; readonly children: React.ReactNode }> } = HooksJS.WithChildren as any;
 
-export const DD: { make: React.ComponentType<{ readonly array: Js_TypedArray2_Uint8Array_t; readonly name: string }> } = HooksJS.DD as any;
+export const DD: { make: React.ComponentType<{ readonly array: Uint8Array; readonly name: string }> } = HooksJS.DD as any;
 
 export const Another: { anotherComponent: React.ComponentType<{ readonly vehicle: vehicle; readonly callback: () => void }> } = HooksJS.Another as any;
 

@@ -23,9 +23,13 @@ if !Fs.existsSync(dirVersion) {
 }
 
 
-let entryPointFiles = ["Belt.res", "Dom.res", "Js.res", "Stdlib.res"]
+let entryPointFiles = [
+  ("belt", "Belt.res"),
+  ("runtime", "Dom.res"),
+  ("runtime", "Stdlib.res"),
+]
 
-let hiddenModules = ["Js.Internal", "Js.MapperRt"]
+let hiddenModules = []
 
 type module_ = {
   id: string,
@@ -42,11 +46,17 @@ type section = {
   submodules: array<module_>,
 }
 
-let env = Process.env
-
-let docsDecoded = entryPointFiles->Array.map(libFile =>
+let docsDecoded = entryPointFiles->Array.map(((packageName, libFile)) =>
   try {
-    let entryPointFile = Path.join([Node.dirname, "..", "..", "packages", "@rescript", "runtime", libFile])
+    let entryPointFile = Path.join([
+      Node.dirname,
+      "..",
+      "..",
+      "packages",
+      "@rescript",
+      packageName,
+      packageName == "runtime" ? libFile : Path.join(["src", libFile]),
+    ])
 
     let rescriptToolsPath = Path.join([Node.dirname, "..", "..", "cli", "rescript-tools.js"])
     let output = ChildProcess.execSync(

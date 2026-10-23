@@ -315,7 +315,7 @@ let make = () => {
         switch url.path {
         | list{"u", username, ..._} =>
           switch me {
-          | Some(me) => me.username != username || Js.Dict.keys(me.items)->Js.Array.length >= 8
+          | Some(me) => me.username != username || Dict.keysToArray(me.items)->Array.length >= 8
           | None => true
           }
         | _ => false
@@ -345,7 +345,7 @@ let make = () => {
             </a>
           : switch quicklist {
             | Some(quicklist) =>
-              let numItems = quicklist.itemIds->Js.Array.length
+              let numItems = quicklist.itemIds->Array.length
               <button
                 onClick={_ => {
                   setVisibility(_ => Panel)
@@ -354,7 +354,7 @@ let make = () => {
                     ~eventProperties={"numItems": numItems},
                   )
                 }}
-                disabled={Js.Array.length(quicklist.itemIds) == 0}
+                disabled={Array.length(quicklist.itemIds) == 0}
                 className=Styles.button>
                 {React.string(
                   numItems > 0
@@ -386,7 +386,7 @@ let make = () => {
               href="#"
               onClick={e => {
                 ReactEvent.Mouse.preventDefault(e)
-                let numItems = Js.Array.length(quicklist.itemIds)
+                let numItems = Array.length(quicklist.itemIds)
                 if numItems > 1 {
                   ConfirmDialog.confirm(
                     ~bodyText="You have " ++
@@ -434,7 +434,7 @@ let make = () => {
           <div className=Styles.bodyList>
             {switch quicklist {
             | Some(quicklist) =>
-              if Js.Array.length(quicklist.itemIds) > 0 {
+              if Array.length(quicklist.itemIds) > 0 {
                 <div className=Styles.listImages>
                   {quicklist.itemIds
                   ->Belt.Array.map(((itemId, variant)) => {
@@ -512,11 +512,11 @@ let make = () => {
                     setVisibility(_ => Bar)
                     CreateDialog.show(~listId)
                     QuicklistStore.removeList()
-                    Promise.resolved()
+                    Promise.resolve()
                   })
                 }->ignore}
               disabled={switch quicklist {
-              | Some(quicklist) => Js.Array.length(quicklist.itemIds) == 0 || isSubmitting
+              | Some(quicklist) => Array.length(quicklist.itemIds) == 0 || isSubmitting
               | None => true
               }}
               className=Styles.saveButton>

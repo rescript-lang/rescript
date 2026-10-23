@@ -256,7 +256,7 @@ module TaggedUnions = {
 
   let area = (shape: shape): float => {
     switch shape {
-    | Circle({radius}) => Js.Math._PI *. radius ** 2.
+    | Circle({radius}) => Math.Constants.pi *. radius ** 2.
     | Square({sideLength}) => sideLength ** 2.
     | Rectangle({width, height}) => width *. height
     }

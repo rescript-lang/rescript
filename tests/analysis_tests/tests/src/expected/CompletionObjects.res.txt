@@ -1,8 +1,7 @@
 Complete src/CompletionObjects.res 5:7
-posCursor:[5:7] posNoWhite:[5:5] Found expr:[2:10->9:1]
-posCursor:[5:7] posNoWhite:[5:5] Found expr:[2:10->9:1]
-posCursor:[5:7] posNoWhite:[5:5] Found pattern:__ghost__[0:-1->7:5]
-posCursor:[5:7] posNoWhite:[5:5] Found pattern:__ghost__[0:-1->7:5]
+pos_cursor:[5:7] pos_no_white:[5:5] Found expr:[2:10->9:1]
+pos_cursor:[5:7] pos_no_white:[5:5] Found pattern:__ghost__[0:-1->7:5]
+pos_cursor:[5:7] pos_no_white:[5:5] Found pattern:__ghost__[0:-1->7:5]
 Completable: Cpattern Value[x]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -21,4 +20,15 @@ Path x
   { "detail": "bool", "kind": 4, "label": "Some(true)", "tags": [] },
   { "detail": "bool", "kind": 4, "label": "Some(false)", "tags": [] }
 ]
+
+Complete src/CompletionObjects.res 13:14
+pos_cursor:[13:14] pos_no_white:[13:13] Found expr:[13:3->13:20]
+Pexp_object_set o[13:13->13:14] e:[13:3->13:11]
+Completable: Cpath Value[settable]["o"]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[settable]["o"]
+ContextPath Value[settable]
+Path settable
+[ { "detail": "int", "kind": 4, "label": "one", "tags": [] } ]
 

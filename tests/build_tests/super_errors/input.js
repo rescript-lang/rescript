@@ -11,11 +11,24 @@ const { bsc } = setup(import.meta.dirname);
 
 const expectedDir = path.join(import.meta.dirname, "expected");
 
-const fixtures = readdirSync(path.join(import.meta.dirname, "fixtures"))
+const fixturesInTree = path.join(import.meta.dirname, "fixtures");
+const fixtures = readdirSync(fixturesInTree)
   .filter(fileName => path.extname(fileName) === ".res")
   .sort();
 
-const prefix = ["-w", "+A", "-bs-jsx", "4"];
+const beltLib = path.join(
+  import.meta.dirname,
+  "..",
+  "..",
+  "..",
+  "packages",
+  "@rescript",
+  "belt",
+  "lib",
+  "ocaml",
+);
+
+const prefix = ["-w", "+A", "-bs-jsx", "4", "-I", beltLib];
 
 const updateTests = process.argv[2] === "update";
 
@@ -34,11 +47,12 @@ function postProcessErrorOutput(output) {
 }
 
 /**
+ * @param {string} fixturesDir
  * @param {string} fileName
  * @returns {Promise<{ fileName: string, failure: string | null }>}
  */
-async function runFixture(fileName) {
-  const fullFilePath = path.join(import.meta.dirname, "fixtures", fileName);
+async function runFixture(fixturesDir, fileName) {
+  const fullFilePath = path.join(fixturesDir, fileName);
   const { stderr } = await bsc([...prefix, "-color", "always", fullFilePath]);
   // careful of:
   // - warning test that actually succeeded in compiling (warning's still in stderr, so the code path is shared here)
@@ -46,7 +60,7 @@ async function runFixture(fileName) {
   // actual, correctly erroring test case
   const actualErrorOutput = postProcessErrorOutput(stderr.toString());
   const expectedFilePath = path.join(expectedDir, `${fileName}.expected`);
-  if (updateTests) {
+  if (updateTests && fixturesDir === fixturesInTree) {
     await fs.writeFile(expectedFilePath, actualErrorOutput);
     return { fileName, failure: null };
   }
@@ -68,22 +82,72 @@ async function runFixture(fileName) {
   };
 }
 
-// Run fixtures in parallel with a worker-pool. Each fixture spawns a bsc
-// process, so wall time is dominated by process startup; serialising the
-// loop made the suite scale linearly with fixture count.
-const concurrency = Math.max(1, os.availableParallelism());
-let cursor = 0;
-const results = new Array(fixtures.length);
-
-await Promise.all(
-  Array.from({ length: Math.min(concurrency, fixtures.length) }, async () => {
-    while (true) {
-      const i = cursor++;
-      if (i >= fixtures.length) return;
-      results[i] = await runFixture(fixtures[i]);
-    }
-  }),
+// Diagnostics must not depend on the length of the source path. Every
+// fixture also runs from a copy whose directory path is 180 characters long,
+// so usually much longer than the in-tree path, ending in the same
+// tests/build_tests/super_errors/fixtures suffix so that
+// postProcessErrorOutput yields the same snapshot text. The directory length
+// is fixed rather than the padding, so the fixture paths stay below Windows'
+// 260-character MAX_PATH whatever the length of the temporary directory.
+const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "super_errors-"));
+const fixturesSuffix = path.join(
+  "tests",
+  "build_tests",
+  "super_errors",
+  "fixtures",
 );
+const fixturesLongPath = path.join(
+  tempRoot,
+  "x".repeat(
+    Math.max(
+      1,
+      180 - tempRoot.length - fixturesSuffix.length - 2 * path.sep.length,
+    ),
+  ),
+  fixturesSuffix,
+);
+await fs.mkdir(fixturesLongPath, { recursive: true });
+for (const fileName of fixtures) {
+  await fs.copyFile(
+    path.join(fixturesInTree, fileName),
+    path.join(fixturesLongPath, fileName),
+  );
+}
+
+/**
+ * Runs fixtures in parallel with a worker-pool. Each fixture spawns a bsc
+ * process, so wall time is dominated by process startup; serialising the
+ * loop made the suite scale linearly with fixture count.
+ * @param {Array<[string, string]>} runs
+ * @returns {Promise<Array<{ fileName: string, failure: string | null }>>}
+ */
+async function runAll(runs) {
+  const concurrency = Math.max(1, os.availableParallelism());
+  let cursor = 0;
+  const results = new Array(runs.length);
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, runs.length) }, async () => {
+      while (true) {
+        const i = cursor++;
+        if (i >= runs.length) return;
+        results[i] = await runFixture(...runs[i]);
+      }
+    }),
+  );
+  return results;
+}
+
+/** @type {Array<[string, string]>} */
+const inTreeRuns = fixtures.map(fileName => [fixturesInTree, fileName]);
+/** @type {Array<[string, string]>} */
+const longPathRuns = fixtures.map(fileName => [fixturesLongPath, fileName]);
+
+// In update mode the in-tree runs rewrite the snapshots that the long-path
+// runs compare against, so the long-path runs must wait for all of them.
+const results = updateTests
+  ? [...(await runAll(inTreeRuns)), ...(await runAll(longPathRuns))]
+  : await runAll([...inTreeRuns, ...longPathRuns]);
+await fs.rm(tempRoot, { recursive: true, force: true });
 
 let atLeastOneTaskFailed = false;
 for (const { failure } of results) {

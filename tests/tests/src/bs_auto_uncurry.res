@@ -46,7 +46,6 @@ let f_02 = xs =>
     Console.log("x")
   })
 let f_03 = (xs, u) => hi(u)
-/* arity adjust to [0] [ function (){return u (0)}] */
 
 let h = (x, y, z) => map2(x, y, z)
 
@@ -134,27 +133,6 @@ let f : expected =
 " we auto-uncurry
 so the inferred type would be
 */
-/*
-let v = ref 0
-
-
-
-(**
-There is a semantics mismatch when converting curried function into uncurried function
-for example
-`let u = f a b c in u d ` may have a side effect here when creating [u].
-We should document it clearly
-*)
-let a4 = Js.Internal.js_fn_mk4 (fun x y z -> incr v ;  fun d -> 1 + d)
-
-
-let () =
-    ignore @@ a4 0 1 2 3 [@bs]
-    ignore @@ a4 0 1 2 3 [@bs]
-
-;;
-*/
-
 let unit_magic = () => {
   Console.log("noinline")
   Console.log("noinline")

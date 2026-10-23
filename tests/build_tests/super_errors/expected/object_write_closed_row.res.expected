@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_write_closed_row.res[0m:[2m6:28-37[0m
+
+  4 [2m│[0m    end-to-end object mutability tests, where assignment strengthens the
+  5 [2m│[0m    function parameter instead. */
+  [1;31m6[0m [2m│[0m let g = (o: {"x": int}) => [1;31mo["x"] = 1[0m
+  7 [2m│[0m 
+
+  This expression has type {"x": int}
+  The field x is not settable. Only fields annotated with @set, e.g. {@set "x": int}, can be assigned.

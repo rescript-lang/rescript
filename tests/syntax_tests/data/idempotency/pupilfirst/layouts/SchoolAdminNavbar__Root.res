@@ -200,7 +200,7 @@ let make = (~schoolName, ~schoolLogoPath, ~schoolIconPath, ~courses, ~isCourseAu
   | _ =>
     Rollbar.critical(
       "Unknown path encountered by SA navbar: " ++
-      (url.path->Array.of_list->Js.Array.joinWith("/")),
+      (url.path->Array.of_list->Array.joinUnsafe("/")),
     )
     throw(UnknownPathEncountered(url.path))
   }

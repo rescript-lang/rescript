@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/react_component_invalid_payload.res[0m:[2m2:3-18[0m
+
+  1 [2m│[0m module C = {
+  [1;31m2[0m [2m│[0m   [1;31m@react.component[0m("Button")
+  3 [2m│[0m   let make = (~label) => React.string(label)
+  4 [2m│[0m }
+
+  @react.component takes no payload, or the props type to share, as in @react.component(: props).

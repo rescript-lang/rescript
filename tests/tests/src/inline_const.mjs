@@ -3,12 +3,19 @@
 
 let N = {};
 
-let hh = "hellohello";
-
 console.log([
   3e-6,
   3e-6
 ]);
+
+function BigintConsts(X) {
+  return {
+    both: [
+      12n,
+      -5n
+    ]
+  };
+}
 
 let x = true;
 
@@ -18,11 +25,14 @@ function N1(funarg) {
 
 let h = "hello";
 
+let hh = "hellohello";
+
 export {
   x,
   N,
   N1,
   h,
   hh,
+  BigintConsts,
 }
 /*  Not a pure module */

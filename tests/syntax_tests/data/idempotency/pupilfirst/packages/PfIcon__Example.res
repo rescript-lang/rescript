@@ -92,14 +92,14 @@ module Example = {
   let search = searchString => {
     let normalizedString =
       searchString
-      ->Js.String.trim
-      ->Js.String.replaceByRe(Js.Re.fromStringWithFlags("\\s+", ~flags="g"), " ")
+      ->String.trim
+      ->String.replaceRegExp(RegExp.fromStringWithFlags("\\s+", ~flags="g"), " ")
 
     switch normalizedString {
     | "" => icons
     | searchString =>
       icons
-      ->Js.Array.filter(icon => icon->String.lowercase_ascii->Js.String.includes(searchString))
+      ->Array.filter(icon => icon->String.lowercase_ascii->String.includes(searchString))
       ->copyAndSort(String.compare)
     }
   }

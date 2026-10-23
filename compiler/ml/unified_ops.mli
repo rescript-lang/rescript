@@ -1,11 +1,15 @@
 type form = Unary | Binary
 
+type lowering =
+  | Lower of Lambda.primitive
+  | Pass_through  (** the operand is already the result: unary [+] *)
+
 type specialization = {
-  int: Lambda.primitive;
-  bool: Lambda.primitive option;
-  float: Lambda.primitive option;
-  bigint: Lambda.primitive option;
-  string: Lambda.primitive option;
+  int: lowering;
+  bool: lowering option;
+  float: lowering option;
+  bigint: lowering option;
+  string: lowering option;
 }
 
 type entry = {

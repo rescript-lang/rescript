@@ -60,9 +60,6 @@ let module_id : module_id fn =
   let _x0 = _self.ident _self _x0 in
   {id = _x0; kind = _x1; dynamic_import = _x2}
 
-let required_modules : required_modules fn =
- fun _self arg -> list _self.module_id _self arg
-
 let vident : vident fn =
  fun _self -> function
   | Id _x0 ->
@@ -79,22 +76,23 @@ let for_ident : for_ident fn = fun _self arg -> _self.ident _self arg
 
 let for_direction : for_direction fn = unknown
 
-let property_map : property_map fn =
- fun _self arg ->
-  list
-    (fun _self (_x0, _x1) ->
-      let _x1 = _self.expression _self _x1 in
-      (_x0, _x1))
-    _self arg
-
-let length_object : length_object fn = unknown
+let object_entry : object_entry fn =
+ fun _self -> function
+  | Object_property (_x0, _x1) ->
+    let _x1 = _self.expression _self _x1 in
+    Object_property (_x0, _x1)
+  | Object_spread _x0 ->
+    let _x0 = _self.expression _self _x0 in
+    Object_spread _x0
+  | Record_spread _x0 ->
+    let _x0 = _self.expression _self _x0 in
+    Record_spread _x0
 
 let expression_desc : expression_desc fn =
  fun _self -> function
-  | Length (_x0, _x1) ->
+  | Length _x0 ->
     let _x0 = _self.expression _self _x0 in
-    let _x1 = length_object _self _x1 in
-    Length (_x0, _x1)
+    Length _x0
   | Is_null_or_undefined _x0 ->
     let _x0 = _self.expression _self _x0 in
     Is_null_or_undefined _x0
@@ -129,23 +127,29 @@ let expression_desc : expression_desc fn =
     let _x1 = _self.expression _self _x1 in
     let _x2 = _self.expression _self _x2 in
     Bin (_x0, _x1, _x2)
-  | FlatCall (_x0, _x1) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = _self.expression _self _x1 in
-    FlatCall (_x0, _x1)
   | Call (_x0, _x1, _x2) ->
     let _x0 = _self.expression _self _x0 in
     let _x1 = list _self.expression _self _x1 in
     Call (_x0, _x1, _x2)
   | Tagged_template (_x0, _x1, _x2) ->
     let _x0 = _self.expression _self _x0 in
-    let _x1 = list _self.expression _self _x1 in
     let _x2 = list _self.expression _self _x2 in
     Tagged_template (_x0, _x1, _x2)
-  | String_index (_x0, _x1) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = _self.expression _self _x1 in
-    String_index (_x0, _x1)
+  | Jsx ({callee; tag; spread; props; children; key} as jsx) ->
+    let callee = _self.expression _self callee in
+    let tag = _self.expression _self tag in
+    let spread = option _self.expression _self spread in
+    let props =
+      list
+        (fun _self (name, value) -> (name, _self.expression _self value))
+        _self props
+    in
+    let children = option (list _self.expression) _self children in
+    let key = option _self.expression _self key in
+    Jsx {jsx with callee; tag; spread; props; children; key}
+  | Interpolated_template ({values} as template) ->
+    let values = list _self.expression _self values in
+    Interpolated_template {template with values}
   | Array_index (_x0, _x1) ->
     let _x0 = _self.expression _self _x0 in
     let _x1 = _self.expression _self _x1 in
@@ -155,9 +159,7 @@ let expression_desc : expression_desc fn =
     Static_index (_x0, _x1, _x2)
   | New (_x0, _x1) ->
     let _x0 = _self.expression _self _x0 in
-    let _x1 =
-      option (fun _self arg -> list _self.expression _self arg) _self _x1
-    in
+    let _x1 = list _self.expression _self _x1 in
     New (_x0, _x1)
   | Var _x0 ->
     let _x0 = _self.vident _self _x0 in
@@ -167,25 +169,25 @@ let expression_desc : expression_desc fn =
     let body = _self.block _self body in
     Fun {fun_ with params; body}
   | Str _ as v -> v
+  | Template_literal _ as v -> v
+  | Json_literal _ as v -> v
   | Raw_js_code _ as v -> v
-  | Array (_x0, _x1) ->
+  | Array _x0 ->
     let _x0 = list _self.expression _self _x0 in
-    Array (_x0, _x1)
+    Array _x0
   | Optional_block (_x0, _x1) ->
     let _x0 = _self.expression _self _x0 in
     Optional_block (_x0, _x1)
-  | Caml_block (_x0, _x1, _x2, _x3) ->
+  | Caml_block (_x0, _x1, _x2) ->
     let _x0 = list _self.expression _self _x0 in
-    let _x2 = _self.expression _self _x2 in
-    Caml_block (_x0, _x1, _x2, _x3)
+    Caml_block (_x0, _x1, _x2)
   | Caml_block_tag (_x0, tag) ->
     let _x0 = _self.expression _self _x0 in
     Caml_block_tag (_x0, tag)
   | Number _ as v -> v
-  | Object (_x0, _x1) ->
-    let _x0 = option _self.expression _self _x0 in
-    let _x1 = property_map _self _x1 in
-    Object (_x0, _x1)
+  | Object _x0 ->
+    let _x0 = list object_entry _self _x0 in
+    Object _x0
   | Undefined _ as v -> v
   | Null as v -> v
   | Await _x0 ->
@@ -205,9 +207,10 @@ let finish_ident_expression : finish_ident_expression fn =
  fun _self arg -> _self.expression _self arg
 
 let case_clause : case_clause fn =
- fun _self {switch_body = _x0; should_break = _x1; comment = _x2} ->
+ fun _self
+     {switch_body = _x0; should_break = _x1; comment = _x2; source_loc = _x3} ->
   let _x0 = _self.block _self _x0 in
-  {switch_body = _x0; should_break = _x1; comment = _x2}
+  {switch_body = _x0; should_break = _x1; comment = _x2; source_loc = _x3}
 
 let string_clause : string_clause fn =
  fun _self (_x0, _x1) ->
@@ -289,14 +292,14 @@ let statement_desc : statement_desc fn =
   | Debugger as v -> v
 
 let expression : expression fn =
- fun _self {expression_desc = _x0; comment = _x1} ->
+ fun _self {expression_desc = _x0; comment = _x1; source_loc = _x2} ->
   let _x0 = expression_desc _self _x0 in
-  {expression_desc = _x0; comment = _x1}
+  {expression_desc = _x0; comment = _x1; source_loc = _x2}
 
 let statement : statement fn =
- fun _self {statement_desc = _x0; comment = _x1} ->
+ fun _self {statement_desc = _x0; comment = _x1; source_loc = _x2} ->
   let _x0 = statement_desc _self _x0 in
-  {statement_desc = _x0; comment = _x1}
+  {statement_desc = _x0; comment = _x1; source_loc = _x2}
 
 let variable_declaration : variable_declaration fn =
  fun _self {ident = _x0; value = _x1; property = _x2; ident_info = _x3} ->
@@ -310,12 +313,6 @@ let program : program fn =
  fun _self {block = _x0; exports = _x1; export_set = _x2} ->
   let _x0 = _self.block _self _x0 in
   {block = _x0; exports = _x1; export_set = _x2}
-
-let deps_program : deps_program fn =
- fun _self {program = _x0; modules = _x1; side_effect = _x2} ->
-  let _x0 = _self.program _self _x0 in
-  let _x1 = required_modules _self _x1 in
-  {program = _x0; modules = _x1; side_effect = _x2}
 
 let super : iter =
   {

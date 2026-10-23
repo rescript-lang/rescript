@@ -22,5 +22,4 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val typ_mapper :
-  Bs_ast_mapper.mapper -> Parsetree.core_type -> Parsetree.core_type
+val typ_mapper : Ast_mapper.mapper -> Parsetree.core_type -> Parsetree.core_type

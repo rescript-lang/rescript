@@ -1,5 +1,6 @@
 {
   "name": "rescript-commonjs-tests",
+  "dependencies": ["@rescript/belt"],
   "sources": [
     {
       "dir": "src",

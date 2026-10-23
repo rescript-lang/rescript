@@ -48,11 +48,11 @@ module FaqItem = {
   @react.component
   let make = (~isOpen, ~toggleAccordion, ~title, ~content) => {
     let (height, setHeight) = useState(_ => "0px")
-    let accordianContentRef = useRef(Js.Nullable.null)
+    let accordianContentRef = useRef(Nullable.null)
 
     useEffect2(() => {
       let optHeight =
-        accordianContentRef.current->Js.Nullable.toOption->Belt.Option.map(_, scrollHeight)
+        accordianContentRef.current->Nullable.toOption->Belt.Option.map(_, scrollHeight)
 
       let height = switch optHeight {
       | Some(height) => string_of_int(height) ++ "px"

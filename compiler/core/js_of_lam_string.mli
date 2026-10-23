@@ -28,6 +28,4 @@
     [string] is Immutable, so there is not [set_string] method
 *)
 
-val ref_string : J.expression -> J.expression -> J.expression
-
 val const_char : int -> J.expression

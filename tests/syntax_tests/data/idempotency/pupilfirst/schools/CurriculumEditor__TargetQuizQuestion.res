@@ -37,7 +37,7 @@ let make = (
     updateQuizQuestionCB(
       quizQuestion->CurriculumEditor__QuizQuestion.id,
       quizQuestion->CurriculumEditor__QuizQuestion.newAnswerOption(
-        Js.Date.now()->Js.Float.toString,
+        Date.now()->Float.toString,
       ),
     )
   let canBeDeleted =

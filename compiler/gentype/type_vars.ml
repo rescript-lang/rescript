@@ -38,7 +38,7 @@ let rec substitute ~f type0 =
         arg_types =
           function_.arg_types
           |> List.map (fun {a_name; a_type = t} ->
-                 {a_name; a_type = t |> substitute ~f});
+              {a_name; a_type = t |> substitute ~f});
       }
   | Ident {type_args = []} -> type0
   | Ident ({type_args} as ident) ->
@@ -50,7 +50,7 @@ let rec substitute ~f type0 =
       ( closed_flag,
         fields
         |> List.map (fun field ->
-               {field with type_ = field.type_ |> substitute ~f}) )
+            {field with type_ = field.type_ |> substitute ~f}) )
   | Option type_ -> Option (type_ |> substitute ~f)
   | Promise type_ -> Promise (type_ |> substitute ~f)
   | Tuple inner_types -> Tuple (inner_types |> List.map (substitute ~f))
@@ -65,7 +65,7 @@ let rec substitute ~f type0 =
         payloads =
           variant.payloads
           |> List.map (fun payload ->
-                 {payload with t = payload.t |> substitute ~f});
+              {payload with t = payload.t |> substitute ~f});
       }
 
 let rec free_ type0 : String_set.t =

@@ -22,13 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let non_exn_protect r v body =
-  let old = !r in
-  r := v;
-  let res = body () in
-  r := old;
-  res
-
 let protect r v body =
   let old = !r in
   try
@@ -39,39 +32,3 @@ let protect r v body =
   with x ->
     r := old;
     raise x
-
-let non_exn_protect2 r1 r2 v1 v2 body =
-  let old1 = !r1 in
-  let old2 = !r2 in
-  r1 := v1;
-  r2 := v2;
-  let res = body () in
-  r1 := old1;
-  r2 := old2;
-  res
-
-let protect2 r1 r2 v1 v2 body =
-  let old1 = !r1 in
-  let old2 = !r2 in
-  try
-    r1 := v1;
-    r2 := v2;
-    let res = body () in
-    r1 := old1;
-    r2 := old2;
-    res
-  with x ->
-    r1 := old1;
-    r2 := old2;
-    raise x
-
-let protect_list rvs body =
-  let olds = Ext_list.map rvs (fun (x, _) -> !x) in
-  let () = List.iter (fun (x, y) -> x := y) rvs in
-  try
-    let res = body () in
-    List.iter2 (fun (x, _) old -> x := old) rvs olds;
-    res
-  with e ->
-    List.iter2 (fun (x, _) old -> x := old) rvs olds;
-    raise e

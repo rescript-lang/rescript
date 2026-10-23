@@ -35,21 +35,15 @@ val wrap_printing_env : Env.t -> (unit -> 'a) -> 'a
 (* Call the function using the environment for type path shortening *)
 (* This affects all the printing functions below *)
 
-val reset : unit -> unit
 val mark_loops : type_expr -> unit
 val reset_and_mark_loops : type_expr -> unit
 val reset_and_mark_loops_list : type_expr list -> unit
 val type_expr : formatter -> type_expr -> unit
 val constructor_arguments : formatter -> constructor_arguments -> unit
-val tree_of_type_scheme : type_expr -> out_type
-val type_sch : formatter -> type_expr -> unit
 val type_scheme : formatter -> type_expr -> unit
 
 (* Maxence *)
 val reset_names : unit -> unit
-val type_scheme_max : ?b_reset_names:bool -> formatter -> type_expr -> unit
-
-(* End Maxence *)
 val tree_of_value_description : Ident.t -> value_description -> out_sig_item
 val value_description : Ident.t -> formatter -> value_description -> unit
 val tree_of_type_declaration :
@@ -59,19 +53,12 @@ val tree_of_extension_constructor :
   Ident.t -> extension_constructor -> ext_status -> out_sig_item
 val extension_constructor :
   Ident.t -> formatter -> extension_constructor -> unit
-val tree_of_module :
-  Ident.t -> ?ellipsis:bool -> module_type -> rec_status -> out_sig_item
 val modtype : formatter -> module_type -> unit
 val signature : formatter -> signature -> unit
-val tree_of_modtype_declaration : Ident.t -> modtype_declaration -> out_sig_item
 val tree_of_signature : Types.signature -> out_sig_item list
 val tree_of_typexp :
   ?printing_context:printing_context -> bool -> type_expr -> out_type
 val modtype_declaration : Ident.t -> formatter -> modtype_declaration -> unit
-val type_expansion : type_expr -> Format.formatter -> type_expr -> unit
-val prepare_expansion : type_expr * type_expr -> type_expr * type_expr
-val trace :
-  bool -> bool -> string -> formatter -> (type_expr * type_expr) list -> unit
 val report_unification_error :
   formatter ->
   Env.t ->
@@ -108,10 +95,3 @@ val report_ambiguous_type_error :
   (formatter -> unit) ->
   (formatter -> unit) ->
   unit
-
-(* for toploop *)
-val print_items :
-  (Env.t -> signature_item -> 'a option) ->
-  Env.t ->
-  signature_item list ->
-  (out_sig_item * 'a option) list

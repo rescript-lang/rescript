@@ -34,7 +34,7 @@ let handleSignInWithPasswordCB = response => {
       open Json.Decode
       field("path", nullable(string))
     }
-    ->Js.Null.toOption
+    ->Null.toOption
   switch path {
   | Some(path) => DomUtils.redirect(path)
   | None => ()
@@ -43,11 +43,11 @@ let handleSignInWithPasswordCB = response => {
 let handleSignInWithEmailCB = (setView, _) => setView(_ => SignInEmailSent)
 
 let signInWithPassword = (authenticityToken, email, password, setSaving, sharedDevice) => {
-  let payload = Js.Dict.empty()
-  Js.Dict.set(payload, "authenticity_token", authenticityToken->Js.Json.string)
-  Js.Dict.set(payload, "email", email->Js.Json.string)
-  Js.Dict.set(payload, "shared_device", (sharedDevice ? "1" : "0")->Js.Json.string)
-  Js.Dict.set(payload, "password", password->Js.Json.string)
+  let payload = Dict.make()
+  Dict.set(payload, "authenticity_token", authenticityToken->JSON.string)
+  Dict.set(payload, "email", email->JSON.string)
+  Dict.set(payload, "shared_device", (sharedDevice ? "1" : "0")->JSON.string)
+  Dict.set(payload, "password", password->JSON.string)
   let url = "/users/sign_in"
   setSaving(_ => true)
 
@@ -55,12 +55,12 @@ let signInWithPassword = (authenticityToken, email, password, setSaving, sharedD
 }
 
 let sendSignInEmail = (authenticityToken, email, setView, setSaving, sharedDevice) => {
-  let payload = Js.Dict.empty()
-  Js.Dict.set(payload, "authenticity_token", authenticityToken->Js.Json.string)
-  Js.Dict.set(payload, "email", email->Js.Json.string)
-  Js.Dict.set(payload, "referer", ""->Js.Json.string)
-  Js.Dict.set(payload, "shared_device", (sharedDevice ? "1" : "0")->Js.Json.string)
-  Js.Dict.set(payload, "username", ""->Js.Json.string)
+  let payload = Dict.make()
+  Dict.set(payload, "authenticity_token", authenticityToken->JSON.string)
+  Dict.set(payload, "email", email->JSON.string)
+  Dict.set(payload, "referer", ""->JSON.string)
+  Dict.set(payload, "shared_device", (sharedDevice ? "1" : "0")->JSON.string)
+  Dict.set(payload, "username", ""->JSON.string)
   setSaving(_ => true)
   let url = "/users/send_login_email"
 
@@ -68,10 +68,10 @@ let sendSignInEmail = (authenticityToken, email, setView, setSaving, sharedDevic
 }
 
 let sendResetPasswordEmail = (authenticityToken, email, setView, setSaving) => {
-  let payload = Js.Dict.empty()
-  Js.Dict.set(payload, "authenticity_token", authenticityToken->Js.Json.string)
-  Js.Dict.set(payload, "email", email->Js.Json.string)
-  Js.Dict.set(payload, "username", ""->Js.Json.string)
+  let payload = Dict.make()
+  Dict.set(payload, "authenticity_token", authenticityToken->JSON.string)
+  Dict.set(payload, "email", email->JSON.string)
+  Dict.set(payload, "username", ""->JSON.string)
   setSaving(_ => true)
   let url = "/users/send_reset_password_email"
 

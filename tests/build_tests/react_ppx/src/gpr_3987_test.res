@@ -27,7 +27,7 @@ module Gpr3987ReproOk = {
   type props = {value: string, onChange: (string, int) => unit}
 
   @react.componentWithProps
-  let make = (_props: props) => React.null
+  let make = {(_props: props) => React.null}
 }
 
 let _ = <Gpr3987ReproOk value="test" onChange={(_, _) => ()} />

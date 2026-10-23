@@ -23,7 +23,7 @@ a value passed to a Promise.catch callback)
 
 **IMPORTANT**: This is an internal API and may be changed / removed any time in the future.
 */
-external anyToExnInternal: 'a => exn = "%wrap_exn"
+let anyToExnInternal: 'a => exn
 
 /**
 `stack(jsExn)` retrieves the `stack` property of the exception, if it exists. The stack is a list of what functions were called, and what files they are defined in, prior to the error happening.

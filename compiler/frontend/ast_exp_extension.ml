@@ -23,13 +23,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 open Ast_helper
 
-let handle_extension e (self : Bs_ast_mapper.mapper)
+let handle_extension e (_self : Ast_mapper.mapper)
     (({txt; loc}, payload) : Parsetree.extension) =
   match txt with
   | "todo" ->
     let todo_message =
-      match Ast_payload.is_single_string payload with
-      | Some (s, _) -> Some s
+      match Ast_payload.semantic_string_of_payload payload with
+      | Some s -> Some s
       | None -> None
     in
     Location.prerr_warning e.Parsetree.pexp_loc (Bs_todo todo_message);
@@ -47,38 +47,19 @@ let handle_extension e (self : Bs_ast_mapper.mapper)
       [
         ( Nolabel,
           Exp.constant ~loc
-            (Pconst_string
-               ( (pretext
-                 ^
-                 match todo_message with
-                 | None -> " - Todo"
-                 | Some msg -> " - Todo: " ^ msg),
-                 None )) );
+            (Ast_helper.Const.string
+               (pretext
+               ^
+               match todo_message with
+               | None -> " - Todo"
+               | Some msg -> " - Todo: " ^ msg)) );
       ]
   | "ffi" -> Ast_exp_handle_external.handle_ffi ~loc ~payload
-  | "raw" -> Ast_exp_handle_external.handle_raw ~kind:Raw_exp loc payload
-  | "re" ->
-    Exp.constraint_ ~loc
-      (Ast_exp_handle_external.handle_raw ~kind:Raw_re loc payload)
-      (Ast_comb.to_regexp_type loc)
+  | "raw" -> Ast_exp_handle_external.handle_raw loc payload
   | "debugger" ->
     {e with pexp_desc = Ast_exp_handle_external.handle_debugger loc payload}
-  | "obj" -> (
-    match payload with
-    | PStr
-        [
-          {
-            pstr_desc =
-              Pstr_eval (({pexp_desc = Pexp_record (label_exprs, None)} as e), _);
-          };
-        ] ->
-      {
-        e with
-        pexp_desc = Ast_util.record_as_js_object e.pexp_loc self label_exprs;
-      }
-    | _ -> Location.raise_errorf ~loc "Expect a record expression here")
   | _ -> e
 (* For an unknown extension, we don't really need to process further*)
 (* Exp.extension ~loc ~attrs:e.pexp_attributes (
     self.extension self extension) *)
-(* Bs_ast_mapper.default_mapper.expr self e   *)
+(* Ast_mapper.default_mapper.expr self e   *)

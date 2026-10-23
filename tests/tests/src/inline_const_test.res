@@ -3,9 +3,9 @@ open Test_utils
 
 module H = Inline_const.N1()
 
-let (f, f1, f2, f3, f4, f5, f6, f7) = {
+let (f, f1, f2, f3, f4, f5, f6, f7, escapedValue) = {
   open Inline_const
-  (f, f1, f2, N.f3, H.f4, f5, f6, H.xx)
+  (f, f1, f2, N.f3, H.f4, f5, f6, H.xx, escapedValue)
 }
 
 describe(__LOC__, () => {
@@ -18,5 +18,6 @@ describe(__LOC__, () => {
     eq(__LOC__, f5, true)
     eq(__LOC__, f6, 1)
     eq(__LOC__, f7, 0.000003)
+    eq(__LOC__, escapedValue, "a\n😀")
   })
 })

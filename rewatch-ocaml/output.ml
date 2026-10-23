@@ -1,0 +1,204 @@
+let line_clear = "\027[2K\r"
+
+(* Like Rust rewatch, logs go to stdout by default. Commands whose stdout is
+   machine-readable output (compiler-args, format) log to stderr instead. *)
+let log ?(channel = stdout) ~minimum ~verbosity ~label message =
+  if verbosity >= minimum then
+    Printf.fprintf channel "%s:\n%s\n%!" label message
+
+let debug ?channel ~verbosity message =
+  log ?channel ~minimum:1 ~verbosity ~label:"DEBUG" message
+
+let trace ?channel ~verbosity message =
+  log ?channel ~minimum:2 ~verbosity ~label:"TRACE" message
+let trace_enabled verbosity = verbosity >= 2
+
+let format_step ~color step =
+  if color then Printf.sprintf "\027[1m\027[2m[%s]\027[0m" step
+  else Printf.sprintf "[%s]" step
+
+module Progress = struct
+  type phase = {
+    step: string;
+    symbol: string;
+    label: string;
+    total: int;
+    mutable position: int;
+  }
+
+  type t = {
+    enabled: bool;
+    color: bool;
+    mutable phase: phase option;
+    mutable frame: int;
+    mutable next_draw: float;
+  }
+
+  let frames = [|"⠁"; "⠂"; "⠄"; "⡀"; "⢀"; "⠠"; "⠐"; "⠈"|]
+  let create ~enabled ~color =
+    {enabled; color; phase = None; frame = 0; next_draw = 0.}
+
+  let draw ?(force = false) progress =
+    if progress.enabled then
+      match progress.phase with
+      | None -> ()
+      | Some phase ->
+        let now = Unix.gettimeofday () in
+        if force || now >= progress.next_draw then (
+          let spinner = frames.(progress.frame mod Array.length frames) in
+          progress.frame <- progress.frame + 1;
+          progress.next_draw <- now +. 0.08;
+          Printf.printf "%s%s %s%s... %s %d/%d %!" line_clear
+            (format_step ~color:progress.color phase.step)
+            phase.symbol phase.label spinner phase.position phase.total)
+
+  let start progress ~step ~symbol ~label ~total =
+    progress.phase <- Some {step; symbol; label; total; position = 0};
+    progress.frame <- 0;
+    progress.next_draw <- 0.;
+    draw ~force:true progress
+
+  let advance progress =
+    Option.iter
+      (fun phase ->
+        if phase.position < phase.total then
+          phase.position <- phase.position + 1)
+      progress.phase;
+    draw progress
+
+  let tick progress = draw progress
+  let finish progress = progress.phase <- None
+
+  let debug progress ~verbosity message =
+    if verbosity >= 1 then (
+      let redraw = progress.enabled && Option.is_some progress.phase in
+      if redraw then Printf.printf "%s%!" line_clear;
+      log ~minimum:1 ~verbosity ~label:"DEBUG" message;
+      if redraw then draw ~force:true progress)
+
+  let start_grouped progress ~step ~symbol ~label groups =
+    let remaining = Hashtbl.create (List.length groups) in
+    List.iter
+      (fun group ->
+        let count =
+          Hashtbl.find_opt remaining group |> Option.value ~default:0
+        in
+        Hashtbl.replace remaining group (count + 1))
+      groups;
+    start progress ~step ~symbol ~label ~total:(Hashtbl.length remaining);
+    let groups = Array.of_list groups in
+    fun index ->
+      let group = groups.(index) in
+      let count = Hashtbl.find remaining group - 1 in
+      Hashtbl.replace remaining group count;
+      if count = 0 then advance progress
+end
+
+let yellow text =
+  if String.starts_with ~prefix:"\n" text then
+    "\n\027[33m" ^ String.sub text 1 (String.length text - 1) ^ "\027[0m"
+  else "\027[33m" ^ text ^ "\027[0m"
+
+let colors_enabled_with ~getenv ~win32 ~interactive =
+  let nonzero name default =
+    match getenv name with
+    | None -> default
+    | Some value -> value <> "0"
+  in
+  let terminal_supports_color =
+    interactive
+    &&
+    if win32 then true
+    else
+      Option.is_none (getenv "NO_COLOR")
+      &&
+      match getenv "TERM" with
+      | Some term -> term <> "dumb"
+      | None -> false
+  in
+  (terminal_supports_color && nonzero "CLICOLOR" true)
+  || nonzero "CLICOLOR_FORCE" false
+
+(* Removes SGR sequences (ESC [ parameters m), the only escapes Cmdliner
+   writes into its diagnostics. *)
+let strip_sgr text =
+  let length = String.length text in
+  let buffer = Buffer.create length in
+  let rec sequence_end index =
+    if index >= length then None
+    else
+      match text.[index] with
+      | '0' .. '9' | ';' -> sequence_end (index + 1)
+      | 'm' -> Some (index + 1)
+      | _ -> None
+  in
+  let rec copy index =
+    if index < length then
+      if text.[index] = '\027' && index + 1 < length && text.[index + 1] = '['
+      then (
+        match sequence_end (index + 2) with
+        | Some next -> copy next
+        | None ->
+          Buffer.add_char buffer text.[index];
+          copy (index + 1))
+      else (
+        Buffer.add_char buffer text.[index];
+        copy (index + 1))
+  in
+  copy 0;
+  Buffer.contents buffer
+
+let colors_enabled ~interactive =
+  colors_enabled_with ~getenv:Sys.getenv_opt
+    ~win32:Platform.terminal_supports_color_without_term ~interactive
+
+let cleanup_message ~color ~step ~cleaned ~total ~seconds =
+  Printf.sprintf "%s%s %sCleaned %d/%d in %.2fs" line_clear
+    (format_step ~color step) Platform.clean_symbol cleaned total seconds
+
+let compiler_cleanup_message ~color ~step =
+  Printf.sprintf "%s%s %sCleaned previous build due to compiler update"
+    line_clear (format_step ~color step) Platform.clean_symbol
+
+let cleaning_command_message ~color ~step target =
+  Printf.sprintf "%s%s %sCleaning %s..." line_clear (format_step ~color step)
+    Platform.clean_symbol target
+
+let cleaned_command_message ~color ~step ~target ~seconds =
+  Printf.sprintf "%s%s %sCleaned %s in %.2fs" line_clear
+    (format_step ~color step) Platform.clean_symbol target seconds
+
+let parsing_message ~color ~step ~count ~seconds =
+  Printf.sprintf "%s%s %sParsed %d source files in %.2fs" line_clear
+    (format_step ~color step) Platform.parse_symbol count seconds
+
+let parsing_failed_message ~color ~step ~seconds =
+  Printf.sprintf "%s%s %sError parsing source files in %.2fs" line_clear
+    (format_step ~color step) Platform.error_symbol seconds
+
+let compiling_message ~color ~step ~count ~seconds =
+  Printf.sprintf "%s%s %sCompiled %d modules in %.2fs" line_clear
+    (format_step ~color step) Platform.build_symbol count seconds
+
+let compilation_failed_message ~color ~step ~count ~seconds =
+  Printf.sprintf "%s%s %sCompiled %d modules in %.2fs" line_clear
+    (format_step ~color step) Platform.error_symbol count seconds
+
+type compilation_label = Standard | Initial | Incremental
+
+let finished_compilation_message ~label ~warnings ~seconds =
+  let status =
+    if warnings then Platform.warning_symbol else Platform.success_symbol
+  in
+  let kind =
+    match label with
+    | Standard -> ""
+    | Initial -> "initial "
+    | Incremental -> "incremental "
+  in
+  let warning_suffix = if warnings then " with warnings" else "" in
+  Printf.sprintf "%s%sFinished %scompilation%s in %.2fs" line_clear status kind
+    warning_suffix seconds
+
+let should_clear_screen ~clear_screen ~show_progress ~interactive =
+  clear_screen && show_progress && interactive

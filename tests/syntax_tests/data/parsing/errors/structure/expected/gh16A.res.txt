@@ -5,10 +5,10 @@
   4 │   })
   5 │ }
   6 │ )
-  7 │ Js.log("test"); // Is omitted from the compiled JS
+  7 │ Console.log("test"); // Is omitted from the compiled JS
   8 │ 
 
   I'm not sure what to parse here when looking at ")".
 
 module C = struct module T = (Fun)(struct ;;foo (a + c) (b + d) end) end
-;;Js.log {js|test|js}
+;;Console.log {js|test|js}

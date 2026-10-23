@@ -25,7 +25,7 @@ let decodeProps = json => {
     communityPath: json->field("communityPath", string),
     isCoach: json->field("isCoach", bool),
     communityId: json->field("communityId", string),
-    target: json->field("target", nullable(Target.decode))->Js.Null.toOption,
+    target: json->field("target", nullable(Target.decode))->Null.toOption,
   }
 }
 

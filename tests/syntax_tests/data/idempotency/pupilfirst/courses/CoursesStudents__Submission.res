@@ -1,8 +1,8 @@
 type t = {
   id: string,
   title: string,
-  createdAt: Js.Date.t,
-  passedAt: option<Js.Date.t>,
+  createdAt: Date.t,
+  passedAt: option<Date.t>,
   levelId: string,
 }
 
@@ -34,7 +34,7 @@ let failed = t =>
 let createdAtPretty = t => t.createdAt->DateFns.format("MMMM D, YYYY")
 
 let makeFromJs = submissions =>
-  submissions->Js.Array.map(submission =>
+  submissions->Array.map(submission =>
     switch submission {
     | Some(submission) =>
       let createdAt = submission["createdAt"]->Json.Decode.string->DateFns.parseString
@@ -52,5 +52,4 @@ let makeFromJs = submissions =>
         ),
       }
     | None => list{}
-    }
-  )
+    })

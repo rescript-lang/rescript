@@ -1,0 +1,1 @@
+- Remove the `rescript/lib/es6/*` and `rescript/lib/js/*` package exports, which pointed to files the `rescript` package doesn't contain; the runtime JS is in `@rescript/runtime`. https://github.com/rescript-lang/rescript/pull/8837

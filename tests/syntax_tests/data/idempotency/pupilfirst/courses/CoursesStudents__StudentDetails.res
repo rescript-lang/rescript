@@ -41,7 +41,7 @@ let coachNotes = t => t.coachNotes
 let teamCoachUserIds = t => t.team->CoursesStudents__TeamInfo.coachUserIds
 
 let makeAverageGrade = gradesData =>
-  gradesData->Js.Array.map(gradeData => {
+  gradesData->Array.map(gradeData => {
     evaluationCriterionId: gradeData["evaluationCriterionId"],
     grade: gradeData["averageGrade"],
   })
@@ -82,7 +82,7 @@ let addNewNote = (note, t) => {
 }
 
 let removeNote = (noteId, t) => {
-  let notes = t.coachNotes->Js.Array.filter(note => CoursesStudents__CoachNote.id(note) != noteId)
+  let notes = t.coachNotes->Array.filter(note => CoursesStudents__CoachNote.id(note) != noteId)
   {...t, coachNotes: notes}
 }
 
@@ -97,7 +97,7 @@ let computeAverageQuizScore = quizScores => {
       )
       numerator /. denominator *. 100.0
     })
-    ->Js.Array.reduce((a, b) => a +. b, 0.0)
+    ->Array.reduce(0.0, (a, b) => a +. b)
   sumOfPercentageScores /. (quizScores->Array.length->float_of_int)
 }
 
@@ -108,9 +108,8 @@ let makeFromJs = (id, studentDetails) => {
   id: id,
   email: studentDetails["email"],
   phone: studentDetails["phone"],
-  coachNotes: studentDetails["coachNotes"]->Js.Array.map(note =>
-    note->CoursesStudents__CoachNote.makeFromJs
-  ),
+  coachNotes: studentDetails["coachNotes"]->Array.map(note =>
+    note->CoursesStudents__CoachNote.makeFromJs),
   evaluationCriteria: studentDetails["evaluationCriteria"]->CoursesStudents__EvaluationCriterion.makeFromJs,
   socialLinks: studentDetails["socialLinks"],
   totalTargets: studentDetails["totalTargets"],

@@ -1,6 +1,6 @@
 Hover src/NestedRecords.res 17:5
 Nothing at that position. Now trying to use completion.
-posCursor:[17:5] posNoWhite:[17:4] Found expr:[17:3->17:10]
+pos_cursor:[17:5] pos_no_white:[17:4] Found expr:[17:3->17:10]
 Pexp_ident options:[17:3->17:10]
 Completable: Cpath Value[options]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -18,7 +18,7 @@ Resolved opens 1 Stdlib
 
 Hover src/NestedRecords.res 20:13
 Nothing at that position. Now trying to use completion.
-posCursor:[20:13] posNoWhite:[20:12] Found expr:[20:3->20:16]
+pos_cursor:[20:13] pos_no_white:[20:12] Found expr:[20:3->20:16]
 Pexp_field [20:3->20:10] extra:[20:11->20:16]
 Completable: Cpath Value[options].extra
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -29,7 +29,7 @@ Path options
 ContextPath Value[options]->extra
 ContextPath Value[options]
 Path options
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path NestedRecords.extra
 Path extra
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -43,7 +43,7 @@ Resolved opens 1 Stdlib
 
 Hover src/NestedRecords.res 23:26
 Nothing at that position. Now trying to use completion.
-posCursor:[23:26] posNoWhite:[23:25] Found expr:[23:3->23:27]
+pos_cursor:[23:26] pos_no_white:[23:25] Found expr:[23:3->23:27]
 Pexp_field [23:3->23:16] superExtra:[23:17->23:27]
 Completable: Cpath Value[options].extra.superExtra
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -55,7 +55,7 @@ Path options
 ContextPath Value[options]->extra
 ContextPath Value[options]
 Path options
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path NestedRecords.extra
 Path extra
 ContextPath Value[options].extra->superExtra
@@ -65,10 +65,10 @@ Path options
 ContextPath Value[options]->extra
 ContextPath Value[options]
 Path options
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path NestedRecords.extra
 Path extra
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path NestedRecords.superExtra
 Path superExtra
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -82,7 +82,7 @@ Resolved opens 1 Stdlib
 
 Hover src/NestedRecords.res 26:29
 Nothing at that position. Now trying to use completion.
-posCursor:[26:29] posNoWhite:[26:28] Found expr:[26:3->26:31]
+pos_cursor:[26:29] pos_no_white:[26:28] Found expr:[26:3->26:31]
 Pexp_field [26:3->26:27] age:[26:28->26:31]
 Completable: Cpath Value[options].extra.superExtra.age
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -95,7 +95,7 @@ Path options
 ContextPath Value[options]->extra
 ContextPath Value[options]
 Path options
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path NestedRecords.extra
 Path extra
 ContextPath Value[options].extra->superExtra
@@ -105,10 +105,10 @@ Path options
 ContextPath Value[options]->extra
 ContextPath Value[options]
 Path options
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path NestedRecords.extra
 Path extra
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path NestedRecords.superExtra
 Path superExtra
 ContextPath Value[options].extra.superExtra->age
@@ -119,7 +119,7 @@ Path options
 ContextPath Value[options]->extra
 ContextPath Value[options]
 Path options
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path NestedRecords.extra
 Path extra
 ContextPath Value[options].extra->superExtra
@@ -129,13 +129,13 @@ Path options
 ContextPath Value[options]->extra
 ContextPath Value[options]
 Path options
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path NestedRecords.extra
 Path extra
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path NestedRecords.superExtra
 Path superExtra
-CPPipe pathFromEnv: found:true
+CPPipe path_from_env: found:true
 Path NestedRecords.age
 Path age
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder

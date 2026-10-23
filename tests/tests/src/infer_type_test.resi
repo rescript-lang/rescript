@@ -1,11 +1,12 @@
-@obj external mk_config: (~hi: int, ~lo: int, ~width: int=?, unit) => _ = ""
+type hh = {"hi": int, "lo": int, "width": option<int>}
 
-type hh = {"hi": int, "lo": int, "width": Js.undefined<int>}
+@obj external mk_config: (~hi: int, ~lo: int, ~width: int=?, unit) => hh = ""
+
 let hh: hh
 
-let v: {"hi": int, "lo": int, "width": Js.undefined<int>}
+let v: {"hi": int, "lo": int, "width": option<int>}
 
-let vv: {"hi": int, "lo": int, "width": Js.undefined<int>}
+let vv: {"hi": int, "lo": int, "width": option<int>}
 
 let u: int
-let uu: Js.undefined<int>
+let uu: option<int>

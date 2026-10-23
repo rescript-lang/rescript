@@ -1,7 +1,7 @@
 type t = {
   id: string,
   title: string,
-  createdAt: Js.Date.t,
+  createdAt: Date.t,
   answersCount: int,
 }
 

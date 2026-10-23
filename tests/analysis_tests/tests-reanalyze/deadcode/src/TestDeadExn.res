@@ -1,2 +1,2 @@
-Js.log(DeadExn.Etoplevel)
+Console.log(DeadExn.Etoplevel)
 

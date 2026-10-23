@@ -1,6 +1,30 @@
 DocumentSymbol src/DocumentSymbol.res
 [
   {
+    "kind": 12,
+    "name": "bracedFunction",
+    "range": {
+      "end": { "character": 33, "line": 33 },
+      "start": { "character": 0, "line": 33 }
+    },
+    "selectionRange": {
+      "end": { "character": 33, "line": 33 },
+      "start": { "character": 0, "line": 33 }
+    }
+  },
+  {
+    "kind": 15,
+    "name": "templateString",
+    "range": {
+      "end": { "character": 49, "line": 32 },
+      "start": { "character": 0, "line": 32 }
+    },
+    "selectionRange": {
+      "end": { "character": 49, "line": 32 },
+      "start": { "character": 0, "line": 32 }
+    }
+  },
+  {
     "kind": 16,
     "name": "zzz",
     "range": {

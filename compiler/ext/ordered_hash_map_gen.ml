@@ -33,13 +33,7 @@ module type S = sig
 
   val create : int -> 'value t
 
-  val clear : 'vaulue t -> unit
-
-  val reset : 'value t -> unit
-
   val add : 'value t -> key -> 'value -> unit
-
-  val mem : 'value t -> key -> bool
 
   val rank : 'value t -> key -> int (* -1 if not found*)
 
@@ -47,13 +41,7 @@ module type S = sig
 
   val iter : 'value t -> (key -> 'value -> int -> unit) -> unit
 
-  val fold : 'value t -> 'b -> (key -> 'value -> int -> 'b -> 'b) -> 'b
-
   val length : 'value t -> int
-
-  val elements : 'value t -> key list
-
-  val choose : 'value t -> key
 
   val to_sorted_array : 'value t -> key array
 end
@@ -67,25 +55,12 @@ type ('a, 'b) bucket =
 type ('a, 'b) t = {
   mutable size: int;
   (* number of entries *)
-  mutable data: ('a, 'b) bucket array;
-  (* the buckets *)
-  initial_size: int; (* initial array size *)
+  mutable data: ('a, 'b) bucket array; (* the buckets *)
 }
 
 let create initial_size =
   let s = Ext_util.power_2_above 16 initial_size in
-  {initial_size = s; size = 0; data = Array.make s Empty}
-
-let clear h =
-  h.size <- 0;
-  let len = Array.length h.data in
-  for i = 0 to len - 1 do
-    Array.unsafe_set h.data i Empty
-  done
-
-let reset h =
-  h.size <- 0;
-  h.data <- Array.make h.initial_size Empty
+  {size = 0; data = Array.make s Empty}
 
 let length h = h.size
 
@@ -138,23 +113,3 @@ let to_sorted_array h =
     let arr = Array.make h.size v in
     iter h (fun k _ i -> Array.unsafe_set arr i k);
     arr
-
-let fold h init f =
-  let rec do_bucket b accu =
-    match b with
-    | Empty -> accu
-    | Cons {key; ord; data; next} -> do_bucket next (f key data ord accu)
-  in
-  let d = h.data in
-  let accu = ref init in
-  for i = 0 to Array.length d - 1 do
-    accu := do_bucket (Array.unsafe_get d i) !accu
-  done;
-  !accu
-
-let elements set = fold set [] (fun k _ _ acc -> k :: acc)
-
-let rec bucket_length acc (x : _ bucket) =
-  match x with
-  | Empty -> 0
-  | Cons rhs -> bucket_length (acc + 1) rhs.next

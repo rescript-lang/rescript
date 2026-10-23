@@ -41,12 +41,12 @@ let createAutoVerifySubmission = (target, linkToComplete, setSaving, addSubmissi
 
   AutoVerifySubmissionQuery.make(~targetId=target->Target.id, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     switch response["autoVerifySubmission"]["submission"] {
     | Some(details) => handleSuccess(details, linkToComplete, addSubmissionCB)
     | None => setSaving(_ => false)
     }
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

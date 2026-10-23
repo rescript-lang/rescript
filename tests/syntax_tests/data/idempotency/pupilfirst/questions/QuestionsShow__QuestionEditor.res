@@ -9,7 +9,7 @@ type similar = {
 
 type state = {
   title: string,
-  titleTimeoutId: option<Js.Global.timeoutId>,
+  titleTimeoutId: option<timeoutId>,
   similar: similar,
   searching: bool,
   description: string,
@@ -37,7 +37,7 @@ let computeInitialState = question => {
 
 type action =
   | UpdateTitle(string)
-  | UpdateTitleAndTimeout(string, Js.Global.timeoutId)
+  | UpdateTitleAndTimeout(string, timeoutId)
   | UpdateDescription(string)
   | BeginSaving
   | FailSaving
@@ -89,19 +89,19 @@ let searchForSimilarQuestions = (send, title, communityId, ()) => {
 
   SimilarQuestionsQuery.make(~communityId, ~title=trimmedTitle, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(result => {
+  ->Promise.then(result => {
     let suggestions = result["similarQuestions"]->Array.map(QuestionSuggestion.makeFromJs)
     send(FinishSearching(trimmedTitle, suggestions))
-    Js.Promise.resolve()
+    Promise.resolve()
   })
-  ->Js.Promise.catch(e => {
-    Js.log(e)
+  ->Promise.catch(e => {
+    Console.log(e)
     Notification.warn(
       "Oops!",
       "We failed to fetch similar questions from the server! Our team has been notified about this error.",
     )
     send(FailSaving)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }
@@ -109,14 +109,14 @@ let searchForSimilarQuestions = (send, title, communityId, ()) => {
 let isInvalidString = s => s->String.trim == ""
 
 let updateTitleAndSearch = (state, send, communityId, title) => {
-  state.titleTimeoutId->Belt.Option.forEach(Js.Global.clearTimeout)
+  state.titleTimeoutId->Belt.Option.forEach(clearTimeout)
 
   let trimmedTitle = title->String.trim
 
   if title->isInvalidString || trimmedTitle == state.similar.search {
     send(UpdateTitle(title))
   } else {
-    let timeoutId = Js.Global.setTimeout(
+    let timeoutId = setTimeout(
       searchForSimilarQuestions(send, trimmedTitle, communityId),
       1500,
     )
@@ -183,7 +183,7 @@ module UpdateQuestionError = {
 let handleResponseCB = (id, title) => {
   let window = Webapi.Dom.window
   let parameterizedTitle =
-    title->Js.String.toLowerCase->Js.String.replaceByRe(/[^0-9a-zA-Z]+/gi, "-")
+    title->String.toLowerCase->String.replaceRegExp(/[^0-9a-zA-Z]+/gi, "-")
   let redirectPath = "/questions/" ++ (id ++ ("/" ++ parameterizedTitle))
   redirectPath->Webapi.Dom.Window.setLocation(window)
 }
@@ -215,7 +215,7 @@ let handleCreateOrUpdateQuestion = (
       let id = question->Question.id
       UpdateQuestionQuery.make(~id, ~title=state.title, ~description=state.description, ())
       ->GraphqlQuery.sendQuery
-      ->Js.Promise.then_(response =>
+      ->Promise.then(response =>
         switch response["updateQuestion"] {
         | #Success(updated) =>
           switch (updated, updateQuestionCB) {
@@ -225,8 +225,8 @@ let handleCreateOrUpdateQuestion = (
           | (_, _) =>
             Notification.error("Something went wrong", "Please refresh the page and try again")
           }
-          Js.Promise.resolve()
-        | #Errors(errors) => Js.Promise.reject(UpdateQuestionErrorHandler.Errors(errors))
+          Promise.resolve()
+        | #Errors(errors) => Promise.reject(UpdateQuestionErrorHandler.Errors(errors))
         }
       )
       ->UpdateQuestionErrorHandler.catch(() => send(FailSaving))
@@ -242,13 +242,13 @@ let handleCreateOrUpdateQuestion = (
         (),
       )
       ->GraphqlQuery.sendQuery
-      ->Js.Promise.then_(response =>
+      ->Promise.then(response =>
         switch response["createQuestion"] {
         | #QuestionId(questionId) =>
           handleResponseCB(questionId, state.title)
           Notification.success("Done!", "Question has been saved.")
-          Js.Promise.resolve()
-        | #Errors(errors) => Js.Promise.reject(CreateQuestionErrorHandler.Errors(errors))
+          Promise.resolve()
+        | #Errors(errors) => Promise.reject(CreateQuestionErrorHandler.Errors(errors))
         }
       )
       ->CreateQuestionErrorHandler.catch(() => send(FailSaving))

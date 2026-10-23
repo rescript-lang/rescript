@@ -39,7 +39,7 @@ This means inline is tricky in javascript, here we try to inline [_loop]?
  */
 let f = () => {
   let n = 10
-  let arr = Belt.Array.make(10, _ => ())
+  let arr = Array.make(~length=10, _ => ())
   for i in 0 to n - 1 {
     arr[i] = _ => v := v.contents + i
   }
@@ -48,6 +48,6 @@ let f = () => {
 
 let () = {
   let u = f()
-  u->Belt.Array.forEach(x => x())
+  u->Array.forEach(x => x())
   assert(v.contents == 45)
 }

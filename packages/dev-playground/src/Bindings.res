@@ -30,6 +30,12 @@ module Instance = {
   @send external setWarnFlags: (compilerInstance, string) => unit = "setWarnFlags"
   @send external setFilename: (compilerInstance, string) => unit = "setFilename"
   @send external setJsxPreserveMode: (compilerInstance, bool) => unit = "setJsxPreserveMode"
+  @send external setGentypeEnabled: (compilerInstance, bool) => unit = "setGentypeEnabled"
+  @send external setSourceMapMode: (compilerInstance, string) => unit = "setSourceMapMode"
+  @send
+  external setSourceMapSourcesContent: (compilerInstance, bool) => unit =
+    "setSourceMapSourcesContent"
+  @send external setSourceMapRoot: (compilerInstance, string) => unit = "setSourceMapRoot"
   @send
   external setExperimentalFeatures: (compilerInstance, array<string>) => unit =
     "setExperimentalFeatures"
@@ -51,6 +57,11 @@ module Config = {
   @get external jsxPreserveMode: compilerConfig => option<bool> = "jsx_preserve_mode"
   @get
   external experimentalFeatures: compilerConfig => option<array<string>> = "experimental_features"
+  @get external gentypeEnabled: compilerConfig => option<bool> = "gentype_enabled"
+  @get external sourceMapMode: compilerConfig => option<string> = "source_map_mode"
+  @get
+  external sourceMapSourcesContent: compilerConfig => option<bool> = "source_map_sources_content"
+  @get external sourceMapRoot: compilerConfig => option<string> = "source_map_root"
 }
 
 module Diagnostic = {
@@ -69,7 +80,9 @@ module CompileResult = {
   @get external parsetree: compileResult => option<string> = "parsetree"
   @get external typedtree: compileResult => option<string> = "typedtree"
   @get external lambda: compileResult => option<string> = "lambda"
-  @get external lam: compileResult => option<string> = "lam"
+  @get external lambdaOptimized: compileResult => option<string> = "lambda_optimized"
+  @get external gentype: compileResult => option<string> = "gentype"
+  @get external sourceMap: compileResult => option<string> = "source_map"
   @get external errors: compileResult => option<array<diagnostic>> = "errors"
   @get external warnings: compileResult => option<array<diagnostic>> = "warnings"
   @get external msg: compileResult => option<string> = "msg"
@@ -84,6 +97,13 @@ module Window = {
   @val external isSecureContext: bool = "window.isSecureContext"
 }
 
+module WindowSelection = {
+  type t
+
+  @val @scope("window") @return(nullable) external get: unit => option<t> = "getSelection"
+  @get external isCollapsed: t => bool = "isCollapsed"
+}
+
 module Url = {
   type t
 
@@ -94,7 +114,13 @@ module Url = {
 
 module Event = {
   @get external target: Dom.event => {..} = "target"
+  @get external currentTarget: Dom.event => Dom.element = "currentTarget"
   @get external key: Dom.event => string = "key"
+  @get external button: Dom.event => int = "button"
+  @get external clientX: Dom.event => float = "clientX"
+  @get external clientY: Dom.event => float = "clientY"
+  @get external pointerId: Dom.event => int = "pointerId"
+  @get external detail: Dom.event => int = "detail"
   @send external preventDefault: Dom.event => unit = "preventDefault"
 
   let value = (event: Dom.event): string => (event->target)["value"]
@@ -103,14 +129,11 @@ module Event = {
 
   let selectionStart = (event: Dom.event): int => (event->target)["selectionStart"]
 
+  let selectionEnd = (event: Dom.event): int => (event->target)["selectionEnd"]
+
   let scrollTop = (event: Dom.event): int => {
     let scrollTop: float = (event->target)["scrollTop"]
     scrollTop->Math.round->Float.toInt
-  }
-
-  let scrollLeft = (event: Dom.event): int => {
-    let scrollLeft: float = (event->target)["scrollLeft"]
-    scrollLeft->Math.round->Float.toInt
   }
 }
 
@@ -128,9 +151,29 @@ module EventTarget = {
 module CssStyle = {
   type t
 
+  @send external setProperty: (t, string, string) => unit = "setProperty"
   @set external setPosition: (t, string) => unit = "position"
   @set external setTop: (t, string) => unit = "top"
   @set external setLeft: (t, string) => unit = "left"
+}
+
+type scrollIntoViewOptions = {
+  block: string,
+  inline: string,
+}
+
+type boundingRect = {
+  left: float,
+  top: float,
+  width: float,
+  height: float,
+}
+
+type classList
+
+module ClassList = {
+  @send external add: (classList, string) => unit = "add"
+  @send external remove: (classList, string) => unit = "remove"
 }
 
 module Element = {
@@ -142,6 +185,18 @@ module Element = {
     "removeEventListener"
   @send external appendChild: (Dom.element, Dom.element) => unit = "appendChild"
   @send external removeChild: (Dom.element, Dom.element) => unit = "removeChild"
+  @send external focus: Dom.element => unit = "focus"
+  @send external setPointerCapture: (Dom.element, int) => unit = "setPointerCapture"
+  @send external releasePointerCapture: (Dom.element, int) => unit = "releasePointerCapture"
+  @send external hasPointerCapture: (Dom.element, int) => bool = "hasPointerCapture"
+  @send external getBoundingClientRect: Dom.element => boundingRect = "getBoundingClientRect"
+  @get external classList: Dom.element => classList = "classList"
+  @send @return(nullable)
+  external querySelector: (Dom.element, string) => option<Dom.element> = "querySelector"
+  @get @return(nullable)
+  external parentElement: Dom.element => option<Dom.element> = "parentElement"
+  @send
+  external scrollIntoView: (Dom.element, scrollIntoViewOptions) => unit = "scrollIntoView"
   @get external style: Dom.element => CssStyle.t = "style"
   @get @return(nullable)
   external getScrollHandler: Dom.element => option<Dom.event => unit> =
@@ -149,6 +204,20 @@ module Element = {
   @set
   external setScrollHandler: (Dom.element, Dom.event => unit) => unit =
     "__devPlaygroundScrollHandler"
+}
+
+type resizeObserver
+type resizeObserverEntry
+
+module ResizeObserverEntry = {
+  @get external contentRect: resizeObserverEntry => boundingRect = "contentRect"
+}
+
+module ResizeObserver = {
+  @val external supported: option<unknown> = "globalThis.ResizeObserver"
+  @new external make: (array<resizeObserverEntry> => unit) => resizeObserver = "ResizeObserver"
+  @send external observe: (resizeObserver, Dom.element) => unit = "observe"
+  @send external disconnect: resizeObserver => unit = "disconnect"
 }
 
 module ScriptElement = {
@@ -161,6 +230,11 @@ module ScriptElement = {
 module TextAreaElement = {
   @set external setValue: (Dom.element, string) => unit = "value"
   @send external select: Dom.element => unit = "select"
+  @send external setSelectionRange: (Dom.element, int, int) => unit = "setSelectionRange"
+  @get external clientHeight: Dom.element => int = "clientHeight"
+  @get external clientWidth: Dom.element => int = "clientWidth"
+  @get external scrollTop: Dom.element => int = "scrollTop"
+  @set external setScrollTop: (Dom.element, int) => unit = "scrollTop"
 }
 
 module Document = {

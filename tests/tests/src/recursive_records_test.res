@@ -64,8 +64,8 @@ describe(__MODULE__, () => {
   })
 
   test("recursive variant list operations", () => {
-    let hd = Belt.List.headExn
-    let tl = Belt.List.tailExn
+    let hd = List.headExn
+    let tl = List.tailExn
     eq(__LOC__, hd(rec_cell3) + hd(tl(rec_cell3)) + hd(tl(tl(rec_cell3))), 9)
     let rec_cell3 = f3(3)
     eq(__LOC__, hd(rec_cell3) + hd(tl(rec_cell3)) + hd(tl(tl(rec_cell3))), 9)

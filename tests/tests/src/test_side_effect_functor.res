@@ -3,8 +3,8 @@ include (
     module M = () => {
       let v = ref(0)
       {
-        incr(v)
-        v.contents->Js.Int.toString->Console.log
+        v.contents = v.contents + 1
+        v.contents->Int.toString->Console.log
       }
       let u = 3
       let use_v = () => v.contents

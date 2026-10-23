@@ -38,7 +38,7 @@ let handleApiError = x =>
   }
 
 let uploadFile = (filename, send, attachFileCB, formData) => {
-  open Js.Promise
+  open Promise
   Fetch.fetchWithInit(
     "/timeline_event_files/",
     Fetch.RequestInit.make(
@@ -52,7 +52,7 @@ let uploadFile = (filename, send, attachFileCB, formData) => {
     if Fetch.Response.ok(response) {
       response->Fetch.Response.json
     } else {
-      Js.Promise.reject(UnexpectedResponse(response->Fetch.Response.status))
+      Promise.reject(UnexpectedResponse(response->Fetch.Response.status))
     }
   )
   ->then_(json => handleResponseJSON(filename, send, attachFileCB, json)->resolve)

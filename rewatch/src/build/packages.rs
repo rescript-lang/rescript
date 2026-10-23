@@ -8,12 +8,12 @@ use crate::helpers::StrippedVerbatimPath;
 use crate::helpers::emojis::*;
 use crate::project_context::{MonoRepoContext, ProjectContext};
 use ahash::{AHashMap, AHashSet};
-use anyhow::{Result, anyhow};
-use console::style;
+use anyhow::{Context, Result, anyhow};
 use log::debug;
 use rayon::prelude::*;
 use std::collections::hash_map::Entry;
 use std::error;
+use std::fmt;
 use std::fs::{self};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
@@ -73,15 +73,15 @@ pub struct Package {
     pub is_root: bool,
 }
 
-pub fn get_build_path(canonical_path: &Path) -> PathBuf {
+fn get_build_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("bs")
 }
 
-pub fn get_js_path(canonical_path: &Path) -> PathBuf {
+fn get_js_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("js")
 }
 
-pub fn get_esmodule_path(canonical_path: &Path) -> PathBuf {
+fn get_esmodule_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("es6")
 }
 
@@ -125,13 +125,6 @@ impl Package {
             .expect("namespace should be set for mlmap module");
         self.get_build_path().join(format!("{suffix}.cmi"))
     }
-
-    pub fn is_source_file_type_dev(&self, path: &Path) -> bool {
-        self.source_files
-            .as_ref()
-            .and_then(|sf| sf.get(path).map(|sfm| sfm.is_type_dev))
-            .unwrap_or(false)
-    }
 }
 
 impl PartialEq for Package {
@@ -153,7 +146,7 @@ fn matches_filter(filter: &Option<regex::Regex>, path: &str) -> bool {
     }
 }
 
-pub fn read_folders(
+fn read_folders(
     filter: &Option<regex::Regex>,
     package_dir: &Path,
     path: &Path,
@@ -289,6 +282,30 @@ pub fn read_dependency(
     Ok(canonical_path)
 }
 
+/// Retain dependency context for CLI exit codes and recovery watches after config errors.
+#[derive(Debug)]
+pub struct DependencyError {
+    pub package_path: Option<PathBuf>,
+    package_name: String,
+    root_path: PathBuf,
+}
+
+impl fmt::Display for DependencyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Could not build package tree {} '{}' at path '{}'. Error",
+            if self.package_path.is_some() {
+                "for"
+            } else {
+                "reading dependency"
+            },
+            self.package_name,
+            self.root_path.display()
+        )
+    }
+}
+
 /// Given a config, recursively finds all dependencies.
 /// 1. It starts with registering dependencies and
 ///    prevents the operation for the ones which are already
@@ -300,10 +317,9 @@ fn read_dependencies(
     registered_dependencies_set: &mut AHashSet<String>,
     project_context: &ProjectContext,
     package_config: &Config,
-    show_progress: bool,
     is_local_dep: bool,
     prod: bool,
-) -> Vec<Dependency> {
+) -> Result<Vec<Dependency>> {
     let mut dependencies: Vec<String> = package_config.get_dependency_names();
 
     // Concatenate dev dependencies if is_local_dep is true and not in prod mode
@@ -318,17 +334,14 @@ fn read_dependencies(
                 // Package already registered - check for duplicate (different path)
                 // Re-resolve from current package and from root to compare paths
                 if let Ok(current_path) = read_dependency(package_name, package_config, project_context)
-                    && let Ok(chosen_path) = read_dependency(package_name, &project_context.current_config, project_context)
+                    && let Ok(chosen_path) =
+                        read_dependency(package_name, &project_context.current_config, project_context)
                     && current_path != chosen_path
                 {
                     // Different paths - this is a duplicate
                     let root_path = project_context.get_root_path();
-                    let chosen_relative = chosen_path
-                        .strip_prefix(root_path)
-                        .unwrap_or(&chosen_path);
-                    let duplicate_relative = current_path
-                        .strip_prefix(root_path)
-                        .unwrap_or(&current_path);
+                    let chosen_relative = chosen_path.strip_prefix(root_path).unwrap_or(&chosen_path);
+                    let duplicate_relative = current_path.strip_prefix(root_path).unwrap_or(&current_path);
                     let current_package_path = package_config
                         .path
                         .parent()
@@ -355,39 +368,16 @@ fn read_dependencies(
         .collect::<Vec<String>>()
         // Read all config files in parallel instead of blocking
         .par_iter()
-        .map(|package_name| {
-            let (config, canonical_path) =
-                match read_dependency(package_name, package_config, project_context) {
-                    Err(error) => {
-                        if show_progress {
-                            println!(
-                                "{} {} Error building package tree. {}",
-                                style("[1/2]").bold().dim(),
-                                CROSS,
-                                error
-                            );
-                        }
-
-                        let parent_path_str = project_context.get_root_path().to_string_lossy();
-                        log::error!(
-                            "Could not build package tree reading dependency '{package_name}' at path '{parent_path_str}'. Error: {error}",
-                        );
-
-                        std::process::exit(2)
-                    }
-                    Ok(canonical_path) => {
-                        match read_config(&canonical_path) {
-                            Ok(config) => (config, canonical_path),
-                            Err(error) => {
-                                let parent_path_str = project_context.get_root_path().to_string_lossy();
-                                log::error!(
-                                    "Could not build package tree for '{package_name}' at path '{parent_path_str}'. Error: {error}",
-                                );
-                                std::process::exit(2)
-                            }
-                        }
-                    }
-                };
+        .map(|package_name| -> Result<Dependency> {
+            let dependency_error = |package_path| DependencyError {
+                package_path,
+                package_name: package_name.clone(),
+                root_path: project_context.get_root_path().to_path_buf(),
+            };
+            let canonical_path = read_dependency(package_name, package_config, project_context)
+                .with_context(|| dependency_error(None))?;
+            let config = read_config(&canonical_path)
+                .with_context(|| dependency_error(Some(canonical_path.clone())))?;
 
             let is_local_dep = is_local_dependency(project_context, package_name, &canonical_path);
 
@@ -395,18 +385,18 @@ fn read_dependencies(
                 &mut registered_dependencies_set.to_owned(),
                 project_context,
                 &config,
-                show_progress,
                 is_local_dep,
                 prod,
-            );
+            )
+            .with_context(|| format!("Could not read dependencies of '{package_name}'"))?;
 
-            Dependency {
+            Ok(Dependency {
                 name: package_name.to_owned(),
                 config,
                 path: canonical_path,
                 dependencies,
                 is_local_dep,
-            }
+            })
         })
         .collect()
 }
@@ -433,7 +423,7 @@ fn flatten_dependencies(dependencies: Vec<Dependency>) -> Vec<Dependency> {
     flattened
 }
 
-pub fn read_package_name(package_dir: &Path) -> Result<String> {
+fn read_package_name(package_dir: &Path) -> Result<String> {
     let read_name = |file_name: &str| -> Result<Option<String>> {
         let path = package_dir.join(file_name);
         if !Path::exists(&path) {
@@ -565,11 +555,7 @@ This inconsistency will cause issues with package resolution.\n",
     })
 }
 
-fn read_packages(
-    project_context: &ProjectContext,
-    show_progress: bool,
-    prod: bool,
-) -> Result<AHashMap<String, Package>> {
+fn read_packages(project_context: &ProjectContext, prod: bool) -> Result<AHashMap<String, Package>> {
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
 
@@ -589,10 +575,9 @@ fn read_packages(
         &mut registered_dependencies_set,
         project_context,
         &project_context.current_config,
-        show_progress,
         /* is local dep */ true,
         prod,
-    ));
+    )?);
 
     for d in dependencies.iter() {
         if !map.contains_key(&d.name) {
@@ -604,15 +589,13 @@ fn read_packages(
     Ok(map)
 }
 
-/// `get_source_files` is essentially a wrapper around `read_structure`, which read a
-/// list of files in a folder to a hashmap of `string` / `fs::Metadata` (file metadata). Reason for
-/// this wrapper is the recursiveness of the `config.json` subfolders. Some sources in config
-/// can be specified as being fully recursive (`{ subdirs: true }`). This wrapper pulls out that
-/// data from the config and pushes it forwards. Another thing is the 'type_', some files / folders
-/// can be marked with the type 'dev'. Which means that they may not be around in the distributed
-/// NPM package. The file reader allows for this, just warns when this happens.
-/// TODO -> Check whether we actually need the `fs::Metadata`
-pub fn get_source_files(
+/// `get_source_files` reads the source files of one source entry of a package's `rescript.json`
+/// with `read_folders`, into a map from file path to `SourceFileMeta` (modification time and
+/// whether the source has the type 'dev'). It reads the folder recursively when the entry is fully
+/// recursive (`{ subdirs: true }`). Sources with the type 'dev' are skipped unless
+/// `build_dev_deps` is set, because they may not be around in the distributed NPM package. A folder
+/// that cannot be read is logged as an error and contributes no files.
+fn get_source_files(
     package_name: &String,
     package_dir: &Path,
     filter: &Option<regex::Regex>,
@@ -769,7 +752,7 @@ fn collect_gentype_source_dirs(package: &Package) -> Vec<PathBuf> {
 /// `read_dependencies` — i.e. when the consumer is a local dep and we're not in `--prod`. This
 /// keeps dev-only feature requests (e.g. a shorthand `dev-dependencies` entry that would flip
 /// everything to "all features") from leaking into production builds.
-pub fn compute_active_features(
+fn compute_active_features(
     packages: &AHashMap<String, Package>,
     cli_features: Option<&Vec<String>>,
     prod: bool,
@@ -856,7 +839,15 @@ pub fn make(
     prod: bool,
     cli_features: Option<&Vec<String>>,
 ) -> Result<AHashMap<String, Package>> {
-    let mut map = read_packages(project_context, show_progress, prod)?;
+    let mut map = read_packages(project_context, prod).inspect_err(|_| {
+        if show_progress {
+            println!(
+                "{} {} Error building package tree.",
+                console::style("[1/2]").bold().dim(),
+                CROSS
+            );
+        }
+    })?;
 
     let active_features = compute_active_features(&map, cli_features, prod)?;
 
@@ -1139,24 +1130,6 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
     Ok(())
 }
 
-impl Package {
-    pub fn get_jsx_args(&self) -> Vec<String> {
-        self.config.get_jsx_args()
-    }
-
-    pub fn get_jsx_mode_args(&self) -> Vec<String> {
-        self.config.get_jsx_mode_args()
-    }
-
-    pub fn get_jsx_module_args(&self) -> Vec<String> {
-        self.config.get_jsx_module_args()
-    }
-
-    pub fn get_jsx_preserve_args(&self) -> Vec<String> {
-        self.config.get_jsx_preserve_args()
-    }
-}
-
 fn get_unallowed_dependents(
     packages: &AHashMap<String, Package>,
     package_name: &String,
@@ -1236,13 +1209,19 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
     let has_any_unallowed_dependent = !detected_unallowed_dependencies.is_empty();
 
     if has_any_unallowed_dependent {
-        log::error!(
-            "\nUpdate the {} value in the {} of the unallowed dependencies to solve the issue!",
-            console::style("unallowed_dependents").bold().dim(),
-            console::style("config.json").bold().dim()
-        )
+        log::error!("{}", unallowed_dependents_hint())
     }
     !has_any_unallowed_dependent
+}
+
+/// The hint printed after the list of unallowed dependencies, naming the
+/// package setting and the file that holds it.
+fn unallowed_dependents_hint() -> String {
+    format!(
+        "\nUpdate the {} value in the {} of the unallowed dependencies to solve the issue!",
+        console::style("allowed-dependents").bold().dim(),
+        console::style("rescript.json").bold().dim()
+    )
 }
 
 #[cfg(test)]
@@ -1257,7 +1236,7 @@ mod test {
     use std::sync::RwLock;
     use tempfile::TempDir;
 
-    pub struct CreatePackageArgs {
+    struct CreatePackageArgs {
         name: String,
         bs_deps: Vec<String>,
         build_dev_deps: Vec<String>,
@@ -1309,6 +1288,15 @@ mod test {
 
         let is_valid = super::validate_packages_dependencies(&packages);
         assert!(!is_valid)
+    }
+
+    #[test]
+    fn unallowed_dependents_hint_names_the_setting_and_its_file() {
+        let hint = console::strip_ansi_codes(&super::unallowed_dependents_hint()).into_owned();
+        assert_eq!(
+            hint,
+            "\nUpdate the allowed-dependents value in the rescript.json of the unallowed dependencies to solve the issue!"
+        );
     }
 
     #[test]

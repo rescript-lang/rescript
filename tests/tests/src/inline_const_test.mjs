@@ -8,13 +8,15 @@ let H = Inline_const.N1({});
 
 let f = "hello";
 
-let f1 = `a`;
+let f1 = "a";
 
-let f2 = `中文`;
+let f2 = "中文";
 
-let f3 = `中文`;
+let f3 = "中文";
 
-let f4 = `中文`;
+let f4 = "中文";
+
+let escapedValue = "a\n😀";
 
 Mocha.describe("File \"inline_const_test.res\", line 11, characters 9-16", () => {
   Mocha.test("inline const test", () => {
@@ -26,6 +28,7 @@ Mocha.describe("File \"inline_const_test.res\", line 11, characters 9-16", () =>
     Test_utils.eq("File \"inline_const_test.res\", line 18, characters 7-14", true, true);
     Test_utils.eq("File \"inline_const_test.res\", line 19, characters 7-14", 1, 1);
     Test_utils.eq("File \"inline_const_test.res\", line 20, characters 7-14", 3e-6, 0.000003);
+    Test_utils.eq("File \"inline_const_test.res\", line 21, characters 7-14", escapedValue, "a\n😀");
   });
 });
 
@@ -45,5 +48,6 @@ export {
   f5,
   f6,
   f7,
+  escapedValue,
 }
 /* H Not a pure module */

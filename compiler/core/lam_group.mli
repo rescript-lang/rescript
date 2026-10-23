@@ -23,14 +23,14 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 type t =
-  | Single of Lam_compat.let_kind * Ident.t * Lam.t
-  | Recursive of (Ident.t * Lam.t) list
-  | Nop of Lam.t
+  | Single of Lambda.let_kind * Ident.t * Lambda.t
+  | Recursive of (Ident.t * Lambda.t) list
+  | Nop of Lambda.t
 
 (** Tricky to be complete *)
 
 val pp_group : Format.formatter -> t -> unit
 
-val single : Lam_compat.let_kind -> Ident.t -> Lam.t -> t
+val single : Lambda.let_kind -> Ident.t -> Lambda.t -> t
 
-val nop_cons : Lam.t -> t list -> t list
+val nop_cons : Lambda.t -> t list -> t list

@@ -16,15 +16,10 @@ let deriving_name = "accessors"
 
 let init () =
   Ast_derive.register deriving_name (fun (x : Parsetree.expression option) ->
-      Ext_option.iter x invalid_config;
+      Option.iter invalid_config x;
       {
         structure_gen =
           (fun (tdcls : tdcls) _explict_nonrec ->
-            let handle_uncurried_accessor_tranform ~arity accessor =
-              (* Accessors with no params (arity of 0) are simply values and not functions *)
-              if arity > 0 then Ast_uncurried.uncurried_fun ~arity accessor
-              else accessor
-            in
             let handle_tdcl tdcl =
               let core_type =
                 Ast_derive_util.core_type_of_type_declaration tdcl
@@ -47,8 +42,11 @@ let init () =
                     let txt = "param" in
                     Ast_comb.single_non_rec_value ?attrs:gentype_attrs pld_name
                       (* arity will always be 1 since these are single param functions *)
-                      (Ast_compatible.fun_ ~arity:(Some 1)
-                         (Pat.constraint_ (Pat.var {txt; loc}) core_type)
+                      (Exp.fun_
+                         [
+                           Exp.fun_param Nolabel
+                             (Pat.constraint_ (Pat.var {txt; loc}) core_type);
+                         ]
                          (Exp.field
                             (Exp.ident {txt = Lident txt; loc})
                             {txt = Longident.Lident pld_label; loc})))
@@ -85,7 +83,7 @@ let init () =
                          Exp.constraint_
                            (Exp.construct
                               {loc; txt = Longident.Lident con_name}
-                              None)
+                              {txt = []; loc})
                            annotate_type
                        else
                          let vars =
@@ -96,21 +94,19 @@ let init () =
                            Exp.constraint_
                              (Exp.construct
                                 {loc; txt = Longident.Lident con_name}
-                             @@ Some
-                                  (if arity = 1 then
-                                     Exp.ident
-                                       {loc; txt = Lident (List.hd vars)}
-                                   else
-                                     Exp.tuple
-                                       (Ext_list.map vars (fun x ->
-                                            Exp.ident {loc; txt = Lident x}))))
+                                {
+                                  txt =
+                                    Ext_list.map vars (fun x ->
+                                        Exp.ident {loc; txt = Lident x});
+                                  loc;
+                                })
                              annotate_type
                          in
-                         Ext_list.fold_right vars exp (fun var b ->
-                             Ast_compatible.fun_ ~arity:None
-                               (Pat.var {loc; txt = var})
-                               b)
-                         |> handle_uncurried_accessor_tranform ~arity))
+                         Ast_helper.Exp.fun_
+                           (Ext_list.map vars (fun var ->
+                                Ast_helper.Exp.fun_param Nolabel
+                                  (Pat.var {loc; txt = var})))
+                           exp))
               | Ptype_abstract | Ptype_open ->
                 Ast_derive_util.not_applicable tdcl.ptype_loc deriving_name;
                 []
@@ -135,8 +131,10 @@ let init () =
               | Ptype_record label_declarations ->
                 Ext_list.map label_declarations (fun {pld_name; pld_type} ->
                     Ast_comb.single_non_rec_val ?attrs:gentype_attrs pld_name
-                      (Ast_helper.Typ.arrows
-                         [{attrs = []; lbl = Nolabel; typ = core_type}]
+                      (Ast_helper.Typ.arrow
+                         [
+                           Parg_type {attrs = []; lbl = Nolabel; typ = core_type};
+                         ]
                          pld_type
                          (*arity will alwys be 1 since these are single param functions*)))
               | Ptype_variant constructor_declarations ->
@@ -162,12 +160,15 @@ let init () =
                     in
                     Ast_comb.single_non_rec_val ?attrs:gentype_attrs
                       {loc; txt = Ext_string.uncapitalize_ascii con_name}
-                      (let args =
+                      (match
                          Ext_list.map pcd_args (fun x ->
-                             ({attrs = []; lbl = Nolabel; typ = x}
-                               : Parsetree.arg))
-                       in
-                       Ast_helper.Typ.arrows ~loc args annotate_type))
+                             Parsetree.Parg_type
+                               {attrs = []; lbl = Nolabel; typ = x})
+                       with
+                      | [] ->
+                        (* zero-argument constructor: the accessor is a value *)
+                        annotate_type
+                      | args -> Ast_helper.Typ.arrow ~loc args annotate_type))
               | Ptype_open | Ptype_abstract ->
                 Ast_derive_util.not_applicable tdcl.ptype_loc deriving_name;
                 []

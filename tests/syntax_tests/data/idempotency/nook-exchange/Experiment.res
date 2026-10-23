@@ -7,18 +7,18 @@ let triggerKey = "triggered_experiments"
 let triggeredMap = ref(
   (Dom.Storage.localStorage->Dom.Storage.getItem(triggerKey))
   ->Belt.Option.map(value => {
-    let json = Js.Json.parseExn(value)
+    let json = JSON.parseOrThrow(value)
     open Json.Decode
     dict(string, json)
   })
-  ->Belt.Option.getWithDefault(Js.Dict.empty()),
+  ->Belt.Option.getWithDefault(Dict.make()),
 )
 let addTrigger = (key, value) => {
-  triggeredMap.contents->Js.Dict.set(key, value)
+  triggeredMap.contents->Dict.set(key, value)
   open Dom.Storage
   localStorage->setItem(
     triggerKey,
-    Js.Json.stringify({
+    JSON.stringify({
       open Json.Encode
       dict(string, triggeredMap.contents)
     }),
@@ -30,7 +30,7 @@ let getBucketHash = () =>
   switch bucketHash.contents {
   | Some(bucketHash) => bucketHash
   | None =>
-    let value = Js.Math.random_int(0, max_int)
+    let value = Math.Int.random(0, max_int)
     bucketHash := Some(value)
     Dom.Storage.localStorage->Dom.Storage.setItem(key, string_of_int(value))
     value
@@ -55,7 +55,7 @@ let getBucketIdForExperiment = (~experimentId) =>
   }
 
 let trigger = (~experimentId, ~bucketId) =>
-  if triggeredMap.contents->Js.Dict.get(experimentId) != Some(bucketId) {
+  if triggeredMap.contents->Dict.get(experimentId) != Some(bucketId) {
     addTrigger(experimentId, bucketId)
     Analytics.Amplitude.addExperimentBucket(~experimentId, ~bucketId)
     Analytics.Amplitude.logEventWithProperties(

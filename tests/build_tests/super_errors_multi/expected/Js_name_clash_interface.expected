@@ -1,0 +1,12 @@
+===== A.resi =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Js_name_clash_interface/A.resi[0m:[2m2:1-17[0m
+
+  1 [2m│[0m let delete: int
+  [1;31m2[0m [2m│[0m [1;31mlet $$delete: int[0m
+  3 [2m│[0m 
+
+  This value has the same JavaScript name $$delete
+  as the value at [1m[36m/.../fixtures/Js_name_clash_interface/A.resi[0m:[2m1:1-15[0m[0m.
+  Rename one of them.

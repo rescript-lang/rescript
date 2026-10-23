@@ -1,5 +1,5 @@
 module Pervasives = {
   include Pervasives
-  include Belt.List
+  include List
 }
-let v = Pervasives.\"@"
+let v = List.concat

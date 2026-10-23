@@ -1,32 +1,22 @@
+; The browser profile builds the playground compiler; these rules generate modules from platform/{native,playground}.
+
+(rule
+ (target js_name_of_module_id.ml)
+ (enabled_if
+  (= %{profile} browser))
+ (action
+  (copy platform/playground/js_name_of_module_id.ml js_name_of_module_id.ml)))
+
+(rule
+ (target js_name_of_module_id.ml)
+ (enabled_if
+  (<> %{profile} browser))
+ (action
+  (copy platform/native/js_name_of_module_id.ml js_name_of_module_id.ml)))
+
 (library
  (name core)
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (flags
-  (:standard -w +a-4-9-27-30-40-41-42-48-70))
- (libraries depends ext flow_parser frontend gentype))
-
-(rule
- (target js_name_of_module_id.ml)
- (deps js_name_of_module_id.cppo.ml)
- (action
-  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
-
-(rule
- (target js_pass_debug.ml)
- (deps js_pass_debug.cppo.ml)
- (action
-  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
-
-(rule
- (target lam_compile_main.ml)
- (deps lam_compile_main.cppo.ml)
- (action
-  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
-
-(rule
- (target lam_util.ml)
- (deps lam_util.cppo.ml)
- (action
-  (run %{bin:cppo} %{env:CPPO_FLAGS=} %{deps} -o %{target})))
+ (libraries depends ext flow_parser frontend gentype yojson unix))

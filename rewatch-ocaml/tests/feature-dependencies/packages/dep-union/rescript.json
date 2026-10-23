@@ -1,0 +1,9 @@
+{
+  "name": "dep-union",
+  "sources": [
+    "src",
+    {"dir": "native", "feature": "native"},
+    {"dir": "web", "feature": "web"},
+    {"dir": "extra", "feature": "extra"}
+  ]
+}

@@ -43,9 +43,9 @@ let resolve_node_module_path ?(fallback_to_runtime_package = true) ~start_path
   | None
     when fallback_to_runtime_package
          && name = Runtime_package.name
-         && Files.exists !Runtime_package.path ->
+         && Files.exists (Runtime_package.get_path ()) ->
     (* Compiler-local fallback for development builds where the runtime package
        is not installed in the target workspace. Real project installs must win
        so LSP definition locations point at the workspace's node_modules. *)
-    Some !Runtime_package.path
+    Some (Runtime_package.get_path ())
   | None -> None

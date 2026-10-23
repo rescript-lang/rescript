@@ -16,4 +16,3 @@ let buf = ArrayBuffer.make(8)
 let ab1 = buf->ArrayBuffer.slice(~start=2)
 
 let re1 = RegExp.fromString("\\w+", ~flags="g")
-

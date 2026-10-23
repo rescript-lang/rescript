@@ -129,14 +129,14 @@ let x = /* before */ user /* c0 */. /* c1 */ name /* c2 */
 
 // Pexp_ifthenelse
 if /* c0 */ user.name === "Steve" /* c1 */ {
-  /* c2 */ Js.log("It's Steve") /* c3 */
+  /* c2 */ Console.log("It's Steve") /* c3 */
 } // trailing
 
 if /* c0 */ user.name === "John" /* c1 */ {
-  /* c2 */ Js.log("It's John…") /* c3 */
+  /* c2 */ Console.log("It's John…") /* c3 */
 } else {
   // c4
-  /* c5 */ Js.log("we need John") /* c6 */
+  /* c5 */ Console.log("we need John") /* c6 */
 } // trailing
 
 if a {
@@ -279,9 +279,10 @@ f((~a)
 
 // ternary
 let x = /* c0 */ test /* c1 */ ? /* c2 */ true /* c3 */ : /* c4 */ false /* c5 */
+let nestedTernary = a ? b : c ? d : e // keep nested alternate comment
 
 // Pexp_if case, don't duplicate comments
-if next == Js.null {
+if next == null {
   /* only one element */
   clear(q)
   Some(contentGet(x))
@@ -352,4 +353,23 @@ let c = {
   ...M.a,
   // foo
   bar: "foo"
+}
+
+// dict literals with spreads
+let d = dict{
+  // before the spread
+  ...base,
+  // first row after a spread
+  "a": 1,
+}
+
+let e = dict{
+  // first row before a spread
+  "x": 0,
+  "y": 0, // trailing
+  ...base,
+  // first row of a run
+  "a": 1,
+  "b": 2, // trailing
+  // after the last row
 }

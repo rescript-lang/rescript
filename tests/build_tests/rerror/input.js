@@ -10,7 +10,8 @@ await execClean();
 const output = await execBuild();
 const stderr = stripVTControlCharacters(output.stderr);
 
-// verify the output is in reason syntax
+// `=>` appears twice: in the code frame and in the expected type, which the
+// error prints in ReScript syntax
 const u = stderr.match(/=>/g);
 
 const lines = stderr

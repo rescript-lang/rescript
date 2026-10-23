@@ -101,7 +101,7 @@ module Focus = {
     type t = t
   })
   @get
-  external relatedTarget: t => Js.nullable<{..}> =
+  external relatedTarget: t => nullable<{..}> =
     "relatedTarget" /* Should return Dom.eventTarget */
 }
 
@@ -131,7 +131,7 @@ module Mouse = {
   @get external pageX: t => int = "pageX"
   @get external pageY: t => int = "pageY"
   @get
-  external relatedTarget: t => Js.nullable<{..}> =
+  external relatedTarget: t => nullable<{..}> =
     "relatedTarget" /* Should return Dom.eventTarget */
   @get external screenX: t => int = "screenX"
   @get external screenY: t => int = "screenY"

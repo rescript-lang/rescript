@@ -22,26 +22,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let find_in_path_uncap path name =
-  let uname = Ext_string.uncapitalize_ascii name in
-  let rec try_dir = function
-    | [] -> None
-    | dir :: rem ->
-      let ufullname = Filename.concat dir uname in
-      if Sys.file_exists ufullname then Some ufullname
-      else
-        let fullname = Filename.concat dir name in
-        if Sys.file_exists fullname then Some fullname else try_dir rem
-  in
-  try_dir path
-
-(* ATTENTION: lazy to wait [Config.load_path] populated *)
-let find_opt file = find_in_path_uncap !Config.load_path file
+(* ATTENTION: read the load path after request options have populated it. *)
+let find_opt file = Misc.find_in_path_uncap_opt (Config.get_load_path ()) file
 
 let output_prefix name =
-  match !Clflags.output_name with
+  match !((Clflags.current ()).output_name) with
   | None ->
     Ext_namespace_encode.make
       (Filename.remove_extension name)
-      ?ns:!Clflags.dont_record_crc_unit
+      ?ns:!((Clflags.current ()).dont_record_crc_unit)
   | Some oname -> Filename.remove_extension oname

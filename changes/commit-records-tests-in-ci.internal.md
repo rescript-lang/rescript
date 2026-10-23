@@ -1,0 +1,1 @@
+- Run the semantic diff renderer's tests (`yarn test-commit-records`) in CI.

@@ -36,7 +36,7 @@ let useLoadMostContributedData = () => {
 
       (patron.id, totalContributedWei)
     })
-    ->Js.Array2.sortInPlaceWith(((_, first), (_, second)) => second->BN.cmp(first))
+    ->Array.toSorted((a, b) => Ordering.fromInt((((_, first), (_, second)) => second->BN.cmp(first))(a, b)))
     ->Some
   | _ => None
   }

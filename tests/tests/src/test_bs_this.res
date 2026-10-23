@@ -3,15 +3,13 @@ let uux_this: @this ({"length": int}, int, int) => int = @this (o, x, y) => o["l
 let even = @this (o, x) => x + o
 
 let bark = () =>
-  @this
-  (o: 'self, x, y) => {
+  @this (o: 'self, x, y) => {
     Console.log((o["length"], o["x"], o["y"], x, y))
     x + y
   }
 
 let js_obj: 'self = {
-  "bark": @this
-  (o: 'self, x, y) => {
+  "bark": @this (o: 'self, x, y) => {
     Console.log(o)
     x + y
   },

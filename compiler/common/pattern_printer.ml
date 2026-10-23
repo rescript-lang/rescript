@@ -10,8 +10,7 @@ let untype_record_rest (rest : Typedtree.record_pat_rest) :
   let rest_name = rest.rest_name in
   {Parsetree.rest_loc = rest_name.loc; rest_name; rest_type = None}
 
-let[@warning "-4"] is_generated_optional_constructor
-    (lid : Longident.t Location.loc) =
+let is_generated_optional_constructor (lid : Longident.t Location.loc) =
   match lid.txt with
   | Longident.Lident name ->
     String.length name >= 2 && name.[0] = '#' && name.[1] = '$'
@@ -34,7 +33,7 @@ type optional_field_state =
 (* Optional record fields are lowered into an extra option layer; we re-infer
    whether we’re looking at a missing field vs. a present-but-`None` value so
    we can render useful surface syntax in error messages. *)
-let[@warning "-4"] rec classify_optional_field_state pat =
+let rec classify_optional_field_state pat =
   match pat.pat_desc with
   | Tpat_construct (lid, cstr, [])
     when is_generated_optional_constructor lid && cstr.cstr_name = "None" ->
@@ -47,9 +46,9 @@ let[@warning "-4"] rec classify_optional_field_state pat =
   | _ -> Field_normal
 
 let none_pattern =
-  mkpat (Ppat_construct (mknoloc (Longident.Lident "None"), None))
+  mkpat (Ppat_construct (mknoloc (Longident.Lident "None"), mknoloc []))
 
-let[@warning "-4"] strip_synthetic_some pat =
+let strip_synthetic_some pat =
   match pat.pat_desc with
   | Tpat_construct (lid, cstr, [inner])
     when is_generated_optional_constructor lid && cstr.cstr_name = "Some" ->
@@ -67,20 +66,20 @@ let untype typed =
     | Tpat_or (pa, pb, _) -> mkpat (Ppat_or (loop pa, loop pb))
     | Tpat_any | Tpat_var _ -> mkpat Ppat_any
     | Tpat_constant c -> mkpat (Ppat_constant (Untypeast.constant c))
+    | Tpat_interval (c1, c2) ->
+      mkpat (Ppat_interval (Untypeast.constant c1, Untypeast.constant c2))
     | Tpat_alias (p, _, _) -> loop p
     | Tpat_tuple lst -> mkpat (Ppat_tuple (List.map loop lst))
     | Tpat_construct (cstr_lid, cstr, lst) ->
       let lid = {cstr_lid with txt = Longident.Lident cstr.cstr_name} in
-      let arg =
-        match List.map loop lst with
-        | [] -> None
-        | [p] -> Some p
-        | lst -> Some (mkpat (Ppat_tuple lst))
-      in
-      mkpat (Ppat_construct (lid, arg))
+      mkpat (Ppat_construct (lid, mknoloc (List.map loop lst)))
     | Tpat_variant (label, p_opt, _row_desc) ->
-      let arg = Option.map loop p_opt in
-      mkpat (Ppat_variant (label, arg))
+      let args =
+        match p_opt with
+        | None -> []
+        | Some p -> [loop p]
+      in
+      mkpat (Ppat_variant (label, mknoloc args))
     | Tpat_record (subpatterns, closed_flag, rest) ->
       let fields, saw_optional_rewrite =
         List.fold_right
@@ -104,6 +103,25 @@ let untype typed =
       let closed_flag = if saw_optional_rewrite then Closed else closed_flag in
       mkpat
         (Ppat_record (fields, closed_flag, Option.map untype_record_rest rest))
+    | Tpat_dict entries ->
+      (* An entry's pattern matches the key's value as an option *)
+      let entry {tdp_key; tdp_pattern} =
+        match tdp_pattern.pat_desc with
+        | Tpat_any -> None
+        | Tpat_construct (_, cstr, [value]) when cstr.cstr_name = "Some" ->
+          Some
+            {pdp_key = tdp_key; pdp_pattern = loop value; pdp_optional = false}
+        | Tpat_var _ | Tpat_alias _ | Tpat_constant _ | Tpat_interval _
+        | Tpat_tuple _ | Tpat_construct _ | Tpat_variant _ | Tpat_record _
+        | Tpat_dict _ | Tpat_array _ | Tpat_or _ ->
+          Some
+            {
+              pdp_key = tdp_key;
+              pdp_pattern = loop tdp_pattern;
+              pdp_optional = true;
+            }
+      in
+      mkpat (Ppat_dict (List.filter_map entry entries))
     | Tpat_array lst -> mkpat (Ppat_array (List.map loop lst))
   in
   loop typed

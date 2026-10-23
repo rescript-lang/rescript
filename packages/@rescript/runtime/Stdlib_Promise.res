@@ -95,11 +95,11 @@ external allSettled6: (
 )> = "allSettled"
 
 @send
-external _catch: (t<'a>, exn => t<'a>) => t<'a> = "catch"
+external _catch: (t<'a>, unknown => t<'a>) => t<'a> = "catch"
 
 let catch = (promise: promise<'a>, callback: exn => promise<'a>): promise<'a> => {
   _catch(promise, err => {
-    callback(Stdlib_Exn.anyToExnInternal(err))
+    callback(Primitive_exceptions.internalToException(err))
   })
 }
 

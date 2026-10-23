@@ -1,7 +1,5 @@
 open Gentype_common
 
-let concat = Filename.concat
-
 let handle_namespace cmt =
   let cut_after_dash s =
     match String.index s '-' with
@@ -60,7 +58,8 @@ let get_module_name cmt =
 
 let get_cmt_file cmt =
   let path_cmt =
-    if Filename.is_relative cmt then Filename.concat (Sys.getcwd ()) cmt
+    if Filename.is_relative cmt then
+      Filename.concat (Compiler_request_state.cwd ()) cmt
     else cmt
   in
   let cmt_file =

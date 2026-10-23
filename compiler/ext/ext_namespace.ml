@@ -33,13 +33,6 @@ let rec rindex_rec s i =
 let change_ext_ns_suffix name ext =
   let i = rindex_rec name (String.length name - 1) in
   if i < 0 then name ^ ext else String.sub name 0 i ^ ext
-(* FIXME: micro-optimizaiton*)
-
-let try_split_module_name name =
-  let len = String.length name in
-  let i = rindex_rec name (len - 1) in
-  if i < 0 then None
-  else Some (String.sub name (i + 1) (len - i - 1), String.sub name 0 i)
 
 let js_name_of_modulename s (case : Ext_js_file_kind.case) suffix : string =
   let s =
@@ -48,26 +41,6 @@ let js_name_of_modulename s (case : Ext_js_file_kind.case) suffix : string =
     | Upper -> s
   in
   change_ext_ns_suffix s suffix
-
-(* https://docs.npmjs.com/files/package.json
-   Some rules:
-   The name must be less than or equal to 214 characters. This includes the scope for scoped packages.
-   The name can't start with a dot or an underscore.
-   New packages must not have uppercase letters in the name.
-   The name ends up being part of a URL, an argument on the command line, and a folder name. Therefore, the name can't contain any non-URL-safe characters.
-*)
-let is_valid_npm_package_name (s : string) =
-  let len = String.length s in
-  len <= 214 (* magic number forced by npm *)
-  && len > 0
-  &&
-  match String.unsafe_get s 0 with
-  | 'a' .. 'z' | '@' ->
-    Ext_string.for_all_from s 1 (fun x ->
-        match x with
-        | 'a' .. 'z' | '0' .. '9' | '_' | '-' -> true
-        | _ -> false)
-  | _ -> false
 
 let namespace_of_package_name (s : string) : string =
   let len = String.length s in

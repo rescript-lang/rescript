@@ -22,109 +22,41 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let local_external_apply loc ?(pval_attributes = []) ~(pval_prim : string list)
-    ~(pval_type : Parsetree.core_type) ?(local_module_name = "J")
-    ?(local_fun_name = "unsafe_expr") (args : Parsetree.expression list) :
-    Parsetree.expression_desc =
-  Pexp_letmodule
-    ( {txt = local_module_name; loc},
-      {
-        pmod_desc =
-          Pmod_structure
-            [
-              {
-                pstr_desc =
-                  Pstr_primitive
-                    {
-                      pval_name = {txt = local_fun_name; loc};
-                      pval_type;
-                      pval_loc = loc;
-                      pval_prim;
-                      pval_attributes;
-                    };
-                pstr_loc = loc;
-              };
-            ];
-        pmod_loc = loc;
-        pmod_attributes = [];
-      },
-      Ast_compatible.apply_simple
-        ({
-           pexp_desc =
-             Pexp_ident
-               {txt = Ldot (Lident local_module_name, local_fun_name); loc};
-           pexp_attributes = [];
-           pexp_loc = loc;
-         }
-          : Parsetree.expression)
-        args ~loc )
-
-let local_external_obj loc ?(pval_attributes = []) ~pval_prim ~pval_type
-    ?(local_module_name = "J") ?(local_fun_name = "unsafe_expr") args :
-    Parsetree.expression_desc =
-  Pexp_letmodule
-    ( {txt = local_module_name; loc},
-      {
-        pmod_desc =
-          Pmod_structure
-            [
-              {
-                pstr_desc =
-                  Pstr_primitive
-                    {
-                      pval_name = {txt = local_fun_name; loc};
-                      pval_type;
-                      pval_loc = loc;
-                      pval_prim;
-                      pval_attributes;
-                    };
-                pstr_loc = loc;
-              };
-            ];
-        pmod_loc = loc;
-        pmod_attributes = [];
-      },
-      Ast_compatible.apply_labels
-        ({
-           pexp_desc =
-             Pexp_ident
-               {txt = Ldot (Lident local_module_name, local_fun_name); loc};
-           pexp_attributes = [];
-           pexp_loc = loc;
-         }
-          : Parsetree.expression)
-        args ~loc )
-
-let local_extern_cont_to_obj loc ?(pval_attributes = []) ~pval_prim ~pval_type
+let local_external_apply loc ?(pval_attributes = [])
+    ~(pval_prim : Parsetree.primitive_repr) ~(pval_type : Parsetree.core_type)
     ?(local_module_name = "J") ?(local_fun_name = "unsafe_expr")
-    (cb : Parsetree.expression -> 'a) : Parsetree.expression_desc =
+    (args : Parsetree.expression list) : Parsetree.expression_desc =
   Pexp_letmodule
     ( {txt = local_module_name; loc},
-      {
-        pmod_desc =
-          Pmod_structure
-            [
-              {
-                pstr_desc =
-                  Pstr_primitive
-                    {
-                      pval_name = {txt = local_fun_name; loc};
-                      pval_type;
-                      pval_loc = loc;
-                      pval_prim;
-                      pval_attributes;
-                    };
-                pstr_loc = loc;
-              };
-            ];
-        pmod_loc = loc;
-        pmod_attributes = [];
-      },
-      cb
-        {
-          pexp_desc =
-            Pexp_ident
-              {txt = Ldot (Lident local_module_name, local_fun_name); loc};
-          pexp_attributes = [];
-          pexp_loc = loc;
-        } )
+      Ast_helper.Mod.structure ~loc
+        [
+          Ast_helper.Str.primitive ~loc
+            {
+              pval_name = {txt = local_fun_name; loc};
+              pval_type;
+              pval_loc = loc;
+              pval_prim = Some pval_prim;
+              pval_jsx_component = None;
+              pval_attributes;
+            };
+        ],
+      Ast_helper.Exp.apply ~loc
+        (Ast_helper.Exp.ident ~loc
+           {txt = Ldot (Lident local_module_name, local_fun_name); loc})
+        (Ext_list.map args (fun x -> (Asttypes.Nolabel, x))) )
+
+let inline_const (c : External_ffi_types.inline_const) :
+    Parsetree.primitive_repr =
+  Prim_inline_const c
+
+let inline_string semantic = inline_const (Const_string semantic)
+
+let inline_bool b = inline_const (Const_bool b)
+
+let inline_int i = inline_const (Const_int i)
+
+let inline_bigint s =
+  let positive, digits = Bigint_utils.parse_bigint s in
+  inline_const (Const_bigint {positive; digits})
+
+let inline_float s = inline_const (Const_float s)

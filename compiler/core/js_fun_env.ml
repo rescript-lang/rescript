@@ -70,12 +70,6 @@ let get_unused t i = t.used_mask.(i)
 
 (* let get_length t = Array.length t.used_mask *)
 
-(* let to_string env =
-   String.concat ","
-    (Ext_list.map (Set_ident.elements  env.unbounded )
-      (fun id  -> Printf.sprintf "%s/%d" id.name id.stamp)
-       ) *)
-
 let get_mutable_params (params : Ident.t list) (x : t) =
   match x.immutable_mask with
   | All_immutable_and_no_tail_call -> []
@@ -84,8 +78,4 @@ let get_mutable_params (params : Ident.t list) (x : t) =
 
 let get_unbounded t = t.unbounded
 
-let set_unbounded env v =
-  (* Ext_log.err "%s -- set @." (to_string env); *)
-  (* if Set_ident.is_empty env.bound then *)
-  env.unbounded <- v
-(* else assert false *)
+let set_unbounded env v = env.unbounded <- v

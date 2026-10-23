@@ -21,9 +21,9 @@ let x = (arr.((x : int))).((y : int))
 ;;f ~a ~b:bArg ?c ?d:expr
 ;;((f ~a ~b:bArg ?c ?d:expr) ~a ~b:bArg ?c ?d:expr) ~a ~b:bArg ?c ?d:expr
 ;;f ~a:(x : int) ?b:(y : int)
-;;connection#platformId
-;;((connection#left)#account)#accountName
-;;john#age #= 99
-;;(john#son)#age #= (steve#age - 5)
-;;dict#\n #= abc
-;;dict#\" #= dict2#\"
+;;connection["platformId"]
+;;((connection["left"])["account"])["accountName"]
+;;john["age"] = 99
+;;(john["son"])["age"] = steve["age"] - 5
+;;dict["\n"] = abc
+;;dict["\""] = dict2["\""]

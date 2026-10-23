@@ -33,7 +33,7 @@ let getPrice = () => {
         let getPriceFromArray = a => a->Array.get(0)
         \">>="(\"<$>"(\">>="(priceObj.result, ethUsd), c), getPriceFromArray)
       | Result.Error(error) =>
-        Js.log(error)
+        Console.log(error)
         None
       }
 

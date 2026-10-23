@@ -67,13 +67,13 @@ let to_yojson (t : t) : Yojson.Safe.t =
   let document_store_to_yojson (store : Document_store.t) =
     store.documents |> Hashtbl.to_seq
     |> Seq.map (fun (uri, doc) ->
-           ( Lsp.Uri.to_string uri,
-             `Assoc
-               [
-                 ("version", `Int (Lsp.Text_document.version doc));
-                 ( "text_length",
-                   `Int (doc |> Lsp.Text_document.text |> String.length) );
-               ] ))
+        ( Lsp.Uri.to_string uri,
+          `Assoc
+            [
+              ("version", `Int (Lsp.Text_document.version doc));
+              ( "text_length",
+                `Int (doc |> Lsp.Text_document.text |> String.length) );
+            ] ))
     |> List.of_seq
     |> fun fields -> `Assoc fields
   in
@@ -81,8 +81,8 @@ let to_yojson (t : t) : Yojson.Safe.t =
   let diagnostics_to_yojson (diagnostics : Diagnostics.t) =
     diagnostics |> Diagnostics.get_all |> Diagnostics.Uri_map.to_seq
     |> Seq.map (fun (uri, diagnostics) ->
-           ( Lsp.Uri.to_string uri,
-             `List (List.map Diagnostic.yojson_of_t diagnostics) ))
+        ( Lsp.Uri.to_string uri,
+          `List (List.map Diagnostic.yojson_of_t diagnostics) ))
     |> List.of_seq
     |> fun fields -> `Assoc fields
   in
@@ -90,7 +90,7 @@ let to_yojson (t : t) : Yojson.Safe.t =
   let compiler_config_to_yojson (compiler_config : Compiler_config.t) =
     compiler_config |> Compiler_config.Uri_map.to_seq
     |> Seq.map (fun (uri, config) ->
-           (Lsp.Uri.to_string uri, Compiler_config.Parse.to_yojson config))
+        (Lsp.Uri.to_string uri, Compiler_config.Parse.to_yojson config))
     |> List.of_seq
     |> fun fields -> `Assoc fields
   in

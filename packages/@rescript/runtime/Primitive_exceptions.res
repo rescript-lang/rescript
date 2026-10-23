@@ -5,7 +5,6 @@
  */
 
 module Obj = Primitive_object_extern
-module Js = Primitive_js_extern
 
 type t = {@as("RE_EXN_ID") id: string}
 
@@ -25,12 +24,12 @@ type js_error = {cause: exn}
    {[
      match toExn x : exn option with 
      | Some _ 
-       -> Js.log "Could be an OCaml exception or an open variant"
+       -> Console.log "Could be an OCaml exception or an open variant"
      (* If it is an Open variant, it will never pattern match, 
         This is Okay, since exception could never have exhaustive pattern match
 
      *)
-     | None -> Js.log "Not an OCaml exception for sure"
+     | None -> Console.log "Not an OCaml exception for sure"
    ]}
 
    However, there is still something wrong, since if user write such code
@@ -41,13 +40,17 @@ type js_error = {cause: exn}
      | None -> (* assert it is not an exception *)
    ]}
 
-   This is not a problem in `try .. with` since the logic above is not expressible, see more design in [destruct_exn.md]
+   This is not a problem in `try .. with`: a handler only asks whether the
+   caught value matches an exception branch, never whether an arbitrary value
+   is an exception - the question a general exception-destruction operator
+   would force, and which cannot be answered soundly while open variants
+   share the exception representation.
 */
 let isExtension = (type a, e: a): bool =>
-  if Js.testAny(e) {
+  if Primitive_js_extern.testAny(e) {
     false
   } else {
-    Js.typeof((Obj.magic(e): t).id) == "string"
+    Primitive_js_extern.typeof((Obj.magic(e): t).id) == "string"
   }
 
 /**   
@@ -69,7 +72,7 @@ module Dict = {
   external set: (dict<'a>, string, 'a) => unit = ""
 
   /**
-    It's the same as `Js.Dict.get` but it doesn't have runtime overhead to check if the key exists.
+    It's the same as `Dict.get` but it doesn't have runtime overhead to check if the key exists.
    */
   @get_index
   external dangerouslyGetNonOption: (dict<'a>, string) => option<'a> = ""
@@ -83,14 +86,12 @@ let idMap = Dict.empty()
 
 let create = (str: string): string => {
   switch idMap->Dict.dangerouslyGetNonOption(str) {
-  | Some(v) => {
-      let id = v + 1
-      idMap->Dict.set(str, id)
-      str ++ ("/" ++ (Obj.magic((id: int)): string))
-    }
-  | None => {
-      idMap->Dict.set(str, 1)
-      str
-    }
+  | Some(v) =>
+    let id = v + 1
+    idMap->Dict.set(str, id)
+    str ++ ("/" ++ (Obj.magic((id: int)): string))
+  | None =>
+    idMap->Dict.set(str, 1)
+    str
   }
 }

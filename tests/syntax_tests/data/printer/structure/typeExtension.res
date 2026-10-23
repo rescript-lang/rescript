@@ -90,3 +90,5 @@ module type Tid = {
     | Uid: Tid.u<t>
     | Uid2: Tid.u<t>
 }
+
+type t += /** doc comment */ Ext({name: string, msg: string})

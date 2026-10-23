@@ -12,7 +12,7 @@ let _ = nextSibling(node)
 let _ = nodeName(node)
 let _ = nodeType(node)
 let _ = nodeValue(node)
-let _ = setNodeValue(node, Js.Null.return("foo"))
+let _ = setNodeValue(node, Null.make("foo"))
 /* Not supported yet
 let _ = setNodeValue(node, "foo");
 let _ = clearNodeValue(node);

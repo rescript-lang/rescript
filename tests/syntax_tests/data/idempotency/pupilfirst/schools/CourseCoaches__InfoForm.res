@@ -24,7 +24,7 @@ let reducer = (state, action) =>
   | LoadCoachInfo(teams, stats) => {teams: teams, stats: stats, loading: false}
   | RemoveTeam(id) => {
       ...state,
-      teams: state.teams->Js.Array.filter(team => Team.id(team) != id),
+      teams: state.teams->Array.filter(team => Team.id(team) != id),
     }
   }
 
@@ -50,7 +50,7 @@ module CoachInfoQuery = %graphql(`
 let loadCoachTeams = (courseId, coachId, send) =>
   CoachInfoQuery.make(~courseId, ~coachId, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(result => {
+  ->Promise.then(result => {
     let coachTeams =
       result["teams"]["nodes"]->OptionUtils.mapWithDefault(Team.makeArrayFromJs, [])
 
@@ -60,7 +60,7 @@ let loadCoachTeams = (courseId, coachId, send) =>
     }
 
     send(LoadCoachInfo(coachTeams, stats))
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 

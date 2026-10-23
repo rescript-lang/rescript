@@ -1,5 +1,3 @@
-/* should give a warning on unused attribute..   [@@bs.xx] */
-
 type readline
 @send
 external on: (

@@ -86,7 +86,7 @@ let updateEvaluationCriterion = (state, setState, addOrUpdateCriterionCB, criter
 
   let jsGradeAndLabelArray =
     state.gradesAndLabels
-    ->Js.Array.filter(gradesAndLabel => gradesAndLabel->GradeLabel.grade <= state.maxGrade)
+    ->Array.filter(gradesAndLabel => gradesAndLabel->GradeLabel.grade <= state.maxGrade)
     ->Array.map(gl => gl->GradeLabel.asJsObject)
 
   UpdateEvaluationCriterionQuery.make(
@@ -96,7 +96,7 @@ let updateEvaluationCriterion = (state, setState, addOrUpdateCriterionCB, criter
     (),
   )
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(result => {
+  ->Promise.then(result => {
     switch result["updateEvaluationCriterion"]["evaluationCriterion"] {
     | Some(criterion) =>
       let updatedCriterion = EvaluationCriterion.makeFromJs(criterion)
@@ -104,7 +104,7 @@ let updateEvaluationCriterion = (state, setState, addOrUpdateCriterionCB, criter
       setState(state => {...state, saving: false})
     | None => setState(state => {...state, saving: false})
     }
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }
@@ -114,7 +114,7 @@ let createEvaluationCriterion = (state, setState, addOrUpdateCriterionCB, course
 
   let jsGradeAndLabelArray =
     state.gradesAndLabels
-    ->Js.Array.filter(gradesAndLabel => gradesAndLabel->GradeLabel.grade <= state.maxGrade)
+    ->Array.filter(gradesAndLabel => gradesAndLabel->GradeLabel.grade <= state.maxGrade)
     ->Array.map(gl => gl->GradeLabel.asJsObject)
 
   CreateEvaluationCriterionQuery.make(
@@ -126,7 +126,7 @@ let createEvaluationCriterion = (state, setState, addOrUpdateCriterionCB, course
     (),
   )
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(result => {
+  ->Promise.then(result => {
     switch result["createEvaluationCriterion"]["evaluationCriterion"] {
     | Some(criterion) =>
       let newCriterion = EvaluationCriterion.makeFromJs(criterion)
@@ -134,7 +134,7 @@ let createEvaluationCriterion = (state, setState, addOrUpdateCriterionCB, course
       setState(state => {...state, saving: false})
     | None => setState(state => {...state, saving: false})
     }
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }
@@ -156,7 +156,7 @@ let labelClasses = (grade, passGrade) => {
 
 let labels = (state, setState) =>
   state.gradesAndLabels
-  ->Js.Array.filter(gnl => gnl->GradeLabel.grade <= state.maxGrade)
+  ->Array.filter(gnl => gnl->GradeLabel.grade <= state.maxGrade)
   ->Array.map(gradeAndLabel => {
     let grade = gradeAndLabel->GradeLabel.grade
 

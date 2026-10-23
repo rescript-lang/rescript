@@ -1,0 +1,8 @@
+Hover src/HoverInlineRecord.res 2:41
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\ntype person.details = {name: string}\n```"
+  }
+}
+

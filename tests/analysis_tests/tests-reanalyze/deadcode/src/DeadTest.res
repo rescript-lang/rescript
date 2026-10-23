@@ -1,4 +1,4 @@
-let _ = Js.log(ImmutableArray.fromArray)
+let _ = Console.log(ImmutableArray.fromArray)
 let fortytwo = 42
 
 @genType
@@ -66,11 +66,11 @@ module MM: {
 }
 
 let _ = {
-  Js.log(MM.x)
+  Console.log(MM.x)
   44
 }
 
-let () = Js.log(DeadValueTest.valueAlive)
+let () = Console.log(DeadValueTest.valueAlive)
 
 let rec unusedRec = () => unusedRec()
 
@@ -95,7 +95,7 @@ and bar = () => foo()
 
 let withDefaultValue = (~paramWithDefault=3, y) => paramWithDefault + y
 
-let () = Js.log(DeadRT.Root("xzz"))
+let () = Console.log(DeadRT.Root("xzz"))
 
 module type LocalDynamicallyLoadedComponent2 = module type of DynamicallyLoadedComponent
 
@@ -107,7 +107,7 @@ let zzz = {
   let a3 = 3
 }
 
-let () = Js.log(<DynamicallyLoadedComponent s="" />)
+let () = Console.log(<DynamicallyLoadedComponent s="" />)
 
 let second = 1
 
@@ -116,9 +116,9 @@ let deadRef = ref(12)
 @react.component
 let make = (~s) => React.string(s)
 
-let () = Js.log(make)
+let () = Console.log(make)
 
-let theSideEffectIsLogging = Js.log(123)
+let theSideEffectIsLogging = Console.log(123)
 
 let stringLengthNoSideEffects = String.length("sdkdl")
 
@@ -145,7 +145,7 @@ module WithInclude: {
   include T
 }
 
-Js.log(WithInclude.A)
+Console.log(WithInclude.A)
 
 @dead
 let funWithInnerVars = () => {

@@ -26,7 +26,7 @@ let sum = n => {
   v.contents
 }
 
-let len = Belt.List.length
+let len = List.length
 
 let f = (g, x) => {
   let u = switch g(x) {

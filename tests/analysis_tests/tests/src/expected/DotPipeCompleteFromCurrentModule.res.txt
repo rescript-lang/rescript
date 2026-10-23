@@ -1,7 +1,7 @@
 Complete src/DotPipeCompleteFromCurrentModule.res 10:13
-posCursor:[10:13] posNoWhite:[10:12] Found expr:[9:12->13:5]
-posCursor:[10:13] posNoWhite:[10:12] Found expr:[10:11->12:10]
-posCursor:[10:13] posNoWhite:[10:12] Found expr:[10:11->10:13]
+pos_cursor:[10:13] pos_no_white:[10:12] Found expr:[9:12->13:5]
+pos_cursor:[10:13] pos_no_white:[10:12] Found expr:[10:11->12:10]
+pos_cursor:[10:13] pos_no_white:[10:12] Found expr:[10:11->10:13]
 Pexp_field [10:11->10:12] _:[12:8->10:13]
 Completable: Cpath Value[x].""
 Raw opens: 1 X.place holder
@@ -13,7 +13,7 @@ Path x
 ContextPath Value[x]->
 ContextPath Value[x]
 Path x
-CPPipe pathFromEnv:X found:true
+CPPipe path_from_env:X found:true
 Path X.
 Path 
 [

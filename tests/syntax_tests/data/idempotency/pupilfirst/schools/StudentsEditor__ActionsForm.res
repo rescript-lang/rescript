@@ -14,9 +14,9 @@ let dropoutStudent = (id, setSaving, reloadTeamsCB, event) => {
 
   DropoutStudentQuery.make(~id, ())
   ->GraphqlQuery.sendQuery
-  ->Js.Promise.then_(response => {
+  ->Promise.then(response => {
     response["dropoutStudent"]["success"] ? reloadTeamsCB() : setSaving(_ => false)
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->ignore
 }

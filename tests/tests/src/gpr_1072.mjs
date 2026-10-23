@@ -10,42 +10,27 @@ let v_ice_cream3_0 = {
   num: 3
 };
 
-let v_ice_cream3_1 = {
-  hd: {
-    flavor: "x",
-    num: 3
-  },
-  tl: {
-    hd: {
-      flavor: "vanilla",
-      num: 3
-    },
-    tl: /* [] */0
-  }
-};
+let v_ice_cream3_1 = {hd: {
+  flavor: "x",
+  num: 3
+}, tl: {hd: {
+  flavor: "vanilla",
+  num: 3
+}, tl: /* [] */0}};
 
-let v_ice_cream3 = {
-  hd: v_ice_cream3_0,
-  tl: v_ice_cream3_1
-};
+let v_ice_cream3 = {hd: v_ice_cream3_0, tl: v_ice_cream3_1};
 
 let v_ice_cream4_0 = {
   flavor: "vanilla",
   num: 3
 };
 
-let v_ice_cream4_1 = {
-  hd: {
-    flavor: "x",
-    num: 3
-  },
-  tl: /* [] */0
-};
+let v_ice_cream4_1 = {hd: {
+  flavor: "x",
+  num: 3
+}, tl: /* [] */0};
 
-let v_ice_cream4 = {
-  hd: v_ice_cream4_0,
-  tl: v_ice_cream4_1
-};
+let v_ice_cream4 = {hd: v_ice_cream4_0, tl: v_ice_cream4_1};
 
 let vv = {
   x__ignore: 3
@@ -61,22 +46,13 @@ let int_expect2 = {
 
 let int_expects_0 = {};
 
-let int_expects_1 = {
-  hd: {
-    x__ignore: 2
-  },
-  tl: {
-    hd: {
-      x__ignore: 3
-    },
-    tl: /* [] */0
-  }
-};
+let int_expects_1 = {hd: {
+  x__ignore: 2
+}, tl: {hd: {
+  x__ignore: 3
+}, tl: /* [] */0}};
 
-let int_expects = {
-  hd: int_expects_0,
-  tl: int_expects_1
-};
+let int_expects = {hd: int_expects_0, tl: int_expects_1};
 
 let mk_ice = {
   flavour: "vanilla",
@@ -118,22 +94,13 @@ let v_mk7_0 = {
   y: 3
 };
 
-let v_mk7_1 = {
-  hd: {
-    y: 2
-  },
-  tl: {
-    hd: {
-      y: 2
-    },
-    tl: /* [] */0
-  }
-};
+let v_mk7_1 = {hd: {
+  y: 2
+}, tl: {hd: {
+  y: 2
+}, tl: /* [] */0}};
 
-let v_mk7 = {
-  hd: v_mk7_0,
-  tl: v_mk7_1
-};
+let v_mk7 = {hd: v_mk7_0, tl: v_mk7_1};
 
 again("a", 3);
 
@@ -153,23 +120,23 @@ let side_effect = {
   contents: 0
 };
 
-again4(undefined, undefined, 141);
+again4(undefined, undefined, 149);
 
-again4(undefined, undefined, 142);
+again4(undefined, undefined, 150);
 
-again4(undefined, undefined, 143);
+again4(undefined, undefined, 151);
 
-again4(undefined, undefined, 144);
+again4(undefined, undefined, 152);
 
-again4(undefined, undefined, 145);
+again4(undefined, undefined, 153);
 
-again4((side_effect.contents = side_effect.contents + 1 | 0, undefined), undefined, 152);
+again4((side_effect.contents = side_effect.contents + 1 | 0, undefined), undefined, 160);
 
-again4((side_effect.contents = side_effect.contents + 1 | 0, undefined), (side_effect.contents = side_effect.contents - 1 | 0, undefined), 164);
+again4((side_effect.contents = side_effect.contents + 1 | 0, undefined), (side_effect.contents = side_effect.contents - 1 | 0, undefined), 172);
 
-again4(undefined, (side_effect.contents = side_effect.contents - 1 | 0, undefined), 172);
+again4(undefined, (side_effect.contents = side_effect.contents - 1 | 0, undefined), 180);
 
-again4((side_effect.contents = side_effect.contents + 1 | 0, undefined), undefined, 175);
+again4((side_effect.contents = side_effect.contents + 1 | 0, undefined), undefined, 183);
 
 export {
   u,

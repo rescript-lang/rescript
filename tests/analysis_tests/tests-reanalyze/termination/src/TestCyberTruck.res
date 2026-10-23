@@ -447,3 +447,32 @@ let rec testTry = () => {
     testTry()
   }
 }
+
+@progress(progress)
+let rec testObjectLiteral = () => {
+  let _o = {"fst": progress(), "snd": ()}
+  testObjectLiteral()
+}
+
+// Fields evaluate in source order: progress in the first field is
+// established before the recursive call in the second.
+@progress(progress)
+let rec testObjectLiteralProgressFirst = () => {
+  let _o = {"fst": progress(), "snd": testObjectLiteralProgressFirst()}
+}
+
+// The recursive call in the first field prevents the second field's
+// progress from running: must be reported as an infinite loop.
+@progress(progress)
+let rec testObjectLiteralRecursionFirst = () => {
+  let _o = {"fst": testObjectLiteralRecursionFirst(), "snd": progress()}
+}
+
+// Object reads and writes traverse their receiver and value.
+@progress(progress)
+let rec testObjectAccess = (o: {@set "fld": int}) => {
+  let _v = o["fld"]
+  progress()
+  o["fld"] = 42
+  testObjectAccess(o)
+}

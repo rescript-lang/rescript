@@ -17,7 +17,7 @@ let get_runtime_dir root_path =
     match Sys.getenv_opt "RESCRIPT_RUNTIME" with
     | Some env_path ->
       if Debug.verbose () then
-        Printf.printf "[getRuntimeDir] Using RESCRIPT_RUNTIME=%s\n" env_path;
+        Printf.printf "[get_runtime_dir] Using RESCRIPT_RUNTIME=%s\n" env_path;
       Some env_path
     | None -> (
       let result =
@@ -27,15 +27,15 @@ let get_runtime_dir root_path =
       match result with
       | Some path ->
         if Debug.verbose () then
-          Printf.printf "[getRuntimeDir] Resolved via node_modules: %s\n" path;
+          Printf.printf "[get_runtime_dir] Resolved via node_modules: %s\n" path;
         Some path
       | None ->
         let message = "@rescript/runtime could not be found" in
         Log.log message;
         if Debug.verbose () then
           Printf.printf
-            "[getRuntimeDir] Failed to resolve @rescript/runtime from \
-             rootPath=%s\n"
+            "[get_runtime_dir] Failed to resolve @rescript/runtime from \
+             root_path=%s\n"
             root_path;
         None))
   | true -> Some root_path

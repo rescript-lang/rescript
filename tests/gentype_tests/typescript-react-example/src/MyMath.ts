@@ -23,6 +23,10 @@ export type stringFunction = (_: string) => string;
 
 export const useColor = (_x: "tomato" | "gray"): number => 0;
 
+export const useEscapedInlineVariant = (_x: 'Illegal"Name'): number => 0;
+
+export const useUtf8InlineVariant = (_x: "café\npath\\name"): number => 0;
+
 export const higherOrder = (foo: (_1: number, _2: number) => number) =>
   foo(3, 4);
 

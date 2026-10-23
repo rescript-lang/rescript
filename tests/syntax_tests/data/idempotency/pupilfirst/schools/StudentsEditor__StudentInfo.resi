@@ -12,7 +12,7 @@ let affiliation: t => string
 
 let teamName: t => option<string>
 
-let encode: t => Js.Json.t
+let encode: t => JSON.t
 
 let make: (
   ~name: string,

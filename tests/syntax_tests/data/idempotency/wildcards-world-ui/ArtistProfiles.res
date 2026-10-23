@@ -17,7 +17,7 @@ module ArtistDetails = {
   ) => {
     let clearAndPush = RootProvider.useClearNonUrlStateAndPushRoute()
     let artistEthAddress =
-      \"||||"(optArtistEthAddress, CONSTANTS.nullEthAddress)->Js.String.toLowerCase
+      \"||||"(optArtistEthAddress, CONSTANTS.nullEthAddress)->String.toLowerCase
     let userInfoContext = UserProvider.useUserInfoContext()
     let reloadUser = forceReload => userInfoContext.update(artistEthAddress, forceReload)
     reloadUser(false)
@@ -29,7 +29,7 @@ module ArtistDetails = {
         \"<$>"(\">>="(\">>="(optProfile, a => a.image), img => img->Array.get(0)), a =>
           a.contentUrl
         ),
-        content => Js.Dict.get(content, "/"),
+        content => Dict.get(content, "/"),
       )->Option.mapWithDefault(Blockie.makeBlockie(artistEthAddress), hash =>
         "https://ipfs.infura.io/ipfs/" ++ hash
       )
@@ -47,7 +47,7 @@ module ArtistDetails = {
       ) =>
         tokens->Array.map(token => token.id->Option.getWithDefault("_")->TokenId.fromStringUnsafe)
       )
-    Js.log(optArtistUnlaunchedWildcards)
+    Console.log(optArtistUnlaunchedWildcards)
 
     let currentUsdEthPrice = UsdPriceProvider.useUsdPrice()
     let (totalCollectedMainnetEth, totalCollectMaticDai) = QlHooks.useTotalRaisedAnimalGroup(
@@ -61,7 +61,7 @@ module ArtistDetails = {
     | (Some(mainnetEth), Some(maticDai)) => (
         (currentUsdEthPrice->Option.mapWithDefault(0., usdEthRate =>
           mainnetEth->Eth.getFloat(Eth.Usd(usdEthRate, 2))
-        ) +. maticDai->Eth.getFloat(Eth.Eth(#ether)))->Js.Float.toFixedWithPrecision(~digits=6),
+        ) +. maticDai->Eth.getFloat(Eth.Eth(#ether)))->Float.toFixedWithPrecision(~digits=6),
         mainnetEth->Web3Utils.fromWeiBNToEthPrecision(~digits=4) ++
           (" ETH + " ++
           (maticDai->Web3Utils.fromWeiBNToEthPrecision(~digits=2) ++ " DAI")),
@@ -253,7 +253,7 @@ module ArtistDetails = {
 @react.component
 let make = (~artistIdentifier: string) => {
   // let artistAddress =
-  Js.log(artistIdentifier)
+  Console.log(artistIdentifier)
 
   let optArtistEthAddress = QlHooks.useArtistEthAddress(~artistIdentifier)
   let optArtistName = QlHooks.useArtistName(~artistIdentifier)

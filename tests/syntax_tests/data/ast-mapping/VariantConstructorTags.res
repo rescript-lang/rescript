@@ -1,0 +1,26 @@
+type renamed =
+  | @as("b") A
+  | B
+
+@unboxed type escaped = | @as("a\nb\"c") Escaped
+
+/* Keep the source spelling in the parsetree rather than reconstructing it
+   from the decoded runtime string. */
+@unboxed type nonCanonical = | @as("\u0041") NonCanonical
+
+@unboxed type backquoted = | @as(`tick`) Backquoted
+
+type otherLiterals =
+  | @as(1) Int
+  | @as(0xA) Hex
+  | @as(1.5) Float
+  | @as(1n) BigInt
+  | @as(true) Bool
+  | @as(null) Null
+  | @as(undefined) Undefined
+
+@unboxed type notATag = | @as(Array) Invalid
+
+@unboxed type twoTags = | @as("one") @as("two") Two
+
+@unboxed type ordered = | @dead("x") @as("two") Ordered

@@ -6,14 +6,14 @@ let called = ref(0)
 let g = () => {
   let rec v = ref(next)
   and next = (i, b) => {
-    incr(called)
+    called.contents = called.contents + 1
     if b {
       ignore(v.contents(i, false))
     }
     i + 1
   }
 
-  Console.log(Js.Int.toString(next(0, true)))
+  Console.log(Int.toString(next(0, true)))
 }
 
 g()

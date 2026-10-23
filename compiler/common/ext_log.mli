@@ -25,9 +25,10 @@
 (** A Poor man's logging utility
 
     Example:
-    {[ 
-      err __LOC__ "xx"
+    {[
+      dwarn ~__POS__ "unexpected %s" name
     ]}
+    prints a warning to stderr when [-debug-ir] is set.
 *)
 
 type 'a logging = ('a, Format.formatter, unit, unit, unit, unit) format6 -> 'a

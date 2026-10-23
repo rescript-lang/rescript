@@ -1,4 +1,3 @@
-open Belt
 open Mocha
 open Test_utils
 

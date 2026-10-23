@@ -79,7 +79,7 @@ end = struct
     let find_did_you_mean_line message =
       message |> String.split_on_char '\n'
       |> List.find_opt (fun line ->
-             String.starts_with ~prefix:did_you_mean_prefix (String.trim line))
+          String.starts_with ~prefix:did_you_mean_prefix (String.trim line))
     in
 
     let message = diagnostic_message diagnostic in
@@ -323,10 +323,10 @@ end = struct
           let fields =
             record_field_names
             |> List.mapi (fun index field_name ->
-                   let padding =
-                     if index = 0 then "  " else padding_content_record_field
-                   in
-                   Printf.sprintf "%s%s: %s,\n" padding field_name todo_value)
+                let padding =
+                  if index = 0 then "  " else padding_content_record_field
+                in
+                Printf.sprintf "%s%s: %s,\n" padding field_name todo_value)
             |> String.concat ""
           in
           fields ^ padding_content_end_brace
@@ -338,7 +338,7 @@ end = struct
           let fields =
             record_field_names
             |> List.map (fun field_name ->
-                   Printf.sprintf "%s: %s" field_name todo_value)
+                Printf.sprintf "%s: %s" field_name todo_value)
             |> String.concat ", "
           in
           prefix ^ fields

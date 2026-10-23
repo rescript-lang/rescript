@@ -67,8 +67,6 @@ val begin_def : unit -> unit
 val end_def : unit -> unit
 (* Lower the variable level by one at the end of a definition *)
 
-val begin_class_def : unit -> unit
-val raise_nongen_level : unit -> unit
 val reset_global_level : unit -> unit
 (* Reset the global level before typing an expression *)
 
@@ -103,30 +101,31 @@ val repr : type_expr -> type_expr
 (* Return the canonical representative of a type. *)
 
 val object_fields : type_expr -> type_expr
-val flatten_fields :
-  type_expr -> (string * field_kind * type_expr) list * type_expr
 
-(* Transform a field type into a list of pairs label-type *)
-(* The fields are sorted *)
+type field_info = {
+  f_name: string;
+  f_mut: field_mutability ref;
+      (* the field's cell as stored; read the class value with
+         [Btype.mutability_repr] *)
+  f_typ: type_expr;
+}
+
+type fields = field_info list
+
+val flatten_fields : type_expr -> fields * type_expr
+
+(* Transform a field type into a sorted list of field infos *)
 val associate_fields :
-  (string * field_kind * type_expr) list ->
-  (string * field_kind * type_expr) list ->
-  (string * field_kind * type_expr * field_kind * type_expr) list
-  * (string * field_kind * type_expr) list
-  * (string * field_kind * type_expr) list
-val opened_object : type_expr -> bool
-val close_object : type_expr -> unit
-val row_variable : type_expr -> type_expr
-(* Return the row variable of an open object type *)
+  fields -> fields -> (field_info * field_info) list * fields * fields
 
-val set_object_name :
-  Ident.t -> type_expr -> type_expr list -> type_expr -> unit
-val remove_object_name : type_expr -> unit
-val hide_private_methods : type_expr -> unit
-val find_cltype_for_path : Env.t -> Path.t -> type_declaration * type_expr
+val object_row_is_structurally_open : type_expr -> bool
+(** Whether an object row is structurally open: its terminator is a [Tvar],
+    [Tunivar], or [Tconstr], rather than [Tnil]. This does not imply that the
+    row can be strengthened. Row-strengthening operations that add a field or
+    promote field mutability require a [Tvar] terminator. *)
+
 val lid_of_path : ?hash:string -> Path.t -> Longident.t
 
-val sort_row_fields : (label * row_field) list -> (label * row_field) list
 val merge_row_fields :
   (label * row_field) list ->
   (label * row_field) list ->
@@ -143,31 +142,26 @@ val generalize_expansive : Env.t -> type_expr -> unit
 (* Generalize the covariant part of a type, making
    contravariant branches non-generalizable *)
 
-val generalize_global : type_expr -> unit
-(* Generalize the structure of a type, lowering variables
-   to !global_level *)
-
 val generalize_structure : type_expr -> unit
-(* Same, but variables are only lowered to !current_level *)
+(** Generalize eligible structural nodes, but lower their variables to
+    [current_level] instead of generalizing the variables. *)
 
 val correct_levels : type_expr -> type_expr
 (* Returns a copy with decreasing levels *)
 
-val limited_generalize : type_expr -> type_expr -> unit
-(* Only generalize some part of the type
-   Make the remaining of the type non-generalizable *)
-
 val instance : ?partial:bool -> Env.t -> type_expr -> type_expr
+(** Instantiate a type scheme in a fresh copy session.
 
-(* Take an instance of a type scheme *)
-(* partial=None  -> normal
-   partial=false -> newvar() for non generic subterms
-   partial=true  -> newty2 ty.level Tvar for non generic subterms *)
+    Without [partial], generic nodes are copied and non-generic nodes are
+    shared. With [partial], non-generic subterms without free universal
+    variables are replaced by fresh variables: at [current_level] when false,
+    or at the original subterm's level when true. Structured subterms with free
+    universal variables are copied. Copies belonging to local GADT constraints
+    are recorded in [env], but that recording does not select additional nodes
+    for copying. *)
+
 val instance_def : type_expr -> type_expr
 (* use defaults *)
-
-val generic_instance : Env.t -> type_expr -> type_expr
-(* Same as instance, but new nodes at generic_level *)
 
 val instance_list : Env.t -> type_expr list -> type_expr list
 (* Take an instance of a list of type schemes *)
@@ -180,23 +174,29 @@ val instance_constructor :
 
 val instance_parameterized_type :
   ?keep_names:bool -> type_expr list -> type_expr -> type_expr list * type_expr
-val instance_parameterized_type_2 :
-  type_expr list ->
-  type_expr list ->
-  type_expr ->
-  type_expr list * type_expr list * type_expr
 val instance_declaration : type_declaration -> type_declaration
+
 val instance_poly :
   ?keep_names:bool ->
-  bool ->
+  fixed:bool ->
   type_expr list ->
   type_expr ->
   type_expr list * type_expr
-(* Take an instance of a type scheme containing free univars *)
+(** [instance_poly ~fixed univars body] replaces the universal variables of a
+    [Tpoly(body, univars)] scheme with fresh variables and returns those
+    variables with the copied body.
+
+    [fixed] controls how fixed polymorphic-variant rows are copied; when true,
+    the copied rows remain closed to extension. It does not by itself select
+    scheme introduction or elimination. A type-checking caller introducing a
+    value at the scheme must separately verify generality. Callers in Typecore
+    do this with the local [check_univars] operation. *)
 
 val instance_label :
   bool -> label_description -> type_expr list * type_expr * type_expr
-(* Same, for a label *)
+(** Instantiate a record label's argument and result types. The Boolean is the
+    [fixed] argument passed to [instance_poly] when the argument is a
+    polymorphic scheme. *)
 
 val apply : Env.t -> type_expr list -> type_expr -> type_expr list -> type_expr
 (* [apply [p1...pN] t [a1...aN]] match the arguments [ai] to
@@ -211,7 +211,6 @@ val expand_head_opt : Env.t -> type_expr -> type_expr
 (** The compiler's own version of [expand_head] necessary for type-based
     optimisations. *)
 
-val full_expand : Env.t -> type_expr -> type_expr
 val extract_concrete_typedecl :
   Env.t -> type_expr -> Path.t * Path.t * type_declaration
 (* Return the original path of the types, and the first concrete
@@ -235,67 +234,61 @@ val unify_var : Env.t -> type_expr -> type_expr -> unit
 val with_passive_variants : ('a -> 'b) -> 'a -> 'b
 (* Call [f] in passive_variants mode, for exhaustiveness check. *)
 
-val filter_arrow :
-  env:Env.t -> arity:arity -> type_expr -> arg_label -> type_expr * type_expr
-(* A special case of unification (with l:'a -> 'b). *)
+val filter_arrow_n :
+  env:Env.t -> type_expr -> arg_label list -> type_expr list * type_expr
+(* A special case of unification: unify with an n-ary arrow taking
+   parameters with the given labels; return parameter and result types. *)
 
-val filter_method : Env.t -> string -> private_flag -> type_expr -> type_expr
-(* A special case of unification (with {m : 'a; 'b}). *)
+val filter_method : Env.t -> string -> type_expr -> type_expr
+(** Constrain a type to have the named readable object field and return the
+    field's stored type. If lookup reaches a [Tvar] row terminator, a missing
+    field extends that inferred row as [Immutable]. A row ending in [Tunivar],
+    [Tconstr], or [Tnil] cannot acquire a missing field. A non-object type which
+    cannot be constrained to an object also raises [Unify]. *)
 
-val check_filter_method : Env.t -> string -> private_flag -> type_expr -> unit
-(* A special case of unification (with {m : 'a; 'b}), returning unit. *)
+type object_field_write_error = Owrite_missing | Owrite_not_mutable
+
+val filter_object_field_for_write :
+  Env.t -> string -> type_expr -> (type_expr, object_field_write_error) Result.t
+(** Constrain a type for assignment to the named object field.
+
+    A mutable field returns its stored type. When the object row ends in a
+    [Tvar], an immutable field is promoted without changing its type, and a
+    missing field is added as mutable. [Tunivar] and private-row [Tconstr]
+    terminators are structurally open but cannot be strengthened. With either
+    of those terminators, or with [Tnil], an immutable field returns
+    [Owrite_not_mutable] and a missing field returns [Owrite_missing]. *)
 
 val occur_in : Env.t -> type_expr -> type_expr -> bool
 val deep_occur : type_expr -> type_expr -> bool
-val filter_self_method :
-  Env.t ->
-  string ->
-  private_flag ->
-  (Ident.t * type_expr) Meths.t ref ->
-  type_expr ->
-  Ident.t * type_expr
 val moregeneral : Env.t -> bool -> type_expr -> type_expr -> bool
 (* Check if the first type scheme is more general than the second. *)
 
-val rigidify : type_expr -> type_expr list
 (* "Rigidify" a type and return its type variable *)
 
-val all_distinct_vars : Env.t -> type_expr list -> bool
 (* Check those types are all distinct type variables *)
 
 val matches : Env.t -> type_expr -> type_expr -> bool
 (* Same as [moregeneral false], implemented using the two above
    functions and backtracking. Ignore levels *)
 
-type class_match_failure =
-  | CM_Virtual_class
-  | CM_Parameter_arity_mismatch of int * int
-  | CM_Type_parameter_mismatch of Env.t * (type_expr * type_expr) list
-  | CM_Parameter_mismatch of Env.t * (type_expr * type_expr) list
-  | CM_Val_type_mismatch of string * Env.t * (type_expr * type_expr) list
-  | CM_Meth_type_mismatch of string * Env.t * (type_expr * type_expr) list
-  | CM_Non_mutable_value of string
-  | CM_Non_concrete_value of string
-  | CM_Missing_value of string
-  | CM_Missing_method of string
-  | CM_Hide_public of string
-  | CM_Hide_virtual of string * string
-  | CM_Public_method of string
-  | CM_Private_method of string
-  | CM_Virtual_method of string
 val equal : Env.t -> bool -> type_expr list -> type_expr list -> bool
 (* [equal env [x1...xn] tau [y1...yn] sigma]
    checks whether the parameterized types
    [/\x1.../\xn.tau] and [/\y1.../\yn.sigma] are equivalent. *)
 
 val enlarge_type : Env.t -> type_expr -> type_expr * bool
-(* Make a type larger, flag is true if some pruning had to be done *)
+(** Build a supertype approximation used by the first coercion-checking path.
+    The result may share unchanged nodes with its input. Changed object fields
+    have independent mutability cells so trial unification cannot change the
+    input. The flag reports that a more complex coercion may do better. *)
 
 val subtype : Env.t -> type_expr -> type_expr -> unit -> unit
-(* [subtype env t1 t2] checks that [t1] is a subtype of [t2].
-   It accumulates the constraints the type variables must
-   enforce and returns a function that enforces this
-   constraints. *)
+(** [subtype env t1 t2] checks that [t1] is a subtype of [t2] and returns a
+    function which enforces the type-variable equality constraints accumulated
+    during traversal. Callers can bind variables to their actual types before
+    invoking the returned function. Specialized cases may perform speculative
+    unification while constructing the constraints. *)
 
 val nondep_type : Env.t -> Ident.t -> type_expr -> type_expr
 (* Return a type equivalent to the given type but without
@@ -310,9 +303,7 @@ val nondep_extension_constructor :
   Env.t -> Ident.t -> extension_constructor -> extension_constructor
 
 (* Same for extension constructor *)
-(*val correct_abbrev: Env.t -> Path.t -> type_expr list -> type_expr -> unit*)
 val cyclic_abbrev : Env.t -> Ident.t -> type_expr -> bool
-val is_contractive : Env.t -> Path.t -> bool
 val normalize_type : Env.t -> type_expr -> unit
 
 val closed_schema : Env.t -> type_expr -> bool
@@ -324,16 +315,8 @@ val free_variables : ?env:Env.t -> type_expr -> type_expr list
 
 val closed_type_decl : type_declaration -> type_expr option
 val closed_extension_constructor : extension_constructor -> type_expr option
-type closed_class_failure =
-  | CC_Method of type_expr * bool * string * type_expr
-  | CC_Value of type_expr * bool * string * type_expr
-
 val unalias : type_expr -> type_expr
-val arity : type_expr -> int
 (* Return the arity (as for curried functions) of the given type. *)
-
-val collapse_conj_params : Env.t -> type_expr list -> unit
-(* Collapse conjunctive types in class parameters *)
 
 val get_current_level : unit -> int
 val wrap_trace_gadt_instances : Env.t -> ('a -> 'b) -> 'a -> 'b
@@ -358,3 +341,9 @@ val variant_is_subtype :
   (Env.t -> Types.row_desc -> Types.type_expr -> bool) ref
 
 val get_arity : Env.t -> type_expr -> int option
+
+module For_test : sig
+  val previous_env_is_empty : unit -> bool
+  (** The environment of the last expansion on this domain is still the
+      initial empty one. *)
+end

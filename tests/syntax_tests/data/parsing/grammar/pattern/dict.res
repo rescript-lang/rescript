@@ -5,8 +5,8 @@ let someDict = dict{
 let dict{"one": ?one} = someDict
 
 let foo = () => switch someDict {
-| dict{"one": "one"} => Js.log("one")
-| _ => Js.log("not one")
+| dict{"one": "one"} => Console.log("one")
+| _ => Console.log("not one")
 }
 
 @unboxed
@@ -39,9 +39,9 @@ let decodeUser = (json: json): option<user> => {
       },
     })
   | _ =>
-    Js.log("Not an object.")
+    Console.log("Not an object.")
     None
   }
 }
 
-Js.log(decodeUser(jsonParse(`{"name": "John", "age": 30}`)))
+Console.log(decodeUser(jsonParse(`{"name": "John", "age": 30}`)))

@@ -18,7 +18,7 @@ type state = {
 let targetStatusClasses = targetStatus => {
   let statusClasses =
     "curriculum__target-status--" ++
-    (targetStatus->TargetStatus.statusToString->Js.String.toLowerCase)
+    (targetStatus->TargetStatus.statusToString->String.toLowerCase)
   "curriculum__target-status px-3 py-px ml-4 h-6 " ++ statusClasses
 }
 

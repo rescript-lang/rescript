@@ -8,5 +8,5 @@ let rec emitModuleAccessPath = moduleAccessPath =>
   | Kaboom => ""
   }
 
-let () = Js.log(Kaboom)
+let () = Console.log(Kaboom)
 

@@ -33,12 +33,12 @@ let normalize_external_reference_key ~namespace ~module_name ~path =
   | _ -> (module_name, path)
 
 let get_loc_item ~full ~pos ~debug =
-  let log n msg = if debug then Printf.printf "getLocItem #%d: %s\n" n msg in
+  let log n msg = if debug then Printf.printf "get_loc_item #%d: %s\n" n msg in
   let pos = line_col_to_cmt_loc ~pos in
   let loc_items = loc_items_for_pos ~extra:full.extra pos in
   if !Log.verbose then
     print_endline
-      ("locItems:\n  "
+      ("loc_items:\n  "
       ^ (loc_items |> List.map loc_item_to_string |> String.concat "\n  "));
   let name_of li =
     match li.loc_type with
@@ -78,21 +78,6 @@ let get_loc_item ~full ~pos ~debug =
        heuristic for: [Props, x], give loc of `x`";
     if debug then Printf.printf "n1:%s n2:%s\n" (name_of li1) (name_of li2);
     Some li2
-  | [
-   ({loc_type = Typed (_, _, LocalReference _)} as li1);
-   ({
-      loc_type = Typed (_, _, GlobalReference ("Js_OO", ["unsafe_downgrade"], _));
-    } as li2);
-   li3;
-  ]
-  (* For older compiler 9.0 or earlier *)
-    when li1.loc = li2.loc && li2.loc = li3.loc ->
-    (* Not currently testable on 9.1.4 *)
-    log 6
-      "heuristic for JSX and compiler combined:\n\
-       ~x becomes Js_OO.unsafe_downgrade(Props)#x\n\
-       heuristic for: [Props, unsafe_downgrade, x], give loc of `x`";
-    Some li3
   | [
    ({loc_type = Typed (_, _, LocalReference (_, Value))} as li1);
    ({loc_type = Typed (_, _, Definition (_, Value))} as li2);
@@ -234,7 +219,7 @@ let alternate_declared ~state ~(file : File.t) ~package
     match paths with
     | IntfAndImpl {resi; res} -> (
       maybe_log
-        ("alternateDeclared for " ^ file.module_name ^ " has both resi and res");
+        ("alternate_declared for " ^ file.module_name ^ " has both resi and res");
       let alternate_uri = if Uri.is_interface file.uri then res else resi in
       match Cmt.full_from_uri ~state ~uri:(Uri.from_path alternate_uri) with
       | None -> None
@@ -252,7 +237,7 @@ let alternate_declared ~state ~(file : File.t) ~package
         | None -> None
         | Some declared -> Some (file, extra, declared)))
     | _ ->
-      maybe_log ("alternateDeclared for " ^ file.module_name ^ " not found");
+      maybe_log ("alternate_declared for " ^ file.module_name ^ " not found");
 
       None)
 
@@ -394,7 +379,7 @@ let definition_for_loc_item ~state ~full:{file; package} loc_item =
   | LModule (GlobalReference (module_name, path, tip))
   | Typed (_, _, GlobalReference (module_name, path, tip)) -> (
     maybe_log
-      ("Typed GlobalReference moduleName:" ^ module_name ^ " path:"
+      ("Typed GlobalReference module_name:" ^ module_name ^ " path:"
      ^ path_to_string path ^ " tip:" ^ Tip.to_string tip);
     match Process_cmt.file_for_module ~state ~package module_name with
     | None -> None
@@ -496,7 +481,7 @@ let for_local_stamp ~state ~full:{file; extra; package} stamp (tip : Tip.t) =
                   | Some locs ->
                     locs
                     |> List.map (fun loc ->
-                           {uri = file.uri; loc_opt = Some loc})))
+                        {uri = file.uri; loc_opt = Some loc})))
               (* if this file has a corresponding interface or implementation file
                  also find the references in that file *)
             in
@@ -513,24 +498,23 @@ let for_local_stamp ~state ~full:{file; extra; package} stamp (tip : Tip.t) =
               package.project_files |> File_set.elements
               |> List.filter (fun name -> name <> file.module_name)
               |> List.map (fun module_name ->
-                     Cmt.fulls_from_module ~package ~module_name
-                     |> List.map (fun {file; extra} ->
-                            match
-                              Hashtbl.find_opt extra.external_references
-                                normalized_module_name
-                            with
-                            | None -> []
-                            | Some refs ->
-                              let locs =
-                                refs
-                                |> Utils.filter_map (fun (p, t, locs) ->
-                                       if p = normalized_path && t = tip then
-                                         Some locs
-                                       else None)
-                              in
-                              locs
-                              |> List.map (fun loc ->
-                                     {uri = file.uri; loc_opt = Some loc})))
+                  Cmt.fulls_from_module ~package ~module_name
+                  |> List.map (fun {file; extra} ->
+                      match
+                        Hashtbl.find_opt extra.external_references
+                          normalized_module_name
+                      with
+                      | None -> []
+                      | Some refs ->
+                        let locs =
+                          refs
+                          |> Utils.filter_map (fun (p, t, locs) ->
+                              if p = normalized_path && t = tip then Some locs
+                              else None)
+                        in
+                        locs
+                        |> List.map (fun loc ->
+                            {uri = file.uri; loc_opt = Some loc})))
               |> List.concat |> List.concat
             in
             alternative_references @ externals)
@@ -549,17 +533,17 @@ let all_references_for_loc_item ~state ~full:({file; package} as full) loc_item
     let other_modules_references =
       package.project_files |> File_set.elements
       |> Utils.filter_map (fun module_name ->
-             Cmt.full_from_module ~package ~module_name)
+          Cmt.full_from_module ~package ~module_name)
       |> List.map (fun full ->
-             match Hashtbl.find_opt full.extra.file_references module_name with
-             | None -> []
-             | Some locs ->
-               locs |> Location_set.elements
-               |> List.map (fun loc ->
-                      {
-                        uri = Uri.from_path loc.Location.loc_start.pos_fname;
-                        loc_opt = Some loc;
-                      }))
+          match Hashtbl.find_opt full.extra.file_references module_name with
+          | None -> []
+          | Some locs ->
+            locs |> Location_set.elements
+            |> List.map (fun loc ->
+                {
+                  uri = Uri.from_path loc.Location.loc_start.pos_fname;
+                  loc_opt = Some loc;
+                }))
       |> List.flatten
     in
     let target_module_references =

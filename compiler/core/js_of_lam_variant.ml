@@ -32,7 +32,7 @@ let eval (arg : J.expression) (dispatches : (string * string) list) : E.t =
   if arg == E.undefined then E.undefined
   else
     match arg.expression_desc with
-    | Str {txt} ->
+    | Str txt ->
       let s = Ext_list.assoc_by_string dispatches txt None in
       E.str s
     | _ ->
@@ -40,13 +40,14 @@ let eval (arg : J.expression) (dispatches : (string * string) list) : E.t =
         [
           S.string_switch arg
             (Ext_list.map dispatches (fun (s, r) ->
-                 ( Ast_untagged_variants.String s,
+                 ( Variant_runtime.Literal (String s),
                    J.
                      {
                        switch_body = [S.return_stmt (E.str r)];
                        should_break = false;
                        (* FIXME: if true, still print break*)
                        comment = None;
+                       source_loc = None;
                      } )));
         ]
 
@@ -63,7 +64,7 @@ let eval (arg : J.expression) (dispatches : (string * string) list) : E.t =
 let eval_as_event (arg : J.expression)
     (dispatches : (string * string) list option) =
   match arg.expression_desc with
-  | Caml_block ([{expression_desc = Str {txt}}; cb], _, _, Blk_poly_var _)
+  | Caml_block ([{expression_desc = Str txt}; cb], _, Blk_poly_var)
     when Js_analyzer.no_side_effect_expression cb ->
     let v =
       match dispatches with
@@ -80,13 +81,14 @@ let eval_as_event (arg : J.expression)
               S.string_switch
                 (E.poly_var_tag_access arg)
                 (Ext_list.map dispatches (fun (s, r) ->
-                     ( Ast_untagged_variants.String s,
+                     ( Variant_runtime.Literal (String s),
                        J.
                          {
                            switch_body = [S.return_stmt (E.str r)];
                            should_break = false;
                            (* FIXME: if true, still print break*)
                            comment = None;
+                           source_loc = None;
                          } )));
             ]
         | None -> E.poly_var_tag_access arg),
@@ -101,24 +103,25 @@ let eval_as_int (arg : J.expression) (dispatches : (string * int) list) : E.t =
   if arg == E.undefined then E.undefined
   else
     match arg.expression_desc with
-    | Str {txt} ->
+    | Str txt ->
       E.int (Int32.of_int (Ext_list.assoc_by_string dispatches txt None))
     | _ ->
       E.of_block
         [
           S.string_switch arg
             (Ext_list.map dispatches (fun (s, r) ->
-                 ( Ast_untagged_variants.String s,
+                 ( Variant_runtime.Literal (String s),
                    J.
                      {
                        switch_body = [S.return_stmt (E.int (Int32.of_int r))];
                        should_break = false;
                        (* FIXME: if true, still print break*)
                        comment = None;
+                       source_loc = None;
                      } )));
         ]
 
 let eval_as_unwrap (arg : J.expression) : E.t =
   match arg.expression_desc with
-  | Caml_block ([{expression_desc = Number _}; cb], _, _, _) -> cb
+  | Caml_block ([{expression_desc = Number _}; cb], _, _) -> cb
   | _ -> E.poly_var_value_access arg

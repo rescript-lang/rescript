@@ -1,0 +1,1 @@
+- Commit records describe each changed compiler object in its own form (parse and typed trees, Lambda and JavaScript, diagnostics, typing rules, clause matrices, representations) Before and After, and the semantic diff page draws each form in its own way, Before and After side by side.

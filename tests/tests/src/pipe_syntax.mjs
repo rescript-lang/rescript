@@ -42,10 +42,10 @@ function f2(a, b, c, d) {
 
 function f3(a, b, c, d, e) {
   let __tuple_internal_obj = a(b);
-  let param_0 = c(__tuple_internal_obj, d);
-  let param_1 = d(__tuple_internal_obj, 1, 2);
-  let param_2 = e(__tuple_internal_obj);
-  return (param_0 + param_1 | 0) + param_2 | 0;
+  let u = c(__tuple_internal_obj, d);
+  let v = d(__tuple_internal_obj, 1, 2);
+  let h = e(__tuple_internal_obj);
+  return (u + v | 0) + h | 0;
 }
 
 function f4(a, b, c) {

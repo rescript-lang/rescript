@@ -10,15 +10,15 @@ Promise.config({
 })
 `)
 
-let let_ = (p, cb) => Js.Promise.then_(cb, p)
+let let_ = (p, cb) => Promise.then(cb, p)
 
-let mapAsync = (p, cb) => Js.Promise.then_(a => cb(a)->Js.Promise.resolve, p)
+let mapAsync = (p, cb) => Promise.then(a => cb(a)->Promise.resolve, p)
 
-let async = a => Js.Promise.resolve(a)
+let async = a => Promise.resolve(a)
 
-type promise<'a> = Js.Promise.t<'a>
+type promise<'a> = Promise.t<'a>
 
-let catchAsync = (p, cb) => Js.Promise.catch(cb, p)
+let catchAsync = (p, cb) => Promise.catch(p, cb)
 
 let asyncFromResult = result =>
   // Lift it into a promise in case the original caller wasn't already in the promise. We want to use Promise's error catching behavior, and not Javascript's error catching behavior.
@@ -27,17 +27,17 @@ let asyncFromResult = result =>
   ->mapAsync(a =>
     switch a {
     | Ok(b) => b
-    | Error(err) => Js.Exn.raiseError(err->Obj.magic)
+    | Error(err) => Exn.raiseError(err->Obj.magic)
     }
   )
 
 let attemptMapAsync = (
-  promise: Js.Promise.t<'a>,
+  promise: Promise.t<'a>,
   attempter: 'a => result<'b, 'error>,
-): Js.Promise.t<'b> =>
+): Promise.t<'b> =>
   promise->mapAsync(a =>
     switch attempter(a) {
     | Ok(b) => b
-    | Error(err) => Js.Exn.raiseError(err->Obj.magic)
+    | Error(err) => Exn.raiseError(err->Obj.magic)
     }
   )

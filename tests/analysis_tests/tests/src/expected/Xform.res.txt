@@ -1,5 +1,5 @@
 Xform src/Xform.res 6:5
-posCursor:[6:3] posNoWhite:[6:1] Found expr:[6:0->11:1]
+pos_cursor:[6:3] pos_no_white:[6:1] Found expr:[6:0->11:1]
 Completable: Cpath Value[kind]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -150,7 +150,7 @@ newText:
            : int
 
 Xform src/Xform.res 48:21
-posCursor:[48:21] posNoWhite:[48:19] Found expr:[48:15->48:25]
+pos_cursor:[48:21] pos_no_white:[48:19] Found expr:[48:15->48:25]
 Completable: Cpath Value[name]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -234,7 +234,7 @@ newText:
 
 
 Xform src/Xform.res 80:4
-posCursor:[78:16] posNoWhite:[78:14] Found expr:[78:9->82:1]
+pos_cursor:[78:16] pos_no_white:[78:14] Found expr:[78:9->82:1]
 Completable: Cpath Value[variant]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -254,7 +254,7 @@ newText:
   Second | Third | Fourth(_)
 
 Xform src/Xform.res 86:4
-posCursor:[84:16] posNoWhite:[84:14] Found expr:[84:9->88:1]
+pos_cursor:[84:16] pos_no_white:[84:14] Found expr:[84:9->88:1]
 Completable: Cpath Value[variant]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -274,7 +274,7 @@ newText:
   Third | Fourth(_)
 
 Xform src/Xform.res 93:4
-posCursor:[90:16] posNoWhite:[90:14] Found expr:[90:9->95:1]
+pos_cursor:[90:16] pos_no_white:[90:14] Found expr:[90:9->95:1]
 Completable: Cpath Value[variant]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -294,7 +294,7 @@ newText:
   First | Third | Fourth(_)
 
 Xform src/Xform.res 101:4
-posCursor:[99:16] posNoWhite:[99:14] Found expr:[99:9->103:1]
+pos_cursor:[99:16] pos_no_white:[99:14] Found expr:[99:9->103:1]
 Completable: Cpath Value[polyvariant]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -314,7 +314,7 @@ newText:
   #second | #"illegal identifier" | #third(_)
 
 Xform src/Xform.res 107:4
-posCursor:[105:16] posNoWhite:[105:14] Found expr:[105:9->109:1]
+pos_cursor:[105:16] pos_no_white:[105:14] Found expr:[105:9->109:1]
 Completable: Cpath Value[polyvariant]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -334,7 +334,7 @@ newText:
   #"illegal identifier" | #third(_)
 
 Xform src/Xform.res 115:4
-posCursor:[113:16] posNoWhite:[113:14] Found expr:[113:9->117:1]
+pos_cursor:[113:16] pos_no_white:[113:14] Found expr:[113:9->117:1]
 Completable: Cpath Value[variantOpt]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -354,7 +354,7 @@ newText:
   Some(Second | Third | Fourth(_)) | None
 
 Xform src/Xform.res 121:4
-posCursor:[119:16] posNoWhite:[119:14] Found expr:[119:9->123:1]
+pos_cursor:[119:16] pos_no_white:[119:14] Found expr:[119:9->123:1]
 Completable: Cpath Value[variantOpt]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -374,7 +374,7 @@ newText:
   Some(Third | Fourth(_)) | None
 
 Xform src/Xform.res 127:4
-posCursor:[125:16] posNoWhite:[125:14] Found expr:[125:9->129:1]
+pos_cursor:[125:16] pos_no_white:[125:14] Found expr:[125:9->129:1]
 Completable: Cpath Value[variantOpt]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -394,7 +394,7 @@ newText:
   Some(Third | Fourth(_)) | None
 
 Xform src/Xform.res 136:4
-posCursor:[133:16] posNoWhite:[133:14] Found expr:[133:9->138:1]
+pos_cursor:[133:16] pos_no_white:[133:14] Found expr:[133:9->138:1]
 Completable: Cpath Value[polyvariantOpt]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -414,7 +414,7 @@ newText:
   Some(#"illegal identifier" | #second | #third(_))
 
 Xform src/Xform.res 142:4
-posCursor:[140:16] posNoWhite:[140:14] Found expr:[140:9->144:1]
+pos_cursor:[140:16] pos_no_white:[140:14] Found expr:[140:9->144:1]
 Completable: Cpath Value[polyvariantOpt]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -432,4 +432,16 @@ TextDocumentEdit: Xform.res
 newText:
   <--here
   Some(#"illegal identifier" | #third(_)) | None
+
+Xform src/Xform.res 146:23
+Hit: Add type annotation
+
+TextDocumentEdit: Xform.res
+{
+  "end": { "character": 27, "line": 146 },
+  "start": { "character": 21, "line": 146 }
+}
+newText:
+                     <--here
+                     (value: 'a)
 

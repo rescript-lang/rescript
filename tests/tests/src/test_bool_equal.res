@@ -70,14 +70,14 @@ let f6 = x =>
   }
 
 let f7 = x =>
-  if Belt.Array.length(x) > 0 {
+  if Array.length(x) > 0 {
     1
   } else {
     2
   }
 
 let f8 = x =>
-  if Belt.Array.length(x) >= 0 {
+  if Array.length(x) >= 0 {
     1
   } else {
     2

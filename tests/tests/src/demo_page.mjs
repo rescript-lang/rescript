@@ -4,7 +4,7 @@ import * as React from "react";
 import * as ReactDom from "react-dom";
 
 function fib(x) {
-  if (x !== 2 && x !== 1) {
+  if (x !== 1 && x !== 2) {
     return fib(x - 1 | 0) + fib(x - 2 | 0) | 0;
   } else {
     return 1;

@@ -9,10 +9,8 @@ let uFun2 [arity:2]x y = 3
 type nonrec cTyp = string -> int (a:1)
 type nonrec uTyp = string -> int (a:1)
 type nonrec mixTyp =
-  string ->
-    string ->
-      string ->
-        string -> string -> string -> string -> string -> int (a:2) (a:3) (a:3)
+  string -> string -> string ->
+    string -> string -> string -> string -> string -> int (a:2) (a:3) (a:3)
 type nonrec bTyp = string -> string -> int (a:1) (a:1)
 type nonrec cTyp2 = string -> string -> int (a:2)
 type nonrec uTyp2 = string -> string -> int (a:2)
@@ -67,9 +65,8 @@ type nonrec cTyp = string -> int (a:1)
 type nonrec uTyp = string -> int (a:1)
 type nonrec mixTyp =
   string ->
-    string ->
-      string ->
-        string -> string -> string -> string -> string -> int (a:1) (a:4) (a:2) (a:1)
+    string -> string ->
+      string -> string -> string -> string -> string -> int (a:1) (a:4) (a:2) (a:1)
 type nonrec bTyp = string -> string -> int (a:1) (a:1)
 type nonrec cTyp2 = string -> string -> int (a:2)
 type nonrec uTyp2 = string -> string -> int (a:2)

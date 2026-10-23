@@ -1,5 +1,5 @@
 // ok
-let updateBriefletNarrative = (updateObj) => Js.log("patented merge algorithm goes here")
+let updateBriefletNarrative = (updateObj) => Console.log("patented merge algorithm goes here")
 
 // this is a bug in Reason, the . will be parsed wrong and disappear.
 /* updateBriefletNarrative(briefletNarrativeUpdateObj); */
@@ -49,11 +49,11 @@ let () = {
   dontDoThisAhome(a, b)(c, d)(e, f)
 }
 
-let _ = library.getBalance(account)->Promise.Js.catch(_ => Promise.resolved(None))
+let _ = library.getBalance(account)->Promise.catch(_ => Promise.resolve(None))
 
 let _ =
   library.getBalance(account)
-  ->Promise.Js.catch(_ => Promise.resolved(None))
+  ->Promise.catch(_ => Promise.resolve(None))
   ->Promise.get(newBalance =>
     dispatch(
       LoadAddress(

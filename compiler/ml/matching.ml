@@ -25,6 +25,9 @@ open Printf
 
 let dbg = false
 
+let int32_low = Int32.to_int Int32.min_int
+let int32_high = Int32.to_int Int32.max_int
+
 (* See Peyton-Jones, ``The Implementation of functional programming
    languages'', chapter 5. *)
 (*
@@ -55,9 +58,7 @@ and may_compats = Parmatch.Compat.compats ~equal_cd
      - Jump summaries: mapping from exit numbers to contexts
 *)
 
-let string_of_lam lam =
-  Printlambda.lambda Format.str_formatter lam;
-  Format.flush_str_formatter ()
+let string_of_lam lam = Format.asprintf "%a" Printlambda.lambda lam
 
 type matrix = pattern list list
 
@@ -176,10 +177,20 @@ let ctx_matcher p =
     fun q rem ->
       match q.pat_desc with
       | Tpat_construct (_, cstr', args)
-      (* NB:  may_constr_equal considers (potential) constructor rebinding *)
+      (* NB:  may_equal_constr considers (potential) constructor rebinding *)
         when Types.may_equal_constr cstr cstr' ->
         (p, args @ rem)
       | Tpat_any -> (p, omegas @ rem)
+      | _ -> raise NoMatch)
+  | (Tpat_constant _ | Tpat_interval _) when Parmatch.int_range p <> None -> (
+    fun (* [p] is a piece of a split column; values matched by a context range
+       that overlaps it may reach it. *)
+          q
+      rem
+    ->
+      match q.pat_desc with
+      | (Tpat_constant _ | Tpat_interval _) when may_compat p q -> (p, rem)
+      | Tpat_any -> (p, rem)
       | _ -> raise NoMatch)
   | Tpat_constant cst -> (
     fun q rem ->
@@ -345,9 +356,62 @@ let jumps_map f env = List.map (fun (i, pss) -> (i, f pss)) env
 
 (* Pattern matching before any compilation *)
 
+(* A case's right-hand side, kept as data until the fallthrough it may need
+   is known. Encoding the guard as a term and recognizing it by shape
+   afterwards would let normalization erase it: a guard that folds to false
+   is not a missing guard. Simplification brings pattern variables into
+   scope with lets, which must cover the guard as well as the body, so those
+   accumulate here too, outermost first. *)
+type action = {
+  binds: (let_kind * Ident.t * Lambda.t) list;
+  guard: Lambda.t option;
+  body: Lambda.t;
+}
+
+let unguarded body = {binds = []; guard = None; body}
+let guarded ~guard body = {binds = []; guard = Some guard; body}
+
+(* Bring [id = e] into scope over the whole right-hand side. Like
+   [Lambda.bind], an alias of a variable to itself is dropped. *)
+let bind_action kind id e (a : action) =
+  match e with
+  | Lvar v when Ident.same v id -> a
+  | _ -> {a with binds = (kind, id, e) :: a.binds}
+
+let action_body_with ~fail {binds; guard; body} =
+  let core =
+    match guard with
+    | None -> body
+    | Some g -> if_ g body fail
+  in
+  List.fold_right (fun (k, id, e) acc -> let_ k id e acc) binds core
+
+(* For comparing actions by key. The stand-in for the fallthrough is a fresh
+   variable, shared by both sides so the keys stay comparable, and impossible
+   for a real action to mention. A constant such as unit would not do: it
+   would make [when g => e] and [_ => if g then e else ()] compare equal, and
+   merging those loses one evaluation of [g]. *)
+let action_key_term ~fail a = action_body_with ~fail a
+
+let action_free_variables {binds; guard; body} =
+  let inner =
+    match guard with
+    | None -> Lambda_traverse.free_variables body
+    | Some g ->
+      Set_ident.union
+        (Lambda_traverse.free_variables body)
+        (Lambda_traverse.free_variables g)
+  in
+  List.fold_right
+    (fun (_, id, e) acc ->
+      Set_ident.union
+        (Lambda_traverse.free_variables e)
+        (Set_ident.remove id acc))
+    binds inner
+
 type pattern_matching = {
-  mutable cases: (pattern list * lambda) list;
-  args: (lambda * let_kind) list;
+  mutable cases: (pattern list * action) list;
+  args: (Lambda.t * let_kind) list;
   default: (matrix * int) list;
 }
 
@@ -365,7 +429,7 @@ type pm_half_compiled =
   | PmVar of pm_var_compiled
   | Pm of pattern_matching
 
-and pm_var_compiled = {inside: pm_half_compiled; var_arg: lambda}
+and pm_var_compiled = {inside: pm_half_compiled; var_arg: Lambda.t}
 
 type pm_half_compiled_info = {
   me: pm_half_compiled;
@@ -378,9 +442,8 @@ let pretty_cases cases =
     (fun (ps, _l) ->
       List.iter
         (fun p ->
-          Parmatch.top_pretty Format.str_formatter p;
           prerr_string " ";
-          prerr_string (Format.flush_str_formatter ()))
+          prerr_string (Format.asprintf "%a" Parmatch.top_pretty p))
         ps;
       (*
       prerr_string " -> " ;
@@ -440,49 +503,14 @@ let pretty_precompiled_res first nexts =
 *)
 
 module Store_exp = Switch.Store (struct
-  type t = lambda
-  type key = lambda
+  type t = Lambda.t
+  type key = Lambda.t
   let compare_key = compare
-  let make_key = Lambda.make_key
+  let make_key = Lambda_traverse.make_key
 end)
 
-let make_exit i = Lstaticraise (i, [])
-
-(* Introduce a catch, if worth it *)
-let make_catch d k =
-  match d with
-  | Lstaticraise (_, []) -> k d
-  | _ ->
-    let e = next_raise_count () in
-    Lstaticcatch (k (make_exit e), (e, []), d)
-
-(* Introduce a catch, if worth it, delayed version *)
-let rec as_simple_exit = function
-  | Lstaticraise (i, []) -> Some i
-  | Llet (Alias, _k, _, _, e) -> as_simple_exit e
-  | _ -> None
-
-let make_catch_delayed handler =
-  match as_simple_exit handler with
-  | Some i -> (i, fun act -> act)
-  | None -> (
-    let i = next_raise_count () in
-    (*
-    Printf.eprintf "SHARE LAMBDA: %i\n%s\n" i (string_of_lam handler);
-*)
-    ( i,
-      fun body ->
-        match body with
-        | Lstaticraise (j, _) -> if i = j then handler else body
-        | _ -> Lstaticcatch (body, (i, []), handler) ))
-
-let raw_action l =
-  match make_key l with
-  | Some l -> l
-  | None -> l
-
 let tr_raw act =
-  match make_key act with
+  match Lambda_traverse.make_key act with
   | Some act -> act
   | None -> raise Exit
 
@@ -501,10 +529,9 @@ let same_actions = function
 
 (* Test for swapping two clauses *)
 
-let up_ok_action act1 act2 =
-  try
-    let raw1 = tr_raw act1 and raw2 = tr_raw act2 in
-    raw1 = raw2
+let up_ok_action (a1 : action) (a2 : action) =
+  let fail = Lambda.var (Ident.create "fallthrough") in
+  try tr_raw (action_key_term ~fail a1) = tr_raw (action_key_term ~fail a2)
   with Exit -> false
 
 let up_ok (ps, act_p) l =
@@ -544,12 +571,9 @@ let simplify_or p =
   try simpl_rec p with Var p -> p
 
 let bind_record_rest loc arg rest action =
-  Llet
-    ( Strict,
-      Pgenval,
-      rest.rest_ident,
-      Lprim (Precord_rest rest.excluded_runtime_labels, [arg], loc),
-      action )
+  bind_action Strict rest.rest_ident
+    (prim ~primitive:(Precord_rest rest.excluded_runtime_labels) ~args:[arg] loc)
+    action
 
 let simplify_cases args cls =
   match args with
@@ -560,10 +584,10 @@ let simplify_cases args cls =
       | ((pat :: patl, action) as cl) :: rem -> (
         match pat.pat_desc with
         | Tpat_var (id, _) ->
-          (omega :: patl, bind Alias id arg action) :: simplify rem
+          (omega :: patl, bind_action Alias id arg action) :: simplify rem
         | Tpat_any -> cl :: simplify rem
         | Tpat_alias (p, id, _) ->
-          simplify ((p :: patl, bind Alias id arg action) :: rem)
+          simplify ((p :: patl, bind_action Alias id arg action) :: rem)
         | Tpat_record ([], _, rest) ->
           let action =
             match rest with
@@ -633,19 +657,22 @@ let default_compat p def =
 (* Or-pattern expansion, variables are a complication w.r.t. the article *)
 let rec extract_vars r p =
   match p.pat_desc with
-  | Tpat_var (id, _) -> Ident_set.add id r
-  | Tpat_alias (p, id, _) -> extract_vars (Ident_set.add id r) p
+  | Tpat_var (id, _) -> Set_ident.add id r
+  | Tpat_alias (p, id, _) -> extract_vars (Set_ident.add id r) p
   | Tpat_tuple pats -> List.fold_left extract_vars r pats
   | Tpat_record (lpats, _, rest) -> (
     let r = List.fold_left (fun r (_, _, p, _) -> extract_vars r p) r lpats in
     match rest with
     | None -> r
-    | Some rest -> Ident_set.add rest.rest_ident r)
+    | Some rest -> Set_ident.add rest.rest_ident r)
+  | Tpat_dict entries ->
+    List.fold_left (fun r {tdp_pattern} -> extract_vars r tdp_pattern) r entries
   | Tpat_construct (_, _, pats) -> List.fold_left extract_vars r pats
   | Tpat_array pats -> List.fold_left extract_vars r pats
   | Tpat_variant (_, Some p, _) -> extract_vars r p
   | Tpat_or (p, _, _) -> extract_vars r p
-  | Tpat_constant _ | Tpat_any | Tpat_variant (_, None, _) -> r
+  | Tpat_constant _ | Tpat_interval _ | Tpat_any | Tpat_variant (_, None, _) ->
+    r
 
 exception Cannot_flatten
 
@@ -676,8 +703,8 @@ let rec explode_or_pat arg patl mk_action rem vars aliases = function
 
 let pm_free_variables {cases} =
   List.fold_right
-    (fun (_, act) r -> Ident_set.union (free_variables act) r)
-    cases Ident_set.empty
+    (fun (_, act) r -> Set_ident.union (action_free_variables act) r)
+    cases Set_ident.empty
 
 (* Basic grouping predicates *)
 let pat_as_constr = function
@@ -685,7 +712,7 @@ let pat_as_constr = function
   | _ -> fatal_error "Matching.pat_as_constr"
 
 let group_constant = function
-  | {pat_desc = Tpat_constant _} -> true
+  | {pat_desc = Tpat_constant _ | Tpat_interval _} -> true
   | _ -> false
 
 and group_constructor = function
@@ -715,7 +742,7 @@ and group_array = function
 let get_group p =
   match p.pat_desc with
   | Tpat_any -> group_var
-  | Tpat_constant _ -> group_constant
+  | Tpat_constant _ | Tpat_interval _ -> group_constant
   | Tpat_construct _ -> group_constructor
   | Tpat_tuple _ -> group_tuple
   | Tpat_record _ -> group_record
@@ -723,20 +750,30 @@ let get_group p =
   | Tpat_variant (_, _, _) -> group_variant
   | _ -> fatal_error "Matching.get_group"
 
-let is_or p =
+(* A row starting with an or-pattern. An interval is precompiled like an
+   or-pattern of its values when the rest of its row tests something: that is
+   then compiled once, in a handler, instead of once per piece of the column. *)
+let is_or p ps =
   match p.pat_desc with
   | Tpat_or _ -> true
+  | Tpat_interval _ ->
+    List.exists
+      (fun q ->
+        match q.pat_desc with
+        | Tpat_any | Tpat_var _ -> false
+        | _ -> true)
+      ps
   | _ -> false
 
 (* Conditions for appending to the Or matrix *)
 let conda p q = not (may_compat p q)
 
-and condb act ps qs = (not (is_guarded act)) && Parmatch.le_pats qs ps
+and condb (act : action) ps qs = act.guard = None && Parmatch.le_pats qs ps
 
 let or_ok p ps l =
   List.for_all
     (function
-      | ({pat_desc = Tpat_or _} as q) :: qs, act -> conda p q || condb act ps qs
+      | q :: qs, act when is_or q qs -> conda p q || condb act ps qs
       | _ -> true)
     l
 
@@ -756,11 +793,11 @@ let rec get_equiv p l =
 let insert_or_append p ps act ors no =
   let rec attempt seen = function
     | ((q :: qs, act_q) as cl) :: rem ->
-      if is_or q then
+      if is_or q qs then
         if may_compat p q then
           if
-            Ident_set.is_empty (extract_vars Ident_set.empty p)
-            && Ident_set.is_empty (extract_vars Ident_set.empty q)
+            Set_ident.is_empty (extract_vars Set_ident.empty p)
+            && Set_ident.is_empty (extract_vars Set_ident.empty q)
             && equiv_pat p q
           then
             (* attempt insert, for equivalent orpats with no variables *)
@@ -842,7 +879,7 @@ let rec split_or argo cls args def =
     | [] -> cons_next (List.rev before) (List.rev ors) (List.rev no)
     | ((p :: ps, act) as cl) :: rem ->
       if up_ok cl no then
-        if is_or p then
+        if is_or p ps then
           let ors, no = insert_or_append p ps act ors no in
           do_split before ors no rem
         else if up_ok cl ors then do_split (cl :: before) ors no rem
@@ -856,7 +893,7 @@ let rec split_or argo cls args def =
       let {me = next; matrix; top_default = def}, nexts =
         do_split [] [] [] rem
       in
-      let idef = next_raise_count () in
+      let idef = Lambda_exits.next_raise_count () in
       precompile_or argo yes yesor args
         (cons_default matrix idef def)
         ((idef, next) :: nexts)
@@ -886,7 +923,7 @@ and split_naive cls args def k =
           let {me = next; matrix; top_default = def}, nexts =
             split_exc cstr [cl] rem
           in
-          let idef = next_raise_count () in
+          let idef = Lambda_exits.next_raise_count () in
           let def = cons_default matrix idef def in
           ( {
               me = Pm {cases = yes; args; default = def};
@@ -899,7 +936,7 @@ and split_naive cls args def k =
         let {me = next; matrix; top_default = def}, nexts =
           split_noexc [cl] rem
         in
-        let idef = next_raise_count () in
+        let idef = Lambda_exits.next_raise_count () in
         let def = cons_default matrix idef def in
         ( {
             me = Pm {cases = yes; args; default = def};
@@ -916,7 +953,7 @@ and split_naive cls args def k =
         let {me = next; matrix; top_default = def}, nexts =
           split_exc (pat_as_constr p) [cl] rem
         in
-        let idef = next_raise_count () in
+        let idef = Lambda_exits.next_raise_count () in
         precompile_var args yes
           (cons_default matrix idef def)
           ((idef, next) :: nexts)
@@ -935,7 +972,7 @@ and split_constr cls args def k =
   let ex_pat = what_is_cases cls in
   match ex_pat.pat_desc with
   | Tpat_any -> precompile_var args cls def k
-  | Tpat_construct (_, {cstr_tag = Cstr_extension _}, _) ->
+  | Tpat_construct (_, {cstr_kind = Extension_constructor _}, _) ->
     split_naive cls args def k
   | _ -> (
     let group = get_group ex_pat in
@@ -960,7 +997,7 @@ and split_constr cls args def k =
             let {me = next; matrix; top_default = def}, nexts =
               split_noex [cl] [] rem
             in
-            let idef = next_raise_count () in
+            let idef = Lambda_exits.next_raise_count () in
             let def = cons_default matrix idef def in
             ( {
                 me = Pm {cases = yes; args; default = def};
@@ -981,7 +1018,7 @@ and split_constr cls args def k =
           let {me = next; matrix; top_default = def}, nexts =
             split_ex [cl] [] rem
           in
-          let idef = next_raise_count () in
+          let idef = Lambda_exits.next_raise_count () in
           precompile_var args yes
             (cons_default matrix idef def)
             ((idef, next) :: nexts))
@@ -1051,7 +1088,7 @@ and precompile_or argo cls ors args def k =
   | [] -> split_constr cls args def k
   | _ ->
     let rec do_cases = function
-      | (({pat_desc = Tpat_or _} as orp) :: patl, action) :: rem ->
+      | (orp :: patl, action) :: rem when is_or orp patl ->
         let others, rem = get_equiv orp rem in
         let orpm =
           {
@@ -1070,16 +1107,16 @@ and precompile_or argo cls ors args def k =
           }
         in
         let vars =
-          Ident_set.elements
-            (Ident_set.inter
-               (extract_vars Ident_set.empty orp)
+          Set_ident.elements
+            (Set_ident.inter
+               (extract_vars Set_ident.empty orp)
                (pm_free_variables orpm))
         in
-        let or_num = next_raise_count () in
+        let or_num = Lambda_exits.next_raise_count () in
         let new_patl = Parmatch.omega_list patl in
 
         let mk_new_action vs =
-          Lstaticraise (or_num, List.map (fun v -> Lvar v) vs)
+          unguarded (staticraise or_num (List.map (fun v -> var v) vs))
         in
 
         let body, handlers = do_cases rem in
@@ -1169,16 +1206,32 @@ let divide_line make_ctx make get_args pat ctx pm =
    new  ``pattern_matching'' records.
 *)
 
-let rec matcher_const cst p rem =
+(* The key of a constant column is a range of constants: [(c, c)] for a
+   constant [c], and the bounds of a piece of a split interval column. *)
+let int_key = function
+  | ( (Asttypes.Const_int lo | Const_char lo),
+      (Asttypes.Const_int hi | Const_char hi) ) ->
+    Some (lo, hi)
+  | _ -> None
+
+let rec matcher_const ((c1, c2) as key) p rem =
   match p.pat_desc with
   | Tpat_or (p1, p2, _) -> (
-    try matcher_const cst p1 rem with NoMatch -> matcher_const cst p2 rem)
-  | Tpat_constant c1 when const_compare c1 cst = 0 -> rem
+    try matcher_const key p1 rem with NoMatch -> matcher_const key p2 rem)
+  | (Tpat_constant _ | Tpat_interval _) when Parmatch.int_range p <> None -> (
+    match (int_key key, Parmatch.int_range p) with
+    | Some (lo, hi), Some (a, b) ->
+      if a <= lo && hi <= b then rem
+      else if b < lo || hi < a then raise NoMatch
+      else fatal_error "Matching.matcher_const: range across a piece"
+    | _ -> raise NoMatch)
+  | Tpat_constant c when const_compare c c1 = 0 && const_compare c c2 = 0 -> rem
   | Tpat_any -> rem
   | _ -> raise NoMatch
 
 let get_key_constant caller = function
-  | {pat_desc = Tpat_constant cst} -> cst
+  | {pat_desc = Tpat_constant cst} -> (cst, cst)
+  | {pat_desc = Tpat_interval (lo, hi)} -> (lo, hi)
   | p ->
     prerr_endline ("BAD: " ^ caller);
     pretty_pat p;
@@ -1193,11 +1246,89 @@ let make_constant_matching p def ctx = function
     and ctx = filter_ctx p ctx in
     {pm = {cases = []; args = argl; default = def}; ctx; pat = normalize_pat p}
 
+(* The int and char ranges of the first column of the cases and of the default
+   matrices, when one of them is an interval. *)
+let column_int_ranges m =
+  let has_interval = ref false in
+  let rec heads p acc =
+    match p.pat_desc with
+    | Tpat_alias (p, _, _) -> heads p acc
+    | Tpat_or (p1, p2, _) -> heads p1 (heads p2 acc)
+    | _ -> (
+      (match p.pat_desc with
+      | Tpat_interval _ -> has_interval := true
+      | _ -> ());
+      match Parmatch.int_range p with
+      | Some r -> r :: acc
+      | None -> acc)
+  in
+  let rows acc pss =
+    List.fold_left
+      (fun acc -> function
+        | p :: _ -> heads p acc
+        | [] -> acc)
+      acc pss
+  in
+  let ranges = rows [] (List.map fst m.cases) in
+  let ranges =
+    List.fold_left (fun acc (pss, _) -> rows acc pss) ranges m.default
+  in
+  if !has_interval then Some ranges else None
+
+(* Divides a column with intervals into pieces cut at the bounds of all its
+   ranges, so that each range covers whole pieces. A case goes to every piece
+   its head covers; the number of pieces depends on the number of patterns,
+   not on the width of the ranges. *)
+let divide_constant_ranges ranges ctx m =
+  let cuts =
+    List.fold_left (fun acc (lo, hi) -> lo :: (hi + 1) :: acc) [] ranges
+    |> List.sort_uniq compare |> Array.of_list
+  in
+  let n = Array.length cuts - 1 in
+  let index x =
+    (* position of [x] in [cuts] *)
+    let rec search lo hi =
+      let mid = (lo + hi) / 2 in
+      if cuts.(mid) = x then mid
+      else if cuts.(mid) < x then search (mid + 1) hi
+      else search lo (mid - 1)
+    in
+    search 0 n
+  in
+  let rows = Array.make n [] and heads = Array.make n None in
+  List.iter
+    (fun (patl, action) ->
+      match patl with
+      | p :: patl -> (
+        match Parmatch.int_range p with
+        | Some (lo, hi) ->
+          for i = index lo to index (hi + 1) - 1 do
+            rows.(i) <- (get_args_constant p patl, action) :: rows.(i);
+            if heads.(i) = None then heads.(i) <- Some p
+          done
+        | None -> ignore (get_key_constant "divide" p))
+      | [] -> fatal_error "Matching.divide_constant_ranges")
+    m.cases;
+  let cells = ref [] in
+  for i = n - 1 downto 0 do
+    match heads.(i) with
+    | Some p ->
+      let p = Parmatch.make_int_range p cuts.(i) (cuts.(i + 1) - 1) in
+      let cell = make_constant_matching p m.default ctx m.args in
+      cell.pm.cases <- List.rev rows.(i);
+      cells := (get_key_constant "divide" p, cell) :: !cells
+    | None -> ()
+  done;
+  !cells
+
 let divide_constant ctx m =
-  divide make_constant_matching
-    (fun c d -> const_compare c d = 0)
-    (get_key_constant "divide")
-    get_args_constant ctx m
+  match column_int_ranges m with
+  | Some ranges -> divide_constant_ranges ranges ctx m
+  | None ->
+    divide make_constant_matching
+      (fun (c, _) (d, _) -> const_compare c d = 0)
+      (get_key_constant "divide")
+      get_args_constant ctx m
 
 (* Matching against a constructor *)
 
@@ -1205,13 +1336,13 @@ let make_field_args ~fld_info loc binding_kind arg first_pos last_pos argl =
   let rec make_args pos =
     if pos > last_pos then argl
     else
-      (Lprim (Pfield (pos, fld_info), [arg], loc), binding_kind)
+      (prim ~primitive:(Pfield (pos, fld_info)) ~args:[arg] loc, binding_kind)
       :: make_args (pos + 1)
   in
   make_args first_pos
 
 let get_key_constr = function
-  | {pat_desc = Tpat_construct (_, cstr, _)} -> cstr.cstr_tag
+  | {pat_desc = Tpat_construct (_, cstr, _)} -> cstr
   | _ -> assert false
 
 let get_args_constr p rem =
@@ -1274,13 +1405,16 @@ let make_constr_matching p def ctx = function
   | [] -> fatal_error "Matching.make_constr_matching"
   | (arg, _mut) :: argl ->
     let cstr = pat_as_constr p in
-    let untagged = Ast_untagged_variants.has_untagged cstr.cstr_attributes in
+    let payload_is_unboxed = Datarepr.constructor_payload_is_unboxed cstr in
     let newargs =
-      if cstr.cstr_inlined <> None || (untagged && cstr.cstr_args <> []) then
-        (arg, Alias) :: argl
+      if
+        cstr.cstr_inlined <> None || (payload_is_unboxed && cstr.cstr_args <> [])
+      then (arg, Alias) :: argl
       else
-        match cstr.cstr_tag with
-        | Cstr_block _ when Datarepr.constructor_has_optional_shape cstr ->
+        match cstr.cstr_kind with
+        | Ordinary_constructor _
+          when cstr.cstr_args <> []
+               && Datarepr.constructor_has_optional_shape cstr ->
           let from_option =
             match p.pat_desc with
             | Tpat_construct (_, _, [{pat_type; pat_env}])
@@ -1288,12 +1422,11 @@ let make_constr_matching p def ctx = function
               Pval_from_option_not_nest
             | _ -> Pval_from_option
           in
-          (Lprim (from_option, [arg], p.pat_loc), Alias) :: argl
-        | Cstr_constant _ | Cstr_block _ ->
+          (prim ~primitive:from_option ~args:[arg] p.pat_loc, Alias) :: argl
+        | Ordinary_constructor _ ->
           make_field_args p.pat_loc Alias arg 0 (cstr.cstr_arity - 1) argl
             ~fld_info:(if cstr.cstr_name = "::" then Fld_cons else Fld_variant)
-        | Cstr_unboxed -> (arg, Alias) :: argl
-        | Cstr_extension _ ->
+        | Extension_constructor _ ->
           make_field_args p.pat_loc Alias arg 1 cstr.cstr_arity argl
             ~fld_info:Fld_extension
     in
@@ -1308,9 +1441,53 @@ let make_constr_matching p def ctx = function
       pat = normalize_pat p;
     }
 
+(* Whether the payload pattern [p] of [Some] can't match the object that
+   represents [Some] of a value like [None] or undefined (see
+   [Primitive_option.some]): it doesn't bind the payload itself, and tests it
+   with a literal comparison or with a type test that an object fails. An
+   untagged case binds its argument only once its type test has passed. *)
+let rec rejects_nested_some p =
+  match p.pat_desc with
+  | Tpat_any | Tpat_constant _ | Tpat_interval _ -> true
+  | Tpat_or (p1, p2, _) -> rejects_nested_some p1 && rejects_nested_some p2
+  | Tpat_construct (_, cstr, _) -> (
+    match cstr.cstr_kind with
+    | Ordinary_constructor representation
+      when not (Datarepr.constructor_has_optional_shape cstr) -> (
+      match Variant_runtime.representation representation with
+      | Constant {literal} -> literal <> Some Variant_runtime.Undefined
+      | Block (Untagged {block_type = ObjectType | UnknownType}) -> false
+      | Block (Untagged _) -> true
+      | Block (Tagged _) -> false)
+    | Ordinary_constructor _ | Extension_constructor _ -> false)
+  | _ -> false
+
+(* A [Some] payload whose patterns all reject the representation of a nested
+   [Some] is matched as it is, without checking for that representation *)
+let skip_nested_some_check (cell : cell) =
+  match cell.pm.args with
+  | (Lprim {primitive = Pval_from_option; args = [arg]; loc}, str) :: argl
+    when List.for_all
+           (function
+             | p :: _, _ -> rejects_nested_some p
+             | [], _ -> false)
+           cell.pm.cases ->
+    {
+      cell with
+      pm =
+        {
+          cell.pm with
+          args =
+            (prim ~primitive:Pval_from_option_not_nest ~args:[arg] loc, str)
+            :: argl;
+        };
+    }
+  | _ -> cell
+
 let divide_constructor ctx pm =
-  divide make_constr_matching Types.equal_tag get_key_constr get_args_constr ctx
-    pm
+  divide make_constr_matching Types.same_constructor get_key_constr
+    get_args_constr ctx pm
+  |> List.map (fun (cstr, cell) -> (cstr, skip_nested_some_check cell))
 
 (* Matching against a variant *)
 
@@ -1347,7 +1524,10 @@ let make_variant_matching_nonconst p lab def ctx = function
         {
           cases = [];
           args =
-            (Lprim (Pfield (1, Fld_poly_var_content), [arg], p.pat_loc), Alias)
+            ( prim
+                ~primitive:(Pfield (1, Fld_poly_var_content))
+                ~args:[arg] p.pat_loc,
+              Alias )
             :: argl;
           default = def;
         };
@@ -1366,19 +1546,17 @@ let divide_variant row ctx {cases = cl; args = al; default = def} =
         with Not_found -> true
       then variants
       else
-        let tag = Btype.hash_variant lab in
-        let ( = ) ((a : string), (b : Types.constructor_tag)) (c, d) =
-          a = c && Types.equal_tag b d
-        in
+        (* key: label of the variant case, and whether it is constant *)
+        let ( = ) ((a : string), (b : bool)) (c, d) = a = c && b = d in
         match pato with
         | None ->
           add
             (make_variant_matching_constant p lab def ctx)
-            variants ( = ) (lab, Cstr_constant tag) (patl, action) al
+            variants ( = ) (lab, true) (patl, action) al
         | Some pat ->
           add
             (make_variant_matching_nonconst p lab def ctx)
-            variants ( = ) (lab, Cstr_block tag)
+            variants ( = ) (lab, false)
             (pat :: patl, action)
             al)
     | _ -> []
@@ -1422,7 +1600,7 @@ let make_tuple_matching loc arity def = function
     let rec make_args pos =
       if pos >= arity then argl
       else
-        (Lprim (Pfield (pos, Fld_tuple), [arg], loc), Alias)
+        (prim ~primitive:(Pfield (pos, Fld_tuple)) ~args:[arg] loc, Alias)
         :: make_args (pos + 1)
     in
     {
@@ -1469,18 +1647,25 @@ let make_record_matching loc all_labels def = function
         let lbl = all_labels.(pos) in
         let access =
           match lbl.lbl_repres with
-          | Record_float_unused -> assert false
           | Record_regular ->
-            Lprim (Pfield (lbl.lbl_pos, Lambda.fld_record lbl), [arg], loc)
+            prim
+              ~primitive:
+                (Pfield (lbl.lbl_pos, Lambda.fld_record lbl.lbl_runtime_name))
+              ~args:[arg] loc
           | Record_inlined _ ->
-            Lprim
-              (Pfield (lbl.lbl_pos, Lambda.fld_record_inline lbl), [arg], loc)
+            prim
+              ~primitive:
+                (Pfield
+                   (lbl.lbl_pos, Lambda.fld_record_inline lbl.lbl_runtime_name))
+              ~args:[arg] loc
           | Record_unboxed _ -> arg
           | Record_extension ->
-            Lprim
-              ( Pfield (lbl.lbl_pos + 1, Lambda.fld_record_extension lbl),
-                [arg],
-                loc )
+            prim
+              ~primitive:
+                (Pfield
+                   ( lbl.lbl_pos + 1,
+                     Lambda.fld_record_extension lbl.lbl_runtime_name ))
+              ~args:[arg] loc
         in
         let str =
           match lbl.lbl_mut with
@@ -1524,8 +1709,7 @@ let make_array_matching p def ctx = function
     let rec make_args pos =
       if pos >= len then argl
       else
-        ( Lprim
-            (Parrayrefu, [arg; Lconst (Const_base (Const_int pos))], p.pat_loc),
+        ( prim ~primitive:Parrayrefu ~args:[arg; const (const_int pos)] p.pat_loc,
           StrictOpt )
         :: make_args (pos + 1)
     in
@@ -1539,107 +1723,17 @@ let make_array_matching p def ctx = function
 let divide_array ctx pm =
   divide make_array_matching ( = ) get_key_array get_args_array ctx pm
 
-(*
-   Specific string test sequence
-   Will be called by the bytecode compiler, from bytegen.ml.
-   The strategy is first dichotomic search (we perform 3-way tests
-   with compare_string), then sequence of equality tests
-   when there are less then T=strings_test_threshold static strings to match.
-
-  Increasing T entails (slightly) less code, decreasing T
-  (slightly) favors runtime speed.
-  T=8 looks a decent tradeoff.
-*)
-
-(* Utilities *)
-
-let strings_test_threshold = 8
-
-let bind_sw arg k =
-  match arg with
-  | Lvar _ -> k arg
-  | _ ->
-    let id = Ident.create "switch" in
-    Llet (Strict, Pgenval, id, arg, k (Lvar id))
-
-(* Sequential equality tests *)
-
-let make_string_test_sequence loc arg sw d =
-  let d, sw =
-    match d with
-    | None -> (
-      match sw with
-      | (_, d) :: sw -> (d, sw)
-      | [] -> assert false)
-    | Some d -> (d, sw)
-  in
-  bind_sw arg (fun arg ->
-      List.fold_right
-        (fun (s, lam) k ->
-          Lifthenelse
-            ( Lprim (Pstringcomp Cneq, [arg; Lconst (Const_immstring s)], loc),
-              k,
-              lam ))
-        sw d)
-
-let rec split k xs =
-  match xs with
-  | [] -> assert false
-  | x0 :: xs ->
-    if k <= 1 then ([], x0, xs)
-    else
-      let xs, y0, ys = split (k - 2) xs in
-      (x0 :: xs, y0, ys)
-
-let zero_lam = Lconst (Const_base (Const_int 0))
-
-let tree_way_test loc arg lt eq gt =
-  Lifthenelse
-    ( Lprim (Pintcomp Clt, [arg; zero_lam], loc),
-      lt,
-      Lifthenelse (Lprim (Pintcomp Clt, [zero_lam; arg], loc), gt, eq) )
-
-(* Dichotomic tree *)
-
-let rec do_make_string_test_tree loc arg sw delta d =
-  let len = List.length sw in
-  if len <= strings_test_threshold + delta then
-    make_string_test_sequence loc arg sw d
-  else
-    let lt, (s, act), gt = split len sw in
-    bind_sw
-      (Lprim (Pstringcomp Ceq, [arg; Lconst (Const_immstring s)], loc))
-      (fun r ->
-        tree_way_test loc r
-          (do_make_string_test_tree loc arg lt delta d)
-          act
-          (do_make_string_test_tree loc arg gt delta d))
-
 (* Entry point *)
-let expand_stringswitch loc arg sw d =
-  match d with
-  | None -> bind_sw arg (fun arg -> do_make_string_test_tree loc arg sw 0 None)
-  | Some e ->
-    bind_sw arg (fun arg ->
-        make_catch e (fun d -> do_make_string_test_tree loc arg sw 1 (Some d)))
-
-(**********************)
-(* Generic test trees *)
-(**********************)
-
-(* Sharing *)
-
-(* Add handler, if shared *)
 let handle_shared () =
   let hs = ref (fun x -> x) in
   let handle_shared act =
     match act with
     | Switch.Single act -> act
     | Switch.Shared act ->
-      let i, h = make_catch_delayed act in
+      let i, h = Lambda_exits.make_catch_delayed act in
       let ohs = !hs in
       (hs := fun act -> h (ohs act));
-      make_exit i
+      Lambda_exits.make_exit i
   in
   (hs, handle_shared)
 
@@ -1694,27 +1788,26 @@ let rec cut n l =
 let rec do_tests_fail loc fail tst arg = function
   | [] -> fail
   | (c, act) :: rem ->
-    Lifthenelse
-      ( Lprim (tst, [arg; Lconst (Const_base c)], loc),
-        do_tests_fail loc fail tst arg rem,
-        act )
+    if_
+      (prim ~primitive:tst ~args:[arg; const (const_of_typed c)] loc)
+      (do_tests_fail loc fail tst arg rem)
+      act
 
 let rec do_tests_nofail loc tst arg = function
   | [] -> fatal_error "Matching.do_tests_nofail"
   | [(_, act)] -> act
   | (c, act) :: rem ->
-    Lifthenelse
-      ( Lprim (tst, [arg; Lconst (Const_base c)], loc),
-        do_tests_nofail loc tst arg rem,
-        act )
+    if_
+      (prim ~primitive:tst ~args:[arg; const (const_of_typed c)] loc)
+      (do_tests_nofail loc tst arg rem)
+      act
 
 let make_test_sequence loc fail tst lt_tst arg const_lambda_list =
   let const_lambda_list = sort_lambda_list const_lambda_list in
   let hs, const_lambda_list, fail = share_actions_tree const_lambda_list fail in
 
   let rec make_test_sequence const_lambda_list =
-    if List.length const_lambda_list >= 4 && lt_tst <> Pignore then
-      split_sequence const_lambda_list
+    if List.length const_lambda_list >= 4 then split_sequence const_lambda_list
     else
       match fail with
       | None -> do_tests_nofail loc tst arg const_lambda_list
@@ -1723,63 +1816,13 @@ let make_test_sequence loc fail tst lt_tst arg const_lambda_list =
     let list1, list2 =
       cut (List.length const_lambda_list / 2) const_lambda_list
     in
-    Lifthenelse
-      ( Lprim (lt_tst, [arg; Lconst (Const_base (fst (List.hd list2)))], loc),
-        make_test_sequence list1,
-        make_test_sequence list2 )
+    if_
+      (prim ~primitive:lt_tst
+         ~args:[arg; const (const_of_typed (fst (List.hd list2)))]
+         loc)
+      (make_test_sequence list1) (make_test_sequence list2)
   in
   hs (make_test_sequence const_lambda_list)
-
-module S_arg = struct
-  type primitive = Lambda.primitive
-
-  let eqint = Pintcomp Ceq
-  let neint = Pintcomp Cneq
-  let leint = Pintcomp Cle
-  let ltint = Pintcomp Clt
-  let geint = Pintcomp Cge
-  let gtint = Pintcomp Cgt
-
-  type act = Lambda.lambda
-
-  let make_prim p args = Lprim (p, args, Location.none)
-  let make_offset arg n =
-    match n with
-    | 0 -> arg
-    | _ -> Lprim (Poffsetint n, [arg], Location.none)
-
-  let bind arg body =
-    let newvar, newarg =
-      match arg with
-      | Lvar v -> (v, arg)
-      | _ ->
-        let newvar = Ident.create "switcher" in
-        (newvar, Lvar newvar)
-    in
-    bind Alias newvar arg (body newarg)
-  let make_const i = Lconst (Const_base (Const_int i))
-  let make_isout h arg = Lprim (Pisout, [h; arg], Location.none)
-  let make_isin h arg = Lprim (Pnot, [make_isout h arg], Location.none)
-  let make_if cond ifso ifnot = Lifthenelse (cond, ifso, ifnot)
-  let make_switch loc arg cases acts ~offset sw_names =
-    let l = ref [] in
-    for i = Array.length cases - 1 downto 0 do
-      l := (offset + i, acts.(cases.(i))) :: !l
-    done;
-    Lswitch
-      ( arg,
-        {
-          sw_numconsts = Array.length cases;
-          sw_consts = !l;
-          sw_numblocks = 0;
-          sw_blocks = [];
-          sw_failaction = None;
-          sw_names;
-        },
-        loc )
-  let make_catch = make_catch_delayed
-  let make_exit = make_exit
-end
 
 (* Action sharing for Lswitch argument *)
 let share_actions_sw sw =
@@ -1821,7 +1864,7 @@ let reintroduce_fail sw =
   | None ->
     let t = Hashtbl.create 17 in
     let seen (_, l) =
-      match as_simple_exit l with
+      match Lambda_exits.as_simple_exit l with
       | Some i ->
         let old = try Hashtbl.find t i with Not_found -> 0 in
         Hashtbl.replace t i (old + 1)
@@ -1843,37 +1886,45 @@ let reintroduce_fail sw =
       let default = !i_max in
       let remove ls =
         Ext_list.filter ls (fun (_, lam) ->
-            match as_simple_exit lam with
+            match Lambda_exits.as_simple_exit lam with
             | Some j -> j <> default
             | None -> true)
       in
+      let sw_consts = remove sw.sw_consts in
+      let sw_blocks = remove sw.sw_blocks in
       {
         sw with
-        sw_consts = remove sw.sw_consts;
-        sw_blocks = remove sw.sw_blocks;
-        sw_failaction = Some (make_exit default);
+        sw_consts_full =
+          sw.sw_consts_full && List.length sw_consts = List.length sw.sw_consts;
+        sw_consts;
+        sw_blocks_full =
+          sw.sw_blocks_full && List.length sw_blocks = List.length sw.sw_blocks;
+        sw_blocks;
+        sw_failaction = Some (Lambda_exits.make_exit default);
       }
     else sw
   | Some _ -> sw
 
-module Switcher = Switch.Make (S_arg)
 open Switch
 
 let rec last def = function
   | [] -> def
-  | [(x, _)] -> x
+  | [(_, x, _)] -> x
   | _ :: rem -> last def rem
 
 let get_edges low high l =
   match l with
   | [] -> (low, high)
-  | (x, _) :: _ -> (x, last high l)
+  | (x, _, _) :: _ -> (x, last high l)
 
 let as_interval_canfail fail low high l =
   let store = Store_exp.mk_store () in
 
-  let do_store _tag act =
-    let i = store.act_store act in
+  (* The action of a range [i .. j] is used for each of its values. Storing it
+     as shared emits it once, as an expanded range sharing the action of each
+     value used to; copies would declare its variables twice. *)
+  let do_store _tag i j act =
+    let i = if i < j then store.act_store_shared act else store.act_store act in
     (*
     eprintf "STORE [%s] %i %s\n" tag i (string_of_lam act) ;
 *)
@@ -1884,37 +1935,37 @@ let as_interval_canfail fail low high l =
     | [] ->
       if cur_high = high then [(cur_low, cur_high, cur_act)]
       else [(cur_low, cur_high, cur_act); (cur_high + 1, high, 0)]
-    | (i, act_i) :: rem as all ->
-      let act_index = do_store "NO" act_i in
+    | (i, j, act_i) :: rem as all ->
+      let act_index = do_store "NO" i j act_i in
       if cur_high + 1 = i then
-        if act_index = cur_act then nofail_rec cur_low i cur_act rem
-        else if act_index = 0 then (cur_low, i - 1, cur_act) :: fail_rec i i rem
-        else (cur_low, i - 1, cur_act) :: nofail_rec i i act_index rem
+        if act_index = cur_act then nofail_rec cur_low j cur_act rem
+        else if act_index = 0 then (cur_low, i - 1, cur_act) :: fail_rec i j rem
+        else (cur_low, i - 1, cur_act) :: nofail_rec i j act_index rem
       else if act_index = 0 then
         (cur_low, cur_high, cur_act)
         :: fail_rec (cur_high + 1) (cur_high + 1) all
       else
         (cur_low, cur_high, cur_act)
         :: (cur_high + 1, i - 1, 0)
-        :: nofail_rec i i act_index rem
+        :: nofail_rec i j act_index rem
   and fail_rec cur_low cur_high = function
     | [] -> [(cur_low, cur_high, 0)]
-    | (i, act_i) :: rem ->
-      let index = do_store "YES" act_i in
-      if index = 0 then fail_rec cur_low i rem
-      else (cur_low, i - 1, 0) :: nofail_rec i i index rem
+    | (i, j, act_i) :: rem ->
+      let index = do_store "YES" i j act_i in
+      if index = 0 then fail_rec cur_low j rem
+      else (cur_low, i - 1, 0) :: nofail_rec i j index rem
   in
 
   let init_rec = function
     | [] -> [(low, high, 0)]
-    | (i, act_i) :: rem ->
-      let index = do_store "INIT" act_i in
-      if index = 0 then fail_rec low i rem
-      else if low < i then (low, i - 1, 0) :: nofail_rec i i index rem
-      else nofail_rec i i index rem
+    | (i, j, act_i) :: rem ->
+      let index = do_store "INIT" i j act_i in
+      if index = 0 then fail_rec low j rem
+      else if low < i then (low, i - 1, 0) :: nofail_rec i j index rem
+      else nofail_rec i j index rem
   in
 
-  assert (do_store "FAIL" fail = 0);
+  assert (do_store "FAIL" 0 0 fail = 0);
   (* fail has action index 0 *)
   let r = init_rec l in
   (Array.of_list r, store)
@@ -1923,28 +1974,30 @@ let as_interval_nofail l =
   let store = Store_exp.mk_store () in
   let rec some_hole = function
     | [] | [_] -> false
-    | (i, _) :: ((j, _) :: _ as rem) -> j > i + 1 || some_hole rem
+    | (_, i, _) :: ((j, _, _) :: _ as rem) -> j > i + 1 || some_hole rem
   in
   let rec i_rec cur_low cur_high cur_act = function
     | [] -> [(cur_low, cur_high, cur_act)]
-    | (i, act) :: rem ->
-      let act_index = store.act_store act in
-      if act_index = cur_act then i_rec cur_low i cur_act rem
-      else (cur_low, cur_high, cur_act) :: i_rec i i act_index rem
+    | (i, j, act) :: rem ->
+      let act_index =
+        if i < j then store.act_store_shared act else store.act_store act
+      in
+      if act_index = cur_act then i_rec cur_low j cur_act rem
+      else (cur_low, cur_high, cur_act) :: i_rec i j act_index rem
   in
   let inters =
     match l with
-    | (i, act) :: rem ->
+    | (i, j, act) :: rem ->
       let act_index =
         (* In case there is some hole and that a switch is emitted,
            action 0 will be used as the action of unreachable
            cases (cf. switch.ml, make_switch).
            Hence, this action will be shared *)
-        if some_hole rem then store.act_store_shared act
+        if some_hole rem || i < j then store.act_store_shared act
         else store.act_store act
       in
       assert (act_index = 0);
-      i_rec i i act_index rem
+      i_rec i j act_index rem
     | _ -> assert false
   in
 
@@ -1955,16 +2008,26 @@ let sort_int_lambda_list l =
     (fun (i1, _) (i2, _) -> if i1 < i2 then -1 else if i2 < i1 then 1 else 0)
     l
 
-let as_interval fail low high l =
-  let l = sort_int_lambda_list l in
+(* [l] maps disjoint ranges [lo .. hi] to actions *)
+let as_interval_ranges fail low high l =
+  let l = List.sort (fun (i1, _, _) (i2, _, _) -> compare i1 i2) l in
   ( get_edges low high l,
     match fail with
     | None -> as_interval_nofail l
     | Some act -> as_interval_canfail act low high l )
 
-let call_switcher loc fail arg low high int_lambda_list sw_names =
-  let edges, (cases, actions) = as_interval fail low high int_lambda_list in
-  Switcher.zyva loc edges arg cases actions sw_names
+let as_interval fail low high l =
+  as_interval_ranges fail low high (List.map (fun (i, act) -> (i, i, act)) l)
+
+let call_switcher_ranges fail arg low high range_lambda_list =
+  let edges, (cases, actions) =
+    as_interval_ranges fail low high range_lambda_list
+  in
+  Switch.zyva edges arg cases actions
+
+let call_switcher fail arg low high int_lambda_list =
+  call_switcher_ranges fail arg low high
+    (List.map (fun (i, act) -> (i, i, act)) int_lambda_list)
 
 let rec list_as_pat = function
   | [] -> fatal_error "Matching.list_as_pat"
@@ -1986,8 +2049,7 @@ let mk_failaction_neg partial ctx def =
   match partial with
   | Partial -> (
     match def with
-    | (_, idef) :: _ ->
-      (Some (Lstaticraise (idef, [])), jumps_singleton idef ctx)
+    | (_, idef) :: _ -> (Some (staticraise idef []), jumps_singleton idef ctx)
     | [] ->
       (* Act as Total, this means
          If no appropriate default matrix exists,
@@ -2006,7 +2068,7 @@ let mk_failaction_pos partial seen ctx defs =
     | [], _ | _, [] ->
       List.fold_left
         (fun (klist, jumps) (pats, i) ->
-          let action = Lstaticraise (i, []) in
+          let action = staticraise i [] in
           let klist =
             List.fold_right
               (fun pat r -> (get_key_constr pat, action) :: r)
@@ -2043,53 +2105,51 @@ let mk_failaction_pos partial seen ctx defs =
         | Some lam -> string_of_lam lam);
     (fail, [], jumps))
 
-let combine_constant names loc arg cst partial ctx def
+let combine_constant loc arg cst partial ctx def
     (const_lambda_list, total, _pats) =
   let fail, local_jumps = mk_failaction_neg partial ctx def in
   let lambda1 =
-    match cst with
-    | Const_int _ ->
-      let int_lambda_list =
+    match (cst : Asttypes.constant) with
+    | Const_int _ | Const_char _ ->
+      (* [char] is an alias of [int], so a column can mix both. Its keys are
+         ranges. *)
+      let range_lambda_list =
         List.map
-          (function
-            | Const_int n, l -> (n, l)
-            | _ -> assert false)
+          (fun (key, l) ->
+            match int_key key with
+            | Some (lo, hi) -> (lo, hi, l)
+            | None -> assert false)
           const_lambda_list
       in
-      call_switcher loc fail arg min_int max_int int_lambda_list names
-    | Const_char _ ->
-      let int_lambda_list =
-        List.map
-          (function
-            | Const_char c, l -> (c, l)
-            | _ -> assert false)
-          const_lambda_list
-      in
-      call_switcher loc fail arg 0 max_int int_lambda_list names
+      (* Match intervals must use ReScript's int32 bounds, not the host's.
+         Otherwise the upper fail interval starts at 2147483648, which wraps
+         when converted to a Lambda integer constant. *)
+      call_switcher_ranges fail arg int32_low int32_high range_lambda_list
     | Const_string _ ->
       (* Note as the bytecode compiler may resort to dichotomic search,
          the clauses of stringswitch  are sorted with duplicates removed.
          This partly applies to the native code compiler, which requires
          no duplicates *)
-      let const_lambda_list = sort_lambda_list const_lambda_list in
+      let const_lambda_list =
+        sort_lambda_list
+          (List.map (fun ((c, _), l) -> (c, l)) const_lambda_list)
+      in
       let sw =
         List.map
           (fun (c, act) ->
             match c with
-            | Const_string (s, _) -> (s, act)
+            | Asttypes.Const_string s -> (s, act)
             | _ -> assert false)
           const_lambda_list
       in
       let hs, sw, fail = share_actions_tree sw fail in
-      hs (Lstringswitch (arg, sw, fail, loc))
+      hs (stringswitch arg sw fail)
     | Const_float _ ->
       make_test_sequence loc fail (Pfloatcomp Cneq) (Pfloatcomp Clt) arg
-        const_lambda_list
-    | Const_int32 _ -> assert false
-    | Const_int64 _ -> assert false
+        (List.map (fun ((c, _), l) -> (c, l)) const_lambda_list)
     | Const_bigint _ ->
       make_test_sequence loc fail (Pbigintcomp Cneq) (Pbigintcomp Clt) arg
-        const_lambda_list
+        (List.map (fun ((c, _), l) -> (c, l)) const_lambda_list)
   in
   (lambda1, jumps_union local_jumps total)
 
@@ -2098,26 +2158,23 @@ let split_cases tag_lambda_list =
     | [] -> ([], [])
     | (cstr, act) :: rem -> (
       let consts, nonconsts = split_rec rem in
-      match cstr with
-      | Cstr_constant n -> ((n, act) :: consts, nonconsts)
-      | Cstr_block n -> (consts, (n, act) :: nonconsts)
-      | Cstr_unboxed -> (consts, (0, act) :: nonconsts)
-      | Cstr_extension _ -> assert false)
+      match cstr.cstr_kind with
+      | Ordinary_constructor _ ->
+        if cstr.cstr_args = [] then ((cstr, act) :: consts, nonconsts)
+        else (consts, (cstr, act) :: nonconsts)
+      | Extension_constructor _ -> assert false)
   in
-  let const, nonconst = split_rec tag_lambda_list in
-  (sort_int_lambda_list const, sort_int_lambda_list nonconst)
+  split_rec tag_lambda_list
 
 (* refine [split_cases] and [split_variant_cases] *)
 let split_variant_cases tag_lambda_list =
   let rec split_rec = function
     | [] -> ([], [])
-    | ((name, cstr), act) :: rem -> (
+    | ((name, is_const), act) :: rem ->
       let consts, nonconsts = split_rec rem in
-      match cstr with
-      | Cstr_constant n -> ((n, (name, act)) :: consts, nonconsts)
-      | Cstr_block n -> (consts, (n, (name, act)) :: nonconsts)
-      | Cstr_unboxed -> assert false
-      | Cstr_extension _ -> assert false)
+      let n = Btype.hash_variant name in
+      if is_const then ((n, (name, act)) :: consts, nonconsts)
+      else (consts, (n, (name, act)) :: nonconsts)
   in
   let const, nonconst = split_rec tag_lambda_list in
   (sort_int_lambda_list const, sort_int_lambda_list nonconst)
@@ -2127,15 +2184,192 @@ let get_extension_cases tag_lambda_list =
     | [] -> []
     | (cstr, act) :: rem -> (
       let nonconsts = split_rec rem in
-      match cstr with
-      | Cstr_extension path -> (path, act) :: nonconsts
-      | _ -> assert false)
+      match cstr.cstr_kind with
+      | Extension_constructor path -> (path, act) :: nonconsts
+      | Ordinary_constructor _ -> assert false)
   in
   split_rec tag_lambda_list
 
-let combine_constructor sw_names loc arg ex_pat cstr partial ctx def
+let sort_constructor_cases cases =
+  List.sort
+    (fun (cstr1, _) (cstr2, _) ->
+      Int.compare
+        (Datarepr.constructor_position cstr1)
+        (Datarepr.constructor_position cstr2))
+    cases
+
+let constructor_switch_key (cstr : Types.constructor_description) =
+  Switch_constructor (Datarepr.constructor_case cstr)
+
+(* An occurrence-specific plan for one constructor decision-tree node. It is
+   deliberately local to pattern matching: [lower_constructor_matching_plan]
+   immediately expresses the decision with existing Lambda control-flow
+   nodes, so Lambda does not acquire another expression language. *)
+type payload_presence_test = Is_present_option | Is_nonempty_list
+
+type constructor_matching_plan =
+  | Use_constructor_action of Lambda.t
+      (** Every possible constructor reaches the same action. *)
+  | Test_payload_presence of {
+      test: payload_presence_test;
+      absent: Lambda.t;
+      present: Lambda.t;
+    }
+      (** A two-constructor representation whose runtime value directly
+          reveals whether the payload constructor is present. *)
+  | Test_boolean_value of {if_false: Lambda.t; if_true: Lambda.t}
+      (** The predefined boolean constructors are JavaScript booleans. *)
+  | Switch_on_constructors of Lambda.lambda_switch
+      (** General nominal and untagged variant matching. *)
+
+(* Whether [present], the action for a value of the option [arg], starts with a
+   test of that value that takes [absent] for undefined. The presence test of
+   [arg] is then redundant: undefined reaches [absent] either way. *)
+let rec value_test_defaults_on_undefined ~arg ~absent present =
+  let is_value = function
+    | Lprim {primitive = Pval_from_option_not_nest; args = [value]} ->
+      Lambda.eq_approx arg value
+    | e -> Lambda.eq_approx arg e
+  in
+  let is_equality = function
+    | Pboolcomp c
+    | Pintcomp c
+    | Pfloatcomp c
+    | Pbigintcomp c
+    | Pstringcomp c
+    | Pjscomp c ->
+      Some c
+    | _ -> None
+  in
+  (* A constant that undefined is unequal to, even loosely *)
+  let is_defined_constant = function
+    | Lconst
+        ( Const_int _ | Const_char _ | Const_string _ | Const_float _
+        | Const_bigint _ | Const_js_false | Const_js_true ) ->
+      true
+    | _ -> false
+  in
+  let compares_value = function
+    | [a; b] ->
+      (is_value a && is_defined_constant b)
+      || (is_defined_constant a && is_value b)
+    | _ -> false
+  in
+  match present with
+  | Llet
+      ( Alias,
+        id,
+        (Lprim {primitive = Pval_from_option_not_nest; args = [value]} as def),
+        body )
+    when Lambda.eq_approx arg value ->
+    (* The value bound to a name *)
+    value_test_defaults_on_undefined ~arg:(Lambda.var id) ~absent body
+    || value_test_defaults_on_undefined ~arg:def ~absent body
+  | Lswitch (scrutinee, ({sw_failaction = Some fail} as sw)) ->
+    is_value scrutinee
+    && Lambda.eq_approx fail absent
+    && switch_defaults_on_undefined sw
+  | Lstringswitch (scrutinee, _, Some fail) ->
+    is_value scrutinee && Lambda.eq_approx fail absent
+  (* undefined is unequal to every constant *)
+  | Lifthenelse (Lprim {primitive; args}, if_true, if_false)
+    when compares_value args -> (
+    match is_equality primitive with
+    | Some Cneq -> Lambda.eq_approx if_true absent
+    | Some Ceq -> Lambda.eq_approx if_false absent
+    | Some (Clt | Cgt | Cle | Cge) | None -> false)
+  | _ -> false
+
+(* Whether the switch [sw] on an untagged variant takes its default action for
+   undefined: no case matches undefined, and each side of the switch that
+   undefined can reach has the default action *)
+and switch_defaults_on_undefined (sw : lambda_switch) =
+  match sw.sw_dispatch with
+  | Switch_variant {block_types} ->
+    block_types <> []
+    && (not (List.mem Variant_runtime.UnknownType block_types))
+    && (not sw.sw_blocks_full)
+    && (not (sw.sw_consts_full && sw.sw_consts <> []))
+    && List.for_all
+         (function
+           | Switch_constructor (Constant {literal}), _ ->
+             literal <> Some Variant_runtime.Undefined
+           | _ -> true)
+         sw.sw_consts
+  | Switch_direct -> false
+
+let lower_constructor_matching_plan ~loc ~arg = function
+  | Use_constructor_action action -> action
+  | Test_payload_presence {test = Is_present_option; absent; present}
+    when value_test_defaults_on_undefined ~arg ~absent present ->
+    present
+  | Test_payload_presence {test; absent; present} ->
+    let condition =
+      match test with
+      | Is_present_option -> prim ~primitive:Pis_not_none ~args:[arg] loc
+      | Is_nonempty_list ->
+        prim ~primitive:(Pjscomp Cneq) ~args:[arg; const (const_int 0)] loc
+    in
+    if_ condition present absent
+  | Test_boolean_value {if_false; if_true} -> if_ arg if_true if_false
+  | Switch_on_constructors sw ->
+    let hs, sw = share_actions_sw sw in
+    let sw = reintroduce_fail sw in
+    hs (switch arg sw)
+
+let make_constructor_matching_plan ~cstr ~(layout : Variant_runtime.layout)
+    ~fail_opt ~num_consts ~num_nonconsts ~tag_lambda_list ~consts ~nonconsts =
+  match (fail_opt, same_actions tag_lambda_list) with
+  | None, Some action -> Use_constructor_action action
+  | _ -> (
+    match (num_consts, num_nonconsts, consts, nonconsts) with
+    | 1, 1, [(_, absent)], [(_, present)]
+      when cstr.cstr_name = "::" || cstr.cstr_name = "[]"
+           || Datarepr.constructor_has_optional_shape cstr ->
+      Test_payload_presence
+        {
+          test =
+            (if Datarepr.constructor_has_optional_shape cstr then
+               Is_present_option
+             else Is_nonempty_list);
+          absent;
+          present;
+        }
+    | 2, 0, _, [] when cstr.cstr_name = "true" || cstr.cstr_name = "false" ->
+      let find_action name =
+        match
+          Ext_list.find_opt consts (fun (cstr, action) ->
+              if cstr.cstr_name = name then Some action else None)
+        with
+        | Some action -> action
+        | None -> assert false
+      in
+      Test_boolean_value
+        {if_false = find_action "false"; if_true = find_action "true"}
+    | _, _, _, _ ->
+      let switch_cases cases =
+        List.map
+          (fun (cstr, action) -> (constructor_switch_key cstr, action))
+          cases
+      in
+      Switch_on_constructors
+        {
+          sw_consts_full = List.length consts >= num_consts;
+          sw_consts = switch_cases consts;
+          sw_blocks_full = List.length nonconsts >= num_nonconsts;
+          sw_blocks = switch_cases nonconsts;
+          sw_failaction = fail_opt;
+          sw_dispatch = Switch_variant (Variant_runtime.matching_facts layout);
+        })
+
+let combine_constructor loc arg ex_pat cstr partial ctx def
     (tag_lambda_list, total1, pats) =
-  if cstr.cstr_consts < 0 then
+  let is_extension =
+    match cstr.cstr_kind with
+    | Extension_constructor _ -> true
+    | Ordinary_constructor _ -> false
+  in
+  if is_extension then
     (* Special cases for extensions *)
     let fail, local_jumps = mk_failaction_neg partial ctx def in
     let lambda1 =
@@ -2155,19 +2389,32 @@ let combine_constructor sw_names loc arg ex_pat cstr partial ctx def
         let tests =
           List.fold_right
             (fun (path, act) rem ->
-              let ext = transl_extension_path ex_pat.pat_env path in
-              Lifthenelse
-                (Lprim (Pextension_slot_eq, [Lvar tag; ext], loc), act, rem))
+              let ext = Transl_path.transl_extension_path ex_pat.pat_env path in
+              if_
+                (prim ~primitive:(Pstringcomp Ceq)
+                   ~args:
+                     [
+                       prim
+                         ~primitive:
+                           (Pfield (0, Fld_record {name = Literals.exception_id}))
+                         ~args:[var tag]
+                         loc;
+                       ext;
+                     ]
+                   loc)
+                act rem)
             extension_cases default
         in
-        Llet (Alias, Pgenval, tag, arg, tests)
+        let_ Alias tag arg tests
     in
     (lambda1, jumps_union local_jumps total1)
   else
     (* Regular concrete type *)
-    let ncases = List.length tag_lambda_list
-    and nconstrs = cstr.cstr_consts + cstr.cstr_nonconsts in
-    let sig_complete = ncases = nconstrs in
+    let layout = Datarepr.constructor_variant cstr in
+    let num_consts = Variant_runtime.num_constants layout
+    and num_nonconsts = Variant_runtime.num_blocks layout in
+    let ncases = List.length tag_lambda_list in
+    let sig_complete = ncases = Variant_runtime.length layout in
     let fail_opt, fails, local_jumps =
       if sig_complete then (None, [], jumps_empty)
       else mk_failaction_pos partial pats ctx def
@@ -2175,118 +2422,60 @@ let combine_constructor sw_names loc arg ex_pat cstr partial ctx def
 
     let tag_lambda_list = fails @ tag_lambda_list in
     let consts, nonconsts = split_cases tag_lambda_list in
-    let lambda1 =
-      match (fail_opt, same_actions tag_lambda_list) with
-      | None, Some act -> act (* Identical actions, no failure *)
-      | _ -> (
-        match (cstr.cstr_consts, cstr.cstr_nonconsts, consts, nonconsts) with
-        | 1, 1, [(0, act1)], [(0, act2)]
-          when cstr.cstr_name = "::" || cstr.cstr_name = "[]"
-               || Datarepr.constructor_has_optional_shape cstr ->
-          (* Typically, match on lists, will avoid isint primitive in that
-             case *)
-          let arg =
-            if Datarepr.constructor_has_optional_shape cstr then
-              Lprim (Pis_not_none, [arg], loc)
-            else
-              Lprim (Pjscomp Cneq, [arg; Lconst (Const_base (Const_int 0))], loc)
-          in
-          Lifthenelse (arg, act2, act1)
-        | 2, 0, [(i1, act1); (_, act2)], []
-          when cstr.cstr_name = "true" || cstr.cstr_name = "false" ->
-          if i1 = 0 then Lifthenelse (arg, act2, act1)
-          else Lifthenelse (arg, act1, act2)
-        | n, 0, _, [] when false (* relies on tag being an int *) ->
-          (* The type defines constant constructors only *)
-          call_switcher loc fail_opt arg 0 (n - 1) consts sw_names
-        | n, _, _, _ -> (
-          let act0 =
-            (* = Some act when all non-const constructors match to act *)
-            match (fail_opt, nonconsts) with
-            | Some a, [] -> Some a
-            | Some _, _ ->
-              if List.length nonconsts = cstr.cstr_nonconsts then
-                same_actions nonconsts
-              else None
-            | None, _ -> same_actions nonconsts
-          in
-          match act0 with
-          | Some act when false (* relies on tag being an int *) ->
-            Lifthenelse
-              ( Lprim (Pisint, [arg], loc),
-                call_switcher loc fail_opt arg 0 (n - 1) consts sw_names,
-                act )
-          (* Emit a switch, as bytecode implements this sophisticated instruction *)
-          | _ ->
-            let sw =
-              {
-                sw_numconsts = cstr.cstr_consts;
-                sw_consts = consts;
-                sw_numblocks = cstr.cstr_nonconsts;
-                sw_blocks = nonconsts;
-                sw_failaction = fail_opt;
-                sw_names;
-              }
-            in
-            let hs, sw = share_actions_sw sw in
-            let sw = reintroduce_fail sw in
-            hs (Lswitch (arg, sw, loc))))
+    let consts = sort_constructor_cases consts
+    and nonconsts = sort_constructor_cases nonconsts in
+    let plan =
+      make_constructor_matching_plan ~cstr ~layout ~fail_opt ~num_consts
+        ~num_nonconsts ~tag_lambda_list ~consts ~nonconsts
     in
+    let lambda1 = lower_constructor_matching_plan ~loc ~arg plan in
     (lambda1, jumps_union local_jumps total1)
 
 let make_test_sequence_variant_constant fail arg int_lambda_list =
   let _, (cases, actions) =
-    as_interval fail min_int max_int
+    as_interval fail int32_low int32_high
       (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list)
   in
-  Switcher.test_sequence arg cases actions
+  Switch.test_sequence arg cases actions
 
-let call_switcher_variant_constant loc fail arg int_lambda_list names =
-  call_switcher loc fail arg min_int max_int
+let call_switcher_variant_constant fail arg int_lambda_list =
+  call_switcher fail arg int32_low int32_high
     (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list)
-    names
 
-let call_switcher_variant_constr loc fail arg int_lambda_list names =
+let call_switcher_variant_constr loc fail arg int_lambda_list =
   let v = Ident.create "variant" in
-  Llet
-    ( Alias,
-      Pgenval,
-      v,
-      Lprim (Pfield (0, Fld_poly_var_tag), [arg], loc),
-      call_switcher loc fail (Lvar v) min_int max_int
-        (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list)
-        names )
+  let_ Alias v
+    (prim ~primitive:(Pfield (0, Fld_poly_var_tag)) ~args:[arg] loc)
+    (call_switcher fail (var v) int32_low int32_high
+       (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list))
 
 let call_switcher_variant_constant :
-    (Location.t ->
-    Lambda.lambda option ->
-    Lambda.lambda ->
-    (int * (string * Lambda.lambda)) list ->
-    Ast_untagged_variants.switch_names option ->
-    Lambda.lambda)
+    (Lambda.t option ->
+    Lambda.t ->
+    (int * (string * Lambda.t)) list ->
+    Lambda.t)
     ref =
   ref call_switcher_variant_constant
 
 let call_switcher_variant_constr :
     (Location.t ->
-    Lambda.lambda option ->
-    Lambda.lambda ->
-    (int * (string * Lambda.lambda)) list ->
-    Ast_untagged_variants.switch_names option ->
-    Lambda.lambda)
+    Lambda.t option ->
+    Lambda.t ->
+    (int * (string * Lambda.t)) list ->
+    Lambda.t)
     ref =
   ref call_switcher_variant_constr
 
 let make_test_sequence_variant_constant :
-    (Lambda.lambda option ->
-    Lambda.lambda ->
-    (int * (string * Lambda.lambda)) list ->
-    Lambda.lambda)
+    (Lambda.t option ->
+    Lambda.t ->
+    (int * (string * Lambda.t)) list ->
+    Lambda.t)
     ref =
   ref make_test_sequence_variant_constant
 
-let combine_variant names loc row arg partial ctx def
-    (tag_lambda_list, total1, _pats) =
+let combine_variant loc row arg partial ctx def (tag_lambda_list, total1, _pats)
+    =
   let row = Btype.row_repr row in
   let num_constr = ref 0 in
   if row.row_closed then
@@ -2298,7 +2487,7 @@ let combine_variant names loc row arg partial ctx def
       row.row_fields
   else num_constr := max_int;
   let test_int_or_block arg if_int if_block =
-    Lifthenelse (Lprim (Pis_poly_var_block, [arg], loc), if_block, if_int)
+    if_ (prim ~primitive:Pis_poly_var_block ~args:[arg] loc) if_block if_int
   in
   let sig_complete = List.length tag_lambda_list = !num_constr
   and one_action = same_actions tag_lambda_list in
@@ -2325,30 +2514,26 @@ let combine_variant names loc row arg partial ctx def
         (* One can compare integers and pointers *)
         !make_test_sequence_variant_constant fail arg consts
       | [], _ -> (
-        let lam = !call_switcher_variant_constr loc fail arg nonconsts names in
+        let lam = !call_switcher_variant_constr loc fail arg nonconsts in
         (* One must not dereference integers *)
         match fail with
         | None -> lam
         | Some fail -> test_int_or_block arg fail lam)
       | _, _ ->
-        let lam_const =
-          !call_switcher_variant_constant loc fail arg consts names
+        let lam_const = !call_switcher_variant_constant fail arg consts
         and lam_nonconst =
-          !call_switcher_variant_constr loc fail arg nonconsts names
+          !call_switcher_variant_constr loc fail arg nonconsts
         in
         test_int_or_block arg lam_const lam_nonconst)
   in
   (lambda1, jumps_union local_jumps total1)
 
-let combine_array names loc arg partial ctx def (len_lambda_list, total1, _pats)
-    =
+let combine_array loc arg partial ctx def (len_lambda_list, total1, _pats) =
   let fail, local_jumps = mk_failaction_neg partial ctx def in
   let lambda1 =
     let newvar = Ident.create "len" in
-    let switch =
-      call_switcher loc fail (Lvar newvar) 0 max_int len_lambda_list names
-    in
-    bind Alias newvar (Lprim (Parraylength, [arg], loc)) switch
+    let switch = call_switcher fail (var newvar) 0 max_int len_lambda_list in
+    bind Alias newvar (prim ~primitive:Parraylength ~args:[arg] loc) switch
   in
   (lambda1, jumps_union local_jumps total1)
 
@@ -2389,27 +2574,62 @@ let compile_list compile_fun division =
   in
   c_rec [] division
 
+(* Is [lam] a jump to a static exit, once alias bindings are seen through?
+   Those bindings are dropped along with [lam], so they are substituted into
+   the raise's arguments rather than left dangling. Recognising this from the
+   term itself keeps Lambda_traverse.make_key's output where it belongs - in comparisons. *)
+let as_exit_call lam =
+  let rec go env lam =
+    match lam with
+    | Lstaticraise (i, args) ->
+      Some
+        ( i,
+          if env == Ident.empty then args
+          else Ext_list.map args (Lambda_traverse.subst_lambda env) )
+    | Llet (Alias, x, ex, body) ->
+      go (Ident.add x (Lambda_traverse.subst_lambda env ex) env) body
+    | _ -> None
+  in
+  go Ident.empty lam
+
+(* Adds the static exits [lam] jumps to to [raised]. Exits cannot leave a
+   function, so function bodies are skipped. *)
+let rec add_raised_exits raised lam =
+  match lam with
+  | Lfunction _ -> ()
+  | Lstaticraise (i, _) ->
+    Hashtbl.replace raised i ();
+    Lambda_traverse.iter (add_raised_exits raised) lam
+  | _ -> Lambda_traverse.iter (add_raised_exits raised) lam
+
 let compile_orhandlers compile_fun lambda1 total1 ctx to_catch =
+  (* The exits of the match and of the handlers compiled so far *)
+  let raised = Hashtbl.create 16 in
+  add_raised_exits raised lambda1;
   let rec do_rec r total_r = function
     | [] -> (r, total_r)
+    | (_, i, _, _) :: rem when not (Hashtbl.mem raised i) ->
+      (* The or-pattern is unreachable, e.g. after a wildcard. Its handler is
+         not compiled: with a guard and no default, its failure has no exit. *)
+      do_rec r total_r rem
     | (mat, i, vars, pm) :: rem -> (
       try
         let ctx = select_columns mat ctx in
         let handler_i, total_i = compile_fun ctx pm in
-        match raw_action r with
-        | Lstaticraise (j, args) ->
+        add_raised_exits raised handler_i;
+        match as_exit_call r with
+        | Some (j, args) ->
           if i = j then
             ( List.fold_right2 (bind Alias) vars args handler_i,
               jumps_map (ctx_rshift_num (ncols mat)) total_i )
           else do_rec r total_r rem
-        | _ ->
+        | None ->
           do_rec
-            (Lstaticcatch (r, (i, vars), handler_i))
+            (staticcatch r (i, vars) handler_i)
             (jumps_union (jumps_remove i total_r)
                (jumps_map (ctx_rshift_num (ncols mat)) total_i))
             rem
-      with Unused ->
-        do_rec (Lstaticcatch (r, (i, vars), lambda_unit)) total_r rem)
+      with Unused -> do_rec (staticcatch r (i, vars) lambda_unit) total_r rem)
   in
   do_rec lambda1 total1 to_catch
 
@@ -2429,8 +2649,9 @@ let compile_test compile_fun partial divide combine ctx to_match =
 let rec approx_present v = function
   | Lconst _ -> false
   | Lstaticraise (_, args) -> List.exists (fun lam -> approx_present v lam) args
-  | Lprim (_, args, _) -> List.exists (fun lam -> approx_present v lam) args
-  | Llet (Alias, _k, _, l1, l2) -> approx_present v l1 || approx_present v l2
+  | Lprim {primitive = _; args; loc = _} ->
+    List.exists (fun lam -> approx_present v lam) args
+  | Llet (Alias, _, l1, l2) -> approx_present v l1 || approx_present v l2
   | Lvar vv -> Ident.same v vv
   | _ -> true
 
@@ -2442,20 +2663,22 @@ let rec lower_bind v arg lam =
     and pnot = approx_present v ifnot in
     match (pcond, pso, pnot) with
     | false, false, false -> lam
-    | false, true, false -> Lifthenelse (cond, lower_bind v arg ifso, ifnot)
-    | false, false, true -> Lifthenelse (cond, ifso, lower_bind v arg ifnot)
+    | false, true, false -> if_ cond (lower_bind v arg ifso) ifnot
+    | false, false, true -> if_ cond ifso (lower_bind v arg ifnot)
     | _, _, _ -> bind Alias v arg lam)
-  | Lswitch (ls, ({sw_consts = [(i, act)]; sw_blocks = []} as sw), loc)
+  | Lswitch (ls, ({sw_consts = [(i, act)]; sw_blocks = []} as sw))
     when not (approx_present v ls) ->
-    Lswitch (ls, {sw with sw_consts = [(i, lower_bind v arg act)]}, loc)
-  | Lswitch (ls, ({sw_consts = []; sw_blocks = [(i, act)]} as sw), loc)
+    switch ls {sw with sw_consts = [(i, lower_bind v arg act)]}
+  | Lswitch (ls, ({sw_consts = []; sw_blocks = [(i, act)]} as sw))
     when not (approx_present v ls) ->
-    Lswitch (ls, {sw with sw_blocks = [(i, lower_bind v arg act)]}, loc)
-  | Llet (Alias, k, vv, lv, l) ->
+    switch ls {sw with sw_blocks = [(i, lower_bind v arg act)]}
+  | Llet (Alias, vv, lv, l) ->
     if approx_present v lv then bind Alias v arg lam
-    else Llet (Alias, k, vv, lv, lower_bind v arg l)
-  | Lvar u when Ident.same u v && Ident.name u = "*sth*" ->
-    arg (* eliminate let *sth* = from_option x in *sth* *)
+    else let_ Alias vv lv (lower_bind v arg l)
+  | Lvar u when Ident.same u v ->
+    (* eliminate [let v = arg in v]; [lower_bind] is only used for alias
+       bindings, so [arg] is pure *)
+    arg
   | _ -> bind Alias v arg lam
 
 let bind_check str v arg lam =
@@ -2466,7 +2689,7 @@ let bind_check str v arg lam =
 
 let comp_exit ctx m =
   match m.default with
-  | (_, i) :: _ -> (Lstaticraise (i, []), jumps_singleton i ctx)
+  | (_, i) :: _ -> (staticraise i [], jumps_singleton i ctx)
   | _ -> fatal_error "Matching.comp_exit"
 
 let rec comp_match_handlers comp_fun partial ctx arg first_match next_matchs =
@@ -2491,11 +2714,11 @@ let rec comp_match_handlers comp_fun partial ctx arg first_match next_matchs =
                 ctx_i arg pm
             in
             c_rec
-              (Lstaticcatch (body, (i, []), li))
+              (staticcatch body (i, []) li)
               (jumps_union total_i total_rem)
               rem
           with Unused ->
-            c_rec (Lstaticcatch (body, (i, []), lambda_unit)) total_rem rem))
+            c_rec (staticcatch body (i, []) lambda_unit) total_rem rem))
     in
     try
       let first_lam, total = comp_fun Partial ctx arg first_match in
@@ -2507,9 +2730,20 @@ let rec comp_match_handlers comp_fun partial ctx arg first_match next_matchs =
 
 (* To find reasonable names for variables *)
 
+(* A name for the value [pat] matches, also found under an option's [Some] *)
+let id_of_pattern pat =
+  match Typecore.id_of_pattern pat with
+  | Some id -> Some id
+  | None -> (
+    match pat.pat_desc with
+    | Tpat_construct (_, cstr, [payload])
+      when Datarepr.constructor_has_optional_shape cstr ->
+      Typecore.id_of_pattern payload
+    | _ -> None)
+
 let rec name_pattern default = function
   | (pat :: _, _) :: rem -> (
-    match Typecore.id_of_pattern pat with
+    match id_of_pattern pat with
     | Some id -> id
     | None -> name_pattern default rem)
   | _ -> Ident.create default
@@ -2519,12 +2753,7 @@ let arg_to_var arg cls =
   | Lvar v -> (v, arg)
   | _ ->
     let v = name_pattern "match" cls in
-    (v, Lvar v)
-
-(* To be set by Lam_compile *)
-let names_from_construct_pattern :
-    (pattern -> Ast_untagged_variants.switch_names option) ref =
-  ref (fun _ -> None)
+    (v, var v)
 
 (*
   The main compilation function.
@@ -2540,11 +2769,15 @@ let names_from_construct_pattern :
 let rec compile_match repr partial ctx m =
   match m with
   | {cases = []; args = []} -> comp_exit ctx m
-  | {cases = ([], action) :: rem} ->
-    if is_guarded action then
-      let lambda, total = compile_match None partial ctx {m with cases = rem} in
-      (patch_guarded lambda action, total)
-    else (action, jumps_empty)
+  | {cases = ([], action) :: rem} -> (
+    (* The row matches. An unguarded action is the result; a guarded one
+       falls through to the remaining rows when the guard fails, so those
+       are compiled first and become the alternative. *)
+    match action.guard with
+    | None -> (action_body_with ~fail:lambda_unit action, jumps_empty)
+    | Some _ ->
+      let fail, total = compile_match None partial ctx {m with cases = rem} in
+      (action_body_with ~fail action, total))
   | {args = (arg, str) :: argl} ->
     let v, newarg = arg_to_var arg m.cases in
     let first_match, rem =
@@ -2589,33 +2822,29 @@ and do_compile_matching repr partial ctx arg pmh =
       compile_no_test
         (divide_record lbl.lbl_all (normalize_pat pat))
         ctx_combine repr partial ctx pm
-    | Tpat_constant cst ->
-      let names = None in
+    | Tpat_constant cst | Tpat_interval (cst, _) ->
       compile_test
         (compile_match repr partial)
         partial divide_constant
-        (combine_constant names pat.pat_loc arg cst partial)
+        (combine_constant pat.pat_loc arg cst partial)
         ctx pm
     | Tpat_construct (_, cstr, _) ->
-      let sw_names = !names_from_construct_pattern pat in
       compile_test
         (compile_match repr partial)
         partial divide_constructor
-        (combine_constructor sw_names pat.pat_loc arg pat cstr partial)
+        (combine_constructor pat.pat_loc arg pat cstr partial)
         ctx pm
     | Tpat_array _ ->
-      let names = None in
       compile_test
         (compile_match repr partial)
         partial divide_array
-        (combine_array names pat.pat_loc arg partial)
+        (combine_array pat.pat_loc arg partial)
         ctx pm
     | Tpat_variant (_, _, row) ->
-      let names = None in
       compile_test
         (compile_match repr partial)
         partial (divide_variant !row)
-        (combine_variant names pat.pat_loc !row arg partial)
+        (combine_variant pat.pat_loc !row arg partial)
         ctx pm
     | _ -> assert false)
   | PmVar {inside = pmh; var_arg = arg} ->
@@ -2662,8 +2891,11 @@ let find_in_pat pred =
       List.exists find_rec ps
     | Tpat_record (lpats, _, _rest) ->
       List.exists (fun (_, _, p, _) -> find_rec p) lpats
+    | Tpat_dict entries ->
+      List.exists (fun {tdp_pattern} -> find_rec tdp_pattern) entries
     | Tpat_or (p, q, _) -> find_rec p || find_rec q
-    | Tpat_constant _ | Tpat_var _ | Tpat_any | Tpat_variant (_, None, _) ->
+    | Tpat_constant _ | Tpat_interval _ | Tpat_var _ | Tpat_any
+    | Tpat_variant (_, None, _) ->
       false
   in
   find_rec
@@ -2678,7 +2910,8 @@ let have_mutable_field p =
         | Immutable -> false)
       lps
   | Tpat_alias _ | Tpat_variant _ | Tpat_tuple _ | Tpat_construct _
-  | Tpat_array _ | Tpat_or _ | Tpat_constant _ | Tpat_var _ | Tpat_any ->
+  | Tpat_dict _ | Tpat_array _ | Tpat_or _ | Tpat_constant _ | Tpat_interval _
+  | Tpat_var _ | Tpat_any ->
     false
 
 let is_mutable p = find_in_pat have_mutable_field p
@@ -2696,12 +2929,11 @@ let check_partial is_mutable pat_act_list = function
       ||
       (* allow empty case list *)
       List.exists
-        (fun (pats, lam) -> is_mutable pats && is_guarded lam)
+        (fun (pats, (act : action)) -> is_mutable pats && act.guard <> None)
         pat_act_list
     then Partial
     else Total
 
-let check_partial_list = check_partial (List.exists is_mutable)
 let check_partial = check_partial is_mutable
 
 (* have toplevel handler when appropriate *)
@@ -2710,13 +2942,13 @@ let start_ctx n = [{left = []; right = omegas n}]
 
 let check_total total lambda i handler_fun =
   if jumps_is_empty total then lambda
-  else Lstaticcatch (lambda, (i, []), handler_fun ())
+  else staticcatch lambda (i, []) (handler_fun ())
 
 let compile_matching repr handler_fun arg pat_act_list partial =
   let partial = check_partial pat_act_list partial in
   match partial with
   | Partial -> (
-    let raise_num = next_raise_count () in
+    let raise_num = Lambda_exits.next_raise_count () in
     let pm =
       {
         cases = List.map (fun (pat, act) -> ([pat], act)) pat_act_list;
@@ -2744,37 +2976,41 @@ let partial_function loc () =
   (* [Location.get_pos_info] is too expensive *)
   let fname, line, char = Location.get_pos_info loc.Location.loc_start in
   let fname = Filename.basename fname in
-  Lprim
-    ( Praise Raise_regular,
+  prim ~primitive:Praise
+    ~args:
       [
-        Lprim
-          ( Pmakeblock Blk_extension,
+        prim ~primitive:(Pmakeblock Blk_extension)
+          ~args:
             [
-              transl_normal_path Predef.path_match_failure;
-              Lconst
+              Transl_path.transl_normal_path Predef.path_match_failure;
+              const
                 (Const_block
                    ( Blk_tuple,
-                     [
-                       Const_base (Const_string (fname, None));
-                       Const_base (Const_int line);
-                       Const_base (Const_int char);
-                     ] ));
-            ],
-            loc );
-      ],
-      loc )
+                     [const_string fname; const_int line; const_int char] ));
+            ]
+          loc;
+      ]
+    loc
+
+let lower_dict_patterns pat_act_list =
+  let lower = Dict_pattern.lowering (List.map fst pat_act_list) in
+  List.map (fun (pat, act) -> (lower pat, act)) pat_act_list
 
 let for_function loc repr param pat_act_list partial =
+  let pat_act_list = lower_dict_patterns pat_act_list in
   compile_matching repr (partial_function loc) param pat_act_list partial
 
 (* In the following two cases, exhaustiveness info is not available! *)
 let for_trywith param pat_act_list =
+  let pat_act_list = lower_dict_patterns pat_act_list in
   compile_matching None
-    (fun () -> Lprim (Praise Raise_reraise, [param], Location.none))
+    (fun () -> prim ~primitive:Praise ~args:[param] Location.none)
     param pat_act_list Partial
 
 let simple_for_let loc param pat body =
-  compile_matching None (partial_function loc) param [(pat, body)] Partial
+  compile_matching None (partial_function loc) param
+    (lower_dict_patterns [(pat, unguarded body)])
+    Partial
 
 (* Optimize binding of immediate tuples
 
@@ -2829,33 +3065,15 @@ let for_let loc param pat body =
   | Tpat_any ->
     (* This eliminates a useless variable (and stack slot in bytecode)
        for "let _ = ...". See #6865. *)
-    Lsequence (param, body)
+    seq param body
   | Tpat_var (id, _) ->
     (* fast path, and keep track of simple bindings to unboxable numbers *)
-    Llet (Strict, Pgenval, id, param, body)
+    let_ Strict id param body
   | _ -> simple_for_let loc param pat body
 
 (* Handling of tupled functions and matchings *)
 
 (* Easy case since variables are available *)
-let for_tupled_function loc paraml pats_act_list partial =
-  let partial = check_partial_list pats_act_list partial in
-  let raise_num = next_raise_count () in
-  let omegas = [List.map (fun _ -> omega) paraml] in
-  let pm =
-    {
-      cases = pats_act_list;
-      args = List.map (fun id -> (Lvar id, Strict)) paraml;
-      default = [(omegas, raise_num)];
-    }
-  in
-  try
-    let lambda, total =
-      compile_match None partial (start_ctx (List.length paraml)) pm
-    in
-    check_total total lambda raise_num (partial_function loc)
-  with Unused -> partial_function loc ()
-
 let flatten_pattern size p =
   match p.pat_desc with
   | Tpat_tuple args -> args
@@ -2878,7 +3096,7 @@ let flatten_cases size cases =
     (fun (ps, action) ->
       match ps with
       | [p] -> (flatten_pattern size p, action)
-      | _ -> fatal_error "Matching.flatten_case")
+      | _ -> fatal_error "Matching.flatten_cases")
     cases
 
 let flatten_matrix size pss =
@@ -2915,7 +3133,7 @@ let flatten_precompiled size args pmh =
   | PmVar _ -> assert false
 
 (*
-   compiled_flattened is a ``comp_fun'' argument to comp_match_handlers.
+   compile_flattened is a ``comp_fun'' argument to comp_match_handlers.
    Hence it needs a fourth argument, which it ignores
 *)
 
@@ -2933,18 +3151,20 @@ let do_for_multiple_match loc paraml pat_act_list partial =
   let raise_num, pm1 =
     match partial with
     | Partial ->
-      let raise_num = next_raise_count () in
+      let raise_num = Lambda_exits.next_raise_count () in
       ( raise_num,
         {
           cases = List.map (fun (pat, act) -> ([pat], act)) pat_act_list;
-          args = [(Lprim (Pmakeblock Blk_tuple, paraml, loc), Strict)];
+          args =
+            [(prim ~primitive:(Pmakeblock Blk_tuple) ~args:paraml loc, Strict)];
           default = [([[omega]], raise_num)];
         } )
     | _ ->
       ( -1,
         {
           cases = List.map (fun (pat, act) -> ([pat], act)) pat_act_list;
-          args = [(Lprim (Pmakeblock Blk_tuple, paraml, loc), Strict)];
+          args =
+            [(prim ~primitive:(Pmakeblock Blk_tuple) ~args:paraml loc, Strict)];
           default = [];
         } )
   in
@@ -2956,7 +3176,7 @@ let do_for_multiple_match loc paraml pat_act_list partial =
 
       let size = List.length paraml
       and idl = List.map (fun _ -> Ident.create "match") paraml in
-      let args = List.map (fun id -> (Lvar id, Alias)) idl in
+      let args = List.map (fun id -> (var id, Alias)) idl in
 
       let flat_next = flatten_precompiled size args next
       and flat_nexts =
@@ -2996,7 +3216,8 @@ let bind_opt (v, eo) k =
   | Some e -> Lambda.bind Strict v e k
 
 let for_multiple_match loc paraml pat_act_list partial =
+  let pat_act_list = lower_dict_patterns pat_act_list in
   let v_paraml = List.map param_to_var paraml in
-  let paraml = List.map (fun (v, _) -> Lvar v) v_paraml in
+  let paraml = List.map (fun (v, _) -> var v) v_paraml in
   List.fold_right bind_opt v_paraml
     (do_for_multiple_match loc paraml pat_act_list partial)

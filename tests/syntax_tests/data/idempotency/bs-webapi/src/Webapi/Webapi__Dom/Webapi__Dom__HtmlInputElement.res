@@ -102,8 +102,8 @@ module Impl = (
   @get external labels: t_htmlInputElement => array<Dom.nodeList> = ""
   @get external step: t_htmlInputElement => string = ""
   @set external setStep: (t_htmlInputElement, string) => unit = "step"
-  @get @return(nullable) external valueAsDate: t_htmlInputElement => option<Js.Date.t> = ""
-  @set external setValueAsDate: (t_htmlInputElement, Js.Date.t) => unit = "valueAsDate"
+  @get @return(nullable) external valueAsDate: t_htmlInputElement => option<Date.t> = ""
+  @set external setValueAsDate: (t_htmlInputElement, Date.t) => unit = "valueAsDate"
   @get external valueAsNumber: t_htmlInputElement => float = ""
 
  

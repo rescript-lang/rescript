@@ -12,7 +12,7 @@ function update() {
   return true;
 }
 
-v.contents = v.contents + 1 | 0;
+update();
 
 Mocha.describe("Gpr_1762_test", () => {
   Mocha.test("gpr_1762 ref increment test", () => Test_utils.eq("File \"gpr_1762_test.res\", line 21, characters 7-14", v.contents, 4));

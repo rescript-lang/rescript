@@ -1,0 +1,1 @@
+- Char range patterns such as `'\u{0}' .. '\u{10FFFF}'` compile as fast as a single character, and missing-case warnings show ranges instead of listing every character.

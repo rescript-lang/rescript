@@ -173,7 +173,7 @@ let reducerComponentWithRetainedProps: string => componentSpec<
 
 let element: (
   ~key: string=?,
-  ~ref: Js.nullable<reactRef> => unit=?,
+  ~ref: nullable<reactRef> => unit=?,
   component<'state, 'retainedProps, 'action>,
 ) => reactElement
 

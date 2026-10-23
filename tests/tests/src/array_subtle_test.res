@@ -4,11 +4,11 @@ open Test_utils
 let v = [1, 2, 3, 3]
 
 let f = v => {
-  switch Js.Array2.pop(v) {
+  switch Array.pop(v) {
   | Some(x) => Console.log("hi")
   | None => Console.log("hi2")
   }
-  Console.log(ignore(Js.Array2.pop(v)))
+  Console.log(ignore(Array.pop(v)))
 }
 
 let fff = x => Array.length(x) >= 0
@@ -40,9 +40,9 @@ describe(__MODULE__, () => {
 
   test("array_push_test", () => {
     let v = [1, 2, 3, 3]
-    eq(__LOC__, 5, Js.Array2.push(v, 3))
+    Array.push(v, 3)
     eq(__LOC__, 5, Array.length(v))
-    eq(__LOC__, 5, Js.Array2.length(v))
+    eq(__LOC__, 5, Array.length(v))
   })
 
   test("array_mutation_test", () => {
@@ -54,10 +54,10 @@ describe(__MODULE__, () => {
 
   test("array_pop_test", () => {
     let v = [1, 2, 3, 3]
-    while Js.Array2.length(v) > 0 {
-      ignore(Js.Array2.pop(v))
+    while Array.length(v) > 0 {
+      ignore(Array.pop(v))
     }
-    eq(__LOC__, 0, Js.Array2.length(v))
+    eq(__LOC__, 0, Array.length(v))
   })
 
   test("array_function_tests", () => {

@@ -1,0 +1,1 @@
+- Remove dead code and duplicated checks in the type-checker-to-Lambda translation. https://github.com/rescript-lang/rescript/pull/8849

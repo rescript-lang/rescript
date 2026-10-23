@@ -4,14 +4,19 @@ import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
 function f(x) {
-  let y = {...x};
+  let y_a0 = x.a0;
+  let y_a1 = x.a1;
+  let y_a2 = x.a2;
+  let y_a3 = x.a3;
+  let y_a4 = x.a4;
+  let y_a5 = x.a5;
   return {
     a0: 1,
-    a1: y.a1,
-    a2: y.a2,
-    a3: y.a3,
-    a4: y.a4,
-    a5: y.a5
+    a1: y_a1,
+    a2: y_a2,
+    a3: y_a3,
+    a4: y_a4,
+    a5: y_a5
   };
 }
 

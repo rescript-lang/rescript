@@ -138,7 +138,7 @@ let attachFile = (updateResultCB, attachingCB, files, id, filename) => {
 
 let removeFile = (updateResultCB, files, id) =>
   updateResultCB(
-    ChecklistItem.Files(files->Js.Array.filter(a => a->ChecklistItem.fileId != id)),
+    ChecklistItem.Files(files->Array.filter(a => a->ChecklistItem.fileId != id)),
   )
 
 let showFiles = (files, preview, id, attachingCB, updateResultCB) =>

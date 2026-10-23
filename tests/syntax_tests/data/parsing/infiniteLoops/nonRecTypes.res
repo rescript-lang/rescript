@@ -5,7 +5,7 @@ include {
                         mutable size: int,
                         mutable root: option(node('value)),
                         compare:
-                          Js.Internal.fn([ | `Arity_2('value, 'value)], int),
+                          Function.fn([ | `Arity_2('value, 'value)], int),
                       };
                     }: {
 
@@ -16,7 +16,7 @@ include {
             (
               ~size: int,
               ~root: option(node('value)),
-              ~compare: Js.Internal.fn([ | `Arity_2('value, 'value)], int)
+              ~compare: Function.fn([ | `Arity_2('value, 'value)], int)
             ) =>
             t('value) =
             ""
@@ -49,11 +49,11 @@ include {
             "use compareGet instead or use {abstract = light} explicitly"
           ]
           external compare:
-            t('value) => Js.Internal.fn([ | `Arity_2('value, 'value)], int) =
+            t('value) => Function.fn([ | `Arity_2('value, 'value)], int) =
             ""
             "BS:6.0.1\x84\x95\xa6\xbe\0\0\0\x13\0\0\0\x07\0\0\0\x14\0\0\0\x13\xb0\xa0\xa0A\x91@@A\x98\xa0'compare@";
           external compareGet:
-            t('value) => Js.Internal.fn([ | `Arity_2('value, 'value)], int) =
+            t('value) => Function.fn([ | `Arity_2('value, 'value)], int) =
             ""
             "BS:6.0.1\x84\x95\xa6\xbe\0\0\0\x13\0\0\0\x07\0\0\0\x14\0\0\0\x13\xb0\xa0\xa0A\x91@@A\x98\xa0'compare@";
         };
@@ -80,13 +80,13 @@ let removeNode = (rbt, node) => {
     | None =>
       let leaf =
         createNode(
-          ~value=Js.Internal.raw_expr("0"),
+          ~value=%raw("0"),
           ~color=Black,
           ~height=0.,
         );
-      let isLeaf = Js.Internal.fn_mk1(x => x === leaf);
+      let isLeaf = x => x === leaf;
       (leaf, isLeaf);
-    | Some(successor) => (successor, Js.Internal.fn_mk1(_ => false))
+    | Some(successor) => (successor, _ => false)
     };
   let nodeParent = parentGet(nodeToRemove);
   parentSet(successor, nodeParent);
@@ -216,7 +216,7 @@ let removeNode = (rbt, node) => {
       };
     };
   };
-  if (Js.Internal.fn_run1(isLeaf, successor)) {
+  if (isLeaf(successor)) {
     if (rootGet(rbt) === Some(successor)) {
       rootSet(rbt, None);
     };
@@ -239,7 +239,7 @@ let findThroughCallback = (rbt, cb) => {
     switch (node) {
     | None => None
     | Some(node) =>
-      let cmp = Js.Internal.fn_run1(cb, valueGet(node));
+      let cmp = cb(valueGet(node));
       if (cmp === 0) {
         Some(node);
       } else if (cmp < 0) {
@@ -261,19 +261,11 @@ let rec heightOfInterval = (rbt, node, lhs, rhs) =>
     if (lhs === None && rhs === None) {
       sumGet(n);
     } else if (lhs !== None
-               && Js.Internal.fn_run2(
-                    compareGet(rbt),
-                    valueGet(n),
-                    castNotOption(lhs),
-                  )
+               && compareGet(rbt)(valueGet(n), castNotOption(lhs))
                < 0) {
       heightOfInterval(rbt, rightGet(n), lhs, rhs);
     } else if (rhs !== None
-               && Js.Internal.fn_run2(
-                    compareGet(rbt),
-                    valueGet(n),
-                    castNotOption(rhs),
-                  )
+               && compareGet(rbt)(valueGet(n), castNotOption(rhs))
                > 0) {
       heightOfInterval(rbt, leftGet(n), lhs, rhs);
     } else {
@@ -358,7 +350,7 @@ let getY = node =>
   sumLeftSpine(node, ~fromRightChild=true) -. heightGet(node);
 let linearSearch = (rbt, callback) => {
   let rec find = (node, callback) =>
-    if (Js.Internal.fn_run1(callback, valueGet(node))) {
+    if (callback(valueGet(node))) {
       Some(valueGet(node));
     } else {
       switch (nextNode(node)) {
@@ -376,11 +368,11 @@ let rec iterate = (~inclusive, firstNode, lastNode, ~callback) =>
   | None => ()
   | Some(node) =>
     if (inclusive) {
-      Js.Internal.fn_run1(callback, node);
+      callback(node);
     };
     if (firstNode !== lastNode) {
       if (!inclusive) {
-        Js.Internal.fn_run1(callback, node);
+        callback(node);
       };
       iterate(~inclusive, nextNode(node), lastNode, ~callback);
     };
@@ -395,11 +387,11 @@ let rec iterateWithY = (~y=?, ~inclusive, firstNode, lastNode, ~callback) =>
       | Some(y) => y
       };
     if (inclusive) {
-      Js.Internal.fn_run2(callback, node, y);
+      callback(node, y);
     };
     if (firstNode !== lastNode) {
       if (!inclusive) {
-        Js.Internal.fn_run2(callback, node, y);
+        callback(node, y);
       };
       iterateWithY(
         ~y=y +. heightGet(node),

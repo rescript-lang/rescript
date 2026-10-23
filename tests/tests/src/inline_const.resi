@@ -6,12 +6,13 @@ let x: bool
 
 @inline(`中文`) let f2: string
 
+@inline(`\x61\n\uD83D\uDE00`) let escapedValue: string
+
 module N: {
   @inline(`中文`) let f3: string
 }
 
-module N1: () =>
-{
+module N1: () => {
   @inline(`中文`) let f4: string
   @inline(3e-6) let xx: float
 }
@@ -22,3 +23,12 @@ let hh: string
 @inline(true) let f5: bool
 
 @inline(1) let f6: int
+
+module BigintConsts: (
+  X: {
+    @inline(12n) let pos: bigint
+    @inline(-5n) let neg: bigint
+  },
+) => {
+  let both: (bigint, bigint)
+}

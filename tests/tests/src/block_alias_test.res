@@ -20,11 +20,11 @@ module V = {
 }
 let f = (a, b) => a == b
 
-let h = Belt.List.length
+let h = List.length
 
 describe(__MODULE__, () => {
   test("block_alias_tests", () => {
-    let h = Belt.List.length
+    let h = List.length
     eq(__LOC__, h(list{1, 2}), 2)
     ok(__LOC__, f(v0, A(0, 1)))
     eq(__LOC__, v0, N.v1)

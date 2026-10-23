@@ -1,4 +1,4 @@
-@ocaml.doc(
+@res.doc(
   " This is like declaring a normal ReasonReact component's `make` function, except the body is a the interop hook wrapJsForReason "
 )
 @genType

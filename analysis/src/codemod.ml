@@ -13,15 +13,15 @@ let transform_opt ~source ~pos ~debug ~typ ~hint =
     | AddMissingCases -> (
       let source = "let " ^ hint ^ " = ()" in
       let {Res_driver.parsetree = hint_structure} =
-        Res_driver.parse_implementation_from_source ~for_printer:false
-          ~display_filename:"<none>" ~source
+        Res_driver.parse_implementation_from_source ~display_filename:"<none>"
+          ~source
       in
       match hint_structure with
       | [{pstr_desc = Pstr_value (_, [{pvb_pat = pattern}])}] -> (
         let cases =
           collect_patterns pattern
           |> List.map (fun (p : Parsetree.pattern) ->
-                 Ast_helper.Exp.case p (Type_utils.Codegen.mk_fail_with_exp ()))
+              Ast_helper.Exp.case p (Type_utils.Codegen.mk_fail_with_exp ()))
         in
         let result = ref None in
         let mk_iterator ~pos ~result =

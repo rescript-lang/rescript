@@ -9,7 +9,10 @@ let InnerModule = {
   make: make
 };
 
+let InnerModule$make = make;
+
 export {
   InnerModule,
+  InnerModule$make,
 }
 /* No side effect */

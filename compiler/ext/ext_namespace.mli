@@ -22,8 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val try_split_module_name : string -> (string * string) option
-
 (* Note  we have to output uncapitalized file Name,
    or at least be consistent, since by reading cmi file on Case insensitive OS, we don't really know it is `list.cmi` or `List.cmi`, so that `require (./list.js)` or `require(./List.js)`
    relevant issues: #1609, #913
@@ -36,15 +34,5 @@ val change_ext_ns_suffix : string -> string -> string
 val js_name_of_modulename : string -> Ext_js_file_kind.case -> string -> string
 (** [js_name_of_modulename ~little A-Ns]
 *)
-
-(* TODO handle cases like
-   '@angular/core'
-   its directory structure is like
-   {[
-     @angular
-     |-------- core
-   ]}
-*)
-val is_valid_npm_package_name : string -> bool
 
 val namespace_of_package_name : string -> string

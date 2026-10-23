@@ -4,7 +4,6 @@
     "@A",
     /* "-drawlambda"; */
     /* "-dtypedtree"; */
-    /* "-bs-diagnose" */
     /* "-dparsetree"; */
     /* "-dsource"; */
     /* "-bs-no-builtin-ppx"; */

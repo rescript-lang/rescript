@@ -1,7 +1,7 @@
 module type CssImplementationIntf = {
   let mergeStyles: (array<string>) => string
-  let injectRule: (Js.Json.t) => unit
+  let injectRule: (JSON.t) => unit
   let injectRaw: (string) => unit
-  let make: (Js.Json.t) => string
-  let makeKeyFrames: (dict<Js.Json.t>) => string
+  let make: (JSON.t) => string
+  let makeKeyFrames: (dict<JSON.t>) => string
 }

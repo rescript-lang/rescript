@@ -195,33 +195,33 @@ let rename ~state ~full ~pos ~new_name ~debug =
         let references_to_toplevel_modules =
           all_references
           |> Utils.filter_map (fun {References.uri = uri2; loc_opt} ->
-                 if loc_opt = None then Some uri2 else None)
+              if loc_opt = None then Some uri2 else None)
         in
         let references_to_items =
           all_references
           |> Utils.filter_map (function
-               | {References.uri = uri2; loc_opt = Some loc} -> Some (uri2, loc)
-               | {loc_opt = None} -> None)
+            | {References.uri = uri2; loc_opt = Some loc} -> Some (uri2, loc)
+            | {loc_opt = None} -> None)
         in
         let file_renames =
           references_to_toplevel_modules
           |> List.map (fun uri ->
-                 let path = Uri.to_path uri in
-                 let dir =
-                   match Filename.dirname path with
-                   | "." -> ""
-                   | other -> other
-                 in
-                 let new_path =
-                   Filename.concat dir (new_name ^ Filename.extension path)
-                 in
-                 `RenameFile
-                   (Lsp.Types.RenameFile.create
-                      ~newUri:
-                        (new_path |> Uri.from_path |> Uri.to_string
-                       |> Uri.from_path)
-                      ~oldUri:(uri |> Uri.to_string |> Uri.from_string)
-                      ()))
+              let path = Uri.to_path uri in
+              let dir =
+                match Filename.dirname path with
+                | "." -> ""
+                | other -> other
+              in
+              let new_path =
+                Filename.concat dir (new_name ^ Filename.extension path)
+              in
+              `RenameFile
+                (Lsp.Types.RenameFile.create
+                   ~newUri:
+                     (new_path |> Uri.from_path |> Uri.to_string
+                    |> Uri.from_path)
+                   ~oldUri:(uri |> Uri.to_string |> Uri.from_string)
+                   ()))
         in
         let text_document_edits =
           let module String_map = Misc.String_map in
@@ -304,8 +304,7 @@ let format ~source ~kind_file =
     match kind_file with
     | Files.Res -> (
       let {Res_driver.parsetree = structure; comments; diagnostics} =
-        Res_driver.parsing_engine.parse_implementation_from_source
-          ~for_printer:true ~source
+        Res_driver.parsing_engine.parse_implementation_from_source ~source
       in
       match List.length diagnostics > 0 with
       | true -> Error "Document has syntax errors"
@@ -314,8 +313,7 @@ let format ~source ~kind_file =
       )
     | Resi -> (
       let {Res_driver.parsetree = signature; comments; diagnostics} =
-        Res_driver.parsing_engine.parse_interface_from_source ~for_printer:true
-          ~source
+        Res_driver.parsing_engine.parse_interface_from_source ~source
       in
       match List.length diagnostics > 0 with
       | true -> Error "Document has syntax errors"

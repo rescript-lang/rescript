@@ -17,34 +17,42 @@ let tag_is_one_of_the_gentype_annotations s =
 
 let rec get_attribute_payload check_text (attributes : Typedtree.attributes) =
   let rec from_expr (expr : Parsetree.expression) =
-    match expr with
-    | {pexp_desc = Pexp_constant (Pconst_string (s, _))} ->
-      Some (StringPayload s)
-    | {pexp_desc = Pexp_constant (Pconst_integer (n, _))} -> Some (IntPayload n)
-    | {pexp_desc = Pexp_constant (Pconst_float (s, _))} -> Some (FloatPayload s)
-    | {
-     pexp_desc = Pexp_construct ({txt = Lident (("true" | "false") as s)}, _);
-     _;
-    } ->
-      Some (BoolPayload (s = "true"))
-    | {pexp_desc = Pexp_construct ({txt = Longident.Lident "[]"}, None)} -> None
-    | {pexp_desc = Pexp_construct ({txt = Longident.Lident "::"}, Some e)} ->
-      from_expr e
-    | {pexp_desc = Pexp_construct ({txt}, _); _} ->
-      Some (ConstructPayload (txt |> Longident.flatten |> String.concat "."))
-    | {pexp_desc = Pexp_tuple exprs | Pexp_array exprs} ->
-      let payloads =
-        exprs |> List.rev
-        |> List.fold_left
-             (fun payloads expr ->
-               match expr |> from_expr with
-               | Some payload -> payload :: payloads
-               | None -> payloads)
-             []
-      in
-      Some (TuplePayload payloads)
-    | {pexp_desc = Pexp_ident {txt}} -> Some (IdentPayload txt)
-    | _ -> None
+    match Ast_payload.semantic_string_of_expression expr with
+    | Some s -> Some (StringPayload s)
+    | None -> (
+      match Ast_payload.unwrap_braces expr with
+      | {pexp_desc = Pexp_constant (Pconst_integer (n, _))} ->
+        Some (IntPayload n)
+      | {pexp_desc = Pexp_constant (Pconst_float (s, _))} ->
+        Some (FloatPayload s)
+      | {
+       pexp_desc = Pexp_construct ({txt = Lident (("true" | "false") as s)}, _);
+       _;
+      } ->
+        Some (BoolPayload (s = "true"))
+      | {pexp_desc = Pexp_construct ({txt = Longident.Lident "[]"}, {txt = []})}
+        ->
+        None
+      | {
+       pexp_desc =
+         Pexp_construct ({txt = Longident.Lident "::"}, {txt = [head; tail]});
+      } ->
+        from_expr {expr with pexp_desc = Pexp_tuple [head; tail]}
+      | {pexp_desc = Pexp_construct ({txt}, _); _} ->
+        Some (ConstructPayload (txt |> Longident.flatten |> String.concat "."))
+      | {pexp_desc = Pexp_tuple exprs | Pexp_array exprs} ->
+        let payloads =
+          exprs |> List.rev
+          |> List.fold_left
+               (fun payloads expr ->
+                 match expr |> from_expr with
+                 | Some payload -> payload :: payloads
+                 | None -> payloads)
+               []
+        in
+        Some (TuplePayload payloads)
+      | {pexp_desc = Pexp_ident {txt}} -> Some (IdentPayload txt)
+      | _ -> None)
   in
   match attributes with
   | [] -> None
@@ -53,7 +61,8 @@ let rec get_attribute_payload check_text (attributes : Typedtree.attributes) =
       match payload with
       | PStr [] -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_eval (expr, _)} :: _) -> expr |> from_expr
-      | PStr ({pstr_desc = Pstr_extension _} :: _) -> Some UnrecognizedPayload
+      | PStr ({pstr_desc = Pstr_extension _ | Pstr_raw _} :: _) ->
+        Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_value _} :: _) -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_primitive _} :: _) -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_type _} :: _) -> Some UnrecognizedPayload
@@ -74,10 +83,7 @@ let has_attribute check_text (attributes : Typedtree.attributes) =
   get_attribute_payload check_text attributes <> None
 
 let is_ocaml_suppress_dead_warning attributes =
-  match
-    attributes
-    |> get_attribute_payload (fun x -> x = "ocaml.warning" || x = "warning")
-  with
+  match attributes |> get_attribute_payload (fun x -> x = "warning") with
   | Some (StringPayload s) ->
     let numeric =
       match Str.search_forward (Str.regexp (Str.quote "-32")) s 0 with

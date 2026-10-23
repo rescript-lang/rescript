@@ -159,20 +159,25 @@ let extension_constructor sub x =
 let pat sub x =
   let extra = function
     | (Tpat_type _ | Tpat_unpack) as d -> d
-    | Tpat_open (path, loc, env) -> Tpat_open (path, loc, sub.env sub env)
     | Tpat_constraint ct -> Tpat_constraint (sub.typ sub ct)
   in
   let pat_env = sub.env sub x.pat_env in
   let pat_extra = List.map (tuple3 extra id id) x.pat_extra in
   let pat_desc =
     match x.pat_desc with
-    | (Tpat_any | Tpat_var _ | Tpat_constant _) as d -> d
+    | (Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_interval _) as d -> d
     | Tpat_tuple l -> Tpat_tuple (List.map (sub.pat sub) l)
     | Tpat_construct (loc, cd, l) ->
       Tpat_construct (loc, cd, List.map (sub.pat sub) l)
     | Tpat_variant (l, po, rd) -> Tpat_variant (l, opt (sub.pat sub) po, rd)
     | Tpat_record (l, closed, rest) ->
       Tpat_record (List.map (tuple4 id id (sub.pat sub) id) l, closed, rest)
+    | Tpat_dict entries ->
+      Tpat_dict
+        (List.map
+           (fun entry ->
+             {entry with tdp_pattern = sub.pat sub entry.tdp_pattern})
+           entries)
     | Tpat_array l -> Tpat_array (List.map (sub.pat sub) l)
     | Tpat_or (p1, p2, rd) -> Tpat_or (sub.pat sub p1, sub.pat sub p2, rd)
     | Tpat_alias (p, id, s) -> Tpat_alias (sub.pat sub p, id, s)
@@ -182,10 +187,10 @@ let pat sub x =
 let expr sub x =
   let extra = function
     | Texp_constraint cty -> Texp_constraint (sub.typ sub cty)
-    | Texp_coerce cty2 -> Texp_coerce (sub.typ sub cty2)
+    | Texp_coerce {source_type; target; target_type} ->
+      Texp_coerce {source_type; target = sub.typ sub target; target_type}
     | Texp_open (ovf, path, loc, env) ->
       Texp_open (ovf, path, loc, sub.env sub env)
-    | Texp_newtype _ as d -> d
   in
   let exp_extra = List.map (tuple3 extra id id) x.exp_extra in
   let exp_env = sub.env sub x.exp_env in
@@ -195,9 +200,14 @@ let expr sub x =
     | Texp_let (rec_flag, list, exp) ->
       let rec_flag, list = sub.value_bindings sub (rec_flag, list) in
       Texp_let (rec_flag, list, sub.expr sub exp)
-    | Texp_function {arg_label; arity; param; case; partial; async} ->
+    | Texp_function {params; body; async} ->
       Texp_function
-        {arg_label; arity; param; case = sub.case sub case; partial; async}
+        {
+          params =
+            List.map (fun fp -> {fp with fp_pat = sub.pat sub fp.fp_pat}) params;
+          body = sub.expr sub body;
+          async;
+        }
     | Texp_apply {funct = exp; args = list; partial; transformed_jsx} ->
       Texp_apply
         {
@@ -233,6 +243,13 @@ let expr sub x =
     | Texp_setfield (exp1, lid, ld, exp2) ->
       Texp_setfield (sub.expr sub exp1, lid, ld, sub.expr sub exp2)
     | Texp_array list -> Texp_array (List.map (sub.expr sub) list)
+    | Texp_dict entries ->
+      Texp_dict
+        (List.map
+           (function
+             | Tdict_entry (key, exp) -> Tdict_entry (key, sub.expr sub exp)
+             | Tdict_spread exp -> Tdict_spread (sub.expr sub exp))
+           entries)
     | Texp_ifthenelse (exp1, exp2, expo) ->
       Texp_ifthenelse
         (sub.expr sub exp1, sub.expr sub exp2, opt (sub.expr sub) expo)
@@ -249,15 +266,26 @@ let expr sub x =
       Texp_for_of (id, p, sub.expr sub exp1, sub.expr sub exp2)
     | Texp_for_await_of (id, p, exp1, exp2) ->
       Texp_for_await_of (id, p, sub.expr sub exp1, sub.expr sub exp2)
-    | Texp_send (exp, meth, expo) ->
-      Texp_send (sub.expr sub exp, meth, opt (sub.expr sub) expo)
+    | Texp_template {segments; values} ->
+      Texp_template {segments; values = List.map (sub.expr sub) values}
+    | Texp_tagged_template {tag; raw_sources; values} ->
+      Texp_tagged_template
+        {
+          tag = sub.expr sub tag;
+          raw_sources;
+          values = List.map (sub.expr sub) values;
+        }
+    | Texp_object_get (exp, name) -> Texp_object_get (sub.expr sub exp, name)
+    | Texp_object_set (exp, name, v) ->
+      Texp_object_set (sub.expr sub exp, name, sub.expr sub v)
+    | Texp_object_literal fields ->
+      Texp_object_literal (List.map (fun (s, e) -> (s, sub.expr sub e)) fields)
     | Texp_letmodule (id, s, mexpr, exp) ->
       Texp_letmodule (id, s, sub.module_expr sub mexpr, sub.expr sub exp)
     | Texp_letexception (cd, exp) ->
       Texp_letexception (sub.extension_constructor sub cd, sub.expr sub exp)
     | Texp_assert exp -> Texp_assert (sub.expr sub exp)
     | Texp_pack mexpr -> Texp_pack (sub.module_expr sub mexpr)
-    | Texp_extension_constructor _ as e -> e
   in
   {x with exp_extra; exp_desc; exp_env}
 
@@ -365,8 +393,12 @@ let typ sub x =
   let ctyp_desc =
     match x.ctyp_desc with
     | (Ttyp_any | Ttyp_var _) as d -> d
-    | Ttyp_arrow (arg, ret, arity) ->
-      Ttyp_arrow ({arg with typ = sub.typ sub arg.typ}, sub.typ sub ret, arity)
+    | Ttyp_arrow (params, ret) ->
+      Ttyp_arrow
+        ( List.map
+            (fun (arg : Typedtree.arg) -> {arg with typ = sub.typ sub arg.typ})
+            params,
+          sub.typ sub ret )
     | Ttyp_tuple list -> Ttyp_tuple (List.map (sub.typ sub) list)
     | Ttyp_constr (path, lid, list) ->
       Ttyp_constr (path, lid, List.map (sub.typ sub) list)

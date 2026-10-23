@@ -192,10 +192,10 @@ let of_list = l =>
   | list{x0, x1, x2} => add(x2, add(x1, singleton(x0)))
   | list{x0, x1, x2, x3} => add(x3, add(x2, add(x1, singleton(x0))))
   | list{x0, x1, x2, x3, x4} => add(x4, add(x3, add(x2, add(x1, singleton(x0)))))
-  | _ => of_sorted_list(l->Belt.List.sort(compare_elt))
+  | _ => of_sorted_list(l->List.sort((a, b) => compare_elt(a, b)->Int.toFloat))
   }
 
-let of_array = l => l->Belt.Array.reduceReverse(empty, (acc, x) => add(x, acc))
+let of_array = l => l->Array.reduceRight(empty, (acc, x) => add(x, acc))
 
 /* also check order */
 let invariant = t => {

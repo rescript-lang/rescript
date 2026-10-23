@@ -2,7 +2,7 @@ open Ws
 
 let wss = Server.make({port: 82})
 let address = wss->Server.address
-let log = msg => Js.log(`> Server: ${msg}`)
+let log = msg => Console.log(`> Server: ${msg}`)
 log(`Running on: ${address.address}:${address.port->string_of_int} (${address.family})`)
 
 module ClientSet = {
@@ -18,4 +18,4 @@ module ClientSet = {
 
 })))))))))))))))))))))))))))))); // this ")" here, this can even be "))))))))))))))))" and should error
 
-Js.log("test") // should not be omitted
+Console.log("test") // should not be omitted

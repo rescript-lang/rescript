@@ -7,9 +7,9 @@ let setDocument: Warp_Types_Client.t<'a> => Warp_Types_Client.t<
 >
 
 let setJson: Warp_Types_Client.t<'a> => Warp_Types_Client.t<
-  Warp_Types_ResponseType.payload<option<Js.Json.t>>,
+  Warp_Types_ResponseType.payload<option<JSON.t>>,
 >
 
 let setArrayBuffer: Warp_Types_Client.t<'a> => Warp_Types_Client.t<
-  Warp_Types_ResponseType.payload<option<Js.Typed_array.ArrayBuffer.t>>,
+  Warp_Types_ResponseType.payload<option<ArrayBuffer.t>>,
 >

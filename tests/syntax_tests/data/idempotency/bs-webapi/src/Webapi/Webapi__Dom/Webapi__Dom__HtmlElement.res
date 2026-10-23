@@ -5,14 +5,14 @@ module Impl = (
 ) => {
   type t_htmlElement = T.t
 
-  let ofElement: Dom.element => Js.null<t_htmlElement> = %raw(`
+  let ofElement: Dom.element => null<t_htmlElement> = %raw(`
     function (element) {
       // BEWARE: Assumes "contentEditable" uniquely identifies an HTMLELement
       return element.contentEditable !== undefined ?  element : null;
     }
   `)
   @deprecated("Consider using Element.asHtmlElement or Element.unsafeAsHtmlElement instead")
-  let ofElement: Dom.element => option<t_htmlElement> = self => Js.Null.toOption(ofElement(self))
+  let ofElement: Dom.element => option<t_htmlElement> = self => Null.toOption(ofElement(self))
 
   @get external accessKey: t_htmlElement => string = ""
   @set external setAccessKey: (t_htmlElement, string) => unit = "accessKey"
@@ -38,14 +38,14 @@ module Impl = (
     setDir(self, Webapi__Dom__Types.encodeDir(value))
   @get external draggable: t_htmlElement => bool = ""
   @set external setDraggable: (t_htmlElement, bool) => unit = "draggable"
-  /* let setDraggable : t_htmlElement => bool => unit = fun self value => setDraggable self (Js.Boolean.to_js_boolean value); */ /* temproarily removed to reduce codegen size */
+  /* let setDraggable : t_htmlElement => bool => unit = fun self value => setDraggable self (Bool.fromBool value); */ /* temproarily removed to reduce codegen size */
   @get external dropzone: t_htmlElement => Dom.domSettableTokenList = ""
   @get external hidden: t_htmlElement => bool = ""
   @set external setHidden: (t_htmlElement, bool) => unit = "hidden"
-  /* let setHidden : t_htmlElement => bool => unit = fun self value => setHidden self (Js.Boolean.to_js_boolean value); */ /* temproarily removed to reduce codegen size */
+  /* let setHidden : t_htmlElement => bool => unit = fun self value => setHidden self (Bool.fromBool value); */ /* temproarily removed to reduce codegen size */
   @get external itemScope: t_htmlElement => bool = "" /* experimental */
   @set external setItemScope: (t_htmlElement, bool) => unit = "itemScope"
-  /* let setItemScope : t_htmlElement => bool => unit = fun self value => setItemScope self (Js.Boolean.to_js_boolean value); */ /* experimental */ /* temproarily removed to reduce codegen size */
+  /* let setItemScope : t_htmlElement => bool => unit = fun self value => setItemScope self (Bool.fromBool value); */ /* experimental */ /* temproarily removed to reduce codegen size */
   @get external itemType: t_htmlElement => Dom.domSettableTokenList = "" /* experimental */
   @get external itemId: t_htmlElement => string = "" /* experimental */
   @set external setItemId: (t_htmlElement, string) => unit = "itemId" /* experimental */
@@ -64,7 +64,7 @@ module Impl = (
   /* external properties : r => HTMLPropertiesCollection.t = "properties" [@@get]; /* experimental */ */
   @get external spellcheck: t_htmlElement => bool = ""
   @set external setSpellcheck: (t_htmlElement, bool) => unit = "spellcheck"
-  /* let setSpellcheck : t_htmlElement => bool => unit = fun self value => setSpellcheck self (Js.Boolean.to_js_boolean value); */ /* temproarily removed to reduce codegen size */
+  /* let setSpellcheck : t_htmlElement => bool => unit = fun self value => setSpellcheck self (Bool.fromBool value); */ /* temproarily removed to reduce codegen size */
   @get external style: t_htmlElement => Dom.cssStyleDeclaration = ""
   @set external setStyle: (t_htmlElement, Dom.cssStyleDeclaration) => unit = "style"
   @get external tabIndex: t_htmlElement => int = ""
@@ -73,7 +73,7 @@ module Impl = (
   @set external setTitle: (t_htmlElement, string) => unit = "title"
   @get external translate: t_htmlElement => bool = "" /* experimental */
   @set external setTranslate: (t_htmlElement, bool) => unit = "translate" /* experimental */
-  /* let setTranslate : t_htmlElement => bool => unit = fun self value => setTranslate self (Js.Boolean.to_js_boolean value); */ /* temproarily removed to reduce codegen size */
+  /* let setTranslate : t_htmlElement => bool => unit = fun self value => setTranslate self (Bool.fromBool value); */ /* temproarily removed to reduce codegen size */
 
 
   /* TODO: element-spcific, should be pulled out */

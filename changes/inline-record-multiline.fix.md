@@ -1,0 +1,1 @@
+- Keep inline records in exception and constructor declarations multiline when the source has a line break after `{`.

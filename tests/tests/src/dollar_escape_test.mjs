@@ -7,25 +7,33 @@ function $$(x, y) {
   return x + y | 0;
 }
 
-let v = 3;
-
 function $$$plus(x, y) {
   return x * y | 0;
 }
 
-let u = 3;
+function f($, $$1) {
+  let $$2 = $$1($);
+  let x = $$1(2);
+  return `$: ${$$2} ${x}`;
+}
 
 Mocha.describe("Dollar_escape_test", () => {
   Mocha.test("dollar escape operators", () => {
-    Test_utils.eq("File \"dollar_escape_test.res\", line 14, characters 7-14", v, 3);
-    Test_utils.eq("File \"dollar_escape_test.res\", line 15, characters 7-14", u, 3);
+    Test_utils.eq("File \"dollar_escape_test.res\", line 21, characters 7-14", 3, 3);
+    Test_utils.eq("File \"dollar_escape_test.res\", line 22, characters 7-14", 3, 3);
   });
+  Mocha.test("dollar identifiers shadowing", () => Test_utils.eq("File \"dollar_escape_test.res\", line 26, characters 7-14", f(1, n => (n * 10 | 0).toString()), "$: 10 20"));
 });
+
+let v = 3;
+
+let u = 3;
 
 export {
   $$,
   v,
   $$$plus,
   u,
+  f,
 }
 /*  Not a pure module */

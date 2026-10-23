@@ -1,0 +1,31 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/inline_bigint_signature_mismatch.res[0m:[2m4:5-7:1[0m
+
+  2 [2m│[0m   @inline(12n) let pos: bigint
+  3 [2m│[0m   @inline(-5n) let neg: bigint
+  [1;31m4[0m [2m│[0m } = [1;31m{[0m
+  [1;31m5[0m [2m│[0m [1;31m  let pos = 12n[0m
+  [1;31m6[0m [2m│[0m [1;31m  let neg = -5n[0m
+  [1;31m7[0m [2m│[0m [1;31m}[0m
+  8 [2m│[0m 
+
+  Signature mismatch:
+  Modules do not match:
+    {
+  let pos: bigint
+  let neg: bigint
+}
+  is not included in
+    {
+  @inline(12n) let pos: bigint
+  @inline(-5n) let neg: bigint
+}
+  Values do not match:
+    let pos: bigint
+  is not included in
+    @inline(12n) let pos: bigint
+  [36m/.../fixtures/inline_bigint_signature_mismatch.res[0m:[2m2:3-30[0m:
+    Expected declaration
+  [36m/.../fixtures/inline_bigint_signature_mismatch.res[0m:[2m5:7-9[0m:
+    Actual declaration

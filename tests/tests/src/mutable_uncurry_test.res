@@ -1,9 +1,3 @@
-@@config({
-  flags: [
-    /* "-bs-diagnose" */
-  ],
-})
-
 open Mocha
 open Test_utils
 

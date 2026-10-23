@@ -3,7 +3,6 @@ use crate::config::Config;
 use crate::helpers;
 use crate::project_context::ProjectContext;
 use anyhow::anyhow;
-use std::ffi::OsString;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
@@ -105,7 +104,7 @@ impl StrippedVerbatimPath for PathBuf {
     }
 }
 
-pub trait LexicalAbsolute {
+trait LexicalAbsolute {
     fn to_lexical_absolute(&self) -> std::io::Result<PathBuf>;
 }
 
@@ -129,7 +128,7 @@ impl LexicalAbsolute for Path {
     }
 }
 
-pub fn package_path(root: &Path, package_name: &str) -> PathBuf {
+fn package_path(root: &Path, package_name: &str) -> PathBuf {
     root.join("node_modules").join(package_name)
 }
 
@@ -300,13 +299,14 @@ pub fn get_basename(path: &Path) -> String {
         .to_string()
 }
 
-/// Capitalizes the first character in s.
+/// Capitalizes the first character in s if it is an ASCII letter, like the compiler's
+/// `Ext_filename.module_name`.
 fn capitalize(s: &str) -> String {
-    let mut c = s.chars();
-    match c.next() {
-        None => String::new(),
-        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    let mut s = s.to_string();
+    if let Some(first) = s.get_mut(0..1) {
+        first.make_ascii_uppercase();
     }
+    s
 }
 
 fn add_suffix(base: &str, namespace: &packages::Namespace) -> String {
@@ -319,10 +319,6 @@ fn add_suffix(base: &str, namespace: &packages::Namespace) -> String {
         } => base.to_string() + "-" + &namespace.to_suffix().unwrap(),
         packages::Namespace::NoNamespace => base.to_string(),
     }
-}
-
-pub fn module_name_with_namespace(module_name: &str, namespace: &packages::Namespace) -> String {
-    capitalize(&add_suffix(module_name, namespace))
 }
 
 // this doesn't capitalize the module name! if the rescript name of the file is "foo.res" the
@@ -353,7 +349,7 @@ pub fn create_path_for_path(path: &Path) {
     fs::DirBuilder::new().recursive(true).create(path).unwrap();
 }
 
-pub fn get_bin_dir() -> PathBuf {
+fn get_bin_dir() -> PathBuf {
     let current_exe_path = std::env::current_exe().expect("Could not get current executable path");
     current_exe_path
         .parent()
@@ -371,12 +367,6 @@ pub fn get_bsc() -> PathBuf {
         .canonicalize()
         .expect("Could not get bsc path, did you set environment variable RESCRIPT_BSC_EXE ?")
         .to_stripped_verbatim_path()
-}
-
-pub fn string_ends_with_any(s: &Path, suffixes: &[&str]) -> bool {
-    suffixes
-        .iter()
-        .any(|&suffix| s.extension().unwrap_or(&OsString::new()).to_str().unwrap_or("") == suffix)
 }
 
 fn path_to_ast_extension(path: &Path) -> &str {
@@ -409,13 +399,6 @@ pub fn get_compiler_asset(
     package
         .get_ocaml_build_path()
         .join(format!("{basename}.{extension}"))
-}
-
-pub fn canonicalize_string_path(path: &str) -> Option<PathBuf> {
-    Path::new(path)
-        .canonicalize()
-        .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-        .ok()
 }
 
 pub fn get_bs_compiler_asset(
@@ -516,7 +499,8 @@ fn has_rescript_config(path: &Path) -> bool {
     path.join("rescript.json").exists() || path.join("bsconfig.json").exists()
 }
 
-// traverse up the directory tree until we find a config.json, if not return None
+// Traverse up the directory tree, starting at `path_buf`, until we find a directory with a
+// rescript.json or bsconfig.json, and return that directory. If there is none, return None.
 pub fn get_nearest_config(path_buf: &Path) -> Option<PathBuf> {
     let mut current_dir = path_buf.to_owned();
     loop {
@@ -549,4 +533,32 @@ pub fn is_local_package(workspace_path: &Path, canonical_package_path: &Path) ->
         && !canonical_package_path
             .components()
             .any(|c| c.as_os_str() == "node_modules")
+}
+
+#[cfg(test)]
+mod test {
+    use super::file_path_to_module_name;
+    use crate::build::packages::Namespace;
+    use std::path::Path;
+
+    #[test]
+    fn module_name_capitalizes_only_ascii() {
+        let module_name = |path| file_path_to_module_name(Path::new(path), &Namespace::NoNamespace);
+        assert_eq!(module_name("src/foo.res"), "Foo");
+        assert_eq!(module_name("src/Foo.resi"), "Foo");
+        assert_eq!(module_name("src/foo.test.res"), "Foo.test");
+        assert_eq!(module_name("src/_app.res"), "_app");
+        assert_eq!(module_name("src/éclair.res"), "éclair");
+        assert_eq!(module_name("src/ßeta.res"), "ßeta");
+        assert_eq!(module_name("src/中文.res"), "中文");
+    }
+
+    #[test]
+    fn module_name_with_namespace() {
+        let namespace = Namespace::Namespace("MyNs".to_string());
+        assert_eq!(
+            file_path_to_module_name(Path::new("src/foo.test.res"), &namespace),
+            "Foo.test-MyNs"
+        );
+    }
 }

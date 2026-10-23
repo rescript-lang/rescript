@@ -50,7 +50,7 @@ type cachedTarget = {
 
 let isPast = dateString =>
   switch dateString {
-  | Some(date) => date->DateFns.parseString->DateFns.isBefore(Js.Date.make())
+  | Some(date) => date->DateFns.parseString->DateFns.isBefore(Date.make())
   | None => false
   }
 

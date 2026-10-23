@@ -22,8 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type anon_fun = rev_args:string list -> unit
-
 type string_action =
   | String_call of (string -> unit)
   | String_set of string ref
@@ -41,6 +39,7 @@ type spec = Unit_dummy | Unit of unit_action | String of string_action
 type t = (string * spec * string) array
 
 exception Bad of string
+exception Help of string
 
 val bad_arg : string -> 'a
 

@@ -28,14 +28,14 @@ type getUnit =
 
 let getFloat = (value, unit) =>
   switch unit {
-  | Eth(unit) => fromWei(value, unit->ethUnitToJs)->Js.Float.fromString
-  | Usd(conversion, _) => fromWei(value, #ether->ethUnitToJs)->Js.Float.fromString *. conversion
+  | Eth(unit) => fromWei(value, unit->ethUnitToJs)->Float.fromString
+  | Usd(conversion, _) => fromWei(value, #ether->ethUnitToJs)->Float.fromString *. conversion
   }
 let get = (value, unit) =>
   switch unit {
   | Eth(unit) => fromWei(value, unit->ethUnitToJs)
   | Usd(conversion, digits) =>
-    (fromWei(value, #ether->ethUnitToJs)->Js.Float.fromString *. conversion)
+    (fromWei(value, #ether->ethUnitToJs)->Float.fromString *. conversion)
       ->toFixedWithPrecisionNoTrailingZeros(~digits)
   }
 

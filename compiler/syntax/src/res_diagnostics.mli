@@ -19,6 +19,7 @@ val unclosed_template : category
 val unclosed_comment : category
 val unknown_uchar : Char.t -> category
 val message : string -> category
+val lazy_message : string Lazy.t -> category
 
 val make : start_pos:Lexing.position -> end_pos:Lexing.position -> category -> t
 

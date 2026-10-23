@@ -1,7 +1,7 @@
 open Mocha
 open Test_utils
 
-@send external map: (Js_array2.t<'a>, 'a => 'b) => Js_array2.t<'b> = "map"
+@send external map: (array<'a>, 'a => 'b) => array<'b> = "map"
 
 describe(__MODULE__, () => {
   test("ffi array test", () => {

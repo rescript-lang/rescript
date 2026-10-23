@@ -5,15 +5,15 @@ module Wrap = {
 }
 
 module JsExn = {
-  exception Unexpected(Js.Promise.error)
+  exception Unexpected(exn)
   let let_ = (bsPromise, cb) => {
-    let promise = bsPromise->Promise.Js.fromBsPromise->Promise.Js.toResult
+    let promise = bsPromise->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
     Promise.flatMap(promise, result =>
       cb(
         switch result {
         | Ok(result) => result
         | Error(error) =>
-          Js.log2("Repromise.JsExn", error)
+          Console.log2("Repromise.JsExn", error)
           throw(Unexpected(error))
         },
       )
@@ -23,7 +23,7 @@ module JsExn = {
 
 module Js = {
   let let_ = (bsPromise, cb) => {
-    let promise = bsPromise->Promise.Js.fromBsPromise->Promise.Js.toResult
+    let promise = bsPromise->Promise.thenResolve(value => Ok(value))->Promise.catch(error => Promise.resolve(Error(error)))
     Promise.flatMap(promise, cb)
   }
 }

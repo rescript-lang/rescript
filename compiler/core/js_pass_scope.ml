@@ -116,18 +116,18 @@ let with_in_loop (st : state) b =
 let add_loop_mutable_variable (st : state) id =
   {
     st with
-    loop_mutable_values = Set_ident.add st.loop_mutable_values id;
-    mutable_values = Set_ident.add st.mutable_values id;
+    loop_mutable_values = Set_ident.add id st.loop_mutable_values;
+    mutable_values = Set_ident.add id st.mutable_values;
   }
 
 let add_mutable_variable (st : state) id =
-  {st with mutable_values = Set_ident.add st.mutable_values id}
+  {st with mutable_values = Set_ident.add id st.mutable_values}
 
 let add_defined_ident (st : state) id =
-  {st with defined_idents = Set_ident.add st.defined_idents id}
+  {st with defined_idents = Set_ident.add id st.defined_idents}
 
 let add_used_ident (st : state) id =
-  {st with used_idents = Set_ident.add st.used_idents id}
+  {st with used_idents = Set_ident.add id st.used_idents}
 
 let add_defined_idents st ids = List.fold_left add_defined_ident st ids
 
@@ -157,13 +157,11 @@ let record_scope_pass =
               {init_state with mutable_values = mutable_params}
               body
           in
-          (* let defined_idents', used_idents' =
-             obj#get_defined_idents, obj#get_used_idents  in *)
           (* mark which param is used *)
           params
           |> List.iteri (fun i v ->
-                 if not (Set_ident.mem used_idents' v) then
-                   Js_fun_env.mark_unused env i);
+              if not (Set_ident.mem v used_idents') then
+                Js_fun_env.mark_unused env i);
           let closured_idents' =
             (* pass param_set down *)
             Set_ident.(diff used_idents' (union defined_idents' param_set))
@@ -224,18 +222,8 @@ let record_scope_pass =
                       TODO:
                   *)
                      match x.expression_desc with
-                     | Fun _ | Number _ | Str _ -> state
-                     | _ ->
-                       (* if Set_ident.(is_empty @@ *)
-                       (*   inter self#get_mutable_values  *)
-                       (*     ( ({<  *)
-                       (*         defined_idents = Set_ident.empty;  *)
-                       (*         used_idents = Set_ident.empty; *)
-                       (*         >} # expression x) # get_used_idents)) then *)
-                       (*   (\* FIXME: still need to check expression is pure or not*\) *)
-                       (*   self *)
-                       (* else  *)
-                       add_loop_mutable_variable state ident))
+                     | Fun _ | Number _ | Str _ | Template_literal _ -> state
+                     | _ -> add_loop_mutable_variable state ident))
                  | false, Variable -> add_mutable_variable state ident
                  | false, (Strict | StrictOpt | Alias) -> state)
                  ident)
@@ -317,22 +305,21 @@ let record_scope_pass =
         *)
         {
           state with
-          used_idents = Set_ident.add state.used_idents x;
-          defined_idents = Set_ident.add state.defined_idents x;
+          used_idents = Set_ident.add x state.used_idents;
+          defined_idents = Set_ident.add x state.defined_idents;
         });
     for_ident =
       (fun _ state x ->
         {
           state with
-          loop_mutable_values = Set_ident.add state.loop_mutable_values x;
+          loop_mutable_values = Set_ident.add x state.loop_mutable_values;
         });
     ident =
       (fun _ state x ->
-        if Set_ident.mem state.defined_idents x then state
-        else {state with used_idents = Set_ident.add state.used_idents x});
+        if Set_ident.mem x state.defined_idents then state
+        else {state with used_idents = Set_ident.add x state.used_idents});
   }
 
 let program js =
   (record_scope_pass.program record_scope_pass init_state js)
     .loop_mutable_values
-(* (scope_pass # program js ) # get_loop_mutable_values *)

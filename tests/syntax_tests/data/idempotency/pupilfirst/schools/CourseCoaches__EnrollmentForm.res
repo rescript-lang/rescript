@@ -21,11 +21,11 @@ let reducer = (state, action) =>
   }
 
 let makePayload = state => {
-  let payload = Js.Dict.empty()
+  let payload = Dict.make()
 
-  Js.Dict.set(payload, "authenticity_token", AuthenticityToken.fromHead()->Js.Json.string)
+  Dict.set(payload, "authenticity_token", AuthenticityToken.fromHead()->JSON.string)
 
-  Js.Dict.set(
+  Dict.set(
     payload,
     "coach_ids",
     state.courseCoaches->{
@@ -47,13 +47,13 @@ module SelectableCourseCoaches = {
 let setCoachSearchInput = (send, value) => send(UpdateCoachSearchInput(value))
 
 let selectCoach = (send, state, coach) => {
-  let updatedCoaches = state.courseCoaches->Js.Array.concat([coach->SchoolCoach.id])
+  let updatedCoaches = state.courseCoaches->Array.concat([coach->SchoolCoach.id])
   send(UpdateCoachesList(updatedCoaches))
 }
 
 let deSelectCoach = (send, state, coach) => {
   let updatedCoaches =
-    state.courseCoaches->Js.Array.filter(coachId => coachId != SchoolCoach.id(coach))
+    state.courseCoaches->Array.filter(coachId => coachId != SchoolCoach.id(coach))
   send(UpdateCoachesList(updatedCoaches))
 }
 
@@ -61,9 +61,9 @@ module MultiselectForCourseCoaches = MultiselectInline.Make(SelectableCourseCoac
 
 let courseCoachEditor = (coaches, state, send) => {
   let selected =
-    coaches->Js.Array.filter(coach => state.courseCoaches->Array.mem(SchoolCoach.id(coach)))
+    coaches->Array.filter(coach => state.courseCoaches->Array.mem(SchoolCoach.id(coach)))
   let unselected =
-    coaches->Js.Array.filter(coach => !(state.courseCoaches->Array.mem(SchoolCoach.id(coach))))
+    coaches->Array.filter(coach => !(state.courseCoaches->Array.mem(SchoolCoach.id(coach))))
   <MultiselectForCourseCoaches
     placeholder="Search coaches"
     emptySelectionMessage="No coaches selected"
@@ -97,7 +97,7 @@ let updateCourseCoaches = (state, send, courseId, updateCoachesCB) => {
 
 let computeAvailableCoaches = (schoolCoaches, courseCoaches) => {
   let courseCoachIds = courseCoaches->Array.map(CourseCoach.id)
-  schoolCoaches->Js.Array.filter(coach => !(courseCoachIds->Array.mem(coach->SchoolCoach.id)))
+  schoolCoaches->Array.filter(coach => !(courseCoachIds->Array.mem(coach->SchoolCoach.id)))
 }
 
 @react.component

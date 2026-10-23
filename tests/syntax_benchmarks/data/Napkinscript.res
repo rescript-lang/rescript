@@ -2608,10 +2608,10 @@ module Reporting = {
       | Invalid_argument(_) => ""
       }
       reportDoc := {
-          open TerminalDoc
-          let ix = startLine + i
-          group(~break_=Always, append(reportDoc.contents, renderLine(line, ix)))
-        }
+        open TerminalDoc
+        let ix = startLine + i
+        group(~break_=Always, append(reportDoc.contents, renderLine(line, ix)))
+      }
     }
 
     TerminalDoc.toString(reportDoc.contents)
@@ -13104,9 +13104,9 @@ Solution: directly use `concat`."
     handle_seq(seq)
   }
 
-  /* {"foo": bar} -> Js.t({. foo: bar})
-   * {.. "foo": bar} -> Js.t({.. foo: bar})
-   * {..} -> Js.t({..}) */
+  /* {"foo": bar} -> object({. foo: bar})
+   * {.. "foo": bar} -> object({.. foo: bar})
+   * {..} -> object({..}) */
   let makeBsObjType = (~attrs, ~loc, ~closed, rows) => {
     let obj = Ast_helper.Typ.object_(~loc, rows, closed)
     let jsDotTCtor = Location.mkloc(Longident.Ldot(Longident.Lident("Js"), "t"), loc)
@@ -17019,7 +17019,7 @@ Solution: directly use `concat`."
       None
     }
 
-  /* Js.Nullable.value<'a> */
+  /* Nullable.t<'a> */
   and parseTypeConstructorArgs = (~constrName, p) => {
     let opening = p.Parser.token
     let openingStartPos = p.startPos

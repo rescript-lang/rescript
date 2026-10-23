@@ -2,60 +2,35 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
-
-let aa = Primitive_object.equal;
-
-let bb = Primitive_object.equal;
-
-let cc = Primitive_object.equal;
 
 Mocha.describe("Equal_box_test", () => {
   Mocha.test("eqNull_tests", () => {
-    Test_utils.ok("File \"equal_box_test.res\", line 11, characters 7-14", 3 !== null);
-    Test_utils.ok("File \"equal_box_test.res\", line 12, characters 7-14", true);
-    Test_utils.ok("File \"equal_box_test.res\", line 13, characters 7-14", "3" !== null);
-    Test_utils.ok("File \"equal_box_test.res\", line 14, characters 7-14", /* '3' */51 !== null);
-    Test_utils.ok("File \"equal_box_test.res\", line 15, characters 7-14", 0 !== null);
+    Test_utils.ok("File \"equal_box_test.res\", line 12, characters 7-14", 3 !== null);
+    Test_utils.ok("File \"equal_box_test.res\", line 13, characters 7-14", true);
+    Test_utils.ok("File \"equal_box_test.res\", line 14, characters 7-14", "3" !== null);
+    Test_utils.ok("File \"equal_box_test.res\", line 15, characters 7-14", /* '3' */51 !== null);
     Test_utils.ok("File \"equal_box_test.res\", line 16, characters 7-14", 0 !== null);
-    Test_utils.ok("File \"equal_box_test.res\", line 17, characters 7-14", true);
+    Test_utils.ok("File \"equal_box_test.res\", line 17, characters 7-14", 0 !== null);
     Test_utils.ok("File \"equal_box_test.res\", line 18, characters 7-14", true);
     Test_utils.ok("File \"equal_box_test.res\", line 19, characters 7-14", true);
     Test_utils.ok("File \"equal_box_test.res\", line 20, characters 7-14", true);
-    Test_utils.ok("File \"equal_box_test.res\", line 21, characters 7-14", 3 !== undefined);
+    Test_utils.ok("File \"equal_box_test.res\", line 21, characters 7-14", true);
+    Test_utils.ok("File \"equal_box_test.res\", line 22, characters 7-14", 3 !== undefined);
   });
   Mocha.test("eqNullable_tests", () => {
     let v = null;
-    Test_utils.ok("File \"equal_box_test.res\", line 29, characters 7-14", 3 !== v);
-    Test_utils.ok("File \"equal_box_test.res\", line 30, characters 7-14", undefined !== v);
-    Test_utils.ok("File \"equal_box_test.res\", line 31, characters 7-14", "3" !== v);
-    Test_utils.ok("File \"equal_box_test.res\", line 32, characters 7-14", /* '3' */51 !== v);
-    Test_utils.ok("File \"equal_box_test.res\", line 33, characters 7-14", 0 !== v);
+    Test_utils.ok("File \"equal_box_test.res\", line 30, characters 7-14", 3 !== v);
+    Test_utils.ok("File \"equal_box_test.res\", line 31, characters 7-14", undefined !== v);
+    Test_utils.ok("File \"equal_box_test.res\", line 32, characters 7-14", "3" !== v);
+    Test_utils.ok("File \"equal_box_test.res\", line 33, characters 7-14", /* '3' */51 !== v);
     Test_utils.ok("File \"equal_box_test.res\", line 34, characters 7-14", 0 !== v);
-    Test_utils.ok("File \"equal_box_test.res\", line 35, characters 7-14", undefined !== v);
-    Test_utils.ok("File \"equal_box_test.res\", line 36, characters 7-14", null === v);
-    Test_utils.ok("File \"equal_box_test.res\", line 37, characters 7-14", true);
+    Test_utils.ok("File \"equal_box_test.res\", line 35, characters 7-14", 0 !== v);
+    Test_utils.ok("File \"equal_box_test.res\", line 36, characters 7-14", undefined !== v);
+    Test_utils.ok("File \"equal_box_test.res\", line 37, characters 7-14", null === v);
     Test_utils.ok("File \"equal_box_test.res\", line 38, characters 7-14", true);
-    Test_utils.ok("File \"equal_box_test.res\", line 39, characters 7-14", 3 !== undefined);
-  });
-  Mocha.test("eqUndefined_tests", () => {
-    Test_utils.ok("File \"equal_box_test.res\", line 47, characters 7-14", 3 !== undefined);
-    Test_utils.ok("File \"equal_box_test.res\", line 48, characters 7-14", true);
-    Test_utils.ok("File \"equal_box_test.res\", line 49, characters 7-14", "3" !== undefined);
-    Test_utils.ok("File \"equal_box_test.res\", line 50, characters 7-14", /* '3' */51 !== undefined);
-    Test_utils.ok("File \"equal_box_test.res\", line 51, characters 7-14", 0 !== undefined);
-    Test_utils.ok("File \"equal_box_test.res\", line 52, characters 7-14", 0 !== undefined);
-    Test_utils.ok("File \"equal_box_test.res\", line 53, characters 7-14", true);
-    Test_utils.ok("File \"equal_box_test.res\", line 54, characters 7-14", true);
-    Test_utils.ok("File \"equal_box_test.res\", line 55, characters 7-14", true);
-    Test_utils.ok("File \"equal_box_test.res\", line 56, characters 7-14", true);
-    Test_utils.ok("File \"equal_box_test.res\", line 57, characters 7-14", 3 !== undefined);
+    Test_utils.ok("File \"equal_box_test.res\", line 39, characters 7-14", true);
+    Test_utils.ok("File \"equal_box_test.res\", line 40, characters 7-14", 3 !== undefined);
   });
 });
 
-export {
-  aa,
-  bb,
-  cc,
-}
 /*  Not a pure module */

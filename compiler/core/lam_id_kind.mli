@@ -31,7 +31,7 @@ type rec_flag =
   | Lam_self_rec
 (* not inlining in this case *)
 
-type element = NA | SimpleForm of Lam.t
+type element = NA | SimpleForm of Lambda.t
 
 type boxed_nullable = Undefined | Null | Null_undefined
 
@@ -48,15 +48,15 @@ type boxed_nullable = Undefined | Null | Null_undefined
        [Lif(v/1)] will be translated into [Lif (v/2 === undefined )]
 *)
 type t =
-  | Normal_optional of Lam.t
-  | OptionalBlock of Lam.t * boxed_nullable
+  | Normal_optional of Lambda.t
+  | OptionalBlock of Lambda.t * boxed_nullable
   | ImmutableBlock of element array
   | MutableBlock of element array
-  | Constant of Lam_constant.t
+  | Constant of Lambda.structured_constant
   | Module of Ident.t  (** TODO: static module vs first class module *)
   | FunctionId of {
       mutable arity: Lam_arity.t;
-      lambda: (Lam.t * rec_flag) option;
+      lambda: (Lambda.t * rec_flag) option;
     }
   | Exception
   | Parameter

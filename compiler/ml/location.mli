@@ -24,7 +24,7 @@ type t = Warnings.loc = {
 }
 
 (** Note on the use of Lexing.position in this module.
-   If [pos_fname = ""], then use [!input_name] instead.
+   If [pos_fname = ""], then use [get_input_name ()] instead.
    If [pos_lnum = -1], then [pos_bol = 0]. Use [pos_cnum] and
      re-parse the file to get the line and character numbers.
    Else all fields are correct.
@@ -36,9 +36,10 @@ val none : t
 val in_file : string -> t
 (** Return an empty ghost range located in a given file. *)
 
-val input_name : string ref
-val set_input_name : string -> unit
+val get_input_name : unit -> string
+(** The source filename for the current compiler request on this domain. *)
 
+val set_input_name : string -> unit
 val get_pos_info : Lexing.position -> string * int * int (* file, line, char *)
 val print_loc : formatter -> t -> unit
 
@@ -109,15 +110,6 @@ val report_error :
   formatter ->
   error ->
   unit
-
-val error_reporter :
-  (?custom_intro:string option ->
-  ?src:string option ->
-  formatter ->
-  error ->
-  unit)
-  ref
-(** Hook for intercepting error reports. *)
 
 val default_error_reporter :
   ?custom_intro:string option ->

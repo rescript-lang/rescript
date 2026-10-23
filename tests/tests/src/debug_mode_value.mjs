@@ -8,10 +8,7 @@ let u = {
   [Symbol.for("name")]: "A"
 };
 
-let h = {
-  hd: 1,
-  tl: /* [] */0
-};
+let h = {hd: 1, tl: /* [] */0};
 
 export {
   u,
