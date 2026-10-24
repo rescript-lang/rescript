@@ -85,6 +85,12 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
         } as x -> (
       match Hash_ident.find_opt meta.ident_tbl v with
       | Some (OptionalBlock (l, _)) -> l
+      (* [v] bound to [Some(l)]: unwrapping gives back [l], whether or not
+         it was nested. Only substitute forms that are safe to repeat. *)
+      | Some (Normal_optional (Lvar _ as l)) -> l
+      | Some (Normal_optional (Lconst c as l))
+        when not (Lambda.const_is_allocating c) ->
+        l
       | _ -> if p = Pval_from_option_not_nest then lvar else x)
     | Lifthenelse (Lprim {primitive = Pis_not_none; args = [Lvar id]}, l2, l3)
       -> (
