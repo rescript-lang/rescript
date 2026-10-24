@@ -49,8 +49,13 @@ let declaration_shape ~env (decl : Types.type_declaration) : value_shape =
       | Some _ | None -> []
     in
     Recognized_as (InstanceType (Class {name; ancestors}))
-  | None ->
-    if has_not_undefined decl.type_attributes then Never_undefined else Unstated
+  | None -> (
+    if not (has_not_undefined decl.type_attributes) then Unstated
+    else
+      (* Restating a kind the abbreviated type is recognized by keeps it *)
+      match Option.map (value_shape ~env) decl.type_manifest with
+      | Some (Recognized_as _ as shape) -> shape
+      | Some (Unstated | Never_undefined) | None -> Never_undefined)
 
 (* Resolves the shapes of a group of declarations, which can abbreviate each
    other. Each round resolves one more level of abbreviation within the

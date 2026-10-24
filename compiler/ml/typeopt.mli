@@ -22,3 +22,14 @@ val is_base_type : Env.t -> Types.type_expr -> Path.t -> bool
 val maybe_pointer_type : Env.t -> Types.type_expr -> Lambda.immediate_or_pointer
 
 val type_cannot_contain_undefined : Types.type_expr -> Env.t -> bool
+
+(** Whether a type can hold [undefined]: it cannot, the compiler does not see
+    its representation, it stands for another type (a functor parameter's or
+    a locally abstract type), or it can *)
+type undefinedness =
+  | Cannot_be_undefined
+  | Unseen
+  | Stands_for_another
+  | Can_be_undefined
+
+val undefinedness : Env.t -> Types.type_expr -> undefinedness

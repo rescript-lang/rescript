@@ -449,12 +449,22 @@ hold `undefined`.
 
 ### 13. `@notUndefined`
 
-`@notUndefined` on an abstract type without a manifest declares that its
-values are never `undefined`. It affects only rule 12: `option` of the type,
-and of an untagged variant with a payload of the type, is unboxed. It does not
-make the type a recognized payload kind (rule 4). On any other type
-declaration it is an error, "@notUndefined can only be used on abstract
-types". `@instanceOf` and `@typeOf` (rule 5) imply it.
+`@notUndefined` on an abstract type declares that its values are never
+`undefined`. It affects only rule 12: `option` of the type, and of an
+untagged variant with a payload of the type, is unboxed. It does not make the
+type a recognized payload kind (rule 4). `@instanceOf` and `@typeOf` (rule 5)
+imply it.
+
+On an abbreviation it follows the rule of rule 5: it can refine a type whose
+representation the compiler does not see, such as an abstract type, or
+restate that the abbreviated type cannot be `undefined`, as
+`@notUndefined type count = int` does, which keeps the kind of `int`.
+
+| Declaration | Error | Fixture |
+| --- | --- | --- |
+| `@notUndefined type t = {x: int}`, or on a variant | @notUndefined can only be used on abstract types and type abbreviations, ... | `invalid_attribute_not_undefined.res` |
+| `@notUndefined type t = option<int>` | @notUndefined on a type abbreviation must describe an abstract type, ... | `not_undefined_on_option.res`, `tests/build_tests/not_undefined_attribute` |
+| `@notUndefined type t = X.t` in a functor of `X` | @notUndefined cannot describe the type of a functor parameter, ... | `not_undefined_on_functor_parameter_type.res` |
 
 When an interface declares a type `@notUndefined`, its implementation must be
 a type that cannot hold `undefined` either, or a type whose representation
@@ -467,14 +477,16 @@ differ: the second declaration is @notUndefined, but the first declaration
 can hold undefined". The same holds
 for functor arguments and `with type` constraints.
 
-- Implementation: `typedecl.ml:transl_declaration`;
+- Implementation: `typedecl.ml:transl_declaration`,
+  `check_not_undefined_manifest`; `typeopt.ml:undefinedness`;
   `ast_untagged_variants.ml:has_not_undefined`;
   `variant_layout.ml:declaration_shape`;
   `typeopt.ml:type_cannot_contain_undefined`;
   `includemod.ml:not_undefined_mismatch`.
 - Tests: `spec_test` rule 13; fixtures `invalid_attribute_not_undefined.res`,
   `not_undefined_functor_argument.res`, `not_undefined_functor_parameter.res`;
-  `tests/tests/src/not_undefined_interface_test.res`;
+  `tests/tests/src/not_undefined_interface_test.res`,
+  `not_undefined_abbreviation_test.res`;
   `tests/build_tests/super_errors_multi/fixtures/Cross_not_undefined_option_implementation`;
   `tests/build_tests/not_undefined_attribute`.
 - Shaped by #7458, #7464, #8964.

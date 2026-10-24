@@ -24,7 +24,7 @@ let scrape_ty env ty =
   | Tconstr (p, _, _) -> (
     match Env.find_type p env with
     | {type_representation = Unboxed; _} -> (
-      match Typedecl.get_unboxed_type_representation env ty with
+      match Ctype.get_unboxed_type_representation env ty with
       | None -> ty
       | Some ty2 -> ty2)
     | _ -> ty
@@ -121,6 +121,28 @@ let rec cannot_contain_undefined ~visiting (typ : Types.type_expr) (env : Env.t)
 
 let type_cannot_contain_undefined typ env =
   cannot_contain_undefined ~visiting:[] typ env
+
+type undefinedness =
+  | Cannot_be_undefined
+  | Unseen
+  | Stands_for_another
+  | Can_be_undefined
+
+(* Whether a type can hold [undefined], as far as the compiler sees. An
+   abstract type, also through an abbreviation, or a JavaScript object type
+   has a representation the compiler does not see; a functor parameter's or a
+   locally abstract type stands for any type. *)
+let undefinedness env ty =
+  if type_cannot_contain_undefined ty env then Cannot_be_undefined
+  else
+    match (Ctype.expand_head_opt env ty).desc with
+    | Tconstr (path, _, _) -> (
+      match Variant_layout.abstractness ~env path with
+      | Opaque -> Unseen
+      | Stands_for_another -> Stands_for_another
+      | Not_abstract -> Can_be_undefined)
+    | Tobject _ -> Unseen
+    | _ -> Can_be_undefined
 
 let is_function_type env ty =
   match scrape env ty with
