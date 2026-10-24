@@ -164,7 +164,8 @@ val assign : ?comment:string -> t -> t -> t
 val literal_tag : Variant_runtime.literal_tag -> t
 val tag_type : Variant_runtime.tag_type -> t
 
-val emit_check : t Ast_untagged_variants.Dynamic_checks.t -> t
+val is_instance_of : Variant_runtime.Instance.t -> t -> t
+(** [Array.isArray(e)] or [e instanceof C] *)
 
 val triple_equal : ?comment:string -> t -> t -> t
 (* TODO: reduce [triple_equal] use *)
@@ -179,7 +180,7 @@ val eq_null_undefined_boolean : ?comment:string -> t -> t -> t
 
 val neq_null_undefined_boolean : ?comment:string -> t -> t -> t
 
-val is_int_tag : ?has_null_undefined_other:bool * bool * bool -> t -> t
+val is_int_tag : literal_tags:Variant_runtime.literal_tag list -> t -> t
 
 val is_type_object : t -> t
 

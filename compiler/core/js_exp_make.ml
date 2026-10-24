@@ -1395,45 +1395,44 @@ let class_constructor (instance : Variant_runtime.Instance.t) =
   | [] -> assert false
   | global :: properties -> List.fold_left dot (js_global global) properties
 
-(* The [typeof] string an untagged payload answers to. *)
-let block_type_name = function
-  | Variant_runtime.InstanceType i -> class_constructor i
-  | block_type -> (
-    match Variant_runtime.typeof_name block_type with
-    | Some name -> str name
-    | None ->
-      (* An unknown payload has no check: it is the only payload case *)
-      assert false)
+(* The [typeof] string an untagged payload answers to, as a [switch] key.
+   Instances are told apart by [is_instance_of], an unknown payload is not
+   checked *)
+let block_type_name block_type =
+  match Variant_runtime.typeof_name block_type with
+  | Some name -> str name
+  | None -> assert false
 
 let tag_type = function
   | Variant_runtime.Literal d -> literal_tag d
   | Payload_shape b -> block_type_name b
 
-let rec emit_check (check : t Ast_untagged_variants.Dynamic_checks.t) =
-  match check with
-  | TagType t -> tag_type t
-  | BinOp (op, x, y) ->
-    let op =
-      match op with
-      | EqEqEq -> Js_op.EqEqEq
-      | NotEqEq -> NotEqEq
-      | And -> And
-      | Or -> Or
-    in
-    bin op (emit_check x) (emit_check y)
-  | TypeOf x -> typeof (emit_check x)
-  | IsInstanceOf (Array, x) -> is_array (emit_check x)
-  | IsInstanceOf (instance, x) ->
-    instanceof (emit_check x) (class_constructor instance)
-  | Not x -> not (emit_check x)
-  | Expr x -> x
+let is_instance_of (instance : Variant_runtime.Instance.t) e =
+  match instance with
+  | Array -> is_array e
+  | Class _ -> instanceof e (class_constructor instance)
 
-let is_int_tag ?has_null_undefined_other e =
-  let check =
-    Ast_untagged_variants.Dynamic_checks.is_int_tag ?has_null_undefined_other
-      (Expr e)
+(* Whether a value of a tagged variant is a constant rather than a block,
+   given the literals of its constants *)
+let is_int_tag ~(literal_tags : Variant_runtime.literal_tag list) e =
+  let has_null = List.mem Variant_runtime.Null literal_tags in
+  let has_undefined = List.mem Variant_runtime.Undefined literal_tags in
+  let has_other =
+    List.exists
+      (function
+        | Variant_runtime.Null | Undefined -> false
+        | String _ | Int _ | Float _ | BigInt _ | Bool _ -> true)
+      literal_tags
   in
-  emit_check check
+  let is_null = bin EqEqEq e nil in
+  let is_undefined = bin EqEqEq e undefined in
+  let not_an_object = bin NotEqEq (typeof e) (str "object") in
+  match (has_null, has_undefined, has_other) with
+  | true, false, false -> is_null
+  | true, true, false -> bin Or is_null is_undefined
+  | false, true, false -> is_undefined
+  | true, _, true -> bin Or is_null not_an_object
+  | false, _, _ -> not_an_object
 
 let tag ?comment ?(name = Js_dump_lit.tag) e : t =
   {expression_desc = Caml_block_tag (e, name); comment; source_loc = None}

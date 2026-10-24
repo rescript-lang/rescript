@@ -129,9 +129,6 @@ type matching_facts = {
           payload constructor only receives values that are not literals, and
           [S("a")] matches as [A]: constructor identity is not observable at
           runtime for such values. *)
-  has_null: bool;
-  has_undefined: bool;
-  has_other_literal: bool;
 }
 (** Declaration-level facts needed when lowering a constructor match. This is
     not an occurrence-specific matching plan: it contains no arms, actions,
@@ -197,18 +194,9 @@ let compute_matching_facts ~tag_name (constructors : constructor_case array) :
     matching_facts =
   let block_types = ref [] in
   let literal_tags = ref [] in
-  let has_null = ref false in
-  let has_undefined = ref false in
-  let has_other_literal = ref false in
   Array.iter
     (function
-      | Constant {literal} -> (
-        literal_tags := literal :: !literal_tags;
-        match literal with
-        | Null -> has_null := true
-        | Undefined -> has_undefined := true
-        | String _ | Int _ | Float _ | BigInt _ | Bool _ ->
-          has_other_literal := true)
+      | Constant {literal} -> literal_tags := literal :: !literal_tags
       | Block (Untagged {block_type}) ->
         block_types := block_type :: !block_types
       | Block (Tagged _) -> ())
@@ -217,9 +205,6 @@ let compute_matching_facts ~tag_name (constructors : constructor_case array) :
     tag_name;
     block_types = List.rev !block_types;
     literal_tags = List.rev !literal_tags;
-    has_null = !has_null;
-    has_undefined = !has_undefined;
-    has_other_literal = !has_other_literal;
   }
 
 let make_layout ~(configuration : configuration) constructors =
