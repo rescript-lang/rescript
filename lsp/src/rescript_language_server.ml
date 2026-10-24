@@ -1,5 +1,5 @@
 open Lsp
-open Types
+open Lsp.Types
 
 let initialization () =
   let textDocumentSync =

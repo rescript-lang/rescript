@@ -1,5 +1,5 @@
 open Lsp
-open Types
+open Lsp.Types
 
 type t = Text_document.t
 

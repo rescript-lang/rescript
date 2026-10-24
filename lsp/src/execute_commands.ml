@@ -1,5 +1,5 @@
 open Lsp
-open Types
+open Lsp.Types
 
 let request_show_document ~uri ~takeFocus (server : State.t Server.t) =
   let state = Server.state server in

@@ -1,5 +1,5 @@
 open Lsp
-open Types
+open Lsp.Types
 
 module From_diagnostics : sig
   val get : doc:Document.t -> diagnostics:Diagnostic.t list -> CodeAction.t list
