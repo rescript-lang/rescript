@@ -4,18 +4,18 @@ import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
 function kind(upload) {
-  if (upload instanceof Blob && !(upload instanceof File)) {
-    return "blob";
-  } else {
+  if (upload instanceof File) {
     return "file";
+  } else {
+    return "blob";
   }
 }
 
 function onlyBlob(upload) {
-  if (upload instanceof Blob && !(upload instanceof File)) {
-    return "blob";
-  } else {
+  if (upload instanceof File) {
     return "other";
+  } else {
+    return "blob";
   }
 }
 

@@ -282,71 +282,86 @@ constructor:
 | `@as(true) LitTrue \| AnyBool(bool)` | `AnyBool(false)` | `AnyBool` |
 | `@as(null) LitNull \| AnyObject({x: int})` | `LitNull` | `LitNull` |
 
-The "is a literal case" test is the smaller of two equivalent expressions: the
-disjunction of `x === literal` over the literal cases, or the conjunction of
-the negated payload checks (with a payload check replaced by the literal
-disjunction where a literal overlaps it). A `switch` whose arms name no
-literal case still tests the literals first when one of them would pass the
-check of a payload arm, such as `@as("lit")` beside a `string` arm, so that
-it reaches the default arm.
+The literals are compared with `===`: by one `switch (x)` over the literal
+arms, whose default holds the payload dispatch, or, with at most two
+literals, by an `if` per arm body. A literal without an arm of its own goes
+to the default arm. It gets a `case` leading there when it could pass a
+check of the payload dispatch (a string literal beside a `string` arm, any
+literal beside an unknown-kind arm) or when the variant has class cases;
+otherwise it reaches the default through the payload dispatch, which then
+checks its last arm. A `null` literal that only the object check would
+accept adds `x !== null` to that check instead (rule 9).
 
-- Implementation: `lam_compile.ml:compile_switch`,
-  `ast_untagged_variants.ml:Dynamic_checks.is_a_literal_case`.
+- Implementation: `lam_compile.ml:compile_switch`.
 - Tests: `spec_test` rule 7; `tests/tests/src/untagged_variants_heuristic.res`
-  (choice of expression).
+  (literals that skip the `switch`).
 - Shaped by #6125, #7128, #7135.
 
 ### 8. Payload cases
 
-The payload arms compile in one of two forms.
+The payload arms compile to one `switch (typeof x)` over the arms of
+primitive kinds (string, number, bigint, boolean, symbol), an `if` for one
+kind, whose default is an `if` chain over the other arms:
 
-- **Two arms, or one arm and a default**: one `if` on the check of the arm
-  declared first, with the other branch unchecked (rule 10). The object check is
-  `typeof x === "object"`, followed by `x !== null` when the variant has an
-  `@as(null)` case, and by `!(x instanceof C)` (`!Array.isArray(x)` for
-  arrays) for every instance case of the variant. The function check is
-  followed by `!(x instanceof C)` for every class case.
-- **Three or more arms**: an `if` chain of the instance checks, in the
-  declaration order of the cases, then one `switch (typeof x)` over the other
-  arms.
-
-In both forms a value of an instance case never lands in the object or
-function case. A class check is followed by `!(x instanceof D)` for every
-case whose class `D` is a subclass of it (rule 5), so a subclass instance
-never lands in its superclass's case, whatever the declaration order:
+1. the instance cases (arrays, tuples and classes), a subclass before its
+   superclasses (rule 5), otherwise in declaration order;
+2. the function case, `typeof x === "function"`;
+3. the tagged constructors of a variant with some untagged ones, an object
+   whose tag a `switch` tells apart;
+4. the object case, `typeof x === "object"`;
+5. the unknown-kind case, unchecked.
 
 ```js
-if (v instanceof Animal && !(v instanceof Dog)) { ... }
+switch (typeof x) {
+  case "string": ...
+  case "number": ...
+  default:
+    if (x instanceof Dog) { ... }
+    else if (x instanceof Animal) { ... }
+    else if (typeof x === "object") { ... }
+}
 ```
+
+An instance case without an arm leads to the default arm, so an array or a
+class instance never lands in the function or object case. Before the last
+checked arm such checks are folded into its check, which then guards them:
+`typeof x === "object" && !(x instanceof Date)`. A primitive never reaches a
+class check: it is taken by the `switch (typeof x)`, where a primitive kind
+of the variant without an arm has a `case` leading to the default when a
+class check could follow. In a complete match the last arm is not checked
+(rule 10).
 
 A value upcast to the superclass and wrapped in its case lands in the
 subclass case, as a payload equal to a literal lands in the literal's case
-(rule 7). Classes not declared to be related are tested in declaration order.
-`instanceof` consults `Symbol.hasInstance`, which is trusted.
+(rule 7). `instanceof` consults `Symbol.hasInstance`, which is trusted for
+the values that reach the check: objects and functions, and values outside
+every case (rule 10).
 An `int` case is recognized by `typeof x === "number"` and so receives every
 number, integral or not.
 
+`break` and `continue` in an arm leave or continue the enclosing loop: every
+arm placed in a generated `switch` is compiled in a `switch` context, where
+they are labeled.
+
 - Implementation: `lam_compile.ml:compile_untagged_cases`,
-  `compile_general_cases`;
-  `ast_untagged_variants.ml:Dynamic_checks.add_runtime_type_check`,
-  `is_case_instance`.
+  `compile_general_cases`.
 - Tests: `spec_test` rules 4, 5 and 8 (`instanceName` shows the chain in
-  declaration order, `objectFirst` both forms); `tests/tests/src/UntaggedVariants.res`
-  (`AllInstanceofTypes`, `MergeCases`);
-  `tests/tests/src/untagged_runtime_annotations_test.res` (subclasses, the
-  function case).
+  declaration order, `objectFirst` the unchecked last arm);
+  `tests/tests/src/UntaggedVariants.res` (`AllInstanceofTypes`,
+  `MergeCases`); `tests/tests/src/untagged_runtime_annotations_test.res`
+  (subclasses, the function case, a missing class);
+  `untagged_default_arm_test.res` (`Symbol.hasInstance`, incomplete
+  matches); `untagged_loop_control_test.res` (`break`, `continue`).
 - Shaped by #6103, #6383, #6792, #7144, #7149.
 
 ### 9. `null` and arrays are not objects
 
-`typeof null` and `typeof []` are `"object"`, and so is the `typeof` of a
-class instance. The object case never receives `null` when the variant has an
-`@as(null)` case, and never receives a value of another instance case (array,
-tuple or class): the two-arm form adds the checks of rule 8, and the
-`switch (typeof x)` form is preceded by `x === null`, `Array.isArray(x)` and
-`x instanceof C` guards that send those values to the default arm when their
-own arm is absent.
-A case declared with `@typeOf("object")`
+`typeof null` and `typeof []` are `"object"`, and a class instance is an
+object or a function. The object case never receives `null` when the variant
+has an `@as(null)` case: the literal comparisons run first (rule 7), or the
+object check tests `x !== null` when `null` goes to the default arm. Neither
+the object nor the function case receives an instance of another case: the
+instance checks come first (rule 8). A case declared with `@typeOf("object")`
 (rule 5) is an object case: without an `@as(null)` case, it receives `null`,
 as a record case does.
 
@@ -356,34 +371,33 @@ as a record case does.
 | | all | `null` | `GNull` |
 | | `GObject(_)`, `_` | `[]`, `null` | `_` |
 
-- Implementation: `lam_compile.ml:compile_untagged_cases` (`needs_null_guard`,
-  `unmatched_instances`), `Dynamic_checks.add_runtime_type_check`.
+- Implementation: `lam_compile.ml:compile_switch` (`null_guard`),
+  `compile_untagged_cases`.
 - Tests: `spec_test` rule 9; `UntaggedVariants.res` (`ObjectAndNull`, `Json`);
   `tests/tests/src/untagged_default_arm_test.res`.
 - Shaped by #6219, #7303, #8253, #8255, #8279, #8995.
 
 ### 10. Values outside every case
 
-Recognition trusts the type. A value that belongs to no case is not rejected:
-
-- in the two-arm form it lands in the unchecked branch: with
-  `I(int) | S(string)`, `true` lands in `S`; with
-  `TDate(Date.t) | TRegExp(RegExp.t)`, `{x: 1}` lands in `TRegExp`; with
-  `PPromise(promise<int>) | PFloat(float)`, a thenable that is not a
-  `Promise` lands in `PFloat`;
-- in the `switch (typeof x)` form it matches no arm, and the `switch`
-  completes without running any arm.
+Recognition trusts the type. A value that belongs to no case is not
+rejected: in a complete match it lands in the arm that is not checked, the
+last one of the `if` chain, or the last primitive arm when there is no other
+arm. With `I(int) | S(string)`, `true` lands in `S`; with
+`TDate(Date.t) | TRegExp(RegExp.t)`, `{x: 1}` lands in `TRegExp`; with
+`PPromise(promise<int>) | PFloat(float)`, the float case is checked, so a
+thenable that is not a `Promise` lands in `PPromise`.
 
 A value from another JavaScript realm fails every `instanceof` check and is
 recognized the same way (by the semantics of `instanceof`; not tested):
 recognition is local to a realm. A class that does not exist where the
-`switch` runs makes its check throw, for every value: the instance checks
-precede the `typeof` checks, so primitives reach them too.
+`switch` runs makes its check throw for every value that reaches it: objects
+and functions, and values outside every case. The literals and the
+primitives of the variant never reach it.
 
-- Implementation: `lam_compile.ml:compile_general_cases` (a complete match
-  emits no check for its last clause).
-- Tests: `spec_test` rule 10 (two-arm form); `kindName` in
-  `untagged_variants_spec_test.mjs` shows the `switch` form.
+- Implementation: `lam_compile.ml:compile_untagged_cases` (a complete match
+  emits no check for its last arm).
+- Tests: `spec_test` rule 10; `untagged_runtime_annotations_test.res` (a
+  missing class).
 
 ### 11. Constant folding
 
@@ -554,6 +568,5 @@ had to answer, and the answers of rule 5:
 9. **Globals.** A shadowed class is read through `globalThis`. A missing
    class throws when the check runs (rule 10).
 
-Still open: a class imported from a module cannot be named; the `typeof`
-checks could precede the instance checks, so that a missing class affects
-only objects; and the typed arrays share one type (#8955).
+Still open: a class imported from a module cannot be named, and the typed
+arrays share one type (#8955).

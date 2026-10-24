@@ -1,0 +1,1 @@
+- Match an untagged variant with one `switch` over its literals and one `switch (typeof x)` over its primitive cases before any class check, so that strings and numbers skip `instanceof` and a class missing at run time no longer throws for them.
