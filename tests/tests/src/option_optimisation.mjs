@@ -13,7 +13,6 @@ function $$null(val1, val2) {
   if (val2 !== null && val2 !== undefined) {
     return "a";
   }
-  val2 === null;
   if (val1 == null) {
     return "b";
   } else {

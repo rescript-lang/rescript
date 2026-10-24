@@ -13,13 +13,8 @@ function f2(param, param$1) {
 function f3(param, param$1) {
   let lhs = param.rank;
   let rhs = param$1.rank;
-  if (typeof lhs !== "object") {
-    lhs === "Uninitialized";
-  } else {
-    if (typeof rhs === "object") {
-      return Primitive_int.compare(lhs._0, rhs._0);
-    }
-    rhs === "Uninitialized";
+  if (typeof lhs === "object" && typeof rhs === "object") {
+    return Primitive_int.compare(lhs._0, rhs._0);
   }
   throw {
     RE_EXN_ID: "Assert_failure",
@@ -35,13 +30,8 @@ function f3(param, param$1) {
 function f4(param, param$1) {
   let lhs = param.rank;
   let rhs = param$1.rank;
-  if (typeof lhs !== "object") {
-    lhs === "Uninitialized";
-  } else {
-    if (typeof rhs === "object") {
-      return Primitive_int.compare(lhs._0, rhs._0);
-    }
-    rhs === "Uninitialized";
+  if (typeof lhs === "object" && typeof rhs === "object") {
+    return Primitive_int.compare(lhs._0, rhs._0);
   }
   throw {
     RE_EXN_ID: "Assert_failure",

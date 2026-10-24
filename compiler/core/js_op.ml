@@ -38,6 +38,13 @@ type binop =
   | Le
   | Gt
   | Ge
+  | Float_lt
+  | Float_le
+  | Float_gt
+  | Float_ge
+    (* Printed as [<], [<=], [>], [>=], for operands that may be NaN, so
+       that negating them can't swap the operator: [!(a < b)] is not
+       [a >= b] when [a] or [b] is NaN *)
   | Bor
   | Bxor
   | Band

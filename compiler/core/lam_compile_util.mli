@@ -26,4 +26,6 @@
 
 val jsop_of_comp : Lambda.comparison -> Js_op.binop
 
+val jsop_of_float_comp : Lambda.comparison -> Js_op.binop
+
 val runtime_of_comp : Lambda.comparison -> string

@@ -1991,9 +1991,7 @@ function process_collision(dir, c1, c2, state) {
       switch (t2$1) {
         case "Mushroom" :
           dec_health(o2$2);
-          if (o1$2.health === 2) {
-            
-          } else {
+          if (o1$2.health !== 2) {
             o1$2.health = o1$2.health + 1 | 0;
           }
           o1$2.vel.x = 0;

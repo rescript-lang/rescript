@@ -246,12 +246,24 @@ let if_ ?comment ?declaration ?else_ (e : J.expression) (then_ : J.block) : t =
   let declared = ref false in
   let rec aux ?comment (e : J.expression) (ifso : J.block) (ifnot : J.block) : t
       =
+    (* An empty block, such as a dropped condition of a nested [if], leaves
+       its branch empty *)
+    let is_not_empty (s : t) =
+      match s.statement_desc with
+      | Block [] -> false
+      | _ -> true
+    in
+    let ifso = List.filter is_not_empty ifso in
+    let ifnot = List.filter is_not_empty ifnot in
     match (e.expression_desc, ifnot) with
     | Bool boolean, _ -> block (if boolean then ifso else ifnot)
     | Js_not pred_not, _ :: _ -> aux ?comment pred_not ifnot ifso
     | _ -> (
       match (ifso, ifnot) with
-      | [], [] -> exp e
+      | [], [] ->
+        (* Both branches are empty: only a condition with side effects
+           needs to be kept *)
+        if Js_analyzer.no_side_effect_expression e then empty_stmt else exp e
       | [], _ -> aux ?comment (E.not e) ifnot [] (*Make sure no infinite loop*)
       | ( [{statement_desc = Return ret_ifso; _}],
           [{statement_desc = Return ret_ifnot; _}] ) ->

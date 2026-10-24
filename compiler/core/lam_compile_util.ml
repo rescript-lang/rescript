@@ -31,6 +31,16 @@ let jsop_of_comp (cmp : Lambda.comparison) : Js_op.binop =
   | Cle -> Le
   | Cge -> Ge
 
+(* For operands that may be NaN, see [Js_op.Float_lt] *)
+let jsop_of_float_comp (cmp : Lambda.comparison) : Js_op.binop =
+  match cmp with
+  | Ceq -> EqEqEq
+  | Cneq -> NotEqEq
+  | Clt -> Float_lt
+  | Cgt -> Float_gt
+  | Cle -> Float_le
+  | Cge -> Float_ge
+
 let runtime_of_comp (cmp : Lambda.comparison) : string =
   match cmp with
   | Ceq -> "equal"

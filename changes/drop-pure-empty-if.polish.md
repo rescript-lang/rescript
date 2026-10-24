@@ -1,0 +1,1 @@
+- Stop emitting bare conditions like `x === null;` and empty `if`/`else` branches.

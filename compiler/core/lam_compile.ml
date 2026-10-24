@@ -1512,7 +1512,7 @@ let compile output_prefix =
             ( Js_exp_make.remove_pure_sub_exp out1,
               Js_exp_make.remove_pure_sub_exp out2 )
           with
-          | None, None -> Js_output.make (Ext_list.append_one b (S.exp e))
+          | None, None -> Js_output.make (Ext_list.append_one b (S.if_ e []))
           (* FIX #1762 *)
           | Some out1, Some out2 ->
             Js_output.make b ~value:(E.econd e out1 out2)

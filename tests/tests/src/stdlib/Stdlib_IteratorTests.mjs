@@ -184,11 +184,11 @@ let syncResult = {
   contents: undefined
 };
 
+Stdlib_IterableIterator.next(iterator);
+
 let match = Stdlib_IterableIterator.next(iterator);
 
-let match$1 = Stdlib_IterableIterator.next(iterator);
-
-if (match$1.done === false && match$1.value === "b") {
+if (match.done === false && match.value === "b") {
   syncResult.contents = "b";
 }
 
@@ -212,9 +212,9 @@ let protocolResult = {
   contents: undefined
 };
 
-let match$2 = Stdlib_Iterator.next(iteratorProtocol);
+let match$1 = Stdlib_Iterator.next(iteratorProtocol);
 
-if (match$2.done === false && match$2.value === "x") {
+if (match$1.done === false && match$1.value === "x") {
   protocolResult.contents = "x";
 }
 
@@ -243,12 +243,10 @@ let omittedDoneResult = {
   contents: undefined
 };
 
-let match$3 = Stdlib_Iterator.next(omittedDoneIterator);
+let match$2 = Stdlib_Iterator.next(omittedDoneIterator);
 
-if (match$3.done === false) {
-  if (match$3.value !== 1) {
-    
-  } else {
+if (match$2.done === false) {
+  if (match$2.value === 1) {
     omittedDoneResult.contents = "yield";
   }
 }
@@ -279,12 +277,10 @@ let createdProtocolResult = {
   contents: undefined
 };
 
-let match$4 = Stdlib_Iterator.next(createdIterator);
+let match$3 = Stdlib_Iterator.next(createdIterator);
 
-if (match$4.done === false) {
-  if (match$4.value !== 0) {
-    
-  } else {
+if (match$3.done === false) {
+  if (match$3.value === 0) {
     createdProtocolResult.contents = "protocol";
   }
 }
@@ -315,14 +311,12 @@ let createdIterableResult = {
   contents: undefined
 };
 
-let match$5 = Stdlib_IterableIterator.next(createdIterableIterator);
+Stdlib_IterableIterator.next(createdIterableIterator);
 
-let match$6 = Stdlib_IterableIterator.next(createdIterableIterator);
+let match$4 = Stdlib_IterableIterator.next(createdIterableIterator);
 
-if (match$6.done === false) {
-  if (match$6.value !== 1) {
-    
-  } else {
+if (match$4.done === false) {
+  if (match$4.value === 1) {
     createdIterableResult.contents = "iterable";
   }
 }
@@ -346,11 +340,11 @@ let iteratorNextValueResult = {
   contents: undefined
 };
 
-let match$7 = Stdlib_Iterator.nextValue(generatorViaIterator, undefined);
+Stdlib_Iterator.nextValue(generatorViaIterator, undefined);
 
-let match$8 = Stdlib_Iterator.nextValue(generatorViaIterator, 4);
+let match$5 = Stdlib_Iterator.nextValue(generatorViaIterator, 4);
 
-if (match$8.done !== false && match$8.value === "5") {
+if (match$5.done !== false && match$5.value === "5") {
   iteratorNextValueResult.contents = "nextValue";
 }
 
@@ -401,13 +395,13 @@ let generatorWithNext = ((function* () {
       yield injected + 1
     })());
 
-let match$9 = Stdlib_Generator.next(generatorWithNext);
+let match$6 = Stdlib_Generator.next(generatorWithNext);
 
 let tmp;
 
-if (match$9.done === false && match$9.value === 1) {
-  let match$10 = Stdlib_IteratorObject.nextValue(generatorWithNext, 41);
-  tmp = match$10.done === false && match$10.value === 42 ? "nextValue" : undefined;
+if (match$6.done === false && match$6.value === 1) {
+  let match$7 = Stdlib_IteratorObject.nextValue(generatorWithNext, 41);
+  tmp = match$7.done === false && match$7.value === 42 ? "nextValue" : undefined;
 } else {
   tmp = undefined;
 }
@@ -431,11 +425,11 @@ let generatorReturnValue = ((function* () {
   return "done"
 })());
 
-let match$11 = Stdlib_Generator.next(generatorReturnValue);
+Stdlib_Generator.next(generatorReturnValue);
 
-let match$12 = Stdlib_Generator.returnValue(generatorReturnValue, "stopped");
+let match$8 = Stdlib_Generator.returnValue(generatorReturnValue, "stopped");
 
-if (match$12.done !== false && match$12.value === "stopped") {
+if (match$8.done !== false && match$8.value === "stopped") {
   generatorReturnValueResult.contents = "returnValue";
 }
 
@@ -462,11 +456,11 @@ let generatorThrowError = ((function* () {
   }
 })());
 
-let match$13 = Stdlib_Generator.next(generatorThrowError);
+Stdlib_Generator.next(generatorThrowError);
 
-let match$14 = Stdlib_Generator.throwError(generatorThrowError, Stdlib_JsExn.anyToExnInternal(new Error("boom")));
+let match$9 = Stdlib_Generator.throwError(generatorThrowError, Stdlib_JsExn.anyToExnInternal(new Error("boom")));
 
-if (match$14.done !== false) {
+if (match$9.done !== false) {
   generatorThrowErrorResult.contents = "throwError";
 }
 
@@ -489,7 +483,7 @@ let asyncResult = {
   contents: undefined
 };
 
-let match$15 = await Stdlib_AsyncIterableIterator.next(asyncIterableIterator);
+await Stdlib_AsyncIterableIterator.next(asyncIterableIterator);
 
 await Stdlib_AsyncIterableIterator.forEach(asyncIterableIterator, param => {
   if (param[0] === "second") {
@@ -584,11 +578,11 @@ let asyncGeneratorNextValueResult = {
   contents: undefined
 };
 
-let match$16 = await Stdlib_AsyncIterator.nextValue(asyncGeneratorNextValue, undefined);
+await Stdlib_AsyncIterator.nextValue(asyncGeneratorNextValue, undefined);
 
-let match$17 = await Stdlib_AsyncGenerator.nextValue(asyncGeneratorNextValue, 4);
+let match$10 = await Stdlib_AsyncGenerator.nextValue(asyncGeneratorNextValue, 4);
 
-if (match$17.done !== false && match$17.value === "5") {
+if (match$10.done !== false && match$10.value === "5") {
   asyncGeneratorNextValueResult.contents = "nextValue";
 }
 
@@ -750,11 +744,11 @@ let asyncGeneratorReturnValue = ((async function* () {
   return "done"
 })());
 
-let match$18 = await Stdlib_AsyncGenerator.next(asyncGeneratorReturnValue);
+await Stdlib_AsyncGenerator.next(asyncGeneratorReturnValue);
 
-let match$19 = await Stdlib_AsyncGenerator.returnValue(asyncGeneratorReturnValue, "stopped");
+let match$11 = await Stdlib_AsyncGenerator.returnValue(asyncGeneratorReturnValue, "stopped");
 
-if (match$19.done !== false && match$19.value === "stopped") {
+if (match$11.done !== false && match$11.value === "stopped") {
   asyncGeneratorReturnValueResult.contents = "returnValue";
 }
 
@@ -781,11 +775,11 @@ let asyncGeneratorThrowError = ((async function* () {
   }
 })());
 
-let match$20 = await Stdlib_AsyncGenerator.next(asyncGeneratorThrowError);
+await Stdlib_AsyncGenerator.next(asyncGeneratorThrowError);
 
-let match$21 = await Stdlib_AsyncGenerator.throwError(asyncGeneratorThrowError, Stdlib_JsExn.anyToExnInternal(new Error("boom")));
+let match$12 = await Stdlib_AsyncGenerator.throwError(asyncGeneratorThrowError, Stdlib_JsExn.anyToExnInternal(new Error("boom")));
 
-if (match$21.done !== false) {
+if (match$12.done !== false) {
   asyncGeneratorThrowErrorResult.contents = "throwError";
 }
 
