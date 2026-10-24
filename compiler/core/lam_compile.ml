@@ -797,23 +797,9 @@ let compile output_prefix =
                       (* A tagged block, an object *)
                       Some Variant_runtime.ObjectType)
               in
-              let reaches_a_payload_arm (literal : Variant_runtime.literal_tag)
-                  =
+              let reaches_a_payload_arm literal =
                 List.exists
-                  (fun (block_type : Variant_runtime.block_type) ->
-                    match (block_type, literal) with
-                    | UnknownType, _
-                    | StringType, String _
-                    | NumberType, (Int _ | Float _)
-                    | BigintType, BigInt _
-                    | BooleanType, Bool _
-                    | ObjectType, Null ->
-                      true
-                    | ( ( StringType | NumberType | BigintType | BooleanType
-                        | ObjectType | InstanceType _ | SymbolType
-                        | FunctionType ),
-                        _ ) ->
-                      false)
+                  (Variant_runtime.literal_passes literal)
                   payload_arms
               in
               let has_class_case =

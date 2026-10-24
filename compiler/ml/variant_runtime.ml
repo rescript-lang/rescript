@@ -91,6 +91,20 @@ let literal_value_key = function
 
 let same_literal_value a b = literal_value_key a = literal_value_key b
 
+let literal_passes (literal : literal_tag) (block_type : block_type) =
+  match (block_type, literal) with
+  | UnknownType, _
+  | StringType, String _
+  | NumberType, (Int _ | Float _)
+  | BigintType, BigInt _
+  | BooleanType, Bool _
+  | ObjectType, Null ->
+    true
+  | ( ( StringType | NumberType | BigintType | BooleanType | ObjectType
+      | InstanceType _ | SymbolType | FunctionType ),
+      _ ) ->
+    false
+
 (** Information used to recognize a constructor during matching. A literal
     identifies a constant or an object's tag; a payload shape identifies a
     value represented directly by its payload. *)
