@@ -908,11 +908,13 @@ let switch lam (lam_switch : lambda_switch) : t =
     match untagged_action facts cst with
     | `Case action -> action_or_switch action
     | `Undecided -> Lswitch (lam, lam_switch))
-  | Lconst (Const_constructor cstr_name), _ ->
+  | Lconst (Const_constructor constant), _ ->
+    (* By runtime value: a coercion accepts [@as(1.)] for [@as(1.0)] *)
     let action =
       Ext_list.find_opt lam_switch.sw_consts (fun (key, action) ->
           match key with
-          | Switch_constructor (Constant tag) when cstr_name = tag ->
+          | Switch_constructor (Constant tag)
+            when literal_denotes_same constant.literal tag.literal ->
             Some action
           | Switch_int _ | Switch_constructor _ -> None)
     in
@@ -940,13 +942,21 @@ let switch lam (lam_switch : lambda_switch) : t =
       | Blk_module _ | Blk_module_export _ | Blk_extension ->
         None
     in
+    let same_runtime (block : Variant_runtime.block)
+        (case : Variant_runtime.block) =
+      match (block, case) with
+      | Tagged block, Tagged case ->
+        block.tag_name = case.tag_name
+        && literal_denotes_same block.tag.literal case.tag.literal
+      | _ -> block = case
+    in
     let action =
       Ext_list.find_opt lam_switch.sw_blocks (fun (key, action) ->
-          match key with
-          | Switch_constructor (Block case_runtime)
-            when runtime = Some case_runtime ->
+          match (key, runtime) with
+          | Switch_constructor (Block case_runtime), Some runtime
+            when same_runtime runtime case_runtime ->
             Some action
-          | Switch_int _ | Switch_constructor _ -> None)
+          | (Switch_int _ | Switch_constructor _), _ -> None)
     in
     action_or_switch action
   | _ -> Lswitch (lam, lam_switch)
