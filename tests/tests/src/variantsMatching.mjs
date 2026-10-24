@@ -287,14 +287,10 @@ function plus$3(x, y) {
           };
       }
   }
-  switch (y) {
-    case null :
-    case undefined :
-      return x;
-    case "WhyNotAnotherOne" :
-      return "WhyNotAnotherOne";
-    default:
-      return "WhyNotAnotherOne";
+  if (y == null) {
+    return x;
+  } else {
+    return "WhyNotAnotherOne";
   }
 }
 

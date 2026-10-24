@@ -886,6 +886,19 @@ let compile output_prefix =
                 | Some arms -> arms @ unnamed
                 | None -> assert false
               in
+              (* A complete payload dispatch with one body runs it unchecked,
+                 so a literal arm with the same body can go there too *)
+              let literal_arms =
+                match (blocks_default, sw_blocks) with
+                | Complete, (_, body) :: rest
+                  when List.for_all
+                         (fun (_, other) -> Lambda.eq_approx body other)
+                         rest ->
+                  List.filter
+                    (fun (_, lam) -> not (Lambda.eq_approx body lam))
+                    literal_arms
+                | _ -> literal_arms
+              in
               let payload =
                 Compiled
                   (fun cxt ->
