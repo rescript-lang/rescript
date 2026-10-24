@@ -60,7 +60,6 @@ val check_coherence : Env.t -> Location.t -> Ident.t -> type_declaration -> unit
 val is_fixed_type : Parsetree.type_declaration -> bool
 
 (* for typeopt.ml *)
-val get_unboxed_type_representation : Env.t -> type_expr -> type_expr option
 
 type error
 

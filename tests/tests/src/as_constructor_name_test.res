@@ -7,7 +7,7 @@ open Test_utils
 type named = A | B
 type declared = | @as("A") A | B | C
 
-let declaredA = (A: named :> declared)
+let declaredA = ((A: named) :> declared)
 
 module Stated: {
   type t = A | B

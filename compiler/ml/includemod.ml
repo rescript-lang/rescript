@@ -63,31 +63,21 @@ let value_descriptions ~loc env cxt subst id vd1 vd2 =
 (* Inclusion between type declarations *)
 
 (* [@notUndefined] lets clients unbox [option] of the type, so the
-   implementation must be a type that cannot hold [undefined] either. A type
-   whose representation the compiler does not see, an abstract type (also
-   through an abbreviation) or a JavaScript object type, has none that
-   contradicts it. A functor parameter's or a locally abstract type stands
-   for any type, so it does not count as abstract. *)
+   implementation must be a type that cannot hold [undefined] either, or one
+   whose representation the compiler does not see, which has none that
+   contradicts it. *)
 let not_undefined_mismatch env id (decl1 : Types.type_declaration)
     (decl2 : Types.type_declaration) =
   match decl2.type_shape with
   | Unstated | Recognized_as _ -> []
-  | Never_undefined ->
+  | Never_undefined -> (
     let env = Env.add_type ~check:false id decl1 env in
     let ty =
       Btype.newgenty (Tconstr (Pident id, decl1.type_params, ref Mnil))
     in
-    let opaque =
-      match (Ctype.expand_head_opt env ty).desc with
-      | Tconstr (path, _, _) -> (
-        match Variant_layout.abstractness ~env path with
-        | Opaque -> true
-        | Stands_for_another | Not_abstract -> false)
-      | Tobject _ -> true
-      | _ -> false
-    in
-    if opaque || Typeopt.type_cannot_contain_undefined ty env then []
-    else [Includecore.Not_undefined]
+    match Typeopt.undefinedness env ty with
+    | Cannot_be_undefined | Unseen -> []
+    | Stands_for_another | Can_be_undefined -> [Includecore.Not_undefined])
 
 let type_declarations ~loc env ?(old_env = env) cxt subst id decl1 decl2 =
   Env.mark_type_used env (Ident.name id) decl1;
