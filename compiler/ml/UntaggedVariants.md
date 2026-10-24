@@ -281,8 +281,8 @@ constructor:
 | `@as(null) LitNull \| AnyObject({x: int})` | `LitNull` | `LitNull` |
 
 The literals are compared with `===`: by one `switch (x)` over the literal
-arms, whose default holds the payload dispatch, or, with at most two
-literals, by an `if` per arm body. A literal without an arm of its own goes
+arms, whose default holds the payload dispatch, or, when at most two
+literals get a `case`, by an `if` per arm body. A literal without an arm of its own goes
 to the default arm. It gets a `case` leading there when it could pass a
 check of the payload dispatch (a string literal beside a `string` arm, any
 literal beside an unknown-kind arm) or when the variant has class cases;
@@ -411,9 +411,11 @@ primitives of the variant never reach it.
 
 ### 11. Constant folding
 
-A `switch` on a constant untagged value folds to the arm that the run-time
-dispatch selects for the constant's JavaScript value, so `S("a")` matched
-against `@as("a") A | S(string)` folds to `A`.
+A `switch` on an untagged value the compiler knows, a literal or a block of
+constants, folds to the arm that the run-time dispatch selects for its
+JavaScript value, so `S("a")` matched against `@as("a") A | S(string)` folds
+to `A`. A value built at run time, such as `A([1])` with its array, is
+matched at run time.
 
 - Implementation: `lambda.ml:switch` (`untagged_action`, `literal_denotes_same`).
 - Tests: `tests/tests/src/unboxed_variant_fold_test.res`.
