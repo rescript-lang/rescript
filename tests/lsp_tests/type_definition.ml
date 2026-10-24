@@ -6,6 +6,33 @@ let type_definition doc pos =
     (TypeDefinitionParams.create ~textDocument:(Test.text_document doc)
        ~position:(Test.position pos) ())
 
+let%expect_test "finds a record type through a module alias" =
+  Test.with_project ~name:"type-definition"
+    ~text:{|module Alias = Other
+let value = Alias.make()
+|}
+    ~files:
+      [
+        ( "Other.res",
+          {|type t = {name: string}
+let make = () => {name: "Alice"}
+|} );
+      ]
+    (fun ~root ~doc client ->
+      Test.snapshot ~root client (type_definition doc (1, 5)));
+  [%expect
+    {|
+    [
+      {
+        "range": {
+          "end": { "character": 23, "line": 0 },
+          "start": { "character": 0, "line": 0 }
+        },
+        "uri": "file:///workspace/Other.res"
+      }
+    ]
+    |}]
+
 let%expect_test "finds the variant type of an inferred binding" =
   Test.with_project ~name:"type-definition"
     ~text:{|type variant = Foo | Bar

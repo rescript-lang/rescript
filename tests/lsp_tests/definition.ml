@@ -6,6 +6,101 @@ let definition doc pos =
     (DefinitionParams.create ~textDocument:(Test.text_document doc)
        ~position:(Test.position pos) ())
 
+let%expect_test "follows a module alias to a value in another file" =
+  Test.with_project ~name:"definition"
+    ~text:{|module Alias = Other
+let x = Alias.value
+|}
+    ~files:[("Other.res", {|let value = 42
+|})]
+    (fun ~root ~doc client ->
+      Test.snapshot ~root client (definition doc (1, 16)));
+  [%expect
+    {|
+    [
+      {
+        "range": {
+          "end": { "character": 9, "line": 0 },
+          "start": { "character": 4, "line": 0 }
+        },
+        "uri": "file:///workspace/Other.res"
+      }
+    ]
+    |}]
+
+let%expect_test "finds a value bound by tuple destructuring" =
+  Test.with_project ~name:"definition"
+    ~text:
+      {|module A = {
+  let makeX = () => (1, 2)
+  let (xxx, yyy) = makeX()
+}
+let y = A.xxx
+|}
+    (fun ~root ~doc client ->
+      Test.snapshot ~root client (definition doc (4, 10)));
+  [%expect
+    {|
+    [
+      {
+        "range": {
+          "end": { "character": 10, "line": 2 },
+          "start": { "character": 7, "line": 2 }
+        },
+        "uri": "file:///workspace/Test.res"
+      }
+    ]
+    |}]
+
+let%expect_test "finds a value bound by record destructuring" =
+  Test.with_project ~name:"definition"
+    ~text:
+      {|module A = {
+  type t = {name: string, age: int}
+  let makeT = () => {name: "", age: 0}
+  let {name, age} = makeT()
+}
+let n1 = A.name
+|}
+    (fun ~root ~doc client ->
+      Test.snapshot ~root client (definition doc (5, 11)));
+  [%expect
+    {|
+    [
+      {
+        "range": {
+          "end": { "character": 11, "line": 3 },
+          "start": { "character": 7, "line": 3 }
+        },
+        "uri": "file:///workspace/Test.res"
+      }
+    ]
+    |}]
+
+let%expect_test "finds a React component from a JSX tag" =
+  Test.with_project ~name:"definition-jsx" ~jsx:true
+    ~text:
+      {|module Comp = {
+  @react.component
+  let make = (~name) => React.string(name)
+}
+let element = <Comp name="test" />
+|}
+    (fun ~root ~doc client ->
+      Test.snapshot ~root client (definition doc (4, 16)));
+  [%expect
+    {|
+    [
+      {
+        "range": {
+          "end": { "character": 10, "line": 2 },
+          "start": { "character": 6, "line": 2 }
+        },
+        "uri": "file:///workspace/Test.res"
+      }
+    ]
+    |}]
+
 let%expect_test "finds a local value declaration" =
   Test.with_project ~name:"definition" ~text:{|let xx = 10
 let y = xx

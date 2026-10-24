@@ -18,6 +18,78 @@ let create_and_print ~root ~doc client =
   In_channel.with_open_bin (Uri.to_path interface.uri) In_channel.input_all
   |> print_string
 
+let%expect_test "creates an interface for components with optional props" =
+  Test.with_project ~name:"create-interface-jsx" ~jsx:true
+    ~text:
+      {|@react.component
+let make = (~name, ~count=3) => React.string(name ++ Int.toString(count))
+module Other = {
+  @react.component
+  let make = (~children) => children
+}
+|}
+    create_and_print;
+  [%expect
+    {|
+    { "uri": "file:///workspace/Test.resi" }
+    @react.component
+    let make: (~name: string, ~count: int=?) => React.element
+    module Other: {
+      @react.component
+      let make: (~children: React.element) => React.element
+    }
+    |}]
+
+let%expect_test "preserves functors and module type constraints" =
+  Test.with_project ~name:"create-interface"
+    ~text:
+      {|module type Input = {
+  type t
+  let value: t
+}
+module Make = (X: Input) => {
+  type t = X.t
+  let value = X.value
+}
+|}
+    create_and_print;
+  [%expect
+    {|
+    { "uri": "file:///workspace/Test.resi" }
+    module type Input = {
+      type t
+      let value: t
+    }
+    module Make: (
+      X: Input,
+    ) =>
+    {
+      type t = X.t
+      let value: X.t
+    }
+    |}]
+
+let%expect_test
+    "preserves polymorphic variants and external argument attributes" =
+  Test.with_project ~name:"create-interface"
+    ~text:
+      {|type red = [#Ruby | #Redwood | #Rust]
+type blue = [#Sapphire | #Neon | #Navy]
+type color = [red | blue | #Papayawhip]
+external upperBound: ([< #d | #e | #f]) => unit = "myexternal"
+external x: (@as("bar") ~foo: int) => unit = "myexternal"
+|}
+    create_and_print;
+  [%expect
+    {|
+    { "uri": "file:///workspace/Test.resi" }
+    type red = [#Ruby | #Redwood | #Rust]
+    type blue = [#Sapphire | #Neon | #Navy]
+    type color = [red | blue | #Papayawhip]
+    external upperBound: ([< #d | #e | #f]) => unit = "myexternal"
+    external x: (@as("bar") ~foo: int) => unit = "myexternal"
+    |}]
+
 let%expect_test "creates an interface for records and labeled functions" =
   Test.with_project ~name:"create-interface"
     ~text:{|type r = {name: string, age: int}
