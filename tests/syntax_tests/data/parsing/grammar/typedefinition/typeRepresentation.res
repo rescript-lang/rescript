@@ -32,3 +32,16 @@ type t = @attr {x: int}
 type t = @attr /**doc before record*/ {x: int}
 type t = @attr ..
 type t = @attr /**doc before open*/ ..
+type t = @attr {x: {y: int}}
+type t = M.t = @attr {x: int}
+type t<'a> = @attr {x: 'a}
+type t = int and u = @attr {x: int}
+type t = /**doc before record*/ {x: int}
+type t = /**doc before open*/ ..
+type t = /**doc*/ @attr {x: int}
+type t = @attr /**doc*/ @attr2 ..
+type t = /**doc*/ {x: {y: int}}
+type t = private /**doc*/ {x: int}
+type t = /**doc*/ A | B
+type t = /**doc*/ | A | /**doc2*/ B
+type t = /**doc*/ @attr A | B
