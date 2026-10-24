@@ -185,6 +185,7 @@ let promiseOrFloatName = v =>
 @inline(never) let someWithNull = (v: withNull): option<withNull> => Some(v)
 @unboxed type withUndefined = | @as(undefined) WUndefined | WUString(string)
 @inline(never) let someWithUndefined = (v: withUndefined): option<withUndefined> => Some(v)
+let someConstantUndefined: option<withUndefined> = Some(WUndefined)
 type opaque
 @unboxed type withOpaque = | @as("n") ONone | OPaque(opaque)
 @inline(never) let someWithOpaque = (v: withOpaque): option<withOpaque> => Some(v)
@@ -323,6 +324,7 @@ describe(__MODULE__, () => {
     eq(__LOC__, raw(someWithNull(WNull)), Nullable.null)
     eq(__LOC__, someWithNull(WNull) == None, false)
     eq(__LOC__, someWithUndefined(id(WUndefined)) == None, false)
+    eq(__LOC__, someConstantUndefined == None, false)
     eq(__LOC__, raw(someWithUndefined(WUString("a"))), "a")
     // An undefined payload shows whether `Some` boxes: a boxed `Some` stays
     // distinct from `None`, an unboxed one does not.
