@@ -104,12 +104,14 @@ let%expect_test "shows an annotated prop in a nested React component" =
     {| { "contents": { "kind": "markdown", "value": "```rescript\nstring\n```" } } |}]
 
 let%expect_test "shows the type of an intrinsic JSX tag" =
-  test_jsx_hover ~position:(0, 10) ~text:"let q = <div />\n";
+  test_jsx_hover ~position:(0, 10) ~text:{|let q = <div />
+|};
   [%expect
     {| { "contents": { "kind": "markdown", "value": "```rescript\nstring\n```" } } |}]
 
 let%expect_test "shows the type of an intrinsic JSX attribute" =
-  test_jsx_hover ~position:(0, 14) ~text:"let _ = <div name=\"\" />\n";
+  test_jsx_hover ~position:(0, 14) ~text:{|let _ = <div name="" />
+|};
   [%expect
     {|
     {
