@@ -3,7 +3,7 @@
 /* Commit records, parsed from a commit message and drawn as HTML. The
  * caller (commitRecords.js) reads each commit's identity and message from
  * git. The
- * format is the `records` skill's (.claude/skills/records/SKILL.md): a
+ * format is the `records` skill's (.agents/skills/records/SKILL.md): a
  * subject, a `Why:` section, object blocks such as
  * `AST modified (raw extensions):`, each followed by an optional `Example:`
  * program and its forms as `Before (<form>):` and `After (<form>):` blocks,
