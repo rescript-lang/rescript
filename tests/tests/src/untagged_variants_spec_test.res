@@ -2,7 +2,7 @@ open Mocha
 open Test_utils
 
 /***
-Pins the rules stated in compiler/ml/UNTAGGED_VARIANTS.md. Each block names
+Pins the rules stated in compiler/ml/UntaggedVariants.md. Each block names
 the rule it pins. Values are passed through [id], whose [@inline(never)] keeps
 them away from constant folding, so the assertions observe the generated
 dispatch. [raw] injects a JavaScript value a case's type does not describe;
@@ -330,7 +330,7 @@ describe(__MODULE__, () => {
     // distinct from `None`, an unboxed one does not.
     eq(__LOC__, someWithOpaque(OPaque(raw(Nullable.undefined))) == None, false)
     eq(__LOC__, someWithVariable(Var(raw(Nullable.undefined))) == None, false)
-    eq(__LOC__, someWithBlob(BBlob(raw(Nullable.undefined))) == None, false)
+    eq(__LOC__, someWithBlob(BBlob(raw(Nullable.undefined))) == None, true)
     eq(__LOC__, someWithDate(DDate(raw(Nullable.undefined))) == None, true)
     eq(__LOC__, someWithRecord(RRecord(raw(Nullable.undefined))) == None, true)
     eq(__LOC__, someWithInlineRecord(raw(Nullable.undefined)) == None, false)

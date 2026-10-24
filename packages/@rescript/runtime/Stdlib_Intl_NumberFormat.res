@@ -1,6 +1,6 @@
 module Grouping = Stdlib_Intl_NumberFormat_Grouping
 
-@notUndefined
+@instanceOf("Intl.NumberFormat")
 type t
 
 /**

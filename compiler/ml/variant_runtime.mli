@@ -1,42 +1,46 @@
 module Instance : sig
-  type t =
-    | Array
-    | ArrayBuffer
-    | BigInt64Array
-    | BigUint64Array
-    | Blob
-    | DataView
-    | Date
-    | File
-    | Float32Array
-    | Float64Array
-    | Int16Array
-    | Int32Array
-    | Int8Array
-    | Promise
-    | RegExp
-    | Uint16Array
-    | Uint32Array
-    | Uint8Array
-    | Uint8ClampedArray
-    | Set
-    | Map
-    | WeakSet
-    | WeakMap
+  (** A JavaScript class whose instances a value is recognized by:
+      [name] is the global constructor's path, such as ["Date"] or
+      ["Intl.Locale"], and [ancestors] are the paths of its superclasses that
+      are declared too, nearest first. Arrays are recognized by
+      [Array.isArray] instead. *)
+  type t = Array | Class of {name: string; ancestors: string list}
 
   val to_string : t -> string
+
+  val is_subclass : t -> of_:t -> bool
+  (** Whether every instance of the first is an instance of [of_] too, without
+      the two being the same class. *)
 end
 
 type block_type =
-  | IntType
+  | NumberType  (** [int] and [float] alike *)
   | StringType
-  | FloatType
   | BigintType
   | BooleanType
   | InstanceType of Instance.t
+  | SymbolType
   | FunctionType
   | ObjectType
   | UnknownType
+
+val typeof_name : block_type -> string option
+(** What [typeof] returns for values of a kind it recognizes; [None] for
+    instances, which are recognized by their class, and unknown payloads. *)
+
+val block_type_of_typeof : string -> block_type option
+
+(** What a type declaration states about its values at run time, through
+    [@notUndefined], [@instanceOf] or [@typeOf]. Each level implies the one
+    before: a value recognized as a class instance or [typeof] kind is never
+    [undefined]. *)
+type value_shape =
+  | Unstated
+      (** Nothing: an abbreviation has the shape of the type it abbreviates *)
+  | Never_undefined  (** [@notUndefined] *)
+  | Recognized_as of block_type
+      (** [@instanceOf] or [@typeOf]: a payload of this kind, with the class's
+          declared superclasses *)
 
 (** The literal value a constructor is represented by: what [@as] states, or
     the constructor's own name when it states nothing. Unlike [tag_type], this

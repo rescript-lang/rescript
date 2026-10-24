@@ -853,7 +853,7 @@ let literal_denotes_same = Variant_runtime.same_literal_value
 let value_has_block_type ~block_types (kind : value_kind)
     (block_type : Variant_runtime.block_type) =
   match (block_type, kind) with
-  | (IntType | FloatType), Is_literal (Int _ | Float _) -> true
+  | NumberType, Is_literal (Int _ | Float _) -> true
   | StringType, Is_literal (String _) -> true
   | BooleanType, Is_literal (Bool _) -> true
   | ObjectType, Is_object -> true
@@ -862,8 +862,8 @@ let value_has_block_type ~block_types (kind : value_kind)
     not (List.mem (Variant_runtime.InstanceType Array) block_types)
   | UnknownType, (Is_literal _ | Is_object | Is_array) -> true
   | UnknownType, Unknown_value -> false
-  | ( ( IntType | FloatType | StringType | BooleanType | ObjectType | BigintType
-      | FunctionType | InstanceType _ ),
+  | ( ( NumberType | StringType | BooleanType | ObjectType | BigintType
+      | SymbolType | FunctionType | InstanceType _ ),
       _ ) ->
     false
 

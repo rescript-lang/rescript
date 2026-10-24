@@ -1,0 +1,1 @@
+@instanceOf("Math") type t
