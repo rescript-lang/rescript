@@ -262,7 +262,7 @@ A literal may equal a value of a payload case: `@as("a") A | S(string)`,
 `@as(true) A | B(bool)` are accepted. Rule 7 says which case such a value
 belongs to.
 
-- Implementation: `ast_untagged_variants.ml:check_invariant`,
+- Implementation: `variant_layout.ml:check_invariant`,
   `variant_runtime.ml:literal_value_key`.
 - Tests: the fixtures above; `tests/tests/src/unboxed_variant_fold_test.res`
   (a number and a bigint literal with the same digits); `TaggedDuplicateLiteral.res`,
