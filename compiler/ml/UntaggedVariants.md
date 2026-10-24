@@ -219,8 +219,14 @@ written (Known bugs).
 
 ### 6. Well-formedness
 
-The type checker rejects an untagged variant, with
-"This untagged variant definition is invalid: ..." and the reason below, when:
+The type checker rejects a variant with an untagged case, with
+"This untagged variant definition is invalid: ..." and the reason below, when
+the condition holds. This includes a variant where only some constructors are
+`@unboxed` (rule 1). There, the tagged blocks together count as one object
+case, and the `@as` of an untagged case is not a tag, so it does not clash
+with a tagged case's (`untagged_mixed_test.res`; fixtures
+`untagged_mixed_two_numbers.res`, `untagged_mixed_unknown_payload.res`,
+`untagged_mixed_object_and_tagged.res`; #9020).
 
 | Condition | Reason | Fixture |
 | --- | --- | --- |
