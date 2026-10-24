@@ -101,9 +101,6 @@ type matching_facts = {
   tag_name: string option;
   block_types: block_type list;
   literal_tags: literal_tag list;
-  has_null: bool;
-  has_undefined: bool;
-  has_other_literal: bool;
 }
 
 type layout
