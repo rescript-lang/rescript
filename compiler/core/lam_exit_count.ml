@@ -92,7 +92,7 @@ let count_helper (lam : Lambda.t) : collection option =
         count l;
         Ext_list.iter_snd sw.sw_consts count;
         Ext_list.iter_snd sw.sw_blocks count
-      | Ltrywith (l1, _v, l2) ->
+      | Ltrywith (l1, _, l2) | Ltryfinally (l1, l2) ->
         count l1;
         count l2
       | Lifthenelse (l1, l2, l3) ->

@@ -163,7 +163,7 @@ let collect_occurs lam : occ_tbl =
     | Lstaticcatch (l1, (_i, _), l2) ->
       count bv l1;
       count bv l2
-    | Ltrywith (l1, _v, l2) ->
+    | Ltrywith (l1, _, l2) | Ltryfinally (l1, l2) ->
       count bv l1;
       count bv l2
     | Lifthenelse (l1, l2, l3) ->

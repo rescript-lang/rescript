@@ -49,8 +49,10 @@ let rec expr_no_side_effects (expr : Typedtree.expression) =
     partial = Total && e |> expr_no_side_effects
     && cases |> List.for_all case_no_side_effects
   | Texp_letmodule _ -> false
-  | Texp_try (e, cases) ->
-    e |> expr_no_side_effects && cases |> List.for_all case_no_side_effects
+  | Texp_try (e, cases, finally) ->
+    e |> expr_no_side_effects
+    && cases |> List.for_all case_no_side_effects
+    && finally |> expr_opt_no_side_effects
   | Texp_tuple el -> el |> List.for_all expr_no_side_effects
   | Texp_variant (_lbl, eo) -> eo |> expr_opt_no_side_effects
   | Texp_field (e, _lid, _ld) -> e |> expr_no_side_effects

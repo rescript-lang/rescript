@@ -673,11 +673,20 @@ and expression ctxt f x =
     | Pexp_match (e, l) ->
       pp f "@[<hv0>@[<hv0>@[<2>match %a@]@ with@]%a@]" (expression reset_ctxt) e
         (case_list ctxt) l
-    | Pexp_try (e, l) ->
-      pp f "@[<0>@[<hv2>try@ %a@]@ @[<0>with%a@]@]"
-        (* "try@;@[<2>%a@]@\nwith@\n%a"*)
-        (expression reset_ctxt)
-        e (case_list ctxt) l
+    | Pexp_try (e, l, finally) -> (
+      let pp_finally f = function
+        | None -> ()
+        | Some fin -> pp f "@ @[<hv2>finally@ %a@]" (expression reset_ctxt) fin
+      in
+      match l with
+      | [] ->
+        pp f "@[<0>@[<hv2>try@ %a@]%a@]" (expression reset_ctxt) e pp_finally
+          finally
+      | _ ->
+        pp f "@[<0>@[<hv2>try@ %a@]@ @[<0>with%a@]%a@]"
+          (* "try@;@[<2>%a@]@\nwith@\n%a"*)
+          (expression reset_ctxt)
+          e (case_list ctxt) l pp_finally finally)
     | Pexp_let (rf, l, e) ->
       (* pp f "@[<2>let %a%a in@;<1 -2>%a@]"
          (*no indentation here, a new line*) *)

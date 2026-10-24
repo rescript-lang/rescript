@@ -121,6 +121,8 @@ let rec no_side_effects (lam : Lambda.t) : bool =
   *)
   | Ltrywith (body, _exn, handler) ->
     no_side_effects body && no_side_effects handler
+  | Ltryfinally (body, finally) ->
+    no_side_effects body && no_side_effects finally
   | Lifthenelse (a, b, c) ->
     no_side_effects a && no_side_effects b && no_side_effects c
   | Lsequence (a, b) -> no_side_effects a && no_side_effects b
@@ -210,7 +212,7 @@ let size_upto ~limit (lam : Lambda.t) =
       add 1;
       List.iter size ls
     | Lstaticcatch _ -> add too_big
-    | Ltrywith _ -> add too_big
+    | Ltrywith _ | Ltryfinally _ -> add too_big
     | Lifthenelse (l1, l2, l3) ->
       add 1;
       size l1;

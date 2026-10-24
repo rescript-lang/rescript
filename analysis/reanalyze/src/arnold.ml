@@ -996,11 +996,13 @@ module Compile = struct
           expression ~ctx e)
       |> Command.unordered_sequence
     | Texp_assert _ -> Command.nothing
-    | Texp_try (e, cases) ->
+    | Texp_try (e, cases, finally) -> (
       let c_e = e |> expression ~ctx in
       let c_cases = cases |> List.map (case ~ctx) |> Command.nondet in
       let open Command in
-      c_e +++ c_cases
+      match finally with
+      | None -> c_e +++ c_cases
+      | Some finally -> c_e +++ c_cases +++ expression ~ctx finally)
     | Texp_variant (_label, e_opt) -> e_opt |> expression_opt ~ctx
     | Texp_while _ ->
       not_implemented "Texp_while";

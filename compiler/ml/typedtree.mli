@@ -204,8 +204,11 @@ and expression_desc =
 
             [Texp_match (E0, [(P1, E1); (P2, E2)], [(P3, E3)], _)]
          *)
-  | Texp_try of expression * case list
-      (** try E with P1 -> E1 | ... | PN -> EN *)
+  | Texp_try of expression * case list * expression option
+      (** try E catch { | P1 => E1 | ... | PN => EN } finally E_fin
+
+          The case list is empty when there is no catch, and then there is
+          always a finally expression. *)
   | Texp_tuple of expression list  (** (E1, ..., EN) *)
   | Texp_construct of
       Longident.t loc * constructor_description * expression list

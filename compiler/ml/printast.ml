@@ -319,10 +319,11 @@ and expression i ppf x =
     line i ppf "Pexp_match\n";
     expression i ppf e;
     list i case ppf l
-  | Pexp_try (e, l) ->
+  | Pexp_try (e, l, finally) ->
     line i ppf "Pexp_try\n";
     expression i ppf e;
-    list i case ppf l
+    list i case ppf l;
+    option i expression ppf finally
   | Pexp_tuple l ->
     line i ppf "Pexp_tuple\n";
     list i expression ppf l
