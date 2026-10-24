@@ -1,0 +1,10 @@
+(library
+ (name rescript_lsp_tests)
+ (package rescript-language-server)
+ (libraries lsp jsonrpc yojson eio eio_main)
+ (inline_tests
+  (deps %{bin:rescript-language-server}))
+ (preprocess
+  (pps ppx_deriving_yojson ppx_expect))
+ (flags
+  (-w "-9-32-33")))
