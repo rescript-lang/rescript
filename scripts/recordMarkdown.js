@@ -38,8 +38,9 @@ import {
 
 /**
  * A changelog fragment the pull request adds: its category, the category's
- * emoji as the changelog heads it (`:boom:`), and its Markdown bullets.
- * @typedef {{ category: string, emoji: string, text: string }} ChangelogEntry
+ * heading as the changelog has it (`#### :boom: Breaking Change`), and its
+ * Markdown bullets.
+ * @typedef {{ category: string, heading: string, text: string }} ChangelogEntry
  */
 
 /** The characters a comment holds at most, with room for the action's tag. */
@@ -442,10 +443,10 @@ export function commitMarkdown(r, full, change = "") {
 }
 
 /**
- * The changelog entries as a list, each bullet led by its entry's emoji, in
- * at most `room` characters: the comment shortens commits to fit its
- * budget but not the changelog, so entries past the room are counted, not
- * drawn.
+ * The changelog entries grouped under their categories' headings, as the
+ * changelog groups them (the entries come in its order), in at most `room`
+ * characters: the comment shortens commits to fit its budget but not the
+ * changelog, so entries past the room are counted, not drawn.
  * @param {ChangelogEntry[]} changelog
  * @param {number} room
  */
@@ -453,16 +454,20 @@ function changelogList(changelog, room) {
   if (!changelog.length) return "No changelog entry.";
   const drawn = [];
   let size = 0;
+  let heading = "";
+  let count = 0;
   for (const e of changelog) {
-    const lines = unmentioned(e.text).replace(/^- /gm, `- ${e.emoji} `);
-    size += lines.length + 1;
+    const lines = `${e.heading === heading ? "" : `${e.heading}\n\n`}${unmentioned(e.text)}`;
+    size += lines.length + 2;
     if (size > room) break;
-    drawn.push(lines);
+    drawn.push(e.heading === heading || !count ? lines : `\n${lines}`);
+    heading = e.heading;
+    count++;
   }
-  const left = changelog.length - drawn.length;
+  const left = changelog.length - count;
   if (left)
     drawn.push(
-      `\n<sub>${left}${drawn.length ? " more" : ""} changelog entr${left === 1 ? "y" : "ies"} under \`changes/\`.</sub>`,
+      `\n<sub>${left}${count ? " more" : ""} changelog entr${left === 1 ? "y" : "ies"} under \`changes/\`.</sub>`,
     );
   return drawn.join("\n");
 }
@@ -474,8 +479,8 @@ function changelogList(changelog, room) {
  * last commits are left to the page. The commits the last push added or
  * edited (`changes`) are marked.
  *
- * The changelog entries the pull request adds (`changelog`, each fragment's
- * bullets led by its category's emoji) describe it as a whole, as its squash
+ * The changelog entries the pull request adds (`changelog`, grouped under
+ * the changelog's category headings) describe it as a whole, as its squash
  * commit will; a commit's `Breaking:` sections describe that commit. They
  * come first, under their own heading, which also notes a pull request
  * whose commits break something while no entry is a breaking change, or

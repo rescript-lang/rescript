@@ -65,15 +65,13 @@ function changelog(base, tip) {
           name,
           git(["show", `${tip}:${f}`]),
         );
-        const emoji =
-          /:\w+:/.exec(
-            categories[/** @type {keyof typeof categories} */ (category)],
-          )?.[0] ?? "";
-        return { category, emoji, text };
+        const heading =
+          categories[/** @type {keyof typeof categories} */ (category)];
+        return { category, heading, text };
       } catch {
         return {
           category: "",
-          emoji: ":grey_question:",
+          heading: "#### :grey_question: Not a changelog fragment",
           text: `- \`${name}\``,
         };
       }
