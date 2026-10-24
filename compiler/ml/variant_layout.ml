@@ -49,8 +49,13 @@ let declaration_shape ~env (decl : Types.type_declaration) : value_shape =
       | Some _ | None -> []
     in
     Recognized_as (InstanceType (Class {name; ancestors}))
-  | None ->
-    if has_not_undefined decl.type_attributes then Never_undefined else Unstated
+  | None -> (
+    if not (has_not_undefined decl.type_attributes) then Unstated
+    else
+      (* Restating a kind the abbreviated type is recognized by keeps it *)
+      match Option.map (value_shape ~env) decl.type_manifest with
+      | Some (Recognized_as _ as shape) -> shape
+      | Some (Unstated | Never_undefined) | None -> Never_undefined)
 
 (* Resolves the shapes of a group of declarations, which can abbreviate each
    other. Each round resolves one more level of abbreviation within the
@@ -169,23 +174,9 @@ let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
   match recognized_as ~env t with
   | Some _ as declared -> declared
   | None -> (
-    (* Builtin types have no declaration to annotate *)
+    (* Builtin types state their shapes in [Predef]; type expressions other
+       than constructors have no declaration *)
     match (Ctype.expand_head env t).desc with
-    | Tconstr (path, _, _) when Path.same path Predef.path_string ->
-      Some StringType
-    | Tconstr (path, _, _)
-      when Path.same path Predef.path_int || Path.same path Predef.path_float ->
-      Some NumberType
-    | Tconstr (path, _, _) when Path.same path Predef.path_bigint ->
-      Some BigintType
-    | Tconstr (path, _, _) when Path.same path Predef.path_bool ->
-      Some BooleanType
-    | Tconstr (path, _, _) when Path.same path Predef.path_dict ->
-      Some ObjectType
-    | Tconstr (path, _, _) when Path.same path Predef.path_array ->
-      Some (InstanceType Array)
-    | Tconstr (path, _, _) when Path.same path Predef.path_promise ->
-      Some (InstanceType (Class {name = "Promise"; ancestors = []}))
     | Ttuple _ -> Some (InstanceType Array)
     | Tarrow _ -> Some FunctionType
     | _ -> None)
@@ -212,7 +203,7 @@ let get_block_type ~env (cstr : Types.constructor_declaration) : block_type =
 let layout_from_type_variant ~(configuration : configuration) ~env
     (cstrs : Types.constructor_declaration list) : Variant_runtime.layout =
   let get_block (cstr : Types.constructor_declaration) : block =
-    let tag = {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag} in
+    let tag = declared_tag cstr in
     let tag_name = process_tag_name cstr.cd_attributes in
     if has_untagged cstr.cd_attributes then
       Untagged {tag; block_type = get_block_type ~env cstr}

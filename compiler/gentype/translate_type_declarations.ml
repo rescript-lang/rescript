@@ -40,17 +40,15 @@ let create_polyvariant_case (label, attributes) =
       | _ -> if is_number label then IntLabel label else StringLabel label);
   }
 
-let create_variant_case label = function
-  | Some (Variant_runtime.String label) ->
+let create_variant_case = function
+  | Variant_runtime.String label ->
     {label_js = StringLabel (Emit_text.escape_string_contents label)}
-  | Some (Variant_runtime.Int label) ->
-    {label_js = IntLabel (string_of_int label)}
-  | Some (Variant_runtime.Float label) -> {label_js = FloatLabel label}
-  | Some (Variant_runtime.BigInt label) -> {label_js = IntLabel label}
-  | Some (Variant_runtime.Bool label) -> {label_js = BoolLabel label}
-  | Some Variant_runtime.Null -> {label_js = NullLabel}
-  | Some Variant_runtime.Undefined -> {label_js = UndefinedLabel}
-  | None -> {label_js = StringLabel label}
+  | Variant_runtime.Int label -> {label_js = IntLabel (string_of_int label)}
+  | Variant_runtime.Float label -> {label_js = FloatLabel label}
+  | Variant_runtime.BigInt label -> {label_js = IntLabel label}
+  | Variant_runtime.Bool label -> {label_js = BoolLabel label}
+  | Variant_runtime.Null -> {label_js = NullLabel}
+  | Variant_runtime.Undefined -> {label_js = UndefinedLabel}
 
 (* The JS name of a declared record field: its runtime name (set by @as),
    escaped as string contents, or else its identifier with the \"..." of an
@@ -255,7 +253,6 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       constructor_declarations
       |> List.mapi (fun position constructor_declaration ->
           let constructor_args = constructor_declaration.Types.cd_args in
-          let name = constructor_declaration.cd_id |> Ident.name in
           let tag = Variant_runtime.constructor_tag layout position in
           let args_translation =
             match constructor_args with
@@ -282,25 +279,25 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
             |> Translation.translate_dependencies ~config ~output_file_relative
                  ~resolver
           in
-          (name, tag, arg_types, import_types))
+          (tag, arg_types, import_types))
     in
     let variants_no_payload, variants_with_payload =
-      variants |> List.partition (fun (_, _, arg_types, _) -> arg_types = [])
+      variants |> List.partition (fun (_, arg_types, _) -> arg_types = [])
     in
     let no_payloads =
       variants_no_payload
-      |> List.map (fun (name, tag, _argTypes, _importTypes) ->
-          create_variant_case name tag)
+      |> List.map (fun (tag, _argTypes, _importTypes) ->
+          create_variant_case tag)
     in
     let payloads =
       variants_with_payload
-      |> List.map (fun (name, tag, arg_types, _importTypes) ->
+      |> List.map (fun (tag, arg_types, _importTypes) ->
           let type_ =
             match arg_types with
             | [type_] -> type_
             | _ -> Tuple arg_types
           in
-          {case = create_variant_case name tag; t = type_})
+          {case = create_variant_case tag; t = type_})
     in
     let variant_typ =
       let unboxed =
@@ -331,7 +328,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     in
     let import_types =
       variants
-      |> List.map (fun (_, _, _, import_types) -> import_types)
+      |> List.map (fun (_, _, import_types) -> import_types)
       |> List.concat
     in
     {Code_item.export_from_type_declaration; import_types}

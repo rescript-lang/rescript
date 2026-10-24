@@ -55,9 +55,9 @@ a payload and `@tag` on the type do not change the representation.
 | `@unboxed @tag("kind") type t = TI({x: int}) \| TS(string)` | `TI({x: 1})` | `{x: 1}` |
 | `@unboxed type t = @as("x") AsX(string) \| AsY(int)` | `AsX("v")` | `"v"` |
 
-- Implementation: `variant_runtime.ml:compute_matching_facts` (a nullary case
-  without `@as` is its name), `translcore.ml:transl_exp0` (constructor
-  application).
+- Implementation: `ast_untagged_variants.ml:declared_tag` (a case without
+  `@as` is its name, resolved once in the layout), `translcore.ml:transl_exp0`
+  (constructor application).
 - Tests: `spec_test` rule 2.
 
 ### 3. `@as` literals
@@ -95,15 +95,17 @@ into one kind:
 | a type declared with `@typeOf("k")` | kind `k` | `typeof x === "k"` |
 | anything else: an abstract type, a type variable, a variant, `list<_>`, an `@unboxed` record | unknown | no check |
 
-The annotations of rule 5 are read first, on the type as written and on each
-type it abbreviates. Otherwise the payload type is classified after expanding
-abbreviations: `type ints = array<int>` is an array case, and `type name =
+The builtin types state their kinds in their declarations, as the
+annotations of rule 5 do for declared types. The shape is read from the type
+as written and from each type it abbreviates, and a tuple or a function type
+is classified after expanding abbreviations: `type ints = array<int>` is an array case, and `type name =
 string` a string case. A type is never recognized by its name. `@typeOf("number")`
 is the number kind, and `@typeOf("symbol")` is a kind of its own, with no
 builtin payload type. `@notUndefined` on an abstract type leaves it unknown.
 
-- Implementation: `variant_layout.ml:get_block_type_from_typ`,
-  `get_block_type`, `recognized_as`.
+- Implementation: `predef.ml` (the builtin shapes),
+  `variant_layout.ml:get_block_type_from_typ`, `get_block_type`,
+  `recognized_as`.
 - Tests: `spec_test` rules 4 (`kinds`, `tuples`, `aliasDict`, `instances`,
   `unknown`); fixtures `UntaggedConstructorMoreThanOneArg.res`,
   `UntaggedConstructorAttributeMoreThanOneArg.res`, `UntaggedNonUnary1.res`,
@@ -144,7 +146,8 @@ superclass.
 
 An annotation on an abbreviation must agree with the abbreviated type. It can
 refine an abstract type that is not builtin and has no annotation, or repeat
-the annotation of the abbreviated type. The type of a functor parameter, of a
+what the abbreviated type is recognized by, as `@typeOf("number") type count =
+int` does. The type of a functor parameter, of a
 recursive module being defined, and a locally abstract type `(type a)` are
 abstract only where they are declared: they stand for another type, so they
 cannot be refined. Only a private abbreviation can declare a subclass of the
@@ -157,8 +160,8 @@ and so would `type dog = phantom<int>` with `type phantom<'a> = animal`.
 
 | Declaration | Error | Fixture |
 | --- | --- | --- |
-| `@typeOf("string") type t = option<string>`, `type t<'a> = 'a`, an abbreviation of `unit`, a builtin type, a record or a variant | @typeOf on a type abbreviation must describe an abstract type, ... | `runtime_annotation_on_option.res`, `runtime_annotation_on_type_variable.res` |
-| `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym` | This annotation, @typeOf("number"), contradicts the abbreviated type's annotation, @typeOf("symbol"). | `runtime_annotation_contradicts_manifest.res` |
+| `@typeOf("string") type t = option<string>`, `type t<'a> = 'a`, an abbreviation of `unit`, `list<_>`, a record or a variant | @typeOf on a type abbreviation must describe an abstract type, ... | `runtime_annotation_on_option.res`, `runtime_annotation_on_type_variable.res` |
+| `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym`, or `@typeOf("string") type t = int` | This annotation, @typeOf("number"), contradicts the abbreviated type, whose values are recognized by @typeOf("symbol"). | `runtime_annotation_contradicts_manifest.res`, `runtime_annotation_contradicts_builtin.res` |
 | `@instanceOf("Date") type date = X.t` in a functor of `X`, or over `(type a)` | @instanceOf cannot describe the type of a functor parameter, ... | `instance_of_functor_parameter.res`, `type_of_locally_abstract_type.res` |
 | `@instanceOf("Dog") type dog = animal`, or `= phantom<int>` with `type phantom<'a> = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res`, `instance_of_public_subclass_through_alias.res` |
 | `@instanceOf("Animal") type t = private dog` | Animal appears twice in this chain of abbreviations ... | `instance_of_class_twice_in_chain.res` |
@@ -446,12 +449,22 @@ hold `undefined`.
 
 ### 13. `@notUndefined`
 
-`@notUndefined` on an abstract type without a manifest declares that its
-values are never `undefined`. It affects only rule 12: `option` of the type,
-and of an untagged variant with a payload of the type, is unboxed. It does not
-make the type a recognized payload kind (rule 4). On any other type
-declaration it is an error, "@notUndefined can only be used on abstract
-types". `@instanceOf` and `@typeOf` (rule 5) imply it.
+`@notUndefined` on an abstract type declares that its values are never
+`undefined`. It affects only rule 12: `option` of the type, and of an
+untagged variant with a payload of the type, is unboxed. It does not make the
+type a recognized payload kind (rule 4). `@instanceOf` and `@typeOf` (rule 5)
+imply it.
+
+On an abbreviation it follows the rule of rule 5: it can refine a type whose
+representation the compiler does not see, such as an abstract type, or
+restate that the abbreviated type cannot be `undefined`, as
+`@notUndefined type count = int` does, which keeps the kind of `int`.
+
+| Declaration | Error | Fixture |
+| --- | --- | --- |
+| `@notUndefined type t = {x: int}`, or on a variant | @notUndefined can only be used on abstract types and type abbreviations, ... | `invalid_attribute_not_undefined.res` |
+| `@notUndefined type t = option<int>` | @notUndefined on a type abbreviation must describe an abstract type, ... | `not_undefined_on_option.res`, `tests/build_tests/not_undefined_attribute` |
+| `@notUndefined type t = X.t` in a functor of `X` | @notUndefined cannot describe the type of a functor parameter, ... | `not_undefined_on_functor_parameter_type.res` |
 
 When an interface declares a type `@notUndefined`, its implementation must be
 a type that cannot hold `undefined` either, or a type whose representation
@@ -464,14 +477,16 @@ differ: the second declaration is @notUndefined, but the first declaration
 can hold undefined". The same holds
 for functor arguments and `with type` constraints.
 
-- Implementation: `typedecl.ml:transl_declaration`;
+- Implementation: `typedecl.ml:transl_declaration`,
+  `check_not_undefined_manifest`; `typeopt.ml:undefinedness`;
   `ast_untagged_variants.ml:has_not_undefined`;
   `variant_layout.ml:declaration_shape`;
   `typeopt.ml:type_cannot_contain_undefined`;
   `includemod.ml:not_undefined_mismatch`.
 - Tests: `spec_test` rule 13; fixtures `invalid_attribute_not_undefined.res`,
   `not_undefined_functor_argument.res`, `not_undefined_functor_parameter.res`;
-  `tests/tests/src/not_undefined_interface_test.res`;
+  `tests/tests/src/not_undefined_interface_test.res`,
+  `not_undefined_abbreviation_test.res`;
   `tests/build_tests/super_errors_multi/fixtures/Cross_not_undefined_option_implementation`;
   `tests/build_tests/not_undefined_attribute`.
 - Shaped by #7458, #7464, #8964.
@@ -486,7 +501,8 @@ error.
 An interface and its implementation must agree on `@unboxed`, on `@tag`, on
 the literal of every nullary case and of every tagged case with a payload,
 and on the payload kind of every untagged case whose kind the interface
-knows. An unknown payload in the interface is its only payload case and is
+knows. A case without `@as` has the literal of its name, so `A` and
+`@as("A") A` agree, here and in coercions (`as_constructor_name_test.res`). An unknown payload in the interface is its only payload case and is
 not checked, so it agrees with any payload of the implementation
 (`untagged_hidden_payload_test.res`). The `@as` of an untagged case with a
 payload does not change its representation (rule 2) and is not compared.
@@ -495,7 +511,9 @@ Type declarations in messages print the `@as` of nullary and tagged cases.
 A type for which an interface states a class or `typeof` (rule 5), through
 its own annotation or the type it abbreviates, must state the same one in the
 implementation, superclasses included: "Their runtime representations
-differ". An interface that states none hides it. The same holds for functor
+differ". A builtin type states its kind, so `@typeOf("number") type t` in an
+interface accepts `type t = int` (`untagged_builtin_alias_test.res`). An
+interface that states none hides it. The same holds for functor
 arguments, `with type` constraints and module type ascriptions. Within one
 variant a class is identified by its path, so two types of the same class are
 one case (rule 6); across a signature the two declarations must also state

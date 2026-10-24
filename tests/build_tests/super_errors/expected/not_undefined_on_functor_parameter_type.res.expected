@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/not_undefined_on_functor_parameter_type.res[0m:[2m6:17-28[0m
+
+  4 [2m│[0m   },
+  5 [2m│[0m ) => {
+  [1;31m6[0m [2m│[0m   @notUndefined [1;31mtype t = X.t[0m
+  7 [2m│[0m }
+  8 [2m│[0m 
+
+  @notUndefined cannot describe the type of a functor parameter, of a recursive module being defined, or a locally abstract type: such a type stands for another one, whose values can be anything.
