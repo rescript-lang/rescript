@@ -1,0 +1,1 @@
+- Drop `Primitive_option.some`/`valFromOption` calls when matching on `Some(x)` with `x` a variable.
