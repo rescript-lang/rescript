@@ -27,6 +27,15 @@ let isOne = (x: targetNumber) =>
   | _ => false
   }
 
+type sourceInt = | @as(1) OneInt
+type targetFloat = | @as(1.) OneInt | TwoInt | ThreeInt | FourInt
+
+let isOneInt = (x: targetFloat) =>
+  switch x {
+  | OneInt => true
+  | _ => false
+  }
+
 type sourceBlock = | @as(1.) OneOf(int)
 type targetBlock = | @as(1.0) OneOf(int) | TwoOf(int)
 
@@ -44,6 +53,7 @@ describe(__MODULE__, () => {
   test("folded matches of coerced constants", () => {
     eq(__LOC__, isOne((One: sourceNumber) :> targetNumber), true)
     eq(__LOC__, isOneOf((OneOf(1): sourceBlock) :> targetBlock), true)
+    eq(__LOC__, isOneInt((OneInt: sourceInt) :> targetFloat), true)
   })
 
   test("interface", () => {

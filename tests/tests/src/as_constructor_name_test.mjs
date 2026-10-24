@@ -11,17 +11,22 @@ function isOne(x) {
   return x === 1.0;
 }
 
+function isOneInt(x) {
+  return x === 1;
+}
+
 function isOneOf(x) {
   return x.TAG === 1.0;
 }
 
 Mocha.describe("As_constructor_name_test", () => {
-  Mocha.test("coercion", () => Test_utils.eq("File \"as_constructor_name_test.res\", line 41, characters 7-14", "A", "A"));
+  Mocha.test("coercion", () => Test_utils.eq("File \"as_constructor_name_test.res\", line 50, characters 7-14", "A", "A"));
   Mocha.test("folded matches of coerced constants", () => {
-    Test_utils.eq("File \"as_constructor_name_test.res\", line 45, characters 7-14", true, true);
-    Test_utils.eq("File \"as_constructor_name_test.res\", line 46, characters 7-14", true, true);
+    Test_utils.eq("File \"as_constructor_name_test.res\", line 54, characters 7-14", true, true);
+    Test_utils.eq("File \"as_constructor_name_test.res\", line 55, characters 7-14", true, true);
+    Test_utils.eq("File \"as_constructor_name_test.res\", line 56, characters 7-14", true, true);
   });
-  Mocha.test("interface", () => Test_utils.eq("File \"as_constructor_name_test.res\", line 50, characters 7-14", "A", "A"));
+  Mocha.test("interface", () => Test_utils.eq("File \"as_constructor_name_test.res\", line 60, characters 7-14", "A", "A"));
 });
 
 let declaredA = "A";
@@ -30,6 +35,7 @@ export {
   declaredA,
   Stated,
   isOne,
+  isOneInt,
   isOneOf,
 }
 /*  Not a pure module */
