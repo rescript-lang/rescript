@@ -177,14 +177,13 @@ let default_action ~saturated failaction =
   | None -> Complete
   | Some x -> if saturated then Complete else Default x
 
-let tag_of_switch_key = function
+let tag_of_switch_key : _ -> Variant_runtime.tag_type option = function
   | Lambda.Switch_int _ -> None
-  | Switch_constructor (Constant tag) ->
-    Some (Variant_runtime.to_matchable_tag tag)
-  | Switch_constructor (Block (Untagged {tag = {name}; block_type})) ->
-    Some {name; tag_type = Some (Payload_shape block_type)}
-  | Switch_constructor (Block (Tagged {tag})) ->
-    Some (Variant_runtime.to_matchable_tag tag)
+  | Switch_constructor (Constant {literal} | Block (Tagged {tag = {literal}}))
+    ->
+    Some (Literal literal)
+  | Switch_constructor (Block (Untagged {block_type})) ->
+    Some (Payload_shape block_type)
 
 let dispatch_info = function
   | Lambda.Switch_direct -> (Js_dump_lit.tag, [], [], (false, false, false))
@@ -707,10 +706,8 @@ let compile output_prefix =
     List.fold_right
       (fun (key, lam) acc ->
         match (tag_of_switch_key key, acc) with
-        | Some {Variant_runtime.tag_type = Some t}, Some string_table ->
-          Some ((t, lam) :: string_table)
-        | Some {name; tag_type = None}, Some string_table ->
-          Some ((Literal (String name), lam) :: string_table)
+        | Some tag_type, Some string_table ->
+          Some ((tag_type, lam) :: string_table)
         | _, _ -> None)
       table (Some [])
   and compile_cases ?(untagged = false) ?(tag_name = Js_dump_lit.tag)
@@ -794,9 +791,8 @@ let compile output_prefix =
               let named =
                 Ext_list.filter_map sw_consts (fun (key, _) ->
                     match tag_of_switch_key key with
-                    | Some {tag_type = Some (Literal literal)} -> Some literal
-                    | Some {name; tag_type = None} -> Some (String name)
-                    | Some {tag_type = Some (Payload_shape _)} | None -> None)
+                    | Some (Literal literal) -> Some literal
+                    | Some (Payload_shape _) | None -> None)
               in
               (* A literal reaches the same default through the payload
                  dispatch when no payload arm accepts its kind and no class
@@ -804,9 +800,8 @@ let compile output_prefix =
               let payload_arms =
                 Ext_list.filter_map sw_blocks (fun (key, _) ->
                     match tag_of_switch_key key with
-                    | Some {tag_type = Some (Payload_shape block_type)} ->
-                      Some block_type
-                    | Some {tag_type = Some (Literal _) | None} | None ->
+                    | Some (Payload_shape block_type) -> Some block_type
+                    | Some (Literal _) | None ->
                       (* A tagged block, an object *)
                       Some Variant_runtime.ObjectType)
               in

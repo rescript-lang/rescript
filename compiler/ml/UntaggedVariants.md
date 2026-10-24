@@ -55,9 +55,9 @@ a payload and `@tag` on the type do not change the representation.
 | `@unboxed @tag("kind") type t = TI({x: int}) \| TS(string)` | `TI({x: 1})` | `{x: 1}` |
 | `@unboxed type t = @as("x") AsX(string) \| AsY(int)` | `AsX("v")` | `"v"` |
 
-- Implementation: `variant_runtime.ml:compute_matching_facts` (a nullary case
-  without `@as` is its name), `translcore.ml:transl_exp0` (constructor
-  application).
+- Implementation: `ast_untagged_variants.ml:declared_tag` (a case without
+  `@as` is its name, resolved once in the layout), `translcore.ml:transl_exp0`
+  (constructor application).
 - Tests: `spec_test` rule 2.
 
 ### 3. `@as` literals
@@ -489,7 +489,8 @@ error.
 An interface and its implementation must agree on `@unboxed`, on `@tag`, on
 the literal of every nullary case and of every tagged case with a payload,
 and on the payload kind of every untagged case whose kind the interface
-knows. An unknown payload in the interface is its only payload case and is
+knows. A case without `@as` has the literal of its name, so `A` and
+`@as("A") A` agree, here and in coercions (`as_constructor_name_test.res`). An unknown payload in the interface is its only payload case and is
 not checked, so it agrees with any payload of the implementation
 (`untagged_hidden_payload_test.res`). The `@as` of an untagged case with a
 payload does not change its representation (rule 2) and is not compared.

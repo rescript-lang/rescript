@@ -422,7 +422,7 @@ let const_constructor (tag : Variant_runtime.tag) =
   if tag.name = "()" then const_unit
   else
     match tag.literal with
-    | Some (Variant_runtime.Int v) -> Const_int (Int32.of_int v)
+    | Variant_runtime.Int v when tag.name <> "[]" -> Const_int (Int32.of_int v)
     | _ -> Const_constructor tag
 
 (* A constructor with an optional shape carries no payload when constant. *)
@@ -588,7 +588,7 @@ let rec const_some_none_depth (c : structured_constant) : int =
     if depth < 0 then depth else depth + 1
   | Const_module_alias | Const_js_undefined _
   (* A constructor represented by [undefined], [@as(undefined)] *)
-  | Const_constructor {literal = Some Undefined} ->
+  | Const_constructor {literal = Undefined} ->
     0
   | _ -> -1
 
@@ -825,10 +825,8 @@ let runtime_value_kind (c : structured_constant) =
   | Const_js_null -> Is_literal Null
   | Const_js_undefined _ -> Is_literal Undefined
   | Const_polyvar name -> Is_literal (String name)
-  | Const_constructor {name = "[]"; literal = None} -> Is_literal (Int 0)
-  | Const_constructor {name; literal = None} -> Is_literal (String name)
-  | Const_constructor {literal = Some (BigInt _)} -> Unknown_value
-  | Const_constructor {literal = Some literal} -> Is_literal literal
+  | Const_constructor {literal = BigInt _} -> Unknown_value
+  | Const_constructor {literal} -> Is_literal literal
   | Const_block (Blk_tuple, _) -> Is_array
   | Const_block (Blk_record {fields}, _) ->
     if record_fields_are_array fields then Is_array else Is_object
@@ -888,11 +886,6 @@ let switch lam (lam_switch : lambda_switch) : t =
              | Switch_constructor case when matches case -> Some action
              | Switch_int _ | Switch_constructor _ -> None))
     in
-    let literal_of_tag (tag : Variant_runtime.tag) =
-      match tag.literal with
-      | Some literal -> literal
-      | None -> Variant_runtime.String tag.name
-    in
     let matches_block = value_has_block_type ~block_types:facts.block_types in
     let kind = runtime_value_kind cst in
     match kind with
@@ -901,7 +894,7 @@ let switch lam (lam_switch : lambda_switch) : t =
       when Ext_list.exists facts.literal_tags (literal_denotes_same literal) ->
       (* The literal side wins, exactly as it does at runtime. *)
       find_in lam_switch.sw_consts (function
-        | Constant tag -> literal_denotes_same literal (literal_of_tag tag)
+        | Constant tag -> literal_denotes_same literal tag.literal
         | Block _ -> false)
     | Is_literal _ | Is_object | Is_array ->
       (* Not a declared literal, so the payload's runtime shape decides. *)
@@ -933,8 +926,7 @@ let switch lam (lam_switch : lambda_switch) : t =
       Ext_list.find_opt lam_switch.sw_consts (fun (key, action) ->
           match key with
           | Switch_int ordinal when ordinal = i -> Some action
-          | Switch_constructor
-              (Constant {literal = Some (Variant_runtime.Int value)})
+          | Switch_constructor (Constant {literal = Variant_runtime.Int value})
             when value = i ->
             Some action
           | Switch_int _ | Switch_constructor _ -> None)
@@ -1016,13 +1008,14 @@ let prim ~primitive:(prim : primitive) ~args loc : t =
         | Cneq -> a <> b
         | _ -> assert false)
     | ( Pintcomp ((Ceq | Cneq) as op),
-        Const_constructor {name = a; literal = None},
-        Const_constructor {name = b; literal = None} ) ->
-      (* Both runtime representations are the constructor names *)
+        Const_constructor {literal = a},
+        Const_constructor {literal = b} ) ->
+      (* Constants are compared by their runtime values *)
+      let same = Variant_runtime.same_literal_value a b in
       Lift.bool
         (match op with
-        | Ceq -> a = b
-        | Cneq -> a <> b
+        | Ceq -> same
+        | Cneq -> not same
         | _ -> assert false)
     | ( ( Paddint | Psubint | Pmulint | Pdivint | Pmodint | Pandint | Porint
         | Pxorint | Plslint | Plsrint | Pasrint ),
@@ -1173,15 +1166,14 @@ let rec eval_const_as_bool (v : structured_constant) : bool option =
   | Const_bigint _ | Const_block _ ->
     Some true
   | Const_some b -> eval_const_as_bool b
-  | Const_constructor {name; literal} -> (
+  | Const_constructor {literal} -> (
     (* Truthiness of the canonical runtime representation *)
     match literal with
-    | None -> Some (name <> "[]") (* the name string; [] is the number 0 *)
-    | Some (String s) -> Some (s <> "")
-    | Some (Int i) -> Some (i <> 0)
-    | Some (Bool b) -> Some b
-    | Some (Null | Undefined) -> Some false
-    | Some (Float _ | BigInt _) -> None)
+    | String s -> Some (s <> "")
+    | Int i -> Some (i <> 0)
+    | Bool b -> Some b
+    | Null | Undefined -> Some false
+    | Float _ | BigInt _ -> None)
 
 let if_ (a : t) (b : t) (c : t) : t =
   match a with

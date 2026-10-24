@@ -198,7 +198,7 @@ let get_block_type ~env (cstr : Types.constructor_declaration) : block_type =
 let layout_from_type_variant ~(configuration : configuration) ~env
     (cstrs : Types.constructor_declaration list) : Variant_runtime.layout =
   let get_block (cstr : Types.constructor_declaration) : block =
-    let tag = {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag} in
+    let tag = declared_tag cstr in
     let tag_name = process_tag_name cstr.cd_attributes in
     if has_untagged cstr.cd_attributes then
       Untagged {tag; block_type = get_block_type ~env cstr}

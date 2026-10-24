@@ -3,16 +3,16 @@ open OUnit
 let ( =~ ) = OUnit.assert_equal
 
 let runtime name : Variant_runtime.tagged_block =
-  {tag = {name; literal = None}; tag_name = None}
+  {tag = {name; literal = String name}; tag_name = None}
 
 let constructor name =
   Lambda.Blk_constructor {name; num_nonconst = 1; runtime = runtime name}
 
 let literal name value : Variant_runtime.constructor_case =
-  Constant {name; literal = Some value}
+  Constant {name; literal = value}
 
 let block name shape : Variant_runtime.constructor_case =
-  Block (Untagged {tag = {name; literal = None}; block_type = shape})
+  Block (Untagged {tag = {name; literal = String name}; block_type = shape})
 
 let action s = Lambda.const (Const_string s)
 
@@ -82,7 +82,7 @@ let switch_tests =
       assert_fold color_switch (Const_string "primary") "literal";
       assert_fold color_switch (Const_string "blue") "payload";
       assert_fold color_switch
-        (Const_constructor {name = "Alias"; literal = Some (String "primary")})
+        (Const_constructor {name = "Alias"; literal = String "primary"})
         "literal" );
     ( "declaration literals missing from match select default" >:: fun _ ->
       let sw =
@@ -147,7 +147,8 @@ let switch_tests =
           ~cases:[(zero, "zero"); (values, "values")]
           ~default:None
       in
-      assert_fold sw (Const_constructor {name = "[]"; literal = None}) "zero" );
+      assert_fold sw (Const_constructor {name = "[]"; literal = Int 0}) "zero"
+    );
     ( "unknown values do not select default" >:: fun _ ->
       let one = literal "One" (BigInt "1") in
       let value = block "Value" UnknownType in
@@ -159,7 +160,7 @@ let switch_tests =
       List.iter (assert_deferred sw)
         [
           Const_bigint (false, "1");
-          Const_constructor {name = "DecimalTen"; literal = Some (BigInt "1_0")};
+          Const_constructor {name = "DecimalTen"; literal = BigInt "1_0"};
           Const_char 65;
           Const_some (Const_int 1l);
         ] );
@@ -191,6 +192,27 @@ let suites =
   __FILE__
   >::: switch_tests
        @ [
+           ( "constant constructors compare by runtime value" >:: fun _ ->
+             let compare op a b =
+               Lambda.prim ~primitive:(Pintcomp op)
+                 ~args:[Lambda.const a; Lambda.const b]
+                 Location.none
+             in
+             let named =
+               Lambda.Const_constructor {name = "A"; literal = String "A"}
+             and declared =
+               Lambda.Const_constructor {name = "B"; literal = String "A"}
+             and other =
+               Lambda.Const_constructor {name = "C"; literal = String "C"}
+             and number =
+               Lambda.Const_constructor {name = "D"; literal = Float "1.0"}
+             and same_number =
+               Lambda.Const_constructor {name = "E"; literal = Float "1"}
+             in
+             Lambda.const Const_js_true =~ compare Ceq named declared;
+             Lambda.const Const_js_false =~ compare Ceq named other;
+             Lambda.const Const_js_true =~ compare Cneq named other;
+             Lambda.const Const_js_true =~ compare Ceq number same_number );
            ( "integer pattern constants agree with Lambda" >:: fun _ ->
              List.iter
                (fun (literal, expected) ->

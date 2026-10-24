@@ -897,9 +897,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
       | Tagged {tag; tag_name} ->
         ( Js_op.Lit (Option.value tag_name ~default:L.tag),
           (* TAG:xx for inline records *)
-          match tag.literal with
-          | None -> E.str p.name
-          | Some t -> E.literal_tag t )
+          E.literal_tag tag.literal )
         :: tails
     in
     expression_desc cxt ~level f (Object (E.object_entries objs))
@@ -936,9 +934,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
       else
         ( Js_op.Lit tag_name,
           (* TAG:xx *)
-          match literal with
-          | None -> E.str p.name
-          | Some t -> E.literal_tag t )
+          E.literal_tag literal )
         :: tails
     in
     expression_desc cxt ~level f (J.Object (E.object_entries objs))
