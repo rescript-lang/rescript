@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/untagged_mixed_unknown_payload.res[0m:[2m1:10-32[0m
+
+  [1;31m1[0m [2m│[0m type t = [1;31m| @unboxed A(list<int>)[0m | B({x: int}) | C
+  2 [2m│[0m let f = x =>
+  3 [2m│[0m   switch x {
+
+  This untagged variant definition is invalid: Case A has a payload that is not of one of the recognized shapes (object, array, etc). Then it must be the only case with payloads.
