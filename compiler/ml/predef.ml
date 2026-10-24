@@ -258,11 +258,17 @@ let plain_variant (cstrs : Types.constructor_declaration list) =
            cstrs) )
 
 let common_initial_env add_type add_extension empty_env =
+  (* What [typeof] or [instanceof] recognizes a builtin type's values by,
+     as an annotation states it for a declared type *)
+  let recognized_as block_type decl =
+    {decl with type_shape = Recognized_as block_type}
+  in
   let decl_bool =
     {
       decl_abstr with
       type_kind = plain_variant [cstr ident_false []; cstr ident_true []];
       type_immediate = true;
+      type_shape = Recognized_as BooleanType;
     }
   and decl_unit =
     {
@@ -278,6 +284,7 @@ let common_initial_env add_type add_extension empty_env =
       type_params = [tvar];
       type_arity = 1;
       type_variance = [Variance.full];
+      type_shape = Recognized_as (InstanceType Array);
     }
   and decl_iterable =
     let tvar = newgenvar () in
@@ -333,6 +340,7 @@ let common_initial_env add_type add_extension empty_env =
       type_params = [tvar];
       type_arity = 1;
       type_variance = [Variance.full];
+      type_shape = Recognized_as ObjectType;
     }
   and decl_unknown =
     let tvar = newgenvar () in
@@ -362,6 +370,8 @@ let common_initial_env add_type add_extension empty_env =
       type_params = [tvar];
       type_arity = 1;
       type_variance = [Variance.covariant];
+      type_shape =
+        Recognized_as (InstanceType (Class {name = "Promise"; ancestors = []}));
     }
   and decl_tagged_template =
     let tvar1, tvar2 = (newgenvar (), newgenvar ()) in
@@ -393,10 +403,10 @@ let common_initial_env add_type add_extension empty_env =
   in
   empty_env
   |> add_type ident_bool decl_bool
-  |> add_type ident_int decl_abstr_imm
-  |> add_type ident_float decl_abstr
-  |> add_type ident_bigint decl_abstr
-  |> add_type ident_string decl_abstr
+  |> add_type ident_int (recognized_as NumberType decl_abstr_imm)
+  |> add_type ident_float (recognized_as NumberType decl_abstr)
+  |> add_type ident_bigint (recognized_as BigintType decl_abstr)
+  |> add_type ident_string (recognized_as StringType decl_abstr)
   |> add_type ident_unit decl_unit
   |> add_type ident_exn decl_exn
   |> add_type ident_option decl_option

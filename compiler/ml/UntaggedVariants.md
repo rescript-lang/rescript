@@ -95,15 +95,17 @@ into one kind:
 | a type declared with `@typeOf("k")` | kind `k` | `typeof x === "k"` |
 | anything else: an abstract type, a type variable, a variant, `list<_>`, an `@unboxed` record | unknown | no check |
 
-The annotations of rule 5 are read first, on the type as written and on each
-type it abbreviates. Otherwise the payload type is classified after expanding
-abbreviations: `type ints = array<int>` is an array case, and `type name =
+The builtin types state their kinds in their declarations, as the
+annotations of rule 5 do for declared types. The shape is read from the type
+as written and from each type it abbreviates, and a tuple or a function type
+is classified after expanding abbreviations: `type ints = array<int>` is an array case, and `type name =
 string` a string case. A type is never recognized by its name. `@typeOf("number")`
 is the number kind, and `@typeOf("symbol")` is a kind of its own, with no
 builtin payload type. `@notUndefined` on an abstract type leaves it unknown.
 
-- Implementation: `variant_layout.ml:get_block_type_from_typ`,
-  `get_block_type`, `recognized_as`.
+- Implementation: `predef.ml` (the builtin shapes),
+  `variant_layout.ml:get_block_type_from_typ`, `get_block_type`,
+  `recognized_as`.
 - Tests: `spec_test` rules 4 (`kinds`, `tuples`, `aliasDict`, `instances`,
   `unknown`); fixtures `UntaggedConstructorMoreThanOneArg.res`,
   `UntaggedConstructorAttributeMoreThanOneArg.res`, `UntaggedNonUnary1.res`,
@@ -144,7 +146,8 @@ superclass.
 
 An annotation on an abbreviation must agree with the abbreviated type. It can
 refine an abstract type that is not builtin and has no annotation, or repeat
-the annotation of the abbreviated type. The type of a functor parameter, of a
+what the abbreviated type is recognized by, as `@typeOf("number") type count =
+int` does. The type of a functor parameter, of a
 recursive module being defined, and a locally abstract type `(type a)` are
 abstract only where they are declared: they stand for another type, so they
 cannot be refined. Only a private abbreviation can declare a subclass of the
@@ -157,8 +160,8 @@ and so would `type dog = phantom<int>` with `type phantom<'a> = animal`.
 
 | Declaration | Error | Fixture |
 | --- | --- | --- |
-| `@typeOf("string") type t = option<string>`, `type t<'a> = 'a`, an abbreviation of `unit`, a builtin type, a record or a variant | @typeOf on a type abbreviation must describe an abstract type, ... | `runtime_annotation_on_option.res`, `runtime_annotation_on_type_variable.res` |
-| `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym` | This annotation, @typeOf("number"), contradicts the abbreviated type's annotation, @typeOf("symbol"). | `runtime_annotation_contradicts_manifest.res` |
+| `@typeOf("string") type t = option<string>`, `type t<'a> = 'a`, an abbreviation of `unit`, `list<_>`, a record or a variant | @typeOf on a type abbreviation must describe an abstract type, ... | `runtime_annotation_on_option.res`, `runtime_annotation_on_type_variable.res` |
+| `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym`, or `@typeOf("string") type t = int` | This annotation, @typeOf("number"), contradicts the abbreviated type, whose values are recognized by @typeOf("symbol"). | `runtime_annotation_contradicts_manifest.res`, `runtime_annotation_contradicts_builtin.res` |
 | `@instanceOf("Date") type date = X.t` in a functor of `X`, or over `(type a)` | @instanceOf cannot describe the type of a functor parameter, ... | `instance_of_functor_parameter.res`, `type_of_locally_abstract_type.res` |
 | `@instanceOf("Dog") type dog = animal`, or `= phantom<int>` with `type phantom<'a> = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res`, `instance_of_public_subclass_through_alias.res` |
 | `@instanceOf("Animal") type t = private dog` | Animal appears twice in this chain of abbreviations ... | `instance_of_class_twice_in_chain.res` |
@@ -495,7 +498,9 @@ Type declarations in messages print the `@as` of nullary and tagged cases.
 A type for which an interface states a class or `typeof` (rule 5), through
 its own annotation or the type it abbreviates, must state the same one in the
 implementation, superclasses included: "Their runtime representations
-differ". An interface that states none hides it. The same holds for functor
+differ". A builtin type states its kind, so `@typeOf("number") type t` in an
+interface accepts `type t = int` (`untagged_builtin_alias_test.res`). An
+interface that states none hides it. The same holds for functor
 arguments, `with type` constraints and module type ascriptions. Within one
 variant a class is identified by its path, so two types of the same class are
 one case (rule 6); across a signature the two declarations must also state

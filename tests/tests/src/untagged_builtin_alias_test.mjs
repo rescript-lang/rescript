@@ -13,17 +13,53 @@ function kind(value) {
   }
 }
 
+function make(x) {
+  return x;
+}
+
+let Score = {
+  make: make
+};
+
+function countedKind(value) {
+  if (typeof value === "number") {
+    return "number";
+  } else {
+    return value;
+  }
+}
+
+function scoredKind(value) {
+  if (typeof value === "number") {
+    return "number";
+  } else {
+    return value;
+  }
+}
+
 Mocha.describe("Untagged_builtin_alias_test", () => {
   Mocha.test("aliases of builtin types", () => {
-    Test_utils.eq("File \"untagged_builtin_alias_test.res\", line 21, characters 7-14", "entries", kind({
+    Test_utils.eq("File \"untagged_builtin_alias_test.res\", line 51, characters 7-14", "entries", kind({
       a: 1
     }));
-    Test_utils.eq("File \"untagged_builtin_alias_test.res\", line 22, characters 7-14", "text", "text");
-    Test_utils.eq("File \"untagged_builtin_alias_test.res\", line 23, characters 7-14", "pair", "pair");
+    Test_utils.eq("File \"untagged_builtin_alias_test.res\", line 52, characters 7-14", "text", "text");
+    Test_utils.eq("File \"untagged_builtin_alias_test.res\", line 53, characters 7-14", "pair", "pair");
+  });
+  Mocha.test("annotations stating a builtin type's kind", () => {
+    Test_utils.eq("File \"untagged_builtin_alias_test.res\", line 57, characters 7-14", "number", "number");
+    Test_utils.eq("File \"untagged_builtin_alias_test.res\", line 58, characters 7-14", "name", "name");
+    Test_utils.eq("File \"untagged_builtin_alias_test.res\", line 59, characters 7-14", "number", "number");
+    Test_utils.eq("File \"untagged_builtin_alias_test.res\", line 60, characters 7-14", "name", "name");
   });
 });
 
+let Score$make = make;
+
 export {
   kind,
+  Score,
+  countedKind,
+  scoredKind,
+  Score$make,
 }
 /*  Not a pure module */
