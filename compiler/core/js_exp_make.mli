@@ -244,6 +244,8 @@ val bigint_div : checked:bool -> ?comment:string -> t -> t -> t
 
 val bigint_mod : checked:bool -> ?comment:string -> t -> t -> t
 
+val float_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
+
 val js_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
 
 val not : t -> t

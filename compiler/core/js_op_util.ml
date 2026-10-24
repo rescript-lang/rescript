@@ -34,7 +34,9 @@ let op_prec (op : Js_op.binop) =
   | Or -> (3, 3, 3)
   | And -> (4, 4, 4)
   | EqEqEq | NotEqEq -> (8, 8, 9)
-  | Gt | Ge | Lt | Le | InstanceOf -> (9, 9, 10)
+  | Gt | Ge | Lt | Le | Float_lt | Float_le | Float_gt | Float_ge | InstanceOf
+    ->
+    (9, 9, 10)
   | Bor -> (5, 5, 5)
   | Bxor -> (6, 6, 6)
   | Band -> (7, 7, 7)
@@ -62,10 +64,10 @@ let op_str (op : Js_op.binop) =
   | And -> "&&"
   | EqEqEq -> "==="
   | NotEqEq -> "!=="
-  | Lt -> "<"
-  | Le -> "<="
-  | Gt -> ">"
-  | Ge -> ">="
+  | Lt | Float_lt -> "<"
+  | Le | Float_le -> "<="
+  | Gt | Float_gt -> ">"
+  | Ge | Float_ge -> ">="
   | InstanceOf -> "instanceof"
 
 let update_used_stats (ident_info : J.ident_info) used_stats =

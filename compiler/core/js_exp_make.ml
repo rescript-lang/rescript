@@ -1555,8 +1555,15 @@ let bool_comp (cmp : Lambda.comparison) ?comment (e0 : t) (e1 : t) =
       bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1)
   | _, _ -> bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1
 
+let float_comp (cmp : Lambda.comparison) ?comment (e0 : t) (e1 : t) =
+  match cmp with
+  | Ceq | Cneq -> int_comp cmp ?comment e0 e1
+  | Clt | Cgt | Cle | Cge ->
+    bin ?comment (Lam_compile_util.jsop_of_float_comp cmp) e0 e1
+
+(* The operands may be of any type, so they may be NaN *)
 let js_comp cmp ?comment e0 e1 =
-  bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1
+  bin ?comment (Lam_compile_util.jsop_of_float_comp cmp) e0 e1
 
 let rec int32_lsr ?comment (e1 : J.expression) (e2 : J.expression) :
     J.expression =

@@ -28,9 +28,9 @@ Mocha.describe("Caml_compare_bigint_test", () => {
     Test_utils.ok("File \"caml_compare_bigint_test.res\", line 27, characters 7-14", BigInt("123") !== BigInt("555555"));
   });
   Mocha.test("compare: 98765 and 98765", () => {
-    Test_utils.ok("File \"caml_compare_bigint_test.res\", line 31, characters 7-14", BigInt("98765") >= BigInt("98765"));
+    Test_utils.ok("File \"caml_compare_bigint_test.res\", line 31, characters 7-14", !(BigInt("98765") < BigInt("98765")));
     Test_utils.ok("File \"caml_compare_bigint_test.res\", line 32, characters 7-14", BigInt("98765") <= BigInt("98765"));
-    Test_utils.ok("File \"caml_compare_bigint_test.res\", line 33, characters 7-14", BigInt("98765") <= BigInt("98765"));
+    Test_utils.ok("File \"caml_compare_bigint_test.res\", line 33, characters 7-14", !(BigInt("98765") > BigInt("98765")));
     Test_utils.ok("File \"caml_compare_bigint_test.res\", line 34, characters 7-14", BigInt("98765") >= BigInt("98765"));
     Test_utils.eq("File \"caml_compare_bigint_test.res\", line 35, characters 7-14", Primitive_float.min(BigInt("98765"), BigInt("98765")), BigInt("98765"));
     Test_utils.eq("File \"caml_compare_bigint_test.res\", line 36, characters 7-14", Primitive_float.max(BigInt("98765"), BigInt("98765")), BigInt("98765"));
@@ -46,9 +46,9 @@ Mocha.describe("Caml_compare_bigint_test", () => {
     Test_utils.ok("File \"caml_compare_bigint_test.res\", line 46, characters 7-14", BigInt("98765") === BigInt("98765"));
   });
   Mocha.test("same instance", () => {
-    Test_utils.ok("File \"caml_compare_bigint_test.res\", line 50, characters 7-14", five >= five);
+    Test_utils.ok("File \"caml_compare_bigint_test.res\", line 50, characters 7-14", !(five < five));
     Test_utils.ok("File \"caml_compare_bigint_test.res\", line 51, characters 7-14", five <= five);
-    Test_utils.ok("File \"caml_compare_bigint_test.res\", line 52, characters 7-14", five <= five);
+    Test_utils.ok("File \"caml_compare_bigint_test.res\", line 52, characters 7-14", !(five > five));
     Test_utils.ok("File \"caml_compare_bigint_test.res\", line 53, characters 7-14", five >= five);
     Test_utils.eq("File \"caml_compare_bigint_test.res\", line 54, characters 7-14", Primitive_float.min(five, five), five);
     Test_utils.eq("File \"caml_compare_bigint_test.res\", line 55, characters 7-14", Primitive_float.max(five, five), five);

@@ -337,12 +337,16 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | [e1; e2] -> E.bool_comp cmp e1 e2
     | _ -> assert false)
-  | Pfloatcomp cmp | Pintcomp cmp -> (
+  | Pintcomp cmp -> (
     (* Global Builtin Exception is an int, like
        [Not_found] or [Invalid_argument] ?
     *)
     match args with
     | [e1; e2] -> E.int_comp cmp e1 e2
+    | _ -> assert false)
+  | Pfloatcomp cmp -> (
+    match args with
+    | [e1; e2] -> E.float_comp cmp e1 e2
     | _ -> assert false)
   | Pbigintcomp cmp -> (
     match args with
