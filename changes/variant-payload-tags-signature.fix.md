@@ -1,0 +1,1 @@
+- Reject an implementation whose variant cases with a payload have other `@as` tags than the interface states, and print those tags in type declarations.

@@ -338,8 +338,10 @@ value. An inline-record field whose runtime name equals the tag field is an
 error.
 
 An interface and its implementation must agree on `@unboxed`, on `@tag`, and
-on the literal of every nullary case. They are not compared on the `@as` of
-cases with a payload (see Known bugs).
+on the literal of every nullary case and of every tagged case with a payload.
+The `@as` of an untagged case with a payload does not change its
+representation (rule 2) and is not compared. Type declarations in messages
+print the `@as` of nullary and tagged cases.
 
 - Implementation: `variant_layout.ml:layout_from_type_variant`,
   `ast_untagged_variants.ml:process_tag_name`, `check_tag_field_conflicts`;
@@ -348,8 +350,8 @@ cases with a payload (see Known bugs).
   `variant_tag_overlaps_with_field.res`, `UntaggedInvalidVariantTagAnnotation.res`,
   `UntaggedImplIntf.res`; `tests/build_tests/super_errors_multi/fixtures/`
   `Iface_unboxed_variant_mismatch`, `Iface_tag_name_mismatch`,
-  `Iface_variant_representation_mismatch`.
-- Shaped by #6498, #6513, #6669, #7875.
+  `Iface_variant_representation_mismatch`; `variant_payload_tag_mismatch.res`.
+- Shaped by #6498, #6513, #6669, #7875, #8956.
 
 ## Known bugs
 
@@ -388,20 +390,6 @@ are one type, so a value of one can be wrapped in the case of another.
 @unboxed type ta = I8(Int8Array.t) | U8(Uint8Array.t)
 let f = v => switch v { | I8(_) => "i8" | U8(_) => "u8" }
 Console.log(f(I8(Uint8Array.fromArray([1]))))   // u8
-```
-
-**Payload-case tags are not compared across a signature.** Rule 14 compares
-only the literals of nullary cases.
-
-```rescript
-module M: {
-  type t = A({x: int}) | C({x: int})
-  let a: t
-} = {
-  type t = | @as("C") A({x: int}) | @as("A") C({x: int})
-  let a = A({x: 1})
-}
-Console.log(switch M.a { | M.A(_) => "A" | M.C(_) => "C" })   // C
 ```
 
 ## Open questions

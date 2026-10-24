@@ -271,7 +271,17 @@ and compare_variants ~loc env params1 params2 ~layout1 ~layout2 n
             let tag_type2 = Variant_runtime.constructor_tag layout2 (n - 1) in
             if tag_type1 <> tag_type2 then [Variant_representation cd1.cd_id]
             else []
-          | false -> r
+          | false -> (
+            (* A tagged case with a payload carries its tag in the object;
+               an untagged one is its payload, whatever its [@as] *)
+            match
+              ( Variant_runtime.constructor_at layout1 (n - 1),
+                Variant_runtime.constructor_at layout2 (n - 1) )
+            with
+            | Block (Tagged {tag = tag1}), Block (Tagged {tag = tag2})
+              when tag1.literal <> tag2.literal ->
+              [Variant_representation cd1.cd_id]
+            | _ -> r)
       in
       if r <> [] then r
       else
