@@ -270,13 +270,13 @@ test("the heading lists the changelog entries and notes a breaking mismatch", ()
   const plain = `Fix a typo\n\n${SIGNED}\n`;
   const fix = {
     category: "fix",
-    emoji: ":bug:",
+    heading: "#### :bug: Bug fix",
     text: "- Recover @someone's `@raw` build.\n- Keep **watching**,\n  after errors.",
   };
   const md = comment([plain], { changelog: [fix] });
   has(
     md,
-    "### Changelog\n\n- :bug: Recover `@someone`'s `@raw` build.\n- :bug: Keep **watching**,\n  after errors.\n\n### Semantic Diff\n\n1 commit\n\n<details",
+    "### Changelog\n\n#### :bug: Bug fix\n\n- Recover `@someone`'s `@raw` build.\n- Keep **watching**,\n  after errors.\n\n### Semantic Diff\n\n1 commit\n\n<details",
   );
   has(
     comment([plain], { changelog: [] }),
@@ -287,7 +287,17 @@ test("the heading lists the changelog entries and notes a breaking mismatch", ()
     comment([breaking], { changelog: [fix] }),
     "<sub>:boom: A commit says what it breaks (`Breaking:`), but no changelog entry is a breaking change.</sub>\n\n### Semantic Diff",
   );
-  const boom = { category: "breaking", emoji: ":boom:", text: "- -x is gone." };
+  const boom = {
+    category: "breaking",
+    heading: "#### :boom: Breaking Change",
+    text: "- -x is gone.",
+  };
+  has(
+    comment([breaking], {
+      changelog: [boom, fix, { ...fix, text: "- More." }],
+    }),
+    "### Changelog\n\n#### :boom: Breaking Change\n\n- -x is gone.\n\n#### :bug: Bug fix\n\n- Recover `@someone`'s `@raw` build.\n- Keep **watching**,\n  after errors.\n- More.\n\n### Semantic Diff",
+  );
   const both = comment([breaking], { changelog: [boom] });
   assert.ok(!both.includes("<sub>:boom:"));
   has(
@@ -299,7 +309,7 @@ test("the heading lists the changelog entries and notes a breaking mismatch", ()
 test("past a quarter of the budget, changelog entries are counted, not drawn", () => {
   const entry = (/** @type {number} */ k) => ({
     category: "fix",
-    emoji: ":bug:",
+    heading: "#### :bug: Bug fix",
     text: `- Fix ${k}: ${"x".repeat(300)}`,
   });
   const md = comment([`Fix\n\n${SIGNED}\n`], {
@@ -307,7 +317,7 @@ test("past a quarter of the budget, changelog entries are counted, not drawn", (
     changelog: Array.from({ length: 20 }, (_, k) => entry(k)),
   });
   assert.ok(md.length <= 4000, `${md.length}`);
-  has(md, "- :bug: Fix 0:");
+  has(md, "#### :bug: Bug fix\n\n- Fix 0:");
   assert.ok(!md.includes("Fix 3:"));
   has(
     md,
@@ -316,7 +326,11 @@ test("past a quarter of the budget, changelog entries are counted, not drawn", (
   const huge = comment([`Fix\n\n${SIGNED}\n`], {
     budget: 4000,
     changelog: [
-      { category: "fix", emoji: ":bug:", text: `- ${"y".repeat(5000)}` },
+      {
+        category: "fix",
+        heading: "#### :bug: Bug fix",
+        text: `- ${"y".repeat(5000)}`,
+      },
     ],
   });
   assert.ok(huge.length <= 4000, `${huge.length}`);

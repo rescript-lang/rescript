@@ -933,7 +933,7 @@ test("the comment lists the changelog entries a range adds, breaking first", asy
   const comment = await fs.readFile(md, "utf8");
   has(
     comment,
-    "### Changelog\n\n- :boom: Drop -x.\n- :bug: Recover the watcher.\n- :grey_question: `Bad Name.md`\n\n",
+    "### Changelog\n\n#### :boom: Breaking Change\n\n- Drop -x.\n\n#### :bug: Bug fix\n\n- Recover the watcher.\n\n#### :grey_question: Not a changelog fragment\n\n- `Bad Name.md`\n\n",
   );
   lacks(comment, "Old.");
   lacks(comment, "Tmp.");
