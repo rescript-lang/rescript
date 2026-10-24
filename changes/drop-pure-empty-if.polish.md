@@ -1,1 +1,1 @@
-- Stop emitting a bare condition like `x === null;` for a switch whose cases all fall through.
+- Stop emitting bare conditions like `x === null;` and empty `if`/`else` branches.

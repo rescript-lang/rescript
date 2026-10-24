@@ -49,15 +49,20 @@ let flatten_map =
           S.block
             (Ext_list.map args (fun arg -> self.statement self (S.exp arg)))
         | Exp {expression_desc = Cond (a, b, c); comment; source_loc} ->
-          {
-            statement_desc =
-              If
-                ( a,
-                  [self.statement self (S.exp b)],
-                  [self.statement self (S.exp c)] );
-            comment;
-            source_loc;
-          }
+          (* A branch whose value is pure leaves nothing to run *)
+          let branch e =
+            if Js_analyzer.no_side_effect_expression e then []
+            else [self.statement self (S.exp e)]
+          in
+          let statement_desc : J.statement_desc =
+            match (branch b, branch c) with
+            | [], [] ->
+              if Js_analyzer.no_side_effect_expression a then Block []
+              else Exp a
+            | [], ifnot -> If (E.not a, ifnot, [])
+            | ifso, ifnot -> If (a, ifso, ifnot)
+          in
+          {statement_desc; comment; source_loc}
         | Exp
             {
               expression_desc = Bin (Eq, a, ({expression_desc = Seq _; _} as v));

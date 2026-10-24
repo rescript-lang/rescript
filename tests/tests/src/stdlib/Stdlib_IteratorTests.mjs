@@ -246,9 +246,7 @@ let omittedDoneResult = {
 let match$2 = Stdlib_Iterator.next(omittedDoneIterator);
 
 if (match$2.done === false) {
-  if (match$2.value !== 1) {
-    
-  } else {
+  if (match$2.value === 1) {
     omittedDoneResult.contents = "yield";
   }
 }
@@ -282,9 +280,7 @@ let createdProtocolResult = {
 let match$3 = Stdlib_Iterator.next(createdIterator);
 
 if (match$3.done === false) {
-  if (match$3.value !== 0) {
-    
-  } else {
+  if (match$3.value === 0) {
     createdProtocolResult.contents = "protocol";
   }
 }
@@ -320,9 +316,7 @@ Stdlib_IterableIterator.next(createdIterableIterator);
 let match$4 = Stdlib_IterableIterator.next(createdIterableIterator);
 
 if (match$4.done === false) {
-  if (match$4.value !== 1) {
-    
-  } else {
+  if (match$4.value === 1) {
     createdIterableResult.contents = "iterable";
   }
 }
