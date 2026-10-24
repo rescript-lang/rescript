@@ -37,7 +37,8 @@ let scrape env ty = (scrape_ty env ty).desc
      records the type at the definition type so for ['a option]
      it will always be [Tvar]
 *)
-let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
+let rec cannot_contain_undefined ~visiting (typ : Types.type_expr) (env : Env.t)
+    =
   match scrape env typ with
   | Tconstr (p, _, _) -> (
     (* all built in types could not inhabit none-like values:
@@ -72,7 +73,13 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
              _ );
       } ->
         false (* conservative *)
+      | {type_kind = Type_variant _} when List.exists (Path.same p) visiting ->
+        (* A value reaches [undefined] through finitely many unboxed
+           payloads, so the cases met again add none: whether the variant
+           can be [undefined] is decided by its other cases *)
+        true
       | {type_kind = Type_variant (cdecls, layout_ref)} ->
+        let visiting = p :: visiting in
         let layout = Variant_runtime.get_layout layout_ref in
         let rec all_cases_cannot_contain_undefined position = function
           | [] -> true
@@ -90,13 +97,13 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
                match cd.cd_args with
                | Cstr_tuple [t] ->
                  Ast_untagged_variants.type_is_builtin_object t
-                 || type_cannot_contain_undefined t env
+                 || cannot_contain_undefined ~visiting t env
                | Cstr_tuple [] -> true
                | Cstr_tuple (_ :: _ :: _) ->
                  true (* Not actually possible for an unboxed payload. *)
                | Cstr_record [{ld_type = t}] ->
                  Ast_untagged_variants.type_is_builtin_object t
-                 || type_cannot_contain_undefined t env
+                 || cannot_contain_undefined ~visiting t env
                | Cstr_record ([] | _ :: _ :: _) -> true)
             && all_cases_cannot_contain_undefined (position + 1) rest
         in
@@ -105,6 +112,9 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
   | Tfield _ | Tpoly _ | Tunivar _ | Tlink _ | Tsubst _ | Tnil | Tvar _
   | Tobject _ ->
     false
+
+let type_cannot_contain_undefined typ env =
+  cannot_contain_undefined ~visiting:[] typ env
 
 let is_function_type env ty =
   match scrape env ty with
