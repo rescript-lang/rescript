@@ -1,0 +1,1 @@
+- Update vite to 8.3.5 in the dev playground, resolving its open security alerts.
