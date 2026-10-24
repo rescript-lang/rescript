@@ -797,7 +797,7 @@ let compile output_prefix =
                     (fun (block_type : Variant_runtime.block_type) ->
                       match (literal, block_type) with
                       | String _, StringType
-                      | (Int _ | Float _), (IntType | FloatType)
+                      | (Int _ | Float _), NumberType
                       | BigInt _, BigintType
                       | Bool _, BooleanType
                       | _, UnknownType ->

@@ -54,17 +54,22 @@ let declaration_shape ~env (decl : Types.type_declaration) : value_shape =
 
 (* Resolves the shapes of a group of declarations, which can abbreviate each
    other. Each round resolves one more level of abbreviation within the
-   group, and a chain inside the group has at most one level per
-   declaration. *)
+   group, so the rounds stop when one changes nothing; a chain inside the
+   group has at most one level per declaration. *)
 let resolve_shapes ~env (decls : (Ident.t * Types.type_declaration) list) =
-  let rec round env decls n =
+  let rec round env previous n =
     let decls =
       List.map
         (fun (id, decl) ->
           (id, {decl with Types.type_shape = declaration_shape ~env decl}))
-        decls
+        previous
     in
-    if n <= 1 then decls
+    if
+      n <= 1
+      || List.for_all2
+           (fun (_, d1) (_, d2) -> d1.Types.type_shape = d2.Types.type_shape)
+           previous decls
+    then decls
     else
       let env =
         List.fold_left
@@ -79,6 +84,23 @@ let resolve_shapes ~env (decls : (Ident.t * Types.type_declaration) list) =
       env decls
   in
   round env decls (List.length decls)
+
+(* Whether the abstract type at [path] has a representation of its own, which
+   an annotation can refine, or stands for another type: a functor
+   parameter's type, a recursive module's type being defined, or a locally
+   abstract type. *)
+type abstractness = Opaque | Stands_for_another | Not_abstract
+
+let abstractness ~env path =
+  match Env.find_type path env with
+  | {type_kind = Type_abstract; type_manifest = None; type_newtype_level} ->
+    if type_newtype_level <> None || Env.is_functor_arg path env then
+      Stands_for_another
+    else if Predef.type_is_builtin_path_but_option path <> Predef.NA then
+      Not_abstract
+    else Opaque
+  | _ -> Not_abstract
+  | exception Not_found -> Not_abstract
 
 let annotation_of_block_type = function
   | InstanceType (Class {name}) -> Instance_of name
@@ -101,24 +123,16 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
     let error err = raise (Error (loc, err)) in
     match (outer, recognized_as ~env manifest) with
     | _, None -> (
-      (* A functor parameter's type and a locally abstract type are abstract
-         only here: they stand for whatever type they are instantiated with *)
-      let refinable path =
-        match Env.find_type path env with
-        | {type_kind = Type_abstract; type_manifest = None; type_newtype_level}
-          ->
-          if type_newtype_level <> None || Env.is_functor_arg path env then
-            error
-              (RuntimeAnnotationOnTypeParameter (runtime_attribute_name outer))
-          else true
-        | _ -> false
-        | exception Not_found -> false
-      in
       match (Ctype.expand_head_opt env manifest).desc with
-      | Tconstr (path, _, _)
-        when Predef.type_is_builtin_path_but_option path = Predef.NA
-             && refinable path ->
-        ()
+      | Tconstr (path, _, _) -> (
+        match abstractness ~env path with
+        | Opaque -> ()
+        | Stands_for_another ->
+          error
+            (RuntimeAnnotationOnTypeParameter (runtime_attribute_name outer))
+        | Not_abstract ->
+          error
+            (RuntimeAnnotationOnUnrelatedType (runtime_attribute_name outer)))
       | _ ->
         error (RuntimeAnnotationOnUnrelatedType (runtime_attribute_name outer)))
     | Type_of block_type, Some inner when block_type = inner -> ()
@@ -159,9 +173,9 @@ let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
     match (Ctype.expand_head env t).desc with
     | Tconstr (path, _, _) when Path.same path Predef.path_string ->
       Some StringType
-    | Tconstr (path, _, _) when Path.same path Predef.path_int -> Some IntType
-    | Tconstr (path, _, _) when Path.same path Predef.path_float ->
-      Some FloatType
+    | Tconstr (path, _, _)
+      when Path.same path Predef.path_int || Path.same path Predef.path_float ->
+      Some NumberType
     | Tconstr (path, _, _) when Path.same path Predef.path_bigint ->
       Some BigintType
     | Tconstr (path, _, _) when Path.same path Predef.path_bool ->
@@ -200,7 +214,7 @@ let layout_from_type_variant ~(configuration : configuration) ~env
   let get_block (cstr : Types.constructor_declaration) : block =
     let tag = {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag} in
     let tag_name = process_tag_name cstr.cd_attributes in
-    if process_untagged cstr.cd_attributes then
+    if has_untagged cstr.cd_attributes then
       Untagged {tag; block_type = get_block_type ~env cstr}
     else Tagged {tag; tag_name}
   in
