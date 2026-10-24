@@ -139,6 +139,15 @@ let switch_tests =
            ( Lambda.blk_record [|("x", false)|] Asttypes.Immutable,
              [Const_int 1l] ))
         "object" );
+    ( "null without a null case is an object" >:: fun _ ->
+      let record = block "Record" ObjectType in
+      let text = block "Text" StringType in
+      let sw =
+        variant_switch ~constructors:[record; text]
+          ~cases:[(record, "record"); (text, "text")]
+          ~default:None
+      in
+      assert_fold sw Const_js_null "record" );
     ( "empty list is zero at runtime" >:: fun _ ->
       let zero = literal "Zero" (Int 0) in
       let values = block "Values" UnknownType in

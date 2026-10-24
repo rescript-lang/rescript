@@ -1,0 +1,1 @@
+- Require `= private` for every subclass declared with `@instanceOf`, also in phantom type hierarchies, and fold `null` into an untagged variant's object case as it is matched at run time.

@@ -151,19 +151,18 @@ int` does. The type of a functor parameter, of a
 recursive module being defined, and a locally abstract type `(type a)` are
 abstract only where they are declared: they stand for another type, so they
 cannot be refined. Only a private abbreviation can declare a subclass of the
-class annotated there, or of a `@typeOf("object")` type, or a public one that
-is a strict instance of the superclass type after expansion, as in the
-phantom type hierarchy
-`@instanceOf("Element") type elementLike<'a> = nodeLike<_element<'a>>`. A
-public `type dog = animal` would make every animal a dog without a coercion,
-and so would `type dog = phantom<int>` with `type phantom<'a> = animal`.
+class annotated there, or of a `@typeOf("object")` type, also in a phantom
+type hierarchy (`type dogLike<'a> = private animalLike<_dog<'a>>`). A public
+`type dog = animal` would make every animal a dog without a coercion, and so
+would `type dog = animal<int>` or `type dog = phantom<int>` with
+`type phantom<'a> = animal`.
 
 | Declaration | Error | Fixture |
 | --- | --- | --- |
 | `@typeOf("string") type t = option<string>`, `type t<'a> = 'a`, an abbreviation of `unit`, `list<_>`, a record or a variant | @typeOf on a type abbreviation must describe an abstract type, ... | `runtime_annotation_on_option.res`, `runtime_annotation_on_type_variable.res` |
 | `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym`, or `@typeOf("string") type t = int` | This annotation, @typeOf("number"), contradicts the abbreviated type, whose values are recognized by @typeOf("symbol"). | `runtime_annotation_contradicts_manifest.res`, `runtime_annotation_contradicts_builtin.res` |
 | `@instanceOf("Date") type date = X.t` in a functor of `X`, or over `(type a)` | @instanceOf cannot describe the type of a functor parameter, ... | `instance_of_functor_parameter.res`, `type_of_locally_abstract_type.res` |
-| `@instanceOf("Dog") type dog = animal`, or `= phantom<int>` with `type phantom<'a> = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res`, `instance_of_public_subclass_through_alias.res` |
+| `@instanceOf("Dog") type dog = animal`, `= animal<int>`, or `= phantom<int>` with `type phantom<'a> = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res`, `instance_of_public_subclass_instance.res`, `instance_of_public_subclass_through_alias.res` |
 | `@instanceOf("Animal") type t = private dog` | Animal appears twice in this chain of abbreviations ... | `instance_of_class_twice_in_chain.res` |
 | `@instanceOf` on a record or variant | @instanceOf can only be used on abstract types and type abbreviations ... | `runtime_annotation_on_record.res` |
 | both annotations | A type can have either @instanceOf or @typeOf, not both. | `runtime_annotation_conflict.res` |
@@ -219,8 +218,14 @@ written (Known bugs).
 
 ### 6. Well-formedness
 
-The type checker rejects an untagged variant, with
-"This untagged variant definition is invalid: ..." and the reason below, when:
+The type checker rejects a variant with an untagged case, with
+"This untagged variant definition is invalid: ..." and the reason below, when
+the condition holds. This includes a variant where only some constructors are
+`@unboxed` (rule 1). There, the tagged blocks together count as one object
+case, and the `@as` of an untagged case is not a tag, so it does not clash
+with a tagged case's (`untagged_mixed_test.res`; fixtures
+`untagged_mixed_two_numbers.res`, `untagged_mixed_unknown_payload.res`,
+`untagged_mixed_object_and_tagged.res`; #9020).
 
 | Condition | Reason | Fixture |
 | --- | --- | --- |
@@ -252,7 +257,7 @@ A literal may equal a value of a payload case: `@as("a") A | S(string)`,
 `@as(true) A | B(bool)` are accepted. Rule 7 says which case such a value
 belongs to.
 
-- Implementation: `ast_untagged_variants.ml:check_invariant`,
+- Implementation: `variant_layout.ml:check_invariant`,
   `variant_runtime.ml:literal_value_key`.
 - Tests: the fixtures above; `tests/tests/src/unboxed_variant_fold_test.res`
   (a number and a bigint literal with the same digits); `TaggedDuplicateLiteral.res`,
@@ -276,8 +281,8 @@ constructor:
 | `@as(null) LitNull \| AnyObject({x: int})` | `LitNull` | `LitNull` |
 
 The literals are compared with `===`: by one `switch (x)` over the literal
-arms, whose default holds the payload dispatch, or, with at most two
-literals, by an `if` per arm body. A literal without an arm of its own goes
+arms, whose default holds the payload dispatch, or, when at most two
+literals get a `case`, by an `if` per arm body. A literal without an arm of its own goes
 to the default arm. It gets a `case` leading there when it could pass a
 check of the payload dispatch (a string literal beside a `string` arm, any
 literal beside an unknown-kind arm) or when the variant has class cases;
@@ -406,9 +411,11 @@ primitives of the variant never reach it.
 
 ### 11. Constant folding
 
-A `switch` on a constant untagged value folds to the arm that the run-time
-dispatch selects for the constant's JavaScript value, so `S("a")` matched
-against `@as("a") A | S(string)` folds to `A`.
+A `switch` on an untagged value the compiler knows, a literal or a block of
+constants, folds to the arm that the run-time dispatch selects for its
+JavaScript value, so `S("a")` matched against `@as("a") A | S(string)` folds
+to `A`. A value built at run time, such as `A([1])` with its array, is
+matched at run time.
 
 - Implementation: `lambda.ml:switch` (`untagged_action`, `literal_denotes_same`).
 - Tests: `tests/tests/src/unboxed_variant_fold_test.res`.
@@ -494,7 +501,7 @@ for functor arguments and `with type` constraints.
   `ast_untagged_variants.ml:has_not_undefined`;
   `variant_layout.ml:declaration_shape`;
   `typeopt.ml:type_cannot_contain_undefined`;
-  `includemod.ml:not_undefined_mismatch`.
+  `includecore.ml:compare_runtime_annotations`.
 - Tests: `spec_test` rule 13; fixtures `invalid_attribute_not_undefined.res`,
   `not_undefined_functor_argument.res`, `not_undefined_functor_parameter.res`;
   `tests/tests/src/not_undefined_interface_test.res`,
@@ -568,8 +575,7 @@ had to answer, and the answers of rule 5:
 1. **Unchecked claims.** An annotation is trusted, as the type of an external
    is, but checked against the type it abbreviates (rule 5).
 2. **Subclasses.** A class's superclasses are the classes annotated further
-   down its chain of private abbreviations, or of strict instances in a
-   phantom type hierarchy. A superclass case excludes its subclass cases in
+   down its chain of private abbreviations. A superclass case excludes its subclass cases in
    any order, and an upcast value lands in the subclass case (rule 8). The
    relation must be visible where the variant is declared: an interface that
    hides it is rejected (rule 14).

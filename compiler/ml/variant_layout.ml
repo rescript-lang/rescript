@@ -145,15 +145,8 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
       when name = inner ->
       ()
     | Instance_of name, Some ((InstanceType (Class _) | ObjectType) as inner) ->
-      (* A public abbreviation is the same type as the superclass, unless it
-         is a strict instance of it, as in the phantom type hierarchy
-         [type element<'a> = node<_element<'a>>]. The arguments are read after
-         expansion, where the superclass type is reached. *)
-      let same_type =
-        match (Ctype.expand_head_opt env manifest).desc with
-        | Tconstr (_, args, _) -> List.for_all Btype.is_Tvar args
-        | _ -> true
-      in
+      (* A public abbreviation would make every value of the superclass type
+         a value of the subclass, without a coercion *)
       let superclass, ancestors =
         match inner with
         | InstanceType (Class {name = ancestor; ancestors}) ->
@@ -161,7 +154,7 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
         (* Every class instance is an object *)
         | _ -> ("Object", [])
       in
-      if decl.type_private = Public && same_type then
+      if decl.type_private = Public then
         error (SubclassOfPublicAbbreviation (name, superclass))
       else if List.mem name ancestors then error (ClassTwiceInChain name)
     | (Instance_of _ | Type_of _), Some inner ->
@@ -199,6 +192,156 @@ let get_block_type ~env (cstr : Types.constructor_declaration) : block_type =
   | Cstr_tuple [] ->
     (* Nullary constructors are handled before computing a payload shape. *)
     assert false
+
+(* The cases of a variant must be told apart at run time: nullary cases and
+   tagged blocks by distinct literals, untagged payloads by distinct kinds,
+   checked as soon as one case is untagged *)
+let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
+    ~(blocks : (Location.t * block) list) =
+  let module String_set = Set.Make (String) in
+  let module String_map = Map.Make (String) in
+  let string_literals_consts = ref String_set.empty in
+  let string_literals_blocks = ref String_set.empty in
+  (* Keyed by [literal_key], with the spelling of the literal *)
+  let nonstring_literals_consts = ref String_map.empty in
+  let nonstring_literals_blocks = ref String_map.empty in
+  let instance_types = Hashtbl.create 1 in
+  let function_types = ref 0 in
+  let object_types = ref 0 in
+  let string_types = ref 0 in
+  let number_types = ref 0 in
+  let bigint_types = ref 0 in
+  let boolean_types = ref 0 in
+  let symbol_types = ref 0 in
+  let unknown_types = ref 0 in
+  let add_string_literal ~is_const ~loc s =
+    let set =
+      if is_const then string_literals_consts else string_literals_blocks
+    in
+    if String_set.mem s !set then
+      raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)));
+    set := String_set.add s !set
+  in
+  let add_nonstring_literal ~is_const ~loc literal s =
+    let map =
+      if is_const then nonstring_literals_consts else nonstring_literals_blocks
+    in
+    let key = Variant_runtime.literal_value_key literal in
+    (match String_map.find_opt key !map with
+    | Some earlier when earlier = s ->
+      raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)))
+    | Some earlier ->
+      raise
+        (Error
+           ( loc,
+             InvalidUntaggedVariantDefinition (SameLiteralValue (s, earlier)) ))
+    | None -> ());
+    map := String_map.add key s !map
+  in
+  let invariant loc name =
+    if !unknown_types <> 0 && List.length blocks <> 1 then
+      raise
+        (Error (loc, InvalidUntaggedVariantDefinition (OnlyOneUnknown name)));
+    if !object_types > 1 then
+      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneObject));
+    Hashtbl.iter
+      (fun _ (i, count) ->
+        if count > 1 then
+          raise
+            (Error (loc, InvalidUntaggedVariantDefinition (AtMostOneInstance i))))
+      instance_types;
+    if !function_types > 1 then
+      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneFunction));
+    if !string_types > 1 then
+      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneString));
+    if !number_types > 1 then
+      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneNumber));
+    if !bigint_types > 1 then
+      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBigint));
+    if !boolean_types > 1 then
+      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBoolean));
+    if !symbol_types > 1 then
+      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneSymbol));
+    ()
+  in
+  let check_literal ~is_const ~loc (tag : tag) =
+    match tag.literal with
+    | String s -> add_string_literal ~is_const ~loc s
+    | Int i as literal ->
+      add_nonstring_literal ~is_const ~loc literal (string_of_int i)
+    | Float f as literal -> add_nonstring_literal ~is_const ~loc literal f
+    | BigInt i as literal ->
+      add_nonstring_literal ~is_const ~loc literal (i ^ "n")
+    | Bool b as literal ->
+      add_nonstring_literal ~is_const ~loc literal
+        (if b then "true" else "false")
+    | Null as literal -> add_nonstring_literal ~is_const ~loc literal "null"
+    | Undefined as literal ->
+      add_nonstring_literal ~is_const ~loc literal "undefined"
+  in
+
+  Ext_list.rev_iter consts (fun (loc, literal) ->
+      check_literal ~is_const:true ~loc literal);
+  (* A tagged block is told apart from the others by its tag; an untagged one
+     is its payload, whatever its [@as] *)
+  Ext_list.rev_iter blocks (fun (loc, block) ->
+      match block with
+      | Tagged {tag} -> check_literal ~is_const:false ~loc tag
+      | Untagged _ -> ());
+  (* The payload kinds are checked as soon as one case is untagged, even when
+     the type itself is not [@unboxed] *)
+  let has_untagged_block =
+    List.exists
+      (function
+        | _, Untagged _ -> true
+        | _, Tagged _ -> false)
+      blocks
+  in
+  if is_untagged_def || has_untagged_block then (
+    (* Tagged blocks are objects with a tag field: together one object case *)
+    if
+      List.exists
+        (function
+          | _, Tagged _ -> true
+          | _, Untagged _ -> false)
+        blocks
+    then incr object_types;
+    Ext_list.rev_iter blocks (fun (loc, block) ->
+        match block with
+        | Untagged {tag; block_type} ->
+          (match block_type with
+          | UnknownType -> incr unknown_types
+          | ObjectType -> incr object_types
+          | InstanceType i ->
+            (* A class is identified by its name *)
+            let name = Instance.to_string i in
+            let count =
+              match Hashtbl.find_opt instance_types name with
+              | Some (_, count) -> count
+              | None -> 0
+            in
+            Hashtbl.replace instance_types name (i, count + 1)
+          | SymbolType -> incr symbol_types
+          | FunctionType -> incr function_types
+          | NumberType -> incr number_types
+          | BigintType -> incr bigint_types
+          | BooleanType ->
+            (* Literal cases are matched before payload cases, so a boolean
+               payload only receives the booleans that are not literal cases.
+               A partial overlap is allowed, like for strings and numbers. *)
+            if
+              String_map.mem "true" !nonstring_literals_consts
+              && String_map.mem "false" !nonstring_literals_consts
+            then
+              raise
+                (Error
+                   ( loc,
+                     InvalidUntaggedVariantDefinition
+                       (UnreachableBoolean tag.name) ));
+            incr boolean_types
+          | StringType -> incr string_types);
+          invariant loc tag.name
+        | Tagged _ -> ()))
 
 let layout_from_type_variant ~(configuration : configuration) ~env
     (cstrs : Types.constructor_declaration list) : Variant_runtime.layout =

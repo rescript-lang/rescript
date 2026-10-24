@@ -186,20 +186,9 @@ let tag_of_switch_key : _ -> Variant_runtime.tag_type option = function
     Some (Payload_shape block_type)
 
 let dispatch_info = function
-  | Lambda.Switch_direct -> (Js_dump_lit.tag, [], [], (false, false, false))
-  | Switch_variant
-      {
-        Variant_runtime.tag_name;
-        block_types;
-        literal_tags;
-        has_null;
-        has_undefined;
-        has_other_literal;
-      } ->
-    ( Option.value tag_name ~default:Js_dump_lit.tag,
-      block_types,
-      literal_tags,
-      (has_null, has_undefined, has_other_literal) )
+  | Lambda.Switch_direct -> (Js_dump_lit.tag, [], [])
+  | Switch_variant {Variant_runtime.tag_name; block_types; literal_tags} ->
+    (Option.value tag_name ~default:Js_dump_lit.tag, block_types, literal_tags)
 
 let no_effects_const = lazy true
 (* let has_effects_const = lazy false *)
@@ -762,9 +751,7 @@ let compile output_prefix =
     let sw_blocks_default =
       default_action ~saturated:sw_blocks_full sw_failaction
     in
-    let tag_name, block_cases, literal_cases, has_null_undefined_other =
-      dispatch_info sw_dispatch
-    in
+    let tag_name, block_cases, literal_cases = dispatch_info sw_dispatch in
     let untagged = block_cases <> [] in
     let compile_whole (cxt : Lam_compile_context.t) =
       match
@@ -805,23 +792,9 @@ let compile output_prefix =
                       (* A tagged block, an object *)
                       Some Variant_runtime.ObjectType)
               in
-              let reaches_a_payload_arm (literal : Variant_runtime.literal_tag)
-                  =
+              let reaches_a_payload_arm literal =
                 List.exists
-                  (fun (block_type : Variant_runtime.block_type) ->
-                    match (block_type, literal) with
-                    | UnknownType, _
-                    | StringType, String _
-                    | NumberType, (Int _ | Float _)
-                    | BigintType, BigInt _
-                    | BooleanType, Bool _
-                    | ObjectType, Null ->
-                      true
-                    | ( ( StringType | NumberType | BigintType | BooleanType
-                        | ObjectType | InstanceType _ | SymbolType
-                        | FunctionType ),
-                        _ ) ->
-                      false)
+                  (Variant_runtime.literal_passes literal)
                   payload_arms
               in
               let has_class_case =
@@ -947,7 +920,7 @@ let compile output_prefix =
             else
               [
                 S.if_
-                  (E.is_int_tag ~has_null_undefined_other e)
+                  (E.is_int_tag ~literal_tags:literal_cases e)
                   (compile_cases ~cxt ~switch_exp:e ~block_cases
                      ~default:sw_num_default sw_consts)
                   ~else_:
@@ -1051,7 +1024,7 @@ let compile output_prefix =
         | Variant_runtime.Instance.Class _ -> true
         | Array -> false
       in
-      let check_instance i = E.emit_check (IsInstanceOf (i, Expr e)) in
+      let check_instance i = E.is_instance_of i e in
       let typeof_is name = E.string_equal (E.typeof e) (E.str name) in
       (* [null], when it did not go to the default before *)
       let is_object =
