@@ -586,7 +586,10 @@ let rec const_some_none_depth (c : structured_constant) : int =
   | Const_some v ->
     let depth = const_some_none_depth v in
     if depth < 0 then depth else depth + 1
-  | Const_module_alias | Const_js_undefined _ -> 0
+  | Const_module_alias | Const_js_undefined _
+  (* A constructor represented by [undefined], [@as(undefined)] *)
+  | Const_constructor {literal = Some Undefined} ->
+    0
   | _ -> -1
 
 (* A constant that has to be built at run time rather than shared. A [Some]

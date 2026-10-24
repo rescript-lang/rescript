@@ -291,7 +291,8 @@ as `Primitive_option.some(v)` otherwise. An untagged variant cannot hold
 | an abstract type without it, a type variable, `option<_>` | yes |
 | a type whose declaration is not on the load path | yes |
 
-An `@as(null)` case does not prevent unboxing; `Some(N)` is `null`.
+An `@as(null)` case does not prevent unboxing; `Some(N)` is `null`. `Some(U)` of an `@as(undefined)` case is boxed, as a constant
+too, so it stays distinct from `None`.
 
 | Declaration | `Some(v)` |
 | --- | --- |
@@ -313,7 +314,7 @@ abstract types `@notUndefined`; `Blob.t` and `File.t` are not marked.
 - Tests: `spec_test` rule 12; `UntaggedVariants.res`
   (`OptionUnboxingHeuristic`); `tests/tests/src/option_wrapping_test.res`;
   `tests/build_tests/option_transitive_dependency`.
-- Shaped by #6222, #6233, #8719.
+- Shaped by #6222, #6233, #8719, #8954.
 
 ### 13. `@notUndefined`
 
@@ -355,21 +356,6 @@ cases with a payload (see Known bugs).
 
 Each was observed with the compiler built from this tree; the programs are
 compiled with `bsc` and run in Node 25.
-
-**`Some` of a constant `undefined` case is `None`.** Rule 12 boxes `Some(v)`
-for a variant with an `@as(undefined)` case, but a constant argument skips
-the boxing.
-
-```rescript
-@unboxed type u = | @as(undefined) U | V(string)
-let x: option<u> = Some(U)                       // let x = undefined;
-@inline(never) let mk = (v: u): option<u> => Some(v)
-Console.log2(x == None, mk(U) == None)           // true false
-```
-
-`lambda.ml:const_some_none_depth` returns "not a none" for every
-`Const_constructor`, including one whose literal is `undefined`; that this is
-the cause is conjectured, not established.
 
 **Overlapping instance classes follow declaration order** (#8938).
 
