@@ -1,4 +1,8 @@
-type feature = LetUnwrap
+type feature =
+  | LetUnwrap
+  | MultilineItemSpacing
+      (** The formatter separates module items that span several lines with a
+          blank line. *)
 
 val enable_from_string : string -> unit
 

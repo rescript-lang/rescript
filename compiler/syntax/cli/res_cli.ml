@@ -55,6 +55,9 @@ end = struct
       ( "-test-ast-conversion",
         Arg.Unit (fun () -> test_ast_conversion := true),
         "Test the ast conversion" );
+      ( "-enable-experimental",
+        Arg.String Experimental_features.enable_from_string,
+        "Enable an experimental feature, e.g. MultilineItemSpacing" );
     ]
 
   let parse () = Arg.parse spec (fun f -> file := f) usage

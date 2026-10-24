@@ -492,7 +492,8 @@ let command_line_flags () : (string * Bsc_args.spec * string) array =
     ( "-enable-experimental",
       string_call Experimental_features.enable_from_string,
       "Enable experimental features: repeatable, e.g. -enable-experimental \
-       LetUnwrap" );
+       LetUnwrap. Pass it before -format to format with a feature such as \
+       MultilineItemSpacing" );
     (* Not used, the build system did the expansion *)
     ( "-bs-no-bin-annot",
       clear (Clflags.current ()).binary_annotations,

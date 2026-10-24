@@ -525,6 +525,179 @@ module Parser_api_test = struct
     windows_crlf ()
 end
 
+(* Res_doc.item_separator puts a blank line next to an item that prints on
+   several lines, measuring the documents on each side as to_string lays them
+   out. Res_doc.comment hides comments from the measurement. *)
+module Multiline_item_spacing_test = struct
+  module Doc = Res_doc
+
+  let check name ~expected actual =
+    if actual <> expected then
+      failwith
+        (Printf.sprintf "%s:\nexpected:\n%S\nactual:\n%S" name expected actual)
+
+  (* Module items are printed inside a broken group, like print_structure. *)
+  let print ?(width = 80) doc =
+    Doc.to_string ~width (Doc.breakable_group ~force_break:true doc)
+  let items prev next = Doc.concat [prev; Doc.item_separator ~prev ~next; next]
+  let a = Doc.text "let a = 1"
+  let b = Doc.text "let b = 2"
+
+  (* A function call that fits on one line at width 80 but not at width 10. *)
+  let call =
+    Doc.group
+      (Doc.concat
+         [
+           Doc.text "f(";
+           Doc.indent
+             (Doc.concat
+                [
+                  Doc.soft_line;
+                  Doc.text "x,";
+                  Doc.line;
+                  Doc.text "y";
+                  Doc.trailing_comma;
+                ]);
+           Doc.soft_line;
+           Doc.text ")";
+         ])
+
+  let measuring () =
+    check "one-line items stay together" ~expected:"let a = 1\nlet b = 2"
+      (print (items a b));
+    check "a hard line spans lines" ~expected:"x\ny\n\nlet b = 2"
+      (print (items (Doc.concat [Doc.text "x"; Doc.hard_line; Doc.text "y"]) b));
+    check "a literal line spans lines" ~expected:"`x\ny`\n\nlet b = 2"
+      (print
+         (items (Doc.concat [Doc.text "`x"; Doc.literal_line; Doc.text "y`"]) b));
+    check "a newline inside text spans lines" ~expected:"`x\ny`\n\nlet b = 2"
+      (print (items (Doc.text "`x\ny`") b));
+    check "an item list spans lines"
+      ~expected:"let a = 1\nlet b = 2\n\nlet c = 3"
+      (print (items (items a b) (Doc.text "let c = 3")));
+    check "a group that fits is one line" ~expected:"f(x, y)\nlet b = 2"
+      (print (items call b));
+    check "a group that breaks spans lines"
+      ~expected:"f(\n  x,\n  y,\n)\n\nlet b = 2"
+      (print ~width:5 (items call b));
+    check "a chosen custom layout is measured" ~expected:"let a = 1\nlet b = 2"
+      (print (items (Doc.custom_layout [a]) b));
+    check "break parents and line suffixes do not span lines"
+      ~expected:"let a = 1 // c\nlet b = 2"
+      (print
+         (items
+            (Doc.concat
+               [a; Doc.break_parent; Doc.line_suffix (Doc.text " // c")])
+            b));
+    check "a comment above an item does not count"
+      ~expected:"let a = 1\n// c\nlet b = 2"
+      (print
+         (items a
+            (Doc.concat
+               [Doc.comment (Doc.concat [Doc.text "// c"; Doc.hard_line]); b])));
+    let forced_if_breaks =
+      Doc.if_breaks (Doc.text "a") (Doc.concat [Doc.text "b"; Doc.hard_line])
+    in
+    check "an if-breaks broken by its flat branch takes the break branch"
+      ~expected:"xa\nlet b = 2"
+      (print (items (Doc.concat [Doc.text "x"; forced_if_breaks]) b));
+    check "an if-breaks in a broken group takes the break branch"
+      ~expected:"{\n}\n\nlet b = 2"
+      (print
+         (items
+            (Doc.breakable_group ~force_break:true
+               (Doc.concat
+                  [
+                    Doc.if_breaks (Doc.text "{") (Doc.text "(");
+                    Doc.line;
+                    Doc.text "}";
+                  ]))
+            b))
+
+  let trailing_comments () =
+    let block =
+      Doc.concat [Doc.text "let a = {"; Doc.hard_line; Doc.text "}"]
+    in
+    let after_block suffix =
+      items (Doc.concat [block; Doc.line_suffix suffix]) b
+    in
+    check "a same-line trailing comment stays on its line"
+      ~expected:"let a = {\n} // c\n\nlet b = 2"
+      (print (after_block (Doc.text " // c")));
+    check "an own-line trailing comment moves below the blank line"
+      ~expected:"let a = {\n}\n\n// c\nlet b = 2"
+      (print (after_block (Doc.concat [Doc.hard_line; Doc.text "// c"])));
+    check "an empty own-line trailing comment prints an empty line"
+      ~expected:"let a = {\n}\n\n\nlet b = 2"
+      (print (after_block Doc.hard_line))
+
+  let predicates () =
+    let separator = Doc.item_separator ~prev:a ~next:b in
+    assert (Doc.will_break separator);
+    assert (Doc.will_break Doc.break_parent);
+    assert (Doc.will_break (Doc.comment Doc.hard_line));
+    assert (not (Doc.will_break (Doc.comment a)));
+    assert (Doc.is_nil Doc.nil);
+    [
+      a;
+      Doc.line_suffix a;
+      Doc.concat [a; b];
+      Doc.indent a;
+      Doc.trailing_comma;
+      Doc.line;
+      Doc.group a;
+      Doc.custom_layout [a];
+      Doc.break_parent;
+      separator;
+      Doc.comment a;
+    ]
+    |> List.iter (fun doc -> assert (not (Doc.is_nil doc)));
+    check "an empty custom layout prints nothing" ~expected:""
+      (print (Doc.custom_layout []))
+
+  (* debug prints to stdout; send it to the null device. *)
+  let debug () =
+    flush stdout;
+    let saved = Unix.dup Unix.stdout in
+    let null = Unix.openfile Filename.null [Unix.O_WRONLY] 0 in
+    Unix.dup2 null Unix.stdout;
+    Fun.protect
+      ~finally:(fun () ->
+        flush stdout;
+        Unix.dup2 saved Unix.stdout;
+        Unix.close saved;
+        Unix.close null)
+      (fun () -> Doc.debug (Doc.concat [items a b; Doc.comment a]))
+
+  let printer () =
+    let source = "module A = {\n  let x = 1\n}\nlet y = 2\n" in
+    let format () =
+      let result =
+        Res_driver.parse_implementation_from_source ~display_filename:"A.res"
+          ~source
+      in
+      Res_printer.print_implementation ~width:80 result.parsetree
+        ~comments:result.comments
+    in
+    check "the printer keeps items together by default" ~expected:source
+      (format ());
+    Experimental_features.enable_from_string
+      (Experimental_features.to_string
+         Experimental_features.MultilineItemSpacing);
+    Fun.protect ~finally:Experimental_features.reset (fun () ->
+        check "the printer spaces items with MultilineItemSpacing"
+          ~expected:"module A = {\n  let x = 1\n}\n\nlet y = 2\n" (format ()))
+
+  let run () =
+    measuring ();
+    trailing_comments ();
+    predicates ();
+    debug ();
+    printer ();
+    print_endline "✅ multi-line item spacing"
+end
+
 let () = Outcome_printer_tests.run ()
 let () = Parser_api_test.run ()
 let () = Res_utf8_test.run ()
+let () = Multiline_item_spacing_test.run ()

@@ -122,6 +122,7 @@ An object of feature flags to enable experimental compiler behavior. Only suppor
 Currently supported features:
 
 - LetUnwrap: Enable `let?` syntax.
+- MultilineItemSpacing: `rescript format` puts a blank line before and after a module item that spans several lines.
 
 ### Warnings
 

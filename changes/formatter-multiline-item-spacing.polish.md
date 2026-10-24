@@ -1,0 +1,1 @@
+- Add the experimental feature `MultilineItemSpacing`: with `"experimental-features": {"MultilineItemSpacing": true}`, `rescript format` puts a blank line before and after a module item that spans several lines.

@@ -505,6 +505,7 @@ pub enum DeprecationWarning {
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum ExperimentalFeature {
     LetUnwrap,
+    MultilineItemSpacing,
 }
 
 impl<'de> serde::Deserialize<'de> for ExperimentalFeature {
@@ -524,8 +525,9 @@ impl<'de> serde::Deserialize<'de> for ExperimentalFeature {
             {
                 match v {
                     "LetUnwrap" => Ok(ExperimentalFeature::LetUnwrap),
+                    "MultilineItemSpacing" => Ok(ExperimentalFeature::MultilineItemSpacing),
                     other => {
-                        let available = ["LetUnwrap"].join(", ");
+                        let available = ["LetUnwrap", "MultilineItemSpacing"].join(", ");
                         Err(DeError::custom(format!(
                             "Unknown experimental feature '{other}'. Available features: {available}",
                         )))
@@ -963,6 +965,7 @@ impl Config {
                         "-enable-experimental".to_string(),
                         match feature {
                             ExperimentalFeature::LetUnwrap => "LetUnwrap",
+                            ExperimentalFeature::MultilineItemSpacing => "MultilineItemSpacing",
                         }
                         .to_string(),
                     ]

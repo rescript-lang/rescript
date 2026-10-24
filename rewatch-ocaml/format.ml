@@ -115,11 +115,22 @@ let files_in_scope ~verbosity =
 let formatting_error target stderr =
   Printf.sprintf "Error formatting %s: %s" target stderr
 
-let format_request path =
-  Compiler_process.{args = ["-format"; path]; cwd = Sys.getcwd ()}
+(* The experimental features of the current project, such as
+   MultilineItemSpacing, as bsc flags. They must precede -format. Outside a
+   project, format runs without them, like Rust rewatch. *)
+let experimental_args () =
+  try
+    let current = Config.load_root (Sys.getcwd ()) in
+    (Project_context.workspace_config_for current).experimental_args
+  with Config.Error _ -> []
+
+let format_request ~experimental_args path =
+  Compiler_process.
+    {args = experimental_args @ ["-format"; path]; cwd = Sys.getcwd ()}
 
 let formatted ?poll ~target path =
-  let result = Compiler_process.run ?poll (format_request path) in
+  let request = format_request ~experimental_args:(experimental_args ()) path in
+  let result = Compiler_process.run ?poll request in
   if not (Process.succeeded result) then
     raise (Error (formatting_error target result.stderr));
   result.stdout
@@ -129,6 +140,7 @@ let format_check_summary = function
   | count -> Printf.sprintf "The %d files listed above need formatting" count
 
 let format_files ?poll ~check files =
+  let experimental_args = experimental_args () in
   let incorrect = ref 0 in
   let works =
     files
@@ -137,7 +149,8 @@ let format_files ?poll ~check files =
           {key = Printf.sprintf "%08d" index; dependencies = []; value = path})
   in
   let next path = function
-    | None -> Some (Compiler_process.task (format_request path))
+    | None ->
+      Some (Compiler_process.task (format_request ~experimental_args path))
     | Some result ->
       if not (Process.succeeded result) then
         raise (Error (formatting_error path result.stderr));
