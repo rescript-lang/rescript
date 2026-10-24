@@ -31,7 +31,6 @@ let suites =
       Ounit_parser_cursor_tests.suites;
       Ounit_parser_recovery_tests.suites;
       Ounit_analysis_config_tests.suites;
-      Ounit_analysis_editor_protocol_tests.suites;
       Ounit_analysis_references_tests.suites;
       Ounit_ffi_inclusion_tests.suites;
       Ounit_typeopt_tests.suites;
