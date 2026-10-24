@@ -136,12 +136,8 @@ function withU(v) {
 function stringOrOther(r) {
   let s = r.u;
   if (s !== undefined) {
-    if (s == null) {
-      if (s === undefined) {
-        return "other";
-      } else {
-        return "null";
-      }
+    if (s === null) {
+      return "null";
     } else if (typeof s === "string") {
       return s;
     } else {
@@ -158,13 +154,9 @@ function objectOrOther(r) {
     return "other";
   }
   let tmp = Primitive_option.valFromOption(match);
-  if (tmp == null) {
-    if (tmp === undefined) {
-      return "undefined";
-    } else {
-      return "other";
-    }
-  } else if (typeof tmp === "string") {
+  if (tmp === undefined) {
+    return "undefined";
+  } else if (tmp === null || typeof tmp === "string") {
     return "other";
   } else {
     return "object";

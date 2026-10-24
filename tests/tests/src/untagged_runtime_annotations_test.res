@@ -143,6 +143,40 @@ let objectOrNameKind = value =>
   | ObjectName(name) => name
   }
 
+@inline(never) let id = x => x
+
+// No class of this name exists at run time
+@instanceOf("UntaggedMissingClass") type missing
+
+@unboxed
+type withMissing = Missing(missing) | Text(string) | Count(float)
+
+let missingKind = value =>
+  switch value {
+  | Missing(_) => "missing"
+  | Text(text) => text
+  | Count(_) => "count"
+  }
+
+@unboxed
+type shared = SharedDate(Date.t) | SharedObject({x: int}) | SharedText(string) | SharedCount(float)
+
+let missingOrDefault = value =>
+  switch value {
+  | Missing(_) => "missing"
+  | Text(text) => text
+  | _ => "other"
+  }
+
+let sharedKind = value => {
+  let kind = switch value {
+  | SharedDate(_) => "date"
+  | SharedText(_) => "text"
+  | _ => "other"
+  }
+  kind ++ "!"
+}
+
 describe(__MODULE__, () => {
   test("a subclass case is not taken for its superclass", () => {
     eq(__LOC__, "animal", describePet(Animal(makeAnimal())))
@@ -204,5 +238,22 @@ describe(__MODULE__, () => {
   test("a class declared over an object type", () => {
     eq(__LOC__, "dog", objectOrNameKind(ObjectDog(makeObjectDog())))
     eq(__LOC__, "rex", objectOrNameKind(ObjectName("rex")))
+  })
+
+  test("primitive cases are tested before class checks", () => {
+    eq(__LOC__, "a", missingKind(id(Text("a"))))
+    eq(__LOC__, "count", missingKind(id(Count(1.))))
+  })
+
+  test("a primitive without an arm skips class checks", () => {
+    eq(__LOC__, "a", missingOrDefault(id(Text("a"))))
+    eq(__LOC__, "other", missingOrDefault(id(Count(1.))))
+  })
+
+  test("a default shared by a primitive and an object case", () => {
+    eq(__LOC__, "date!", sharedKind(id(SharedDate(Date.make()))))
+    eq(__LOC__, "other!", sharedKind(id(SharedObject({x: 1}))))
+    eq(__LOC__, "text!", sharedKind(id(SharedText("a"))))
+    eq(__LOC__, "other!", sharedKind(id(SharedCount(1.))))
   })
 })

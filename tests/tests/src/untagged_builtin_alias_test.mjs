@@ -4,14 +4,12 @@ import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
 function kind(value) {
-  if (Array.isArray(value)) {
+  if (typeof value === "string") {
+    return value;
+  } else if (Array.isArray(value)) {
     return "pair";
-  }
-  switch (typeof value) {
-    case "object" :
-      return "entries";
-    case "string" :
-      return value;
+  } else {
+    return "entries";
   }
 }
 

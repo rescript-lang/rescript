@@ -181,12 +181,6 @@ val neq_null_undefined_boolean : ?comment:string -> t -> t -> t
 
 val is_int_tag : ?has_null_undefined_other:bool * bool * bool -> t -> t
 
-val is_a_literal_case :
-  literal_cases:Variant_runtime.literal_tag list ->
-  block_cases:Variant_runtime.block_type list ->
-  t ->
-  t
-
 val is_type_object : t -> t
 
 val typeof : ?comment:string -> t -> t

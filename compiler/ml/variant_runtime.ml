@@ -126,7 +126,8 @@ type matching_facts = {
           standard [TAG] field. *)
   block_types: block_type list;
       (** Runtime shapes of constructors represented directly by their
-          payload. Tagged object constructors do not appear here. *)
+          payload, in declaration order. Tagged object constructors do not
+          appear here. *)
   literal_tags: literal_tag list;
       (** Runtime values of all nullary constructors. In an untagged variant
           these may overlap the values of a payload constructor, as in
@@ -226,8 +227,8 @@ let compute_matching_facts ~tag_name (constructors : constructor_case array) :
     constructors;
   {
     tag_name;
-    block_types = !block_types;
-    literal_tags = !literal_tags;
+    block_types = List.rev !block_types;
+    literal_tags = List.rev !literal_tags;
     has_null = !has_null;
     has_undefined = !has_undefined;
     has_other_literal = !has_other_literal;

@@ -21,12 +21,10 @@ function classify2(x) {
 }
 
 function cls(x) {
-  if (typeof x !== "object") {
-    if (x === "One") {
-      return "one";
-    } else {
-      return "two";
-    }
+  if (x === "One") {
+    return "one";
+  } else if (x === "Two") {
+    return "two";
   } else {
     return "object" + x.y;
   }
@@ -77,12 +75,10 @@ let Truthy = {
 };
 
 function classify$1(x) {
-  if (x == null) {
-    if (x === null) {
-      return "null";
-    } else {
-      return "undefined";
-    }
+  if (x === null) {
+    return "null";
+  } else if (x === undefined) {
+    return "undefined";
   } else {
     return "object" + x.name;
   }
@@ -93,12 +89,11 @@ let TwoObjects = {
 };
 
 function classify$2(x) {
-  if (x === "A" || x === "B") {
-    if (x === "A") {
-      return "a";
-    } else {
-      return "b";
-    }
+  if (x === "A") {
+    return "a";
+  }
+  if (x === "B") {
+    return "b";
   }
   console.log(x);
   return "Unknown";
@@ -109,26 +104,24 @@ let Unknown = {
 };
 
 function classify$3(x) {
-  if (x === "A" || x === "D" || x === "B" || x === "C") {
-    switch (x) {
-      case "A" :
-        return "a";
-      case "B" :
-        return "b";
-      case "C" :
-        return "c";
-      case "D" :
-        return "d";
-    }
-  } else {
-    switch (typeof x) {
-      case "string" :
-        return "string";
-      case "number" :
-        return "int";
-      case "object" :
-        return "Object" + x.name;
-    }
+  switch (x) {
+    case "A" :
+      return "a";
+    case "B" :
+      return "b";
+    case "C" :
+      return "c";
+    case "D" :
+      return "d";
+    default:
+      switch (typeof x) {
+        case "string" :
+          return "string";
+        case "number" :
+          return "int";
+        default:
+          return "Object" + x.name;
+      }
   }
 }
 
@@ -142,7 +135,7 @@ function classify$4(x) {
       return "string";
     case "number" :
       return "int";
-    case "object" :
+    default:
       return "Object" + x.name;
   }
 }
@@ -152,16 +145,17 @@ let OnlyBlocks = {
 };
 
 function classify$5(x) {
-  if (Array.isArray(x)) {
-    return "array";
-  }
   switch (typeof x) {
     case "string" :
       return "string";
     case "number" :
       return "int";
-    case "object" :
-      return "Object" + x.name;
+    default:
+      if (Array.isArray(x)) {
+        return "array";
+      } else {
+        return "Object" + x.name;
+      }
   }
 }
 
@@ -170,39 +164,38 @@ let WithArray = {
 };
 
 function classify$6(x) {
-  if (x === false || x === null || x === true) {
-    switch (x) {
-      case false :
-        return "JSONFalse";
-      case true :
-        return "JSONTrue";
-      case null :
-        return "JSONNull";
-    }
-  } else {
-    if (Array.isArray(x)) {
-      return {
-        TAG: "JSONArray",
-        _0: x
-      };
-    }
-    switch (typeof x) {
-      case "string" :
-        return {
-          TAG: "JSONString",
-          _0: x
-        };
-      case "number" :
-        return {
-          TAG: "JSONNumber",
-          _0: x
-        };
-      case "object" :
-        return {
-          TAG: "JSONObject",
-          _0: x
-        };
-    }
+  switch (x) {
+    case false :
+      return "JSONFalse";
+    case true :
+      return "JSONTrue";
+    case null :
+      return "JSONNull";
+    default:
+      switch (typeof x) {
+        case "string" :
+          return {
+            TAG: "JSONString",
+            _0: x
+          };
+        case "number" :
+          return {
+            TAG: "JSONNumber",
+            _0: x
+          };
+        default:
+          if (Array.isArray(x)) {
+            return {
+              TAG: "JSONArray",
+              _0: x
+            };
+          } else {
+            return {
+              TAG: "JSONObject",
+              _0: x
+            };
+          }
+      }
   }
 }
 
@@ -231,9 +224,6 @@ let TrickyNested = {
 };
 
 function checkEnum(e) {
-  if (e !== "One" && e !== "Three" && e !== "Two") {
-    return "Something else..." + e;
-  }
   switch (e) {
     case "One" :
       return "One!";
@@ -241,6 +231,8 @@ function checkEnum(e) {
       return "Two";
     case "Three" :
       return "Threeeee";
+    default:
+      return "Something else..." + e;
   }
 }
 
@@ -249,9 +241,6 @@ let OverlapString = {
 };
 
 function checkEnum$1(e) {
-  if (e !== 1.0 && e !== "Three" && e !== "Two") {
-    return "Something else...";
-  }
   switch (e) {
     case 1.0 :
       return "One!";
@@ -259,6 +248,8 @@ function checkEnum$1(e) {
       return "Two";
     case "Three" :
       return "Threeeee";
+    default:
+      return "Something else...";
   }
 }
 
@@ -267,9 +258,6 @@ let OverlapNumber = {
 };
 
 function checkEnum$2(e) {
-  if (e !== null && typeof e === "object") {
-    return "Object...";
-  }
   switch (e) {
     case null :
       return "One!";
@@ -277,6 +265,8 @@ function checkEnum$2(e) {
       return "Two";
     case "Three" :
       return "Threeeee";
+    default:
+      return "Object...";
   }
 }
 
@@ -297,10 +287,10 @@ let RecordIsObject = {
 };
 
 function classify$8(v) {
-  if (typeof v === "object" && !Array.isArray(v)) {
-    return v.x;
-  } else {
+  if (Array.isArray(v)) {
     return v[0];
+  } else {
+    return v.x;
   }
 }
 
@@ -354,12 +344,10 @@ let OptionUnboxingHeuristic = {
 function classify$9(v) {
   if (Array.isArray(v)) {
     return v[0];
-  }
-  switch (typeof v) {
-    case "object" :
-      return v.x;
-    case "function" :
-      return v(3);
+  } else if (typeof v === "function") {
+    return v(3);
+  } else {
+    return v.x;
   }
 }
 
@@ -383,27 +371,23 @@ function check$1(s) {
     let match = s[0];
     if (match === true) {
       let match$1 = s[1];
-      if (match$1 === undefined || match$1 === null || match$1 === false || match$1 === true) {
-        if (match$1 === false) {
-          let match$2 = s[2];
-          if (Array.isArray(match$2)) {
-            if (match$2.length !== 2) {
-              console.log("Nope...");
-              return;
-            }
-            let match$3 = match$2[0];
-            if (typeof match$3 === "string") {
-              if (match$3 === "My name is") {
-                let match$4 = match$2[1];
-                if (typeof match$4 === "number") {
-                  if (match$4 !== 10) {
-                    console.log("Nope...");
-                  } else {
-                    console.log("yup");
-                  }
-                  return;
+      if (match$1 === false) {
+        let match$2 = s[2];
+        if (Array.isArray(match$2)) {
+          if (match$2.length !== 2) {
+            console.log("Nope...");
+            return;
+          }
+          let match$3 = match$2[0];
+          if (typeof match$3 === "string") {
+            if (match$3 === "My name is") {
+              let match$4 = match$2[1];
+              if (typeof match$4 === "number") {
+                if (match$4 !== 10) {
+                  console.log("Nope...");
+                } else {
+                  console.log("yup");
                 }
-                console.log("Nope...");
                 return;
               }
               console.log("Nope...");
@@ -417,18 +401,14 @@ function check$1(s) {
         }
         console.log("Nope...");
         return;
-      } else {
-        console.log("Nope...");
-        return;
       }
-    } else {
       console.log("Nope...");
       return;
     }
-  } else {
     console.log("Nope...");
     return;
   }
+  console.log("Nope...");
 }
 
 let ComplexPattern = {
@@ -437,25 +417,20 @@ let ComplexPattern = {
 };
 
 async function getUserName(u) {
-  if (u instanceof Promise) {
+  if (typeof u === "string") {
+    return u;
+  } else if (u instanceof Promise) {
     return (await u).name;
-  }
-  switch (typeof u) {
-    case "object" :
-      return u.name;
-    case "string" :
-      return u;
+  } else {
+    return u.name;
   }
 }
 
 async function awaitUser(u) {
-  if (u instanceof Promise) {
+  if (typeof u === "string" || !(u instanceof Promise)) {
+    return "dummy";
+  } else {
     return (await u).name;
-  }
-  switch (typeof u) {
-    case "object" :
-    case "string" :
-      return "dummy";
   }
 }
 
@@ -465,31 +440,27 @@ let PromiseSync = {
 };
 
 async function classify$10(a) {
-  if (a === "test" || a === 12) {
-    if (a === "test") {
-      console.log("testing");
-      return;
-    }
+  if (a === "test") {
+    console.log("testing");
+    return;
+  }
+  if (a === 12) {
     console.log(12);
     return;
-  } else {
-    if (Array.isArray(a)) {
-      console.log(a.join("-"));
-      return;
-    }
-    if (a instanceof Promise) {
-      console.log(await a);
-      return;
-    }
-    switch (typeof a) {
-      case "string" :
-        console.log(a);
-        return;
-      case "object" :
-        console.log(a.userName);
-        return;
-    }
   }
+  if (typeof a === "string") {
+    console.log(a);
+    return;
+  }
+  if (Array.isArray(a)) {
+    console.log(a.join("-"));
+    return;
+  }
+  if (a instanceof Promise) {
+    console.log(await a);
+    return;
+  }
+  console.log(a.userName);
 }
 
 let Arr = {
@@ -497,6 +468,10 @@ let Arr = {
 };
 
 async function classifyAll(t) {
+  if (typeof t === "string") {
+    console.log(t);
+    return;
+  }
   if (Array.isArray(t)) {
     console.log(t.join("-"));
     return;
@@ -517,7 +492,7 @@ async function classifyAll(t) {
     console.log(t.name);
     return;
   }
-  if (t instanceof Blob && !(t instanceof File)) {
+  if (t instanceof Blob) {
     console.log(t.size);
     return;
   }
@@ -589,14 +564,7 @@ async function classifyAll(t) {
     console.log("WeakMap");
     return;
   }
-  switch (typeof t) {
-    case "string" :
-      console.log(t);
-      return;
-    case "object" :
-      console.log(t.userName);
-      return;
-  }
+  console.log(t.userName);
 }
 
 let AllInstanceofTypes = {
@@ -604,13 +572,12 @@ let AllInstanceofTypes = {
 };
 
 function test(t) {
-  switch (typeof t) {
-    case "object" :
-      return t["Hello"];
-    case "string" :
-      return t;
-    case "function" :
-      return t();
+  if (typeof t === "string") {
+    return t;
+  } else if (typeof t === "function") {
+    return t();
+  } else {
+    return t["Hello"];
   }
 }
 
@@ -631,16 +598,10 @@ function shareEquivalentStringActions(x) {
 }
 
 function can_merge(x) {
-  if (Array.isArray(x)) {
+  if (typeof x === "boolean" || !(Array.isArray(x) || x instanceof Date)) {
+    return "merge";
+  } else {
     return "do not merge";
-  }
-  if (x instanceof Date) {
-    return "do not merge";
-  }
-  switch (typeof x) {
-    case "boolean" :
-    case "object" :
-      return "merge";
   }
 }
 
@@ -665,6 +626,9 @@ function shareAlphaEquivalentStringActions(value) {
 }
 
 function preserveDiscriminatorGroups(x) {
+  if (typeof x === "boolean") {
+    return;
+  }
   if (Array.isArray(x)) {
     while (keepGoing()) {
       sideEffect();
@@ -677,15 +641,9 @@ function preserveDiscriminatorGroups(x) {
     };
     return;
   }
-  switch (typeof x) {
-    case "boolean" :
-      return;
-    case "object" :
-      while (keepGoing()) {
-        sideEffect();
-      };
-      return;
-  }
+  while (keepGoing()) {
+    sideEffect();
+  };
 }
 
 let MergeCases = {
