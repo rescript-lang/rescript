@@ -493,7 +493,7 @@ for functor arguments and `with type` constraints.
   `ast_untagged_variants.ml:has_not_undefined`;
   `variant_layout.ml:declaration_shape`;
   `typeopt.ml:type_cannot_contain_undefined`;
-  `includemod.ml:not_undefined_mismatch`.
+  `includecore.ml:compare_runtime_annotations`.
 - Tests: `spec_test` rule 13; fixtures `invalid_attribute_not_undefined.res`,
   `not_undefined_functor_argument.res`, `not_undefined_functor_parameter.res`;
   `tests/tests/src/not_undefined_interface_test.res`,
