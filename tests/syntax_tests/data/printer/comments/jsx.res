@@ -84,3 +84,12 @@ let x = <>
 
 let standaloneMultilineComment = <div>{/* multiline
     comment */}</div>
+
+let x =
+  <a
+    href="https://blog.wildcards.world/how-to-buy-a-wildcard-web3-ethereum/"
+    target=// Decided to leave this wildcard braning in here ;)
+    "_blank"
+    rel="noopener noreferrer">
+    {"Read this guide"->React.string}
+  </a>

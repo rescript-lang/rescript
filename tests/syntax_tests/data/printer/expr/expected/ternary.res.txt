@@ -262,3 +262,5 @@ let x = (@attrOnCondition truth) ? true : false
 
 x ? y => () : onChange
 let y = <input value onChange={x ? _ => () : onChange} />
+
+let x = value->(early ? Emitters.requireEarly : Emitters.require)(~emitters)

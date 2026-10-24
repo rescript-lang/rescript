@@ -470,3 +470,7 @@ let arrow_with_container_tag = el => <div>
   prop2>
   {React.string("yow")}
 </Component>
+
+let x = <Box fontSize=4 p=3.5 />
+
+let x = <div> {React.string(name ++ (" has no items! " ++ `😞`))} </div>

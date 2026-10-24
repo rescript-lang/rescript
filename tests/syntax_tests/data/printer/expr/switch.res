@@ -72,3 +72,14 @@ switch value {
     {bar()}
   }
 }
+
+let x = switch (selectable: Selectable.t) {
+| Level(_) => 1
+}
+
+let a = switch x {
+| A => [1, 2]
+| B => (1, 2)
+| C => {"a": 1}
+| D => {a: 1}
+}
