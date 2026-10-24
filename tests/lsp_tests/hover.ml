@@ -48,6 +48,59 @@ let test_hover ~text ~position =
         ])
   |> ignore
 
+let%expect_test "shows documentation for an exported value from another file" =
+  Test.with_project ~name:"hover" ~text:{|let x = Other.customDouble(2)
+|}
+    ~files:
+      [
+        ("Other.res", {|/** Doubles a value. */
+let customDouble = x => x * 2
+|});
+      ]
+    (fun ~root ~doc client ->
+      Test.snapshot ~root client
+        (Client_request.TextDocumentHover
+           (HoverParams.create ~textDocument:(Test.text_document doc)
+              ~position:(Test.position (0, 18))
+              ())));
+  [%expect
+    {|
+    {
+      "contents": {
+        "kind": "markdown",
+        "value": "```rescript\nint => int\n```\n---\n Doubles a value. "
+      }
+    }
+    |}]
+
+let%expect_test "shows the abstract type exposed by an interface" =
+  Test.with_project ~name:"hover" ~text:{|let x = Other.value
+|}
+    ~files:
+      [
+        ("Other.res", {|type t = int
+let value = 1
+|});
+        ("Other.resi", {|type t
+let value: t
+|});
+      ]
+    (fun ~root ~doc client ->
+      Test.snapshot ~root client
+        (Client_request.TextDocumentHover
+           (HoverParams.create ~textDocument:(Test.text_document doc)
+              ~position:(Test.position (0, 15))
+              ())));
+  [%expect
+    {|
+    {
+      "contents": {
+        "kind": "markdown",
+        "value": "```rescript\nOther.t\n```\n\n---\n```rescript\ntype Other.t\n```\n"
+      }
+    }
+    |}]
+
 let%expect_test "infers the type of an arithmetic binding" =
   test_hover ~position:(0, 4) ~text:{|let abc = 22 + 34
 |};

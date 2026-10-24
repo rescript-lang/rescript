@@ -276,3 +276,110 @@ let open_document (doc : TextDocumentItem.t) =
               ~version:0 ~text:doc.text))
   in
   Notification notification
+
+let change_document client (doc : TextDocumentItem.t) ~version ~text =
+  Client.send_notification client
+    (Client_notification.TextDocumentDidChange
+       (DidChangeTextDocumentParams.create
+          ~textDocument:
+            (VersionedTextDocumentIdentifier.create ~uri:doc.uri ~version)
+          ~contentChanges:[TextDocumentContentChangeEvent.create ~text ()]))
+
+let configure client settings =
+  Client.send_notification client
+    (Client_notification.ChangeConfiguration
+       (DidChangeConfigurationParams.create ~settings));
+  let request = Client.read_request client "workspace/configuration" in
+  Client.send_packet client
+    (Jsonrpc.Packet.Response (Jsonrpc.Response.ok request.id (`List [settings])))
+
+let position (line, character) = Position.create ~line ~character
+
+let range start end_ =
+  Range.create ~start:(position start) ~end_:(position end_)
+
+let text_document (doc : TextDocumentItem.t) =
+  TextDocumentIdentifier.create ~uri:doc.uri
+
+(* Only replace the temporary workspace prefix; keep relative paths, ranges and
+   response ordering intact so snapshots still catch navigation/edit regressions. *)
+let normalize_json ~root json =
+  let prefixes =
+    [
+      (Uri.to_string (Uri.of_path root), "file:///workspace");
+      (root, "/workspace");
+    ]
+  in
+  let normalize_string value =
+    List.find_map
+      (fun (prefix, replacement) ->
+        let length = String.length prefix in
+        if
+          String.starts_with ~prefix value
+          && (String.length value = length
+             || value.[length] = '/'
+             || value.[length] = '\\')
+        then
+          let suffix = String.sub value length (String.length value - length) in
+          let suffix =
+            if Sys.win32 then
+              String.map
+                (function
+                  | '\\' -> '/'
+                  | c -> c)
+                suffix
+            else suffix
+          in
+          Some (replacement ^ suffix)
+        else None)
+      prefixes
+    |> Option.value ~default:value
+  in
+  let rec normalize = function
+    | `String value -> `String (normalize_string value)
+    | `Assoc fields ->
+      `Assoc
+        (List.map
+           (fun (key, value) -> (normalize_string key, normalize value))
+           fields)
+    | `List values -> `List (List.map normalize values)
+    | value -> value
+  in
+  normalize json
+
+let print_json ~root json =
+  normalize_json ~root json |> Yojson.Safe.pretty_to_string |> print_endline
+
+let snapshot ~root client request =
+  Client.request client request
+  |> Client_request.yojson_of_result request
+  |> print_json ~root
+
+let rec remove_project path =
+  if (Unix.lstat path).st_kind = Unix.S_DIR then (
+    Sys.readdir path |> Array.iter (fun name -> remove_project (path // name));
+    Unix.rmdir path)
+  else Sys.remove path
+
+let with_project ?(files = []) ?(run_build = true) ~name ~text f =
+  let root = Filename.temp_file ("rescript-lsp-" ^ name ^ "-") "" in
+  Sys.remove root;
+  mkdir_p root;
+  Fun.protect
+    ~finally:(fun () -> remove_project root)
+    (fun () ->
+      let doc = make_document ~uri:(Uri.of_path (root // "Test.res")) ~text in
+      let documents =
+        doc
+        :: List.map
+             (fun (file, text) ->
+               make_document ~uri:(Uri.of_path (root // file)) ~text)
+             files
+      in
+      let rescript_json =
+        {|{"name":"lsp-test","sources":{"dir":"."},"package-specs":{"module":"esmodule","in-source":false},"suffix":".res.js"}|}
+      in
+      setup_project ~root ~rescript_json ~run_build ~documents;
+      with_client ~root (fun client ->
+          perform client (open_document doc);
+          f ~root ~doc client))
