@@ -780,10 +780,34 @@ let compile output_prefix =
               | NonComplete, NonComplete -> true
               | _ -> false
             in
+            (* A literal handled by the default would otherwise pass the
+               check of a payload arm of its kind *)
+            let a_literal_reaches_an_arm () =
+              let arm_types =
+                Ext_list.filter_map sw_blocks (fun (key, _) ->
+                    match tag_of_switch_key key with
+                    | Some {tag_type = Some (Payload_shape block_type)} ->
+                      Some block_type
+                    | Some _ | None -> None)
+              in
+              Ext_list.exists literal_cases
+                (fun (literal : Variant_runtime.literal_tag) ->
+                  Ext_list.exists arm_types
+                    (fun (block_type : Variant_runtime.block_type) ->
+                      match (literal, block_type) with
+                      | String _, StringType
+                      | (Int _ | Float _), (IntType | FloatType)
+                      | BigInt _, BigintType
+                      | Bool _, BooleanType
+                      | _, UnknownType ->
+                        true
+                      | _, _ -> false))
+            in
             if
               untagged
               && List.length sw_consts = 0
               && eq_default sw_num_default sw_blocks_default
+              && not (a_literal_reaches_an_arm ())
             then
               let has_null_case = List.mem Variant_runtime.Null literal_cases in
               compile_cases ~untagged ~cxt
@@ -864,26 +888,25 @@ let compile output_prefix =
             | _ -> false)
           typeof_clauses
       in
-      let clauses_have_array_case =
-        List.exists
-          (function
-            | Variant_runtime.Payload_shape (InstanceType Array), _ -> true
-            | _ -> false)
-          not_typeof_clauses
-      in
-      let type_has_array_case =
-        List.exists
-          (function
-            | Variant_runtime.InstanceType Array -> true
-            | _ -> false)
-          block_cases
-      in
-      (* When there's an ObjectType typeof case, null and arrays can
-         incorrectly match it (typeof null === typeof [] === "object").
-         Guard against them when they should fall through to default. *)
+      (* When there's an ObjectType typeof case, null, arrays and class
+         instances can incorrectly match it (typeof null === typeof [] ===
+         "object"). Guard against them when they should fall through to
+         default: null, and the instance cases without an arm of their own. *)
       let needs_null_guard = has_object_typeof && has_null_case in
-      let needs_array_guard =
-        has_object_typeof && type_has_array_case && not clauses_have_array_case
+      let unmatched_instances =
+        if not has_object_typeof then []
+        else
+          Ext_list.filter_map block_cases (function
+            | Variant_runtime.InstanceType instance
+              when not
+                     (List.exists
+                        (function
+                          | Variant_runtime.Payload_shape (InstanceType i), _ ->
+                            i = instance
+                          | _ -> false)
+                        not_typeof_clauses) ->
+              Some instance
+            | _ -> None)
       in
       let rec build_if_chain remaining_clauses =
         match remaining_clauses with
@@ -898,12 +921,16 @@ let compile output_prefix =
           let typeof_switch () =
             S.string_switch ?default ?declaration (E.typeof e) typeof_clauses
           in
+          let guards =
+            (if needs_null_guard then [E.is_null e] else [])
+            @ List.map
+                (fun instance -> E.emit_check (IsInstanceOf (instance, Expr e)))
+                unmatched_instances
+          in
           let guard =
-            match (needs_null_guard, needs_array_guard) with
-            | true, true -> Some (E.or_ (E.is_null e) (E.is_array e))
-            | true, false -> Some (E.is_null e)
-            | false, true -> Some (E.is_array e)
-            | false, false -> None
+            match guards with
+            | [] -> None
+            | first :: rest -> Some (List.fold_left E.or_ first rest)
           in
           match (guard, default) with
           | Some guard, Some default_body ->
