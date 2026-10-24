@@ -1,9 +1,19 @@
 let ( // ) = Filename.concat
 let ( / ) = Eio.Path.( / )
-let executable = "rescript-language-server"
+
+(* Dune runs inline tests from this library's build directory. Resolve its
+   declared CLI dependency before setup changes into temporary workspaces. *)
+let executable =
+  Sys.getcwd () // ".." // ".." // "rewatch-ocaml" // "rescript_ocaml.exe"
 
 let source_root () =
   Sys.getenv_opt "DUNE_SOURCEROOT" |> Option.value ~default:(Sys.getcwd ())
+
+(* These tests invoke the native CLI without the npm launcher that normally
+   sets RESCRIPT_RUNTIME. Both builds and the LSP inherit the same runtime. *)
+let () =
+  Unix.putenv "RESCRIPT_RUNTIME"
+    (source_root () // "packages" // "@rescript" // "runtime")
 
 let rec mkdir_p path =
   if path = "" || Sys.file_exists path then ()
@@ -18,15 +28,6 @@ let write_file path content =
     ~finally:(fun () -> close_out_noerr oc)
     (fun () -> output_string oc content)
 
-let local_platform_bin name =
-  let bin_name = name ^ ".exe" in
-  let packages_dir = source_root () // "packages" // "@rescript" in
-  ["linux-x64"; "linux-arm64"; "darwin-x64"; "darwin-arm64"; "win32-x64"]
-  |> List.find_map (fun platform ->
-      let path = packages_dir // platform // "bin" // bin_name in
-      if Sys.file_exists path then Some path else None)
-  |> Option.value ~default:bin_name
-
 let with_chdir dir f =
   let cwd = Sys.getcwd () in
   Fun.protect
@@ -35,21 +36,7 @@ let with_chdir dir f =
       Sys.chdir dir;
       f ())
 
-let with_env_var name value env =
-  let prefix = name ^ "=" in
-  let without_name =
-    env |> Array.to_list
-    |> List.filter (fun item -> not (String.starts_with ~prefix item))
-  in
-  Array.of_list ((prefix ^ value) :: without_name)
-
 let run_rescript_build ~root =
-  let executable = local_platform_bin "rescript" in
-  let env =
-    Unix.environment ()
-    |> with_env_var "RESCRIPT_RUNTIME"
-         (source_root () // "packages" // "@rescript" // "runtime")
-  in
   let null_device = if Sys.os_type = "Win32" then "NUL" else "/dev/null" in
   let dev_null = Unix.openfile null_device [Unix.O_WRONLY] 0 in
   Fun.protect
@@ -57,8 +44,8 @@ let run_rescript_build ~root =
     (fun () ->
       with_chdir root (fun () ->
           let pid =
-            Unix.create_process_env executable [|executable; "build"|] env
-              Unix.stdin dev_null dev_null
+            Unix.create_process_env executable [|executable; "build"|]
+              (Unix.environment ()) Unix.stdin dev_null dev_null
           in
           match snd (Unix.waitpid [] pid) with
           | Unix.WEXITED 0 -> ()
@@ -118,7 +105,7 @@ module Client = struct
 
   let start () =
     let process_stdout, process_stdin =
-      Unix.open_process_args executable [|executable|]
+      Unix.open_process_args executable [|executable; "lsp"; "--stdio"|]
     in
     set_binary_mode_in process_stdout true;
     set_binary_mode_out process_stdin true;

@@ -3,7 +3,7 @@
  (package rescript-language-server)
  (libraries lsp jsonrpc yojson eio eio_main)
  (inline_tests
-  (deps %{bin:rescript-language-server}))
+  (deps ../../rewatch-ocaml/rescript_ocaml.exe))
  (preprocess
   (pps ppx_deriving_yojson ppx_expect))
  (flags
