@@ -4,7 +4,7 @@
 
 /* Draws commit records as a Semantic Diff page: one card per commit, each
  * the commit's identity and its message drawn. A record is a commit message
- * in the format of the `records` skill (.claude/skills/records/SKILL.md).
+ * in the format of the `records` skill (.agents/skills/records/SKILL.md).
  * This file reads git; scripts/recordRender.js draws.
  *
  *   node scripts/commitRecords.js --out review.html <rev>...

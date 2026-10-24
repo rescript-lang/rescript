@@ -76,7 +76,7 @@ relevant guidance from each.
 - Include appropriate tests with all changes
 - Build must pass before committing
 - Write each commit message as a record in the format of
-  [`.claude/skills/records/SKILL.md`](.claude/skills/records/SKILL.md), and
+  [`.agents/skills/records/SKILL.md`](.agents/skills/records/SKILL.md), and
   render review pages from records with `make semantic-diff`
 
 ### Stacked pull requests
