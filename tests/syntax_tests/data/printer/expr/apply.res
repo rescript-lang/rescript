@@ -109,3 +109,5 @@ let g =  f(
   b,
   c => LongModuleName.functionWithAlongNameThatWrapsTheEditorToTheNextLinexxxxxxxxxxxxxxxxxxxxxx(d, ...)
 )
+
+let parts = String.split_on_char('-')
