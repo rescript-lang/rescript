@@ -1428,13 +1428,6 @@ let rec emit_check (check : t Ast_untagged_variants.Dynamic_checks.t) =
   | Not x -> not (emit_check x)
   | Expr x -> x
 
-let is_a_literal_case ~literal_cases ~block_cases (e : t) =
-  let check =
-    Ast_untagged_variants.Dynamic_checks.is_a_literal_case ~literal_cases
-      ~block_cases (Expr e)
-  in
-  emit_check check
-
 let is_int_tag ?has_null_undefined_other e =
   let check =
     Ast_untagged_variants.Dynamic_checks.is_int_tag ?has_null_undefined_other
