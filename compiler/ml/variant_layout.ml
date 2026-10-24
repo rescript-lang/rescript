@@ -145,15 +145,8 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
       when name = inner ->
       ()
     | Instance_of name, Some ((InstanceType (Class _) | ObjectType) as inner) ->
-      (* A public abbreviation is the same type as the superclass, unless it
-         is a strict instance of it, as in the phantom type hierarchy
-         [type element<'a> = node<_element<'a>>]. The arguments are read after
-         expansion, where the superclass type is reached. *)
-      let same_type =
-        match (Ctype.expand_head_opt env manifest).desc with
-        | Tconstr (_, args, _) -> List.for_all Btype.is_Tvar args
-        | _ -> true
-      in
+      (* A public abbreviation would make every value of the superclass type
+         a value of the subclass, without a coercion *)
       let superclass, ancestors =
         match inner with
         | InstanceType (Class {name = ancestor; ancestors}) ->
@@ -161,7 +154,7 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
         (* Every class instance is an object *)
         | _ -> ("Object", [])
       in
-      if decl.type_private = Public && same_type then
+      if decl.type_private = Public then
         error (SubclassOfPublicAbbreviation (name, superclass))
       else if List.mem name ancestors then error (ClassTwiceInChain name)
     | (Instance_of _ | Type_of _), Some inner ->

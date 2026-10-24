@@ -94,12 +94,12 @@ let localeKind = locale =>
   | Tag(tag) => tag
   }
 
-// A phantom type hierarchy declares subclasses with public abbreviations that
-// are strict instances of their superclass type
+// A phantom type hierarchy declares its subclasses as private abbreviations
+// too
 type nodeLike<'a>
 @instanceOf("UntaggedAnimal") type animalLike<'a> = nodeLike<'a>
 type _dog<'a>
-@instanceOf("UntaggedDog") type dogLike<'a> = animalLike<_dog<'a>>
+@instanceOf("UntaggedDog") type dogLike<'a> = private animalLike<_dog<'a>>
 type _base
 @new external makePhantomAnimal: unit => animalLike<_base> = "UntaggedAnimal"
 @new external makePhantomDog: unit => dogLike<_base> = "UntaggedDog"
