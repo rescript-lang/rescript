@@ -383,7 +383,7 @@ let process_tag_name (attrs : Parsetree.attributes) =
   !st
 
 (* A constructor the compiler generates itself carries no annotations. *)
-let generated_tag ~name = {name; literal = None}
+let generated_tag ~name = {name; literal = String name}
 
 let generated_block_runtime ~name = {tag = generated_tag ~name; tag_name = None}
 
@@ -465,20 +465,17 @@ let check_invariant ~(consts : (Location.t * tag) list)
   in
   let check_literal ~is_const ~loc (tag : tag) =
     match tag.literal with
-    | None -> add_string_literal ~is_const ~loc tag.name
-    | Some (String s) -> add_string_literal ~is_const ~loc s
-    | Some (Int i as literal) ->
+    | String s -> add_string_literal ~is_const ~loc s
+    | Int i as literal ->
       add_nonstring_literal ~is_const ~loc literal (string_of_int i)
-    | Some (Float f as literal) ->
-      add_nonstring_literal ~is_const ~loc literal f
-    | Some (BigInt i as literal) ->
+    | Float f as literal -> add_nonstring_literal ~is_const ~loc literal f
+    | BigInt i as literal ->
       add_nonstring_literal ~is_const ~loc literal (i ^ "n")
-    | Some (Bool b as literal) ->
+    | Bool b as literal ->
       add_nonstring_literal ~is_const ~loc literal
         (if b then "true" else "false")
-    | Some (Null as literal) ->
-      add_nonstring_literal ~is_const ~loc literal "null"
-    | Some (Undefined as literal) ->
+    | Null as literal -> add_nonstring_literal ~is_const ~loc literal "null"
+    | Undefined as literal ->
       add_nonstring_literal ~is_const ~loc literal "undefined"
   in
 
@@ -524,8 +521,13 @@ let check_invariant ~(consts : (Location.t * tag) list)
         | StringType -> incr string_types);
         invariant loc tag.name)
 
+(* A constructor without [@as] is represented by its name *)
+let declared_tag (cstr : Types.constructor_declaration) =
+  let name = Ident.name cstr.cd_id in
+  {name; literal = Option.value cstr.cd_runtime_tag ~default:(String name)}
+
 let get_cstr_loc_tag (cstr : Types.constructor_declaration) =
-  (cstr.cd_loc, {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag})
+  (cstr.cd_loc, declared_tag cstr)
 
 let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
   List.iter

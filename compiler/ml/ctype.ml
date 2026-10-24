@@ -3580,7 +3580,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
           Variant_coercion.can_try_coerce_variant_to_primitive_opt
             (extract_concrete_typedecl_opt env t2)
         with
-        | Some (p, _, _, false) ->
+        | Some (p, _, false) ->
           (* Not @unboxed *)
           ( trace,
             t1,
@@ -3590,7 +3590,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
               (Coercion_target_variant_not_unboxed
                  {variant_name = p; primitive = path}) )
           :: cstrs
-        | Some (p, constructors, _, true) ->
+        | Some (p, constructors, true) ->
           if
             Variant_coercion.variant_has_case_covering_type constructors
               ~path_is_same_fn:(fun p -> Path.same p path)
@@ -3622,12 +3622,12 @@ let rec subtype_rec env trace t1 t2 cstrs =
           Variant_coercion.can_try_coerce_variant_to_primitive_opt
             (extract_concrete_typedecl_opt env t1)
         with
-        | Some (p, constructors, layout, unboxed) ->
+        | Some (p, constructors, unboxed) ->
           let runtime_representation_issues =
             constructors
             |> Variant_coercion
                .variant_has_same_runtime_representation_as_target
-                 ~target_path:path ~unboxed ~layout
+                 ~target_path:path ~unboxed
           in
           if List.length runtime_representation_issues <> 0 then
             ( trace,
@@ -3857,7 +3857,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
           in
           match
             Variant_coercion.can_coerce_polyvariant_to_variant ~row_fields
-              ~variant_constructors ~layout ~unboxed
+              ~variant_constructors ~unboxed
           with
           | Ok _ -> cstrs
           | Error _ ->

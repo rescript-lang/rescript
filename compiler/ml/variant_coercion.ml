@@ -42,12 +42,12 @@ let variant_has_case_covering_type
 
 (* Checks if every case of the variant has the same runtime representation as the target type. *)
 let variant_has_same_runtime_representation_as_target ~(target_path : Path.t)
-    ~unboxed ~layout (constructors : Types.constructor_declaration list) =
+    ~unboxed (constructors : Types.constructor_declaration list) =
   (* Helper function to check if a constructor has the same runtime representation as the target type *)
-  let has_same_runtime_representation position
-      (c : Types.constructor_declaration) =
+  let has_same_runtime_representation (c : Types.constructor_declaration) =
     let args = c.cd_args in
-    let as_payload = Variant_runtime.constructor_tag layout position in
+    (* The messages name the declared [@as] *)
+    let as_payload = c.cd_runtime_tag in
 
     match args with
     | Cstr_tuple [{desc = Tconstr (p, [], _)}] when unboxed ->
@@ -112,8 +112,7 @@ let variant_has_same_runtime_representation_as_target ~(target_path : Path.t)
         (Inline_record_cannot_be_coerced {constructor_name = Ident.name c.cd_id})
   in
 
-  List.mapi has_same_runtime_representation constructors
-  |> List.filter_map Fun.id
+  List.filter_map has_same_runtime_representation constructors
 
 let can_try_coerce_variant_to_primitive
     ((_, p, typedecl) : Path.t * Path.t * Types.type_declaration) =
@@ -130,7 +129,6 @@ let can_try_coerce_variant_to_primitive
     Some
       ( p,
         constructors,
-        layout,
         type_representation = Unboxed
         || (Variant_runtime.configuration layout).unboxed )
   | _ -> None
@@ -141,10 +139,7 @@ let can_try_coerce_variant_to_primitive_opt p =
   | Some p -> can_try_coerce_variant_to_primitive p
 
 let variant_representation_matches tag1 tag2 =
-  match (tag1, tag2) with
-  | None, None -> true
-  | Some s1, Some s2 when s1 = s2 -> true
-  | _ -> false
+  Variant_runtime.same_literal_value tag1 tag2
 
 type variant_configuration_error =
   | Untagged of {left_is_unboxed: bool}
@@ -230,8 +225,8 @@ let variant_configuration_can_be_coerced_raises ~is_spread_context ~left_loc
               error = TagName {left_tag; right_tag};
             }))
 
-let can_coerce_polyvariant_to_variant ~row_fields ~variant_constructors ~layout
-    ~unboxed =
+let can_coerce_polyvariant_to_variant ~row_fields ~variant_constructors ~unboxed
+    =
   let polyvariant_runtime_representations =
     row_fields
     |> List.filter_map (fun (label, (field : Types.row_field)) ->
@@ -248,9 +243,9 @@ let can_coerce_polyvariant_to_variant ~row_fields ~variant_constructors ~layout
     List.for_all
       (fun polyvariant_value ->
         variant_constructors
-        |> List.mapi (fun position (c : Types.constructor_declaration) ->
+        |> List.map (fun (c : Types.constructor_declaration) ->
             let constructor_name = Ident.name c.cd_id in
-            match Variant_runtime.constructor_tag layout position with
+            match c.cd_runtime_tag with
             | Some (String as_runtime_string) ->
               (* `@as("")`, does the configured string match the polyvariant value? *)
               as_runtime_string = polyvariant_value

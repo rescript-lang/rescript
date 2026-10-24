@@ -110,12 +110,9 @@ let literal_passes (literal : literal_tag) (block_type : block_type) =
     value represented directly by its payload. *)
 type tag_type = Literal of literal_tag | Payload_shape of block_type
 
-type tag = {name: string; literal: literal_tag option}
-(** A constructor's name and optional explicitly declared runtime literal. *)
-
-type matchable_tag = {name: string; tag_type: tag_type option}
-(** A constructor tag widened for matching, where an untagged payload shape
-    can participate alongside declared literals. *)
+type tag = {name: string; literal: literal_tag}
+(** A constructor's name and its runtime literal: what [@as] states, or the
+    name itself *)
 
 type tagged_block = {tag: tag; tag_name: string option}
 
@@ -124,11 +121,6 @@ type tagged_block = {tag: tag; tag_name: string option}
 type block =
   | Tagged of tagged_block
   | Untagged of {tag: tag; block_type: block_type}
-
-(* Matching compares against a wider notion of tag than a declaration can
-   state, so a stored tag widens on its way into a check. *)
-let to_matchable_tag ({name; literal} : tag) : matchable_tag =
-  {name; tag_type = Option.map (fun literal -> Literal literal) literal}
 
 type constructor_case = Constant of tag | Block of block
 
@@ -216,14 +208,7 @@ let compute_matching_facts ~tag_name (constructors : constructor_case array) :
   let literal_tags = ref [] in
   Array.iter
     (function
-      | Constant {name; literal} ->
-        (* Without an [@as], a nullary constructor is its own name. *)
-        let literal =
-          match literal with
-          | Some literal -> literal
-          | None -> String name
-        in
-        literal_tags := literal :: !literal_tags
+      | Constant {literal} -> literal_tags := literal :: !literal_tags
       | Block (Untagged {block_type}) ->
         block_types := block_type :: !block_types
       | Block (Tagged _) -> ())
@@ -260,9 +245,10 @@ let complete_layout layout_ref layout =
    predefined types, whose declarations are built by hand *)
 let plain_layout (cases : (string * bool (* has payload *)) list) : layout_ref =
   let case (name, has_payload) =
-    if has_payload then
-      Block (Tagged {tag = {name; literal = None}; tag_name = None})
-    else Constant {name; literal = None}
+    (* The empty list is the number 0 *)
+    let literal = if name = "[]" then Int 0 else String name in
+    if has_payload then Block (Tagged {tag = {name; literal}; tag_name = None})
+    else Constant {name; literal}
   in
   ref
     (Complete

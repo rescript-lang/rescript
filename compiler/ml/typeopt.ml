@@ -100,7 +100,7 @@ let rec cannot_contain_undefined ~visiting (typ : Types.type_expr) (env : Env.t)
               | Variant_runtime.Block (Tagged {tag}) -> (tag, false)
               | Variant_runtime.Block (Untagged {tag}) -> (tag, true)
             in
-            tag.literal <> Some Variant_runtime.Undefined
+            tag.literal <> Variant_runtime.Undefined
             && ((not payload_is_unboxed)
                ||
                match cd.cd_args with
