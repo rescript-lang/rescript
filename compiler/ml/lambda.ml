@@ -928,8 +928,9 @@ let switch lam (lam_switch : lambda_switch) : t =
       Ext_list.find_opt lam_switch.sw_consts (fun (key, action) ->
           match key with
           | Switch_int ordinal when ordinal = i -> Some action
-          | Switch_constructor (Constant {literal = Variant_runtime.Int value})
-            when value = i ->
+          | Switch_constructor (Constant {literal})
+            when literal_denotes_same (Int i) literal ->
+            (* A constant represented as a number, compared by value *)
             Some action
           | Switch_int _ | Switch_constructor _ -> None)
     in
