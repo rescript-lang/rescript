@@ -80,6 +80,7 @@ module Client = struct
     process_stdin: out_channel;
     mutable next_id: int;
     mutable stopped: bool;
+    mutable notifications: Jsonrpc.Notification.t list;
   }
 
   let frame (json : Yojson.Safe.t) : string =
@@ -121,7 +122,13 @@ module Client = struct
     in
     set_binary_mode_in process_stdout true;
     set_binary_mode_out process_stdin true;
-    {process_stdout; process_stdin; next_id = 0; stopped = false}
+    {
+      process_stdout;
+      process_stdin;
+      next_id = 0;
+      stopped = false;
+      notifications = [];
+    }
 
   let send_packet t (packet : Jsonrpc.Packet.t) =
     let json = Jsonrpc.Packet.yojson_of_t packet in
@@ -144,15 +151,34 @@ module Client = struct
     let jsonrpc_notif = Lsp.Client_notification.to_jsonrpc notif in
     send_packet t (Jsonrpc.Packet.Notification jsonrpc_notif)
 
-  (** Read packets until we find the response matching [id]. Server
-      notifications/requests received in the meantime are discarded. *)
+  (** Keep notifications for assertions and acknowledge refresh requests while
+      waiting for the response. This lets tests inspect every publication, not
+      just the final diagnostic state. *)
   let rec read_response t id =
     match read_message t with
     | None -> failwith "Helper.read_response: unexpected EOF"
     | Some json -> (
       match Jsonrpc.Packet.t_of_yojson json with
       | Response resp when resp.id = id -> resp
+      | Notification notification ->
+        t.notifications <- notification :: t.notifications;
+        read_response t id
+      | Request request
+        when List.mem request.method_
+               [
+                 "workspace/diagnostic/refresh";
+                 "workspace/codeLens/refresh";
+                 "workspace/inlayHint/refresh";
+               ] ->
+        send_packet t
+          (Jsonrpc.Packet.Response (Jsonrpc.Response.ok request.id `Null));
+        read_response t id
       | _ -> read_response t id)
+
+  let take_notifications t =
+    let notifications = List.rev t.notifications in
+    t.notifications <- [];
+    notifications
 
   (** Send a typed request and synchronously wait for its response, decoded
       back into the request's result type. *)
@@ -169,6 +195,9 @@ module Client = struct
     | Some json -> (
       match Jsonrpc.Packet.t_of_yojson json with
       | Request request when request.method_ = method_ -> request
+      | Notification notification ->
+        t.notifications <- notification :: t.notifications;
+        read_request t method_
       | _ -> read_request t method_)
 
   let respond_ok t (request : Jsonrpc.Request.t) =
@@ -229,11 +258,11 @@ let client_capabilities =
          ())
     ()
 
-let initialize_client ~root client =
+let initialize_client ?(capabilities = client_capabilities) ~root client =
   let id =
     Client.send_request client
       (Client_request.Initialize
-         (InitializeParams.create ~capabilities:client_capabilities
+         (InitializeParams.create ~capabilities
             ~rootUri:(DocumentUri.of_path root) ()))
   in
   assert ((Client.read_response client id).result |> Result.is_ok);
@@ -252,17 +281,20 @@ let perform client = function
 
 let perform_all client actions = List.iter (perform client) actions
 
-let start_client ~root =
+let start_client_with_capabilities ~capabilities ~root =
   let client = Client.start () in
   try
-    initialize_client ~root client;
+    initialize_client ~capabilities ~root client;
     client
   with exn ->
     ignore (Client.stop client);
     raise exn
 
-let with_client ~root f =
-  let client = start_client ~root in
+let start_client ~root =
+  start_client_with_capabilities ~capabilities:client_capabilities ~root
+
+let with_client ?(capabilities = client_capabilities) ~root f =
+  let client = start_client_with_capabilities ~capabilities ~root in
   Fun.protect
     ~finally:(fun () -> ignore (Client.stop client))
     (fun () -> f client)
@@ -306,6 +338,10 @@ let text_document (doc : TextDocumentItem.t) =
 let normalize_json ~root json =
   let prefixes =
     [
+      (* File rename currently encodes an already encoded URI as a path. Keep
+         that defect visible in snapshots while removing the random root. *)
+      ( Uri.to_string (Uri.of_path (Uri.to_string (Uri.of_path root))),
+        "file:///file%3A///workspace" );
       (Uri.to_string (Uri.of_path root), "file:///workspace");
       (root, "/workspace");
     ]
@@ -355,13 +391,42 @@ let snapshot ~root client request =
   |> Client_request.yojson_of_result request
   |> print_json ~root
 
+(* A round trip is a barrier for preceding notifications. No timing assumptions
+   or sleeps are needed to assert the complete diagnostic publication sequence. *)
+let synchronize client =
+  Client.request client
+    (Client_request.ExecuteCommand
+       (ExecuteCommandParams.create ~command:"rescript/dumpServerState" ()))
+  |> ignore
+
+let setup_react ~root =
+  let source =
+    source_root () // "tests" // "dependencies" // "rescript-react"
+  in
+  let destination = root // "node_modules" // "@rescript" // "react" in
+  let sources =
+    Sys.readdir (source // "src")
+    |> Array.to_list
+    |> List.filter (fun name ->
+        Filename.check_suffix name ".res" || Filename.check_suffix name ".resi")
+    |> List.map (Filename.concat "src")
+  in
+  List.iter
+    (fun path ->
+      let content =
+        In_channel.with_open_bin (source // path) In_channel.input_all
+      in
+      write_file (destination // path) content)
+    ("rescript.json" :: "package.json" :: sources)
+
 let rec remove_project path =
   if (Unix.lstat path).st_kind = Unix.S_DIR then (
     Sys.readdir path |> Array.iter (fun name -> remove_project (path // name));
     Unix.rmdir path)
   else Sys.remove path
 
-let with_project ?(files = []) ?(run_build = true) ~name ~text f =
+let with_project ?(files = []) ?(run_build = true) ?(jsx = false)
+    ?(capabilities = client_capabilities) ~name ~text f =
   let root = Filename.temp_file ("rescript-lsp-" ^ name ^ "-") "" in
   Sys.remove root;
   mkdir_p root;
@@ -377,9 +442,13 @@ let with_project ?(files = []) ?(run_build = true) ~name ~text f =
              files
       in
       let rescript_json =
-        {|{"name":"lsp-test","sources":{"dir":"."},"package-specs":{"module":"esmodule","in-source":false},"suffix":".res.js"}|}
+        if jsx then
+          {|{"name":"lsp-test","sources":{"dir":"."},"dependencies":["@rescript/react"],"jsx":{"version":4},"package-specs":{"module":"esmodule","in-source":false},"suffix":".res.js"}|}
+        else
+          {|{"name":"lsp-test","sources":{"dir":"."},"package-specs":{"module":"esmodule","in-source":false},"suffix":".res.js"}|}
       in
+      if jsx then setup_react ~root;
       setup_project ~root ~rescript_json ~run_build ~documents;
-      with_client ~root (fun client ->
+      with_client ~capabilities ~root (fun client ->
           perform client (open_document doc);
           f ~root ~doc client))

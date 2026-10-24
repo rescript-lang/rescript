@@ -15,26 +15,6 @@ let jsx_rescript_json =
   "suffix": ".res.js"
 }|}
 
-let setup_react ~root =
-  let source =
-    Test.source_root () /+ "tests" /+ "dependencies" /+ "rescript-react"
-  in
-  let destination = root /+ "node_modules" /+ "@rescript" /+ "react" in
-  let sources =
-    Sys.readdir (source /+ "src")
-    |> Array.to_list
-    |> List.filter (fun name ->
-        Filename.check_suffix name ".res" || Filename.check_suffix name ".resi")
-    |> List.map (Filename.concat "src")
-  in
-  List.iter
-    (fun path ->
-      let content =
-        In_channel.with_open_bin (source /+ path) In_channel.input_all
-      in
-      Test.write_file (destination /+ path) content)
-    ("rescript.json" :: "package.json" :: sources)
-
 let test_hover_with_interface ~interface ~text ~position =
   let root =
     Filename.get_temp_dir_name ()
@@ -52,7 +32,7 @@ let test_hover_with_interface ~interface ~text ~position =
       (interface_doc, [doc; interface_doc])
   in
   let uri = doc.uri in
-  setup_react ~root;
+  Test.setup_react ~root;
   Test.setup_project ~root ~rescript_json:jsx_rescript_json ~run_build:true
     ~documents;
 
