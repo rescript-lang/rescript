@@ -468,7 +468,10 @@ A type for which an interface states a class or `typeof` (rule 5), through
 its own annotation or the type it abbreviates, must state the same one in the
 implementation, superclasses included: "Their runtime representations
 differ". An interface that states none hides it. The same holds for functor
-arguments, `with type` constraints and module type ascriptions.
+arguments, `with type` constraints and module type ascriptions. Within one
+variant a class is identified by its path, so two types of the same class are
+one case (rule 6); across a signature the two declarations must also state
+the same superclasses.
 
 - Implementation: `variant_layout.ml:layout_from_type_variant`,
   `ast_untagged_variants.ml:process_tag_name`, `check_tag_field_conflicts`;

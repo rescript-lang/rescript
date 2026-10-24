@@ -101,7 +101,7 @@ let switch_tests =
       assert_fold sw (Const_string "blue") "default" );
     ( "ints and floats use JavaScript numeric equality" >:: fun _ ->
       let one = literal "One" (Int 1) in
-      let number = block "Number" FloatType in
+      let number = block "Number" NumberType in
       let sw =
         variant_switch ~constructors:[one; number]
           ~cases:[(one, "literal"); (number, "number")]
@@ -112,7 +112,7 @@ let switch_tests =
       assert_fold sw (Const_float "2.5") "number" );
     ( "integer tag emission truncates to 32 bits" >:: fun _ ->
       let one = literal "One" (Int 4294967297) in
-      let number = block "Number" FloatType in
+      let number = block "Number" NumberType in
       let sw =
         variant_switch ~constructors:[one; number]
           ~cases:[(one, "literal"); (number, "number")]

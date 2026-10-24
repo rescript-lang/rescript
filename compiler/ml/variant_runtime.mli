@@ -14,9 +14,8 @@ module Instance : sig
 end
 
 type block_type =
-  | IntType
+  | NumberType  (** [int] and [float] alike *)
   | StringType
-  | FloatType
   | BigintType
   | BooleanType
   | InstanceType of Instance.t
@@ -24,6 +23,12 @@ type block_type =
   | FunctionType
   | ObjectType
   | UnknownType
+
+val typeof_name : block_type -> string option
+(** What [typeof] returns for values of a kind it recognizes; [None] for
+    instances, which are recognized by their class, and unknown payloads. *)
+
+val block_type_of_typeof : string -> block_type option
 
 (** What a type declaration states about its values at run time, through
     [@notUndefined], [@instanceOf] or [@typeOf]. Each level implies the one
