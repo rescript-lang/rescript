@@ -2260,6 +2260,147 @@ let do_check_fragile_param exhaust loc casel pss =
 
 let do_check_fragile_gadt = do_check_fragile_param exhaust_gadt
 
+(*****************************************)
+(* Payloads shadowed by untagged literals *)
+(*****************************************)
+
+(* An untagged variant tests its literal cases before its payload cases, so in
+   [@as("a") A | S(string)] the value "a" is always matched as [A]. A payload
+   pattern can therefore never match a value that is also the runtime value of
+   a literal case, wherever it appears in the match: [S("a")] is dead. *)
+
+type shadowed_payload = {
+  payload_constructor: string;
+  value: Variant_runtime.literal_tag;
+  literal_constructor: string;
+}
+
+type payload_liveness =
+  | Never_matches of shadowed_payload list
+  | Matches of (pattern * shadowed_payload list) list
+      (** The pattern can match, except for these dead or-pattern alternatives *)
+
+let is_type_path path ty =
+  match (Ctype.repr ty).desc with
+  | Tconstr (p, _, _) -> Path.same p path
+  | _ -> false
+
+(* The runtime value of the only value [p] matches, when it is a literal *)
+let rec pattern_literal p : Variant_runtime.literal_tag option =
+  match p.pat_desc with
+  | Tpat_constant (Const_string s) -> Some (String s)
+  | Tpat_constant (Const_int i | Const_char i) -> Some (Int i)
+  | Tpat_constant (Const_float f) -> Some (Float f)
+  | Tpat_constant (Const_bigint _) ->
+    (* Bigints are never compared, see [Variant_runtime.same_literal_value] *)
+    None
+  | Tpat_alias (p, _, _) -> pattern_literal p
+  | Tpat_construct (_, {cstr_name; cstr_res}, [])
+    when is_type_path Predef.path_bool cstr_res ->
+    Some (Bool (cstr_name = "true"))
+  | Tpat_construct (_, {cstr_res}, _)
+    when List.exists
+           (fun path -> is_type_path path cstr_res)
+           [Predef.path_unit; Predef.path_list; Predef.path_option] ->
+    None
+  | Tpat_construct (_, {cstr_kind = Ordinary_constructor r}, args) -> (
+    match (Variant_runtime.representation r, args) with
+    | Constant tag, [] -> Some tag.literal
+    | Block (Untagged _), [arg] ->
+      (* An untagged payload is represented by the payload itself *)
+      pattern_literal arg
+    | (Constant _ | Block _), _ -> None)
+  | Tpat_construct (_, {cstr_kind = Extension_constructor _}, _)
+  | Tpat_any | Tpat_var _ | Tpat_interval _ | Tpat_tuple _ | Tpat_variant _
+  | Tpat_record _ | Tpat_dict _ | Tpat_array _ | Tpat_or _ ->
+    None
+
+(* The literal cases that take precedence over an untagged payload constructor,
+   as runtime values and constructor names *)
+let shadowing_literal_cases cd =
+  match cd.cstr_kind with
+  | Ordinary_constructor r -> (
+    match Variant_runtime.representation r with
+    | Block (Untagged _) ->
+      let layout = Variant_runtime.get_layout r.variant in
+      List.init (Variant_runtime.length layout) Fun.id
+      |> List.filter_map (fun position ->
+          match Variant_runtime.constructor_at layout position with
+          | Constant tag -> Some (tag.literal, tag.name)
+          | Block _ -> None)
+    | Constant _ | Block (Tagged _) -> [])
+  | Extension_constructor _ -> []
+
+let or_liveness liveness p1 p2 =
+  match (liveness p1, liveness p2) with
+  | Never_matches s1, Never_matches s2 -> Never_matches (s1 @ s2)
+  | Matches d1, Never_matches s2 -> Matches (d1 @ [(p2, s2)])
+  | Never_matches s1, Matches d2 -> Matches ((p1, s1) :: d2)
+  | Matches d1, Matches d2 -> Matches (d1 @ d2)
+
+let rec payload_liveness p =
+  match p.pat_desc with
+  | Tpat_or (p1, p2, _) -> or_liveness payload_liveness p1 p2
+  | Tpat_construct (_, cd, [arg]) -> (
+    match shadowing_literal_cases cd with
+    | [] -> subpatterns_liveness p
+    | literal_cases ->
+      shadowed_argument_liveness ~payload_constructor:cd.cstr_name
+        ~literal_cases arg)
+  | _ -> subpatterns_liveness p
+
+(* A pattern that is not an or-pattern matches nothing as soon as one of its
+   subpatterns matches nothing *)
+and subpatterns_liveness p =
+  let result = ref (Matches []) in
+  Typedtree.iter_pattern_desc
+    (fun sub ->
+      match (!result, payload_liveness sub) with
+      | Never_matches _, _ -> ()
+      | Matches _, (Never_matches _ as dead) -> result := dead
+      | Matches d1, Matches d2 -> result := Matches (d1 @ d2))
+    p.pat_desc;
+  !result
+
+and shadowed_argument_liveness ~payload_constructor ~literal_cases arg =
+  match arg.pat_desc with
+  | Tpat_or (p1, p2, _) ->
+    or_liveness
+      (shadowed_argument_liveness ~payload_constructor ~literal_cases)
+      p1 p2
+  | _ -> (
+    let shadowing_case =
+      match pattern_literal arg with
+      | Some value ->
+        List.find_opt
+          (fun (literal, _) -> Variant_runtime.same_literal_value value literal)
+          literal_cases
+      | None -> None
+    in
+    match shadowing_case with
+    | Some (value, literal_constructor) ->
+      Never_matches [{payload_constructor; value; literal_constructor}]
+    | None -> payload_liveness arg)
+
+let literal_to_string : Variant_runtime.literal_tag -> string = function
+  | String s -> "\"" ^ s ^ "\""
+  | Int i -> string_of_int i
+  | Float f -> f
+  | BigInt b -> b ^ "n"
+  | Bool b -> string_of_bool b
+  | Null -> "null"
+  | Undefined -> "undefined"
+
+let shadowed_payload_reason shadowed =
+  shadowed |> List.sort_uniq compare
+  |> List.map (fun {payload_constructor; value; literal_constructor} ->
+      Printf.sprintf
+        "%s is the runtime value of constructor %s, so it is always matched as \
+         %s, never as %s."
+        (literal_to_string value) literal_constructor literal_constructor
+        payload_constructor)
+  |> String.concat "\n  "
+
 (********************************)
 (* Exported unused clause check *)
 (********************************)
@@ -2268,11 +2409,43 @@ let lower_cases casel =
   let lower = Dict_pattern.lowering (List.map (fun c -> c.c_lhs) casel) in
   List.map (fun c -> {c with c_lhs = lower c.c_lhs}) casel
 
+(* Report cases and or-pattern alternatives that can never match because of
+   [payload_liveness]. Returns the cases that match nothing, and whether a
+   sub-pattern has already been reported. *)
+let check_shadowed_payloads casel =
+  let reported = ref [] in
+  let dead_cases =
+    List.filter
+      (fun {c_lhs = q} ->
+        match payload_liveness q with
+        | Never_matches shadowed ->
+          Location.prerr_warning q.pat_loc
+            (Warnings.Unused_match (shadowed_payload_reason shadowed));
+          true
+        | Matches dead_alternatives ->
+          List.iter
+            (fun (p, shadowed) ->
+              reported := p.pat_loc :: !reported;
+              Location.prerr_warning p.pat_loc
+                (Warnings.Unused_pat (shadowed_payload_reason shadowed)))
+            dead_alternatives;
+          false)
+      casel
+  in
+  (dead_cases, fun p -> List.mem p.pat_loc !reported)
+
 let check_unused pred casel =
-  if Warnings.is_active Warnings.Unused_match then
+  let unused_match = Warnings.is_active (Warnings.Unused_match "") in
+  (* Shadowed payloads are reported as warning 11 or 12, so they are checked
+     when either is active; the usefulness analysis below only when 11 is. *)
+  if unused_match || Warnings.is_active (Warnings.Unused_pat "") then
     let casel = lower_cases casel in
+    let dead_cases, already_reported = check_shadowed_payloads casel in
     let rec do_rec pref = function
       | [] -> ()
+      | case :: rem when List.memq case dead_cases ->
+        (* A case that matches nothing cannot make later cases unused *)
+        do_rec pref rem
       | {c_lhs = q; c_guard} :: rem ->
         let qs = [q] in
         (try
@@ -2323,20 +2496,23 @@ let check_unused pred casel =
                  | _ -> r
            in
            match r with
-           | Unused -> Location.prerr_warning q.pat_loc Warnings.Unused_match
+           | Unused ->
+             Location.prerr_warning q.pat_loc (Warnings.Unused_match "")
            | Upartial ps ->
              ps
              |> List.filter (fun p ->
-                 not (Variant_type_spread.is_pat_from_variant_spread_attr p))
+                 not
+                   (Variant_type_spread.is_pat_from_variant_spread_attr p
+                   || already_reported p))
              |> List.iter (fun p ->
-                 Location.prerr_warning p.pat_loc Warnings.Unused_pat)
+                 Location.prerr_warning p.pat_loc (Warnings.Unused_pat ""))
            | Used -> ()
          with Empty | Not_found | NoGuard -> assert false);
 
         if c_guard <> None then do_rec pref rem else do_rec ([q] :: pref) rem
     in
 
-    do_rec [] casel
+    if unused_match then do_rec [] casel
 
 (*********************************)
 (* Exported irrefutability tests *)
@@ -2361,8 +2537,62 @@ let check_partial_param do_check_partial do_check_fragile loc casel =
     do_check_fragile loc casel pss;
   total
 
+(* For the exhaustiveness check only: a literal case of an untagged variant
+   also covers the payload values equal to its runtime value. This matters for
+   a bool payload, whose values can all be covered, as in
+   [@as(true) Yes | Ans(bool)] where [Yes | Ans(false)] is exhaustive. Other
+   payload types have infinitely many values, so the overlap can't complete a
+   match and is left out. *)
+let rec with_bool_payload_overlaps p =
+  match p.pat_desc with
+  | Tpat_construct (_, {cstr_kind = Ordinary_constructor r}, []) -> (
+    match Variant_runtime.representation r with
+    | Constant tag -> (
+      match tag.literal with
+      | Bool b -> (
+        let is_bool_payload cd =
+          match cd.cstr_kind with
+          | Ordinary_constructor r -> (
+            match Variant_runtime.representation r with
+            | Block (Untagged {block_type = BooleanType}) -> true
+            | Constant _ | Block _ -> false)
+          | Extension_constructor _ -> false
+        in
+        match
+          List.find_opt is_bool_payload
+            (get_variant_constructors p.pat_env p.pat_type)
+        with
+        | Some payload_cd ->
+          let bool_cd =
+            List.find
+              (fun cd -> cd.cstr_name = string_of_bool b)
+              (get_variant_constructors p.pat_env (Predef.type_bool ()))
+          in
+          let construct cd args ty =
+            make_pat
+              (Tpat_construct (mknoloc (Longident.Lident cd.cstr_name), cd, args))
+              ty p.pat_env
+          in
+          orify p
+            (construct payload_cd
+               [construct bool_cd [] (Predef.type_bool ())]
+               p.pat_type)
+        | None -> p)
+      | String _ | Int _ | Float _ | BigInt _ | Null | Undefined -> p)
+    | Block _ -> p)
+  | _ ->
+    {
+      p with
+      pat_desc =
+        Typedtree.map_pattern_desc with_bool_payload_overlaps p.pat_desc;
+    }
+
 let check_partial_gadt ?partial_match_warning_hint pred loc casel =
-  let casel = lower_cases casel in
+  let casel =
+    List.map
+      (fun c -> {c with c_lhs = with_bool_payload_overlaps c.c_lhs})
+      (lower_cases casel)
+  in
   check_partial_param
     (do_check_partial_gadt ?partial_match_warning_hint pred)
     do_check_fragile_gadt loc casel
