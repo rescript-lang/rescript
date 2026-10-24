@@ -162,7 +162,8 @@ let report_error ppf =
       attribute
   | RuntimeAnnotationContradictsManifest (outer, inner) ->
     fprintf ppf
-      "This annotation, %s, contradicts the abbreviated type's annotation, %s."
+      "This annotation, %s, contradicts the abbreviated type, whose values are \
+       recognized by %s."
       outer inner
   | SubclassOfPublicAbbreviation (name, ancestor) ->
     fprintf ppf

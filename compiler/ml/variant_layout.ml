@@ -162,23 +162,9 @@ let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
   match recognized_as ~env t with
   | Some _ as declared -> declared
   | None -> (
-    (* Builtin types have no declaration to annotate *)
+    (* Builtin types state their shapes in [Predef]; type expressions other
+       than constructors have no declaration *)
     match (Ctype.expand_head env t).desc with
-    | Tconstr (path, _, _) when Path.same path Predef.path_string ->
-      Some StringType
-    | Tconstr (path, _, _)
-      when Path.same path Predef.path_int || Path.same path Predef.path_float ->
-      Some NumberType
-    | Tconstr (path, _, _) when Path.same path Predef.path_bigint ->
-      Some BigintType
-    | Tconstr (path, _, _) when Path.same path Predef.path_bool ->
-      Some BooleanType
-    | Tconstr (path, _, _) when Path.same path Predef.path_dict ->
-      Some ObjectType
-    | Tconstr (path, _, _) when Path.same path Predef.path_array ->
-      Some (InstanceType Array)
-    | Tconstr (path, _, _) when Path.same path Predef.path_promise ->
-      Some (InstanceType (Class {name = "Promise"; ancestors = []}))
     | Ttuple _ -> Some (InstanceType Array)
     | Tarrow _ -> Some FunctionType
     | _ -> None)
