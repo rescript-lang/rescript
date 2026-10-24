@@ -19,9 +19,8 @@ end
 
 (* Type of the runtime representation of an untagged block (case with payload) *)
 type block_type =
-  | IntType
+  | NumberType  (** [int] and [float] alike *)
   | StringType
-  | FloatType
   | BigintType
   | BooleanType
   | InstanceType of Instance.t
@@ -29,6 +28,25 @@ type block_type =
   | FunctionType
   | ObjectType
   | UnknownType
+
+(* The payload kinds recognized by [typeof], with the name it returns *)
+let typeof_kinds =
+  [
+    (StringType, "string");
+    (NumberType, "number");
+    (BigintType, "bigint");
+    (BooleanType, "boolean");
+    (SymbolType, "symbol");
+    (FunctionType, "function");
+    (ObjectType, "object");
+  ]
+
+let typeof_name block_type = List.assoc_opt block_type typeof_kinds
+
+let block_type_of_typeof name =
+  List.find_map
+    (fun (block_type, kind) -> if kind = name then Some block_type else None)
+    typeof_kinds
 
 (** What a type declaration states about its values at run time, through
     [@notUndefined], [@instanceOf] or [@typeOf]. Each level implies the one

@@ -292,28 +292,13 @@ let is_class_path name =
     && List.for_all is_identifier properties
   | [] -> false
 
-let block_type_of_typeof = function
-  | "string" -> Some StringType
-  | "number" -> Some FloatType
-  | "bigint" -> Some BigintType
-  | "boolean" -> Some BooleanType
-  | "symbol" -> Some SymbolType
-  | "function" -> Some FunctionType
-  | "object" -> Some ObjectType
-  | _ -> None
-
 let runtime_attribute_name = function
   | Instance_of _ -> instance_of
   | Type_of _ -> type_of
 
-let typeof_name = function
-  | StringType -> "string"
-  | IntType | FloatType -> "number"
-  | BigintType -> "bigint"
-  | BooleanType -> "boolean"
-  | SymbolType -> "symbol"
-  | FunctionType -> "function"
-  | ObjectType | InstanceType _ | UnknownType -> "object"
+(* A [@typeOf] states one of the kinds [typeof] recognizes *)
+let typeof_name block_type =
+  Option.value (Variant_runtime.typeof_name block_type) ~default:"object"
 
 let runtime_annotation_to_string = function
   | Instance_of name -> Printf.sprintf "@%s(\"%s\")" instance_of name
@@ -519,7 +504,7 @@ let check_invariant ~(consts : (Location.t * tag) list)
           Hashtbl.replace instance_types name (i, count + 1)
         | SymbolType -> incr symbol_types
         | FunctionType -> incr function_types
-        | IntType | FloatType -> incr number_types
+        | NumberType -> incr number_types
         | BigintType -> incr bigint_types
         | BooleanType ->
           (* Literal cases are matched before payload cases, so a boolean
@@ -597,7 +582,7 @@ module Dynamic_checks = struct
 
   let function_ = Payload_shape FunctionType |> tag_type
   let string = Payload_shape StringType |> tag_type
-  let number = Payload_shape IntType |> tag_type
+  let number = Payload_shape NumberType |> tag_type
 
   let bigint = Payload_shape BigintType |> tag_type
 
@@ -644,9 +629,7 @@ module Dynamic_checks = struct
       | StringType
         when literals_overlaps_with_string () = false (* No overlap *) ->
         typeof e != string
-      | IntType when literals_overlaps_with_number () = false ->
-        typeof e != number
-      | FloatType when literals_overlaps_with_number () = false ->
+      | NumberType when literals_overlaps_with_number () = false ->
         typeof e != number
       | BigintType when literals_overlaps_with_bigint () = false ->
         typeof e != bigint
@@ -659,8 +642,7 @@ module Dynamic_checks = struct
         typeof e != object_
       | ObjectType (* overlap *) -> e == nil ||| (typeof e != object_)
       | StringType (* overlap *)
-      | IntType (* overlap *)
-      | FloatType (* overlap *)
+      | NumberType (* overlap *)
       | BigintType (* overlap *)
       | BooleanType (* overlap *)
       | UnknownType -> (
@@ -745,8 +727,7 @@ module Dynamic_checks = struct
     in
     match tag_type with
     | Payload_shape
-        ( IntType | StringType | FloatType | BigintType | BooleanType
-        | SymbolType ) ->
+        (NumberType | StringType | BigintType | BooleanType | SymbolType) ->
       typeof y == x
     | Payload_shape FunctionType -> not_one_of_the_instances (typeof y == x)
     | Payload_shape ObjectType ->

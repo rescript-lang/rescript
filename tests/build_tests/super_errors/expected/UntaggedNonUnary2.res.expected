@@ -1,9 +1,9 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/UntaggedNonUnary2.res[0m:[2m2:1-42[0m
+  [36m/.../fixtures/UntaggedNonUnary2.res[0m:[2m2:10-27[0m
 
   1 [2m│[0m @unboxed
-  [1;31m2[0m [2m│[0m [1;31mtype t = Tuple(int, string) | Float(float)[0m
+  [1;31m2[0m [2m│[0m type t = [1;31mTuple(int, string)[0m | Float(float)
   3 [2m│[0m 
 
   This untagged variant definition is invalid: Constructor Tuple has more than one argument.

@@ -1411,17 +1411,13 @@ let class_constructor (instance : Variant_runtime.Instance.t) =
 
 (* The [typeof] string an untagged payload answers to. *)
 let block_type_name = function
-  | Variant_runtime.IntType | FloatType -> str "number"
-  | BigintType -> str "bigint"
-  | BooleanType -> str "boolean"
-  | SymbolType -> str "symbol"
-  | FunctionType -> str "function"
-  | StringType -> str "string"
-  | InstanceType i -> class_constructor i
-  | ObjectType -> str "object"
-  | UnknownType ->
-    (* TODO: this should not happen *)
-    assert false
+  | Variant_runtime.InstanceType i -> class_constructor i
+  | block_type -> (
+    match Variant_runtime.typeof_name block_type with
+    | Some name -> str name
+    | None ->
+      (* An unknown payload has no check: it is the only payload case *)
+      assert false)
 
 let tag_type = function
   | Variant_runtime.Literal d -> literal_tag d

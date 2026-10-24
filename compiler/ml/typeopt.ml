@@ -62,7 +62,9 @@ let rec cannot_contain_undefined ~visiting (typ : Types.type_expr)
         (* A transitive dependency's interface may not be on the search path.
            Keep option wrapping when its runtime representation is unknown. *)
         false
-      | {type_kind = Type_abstract; type_shape} -> type_shape <> Unstated
+      | {type_kind = Type_abstract} ->
+        (* Its shape was read from the scraped type above *)
+        false
       | {type_kind = Type_open} -> false
       | {type_kind = Type_record _} -> true
       | {
