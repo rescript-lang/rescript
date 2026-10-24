@@ -159,19 +159,18 @@ the annotation of the abbreviated type. The type of a functor parameter, of a
 recursive module being defined, and a locally abstract type `(type a)` are
 abstract only where they are declared: they stand for another type, so they
 cannot be refined. Only a private abbreviation can declare a subclass of the
-class annotated there, or of a `@typeOf("object")` type, or a public one that
-is a strict instance of the superclass type after expansion, as in the
-phantom type hierarchy
-`@instanceOf("Element") type elementLike<'a> = nodeLike<_element<'a>>`. A
-public `type dog = animal` would make every animal a dog without a coercion,
-and so would `type dog = phantom<int>` with `type phantom<'a> = animal`.
+class annotated there, or of a `@typeOf("object")` type, also in a phantom
+type hierarchy (`type dogLike<'a> = private animalLike<_dog<'a>>`). A public
+`type dog = animal` would make every animal a dog without a coercion, and so
+would `type dog = animal<int>` or `type dog = phantom<int>` with
+`type phantom<'a> = animal`.
 
 | Declaration | Error | Fixture |
 | --- | --- | --- |
 | `@typeOf("string") type t = option<string>`, `type t<'a> = 'a`, an abbreviation of `unit`, a builtin type, a record or a variant | @typeOf on a type abbreviation must describe an abstract type, ... | `runtime_annotation_on_option.res`, `runtime_annotation_on_type_variable.res` |
 | `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym` | This annotation, @typeOf("number"), contradicts the abbreviated type's annotation, @typeOf("symbol"). | `runtime_annotation_contradicts_manifest.res` |
 | `@instanceOf("Date") type date = X.t` in a functor of `X`, or over `(type a)` | @instanceOf cannot describe the type of a functor parameter, ... | `instance_of_functor_parameter.res`, `type_of_locally_abstract_type.res` |
-| `@instanceOf("Dog") type dog = animal`, or `= phantom<int>` with `type phantom<'a> = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res`, `instance_of_public_subclass_through_alias.res` |
+| `@instanceOf("Dog") type dog = animal`, `= animal<int>`, or `= phantom<int>` with `type phantom<'a> = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res`, `instance_of_public_subclass_instance.res`, `instance_of_public_subclass_through_alias.res` |
 | `@instanceOf("Animal") type t = private dog` | Animal appears twice in this chain of abbreviations ... | `instance_of_class_twice_in_chain.res` |
 | `@instanceOf` on a record or variant | @instanceOf can only be used on abstract types and type abbreviations ... | `runtime_annotation_on_record.res` |
 | both annotations | A type can have either @instanceOf or @typeOf, not both. | `runtime_annotation_conflict.res` |
@@ -535,8 +534,7 @@ had to answer, and the answers of rule 5:
 1. **Unchecked claims.** An annotation is trusted, as the type of an external
    is, but checked against the type it abbreviates (rule 5).
 2. **Subclasses.** A class's superclasses are the classes annotated further
-   down its chain of private abbreviations, or of strict instances in a
-   phantom type hierarchy. A superclass case excludes its subclass cases in
+   down its chain of private abbreviations. A superclass case excludes its subclass cases in
    any order, and an upcast value lands in the subclass case (rule 8). The
    relation must be visible where the variant is declared: an interface that
    hides it is rejected (rule 14).
