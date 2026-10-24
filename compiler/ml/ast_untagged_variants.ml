@@ -297,7 +297,30 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
 
   Ext_list.rev_iter consts (fun (loc, literal) ->
       check_literal ~is_const:true ~loc literal);
-  if is_untagged_def then
+  (* A tagged block is told apart from the others by its tag; an untagged one
+     is its payload, whatever its [@as] *)
+  Ext_list.rev_iter blocks (fun (loc, block) ->
+      match block with
+      | Tagged {tag} -> check_literal ~is_const:false ~loc tag
+      | Untagged _ -> ());
+  (* The payload kinds are checked as soon as one case is untagged, even when
+     the type itself is not [@unboxed] *)
+  let has_untagged_block =
+    List.exists
+      (function
+        | _, Untagged _ -> true
+        | _, Tagged _ -> false)
+      blocks
+  in
+  if is_untagged_def || has_untagged_block then (
+    (* Tagged blocks are objects with a tag field: together one object case *)
+    if
+      List.exists
+        (function
+          | _, Tagged _ -> true
+          | _, Untagged _ -> false)
+        blocks
+    then incr object_types;
     Ext_list.rev_iter blocks (fun (loc, block) ->
         match block with
         | Untagged {tag; block_type} ->
@@ -328,14 +351,7 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
             incr boolean_types
           | StringType -> incr string_types);
           invariant loc tag.name
-        | Tagged _ -> ())
-  else
-    Ext_list.rev_iter blocks (fun (loc, block) ->
-        let tag =
-          match block with
-          | Tagged {tag} | Untagged {tag} -> tag
-        in
-        check_literal ~is_const:false ~loc tag)
+        | Tagged _ -> ()))
 
 let get_cstr_loc_tag (cstr : Types.constructor_declaration) =
   (cstr.cd_loc, {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag})
