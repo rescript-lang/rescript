@@ -126,6 +126,23 @@ let handlerKind = handler =>
   | Function(_) => "function"
   }
 
+// A callable instance without an arm reaches the default, not the function arm
+@unboxed
+type wideHandler =
+  | WideCallable(callable)
+  | WideAnimal(animal)
+  | WideFunction(int => int)
+  | WideName(string)
+  | WideCount(float)
+  | WideFlag(bool)
+
+let wideHandlerKind = handler =>
+  switch handler {
+  | WideFunction(_) => "function"
+  | WideName(_) => "name"
+  | _ => "other"
+  }
+
 @unboxed
 type boxedAnimal = BoxedAnimal(animal)
 
@@ -199,6 +216,11 @@ describe(__MODULE__, () => {
   test("a function case excludes class instances", () => {
     eq(__LOC__, "callable", handlerKind(Callable(makeCallable())))
     eq(__LOC__, "function", handlerKind(Function(x => x)))
+    eq(__LOC__, "other", wideHandlerKind(WideCallable(makeCallable())))
+    eq(__LOC__, "other", wideHandlerKind(WideAnimal(makeAnimal())))
+    eq(__LOC__, "function", wideHandlerKind(WideFunction(x => x)))
+    eq(__LOC__, "name", wideHandlerKind(WideName("a")))
+    eq(__LOC__, "other", wideHandlerKind(WideCount(1.)))
   })
 
   test("a class declared over an object type", () => {
