@@ -4,6 +4,8 @@ for file in src/*.{res,resi}; do
   # CI. We use LF, and the CI OCaml fork prints CRLF. Convert.
   if [ "$RUNNER_OS" == "Windows" ]; then
     perl -pi -e 's/\r\n/\n/g' -- $output
+    # Completion data holds a native path. Use the snapshots' separator.
+    perl -pi -e 's{(?<="filePath": ")[^"]*}{$& =~ s#\\\\#/#gr}ge' -- $output
   fi
 done
 
@@ -13,6 +15,8 @@ for file in not_compiled/*.{res,resi}; do
   # CI. We use LF, and the CI OCaml fork prints CRLF. Convert.
   if [ "$RUNNER_OS" == "Windows" ]; then
     perl -pi -e 's/\r\n/\n/g' -- $output
+    # Completion data holds a native path. Use the snapshots' separator.
+    perl -pi -e 's{(?<="filePath": ")[^"]*}{$& =~ s#\\\\#/#gr}ge' -- $output
   fi
 done
 

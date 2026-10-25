@@ -64,35 +64,9 @@ if (formatTest) {
 }
 
 if (ounitTest) {
-  if (process.platform === "win32") {
-    // GenType's drive-root regression needs the native Windows Filename module.
-    const binary = path.join(
-      projectDir,
-      "_build/default/tests/ounit_tests/ounit_tests_main.exe",
-    );
-    const { stdout } = await execBin(binary, ["-list-test"], {
-      shell: false,
-      throwOnFail: true,
-    });
-    const tests = stdout
-      .split(/\r?\n/)
-      .filter(test => test.includes(":gentype:"));
-    if (tests.length === 0) {
-      throw new Error("No GenType unit tests found");
-    }
-    await execBin(
-      binary,
-      tests.flatMap(test => ["-only-test", test]),
-      {
-        stdio: "inherit",
-        shell: false,
-      },
-    );
-  } else {
-    await execBin(ounitTestBin, [], {
-      stdio: "inherit",
-    });
-  }
+  await execBin(ounitTestBin, [], {
+    stdio: "inherit",
+  });
 }
 
 if (mochaTest) {
@@ -197,9 +171,7 @@ if (buildTest) {
 }
 
 if (runtimeDocstrings) {
-  if (process.platform === "win32") {
-    console.log(`Skipping docstrings tests on ${process.platform}`);
-  } else if (process.platform === "darwin" && os.release().startsWith("22")) {
+  if (process.platform === "darwin" && os.release().startsWith("22")) {
     // Workaround for intermittent hangs in CI
     console.log("Skipping docstrings tests on macOS 13");
   } else {

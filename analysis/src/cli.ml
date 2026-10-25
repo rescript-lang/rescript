@@ -209,8 +209,11 @@ let test ~state ~path =
     let lines = text |> String.split_on_char '\n' in
     let process_line i line =
       let create_current_file () =
+        (* Binary mode keeps the copy's LF line endings on Windows, so dumped
+           source text matches the original file. *)
         let current_file, cout =
-          Filename.open_temp_file "def" ("txt." ^ Filename.extension path)
+          Filename.open_temp_file ~mode:[Open_binary] "def"
+            ("txt." ^ Filename.extension path)
         in
         let remove_line_comment l =
           let len = String.length l in
