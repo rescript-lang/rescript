@@ -1,0 +1,1 @@
+- Run the syntax roundtrip tests and the OCaml and ReScript format checks on Windows CI.

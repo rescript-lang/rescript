@@ -1,7 +1,9 @@
 (* print res files to res syntax *)
-let print_res ~ignore_parse_errors ~is_interface ~filename =
+let print_res ~ignore_parse_errors ~is_interface ~filename source =
   if is_interface then (
-    let parse_result = Res_driver.parsing_engine.parse_interface ~filename in
+    let parse_result =
+      Res_driver.parse_interface_from_source ~display_filename:filename ~source
+    in
     if parse_result.invalid then (
       Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
       if not ignore_parse_errors then raise_notrace Res_driver.Already_reported);
@@ -9,7 +11,8 @@ let print_res ~ignore_parse_errors ~is_interface ~filename =
       ~comments:parse_result.comments parse_result.parsetree)
   else
     let parse_result =
-      Res_driver.parsing_engine.parse_implementation ~filename
+      Res_driver.parse_implementation_from_source ~display_filename:filename
+        ~source
     in
     if parse_result.invalid then (
       Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
@@ -24,7 +27,8 @@ let print ?(ignore_parse_errors = false) input =
     let len = String.length input in
     len > 0 && String.unsafe_get input (len - 1) = 'i'
   in
-  print_res ~ignore_parse_errors ~is_interface ~filename:input
+  Res_line_endings.preserve (Ext_io.load_file input)
+    (print_res ~ignore_parse_errors ~is_interface ~filename:input)
 [@@raises Res_driver.Already_reported]
 
 (* suppress unused optional arg *)

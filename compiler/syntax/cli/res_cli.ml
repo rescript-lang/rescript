@@ -61,9 +61,6 @@ end = struct
 end
 
 module Cli_arg_processor = struct
-  type backend = Parser : 'diagnostics Res_driver.parsing_engine -> backend
-  [@@unboxed]
-
   let process_file ~is_interface ~width ~recover ~target ~jsx_version
       ~jsx_module ~test_ast_conversion filename =
     let len = String.length filename in
@@ -71,7 +68,6 @@ module Cli_arg_processor = struct
       is_interface
       || (len > 0 && (String.get [@doesNotRaise]) filename (len - 1) = 'i')
     in
-    let parsing_engine = Parser Res_driver.parsing_engine in
     let print_engine =
       match target with
       | "ml" -> Res_driver_ml_printer.print_engine
@@ -87,7 +83,9 @@ module Cli_arg_processor = struct
         exit 1
     in
 
-    let (Parser backend) = parsing_engine in
+    (* Read sources with LF line endings, so a CRLF file prints like an LF one,
+       also inside comments, template literals and raw JS. *)
+    let load_source () = Res_line_endings.to_lf (Ext_io.load_file filename) in
     (* Color the Format tags (e.g. @{<error>...@}) of printed diagnostics *)
     Misc.Color.setup None;
 
@@ -95,10 +93,13 @@ module Cli_arg_processor = struct
     if target = "tokens" then
       print_engine.print_implementation ~width ~filename ~comments:[] []
     else if process_interface then
-      let parse_result = backend.parse_interface ~filename in
+      let parse_result =
+        Res_driver.parse_interface_from_source ~display_filename:filename
+          ~source:(load_source ())
+      in
       if parse_result.invalid then (
-        backend.string_of_diagnostics ~source:parse_result.source
-          ~filename:parse_result.filename parse_result.diagnostics;
+        Res_diagnostics.print_report parse_result.diagnostics
+          parse_result.source;
         if recover then
           print_engine.print_interface ~width ~filename
             ~comments:parse_result.comments parse_result.parsetree
@@ -120,10 +121,13 @@ module Cli_arg_processor = struct
         print_engine.print_interface ~width ~filename
           ~comments:parse_result.comments parsetree
     else
-      let parse_result = backend.parse_implementation ~filename in
+      let parse_result =
+        Res_driver.parse_implementation_from_source ~display_filename:filename
+          ~source:(load_source ())
+      in
       if parse_result.invalid then (
-        backend.string_of_diagnostics ~source:parse_result.source
-          ~filename:parse_result.filename parse_result.diagnostics;
+        Res_diagnostics.print_report parse_result.diagnostics
+          parse_result.source;
         if recover then
           print_engine.print_implementation ~width ~filename
             ~comments:parse_result.comments parse_result.parsetree
