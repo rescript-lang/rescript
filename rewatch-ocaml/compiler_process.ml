@@ -26,17 +26,24 @@ let compiler_phase args =
   in
   (phase, input)
 
+(* Requests run in parallel domains. Windows emulates append mode as a seek to
+   the end followed by a write, so two domains appending at once could write
+   at the same offset and lose one of the lines the tests count. *)
+let call_log_mutex = Mutex.create ()
+
 let log_compiler_request (request : request) =
   match Sys.getenv_opt "REWATCH_COMPILER_CALL_LOG" with
   | None -> ()
   | Some path ->
     let phase, input = compiler_phase request.args in
-    let channel =
-      open_out_gen [Open_creat; Open_append; Open_text] 0o644 path
-    in
-    Fun.protect
-      ~finally:(fun () -> close_out_noerr channel)
-      (fun () -> Printf.fprintf channel "%s\t%s\t%s\n" phase request.cwd input)
+    Process_child.with_lock call_log_mutex (fun () ->
+        let channel =
+          open_out_gen [Open_creat; Open_append; Open_text] 0o644 path
+        in
+        Fun.protect
+          ~finally:(fun () -> close_out_noerr channel)
+          (fun () ->
+            Printf.fprintf channel "%s\t%s\t%s\n" phase request.cwd input))
 
 let exit_code = function
   | Unix.WEXITED code -> code
