@@ -278,6 +278,9 @@ jobs:
         run: make -C tests/gentype_tests/typescript-react-example clean test
         shell: bash
 
+      - name: Run LSP tests
+        run: opam exec -- make test-lsp
+
       - name: Run OCaml rewatch parity tests
         if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
         timeout-minutes: 20
