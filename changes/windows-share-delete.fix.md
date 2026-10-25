@@ -1,0 +1,1 @@
+- On Windows, let other programs delete or rename files while the build system reads them, so stopping a watcher by removing `lib/watch.lock` no longer fails intermittently.

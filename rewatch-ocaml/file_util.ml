@@ -27,8 +27,15 @@ let ensure_dir path =
   in
   loop path
 
+let open_for_reading path =
+  (* Windows denies deleting or renaming a file while any handle lacks
+     FILE_SHARE_DELETE, and Unix.openfile only adds it on request. Without it
+     the watcher's periodic watch.lock read can make the shutdown protocol's
+     rm fail, and hashing a source can block an editor's atomic rename. *)
+  Unix.openfile path [Unix.O_RDONLY; Unix.O_CLOEXEC; Unix.O_SHARE_DELETE] 0
+
 let read_file path =
-  let descriptor = Unix.openfile path [Unix.O_RDONLY; Unix.O_CLOEXEC] 0 in
+  let descriptor = open_for_reading path in
   let channel = Unix.in_channel_of_descr descriptor in
   Fun.protect
     ~finally:(fun () -> close_in_noerr channel)
@@ -54,7 +61,7 @@ let is_regular_file path =
   | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> false
 
 let digest_file path =
-  let descriptor = Unix.openfile path [Unix.O_RDONLY; Unix.O_CLOEXEC] 0 in
+  let descriptor = open_for_reading path in
   let channel = Unix.in_channel_of_descr descriptor in
   Fun.protect
     ~finally:(fun () -> close_in_noerr channel)
@@ -117,9 +124,7 @@ let copy_buffer = Domain.DLS.new_key (fun () -> Bytes.create 65_536)
 let compare_buffer = Domain.DLS.new_key (fun () -> Bytes.create 65_536)
 
 let copy_existing_file source destination =
-  let input_descriptor =
-    Unix.openfile source [Unix.O_RDONLY; Unix.O_CLOEXEC] 0
-  in
+  let input_descriptor = open_for_reading source in
   let input_channel = Unix.in_channel_of_descr input_descriptor in
   Fun.protect
     ~finally:(fun () -> close_in_noerr input_channel)
@@ -166,16 +171,12 @@ let files_equal first second =
     | Some second_stat ->
       first_stat.Unix.st_size = second_stat.Unix.st_size
       &&
-      let first_descriptor =
-        Unix.openfile first [Unix.O_RDONLY; Unix.O_CLOEXEC] 0
-      in
+      let first_descriptor = open_for_reading first in
       let first_channel = Unix.in_channel_of_descr first_descriptor in
       Fun.protect
         ~finally:(fun () -> close_in_noerr first_channel)
         (fun () ->
-          let second_descriptor =
-            Unix.openfile second [Unix.O_RDONLY; Unix.O_CLOEXEC] 0
-          in
+          let second_descriptor = open_for_reading second in
           let second_channel = Unix.in_channel_of_descr second_descriptor in
           Fun.protect
             ~finally:(fun () -> close_in_noerr second_channel)
