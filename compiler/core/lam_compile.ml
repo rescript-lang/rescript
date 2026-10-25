@@ -860,13 +860,27 @@ let compile output_prefix =
                 | None -> assert false
               in
               (* A complete payload dispatch with one body runs it unchecked,
-                 so a literal arm with the same body can go there too *)
+                 so a literal arm with the same body can go there too. Two
+                 tagged blocks are told apart by reading the tag, which a
+                 literal such as [null] does not have *)
+              let tagged_blocks =
+                List.length
+                  (List.filter
+                     (fun (key, _) ->
+                       match (key : Lambda.switch_key) with
+                       | Switch_constructor (Block (Tagged _)) -> true
+                       | Switch_constructor (Block (Untagged _) | Constant _)
+                       | Switch_int _ ->
+                         false)
+                     sw_blocks)
+              in
               let literal_arms =
                 match (blocks_default, sw_blocks) with
                 | Complete, (_, body) :: rest
-                  when List.for_all
-                         (fun (_, other) -> Lambda.eq_approx body other)
-                         rest ->
+                  when tagged_blocks <= 1
+                       && List.for_all
+                            (fun (_, other) -> Lambda.eq_approx body other)
+                            rest ->
                   List.filter
                     (fun (_, lam) -> not (Lambda.eq_approx body lam))
                     literal_arms
@@ -1062,12 +1076,19 @@ let compile output_prefix =
         | [(_, {J.switch_body})], None ->
           [(Some is_object, false, Some switch_body)]
         | _ ->
+          (* In a complete match the last tag is not checked *)
+          let tagged_clauses, tag_default =
+            match (default, List.rev tagged_clauses) with
+            | None, (_, {J.switch_body}) :: rest ->
+              (List.rev rest, Some switch_body)
+            | _ -> (tagged_clauses, default)
+          in
           [
             ( Some is_object,
               false,
               Some
                 [
-                  S.string_switch ?default (E.tag ~name:tag_name e)
+                  S.string_switch ?default:tag_default (E.tag ~name:tag_name e)
                     tagged_clauses;
                 ] );
           ]
@@ -1117,6 +1138,8 @@ let compile output_prefix =
         | [] -> []
       in
       let entries = merge_defaults entries in
+      (* An arm may compile to no statement, so arms are counted here *)
+      let has_other_arms = entries <> [] in
       (* The last arm of a complete match is not checked *)
       let entries, final =
         match (default, List.rev entries) with
@@ -1181,19 +1204,19 @@ let compile output_prefix =
           | None -> assert false)
         | _ -> S.string_switch ?declaration ?default (E.typeof e) clauses
       in
-      match (primitive_clauses, other) with
-      | [], _ -> (
+      match primitive_clauses with
+      | [] -> (
         match declaration with
         | Some (kind, id) -> S.block (S.declare_variable ~kind id :: other)
         | None -> S.block other)
-      | _ :: _, [] -> (
+      | _ :: _ when not has_other_arms -> (
         (* No other arm: in a complete match the last primitive arm is not
            checked *)
         match List.rev primitive_clauses with
         | (_, {J.switch_body}) :: rest when complete ->
           typeof_switch ~default:switch_body (List.rev rest)
         | _ -> typeof_switch ?default primitive_clauses)
-      | _ :: _, _ :: _ -> typeof_switch ~default:other primitive_clauses
+      | _ :: _ -> typeof_switch ~default:other primitive_clauses
     in
     let is_tagged_block = function
       | Variant_runtime.Literal _ -> true
