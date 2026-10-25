@@ -387,16 +387,19 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
       if decl.type_private = Public then
         error (SubclassOfPublicAbbreviation (name, superclass))
       else if List.mem name ancestors then error (ClassTwiceInChain name)
+    | Instance_of name, Some (InstanceType Array) ->
+      error (SubclassOfArray name)
     | (Instance_of _ | Type_of _), Some inner ->
-      let inner =
+      let recognized_by =
         match inner with
-        | InstanceType (Class {name}) -> Instance_of name
-        | block_type -> Type_of block_type
+        | InstanceType (Class {name}) ->
+          runtime_annotation_to_string (Instance_of name)
+        | InstanceType Array -> "Array.isArray"
+        | block_type -> runtime_annotation_to_string (Type_of block_type)
       in
       error
         (RuntimeAnnotationContradictsManifest
-           ( runtime_annotation_to_string outer,
-             runtime_annotation_to_string inner )))
+           (runtime_annotation_to_string outer, recognized_by)))
 
 let transl_declaration ~type_record_as_object env sdecl id =
   Ast_untagged_variants.check_runtime_annotation ~loc:sdecl.ptype_loc

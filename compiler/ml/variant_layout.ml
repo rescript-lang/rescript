@@ -35,19 +35,22 @@ let recognized_as ~env t =
 
 (* The payload kind of the values of [t]: the one its declarations state, or
    the one its structure gives. Builtin types state their kinds in [Predef];
-   type expressions other than constructors have no declaration. An unboxed
-   record is the value of its field, so it has no kind of its own. *)
+   type expressions other than constructors have no declaration. A private
+   abbreviation hides how its values are built, not what they are, so it is
+   expanded like any other. An unboxed record is the value of its field, so it
+   has no kind of its own. *)
 let payload_kind ~env (t : Types.type_expr) : block_type option =
   match recognized_as ~env t with
   | Some _ as declared -> declared
   | None -> (
-    match (Ctype.expand_head env t).desc with
+    match (Ctype.expand_head_opt env t).desc with
     | Ttuple _ -> Some (InstanceType Array)
     | Tarrow _ -> Some FunctionType
-    | Tconstr _ -> (
-      match Ctype.extract_concrete_typedecl env t with
-      | _, _, {type_kind = Type_record (_, Record_unboxed _)} -> None
-      | _, _, {type_kind = Type_record _} -> Some ObjectType
+    | Tobject _ -> Some ObjectType
+    | Tconstr (path, _, _) -> (
+      match Env.find_type path env with
+      | {type_kind = Type_record (_, Record_unboxed _)} -> None
+      | {type_kind = Type_record _} -> Some ObjectType
       | _ -> None
       | exception Not_found -> None)
     | _ -> None)

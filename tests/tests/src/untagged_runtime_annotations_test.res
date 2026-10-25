@@ -196,6 +196,30 @@ let restatedAbstractKind = value =>
   | AbstractPoint(_) => "point"
   }
 
+// A private abbreviation has the kind of the type it abbreviates, and a
+// JavaScript object type is an object
+type privatePoint = private point
+external makePrivatePoint: point => privatePoint = "%identity"
+type jsPoint = {"pz": int}
+
+@unboxed
+type privateOrName = PrivatePoint(privatePoint) | PrivateName(string)
+
+let privateOrNameKind = value =>
+  switch value {
+  | PrivatePoint(point) => Int.toString((point :> point).px)
+  | PrivateName(name) => name
+  }
+
+@unboxed
+type jsOrName = JsPoint(jsPoint) | JsName(string)
+
+let jsOrNameKind = value =>
+  switch value {
+  | JsPoint(point) => Int.toString(point["pz"])
+  | JsName(name) => name
+  }
+
 @inline(never) let id = x => x
 
 // No class of this name exists at run time
@@ -304,6 +328,10 @@ describe(__MODULE__, () => {
     eq(__LOC__, "a", restatedKind(id(Label("a"))))
     eq(__LOC__, "callback", restatedAbstractKind(id(AbstractCallback(Restated.callback))))
     eq(__LOC__, "point", restatedAbstractKind(id(AbstractPoint(Restated.point))))
+    eq(__LOC__, "4", privateOrNameKind(id(PrivatePoint(makePrivatePoint({px: 4})))))
+    eq(__LOC__, "a", privateOrNameKind(id(PrivateName("a"))))
+    eq(__LOC__, "5", jsOrNameKind(id(JsPoint({"pz": 5}))))
+    eq(__LOC__, "b", jsOrNameKind(id(JsName("b"))))
   })
 
   test("primitive cases are tested before class checks", () => {

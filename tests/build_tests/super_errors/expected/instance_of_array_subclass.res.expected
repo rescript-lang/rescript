@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/instance_of_array_subclass.res[0m:[2m1:22-52[0m
+
+  [1;31m1[0m [2m│[0m @instanceOf("MyArr") [1;31mtype myArr = private array<int>[0m
+  2 [2m│[0m 
+
+  @instanceOf("MyArr") cannot describe the values of an array type: they are recognized by Array.isArray, and subclasses of Array are not supported.

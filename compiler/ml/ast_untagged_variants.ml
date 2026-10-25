@@ -33,6 +33,7 @@ type error =
   | RuntimeAnnotationOnRepresentedType of string
   | RuntimeAnnotationOnUnrelatedType of string
   | RuntimeAnnotationContradictsManifest of string * string
+  | SubclassOfArray of string
   | SubclassOfPublicAbbreviation of string * string
   | ClassTwiceInChain of string
 exception Error of Location.t * error
@@ -162,6 +163,12 @@ let report_error ppf =
       "This annotation, %s, contradicts the abbreviated type, whose values are \
        recognized by %s."
       outer inner
+  | SubclassOfArray name ->
+    fprintf ppf
+      "@instanceOf(\"%s\") cannot describe the values of an array type: they \
+       are recognized by Array.isArray, and subclasses of Array are not \
+       supported."
+      name
   | SubclassOfPublicAbbreviation (name, ancestor) ->
     fprintf ppf
       "A subclass must be a private abbreviation: write `= private ...` so \

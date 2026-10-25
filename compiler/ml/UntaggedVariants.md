@@ -99,7 +99,7 @@ into one kind:
 | `bigint` | bigint | `typeof x === "bigint"` |
 | `bool` | boolean | `typeof x === "boolean"` |
 | a function type | function | `typeof x === "function"` |
-| a record (not `@unboxed`), an inline record, `dict<_>` | object | `typeof x === "object"` |
+| a record (not `@unboxed`), an inline record, a JavaScript object type `{"x": int}`, `dict<_>` | object | `typeof x === "object"` |
 | `array<_>`, a tuple | instance `Array` | `Array.isArray(x)` |
 | a type declared with `@instanceOf("C")` (rule 5) | instance `C` | `x instanceof C` |
 | `promise<_>` | instance `Promise` | `x instanceof Promise` |
@@ -109,8 +109,9 @@ into one kind:
 The builtin types state their kinds in their declarations, as the
 annotations of rule 5 do for declared types. The shape is read from the type
 as written and from each type it abbreviates, and a tuple, a function type
-or a record is classified after expanding abbreviations: `type ints =
-array<int>` is an array case, and `type name = string` a string case. Every
+or a record is classified after expanding abbreviations, private ones
+included: `type ints = array<int>` is an array case, and `type name =
+private string` a string case. Every
 reader of rule 5 uses this one classification. A type is never recognized by
 its name. `@typeOf("number")`
 is the number kind, and `@typeOf("symbol")` is a kind of its own, with no
@@ -184,10 +185,11 @@ would `type dog = animal<int>` or `type dog = phantom<int>` with
 | --- | --- | --- |
 | `@typeOf("string") type t = option<string>`, `type t<'a> = 'a`, an abbreviation of `unit`, `list<_>` or a variant | @typeOf on a type abbreviation must describe an abstract type, ... | `runtime_annotation_on_option.res`, `runtime_annotation_on_type_variable.res` |
 | `@notUndefined type t = option<int>` | @notUndefined on a type abbreviation must describe an abstract type, ... | `not_undefined_on_option.res`, `tests/build_tests/not_undefined_attribute` |
-| `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym`, `@typeOf("string") type t = int`, or an abbreviation of a function type or a record | This annotation, @typeOf("number"), contradicts the abbreviated type, whose values are recognized by @typeOf("symbol"). | `runtime_annotation_contradicts_manifest.res`, `runtime_annotation_contradicts_builtin.res`, `runtime_annotation_contradicts_function.res` |
+| `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym`, `@typeOf("string") type t = int`, or an abbreviation of a function type, a record or a tuple | This annotation, @typeOf("number"), contradicts the abbreviated type, whose values are recognized by @typeOf("symbol"). An array or tuple is recognized by Array.isArray. | `runtime_annotation_contradicts_manifest.res`, `runtime_annotation_contradicts_builtin.res`, `runtime_annotation_contradicts_function.res`, `runtime_annotation_contradicts_tuple.res` |
 | `@instanceOf("Date") type date = X.t` in a functor of `X`, or over `(type a)`; `@notUndefined type t = X.t` | @instanceOf cannot describe the type of a functor parameter, ... | `instance_of_functor_parameter.res`, `type_of_locally_abstract_type.res`, `not_undefined_on_functor_parameter_type.res` |
 | `@instanceOf("Dog") type dog = animal`, `= animal<int>`, or `= phantom<int>` with `type phantom<'a> = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res`, `instance_of_public_subclass_instance.res`, `instance_of_public_subclass_through_alias.res` |
 | `@instanceOf("Animal") type t = private dog` | Animal appears twice in this chain of abbreviations ... | `instance_of_class_twice_in_chain.res` |
+| `@instanceOf("MyList") type t = private array<int>` | @instanceOf("MyList") cannot describe the values of an array type: ... subclasses of Array are not supported. | `instance_of_array_subclass.res` |
 | any of the three on a record or variant | @instanceOf can only be used on abstract types and type abbreviations ... | `runtime_annotation_on_record.res`, `invalid_attribute_not_undefined.res` |
 | two of the three | A type can have only one of @notUndefined, @instanceOf and @typeOf. ... | `runtime_annotation_conflict.res`, `runtime_annotation_not_undefined_conflict.res` |
 | one annotation twice | Duplicate @instanceOf annotation; a type can have only one. | `instance_of_duplicate.res` |
