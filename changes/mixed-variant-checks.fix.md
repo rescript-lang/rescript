@@ -1,1 +1,0 @@
-- Check variants with some `@unboxed` constructors like untagged variants, so that cases a match cannot tell apart are rejected, and an untagged case's `@as` no longer clashes with a tagged case's tag.

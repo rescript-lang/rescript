@@ -1,0 +1,1 @@
+- `@unboxed` applies to a whole variant and can no longer be written on a constructor. Write `@unboxed type t = ...` instead. A constructor whose payload is an inline record with one field became that record object, while `@unboxed` on its type makes the value the field: give the record type a name to keep the object.

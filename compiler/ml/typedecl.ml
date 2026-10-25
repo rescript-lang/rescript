@@ -472,10 +472,31 @@ let transl_declaration ~type_record_as_object env sdecl id =
             raise (Error (sdecl.ptype_loc, Duplicate_constructor name));
           all_constrs := String_set.add name !all_constrs)
         scstrs;
+      (* [@unboxed] applies to the whole variant, so a constructor cannot have
+         its own *)
+      List.iter
+        (fun {pcd_name = {txt = constructor}; pcd_args; pcd_attributes} ->
+          match
+            Ext_list.find_first pcd_attributes (fun ({txt}, _) ->
+                txt = Ast_untagged_variants.untagged)
+          with
+          | Some ({loc}, _) ->
+            raise
+              (Ast_untagged_variants.Error
+                 ( loc,
+                   UnboxedOnConstructor
+                     {
+                       constructor;
+                       single_field_record =
+                         (match pcd_args with
+                         | Pcstr_record [_] -> true
+                         | Pcstr_record _ | Pcstr_tuple _ -> false);
+                     } ))
+          | None -> ())
+        scstrs;
       let copy_tag_attr_from_decl attr =
         let tag_attrs =
-          Ext_list.filter sdecl.ptype_attributes (fun ({txt}, _) ->
-              txt = "tag" || txt = Ast_untagged_variants.untagged)
+          Ext_list.filter sdecl.ptype_attributes (fun ({txt}, _) -> txt = "tag")
         in
         if tag_attrs = [] then attr else tag_attrs @ attr
       in

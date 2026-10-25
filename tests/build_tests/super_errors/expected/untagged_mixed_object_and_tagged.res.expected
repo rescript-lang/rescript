@@ -1,9 +1,0 @@
-
-  [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/untagged_mixed_object_and_tagged.res[0m:[2m1:10-31[0m
-
-  [1;31m1[0m [2m│[0m type t = [1;31m| @unboxed A({x: int})[0m | B({y: int}) | C
-  2 [2m│[0m let f = x =>
-  3 [2m│[0m   switch x {
-
-  This untagged variant definition is invalid: At most one case can be an object type.

@@ -31,7 +31,7 @@ describe(__LOC__, () => {
 })
 
 /* Record_unboxed */
-type t1 = | @unboxed A({x: int})
+@unboxed type t1 = A({x: int})
 
 /* Record_inlined */
 type t2 =
