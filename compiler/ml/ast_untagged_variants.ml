@@ -20,6 +20,7 @@ type error =
   | InvalidVariantTagAnnotation
   | InvalidUntaggedVariantDefinition of untagged_error
   | TagFieldNameConflict of string * string * string
+  | UnboxedOnConstructor of {constructor: string; single_field_record: bool}
 exception Error of Location.t * error
 
 let report_error ppf =
@@ -71,6 +72,18 @@ let report_error ppf =
        value of inline record field \"%s\". Use a different @tag name or \
        rename the field."
       constructor_name runtime_value field_name
+  | UnboxedOnConstructor {constructor; single_field_record} ->
+    fprintf ppf
+      "@@unboxed applies to a whole variant: write it on the type, as in \
+       `@@unboxed type t = ...`, instead of on constructor %s."
+      constructor;
+    if single_field_record then
+      fprintf ppf
+        " For a constructor whose payload is an inline record with one field, \
+         `@@unboxed type t = %s({...})` makes the value that field. To keep \
+         the record object, give the record type a name: `@@unboxed type t = \
+         %s(r)`."
+        constructor constructor
 
 (*
   Type of the runtime representation of a tag.
@@ -90,14 +103,6 @@ let untagged = "unboxed"
 
 let has_untagged (attrs : Parsetree.attributes) =
   Ext_list.exists attrs (function {txt}, _ -> txt = untagged)
-
-let process_untagged (attrs : Parsetree.attributes) =
-  let st = ref false in
-  Ext_list.iter attrs (fun ({txt}, _) ->
-      match txt with
-      | "unboxed" -> st := true
-      | _ -> ());
-  !st
 
 let runtime_tag_of_parsetree ~loc = function
   | Parsetree.Pct_string s -> String (String_literal.string_semantic s)
@@ -211,7 +216,7 @@ let is_nullary_variant (x : Types.constructor_arguments) =
 (* A literal's JavaScript value, which a [switch] compares with [===]. Ints
    are emitted as 32-bit numbers, so [1], [1.0] and [4294967297] are one
    number, while [1n] is a bigint. *)
-let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
+let check_invariant ~(consts : (Location.t * tag) list)
     ~(blocks : (Location.t * block) list) =
   let module String_set = Set.Make (String) in
   let module String_map = Map.Make (String) in
@@ -297,61 +302,40 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
 
   Ext_list.rev_iter consts (fun (loc, literal) ->
       check_literal ~is_const:true ~loc literal);
-  (* A tagged block is told apart from the others by its tag; an untagged one
-     is its payload, whatever its [@as] *)
+  (* The blocks of a variant are all tagged or, when the type is [@unboxed],
+     all untagged. A tagged block is told apart from the others by its tag; an
+     untagged one by the kind of its payload, whatever its [@as]. *)
   Ext_list.rev_iter blocks (fun (loc, block) ->
       match block with
       | Tagged {tag} -> check_literal ~is_const:false ~loc tag
-      | Untagged _ -> ());
-  (* The payload kinds are checked as soon as one case is untagged, even when
-     the type itself is not [@unboxed] *)
-  let has_untagged_block =
-    List.exists
-      (function
-        | _, Untagged _ -> true
-        | _, Tagged _ -> false)
-      blocks
-  in
-  if is_untagged_def || has_untagged_block then (
-    (* Tagged blocks are objects with a tag field: together one object case *)
-    if
-      List.exists
-        (function
-          | _, Tagged _ -> true
-          | _, Untagged _ -> false)
-        blocks
-    then incr object_types;
-    Ext_list.rev_iter blocks (fun (loc, block) ->
-        match block with
-        | Untagged {tag; block_type} ->
-          (match block_type with
-          | UnknownType -> incr unknown_types
-          | ObjectType -> incr object_types
-          | InstanceType i ->
-            let count =
-              Hashtbl.find_opt instance_types i |> Option.value ~default:0
-            in
-            Hashtbl.replace instance_types i (count + 1)
-          | FunctionType -> incr function_types
-          | IntType | FloatType -> incr number_types
-          | BigintType -> incr bigint_types
-          | BooleanType ->
-            (* Literal cases are matched before payload cases, so a boolean
+      | Untagged {tag; block_type} ->
+        (match block_type with
+        | UnknownType -> incr unknown_types
+        | ObjectType -> incr object_types
+        | InstanceType i ->
+          let count =
+            Hashtbl.find_opt instance_types i |> Option.value ~default:0
+          in
+          Hashtbl.replace instance_types i (count + 1)
+        | FunctionType -> incr function_types
+        | IntType | FloatType -> incr number_types
+        | BigintType -> incr bigint_types
+        | BooleanType ->
+          (* Literal cases are matched before payload cases, so a boolean
                payload only receives the booleans that are not literal cases.
                A partial overlap is allowed, like for strings and numbers. *)
-            if
-              String_map.mem "true" !nonstring_literals_consts
-              && String_map.mem "false" !nonstring_literals_consts
-            then
-              raise
-                (Error
-                   ( loc,
-                     InvalidUntaggedVariantDefinition
-                       (UnreachableBoolean tag.name) ));
-            incr boolean_types
-          | StringType -> incr string_types);
-          invariant loc tag.name
-        | Tagged _ -> ()))
+          if
+            String_map.mem "true" !nonstring_literals_consts
+            && String_map.mem "false" !nonstring_literals_consts
+          then
+            raise
+              (Error
+                 ( loc,
+                   InvalidUntaggedVariantDefinition
+                     (UnreachableBoolean tag.name) ));
+          incr boolean_types
+        | StringType -> incr string_types);
+        invariant loc tag.name)
 
 let get_cstr_loc_tag (cstr : Types.constructor_declaration) =
   (cstr.cd_loc, {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag})

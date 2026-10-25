@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/unboxed_on_single_field_record_constructor.res[0m:[2m1:12-19[0m
+
+  [1;31m1[0m [2m│[0m type t = | [1;31m@unboxed[0m A({x: int})
+  2 [2m│[0m 
+
+  @unboxed applies to a whole variant: write it on the type, as in `@unboxed type t = ...`, instead of on constructor A. For a constructor whose payload is an inline record with one field, `@unboxed type t = A({...})` makes the value that field. To keep the record object, give the record type a name: `@unboxed type t = A(r)`.

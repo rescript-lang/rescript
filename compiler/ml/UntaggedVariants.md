@@ -20,24 +20,35 @@ directory is named.
 
 ### 1. Declaration
 
-`@unboxed` and `@tag(...)` on a variant type are copied onto every
-constructor. `@unboxed` on a single constructor of an ordinary variant makes
-that constructor untagged and leaves the others tagged:
+`@unboxed` on a variant type makes the whole variant untagged: every case with
+a payload is represented by its payload. `@tag(...)` on the type is copied
+onto every constructor. A constructor cannot have its own `@unboxed`: it would
+mix tagged and untagged cases in one variant, and is an error telling to write
+it on the type. For a constructor whose payload is an inline record with one
+field, `@unboxed` on the type makes the value that field (the legacy unboxed
+representation), so the error also tells to give the record type a name to
+keep the record object.
 
 | Declaration | Value | JavaScript |
 | --- | --- | --- |
-| `type mixed = \| @unboxed MA(int) \| MB({x: int}) \| MC` | `MA(3)` | `3` |
-| | `MB({x: 1})` | `{TAG: "MB", x: 1}` |
-| | `MC` | `"MC"` |
+| `@unboxed type whole = WA(int) \| WB({x: int}) \| WC` | `WA(3)` | `3` |
+| | `WB({x: 1})` | `{x: 1}` |
+| | `WC` | `"WC"` |
+
+| Declaration | Error | Fixture |
+| --- | --- | --- |
+| `type t = \| @unboxed A(int) \| B({x: int}) \| C` | @unboxed applies to a whole variant: write it on the type, ... | `unboxed_on_constructor.res` |
+| `type t = \| @unboxed A({x: int})` | the same, and how to keep the record object | `unboxed_on_single_field_record_constructor.res` |
 
 The layout of a declaration is computed once, after its recursive group is in
 the environment, and stored on the declaration.
 
-- Implementation: `typedecl.ml` (`copy_tag_attr_from_decl` in
-  `transl_declaration`; the layout pass in `transl_type_decl`),
-  `variant_layout.ml:layout_from_type_variant`.
-- Tests: `spec_test` rule 1.
-- Shaped by #7320 (recursive groups), #8579 (layout stored once).
+- Implementation: `typedecl.ml` (the constructor check and
+  `copy_tag_attr_from_decl` in `transl_declaration`; the layout pass in
+  `transl_type_decl`), `variant_layout.ml:layout_from_type_variant`.
+- Tests: `spec_test` rule 1; the fixtures above.
+- Shaped by #7320 (recursive groups), #8579 (layout stored once), #9020 and
+  #9038 (constructor-level `@unboxed` removed).
 
 ### 2. Representation
 

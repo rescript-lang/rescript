@@ -61,7 +61,7 @@ let layout_from_type_variant ~(configuration : configuration) ~env
   let get_block (cstr : Types.constructor_declaration) : block =
     let tag = {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag} in
     let tag_name = process_tag_name cstr.cd_attributes in
-    if process_untagged cstr.cd_attributes then
+    if configuration.unboxed then
       Untagged {tag; block_type = get_block_type ~env cstr}
     else Tagged {tag; tag_name}
   in
@@ -81,7 +81,7 @@ let layout_from_type_variant ~(configuration : configuration) ~env
         | Constant tag -> ((loc, tag) :: consts, blocks)
         | Block block -> (consts, (loc, block) :: blocks))
   in
-  check_invariant ~is_untagged_def:configuration.unboxed ~consts ~blocks;
+  check_invariant ~consts ~blocks;
   let constructors =
     Array.of_list
       (List.map (fun (_, constructor) -> constructor) located_constructors)

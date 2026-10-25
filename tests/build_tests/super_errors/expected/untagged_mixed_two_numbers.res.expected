@@ -1,9 +1,0 @@
-
-  [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/untagged_mixed_two_numbers.res[0m:[2m1:28-44[0m
-
-  [1;31m1[0m [2m│[0m type t = | @unboxed A(int) [1;31m| @unboxed B(int)[0m | C
-  2 [2m│[0m let f = x =>
-  3 [2m│[0m   switch x {
-
-  This untagged variant definition is invalid: At most one case can be a number type (int or float).

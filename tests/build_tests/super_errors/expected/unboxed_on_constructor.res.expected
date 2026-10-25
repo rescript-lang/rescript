@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/unboxed_on_constructor.res[0m:[2m1:12-19[0m
+
+  [1;31m1[0m [2m│[0m type t = | [1;31m@unboxed[0m A(int) | B({x: int}) | C
+  2 [2m│[0m 
+
+  @unboxed applies to a whole variant: write it on the type, as in `@unboxed type t = ...`, instead of on constructor A.

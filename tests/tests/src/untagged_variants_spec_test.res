@@ -12,14 +12,13 @@ those assertions show how recognition treats values outside every case.
 @inline(never) let id = x => x
 external raw: 'a => 'b = "%identity"
 
-// Rule 1: `@unboxed` and `@tag` on the type apply to every constructor;
-// `@unboxed` on one constructor of a tagged variant applies to that one.
-type mixed = | @unboxed MA(int) | MB({x: int}) | MC
-let mixedName = v =>
+// Rule 1: `@unboxed` and `@tag` on the type apply to every constructor.
+@unboxed type whole = WA(int) | WB({x: int}) | WC
+let wholeName = v =>
   switch v {
-  | MA(_) => "MA"
-  | MB(_) => "MB"
-  | MC => "MC"
+  | WA(_) => "WA"
+  | WB(_) => "WB"
+  | WC => "WC"
   }
 
 // Rule 2: a nullary case is its literal; a payload case is its payload.
@@ -221,13 +220,13 @@ let someWithUnboxedString = (v: withUnboxedString): option<withUnboxedString> =>
 @tag("kind") type tagged = TA({x: int}) | @as("bee") TB({y: int}) | TC
 
 describe(__MODULE__, () => {
-  test("rule 1: @unboxed on one constructor of a tagged variant", () => {
-    eq(__LOC__, raw(id(MA(3))), 3)
-    eq(__LOC__, raw(id(MB({x: 1}))), {"TAG": "MB", "x": 1})
-    eq(__LOC__, raw(id(MC)), "MC")
-    eq(__LOC__, mixedName(id(MA(3))), "MA")
-    eq(__LOC__, mixedName(id(MB({x: 1}))), "MB")
-    eq(__LOC__, mixedName(id(MC)), "MC")
+  test("rule 1: @unboxed on the type applies to every constructor", () => {
+    eq(__LOC__, raw(id(WA(3))), 3)
+    eq(__LOC__, raw(id(WB({x: 1}))), {"x": 1})
+    eq(__LOC__, raw(id(WC)), "WC")
+    eq(__LOC__, wholeName(id(WA(3))), "WA")
+    eq(__LOC__, wholeName(id(WB({x: 1}))), "WB")
+    eq(__LOC__, wholeName(id(WC)), "WC")
   })
 
   test("rule 2: representation of each case", () => {

@@ -198,8 +198,8 @@ let variant_configuration_can_be_coerced_raises ~is_spread_context ~left_loc
     ~right_loc ~(left_attributes : Parsetree.attributes)
     ~(right_attributes : Parsetree.attributes) =
   (match
-     ( Ast_untagged_variants.process_untagged left_attributes,
-       Ast_untagged_variants.process_untagged right_attributes )
+     ( Ast_untagged_variants.has_untagged left_attributes,
+       Ast_untagged_variants.has_untagged right_attributes )
    with
   | true, true | false, false -> ()
   | left, _right ->
