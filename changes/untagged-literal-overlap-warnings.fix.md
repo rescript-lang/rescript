@@ -1,0 +1,1 @@
+- Warn about untagged variant payload patterns that can never match because a literal case has the same value, like `S("a")` with `@as("a") A | S(string)`, and treat `@as(true) Yes | Ans(bool)` as fully covered by `Yes | Ans(false)`.

@@ -1,0 +1,12 @@
+
+  [1;33mWarning number 12[0m
+  [36m/.../fixtures/warning_12_untagged_literal_shadows_aliased_or_pattern.res[0m:[2m6:8-10[0m
+
+  4 [2m│[0m let f = x =>
+  5 [2m│[0m   switch x {
+  [1;33m6[0m [2m│[0m   | S(([1;33m"a"[0m | "b") as s) => s
+  7 [2m│[0m   | S(_) | A => "other"
+  8 [2m│[0m   }
+
+  this sub-pattern is unused.
+  "a" is the runtime value of constructor A, so it is always matched as A, never as S.

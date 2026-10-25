@@ -57,11 +57,19 @@ let flagName = v =>
   | Str(_) => "str"
   }
 
-// A boolean payload only receives the boolean that is not a literal case.
+// A boolean payload only receives the boolean that is not a literal case. The
+// first arm can never match (warning 11); folding must not select it either.
 @unboxed type answer = | @as(true) Yes2 | Answer(bool)
+@warning("-11")
 let answerName = v =>
   switch v {
   | Answer(true) => "answer true"
+  | Yes2 => "yes"
+  | Answer(false) => "answer false"
+  }
+// Yes2 also covers Answer(true), so this match is exhaustive.
+let answerName2 = v =>
+  switch v {
   | Yes2 => "yes"
   | Answer(false) => "answer false"
   }
@@ -163,6 +171,14 @@ let numberOrBigintName = value =>
   | Other(s) => s
   }
 
+// A bigint payload equal to a bigint literal folds to the literal's case
+@unboxed type bigintOrPayload = | @as(2n) BigTwo | BigOther(bigint)
+let bigintOrPayloadName = value =>
+  switch value {
+  | BigTwo => "two"
+  | BigOther(_) => "other"
+  }
+
 @inline(never) let id = x => x
 
 // Nonconstant scalar payloads are passed through; inline records remain objects.
@@ -234,6 +250,8 @@ describe(__MODULE__, () => {
     eq(__LOC__, pureName(I(1)), "int")
     eq(__LOC__, answerName(Answer(true)), "yes")
     eq(__LOC__, answerName(Answer(false)), "answer false")
+    eq(__LOC__, answerName2(id(Answer(true))), "yes")
+    eq(__LOC__, answerName2(id(Answer(false))), "answer false")
     eq(__LOC__, mixedName(Toggle(false)), "off")
     eq(__LOC__, mixedName(Toggle(true)), "toggle true")
     eq(__LOC__, mixedName(Label("false")), "false")
@@ -246,6 +264,8 @@ describe(__MODULE__, () => {
     eq(__LOC__, bigintName(Wrapped(DecimalTen)), "one")
     eq(__LOC__, wideName(WideInt(1)), "one")
     eq(__LOC__, numberOrBigintName(BigintOne), "bigint")
+    eq(__LOC__, bigintOrPayloadName(BigOther(2n)), "two")
+    eq(__LOC__, bigintOrPayloadName(BigOther(02n)), "two")
   })
 
   test("a number and a bigint literal with the same digits", () => {
