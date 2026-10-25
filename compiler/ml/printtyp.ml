@@ -930,9 +930,7 @@ and tree_of_constructor ?printing_context ~layout ~position cd =
         | Bool b -> Printf.sprintf "@as(%b)" b
         | BigInt s -> Printf.sprintf "@as(%sn)" s
       in
-      match Variant_runtime.constructor_tag layout position with
-      | Some d -> Some (as_annotation d)
-      | None -> None
+      Option.map as_annotation cd.cd_runtime_tag
   in
   let arg () = tree_of_constructor_arguments ?printing_context cd.cd_args in
   match cd.cd_res with

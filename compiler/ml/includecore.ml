@@ -345,21 +345,32 @@ and compare_records env params1_ params2_ n_
   in
   aux ~fast:true params1_ params2_ n_ labels1_ labels2_
 
-(* Values are recognized by the class or [typeof] the second declaration
-   states, so the first must state the same. Stating nothing hides it. *)
-let compare_runtime_annotations env decl1 decl2 =
+(* What the second declaration states about its values at run time must
+   hold for the first. Values are recognized by the class or [typeof] the
+   second states, so the first must state the same; stating nothing hides it.
+   [@notUndefined] lets clients unbox [option] of the type, so the first must
+   be a type that cannot hold [undefined] either, or one whose representation
+   the compiler does not see, which has none that contradicts it. *)
+let compare_runtime_annotations env id decl1 decl2 =
   (* The second declaration's shape was resolved in its own environment, so
      it is what users of the second declaration see *)
   match decl2.type_shape with
-  | Unstated | Never_undefined -> []
+  | Unstated -> []
+  | Never_undefined -> (
+    let env = Env.add_type ~check:false id decl1 env in
+    let ty =
+      Btype.newgenty (Tconstr (Pident id, decl1.type_params, ref Mnil))
+    in
+    match Typeopt.undefinedness env ty with
+    | Cannot_be_undefined | Unseen -> []
+    | Stands_for_another | Can_be_undefined -> [Not_undefined])
   | Recognized_as block_type2 ->
     let declared2 = Some block_type2 in
+    (* What the first declaration states, or what its structure gives *)
     let declared1 =
-      match decl1.type_shape with
-      | Recognized_as block_type1 -> Some block_type1
-      | Never_undefined -> None
-      | Unstated ->
-        Option.bind decl1.type_manifest (Variant_layout.recognized_as ~env)
+      let env = Env.add_type ~check:false id decl1 env in
+      Variant_layout.payload_kind ~env
+        (Btype.newgenty (Tconstr (Pident id, decl1.type_params, ref Mnil)))
     in
     if declared1 = declared2 then []
     else
@@ -395,7 +406,7 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
         else [Constraint]
     in
     let err =
-      if err <> [] then err else compare_runtime_annotations env decl1 decl2
+      if err <> [] then err else compare_runtime_annotations env id decl1 decl2
     in
     if err <> [] then err
     else

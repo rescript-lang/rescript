@@ -24,7 +24,7 @@ let scrape_ty env ty =
   | Tconstr (p, _, _) -> (
     match Env.find_type p env with
     | {type_representation = Unboxed; _} -> (
-      match Typedecl.get_unboxed_type_representation env ty with
+      match Ctype.get_unboxed_type_representation env ty with
       | None -> ty
       | Some ty2 -> ty2)
     | _ -> ty
@@ -100,7 +100,7 @@ let rec cannot_contain_undefined ~visiting (typ : Types.type_expr) (env : Env.t)
               | Variant_runtime.Block (Tagged {tag}) -> (tag, false)
               | Variant_runtime.Block (Untagged {tag}) -> (tag, true)
             in
-            tag.literal <> Some Variant_runtime.Undefined
+            tag.literal <> Variant_runtime.Undefined
             && ((not payload_is_unboxed)
                ||
                match cd.cd_args with
@@ -121,6 +121,46 @@ let rec cannot_contain_undefined ~visiting (typ : Types.type_expr) (env : Env.t)
 
 let type_cannot_contain_undefined typ env =
   cannot_contain_undefined ~visiting:[] typ env
+
+type abstractness = Opaque | Stands_for_another | Not_abstract
+
+(* Whether [ty] is, also through abbreviations, an abstract type with a
+   representation of its own, which an annotation can refine, or one that
+   stands for another type: a functor parameter's type, a recursive module's
+   type being defined, or a locally abstract type. *)
+let abstractness env ty =
+  match (Ctype.expand_head_opt env ty).desc with
+  | Tconstr (path, _, _) -> (
+    match Env.find_type path env with
+    | {type_kind = Type_abstract; type_manifest = None; type_newtype_level} ->
+      if type_newtype_level <> None || Env.is_functor_arg path env then
+        Stands_for_another
+      else if Predef.type_is_builtin_path_but_option path <> Predef.NA then
+        Not_abstract
+      else Opaque
+    | _ -> Not_abstract
+    | exception Not_found -> Not_abstract)
+  | _ -> Not_abstract
+
+type undefinedness =
+  | Cannot_be_undefined
+  | Unseen
+  | Stands_for_another
+  | Can_be_undefined
+
+(* Whether a type can hold [undefined], as far as the compiler sees. An
+   opaque abstract type or a JavaScript object type has a representation the
+   compiler does not see. *)
+let undefinedness env ty : undefinedness =
+  if type_cannot_contain_undefined ty env then Cannot_be_undefined
+  else
+    match abstractness env ty with
+    | Opaque -> Unseen
+    | Stands_for_another -> Stands_for_another
+    | Not_abstract -> (
+      match (Ctype.expand_head_opt env ty).desc with
+      | Tobject _ -> Unseen
+      | _ -> Can_be_undefined)
 
 let is_function_type env ty =
   match scrape env ty with

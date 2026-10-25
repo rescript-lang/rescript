@@ -5,4 +5,4 @@
   [1;31m1[0m [2m│[0m @instanceOf("Date") @typeOf("object") [1;31mtype t[0m
   2 [2m│[0m 
 
-  A type can have either @instanceOf or @typeOf, not both.
+  A type can have only one of @notUndefined, @instanceOf and @typeOf. @instanceOf and @typeOf already imply @notUndefined.

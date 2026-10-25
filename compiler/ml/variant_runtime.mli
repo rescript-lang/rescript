@@ -71,12 +71,9 @@ val literal_passes : literal_tag -> block_type -> bool
     value represented directly by its payload. *)
 type tag_type = Literal of literal_tag | Payload_shape of block_type
 
-type tag = {name: string; literal: literal_tag option}
-(** A constructor's name and optional explicitly declared runtime literal. *)
-
-type matchable_tag = {name: string; tag_type: tag_type option}
-(** A constructor tag widened for matching, where an untagged payload shape
-    can participate alongside declared literals. *)
+type tag = {name: string; literal: literal_tag}
+(** A constructor's name and its runtime literal: what [@as] states, or the
+    name itself *)
 
 type tagged_block = {tag: tag; tag_name: string option}
 
@@ -87,10 +84,6 @@ type block =
   | Untagged of {tag: tag; block_type: block_type}
 
 type constructor_case = Constant of tag | Block of block
-
-val to_matchable_tag : tag -> matchable_tag
-(** Widen a tag as stated by a declaration into one a match can compare
-    against, which also covers an untagged payload's shape. *)
 
 type configuration = {
   unboxed: bool;
@@ -121,7 +114,10 @@ val get_layout : layout_ref -> layout
 val matching_facts : layout -> matching_facts
 val configuration : layout -> configuration
 val constructor_at : layout -> int -> constructor_case
-val constructor_tag : layout -> int -> literal_tag option
+
+val constructor_tag : layout -> int -> literal_tag
+(** The literal of a constant constructor, or of the tag of a tagged one *)
+
 val representation : constructor_reference -> constructor_case
 val length : layout -> int
 val num_constants : layout -> int

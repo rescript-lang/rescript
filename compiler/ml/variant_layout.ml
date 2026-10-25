@@ -33,11 +33,34 @@ let recognized_as ~env t =
   | Recognized_as block_type -> Some block_type
   | Unstated | Never_undefined -> None
 
+(* The payload kind of the values of [t]: the one its declarations state, or
+   the one its structure gives. Builtin types state their kinds in [Predef];
+   type expressions other than constructors have no declaration. A private
+   abbreviation hides how its values are built, not what they are, so it is
+   expanded like any other. An unboxed record is the value of its field, so it
+   has no kind of its own. *)
+let payload_kind ~env (t : Types.type_expr) : block_type option =
+  match recognized_as ~env t with
+  | Some _ as declared -> declared
+  | None -> (
+    match (Ctype.expand_head_opt env t).desc with
+    | Ttuple _ -> Some (InstanceType Array)
+    | Tarrow _ -> Some FunctionType
+    | Tobject _ -> Some ObjectType
+    | Tconstr (path, _, _) -> (
+      match Env.find_type path env with
+      | {type_kind = Type_record (_, Record_unboxed _)} -> None
+      | {type_kind = Type_record _} -> Some ObjectType
+      | _ -> None
+      | exception Not_found -> None)
+    | _ -> None)
+
 (* The shape a declaration states, resolved against what the type it
    abbreviates states in [env]: a class's superclasses are the classes
    annotated further down a chain of abbreviations. *)
 let declaration_shape ~env (decl : Types.type_declaration) : value_shape =
   match process_runtime_annotation decl.type_attributes with
+  | None -> Unstated
   | Some (Type_of block_type) -> Recognized_as block_type
   | Some (Instance_of name) ->
     let ancestors =
@@ -49,8 +72,11 @@ let declaration_shape ~env (decl : Types.type_declaration) : value_shape =
       | Some _ | None -> []
     in
     Recognized_as (InstanceType (Class {name; ancestors}))
-  | None ->
-    if has_not_undefined decl.type_attributes then Never_undefined else Unstated
+  | Some Not_undefined -> (
+    (* Restating a kind the abbreviated type is recognized by keeps it *)
+    match Option.map (value_shape ~env) decl.type_manifest with
+    | Some (Recognized_as _ as shape) -> shape
+    | Some (Unstated | Never_undefined) | None -> Never_undefined)
 
 (* Resolves the shapes of a group of declarations, which can abbreviate each
    other. Each round resolves one more level of abbreviation within the
@@ -85,115 +111,9 @@ let resolve_shapes ~env (decls : (Ident.t * Types.type_declaration) list) =
   in
   round env decls (List.length decls)
 
-(* Whether the abstract type at [path] has a representation of its own, which
-   an annotation can refine, or stands for another type: a functor
-   parameter's type, a recursive module's type being defined, or a locally
-   abstract type. *)
-type abstractness = Opaque | Stands_for_another | Not_abstract
-
-let abstractness ~env path =
-  match Env.find_type path env with
-  | {type_kind = Type_abstract; type_manifest = None; type_newtype_level} ->
-    if type_newtype_level <> None || Env.is_functor_arg path env then
-      Stands_for_another
-    else if Predef.type_is_builtin_path_but_option path <> Predef.NA then
-      Not_abstract
-    else Opaque
-  | _ -> Not_abstract
-  | exception Not_found -> Not_abstract
-
-let annotation_of_block_type = function
-  | InstanceType (Class {name}) -> Instance_of name
-  | block_type -> Type_of block_type
-
-(* An annotation on an abbreviation is a claim about the abbreviated type, so
-   it must agree with what the compiler knows about that type. It can refine
-   an abstract type, restate the annotation the abbreviated type has, or, on a
-   private abbreviation, declare a subclass of the class annotated there.
-   Anything else, such as [@typeOf("string") type t = option<string>], would
-   let two spellings of one type be recognized differently, and would make
-   [Some(None)] of a type that can be undefined indistinguishable from
-   [None]. *)
-let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
-  match
-    (process_runtime_annotation decl.type_attributes, decl.type_manifest)
-  with
-  | None, _ | Some _, None -> ()
-  | Some outer, Some manifest -> (
-    let error err = raise (Error (loc, err)) in
-    match (outer, recognized_as ~env manifest) with
-    | _, None -> (
-      match (Ctype.expand_head_opt env manifest).desc with
-      | Tconstr (path, _, _) -> (
-        match abstractness ~env path with
-        | Opaque -> ()
-        | Stands_for_another ->
-          error
-            (RuntimeAnnotationOnTypeParameter (runtime_attribute_name outer))
-        | Not_abstract ->
-          error
-            (RuntimeAnnotationOnUnrelatedType (runtime_attribute_name outer)))
-      | _ ->
-        error (RuntimeAnnotationOnUnrelatedType (runtime_attribute_name outer)))
-    | Type_of block_type, Some inner when block_type = inner -> ()
-    | Instance_of name, Some (InstanceType (Class {name = inner}))
-      when name = inner ->
-      ()
-    | Instance_of name, Some ((InstanceType (Class _) | ObjectType) as inner) ->
-      (* A public abbreviation would make every value of the superclass type
-         a value of the subclass, without a coercion *)
-      let superclass, ancestors =
-        match inner with
-        | InstanceType (Class {name = ancestor; ancestors}) ->
-          (ancestor, ancestor :: ancestors)
-        (* Every class instance is an object *)
-        | _ -> ("Object", [])
-      in
-      if decl.type_private = Public then
-        error (SubclassOfPublicAbbreviation (name, superclass))
-      else if List.mem name ancestors then error (ClassTwiceInChain name)
-    | (Instance_of _ | Type_of _), Some inner ->
-      error
-        (RuntimeAnnotationContradictsManifest
-           ( runtime_annotation_to_string outer,
-             runtime_annotation_to_string (annotation_of_block_type inner) )))
-
-let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
-  match recognized_as ~env t with
-  | Some _ as declared -> declared
-  | None -> (
-    (* Builtin types have no declaration to annotate *)
-    match (Ctype.expand_head env t).desc with
-    | Tconstr (path, _, _) when Path.same path Predef.path_string ->
-      Some StringType
-    | Tconstr (path, _, _)
-      when Path.same path Predef.path_int || Path.same path Predef.path_float ->
-      Some NumberType
-    | Tconstr (path, _, _) when Path.same path Predef.path_bigint ->
-      Some BigintType
-    | Tconstr (path, _, _) when Path.same path Predef.path_bool ->
-      Some BooleanType
-    | Tconstr (path, _, _) when Path.same path Predef.path_dict ->
-      Some ObjectType
-    | Tconstr (path, _, _) when Path.same path Predef.path_array ->
-      Some (InstanceType Array)
-    | Tconstr (path, _, _) when Path.same path Predef.path_promise ->
-      Some (InstanceType (Class {name = "Promise"; ancestors = []}))
-    | Ttuple _ -> Some (InstanceType Array)
-    | Tarrow _ -> Some FunctionType
-    | _ -> None)
-
 let get_block_type ~env (cstr : Types.constructor_declaration) : block_type =
   match cstr.cd_args with
-  | Cstr_tuple [ty] -> (
-    match get_block_type_from_typ ~env ty with
-    | Some shape -> shape
-    | None -> (
-      match Ctype.extract_concrete_typedecl env ty with
-      | _, _, {type_kind = Type_record (_, Record_unboxed _)} -> UnknownType
-      | _, _, {type_kind = Type_record (_, _)} -> ObjectType
-      | _ -> UnknownType
-      | exception _ -> UnknownType))
+  | Cstr_tuple [ty] -> Option.value (payload_kind ~env ty) ~default:UnknownType
   | Cstr_tuple (_ :: _ :: _) ->
     report_constructor_more_than_one_arg ~loc:cstr.cd_loc
       ~name:(Ident.name cstr.cd_id)
@@ -202,10 +122,108 @@ let get_block_type ~env (cstr : Types.constructor_declaration) : block_type =
     (* Nullary constructors are handled before computing a payload shape. *)
     assert false
 
+(* The cases of a variant must be told apart at run time: nullary cases and
+   tagged blocks by distinct literals, the untagged payloads of an [@unboxed]
+   variant by distinct kinds *)
+let check_invariant ~(consts : (Location.t * tag) list)
+    ~(blocks : (Location.t * block) list) =
+  let module String_set = Set.Make (String) in
+  let module String_map = Map.Make (String) in
+  let string_literals_consts = ref String_set.empty in
+  let string_literals_blocks = ref String_set.empty in
+  (* Keyed by [literal_key], with the spelling of the literal *)
+  let nonstring_literals_consts = ref String_map.empty in
+  let nonstring_literals_blocks = ref String_map.empty in
+  (* The kinds of the untagged payloads seen so far. A class is identified by
+     its name. *)
+  let kinds = Hashtbl.create 1 in
+  let kind_key = function
+    | InstanceType (Class {name}) -> InstanceType (Class {name; ancestors = []})
+    | kind -> kind
+  in
+  let add_string_literal ~is_const ~loc s =
+    let set =
+      if is_const then string_literals_consts else string_literals_blocks
+    in
+    if String_set.mem s !set then
+      raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)));
+    set := String_set.add s !set
+  in
+  let add_nonstring_literal ~is_const ~loc literal s =
+    let map =
+      if is_const then nonstring_literals_consts else nonstring_literals_blocks
+    in
+    let key = Variant_runtime.literal_value_key literal in
+    (match String_map.find_opt key !map with
+    | Some earlier when earlier = s ->
+      raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)))
+    | Some earlier ->
+      raise
+        (Error
+           ( loc,
+             InvalidUntaggedVariantDefinition (SameLiteralValue (s, earlier)) ))
+    | None -> ());
+    map := String_map.add key s !map
+  in
+  let check_literal ~is_const ~loc (tag : tag) =
+    match tag.literal with
+    | String s -> add_string_literal ~is_const ~loc s
+    | Int i as literal ->
+      add_nonstring_literal ~is_const ~loc literal (string_of_int i)
+    | Float f as literal -> add_nonstring_literal ~is_const ~loc literal f
+    | BigInt i as literal ->
+      add_nonstring_literal ~is_const ~loc literal (i ^ "n")
+    | Bool b as literal ->
+      add_nonstring_literal ~is_const ~loc literal
+        (if b then "true" else "false")
+    | Null as literal -> add_nonstring_literal ~is_const ~loc literal "null"
+    | Undefined as literal ->
+      add_nonstring_literal ~is_const ~loc literal "undefined"
+  in
+
+  Ext_list.rev_iter consts (fun (loc, literal) ->
+      check_literal ~is_const:true ~loc literal);
+  (* The blocks of a variant are all tagged or, when the type is [@unboxed],
+     all untagged. A tagged block is told apart from the others by its tag; an
+     untagged one by the kind of its payload, whatever its [@as]. *)
+  Ext_list.rev_iter blocks (fun (loc, block) ->
+      match block with
+      | Tagged {tag} -> check_literal ~is_const:false ~loc tag
+      | Untagged {tag; block_type = UnknownType} ->
+        (* No check tells an unknown payload apart from another payload *)
+        if List.length blocks <> 1 then
+          raise
+            (Error
+               (loc, InvalidUntaggedVariantDefinition (OnlyOneUnknown tag.name)))
+      | Untagged {tag; block_type} ->
+        (* Literal cases are matched before payload cases, so a boolean
+           payload only receives the booleans that are not literal cases. A
+           partial overlap is allowed, like for strings and numbers. *)
+        if
+          block_type = BooleanType
+          && String_map.mem "true" !nonstring_literals_consts
+          && String_map.mem "false" !nonstring_literals_consts
+        then
+          raise
+            (Error
+               ( loc,
+                 InvalidUntaggedVariantDefinition (UnreachableBoolean tag.name)
+               ));
+        let key = kind_key block_type in
+        if Hashtbl.mem kinds key then
+          raise
+            (Error
+               ( loc,
+                 InvalidUntaggedVariantDefinition (AtMostOneOfKind block_type)
+               ));
+        Hashtbl.add kinds key ())
+
+(* A constructor without [@as] is represented by its name *)
+
 let layout_from_type_variant ~(configuration : configuration) ~env
     (cstrs : Types.constructor_declaration list) : Variant_runtime.layout =
   let get_block (cstr : Types.constructor_declaration) : block =
-    let tag = {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag} in
+    let tag = declared_tag cstr in
     let tag_name = process_tag_name cstr.cd_attributes in
     if configuration.unboxed then
       Untagged {tag; block_type = get_block_type ~env cstr}

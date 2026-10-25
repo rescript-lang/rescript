@@ -347,3 +347,7 @@ module For_test : sig
   (** The environment of the last expansion on this domain is still the
       initial empty one. *)
 end
+
+val get_unboxed_type_representation : Env.t -> type_expr -> type_expr option
+(** The type an [@unboxed] wrapper is represented by, through any number of
+    wrappers *)

@@ -2,14 +2,7 @@ open Variant_runtime
 
 type untagged_error =
   | OnlyOneUnknown of string
-  | AtMostOneObject
-  | AtMostOneInstance of Instance.t
-  | AtMostOneFunction
-  | AtMostOneString
-  | AtMostOneNumber
-  | AtMostOneBigint
-  | AtMostOneBoolean
-  | AtMostOneSymbol
+  | AtMostOneOfKind of block_type  (** never [UnknownType] *)
   | UnreachableBoolean of string
   | DuplicateLiteral of string
   | SameLiteralValue of string * string
@@ -40,6 +33,7 @@ type error =
   | RuntimeAnnotationOnRepresentedType of string
   | RuntimeAnnotationOnUnrelatedType of string
   | RuntimeAnnotationContradictsManifest of string * string
+  | SubclassOfArray of string
   | SubclassOfPublicAbbreviation of string * string
   | ClassTwiceInChain of string
 exception Error of Location.t * error
@@ -66,22 +60,24 @@ let report_error ppf =
         "Case " ^ name
         ^ " has a payload that is not of one of the recognized shapes (object, \
            array, etc). Then it must be the only case with payloads."
-      | AtMostOneObject -> "At most one case can be an object type."
-      | AtMostOneInstance Array ->
-        "At most one case can be an array or tuple type."
-      | AtMostOneInstance i ->
-        "At most one case can be an instance of " ^ Instance.to_string i ^ "."
-      | AtMostOneFunction -> "At most one case can be a function type."
-      | AtMostOneString -> "At most one case can be a string type."
-      | AtMostOneBoolean -> "At most one case can be a boolean type."
-      | AtMostOneSymbol -> "At most one case can be a symbol type."
+      | AtMostOneOfKind kind ->
+        "At most one case can be "
+        ^ (match kind with
+          | ObjectType -> "an object type"
+          | InstanceType Array -> "an array or tuple type"
+          | InstanceType i -> "an instance of " ^ Instance.to_string i
+          | FunctionType -> "a function type"
+          | StringType -> "a string type"
+          | NumberType -> "a number type (int or float)"
+          | BigintType -> "a bigint type"
+          | BooleanType -> "a boolean type"
+          | SymbolType -> "a symbol type"
+          | UnknownType -> "of an unknown type")
+        ^ "."
       | UnreachableBoolean name ->
         "Case " ^ name
         ^ " can never match: both true and false are already cases of this \
            variant."
-      | AtMostOneNumber ->
-        "At most one case can be a number type (int or float)."
-      | AtMostOneBigint -> "At most one case can be a bigint type."
       | DuplicateLiteral s -> "Duplicate literal " ^ s ^ "."
       | SameLiteralValue (literal, earlier) ->
         "The literal " ^ literal ^ " is the same JavaScript value as " ^ earlier
@@ -148,7 +144,9 @@ let report_error ppf =
        for another one, whose values can be anything."
       attribute
   | ConflictingRuntimeAnnotations ->
-    fprintf ppf "A type can have either @instanceOf or @typeOf, not both."
+    fprintf ppf
+      "A type can have only one of @notUndefined, @instanceOf and @typeOf. \
+       @instanceOf and @typeOf already imply @notUndefined."
   | RuntimeAnnotationOnRepresentedType attribute ->
     fprintf ppf
       "@%s can only be used on abstract types and type abbreviations, whose \
@@ -162,8 +160,15 @@ let report_error ppf =
       attribute
   | RuntimeAnnotationContradictsManifest (outer, inner) ->
     fprintf ppf
-      "This annotation, %s, contradicts the abbreviated type's annotation, %s."
+      "This annotation, %s, contradicts the abbreviated type, whose values are \
+       recognized by %s."
       outer inner
+  | SubclassOfArray name ->
+    fprintf ppf
+      "@instanceOf(\"%s\") cannot describe the values of an array type: they \
+       are recognized by Array.isArray, and subclasses of Array are not \
+       supported."
+      name
   | SubclassOfPublicAbbreviation (name, ancestor) ->
     fprintf ppf
       "A subclass must be a private abbreviation: write `= private ...` so \
@@ -241,12 +246,14 @@ let report_constructor_more_than_one_arg ~loc ~name =
     (Error
        (loc, InvalidUntaggedVariantDefinition (ConstructorMoreThanOneArg name)))
 
-(* What [@instanceOf] or [@typeOf] on a type declaration states about the
-   runtime representation of its values. *)
+(* What [@notUndefined], [@instanceOf] or [@typeOf] on a type declaration
+   states about the runtime representation of its values. *)
 type runtime_annotation =
+  | Not_undefined  (** values that are never [undefined] *)
   | Instance_of of string  (** instances of the global class at this path *)
   | Type_of of block_type  (** values with this [typeof] *)
 
+let not_undefined = "notUndefined"
 let instance_of = "instanceOf"
 let type_of = "typeOf"
 
@@ -293,6 +300,7 @@ let is_class_path name =
   | [] -> false
 
 let runtime_attribute_name = function
+  | Not_undefined -> not_undefined
   | Instance_of _ -> instance_of
   | Type_of _ -> type_of
 
@@ -301,6 +309,7 @@ let typeof_name block_type =
   Option.value (Variant_runtime.typeof_name block_type) ~default:"object"
 
 let runtime_annotation_to_string = function
+  | Not_undefined -> "@" ^ not_undefined
   | Instance_of name -> Printf.sprintf "@%s(\"%s\")" instance_of name
   | Type_of block_type ->
     Printf.sprintf "@%s(\"%s\")" type_of (typeof_name block_type)
@@ -316,16 +325,15 @@ let describe_declared_block_type = function
     "values whose typeof is \"" ^ typeof_name block_type ^ "\""
   | None -> "no runtime class or typeof"
 
-let has_not_undefined (attrs : Parsetree.attributes) =
-  Ext_list.exists attrs (fun ({txt}, _) -> txt = "notUndefined")
-
-(* The [@instanceOf] or [@typeOf] annotation in [attrs], validated. Only
-   [Typedecl] passes [~loc]; later readers see attributes it accepted. *)
+(* The [@notUndefined], [@instanceOf] or [@typeOf] annotation in [attrs],
+   validated. Only [Typedecl] passes [~loc]; later readers see attributes it
+   accepted. *)
 let process_runtime_annotation ?(loc = Location.none)
     (attrs : Parsetree.attributes) =
   let annotation_of ({Location.txt; loc = attr_loc}, payload) =
     let loc = if attr_loc = Location.none then loc else attr_loc in
-    if txt = instance_of then
+    if txt = not_undefined then Some Not_undefined
+    else if txt = instance_of then
       match Ast_payload.semantic_string_of_payload payload with
       | Some name when is_class_path name -> (
         match unsupported_class name with
@@ -382,7 +390,7 @@ let process_tag_name (attrs : Parsetree.attributes) =
   !st
 
 (* A constructor the compiler generates itself carries no annotations. *)
-let generated_tag ~name = {name; literal = None}
+let generated_tag ~name = {name; literal = String name}
 
 let generated_block_runtime ~name = {tag = generated_tag ~name; tag_name = None}
 
@@ -391,140 +399,12 @@ let is_nullary_variant (x : Types.constructor_arguments) =
   | Types.Cstr_tuple [] -> true
   | _ -> false
 
-(* A literal's JavaScript value, which a [switch] compares with [===]. Ints
-   are emitted as 32-bit numbers, so [1], [1.0] and [4294967297] are one
-   number, while [1n] is a bigint. *)
-let check_invariant ~(consts : (Location.t * tag) list)
-    ~(blocks : (Location.t * block) list) =
-  let module String_set = Set.Make (String) in
-  let module String_map = Map.Make (String) in
-  let string_literals_consts = ref String_set.empty in
-  let string_literals_blocks = ref String_set.empty in
-  (* Keyed by [literal_key], with the spelling of the literal *)
-  let nonstring_literals_consts = ref String_map.empty in
-  let nonstring_literals_blocks = ref String_map.empty in
-  let instance_types = Hashtbl.create 1 in
-  let function_types = ref 0 in
-  let object_types = ref 0 in
-  let string_types = ref 0 in
-  let number_types = ref 0 in
-  let bigint_types = ref 0 in
-  let boolean_types = ref 0 in
-  let symbol_types = ref 0 in
-  let unknown_types = ref 0 in
-  let add_string_literal ~is_const ~loc s =
-    let set =
-      if is_const then string_literals_consts else string_literals_blocks
-    in
-    if String_set.mem s !set then
-      raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)));
-    set := String_set.add s !set
-  in
-  let add_nonstring_literal ~is_const ~loc literal s =
-    let map =
-      if is_const then nonstring_literals_consts else nonstring_literals_blocks
-    in
-    let key = Variant_runtime.literal_value_key literal in
-    (match String_map.find_opt key !map with
-    | Some earlier when earlier = s ->
-      raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)))
-    | Some earlier ->
-      raise
-        (Error
-           ( loc,
-             InvalidUntaggedVariantDefinition (SameLiteralValue (s, earlier)) ))
-    | None -> ());
-    map := String_map.add key s !map
-  in
-  let invariant loc name =
-    if !unknown_types <> 0 && List.length blocks <> 1 then
-      raise
-        (Error (loc, InvalidUntaggedVariantDefinition (OnlyOneUnknown name)));
-    if !object_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneObject));
-    Hashtbl.iter
-      (fun _ (i, count) ->
-        if count > 1 then
-          raise
-            (Error (loc, InvalidUntaggedVariantDefinition (AtMostOneInstance i))))
-      instance_types;
-    if !function_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneFunction));
-    if !string_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneString));
-    if !number_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneNumber));
-    if !bigint_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBigint));
-    if !boolean_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBoolean));
-    if !symbol_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneSymbol));
-    ()
-  in
-  let check_literal ~is_const ~loc (tag : tag) =
-    match tag.literal with
-    | None -> add_string_literal ~is_const ~loc tag.name
-    | Some (String s) -> add_string_literal ~is_const ~loc s
-    | Some (Int i as literal) ->
-      add_nonstring_literal ~is_const ~loc literal (string_of_int i)
-    | Some (Float f as literal) ->
-      add_nonstring_literal ~is_const ~loc literal f
-    | Some (BigInt i as literal) ->
-      add_nonstring_literal ~is_const ~loc literal (i ^ "n")
-    | Some (Bool b as literal) ->
-      add_nonstring_literal ~is_const ~loc literal
-        (if b then "true" else "false")
-    | Some (Null as literal) ->
-      add_nonstring_literal ~is_const ~loc literal "null"
-    | Some (Undefined as literal) ->
-      add_nonstring_literal ~is_const ~loc literal "undefined"
-  in
-
-  Ext_list.rev_iter consts (fun (loc, literal) ->
-      check_literal ~is_const:true ~loc literal);
-  (* The blocks of a variant are all tagged or, when the type is [@unboxed],
-     all untagged. A tagged block is told apart from the others by its tag; an
-     untagged one by the kind of its payload, whatever its [@as]. *)
-  Ext_list.rev_iter blocks (fun (loc, block) ->
-      match block with
-      | Tagged {tag} -> check_literal ~is_const:false ~loc tag
-      | Untagged {tag; block_type} ->
-        (match block_type with
-        | UnknownType -> incr unknown_types
-        | ObjectType -> incr object_types
-        | InstanceType i ->
-          (* A class is identified by its name *)
-          let name = Instance.to_string i in
-          let count =
-            match Hashtbl.find_opt instance_types name with
-            | Some (_, count) -> count
-            | None -> 0
-          in
-          Hashtbl.replace instance_types name (i, count + 1)
-        | SymbolType -> incr symbol_types
-        | FunctionType -> incr function_types
-        | NumberType -> incr number_types
-        | BigintType -> incr bigint_types
-        | BooleanType ->
-          (* Literal cases are matched before payload cases, so a boolean
-               payload only receives the booleans that are not literal cases.
-               A partial overlap is allowed, like for strings and numbers. *)
-          if
-            String_map.mem "true" !nonstring_literals_consts
-            && String_map.mem "false" !nonstring_literals_consts
-          then
-            raise
-              (Error
-                 ( loc,
-                   InvalidUntaggedVariantDefinition
-                     (UnreachableBoolean tag.name) ));
-          incr boolean_types
-        | StringType -> incr string_types);
-        invariant loc tag.name)
+let declared_tag (cstr : Types.constructor_declaration) =
+  let name = Ident.name cstr.cd_id in
+  {name; literal = Option.value cstr.cd_runtime_tag ~default:(String name)}
 
 let get_cstr_loc_tag (cstr : Types.constructor_declaration) =
-  (cstr.cd_loc, {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag})
+  (cstr.cd_loc, declared_tag cstr)
 
 let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
   List.iter

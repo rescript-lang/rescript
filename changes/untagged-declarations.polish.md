@@ -1,0 +1,1 @@
+- Allow `@notUndefined` on type abbreviations, and `@typeOf` restating a builtin type's kind, as in `@typeOf("number") type count = int`; a constructor `A` and `@as("A") A` now agree across interfaces and coercions.
