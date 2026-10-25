@@ -2321,21 +2321,32 @@ let rec pattern_literal p : Variant_runtime.literal_tag option =
   | Tpat_record _ | Tpat_dict _ | Tpat_array _ | Tpat_or _ ->
     None
 
-(* The literal cases that take precedence over an untagged payload constructor,
-   as runtime values and constructor names *)
-let shadowing_literal_cases cd =
+let is_untagged_payload cd =
   match cd.cstr_kind with
   | Ordinary_constructor r -> (
     match Variant_runtime.representation r with
-    | Block (Untagged _) ->
-      let layout = Variant_runtime.get_layout r.variant in
-      List.init (Variant_runtime.length layout) Fun.id
-      |> List.filter_map (fun position ->
-          match Variant_runtime.constructor_at layout position with
-          | Constant tag -> Some (tag.literal, tag.name)
-          | Block _ -> None)
-    | Constant _ | Block (Tagged _) -> [])
-  | Extension_constructor _ -> []
+    | Block (Untagged _) -> true
+    | Constant _ | Block (Tagged _) -> false)
+  | Extension_constructor _ -> false
+
+(* The literal cases that take precedence over an untagged payload
+   constructor *)
+let shadowing_literal_cases cd =
+  match cd.cstr_kind with
+  | Ordinary_constructor r when is_untagged_payload cd ->
+    let layout = Variant_runtime.get_layout r.variant in
+    List.init (Variant_runtime.length layout) Fun.id
+    |> List.filter_map (fun position ->
+        match Variant_runtime.constructor_at layout position with
+        | Constant tag ->
+          Some
+            {
+              payload_constructor = cd.cstr_name;
+              value = tag.literal;
+              literal_constructor = tag.name;
+            }
+        | Block _ -> None)
+  | Ordinary_constructor _ | Extension_constructor _ -> []
 
 let or_liveness liveness p1 p2 =
   match (liveness p1, liveness p2) with
@@ -2350,9 +2361,7 @@ let rec payload_liveness p =
   | Tpat_construct (_, cd, [arg]) -> (
     match shadowing_literal_cases cd with
     | [] -> subpatterns_liveness p
-    | literal_cases ->
-      shadowed_argument_liveness ~payload_constructor:cd.cstr_name
-        ~literal_cases arg)
+    | shadowing -> shadowed_argument_liveness ~shadowing arg)
   | _ -> subpatterns_liveness p
 
 (* A pattern that is not an or-pattern matches nothing as soon as one of its
@@ -2368,26 +2377,31 @@ and subpatterns_liveness p =
     p.pat_desc;
   !result
 
-and shadowed_argument_liveness ~payload_constructor ~literal_cases arg =
+(* [shadowing] lists the literal cases that take precedence over the value
+   [arg] matches, outermost first *)
+and shadowed_argument_liveness ~shadowing arg =
   match arg.pat_desc with
   | Tpat_or (p1, p2, _) ->
-    or_liveness
-      (shadowed_argument_liveness ~payload_constructor ~literal_cases)
-      p1 p2
-  | Tpat_alias (p, _, _) ->
-    shadowed_argument_liveness ~payload_constructor ~literal_cases p
+    or_liveness (shadowed_argument_liveness ~shadowing) p1 p2
+  | Tpat_alias (p, _, _) -> shadowed_argument_liveness ~shadowing p
+  | Tpat_construct (_, cd, [inner]) when is_untagged_payload cd ->
+    (* An untagged payload is the value itself, so the literal cases around
+       it still take precedence, before its own *)
+    shadowed_argument_liveness
+      ~shadowing:(shadowing @ shadowing_literal_cases cd)
+      inner
   | _ -> (
     let shadowing_case =
       match pattern_literal arg with
       | Some value ->
         List.find_opt
-          (fun (literal, _) -> Variant_runtime.same_literal_value value literal)
-          literal_cases
+          (fun {value = literal} ->
+            Variant_runtime.same_literal_value value literal)
+          shadowing
       | None -> None
     in
     match shadowing_case with
-    | Some (value, literal_constructor) ->
-      Never_matches [{payload_constructor; value; literal_constructor}]
+    | Some shadowed -> Never_matches [shadowed]
     | None -> payload_liveness arg)
 
 let literal_to_string : Variant_runtime.literal_tag -> string = function

@@ -347,7 +347,9 @@ match, and is reported: warning 11 for an arm, such as `S("a")` beside
 "\"a\" is the runtime value of constructor A, so it is always matched as A,
 never as S". Values are compared as `===` compares them (rule 6), so
 `BI(02n)` beside `@as(2n) Two` and `P(#Foo)` beside `@as("Foo") F` are
-reported too, and an or-pattern also counts when it is named with `as`. For the
+reported too, and an or-pattern also counts when it is named with `as`. An
+untagged payload inside another is the value itself, so the outer literal
+cases also shadow it: `W(N(1 | 2))` reports `1` beside `@as(1) One | W(inner)`. For the
 exhaustiveness check a literal case covers the payload values equal to it, so
 `Yes | Ans(false)` is a complete match of `@as(true) Yes | Ans(bool)`. This
 needs a payload of type `bool`, also through an abbreviation: a
@@ -366,7 +368,8 @@ does not cover it.
   `warning_8_untagged_boolean_kind_payload.res`,
   `warning_11_untagged_literal_shadows_polyvariant.res`,
   `warning_12_untagged_literal_shadows_or_pattern.res`,
-  `warning_12_untagged_literal_shadows_aliased_or_pattern.res`.
+  `warning_12_untagged_literal_shadows_aliased_or_pattern.res`,
+  `warning_12_untagged_literal_shadows_nested_payload.res`.
 - Shaped by #6125, #7128, #7135, #8806.
 
 ### 8. Payload cases
