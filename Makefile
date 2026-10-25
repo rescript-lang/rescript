@@ -188,6 +188,9 @@ test-gentype: lib
 test-rewatch: lib
 	./rewatch/tests/suite.sh $(RESCRIPT_EXE)
 
+test-rewatch-rust: lib rewatch
+	./rewatch/tests/suite.sh $(RESCRIPT_RUST_EXE)
+
 test-lsp: lib
 	@dune runtest tests/lsp_tests
 
