@@ -825,8 +825,9 @@ let runtime_value_kind (c : structured_constant) =
   | Const_js_null -> Is_literal Null
   | Const_js_undefined _ -> Is_literal Undefined
   | Const_polyvar name -> Is_literal (String name)
-  | Const_constructor {literal = BigInt _} -> Unknown_value
   | Const_constructor {literal} -> Is_literal literal
+  | Const_bigint (sign, digits) ->
+    Is_literal (BigInt (Bigint_utils.to_string sign digits))
   | Const_block (Blk_tuple, _) -> Is_array
   | Const_block (Blk_record {fields}, _) ->
     if record_fields_are_array fields then Is_array else Is_object
@@ -836,13 +837,11 @@ let runtime_value_kind (c : structured_constant) =
           ),
         _ ) ->
     Is_object
-  | Const_char _ | Const_bigint _ | Const_some _ | Const_module_alias
-  | Const_assertfalse ->
+  | Const_char _ | Const_some _ | Const_module_alias | Const_assertfalse ->
     Unknown_value
 
 (* Runtime equality, rather than equality of tags: [@as(1)] and a payload
-   [1.0] are the same JavaScript number. Bigint spellings are not compared;
-   both bigint payloads and bigint constructors are classified as unknown.
+   [1.0] are the same JavaScript number, and [1_0n] and [10n] the same bigint.
    Integer tags are emitted through [Int32.of_int], just like [Const_int]. *)
 let literal_denotes_same = Variant_runtime.same_literal_value
 

@@ -166,13 +166,22 @@ let switch_tests =
           ~cases:[(one, "one")]
           ~default:(Some "default")
       in
-      List.iter (assert_deferred sw)
-        [
-          Const_bigint (false, "1");
-          Const_constructor {name = "DecimalTen"; literal = BigInt "1_0"};
-          Const_char 65;
-          Const_some (Const_int 1l);
-        ] );
+      List.iter (assert_deferred sw) [Const_char 65; Const_some (Const_int 1l)]
+    );
+    ( "bigints compare by value" >:: fun _ ->
+      let one = literal "One" (BigInt "1") in
+      let value = block "Value" UnknownType in
+      let sw =
+        variant_switch ~constructors:[one; value]
+          ~cases:[(one, "one")]
+          ~default:(Some "default")
+      in
+      assert_fold sw (Const_bigint (true, "1")) "one";
+      assert_fold sw (Const_bigint (true, "01")) "one";
+      assert_fold sw (Const_bigint (false, "1")) "default";
+      assert_fold sw
+        (Const_constructor {name = "DecimalTen"; literal = BigInt "1_0"})
+        "default" );
     ( "tagged switch still folds by constructor" >:: fun _ ->
       let runtime = runtime "Color" in
       let case = Variant_runtime.Block (Tagged runtime) in

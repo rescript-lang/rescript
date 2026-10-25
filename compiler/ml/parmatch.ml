@@ -2291,9 +2291,8 @@ let rec pattern_literal p : Variant_runtime.literal_tag option =
   | Tpat_constant (Const_string s) -> Some (String s)
   | Tpat_constant (Const_int i | Const_char i) -> Some (Int i)
   | Tpat_constant (Const_float f) -> Some (Float f)
-  | Tpat_constant (Const_bigint _) ->
-    (* Bigints are never compared, see [Variant_runtime.same_literal_value] *)
-    None
+  | Tpat_constant (Const_bigint (sign, digits)) ->
+    Some (BigInt (Bigint_utils.to_string sign digits))
   | Tpat_alias (p, _, _) -> pattern_literal p
   | Tpat_construct (_, {cstr_name; cstr_res}, [])
     when is_type_path Predef.path_bool cstr_res ->

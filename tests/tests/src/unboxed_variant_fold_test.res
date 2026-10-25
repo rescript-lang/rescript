@@ -171,6 +171,14 @@ let numberOrBigintName = value =>
   | Other(s) => s
   }
 
+// A bigint payload equal to a bigint literal folds to the literal's case
+@unboxed type bigintOrPayload = | @as(2n) BigTwo | BigOther(bigint)
+let bigintOrPayloadName = value =>
+  switch value {
+  | BigTwo => "two"
+  | BigOther(_) => "other"
+  }
+
 @inline(never) let id = x => x
 
 // Nonconstant scalar payloads are passed through; inline records remain objects.
@@ -256,6 +264,8 @@ describe(__MODULE__, () => {
     eq(__LOC__, bigintName(Wrapped(DecimalTen)), "one")
     eq(__LOC__, wideName(WideInt(1)), "one")
     eq(__LOC__, numberOrBigintName(BigintOne), "bigint")
+    eq(__LOC__, bigintOrPayloadName(BigOther(2n)), "two")
+    eq(__LOC__, bigintOrPayloadName(BigOther(02n)), "two")
   })
 
   test("a number and a bigint literal with the same digits", () => {
