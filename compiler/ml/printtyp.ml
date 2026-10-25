@@ -1604,7 +1604,7 @@ let print_variant_configuration_issue ppf
     let print_unboxed_status ppf unboxed name =
       fprintf ppf "@ - Variant @{<info>%s@} is @{<error>%s@}unboxed."
         (Path.name name)
-        (if unboxed then "not " else "")
+        (if unboxed then "" else "not ")
     in
     print_unboxed_status ppf left_unboxed left_variant_name;
     print_unboxed_status ppf right_unboxed right_variant_name;
