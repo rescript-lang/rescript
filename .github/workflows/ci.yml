@@ -209,9 +209,13 @@ jobs:
       # On Windows, after running setup-ocaml (if it wasn't cached yet or the cache couldn't be restored),
       # Cygwin bash is used instead of Git Bash for Windows, breaking the test scripts below.
       # So we need to adjust the path to bring back Git Bash for Windows.
+      # setup-ocaml also points BASH_ENV at Cygwin's bash_env, which would put
+      # Cygwin's /cygdrive paths (and its make) back in front for Git Bash.
       - name: "Windows: Use Git Bash"
         if: ${{ runner.os == 'Windows' }}
-        run: echo "C:\Program Files\Git\bin" >> $GITHUB_PATH
+        run: |
+          echo "C:\Program Files\Git\bin" >> $GITHUB_PATH
+          echo "BASH_ENV=" >> $GITHUB_ENV
         shell: bash
 
       # Git Bash does not include make.
