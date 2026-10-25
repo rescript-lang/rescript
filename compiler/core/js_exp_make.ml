@@ -1059,7 +1059,21 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
               {expression_desc = Typeof {expression_desc = Var ia}},
               {expression_desc = Str "boolean"} ) )
         when Js_op_util.same_vident ia ib ->
-        Some {expression_desc = Bool (not b); comment = None; source_loc = None}
+        (* A boolean other than [b] is [!b] *)
+        Some
+          {
+            expression_desc =
+              Bin
+                ( EqEqEq,
+                  {expression_desc = Var ib; comment = None; source_loc = None},
+                  {
+                    expression_desc = Bool (not b);
+                    comment = None;
+                    source_loc = None;
+                  } );
+            comment = None;
+            source_loc = None;
+          }
       | ( Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
