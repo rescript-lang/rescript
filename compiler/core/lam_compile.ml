@@ -816,30 +816,12 @@ let compile output_prefix =
               in
               (* [null] passes only the object check, which then tests
                  [x !== null] *)
-              let can_skip (literal : Variant_runtime.literal_tag) =
+              let skips_the_switch (literal : Variant_runtime.literal_tag) =
                 (not has_class_case)
                 && ((not (reaches_a_payload_arm literal))
                    || literal = Null
                       && not (List.mem Variant_runtime.UnknownType payload_arms)
                    )
-              in
-              (* Skipping can add a check to the payload dispatch: its last
-                 arm is checked once a literal reaches it, and the object
-                 check tests [x !== null] once [null] does. Next to other
-                 cases, a case for the literal costs less. *)
-              let adds_a_check (literal : Variant_runtime.literal_tag) =
-                (match sw_blocks_default with
-                  | Complete -> true
-                  | Default _ | Compiled _ | NonComplete -> false)
-                || literal = Null
-                   && List.mem Variant_runtime.ObjectType payload_arms
-              in
-              let others_get_a_case =
-                named <> [] || not (List.for_all can_skip unnamed)
-              in
-              let skips_the_switch literal =
-                can_skip literal
-                && not (others_get_a_case && adds_a_check literal)
               in
               (* Values no payload arm takes are the literals without an arm:
                  a complete payload dispatch checks its last arm, and these
@@ -854,7 +836,10 @@ let compile output_prefix =
               let null_guard =
                 match (sw_num_default, blocks_default) with
                 | Default _, Default _ ->
-                  List.mem Variant_runtime.Null unnamed && skips_the_switch Null
+                  List.exists
+                    (fun (literal : Variant_runtime.literal_tag) ->
+                      literal = Null && skips_the_switch literal)
+                    unnamed
                 | _ -> false
               in
               let unnamed =

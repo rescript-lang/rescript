@@ -290,15 +290,11 @@ check of the payload dispatch (a string literal beside a `string` arm, any
 literal beside an unknown-kind arm) or when the variant has class cases;
 otherwise it reaches the default through the payload dispatch, which then
 checks its last arm. A `null` literal that only the object check would
-accept adds `x !== null` to that check instead (rule 9). When other literals
-get a `case` anyway, a literal whose skipping would add such a check, to the
-last arm of a complete payload dispatch or `x !== null`, gets a `case` as
-well: one more `case` costs less than the check.
+accept adds `x !== null` to that check instead (rule 9).
 
 - Implementation: `lam_compile.ml:compile_switch`.
 - Tests: `spec_test` rule 7; `tests/tests/src/untagged_variants_heuristic.res`
-  (literals that skip the `switch`, and `caseBesideCases`,
-  `nullBesideCases`, which get a `case` next to other literals).
+  (literals that skip the `switch`).
 - Shaped by #6125, #7128, #7135.
 
 ### 8. Payload cases

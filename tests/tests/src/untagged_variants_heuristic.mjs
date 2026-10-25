@@ -15,35 +15,8 @@ function ff(x) {
   console.log("abc");
 }
 
-function caseBesideCases(x) {
-  switch (x) {
-    case "a" :
-    case "b" :
-    case true :
-      return 3;
-    default:
-      if (typeof x === "string") {
-        return 1;
-      } else {
-        return 2;
-      }
-  }
-}
-
-function nullBesideCases(x) {
-  if (x === "a" || x === null) {
-    return 3;
-  } else if (typeof x === "string") {
-    return 1;
-  } else {
-    return 2;
-  }
-}
-
 export {
   f,
   ff,
-  caseBesideCases,
-  nullBesideCases,
 }
 /* No side effect */
