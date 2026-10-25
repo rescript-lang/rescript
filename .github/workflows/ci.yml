@@ -225,6 +225,8 @@ jobs:
         if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
         timeout-minutes: 20
         run: |
+          . rewatch-ocaml/tests/process_watchdog.sh
+          start_process_watchdog
           bash rewatch-ocaml/tests/check_canonical_test_coverage.sh
           bash rewatch-ocaml/tests/check_config_acceptance.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \

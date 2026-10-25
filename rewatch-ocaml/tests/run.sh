@@ -1940,8 +1940,15 @@ while [ "$quiet_polls" -lt 10 ]; do
 done
 reported_errors=$(grep -c 'This let-binding misses an expression' "$retained_parse/watch.log")
 printf 'let other = 2\n' >"$retained_parse/src/B.res"
-wait_for_count "$retained_parse/calls.log" '^parse.*A\.res' $((failed_parses + 1))
-wait_for_text "$retained_parse/watch.log" 'This let-binding misses an expression' $((reported_errors + 1))
+if ! wait_for_count "$retained_parse/calls.log" '^parse.*A\.res' $((failed_parses + 1)) ||
+  ! wait_for_text "$retained_parse/watch.log" 'This let-binding misses an expression' $((reported_errors + 1)); then
+  echo "--- watch.log" >&2
+  cat "$retained_parse/watch.log" >&2
+  echo "--- calls.log" >&2
+  cat "$retained_parse/calls.log" >&2
+  echo "the edit of B did not parse and report the pending A again (expected $((failed_parses + 1)) parses, $((reported_errors + 1)) reports)" >&2
+  exit 1
+fi
 grep 'value = 1' "$retained_parse/src/A.js" >/dev/null
 printf 'let value = 2\n' >"$retained_parse/src/A.res"
 wait_for_text "$retained_parse/src/A.js" 'value = 2'

@@ -76,14 +76,40 @@ exit_watcher() {
     watcher_pid=$(cat lib/watch.lock)
   fi
 
-  rm -f lib/watch.lock
+  # Windows refuses to delete a file while another process has it open
+  # without delete sharing, so a watcher reading the lock can make one
+  # attempt fail.
+  local attempts=0
+  until rm -f lib/watch.lock 2> /dev/null; do
+    attempts=$((attempts + 1))
+    if [ "$attempts" -ge 50 ]; then
+      rm -f lib/watch.lock
+      break
+    fi
+    sleep 0.1
+  done
 
   if [ -n "$watcher_pid" ]; then
     if ! wait_for_pid_gone "$watcher_pid" 20; then
       error "Watcher process $watcher_pid did not exit after watch.lock was removed"
+      kill_process "$watcher_pid"
+      rm -f lib/watch.lock
       return 1
     fi
   fi
+}
+
+# Stop a watcher that ignored the shutdown protocol, so that it does not keep
+# running into later tests.
+kill_process() {
+  local pid="$1"
+  if is_windows; then
+    WATCH_PID="$pid" powershell.exe -NoProfile -NonInteractive -Command \
+      'Stop-Process -Id ([int]$env:WATCH_PID) -Force -ErrorAction SilentlyContinue'
+  else
+    kill -9 "$pid" 2> /dev/null
+  fi
+  wait_for_pid_gone "$pid" 5 || true
 }
 
 clear_locks() {
