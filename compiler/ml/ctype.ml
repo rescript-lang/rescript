@@ -3727,9 +3727,9 @@ let rec subtype_rec env trace t1 t2 cstrs =
                              ({Types.cd_args = Cstr_record fields2}, position2)
                          ) ->
                          if
-                           Variant_coercion.variant_representation_matches
-                             (Variant_runtime.constructor_tag layout1 position1)
-                             (Variant_runtime.constructor_tag layout2 position2)
+                           Variant_runtime.same_representation
+                             (Variant_runtime.constructor_at layout1 position1)
+                             (Variant_runtime.constructor_at layout2 position2)
                          then
                            let violations, tl1, tl2 =
                              Record_coercion.check_record_fields fields1 fields2
@@ -3754,9 +3754,9 @@ let rec subtype_rec env trace t1 t2 cstrs =
                            Some ({Types.cd_args = Cstr_tuple tl2}, position2) )
                          ->
                          if
-                           Variant_coercion.variant_representation_matches
-                             (Variant_runtime.constructor_tag layout1 position1)
-                             (Variant_runtime.constructor_tag layout2 position2)
+                           Variant_runtime.same_representation
+                             (Variant_runtime.constructor_at layout1 position1)
+                             (Variant_runtime.constructor_at layout2 position2)
                          then
                            try
                              let lst = subtype_list env trace tl1 tl2 cstrs in

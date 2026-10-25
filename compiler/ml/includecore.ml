@@ -184,6 +184,9 @@ type type_mismatch =
   | Immediate
   | Tag_name
   | Variant_representation of Ident.t
+  | Constructor_unboxed of Ident.t * bool
+      (** The case is untagged in only one declaration; [true] means the
+          second *)
 
 let report_type_mismatch0 first second decl ppf err =
   let pr fmt = Format.fprintf ppf fmt in
@@ -216,6 +219,13 @@ let report_type_mismatch0 first second decl ppf err =
   | Tag_name -> pr "Their @tag annotations differ"
   | Variant_representation s ->
     pr "The internal representations for case %s are not equal" (Ident.name s)
+  | Constructor_unboxed (s, b) ->
+    pr
+      "Their internal representations differ:@ case %s is @@unboxed only in %s \
+       %s"
+      (Ident.name s)
+      (if b then second else first)
+      decl
 
 let report_type_mismatch first second decl ppf =
   List.iter (fun err ->
@@ -265,23 +275,19 @@ and compare_variants ~loc env params1 params2 ~layout1 ~layout2 n
       let r =
         if r <> [] then r
         else
-          match Ast_untagged_variants.is_nullary_variant cd1.cd_args with
-          | true ->
-            let tag_type1 = Variant_runtime.constructor_tag layout1 (n - 1) in
-            let tag_type2 = Variant_runtime.constructor_tag layout2 (n - 1) in
-            if tag_type1 <> tag_type2 then [Variant_representation cd1.cd_id]
-            else []
-          | false -> (
-            (* A tagged case with a payload carries its tag in the object;
-               an untagged one is its payload, whatever its [@as] *)
-            match
-              ( Variant_runtime.constructor_at layout1 (n - 1),
-                Variant_runtime.constructor_at layout2 (n - 1) )
-            with
-            | Block (Tagged {tag = tag1}), Block (Tagged {tag = tag2})
-              when tag1.literal <> tag2.literal ->
-              [Variant_representation cd1.cd_id]
-            | _ -> r)
+          (* A tagged case with a payload carries its tag in the object; an
+             untagged one is its payload, whatever its [@as], also when only
+             some constructors are [@unboxed] *)
+          let case1 = Variant_runtime.constructor_at layout1 (n - 1)
+          and case2 = Variant_runtime.constructor_at layout2 (n - 1) in
+          if Variant_runtime.same_representation case1 case2 then r
+          else
+            match (case1, case2) with
+            | Block (Tagged _), Block (Untagged _) ->
+              [Constructor_unboxed (cd1.cd_id, true)]
+            | Block (Untagged _), Block (Tagged _) ->
+              [Constructor_unboxed (cd1.cd_id, false)]
+            | _ -> [Variant_representation cd1.cd_id]
       in
       if r <> [] then r
       else

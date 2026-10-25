@@ -1,0 +1,1 @@
+- Reject interfaces and coercions in which an `@unboxed` constructor meets a tagged one, and name the unboxed variant correctly in the coercion error.

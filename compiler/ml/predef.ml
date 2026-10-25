@@ -340,17 +340,32 @@ let common_initial_env add_type add_extension empty_env =
       type_params = [];
       type_arity = 0;
       type_kind =
-        plain_variant
-          [
-            {
-              cd_id = ident_ctor_unknown;
-              cd_runtime_tag = None;
-              cd_args = Cstr_tuple [tvar];
-              cd_res = Some (type_unknown ());
-              cd_loc = Location.none;
-              cd_attributes = [];
-            };
-          ];
+        (* An [@unboxed] variant whose only case is its payload *)
+        (let layout = Variant_runtime.pending_layout () in
+         Variant_runtime.complete_layout layout
+           (Variant_runtime.make_layout
+              ~configuration:{unboxed = true; tag_name = None}
+              [|
+                Block
+                  (Untagged
+                     {
+                       tag =
+                         {name = Ident.name ident_ctor_unknown; literal = None};
+                       block_type = UnknownType;
+                     });
+              |]);
+         Type_variant
+           ( [
+               {
+                 cd_id = ident_ctor_unknown;
+                 cd_runtime_tag = None;
+                 cd_args = Cstr_tuple [tvar];
+                 cd_res = Some (type_unknown ());
+                 cd_loc = Location.none;
+                 cd_attributes = [];
+               };
+             ],
+             layout ));
       type_representation = Types.Unboxed;
     }
   and decl_promise =

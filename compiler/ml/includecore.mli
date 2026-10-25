@@ -38,6 +38,9 @@ type type_mismatch =
   | Immediate
   | Tag_name
   | Variant_representation of Ident.t
+  | Constructor_unboxed of Ident.t * bool
+      (** The case is untagged in only one declaration; [true] means the
+          second *)
 
 val value_descriptions :
   loc:Location.t ->

@@ -140,12 +140,6 @@ let can_try_coerce_variant_to_primitive_opt p =
   | None -> None
   | Some p -> can_try_coerce_variant_to_primitive p
 
-let variant_representation_matches tag1 tag2 =
-  match (tag1, tag2) with
-  | None, None -> true
-  | Some s1, Some s2 when s1 = s2 -> true
-  | _ -> false
-
 type variant_configuration_error =
   | Untagged of {left_is_unboxed: bool}
   | TagName of {left_tag: string option; right_tag: string option}

@@ -184,6 +184,14 @@ let constructor_tag layout position =
   | Constant tag -> tag.literal
   | Block (Tagged {tag} | Untagged {tag}) -> tag.literal
 
+let same_representation (case1 : constructor_case) (case2 : constructor_case) =
+  match (case1, case2) with
+  | Constant tag1, Constant tag2 -> tag1.literal = tag2.literal
+  | Block (Tagged {tag = tag1}), Block (Tagged {tag = tag2}) ->
+    tag1.literal = tag2.literal
+  | Block (Untagged _), Block (Untagged _) -> true
+  | (Constant _ | Block (Tagged _ | Untagged _)), _ -> false
+
 let representation ({variant; position} : constructor_reference) =
   constructor_at (get_layout variant) position
 

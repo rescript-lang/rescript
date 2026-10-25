@@ -116,6 +116,12 @@ val matching_facts : layout -> matching_facts
 val configuration : layout -> configuration
 val constructor_at : layout -> int -> constructor_case
 val constructor_tag : layout -> int -> literal_tag option
+
+val same_representation : constructor_case -> constructor_case -> bool
+(** Whether two constructors are represented alike at run time: both constant
+    with the same literal, both tagged with the same tag, or both untagged,
+    whose payloads are compared by their types *)
+
 val representation : constructor_reference -> constructor_case
 val length : layout -> int
 val num_constants : layout -> int
