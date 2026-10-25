@@ -366,12 +366,11 @@ let compare_runtime_annotations env id decl1 decl2 =
     | Stands_for_another | Can_be_undefined -> [Not_undefined])
   | Recognized_as block_type2 ->
     let declared2 = Some block_type2 in
+    (* What the first declaration states, or what its structure gives *)
     let declared1 =
-      match decl1.type_shape with
-      | Recognized_as block_type1 -> Some block_type1
-      | Never_undefined -> None
-      | Unstated ->
-        Option.bind decl1.type_manifest (Variant_layout.recognized_as ~env)
+      let env = Env.add_type ~check:false id decl1 env in
+      Variant_layout.payload_kind ~env
+        (Btype.newgenty (Tconstr (Pident id, decl1.type_params, ref Mnil)))
     in
     if declared1 = declared2 then []
     else

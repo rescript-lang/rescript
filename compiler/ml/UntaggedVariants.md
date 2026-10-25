@@ -108,15 +108,16 @@ into one kind:
 
 The builtin types state their kinds in their declarations, as the
 annotations of rule 5 do for declared types. The shape is read from the type
-as written and from each type it abbreviates, and a tuple or a function type
-is classified after expanding abbreviations: `type ints = array<int>` is an array case, and `type name =
-string` a string case. A type is never recognized by its name. `@typeOf("number")`
+as written and from each type it abbreviates, and a tuple, a function type
+or a record is classified after expanding abbreviations: `type ints =
+array<int>` is an array case, and `type name = string` a string case. Every
+reader of rule 5 uses this one classification. A type is never recognized by
+its name. `@typeOf("number")`
 is the number kind, and `@typeOf("symbol")` is a kind of its own, with no
 builtin payload type. `@notUndefined` on an abstract type leaves it unknown.
 
 - Implementation: `predef.ml` (the builtin shapes),
-  `variant_layout.ml:get_block_type_from_typ`, `get_block_type`,
-  `recognized_as`.
+  `variant_layout.ml:payload_kind`, `get_block_type`, `recognized_as`.
 - Tests: `spec_test` rules 4 (`kinds`, `tuples`, `aliasDict`, `instances`,
   `unknown`); fixtures `UntaggedConstructorMoreThanOneArg.res`,
   `UntaggedConstructorAttributeMoreThanOneArg.res`, `UntaggedNonUnary1.res`,
@@ -166,8 +167,9 @@ superclass.
 An annotation on an abbreviation must agree with the abbreviated type. It can
 refine a type whose representation the compiler does not see, an abstract
 type that is not builtin and has no annotation, or restate what the
-abbreviated type is known to be, as `@typeOf("number") type count = int` and
-`@notUndefined type count = int` do; a restating `@notUndefined` keeps the
+abbreviated type is known to be (rule 4), as `@typeOf("number") type count =
+int`, `@typeOf("function") type callback = int => int` and `@notUndefined
+type count = int` do; a restating `@notUndefined` keeps the
 kind of `int`. The type of a functor parameter, of a
 recursive module being defined, and a locally abstract type `(type a)` are
 abstract only where they are declared: they stand for another type, so they
@@ -180,9 +182,9 @@ would `type dog = animal<int>` or `type dog = phantom<int>` with
 
 | Declaration | Error | Fixture |
 | --- | --- | --- |
-| `@typeOf("string") type t = option<string>`, `type t<'a> = 'a`, an abbreviation of `unit`, `list<_>`, a record or a variant | @typeOf on a type abbreviation must describe an abstract type, ... | `runtime_annotation_on_option.res`, `runtime_annotation_on_type_variable.res` |
+| `@typeOf("string") type t = option<string>`, `type t<'a> = 'a`, an abbreviation of `unit`, `list<_>` or a variant | @typeOf on a type abbreviation must describe an abstract type, ... | `runtime_annotation_on_option.res`, `runtime_annotation_on_type_variable.res` |
 | `@notUndefined type t = option<int>` | @notUndefined on a type abbreviation must describe an abstract type, ... | `not_undefined_on_option.res`, `tests/build_tests/not_undefined_attribute` |
-| `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym`, or `@typeOf("string") type t = int` | This annotation, @typeOf("number"), contradicts the abbreviated type, whose values are recognized by @typeOf("symbol"). | `runtime_annotation_contradicts_manifest.res`, `runtime_annotation_contradicts_builtin.res` |
+| `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym`, `@typeOf("string") type t = int`, or an abbreviation of a function type or a record | This annotation, @typeOf("number"), contradicts the abbreviated type, whose values are recognized by @typeOf("symbol"). | `runtime_annotation_contradicts_manifest.res`, `runtime_annotation_contradicts_builtin.res`, `runtime_annotation_contradicts_function.res` |
 | `@instanceOf("Date") type date = X.t` in a functor of `X`, or over `(type a)`; `@notUndefined type t = X.t` | @instanceOf cannot describe the type of a functor parameter, ... | `instance_of_functor_parameter.res`, `type_of_locally_abstract_type.res`, `not_undefined_on_functor_parameter_type.res` |
 | `@instanceOf("Dog") type dog = animal`, `= animal<int>`, or `= phantom<int>` with `type phantom<'a> = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res`, `instance_of_public_subclass_instance.res`, `instance_of_public_subclass_through_alias.res` |
 | `@instanceOf("Animal") type t = private dog` | Animal appears twice in this chain of abbreviations ... | `instance_of_class_twice_in_chain.res` |
@@ -192,10 +194,12 @@ would `type dog = animal<int>` or `type dog = phantom<int>` with
 
 What an interface states about a type must hold for its implementation. A
 class or `typeof`, stated through its own annotation or the type it
-abbreviates, must be the one the implementation states, superclasses
-included: "Their runtime representations differ". A builtin type states its
+abbreviates, must be the one the implementation has by rule 4, superclasses
+included: "Their runtime representations differ"
+(`runtime_annotation_interface_over_record.res`). A builtin type states its
 kind, so `@typeOf("number") type t` in an interface accepts `type t = int`
-(`untagged_builtin_alias_test.res`). Under `@notUndefined`, the
+(`untagged_builtin_alias_test.res`), and `@typeOf("function") type t` accepts
+`type t = int => int` (`untagged_runtime_annotations_test.res`). Under `@notUndefined`, the
 implementation must be a type that cannot hold `undefined` either, or one
 whose representation the compiler does not see, which has none to contradict
 it: an abstract type, also through an abbreviation such as

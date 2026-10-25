@@ -160,6 +160,42 @@ let objectOrNameKind = value =>
   | ObjectName(name) => name
   }
 
+// Annotations restating the kind a type's structure gives
+@typeOf("function") type callback = int => int
+type point = {px: int}
+@typeOf("object") type pointObject = point
+
+module Restated: {
+  @typeOf("function") type callback
+  @typeOf("object") type point
+  let callback: callback
+  let point: point
+} = {
+  type callback = int => int
+  type point = {py: int}
+  let callback = x => x + 1
+  let point = {py: 1}
+}
+
+@unboxed
+type restated = Callback(callback) | PointObject(pointObject) | Label(string)
+
+let restatedKind = value =>
+  switch value {
+  | Callback(callback) => Int.toString(callback(1))
+  | PointObject(point) => Int.toString(point.px)
+  | Label(label) => label
+  }
+
+@unboxed
+type restatedAbstract = AbstractCallback(Restated.callback) | AbstractPoint(Restated.point)
+
+let restatedAbstractKind = value =>
+  switch value {
+  | AbstractCallback(_) => "callback"
+  | AbstractPoint(_) => "point"
+  }
+
 @inline(never) let id = x => x
 
 // No class of this name exists at run time
@@ -260,6 +296,14 @@ describe(__MODULE__, () => {
   test("a class declared over an object type", () => {
     eq(__LOC__, "dog", objectOrNameKind(ObjectDog(makeObjectDog())))
     eq(__LOC__, "rex", objectOrNameKind(ObjectName("rex")))
+  })
+
+  test("annotations restating a structural kind", () => {
+    eq(__LOC__, "2", restatedKind(id(Callback(x => x + 1))))
+    eq(__LOC__, "3", restatedKind(id(PointObject({px: 3}))))
+    eq(__LOC__, "a", restatedKind(id(Label("a"))))
+    eq(__LOC__, "callback", restatedAbstractKind(id(AbstractCallback(Restated.callback))))
+    eq(__LOC__, "point", restatedAbstractKind(id(AbstractPoint(Restated.point))))
   })
 
   test("primitive cases are tested before class checks", () => {

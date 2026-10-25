@@ -33,6 +33,25 @@ let recognized_as ~env t =
   | Recognized_as block_type -> Some block_type
   | Unstated | Never_undefined -> None
 
+(* The payload kind of the values of [t]: the one its declarations state, or
+   the one its structure gives. Builtin types state their kinds in [Predef];
+   type expressions other than constructors have no declaration. An unboxed
+   record is the value of its field, so it has no kind of its own. *)
+let payload_kind ~env (t : Types.type_expr) : block_type option =
+  match recognized_as ~env t with
+  | Some _ as declared -> declared
+  | None -> (
+    match (Ctype.expand_head env t).desc with
+    | Ttuple _ -> Some (InstanceType Array)
+    | Tarrow _ -> Some FunctionType
+    | Tconstr _ -> (
+      match Ctype.extract_concrete_typedecl env t with
+      | _, _, {type_kind = Type_record (_, Record_unboxed _)} -> None
+      | _, _, {type_kind = Type_record _} -> Some ObjectType
+      | _ -> None
+      | exception Not_found -> None)
+    | _ -> None)
+
 (* The shape a declaration states, resolved against what the type it
    abbreviates states in [env]: a class's superclasses are the classes
    annotated further down a chain of abbreviations. *)
@@ -126,7 +145,7 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
   | None, _ | Some _, None -> ()
   | Some outer, Some manifest -> (
     let error err = raise (Error (loc, err)) in
-    match (outer, recognized_as ~env manifest) with
+    match (outer, payload_kind ~env manifest) with
     | _, None -> (
       match (Ctype.expand_head_opt env manifest).desc with
       | Tconstr (path, _, _) -> (
@@ -163,28 +182,9 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
            ( runtime_annotation_to_string outer,
              runtime_annotation_to_string (annotation_of_block_type inner) )))
 
-let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
-  match recognized_as ~env t with
-  | Some _ as declared -> declared
-  | None -> (
-    (* Builtin types state their shapes in [Predef]; type expressions other
-       than constructors have no declaration *)
-    match (Ctype.expand_head env t).desc with
-    | Ttuple _ -> Some (InstanceType Array)
-    | Tarrow _ -> Some FunctionType
-    | _ -> None)
-
 let get_block_type ~env (cstr : Types.constructor_declaration) : block_type =
   match cstr.cd_args with
-  | Cstr_tuple [ty] -> (
-    match get_block_type_from_typ ~env ty with
-    | Some shape -> shape
-    | None -> (
-      match Ctype.extract_concrete_typedecl env ty with
-      | _, _, {type_kind = Type_record (_, Record_unboxed _)} -> UnknownType
-      | _, _, {type_kind = Type_record (_, _)} -> ObjectType
-      | _ -> UnknownType
-      | exception _ -> UnknownType))
+  | Cstr_tuple [ty] -> Option.value (payload_kind ~env ty) ~default:UnknownType
   | Cstr_tuple (_ :: _ :: _) ->
     report_constructor_more_than_one_arg ~loc:cstr.cd_loc
       ~name:(Ident.name cstr.cd_id)
