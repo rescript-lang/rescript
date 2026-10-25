@@ -290,11 +290,15 @@ check of the payload dispatch (a string literal beside a `string` arm, any
 literal beside an unknown-kind arm) or when the variant has class cases;
 otherwise it reaches the default through the payload dispatch, which then
 checks its last arm. A `null` literal that only the object check would
-accept adds `x !== null` to that check instead (rule 9).
+accept adds `x !== null` to that check instead (rule 9). When other literals
+get a `case` anyway, a literal whose skipping would add such a check, to the
+last arm of a complete payload dispatch or `x !== null`, gets a `case` as
+well: one more `case` costs less than the check.
 
 - Implementation: `lam_compile.ml:compile_switch`.
 - Tests: `spec_test` rule 7; `tests/tests/src/untagged_variants_heuristic.res`
-  (literals that skip the `switch`).
+  (literals that skip the `switch`, and `caseBesideCases`,
+  `nullBesideCases`, which get a `case` next to other literals).
 - Shaped by #6125, #7128, #7135.
 
 ### 8. Payload cases
@@ -380,7 +384,8 @@ as a record case does.
 Recognition trusts the type. A value that belongs to no case is not
 rejected: in a complete match it lands in the arm that is not checked, the
 last one of the `if` chain, or the last primitive arm when there is no other
-arm. With `I(int) | S(string)`, `true` lands in `S`; with
+arm. When the match sends several cases to one shared default, the dispatch
+checks the arms before it and the value lands in that default instead. With `I(int) | S(string)`, `true` lands in `S`; with
 `TDate(Date.t) | TRegExp(RegExp.t)`, `{x: 1}` lands in `TRegExp`; with
 `PPromise(promise<int>) | PFloat(float)`, the float case is checked, so a
 thenable that is not a `Promise` lands in `PPromise`.
