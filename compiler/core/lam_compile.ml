@@ -738,11 +738,6 @@ let compile output_prefix =
       default_action ~saturated:sw_blocks_full sw_failaction
     in
     let tag_name, literal_cases = dispatch_info sw_dispatch in
-    let untagged_facts =
-      match sw_dispatch with
-      | Switch_variant ({block_types = _ :: _} as facts) -> Some facts
-      | Switch_variant {block_types = []} | Switch_direct -> None
-    in
     let payload_only = sw_consts_full && sw_consts = [] in
     let compile_whole (cxt : Lam_compile_context.t) =
       match
@@ -760,38 +755,14 @@ let compile output_prefix =
         in
         block
         @
-        match untagged_facts with
-        | Some facts when payload_only || not (sw_blocks_full && sw_blocks = [])
-          ->
-          let plan =
-            Untagged_dispatch.plan ~same:Lambda.eq_approx
-              {
-                facts;
-                literal_arms =
-                  List.map
-                    (fun (key, lam) ->
-                      match tag_of_switch_key key with
-                      | Some (Literal literal) -> (literal, lam)
-                      | Some (Payload_shape _) | None -> assert false)
-                    sw_consts;
-                payload_arms =
-                  List.map
-                    (fun (key, lam) ->
-                      match tag_of_switch_key key with
-                      | Some (Payload_shape block_type) -> (block_type, lam)
-                      | Some (Literal _) | None -> assert false)
-                    sw_blocks;
-                literals_complete = sw_consts_full;
-                payloads_complete = sw_blocks_full;
-                fallback = sw_failaction;
-              }
-          in
+        match Lambda.untagged_plan sw with
+        | Some plan ->
           let compile e =
             compile_untagged_plan ~cxt ~switch_exp:e ~fallback:sw_failaction
               plan
           in
           if payload_only then compile e else with_variable compile
-        | Some _ | None ->
+        | None ->
           if payload_only then
             compile_cases ~cxt ~switch_exp:(E.tag ~name:tag_name e)
               ~default:sw_blocks_default sw_blocks

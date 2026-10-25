@@ -53,3 +53,20 @@ type 'a input = {
 
 val plan : same:('a -> 'a -> bool) -> 'a input -> 'a tree
 (** [same] tells two bodies that are one body apart *)
+
+(** What constant folding knows about a constant: the JavaScript value it is
+    emitted as *)
+type value =
+  | Literal of Variant_runtime.literal_tag
+  | Object  (** a record or an inline record, which is no class instance *)
+  | Array  (** a tuple, or a record whose fields are named 0, 1, … *)
+
+type 'a outcome =
+  | Arm of 'a
+  | Default  (** the match's default action *)
+  | Nothing  (** no statement runs *)
+
+val select : ?on_test:(test -> unit) -> 'a tree -> value -> 'a outcome
+(** What the code printed from a plan runs for a value: constant folding
+    evaluates the plan instead of deciding by itself, so a folded match and
+    the generated code agree. [on_test] sees each test that is evaluated. *)

@@ -313,6 +313,8 @@ describe(__MODULE__, () => {
   })
 
   test("rule 10: a value outside every case lands in the unchecked branch", () => {
+    eq(__LOC__, intOrStringName(id(raw(true))), "string")
+    // Folding a constant agrees with the dispatch
     eq(__LOC__, intOrStringName(raw(true)), "string")
     eq(__LOC__, twoInstancesName(raw({"x": 1})), "RegExp")
     let thenable = %raw(`{then: (resolve) => resolve(1)}`)

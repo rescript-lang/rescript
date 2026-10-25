@@ -65,9 +65,147 @@ let plan ~literals ~kinds ?(fallback : string option) literal_arms payload_arms
 let ( =~ ) expected tree =
   OUnit.assert_equal ~printer:(fun s -> s) expected (tree_to_string tree)
 
+(* Random variants and matches, for comparing the plan with the rules *)
+let random_case state =
+  let pick list = List.nth list (Random.State.int state (List.length list)) in
+  let some_of list = List.filter (fun _ -> Random.State.bool state) list in
+  let literals =
+    some_of
+      (* A literal of each kind *)
+      [
+        R.String "a";
+        String "b";
+        Int 1;
+        Float "1.5";
+        Bool true;
+        Null;
+        Undefined;
+        BigInt "2";
+      ]
+  in
+  let kinds =
+    if Random.State.int state 10 = 0 then [R.UnknownType]
+    else
+      List.filter
+        (fun kind ->
+          (* A boolean payload needs a boolean that is not a literal case *)
+          kind <> R.BooleanType || not (List.mem (R.Bool true) literals))
+        (some_of
+           [
+             R.StringType;
+             NumberType;
+             BigintType;
+             BooleanType;
+             SymbolType;
+             FunctionType;
+             ObjectType;
+             InstanceType Array;
+             class_ "Date";
+             class_ "Animal";
+             class_ "Dog" ~ancestors:["Animal"];
+           ])
+  in
+  let arms cases =
+    List.filter_map
+      (fun case ->
+        if Random.State.int state 5 < 3 then Some (case, pick ["b0"; "b1"; "b2"])
+        else None)
+      cases
+  in
+  (literals, kinds, arms literals, arms kinds)
+
+(* Rules 7 to 9: a literal case takes its arm, any other value the arm of its
+   kind, and a case without an arm the default. [None] for a value of no
+   case. *)
+let oracle ~literals ~kinds ~literal_arms ~payload_arms (value : D.value) =
+  let of_arm arms case : string D.outcome =
+    match List.assoc_opt case arms with
+    | Some body -> Arm body
+    | None -> Default
+  in
+  let declared (kind : R.block_type) = List.mem kind kinds in
+  let kind_case : R.block_type option =
+    if declared UnknownType then Some UnknownType
+    else
+      match value with
+      | Literal (String _) -> Some StringType
+      | Literal (Int _ | Float _) -> Some NumberType
+      | Literal (BigInt _) -> Some BigintType
+      | Literal (Bool _) -> Some BooleanType
+      | Literal (Null | Undefined) -> None
+      | Object -> Some ObjectType
+      | Array ->
+        if declared (InstanceType Array) then Some (InstanceType Array)
+        else Some ObjectType
+  in
+  match value with
+  | Literal literal when List.exists (R.same_literal_value literal) literals ->
+    Some (of_arm literal_arms literal)
+  | _ -> (
+    match kind_case with
+    | Some kind when declared kind -> Some (of_arm payload_arms kind)
+    | Some _ | None -> None)
+
+(* One value of each case of the variant *)
+let values ~literals ~kinds : D.value list =
+  List.map (fun literal -> D.Literal literal) literals
+  @ List.concat_map
+      (fun (kind : R.block_type) : D.value list ->
+        match kind with
+        | StringType -> [Literal (String "fresh")]
+        | NumberType -> [Literal (Int 98765)]
+        | BigintType -> [Literal (BigInt "77")]
+        | BooleanType -> [Literal (Bool false)]
+        | ObjectType -> [Object]
+        | InstanceType Array -> [Array]
+        | UnknownType -> [Object; Array; Literal (String "fresh")]
+        | SymbolType | FunctionType | InstanceType (Class _) -> [])
+      kinds
+
+let outcome_to_string : string D.outcome -> string = function
+  | Arm body -> body
+  | Default -> "default"
+  | Nothing -> "nothing"
+
+let value_to_string : D.value -> string = function
+  | Literal literal -> R.literal_value_key literal
+  | Object -> "object"
+  | Array -> "array"
+
 let suites =
   __FILE__
   >::: [
+         ( "every plan takes the arms rules 7 to 9 give" >:: fun _ ->
+           let state = Random.State.make [|8955|] in
+           for _ = 1 to 3000 do
+             let literals, kinds, literal_arms, payload_arms =
+               random_case state
+             in
+             let complete =
+               List.length literal_arms = List.length literals
+               && List.length payload_arms = List.length kinds
+             in
+             let tree =
+               plan ~literals ~kinds
+                 ?fallback:(if complete then None else Some "default")
+                 literal_arms payload_arms
+             in
+             List.iter
+               (fun value ->
+                 let outcome = D.select tree value in
+                 match
+                   oracle ~literals ~kinds ~literal_arms ~payload_arms value
+                 with
+                 | Some expected ->
+                   (* A literal case leading to the default runs its body *)
+                   OUnit.assert_equal
+                     ~msg:(value_to_string value ^ " in " ^ tree_to_string tree)
+                     ~printer:Fun.id
+                     (outcome_to_string expected)
+                     (outcome_to_string outcome)
+                 | None -> ())
+               (values ~literals ~kinds)
+           done );
          ( "a literal no payload arm takes skips the switch" >:: fun _ ->
            "switch (typeof x) {number: int; default: fallback}"
            =~ plan ~literals:[String "a"; String "b"] ~kinds:[NumberType]

@@ -796,15 +796,6 @@ and eq_option l1 l2 =
 
 and eq_approx_list ls ls1 = Ext_list.for_all2_no_exn ls ls1 eq_approx
 
-(* Classify constants by the JavaScript value emitted by [Lam_compile_const]
-   and [Js_dump], not by their source constructor. Unknown representations
-   must retain runtime dispatch. *)
-type value_kind =
-  | Is_literal of Variant_runtime.literal_tag
-  | Is_object
-  | Is_array
-  | Unknown_value
-
 let record_fields_are_array fields =
   let len = Array.length fields in
   let rec loop i =
@@ -815,53 +806,77 @@ let record_fields_are_array fields =
   in
   len <> 0 && loop 0
 
-let runtime_value_kind (c : structured_constant) =
+(* The JavaScript value a constant is emitted as by [Lam_compile_const] and
+   [Js_dump], not its source constructor. A constant of another
+   representation keeps the dispatch at run time. *)
+let untagged_value (c : structured_constant) : Untagged_dispatch.value option =
   match c with
-  | Const_string s -> Is_literal (String s)
-  | Const_int i -> Is_literal (Int (Int32.to_int i))
-  | Const_float f -> Is_literal (Float f)
-  | Const_js_true -> Is_literal (Bool true)
-  | Const_js_false -> Is_literal (Bool false)
-  | Const_js_null -> Is_literal Null
-  | Const_js_undefined _ -> Is_literal Undefined
-  | Const_polyvar name -> Is_literal (String name)
-  | Const_constructor {literal} -> Is_literal literal
+  | Const_string s -> Some (Literal (String s))
+  | Const_int i -> Some (Literal (Int (Int32.to_int i)))
+  | Const_float f -> Some (Literal (Float f))
+  | Const_js_true -> Some (Literal (Bool true))
+  | Const_js_false -> Some (Literal (Bool false))
+  | Const_js_null -> Some (Literal Null)
+  | Const_js_undefined _ -> Some (Literal Undefined)
+  | Const_polyvar name -> Some (Literal (String name))
+  | Const_constructor {literal} -> Some (Literal literal)
   | Const_bigint (sign, digits) ->
-    Is_literal (BigInt (Bigint_utils.to_string sign digits))
-  | Const_block (Blk_tuple, _) -> Is_array
+    Some (Literal (BigInt (Bigint_utils.to_string sign digits)))
+  | Const_block (Blk_tuple, _) -> Some Array
   | Const_block (Blk_record {fields}, _) ->
-    if record_fields_are_array fields then Is_array else Is_object
+    if record_fields_are_array fields then Some Array else Some Object
   | Const_block
       ( ( Blk_constructor _ | Blk_record_inlined _ | Blk_poly_var
         | Blk_record_ext _ | Blk_module _ | Blk_module_export _ | Blk_extension
           ),
         _ ) ->
-    Is_object
-  | Const_char _ | Const_some _ | Const_module_alias | Const_assertfalse ->
-    Unknown_value
+    Some Object
+  | Const_char _ | Const_some _ | Const_module_alias | Const_assertfalse -> None
 
 (* Runtime equality, rather than equality of tags: [@as(1)] and a payload
    [1.0] are the same JavaScript number, and [1_0n] and [10n] the same bigint.
    Integer tags are emitted through [Int32.of_int], just like [Const_int]. *)
 let literal_denotes_same = Variant_runtime.same_literal_value
 
-(* Whether the payload dispatch sends a value of this kind to a case of this
-   block type. Literals are checked as the generated code checks them; the
-   object case excludes arrays when an array case exists. *)
-let value_has_block_type ~block_types (kind : value_kind)
-    (block_type : Variant_runtime.block_type) =
-  match (block_type, kind) with
-  | _, Is_literal literal -> Variant_runtime.literal_passes literal block_type
-  | ObjectType, Is_object -> true
-  | InstanceType Array, Is_array -> true
-  | ObjectType, Is_array ->
-    not (List.mem (Variant_runtime.InstanceType Array) block_types)
-  | UnknownType, (Is_object | Is_array) -> true
-  | UnknownType, Unknown_value -> false
-  | ( ( NumberType | StringType | BooleanType | ObjectType | BigintType
-      | SymbolType | FunctionType | InstanceType _ ),
-      _ ) ->
-    false
+(* The dispatch of a switch on an untagged variant, which the code generator
+   prints and constant folding evaluates. A switch with literal arms and no
+   payload arm left is a plain switch on the literals. *)
+let untagged_plan (sw : lambda_switch) =
+  match sw.sw_dispatch with
+  | Switch_variant ({block_types = _ :: _} as facts)
+    when (sw.sw_consts_full && sw.sw_consts = [])
+         || not (sw.sw_blocks_full && sw.sw_blocks = []) -> (
+    let exception Not_untagged in
+    match
+      ( List.map
+          (fun (key, action) ->
+            match key with
+            | Switch_constructor (Constant {literal}) -> (literal, action)
+            | Switch_constructor (Block _) | Switch_int _ -> raise Not_untagged)
+          sw.sw_consts,
+        List.map
+          (fun (key, action) ->
+            match key with
+            | Switch_constructor (Block (Untagged {block_type})) ->
+              (block_type, action)
+            | Switch_constructor (Constant _ | Block (Tagged _)) | Switch_int _
+              ->
+              raise Not_untagged)
+          sw.sw_blocks )
+    with
+    | literal_arms, payload_arms ->
+      Some
+        (Untagged_dispatch.plan ~same:eq_approx
+           {
+             facts;
+             literal_arms;
+             payload_arms;
+             literals_complete = sw.sw_consts_full;
+             payloads_complete = sw.sw_blocks_full;
+             fallback = sw.sw_failaction;
+           })
+    | exception Not_untagged -> None)
+  | Switch_variant _ | Switch_direct -> None
 
 let switch lam (lam_switch : lambda_switch) : t =
   let action_or_switch = function
@@ -871,42 +886,18 @@ let switch lam (lam_switch : lambda_switch) : t =
       | Some action -> action
       | None -> Lswitch (lam, lam_switch))
   in
-  (* An untagged variant is dispatched on the value, so a constant scrutinee is
-     decided here rather than by the constructor it was written with - which
-     has no runtime existence and may be shared with a literal constructor.
-     [`Undecided] means this layer cannot name the constant's runtime shape, so
-     the switch has to stay; it is not the same as "no case matches". *)
-  let untagged_action (facts : Variant_runtime.matching_facts) cst =
-    let find_in cases matches =
-      `Case
-        (Ext_list.find_opt cases (fun (key, action) ->
-             match key with
-             | Switch_constructor case when matches case -> Some action
-             | Switch_int _ | Switch_constructor _ -> None))
-    in
-    let matches_block = value_has_block_type ~block_types:facts.block_types in
-    let kind = runtime_value_kind cst in
-    match kind with
-    | Unknown_value -> `Undecided
-    | Is_literal literal
-      when Ext_list.exists facts.literal_tags (literal_denotes_same literal) ->
-      (* The literal side wins, exactly as it does at runtime. *)
-      find_in lam_switch.sw_consts (function
-        | Constant tag -> literal_denotes_same literal tag.literal
-        | Block _ -> false)
-    | Is_literal _ | Is_object | Is_array ->
-      (* Not a declared literal, so the payload's runtime shape decides. *)
-      if Ext_list.exists facts.block_types (matches_block kind) then
-        find_in lam_switch.sw_blocks (function
-          | Block (Untagged {block_type}) -> matches_block kind block_type
-          | Constant _ | Block (Tagged _) -> false)
-      else `Undecided
-  in
   match (lam, lam_switch.sw_dispatch) with
-  | Lconst cst, Switch_variant ({block_types = _ :: _} as facts) -> (
-    match untagged_action facts cst with
-    | `Case action -> action_or_switch action
-    | `Undecided -> Lswitch (lam, lam_switch))
+  | Lconst cst, Switch_variant {block_types = _ :: _} -> (
+    (* An untagged variant is dispatched on the value, so a constant
+       scrutinee takes the arm the generated code takes for its JavaScript
+       value, not the arm of the constructor it was written with *)
+    match (untagged_plan lam_switch, untagged_value cst) with
+    | Some plan, Some value -> (
+      match Untagged_dispatch.select plan value with
+      | Arm action -> action
+      | Default -> action_or_switch None
+      | Nothing -> Lswitch (lam, lam_switch))
+    | (Some _ | None), _ -> Lswitch (lam, lam_switch))
   | Lconst (Const_constructor constant), _ ->
     (* By runtime value: a coercion accepts [@as(1.)] for [@as(1.0)] *)
     let action =
