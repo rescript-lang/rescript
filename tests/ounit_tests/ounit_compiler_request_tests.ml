@@ -1604,9 +1604,11 @@ let concurrent_async_context_tests _context =
         write directory "Sync.res" sync_source;
         Domain.spawn (fun () ->
             ignore (Atomic.fetch_and_add ready 1);
-            let deadline = Unix.gettimeofday () +. 5. in
+            (* Sleep rather than spin: each spawn stops the world, and spinning
+               domains outnumbering the cores starve the domain that spawns. *)
+            let deadline = Unix.gettimeofday () +. 30. in
             while Atomic.get ready < 8 && Unix.gettimeofday () < deadline do
-              Domain.cpu_relax ()
+              Unix.sleepf 0.001
             done;
             check (Atomic.get ready = 8) "async requests did not overlap";
             for _ = 1 to 3 do

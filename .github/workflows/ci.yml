@@ -91,6 +91,7 @@ jobs:
           git config --system core.autocrlf false
           git config --system core.eol lf
           git config --system core.longpaths true
+          git config --system core.symlinks true
 
       - name: Checkout
         uses: actions/checkout@v7
@@ -205,20 +206,28 @@ jobs:
       - name: Check for diffs in tests folder
         run: git diff --ignore-cr-at-eol --exit-code tests
 
-      - name: Run analysis / tools tests
-        if: runner.os != 'Windows' && runner.os != 'Linux'
-        run: opam exec -- make -C tests/analysis_tests test && make -C tests/tools_tests test
-
-      - name: Run gentype tests
-        if: runner.os != 'Windows'
-        run: make -C tests/gentype_tests/typescript-react-example clean test
-
       # On Windows, after running setup-ocaml (if it wasn't cached yet or the cache couldn't be restored),
-      # Cygwin bash is used instead of Git Bash for Windows, breaking the rewatch tests.
+      # Cygwin bash is used instead of Git Bash for Windows, breaking the test scripts below.
       # So we need to adjust the path to bring back Git Bash for Windows.
-      - name: Rewatch tests need Git Bash for Windows
+      - name: "Windows: Use Git Bash"
         if: ${{ runner.os == 'Windows' }}
         run: echo "C:\Program Files\Git\bin" >> $GITHUB_PATH
+        shell: bash
+
+      # Git Bash does not include make.
+      - name: "Windows: Install make"
+        if: ${{ runner.os == 'Windows' }}
+        run: command -v make || choco install make --no-progress
+        shell: bash
+
+      # Linux runs these tests in the coverage workflow.
+      - name: Run analysis / tools tests
+        if: runner.os != 'Linux'
+        run: opam exec -- make -C tests/analysis_tests test && make -C tests/tools_tests test
+        shell: bash
+
+      - name: Run gentype tests
+        run: make -C tests/gentype_tests/typescript-react-example clean test
         shell: bash
 
       - name: Run OCaml rewatch parity tests

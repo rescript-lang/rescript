@@ -13,9 +13,16 @@ for file in src/*.{res,resi}; do
   fi
 done
 
+# bsc runs the PPX command through the system shell, and cmd.exe needs
+# backslashes in the program path.
+ppx_command="../../_build/install/default/bin/rescript-tools ppx"
+if [ "${RUNNER_OS:-}" == "Windows" ]; then
+  ppx_command='..\..\_build\install\default\bin\rescript-tools.exe ppx'
+fi
+
 for file in ppx/*.res; do
   output="src/expected/$(basename $file).jsout"
-  ../../cli/bsc.js -ppx "../../_build/install/default/bin/rescript-tools ppx" $file > $output
+  ../../cli/bsc.js -ppx "$ppx_command" $file > $output
   if [ "${RUNNER_OS:-}" == "Windows" ]; then
     perl -pi -e 's/\r\n/\n/g' -- $output
   fi

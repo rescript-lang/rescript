@@ -72,6 +72,9 @@ export const compilerBinDir = path.resolve(
 );
 
 /**
- * path: `<projectDir>/_build/install/default/bin/ounit_tests`
+ * path: `<projectDir>/_build/install/default/bin/ounit_tests[.exe]`
  */
-export const ounitTestBin = path.join(compilerBinDir, "ounit_tests");
+export const ounitTestBin = path.join(
+  compilerBinDir,
+  process.platform === "win32" ? "ounit_tests.exe" : "ounit_tests",
+);
