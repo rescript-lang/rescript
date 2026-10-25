@@ -1,0 +1,1 @@
+- Fix matching a bool payload of an untagged variant beside a bool literal case in a match that does not name every case.
