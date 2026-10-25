@@ -1,0 +1,1 @@
+@instanceOf("Array") type t

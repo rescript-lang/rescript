@@ -140,6 +140,9 @@ type type_declaration = {
   type_attributes: Parsetree.attributes;
   type_immediate: bool;
   type_representation: type_representation;
+  type_shape: Variant_runtime.value_shape;
+      (** Resolved from the declaration's annotations in its own
+          environment, when it is declared *)
   type_inlined_types: type_inlined_type list;
 }
 

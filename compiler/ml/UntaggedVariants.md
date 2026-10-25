@@ -101,47 +101,128 @@ into one kind:
 | a function type | function | `typeof x === "function"` |
 | a record (not `@unboxed`), an inline record, `dict<_>` | object | `typeof x === "object"` |
 | `array<_>`, a tuple | instance `Array` | `Array.isArray(x)` |
-| a type in the list of rule 5 | instance `C` | `x instanceof C` |
+| a type declared with `@instanceOf("C")` (rule 5) | instance `C` | `x instanceof C` |
+| `promise<_>` | instance `Promise` | `x instanceof Promise` |
+| a type declared with `@typeOf("k")` | kind `k` | `typeof x === "k"` |
 | anything else: an abstract type, a type variable, a variant, `list<_>`, an `@unboxed` record | unknown | no check |
 
-The payload type is classified after expanding abbreviations
-(`type myDate = Date.t` is an instance case), except that the list of rule 5
-is consulted first on the type as written. `@notUndefined` on an abstract type
-leaves it unknown.
+The annotations of rule 5 are read first, on the type as written and on each
+type it abbreviates. Otherwise the payload type is classified after expanding
+abbreviations: `type ints = array<int>` is an array case, and `type name =
+string` a string case. A type is never recognized by its name. `@typeOf("number")`
+is the number kind, and `@typeOf("symbol")` is a kind of its own, with no
+builtin payload type. `@notUndefined` on an abstract type leaves it unknown.
 
 - Implementation: `variant_layout.ml:get_block_type_from_typ`,
-  `get_block_type`; `ast_untagged_variants.ml:type_is_builtin_object`.
+  `get_block_type`, `recognized_as`.
 - Tests: `spec_test` rules 4 (`kinds`, `tuples`, `aliasDict`, `instances`,
   `unknown`); fixtures `UntaggedConstructorMoreThanOneArg.res`,
   `UntaggedConstructorAttributeMoreThanOneArg.res`, `UntaggedNonUnary1.res`,
   `UntaggedNonUnary2.res` ("Constructor A has more than one argument."),
-  `UntaggedUnknown.res` (`list<float>` is unknown).
+  `UntaggedUnknown.res` (`list<float>` is unknown),
+  `untagged_unannotated_stdlib_name.res` (a type named like a stdlib class
+  is unknown); `tests/tests/src/untagged_runtime_annotations_test.res`,
+  `untagged_builtin_alias_test.res`.
 - Shaped by #6121, #6208, #6219, #6279, #6368, #6394, #6550, #6670.
 
-### 5. Instance types
+### 5. Declared instance types
 
-The instance cases come from a fixed list of type names in
-`ast_untagged_variants.ml:type_to_instanceof_backed_obj`. The predefined
-`promise<_>` and `array<_>` are matched by path; the others by the printed
-path of the type:
+`@instanceOf("C")` on a type declares that its values are instances of the
+global class at the path `C`, such as `"Date"` or `"Intl.Locale"`.
+`@typeOf("k")` declares that their `typeof` is `k`, one of `"string"`,
+`"number"`, `"bigint"`, `"boolean"`, `"symbol"`, `"function"` and
+`"object"`. A type has at most one of the two, and only abstract types and
+type abbreviations, public or private, can have them.
 
-| Type | Class |
+When a type is declared, its annotation is resolved into its *shape*, which
+is stored on the declaration: the class with its superclasses, or the
+`typeof` kind (`@notUndefined` gives the shape "never undefined", rule 13).
+The classes annotated further down a chain of abbreviations are the
+superclasses (rule 8):
+
+```rescript
+@instanceOf("Animal") type animal
+@instanceOf("Dog") type dog = private animal
+```
+
+The classifier and every other reader take the shape of the payload type as
+written, or of the first type it abbreviates that states one, so the
+outermost annotation decides. A shape is resolved in the environment the
+type is declared in, so an interface's shape is what its users see, even
+where the implementation knows more (rule 14). An annotation that repeats
+the abbreviated type's, as the declarations of a module alias do, adds no
+superclass.
+
+An annotation on an abbreviation must agree with the abbreviated type. It can
+refine an abstract type that is not builtin and has no annotation, or repeat
+the annotation of the abbreviated type. The type of a functor parameter, of a
+recursive module being defined, and a locally abstract type `(type a)` are
+abstract only where they are declared: they stand for another type, so they
+cannot be refined. Only a private abbreviation can declare a subclass of the
+class annotated there, or of a `@typeOf("object")` type, also in a phantom
+type hierarchy (`type dogLike<'a> = private animalLike<_dog<'a>>`). A public
+`type dog = animal` would make every animal a dog without a coercion, and so
+would `type dog = animal<int>` or `type dog = phantom<int>` with
+`type phantom<'a> = animal`.
+
+| Declaration | Error | Fixture |
+| --- | --- | --- |
+| `@typeOf("string") type t = option<string>`, `type t<'a> = 'a`, an abbreviation of `unit`, a builtin type, a record or a variant | @typeOf on a type abbreviation must describe an abstract type, ... | `runtime_annotation_on_option.res`, `runtime_annotation_on_type_variable.res` |
+| `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym` | This annotation, @typeOf("number"), contradicts the abbreviated type's annotation, @typeOf("symbol"). | `runtime_annotation_contradicts_manifest.res` |
+| `@instanceOf("Date") type date = X.t` in a functor of `X`, or over `(type a)` | @instanceOf cannot describe the type of a functor parameter, ... | `instance_of_functor_parameter.res`, `type_of_locally_abstract_type.res` |
+| `@instanceOf("Dog") type dog = animal`, `= animal<int>`, or `= phantom<int>` with `type phantom<'a> = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res`, `instance_of_public_subclass_instance.res`, `instance_of_public_subclass_through_alias.res` |
+| `@instanceOf("Animal") type t = private dog` | Animal appears twice in this chain of abbreviations ... | `instance_of_class_twice_in_chain.res` |
+| `@instanceOf` on a record or variant | @instanceOf can only be used on abstract types and type abbreviations ... | `runtime_annotation_on_record.res` |
+| both annotations | A type can have either @instanceOf or @typeOf, not both. | `runtime_annotation_conflict.res` |
+| one annotation twice | Duplicate @instanceOf annotation; a type can have only one. | `instance_of_duplicate.res` |
+
+The class path is a dot-separated list of identifiers whose first one is not
+a JavaScript keyword. Paths that name no class to recognize values by are
+rejected as well:
+
+| Path | Error | Fixture |
+| --- | --- | --- |
+| not a path, or a keyword global | @instanceOf expects the name of a global class ... | `instance_of_invalid_class.res`, `instance_of_keyword.res` |
+| `globalThis.C` | Write @instanceOf("C") without "globalThis." ... | `instance_of_global_this.res` |
+| `Object`, `Function` | Every object is an instance of Object ... Use @typeOf("object") instead. | `instance_of_object.res` |
+| `Array` | Arrays are recognized by Array.isArray ... | `instance_of_array.res` |
+| `String`, `Number`, `Boolean`, `BigInt`, `Symbol` | Values of type bigint are primitives ... | `instance_of_primitive_wrapper.res` |
+| `globalThis`, `undefined`, `NaN`, `Infinity`, `Math`, `JSON`, `Reflect`, `Atomics`, `Intl`, `Proxy` | Math is not a class ... | `instance_of_not_a_class.res` |
+
+An unknown `typeof` is an error too (`type_of_invalid.res`). The class is read
+as a global; where a local binding of the same name is in scope, it is read
+through `globalThis` (#8785). The compiler trusts the annotations, as it
+trusts the type of an external: a value that is not what its type declares is
+recognized by what it is (rule 10).
+
+The stdlib annotates the types of the classes it binds:
+
+| Type | Annotation |
 | --- | --- |
-| `promise<_>` | `Promise` |
-| `array<_>` | `Array` (checked with `Array.isArray`) |
-| `Date.t`, `RegExp.t`, `File.t`, `Blob.t`, `ArrayBuffer.t`, `DataView.t` | the class of the same name |
-| `Set.t`, `Map.t`, `WeakSet.t`, `WeakMap.t` | the class of the same name |
-| `Int8Array.t`, `Uint8Array.t`, `Uint8ClampedArray.t`, `Int16Array.t`, `Uint16Array.t`, `Int32Array.t`, `Uint32Array.t`, `Float32Array.t`, `Float64Array.t`, `BigInt64Array.t`, `BigUint64Array.t` | the class of the same name |
+| `Date.t`, `RegExp.t`, `ArrayBuffer.t`, `DataView.t`, `Map.t`, `Set.t`, `WeakMap.t`, `WeakSet.t`, `Blob.t` | `@instanceOf` the class of the same name |
+| `File.t`, a private abbreviation of `Blob.t` | `@instanceOf("File")`, a subclass of `Blob` |
+| `JsError.t` | `@instanceOf("Error")` |
+| `Intl.Collator.t`, `Intl.DateTimeFormat.t`, `Intl.ListFormat.t`, `Intl.Locale.t`, `Intl.NumberFormat.t`, `Intl.PluralRules.t`, `Intl.RelativeTimeFormat.t`, `Intl.Segmenter.t` | `@instanceOf("Intl.Collator")` and so on |
+| `Int8Array.t` and the other typed arrays, public abbreviations of `TypedArray.t<_>` | `@instanceOf` the class of the same name |
+| `Symbol.t` | `@typeOf("symbol")` |
 
-A type outside this list, such as a binding to a Web API class, is unknown
-(rule 4). The typed-array types are abbreviations of one type,
-`TypedArray.t<_>`, and are told apart only by the name as written.
+The typed-array types are abbreviations of one type, `TypedArray.t<_>`, and
+are told apart only by their annotations, which are read on the name as
+written (Known bugs).
 
-- Implementation: `ast_untagged_variants.ml:type_to_instanceof_backed_obj`,
-  `variant_runtime.ml:Instance`.
-- Tests: `spec_test` rules 4 and 5; fixtures `UntaggedAtMostOneInstance.res`,
-  `UntaggedTupleAndArray.res`.
-- Shaped by #6296, #6383, #6396, #7788, #8009. Related: #7147.
+- Implementation: `types.mli:type_shape`,
+  `variant_runtime.mli:value_shape`; `variant_layout.ml:declaration_shape`,
+  `resolve_shapes`, `value_shape`, `check_manifest_annotation`;
+  `ast_untagged_variants.ml:process_runtime_annotation`, `unsupported_class`,
+  `check_runtime_annotation`;
+  `variant_runtime.ml:Instance`; `js_exp_make.ml:class_constructor`.
+- Tests: `spec_test` rules 4 and 5;
+  `tests/tests/src/untagged_runtime_annotations_test.res`,
+  `untagged_runtime_annotations_shadow_test.res`,
+  `untagged_file_blob_test.res`; the fixtures above,
+  `UntaggedAtMostOneInstance.res`, `UntaggedTupleAndArray.res`.
+- Shaped by #6296, #6383, #6396, #7788, #8009, #8950, #8948, #8949.
+  Related: #7147.
 
 ### 6. Well-formedness
 
@@ -151,12 +232,13 @@ The type checker rejects an untagged variant, with
 | Condition | Reason | Fixture |
 | --- | --- | --- |
 | two object cases | At most one case can be an object type. | `UntaggedAtMostOneObject.res` |
-| two cases of one instance class (arrays and tuples share `Array`) | At most one case can be a C type; for `Array`, an array or tuple type. | `UntaggedAtMostOneInstance.res`, `UntaggedTupleAndArray.res` |
+| two cases of one instance class, compared by path (arrays and tuples share `Array`) | At most one case can be an instance of C; for `Array`, an array or tuple type. | `UntaggedAtMostOneInstance.res`, `UntaggedTupleAndArray.res`, `untagged_same_class_twice.res` |
 | two function cases | At most one case can be a function type. | `UntaggedAtMostOneFunction.res` |
 | two string cases | At most one case can be a string type. | `UntaggedAtMostOneString.res` |
 | two number cases (`int` and `float` count together) | At most one case can be a number type (int or float). | `UntaggedAtMostOneNumber.res` |
 | two bigint cases | At most one case can be a bigint type. | `UntaggedAtMostOneBigint.res` |
 | two boolean cases | At most one case can be a boolean type. | `UntaggedAtMostOneBoolean.res` |
+| two symbol cases | At most one case can be a symbol type. | `untagged_two_symbols.res` |
 | an unknown case beside another case with a payload | Case A has a payload that is not of one of the recognized shapes ... | `UntaggedOnlyOneUnknown.res`, `UntaggedUnknown.res` |
 | a `bool` case when both `true` and `false` are literal cases | Case B can never match ... | `UntaggedUnreachableBoolean.res` |
 | two nullary cases with the same literal | Duplicate literal x. | `UntaggedDuplicateLiteral.res` |
@@ -222,21 +304,37 @@ The payload arms compile in one of two forms.
   declared first, with the other branch unchecked (rule 10). The object check is
   `typeof x === "object"`, followed by `x !== null` when the variant has an
   `@as(null)` case, and by `!(x instanceof C)` (`!Array.isArray(x)` for
-  arrays) for every instance case of the variant.
+  arrays) for every instance case of the variant. The function check is
+  followed by `!(x instanceof C)` for every class case.
 - **Three or more arms**: an `if` chain of the instance checks, in the
   declaration order of the cases, then one `switch (typeof x)` over the other
   arms.
 
-In both forms a value of an instance case never lands in the object case.
+In both forms a value of an instance case never lands in the object or
+function case. A class check is followed by `!(x instanceof D)` for every
+case whose class `D` is a subclass of it (rule 5), so a subclass instance
+never lands in its superclass's case, whatever the declaration order:
+
+```js
+if (v instanceof Animal && !(v instanceof Dog)) { ... }
+```
+
+A value upcast to the superclass and wrapped in its case lands in the
+subclass case, as a payload equal to a literal lands in the literal's case
+(rule 7). Classes not declared to be related are tested in declaration order.
+`instanceof` consults `Symbol.hasInstance`, which is trusted.
 An `int` case is recognized by `typeof x === "number"` and so receives every
 number, integral or not.
 
 - Implementation: `lam_compile.ml:compile_untagged_cases`,
   `compile_general_cases`;
-  `ast_untagged_variants.ml:Dynamic_checks.add_runtime_type_check`.
+  `ast_untagged_variants.ml:Dynamic_checks.add_runtime_type_check`,
+  `is_case_instance`.
 - Tests: `spec_test` rules 4, 5 and 8 (`instanceName` shows the chain in
   declaration order, `objectFirst` both forms); `tests/tests/src/UntaggedVariants.res`
-  (`AllInstanceofTypes`, `MergeCases`).
+  (`AllInstanceofTypes`, `MergeCases`);
+  `tests/tests/src/untagged_runtime_annotations_test.res` (subclasses, the
+  function case).
 - Shaped by #6103, #6383, #6792, #7144, #7149.
 
 ### 9. `null` and arrays are not objects
@@ -248,6 +346,9 @@ tuple or class): the two-arm form adds the checks of rule 8, and the
 `switch (typeof x)` form is preceded by `x === null`, `Array.isArray(x)` and
 `x instanceof C` guards that send those values to the default arm when their
 own arm is absent.
+A case declared with `@typeOf("object")`
+(rule 5) is an object case: without an `@as(null)` case, it receives `null`,
+as a record case does.
 
 | Declaration | `switch` arms | Value | Arm |
 | --- | --- | --- | --- |
@@ -274,7 +375,10 @@ Recognition trusts the type. A value that belongs to no case is not rejected:
   completes without running any arm.
 
 A value from another JavaScript realm fails every `instanceof` check and is
-recognized the same way (by the semantics of `instanceof`; not tested).
+recognized the same way (by the semantics of `instanceof`; not tested):
+recognition is local to a realm. A class that does not exist where the
+`switch` runs makes its check throw, for every value: the instance checks
+precede the `typeof` checks, so primitives reach them too.
 
 - Implementation: `lam_compile.ml:compile_general_cases` (a complete match
   emits no check for its last clause).
@@ -303,7 +407,7 @@ as `Primitive_option.some(v)` otherwise. An untagged variant cannot hold
 | `string`, `int`, `float`, `bool`, `bigint`, a function, a tuple, a record without `@unboxed` | no |
 | an inline record with two or more fields | no |
 | an `@unboxed` record, an inline record with one field | as the type of its field |
-| an abstract type with `@notUndefined` (rule 13) | no |
+| an abstract type with `@notUndefined` (rule 13), a type declared with `@instanceOf` or `@typeOf` (rule 5), an `@unboxed` wrapper of either | no |
 | an abstract type without it, a type variable, `option<_>` | yes |
 | a type whose declaration is not on the load path | yes |
 
@@ -315,16 +419,20 @@ too, so it stays distinct from `None`.
 | `@as(null) WNull \| WString(string)` | `v` |
 | `@as(undefined) WUndefined \| WUString(string)` | `Primitive_option.some(v)` |
 | `@as("n") ONone \| OPaque(opaque)` | `Primitive_option.some(v)` |
-| `BBlob(Blob.t) \| BString(string)` | `Primitive_option.some(v)` |
+| `BBlob(Blob.t) \| BString(string)` | `v` |
 | `DDate(Date.t) \| DString(string)` | `v` |
 | `RRecord(record) \| RString(string)` with `type record = {y: option<int>}` | `v` |
 | `INone \| IRecord({x: option<int>})` | `Primitive_option.some(v)` |
 | `@as("n") UONone \| UOption(unboxedOption)` with `@unboxed type unboxedOption = {x: option<int>}` | `Primitive_option.some(v)` |
 | `@as("n") USNone \| UString(unboxedString)` with `@unboxed type unboxedString = {s: string}` | `v` |
 
-The stdlib marks `Date.t`, `RegExp.t`, `Map.t`, `Set.t`, `WeakMap.t`,
-`WeakSet.t`, `ArrayBuffer.t`, `DataView.t`, the typed arrays and other
-abstract types `@notUndefined`; `Blob.t` and `File.t` are not marked.
+The stdlib's annotated types (rule 5) cannot hold `undefined`. It marks the
+JSX element and component types, `Iterator.t`, `AsyncIterator.t`,
+`TypedArray.t`, `Intl.Segments.t`, `Intl.NumberFormat.Grouping.t` and
+`Lazy.t` with `@notUndefined`.
+
+Rule 5 keeps an annotated abbreviation from claiming this of a type that can
+hold `undefined`.
 
 - Implementation: `typeopt.ml:type_cannot_contain_undefined`.
 - Tests: `spec_test` rule 12; `UntaggedVariants.res`
@@ -339,13 +447,30 @@ values are never `undefined`. It affects only rule 12: `option` of the type,
 and of an untagged variant with a payload of the type, is unboxed. It does not
 make the type a recognized payload kind (rule 4). On any other type
 declaration it is an error, "@notUndefined can only be used on abstract
-types". Interface inclusion does not compare it.
+types". `@instanceOf` and `@typeOf` (rule 5) imply it.
 
-- Implementation: `typedecl.ml:transl_declaration`, `is_not_undefined_attr`;
-  `typeopt.ml:type_cannot_contain_undefined`.
-- Tests: `spec_test` rule 13; fixture `invalid_attribute_not_undefined.res`;
+When an interface declares a type `@notUndefined`, its implementation must be
+a type that cannot hold `undefined` either, or a type whose representation
+the compiler does not see, which has none to contradict it: an abstract type,
+also through an abbreviation such as `type t = Dom.element`, or a JavaScript
+object type. The type of a functor parameter or a locally abstract type
+stands for another type and does not count as abstract. `type t = option<int>` under
+`@notUndefined type t` is an error: "Their runtime representations
+differ: the second declaration is @notUndefined, but the first declaration
+can hold undefined". The same holds
+for functor arguments and `with type` constraints.
+
+- Implementation: `typedecl.ml:transl_declaration`;
+  `ast_untagged_variants.ml:has_not_undefined`;
+  `variant_layout.ml:declaration_shape`;
+  `typeopt.ml:type_cannot_contain_undefined`;
+  `includemod.ml:not_undefined_mismatch`.
+- Tests: `spec_test` rule 13; fixtures `invalid_attribute_not_undefined.res`,
+  `not_undefined_functor_argument.res`, `not_undefined_functor_parameter.res`;
+  `tests/tests/src/not_undefined_interface_test.res`;
+  `tests/build_tests/super_errors_multi/fixtures/Cross_not_undefined_option_implementation`;
   `tests/build_tests/not_undefined_attribute`.
-- Shaped by #7458, #7464.
+- Shaped by #7458, #7464, #8964.
 
 ### 14. `@tag` and interfaces
 
@@ -354,11 +479,23 @@ with a payload (`TAG` by default), and `@as` on such a case sets the tag's
 value. An inline-record field whose runtime name equals the tag field is an
 error.
 
-An interface and its implementation must agree on `@unboxed`, on `@tag`, and
-on the literal of every nullary case and of every tagged case with a payload.
-The `@as` of an untagged case with a payload does not change its
-representation (rule 2) and is not compared. Type declarations in messages
-print the `@as` of nullary and tagged cases.
+An interface and its implementation must agree on `@unboxed`, on `@tag`, on
+the literal of every nullary case and of every tagged case with a payload,
+and on the payload kind of every untagged case whose kind the interface
+knows. An unknown payload in the interface is its only payload case and is
+not checked, so it agrees with any payload of the implementation
+(`untagged_hidden_payload_test.res`). The `@as` of an untagged case with a
+payload does not change its representation (rule 2) and is not compared.
+Type declarations in messages print the `@as` of nullary and tagged cases.
+
+A type for which an interface states a class or `typeof` (rule 5), through
+its own annotation or the type it abbreviates, must state the same one in the
+implementation, superclasses included: "Their runtime representations
+differ". An interface that states none hides it. The same holds for functor
+arguments, `with type` constraints and module type ascriptions. Within one
+variant a class is identified by its path, so two types of the same class are
+one case (rule 6); across a signature the two declarations must also state
+the same superclasses.
 
 - Implementation: `variant_layout.ml:layout_from_type_variant`,
   `ast_untagged_variants.ml:process_tag_name`, `check_tag_field_conflicts`;
@@ -367,7 +504,11 @@ print the `@as` of nullary and tagged cases.
   `variant_tag_overlaps_with_field.res`, `UntaggedInvalidVariantTagAnnotation.res`,
   `UntaggedImplIntf.res`; `tests/build_tests/super_errors_multi/fixtures/`
   `Iface_unboxed_variant_mismatch`, `Iface_tag_name_mismatch`,
-  `Iface_variant_representation_mismatch`; `variant_payload_tag_mismatch.res`.
+  `Iface_variant_representation_mismatch`,
+  `Cross_runtime_annotation_hidden_superclass`,
+  `Cross_runtime_annotation_hidden_base`,
+  `Cross_runtime_annotation_claimed_by_interface`,
+  `Cross_runtime_annotation_functor_argument`; `variant_payload_tag_mismatch.res`.
 - Shaped by #6498, #6513, #6669, #7875, #8956.
 
 ## Known bugs
@@ -375,18 +516,9 @@ print the `@as` of nullary and tagged cases.
 Each was observed with the compiler built from this tree; the programs are
 compiled with `bsc` and run in Node 25.
 
-**Overlapping instance classes follow declaration order** (#8938).
-
-```rescript
-@unboxed type b = B(Blob.t) | F(File.t)
-let f = v => switch v { | B(_) => "blob" | F(_) => "file" }
-Console.log(f(F(%raw(`new File(["x"], "a.txt")`))))   // blob
-```
-
-A `File` is a `Blob`, and the `Blob` check runs first.
-
-**Typed arrays are classified by the name as written.** The typed-array types
-are one type, so a value of one can be wrapped in the case of another.
+**Typed arrays share one type** (#8955). The typed-array types are public
+abbreviations of `TypedArray.t<_>`, each annotated with its class, so a value
+of one can be wrapped in the case of another.
 
 ```rescript
 @unboxed type ta = I8(Int8Array.t) | U8(Uint8Array.t)
@@ -394,41 +526,34 @@ let f = v => switch v { | I8(_) => "i8" | U8(_) => "u8" }
 Console.log(f(I8(Uint8Array.fromArray([1]))))   // u8
 ```
 
-## Open questions
+## Decisions on declared classes and kinds
 
-These are the decisions a general mechanism for recognizing payloads by class
-or `typeof` kind, declared on types rather than listed in the compiler (rule
-5), has to make.
+The questions a mechanism for declaring classes and `typeof` kinds on types
+had to answer, and the answers of rule 5:
 
-1. **Unchecked claims.** Is a declared class or kind checked against the type
-   it is declared on, or trusted? An unknown payload must be the only payload
-   case (rule 6); a recognized one may sit beside others, so a wrong claim
-   moves values between cases. Related: #7147.
-2. **Subclasses.** How does the compiler learn that one class extends another,
-   and does a superclass case exclude a subclass case of the same variant
-   regardless of declaration order (Known bugs, #8938)? What happens to a
-   value upcast to the superclass and wrapped in its case (rule 7 has the same
-   effect for literals)? Related: #8806, #8914.
-3. **Overlaps across kinds.** Rule 6 counts cases per kind and per class.
-   Which overlaps are rejected or ordered: a class and the object case
-   (`Object`), a class and the function case (`Function`), two unrelated
-   classes, a declared `typeof` kind and a primitive case or literal?
-   Related: #6123, #6207, #7289, #8251.
-4. **The unchecked branch.** Rule 10 sends values outside every case to the
-   last case or to no arm. Is that the contract, or is the last case checked
-   too? Related: #6103.
-5. **Realms.** `instanceof` is false across realms and overridable through
-   `Symbol.hasInstance`; arrays use `Array.isArray`. Is realm-local
-   recognition part of the contract? Related: #6103, #2117.
-6. **Interfaces and functors.** Inclusion compares `@unboxed` and tags (rule
-   14) but not `@notUndefined`. Does it compare declared classes and kinds?
-   Related: #6498, #6513, #6669.
-7. **Implied `@notUndefined`.** Does a declared class or kind imply that the
-   type never holds `undefined` (rule 12), and how is that kept consistent
-   with the declared type's own structure? Related: #6222, #6233, #7458.
-8. **Abbreviations.** Rule 5 reads the name as written before expanding; two
-   equal types classify differently (Known bugs). Does a declaration on an
-   abbreviation follow the same rule? Related: #6394, #7788.
-9. **Globals.** Classes are read as globals. How is a class shadowed by a
-   local binding, imported from a module, or missing at run time handled?
-   Related: #8785.
+1. **Unchecked claims.** An annotation is trusted, as the type of an external
+   is, but checked against the type it abbreviates (rule 5).
+2. **Subclasses.** A class's superclasses are the classes annotated further
+   down its chain of private abbreviations. A superclass case excludes its subclass cases in
+   any order, and an upcast value lands in the subclass case (rule 8). The
+   relation must be visible where the variant is declared: an interface that
+   hides it is rejected (rule 14).
+3. **Overlaps across kinds.** `Object`, `Function`, `Array` and the wrappers
+   of primitives are rejected as classes. A declared kind counts as the
+   builtin kind (rule 6). Unrelated classes are tested in declaration order.
+4. **The unchecked branch** stays the contract (rule 10).
+5. **Realms.** Recognition is local to a realm (rule 10).
+6. **Interfaces and functors** compare declared classes and kinds, and the
+   payload kinds of untagged cases (rule 14), and `@notUndefined` against
+   the implementation (rule 13).
+7. **Implied `@notUndefined`.** A declared class or kind implies it, and
+   rule 5 rejects annotations on abbreviations of types that can hold
+   `undefined`.
+8. **Abbreviations.** Annotations are read along the chain of abbreviations,
+   and a type is never recognized by its name.
+9. **Globals.** A shadowed class is read through `globalThis`. A missing
+   class throws when the check runs (rule 10).
+
+Still open: a class imported from a module cannot be named; the `typeof`
+checks could precede the instance checks, so that a missing class affects
+only objects; and the typed arrays share one type (#8955).

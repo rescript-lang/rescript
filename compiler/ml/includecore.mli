@@ -38,6 +38,8 @@ type type_mismatch =
   | Immediate
   | Tag_name
   | Variant_representation of Ident.t
+  | Runtime_annotation of string * string
+  | Not_undefined
 
 val value_descriptions :
   loc:Location.t ->

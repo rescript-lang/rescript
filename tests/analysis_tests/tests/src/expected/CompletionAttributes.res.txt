@@ -315,3 +315,62 @@ Resolved opens 1 Stdlib
   }
 ]
 
+Complete src/CompletionAttributes.res 45:11
+Attribute id:instanc:[45:3->45:11] label:instanc
+Completable: Cdecorator(instanc)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+[
+  {
+    "detail": "",
+    "documentation": {
+      "kind": "markdown",
+      "value": "The `@instanceOf` decorator states that the values of an abstract type are instances of a global JavaScript class. Such a type can be the payload of an untagged variant case, which is then recognized with `instanceof`, and is never `undefined`, like with `@notUndefined`.\n\nA private abbreviation of another annotated type declares a subclass. A case of the superclass then excludes the instances of a subclass that is a case too, whatever the order of the cases.\n\nExample usage:\n```rescript\n@instanceOf(\"Blob\")\ntype blob\n\n@instanceOf(\"File\")\ntype file = private blob\n```"
+    },
+    "insertText": "instanceOf(\"$0\")",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "instanceOf",
+    "tags": []
+  }
+]
+
+Complete src/CompletionAttributes.res 48:9
+Attribute id:typeO:[48:3->48:9] label:typeO
+Completable: Cdecorator(typeO)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+[
+  {
+    "detail": "",
+    "documentation": {
+      "kind": "markdown",
+      "value": "The `@typeOf` decorator states the JavaScript `typeof` of the values of an abstract type: one of `\"string\"`, `\"number\"`, `\"bigint\"`, `\"boolean\"`, `\"symbol\"`, `\"function\"` or `\"object\"`. Such a type can be the payload of an untagged variant case, and is never `undefined`, like with `@notUndefined`.\n\nExample usage:\n```rescript\n@typeOf(\"symbol\")\ntype key\n```"
+    },
+    "insertText": "typeOf(\"$0\")",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "typeOf",
+    "tags": []
+  }
+]
+
+Complete src/CompletionAttributes.res 51:10
+Attribute id:notUnd:[51:3->51:10] label:notUnd
+Completable: Cdecorator(notUnd)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+[
+  {
+    "detail": "",
+    "documentation": {
+      "kind": "markdown",
+      "value": "The `@notUndefined` decorator marks an abstract type as one that can never be `undefined` in JavaScript. This allows the compiler to generate more efficient code when the type is used inside an `option`.\n\nExample usage:\n```rescript\n@notUndefined\ntype t\n```\n\n[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#notundefined-decorator)."
+    },
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "notUndefined",
+    "tags": []
+  }
+]
+

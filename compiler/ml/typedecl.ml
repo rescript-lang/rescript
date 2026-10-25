@@ -97,6 +97,7 @@ let enter_type rec_flag env sdecl id =
         type_attributes = sdecl.ptype_attributes;
         type_immediate = false;
         type_representation = Boxed;
+        type_shape = Unstated;
         type_inlined_types = [];
       }
     in
@@ -362,11 +363,6 @@ let make_constructor env type_path type_params sargs sret_type =
     widen z;
     (targs, Some tret_type, args, Some ret_type, params)
 
-let is_not_undefined_attr (attr : attribute) =
-  match attr with
-  | {Location.txt = "notUndefined"; _}, _ -> true
-  | _ -> false
-
 (* Check that all the variables found in [ty] are in [univ].
    Because [ty] is the argument to an abstract type, the representation
    of that abstract type could be any subexpression of [ty], in particular
@@ -376,7 +372,7 @@ let is_not_undefined_attr (attr : attribute) =
 let transl_declaration ~type_record_as_object env sdecl id =
   (* Check for @notUndefined attribute *)
   let has_not_undefined =
-    List.exists is_not_undefined_attr sdecl.ptype_attributes
+    Ast_untagged_variants.has_not_undefined sdecl.ptype_attributes
   in
   (if has_not_undefined then
      match (sdecl.ptype_kind, sdecl.ptype_manifest) with
@@ -387,6 +383,9 @@ let transl_declaration ~type_record_as_object env sdecl id =
             ( sdecl.ptype_loc,
               Invalid_attribute
                 "@notUndefined can only be used on abstract types" )));
+  Ast_untagged_variants.check_runtime_annotation ~loc:sdecl.ptype_loc
+    ~is_abstract_or_abbreviation:(sdecl.ptype_kind = Ptype_abstract)
+    sdecl.ptype_attributes;
 
   (* Bind type parameters *)
   reset_type_variables ();
@@ -403,21 +402,9 @@ let transl_declaration ~type_record_as_object env sdecl id =
   in
   let raw_status = get_representation_from_attributes sdecl in
 
-  let check_untagged_variant () =
-    match sdecl.ptype_kind with
-    | Ptype_variant cds ->
-      Ext_list.for_all cds (function
-        | {pcd_args = Pcstr_tuple ([] | [_])} ->
-          (* at most one payload allowed for untagged  variants *)
-          true
-        | {pcd_args = Pcstr_tuple (_ :: _ :: _); pcd_name = {txt = name}} ->
-          Ast_untagged_variants.report_constructor_more_than_one_arg
-            ~loc:sdecl.ptype_loc ~name
-        | {pcd_args = Pcstr_record _} -> true)
-    | _ -> false
-  in
-
-  (if raw_status = Unboxed && not (check_untagged_variant ()) then
+  (* An untagged variant's constructors are checked when its layout is
+     computed *)
+  (if raw_status = Unboxed then
      match sdecl.ptype_kind with
      | Ptype_abstract ->
        raise (Error (sdecl.ptype_loc, Bad_unboxed_attribute "it is abstract"))
@@ -733,6 +720,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
       type_attributes = sdecl.ptype_attributes;
       type_immediate = false;
       type_representation = representation;
+      type_shape = Unstated;
       type_inlined_types = [];
     }
   in
@@ -1561,6 +1549,9 @@ let transl_type_decl env rec_flag sdecl_list =
   current_slot := None;
   (* Check for duplicates *)
   check_duplicates sdecl_list;
+  (* What each declaration states about its values at run time, resolved in
+     the environment it is declared in *)
+  let decls = Variant_layout.resolve_shapes ~env decls in
   (* Build the final env. *)
   let newenv =
     List.fold_right
@@ -1630,6 +1621,11 @@ let transl_type_decl env rec_flag sdecl_list =
         | Type_abstract | Type_record _ | Type_open -> (id, decl))
       decls
   in
+  List.iter2
+    (fun sdecl (_, decl) ->
+      Variant_layout.check_manifest_annotation ~loc:sdecl.ptype_loc ~env:newenv
+        decl)
+    sdecl_list decls;
   List.iter2 (check_constraints ~type_record_as_object newenv) sdecl_list decls;
   (* Name recursion *)
   let decls =
@@ -2028,6 +2024,7 @@ let transl_with_constraint env id row_path orig_decl sdecl =
       type_attributes = sdecl.ptype_attributes;
       type_immediate = false;
       type_representation;
+      type_shape = Unstated;
       type_inlined_types = [];
     }
   in
@@ -2037,6 +2034,10 @@ let transl_with_constraint env id row_path orig_decl sdecl =
   (match Ctype.closed_type_decl decl with
   | None -> ()
   | Some ty -> raise (Error (sdecl.ptype_loc, Unbound_type_var (ty, decl))));
+  let decl =
+    {decl with type_shape = Variant_layout.declaration_shape ~env decl}
+  in
+  Variant_layout.check_manifest_annotation ~loc:sdecl.ptype_loc ~env decl;
   let decl = name_recursion sdecl id decl in
   let type_variance =
     compute_variance_decl env true decl
@@ -2079,6 +2080,7 @@ let abstract_type_decl arity =
       type_attributes = [];
       type_immediate = false;
       type_representation = Boxed;
+      type_shape = Unstated;
       type_inlined_types = [];
     }
   in

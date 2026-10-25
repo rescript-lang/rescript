@@ -1,0 +1,21 @@
+===== Claim.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_runtime_annotation_claimed_by_interface/Claim.res[0m:[2m1:1-23[0m
+
+  [1;31m1[0m [2m│[0m [1;31mtype t = option<string>[0m
+  2 [2m│[0m 
+
+  The implementation /.../fixtures/Cross_runtime_annotation_claimed_by_interface/Claim.res
+  does not match the interface /.../fixtures/Cross_runtime_annotation_claimed_by_interface/claim.cmi:
+  Type declarations do not match:
+    type t = option<string>
+  is not included in
+    type t
+  [36m/.../fixtures/Cross_runtime_annotation_claimed_by_interface/Claim.resi[0m:[2m1:19-24[0m:
+    Expected declaration
+  [36m/.../fixtures/Cross_runtime_annotation_claimed_by_interface/Claim.res[0m:[2m1:1-23[0m:
+    Actual declaration
+  Their runtime representations differ:
+  the first declaration states no runtime class or typeof,
+  the second declaration states values whose typeof is "string".

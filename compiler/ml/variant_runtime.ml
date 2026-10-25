@@ -5,67 +5,60 @@
    each declaration. *)
 
 module Instance = struct
-  type t =
-    | Array
-    | ArrayBuffer
-    | BigInt64Array
-    | BigUint64Array
-    | Blob
-    | DataView
-    | Date
-    | File
-    | Float32Array
-    | Float64Array
-    | Int16Array
-    | Int32Array
-    | Int8Array
-    | Promise
-    | RegExp
-    | Uint16Array
-    | Uint32Array
-    | Uint8Array
-    | Uint8ClampedArray
-    | Set
-    | Map
-    | WeakSet
-    | WeakMap
+  type t = Array | Class of {name: string; ancestors: string list}
+
   let to_string = function
     | Array -> "Array"
-    | ArrayBuffer -> "ArrayBuffer"
-    | BigInt64Array -> "BigInt64Array"
-    | BigUint64Array -> "BigUint64Array"
-    | Blob -> "Blob"
-    | DataView -> "DataView"
-    | Date -> "Date"
-    | File -> "File"
-    | Float32Array -> "Float32Array"
-    | Float64Array -> "Float64Array"
-    | Int16Array -> "Int16Array"
-    | Int32Array -> "Int32Array"
-    | Int8Array -> "Int8Array"
-    | Promise -> "Promise"
-    | RegExp -> "RegExp"
-    | Uint16Array -> "Uint16Array"
-    | Uint32Array -> "Uint32Array"
-    | Uint8Array -> "Uint8Array"
-    | Uint8ClampedArray -> "Uint8ClampedArray"
-    | Set -> "Set"
-    | Map -> "Map"
-    | WeakSet -> "WeakSet"
-    | WeakMap -> "WeakMap"
+    | Class {name} -> name
+
+  let is_subclass t ~of_ =
+    match (t, of_) with
+    | Class {ancestors}, Class {name} -> List.mem name ancestors
+    | (Array | Class _), _ -> false
 end
 
 (* Type of the runtime representation of an untagged block (case with payload) *)
 type block_type =
-  | IntType
+  | NumberType  (** [int] and [float] alike *)
   | StringType
-  | FloatType
   | BigintType
   | BooleanType
   | InstanceType of Instance.t
+  | SymbolType
   | FunctionType
   | ObjectType
   | UnknownType
+
+(* The payload kinds recognized by [typeof], with the name it returns *)
+let typeof_kinds =
+  [
+    (StringType, "string");
+    (NumberType, "number");
+    (BigintType, "bigint");
+    (BooleanType, "boolean");
+    (SymbolType, "symbol");
+    (FunctionType, "function");
+    (ObjectType, "object");
+  ]
+
+let typeof_name block_type = List.assoc_opt block_type typeof_kinds
+
+let block_type_of_typeof name =
+  List.find_map
+    (fun (block_type, kind) -> if kind = name then Some block_type else None)
+    typeof_kinds
+
+(** What a type declaration states about its values at run time, through
+    [@notUndefined], [@instanceOf] or [@typeOf]. Each level implies the one
+    before: a value recognized as a class instance or [typeof] kind is never
+    [undefined]. *)
+type value_shape =
+  | Unstated
+      (** Nothing: an abbreviation has the shape of the type it abbreviates *)
+  | Never_undefined  (** [@notUndefined] *)
+  | Recognized_as of block_type
+      (** [@instanceOf] or [@typeOf]: a payload of this kind, with the class's
+          declared superclasses *)
 
 (* The literal value a constructor is represented by: what [@as] states, or
    the constructor's own name when it states nothing. Unlike [tag_type], this

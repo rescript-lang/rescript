@@ -236,6 +236,12 @@ type type_declaration = {
   type_attributes: Parsetree.attributes;
   type_immediate: bool; (* true iff type should not be a pointer *)
   type_representation: type_representation;
+  type_shape: Variant_runtime.value_shape;
+      (** What the declaration itself states about its values at run time,
+          resolved in its own environment when it is declared. An
+          abbreviation without an annotation states [Unstated]; readers take
+          the shape of the first type on an expansion chain that states one
+          ([Variant_layout.value_shape]). *)
   type_inlined_types: type_inlined_type list;
       (** Representation of inlined types, needed for printing *)
 }

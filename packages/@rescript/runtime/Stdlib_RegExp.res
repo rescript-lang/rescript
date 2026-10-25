@@ -1,4 +1,4 @@
-@notUndefined
+@instanceOf("RegExp")
 type t
 
 module Result = {

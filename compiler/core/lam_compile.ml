@@ -797,7 +797,7 @@ let compile output_prefix =
                     (fun (block_type : Variant_runtime.block_type) ->
                       match (literal, block_type) with
                       | String _, StringType
-                      | (Int _ | Float _), (IntType | FloatType)
+                      | (Int _ | Float _), NumberType
                       | BigInt _, BigintType
                       | Bool _, BooleanType
                       | _, UnknownType ->
@@ -882,20 +882,23 @@ let compile output_prefix =
       let not_typeof_clauses, typeof_clauses =
         List.partition clause_is_not_typeof clauses
       in
-      let has_object_typeof =
+      let has_typeof kind =
         List.exists
           (function
-            | Variant_runtime.Payload_shape ObjectType, _ -> true
+            | Variant_runtime.Payload_shape block_type, _ -> block_type = kind
             | _ -> false)
           typeof_clauses
       in
+      let has_object_typeof = has_typeof ObjectType in
       (* When there's an ObjectType typeof case, null, arrays and class
          instances can incorrectly match it (typeof null === typeof [] ===
-         "object"). Guard against them when they should fall through to
-         default: null, and the instance cases without an arm of their own. *)
+         "object"), and class instances can match a FunctionType case, since
+         a class can extend Function. Guard against them when they should fall
+         through to default: null, and the instance cases without an arm of
+         their own. *)
       let needs_null_guard = has_object_typeof && has_null_case in
       let unmatched_instances =
-        if not has_object_typeof then []
+        if not (has_object_typeof || has_typeof FunctionType) then []
         else
           Ext_list.filter_map block_cases (function
             | Variant_runtime.InstanceType instance
@@ -909,13 +912,20 @@ let compile output_prefix =
               Some instance
             | _ -> None)
       in
+      let instances =
+        Ext_list.filter_map block_cases (function
+          | Variant_runtime.InstanceType i -> Some i
+          | _ -> None)
+      in
       let rec build_if_chain remaining_clauses =
         match remaining_clauses with
         | ( Variant_runtime.Payload_shape (InstanceType instance_type),
             {J.switch_body} )
           :: rest ->
           S.if_
-            (E.emit_check (IsInstanceOf (instance_type, Expr e)))
+            (E.emit_check
+               (Ast_untagged_variants.Dynamic_checks.is_case_instance ~instances
+                  instance_type (Expr e)))
             switch_body
             ~else_:[build_if_chain rest]
         | _ -> (
