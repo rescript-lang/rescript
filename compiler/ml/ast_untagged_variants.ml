@@ -2,14 +2,7 @@ open Variant_runtime
 
 type untagged_error =
   | OnlyOneUnknown of string
-  | AtMostOneObject
-  | AtMostOneInstance of Instance.t
-  | AtMostOneFunction
-  | AtMostOneString
-  | AtMostOneNumber
-  | AtMostOneBigint
-  | AtMostOneBoolean
-  | AtMostOneSymbol
+  | AtMostOneOfKind of block_type  (** never [UnknownType] *)
   | UnreachableBoolean of string
   | DuplicateLiteral of string
   | SameLiteralValue of string * string
@@ -66,22 +59,24 @@ let report_error ppf =
         "Case " ^ name
         ^ " has a payload that is not of one of the recognized shapes (object, \
            array, etc). Then it must be the only case with payloads."
-      | AtMostOneObject -> "At most one case can be an object type."
-      | AtMostOneInstance Array ->
-        "At most one case can be an array or tuple type."
-      | AtMostOneInstance i ->
-        "At most one case can be an instance of " ^ Instance.to_string i ^ "."
-      | AtMostOneFunction -> "At most one case can be a function type."
-      | AtMostOneString -> "At most one case can be a string type."
-      | AtMostOneBoolean -> "At most one case can be a boolean type."
-      | AtMostOneSymbol -> "At most one case can be a symbol type."
+      | AtMostOneOfKind kind ->
+        "At most one case can be "
+        ^ (match kind with
+          | ObjectType -> "an object type"
+          | InstanceType Array -> "an array or tuple type"
+          | InstanceType i -> "an instance of " ^ Instance.to_string i
+          | FunctionType -> "a function type"
+          | StringType -> "a string type"
+          | NumberType -> "a number type (int or float)"
+          | BigintType -> "a bigint type"
+          | BooleanType -> "a boolean type"
+          | SymbolType -> "a symbol type"
+          | UnknownType -> "of an unknown type")
+        ^ "."
       | UnreachableBoolean name ->
         "Case " ^ name
         ^ " can never match: both true and false are already cases of this \
            variant."
-      | AtMostOneNumber ->
-        "At most one case can be a number type (int or float)."
-      | AtMostOneBigint -> "At most one case can be a bigint type."
       | DuplicateLiteral s -> "Duplicate literal " ^ s ^ "."
       | SameLiteralValue (literal, earlier) ->
         "The literal " ^ literal ^ " is the same JavaScript value as " ^ earlier

@@ -131,15 +131,13 @@ let check_invariant ~(consts : (Location.t * tag) list)
   (* Keyed by [literal_key], with the spelling of the literal *)
   let nonstring_literals_consts = ref String_map.empty in
   let nonstring_literals_blocks = ref String_map.empty in
-  let instance_types = Hashtbl.create 1 in
-  let function_types = ref 0 in
-  let object_types = ref 0 in
-  let string_types = ref 0 in
-  let number_types = ref 0 in
-  let bigint_types = ref 0 in
-  let boolean_types = ref 0 in
-  let symbol_types = ref 0 in
-  let unknown_types = ref 0 in
+  (* The kinds of the untagged payloads seen so far. A class is identified by
+     its name. *)
+  let kinds = Hashtbl.create 1 in
+  let kind_key = function
+    | InstanceType (Class {name}) -> InstanceType (Class {name; ancestors = []})
+    | kind -> kind
+  in
   let add_string_literal ~is_const ~loc s =
     let set =
       if is_const then string_literals_consts else string_literals_blocks
@@ -163,32 +161,6 @@ let check_invariant ~(consts : (Location.t * tag) list)
              InvalidUntaggedVariantDefinition (SameLiteralValue (s, earlier)) ))
     | None -> ());
     map := String_map.add key s !map
-  in
-  let invariant loc name =
-    if !unknown_types <> 0 && List.length blocks <> 1 then
-      raise
-        (Error (loc, InvalidUntaggedVariantDefinition (OnlyOneUnknown name)));
-    if !object_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneObject));
-    Hashtbl.iter
-      (fun _ (i, count) ->
-        if count > 1 then
-          raise
-            (Error (loc, InvalidUntaggedVariantDefinition (AtMostOneInstance i))))
-      instance_types;
-    if !function_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneFunction));
-    if !string_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneString));
-    if !number_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneNumber));
-    if !bigint_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBigint));
-    if !boolean_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBoolean));
-    if !symbol_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneSymbol));
-    ()
   in
   let check_literal ~is_const ~loc (tag : tag) =
     match tag.literal with
@@ -214,39 +186,34 @@ let check_invariant ~(consts : (Location.t * tag) list)
   Ext_list.rev_iter blocks (fun (loc, block) ->
       match block with
       | Tagged {tag} -> check_literal ~is_const:false ~loc tag
+      | Untagged {tag; block_type = UnknownType} ->
+        (* No check tells an unknown payload apart from another payload *)
+        if List.length blocks <> 1 then
+          raise
+            (Error
+               (loc, InvalidUntaggedVariantDefinition (OnlyOneUnknown tag.name)))
       | Untagged {tag; block_type} ->
-        (match block_type with
-        | UnknownType -> incr unknown_types
-        | ObjectType -> incr object_types
-        | InstanceType i ->
-          (* A class is identified by its name *)
-          let name = Instance.to_string i in
-          let count =
-            match Hashtbl.find_opt instance_types name with
-            | Some (_, count) -> count
-            | None -> 0
-          in
-          Hashtbl.replace instance_types name (i, count + 1)
-        | SymbolType -> incr symbol_types
-        | FunctionType -> incr function_types
-        | NumberType -> incr number_types
-        | BigintType -> incr bigint_types
-        | BooleanType ->
-          (* Literal cases are matched before payload cases, so a boolean
-               payload only receives the booleans that are not literal cases.
-               A partial overlap is allowed, like for strings and numbers. *)
-          if
-            String_map.mem "true" !nonstring_literals_consts
-            && String_map.mem "false" !nonstring_literals_consts
-          then
-            raise
-              (Error
-                 ( loc,
-                   InvalidUntaggedVariantDefinition
-                     (UnreachableBoolean tag.name) ));
-          incr boolean_types
-        | StringType -> incr string_types);
-        invariant loc tag.name)
+        (* Literal cases are matched before payload cases, so a boolean
+           payload only receives the booleans that are not literal cases. A
+           partial overlap is allowed, like for strings and numbers. *)
+        if
+          block_type = BooleanType
+          && String_map.mem "true" !nonstring_literals_consts
+          && String_map.mem "false" !nonstring_literals_consts
+        then
+          raise
+            (Error
+               ( loc,
+                 InvalidUntaggedVariantDefinition (UnreachableBoolean tag.name)
+               ));
+        let key = kind_key block_type in
+        if Hashtbl.mem kinds key then
+          raise
+            (Error
+               ( loc,
+                 InvalidUntaggedVariantDefinition (AtMostOneOfKind block_type)
+               ));
+        Hashtbl.add kinds key ())
 
 (* A constructor without [@as] is represented by its name *)
 
