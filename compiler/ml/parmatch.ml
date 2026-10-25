@@ -2294,6 +2294,12 @@ let rec pattern_literal p : Variant_runtime.literal_tag option =
   | Tpat_constant (Const_bigint (sign, digits)) ->
     Some (BigInt (Bigint_utils.to_string sign digits))
   | Tpat_alias (p, _, _) -> pattern_literal p
+  | Tpat_variant (label, None, _) ->
+    (* A polymorphic variant is its name, or the number its name spells, as
+       in [Lambda.const_polyvar] *)
+    if Ext_string.is_valid_hash_number label then
+      Some (Int (Int32.to_int (Ext_string.hash_number_as_i32_exn label)))
+    else Some (String label)
   | Tpat_construct (_, {cstr_name; cstr_res}, [])
     when is_type_path Predef.path_bool cstr_res ->
     Some (Bool (cstr_name = "true"))
@@ -2310,7 +2316,8 @@ let rec pattern_literal p : Variant_runtime.literal_tag option =
       pattern_literal arg
     | (Constant _ | Block _), _ -> None)
   | Tpat_construct (_, {cstr_kind = Extension_constructor _}, _)
-  | Tpat_any | Tpat_var _ | Tpat_interval _ | Tpat_tuple _ | Tpat_variant _
+  | Tpat_any | Tpat_var _ | Tpat_interval _ | Tpat_tuple _
+  | Tpat_variant (_, Some _, _)
   | Tpat_record _ | Tpat_dict _ | Tpat_array _ | Tpat_or _ ->
     None
 
@@ -2367,6 +2374,8 @@ and shadowed_argument_liveness ~payload_constructor ~literal_cases arg =
     or_liveness
       (shadowed_argument_liveness ~payload_constructor ~literal_cases)
       p1 p2
+  | Tpat_alias (p, _, _) ->
+    shadowed_argument_liveness ~payload_constructor ~literal_cases p
   | _ -> (
     let shadowing_case =
       match pattern_literal arg with

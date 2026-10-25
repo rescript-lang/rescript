@@ -346,7 +346,8 @@ match, and is reported: warning 11 for an arm, such as `S("a")` beside
 `@as("a") A`, and warning 12 for an alternative of an or-pattern, both with
 "\"a\" is the runtime value of constructor A, so it is always matched as A,
 never as S". Values are compared as `===` compares them (rule 6), so
-`BI(02n)` beside `@as(2n) Two` is reported too. For the
+`BI(02n)` beside `@as(2n) Two` and `P(#Foo)` beside `@as("Foo") F` are
+reported too, and an or-pattern also counts when it is named with `as`. For the
 exhaustiveness check a literal case covers the payload values equal to it, so
 `Yes | Ans(false)` is a complete match of `@as(true) Yes | Ans(bool)`.
 
@@ -359,7 +360,9 @@ exhaustiveness check a literal case covers the payload values equal to it, so
   `warning_11_untagged_literal_shadows_payload_kinds.res`,
   `warning_11_untagged_literal_shadows_bigint.res`,
   `warning_11_untagged_bool_payload_overlap.res`,
-  `warning_12_untagged_literal_shadows_or_pattern.res`.
+  `warning_11_untagged_literal_shadows_polyvariant.res`,
+  `warning_12_untagged_literal_shadows_or_pattern.res`,
+  `warning_12_untagged_literal_shadows_aliased_or_pattern.res`.
 - Shaped by #6125, #7128, #7135, #8806.
 
 ### 8. Payload cases

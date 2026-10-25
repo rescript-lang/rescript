@@ -1,0 +1,25 @@
+
+  [1;33mWarning number 11[0m
+  [36m/.../fixtures/warning_11_untagged_literal_shadows_polyvariant.res[0m:[2m9:5-11[0m
+
+   7 [2m┆[0m | F => 1
+   8 [2m┆[0m | One => 2
+   [1;33m9[0m [2m┆[0m | [1;33mP(#Foo)[0m => 3
+  10 [2m┆[0m | P(#1) => 4
+  11 [2m┆[0m | P(_) => 5
+
+  this match case is unused.
+  "Foo" is the runtime value of constructor F, so it is always matched as F, never as P.
+
+
+  [1;33mWarning number 11[0m
+  [36m/.../fixtures/warning_11_untagged_literal_shadows_polyvariant.res[0m:[2m10:5-9[0m
+
+   8 [2m┆[0m | One => 2
+   9 [2m┆[0m | P(#Foo) => 3
+  [1;33m10[0m [2m┆[0m | [1;33mP(#1)[0m => 4
+  11 [2m┆[0m | P(_) => 5
+  12 [2m┆[0m }
+
+  this match case is unused.
+  1 is the runtime value of constructor One, so it is always matched as One, never as P.
