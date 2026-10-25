@@ -629,18 +629,6 @@ function preserveDiscriminatorGroups(x) {
   if (typeof x === "boolean") {
     return;
   }
-  if (Array.isArray(x)) {
-    while (keepGoing()) {
-      sideEffect();
-    };
-    return;
-  }
-  if (x instanceof Date) {
-    while (keepGoing()) {
-      sideEffect();
-    };
-    return;
-  }
   while (keepGoing()) {
     sideEffect();
   };

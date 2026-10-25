@@ -15,8 +15,34 @@ function ff(x) {
   console.log("abc");
 }
 
+function dateOrObject(x) {
+  switch (typeof x) {
+    case "string" :
+    case "number" :
+      return 3;
+    default:
+      if (x instanceof Date) {
+        return 1;
+      } else if (typeof x === "object") {
+        return 2;
+      } else {
+        return 3;
+      }
+  }
+}
+
+function logPointOrName(x) {
+  if (x === null) {
+    console.log("null");
+    return;
+  }
+  console.log("payload");
+}
+
 export {
   f,
   ff,
+  dateOrObject,
+  logPointOrName,
 }
 /* No side effect */

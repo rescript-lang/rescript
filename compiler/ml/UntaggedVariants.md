@@ -334,12 +334,17 @@ constructor:
 The literals are compared with `===`: by one `switch (x)` over the literal
 arms, whose default holds the payload dispatch, or, when at most two
 literals get a `case`, by an `if` per arm body. A literal without an arm of its own goes
-to the default arm. It gets a `case` leading there when it could pass a
-check of the payload dispatch (a string literal beside a `string` arm, any
-literal beside an unknown-kind arm) or when the variant has class cases;
-otherwise it reaches the default through the payload dispatch, which then
-checks its last arm. A `null` literal that only the object check would
-accept adds `x !== null` to that check instead (rule 9).
+to the default arm. It reaches the default through the payload dispatch,
+which then checks its last arm, when the payload dispatch takes it there
+without a class check; otherwise, as for a string literal beside a `string`
+arm, any literal beside an unknown-kind arm, or a literal whose kind meets a
+class check, it gets a `case` leading there. A `null` literal that only the
+object check would accept adds `x !== null` to that check instead (rule 9).
+
+The dispatch tests nothing whose outcome runs the same body: arms of
+different kinds with one body, also arms with the default's body, are left
+to one unchecked branch, and a literal with the body of a payload dispatch
+that runs one body unchecked gets no `case`.
 
 A payload pattern whose every value is a literal case's can therefore never
 match, and is reported: warning 11 for an arm, such as `S("a")` beside

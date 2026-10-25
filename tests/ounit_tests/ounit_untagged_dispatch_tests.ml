@@ -192,7 +192,19 @@ let suites =
              in
              List.iter
                (fun value ->
-                 let outcome = D.select tree value in
+                 let class_checks = ref 0 in
+                 let on_test : D.test -> unit = function
+                   | Instance (Class _) -> incr class_checks
+                   | _ -> ()
+                 in
+                 let outcome = D.select ~on_test tree value in
+                 (* A literal or a primitive never reaches a class check *)
+                 (match value with
+                 | Literal _ when !class_checks > 0 ->
+                   OUnit.assert_failure
+                     ("a class check on " ^ value_to_string value ^ " in "
+                    ^ tree_to_string tree)
+                 | Literal _ | Object | Array -> ());
                  match
                    oracle ~literals ~kinds ~literal_arms ~payload_arms value
                  with
