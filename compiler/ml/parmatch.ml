@@ -2558,13 +2558,16 @@ let rec with_bool_payload_overlaps p =
     | Constant tag -> (
       match tag.literal with
       | Bool b -> (
+        (* The payload type must be [bool] itself: a [@typeOf("boolean")]
+           type has boolean values, but no [true] and [false] patterns *)
         let is_bool_payload cd =
-          match cd.cstr_kind with
-          | Ordinary_constructor r -> (
+          match (cd.cstr_kind, cd.cstr_args) with
+          | Ordinary_constructor r, [arg] -> (
             match Variant_runtime.representation r with
-            | Block (Untagged {block_type = BooleanType}) -> true
+            | Block (Untagged {block_type = BooleanType}) ->
+              is_type_path Predef.path_bool (Ctype.expand_head p.pat_env arg)
             | Constant _ | Block _ -> false)
-          | Extension_constructor _ -> false
+          | Ordinary_constructor _, _ | Extension_constructor _, _ -> false
         in
         match
           List.find_opt is_bool_payload

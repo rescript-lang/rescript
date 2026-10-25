@@ -349,7 +349,10 @@ never as S". Values are compared as `===` compares them (rule 6), so
 `BI(02n)` beside `@as(2n) Two` and `P(#Foo)` beside `@as("Foo") F` are
 reported too, and an or-pattern also counts when it is named with `as`. For the
 exhaustiveness check a literal case covers the payload values equal to it, so
-`Yes | Ans(false)` is a complete match of `@as(true) Yes | Ans(bool)`.
+`Yes | Ans(false)` is a complete match of `@as(true) Yes | Ans(bool)`. This
+needs a payload of type `bool`, also through an abbreviation: a
+`@typeOf("boolean")` type has no `true` and `false` patterns, so `Yes` alone
+does not cover it.
 
 - Implementation: `lam_compile.ml:compile_switch`;
   `parmatch.ml` (shadowed payload patterns, exhaustiveness).
@@ -360,6 +363,7 @@ exhaustiveness check a literal case covers the payload values equal to it, so
   `warning_11_untagged_literal_shadows_payload_kinds.res`,
   `warning_11_untagged_literal_shadows_bigint.res`,
   `warning_11_untagged_bool_payload_overlap.res`,
+  `warning_8_untagged_boolean_kind_payload.res`,
   `warning_11_untagged_literal_shadows_polyvariant.res`,
   `warning_12_untagged_literal_shadows_or_pattern.res`,
   `warning_12_untagged_literal_shadows_aliased_or_pattern.res`.
