@@ -139,8 +139,8 @@ level implying the one before:
 - `@instanceOf("C")`: they are instances of the global class at the path `C`,
   such as `"Date"` or `"Intl.Locale"`.
 
-A type has at most one of `@typeOf` and `@instanceOf`, and only abstract types
-and type abbreviations, public or private, can have any of the three.
+A type has at most one of the three, and only abstract types and type
+abbreviations, public or private, can have one.
 `@notUndefined` affects only rule 12: `option` of the type, and of an untagged
 variant with a payload of the type, is unboxed. It does not make the type a
 recognized payload kind (rule 4).
@@ -189,7 +189,7 @@ would `type dog = animal<int>` or `type dog = phantom<int>` with
 | `@instanceOf("Dog") type dog = animal`, `= animal<int>`, or `= phantom<int>` with `type phantom<'a> = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res`, `instance_of_public_subclass_instance.res`, `instance_of_public_subclass_through_alias.res` |
 | `@instanceOf("Animal") type t = private dog` | Animal appears twice in this chain of abbreviations ... | `instance_of_class_twice_in_chain.res` |
 | any of the three on a record or variant | @instanceOf can only be used on abstract types and type abbreviations ... | `runtime_annotation_on_record.res`, `invalid_attribute_not_undefined.res` |
-| both `@instanceOf` and `@typeOf` | A type can have either @instanceOf or @typeOf, not both. | `runtime_annotation_conflict.res` |
+| two of the three | A type can have only one of @notUndefined, @instanceOf and @typeOf. ... | `runtime_annotation_conflict.res`, `runtime_annotation_not_undefined_conflict.res` |
 | one annotation twice | Duplicate @instanceOf annotation; a type can have only one. | `instance_of_duplicate.res` |
 
 What an interface states about a type must hold for its implementation. A
@@ -249,9 +249,9 @@ written (Known bugs).
 
 - Implementation: `types.mli:type_shape`,
   `variant_runtime.mli:value_shape`; `variant_layout.ml:declaration_shape`,
-  `resolve_shapes`, `value_shape`, `check_manifest_annotation`;
-  `typedecl.ml:check_manifest_annotations`; `typeopt.ml:undefinedness`;
-  `ast_untagged_variants.ml:process_runtime_annotation`, `has_not_undefined`,
+  `resolve_shapes`, `value_shape`, `payload_kind`;
+  `typedecl.ml:check_manifest_annotation`; `typeopt.ml:abstractness`,
+  `undefinedness`; `ast_untagged_variants.ml:process_runtime_annotation`,
   `unsupported_class`, `check_runtime_annotation`;
   `includecore.ml:compare_runtime_annotations`;
   `variant_runtime.ml:Instance`; `js_exp_make.ml:class_constructor`.

@@ -148,7 +148,9 @@ let report_error ppf =
        for another one, whose values can be anything."
       attribute
   | ConflictingRuntimeAnnotations ->
-    fprintf ppf "A type can have either @instanceOf or @typeOf, not both."
+    fprintf ppf
+      "A type can have only one of @notUndefined, @instanceOf and @typeOf. \
+       @instanceOf and @typeOf already imply @notUndefined."
   | RuntimeAnnotationOnRepresentedType attribute ->
     fprintf ppf
       "@%s can only be used on abstract types and type abbreviations, whose \
@@ -242,12 +244,14 @@ let report_constructor_more_than_one_arg ~loc ~name =
     (Error
        (loc, InvalidUntaggedVariantDefinition (ConstructorMoreThanOneArg name)))
 
-(* What [@instanceOf] or [@typeOf] on a type declaration states about the
-   runtime representation of its values. *)
+(* What [@notUndefined], [@instanceOf] or [@typeOf] on a type declaration
+   states about the runtime representation of its values. *)
 type runtime_annotation =
+  | Not_undefined  (** values that are never [undefined] *)
   | Instance_of of string  (** instances of the global class at this path *)
   | Type_of of block_type  (** values with this [typeof] *)
 
+let not_undefined = "notUndefined"
 let instance_of = "instanceOf"
 let type_of = "typeOf"
 
@@ -294,6 +298,7 @@ let is_class_path name =
   | [] -> false
 
 let runtime_attribute_name = function
+  | Not_undefined -> not_undefined
   | Instance_of _ -> instance_of
   | Type_of _ -> type_of
 
@@ -302,6 +307,7 @@ let typeof_name block_type =
   Option.value (Variant_runtime.typeof_name block_type) ~default:"object"
 
 let runtime_annotation_to_string = function
+  | Not_undefined -> "@" ^ not_undefined
   | Instance_of name -> Printf.sprintf "@%s(\"%s\")" instance_of name
   | Type_of block_type ->
     Printf.sprintf "@%s(\"%s\")" type_of (typeof_name block_type)
@@ -317,16 +323,15 @@ let describe_declared_block_type = function
     "values whose typeof is \"" ^ typeof_name block_type ^ "\""
   | None -> "no runtime class or typeof"
 
-let has_not_undefined (attrs : Parsetree.attributes) =
-  Ext_list.exists attrs (fun ({txt}, _) -> txt = "notUndefined")
-
-(* The [@instanceOf] or [@typeOf] annotation in [attrs], validated. Only
-   [Typedecl] passes [~loc]; later readers see attributes it accepted. *)
+(* The [@notUndefined], [@instanceOf] or [@typeOf] annotation in [attrs],
+   validated. Only [Typedecl] passes [~loc]; later readers see attributes it
+   accepted. *)
 let process_runtime_annotation ?(loc = Location.none)
     (attrs : Parsetree.attributes) =
   let annotation_of ({Location.txt; loc = attr_loc}, payload) =
     let loc = if attr_loc = Location.none then loc else attr_loc in
-    if txt = instance_of then
+    if txt = not_undefined then Some Not_undefined
+    else if txt = instance_of then
       match Ast_payload.semantic_string_of_payload payload with
       | Some name when is_class_path name -> (
         match unsupported_class name with

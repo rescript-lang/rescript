@@ -336,35 +336,69 @@ let make_constructor env type_path type_params sargs sret_type =
    any type variable present in [ty].
 *)
 
-(* [@notUndefined] on an abbreviation is a claim about the abbreviated type,
-   as [@instanceOf] and [@typeOf] are: it can refine a type whose
-   representation the compiler does not see, or restate that a type cannot
-   hold [undefined] *)
-let check_not_undefined_manifest ~loc ~env (decl : Types.type_declaration) =
-  match decl.type_manifest with
-  | Some manifest
-    when Ast_untagged_variants.has_not_undefined decl.type_attributes -> (
-    let error err = raise (Ast_untagged_variants.Error (loc, err)) in
-    match Typeopt.undefinedness env manifest with
-    | Cannot_be_undefined | Unseen -> ()
-    | Stands_for_another ->
-      error (RuntimeAnnotationOnTypeParameter "notUndefined")
-    | Can_be_undefined ->
-      error (RuntimeAnnotationOnUnrelatedType "notUndefined"))
-  | Some _ | None -> ()
-
-let check_manifest_annotations ~loc ~env decl =
-  Variant_layout.check_manifest_annotation ~loc ~env decl;
-  check_not_undefined_manifest ~loc ~env decl
+(* An annotation on an abbreviation is a claim about the abbreviated type, so
+   it must agree with what the compiler knows about that type. It can refine
+   an abstract type, restate what the abbreviated type is known to be, or, on
+   a private abbreviation, declare a subclass of the class annotated there.
+   Anything else, such as [@typeOf("string") type t = option<string>], would
+   let two spellings of one type be recognized differently, and would make
+   [Some(None)] of a type that can be undefined indistinguishable from
+   [None]. *)
+let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
+  let open Ast_untagged_variants in
+  let open Variant_runtime in
+  match
+    (process_runtime_annotation decl.type_attributes, decl.type_manifest)
+  with
+  | None, _ | Some _, None -> ()
+  | Some outer, Some manifest -> (
+    let error err = raise (Error (loc, err)) in
+    let stands_for_another () =
+      error (RuntimeAnnotationOnTypeParameter (runtime_attribute_name outer))
+    in
+    let unrelated () =
+      error (RuntimeAnnotationOnUnrelatedType (runtime_attribute_name outer))
+    in
+    match (outer, Variant_layout.payload_kind ~env manifest) with
+    | Not_undefined, _ -> (
+      match Typeopt.undefinedness env manifest with
+      | Cannot_be_undefined | Unseen -> ()
+      | Stands_for_another -> stands_for_another ()
+      | Can_be_undefined -> unrelated ())
+    | (Instance_of _ | Type_of _), None -> (
+      match Typeopt.abstractness env manifest with
+      | Opaque -> ()
+      | Stands_for_another -> stands_for_another ()
+      | Not_abstract -> unrelated ())
+    | Type_of block_type, Some inner when block_type = inner -> ()
+    | Instance_of name, Some (InstanceType (Class {name = inner}))
+      when name = inner ->
+      ()
+    | Instance_of name, Some ((InstanceType (Class _) | ObjectType) as inner) ->
+      (* A public abbreviation would make every value of the superclass type
+         a value of the subclass, without a coercion *)
+      let superclass, ancestors =
+        match inner with
+        | InstanceType (Class {name = ancestor; ancestors}) ->
+          (ancestor, ancestor :: ancestors)
+        (* Every class instance is an object *)
+        | _ -> ("Object", [])
+      in
+      if decl.type_private = Public then
+        error (SubclassOfPublicAbbreviation (name, superclass))
+      else if List.mem name ancestors then error (ClassTwiceInChain name)
+    | (Instance_of _ | Type_of _), Some inner ->
+      let inner =
+        match inner with
+        | InstanceType (Class {name}) -> Instance_of name
+        | block_type -> Type_of block_type
+      in
+      error
+        (RuntimeAnnotationContradictsManifest
+           ( runtime_annotation_to_string outer,
+             runtime_annotation_to_string inner )))
 
 let transl_declaration ~type_record_as_object env sdecl id =
-  if
-    Ast_untagged_variants.has_not_undefined sdecl.ptype_attributes
-    && sdecl.ptype_kind <> Ptype_abstract
-  then
-    raise
-      (Ast_untagged_variants.Error
-         (sdecl.ptype_loc, RuntimeAnnotationOnRepresentedType "notUndefined"));
   Ast_untagged_variants.check_runtime_annotation ~loc:sdecl.ptype_loc
     ~is_abstract_or_abbreviation:(sdecl.ptype_kind = Ptype_abstract)
     sdecl.ptype_attributes;
@@ -1605,7 +1639,7 @@ let transl_type_decl env rec_flag sdecl_list =
   in
   List.iter2
     (fun sdecl (_, decl) ->
-      check_manifest_annotations ~loc:sdecl.ptype_loc ~env:newenv decl)
+      check_manifest_annotation ~loc:sdecl.ptype_loc ~env:newenv decl)
     sdecl_list decls;
   List.iter2 (check_constraints ~type_record_as_object newenv) sdecl_list decls;
   (* Name recursion *)
@@ -2018,7 +2052,7 @@ let transl_with_constraint env id row_path orig_decl sdecl =
   let decl =
     {decl with type_shape = Variant_layout.declaration_shape ~env decl}
   in
-  check_manifest_annotations ~loc:sdecl.ptype_loc ~env decl;
+  check_manifest_annotation ~loc:sdecl.ptype_loc ~env decl;
   let decl = name_recursion sdecl id decl in
   let type_variance =
     compute_variance_decl env true decl

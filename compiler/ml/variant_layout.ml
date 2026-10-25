@@ -57,6 +57,7 @@ let payload_kind ~env (t : Types.type_expr) : block_type option =
    annotated further down a chain of abbreviations. *)
 let declaration_shape ~env (decl : Types.type_declaration) : value_shape =
   match process_runtime_annotation decl.type_attributes with
+  | None -> Unstated
   | Some (Type_of block_type) -> Recognized_as block_type
   | Some (Instance_of name) ->
     let ancestors =
@@ -68,13 +69,11 @@ let declaration_shape ~env (decl : Types.type_declaration) : value_shape =
       | Some _ | None -> []
     in
     Recognized_as (InstanceType (Class {name; ancestors}))
-  | None -> (
-    if not (has_not_undefined decl.type_attributes) then Unstated
-    else
-      (* Restating a kind the abbreviated type is recognized by keeps it *)
-      match Option.map (value_shape ~env) decl.type_manifest with
-      | Some (Recognized_as _ as shape) -> shape
-      | Some (Unstated | Never_undefined) | None -> Never_undefined)
+  | Some Not_undefined -> (
+    (* Restating a kind the abbreviated type is recognized by keeps it *)
+    match Option.map (value_shape ~env) decl.type_manifest with
+    | Some (Recognized_as _ as shape) -> shape
+    | Some (Unstated | Never_undefined) | None -> Never_undefined)
 
 (* Resolves the shapes of a group of declarations, which can abbreviate each
    other. Each round resolves one more level of abbreviation within the
@@ -108,79 +107,6 @@ let resolve_shapes ~env (decls : (Ident.t * Types.type_declaration) list) =
       env decls
   in
   round env decls (List.length decls)
-
-(* Whether the abstract type at [path] has a representation of its own, which
-   an annotation can refine, or stands for another type: a functor
-   parameter's type, a recursive module's type being defined, or a locally
-   abstract type. *)
-type abstractness = Opaque | Stands_for_another | Not_abstract
-
-let abstractness ~env path =
-  match Env.find_type path env with
-  | {type_kind = Type_abstract; type_manifest = None; type_newtype_level} ->
-    if type_newtype_level <> None || Env.is_functor_arg path env then
-      Stands_for_another
-    else if Predef.type_is_builtin_path_but_option path <> Predef.NA then
-      Not_abstract
-    else Opaque
-  | _ -> Not_abstract
-  | exception Not_found -> Not_abstract
-
-let annotation_of_block_type = function
-  | InstanceType (Class {name}) -> Instance_of name
-  | block_type -> Type_of block_type
-
-(* An annotation on an abbreviation is a claim about the abbreviated type, so
-   it must agree with what the compiler knows about that type. It can refine
-   an abstract type, restate the annotation the abbreviated type has, or, on a
-   private abbreviation, declare a subclass of the class annotated there.
-   Anything else, such as [@typeOf("string") type t = option<string>], would
-   let two spellings of one type be recognized differently, and would make
-   [Some(None)] of a type that can be undefined indistinguishable from
-   [None]. *)
-let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
-  match
-    (process_runtime_annotation decl.type_attributes, decl.type_manifest)
-  with
-  | None, _ | Some _, None -> ()
-  | Some outer, Some manifest -> (
-    let error err = raise (Error (loc, err)) in
-    match (outer, payload_kind ~env manifest) with
-    | _, None -> (
-      match (Ctype.expand_head_opt env manifest).desc with
-      | Tconstr (path, _, _) -> (
-        match abstractness ~env path with
-        | Opaque -> ()
-        | Stands_for_another ->
-          error
-            (RuntimeAnnotationOnTypeParameter (runtime_attribute_name outer))
-        | Not_abstract ->
-          error
-            (RuntimeAnnotationOnUnrelatedType (runtime_attribute_name outer)))
-      | _ ->
-        error (RuntimeAnnotationOnUnrelatedType (runtime_attribute_name outer)))
-    | Type_of block_type, Some inner when block_type = inner -> ()
-    | Instance_of name, Some (InstanceType (Class {name = inner}))
-      when name = inner ->
-      ()
-    | Instance_of name, Some ((InstanceType (Class _) | ObjectType) as inner) ->
-      (* A public abbreviation would make every value of the superclass type
-         a value of the subclass, without a coercion *)
-      let superclass, ancestors =
-        match inner with
-        | InstanceType (Class {name = ancestor; ancestors}) ->
-          (ancestor, ancestor :: ancestors)
-        (* Every class instance is an object *)
-        | _ -> ("Object", [])
-      in
-      if decl.type_private = Public then
-        error (SubclassOfPublicAbbreviation (name, superclass))
-      else if List.mem name ancestors then error (ClassTwiceInChain name)
-    | (Instance_of _ | Type_of _), Some inner ->
-      error
-        (RuntimeAnnotationContradictsManifest
-           ( runtime_annotation_to_string outer,
-             runtime_annotation_to_string (annotation_of_block_type inner) )))
 
 let get_block_type ~env (cstr : Types.constructor_declaration) : block_type =
   match cstr.cd_args with
