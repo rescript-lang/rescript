@@ -91,6 +91,20 @@ let literal_value_key = function
 
 let same_literal_value a b = literal_value_key a = literal_value_key b
 
+let literal_passes (literal : literal_tag) (block_type : block_type) =
+  match (block_type, literal) with
+  | UnknownType, _
+  | StringType, String _
+  | NumberType, (Int _ | Float _)
+  | BigintType, BigInt _
+  | BooleanType, Bool _
+  | ObjectType, Null ->
+    true
+  | ( ( StringType | NumberType | BigintType | BooleanType | ObjectType
+      | InstanceType _ | SymbolType | FunctionType ),
+      _ ) ->
+    false
+
 (** Information used to recognize a constructor during matching. A literal
     identifies a constant or an object's tag; a payload shape identifies a
     value represented directly by its payload. *)
@@ -126,7 +140,8 @@ type matching_facts = {
           standard [TAG] field. *)
   block_types: block_type list;
       (** Runtime shapes of constructors represented directly by their
-          payload. Tagged object constructors do not appear here. *)
+          payload, in declaration order. Tagged object constructors do not
+          appear here. *)
   literal_tags: literal_tag list;
       (** Runtime values of all nullary constructors. In an untagged variant
           these may overlap the values of a payload constructor, as in
@@ -134,9 +149,6 @@ type matching_facts = {
           payload constructor only receives values that are not literals, and
           [S("a")] matches as [A]: constructor identity is not observable at
           runtime for such values. *)
-  has_null: bool;
-  has_undefined: bool;
-  has_other_literal: bool;
 }
 (** Declaration-level facts needed when lowering a constructor match. This is
     not an occurrence-specific matching plan: it contains no arms, actions,
@@ -202,35 +214,24 @@ let compute_matching_facts ~tag_name (constructors : constructor_case array) :
     matching_facts =
   let block_types = ref [] in
   let literal_tags = ref [] in
-  let has_null = ref false in
-  let has_undefined = ref false in
-  let has_other_literal = ref false in
   Array.iter
     (function
-      | Constant {name; literal} -> (
+      | Constant {name; literal} ->
         (* Without an [@as], a nullary constructor is its own name. *)
         let literal =
           match literal with
           | Some literal -> literal
           | None -> String name
         in
-        literal_tags := literal :: !literal_tags;
-        match literal with
-        | Null -> has_null := true
-        | Undefined -> has_undefined := true
-        | String _ | Int _ | Float _ | BigInt _ | Bool _ ->
-          has_other_literal := true)
+        literal_tags := literal :: !literal_tags
       | Block (Untagged {block_type}) ->
         block_types := block_type :: !block_types
       | Block (Tagged _) -> ())
     constructors;
   {
     tag_name;
-    block_types = !block_types;
-    literal_tags = !literal_tags;
-    has_null = !has_null;
-    has_undefined = !has_undefined;
-    has_other_literal = !has_other_literal;
+    block_types = List.rev !block_types;
+    literal_tags = List.rev !literal_tags;
   }
 
 let make_layout ~(configuration : configuration) constructors =

@@ -848,19 +848,18 @@ let runtime_value_kind (c : structured_constant) =
    Integer tags are emitted through [Int32.of_int], just like [Const_int]. *)
 let literal_denotes_same = Variant_runtime.same_literal_value
 
-(* Mirror [Dynamic_checks]: literals take precedence; the object case excludes
-   arrays when an array case exists. Int and float share one runtime type. *)
+(* Whether the payload dispatch sends a value of this kind to a case of this
+   block type. Literals are checked as the generated code checks them; the
+   object case excludes arrays when an array case exists. *)
 let value_has_block_type ~block_types (kind : value_kind)
     (block_type : Variant_runtime.block_type) =
   match (block_type, kind) with
-  | NumberType, Is_literal (Int _ | Float _) -> true
-  | StringType, Is_literal (String _) -> true
-  | BooleanType, Is_literal (Bool _) -> true
+  | _, Is_literal literal -> Variant_runtime.literal_passes literal block_type
   | ObjectType, Is_object -> true
   | InstanceType Array, Is_array -> true
   | ObjectType, Is_array ->
     not (List.mem (Variant_runtime.InstanceType Array) block_types)
-  | UnknownType, (Is_literal _ | Is_object | Is_array) -> true
+  | UnknownType, (Is_object | Is_array) -> true
   | UnknownType, Unknown_value -> false
   | ( ( NumberType | StringType | BooleanType | ObjectType | BigintType
       | SymbolType | FunctionType | InstanceType _ ),

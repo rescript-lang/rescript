@@ -76,6 +76,9 @@ val string_switch :
   (Variant_runtime.tag_type * J.case_clause) list ->
   t
 
+val block_last_is_return_throw_or_continue : J.block -> bool
+(** Whether control never falls out of the end of the block *)
+
 val declare_variable :
   ?comment:string ->
   ?ident_info:J.ident_info ->

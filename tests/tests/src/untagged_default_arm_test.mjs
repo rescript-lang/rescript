@@ -3,55 +3,134 @@
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 
+globalThis.UntaggedAnyValue = class AnyValue {
+  static [Symbol.hasInstance]() { return true }
+}
+;
+
 function id(x) {
   return x;
 }
 
 function objectOrString(value) {
-  if (value instanceof RegExp || value instanceof Date) {
+  if (typeof value === "string") {
+    return "S";
+  } else if (typeof value === "object" && !(value instanceof RegExp) && !(value instanceof Date)) {
+    return "O";
+  } else {
     return "other";
-  }
-  switch (typeof value) {
-    case "object" :
-      return "O";
-    case "string" :
-      return "S";
-    default:
-      return "other";
   }
 }
 
 function textOrRecord(value) {
   if (value === "lit") {
     return "other";
-  }
-  switch (typeof value) {
-    case "string" :
-      return "text";
-    case "object" :
-      return "record";
-    default:
-      return "other";
+  } else if (typeof value === "string") {
+    return "text";
+  } else if (typeof value === "object") {
+    return "record";
+  } else {
+    return "other";
   }
 }
 
+function twoArmsKind(value) {
+  if (typeof value === "string") {
+    return "name";
+  } else {
+    return "any";
+  }
+}
+
+function withLiteralsKind(value) {
+  switch (value) {
+    case 1 :
+      return "one";
+    case 2 :
+      return "two";
+    case 3 :
+      return "three";
+    case 4 :
+      return "four";
+    case 5 :
+      return "five";
+    default:
+      if (typeof value === "string") {
+        return "name";
+      } else {
+        return "any";
+      }
+  }
+}
+
+function pair(a, b) {
+  let exit = 0;
+  if (typeof a === "string") {
+    if (typeof b === "object" && b !== null && !Array.isArray(b)) {
+      return "string, object";
+    } else {
+      return "other";
+    }
+  }
+  exit = 2;
+  if (exit === 2 && typeof b === "object" && b !== null && !Array.isArray(b)) {
+    return "any, object";
+  }
+  if (typeof a === "number") {
+    return "number, any";
+  } else {
+    return "other";
+  }
+}
+
+let logged = [];
+
+function logString(value) {
+  if (typeof value === "string") {
+    logged.push("string");
+  }
+  logged.push("done");
+}
+
 Mocha.describe("Untagged_default_arm_test", () => {
+  Mocha.test("an empty arm keeps the checks before it", () => {
+    logString(id({
+      x: 1
+    }));
+    logString(id("a"));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 95, characters 7-14", [
+      "done",
+      "string",
+      "done"
+    ], logged);
+  });
   Mocha.test("an instance handled by the default is not an object case", () => {
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 31, characters 7-14", "other", objectOrString(id(new Date())));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 32, characters 7-14", "other", objectOrString(id(/a/)));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 33, characters 7-14", "O", objectOrString(id({
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 99, characters 7-14", "other", objectOrString(id(new Date())));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 100, characters 7-14", "other", objectOrString(id(/a/)));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 101, characters 7-14", "O", objectOrString(id({
       x: 1
     })));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 34, characters 7-14", "S", objectOrString(id("s")));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 35, characters 7-14", "other", objectOrString(id(1)));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 102, characters 7-14", "S", objectOrString(id("s")));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 103, characters 7-14", "other", objectOrString(id(1)));
   });
   Mocha.test("a literal handled by the default is not a string case", () => {
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 39, characters 7-14", "other", textOrRecord(id("lit")));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 40, characters 7-14", "text", textOrRecord(id("lit2")));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 41, characters 7-14", "record", textOrRecord(id({
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 107, characters 7-14", "other", textOrRecord(id("lit")));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 108, characters 7-14", "text", textOrRecord(id("lit2")));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 109, characters 7-14", "record", textOrRecord(id({
       x: 1
     })));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 42, characters 7-14", "other", textOrRecord(id(1)));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 110, characters 7-14", "other", textOrRecord(id(1)));
+  });
+  Mocha.test("primitives skip class checks in the two-arm form", () => Test_utils.eq("File \"untagged_default_arm_test.res\", line 114, characters 7-14", "name", twoArmsKind(id("a"))));
+  Mocha.test("a value no arm of an incomplete match takes falls through", () => {
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 118, characters 7-14", "number, any", pair(id(1), id([])));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 119, characters 7-14", "number, any", pair(id(1), id(null)));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 120, characters 7-14", "any, object", pair(id(1), id({})));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 121, characters 7-14", "other", pair(id("a"), id([])));
+  });
+  Mocha.test("literals skip class checks", () => {
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 125, characters 7-14", "one", withLiteralsKind(id(1)));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 126, characters 7-14", "name", withLiteralsKind(id("a")));
   });
 });
 
@@ -59,5 +138,10 @@ export {
   id,
   objectOrString,
   textOrRecord,
+  twoArmsKind,
+  withLiteralsKind,
+  pair,
+  logged,
+  logString,
 }
 /*  Not a pure module */

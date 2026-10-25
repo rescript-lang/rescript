@@ -230,12 +230,10 @@ function plus$2(x, y) {
 }
 
 function kind(x) {
-  if (x == null) {
-    if (x === null) {
-      return "null";
-    } else {
-      return "undefined";
-    }
+  if (x === null) {
+    return "null";
+  } else if (x === undefined) {
+    return "undefined";
   } else {
     return "present";
   }
@@ -270,36 +268,33 @@ function isWhyNot(x) {
 }
 
 function plus$3(x, y) {
-  if (x === null || x === "WhyNotAnotherOne" || x === undefined) {
-    switch (x) {
-      case null :
-      case undefined :
-        return y;
-      case "WhyNotAnotherOne" :
-        break;
-    }
-  } else if (y !== null && y !== "WhyNotAnotherOne" && y !== undefined) {
-    return {
-      x: x.x + y.x,
-      y: x.y + y.y
-    };
-  }
-  if (y !== null && y !== "WhyNotAnotherOne" && y !== undefined) {
-    return "WhyNotAnotherOne";
-  }
-  switch (y) {
+  switch (x) {
     case null :
     case undefined :
-      return x;
+      return y;
     case "WhyNotAnotherOne" :
-      return "WhyNotAnotherOne";
+      break;
+    default:
+      switch (y) {
+        case null :
+        case undefined :
+        case "WhyNotAnotherOne" :
+          break;
+        default:
+          return {
+            x: x.x + y.x,
+            y: x.y + y.y
+          };
+      }
+  }
+  if (y == null) {
+    return x;
+  } else {
+    return "WhyNotAnotherOne";
   }
 }
 
 function kind$1(x) {
-  if (x !== null && x !== "WhyNotAnotherOne" && x !== undefined) {
-    return "present";
-  }
   switch (x) {
     case null :
       return "null";
@@ -307,6 +302,8 @@ function kind$1(x) {
       return "undefined";
     case "WhyNotAnotherOne" :
       return "whynot";
+    default:
+      return "present";
   }
 }
 
@@ -388,7 +385,7 @@ function classify(x) {
       } else {
         return "boolean";
       }
-    case "object" :
+    default:
       return "Object" + x.name;
   }
 }

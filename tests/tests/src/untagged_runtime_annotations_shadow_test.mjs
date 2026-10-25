@@ -20,15 +20,12 @@ let UntaggedNs = {
 };
 
 function kind(value) {
-  if (value instanceof globalThis.UntaggedShadowed) {
+  if (typeof value === "string") {
+    return value;
+  } else if (value instanceof globalThis.UntaggedShadowed) {
     return "shadowed";
-  }
-  if (value instanceof globalThis.UntaggedNs.Klass) {
+  } else {
     return "klass";
-  }
-  switch (typeof value) {
-    case "string" :
-      return value;
   }
 }
 

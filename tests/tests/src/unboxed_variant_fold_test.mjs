@@ -28,12 +28,10 @@ function pureName(v) {
 }
 
 function optName(v) {
-  if (v == null) {
-    if (v === null) {
-      return "null";
-    } else {
-      return "undef";
-    }
+  if (v === null) {
+    return "null";
+  } else if (v === undefined) {
+    return "undef";
   } else {
     return "obj";
   }
@@ -58,12 +56,10 @@ function answerName(v) {
 }
 
 function mixedName(v) {
-  if (v === false || v === null) {
-    if (v === false) {
-      return "off";
-    } else {
-      return "unset";
-    }
+  if (v === false) {
+    return "off";
+  } else if (v === null) {
+    return "unset";
   } else if (typeof v === "boolean") {
     if (v) {
       return "toggle true";
@@ -148,12 +144,10 @@ function wideName(value) {
 }
 
 function numberOrBigintName(value) {
-  if (typeof value !== "string") {
-    if (value === 1) {
-      return "number";
-    } else {
-      return "bigint";
-    }
+  if (value === 1) {
+    return "number";
+  } else if (value === 1n) {
+    return "bigint";
   } else {
     return value;
   }

@@ -11,28 +11,20 @@ globalThis.UntaggedCallable = class Callable extends Function {}
 ;
 
 function describePet(pet) {
-  if (pet instanceof UntaggedAnimal && !(pet instanceof UntaggedDog)) {
-    return "animal";
-  }
-  if (pet instanceof UntaggedDog) {
+  if (typeof pet === "string") {
+    return pet;
+  } else if (pet instanceof UntaggedDog) {
     return "dog";
-  }
-  switch (typeof pet) {
-    case "string" :
-      return pet;
+  } else {
+    return "animal";
   }
 }
 
 function onlyAnimal(pet) {
-  if (pet instanceof UntaggedAnimal && !(pet instanceof UntaggedDog)) {
-    return "animal";
-  }
-  if (pet instanceof UntaggedDog) {
+  if (typeof pet === "string" || pet instanceof UntaggedDog) {
     return "other";
-  }
-  switch (typeof pet) {
-    case "string" :
-      return "other";
+  } else {
+    return "animal";
   }
 }
 
@@ -47,10 +39,10 @@ function describeReversed(pet) {
 let Zoo = {};
 
 function describeAliased(pet) {
-  if (pet instanceof UntaggedAnimal && !(pet instanceof UntaggedDog)) {
-    return "animal";
-  } else {
+  if (pet instanceof UntaggedDog) {
     return "dog";
+  } else {
+    return "animal";
   }
 }
 
@@ -71,106 +63,159 @@ function referenceKind(reference) {
 }
 
 function localeKind(locale) {
-  if (locale instanceof Intl.Locale) {
-    return "locale";
-  } else {
+  if (typeof locale === "string") {
     return locale;
+  } else {
+    return "locale";
   }
 }
 
 function describePhantom(pet) {
-  if (pet instanceof UntaggedAnimal && !(pet instanceof UntaggedDog)) {
-    return "animal";
-  } else {
+  if (pet instanceof UntaggedDog) {
     return "dog";
+  } else {
+    return "animal";
   }
 }
 
 function handlerKind(handler) {
-  if (typeof handler === "function" && !(handler instanceof UntaggedCallable)) {
-    return "function";
-  } else {
+  if (handler instanceof UntaggedCallable) {
     return "callable";
+  } else {
+    return "function";
   }
 }
 
 function wideHandlerKind(handler) {
-  if (handler instanceof UntaggedAnimal || handler instanceof UntaggedCallable) {
+  if (typeof handler === "string") {
+    return "name";
+  } else if (typeof handler === "function" && !(handler instanceof UntaggedAnimal) && !(handler instanceof UntaggedCallable)) {
+    return "function";
+  } else {
     return "other";
-  }
-  switch (typeof handler) {
-    case "function" :
-      return "function";
-    case "string" :
-      return "name";
-    default:
-      return "other";
   }
 }
 
 function objectOrNameKind(value) {
-  if (value instanceof UntaggedDog) {
-    return "dog";
-  } else {
+  if (typeof value === "string") {
     return value;
+  } else {
+    return "dog";
   }
+}
+
+function id(x) {
+  return x;
+}
+
+function missingKind(value) {
+  switch (typeof value) {
+    case "string" :
+      return value;
+    case "number" :
+      return "count";
+    default:
+      return "missing";
+  }
+}
+
+function missingOrDefault(value) {
+  switch (typeof value) {
+    case "string" :
+      return value;
+    case "number" :
+      return "other";
+    default:
+      return "missing";
+  }
+}
+
+function sharedKind(value) {
+  let kind;
+  switch (typeof value) {
+    case "string" :
+      kind = "text";
+      break;
+    case "number" :
+      kind = "other";
+      break;
+    default:
+      kind = value instanceof Date ? "date" : "other";
+  }
+  return kind + "!";
 }
 
 Mocha.describe("Untagged_runtime_annotations_test", () => {
   Mocha.test("a subclass case is not taken for its superclass", () => {
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 165, characters 7-14", "animal", describePet(new UntaggedAnimal()));
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 166, characters 7-14", "dog", describePet(new UntaggedDog()));
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 167, characters 7-14", "rex", "rex");
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 199, characters 7-14", "animal", describePet(new UntaggedAnimal()));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 200, characters 7-14", "dog", describePet(new UntaggedDog()));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 201, characters 7-14", "rex", "rex");
   });
   Mocha.test("a superclass case alone excludes the subclass", () => {
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 171, characters 7-14", "animal", onlyAnimal(new UntaggedAnimal()));
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 172, characters 7-14", "other", onlyAnimal(new UntaggedDog()));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 205, characters 7-14", "animal", onlyAnimal(new UntaggedAnimal()));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 206, characters 7-14", "other", onlyAnimal(new UntaggedDog()));
   });
   Mocha.test("declaration order does not matter", () => {
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 176, characters 7-14", "dog", describeReversed(new UntaggedDog()));
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 177, characters 7-14", "animal", describeReversed(new UntaggedAnimal()));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 210, characters 7-14", "dog", describeReversed(new UntaggedDog()));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 211, characters 7-14", "animal", describeReversed(new UntaggedAnimal()));
   });
   Mocha.test("a subclass upcasts to its superclass", () => {
     let animal = new UntaggedDog();
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 182, characters 7-14", "dog", describePet(animal));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 216, characters 7-14", "dog", describePet(animal));
   });
   Mocha.test("classes reached through a module alias", () => {
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 186, characters 7-14", "animal", describeAliased(new UntaggedAnimal()));
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 187, characters 7-14", "dog", describeAliased(new UntaggedDog()));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 220, characters 7-14", "animal", describeAliased(new UntaggedAnimal()));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 221, characters 7-14", "dog", describeAliased(new UntaggedDog()));
   });
   Mocha.test("typeOf symbol", () => {
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 191, characters 7-14", "symbol", keyKind(Symbol.for("key")));
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 192, characters 7-14", "text", "text");
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 225, characters 7-14", "symbol", keyKind(Symbol.for("key")));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 226, characters 7-14", "text", "text");
   });
   Mocha.test("typeOf string", () => {
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 196, characters 7-14", "id", "id");
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 197, characters 7-14", "index", "index");
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 230, characters 7-14", "id", "id");
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 231, characters 7-14", "index", "index");
   });
   Mocha.test("a class at a dotted path", () => {
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 201, characters 7-14", "locale", localeKind(new Intl.Locale("en")));
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 202, characters 7-14", "de", "de");
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 235, characters 7-14", "locale", localeKind(new Intl.Locale("en")));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 236, characters 7-14", "de", "de");
   });
   Mocha.test("an annotated type is not wrapped in an option", () => {
     let animal = new UntaggedAnimal();
-    Test_utils.ok("File \"untagged_runtime_annotations_test.res\", line 207, characters 7-14", animal === animal);
-    Test_utils.ok("File \"untagged_runtime_annotations_test.res\", line 208, characters 7-14", animal === animal);
+    Test_utils.ok("File \"untagged_runtime_annotations_test.res\", line 241, characters 7-14", animal === animal);
+    Test_utils.ok("File \"untagged_runtime_annotations_test.res\", line 242, characters 7-14", animal === animal);
   });
   Mocha.test("a phantom type hierarchy", () => {
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 212, characters 7-14", "animal", describePhantom(new UntaggedAnimal()));
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 213, characters 7-14", "dog", describePhantom(new UntaggedDog()));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 246, characters 7-14", "animal", describePhantom(new UntaggedAnimal()));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 247, characters 7-14", "dog", describePhantom(new UntaggedDog()));
   });
   Mocha.test("a function case excludes class instances", () => {
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 217, characters 7-14", "callable", handlerKind(new UntaggedCallable()));
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 218, characters 7-14", "function", handlerKind(x => x));
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 219, characters 7-14", "other", wideHandlerKind(new UntaggedCallable()));
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 220, characters 7-14", "other", wideHandlerKind(new UntaggedAnimal()));
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 221, characters 7-14", "function", wideHandlerKind(x => x));
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 222, characters 7-14", "name", "name");
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 223, characters 7-14", "other", "other");
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 251, characters 7-14", "callable", handlerKind(new UntaggedCallable()));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 252, characters 7-14", "function", handlerKind(x => x));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 253, characters 7-14", "other", wideHandlerKind(new UntaggedCallable()));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 254, characters 7-14", "other", wideHandlerKind(new UntaggedAnimal()));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 255, characters 7-14", "function", wideHandlerKind(x => x));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 256, characters 7-14", "name", "name");
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 257, characters 7-14", "other", "other");
   });
   Mocha.test("a class declared over an object type", () => {
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 227, characters 7-14", "dog", objectOrNameKind(new UntaggedDog()));
-    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 228, characters 7-14", "rex", "rex");
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 261, characters 7-14", "dog", objectOrNameKind(new UntaggedDog()));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 262, characters 7-14", "rex", "rex");
+  });
+  Mocha.test("primitive cases are tested before class checks", () => {
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 266, characters 7-14", "a", missingKind(id("a")));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 267, characters 7-14", "count", missingKind(id(1)));
+  });
+  Mocha.test("a primitive without an arm skips class checks", () => {
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 271, characters 7-14", "a", missingOrDefault(id("a")));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 272, characters 7-14", "other", missingOrDefault(id(1)));
+  });
+  Mocha.test("a default shared by a primitive and an object case", () => {
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 276, characters 7-14", "date!", sharedKind(id(new Date())));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 277, characters 7-14", "other!", sharedKind(id({
+      x: 1
+    })));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 278, characters 7-14", "text!", sharedKind(id("a")));
+    Test_utils.eq("File \"untagged_runtime_annotations_test.res\", line 279, characters 7-14", "other!", sharedKind(id(1)));
   });
 });
 
@@ -190,5 +235,9 @@ export {
   handlerKind,
   wideHandlerKind,
   objectOrNameKind,
+  id,
+  missingKind,
+  missingOrDefault,
+  sharedKind,
 }
 /*  Not a pure module */

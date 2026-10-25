@@ -28,10 +28,12 @@ function kindName(v) {
       return "bigint";
     case "boolean" :
       return "bool";
-    case "function" :
-      return "function";
-    case "object" :
-      return "object";
+    default:
+      if (typeof v === "function") {
+        return "function";
+      } else {
+        return "object";
+      }
   }
 }
 
@@ -44,57 +46,44 @@ function tupleName(v) {
 }
 
 function aliasDictName(v) {
-  if (typeof v === "object" && !Array.isArray(v)) {
-    return "object";
-  } else {
+  if (Array.isArray(v)) {
     return "array";
+  } else {
+    return "object";
   }
 }
 
 function instanceName(v) {
-  if (v instanceof Date) {
+  if (typeof v === "string") {
+    return "string";
+  } else if (v instanceof Date) {
     return "Date";
-  }
-  if (v instanceof RegExp) {
+  } else if (v instanceof RegExp) {
     return "RegExp";
-  }
-  if (v instanceof Promise) {
+  } else if (v instanceof Promise) {
     return "Promise";
-  }
-  if (v instanceof Map) {
+  } else if (v instanceof Map) {
     return "Map";
-  }
-  if (v instanceof Set) {
+  } else if (v instanceof Set) {
     return "Set";
-  }
-  if (v instanceof WeakMap) {
+  } else if (v instanceof WeakMap) {
     return "WeakMap";
-  }
-  if (v instanceof WeakSet) {
+  } else if (v instanceof WeakSet) {
     return "WeakSet";
-  }
-  if (v instanceof ArrayBuffer) {
+  } else if (v instanceof ArrayBuffer) {
     return "ArrayBuffer";
-  }
-  if (v instanceof DataView) {
+  } else if (v instanceof DataView) {
     return "DataView";
-  }
-  if (v instanceof Float64Array) {
+  } else {
     return "Float64Array";
-  }
-  switch (typeof v) {
-    case "string" :
-      return "string";
   }
 }
 
 function unknownName(v) {
-  if (v === null || v === "none") {
-    if (v === null) {
-      return "null";
-    } else {
-      return "none";
-    }
+  if (v === null) {
+    return "null";
+  } else if (v === "none") {
+    return "none";
   } else {
     return "list";
   }
@@ -133,10 +122,10 @@ function overlapNullName(v) {
 }
 
 function objectFirstName(v) {
-  if (typeof v === "object" && !(v instanceof Date)) {
-    return "object";
-  } else {
+  if (v instanceof Date) {
     return "Date";
+  } else {
+    return "object";
   }
 }
 
@@ -175,10 +164,10 @@ function twoInstancesName(v) {
 }
 
 function promiseOrFloatName(v) {
-  if (v instanceof Promise) {
-    return "promise";
-  } else {
+  if (typeof v === "number") {
     return "float";
+  } else {
+    return "promise";
   }
 }
 
@@ -348,7 +337,7 @@ Mocha.describe("Untagged_variants_spec_test", () => {
       x: 1
     }), "RegExp");
     let thenable = ({then: (resolve) => resolve(1)});
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 319, characters 7-14", promiseOrFloatName(thenable), "float");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 319, characters 7-14", promiseOrFloatName(thenable), "promise");
   });
   Mocha.test("rule 12: option of an untagged variant", () => {
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 323, characters 7-14", someWithNull(null), null);
