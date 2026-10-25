@@ -338,12 +338,12 @@ describe(__MODULE__, () => {
     eq(__LOC__, someWithUnboxedString(UString(raw(Nullable.undefined))) == None, true)
   })
 
-  test("rule 13: @notUndefined unboxes option of a variant holding the type", () => {
+  test("rule 5: @notUndefined unboxes option of a variant holding the type", () => {
     eq(__LOC__, someWithDefined(Defined(raw(Nullable.undefined))) == None, true)
     eq(__LOC__, raw(someWithDefined(Defined(raw(5)))), 5)
   })
 
-  test("rule 14: @tag and @as on a tagged variant", () => {
+  test("rule 13: @tag and @as on a tagged variant", () => {
     eq(__LOC__, raw(id(TA({x: 1}))), {"kind": "TA", "x": 1})
     eq(__LOC__, raw(id(TB({y: 1}))), {"kind": "bee", "y": 1})
     eq(__LOC__, raw(id(TC)), "TC")

@@ -357,11 +357,11 @@ Mocha.describe("Untagged_variants_spec_test", () => {
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 337, characters 7-14", someWithUnboxedOption(undefined) === undefined, false);
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 338, characters 7-14", someWithUnboxedString(undefined) === undefined, true);
   });
-  Mocha.test("rule 13: @notUndefined unboxes option of a variant holding the type", () => {
+  Mocha.test("rule 5: @notUndefined unboxes option of a variant holding the type", () => {
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 342, characters 7-14", someWithDefined(undefined) === undefined, true);
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 343, characters 7-14", someWithDefined(5), 5);
   });
-  Mocha.test("rule 14: @tag and @as on a tagged variant", () => {
+  Mocha.test("rule 13: @tag and @as on a tagged variant", () => {
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 347, characters 7-14", id({
       kind: "TA",
       x: 1
