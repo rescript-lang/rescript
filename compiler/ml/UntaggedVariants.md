@@ -356,7 +356,7 @@ needs a payload of type `bool`, also through an abbreviation: a
 `@typeOf("boolean")` type has no `true` and `false` patterns, so `Yes` alone
 does not cover it.
 
-- Implementation: `lam_compile.ml:compile_switch`;
+- Implementation: `untagged_dispatch.ml:plan` (the literal part);
   `parmatch.ml` (shadowed payload patterns, exhaustiveness).
 - Tests: `spec_test` rule 7; `tests/tests/src/untagged_variants_heuristic.res`
   (literals that skip the `switch`); `unboxed_variant_fold_test.res`
@@ -412,12 +412,14 @@ every case (rule 10).
 An `int` case is recognized by `typeof x === "number"` and so receives every
 number, integral or not.
 
-`break` and `continue` in an arm leave or continue the enclosing loop: every
-arm placed in a generated `switch` is compiled in a `switch` context, where
-they are labeled.
+`break` and `continue` in an arm leave or continue the enclosing loop: an
+arm placed in a generated `switch` statement is compiled in a `switch`
+context, where they are labeled; an arm of an `if` is not
+(`untagged_loop_control_test.res`, `scanIf`).
 
-- Implementation: `lam_compile.ml:compile_untagged_cases`,
-  `compile_general_cases`.
+- Implementation: `untagged_dispatch.ml:payload_part` builds the dispatch as
+  a plan, `lam_compile.ml:compile_untagged_plan` prints it; ounit tests in
+  `ounit_untagged_dispatch_tests.ml` pin plans as data.
 - Tests: `spec_test` rules 4, 5 and 8 (`instanceName` shows the chain in
   declaration order, `objectFirst` the unchecked last arm);
   `tests/tests/src/UntaggedVariants.res` (`AllInstanceofTypes`,
@@ -444,8 +446,8 @@ as a record case does.
 | | all | `null` | `GNull` |
 | | `GObject(_)`, `_` | `[]`, `null` | `_` |
 
-- Implementation: `lam_compile.ml:compile_switch` (`null_guard`),
-  `compile_untagged_cases`.
+- Implementation: `untagged_dispatch.ml:plan` (`null_guard`),
+  `payload_part`.
 - Tests: `spec_test` rule 9; `UntaggedVariants.res` (`ObjectAndNull`, `Json`);
   `tests/tests/src/untagged_default_arm_test.res`.
 - Shaped by #6219, #7303, #8253, #8255, #8279, #8995.
@@ -468,7 +470,7 @@ recognition is local to a realm. A class that does not exist where the
 and functions, and values outside every case. The literals and the
 primitives of the variant never reach it.
 
-- Implementation: `lam_compile.ml:compile_untagged_cases` (a complete match
+- Implementation: `untagged_dispatch.ml:payload_part` (a complete match
   emits no check for its last arm).
 - Tests: `spec_test` rule 10; `untagged_runtime_annotations_test.res` (a
   missing class).

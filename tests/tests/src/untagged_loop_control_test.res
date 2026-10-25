@@ -63,6 +63,21 @@ let scanDefaultBreak = (values: array<value>) => {
   seen
 }
 
+// A dispatch printed as an [if] leaves the loop with a plain [break]
+@unboxed
+type textOrCount = TextItem(string) | CountItem(float)
+
+let scanIf = (values: array<textOrCount>) => {
+  let seen = []
+  for i in 0 to Array.length(values) - 1 {
+    switch values->Array.getUnsafe(i) {
+    | TextItem(text) => seen->Array.push(text)
+    | CountItem(_) => break
+    }
+  }
+  seen
+}
+
 describe(__MODULE__, () => {
   test("a literal arm", () => {
     eq(__LOC__, scan([Text("a"), Skip, Text("b"), Stop, Text("c")]), ["a", ".", "b", "."])
@@ -90,5 +105,9 @@ describe(__MODULE__, () => {
     eq(__LOC__, scanDefaultBreak([Text("a"), Count(1.), Text("c")]), ["a"])
     eq(__LOC__, scanDefaultBreak([Text("a"), Object({x: 1}), Text("c")]), ["a"])
     eq(__LOC__, scanDefaultBreak([Date(Date.make()), Skip, Text("c")]), ["date"])
+  })
+
+  test("an arm of an if", () => {
+    eq(__LOC__, scanIf([TextItem("a"), CountItem(1.), TextItem("c")]), ["a"])
   })
 })

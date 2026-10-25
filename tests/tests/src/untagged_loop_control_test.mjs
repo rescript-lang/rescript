@@ -95,8 +95,21 @@ function scanDefaultBreak(values) {
   return seen;
 }
 
+function scanIf(values) {
+  let seen = [];
+  for (let i = 0, i_finish = values.length; i < i_finish; ++i) {
+    let text = values[i];
+    if (typeof text === "string") {
+      seen.push(text);
+    } else {
+      break;
+    }
+  }
+  return seen;
+}
+
 Mocha.describe("Untagged_loop_control_test", () => {
-  Mocha.test("a literal arm", () => Test_utils.eq("File \"untagged_loop_control_test.res\", line 68, characters 7-14", scan([
+  Mocha.test("a literal arm", () => Test_utils.eq("File \"untagged_loop_control_test.res\", line 83, characters 7-14", scan([
     "a",
     "skip",
     "b",
@@ -109,7 +122,7 @@ Mocha.describe("Untagged_loop_control_test", () => {
     "."
   ]));
   Mocha.test("a primitive arm", () => {
-    Test_utils.eq("File \"untagged_loop_control_test.res\", line 73, characters 6-13", scan([
+    Test_utils.eq("File \"untagged_loop_control_test.res\", line 88, characters 6-13", scan([
       "a",
       "continue",
       1,
@@ -121,7 +134,7 @@ Mocha.describe("Untagged_loop_control_test", () => {
       "count",
       "."
     ]);
-    Test_utils.eq("File \"untagged_loop_control_test.res\", line 77, characters 7-14", scan([
+    Test_utils.eq("File \"untagged_loop_control_test.res\", line 92, characters 7-14", scan([
       1,
       -1,
       "c"
@@ -130,7 +143,7 @@ Mocha.describe("Untagged_loop_control_test", () => {
       "."
     ]);
   });
-  Mocha.test("a class and an object arm", () => Test_utils.eq("File \"untagged_loop_control_test.res\", line 81, characters 7-14", scan([
+  Mocha.test("a class and an object arm", () => Test_utils.eq("File \"untagged_loop_control_test.res\", line 96, characters 7-14", scan([
     new Date(),
     "a",
     {
@@ -142,7 +155,7 @@ Mocha.describe("Untagged_loop_control_test", () => {
     "."
   ]));
   Mocha.test("a default arm", () => {
-    Test_utils.eq("File \"untagged_loop_control_test.res\", line 86, characters 6-13", scanDefault([
+    Test_utils.eq("File \"untagged_loop_control_test.res\", line 101, characters 6-13", scanDefault([
       1,
       "a",
       "skip",
@@ -158,29 +171,35 @@ Mocha.describe("Untagged_loop_control_test", () => {
       "date",
       "."
     ]);
-    Test_utils.eq("File \"untagged_loop_control_test.res\", line 90, characters 7-14", scanDefaultBreak([
+    Test_utils.eq("File \"untagged_loop_control_test.res\", line 105, characters 7-14", scanDefaultBreak([
       "a",
       1,
       "c"
     ]), ["a"]);
-    Test_utils.eq("File \"untagged_loop_control_test.res\", line 91, characters 7-14", scanDefaultBreak([
+    Test_utils.eq("File \"untagged_loop_control_test.res\", line 106, characters 7-14", scanDefaultBreak([
       "a",
       {
         x: 1
       },
       "c"
     ]), ["a"]);
-    Test_utils.eq("File \"untagged_loop_control_test.res\", line 92, characters 7-14", scanDefaultBreak([
+    Test_utils.eq("File \"untagged_loop_control_test.res\", line 107, characters 7-14", scanDefaultBreak([
       new Date(),
       "skip",
       "c"
     ]), ["date"]);
   });
+  Mocha.test("an arm of an if", () => Test_utils.eq("File \"untagged_loop_control_test.res\", line 111, characters 7-14", scanIf([
+    "a",
+    1,
+    "c"
+  ]), ["a"]));
 });
 
 export {
   scan,
   scanDefault,
   scanDefaultBreak,
+  scanIf,
 }
 /*  Not a pure module */
