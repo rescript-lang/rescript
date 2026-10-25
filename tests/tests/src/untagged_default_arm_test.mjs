@@ -92,81 +92,45 @@ function logString(value) {
   logged.push("done");
 }
 
-function mixedKind(value) {
-  if (value === null) {
-    return "other";
-  }
-  if (value === 1) {
-    return "one";
-  }
-  if (typeof value === "string") {
-    return "other";
-  }
-  switch (value.TAG) {
-    case "MB" :
-    default:
-      return "other";
-  }
-}
-
 Mocha.describe("Untagged_default_arm_test", () => {
   Mocha.test("an empty arm keeps the checks before it", () => {
     logString(id({
       x: 1
     }));
     logString(id("a"));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 107, characters 7-14", [
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 95, characters 7-14", [
       "done",
       "string",
       "done"
     ], logged);
   });
-  Mocha.test("a literal sharing the body of tagged blocks", () => Test_utils.eq("File \"untagged_default_arm_test.res\", line 112, characters 6-13", [
-    "other",
-    "other",
-    "other",
-    "one",
-    "other"
-  ], [
-    "s",
-    {
-      TAG: "MB",
-      x: 1
-    },
-    {
-      TAG: "MC",
-      _0: 2
-    },
-    1,
-    null
-  ].map(v => mixedKind(id(v)))));
   Mocha.test("an instance handled by the default is not an object case", () => {
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 119, characters 7-14", "other", objectOrString(id(new Date())));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 120, characters 7-14", "other", objectOrString(id(/a/)));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 121, characters 7-14", "O", objectOrString(id({
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 99, characters 7-14", "other", objectOrString(id(new Date())));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 100, characters 7-14", "other", objectOrString(id(/a/)));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 101, characters 7-14", "O", objectOrString(id({
       x: 1
     })));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 122, characters 7-14", "S", objectOrString(id("s")));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 123, characters 7-14", "other", objectOrString(id(1)));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 102, characters 7-14", "S", objectOrString(id("s")));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 103, characters 7-14", "other", objectOrString(id(1)));
   });
   Mocha.test("a literal handled by the default is not a string case", () => {
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 127, characters 7-14", "other", textOrRecord(id("lit")));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 128, characters 7-14", "text", textOrRecord(id("lit2")));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 129, characters 7-14", "record", textOrRecord(id({
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 107, characters 7-14", "other", textOrRecord(id("lit")));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 108, characters 7-14", "text", textOrRecord(id("lit2")));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 109, characters 7-14", "record", textOrRecord(id({
       x: 1
     })));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 130, characters 7-14", "other", textOrRecord(id(1)));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 110, characters 7-14", "other", textOrRecord(id(1)));
   });
-  Mocha.test("primitives skip class checks in the two-arm form", () => Test_utils.eq("File \"untagged_default_arm_test.res\", line 134, characters 7-14", "name", twoArmsKind(id("a"))));
+  Mocha.test("primitives skip class checks in the two-arm form", () => Test_utils.eq("File \"untagged_default_arm_test.res\", line 114, characters 7-14", "name", twoArmsKind(id("a"))));
   Mocha.test("a value no arm of an incomplete match takes falls through", () => {
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 138, characters 7-14", "number, any", pair(id(1), id([])));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 139, characters 7-14", "number, any", pair(id(1), id(null)));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 140, characters 7-14", "any, object", pair(id(1), id({})));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 141, characters 7-14", "other", pair(id("a"), id([])));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 118, characters 7-14", "number, any", pair(id(1), id([])));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 119, characters 7-14", "number, any", pair(id(1), id(null)));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 120, characters 7-14", "any, object", pair(id(1), id({})));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 121, characters 7-14", "other", pair(id("a"), id([])));
   });
   Mocha.test("literals skip class checks", () => {
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 145, characters 7-14", "one", withLiteralsKind(id(1)));
-    Test_utils.eq("File \"untagged_default_arm_test.res\", line 146, characters 7-14", "name", withLiteralsKind(id("a")));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 125, characters 7-14", "one", withLiteralsKind(id(1)));
+    Test_utils.eq("File \"untagged_default_arm_test.res\", line 126, characters 7-14", "name", withLiteralsKind(id("a")));
   });
 });
 
@@ -179,6 +143,5 @@ export {
   pair,
   logged,
   logString,
-  mixedKind,
 }
 /*  Not a pure module */

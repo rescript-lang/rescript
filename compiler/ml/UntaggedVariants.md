@@ -306,10 +306,8 @@ kind, whose default is an `if` chain over the other arms:
 1. the instance cases (arrays, tuples and classes), a subclass before its
    superclasses (rule 5), otherwise in declaration order;
 2. the function case, `typeof x === "function"`;
-3. the tagged constructors of a variant with some untagged ones, an object
-   whose tag a `switch` tells apart;
-4. the object case, `typeof x === "object"`;
-5. the unknown-kind case, unchecked.
+3. the object case, `typeof x === "object"`;
+4. the unknown-kind case, unchecked.
 
 ```js
 switch (typeof x) {

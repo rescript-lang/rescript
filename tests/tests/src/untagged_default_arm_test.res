@@ -88,31 +88,11 @@ let logString = value => {
   logged->Array.push("done")
 }
 
-// Tagged blocks sharing a body with a literal: the literal keeps its case,
-// since telling the blocks apart reads their tag
-type mixed = | @unboxed MS(string) | MB({x: int}) | MC(int) | @as(null) MNull | @as(1) MOne
-
-let mixedKind = value =>
-  switch value {
-  | MB(_) => "other"
-  | MC(_) => "other"
-  | MOne => "one"
-  | MNull | MS(_) => "other"
-  }
-
 describe(__MODULE__, () => {
   test("an empty arm keeps the checks before it", () => {
     logString(id(LogRec({x: 1})))
     logString(id(LogStr("a")))
     eq(__LOC__, ["done", "string", "done"], logged)
-  })
-
-  test("a literal sharing the body of tagged blocks", () => {
-    eq(
-      __LOC__,
-      ["other", "other", "other", "one", "other"],
-      [MS("s"), MB({x: 1}), MC(2), MOne, MNull]->Array.map(v => mixedKind(id(v))),
-    )
   })
 
   test("an instance handled by the default is not an object case", () => {

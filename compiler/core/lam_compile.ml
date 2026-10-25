@@ -702,14 +702,14 @@ let compile output_prefix =
           Some ((Literal (String name), lam) :: string_table)
         | _, _ -> None)
       table (Some [])
-  and compile_cases ?(untagged = false) ?(tag_name = Js_dump_lit.tag)
-      ?(null_guard = false) ~cxt ~(switch_exp : E.t) ?(default = NonComplete)
-      ?(block_cases = []) cases : initialization =
+  and compile_cases ?(untagged = false) ?(null_guard = false) ~cxt
+      ~(switch_exp : E.t) ?(default = NonComplete) ?(block_cases = []) cases :
+      initialization =
     match use_compile_literal_cases cases with
     | Some string_cases ->
       if untagged then
-        compile_untagged_cases ~cxt ~switch_exp ~block_cases ~tag_name
-          ~null_guard ~default string_cases
+        compile_untagged_cases ~cxt ~switch_exp ~block_cases ~null_guard
+          ~default string_cases
       else compile_string_cases ~cxt ~switch_exp ~default string_cases
     | None ->
       cases
@@ -765,7 +765,7 @@ let compile output_prefix =
         block
         @
         if sw_consts_full && sw_consts = [] then
-          compile_cases ~block_cases ~untagged ~tag_name ~cxt
+          compile_cases ~block_cases ~untagged ~cxt
             ~switch_exp:(if untagged then e else E.tag ~name:tag_name e)
             ~default:sw_blocks_default sw_blocks
         else if sw_blocks_full && sw_blocks = [] then
@@ -860,27 +860,13 @@ let compile output_prefix =
                 | None -> assert false
               in
               (* A complete payload dispatch with one body runs it unchecked,
-                 so a literal arm with the same body can go there too. Two
-                 tagged blocks are told apart by reading the tag, which a
-                 literal such as [null] does not have *)
-              let tagged_blocks =
-                List.length
-                  (List.filter
-                     (fun (key, _) ->
-                       match (key : Lambda.switch_key) with
-                       | Switch_constructor (Block (Tagged _)) -> true
-                       | Switch_constructor (Block (Untagged _) | Constant _)
-                       | Switch_int _ ->
-                         false)
-                     sw_blocks)
-              in
+                 so a literal arm with the same body can go there too *)
               let literal_arms =
                 match (blocks_default, sw_blocks) with
                 | Complete, (_, body) :: rest
-                  when tagged_blocks <= 1
-                       && List.for_all
-                            (fun (_, other) -> Lambda.eq_approx body other)
-                            rest ->
+                  when List.for_all
+                         (fun (_, other) -> Lambda.eq_approx body other)
+                         rest ->
                   List.filter
                     (fun (_, lam) -> not (Lambda.eq_approx body lam))
                     literal_arms
@@ -889,9 +875,8 @@ let compile output_prefix =
               let payload =
                 Compiled
                   (fun cxt ->
-                    compile_cases ~untagged ~tag_name ~null_guard ~cxt
-                      ~switch_exp:e ~block_cases ~default:blocks_default
-                      sw_blocks)
+                    compile_cases ~untagged ~null_guard ~cxt ~switch_exp:e
+                      ~block_cases ~default:blocks_default sw_blocks)
               in
               if List.length literal_arms <= 2 then
                 (* An [if] per body, testing its literals with [===] *)
@@ -979,8 +964,8 @@ let compile output_prefix =
          ~switch:(fun ?default ?declaration e clauses ->
            S.string_switch ?default ?declaration e clauses)
          ~switch_exp ~default
-  and compile_untagged_cases ~cxt ~switch_exp ~default ~block_cases ~tag_name
-      ~null_guard cases =
+  and compile_untagged_cases ~cxt ~switch_exp ~default ~block_cases ~null_guard
+      cases =
     (* The payload cases of an untagged variant, after its literals: one
        [switch (typeof x)] over the primitive kinds, whose default is an [if]
        chain over the classes (subclasses first), arrays, functions and
@@ -1061,44 +1046,11 @@ let compile output_prefix =
             | None, Some _ -> Some (check, is_class i, None)
             | None, None -> None)
       in
-      (* The tagged blocks of a variant with some untagged constructors are
-         objects told apart by their tag *)
-      let tagged_clauses =
-        List.filter
-          (function
-            | Variant_runtime.Literal _, _ -> true
-            | Payload_shape _, _ -> false)
-          other_clauses
-      in
-      let tagged =
-        match (tagged_clauses, default) with
-        | [], _ -> []
-        | [(_, {J.switch_body})], None ->
-          [(Some is_object, false, Some switch_body)]
-        | _ ->
-          (* In a complete match the last tag is not checked *)
-          let tagged_clauses, tag_default =
-            match (default, List.rev tagged_clauses) with
-            | None, (_, {J.switch_body}) :: rest ->
-              (List.rev rest, Some switch_body)
-            | _ -> (tagged_clauses, default)
-          in
-          [
-            ( Some is_object,
-              false,
-              Some
-                [
-                  S.string_switch ?default:tag_default (E.tag ~name:tag_name e)
-                    tagged_clauses;
-                ] );
-          ]
-      in
       let entries =
         entries
         @ (match arm FunctionType with
           | Some body -> [(Some (typeof_is "function"), false, Some body)]
           | None -> [])
-        @ tagged
         @ (match arm ObjectType with
           | Some body -> [(Some is_object, false, Some body)]
           | None -> [])
@@ -1218,15 +1170,9 @@ let compile output_prefix =
         | _ -> typeof_switch ?default primitive_clauses)
       | _ :: _ -> typeof_switch ~default:other primitive_clauses
     in
-    let is_tagged_block = function
-      | Variant_runtime.Literal _ -> true
-      | Payload_shape _ -> false
-    in
     let merge_cases tag1 tag2 =
-      (* Only primitive kinds, or tagged blocks, share a switch, and so
-         bodies *)
-      (is_primitive_tag tag1 && is_primitive_tag tag2)
-      || (is_tagged_block tag1 && is_tagged_block tag2)
+      (* Only primitive kinds share a switch, and so bodies *)
+      is_primitive_tag tag1 && is_primitive_tag tag2
     in
     cases
     |> compile_general_cases ~make_exp:E.tag_type
