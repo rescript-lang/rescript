@@ -14,6 +14,17 @@ function exp {
   echo "$(dirname $1)/expected/$(basename $1).txt"
 }
 
+# Lists the .res and .resi files under the given directories in the array
+# files. The list is read before any test runs in the background: under MSYS
+# on Windows, starting background jobs while a loop reads the list from a file
+# corrupts what the loop reads.
+function listFiles {
+  files=()
+  while IFS= read -r file; do
+    files+=("$file")
+  done < <(find "$@" -name "*.res" -o -name "*.resi")
+}
+
 taskCount=0
 function maybeWait {
   let taskCount+=1
@@ -39,32 +50,32 @@ rm -rf temp
 mkdir temp
 
 # parsing
-find syntax_tests/data/parsing/{errors,infiniteLoops,recovery} -name "*.res" -o -name "*.resi" >temp/files.txt
-while read file; do
+listFiles syntax_tests/data/parsing/{errors,infiniteLoops,recovery}
+for file in "${files[@]}"; do
   $DUNE_BIN_DIR/res_parser -recover -print ml $file &> $(exp $file) & maybeWait
-done <temp/files.txt
-find syntax_tests/data/parsing/{grammar,other} -name "*.res" -o -name "*.resi" >temp/files.txt
-while read file; do
+done
+listFiles syntax_tests/data/parsing/{grammar,other}
+for file in "${files[@]}"; do
   $DUNE_BIN_DIR/res_parser -print ml $file &> $(exp $file) & maybeWait
-done <temp/files.txt
+done
 
 # printing
-find syntax_tests/data/{printer,conversion} -name "*.res" -o -name "*.resi" >temp/files.txt
-while read file; do
+listFiles syntax_tests/data/{printer,conversion}
+for file in "${files[@]}"; do
   $DUNE_BIN_DIR/res_parser $file &> $(exp $file) & maybeWait
-done <temp/files.txt
+done
 
 # printing with ast conversion
-find syntax_tests/data/ast-mapping -name "*.res" -o -name "*.resi" >temp/files.txt
-while read file; do
+listFiles syntax_tests/data/ast-mapping
+for file in "${files[@]}"; do
   $DUNE_BIN_DIR/res_parser -test-ast-conversion -jsx-version 4 $file &> $(exp $file) & maybeWait
-done <temp/files.txt
+done
 
 # printing with ppx
-find syntax_tests/data/ppx/react -name "*.res" -o -name "*.resi" >temp/files.txt
-while read file; do
+listFiles syntax_tests/data/ppx/react
+for file in "${files[@]}"; do
   $DUNE_BIN_DIR/res_parser -jsx-version 4 $file &> $(exp $file) & maybeWait
-done <temp/files.txt
+done
 
 wait
 
@@ -88,8 +99,8 @@ if [[ $ROUNDTRIP_TEST = 1 ]]; then
   roundtripTestsResult="temp/result.txt"
   touch $roundtripTestsResult
 
-  find syntax_tests/data/printer -name "*.res" -o -name "*.resi" >temp/files.txt
-  while read file; do {
+  listFiles syntax_tests/data/printer
+  for file in "${files[@]}"; do {
     mkdir -p temp/$(dirname $file)
     rescript1=temp/$file.res
     rescript2=temp/$file.2.res
@@ -107,7 +118,7 @@ if [[ $ROUNDTRIP_TEST = 1 ]]; then
     diff --unified $rescript1 $rescript2
     [[ "$?" = 1 ]] && echo 1 > $roundtripTestsResult
   } & maybeWait
-  done <temp/files.txt
+  done
 
   wait
 
