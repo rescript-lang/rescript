@@ -4,7 +4,7 @@ build:
 	yarn build > /dev/null 2>&1 || true
 
 test: build
-	./test.sh
+	bash ./test.sh
 
 clean:
 	yarn clean

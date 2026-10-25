@@ -3,3 +3,9 @@
   | Exit -> Console.log {js|catched exit|js}
 ;;try myDangerousFn () with | Foo -> Console.log {js|catched Foo|js}[@@attr ]
 let x = {let y = 1 in try {apply y} with | _ -> 2}
+;;try {dangerousCall ()} finally cleanup ()
+;;try dangerousCall () with | Foo -> Console.log {js|catched Foo|js}
+  finally cleanup ()
+let x = try 1 finally ()
+;;try dangerousCall () with | _ -> ()
+;;finally x

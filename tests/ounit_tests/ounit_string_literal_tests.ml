@@ -774,12 +774,10 @@ let suites =
            | _ ->
              OUnit.assert_failure
                "expected Array.isArray simplification to remain active");
-           let open Ast_untagged_variants.Dynamic_checks in
-           let date = Variant_runtime.Instance.Date in
-           assert_js_global ~expected:"Date"
-             (Js_exp_make.emit_check
-                (TagType (Variant_runtime.Payload_shape (InstanceType date))));
-           match Js_exp_make.emit_check (IsInstanceOf (date, Expr value)) with
+           let date =
+             Variant_runtime.Instance.Class {name = "Date"; ancestors = []}
+           in
+           match Js_exp_make.is_instance_of date value with
            | {expression_desc = Bin (InstanceOf, argument, constructor)} ->
              OUnit.assert_bool "expected the original argument"
                (Js_analyzer.eq_expression value argument);

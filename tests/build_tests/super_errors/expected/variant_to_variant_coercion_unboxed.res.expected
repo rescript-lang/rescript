@@ -10,7 +10,7 @@
   Type x is not a subtype of y 
 
   The variants have different [1;33m@unboxed[0m configurations.
-  - Variant [1;33mx[0m is [1;31mnot [0munboxed.
-  - Variant [1;33my[0m is [1;31m[0munboxed.
+  - Variant [1;33mx[0m is [1;31m[0munboxed.
+  - Variant [1;33my[0m is [1;31mnot [0munboxed.
   
   Fix this by making sure the variants either both have, or don't have, the [1;33m@unboxed[0m attribute.

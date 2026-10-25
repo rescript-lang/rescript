@@ -45,11 +45,8 @@ and translate (x : Lambda.structured_constant) : J.expression =
   | Const_js_null -> E.nil
   | Const_js_undefined {is_unit = true} -> E.unit
   | Const_js_undefined {is_unit = false} -> E.undefined
-  | Const_constructor {name; literal = None} ->
-    (* The runtime representation of a constant constructor is its name,
-       except for the list constructor [] which is the number 0 *)
-    if name = "[]" then E.int 0l ~comment:"[]" else E.str name
-  | Const_constructor {literal = Some t} -> E.literal_tag t
+  | Const_constructor {name = "[]"} -> E.int 0l ~comment:"[]"
+  | Const_constructor {literal} -> E.literal_tag literal
   | Const_int i -> E.int i
   | Const_assertfalse -> E.int 0l ~comment:"assert_false"
   | Const_char i -> Js_of_lam_string.const_char i

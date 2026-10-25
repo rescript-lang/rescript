@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/runtime_annotation_contradicts_manifest.res[0m:[2m2:19-30[0m
+
+  1 [2m│[0m @typeOf("symbol") type sym
+  [1;31m2[0m [2m│[0m @typeOf("number") [1;31mtype t = sym[0m
+  3 [2m│[0m 
+
+  This annotation, @typeOf("number"), contradicts the abbreviated type, whose values are recognized by @typeOf("symbol").

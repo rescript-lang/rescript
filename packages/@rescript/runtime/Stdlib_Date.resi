@@ -5,7 +5,7 @@
 /**
 A type representing a JavaScript date.
 */
-@notUndefined
+@instanceOf("Date")
 type t
 
 /**

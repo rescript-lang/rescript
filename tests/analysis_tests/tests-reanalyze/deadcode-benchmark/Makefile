@@ -5,7 +5,7 @@ COPIES ?= 50
 
 generate:
 	chmod +x generate.sh
-	./generate.sh $(COPIES)
+	bash ./generate.sh $(COPIES)
 
 node_modules/.bin/rescript:
 	yarn install

@@ -8,13 +8,13 @@ function id(x) {
   return x;
 }
 
-function mixedName(v) {
-  if (v === "MC") {
-    return "MC";
+function wholeName(v) {
+  if (v === "WC") {
+    return "WC";
   } else if (typeof v === "number") {
-    return "MA";
+    return "WA";
   } else {
-    return "MB";
+    return "WB";
   }
 }
 
@@ -28,10 +28,12 @@ function kindName(v) {
       return "bigint";
     case "boolean" :
       return "bool";
-    case "function" :
-      return "function";
-    case "object" :
-      return "object";
+    default:
+      if (typeof v === "function") {
+        return "function";
+      } else {
+        return "object";
+      }
   }
 }
 
@@ -44,57 +46,44 @@ function tupleName(v) {
 }
 
 function aliasDictName(v) {
-  if (typeof v === "object" && !Array.isArray(v)) {
-    return "object";
-  } else {
+  if (Array.isArray(v)) {
     return "array";
+  } else {
+    return "object";
   }
 }
 
 function instanceName(v) {
-  if (v instanceof Date) {
+  if (typeof v === "string") {
+    return "string";
+  } else if (v instanceof Date) {
     return "Date";
-  }
-  if (v instanceof RegExp) {
+  } else if (v instanceof RegExp) {
     return "RegExp";
-  }
-  if (v instanceof Promise) {
+  } else if (v instanceof Promise) {
     return "Promise";
-  }
-  if (v instanceof Map) {
+  } else if (v instanceof Map) {
     return "Map";
-  }
-  if (v instanceof Set) {
+  } else if (v instanceof Set) {
     return "Set";
-  }
-  if (v instanceof WeakMap) {
+  } else if (v instanceof WeakMap) {
     return "WeakMap";
-  }
-  if (v instanceof WeakSet) {
+  } else if (v instanceof WeakSet) {
     return "WeakSet";
-  }
-  if (v instanceof ArrayBuffer) {
+  } else if (v instanceof ArrayBuffer) {
     return "ArrayBuffer";
-  }
-  if (v instanceof DataView) {
+  } else if (v instanceof DataView) {
     return "DataView";
-  }
-  if (v instanceof Float64Array) {
+  } else {
     return "Float64Array";
-  }
-  switch (typeof v) {
-    case "string" :
-      return "string";
   }
 }
 
 function unknownName(v) {
-  if (v === null || v === "none") {
-    if (v === null) {
-      return "null";
-    } else {
-      return "none";
-    }
+  if (v === null) {
+    return "null";
+  } else if (v === "none") {
+    return "none";
   } else {
     return "list";
   }
@@ -133,10 +122,10 @@ function overlapNullName(v) {
 }
 
 function objectFirstName(v) {
-  if (typeof v === "object" && !(v instanceof Date)) {
-    return "object";
-  } else {
+  if (v instanceof Date) {
     return "Date";
+  } else {
+    return "object";
   }
 }
 
@@ -175,10 +164,10 @@ function twoInstancesName(v) {
 }
 
 function promiseOrFloatName(v) {
-  if (v instanceof Promise) {
-    return "promise";
-  } else {
+  if (typeof v === "number") {
     return "float";
+  } else {
+    return "promise";
   }
 }
 
@@ -190,6 +179,8 @@ function someWithUndefined(v) {
   return Primitive_option.some(v);
 }
 
+let someConstantUndefined = Primitive_option.some(undefined);
+
 function someWithOpaque(v) {
   return Primitive_option.some(v);
 }
@@ -199,7 +190,7 @@ function someWithVariable(v) {
 }
 
 function someWithBlob(v) {
-  return Primitive_option.some(v);
+  return v;
 }
 
 function someWithDate(v) {
@@ -227,22 +218,19 @@ function someWithDefined(v) {
 }
 
 Mocha.describe("Untagged_variants_spec_test", () => {
-  Mocha.test("rule 1: @unboxed on one constructor of a tagged variant", () => {
+  Mocha.test("rule 1: @unboxed on the type applies to every constructor", () => {
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 224, characters 7-14", id(3), 3);
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 225, characters 7-14", id({
-      TAG: "MB",
       x: 1
     }), {
-      TAG: "MB",
       x: 1
     });
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 226, characters 7-14", id("MC"), "MC");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 227, characters 7-14", mixedName(id(3)), "MA");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 228, characters 7-14", mixedName(id({
-      TAG: "MB",
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 226, characters 7-14", id("WC"), "WC");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 227, characters 7-14", wholeName(id(3)), "WA");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 228, characters 7-14", wholeName(id({
       x: 1
-    })), "MB");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 229, characters 7-14", mixedName(id("MC")), "MC");
+    })), "WB");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 229, characters 7-14", wholeName(id("WC")), "WC");
   });
   Mocha.test("rule 2: representation of each case", () => {
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 233, characters 7-14", id("Named"), "Named");
@@ -349,48 +337,49 @@ Mocha.describe("Untagged_variants_spec_test", () => {
       x: 1
     }), "RegExp");
     let thenable = ({then: (resolve) => resolve(1)});
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 319, characters 7-14", promiseOrFloatName(thenable), "float");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 319, characters 7-14", promiseOrFloatName(thenable), "promise");
   });
   Mocha.test("rule 12: option of an untagged variant", () => {
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 323, characters 7-14", someWithNull(null), null);
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 324, characters 7-14", someWithNull(null) === undefined, false);
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 325, characters 7-14", someWithUndefined(id(undefined)) === undefined, false);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 326, characters 7-14", someWithUndefined("a"), "a");
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 329, characters 7-14", someWithOpaque(undefined) === undefined, false);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 330, characters 7-14", someWithVariable(undefined) === undefined, false);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 331, characters 7-14", someWithBlob(undefined) === undefined, false);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 332, characters 7-14", someWithDate(undefined) === undefined, true);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 333, characters 7-14", someWithRecord(undefined) === undefined, true);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 334, characters 7-14", someWithInlineRecord(undefined) === undefined, false);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 335, characters 7-14", someWithUnboxedOption(undefined) === undefined, false);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 336, characters 7-14", someWithUnboxedString(undefined) === undefined, true);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 326, characters 7-14", someConstantUndefined === undefined, false);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 327, characters 7-14", someWithUndefined("a"), "a");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 330, characters 7-14", someWithOpaque(undefined) === undefined, false);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 331, characters 7-14", someWithVariable(undefined) === undefined, false);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 332, characters 7-14", someWithBlob(undefined) === undefined, true);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 333, characters 7-14", someWithDate(undefined) === undefined, true);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 334, characters 7-14", someWithRecord(undefined) === undefined, true);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 335, characters 7-14", someWithInlineRecord(undefined) === undefined, false);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 336, characters 7-14", someWithUnboxedOption(undefined) === undefined, false);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 337, characters 7-14", someWithUnboxedString(undefined) === undefined, true);
   });
-  Mocha.test("rule 13: @notUndefined unboxes option of a variant holding the type", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 340, characters 7-14", someWithDefined(undefined) === undefined, true);
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 341, characters 7-14", someWithDefined(5), 5);
+  Mocha.test("rule 5: @notUndefined unboxes option of a variant holding the type", () => {
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 341, characters 7-14", someWithDefined(undefined) === undefined, true);
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 342, characters 7-14", someWithDefined(5), 5);
   });
-  Mocha.test("rule 14: @tag and @as on a tagged variant", () => {
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 345, characters 7-14", id({
-      kind: "TA",
-      x: 1
-    }), {
-      kind: "TA",
-      x: 1
-    });
+  Mocha.test("rule 13: @tag and @as on a tagged variant", () => {
     Test_utils.eq("File \"untagged_variants_spec_test.res\", line 346, characters 7-14", id({
+      kind: "TA",
+      x: 1
+    }), {
+      kind: "TA",
+      x: 1
+    });
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 347, characters 7-14", id({
       kind: "bee",
       y: 1
     }), {
       kind: "bee",
       y: 1
     });
-    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 347, characters 7-14", id("TC"), "TC");
+    Test_utils.eq("File \"untagged_variants_spec_test.res\", line 348, characters 7-14", id("TC"), "TC");
   });
 });
 
 export {
   id,
-  mixedName,
+  wholeName,
   kindName,
   tupleName,
   aliasDictName,
@@ -408,6 +397,7 @@ export {
   promiseOrFloatName,
   someWithNull,
   someWithUndefined,
+  someConstantUndefined,
   someWithOpaque,
   someWithVariable,
   someWithBlob,

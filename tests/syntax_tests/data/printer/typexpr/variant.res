@@ -128,3 +128,6 @@ type color = [
   /** Another warm color */
   | #Yellow
 ]
+
+type t = [#A | b]
+type u = [b | #A]

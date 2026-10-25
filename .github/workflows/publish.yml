@@ -19,6 +19,7 @@ jobs:
       version: ${{ steps.plan.outputs.version }}
       npm-tag: ${{ steps.plan.outputs.npm-tag }}
       publish-tag: ${{ steps.plan.outputs.publish-tag }}
+      website-branch: ${{ steps.plan.outputs.website-branch }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -156,6 +157,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: rescript-lang/rescript-lang.org
+          ref: ${{ needs.release-plan.outputs.website-branch }}
           path: rescript-lang.org
           ssh-key: ${{ secrets.RESCRIPT_LANG_ORG_DEPLOY_KEY }}
 
@@ -194,12 +196,16 @@ jobs:
 
       - name: Publish API docs
         if: steps.api-docs-diff.outputs.changed == 'true'
+        env:
+          WEBSITE_BRANCH: ${{ needs.release-plan.outputs.website-branch }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions@rescript-lang.org"
           git add data/api
           git commit -m "Update API docs for v${{ needs.release-plan.outputs.version }}"
-          git push
+          # The deploy key lets this push trigger the website branch's
+          # deployment workflow.
+          git push origin "HEAD:$WEBSITE_BRANCH"
         working-directory: rescript-lang.org
 
       - name: Update Website Playground

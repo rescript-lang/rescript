@@ -3567,12 +3567,38 @@ and parse_try_expression p =
   let start_pos = Parser.start_pos p in
   Parser.expect Try p;
   let expr = parse_expr ~context:WhenExpr p in
-  Parser.expect Res_token.catch p;
-  Parser.expect Lbrace p;
-  let cases = parse_pattern_matching p in
-  Parser.expect Rbrace p;
+  let cases, finally =
+    if Parser.peek p = Res_token.finally then ([], Some (parse_finally_block p))
+    else (
+      Parser.expect Res_token.catch p;
+      Parser.expect Lbrace p;
+      let cases = parse_pattern_matching p in
+      Parser.expect Rbrace p;
+      (* [finally] is not a keyword. After a catch it only starts a finally
+         block when a brace follows, so a statement after the try can still
+         use a [finally] identifier. *)
+      let finally =
+        if Parser.peek p = Res_token.finally && Parser.peek2 p = Lbrace then
+          Some (parse_finally_block p)
+        else None
+      in
+      (cases, finally))
+  in
   let loc = mk_loc start_pos (Parser.position p) in
-  Ast_helper.Exp.try_ ~loc expr cases
+  Ast_helper.Exp.try_ ~loc ?finally expr cases
+
+and parse_finally_block p =
+  if Parser.peek2 p <> Lbrace then
+    Parser.err p
+      (Diagnostics.message "A `finally` block needs braces: `finally { ... }`");
+  Parser.next p;
+  match Parser.peek p with
+  | Lbrace ->
+    Parser.next p;
+    let finally = parse_expr_block p in
+    Parser.expect Rbrace p;
+    finally
+  | _ -> parse_expr p
 
 and parse_if_condition p =
   Parser.leave_breadcrumb p Grammar.IfCondition;

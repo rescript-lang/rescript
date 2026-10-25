@@ -80,6 +80,9 @@ let shallow_map_sharing (f : t -> t) (lam : t) : t =
   | Ltrywith (b, id, h) ->
     let b' = f b and h' = f h in
     if b' == b && h' == h then lam else try_ b' id h'
+  | Ltryfinally (b, fin) ->
+    let b' = f b and fin' = f fin in
+    if b' == b && fin' == fin then lam else try_finally b' fin'
   | Lifthenelse (a, b, c) ->
     let a' = f a and b' = f b and c' = f c in
     if a' == a && b' == b && c' == c then lam else if_ a' b' c'
@@ -146,6 +149,7 @@ let make_key e =
     | Lstaticcatch (e1, xs, e2) ->
       staticcatch (tr_rec env e1) xs (tr_rec env e2)
     | Ltrywith (e1, x, e2) -> try_ (tr_rec env e1) x (tr_rec env e2)
+    | Ltryfinally (e1, e2) -> try_finally (tr_rec env e1) (tr_rec env e2)
     | Lifthenelse (cond, ifso, ifnot) ->
       if_ (tr_rec env cond) (tr_rec env ifso) (tr_rec env ifnot)
     | Lsequence (e1, e2) -> seq (tr_rec env e1) (tr_rec env e2)
@@ -190,7 +194,7 @@ let shallow_exists (f : t -> bool) (lam : t) : bool =
     || Option.fold ~none:false ~some:f default
   | Lstaticraise (_, args) -> Ext_list.exists args f
   | Lstaticcatch (e1, _, e2) -> f e1 || f e2
-  | Ltrywith (e1, _, e2) -> f e1 || f e2
+  | Ltrywith (e1, _, e2) | Ltryfinally (e1, e2) -> f e1 || f e2
   | Lifthenelse (e1, e2, e3) -> f e1 || f e2 || f e3
   | Lsequence (e1, e2) -> f e1 || f e2
   | Lwhile (e1, e2) -> f e1 || f e2
@@ -225,8 +229,8 @@ let free_ids get l =
       fv := Set_ident.remove v !fv
     | Lassign (id, _e) -> fv := Set_ident.add id !fv
     | Lvar _ | Lglobal_module _ | Lconst _ | Lapply _ | Lprim _ | Lswitch _
-    | Lstringswitch _ | Lstaticraise _ | Lifthenelse _ | Lsequence _ | Lbreak
-    | Lcontinue | Lwhile _ ->
+    | Lstringswitch _ | Lstaticraise _ | Ltryfinally _ | Lifthenelse _
+    | Lsequence _ | Lbreak | Lcontinue | Lwhile _ ->
       ()
   in
   free l;

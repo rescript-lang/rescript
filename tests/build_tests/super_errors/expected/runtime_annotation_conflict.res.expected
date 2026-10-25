@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/runtime_annotation_conflict.res[0m:[2m1:39-44[0m
+
+  [1;31m1[0m [2m│[0m @instanceOf("Date") @typeOf("object") [1;31mtype t[0m
+  2 [2m│[0m 
+
+  A type can have only one of @notUndefined, @instanceOf and @typeOf. @instanceOf and @typeOf already imply @notUndefined.

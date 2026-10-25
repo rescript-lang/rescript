@@ -38,7 +38,7 @@ let hit_variables (fv : Set_ident.t) (l : t) : bool =
     | Lvar id -> hit_var id
     | Lassign (id, e) -> hit_var id || hit e
     | Lstaticcatch (e1, (_, _vars), e2) -> hit e1 || hit e2
-    | Ltrywith (e1, _exn, e2) -> hit e1 || hit e2
+    | Ltrywith (e1, _, e2) | Ltryfinally (e1, e2) -> hit e1 || hit e2
     | Lfunction {body; params = _} -> hit body
     | Llet (_str, _id, arg, body) -> hit arg || hit body
     | Lletrec (decl, body) -> hit body || hit_list_snd decl
@@ -75,7 +75,7 @@ let hit_variable (fv : Ident.t) (l : t) : bool =
     | Lvar id -> hit_var id
     | Lassign (id, e) -> hit_var id || hit e
     | Lstaticcatch (e1, (_, _vars), e2) -> hit e1 || hit e2
-    | Ltrywith (e1, _exn, e2) -> hit e1 || hit e2
+    | Ltrywith (e1, _, e2) | Ltryfinally (e1, e2) -> hit e1 || hit e2
     | Lfunction {body; params = _} -> hit body
     | Llet (_str, _id, arg, body) -> hit arg || hit body
     | Lletrec (decl, body) -> hit body || hit_list_snd decl

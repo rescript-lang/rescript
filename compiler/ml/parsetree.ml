@@ -323,8 +323,10 @@ and expression_desc =
     *)
   | Pexp_match of expression * case list
     (* match E0 with P1 -> E1 | ... | Pn -> En *)
-  | Pexp_try of expression * case list
-    (* try E0 with P1 -> E1 | ... | Pn -> En *)
+  | Pexp_try of expression * case list * expression option
+    (* try E0 catch { | P1 => E1 | ... | Pn => En } finally E_fin
+       The case list is empty when there is no catch, and then there is always
+       a finally expression. *)
   | Pexp_tuple of expression list
     (* (E1, ..., En)
 

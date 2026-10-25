@@ -442,6 +442,33 @@ let test_ternary_roundtrips_through_ast0 _ =
   OUnit.assert_equal ["before"; "after"]
     (attr_names round_tripped.pexp_attributes)
 
+let test_try_finally_roundtrips_through_ast0 _ =
+  let ident name =
+    Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident name))
+  in
+  let finally =
+    Ast_helper.Exp.ident ~loc:(source_loc 30 37)
+      (Location.mknoloc (Longident.Lident "cleanup"))
+  in
+  let try_ =
+    Ast_helper.Exp.try_ ~loc
+      ~attrs:[attr "before" (Parsetree.PStr [])]
+      ~finally (ident "body") []
+  in
+  let wire = to_expr0 try_ in
+  (match wire.pexp_desc with
+  | Parsetree0.Pexp_try (_, []) -> ()
+  | _ -> assert_failure "Expected a v0 try without cases");
+  let attr_names attrs = List.map (fun ({Location.txt}, _) -> txt) attrs in
+  OUnit.assert_equal ["_res.finally"; "before"]
+    (attr_names wire.pexp_attributes);
+  let round_tripped = map_expr0 wire in
+  match round_tripped.pexp_desc with
+  | Parsetree.Pexp_try (_, [], Some round_tripped_finally) ->
+    OUnit.assert_equal ["before"] (attr_names round_tripped.pexp_attributes);
+    OUnit.assert_equal finally.pexp_loc round_tripped_finally.pexp_loc
+  | _ -> assert_failure "Expected a try with a finally after the v0 roundtrip"
+
 let test_v0_ternary_marker_preserves_other_attribute_order _ =
   let ident name =
     Ast_helper0.Exp.ident ~loc (Location.mknoloc (Longident.Lident name))
@@ -2637,6 +2664,8 @@ let suites =
          >:: test_string_literals_roundtrip_through_ast0;
          "removed_regexp_extension" >:: test_removed_regexp_extension;
          "regexp_parser_locations" >:: test_regexp_parser_locations;
+         "try_finally_roundtrips_through_ast0"
+         >:: test_try_finally_roundtrips_through_ast0;
          "regexp_roundtrip_through_ast0" >:: test_regexp_roundtrip_through_ast0;
          "ppx_regexp_payloads" >:: test_ppx_regexp_payloads;
          "malformed_ppx_regexp_payloads" >:: test_malformed_ppx_regexp_payloads;

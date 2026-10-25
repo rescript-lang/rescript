@@ -12,9 +12,7 @@ function guard() {
 
 function both_guards_run() {
   calls.contents = 0;
-  if (guard()) {
-    
-  } else {
+  if (!guard()) {
     guard();
   }
   return calls.contents;

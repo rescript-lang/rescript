@@ -1455,7 +1455,7 @@ let rec rejects_nested_some p =
     | Ordinary_constructor representation
       when not (Datarepr.constructor_has_optional_shape cstr) -> (
       match Variant_runtime.representation representation with
-      | Constant {literal} -> literal <> Some Variant_runtime.Undefined
+      | Constant {literal} -> literal <> Variant_runtime.Undefined
       | Block (Untagged {block_type = ObjectType | UnknownType}) -> false
       | Block (Untagged _) -> true
       | Block (Tagged _) -> false)
@@ -2293,7 +2293,7 @@ and switch_defaults_on_undefined (sw : lambda_switch) =
     && List.for_all
          (function
            | Switch_constructor (Constant {literal}), _ ->
-             literal <> Some Variant_runtime.Undefined
+             literal <> Variant_runtime.Undefined
            | _ -> true)
          sw.sw_consts
   | Switch_direct -> false

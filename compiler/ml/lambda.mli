@@ -371,6 +371,11 @@ type t = private
   | Lstaticraise of int * t list
   | Lstaticcatch of t * (int * Ident.t list) * t
   | Ltrywith of t * Ident.t * t
+  | Ltryfinally of t * t
+      (** [Ltryfinally (body, finally)] evaluates [body], then [finally] however
+          [body] is left (normally, by an exception, or by break/continue/return),
+          and has the value of [body]. A try with both catch and finally is an
+          [Ltryfinally] around an [Ltrywith]. *)
   | Lifthenelse of t * t * t
   | Lsequence of t * t
   | Lbreak
@@ -490,6 +495,8 @@ val staticraise : int -> t list -> t
 val staticcatch : t -> int * Ident.t list -> t -> t
 
 val try_ : t -> Ident.t -> t -> t
+
+val try_finally : t -> t -> t
 
 val if_ : t -> t -> t -> t
 

@@ -116,7 +116,7 @@ let collect_info (meta : Lam_stats.t) (lam : Lambda.t) =
     | Lstaticcatch (l1, (_, _), l2) ->
       collect l1;
       collect l2
-    | Ltrywith (l1, _, l2) ->
+    | Ltrywith (l1, _, l2) | Ltryfinally (l1, l2) ->
       collect l1;
       collect l2
     | Lifthenelse (l1, l2, l3) ->

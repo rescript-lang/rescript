@@ -12,12 +12,10 @@ function r2Test(x) {
 function tLength(v) {
   if (Array.isArray(v)) {
     return v.length;
-  }
-  switch (typeof v) {
-    case "object" :
-      return v.x;
-    case "function" :
-      return v(0);
+  } else if (typeof v === "function") {
+    return v(0);
+  } else {
+    return v.x;
   }
 }
 

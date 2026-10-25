@@ -113,7 +113,15 @@
   bar might throw Not_found (ExnA.res:1:16) and is not annotated with @throws(Not_found)
 
   Exception Analysis
+  ExnFinally.res:2:5-24
+  throwsThroughFinally might throw Not_found (ExnFinally.res:3:6) and is not annotated with @throws(Not_found)
+
+  Exception Analysis
+  ExnFinally.res:7:5-19
+  throwsInFinally might throw Not_found (ExnFinally.res:11:4) and is not annotated with @throws(Not_found)
+
+  Exception Analysis
   ExternalTest.res:7:5-24
   bigIntFromStringExn2 might throw JsExn (ExternalTest.res:7:35) and is not annotated with @throws(JsExn)
   
-  Analysis reported 29 issues (Exception Analysis:29)
+  Analysis reported 31 issues (Exception Analysis:31)

@@ -30,3 +30,70 @@ let () =
   try myDangerousFn() catch {
   | Foo => Console.log()
   }
+
+try {
+  dangerousCall()
+} finally {
+  cleanup()
+}
+
+try dangerousCall() finally {
+  cleanup()
+}
+
+try {
+  let x = 1
+  dangerousCall(x)
+} catch {
+| Foo => Console.log("foo")
+| Exit => Console.log("exit")
+} finally {
+  cleanup()
+  Console.log("done")
+}
+
+let result = try {
+  compute()
+} catch {
+| _ => 0
+} finally {
+  cleanup()
+}
+
+let x = try 1 finally {
+  ()
+}
+
+let nested = try {
+  try {
+    inner()
+  } finally {
+    innerCleanup()
+  }
+} finally {
+  outerCleanup()
+}
+
+let f = async () =>
+  try {
+    await fetchData()
+  } catch {
+  | _ => None
+  } finally {
+    setLoading(false)
+  }
+
+@attr
+try myDangerousFn() finally {
+  cleanup()
+}
+
+let finally = x => x
+let afterTry = () => {
+  try {
+    ()
+  } catch {
+  | _ => ()
+  }
+  finally(1)
+}

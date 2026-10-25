@@ -2,17 +2,20 @@ open Variant_runtime
 
 type untagged_error =
   | OnlyOneUnknown of string
-  | AtMostOneObject
-  | AtMostOneInstance of Instance.t
-  | AtMostOneFunction
-  | AtMostOneString
-  | AtMostOneNumber
-  | AtMostOneBigint
-  | AtMostOneBoolean
+  | AtMostOneOfKind of block_type  (** never [UnknownType] *)
   | UnreachableBoolean of string
   | DuplicateLiteral of string
   | SameLiteralValue of string * string
   | ConstructorMoreThanOneArg of string
+
+(* Why a syntactically valid [@instanceOf] path is still not accepted *)
+and unsupported_class =
+  | Through_global_this
+  | Every_value_of of string  (** names the [@typeOf] that says the same *)
+  | Wrapper_of of string  (** names the [@typeOf] of the wrapped primitive *)
+  | Array_class
+  | Not_a_class
+
 type error =
   | InvalidVariantAsAnnotation
   | VariantAsIntegerOutOfRange of string
@@ -20,6 +23,19 @@ type error =
   | InvalidVariantTagAnnotation
   | InvalidUntaggedVariantDefinition of untagged_error
   | TagFieldNameConflict of string * string * string
+  | UnboxedOnConstructor of {constructor: string; single_field_record: bool}
+  | InvalidInstanceOf
+  | UnsupportedInstanceOf of string * unsupported_class
+  | InvalidTypeOf of string
+  | ConflictingRuntimeAnnotations
+  | DuplicateRuntimeAnnotation of string
+  | RuntimeAnnotationOnTypeParameter of string
+  | RuntimeAnnotationOnRepresentedType of string
+  | RuntimeAnnotationOnUnrelatedType of string
+  | RuntimeAnnotationContradictsManifest of string * string
+  | SubclassOfArray of string
+  | SubclassOfPublicAbbreviation of string * string
+  | ClassTwiceInChain of string
 exception Error of Location.t * error
 
 let report_error ppf =
@@ -44,21 +60,24 @@ let report_error ppf =
         "Case " ^ name
         ^ " has a payload that is not of one of the recognized shapes (object, \
            array, etc). Then it must be the only case with payloads."
-      | AtMostOneObject -> "At most one case can be an object type."
-      | AtMostOneInstance Array ->
-        "At most one case can be an array or tuple type."
-      | AtMostOneInstance i ->
-        "At most one case can be a " ^ Instance.to_string i ^ " type."
-      | AtMostOneFunction -> "At most one case can be a function type."
-      | AtMostOneString -> "At most one case can be a string type."
-      | AtMostOneBoolean -> "At most one case can be a boolean type."
+      | AtMostOneOfKind kind ->
+        "At most one case can be "
+        ^ (match kind with
+          | ObjectType -> "an object type"
+          | InstanceType Array -> "an array or tuple type"
+          | InstanceType i -> "an instance of " ^ Instance.to_string i
+          | FunctionType -> "a function type"
+          | StringType -> "a string type"
+          | NumberType -> "a number type (int or float)"
+          | BigintType -> "a bigint type"
+          | BooleanType -> "a boolean type"
+          | SymbolType -> "a symbol type"
+          | UnknownType -> "of an unknown type")
+        ^ "."
       | UnreachableBoolean name ->
         "Case " ^ name
         ^ " can never match: both true and false are already cases of this \
            variant."
-      | AtMostOneNumber ->
-        "At most one case can be a number type (int or float)."
-      | AtMostOneBigint -> "At most one case can be a bigint type."
       | DuplicateLiteral s -> "Duplicate literal " ^ s ^ "."
       | SameLiteralValue (literal, earlier) ->
         "The literal " ^ literal ^ " is the same JavaScript value as " ^ earlier
@@ -71,6 +90,96 @@ let report_error ppf =
        value of inline record field \"%s\". Use a different @tag name or \
        rename the field."
       constructor_name runtime_value field_name
+  | UnboxedOnConstructor {constructor; single_field_record} ->
+    fprintf ppf
+      "@@unboxed applies to a whole variant: write it on the type, as in \
+       `@@unboxed type t = ...`, instead of on constructor %s."
+      constructor;
+    if single_field_record then
+      fprintf ppf
+        " For a constructor whose payload is an inline record with one field, \
+         `@@unboxed type t = %s({...})` makes the value that field. To keep \
+         the record object, give the record type a name: `@@unboxed type t = \
+         %s(r)`."
+        constructor constructor
+  | InvalidInstanceOf ->
+    fprintf ppf
+      "@instanceOf expects the name of a global class, such as \
+       @instanceOf(\"Date\") or @instanceOf(\"Intl.Locale\")."
+  | UnsupportedInstanceOf (name, reason) -> (
+    match reason with
+    | Through_global_this ->
+      fprintf ppf
+        "Write @instanceOf(\"%s\") without \"globalThis.\": the compiler reads \
+         the class through globalThis itself where a local binding shadows it."
+        (String.concat "." (List.tl (String.split_on_char '.' name)))
+    | Every_value_of type_of ->
+      fprintf ppf
+        "Every %s is an instance of %s, so @instanceOf(\"%s\") cannot tell \
+         cases apart. Use @typeOf(\"%s\") instead."
+        type_of name name type_of
+    | Wrapper_of type_of ->
+      fprintf ppf
+        "Values of type %s are primitives, not instances of %s. Use \
+         @typeOf(\"%s\") instead."
+        type_of name type_of
+    | Array_class ->
+      fprintf ppf
+        "Arrays are recognized by Array.isArray. Use array<_> as the payload \
+         type instead of @instanceOf(\"Array\")."
+    | Not_a_class ->
+      fprintf ppf "%s is not a class, so it cannot be used with @instanceOf."
+        name)
+  | InvalidTypeOf name ->
+    fprintf ppf
+      "@typeOf expects one of \"string\", \"number\", \"bigint\", \"boolean\", \
+       \"symbol\", \"function\" or \"object\"%s."
+      (if name = "" then "" else ", not \"" ^ name ^ "\"")
+  | DuplicateRuntimeAnnotation attribute ->
+    fprintf ppf "Duplicate @%s annotation; a type can have only one." attribute
+  | RuntimeAnnotationOnTypeParameter attribute ->
+    fprintf ppf
+      "@%s cannot describe the type of a functor parameter, of a recursive \
+       module being defined, or a locally abstract type: such a type stands \
+       for another one, whose values can be anything."
+      attribute
+  | ConflictingRuntimeAnnotations ->
+    fprintf ppf
+      "A type can have only one of @notUndefined, @instanceOf and @typeOf. \
+       @instanceOf and @typeOf already imply @notUndefined."
+  | RuntimeAnnotationOnRepresentedType attribute ->
+    fprintf ppf
+      "@%s can only be used on abstract types and type abbreviations, whose \
+       runtime representation it describes."
+      attribute
+  | RuntimeAnnotationOnUnrelatedType attribute ->
+    fprintf ppf
+      "@%s on a type abbreviation must describe an abstract type, or a type \
+       with the same annotation. The abbreviated type already has a runtime \
+       representation the compiler knows, or can be undefined."
+      attribute
+  | RuntimeAnnotationContradictsManifest (outer, inner) ->
+    fprintf ppf
+      "This annotation, %s, contradicts the abbreviated type, whose values are \
+       recognized by %s."
+      outer inner
+  | SubclassOfArray name ->
+    fprintf ppf
+      "@instanceOf(\"%s\") cannot describe the values of an array type: they \
+       are recognized by Array.isArray, and subclasses of Array are not \
+       supported."
+      name
+  | SubclassOfPublicAbbreviation (name, ancestor) ->
+    fprintf ppf
+      "A subclass must be a private abbreviation: write `= private ...` so \
+       that instances of %s cannot be used as instances of %s without a \
+       coercion."
+      ancestor name
+  | ClassTwiceInChain name ->
+    fprintf ppf
+      "%s appears twice in this chain of abbreviations, so it would be its own \
+       superclass."
+      name
 
 (*
   Type of the runtime representation of a tag.
@@ -90,14 +199,6 @@ let untagged = "unboxed"
 
 let has_untagged (attrs : Parsetree.attributes) =
   Ext_list.exists attrs (function {txt}, _ -> txt = untagged)
-
-let process_untagged (attrs : Parsetree.attributes) =
-  let st = ref false in
-  Ext_list.iter attrs (fun ({txt}, _) ->
-      match txt with
-      | "unboxed" -> st := true
-      | _ -> ());
-  !st
 
 let runtime_tag_of_parsetree ~loc = function
   | Parsetree.Pct_string s -> String (String_literal.string_semantic s)
@@ -145,44 +246,134 @@ let report_constructor_more_than_one_arg ~loc ~name =
     (Error
        (loc, InvalidUntaggedVariantDefinition (ConstructorMoreThanOneArg name)))
 
-let type_is_builtin_object (t : Types.type_expr) =
-  match t.desc with
-  | Tconstr (Path.Pident ident, [_], _) when Ident.name ident = "dict" -> true
-  | Tconstr (path, _, _) ->
-    let name = Path.name path in
-    name = "Stdlib.Dict.t" || name = "Stdlib_Dict.t"
-  | _ -> false
+(* What [@notUndefined], [@instanceOf] or [@typeOf] on a type declaration
+   states about the runtime representation of its values. *)
+type runtime_annotation =
+  | Not_undefined  (** values that are never [undefined] *)
+  | Instance_of of string  (** instances of the global class at this path *)
+  | Type_of of block_type  (** values with this [typeof] *)
 
-let type_to_instanceof_backed_obj (t : Types.type_expr) =
-  match t.desc with
-  | Tconstr (path, _, _) when Path.same path Predef.path_promise ->
-    Some Instance.Promise
-  | Tconstr (path, _, _) when Path.same path Predef.path_array -> Some Array
-  | Tconstr (path, _, _) -> (
-    match Path.name path with
-    | "Stdlib_ArrayBuffer.t" -> Some ArrayBuffer
-    | "Stdlib.BigInt64Array.t" -> Some BigInt64Array
-    | "Stdlib.BigUint64Array.t" -> Some BigUint64Array
-    | "Stdlib.DataView.t" -> Some DataView
-    | "Stdlib_Date.t" -> Some Date
-    | "Stdlib.Float32Array.t" -> Some Float32Array
-    | "Stdlib.Float64Array.t" -> Some Float64Array
-    | "Stdlib.Int16Array.t" -> Some Int16Array
-    | "Stdlib.Int32Array.t" -> Some Int32Array
-    | "Stdlib.Int8Array.t" -> Some Int8Array
-    | "Stdlib_RegExp.t" -> Some RegExp
-    | "Stdlib.Uint16Array.t" -> Some Uint16Array
-    | "Stdlib.Uint32Array.t" -> Some Uint32Array
-    | "Stdlib.Uint8Array.t" -> Some Uint8Array
-    | "Stdlib.Uint8ClampedArray.t" -> Some Uint8ClampedArray
-    | "Stdlib_File.t" -> Some File
-    | "Stdlib_Blob.t" -> Some Blob
-    | "Stdlib.Set.t" -> Some Set
-    | "Stdlib.Map.t" -> Some Map
-    | "Stdlib.WeakSet.t" -> Some WeakSet
-    | "Stdlib.WeakMap.t" -> Some WeakMap
+let not_undefined = "notUndefined"
+let instance_of = "instanceOf"
+let type_of = "typeOf"
+
+(* The reason a global that is a valid path is still not a class to recognize
+   values by. Classes nested in namespaces, such as [Intl.Locale], are not
+   checked. *)
+let unsupported_class name =
+  match String.split_on_char '.' name with
+  | "globalThis" :: _ :: _ -> Some Through_global_this
+  | [global] -> (
+    match global with
+    | "Object" -> Some (Every_value_of "object")
+    | "Function" -> Some (Every_value_of "function")
+    | "Array" -> Some Array_class
+    | "String" -> Some (Wrapper_of "string")
+    | "Number" -> Some (Wrapper_of "number")
+    | "Boolean" -> Some (Wrapper_of "boolean")
+    | "BigInt" -> Some (Wrapper_of "bigint")
+    | "Symbol" -> Some (Wrapper_of "symbol")
+    | "globalThis" | "undefined" | "NaN" | "Infinity" | "Math" | "JSON"
+    | "Reflect" | "Atomics" | "Intl" | "Proxy" ->
+      Some Not_a_class
     | _ -> None)
   | _ -> None
+
+let is_class_path name =
+  let is_start = function
+    | 'A' .. 'Z' | 'a' .. 'z' | '_' | '$' -> true
+    | _ -> false
+  in
+  let is_part = function
+    | '0' .. '9' -> true
+    | c -> is_start c
+  in
+  let is_identifier segment =
+    segment <> "" && is_start segment.[0] && String.for_all is_part segment
+  in
+  match String.split_on_char '.' name with
+  | global :: properties ->
+    (* Properties may be named like keywords, the global may not *)
+    is_identifier global
+    && (not (Js_reserved_map.is_js_keyword global))
+    && List.for_all is_identifier properties
+  | [] -> false
+
+let runtime_attribute_name = function
+  | Not_undefined -> not_undefined
+  | Instance_of _ -> instance_of
+  | Type_of _ -> type_of
+
+(* A [@typeOf] states one of the kinds [typeof] recognizes *)
+let typeof_name block_type =
+  Option.value (Variant_runtime.typeof_name block_type) ~default:"object"
+
+let runtime_annotation_to_string = function
+  | Not_undefined -> "@" ^ not_undefined
+  | Instance_of name -> Printf.sprintf "@%s(\"%s\")" instance_of name
+  | Type_of block_type ->
+    Printf.sprintf "@%s(\"%s\")" type_of (typeof_name block_type)
+
+(* What a declaration's annotations state, for error messages *)
+let describe_declared_block_type = function
+  | Some (InstanceType (Class {name; ancestors = []})) -> "instances of " ^ name
+  | Some (InstanceType (Class {name; ancestors})) ->
+    "instances of " ^ name ^ ", a subclass of "
+    ^ String.concat " and " ancestors
+  | Some (InstanceType Array) -> "arrays"
+  | Some block_type ->
+    "values whose typeof is \"" ^ typeof_name block_type ^ "\""
+  | None -> "no runtime class or typeof"
+
+(* The [@notUndefined], [@instanceOf] or [@typeOf] annotation in [attrs],
+   validated. Only [Typedecl] passes [~loc]; later readers see attributes it
+   accepted. *)
+let process_runtime_annotation ?(loc = Location.none)
+    (attrs : Parsetree.attributes) =
+  let annotation_of ({Location.txt; loc = attr_loc}, payload) =
+    let loc = if attr_loc = Location.none then loc else attr_loc in
+    if txt = not_undefined then Some Not_undefined
+    else if txt = instance_of then
+      match Ast_payload.semantic_string_of_payload payload with
+      | Some name when is_class_path name -> (
+        match unsupported_class name with
+        | None -> Some (Instance_of name)
+        | Some reason ->
+          raise (Error (loc, UnsupportedInstanceOf (name, reason))))
+      | _ -> raise (Error (loc, InvalidInstanceOf))
+    else if txt = type_of then
+      match Ast_payload.semantic_string_of_payload payload with
+      | Some name -> (
+        match block_type_of_typeof name with
+        | Some block_type -> Some (Type_of block_type)
+        | None -> raise (Error (loc, InvalidTypeOf name)))
+      | None -> raise (Error (loc, InvalidTypeOf ""))
+    else None
+  in
+  match Ext_list.filter_map attrs annotation_of with
+  | [] -> None
+  | [annotation] -> Some annotation
+  | first :: second :: _ ->
+    raise
+      (Error
+         ( loc,
+           if runtime_attribute_name first = runtime_attribute_name second then
+             DuplicateRuntimeAnnotation (runtime_attribute_name first)
+           else ConflictingRuntimeAnnotations ))
+
+(* Checks the runtime annotations of a declaration whose kind is
+   [is_abstract_or_abbreviation]. *)
+let check_runtime_annotation ~loc ~is_abstract_or_abbreviation
+    (attrs : Parsetree.attributes) =
+  match process_runtime_annotation ~loc attrs with
+  | None -> ()
+  | Some annotation ->
+    if not is_abstract_or_abbreviation then
+      raise
+        (Error
+           ( loc,
+             RuntimeAnnotationOnRepresentedType
+               (runtime_attribute_name annotation) ))
 
 let process_tag_name (attrs : Parsetree.attributes) =
   let st = ref None in
@@ -199,7 +390,7 @@ let process_tag_name (attrs : Parsetree.attributes) =
   !st
 
 (* A constructor the compiler generates itself carries no annotations. *)
-let generated_tag ~name = {name; literal = None}
+let generated_tag ~name = {name; literal = String name}
 
 let generated_block_runtime ~name = {tag = generated_tag ~name; tag_name = None}
 
@@ -208,137 +399,12 @@ let is_nullary_variant (x : Types.constructor_arguments) =
   | Types.Cstr_tuple [] -> true
   | _ -> false
 
-(* A literal's JavaScript value, which a [switch] compares with [===]. Ints
-   are emitted as 32-bit numbers, so [1], [1.0] and [4294967297] are one
-   number, while [1n] is a bigint. *)
-let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
-    ~(blocks : (Location.t * block) list) =
-  let module String_set = Set.Make (String) in
-  let module String_map = Map.Make (String) in
-  let string_literals_consts = ref String_set.empty in
-  let string_literals_blocks = ref String_set.empty in
-  (* Keyed by [literal_key], with the spelling of the literal *)
-  let nonstring_literals_consts = ref String_map.empty in
-  let nonstring_literals_blocks = ref String_map.empty in
-  let instance_types = Hashtbl.create 1 in
-  let function_types = ref 0 in
-  let object_types = ref 0 in
-  let string_types = ref 0 in
-  let number_types = ref 0 in
-  let bigint_types = ref 0 in
-  let boolean_types = ref 0 in
-  let unknown_types = ref 0 in
-  let add_string_literal ~is_const ~loc s =
-    let set =
-      if is_const then string_literals_consts else string_literals_blocks
-    in
-    if String_set.mem s !set then
-      raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)));
-    set := String_set.add s !set
-  in
-  let add_nonstring_literal ~is_const ~loc literal s =
-    let map =
-      if is_const then nonstring_literals_consts else nonstring_literals_blocks
-    in
-    let key = Variant_runtime.literal_value_key literal in
-    (match String_map.find_opt key !map with
-    | Some earlier when earlier = s ->
-      raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)))
-    | Some earlier ->
-      raise
-        (Error
-           ( loc,
-             InvalidUntaggedVariantDefinition (SameLiteralValue (s, earlier)) ))
-    | None -> ());
-    map := String_map.add key s !map
-  in
-  let invariant loc name =
-    if !unknown_types <> 0 && List.length blocks <> 1 then
-      raise
-        (Error (loc, InvalidUntaggedVariantDefinition (OnlyOneUnknown name)));
-    if !object_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneObject));
-    Hashtbl.iter
-      (fun i count ->
-        if count > 1 then
-          raise
-            (Error (loc, InvalidUntaggedVariantDefinition (AtMostOneInstance i))))
-      instance_types;
-    if !function_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneFunction));
-    if !string_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneString));
-    if !number_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneNumber));
-    if !bigint_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBigint));
-    if !boolean_types > 1 then
-      raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBoolean));
-    ()
-  in
-  let check_literal ~is_const ~loc (tag : tag) =
-    match tag.literal with
-    | None -> add_string_literal ~is_const ~loc tag.name
-    | Some (String s) -> add_string_literal ~is_const ~loc s
-    | Some (Int i as literal) ->
-      add_nonstring_literal ~is_const ~loc literal (string_of_int i)
-    | Some (Float f as literal) ->
-      add_nonstring_literal ~is_const ~loc literal f
-    | Some (BigInt i as literal) ->
-      add_nonstring_literal ~is_const ~loc literal (i ^ "n")
-    | Some (Bool b as literal) ->
-      add_nonstring_literal ~is_const ~loc literal
-        (if b then "true" else "false")
-    | Some (Null as literal) ->
-      add_nonstring_literal ~is_const ~loc literal "null"
-    | Some (Undefined as literal) ->
-      add_nonstring_literal ~is_const ~loc literal "undefined"
-  in
-
-  Ext_list.rev_iter consts (fun (loc, literal) ->
-      check_literal ~is_const:true ~loc literal);
-  if is_untagged_def then
-    Ext_list.rev_iter blocks (fun (loc, block) ->
-        match block with
-        | Untagged {tag; block_type} ->
-          (match block_type with
-          | UnknownType -> incr unknown_types
-          | ObjectType -> incr object_types
-          | InstanceType i ->
-            let count =
-              Hashtbl.find_opt instance_types i |> Option.value ~default:0
-            in
-            Hashtbl.replace instance_types i (count + 1)
-          | FunctionType -> incr function_types
-          | IntType | FloatType -> incr number_types
-          | BigintType -> incr bigint_types
-          | BooleanType ->
-            (* Literal cases are matched before payload cases, so a boolean
-               payload only receives the booleans that are not literal cases.
-               A partial overlap is allowed, like for strings and numbers. *)
-            if
-              String_map.mem "true" !nonstring_literals_consts
-              && String_map.mem "false" !nonstring_literals_consts
-            then
-              raise
-                (Error
-                   ( loc,
-                     InvalidUntaggedVariantDefinition
-                       (UnreachableBoolean tag.name) ));
-            incr boolean_types
-          | StringType -> incr string_types);
-          invariant loc tag.name
-        | Tagged _ -> ())
-  else
-    Ext_list.rev_iter blocks (fun (loc, block) ->
-        let tag =
-          match block with
-          | Tagged {tag} | Untagged {tag} -> tag
-        in
-        check_literal ~is_const:false ~loc tag)
+let declared_tag (cstr : Types.constructor_declaration) =
+  let name = Ident.name cstr.cd_id in
+  {name; literal = Option.value cstr.cd_runtime_tag ~default:(String name)}
 
 let get_cstr_loc_tag (cstr : Types.constructor_declaration) =
-  (cstr.cd_loc, {name = Ident.name cstr.cd_id; literal = cstr.cd_runtime_tag})
+  (cstr.cd_loc, declared_tag cstr)
 
 let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
   List.iter
@@ -365,184 +431,3 @@ let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
           fields
       | _ -> ())
     cstrs
-
-module Dynamic_checks = struct
-  type op = EqEqEq | NotEqEq | Or | And
-  type 'a t =
-    | BinOp of op * 'a t * 'a t
-    | TagType of tag_type
-    | TypeOf of 'a t
-    | IsInstanceOf of Instance.t * 'a t
-    | Not of 'a t
-    | Expr of 'a
-
-  let rec size = function
-    | BinOp (_, x, y) -> 1 + size x + size y
-    | TagType _ -> 1
-    | TypeOf x -> 1 + size x
-    | IsInstanceOf (_, x) -> 1 + size x
-    | Not x -> 1 + size x
-    | Expr _ -> 1
-
-  let bin op x y = BinOp (op, x, y)
-  let tag_type t = TagType t
-  let typeof x = TypeOf x
-  let str s = Literal (String s) |> tag_type
-  let is_instance i x = IsInstanceOf (i, x)
-  let not x = Not x
-  let nil = Literal Null |> tag_type
-  let undefined = Literal Undefined |> tag_type
-  let object_ = Payload_shape ObjectType |> tag_type
-
-  let function_ = Payload_shape FunctionType |> tag_type
-  let string = Payload_shape StringType |> tag_type
-  let number = Payload_shape IntType |> tag_type
-
-  let bigint = Payload_shape BigintType |> tag_type
-
-  let boolean = Payload_shape BooleanType |> tag_type
-
-  let ( == ) x y = bin EqEqEq x y
-  let ( != ) x y = bin NotEqEq x y
-  let ( ||| ) x y = bin Or x y
-  let ( &&& ) x y = bin And x y
-
-  let rec is_a_literal_case ~(literal_cases : literal_tag list) ~block_cases
-      ~list_literal_cases (e : _ t) =
-    let overlaps p = Ext_list.exists literal_cases p in
-    let literals_overlaps_with_string () =
-      overlaps (function
-        | String _ -> true
-        | _ -> false)
-    in
-    let literals_overlaps_with_number () =
-      overlaps (function
-        | Int _ | Float _ -> true
-        | _ -> false)
-    in
-    let literals_overlaps_with_bigint () =
-      overlaps (function
-        | BigInt _ -> true
-        | _ -> false)
-    in
-    let literals_overlaps_with_boolean () =
-      overlaps (function
-        | Bool _ -> true
-        | _ -> false)
-    in
-    let literals_overlaps_with_object () =
-      overlaps (function
-        | Null -> true
-        | _ -> false)
-    in
-    let is_literal_case (t : literal_tag) : _ t = e == tag_type (Literal t) in
-    let is_not_block_case (c : block_type) : _ t =
-      match c with
-      | StringType
-        when literals_overlaps_with_string () = false (* No overlap *) ->
-        typeof e != string
-      | IntType when literals_overlaps_with_number () = false ->
-        typeof e != number
-      | FloatType when literals_overlaps_with_number () = false ->
-        typeof e != number
-      | BigintType when literals_overlaps_with_bigint () = false ->
-        typeof e != bigint
-      | BooleanType when literals_overlaps_with_boolean () = false ->
-        typeof e != boolean
-      | InstanceType i -> not (is_instance i e)
-      | FunctionType -> typeof e != function_
-      | ObjectType when literals_overlaps_with_object () = false ->
-        typeof e != object_
-      | ObjectType (* overlap *) -> e == nil ||| (typeof e != object_)
-      | StringType (* overlap *)
-      | IntType (* overlap *)
-      | FloatType (* overlap *)
-      | BigintType (* overlap *)
-      | BooleanType (* overlap *)
-      | UnknownType -> (
-        (* We don't know the type of unknown, so we need to express:
-           this is not one of the literals *)
-        match literal_cases with
-        | [] ->
-          (* this should not happen *)
-          assert false
-        | l1 :: others ->
-          let is_literal_1 = is_literal_case l1 in
-          Ext_list.fold_right others is_literal_1 (fun literal_n acc ->
-              is_literal_case literal_n ||| acc))
-    in
-    if list_literal_cases then
-      let rec mk cases =
-        match List.rev cases with
-        | [case] -> is_literal_case case
-        | case :: rest -> is_literal_case case ||| mk rest
-        | [] -> assert false
-      in
-      mk literal_cases
-    else
-      match block_cases with
-      | [c] -> is_not_block_case c
-      | c1 :: (_ :: _ as rest) ->
-        is_not_block_case c1
-        &&& is_a_literal_case ~literal_cases ~block_cases:rest
-              ~list_literal_cases e
-      | [] -> assert false
-
-  let is_a_literal_case ~literal_cases ~block_cases e =
-    let with_literal_cases =
-      is_a_literal_case ~literal_cases ~block_cases ~list_literal_cases:true e
-    in
-    let without_literal_cases =
-      is_a_literal_case ~literal_cases ~block_cases ~list_literal_cases:false e
-    in
-    if size with_literal_cases <= size without_literal_cases then
-      with_literal_cases
-    else without_literal_cases
-
-  let is_int_tag ?(has_null_undefined_other = (false, false, false)) (e : _ t) :
-      _ t =
-    let has_null, has_undefined, has_other = has_null_undefined_other in
-    if has_null && has_undefined = false && has_other = false then
-      (* null *)
-      bin EqEqEq e nil
-    else if has_null && has_undefined && has_other = false then
-      (* null + undefined *)
-      e == nil ||| e == undefined
-    else if has_null = false && has_undefined && has_other = false then
-      (* undefined *)
-      e == undefined
-    else if has_null then
-      (* (null + undefined + other) || (null + other) *)
-      e == nil ||| typeof e != object_
-    else (* (undefiled + other) || other *)
-      typeof e != object_
-
-  let add_runtime_type_check ~tag_type ~has_null_case
-      ~(block_cases : block_type list) x y =
-    let instances =
-      Ext_list.filter_map block_cases (function
-        | InstanceType i -> Some i
-        | _ -> None)
-    in
-    match tag_type with
-    | Payload_shape
-        ( IntType | StringType | FloatType | BigintType | BooleanType
-        | FunctionType ) ->
-      typeof y == x
-    | Payload_shape ObjectType ->
-      let object_case =
-        if has_null_case then typeof y == x &&& (y != nil) else typeof y == x
-      in
-      if instances <> [] then
-        let not_one_of_the_instances =
-          Ext_list.fold_right instances object_case (fun i x ->
-              x &&& not (is_instance i y))
-        in
-        not_one_of_the_instances
-      else object_case
-    | Payload_shape (InstanceType i) -> is_instance i y
-    | Payload_shape UnknownType ->
-      (* This should not happen because unknown must be the only non-literal case *)
-      assert false
-    | Literal _ -> x
-end

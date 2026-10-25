@@ -24,7 +24,7 @@ let scrape_ty env ty =
   | Tconstr (p, _, _) -> (
     match Env.find_type p env with
     | {type_representation = Unboxed; _} -> (
-      match Typedecl.get_unboxed_type_representation env ty with
+      match Ctype.get_unboxed_type_representation env ty with
       | None -> ty
       | Some ty2 -> ty2)
     | _ -> ty
@@ -37,8 +37,17 @@ let scrape env ty = (scrape_ty env ty).desc
      records the type at the definition type so for ['a option]
      it will always be [Tvar]
 *)
-let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
-  match scrape env typ with
+let rec cannot_contain_undefined ~visiting (typ : Types.type_expr) (env : Env.t)
+    =
+  (* A value declared to be a class instance or to have a [typeof] other than
+     "undefined" is not undefined. The payload of an [@unboxed] wrapper is
+     declared only after scraping. *)
+  Variant_layout.value_shape ~env typ <> Unstated
+  ||
+  let scraped = scrape_ty env typ in
+  Variant_layout.value_shape ~env scraped <> Unstated
+  ||
+  match scraped.desc with
   | Tconstr (p, _, _) -> (
     (* all built in types could not inhabit none-like values:
        int, char, float, bool, unit, exn, array, list, nativeint,
@@ -53,8 +62,9 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
         (* A transitive dependency's interface may not be on the search path.
            Keep option wrapping when its runtime representation is unknown. *)
         false
-      | {type_kind = Type_abstract; type_attributes} ->
-        List.exists Typedecl.is_not_undefined_attr type_attributes
+      | {type_kind = Type_abstract} ->
+        (* Its shape was read from the scraped type above *)
+        false
       | {type_kind = Type_open} -> false
       | {type_kind = Type_record _} -> true
       | {
@@ -72,7 +82,13 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
              _ );
       } ->
         false (* conservative *)
+      | {type_kind = Type_variant _} when List.exists (Path.same p) visiting ->
+        (* A value reaches [undefined] through finitely many unboxed
+           payloads, so the cases met again add none: whether the variant
+           can be [undefined] is decided by its other cases *)
+        true
       | {type_kind = Type_variant (cdecls, layout_ref)} ->
+        let visiting = p :: visiting in
         let layout = Variant_runtime.get_layout layout_ref in
         let rec all_cases_cannot_contain_undefined position = function
           | [] -> true
@@ -84,19 +100,16 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
               | Variant_runtime.Block (Tagged {tag}) -> (tag, false)
               | Variant_runtime.Block (Untagged {tag}) -> (tag, true)
             in
-            tag.literal <> Some Variant_runtime.Undefined
+            tag.literal <> Variant_runtime.Undefined
             && ((not payload_is_unboxed)
                ||
                match cd.cd_args with
-               | Cstr_tuple [t] ->
-                 Ast_untagged_variants.type_is_builtin_object t
-                 || type_cannot_contain_undefined t env
+               | Cstr_tuple [t] -> cannot_contain_undefined ~visiting t env
                | Cstr_tuple [] -> true
                | Cstr_tuple (_ :: _ :: _) ->
                  true (* Not actually possible for an unboxed payload. *)
                | Cstr_record [{ld_type = t}] ->
-                 Ast_untagged_variants.type_is_builtin_object t
-                 || type_cannot_contain_undefined t env
+                 cannot_contain_undefined ~visiting t env
                | Cstr_record ([] | _ :: _ :: _) -> true)
             && all_cases_cannot_contain_undefined (position + 1) rest
         in
@@ -105,6 +118,49 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
   | Tfield _ | Tpoly _ | Tunivar _ | Tlink _ | Tsubst _ | Tnil | Tvar _
   | Tobject _ ->
     false
+
+let type_cannot_contain_undefined typ env =
+  cannot_contain_undefined ~visiting:[] typ env
+
+type abstractness = Opaque | Stands_for_another | Not_abstract
+
+(* Whether [ty] is, also through abbreviations, an abstract type with a
+   representation of its own, which an annotation can refine, or one that
+   stands for another type: a functor parameter's type, a recursive module's
+   type being defined, or a locally abstract type. *)
+let abstractness env ty =
+  match (Ctype.expand_head_opt env ty).desc with
+  | Tconstr (path, _, _) -> (
+    match Env.find_type path env with
+    | {type_kind = Type_abstract; type_manifest = None; type_newtype_level} ->
+      if type_newtype_level <> None || Env.is_functor_arg path env then
+        Stands_for_another
+      else if Predef.type_is_builtin_path_but_option path <> Predef.NA then
+        Not_abstract
+      else Opaque
+    | _ -> Not_abstract
+    | exception Not_found -> Not_abstract)
+  | _ -> Not_abstract
+
+type undefinedness =
+  | Cannot_be_undefined
+  | Unseen
+  | Stands_for_another
+  | Can_be_undefined
+
+(* Whether a type can hold [undefined], as far as the compiler sees. An
+   opaque abstract type or a JavaScript object type has a representation the
+   compiler does not see. *)
+let undefinedness env ty : undefinedness =
+  if type_cannot_contain_undefined ty env then Cannot_be_undefined
+  else
+    match abstractness env ty with
+    | Opaque -> Unseen
+    | Stands_for_another -> Stands_for_another
+    | Not_abstract -> (
+      match (Ctype.expand_head_opt env ty).desc with
+      | Tobject _ -> Unseen
+      | _ -> Can_be_undefined)
 
 let is_function_type env ty =
   match scrape env ty with

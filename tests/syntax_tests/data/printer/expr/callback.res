@@ -386,3 +386,19 @@ React.useEffect5((
 
 apply(a, b, c, /* before */ () => () /* after */)
 apply(/* before */ () => () /* after */, a, b, c)
+
+let x = React.useMemo2(() =>
+  if isLoggedIn {
+    userItems->Belt.Array.forEach(((itemKey, userItem)) =>
+      if (
+        switch userItem.status {
+        | ForTrade => filters.exclude->Array.includes(ItemFilters.Catalog)
+        }
+      ) {
+        let itemVariantList = switch Dict.get(userItemMap, itemId) {
+        | Some(list) => list
+        }
+      }
+    )
+  }
+, (excludeString, isLoggedIn))

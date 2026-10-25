@@ -35,7 +35,9 @@ let publish ~candidate ~path ~contents =
   | Unix.Unix_error (Unix.EEXIST, _, _) -> false
   | Unix.Unix_error _ -> (
     match
-      Unix.openfile path [Unix.O_WRONLY; Unix.O_CREAT; Unix.O_EXCL] 0o644
+      Unix.openfile path
+        [Unix.O_WRONLY; Unix.O_CREAT; Unix.O_EXCL; Unix.O_SHARE_DELETE]
+        0o644
     with
     | exception Unix.Unix_error (Unix.EEXIST, _, _) -> false
     | descriptor ->

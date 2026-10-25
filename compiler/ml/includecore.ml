@@ -184,6 +184,8 @@ type type_mismatch =
   | Immediate
   | Tag_name
   | Variant_representation of Ident.t
+  | Runtime_annotation of string * string
+  | Not_undefined
 
 let report_type_mismatch0 first second decl ppf err =
   let pr fmt = Format.fprintf ppf fmt in
@@ -216,6 +218,15 @@ let report_type_mismatch0 first second decl ppf err =
   | Tag_name -> pr "Their @tag annotations differ"
   | Variant_representation s ->
     pr "The internal representations for case %s are not equal" (Ident.name s)
+  | Not_undefined ->
+    pr
+      "Their runtime representations differ:@ %s %s is @notUndefined,@ but %s \
+       %s can hold undefined"
+      second decl first decl
+  | Runtime_annotation (declared1, declared2) ->
+    pr
+      "Their runtime representations differ:@ %s %s states %s,@ %s %s states %s"
+      first decl declared1 second decl declared2
 
 let report_type_mismatch first second decl ppf =
   List.iter (fun err ->
@@ -271,7 +282,24 @@ and compare_variants ~loc env params1 params2 ~layout1 ~layout2 n
             let tag_type2 = Variant_runtime.constructor_tag layout2 (n - 1) in
             if tag_type1 <> tag_type2 then [Variant_representation cd1.cd_id]
             else []
-          | false -> r
+          | false -> (
+            (* A tagged case with a payload carries its tag in the object;
+               an untagged one is its payload, whatever its [@as], and is
+               compared by its payload kind *)
+            match
+              ( Variant_runtime.constructor_at layout1 (n - 1),
+                Variant_runtime.constructor_at layout2 (n - 1) )
+            with
+            | Block (Tagged {tag = tag1}), Block (Tagged {tag = tag2})
+              when tag1.literal <> tag2.literal ->
+              [Variant_representation cd1.cd_id]
+            (* An unknown payload in the second declaration is the only
+               payload case and has no check, so any first one agrees *)
+            | ( Block (Untagged {block_type = block_type1}),
+                Block (Untagged {block_type = block_type2}) )
+              when block_type1 <> block_type2 && block_type2 <> UnknownType ->
+              [Variant_representation cd1.cd_id]
+            | _ -> r)
       in
       if r <> [] then r
       else
@@ -317,6 +345,41 @@ and compare_records env params1_ params2_ n_
   in
   aux ~fast:true params1_ params2_ n_ labels1_ labels2_
 
+(* What the second declaration states about its values at run time must
+   hold for the first. Values are recognized by the class or [typeof] the
+   second states, so the first must state the same; stating nothing hides it.
+   [@notUndefined] lets clients unbox [option] of the type, so the first must
+   be a type that cannot hold [undefined] either, or one whose representation
+   the compiler does not see, which has none that contradicts it. *)
+let compare_runtime_annotations env id decl1 decl2 =
+  (* The second declaration's shape was resolved in its own environment, so
+     it is what users of the second declaration see *)
+  match decl2.type_shape with
+  | Unstated -> []
+  | Never_undefined -> (
+    let env = Env.add_type ~check:false id decl1 env in
+    let ty =
+      Btype.newgenty (Tconstr (Pident id, decl1.type_params, ref Mnil))
+    in
+    match Typeopt.undefinedness env ty with
+    | Cannot_be_undefined | Unseen -> []
+    | Stands_for_another | Can_be_undefined -> [Not_undefined])
+  | Recognized_as block_type2 ->
+    let declared2 = Some block_type2 in
+    (* What the first declaration states, or what its structure gives *)
+    let declared1 =
+      let env = Env.add_type ~check:false id decl1 env in
+      Variant_layout.payload_kind ~env
+        (Btype.newgenty (Tconstr (Pident id, decl1.type_params, ref Mnil)))
+    in
+    if declared1 = declared2 then []
+    else
+      [
+        Runtime_annotation
+          ( Ast_untagged_variants.describe_declared_block_type declared1,
+            Ast_untagged_variants.describe_declared_block_type declared2 );
+      ]
+
 let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
   Builtin_attributes.check_deprecated_inclusion ~def:decl1.type_loc
     ~use:decl2.type_loc loc decl1.type_attributes decl2.type_attributes name;
@@ -341,6 +404,9 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
         if Ctype.equal env true decl1.type_params decl2.type_params then
           if Ctype.equal env false [ty1] [ty2] then [] else [Manifest]
         else [Constraint]
+    in
+    let err =
+      if err <> [] then err else compare_runtime_annotations env id decl1 decl2
     in
     if err <> [] then err
     else

@@ -1,2 +1,2 @@
 @notUndefined
-type t = int
+type t = option<int>

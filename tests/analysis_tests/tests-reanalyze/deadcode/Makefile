@@ -4,7 +4,7 @@ build:
 	yarn build
 
 test: build node_modules/.bin/rescript
-	./test.sh
+	bash ./test.sh
 
 # Order-independence test for reanalyze - not run by default (takes longer)
 # Verifies that processing files in different orders produces identical results

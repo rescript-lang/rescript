@@ -1,0 +1,1 @@
+@instanceOf("BigInt") type t

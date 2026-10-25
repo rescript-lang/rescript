@@ -1,0 +1,26 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/not_undefined_functor_parameter.res[0m:[2m8:7-10:3[0m
+
+   6 [2m│[0m   module Checked: {
+   7 [2m│[0m     @notUndefined type t
+   [1;31m8[0m [2m│[0m   } = [1;31m{[0m
+   [1;31m9[0m [2m│[0m [1;31m    type t = X.t[0m
+  [1;31m10[0m [2m│[0m [1;31m  }[0m
+  11 [2m│[0m }
+  12 [2m│[0m 
+
+  Signature mismatch:
+  Modules do not match: {
+  type t = X.t
+} is not included in {
+  type t
+}
+  Type declarations do not match: type t = X.t is not included in type t
+  [36m/.../fixtures/not_undefined_functor_parameter.res[0m:[2m7:19-24[0m:
+    Expected declaration
+  [36m/.../fixtures/not_undefined_functor_parameter.res[0m:[2m9:5-16[0m:
+    Actual declaration
+  Their runtime representations differ:
+  the second declaration is @notUndefined,
+  but the first declaration can hold undefined.

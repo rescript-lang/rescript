@@ -88,7 +88,7 @@ if [[ $ROUNDTRIP_TEST = 1 ]]; then
   roundtripTestsResult="temp/result.txt"
   touch $roundtripTestsResult
 
-  find syntax_tests/data/{idempotency,printer} -name "*.res" -o -name "*.resi" >temp/files.txt
+  find syntax_tests/data/printer -name "*.res" -o -name "*.resi" >temp/files.txt
   while read file; do {
     mkdir -p temp/$(dirname $file)
     rescript1=temp/$file.res

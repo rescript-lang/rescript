@@ -1,0 +1,19 @@
+===== Priv.res =====
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/Cross_private_variant_manifest_mismatch/Priv.res[0m:[2m2:1-14[0m
+
+  1 [2m│[0m type v = A | B
+  [1;31m2[0m [2m│[0m [1;31mtype w = A | B[0m
+  3 [2m│[0m 
+
+  The implementation /.../fixtures/Cross_private_variant_manifest_mismatch/Priv.res
+  does not match the interface /.../fixtures/Cross_private_variant_manifest_mismatch/priv.cmi:
+  Type declarations do not match:
+    type w = A | B
+  is not included in
+    type w = v = private A | B
+  [36m/.../fixtures/Cross_private_variant_manifest_mismatch/Priv.resi[0m:[2m2:1-26[0m:
+    Expected declaration
+  [36m/.../fixtures/Cross_private_variant_manifest_mismatch/Priv.res[0m:[2m2:1-14[0m:
+    Actual declaration

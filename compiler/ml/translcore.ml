@@ -916,6 +916,7 @@ let exception_id_destructed (l : Lambda.t) (fv : Ident.t) : bool =
     | Lassign (id, e) -> Ident.same id fv || hit e
     | Lstaticcatch (e1, _, e2) -> hit e1 || hit e2
     | Ltrywith (e1, _, e2) -> hit e1 || hit e2
+    | Ltryfinally (e1, e2) -> hit e1 || hit e2
     | Lfunction {body} -> hit body
     | Llet (_, _, arg, body) -> hit arg || hit body
     | Lletrec (decl, body) -> hit body || hit_list_snd decl
@@ -1296,11 +1297,22 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
       e.exp_loc
   | Texp_match (arg, pat_expr_list, exn_pat_expr_list, partial) ->
     transl_match e arg pat_expr_list exn_pat_expr_list partial
-  | Texp_try (body, pat_expr_list) ->
-    let id = Typecore.name_pattern "exn" pat_expr_list in
-    let handler = Matching.for_trywith (var id) (transl_cases pat_expr_list) in
-    let id, handler = pack_trywith_exn id handler in
-    try_ (transl_exp body) id handler
+  | Texp_try (body, pat_expr_list, finally) -> (
+    let body = transl_exp body in
+    let body =
+      match pat_expr_list with
+      | [] -> body
+      | _ :: _ ->
+        let id = Typecore.name_pattern "exn" pat_expr_list in
+        let handler =
+          Matching.for_trywith (var id) (transl_cases pat_expr_list)
+        in
+        let id, handler = pack_trywith_exn id handler in
+        try_ body id handler
+    in
+    match finally with
+    | None -> body
+    | Some finally -> try_finally body (transl_exp finally))
   | Texp_tuple el -> (
     let ll = transl_list el in
     try const (Const_block (Blk_tuple, List.map extract_constant ll))

@@ -5,15 +5,25 @@ function isNested(x) {
   return x.BS_PRIVATE_NESTED_SOME_NONE !== undefined;
 }
 
+let markers = [];
+
+function marker(depth) {
+  let m = markers[depth];
+  if (m !== undefined) {
+    return m;
+  }
+  let m$1 = Object.freeze({
+    BS_PRIVATE_NESTED_SOME_NONE: depth
+  });
+  markers[depth] = m$1;
+  return m$1;
+}
+
 function some(x) {
   if (x === undefined) {
-    return {
-      BS_PRIVATE_NESTED_SOME_NONE: 0
-    };
+    return marker(0);
   } else if (x !== null && x.BS_PRIVATE_NESTED_SOME_NONE !== undefined) {
-    return {
-      BS_PRIVATE_NESTED_SOME_NONE: x.BS_PRIVATE_NESTED_SOME_NONE + 1 | 0
-    };
+    return marker(x.BS_PRIVATE_NESTED_SOME_NONE + 1 | 0);
   } else {
     return x;
   }
@@ -43,9 +53,7 @@ function valFromOption(x) {
   if (depth === 0) {
     return;
   } else {
-    return {
-      BS_PRIVATE_NESTED_SOME_NONE: depth - 1 | 0
-    };
+    return marker(depth - 1 | 0);
   }
 }
 

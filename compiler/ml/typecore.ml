@@ -79,6 +79,8 @@ type error =
   | Inlined_record_expected
   | Break_outside_loop
   | Continue_outside_loop
+  | Break_out_of_finally
+  | Continue_out_of_finally
   | Literal_overflow of string
   | Polyvar_literal_overflow
   | Unknown_literal of string * char
@@ -150,6 +152,9 @@ type recarg = Allowed | Required | Rejected
    patterns. A failed request must not leave them in another request. *)
 type request_state = {
   loop_depth: int ref;
+  (* Whether the innermost loop or function boundary is a finally block, which
+     break and continue must not leave. *)
+  in_finally: bool ref;
   newtype_level: int option ref;
   pattern_variables:
     (Ident.t * type_expr * string loc * Location.t * bool) list ref;
@@ -161,6 +166,7 @@ type request_state = {
 let fresh_state () =
   {
     loop_depth = ref 0;
+    in_finally = ref false;
     newtype_level = ref None;
     pattern_variables = ref [];
     pattern_force = ref [];
@@ -171,6 +177,7 @@ let fresh_state () =
 let state_key = Request_local.new_key fresh_state
 let state () = Domain.DLS.get state_key
 let loop_depth_ref () = (state ()).loop_depth
+let in_finally_ref () = (state ()).in_finally
 let newtype_level_ref () = (state ()).newtype_level
 let pattern_variables_ref () = (state ()).pattern_variables
 let pattern_force_ref () = (state ()).pattern_force
@@ -182,10 +189,17 @@ let with_depth depth_ref f =
   depth_ref := saved + 1;
   Misc.try_finally f (fun () -> depth_ref := saved)
 
-let with_reset_control_flow f =
+let with_control_flow_boundary ~in_finally f =
   let saved_loop_depth = !(loop_depth_ref ()) in
+  let saved_in_finally = !(in_finally_ref ()) in
   loop_depth_ref () := 0;
-  Misc.try_finally f (fun () -> loop_depth_ref () := saved_loop_depth)
+  in_finally_ref () := in_finally;
+  Misc.try_finally f (fun () ->
+      loop_depth_ref () := saved_loop_depth;
+      in_finally_ref () := saved_in_finally)
+
+(* A function body starts without enclosing loops. *)
+let with_reset_control_flow f = with_control_flow_boundary ~in_finally:false f
 
 let case lhs rhs = {c_lhs = lhs; c_guard = None; c_rhs = rhs}
 
@@ -213,9 +227,13 @@ let iter_expression f e =
     | Pexp_let (_, pel, e) ->
       expr e;
       List.iter binding pel
-    | Pexp_match (e, pel) | Pexp_try (e, pel) ->
+    | Pexp_match (e, pel) ->
       expr e;
       List.iter case pel
+    | Pexp_try (e, pel, finally) ->
+      expr e;
+      List.iter case pel;
+      Option.iter expr finally
     | Pexp_array args
     | Pexp_tuple args
     | Pexp_construct (_, {txt = args})
@@ -1961,7 +1979,7 @@ let rec final_subexpression sexp =
   | Pexp_braces {expr = e} -> final_subexpression e
   | Pexp_let (_, _, e)
   | Pexp_sequence (_, e)
-  | Pexp_try (e, _)
+  | Pexp_try (e, _, _)
   | Pexp_ifthenelse (_, e, _)
   | Pexp_ternary (_, e, _)
   | Pexp_match (_, {pc_rhs = e} :: _) ->
@@ -2162,7 +2180,7 @@ let rec type_approx env sexp =
              params,
            type_approx env body ))
   | Pexp_match (_, {pc_rhs = e} :: _) -> type_approx env e
-  | Pexp_try (e, _) -> type_approx env e
+  | Pexp_try (e, _, _) -> type_approx env e
   | Pexp_tuple l -> newty (Ttuple (List.map (type_approx env) l))
   | Pexp_ifthenelse (_, e, _) -> type_approx env e
   | Pexp_ternary (_, e, _) -> type_approx env e
@@ -2832,15 +2850,25 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
-  | Pexp_try (sbody, caselist) ->
+  | Pexp_try (sbody, caselist, sfinally) ->
     let body = type_expect ~context:None env sbody ty_expected in
     let cases, _ =
       type_cases ~call_context:`Try env (Predef.type_exn ()) ty_expected false
         loc caselist
     in
+    (* JavaScript runs the finally block after the body or catch has already
+       decided how the try is left, so a break or continue there would cancel
+       a pending exception or result. *)
+    let finally =
+      Option.map
+        (fun sfinally ->
+          with_control_flow_boundary ~in_finally:true (fun () ->
+              type_statement ~context:None env sfinally))
+        sfinally
+    in
     re
       {
-        exp_desc = Texp_try (body, cases);
+        exp_desc = Texp_try (body, cases, finally);
         exp_loc = loc;
         exp_extra = [];
         exp_type = body.exp_type;
@@ -3260,7 +3288,12 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       }
   | Pexp_break ->
     if !(loop_depth_ref ()) = 0 then
-      raise (Error (loc, env, Break_outside_loop))
+      raise
+        (Error
+           ( loc,
+             env,
+             if !(in_finally_ref ()) then Break_out_of_finally
+             else Break_outside_loop ))
     else
       rue
         {
@@ -3273,7 +3306,12 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         }
   | Pexp_continue ->
     if !(loop_depth_ref ()) = 0 then
-      raise (Error (loc, env, Continue_outside_loop))
+      raise
+        (Error
+           ( loc,
+             env,
+             if !(in_finally_ref ()) then Continue_out_of_finally
+             else Continue_outside_loop ))
     else
       rue
         {
@@ -3751,6 +3789,7 @@ and type_newtype ~loc ~env ~name (type_body : Env.t -> Typedtree.expression) =
       type_attributes = [];
       type_immediate = false;
       type_representation = Boxed;
+      type_shape = Unstated;
       type_inlined_types = [];
     }
   in
@@ -5404,6 +5443,14 @@ let report_error env loc ppf error =
     fprintf ppf "`break` can only be used directly inside a loop body."
   | Continue_outside_loop ->
     fprintf ppf "`continue` can only be used inside a loop body."
+  | Break_out_of_finally ->
+    fprintf ppf
+      "`break` cannot leave a `finally` block. Only a loop inside the block \
+       can be broken out of."
+  | Continue_out_of_finally ->
+    fprintf ppf
+      "`continue` cannot leave a `finally` block. Only a loop inside the block \
+       can be continued."
   | Literal_overflow ty ->
     fprintf ppf
       "Integer literal exceeds the range of representable integers of type %s"

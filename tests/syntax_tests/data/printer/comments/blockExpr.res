@@ -525,3 +525,14 @@ let () = {
   
 //  assert 
 }
+
+let performQuickNavigation = send => {
+  {
+    open Webapi.Dom
+    switch document->Document.getElementById("target-overlay") {
+    | None => ()
+    }
+  }
+  // Clear loaded target details.
+  send(ClearTargetDetails)
+}

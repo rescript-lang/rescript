@@ -1,0 +1,1 @@
+- Run the full compiler unit tests, runtime docstring tests, analysis, tools and gentype tests, and the `unicode` and `duplicated_symlinked_packages` build tests on Windows CI.

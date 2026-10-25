@@ -46,6 +46,20 @@ let tests =
       check
         (not (File_util.files_equal missing first))
         "a missing file should not compare equal";
+      (* The watch shutdown protocol and atomic saves remove or rename files
+         while the watcher may be reading them. *)
+      let held = Filename.concat root "held" in
+      let renamed = Filename.concat root "held.renamed" in
+      write_file held "held";
+      let descriptor = File_util.open_for_reading held in
+      Fun.protect
+        ~finally:(fun () -> Unix.close descriptor)
+        (fun () ->
+          Unix.rename held renamed;
+          Unix.unlink renamed);
+      check
+        (not (File_util.exists renamed))
+        "a file open for reading can be renamed and removed";
       if not Sys.win32 then (
         let fifo = Filename.concat root "stream" in
         Unix.mkfifo fifo 0o600;

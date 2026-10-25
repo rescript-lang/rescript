@@ -1,0 +1,24 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/tryFinally.res:1:29-35
+
+  1 │ let a = try dangerousCall() finally cleanup()
+  2 │ 
+  3 │ let b = try {
+
+  A `finally` block needs braces: `finally { ... }`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/tryFinally.res:7:2-9
+
+  5 │ } catch {
+  6 │ | _ => ()
+  7 │ } finally
+  8 │ 
+
+  Consecutive statements on a line must be separated by ';' or a newline
+
+let a = try dangerousCall () finally cleanup ()
+let b = try {dangerousCall ()} with | _ -> ()
+;;finally

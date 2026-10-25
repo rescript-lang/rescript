@@ -20,3 +20,23 @@ let x = {
   | _ => 2
   }
 }
+
+try {
+  dangerousCall()
+} finally {
+  cleanup()
+}
+
+try dangerousCall() catch {
+| Foo => Console.log("catched Foo")
+} finally {
+  cleanup()
+}
+
+let x = try 1 finally {()}
+
+// `finally` stays an identifier unless a block follows it
+try dangerousCall() catch {
+| _ => ()
+}
+finally(x)

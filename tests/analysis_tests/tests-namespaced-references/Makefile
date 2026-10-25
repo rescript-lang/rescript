@@ -10,7 +10,7 @@ build:
 	cp lib/bs/MyNamespace.cmt lib/bs/___incremental/MyNamespace.cmt
 
 test: build
-	./test.sh
+	bash ./test.sh
 
 clean:
 	yarn clean

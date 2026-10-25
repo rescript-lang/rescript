@@ -48,7 +48,6 @@ type error =
   | Bad_fixed_type of string
   | Unbound_type_var_ext of type_expr * extension_constructor
   | Varying_anonymous
-  | Invalid_attribute of string
   | Bad_immediate_attribute
   | Bad_unboxed_attribute of string
   | Nonrec_gadt
@@ -97,6 +96,7 @@ let enter_type rec_flag env sdecl id =
         type_attributes = sdecl.ptype_attributes;
         type_immediate = false;
         type_representation = Boxed;
+        type_shape = Unstated;
         type_inlined_types = [];
       }
     in
@@ -117,38 +117,6 @@ let update_type temp_env env id loc =
        replaced with [assert false]. *)
     try Ctype.unify env (Ctype.newconstr path params) ty
     with Ctype.Unify trace -> raise (Error (loc, Type_clash (env, trace))))
-
-(* We use the Ctype.expand_head_opt version of expand_head to get access
-   to the manifest type of private abbreviations. *)
-let rec get_unboxed_type_representation env ty fuel =
-  if fuel < 0 then None
-  else
-    let ty = Ctype.repr (Ctype.expand_head_opt env ty) in
-    match ty.desc with
-    | Tconstr (p, args, _) -> (
-      match Env.find_type p env with
-      | exception Not_found -> Some ty
-      | {type_representation = Boxed} -> Some ty
-      | {
-       type_params;
-       type_kind =
-         ( Type_record ([{ld_type = ty2; _}], _)
-         | Type_variant ([{cd_args = Cstr_tuple [ty2]; _}], _)
-         | Type_variant ([{cd_args = Cstr_record [{ld_type = ty2; _}]; _}], _) );
-      } ->
-        get_unboxed_type_representation env
-          (Ctype.apply env type_params ty2 args)
-          (fuel - 1)
-      | {type_kind = Type_abstract} ->
-        None
-        (* This case can occur when checking a recursive unboxed type
-           declaration. *)
-      | _ -> assert false (* only the above can be unboxed *))
-    | _ -> Some ty
-
-let get_unboxed_type_representation env ty =
-  (* Do not give too much fuel: PR#7424 *)
-  get_unboxed_type_representation env ty 100
 
 (* Determine if a type definition defines a fixed type. (PW) *)
 let is_fixed_type sd =
@@ -362,31 +330,81 @@ let make_constructor env type_path type_params sargs sret_type =
     widen z;
     (targs, Some tret_type, args, Some ret_type, params)
 
-let is_not_undefined_attr (attr : attribute) =
-  match attr with
-  | {Location.txt = "notUndefined"; _}, _ -> true
-  | _ -> false
-
 (* Check that all the variables found in [ty] are in [univ].
    Because [ty] is the argument to an abstract type, the representation
    of that abstract type could be any subexpression of [ty], in particular
    any type variable present in [ty].
 *)
 
+(* An annotation on an abbreviation is a claim about the abbreviated type, so
+   it must agree with what the compiler knows about that type. It can refine
+   an abstract type, restate what the abbreviated type is known to be, or, on
+   a private abbreviation, declare a subclass of the class annotated there.
+   Anything else, such as [@typeOf("string") type t = option<string>], would
+   let two spellings of one type be recognized differently, and would make
+   [Some(None)] of a type that can be undefined indistinguishable from
+   [None]. *)
+let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
+  let open Ast_untagged_variants in
+  let open Variant_runtime in
+  match
+    (process_runtime_annotation decl.type_attributes, decl.type_manifest)
+  with
+  | None, _ | Some _, None -> ()
+  | Some outer, Some manifest -> (
+    let error err = raise (Error (loc, err)) in
+    let stands_for_another () =
+      error (RuntimeAnnotationOnTypeParameter (runtime_attribute_name outer))
+    in
+    let unrelated () =
+      error (RuntimeAnnotationOnUnrelatedType (runtime_attribute_name outer))
+    in
+    match (outer, Variant_layout.payload_kind ~env manifest) with
+    | Not_undefined, _ -> (
+      match Typeopt.undefinedness env manifest with
+      | Cannot_be_undefined | Unseen -> ()
+      | Stands_for_another -> stands_for_another ()
+      | Can_be_undefined -> unrelated ())
+    | (Instance_of _ | Type_of _), None -> (
+      match Typeopt.abstractness env manifest with
+      | Opaque -> ()
+      | Stands_for_another -> stands_for_another ()
+      | Not_abstract -> unrelated ())
+    | Type_of block_type, Some inner when block_type = inner -> ()
+    | Instance_of name, Some (InstanceType (Class {name = inner}))
+      when name = inner ->
+      ()
+    | Instance_of name, Some ((InstanceType (Class _) | ObjectType) as inner) ->
+      (* A public abbreviation would make every value of the superclass type
+         a value of the subclass, without a coercion *)
+      let superclass, ancestors =
+        match inner with
+        | InstanceType (Class {name = ancestor; ancestors}) ->
+          (ancestor, ancestor :: ancestors)
+        (* Every class instance is an object *)
+        | _ -> ("Object", [])
+      in
+      if decl.type_private = Public then
+        error (SubclassOfPublicAbbreviation (name, superclass))
+      else if List.mem name ancestors then error (ClassTwiceInChain name)
+    | Instance_of name, Some (InstanceType Array) ->
+      error (SubclassOfArray name)
+    | (Instance_of _ | Type_of _), Some inner ->
+      let recognized_by =
+        match inner with
+        | InstanceType (Class {name}) ->
+          runtime_annotation_to_string (Instance_of name)
+        | InstanceType Array -> "Array.isArray"
+        | block_type -> runtime_annotation_to_string (Type_of block_type)
+      in
+      error
+        (RuntimeAnnotationContradictsManifest
+           (runtime_annotation_to_string outer, recognized_by)))
+
 let transl_declaration ~type_record_as_object env sdecl id =
-  (* Check for @notUndefined attribute *)
-  let has_not_undefined =
-    List.exists is_not_undefined_attr sdecl.ptype_attributes
-  in
-  (if has_not_undefined then
-     match (sdecl.ptype_kind, sdecl.ptype_manifest) with
-     | Ptype_abstract, None -> ()
-     | _ ->
-       raise
-         (Error
-            ( sdecl.ptype_loc,
-              Invalid_attribute
-                "@notUndefined can only be used on abstract types" )));
+  Ast_untagged_variants.check_runtime_annotation ~loc:sdecl.ptype_loc
+    ~is_abstract_or_abbreviation:(sdecl.ptype_kind = Ptype_abstract)
+    sdecl.ptype_attributes;
 
   (* Bind type parameters *)
   reset_type_variables ();
@@ -403,21 +421,9 @@ let transl_declaration ~type_record_as_object env sdecl id =
   in
   let raw_status = get_representation_from_attributes sdecl in
 
-  let check_untagged_variant () =
-    match sdecl.ptype_kind with
-    | Ptype_variant cds ->
-      Ext_list.for_all cds (function
-        | {pcd_args = Pcstr_tuple ([] | [_])} ->
-          (* at most one payload allowed for untagged  variants *)
-          true
-        | {pcd_args = Pcstr_tuple (_ :: _ :: _); pcd_name = {txt = name}} ->
-          Ast_untagged_variants.report_constructor_more_than_one_arg
-            ~loc:sdecl.ptype_loc ~name
-        | {pcd_args = Pcstr_record _} -> true)
-    | _ -> false
-  in
-
-  (if raw_status = Unboxed && not (check_untagged_variant ()) then
+  (* An untagged variant's constructors are checked when its layout is
+     computed *)
+  (if raw_status = Unboxed then
      match sdecl.ptype_kind with
      | Ptype_abstract ->
        raise (Error (sdecl.ptype_loc, Bad_unboxed_attribute "it is abstract"))
@@ -472,10 +478,31 @@ let transl_declaration ~type_record_as_object env sdecl id =
             raise (Error (sdecl.ptype_loc, Duplicate_constructor name));
           all_constrs := String_set.add name !all_constrs)
         scstrs;
+      (* [@unboxed] applies to the whole variant, so a constructor cannot have
+         its own *)
+      List.iter
+        (fun {pcd_name = {txt = constructor}; pcd_args; pcd_attributes} ->
+          match
+            Ext_list.find_first pcd_attributes (fun ({txt}, _) ->
+                txt = Ast_untagged_variants.untagged)
+          with
+          | Some ({loc}, _) ->
+            raise
+              (Ast_untagged_variants.Error
+                 ( loc,
+                   UnboxedOnConstructor
+                     {
+                       constructor;
+                       single_field_record =
+                         (match pcd_args with
+                         | Pcstr_record [_] -> true
+                         | Pcstr_record _ | Pcstr_tuple _ -> false);
+                     } ))
+          | None -> ())
+        scstrs;
       let copy_tag_attr_from_decl attr =
         let tag_attrs =
-          Ext_list.filter sdecl.ptype_attributes (fun ({txt}, _) ->
-              txt = "tag" || txt = Ast_untagged_variants.untagged)
+          Ext_list.filter sdecl.ptype_attributes (fun ({txt}, _) -> txt = "tag")
         in
         if tag_attrs = [] then attr else tag_attrs @ attr
       in
@@ -712,6 +739,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
       type_attributes = sdecl.ptype_attributes;
       type_immediate = false;
       type_representation = representation;
+      type_shape = Unstated;
       type_inlined_types = [];
     }
   in
@@ -1334,7 +1362,7 @@ let compute_immediacy env tdecl =
   | Type_variant ([{cd_args = Cstr_record [{ld_type = arg; _}]; _}], _), _
   | Type_record ([{ld_type = arg; _}], _), _
     when tdecl.type_representation = Unboxed -> (
-    match get_unboxed_type_representation env arg with
+    match Ctype.get_unboxed_type_representation env arg with
     | Some argrepr -> not (Ctype.maybe_pointer_type env argrepr)
     | None -> false)
   | Type_variant ((_ :: _ as cstrs), _), _ ->
@@ -1540,6 +1568,9 @@ let transl_type_decl env rec_flag sdecl_list =
   current_slot := None;
   (* Check for duplicates *)
   check_duplicates sdecl_list;
+  (* What each declaration states about its values at run time, resolved in
+     the environment it is declared in *)
+  let decls = Variant_layout.resolve_shapes ~env decls in
   (* Build the final env. *)
   let newenv =
     List.fold_right
@@ -1609,6 +1640,10 @@ let transl_type_decl env rec_flag sdecl_list =
         | Type_abstract | Type_record _ | Type_open -> (id, decl))
       decls
   in
+  List.iter2
+    (fun sdecl (_, decl) ->
+      check_manifest_annotation ~loc:sdecl.ptype_loc ~env:newenv decl)
+    sdecl_list decls;
   List.iter2 (check_constraints ~type_record_as_object newenv) sdecl_list decls;
   (* Name recursion *)
   let decls =
@@ -2007,6 +2042,7 @@ let transl_with_constraint env id row_path orig_decl sdecl =
       type_attributes = sdecl.ptype_attributes;
       type_immediate = false;
       type_representation;
+      type_shape = Unstated;
       type_inlined_types = [];
     }
   in
@@ -2016,6 +2052,10 @@ let transl_with_constraint env id row_path orig_decl sdecl =
   (match Ctype.closed_type_decl decl with
   | None -> ()
   | Some ty -> raise (Error (sdecl.ptype_loc, Unbound_type_var (ty, decl))));
+  let decl =
+    {decl with type_shape = Variant_layout.declaration_shape ~env decl}
+  in
+  check_manifest_annotation ~loc:sdecl.ptype_loc ~env decl;
   let decl = name_recursion sdecl id decl in
   let type_variance =
     compute_variance_decl env true decl
@@ -2058,6 +2098,7 @@ let abstract_type_decl arity =
       type_attributes = [];
       type_immediate = false;
       type_representation = Boxed;
+      type_shape = Unstated;
       type_inlined_types = [];
     }
   in
@@ -2148,7 +2189,6 @@ let report_error ppf = function
        Remove the record field or change it to an object field (e.g. \"%s\": \
        ...).@]"
       field_name
-  | Invalid_attribute msg -> fprintf ppf "%s" msg
   | Duplicate_label (s, Some record_name) ->
     fprintf ppf
       "The field @{<info>%s@} is defined several times in the record \

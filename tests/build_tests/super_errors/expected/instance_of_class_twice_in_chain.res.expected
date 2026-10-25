@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/instance_of_class_twice_in_chain.res[0m:[2m3:23-42[0m
+
+  1 [2m│[0m @instanceOf("Animal") type animal
+  2 [2m│[0m @instanceOf("Dog") type dog = private animal
+  [1;31m3[0m [2m│[0m @instanceOf("Animal") [1;31mtype t = private dog[0m
+  4 [2m│[0m 
+
+  Animal appears twice in this chain of abbreviations, so it would be its own superclass.

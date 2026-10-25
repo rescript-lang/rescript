@@ -14,6 +14,7 @@ import {
   atomDiff,
   BELOW,
   BLOCK,
+  byline,
   cellsOf,
   columnWidths,
   dedent,
@@ -35,6 +36,13 @@ import {
 
 /** @import { CommitRecord, Group, Section, FormEntry } from "./recordRender.js" */
 
+/**
+ * A changelog fragment the pull request adds: its category, the category's
+ * heading as the changelog has it (`#### :boom: Breaking Change`), and its
+ * Markdown bullets.
+ * @typedef {{ category: string, heading: string, text: string }} ChangelogEntry
+ */
+
 /** The characters a comment holds at most, with room for the action's tag. */
 export const BUDGET = 60000;
 
@@ -50,6 +58,16 @@ export const BUDGET = 60000;
  */
 const spans = s =>
   s.split(/(`[^`]+`|(?<![\w@`])@{1,2}\w[\w.]*(?:\([^()`\s]*\))?)/);
+
+/**
+ * Markdown kept as written, but for an `@name` outside backticks, drawn as
+ * code so that it notifies no one.
+ * @param {string} s
+ */
+export const unmentioned = s =>
+  spans(s)
+    .map((part, i) => (i % 2 && !part.startsWith("`") ? `\`${part}\`` : part))
+    .join("");
 
 /**
  * Prose as Markdown: code spans kept, attributes drawn as code, the
@@ -386,20 +404,26 @@ function section(s, parts, full) {
   return out.join("\n\n");
 }
 
+/** The sign before a commit's subject that marks what the last push did. */
+const SIGNS = { new: "✨", edited: "✏️" };
+
 /**
  * A commit as a collapsible block: its subject, identity and message drawn;
- * without `full`, its forms are left to the page.
+ * without `full`, its forms are left to the page. A `change` (`new` or
+ * `edited`), what the last push did to it, puts a sign before the subject
+ * and the word in the identity line.
  * @param {CommitRecord} r
  * @param {boolean} full
+ * @param {string} [change]
  */
-export function commitMarkdown(r, full) {
+export function commitMarkdown(r, full, change = "") {
   const pr = /\(#(\d+)\)\s*$/.exec(r.subject)?.[1] ?? "";
   const subject = r.subject.replace(/\s*\(#\d+\)\s*$/, "");
   const joined = (/** @type {Section} */ s) =>
     [...s.text, ...s.block.map(l => l.trim())].join(" ").trim();
   const out = [
-    `<details open><summary><b>${inlineHtml(subject)}</b></summary>`,
-    `<sub>${esc(r.sha)} · ${inline(r.author)}${r.coauthors.length ? ` with ${inline(r.coauthors.join(", "))}` : ""}${r.date ? ` · ${esc(r.date)}` : ""}${pr ? ` · #${pr}` : ""}</sub>`,
+    `<details open><summary>${change ? `${SIGNS[/** @type {keyof typeof SIGNS} */ (change)] ?? ""} ` : ""}<b>${inlineHtml(subject)}</b></summary>`,
+    `<sub>${esc(r.sha)} · ${byline(r, inline, (login, url) => `[${login}](${url})`)}${r.date ? ` · ${esc(r.date)}` : ""}${pr ? ` · #${pr}` : ""}${change ? ` · ${esc(change)}` : ""}</sub>`,
     ...sectionGroups(r.sections.filter(s => !BELOW.has(s.name))).map(g =>
       section(g.section, g.parts, full),
     ),
@@ -419,29 +443,87 @@ export function commitMarkdown(r, full) {
 }
 
 /**
- * The comment: a heading linking the page, then each commit. Past the
- * budget, the commits with the most characters are drawn without their
- * forms, and if that is not enough, the last commits are left to the page.
- * With `total`, the commits are the new ones a push added to a pull request
- * of `total` commits.
+ * The changelog entries grouped under their categories' headings, as the
+ * changelog groups them (the entries come in its order), in at most `room`
+ * characters: the comment shortens commits to fit its budget but not the
+ * changelog, so entries past the room are counted, not drawn.
+ * @param {ChangelogEntry[]} changelog
+ * @param {number} room
+ */
+function changelogList(changelog, room) {
+  if (!changelog.length) return "No changelog entry.";
+  const drawn = [];
+  let size = 0;
+  let heading = "";
+  let count = 0;
+  for (const e of changelog) {
+    const lines = `${e.heading === heading ? "" : `${e.heading}\n\n`}${unmentioned(e.text)}`;
+    size += lines.length + 2;
+    if (size > room) break;
+    drawn.push(e.heading === heading || !count ? lines : `\n${lines}`);
+    heading = e.heading;
+    count++;
+  }
+  const left = changelog.length - count;
+  if (left)
+    drawn.push(
+      `\n<sub>${left}${count ? " more" : ""} changelog entr${left === 1 ? "y" : "ies"} under \`changes/\`.</sub>`,
+    );
+  return drawn.join("\n");
+}
+
+/**
+ * The comment: a heading linking the page (`url`), in its title and as "Full
+ * page", then each commit. Past the budget, the commits with the most
+ * characters are drawn without their forms, and if that is not enough, the
+ * last commits are left to the page. The commits the last push added or
+ * edited (`changes`) are marked.
+ *
+ * The changelog entries the pull request adds (`changelog`, grouped under
+ * the changelog's category headings) describe it as a whole, as its squash
+ * commit will; a commit's `Breaking:` sections describe that commit. They
+ * come first, under their own heading, which also notes a pull request
+ * whose commits break something while no entry is a breaking change, or
+ * the other way round.
  * @param {Group[]} groups
- * @param {{ url?: string, budget?: number, total?: number }} [options]
+ * @param {{ url?: string, budget?: number, changes?: Map<string, string>, changelog?: ChangelogEntry[] }} [options]
  */
 export function commentMarkdown(
   groups,
-  { url = "", budget = BUDGET, total } = {},
+  { url = "", budget = BUDGET, changes = new Map(), changelog } = {},
 ) {
   const records = groups.flatMap(g => g.records);
   const n = records.length;
-  const head = `### Semantic Diff\n\n${n}${total === undefined ? "" : " new"} commit${n === 1 ? "" : "s"}${total === undefined || total === n ? "" : ` (${total} total)`}${url ? ` · [Full page](${url})` : ""}`;
-  const drawn = records.map(r => commitMarkdown(r, true));
+  const breakingCommits = records.filter(r =>
+    r.sections.some(s => s.name === "Breaking"),
+  ).length;
+  const breakingEntry = changelog?.some(e => e.category === "breaking");
+  const head = [
+    changelog && "### Changelog",
+    changelog && changelogList(changelog, budget / 4),
+    changelog &&
+      breakingCommits &&
+      !breakingEntry &&
+      `<sub>:boom: ${breakingCommits === 1 ? "A commit says" : `${breakingCommits} commits say`} what it breaks (\`Breaking:\`), but no changelog entry is a breaking change.</sub>`,
+    breakingEntry &&
+      !breakingCommits &&
+      "<sub>:boom: A changelog entry is a breaking change, but no commit says what it breaks (`Breaking:`).</sub>",
+    `### ${url ? `[Semantic Diff](${url})` : "Semantic Diff"}`,
+    [`${n} commit${n === 1 ? "" : "s"}`, url && `[Full page](${url})`]
+      .filter(Boolean)
+      .join(" · "),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  const change = (/** @type {CommitRecord} */ r) => changes.get(r.sha) ?? "";
+  const drawn = records.map(r => commitMarkdown(r, true, change(r)));
   const size = () => drawn.reduce((t, d) => t + d.length + 2, head.length);
   const order = drawn
     .map((d, k) => ({ k, length: d.length }))
     .sort((x, y) => y.length - x.length);
   for (const { k } of order) {
     if (size() <= budget) break;
-    drawn[k] = commitMarkdown(records[k], false);
+    drawn[k] = commitMarkdown(records[k], false, change(records[k]));
   }
   let left = 0;
   while (drawn.length && size() > budget) {

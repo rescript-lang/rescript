@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/continue_out_of_finally.res[0m:[2m8:7-14[0m
+
+   6 [2m┆[0m   | _ => ()
+   7 [2m┆[0m   } finally {
+   [1;31m8[0m [2m┆[0m     [1;31mcontinue[0m
+   9 [2m┆[0m   }
+  10 [2m┆[0m }
+
+  `continue` cannot leave a `finally` block. Only a loop inside the block can be continued.

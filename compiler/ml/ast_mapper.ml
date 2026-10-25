@@ -347,7 +347,10 @@ module E = struct
         (List.map (map_snd (sub.expr sub)) l)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
-    | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
+    | Pexp_try (e, pel, finally) ->
+      try_ ~loc ~attrs
+        ?finally:(map_opt (sub.expr sub) finally)
+        (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
     | Pexp_construct (lid, {txt = args; loc = args_loc}) ->
       construct ~loc ~attrs (map_loc sub lid)

@@ -1,6 +1,7 @@
 val path_of_parts : string -> string list -> string
 val is_directory : string -> bool
 val ensure_dir : string -> unit
+val open_for_reading : string -> Unix.file_descr
 val read_file : string -> string
 val is_regular_file : string -> bool
 val digest_file : string -> Digest.t

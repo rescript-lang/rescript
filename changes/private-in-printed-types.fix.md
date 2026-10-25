@@ -1,0 +1,1 @@
+- Print `private` for abbreviations and variants in type mismatch errors and other printed type declarations.

@@ -3,7 +3,7 @@
 /* Commit records, parsed from a commit message and drawn as HTML. The
  * caller (commitRecords.js) reads each commit's identity and message from
  * git. The
- * format is the `records` skill's (.claude/skills/records/SKILL.md): a
+ * format is the `records` skill's (.agents/skills/records/SKILL.md): a
  * subject, a `Why:` section, object blocks such as
  * `AST modified (raw extensions):`, each followed by an optional `Example:`
  * program and its forms as `Before (<form>):` and `After (<form>):` blocks,
@@ -66,7 +66,9 @@ export const PART = /^(?:Example|(Before|After) \(([a-z]+)\))$/;
 
 /**
  * @typedef {{ name: string, text: string[], block: string[] }} Section
- * @typedef {{ sha: string, author: string, date: string, message: string }} CommitInfo
+ * @typedef {{
+ *   sha: string, author: string, login?: string, date: string, message: string
+ * }} CommitInfo
  * @typedef {CommitInfo & {
  *   subject: string, sections: Section[], coauthors: string[]
  * }} CommitRecord
@@ -167,8 +169,15 @@ function parseMessage(text) {
 }
 
 /**
+ * AI assistants by the email their `Co-Authored-By:` trailers give, and the
+ * short name drawn for them: the name in the trailer changes with the model
+ * ("Claude Opus 5.5"), the email does not.
+ */
+const ASSISTANTS = new Map([["noreply@anthropic.com", "Claude"]]);
+
+/**
  * A commit's record: its identity and its message, parsed; the co-authors
- * are the names its `Co-Authored-By:` trailers give.
+ * are the names its `Co-Authored-By:` trailers give, an assistant's short.
  * @param {CommitInfo} commit
  * @returns {CommitRecord}
  */
@@ -176,9 +185,30 @@ export function parseRecord(commit) {
   const { subject, sections, trailers } = parseMessage(commit.message);
   const coauthors = trailers
     .filter(l => /^Co-Authored-By:/i.test(l))
-    .map(l => l.replace(/^Co-Authored-By:\s*/i, "").replace(/\s*<[^>]*>/, ""));
+    .map(l => {
+      const [, name, email = ""] =
+        /^Co-Authored-By:\s*(.*?)\s*(?:<([^>]*)>)?\s*$/i.exec(l) ?? [];
+      return ASSISTANTS.get(email.toLowerCase()) ?? name;
+    });
   return { ...commit, subject, sections, coauthors: [...new Set(coauthors)] };
 }
+
+/**
+ * Who made a commit, as `A Person + Claude`: its author, by the GitHub login
+ * when known, and its co-authors, each name drawn by `name` and the login
+ * as a link to the profile by `profile` (a link, not an `@` mention, which
+ * would notify the user).
+ * @param {CommitRecord} r
+ * @param {(name: string) => string} name
+ * @param {(login: string, url: string) => string} profile
+ */
+export const byline = (r, name, profile) =>
+  [
+    r.login && /^[A-Za-z0-9-]+$/.test(r.login)
+      ? profile(r.login, `https://github.com/${r.login}`)
+      : name(r.author),
+    ...r.coauthors.map(name),
+  ].join(" + ");
 
 // ---------------------------------------------------------------------------
 // Code, highlighted by token
@@ -1513,7 +1543,7 @@ function card(r) {
     [...s.text, ...s.block.map(l => l.trim())].join(" ").trim();
   const out = [
     `<article class="card${breaking.length ? " breaking" : ""}" id="c-${esc(r.sha)}">`,
-    `<header><div class="meta"><code>${esc(r.sha)}</code> · ${esc(r.author)}${r.coauthors.length ? ` with ${esc(r.coauthors.join(", "))}` : ""}${r.date ? ` · ${esc(r.date)}` : ""}${
+    `<header><div class="meta"><code>${esc(r.sha)}</code> · ${byline(r, esc, (login, url) => `<a href="${url}">${login}</a>`)}${r.date ? ` · ${esc(r.date)}` : ""}${
       pr ? ` · <a href="${REPO_URL}/pull/${pr}">#${pr}</a>` : ""
     }</div><h3>${inline(subject)}</h3></header>`,
   ];

@@ -1,0 +1,1 @@
+- Fix untagged variant switches with a default arm matching class instances in the object case and literals in a payload case of their kind.
