@@ -134,12 +134,6 @@ let rec no_side_effects (lam : Lambda.t) : bool =
   | Lfor _ -> false
   | Lfor_of _ | Lfor_await_of _ -> false
   | Lassign _ -> false (* actually it depends ... *)
-  | Lapply
-      {
-        ap_func = Lprim {primitive = Pfield (_, Fld_module {name = "from_fun"})};
-        ap_args = [arg];
-      } ->
-    no_side_effects arg
   | Lapply _ -> false
 (* we need purity analysis .. *)
 

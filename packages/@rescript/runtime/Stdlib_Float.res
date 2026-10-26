@@ -18,44 +18,14 @@ external compare: (float, float) => Stdlib_Ordering.t = "%compare"
 @val external parseFloat: 'a => float = "parseFloat"
 // parseInt's return type is a float because it can be NaN
 @val external parseInt: ('a, ~radix: int=?) => float = "parseInt"
-@deprecated({
-  reason: "Use `parseInt` instead",
-  migrate: Float.parseInt(),
-})
-@val
-external parseIntWithRadix: ('a, ~radix: int) => float = "parseInt"
 
 @send external toExponential: (float, ~digits: int=?) => string = "toExponential"
-@deprecated({
-  reason: "Use `toExponential` instead",
-  migrate: Float.toExponential(),
-})
-@send
-external toExponentialWithPrecision: (float, ~digits: int) => string = "toExponential"
 
 @send external toFixed: (float, ~digits: int=?) => string = "toFixed"
-@deprecated({
-  reason: "Use `toFixed` instead",
-  migrate: Float.toFixed(),
-})
-@send
-external toFixedWithPrecision: (float, ~digits: int) => string = "toFixed"
 
 @send external toPrecision: (float, ~digits: int=?) => string = "toPrecision"
-@deprecated({
-  reason: "Use `toPrecision` instead",
-  migrate: Float.toPrecision(),
-})
-@send
-external toPrecisionWithPrecision: (float, ~digits: int) => string = "toPrecision"
 
 @send external toString: (float, ~radix: int=?) => string = "toString"
-@deprecated({
-  reason: "Use `toString` instead",
-  migrate: Float.toString(),
-})
-@send
-external toStringWithRadix: (float, ~radix: int) => string = "toString"
 @send external toLocaleString: float => string = "toLocaleString"
 
 let fromString: string => option<float> = %raw(`str => {

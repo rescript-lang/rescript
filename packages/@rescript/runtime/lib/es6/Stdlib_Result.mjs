@@ -395,21 +395,12 @@ async function flatMapErrorAsync(res, f) {
   }
 }
 
-let getExn = getOrThrow;
-
-let mapWithDefault = mapOr;
-
-let getWithDefault = getOr;
-
 export {
-  getExn,
   getOrThrow,
   mapOr,
-  mapWithDefault,
   map,
   flatMap,
   getOr,
-  getWithDefault,
   isOk,
   isError,
   equal,

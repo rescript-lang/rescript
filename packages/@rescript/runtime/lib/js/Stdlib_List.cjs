@@ -214,51 +214,6 @@ function copyAuxWitFilterMap(f, _cellX, _prec) {
   };
 }
 
-function removeAssocAuxWithMap(_cellX, x, _prec, f) {
-  while (true) {
-    let prec = _prec;
-    let cellX = _cellX;
-    if (cellX === 0) {
-      return false;
-    }
-    let t = cellX.tl;
-    let h = cellX.hd;
-    if (f(h[0], x)) {
-      prec.tl = t;
-      return true;
-    }
-    let next = {hd: h, tl: /* [] */0};
-    prec.tl = next;
-    _prec = next;
-    _cellX = t;
-    continue;
-  };
-}
-
-function setAssocAuxWithMap(_cellX, x, k, _prec, eq) {
-  while (true) {
-    let prec = _prec;
-    let cellX = _cellX;
-    if (cellX === 0) {
-      return false;
-    }
-    let t = cellX.tl;
-    let h = cellX.hd;
-    if (eq(h[0], x)) {
-      prec.tl = {hd: [
-        x,
-        k
-      ], tl: t};
-      return true;
-    }
-    let next = {hd: h, tl: /* [] */0};
-    prec.tl = next;
-    _prec = next;
-    _cellX = t;
-    continue;
-  };
-}
-
 function copyAuxWithMap(_cellX, _prec, f) {
   while (true) {
     let prec = _prec;
@@ -933,20 +888,6 @@ function some2(_l1, _l2, p) {
   };
 }
 
-function has(_xs, x, eq) {
-  while (true) {
-    let xs = _xs;
-    if (xs === 0) {
-      return false;
-    }
-    if (eq(xs.hd, x)) {
-      return true;
-    }
-    _xs = xs.tl;
-    continue;
-  };
-}
-
 function includes(_xs, x) {
   while (true) {
     let xs = _xs;
@@ -959,80 +900,6 @@ function includes(_xs, x) {
     _xs = xs.tl;
     continue;
   };
-}
-
-function getAssoc(_xs, x, eq) {
-  while (true) {
-    let xs = _xs;
-    if (xs === 0) {
-      return;
-    }
-    let match = xs.hd;
-    if (eq(match[0], x)) {
-      return Primitive_option.some(match[1]);
-    }
-    _xs = xs.tl;
-    continue;
-  };
-}
-
-function hasAssoc(_xs, x, eq) {
-  while (true) {
-    let xs = _xs;
-    if (xs === 0) {
-      return false;
-    }
-    if (eq(xs.hd[0], x)) {
-      return true;
-    }
-    _xs = xs.tl;
-    continue;
-  };
-}
-
-function removeAssoc(xs, x, eq) {
-  if (xs === 0) {
-    return /* [] */0;
-  }
-  let l = xs.tl;
-  let pair = xs.hd;
-  if (eq(pair[0], x)) {
-    return l;
-  }
-  let cell = {hd: pair, tl: /* [] */0};
-  let removed = removeAssocAuxWithMap(l, x, cell, eq);
-  if (removed) {
-    return cell;
-  } else {
-    return xs;
-  }
-}
-
-function setAssoc(xs, x, k, eq) {
-  if (xs === 0) {
-    return {hd: [
-      x,
-      k
-    ], tl: /* [] */0};
-  }
-  let l = xs.tl;
-  let pair = xs.hd;
-  if (eq(pair[0], x)) {
-    return {hd: [
-      x,
-      k
-    ], tl: l};
-  }
-  let cell = {hd: pair, tl: /* [] */0};
-  let replaced = setAssocAuxWithMap(l, x, k, cell, eq);
-  if (replaced) {
-    return cell;
-  } else {
-    return {hd: [
-      x,
-      k
-    ], tl: xs};
-  }
 }
 
 function sort(xs, cmp) {
@@ -1173,30 +1040,18 @@ function zip(l1, l2) {
 
 let size = length;
 
-let headExn = headOrThrow;
-
-let tailExn = tailOrThrow;
-
-let getExn = getOrThrow;
-
-let toShuffled = shuffle;
-
 exports.length = length;
 exports.size = size;
 exports.head = head;
-exports.headExn = headExn;
 exports.headOrThrow = headOrThrow;
 exports.tail = tail;
-exports.tailExn = tailExn;
 exports.tailOrThrow = tailOrThrow;
 exports.add = add;
 exports.get = get;
-exports.getExn = getExn;
 exports.getOrThrow = getOrThrow;
 exports.make = make;
 exports.fromInitializer = fromInitializer;
 exports.shuffle = shuffle;
-exports.toShuffled = toShuffled;
 exports.drop = drop;
 exports.take = take;
 exports.splitAt = splitAt;
@@ -1228,7 +1083,6 @@ exports.some2 = some2;
 exports.compareLength = compareLength;
 exports.compare = compare;
 exports.equal = equal;
-exports.has = has;
 exports.includes = includes;
 exports.find = find;
 exports.filter = filter;
@@ -1236,9 +1090,5 @@ exports.filterWithIndex = filterWithIndex;
 exports.filterMap = filterMap;
 exports.partition = partition;
 exports.unzip = unzip;
-exports.getAssoc = getAssoc;
-exports.hasAssoc = hasAssoc;
-exports.removeAssoc = removeAssoc;
-exports.setAssoc = setAssoc;
 exports.sort = sort;
 /* No side effect */

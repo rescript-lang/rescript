@@ -66,24 +66,15 @@ function flatMap(value, f) {
   }
 }
 
-let getWithDefault = getOr;
-
-let getExn = getOrThrow;
-
-let mapWithDefault = mapOr;
-
 export {
   equal,
   compare,
   fromOption,
   getOr,
-  getWithDefault,
-  getExn,
   getOrThrow,
   forEach,
   map,
   mapOr,
-  mapWithDefault,
   flatMap,
 }
 /* No side effect */

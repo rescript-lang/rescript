@@ -1,43 +1,6 @@
 'use strict';
 
 
-function classify(value) {
-  let match = Object.prototype.toString.call(value);
-  switch (match) {
-    case "[object Array]" :
-      return {
-        TAG: "Array",
-        _0: value
-      };
-    case "[object Boolean]" :
-      return {
-        TAG: "Bool",
-        _0: value
-      };
-    case "[object Null]" :
-      return "Null";
-    case "[object Number]" :
-      return {
-        TAG: "Number",
-        _0: value
-      };
-    case "[object String]" :
-      return {
-        TAG: "String",
-        _0: value
-      };
-    default:
-      return {
-        TAG: "Object",
-        _0: value
-      };
-  }
-}
-
-let Classify = {
-  classify: classify
-};
-
 let Encode = {};
 
 function bool(json) {
@@ -85,7 +48,6 @@ let Decode = {
   array: array
 };
 
-exports.Classify = Classify;
 exports.Encode = Encode;
 exports.Decode = Decode;
 /* No side effect */

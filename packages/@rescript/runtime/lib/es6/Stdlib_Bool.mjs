@@ -35,12 +35,9 @@ function fromStringOrThrow(param) {
   }
 }
 
-let fromStringExn = fromStringOrThrow;
-
 export {
   toString,
   fromString,
   fromStringOrThrow,
-  fromStringExn,
 }
 /* No side effect */

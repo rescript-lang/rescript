@@ -130,42 +130,6 @@ Nullable.null->Nullable.toOption->greet // "Greetings Anonymous"
 */
 let getOr: (t<'a>, 'a) => 'a
 
-@deprecated({
-  reason: "Use getOr instead",
-  migrate: Nullable.getOr(),
-})
-let getWithDefault: (t<'a>, 'a) => 'a
-
-/**
-`getExn(value)` throws an exception if `null` or `undefined`, otherwise returns the value.
-
-```rescript
-switch Nullable.getExn(%raw("'Hello'")) {
-| exception Invalid_argument(_) => assert(false)
-| value => value == "Hello"
-}
-
-switch Nullable.getExn(%raw("null")) {
-| exception Invalid_argument(_) => assert(true)
-| _ => assert(false)
-}
-
-switch Nullable.getExn(%raw("undefined")) {
-| exception Invalid_argument(_) => assert(true)
-| _ => assert(false)
-}
-```
-
-## Exceptions
-
-- Throws `Invalid_argument` if `value` is `null` or `undefined`
-*/
-@deprecated({
-  reason: "Use `getOrThrow` instead",
-  migrate: Nullable.getOrThrow(),
-})
-let getExn: t<'a> => 'a
-
 /**
 `getOrThrow(value)` throws an exception if `null` or `undefined`, otherwise returns the value.
 
@@ -250,12 +214,6 @@ noneValue->Nullable.mapOr(0, x => x + 5) // 0
 ```
 */
 let mapOr: (t<'a>, 'b, 'a => 'b) => 'b
-
-@deprecated({
-  reason: "Use mapOr instead",
-  migrate: Nullable.mapOr(),
-})
-let mapWithDefault: (t<'a>, 'b, 'a => 'b) => 'b
 
 /**
 `flatMap(value, f)` returns `f(value)` if `value` is not `null` or `undefined`,

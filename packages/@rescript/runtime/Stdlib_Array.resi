@@ -172,45 +172,6 @@ nonEmptyArray->Array.isEmpty->assertEqual(false)
 let isEmpty: array<'a> => bool
 
 /**
-`isEmpty(array)` returns `true` if the array is empty (has length 0), `false` otherwise.
-
-## Examples
-
-```rescript
-let arr = [100, 101, 102, 103, 104]
-arr->Array.copyAllWithin(~target=2) == [100, 101, 100, 101, 102]
-arr == [100, 101, 100, 101, 102]
-```
-*/
-@deprecated({
-  reason: "Use `copyWithin` instead",
-  migrate: Array.copyWithin(~start=0),
-})
-@send external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
-
-/**
-`copyWithinToEnd(array, ~target, ~start)` copies starting at element `start` in the given array to the designated `target` position, returning the resulting array.
-
-Beware this will *mutate* the array.
-
-See [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.
-
-## Examples
-
-```rescript
-let arr = [100, 101, 102, 103, 104]
-arr->Array.copyWithinToEnd(~target=0, ~start=2) == [102, 103, 104, 103, 104]
-arr == [102, 103, 104, 103, 104]
-```
-*/
-@deprecated({
-  reason: "Use `copyWithin` instead",
-  migrate: Array.copyWithin(),
-})
-@send
-external copyWithinToEnd: (array<'a>, ~target: int, ~start: int) => array<'a> = "copyWithin"
-
-/**
 `copyWithin(array, ~target, ~start, ~end)` copies starting at element `start` in the given array up to but not including `end` to the designated `target` position, returning the resulting array.
 
 Beware this will *mutate* the array.
@@ -227,50 +188,6 @@ arr == [100, 102, 103, 104, 104, 105]
 */
 @send
 external copyWithin: (array<'a>, ~target: int, ~start: int, ~end: int=?) => array<'a> = "copyWithin"
-
-/**
-`fillAll(array, value)` fills the entire `array` with `value`.
-
-Beware this will *mutate* the array.
-
-See [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.
-
-## Examples
-
-```rescript
-let myArray = [1, 2, 3, 4]
-myArray->Array.fillAll(9)
-myArray == [9, 9, 9, 9]
-```
-*/
-@deprecated({
-  reason: "Use `fill` instead",
-  migrate: Array.fill(),
-})
-@send
-external fillAll: (array<'a>, 'a) => unit = "fill"
-
-/**
-`fillToEnd(array, value, ~start)` fills `array` with `value` from the `start` index.
-
-Beware this will *mutate* the array.
-
-See [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.
-
-## Examples
-
-```rescript
-let myArray = [1, 2, 3, 4]
-myArray->Array.fillToEnd(9, ~start=1)
-myArray == [1, 9, 9, 9]
-```
-*/
-@deprecated({
-  reason: "Use `fill` instead",
-  migrate: Array.fill(~start=%insert.labelledArgument("start")),
-})
-@send
-external fillToEnd: (array<'a>, 'a, ~start: int) => unit = "fill"
 
 /**
 `fill(array, value, ~start, ~end)` fills `array` with `value` from `start` to `end`.
@@ -661,12 +578,6 @@ See [`Array.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 ```
 */
 let indexOfOpt: (array<'a>, 'a) => option<int>
-@deprecated({
-  reason: "Use `indexOf` instead",
-  migrate: Array.indexOf(~from=%insert.unlabelledArgument(2)),
-})
-@send
-external indexOfFrom: (array<'a>, 'a, int) => int = "indexOf"
 
 /**
 `join(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Array items must be strings, to join number or other arrays, use `joinUnsafe`. Under the hood this will run JavaScript's `toString` on all the array items.
@@ -683,22 +594,6 @@ See [Array.join](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 external join: (array<string>, string) => string = "join"
 
 /**
-`joinWith(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Array items must be strings, to join number or other arrays, use `joinWithUnsafe`. Under the hood this will run JavaScript's `toString` on all the array items.
-
-## Examples
-
-```rescript
-["One", "Two", "Three"]->Array.joinWith(" -- ") == "One -- Two -- Three"
-```
-*/
-@deprecated({
-  reason: "Use `join` instead",
-  migrate: Array.join(),
-})
-@send
-external joinWith: (array<string>, string) => string = "join"
-
-/**
 `joinUnsafe(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Under the hood this will run JavaScript's `toString` on all the array items.
 
 See [Array.join](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join)
@@ -712,21 +607,6 @@ See [Array.join](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 @send
 external joinUnsafe: (array<'a>, string) => string = "join"
 
-/**
-`joinWithUnsafe(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Under the hood this will run JavaScript's `toString` on all the array items.
-
-## Examples
-
-```rescript
-[1, 2, 3]->Array.joinWithUnsafe(" -- ") == "1 -- 2 -- 3"
-```
-*/
-@deprecated({
-  reason: "Use `joinUnsafe` instead",
-  migrate: Array.joinUnsafe(),
-})
-@send
-external joinWithUnsafe: (array<'a>, string) => string = "join"
 /**
 `lastIndexOf(array, item, ~from)` returns the last index of the provided `item` in `array`, searching backwards from `from`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.
 
@@ -746,12 +626,6 @@ See [`Array.lastIndexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 */
 @send external lastIndexOf: (array<'a>, 'a, ~from: int=?) => int = "lastIndexOf"
 let lastIndexOfOpt: (array<'a>, 'a) => option<int>
-@deprecated({
-  reason: "Use `lastIndexOf` instead",
-  migrate: Array.lastIndexOf(~from=%insert.unlabelledArgument(2)),
-})
-@send
-external lastIndexOfFrom: (array<'a>, 'a, int) => int = "lastIndexOf"
 
 /**
 `slice(array, ~start, ~end)` creates a new array of items copied from `array` from `start` until (but not including) `end`.
@@ -769,23 +643,6 @@ See [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 @send
 external slice: (array<'a>, ~start: int=?, ~end: int=?) => array<'a> = "slice"
 
-/**
-`sliceToEnd(array, start)` creates a new array from `array`, with all items from `array` starting from `start`.
-
-See [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) on MDN.
-
-## Examples
-
-```rescript
-[1, 2, 3, 4]->Array.sliceToEnd(~start=1) == [2, 3, 4]
-```
-*/
-@deprecated({
-  reason: "Use `slice` instead",
-  migrate: Array.slice(),
-})
-@send
-external sliceToEnd: (array<'a>, ~start: int) => array<'a> = "slice"
 /**
 `copy(array)` makes a copy of the array with the items in it, but does not make copies of the items themselves.
 

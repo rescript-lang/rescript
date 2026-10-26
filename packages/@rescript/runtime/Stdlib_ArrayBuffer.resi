@@ -53,13 +53,6 @@ ArrayBuffer.byteLength(sliced) == 8
 */
 @send external slice: (t, ~start: int=?, ~end: int=?) => t = "slice"
 
-@deprecated({
-  reason: "Use `slice` instead.",
-  migrate: ArrayBuffer.slice(),
-})
-@send
-external sliceToEnd: (t, ~start: int) => t = "slice"
-
 /**
   `ignore(arrayBuffer)` ignores the provided arrayBuffer and returns unit.
 

@@ -22,12 +22,6 @@ let fromStringOrThrow = param =>
   | _ => throw(Invalid_argument(`Bool.fromStringOrThrow: value is neither "true" nor "false"`))
   }
 
-@deprecated({
-  reason: "Use `fromStringOrThrow` instead",
-  migrate: Bool.fromStringOrThrow(),
-})
-let fromStringExn = fromStringOrThrow
-
 external compare: (bool, bool) => Stdlib_Ordering.t = "%compare"
 
 external equal: (bool, bool) => bool = "%equal"

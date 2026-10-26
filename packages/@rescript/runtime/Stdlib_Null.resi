@@ -133,39 +133,6 @@ Null.null->Null.toOption->greet // "Greetings Anonymous"
 */
 let getOr: (t<'a>, 'a) => 'a
 
-@deprecated({
-  reason: "Use getOr instead",
-  migrate: Null.getOr(),
-})
-let getWithDefault: (t<'a>, 'a) => 'a
-
-/**
-`getExn(value)` throws an exception if `null`, otherwise returns the value.
-
-```rescript
-Null.getExn(Null.make(3)) == 3
-
-switch Null.getExn(%raw("'ReScript'")) {
-| exception Invalid_argument(_) => assert(false)
-| value => value == "ReScript"
-}
-
-switch Null.getExn(%raw("null")) {
-| exception Invalid_argument(_) => assert(true)
-| _ => assert(false)
-}
-```
-
-## Exceptions
-
-- Throws `Invalid_argument` if `value` is `null`
-*/
-@deprecated({
-  reason: "Use `getOrThrow` instead",
-  migrate: Null.getOrThrow(),
-})
-let getExn: t<'a> => 'a
-
 /**
 `getOrThrow(value)` throws an exception if `null`, otherwise returns the value.
 
@@ -246,12 +213,6 @@ noneValue->Null.mapOr(0, x => x + 5) // 0
 ```
 */
 let mapOr: (t<'a>, 'b, 'a => 'b) => 'b
-
-@deprecated({
-  reason: "Use mapOr instead",
-  migrate: Null.mapOr(),
-})
-let mapWithDefault: (t<'a>, 'b, 'a => 'b) => 'b
 
 /**
 `flatMap(value, f)` returns `f(value)` if `value` is not `null`, otherwise

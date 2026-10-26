@@ -2075,7 +2075,7 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
     if Debug.verbose () then print_endline "[complete_typed_value]--> Texn";
     [
       create
-        (["Exn"; "Error(error)"] |> ident)
+        (["JsExn(error)"] |> ident)
         ~kind:(Label "Catches errors from JavaScript errors.")
         ~docstring:
           [

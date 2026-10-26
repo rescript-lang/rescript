@@ -53,33 +53,6 @@ Option.forEach(None, x => Console.log(x)) // returns ()
 let forEach: (option<'a>, 'a => unit) => unit
 
 /**
-`getExn(opt, ~message=?)` returns `value` if `opt` is `Some(value)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.
-
-```rescript
-Option.getExn(Some(3)) == 3
-
-switch Option.getExn(None) {
-| exception _ => assert(true)
-| _ => assert(false)
-}
-
-switch Option.getExn(None, ~message="was None!") {
-| exception _ => assert(true) // Throws a JsError with the message "was None!"
-| _ => assert(false)
-}
-```
-
-## Exceptions
-
-- Throws an error if `opt` is `None`
-*/
-@deprecated({
-  reason: "Use `getOrThrow` instead",
-  migrate: Option.getOrThrow(),
-})
-let getExn: (option<'a>, ~message: string=?) => 'a
-
-/**
 `getOrThrow(opt, ~message=?)` returns `value` if `opt` is `Some(value)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.
 
 ```rescript
@@ -133,12 +106,6 @@ noneValue->Option.mapOr(0, x => x + 5) // 0
 */
 let mapOr: (option<'a>, 'b, 'a => 'b) => 'b
 
-@deprecated({
-  reason: "Use mapOr instead",
-  migrate: Option.mapOr(),
-})
-let mapWithDefault: (option<'a>, 'b, 'a => 'b) => 'b
-
 /**
 `map(opt, f)` returns `Some(f(value))` if `opt` is `Some(value)`, otherwise `None`.
 
@@ -187,12 +154,6 @@ None->greet // "Greetings Anonymous"
 ```
 */
 let getOr: (option<'a>, 'a) => 'a
-
-@deprecated({
-  reason: "Use getOr instead",
-  migrate: Option.getOr(),
-})
-let getWithDefault: (option<'a>, 'a) => 'a
 
 /**
 `orElse(opt1, opt2)` returns `opt2` if `opt1` is `None`, otherwise `opt1`.

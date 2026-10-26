@@ -127,28 +127,6 @@ TypedArray.toString(view) == "10,10,20"
 */
 @send external copyAllWithin: (t<'a>, ~target: int) => array<'a> = "copyWithin"
 /**
-`copyWithinToEnd(typedArray, ~target, ~start)` copies values from `start` through the end of the view into the range beginning at `target`.
-
-Beware this will *mutate* the typed array.
-
-See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.
-
-## Examples
-
-```rescript
-let view = (Int32Array.fromArray([1, 2, 3, 4]) :> TypedArray.t<int>)
-let _ = TypedArray.copyWithinToEnd(view, ~target=0, ~start=2)
-TypedArray.toString(view) == "3,4,3,4"
-```
-*/
-@deprecated({
-  reason: "Use `copyWithin` instead",
-  migrate: TypedArray.copyWithin(),
-})
-@send
-@send
-external copyWithinToEnd: (t<'a>, ~target: int, ~start: int) => array<'a> = "copyWithin"
-/**
 `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.
 
 Beware this will *mutate* the typed array.
@@ -182,18 +160,6 @@ TypedArray.toString(view) == "9,9,9"
 ```
 */
 @send external fillAll: (t<'a>, 'a) => t<'a> = "fill"
-/**
-`fillToEnd(typedArray, value, ~start)` fills from `start` through the end with `value`.
-
-Beware this will *mutate* the typed array.
-*/
-@deprecated({
-  reason: "Use `fill` instead",
-  migrate: TypedArray.fill(),
-})
-@send
-@send
-external fillToEnd: (t<'a>, 'a, ~start: int) => t<'a> = "fill"
 
 /**
 `fill(typedArray, value, ~start, ~end)` fills the half-open interval `[start, end)` with `value`.
@@ -335,15 +301,6 @@ See [`TypedArray.prototype.slice`](https://developer.mozilla.org/en-US/docs/Web/
 */
 @send external slice: (t<'a>, ~start: int, ~end: int=?) => t<'a> = "slice"
 /**
-`sliceToEnd(typedArray, ~start)` returns the elements from `start` through the end in a new typed array.
-*/
-@deprecated({
-  reason: "Use `slice` instead",
-  migrate: TypedArray.slice(),
-})
-@send
-external sliceToEnd: (t<'a>, ~start: int) => t<'a> = "slice"
-/**
 `copy(typedArray)` produces a shallow copy of the typed array.
 */
 @send external copy: t<'a> => t<'a> = "slice"
@@ -354,15 +311,6 @@ external sliceToEnd: (t<'a>, ~start: int) => t<'a> = "slice"
 See [`TypedArray.prototype.subarray`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/subarray) on MDN.
 */
 @send external subarray: (t<'a>, ~start: int, ~end: int=?) => t<'a> = "subarray"
-/**
-`subarrayToEnd(typedArray, ~start)` returns a new view from `start` to the end of the buffer.
-*/
-@deprecated({
-  reason: "Use `subarray` instead",
-  migrate: TypedArray.subarray(),
-})
-@send
-external subarrayToEnd: (t<'a>, ~start: int) => t<'a> = "subarray"
 
 /**
 `toString(typedArray)` returns a comma-separated string of the elements.

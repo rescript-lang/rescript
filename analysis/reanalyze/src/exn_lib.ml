@@ -61,29 +61,14 @@ let raises_lib_table : (Name.t, Exceptions.t) Hashtbl.t =
     [
       ("panic", [js_exn]);
       ("assertEqual", [js_exn]);
-      ("invalid_arg", [invalid_argument]);
-      ("failwith", [failure]);
       ("/", [division_by_zero]);
       ("mod", [division_by_zero]);
-      ("char_of_int", [invalid_argument]);
-      ("bool_of_string", [invalid_argument]);
-      ("int_of_string", [failure]);
-      ("float_of_string", [failure]);
     ]
   in
   let stdlib_big_int =
-    [
-      ("fromStringExn", [js_exn]);
-      ("fromStringOrThrow", [js_exn]);
-      ("fromFloatOrThrow", [js_exn]);
-    ]
+    [("fromStringOrThrow", [js_exn]); ("fromFloatOrThrow", [js_exn])]
   in
-  let stdlib_bool =
-    [
-      ("fromStringExn", [invalid_argument]);
-      ("fromStringOrThrow", [invalid_argument]);
-    ]
-  in
+  let stdlib_bool = [("fromStringOrThrow", [invalid_argument])] in
   let stdlib_js_error =
     [
       ("EvalError.throwWithMessage", [js_exn]);
@@ -97,42 +82,18 @@ let raises_lib_table : (Name.t, Exceptions.t) Hashtbl.t =
       ("throwWithMessage", [js_exn]);
     ]
   in
-  let stdlib_error =
-    [("raise", [js_exn]); ("panic", [js_exn]); ("throw", [js_exn])]
-  in
-  let stdlib_exn =
-    [
-      ("raiseError", [js_exn]);
-      ("raiseEvalError", [js_exn]);
-      ("raiseRangeError", [js_exn]);
-      ("raiseReferenceError", [js_exn]);
-      ("raiseSyntaxError", [js_exn]);
-      ("raiseTypeError", [js_exn]);
-      ("raiseUriError", [js_exn]);
-    ]
-  in
-  let stdlib_json =
-    [
-      ("parseExn", [js_exn]);
-      ("parseExnWithReviver", [js_exn]);
-      ("parseOrThrow", [js_exn]);
-      ("stringifyAny", [js_exn]);
-      ("stringifyAnyWithIndent", [js_exn]);
-      ("stringifyAnyWithReplacer", [js_exn]);
-      ("stringifyAnyWithReplacerAndIndent", [js_exn]);
-      ("stringifyAnyWithFilter", [js_exn]);
-      ("stringifyAnyWithFilterAndIndent", [js_exn]);
-    ]
-  in
+  let stdlib_json = [("parseOrThrow", [js_exn]); ("stringifyAny", [js_exn])] in
   let stdlib_list =
     [
-      ("headExn", [not_found]); ("tailExn", [not_found]); ("getExn", [not_found]);
+      ("headOrThrow", [not_found]);
+      ("tailOrThrow", [not_found]);
+      ("getOrThrow", [not_found]);
     ]
   in
-  let stdlib_null = [("getExn", [invalid_argument])] in
-  let stdlib_nullable = [("getExn", [invalid_argument])] in
-  let stdlib_option = [("getExn", [js_exn])] in
-  let stdlib_result = [("getExn", [not_found])] in
+  let stdlib_null = [("getOrThrow", [invalid_argument])] in
+  let stdlib_nullable = [("getOrThrow", [invalid_argument])] in
+  let stdlib_option = [("getOrThrow", [js_exn])] in
+  let stdlib_result = [("getOrThrow", [js_exn])] in
   let yojson_basic = [("from_string", [yojson_json_error])] in
   let yojson_basic_util =
     [
@@ -192,8 +153,6 @@ let raises_lib_table : (Name.t, Exceptions.t) Hashtbl.t =
     ("Belt_SetString", belt_set);
     ("BigInt", stdlib_big_int);
     ("Bool", stdlib_bool);
-    ("Error", stdlib_error);
-    ("Exn", stdlib_exn);
     ("JsError", stdlib_js_error);
     ("JSON", stdlib_json);
     ("Json_decode", bs_json);
@@ -212,10 +171,6 @@ let raises_lib_table : (Name.t, Exceptions.t) Hashtbl.t =
     ("Stdlib.BigInt", stdlib_big_int);
     ("Stdlib_Bool", stdlib_bool);
     ("Stdlib.Bool", stdlib_bool);
-    ("Stdlib_Error", stdlib_error);
-    ("Stdlib.Error", stdlib_error);
-    ("Stdlib_Exn", stdlib_exn);
-    ("Stdlib.Exn", stdlib_exn);
     ("Stdlib_JsError", stdlib_js_error);
     ("Stdlib.JsError", stdlib_js_error);
     ("Stdlib_JSON", stdlib_json);
