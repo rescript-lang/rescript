@@ -23,6 +23,7 @@
 - Deprecate `Stdlib_Error` and `Stdlib_Exn` modules in favor of `JsError/JsExn`. https://github.com/rescript-lang/rescript/pull/8404
 - Deprecate `List.has` in favor of `List.some`. https://github.com/rescript-lang/rescript/pull/8807
 - Deprecate `@deriving(abstract)` and `@deriving(jsConverter)`, which will be removed in v13. https://github.com/rescript-lang/rescript/pull/8808
+- Deprecate `@unboxed` on a variant constructor, which is an error in v13: write `@unboxed` on the type. https://github.com/rescript-lang/rescript/pull/9049
 
 # 12.3.1
 

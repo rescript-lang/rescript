@@ -591,8 +591,34 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
           in
           Some (tcstr, cstr)
       in
+      (* [@unboxed] on a constructor, as written, before the type's
+         attributes are copied to its constructors. v13 rejects it.
+         Constructors copied by a variant spread carry the source type's
+         attributes, already reported at the source. *)
+      let warn_unboxed_constructor scstr =
+        let from_spread =
+          Variant_type_spread.constructor_is_from_spread scstr.pcd_attributes
+        in
+        Ext_list.iter scstr.pcd_attributes (fun ({txt; loc}, _) ->
+            if (not from_spread) && txt = Ast_untagged_variants.untagged then
+              Location.deprecated loc
+                (if Ast_untagged_variants.has_untagged sdecl.ptype_attributes
+                 then
+                   Printf.sprintf
+                     "@unboxed on constructor %s is deprecated and will be an \
+                      error in v13. The type is already @unboxed, so remove it \
+                      from the constructor."
+                     scstr.pcd_name.txt
+                 else
+                   Printf.sprintf
+                     "@unboxed on constructor %s is deprecated and will be an \
+                      error in v13, where @unboxed applies to a whole variant: \
+                      write it on the type, as in `@unboxed type t = ...`."
+                     scstr.pcd_name.txt))
+      in
       let make_cstr scstr =
         Builtin_attributes.warning_scope scstr.pcd_attributes (fun () ->
+            warn_unboxed_constructor scstr;
             make_cstr scstr)
       in
       let tcstrs, cstrs = List.split (List.filter_map make_cstr scstrs) in
