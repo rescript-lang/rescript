@@ -108,6 +108,13 @@ printing changes. Other focused suites are `make test-gentype`,
 `make test-analysis`, `make test-tools`, `make test-rewatch` (OCaml build
 system), and `make test-rewatch-rust` (Rust build system).
 
+Root `make test*` suite targets and direct `node scripts/test.js` invocations
+use a per-checkout artifact lock (currently a macOS/Linux prototype). Let a
+waiting invocation wait; do not delete `.rescript-test.lock` or bypass the
+`_locked-*` targets. See [test concurrency](CONTRIBUTING.md#test-concurrency)
+for coverage and limitations. Separate worktrees need their own build outputs
+and dependencies to run independently.
+
 ### Testing Requirements
 
 #### When to Add Tests
