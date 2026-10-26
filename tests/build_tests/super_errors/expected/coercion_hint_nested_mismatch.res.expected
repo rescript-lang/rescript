@@ -12,7 +12,7 @@
   But this function argument is expecting: [1;33munit => Iterable.t<int>[0m
   
   The incompatible parts:
-    [1;31mGenerator.t<int, unit, unit>[0m [2m(defined as[0m [1;31mGenerator.t<int, unit, unit>[0m[2m)[0m vs
+    [1;31mGenerator.t<int, unit, unit>[0m vs
     [1;33mIterable.t<int>[0m [2m(defined as[0m [1;33miterable<int>[0m[2m)[0m
   
   Possible solutions: 

@@ -7,5 +7,5 @@
   [1;31m4[0m [2m│[0m let x = I8([1;31mUint8Array.fromArray([1])[0m)
   5 [2m│[0m 
 
-  This has type: [1;31mUint8Array.t[0m [2m(defined as[0m [1;31mUint8Array.t[0m[2m)[0m
-  But it's expected to have type: [1;33mInt8Array.t[0m [2m(defined as[0m [1;33mInt8Array.t[0m[2m)[0m
+  This has type: [1;31mUint8Array.t[0m
+  But it's expected to have type: [1;33mInt8Array.t[0m

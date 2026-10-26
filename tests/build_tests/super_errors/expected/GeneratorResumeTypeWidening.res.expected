@@ -7,9 +7,8 @@
     [2m│[0m [1;31munit, [#X | #Y]>)[0m
   3 [2m│[0m 
 
-  Type Generator.t<int, unit, [#X]> = Generator.t<int, unit, [#X]>
-  is not a subtype of
-    Generator.t<int, unit, [#X | #Y]> = Generator.t<int, unit, [#X | #Y]> 
+  Type Generator.t<int, unit, [#X]> is not a subtype of
+    Generator.t<int, unit, [#X | #Y]> 
   
   The second polymorphic variant is [1;33mclosed[0m and doesn't include the constructor: [1;31m#Y[0m.
   
