@@ -39,10 +39,28 @@ function logPointOrName(x) {
   console.log("payload");
 }
 
+function numberOrText(x) {
+  if (typeof x === "number") {
+    return 1;
+  } else {
+    return 2;
+  }
+}
+
+function letterOrNumber(x) {
+  if (x === "a") {
+    return 1;
+  } else {
+    return 2;
+  }
+}
+
 export {
   f,
   ff,
   dateOrObject,
   logPointOrName,
+  numberOrText,
+  letterOrNumber,
 }
 /* No side effect */

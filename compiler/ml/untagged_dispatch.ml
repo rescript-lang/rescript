@@ -208,7 +208,12 @@ let payload_part ~same ~block_cases ~null_guard ~fallback ~has_default arms =
           | Body tree -> tree
           | Falls_through _ -> Skip
         in
-        Switch_typeof (List.rev rest, default)
+        (* The cases falling through to that arm go to the default too *)
+        let rec without_fall_through = function
+          | (_, Falls_through _) :: rest -> without_fall_through rest
+          | rest -> rest
+        in
+        Switch_typeof (List.rev (without_fall_through rest), default)
       | _ -> Switch_typeof (primitive_clauses, Fallback))
     | _ :: _ -> Switch_typeof (primitive_clauses, chain entries))
 
