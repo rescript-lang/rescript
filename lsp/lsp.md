@@ -1,10 +1,12 @@
 > Very experimental, WIP!!
 
-This branch introduces a standalone ReScript LSP server
-(`rescript lsp` subcommand) built on top of the existing `analysis` library.
-It's a separate, OCaml-side exploration alongside the Rust/rewatch-based
-experiment in #8243, the two share the same goal (a LSP server for ReScript) but
-approach it from different ends of the toolchain.
+This branch introduces a ReScript LSP server built on top of the existing
+`analysis` library. It runs in-process through `rescript lsp --stdio`, using the
+new `rescript` CLI written in OCaml (`rewatch-ocaml`). There is no separate
+`rescript-language-server` executable. It's a separate, OCaml-side exploration
+alongside the Rust/rewatch-based experiment in #8243, the two share the same
+goal (a LSP server for ReScript) but approach it from different ends of the
+toolchain.
 
 ## Why rewriting the server in OCaml is a good fit
 
@@ -33,10 +35,10 @@ This is not only a theoretical compatibility concern. In
 [#8475](https://github.com/rescript-lang/rescript/issues/8475), adding typedtree
 constructors for `for...of` without changing the CMT magic number allowed a
 newer analysis binary to read incompatible ReScript 12 artifacts and
-segmentation fault. The same class of failure appeared after record-rest
-changes altered compiler data stored in CMT files. Bumping the CMT magic number
-makes these mismatches rejectable, but the project must still be rebuilt with
-the matching compiler.
+segmentation fault. The same class of failure appeared after record-rest changes
+altered compiler data stored in CMT files. Bumping the CMT magic number makes
+these mismatches rejectable, but the project must still be rebuilt with the
+matching compiler.
 
 Shipping the server in the same platform package as the compiler, and exposing
 it through `rescript lsp --stdio`, gives clients one project-local entrypoint.
@@ -46,25 +48,30 @@ language server from the same release. This has several practical benefits:
 - Editors do not need to install or select a separate language-server version.
 - Projects pinned to different ReScript versions get the corresponding server.
 - Compiler, analysis, and LSP changes can be released and upgraded atomically.
-- The native `rescript-language-server.exe` path remains a packaging detail.
+- The OCaml `rescript` executable links the server library directly, so no
+  separate language-server executable needs to be located or launched.
 
 Bundling does not make stale artifacts safe. Compiler changes that alter
 marshalled CMT data must still bump the magic number, and the server should turn
-version mismatches into an actionable request to rebuild. A separately
-versioned server becomes practical only if analysis moves to a stable,
-explicitly versioned artifact format or maintains decoders for multiple
-compiler-internal formats. Until then, promising one server binary that supports
-multiple compiler versions would hide a compatibility boundary that already
-exists.
+version mismatches into an actionable request to rebuild. A separately versioned
+server becomes practical only if analysis moves to a stable, explicitly
+versioned artifact format or maintains decoders for multiple compiler-internal
+formats. Until then, promising one server binary that supports multiple compiler
+versions would hide a compatibility boundary that already exists.
 
 ## What's here
 
-- New `lsp/` package split into `lsp/bin` (entrypoint) and `lsp/src` (library),
-  with its own opam file (`rescript-language-server.opam`). Depends on `lsp` (>=
-  1.22.0), `eio`/`eio_main`, `ppx_deriving_yojson`, `ppx_expect` and the in-tree
-  `analysis` library.
-- New rescript command `rescript lsp`. The language server is shipped with the
-  compiler.
+- The server library lives in `lsp/src`, with its own opam package
+  (`rescript-language-server.opam`). It uses `lsp` (>= 1.22.0), `eio`,
+  `ppx_deriving_yojson`, `ppx_expect` and the in-tree `analysis` library.
+- The entrypoint is `rewatch-ocaml/rescript_ocaml.ml`. The OCaml `rescript`
+  executable links the server library and uses `Eio_main.run` to supply its
+  filesystem, stdin and stdout.
+- Start the server with `rescript lsp --stdio`. The `--stdio` flag is required:
+  `rescript lsp` without it fails and displays usage help. The LSP subcommand
+  does not accept `--quiet` or `--verbose`.
+- End-to-end snapshot tests in `tests/lsp_tests` exercise the server through the
+  same OCaml CLI entrypoint.
 
 ## Status / what's not here yet
 
@@ -113,7 +120,7 @@ notifications. Some are out of scope because they don't make sense.
     republishes diagnostics so stale errors are cleared and monorepo diagnostics
     stay in sync.
   - Use `GlobPattern` with `baseUri` (workspace root)?
-  - Should we watch all `rescript.json` files in the workspace?
+  - Should we watch all `rescript.json` files in the workspace root?
     - Some features require data defined in `rescript.json`. For example,
       `suffix` and `package-specs` are needed to create the code action
       `Open compiled JS file`. Changes in `dependencies` impact various
@@ -281,14 +288,46 @@ notifications. Some are out of scope because they don't make sense.
 
 ## Tests
 
-`tests/lsp_tests/` adds a dune-driven integration test (`test.ml`) that boots
-the server against a real ReScript workspace (`basic-workspace/`), initializes
-the LSP session, sends the `initialized` notification, opens source documents,
-and snapshots responses for representative fixtures.
+`tests/lsp_tests/` contains OCaml `ppx_expect` end-to-end tests, with a named
+`let%expect_test` for each scenario and separate modules for each feature.
+Representative cases are adapted from `tests/analysis_tests`; the original
+analysis suite remains in place. Source snippets no longer contain cursor
+markers: requests use explicit, zero-based LSP positions.
 
-The LSP test target now also runs `dune runtest`, covering inline tests such as
-`.sourcedirs.json` build-root, `.compiler.log` parsing used by diagnostics and
-file-watcher setup.
+The shared client in `test.ml` starts
+`rewatch-ocaml/rescript_ocaml.exe lsp --stdio` through `Unix.open_process_args`,
+avoiding `Eio.Stdenv.process_mgr` in the test harness so it can run on Windows,
+Linux and macOS. Dune declares the CLI executable as a test dependency. The
+harness supplies `RESCRIPT_RUNTIME` because it bypasses the npm launcher.
+
+Tests create their source files and `rescript.json` from OCaml.
+`Test.setup_project` writes the project and optionally builds it;
+`Test.with_project` manages a temporary workspace and cleanup. Tests can add
+multiple documents, edit unsaved buffers, rebuild, change settings and vary
+client capabilities. Snapshots normalize temporary workspace paths while
+preserving ranges and response ordering.
+
+Coverage includes hover and JSX hover, completion and JSX completion, completion
+resolution, definitions, type definitions, references, prepare rename, rename,
+document symbols, semantic tokens, signature help, interface creation, code
+actions, inlay hints, syntax diagnostics and code lenses. Diagnostic regression
+tests cover build-log updates, stale warnings, duplicate publications, flicker
+and document closure. Execute-command tests check the temporary state/CMT dump
+files and `window/showDocument` capability handling. These tests do not imply
+complete coverage or feature parity with the existing server.
+
+Build the toolchain and runtime and run the LSP suite with:
+
+```sh
+opam exec -- make test-lsp
+```
+
+After the toolchain and runtime are built, run just the integration suite with
+`opam exec -- dune runtest tests/lsp_tests`. Run `opam exec -- dune runtest` to
+also cover inline tests in the server library, including `.sourcedirs.json`
+build-root extraction and `.compiler.log` parsing. See
+[the snapshot test guide](../tests/lsp_tests/README.md) for helpers and commands
+to review and promote snapshots.
 
 ## Breaking Changes
 
@@ -297,6 +336,10 @@ file-watcher setup.
   https://github.com/microsoft/language-server-protocol/issues/567#issuecomment-448538082.
   We use `workspace/configuration`.
 - Signature help is enabled by default.
+- `rescript/dumpServerState` and `rescript/dumpCmt` open temporary files through
+  `window/showDocument` instead of returning a JSON object with a `content`
+  field. Clients need to support that request and no longer need to create their
+  own buffers from the command result.
 
 ## Server settings
 
@@ -350,7 +393,8 @@ interface Settings {
 - Update the VSCode and Zed clients to support the experimental server
   - VSCode: https://github.com/rescript-lang/rescript-vscode/pull/1183
   - Zed: https://github.com/rescript-lang/rescript-zed/pull/24
-- Neovim users need to make an adjustment to their LSP setup.
+- Neovim users need to make an adjustment to their LSP setup; see
+  [the configuration example](./notes.md#neovim-setup).
 
 ## Other related topics
 

@@ -23,19 +23,6 @@ local capabilities = vim.lsp.protocol.make_client_capabilities()
 -- Enable workspace.didChangeWatchedFiles capabilities
 capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true
 
----@param client vim.lsp.Client
----@param bufnr integer
-local dump_server_state = function(client, bufnr)
-  client:exec_cmd({
-    title = 'ReScript Dump server state',
-    command = 'rescript/dumpServerState',
-  }, { bufnr = bufnr }, function(err)
-    if err then
-      vim.notify(tostring(err), vim.log.levels.ERROR)
-    end
-  end)
-end
-
 if new_rescript_ls_available then
   -- Dot notation defines a new configuration instead of extending one with
   -- vim.lsp.config(name, cfg).
@@ -78,7 +65,14 @@ if new_rescript_ls_available then
         bufnr,
         'LspDumpServerState',
         function()
-          dump_server_state(client, bufnr)
+            client:exec_cmd({
+              title = 'ReScript dump server state',
+              command = 'rescript/dumpServerState',
+            }, { bufnr = bufnr }, function(err)
+              if err then
+                vim.notify(tostring(err), vim.log.levels.ERROR)
+              end
+            end)
         end,
         { desc = 'rescriptls: Dump server state' }
       )
