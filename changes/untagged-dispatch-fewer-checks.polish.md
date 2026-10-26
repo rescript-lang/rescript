@@ -1,0 +1,1 @@
+- Leave out checks of an untagged variant switch whose outcome runs the same code, and test a literal without an arm with `===` only when the payload dispatch would run a class check on it.

@@ -61,11 +61,6 @@ val literal_value_key : literal_tag -> string
 
 val same_literal_value : literal_tag -> literal_tag -> bool
 
-val literal_passes : literal_tag -> block_type -> bool
-(** Whether a literal passes the check of a payload case of this kind, as
-    [typeof] sees it: ["a"] a string case, [null] an object case, anything an
-    unknown case, which is not checked *)
-
 (** Information used to recognize a constructor during matching. A literal
     identifies a constant or an object's tag; a payload shape identifies a
     value represented directly by its payload. *)

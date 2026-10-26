@@ -208,113 +208,14 @@ let payload_part ~same ~block_cases ~null_guard ~fallback ~has_default arms =
           | Body tree -> tree
           | Falls_through _ -> Skip
         in
-        Switch_typeof (List.rev rest, default)
+        (* The cases falling through to that arm go to the default too *)
+        let rec without_fall_through = function
+          | (_, Falls_through _) :: rest -> without_fall_through rest
+          | rest -> rest
+        in
+        Switch_typeof (List.rev (without_fall_through rest), default)
       | _ -> Switch_typeof (primitive_clauses, Fallback))
     | _ :: _ -> Switch_typeof (primitive_clauses, chain entries))
-
-let plan ~same
-    ({
-       facts = {block_types = block_cases; literal_tags = literal_cases};
-       literal_arms;
-       payload_arms;
-       literals_complete;
-       payloads_complete;
-       fallback;
-     } :
-      'a input) =
-  let literal_default = if literals_complete then None else fallback in
-  let payload_has_default = (not payloads_complete) && fallback <> None in
-  if literals_complete && literal_arms = [] then
-    payload_part ~same ~block_cases ~null_guard:false ~fallback
-      ~has_default:payload_has_default payload_arms
-  else
-    (* The literals first, compared with [===] by one switch whose default is
-       the payload dispatch. A literal without an arm goes to the match's
-       default, never to a payload arm *)
-    let named = List.map fst literal_arms in
-    (* A literal reaches the same default through the payload dispatch when no
-       payload arm accepts its kind and no class check runs on it *)
-    let payload_kinds = List.map fst payload_arms in
-    let reaches_a_payload_arm literal =
-      List.exists (literal_passes literal) payload_kinds
-    in
-    let has_class_case =
-      List.exists
-        (function
-          | InstanceType (Class _) -> true
-          | _ -> false)
-        block_cases
-    in
-    let unnamed =
-      List.filter (fun literal -> not (List.mem literal named)) literal_cases
-    in
-    (* [null] passes only the object check, which then tests [x !== null] *)
-    let skips_the_switch literal =
-      (not has_class_case)
-      && ((not (reaches_a_payload_arm literal))
-         || (literal = Null && not (List.mem UnknownType payload_kinds)))
-    in
-    (* Values no payload arm takes are the literals without an arm: a complete
-       payload dispatch checks its last arm, and these literals skip the
-       switch *)
-    let payload_has_default =
-      payload_has_default
-      || (literal_default <> None && List.exists skips_the_switch unnamed)
-    in
-    let null_guard =
-      literal_default <> None && payload_has_default
-      && List.exists
-           (fun literal -> literal = Null && skips_the_switch literal)
-           unnamed
-    in
-    let unnamed =
-      match literal_default with
-      | Some fallback ->
-        Ext_list.filter_map unnamed (fun literal ->
-            if payload_has_default && skips_the_switch literal then None
-            else Some (literal, fallback))
-      | None -> []
-    in
-    let literal_arms = literal_arms @ unnamed in
-    (* A complete payload dispatch with one body runs it unchecked, so a
-       literal arm with the same body can go there too *)
-    let literal_arms =
-      match payload_arms with
-      | (_, body) :: rest
-        when (not payload_has_default)
-             && List.for_all (fun (_, other) -> same body other) rest ->
-        List.filter (fun (_, other) -> not (same body other)) literal_arms
-      | _ -> literal_arms
-    in
-    let payload =
-      payload_part ~same ~block_cases ~null_guard ~fallback
-        ~has_default:payload_has_default payload_arms
-    in
-    if List.length literal_arms <= 2 then
-      (* An [if] per body, testing its literals with [===] *)
-      let rec group = function
-        | [] -> []
-        | (literal, body) :: rest ->
-          let same_body, others =
-            List.partition (fun (_, other) -> same body other) rest
-          in
-          (literal :: List.map fst same_body, body) :: group others
-      in
-      List.fold_right
-        (fun (literals, body) rest ->
-          let test =
-            match literals with
-            | first :: others ->
-              List.fold_left
-                (fun test literal -> Or (test, Equals literal))
-                (Equals first) others
-            | [] -> assert false
-          in
-          If (test, Run body, rest))
-        (group literal_arms) payload
-    else
-      Switch_value
-        (clauses ~same literal_arms ~shares:(fun _ _ -> true), payload)
 
 type value = Literal of literal_tag | Object | Array
 
@@ -377,3 +278,182 @@ let select ?(on_test = ignore) tree value =
     find clauses
   in
   run tree
+
+(* Two trees that run the same bodies after the same tests *)
+let rec same_tree ~same tree1 tree2 =
+  match (tree1, tree2) with
+  | Run body1, Run body2 -> same body1 body2
+  | Fallback, Fallback | Skip, Skip -> true
+  | If (test1, then1, else1), If (test2, then2, else2) ->
+    test1 = test2 && same_tree ~same then1 then2 && same_tree ~same else1 else2
+  | Block tree1, Block tree2 -> same_tree ~same tree1 tree2
+  | Switch_value (clauses1, default1), Switch_value (clauses2, default2) ->
+    same_clauses ~same clauses1 clauses2 && same_tree ~same default1 default2
+  | Switch_typeof (clauses1, default1), Switch_typeof (clauses2, default2) ->
+    same_clauses ~same clauses1 clauses2 && same_tree ~same default1 default2
+  | ( ( Run _ | Fallback | Skip | If _ | Block _ | Switch_value _
+      | Switch_typeof _ ),
+      _ ) ->
+    false
+
+and same_clauses : 'k. same:_ -> ('k * _) list -> ('k * _) list -> bool =
+ fun ~same clauses1 clauses2 ->
+  List.length clauses1 = List.length clauses2
+  && List.for_all2
+       (fun (key1, clause1) (key2, clause2) ->
+         key1 = key2
+         &&
+         match (clause1, clause2) with
+         | Falls_through _, Falls_through _ -> true
+         | Body tree1, Body tree2 -> same_tree ~same tree1 tree2
+         | (Falls_through _ | Body _), _ -> false)
+       clauses1 clauses2
+
+(* A test whose branches run the same is not run, and a case of a switch that
+   runs what its default runs is left to the default, with the cases falling
+   through to it *)
+let rec simplify ~same tree =
+  match tree with
+  | Run _ | Fallback | Skip -> tree
+  | If (test, then_, else_) ->
+    let then_ = simplify ~same then_ and else_ = simplify ~same else_ in
+    if same_tree ~same then_ else_ then then_ else If (test, then_, else_)
+  | Block tree -> Block (simplify ~same tree)
+  | Switch_value (clauses, default) -> (
+    let default = simplify ~same default in
+    match simplify_clauses ~same ~default clauses with
+    | [] -> default
+    | clauses -> Switch_value (clauses, default))
+  | Switch_typeof (clauses, default) -> (
+    let default = simplify ~same default in
+    match simplify_clauses ~same ~default clauses with
+    | [] -> default
+    | clauses -> Switch_typeof (clauses, default))
+
+and simplify_clauses : 'k. same:_ -> default:_ -> ('k * _) list -> ('k * _) list
+    =
+ fun ~same ~default clauses ->
+  (* The cases falling through to a body, then the body *)
+  let rec groups pending = function
+    | [] -> if pending = [] then [] else [List.rev pending]
+    | ((_, Falls_through _) as clause) :: rest ->
+      groups (clause :: pending) rest
+    | ((_, Body _) as clause) :: rest ->
+      List.rev (clause :: pending) :: groups [] rest
+  in
+  groups [] clauses
+  |> List.concat_map (fun group ->
+      match List.rev group with
+      | (key, Body tree) :: members ->
+        let tree = simplify ~same tree in
+        if same_tree ~same tree default then []
+        else List.rev ((key, Body tree) :: members)
+      | _ -> group)
+
+let plan ~same
+    ({
+       facts = {block_types = block_cases; literal_tags = literal_cases};
+       literal_arms;
+       payload_arms;
+       literals_complete;
+       payloads_complete;
+       fallback;
+     } :
+      'a input) =
+  let literal_default = if literals_complete then None else fallback in
+  let payload_has_default = (not payloads_complete) && fallback <> None in
+  if literals_complete && literal_arms = [] then
+    simplify ~same
+      (payload_part ~same ~block_cases ~null_guard:false ~fallback
+         ~has_default:payload_has_default payload_arms)
+  else
+    (* The literals first, compared with [===] by one switch whose default is
+       the payload dispatch. A literal without an arm goes to the match's
+       default, never to a payload arm *)
+    let named = List.map fst literal_arms in
+    let unnamed =
+      List.filter (fun literal -> not (List.mem literal named)) literal_cases
+    in
+    (* A literal without an arm skips the switch when the payload dispatch
+       takes it to the default without a class check, which could throw when
+       the class does not exist. [null] passes the object check only without
+       [x !== null], which is added when [null] skips. *)
+    let skips_the_switch =
+      match literal_default with
+      | None -> fun _ -> false
+      | Some _ -> (
+        let payload =
+          payload_part ~same ~block_cases ~null_guard:(List.mem Null unnamed)
+            ~fallback ~has_default:true payload_arms
+        in
+        fun literal ->
+          let class_check = ref false in
+          let on_test = function
+            | Instance (Class _) -> class_check := true
+            | _ -> ()
+          in
+          match select ~on_test payload (Literal literal) with
+          | Default -> not !class_check
+          | Arm _ | Nothing -> false)
+    in
+    (* Values no payload arm takes are the literals without an arm: a complete
+       payload dispatch checks its last arm, and these literals skip the
+       switch *)
+    let payload_has_default =
+      payload_has_default
+      || (literal_default <> None && List.exists skips_the_switch unnamed)
+    in
+    let null_guard =
+      literal_default <> None && payload_has_default
+      && List.exists
+           (fun literal -> literal = Null && skips_the_switch literal)
+           unnamed
+    in
+    let unnamed =
+      match literal_default with
+      | Some fallback ->
+        Ext_list.filter_map unnamed (fun literal ->
+            if payload_has_default && skips_the_switch literal then None
+            else Some (literal, fallback))
+      | None -> []
+    in
+    let literal_arms = literal_arms @ unnamed in
+    let payload =
+      simplify ~same
+        (payload_part ~same ~block_cases ~null_guard ~fallback
+           ~has_default:payload_has_default payload_arms)
+    in
+    (* A payload dispatch that runs one body unchecked takes the literals with
+       that body too *)
+    let literal_arms =
+      match payload with
+      | Run body ->
+        List.filter (fun (_, other) -> not (same body other)) literal_arms
+      | _ -> literal_arms
+    in
+    if List.length literal_arms <= 2 then
+      (* An [if] per body, testing its literals with [===] *)
+      let rec group = function
+        | [] -> []
+        | (literal, body) :: rest ->
+          let same_body, others =
+            List.partition (fun (_, other) -> same body other) rest
+          in
+          (literal :: List.map fst same_body, body) :: group others
+      in
+      List.fold_right
+        (fun (literals, body) rest ->
+          let test =
+            match literals with
+            | first :: others ->
+              List.fold_left
+                (fun test literal -> Or (test, Equals literal))
+                (Equals first) others
+            | [] -> assert false
+          in
+          If (test, Run body, rest))
+        (group literal_arms) payload
+    else
+      simplify ~same
+        (Switch_value
+           (clauses ~same literal_arms ~shares:(fun _ _ -> true), payload))
