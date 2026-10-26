@@ -240,3 +240,39 @@ index 76d8dd579740d5a1b0d21b2818093b06061f031f..b6e40acd97b1e52b44a18725619da86e
 -  // external setInterval: (int, 'a) => Js.Promise.t<'a> = "setTimeout"
 +  // external setInterval: (int, 'a) => promise<'a> = "setTimeout"
  }
+diff --git a/src/BunSqlite.res b/src/BunSqlite.res
+--- a/src/BunSqlite.res
++++ b/src/BunSqlite.res
+@@ -66,7 +66,7 @@
+ 
+    ```rescript
+    let users = switch db->Database.query("SELECT * FROM users WHERE age > :age")->Statement.all({"age": 90}) {
+-   | exception Exn.Error(e) => Error(#DatabaseFailed)
++   | exception JsExn(e) => Error(#DatabaseFailed)
+    | [] => Error(#NoUsersFound)
+    | users => Ok(users->usersFromJson)
+    }
+diff --git a/src/Errors.res b/src/Errors.res
+--- a/src/Errors.res
++++ b/src/Errors.res
+@@ -220,7 +220,7 @@
+ 
+ let classifyExn: JsExn.t => case = value =>
+   switch classifyOpt(value) {
+-  | None => failwith("Unknown data type")
++  | None => throw(Failure("Unknown data type"))
+   | Some(err) => err
+   }
+ 
+diff --git a/src/StringBuffer.res b/src/StringBuffer.res
+--- a/src/StringBuffer.res
++++ b/src/StringBuffer.res
+@@ -22,7 +22,7 @@
+   } else if Buffer.isBuffer(value) {
+     Buffer(Obj.magic(value))
+   } else {
+-    failwith("Unknown data type")
++    throw(Failure("Unknown data type"))
+   }
+ 
+ let classify = value =>

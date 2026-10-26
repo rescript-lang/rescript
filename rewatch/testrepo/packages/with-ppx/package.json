@@ -7,7 +7,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "rescript-nodejs": "17.0.0",
+    "rescript-nodejs": "patch:rescript-nodejs@npm%3A17.0.0#~/.yarn/patches/rescript-nodejs-npm-17.0.0-stdlib-v13.patch",
     "sury": "11.0.0-rc.0",
     "sury-ppx": "11.0.0-rc.0"
   }
