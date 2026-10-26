@@ -877,8 +877,10 @@ let compile output_prefix =
       | Fallback -> fallback_block cxt
       | Skip -> []
       | If (test, then_, else_) ->
-        let else_ = emit ~cxt else_ in
+        (* Bodies are compiled in the order they are printed, which numbers
+           loop labels top to bottom *)
         let then_ = emit ~cxt then_ in
+        let else_ = emit ~cxt else_ in
         [S.if_ (test_exp test) then_ ~else_]
       | Block tree -> [S.block (emit ~cxt tree)]
       | Switch_value (clauses, default) ->
@@ -896,20 +898,10 @@ let compile output_prefix =
         in
         [S.string_switch ?default e clauses]
       | Switch_typeof ([(block_type, (Body _ as clause))], default) ->
-        (* One kind is an [if], unless its case falls through *)
-        let default = emit ~cxt default in
+        (* One kind is an [if], so its bodies are not in a [switch] *)
         let clause = emit_clause ~cxt clause in
-        if clause.switch_body <> [] || clause.should_break then
-          [
-            S.if_
-              (test_exp (Typeof block_type))
-              clause.switch_body ~else_:default;
-          ]
-        else
-          [
-            S.string_switch ~default (E.typeof e)
-              [(Payload_shape block_type, clause)];
-          ]
+        let default = emit ~cxt default in
+        [S.if_ (test_exp (Typeof block_type)) clause.switch_body ~else_:default]
       | Switch_typeof (clauses, default) ->
         let cxt = Lam_compile_context.enter_switch cxt in
         let default = emit ~cxt default in
