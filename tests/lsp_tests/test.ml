@@ -379,12 +379,15 @@ let snapshot ~root client request =
   |> print_json ~root
 
 (* A round trip is a barrier for preceding notifications. No timing assumptions
-   or sleeps are needed to assert the complete diagnostic publication sequence. *)
+   or sleeps are needed to assert the complete diagnostic publication sequence.
+   An unsupported request also provides a barrier without creating dump files
+   or requiring window/showDocument support. *)
 let synchronize client =
-  Client.request client
-    (Client_request.ExecuteCommand
-       (ExecuteCommandParams.create ~command:"rescript/dumpServerState" ()))
-  |> ignore
+  let id =
+    Client.send_request client
+      (Client_request.UnknownRequest {meth = "test/synchronize"; params = None})
+  in
+  ignore (Client.read_response client id)
 
 let setup_react ~root =
   let source =

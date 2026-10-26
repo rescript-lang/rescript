@@ -79,16 +79,34 @@ module Switch_implementation_interface = struct
            name)
 end
 
+let write_tmp_file ~prefix ~suffix ~content (server : State.t Server.t) =
+  let fs = (Server.state server).fs in
+  let random = Random.State.make_self_init () in
+  let name =
+    Printf.sprintf "%s%08x%08x%s" prefix (Random.State.bits random)
+      (Random.State.bits random) suffix
+  in
+  let path = Filename.concat (Filename.get_temp_dir_name ()) name in
+  try
+    Fs.save ~append:false ~create:(`Or_truncate 0o644) ~fs path content;
+    Ok (Uri.of_path path)
+  with _ as exn ->
+    Error ("Failed to write temporary dump: " ^ Printexc.to_string exn)
+
 module Dump_server_state = struct
   let name = "rescript/dumpServerState"
-  let execute ~(arguments : Yojson.Safe.t list option)
+  let execute ~arguments:(_ : Yojson.Safe.t list option)
       (server : State.t Server.t) =
-    let json =
+    let content =
       State.to_yojson (Server.state server) |> Yojson.Safe.pretty_to_string
     in
-    let response = `Assoc [("content", `String json)] in
-    Ok (Some response)
-end [@warning "-27"]
+    match
+      write_tmp_file ~prefix:"rescript-server-state-" ~suffix:".json" ~content
+        server
+    with
+    | Ok uri -> request_show_document ~uri ~takeFocus:true server
+    | Error _ as err -> err
+end
 
 module Dump_cmt = struct
   let name = "rescript/dumpCmt"
@@ -98,10 +116,13 @@ module Dump_cmt = struct
     | Some [`String uri] -> (
       let analysis_state = server |> Server.state |> State.analysis_state in
       match Helpers.load_full (Uri.of_string uri) analysis_state with
-      | Some full ->
-        let cmt_content = Analysis.Cmt_viewer.dump ~full in
-        let response = `Assoc [("content", `String cmt_content)] in
-        Ok (Some response)
+      | Some full -> (
+        let content = Analysis.Cmt_viewer.dump ~full in
+        match
+          write_tmp_file ~prefix:"rescript-cmt-" ~suffix:".txt" ~content server
+        with
+        | Ok uri -> request_show_document ~uri ~takeFocus:true server
+        | Error _ as err -> err)
       | None ->
         Error
           (Printf.sprintf

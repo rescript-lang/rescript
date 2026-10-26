@@ -29,43 +29,10 @@ local dump_server_state = function(client, bufnr)
   client:exec_cmd({
     title = 'ReScript Dump server state',
     command = 'rescript/dumpServerState',
-  }, { bufnr = bufnr }, function(err, result)
+  }, { bufnr = bufnr }, function(err)
     if err then
       vim.notify(tostring(err), vim.log.levels.ERROR)
-      return
     end
-
-    if not result or type(result.content) ~= 'string' then
-      vim.notify('Invalid server response', vim.log.levels.ERROR)
-      return
-    end
-
-    local content = result.content
-
-    -- Create a listed scratch buffer.
-    local dump_buf = vim.api.nvim_create_buf(true, true)
-
-    vim.api.nvim_buf_set_name(
-      dump_buf,
-      'rescriptls://rescript-dump-server-state'
-    )
-
-    -- Do not specify the file type to avoid freezing with syntax highlighting using Tree-sitter.
-    -- The state is a large JSON file.
-    vim.bo[dump_buf].buftype = 'nofile'
-    vim.bo[dump_buf].bufhidden = 'wipe'
-    vim.bo[dump_buf].swapfile = false
-
-    -- Open it in the current window.
-    vim.api.nvim_set_current_buf(dump_buf)
-
-    -- Fill buffer with content.
-    local lines = vim.split(content, '\n', { plain = true })
-    vim.api.nvim_buf_set_lines(dump_buf, 0, -1, false, lines)
-
-    -- Optional: make it read-only after writing.
-    vim.bo[dump_buf].modifiable = false
-    vim.bo[dump_buf].readonly = true
   end)
 end
 

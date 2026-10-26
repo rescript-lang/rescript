@@ -202,6 +202,8 @@ notifications. Some are out of scope because they don't make sense.
   - [x] `rescript/dumpServerState`
     - Dump the `State.t` (diagnostics, document store, status, configuration,
       analysis state (`Analysis.Shared_types.state`) and compiler config).
+    - Write a temporary `.json` file and open it using `window/showDocument`.
+      Requires client support for that request; the command returns no content.
   - [x] `rescript/openCompiled`: Triggered by a code action
     - Only works if the client supports `window/showDocument`.
   - [x] `rescript/createInterface`: Triggered by a code action
@@ -211,6 +213,8 @@ notifications. Some are out of scope because they don't make sense.
   - [x] `rescript/switchImplementationInterface`: Triggered by a code action
     - Only available if the client supports the `window/showDocument` request.
   - [x] `rescript/dumpCmt`: Dump cmt file content
+    - Write a temporary `.txt` file and open it using `window/showDocument`.
+      Requires client support for that request; the command returns no content.
   - [ ] `rescript/dumpParseTree` **It will not be implemented for now.**
     - Dump parsed tree
   - [ ] `rescript/dumpTypedTree` **It will not be implemented for now.**
