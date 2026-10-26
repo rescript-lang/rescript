@@ -592,10 +592,15 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
           Some (tcstr, cstr)
       in
       (* [@unboxed] on a constructor, as written, before the type's
-         attributes are copied to its constructors. v13 rejects it. *)
+         attributes are copied to its constructors. v13 rejects it.
+         Constructors copied by a variant spread carry the source type's
+         attributes, already reported at the source. *)
       let warn_unboxed_constructor scstr =
+        let from_spread =
+          Variant_type_spread.constructor_is_from_spread scstr.pcd_attributes
+        in
         Ext_list.iter scstr.pcd_attributes (fun ({txt; loc}, _) ->
-            if txt = Ast_untagged_variants.untagged then
+            if (not from_spread) && txt = Ast_untagged_variants.untagged then
               Location.deprecated loc
                 (if Ast_untagged_variants.has_untagged sdecl.ptype_attributes
                  then
