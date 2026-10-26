@@ -6,6 +6,11 @@ val is_active : unit -> bool
 val stdout_formatter : unit -> Format.formatter
 val stderr_formatter : unit -> Format.formatter
 val write_stdout : string -> unit
+
+val write_stdout_binary : string -> unit
+(** Write [text] as is, without the CRLF line endings that a text-mode channel
+    writes on Windows. *)
+
 val write_stderr : string -> unit
 val print_stdout : string -> unit
 val print_stderr : string -> unit

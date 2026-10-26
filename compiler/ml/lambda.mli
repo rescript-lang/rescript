@@ -486,6 +486,10 @@ val letrec : (Ident.t * t) list -> t -> t
 
 val prim : primitive:primitive -> args:t list -> Location.t -> t
 
+val untagged_plan : lambda_switch -> t Untagged_dispatch.tree option
+(** The dispatch of a switch on an untagged variant, which the code generator
+    prints and constant folding evaluates *)
+
 val switch : t -> lambda_switch -> t
 
 val stringswitch : t -> (string * t) list -> t option -> t

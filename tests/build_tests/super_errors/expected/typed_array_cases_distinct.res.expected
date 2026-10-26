@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/typed_array_cases_distinct.res[0m:[2m4:12-36[0m
+
+  2 [2m│[0m @unboxed type ta = I8(Int8Array.t) | U8(Uint8Array.t)
+  3 [2m│[0m 
+  [1;31m4[0m [2m│[0m let x = I8([1;31mUint8Array.fromArray([1])[0m)
+  5 [2m│[0m 
+
+  This has type: [1;31mUint8Array.t[0m [2m(defined as[0m [1;31mUint8Array.t[0m[2m)[0m
+  But it's expected to have type: [1;33mInt8Array.t[0m [2m(defined as[0m [1;33mInt8Array.t[0m[2m)[0m

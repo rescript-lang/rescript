@@ -1,0 +1,2 @@
+- Typed arrays are distinct types: `Int8Array.t` and the others are private abbreviations of `TypedArray.t<_>`, so an untagged variant can no longer take one typed array for another. Use each module's own functions, such as `Int8Array.get`, or upcast with `(view :> TypedArray.t<int>)` to call the `TypedArray` functions.
+- `@instanceOf` that introduces a class on an abbreviation of an abstract type requires a private abbreviation: write `@instanceOf("Element") type element = private node`.

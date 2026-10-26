@@ -1,7 +1,12 @@
 /** The `Int8Array` typed array represents an array of twos-complement 8-bit signed integers. See [Int8Array on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int8Array)
 */
-@editor.completeFrom(Stdlib.TypedArray) @instanceOf("Int8Array")
-type t = Stdlib_TypedArray.t<int>
+@instanceOf("Int8Array")
+type t = private Stdlib_TypedArray.t<int>
+
+include Stdlib_TypedArray.Impl({
+  type t = t
+  type elt = int
+})
 
 module Constants = {
   /**`bytesPerElement` returns the element size. See [BYTES_PER_ELEMENT on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/BYTES_PER_ELEMENT)

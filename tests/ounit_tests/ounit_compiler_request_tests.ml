@@ -259,6 +259,37 @@ let captured_line_endings_tests _context =
     ("before\r\nplain" ^ newline ^ "after\r\n")
     stdout
 
+(* Binary output keeps its bytes, as formatted source written by bsc -format
+   does, while text around it still gets a bsc process's line endings. *)
+let captured_binary_output_tests _context =
+  let newline = if Sys.win32 then "\r\n" else "\n" in
+  let expected = "text" ^ newline ^ "lf\ncrlf\r\n" ^ "more" ^ newline in
+  let (), stdout, _ =
+    Compiler_request_output.with_capture (fun () ->
+        Compiler_request_output.write_stdout "text\n";
+        Compiler_request_output.write_stdout_binary "lf\ncrlf\r\n";
+        Compiler_request_output.write_stdout "more\n")
+  in
+  assert_equal ~printer:String.escaped expected stdout;
+  (* The same holds once stdout is backed by a file *)
+  let (), stdout, _ =
+    Compiler_request_output.with_capture (fun () ->
+        Compiler_request_output.write_stdout "text\n";
+        ignore (Compiler_request_output.stdout_channel () : out_channel);
+        Compiler_request_output.write_stdout_binary "lf\ncrlf\r\n";
+        Compiler_request_output.write_stdout "more\n")
+  in
+  assert_equal ~printer:String.escaped expected stdout;
+  (* and when stdout gets a file only after the binary output *)
+  let (), stdout, _ =
+    Compiler_request_output.with_capture (fun () ->
+        Compiler_request_output.write_stdout "text\n";
+        Compiler_request_output.write_stdout_binary "lf\ncrlf\r\n";
+        ignore (Compiler_request_output.stdout_channel () : out_channel);
+        Compiler_request_output.write_stdout "more\n")
+  in
+  assert_equal ~printer:String.escaped expected stdout
+
 (* Readers of compiler artifacts close their file when decoding fails, so a
    long-lived build process does not keep it open. *)
 let failed_decoding_closes_files_tests _context =
@@ -1632,6 +1663,7 @@ let suites =
          "request_local_order" >:: request_local_order_tests;
          "failed_capture" >:: failed_capture_tests;
          "captured_line_endings" >:: captured_line_endings_tests;
+         "captured_binary_output" >:: captured_binary_output_tests;
          "failed_decoding_closes_files" >:: failed_decoding_closes_files_tests;
          "gentype_source_lookup" >:: gentype_source_lookup_tests;
          "standalone_output" >:: standalone_output_tests;

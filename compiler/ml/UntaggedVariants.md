@@ -181,6 +181,16 @@ type hierarchy (`type dogLike<'a> = private animalLike<_dog<'a>>`). A public
 would `type dog = animal<int>` or `type dog = phantom<int>` with
 `type phantom<'a> = animal`.
 
+A class introduced on an abbreviation of a type the compiler does not see is
+private too: `@instanceOf("Element") type element = private node`. A public
+abbreviation would make every `node` an `element`, and a second one could
+declare the same values instances of another class while the type checker
+treats both as one type. The stdlib's typed arrays are such private
+abbreviations of `TypedArray.t<_>`, so `Int8Array.t` and `Uint8Array.t` are
+different types, upcast to `TypedArray.t<int>` with `:>`. Each typed array
+module has the functions of `TypedArray` for its own type, through the
+`TypedArray.Impl` functor.
+
 | Declaration | Error | Fixture |
 | --- | --- | --- |
 | `@typeOf("string") type t = option<string>`, `type t<'a> = 'a`, an abbreviation of `unit`, `list<_>` or a variant | @typeOf on a type abbreviation must describe an abstract type, ... | `runtime_annotation_on_option.res`, `runtime_annotation_on_type_variable.res` |
@@ -188,6 +198,7 @@ would `type dog = animal<int>` or `type dog = phantom<int>` with
 | `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym`, `@typeOf("string") type t = int`, or an abbreviation of a function type, a record or a tuple | This annotation, @typeOf("number"), contradicts the abbreviated type, whose values are recognized by @typeOf("symbol"). An array or tuple is recognized by Array.isArray. | `runtime_annotation_contradicts_manifest.res`, `runtime_annotation_contradicts_builtin.res`, `runtime_annotation_contradicts_function.res`, `runtime_annotation_contradicts_tuple.res` |
 | `@instanceOf("Date") type date = X.t` in a functor of `X`, or over `(type a)`; `@notUndefined type t = X.t` | @instanceOf cannot describe the type of a functor parameter, ... | `instance_of_functor_parameter.res`, `type_of_locally_abstract_type.res`, `not_undefined_on_functor_parameter_type.res` |
 | `@instanceOf("Dog") type dog = animal`, `= animal<int>`, or `= phantom<int>` with `type phantom<'a> = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res`, `instance_of_public_subclass_instance.res`, `instance_of_public_subclass_through_alias.res` |
+| `@instanceOf("Element") type element = node` with `type node` | A class must be declared on an abstract type or a private abbreviation ... | `instance_of_public_abbreviation.res`; `typed_array_cases_distinct.res` (typed arrays are distinct types) |
 | `@instanceOf("Animal") type t = private dog` | Animal appears twice in this chain of abbreviations ... | `instance_of_class_twice_in_chain.res` |
 | `@instanceOf("MyList") type t = private array<int>` | @instanceOf("MyList") cannot describe the values of an array type: ... subclasses of Array are not supported. | `instance_of_array_subclass.res` |
 | any of the three on a record or variant | @instanceOf can only be used on abstract types and type abbreviations ... | `runtime_annotation_on_record.res`, `invalid_attribute_not_undefined.res` |
@@ -271,7 +282,7 @@ written (Known bugs).
   `Cross_runtime_annotation_functor_argument`,
   `Cross_not_undefined_option_implementation`.
 - Shaped by #6296, #6383, #6396, #7458, #7464, #7788, #8009, #8950, #8948,
-  #8949, #8964. Related: #7147.
+  #8949, #8955, #8964. Related: #7147.
 
 ### 6. Well-formedness
 
@@ -334,12 +345,17 @@ constructor:
 The literals are compared with `===`: by one `switch (x)` over the literal
 arms, whose default holds the payload dispatch, or, when at most two
 literals get a `case`, by an `if` per arm body. A literal without an arm of its own goes
-to the default arm. It gets a `case` leading there when it could pass a
-check of the payload dispatch (a string literal beside a `string` arm, any
-literal beside an unknown-kind arm) or when the variant has class cases;
-otherwise it reaches the default through the payload dispatch, which then
-checks its last arm. A `null` literal that only the object check would
-accept adds `x !== null` to that check instead (rule 9).
+to the default arm. It reaches the default through the payload dispatch,
+which then checks its last arm, when the payload dispatch takes it there
+without a class check; otherwise, as for a string literal beside a `string`
+arm, any literal beside an unknown-kind arm, or a literal whose kind meets a
+class check, it gets a `case` leading there. A `null` literal that only the
+object check would accept adds `x !== null` to that check instead (rule 9).
+
+The dispatch tests nothing whose outcome runs the same body: arms of
+different kinds with one body, also arms with the default's body, are left
+to one unchecked branch, and a literal with the body of a payload dispatch
+that runs one body unchecked gets no `case`.
 
 A payload pattern whose every value is a literal case's can therefore never
 match, and is reported: warning 11 for an arm, such as `S("a")` beside
@@ -356,7 +372,7 @@ needs a payload of type `bool`, also through an abbreviation: a
 `@typeOf("boolean")` type has no `true` and `false` patterns, so `Yes` alone
 does not cover it.
 
-- Implementation: `lam_compile.ml:compile_switch`;
+- Implementation: `untagged_dispatch.ml:plan` (the literal part);
   `parmatch.ml` (shadowed payload patterns, exhaustiveness).
 - Tests: `spec_test` rule 7; `tests/tests/src/untagged_variants_heuristic.res`
   (literals that skip the `switch`); `unboxed_variant_fold_test.res`
@@ -412,12 +428,14 @@ every case (rule 10).
 An `int` case is recognized by `typeof x === "number"` and so receives every
 number, integral or not.
 
-`break` and `continue` in an arm leave or continue the enclosing loop: every
-arm placed in a generated `switch` is compiled in a `switch` context, where
-they are labeled.
+`break` and `continue` in an arm leave or continue the enclosing loop: an
+arm placed in a generated `switch` statement is compiled in a `switch`
+context, where they are labeled; an arm of an `if` is not
+(`untagged_loop_control_test.res`, `scanIf`).
 
-- Implementation: `lam_compile.ml:compile_untagged_cases`,
-  `compile_general_cases`.
+- Implementation: `untagged_dispatch.ml:payload_part` builds the dispatch as
+  a plan, `lam_compile.ml:compile_untagged_plan` prints it; ounit tests in
+  `ounit_untagged_dispatch_tests.ml` pin plans as data.
 - Tests: `spec_test` rules 4, 5 and 8 (`instanceName` shows the chain in
   declaration order, `objectFirst` the unchecked last arm);
   `tests/tests/src/UntaggedVariants.res` (`AllInstanceofTypes`,
@@ -444,8 +462,8 @@ as a record case does.
 | | all | `null` | `GNull` |
 | | `GObject(_)`, `_` | `[]`, `null` | `_` |
 
-- Implementation: `lam_compile.ml:compile_switch` (`null_guard`),
-  `compile_untagged_cases`.
+- Implementation: `untagged_dispatch.ml:plan` (`null_guard`),
+  `payload_part`.
 - Tests: `spec_test` rule 9; `UntaggedVariants.res` (`ObjectAndNull`, `Json`);
   `tests/tests/src/untagged_default_arm_test.res`.
 - Shaped by #6219, #7303, #8253, #8255, #8279, #8995.
@@ -468,7 +486,7 @@ recognition is local to a realm. A class that does not exist where the
 and functions, and values outside every case. The literals and the
 primitives of the variant never reach it.
 
-- Implementation: `lam_compile.ml:compile_untagged_cases` (a complete match
+- Implementation: `untagged_dispatch.ml:payload_part` (a complete match
   emits no check for its last arm).
 - Tests: `spec_test` rule 10; `untagged_runtime_annotations_test.res` (a
   missing class).
@@ -478,11 +496,16 @@ primitives of the variant never reach it.
 A `switch` on an untagged value the compiler knows, a literal or a block of
 constants, folds to the arm that the run-time dispatch selects for its
 JavaScript value, so `S("a")` matched against `@as("a") A | S(string)` folds
-to `A`. A value built at run time, such as `A([1])` with its array, is
+to `A`. Folding evaluates the plan the code is printed from, so it agrees
+with the generated code by construction, also for a value outside every case
+(rule 10). A value built at run time, such as `A([1])` with its array, is
 matched at run time.
 
-- Implementation: `lambda.ml:switch` (`untagged_action`, `literal_denotes_same`).
-- Tests: `tests/tests/src/unboxed_variant_fold_test.res`.
+- Implementation: `lambda.ml:switch` (`untagged_value`, `untagged_plan`),
+  `untagged_dispatch.ml:select`.
+- Tests: `tests/tests/src/unboxed_variant_fold_test.res`; `spec_test` rule 10
+  (a folded value outside every case); `ounit_untagged_dispatch_tests.ml`
+  compares the plans of random variants and matches with rules 7 to 9.
 - Shaped by #8631.
 
 ### 12. `option` of an untagged variant

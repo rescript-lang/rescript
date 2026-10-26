@@ -367,7 +367,14 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
       | Can_be_undefined -> unrelated ())
     | (Instance_of _ | Type_of _), None -> (
       match Typeopt.abstractness env manifest with
-      | Opaque -> ()
+      | Opaque -> (
+        (* Two public abbreviations of one type would declare its values
+           instances of two classes, and the type checker would not tell
+           them apart *)
+        match outer with
+        | Instance_of name when decl.type_private = Public ->
+          error (ClassOnPublicAbbreviation name)
+        | Not_undefined | Instance_of _ | Type_of _ -> ())
       | Stands_for_another -> stands_for_another ()
       | Not_abstract -> unrelated ())
     | Type_of block_type, Some inner when block_type = inner -> ()

@@ -176,7 +176,7 @@ let format_file input =
       input
   in
   match !((Clflags.current ()).output_name) with
-  | None -> Compiler_request_output.write_stdout formatted
+  | None -> Compiler_request_output.write_stdout_binary formatted
   | Some fname -> Ext_io.write_file fname formatted
 
 let set_color_option option =

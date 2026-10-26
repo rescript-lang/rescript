@@ -153,10 +153,10 @@ let morph_declare_to_assign (cxt : Lam_compile_context.t) k =
     k {cxt with continuation = Assign did} (Some (kind, did))
   | _ -> k cxt None
 
-let group_apply ~merge_cases cases callback =
+let group_apply cases callback =
   Ext_list.flat_map
-    (Ext_list.stable_group cases (fun (tag1, lam) (tag2, lam1) ->
-         merge_cases tag1 tag2 && Lambda.eq_approx lam lam1))
+    (Ext_list.stable_group cases (fun (_, lam) (_, lam1) ->
+         Lambda.eq_approx lam lam1))
     (fun group -> Ext_list.map_last group callback)
 (* TODO:
     for expression generation,
@@ -164,13 +164,7 @@ let group_apply ~merge_cases cases callback =
     only jmp_table and env needed
 *)
 
-type default_case =
-  | Default of Lambda.t
-  | Compiled of (Lam_compile_context.t -> J.block)
-      (** a default compiled by the caller, such as the payload dispatch of
-          an untagged variant after its literals *)
-  | Complete
-  | NonComplete
+type default_case = Default of Lambda.t | Complete | NonComplete
 
 let default_action ~saturated failaction =
   match failaction with
@@ -186,9 +180,9 @@ let tag_of_switch_key : _ -> Variant_runtime.tag_type option = function
     Some (Payload_shape block_type)
 
 let dispatch_info = function
-  | Lambda.Switch_direct -> (Js_dump_lit.tag, [], [])
-  | Switch_variant {Variant_runtime.tag_name; block_types; literal_tags} ->
-    (Option.value tag_name ~default:Js_dump_lit.tag, block_types, literal_tags)
+  | Lambda.Switch_direct -> (Js_dump_lit.tag, [])
+  | Switch_variant {Variant_runtime.tag_name; literal_tags} ->
+    (Option.value tag_name ~default:Js_dump_lit.tag, literal_tags)
 
 let no_effects_const = lazy true
 (* let has_effects_const = lazy false *)
@@ -557,8 +551,6 @@ let compile output_prefix =
         J.statement) ->
       switch_exp:J.expression ->
       default:default_case ->
-      ?merge_cases:('a -> 'a -> bool) ->
-      ?always_switch:bool ->
       ('a * Lambda.t) list ->
       J.block =
    fun (type a) ~(make_exp : a -> J.expression)
@@ -571,7 +563,6 @@ let compile output_prefix =
           _ ->
           (a * J.case_clause) list ->
           J.statement) ~(switch_exp : J.expression) ~(default : default_case)
-       ?(merge_cases = fun _ _ -> true) ?(always_switch = false)
        (cases : (a * Lambda.t) list) ->
     let output_block_with_source_loc cxt lam =
       compile_lambda cxt lam |> Js_output.output_as_block
@@ -579,11 +570,10 @@ let compile output_prefix =
     in
     let output_default cxt = function
       | Default lam -> output_block_with_source_loc cxt lam
-      | Compiled compile -> compile cxt
       | Complete | NonComplete -> []
     in
     match (cases, default) with
-    | [], (Default _ | Compiled _) -> output_default cxt default
+    | [], Default _ -> output_default cxt default
     | [], (Complete | NonComplete) -> []
     | [(_, lam)], Complete ->
       (* To take advantage of such optimizations,
@@ -593,14 +583,14 @@ let compile output_prefix =
           it's also complete
       *)
       output_block_with_source_loc cxt lam
-    | [(id, lam)], NonComplete when not always_switch ->
+    | [(id, lam)], NonComplete ->
       morph_declare_to_assign cxt (fun cxt define ->
           [
             S.if_ ?declaration:define
               (eq_exp None switch_exp (Some id) (make_exp id))
               (output_block_with_source_loc cxt lam);
           ])
-    | [(id, lam)], (Default _ | Compiled _) when not always_switch ->
+    | [(id, lam)], Default _ ->
       morph_declare_to_assign cxt (fun cxt define ->
           let else_block = output_default cxt default in
           let then_block = output_block_with_source_loc cxt lam in
@@ -609,7 +599,7 @@ let compile output_prefix =
               (eq_exp None switch_exp (Some id) (make_exp id))
               then_block ~else_:else_block;
           ])
-    | [(id, lam); (_, x)], Complete when not always_switch ->
+    | [(id, lam); (_, x)], Complete ->
       morph_declare_to_assign cxt (fun cxt define ->
           let else_block = output_block_with_source_loc cxt x in
           let then_block = output_block_with_source_loc cxt lam in
@@ -654,7 +644,7 @@ let compile output_prefix =
             | statements -> Some statements
           in
           let body =
-            group_apply ~merge_cases cases (fun last (switch_case, lam) ->
+            group_apply cases (fun last (switch_case, lam) ->
                 if last then
                   (* merge and shared *)
                   let switch_body, should_break =
@@ -699,15 +689,11 @@ let compile output_prefix =
           Some ((tag_type, lam) :: string_table)
         | _, _ -> None)
       table (Some [])
-  and compile_cases ?(untagged = false) ?(null_guard = false) ~cxt
-      ~(switch_exp : E.t) ?(default = NonComplete) ?(block_cases = []) cases :
+  and compile_cases ~cxt ~(switch_exp : E.t) ?(default = NonComplete) cases :
       initialization =
     match use_compile_literal_cases cases with
     | Some string_cases ->
-      if untagged then
-        compile_untagged_cases ~cxt ~switch_exp ~block_cases ~null_guard
-          ~default string_cases
-      else compile_string_cases ~cxt ~switch_exp ~default string_cases
+      compile_string_cases ~cxt ~switch_exp ~default string_cases
     | None ->
       cases
       |> compile_general_cases
@@ -751,188 +737,48 @@ let compile output_prefix =
     let sw_blocks_default =
       default_action ~saturated:sw_blocks_full sw_failaction
     in
-    let tag_name, block_cases, literal_cases = dispatch_info sw_dispatch in
-    let untagged = block_cases <> [] in
+    let tag_name, literal_cases = dispatch_info sw_dispatch in
+    let payload_only = sw_consts_full && sw_consts = [] in
     let compile_whole (cxt : Lam_compile_context.t) =
       match
         compile_lambda {cxt with continuation = NeedValue Not_tail} switch_arg
       with
       | {value = None; _} -> assert false
       | {block; value = Some e} -> (
-        block
-        @
-        if sw_consts_full && sw_consts = [] then
-          compile_cases ~block_cases ~untagged ~cxt
-            ~switch_exp:(if untagged then e else E.tag ~name:tag_name e)
-            ~default:sw_blocks_default sw_blocks
-        else if sw_blocks_full && sw_blocks = [] then
-          compile_cases ~cxt ~switch_exp:e ~block_cases ~default:sw_num_default
-            sw_consts
-        else
-          (* [e] will be used twice  *)
-          let dispatch e =
-            if untagged then
-              (* The literals first, compared with [===] by one switch whose
-                 default is the payload dispatch. A literal without an arm
-                 goes to the match's default, never to a payload arm *)
-              let named =
-                Ext_list.filter_map sw_consts (fun (key, _) ->
-                    match tag_of_switch_key key with
-                    | Some (Literal literal) -> Some literal
-                    | Some (Payload_shape _) | None -> None)
-              in
-              (* A literal reaches the same default through the payload
-                 dispatch when no payload arm accepts its kind and no class
-                 check runs on it *)
-              let payload_arms =
-                Ext_list.filter_map sw_blocks (fun (key, _) ->
-                    match tag_of_switch_key key with
-                    | Some (Payload_shape block_type) -> Some block_type
-                    | Some (Literal _) | None ->
-                      (* The blocks of an untagged variant are all untagged *)
-                      None)
-              in
-              let reaches_a_payload_arm literal =
-                List.exists
-                  (Variant_runtime.literal_passes literal)
-                  payload_arms
-              in
-              let has_class_case =
-                List.exists
-                  (function
-                    | Variant_runtime.InstanceType (Class _) -> true
-                    | _ -> false)
-                  block_cases
-              in
-              let unnamed =
-                List.filter
-                  (fun literal -> not (List.mem literal named))
-                  literal_cases
-              in
-              (* [null] passes only the object check, which then tests
-                 [x !== null] *)
-              let skips_the_switch (literal : Variant_runtime.literal_tag) =
-                (not has_class_case)
-                && ((not (reaches_a_payload_arm literal))
-                   || literal = Null
-                      && not (List.mem Variant_runtime.UnknownType payload_arms)
-                   )
-              in
-              (* Values no payload arm takes are the literals without an arm:
-                 a complete payload dispatch checks its last arm, and these
-                 literals skip the switch *)
-              let blocks_default =
-                match (sw_num_default, sw_blocks_default) with
-                | Default lam, Complete
-                  when List.exists skips_the_switch unnamed ->
-                  Default lam
-                | _ -> sw_blocks_default
-              in
-              let null_guard =
-                match (sw_num_default, blocks_default) with
-                | Default _, Default _ ->
-                  List.exists
-                    (fun (literal : Variant_runtime.literal_tag) ->
-                      literal = Null && skips_the_switch literal)
-                    unnamed
-                | _ -> false
-              in
-              let unnamed =
-                match (sw_num_default, blocks_default) with
-                | Default lam, Default _ ->
-                  Ext_list.filter_map unnamed (fun literal ->
-                      if skips_the_switch literal then None
-                      else Some (Variant_runtime.Literal literal, lam))
-                | Default lam, (Compiled _ | Complete | NonComplete) ->
-                  List.map
-                    (fun literal -> (Variant_runtime.Literal literal, lam))
-                    unnamed
-                | (Compiled _ | Complete | NonComplete), _ -> []
-              in
-              let literal_arms =
-                match use_compile_literal_cases sw_consts with
-                | Some arms -> arms @ unnamed
-                | None -> assert false
-              in
-              (* A complete payload dispatch with one body runs it unchecked,
-                 so a literal arm with the same body can go there too *)
-              let literal_arms =
-                match (blocks_default, sw_blocks) with
-                | Complete, (_, body) :: rest
-                  when List.for_all
-                         (fun (_, other) -> Lambda.eq_approx body other)
-                         rest ->
-                  List.filter
-                    (fun (_, lam) -> not (Lambda.eq_approx body lam))
-                    literal_arms
-                | _ -> literal_arms
-              in
-              let payload =
-                Compiled
-                  (fun cxt ->
-                    compile_cases ~untagged ~null_guard ~cxt ~switch_exp:e
-                      ~block_cases ~default:blocks_default sw_blocks)
-              in
-              if List.length literal_arms <= 2 then
-                (* An [if] per body, testing its literals with [===] *)
-                let rec group = function
-                  | [] -> []
-                  | (tag, lam) :: rest ->
-                    let same, others =
-                      List.partition
-                        (fun (_, other) -> Lambda.eq_approx lam other)
-                        rest
-                    in
-                    (tag :: List.map fst same, lam) :: group others
-                in
-                let rec chain ~cxt = function
-                  | [] -> (
-                    match payload with
-                    | Compiled compile -> compile cxt
-                    | Default _ | Complete | NonComplete -> assert false)
-                  | group :: rest ->
-                    compile_general_cases
-                      ~make_exp:(fun tags -> E.tag_type (List.hd tags))
-                      ~eq_exp:(fun _ x tags _ ->
-                        match tags with
-                        | Some (tag :: tags) ->
-                          List.fold_left
-                            (fun check tag ->
-                              E.or_ check (E.string_equal x (E.tag_type tag)))
-                            (E.string_equal x (E.tag_type tag))
-                            tags
-                        | Some [] | None -> assert false)
-                      ~cxt
-                      ~switch:(fun ?default:_ ?declaration:_ _ _ ->
-                        assert false)
-                      ~switch_exp:e
-                      ~default:
-                        (match rest with
-                        | [] -> payload
-                        | _ :: _ -> Compiled (fun cxt -> chain ~cxt rest))
-                      [group]
-                in
-                chain ~cxt (group literal_arms)
-              else
-                compile_string_cases ~cxt ~switch_exp:e ~default:payload
-                  literal_arms
-            else
-              [
-                S.if_
-                  (E.is_int_tag ~literal_tags:literal_cases e)
-                  (compile_cases ~cxt ~switch_exp:e ~block_cases
-                     ~default:sw_num_default sw_consts)
-                  ~else_:
-                    (compile_cases ~cxt ~switch_exp:(E.tag ~name:tag_name e)
-                       ~block_cases ~default:sw_blocks_default sw_blocks);
-              ]
-          in
+        (* [e] is used more than once *)
+        let with_variable dispatch =
           match e.expression_desc with
           | J.Var _ -> dispatch e
           | _ ->
             let v = Ext_ident.create_tmp () in
-            (* Necessary avoid duplicated computation*)
-            S.define_variable ~kind:Variable v e :: dispatch (E.var v))
+            S.define_variable ~kind:Variable v e :: dispatch (E.var v)
+        in
+        block
+        @
+        match Lambda.untagged_plan sw with
+        | Some plan ->
+          let compile e =
+            compile_untagged_plan ~cxt ~switch_exp:e ~fallback:sw_failaction
+              plan
+          in
+          if payload_only then compile e else with_variable compile
+        | None ->
+          if payload_only then
+            compile_cases ~cxt ~switch_exp:(E.tag ~name:tag_name e)
+              ~default:sw_blocks_default sw_blocks
+          else if sw_blocks_full && sw_blocks = [] then
+            compile_cases ~cxt ~switch_exp:e ~default:sw_num_default sw_consts
+          else
+            with_variable (fun e ->
+                [
+                  S.if_
+                    (E.is_int_tag ~literal_tags:literal_cases e)
+                    (compile_cases ~cxt ~switch_exp:e ~default:sw_num_default
+                       sw_consts)
+                    ~else_:
+                      (compile_cases ~cxt ~switch_exp:(E.tag ~name:tag_name e)
+                         ~default:sw_blocks_default sw_blocks);
+                ]))
     in
     match lambda_cxt.continuation with
     (* Needs declare first *)
@@ -959,220 +805,121 @@ let compile output_prefix =
          ~switch:(fun ?default ?declaration e clauses ->
            S.string_switch ?default ?declaration e clauses)
          ~switch_exp ~default
-  and compile_untagged_cases ~cxt ~switch_exp ~default ~block_cases ~null_guard
-      cases =
-    (* The payload cases of an untagged variant, after its literals: one
-       [switch (typeof x)] over the primitive kinds, whose default is an [if]
-       chain over the classes (subclasses first), arrays, functions and
-       objects. Primitives never reach a class check, and a class instance
-       never reaches the function or object arm before its own. In a complete
-       match the last arm is not checked. *)
-    let is_primitive_tag = function
-      | Variant_runtime.Payload_shape
-          (NumberType | StringType | BigintType | BooleanType | SymbolType) ->
-        true
-      | _ -> false
+  and compile_untagged_plan ~(cxt : Lam_compile_context.t) ~switch_exp ~fallback
+      (plan : Lambda.t Untagged_dispatch.tree) : J.block =
+    (* Prints the plan: each node is one statement. A body in a [switch]
+       statement is compiled in a [switch] context, a body of an [if] is
+       not *)
+    let e = switch_exp in
+    let rec test_exp : Untagged_dispatch.test -> J.expression = function
+      | Equals literal -> E.string_equal e (E.tag_type (Literal literal))
+      | Typeof block_type -> (
+        match Variant_runtime.typeof_name block_type with
+        | Some name -> E.string_equal (E.typeof e) (E.str name)
+        | None -> assert false)
+      | Instance instance -> E.is_instance_of instance e
+      | Not_null -> E.not (E.is_null e)
+      | Not test -> E.not (test_exp test)
+      | And (test1, test2) -> E.and_ (test_exp test1) (test_exp test2)
+      | Or (test1, test2) -> E.or_ (test_exp test1) (test_exp test2)
     in
-    let complete =
-      match default with
-      | Complete -> true
-      | Default _ | Compiled _ | NonComplete -> false
+    let output_block cxt lam =
+      compile_lambda cxt lam |> Js_output.output_as_block
+      |> with_block_source_loc lam
     in
-    let switch ?default:compiled_default ?declaration e clauses =
-      (* [None] in a complete match, where the last arm is not checked. A
-         value of an incomplete match that no arm takes runs no statement *)
-      let default =
-        if complete then None
-        else Some (Option.value compiled_default ~default:[])
-      in
-      let primitive_clauses, other_clauses =
-        List.partition (fun (tag, _) -> is_primitive_tag tag) clauses
-      in
-      let arm block_type =
-        List.find_map
-          (fun (tag, {J.switch_body}) ->
-            if tag = Variant_runtime.Payload_shape block_type then
-              Some switch_body
-            else None)
-          other_clauses
-      in
-      (* A subclass is checked before its superclasses, otherwise the
-         declaration order decides *)
-      let rec subclasses_first = function
-        | [] -> []
-        | instances ->
-          let first =
-            List.find
-              (fun i ->
-                not
-                  (List.exists
-                     (fun j -> Variant_runtime.Instance.is_subclass j ~of_:i)
-                     instances))
-              instances
-          in
-          first
-          :: subclasses_first (List.filter (fun i -> i <> first) instances)
-      in
-      let instances =
-        subclasses_first
-          (Ext_list.filter_map block_cases (function
-            | Variant_runtime.InstanceType i -> Some i
-            | _ -> None))
-      in
-      let is_class = function
-        | Variant_runtime.Instance.Class _ -> true
-        | Array -> false
-      in
-      let check_instance i = E.is_instance_of i e in
-      let typeof_is name = E.string_equal (E.typeof e) (E.str name) in
-      (* [null], when it did not go to the default before *)
-      let is_object =
-        if null_guard then E.and_ (typeof_is "object") (E.not (E.is_null e))
-        else typeof_is "object"
-      in
-      (* [Some body] for an arm, [None] for the default *)
-      let entries =
-        List.map
-          (fun i -> (Some (check_instance i), i, arm (InstanceType i)))
-          instances
-        |> List.filter_map (fun (check, i, body) ->
-            match (body, default) with
-            | Some body, _ -> Some (check, is_class i, Some body)
-            | None, Some _ -> Some (check, is_class i, None)
-            | None, None -> None)
-      in
-      let entries =
-        entries
-        @ (match arm FunctionType with
-          | Some body -> [(Some (typeof_is "function"), false, Some body)]
-          | None -> [])
-        @ (match arm ObjectType with
-          | Some body -> [(Some is_object, false, Some body)]
-          | None -> [])
-        @
-        match arm UnknownType with
-        | Some body -> [(None, false, Some body)]
-        | None -> []
-      in
-      (* Checks leading to the default are needed only before an arm *)
-      let rec drop_trailing_defaults = function
-        | [] -> []
-        | entries -> (
-          match List.rev entries with
-          | (_, _, None) :: rest -> drop_trailing_defaults (List.rev rest)
-          | _ -> entries)
-      in
-      let entries = drop_trailing_defaults entries in
-      (* [if (c1) default else if (c2) body else default] is
-         [if (c2 && !c1) body else default], and [c1] then runs only on
-         values passing [c2], never on primitives *)
-      let entries =
-        match (default, List.rev entries) with
-        | Some _, (Some check, is_class, Some body) :: rest ->
-          let rec absorb check = function
-            | (Some previous, _, None) :: rest ->
-              absorb (E.and_ check (E.not previous)) rest
-            | rest -> List.rev ((Some check, is_class, Some body) :: rest)
-          in
-          absorb check rest
-        | _ -> entries
-      in
-      (* Consecutive checks leading to the default share one [if] *)
-      let rec merge_defaults = function
-        | (Some c1, class1, None) :: (Some c2, class2, None) :: rest ->
-          merge_defaults ((Some (E.or_ c1 c2), class1 || class2, None) :: rest)
-        | entry :: rest -> entry :: merge_defaults rest
-        | [] -> []
-      in
-      let entries = merge_defaults entries in
-      (* An arm may compile to no statement, so arms are counted here *)
-      let has_other_arms = entries <> [] in
-      (* The last arm of a complete match is not checked *)
-      let entries, final =
-        match (default, List.rev entries) with
-        | Some default, _ -> (entries, Some default)
-        | None, (_, _, body) :: rest -> (List.rev rest, body)
-        | None, [] -> (entries, None)
-      in
-      let has_class_check =
-        List.exists (fun (_, is_class, _) -> is_class) entries
-      in
-      let rec chain = function
-        | [] -> Option.value final ~default:[]
-        | (check, _, body) :: rest -> (
-          let body =
-            Option.value body ~default:(Option.value default ~default:[])
-          in
-          match check with
-          | Some check -> [S.if_ check body ~else_:(chain rest)]
-          | None -> body)
-      in
-      let other = chain entries in
-      (* The primitive kinds of the type without an arm go to the default
-         directly when the chain has class checks *)
-      let unmatched_primitives =
-        match default with
-        | Some default when has_class_check ->
-          let kinds =
-            Ext_list.filter_map block_cases (fun block_type ->
-                let tag = Variant_runtime.Payload_shape block_type in
-                if
-                  is_primitive_tag tag
-                  && not (List.exists (fun (t, _) -> t = tag) primitive_clauses)
-                then Some tag
-                else None)
-          in
-          Ext_list.mapi kinds (fun index tag ->
-              let last = index = List.length kinds - 1 in
-              ( tag,
-                {
-                  J.switch_body = (if last then default else []);
-                  should_break =
-                    last
-                    && not (S.block_last_is_return_throw_or_continue default);
-                  comment = None;
-                  source_loc = None;
-                } ))
-        | Some _ | None -> []
-      in
-      let primitive_clauses = primitive_clauses @ unmatched_primitives in
-      (* One kind is an [if], more a [switch (typeof x)] *)
-      let typeof_switch ?default clauses =
-        match clauses with
-        | [
-         ( Variant_runtime.Payload_shape block_type,
-           {J.switch_body; should_break} );
-        ]
-          when switch_body <> [] || should_break -> (
-          (* Not a clause falling through to the default *)
-          match Variant_runtime.typeof_name block_type with
-          | Some name ->
-            S.if_ ?declaration (typeof_is name) switch_body ?else_:default
-          | None -> assert false)
-        | _ -> S.string_switch ?declaration ?default (E.typeof e) clauses
-      in
-      match primitive_clauses with
-      | [] -> (
-        match declaration with
-        | Some (kind, id) -> S.block (S.declare_variable ~kind id :: other)
-        | None -> S.block other)
-      | _ :: _ when not has_other_arms -> (
-        (* No other arm: in a complete match the last primitive arm is not
-           checked *)
-        match List.rev primitive_clauses with
-        | (_, {J.switch_body}) :: rest when complete ->
-          typeof_switch ~default:switch_body (List.rev rest)
-        | _ -> typeof_switch ?default primitive_clauses)
-      | _ :: _ -> typeof_switch ~default:other primitive_clauses
+    (* The default action is compiled once and shared by every path to it *)
+    let fallback_blocks = ref [] in
+    let fallback_block (cxt : Lam_compile_context.t) =
+      let in_switch = cxt.switch_depth > 0 in
+      match List.assoc_opt in_switch !fallback_blocks with
+      | Some block -> block
+      | None ->
+        let block =
+          match fallback with
+          | Some lam -> output_block cxt lam
+          | None -> assert false
+        in
+        fallback_blocks := (in_switch, block) :: !fallback_blocks;
+        block
     in
-    let merge_cases tag1 tag2 =
-      (* Only primitive kinds share a switch, and so bodies *)
-      is_primitive_tag tag1 && is_primitive_tag tag2
+    let rec emit ~cxt (tree : Lambda.t Untagged_dispatch.tree) : J.block =
+      match tree with
+      | Run lam -> output_block cxt lam
+      | Fallback -> fallback_block cxt
+      | Skip -> []
+      | If (test, then_, else_) ->
+        (* Bodies are compiled in the order they are printed, which numbers
+           loop labels top to bottom *)
+        let then_ = emit ~cxt then_ in
+        let else_ = emit ~cxt else_ in
+        [S.if_ (test_exp test) then_ ~else_]
+      | Block tree -> [S.block (emit ~cxt tree)]
+      | Switch_value (clauses, default) ->
+        let cxt = Lam_compile_context.enter_switch cxt in
+        let default =
+          match emit ~cxt default with
+          | [] -> None
+          | statements -> Some statements
+        in
+        let clauses =
+          List.map
+            (fun (literal, clause) ->
+              (Variant_runtime.Literal literal, emit_clause ~cxt clause))
+            clauses
+        in
+        [S.string_switch ?default e clauses]
+      | Switch_typeof ([(block_type, (Body _ as clause))], default) ->
+        (* One kind is an [if], so its bodies are not in a [switch] *)
+        let clause = emit_clause ~cxt clause in
+        let default = emit ~cxt default in
+        [S.if_ (test_exp (Typeof block_type)) clause.switch_body ~else_:default]
+      | Switch_typeof (clauses, default) ->
+        let cxt = Lam_compile_context.enter_switch cxt in
+        let default = emit ~cxt default in
+        let clauses =
+          List.map
+            (fun (block_type, clause) ->
+              (Variant_runtime.Payload_shape block_type, emit_clause ~cxt clause))
+            clauses
+        in
+        [S.string_switch ~default (E.typeof e) clauses]
+    and emit_clause ~cxt (clause : Lambda.t Untagged_dispatch.clause) :
+        J.case_clause =
+      match clause with
+      | Falls_through lam ->
+        {
+          switch_body = [];
+          should_break = false;
+          comment = None;
+          source_loc = Option.bind lam source_map_loc_of_lam;
+        }
+      | Body (Run lam) ->
+        let switch_body, should_break =
+          Js_output.to_break_block (compile_lambda cxt lam)
+        in
+        let should_break =
+          if not (Lam_compile_context.continuation_is_return cxt.continuation)
+          then should_break
+          else should_break && Lam_exit_code.has_exit lam
+        in
+        {
+          switch_body = with_block_source_loc lam switch_body;
+          should_break;
+          comment = None;
+          source_loc = source_map_loc_of_lam lam;
+        }
+      | Body Fallback ->
+        let block = fallback_block cxt in
+        {
+          switch_body = block;
+          should_break = not (S.block_last_is_return_throw_or_continue block);
+          comment = None;
+          source_loc = None;
+        }
+      | Body (Skip | If _ | Block _ | Switch_value _ | Switch_typeof _) ->
+        assert false
     in
-    cases
-    |> compile_general_cases ~make_exp:E.tag_type
-         ~eq_exp:(fun _ _ _ _ -> assert false)
-         ~cxt ~switch ~switch_exp ~default ~merge_cases ~always_switch:true
+    emit ~cxt plan
   and compile_stringswitch l cases default (lambda_cxt : Lam_compile_context.t)
       =
     (* TODO might better optimization according to the number of cases

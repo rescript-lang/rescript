@@ -1,4 +1,4 @@
-let ta = Uint8Array.fromArray([1, 2, 3, 4])
+let ta = (Uint8Array.fromArray([1, 2, 3, 4]) :> TypedArray.t<int>)
 
 let a1 = ta->TypedArray.copyWithinToEnd(~target=1, ~start=2)
 let a2 = ta->TypedArray.fillToEnd(9, ~start=1)

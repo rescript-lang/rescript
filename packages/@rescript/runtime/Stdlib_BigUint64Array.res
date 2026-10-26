@@ -1,7 +1,12 @@
 /** The `BigUint64Array` typed array represents an array of 64-bit unsigned integers in platform byte order. See [BigUint64Array on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigUint64Array)
 */
-@editor.completeFrom(Stdlib.TypedArray) @instanceOf("BigUint64Array")
-type t = Stdlib_TypedArray.t<bigint>
+@instanceOf("BigUint64Array")
+type t = private Stdlib_TypedArray.t<bigint>
+
+include Stdlib_TypedArray.Impl({
+  type t = t
+  type elt = bigint
+})
 
 module Constants = {
   /**`bytesPerElement` returns the element size. See [BYTES_PER_ELEMENT on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/BYTES_PER_ELEMENT)

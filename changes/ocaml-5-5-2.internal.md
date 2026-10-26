@@ -1,0 +1,1 @@
+- Upgrade the development toolchain and CI builds to OCaml 5.5.2.

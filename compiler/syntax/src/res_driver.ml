@@ -155,11 +155,11 @@ let print_engine =
   {
     print_implementation =
       (fun ~width ~filename:_ ~comments structure ->
-        Compiler_request_output.write_stdout
+        Compiler_request_output.write_stdout_binary
           (Res_printer.print_implementation ~width structure ~comments));
     print_interface =
       (fun ~width ~filename:_ ~comments signature ->
-        Compiler_request_output.write_stdout
+        Compiler_request_output.write_stdout_binary
           (Res_printer.print_interface ~width signature ~comments));
   }
 

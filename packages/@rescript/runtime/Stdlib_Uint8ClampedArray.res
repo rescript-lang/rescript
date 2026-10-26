@@ -1,7 +1,12 @@
 /** The `Uint8ClampedArray` typed array represents an array of 8-bit unsigned integers clamped to 0-255. See [Uint8ClampedArray on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray)
 */
-@editor.completeFrom(Stdlib.TypedArray) @instanceOf("Uint8ClampedArray")
-type t = Stdlib_TypedArray.t<int>
+@instanceOf("Uint8ClampedArray")
+type t = private Stdlib_TypedArray.t<int>
+
+include Stdlib_TypedArray.Impl({
+  type t = t
+  type elt = int
+})
 
 module Constants = {
   /**`bytesPerElement` returns the element size. See [BYTES_PER_ELEMENT on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/BYTES_PER_ELEMENT)

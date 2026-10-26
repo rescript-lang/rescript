@@ -24,6 +24,37 @@ let () =
 let x: int
 |})
 
+(* Formatting keeps a file's line endings, also inside comments, template
+   literals and raw JS, and formatting the result again changes nothing *)
+let () =
+  let lf =
+    "/* a\n\
+    \ multi-line comment */\n\
+     let s = `line 1\n\
+     line 2`\n\
+     let r = %raw(`\n\
+    \  function () {\n\
+    \    return 1\n\
+    \  }\n\
+     `)\n"
+  in
+  let format source =
+    let filename = Filename.temp_file "line_endings" ".res" in
+    Fun.protect
+      (fun () ->
+        let channel = open_out_bin filename in
+        output_string channel source;
+        close_out channel;
+        Res_multi_printer.print filename)
+      ~finally:(fun () -> Sys.remove filename)
+  in
+  List.iter
+    (fun source ->
+      let formatted = format source in
+      assert (formatted = source);
+      assert (format formatted = formatted))
+    [lf; Res_line_endings.to_crlf lf]
+
 let () = print_endline "✅ multi printer api tests"
 
 let () =

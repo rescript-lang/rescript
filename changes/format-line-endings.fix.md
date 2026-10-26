@@ -1,0 +1,1 @@
+- Make the formatter keep each file's line endings. On Windows it no longer rewrites LF files with CRLF or reports them in `rescript format --check`, and formatting a CRLF file no longer adds a carriage return inside multi-line comments, template literals and raw JS on every run.
