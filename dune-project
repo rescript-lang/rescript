@@ -47,12 +47,12 @@
    (and
     (<> :os "win32")
     :with-test
-    (= 6.4.1)))
+    (= 6.5.0)))
   (wasm_of_ocaml-compiler
    (and
     (<> :os "win32")
     :with-test
-    (= 6.4.1)))))
+    (= 6.5.0)))))
 
 (package
  (name analysis)

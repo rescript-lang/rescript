@@ -22,8 +22,8 @@ depends: [
   "ounit2" {with-test & = "2.2.7"}
   "odoc" {with-doc}
   "ocaml-lsp-server" {with-dev-setup & >= "1.23.0"}
-  "js_of_ocaml" {os != "win32" & with-test & = "6.4.1"}
-  "wasm_of_ocaml-compiler" {os != "win32" & with-test & = "6.4.1"}
+  "js_of_ocaml" {os != "win32" & with-test & = "6.5.0"}
+  "wasm_of_ocaml-compiler" {os != "win32" & with-test & = "6.5.0"}
 ]
 build: [
   ["dune" "subst"] {dev}
