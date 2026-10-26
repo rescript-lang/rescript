@@ -32,3 +32,14 @@ let copySpreadOrder = log->Array.copy
 
 let props = <Logged a={note("a")} b={note("b")} />
 let propsOrder = log->Array.copy
+
+module LoggedDict = {
+  @val external make: React.component<dict<string>> = "LoggedComp"
+}
+
+// A dict spread is one props object: its children are evaluated before the
+// fields after them
+let dictBase: dict<string> = dict{}
+let dictChildren =
+  <LoggedDict {...dict{...dictBase, "children": note("children"), "title": note("title")}} />
+let dictChildrenOrder = log->Array.copy
