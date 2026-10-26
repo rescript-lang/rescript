@@ -4,7 +4,6 @@ let compare = String.compare
 let decode_error = "DecodeError"
 let assert_failure = "Assert_failure"
 let division_by_zero = "Division_by_zero"
-let failure = "Failure"
 let invalid_argument = "Invalid_argument"
 let js_exn = "JsExn"
 let match_failure = "Match_failure"

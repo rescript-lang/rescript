@@ -5,14 +5,14 @@ import * as Stdlib_Lazy from "@rescript/runtime/lib/es6/Stdlib_Lazy.mjs";
 function fix() {
   return {
     TAG: "Fix",
-    _0: Stdlib_Lazy.from_fun(fix)
+    _0: Stdlib_Lazy.make(fix)
   };
 }
 
 function unfixLeak(_f) {
   while (true) {
     let f = _f;
-    _f = Stdlib_Lazy.force(f._0);
+    _f = Stdlib_Lazy.get(f._0);
     continue;
   };
 }
@@ -20,7 +20,7 @@ function unfixLeak(_f) {
 function unfix(p) {
   while (true) {
     let h = p.contents;
-    p.contents = Stdlib_Lazy.force(h._0);
+    p.contents = Stdlib_Lazy.get(h._0);
   };
 }
 

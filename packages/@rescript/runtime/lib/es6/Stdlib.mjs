@@ -12,7 +12,7 @@ function assertEqual(a, b) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "Stdlib.res",
-      163,
+      157,
       4
     ],
     Error: new Error()
@@ -38,10 +38,6 @@ let $$DataView;
 let $$Date;
 
 let Dict;
-
-let Exn;
-
-let $$Error;
 
 let File;
 
@@ -154,8 +150,6 @@ export {
   $$DataView,
   $$Date,
   Dict,
-  Exn,
-  $$Error,
   File,
   Float,
   Int,

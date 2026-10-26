@@ -19,7 +19,7 @@ external valToFn: 'a => unit => 'a = "%identity"
 external castToConcrete: t<'a> => internal<'a> = "%identity"
 external castFromConcrete: internal<'a> => t<'a> = "%identity"
 
-let is_val = (type a, l: t<a>): bool => castToConcrete(l).tag
+let isEvaluated = (type a, l: t<a>): bool => castToConcrete(l).tag
 
 exception Undefined
 
@@ -43,14 +43,7 @@ let force_lazy_block = (type a, blk: internal<a>): a => {
   }
 }
 
-/* Assume [blk] is a block with tag lazy */
-let force_val_lazy_block = (type a, blk: internal<a>): a => {
-  let closure = valToFn(blk.value)
-  blk.value = fnToVal(raise_undefined)
-  forward_with_closure(blk, closure)
-}
-
-let force = (type a, lzv: t<a>): a => {
+let get = (type a, lzv: t<a>): a => {
   let lzv: internal<_> = castToConcrete(lzv)
   if lzv.tag {
     lzv.value
@@ -59,33 +52,12 @@ let force = (type a, lzv: t<a>): a => {
   }
 }
 
-let force_val = (type a, lzv: t<a>): a => {
-  let lzv: internal<_> = castToConcrete(lzv)
-  if lzv.tag {
-    lzv.value
-  } else {
-    force_val_lazy_block(lzv)
-  }
-}
-
-let from_fun = (type a, closure: unit => a): t<a> => {
+let make = (type a, closure: unit => a): t<a> => {
   let blk = {
     tag: false,
     value: fnToVal(closure),
   }
   castFromConcrete(blk)
 }
-
-let from_val = (type a, value: a): t<a> => {
-  let blk = {
-    tag: true,
-    value,
-  }
-  castFromConcrete(blk)
-}
-
-let make = from_fun
-let get = force
-let isEvaluated = is_val
 
 external ignore: t<'a> => unit = "%ignore"

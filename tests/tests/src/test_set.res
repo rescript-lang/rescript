@@ -104,26 +104,26 @@ module Make = (Ord: OrderedType) => {
     }
     if hl > hr + 2 {
       switch l {
-      | Empty => invalid_arg("Set.bal")
+      | Empty => throw(Invalid_argument("Set.bal"))
       | Node(ll, lv, lr, _) =>
         if height(ll) >= height(lr) {
           create(ll, lv, create(lr, v, r))
         } else {
           switch lr {
-          | Empty => invalid_arg("Set.bal")
+          | Empty => throw(Invalid_argument("Set.bal"))
           | Node(lrl, lrv, lrr, _) => create(create(ll, lv, lrl), lrv, create(lrr, v, r))
           }
         }
       }
     } else if hr > hl + 2 {
       switch r {
-      | Empty => invalid_arg("Set.bal")
+      | Empty => throw(Invalid_argument("Set.bal"))
       | Node(rl, rv, rr, _) =>
         if height(rr) >= height(rl) {
           create(create(l, v, rl), rv, rr)
         } else {
           switch rl {
-          | Empty => invalid_arg("Set.bal")
+          | Empty => throw(Invalid_argument("Set.bal"))
           | Node(rll, rlv, rlr, _) => create(create(l, v, rll), rlv, create(rlr, rv, rr))
           }
         }
@@ -216,7 +216,7 @@ module Make = (Ord: OrderedType) => {
 
   let rec remove_min_elt = x =>
     switch x {
-    | Empty => invalid_arg("Set.remove_min_elt")
+    | Empty => throw(Invalid_argument("Set.remove_min_elt"))
     | Node(Empty, v, r, _) => r
     | Node(l, v, r, _) => bal(remove_min_elt(l), v, r)
     }

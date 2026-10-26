@@ -35,10 +35,7 @@ function fromStringOrThrow(param) {
   }
 }
 
-let fromStringExn = fromStringOrThrow;
-
 exports.toString = toString;
 exports.fromString = fromString;
 exports.fromStringOrThrow = fromStringOrThrow;
-exports.fromStringExn = fromStringExn;
 /* No side effect */

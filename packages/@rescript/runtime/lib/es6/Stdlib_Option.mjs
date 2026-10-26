@@ -187,23 +187,14 @@ function all6(param) {
   }
 }
 
-let getExn = getOrThrow;
-
-let mapWithDefault = mapOr;
-
-let getWithDefault = getOr;
-
 export {
   filter,
   forEach,
-  getExn,
   getOrThrow,
   mapOr,
-  mapWithDefault,
   map,
   flatMap,
   getOr,
-  getWithDefault,
   orElse,
   isSome,
   isNone,

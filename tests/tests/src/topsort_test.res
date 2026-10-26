@@ -24,7 +24,7 @@ let rec dfs1 = (nodes, graph, visited) =>
   switch nodes {
   | list{} => List.reverse(visited)
   | list{x, ...xs} =>
-    if visited->List.has(x, \"==") {
+    if visited->List.some(y => y == x) {
       dfs1(xs, graph, visited)
     } else {
       Console.log(x)
@@ -44,7 +44,7 @@ let rec dfs2 = (nodes, graph, visited) => {
     switch nodes {
     | list{} => visited
     | list{x, ...xs} =>
-      if visited->List.has(x, \"==") {
+      if visited->List.some(y => y == x) {
         aux(xs, graph, visited)
       } else {
         aux(xs, graph, aux(nexts(x, graph), graph, list{x, ...visited}))
@@ -62,7 +62,7 @@ let () = {
 let dfs3 = (nodes, graph) => {
   let visited = ref(list{})
   let rec aux = (node, graph) =>
-    if !List.has(visited.contents, node, \"==") {
+    if !List.some(visited.contents, y => y == node) {
       visited := list{node, ...visited.contents}
       nexts(node, graph)->List.forEach(x => aux(x, graph))
     }
@@ -93,7 +93,7 @@ let unsafe_topsort = graph => {
   let visited = ref(list{})
   let rec sort_nodes = nodes => nodes->List.forEach(node => sort_node(node))
   and sort_node = node =>
-    if !List.has(visited.contents, node, \"==") {
+    if !List.some(visited.contents, y => y == node) {
       /* This check does not prevent cycle ,
            but it is still necessary? yes! 
            since a node can have multiple parents
@@ -117,7 +117,7 @@ let pathsort = graph => {
   let visited = ref(list{})
   let empty_path = list{}
   let \"+>" = (node, path) =>
-    if List.has(path, node, \"==") {
+    if List.some(path, y => y == node) {
       throw(Cycle(list{node, ...path}))
     } else {
       list{node, ...path}
@@ -125,7 +125,7 @@ let pathsort = graph => {
 
   let rec sort_nodes = (path, nodes) => nodes->List.forEach(node => sort_node(path, node))
   and sort_node = (path, node) =>
-    if !List.has(visited.contents, node, \"==") {
+    if !List.some(visited.contents, y => y == node) {
       /* check node path ; */
       sort_nodes(\"+>"(node, path), nexts(node, graph))
       /* different from dfs, recorded after its 

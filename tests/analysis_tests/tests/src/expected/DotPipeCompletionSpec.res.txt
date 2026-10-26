@@ -573,21 +573,21 @@ Path filt
   }
 ]
 
-Complete src/DotPipeCompletionSpec.res 89:62
-pos_cursor:[89:62] pos_no_white:[89:61] Found expr:[89:3->89:62]
-pos_cursor:[89:62] pos_no_white:[89:61] Found expr:[89:36->89:62]
-Pexp_field [89:36->89:55] includ:[89:56->89:62]
-Completable: Cpath Value[Array, joinWith](Nolabel).includ
+Complete src/DotPipeCompletionSpec.res 89:58
+pos_cursor:[89:58] pos_no_white:[89:57] Found expr:[89:3->89:58]
+pos_cursor:[89:58] pos_no_white:[89:57] Found expr:[89:36->89:58]
+Pexp_field [89:36->89:51] includ:[89:52->89:58]
+Completable: Cpath Value[Array, join](Nolabel).includ
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
-ContextPath Value[Array, joinWith](Nolabel).includ
-ContextPath Value[Array, joinWith](Nolabel)
-ContextPath Value[Array, joinWith]
-Path Array.joinWith
-ContextPath Value[Array, joinWith](Nolabel, Nolabel)->includ
-ContextPath Value[Array, joinWith](Nolabel, Nolabel)
-ContextPath Value[Array, joinWith]
-Path Array.joinWith
+ContextPath Value[Array, join](Nolabel).includ
+ContextPath Value[Array, join](Nolabel)
+ContextPath Value[Array, join]
+Path Array.join
+ContextPath Value[Array, join](Nolabel, Nolabel)->includ
+ContextPath Value[Array, join](Nolabel, Nolabel)
+ContextPath Value[Array, join]
+Path Array.join
 Path Stdlib.String.includ
 Path includ
 [
@@ -596,29 +596,8 @@ Path includ
       {
         "newText": "",
         "range": {
-          "end": { "character": 56, "line": 89 },
-          "start": { "character": 55, "line": 89 }
-        }
-      }
-    ],
-    "detail": "(string, string) => bool",
-    "documentation": {
-      "kind": "markdown",
-      "value": "\n`includes(str, searchValue)` returns `true` if `searchValue` is found anywhere\nwithin `str`, `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includes(\"programmer\", \"gram\") == true\nString.includes(\"programmer\", \"er\") == true\nString.includes(\"programmer\", \"pro\") == true\nString.includes(\"programmer.dat\", \"xyz\") == false\n```\n"
-    },
-    "insertText": "->String.includes",
-    "kind": 12,
-    "label": "->String.includes",
-    "sortText": "includes",
-    "tags": []
-  },
-  {
-    "additionalTextEdits": [
-      {
-        "newText": "",
-        "range": {
-          "end": { "character": 56, "line": 89 },
-          "start": { "character": 55, "line": 89 }
+          "end": { "character": 52, "line": 89 },
+          "start": { "character": 51, "line": 89 }
         }
       }
     ],
@@ -631,6 +610,27 @@ Path includ
     "kind": 12,
     "label": "->String.includesFrom",
     "sortText": "includesFrom",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 52, "line": 89 },
+          "start": { "character": 51, "line": 89 }
+        }
+      }
+    ],
+    "detail": "(string, string) => bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`includes(str, searchValue)` returns `true` if `searchValue` is found anywhere\nwithin `str`, `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includes(\"programmer\", \"gram\") == true\nString.includes(\"programmer\", \"er\") == true\nString.includes(\"programmer\", \"pro\") == true\nString.includes(\"programmer.dat\", \"xyz\") == false\n```\n"
+    },
+    "insertText": "->String.includes",
+    "kind": 12,
+    "label": "->String.includes",
+    "sortText": "includes",
     "tags": []
   }
 ]

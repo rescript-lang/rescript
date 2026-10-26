@@ -2,7 +2,6 @@
 
 import * as Belt_List from "@rescript/belt/src/Belt_List.mjs";
 import * as Belt_Float from "@rescript/belt/src/Belt_Float.mjs";
-import * as Pervasives from "@rescript/runtime/lib/es6/Pervasives.mjs";
 import * as Belt_Option from "@rescript/belt/src/Belt_Option.mjs";
 import * as Primitive_int from "@rescript/runtime/lib/es6/Primitive_int.mjs";
 import * as Belt_MapString from "@rescript/belt/src/Belt_MapString.mjs";
@@ -136,13 +135,35 @@ function compute_update_sequences(all_tickers) {
     let l$1 = Belt_List.sort(l, (lhs, rhs) => {
       let x = lhs.rank;
       if (typeof x !== "object") {
-        return Pervasives.failwith("All nodes should be ranked");
-      }
-      let y = rhs.rank;
-      if (typeof y !== "object") {
-        return Pervasives.failwith("All nodes should be ranked");
+        if (x === "Uninitialized") {
+          throw {
+            RE_EXN_ID: "Failure",
+            _1: "All nodes should be ranked",
+            Error: new Error()
+          };
+        }
+        throw {
+          RE_EXN_ID: "Failure",
+          _1: "All nodes should be ranked",
+          Error: new Error()
+        };
       } else {
-        return Primitive_int.compare(x._0, y._0);
+        let y = rhs.rank;
+        if (typeof y === "object") {
+          return Primitive_int.compare(x._0, y._0);
+        }
+        if (y === "Uninitialized") {
+          throw {
+            RE_EXN_ID: "Failure",
+            _1: "All nodes should be ranked",
+            Error: new Error()
+          };
+        }
+        throw {
+          RE_EXN_ID: "Failure",
+          _1: "All nodes should be ranked",
+          Error: new Error()
+        };
       }
     });
     return Belt_MapString.set(map, k, l$1);
@@ -157,9 +178,12 @@ function process_quote(ticker_map, new_ticker, new_value) {
       if (ticker.ticker_name === new_ticker) {
         ticker.value = new_value;
         return;
-      } else {
-        return Pervasives.failwith("Only single Market ticker should be udpated upon a new quote");
       }
+      throw {
+        RE_EXN_ID: "Failure",
+        _1: "Only single Market ticker should be udpated upon a new quote",
+        Error: new Error()
+      };
     }
     let match$1 = match._0;
     let match$2 = match$1.lhs.value;
@@ -190,87 +214,153 @@ function process_input_line(ticker_map, all_tickers, line) {
     };
   };
   let tokens = split("|", line);
-  if (tokens === 0) {
-    return Pervasives.failwith("Invalid input line");
-  }
-  switch (tokens.hd) {
-    case "Q" :
-      let match = tokens.tl;
-      if (match === 0) {
-        return Pervasives.failwith("Invalid input line");
-      }
-      let match$1 = match.tl;
-      if (match$1 === 0) {
-        return Pervasives.failwith("Invalid input line");
-      }
-      if (match$1.tl !== 0) {
-        return Pervasives.failwith("Invalid input line");
-      }
-      let ticker_map$1 = ticker_map !== undefined ? Primitive_option.valFromOption(ticker_map) : compute_update_sequences(all_tickers);
-      let value = Belt_Option.getExn(Belt_Float.fromString(match$1.hd));
-      process_quote(ticker_map$1, match.hd, value);
-      return [
-        all_tickers,
-        Primitive_option.some(ticker_map$1)
-      ];
-    case "R" :
-      let match$2 = tokens.tl;
-      if (match$2 === 0) {
-        return Pervasives.failwith("Invalid input line");
-      }
-      let match$3 = match$2.tl;
-      if (match$3 === 0) {
-        return Pervasives.failwith("Invalid input line");
-      }
-      let ticker_name = match$2.hd;
-      switch (match$3.hd) {
-        case "+" :
-          let match$4 = match$3.tl;
-          if (match$4 === 0) {
-            return Pervasives.failwith("Invalid input line");
-          }
-          let match$5 = match$4.tl;
-          if (match$5 !== 0 && match$5.tl === 0) {
+  if (tokens !== 0) {
+    switch (tokens.hd) {
+      case "Q" :
+        let match = tokens.tl;
+        if (match !== 0) {
+          let match$1 = match.tl;
+          if (match$1 !== 0) {
+            if (match$1.tl !== 0) {
+              throw {
+                RE_EXN_ID: "Failure",
+                _1: "Invalid input line",
+                Error: new Error()
+              };
+            }
+            let ticker_map$1 = ticker_map !== undefined ? Primitive_option.valFromOption(ticker_map) : compute_update_sequences(all_tickers);
+            let value = Belt_Option.getExn(Belt_Float.fromString(match$1.hd));
+            process_quote(ticker_map$1, match.hd, value);
             return [
-              {hd: make_binary_op(ticker_name, match$4.hd, match$5.hd, "PLUS"), tl: all_tickers},
-              ticker_map
-            ];
-          } else {
-            return Pervasives.failwith("Invalid input line");
-          }
-        case "-" :
-          let match$6 = match$3.tl;
-          if (match$6 === 0) {
-            return Pervasives.failwith("Invalid input line");
-          }
-          let match$7 = match$6.tl;
-          if (match$7 !== 0 && match$7.tl === 0) {
-            return [
-              {hd: make_binary_op(ticker_name, match$6.hd, match$7.hd, "MINUS"), tl: all_tickers},
-              ticker_map
-            ];
-          } else {
-            return Pervasives.failwith("Invalid input line");
-          }
-        case "S" :
-          if (match$3.tl !== 0) {
-            return Pervasives.failwith("Invalid input line");
-          } else {
-            return [
-              {hd: {
-                value: undefined,
-                rank: "Uninitialized",
-                ticker_name: ticker_name,
-                type_: "Market"
-              }, tl: all_tickers},
-              ticker_map
+              all_tickers,
+              Primitive_option.some(ticker_map$1)
             ];
           }
-        default:
-          return Pervasives.failwith("Invalid input line");
-      }
-    default:
-      return Pervasives.failwith("Invalid input line");
+          throw {
+            RE_EXN_ID: "Failure",
+            _1: "Invalid input line",
+            Error: new Error()
+          };
+        }
+        throw {
+          RE_EXN_ID: "Failure",
+          _1: "Invalid input line",
+          Error: new Error()
+        };
+      case "R" :
+        let match$2 = tokens.tl;
+        if (match$2 !== 0) {
+          let match$3 = match$2.tl;
+          if (match$3 !== 0) {
+            let ticker_name = match$2.hd;
+            switch (match$3.hd) {
+              case "+" :
+                let match$4 = match$3.tl;
+                if (match$4 !== 0) {
+                  let match$5 = match$4.tl;
+                  if (match$5 !== 0) {
+                    if (match$5.tl !== 0) {
+                      throw {
+                        RE_EXN_ID: "Failure",
+                        _1: "Invalid input line",
+                        Error: new Error()
+                      };
+                    }
+                    return [
+                      {hd: make_binary_op(ticker_name, match$4.hd, match$5.hd, "PLUS"), tl: all_tickers},
+                      ticker_map
+                    ];
+                  }
+                  throw {
+                    RE_EXN_ID: "Failure",
+                    _1: "Invalid input line",
+                    Error: new Error()
+                  };
+                }
+                throw {
+                  RE_EXN_ID: "Failure",
+                  _1: "Invalid input line",
+                  Error: new Error()
+                };
+              case "-" :
+                let match$6 = match$3.tl;
+                if (match$6 !== 0) {
+                  let match$7 = match$6.tl;
+                  if (match$7 !== 0) {
+                    if (match$7.tl !== 0) {
+                      throw {
+                        RE_EXN_ID: "Failure",
+                        _1: "Invalid input line",
+                        Error: new Error()
+                      };
+                    }
+                    return [
+                      {hd: make_binary_op(ticker_name, match$6.hd, match$7.hd, "MINUS"), tl: all_tickers},
+                      ticker_map
+                    ];
+                  }
+                  throw {
+                    RE_EXN_ID: "Failure",
+                    _1: "Invalid input line",
+                    Error: new Error()
+                  };
+                }
+                throw {
+                  RE_EXN_ID: "Failure",
+                  _1: "Invalid input line",
+                  Error: new Error()
+                };
+              case "S" :
+                if (match$3.tl !== 0) {
+                  throw {
+                    RE_EXN_ID: "Failure",
+                    _1: "Invalid input line",
+                    Error: new Error()
+                  };
+                }
+                return [
+                  {hd: {
+                    value: undefined,
+                    rank: "Uninitialized",
+                    ticker_name: ticker_name,
+                    type_: "Market"
+                  }, tl: all_tickers},
+                  ticker_map
+                ];
+              default:
+                throw {
+                  RE_EXN_ID: "Failure",
+                  _1: "Invalid input line",
+                  Error: new Error()
+                };
+            }
+          } else {
+            throw {
+              RE_EXN_ID: "Failure",
+              _1: "Invalid input line",
+              Error: new Error()
+            };
+          }
+        } else {
+          throw {
+            RE_EXN_ID: "Failure",
+            _1: "Invalid input line",
+            Error: new Error()
+          };
+        }
+      default:
+        throw {
+          RE_EXN_ID: "Failure",
+          _1: "Invalid input line",
+          Error: new Error()
+        };
+    }
+  } else {
+    throw {
+      RE_EXN_ID: "Failure",
+      _1: "Invalid input line",
+      Error: new Error()
+    };
   }
 }
 

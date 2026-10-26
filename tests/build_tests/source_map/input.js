@@ -161,7 +161,7 @@ const originalDebuggerPositions = findTokenPositions(demoSource, "%debugger");
 assert.equal(originalDebuggerPositions.length, 2);
 const originalRaiseErrorPositions = findTokenPositions(
   demoSource,
-  "Exn.raiseError",
+  "JsError.throwWithMessage",
 );
 assert.equal(originalRaiseErrorPositions.length, 2);
 const originalPipeCallPositions = findTokenPositions(demoSource, "input->fn");
@@ -172,7 +172,7 @@ const originalPatternBranchPositions = [
 ];
 const originalHelperRaiseErrorPositions = findTokenPositions(
   helperSource,
-  "Exn.raiseError",
+  "JsError.throwWithMessage",
 );
 assert.equal(originalHelperRaiseErrorPositions.length, 1);
 const originalHelperPipeCallPositions = findTokenPositions(
@@ -301,7 +301,7 @@ function assertSourceMap(filename, js, map, options = {}) {
   const decodedMappings = decodeMappings(map.mappings);
   const generatedRaiseErrorPositions = findTokenPositions(
     js,
-    "Stdlib_Exn.raiseError",
+    "Stdlib_JsError.throwWithMessage",
   );
   assert.equal(
     generatedRaiseErrorPositions.length,

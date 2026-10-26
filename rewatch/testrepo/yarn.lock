@@ -208,7 +208,7 @@ __metadata:
   resolution: "@testrepo/with-dev-deps@workspace:packages/with-dev-deps"
   dependencies:
     "@rescript/webapi": "patch:@rescript/webapi@npm%3A0.1.0-experimental-73e6a0d#~/.yarn/patches/@rescript-webapi-npm-0.1.0-experimental-73e6a0d-288a2072f7.patch"
-    rescript-nodejs: "npm:17.0.0"
+    rescript-nodejs: "patch:rescript-nodejs@npm%3A17.0.0#~/.yarn/patches/rescript-nodejs-npm-17.0.0-stdlib-v13.patch"
   languageName: unknown
   linkType: soft
 
@@ -216,7 +216,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@testrepo/with-ppx@workspace:packages/with-ppx"
   dependencies:
-    rescript-nodejs: "npm:17.0.0"
+    rescript-nodejs: "patch:rescript-nodejs@npm%3A17.0.0#~/.yarn/patches/rescript-nodejs-npm-17.0.0-stdlib-v13.patch"
     sury: "npm:11.0.0-rc.0"
     sury-ppx: "npm:11.0.0-rc.0"
   languageName: unknown
@@ -233,10 +233,10 @@ __metadata:
 
 "rescript-bun@patch:rescript-bun@npm%3A2.1.0#~/.yarn/patches/rescript-bun-npm-2.1.0-d9adc91a04.patch":
   version: 2.1.0
-  resolution: "rescript-bun@patch:rescript-bun@npm%3A2.1.0#~/.yarn/patches/rescript-bun-npm-2.1.0-d9adc91a04.patch::version=2.1.0&hash=cc7d77"
+  resolution: "rescript-bun@patch:rescript-bun@npm%3A2.1.0#~/.yarn/patches/rescript-bun-npm-2.1.0-d9adc91a04.patch::version=2.1.0&hash=422c2f"
   peerDependencies:
     rescript: ">= 12.0.0-alpha.4"
-  checksum: 10c0/e58a68cc5cc0b3aef0198ad44ad80535f962c4a50d1085b9aaa2d8454fa4203907aa2b4e14939e909778b0c52ba6767175469ec51ddc5238d2674fe6d65f6a79
+  checksum: 10c0/aec846f87d07e4433bf3060abcaaae896d2c48e21f7c1f97bdb60733f9ccf458f4b0eeef75906d22638099689fe1faaa9fbb6ae5c039458f1967f9712137e9f5
   languageName: node
   linkType: hard
 
@@ -244,6 +244,13 @@ __metadata:
   version: 17.0.0
   resolution: "rescript-nodejs@npm:17.0.0"
   checksum: 10c0/2c35fb20a208e4e62b462b588253457a66841201ecddb703ab4cdfb1119d4d496ee8663c6224114bcb5216cdbff8f33832f3fd22fa47c058a164db97a7b8a007
+  languageName: node
+  linkType: hard
+
+"rescript-nodejs@patch:rescript-nodejs@npm%3A17.0.0#~/.yarn/patches/rescript-nodejs-npm-17.0.0-stdlib-v13.patch":
+  version: 17.0.0
+  resolution: "rescript-nodejs@patch:rescript-nodejs@npm%3A17.0.0#~/.yarn/patches/rescript-nodejs-npm-17.0.0-stdlib-v13.patch::version=17.0.0&hash=121416"
+  checksum: 10c0/31def0dda716c3803ef3f35ba51cfd7d5f214d3cec0a7e06202690725ffb4ea7eeee9ca465cee09b7538d31ac17a258c60ebfe0f5c2fda2d06f86625b0f3e711
   languageName: node
   linkType: hard
 

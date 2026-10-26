@@ -19,7 +19,7 @@ let init = (l, f) =>
   if l == 0 {
     []
   } else if l < 0 {
-    invalid_arg("Array.init")
+    throw(Invalid_argument("Array.init"))
   } else {
     /* See #6575. We could also check for maximum array size, but this depends
      on whether we create a float array or a regular one... */

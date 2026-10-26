@@ -69,30 +69,6 @@ Int.toExponential(5678, ~digits=2) // "5.68e+3"
 external toExponential: (int, ~digits: int=?) => string = "toExponential"
 
 /**
-`toExponential(n, ~digits)` return a `string` representing the given value in
-exponential notation. `digits` specifies how many digits should appear after
-the decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)
-on MDN.
-
-## Examples
-
-```rescript
-Int.toExponentialWithPrecision(77, ~digits=2) // "7.70e+1"
-Int.toExponentialWithPrecision(5678, ~digits=2) // "5.68e+3"
-```
-
-## Exceptions
-
-- `RangeError`: If `digits` less than 0 or greater than 10.
-*/
-@deprecated({
-  reason: "Use `toExponential` instead",
-  migrate: Int.toExponential(),
-})
-@send
-external toExponentialWithPrecision: (int, ~digits: int) => string = "toExponential"
-
-/**
 `toFixed(n, ~digits=?)` return a `string` representing the given
 value using fixed-point notation. `digits` specifies how many digits should
 appear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)
@@ -113,30 +89,6 @@ Int.toFixed(300, ~digits=1) // "300.0"
 */
 @send
 external toFixed: (int, ~digits: int=?) => string = "toFixed"
-
-/**
-`toFixedWithPrecision(n, ~digits)` return a `string` representing the given
-value using fixed-point notation. `digits` specifies how many digits should
-appear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)
-on MDN.
-
-## Examples
-
-```rescript
-Int.toFixedWithPrecision(300, ~digits=4) // "300.0000"
-Int.toFixedWithPrecision(300, ~digits=1) // "300.0"
-```
-
-## Exceptions
-
-- `RangeError`: If `digits` is less than 0 or larger than 100.
-*/
-@deprecated({
-  reason: "Use `toFixed` instead",
-  migrate: Int.toFixed(),
-})
-@send
-external toFixedWithPrecision: (int, ~digits: int) => string = "toFixed"
 
 /**
 `toPrecision(n, ~digits=?)` return a `string` representing the giver value with
@@ -161,30 +113,6 @@ Int.toPrecision(1, ~digits=2) // "1.0"
 external toPrecision: (int, ~digits: int=?) => string = "toPrecision"
 
 /**
-`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with
-precision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.
-
-## Examples
-
-```rescript
-Int.toPrecisionWithPrecision(100, ~digits=2) // "1.0e+2"
-Int.toPrecisionWithPrecision(1, ~digits=2) // "1.0"
-```
-
-## Exceptions
-
-- `RangeError`: If `digits` is not between 1 and 100 (inclusive).
-  Implementations are allowed to support larger and smaller values as well.
-  ECMA-262 only requires a precision of up to 21 significant digits.
-*/
-@send
-@deprecated({
-  reason: "Use `toPrecision` instead",
-  migrate: Int.toPrecision(),
-})
-external toPrecisionWithPrecision: (int, ~digits: int) => string = "toPrecision"
-
-/**
 `toString(n, ~radix=?)` return a `string` representing the given value.
 `~radix` specifies the radix base to use for the formatted number.
 See [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)
@@ -206,31 +134,6 @@ Int.toString(123456, ~radix=36) // "2n9c"
 */
 @send
 external toString: (int, ~radix: int=?) => string = "toString"
-
-/**
-`toStringWithRadix(n, ~radix)` return a `string` representing the given value.
-`~radix` specifies the radix base to use for the formatted number.
-See [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)
-on MDN.
-
-## Examples
-
-```rescript
-Int.toStringWithRadix(6, ~radix=2) // "110"
-Int.toStringWithRadix(373592855, ~radix=16) // "16449317"
-Int.toStringWithRadix(123456, ~radix=36) // "2n9c"
-```
-
-## Exceptions
-
-`RangeError`: if `radix` is less than 2 or greater than 36.
-*/
-@deprecated({
-  reason: "Use `toString` instead",
-  migrate: Int.toString(),
-})
-@send
-external toStringWithRadix: (int, ~radix: int) => string = "toString"
 
 /**
 `toLocaleString(n)` return a `string` with language-sensitive representing the
@@ -344,38 +247,6 @@ Int.range(3, 6, ~options={step: -2}) // RangeError
 let range: (int, int, ~options: rangeOptions=?) => array<int>
 
 /**
-`rangeWithOptions(start, end, options)` is like `range`, but with `step` and
-`inclusive` options configurable.
-
-If `step` is set, the sequence will increase or decrease by that amount for each
-step. If `start < end` and `step` is negative, or vice versa, an empty array is
-returned since the sequence would otherwise never reach or exceed the end value
-and hence be infinite. If `step` is `0` and `start !=` end, a `RangeError` is
-raised as the sequence would never reach or exceed the end value and hence be
-infinite.
-
-If `inclusive` is set to `true`, the sequence will include `end` if `step` is
-set such that the sequence includes it.
-
-## Examples
-
-```rescript
-Int.rangeWithOptions(3, 7, {step: 2}) == [3, 5]
-Int.rangeWithOptions(3, 7, {step: 2, inclusive: true}) == [3, 5, 7]
-Int.rangeWithOptions(3, 6, {step: -2}) // RangeError
-```
-
-## Exceptions
-
-- Raises `RangeError` if `step == 0 && start != end`.
-*/
-@deprecated({
-  reason: "Use `range` instead",
-  migrate: Int.range(~options=%insert.unlabelledArgument(2)),
-})
-let rangeWithOptions: (int, int, rangeOptions) => array<int>
-
-/**
 `clamp(~min=?, ~max=?, value)` returns `value`, optionally bounded by `min` and `max`.
 
 if `max` \< `min` returns `min`.
@@ -472,46 +343,6 @@ Int.shiftRightUnsigned(4, 1) == 2
 ```
 */
 external shiftRightUnsigned: (int, int) => int = "%lsrint"
-
-module Bitwise: {
-  @deprecated({
-    reason: "Use `Int.bitwiseAnd` instead",
-    migrate: Int.bitwiseAnd(),
-  })
-  external land: (int, int) => int = "%andint"
-  @deprecated({
-    reason: "Use `Int.bitwiseOr` instead",
-    migrate: Int.bitwiseOr(),
-  })
-  external lor: (int, int) => int = "%orint"
-  @deprecated({
-    reason: "Use `Int.bitwiseXor` instead",
-    migrate: Int.bitwiseXor(),
-  })
-  external lxor: (int, int) => int = "%xorint"
-
-  @deprecated({
-    reason: "Use `Int.shiftLeft` instead",
-    migrate: Int.shiftLeft(),
-  })
-  external lsl: (int, int) => int = "%lslint"
-  @deprecated({
-    reason: "Use `Int.shiftRightUnsigned` instead",
-    migrate: Int.shiftRightUnsigned(),
-  })
-  external lsr: (int, int) => int = "%lsrint"
-  @deprecated({
-    reason: "Use `Int.shiftRight` instead",
-    migrate: Int.shiftRight(),
-  })
-  external asr: (int, int) => int = "%asrint"
-
-  @deprecated({
-    reason: "Use `Int.bitwiseNot` instead",
-    migrate: Int.bitwiseNot(),
-  })
-  let lnot: int => int
-}
 
 /**
   `ignore(int)` ignores the provided int and returns unit.

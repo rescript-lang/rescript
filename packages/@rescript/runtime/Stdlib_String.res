@@ -68,41 +68,6 @@ type normalizeForm = [#NFC | #NFD | #NFKC | #NFKD]
 @send external replaceAllRegExp: (string, Stdlib_RegExp.t, string) => string = "replaceAll"
 
 @send
-external unsafeReplaceRegExpBy0: (
-  string,
-  Stdlib_RegExp.t,
-  (~match: string, ~offset: int, ~input: string) => string,
-) => string = "replace"
-
-@send
-external unsafeReplaceRegExpBy1: (
-  string,
-  Stdlib_RegExp.t,
-  (~match: string, ~group1: string, ~offset: int, ~input: string) => string,
-) => string = "replace"
-
-@send
-external unsafeReplaceRegExpBy2: (
-  string,
-  Stdlib_RegExp.t,
-  (~match: string, ~group1: string, ~group2: string, ~offset: int, ~input: string) => string,
-) => string = "replace"
-
-@send
-external unsafeReplaceRegExpBy3: (
-  string,
-  Stdlib_RegExp.t,
-  (
-    ~match: string,
-    ~group1: string,
-    ~group2: string,
-    ~group3: string,
-    ~offset: int,
-    ~input: string,
-  ) => string,
-) => string = "replace"
-
-@send
 external replaceRegExpBy0Unsafe: (
   string,
   Stdlib_RegExp.t,
@@ -145,12 +110,6 @@ let searchOpt = (s, re) =>
   }
 
 @send external slice: (string, ~start: int, ~end: int=?) => string = "slice"
-@deprecated({
-  reason: "Use `slice` instead",
-  migrate: String.slice(),
-})
-@send
-external sliceToEnd: (string, ~start: int) => string = "slice"
 
 @send external split: (string, string) => array<string> = "split"
 @send external splitAtMost: (string, string, ~limit: int) => array<string> = "split"
@@ -163,12 +122,6 @@ external splitByRegExpAtMost: (string, Stdlib_RegExp.t, ~limit: int) => array<op
 @send external startsWithFrom: (string, string, int) => bool = "startsWith"
 
 @send external substring: (string, ~start: int, ~end: int=?) => string = "substring"
-@deprecated({
-  reason: "Use `substring` instead",
-  migrate: String.substring(),
-})
-@send
-external substringToEnd: (string, ~start: int) => string = "substring"
 
 @send external toLowerCase: string => string = "toLowerCase"
 @send external toLocaleLowerCase: string => string = "toLocaleLowerCase"
@@ -196,7 +149,7 @@ let capitalize = s =>
   if isEmpty(s) {
     s
   } else {
-    toUpperCase(getUnsafe(s, 0)) ++ sliceToEnd(s, ~start=1)
+    toUpperCase(getUnsafe(s, 0)) ++ slice(s, ~start=1)
   }
 
 external ignore: string => unit = "%ignore"

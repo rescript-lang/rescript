@@ -49,7 +49,7 @@ function dfs1(_nodes, graph, _visited) {
     }
     let xs = nodes.tl;
     let x = nodes.hd;
-    if (Stdlib_List.has(visited, x, (prim0, prim1) => prim0 === prim1)) {
+    if (Stdlib_List.some(visited, y => y === x)) {
       _nodes = xs;
       continue;
     }
@@ -99,7 +99,7 @@ function dfs2(nodes, graph, visited) {
       }
       let xs = nodes.tl;
       let x = nodes.hd;
-      if (Stdlib_List.has(visited, x, (prim0, prim1) => prim0 === prim1)) {
+      if (Stdlib_List.some(visited, y => y === x)) {
         _nodes = xs;
         continue;
       }
@@ -141,7 +141,7 @@ if (!Primitive_object.equal(dfs2({hd: "b", tl: /* [] */0}, {hd: [
 function dfs3(nodes, graph) {
   let visited = /* [] */0;
   let aux = (node, graph) => {
-    if (Stdlib_List.has(visited, node, (prim0, prim1) => prim0 === prim1)) {
+    if (Stdlib_List.some(visited, y => y === node)) {
       return;
     }
     visited = {hd: node, tl: visited};
@@ -201,7 +201,7 @@ let grwork = {hd: [
 function unsafe_topsort(graph) {
   let visited = /* [] */0;
   let sort_node = node => {
-    if (Stdlib_List.has(visited, node, (prim0, prim1) => prim0 === prim1)) {
+    if (Stdlib_List.some(visited, y => y === node)) {
       return;
     }
     let nodes = nexts(node, graph);
@@ -229,7 +229,7 @@ let Cycle = /* @__PURE__ */Primitive_exceptions.create("Topsort_test.Cycle");
 function pathsort(graph) {
   let visited = /* [] */0;
   let $plus$great = (node, path) => {
-    if (Stdlib_List.has(path, node, (prim0, prim1) => prim0 === prim1)) {
+    if (Stdlib_List.some(path, y => y === node)) {
       throw {
         RE_EXN_ID: Cycle,
         _1: {hd: node, tl: path},
@@ -240,7 +240,7 @@ function pathsort(graph) {
   };
   let sort_nodes = (path, nodes) => Stdlib_List.forEach(nodes, node => sort_node(path, node));
   let sort_node = (path, node) => {
-    if (Stdlib_List.has(visited, node, (prim0, prim1) => prim0 === prim1)) {
+    if (Stdlib_List.some(visited, y => y === node)) {
       return;
     }
     sort_nodes($plus$great(node, path), nexts(node, graph));

@@ -1,7 +1,7 @@
 exception TestError(string)
 
 let fail = msg => {
-  Exn.raiseError(msg)
+  JsError.throwWithMessage(msg)
 }
 
 let equal = (a, b) => {
@@ -164,7 +164,7 @@ module Catching = {
     open Promise
 
     let causeErr = () => {
-      Exn.raiseError("Some JS error")
+      JsError.throwWithMessage("Some JS error")
     }
 
     resolve()

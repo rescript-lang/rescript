@@ -94,8 +94,6 @@ let headOrThrow = x =>
   | list{x, ..._} => x
   }
 
-let headExn = headOrThrow
-
 let tail = x =>
   switch x {
   | list{} => None
@@ -107,8 +105,6 @@ let tailOrThrow = x =>
   | list{} => throw(Not_found)
   | list{_, ...t} => t
   }
-
-let tailExn = tailOrThrow
 
 let add = (xs, x) => list{x, ...xs}
 
@@ -148,8 +144,6 @@ let getOrThrow = (x, n) =>
   } else {
     nthAuxAssert(x, n)
   }
-
-let getExn = getOrThrow
 
 let rec partitionAux = (p, cell, precX, precY) =>
   switch cell {
@@ -224,34 +218,6 @@ let rec copyAuxWitFilterMap = (f, cellX, prec) =>
       unsafeMutateTail(prec, next)
       copyAuxWitFilterMap(f, t, next)
     | None => copyAuxWitFilterMap(f, t, prec)
-    }
-  }
-
-let rec removeAssocAuxWithMap = (cellX, x, prec, f) =>
-  switch cellX {
-  | list{} => false
-  | list{(a, _) as h, ...t} =>
-    if f(a, x) {
-      unsafeMutateTail(prec, t)
-      true
-    } else {
-      let next = mutableCell(h, list{})
-      unsafeMutateTail(prec, next)
-      removeAssocAuxWithMap(t, x, next, f)
-    }
-  }
-
-let rec setAssocAuxWithMap = (cellX, x, k, prec, eq) =>
-  switch cellX {
-  | list{} => false
-  | list{(a, _) as h, ...t} =>
-    if eq(a, x) {
-      unsafeMutateTail(prec, list{(x, k), ...t})
-      true
-    } else {
-      let next = mutableCell(h, list{})
-      unsafeMutateTail(prec, next)
-      setAssocAuxWithMap(t, x, k, next, eq)
     }
   }
 
@@ -481,9 +447,6 @@ let shuffle = xs => {
   fromArray(v)
 }
 
-@deprecated("Use `shuffle` instead")
-let toShuffled = shuffle
-
 let rec reverseConcat = (l1, l2) =>
   switch l1 {
   | list{} => l2
@@ -673,71 +636,10 @@ let rec some2 = (l1, l2, p) =>
   | (list{a1, ...l1}, list{a2, ...l2}) => p(a1, a2) || some2(l1, l2, p)
   }
 
-let rec has = (xs, x, eq) =>
-  switch xs {
-  | list{} => false
-  | list{a, ...l} => eq(a, x) || has(l, x, eq)
-  }
-
 let rec includes = (xs, x) =>
   switch xs {
   | list{} => false
   | list{a, ...l} => a === x || includes(l, x)
-  }
-
-@deprecated("Use a `Map` instead")
-let rec getAssoc = (xs, x, eq) =>
-  switch xs {
-  | list{} => None
-  | list{(a, b), ...l} =>
-    if eq(a, x) {
-      Some(b)
-    } else {
-      getAssoc(l, x, eq)
-    }
-  }
-
-@deprecated("Use a `Map` instead")
-let rec hasAssoc = (xs, x, eq) =>
-  switch xs {
-  | list{} => false
-  | list{(a, _), ...l} => eq(a, x) || hasAssoc(l, x, eq)
-  }
-
-@deprecated("Use a `Map` instead")
-let removeAssoc = (xs, x, eq) =>
-  switch xs {
-  | list{} => list{}
-  | list{(a, _) as pair, ...l} =>
-    if eq(a, x) {
-      l
-    } else {
-      let cell = mutableCell(pair, list{})
-      let removed = removeAssocAuxWithMap(l, x, cell, eq)
-      if removed {
-        cell
-      } else {
-        xs
-      }
-    }
-  }
-
-@deprecated("Use a `Map` instead")
-let setAssoc = (xs, x, k, eq) =>
-  switch xs {
-  | list{} => list{(x, k)}
-  | list{(a, _) as pair, ...l} =>
-    if eq(a, x) {
-      list{(x, k), ...l}
-    } else {
-      let cell = mutableCell(pair, list{})
-      let replaced = setAssocAuxWithMap(l, x, k, cell, eq)
-      if replaced {
-        cell
-      } else {
-        list{(x, k), ...xs}
-      }
-    }
   }
 
 let sort = (xs, cmp) => {

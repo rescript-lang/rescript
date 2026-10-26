@@ -48,27 +48,6 @@ switch Bool.fromStringOrThrow("notAValidBoolean") {
 let fromStringOrThrow: string => bool
 
 /**
-Converts a string to a boolean.
-Beware, this function will throw an `Invalid_argument` exception
-if the string is not a valid boolean.
-
-## Examples
-```rescript
-Bool.fromStringExn("true") == true
-Bool.fromStringExn("false") == false
-switch Bool.fromStringExn("notAValidBoolean") {
-| exception Invalid_argument(_) => assert(true)
-| _ => assert(false)
-}
-```
-*/
-@deprecated({
-  reason: "Use `fromStringOrThrow` instead",
-  migrate: Bool.fromStringOrThrow(),
-})
-let fromStringExn: string => bool
-
-/**
 Compares two booleans, returns an `Ordering.t` value.
 
 ## Examples

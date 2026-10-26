@@ -16,10 +16,10 @@ let generic_lessequal = \"<="
 let bigint_greaterequal = (x: bigint, y) => x >= y
 let generic_greaterequal = \">="
 let bigint_land = BigInt.bitwiseAnd
-let bigint_lor = BigInt.lor
-let bigint_lxor = BigInt.lxor
-let bigint_lsl = BigInt.lsl
-let bigint_asr = BigInt.asr
+let bigint_lor = BigInt.bitwiseOr
+let bigint_lxor = BigInt.bitwiseXor
+let bigint_lsl = BigInt.shiftLeft
+let bigint_asr = BigInt.shiftRight
 
 describe(__MODULE__, () => {
   test("bigint_test", () => {

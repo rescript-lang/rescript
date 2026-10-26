@@ -1,0 +1,24 @@
+diff --git a/src/Errors.res b/src/Errors.res
+--- a/src/Errors.res
++++ b/src/Errors.res
+@@ -220,7 +220,7 @@
+ 
+ let classifyExn: JsExn.t => case = value =>
+   switch classifyOpt(value) {
+-  | None => failwith("Unknown data type")
++  | None => throw(Failure("Unknown data type"))
+   | Some(err) => err
+   }
+ 
+diff --git a/src/StringBuffer.res b/src/StringBuffer.res
+--- a/src/StringBuffer.res
++++ b/src/StringBuffer.res
+@@ -22,7 +22,7 @@
+   } else if Buffer.isBuffer(value) {
+     Buffer(Obj.magic(value))
+   } else {
+-    failwith("Unknown data type")
++    throw(Failure("Unknown data type"))
+   }
+ 
+ let classify = value =>

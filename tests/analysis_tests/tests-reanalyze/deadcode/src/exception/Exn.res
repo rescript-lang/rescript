@@ -120,9 +120,9 @@ let bar = () => JSON.parseOrThrow("!!!")
 
 let severalCases = cases =>
   switch cases {
-  | "one" => failwith("one")
-  | "two" => failwith("two")
-  | "three" => failwith("three")
+  | "one" => throw(Failure("one"))
+  | "two" => throw(Failure("two"))
+  | "three" => throw(Failure("three"))
   | _ => ()
   }
 

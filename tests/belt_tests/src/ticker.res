@@ -160,7 +160,7 @@ let compute_update_sequences = all_tickers => {
     let l = l->List.sort((lhs, rhs) =>
       switch (lhs, rhs) {
       | ({rank: Ranked(x)}, {rank: Ranked(y)}) => Pervasives.compare(x, y)
-      | (_, _) => failwith("All nodes should be ranked")
+      | (_, _) => throw(Failure("All nodes should be ranked"))
       }
     )
     map->Ticker_map.set(k, l)
@@ -176,7 +176,8 @@ let process_quote = (ticker_map, new_ticker, new_value) => {
     switch ticker {
     | {type_: Market, ticker_name, _} if ticker_name == new_ticker => ticker.value = Some(new_value)
 
-    | {type_: Market, _} => failwith("Only single Market ticker should be udpated upon a new quote")
+    | {type_: Market, _} =>
+      throw(Failure("Only single Market ticker should be udpated upon a new quote"))
 
     | {type_: Binary_op({lhs, rhs, op}), ticker_name, _} =>
       let value = switch (lhs.value, rhs.value) {
@@ -230,7 +231,7 @@ let process_input_line = (ticker_map, all_tickers, line) => {
     let value = value->Float.fromString->Option.getExn
     process_quote(ticker_map, ticker_name, value)
     (all_tickers, Some(ticker_map))
-  | _ => failwith("Invalid input line")
+  | _ => throw(Failure("Invalid input line"))
   }
 
   all_tickers

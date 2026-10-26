@@ -87,8 +87,8 @@ let xxxx = [1, 2]
 // xxxx->Array.filter(v => v > 10).filt
 //                                     ^com
 
-// xxxx->Array.filter(v => v > 10)->Array.joinWith(",").includ
-//                                                            ^com
+// xxxx->Array.filter(v => v > 10)->Array.join(",").includ
+//                                                        ^com
 
 let str = "hello"
 

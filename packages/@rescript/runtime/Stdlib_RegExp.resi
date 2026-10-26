@@ -103,29 +103,6 @@ switch regexp->RegExp.exec("FOO") {
 external fromString: (string, ~flags: string=?) => t = "RegExp"
 
 /**
-`fromStringWithFlags(string)` creates a `RegExp.t` from the provided string, using the provided `flags`. This can then be used to match on strings using `RegExp.exec`.
-
-See [`RegExp parameters`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/RegExp#parameters) on MDN.
-
-## Examples
-```rescript
-// Match the first word in a sentence
-let regexp = RegExp.fromStringWithFlags("\\w+", ~flags="g")
-
-switch regexp->RegExp.exec("ReScript is pretty cool, right?") {
-| None => Console.log("Nope, no match...")
-| Some(result) => Console.log(result->RegExp.Result.fullMatch) // Prints "ReScript"
-}
-```
-*/
-@deprecated({
-  reason: "Use `fromString` instead",
-  migrate: RegExp.fromString(~flags=%insert.labelledArgument("flags")),
-})
-@new
-external fromStringWithFlags: (string, ~flags: string) => t = "RegExp"
-
-/**
 `escape(string)` escapes any potential regex syntax characters in a string.
 
 See [`RegExp.escape`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/escape) on MDN.
@@ -229,10 +206,10 @@ See [`RegExp.ignoreCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 
 ## Examples
 ```rescript
-let regexp1 = RegExp.fromStringWithFlags("\\w+", ~flags="g")
+let regexp1 = RegExp.fromString("\\w+", ~flags="g")
 Console.log(regexp1->RegExp.ignoreCase) // Logs `false`, since `i` is not set
 
-let regexp2 = RegExp.fromStringWithFlags("\\w+", ~flags="i")
+let regexp2 = RegExp.fromString("\\w+", ~flags="i")
 Console.log(regexp2->RegExp.ignoreCase) // Logs `true`, since `i` is set
 ```
 */
@@ -246,10 +223,10 @@ See [`RegExp.global`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 
 ## Examples
 ```rescript
-let regexp1 = RegExp.fromStringWithFlags("\\w+", ~flags="g")
+let regexp1 = RegExp.fromString("\\w+", ~flags="g")
 Console.log(regexp1->RegExp.global) // Logs `true`, since `g` is set
 
-let regexp2 = RegExp.fromStringWithFlags("\\w+", ~flags="i")
+let regexp2 = RegExp.fromString("\\w+", ~flags="i")
 Console.log(regexp2->RegExp.global) // Logs `false`, since `g` is not set
 ```
 */
@@ -263,10 +240,10 @@ See [`RegExp.multiline`](https://developer.mozilla.org/en-US/docs/Web/JavaScript
 
 ## Examples
 ```rescript
-let regexp1 = RegExp.fromStringWithFlags("\\w+", ~flags="g")
+let regexp1 = RegExp.fromString("\\w+", ~flags="g")
 Console.log(regexp1->RegExp.multiline) // Logs `false`, since `m` is not set
 
-let regexp2 = RegExp.fromStringWithFlags("\\w+", ~flags="mi")
+let regexp2 = RegExp.fromString("\\w+", ~flags="mi")
 Console.log(regexp2->RegExp.multiline) // Logs `true`, since `m` is set
 ```
 */
@@ -280,7 +257,7 @@ See [`RegExp.source`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 
 ## Examples
 ```rescript
-let regexp = RegExp.fromStringWithFlags("\\w+", ~flags="g")
+let regexp = RegExp.fromString("\\w+", ~flags="g")
 Console.log(regexp->RegExp.source) // Logs `\w+`, the source text of the `RegExp`
 ```
 */
@@ -294,10 +271,10 @@ See [`RegExp.sticky`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 
 ## Examples
 ```rescript
-let regexp1 = RegExp.fromStringWithFlags("\\w+", ~flags="g")
+let regexp1 = RegExp.fromString("\\w+", ~flags="g")
 Console.log(regexp1->RegExp.unicode) // Logs `false`, since `y` is not set
 
-let regexp2 = RegExp.fromStringWithFlags("\\w+", ~flags="my")
+let regexp2 = RegExp.fromString("\\w+", ~flags="my")
 Console.log(regexp2->RegExp.unicode) // Logs `true`, since `y` is set
 ```
 */
@@ -311,10 +288,10 @@ See [`RegExp.unicode`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 
 ## Examples
 ```rescript
-let regexp1 = RegExp.fromStringWithFlags("\\w+", ~flags="g")
+let regexp1 = RegExp.fromString("\\w+", ~flags="g")
 Console.log(regexp1->RegExp.unicode) // Logs `false`, since `u` is not set
 
-let regexp2 = RegExp.fromStringWithFlags("\\w+", ~flags="mu")
+let regexp2 = RegExp.fromString("\\w+", ~flags="mu")
 Console.log(regexp2->RegExp.unicode) // Logs `true`, since `u` is set
 ```
 */

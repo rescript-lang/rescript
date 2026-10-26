@@ -372,8 +372,6 @@ type domProps = {
   baselineShift?: string,
   bbox?: string,
   begin?: string,
-  @deprecated("Please use begin")
-  begin_?: string,
   bias?: string,
   by?: string,
   calcMode?: string,
@@ -406,8 +404,6 @@ type domProps = {
   elevation?: string,
   enableBackground?: string,
   end?: string,
-  @deprecated("Please use end")
-  end_?: string,
   exponent?: string,
   externalResourcesRequired?: string,
   fill?: string,
@@ -555,8 +551,6 @@ type domProps = {
   textLength?: string,
   textRendering?: string,
   to?: string,
-  @deprecated("Please use to")
-  to_?: string,
   transform?: string,
   u1?: string,
   u2?: string,

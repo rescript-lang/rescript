@@ -324,7 +324,7 @@ let internal_bal = (l, v, r) => {
 
 let rec remove_min_elt = x =>
   switch x {
-  | Empty => invalid_arg("Set.remove_min_elt")
+  | Empty => throw(Invalid_argument("Set.remove_min_elt"))
   | Node(Empty, v, r, _) => r
   | Node(l, v, r, _) => internal_bal(remove_min_elt(l), v, r)
   }

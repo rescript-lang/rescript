@@ -4,4 +4,4 @@ let u = if Const_defs.v {
   4
 }
 
-let f = () => invalid_arg("hi")
+let f = () => throw(Invalid_argument("hi"))

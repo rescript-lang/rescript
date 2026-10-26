@@ -33,7 +33,7 @@ Path
     "detail": "t => bool",
     "documentation": {
       "kind": "markdown",
-      "value": "\n`sticky(regexp)` returns whether the sticky (`y`) flag is set on this `RegExp`.\n\nSee [`RegExp.sticky`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.unicode) // Logs `false`, since `y` is not set\n\nlet regexp2 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"my\")\nConsole.log(regexp2->RegExp.unicode) // Logs `true`, since `y` is set\n```\n"
+      "value": "\n`sticky(regexp)` returns whether the sticky (`y`) flag is set on this `RegExp`.\n\nSee [`RegExp.sticky`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromString(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.unicode) // Logs `false`, since `y` is not set\n\nlet regexp2 = RegExp.fromString(\"\\\\w+\", ~flags=\"my\")\nConsole.log(regexp2->RegExp.unicode) // Logs `true`, since `y` is set\n```\n"
     },
     "kind": 12,
     "label": "RegExp.sticky",
@@ -63,7 +63,7 @@ Path
     "detail": "t => bool",
     "documentation": {
       "kind": "markdown",
-      "value": "\n`ignoreCase(regexp)` returns whether the ignore case (`i`) flag is set on this `RegExp`.\n\nSee [`RegExp.ignoreCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/ignoreCase) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.ignoreCase) // Logs `false`, since `i` is not set\n\nlet regexp2 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"i\")\nConsole.log(regexp2->RegExp.ignoreCase) // Logs `true`, since `i` is set\n```\n"
+      "value": "\n`ignoreCase(regexp)` returns whether the ignore case (`i`) flag is set on this `RegExp`.\n\nSee [`RegExp.ignoreCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/ignoreCase) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromString(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.ignoreCase) // Logs `false`, since `i` is not set\n\nlet regexp2 = RegExp.fromString(\"\\\\w+\", ~flags=\"i\")\nConsole.log(regexp2->RegExp.ignoreCase) // Logs `true`, since `i` is set\n```\n"
     },
     "kind": 12,
     "label": "RegExp.ignoreCase",
@@ -73,7 +73,7 @@ Path
     "detail": "t => bool",
     "documentation": {
       "kind": "markdown",
-      "value": "\n`global(regexp)` returns whether the global (`g`) flag is set on this `RegExp`.\n\nSee [`RegExp.global`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/global) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.global) // Logs `true`, since `g` is set\n\nlet regexp2 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"i\")\nConsole.log(regexp2->RegExp.global) // Logs `false`, since `g` is not set\n```\n"
+      "value": "\n`global(regexp)` returns whether the global (`g`) flag is set on this `RegExp`.\n\nSee [`RegExp.global`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/global) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromString(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.global) // Logs `true`, since `g` is set\n\nlet regexp2 = RegExp.fromString(\"\\\\w+\", ~flags=\"i\")\nConsole.log(regexp2->RegExp.global) // Logs `false`, since `g` is not set\n```\n"
     },
     "kind": 12,
     "label": "RegExp.global",
@@ -83,7 +83,7 @@ Path
     "detail": "t => bool",
     "documentation": {
       "kind": "markdown",
-      "value": "\n`multiline(regexp)` returns whether the multiline (`m`) flag is set on this `RegExp`.\n\nSee [`RegExp.multiline`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/multiline) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.multiline) // Logs `false`, since `m` is not set\n\nlet regexp2 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"mi\")\nConsole.log(regexp2->RegExp.multiline) // Logs `true`, since `m` is set\n```\n"
+      "value": "\n`multiline(regexp)` returns whether the multiline (`m`) flag is set on this `RegExp`.\n\nSee [`RegExp.multiline`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/multiline) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromString(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.multiline) // Logs `false`, since `m` is not set\n\nlet regexp2 = RegExp.fromString(\"\\\\w+\", ~flags=\"mi\")\nConsole.log(regexp2->RegExp.multiline) // Logs `true`, since `m` is set\n```\n"
     },
     "kind": 12,
     "label": "RegExp.multiline",
@@ -103,7 +103,7 @@ Path
     "detail": "t => bool",
     "documentation": {
       "kind": "markdown",
-      "value": "\n`unicode(regexp)` returns whether the unicode (`y`) flag is set on this `RegExp`.\n\nSee [`RegExp.unicode`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicode) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.unicode) // Logs `false`, since `u` is not set\n\nlet regexp2 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"mu\")\nConsole.log(regexp2->RegExp.unicode) // Logs `true`, since `u` is set\n```\n"
+      "value": "\n`unicode(regexp)` returns whether the unicode (`y`) flag is set on this `RegExp`.\n\nSee [`RegExp.unicode`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicode) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromString(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.unicode) // Logs `false`, since `u` is not set\n\nlet regexp2 = RegExp.fromString(\"\\\\w+\", ~flags=\"mu\")\nConsole.log(regexp2->RegExp.unicode) // Logs `true`, since `u` is set\n```\n"
     },
     "kind": 12,
     "label": "RegExp.unicode",
@@ -113,7 +113,7 @@ Path
     "detail": "t => string",
     "documentation": {
       "kind": "markdown",
-      "value": "\n`source(regexp)` returns the source text for this `RegExp`, without the two forward slashes (if present), and without any set flags.\n\nSee [`RegExp.source`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/source) on MDN.\n\n## Examples\n```rescript\nlet regexp = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp->RegExp.source) // Logs `\\w+`, the source text of the `RegExp`\n```\n"
+      "value": "\n`source(regexp)` returns the source text for this `RegExp`, without the two forward slashes (if present), and without any set flags.\n\nSee [`RegExp.source`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/source) on MDN.\n\n## Examples\n```rescript\nlet regexp = RegExp.fromString(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp->RegExp.source) // Logs `\\w+`, the source text of the `RegExp`\n```\n"
     },
     "kind": 12,
     "label": "RegExp.source",

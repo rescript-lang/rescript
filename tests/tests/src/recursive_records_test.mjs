@@ -86,9 +86,9 @@ Mocha.describe("Recursive_records_test", () => {
     Test_utils.eq("File \"recursive_records_test.res\", line 63, characters 7-14", (hd(rec_cell2$1) + hd(tl_exn(rec_cell2$1)) | 0) + hd(tl_exn(tl_exn(rec_cell2$1))) | 0, 9);
   });
   Mocha.test("recursive variant list operations", () => {
-    Test_utils.eq("File \"recursive_records_test.res\", line 69, characters 7-14", (Stdlib_List.headExn(rec_cell3) + Stdlib_List.headExn(Stdlib_List.tailExn(rec_cell3)) | 0) + Stdlib_List.headExn(Stdlib_List.tailExn(Stdlib_List.tailExn(rec_cell3))) | 0, 9);
+    Test_utils.eq("File \"recursive_records_test.res\", line 69, characters 7-14", (Stdlib_List.headOrThrow(rec_cell3) + Stdlib_List.headOrThrow(Stdlib_List.tailOrThrow(rec_cell3)) | 0) + Stdlib_List.headOrThrow(Stdlib_List.tailOrThrow(Stdlib_List.tailOrThrow(rec_cell3))) | 0, 9);
     let rec_cell3$1 = f3(3);
-    Test_utils.eq("File \"recursive_records_test.res\", line 71, characters 7-14", (Stdlib_List.headExn(rec_cell3$1) + Stdlib_List.headExn(Stdlib_List.tailExn(rec_cell3$1)) | 0) + Stdlib_List.headExn(Stdlib_List.tailExn(Stdlib_List.tailExn(rec_cell3$1))) | 0, 9);
+    Test_utils.eq("File \"recursive_records_test.res\", line 71, characters 7-14", (Stdlib_List.headOrThrow(rec_cell3$1) + Stdlib_List.headOrThrow(Stdlib_List.tailOrThrow(rec_cell3$1)) | 0) + Stdlib_List.headOrThrow(Stdlib_List.tailOrThrow(Stdlib_List.tailOrThrow(rec_cell3$1))) | 0, 9);
   });
 });
 

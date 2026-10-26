@@ -10,7 +10,6 @@ module Result = {
 }
 
 @new external fromString: (string, ~flags: string=?) => t = "RegExp"
-@new external fromStringWithFlags: (string, ~flags: string) => t = "RegExp"
 
 external escape: string => string = "RegExp.escape"
 
