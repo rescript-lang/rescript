@@ -480,11 +480,16 @@ primitives of the variant never reach it.
 A `switch` on an untagged value the compiler knows, a literal or a block of
 constants, folds to the arm that the run-time dispatch selects for its
 JavaScript value, so `S("a")` matched against `@as("a") A | S(string)` folds
-to `A`. A value built at run time, such as `A([1])` with its array, is
+to `A`. Folding evaluates the plan the code is printed from, so it agrees
+with the generated code by construction, also for a value outside every case
+(rule 10). A value built at run time, such as `A([1])` with its array, is
 matched at run time.
 
-- Implementation: `lambda.ml:switch` (`untagged_action`, `literal_denotes_same`).
-- Tests: `tests/tests/src/unboxed_variant_fold_test.res`.
+- Implementation: `lambda.ml:switch` (`untagged_value`, `untagged_plan`),
+  `untagged_dispatch.ml:select`.
+- Tests: `tests/tests/src/unboxed_variant_fold_test.res`; `spec_test` rule 10
+  (a folded value outside every case); `ounit_untagged_dispatch_tests.ml`
+  compares the plans of random variants and matches with rules 7 to 9.
 - Shaped by #8631.
 
 ### 12. `option` of an untagged variant

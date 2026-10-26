@@ -315,3 +315,65 @@ let plan ~same
     else
       Switch_value
         (clauses ~same literal_arms ~shares:(fun _ _ -> true), payload)
+
+type value = Literal of literal_tag | Object | Array
+
+type 'a outcome = Arm of 'a | Default | Nothing
+
+(* What [typeof] returns for a value, as a kind *)
+let kind_of = function
+  | Literal (String _) -> Some StringType
+  | Literal (Int _ | Float _) -> Some NumberType
+  | Literal (BigInt _) -> Some BigintType
+  | Literal (Bool _) -> Some BooleanType
+  | Literal Null | Object | Array -> Some ObjectType
+  | Literal Undefined -> None
+
+let select ?(on_test = ignore) tree value =
+  (* JavaScript semantics, including the short circuits of [&&] and [||] *)
+  let rec holds test =
+    on_test test;
+    match (test, value) with
+    | Equals literal, Literal v -> same_literal_value v literal
+    | Equals _, (Object | Array) -> false
+    | Typeof kind, _ -> kind_of value = Some kind
+    | Instance Array, _ -> value = Array
+    | Instance (Class _), _ -> false
+    | Not_null, _ -> value <> Literal Null
+    | Not test, _ -> not (holds test)
+    | And (test1, test2), _ -> holds test1 && holds test2
+    | Or (test1, test2), _ -> holds test1 || holds test2
+  in
+  let rec run = function
+    | Run body -> Arm body
+    | Fallback -> Default
+    | Skip -> Nothing
+    | If (test, then_, else_) -> if holds test then run then_ else run else_
+    | Block tree -> run tree
+    | Switch_value (clauses, default) -> (
+      match value with
+      | Literal v ->
+        from_clauses
+          (fun literal -> same_literal_value v literal)
+          clauses default
+      | Object | Array -> run default)
+    | Switch_typeof (clauses, default) -> (
+      match kind_of value with
+      | Some kind -> from_clauses (fun k -> k = kind) clauses default
+      | None -> run default)
+  (* A matching case runs its body, or falls through to the next one *)
+  and from_clauses : 'k. ('k -> bool) -> ('k * _ clause) list -> _ =
+   fun matches clauses default ->
+    let rec fall = function
+      | (_, Body tree) :: _ -> run tree
+      | (_, Falls_through _) :: rest -> fall rest
+      | [] -> run default
+    in
+    let rec find = function
+      | [] -> run default
+      | (key, _) :: _ as clauses when matches key -> fall clauses
+      | _ :: rest -> find rest
+    in
+    find clauses
+  in
+  run tree
