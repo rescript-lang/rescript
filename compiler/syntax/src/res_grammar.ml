@@ -180,7 +180,7 @@ let is_pattern_start = function
   | _ -> false
 
 let is_parameter_start = function
-  | Token.Typ | Tilde | Dot -> true
+  | Token.Typ | Tilde | Dot | DocComment _ -> true
   | token when is_pattern_start token -> true
   | _ -> false
 
