@@ -35,6 +35,7 @@ type error =
   | RuntimeAnnotationContradictsManifest of string * string
   | SubclassOfArray of string
   | SubclassOfPublicAbbreviation of string * string
+  | ClassOnPublicAbbreviation of string
   | ClassTwiceInChain of string
 exception Error of Location.t * error
 
@@ -168,6 +169,13 @@ let report_error ppf =
       "@instanceOf(\"%s\") cannot describe the values of an array type: they \
        are recognized by Array.isArray, and subclasses of Array are not \
        supported."
+      name
+  | ClassOnPublicAbbreviation name ->
+    fprintf ppf
+      "A class must be declared on an abstract type or a private abbreviation: \
+       write `= private ...`, so that values of the abbreviated type are not \
+       instances of %s without a coercion, and another abbreviation cannot \
+       declare them instances of another class."
       name
   | SubclassOfPublicAbbreviation (name, ancestor) ->
     fprintf ppf
