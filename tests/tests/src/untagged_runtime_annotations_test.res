@@ -97,7 +97,7 @@ let localeKind = locale =>
 // A phantom type hierarchy declares its subclasses as private abbreviations
 // too
 type nodeLike<'a>
-@instanceOf("UntaggedAnimal") type animalLike<'a> = nodeLike<'a>
+@instanceOf("UntaggedAnimal") type animalLike<'a> = private nodeLike<'a>
 type _dog<'a>
 @instanceOf("UntaggedDog") type dogLike<'a> = private animalLike<_dog<'a>>
 type _base
@@ -222,6 +222,17 @@ let jsOrNameKind = value =>
 
 @inline(never) let id = x => x
 
+// Typed arrays are types of their own, each recognized by its class
+@unboxed
+type typedArrays = Bytes(Int8Array.t) | UnsignedBytes(Uint8Array.t) | Doubles(Float64Array.t)
+
+let typedArrayKind = value =>
+  switch value {
+  | Bytes(_) => "int8"
+  | UnsignedBytes(_) => "uint8"
+  | Doubles(_) => "float64"
+  }
+
 // No class of this name exists at run time
 @instanceOf("UntaggedMissingClass") type missing
 
@@ -315,6 +326,12 @@ describe(__MODULE__, () => {
     eq(__LOC__, "function", wideHandlerKind(WideFunction(x => x)))
     eq(__LOC__, "name", wideHandlerKind(WideName("a")))
     eq(__LOC__, "other", wideHandlerKind(WideCount(1.)))
+  })
+
+  test("typed arrays of different classes", () => {
+    eq(__LOC__, "int8", typedArrayKind(id(Bytes(Int8Array.fromArray([1])))))
+    eq(__LOC__, "uint8", typedArrayKind(id(UnsignedBytes(Uint8Array.fromArray([1])))))
+    eq(__LOC__, "float64", typedArrayKind(id(Doubles(Float64Array.fromArray([1.])))))
   })
 
   test("a class declared over an object type", () => {

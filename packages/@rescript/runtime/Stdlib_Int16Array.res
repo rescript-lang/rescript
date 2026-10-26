@@ -1,7 +1,12 @@
 /** The `Int16Array` typed array represents an array of twos-complement 16-bit signed integers in platform byte order. See [Int16Array on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int16Array)
 */
-@editor.completeFrom(Stdlib.TypedArray) @instanceOf("Int16Array")
-type t = Stdlib_TypedArray.t<int>
+@instanceOf("Int16Array")
+type t = private Stdlib_TypedArray.t<int>
+
+include Stdlib_TypedArray.Impl({
+  type t = t
+  type elt = int
+})
 
 module Constants = {
   /**`bytesPerElement` returns the element size. See [BYTES_PER_ELEMENT on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/BYTES_PER_ELEMENT)
