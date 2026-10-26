@@ -8,8 +8,10 @@ echo Formatting OCaml code...
 opam exec -- dune build @fmt --auto-promote
 
 echo Formatting ReScript code...
-files=$(find packages tests -type f \( -name "*.res" -o -name "*.resi" \) ! -name "syntaxErrors*" ! -name "generated_mocha_test.res" ! -path "tests/build_tests/super_errors/fixtures/break_keyword_binding.res" ! -path "tests/tools_tests/*/NoMigration.res*" ! -path "tests/build_tests/super_errors_multi/fixtures/Iface_not_compiled/*" ! -path "tests/syntax_tests*" ! -path "tests/analysis_tests/tests*" ! -path "*/node_modules/*")
-./cli/rescript.js format $files
+# xargs passes the files in batches that fit the platform's command-line
+# length limit, which is only 32K characters on Windows.
+find packages tests -type f \( -name "*.res" -o -name "*.resi" \) ! -name "syntaxErrors*" ! -name "generated_mocha_test.res" ! -path "tests/build_tests/super_errors/fixtures/break_keyword_binding.res" ! -path "tests/tools_tests/*/NoMigration.res*" ! -path "tests/build_tests/super_errors_multi/fixtures/Iface_not_compiled/*" ! -path "tests/syntax_tests*" ! -path "tests/analysis_tests/tests*" ! -path "*/node_modules/*" -print0 \
+  | xargs -0 node ./cli/rescript.js format
 
 echo Formatting JS code...
 yarn format

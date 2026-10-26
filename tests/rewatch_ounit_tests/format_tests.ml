@@ -16,11 +16,6 @@ let write_file = Test_support.write_file
 
 let with_temp_dir = Test_support.with_temp_dir "rewatch-ocaml-format-"
 
-(* The formatter writes text-mode output, so lines end in CRLF on Windows. *)
-let native text =
-  if Sys.win32 then String.concat "\r\n" (String.split_on_char '\n' text)
-  else text
-
 let tests =
   "format_tests" >:: fun _context ->
   check
@@ -70,8 +65,16 @@ let tests =
   with_temp_dir (fun root ->
       let unformatted = Filename.concat root "Unformatted.res" in
       let formatted = Filename.concat root "Formatted.res" in
+      let formatted_crlf = Filename.concat root "FormattedCrlf.res" in
       write_file unformatted "let first=1\n";
-      write_file formatted (native "let second = 2\n");
+      write_file formatted "let second = 2\n";
+      write_file formatted_crlf "/* a\r\n b */\r\nlet third = 3\r\n";
+      check
+        (try
+           Format.format_files ~check:true [formatted; formatted_crlf];
+           true
+         with Format.Error _ -> false)
+        "format --check accepts formatted LF and CRLF files";
       check
         (try
            Format.format_files ~check:true [unformatted; formatted];
@@ -81,11 +84,14 @@ let tests =
       check
         (File_util.read_file unformatted = "let first=1\n")
         "format --check leaves files unchanged";
-      Format.format_files ~check:false [unformatted; formatted];
+      Format.format_files ~check:false [unformatted; formatted; formatted_crlf];
       check
-        (File_util.read_file unformatted = native "let first = 1\n"
-        && File_util.read_file formatted = native "let second = 2\n")
-        "the embedded formatter rewrites only files that need formatting";
+        (File_util.read_file unformatted = "let first = 1\n"
+        && File_util.read_file formatted = "let second = 2\n"
+        && File_util.read_file formatted_crlf
+           = "/* a\r\n b */\r\nlet third = 3\r\n")
+        "the embedded formatter rewrites only files that need formatting, \
+         keeping their line endings";
       check
         (try
            write_file unformatted "let =\n";
@@ -119,13 +125,11 @@ let tests =
         (fun () ->
           Unix.chdir root;
           Format.run_files ~verbosity:0 ~check:false []);
-      let formatted path =
-        File_util.read_file path = native "let value = 1\n"
-      in
+      let formatted path = File_util.read_file path = "let value = 1\n" in
       check (formatted root_source)
         "implicit format includes the current package";
       check
-        (File_util.read_file orphan_interface = native "let value: int\n")
+        (File_util.read_file orphan_interface = "let value: int\n")
         "implicit format includes an orphan interface";
       check
         (formatted duplicate_one && formatted duplicate_two)

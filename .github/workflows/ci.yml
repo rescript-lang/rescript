@@ -167,7 +167,7 @@ jobs:
 
       - name: "Syntax: Run tests"
         env:
-          ROUNDTRIP_TEST: ${{ runner.os == 'Windows' && '0' || '1' }}
+          ROUNDTRIP_TEST: 1
         run: ./scripts/test_syntax.sh
         shell: bash
 
