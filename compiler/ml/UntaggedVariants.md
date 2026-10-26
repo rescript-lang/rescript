@@ -181,6 +181,16 @@ type hierarchy (`type dogLike<'a> = private animalLike<_dog<'a>>`). A public
 would `type dog = animal<int>` or `type dog = phantom<int>` with
 `type phantom<'a> = animal`.
 
+A class introduced on an abbreviation of a type the compiler does not see is
+private too: `@instanceOf("Element") type element = private node`. A public
+abbreviation would make every `node` an `element`, and a second one could
+declare the same values instances of another class while the type checker
+treats both as one type. The stdlib's typed arrays are such private
+abbreviations of `TypedArray.t<_>`, so `Int8Array.t` and `Uint8Array.t` are
+different types, upcast to `TypedArray.t<int>` with `:>`. Each typed array
+module has the functions of `TypedArray` for its own type, through the
+`TypedArray.Impl` functor.
+
 | Declaration | Error | Fixture |
 | --- | --- | --- |
 | `@typeOf("string") type t = option<string>`, `type t<'a> = 'a`, an abbreviation of `unit`, `list<_>` or a variant | @typeOf on a type abbreviation must describe an abstract type, ... | `runtime_annotation_on_option.res`, `runtime_annotation_on_type_variable.res` |
@@ -188,6 +198,7 @@ would `type dog = animal<int>` or `type dog = phantom<int>` with
 | `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym`, `@typeOf("string") type t = int`, or an abbreviation of a function type, a record or a tuple | This annotation, @typeOf("number"), contradicts the abbreviated type, whose values are recognized by @typeOf("symbol"). An array or tuple is recognized by Array.isArray. | `runtime_annotation_contradicts_manifest.res`, `runtime_annotation_contradicts_builtin.res`, `runtime_annotation_contradicts_function.res`, `runtime_annotation_contradicts_tuple.res` |
 | `@instanceOf("Date") type date = X.t` in a functor of `X`, or over `(type a)`; `@notUndefined type t = X.t` | @instanceOf cannot describe the type of a functor parameter, ... | `instance_of_functor_parameter.res`, `type_of_locally_abstract_type.res`, `not_undefined_on_functor_parameter_type.res` |
 | `@instanceOf("Dog") type dog = animal`, `= animal<int>`, or `= phantom<int>` with `type phantom<'a> = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res`, `instance_of_public_subclass_instance.res`, `instance_of_public_subclass_through_alias.res` |
+| `@instanceOf("Element") type element = node` with `type node` | A class must be declared on an abstract type or a private abbreviation ... | `instance_of_public_abbreviation.res`; `typed_array_cases_distinct.res` (typed arrays are distinct types) |
 | `@instanceOf("Animal") type t = private dog` | Animal appears twice in this chain of abbreviations ... | `instance_of_class_twice_in_chain.res` |
 | `@instanceOf("MyList") type t = private array<int>` | @instanceOf("MyList") cannot describe the values of an array type: ... subclasses of Array are not supported. | `instance_of_array_subclass.res` |
 | any of the three on a record or variant | @instanceOf can only be used on abstract types and type abbreviations ... | `runtime_annotation_on_record.res`, `invalid_attribute_not_undefined.res` |
@@ -271,7 +282,7 @@ written (Known bugs).
   `Cross_runtime_annotation_functor_argument`,
   `Cross_not_undefined_option_implementation`.
 - Shaped by #6296, #6383, #6396, #7458, #7464, #7788, #8009, #8950, #8948,
-  #8949, #8964. Related: #7147.
+  #8949, #8955, #8964. Related: #7147.
 
 ### 6. Well-formedness
 

@@ -84,6 +84,11 @@ assertTrue("fromLength is NOT in bytes", () => {
   return x.byteLength === 8;
 });
 
+assertTrue("a typed array is a TypedArray.t through a coercion", () => {
+  let x = new BigInt64Array(2);
+  return x.length === 2;
+});
+
 function o(prim0, prim1) {
   return BigInt64Array.from(prim0, prim1);
 }

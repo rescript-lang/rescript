@@ -1,7 +1,12 @@
 /** The `Float32Array` typed array represents an array of 32-bit floating point numbers in platform byte order. See [Float32Array on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array)
 */
-@editor.completeFrom(Stdlib.TypedArray) @instanceOf("Float32Array")
-type t = Stdlib_TypedArray.t<float>
+@instanceOf("Float32Array")
+type t = private Stdlib_TypedArray.t<float>
+
+include Stdlib_TypedArray.Impl({
+  type t = t
+  type elt = float
+})
 
 module Constants = {
   /**`bytesPerElement` returns the element size. See [BYTES_PER_ELEMENT on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/BYTES_PER_ELEMENT)

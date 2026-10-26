@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/instance_of_public_abbreviation.res[0m:[2m4:24-42[0m
+
+  2 [2m│[0m // of that type an instance, and two such abbreviations could disagree
+  3 [2m│[0m type node
+  [1;31m4[0m [2m│[0m @instanceOf("Element") [1;31mtype element = node[0m
+  5 [2m│[0m 
+
+  A class must be declared on an abstract type or a private abbreviation: write `= private ...`, so that values of the abbreviated type are not instances of Element without a coercion, and another abbreviation cannot declare them instances of another class.
