@@ -65,67 +65,6 @@ let isEvaluated: t<'a> => bool
 
 exception Undefined
 
-/** 
-    `force(x)` forces the suspension `x` and returns its result.
-    If `x` has already been forced, `Lazy.force(x)` returns the
-    same value again without recomputing it.  If it threw an exception,
-    the same exception is thrown again.
-    Throw `Undefined` if the forcing of `x` tries to force `x` itself
-    recursively.
-*/
-@deprecated({
-  reason: "Use `Lazy.get` instead",
-  migrate: Lazy.get(),
-})
-let force: t<'a> => 'a
-
-/** 
-    `force_val(x)` forces the suspension `x` and returns its
-    result.  If `x` has already been forced, `force_val(x)`
-    returns the same value again without recomputing it.
-    Throw `Undefined` if the forcing of `x` tries to force `x` itself
-    recursively.
-    If the computation of `x` throws an exception, it is unspecified
-    whether `force_val(x)` throws the same exception or `Undefined`.
-*/
-@deprecated({
-  reason: "Use `Lazy.get` instead",
-  migrate: Lazy.get(),
-})
-let force_val: t<'a> => 'a
-
-/** 
-    `Lazy.from_fun(f)` creates a lazy value from `f` which is the
-    computation to be deferred of type `unit => 'a`. 
-    The function returns a lazy value of type `Lazy.t<'a>`.  
-    The computation is not executed until the lazy value is accessed.
-*/
-@deprecated({
-  reason: "Use `Lazy.make` instead",
-  migrate: Lazy.make(),
-})
-let from_fun: (unit => 'a) => t<'a>
-
-/** 
-    `from_val(v)` returns an already-forced suspension of `v`.
-    This is for special purposes only.
-*/
-@deprecated({
-  reason: "Use `Lazy.make` instead",
-  migrate: Lazy.make(() => %insert.unlabelledArgument(0)),
-})
-let from_val: 'a => t<'a>
-
-/** 
-    `is_val(x)` returns `true` if `x has already been forced and
-    did not throw an exception.
-*/
-@deprecated({
-  reason: "Use `Lazy.isEvaluated` instead",
-  migrate: Lazy.isEvaluated(),
-})
-let is_val: t<'a> => bool
-
 /**
   `ignore(lazyValue)` ignores the provided lazy value and returns unit.
 

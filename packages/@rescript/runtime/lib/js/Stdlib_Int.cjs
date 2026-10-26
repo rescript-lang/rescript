@@ -54,10 +54,6 @@ function range(start, end, optionsOpt) {
   return Stdlib_Array.fromInitializer(length, i => start + (i * step | 0) | 0);
 }
 
-function rangeWithOptions(start, end, options) {
-  return range(start, end, options);
-}
-
 function clamp(min, max, value) {
   let value$1 = max !== undefined && max < value ? max : value;
   if (min !== undefined && min > value$1) {
@@ -67,14 +63,6 @@ function clamp(min, max, value) {
   }
 }
 
-function lnot(x) {
-  return x ^ -1;
-}
-
-let Bitwise = {
-  lnot: lnot
-};
-
 let Constants = {
   minValue: -2147483648,
   maxValue: 2147483647
@@ -83,7 +71,5 @@ let Constants = {
 exports.Constants = Constants;
 exports.fromString = fromString;
 exports.range = range;
-exports.rangeWithOptions = rangeWithOptions;
 exports.clamp = clamp;
-exports.Bitwise = Bitwise;
 /* No side effect */

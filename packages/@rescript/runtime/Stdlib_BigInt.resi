@@ -80,13 +80,6 @@ BigInt.fromString("invalid") == None
 */
 let fromString: string => option<bigint>
 
-@deprecated({
-  reason: "Use `fromStringOrThrow` instead",
-  migrate: BigInt.fromStringOrThrow(),
-})
-@val
-external fromStringExn: string => bigint = "BigInt"
-
 /**
 `fromInt(int)` converts an `int` to a `bigint`.
 
@@ -150,13 +143,6 @@ BigInt.toString(123n) == "123"
 */
 @send
 external toString: (bigint, ~radix: int=?) => string = "toString"
-
-@deprecated({
-  reason: "Use `toString` with `~radix` instead",
-  migrate: BigInt.toString(),
-})
-@send
-external toStringWithRadix: (bigint, ~radix: int) => string = "toString"
 
 /**
 Returns a string with a language-sensitive representation of this BigInt value.
@@ -335,111 +321,3 @@ external shiftRight: (bigint, bigint) => bigint = "%asrbigint"
   without having to store or process it further.
 */
 external ignore: bigint => unit = "%ignore"
-
-/**
-`land(a, b)` calculates the bitwise AND of two bigints.
-
-**Deprecated:** Use `&&&` operator or `bitwiseAnd` instead.
-
-## Examples
-
-```rescript
-BigInt.land(7n, 4n) == 4n
-```
-*/
-@deprecated({
-  reason: "Use `&&&` operator or `bitwiseAnd` instead.",
-  migrate: %insert.unlabelledArgument(0) &&& %insert.unlabelledArgument(1),
-  migrateInPipeChain: BigInt.bitwiseAnd(),
-})
-external land: (bigint, bigint) => bigint = "%andbigint"
-
-/**
-`lor(a, b)` calculates the bitwise OR of two bigints.
-
-**Deprecated:** Use `|||` operator or `bitwiseOr` instead.
-
-## Examples
-
-```rescript
-BigInt.lor(7n, 4n) == 7n
-```
-*/
-@deprecated({
-  reason: "Use `|||` operator or `bitwiseOr` instead.",
-  migrate: %insert.unlabelledArgument(0) ||| %insert.unlabelledArgument(1),
-  migrateInPipeChain: BigInt.bitwiseOr(),
-})
-external lor: (bigint, bigint) => bigint = "%orbigint"
-
-/**
-`lxor(a, b)` calculates the bitwise XOR of two bigints.
-
-**Deprecated:** Use `^^^` operator or `bitwiseXor` instead.
-
-## Examples
-
-```rescript
-BigInt.lxor(7n, 4n) == 3n
-```
-*/
-@deprecated({
-  reason: "Use `^^^` operator or `bitwiseXor` instead.",
-  migrate: %insert.unlabelledArgument(0) ^^^ %insert.unlabelledArgument(1),
-  migrateInPipeChain: BigInt.bitwiseXor(),
-})
-external lxor: (bigint, bigint) => bigint = "%xorbigint"
-
-/**
-`lnot(bigint)` calculates the bitwise NOT of a bigint.
-
-**Deprecated:** Use `~~~` operator or `bitwiseNot` instead.
-
-## Examples
-
-```rescript
-BigInt.lnot(2n) == -3n
-```
-*/
-@deprecated({
-  reason: "Use `~~~` operator or `bitwiseNot` instead.",
-  migrate: ~~~(%insert.unlabelledArgument(0)),
-  migrateInPipeChain: BigInt.bitwiseNot(),
-})
-external lnot: bigint => bigint = "%bitnot_bigint"
-
-/**
-`lsl(bigint, amount)` calculates the shifted value of a bigint by `amount` bits to the left.
-
-**Deprecated:** Use `<<` operator or `shiftLeft` instead.
-
-## Examples
-
-```rescript
-BigInt.lsl(4n, 1n) == 8n
-```
-*/
-@deprecated({
-  reason: "Use `<<` operator or `shiftLeft` instead.",
-  migrate: %insert.unlabelledArgument(0) << %insert.unlabelledArgument(1),
-  migrateInPipeChain: BigInt.shiftLeft(),
-})
-external lsl: (bigint, bigint) => bigint = "%lslbigint"
-
-/**
-`asr(bigint, amount)` calculates the shifted value of a bigint by `amount` bits to the right.
-
-**Deprecated:** Use `>>` operator or `shiftRight` instead.
-
-## Examples
-
-```rescript
-BigInt.asr(8n, 1n) == 4n
-```
-*/
-@deprecated({
-  reason: "Use `>>` operator or `shiftRight` instead.",
-  migrate: %insert.unlabelledArgument(0) >> %insert.unlabelledArgument(1),
-  migrateInPipeChain: BigInt.shiftRight(),
-})
-external asr: (bigint, bigint) => bigint = "%asrbigint"

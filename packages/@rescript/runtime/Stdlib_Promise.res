@@ -109,6 +109,4 @@ external race: array<t<'a>> => t<'a> = "race"
 @scope("Promise") @val
 external any: array<t<'a>> => t<'a> = "any"
 
-external done: promise<'a> => unit = "%ignore"
-
 external ignore: promise<'a> => unit = "%ignore"

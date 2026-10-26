@@ -127,8 +127,7 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
   | ["Stdlib"; "Symbol"; "t"], [] -> {dependencies = []; type_ = ident "symbol"}
   | ["Stdlib"; "Intl"; intl_module; "t"], [] ->
     {dependencies = []; type_ = ident ("Intl." ^ intl_module)}
-  | (["Stdlib"; "Error"; "t"] | ["Stdlib"; "JsError"; "t"]), [] ->
-    {dependencies = []; type_ = ident "Error"}
+  | ["Stdlib"; "JsError"; "t"], [] -> {dependencies = []; type_ = ident "Error"}
   | (["Stdlib"; "Iterable"; "t"] | ["iterable"]), [param_translation] ->
     {
       dependencies = param_translation.dependencies;

@@ -772,6 +772,11 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
         with _ -> false)
       | None -> false
     in
+    let target_type =
+      match top_level_types with
+      | Some (_, t2_top) -> t2_top
+      | None -> target_type
+    in
     let target_type_string = Format.asprintf "%a" type_expr target_type in
     let target_expr_text = Parser.extract_text_at_loc loc in
     let suggested_rewrite =

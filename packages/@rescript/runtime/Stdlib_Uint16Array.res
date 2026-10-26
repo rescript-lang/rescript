@@ -27,29 +27,6 @@ external fromArray: array<int> => t = "Uint16Array"
 @new
 external fromBuffer: (Stdlib_ArrayBuffer.t, ~byteOffset: int=?, ~length: int=?) => t = "Uint16Array"
 
-/** `fromBufferToEnd` creates a `Uint16Array` from an `ArrayBuffer.t`, starting at a particular offset and continuing through to the end. See [TypedArray constructor on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint16Array/Uint16Array)
-
-**Note:** This is a potentially unsafe operation. Ensure the buffer is large enough and only accessed within its bounds.
-*/
-@deprecated({
-  reason: "Use `fromBuffer` instead",
-  migrate: Uint16Array.fromBuffer(),
-})
-@new
-external fromBufferToEnd: (Stdlib_ArrayBuffer.t, ~byteOffset: int) => t = "Uint16Array"
-
-/** `fromBufferWithRange` creates a `Uint16Array` from an `ArrayBuffer.t`, starting at a particular offset and consuming `length` **bytes**. See [TypedArray constructor on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint16Array/Uint16Array)
-
-**Note:** This is a potentially unsafe operation. Ensure the buffer is large enough and only accessed within its bounds.
-*/
-@deprecated({
-  reason: "Use `fromBuffer` instead",
-  migrate: Uint16Array.fromBuffer(),
-})
-@new
-external fromBufferWithRange: (Stdlib_ArrayBuffer.t, ~byteOffset: int, ~length: int) => t =
-  "Uint16Array"
-
 /** `fromLength` creates a zero-initialized `Uint16Array` to hold the specified count of numbers; this is **not** a byte length. See [TypedArray constructor on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint16Array/Uint16Array)
 
 **Note:** This is a potentially unsafe operation. Ensure the buffer is large enough and only accessed within its bounds.
@@ -61,18 +38,6 @@ external fromLength: int => t = "Uint16Array"
 */
 @val
 external fromArrayLikeOrIterable: ('a, ~map: ('b, int) => int=?) => t = "Uint16Array.from"
-
-/** `fromArrayLikeOrIterableWithMap` creates a `Uint16Array` from an array-like or iterable object and applies the mapping function to each item. The mapping function expects (value, index). See [TypedArray.from on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/from)
-*/
-@deprecated({
-  reason: "Use `fromArrayLikeOrIterable` instead",
-  migrate: Uint16Array.fromArrayLikeOrIterable(
-    %insert.unlabelledArgument(0),
-    ~map=%insert.unlabelledArgument(1),
-  ),
-})
-@val
-external fromArrayLikeOrIterableWithMap: ('a, ('b, int) => int) => t = "Uint16Array.from"
 
 /**
   `ignore(uintArray)` ignores the provided uintArray and returns unit.

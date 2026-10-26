@@ -19,20 +19,6 @@ result == "Caught exception: Out of milk"
 */
 external throw: exn => 'a = "%raise"
 
-@deprecated({
-  reason: "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw` instead",
-  migrate: throw(),
-})
-external raise: exn => 'a = "%raise"
-
-@deprecated("Use a custom exception or `JsError.throwWithMessage` instead.")
-let failwith = s => throw(Failure(s))
-
-@deprecated("Use a custom exception or `JsError.throwWithMessage` instead.")
-let invalid_arg = s => throw(Invalid_argument(s))
-
-@deprecated("Use custom exception instead") exception Exit
-
 /* Debugging */
 
 external __LOC__: string = "%loc_LOC"

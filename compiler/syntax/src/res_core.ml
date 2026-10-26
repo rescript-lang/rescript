@@ -1852,12 +1852,7 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?context ?term_parameters
  * labelName ::= lident
  *)
 and parse_parameter p =
-  if
-    Parser.peek p = Token.Typ
-    || Parser.peek p = Tilde
-    || Parser.peek p = Dot
-    || Grammar.is_pattern_start (Parser.peek p)
-  then (
+  if Grammar.is_parameter_start (Parser.peek p) then (
     let start_pos = Parser.start_pos p in
     if Parser.peek p = Token.Dot then (
       let dot_loc = mk_loc start_pos (Parser.end_pos p) in

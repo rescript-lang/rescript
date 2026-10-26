@@ -90,13 +90,13 @@ module Make = (Ord: OrderedType) => {
     }
     if hl > hr + 2 {
       switch l {
-      | Empty => invalid_arg("Map.bal")
+      | Empty => throw(Invalid_argument("Map.bal"))
       | Node(ll, lv, ld, lr, _) =>
         if height(ll) >= height(lr) {
           create(ll, lv, ld, create(lr, x, d, r))
         } else {
           switch lr {
-          | Empty => invalid_arg("Map.bal")
+          | Empty => throw(Invalid_argument("Map.bal"))
           | Node(lrl, lrv, lrd, lrr, _) =>
             create(create(ll, lv, ld, lrl), lrv, lrd, create(lrr, x, d, r))
           }
@@ -104,13 +104,13 @@ module Make = (Ord: OrderedType) => {
       }
     } else if hr > hl + 2 {
       switch r {
-      | Empty => invalid_arg("Map.bal")
+      | Empty => throw(Invalid_argument("Map.bal"))
       | Node(rl, rv, rd, rr, _) =>
         if height(rr) >= height(rl) {
           create(create(l, x, d, rl), rv, rd, rr)
         } else {
           switch rl {
-          | Empty => invalid_arg("Map.bal")
+          | Empty => throw(Invalid_argument("Map.bal"))
           | Node(rll, rlv, rld, rlr, _) =>
             create(create(l, x, d, rll), rlv, rld, create(rlr, rv, rd, rr))
           }
@@ -204,7 +204,7 @@ module Make = (Ord: OrderedType) => {
 
   let rec remove_min_binding = x =>
     switch x {
-    | Empty => invalid_arg("Map.remove_min_elt")
+    | Empty => throw(Invalid_argument("Map.remove_min_elt"))
     | Node(Empty, x, d, r, _) => r
     | Node(l, x, d, r, _) => bal(remove_min_binding(l), x, d, r)
     }

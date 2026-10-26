@@ -149,28 +149,6 @@ Path Array.
     "tags": []
   },
   {
-    "deprecated": true,
-    "detail": "(array<string>, string) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `join` instead\n\n\n`joinWith(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Array items must be strings, to join number or other arrays, use `joinWithUnsafe`. Under the hood this will run JavaScript's `toString` on all the array items.\n\n## Examples\n\n```rescript\n[\"One\", \"Two\", \"Three\"]->Array.joinWith(\" -- \") == \"One -- Two -- Three\"\n```\n"
-    },
-    "kind": 12,
-    "label": "joinWith",
-    "tags": [ 1 ]
-  },
-  {
-    "deprecated": true,
-    "detail": "(array<'a>, string) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `joinUnsafe` instead\n\n\n`joinWithUnsafe(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Under the hood this will run JavaScript's `toString` on all the array items.\n\n## Examples\n\n```rescript\n[1, 2, 3]->Array.joinWithUnsafe(\" -- \") == \"1 -- 2 -- 3\"\n```\n"
-    },
-    "kind": 12,
-    "label": "joinWithUnsafe",
-    "tags": [ 1 ]
-  },
-  {
     "detail": "(array<'a>, 'b, ('b, 'a) => 'b) => 'b",
     "documentation": {
       "kind": "markdown",
@@ -301,17 +279,6 @@ Path Array.
     "tags": []
   },
   {
-    "deprecated": true,
-    "detail": "(array<'a>, 'a, ~start: int) => unit",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `fill` instead\n\n\n`fillToEnd(array, value, ~start)` fills `array` with `value` from the `start` index.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\nmyArray->Array.fillToEnd(9, ~start=1)\nmyArray == [1, 9, 9, 9]\n```\n"
-    },
-    "kind": 12,
-    "label": "fillToEnd",
-    "tags": [ 1 ]
-  },
-  {
     "detail": "(array<'a>, 'a) => bool",
     "documentation": {
       "kind": "markdown",
@@ -360,17 +327,6 @@ Path Array.
     "kind": 12,
     "label": "make",
     "tags": []
-  },
-  {
-    "deprecated": true,
-    "detail": "(array<'a>, 'a, int) => int",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `lastIndexOf` instead\n\n"
-    },
-    "kind": 12,
-    "label": "lastIndexOfFrom",
-    "tags": [ 1 ]
   },
   {
     "detail": "array<'a> => string",
@@ -719,17 +675,6 @@ Path Array.
     "tags": []
   },
   {
-    "deprecated": true,
-    "detail": "(array<'a>, ~start: int) => array<'a>",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `slice` instead\n\n\n`sliceToEnd(array, start)` creates a new array from `array`, with all items from `array` starting from `start`.\n\nSee [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.sliceToEnd(~start=1) == [2, 3, 4]\n```\n"
-    },
-    "kind": 12,
-    "label": "sliceToEnd",
-    "tags": [ 1 ]
-  },
-  {
     "detail": "(arrayLike<'a>, 'a => 'b) => array<'b>",
     "documentation": {
       "kind": "markdown",
@@ -738,17 +683,6 @@ Path Array.
     "kind": 12,
     "label": "fromArrayLikeWithMap",
     "tags": []
-  },
-  {
-    "deprecated": true,
-    "detail": "(array<'a>, 'a) => unit",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `fill` instead\n\n\n`fillAll(array, value)` fills the entire `array` with `value`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\nmyArray->Array.fillAll(9)\nmyArray == [9, 9, 9, 9]\n```\n"
-    },
-    "kind": 12,
-    "label": "fillAll",
-    "tags": [ 1 ]
   },
   {
     "detail": "(array<'a>, int, 'a) => unit",
@@ -851,17 +785,6 @@ Path Array.
     "tags": []
   },
   {
-    "deprecated": true,
-    "detail": "(array<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `copyWithin` instead\n\n\n`copyWithinToEnd(array, ~target, ~start)` copies starting at element `start` in the given array to the designated `target` position, returning the resulting array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103, 104]\narr->Array.copyWithinToEnd(~target=0, ~start=2) == [102, 103, 104, 103, 104]\narr == [102, 103, 104, 103, 104]\n```\n"
-    },
-    "kind": 12,
-    "label": "copyWithinToEnd",
-    "tags": [ 1 ]
-  },
-  {
     "detail": "(array<'a>, 'a) => unit",
     "documentation": {
       "kind": "markdown",
@@ -930,17 +853,6 @@ Path Array.
     "kind": 12,
     "label": "partition",
     "tags": []
-  },
-  {
-    "deprecated": true,
-    "detail": "(array<'a>, ~target: int) => array<'a>",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `copyWithin` instead\n\n\n`isEmpty(array)` returns `true` if the array is empty (has length 0), `false` otherwise.\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103, 104]\narr->Array.copyAllWithin(~target=2) == [100, 101, 100, 101, 102]\narr == [100, 101, 100, 101, 102]\n```\n"
-    },
-    "kind": 12,
-    "label": "copyAllWithin",
-    "tags": [ 1 ]
   },
   {
     "detail": "array<option<'a>> => array<'a>",
@@ -1061,17 +973,6 @@ Path Array.
     "kind": 12,
     "label": "fromArrayLike",
     "tags": []
-  },
-  {
-    "deprecated": true,
-    "detail": "(array<'a>, 'a, int) => int",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `indexOf` instead\n\n"
-    },
-    "kind": 12,
-    "label": "indexOfFrom",
-    "tags": [ 1 ]
   }
 ]
 
@@ -2470,7 +2371,7 @@ Hover src/Completion.res 349:14
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nJsxDOM.domProps\n```\n\n---\n\n```\n \n```\n```rescript\ntype JsxDOM.domProps = {\n  key?: string,\n  children?: Jsx.element,\n  ref?: domRef,\n  allow?: string,\n  ariaCurrent?: [\n    | #date\n    | #\"false\"\n    | #location\n    | #page\n    | #step\n    | #time\n    | #\"true\"\n  ],\n  ariaDetails?: string,\n  ariaDisabled?: bool,\n  ariaHidden?: bool,\n  ariaInvalid?: [#\"false\" | #grammar | #spelling | #\"true\"],\n  ariaKeyshortcuts?: string,\n  ariaLabel?: string,\n  ariaRoledescription?: string,\n  ariaAutocomplete?: [#both | #inline | #list | #none],\n  ariaChecked?: [#\"false\" | #mixed | #\"true\"],\n  ariaExpanded?: bool,\n  ariaHaspopup?: [\n    | #dialog\n    | #\"false\"\n    | #grid\n    | #listbox\n    | #menu\n    | #tree\n    | #\"true\"\n  ],\n  ariaLevel?: int,\n  ariaModal?: bool,\n  ariaMultiline?: bool,\n  ariaMultiselectable?: bool,\n  ariaOrientation?: [#horizontal | #undefined | #vertical],\n  ariaPlaceholder?: string,\n  ariaPressed?: [#\"false\" | #mixed | #\"true\"],\n  ariaReadonly?: bool,\n  ariaRequired?: bool,\n  ariaSelected?: bool,\n  ariaSort?: string,\n  ariaValuemax?: float,\n  ariaValuemin?: float,\n  ariaValuenow?: float,\n  ariaValuetext?: string,\n  ariaAtomic?: bool,\n  ariaBusy?: bool,\n  ariaLive?: [#assertive | #off | #polite | #rude],\n  ariaRelevant?: string,\n  ariaDropeffect?: [\n    | #copy\n    | #execute\n    | #link\n    | #move\n    | #none\n    | #popup\n  ],\n  ariaGrabbed?: bool,\n  ariaActivedescendant?: string,\n  ariaColcount?: int,\n  ariaColindex?: int,\n  ariaColspan?: int,\n  ariaControls?: string,\n  ariaDescribedby?: string,\n  ariaErrormessage?: string,\n  ariaFlowto?: string,\n  ariaLabelledby?: string,\n  ariaOwns?: string,\n  ariaPosinset?: int,\n  ariaRowcount?: int,\n  ariaRowindex?: int,\n  ariaRowspan?: int,\n  ariaSetsize?: int,\n  defaultChecked?: bool,\n  defaultValue?: string,\n  accessKey?: string,\n  capture?: [#environment | #user],\n  className?: string,\n  contentEditable?: bool,\n  contextMenu?: string,\n  dataTestId?: string,\n  dir?: string,\n  draggable?: bool,\n  hidden?: bool,\n  id?: string,\n  inert?: bool,\n  lang?: string,\n  popover?: popover,\n  popoverTarget?: string,\n  popoverTargetAction?: popoverTargetAction,\n  role?: string,\n  style?: style,\n  spellCheck?: bool,\n  tabIndex?: int,\n  title?: string,\n  itemID?: string,\n  itemProp?: string,\n  itemRef?: string,\n  itemScope?: bool,\n  itemType?: string,\n  accept?: string,\n  acceptCharset?: string,\n  action?: string,\n  allowFullScreen?: bool,\n  alt?: string,\n  as_?: string,\n  async?: bool,\n  autoComplete?: string,\n  autoCapitalize?: string,\n  autoFocus?: bool,\n  autoPlay?: bool,\n  challenge?: string,\n  charSet?: string,\n  checked?: bool,\n  cite?: string,\n  crossOrigin?: string,\n  cols?: int,\n  colSpan?: int,\n  content?: string,\n  controls?: bool,\n  coords?: string,\n  data?: string,\n  dateTime?: string,\n  default?: bool,\n  defer?: bool,\n  disabled?: bool,\n  download?: string,\n  encType?: string,\n  form?: string,\n  formAction?: string,\n  formTarget?: string,\n  formMethod?: string,\n  frameBorder?: int,\n  headers?: string,\n  height?: string,\n  high?: int,\n  href?: string,\n  hrefLang?: string,\n  htmlFor?: string,\n  httpEquiv?: string,\n  icon?: string,\n  inputMode?: string,\n  integrity?: string,\n  keyType?: string,\n  kind?: string,\n  label?: string,\n  list?: string,\n  loading?: [#eager | #lazy],\n  loop?: bool,\n  low?: int,\n  manifest?: string,\n  max?: string,\n  maxLength?: int,\n  media?: string,\n  mediaGroup?: string,\n  method?: string,\n  min?: string,\n  minLength?: int,\n  multiple?: bool,\n  muted?: bool,\n  name?: string,\n  nonce?: string,\n  noValidate?: bool,\n  open_?: bool,\n  optimum?: int,\n  pattern?: string,\n  placeholder?: string,\n  playsInline?: bool,\n  poster?: string,\n  preload?: string,\n  radioGroup?: string,\n  readOnly?: bool,\n  rel?: string,\n  required?: bool,\n  reversed?: bool,\n  rows?: int,\n  rowSpan?: int,\n  sandbox?: string,\n  scope?: string,\n  scoped?: bool,\n  scrolling?: string,\n  selected?: bool,\n  shape?: string,\n  size?: int,\n  sizes?: string,\n  span?: int,\n  src?: string,\n  srcDoc?: string,\n  srcLang?: string,\n  srcSet?: string,\n  start?: int,\n  step?: float,\n  summary?: string,\n  target?: string,\n  type_?: string,\n  useMap?: string,\n  value?: string,\n  width?: string,\n  wrap?: string,\n  onCopy?: JsxEvent.Clipboard.t => unit,\n  onCut?: JsxEvent.Clipboard.t => unit,\n  onPaste?: JsxEvent.Clipboard.t => unit,\n  onCompositionEnd?: JsxEvent.Composition.t => unit,\n  onCompositionStart?: JsxEvent.Composition.t => unit,\n  onCompositionUpdate?: JsxEvent.Composition.t => unit,\n  onKeyDown?: JsxEvent.Keyboard.t => unit,\n  onKeyPress?: JsxEvent.Keyboard.t => unit,\n  onKeyUp?: JsxEvent.Keyboard.t => unit,\n  onFocus?: JsxEvent.Focus.t => unit,\n  onBlur?: JsxEvent.Focus.t => unit,\n  onBeforeInput?: JsxEvent.Form.t => unit,\n  onChange?: JsxEvent.Form.t => unit,\n  onInput?: JsxEvent.Form.t => unit,\n  onReset?: JsxEvent.Form.t => unit,\n  onSubmit?: JsxEvent.Form.t => unit,\n  onInvalid?: JsxEvent.Form.t => unit,\n  onClick?: JsxEvent.Mouse.t => unit,\n  onContextMenu?: JsxEvent.Mouse.t => unit,\n  onDoubleClick?: JsxEvent.Mouse.t => unit,\n  onDrag?: JsxEvent.Mouse.t => unit,\n  onDragEnd?: JsxEvent.Mouse.t => unit,\n  onDragEnter?: JsxEvent.Mouse.t => unit,\n  onDragExit?: JsxEvent.Mouse.t => unit,\n  onDragLeave?: JsxEvent.Mouse.t => unit,\n  onDragOver?: JsxEvent.Mouse.t => unit,\n  onDragStart?: JsxEvent.Mouse.t => unit,\n  onDrop?: JsxEvent.Mouse.t => unit,\n  onMouseDown?: JsxEvent.Mouse.t => unit,\n  onMouseEnter?: JsxEvent.Mouse.t => unit,\n  onMouseLeave?: JsxEvent.Mouse.t => unit,\n  onMouseMove?: JsxEvent.Mouse.t => unit,\n  onMouseOut?: JsxEvent.Mouse.t => unit,\n  onMouseOver?: JsxEvent.Mouse.t => unit,\n  onMouseUp?: JsxEvent.Mouse.t => unit,\n  onSelect?: JsxEvent.Selection.t => unit,\n  onTouchCancel?: JsxEvent.Touch.t => unit,\n  onTouchEnd?: JsxEvent.Touch.t => unit,\n  onTouchMove?: JsxEvent.Touch.t => unit,\n  onTouchStart?: JsxEvent.Touch.t => unit,\n  onPointerOver?: JsxEvent.Pointer.t => unit,\n  onPointerEnter?: JsxEvent.Pointer.t => unit,\n  onPointerDown?: JsxEvent.Pointer.t => unit,\n  onPointerMove?: JsxEvent.Pointer.t => unit,\n  onPointerUp?: JsxEvent.Pointer.t => unit,\n  onPointerCancel?: JsxEvent.Pointer.t => unit,\n  onPointerOut?: JsxEvent.Pointer.t => unit,\n  onPointerLeave?: JsxEvent.Pointer.t => unit,\n  onGotPointerCapture?: JsxEvent.Pointer.t => unit,\n  onLostPointerCapture?: JsxEvent.Pointer.t => unit,\n  onScroll?: JsxEvent.UI.t => unit,\n  onWheel?: JsxEvent.Wheel.t => unit,\n  onAbort?: JsxEvent.Media.t => unit,\n  onCanPlay?: JsxEvent.Media.t => unit,\n  onCanPlayThrough?: JsxEvent.Media.t => unit,\n  onDurationChange?: JsxEvent.Media.t => unit,\n  onEmptied?: JsxEvent.Media.t => unit,\n  onEncrypted?: JsxEvent.Media.t => unit,\n  onEnded?: JsxEvent.Media.t => unit,\n  onError?: JsxEvent.Media.t => unit,\n  onLoadedData?: JsxEvent.Media.t => unit,\n  onLoadedMetadata?: JsxEvent.Media.t => unit,\n  onLoadStart?: JsxEvent.Media.t => unit,\n  onPause?: JsxEvent.Media.t => unit,\n  onPlay?: JsxEvent.Media.t => unit,\n  onPlaying?: JsxEvent.Media.t => unit,\n  onProgress?: JsxEvent.Media.t => unit,\n  onRateChange?: JsxEvent.Media.t => unit,\n  onSeeked?: JsxEvent.Media.t => unit,\n  onSeeking?: JsxEvent.Media.t => unit,\n  onStalled?: JsxEvent.Media.t => unit,\n  onSuspend?: JsxEvent.Media.t => unit,\n  onTimeUpdate?: JsxEvent.Media.t => unit,\n  onVolumeChange?: JsxEvent.Media.t => unit,\n  onWaiting?: JsxEvent.Media.t => unit,\n  onLoad?: JsxEvent.Image.t => unit,\n  onAnimationStart?: JsxEvent.Animation.t => unit,\n  onAnimationEnd?: JsxEvent.Animation.t => unit,\n  onAnimationIteration?: JsxEvent.Animation.t => unit,\n  onTransitionEnd?: JsxEvent.Transition.t => unit,\n  accentHeight?: string,\n  accumulate?: string,\n  additive?: string,\n  alignmentBaseline?: string,\n  allowReorder?: string,\n  alphabetic?: string,\n  amplitude?: string,\n  arabicForm?: string,\n  ascent?: string,\n  attributeName?: string,\n  attributeType?: string,\n  autoReverse?: string,\n  azimuth?: string,\n  baseFrequency?: string,\n  baseProfile?: string,\n  baselineShift?: string,\n  bbox?: string,\n  begin?: string,\n  begin_?: string,\n  bias?: string,\n  by?: string,\n  calcMode?: string,\n  capHeight?: string,\n  clip?: string,\n  clipPath?: string,\n  clipPathUnits?: string,\n  clipRule?: string,\n  colorInterpolation?: string,\n  colorInterpolationFilters?: string,\n  colorProfile?: string,\n  colorRendering?: string,\n  contentScriptType?: string,\n  contentStyleType?: string,\n  cursor?: string,\n  cx?: string,\n  cy?: string,\n  d?: string,\n  decelerate?: string,\n  descent?: string,\n  diffuseConstant?: string,\n  direction?: string,\n  display?: string,\n  divisor?: string,\n  dominantBaseline?: string,\n  dur?: string,\n  dx?: string,\n  dy?: string,\n  edgeMode?: string,\n  elevation?: string,\n  enableBackground?: string,\n  end?: string,\n  end_?: string,\n  exponent?: string,\n  externalResourcesRequired?: string,\n  fill?: string,\n  fillOpacity?: string,\n  fillRule?: string,\n  filter?: string,\n  filterRes?: string,\n  filterUnits?: string,\n  floodColor?: string,\n  floodOpacity?: string,\n  focusable?: string,\n  fontFamily?: string,\n  fontSize?: string,\n  fontSizeAdjust?: string,\n  fontStretch?: string,\n  fontStyle?: string,\n  fontVariant?: string,\n  fontWeight?: string,\n  fomat?: string,\n  from?: string,\n  fx?: string,\n  fy?: string,\n  g1?: string,\n  g2?: string,\n  glyphName?: string,\n  glyphOrientationHorizontal?: string,\n  glyphOrientationVertical?: string,\n  glyphRef?: string,\n  gradientTransform?: string,\n  gradientUnits?: string,\n  hanging?: string,\n  horizAdvX?: string,\n  horizOriginX?: string,\n  ideographic?: string,\n  imageRendering?: string,\n  in_?: string,\n  in2?: string,\n  intercept?: string,\n  k?: string,\n  k1?: string,\n  k2?: string,\n  k3?: string,\n  k4?: string,\n  kernelMatrix?: string,\n  kernelUnitLength?: string,\n  kerning?: string,\n  keyPoints?: string,\n  keySplines?: string,\n  keyTimes?: string,\n  lengthAdjust?: string,\n  letterSpacing?: string,\n  lightingColor?: string,\n  limitingConeAngle?: string,\n  local?: string,\n  markerEnd?: string,\n  markerHeight?: string,\n  markerMid?: string,\n  markerStart?: string,\n  markerUnits?: string,\n  markerWidth?: string,\n  mask?: string,\n  maskContentUnits?: string,\n  maskUnits?: string,\n  mathematical?: string,\n  mode?: string,\n  numOctaves?: string,\n  offset?: string,\n  opacity?: string,\n  operator?: string,\n  order?: string,\n  orient?: string,\n  orientation?: string,\n  origin?: string,\n  overflow?: string,\n  overflowX?: string,\n  overflowY?: string,\n  overlinePosition?: string,\n  overlineThickness?: string,\n  paintOrder?: string,\n  panose1?: string,\n  pathLength?: string,\n  patternContentUnits?: string,\n  patternTransform?: string,\n  patternUnits?: string,\n  pointerEvents?: string,\n  points?: string,\n  pointsAtX?: string,\n  pointsAtY?: string,\n  pointsAtZ?: string,\n  preserveAlpha?: string,\n  preserveAspectRatio?: string,\n  primitiveUnits?: string,\n  r?: string,\n  radius?: string,\n  referrerPolicy?: string,\n  refX?: string,\n  refY?: string,\n  renderingIntent?: string,\n  repeatCount?: string,\n  repeatDur?: string,\n  requiredExtensions?: string,\n  requiredFeatures?: string,\n  restart?: string,\n  result?: string,\n  rotate?: string,\n  rx?: string,\n  ry?: string,\n  scale?: string,\n  seed?: string,\n  shapeRendering?: string,\n  slope?: string,\n  slot?: string,\n  spacing?: string,\n  specularConstant?: string,\n  specularExponent?: string,\n  speed?: string,\n  spreadMethod?: string,\n  startOffset?: string,\n  stdDeviation?: string,\n  stemh?: string,\n  stemv?: string,\n  stitchTiles?: string,\n  stopColor?: string,\n  stopOpacity?: string,\n  strikethroughPosition?: string,\n  strikethroughThickness?: string,\n  string?: string,\n  stroke?: string,\n  strokeDasharray?: string,\n  strokeDashoffset?: string,\n  strokeLinecap?: string,\n  strokeLinejoin?: string,\n  strokeMiterlimit?: string,\n  strokeOpacity?: string,\n  strokeWidth?: string,\n  surfaceScale?: string,\n  systemLanguage?: string,\n  tableValues?: string,\n  targetX?: string,\n  targetY?: string,\n  textAnchor?: string,\n  textDecoration?: string,\n  textLength?: string,\n  textRendering?: string,\n  to?: string,\n  to_?: string,\n  transform?: string,\n  u1?: string,\n  u2?: string,\n  underlinePosition?: string,\n  underlineThickness?: string,\n  unicode?: string,\n  unicodeBidi?: string,\n  unicodeRange?: string,\n  unitsPerEm?: string,\n  vAlphabetic?: string,\n  vHanging?: string,\n  vIdeographic?: string,\n  vMathematical?: string,\n  values?: string,\n  vectorEffect?: string,\n  version?: string,\n  vertAdvX?: string,\n  vertAdvY?: string,\n  vertOriginX?: string,\n  vertOriginY?: string,\n  viewBox?: string,\n  viewTarget?: string,\n  visibility?: string,\n  widths?: string,\n  wordSpacing?: string,\n  writingMode?: string,\n  x?: string,\n  x1?: string,\n  x2?: string,\n  xChannelSelector?: string,\n  xHeight?: string,\n  xlinkActuate?: string,\n  xlinkArcrole?: string,\n  xlinkHref?: string,\n  xlinkRole?: string,\n  xlinkShow?: string,\n  xlinkTitle?: string,\n  xlinkType?: string,\n  xmlns?: string,\n  xmlnsXlink?: string,\n  xmlBase?: string,\n  xmlLang?: string,\n  xmlSpace?: string,\n  y?: string,\n  y1?: string,\n  y2?: string,\n  yChannelSelector?: string,\n  z?: string,\n  zoomAndPan?: string,\n  about?: string,\n  datatype?: string,\n  inlist?: string,\n  prefix?: string,\n  property?: string,\n  resource?: string,\n  typeof?: string,\n  vocab?: string,\n  dangerouslySetInnerHTML?: {\"__html\": string},\n  suppressContentEditableWarning?: bool,\n}\n```\nGo to: [Type definition](JsxDOM.res#L21,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype Jsx.element\n```\nGo to: [Type definition](Jsx.res#L8,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype domRef\n```\nGo to: [Type definition](JsxDOM.res#L8,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype popover =\n  | @as(\"auto\") Auto\n  | @as(\"manual\") Manual\n  | @as(\"hint\") Hint\n```\nGo to: [Type definition](JsxDOM.res#L12,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype popoverTargetAction =\n  | @as(\"toggle\") Toggle\n  | @as(\"show\") Show\n  | @as(\"hide\") Hide\n```\nGo to: [Type definition](JsxDOM.res#L16,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype style = JsxDOMStyle.t\n```\nGo to: [Type definition](JsxDOM.res#L7,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Clipboard.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L78,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Composition.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L88,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Keyboard.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L97,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Focus.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L119,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Form.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L129,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Mouse.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L136,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Selection.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L213,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Touch.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L220,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Pointer.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L165,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.UI.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L243,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Wheel.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L254,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Media.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L266,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Image.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L273,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Animation.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L280,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Transition.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L291,3)\n"
+    "value": "```rescript\nJsxDOM.domProps\n```\n\n---\n\n```\n \n```\n```rescript\ntype JsxDOM.domProps = {\n  key?: string,\n  children?: Jsx.element,\n  ref?: domRef,\n  allow?: string,\n  ariaCurrent?: [\n    | #date\n    | #\"false\"\n    | #location\n    | #page\n    | #step\n    | #time\n    | #\"true\"\n  ],\n  ariaDetails?: string,\n  ariaDisabled?: bool,\n  ariaHidden?: bool,\n  ariaInvalid?: [#\"false\" | #grammar | #spelling | #\"true\"],\n  ariaKeyshortcuts?: string,\n  ariaLabel?: string,\n  ariaRoledescription?: string,\n  ariaAutocomplete?: [#both | #inline | #list | #none],\n  ariaChecked?: [#\"false\" | #mixed | #\"true\"],\n  ariaExpanded?: bool,\n  ariaHaspopup?: [\n    | #dialog\n    | #\"false\"\n    | #grid\n    | #listbox\n    | #menu\n    | #tree\n    | #\"true\"\n  ],\n  ariaLevel?: int,\n  ariaModal?: bool,\n  ariaMultiline?: bool,\n  ariaMultiselectable?: bool,\n  ariaOrientation?: [#horizontal | #undefined | #vertical],\n  ariaPlaceholder?: string,\n  ariaPressed?: [#\"false\" | #mixed | #\"true\"],\n  ariaReadonly?: bool,\n  ariaRequired?: bool,\n  ariaSelected?: bool,\n  ariaSort?: string,\n  ariaValuemax?: float,\n  ariaValuemin?: float,\n  ariaValuenow?: float,\n  ariaValuetext?: string,\n  ariaAtomic?: bool,\n  ariaBusy?: bool,\n  ariaLive?: [#assertive | #off | #polite | #rude],\n  ariaRelevant?: string,\n  ariaDropeffect?: [\n    | #copy\n    | #execute\n    | #link\n    | #move\n    | #none\n    | #popup\n  ],\n  ariaGrabbed?: bool,\n  ariaActivedescendant?: string,\n  ariaColcount?: int,\n  ariaColindex?: int,\n  ariaColspan?: int,\n  ariaControls?: string,\n  ariaDescribedby?: string,\n  ariaErrormessage?: string,\n  ariaFlowto?: string,\n  ariaLabelledby?: string,\n  ariaOwns?: string,\n  ariaPosinset?: int,\n  ariaRowcount?: int,\n  ariaRowindex?: int,\n  ariaRowspan?: int,\n  ariaSetsize?: int,\n  defaultChecked?: bool,\n  defaultValue?: string,\n  accessKey?: string,\n  capture?: [#environment | #user],\n  className?: string,\n  contentEditable?: bool,\n  contextMenu?: string,\n  dataTestId?: string,\n  dir?: string,\n  draggable?: bool,\n  hidden?: bool,\n  id?: string,\n  inert?: bool,\n  lang?: string,\n  popover?: popover,\n  popoverTarget?: string,\n  popoverTargetAction?: popoverTargetAction,\n  role?: string,\n  style?: style,\n  spellCheck?: bool,\n  tabIndex?: int,\n  title?: string,\n  itemID?: string,\n  itemProp?: string,\n  itemRef?: string,\n  itemScope?: bool,\n  itemType?: string,\n  accept?: string,\n  acceptCharset?: string,\n  action?: string,\n  allowFullScreen?: bool,\n  alt?: string,\n  as_?: string,\n  async?: bool,\n  autoComplete?: string,\n  autoCapitalize?: string,\n  autoFocus?: bool,\n  autoPlay?: bool,\n  challenge?: string,\n  charSet?: string,\n  checked?: bool,\n  cite?: string,\n  crossOrigin?: string,\n  cols?: int,\n  colSpan?: int,\n  content?: string,\n  controls?: bool,\n  coords?: string,\n  data?: string,\n  dateTime?: string,\n  default?: bool,\n  defer?: bool,\n  disabled?: bool,\n  download?: string,\n  encType?: string,\n  form?: string,\n  formAction?: string,\n  formTarget?: string,\n  formMethod?: string,\n  frameBorder?: int,\n  headers?: string,\n  height?: string,\n  high?: int,\n  href?: string,\n  hrefLang?: string,\n  htmlFor?: string,\n  httpEquiv?: string,\n  icon?: string,\n  inputMode?: string,\n  integrity?: string,\n  keyType?: string,\n  kind?: string,\n  label?: string,\n  list?: string,\n  loading?: [#eager | #lazy],\n  loop?: bool,\n  low?: int,\n  manifest?: string,\n  max?: string,\n  maxLength?: int,\n  media?: string,\n  mediaGroup?: string,\n  method?: string,\n  min?: string,\n  minLength?: int,\n  multiple?: bool,\n  muted?: bool,\n  name?: string,\n  nonce?: string,\n  noValidate?: bool,\n  open_?: bool,\n  optimum?: int,\n  pattern?: string,\n  placeholder?: string,\n  playsInline?: bool,\n  poster?: string,\n  preload?: string,\n  radioGroup?: string,\n  readOnly?: bool,\n  rel?: string,\n  required?: bool,\n  reversed?: bool,\n  rows?: int,\n  rowSpan?: int,\n  sandbox?: string,\n  scope?: string,\n  scoped?: bool,\n  scrolling?: string,\n  selected?: bool,\n  shape?: string,\n  size?: int,\n  sizes?: string,\n  span?: int,\n  src?: string,\n  srcDoc?: string,\n  srcLang?: string,\n  srcSet?: string,\n  start?: int,\n  step?: float,\n  summary?: string,\n  target?: string,\n  type_?: string,\n  useMap?: string,\n  value?: string,\n  width?: string,\n  wrap?: string,\n  onCopy?: JsxEvent.Clipboard.t => unit,\n  onCut?: JsxEvent.Clipboard.t => unit,\n  onPaste?: JsxEvent.Clipboard.t => unit,\n  onCompositionEnd?: JsxEvent.Composition.t => unit,\n  onCompositionStart?: JsxEvent.Composition.t => unit,\n  onCompositionUpdate?: JsxEvent.Composition.t => unit,\n  onKeyDown?: JsxEvent.Keyboard.t => unit,\n  onKeyPress?: JsxEvent.Keyboard.t => unit,\n  onKeyUp?: JsxEvent.Keyboard.t => unit,\n  onFocus?: JsxEvent.Focus.t => unit,\n  onBlur?: JsxEvent.Focus.t => unit,\n  onBeforeInput?: JsxEvent.Form.t => unit,\n  onChange?: JsxEvent.Form.t => unit,\n  onInput?: JsxEvent.Form.t => unit,\n  onReset?: JsxEvent.Form.t => unit,\n  onSubmit?: JsxEvent.Form.t => unit,\n  onInvalid?: JsxEvent.Form.t => unit,\n  onClick?: JsxEvent.Mouse.t => unit,\n  onContextMenu?: JsxEvent.Mouse.t => unit,\n  onDoubleClick?: JsxEvent.Mouse.t => unit,\n  onDrag?: JsxEvent.Mouse.t => unit,\n  onDragEnd?: JsxEvent.Mouse.t => unit,\n  onDragEnter?: JsxEvent.Mouse.t => unit,\n  onDragExit?: JsxEvent.Mouse.t => unit,\n  onDragLeave?: JsxEvent.Mouse.t => unit,\n  onDragOver?: JsxEvent.Mouse.t => unit,\n  onDragStart?: JsxEvent.Mouse.t => unit,\n  onDrop?: JsxEvent.Mouse.t => unit,\n  onMouseDown?: JsxEvent.Mouse.t => unit,\n  onMouseEnter?: JsxEvent.Mouse.t => unit,\n  onMouseLeave?: JsxEvent.Mouse.t => unit,\n  onMouseMove?: JsxEvent.Mouse.t => unit,\n  onMouseOut?: JsxEvent.Mouse.t => unit,\n  onMouseOver?: JsxEvent.Mouse.t => unit,\n  onMouseUp?: JsxEvent.Mouse.t => unit,\n  onSelect?: JsxEvent.Selection.t => unit,\n  onTouchCancel?: JsxEvent.Touch.t => unit,\n  onTouchEnd?: JsxEvent.Touch.t => unit,\n  onTouchMove?: JsxEvent.Touch.t => unit,\n  onTouchStart?: JsxEvent.Touch.t => unit,\n  onPointerOver?: JsxEvent.Pointer.t => unit,\n  onPointerEnter?: JsxEvent.Pointer.t => unit,\n  onPointerDown?: JsxEvent.Pointer.t => unit,\n  onPointerMove?: JsxEvent.Pointer.t => unit,\n  onPointerUp?: JsxEvent.Pointer.t => unit,\n  onPointerCancel?: JsxEvent.Pointer.t => unit,\n  onPointerOut?: JsxEvent.Pointer.t => unit,\n  onPointerLeave?: JsxEvent.Pointer.t => unit,\n  onGotPointerCapture?: JsxEvent.Pointer.t => unit,\n  onLostPointerCapture?: JsxEvent.Pointer.t => unit,\n  onScroll?: JsxEvent.UI.t => unit,\n  onWheel?: JsxEvent.Wheel.t => unit,\n  onAbort?: JsxEvent.Media.t => unit,\n  onCanPlay?: JsxEvent.Media.t => unit,\n  onCanPlayThrough?: JsxEvent.Media.t => unit,\n  onDurationChange?: JsxEvent.Media.t => unit,\n  onEmptied?: JsxEvent.Media.t => unit,\n  onEncrypted?: JsxEvent.Media.t => unit,\n  onEnded?: JsxEvent.Media.t => unit,\n  onError?: JsxEvent.Media.t => unit,\n  onLoadedData?: JsxEvent.Media.t => unit,\n  onLoadedMetadata?: JsxEvent.Media.t => unit,\n  onLoadStart?: JsxEvent.Media.t => unit,\n  onPause?: JsxEvent.Media.t => unit,\n  onPlay?: JsxEvent.Media.t => unit,\n  onPlaying?: JsxEvent.Media.t => unit,\n  onProgress?: JsxEvent.Media.t => unit,\n  onRateChange?: JsxEvent.Media.t => unit,\n  onSeeked?: JsxEvent.Media.t => unit,\n  onSeeking?: JsxEvent.Media.t => unit,\n  onStalled?: JsxEvent.Media.t => unit,\n  onSuspend?: JsxEvent.Media.t => unit,\n  onTimeUpdate?: JsxEvent.Media.t => unit,\n  onVolumeChange?: JsxEvent.Media.t => unit,\n  onWaiting?: JsxEvent.Media.t => unit,\n  onLoad?: JsxEvent.Image.t => unit,\n  onAnimationStart?: JsxEvent.Animation.t => unit,\n  onAnimationEnd?: JsxEvent.Animation.t => unit,\n  onAnimationIteration?: JsxEvent.Animation.t => unit,\n  onTransitionEnd?: JsxEvent.Transition.t => unit,\n  accentHeight?: string,\n  accumulate?: string,\n  additive?: string,\n  alignmentBaseline?: string,\n  allowReorder?: string,\n  alphabetic?: string,\n  amplitude?: string,\n  arabicForm?: string,\n  ascent?: string,\n  attributeName?: string,\n  attributeType?: string,\n  autoReverse?: string,\n  azimuth?: string,\n  baseFrequency?: string,\n  baseProfile?: string,\n  baselineShift?: string,\n  bbox?: string,\n  begin?: string,\n  bias?: string,\n  by?: string,\n  calcMode?: string,\n  capHeight?: string,\n  clip?: string,\n  clipPath?: string,\n  clipPathUnits?: string,\n  clipRule?: string,\n  colorInterpolation?: string,\n  colorInterpolationFilters?: string,\n  colorProfile?: string,\n  colorRendering?: string,\n  contentScriptType?: string,\n  contentStyleType?: string,\n  cursor?: string,\n  cx?: string,\n  cy?: string,\n  d?: string,\n  decelerate?: string,\n  descent?: string,\n  diffuseConstant?: string,\n  direction?: string,\n  display?: string,\n  divisor?: string,\n  dominantBaseline?: string,\n  dur?: string,\n  dx?: string,\n  dy?: string,\n  edgeMode?: string,\n  elevation?: string,\n  enableBackground?: string,\n  end?: string,\n  exponent?: string,\n  externalResourcesRequired?: string,\n  fill?: string,\n  fillOpacity?: string,\n  fillRule?: string,\n  filter?: string,\n  filterRes?: string,\n  filterUnits?: string,\n  floodColor?: string,\n  floodOpacity?: string,\n  focusable?: string,\n  fontFamily?: string,\n  fontSize?: string,\n  fontSizeAdjust?: string,\n  fontStretch?: string,\n  fontStyle?: string,\n  fontVariant?: string,\n  fontWeight?: string,\n  fomat?: string,\n  from?: string,\n  fx?: string,\n  fy?: string,\n  g1?: string,\n  g2?: string,\n  glyphName?: string,\n  glyphOrientationHorizontal?: string,\n  glyphOrientationVertical?: string,\n  glyphRef?: string,\n  gradientTransform?: string,\n  gradientUnits?: string,\n  hanging?: string,\n  horizAdvX?: string,\n  horizOriginX?: string,\n  ideographic?: string,\n  imageRendering?: string,\n  in_?: string,\n  in2?: string,\n  intercept?: string,\n  k?: string,\n  k1?: string,\n  k2?: string,\n  k3?: string,\n  k4?: string,\n  kernelMatrix?: string,\n  kernelUnitLength?: string,\n  kerning?: string,\n  keyPoints?: string,\n  keySplines?: string,\n  keyTimes?: string,\n  lengthAdjust?: string,\n  letterSpacing?: string,\n  lightingColor?: string,\n  limitingConeAngle?: string,\n  local?: string,\n  markerEnd?: string,\n  markerHeight?: string,\n  markerMid?: string,\n  markerStart?: string,\n  markerUnits?: string,\n  markerWidth?: string,\n  mask?: string,\n  maskContentUnits?: string,\n  maskUnits?: string,\n  mathematical?: string,\n  mode?: string,\n  numOctaves?: string,\n  offset?: string,\n  opacity?: string,\n  operator?: string,\n  order?: string,\n  orient?: string,\n  orientation?: string,\n  origin?: string,\n  overflow?: string,\n  overflowX?: string,\n  overflowY?: string,\n  overlinePosition?: string,\n  overlineThickness?: string,\n  paintOrder?: string,\n  panose1?: string,\n  pathLength?: string,\n  patternContentUnits?: string,\n  patternTransform?: string,\n  patternUnits?: string,\n  pointerEvents?: string,\n  points?: string,\n  pointsAtX?: string,\n  pointsAtY?: string,\n  pointsAtZ?: string,\n  preserveAlpha?: string,\n  preserveAspectRatio?: string,\n  primitiveUnits?: string,\n  r?: string,\n  radius?: string,\n  referrerPolicy?: string,\n  refX?: string,\n  refY?: string,\n  renderingIntent?: string,\n  repeatCount?: string,\n  repeatDur?: string,\n  requiredExtensions?: string,\n  requiredFeatures?: string,\n  restart?: string,\n  result?: string,\n  rotate?: string,\n  rx?: string,\n  ry?: string,\n  scale?: string,\n  seed?: string,\n  shapeRendering?: string,\n  slope?: string,\n  slot?: string,\n  spacing?: string,\n  specularConstant?: string,\n  specularExponent?: string,\n  speed?: string,\n  spreadMethod?: string,\n  startOffset?: string,\n  stdDeviation?: string,\n  stemh?: string,\n  stemv?: string,\n  stitchTiles?: string,\n  stopColor?: string,\n  stopOpacity?: string,\n  strikethroughPosition?: string,\n  strikethroughThickness?: string,\n  string?: string,\n  stroke?: string,\n  strokeDasharray?: string,\n  strokeDashoffset?: string,\n  strokeLinecap?: string,\n  strokeLinejoin?: string,\n  strokeMiterlimit?: string,\n  strokeOpacity?: string,\n  strokeWidth?: string,\n  surfaceScale?: string,\n  systemLanguage?: string,\n  tableValues?: string,\n  targetX?: string,\n  targetY?: string,\n  textAnchor?: string,\n  textDecoration?: string,\n  textLength?: string,\n  textRendering?: string,\n  to?: string,\n  transform?: string,\n  u1?: string,\n  u2?: string,\n  underlinePosition?: string,\n  underlineThickness?: string,\n  unicode?: string,\n  unicodeBidi?: string,\n  unicodeRange?: string,\n  unitsPerEm?: string,\n  vAlphabetic?: string,\n  vHanging?: string,\n  vIdeographic?: string,\n  vMathematical?: string,\n  values?: string,\n  vectorEffect?: string,\n  version?: string,\n  vertAdvX?: string,\n  vertAdvY?: string,\n  vertOriginX?: string,\n  vertOriginY?: string,\n  viewBox?: string,\n  viewTarget?: string,\n  visibility?: string,\n  widths?: string,\n  wordSpacing?: string,\n  writingMode?: string,\n  x?: string,\n  x1?: string,\n  x2?: string,\n  xChannelSelector?: string,\n  xHeight?: string,\n  xlinkActuate?: string,\n  xlinkArcrole?: string,\n  xlinkHref?: string,\n  xlinkRole?: string,\n  xlinkShow?: string,\n  xlinkTitle?: string,\n  xlinkType?: string,\n  xmlns?: string,\n  xmlnsXlink?: string,\n  xmlBase?: string,\n  xmlLang?: string,\n  xmlSpace?: string,\n  y?: string,\n  y1?: string,\n  y2?: string,\n  yChannelSelector?: string,\n  z?: string,\n  zoomAndPan?: string,\n  about?: string,\n  datatype?: string,\n  inlist?: string,\n  prefix?: string,\n  property?: string,\n  resource?: string,\n  typeof?: string,\n  vocab?: string,\n  dangerouslySetInnerHTML?: {\"__html\": string},\n  suppressContentEditableWarning?: bool,\n}\n```\nGo to: [Type definition](JsxDOM.res#L21,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype Jsx.element\n```\nGo to: [Type definition](Jsx.res#L8,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype domRef\n```\nGo to: [Type definition](JsxDOM.res#L8,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype popover =\n  | @as(\"auto\") Auto\n  | @as(\"manual\") Manual\n  | @as(\"hint\") Hint\n```\nGo to: [Type definition](JsxDOM.res#L12,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype popoverTargetAction =\n  | @as(\"toggle\") Toggle\n  | @as(\"show\") Show\n  | @as(\"hide\") Hide\n```\nGo to: [Type definition](JsxDOM.res#L16,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype style = JsxDOMStyle.t\n```\nGo to: [Type definition](JsxDOM.res#L7,1)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Clipboard.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L78,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Composition.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L88,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Keyboard.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L97,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Focus.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L119,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Form.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L129,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Mouse.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L136,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Selection.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L213,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Touch.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L220,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Pointer.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L165,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.UI.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L243,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Wheel.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L254,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Media.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L266,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Image.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L273,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Animation.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L280,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype JsxEvent.Transition.t = synthetic<tag>\n```\nGo to: [Type definition](JsxEvent.res#L291,3)\n"
   }
 }
 
@@ -2866,50 +2767,6 @@ Path Stdlib.Int.t
 Path t
 [
   {
-    "deprecated": true,
-    "detail": "(int, ~radix: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"
-    },
-    "kind": 12,
-    "label": "Int.toStringWithRadix",
-    "tags": [ 1 ]
-  },
-  {
-    "deprecated": true,
-    "detail": "(int, ~digits: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"
-    },
-    "kind": 12,
-    "label": "Int.toExponentialWithPrecision",
-    "tags": [ 1 ]
-  },
-  {
-    "deprecated": true,
-    "detail": "(int, ~digits: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"
-    },
-    "kind": 12,
-    "label": "Int.toFixedWithPrecision",
-    "tags": [ 1 ]
-  },
-  {
-    "deprecated": true,
-    "detail": "(int, ~digits: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"
-    },
-    "kind": 12,
-    "label": "Int.toPrecisionWithPrecision",
-    "tags": [ 1 ]
-  },
-  {
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {
       "kind": "markdown",
@@ -2983,28 +2840,6 @@ Path Stdlib.Float.t
 Path t
 [
   {
-    "deprecated": true,
-    "detail": "(float, ~radix: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toString` with `~radix` instead\n\n\n`toStringWithRadix(v, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.\n\n## Examples\n\n```rescript\nFloat.toStringWithRadix(6.0, ~radix=2) == \"110\"\nFloat.toStringWithRadix(3735928559.0, ~radix=16) == \"deadbeef\"\nFloat.toStringWithRadix(123456.0, ~radix=36) == \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"
-    },
-    "kind": 12,
-    "label": "Float.toStringWithRadix",
-    "tags": [ 1 ]
-  },
-  {
-    "deprecated": true,
-    "detail": "(float, ~digits: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(v, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point.\nSee [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.\n\n## Examples\n\n```rescript\nFloat.toExponentialWithPrecision(77.0, ~digits=2) == \"7.70e+1\"\nFloat.toExponentialWithPrecision(5678.0, ~digits=2) == \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"
-    },
-    "kind": 12,
-    "label": "Float.toExponentialWithPrecision",
-    "tags": [ 1 ]
-  },
-  {
     "detail": "float => int",
     "documentation": {
       "kind": "markdown",
@@ -3013,28 +2848,6 @@ Path t
     "kind": 12,
     "label": "Float.toInt",
     "tags": []
-  },
-  {
-    "deprecated": true,
-    "detail": "(float, ~digits: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(v, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point.\nSee [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed) on MDN.\n\n## Examples\n\n```rescript\nFloat.toFixedWithPrecision(300.0, ~digits=4) == \"300.0000\"\nFloat.toFixedWithPrecision(300.0, ~digits=1) == \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"
-    },
-    "kind": 12,
-    "label": "Float.toFixedWithPrecision",
-    "tags": [ 1 ]
-  },
-  {
-    "deprecated": true,
-    "detail": "(float, ~digits: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(v, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits.\nSee [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nFloat.toPrecisionWithPrecision(100.0, ~digits=2) == \"1.0e+2\"\nFloat.toPrecisionWithPrecision(1.0, ~digits=1) == \"1\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n  \n"
-    },
-    "kind": 12,
-    "label": "Float.toPrecisionWithPrecision",
-    "tags": [ 1 ]
   },
   {
     "detail": "(float, ~digits: int=?) => string",
@@ -3101,17 +2914,6 @@ Path Stdlib.Result.g
 Path g
 [
   {
-    "deprecated": true,
-    "detail": "(result<'a, 'b>, ~message: string=?) => 'a",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use 'getOrThrow' instead\n\n\n  `getExn(res, ~message=?)` returns `n` if `res` is `Ok(n)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.\n\n  ```res example\n  Result.getExn(Result.Ok(42)) == 42\n  \n  switch Result.getExn(Error(\"Invalid data\")) {\n  | exception _ => true\n  | _ => false\n  } == true\n\n  switch Result.getExn(Error(\"Invalid data\"), ~message=\"was Error!\") {\n  | exception _ => true // Throws a JsError with the message \"was Error!\"\n  | _ => false\n  } == true\n  ```\n"
-    },
-    "kind": 12,
-    "label": "Result.getExn",
-    "tags": [ 1 ]
-  },
-  {
     "detail": "(result<'a, 'b>, ~message: string=?) => 'a",
     "documentation": {
       "kind": "markdown",
@@ -3130,17 +2932,6 @@ Path g
     "kind": 12,
     "label": "Result.getOr",
     "tags": []
-  },
-  {
-    "deprecated": true,
-    "detail": "(result<'a, 'b>, 'a) => 'a",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use getOr instead\n\n"
-    },
-    "kind": 12,
-    "label": "Result.getWithDefault",
-    "tags": [ 1 ]
   }
 ]
 
@@ -3247,17 +3038,6 @@ Path uncurried
 Path Stdlib.Int.toS
 Path toS
 [
-  {
-    "deprecated": true,
-    "detail": "(int, ~radix: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"
-    },
-    "kind": 12,
-    "label": "Int.toStringWithRadix",
-    "tags": [ 1 ]
-  },
   {
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {

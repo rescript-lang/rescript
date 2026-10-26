@@ -1193,7 +1193,12 @@ let same_path t t' =
     let p1, s1 = best_type_path p and p2, s2 = best_type_path p' in
     match (s1, s2) with
     | Nth n1, Nth n2 when n1 = n2 -> true
-    | (Id | Map _), (Id | Map _) when Path.same p1 p2 ->
+    | (Id | Map _), (Id | Map _)
+      when let env = !(printing_env ()) in
+           (* A module alias names the same type as its target. *)
+           Path.same
+             (Env.normalize_path None env p1)
+             (Env.normalize_path None env p2) ->
       let tl = apply_subst s1 tl and tl' = apply_subst s2 tl' in
       List.length tl = List.length tl' && List.for_all2 same_type tl tl'
     | _ -> false)

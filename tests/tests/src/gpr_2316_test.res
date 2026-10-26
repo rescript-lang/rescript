@@ -1,12 +1,12 @@
 open Mocha
 open Test_utils
 
-let y = switch failwith("boo") {
+let y = switch throw(Failure("boo")) {
 | exception Failure(msg) => Some(msg)
 | e => None
 }
 
-let x = switch failwith("boo") {
+let x = switch throw(Failure("boo")) {
 | exception Failure(msg) => Some(msg)
 | e =>
   Console.log("ok")

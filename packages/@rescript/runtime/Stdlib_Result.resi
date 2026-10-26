@@ -30,29 +30,6 @@ query operation:
 type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
 
 /**
-  `getExn(res, ~message=?)` returns `n` if `res` is `Ok(n)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.
-
-  ```res example
-  Result.getExn(Result.Ok(42)) == 42
-  
-  switch Result.getExn(Error("Invalid data")) {
-  | exception _ => true
-  | _ => false
-  } == true
-
-  switch Result.getExn(Error("Invalid data"), ~message="was Error!") {
-  | exception _ => true // Throws a JsError with the message "was Error!"
-  | _ => false
-  } == true
-  ```
-*/
-@deprecated({
-  reason: "Use 'getOrThrow' instead",
-  migrate: Result.getOrThrow(),
-})
-let getExn: (result<'a, 'b>, ~message: string=?) => 'a
-
-/**
   `getOrThrow(res, ~message=?)` returns `n` if `res` is `Ok(n)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.
 
   ```res example
@@ -85,12 +62,6 @@ Result.mapOr(error, 0, x => x / 2) == 0
 ```
 */
 let mapOr: (result<'a, 'c>, 'b, 'a => 'b) => 'b
-
-@deprecated({
-  reason: "Use mapOr instead",
-  migrate: Result.mapOr(),
-})
-let mapWithDefault: (result<'a, 'c>, 'b, 'a => 'b) => 'b
 
 /**
 `map(res, f)`: When res is `Ok(n)`, returns `Ok(f(n))`. Otherwise returns res
@@ -145,12 +116,6 @@ Result.getOr(Error("Invalid Data"), 0) == 0
 ```
 */
 let getOr: (result<'a, 'b>, 'a) => 'a
-
-@deprecated({
-  reason: "Use getOr instead",
-  migrate: Result.getOr(),
-})
-let getWithDefault: (result<'a, 'b>, 'a) => 'a
 
 /**
 `isOk(res)`: Returns `true` if `res` is of the form `Ok(n)`, `false` if it is the `Error(e)` variant.

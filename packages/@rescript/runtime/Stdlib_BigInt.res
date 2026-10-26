@@ -12,9 +12,6 @@ let fromString = (value: string) => {
   }
 }
 
-@deprecated("Use `fromStringOrThrow` instead") @val
-external fromStringExn: string => bigint = "BigInt"
-
 @val external fromInt: int => bigint = "BigInt"
 
 @val
@@ -28,9 +25,6 @@ let fromFloat = (value: float) => {
 
 @send
 external toString: (bigint, ~radix: int=?) => string = "toString"
-
-@deprecated("Use `toString` with `~radix` instead") @send
-external toStringWithRadix: (bigint, ~radix: int) => string = "toString"
 
 @send
 external toLocaleString: bigint => string = "toLocaleString"
@@ -55,21 +49,3 @@ external shiftLeft: (bigint, bigint) => bigint = "%lslbigint"
 external shiftRight: (bigint, bigint) => bigint = "%asrbigint"
 
 external ignore: bigint => unit = "%ignore"
-
-@deprecated("Use `&&&` operator or `bitwiseAnd` instead.")
-external land: (bigint, bigint) => bigint = "%andbigint"
-
-@deprecated("Use `|||` operator or `bitwiseOr` instead.")
-external lor: (bigint, bigint) => bigint = "%orbigint"
-
-@deprecated("Use `^^^` operator or `bitwiseXor` instead.")
-external lxor: (bigint, bigint) => bigint = "%xorbigint"
-
-@deprecated("Use `~` operator or `bitwiseNot` instead.")
-external lnot: bigint => bigint = "%bitnot_bigint"
-
-@deprecated("Use `<<` operator or `shiftLeft` instead.")
-external lsl: (bigint, bigint) => bigint = "%lslbigint"
-
-@deprecated("Use `>>` operator or `shiftRight` instead.")
-external asr: (bigint, bigint) => bigint = "%asrbigint"

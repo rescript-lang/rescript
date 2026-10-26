@@ -11,10 +11,10 @@ let num3 = BigInt.fromStringOrThrow("555555555")
 let assertTrue = (message, predicate) => {
   try {
     if !predicate() {
-      message->Error.make->Error.raise
+      message->JsError.make->JsError.throw
     }
   } catch {
-  | _ => message->Error.make->Error.raise
+  | _ => message->JsError.make->JsError.throw
   }
 }
 
@@ -26,7 +26,7 @@ let assertWillThrow = (message, f) => {
   | _ => didThrow := true
   }
   if didThrow.contents == false {
-    message->Error.make->Error.raise
+    message->JsError.make->JsError.throw
   }
 }
 
@@ -37,34 +37,34 @@ let areSame = (x: bigint, y: bigint) => BigInt.toString(x) == BigInt.toString(y)
 // assertTrue("big ints if same then equal", () => num1 == num1)
 
 assertTrue("fromArray", () =>
-  [num1, num2]->BigInt64Array.fromArray->BigInt64Array.get(1)->Option.getExn->areSame(num2)
+  [num1, num2]->BigInt64Array.fromArray->BigInt64Array.get(1)->Option.getOrThrow->areSame(num2)
 )
 
 assertTrue("fromBuffer", () => {
   let x = ArrayBuffer.make(16)->BigInt64Array.fromBuffer
   x->BigInt64Array.set(1, num2)
-  x->BigInt64Array.get(1)->Option.getExn->areSame(num2)
+  x->BigInt64Array.get(1)->Option.getOrThrow->areSame(num2)
 })
 
 assertWillThrow("fromBuffer when too short can throw when used", () => {
   let x = ArrayBuffer.make(1)->BigInt64Array.fromBuffer
   x->BigInt64Array.set(0, num1)
-  x->BigInt64Array.get(0)->Option.getExn->areSame(num1)->ignore
+  x->BigInt64Array.get(0)->Option.getOrThrow->areSame(num1)->ignore
 })
 
 assertTrue("fromBufferWithRange", () => {
-  let x = ArrayBuffer.make(16)->BigInt64Array.fromBufferWithRange(~byteOffset=0, ~length=1)
+  let x = ArrayBuffer.make(16)->BigInt64Array.fromBuffer(~byteOffset=0, ~length=1)
   x->BigInt64Array.set(0, num1)
-  x->BigInt64Array.get(0)->Option.getExn->areSame(num1)
+  x->BigInt64Array.get(0)->Option.getOrThrow->areSame(num1)
 })
 
 // assertWillThrow("testing", () => {"a"->Error.make->Error.raise})
 // assertWillThrow("testing", () => {Console.log("f")})
 
 assertWillThrow("fromBufferWithRange is unsafe, out of range", () => {
-  let x = ArrayBuffer.make(16)->BigInt64Array.fromBufferWithRange(~byteOffset=13, ~length=1)
+  let x = ArrayBuffer.make(16)->BigInt64Array.fromBuffer(~byteOffset=13, ~length=1)
   x->BigInt64Array.set(0, num1)
-  x->BigInt64Array.get(0)->Option.getExn->areSame(num1)->ignore
+  x->BigInt64Array.get(0)->Option.getOrThrow->areSame(num1)->ignore
 })
 
 assertTrue("fromLength is NOT in bytes", () => {
@@ -76,4 +76,4 @@ assertTrue("a typed array is a TypedArray.t through a coercion", () => {
   let x = BigInt64Array.fromLength(2)
   TypedArray.length(x :> TypedArray.t<bigint>) == 2
 })
-let o = BigInt64Array.fromArrayLikeOrIterableWithMap
+let o = (x, map) => BigInt64Array.fromArrayLikeOrIterable(x, ~map)

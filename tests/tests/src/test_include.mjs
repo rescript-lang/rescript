@@ -37,21 +37,15 @@ let size = Stdlib_List.size;
 
 let head = Stdlib_List.head;
 
-let headExn = Stdlib_List.headExn;
-
 let headOrThrow = Stdlib_List.headOrThrow;
 
 let tail = Stdlib_List.tail;
-
-let tailExn = Stdlib_List.tailExn;
 
 let tailOrThrow = Stdlib_List.tailOrThrow;
 
 let add = Stdlib_List.add;
 
 let get = Stdlib_List.get;
-
-let getExn = Stdlib_List.getExn;
 
 let getOrThrow = Stdlib_List.getOrThrow;
 
@@ -60,8 +54,6 @@ let make = Stdlib_List.make;
 let fromInitializer = Stdlib_List.fromInitializer;
 
 let shuffle = Stdlib_List.shuffle;
-
-let toShuffled = Stdlib_List.toShuffled;
 
 let drop = Stdlib_List.drop;
 
@@ -125,8 +117,6 @@ let compare = Stdlib_List.compare;
 
 let equal = Stdlib_List.equal;
 
-let has = Stdlib_List.has;
-
 let includes = Stdlib_List.includes;
 
 let find = Stdlib_List.find;
@@ -140,14 +130,6 @@ let filterMap = Stdlib_List.filterMap;
 let partition = Stdlib_List.partition;
 
 let unzip = Stdlib_List.unzip;
-
-let getAssoc = Stdlib_List.getAssoc;
-
-let hasAssoc = Stdlib_List.hasAssoc;
-
-let removeAssoc = Stdlib_List.removeAssoc;
-
-let setAssoc = Stdlib_List.setAssoc;
 
 let sort = Stdlib_List.sort;
 
@@ -166,19 +148,15 @@ export {
   length,
   size,
   head,
-  headExn,
   headOrThrow,
   tail,
-  tailExn,
   tailOrThrow,
   add,
   get,
-  getExn,
   getOrThrow,
   make,
   fromInitializer,
   shuffle,
-  toShuffled,
   drop,
   take,
   splitAt,
@@ -210,7 +188,6 @@ export {
   compareLength,
   compare,
   equal,
-  has,
   includes,
   find,
   filter,
@@ -218,10 +195,6 @@ export {
   filterMap,
   partition,
   unzip,
-  getAssoc,
-  hasAssoc,
-  removeAssoc,
-  setAssoc,
   sort,
 }
 /* No side effect */

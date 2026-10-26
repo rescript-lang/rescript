@@ -1,0 +1,29 @@
+// Uses the deprecated items of DeprecatedTemplates to validate each kind of migration template.
+
+// %replace.type
+let value: DeprecatedTemplates.Target.t = DeprecatedTemplates.Target.make(1)
+
+// A fixed labelled argument
+let fromZero1 = DeprecatedTemplates.Target.make(1, ~start=0)
+let fromZero2 = 1->DeprecatedTemplates.Target.make(~start=0)
+
+// An unlabelled argument inserted as a labelled one
+let options1 = DeprecatedTemplates.Target.fromOptions(2, ~options={step: 3})
+let options2 = 2->DeprecatedTemplates.Target.fromOptions(~options={step: 3})
+
+// An unlabelled argument inserted into a function
+let delayed = DeprecatedTemplates.Target.delay(() => 4)
+
+// An operator built from unlabelled arguments
+let sum1 = 1 + 2
+
+// %replace.constructor
+let caught = switch throw(DeprecatedTemplates.Target.Failed("boom")) {
+| exception DeprecatedTemplates.Target.Failed(message) => message
+| () => ""
+}
+
+let matched = switch DeprecatedTemplates.Target.Failed("boom") {
+| DeprecatedTemplates.Target.Failed(message) => message
+| _ => ""
+}

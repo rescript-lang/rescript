@@ -428,16 +428,6 @@ external allSettled6: ((t<'a>, t<'b>, t<'c>, t<'d>, t<'e>, t<'f>)) => t<(
 )> = "allSettled"
 
 /**
-`done(p)` is a safe way to ignore a promise. If a value is anything else than a
-promise, it will throw a type error.
-*/
-@deprecated({
-  reason: "Please use `Promise.ignore` instead",
-  migrate: Promise.ignore(),
-})
-external done: promise<'a> => unit = "%ignore"
-
-/**
   `ignore(promise)` ignores the provided promise and returns unit.
 
   This helper is useful when you want to discard a value (for example, the result of an operation with side effects)

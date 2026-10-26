@@ -18,13 +18,13 @@ describe(__MODULE__, () => {
   testAsync("cond_a loads as a module whose body throws Assert_failure", async () => {
     let ok = await raisesAssertFailure(() => import(Cond_a.u))
     if !ok {
-      failwith("cond_a did not throw Assert_failure on load")
+      throw(Failure("cond_a did not throw Assert_failure on load"))
     }
   })
   testAsync("cond_a_none loads as a module whose body throws Assert_failure", async () => {
     let ok = await raisesAssertFailure(loadCondANone)
     if !ok {
-      failwith("cond_a_none did not throw Assert_failure on load")
+      throw(Failure("cond_a_none did not throw Assert_failure on load"))
     }
   })
 })

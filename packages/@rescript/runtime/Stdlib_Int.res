@@ -10,36 +10,12 @@ external equal: (int, int) => bool = "%equal"
 external compare: (int, int) => Stdlib_Ordering.t = "%compare"
 
 @send external toExponential: (int, ~digits: int=?) => string = "toExponential"
-@deprecated({
-  reason: "Use `toExponential` instead",
-  migrate: Int.toExponential(),
-})
-@send
-external toExponentialWithPrecision: (int, ~digits: int) => string = "toExponential"
 
 @send external toFixed: (int, ~digits: int=?) => string = "toFixed"
-@deprecated({
-  reason: "Use `toFixed` instead",
-  migrate: Int.toFixed(),
-})
-@send
-external toFixedWithPrecision: (int, ~digits: int) => string = "toFixed"
 
 @send external toPrecision: (int, ~digits: int=?) => string = "toPrecision"
-@deprecated({
-  reason: "Use `toPrecision` instead",
-  migrate: Int.toPrecision(),
-})
-@send
-external toPrecisionWithPrecision: (int, ~digits: int) => string = "toPrecision"
 
 @send external toString: (int, ~radix: int=?) => string = "toString"
-@deprecated({
-  reason: "Use `toString` instead",
-  migrate: Int.toString(),
-})
-@send
-external toStringWithRadix: (int, ~radix: int) => string = "toString"
 @send external toLocaleString: int => string = "toLocaleString"
 
 external toFloat: int => float = "%identity"
@@ -69,7 +45,7 @@ let range = (start, end, ~options: rangeOptions={}) => {
   let step = switch options.step {
   | None => isInverted ? -1 : 1
   | Some(0) if start !== end =>
-    Stdlib_Error.throw(Stdlib_Error.RangeError.make("Incorrect range arguments"))
+    Stdlib_JsError.throw(Stdlib_JsError.RangeError.make("Incorrect range arguments"))
   | Some(n) => n
   }
 
@@ -85,13 +61,6 @@ let range = (start, end, ~options: rangeOptions={}) => {
 
   Stdlib_Array.fromInitializer(~length, i => start + i * step)
 }
-
-@deprecated({
-  reason: "Use `range` instead",
-  migrate: Int.range(~options=%insert.unlabelledArgument(2)),
-})
-@send
-let rangeWithOptions = (start, end, options) => range(start, end, ~options)
 
 let clamp = (~min=?, ~max=?, value): int => {
   let value = switch max {
@@ -113,17 +82,5 @@ external bitwiseNot: int => int = "%bitnot_int"
 external shiftLeft: (int, int) => int = "%lslint"
 external shiftRight: (int, int) => int = "%asrint"
 external shiftRightUnsigned: (int, int) => int = "%lsrint"
-
-module Bitwise = {
-  external land: (int, int) => int = "%andint"
-  external lor: (int, int) => int = "%orint"
-  external lxor: (int, int) => int = "%xorint"
-
-  external lsl: (int, int) => int = "%lslint"
-  external lsr: (int, int) => int = "%lsrint"
-  external asr: (int, int) => int = "%asrint"
-
-  let lnot = x => lxor(x, -1)
-}
 
 external ignore: int => unit = "%ignore"

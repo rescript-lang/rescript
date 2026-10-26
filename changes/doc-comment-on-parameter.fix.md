@@ -1,0 +1,1 @@
+- Parse a doc comment before a function parameter, so formatting a `@res.doc` parameter attribute no longer produces code that doesn't parse.

@@ -193,30 +193,6 @@ Float.parseInt("17", ~radix=40)->Float.isNaN == true
 external parseInt: ('a, ~radix: int=?) => float = "parseInt"
 
 /**
-`parseIntWithRadix(v, ~radix)` parse the given `v` and returns a float. Leading
-whitespace in this argument `v`is ignored. `radix` specifies the radix base to
-use for the formatted number. The value must be in the range \[2, 36\] (inclusive).
-Returns `NaN` if `v` can't be parsed and `radix` is smaller than 2 or bigger
-than 36.
-See [`parseInt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/parseInt) on MDN.
-
-## Examples
-
-```rescript
-Float.parseIntWithRadix("10.0", ~radix=2) == 2.0
-Float.parseIntWithRadix("15 * 3", ~radix=10) == 15.0
-Float.parseIntWithRadix("12", ~radix=13) == 15.0
-Float.parseIntWithRadix("17", ~radix=40)->Float.isNaN == true
-```
-*/
-@deprecated({
-  reason: "Use `parseInt` instead",
-  migrate: Float.parseInt(),
-})
-@val
-external parseIntWithRadix: ('a, ~radix: int) => float = "parseInt"
-
-/**
 `toExponential(v, ~digits=?)` return a `string` representing the given value in
 exponential notation. `digits` specifies how many digits should appear after
 the decimal point.
@@ -239,30 +215,6 @@ Float.toExponential(5678.0, ~digits=2) == "5.68e+3"
 external toExponential: (float, ~digits: int=?) => string = "toExponential"
 
 /**
-`toExponential(v, ~digits)` return a `string` representing the given value in
-exponential notation. `digits` specifies how many digits should appear after
-the decimal point.
-See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.
-
-## Examples
-
-```rescript
-Float.toExponentialWithPrecision(77.0, ~digits=2) == "7.70e+1"
-Float.toExponentialWithPrecision(5678.0, ~digits=2) == "5.68e+3"
-```
-
-## Exceptions
-
-- `RangeError`: If `digits` less than 0 or greater than 10.
-*/
-@deprecated({
-  reason: "Use `toExponential` instead",
-  migrate: Float.toExponential(),
-})
-@send
-external toExponentialWithPrecision: (float, ~digits: int) => string = "toExponential"
-
-/**
 `toFixed(v, ~digits=?)` return a `string` representing the given
 value using fixed-point notation. `digits` specifies how many digits should
 appear after the decimal point.
@@ -283,30 +235,6 @@ Float.toFixed(300.0, ~digits=1) == "300.0"
 */
 @send
 external toFixed: (float, ~digits: int=?) => string = "toFixed"
-
-/**
-`toFixedWithPrecision(v, ~digits)` return a `string` representing the given
-value using fixed-point notation. `digits` specifies how many digits should
-appear after the decimal point.
-See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed) on MDN.
-
-## Examples
-
-```rescript
-Float.toFixedWithPrecision(300.0, ~digits=4) == "300.0000"
-Float.toFixedWithPrecision(300.0, ~digits=1) == "300.0"
-```
-
-## Exceptions
-
-- `RangeError`: If `digits` is less than 0 or larger than 100.
-*/
-@deprecated({
-  reason: "Use `toFixed` instead",
-  migrate: Float.toFixed(),
-})
-@send
-external toFixedWithPrecision: (float, ~digits: int) => string = "toFixed"
 
 /**
 `toPrecision(v, ~digits=?)` return a `string` representing the giver value with
@@ -332,32 +260,6 @@ Float.toPrecision(1.0, ~digits=1) == "1"
 external toPrecision: (float, ~digits: int=?) => string = "toPrecision"
 
 /**
-`toPrecisionWithPrecision(v, ~digits)` return a `string` representing the giver value with
-precision. `digits` specifies the number of significant digits.
-See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.
-
-## Examples
-
-```rescript
-Float.toPrecisionWithPrecision(100.0, ~digits=2) == "1.0e+2"
-Float.toPrecisionWithPrecision(1.0, ~digits=1) == "1"
-```
-
-## Exceptions
-
-- `RangeError`: If `digits` is not between 1 and 100 (inclusive).
-  Implementations are allowed to support larger and smaller values as well.
-  ECMA-262 only requires a precision of up to 21 significant digits.
-  
-*/
-@deprecated({
-  reason: "Use `toPrecision` instead",
-  migrate: Float.toPrecision(),
-})
-@send
-external toPrecisionWithPrecision: (float, ~digits: int) => string = "toPrecision"
-
-/**
 `toString(v)` return a `string` representing the given value.
 See [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.
 
@@ -370,30 +272,6 @@ Float.toString(-1000.0) == "-1000"
 */
 @send
 external toString: (float, ~radix: int=?) => string = "toString"
-
-/**
-`toStringWithRadix(v, ~radix)` return a `string` representing the given value.
-`~radix` specifies the radix base to use for the formatted number.
-See [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.
-
-## Examples
-
-```rescript
-Float.toStringWithRadix(6.0, ~radix=2) == "110"
-Float.toStringWithRadix(3735928559.0, ~radix=16) == "deadbeef"
-Float.toStringWithRadix(123456.0, ~radix=36) == "2n9c"
-```
-
-## Exceptions
-
-`RangeError`: if `radix` is less than 2 or greater than 36.
-*/
-@deprecated({
-  reason: "Use `toString` with `~radix` instead",
-  migrate: Float.toString(),
-})
-@send
-external toStringWithRadix: (float, ~radix: int) => string = "toString"
 
 /**
 `toLocaleString(v)` return a `string` with language-sensitive representing the

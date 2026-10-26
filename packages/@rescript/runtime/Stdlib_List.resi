@@ -54,31 +54,6 @@ List.head(list{1, 2, 3}) == Some(1)
 let head: list<'a> => option<'a>
 
 /**
-`headExn(list)` same as [`head`](#head).
-
-## Examples
-
-```rescript
-List.headExn(list{1, 2, 3}) == 1
-
-switch List.headExn(list{}) {
-| exception Not_found => assert(true)
-| _ => assert(false)
-}
-```
-
-## Exceptions
-
-- Throws an Error if list is empty.
-  
-*/
-@deprecated({
-  reason: "Use `headOrThrow` instead",
-  migrate: List.headOrThrow(),
-})
-let headExn: list<'a> => 'a
-
-/**
 `headOrThrow(list)` same as [`head`](#head).
 
 ## Examples
@@ -111,30 +86,6 @@ List.tail(list{}) == None
 ```
 */
 let tail: list<'a> => option<list<'a>>
-
-/**
-`tailExn(list)` same as [`tail`](#tail).
-
-## Examples
-
-```rescript
-List.tailExn(list{1, 2, 3}) == list{2, 3}
-
-switch List.tailExn(list{}) {
-| exception Not_found => assert(true)
-| _ => assert(false)
-}
-```
-
-## Exceptions
-
-- Throws an Error if list is empty.
-*/
-@deprecated({
-  reason: "Use `tailOrThrow` instead",
-  migrate: List.tailOrThrow(),
-})
-let tailExn: list<'a> => list<'a>
 
 /**
 `tailOrThrow(list)` same as [`tail`](#tail).
@@ -184,32 +135,6 @@ abc->List.get(4) == None
 ```
 */
 let get: (list<'a>, int) => option<'a>
-
-/**
-`getExn(list, index)` same as [`get`](#get).
-
-## Examples
-
-```rescript
-let abc = list{"A", "B", "C"}
-
-abc->List.getExn(1) == "B"
-
-switch abc->List.getExn(4) {
-| exception Not_found => assert(true)
-| _ => assert(false)
-}
-```
-
-## Exceptions
-
-- Throws an Error if `index` is larger than the length of list.
-*/
-@deprecated({
-  reason: "Use `getOrThrow` instead",
-  migrate: List.getOrThrow(),
-})
-let getExn: (list<'a>, int) => 'a
 
 /**
 `getOrThrow(list, index)` same as [`get`](#get).
@@ -269,21 +194,6 @@ List.shuffle(list{1, 2, 3}) // list{2, 1, 3}
 ```
 */
 let shuffle: list<'a> => list<'a>
-
-/**
-`toShuffled(list)` returns a new list in random order.
-
-## Examples
-
-```rescript
-List.toShuffled(list{1, 2, 3}) // list{2, 1, 3}
-```
-*/
-@deprecated({
-  reason: "Use `shuffle` instead",
-  migrate: List.shuffle(),
-})
-let toShuffled: list<'a> => list<'a>
 
 /**
 `drop(list, value)` return a new list, dropping the first `value` element.
@@ -756,25 +666,6 @@ List.equal(list{1, 2, 3}, list{-1, -2, -3}, (a, b) => Math.Int.abs(a) == Math.In
 let equal: (list<'a>, list<'a>, ('a, 'a) => bool) => bool
 
 /**
-`has(list, element, f)` returns `true` if the list contains at least one
-`element` for which `f` returns \`true'.
-
-Use [`some`](#some) with a predicate instead.
-
-## Examples
-
-```rescript
-list{1, 2, 3}->List.has(2, (a, b) => a == b) == true
-
-list{1, 2, 3}->List.has(4, (a, b) => a == b) == false
-
-list{-1, -2, -3}->List.has(2, (a, b) => Math.Int.abs(a) == Math.Int.abs(b)) == true
-```
-*/
-@deprecated("Use `some` instead")
-let has: (list<'a>, 'b, ('a, 'b) => bool) => bool
-
-/**
 `includes(list, item)` checks whether `list` includes `item` using strict equality.
 
 Object values are only equal when they refer to the same object. `NaN` is not
@@ -892,88 +783,6 @@ List.unzip(list{("H", "W"), ("e", "o"), ("l", "r"), ("l", "l"), ("o", "d"), (" "
 ```
 */
 let unzip: list<('a, 'b)> => (list<'a>, list<'b>)
-
-/**
-`getAssoc(list, k, f)` return the second element of a pair in `list` where
-the first element equals `k` as per the predicate function `f`, or `None` if
-not found.
-
-## Examples
-
-```rescript
-list{(1, "a"), (2, "b"), (3, "c")}->List.getAssoc(3, (a, b) => a == b) // Some("c")
-
-list{(9, "morning"), (15, "afternoon"), (22, "night")}->List.getAssoc(15, (k, item) =>
-  k /* 15 */ == item
-) == Some("afternoon")
-/* 9, 5, 22 */
-```
-*/
-@deprecated("Use a `Map` instead")
-let getAssoc: (list<('a, 'c)>, 'b, ('a, 'b) => bool) => option<'c>
-
-/**
-`hasAssoc(list, k, f)` returns `true` if there is a pair in `list` where the
-first element equals `k` as per the predicate function `f`.
-
-## Examples
-
-```rescript
-list{(1, "a"), (2, "b"), (3, "c")}->List.hasAssoc(1, (a, b) => a == b) // true
-
-list{(9, "morning"), (15, "afternoon"), (22, "night")}->List.hasAssoc(25, (k, item) =>
-  k /* 25 */ == item
-) == false
-/* 9, 5, 22 */
-```
-*/
-@deprecated("Use a `Map` instead")
-let hasAssoc: (list<('a, 'c)>, 'b, ('a, 'b) => bool) => bool
-
-/**
-`removeAssoc(list, k, f)` return a list after removing the first pair whose
-first value is `k` per the equality predicate `f`, if not found, return a new
-list identical to `list`.
-
-## Examples
-
-```rescript
-list{(1, "a"), (2, "b"), (3, "c")}->List.removeAssoc(1, (a, b) => a == b) // list{(2, "b"), (3, "c")}
-
-list{(9, "morning"), (15, "afternoon"), (22, "night")}->List.removeAssoc(9, (k, item) =>
-  k /* 9 */ == item
-) == list{(15, "afternoon"), (22, "night")}
-/* 9, 5, 22 */
-```
-*/
-@deprecated("Use a `Map` instead")
-let removeAssoc: (list<('a, 'c)>, 'b, ('a, 'b) => bool) => list<('a, 'c)>
-
-/**
-`setAssoc(list, k, v, f)`. If `k` exists in `list` by satisfying the `f`
-predicate, return a new list with the key and value replaced by the new `k` and
-`v`, otherwise, return a new list with the pair `k`, `v` added to the head of
-`list`.
-
-## Examples
-
-```rescript
-list{(1, "a"), (2, "b"), (3, "c")}->List.setAssoc(2, "x", (a, b) => a == b) ==
-  list{(1, "a"), (2, "x"), (3, "c")}
-
-list{(1, "a"), (3, "c")}->List.setAssoc(2, "b", (a, b) => a == b) ==
-  list{(2, "b"), (1, "a"), (3, "c")}
-
-list{(9, "morning"), (3, "morning?!"), (22, "night")}->List.setAssoc(15, "afternoon", (a, b) =>
-  mod(a, 12) == mod(b, 12)
-) == list{(9, "morning"), (15, "afternoon"), (22, "night")}
-```
-
-**Please note**: In the last example, since: `15 mod 12` equals `3 mod 12`. Both
-the key _and_ the value are replaced in the list.
-*/
-@deprecated("Use a `Map` instead")
-let setAssoc: (list<('a, 'c)>, 'a, 'c, ('a, 'a) => bool) => list<('a, 'c)>
 
 /**
 `sort(list, f)` returns a sorted list.

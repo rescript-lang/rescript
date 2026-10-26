@@ -29,8 +29,6 @@ let getOrThrow = (x, ~message=?) =>
     )
   }
 
-let getExn = getOrThrow
-
 external getUnsafe: option<'a> => 'a = "%identity"
 
 let mapOr = (opt, default, f) =>
@@ -38,8 +36,6 @@ let mapOr = (opt, default, f) =>
   | Some(x) => f(x)
   | None => default
   }
-
-let mapWithDefault = mapOr
 
 let map = (opt, f) =>
   switch opt {
@@ -58,8 +54,6 @@ let getOr = (opt, default) =>
   | Some(x) => x
   | None => default
   }
-
-let getWithDefault = getOr
 
 let orElse = (opt, other) =>
   switch opt {

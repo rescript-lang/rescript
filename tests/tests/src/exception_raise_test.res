@@ -81,7 +81,7 @@ describe(__MODULE__, () => {
 
   test("Exn.asJsExn with raw throw", () => {
     let testValue = try %raw(`()=>{throw 2}`)() catch {
-    | e => Exn.asJsExn(e) != None
+    | e => JsExn.fromException(e) != None
     }
     eq(__LOC__, testValue, true)
   })

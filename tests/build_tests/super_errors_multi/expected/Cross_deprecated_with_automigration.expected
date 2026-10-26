@@ -1,0 +1,14 @@
+===== User.res =====
+
+  [1;33mWarning number 3[0m
+  [36m/.../fixtures/Cross_deprecated_with_automigration/User.res[0m:[2m2:13-25[0m
+
+  1 [2m│[0m let values = list{1, 2}
+  [1;33m2[0m [2m│[0m let first = [1;33mLegacy.getExn[0m(values, 0)
+  3 [2m│[0m let incremented = first + 1
+  4 [2m│[0m let _ = incremented
+
+  deprecated: Legacy.getExn
+  Use `getOrThrow` instead
+
+  This can be automatically migrated by the ReScript migration tool. Run `rescript-tools migrate-all <project-root>` to run all automatic migrations available in your project, or `rescript-tools migrate <file>` to migrate a single file.

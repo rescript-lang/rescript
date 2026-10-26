@@ -3,7 +3,7 @@ let eq = (a, b) => a == b
 // Test for RegExp.flags
 Test.run(
   __POS_OF__("RegExp.flags basic"),
-  RegExp.fromStringWithFlags("\\w+", ~flags="gi")->RegExp.flags,
+  RegExp.fromString("\\w+", ~flags="gi")->RegExp.flags,
   eq,
   "gi",
 )
@@ -11,7 +11,7 @@ Test.run(
 // Test for alphabetical sorting of flags
 Test.run(
   __POS_OF__("RegExp.flags sorting"),
-  RegExp.fromStringWithFlags("\\w+", ~flags="igd")->RegExp.flags,
+  RegExp.fromString("\\w+", ~flags="igd")->RegExp.flags,
   eq,
   "dgi",
 )

@@ -3,7 +3,7 @@ let eq = (a, b) => a == b
 let catch = f =>
   try {
     let _ = f()
-    failwith("no exception raised")
+    throw(Failure("no exception raised"))
   } catch {
   | JsExn(err) => err
   }

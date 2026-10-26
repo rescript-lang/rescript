@@ -6,13 +6,13 @@ let nearestGroots = list{}
 let oppHeroes = list{0}
 let huntGrootCondition =
   List.length(nearestGroots) > 0 && {
-      let x = oppHeroes->List.filter(h => List.headExn(nearestGroots) <= 1000)
+      let x = oppHeroes->List.filter(h => List.headOrThrow(nearestGroots) <= 1000)
       List.length(x) == 0
     }
 
 let huntGrootCondition2 =
   List.length(nearestGroots) >= 0 || {
-      let x = oppHeroes->List.filter(h => List.headExn(nearestGroots) <= 1000)
+      let x = oppHeroes->List.filter(h => List.headOrThrow(nearestGroots) <= 1000)
       List.length(x) == 0
     }
 

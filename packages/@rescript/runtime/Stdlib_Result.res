@@ -17,15 +17,11 @@ let getOrThrow = (x, ~message=?) =>
     )
   }
 
-let getExn = getOrThrow
-
 let mapOr = (opt, default, f) =>
   switch opt {
   | Ok(x) => f(x)
   | Error(_) => default
   }
-
-let mapWithDefault = mapOr
 
 let map = (opt, f) =>
   switch opt {
@@ -44,8 +40,6 @@ let getOr = (opt, default) =>
   | Ok(x) => x
   | Error(_) => default
   }
-
-let getWithDefault = getOr
 
 let isOk = x =>
   switch x {
