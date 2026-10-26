@@ -5,7 +5,8 @@
       "end": { "character": 6, "line": 2 },
       "start": { "character": 4, "line": 2 }
     },
-    "severity": 1
+    "severity": 1,
+    "source": "ReScript"
   },
   {
     "message": "This let-binding misses an expression",
@@ -13,7 +14,8 @@
       "end": { "character": 11, "line": 1 },
       "start": { "character": 9, "line": 1 }
     },
-    "severity": 1
+    "severity": 1,
+    "source": "ReScript"
   },
   {
     "message": "I was expecting a name for this let-binding. Example: `let message = \"hello\"`",
@@ -21,7 +23,8 @@
       "end": { "character": 5, "line": 0 },
       "start": { "character": 4, "line": 0 }
     },
-    "severity": 1
+    "severity": 1,
+    "source": "ReScript"
   }
 ]
 
