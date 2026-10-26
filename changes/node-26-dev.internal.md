@@ -1,0 +1,1 @@
+- Develop and test with Node.js 26, and run the stdlib tests in the installation tests on Node.js 22, the oldest supported version.

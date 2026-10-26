@@ -28,7 +28,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           cache: yarn
-          node-version: 22
+          node-version-file: .nvmrc
       # The scripts import semver. Package builds aren't needed for them.
       - run: yarn install --immutable --mode=skip-build
       - run: node --test scripts/changelog.test.js scripts/magicNumbers.test.js
