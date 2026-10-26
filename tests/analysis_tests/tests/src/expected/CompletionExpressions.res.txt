@@ -948,7 +948,7 @@ Path fnTakingCallback
     "detail": "('a, 'a) => unit",
     "documentation": {
       "kind": "markdown",
-      "value": "\n`assertEqual(a, b)` check if `a` is equal `b`. If not throw a panic exception\n\n## Examples\n\n```rescript\nlist{1, 2}->List.tailExn == list{2}\n```\n"
+      "value": "\n`assertEqual(a, b)` check if `a` is equal `b`. If not throw a panic exception\n\n## Examples\n\n```rescript\nlist{1, 2}->List.tailOrThrow == list{2}\n```\n"
     },
     "kind": 12,
     "label": "assertEqual",
@@ -1616,14 +1616,6 @@ Path mkStuff
     "insertTextFormat": 2,
     "kind": 12,
     "label": "RegExp.fromString()",
-    "tags": []
-  },
-  {
-    "detail": "(string, ~flags: string) => t",
-    "insertText": "RegExp.fromStringWithFlags($0)",
-    "insertTextFormat": 2,
-    "kind": 12,
-    "label": "RegExp.fromStringWithFlags()",
     "tags": []
   }
 ]

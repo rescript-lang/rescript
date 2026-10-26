@@ -86,28 +86,6 @@ Path
         }
       }
     ],
-    "deprecated": true,
-    "detail": "t<'a> => 'a",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `getOrThrow` instead\n\n\n`getExn(value)` throws an exception if `null`, otherwise returns the value.\n\n```rescript\nNull.getExn(Null.make(3)) == 3\n\nswitch Null.getExn(%raw(\"'ReScript'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"ReScript\"\n}\n\nswitch Null.getExn(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Throws `Invalid_argument` if `value` is `null`\n"
-    },
-    "insertText": "->Null.getExn",
-    "kind": 12,
-    "label": "->Null.getExn",
-    "sortText": "getExn",
-    "tags": [ 1 ]
-  },
-  {
-    "additionalTextEdits": [
-      {
-        "newText": "",
-        "range": {
-          "end": { "character": 5, "line": 2 },
-          "start": { "character": 4, "line": 2 }
-        }
-      }
-    ],
     "detail": "(t<'a>, t<'b>, ('a, 'b) => Ordering.t) => Ordering.t",
     "documentation": {
       "kind": "markdown",
@@ -223,50 +201,6 @@ Path
     "label": "->Null.mapOr",
     "sortText": "mapOr",
     "tags": []
-  },
-  {
-    "additionalTextEdits": [
-      {
-        "newText": "",
-        "range": {
-          "end": { "character": 5, "line": 2 },
-          "start": { "character": 4, "line": 2 }
-        }
-      }
-    ],
-    "deprecated": true,
-    "detail": "(t<'a>, 'b, 'a => 'b) => 'b",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use mapOr instead\n\n"
-    },
-    "insertText": "->Null.mapWithDefault",
-    "kind": 12,
-    "label": "->Null.mapWithDefault",
-    "sortText": "mapWithDefault",
-    "tags": [ 1 ]
-  },
-  {
-    "additionalTextEdits": [
-      {
-        "newText": "",
-        "range": {
-          "end": { "character": 5, "line": 2 },
-          "start": { "character": 4, "line": 2 }
-        }
-      }
-    ],
-    "deprecated": true,
-    "detail": "(t<'a>, 'a) => 'a",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use getOr instead\n\n"
-    },
-    "insertText": "->Null.getWithDefault",
-    "kind": 12,
-    "label": "->Null.getWithDefault",
-    "sortText": "getWithDefault",
-    "tags": [ 1 ]
   },
   {
     "additionalTextEdits": [
@@ -417,28 +351,6 @@ Path
         }
       }
     ],
-    "deprecated": true,
-    "detail": "t<'a> => 'a",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `getOrThrow` instead\n\n\n`getExn(value)` throws an exception if `null` or `undefined`, otherwise returns the value.\n\n```rescript\nswitch Nullable.getExn(%raw(\"'Hello'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"Hello\"\n}\n\nswitch Nullable.getExn(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n\nswitch Nullable.getExn(%raw(\"undefined\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Throws `Invalid_argument` if `value` is `null` or `undefined`\n"
-    },
-    "insertText": "->Nullable.getExn",
-    "kind": 12,
-    "label": "->Nullable.getExn",
-    "sortText": "getExn",
-    "tags": [ 1 ]
-  },
-  {
-    "additionalTextEdits": [
-      {
-        "newText": "",
-        "range": {
-          "end": { "character": 5, "line": 7 },
-          "start": { "character": 4, "line": 7 }
-        }
-      }
-    ],
     "detail": "(t<'a>, t<'b>, ('a, 'b) => Ordering.t) => Ordering.t",
     "insertText": "->Nullable.compare",
     "kind": 12,
@@ -550,50 +462,6 @@ Path
     "label": "->Nullable.mapOr",
     "sortText": "mapOr",
     "tags": []
-  },
-  {
-    "additionalTextEdits": [
-      {
-        "newText": "",
-        "range": {
-          "end": { "character": 5, "line": 7 },
-          "start": { "character": 4, "line": 7 }
-        }
-      }
-    ],
-    "deprecated": true,
-    "detail": "(t<'a>, 'b, 'a => 'b) => 'b",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use mapOr instead\n\n"
-    },
-    "insertText": "->Nullable.mapWithDefault",
-    "kind": 12,
-    "label": "->Nullable.mapWithDefault",
-    "sortText": "mapWithDefault",
-    "tags": [ 1 ]
-  },
-  {
-    "additionalTextEdits": [
-      {
-        "newText": "",
-        "range": {
-          "end": { "character": 5, "line": 7 },
-          "start": { "character": 4, "line": 7 }
-        }
-      }
-    ],
-    "deprecated": true,
-    "detail": "(t<'a>, 'a) => 'a",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use getOr instead\n\n"
-    },
-    "insertText": "->Nullable.getWithDefault",
-    "kind": 12,
-    "label": "->Nullable.getWithDefault",
-    "sortText": "getWithDefault",
-    "tags": [ 1 ]
   },
   {
     "additionalTextEdits": [

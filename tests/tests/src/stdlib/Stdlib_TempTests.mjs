@@ -2,7 +2,6 @@
 
 import * as Stdlib_Int from "@rescript/runtime/lib/es6/Stdlib_Int.mjs";
 import * as Stdlib_Dict from "@rescript/runtime/lib/es6/Stdlib_Dict.mjs";
-import * as Stdlib_JSON from "@rescript/runtime/lib/es6/Stdlib_JSON.mjs";
 import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.mjs";
 import * as Stdlib_Float from "@rescript/runtime/lib/es6/Stdlib_Float.mjs";
 import * as Stdlib_BigInt from "@rescript/runtime/lib/es6/Stdlib_BigInt.mjs";
@@ -97,15 +96,13 @@ console.info("---");
 
 let json = JSON.parse(`{"foo": "bar"}`);
 
-let json$1 = Stdlib_JSON.Classify.classify(json);
-
 let tmp;
 
-if (typeof json$1 !== "object" || json$1.TAG !== "Object") {
-  tmp = undefined;
+if (typeof json === "object" && json !== null && !Array.isArray(json)) {
+  let value = json["foo"];
+  tmp = typeof value === "string" ? value : undefined;
 } else {
-  let value = Stdlib_JSON.Classify.classify(json$1._0["foo"]);
-  tmp = typeof value !== "object" || value.TAG !== "String" ? undefined : value._0;
+  tmp = undefined;
 }
 
 console.log(tmp);

@@ -24,23 +24,23 @@ let length = l => length_aux(0, l)
 
 let hd = x =>
   switch x {
-  | list{} => failwith("hd")
+  | list{} => throw(Failure("hd"))
   | list{a, ...l} => a
   }
 
 let tl = x =>
   switch x {
-  | list{} => failwith("tl")
+  | list{} => throw(Failure("tl"))
   | list{a, ...l} => l
   }
 
 let nth = (l, n) =>
   if n < 0 {
-    invalid_arg("List.nth")
+    throw(Invalid_argument("List.nth"))
   } else {
     let rec nth_aux = (l, n) =>
       switch l {
-      | list{} => failwith("nth")
+      | list{} => throw(Failure("nth"))
       | list{a, ...l} =>
         if n == 0 {
           a
@@ -133,7 +133,7 @@ let rec map2 = (f, l1, l2) =>
   | (list{a1, ...l1}, list{a2, ...l2}) =>
     let r = f(a1, a2)
     list{r, ...map2(f, l1, l2)}
-  | (_, _) => invalid_arg("List.map2")
+  | (_, _) => throw(Invalid_argument("List.map2"))
   }
 
 let rev_map2 = (f, l1, l2) => {
@@ -141,7 +141,7 @@ let rev_map2 = (f, l1, l2) => {
     switch (l1, l2) {
     | (list{}, list{}) => accu
     | (list{a1, ...l1}, list{a2, ...l2}) => rmap2_f(list{f(a1, a2), ...accu}, l1, l2)
-    | (_, _) => invalid_arg("List.rev_map2")
+    | (_, _) => throw(Invalid_argument("List.rev_map2"))
     }
 
   rmap2_f(list{}, l1, l2)
@@ -153,21 +153,21 @@ let rec iter2 = (f, l1, l2) =>
   | (list{a1, ...l1}, list{a2, ...l2}) =>
     f(a1, a2)
     iter2(f, l1, l2)
-  | (_, _) => invalid_arg("List.iter2")
+  | (_, _) => throw(Invalid_argument("List.iter2"))
   }
 
 let rec fold_left2 = (f, accu, l1, l2) =>
   switch (l1, l2) {
   | (list{}, list{}) => accu
   | (list{a1, ...l1}, list{a2, ...l2}) => fold_left2(f, f(accu, a1, a2), l1, l2)
-  | (_, _) => invalid_arg("List.fold_left2")
+  | (_, _) => throw(Invalid_argument("List.fold_left2"))
   }
 
 let rec fold_right2 = (f, l1, l2, accu) =>
   switch (l1, l2) {
   | (list{}, list{}) => accu
   | (list{a1, ...l1}, list{a2, ...l2}) => f(a1, a2, fold_right2(f, l1, l2, accu))
-  | (_, _) => invalid_arg("List.fold_right2")
+  | (_, _) => throw(Invalid_argument("List.fold_right2"))
   }
 
 let rec for_all = (p, x) =>
@@ -186,14 +186,14 @@ let rec for_all2 = (p, l1, l2) =>
   switch (l1, l2) {
   | (list{}, list{}) => true
   | (list{a1, ...l1}, list{a2, ...l2}) => p(a1, a2) && for_all2(p, l1, l2)
-  | (_, _) => invalid_arg("List.for_all2")
+  | (_, _) => throw(Invalid_argument("List.for_all2"))
   }
 
 let rec exists2 = (p, l1, l2) =>
   switch (l1, l2) {
   | (list{}, list{}) => false
   | (list{a1, ...l1}, list{a2, ...l2}) => p(a1, a2) || exists2(p, l1, l2)
-  | (_, _) => invalid_arg("List.exists2")
+  | (_, _) => throw(Invalid_argument("List.exists2"))
   }
 
 let rec mem = (x, x_) =>
@@ -317,7 +317,7 @@ let rec combine = (l1, l2) =>
   switch (l1, l2) {
   | (list{}, list{}) => list{}
   | (list{a1, ...l1}, list{a2, ...l2}) => list{(a1, a2), ...combine(l1, l2)}
-  | (_, _) => invalid_arg("List.combine")
+  | (_, _) => throw(Invalid_argument("List.combine"))
   }
 
 /* sorting */

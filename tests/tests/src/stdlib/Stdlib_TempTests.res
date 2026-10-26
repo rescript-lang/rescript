@@ -26,10 +26,10 @@ Console.info("")
 Console.info("Error")
 Console.info("---")
 let f = () => {
-  let error = Error.make("hello")
-  let typeError = Error.TypeError.make("error")
-  let g = () => Error.throw(error)
-  let h = () => Error.throw(typeError)
+  let error = JsError.make("hello")
+  let typeError = JsError.TypeError.make("error")
+  let g = () => JsError.throw(error)
+  let h = () => JsError.throw(typeError)
   (g, h)
 }
 
@@ -46,10 +46,10 @@ Console.info("JSON")
 Console.info("---")
 let json = JSON.parseOrThrow(`{"foo": "bar"}`)
 Console.log(
-  switch JSON.Classify.classify(json) {
+  switch json {
   | Object(json) =>
-    switch JSON.Classify.classify(json->Dict.get("foo")) {
-    | String(value) => Some(value)
+    switch json->Dict.get("foo") {
+    | Some(String(value)) => Some(value)
     | _ => None
     }
   | _ => None
@@ -144,7 +144,7 @@ Console.log(
   "   Hello world  "
   ->String.toLowerCase
   ->String.trim
-  ->String.unsafeReplaceRegExpBy2(regexp, (
+  ->String.replaceRegExpBy2Unsafe(regexp, (
     ~match as _,
     ~group1,
     ~group2,

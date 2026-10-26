@@ -9,14 +9,14 @@ let oppHeroes = {hd: 0, tl: /* [] */0};
 let huntGrootCondition = false;
 
 if (Stdlib_List.length(/* [] */0) > 0) {
-  let x = Stdlib_List.filter(oppHeroes, h => Stdlib_List.headExn(/* [] */0) <= 1000);
+  let x = Stdlib_List.filter(oppHeroes, h => Stdlib_List.headOrThrow(/* [] */0) <= 1000);
   huntGrootCondition = Stdlib_List.length(x) === 0;
 }
 
 let huntGrootCondition2 = true;
 
 if (Stdlib_List.length(/* [] */0) < 0) {
-  let x$1 = Stdlib_List.filter(oppHeroes, h => Stdlib_List.headExn(/* [] */0) <= 1000);
+  let x$1 = Stdlib_List.filter(oppHeroes, h => Stdlib_List.headOrThrow(/* [] */0) <= 1000);
   huntGrootCondition2 = Stdlib_List.length(x$1) === 0;
 }
 

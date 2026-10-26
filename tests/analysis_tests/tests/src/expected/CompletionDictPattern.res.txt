@@ -352,17 +352,6 @@ Path
     "tags": []
   },
   {
-    "deprecated": true,
-    "detail": "(option<'a>, ~message: string=?) => 'a",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `getOrThrow` instead\n\n\n`getExn(opt, ~message=?)` returns `value` if `opt` is `Some(value)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.\n\n```rescript\nOption.getExn(Some(3)) == 3\n\nswitch Option.getExn(None) {\n| exception _ => assert(true)\n| _ => assert(false)\n}\n\nswitch Option.getExn(None, ~message=\"was None!\") {\n| exception _ => assert(true) // Throws a JsError with the message \"was None!\"\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Throws an error if `opt` is `None`\n"
-    },
-    "kind": 12,
-    "label": "Option.getExn",
-    "tags": [ 1 ]
-  },
-  {
     "detail": "(\n  option<'a>,\n  option<'b>,\n  ('a, 'b) => Ordering.t,\n) => Ordering.t",
     "documentation": {
       "kind": "markdown",
@@ -413,17 +402,6 @@ Path
     "tags": []
   },
   {
-    "deprecated": true,
-    "detail": "(option<'a>, 'b, 'a => 'b) => 'b",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use mapOr instead\n\n"
-    },
-    "kind": 12,
-    "label": "Option.mapWithDefault",
-    "tags": [ 1 ]
-  },
-  {
     "detail": "option<'a> => bool",
     "documentation": {
       "kind": "markdown",
@@ -432,17 +410,6 @@ Path
     "kind": 12,
     "label": "Option.isSome",
     "tags": []
-  },
-  {
-    "deprecated": true,
-    "detail": "(option<'a>, 'a) => 'a",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use getOr instead\n\n"
-    },
-    "kind": 12,
-    "label": "Option.getWithDefault",
-    "tags": [ 1 ]
   },
   {
     "detail": "(option<'a>, 'a => unit) => unit",

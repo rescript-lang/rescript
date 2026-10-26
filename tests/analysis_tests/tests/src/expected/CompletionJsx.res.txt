@@ -275,28 +275,6 @@ Path
     "tags": []
   },
   {
-    "deprecated": true,
-    "detail": "(int, ~radix: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"
-    },
-    "kind": 12,
-    "label": "Int.toStringWithRadix",
-    "tags": [ 1 ]
-  },
-  {
-    "deprecated": true,
-    "detail": "(int, ~digits: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"
-    },
-    "kind": 12,
-    "label": "Int.toExponentialWithPrecision",
-    "tags": [ 1 ]
-  },
-  {
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -315,28 +293,6 @@ Path
     "kind": 12,
     "label": "Int.clamp",
     "tags": []
-  },
-  {
-    "deprecated": true,
-    "detail": "(int, ~digits: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"
-    },
-    "kind": 12,
-    "label": "Int.toFixedWithPrecision",
-    "tags": [ 1 ]
-  },
-  {
-    "deprecated": true,
-    "detail": "(int, ~digits: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"
-    },
-    "kind": 12,
-    "label": "Int.toPrecisionWithPrecision",
-    "tags": [ 1 ]
   },
   {
     "detail": "(int, int) => int",
@@ -443,17 +399,6 @@ Path
     "kind": 12,
     "label": "Int.mod",
     "tags": []
-  },
-  {
-    "deprecated": true,
-    "detail": "(int, int, rangeOptions) => array<int>",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `range` instead\n\n\n`rangeWithOptions(start, end, options)` is like `range`, but with `step` and\n`inclusive` options configurable.\n\nIf `step` is set, the sequence will increase or decrease by that amount for each\nstep. If `start < end` and `step` is negative, or vice versa, an empty array is\nreturned since the sequence would otherwise never reach or exceed the end value\nand hence be infinite. If `step` is `0` and `start !=` end, a `RangeError` is\nraised as the sequence would never reach or exceed the end value and hence be\ninfinite.\n\nIf `inclusive` is set to `true`, the sequence will include `end` if `step` is\nset such that the sequence includes it.\n\n## Examples\n\n```rescript\nInt.rangeWithOptions(3, 7, {step: 2}) == [3, 5]\nInt.rangeWithOptions(3, 7, {step: 2, inclusive: true}) == [3, 5, 7]\nInt.rangeWithOptions(3, 6, {step: -2}) // RangeError\n```\n\n## Exceptions\n\n- Raises `RangeError` if `step == 0 && start != end`.\n"
-    },
-    "kind": 12,
-    "label": "Int.rangeWithOptions",
-    "tags": [ 1 ]
   },
   {
     "detail": "(int, int) => int",
@@ -543,28 +488,6 @@ Path
     "tags": []
   },
   {
-    "deprecated": true,
-    "detail": "(int, ~radix: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"
-    },
-    "kind": 12,
-    "label": "Int.toStringWithRadix",
-    "tags": [ 1 ]
-  },
-  {
-    "deprecated": true,
-    "detail": "(int, ~digits: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"
-    },
-    "kind": 12,
-    "label": "Int.toExponentialWithPrecision",
-    "tags": [ 1 ]
-  },
-  {
     "detail": "(int, int) => int",
     "documentation": {
       "kind": "markdown",
@@ -583,28 +506,6 @@ Path
     "kind": 12,
     "label": "Int.clamp",
     "tags": []
-  },
-  {
-    "deprecated": true,
-    "detail": "(int, ~digits: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"
-    },
-    "kind": 12,
-    "label": "Int.toFixedWithPrecision",
-    "tags": [ 1 ]
-  },
-  {
-    "deprecated": true,
-    "detail": "(int, ~digits: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"
-    },
-    "kind": 12,
-    "label": "Int.toPrecisionWithPrecision",
-    "tags": [ 1 ]
   },
   {
     "detail": "(int, int) => int",
@@ -711,17 +612,6 @@ Path
     "kind": 12,
     "label": "Int.mod",
     "tags": []
-  },
-  {
-    "deprecated": true,
-    "detail": "(int, int, rangeOptions) => array<int>",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `range` instead\n\n\n`rangeWithOptions(start, end, options)` is like `range`, but with `step` and\n`inclusive` options configurable.\n\nIf `step` is set, the sequence will increase or decrease by that amount for each\nstep. If `start < end` and `step` is negative, or vice versa, an empty array is\nreturned since the sequence would otherwise never reach or exceed the end value\nand hence be infinite. If `step` is `0` and `start !=` end, a `RangeError` is\nraised as the sequence would never reach or exceed the end value and hence be\ninfinite.\n\nIf `inclusive` is set to `true`, the sequence will include `end` if `step` is\nset such that the sequence includes it.\n\n## Examples\n\n```rescript\nInt.rangeWithOptions(3, 7, {step: 2}) == [3, 5]\nInt.rangeWithOptions(3, 7, {step: 2, inclusive: true}) == [3, 5, 7]\nInt.rangeWithOptions(3, 6, {step: -2}) // RangeError\n```\n\n## Exceptions\n\n- Raises `RangeError` if `step == 0 && start != end`.\n"
-    },
-    "kind": 12,
-    "label": "Int.rangeWithOptions",
-    "tags": [ 1 ]
   },
   {
     "detail": "(int, int) => int",
@@ -1091,6 +981,48 @@ Path s
         }
       }
     ],
+    "detail": "(string, string) => bool",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`startsWith(str, substr)` returns `true` if the `str` starts with `substr`,\n`false` otherwise.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWith(\"BuckleScript\", \"Buckle\") == true\nString.startsWith(\"BuckleScript\", \"\") == true\nString.startsWith(\"JavaScript\", \"Buckle\") == false\n```\n"
+    },
+    "insertText": "->String.startsWith",
+    "kind": 12,
+    "label": "->String.startsWith",
+    "sortText": "startsWith",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 18, "line": 93 },
+          "start": { "character": 17, "line": 93 }
+        }
+      }
+    ],
+    "detail": "(string, string, ~limit: int) => array<string>",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`splitAtMost(str, delimiter, ~limit)` splits the given `str` at every\noccurrence of `delimiter` and returns an array of the first `limit` resulting\nsubstrings. If `limit` is negative or greater than the number of substrings,\nthe array will contain all the substrings.\n\n## Examples\n\n```rescript\nString.splitAtMost(\"ant/bee/cat/dog/elk\", \"/\", ~limit=3) == [\"ant\", \"bee\", \"cat\"]\nString.splitAtMost(\"ant/bee/cat/dog/elk\", \"/\", ~limit=0) == []\nString.splitAtMost(\"ant/bee/cat/dog/elk\", \"/\", ~limit=9) == [\"ant\", \"bee\", \"cat\", \"dog\", \"elk\"]\n```\n"
+    },
+    "insertText": "->String.splitAtMost",
+    "kind": 12,
+    "label": "->String.splitAtMost",
+    "sortText": "splitAtMost",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 18, "line": 93 },
+          "start": { "character": 17, "line": 93 }
+        }
+      }
+    ],
     "detail": "(string, RegExp.t) => option<int>",
     "documentation": {
       "kind": "markdown",
@@ -1143,92 +1075,6 @@ Path s
     "label": "->String.slice",
     "sortText": "slice",
     "tags": []
-  },
-  {
-    "additionalTextEdits": [
-      {
-        "newText": "",
-        "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
-        }
-      }
-    ],
-    "deprecated": true,
-    "detail": "(string, ~start: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `substring` instead\n\n\n`substringToEnd(str, ~start)` returns the substring of `str` from position\n`start` to the end.\n- If `start` is less than or equal to zero, the entire string is returned.\n- If `start` is greater than or equal to the length of `str`, the empty string\n  is returned.\n  See [`String.substring`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/substring) on MDN.\n\n## Examples\n\n```rescript\nString.substringToEnd(\"playground\", ~start=4) == \"ground\"\nString.substringToEnd(\"playground\", ~start=-3) == \"playground\"\nString.substringToEnd(\"playground\", ~start=12) == \"\"\n```\n"
-    },
-    "insertText": "->String.substringToEnd",
-    "kind": 12,
-    "label": "->String.substringToEnd",
-    "sortText": "substringToEnd",
-    "tags": [ 1 ]
-  },
-  {
-    "additionalTextEdits": [
-      {
-        "newText": "",
-        "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
-        }
-      }
-    ],
-    "detail": "(string, string) => bool",
-    "documentation": {
-      "kind": "markdown",
-      "value": "\n`startsWith(str, substr)` returns `true` if the `str` starts with `substr`,\n`false` otherwise.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWith(\"BuckleScript\", \"Buckle\") == true\nString.startsWith(\"BuckleScript\", \"\") == true\nString.startsWith(\"JavaScript\", \"Buckle\") == false\n```\n"
-    },
-    "insertText": "->String.startsWith",
-    "kind": 12,
-    "label": "->String.startsWith",
-    "sortText": "startsWith",
-    "tags": []
-  },
-  {
-    "additionalTextEdits": [
-      {
-        "newText": "",
-        "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
-        }
-      }
-    ],
-    "detail": "(string, string, ~limit: int) => array<string>",
-    "documentation": {
-      "kind": "markdown",
-      "value": "\n`splitAtMost(str, delimiter, ~limit)` splits the given `str` at every\noccurrence of `delimiter` and returns an array of the first `limit` resulting\nsubstrings. If `limit` is negative or greater than the number of substrings,\nthe array will contain all the substrings.\n\n## Examples\n\n```rescript\nString.splitAtMost(\"ant/bee/cat/dog/elk\", \"/\", ~limit=3) == [\"ant\", \"bee\", \"cat\"]\nString.splitAtMost(\"ant/bee/cat/dog/elk\", \"/\", ~limit=0) == []\nString.splitAtMost(\"ant/bee/cat/dog/elk\", \"/\", ~limit=9) == [\"ant\", \"bee\", \"cat\", \"dog\", \"elk\"]\n```\n"
-    },
-    "insertText": "->String.splitAtMost",
-    "kind": 12,
-    "label": "->String.splitAtMost",
-    "sortText": "splitAtMost",
-    "tags": []
-  },
-  {
-    "additionalTextEdits": [
-      {
-        "newText": "",
-        "range": {
-          "end": { "character": 18, "line": 93 },
-          "start": { "character": 17, "line": 93 }
-        }
-      }
-    ],
-    "deprecated": true,
-    "detail": "(string, ~start: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `slice` instead\n\n\n`sliceToEnd(str, ~start)` returns the substring of `str` starting at character\n`start` to the end of the string.\n- If `start` is negative, then it is evaluated as `length(str - start)`.\n- If `start` is greater than the length of `str`, then sliceToEnd returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.sliceToEnd(\"abcdefg\", ~start=4) == \"efg\"\nString.sliceToEnd(\"abcdefg\", ~start=-2) == \"fg\"\nString.sliceToEnd(\"abcdefg\", ~start=7) == \"\"\n```\n"
-    },
-    "insertText": "->String.sliceToEnd",
-    "kind": 12,
-    "label": "->String.sliceToEnd",
-    "sortText": "sliceToEnd",
-    "tags": [ 1 ]
   },
   {
     "additionalTextEdits": [

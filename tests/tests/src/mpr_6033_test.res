@@ -8,7 +8,7 @@ let f = x =>
 
 describe(__MODULE__, () => {
   test("lazy evaluation", () => {
-    let x = Lazy.from_fun(() => "def")
+    let x = Lazy.make(() => "def")
     ignore(Lazy.get(x))
     let u = f(x)
     eq(__LOC__, u, "defabc")

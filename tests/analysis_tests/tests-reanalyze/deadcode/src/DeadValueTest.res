@@ -5,7 +5,7 @@ let valueOnlyInImplementation = 3
 
 let rec subList = (b, e, l) =>
   switch l {
-  | list{} => failwith("subList")
+  | list{} => throw(Failure("subList"))
   | list{h, ...t} =>
     let tail = if e == 0 {
       list{}

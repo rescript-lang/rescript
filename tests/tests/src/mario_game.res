@@ -1486,7 +1486,7 @@ module Draw: {
     ctx["fillStyle"] = "white"
     ctx["font"] = "20px 'Press Start 2P'"
     ctx["fillText"]("You win!", 180., 128.)
-    failwith("Game over.")
+    throw(Failure("Game over."))
   }
 
   /* gave_loss displays a black screen stating a loss to finish that level play. */
@@ -1498,10 +1498,10 @@ module Draw: {
     ctx["fillStyle"] = "white"
     ctx["font"] = "20px 'Press Start 2P'"
     ctx["fillText"]("GAME OVER. You lose!", 60., 128.)
-    failwith("Game over.")
+    throw(Failure("Game over."))
   }
 
-  let draw_background_color = canvas => failwith("todo")
+  let draw_background_color = canvas => throw(Failure("todo"))
 }
 module Viewport: {
   open Actors
@@ -2190,7 +2190,7 @@ module Procedural_generator: {
     | 0 => RKoopa
     | 1 => GKoopa
     | 2 => Goomba
-    | _ => failwith("Shouldn't reach here")
+    | _ => throw(Failure("Shouldn't reach here"))
     }
 
   /* Chooses what type of block should be instantiated given typ number */
@@ -2201,7 +2201,7 @@ module Procedural_generator: {
     | 2 => Cloud
     | 3 => QBlock(Mushroom)
     | 4 => Ground
-    | _ => failwith("Shouldn't reach here")
+    | _ => throw(Failure("Shouldn't reach here"))
     }
 
   /* Optimizes lst such that there are no two items in the list that have the same
@@ -2371,7 +2371,7 @@ module Procedural_generator: {
           }
         }
       | 5 => list{(3, (cbx, cby))}
-      | _ => failwith("Shouldn't reach here")
+      | _ => throw(Failure("Shouldn't reach here"))
       }
       obj_coord
     }
@@ -2595,7 +2595,7 @@ module Main = {
     let canvas = switch Dom_html.getElementById(Dom_html.document, canvas_id) {
     | None =>
       Console.log("cant find canvas " ++ canvas_id ++ "")
-      failwith("fail")
+      throw(Failure("fail"))
     | Some(el) => Dom_html.elementToCanvasElement(el)
     }
 

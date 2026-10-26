@@ -10,7 +10,7 @@ function f(x) {
 
 Mocha.describe("Mpr_6033_test", () => {
   Mocha.test("lazy evaluation", () => {
-    let x = Stdlib_Lazy.from_fun(() => "def");
+    let x = Stdlib_Lazy.make(() => "def");
     Stdlib_Lazy.get(x);
     let u = Stdlib_Lazy.get(x) + "abc";
     Test_utils.eq("File \"mpr_6033_test.res\", line 14, characters 7-14", u, "defabc");

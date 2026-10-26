@@ -1,11 +1,11 @@
 @throws(JsExn)
-let optionGetExn = o => o->Option.getExn
+let optionGetOrThrow = o => o->Option.getOrThrow
 
-@throws(Not_found)
-let resultGetExn = r => r->Result.getExn
+@throws(JsExn)
+let resultGetOrThrow = r => r->Result.getOrThrow
 
 @throws(Invalid_argument)
-let nullGetExn = n => n->Null.getExn
+let nullGetOrThrow = n => n->Null.getOrThrow
 
 @throws(JsExn)
 let bigIntFromStringExn = s => s->BigInt.fromStringOrThrow

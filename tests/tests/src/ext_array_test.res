@@ -97,7 +97,7 @@ let filter_map = (f: _ => option<_>, a) => {
 
 let range = (from, to_) =>
   if from > to_ {
-    invalid_arg("Ext_array_test.range")
+    throw(Invalid_argument("Ext_array_test.range"))
   } else {
     Array.fromInitializer(~length=to_ - from + 1, i => i + from)
   }
@@ -105,7 +105,7 @@ let range = (from, to_) =>
 let map2i = (f, a, b) => {
   let len = Array.length(a)
   if len != Array.length(b) {
-    invalid_arg("Ext_array_test.map2i")
+    throw(Invalid_argument("Ext_array_test.map2i"))
   } else {
     a->Array.mapWithIndex((i, a) => f(i, a, Array.getUnsafe(b, i)))
   }

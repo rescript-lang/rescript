@@ -50,7 +50,7 @@ function areSame(x, y) {
   return x.toString() === y.toString();
 }
 
-assertTrue("fromArray", () => areSame(Stdlib_Option.getExn(new BigInt64Array([
+assertTrue("fromArray", () => areSame(Stdlib_Option.getOrThrow(new BigInt64Array([
     num1,
     num2
   ])[1], undefined), num2));
@@ -58,25 +58,25 @@ assertTrue("fromArray", () => areSame(Stdlib_Option.getExn(new BigInt64Array([
 assertTrue("fromBuffer", () => {
   let x = new BigInt64Array(new ArrayBuffer(16));
   x[1] = num2;
-  return areSame(Stdlib_Option.getExn(x[1], undefined), num2);
+  return areSame(Stdlib_Option.getOrThrow(x[1], undefined), num2);
 });
 
 assertWillThrow("fromBuffer when too short can throw when used", () => {
   let x = new BigInt64Array(new ArrayBuffer(1));
   x[0] = num1;
-  areSame(Stdlib_Option.getExn(x[0], undefined), num1);
+  areSame(Stdlib_Option.getOrThrow(x[0], undefined), num1);
 });
 
 assertTrue("fromBufferWithRange", () => {
   let x = new BigInt64Array(new ArrayBuffer(16), 0, 1);
   x[0] = num1;
-  return areSame(Stdlib_Option.getExn(x[0], undefined), num1);
+  return areSame(Stdlib_Option.getOrThrow(x[0], undefined), num1);
 });
 
 assertWillThrow("fromBufferWithRange is unsafe, out of range", () => {
   let x = new BigInt64Array(new ArrayBuffer(16), 13, 1);
   x[0] = num1;
-  areSame(Stdlib_Option.getExn(x[0], undefined), num1);
+  areSame(Stdlib_Option.getOrThrow(x[0], undefined), num1);
 });
 
 assertTrue("fromLength is NOT in bytes", () => {
@@ -89,8 +89,8 @@ assertTrue("a typed array is a TypedArray.t through a coercion", () => {
   return x.length === 2;
 });
 
-function o(prim0, prim1) {
-  return BigInt64Array.from(prim0, prim1);
+function o(x, map) {
+  return BigInt64Array.from(x, map);
 }
 
 export {

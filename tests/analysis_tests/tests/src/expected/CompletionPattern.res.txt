@@ -938,7 +938,7 @@ Path xn
       "value": "Matches on a JavaScript error. Read more in the [documentation on catching JS exceptions](https://rescript-lang.org/docs/manual/latest/exception#catching-js-exceptions)."
     },
     "kind": 4,
-    "label": "Exn.Error(error)",
+    "label": "JsExn(error)",
     "tags": []
   }
 ]

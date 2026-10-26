@@ -10,17 +10,6 @@ Path Stdlib.Int.toS
 Path toS
 [
   {
-    "deprecated": true,
-    "detail": "(int, ~radix: int) => string",
-    "documentation": {
-      "kind": "markdown",
-      "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"
-    },
-    "kind": 12,
-    "label": "Int.toStringWithRadix",
-    "tags": [ 1 ]
-  },
-  {
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {
       "kind": "markdown",
