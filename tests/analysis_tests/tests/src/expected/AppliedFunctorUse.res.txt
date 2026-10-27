@@ -15,3 +15,40 @@ Hover src/AppliedFunctorUse.res 8:14
   }
 }
 
+Signature help src/AppliedFunctorUse.res 11:22
+pos_cursor:[11:21] pos_no_white:[11:20] Found expr:[11:11->11:22]
+Pexp_apply ...[11:11->11:21] (...[14:0->11:22])
+pos_cursor:[11:21] pos_no_white:[11:20] Found expr:[11:11->11:21]
+Pexp_ident StrSet.add:[11:11->11:21]
+Completable: Cpath Value[StrSet, add]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[StrSet, add]
+Path StrSet.add
+arg_at_cursor: unlabelled<0>
+extracted params: 
+[t, string]
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "(t, string) => array<string>",
+      "parameters": [
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "```rescript\ntype t = array<string>\n```\nGo to: [Type definition](AppliedFunctor.res#L7,3)"
+          },
+          "label": [ 1, 2 ]
+        },
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 4, 10 ]
+        }
+      ]
+    }
+  ]
+}
+

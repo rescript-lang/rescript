@@ -8,3 +8,6 @@ let s = StrSet.add([], "a")
 
 let t: StrSet.t = []
 //            ^hov
+
+// let _ = StrSet.add(
+//                    ^she

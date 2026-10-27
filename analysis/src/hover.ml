@@ -149,14 +149,12 @@ let expand_types ~state ~file ~package ~supports_markdown_links typ =
           else (
             types_seen := String_set.add type_id !types_seen;
             true))
-      |> List.map (fun {decl; env; loc; path; uri} ->
+      |> List.map (fun {decl; loc; path; uri} ->
           let link_to_type_definition_str =
             if
               supports_markdown_links
               && not (is_inline_record_definition decl path)
-            then
-              Markdown.go_to_definition_text ~uri ~env
-                ~pos:loc.Warnings.loc_start ()
+            then Markdown.go_to_definition_text ~uri ~pos:loc.Warnings.loc_start
             else ""
           in
           Markdown.divider
