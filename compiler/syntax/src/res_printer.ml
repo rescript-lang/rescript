@@ -2494,27 +2494,55 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
              print_comments (print_ident_like txt) cmt_tbl loc)
            pvc_newtypes)
     in
-    Doc.group
-      (Doc.concat
-         [
-           attrs;
-           header;
-           print_pattern ~state pattern cmt_tbl;
-           Doc.text ":";
-           Doc.indent
-             (Doc.concat
-                [
-                  Doc.line;
-                  Doc.text "type ";
-                  newtypes;
-                  Doc.dot;
-                  Doc.space;
-                  print_typ_expr ~state pvc_type cmt_tbl;
-                  Doc.text " =";
-                  Doc.line;
-                  print_expression_with_comments_and_parens ~state expr cmt_tbl;
-                ]);
-         ])
+    let pattern_doc = print_pattern ~state pattern cmt_tbl in
+    let typ_doc = print_typ_expr ~state pvc_type cmt_tbl in
+    let expr_doc =
+      print_expression_with_comments_and_parens ~state expr cmt_tbl
+    in
+    (* Keep `let f: type a. t = body` on one line up to the body's first
+       line break when it fits; otherwise break after `:` and `=`. The
+       attributes stay outside, so that [fits] measures from the `let`. *)
+    Doc.concat
+      [
+        attrs;
+        Doc.custom_layout
+          [
+            (* not a group: a group would be marked broken by the body's line
+               breaks, and [fits] would then accept a header that overflows *)
+            Doc.concat
+              [
+                header;
+                pattern_doc;
+                Doc.text ": type ";
+                newtypes;
+                Doc.dot;
+                Doc.space;
+                typ_doc;
+                Doc.text " = ";
+                expr_doc;
+              ];
+            Doc.group
+              (Doc.concat
+                 [
+                   header;
+                   pattern_doc;
+                   Doc.text ":";
+                   Doc.indent
+                     (Doc.concat
+                        [
+                          Doc.line;
+                          Doc.text "type ";
+                          newtypes;
+                          Doc.dot;
+                          Doc.space;
+                          typ_doc;
+                          Doc.text " =";
+                          Doc.line;
+                          expr_doc;
+                        ]);
+                 ]);
+          ];
+      ]
   | {
    pvb_pat =
      {

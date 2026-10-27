@@ -11,20 +11,18 @@ type rec expr<_> =
   | Pair(expr<'a>, expr<'b>): expr<('a, 'b)>
   | First(expr<('a, 'b)>): expr<'a>
 
-let rec eval:
-  type a. expr<a> => a =
-  expr =>
-    switch expr {
-    | Int(n) => n
-    | Bool(b) => b
-    | Add(a, b) => eval(a) + eval(b)
-    | Equal(a, b) => eval(a) == eval(b)
-    | If(cond, yes, no) => eval(cond) ? eval(yes) : eval(no)
-    | Pair(a, b) => (eval(a), eval(b))
-    | First(pair) =>
-      let (a, _) = eval(pair)
-      a
-    }
+let rec eval: type a. expr<a> => a = expr =>
+  switch expr {
+  | Int(n) => n
+  | Bool(b) => b
+  | Add(a, b) => eval(a) + eval(b)
+  | Equal(a, b) => eval(a) == eval(b)
+  | If(cond, yes, no) => eval(cond) ? eval(yes) : eval(no)
+  | Pair(a, b) => (eval(a), eval(b))
+  | First(pair) =>
+    let (a, _) = eval(pair)
+    a
+  }
 
 // Type witnesses: one function, a different result type per witness.
 type rec ty<_> =
@@ -34,29 +32,25 @@ type rec ty<_> =
   | TPair(ty<'a>, ty<'b>): ty<('a, 'b)>
   | TOption(ty<'a>): ty<option<'a>>
 
-let rec show:
-  type a. (ty<a>, a) => string =
-  (ty, value) =>
-    switch (ty, value) {
-    | (TInt, n) => Int.toString(n)
-    | (TString, s) => `"${s}"`
-    | (TList(_), list{}) => "[]"
-    | (TList(ty), list{x, ...rest}) => show(ty, x) ++ "::" ++ show(TList(ty), rest)
-    | (TPair(a, b), (x, y)) => "(" ++ show(a, x) ++ ", " ++ show(b, y) ++ ")"
-    | (TOption(_), None) => "None"
-    | (TOption(ty), Some(x)) => "Some(" ++ show(ty, x) ++ ")"
-    }
+let rec show: type a. (ty<a>, a) => string = (ty, value) =>
+  switch (ty, value) {
+  | (TInt, n) => Int.toString(n)
+  | (TString, s) => `"${s}"`
+  | (TList(_), list{}) => "[]"
+  | (TList(ty), list{x, ...rest}) => show(ty, x) ++ "::" ++ show(TList(ty), rest)
+  | (TPair(a, b), (x, y)) => "(" ++ show(a, x) ++ ", " ++ show(b, y) ++ ")"
+  | (TOption(_), None) => "None"
+  | (TOption(ty), Some(x)) => "Some(" ++ show(ty, x) ++ ")"
+  }
 
-let defaultOf:
-  type a. ty<a> => a =
-  ty =>
-    switch ty {
-    | TInt => 0
-    | TString => ""
-    | TList(_) => list{}
-    | TPair(_, _) => throw(Invalid_argument("no default pair"))
-    | TOption(_) => None
-    }
+let defaultOf: type a. ty<a> => a = ty =>
+  switch ty {
+  | TInt => 0
+  | TString => ""
+  | TList(_) => list{}
+  | TPair(_, _) => throw(Invalid_argument("no default pair"))
+  | TOption(_) => None
+  }
 
 // A match on a refined index needs no case for impossible constructors.
 let intName = (ty: ty<int>) =>
@@ -69,29 +63,27 @@ type rec equal<_, _> = Refl: equal<'a, 'a>
 
 let cast = (type a b, Refl: equal<a, b>, x: a): b => x
 
-let rec equalTy:
-  type a b. (ty<a>, ty<b>) => option<equal<a, b>> =
-  (a, b) =>
-    switch (a, b) {
-    | (TInt, TInt) => Some(Refl)
-    | (TString, TString) => Some(Refl)
-    | (TList(a), TList(b)) =>
-      switch equalTy(a, b) {
-      | Some(Refl) => Some(Refl)
-      | None => None
-      }
-    | (TOption(a), TOption(b)) =>
-      switch equalTy(a, b) {
-      | Some(Refl) => Some(Refl)
-      | None => None
-      }
-    | (TPair(a1, b1), TPair(a2, b2)) =>
-      switch (equalTy(a1, a2), equalTy(b1, b2)) {
-      | (Some(Refl), Some(Refl)) => Some(Refl)
-      | _ => None
-      }
+let rec equalTy: type a b. (ty<a>, ty<b>) => option<equal<a, b>> = (a, b) =>
+  switch (a, b) {
+  | (TInt, TInt) => Some(Refl)
+  | (TString, TString) => Some(Refl)
+  | (TList(a), TList(b)) =>
+    switch equalTy(a, b) {
+    | Some(Refl) => Some(Refl)
+    | None => None
+    }
+  | (TOption(a), TOption(b)) =>
+    switch equalTy(a, b) {
+    | Some(Refl) => Some(Refl)
+    | None => None
+    }
+  | (TPair(a1, b1), TPair(a2, b2)) =>
+    switch (equalTy(a1, a2), equalTy(b1, b2)) {
+    | (Some(Refl), Some(Refl)) => Some(Refl)
     | _ => None
     }
+  | _ => None
+  }
 
 // Existential types: the payload type is hidden from the outside.
 type rec dynamic = Dynamic(ty<'a>, 'a): dynamic
@@ -136,15 +128,13 @@ type rec format<_> =
   | IntArg(format<'a>): format<int => 'a>
   | StringArg(format<'a>): format<string => 'a>
 
-let rec format:
-  type a. (format<a>, string) => a =
-  (fmt, acc) =>
-    switch fmt {
-    | End => acc
-    | Text(s, rest) => format(rest, acc ++ s)
-    | IntArg(rest) => n => format(rest, acc ++ Int.toString(n))
-    | StringArg(rest) => s => format(rest, acc ++ s)
-    }
+let rec format: type a. (format<a>, string) => a = (fmt, acc) =>
+  switch fmt {
+  | End => acc
+  | Text(s, rest) => format(rest, acc ++ s)
+  | IntArg(rest) => n => format(rest, acc ++ Int.toString(n))
+  | StringArg(rest) => s => format(rest, acc ++ s)
+  }
 
 let sprintf = fmt => format(fmt, "")
 
@@ -154,40 +144,34 @@ type rec field<_> =
   | StringField({s: string}): field<string>
   | Empty: field<unit>
 
-let fieldValue:
-  type a. field<a> => a =
-  field =>
-    switch field {
-    | IntField({n}) => n
-    | StringField({s}) => s
-    | Empty => ()
-    }
+let fieldValue: type a. field<a> => a = field =>
+  switch field {
+  | IntField({n}) => n
+  | StringField({s}) => s
+  | Empty => ()
+  }
 
 @tag("kind")
 type rec shape<_> =
   | Circle({radius: float}): shape<float>
   | Label({text: string}): shape<string>
 
-let shapeValue:
-  type a. shape<a> => a =
-  shape =>
-    switch shape {
-    | Circle({radius}) => radius
-    | Label({text}) => text
-    }
+let shapeValue: type a. shape<a> => a = shape =>
+  switch shape {
+  | Circle({radius}) => radius
+  | Label({text}) => text
+  }
 
 @unboxed
 type rec primitive<_> =
   | Number(float): primitive<float>
   | Str(string): primitive<string>
 
-let primitiveValue:
-  type a. primitive<a> => a =
-  p =>
-    switch p {
-    | Number(f) => f
-    | Str(s) => s
-    }
+let primitiveValue: type a. primitive<a> => a = p =>
+  switch p {
+  | Number(f) => f
+  | Str(s) => s
+  }
 
 // Polymorphic recursion on a nested (non-regular) type.
 type rec nested<'a> = Flat('a) | Nest(nested<array<'a>>)

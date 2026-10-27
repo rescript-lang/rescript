@@ -26,6 +26,32 @@ let cancel_and_collect_callbacks:
    'a 'u 'c. (list<packed_callbacks>, promise<'a, 'u, 'c>) => list<packed_callbacks> =
   (type x, callbacks_accumulator, p: promise<_, _, c>) => ()
 
+// the header stays on one line when it fits
+let rec eval: type a. expr<a> => a = e =>
+  switch e {
+  | Int(n) => n
+  | Bool(b) => b
+  }
+
+let id: type a. a => a = x => x
+
+/** Docs */
+@inline
+let rec veryLongFunctionNameForWrapping:
+  type a b c. (someLongType<a, b>, anotherLongType<c>) => resultType<a> =
+  (x, y) =>
+    switch x {
+    | _ => 1
+    }
+
+module M = {
+  let default: type a. ty<a> => a = ty =>
+    switch ty {
+    | TInt => 0
+    | TString => ""
+    }
+}
+
 // type parameters written between term parameters are hoisted to the front
 let g = (type t, x, y: t) => y
 let g = (@attr type t u v, x: int, y: t, z: v) => (y, z)
