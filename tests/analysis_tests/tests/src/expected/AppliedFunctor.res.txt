@@ -132,3 +132,39 @@ Path IntSet.
   }
 ]
 
+References src/AppliedFunctor.res 32:11
+[
+  {
+    "range": {
+      "end": { "character": 15, "line": 32 },
+      "start": { "character": 9, "line": 32 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 16, "line": 45 },
+      "start": { "character": 10, "line": 45 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+References src/AppliedFunctor.res 45:10
+[
+  {
+    "range": {
+      "end": { "character": 15, "line": 32 },
+      "start": { "character": 9, "line": 32 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 16, "line": 45 },
+      "start": { "character": 10, "line": 45 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
