@@ -135,13 +135,21 @@ let extra_for_cmt ~(iterator : Tast_iterator.iterator)
     extra_for_signature_items ~iterator items;
     extra_for_parts parts
 
+(* A use of an applied functor's member is also a use of the declaration
+   in the functor's body that it was renamed from. *)
+let add_reference_with_original ~(env : Query_env.t) ~extra stamp loc =
+  add_reference ~extra stamp loc;
+  match Hashtbl.find_opt env.file.renamed_stamps stamp with
+  | Some original -> add_reference ~extra original loc
+  | None -> ()
+
 let add_for_path ~env ~extra path lident loc typ tip =
   let ident_name = Longident.last lident in
   let ident_loc = Utils.end_of_location loc (String.length ident_name) in
   let loc_type =
     match Resolve_path.from_compiler_path ~env path with
     | Stamp stamp ->
-      add_reference ~extra stamp ident_loc;
+      add_reference_with_original ~env ~extra stamp ident_loc;
       LocalReference (stamp, tip)
     | NotFound -> NotFound
     | Global (module_name, path) ->
@@ -154,7 +162,7 @@ let add_for_path ~env ~extra path lident loc typ tip =
         | _ -> Exported.find env.exported Exported.Value name
       with
       | Some stamp ->
-        add_reference ~extra stamp ident_loc;
+        add_reference_with_original ~env ~extra stamp ident_loc;
         LocalReference (stamp, tip)
       | None -> NotFound)
     | GlobalMod _ -> NotFound

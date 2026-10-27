@@ -189,6 +189,39 @@ and for_type_module ~name ~env module_type =
    in a typed tree, so that they never meet one of them. *)
 let renamed_stamp_floor = 1 lsl 40
 
+(* [Subst] renames the items of a signature in place, so the original and
+   the renamed signature list the same items in the same order. Records
+   each renamed stamp's original, nested signatures included, for
+   references to find the declarations in the functor body. *)
+let rec record_renamed_stamps table (original : Types.module_type)
+    (renamed : Types.module_type) =
+  match (original, renamed) with
+  | Mty_signature items, Mty_signature renamed_items
+    when List.length items = List.length renamed_items ->
+    List.iter2
+      (fun (item : Types.signature_item) (renamed_item : Types.signature_item)
+         ->
+        let ids =
+          match (item, renamed_item) with
+          | Sig_value (id, _), Sig_value (id', _)
+          | Sig_type (id, _, _), Sig_type (id', _, _)
+          | Sig_typext (id, _, _), Sig_typext (id', _, _)
+          | Sig_modtype (id, _), Sig_modtype (id', _) ->
+            Some (id, id')
+          | Sig_module (id, md, _), Sig_module (id', md', _) ->
+            record_renamed_stamps table md.md_type md'.md_type;
+            Some (id, id')
+          | _ -> None
+        in
+        match ids with
+        | Some (id, id') ->
+          Hashtbl.replace table (Ident.binding_time id') (Ident.binding_time id)
+        | None -> ())
+      items renamed_items
+  | Mty_functor (_, _, result), Mty_functor (_, _, renamed_result) ->
+    record_renamed_stamps table result renamed_result
+  | _ -> ()
+
 let get_module_type_path mod_desc =
   match mod_desc with
   | Typedtree.Tmty_ident (path, _) | Tmty_alias (path, _) -> Some path
@@ -685,8 +718,9 @@ and for_module ~env (mod_expr : Typedtree.module_expr) module_name =
     in
     if Ident.current_time () < renamed_stamp_floor then
       Ident.set_current_time renamed_stamp_floor;
-    for_type_module ~name:module_name ~env
-      (Subst.modtype Subst.identity mod_expr.mod_type)
+    let renamed = Subst.modtype Subst.identity mod_expr.mod_type in
+    record_renamed_stamps env.renamed_stamps mod_expr.mod_type renamed;
+    for_type_module ~name:module_name ~env renamed
   | Tmod_unpack (_expr, module_type) ->
     let env = env |> Env.add_module ~name:module_name in
     for_type_module ~name:module_name ~env module_type
@@ -742,7 +776,11 @@ and for_structure ~name ~env str_items =
 let file_for_cmt_infos ~module_name ~uri
     ({cmt_modname; cmt_annots} : Cmt_format.cmt_infos) =
   let env =
-    {Env.stamps = Stamps.init (); module_path = File (uri, module_name)}
+    {
+      Env.stamps = Stamps.init ();
+      module_path = File (uri, module_name);
+      renamed_stamps = Hashtbl.create 1;
+    }
   in
   match cmt_annots with
   | Partial_implementation parts ->
@@ -756,7 +794,13 @@ let file_for_cmt_infos ~module_name ~uri
       |> List.concat
     in
     let structure = for_structure ~name:module_name ~env items in
-    {File.uri; module_name = cmt_modname; stamps = env.stamps; structure}
+    {
+      File.uri;
+      module_name = cmt_modname;
+      stamps = env.stamps;
+      structure;
+      renamed_stamps = env.renamed_stamps;
+    }
   | Partial_interface parts ->
     let items =
       parts |> Array.to_list
@@ -768,13 +812,31 @@ let file_for_cmt_infos ~module_name ~uri
       |> List.concat
     in
     let structure = for_signature ~name:module_name ~env items in
-    {uri; module_name = cmt_modname; stamps = env.stamps; structure}
+    {
+      uri;
+      module_name = cmt_modname;
+      stamps = env.stamps;
+      structure;
+      renamed_stamps = env.renamed_stamps;
+    }
   | Implementation structure ->
     let structure = for_structure ~name:module_name ~env structure.str_items in
-    {uri; module_name = cmt_modname; stamps = env.stamps; structure}
+    {
+      uri;
+      module_name = cmt_modname;
+      stamps = env.stamps;
+      structure;
+      renamed_stamps = env.renamed_stamps;
+    }
   | Interface signature ->
     let structure = for_signature ~name:module_name ~env signature.sig_items in
-    {uri; module_name = cmt_modname; stamps = env.stamps; structure}
+    {
+      uri;
+      module_name = cmt_modname;
+      stamps = env.stamps;
+      structure;
+      renamed_stamps = env.renamed_stamps;
+    }
 
 let file_for_cmt ~state ~module_name ~cmt ~uri =
   match Hashtbl.find_opt state.cmt_cache cmt with
