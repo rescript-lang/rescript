@@ -6100,10 +6100,7 @@ and parse_type_equation_and_representation ?current_type_name_path
       in
       (manifest, priv, kind, [])
     | Private -> parse_private_eq_or_repr p
-    | Bar | DotDot ->
-      let priv, kind, attrs = parse_type_representation p in
-      (None, priv, kind, attrs)
-    | DocComment _ ->
+    | Bar | DotDot | DocComment _ ->
       let priv, kind, attrs =
         parse_type_representation ?current_type_name_path ?inline_types_context
           p
