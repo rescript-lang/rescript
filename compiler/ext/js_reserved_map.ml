@@ -164,6 +164,7 @@ let js_globals =
       "String";
       "Symbol";
       "SyntaxError";
+      "Temporal";
       "TypedArray";
       "TypeError";
       "Uint16Array";
