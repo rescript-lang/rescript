@@ -16,4 +16,4 @@
     Expected declaration
   [36m/.../fixtures/Iface_field_arity_mismatch/Foo.res[0m:[2m1:1-19[0m:
     Actual declaration
-  The arities for field A differ.
+  The arities for constructor A differ.

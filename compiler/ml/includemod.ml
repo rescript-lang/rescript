@@ -543,7 +543,7 @@ let show_arity_mismatch env ppf (d1 : value_description)
 
 let include_symptom env ppf = function
   | Missing_field (id, loc, kind) ->
-    fprintf ppf "The %s `%a' is required but not provided" kind ident id;
+    fprintf ppf "The %s `%a` is required but not provided" kind ident id;
     show_loc "Expected declaration" ppf loc
   | Value_descriptions (id, d1, d2) ->
     fprintf ppf
@@ -588,21 +588,16 @@ let rec context ppf = function
   | Module id :: rem -> fprintf ppf "@[<2>module %a%a@]" ident id args rem
   | Modtype id :: rem ->
     fprintf ppf "@[<2>module type %a =@ %a@]" ident id context_mty rem
-  | Body x :: rem ->
-    fprintf ppf "functor (%s) ->@ %a" (argname x) context_mty rem
-  | Arg x :: rem ->
-    fprintf ppf "functor (%a : %a) -> ..." ident x context_mty rem
+  | Body x :: rem -> fprintf ppf "(%s) =>@ %a" (argname x) context_mty rem
+  | Arg x :: rem -> fprintf ppf "(%a:@ %a) => ..." ident x context_mty rem
   | [] -> fprintf ppf "<here>"
 
 and context_mty ppf = function
   | (Module _ | Modtype _) :: _ as rem ->
-    fprintf ppf "@[<2>sig@ %a@;<1 -2>end@]" context rem
+    fprintf ppf "@[<2>{@ %a@;<1 -2>}@]" context rem
   | cxt -> context ppf cxt
 
-and args ppf = function
-  | Body x :: rem -> fprintf ppf "(%s)%a" (argname x) args rem
-  | Arg x :: rem -> fprintf ppf "(%a :@ %a) : ..." ident x context_mty rem
-  | cxt -> fprintf ppf " :@ %a" context_mty cxt
+and args ppf cxt = fprintf ppf ":@ %a" context_mty cxt
 
 and argname x =
   let s = Ident.name x in

@@ -889,7 +889,7 @@ and print_out_extension_constructor_doc
          Doc.text "type ";
          Printer.print_ident_like ~allow_uident:false out_ext.oext_type_name;
          type_params;
-         Doc.text " += ";
+         Doc.text " +=";
          Doc.line;
          (if out_ext.oext_private = Asttypes.Private then Doc.text "private "
           else Doc.nil);

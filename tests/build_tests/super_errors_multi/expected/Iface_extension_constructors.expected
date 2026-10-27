@@ -6,9 +6,9 @@
   The implementation /.../fixtures/Iface_extension_constructors/Foo.res
   does not match the interface /.../fixtures/Iface_extension_constructors/foo.cmi:
   Extension declarations do not match:
-    type t +=  Boom(string)
+    type t += Boom(string)
   is not included in
-    type t +=  Boom(int)
+    type t += Boom(int)
   [36m/.../fixtures/Iface_extension_constructors/Foo.res[0m:
     Expected declaration
   [36m/.../fixtures/Iface_extension_constructors/Foo.res[0m:[2m4:3-16[0m:

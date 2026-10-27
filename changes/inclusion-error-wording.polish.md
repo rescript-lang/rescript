@@ -1,0 +1,1 @@
+- Signature mismatch errors name variant constructors as constructors, write functor positions and quotes in ReScript syntax, and print `type t += A` with a single space.

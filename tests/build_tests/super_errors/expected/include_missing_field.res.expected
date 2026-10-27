@@ -19,6 +19,6 @@
       let x: int
       let y: string
     }
-  The value `y' is required but not provided
+  The value `y` is required but not provided
   [36m/.../fixtures/include_missing_field.res[0m:[2m3:3-15[0m:
     Expected declaration
