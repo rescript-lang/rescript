@@ -932,12 +932,15 @@ let new_declaration newtype manifest =
     type_inlined_types = [];
   }
 
-(* The constructor binding each existential type named by
-   [instance_constructor], for explaining an escaping one. *)
+(* The constructor binding each existential type created by
+   [instance_constructor], by the stamp of its identifier, for explaining an
+   escaping one. Names are not unique: their counter is reset per binding. *)
 let existential_constructors_key =
   Request_local.new_key (fun () -> Hashtbl.create 8)
-let existential_constructor name =
-  Hashtbl.find_opt (Domain.DLS.get existential_constructors_key) name
+let existential_constructor id =
+  Hashtbl.find_opt
+    (Domain.DLS.get existential_constructors_key)
+    (Ident.binding_time id)
 
 let instance_constructor ?in_pattern cstr =
   with_copy_session (fun () ->
@@ -953,11 +956,11 @@ let instance_constructor ?in_pattern cstr =
             | {desc = Tvar (Some name)} -> "$" ^ name
             | _ -> "$" ^ cstr.cstr_name
           in
-          let name = get_new_abstract_name name in
+          let id = Ident.create (get_new_abstract_name name) in
           Hashtbl.replace
             (Domain.DLS.get existential_constructors_key)
-            name cstr.cstr_name;
-          let path = Path.Pident (Ident.create name) in
+            (Ident.binding_time id) cstr.cstr_name;
+          let path = Path.Pident id in
           let new_env = Env.add_local_type path decl !env in
           env := new_env;
           let to_unify = newty (Tconstr (path, [], ref Mnil)) in

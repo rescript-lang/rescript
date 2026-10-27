@@ -1303,7 +1303,7 @@ let rec mismatch = function
 let escape_explanation ppf p =
   match p with
   | Pident id -> (
-    match Ctype.existential_constructor (Ident.name id) with
+    match Ctype.existential_constructor id with
     | Some constructor ->
       fprintf ppf
         "@,\
