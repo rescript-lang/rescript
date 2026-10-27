@@ -237,6 +237,56 @@ function idIntlSegments(x) {
   return x;
 }
 
+function idTemporalDuration(x) {
+  return x;
+}
+
+function idTemporalInstant(x) {
+  return x;
+}
+
+function idTemporalPlainDate(x) {
+  return x;
+}
+
+function idTemporalPlainTime(x) {
+  return x;
+}
+
+function idTemporalPlainDateTime(x) {
+  return x;
+}
+
+function idTemporalPlainYearMonth(x) {
+  return x;
+}
+
+function idTemporalPlainMonthDay(x) {
+  return x;
+}
+
+function idTemporalZonedDateTime(x) {
+  return x;
+}
+
+function idTemporalCommonZonedDateTime(x) {
+  return x;
+}
+
+function temporalDateOfDateTime(x) {
+  return x.toPlainDate();
+}
+
+function temporalNextDay(x) {
+  return x.add({
+    days: 1
+  });
+}
+
+function temporalParseDate(x) {
+  return Temporal.PlainDate.from(x);
+}
+
 function idJsError(x) {
   return x;
 }
@@ -305,6 +355,18 @@ export {
   idIntlRelativeTimeFormat,
   idIntlSegmenter,
   idIntlSegments,
+  idTemporalDuration,
+  idTemporalInstant,
+  idTemporalPlainDate,
+  idTemporalPlainTime,
+  idTemporalPlainDateTime,
+  idTemporalPlainYearMonth,
+  idTemporalPlainMonthDay,
+  idTemporalZonedDateTime,
+  idTemporalCommonZonedDateTime,
+  temporalDateOfDateTime,
+  temporalNextDay,
+  temporalParseDate,
   idJsError,
   idObj,
 }

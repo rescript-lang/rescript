@@ -46,6 +46,13 @@ let translate_obj_type closed_flag fields_translations =
   let type_ = Object (closed_flag, fields) in
   {dependencies; type_}
 
+(* The Temporal types declared by TypeScript's [ESNext.Temporal] library. *)
+let is_temporal_value_type = function
+  | "Duration" | "Instant" | "PlainDate" | "PlainDateTime" | "PlainMonthDay"
+  | "PlainTime" | "PlainYearMonth" | "ZonedDateTime" ->
+    true
+  | _ -> false
+
 let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
   let default_case () =
     let type_args =
@@ -127,6 +134,19 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
   | ["Stdlib"; "Symbol"; "t"], [] -> {dependencies = []; type_ = ident "symbol"}
   | ["Stdlib"; "Intl"; intl_module; "t"], [] ->
     {dependencies = []; type_ = ident ("Intl." ^ intl_module)}
+  | ["Stdlib"; "Temporal"; temporal_module; "t"], []
+    when is_temporal_value_type temporal_module ->
+    {dependencies = []; type_ = ident ("Temporal." ^ temporal_module)}
+  (* Conversions between Temporal types return the shared types of
+     [Stdlib_Temporal_Common], like [Stdlib_Temporal_Common.plainDate]. *)
+  | ( ( ["Stdlib"; "Temporal"; "Common"; temporal_type]
+      | ["Stdlib"; "Temporal_Common"; temporal_type] ),
+      [] )
+    when is_temporal_value_type (String.capitalize_ascii temporal_type) ->
+    {
+      dependencies = [];
+      type_ = ident ("Temporal." ^ String.capitalize_ascii temporal_type);
+    }
   | ["Stdlib"; "JsError"; "t"], [] -> {dependencies = []; type_ = ident "Error"}
   | (["Stdlib"; "Iterable"; "t"] | ["iterable"]), [param_translation] ->
     {
