@@ -41,8 +41,24 @@ let rec longident ppf = function
 let unique_names_key = Request_local.new_key (fun () -> ref Ident.empty)
 let unique_names () = Domain.DLS.get unique_names_key
 
+(* [Ctype.instance_constructor] names the existential type of variable ['a]
+   of constructor [C] [$C_'a], followed by a number when the name is taken.
+   It is printed [$a], and [C] is named in the escape explanation. *)
+let existential_of_name name =
+  match String.rindex_opt name '\'' with
+  | Some i when i >= 3 && name.[0] = '$' && name.[i - 1] = '_' ->
+    let constructor = String.sub name 1 (i - 2) in
+    let var = String.sub name (i + 1) (String.length name - i - 1) in
+    Some ("$" ^ var, constructor)
+  | _ -> None
+
 let ident_name id =
-  try Ident.find_same id !(unique_names ()) with Not_found -> Ident.name id
+  try Ident.find_same id !(unique_names ())
+  with Not_found -> (
+    let name = Ident.name id in
+    match existential_of_name name with
+    | Some (display, _) -> display
+    | None -> name)
 
 let add_unique id =
   try ignore (Ident.find_same id !(unique_names ()))
@@ -1300,16 +1316,31 @@ let rec mismatch = function
   | [] -> None
   | _ -> assert false
 
+let escape_explanation ppf p =
+  match p with
+  | Pident id -> (
+    match existential_of_name (Ident.name id) with
+    | Some (display, constructor) ->
+      fprintf ppf
+        "@,\
+         @[%s is an existential type bound by the constructor %s.@ It is only \
+         known in the scope of the pattern that matches %s.@]"
+        display constructor constructor
+    | None ->
+      fprintf ppf "@,@[The type constructor@;<1 2>%a@ would escape its scope@]"
+        path p)
+  | _ ->
+    fprintf ppf "@,@[The type constructor@;<1 2>%a@ would escape its scope@]"
+      path p
+
 let explanation unif t3 t4 ppf =
   match (t3.desc, t4.desc) with
   | Ttuple [], Tvar _ | Tvar _, Ttuple [] ->
     fprintf ppf "@,Self type cannot escape its class"
   | Tconstr (p, _, _), Tvar _ when unif && t4.level < Path.binding_time p ->
-    fprintf ppf "@,@[The type constructor@;<1 2>%a@ would escape its scope@]"
-      path p
+    escape_explanation ppf p
   | Tvar _, Tconstr (p, _, _) when unif && t3.level < Path.binding_time p ->
-    fprintf ppf "@,@[The type constructor@;<1 2>%a@ would escape its scope@]"
-      path p
+    escape_explanation ppf p
   | Tvar _, Tunivar _ | Tunivar _, Tvar _ ->
     fprintf ppf "@,The universal variable %a would escape its scope" type_expr
       (if is_Tunivar t3 then t3 else t4)
