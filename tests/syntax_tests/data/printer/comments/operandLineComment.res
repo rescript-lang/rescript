@@ -89,3 +89,46 @@ try obj // c
 .x catch {
 | _ => ()
 }
+
+// An operand printed in its own parentheses keeps the comment inside them
+switch (f(
+  a, // c
+  b,
+) :> int) {
+| _ => ()
+}
+
+switch (f(
+  a, // c
+  b,
+): int) {
+| _ => ()
+}
+
+if (f(
+  a, // c
+  b,
+) :> bool) {
+  ()
+}
+
+while (f(
+  a, // c
+  b,
+) :> bool) {
+  ()
+}
+
+for x of (f(
+  a, // c
+  b,
+) :> array<int>) {
+  ()
+}
+
+try (f(
+  a, // c
+  b,
+) :> int) catch {
+| _ => ()
+}

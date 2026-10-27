@@ -107,3 +107,40 @@ try (
 ) catch {
 | _ => ()
 }
+
+// An operand printed in its own parentheses keeps the comment inside them
+switch (
+  f(a, b) :> int // c
+) {
+| _ => ()
+}
+
+switch (
+  f(a, b): int // c
+) {
+| _ => ()
+}
+
+if (
+  f(a, b) :> bool // c
+) {
+  ()
+}
+
+while (
+  f(a, b) :> bool // c
+) {
+  ()
+}
+
+for x of (
+  f(a, b) :> array<int> // c
+) {
+  ()
+}
+
+try (
+  f(a, b) :> int // c
+) catch {
+| _ => ()
+}
