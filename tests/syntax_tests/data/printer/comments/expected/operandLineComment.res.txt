@@ -1,0 +1,227 @@
+// A line comment in the operand of a block construct stays in the operand
+
+switch (
+  obj.x // c
+) {
+| _ => ()
+}
+
+switch (
+  obj.x.y // c
+) {
+| _ => ()
+}
+
+switch (
+  obj.x.y // c // d
+) {
+| _ => ()
+}
+
+switch (
+  arr[0] // c
+) {
+| _ => ()
+}
+
+switch (
+  obj["member"] // c
+) {
+| _ => ()
+}
+
+switch (
+  obj["member"] // c
+) {
+| _ => ()
+}
+
+switch (
+  obj->f // c
+) {
+| _ => ()
+}
+
+switch (
+  a + b // c
+) {
+| _ => ()
+}
+
+switch f(
+  // c
+  x,
+) {
+| _ => ()
+}
+
+switch x {
+// c
+| _ => ()
+}
+
+if (
+  obj.x // c
+) {
+  ()
+} else if (
+  obj.y // d
+) {
+  ()
+}
+
+while (
+  obj.x // c
+) {
+  ()
+}
+
+for x of (
+  obj.x // c
+) {
+  ()
+}
+
+let f = async () => {
+  for await x of (
+    obj.x // c
+  ) {
+    ()
+  }
+}
+
+for i in (
+  0 // c
+) to n {
+  ()
+}
+
+for i in 0 to (
+  n // c
+) {
+  ()
+}
+
+try (
+  obj.x // c
+) catch {
+| _ => ()
+}
+
+// An operand printed in its own parentheses keeps the comment inside them
+switch (
+  f(a, b) :> int // c
+) {
+| _ => ()
+}
+
+switch (
+  f(a, b): int // c
+) {
+| _ => ()
+}
+
+if (
+  f(a, b) :> bool // c
+) {
+  ()
+}
+
+while (
+  f(a, b) :> bool // c
+) {
+  ()
+}
+
+for x of (
+  f(a, b) :> array<int> // c
+) {
+  ()
+}
+
+try (
+  f(a, b) :> int // c
+) catch {
+| _ => ()
+}
+
+// A comment after an item of the operand
+switch (
+  [a, b] // c // d
+) {
+| _ => ()
+}
+
+switch (
+  list{a, ...b, ...c} // c
+) {
+| _ => ()
+}
+
+switch (
+  (a, b) // c
+) {
+| _ => ()
+}
+
+switch {
+  x: a, // c
+  y: b,
+} {
+| _ => ()
+}
+
+switch (
+  a->f(x, y) // c
+) {
+| _ => ()
+}
+
+switch (
+  a->f(x, y) // c // d
+) {
+| _ => ()
+}
+
+if (
+  f(a, b) // c
+) {
+  ()
+}
+
+while (
+  f(a, b) + 1 > 0 // c
+) {
+  ()
+}
+
+for x of (
+  [a, b] // c
+) {
+  ()
+}
+
+try (
+  [...a, b] // c
+) catch {
+| _ => ()
+}
+
+// A binary expression or pipe in an item of the operand
+switch (
+  [a + b, d] // c
+) {
+| _ => ()
+}
+
+if (
+  f(a && b) // c
+) {
+  ()
+}
+
+for x of (
+  [a->f(y)] // c
+) {
+  ()
+}
