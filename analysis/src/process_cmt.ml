@@ -719,7 +719,15 @@ and for_module ~env (mod_expr : Typedtree.module_expr) module_name =
     if Ident.current_time () < renamed_stamp_floor then
       Ident.set_current_time renamed_stamp_floor;
     let renamed = Subst.modtype Subst.identity mod_expr.mod_type in
-    record_renamed_stamps env.renamed_stamps mod_expr.mod_type renamed;
+    (* The functor's result signature has the identifiers of the body's
+       declarations; the application's has them only when the argument is
+       not a path, else the compiler already renamed them. *)
+    let functor_result =
+      match functor_.mod_type with
+      | Mty_functor (_, _, result) -> result
+      | mty -> mty
+    in
+    record_renamed_stamps env.renamed_stamps functor_result renamed;
     for_type_module ~name:module_name ~env renamed
   | Tmod_unpack (_expr, module_type) ->
     let env = env |> Env.add_module ~name:module_name in

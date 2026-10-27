@@ -176,7 +176,7 @@ let add_for_path_parent ~env ~extra path loc =
       add_file_reference ~extra module_name loc;
       TopLevelModule module_name
     | Stamp stamp ->
-      add_reference ~extra stamp loc;
+      add_reference_with_original ~env ~extra stamp loc;
       LModule (LocalReference (stamp, Module))
     | NotFound -> LModule NotFound
     | Global (module_name, path) ->
@@ -185,7 +185,7 @@ let add_for_path_parent ~env ~extra path loc =
     | Exported (env, name) -> (
       match Exported.find env.exported Exported.Module name with
       | Some stamp ->
-        add_reference ~extra stamp loc;
+        add_reference_with_original ~env ~extra stamp loc;
         LModule (LocalReference (stamp, Module))
       | None -> LModule NotFound)
   in

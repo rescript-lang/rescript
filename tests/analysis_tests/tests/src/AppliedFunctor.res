@@ -28,3 +28,20 @@ let t: IntSet.t = []
 
 // let s2 = IntSet.
 //                 ^com
+
+module WithNested = (O: Ord) => {
+  module Nested = {
+    //     ^ref
+    let value = 1
+  }
+}
+
+module IntOrd = {
+  type t = int
+  let compare = (a: int, b) => a - b
+}
+
+module N = WithNested(IntOrd)
+
+let n = N.Nested.value
+//        ^ref
