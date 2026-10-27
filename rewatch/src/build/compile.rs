@@ -880,6 +880,7 @@ pub fn compiler_args(
     Ok(vec![
         namespace_args,
         read_cmi_args,
+        vec!["-I".to_string(), ".".to_string()],
         vec![
             "-I".to_string(),
             Path::new("..").join("ocaml").to_string_lossy().to_string(),
