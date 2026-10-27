@@ -14,4 +14,13 @@ module IntSet: {
   type t = array<int>
   let add: (t, int) => array<int>
 }
+module M: {
+  type t = {@as("wire") field: int}
+}
+module type S = {
+  type t = {@as("wire") field: int}
+}
+module N: {
+  type t = {@as("wire") field: int}
+}
 

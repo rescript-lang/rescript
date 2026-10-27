@@ -95,20 +95,38 @@ end = struct
       !res |> List.rev |> String.concat "\n"
 end
 
-(* A type declared in the module being printed can be copied from the source.
-   One that comes from elsewhere, such as the body of an applied functor or an
-   included module of another file, has its location there instead. *)
-let declared_in ~path ~(scope : Location.t option) (loc : Location.t) =
+let loc_within ~(outer : Location.t) (loc : Location.t) =
+  outer.loc_start.pos_cnum <= loc.loc_start.pos_cnum
+  && loc.loc_end.pos_cnum <= outer.loc_end.pos_cnum
+
+(* The locations of the functors in a signature, nested ones included. *)
+let rec functor_locs (signature : Types.signature) =
+  signature
+  |> List.concat_map (function
+    | Types.Sig_module (_, {md_type; md_loc}, _) -> (
+      match md_type with
+      | Mty_functor _ -> [md_loc]
+      | Mty_signature signature -> functor_locs signature
+      | Mty_ident _ | Mty_alias _ -> [])
+    | _ -> [])
+
+(* The source text of a type declaration can be copied when it says what the
+   type is at this point of the interface: when the type is declared in this
+   file, and either inside the module being printed or outside any functor.
+   A type of an applied functor is located in the functor's body, where its
+   definition mentions the functor's parameters, and a type included from
+   another file is located there; both are printed from the signature. *)
+let declared_in ~path ~functors ~(scope : Location.t option) (loc : Location.t)
+    =
   Filename.basename loc.loc_start.pos_fname = Filename.basename path
   &&
   match scope with
-  | None -> true
-  | Some scope ->
-    scope.loc_start.pos_cnum <= loc.loc_start.pos_cnum
-    && loc.loc_end.pos_cnum <= scope.loc_end.pos_cnum
+  | Some scope when loc_within ~outer:scope loc -> true
+  | _ -> not (List.exists (fun outer -> loc_within ~outer loc) functors)
 
 let print_signature ~path ~extractor ~signature =
   Printtyp.reset_names ();
+  let functors = functor_locs signature in
   let sig_item_to_string (item : Outcometree.out_sig_item) =
     item |> Res_outcome_printer.print_out_sig_item_doc
     |> Res_doc.to_string ~width:Res_printer.default_print_width
@@ -259,7 +277,7 @@ let print_signature ~path ~extractor ~signature =
       Buffer.add_string buf (indent ^ new_item_str ^ "\n");
       process_signature ~scope ~indent items
     | Sig_type (id, type_decl, rec_status) :: items ->
-      (if declared_in ~path ~scope type_decl.type_loc then
+      (if declared_in ~path ~functors ~scope type_decl.type_loc then
          let lines =
            let pos_start, pos_end = Loc.range type_decl.type_loc in
            extractor |> Source_file_extractor.extract ~pos_start ~pos_end

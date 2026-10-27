@@ -14,3 +14,14 @@ module IntSet = MakeSet({
   type t = int
   let compare = (a: int, b) => a - b
 })
+
+// Types of the same file outside a functor keep their attributes
+module M = {
+  type t = {@as("wire") field: int}
+}
+
+module type S = module type of M
+
+module N = {
+  include M
+}
