@@ -137,6 +137,8 @@ module Module = struct
     exported: Exported.t;
     items: item list;
     deprecated: string option;
+    functor_params: string list;
+        (** the parameters, such as [O: Ord], when this is a functor's result *)
   }
 
   and t = Ident of Path.t | Structure of structure | Constraint of t * t
