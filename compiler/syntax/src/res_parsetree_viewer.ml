@@ -305,6 +305,29 @@ let is_binary_expression expr =
     true
   | _ -> false
 
+let has_line_break_before_operator expr =
+  let found = ref false in
+  let check_expr iterator (e : Parsetree.expression) =
+    match e.pexp_desc with
+    | Pexp_apply
+        {
+          funct =
+            {
+              pexp_desc =
+                Pexp_ident {txt = Longident.Lident operator; loc = operator_loc};
+            };
+          args = [(Nolabel, left); (Nolabel, _)];
+        }
+      when not_ghost_operator operator operator_loc
+           && left.pexp_loc.loc_end.pos_lnum < operator_loc.loc_start.pos_lnum
+      ->
+      found := true
+    | _ -> if not !found then Ast_iterator.default_iterator.expr iterator e
+  in
+  let iterator = {Ast_iterator.default_iterator with expr = check_expr} in
+  iterator.expr iterator expr;
+  !found
+
 let is_equality_operator operator =
   match operator with
   | "==" | "===" | "!=" | "!==" -> true

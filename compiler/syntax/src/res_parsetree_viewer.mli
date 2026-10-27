@@ -62,6 +62,12 @@ val operator_precedence : string -> int
 val not_ghost_operator : string -> Location.t -> bool
 val is_unary_expression : Parsetree.expression -> bool
 val is_binary_expression : Parsetree.expression -> bool
+
+val has_line_break_before_operator : Parsetree.expression -> bool
+(** [has_line_break_before_operator expr] checks whether [expr] contains a
+    binary expression, a pipe included, whose operator starts a line, after its
+    left operand, where a line comment can be written. *)
+
 val is_rhs_binary_operator : string -> bool
 val is_equality_operator : string -> bool
 

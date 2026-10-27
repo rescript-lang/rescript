@@ -61,3 +61,19 @@ let x = while f(
   a, // c
   b,
 ) + 1 > 0 { () }
+
+// A binary expression inside the operand, with the comment before its operator
+let x = switch [a // c
++ b, d] { | _ => 1 }
+
+let x = if f(a // c
+&& b) { 1 } else { 2 }
+
+let x = for y of [a // c
+->f(x)] { () }
+
+// A binary expression inside the operand, with the comment after an item
+let x = switch [
+  a + b, // c
+  d,
+] { | _ => 1 }

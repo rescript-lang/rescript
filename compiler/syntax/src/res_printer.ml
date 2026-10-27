@@ -3172,10 +3172,14 @@ and print_expression_args ~state (args : Parsetree.expression list) cmt_tbl =
    parentheses with the comment before the [)]. A binary expression is left
    flat: breaking it would print the comment after the operator, where the
    next format attaches it to the right operand, so its comment goes into the
-   parentheses instead. *)
+   parentheses instead. So is an operand with a binary expression inside whose
+   operator starts a line, where a comment after the left operand may sit. *)
 and print_operand_before_brace ~expr doc =
   let doc =
-    if Parsetree_viewer.is_binary_expression expr then doc
+    if
+      Parsetree_viewer.is_binary_expression expr
+      || Parsetree_viewer.has_line_break_before_operator expr
+    then doc
     else Doc.break_before_line_suffixes doc
   in
   if Doc.has_pending_line_suffix doc then add_operand_parens doc else doc
