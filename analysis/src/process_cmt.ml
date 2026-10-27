@@ -185,6 +185,10 @@ and for_type_module ~name ~env module_type =
   | Mty_functor (_argIdent, _argType, result_type) ->
     for_type_module ~name ~env result_type
 
+(* Stamps given to renamed identifiers start here, far above the stamps
+   in a typed tree, so that they never meet one of them. *)
+let renamed_stamp_floor = 1 lsl 40
+
 let get_module_type_path mod_desc =
   match mod_desc with
   | Typedtree.Tmty_ident (path, _) | Tmty_alias (path, _) -> Some path
@@ -546,13 +550,12 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
     bindings
     |> List.iter (fun {Typedtree.vb_expr} -> scan_let_modules ~env vb_expr);
     !items
-  | Tstr_module
-      {mb_id; mb_attributes; mb_loc; mb_name = name; mb_expr = {mod_desc}}
+  | Tstr_module {mb_id; mb_attributes; mb_loc; mb_name = name; mb_expr}
     when not
            (String.length name.txt >= 6
            && (String.sub name.txt 0 6 = "local_") [@doesNotRaise])
          (* %%private generates a dummy module called local_... *) ->
-    let item = for_module ~env mod_desc name.txt in
+    let item = for_module ~env mb_expr name.txt in
     let declared =
       add_declared ~item ~name ~extent:mb_loc ~stamp:(Ident.binding_time mb_id)
         ~env mb_attributes
@@ -647,8 +650,8 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
         decl |> for_type_declaration ~env ~exported ~rec_status)
   | _ -> []
 
-and for_module ~env mod_desc module_name =
-  match mod_desc with
+and for_module ~env (mod_expr : Typedtree.module_expr) module_name =
+  match mod_expr.mod_desc with
   | Tmod_ident (path, _lident) -> Ident path
   | Tmod_structure structure ->
     let env = env |> Env.add_module ~name:module_name in
@@ -665,15 +668,23 @@ and for_module ~env mod_desc module_name =
           ~extent:arg_name.loc ~stamp ~module_path:NotVisible false []
       in
       Stamps.add_module env.stamps stamp declared);
-    for_module ~env result_expr.mod_desc module_name
-  | Tmod_apply (functor_, _arg, _coercion) ->
-    for_module ~env functor_.mod_desc module_name
+    for_module ~env result_expr module_name
+  | Tmod_apply _ ->
+    (* The functor's body has the parameter's types; the application's
+       signature has the argument's. Its items keep the identifiers of the
+       body, whose stamps are already taken, so they are renamed first,
+       with stamps above any that a compilation hands out. *)
+    let env = env |> Env.add_module ~name:module_name in
+    if Ident.current_time () < renamed_stamp_floor then
+      Ident.set_current_time renamed_stamp_floor;
+    for_type_module ~name:module_name ~env
+      (Subst.modtype Subst.identity mod_expr.mod_type)
   | Tmod_unpack (_expr, module_type) ->
     let env = env |> Env.add_module ~name:module_name in
     for_type_module ~name:module_name ~env module_type
   | Tmod_constraint (expr, typ, _constraint, _coercion) ->
     (* TODO do this better I think *)
-    let mod_kind = for_module ~env expr.mod_desc module_name in
+    let mod_kind = for_module ~env expr module_name in
     let env = env |> Env.add_module ~name:module_name in
     let mod_type_kind = for_type_module ~name:module_name ~env typ in
     Constraint (mod_kind, mod_type_kind)
@@ -690,7 +701,7 @@ and scan_let_modules ~env (e : Typedtree.expression) =
     (match expression.exp_desc with
     | Texp_letmodule (id, name, mexpr, _body) ->
       let stamp = Ident.binding_time id in
-      let item = for_module ~env mexpr.mod_desc name.txt in
+      let item = for_module ~env mexpr name.txt in
       let declared =
         Process_attributes.new_declared ~item ~extent:name.loc ~name ~stamp
           ~module_path:NotVisible false []

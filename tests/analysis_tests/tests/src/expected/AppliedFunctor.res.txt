@@ -1,0 +1,33 @@
+Hover src/AppliedFunctor.res 15:15
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\n(IntSet.t, int) => array<int>\n```\n\n---\n\n```\n \n```\n```rescript\ntype IntSet.t = array<int>\n```\nGo to: [Type definition](AppliedFunctor.res#L7,3)\n"
+  }
+}
+
+Hover src/AppliedFunctor.res 18:14
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nIntSet.t\n```\n\n---\n\n```\n \n```\n```rescript\ntype IntSet.t = array<int>\n```\nGo to: [Type definition](AppliedFunctor.res#L7,3)\n"
+  }
+}
+
+Complete src/AppliedFunctor.res 21:19
+pos_cursor:[21:19] pos_no_white:[21:18] Found expr:[21:12->21:19]
+Pexp_ident IntSet.:[21:12->21:19]
+Completable: Cpath Value[IntSet, ""]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[IntSet, ""]
+Path IntSet.
+[
+  {
+    "detail": "(t, int) => array<int>",
+    "kind": 12,
+    "label": "add",
+    "tags": []
+  }
+]
+
