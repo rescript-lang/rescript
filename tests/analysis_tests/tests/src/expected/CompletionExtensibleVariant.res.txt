@@ -1,4 +1,40 @@
-Complete src/CompletionExtensibleVariant.res 7:19
+Complete src/CompletionExtensibleVariant.res 6:26
+XXX Not found!
+Completable: Cexpression Type[attr]=Fl
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "Flag",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nFlag\n```\n\n```rescript\ntype attr = ..\n```"
+    },
+    "insertText": "Flag",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Flag",
+    "sortText": "A Flag",
+    "tags": []
+  },
+  {
+    "detail": "module Float32Array",
+    "kind": 9,
+    "label": "Float32Array",
+    "tags": []
+  },
+  {
+    "detail": "module Float64Array",
+    "kind": 9,
+    "label": "Float64Array",
+    "tags": []
+  },
+  { "detail": "module Float", "kind": 9, "label": "Float", "tags": [] }
+]
+
+Complete src/CompletionExtensibleVariant.res 10:19
 XXX Not found!
 Completable: Cexpression Type[attr]=Nu
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -23,7 +59,7 @@ Path attr
   { "detail": "module Null", "kind": 9, "label": "Null", "tags": [] }
 ]
 
-Hover src/CompletionExtensibleVariant.res 10:19
+Hover src/CompletionExtensibleVariant.res 13:19
 {
   "contents": {
     "kind": "markdown",
@@ -31,9 +67,9 @@ Hover src/CompletionExtensibleVariant.res 10:19
   }
 }
 
-Complete src/CompletionExtensibleVariant.res 13:21
-pos_cursor:[13:21] pos_no_white:[13:20] Found pattern:[13:20->13:21]
-Ppat_construct S:[13:20->13:21]
+Complete src/CompletionExtensibleVariant.res 16:21
+pos_cursor:[16:21] pos_no_white:[16:20] Found pattern:[16:20->16:21]
+Ppat_construct S:[16:20->16:21]
 Completable: Cpattern Value[value]=S
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -66,7 +102,7 @@ Path value
   }
 ]
 
-Complete src/CompletionExtensibleVariant.res 16:14
+Complete src/CompletionExtensibleVariant.res 19:14
 XXX Not found!
 Completable: CexhaustiveSwitch Value[valu]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -86,9 +122,9 @@ Path valu
   }
 ]
 
-Complete src/CompletionExtensibleVariant.res 32:17
-pos_cursor:[32:17] pos_no_white:[32:16] Found pattern:[32:16->32:17]
-Ppat_construct M:[32:16->32:17]
+Complete src/CompletionExtensibleVariant.res 35:17
+pos_cursor:[35:17] pos_no_white:[35:16] Found pattern:[35:16->35:17]
+Ppat_construct M:[35:16->35:17]
 Completable: Cpattern Value[a]=M
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -109,9 +145,9 @@ Path a
   }
 ]
 
-Complete src/CompletionExtensibleVariant.res 35:17
-pos_cursor:[35:17] pos_no_white:[35:16] Found pattern:[35:16->35:17]
-Ppat_construct F:[35:16->35:17]
+Complete src/CompletionExtensibleVariant.res 38:17
+pos_cursor:[38:17] pos_no_white:[38:16] Found pattern:[38:16->38:17]
+Ppat_construct F:[38:16->38:17]
 Completable: Cpattern Value[a]=F
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -132,9 +168,9 @@ Path a
   }
 ]
 
-Complete src/CompletionExtensibleVariant.res 38:22
-pos_cursor:[38:22] pos_no_white:[38:21] Found pattern:[38:20->38:22]
-Ppat_construct Fl:[38:20->38:22]
+Complete src/CompletionExtensibleVariant.res 41:22
+pos_cursor:[41:22] pos_no_white:[41:21] Found pattern:[41:20->41:22]
+Ppat_construct Fl:[41:20->41:22]
 Completable: Cpattern Value[value]=Fl
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib

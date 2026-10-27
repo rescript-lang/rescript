@@ -2105,8 +2105,8 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
 
 module String_set = Set.Make (String)
 
-let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
-    completable =
+let rec process_completable_in_scope ~state ~debug ~full ~scope ~env ~pos
+    ~for_hover completable =
   if debug then
     Printf.printf "Completable: %s\n" (Completable.to_string completable);
   let package = full.package in
@@ -2412,7 +2412,8 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
       match (fallback, items) with
       | Some fallback, (None | Some []) ->
         fallback
-        |> process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
+        |> process_completable_in_scope ~state ~debug ~full ~scope ~env ~pos
+             ~for_hover
       | _, Some items -> items
       | None, None -> []
     in
@@ -2647,3 +2648,32 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
           ~env ~insert_text:"todo(\"${0:TODO}\")";
       ]
     else []
+
+(* The names of the modules around [pos] in [file], outermost first. *)
+let module_path_at ~(full : full) ~pos =
+  let rec in_items (items : Module.item list) =
+    match
+      items
+      |> List.find_opt (fun (item : Module.item) ->
+          Loc.has_pos ~pos item.loc
+          &&
+          match item.kind with
+          | Module _ -> true
+          | _ -> false)
+    with
+    | Some {name; kind = Module {type_}} -> name :: in_module type_
+    | _ -> []
+  and in_module (m : Module.t) =
+    match m with
+    | Structure {items} -> in_items items
+    | Constraint (implementation, _) -> in_module implementation
+    | Ident _ -> []
+  in
+  in_items full.file.structure.items
+
+let process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
+    completable =
+  Type_utils.with_completion_scope ~file:full.file
+    ~module_path:(module_path_at ~full ~pos) (fun () ->
+      process_completable_in_scope ~state ~debug ~full ~scope ~env ~pos
+        ~for_hover completable)

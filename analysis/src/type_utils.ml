@@ -361,6 +361,17 @@ let extract_function_type2 ?type_arg_context ~state ~env ~package typ =
   in
   loop ?type_arg_context ~env [] typ
 
+(* The file being edited and the module path at the cursor, while a
+   completion request runs. Extension constructors are named relative to
+   it: unlike ordinary constructors they can't be found from the expected
+   type, so they have to be written so that they are in scope there. *)
+let completion_scope : (File.t * string list) option ref = ref None
+
+let with_completion_scope ~file ~module_path f =
+  let previous = !completion_scope in
+  completion_scope := Some (file, module_path);
+  Fun.protect ~finally:(fun () -> completion_scope := previous) f
+
 (* The stamp under which [typ] is declared in [file]. *)
 let type_stamp (file : File.t) (typ : Type.t) =
   let found = ref None in
@@ -377,6 +388,11 @@ let type_stamp (file : File.t) (typ : Type.t) =
    constructor can't be found from the expected type alone. *)
 let extension_constructors ~state ~package ~(current_file : File.t)
     ~(type_file : File.t) ~type_stamp ~type_name ~decl =
+  let current_file, scope_path =
+    match !completion_scope with
+    | Some (file, module_path) -> (file, module_path)
+    | None -> (current_file, [])
+  in
   let extends (file : File.t) (ext_decl : Types.type_declaration) =
     match (type_stamp, ext_decl.type_manifest) with
     | None, _ -> true
@@ -424,8 +440,16 @@ let extension_constructors ~state ~package ~(current_file : File.t)
       let path =
         Module_path.to_path declared.module_path declared.item.cname.txt
       in
+      (* Inside a module, its own name and those of the modules around it
+         are not in scope: drop the module path shared with the cursor. *)
+      let rec relative path scope =
+        match (path, scope) with
+        | p :: (_ :: _ as path), s :: scope when p = s -> relative path scope
+        | _ -> path
+      in
       let path =
-        if file.uri = current_file.uri then path else file.module_name :: path
+        if file.uri = current_file.uri then relative path scope_path
+        else file.module_name :: path
       in
       {
         declared.item with
