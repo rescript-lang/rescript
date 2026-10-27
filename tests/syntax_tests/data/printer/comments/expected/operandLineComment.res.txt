@@ -144,3 +144,84 @@ try (
 ) catch {
 | _ => ()
 }
+
+// A comment after an item of the operand
+switch (
+  [a, b] // c // d
+) {
+| _ => ()
+}
+
+switch (
+  list{a, ...b, ...c} // c
+) {
+| _ => ()
+}
+
+switch (
+  (a, b) // c
+) {
+| _ => ()
+}
+
+switch {
+  x: a, // c
+  y: b,
+} {
+| _ => ()
+}
+
+switch (
+  a->f(x, y) // c
+) {
+| _ => ()
+}
+
+switch (
+  a->f(x, y) // c // d
+) {
+| _ => ()
+}
+
+if (
+  f(a, b) // c
+) {
+  ()
+}
+
+while (
+  f(a, b) + 1 > 0 // c
+) {
+  ()
+}
+
+for x of (
+  [a, b] // c
+) {
+  ()
+}
+
+try (
+  [...a, b] // c
+) catch {
+| _ => ()
+}
+
+// A binary expression or pipe in an item of the operand
+switch (
+  [a + b, d] // c
+) {
+| _ => ()
+}
+
+if (
+  f(a && b) // c
+) {
+  ()
+}
+
+for x of (
+  [a->f(y)] // c
+) {
+  ()
+}

@@ -132,3 +132,92 @@ try (f(
 ) :> int) catch {
 | _ => ()
 }
+
+// A comment after an item of the operand
+switch [
+  a, // c
+  b, // d
+] {
+| _ => ()
+}
+
+switch list{
+  a, // c
+  ...b,
+  ...c,
+} {
+| _ => ()
+}
+
+switch (
+  a, // c
+  b,
+) {
+| _ => ()
+}
+
+switch {
+  x: a, // c
+  y: b,
+} {
+| _ => ()
+}
+
+switch a->f(
+  x, // c
+  y,
+) {
+| _ => ()
+}
+
+switch a // c
+->f(
+  x, // d
+  y,
+) {
+| _ => ()
+}
+
+if f(
+  a, // c
+  b,
+) {
+  ()
+}
+
+while f(
+  a, // c
+  b,
+) + 1 > 0 {
+  ()
+}
+
+for x of [
+  a, // c
+  b,
+] {
+  ()
+}
+
+try [
+  ...a, // c
+  b,
+] catch {
+| _ => ()
+}
+
+// A binary expression or pipe in an item of the operand
+switch [a // c
++ b, d] {
+| _ => ()
+}
+
+if f(a // c
+&& b) {
+  ()
+}
+
+for x of [a // c
+->f(y)] {
+  ()
+}
