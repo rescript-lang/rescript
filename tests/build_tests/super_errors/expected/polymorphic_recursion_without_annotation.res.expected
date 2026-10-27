@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/polymorphic_recursion_without_annotation.res[0m:[2m6:26[0m
+
+  4 [2m┆[0m switch n {
+  5 [2m┆[0m | Flat(_) => 0
+  [1;31m6[0m [2m┆[0m | Nest(n) => 1 + depth([1;31mn[0m)
+  7 [2m┆[0m }
+  8 [2m┆[0m 
+
+  This has type: [1;31mnested<array<'a>>[0m
+  But this function argument is expecting: [1;33mnested<'a>[0m
+  The type variable 'a occurs inside array<'a>
