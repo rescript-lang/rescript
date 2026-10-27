@@ -3,6 +3,9 @@ type attr += Str(string) | Num(int)
 
 module Sub = {
   type attr += Flag
+  // Inside the declaring module the constructor is not qualified
+  // let inside: attr = Fl
+  //                      ^com
 }
 
 // let a: attr = Nu
