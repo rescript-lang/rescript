@@ -1,27 +1,21 @@
 (* Array and list literals with spreads, [Pexp_spread]: [[a, ...b]] and
-   [list{...a, b}]. They used to be parsed into calls of the runtime's
-   [Primitive_array.spread] and [Primitive_list.spread], which remain their
-   encoding on the v0 PPX wire and the calls they compile to. The [spread]
-   carries the [res.spread] marker, and its argument is an array of parts:
+   [list{...a, b}]. They compile to calls of the runtime's
+   [Primitive_array.spread] and [Primitive_list.spread], whose argument is an
+   array of parts:
    - for arrays, the spreads, and array literals of the items between them;
    - for lists, the items before each spread consed onto it
      ([a :: b :: spread]), and a list literal of the items after the last one.
-   The array literals and [::] and [[]] constructors built from the items have
-   ghost locations, which tells them apart from array and list literals that
-   are spread. *)
+   The type checker types a literal as its parts, so the items keep the errors
+   of array and list literals. The array literals and [::] and [[]]
+   constructors built from the items have ghost locations, like any node the
+   compiler makes up; on the v0 PPX wire they also tell the items apart from
+   array and list literals that are spread, see [Ast_mapper_to0.spread_call]. *)
 
 open Parsetree
-
-let marker = "res.spread"
 
 let module_name = function
   | Spread_array -> Primitive_modules.array
   | Spread_list -> Primitive_modules.list
-
-let kind_of_module_name name =
-  if name = Primitive_modules.array then Some Spread_array
-  else if name = Primitive_modules.list then Some Spread_list
-  else None
 
 (* The items before each spread with that spread, and the items after the last
    spread *)
@@ -83,13 +77,3 @@ let parts kind elements =
             items tail;
         ])
     (groups elements)
-
-(* The call encoding the literal [kind] of [elements] at [loc] *)
-let to_call ~loc ~attrs kind elements =
-  Ast_helper.Exp.apply ~loc ~attrs
-    (Ast_helper.Exp.ident ~loc
-       ~attrs:[(Location.mknoloc marker, PStr [])]
-       (Location.mkloc
-          (Longident.Ldot (Longident.Lident (module_name kind), "spread"))
-          loc))
-    [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc (parts kind elements))]

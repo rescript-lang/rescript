@@ -679,8 +679,13 @@ module E = struct
     | _ -> Option.map rows (dict_rows ~marker:Ast_dict.literal_marker e)
 
   (* The kind and elements of an array or list literal with spreads encoded as
-     a call, see [Ast_spread] *)
+     a call, see [Ast_mapper_to0.spread_call] *)
   let spread_elements (e : expression) =
+    let kind_of_module_name name =
+      if name = Primitive_modules.array then Some Pt.Spread_array
+      else if name = Primitive_modules.list then Some Pt.Spread_list
+      else None
+    in
     let generated (e : expression) =
       e.pexp_loc.loc_ghost && e.pexp_attributes = []
     in
@@ -710,11 +715,11 @@ module E = struct
             ( Asttypes.Noloc.Nolabel,
               {pexp_desc = Pexp_array parts; pexp_attributes = []} );
           ] )
-      when txt = Ast_spread.marker -> (
-      match Ast_spread.kind_of_module_name module_name with
-      | Some Spread_array ->
+      when txt = Ast_mapper_to0.spread_marker -> (
+      match kind_of_module_name module_name with
+      | Some Pt.Spread_array ->
         Some (Pt.Spread_array, List.concat_map array_part parts)
-      | Some Spread_list ->
+      | Some Pt.Spread_list ->
         Some (Pt.Spread_list, List.concat_map list_part parts)
       | None -> None)
     | _ -> None
