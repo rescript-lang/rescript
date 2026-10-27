@@ -2644,6 +2644,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       {
         sexp with
         pexp_desc = Pexp_match (sval, [Ast_helper.Exp.case spat sbody]);
+        pexp_attributes =
+          (mknoloc "#let_gadt_pattern", PStr []) :: sexp.pexp_attributes;
       }
       ty_expected
   | Pexp_let (rec_flag, spat_sexp_list, sbody) ->
@@ -2832,10 +2834,13 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     in
     let call_context =
       (* Optional-default lowering synthesizes a match expression, but from the
-         user's point of view this is still part of a function definition. Use
-         function-style diagnostics instead of reporting a phantom switch. *)
+         user's point of view this is still part of a function definition. A
+         [let] destructuring a GADT constructor is typed as a one-case match,
+         whose body is the rest of the block. Use function-style diagnostics
+         for both instead of reporting a phantom switch. *)
       if has_attr "let.unwrap" then `LetUnwrap
-      else if has_attr "#optional_arg_default" then `Function
+      else if has_attr "#optional_arg_default" || has_attr "#let_gadt_pattern"
+      then `Function
       else `Switch
     in
     let val_cases, partial =

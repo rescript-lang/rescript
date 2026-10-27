@@ -1,0 +1,1 @@
+- A type error in the body after a `let` that destructures a GADT constructor no longer talks about switch branches.
