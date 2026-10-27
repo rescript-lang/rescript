@@ -669,12 +669,20 @@ and for_module ~env (mod_expr : Typedtree.module_expr) module_name =
       in
       Stamps.add_module env.stamps stamp declared);
     for_module ~env result_expr module_name
-  | Tmod_apply _ ->
+  | Tmod_apply (functor_, _arg, _coercion) ->
     (* The functor's body has the parameter's types; the application's
        signature has the argument's. Its items keep the identifiers of the
        body, whose stamps are already taken, so they are renamed first,
-       with stamps above any that a compilation hands out. *)
+       with stamps above any that a compilation hands out. Their locations
+       are in the functor's body, so they are marked as coming from the
+       functor, like included items, for definitions to find its file. *)
     let env = env |> Env.add_module ~name:module_name in
+    let env =
+      match get_module_path functor_.mod_desc with
+      | Some path ->
+        {env with module_path = IncludedModule (path, env.module_path)}
+      | None -> env
+    in
     if Ident.current_time () < renamed_stamp_floor then
       Ident.set_current_time renamed_stamp_floor;
     for_type_module ~name:module_name ~env

@@ -1,0 +1,17 @@
+Definition src/AppliedFunctorUse.res 5:15
+{
+  "range": {
+    "end": { "character": 9, "line": 7 },
+    "start": { "character": 6, "line": 7 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
+
+Hover src/AppliedFunctorUse.res 8:14
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nStrSet.t\n```\n\n---\n\n```\n \n```\n```rescript\ntype StrSet.t = array<string>\n```\nGo to: [Type definition](AppliedFunctor.res#L7,3)\n"
+  }
+}
+

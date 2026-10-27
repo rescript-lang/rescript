@@ -8,12 +8,17 @@ let make_goto_command link =
   Printf.sprintf "[%s](%s#L%d,%d)" link.label link.file (link.start_pos.line + 1)
     (link.start_pos.character + 1)
 
-let go_to_definition_text ~env ~pos =
+let go_to_definition_text ?uri ~env ~pos () =
   let start_line, start_col = Pos.of_lexing pos in
+  let uri =
+    match uri with
+    | Some uri -> uri
+    | None -> env.Shared_types.Query_env.file.uri
+  in
   "\nGo to: "
   ^ make_goto_command
       {
         label = "Type definition";
-        file = Uri.to_string env.Shared_types.Query_env.file.uri;
+        file = Uri.to_string uri;
         start_pos = {line = start_line; character = start_col};
       }

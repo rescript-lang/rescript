@@ -12,7 +12,7 @@ let docs_for_label type_expr ~file ~state ~package ~supports_markdown_links =
     |> List.map (fun {Hover.decl; name; env; loc; path} ->
         let link_to_type_definition_str =
           if supports_markdown_links then
-            Markdown.go_to_definition_text ~env ~pos:loc.Warnings.loc_start
+            Markdown.go_to_definition_text ~env ~pos:loc.Warnings.loc_start ()
           else ""
         in
         (* Since printing the whole name via its path can get quite long, and
