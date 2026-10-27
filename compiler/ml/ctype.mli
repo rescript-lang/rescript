@@ -172,6 +172,10 @@ val instance_constructor :
   type_expr list * type_expr
 (* Same, for a constructor *)
 
+val existential_constructor : string -> string option
+(* The constructor that binds the existential type of this name, given to it
+   by [instance_constructor] in the current request *)
+
 val instance_parameterized_type :
   ?keep_names:bool -> type_expr list -> type_expr -> type_expr list * type_expr
 val instance_declaration : type_declaration -> type_declaration

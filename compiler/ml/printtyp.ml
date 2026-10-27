@@ -41,24 +41,8 @@ let rec longident ppf = function
 let unique_names_key = Request_local.new_key (fun () -> ref Ident.empty)
 let unique_names () = Domain.DLS.get unique_names_key
 
-(* [Ctype.instance_constructor] names the existential type of variable ['a]
-   of constructor [C] [$C_'a], followed by a number when the name is taken.
-   It is printed [$a], and [C] is named in the escape explanation. *)
-let existential_of_name name =
-  match String.rindex_opt name '\'' with
-  | Some i when i >= 3 && name.[0] = '$' && name.[i - 1] = '_' ->
-    let constructor = String.sub name 1 (i - 2) in
-    let var = String.sub name (i + 1) (String.length name - i - 1) in
-    Some ("$" ^ var, constructor)
-  | _ -> None
-
 let ident_name id =
-  try Ident.find_same id !(unique_names ())
-  with Not_found -> (
-    let name = Ident.name id in
-    match existential_of_name name with
-    | Some (display, _) -> display
-    | None -> name)
+  try Ident.find_same id !(unique_names ()) with Not_found -> Ident.name id
 
 let add_unique id =
   try ignore (Ident.find_same id !(unique_names ()))
@@ -1319,13 +1303,13 @@ let rec mismatch = function
 let escape_explanation ppf p =
   match p with
   | Pident id -> (
-    match existential_of_name (Ident.name id) with
-    | Some (display, constructor) ->
+    match Ctype.existential_constructor (Ident.name id) with
+    | Some constructor ->
       fprintf ppf
         "@,\
          @[%s is an existential type bound by the constructor %s.@ It is only \
          known in the scope of the pattern that matches %s.@]"
-        display constructor constructor
+        (Ident.name id) constructor constructor
     | None ->
       fprintf ppf "@,@[The type constructor@;<1 2>%a@ would escape its scope@]"
         path p)
