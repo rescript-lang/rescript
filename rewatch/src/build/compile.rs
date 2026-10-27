@@ -777,6 +777,11 @@ pub fn compiler_args(
     let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
     let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
 
+    let local_namespace_args = match &config.get_namespace() {
+        packages::Namespace::NamespaceWithEntry { entry, .. } if &module_name == entry => vec![],
+        _ => vec!["-I".to_string(), ".".to_string()],
+    };
+
     let namespace_args = match &config.get_namespace() {
         packages::Namespace::NamespaceWithEntry { namespace: _, entry } if &module_name == entry => {
             // if the module is the entry we just want to open the namespace
@@ -880,7 +885,7 @@ pub fn compiler_args(
     Ok(vec![
         namespace_args,
         read_cmi_args,
-        vec!["-I".to_string(), ".".to_string()],
+        local_namespace_args,
         vec![
             "-I".to_string(),
             Path::new("..").join("ocaml").to_string_lossy().to_string(),

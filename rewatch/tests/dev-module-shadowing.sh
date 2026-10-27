@@ -63,3 +63,20 @@ rm consumer/test/Leak.res
 "$REWATCH_EXECUTABLE" build
 
 echo 'Dev-module namespace isolation passed'
+
+# Namespace entries must expose interfaces compatible with the public namespace.
+node <<'NODE'
+const fs = require('fs');
+const config = JSON.parse(fs.readFileSync('provider/rescript.json', 'utf8'));
+config['namespace-entry'] = 'Entry';
+fs.writeFileSync('provider/rescript.json', JSON.stringify(config));
+fs.writeFileSync('provider/src/Entry.res', 'module Public = Public\n');
+fs.writeFileSync('provider/test/Local.res', 'let value = Config.other\n');
+fs.writeFileSync('consumer/src/Use.res', 'let value = Entry.Public.make()\n');
+fs.writeFileSync('consumer/test/Check.res', 'let value = Config.get()\n');
+NODE
+"$REWATCH_EXECUTABLE" clean
+"$REWATCH_EXECUTABLE" build
+"$REWATCH_EXECUTABLE" build
+
+echo 'Namespace-entry isolation passed'
