@@ -449,7 +449,7 @@ let extension_constructors ~state ~package ~(current_file : File.t)
       in
       let path =
         if file.uri = current_file.uri then relative path scope_path
-        else file.module_name :: path
+        else Utils.flatten_any_namespace_in_path (file.module_name :: path)
       in
       {
         declared.item with
