@@ -1,0 +1,68 @@
+Complete src/CompletionExtensibleVariant.res 7:19
+XXX Not found!
+Completable: Cexpression Type[attr]=Nu
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "Num(int)",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nNum(int)\n```\n\n```rescript\ntype attr = ..\n```"
+    },
+    "insertText": "Num($0)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Num(_)",
+    "sortText": "A Num(_)",
+    "tags": []
+  },
+  { "detail": "module Nullable", "kind": 9, "label": "Nullable", "tags": [] },
+  { "detail": "module Null", "kind": 9, "label": "Null", "tags": [] }
+]
+
+Complete src/CompletionExtensibleVariant.res 12:21
+pos_cursor:[12:21] pos_no_white:[12:20] Found pattern:[12:20->12:21]
+Ppat_construct S:[12:20->12:21]
+Completable: Cpattern Value[value]=S
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+[
+  {
+    "detail": "Str(string)",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nStr(string)\n```\n\n```rescript\ntype attr = ..\n```"
+    },
+    "insertText": "Str(${1:_})",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Str(_)",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensibleVariant.res 15:14
+XXX Not found!
+Completable: CexhaustiveSwitch Value[valu]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[valu]
+Path valu
+[
+  { "detail": "attr", "kind": 12, "label": "value", "tags": [] },
+  {
+    "detail": "insert exhaustive switch for value",
+    "filterText": "value",
+    "insertText": "value {\n   | Str(_) => ${1:%todo}\n   | Num(_) => ${2:%todo}\n   | Flag => ${3:%todo}\n   | _ => ${4:%todo}\n   }",
+    "insertTextFormat": 2,
+    "kind": 15,
+    "label": "value (exhaustive switch)",
+    "tags": []
+  }
+]
+
