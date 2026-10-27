@@ -337,6 +337,12 @@ and expression i ppf x =
   | Texp_dict l ->
     line i ppf "Texp_dict\n";
     list i dict_entry ppf l
+  | Texp_spread (kind, l) ->
+    line i ppf "Texp_spread %s\n"
+      (match kind with
+      | Spread_array -> "array"
+      | Spread_list -> "list");
+    list i expression ppf l
   | Texp_ifthenelse (e1, e2, eo) ->
     line i ppf "Texp_ifthenelse\n";
     expression i ppf e1;

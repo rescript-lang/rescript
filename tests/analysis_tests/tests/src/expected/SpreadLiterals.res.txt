@@ -1,0 +1,119 @@
+Dump AST src/SpreadLiterals.res 3:8
+
+Source:
+// let a = [0, ...xs]
+//      ^ast
+
+<*>Pstr_value(
+  value:
+    Ppat_var(a)
+  expr:
+    <*>Pexp_spread(array,
+      Pexp_constant(Pconst_integer(0))
+      ...Pexp_ident:xs
+    )
+)
+
+Inlay Hint src/SpreadLiterals.res 1:34
+[
+  {
+    "kind": 1,
+    "label": ": array<int>",
+    "paddingLeft": true,
+    "paddingRight": false,
+    "position": { "character": 10, "line": 12 }
+  },
+  {
+    "kind": 1,
+    "label": ": list<int>",
+    "paddingLeft": true,
+    "paddingRight": false,
+    "position": { "character": 9, "line": 8 }
+  },
+  {
+    "kind": 1,
+    "label": ": array<int>",
+    "paddingLeft": true,
+    "paddingRight": false,
+    "position": { "character": 10, "line": 7 }
+  },
+  {
+    "kind": 1,
+    "label": ": array<int>",
+    "paddingLeft": true,
+    "paddingRight": false,
+    "position": { "character": 5, "line": 3 }
+  },
+  {
+    "kind": 1,
+    "label": ": list<int>",
+    "paddingLeft": true,
+    "paddingRight": false,
+    "position": { "character": 6, "line": 1 }
+  }
+]
+
+Highlight src/SpreadLiterals.res
+structure items:6 diagnostics:0
+Variable: xs [0:4->0:6]
+Variable: ys [1:4->1:6]
+Variable: a [3:4->3:5]
+Lident: xs 3:15 Variable
+Variable: arrays [7:4->7:10]
+Lident: xs 7:17 Variable
+Variable: lists [8:4->8:9]
+Lident: ys 8:20 Variable
+Lident: ys 8:30 Variable
+Variable: tokens [12:4->12:10]
+Lident: xs 12:17 Variable
+Lident: xs 12:24 Variable
+
+Complete src/SpreadLiterals.res 15:24
+pos_cursor:[15:24] pos_no_white:[15:23] Found expr:[15:11->15:25]
+Completable: Cpath Value[Primitive_array, spread](Nolabel)->le
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Primitive_array, spread](Nolabel)->le
+ContextPath Value[Primitive_array, spread](Nolabel)
+ContextPath Value[Primitive_array, spread]
+Path Primitive_array.spread
+Path Stdlib.Array.le
+Path ArrayUtils.le
+Path le
+[
+  {
+    "detail": "array<'a> => int",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`length(array)` returns the length of (i.e. number of items in) the array.\n\nSee [`Array.length`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/length) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\n\nsomeArray->Array.length == 2\n```\n"
+    },
+    "kind": 12,
+    "label": "Array.length",
+    "tags": []
+  }
+]
+
+Complete src/SpreadLiterals.res 18:35
+pos_cursor:[18:35] pos_no_white:[18:34] Found expr:[18:11->18:36]
+Completable: Cpath Value[Primitive_list, spread](Nolabel)->le
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Primitive_list, spread](Nolabel)->le
+ContextPath Value[Primitive_list, spread](Nolabel)
+ContextPath Value[Primitive_list, spread]
+Path Primitive_list.spread
+Path Stdlib.List.le
+Path le
+[
+  {
+    "detail": "list<'a> => int",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`length(list)` returns the length of `list`.\n\n## Examples\n\n```rescript\nList.length(list{1, 2, 3}) == 3\n```\n"
+    },
+    "kind": 12,
+    "label": "List.length",
+    "tags": []
+  }
+]
+

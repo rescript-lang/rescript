@@ -211,10 +211,11 @@ let rec classify_expression : Typedtree.expression -> sd =
   | Texp_apply {funct = {exp_desc = Texp_ident (_, _, vd)}} when is_ref vd ->
     Static
   (* A dict literal is built by the [Pmakedict] and [Pdict_spread] primitives,
-     see [Translcore] *)
-  | Texp_apply _ | Texp_dict _ | Texp_match _ | Texp_ifthenelse _
-  | Texp_object_get _ | Texp_object_set _ | Texp_field _ | Texp_assert _
-  | Texp_try _ | Texp_tagged_template _ | Texp_template _ ->
+     and an array or list literal with spreads by [Parray_spread] or
+     [Plist_spread], see [Translcore] *)
+  | Texp_apply _ | Texp_dict _ | Texp_spread _ | Texp_match _
+  | Texp_ifthenelse _ | Texp_object_get _ | Texp_object_set _ | Texp_field _
+  | Texp_assert _ | Texp_try _ | Texp_tagged_template _ | Texp_template _ ->
     Dynamic
 
 let rec expression : Env.env -> Typedtree.expression -> Use.t =
@@ -277,6 +278,7 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
       | Tdict_entry (_, e) | Tdict_spread e -> expression env e
     in
     Use.inspect (list entry env entries)
+  | Texp_spread (_, parts) -> Use.inspect (list expression env parts)
   | Texp_construct (_, desc, exprs) ->
     let access_constructor =
       match desc.cstr_kind with

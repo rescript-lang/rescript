@@ -1,0 +1,1 @@
+- Fix the formatter dropping spreads of array and list literals, attributes on literals with spreads, and comments in list literals with spreads.

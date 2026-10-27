@@ -270,6 +270,7 @@ end = struct
         (function
           | Tdict_entry (_, exp) | Tdict_spread exp -> iter_expression exp)
         entries
+    | Texp_spread (_, parts) -> List.iter iter_expression parts
     | Texp_ifthenelse (exp1, exp2, expo) -> (
       iter_expression exp1;
       iter_expression exp2;

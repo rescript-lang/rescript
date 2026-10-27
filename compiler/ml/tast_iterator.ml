@@ -185,6 +185,7 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
       (function
         | Tdict_entry (_, exp) | Tdict_spread exp -> sub.expr sub exp)
       entries
+  | Texp_spread (_, parts) -> List.iter (sub.expr sub) parts
   | Texp_ifthenelse (exp1, exp2, expo) ->
     sub.expr sub exp1;
     sub.expr sub exp2;

@@ -231,6 +231,18 @@ let rec expr_to_context_path_inner ~(in_jsx_context : bool)
          | [] -> None
          | exp :: _ -> expr_to_context_path ~in_jsx_context exp))
   | Pexp_dict _ -> Some (CPDict None)
+  | Pexp_spread (kind, _) ->
+    (* Typed like the runtime call it compiles to, as when the parser
+       represented it as [Pexp_apply] *)
+    Some
+      (CPApply
+         ( CPId
+             {
+               path = [Ast_spread.module_name kind; "spread"];
+               completion_context = Value;
+               loc = e.pexp_loc;
+             },
+           [Nolabel] ))
   | Pexp_ident {txt = Lident "->"} -> None
   | Pexp_ident {txt; loc} ->
     Some

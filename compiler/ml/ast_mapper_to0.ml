@@ -124,6 +124,26 @@ let remove_ppx_context_string_attr attrs =
 
 let map_loc sub {loc; txt} = {loc = sub.location sub loc; txt}
 
+(* v0 has no array or list literals with spreads, [Pexp_spread]: they're the
+   calls of [Primitive_array.spread] and [Primitive_list.spread] they used to be
+   parsed into, whose [spread] carries the [res.spread] marker. The argument is
+   an array of the [Ast_spread.parts]; [Ast_mapper_from0] decodes the parts
+   with ghost locations back into the items. *)
+let spread_marker = "res.spread"
+
+let spread_call ~loc ~attrs kind elements =
+  Ast_helper.Exp.apply ~loc ~attrs
+    (Ast_helper.Exp.ident ~loc
+       ~attrs:[(Location.mknoloc spread_marker, PStr [])]
+       (Location.mkloc
+          (Longident.Ldot
+             (Longident.Lident (Ast_spread.module_name kind), "spread"))
+          loc))
+    [
+      ( Asttypes.Nolabel,
+        Ast_helper.Exp.array ~loc (Ast_spread.parts kind elements) );
+    ]
+
 (* Internal Parsetree0 bridge metadata; public res.* attributes pass through. *)
 let record_rest_attr_name = "_res.record_rest"
 let constructor_args_attr_name = "_res.constructor_args"
@@ -704,6 +724,11 @@ module E = struct
          into *)
       sub.expr sub
         (Ast_dict.to_calls ~loc:e.pexp_loc ~attrs:e.pexp_attributes entries)
+    | Pexp_spread (kind, elements) ->
+      (* v0 has no spread literals: they're the calls they used to be parsed
+         into *)
+      sub.expr sub
+        (spread_call ~loc:e.pexp_loc ~attrs:e.pexp_attributes kind elements)
     | Pexp_ifthenelse (e1, e2, e3) ->
       ifthenelse ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
         (map_opt (sub.expr sub) e3)

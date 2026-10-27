@@ -584,6 +584,8 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
               Some (Js_op.Lit txt, expr)
             | _ -> None))
     | _ -> assert false)
+  | Parray_spread -> E.runtime_call Primitive_modules.array "spread" args
+  | Plist_spread -> E.runtime_call Primitive_modules.list "spread" args
   | Pdict_spread ->
     (* {...target, ...source}, with the rows of dict literals in place *)
     E.obj_entries
