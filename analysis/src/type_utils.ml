@@ -361,6 +361,27 @@ let extract_function_type2 ?type_arg_context ~state ~env ~package typ =
   in
   loop ?type_arg_context ~env [] typ
 
+(* The constructors of an open type are those of its extensions, here the
+   ones in the given files. *)
+let extension_constructors ~(files : File.t list) ~type_name ~decl =
+  let found = Hashtbl.create 8 in
+  files
+  |> List.iter (fun (file : File.t) ->
+      file.stamps
+      |> Stamps.iter_constructors
+           (fun stamp (declared : Constructor.t Declared.t) ->
+             let name, ext_decl = declared.item.type_decl in
+             if name = type_name && ext_decl.type_kind = Type_open then
+               Hashtbl.replace found (file.uri, stamp) declared.item));
+  Hashtbl.to_seq_values found
+  |> List.of_seq
+  |> List.sort (fun (a : Constructor.t) (b : Constructor.t) ->
+      compare
+        (a.cname.loc.loc_start.pos_fname, a.cname.loc.loc_start.pos_cnum)
+        (b.cname.loc.loc_start.pos_fname, b.cname.loc.loc_start.pos_cnum))
+  |> List.map (fun (c : Constructor.t) ->
+      {c with type_decl = (type_name, decl)})
+
 let rec extract_type ?(print_opening_debug = true)
     ?(type_arg_context : type_arg_context option)
     ?(type_arg_context_from_type_manifest : type_arg_context option) ~env ~state
@@ -445,6 +466,28 @@ let rec extract_type ?(print_opening_debug = true)
               variant_decl = decl;
             },
           type_arg_context )
+    | Some (env_from_item, {name; item = {decl; kind = Type.Open}})
+      when decl.type_manifest = None -> (
+      let type_arg_context =
+        maybe_set_type_arg_ctx ~type_params:decl.type_params ~type_args env
+      in
+      match
+        extension_constructors ~files:[env_from_item.file] ~type_name:name.txt
+          ~decl
+      with
+      | [] when name.txt = "t" ->
+        Some (TtypeT {env = env_from_item; path}, type_arg_context)
+      | [] -> None
+      | constructors ->
+        Some
+          ( Tvariant
+              {
+                env = env_from_item;
+                constructors;
+                variant_name = name.txt;
+                variant_decl = decl;
+              },
+            type_arg_context ))
     | Some (env_from_declaration, {item = {kind = Record fields; decl}}) ->
       if Debug.verbose () then print_endline "[extract_type]--> found record";
       (* Need to create a new type arg context here because we're sending along a type expr that might have type vars. *)
@@ -601,6 +644,17 @@ let extract_type_from_resolved_type (typ : Type.t) ~env ~full ~state =
     Some
       (Tvariant
          {env; constructors; variant_name = typ.name; variant_decl = typ.decl})
+  | Open when typ.decl.type_manifest = None -> (
+    match
+      extension_constructors ~files:[env.file; full.file] ~type_name:typ.name
+        ~decl:typ.decl
+    with
+    | [] -> None
+    | constructors ->
+      Some
+        (Tvariant
+           {env; constructors; variant_name = typ.name; variant_decl = typ.decl})
+    )
   | Abstract _ | Open -> (
     match typ.decl.type_manifest with
     | None -> None

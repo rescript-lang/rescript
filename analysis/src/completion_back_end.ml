@@ -2569,15 +2569,23 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
             typ_expr |> Type_utils.extract_type ~env:c.env ~package ~state
           with
           | Some (Tvariant v, _) ->
-            with_exhaustive_item c
-              ~cases:
-                (v.constructors
-                |> List.map (fun (constructor : Constructor.t) ->
-                    constructor.cname.txt
-                    ^
-                    match constructor.args with
-                    | Args [] -> ""
-                    | _ -> "(_)"))
+            let cases =
+              v.constructors
+              |> List.map (fun (constructor : Constructor.t) ->
+                  constructor.cname.txt
+                  ^
+                  match constructor.args with
+                  | Args [] -> ""
+                  | _ -> "(_)")
+            in
+            (* An open type can be extended elsewhere, so only a catch-all
+               case makes the switch exhaustive. *)
+            let cases =
+              match v.variant_decl.type_kind with
+              | Type_open -> cases @ ["_"]
+              | _ -> cases
+            in
+            with_exhaustive_item c ~cases
           | Some (Tpolyvariant v, _) ->
             with_exhaustive_item c
               ~cases:
