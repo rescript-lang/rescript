@@ -1,0 +1,17 @@
+Create Interface src/CreateInterfaceFunctor.res
+module type Ord = {
+  type t
+  let compare: (t, t) => int
+}
+module MakeSet: (
+  O: Ord,
+) =>
+{
+  type t = array<O.t>
+  let add: (t, O.t) => array<O.t>
+}
+module IntSet: {
+  type t = array<int>
+  let add: (t, int) => array<int>
+}
+

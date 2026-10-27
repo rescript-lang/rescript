@@ -95,7 +95,19 @@ end = struct
       !res |> List.rev |> String.concat "\n"
 end
 
-let print_signature ~extractor ~signature =
+(* A type declared in the module being printed can be copied from the source.
+   One that comes from elsewhere, such as the body of an applied functor or an
+   included module of another file, has its location there instead. *)
+let declared_in ~path ~(scope : Location.t option) (loc : Location.t) =
+  Filename.basename loc.loc_start.pos_fname = Filename.basename path
+  &&
+  match scope with
+  | None -> true
+  | Some scope ->
+    scope.loc_start.pos_cnum <= loc.loc_start.pos_cnum
+    && loc.loc_end.pos_cnum <= scope.loc_end.pos_cnum
+
+let print_signature ~path ~extractor ~signature =
   Printtyp.reset_names ();
   let sig_item_to_string (item : Outcometree.out_sig_item) =
     item |> Res_outcome_printer.print_out_sig_item_doc
@@ -140,7 +152,8 @@ let print_signature ~extractor ~signature =
     | _ -> None
   in
 
-  let rec process_signature ~indent (signature : Types.signature) : unit =
+  let rec process_signature ~scope ~indent (signature : Types.signature) : unit
+      =
     match signature with
     | Sig_type
         (props_id, {type_params; type_kind = Type_record (label_decls, _)}, _)
@@ -193,7 +206,7 @@ let print_signature ~extractor ~signature =
       in
       Buffer.add_string buf (indent ^ "@react.component\n");
       Buffer.add_string buf (indent ^ new_item_str ^ "\n");
-      process_signature ~indent rest
+      process_signature ~scope ~indent rest
     | Sig_module (id, mod_decl, rec_status) :: rest ->
       let colon_or_equals =
         match mod_decl.md_type with
@@ -207,9 +220,9 @@ let print_signature ~extractor ~signature =
           | Trec_first -> "module rec "
           | Trec_next -> "and ")
         ^ Ident.name id ^ colon_or_equals);
-      process_module_type ~indent mod_decl.md_type;
+      process_module_type ~scope:(Some mod_decl.md_loc) ~indent mod_decl.md_type;
       Buffer.add_string buf "\n";
-      process_signature ~indent rest
+      process_signature ~scope ~indent rest
     | Sig_modtype (id, mtd) :: rest ->
       let () =
         match mtd.mtd_type with
@@ -217,10 +230,10 @@ let print_signature ~extractor ~signature =
           Buffer.add_string buf (indent ^ "module type " ^ Ident.name id ^ "\n")
         | Some mt ->
           Buffer.add_string buf (indent ^ "module type " ^ Ident.name id ^ " = ");
-          process_module_type ~indent mt;
+          process_module_type ~scope:(Some mtd.mtd_loc) ~indent mt;
           Buffer.add_string buf "\n"
       in
-      process_signature ~indent rest
+      process_signature ~scope ~indent rest
     | Sig_value (id, ({val_kind = Val_prim prim; val_loc} as vd)) :: items
       when prim.prim_kind <> Primitive.Kind_intrinsic ->
       (* Rescript primitive name, e.g. @val external ... *)
@@ -238,34 +251,41 @@ let print_signature ~extractor ~signature =
         (* Copy the external declaration verbatim from the implementation file *)
         Buffer.add_string buf ((lines |> String.concat "\n") ^ "\n");
 
-      process_signature ~indent items
+      process_signature ~scope ~indent items
     | Sig_value (id, vd) :: items ->
       let new_item_str =
         sig_item_to_string (Printtyp.tree_of_value_description id vd)
       in
       Buffer.add_string buf (indent ^ new_item_str ^ "\n");
-      process_signature ~indent items
-    | Sig_type (_id, type_decl, _recStatus) :: items ->
-      let lines =
-        let pos_start, pos_end = Loc.range type_decl.type_loc in
-        extractor |> Source_file_extractor.extract ~pos_start ~pos_end
-      in
-      (* Copy the type declaration verbatim to preserve attributes *)
-      Buffer.add_string buf ((lines |> String.concat "\n") ^ "\n");
-      process_signature ~indent items
+      process_signature ~scope ~indent items
+    | Sig_type (id, type_decl, rec_status) :: items ->
+      (if declared_in ~path ~scope type_decl.type_loc then
+         let lines =
+           let pos_start, pos_end = Loc.range type_decl.type_loc in
+           extractor |> Source_file_extractor.extract ~pos_start ~pos_end
+         in
+         (* Copy the type declaration verbatim to preserve attributes *)
+         Buffer.add_string buf ((lines |> String.concat "\n") ^ "\n")
+       else
+         let new_item_str =
+           sig_item_to_string
+             (Printtyp.tree_of_type_declaration id type_decl rec_status)
+         in
+         Buffer.add_string buf (indent ^ new_item_str ^ "\n"));
+      process_signature ~scope ~indent items
     | Sig_typext (id, ext_constr, ext_status) :: items ->
       let new_item_str =
         sig_item_to_string
           (Printtyp.tree_of_extension_constructor id ext_constr ext_status)
       in
       Buffer.add_string buf (indent ^ new_item_str ^ "\n");
-      process_signature ~indent items
+      process_signature ~scope ~indent items
     | [] -> ()
-  and process_module_type ~indent (mt : Types.module_type) =
+  and process_module_type ~scope ~indent (mt : Types.module_type) =
     match mt with
     | Mty_signature signature ->
       Buffer.add_string buf "{\n";
-      process_signature ~indent:(indent ^ "  ") signature;
+      process_signature ~scope ~indent:(indent ^ "  ") signature;
       Buffer.add_string buf (indent ^ "}")
     | Mty_functor _ ->
       let rec collect_functor_args ~args (mt : Types.module_type) =
@@ -286,11 +306,11 @@ let print_signature ~extractor ~signature =
           | None -> Buffer.add_string buf (Ident.name id)
           | Some mt ->
             Buffer.add_string buf (Ident.name id ^ ": ");
-            process_module_type ~indent:(indent ^ "  ") mt);
+            process_module_type ~scope ~indent:(indent ^ "  ") mt);
           Buffer.add_string buf ",");
       if args <> [] then Buffer.add_string buf ("\n" ^ indent);
       Buffer.add_string buf (") =>\n" ^ indent);
-      process_module_type ~indent ret_mt
+      process_module_type ~scope ~indent ret_mt
     | Mty_ident path | Mty_alias (_, path) ->
       let rec out_ident_to_string (ident : Outcometree.out_ident) =
         match ident with
@@ -302,12 +322,12 @@ let print_signature ~extractor ~signature =
       Buffer.add_string buf (out_ident_to_string (Printtyp.tree_of_path path))
   in
 
-  process_signature ~indent:"" signature;
+  process_signature ~scope:None ~indent:"" signature;
   Buffer.contents buf
 
-let command ~source ~cmi_file =
+let command ~path ~source ~cmi_file =
   match Shared.try_read_cmi cmi_file with
   | Some cmi_info ->
     let extractor = source |> String.split_on_char '\n' |> Array.of_list in
-    Ok (print_signature ~extractor ~signature:cmi_info.cmi_sign)
+    Ok (print_signature ~path ~extractor ~signature:cmi_info.cmi_sign)
   | None -> Error ("Failed to read cmi file " ^ cmi_file)

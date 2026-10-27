@@ -1,0 +1,1 @@
+- Editor "create interface" prints the types of applied functors and included modules instead of copying unrelated source lines.
