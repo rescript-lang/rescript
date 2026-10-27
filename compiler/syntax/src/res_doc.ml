@@ -122,6 +122,25 @@ let rec will_break doc =
   | IfBreaks {yes; no} -> will_break yes || will_break no
   | _ -> false
 
+(* See documentation in interface file *)
+let has_pending_line_suffix doc =
+  (* [pending]: a line suffix is queued; [broken]: the innermost enclosing
+     group is printed in break mode, so its line breaks flush the queue. *)
+  let rec walk ~broken pending doc =
+    match doc with
+    | LineSuffix _ -> true
+    | LineBreak _ -> pending && not broken
+    | Nil | Text _ | BreakParent -> pending
+    | Indent doc -> walk ~broken pending doc
+    | Concat docs -> List.fold_left (walk ~broken) pending docs
+    | Group {should_break; doc} ->
+      walk ~broken:(should_break || will_break doc) pending doc
+    | IfBreaks {yes; no; broken = if_broken} ->
+      walk ~broken pending (if broken || if_broken then yes else no)
+    | CustomLayout docs -> List.exists (walk ~broken:false pending) docs
+  in
+  walk ~broken:false false doc
+
 let join ~sep docs =
   let rec loop acc sep docs =
     match docs with

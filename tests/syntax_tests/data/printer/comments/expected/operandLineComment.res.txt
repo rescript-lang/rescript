@@ -1,0 +1,109 @@
+// A line comment in the operand of a block construct stays in the operand
+
+switch (
+  obj.x // c
+) {
+| _ => ()
+}
+
+switch (
+  obj.x.y // c
+) {
+| _ => ()
+}
+
+switch (
+  obj.x.y // c // d
+) {
+| _ => ()
+}
+
+switch (
+  arr[0] // c
+) {
+| _ => ()
+}
+
+switch (
+  obj["member"] // c
+) {
+| _ => ()
+}
+
+switch (
+  obj["member"] // c
+) {
+| _ => ()
+}
+
+switch (
+  obj->f // c
+) {
+| _ => ()
+}
+
+switch (
+  a + b // c
+) {
+| _ => ()
+}
+
+switch f(
+  // c
+  x,
+) {
+| _ => ()
+}
+
+switch x {
+// c
+| _ => ()
+}
+
+if (
+  obj.x // c
+) {
+  ()
+} else if (
+  obj.y // d
+) {
+  ()
+}
+
+while (
+  obj.x // c
+) {
+  ()
+}
+
+for x of (
+  obj.x // c
+) {
+  ()
+}
+
+let f = async () => {
+  for await x of (
+    obj.x // c
+  ) {
+    ()
+  }
+}
+
+for i in (
+  0 // c
+) to n {
+  ()
+}
+
+for i in 0 to (
+  n // c
+) {
+  ()
+}
+
+try (
+  obj.x // c
+) catch {
+| _ => ()
+}

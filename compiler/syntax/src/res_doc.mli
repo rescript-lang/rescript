@@ -50,6 +50,13 @@ val will_break : t -> bool
     [will_break] to detect a forced break in a custom layout and explicitly add
     [break_parent] to propagate it to the parent document. *)
 
+val has_pending_line_suffix : t -> bool
+(** [has_pending_line_suffix doc] checks whether a line suffix (a trailing line
+    comment) in [doc] is still queued at its end, because no line break of a
+    group that breaks follows it. Groups that only break for lack of width
+    count as flat. Text after [doc] on the same line would precede the
+    comment. *)
+
 val to_string : width:int -> t -> string
 val debug : t -> unit
 
