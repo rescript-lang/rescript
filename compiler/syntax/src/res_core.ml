@@ -5417,14 +5417,14 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
     if Parser.optional p Token.Private then Asttypes.Private
     else Asttypes.Public
   in
-  let kind =
+  let kind, attrs =
     match Parser.peek p with
-    | Bar | Uident _ | DocComment _ ->
-      Parsetree.Ptype_variant (parse_type_constructor_declarations p)
-    | At -> (
-      (* Attributes can prefix either a variant (constructor list), a record, or an
-         open/extensible variant marker (`..`). Peek past attributes and any doc
-         comments to decide which kind it is. *)
+    | Bar | Uident _ ->
+      (Parsetree.Ptype_variant (parse_type_constructor_declarations p), [])
+    | At | DocComment _ -> (
+      (* Attributes and doc comments can prefix either a variant (constructor
+         list), a record, or an open/extensible variant marker (`..`). Peek past
+         them to decide which kind it is. *)
       let after_attrs =
         Parser.lookahead p (fun state ->
             ignore (parse_attributes state);
@@ -5433,37 +5433,39 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
       in
       match after_attrs with
       | Lbrace ->
-        (* consume the attributes and any doc comments before the record *)
-        ignore (parse_attributes p);
-        skip_doc_comments p;
-        Parsetree.Ptype_record
-          (parse_record_declaration ?current_type_name_path
-             ?inline_types_context p)
+        (* Attributes (and doc comments) before a record have no node of their
+           own: they are returned so the caller attaches them to the type
+           declaration. *)
+        let attrs = parse_attributes p in
+        ( Parsetree.Ptype_record
+            (parse_record_declaration ?current_type_name_path
+               ?inline_types_context p),
+          attrs )
       | DotDot ->
-        (* attributes before an open variant marker; consume attrs/docs then handle `..` *)
-        ignore (parse_attributes p);
-        skip_doc_comments p;
+        (* Same for attributes before an open variant marker `..`. *)
+        let attrs = parse_attributes p in
         Parser.next p;
         (* consume DotDot *)
-        Ptype_open
+        (Ptype_open, attrs)
       | _ ->
         (* fall back to variant constructor declarations; leave attributes for the
              constructor parsing so they attach to the first constructor. *)
-        Parsetree.Ptype_variant (parse_type_constructor_declarations p))
+        (Parsetree.Ptype_variant (parse_type_constructor_declarations p), []))
     | Lbrace ->
-      Parsetree.Ptype_record
-        (parse_record_declaration ?current_type_name_path ?inline_types_context
-           p)
+      ( Parsetree.Ptype_record
+          (parse_record_declaration ?current_type_name_path
+             ?inline_types_context p),
+        [] )
     | DotDot ->
       Parser.next p;
-      Ptype_open
+      (Ptype_open, [])
     | token ->
       Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
       (* TODO: I have no idea if this is even remotely a good idea *)
-      Parsetree.Ptype_variant []
+      (Parsetree.Ptype_variant [], [])
   in
   Parser.eat_breadcrumb p;
-  (private_flag, kind)
+  (private_flag, kind, attrs)
 
 (* type-param	::=
  *  | variance 'lident
@@ -5614,8 +5616,8 @@ and parse_type_equation_or_constr_decl p =
       match Parser.peek p with
       | Equal ->
         Parser.next p;
-        let priv, kind = parse_type_representation p in
-        (Some typ, priv, kind)
+        let priv, kind, attrs = parse_type_representation p in
+        (Some typ, priv, kind, attrs)
       | EqualGreater ->
         Parser.next p;
         let return_type = parse_typ_expr ~alias:false p in
@@ -5626,8 +5628,8 @@ and parse_type_equation_or_constr_decl p =
             return_type
         in
         let typ = parse_type_alias p arrow_type in
-        (Some typ, Asttypes.Public, Parsetree.Ptype_abstract)
-      | _ -> (Some typ, Asttypes.Public, Parsetree.Ptype_abstract))
+        (Some typ, Asttypes.Public, Parsetree.Ptype_abstract, [])
+      | _ -> (Some typ, Asttypes.Public, Parsetree.Ptype_abstract, []))
     | _ ->
       let uident_end_pos = Parser.position p in
       let args, res = parse_constr_decl_args p in
@@ -5641,12 +5643,12 @@ and parse_type_equation_or_constr_decl p =
       in
       ( None,
         Asttypes.Public,
-        Parsetree.Ptype_variant (parse_type_constructor_declarations p ?first)
-      ))
+        Parsetree.Ptype_variant (parse_type_constructor_declarations p ?first),
+        [] ))
   | t ->
     Parser.err p (Diagnostics.uident t);
     (* TODO: is this a good idea? *)
-    (None, Asttypes.Public, Parsetree.Ptype_abstract)
+    (None, Asttypes.Public, Parsetree.Ptype_abstract, [])
 
 and parse_spread_tail_classified ?current_type_name_path ?inline_types_context
     ~start_pos ~spread_typ ~grammar p =
@@ -5856,18 +5858,18 @@ and parse_private_eq_or_repr p =
   match Parser.peek p with
   | Lbrace ->
     let manifest, _, kind = parse_record_or_object_decl p in
-    (manifest, Asttypes.Private, kind)
+    (manifest, Asttypes.Private, kind, [])
   | Uident _ ->
-    let manifest, _, kind = parse_type_equation_or_constr_decl p in
-    (manifest, Asttypes.Private, kind)
+    let manifest, _, kind, attrs = parse_type_equation_or_constr_decl p in
+    (manifest, Asttypes.Private, kind, attrs)
   | Bar | DotDot ->
-    let _, kind = parse_type_representation p in
-    (None, Asttypes.Private, kind)
+    let _, kind, attrs = parse_type_representation p in
+    (None, Asttypes.Private, kind, attrs)
   | t when Grammar.is_typ_expr_start t ->
-    (Some (parse_typ_expr p), Asttypes.Private, Parsetree.Ptype_abstract)
+    (Some (parse_typ_expr p), Asttypes.Private, Parsetree.Ptype_abstract, [])
   | _ ->
-    let _, kind = parse_type_representation p in
-    (None, Asttypes.Private, kind)
+    let _, kind, attrs = parse_type_representation p in
+    (None, Asttypes.Private, kind, attrs)
 
 (*
   polymorphic-variant-type	::=
@@ -6092,12 +6094,18 @@ and parse_type_equation_and_representation ?current_type_name_path
     match Parser.peek p with
     | Uident _ -> parse_type_equation_or_constr_decl p
     | Lbrace ->
-      parse_record_or_object_decl ?current_type_name_path ?inline_types_context
-        p
+      let manifest, priv, kind =
+        parse_record_or_object_decl ?current_type_name_path
+          ?inline_types_context p
+      in
+      (manifest, priv, kind, [])
     | Private -> parse_private_eq_or_repr p
     | Bar | DotDot | DocComment _ ->
-      let priv, kind = parse_type_representation p in
-      (None, priv, kind)
+      let priv, kind, attrs =
+        parse_type_representation ?current_type_name_path ?inline_types_context
+          p
+      in
+      (None, priv, kind, attrs)
     | At -> (
       (* Attributes can start a representation (variant/record/open variant) or a manifest.
          Look ahead past attributes (and doc comments). If a representation-like token follows,
@@ -6135,31 +6143,34 @@ and parse_type_equation_and_representation ?current_type_name_path
             | _ -> false)
       in
       if is_representation_after_attrs then
-        let priv, kind = parse_type_representation p in
-        (None, priv, kind)
+        let priv, kind, attrs =
+          parse_type_representation ?current_type_name_path
+            ?inline_types_context p
+        in
+        (None, priv, kind, attrs)
       else
         let manifest = Some (parse_typ_expr p) in
         match Parser.peek p with
         | Equal ->
           Parser.next p;
-          let priv, kind =
+          let priv, kind, attrs =
             parse_type_representation ?current_type_name_path
               ?inline_types_context p
           in
-          (manifest, priv, kind)
-        | _ -> (manifest, Public, Parsetree.Ptype_abstract))
+          (manifest, priv, kind, attrs)
+        | _ -> (manifest, Public, Parsetree.Ptype_abstract, []))
     | _ -> (
       let manifest = Some (parse_typ_expr p) in
       match Parser.peek p with
       | Equal ->
         Parser.next p;
-        let priv, kind =
+        let priv, kind, attrs =
           parse_type_representation ?current_type_name_path
             ?inline_types_context p
         in
-        (manifest, priv, kind)
-      | _ -> (manifest, Public, Parsetree.Ptype_abstract)))
-  | _ -> (None, Public, Parsetree.Ptype_abstract)
+        (manifest, priv, kind, attrs)
+      | _ -> (manifest, Public, Parsetree.Ptype_abstract, [])))
+  | _ -> (None, Public, Parsetree.Ptype_abstract, [])
 
 (* type-definition	::=	type [rec] typedef  { and typedef }
  * typedef	::=	typeconstr-name [type-params] type-information
@@ -6176,11 +6187,13 @@ and parse_type_def ~attrs ~start_pos p =
     parse_type_params ~parent:constr_name p
   in
   let type_def =
-    let manifest, priv, kind = parse_type_equation_and_representation p in
+    let manifest, priv, kind, repr_attrs =
+      parse_type_equation_and_representation p
+    in
     let cstrs = parse_type_constraints p in
     let loc = mk_loc start_pos (Parser.position p) in
-    Ast_helper.Type.mk ~loc ~attrs ~priv ~kind ~params ~cstrs ?manifest
-      type_constr_name
+    Ast_helper.Type.mk ~loc ~attrs:(attrs @ repr_attrs) ~priv ~kind ~params
+      ~cstrs ?manifest type_constr_name
   in
   Parser.eat_breadcrumb p;
   type_def
@@ -6224,13 +6237,14 @@ and parse_type_extension ~params ~attrs ~name p =
 and parse_type_definitions ~current_type_name_path ~inline_types_context ~attrs
     ~name ~params ~start_pos p =
   let type_def =
-    let manifest, priv, kind =
+    let manifest, priv, kind, repr_attrs =
       parse_type_equation_and_representation ~current_type_name_path
         ~inline_types_context p
     in
     let cstrs = parse_type_constraints p in
     let loc = mk_loc start_pos (Parser.position p) in
-    Ast_helper.Type.mk ~loc ~attrs ~priv ~kind ~params ~cstrs ?manifest
+    Ast_helper.Type.mk ~loc ~attrs:(attrs @ repr_attrs) ~priv ~kind ~params
+      ~cstrs ?manifest
       {name with txt = lident_of_path name.Location.txt}
   in
   let rec loop p defs =
