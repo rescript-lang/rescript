@@ -13,14 +13,14 @@
   Signature mismatch:
   Modules do not match:
     {
-  type t = ..
-  type t += E(string)
-}
+      type t = ..
+      type t += E(string)
+    }
   is not included in
     {
-  type t = ..
-  type t += E(int)
-}
+      type t = ..
+      type t += E(int)
+    }
   Extension declarations do not match:
     type t +=  E(string)
   is not included in

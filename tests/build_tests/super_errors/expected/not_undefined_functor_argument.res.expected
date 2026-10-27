@@ -12,12 +12,12 @@
   Signature mismatch:
   Modules do not match:
     {
-  type t = option<int>
-}
+      type t = option<int>
+    }
   is not included in
     {
-  type t
-}
+      type t
+    }
   Type declarations do not match:
     type t = option<int>
   is not included in

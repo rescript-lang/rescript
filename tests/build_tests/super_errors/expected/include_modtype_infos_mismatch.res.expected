@@ -14,33 +14,33 @@
   Signature mismatch:
   Modules do not match:
     {
-  module type T = {
-    let x: string
-  }
-}
+      module type T = {
+        let x: string
+      }
+    }
   is not included in
     {
-  module type T = {
-    let x: int
-  }
-}
+      module type T = {
+        let x: int
+      }
+    }
   Module type declarations do not match:
     module type T = {
-  let x: string
-}
+      let x: string
+    }
   does not match
     module type T = {
-  let x: int
-}
+      let x: int
+    }
   At position module type T = <here>
   Modules do not match:
     {
-  let x: string
-}
+      let x: string
+    }
   is not included in
     {
-  let x: int
-}
+      let x: int
+    }
   At position module type T = <here>
   Values do not match: let x: string is not included in let x: int
   [36m/.../fixtures/include_modtype_infos_mismatch.res[0m:[2m3:5-14[0m:

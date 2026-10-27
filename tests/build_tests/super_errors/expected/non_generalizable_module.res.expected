@@ -11,10 +11,10 @@
 
   The type of this module contains type variables that cannot be generalized:
   [1;31m{
-  module Inner: {
-    let r: ref<option<'_weak1>>
-  }
-}[0m
+    module Inner: {
+      let r: ref<option<'_weak1>>
+    }
+  }[0m
   
   This happens when the type system senses there's a mutation/side-effect,
   in combination with a polymorphic value.

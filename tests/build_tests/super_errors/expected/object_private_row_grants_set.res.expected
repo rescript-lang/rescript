@@ -12,12 +12,12 @@
   Signature mismatch:
   Modules do not match:
     {
-  type t = private {.."x": int}
-}
+      type t = private {.."x": int}
+    }
   is not included in
     {
-  type t = private {..@set "x": int}
-}
+      type t = private {..@set "x": int}
+    }
   Type declarations do not match:
     type t = private {.."x": int}
   is not included in

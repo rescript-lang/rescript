@@ -14,27 +14,27 @@
   Signature mismatch:
   Modules do not match:
     {
-  module type T = {
-    let b: int
-    let a: int
-  }
-}
+      module type T = {
+        let b: int
+        let a: int
+      }
+    }
   is not included in
     {
-  module type T = {
-    let a: int
-    let b: int
-  }
-}
+      module type T = {
+        let a: int
+        let b: int
+      }
+    }
   Module type declarations do not match:
     module type T = {
-  let b: int
-  let a: int
-}
+      let b: int
+      let a: int
+    }
   does not match
     module type T = {
-  let a: int
-  let b: int
-}
+      let a: int
+      let b: int
+    }
   At position module type T = <here>
   Illegal permutation of structure fields

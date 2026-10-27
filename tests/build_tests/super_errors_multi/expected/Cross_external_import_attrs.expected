@@ -12,10 +12,10 @@
   does not match the interface /.../fixtures/Cross_external_import_attrs/importattrs.cmi:
   Values do not match:
     @val @module({from: "somepkg", with: {type_: "json", \"some-identifier": "nope"}}) external data: int =
-  "default"
+      "default"
   is not included in
     @val @module({from: "somepkg", with: {type_: "json", \"some-identifier": "yep"}}) external data: int =
-  "default"
+      "default"
   [36m/.../fixtures/Cross_external_import_attrs/Importattrs.resi[0m:[2m1:1-2:30[0m:
     Expected declaration
   [36m/.../fixtures/Cross_external_import_attrs/Importattrs.res[0m:[2m1:1-2:30[0m:

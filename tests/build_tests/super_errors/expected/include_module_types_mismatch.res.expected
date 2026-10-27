@@ -14,16 +14,19 @@
   Signature mismatch:
   Modules do not match:
     {
-  module M: {
-    let a: string
-  }
-}
+      module M: {
+        let a: string
+      }
+    }
   is not included in
     Outer
   In module M:
-  Modules do not match: {
-  let a: string
-} is not included in Inner
+  Modules do not match:
+    {
+      let a: string
+    }
+  is not included in
+    Inner
   In module M:
   Values do not match: let a: string is not included in let a: int
   [36m/.../fixtures/include_module_types_mismatch.res[0m:[2m2:3-12[0m:
