@@ -23,9 +23,17 @@ Path attr
   { "detail": "module Null", "kind": 9, "label": "Null", "tags": [] }
 ]
 
-Complete src/CompletionExtensibleVariant.res 12:21
-pos_cursor:[12:21] pos_no_white:[12:20] Found pattern:[12:20->12:21]
-Ppat_construct S:[12:20->12:21]
+Hover src/CompletionExtensibleVariant.res 10:19
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nattr\n```\n\n---\n\n```\n \n```\n```rescript\ntype attr = ..\n```\nGo to: [Type definition](CompletionExtensibleVariant.res#L1,1)\n"
+  }
+}
+
+Complete src/CompletionExtensibleVariant.res 13:21
+pos_cursor:[13:21] pos_no_white:[13:20] Found pattern:[13:20->13:21]
+Ppat_construct S:[13:20->13:21]
 Completable: Cpattern Value[value]=S
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -43,10 +51,22 @@ Path value
     "kind": 4,
     "label": "Str(_)",
     "tags": []
+  },
+  {
+    "detail": "Sub.Flag",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSub.Flag\n```\n\n```rescript\ntype attr = ..\n```"
+    },
+    "insertText": "Sub.Flag",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Sub.Flag",
+    "tags": []
   }
 ]
 
-Complete src/CompletionExtensibleVariant.res 15:14
+Complete src/CompletionExtensibleVariant.res 16:14
 XXX Not found!
 Completable: CexhaustiveSwitch Value[valu]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -58,10 +78,79 @@ Path valu
   {
     "detail": "insert exhaustive switch for value",
     "filterText": "value",
-    "insertText": "value {\n   | Str(_) => ${1:%todo}\n   | Num(_) => ${2:%todo}\n   | Flag => ${3:%todo}\n   | _ => ${4:%todo}\n   }",
+    "insertText": "value {\n   | Str(_) => ${1:%todo}\n   | Num(_) => ${2:%todo}\n   | Sub.Flag => ${3:%todo}\n   | _ => ${4:%todo}\n   }",
     "insertTextFormat": 2,
     "kind": 15,
     "label": "value (exhaustive switch)",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensibleVariant.res 32:17
+pos_cursor:[32:17] pos_no_white:[32:16] Found pattern:[32:16->32:17]
+Ppat_construct M:[32:16->32:17]
+Completable: Cpattern Value[a]=M
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[a]
+Path a
+[
+  {
+    "detail": "MoreA",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nMoreA\n```\n\n```rescript\ntype t = ..\n```"
+    },
+    "insertText": "MoreA",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "MoreA",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensibleVariant.res 35:17
+pos_cursor:[35:17] pos_no_white:[35:16] Found pattern:[35:16->35:17]
+Ppat_construct F:[35:16->35:17]
+Completable: Cpattern Value[a]=F
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[a]
+Path a
+[
+  {
+    "detail": "A.FromA",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nA.FromA\n```\n\n```rescript\ntype t = ..\n```"
+    },
+    "insertText": "A.FromA",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "A.FromA",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensibleVariant.res 38:22
+pos_cursor:[38:22] pos_no_white:[38:21] Found pattern:[38:20->38:22]
+Ppat_construct Fl:[38:20->38:22]
+Completable: Cpattern Value[value]=Fl
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+[
+  {
+    "detail": "Sub.Flag",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSub.Flag\n```\n\n```rescript\ntype attr = ..\n```"
+    },
+    "insertText": "Sub.Flag",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Sub.Flag",
     "tags": []
   }
 ]
