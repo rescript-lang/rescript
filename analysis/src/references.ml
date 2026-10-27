@@ -440,6 +440,11 @@ type references = {
 
 let for_local_stamp ~state ~full:{file; extra; package} stamp (tip : Tip.t) =
   let env = Query_env.from_file file in
+  let stamp =
+    match Hashtbl.find_opt file.renamed_stamps stamp with
+    | Some original -> original
+    | None -> stamp
+  in
   match
     match tip with
     | Constructor name ->

@@ -1,4 +1,36 @@
-Hover src/AppliedFunctor.res 15:15
+References src/AppliedFunctor.res 7:7
+[
+  {
+    "range": {
+      "end": { "character": 9, "line": 7 },
+      "start": { "character": 6, "line": 7 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 16 },
+      "start": { "character": 15, "line": 16 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 19 },
+      "start": { "character": 16, "line": 19 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 22 },
+      "start": { "character": 16, "line": 22 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+Hover src/AppliedFunctor.res 16:15
 {
   "contents": {
     "kind": "markdown",
@@ -6,7 +38,76 @@ Hover src/AppliedFunctor.res 15:15
   }
 }
 
-Hover src/AppliedFunctor.res 18:14
+References src/AppliedFunctor.res 19:16
+[
+  {
+    "range": {
+      "end": { "character": 9, "line": 7 },
+      "start": { "character": 6, "line": 7 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 16 },
+      "start": { "character": 15, "line": 16 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 19 },
+      "start": { "character": 16, "line": 19 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 22 },
+      "start": { "character": 16, "line": 22 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+Rename src/AppliedFunctor.res 22:16 insert
+[
+  {
+    "edits": [
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 9, "line": 7 },
+          "start": { "character": 6, "line": 7 }
+        }
+      },
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 18, "line": 16 },
+          "start": { "character": 15, "line": 16 }
+        }
+      },
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 19, "line": 19 },
+          "start": { "character": 16, "line": 19 }
+        }
+      },
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 19, "line": 22 },
+          "start": { "character": 16, "line": 22 }
+        }
+      }
+    ],
+    "textDocument": { "uri": "file:///AppliedFunctor.res", "version": 0 }
+  }
+]
+
+Hover src/AppliedFunctor.res 25:14
 {
   "contents": {
     "kind": "markdown",
@@ -14,9 +115,9 @@ Hover src/AppliedFunctor.res 18:14
   }
 }
 
-Complete src/AppliedFunctor.res 21:19
-pos_cursor:[21:19] pos_no_white:[21:18] Found expr:[21:12->21:19]
-Pexp_ident IntSet.:[21:12->21:19]
+Complete src/AppliedFunctor.res 28:19
+pos_cursor:[28:19] pos_no_white:[28:18] Found expr:[28:12->28:19]
+Pexp_ident IntSet.:[28:12->28:19]
 Completable: Cpath Value[IntSet, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
