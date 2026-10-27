@@ -1,0 +1,1 @@
+- The new `Temporal` stdlib module shadows a project module named `Temporal`, so rename such a module. A nested module named `Temporal` is now exported to JS as `$$Temporal`, like modules named after other JS globals such as `Intl`, so that it no longer shadows the global `Temporal`.
