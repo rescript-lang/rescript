@@ -1,0 +1,48 @@
+Hover src/HoverFunctor.res 5:9
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule MakeSet: (O: Ord) => {\n  type t = array<O.t>\n  let add: (t, O.t) => array<O.t>\n}\n```"
+  }
+}
+
+Hover src/HoverFunctor.res 11:7
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule Pair: (A: Ord, B: Ord) => {\n  type t = (A.t, B.t)\n}\n```"
+  }
+}
+
+Hover src/HoverFunctor.res 16:9
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule Inline: (X: {let x: int}) => {\n  let y: int\n}\n```"
+  }
+}
+
+Hover src/HoverFunctor.res 29:8
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule IntSet: {\n  type t = array<IntOrd.t>\n  let add: (t, IntOrd.t) => array<IntOrd.t>\n}\n```"
+  }
+}
+
+Hover src/HoverFunctor.res 33:8
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule PairInt: (B: Ord) => {\n  type t = (IntOrd.t, B.t)\n}\n```"
+  }
+}
+
+Hover src/HoverFunctor.res 36:9
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule Counter: () => {\n  let count: ref<int>\n}\n```"
+  }
+}
+

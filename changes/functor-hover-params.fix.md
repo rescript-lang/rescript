@@ -1,0 +1,1 @@
+- Hover on a functor shows its parameters, such as `module MakeSet: (O: Ord) => {...}`, instead of only its body.

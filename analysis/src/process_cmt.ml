@@ -35,6 +35,35 @@ let map_record_field {Types.ld_id; ld_type; ld_attributes; ld_optional} =
     deprecated = Process_attributes.find_deprecated_attribute ld_attributes;
   }
 
+(* A functor parameter's module type, on one line for hover. *)
+let module_type_to_string (mty : Types.module_type) =
+  match mty with
+  | Mty_ident path | Mty_alias (_, path) -> Printtyp.string_of_path path
+  | Mty_signature signature ->
+    let items =
+      Printtyp.tree_of_signature signature
+      |> List.map (fun item ->
+          Res_outcome_printer.print_out_sig_item_doc item
+          |> Res_doc.to_string ~width:Res_printer.default_print_width)
+    in
+    "{" ^ String.concat "; " items ^ "}"
+  | Mty_functor _ -> "{...}"
+
+(* A functor parameter as hover shows it, such as [O: Ord]; a generative
+   functor's [*] parameter shows as nothing, giving [() => ...]. *)
+let functor_param ~name (mty : Types.module_type option) =
+  match (name, mty) with
+  | "*", _ -> ""
+  | _, None -> name
+  | _, Some mty -> name ^ ": " ^ module_type_to_string mty
+
+let rec add_functor_param param (m : Module.t) : Module.t =
+  match m with
+  | Structure s -> Structure {s with functor_params = param :: s.functor_params}
+  | Constraint (m1, m2) ->
+    Constraint (add_functor_param param m1, add_functor_param param m2)
+  | Ident _ -> m
+
 let rec for_type_signature_item ~(env : Shared_types.Env.t)
     ~(exported : Exported.t) (item : Types.signature_item) =
   match item with
@@ -196,7 +225,14 @@ and for_type_signature ~name ~env signature =
       (fun item items -> for_type_signature_item ~env ~exported item @ items)
       signature []
   in
-  {Module.name; docstring = []; exported; items; deprecated = None}
+  {
+    Module.name;
+    docstring = [];
+    exported;
+    items;
+    deprecated = None;
+    functor_params = [];
+  }
 
 and for_type_module ~name ~env module_type =
   match module_type with
@@ -204,8 +240,9 @@ and for_type_module ~name ~env module_type =
   | Mty_alias (_ (* 402 *), path) -> Ident path
   | Mty_signature signature ->
     Structure (for_type_signature ~name ~env signature)
-  | Mty_functor (_argIdent, _argType, result_type) ->
+  | Mty_functor (arg_ident, arg_type, result_type) ->
     for_type_module ~name ~env result_type
+    |> add_functor_param (functor_param ~name:(Ident.name arg_ident) arg_type)
 
 (* Stamps given to renamed identifiers start here, far above the stamps
    in a typed tree, so that they never meet one of them. *)
@@ -494,7 +531,7 @@ let for_signature ~name ~env sig_items =
   in
   let docstring = attrs_to_docstring attributes in
   let deprecated = Process_attributes.find_deprecated_attribute attributes in
-  {Module.name; docstring; exported; items; deprecated}
+  {Module.name; docstring; exported; items; deprecated; functor_params = []}
 
 let rec get_module_path mod_desc =
   match mod_desc with
@@ -746,7 +783,11 @@ and for_module ~env (mod_expr : Typedtree.module_expr) module_name =
           ~extent:arg_name.loc ~stamp ~module_path:NotVisible false []
       in
       Stamps.add_module env.stamps stamp declared);
-    for_module ~env result_expr module_name
+    let param =
+      functor_param ~name:arg_name.txt
+        (Option.map (fun (t : Typedtree.module_type) -> t.mty_type) maybe_type)
+    in
+    for_module ~env result_expr module_name |> add_functor_param param
   | Tmod_apply (functor_, _arg, _coercion) ->
     (* The functor's body has the parameter's types; the application's
        signature has the argument's. Its items keep the identifiers of the
@@ -819,7 +860,7 @@ and for_structure ~name ~env str_items =
   in
   let docstring = attrs_to_docstring attributes in
   let deprecated = Process_attributes.find_deprecated_attribute attributes in
-  {Module.name; docstring; exported; items; deprecated}
+  {Module.name; docstring; exported; items; deprecated; functor_params = []}
 
 let file_for_cmt_infos ~module_name ~uri
     ({cmt_modname; cmt_annots} : Cmt_format.cmt_infos) =
