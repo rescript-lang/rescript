@@ -1783,7 +1783,22 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
       ]
   | Tvariant {env; constructors; variant_decl; variant_name} ->
     if Debug.verbose () then print_endline "[complete_typed_value]--> Tvariant";
+    (* An extension constructor is named by its module path, as in
+       [Sub.Flag]; the prefix may also be the start of its last part. *)
+    let matches_prefix name =
+      prefix = ""
+      || Utils.starts_with name prefix
+      ||
+      match String.rindex_opt name '.' with
+      | Some i ->
+        Utils.starts_with
+          (String.sub name (i + 1) (String.length name - i - 1))
+          prefix
+      | None -> false
+    in
     constructors
+    |> List.filter (fun (constructor : Constructor.t) ->
+        matches_prefix constructor.cname.txt)
     |> List.map (fun (constructor : Constructor.t) ->
         let num_args =
           match constructor.args with
@@ -1800,7 +1815,6 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
             (Constructor
                (constructor, variant_decl |> Shared.decl_to_string variant_name))
           ~env)
-    |> filter_items ~prefix
   | Tpolyvariant {env; constructors; type_expr} ->
     if Debug.verbose () then
       print_endline "[complete_typed_value]--> Tpolyvariant";

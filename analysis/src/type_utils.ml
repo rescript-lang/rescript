@@ -361,26 +361,77 @@ let extract_function_type2 ?type_arg_context ~state ~env ~package typ =
   in
   loop ?type_arg_context ~env [] typ
 
+(* The stamp under which [typ] is declared in [file]. *)
+let type_stamp (file : File.t) (typ : Type.t) =
+  let found = ref None in
+  file.stamps
+  |> Stamps.iter_types (fun stamp (declared : Type.t Declared.t) ->
+      if declared.item == typ then found := Some stamp);
+  !found
+
 (* The constructors of an open type are those of its extensions, here the
-   ones in the given files. *)
-let extension_constructors ~(files : File.t list) ~type_name ~decl =
+   ones in the type's file and in the current file. An extension names the
+   type it extends by its path where it is declared: an identifier of the
+   type's own file, or a path resolved from the extension's file. The
+   constructors are named by their module path, since an extension
+   constructor can't be found from the expected type alone. *)
+let extension_constructors ~state ~package ~(current_file : File.t)
+    ~(type_file : File.t) ~type_stamp ~type_name ~decl =
+  let extends (file : File.t) (ext_decl : Types.type_declaration) =
+    match (type_stamp, ext_decl.type_manifest) with
+    | None, _ -> true
+    | Some stamp, Some {desc = Tconstr (Pident id, _, _)} ->
+      file.uri = type_file.uri && Ident.binding_time id = stamp
+    | Some stamp, Some {desc = Tconstr (path, _, _)} -> (
+      match
+        References.dig_constructor ~state ~env:(Query_env.from_file file)
+          ~package path
+      with
+      | Some (env, declared) ->
+        env.file.uri = type_file.uri && declared.stamp = stamp
+      | None -> false)
+    | Some _, _ -> false
+  in
   let found = Hashtbl.create 8 in
+  let files =
+    if current_file.uri = type_file.uri then [type_file]
+    else [type_file; current_file]
+  in
   files
   |> List.iter (fun (file : File.t) ->
       file.stamps
       |> Stamps.iter_constructors
            (fun stamp (declared : Constructor.t Declared.t) ->
              let name, ext_decl = declared.item.type_decl in
-             if name = type_name && ext_decl.type_kind = Type_open then
-               Hashtbl.replace found (file.uri, stamp) declared.item));
+             if
+               name = type_name
+               && ext_decl.type_kind = Type_open
+               && extends file ext_decl
+             then Hashtbl.replace found (file.uri, stamp) (file, declared)));
   Hashtbl.to_seq_values found
   |> List.of_seq
-  |> List.sort (fun (a : Constructor.t) (b : Constructor.t) ->
-      compare
-        (a.cname.loc.loc_start.pos_fname, a.cname.loc.loc_start.pos_cnum)
-        (b.cname.loc.loc_start.pos_fname, b.cname.loc.loc_start.pos_cnum))
-  |> List.map (fun (c : Constructor.t) ->
-      {c with type_decl = (type_name, decl)})
+  |> List.sort
+       (fun
+         ((_, a) : File.t * Constructor.t Declared.t)
+         ((_, b) : File.t * Constructor.t Declared.t)
+       ->
+         compare
+           ( a.item.cname.loc.loc_start.pos_fname,
+             a.item.cname.loc.loc_start.pos_cnum )
+           ( b.item.cname.loc.loc_start.pos_fname,
+             b.item.cname.loc.loc_start.pos_cnum ))
+  |> List.map (fun ((file : File.t), (declared : Constructor.t Declared.t)) ->
+      let path =
+        Module_path.to_path declared.module_path declared.item.cname.txt
+      in
+      let path =
+        if file.uri = current_file.uri then path else file.module_name :: path
+      in
+      {
+        declared.item with
+        cname = {declared.item.cname with txt = String.concat "." path};
+        type_decl = (type_name, decl);
+      })
 
 let rec extract_type ?(print_opening_debug = true)
     ?(type_arg_context : type_arg_context option)
@@ -466,14 +517,15 @@ let rec extract_type ?(print_opening_debug = true)
               variant_decl = decl;
             },
           type_arg_context )
-    | Some (env_from_item, {name; item = {decl; kind = Type.Open}})
+    | Some (env_from_item, {name; stamp; item = {decl; kind = Type.Open}})
       when decl.type_manifest = None -> (
       let type_arg_context =
         maybe_set_type_arg_ctx ~type_params:decl.type_params ~type_args env
       in
       match
-        extension_constructors ~files:[env_from_item.file] ~type_name:name.txt
-          ~decl
+        extension_constructors ~state ~package ~current_file:env.file
+          ~type_file:env_from_item.file ~type_stamp:(Some stamp)
+          ~type_name:name.txt ~decl
       with
       | [] when name.txt = "t" ->
         Some (TtypeT {env = env_from_item; path}, type_arg_context)
@@ -646,8 +698,9 @@ let extract_type_from_resolved_type (typ : Type.t) ~env ~full ~state =
          {env; constructors; variant_name = typ.name; variant_decl = typ.decl})
   | Open when typ.decl.type_manifest = None -> (
     match
-      extension_constructors ~files:[env.file; full.file] ~type_name:typ.name
-        ~decl:typ.decl
+      extension_constructors ~state ~package:full.package
+        ~current_file:full.file ~type_file:env.file
+        ~type_stamp:(type_stamp env.file typ) ~type_name:typ.name ~decl:typ.decl
     with
     | [] -> None
     | constructors ->

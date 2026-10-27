@@ -331,7 +331,8 @@ let for_type_declaration ~env ~(exported : Exported.t)
 (* The constructors of [type t += ...] are registered as constructors of an
    open type named [t], so that completion can offer them for values of
    type [t]. They are not part of any type declaration, hence the stand-in
-   declaration that only carries the kind. *)
+   declaration that carries the kind and, as its manifest, the extended
+   type, which completion compares with the type it completes. *)
 let add_extension_constructors ~(env : Env.t)
     {Typedtree.tyext_path; tyext_constructors} =
   let type_name = Path.last tyext_path in
@@ -341,7 +342,7 @@ let add_extension_constructors ~(env : Env.t)
       type_arity = 0;
       type_kind = Type_open;
       type_private = Public;
-      type_manifest = None;
+      type_manifest = Some (Ctype.newconstr tyext_path []);
       type_variance = [];
       type_newtype_level = None;
       type_loc = Location.none;
