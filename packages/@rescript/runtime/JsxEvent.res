@@ -296,3 +296,15 @@ module Transition = {
   @get external pseudoElement: t => string = "pseudoElement"
   @get external elapsedTime: t => float = "elapsedTime"
 }
+
+module Toggle = {
+  type tag
+  type t = synthetic<tag>
+
+  include MakeEventWithType({type t = t})
+
+  @get external oldState: t => [#closed | #"open"] = "oldState"
+  @get external newState: t => [#closed | #"open"] = "newState"
+  /** The element that triggered the toggle. Available in React 19.3 and later. */
+  @get @return(nullable) external source: t => option<Dom.element> = "source"
+}

@@ -37,6 +37,8 @@ let Animation = {};
 
 let Transition = {};
 
+let Toggle = {};
+
 exports.MakeEventWithType = MakeEventWithType;
 exports.Synthetic = Synthetic;
 exports.Clipboard = Clipboard;
@@ -54,4 +56,5 @@ exports.Media = Media;
 exports.Image = Image;
 exports.Animation = Animation;
 exports.Transition = Transition;
+exports.Toggle = Toggle;
 /* No side effect */
