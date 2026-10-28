@@ -143,6 +143,38 @@ const _segs: Intl.Segments = S.idIntlSegments(
   new Intl.Segmenter().segment("hello")
 );
 
+// Temporal family
+const _duration: Temporal.Duration = S.idTemporalDuration(
+  Temporal.Duration.from({ hours: 1 })
+);
+const _instant: Temporal.Instant = S.idTemporalInstant(
+  Temporal.Instant.fromEpochMilliseconds(0)
+);
+const _plainDate: Temporal.PlainDate = S.idTemporalPlainDate(
+  Temporal.PlainDate.from("2024-02-29")
+);
+const _plainTime: Temporal.PlainTime = S.idTemporalPlainTime(
+  Temporal.PlainTime.from("09:30")
+);
+const _plainDateTime: Temporal.PlainDateTime = S.idTemporalPlainDateTime(
+  Temporal.PlainDateTime.from("2024-02-29T09:30")
+);
+const _plainYearMonth: Temporal.PlainYearMonth = S.idTemporalPlainYearMonth(
+  Temporal.PlainYearMonth.from("2024-02")
+);
+const _plainMonthDay: Temporal.PlainMonthDay = S.idTemporalPlainMonthDay(
+  Temporal.PlainMonthDay.from("02-29")
+);
+const _zonedDateTime: Temporal.ZonedDateTime = S.idTemporalZonedDateTime(
+  Temporal.ZonedDateTime.from("2024-02-29T09:30:00+09:00[Asia/Seoul]")
+);
+const _commonZonedDateTime: Temporal.ZonedDateTime =
+  S.idTemporalCommonZonedDateTime(_zonedDateTime);
+const _dateOfDateTime: Temporal.PlainDate =
+  S.temporalDateOfDateTime(_plainDateTime);
+const _nextDay: Temporal.PlainDate = S.temporalNextDay(_plainDate);
+const _parsedDate: Temporal.PlainDate = S.temporalParseDate("2024-02-29");
+
 // Errors (use JsError only)
 const _jserr: Error = S.idJsError(new Error("x"));
 

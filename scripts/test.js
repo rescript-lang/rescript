@@ -122,6 +122,19 @@ if (mochaTest) {
     stdio: "inherit",
   });
 
+  // Not part of Stdlib_TestSuite, which the installation tests also run on
+  // Node.js 22.
+  if ("Temporal" in globalThis) {
+    await node("tests/tests/src/stdlib/Stdlib_TemporalTests.mjs", [], {
+      cwd: projectDir,
+      stdio: "inherit",
+    });
+  } else {
+    console.warn(
+      `Ignoring Stdlib_TemporalTests. Not supported by Node ${process.versions.node}`,
+    );
+  }
+
   // CommonJS tests
   await execClean([], {
     cwd: commonjsTestDir,

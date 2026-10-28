@@ -30,6 +30,7 @@ module Result = Stdlib_Result
 module String = Stdlib_String
 module Symbol = Stdlib_Symbol
 module TaggedTemplate = Stdlib_TaggedTemplate
+module Temporal = Stdlib_Temporal
 module Type = Stdlib_Type
 
 module Iterable = Stdlib_Iterable

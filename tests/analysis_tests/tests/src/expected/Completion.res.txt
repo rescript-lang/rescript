@@ -2466,6 +2466,7 @@ Path T
     "label": "This",
     "tags": []
   },
+  { "detail": "module Temporal", "kind": 9, "label": "Temporal", "tags": [] },
   {
     "detail": "module TypedArray",
     "kind": 9,

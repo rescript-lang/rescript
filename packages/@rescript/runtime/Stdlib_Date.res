@@ -179,5 +179,6 @@ external toLocaleTimeStringWithLocaleAndOptions: (t, string, localeOptions) => s
 @send external toISOString: t => string = "toISOString"
 @send external toUTCString: t => string = "toUTCString"
 @return(nullable) @send external toJSON: t => option<string> = "toJSON"
+@send external toTemporalInstant: t => Stdlib_Temporal_Common.instant = "toTemporalInstant"
 
 external ignore: t => unit = "%ignore"
