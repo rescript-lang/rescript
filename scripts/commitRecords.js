@@ -16,13 +16,22 @@
  *   the commits' authors, drawn in place of their names. With
  *   --previous <rev>, the pull request's head before the last push, the
  *   comment marks the commits that push added or whose message it edited.
+ *   --check fails when a record has no description, a paragraph of prose
+ *   or a `Why:` section, naming those records; it needs no --out.
  */
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { categories, parseFragment } from "./changelogFragments.js";
 import { commentMarkdown } from "./recordMarkdown.js";
-import { CSS, esc, pageBody, pageTitle, parseRecord } from "./recordRender.js";
+import {
+  CSS,
+  described,
+  esc,
+  pageBody,
+  pageTitle,
+  parseRecord,
+} from "./recordRender.js";
 
 /** @import { CommitRecord, Group } from "./recordRender.js" */
 /** @import { ChangelogEntry } from "./recordMarkdown.js" */
@@ -183,7 +192,8 @@ const options = {};
 /** @type {string[]} */
 const targets = [];
 for (let i = 0; i < args.length; i++) {
-  if (
+  if (args[i] === "--check") options.check = "true";
+  else if (
     [
       "--out",
       "--pr",
@@ -199,9 +209,9 @@ for (let i = 0; i < args.length; i++) {
   else targets.push(args[i]);
 }
 const outFile = options.out;
-if (!outFile) {
+if (!outFile && !options.check) {
   console.error(
-    "usage: commitRecords.js --out <page.html> [--pr <number>] [--title <text>] [--markdown <comment.md> [--url <page url>] [--previous <rev>]] [--logins <file>] <rev | base..tip>...",
+    "usage: commitRecords.js (--out <page.html> [--pr <number>] [--title <text>] [--markdown <comment.md> [--url <page url>] [--previous <rev>]] [--logins <file>] | --check) <rev | base..tip>...",
   );
   process.exit(1);
 }
@@ -218,27 +228,56 @@ const heading = {
   title: options.title ?? "",
 };
 const groups = targets.map(group);
-const body = pageBody(groups, heading);
-if (options.markdown) {
-  const [base, tip] = targets[targets.length - 1].split("..");
-  const records = groups.flatMap(g => g.records);
-  writeFileSync(
-    options.markdown,
-    commentMarkdown(groups, {
-      url: options.url,
-      ...(tip ? { changelog: changelog(base, tip) } : {}),
-      ...(options.previous && tip
-        ? marks(records, base, options.previous)
-        : {}),
-    }),
-  );
-  console.log(options.markdown);
-}
-const head = `<title>${esc(pageTitle(heading))}</title>
+
+/** Draws the page and, with --markdown, the comment. @param {string} outFile */
+function draw(outFile) {
+  const body = pageBody(groups, heading);
+  if (options.markdown) {
+    const [base, tip] = targets[targets.length - 1].split("..");
+    const records = groups.flatMap(g => g.records);
+    writeFileSync(
+      options.markdown,
+      commentMarkdown(groups, {
+        url: options.url,
+        ...(tip ? { changelog: changelog(base, tip) } : {}),
+        ...(options.previous && tip
+          ? marks(records, base, options.previous)
+          : {}),
+      }),
+    );
+    console.log(options.markdown);
+  }
+  const head = `<title>${esc(pageTitle(heading))}</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=STIX+Two+Text:ital,wght@0,400;0,500;1,400&display=swap">
 <style>${CSS}</style>`;
-writeFileSync(
-  outFile,
-  `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">\n${head}</head><body>${body}</body></html>\n`,
-);
-console.log(outFile);
+  writeFileSync(
+    outFile,
+    `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">\n${head}</head><body>${body}</body></html>\n`,
+  );
+  console.log(outFile);
+}
+
+/**
+ * Names the records without a description and fails, telling how to add
+ * one. A pull request's check runs this after its page and comment are
+ * drawn, so the comment shows the records as they are.
+ */
+function check() {
+  const missing = groups.flatMap(g => g.records).filter(r => !described(r));
+  if (!missing.length) return;
+  console.error(
+    missing.length === 1
+      ? "A commit has no description:\n"
+      : `${missing.length} commits have no description:\n`,
+  );
+  for (const r of missing) console.error(`  ${r.sha} ${r.subject}`);
+  console.error(`
+Below its subject, a commit message says why the commit is made, as a line
+or two of prose or a \`Why:\` section (see "Commit messages" in
+CONTRIBUTING.md). Add one with \`git rebase -i\`, marking these commits
+\`reword\`, or squash them into a commit that has one, and force-push.`);
+  process.exit(1);
+}
+
+if (outFile) draw(outFile);
+if (options.check) check();

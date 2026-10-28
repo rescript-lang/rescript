@@ -1026,3 +1026,50 @@ test("--previous marks the commits the last push added or edited", async () => {
   has(marked("Added"), "<summary>✨ <b>Added</b></summary>");
   has(marked("Added"), " · new</sub>");
 });
+
+test("--check names the commits without a description and fails", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "commit-records-"));
+  const git = (/** @type {string[]} */ ...a) =>
+    execFileSync("git", a, { cwd: dir, encoding: "utf8" }).trim();
+  git("init", "-q", "-b", "main");
+  git("config", "user.name", "A Person");
+  git("config", "user.email", "a@example.com");
+  await commit(git, dir, { "a.txt": "a\n" }, "base");
+  const base = git("rev-parse", "HEAD");
+  const check = () =>
+    spawnSync("node", [script, "--check", `${base}..HEAD`], {
+      cwd: dir,
+      encoding: "utf8",
+    });
+  await commit(git, dir, {}, `Prose\n\nA line of why.\n\n${SIGNED}`);
+  await commit(git, dir, {}, `Why block\n\nWhy:\n    The reason.\n\n${SIGNED}`);
+  await commit(
+    git,
+    dir,
+    {},
+    `Why on its line\n\nWhy: the reason.\nReview: a question?\n\n${SIGNED}`,
+  );
+  let r = check();
+  assert.equal(r.status, 0, r.stderr);
+  await commit(git, dir, {}, `Title only\n\n${SIGNED}`);
+  await commit(
+    git,
+    dir,
+    {},
+    `Trailers only\n\nCo-Authored-By: B <b@example.com>\n${SIGNED}`,
+  );
+  await commit(
+    git,
+    dir,
+    {},
+    `Blocks only\n\nJS modified:\nBefore (js):\n    a;\nAfter (js):\n    b;\n\nReview: a question?\n\n${SIGNED}`,
+  );
+  await commit(git, dir, {}, `Empty why\n\nWhy:\n\n${SIGNED}`);
+  r = check();
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /^4 commits have no description/);
+  for (const s of ["Title only", "Trailers only", "Blocks only", "Empty why"])
+    assert.ok(r.stderr.includes(` ${s}\n`), `stderr lacks ${s}`);
+  for (const s of ["Prose", "Why block", "Why on its line"])
+    assert.ok(!r.stderr.includes(` ${s}\n`), `stderr has ${s}`);
+});
