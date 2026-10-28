@@ -176,7 +176,7 @@ let create_interface ~path ~cmi_file =
     match Files.read_file path with
     | None -> ""
     | Some source -> (
-      match Create_interface.command ~source ~cmi_file with
+      match Create_interface.command ~path ~source ~cmi_file with
       | Ok content -> content
       | Error _ -> "")
   in

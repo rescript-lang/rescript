@@ -392,10 +392,14 @@ and print_out_constructor_doc (name, args, gadt, repr) =
   in
   Doc.group (Doc.concat [repr_doc; Doc.text name; args_doc; gadt_doc])
 
-and print_record_decl_row_doc (name, mut, opt, arg) =
+and print_record_decl_row_doc (name, runtime_name, mut, opt, arg) =
   Doc.group
     (Doc.concat
        [
+         (match runtime_name with
+         | Some runtime_name ->
+           Doc.text ("@as(\"" ^ String.escaped runtime_name ^ "\") ")
+         | None -> Doc.nil);
          (if mut then Doc.text "mutable " else Doc.nil);
          Printer.print_ident_like ~allow_uident:false name;
          (if opt then Doc.text "?" else Doc.nil);

@@ -1,0 +1,36 @@
+Create Interface src/CreateInterfaceFunctor.res
+module type Ord = {
+  type t
+  let compare: (t, t) => int
+}
+module MakeSet: (
+  O: Ord,
+) =>
+{
+  type t = array<O.t>
+  let add: (t, O.t) => array<O.t>
+}
+module IntSet: {
+  type t = array<int>
+  let add: (t, int) => array<int>
+}
+module M: {
+  type t = {@as("wire") field: int}
+}
+module type S = {
+  type t = {@as("wire") field: int}
+}
+module N: {
+  type t = {@as("wire") field: int}
+}
+module WithWire: (
+  X: {
+  },
+) =>
+{
+  type t = {@as("wire") field: int}
+}
+module Applied: {
+  type t = {@as("wire") field: int}
+}
+
