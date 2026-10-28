@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/coercion_hint_names_alias.res[0m:[2m1:61[0m
+
+  [1;31m1[0m [2m│[0m let f = (x: Generator.t<'a, unit, unit>): Iterable.t<'a> => [1;31mx[0m
+  2 [2m│[0m 
+
+  This has type: [1;31mGenerator.t<'a, unit, unit>[0m
+  But it's expected to have type: [1;33mIterable.t<'a>[0m [2m(defined as[0m [1;33miterable<'a>[0m[2m)[0m
+  
+  Possible solutions: 
+  - These types are compatible at runtime. You can use the coercion operator to convert to the expected type: [1;33m(x :> Iterable.t<'a>)
+[0m

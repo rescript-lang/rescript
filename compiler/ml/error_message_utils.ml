@@ -772,20 +772,28 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
         with _ -> false)
       | None -> false
     in
+    (* Name the target type as the message shows it, not its expansion. *)
     let target_type =
-      match top_level_types with
-      | Some (_, t2_top) -> t2_top
-      | None -> target_type
+      match trace with
+      | _ :: (t2_top, _) :: _ -> t2_top
+      | _ -> target_type
     in
     let target_type_string = Format.asprintf "%a" type_expr target_type in
     let target_expr_text = Parser.extract_text_at_loc loc in
     let suggested_rewrite =
-      match
-        !Parser.parse_source
-          (Printf.sprintf "(%s :> %s)" target_expr_text target_type_string)
-      with
-      | [], _ -> None
-      | structure, comments -> Some (!Parser.reprint_source structure comments)
+      (* The location of an expression leaves out the parentheses around its
+         first or last operand, so the text alone may not be an expression,
+         even when the wrapped text happens to parse. *)
+      match Parser.parse_expr_at_loc loc with
+      | None -> None
+      | Some _ -> (
+        match
+          !Parser.parse_source
+            (Printf.sprintf "(%s :> %s)" target_expr_text target_type_string)
+        with
+        | [], _ -> None
+        | structure, comments ->
+          Some (!Parser.reprint_source structure comments))
     in
 
     (* Suggesting coercion only makes sense for non-constant values. *)
