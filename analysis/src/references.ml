@@ -124,8 +124,15 @@ let declared_for_tip ~(stamps : Stamps.t) stamp (tip : Tip.t) =
     Stamps.find_module stamps stamp
     |> Option.map (fun x -> {x with Declared.item = ()})
 
+(* The type a renamed type of an applied functor comes from, whose fields
+   and constructors have source locations. *)
+let original_type_stamp (file : File.t) stamp =
+  match Hashtbl.find_opt file.renamed_stamps stamp with
+  | Some original -> original
+  | None -> stamp
+
 let get_field (file : File.t) stamp name =
-  match Stamps.find_type file.stamps stamp with
+  match Stamps.find_type file.stamps (original_type_stamp file stamp) with
   | None -> None
   | Some {item = {kind}} -> (
     match kind with
@@ -133,7 +140,7 @@ let get_field (file : File.t) stamp name =
     | _ -> None)
 
 let get_constructor (file : File.t) stamp name =
-  match Stamps.find_type file.stamps stamp with
+  match Stamps.find_type file.stamps (original_type_stamp file stamp) with
   | None -> None
   | Some {item = {kind}} -> (
     match kind with

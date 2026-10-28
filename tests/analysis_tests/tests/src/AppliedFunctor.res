@@ -45,3 +45,20 @@ module N = WithNested(IntOrd)
 
 let n = N.Nested.value
 //        ^ref
+
+module WithShapes = (O: Ord) => {
+  type point = {x: int}
+  type shape = Dot | Box(int)
+}
+
+module Shapes = WithShapes(IntOrd)
+
+let p: Shapes.point = {x: 1}
+let px = p.x
+//         ^def
+
+let shape = Shapes.Box(1)
+//                 ^def
+
+let py = p.x
+//         ^ren y

@@ -29,14 +29,19 @@ let extra_for_file ~(file : File.t) =
         (TypeDefinition (d.name.txt, d.item.Type.decl, stamp));
       add_reference ~extra stamp d.name.loc;
       match d.item.Type.kind with
+      (* Fields and constructors of a type read from a signature, such as
+         an applied functor's, have no location of their own; references
+         to them are those of the declarations they come from. *)
       | Record labels ->
         labels
+        |> List.filter (fun {fname} -> not fname.loc.loc_ghost)
         |> List.iter (fun {stamp; fname; typ} ->
             add_reference ~extra stamp fname.loc;
             add_loc_item extra fname.loc
               (Typed (d.name.txt, typ, Definition (d.stamp, Field fname.txt))))
       | Variant constructors ->
         constructors
+        |> List.filter (fun {Constructor.cname} -> not cname.loc.loc_ghost)
         |> List.iter (fun {Constructor.stamp; cname} ->
             add_reference ~extra stamp cname.loc;
             let t =
