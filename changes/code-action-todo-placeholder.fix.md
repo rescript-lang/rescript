@@ -1,0 +1,1 @@
+- Fill cases added by the exhaustive-switch and add-missing-cases code actions with `%todo` instead of the removed `failwith("TODO")`.

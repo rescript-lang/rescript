@@ -1035,10 +1035,10 @@ let rec context_path_from_core_type (core_type : Parsetree.core_type) =
   | _ -> None
 
 module Codegen = struct
-  let mk_fail_with_exp () =
-    Ast_helper.Exp.apply
-      (Ast_helper.Exp.ident {txt = Lident "failwith"; loc = Location.none})
-      [(Nolabel, Ast_helper.Exp.constant (Ast_helper.Const.string "TODO"))]
+  (* Placeholder body for generated cases: `%todo`, which compiles (with a
+     warning) and throws at runtime. *)
+  let mk_todo_exp () =
+    Ast_helper.Exp.extension ({txt = "todo"; loc = Location.none}, PStr [])
 
   let mk_construct_pat ?payload name =
     Ast_helper.Pat.construct
@@ -1160,7 +1160,7 @@ module Codegen = struct
       Some
         (patterns
         |> List.map (fun (pat : Parsetree.pattern) ->
-            Ast_helper.Exp.case pat (mk_fail_with_exp ())))
+            Ast_helper.Exp.case pat (mk_todo_exp ())))
 end
 
 let get_module_path_relative_to_env ~debug ~(env : Query_env.t) ~env_from_item
