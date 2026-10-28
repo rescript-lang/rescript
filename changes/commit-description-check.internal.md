@@ -1,0 +1,1 @@
+- Fail the Semantic Diff check when a commit message has no description below its subject.

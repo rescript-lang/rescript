@@ -5,7 +5,9 @@ name: Semantic Diff
 # Markdown (scripts/recordMarkdown.js) with the page's link. A pull request
 # has one such comment, which each push updates in place to hold every
 # commit, so the pull request shows its current records in one place; the
-# comment marks the commits the last push added or edited.
+# comment marks the commits the last push added or edited. After commenting,
+# the job fails if a commit's message has no description below its subject,
+# naming those commits.
 #
 # A pull request from a branch of this repository runs on pull_request, with
 # the workflow and renderer of its merge into the base branch: GitHub takes
@@ -107,3 +109,7 @@ jobs:
           comment-tag: semantic-diff
           mode: upsert
           file-path: semantic-diff/comment.md
+
+      # Last, so that the page and the comment show the records either way.
+      - name: Check commit descriptions
+        run: node scripts/commitRecords.js --check "$(git merge-base "$BASE_SHA" "pr-${PR_NUMBER}")..pr-${PR_NUMBER}"
