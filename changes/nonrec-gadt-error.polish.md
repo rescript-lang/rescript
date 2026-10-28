@@ -1,0 +1,1 @@
+- A GADT constructor in a type declared without `rec` reports the same `type rec` hint whichever constructor it is, also in signatures.

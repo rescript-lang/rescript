@@ -2332,7 +2332,9 @@ let report_error ppf = function
   | Bad_unboxed_attribute msg ->
     fprintf ppf "@[This type cannot be unboxed because@ %s.@]" msg
   | Nonrec_gadt ->
-    fprintf ppf "@[GADT case syntax cannot be used in a 'nonrec' block.@]"
+    fprintf ppf
+      "@[GADTs require recursive type syntax.@ Define your type using `type \
+       rec` instead of `type`.@]"
   | Variant_runtime_representation_mismatch
       (Variant_coercion.VariantError
          {
