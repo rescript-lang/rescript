@@ -365,11 +365,11 @@ let extract_function_type2 ?type_arg_context ~state ~env ~package typ =
    completion request runs. Extension constructors are named relative to
    it: unlike ordinary constructors they can't be found from the expected
    type, so they have to be written so that they are in scope there. *)
-let completion_scope : (File.t * string list) option ref = ref None
+let completion_scope : (File.t * string list * Pos.t) option ref = ref None
 
-let with_completion_scope ~file ~module_path f =
+let with_completion_scope ~file ~module_path ~pos f =
   let previous = !completion_scope in
-  completion_scope := Some (file, module_path);
+  completion_scope := Some (file, module_path, pos);
   Fun.protect ~finally:(fun () -> completion_scope := previous) f
 
 (* The stamp under which [typ] is declared in [file]. *)
@@ -388,10 +388,17 @@ let type_stamp (file : File.t) (typ : Type.t) =
    constructor can't be found from the expected type alone. *)
 let extension_constructors ~state ~package ~(current_file : File.t)
     ~(type_file : File.t) ~type_stamp ~type_name ~decl =
-  let current_file, scope_path =
+  let current_file, scope_path, cursor =
     match !completion_scope with
-    | Some (file, module_path) -> (file, module_path)
-    | None -> (current_file, [])
+    | Some (file, module_path, pos) -> (file, module_path, Some pos)
+    | None -> (current_file, [], None)
+  in
+  (* An extension of the edited file is in scope from its declaration on. *)
+  let declared_before_cursor (file : File.t) (declared : _ Declared.t) =
+    match cursor with
+    | Some pos when file.uri = current_file.uri ->
+      Loc.start declared.extent_loc <= pos
+    | _ -> true
   in
   let extends (file : File.t) (ext_decl : Types.type_declaration) =
     match (type_stamp, ext_decl.type_manifest) with
@@ -422,6 +429,7 @@ let extension_constructors ~state ~package ~(current_file : File.t)
              if
                name = type_name
                && ext_decl.type_kind = Type_open
+               && declared_before_cursor file declared
                && extends file ext_decl
              then Hashtbl.replace found (file.uri, stamp) (file, declared)));
   Hashtbl.to_seq_values found

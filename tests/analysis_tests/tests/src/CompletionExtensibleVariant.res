@@ -41,3 +41,9 @@ let a: A.t = A.FromA
 
 // switch value { | Fl
 //                    ^com
+
+// An extension declared later is not in scope yet
+// switch value { | La
+//                    ^com
+
+type attr += Later
