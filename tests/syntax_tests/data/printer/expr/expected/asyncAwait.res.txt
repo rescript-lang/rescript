@@ -104,7 +104,7 @@ let _ = await {
 
 let f1 = async (~x, ~y) => x + y
 let f2 = async (@foo ~x, @bar ~y) => x + y
-let f3 = @foo async (~x as @bar @zz z, ~y) => x + y
+let f3 = @foo async (@bar @zz ~x as z, ~y) => x + y
 let f4 = async x => x
 let f5 = async x => async y => 3
 let f6 = async (~x1, ~x2) => async y => 3

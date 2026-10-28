@@ -1,0 +1,1 @@
+- Fix the formatter moving an attribute or doc comment in front of a labeled parameter alias like `~a as x: int` onto the alias.

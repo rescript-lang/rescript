@@ -5648,13 +5648,14 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
              ])
           cmt_tbl pattern.ppat_loc
       | (Labelled {txt = lbl} | Optional {txt = lbl}), pattern ->
-        (* ~b as c *)
+        (* ~b as c: the parser puts attributes before [~b] on [c] *)
         Doc.concat
           [
+            print_attributes ~state pattern.ppat_attributes cmt_tbl;
             Doc.text "~";
             print_ident_like lbl;
             Doc.text " as ";
-            print_pattern ~state pattern cmt_tbl;
+            print_pattern ~state {pattern with ppat_attributes = []} cmt_tbl;
           ]
     in
     let optional_label_suffix =
