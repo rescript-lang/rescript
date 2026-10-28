@@ -93,6 +93,79 @@ function o(x, map) {
   return BigInt64Array.from(x, map);
 }
 
+assertTrue("copyAllWithin returns the typed array it mutated", () => {
+  let x = new Int32Array([
+    1,
+    2,
+    3
+  ]);
+  let r = x.copyWithin(1);
+  if (r === x) {
+    return r.toString() === "1,1,2";
+  } else {
+    return false;
+  }
+});
+
+assertTrue("copyWithin returns the typed array it mutated", () => {
+  let x = new Int32Array([
+    1,
+    2,
+    3,
+    4
+  ]);
+  let r = x.copyWithin(1, 2, 4);
+  if (r === x) {
+    return r.toString() === "1,3,4,4";
+  } else {
+    return false;
+  }
+});
+
+assertTrue("TypedArray.copyAllWithin returns the typed array it mutated", () => {
+  let x = new Int32Array([
+    1,
+    2,
+    3
+  ]);
+  let r = x.copyWithin(1);
+  if (r === x) {
+    return r.toString() === "1,1,2";
+  } else {
+    return false;
+  }
+});
+
+assertTrue("TypedArray.copyWithin returns the typed array it mutated", () => {
+  let x = new Int32Array([
+    1,
+    2,
+    3,
+    4
+  ]);
+  let r = x.copyWithin(1, 2, 4);
+  if (r === x) {
+    return r.toString() === "1,3,4,4";
+  } else {
+    return false;
+  }
+});
+
+assertTrue("TypedArray.map keeps the element type", () => {
+  let x = new Int32Array([
+    1,
+    2,
+    3
+  ]);
+  let r = x.map(v => (v << 1));
+  let s = x.map((v, i) => v + i | 0);
+  if (r.toString() === "2,4,6") {
+    return s.toString() === "1,3,5";
+  } else {
+    return false;
+  }
+});
+
 export {
   eq,
   num1,

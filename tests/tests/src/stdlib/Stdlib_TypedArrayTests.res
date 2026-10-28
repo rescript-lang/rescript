@@ -77,3 +77,36 @@ assertTrue("a typed array is a TypedArray.t through a coercion", () => {
   TypedArray.length(x :> TypedArray.t<bigint>) == 2
 })
 let o = (x, map) => BigInt64Array.fromArrayLikeOrIterable(x, ~map)
+
+// ===== copyWithin and map keep the typed array =====
+
+assertTrue("copyAllWithin returns the typed array it mutated", () => {
+  let x = Int32Array.fromArray([1, 2, 3])
+  let r: Int32Array.t = x->Int32Array.copyAllWithin(~target=1)
+  r === x && Int32Array.toString(r) == "1,1,2"
+})
+
+assertTrue("copyWithin returns the typed array it mutated", () => {
+  let x = Int32Array.fromArray([1, 2, 3, 4])
+  let r: Int32Array.t = x->Int32Array.copyWithin(~target=1, ~start=2, ~end=4)
+  r === x && Int32Array.toString(r) == "1,3,4,4"
+})
+
+assertTrue("TypedArray.copyAllWithin returns the typed array it mutated", () => {
+  let x = (Int32Array.fromArray([1, 2, 3]) :> TypedArray.t<int>)
+  let r: TypedArray.t<int> = x->TypedArray.copyAllWithin(~target=1)
+  r === x && TypedArray.toString(r) == "1,1,2"
+})
+
+assertTrue("TypedArray.copyWithin returns the typed array it mutated", () => {
+  let x = (Int32Array.fromArray([1, 2, 3, 4]) :> TypedArray.t<int>)
+  let r: TypedArray.t<int> = x->TypedArray.copyWithin(~target=1, ~start=2, ~end=4)
+  r === x && TypedArray.toString(r) == "1,3,4,4"
+})
+
+assertTrue("TypedArray.map keeps the element type", () => {
+  let x = (Int32Array.fromArray([1, 2, 3]) :> TypedArray.t<int>)
+  let r: TypedArray.t<int> = x->TypedArray.map(v => v * 2)
+  let s: TypedArray.t<int> = x->TypedArray.mapWithIndex((v, i) => v + i)
+  TypedArray.toString(r) == "2,4,6" && TypedArray.toString(s) == "1,3,5"
+})

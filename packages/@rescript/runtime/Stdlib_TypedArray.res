@@ -111,7 +111,7 @@ TypedArray.length(view) == 3
 external length: t<'a> => int = "length"
 
 /**
-`copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.
+`copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.
 
 Beware this will *mutate* the typed array.
 
@@ -125,9 +125,9 @@ let _ = TypedArray.copyAllWithin(view, ~target=1)
 TypedArray.toString(view) == "10,10,20"
 ```
 */
-@send external copyAllWithin: (t<'a>, ~target: int) => array<'a> = "copyWithin"
+@send external copyAllWithin: (t<'a>, ~target: int) => t<'a> = "copyWithin"
 /**
-`copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.
+`copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.
 
 Beware this will *mutate* the typed array.
 
@@ -141,8 +141,8 @@ let _ = TypedArray.copyWithin(view, ~target=1, ~start=2, ~end=4)
 TypedArray.toString(view) == "1,3,4,4"
 ```
 */
-@send @send
-external copyWithin: (t<'a>, ~target: int, ~start: int, ~end: int=?) => array<'a> = "copyWithin"
+@send
+external copyWithin: (t<'a>, ~target: int, ~start: int, ~end: int=?) => t<'a> = "copyWithin"
 
 /**
 `fillAll(typedArray, value)` fills every element with `value`.
@@ -409,15 +409,15 @@ See [`TypedArray.prototype.forEach`](https://developer.mozilla.org/en-US/docs/We
 @send external forEachWithIndex: (t<'a>, ('a, int) => unit) => unit = "forEach"
 
 /**
-`map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.
+`map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.
 
 See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.
 */
-@send external map: (t<'a>, 'a => 'b) => t<'b> = "map"
+@send external map: (t<'a>, 'a => 'a) => t<'a> = "map"
 /**
 `mapWithIndex(typedArray, f)` behaves like `map`, but `f` also receives the index.
 */
-@send external mapWithIndex: (t<'a>, ('a, int) => 'b) => t<'b> = "map"
+@send external mapWithIndex: (t<'a>, ('a, int) => 'a) => t<'a> = "map"
 
 /**
 `reduce(typedArray, reducer, initial)` combines the elements from left to right using `reducer`.
@@ -582,7 +582,7 @@ module Impl = (
   external length: T.t => int = "length"
 
   /**
-  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.
+  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.
 
   Beware this will *mutate* the typed array.
 
@@ -597,10 +597,10 @@ module Impl = (
   ```
   */
   @send
-  external copyAllWithin: (T.t, ~target: int) => array<T.elt> = "copyWithin"
+  external copyAllWithin: (T.t, ~target: int) => T.t = "copyWithin"
 
   /**
-  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.
+  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.
 
   Beware this will *mutate* the typed array.
 
@@ -615,7 +615,7 @@ module Impl = (
   ```
   */
   @send
-  external copyWithin: (T.t, ~target: int, ~start: int, ~end: int=?) => array<T.elt> = "copyWithin"
+  external copyWithin: (T.t, ~target: int, ~start: int, ~end: int=?) => T.t = "copyWithin"
 
   /**
   `fillAll(typedArray, value)` fills every element with `value`.
@@ -926,7 +926,7 @@ module Impl = (
   external forEachWithIndex: (T.t, (T.elt, int) => unit) => unit = "forEach"
 
   /**
-  `map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.
+  `map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.
 
   See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.
   */

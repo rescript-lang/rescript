@@ -1,0 +1,1 @@
+- Type `copyWithin` and `copyAllWithin` of typed arrays as returning the typed array instead of an `array`.
