@@ -13,7 +13,21 @@ let seek_2_lines_before src (pos : Lexing.position) =
         (if src.[current_char] = '\n' then current_line + 1 else current_line)
         (current_char + 1)
   in
-  loop 1 0
+  (* Like the scanner, start the first line after a UTF-8 byte order mark *)
+  loop 1 (if String.starts_with ~prefix:"\xEF\xBB\xBF" src then 3 else 0)
+
+(* Like the scanner, end a line at a CR not followed by LF too. Each such CR
+   becomes an LF, so the byte offsets of positions stay valid. *)
+let lone_crs_to_lf src =
+  if not (String.contains src '\r') then src
+  else
+    let length = String.length src in
+    String.mapi
+      (fun index character ->
+        if character = '\r' && (index + 1 = length || src.[index + 1] <> '\n')
+        then '\n'
+        else character)
+      src
 
 let seek_2_lines_after src (pos : Lexing.position) =
   let original_line = pos.pos_lnum in
@@ -122,6 +136,7 @@ type line = {gutter: gutter; content: highlighted_string list}
 *)
 let print ~is_warning ~src ~(start_pos : Lexing.position)
     ~(end_pos : Lexing.position) =
+  let src = lone_crs_to_lf src in
   let indent = 2 in
   let highlight_line_start_line = start_pos.pos_lnum in
   let highlight_line_end_line = end_pos.pos_lnum in
