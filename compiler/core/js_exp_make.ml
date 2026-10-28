@@ -911,18 +911,6 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
           | Some e -> simplify_and_force ~n:(n + 1) e e2)
         | Some a_, Some b_ -> simplify_or_force ~n:(n + 1) a_ b_)
       | ( Bin
-            ( ((EqEqEq | NotEqEq) as op1),
-              {expression_desc = Var i1},
-              {expression_desc = Bool b1} ),
-          Bin
-            ( ((EqEqEq | NotEqEq) as op2),
-              {expression_desc = Var i2},
-              {expression_desc = Bool b2} ) )
-        when Js_op_util.same_vident i1 i2 ->
-        let op_eq = op1 = op2 in
-        let consistent = if op_eq then b1 = b2 else b1 <> b2 in
-        if consistent then Some e1 else Some false_
-      | ( Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
               {expression_desc = Str "boolean"} ),

@@ -1,0 +1,1 @@
+- Fix untagged variant matches involving boolean literals that skipped the checks for the other cases.
