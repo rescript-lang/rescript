@@ -128,9 +128,9 @@ TextDocumentEdit: ExhaustiveSwitch.res
 newText:
    <--here
    switch x->getV {
-   | One => failwith("TODO")
-   | Two => failwith("TODO")
-   | Three(_) => failwith("TODO")
+   | One => %todo
+   | Two => %todo
+   | Three(_) => %todo
    }
 
 Xform src/ExhaustiveSwitch.res 36:4
@@ -152,11 +152,11 @@ TextDocumentEdit: ExhaustiveSwitch.res
 newText:
    <--here
    switch vvv {
-   | None => failwith("TODO")
-   | Some(_) => failwith("TODO")
-   | Some(One) => failwith("TODO")
-   | Some(Two) => failwith("TODO")
-   | Some(Three(_)) => failwith("TODO")
+   | None => %todo
+   | Some(_) => %todo
+   | Some(One) => %todo
+   | Some(Two) => %todo
+   | Some(Three(_)) => %todo
    }
 
 
