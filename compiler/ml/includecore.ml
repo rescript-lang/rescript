@@ -179,6 +179,10 @@ type type_mismatch =
   | Field_arity of Ident.t
   | Field_names of int * string * string
   | Field_missing of bool * Ident.t
+  | Constructor_type of Ident.t
+  | Constructor_arity of Ident.t
+  | Constructor_names of int * string * string
+  | Constructor_missing of bool * Ident.t
   | Record_representation of record_representation * record_representation
   | Unboxed_representation of bool (* true means second one is unboxed *)
   | Immediate
@@ -206,6 +210,16 @@ let report_type_mismatch0 first second decl ppf err =
     pr "Fields number %i have different names, %s and %s" n name1 name2
   | Field_missing (b, s) ->
     pr "The field %s is only present in %s %s" (Ident.name s)
+      (if b then second else first)
+      decl
+  | Constructor_type s ->
+    pr "The types for constructor %s are not equal" (Ident.name s)
+  | Constructor_arity s ->
+    pr "The arities for constructor %s differ" (Ident.name s)
+  | Constructor_names (n, name1, name2) ->
+    pr "Constructors number %i have different names, %s and %s" n name1 name2
+  | Constructor_missing (b, s) ->
+    pr "The constructor %s is only present in %s %s" (Ident.name s)
       (if b then second else first)
       decl
   | Record_representation (_rep1, _rep2) ->
@@ -237,26 +251,26 @@ let report_type_mismatch first second decl ppf =
 let rec compare_constructor_arguments env cstr params1 params2 arg1 arg2 =
   match (arg1, arg2) with
   | Types.Cstr_tuple arg1, Types.Cstr_tuple arg2 ->
-    if List.length arg1 <> List.length arg2 then [Field_arity cstr]
+    if List.length arg1 <> List.length arg2 then [Constructor_arity cstr]
     else if
       (* Ctype.equal must be called on all arguments at once, cf. PR#7378 *)
       Ctype.equal env true (params1 @ arg1) (params2 @ arg2)
     then []
-    else [Field_type cstr]
+    else [Constructor_type cstr]
   | Types.Cstr_record l1, Types.Cstr_record l2 ->
     compare_records env params1 params2 0 l1 l2
-  | _ -> [Field_type cstr]
+  | _ -> [Constructor_type cstr]
 
 and compare_variants ~loc env params1 params2 ~layout1 ~layout2 n
     (cstrs1 : Types.constructor_declaration list)
     (cstrs2 : Types.constructor_declaration list) =
   match (cstrs1, cstrs2) with
   | [], [] -> []
-  | [], c :: _ -> [Field_missing (true, c.Types.cd_id)]
-  | c :: _, [] -> [Field_missing (false, c.Types.cd_id)]
+  | [], c :: _ -> [Constructor_missing (true, c.Types.cd_id)]
+  | c :: _, [] -> [Constructor_missing (false, c.Types.cd_id)]
   | cd1 :: rem1, cd2 :: rem2 ->
     if Ident.name cd1.cd_id <> Ident.name cd2.cd_id then
-      [Field_names (n, cd1.cd_id.name, cd2.cd_id.name)]
+      [Constructor_names (n, cd1.cd_id.name, cd2.cd_id.name)]
     else (
       Builtin_attributes.check_deprecated_inclusion ~def:cd1.cd_loc
         ~use:cd2.cd_loc loc cd1.cd_attributes cd2.cd_attributes
@@ -267,8 +281,8 @@ and compare_variants ~loc env params1 params2 ~layout1 ~layout2 n
           if Ctype.equal env true [r1] [r2] then
             compare_constructor_arguments env cd1.cd_id [r1] [r2] cd1.cd_args
               cd2.cd_args
-          else [Field_type cd1.cd_id]
-        | Some _, None | None, Some _ -> [Field_type cd1.cd_id]
+          else [Constructor_type cd1.cd_id]
+        | Some _, None | None, Some _ -> [Constructor_type cd1.cd_id]
         | _ ->
           compare_constructor_arguments env cd1.cd_id params1 params2
             cd1.cd_args cd2.cd_args

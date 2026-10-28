@@ -16,4 +16,4 @@
     Expected declaration
   [36m/.../fixtures/Iface_variant_extra_constructor/Foo.res[0m:[2m1:1-18[0m:
     Actual declaration
-  The field C is only present in the first declaration.
+  The constructor C is only present in the first declaration.

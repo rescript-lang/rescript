@@ -33,6 +33,10 @@ type type_mismatch =
   | Field_arity of Ident.t
   | Field_names of int * string * string
   | Field_missing of bool * Ident.t
+  | Constructor_type of Ident.t
+  | Constructor_arity of Ident.t
+  | Constructor_names of int * string * string
+  | Constructor_missing of bool * Ident.t
   | Record_representation of record_representation * record_representation
   | Unboxed_representation of bool
   | Immediate
