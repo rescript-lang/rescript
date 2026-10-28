@@ -366,13 +366,6 @@ let collect_ternary_parts expr =
   in
   collect [] expr
 
-let parameters_should_hug parameters =
-  match parameters with
-  | [Parameter {attrs = []; lbl = Nolabel; default_expr = None; pat}]
-    when is_huggable_pattern pat ->
-    true
-  | _ -> false
-
 let should_indent_binary_expr expr =
   let same_precedence_sub_expression operator sub_expression =
     match sub_expression with
@@ -430,8 +423,25 @@ let is_doc_comment_attribute ((id, payload) : Parsetree.attribute) =
     true
   | _ -> false
 
+(* Only the doc comments before every other attribute: one after an attribute
+   stays in its place, so that printing keeps the order of the attributes. *)
 let partition_doc_comment_attributes attrs =
-  List.partition is_doc_comment_attribute attrs
+  let rec split doc_comments = function
+    | attr :: attrs when is_doc_comment_attribute attr ->
+      split (attr :: doc_comments) attrs
+    | attrs -> (List.rev doc_comments, attrs)
+  in
+  split [] attrs
+
+(* A doc comment can be printed on its own line, which a hugged parameter
+   cannot start. *)
+let parameters_should_hug parameters =
+  match parameters with
+  | [Parameter {attrs = []; lbl = Nolabel; default_expr = None; pat}]
+    when is_huggable_pattern pat
+         && not (List.exists is_doc_comment_attribute pat.ppat_attributes) ->
+    true
+  | _ -> false
 
 let rec is_fun_expr expr =
   match expr.pexp_desc with
