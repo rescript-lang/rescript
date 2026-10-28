@@ -63,10 +63,8 @@ Signed-off-by: Name <email>
 
 - The subject, a description and `Signed-off-by` are required: the
   description says why the commit is made, as a line or two of prose or
-  a `Why:` section, and object blocks then show what it changes. The
-  Semantic Diff workflow fails a pull request with a commit that has no
-  description (`node scripts/commitRecords.js --check <base>..HEAD`).
-  Every other section is optional. The message ends with its trailers, git's
+  a `Why:` section, and object blocks then show what it changes. Every
+  other section is optional. The message ends with its trailers, git's
   `Key: value` lines (`Co-Authored-By:`, `Fixes:` or any other one-word
   key), `Signed-off-by` last; the page lists the `Co-Authored-By` names
   and draws no other trailer.
