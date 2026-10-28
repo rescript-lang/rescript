@@ -10,6 +10,7 @@ type record_field_subtype_violation =
       right_as: string option;
     }
   | Field_missing of {label: string}
+  | Mutable_mismatch of {label: string}
 
 let check_record_fields (fields1 : Types.label_declaration list)
     (fields2 : Types.label_declaration list) =
@@ -40,7 +41,16 @@ let check_record_fields (fields1 : Types.label_declaration list)
                left_as = ld1.ld_runtime_name;
                right_as = ld2.ld_runtime_name;
              });
-      (ld1.ld_type :: acc1, ld2.ld_type :: acc2)
+      (match (ld1.ld_mutable, ld2.ld_mutable) with
+      | Immutable, Mutable ->
+        (* writing through the target would change a field that the source
+           treats as immutable *)
+        add_violation (Mutable_mismatch {label = ld1.ld_id.name})
+      | _ -> ());
+      if ld1.ld_mutable = Mutable && ld2.ld_mutable = Mutable then
+        (* a field read and written through both types: subtyping both ways *)
+        (ld1.ld_type :: ld2.ld_type :: acc1, ld2.ld_type :: ld1.ld_type :: acc2)
+      else (ld1.ld_type :: acc1, ld2.ld_type :: acc2)
     | None ->
       (* field must be present *)
       add_violation (Field_missing {label = ld2.ld_id.name});

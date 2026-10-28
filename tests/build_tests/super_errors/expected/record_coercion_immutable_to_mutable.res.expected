@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_coercion_immutable_to_mutable.res[0m:[2m4:24-30[0m
+
+  2 [2m│[0m type rw = {mutable x: float}
+  3 [2m│[0m 
+  [1;31m4[0m [2m│[0m let toRw = (r: ro) => ([1;31mr :> rw[0m)
+  5 [2m│[0m 
+
+  Type ro is not a subtype of rw 
+
+  The record [1;33mro[0m cannot be coerced to the record [1;33mrw[0m because:
+  - The field [1;33mx[0m is mutable in record [1;33mrw[0m, but not in record [1;33mro[0m. A coercion can't make a field writable.

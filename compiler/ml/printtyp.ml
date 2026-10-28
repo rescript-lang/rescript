@@ -1707,6 +1707,13 @@ let print_record_field_subtype_violation ppf
       label
       (Path.name right_record_name)
       (Path.name left_record_name)
+  | Mutable_mismatch {label} ->
+    fprintf ppf
+      "The field @{<info>%s@} is mutable in record @{<info>%s@}, but not in \
+       record @{<info>%s@}. A coercion can't make a field writable."
+      label
+      (Path.name right_record_name)
+      (Path.name left_record_name)
 
 let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
   wrap_printing_env env (fun () ->
