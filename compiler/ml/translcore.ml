@@ -949,8 +949,9 @@ let extract_directive_for_fn exp =
       if txt = "directive" then Ast_payload.semantic_string_of_payload payload
       else None)
 
-(* JSX preserve mode: a call of a JSX external as the JSX PPX produces it,
-   which [transl_jsx_element] turns into [Pjsx]. The JSX module's names
+(* A call of a JSX external as the JSX PPX produces it, which
+   [transl_jsx_element] turns into [Pjsx] in both JSX modes, so that they
+   evaluate the parts of an element in the same order. The JSX module's names
    ([jsx], [jsxs], [jsxKeyed], [jsxsKeyed], [jsxFragment]) are fixed by the
    PPX, unlike the JS names of the externals. *)
 type jsx_props =
@@ -1206,8 +1207,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
            funct;
          args;
          transformed_jsx = true;
-       } as apply)
-    when !((Clflags.current ()).jsx_preserve) -> (
+       } as apply) -> (
     match jsx_call e.exp_env funct p ~val_type args with
     | Some call ->
       check_callee_attributes funct;
@@ -1675,9 +1675,9 @@ and transl_let rec_flag pat_expr_list body =
     in
     Lambda_scc.bind_rec (Ext_list.map pat_expr_list transl_case) body
 
-(* JSX preserve mode: see [jsx_call]. The arguments of [Pjsx] are in the
-   order the call evaluates them, except that the children come after the
-   other props, as in JSX. *)
+(* See [jsx_call]. The arguments of [Pjsx] are in the order the call
+   evaluates them, except that the children come after the other props, as in
+   JSX, whatever the order of the fields in the props type (#9104). *)
 and transl_jsx_element loc
     ({jsx_name; jsx_ffi; jsx_multi; jsx_fragment; jsx_tag; jsx_props; jsx_key} :
       jsx_call) =

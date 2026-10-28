@@ -119,8 +119,7 @@ type import_source =
    rather than primitives. See [builtin]. *)
 type eliminated = Identity | Ignore
 
-(* A JSX element in JSX preserve mode, built by [Translcore] from a call the
-   JSX PPX produced. The arguments of [Pjsx] are, in evaluation order: the tag,
+(* A JSX element, built by [Translcore] from a call the JSX PPX produced. The arguments of [Pjsx] are, in evaluation order: the tag,
    the spread props (if [jsx_spread]), one value per [jsx_props] entry, the
    children ([jsx_children] of them) and the key (if [jsx_key]). *)
 type jsx_element = {

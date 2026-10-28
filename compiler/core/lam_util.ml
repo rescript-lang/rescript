@@ -53,8 +53,10 @@
    nothing is refined it is handed back untouched rather than rebuilt. *)
 let refine_let ?original ~kind param (arg : Lambda.t) (l : Lambda.t) : Lambda.t
     =
-  let is_block_constructor = function
-    | Lambda.Pmakeblock _ -> true
+  (* A JSX element whose only argument is its tag keeps the tag bound: a
+     function bound by [let] gets the binding's name, which React shows *)
+  let keeps_binding = function
+    | Lambda.Pmakeblock _ | Pjsx _ -> true
     | _ -> false
   in
   (* SafeAlias is the predicate that justifies the (Alias) rewrite
@@ -99,7 +101,7 @@ let refine_let ?original ~kind param (arg : Lambda.t) (l : Lambda.t) : Lambda.t
          cannot refer back to `x`, and we avoid generating a redundant local. *)
     arg
   | _, _, Lprim {primitive; args = [Lvar w]; loc; _}
-    when Ident.same w param && not (is_block_constructor primitive) ->
+    when Ident.same w param && not (keeps_binding primitive) ->
     (* When we immediately feed the binding into a primitive, like
          `{ let x = value; Array.length(x) }`, we inline the primitive call
          with `value`. This only happens for primitives that are pure and do not
