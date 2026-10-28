@@ -181,6 +181,14 @@ let print_multiline_comment_content txt =
     Doc.concat
       [Doc.text "/* "; Doc.text (Comment.trim_spaces line); Doc.text " */"]
   | first :: rest ->
+    (* The printer writes the line break, so drop the CRs of a CRLF one *)
+    let first =
+      let len = ref (String.length first) in
+      while !len > 0 && String.unsafe_get first (!len - 1) = '\r' do
+        decr len
+      done;
+      String.sub first 0 !len [@doesNotRaise]
+    in
     let first_line = Comment.trim_spaces first in
     Doc.concat
       [
@@ -6448,12 +6456,12 @@ let interface_doc (s : Parsetree.signature) ~comments =
   Comment_table.walk_signature s cmt_tbl comments;
   print_signature ~state:(State.init ()) s cmt_tbl
 
-let print_implementation ?(width = default_print_width)
+let print_implementation ?(width = default_print_width) ?(newline = "\n")
     (s : Parsetree.structure) ~comments =
-  Doc.to_string ~width (implementation_doc s ~comments) ^ "\n"
+  Doc.to_string ~newline ~width (implementation_doc s ~comments) ^ newline
 
-let print_interface ?(width = default_print_width) (s : Parsetree.signature)
-    ~comments =
-  Doc.to_string ~width (interface_doc s ~comments) ^ "\n"
+let print_interface ?(width = default_print_width) ?(newline = "\n")
+    (s : Parsetree.signature) ~comments =
+  Doc.to_string ~newline ~width (interface_doc s ~comments) ^ newline
 
 let print_structure s t = print_structure ~state:(State.init ()) s t

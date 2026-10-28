@@ -25,11 +25,17 @@ let x: int
 |})
 
 (* Formatting keeps a file's line endings, also inside comments, template
-   literals and raw JS, and formatting the result again changes nothing *)
+   literals and raw JS, and formatting the result again changes nothing. The
+   line breaks inside literals are part of the program and keep their bytes,
+   whatever the file's line endings, and so do the ones inside comments. *)
 let () =
+  let to_crlf text = String.concat "\r\n" (String.split_on_char '\n' text) in
   let lf =
     "/* a\n\
     \ multi-line comment */\n\
+     /* a comment\n\
+    \ * with stars\n\
+    \ */\n\
      let s = `line 1\n\
      line 2`\n\
      let r = %raw(`\n\
@@ -53,7 +59,20 @@ let () =
       let formatted = format source in
       assert (formatted = source);
       assert (format formatted = formatted))
-    [lf; Res_line_endings.to_crlf lf]
+    [
+      lf;
+      to_crlf lf;
+      "let x = 1\r\nlet s = \"a\nb\"\r\n";
+      "let x = 1\nlet s = \"a\r\nb\"\n";
+      "let x = 1\r\nlet t = `a\nb`\r\nlet c = '\n'\r\nlet p = #\"a\nb\"\r\n";
+      "let x = 1\nlet t = `a\r\nb`\nlet c = '\r'\nlet p = #\"a\r\nb\"\n";
+      "let x = 1\n/* a\r\r\nb\nc */\nlet y = 2\n";
+      "let x = 1\r\n/* a\nb\r\nc */\r\nlet y = 2\r\n";
+    ];
+  (* The printer writes the line breaks of a comment it reindents *)
+  let formatted = format "let x = 1\n/* a\r\r\n b */\nlet y = 2\n" in
+  assert (formatted = "let x = 1\n/* a\n b */\nlet y = 2\n");
+  assert (format (to_crlf formatted) = to_crlf formatted)
 
 let () = print_endline "✅ multi printer api tests"
 

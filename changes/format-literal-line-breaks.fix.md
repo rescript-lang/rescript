@@ -1,0 +1,1 @@
+- Make `bsc -format` keep the line breaks inside string, template and character literals and polymorphic variant names as written, and format comments with `\r\r\n` stably.

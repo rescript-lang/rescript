@@ -38,10 +38,10 @@ let add_string b s =
   b.position <- new_position
 
 (* adds newline and trims all preceding whitespace *)
-let flush_newline b =
+let flush_newline b ~newline =
   let position = ref b.position in
   while Bytes.unsafe_get b.buffer (!position - 1) = ' ' && !position >= 0 do
     position := !position - 1
   done;
   b.position <- !position;
-  add_char b '\n'
+  add_string b newline

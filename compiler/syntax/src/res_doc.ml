@@ -203,7 +203,7 @@ let fits w stack =
   in
   calculate_all stack
 
-let to_string ~width doc =
+let to_string ?(newline = "\n") ~width doc =
   propagate_forced_breaks doc;
   let buffer = Mini_buffer.create 1000 in
 
@@ -234,7 +234,7 @@ let to_string ~width doc =
               Mini_buffer.add_char buffer '\n';
               process ~pos:0 [] rest)
             else (
-              Mini_buffer.flush_newline buffer;
+              Mini_buffer.flush_newline buffer ~newline;
               Mini_buffer.add_string buffer
                 (String.make ind ' ' [@doesNotRaise]);
               process ~pos:ind [] rest)
@@ -249,7 +249,7 @@ let to_string ~width doc =
               Mini_buffer.add_string buffer " ";
               pos + 1
             | Hard ->
-              Mini_buffer.flush_newline buffer;
+              Mini_buffer.flush_newline buffer ~newline;
               0
             | Literal ->
               Mini_buffer.add_char buffer '\n';
