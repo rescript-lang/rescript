@@ -191,3 +191,18 @@ Path value
   }
 ]
 
+Complete src/CompletionExtensibleVariant.res 45:22
+pos_cursor:[45:22] pos_no_white:[45:21] Found pattern:[45:20->45:22]
+Ppat_construct La:[45:20->45:22]
+Completable: Cpattern Value[value]=La
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+Completable: Cpath Value[La]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[La]
+Path La
+[ { "detail": "module Lazy", "kind": 9, "label": "Lazy", "tags": [] } ]
+
