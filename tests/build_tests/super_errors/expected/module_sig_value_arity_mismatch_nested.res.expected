@@ -12,12 +12,12 @@
   Signature mismatch:
   Modules do not match:
     {
-  let f: int => int => int => int
-}
+      let f: int => int => int => int
+    }
   is not included in
     {
-  let f: int => (int, int) => int
-}
+      let f: int => (int, int) => int
+    }
   Values do not match:
     let f: int => int => int => int
   is not included in

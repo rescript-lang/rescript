@@ -12,12 +12,12 @@
   Signature mismatch:
   Modules do not match:
     {
-  let x: string
-}
+      let x: string
+    }
   is not included in
     {
-  let x: int
-}
+      let x: int
+    }
   Values do not match: let x: string is not included in let x: int
   [36m/.../fixtures/include_value_type_mismatch.res[0m:[2m2:3-12[0m:
     Expected declaration

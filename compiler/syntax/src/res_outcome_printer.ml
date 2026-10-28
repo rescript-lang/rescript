@@ -423,9 +423,23 @@ and print_record_declaration_doc ~inline rows =
   in
   if not inline then Doc.group content else content
 
-let print_out_type fmt out_type =
-  Format.pp_print_string fmt
-    (Doc.to_string ~width:80 (print_out_type_doc out_type))
+(* A printed doc can span several lines. Each line break is emitted as a
+   newline of the enclosing Format box, so that the following lines are
+   indented with the box instead of starting at column 0. The first line of
+   a multi-line doc claims the whole margin, so that the box breaks around
+   it instead of continuing the doc's last line on the same line. *)
+let pp_doc fmt doc =
+  match String.split_on_char '\n' (Doc.to_string ~width:80 doc) with
+  | [line] -> Format.pp_print_string fmt line
+  | lines ->
+    lines
+    |> List.iteri (fun i line ->
+        if i = 0 then Format.pp_print_as fmt (Format.pp_get_margin fmt ()) line
+        else (
+          Format.pp_force_newline fmt ();
+          Format.pp_print_string fmt line))
+
+let print_out_type fmt out_type = pp_doc fmt (print_out_type_doc out_type)
 
 let print_type_parameter_doc (typ, (co, cn)) =
   Doc.concat
@@ -926,16 +940,13 @@ and print_out_type_extension_doc
        ])
 
 let print_out_sig_item fmt out_sig_item =
-  Format.pp_print_string fmt
-    (Doc.to_string ~width:80 (print_out_sig_item_doc out_sig_item))
+  pp_doc fmt (print_out_sig_item_doc out_sig_item)
 
 let print_out_signature fmt signature =
-  Format.pp_print_string fmt
-    (Doc.to_string ~width:80 (print_out_signature_doc signature))
+  pp_doc fmt (print_out_signature_doc signature)
 
 let print_out_module_type fmt out_module_type =
-  Format.pp_print_string fmt
-    (Doc.to_string ~width:80 (print_out_module_type_doc out_module_type))
+  pp_doc fmt (print_out_module_type_doc out_module_type)
 
 (* Not supported in ReScript *)
 (* Oprint.out_class_type *)

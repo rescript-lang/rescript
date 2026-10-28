@@ -12,12 +12,12 @@
   Signature mismatch:
   Modules do not match:
     {
-  type t = {@set "x": int}
-}
+      type t = {@set "x": int}
+    }
   is not included in
     {
-  type t = {"x": int}
-}
+      type t = {"x": int}
+    }
   Type declarations do not match:
     type t = {@set "x": int}
   is not included in

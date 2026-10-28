@@ -12,12 +12,12 @@
   Signature mismatch:
   Modules do not match:
     {
-  type t = @as(null) A
-}
+      type t = @as(null) A
+    }
   is not included in
     {
-  @unboxed type t = @as(null) A
-}
+      @unboxed type t = @as(null) A
+    }
   Type declarations do not match:
     type t = @as(null) A
   is not included in

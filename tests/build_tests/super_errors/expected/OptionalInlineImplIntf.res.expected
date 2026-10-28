@@ -12,12 +12,12 @@
   Signature mismatch:
   Modules do not match:
     {
-  type t = A({x: int})
-}
+      type t = A({x: int})
+    }
   is not included in
     {
-  type t = A({x?: int})
-}
+      type t = A({x?: int})
+    }
   Type declarations do not match:
     type t = A({x: int})
   is not included in

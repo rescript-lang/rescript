@@ -12,12 +12,12 @@
   Signature mismatch:
   Modules do not match:
     {
-  type t = int => int => int
-}
+      type t = int => int => int
+    }
   is not included in
     {
-  type t = (int, int) => int
-}
+      type t = (int, int) => int
+    }
   Type declarations do not match:
     type t = int => int => int
   is not included in

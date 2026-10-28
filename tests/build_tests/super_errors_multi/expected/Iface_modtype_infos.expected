@@ -7,21 +7,21 @@
   does not match the interface /.../fixtures/Iface_modtype_infos/foo.cmi:
   Module type declarations do not match:
     module type T = {
-  let v: string
-}
+      let v: string
+    }
   does not match
     module type T = {
-  let v: int
-}
+      let v: int
+    }
   At position module type T = <here>
   Modules do not match:
     {
-  let v: string
-}
+      let v: string
+    }
   is not included in
     {
-  let v: int
-}
+      let v: int
+    }
   At position module type T = <here>
   Values do not match: let v: string is not included in let v: int
   [36m/.../fixtures/Iface_modtype_infos/Foo.resi[0m:[2m2:3-12[0m:

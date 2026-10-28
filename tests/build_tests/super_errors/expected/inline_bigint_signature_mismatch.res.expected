@@ -13,14 +13,14 @@
   Signature mismatch:
   Modules do not match:
     {
-  let pos: bigint
-  let neg: bigint
-}
+      let pos: bigint
+      let neg: bigint
+    }
   is not included in
     {
-  @inline(12n) let pos: bigint
-  @inline(-5n) let neg: bigint
-}
+      @inline(12n) let pos: bigint
+      @inline(-5n) let neg: bigint
+    }
   Values do not match:
     let pos: bigint
   is not included in

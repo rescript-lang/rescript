@@ -9,9 +9,9 @@
 
   This module is not a structure; it has type
   (
-  M: {
-    let v: int
-  },
-) => {
-  let doubled: int
-}
+    M: {
+      let v: int
+    },
+  ) => {
+    let doubled: int
+  }

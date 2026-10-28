@@ -11,13 +11,13 @@
   
   This record expression is expected to have type
     [1;33mComponent.props<
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
->[0m
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+    >[0m

@@ -12,12 +12,12 @@
   Signature mismatch:
   Modules do not match:
     {
-  let v: {@set "x": int}
-}
+      let v: {@set "x": int}
+    }
   is not included in
     {
-  let v: {"x": int}
-}
+      let v: {"x": int}
+    }
   Values do not match:
     let v: {@set "x": int}
   is not included in
