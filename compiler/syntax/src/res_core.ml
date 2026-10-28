@@ -5799,6 +5799,11 @@ and parse_private_eq_or_repr p =
   | Bar | DotDot ->
     let _, kind, attrs = parse_type_representation p in
     (None, Asttypes.Private, kind, attrs)
+  | (At | DocComment _) when is_representation_after_attrs p ->
+    let _, kind, attrs = parse_type_representation p in
+    (None, Asttypes.Private, kind, attrs)
+  | DocComment _ ->
+    (Some (parse_typ_expr p), Asttypes.Private, Parsetree.Ptype_abstract, [])
   | t when Grammar.is_typ_expr_start t ->
     (Some (parse_typ_expr p), Asttypes.Private, Parsetree.Ptype_abstract, [])
   | _ ->
@@ -6019,6 +6024,55 @@ and parse_polymorphic_variant_type_args p =
   Parser.expect Rparen p;
   Location.mkloc args (mk_loc start_pos (Parser.position p))
 
+(* Attributes and doc comments after `=` (or `= private`) can start a
+   representation (variant/record/open variant) or a manifest. Look ahead past
+   them: if a representation-like token follows, it is a representation;
+   otherwise a manifest type expression. *)
+and is_representation_after_attrs p =
+  let starts_with_doc_comment =
+    match Parser.peek p with
+    | DocComment _ -> true
+    | _ -> false
+  in
+  Parser.lookahead p (fun state ->
+      ignore (parse_attributes state);
+      (* optionally skip a run of doc comments before deciding *)
+      skip_doc_comments state;
+      match Parser.peek state with
+      | Lbrace -> (
+        (* Disambiguate record declaration vs object type.
+           Peek inside the braces; if it looks like an object (String/Dot/DotDot/DotDotDot),
+           then this is a manifest type expression, not a representation. If it looks like
+           a record field (e.g. Lident or attributes before one), treat as representation. *)
+        Parser.next state;
+        (* consume Lbrace *)
+        ignore (parse_attributes state);
+        skip_doc_comments state;
+        match Parser.peek state with
+        | String _ | Dot | DotDot -> false (* object type => manifest *)
+        | DotDotDot ->
+          (* A spread (`{...base, y: int}`) after a leading doc comment has
+             always been parsed as a record declaration, and after a leading
+             attribute as an object type. *)
+          starts_with_doc_comment
+        | _ -> true
+        (* record decl => representation *))
+      | Bar -> true (* variant constructor list *)
+      | DotDot -> true (* extensible/open variant ".." *)
+      | DotDotDot ->
+        (* A variant spread (`...base | C`) after a leading doc comment has
+           always been parsed as a constructor list. *)
+        starts_with_doc_comment
+      | Uident _ -> (
+        (* constructor vs module-qualified manifest *)
+        Parser.next state;
+        match Parser.peek state with
+        | Dot -> false (* M.t => manifest *)
+        | _ -> true
+        (* Uident starting a constructor *))
+      | DocComment _ -> true (* doc before constructor list *)
+      | _ -> false)
+
 and parse_type_equation_and_representation ?current_type_name_path
     ?inline_types_context p =
   match Parser.peek p with
@@ -6034,49 +6088,14 @@ and parse_type_equation_and_representation ?current_type_name_path
       in
       (manifest, priv, kind, [])
     | Private -> parse_private_eq_or_repr p
-    | Bar | DotDot | DocComment _ ->
+    | Bar | DotDot ->
       let priv, kind, attrs =
         parse_type_representation ?current_type_name_path ?inline_types_context
           p
       in
       (None, priv, kind, attrs)
-    | At -> (
-      (* Attributes can start a representation (variant/record/open variant) or a manifest.
-         Look ahead past attributes (and doc comments). If a representation-like token follows,
-         parse it as a representation; otherwise treat as a manifest. *)
-      let is_representation_after_attrs =
-        Parser.lookahead p (fun state ->
-            ignore (parse_attributes state);
-            (* optionally skip a run of doc comments before deciding *)
-            skip_doc_comments state;
-            match Parser.peek state with
-            | Lbrace -> (
-              (* Disambiguate record declaration vs object type.
-                 Peek inside the braces; if it looks like an object (String/Dot/DotDot/DotDotDot),
-                 then this is a manifest type expression, not a representation. If it looks like
-                 a record field (e.g. Lident or attributes before one), treat as representation. *)
-              Parser.next state;
-              (* consume Lbrace *)
-              ignore (parse_attributes state);
-              skip_doc_comments state;
-              match Parser.peek state with
-              | String _ | Dot | DotDot | DotDotDot ->
-                false (* object type => manifest *)
-              | _ -> true
-              (* record decl => representation *))
-            | Bar -> true (* variant constructor list *)
-            | DotDot -> true (* extensible/open variant ".." *)
-            | Uident _ -> (
-              (* constructor vs module-qualified manifest *)
-              Parser.next state;
-              match Parser.peek state with
-              | Dot -> false (* M.t => manifest *)
-              | _ -> true
-              (* Uident starting a constructor *))
-            | DocComment _ -> true (* doc before constructor list *)
-            | _ -> false)
-      in
-      if is_representation_after_attrs then
+    | At | DocComment _ -> (
+      if is_representation_after_attrs p then
         let priv, kind, attrs =
           parse_type_representation ?current_type_name_path
             ?inline_types_context p
