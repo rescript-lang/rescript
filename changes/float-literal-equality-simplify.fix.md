@@ -1,0 +1,1 @@
+- Fix the JavaScript simplifier treating equal float literals, or an int and a float literal of the same value, as different constants, which turned `x == 2.5 && x == 2.5` into `false`.
