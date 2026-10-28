@@ -1,0 +1,25 @@
+Complete src/CompletionExtensibleIfaceUse.res 2:17
+XXX Not found!
+Completable: CexhaustiveSwitch Value[importe]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[importe]
+Path importe
+[
+  {
+    "detail": "CompletionExtensibleIface.attr",
+    "kind": 12,
+    "label": "imported",
+    "tags": []
+  },
+  {
+    "detail": "insert exhaustive switch for value",
+    "filterText": "imported",
+    "insertText": "imported {\n   | CompletionExtensibleIface.Top => ${1:%todo}\n   | CompletionExtensibleIface.Sub.Flag => ${2:%todo}\n   | _ => ${3:%todo}\n   }",
+    "insertTextFormat": 2,
+    "kind": 15,
+    "label": "imported (exhaustive switch)",
+    "tags": []
+  }
+]
+

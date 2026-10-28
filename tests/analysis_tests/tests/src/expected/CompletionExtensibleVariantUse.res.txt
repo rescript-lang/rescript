@@ -15,7 +15,7 @@ Path importe
   {
     "detail": "insert exhaustive switch for value",
     "filterText": "imported",
-    "insertText": "imported {\n   | CompletionExtensibleVariant.Str(_) => ${1:%todo}\n   | CompletionExtensibleVariant.Num(_) => ${2:%todo}\n   | CompletionExtensibleVariant.Sub.Flag => ${3:%todo}\n   | Local => ${4:%todo}\n   | _ => ${5:%todo}\n   }",
+    "insertText": "imported {\n   | CompletionExtensibleVariant.Str(_) => ${1:%todo}\n   | CompletionExtensibleVariant.Num(_) => ${2:%todo}\n   | CompletionExtensibleVariant.Sub.Flag => ${3:%todo}\n   | CompletionExtensibleVariant.Later => ${4:%todo}\n   | Local => ${5:%todo}\n   | _ => ${6:%todo}\n   }",
     "insertTextFormat": 2,
     "kind": 15,
     "label": "imported (exhaustive switch)",
