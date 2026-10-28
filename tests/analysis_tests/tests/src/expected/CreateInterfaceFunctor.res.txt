@@ -23,4 +23,14 @@ module type S = {
 module N: {
   type t = {@as("wire") field: int}
 }
+module WithWire: (
+  X: {
+  },
+) =>
+{
+  type t = {@as("wire") field: int}
+}
+module Applied: {
+  type t = {@as("wire") field: int}
+}
 

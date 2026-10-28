@@ -37,7 +37,8 @@ type out_type =
   | Otyp_manifest of out_type * out_type
   | Otyp_object of (string * bool * out_type) list * bool option
     (* fields are (name, mutable, type) *)
-  | Otyp_record of (string * bool * bool * out_type) list
+  | Otyp_record of (string * string option * bool * bool * out_type) list
+      (** name, runtime name given with [@as], mutable, optional, type *)
   | Otyp_stuff of string
   | Otyp_sum of (string * out_type list * out_type option * string option) list
   | Otyp_tuple of out_type list

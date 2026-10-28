@@ -951,6 +951,7 @@ and tree_of_label ?printing_context l =
     | _ -> l.ld_type
   in
   ( Ident.name l.ld_id,
+    l.ld_runtime_name,
     l.ld_mutable = Mutable,
     opt,
     tree_of_typexp ?printing_context false typ )

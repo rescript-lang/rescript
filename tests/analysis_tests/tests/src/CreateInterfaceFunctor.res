@@ -25,3 +25,10 @@ module type S = module type of M
 module N = {
   include M
 }
+
+// Types of an applied functor keep the runtime names of their fields
+module WithWire = (X: {}) => {
+  type t = {@as("wire") field: int}
+}
+
+module Applied = WithWire({})
