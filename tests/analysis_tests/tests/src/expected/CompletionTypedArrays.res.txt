@@ -720,7 +720,7 @@ Path
     "detail": "(t, bigint => bigint) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
+      "value": "\n  `map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
     },
     "insertText": "->BigInt64Array.map",
     "kind": 12,
@@ -759,10 +759,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int) => array<bigint>",
+    "detail": "(t, ~target: int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
+      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
     },
     "insertText": "->BigInt64Array.copyAllWithin",
     "kind": 12,
@@ -885,10 +885,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => array<bigint>",
+    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
+      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
     },
     "insertText": "->BigInt64Array.copyWithin",
     "kind": 12,
@@ -1809,7 +1809,7 @@ Path
     "detail": "(t, bigint => bigint) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
+      "value": "\n  `map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
     },
     "insertText": "->BigUint64Array.map",
     "kind": 12,
@@ -1848,10 +1848,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int) => array<bigint>",
+    "detail": "(t, ~target: int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
+      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
     },
     "insertText": "->BigUint64Array.copyAllWithin",
     "kind": 12,
@@ -1974,10 +1974,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => array<bigint>",
+    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
+      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
     },
     "insertText": "->BigUint64Array.copyWithin",
     "kind": 12,
@@ -2898,7 +2898,7 @@ Path
     "detail": "(t, float => float) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
+      "value": "\n  `map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
     },
     "insertText": "->Float32Array.map",
     "kind": 12,
@@ -2937,10 +2937,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int) => array<float>",
+    "detail": "(t, ~target: int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
+      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
     },
     "insertText": "->Float32Array.copyAllWithin",
     "kind": 12,
@@ -3063,10 +3063,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => array<float>",
+    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
+      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
     },
     "insertText": "->Float32Array.copyWithin",
     "kind": 12,
@@ -3987,7 +3987,7 @@ Path
     "detail": "(t, float => float) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
+      "value": "\n  `map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
     },
     "insertText": "->Float64Array.map",
     "kind": 12,
@@ -4026,10 +4026,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int) => array<float>",
+    "detail": "(t, ~target: int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
+      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
     },
     "insertText": "->Float64Array.copyAllWithin",
     "kind": 12,
@@ -4152,10 +4152,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => array<float>",
+    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
+      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
     },
     "insertText": "->Float64Array.copyWithin",
     "kind": 12,
@@ -5076,7 +5076,7 @@ Path
     "detail": "(t, int => int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
+      "value": "\n  `map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
     },
     "insertText": "->Int16Array.map",
     "kind": 12,
@@ -5115,10 +5115,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int) => array<int>",
+    "detail": "(t, ~target: int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
+      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
     },
     "insertText": "->Int16Array.copyAllWithin",
     "kind": 12,
@@ -5241,10 +5241,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => array<int>",
+    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
+      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
     },
     "insertText": "->Int16Array.copyWithin",
     "kind": 12,
@@ -6165,7 +6165,7 @@ Path
     "detail": "(t, int => int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
+      "value": "\n  `map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
     },
     "insertText": "->Int32Array.map",
     "kind": 12,
@@ -6204,10 +6204,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int) => array<int>",
+    "detail": "(t, ~target: int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
+      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
     },
     "insertText": "->Int32Array.copyAllWithin",
     "kind": 12,
@@ -6330,10 +6330,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => array<int>",
+    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
+      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
     },
     "insertText": "->Int32Array.copyWithin",
     "kind": 12,
@@ -7254,7 +7254,7 @@ Path
     "detail": "(t, int => int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
+      "value": "\n  `map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
     },
     "insertText": "->Int8Array.map",
     "kind": 12,
@@ -7293,10 +7293,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int) => array<int>",
+    "detail": "(t, ~target: int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
+      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
     },
     "insertText": "->Int8Array.copyAllWithin",
     "kind": 12,
@@ -7419,10 +7419,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => array<int>",
+    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
+      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
     },
     "insertText": "->Int8Array.copyWithin",
     "kind": 12,
@@ -8343,7 +8343,7 @@ Path
     "detail": "(t, int => int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
+      "value": "\n  `map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
     },
     "insertText": "->Uint16Array.map",
     "kind": 12,
@@ -8382,10 +8382,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int) => array<int>",
+    "detail": "(t, ~target: int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
+      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
     },
     "insertText": "->Uint16Array.copyAllWithin",
     "kind": 12,
@@ -8508,10 +8508,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => array<int>",
+    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
+      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
     },
     "insertText": "->Uint16Array.copyWithin",
     "kind": 12,
@@ -9432,7 +9432,7 @@ Path
     "detail": "(t, int => int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
+      "value": "\n  `map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
     },
     "insertText": "->Uint32Array.map",
     "kind": 12,
@@ -9471,10 +9471,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int) => array<int>",
+    "detail": "(t, ~target: int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
+      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
     },
     "insertText": "->Uint32Array.copyAllWithin",
     "kind": 12,
@@ -9597,10 +9597,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => array<int>",
+    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
+      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
     },
     "insertText": "->Uint32Array.copyWithin",
     "kind": 12,
@@ -10521,7 +10521,7 @@ Path
     "detail": "(t, int => int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
+      "value": "\n  `map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
     },
     "insertText": "->Uint8Array.map",
     "kind": 12,
@@ -10560,10 +10560,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int) => array<int>",
+    "detail": "(t, ~target: int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
+      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
     },
     "insertText": "->Uint8Array.copyAllWithin",
     "kind": 12,
@@ -10686,10 +10686,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => array<int>",
+    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
+      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
     },
     "insertText": "->Uint8Array.copyWithin",
     "kind": 12,
@@ -11610,7 +11610,7 @@ Path
     "detail": "(t, int => int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
+      "value": "\n  `map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.\n\n  See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.\n  "
     },
     "insertText": "->Uint8ClampedArray.map",
     "kind": 12,
@@ -11649,10 +11649,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int) => array<int>",
+    "detail": "(t, ~target: int) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
+      "value": "\n  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([10, 20, 30])\n  let _ = Int32Array.copyAllWithin(view, ~target=1)\n  Int32Array.toString(view) == \"10,10,20\"\n  ```\n  "
     },
     "insertText": "->Uint8ClampedArray.copyAllWithin",
     "kind": 12,
@@ -11775,10 +11775,10 @@ Path
         }
       }
     ],
-    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => array<int>",
+    "detail": "(t, ~target: int, ~start: int, ~end: int=?) => t",
     "documentation": {
       "kind": "markdown",
-      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
+      "value": "\n  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.\n\n  Beware this will *mutate* the typed array.\n\n  See [`TypedArray.prototype.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/copyWithin) on MDN.\n\n  ## Examples\n\n  ```rescript\n  let view = Int32Array.fromArray([1, 2, 3, 4])\n  let _ = Int32Array.copyWithin(view, ~target=1, ~start=2, ~end=4)\n  Int32Array.toString(view) == \"1,3,4,4\"\n  ```\n  "
     },
     "insertText": "->Uint8ClampedArray.copyWithin",
     "kind": 12,

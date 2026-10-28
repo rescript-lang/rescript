@@ -1,0 +1,1 @@
+- `TypedArray.map` and `TypedArray.mapWithIndex` now keep the element type, because a typed array converts the results of `map` to its own element type.
