@@ -57,6 +57,10 @@ val no_side_effect_statement : J.statement -> bool
 
 val eq_expression : J.expression -> J.expression -> bool
 
+val eq_literal : J.expression_desc -> J.expression_desc -> bool option
+(** Whether two literals are the same value under JavaScript [===], for
+    example [1] and [1.0]; [None] when either is not a literal. *)
+
 val eq_block : J.block -> J.block -> bool
 
 val rev_flatten_seq : J.expression -> J.block
