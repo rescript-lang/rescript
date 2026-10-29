@@ -161,6 +161,10 @@ function showAll(items) {
   return items.map(item => item.show(item.value));
 }
 
+function showOne(item) {
+  return item.show(item.value);
+}
+
 function show$1(n) {
   return n.toString();
 }
@@ -231,7 +235,7 @@ function depth(n) {
 
 Mocha.describe("Gadt_test", () => {
   Mocha.test("evaluator", () => {
-    Test_utils.eq("File \"gadt_test.res\", line 187, characters 7-14", 10, $$eval({
+    Test_utils.eq("File \"gadt_test.res\", line 195, characters 7-14", 10, $$eval({
       TAG: "If",
       _0: {
         TAG: "Equal",
@@ -260,7 +264,7 @@ Mocha.describe("Gadt_test", () => {
         _0: 20
       }
     }));
-    Test_utils.eq("File \"gadt_test.res\", line 188, characters 7-14", true, $$eval({
+    Test_utils.eq("File \"gadt_test.res\", line 196, characters 7-14", true, $$eval({
       TAG: "First",
       _0: {
         TAG: "Pair",
@@ -274,7 +278,7 @@ Mocha.describe("Gadt_test", () => {
         }
       }
     }));
-    Test_utils.eq("File \"gadt_test.res\", line 189, characters 7-14", [
+    Test_utils.eq("File \"gadt_test.res\", line 197, characters 7-14", [
       3,
       false
     ], $$eval({
@@ -304,7 +308,7 @@ Mocha.describe("Gadt_test", () => {
     }));
   });
   Mocha.test("type witnesses", () => {
-    Test_utils.eq("File \"gadt_test.res\", line 194, characters 6-13", `(1, "a")::(2, "b")::[]`, show({
+    Test_utils.eq("File \"gadt_test.res\", line 202, characters 6-13", `(1, "a")::(2, "b")::[]`, show({
       TAG: "TList",
       _0: {
         TAG: "TPair",
@@ -318,29 +322,29 @@ Mocha.describe("Gadt_test", () => {
       2,
       "b"
     ], tl: /* [] */0}}));
-    Test_utils.eq("File \"gadt_test.res\", line 198, characters 7-14", "Some(None)", show({
+    Test_utils.eq("File \"gadt_test.res\", line 206, characters 7-14", "Some(None)", show({
       TAG: "TOption",
       _0: {
         TAG: "TOption",
         _0: "TInt"
       }
     }, Primitive_option.some(undefined)));
-    Test_utils.eq("File \"gadt_test.res\", line 199, characters 7-14", 0, 0);
-    Test_utils.eq("File \"gadt_test.res\", line 200, characters 7-14", "", "");
-    Test_utils.eq("File \"gadt_test.res\", line 201, characters 7-14", /* [] */0, /* [] */0);
-    Test_utils.eq("File \"gadt_test.res\", line 202, characters 7-14", undefined, undefined);
-    Test_utils.eq("File \"gadt_test.res\", line 203, characters 7-14", "int", "int");
+    Test_utils.eq("File \"gadt_test.res\", line 207, characters 7-14", 0, 0);
+    Test_utils.eq("File \"gadt_test.res\", line 208, characters 7-14", "", "");
+    Test_utils.eq("File \"gadt_test.res\", line 209, characters 7-14", /* [] */0, /* [] */0);
+    Test_utils.eq("File \"gadt_test.res\", line 210, characters 7-14", undefined, undefined);
+    Test_utils.eq("File \"gadt_test.res\", line 211, characters 7-14", "int", "int");
   });
   Mocha.test("equality witness", () => {
-    Test_utils.eq("File \"gadt_test.res\", line 207, characters 7-14", 42, 42);
-    Test_utils.ok("File \"gadt_test.res\", line 208, characters 7-14", equalTy({
+    Test_utils.eq("File \"gadt_test.res\", line 215, characters 7-14", 42, 42);
+    Test_utils.ok("File \"gadt_test.res\", line 216, characters 7-14", equalTy({
       TAG: "TList",
       _0: "TInt"
     }, {
       TAG: "TList",
       _0: "TInt"
     }) !== undefined);
-    Test_utils.ok("File \"gadt_test.res\", line 209, characters 7-14", equalTy({
+    Test_utils.ok("File \"gadt_test.res\", line 217, characters 7-14", equalTy({
       TAG: "TPair",
       _0: "TInt",
       _1: "TString"
@@ -371,12 +375,12 @@ Mocha.describe("Gadt_test", () => {
         _1: {hd: 1, tl: {hd: 2, tl: /* [] */0}}
       }
     ];
-    Test_utils.eq("File \"gadt_test.res\", line 214, characters 7-14", [
+    Test_utils.eq("File \"gadt_test.res\", line 222, characters 7-14", [
       1,
       undefined,
       undefined
     ], values.map(v => fromDynamic("TInt", v)));
-    Test_utils.eq("File \"gadt_test.res\", line 215, characters 7-14", [
+    Test_utils.eq("File \"gadt_test.res\", line 223, characters 7-14", [
       undefined,
       undefined,
       {hd: 1, tl: {hd: 2, tl: /* [] */0}}
@@ -384,7 +388,7 @@ Mocha.describe("Gadt_test", () => {
       TAG: "TList",
       _0: "TInt"
     }, v)));
-    Test_utils.eq("File \"gadt_test.res\", line 217, characters 6-13", [
+    Test_utils.eq("File \"gadt_test.res\", line 225, characters 6-13", [
       "1",
       "s"
     ], showAll([
@@ -399,13 +403,18 @@ Mocha.describe("Gadt_test", () => {
         show: s => s
       }
     ]));
-    Test_utils.eq("File \"gadt_test.res\", line 224, characters 7-14", "7", showBoxed({
+    Test_utils.eq("File \"gadt_test.res\", line 232, characters 7-14", "7", showBoxed({
       TAG: "Boxed",
       _0: ShowInt,
       _1: 7
     }));
+    Test_utils.eq("File \"gadt_test.res\", line 233, characters 7-14", "8", showOne({
+      TAG: "Showable",
+      value: 8,
+      show: n => n.toString()
+    }));
   });
-  Mocha.test("typed printf", () => Test_utils.eq("File \"gadt_test.res\", line 228, characters 7-14", "x=1, y=b", format({
+  Mocha.test("typed printf", () => Test_utils.eq("File \"gadt_test.res\", line 237, characters 7-14", "x=1, y=b", format({
     TAG: "Text",
     _0: "x=",
     _1: {
@@ -421,28 +430,28 @@ Mocha.describe("Gadt_test", () => {
     }
   }, "")(1)("b")));
   Mocha.test("representation attributes", () => {
-    Test_utils.eq("File \"gadt_test.res\", line 232, characters 7-14", 3, 3);
-    Test_utils.eq("File \"gadt_test.res\", line 233, characters 7-14", "s", "s");
-    Test_utils.eq("File \"gadt_test.res\", line 234, characters 7-14", {
+    Test_utils.eq("File \"gadt_test.res\", line 241, characters 7-14", 3, 3);
+    Test_utils.eq("File \"gadt_test.res\", line 242, characters 7-14", "s", "s");
+    Test_utils.eq("File \"gadt_test.res\", line 243, characters 7-14", {
       TAG: "int",
       v: 3
     }, {
       TAG: "int",
       v: 3
     });
-    Test_utils.eq("File \"gadt_test.res\", line 235, characters 7-14", {
+    Test_utils.eq("File \"gadt_test.res\", line 244, characters 7-14", {
       kind: "Circle",
       radius: 1.5
     }, {
       kind: "Circle",
       radius: 1.5
     });
-    Test_utils.eq("File \"gadt_test.res\", line 236, characters 7-14", "hi", "hi");
-    Test_utils.eq("File \"gadt_test.res\", line 237, characters 7-14", 2, 2);
-    Test_utils.eq("File \"gadt_test.res\", line 238, characters 7-14", "u", "u");
-    Test_utils.eq("File \"gadt_test.res\", line 239, characters 7-14", "u", "u");
+    Test_utils.eq("File \"gadt_test.res\", line 245, characters 7-14", "hi", "hi");
+    Test_utils.eq("File \"gadt_test.res\", line 246, characters 7-14", 2, 2);
+    Test_utils.eq("File \"gadt_test.res\", line 247, characters 7-14", "u", "u");
+    Test_utils.eq("File \"gadt_test.res\", line 248, characters 7-14", "u", "u");
   });
-  Mocha.test("polymorphic recursion", () => Test_utils.eq("File \"gadt_test.res\", line 243, characters 7-14", 2, depth({
+  Mocha.test("polymorphic recursion", () => Test_utils.eq("File \"gadt_test.res\", line 252, characters 7-14", 2, depth({
     TAG: "Nest",
     _0: {
       TAG: "Nest",
@@ -463,6 +472,7 @@ export {
   equalTy,
   fromDynamic,
   showAll,
+  showOne,
   ShowInt,
   showBoxed,
   format,
