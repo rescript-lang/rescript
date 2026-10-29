@@ -43,3 +43,22 @@ let dictBase: dict<string> = dict{}
 let dictChildren =
   <LoggedDict {...dict{...dictBase, "children": note("children"), "title": note("title")}} />
 let dictChildrenOrder = log->Array.copy
+
+// Children are evaluated after the other props, as JSX writes them, even when
+// the props type declares children first, and the key last
+let domChildren = <div title={note("title")} key={note("key")}>{React.string(note("child"))}</div>
+let domChildrenOrder = log->Array.copy
+
+type childrenFirstProps = {children: string, a: string}
+module ChildrenFirst = {
+  @val external make: React.component<childrenFirstProps> = "LoggedComp"
+}
+let componentChildren = <ChildrenFirst a={note("a")}>{note("child")}</ChildrenFirst>
+let componentChildrenOrder = log->Array.copy
+
+let domManyChildren =
+  <div title={note("title")}>
+    {React.string(note("first"))}
+    {React.string(note("second"))}
+  </div>
+let domManyChildrenOrder = log->Array.copy

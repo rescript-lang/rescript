@@ -277,10 +277,11 @@ let subst_map (substitution : J.expression Hash_ident.t) =
           | Some _ | None -> super.expression self x)
         | Jsx
             ({tag = {expression_desc = Static_index _ | Array_index _}} as jsx)
-          ->
-          (* Keep a JSX tag like [M.make] as it is: the field's value may be a
-             variable with a lowercase name, which JSX reads as an intrinsic
-             element, so js_dump would have to print the call instead (#7432) *)
+          when !((Clflags.current ()).jsx_preserve) ->
+          (* In JSX preserve mode, keep a JSX tag like [M.make] as it is: the
+             field's value may be a variable with a lowercase name, which JSX
+             reads as an intrinsic element, so js_dump would have to print the
+             call instead (#7432) *)
           let map = self.expression self in
           {
             x with

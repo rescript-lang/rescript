@@ -57,14 +57,16 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
   let inline_depth = ref 0 in
   let rec simpl (lam : Lambda.t) : Lambda.t =
     match lam with
-    (* Keep a JSX tag like [M.make] as it is: flattening it may give a variable
-       with a lowercase name, which JSX reads as an intrinsic element (#7432) *)
+    (* In JSX preserve mode, keep a JSX tag like [M.make] as it is: flattening
+       it may give a variable with a lowercase name, which JSX reads as an
+       intrinsic element (#7432) *)
     | Lprim
         {
           primitive = Pjsx _ as primitive;
           args = (Lprim {primitive = Pfield (_, _)} as tag) :: rest;
           loc;
-        } ->
+        }
+      when !((Clflags.current ()).jsx_preserve) ->
       let rest' = Ext_list.map_sharing rest simpl in
       if rest' == rest then lam
       else Lambda.prim ~primitive ~args:(tag :: rest') loc
