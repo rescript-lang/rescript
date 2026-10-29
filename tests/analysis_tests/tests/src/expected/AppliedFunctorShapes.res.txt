@@ -1,0 +1,114 @@
+Definition src/AppliedFunctorShapes.res 11:14
+{
+  "range": {
+    "end": { "character": 28, "line": 2 },
+    "start": { "character": 2, "line": 2 }
+  },
+  "uri": "file:///AppliedFunctorShapes.res"
+}
+
+Definition src/AppliedFunctorShapes.res 16:17
+{
+  "range": {
+    "end": { "character": 9, "line": 13 },
+    "start": { "character": 6, "line": 13 }
+  },
+  "uri": "file:///AppliedFunctorShapes.res"
+}
+
+Hover src/AppliedFunctorShapes.res 20:27
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\n(B.t, B.t) => int\n```\n\n---\n\n```\n \n```\n```rescript\ntype B.t\n```\nGo to: [Type definition](AppliedFunctorShapes.res#L2,3)\n"
+  }
+}
+
+References src/AppliedFunctorShapes.res 24:25
+[
+  {
+    "range": {
+      "end": { "character": 10, "line": 20 },
+      "start": { "character": 6, "line": 20 }
+    },
+    "uri": "file:///AppliedFunctorShapes.res"
+  },
+  {
+    "range": {
+      "end": { "character": 29, "line": 24 },
+      "start": { "character": 25, "line": 24 }
+    },
+    "uri": "file:///AppliedFunctorShapes.res"
+  }
+]
+
+Definition src/AppliedFunctorShapes.res 31:23
+{
+  "range": {
+    "end": { "character": 11, "line": 28 },
+    "start": { "character": 6, "line": 28 }
+  },
+  "uri": "file:///AppliedFunctorShapes.res"
+}
+
+References src/AppliedFunctorShapes.res 40:15
+[
+  {
+    "range": {
+      "end": { "character": 10, "line": 35 },
+      "start": { "character": 6, "line": 35 }
+    },
+    "uri": "file:///AppliedFunctorShapes.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 40 },
+      "start": { "character": 15, "line": 40 }
+    },
+    "uri": "file:///AppliedFunctorShapes.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 62 },
+      "start": { "character": 14, "line": 62 }
+    },
+    "uri": "file:///AppliedFunctorShapes.res"
+  }
+]
+
+Definition src/AppliedFunctorShapes.res 44:12
+{
+  "range": {
+    "end": { "character": 28, "line": 2 },
+    "start": { "character": 2, "line": 2 }
+  },
+  "uri": "file:///AppliedFunctorShapes.res"
+}
+
+Definition src/AppliedFunctorShapes.res 50:20
+{
+  "range": {
+    "end": { "character": 26, "line": 47 },
+    "start": { "character": 2, "line": 47 }
+  },
+  "uri": "file:///AppliedFunctorShapes.res"
+}
+
+Definition src/AppliedFunctorShapes.res 57:15
+{
+  "range": {
+    "end": { "character": 13, "line": 7 },
+    "start": { "character": 6, "line": 7 }
+  },
+  "uri": "file:///AppliedFunctorShapes.res"
+}
+
+Definition src/AppliedFunctorShapes.res 62:14
+{
+  "range": {
+    "end": { "character": 10, "line": 35 },
+    "start": { "character": 6, "line": 35 }
+  },
+  "uri": "file:///AppliedFunctorShapes.res"
+}
+

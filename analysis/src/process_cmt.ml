@@ -248,6 +248,21 @@ let rec record_renamed_stamps table (original : Types.module_type)
     record_renamed_stamps table result renamed_result
   | _ -> ()
 
+(* The type of an applied functor with the identifiers of the body's
+   declarations. The functor's result signature has them; an application's
+   has them only when the argument is not a path, else the compiler already
+   renamed them, so the results of curried applications are taken from the
+   functor applied first. *)
+let rec body_type (mod_expr : Typedtree.module_expr) =
+  match mod_expr.mod_desc with
+  | Tmod_apply (functor_, _arg, _coercion) -> (
+    match body_type functor_ with
+    | Types.Mty_functor (_, _, result) -> result
+    | mty -> mty)
+  | Tmod_ident _ | Tmod_structure _ | Tmod_functor _ | Tmod_constraint _
+  | Tmod_unpack _ ->
+    mod_expr.mod_type
+
 let get_module_type_path mod_desc =
   match mod_desc with
   | Typedtree.Tmty_ident (path, _) | Tmty_alias (path, _) -> Some path
@@ -734,7 +749,10 @@ and for_module ~env (mod_expr : Typedtree.module_expr) module_name =
        body, whose stamps are already taken, so they are renamed first,
        with stamps above any that a compilation hands out. Their locations
        are in the functor's body, so they are marked as coming from the
-       functor, like included items, for definitions to find its file. *)
+       functor, like included items, for definitions to find its file.
+       An inline functor's parameters and declarations are registered
+       first, for uses inside its body to resolve. *)
+    ignore (for_module ~env functor_ module_name);
     let env = env |> Env.add_module ~name:module_name in
     let env =
       match get_module_path functor_.mod_desc with
@@ -745,15 +763,7 @@ and for_module ~env (mod_expr : Typedtree.module_expr) module_name =
     if Ident.current_time () < renamed_stamp_floor then
       Ident.set_current_time renamed_stamp_floor;
     let renamed = Subst.modtype Subst.identity mod_expr.mod_type in
-    (* The functor's result signature has the identifiers of the body's
-       declarations; the application's has them only when the argument is
-       not a path, else the compiler already renamed them. *)
-    let functor_result =
-      match functor_.mod_type with
-      | Mty_functor (_, _, result) -> result
-      | mty -> mty
-    in
-    record_renamed_stamps env.renamed_stamps functor_result renamed;
+    record_renamed_stamps env.renamed_stamps (body_type mod_expr) renamed;
     for_type_module ~name:module_name ~env renamed
   | Tmod_unpack (_expr, module_type) ->
     let env = env |> Env.add_module ~name:module_name in
