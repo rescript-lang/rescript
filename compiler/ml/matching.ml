@@ -103,6 +103,15 @@ let rshift {left; right} =
 
 let ctx_rshift ctx = List.map rshift ctx
 
+(* Forget what the contexts know about the first column *)
+let ctx_erase_first_col ctx =
+  List.map
+    (fun {left; right} ->
+      match right with
+      | _ :: right -> {left; right = omega :: right}
+      | [] -> fatal_error "Matching.ctx_erase_first_col")
+    ctx
+
 let rec nchars n ps =
   if n <= 0 then ([], ps)
   else
@@ -2788,6 +2797,15 @@ let rec compile_match repr partial ctx m =
         ((if dbg then do_compile_matching_pr else do_compile_matching) repr)
         partial ctx newarg first_match rem
     in
+    (* A mutable field or array element is read once into [v] here. The code
+       that the exits jump to reads it again and may see another value, as a
+       guard may have changed it, so what the tests on [v] found doesn't hold
+       there. *)
+    let total =
+      match str with
+      | StrictOpt -> jumps_map ctx_erase_first_col total
+      | Strict | Alias | Variable -> total
+    in
     (bind_check str v arg lam, total)
   | _ -> assert false
 
@@ -2916,10 +2934,12 @@ let have_mutable_field p =
 
 let is_mutable p = find_in_pat have_mutable_field p
 
-(* Downgrade Total when
-   1. Matching accesses some mutable fields;
-   2. And there are  guards or lazy patterns.
-*)
+(* Downgrade Total when the matching reads some mutable field and has a guard.
+   The guard may change the field, and the cases after it read it again: the
+   value they see may match none of them. The guarded case need not read the
+   field, e.g. [{c: None} => 0 | {d: true} if f() => 1 | {c: Some(x)} => x].
+   Array elements are mutable too, but a Total matching on arrays has a case
+   that matches any array, and the cases after a guard fall through to it. *)
 
 let check_partial is_mutable pat_act_list = function
   | Partial -> Partial
@@ -2928,9 +2948,8 @@ let check_partial is_mutable pat_act_list = function
       pat_act_list = []
       ||
       (* allow empty case list *)
-      List.exists
-        (fun (pats, (act : action)) -> is_mutable pats && act.guard <> None)
-        pat_act_list
+      List.exists (fun (_, (act : action)) -> act.guard <> None) pat_act_list
+      && List.exists (fun (pats, _) -> is_mutable pats) pat_act_list
     then Partial
     else Total
 

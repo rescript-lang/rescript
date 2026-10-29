@@ -1,0 +1,1 @@
+- Test a mutable field again after a guard that may have changed it, instead of taking a `switch` case that no longer matches.
