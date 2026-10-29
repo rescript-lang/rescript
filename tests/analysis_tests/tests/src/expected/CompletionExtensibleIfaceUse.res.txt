@@ -15,7 +15,7 @@ Path importe
   {
     "detail": "insert exhaustive switch for value",
     "filterText": "imported",
-    "insertText": "imported {\n   | CompletionExtensibleIface.Top => ${1:%todo}\n   | CompletionExtensibleIface.Sub.Flag => ${2:%todo}\n   | _ => ${3:%todo}\n   }",
+    "insertText": "imported {\n   | CompletionExtensibleIface.Top => ${1:%todo}\n   | CompletionExtensibleIface.Sub.Flag => ${2:%todo}\n   | CompletionExtensibleIface.Outer.Inner.Deep => ${3:%todo}\n   | _ => ${4:%todo}\n   }",
     "insertTextFormat": 2,
     "kind": 15,
     "label": "imported (exhaustive switch)",

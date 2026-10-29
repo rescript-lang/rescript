@@ -372,6 +372,17 @@ let with_completion_scope ~file ~module_path ~pos f =
   completion_scope := Some (file, module_path, pos);
   Fun.protect ~finally:(fun () -> completion_scope := previous) f
 
+(* Whether [c] is the constructor written [name] in a payload position, where
+   only the last part of a path such as [Sub.Flag] is kept. Extension
+   constructors are named by their module path, ordinary ones are not. *)
+let constructor_has_name (c : Constructor.t) name =
+  c.cname.txt = name
+  ||
+  match String.rindex_opt c.cname.txt '.' with
+  | Some i ->
+    String.sub c.cname.txt (i + 1) (String.length c.cname.txt - i - 1) = name
+  | None -> false
+
 (* The stamp under which [typ] is declared in [file]. *)
 let type_stamp (file : File.t) (typ : Type.t) =
   let found = ref None in
@@ -909,7 +920,7 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
       match
         constructors
         |> List.find_opt (fun (c : Constructor.t) ->
-            c.cname.txt = constructor_name)
+            constructor_has_name c constructor_name)
       with
       | Some {args = Args args} -> (
         if Debug.verbose () then
@@ -1045,7 +1056,7 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~state ~nested
         match
           constructors
           |> List.find_opt (fun (constructor : Constructor.t) ->
-              constructor.cname.txt = constructor_name)
+              constructor_has_name constructor constructor_name)
         with
         | Some {args = Args args} -> (
           let item_num, nested =
