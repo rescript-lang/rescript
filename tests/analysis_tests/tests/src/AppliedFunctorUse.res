@@ -59,3 +59,18 @@ let nv4 = N.Nested.value
 
 let p2: Shapes.point = {x: 2}
 //             ^ref
+
+let s3 = StrSet.add([], "c")
+//              ^ren addItem
+
+let p3: Shapes.point = {x: 3}
+//             ^ren location
+
+let nv5 = N.Nested.value
+//                 ^ren renamedValue
+
+let px2 = p.x
+//          ^ref
+
+let box2 = Shapes.Box(2)
+//                ^ren Square
