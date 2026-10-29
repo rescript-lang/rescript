@@ -19,9 +19,13 @@ let f = (
   ~a=?,
   /** Default */
   ~b=1,
-  ~c as /** Aliased */
-  d,
+  /** Aliased */
+  ~c as d,
 ) => d
+let f = (
+  /** Typed alias */
+  ~a as x: int=3,
+) => x
 let f = (
   /** Locally abstract */
   type a,
