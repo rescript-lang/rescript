@@ -38,3 +38,30 @@ module Counter = () => {
   //     ^hov
   let count = ref(0)
 }
+
+module type Primitive = {
+  type t
+}
+
+module Gen = (P: Primitive, ()) => {
+  //   ^hov
+  type t = P.t
+}
+
+module GenFirst = ((), P: Primitive) => {
+  //     ^hov
+  type t = P.t
+}
+
+module Curried = (A: Ord) => (B: Ord) => {
+  //     ^hov
+  type t = (A.t, B.t)
+}
+
+module GenCurried = () => (P: Primitive) => {
+  //     ^hov
+  type t = P.t
+}
+
+module GenApplied = Gen(IntOrd)
+//      ^hov

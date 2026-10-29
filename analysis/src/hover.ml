@@ -24,6 +24,7 @@ let show_module_top_level ?(functor_params = []) ~docstring ~is_type ~name
       ^ (if is_type then "type " ^ name ^ " = " else name ^ ": ")
       ^ (match functor_params with
         | [] -> ""
+        | ["()"] -> "() => "
         | params -> "(" ^ String.concat ", " params ^ ") => ")
       ^ "{" ^ "\n" ^ contents ^ "\n}")
   in
