@@ -145,3 +145,12 @@ module UseDeepModType = (Y: Deep.Outer.T) => {
   let d = Y.Inner.deep
   //              ^ref
 }
+
+let nm = N.Nested.value
+//         ^def
+
+let sp: Shapes.point = {x: 2}
+//  ^typ
+
+let spx = sp.x
+//           ^def

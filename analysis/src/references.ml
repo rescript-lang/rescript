@@ -131,27 +131,61 @@ let original_type_stamp (file : File.t) stamp =
   | Some original -> original
   | None -> stamp
 
+let field_of_type ({item = {kind}} : Type.t Declared.t) name =
+  match kind with
+  | Record fields -> fields |> List.find_opt (fun f -> f.fname.txt = name)
+  | _ -> None
+
+let constructor_of_type ({item = {kind}} : Type.t Declared.t) name =
+  match kind with
+  | Variant constructors ->
+    constructors
+    |> List.find_opt (fun const -> const.Constructor.cname.txt = name)
+  | _ -> None
+
 let get_field (file : File.t) stamp name =
   match Stamps.find_type file.stamps (original_type_stamp file stamp) with
   | None -> None
-  | Some {item = {kind}} -> (
-    match kind with
-    | Record fields -> fields |> List.find_opt (fun f -> f.fname.txt = name)
-    | _ -> None)
+  | Some declared -> field_of_type declared name
 
 let get_constructor (file : File.t) stamp name =
   match Stamps.find_type file.stamps (original_type_stamp file stamp) with
   | None -> None
-  | Some {item = {kind}} -> (
-    match kind with
-    | Variant constructors -> (
+  | Some declared -> constructor_of_type declared name
+
+(* The file a declaration is in. Items read from a signature, such as those
+   of an applied functor, are declared in this file but come from the
+   functor's file, which their module path records. *)
+let declared_uri ~state ~package (file : File.t) (declared : _ Declared.t) =
+  Resolve_path.get_source_uri ~state ~env:(Query_env.from_file file) ~package
+    declared.module_path
+
+(* A type with its declaring file, for the locations of its fields and
+   constructors. A type of a functor applied from another file was renamed
+   from one that no file declares, and is looked up in the functor's file by
+   its location, among the types declared there rather than read from a
+   signature. *)
+let source_type ~state ~package (file : File.t) stamp =
+  match Stamps.find_type file.stamps (original_type_stamp file stamp) with
+  | Some declared -> Some (file, declared)
+  | None -> (
+    match Stamps.find_type file.stamps stamp with
+    | None -> None
+    | Some declared -> (
       match
-        constructors
-        |> List.find_opt (fun const -> const.Constructor.cname.txt = name)
+        Cmt.full_from_uri ~state
+          ~uri:(declared_uri ~state ~package file declared)
       with
       | None -> None
-      | Some const -> Some const)
-    | _ -> None)
+      | Some {file = source} ->
+        Stamps.get_entries source.stamps
+        |> List.find_map (fun (source_stamp, kind) ->
+            match kind with
+            | Stamps.KType source_declared
+              when source_stamp < Process_cmt.renamed_stamp_floor
+                   && source_declared.extent_loc = declared.extent_loc ->
+              Some (source, source_declared)
+            | _ -> None)))
 
 let exported_for_tip ~state ~env ~path ~package ~(tip : Tip.t) =
   match Resolve_path.resolve_path ~state ~env ~path ~package with
@@ -310,24 +344,29 @@ let resolve_module_definition ~state ~(file : File.t) ~package stamp =
   | Some md -> (
     match resolve_module_reference ~state ~file ~package md with
     | None -> None
-    | Some (file, declared) ->
-      let loc =
-        match declared with
-        | None -> Uri.to_top_level_loc file.uri
-        | Some declared -> validate_loc declared.name.loc declared.extent_loc
-      in
-      Some (file.uri, loc))
+    | Some (file, declared) -> (
+      match declared with
+      | None -> Some (file.uri, Uri.to_top_level_loc file.uri)
+      | Some declared ->
+        Some
+          ( declared_uri ~state ~package file declared,
+            validate_loc declared.name.loc declared.extent_loc )))
 
 let definition ~state ~file ~package stamp (tip : Tip.t) =
   match tip with
   | Constructor name -> (
-    match get_constructor file stamp name with
+    match source_type ~state ~package file stamp with
     | None -> None
-    | Some constructor -> Some (file.uri, constructor.cname.loc))
+    | Some (file, declared) ->
+      constructor_of_type declared name
+      |> Option.map (fun (constructor : Constructor.t) ->
+          (file.uri, constructor.cname.loc)))
   | Field name -> (
-    match get_field file stamp name with
+    match source_type ~state ~package file stamp with
     | None -> None
-    | Some field -> Some (file.uri, field.fname.loc))
+    | Some (file, declared) ->
+      field_of_type declared name
+      |> Option.map (fun field -> (file.uri, field.fname.loc)))
   | Module -> resolve_module_definition ~state ~file ~package stamp
   | _ -> (
     match declared_for_tip ~stamps:file.stamps stamp tip with
@@ -341,11 +380,7 @@ let definition ~state ~file ~package stamp (tip : Tip.t) =
         | _ -> (file, declared)
       in
       let loc = validate_loc declared_impl.name.loc declared_impl.extent_loc in
-      let env = Query_env.from_file file_impl in
-      let uri =
-        Resolve_path.get_source_uri ~state ~env ~package
-          declared_impl.module_path
-      in
+      let uri = declared_uri ~state ~package file_impl declared_impl in
       maybe_log ("Inner uri " ^ Uri.to_string uri);
       Some (uri, loc))
 
@@ -425,7 +460,10 @@ let type_definition_for_loc_item ~state ~full:{file; package} loc_item =
     | None -> None
     | Some path -> (
       match dig_constructor ~state ~env ~package path with
-      | Some (env, declared) -> Some (env.file.uri, declared.item.decl.type_loc)
+      | Some (env, declared) ->
+        Some
+          ( declared_uri ~state ~package env.file declared,
+            declared.item.decl.type_loc )
       | None -> None))
 
 let is_visible (declared : _ Declared.t) =

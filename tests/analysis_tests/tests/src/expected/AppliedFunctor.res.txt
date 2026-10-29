@@ -147,6 +147,13 @@ References src/AppliedFunctor.res 32:11
       "start": { "character": 10, "line": 45 }
     },
     "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 17, "line": 148 },
+      "start": { "character": 11, "line": 148 }
+    },
+    "uri": "file:///AppliedFunctor.res"
   }
 ]
 
@@ -163,6 +170,13 @@ References src/AppliedFunctor.res 45:10
     "range": {
       "end": { "character": 16, "line": 45 },
       "start": { "character": 10, "line": 45 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 17, "line": 148 },
+      "start": { "character": 11, "line": 148 }
     },
     "uri": "file:///AppliedFunctor.res"
   }
@@ -216,6 +230,20 @@ Rename src/AppliedFunctor.res 62:11 y
         "range": {
           "end": { "character": 12, "line": 62 },
           "start": { "character": 11, "line": 62 }
+        }
+      },
+      {
+        "newText": "y",
+        "range": {
+          "end": { "character": 25, "line": 151 },
+          "start": { "character": 24, "line": 151 }
+        }
+      },
+      {
+        "newText": "y",
+        "range": {
+          "end": { "character": 14, "line": 154 },
+          "start": { "character": 13, "line": 154 }
         }
       }
     ],
@@ -470,4 +498,31 @@ References src/AppliedFunctor.res 144:18
     "uri": "file:///AppliedFunctor.res"
   }
 ]
+
+Definition src/AppliedFunctor.res 148:11
+{
+  "range": {
+    "end": { "character": 3, "line": 35 },
+    "start": { "character": 9, "line": 32 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
+
+TypeDefinition src/AppliedFunctor.res 151:4
+{
+  "range": {
+    "end": { "character": 23, "line": 49 },
+    "start": { "character": 2, "line": 49 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
+
+Definition src/AppliedFunctor.res 154:13
+{
+  "range": {
+    "end": { "character": 17, "line": 49 },
+    "start": { "character": 16, "line": 49 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
 

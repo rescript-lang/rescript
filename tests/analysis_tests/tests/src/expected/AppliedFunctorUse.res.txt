@@ -52,3 +52,175 @@ extracted params:
   ]
 }
 
+TypeDefinition src/AppliedFunctorUse.res 14:5
+{
+  "range": {
+    "end": { "character": 21, "line": 6 },
+    "start": { "character": 2, "line": 6 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
+
+References src/AppliedFunctorUse.res 17:16
+[
+  {
+    "range": {
+      "end": { "character": 18, "line": 5 },
+      "start": { "character": 15, "line": 5 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 17 },
+      "start": { "character": 16, "line": 17 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  }
+]
+
+Definition src/AppliedFunctorUse.res 22:11
+{
+  "range": {
+    "end": { "character": 3, "line": 35 },
+    "start": { "character": 9, "line": 32 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
+
+Definition src/AppliedFunctorUse.res 25:19
+{
+  "range": {
+    "end": { "character": 13, "line": 34 },
+    "start": { "character": 8, "line": 34 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
+
+References src/AppliedFunctorUse.res 28:19
+[
+  {
+    "range": {
+      "end": { "character": 23, "line": 22 },
+      "start": { "character": 18, "line": 22 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 24, "line": 25 },
+      "start": { "character": 19, "line": 25 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 24, "line": 28 },
+      "start": { "character": 19, "line": 28 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 24, "line": 56 },
+      "start": { "character": 19, "line": 56 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  }
+]
+
+TypeDefinition src/AppliedFunctorUse.res 33:4
+{
+  "range": {
+    "end": { "character": 23, "line": 49 },
+    "start": { "character": 2, "line": 49 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
+
+Definition src/AppliedFunctorUse.res 36:11
+{
+  "range": {
+    "end": { "character": 17, "line": 49 },
+    "start": { "character": 16, "line": 49 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
+
+Definition src/AppliedFunctorUse.res 39:17
+{
+  "range": {
+    "end": { "character": 24, "line": 50 },
+    "start": { "character": 21, "line": 50 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
+
+TypeDefinition src/AppliedFunctorUse.res 50:4
+{
+  "range": {
+    "end": { "character": 16, "line": 44 },
+    "start": { "character": 4, "line": 44 }
+  },
+  "uri": "file:///AppliedFunctorUse.res"
+}
+
+Definition src/AppliedFunctorUse.res 53:21
+{
+  "range": {
+    "end": { "character": 19, "line": 48 },
+    "start": { "character": 7, "line": 48 }
+  },
+  "uri": "file:///AppliedFunctorUse.res"
+}
+
+References src/AppliedFunctorUse.res 56:12
+[
+  {
+    "range": {
+      "end": { "character": 17, "line": 22 },
+      "start": { "character": 11, "line": 22 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 25 },
+      "start": { "character": 12, "line": 25 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 28 },
+      "start": { "character": 12, "line": 28 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 56 },
+      "start": { "character": 12, "line": 56 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  }
+]
+
+References src/AppliedFunctorUse.res 59:15
+[
+  {
+    "range": {
+      "end": { "character": 19, "line": 33 },
+      "start": { "character": 14, "line": 33 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 20, "line": 59 },
+      "start": { "character": 15, "line": 59 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  }
+]
+
