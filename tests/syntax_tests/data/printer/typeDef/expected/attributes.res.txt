@@ -44,3 +44,34 @@ type t =
   | A
   /** doc2 */
   | B
+@attr type t = private {x: int}
+/** doc */
+@attr type t = private ..
+type t = private @attr int
+type t = private /** doc */ int
+type t =
+  private
+  /** doc */
+  | A
+  | B
+type t = /** doc */ int
+type t = /** doc */ {"a": int}
+type t = /** doc */ (int, int)
+type t = /** doc */ [#A]
+type t = /** doc */ M.t = A | B
+/** doc */
+type t = {...base, y: int}
+type t = /** doc */ {.."a": int}
+/** doc */
+type t = private {...base, y: int}
+type t = private /** doc */ {.}
+type t =
+  /** doc */
+  | ...base
+  | C
+type t =
+  private
+  /** doc */
+  | ...base
+  | C
+type t = /** doc */ 'a

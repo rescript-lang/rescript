@@ -80,3 +80,72 @@ type nonrec t =
 type nonrec t =
   | A [@res.doc {js|doc|js}][@attr ]
   | B 
+type nonrec t = private {
+  x: int }[@@attr ]
+type nonrec t = private ..[@@attr ]
+type nonrec t = private
+  | A [@attr ]
+  | B 
+type nonrec t = private ((int)[@attr ])
+type nonrec t = private ((< a: int   > )[@attr ])
+type nonrec t = private ((int)[@res.doc {js|doc|js}])
+type nonrec t = private ((M.t)[@res.doc {js|doc|js}])
+type nonrec t = private
+  | A [@res.doc {js|doc|js}]
+  | B 
+type nonrec t = private {
+  x: int }[@@res.doc {js|doc|js}][@@attr ]
+type nonrec t = ((int)[@res.doc {js|doc|js}])
+type nonrec t = ((< a: int   > )[@res.doc {js|doc|js}])
+type nonrec t = (((int * int))[@res.doc {js|doc|js}])
+type nonrec t = (([ `A ])[@res.doc {js|doc|js}])
+type nonrec t = ((M.t)[@res.doc {js|doc|js}])
+type nonrec t = ((M.t)[@res.doc {js|doc|js}]) =
+  | A 
+  | B 
+type nonrec t = ((int)[@res.doc {js|doc|js}][@attr ])
+type nonrec t = {
+  ...: base ;
+  y: int }[@@res.doc {js|doc|js}]
+type nonrec t = {
+  ...: base }[@@res.doc {js|doc|js}]
+type nonrec t = {
+  ...: base ;
+  y: int }[@@res.doc {js|doc|js}][@@attr ]
+type nonrec t = ((< .. > )[@res.doc {js|doc|js}])
+type nonrec t = ((<  > )[@res.doc {js|doc|js}])
+type nonrec t = ((< a: int   ;.. > )[@res.doc {js|doc|js}])
+type nonrec t = ((< base ;y: int   > )[@attr ])
+type nonrec t = ((< base  > )[@attr ])
+type nonrec t = private {
+  ...: base ;
+  y: int }[@@res.doc {js|doc|js}]
+type nonrec t = private {
+  ...: base }[@@res.doc {js|doc|js}]
+type nonrec t = private {
+  ...: base ;
+  y: int }[@@res.doc {js|doc|js}][@@attr ]
+type nonrec t = private ((< .. > )[@res.doc {js|doc|js}])
+type nonrec t = private ((< a: int   ;.. > )[@res.doc {js|doc|js}])
+type nonrec t = private ((< base ;y: int   > )[@attr ])
+type nonrec t = private ((< base  > )[@attr ])
+type nonrec t =
+  | ... of base [@res.doc {js|doc|js}]
+  | C 
+type nonrec t =
+  | ... of base [@res.doc {js|doc|js}][@res.doc {js|doc2|js}]
+  | C 
+type nonrec t =
+  | ... of base [@res.doc {js|doc|js}][@attr ]
+  | C 
+type nonrec t = private
+  | ... of base [@res.doc {js|doc|js}]
+  | C 
+type nonrec t = private
+  | ... of base [@res.doc {js|doc|js}][@attr ]
+  | C 
+type nonrec t = (('a)[@res.doc {js|doc|js}])
+type nonrec t = ((int)[@res.doc {js|doc|js}]) -> int (a:1)
+type nonrec t = ((M.t)[@res.doc {js|doc|js}]) = {
+  x: int }
+type nonrec t = private (('a Dict.t)[@res.doc {js|doc|js}])
