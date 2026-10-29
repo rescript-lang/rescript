@@ -6,7 +6,7 @@
   4 [2m│[0m   module Helper = {
   [1;33m5[0m [2m│[0m     let [1;33mf[0m = 1
   6 [2m│[0m   }
-  7 [2m│[0m   let v = 1
+  7 [2m│[0m 
 
   unused value f.
 
@@ -19,7 +19,7 @@
   [1;33m4[0m [2m│[0m   module [1;33mHelper = {[0m
   [1;33m5[0m [2m│[0m [1;33m    let f = 1[0m
   [1;33m6[0m [2m│[0m [1;33m  }[0m
-  7 [2m│[0m   let v = 1
-  8 [2m│[0m }
+  7 [2m│[0m 
+  8 [2m│[0m   let v = 1
 
   unused module Helper.

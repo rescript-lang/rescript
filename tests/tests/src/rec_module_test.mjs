@@ -74,7 +74,7 @@ let Even = {};
 let Odd = {};
 
 Mocha.describe("Rec_module_test", () => {
-  Mocha.test("test1", () => Test_utils.eq("File \"rec_module_test.res\", line 71, characters 7-14", [
+  Mocha.test("test1", () => Test_utils.eq("File \"rec_module_test.res\", line 73, characters 7-14", [
     true,
     true,
     false,
@@ -85,11 +85,11 @@ Mocha.describe("Rec_module_test", () => {
     B.odd(2),
     odd$1(4)
   ]));
-  Mocha.test("test2", () => Test_utils.eq("File \"rec_module_test.res\", line 75, characters 7-14", y(), 32));
-  Mocha.test("test3", () => Test_utils.eq("File \"rec_module_test.res\", line 79, characters 7-14", x(), 35));
-  Mocha.test("test4 - A.even", () => Test_utils.eq("File \"rec_module_test.res\", line 83, characters 7-14", true, A.even(2)));
-  Mocha.test("test4 - AA.even", () => Test_utils.eq("File \"rec_module_test.res\", line 87, characters 7-14", true, even$1(4)));
-  Mocha.test("test5", () => Test_utils.eq("File \"rec_module_test.res\", line 91, characters 7-14", false, B.odd(2)));
+  Mocha.test("test2", () => Test_utils.eq("File \"rec_module_test.res\", line 77, characters 7-14", y(), 32));
+  Mocha.test("test3", () => Test_utils.eq("File \"rec_module_test.res\", line 81, characters 7-14", x(), 35));
+  Mocha.test("test4 - A.even", () => Test_utils.eq("File \"rec_module_test.res\", line 85, characters 7-14", true, A.even(2)));
+  Mocha.test("test4 - AA.even", () => Test_utils.eq("File \"rec_module_test.res\", line 89, characters 7-14", true, even$1(4)));
+  Mocha.test("test5", () => Test_utils.eq("File \"rec_module_test.res\", line 93, characters 7-14", false, B.odd(2)));
 });
 
 let effects = {

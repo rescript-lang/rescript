@@ -77,7 +77,7 @@ Mocha.describe("Bs_map_set_dict_test", () => {
       x
     ]), Icmp);
     let u1 = Belt_Map.set(u0, 39, 120);
-    Test_utils.ok("File \"bs_map_set_dict_test.res\", line 71, characters 6-13", Belt_Array.every2(Belt_Map.toArray(u0), Belt_Array.map(Array_data_util.range(0, 39), x => [
+    Test_utils.ok("File \"bs_map_set_dict_test.res\", line 75, characters 6-13", Belt_Array.every2(Belt_Map.toArray(u0), Belt_Array.map(Array_data_util.range(0, 39), x => [
       x,
       x
     ]), (param, param$1) => {
@@ -87,7 +87,7 @@ Mocha.describe("Bs_map_set_dict_test", () => {
         return false;
       }
     }));
-    Test_utils.ok("File \"bs_map_set_dict_test.res\", line 80, characters 6-13", Belt_List.every2(Belt_Map.toList(u0), Belt_List.fromArray(Belt_Array.map(Array_data_util.range(0, 39), x => [
+    Test_utils.ok("File \"bs_map_set_dict_test.res\", line 84, characters 6-13", Belt_List.every2(Belt_Map.toList(u0), Belt_List.fromArray(Belt_Array.map(Array_data_util.range(0, 39), x => [
       x,
       x
     ])), (param, param$1) => {
@@ -97,20 +97,20 @@ Mocha.describe("Bs_map_set_dict_test", () => {
         return false;
       }
     }));
-    Test_utils.eq("File \"bs_map_set_dict_test.res\", line 87, characters 7-14", Belt_Map.get(u0, 39), 39);
-    Test_utils.eq("File \"bs_map_set_dict_test.res\", line 88, characters 7-14", Belt_Map.get(u1, 39), 120);
+    Test_utils.eq("File \"bs_map_set_dict_test.res\", line 91, characters 7-14", Belt_Map.get(u0, 39), 39);
+    Test_utils.eq("File \"bs_map_set_dict_test.res\", line 92, characters 7-14", Belt_Map.get(u1, 39), 120);
   });
   Mocha.test("bs_map_set_dict_test_large_dataset", () => {
     let u = Belt_Map.fromArray(Belt_Array.makeByAndShuffle(10000, x => [
       x,
       x
     ]), Icmp);
-    Test_utils.eq("File \"bs_map_set_dict_test.res\", line 93, characters 7-14", Belt_Array.makeBy(10000, x => [
+    Test_utils.eq("File \"bs_map_set_dict_test.res\", line 97, characters 7-14", Belt_Array.makeBy(10000, x => [
       x,
       x
     ]), Belt_Map.toArray(u));
   });
-  Mocha.test("map_set_dict_tests", () => Test_utils.ok("File \"bs_map_set_dict_test.res\", line 98, characters 7-14", true));
+  Mocha.test("map_set_dict_tests", () => Test_utils.ok("File \"bs_map_set_dict_test.res\", line 102, characters 7-14", true));
 });
 
 let M;

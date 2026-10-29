@@ -120,23 +120,23 @@ let side_effect = {
   contents: 0
 };
 
-again4(undefined, undefined, 149);
-
-again4(undefined, undefined, 150);
-
 again4(undefined, undefined, 151);
 
 again4(undefined, undefined, 152);
 
 again4(undefined, undefined, 153);
 
-again4((side_effect.contents = side_effect.contents + 1 | 0, undefined), undefined, 160);
+again4(undefined, undefined, 154);
 
-again4((side_effect.contents = side_effect.contents + 1 | 0, undefined), (side_effect.contents = side_effect.contents - 1 | 0, undefined), 172);
+again4(undefined, undefined, 155);
 
-again4(undefined, (side_effect.contents = side_effect.contents - 1 | 0, undefined), 180);
+again4((side_effect.contents = side_effect.contents + 1 | 0, undefined), undefined, 162);
 
-again4((side_effect.contents = side_effect.contents + 1 | 0, undefined), undefined, 183);
+again4((side_effect.contents = side_effect.contents + 1 | 0, undefined), (side_effect.contents = side_effect.contents - 1 | 0, undefined), 174);
+
+again4(undefined, (side_effect.contents = side_effect.contents - 1 | 0, undefined), 182);
+
+again4((side_effect.contents = side_effect.contents + 1 | 0, undefined), undefined, 185);
 
 export {
   u,

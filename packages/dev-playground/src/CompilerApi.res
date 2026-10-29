@@ -139,10 +139,12 @@ let parseCompilerVersions = defaultVersion => {
 let compilerVersions = parseCompilerVersions(defaultConfig.compilerVersion)
 let availableCompilerVersions = compilerVersions->Array.map(Version.toPublic)
 let compilerRoot = pathFromBase("playground-bundles")
+
 let compilerPreviewRoot = switch Env.viteCompilerPreviewRoot {
 | Some(root) => root === "" ? None : Some(root->Version.normalizeRoot)
 | None => None
 }
+
 let loadedScripts: Map.t<string, promise<unit>> = Map.make()
 let compilerApis: Map.t<string, compilerApi> = Map.make()
 let compilers: Map.t<string, compilerInstance> = Map.make()

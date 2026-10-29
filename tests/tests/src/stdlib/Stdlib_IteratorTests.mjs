@@ -436,7 +436,7 @@ if (match$8.done !== false && match$8.value === "stopped") {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    321,
+    322,
     13,
     36
   ],
@@ -467,7 +467,7 @@ if (match$9.done !== false) {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    348,
+    350,
     13,
     35
   ],
@@ -495,7 +495,7 @@ await Stdlib_AsyncIterableIterator.forEach(asyncIterableIterator, param => {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    374,
+    376,
     20,
     35
   ],
@@ -530,7 +530,7 @@ await Stdlib_AsyncIterator.forEach(asyncIterator, value => {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    400,
+    402,
     20,
     54
   ],
@@ -562,7 +562,7 @@ await Stdlib_AsyncIterator.forEach(asyncOmittedDoneIterator, value => {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    419,
+    422,
     13,
     54
   ],
@@ -589,7 +589,7 @@ if (match$10.done !== false && match$10.value === "5") {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    449,
+    452,
     13,
     39
   ],
@@ -615,7 +615,7 @@ await Stdlib_AsyncIterableIterator.forEach(asyncGeneratorIterable, value => {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    468,
+    472,
     13,
     53
   ],
@@ -645,7 +645,7 @@ for await (let value of asyncIterableForAwait) {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    485,
+    490,
     20,
     36
   ],
@@ -688,7 +688,7 @@ loop_0: for await (let value$1 of asyncIterableForAwaitLoopControl) {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    508,
+    514,
     13,
     44
   ],
@@ -721,7 +721,7 @@ let startupLogs = ((async function* () {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    542,
+    548,
     13,
     54
   ],
@@ -755,7 +755,7 @@ if (match$11.done !== false && match$11.value === "stopped") {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    571,
+    578,
     13,
     41
   ],
@@ -786,7 +786,7 @@ if (match$12.done !== false) {
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    600,
+    608,
     13,
     40
   ],
@@ -813,7 +813,7 @@ await Stdlib_AsyncIterableIterator.forEach(createdAsyncIterableIterator, value =
 Test.run([
   [
     "Stdlib_IteratorTests.res",
-    624,
+    632,
     13,
     56
   ],

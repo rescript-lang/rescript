@@ -3,4 +3,5 @@ module Color: {
 } = {
   type t = Red | Green
 }
+
 let fromPoly = ((#Red: [#Red]) :> Color.t)

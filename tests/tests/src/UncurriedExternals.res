@@ -10,6 +10,7 @@ module StandardNotation = {
   } = {
     external sum: (float, float) => float = "sum"
   }
+
   let hh = M.sum(1.0, 2.0)
 
   @get_index external get: (array<string>, int) => option<'a> = ""
@@ -32,6 +33,7 @@ module StandardNotation = {
 
   @module("react")
   external useState: (unit => 'state) => ('state, ('state => 'state) => unit) = "useState"
+
   let (get, set) = useState(() => 3)
 }
 

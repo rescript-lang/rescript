@@ -10,6 +10,7 @@ module X = {
 let u = 3->X.Some
 
 let xx = (obj, a0, a1, a2, a3, a4, a5) => obj->a0(a1)->a2(a3)->a4(a5)->\"-"(1)->(3->\"-")
+
 /*
   (a4 (a2 (a0 obj a1) a3) a5)
 */

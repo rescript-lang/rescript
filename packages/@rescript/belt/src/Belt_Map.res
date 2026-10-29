@@ -62,6 +62,7 @@ let update = (m, key, f) => {
   let cmp = m.cmp
   {cmp, data: Dict.update(~cmp, m.data, key, f)}
 }
+
 let split = (m, x) => {
   let cmp = m.cmp
   let ((l, r), b) = Dict.split(~cmp, m.data, x)

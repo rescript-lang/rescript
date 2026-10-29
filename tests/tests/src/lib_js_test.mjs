@@ -8,7 +8,7 @@ console.log(JSON.stringify({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}));
 console.log("hey");
 
 Mocha.describe("Lib_js_test", () => {
-  Mocha.test("anything_to_string", () => Test_utils.eq("File \"lib_js_test.res\", line 13, characters 38-45", "3", String(3)));
+  Mocha.test("anything_to_string", () => Test_utils.eq("File \"lib_js_test.res\", line 14, characters 38-45", "3", String(3)));
 });
 
 /*  Not a pure module */

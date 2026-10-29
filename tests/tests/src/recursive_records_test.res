@@ -26,6 +26,7 @@ type rec cell2 =
   | Cons({content: int, mutable next: cell2})
 
 let rec rec_cell2 = Cons({content: 3, next: rec_cell2})
+
 /* over inline records */
 let f2 = x => {
   let rec rec_cell2 = Cons({content: x * x - 6, next: rec_cell2})

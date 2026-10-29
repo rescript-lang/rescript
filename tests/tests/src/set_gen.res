@@ -114,6 +114,7 @@ let max_int3 = (a: int, b, c) =>
   } else {
     c
   }
+
 let max_int_2 = (a: int, b) =>
   if a >= b {
     a
@@ -143,6 +144,7 @@ let rec check_height_and_diff = x =>
   }
 
 let check = tree => ignore(check_height_and_diff(tree))
+
 /*
     Invariants: 
     1. {[ l < v < r]}

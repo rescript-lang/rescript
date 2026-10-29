@@ -22,8 +22,8 @@ if (Stdlib_List.length(/* [] */0) < 0) {
 
 Mocha.describe("Gpr_2608_test", () => {
   Mocha.test("huntGroot conditions", () => {
-    Test_utils.eq("File \"gpr_2608_test.res\", line 21, characters 7-14", huntGrootCondition, false);
-    Test_utils.eq("File \"gpr_2608_test.res\", line 22, characters 7-14", huntGrootCondition2, true);
+    Test_utils.eq("File \"gpr_2608_test.res\", line 22, characters 7-14", huntGrootCondition, false);
+    Test_utils.eq("File \"gpr_2608_test.res\", line 23, characters 7-14", huntGrootCondition2, true);
   });
 });
 

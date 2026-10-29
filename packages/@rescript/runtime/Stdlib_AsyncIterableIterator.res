@@ -14,6 +14,7 @@ let make: (unit => promise<Stdlib_Iterator.result<'yield, 'return>>) => t<
 }`)
 
 external asAsyncIterable: t<'yield, 'return, 'next> => Stdlib_AsyncIterable.t<'yield> = "%identity"
+
 external asAsyncIterator: t<'yield, 'return, 'next> => Stdlib_AsyncIterator.t<
   'yield,
   'return,

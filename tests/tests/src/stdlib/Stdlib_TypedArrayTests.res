@@ -76,6 +76,7 @@ assertTrue("a typed array is a TypedArray.t through a coercion", () => {
   let x = BigInt64Array.fromLength(2)
   TypedArray.length(x :> TypedArray.t<bigint>) == 2
 })
+
 let o = (x, map) => BigInt64Array.fromArrayLikeOrIterable(x, ~map)
 
 // ===== copyWithin and map keep the typed array =====

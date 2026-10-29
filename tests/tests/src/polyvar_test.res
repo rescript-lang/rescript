@@ -19,4 +19,5 @@ let ff = {
     "A"
   }
 }
+
 let () = Console.log((f(#A), ff, f1(#A)))

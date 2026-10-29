@@ -39,20 +39,20 @@ function effectful() {
 
 Mocha.describe("Option_known_some_test", () => {
   Mocha.test("nested payload", () => {
-    Test_utils.eq("File \"option_known_some_test.res\", line 35, characters 7-14", 0, 0);
-    Test_utils.eq("File \"option_known_some_test.res\", line 36, characters 7-14", 3, 3);
+    Test_utils.eq("File \"option_known_some_test.res\", line 36, characters 7-14", 0, 0);
+    Test_utils.eq("File \"option_known_some_test.res\", line 37, characters 7-14", 3, 3);
   });
   Mocha.test("polymorphic payload", () => {
-    Test_utils.eq("File \"option_known_some_test.res\", line 39, characters 7-14", [undefined], [undefined]);
+    Test_utils.eq("File \"option_known_some_test.res\", line 40, characters 7-14", [undefined], [undefined]);
     let v = Primitive_option.some(Primitive_option.some(undefined));
-    Test_utils.eq("File \"option_known_some_test.res\", line 40, characters 7-14", [Primitive_option.some(undefined)], [Primitive_option.valFromOption(v)]);
-    Test_utils.eq("File \"option_known_some_test.res\", line 41, characters 7-14", [1], [1]);
+    Test_utils.eq("File \"option_known_some_test.res\", line 41, characters 7-14", [Primitive_option.some(undefined)], [Primitive_option.valFromOption(v)]);
+    Test_utils.eq("File \"option_known_some_test.res\", line 42, characters 7-14", [1], [1]);
   });
   Mocha.test("payload with side effects", () => {
-    Test_utils.eq("File \"option_known_some_test.res\", line 44, characters 7-14", 0, effectful());
-    Test_utils.eq("File \"option_known_some_test.res\", line 45, characters 7-14", 1, calls.contents);
-    Test_utils.eq("File \"option_known_some_test.res\", line 46, characters 7-14", 2, effectful());
-    Test_utils.eq("File \"option_known_some_test.res\", line 47, characters 7-14", 2, calls.contents);
+    Test_utils.eq("File \"option_known_some_test.res\", line 45, characters 7-14", 0, effectful());
+    Test_utils.eq("File \"option_known_some_test.res\", line 46, characters 7-14", 1, calls.contents);
+    Test_utils.eq("File \"option_known_some_test.res\", line 47, characters 7-14", 2, effectful());
+    Test_utils.eq("File \"option_known_some_test.res\", line 48, characters 7-14", 2, calls.contents);
   });
 });
 

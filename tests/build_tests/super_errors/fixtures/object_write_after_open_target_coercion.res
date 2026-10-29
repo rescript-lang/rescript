@@ -7,6 +7,7 @@
 
 type wide = {"a": int, "b": int}
 type narrow = {"a": int}
+
 let p = (v: {"x": wide}) => {
   let r = (v :> {.."x": narrow})
   r["x"] = {"a": 1}

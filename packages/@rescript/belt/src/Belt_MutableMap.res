@@ -118,6 +118,7 @@ let rec updateDone = (t, x, f, ~cmp) =>
       Some(N.balMutate(nt))
     }
   }
+
 let update = (t, x, f) => {
   let oldRoot = t.data
   let newRoot = updateDone(oldRoot, x, f, ~cmp=t.cmp)

@@ -32,6 +32,7 @@ module H = {
     let v = 3
   }
 }
+
 let u = {
   let {length: l, add} = module(List)
   list{}->add(l(list{1, 2, 3}))
@@ -46,6 +47,7 @@ let bracedLocalModule = {
   let {v} = {module(H.H1)}
   v
 }
+
 assert(bracedLocalModule == 3)
 
 let to = 3

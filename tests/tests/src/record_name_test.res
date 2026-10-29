@@ -62,10 +62,12 @@ type t6 = {
   @as("x") x: int,
   @as("y") y: int,
 }
+
 /* allow this case */
 
 @obj external ff: (~x: int, ~h: @as(3) _) => _ = ""
 @obj external ff2: (~x: int, ~h: @as(3) _) => {"x": int} = ""
+
 let u = () => {
   ignore(ff(~x=3))
   ff2(~x=22)

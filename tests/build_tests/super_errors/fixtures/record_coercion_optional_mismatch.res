@@ -2,6 +2,7 @@ type x = {
   x?: int,
   y: int,
 }
+
 type y = {
   x: int,
   y: int,

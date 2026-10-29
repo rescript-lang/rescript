@@ -25,6 +25,7 @@ Console.log2(dict, dict2)
 Console.info("")
 Console.info("Error")
 Console.info("---")
+
 let f = () => {
   let error = JsError.make("hello")
   let typeError = JsError.TypeError.make("error")
@@ -45,6 +46,7 @@ Console.info("")
 Console.info("JSON")
 Console.info("---")
 let json = JSON.parseOrThrow(`{"foo": "bar"}`)
+
 Console.log(
   switch json {
   | Object(json) =>
@@ -83,6 +85,7 @@ Console.log({
 Console.info("")
 Console.info("Object")
 Console.info("---")
+
 let myObject = {
   "foo": "bar",
 }
@@ -98,6 +101,7 @@ let withNewProp = Object.assign(copy, {"bar": "baz"})
 Console.info("")
 Console.info("Promise")
 Console.info("---")
+
 let promise: promise<int> = Promise.make((resolve, _reject) => {
   let _ = setTimeout(() => {
     resolve(1)
@@ -140,6 +144,7 @@ Console.info("")
 Console.info("String")
 Console.info("---")
 let regexp = RegExp.fromString("(hello )(world)")
+
 Console.log(
   "   Hello world  "
   ->String.toLowerCase

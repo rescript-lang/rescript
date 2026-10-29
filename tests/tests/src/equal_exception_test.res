@@ -29,11 +29,13 @@ describe(__MODULE__, () => {
 })
 
 let e = Not_found
+
 let eq = x =>
   switch x {
   | Not_found => true
   | _ => false
   }
+
 exception Not_found
 assert((e == Not_found) == false)
 assert(eq(Not_found) == false)

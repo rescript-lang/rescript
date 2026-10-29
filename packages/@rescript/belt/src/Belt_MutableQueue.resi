@@ -80,7 +80,9 @@ let size: t<'a> => int
 
 @deprecated("Use `map` instead")
 let mapU: (t<'a>, 'a => 'b) => t<'b>
+
 let map: (t<'a>, 'a => 'b) => t<'b>
+
 @deprecated("Use `forEach` instead")
 let forEachU: (t<'a>, 'a => unit) => unit
 

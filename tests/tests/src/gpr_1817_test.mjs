@@ -18,7 +18,7 @@ Mocha.describe("Gpr_1817_test", () => {
   Mocha.test("date comparison test", () => {
     let match = f();
     console.log(match[0], match[1]);
-    Test_utils.eq("File \"gpr_1817_test.res\", line 16, characters 7-14", match[2], true);
+    Test_utils.eq("File \"gpr_1817_test.res\", line 17, characters 7-14", match[2], true);
   });
 });
 

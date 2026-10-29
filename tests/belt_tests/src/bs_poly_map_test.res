@@ -35,6 +35,7 @@ let mergeUnion = (s1, s2) =>
       ),
     ),
   )
+
 let mergeDiff = (s1, s2) =>
   setOfArray(
     M.keysToArray(

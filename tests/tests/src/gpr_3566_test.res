@@ -1,4 +1,5 @@
 type t = A(int) | B(string)
+
 let eq_A = (x: t, y) =>
   switch x {
   | A(x) =>
@@ -36,6 +37,7 @@ module Test3 = () => {
   let f = (x, y) => x == y
   module Caml_obj = {}
 }
+
 module Test4 = () => {
   module Caml_obj = {}
   let f = (x, y) => x == y

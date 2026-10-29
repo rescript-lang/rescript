@@ -47,6 +47,7 @@ module Zoo = {
   @instanceOf("UntaggedDog") type dog = private animal
   @new external makeDog: unit => dog = "UntaggedDog"
 }
+
 module ZooAlias = Zoo
 
 @unboxed

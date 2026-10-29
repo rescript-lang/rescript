@@ -27,6 +27,7 @@ let \"SomeConstant" = 12
 
 module SomeInnerModule = {
   /*** Another module level docstring here.*/
+
   type status =
     /** If this is started or not */
     | Started(t)

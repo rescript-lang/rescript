@@ -510,6 +510,7 @@ Console.log(normalizeString1 == normalizeString2) // true
 ```
 */
 type normalizeForm = [#NFC | #NFD | #NFKC | #NFKD]
+
 @send
 external normalizeByForm: (string, normalizeForm) => string = "normalize"
 

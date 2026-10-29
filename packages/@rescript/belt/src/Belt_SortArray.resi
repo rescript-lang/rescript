@@ -40,6 +40,7 @@ let strictlySortedLength: (array<'a>, ('a, 'a) => bool) => int
 
 @deprecated("Use `isSorted` instead")
 let isSortedU: (array<'a>, ('a, 'a) => int) => bool
+
 /**
 `isSorted(arr, cmp)`: Returns true if array is increasingly sorted (equal is okay)
 */
@@ -47,10 +48,12 @@ let isSorted: (array<'a>, ('a, 'a) => int) => bool
 
 @deprecated("Use `stableSortInPlaceBy` instead")
 let stableSortInPlaceByU: (array<'a>, ('a, 'a) => int) => unit
+
 let stableSortInPlaceBy: (array<'a>, ('a, 'a) => int) => unit
 
 @deprecated("Use `stableSortBy` instead")
 let stableSortByU: (array<'a>, ('a, 'a) => int) => array<'a>
+
 /**
 `stableSortBy(xs, cmp)`: Returns a fresh array Sort `xs` in place using
 comparator `cmp`, the stable means if the elements are equal, their order will
@@ -84,6 +87,7 @@ let binarySearchBy: (array<'a>, 'a, ('a, 'a) => int) => int
 
 @deprecated("Use `union` instead")
 let unionU: (array<'a>, int, int, array<'a>, int, int, array<'a>, int, ('a, 'a) => int) => int
+
 /**
 `union src src1ofs src1len src2 src2ofs src2len dst dstofs cmp` assume `src` and
 `src2` is strictly sorted. for equivalent elements, it is picked from `src`
@@ -93,6 +97,7 @@ let union: (array<'a>, int, int, array<'a>, int, int, array<'a>, int, ('a, 'a) =
 
 @deprecated("Use `intersect` instead")
 let intersectU: (array<'a>, int, int, array<'a>, int, int, array<'a>, int, ('a, 'a) => int) => int
+
 /**
 `union src src1ofs src1len src2 src2ofs src2len dst dstofs cmp`
 
@@ -102,4 +107,5 @@ let intersect: (array<'a>, int, int, array<'a>, int, int, array<'a>, int, ('a, '
 
 @deprecated("Use `diff` instead")
 let diffU: (array<'a>, int, int, array<'a>, int, int, array<'a>, int, ('a, 'a) => int) => int
+
 let diff: (array<'a>, int, int, array<'a>, int, int, array<'a>, int, ('a, 'a) => int) => int

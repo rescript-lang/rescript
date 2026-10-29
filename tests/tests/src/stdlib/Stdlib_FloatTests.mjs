@@ -205,7 +205,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_FloatTests.res",
-    26,
+    27,
     13,
     49
   ],
@@ -215,7 +215,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_FloatTests.res",
-    32,
+    34,
     13,
     50
   ],
@@ -225,7 +225,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_FloatTests.res",
-    38,
+    41,
     13,
     50
   ],
@@ -235,7 +235,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_FloatTests.res",
-    44,
+    48,
     13,
     51
   ],
@@ -245,7 +245,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_FloatTests.res",
-    50,
+    54,
     20,
     46
   ],

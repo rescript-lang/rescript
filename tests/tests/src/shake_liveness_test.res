@@ -16,12 +16,14 @@ let chainEnd = (x: int) => chain2(x) + chain2(x + 1)
 // Unused, but its initializer has a side effect: it compiles to the statement
 // `bump(1)`, which keeps `bump` and, through it, `effectHelper`.
 %%private(let effectHelper = (x: int) => x * x * 7 + x * 3 + 5)
+
 %%private(
   let bump = (x: int) => {
     counter := counter.contents + effectHelper(x)
     counter.contents
   }
 )
+
 %%private(let effectful = bump(1))
 
 // Only used by a toplevel statement with a side effect.

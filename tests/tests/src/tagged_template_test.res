@@ -23,6 +23,7 @@ let jsonTaggedQuery = json`SELECT * FROM ${table}`
 // The tag still emits backticks when used through `open` (i.e. once it has
 // crossed the module boundary as a value of the `taggedTemplate` type).
 open Pg
+
 let query = sql`
 " SELECT * FROM ${table} WHERE id = ${id}`
 

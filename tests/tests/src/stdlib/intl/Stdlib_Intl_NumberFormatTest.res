@@ -22,6 +22,7 @@ let groupingFormatter1 = Intl.NumberFormat.make(
     useGrouping: Intl.NumberFormat.Grouping.fromBool(true),
   },
 )
+
 let groupingFormatter2 = Intl.NumberFormat.make(
   ~options={
     useGrouping: Intl.NumberFormat.Grouping.fromString(#auto),

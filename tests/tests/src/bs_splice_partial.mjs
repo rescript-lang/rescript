@@ -2,7 +2,7 @@
 
 
 function test(g) {
-  g.xx(10, 3, "xxx", 1, 2, 3);
+  g.xx(11, 3, "xxx", 1, 2, 3);
 }
 
 function test_hi(x) {

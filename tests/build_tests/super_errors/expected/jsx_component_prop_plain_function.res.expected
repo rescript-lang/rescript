@@ -1,11 +1,11 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/jsx_component_prop_plain_function.res[0m:[2m19:46-58[0m
+  [36m/.../fixtures/jsx_component_prop_plain_function.res[0m:[2m20:46-58[0m
 
-  17 [2m│[0m }
-  18 [2m│[0m 
-  [1;31m19[0m [2m│[0m let _ = <List itemSeparatorComponent={_props [1;31m=> React.null[0m} />
-  20 [2m│[0m 
+  18 [2m│[0m }
+  19 [2m│[0m 
+  [1;31m20[0m [2m│[0m let _ = <List itemSeparatorComponent={_props [1;31m=> React.null[0m} />
+  21 [2m│[0m 
 
   This has type: [1;31m'a => 'b[0m
   But it's expected to have type:

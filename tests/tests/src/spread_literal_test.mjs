@@ -22,7 +22,7 @@ Mocha.describe("Spread_literal_test", () => {
       2
     ];
     let b = [5];
-    Test_utils.eq("File \"spread_literal_test.res\", line 14, characters 7-14", Primitive_array.spread([
+    Test_utils.eq("File \"spread_literal_test.res\", line 15, characters 7-14", Primitive_array.spread([
       a,
       [
         3,
@@ -38,7 +38,7 @@ Mocha.describe("Spread_literal_test", () => {
       5,
       6
     ]);
-    Test_utils.eq("File \"spread_literal_test.res\", line 15, characters 7-14", Primitive_array.spread([
+    Test_utils.eq("File \"spread_literal_test.res\", line 16, characters 7-14", Primitive_array.spread([
       [0],
       a,
       [],
@@ -53,17 +53,17 @@ Mocha.describe("Spread_literal_test", () => {
   Mocha.test("list spreads keep items and spreads in order", () => {
     let xs = {hd: 1, tl: {hd: 2, tl: /* [] */0}};
     let ys = {hd: 5, tl: /* [] */0};
-    Test_utils.eq("File \"spread_literal_test.res\", line 21, characters 7-14", Primitive_list.spread([
+    Test_utils.eq("File \"spread_literal_test.res\", line 22, characters 7-14", Primitive_list.spread([
       xs,
       {hd: 3, tl: ys},
       {hd: 6, tl: /* [] */0}
     ]), {hd: 1, tl: {hd: 2, tl: {hd: 3, tl: {hd: 5, tl: {hd: 6, tl: /* [] */0}}}}});
-    Test_utils.eq("File \"spread_literal_test.res\", line 22, characters 7-14", Primitive_list.spread([
+    Test_utils.eq("File \"spread_literal_test.res\", line 23, characters 7-14", Primitive_list.spread([
       {hd: 0, tl: xs},
       /* [] */0,
       {hd: 4, tl: ys}
     ]), {hd: 0, tl: {hd: 1, tl: {hd: 2, tl: {hd: 4, tl: {hd: 5, tl: /* [] */0}}}}});
-    Test_utils.eq("File \"spread_literal_test.res\", line 23, characters 7-14", {hd: 0, tl: xs}, {hd: 0, tl: {hd: 1, tl: {hd: 2, tl: /* [] */0}}});
+    Test_utils.eq("File \"spread_literal_test.res\", line 24, characters 7-14", {hd: 0, tl: xs}, {hd: 0, tl: {hd: 1, tl: {hd: 2, tl: /* [] */0}}});
   });
   Mocha.test("items and spreads are evaluated left to right", () => {
     log.contents = /* [] */0;
@@ -76,7 +76,7 @@ Mocha.describe("Spread_literal_test", () => {
       {hd: note("d", 4), tl: note("e", {hd: 5, tl: /* [] */0})},
       {hd: note("f", 6), tl: /* [] */0}
     ]);
-    Test_utils.eq("File \"spread_literal_test.res\", line 30, characters 7-14", [
+    Test_utils.eq("File \"spread_literal_test.res\", line 31, characters 7-14", [
       arr,
       lst
     ], [
@@ -87,7 +87,7 @@ Mocha.describe("Spread_literal_test", () => {
       ],
       {hd: 4, tl: {hd: 5, tl: {hd: 6, tl: /* [] */0}}}
     ]);
-    Test_utils.eq("File \"spread_literal_test.res\", line 31, characters 7-14", Stdlib_List.reverse(log.contents), {hd: "a", tl: {hd: "b", tl: {hd: "c", tl: {hd: "d", tl: {hd: "e", tl: {hd: "f", tl: /* [] */0}}}}}});
+    Test_utils.eq("File \"spread_literal_test.res\", line 32, characters 7-14", Stdlib_List.reverse(log.contents), {hd: "a", tl: {hd: "b", tl: {hd: "c", tl: {hd: "d", tl: {hd: "e", tl: {hd: "f", tl: /* [] */0}}}}}});
   });
 });
 

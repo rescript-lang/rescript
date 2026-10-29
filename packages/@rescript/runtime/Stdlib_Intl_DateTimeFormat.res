@@ -104,6 +104,7 @@ type dateTimePart = {
 }
 
 type dateTimeRangeSource = [#startRange | #shared | #endRange]
+
 type dateTimeRangePart = {
   \"type": dateTimeComponent,
   value: string,

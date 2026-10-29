@@ -1,4 +1,5 @@
 type x = One(bool) | Two | Three | Four | Five
+
 type y = {
   x: x,
   y: int,

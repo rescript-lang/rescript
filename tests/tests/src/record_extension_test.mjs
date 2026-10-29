@@ -106,9 +106,9 @@ function u(f) {
   }
 }
 
-Mocha.describe("File \"record_extension_test.res\", line 71, characters 9-16", () => {
+Mocha.describe("File \"record_extension_test.res\", line 72, characters 9-16", () => {
   Mocha.test("record extension with exceptions", () => {
-    Test_utils.eq("File \"record_extension_test.res\", line 73, characters 7-14", u(() => {
+    Test_utils.eq("File \"record_extension_test.res\", line 74, characters 7-14", u(() => {
       throw {
         RE_EXN_ID: A,
         name: 1,
@@ -116,7 +116,7 @@ Mocha.describe("File \"record_extension_test.res\", line 71, characters 9-16", (
         Error: new Error()
       };
     }), 2);
-    Test_utils.eq("File \"record_extension_test.res\", line 74, characters 7-14", u(() => {
+    Test_utils.eq("File \"record_extension_test.res\", line 75, characters 7-14", u(() => {
       throw {
         RE_EXN_ID: B,
         _1: 1,
@@ -124,14 +124,14 @@ Mocha.describe("File \"record_extension_test.res\", line 71, characters 9-16", (
         Error: new Error()
       };
     }), 3);
-    Test_utils.eq("File \"record_extension_test.res\", line 75, characters 7-14", u(() => {
+    Test_utils.eq("File \"record_extension_test.res\", line 76, characters 7-14", u(() => {
       throw {
         RE_EXN_ID: C,
         name: 4,
         Error: new Error()
       };
     }), 4);
-    Test_utils.eq("File \"record_extension_test.res\", line 76, characters 7-14", u(() => {
+    Test_utils.eq("File \"record_extension_test.res\", line 77, characters 7-14", u(() => {
       throw {
         RE_EXN_ID: D,
         code: 1,
@@ -139,7 +139,7 @@ Mocha.describe("File \"record_extension_test.res\", line 71, characters 9-16", (
         Error: new Error()
       };
     }), 2);
-    Test_utils.eq("File \"record_extension_test.res\", line 77, characters 7-14", u(() => {
+    Test_utils.eq("File \"record_extension_test.res\", line 78, characters 7-14", u(() => {
       throw {
         RE_EXN_ID: D,
         code: 3,

@@ -2,6 +2,7 @@ open Mocha
 open Test_utils
 
 let called = ref(0)
+
 /* function hoisting prevent the toplevel bug */
 let g = () => {
   let rec v = ref(next)

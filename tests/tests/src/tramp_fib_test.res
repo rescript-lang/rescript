@@ -4,6 +4,7 @@ open Mocha
 open Test_utils
 
 type rec bounce<'a> = Continue('a) | Suspend(unit => bounce<'a>)
+
 /* https://eli.thegreenplace.net/2017/on-recursion-continuations-and-trampolines/ */
 /* http://gallium.inria.fr/seminaires/transparents/20141027.Frederic.Bour.pdf */
 /* http://www.usrsb.in/blog/blog/2012/08/12/bouncing-pythons-generators-with-a-trampoline/ */
@@ -47,6 +48,7 @@ and isOdd = n =>
   | 1 => Continue(true)
   | _ => isEven(n - 1)
   }
+
 /* Suspend (fun [@bs] () -> isEven (n - 1)) */
 
 describe(__MODULE__, () => {

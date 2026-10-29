@@ -305,6 +305,7 @@ module Toggle = {
 
   @get external oldState: t => [#closed | #"open"] = "oldState"
   @get external newState: t => [#closed | #"open"] = "newState"
+
   /** The element that triggered the toggle. Available in React 19.3 and later. */
   @get @return(nullable) external source: t => option<Dom.element> = "source"
 }

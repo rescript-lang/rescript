@@ -52,32 +52,32 @@ let u = {
 
 Mocha.describe("Poly_variant_test", () => {
   Mocha.test("poly variant string marshalling", () => {
-    Test_utils.eq("File \"poly_variant_test.res\", line 70, characters 7-14", vv, [
+    Test_utils.eq("File \"poly_variant_test.res\", line 73, characters 7-14", vv, [
       3,
       0,
       4
     ]);
-    Test_utils.eq("File \"poly_variant_test.res\", line 71, characters 7-14", [
+    Test_utils.eq("File \"poly_variant_test.res\", line 74, characters 7-14", [
       hey_int(5),
       hey_int(6)
     ], [
       5,
       6
     ]);
-    Test_utils.eq("File \"poly_variant_test.res\", line 72, characters 7-14", uu, [
+    Test_utils.eq("File \"poly_variant_test.res\", line 75, characters 7-14", uu, [
       "on_open",
       "on_closed",
       "in"
     ]);
   });
-  Mocha.test("poly variant function application", () => Test_utils.eq("File \"poly_variant_test.res\", line 76, characters 7-14", v, "on_closed"));
+  Mocha.test("poly variant function application", () => Test_utils.eq("File \"poly_variant_test.res\", line 79, characters 7-14", v, "on_closed"));
   Mocha.test("poly variant pattern matching", () => {
-    Test_utils.eq("File \"poly_variant_test.res\", line 80, characters 7-14", 2, 2);
-    Test_utils.eq("File \"poly_variant_test.res\", line 81, characters 7-14", 3, p_is_int_test(u));
+    Test_utils.eq("File \"poly_variant_test.res\", line 83, characters 7-14", 2, 2);
+    Test_utils.eq("File \"poly_variant_test.res\", line 84, characters 7-14", 3, p_is_int_test(u));
   });
   Mocha.test("emoji poly variant conversion", () => {
-    Test_utils.eq("File \"poly_variant_test.res\", line 85, characters 7-14", "🚀", "🚀");
-    Test_utils.eq("File \"poly_variant_test.res\", line 86, characters 7-14", "🔥", "🔥");
+    Test_utils.eq("File \"poly_variant_test.res\", line 88, characters 7-14", "🚀", "🚀");
+    Test_utils.eq("File \"poly_variant_test.res\", line 89, characters 7-14", "🔥", "🔥");
   });
 });
 

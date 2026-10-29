@@ -18,7 +18,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_StringTests.res",
-    5,
+    6,
     13,
     32
   ],

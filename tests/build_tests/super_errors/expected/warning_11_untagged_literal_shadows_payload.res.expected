@@ -52,13 +52,13 @@
 
 
   [1;33mWarning number 11[0m
-  [36m/.../fixtures/warning_11_untagged_literal_shadows_payload.res[0m:[2m42:5-21[0m
+  [36m/.../fixtures/warning_11_untagged_literal_shadows_payload.res[0m:[2m43:5-21[0m
 
-  40 [2m│[0m let allAlternatives = x =>
-  41 [2m│[0m   switch x {
-  [1;33m42[0m [2m│[0m   | [1;33mUS("a") | US("b")[0m => 1
-  43 [2m│[0m   | US(_) | UA | UB => 2
-  44 [2m│[0m   }
+  41 [2m│[0m let allAlternatives = x =>
+  42 [2m│[0m   switch x {
+  [1;33m43[0m [2m│[0m   | [1;33mUS("a") | US("b")[0m => 1
+  44 [2m│[0m   | US(_) | UA | UB => 2
+  45 [2m│[0m   }
 
   this match case is unused.
   "a" is the runtime value of constructor UA, so it is always matched as UA, never as US.

@@ -3,9 +3,11 @@ function add(x,y){
   return x + y
 }
 `)
+
 type rec kind<_> =
   | Float: kind<float>
   | String: kind<string>
+
 @val external add: (@ignore kind<'a>, 'a, 'a) => 'a = "add"
 
 let () = {

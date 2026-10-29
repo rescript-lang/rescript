@@ -69,12 +69,14 @@ let rec assoc3 = (x, l) =>
 /* ;; */
 
 let help_action = () => throw(Stop(Unknown("-help")))
+
 let v = speclist => {
   ignore(assoc3("-help", speclist))
   list{}
 }
 
 let f = (g, speclist) => g(assoc3("-help", speclist))
+
 let add_help = speclist => {
   let add1 = try {
     ignore(assoc3("-help", speclist))

@@ -16,6 +16,7 @@ module Component = {
     eight: 'eight,
     ninth: 'ninth,
   }
+
   let make = props => {
     props.name ++
     props.second ++

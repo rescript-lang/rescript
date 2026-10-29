@@ -7,6 +7,7 @@ let keys: Obj.t => array<string> = %raw(" function (x){return Object.keys(x)}")
    }
   }
 `)
+
 @val external higher_order: int => (int, int) => int = "$$higher_order"
 
 open Mocha

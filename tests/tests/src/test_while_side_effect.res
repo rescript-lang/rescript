@@ -7,6 +7,7 @@ while {
 } {
   ignore()
 }
+
 let rec fib = x =>
   switch x {
   | 0 | 1 => 1

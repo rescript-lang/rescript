@@ -15,6 +15,7 @@ List.forEach(list{{N.x: 3}}, x => Console.log(x.x))
 module Foo = {
   type record = {foo: string}
 }
+
 let bar = [{Foo.foo: @reason.raw_literal("bar") "bar"}]
 
 let _ = Array.map(bar, b => b.foo)

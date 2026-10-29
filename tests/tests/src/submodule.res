@@ -1,15 +1,19 @@
 module A0 = {
   let () = Console.log(__LINE__)
   let a0 = (x, y) => x + y + 1
+
   module A1 = {
     let () = Console.log(__LINE__)
     let a1 = (x, y) => a0(x, y) + 1
+
     module A2 = {
       let () = Console.log(__LINE__)
       let a2 = (x, y) => a1(x, y) + 1
+
       module A3 = {
         let () = Console.log(__LINE__)
         let a3 = (x, y) => a2(x, y) + 1
+
         module A4 = {
           let () = Console.log(__LINE__)
           let a4 = (x, y) => a3(x, y) + 1

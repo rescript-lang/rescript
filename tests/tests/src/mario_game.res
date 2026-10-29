@@ -151,6 +151,7 @@ module Actors: {
     | SItem(item_typ)
     | SBlock(block_typ)
 }
+
 module Dom_html = {
   type imageElement
   type canvasRenderingContext2D
@@ -162,11 +163,14 @@ module Dom_html = {
   /* external createImg: (_ [@as "img"]) -> document -> imageElement = "createElement" [@@send] */
   @send external createImg: (Dom.document, @as("img") _) => imageElement = "createElement"
   @val external requestAnimationFrame: (float => unit) => unit = "requestAnimationFrame"
+
   @return(null_to_opt) @send
   external getElementById: (Dom.document, string) => option<Dom.element> = "getElementById"
+
   @send
   external addEventListener: (Dom.document, string, Dom.event_like<'a> => bool, bool) => unit =
     "addEventListener"
+
   @send
   external addEventListenerImg: (imageElement, string, Dom.event_like<'a> => bool, bool) => unit =
     "addEventListener"
@@ -179,6 +183,7 @@ module Dom_html = {
   external elementToCanvasElement: Dom.element => canvasElement = "%identity"
   external windowToJsObj: Dom.window => {..} = "%identity"
 }
+
 module Sprite: {
   open Actors
 
@@ -635,6 +640,7 @@ module Sprite: {
     }
   }
 }
+
 module Particle: {
   open Actors
   open Sprite
@@ -784,6 +790,7 @@ module Particle: {
     update_pos(part)
   }
 }
+
 module Object: {
   open Sprite
   open Actors
@@ -801,6 +808,7 @@ module Object: {
     has_gravity: bool,
     speed: float,
   }
+
   type obj = {
     params: obj_params,
     pos: xy,
@@ -1378,6 +1386,7 @@ module Object: {
     | _ => list{}
     }
 }
+
 module Draw: {
   let render: (Sprite.sprite, (float, float)) => unit
 
@@ -1503,6 +1512,7 @@ module Draw: {
 
   let draw_background_color = canvas => throw(Failure("todo"))
 }
+
 module Viewport: {
   open Actors
 
@@ -1585,6 +1595,7 @@ module Viewport: {
     {...vpt, pos}
   }
 }
+
 module Director: {
   let update_loop: (
     Dom_html.canvasElement,
@@ -2138,6 +2149,7 @@ module Director: {
     true
   }
 }
+
 module Procedural_generator: {
   open Object
   open Actors
@@ -2574,6 +2586,7 @@ module Procedural_generator: {
   /* Makes sure level map is uniquely generated at each call. */
   let init = () => Random.self_init()
 }
+
 module Main = {
   open Actors
   open Sprite

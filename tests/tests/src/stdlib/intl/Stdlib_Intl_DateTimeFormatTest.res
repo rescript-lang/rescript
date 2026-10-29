@@ -2,6 +2,7 @@ Console.log("---")
 Console.log("Intl.DateTimeFormat")
 
 Intl.DateTimeFormat.supportedLocalesOf(["en-US", "en-GB"])->ignore
+
 Intl.DateTimeFormat.supportedLocalesOf(
   ["en-US", "en-GB"],
   ~options={localeMatcher: #lookup},
@@ -33,6 +34,7 @@ let options: Intl.DateTimeFormat.options = {
   fractionalSecondDigits: #3,
   timeZoneName: #longGeneric,
 }
+
 let formatter = Intl.DateTimeFormat.make(~options)
 
 Console.log(formatter->Intl.DateTimeFormat.format(Date.fromTime(Date.now())))

@@ -7,6 +7,7 @@ let () = {
   Console.log(to_json_string(list{1, 2, 3}))
   Console.log("hey")
 }
+
 @val external of_any: 'a => string = "String"
 
 describe(__MODULE__, () => {

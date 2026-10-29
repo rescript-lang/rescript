@@ -19,6 +19,7 @@ let typeof = Primitive_js_extern.typeof
 module O = {
   @val external isArray: 'a => bool = "Array.isArray"
   type key = string
+
   let for_in: (t, key => unit) => unit = %raw(`function(o,foo){
         for (var x in o) { foo(x) }}
       `)

@@ -68,7 +68,7 @@ if (Primitive_object.equal(e, {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "equal_exception_test.res",
-      38,
+      40,
       0
     ],
     Error: new Error()
@@ -80,7 +80,7 @@ if (Not_found === "Not_found" !== false) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "equal_exception_test.res",
-      39,
+      41,
       0
     ],
     Error: new Error()

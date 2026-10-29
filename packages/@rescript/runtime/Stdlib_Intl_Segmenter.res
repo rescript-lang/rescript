@@ -3,6 +3,7 @@ Bindings to JavaScript's `Intl.Segmenter`.
 
 See [MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Segmenter) for API details.
 */
+
 @instanceOf("Intl.Segmenter")
 type t
 

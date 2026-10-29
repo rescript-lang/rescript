@@ -39,11 +39,13 @@ let a18 = a17
 let a19 = a18
 
 let a20 = a19 ++ "not"
+
 let v = if String.getUnsafe(a20, 0) == "h" {
   1
 } else {
   2
 }
+
 let a21 = a20 ++ a20
 
 let a22 = "test " ++ (a21 ++ "hello")

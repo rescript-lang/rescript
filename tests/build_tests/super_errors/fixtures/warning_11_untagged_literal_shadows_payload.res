@@ -37,6 +37,7 @@ let fine = x =>
 
 // Every alternative can never match.
 @unboxed type u = | @as("a") UA | @as("b") UB | US(string)
+
 let allAlternatives = x =>
   switch x {
   | US("a") | US("b") => 1

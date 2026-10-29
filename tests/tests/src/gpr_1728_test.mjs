@@ -29,16 +29,16 @@ Test_utils.eq("File \"gpr_1728_test.res\", line 19, characters 3-10", Number.par
 Test_utils.eq("File \"gpr_1728_test.res\", line 20, characters 3-10", Number.parseInt("0x32"), 50);
 
 Mocha.describe("Gpr_1728_test", () => {
-  Mocha.test("bad_inlining_test", () => Test_utils.eq("File \"gpr_1728_test.res\", line 23, characters 7-14", badInlining({
+  Mocha.test("bad_inlining_test", () => Test_utils.eq("File \"gpr_1728_test.res\", line 24, characters 7-14", badInlining({
     field: "3"
   }), undefined));
   Mocha.test("parseInt_tests", () => {
-    Test_utils.eq("File \"gpr_1728_test.res\", line 27, characters 7-14", Number.parseInt("-13"), -13);
-    Test_utils.eq("File \"gpr_1728_test.res\", line 28, characters 7-14", Number.parseInt("+13"), 13);
-    Test_utils.eq("File \"gpr_1728_test.res\", line 29, characters 7-14", Number.parseInt("13"), 13);
-    Test_utils.eq("File \"gpr_1728_test.res\", line 30, characters 7-14", Number.parseInt("+0x32"), 50);
-    Test_utils.eq("File \"gpr_1728_test.res\", line 31, characters 7-14", Number.parseInt("-0x32"), -50);
-    Test_utils.eq("File \"gpr_1728_test.res\", line 32, characters 7-14", Number.parseInt("0x32"), 50);
+    Test_utils.eq("File \"gpr_1728_test.res\", line 28, characters 7-14", Number.parseInt("-13"), -13);
+    Test_utils.eq("File \"gpr_1728_test.res\", line 29, characters 7-14", Number.parseInt("+13"), 13);
+    Test_utils.eq("File \"gpr_1728_test.res\", line 30, characters 7-14", Number.parseInt("13"), 13);
+    Test_utils.eq("File \"gpr_1728_test.res\", line 31, characters 7-14", Number.parseInt("+0x32"), 50);
+    Test_utils.eq("File \"gpr_1728_test.res\", line 32, characters 7-14", Number.parseInt("-0x32"), -50);
+    Test_utils.eq("File \"gpr_1728_test.res\", line 33, characters 7-14", Number.parseInt("0x32"), 50);
   });
 });
 

@@ -8,6 +8,7 @@ let four: int = %raw(`4`)
 
 let floatPowDiv = (base: float, numerator: float, denominator: float) =>
   base ** (numerator /. denominator)
+
 let floatPowMul = (base: float, left: float, right: float) => base ** (left *. right)
 let floatPowMod = (base: float, value: float, modulus: float) => base ** (value % modulus)
 let bigintPowMul = (base: bigint, left: bigint, right: bigint) => base ** (left * right)

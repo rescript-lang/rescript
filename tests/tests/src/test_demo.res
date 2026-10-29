@@ -1,4 +1,5 @@
 let f = x => x + 1
+
 let rec fib = x =>
   switch x {
   | 1 | 2 => 1
@@ -95,6 +96,7 @@ let f = (h, g, x) =>
   )
 
 let f = (x, y, z) => x + y + z
+
 let g = (x, y) => {
   let u = x + y
   z => u + z
@@ -104,6 +106,7 @@ let g1 = (x, y) => {
   let u = x + y
   (xx, yy) => xx + yy + u
 }
+
 let x = g(3, 5)(6)
 
 let v = g1(3, 4)(6, ...)

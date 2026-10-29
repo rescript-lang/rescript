@@ -5,6 +5,7 @@
  */
 
 type opt<'a> = Primitive_js_extern.undefined<'a>
+
 type container<'hash, 'eq, 'c> = {
   mutable size: int /* number of entries */,
   mutable buckets: array<opt<'c>> /* the buckets */,

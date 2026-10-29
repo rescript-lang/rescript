@@ -38,6 +38,7 @@ module rec AA: {
     } else {
       BB.odd(n - 1)
     }
+
   let x = () => BB.y() + 3
 }
 and BB: {
@@ -52,6 +53,7 @@ and BB: {
     } else {
       AA.even(n - 1)
     }
+
   let y = () => 32
 }
 

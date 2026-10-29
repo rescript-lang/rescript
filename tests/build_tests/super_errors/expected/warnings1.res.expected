@@ -1,12 +1,12 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/warnings1.res[0m:[2m3:3[0m
+  [36m/.../fixtures/warnings1.res[0m:[2m4:3[0m
 
-  1 [2m│[0m let x = (a, b) => a + b
-  2 [2m│[0m let z = () => {
-  [1;31m3[0m [2m│[0m   [1;31mx[0m(10)
-  4 [2m│[0m   10
-  5 [2m│[0m }
+  2 [2m│[0m 
+  3 [2m│[0m let z = () => {
+  [1;31m4[0m [2m│[0m   [1;31mx[0m(10)
+  5 [2m│[0m   10
+  6 [2m│[0m }
 
   This function call is incorrect.
   The function has type:

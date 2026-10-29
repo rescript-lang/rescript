@@ -8,8 +8,8 @@
    [1;31m6[0m [2m│[0m [1;31m  type t = | @as("C") A({x: int}) | @as("A") C({x: int})[0m
    [1;31m7[0m [2m│[0m [1;31m  let a = A({x: 1})[0m
    [1;31m8[0m [2m│[0m [1;31m}[0m
-   9 [2m│[0m Console.log(
-  10 [2m│[0m   switch M.a {
+   9 [2m│[0m 
+  10 [2m│[0m Console.log(
 
   Signature mismatch:
   ...

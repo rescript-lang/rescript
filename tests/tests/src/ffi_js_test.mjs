@@ -47,15 +47,15 @@ function create_prim() {
 }
 
 Mocha.describe("Ffi_js_test", () => {
-  Mocha.test("higher_order function", () => Test_utils.eq("File \"ffi_js_test.res\", line 58, characters 41-48", 6, $$higher_order(1)(2, 3)));
+  Mocha.test("higher_order function", () => Test_utils.eq("File \"ffi_js_test.res\", line 59, characters 41-48", 6, $$higher_order(1)(2, 3)));
   Mocha.test("config objects", () => {
-    Test_utils.eq("File \"ffi_js_test.res\", line 65, characters 7-14", Object.keys(int_config).length, 2);
-    Test_utils.eq("File \"ffi_js_test.res\", line 66, characters 7-14", Object.keys(string_config).length, 2);
+    Test_utils.eq("File \"ffi_js_test.res\", line 66, characters 7-14", Object.keys(int_config).length, 2);
+    Test_utils.eq("File \"ffi_js_test.res\", line 67, characters 7-14", Object.keys(string_config).length, 2);
   });
   Mocha.test("side effect config", () => {
     let u = 3;
     u = u + 1 | 0;
-    Test_utils.eq("File \"ffi_js_test.res\", line 79, characters 7-14", u, 4);
+    Test_utils.eq("File \"ffi_js_test.res\", line 80, characters 7-14", u, 4);
   });
   Mocha.test("GADT operations", () => {});
 });

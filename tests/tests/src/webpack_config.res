@@ -1,6 +1,7 @@
 module type Config = {
   let configx: JSON.t
 }
+
 module WebpackConfig: Config = {
   @module external configx: JSON.t = "../../../webpack.config.js"
 }
@@ -13,16 +14,20 @@ module WebpackDevMiddlewareConfig: Config = {
 external configX: unit => JSON.t = "configX"
 
 let configX = configX
+
 module U: {
   let configX: unit => JSON.t
 } = {
   @module("../../../webpack.config.js") @val external configX: unit => JSON.t = "configX"
 }
+
 @module("List") external hey: unit => unit = "xx"
+
 module A = {
   @module(("reactX", "List")) external ff: unit => unit = "ff"
   @module(("reactX", "List")) external ff2: unit => unit = "ff2"
 }
+
 module B = {
   @module(("reactV", "List")) external ff: unit => unit = "ff"
   @module(("reactV", "List")) external ff2: unit => unit = "ff2"

@@ -6,6 +6,7 @@ let twoSpreads = <input {...dict{...baseProps->Obj.magic, ...otherProps->Obj.mag
 let spacedKey = <input {...dict{...baseProps->Obj.magic, "foo bar": "x"}->Obj.magic} />
 let protoKey = <input {...dict{...baseProps->Obj.magic, "__proto__": "x"}->Obj.magic} />
 let hyphenatedKey = <input {...dict{...baseProps->Obj.magic, "aria-label": "x"}->Obj.magic} />
+
 let repeatedChildren =
   <div
     {...dict{
@@ -14,8 +15,11 @@ let repeatedChildren =
       "children": React.string("second"),
     }->Obj.magic}
   />
+
 let repeatedKey =
   <input {...dict{...baseProps->Obj.magic, "title": "x", "title": "y"}->Obj.magic} />
+
 let keyProp = <input {...dict{...baseProps->Obj.magic, "key": "inner"}->Obj.magic} key="outer" />
+
 let keyPropAfter =
   <input key="outer" {...dict{...baseProps->Obj.magic, "key": "inner"}->Obj.magic} />

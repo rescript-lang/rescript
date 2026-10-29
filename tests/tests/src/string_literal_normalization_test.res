@@ -14,8 +14,10 @@ external escapedModuleName: string => string = "basename"
 
 let escaped = "\x61\u0062\u{63}"
 let namedEscapes = "\b\f\n\r\t\v\0"
+
 let continued = "a\
 b"
+
 let surrogatePair = "\uD83D\uDE00"
 let concatenated = "\x61" ++ "\u0062"
 let interpolated = `\x61${"b"}\u0063`

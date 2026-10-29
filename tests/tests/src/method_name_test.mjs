@@ -32,7 +32,7 @@ function hg(x) {
 }
 
 Mocha.describe("Method_name_test", () => {
-  Mocha.test("method name test", () => Test_utils.eq("File \"method_name_test.res\", line 36, characters 7-14", 35, hg(h)));
+  Mocha.test("method name test", () => Test_utils.eq("File \"method_name_test.res\", line 37, characters 7-14", 35, hg(h)));
 });
 
 export {

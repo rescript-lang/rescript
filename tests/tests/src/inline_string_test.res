@@ -1,4 +1,5 @@
 @@config({no_export: no_export})
+
 type t =
   | A_list
   | A_hashtable
@@ -15,6 +16,7 @@ type t2 =
   | A_list
   | A_hashtable
   | A_bad
+
 let string_of_associative_type = x =>
   switch x {
   | A_list => "list"
@@ -31,6 +33,7 @@ let f = x =>
   | Some(_) => "Some"
   | None => "None"
   }
+
 let u = v => f(Some(v))
 Console.log((f(v), f(None), f(Some(3))))
 

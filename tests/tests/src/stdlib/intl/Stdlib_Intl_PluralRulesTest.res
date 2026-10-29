@@ -3,6 +3,7 @@ Console.log("Intl.PluralRules")
 
 let _formatter = Intl.PluralRules.make()
 let _formatter = Intl.PluralRules.make(~locales=["en-US", "en-GB"])
+
 let _formatter = Intl.PluralRules.make(
   ~options={
     \"type": #ordinal,
@@ -10,6 +11,7 @@ let _formatter = Intl.PluralRules.make(
     minimumSignificantDigits: #3,
   },
 )
+
 let formatter = Intl.PluralRules.make(
   ~locales=["en-US"],
   ~options={

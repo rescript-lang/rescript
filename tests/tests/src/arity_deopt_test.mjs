@@ -21,10 +21,10 @@ function f3(x) {
 
 Mocha.describe("Arity_deopt_test", () => {
   Mocha.test("arity_deopt_tests", () => {
-    Test_utils.eq("File \"arity_deopt_test.res\", line 43, characters 7-14", 6, 6);
     Test_utils.eq("File \"arity_deopt_test.res\", line 44, characters 7-14", 6, 6);
     Test_utils.eq("File \"arity_deopt_test.res\", line 45, characters 7-14", 6, 6);
     Test_utils.eq("File \"arity_deopt_test.res\", line 46, characters 7-14", 6, 6);
+    Test_utils.eq("File \"arity_deopt_test.res\", line 47, characters 7-14", 6, 6);
   });
 });
 

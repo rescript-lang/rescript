@@ -207,20 +207,20 @@ let IntValue = {
 
 Mocha.describe("Advanced_types_test", () => {
   Mocha.test("polymorphic fields", () => {
-    Test_utils.eq("File \"advanced_types_test.res\", line 144, characters 7-14", [
+    Test_utils.eq("File \"advanced_types_test.res\", line 162, characters 7-14", [
       1,
       "s"
     ], useIdentity({
       id: x => x
     }));
-    Test_utils.eq("File \"advanced_types_test.res\", line 146, characters 6-13", [
+    Test_utils.eq("File \"advanced_types_test.res\", line 164, characters 6-13", [
       [2],
       ["a!"]
     ], [
       arrayMapper.map([1], x => x + 1 | 0),
       arrayMapper.map(["a"], s => s + "!")
     ]);
-    Test_utils.eq("File \"advanced_types_test.res\", line 150, characters 7-14", [
+    Test_utils.eq("File \"advanced_types_test.res\", line 168, characters 7-14", [
       [1],
       ["a"]
     ], [
@@ -229,11 +229,11 @@ Mocha.describe("Advanced_types_test", () => {
     ]);
   });
   Mocha.test("constraint and alias", () => {
-    Test_utils.eq("File \"advanced_types_test.res\", line 154, characters 7-14", [
+    Test_utils.eq("File \"advanced_types_test.res\", line 172, characters 7-14", [
       1,
       [2]
     ], withDefault);
-    Test_utils.eq("File \"advanced_types_test.res\", line 155, characters 7-14", 3, sum({
+    Test_utils.eq("File \"advanced_types_test.res\", line 173, characters 7-14", 3, sum({
       NAME: "Cons",
       VAL: [
         1,
@@ -246,35 +246,35 @@ Mocha.describe("Advanced_types_test", () => {
         }
       ]
     }));
-    Test_utils.eq("File \"advanced_types_test.res\", line 156, characters 7-14", "B", "B");
+    Test_utils.eq("File \"advanced_types_test.res\", line 174, characters 7-14", "B", "B");
   });
   Mocha.test("type pattern", () => {
-    Test_utils.eq("File \"advanced_types_test.res\", line 160, characters 7-14", "basic Red", "basic Red");
-    Test_utils.eq("File \"advanced_types_test.res\", line 161, characters 7-14", "blue", "blue");
+    Test_utils.eq("File \"advanced_types_test.res\", line 178, characters 7-14", "basic Red", "basic Red");
+    Test_utils.eq("File \"advanced_types_test.res\", line 179, characters 7-14", "blue", "blue");
   });
   Mocha.test("private types", () => {
-    Test_utils.eq("File \"advanced_types_test.res\", line 166, characters 20-27", 4, 3 + 1 | 0);
-    Test_utils.eq("File \"advanced_types_test.res\", line 169, characters 7-14", undefined, undefined);
+    Test_utils.eq("File \"advanced_types_test.res\", line 184, characters 20-27", 4, 3 + 1 | 0);
+    Test_utils.eq("File \"advanced_types_test.res\", line 187, characters 7-14", undefined, undefined);
     let n = parse("7");
     let tmp;
     tmp = n.TAG === "Word" ? 0 : n._0;
-    Test_utils.eq("File \"advanced_types_test.res\", line 171, characters 6-13", 7, tmp);
+    Test_utils.eq("File \"advanced_types_test.res\", line 189, characters 6-13", 7, tmp);
   });
-  Mocha.test("variance", () => Test_utils.eq("File \"advanced_types_test.res\", line 181, characters 7-14", "A", Stdlib_Option.getOrThrow(widened, undefined)));
+  Mocha.test("variance", () => Test_utils.eq("File \"advanced_types_test.res\", line 199, characters 7-14", "A", Stdlib_Option.getOrThrow(widened, undefined)));
   Mocha.test("signatures", () => {
-    Test_utils.eq("File \"advanced_types_test.res\", line 185, characters 7-14", [1], [1]);
-    Test_utils.eq("File \"advanced_types_test.res\", line 186, characters 7-14", 9, 9);
-    Test_utils.eq("File \"advanced_types_test.res\", line 187, characters 7-14", 2, 2);
+    Test_utils.eq("File \"advanced_types_test.res\", line 203, characters 7-14", [1], [1]);
+    Test_utils.eq("File \"advanced_types_test.res\", line 204, characters 7-14", 9, 9);
+    Test_utils.eq("File \"advanced_types_test.res\", line 205, characters 7-14", 2, 2);
   });
   Mocha.test("functors", () => {
-    Test_utils.ok("File \"advanced_types_test.res\", line 191, characters 7-14", compare$1(1, 2) > 0);
-    Test_utils.eq("File \"advanced_types_test.res\", line 192, characters 7-14", 1, next());
-    Test_utils.eq("File \"advanced_types_test.res\", line 193, characters 7-14", 2, next());
-    Test_utils.eq("File \"advanced_types_test.res\", line 194, characters 7-14", 1, next$1());
+    Test_utils.ok("File \"advanced_types_test.res\", line 209, characters 7-14", compare$1(1, 2) > 0);
+    Test_utils.eq("File \"advanced_types_test.res\", line 210, characters 7-14", 1, next());
+    Test_utils.eq("File \"advanced_types_test.res\", line 211, characters 7-14", 2, next());
+    Test_utils.eq("File \"advanced_types_test.res\", line 212, characters 7-14", 1, next$1());
   });
   Mocha.test("first-class modules", () => {
-    Test_utils.eq("File \"advanced_types_test.res\", line 198, characters 7-14", "3", (3).toString());
-    Test_utils.eq("File \"advanced_types_test.res\", line 199, characters 7-14", 3, 3);
+    Test_utils.eq("File \"advanced_types_test.res\", line 216, characters 7-14", "3", (3).toString());
+    Test_utils.eq("File \"advanced_types_test.res\", line 217, characters 7-14", 3, 3);
   });
 });
 

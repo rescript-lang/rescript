@@ -472,6 +472,7 @@ let s = List.reduceReverse(list{("10", 'a'), ("3", 'b'), ("7", 'c'), ("20", 'd')
   acc,
   (k, v),
 ) => SMap.add(k, v, acc))
+
 @val("console.log") external log: 'a => unit = ""
 
 describe(__MODULE__, () => {

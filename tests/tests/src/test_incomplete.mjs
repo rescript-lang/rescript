@@ -9,7 +9,7 @@ function f(x) {
     RE_EXN_ID: "Match_failure",
     _1: [
       "test_incomplete.res",
-      3,
+      4,
       2
     ],
     Error: new Error()

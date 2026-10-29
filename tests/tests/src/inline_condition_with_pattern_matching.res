@@ -1,5 +1,6 @@
 module Test1 = {
   type status = Vacations(int) | Sabbatical(int) | Sick
+
   type person =
     | Teacher({age: int})
     | Student({status: status})
@@ -15,6 +16,7 @@ module Test1 = {
 module Test2 = {
   type status = Vacations(int) | Sabbatical(int) | Sick | Present
   type reportCard = {passing: bool, gpa: float}
+
   type person =
     | Teacher({name: string, age: int})
     | Student({name: string, status: status, reportCard: reportCard})

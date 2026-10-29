@@ -1,5 +1,6 @@
 module Req = {
   type props = {a: string, b: string}
+
   @react.componentWithProps
   let make = (props: props) => <div title={props.a ++ props.b} />
 }

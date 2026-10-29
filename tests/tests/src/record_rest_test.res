@@ -44,6 +44,7 @@ let getRenamedNameAndRest = ({name, ...restConfig as rest}: renamedConfig) => (n
 let getName = ({name, ...restConfig as _rest}: config) => name
 let getWholeConfig = ({...config as rest}: config) => rest
 let makeConfig = (): config => {name: "call", version: "4.5", debug: true}
+
 let getCallResultRest = () => {
   let {name: _, ...restConfig as rest} = makeConfig()
   rest

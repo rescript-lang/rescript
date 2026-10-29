@@ -1,4 +1,5 @@
 @@warning("-a")
+
 let f = x =>
   switch x {
   | 1

@@ -23,6 +23,7 @@ let hh = map(["1", "2", "3"], x => parseInt(x))
 let u = () => 3
 
 let vvv = ref(0)
+
 let fff = () => {
   /* No inline */
   Console.log("x")
@@ -31,6 +32,7 @@ let fff = () => {
 }
 
 let g = () => fff()
+
 /* will be compiled into 
   var g = function () { fff (0)}
   not {[ var g = fff ]}

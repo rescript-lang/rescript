@@ -4,6 +4,7 @@
 type rec tt = [
   | #List(list<tt>)
 ]
+
 type sexp = tt
 
 /* {2 Serialization (encoding)} */

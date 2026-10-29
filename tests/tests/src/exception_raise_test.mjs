@@ -97,7 +97,7 @@ try {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "exception_raise_test.res",
-        46,
+        47,
         7
       ],
       Error: new Error()
@@ -146,7 +146,7 @@ function input_lines(ic, _acc) {
 }
 
 Mocha.describe("Exception_raise_test", () => {
-  Mocha.test("exception values", () => Test_utils.eq("File \"exception_raise_test.res\", line 72, characters 7-14", [
+  Mocha.test("exception values", () => Test_utils.eq("File \"exception_raise_test.res\", line 75, characters 7-14", [
     f,
     ff,
     fff,
@@ -159,13 +159,13 @@ Mocha.describe("Exception_raise_test", () => {
   ]));
   Mocha.test("Exn.Error conversion", () => {
     if (a1.RE_EXN_ID === "JsExn") {
-      return Test_utils.eq("File \"exception_raise_test.res\", line 77, characters 21-28", a1._1, 2);
+      return Test_utils.eq("File \"exception_raise_test.res\", line 80, characters 21-28", a1._1, 2);
     }
     throw {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "exception_raise_test.res",
-        78,
+        81,
         11
       ],
       Error: new Error()
@@ -179,9 +179,9 @@ Mocha.describe("Exception_raise_test", () => {
       let e = Primitive_exceptions.internalToException(raw_e);
       testValue = Stdlib_JsExn.fromException(e) !== undefined;
     }
-    Test_utils.eq("File \"exception_raise_test.res\", line 86, characters 7-14", testValue, true);
+    Test_utils.eq("File \"exception_raise_test.res\", line 89, characters 7-14", testValue, true);
   });
-  Mocha.test("raw function call", () => Test_utils.eq("File \"exception_raise_test.res\", line 90, characters 7-14", ((a,b,c,_) => a + b + c)(1, 2, 3, 4), 6));
+  Mocha.test("raw function call", () => Test_utils.eq("File \"exception_raise_test.res\", line 93, characters 7-14", ((a,b,c,_) => a + b + c)(1, 2, 3, 4), 6));
 });
 
 export {

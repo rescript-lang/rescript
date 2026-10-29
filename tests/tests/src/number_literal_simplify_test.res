@@ -10,6 +10,7 @@ let float_neq_other = (x: float) => x != 2.5 && x == 3.5
 let float_or = (x: float) => x != 2.5 || x != 2.5
 
 @unboxed type int_tag = | @as(1) L1 | N(float) | S(string)
+
 // The payload case is unused (warning 11): 1 always matches as L1.
 @warning("-11")
 let int_tag_shadowed = (v: int_tag) =>
@@ -19,6 +20,7 @@ let int_tag_shadowed = (v: int_tag) =>
   }
 
 @unboxed type float_tag = | @as(2.5) L | M(float) | P(string)
+
 @warning("-11")
 let float_tag_shadowed = (v: float_tag) =>
   switch v {

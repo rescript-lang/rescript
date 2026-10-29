@@ -173,4 +173,5 @@ module Int = {
 module Float = {
   let sum = xs => reduce(xs, 0., (a, b) => a +. b)
 }
+
 let clear = t => truncateToLengthUnsafe(t, 0)

@@ -313,7 +313,7 @@ if (!Primitive_object.equal(x, of_array([
     RE_EXN_ID: "Assert_failure",
     _1: [
       "flexible_array_test.res",
-      184,
+      185,
       2
     ],
     Error: new Error()
@@ -331,7 +331,7 @@ if (!Primitive_object.equal(x$1, of_array(y))) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "flexible_array_test.res",
-      187,
+      188,
       2
     ],
     Error: new Error()

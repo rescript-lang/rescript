@@ -24,6 +24,7 @@ type dirOptions = {
   depth?: Stdlib_Nullable.t<int>,
   showHidden?: bool,
 }
+
 @val external dir: ('a, ~options: dirOptions=?) => unit = "console.dir"
 @val external dirxml: 'a => unit = "console.dirxml"
 

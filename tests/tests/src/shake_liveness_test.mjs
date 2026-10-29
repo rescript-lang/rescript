@@ -40,10 +40,10 @@ function statementHelper(x) {
 
 counter.contents = counter.contents + statementHelper(2) | 0;
 
-Mocha.describe("File \"shake_liveness_test.res\", line 36, characters 9-16", () => {
+Mocha.describe("File \"shake_liveness_test.res\", line 38, characters 9-16", () => {
   Mocha.test("kept bindings work", () => {
-    Test_utils.eq("File \"shake_liveness_test.res\", line 39, characters 7-14", counter.contents, 59);
-    Test_utils.eq("File \"shake_liveness_test.res\", line 40, characters 7-14", chainEnd(1), 338);
+    Test_utils.eq("File \"shake_liveness_test.res\", line 41, characters 7-14", counter.contents, 59);
+    Test_utils.eq("File \"shake_liveness_test.res\", line 42, characters 7-14", chainEnd(1), 338);
   });
 });
 

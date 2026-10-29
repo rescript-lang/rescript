@@ -1,5 +1,6 @@
 type element
 type dom
+
 @send @return({null_to_opt: null_to_opt})
 external getElementById: (dom, string) => option<element> = "getElementById"
 
