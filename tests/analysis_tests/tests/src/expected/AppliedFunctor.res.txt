@@ -223,16 +223,251 @@ Rename src/AppliedFunctor.res 62:11 y
   }
 ]
 
-Hover src/AppliedFunctor.res 76:24
+References src/AppliedFunctor.res 67:8
+[
+  {
+    "range": {
+      "end": { "character": 18, "line": 67 },
+      "start": { "character": 4, "line": 67 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 29, "line": 77 },
+      "start": { "character": 24, "line": 77 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 30, "line": 83 },
+      "start": { "character": 25, "line": 83 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 17, "line": 139 },
+      "start": { "character": 12, "line": 139 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+Hover src/AppliedFunctor.res 77:24
 { "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
 
-Complete src/AppliedFunctor.res 79:28
-pos_cursor:[79:28] pos_no_white:[79:27] Found expr:[79:13->79:28]
-Pexp_ident Applied.Nested.:[79:13->79:28]
+Complete src/AppliedFunctor.res 80:28
+pos_cursor:[80:28] pos_no_white:[80:27] Found expr:[80:13->80:28]
+Pexp_ident Applied.Nested.:[80:13->80:28]
 Completable: Cpath Value[Applied, Nested, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[Applied, Nested, ""]
 Path Applied.Nested.
 [ { "detail": "int", "kind": 12, "label": "value", "tags": [] } ]
+
+Rename src/AppliedFunctor.res 83:25 renamed
+[
+  {
+    "edits": [
+      {
+        "newText": "renamed",
+        "range": {
+          "end": { "character": 18, "line": 67 },
+          "start": { "character": 4, "line": 67 }
+        }
+      },
+      {
+        "newText": "renamed",
+        "range": {
+          "end": { "character": 29, "line": 77 },
+          "start": { "character": 24, "line": 77 }
+        }
+      },
+      {
+        "newText": "renamed",
+        "range": {
+          "end": { "character": 30, "line": 83 },
+          "start": { "character": 25, "line": 83 }
+        }
+      },
+      {
+        "newText": "renamed",
+        "range": {
+          "end": { "character": 17, "line": 139 },
+          "start": { "character": 12, "line": 139 }
+        }
+      }
+    ],
+    "textDocument": { "uri": "file:///AppliedFunctor.res", "version": 0 }
+  }
+]
+
+References src/AppliedFunctor.res 90:12
+[
+  {
+    "range": {
+      "end": { "character": 21, "line": 90 },
+      "start": { "character": 8, "line": 90 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 36, "line": 112 },
+      "start": { "character": 32, "line": 112 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 37, "line": 113 },
+      "start": { "character": 33, "line": 113 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 22, "line": 144 },
+      "start": { "character": 18, "line": 144 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+References src/AppliedFunctor.res 113:33
+[
+  {
+    "range": {
+      "end": { "character": 21, "line": 90 },
+      "start": { "character": 8, "line": 90 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 36, "line": 112 },
+      "start": { "character": 32, "line": 112 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 37, "line": 113 },
+      "start": { "character": 33, "line": 113 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 22, "line": 144 },
+      "start": { "character": 18, "line": 144 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+References src/AppliedFunctor.res 118:8
+get_loc_item #8: heuristic for JSX with at most one child
+heuristic for: [makeProps, make, createElement], give the loc of `make` 
+[
+  {
+    "range": {
+      "end": { "character": 21, "line": 118 },
+      "start": { "character": 4, "line": 118 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 35, "line": 135 },
+      "start": { "character": 27, "line": 135 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+References src/AppliedFunctor.res 135:27
+[
+  {
+    "range": {
+      "end": { "character": 21, "line": 118 },
+      "start": { "character": 4, "line": 118 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 35, "line": 135 },
+      "start": { "character": 27, "line": 135 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+References src/AppliedFunctor.res 139:12
+[
+  {
+    "range": {
+      "end": { "character": 18, "line": 67 },
+      "start": { "character": 4, "line": 67 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 29, "line": 77 },
+      "start": { "character": 24, "line": 77 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 30, "line": 83 },
+      "start": { "character": 25, "line": 83 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 17, "line": 139 },
+      "start": { "character": 12, "line": 139 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+References src/AppliedFunctor.res 144:18
+[
+  {
+    "range": {
+      "end": { "character": 21, "line": 90 },
+      "start": { "character": 8, "line": 90 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 36, "line": 112 },
+      "start": { "character": 32, "line": 112 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 37, "line": 113 },
+      "start": { "character": 33, "line": 113 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 22, "line": 144 },
+      "start": { "character": 18, "line": 144 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
 
