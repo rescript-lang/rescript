@@ -1254,3 +1254,32 @@ Path v
   }
 ]
 
+Complete src/CompletionExtensiblePayload.res 126:23
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Value($0)
+Raw opens: 3 A.place holder ... B.place holder ... A.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 4 Stdlib CompletionExtensiblePayload CompletionExtensiblePayload CompletionExtensiblePayload
+ContextPath Type[attr]
+Path attr
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionExtensiblePayload.res 129:22
+pos_cursor:[129:22] pos_no_white:[129:21] Found pattern:[129:16->129:23]
+Ppat_construct Value:[129:16->129:21]
+pos_cursor:[129:22] pos_no_white:[129:21] Found pattern:[129:21->129:23]
+Ppat_construct ():[129:21->129:23]
+Completable: Cpattern Value[v]->variantPayload::Value($0)
+Raw opens: 3 A.place holder ... B.place holder ... A.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 4 Stdlib CompletionExtensiblePayload CompletionExtensiblePayload CompletionExtensiblePayload
+ContextPath Value[v]
+Path v
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+

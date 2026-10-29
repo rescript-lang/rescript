@@ -120,3 +120,12 @@ module type S = {
 
 // switch v
 //         ^com
+
+// An open after a local declaration shadows it in turn
+open A
+
+// let x: attr = Value()
+//                     ^com
+
+// switch v { | Value() }
+//                    ^com
