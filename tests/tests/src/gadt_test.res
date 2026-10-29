@@ -103,6 +103,14 @@ let showAll = items =>
     }
   )
 
+// A let destructuring a GADT constructor, with attributes in front.
+let showOne = item => {
+  /** Opens the existential. */
+  @warning("-27")
+  let Showable({value, show}) = item
+  show(value)
+}
+
 // Existential packing a first-class module.
 module type Show = {
   type t
@@ -222,6 +230,7 @@ describe(__MODULE__, () => {
       ]),
     )
     eq(__LOC__, "7", showBoxed(Boxed(module(ShowInt), 7)))
+    eq(__LOC__, "8", showOne(Showable({value: 8, show: n => Int.toString(n)})))
   })
 
   test("typed printf", () => {
