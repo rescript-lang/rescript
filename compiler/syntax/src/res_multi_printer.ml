@@ -28,8 +28,10 @@ let print ?(ignore_parse_errors = false) input =
     let len = String.length input in
     len > 0 && String.unsafe_get input (len - 1) = 'i'
   in
-  print_res ~ignore_parse_errors ~is_interface ~filename:input
-    (Ext_io.load_file input)
+  let source = Ext_io.load_file input in
+  (* Keep a byte order mark, which the scanner skips *)
+  Res_scanner.byte_order_mark source
+  ^ print_res ~ignore_parse_errors ~is_interface ~filename:input source
 [@@raises Res_driver.Already_reported]
 
 (* suppress unused optional arg *)

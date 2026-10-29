@@ -16,6 +16,10 @@ type t = {
   mutable lnum: int; (* current line number *)
 }
 
+(* The UTF-8 byte order mark that [src] starts with, or "". The scanner skips
+   it, and the formatter keeps it. *)
+val byte_order_mark : string -> string
+
 val make : filename:string -> string -> t
 val position : t -> Lexing.position
 
