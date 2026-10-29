@@ -211,6 +211,7 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
           Completable.NVariantPayload
             {
               constructor_name = Longident.last txt;
+              constructor_path = Longident.flatten txt;
               item_num = 0;
               source_arity = 1;
             };
@@ -224,6 +225,7 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
              Completable.NVariantPayload
                {
                  constructor_name = Longident.last txt;
+                 constructor_path = Longident.flatten txt;
                  item_num;
                  source_arity = List.length args;
                };
@@ -234,6 +236,7 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
              Completable.NVariantPayload
                {
                  constructor_name = Longident.last txt;
+                 constructor_path = Longident.flatten txt;
                  item_num = item_num + 1;
                  source_arity = List.length args;
                };

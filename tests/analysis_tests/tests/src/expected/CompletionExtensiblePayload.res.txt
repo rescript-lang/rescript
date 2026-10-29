@@ -1,0 +1,891 @@
+Complete src/CompletionExtensiblePayload.res 13:23
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Color($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Red",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Red",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Blue",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Blue",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 16:22
+pos_cursor:[16:22] pos_no_white:[16:21] Found pattern:[16:16->16:23]
+Ppat_construct Color:[16:16->16:21]
+pos_cursor:[16:22] pos_no_white:[16:21] Found pattern:[16:21->16:23]
+Ppat_construct ():[16:21->16:23]
+Completable: Cpattern Value[v]->variantPayload::Color($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[v]
+Path v
+[
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Red",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Red",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Blue",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Blue",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 19:27
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Boxed($0), recordField(b)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Red",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Red",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Blue",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Blue",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 22:28
+pos_cursor:[22:28] pos_no_white:[22:26] Found pattern:[22:16->22:30]
+Ppat_construct Wrapped:[22:16->22:23]
+pos_cursor:[22:28] pos_no_white:[22:26] Found pattern:[22:24->22:29]
+Completable: Cpattern Value[v]->variantPayload::Wrapped($0), recordField(c)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[v]
+Path v
+[
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Red",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Red",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Blue",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Blue",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 25:27
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Pair($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "Circle",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nCircle\n```\n\n```rescript\ntype shape = Circle | Square\n```"
+    },
+    "insertText": "Circle",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Circle",
+    "tags": []
+  },
+  {
+    "detail": "Square",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSquare\n```\n\n```rescript\ntype shape = Circle | Square\n```"
+    },
+    "insertText": "Square",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Square",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 28:26
+pos_cursor:[28:26] pos_no_white:[28:24] Found pattern:[28:16->28:27]
+Ppat_construct Pair:[28:16->28:20]
+Completable: Cpattern Value[v]->variantPayload::Pair($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[v]
+Path v
+[
+  {
+    "detail": "Circle",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nCircle\n```\n\n```rescript\ntype shape = Circle | Square\n```"
+    },
+    "insertText": "Circle",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Circle",
+    "tags": []
+  },
+  {
+    "detail": "Square",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSquare\n```\n\n```rescript\ntype shape = Circle | Square\n```"
+    },
+    "insertText": "Square",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Square",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 31:23
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Sized($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "Small",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSmall\n```\n\n```rescript\ntype size = Small | Large\n```"
+    },
+    "insertText": "Small",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Small",
+    "tags": []
+  },
+  {
+    "detail": "Large",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nLarge\n```\n\n```rescript\ntype size = Small | Large\n```"
+    },
+    "insertText": "Large",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Large",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 34:22
+pos_cursor:[34:22] pos_no_white:[34:21] Found pattern:[34:16->34:23]
+Ppat_construct Sized:[34:16->34:21]
+pos_cursor:[34:22] pos_no_white:[34:21] Found pattern:[34:21->34:23]
+Ppat_construct ():[34:21->34:23]
+Completable: Cpattern Value[v]->variantPayload::Sized($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[v]
+Path v
+[
+  {
+    "detail": "Small",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSmall\n```\n\n```rescript\ntype size = Small | Large\n```"
+    },
+    "insertText": "Small",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Small",
+    "tags": []
+  },
+  {
+    "detail": "Large",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nLarge\n```\n\n```rescript\ntype size = Small | Large\n```"
+    },
+    "insertText": "Large",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Large",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 37:56
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Shaped($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "Circle",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nCircle\n```\n\n```rescript\ntype shape = Circle | Square\n```"
+    },
+    "insertText": "Circle",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Circle",
+    "tags": []
+  },
+  {
+    "detail": "Square",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSquare\n```\n\n```rescript\ntype shape = Circle | Square\n```"
+    },
+    "insertText": "Square",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Square",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 46:25
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Value($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "color",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype color = Red | Blue\n```"
+    },
+    "kind": 12,
+    "label": "None",
+    "tags": []
+  },
+  {
+    "detail": "color",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(Red)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Red)",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(Blue)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Blue)",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 56:23
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::InM($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "X",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nX\n```\n\n```rescript\ntype local = X | Y\n```"
+    },
+    "insertText": "X",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "X",
+    "tags": []
+  },
+  {
+    "detail": "Y",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nY\n```\n\n```rescript\ntype local = X | Y\n```"
+    },
+    "insertText": "Y",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Y",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 59:22
+pos_cursor:[59:22] pos_no_white:[59:21] Found pattern:[59:16->59:23]
+Ppat_construct M.InM:[59:16->59:21]
+pos_cursor:[59:22] pos_no_white:[59:21] Found pattern:[59:21->59:23]
+Ppat_construct ():[59:21->59:23]
+Completable: Cpattern Value[v]->variantPayload::InM($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[v]
+Path v
+[
+  {
+    "detail": "X",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nX\n```\n\n```rescript\ntype local = X | Y\n```"
+    },
+    "insertText": "X",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "X",
+    "tags": []
+  },
+  {
+    "detail": "Y",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nY\n```\n\n```rescript\ntype local = X | Y\n```"
+    },
+    "insertText": "Y",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Y",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 62:25
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Value($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionExtensiblePayload.res 65:25
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Value($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "color",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype color = Red | Blue\n```"
+    },
+    "kind": 12,
+    "label": "None",
+    "tags": []
+  },
+  {
+    "detail": "color",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(Red)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Red)",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(Blue)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Blue)",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 68:30
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Value($0), variantPayload::Some($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Red",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Red",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Blue",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Blue",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 71:24
+pos_cursor:[71:24] pos_no_white:[71:23] Found pattern:[71:16->71:25]
+Ppat_construct A.Value:[71:16->71:23]
+pos_cursor:[71:24] pos_no_white:[71:23] Found pattern:[71:23->71:25]
+Ppat_construct ():[71:23->71:25]
+Completable: Cpattern Value[v]->variantPayload::Value($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[v]
+Path v
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionExtensiblePayload.res 74:24
+pos_cursor:[74:24] pos_no_white:[74:23] Found pattern:[74:16->74:25]
+Ppat_construct B.Value:[74:16->74:23]
+pos_cursor:[74:24] pos_no_white:[74:23] Found pattern:[74:23->74:25]
+Ppat_construct ():[74:23->74:25]
+Completable: Cpattern Value[v]->variantPayload::Value($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[v]
+Path v
+[
+  {
+    "detail": "color",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype color = Red | Blue\n```"
+    },
+    "kind": 12,
+    "label": "None",
+    "tags": []
+  },
+  {
+    "detail": "color",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(${1:_})",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(Red)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Red)",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(Blue)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Blue)",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 77:55
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Value($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "Circle",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nCircle\n```\n\n```rescript\ntype shape = Circle | Square\n```"
+    },
+    "insertText": "Circle",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Circle",
+    "tags": []
+  },
+  {
+    "detail": "Square",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSquare\n```\n\n```rescript\ntype shape = Circle | Square\n```"
+    },
+    "insertText": "Square",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Square",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 80:53
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Value($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "color",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype color = Red | Blue\n```"
+    },
+    "kind": 12,
+    "label": "None",
+    "tags": []
+  },
+  {
+    "detail": "color",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(Red)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Red)",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(Blue)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Blue)",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 83:54
+pos_cursor:[83:54] pos_no_white:[83:53] Found pattern:[83:16->83:55]
+Ppat_construct CompletionExtensiblePayloadBase.Value:[83:16->83:53]
+pos_cursor:[83:54] pos_no_white:[83:53] Found pattern:[83:53->83:55]
+Ppat_construct ():[83:53->83:55]
+Completable: Cpattern Value[v]->variantPayload::Value($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[v]
+Path v
+[
+  {
+    "detail": "Circle",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nCircle\n```\n\n```rescript\ntype shape = Circle | Square\n```"
+    },
+    "insertText": "Circle",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Circle",
+    "tags": []
+  },
+  {
+    "detail": "Square",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSquare\n```\n\n```rescript\ntype shape = Circle | Square\n```"
+    },
+    "insertText": "Square",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Square",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 89:23
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Value($0)
+Raw opens: 1 A.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib CompletionExtensiblePayload
+ContextPath Type[attr]
+Path attr
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionExtensiblePayload.res 92:22
+pos_cursor:[92:22] pos_no_white:[92:21] Found pattern:[92:16->92:23]
+Ppat_construct Value:[92:16->92:21]
+pos_cursor:[92:22] pos_no_white:[92:21] Found pattern:[92:21->92:23]
+Ppat_construct ():[92:21->92:23]
+Completable: Cpattern Value[v]->variantPayload::Value($0)
+Raw opens: 1 A.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib CompletionExtensiblePayload
+ContextPath Value[v]
+Path v
+[
+  { "detail": "bool", "kind": 4, "label": "true", "tags": [] },
+  { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
+]
+
+Complete src/CompletionExtensiblePayload.res 97:23
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Value($0)
+Raw opens: 2 B.place holder ... A.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 3 Stdlib CompletionExtensiblePayload CompletionExtensiblePayload
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "color",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype color = Red | Blue\n```"
+    },
+    "kind": 12,
+    "label": "None",
+    "tags": []
+  },
+  {
+    "detail": "color",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some($0)",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(Red)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Red)",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(Blue)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Blue)",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 100:22
+pos_cursor:[100:22] pos_no_white:[100:21] Found pattern:[100:16->100:23]
+Ppat_construct Value:[100:16->100:21]
+pos_cursor:[100:22] pos_no_white:[100:21] Found pattern:[100:21->100:23]
+Ppat_construct ():[100:21->100:23]
+Completable: Cpattern Value[v]->variantPayload::Value($0)
+Raw opens: 2 B.place holder ... A.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 3 Stdlib CompletionExtensiblePayload CompletionExtensiblePayload
+ContextPath Value[v]
+Path v
+[
+  {
+    "detail": "color",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype color = Red | Blue\n```"
+    },
+    "kind": 12,
+    "label": "None",
+    "tags": []
+  },
+  {
+    "detail": "color",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(${1:_})",
+    "insertTextFormat": 2,
+    "kind": 12,
+    "label": "Some(_)",
+    "tags": []
+  },
+  {
+    "detail": "Red",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nRed\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(Red)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Red)",
+    "tags": []
+  },
+  {
+    "detail": "Blue",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBlue\n```\n\n```rescript\ntype color = Red | Blue\n```"
+    },
+    "insertText": "Some(Blue)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Some(Blue)",
+    "tags": []
+  }
+]
+
