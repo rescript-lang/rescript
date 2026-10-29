@@ -5,6 +5,7 @@ let a = [0., 1., 2.]
 let b = [0, 1, 2]
 let c = [0, 1, 2, 3, 4, 5]
 let v = (0, 1, 2, 3, 4, 5)
+
 let f = () => {
   a->Array.setUnsafe(0, 3.0)
   b->Array.setUnsafe(0, 3)

@@ -1,8 +1,11 @@
 @@config({no_export: true})
+
 type value =
   | Natural(int)
   | Symbol(string)
+
 type context = InSum
+
 type rec t =
   | Val(value)
   | Neg(t)
@@ -10,6 +13,7 @@ type rec t =
   | Pow(t, t)
   | Frac(t, t)
   | Gcd(t, t)
+
 let rec is_number = (expr: t) =>
   switch expr {
   | Val(Natural(_)) => true
@@ -40,6 +44,7 @@ let rec compare = (context, state, a, b) =>
   | (_, Gcd(_), _) => -1
   | _ => assert(false)
   }
+
 let a = Sum(list{sym("a"), Val(Natural(2))})
 let b = sym("x")
 type st = {complex: bool}

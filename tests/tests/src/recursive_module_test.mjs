@@ -44,8 +44,8 @@ let Fact = {
 };
 
 Mocha.describe("Recursive_module_test", () => {
-  Mocha.test("recursive module factorial", () => Test_utils.eq("File \"recursive_module_test.res\", line 25, characters 7-14", 120, fact$1(5)));
-  Mocha.test("recursive module exception", () => Test_utils.throws("File \"recursive_module_test.res\", line 29, characters 11-18", () => {
+  Mocha.test("recursive module factorial", () => Test_utils.eq("File \"recursive_module_test.res\", line 27, characters 7-14", 120, fact$1(5)));
+  Mocha.test("recursive module exception", () => Test_utils.throws("File \"recursive_module_test.res\", line 31, characters 11-18", () => {
     Int3.u(3);
   }));
 });

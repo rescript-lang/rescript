@@ -6,6 +6,7 @@
 
 // Pstr_include
 /* c0 */ include /* c1 */ Belt /* c2 */
+
 /* c0 */ include /* c1 */ {
   let a /* inside */ = 2
 } /* c2 */

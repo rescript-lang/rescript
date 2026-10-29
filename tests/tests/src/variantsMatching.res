@@ -57,6 +57,7 @@ type state =
   | Empty
   | Int1(int)
   | Int2(int)
+
 let st = state =>
   switch state {
   | Empty => 0
@@ -109,6 +110,7 @@ module CustomizeTags = {
 module MyUndefined = {
   @genType @unboxed
   type t<'a> = | @as(undefined) Undefined | Present('a)
+
   // Note: 'a must not have undefined as value
   // There can be only one with payload, with 1 argument, to use unboxed
 
@@ -127,6 +129,7 @@ module MyUndefined = {
 module MyNull = {
   @genType @unboxed
   type t<'a> = | @as(null) Null | Present('a)
+
   // Note: 'a must not have null as value
   // There can be only one with payload, with 1 argument, to use unboxed
 
@@ -148,6 +151,7 @@ module MyNullable = {
     | @as(null) Null
     | @as(undefined) Undefined
     | Present('a)
+
   // Note: 'a must not have null or undefined as value
   // There can be only one with payload, with 1 argument, to use unboxed
 
@@ -182,6 +186,7 @@ module MyNullableExtended = {
     | @as(undefined) Undefined
     | Present('a)
     | WhyNotAnotherOne
+
   // Note: 'a must be a not have null or something that's not an object as value
   // There can be only one with payload, with 1 argument, to use unboxed
 
@@ -269,6 +274,7 @@ module TaggedUnions = {
 module CustomTagNotInline = {
   @tag("custom-tag")
   type t = A(int) | B(int)
+
   let a = A(10)
   let b = B(20)
 }

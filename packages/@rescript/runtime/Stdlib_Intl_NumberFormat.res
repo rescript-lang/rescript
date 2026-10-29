@@ -7,6 +7,7 @@ type t
 An ISO 4217 currency code. e.g. USD, EUR, CNY
 */
 type currency = string
+
 type currencyDisplay = [#symbol | #narrowSymbol | #code | #name]
 type currencySign = [#accounting | #standard]
 type notation = [#scientific | #standard | #engineering | #compact]
@@ -219,6 +220,7 @@ formatter->Intl.NumberFormat.format(1234.5) == "1,234.5"
 ```
 */
 @send external format: (t, float) => string = "format"
+
 /**
 `formatRange(formatter, ~start, ~end)` formats numbers representing a range.
 
@@ -231,6 +233,7 @@ formatter->Intl.NumberFormat.formatRange(~start=1., ~end=2.)->String.length > 0
 */
 @send
 external formatRange: (t, ~start: float, ~end: float) => string = "formatRange"
+
 /**
 `formatToParts(formatter, value)` breaks the formatted result into parts.
 
@@ -243,6 +246,7 @@ formatter->Intl.NumberFormat.formatToParts(123)->Array.length > 0
 */
 @send
 external formatToParts: (t, float) => array<numberFormatPart> = "formatToParts"
+
 /**
 `formatRangeToParts(formatter, ~start, ~end)` returns how the range would be rendered.
 
@@ -281,6 +285,7 @@ formatter->Intl.NumberFormat.formatIntRange(~start=1, ~end=3)->String.length > 0
 */
 @send
 external formatIntRange: (t, ~start: int, ~end: int) => string = "formatRange"
+
 /**
 `formatIntToParts(formatter, value)` returns formatting parts for an integer.
 
@@ -325,6 +330,7 @@ formatter->Intl.NumberFormat.formatBigIntRange(~start=1n, ~end=2n) == "1–2"
 */
 @send
 external formatBigIntRange: (t, ~start: bigint, ~end: bigint) => string = "formatRange"
+
 /**
 `formatBigIntToParts(formatter, value)` returns the bigint formatting broken into parts.
 

@@ -2,6 +2,7 @@ module PrioQueue = {
   type priority = int
   type rec queue<'a> = Empty | Node(priority, 'a, queue<'a>, queue<'a>)
   let empty = Empty
+
   let rec insert = (queue, prio, elt) =>
     switch queue {
     | Empty => Node(prio, elt, Empty, Empty)
@@ -12,7 +13,9 @@ module PrioQueue = {
         Node(p, e, insert(right, prio, elt), left)
       }
     }
+
   exception Queue_is_empty
+
   let rec remove_top = x =>
     switch x {
     | Empty => throw(Queue_is_empty)
@@ -25,6 +28,7 @@ module PrioQueue = {
         Node(rprio, relt, left, remove_top(right))
       }
     }
+
   let extract = x =>
     switch x {
     | Empty => throw(Queue_is_empty)

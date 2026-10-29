@@ -52,16 +52,22 @@ external createRef: unit => ref<nullable<'a>> = "createRef"
 module Children = {
   @module("react") @scope("Children")
   external map: (element, element => element) => element = "map"
+
   @module("react") @scope("Children")
   external mapWithIndex: (element, (element, int) => element) => element = "map"
+
   @module("react") @scope("Children")
   external forEach: (element, element => unit) => unit = "forEach"
+
   @module("react") @scope("Children")
   external forEachWithIndex: (element, (element, int) => unit) => unit = "forEach"
+
   @module("react") @scope("Children")
   external count: element => int = "count"
+
   @module("react") @scope("Children")
   external only: element => element = "only"
+
   @module("react") @scope("Children")
   external toArray: element => array<element> = "toArray"
 }
@@ -147,48 +153,66 @@ external useReducerWithMapState: (
 
 @module("react")
 external useEffectOnEveryRender: (unit => option<unit => unit>) => unit = "useEffect"
+
 @module("react")
 external useEffect: (unit => option<unit => unit>, 'deps) => unit = "useEffect"
+
 @module("react")
 external useEffect0: (unit => option<unit => unit>, @as(json`[]`) _) => unit = "useEffect"
+
 @module("react")
 external useEffect1: (unit => option<unit => unit>, array<'a>) => unit = "useEffect"
+
 @module("react")
 external useEffect2: (unit => option<unit => unit>, ('a, 'b)) => unit = "useEffect"
+
 @module("react")
 external useEffect3: (unit => option<unit => unit>, ('a, 'b, 'c)) => unit = "useEffect"
+
 @module("react")
 external useEffect4: (unit => option<unit => unit>, ('a, 'b, 'c, 'd)) => unit = "useEffect"
+
 @module("react")
 external useEffect5: (unit => option<unit => unit>, ('a, 'b, 'c, 'd, 'e)) => unit = "useEffect"
+
 @module("react")
 external useEffect6: (unit => option<unit => unit>, ('a, 'b, 'c, 'd, 'e, 'f)) => unit = "useEffect"
+
 @module("react")
 external useEffect7: (unit => option<unit => unit>, ('a, 'b, 'c, 'd, 'e, 'f, 'g)) => unit =
   "useEffect"
 
 @module("react")
 external useLayoutEffectOnEveryRender: (unit => option<unit => unit>) => unit = "useLayoutEffect"
+
 @module("react")
 external useLayoutEffect: (unit => option<unit => unit>, 'deps) => unit = "useLayoutEffect"
+
 @module("react")
 external useLayoutEffect0: (unit => option<unit => unit>, @as(json`[]`) _) => unit =
   "useLayoutEffect"
+
 @module("react")
 external useLayoutEffect1: (unit => option<unit => unit>, array<'a>) => unit = "useLayoutEffect"
+
 @module("react")
 external useLayoutEffect2: (unit => option<unit => unit>, ('a, 'b)) => unit = "useLayoutEffect"
+
 @module("react")
 external useLayoutEffect3: (unit => option<unit => unit>, ('a, 'b, 'c)) => unit = "useLayoutEffect"
+
 @module("react")
 external useLayoutEffect4: (unit => option<unit => unit>, ('a, 'b, 'c, 'd)) => unit =
   "useLayoutEffect"
+
 @module("react")
 external useLayoutEffect5: (unit => option<unit => unit>, ('a, 'b, 'c, 'd, 'e)) => unit =
   "useLayoutEffect"
+
 @module("react")
 external useLayoutEffect6: (unit => option<unit => unit>, ('a, 'b, 'c, 'd, 'e, 'f)) => unit =
   "useLayoutEffect"
+
 @module("react")
 external useLayoutEffect7: (unit => option<unit => unit>, ('a, 'b, 'c, 'd, 'e, 'f, 'g)) => unit =
   "useLayoutEffect"
@@ -313,29 +337,38 @@ external useDeferredValue: ('value, ~initialValue: 'value=?) => 'value = "useDef
 @module("react")
 external useInsertionEffectOnEveryRender: (unit => option<unit => unit>) => unit =
   "useInsertionEffect"
+
 @module("react")
 external useInsertionEffect: (unit => option<unit => unit>, 'deps) => unit = "useInsertionEffect"
+
 @module("react")
 external useInsertionEffect0: (unit => option<unit => unit>, @as(json`[]`) _) => unit =
   "useInsertionEffect"
+
 @module("react")
 external useInsertionEffect1: (unit => option<unit => unit>, array<'a>) => unit =
   "useInsertionEffect"
+
 @module("react")
 external useInsertionEffect2: (unit => option<unit => unit>, ('a, 'b)) => unit =
   "useInsertionEffect"
+
 @module("react")
 external useInsertionEffect3: (unit => option<unit => unit>, ('a, 'b, 'c)) => unit =
   "useInsertionEffect"
+
 @module("react")
 external useInsertionEffect4: (unit => option<unit => unit>, ('a, 'b, 'c, 'd)) => unit =
   "useInsertionEffect"
+
 @module("react")
 external useInsertionEffect5: (unit => option<unit => unit>, ('a, 'b, 'c, 'd, 'e)) => unit =
   "useInsertionEffect"
+
 @module("react")
 external useInsertionEffect6: (unit => option<unit => unit>, ('a, 'b, 'c, 'd, 'e, 'f)) => unit =
   "useInsertionEffect"
+
 @module("react")
 external useInsertionEffect7: (unit => option<unit => unit>, ('a, 'b, 'c, 'd, 'e, 'f, 'g)) => unit =
   "useInsertionEffect"
@@ -413,12 +446,14 @@ type transitionStartFunctionAsync = transitionFunctionAsync => unit
 /** `startTransition` lets you render a part of the UI in the background. */
 @module("react")
 external startTransition: transitionStartFunction = "startTransition"
+
 @module("react")
 external startTransitionAsync: transitionStartFunctionAsync = "startTransition"
 
 /** `useTransition` is a React Hook that lets you render a part of the UI in the background. */
 @module("react")
 external useTransition: unit => (bool, transitionStartFunction) = "useTransition"
+
 @module("react")
 external useTransitionAsync: unit => (bool, transitionStartFunctionAsync) = "useTransition"
 

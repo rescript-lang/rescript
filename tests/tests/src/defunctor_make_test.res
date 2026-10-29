@@ -1,12 +1,15 @@
 module Comparable: {
   type comparator<'a>
   let getcompare: comparator<'a> => ('a, 'a) => int
+
   module type C = {
     type id
     type key
     let compare: comparator<key>
   }
+
   type compare<'key, 'id> = module(C with type key = 'key and type id = 'id)
+
   module Make: (
     M: {
       type key
@@ -16,11 +19,13 @@ module Comparable: {
 } = {
   type comparator<'a> = ('a, 'a) => int
   let getcompare: comparator<'a> => ('a, 'a) => int = x => x
+
   module type C = {
     type id
     type key
     let compare: comparator<key>
   }
+
   type compare<'key, 'id> = module(C with type key = 'key and type id = 'id)
 
   module Make = (
@@ -156,10 +161,12 @@ module V0 = Comparable.Make({
   type key = int
   let compare = (x: key, y) => Pervasives.compare((x: key), y)
 })
+
 module V1 = Comparable.Make({
   type key = int
   let compare = (x: key, y) => Pervasives.compare(x, y)
 })
+
 let v0 = empty(module(V0))
 let v1 = empty(module(V1))
 

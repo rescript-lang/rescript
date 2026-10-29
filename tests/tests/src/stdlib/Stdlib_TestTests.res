@@ -19,10 +19,12 @@ Test.run(__POS_OF__("print array"), Test.print([1, 2, 3]), eq, "[ 1, 2, 3 ]")
 Test.run(__POS_OF__("print symbol"), Test.print(Symbol.make("foo")), eq, "Symbol(foo)")
 Test.run(__POS_OF__("print function"), Test.print(() => 42), eq, "() => 42")
 Test.run(__POS_OF__("print es6 function"), Test.print(%raw("() => 42")), eq, "() => 42")
+
 Test.run(
   __POS_OF__("print bigint"),
   Test.print(bign),
   eq,
   "359538626972463141629054847463408713596141135051689993197834953606314521560057077521179117265533756343080917907028764928468642653778928365536935093407075033972099821153102564152490980180778657888151737016910267884609166473806445896331617118664246696549595652408289446337476354361838599762500808052368249716736n",
 )
+
 Test.run(__POS_OF__("print set"), Test.print(Set.fromArray([1, 2, 2, 3])), eq, "Set(3) { 1, 2, 3 }")

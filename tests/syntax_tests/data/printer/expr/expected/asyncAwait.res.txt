@@ -48,16 +48,19 @@ let _ = await %extension
 let _ = await "test"
 let _ = await ((a, b) => a + b)
 let _ = await (async (a, b) => a + b)
+
 let _ = await (
   switch x {
   | A => ()
   | B => ()
   }
 )
+
 let _ = await [1, 2, 3]
 let _ = await (1, 2, 3)
 let _ = await {name: "Steve", age: 32}
 let _ = await (user.name = "Steve")
+
 let _ = await (
   if 20 {
     true
@@ -65,25 +68,30 @@ let _ = await (
     false
   }
 )
+
 let _ = await (condition() ? true : false)
 let _ = await f(x)
 let _ = await f(x)
 let _ = await (f(x): Promise.t<unit>)
+
 let _ = await (
   while true {
     infiniteLoop()
   }
 )
+
 let _ = await (
   try ok() catch {
   | _ => logError()
   }
 )
+
 let _ = await (
   for i in 0 to 10 {
     sideEffect()
   }
 )
+
 let _ = await (assert(x))
 let _ = await promises[0]
 let _ = await promises["resolved"]
@@ -96,6 +104,7 @@ let _ = await Promise(status)
 
 // braces are being dropped, because the ast only has space to record braces surrounding the await
 let _ = await x
+
 // here braces stay, because of precedence
 let _ = await {
   let x = 1

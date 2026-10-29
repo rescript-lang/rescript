@@ -37,7 +37,7 @@ function f(g, h) {
 }
 
 Mocha.describe("Record_with_test", () => {
-  Mocha.test("eq_with", () => Test_utils.eq("File \"record_with_test.res\", line 39, characters 7-14", v, u_v));
+  Mocha.test("eq_with", () => Test_utils.eq("File \"record_with_test.res\", line 40, characters 7-14", v, u_v));
 });
 
 let uv = {

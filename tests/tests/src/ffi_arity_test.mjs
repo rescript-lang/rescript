@@ -58,17 +58,17 @@ let abc_u = abc;
 fff();
 
 Mocha.describe("Ffi_arity_test", () => {
-  Mocha.test("mapi with function", () => Test_utils.eq("File \"ffi_arity_test.res\", line 52, characters 7-14", v, [
+  Mocha.test("mapi with function", () => Test_utils.eq("File \"ffi_arity_test.res\", line 54, characters 7-14", v, [
     0,
     1,
     4
   ]));
-  Mocha.test("mapi with addition", () => Test_utils.eq("File \"ffi_arity_test.res\", line 56, characters 7-14", vv, [
+  Mocha.test("mapi with addition", () => Test_utils.eq("File \"ffi_arity_test.res\", line 58, characters 7-14", vv, [
     1,
     3,
     5
   ]));
-  Mocha.test("map with parseInt", () => Test_utils.eq("File \"ffi_arity_test.res\", line 60, characters 7-14", hh, [
+  Mocha.test("map with parseInt", () => Test_utils.eq("File \"ffi_arity_test.res\", line 62, characters 7-14", hh, [
     1,
     2,
     3

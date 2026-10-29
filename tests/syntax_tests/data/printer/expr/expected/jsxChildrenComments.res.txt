@@ -3,6 +3,7 @@ let a =
     {x}
     {/* a */}
   </div>
+
 let b =
   <div>
     {x}
@@ -10,6 +11,7 @@ let b =
     {/* c */}
     {y}
   </div>
+
 let c =
   <div>
     <span />
@@ -17,6 +19,7 @@ let c =
 
     <b />
   </div>
+
 let d =
   <div>
     {/* a */}
@@ -24,34 +27,40 @@ let d =
     {/* b */}
     <b />
   </div>
+
 let e =
   <div>
     {/* a */}
 
     {/* b */}
   </div>
+
 let f =
   <div>
     {x}
     {/* c */}
     {y}
   </div>
+
 let g =
   <div>
     <span />
     {/* c */}
     {x}
   </div>
+
 let h =
   <div>
     {/* a */ /* b */}
     <span />
   </div>
+
 let i =
   <div>
     {x}
     {/* a */}
   </div>
+
 let j =
   <div>
     {
@@ -59,6 +68,7 @@ let j =
       x
     }
   </div>
+
 let k =
   <div>
     {
@@ -66,11 +76,13 @@ let k =
       /* trailing */
     }
   </div>
+
 let l =
   <div>
     {x}
     {/* trailing */}
   </div>
+
 let m =
   <div>
     {
@@ -78,11 +90,13 @@ let m =
       x
     }
   </div>
+
 let n =
   <div>
     {/* a */ /* b */}
     <span />
   </div>
+
 let o =
   <div>
     {
@@ -98,6 +112,7 @@ let a =
     {x}
     {/* a */}
   </>
+
 let b =
   <>
     {x}
@@ -105,6 +120,7 @@ let b =
     {/* c */}
     {y}
   </>
+
 let c =
   <>
     <span />
@@ -112,6 +128,7 @@ let c =
 
     <b />
   </>
+
 let d =
   <>
     {/* a */}
@@ -119,34 +136,40 @@ let d =
     {/* b */}
     <b />
   </>
+
 let e =
   <>
     {/* a */}
 
     {/* b */}
   </>
+
 let f =
   <>
     {x}
     {/* c */}
     {y}
   </>
+
 let g =
   <>
     <span />
     {/* c */}
     {x}
   </>
+
 let h =
   <>
     {/* a */ /* b */}
     <span />
   </>
+
 let i =
   <>
     {x}
     {/* a */}
   </>
+
 let j =
   <>
     {
@@ -154,6 +177,7 @@ let j =
       x
     }
   </>
+
 let k =
   <>
     {
@@ -161,11 +185,13 @@ let k =
       /* trailing */
     }
   </>
+
 let l =
   <>
     {x}
     {/* trailing */}
   </>
+
 let m =
   <>
     {
@@ -173,11 +199,13 @@ let m =
       x
     }
   </>
+
 let n =
   <>
     {/* a */ /* b */}
     <span />
   </>
+
 let o =
   <>
     {
@@ -197,6 +225,7 @@ let spanningContainer =
     }
     {y}
   </div>
+
 let spanningFragmentContainer =
   <>
     {x}
@@ -215,6 +244,7 @@ let multilineExpressionComment =
     }
     {y}
   </div>
+
 let leadingExpressionComment =
   <div>
     <A />
@@ -230,30 +260,35 @@ let mixedLeadingContainers =
     {/* b */}
     {y}
   </div>
+
 let mixedTrailingContainers =
   <div>
     {x}
     {/* b */}
     {/* a */}
   </div>
+
 let mixedLeadingFragmentContainers =
   <>
     {/* a */}
     {/* b */}
     {y}
   </>
+
 let mixedTrailingFragmentContainers =
   <>
     {x}
     {/* b */}
     {/* a */}
   </>
+
 let mixedBetweenContainers =
   <div>
     {x /* a */}
     {/* b */}
     {/* c */ y}
   </div>
+
 let mixedBetweenFragmentContainers =
   <>
     {x /* a */}
@@ -263,30 +298,35 @@ let mixedBetweenFragmentContainers =
 
 let safeLineComment = <span>{value /* note */}</span>
 let safeInnerLineComment = <span>{value /* note */}</span>
+
 let unsafeOpeningDelimiter =
   <span>
     {
       // starts /*
     }
   </span>
+
 let unsafeClosingDelimiter =
   <span>
     {
       // closes */
     }
   </span>
+
 let unsafeNestedBlock =
   <>
     {
       // /* nested */
     }
   </>
+
 let unsafeReversedDelimiters =
   <>
     {
       // */ before /*
     }
   </>
+
 let emptyLineComment = <span>{/*  */}</span>
 let starLineComment = <span>{/* * */}</span>
 let slashLineComment = <>{/* / */}</>

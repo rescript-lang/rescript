@@ -1,12 +1,12 @@
 
   [1;33mWarning number 26[0m
-  [36m/.../fixtures/newtype_group_warning_scope.res[0m:[2m6:7-12[0m
+  [36m/.../fixtures/newtype_group_warning_scope.res[0m:[2m7:7-12[0m
 
-  4 [2m│[0m }
-  5 [2m│[0m let unsuppressed = (type a, x: a) => {
-  [1;33m6[0m [2m│[0m   let [1;33munused[0m = 1
-  7 [2m│[0m   x
-  8 [2m│[0m }
+  5 [2m│[0m 
+  6 [2m│[0m let unsuppressed = (type a, x: a) => {
+  [1;33m7[0m [2m│[0m   let [1;33munused[0m = 1
+  8 [2m│[0m   x
+  9 [2m│[0m }
 
   unused variable unused.
 

@@ -129,7 +129,7 @@
           "docstrings": [],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 30,
+            "line": 31,
             "col": 3
           },
           "detail": {
@@ -161,7 +161,7 @@
           "docstrings": [ "These are all the valid inputs." ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 39,
+            "line": 40,
             "col": 3
           }
         },
@@ -173,7 +173,7 @@
           "docstrings": [],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 41,
+            "line": 42,
             "col": 3
           }
         }
@@ -186,7 +186,7 @@
       "docstrings": [ "Mighty fine module here too!" ],
       "source": {
         "filepath": "src/DocExtractionRes.res",
-        "line": 44,
+        "line": 45,
         "col": 8
       },
       "items": [
@@ -197,7 +197,7 @@
           "docstrings": [ "This links another module. Neat." ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 48,
+            "line": 49,
             "col": 10
           },
           "items": []
@@ -210,7 +210,7 @@
           "docstrings": [ "Testing what this looks like." ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 52,
+            "line": 53,
             "col": 3
           }
         },
@@ -222,7 +222,7 @@
           "docstrings": [],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 54,
+            "line": 55,
             "col": 7
           },
           "detail": {
@@ -256,7 +256,7 @@
           ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 57,
+            "line": 58,
             "col": 3
           },
           "detail": {
@@ -295,7 +295,7 @@
           "docstrings": [ "Callback to get the DOM root..." ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 68,
+            "line": 69,
             "col": 3
           }
         }
@@ -320,7 +320,7 @@
           "docstrings": [ "The type t is stuff." ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 75,
+            "line": 76,
             "col": 3
           }
         },
@@ -332,7 +332,7 @@
           "docstrings": [ "The maker of stuff!" ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 77,
+            "line": 78,
             "col": 3
           },
           "detail": {
@@ -365,7 +365,7 @@
       "docstrings": [],
       "source": {
         "filepath": "src/DocExtractionRes.res",
-        "line": 105,
+        "line": 106,
         "col": 13
       },
       "items": [
@@ -377,7 +377,7 @@
           "docstrings": [ "main type of this module" ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 113,
+            "line": 114,
             "col": 3
           }
         },
@@ -389,7 +389,7 @@
           "docstrings": [ "function from t to t" ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 115,
+            "line": 116,
             "col": 3
           },
           "detail": {
@@ -434,7 +434,7 @@
           "docstrings": [ "main type" ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 129,
+            "line": 130,
             "col": 3
           }
         },
@@ -446,7 +446,7 @@
           "docstrings": [ "identity function" ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 134,
+            "line": 135,
             "col": 7
           },
           "detail": {
@@ -480,7 +480,7 @@
       "docstrings": [],
       "source": {
         "filepath": "src/DocExtractionRes.res",
-        "line": 137,
+        "line": 138,
         "col": 13
       },
       "items": [
@@ -492,7 +492,7 @@
           "docstrings": [],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 138,
+            "line": 139,
             "col": 3
           }
         }
@@ -517,7 +517,7 @@
           "docstrings": [],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 142,
+            "line": 143,
             "col": 7
           }
         }
@@ -531,7 +531,7 @@
       "docstrings": [],
       "source": {
         "filepath": "src/DocExtractionRes.res",
-        "line": 145,
+        "line": 146,
         "col": 8
       },
       "items": [
@@ -554,7 +554,7 @@
               "docstrings": [],
               "source": {
                 "filepath": "src/DocExtractionRes.res",
-                "line": 147,
+                "line": 148,
                 "col": 9
               }
             }

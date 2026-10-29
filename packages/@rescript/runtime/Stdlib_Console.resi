@@ -247,6 +247,7 @@ type dirOptions = {
   depth?: Stdlib_Nullable.t<int>,
   showHidden?: bool,
 }
+
 /**
 `dir(object, options)` displays an interactive view of the object in the console.
 

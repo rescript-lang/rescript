@@ -15,6 +15,7 @@ let f0 = x =>
 type x = A(int, int) | None
 
 type x0 = Some(int) | None
+
 let f1 = u =>
   switch u {
   | A(_) => 0
@@ -44,6 +45,7 @@ let f4 = x =>
 type t<'a> =
   | None
   | Some('a)
+
 let f5 = a => Some(a) == None
 
 let f6 = a => Some(a) != None
@@ -85,6 +87,7 @@ let length_10_id: list<int> = N.fromInitializer(~length=10, x => x)
 type xx<'a> = option<'a> =
   | None
   | Some('a)
+
 let f13 = () => N.take(length_10_id, 8) == (Some(list{1, 2, 3}): option<_>)
 
 @val

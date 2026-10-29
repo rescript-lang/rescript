@@ -84,6 +84,7 @@ type withUndefined =
   | @as(null) Null
   | String(string)
   | Object(dict<string>)
+
 type withUndefinedField = {u?: withUndefined}
 
 // Through a ref, so that `Some(Undefined)` is built at runtime

@@ -12,6 +12,7 @@
 
 module ExtUnixAll = {
   external unused: unit => unit = "%identity"
+
   module BigEndian = {
     let get_uint8 = (str, off) => 33
   }
@@ -23,9 +24,11 @@ module ExtUnix = {
 
 module Test = {
   open ExtUnix.All
+
   let test_endian_string = x => {
     module B = BigEndian
     B.get_uint8(x, 0)
   }
+
   let v = test_endian_string(1)
 }

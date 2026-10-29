@@ -10,7 +10,9 @@ external asIterable: array<'a> => Stdlib_Iterable.t<'a> = "%identity"
 
 @val
 external fromIterable: Stdlib_Iterable.t<'a> => array<'a> = "Array.from"
+
 @val external fromArrayLike: arrayLike<'a> => array<'a> = "Array.from"
+
 @val
 external fromArrayLikeWithMap: (arrayLike<'a>, 'a => 'b) => array<'b> = "Array.from"
 
@@ -100,6 +102,7 @@ external copyWithin: (array<'a>, ~target: int, ~start: int, ~end: int=?) => arra
 
 @variadic @send
 external splice: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => unit = "splice"
+
 @variadic @send
 external toSpliced: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => array<'a> =
   "toSpliced"
@@ -122,6 +125,7 @@ let concatAll = arrays => concatMany([], arrays)
 @send external includes: (array<'a>, 'a) => bool = "includes"
 
 @send external indexOf: (array<'a>, 'a, ~from: int=?) => int = "indexOf"
+
 let indexOfOpt = (arr, item) =>
   switch arr->indexOf(item) {
   | -1 => None
@@ -133,6 +137,7 @@ let indexOfOpt = (arr, item) =>
 @send external joinUnsafe: (array<'a>, string) => string = "join"
 
 @send external lastIndexOf: (array<'a>, 'a, ~from: int=?) => int = "lastIndexOf"
+
 let lastIndexOfOpt = (arr, item) =>
   switch arr->lastIndexOf(item) {
   | -1 => None
@@ -177,11 +182,15 @@ let lastIndexOfOpt = (arr, item) =>
 let reduce = (arr, init, f) => reduce(arr, f, init)
 @send external reduceWithIndex: (array<'b>, ('a, 'b, int) => 'a, 'a) => 'a = "reduce"
 let reduceWithIndex = (arr, init, f) => reduceWithIndex(arr, f, init)
+
 @send
 external reduceRight: (array<'b>, ('a, 'b) => 'a, 'a) => 'a = "reduceRight"
+
 let reduceRight = (arr, init, f) => reduceRight(arr, f, init)
+
 @send
 external reduceRightWithIndex: (array<'b>, ('a, 'b, int) => 'a, 'a) => 'a = "reduceRight"
+
 let reduceRightWithIndex = (arr, init, f) => reduceRightWithIndex(arr, f, init)
 
 @send external some: (array<'a>, 'a => bool) => bool = "some"

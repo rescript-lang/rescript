@@ -9,12 +9,14 @@ let hh = () => {
   let v = throw(Not_found)
   v + 3
 }
+
 /* TODO: comment for line column number */
 
 exception A(int)
 exception B
 exception C(int, int)
 let u = A(3)
+
 /** note in ocaml, if such exception is not caught,
   it will be re-raised */
 let test_not_found = (f, ()) =>

@@ -2,6 +2,7 @@ open Mocha
 open Test_utils
 
 let u = ref(0)
+
 let div = (~children, ()) =>
   for i in 0 to 1 {
     u := 300

@@ -42,9 +42,9 @@ function ff(x, y) {
 }
 
 Mocha.describe("Gpr496_test", () => {
-  Mocha.test("expected equals u", () => Test_utils.eq("File \"gpr496_test.res\", line 30, characters 37-44", expected, u));
-  Mocha.test("expected equals expected2", () => Test_utils.eq("File \"gpr496_test.res\", line 31, characters 45-52", expected, expected2));
-  Mocha.test("min function", () => Test_utils.eq("File \"gpr496_test.res\", line 32, characters 32-39", false, true < false));
+  Mocha.test("expected equals u", () => Test_utils.eq("File \"gpr496_test.res\", line 31, characters 37-44", expected, u));
+  Mocha.test("expected equals expected2", () => Test_utils.eq("File \"gpr496_test.res\", line 32, characters 45-52", expected, expected2));
+  Mocha.test("min function", () => Test_utils.eq("File \"gpr496_test.res\", line 33, characters 32-39", false, true < false));
 });
 
 export {

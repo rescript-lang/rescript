@@ -10,6 +10,7 @@ let does_raise = (f, q) =>
   } catch {
   | _ => true
   }
+
 let queueAdd = (q, x) => {
   Q.add(q, x)
   q

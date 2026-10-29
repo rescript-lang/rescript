@@ -2,6 +2,7 @@ Console.log("---")
 Console.log("Intl.Locale")
 
 let _locale = Intl.Locale.make("en-US")
+
 let locale = Intl.Locale.make(
   "en-US",
   ~options={

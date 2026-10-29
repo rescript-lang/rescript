@@ -43,22 +43,31 @@ module Synthetic: {
   type t = synthetic<tag>
   @get external bubbles: synthetic<'a> => bool = "bubbles"
   @get external cancelable: synthetic<'a> => bool = "cancelable"
+
   @get
   external currentTarget: synthetic<'a> => {..} = "currentTarget"
+
   @get
   external defaultPrevented: synthetic<'a> => bool = "defaultPrevented"
+
   @get external eventPhase: synthetic<'a> => int = "eventPhase"
   @get external isTrusted: synthetic<'a> => bool = "isTrusted"
+
   @get
   external nativeEvent: synthetic<'a> => {..} = "nativeEvent"
+
   @send
   external preventDefault: synthetic<'a> => unit = "preventDefault"
+
   @send
   external isDefaultPrevented: synthetic<'a> => bool = "isDefaultPrevented"
+
   @send
   external stopPropagation: synthetic<'a> => unit = "stopPropagation"
+
   @send
   external isPropagationStopped: synthetic<'a> => bool = "isPropagationStopped"
+
   @get external target: synthetic<'a> => {..} = "target"
   @get external timeStamp: synthetic<'a> => float = "timeStamp"
   @get external type_: synthetic<'a> => string = "type"
@@ -132,8 +141,10 @@ module Keyboard: {
   @get external charCode: t => int = "charCode"
   @get external code: t => string = "code"
   @get external ctrlKey: t => bool = "ctrlKey"
+
   @send
   external getModifierState: (t, string) => bool = "getModifierState"
+
   @get external key: t => string = "key"
   @get external keyCode: t => int = "keyCode"
   @get external locale: t => string = "locale"
@@ -162,6 +173,7 @@ module Focus: {
   @get external timeStamp: t => float = "timeStamp"
   @get external type_: t => string = "type"
   @send external persist: t => unit = "persist"
+
   @get @return(nullable)
   external relatedTarget: t => option<{..}> = "relatedTarget" /* Should return Dom.eventTarget */
 }
@@ -210,15 +222,19 @@ module Mouse: {
   @get external clientX: t => int = "clientX"
   @get external clientY: t => int = "clientY"
   @get external ctrlKey: t => bool = "ctrlKey"
+
   @send
   external getModifierState: (t, string) => bool = "getModifierState"
+
   @get external metaKey: t => bool = "metaKey"
   @get external movementX: t => int = "movementX"
   @get external movementY: t => int = "movementY"
   @get external pageX: t => int = "pageX"
   @get external pageY: t => int = "pageY"
+
   @get @return(nullable)
   external relatedTarget: t => option<{..}> = "relatedTarget" /* Should return Dom.eventTarget */
+
   @get external screenX: t => int = "screenX"
   @get external screenY: t => int = "screenY"
   @get external shiftKey: t => bool = "shiftKey"
@@ -268,6 +284,7 @@ module Pointer: {
   @get external shiftKey: t => bool = "shiftKey"
   @get external altKey: t => bool = "altKey"
   @get external metaKey: t => bool = "metaKey"
+
   @send
   external getModifierState: (t, string) => bool = "getModifierState"
 
@@ -331,8 +348,10 @@ module Touch: {
   @get external altKey: t => bool = "altKey"
   @get external changedTouches: t => {..} = "changedTouches" /* Should return Dom.touchList */
   @get external ctrlKey: t => bool = "ctrlKey"
+
   @send
   external getModifierState: (t, string) => bool = "getModifierState"
+
   @get external metaKey: t => bool = "metaKey"
   @get external shiftKey: t => bool = "shiftKey"
   @get external targetTouches: t => {..} = "targetTouches" /* Should return Dom.touchList */

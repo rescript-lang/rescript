@@ -24,11 +24,11 @@ function f(check) {
 }
 
 Mocha.describe("Gpr_904_test", () => {
-  Mocha.test("f function", () => Test_utils.eq("File \"gpr_904_test.res\", line 12, characters 30-37", false, f({
+  Mocha.test("f function", () => Test_utils.eq("File \"gpr_904_test.res\", line 13, characters 30-37", false, f({
     x: true,
     y: false
   })));
-  Mocha.test("check_healty function", () => Test_utils.eq("File \"gpr_904_test.res\", line 14, characters 7-14", false, check_healty({
+  Mocha.test("check_healty function", () => Test_utils.eq("File \"gpr_904_test.res\", line 15, characters 7-14", false, check_healty({
     a: false,
     b: false,
     c: true

@@ -2,10 +2,12 @@ let f = (
   /**The runner*/
   run: string,
 ) => run
+
 let f = (
   /** The runner */
   run: string,
 ) => run
+
 let f = (
   /** Positional */
   x,
@@ -14,6 +16,7 @@ let f = (
   /** Typed */
   ~z: int,
 ) => x + y + z
+
 let f = (
   /** Optional */
   ~a=?,
@@ -22,10 +25,12 @@ let f = (
   /** Aliased */
   ~c as d,
 ) => d
+
 let f = (
   /** Typed alias */
   ~a as x: int=3,
 ) => x
+
 let f = (
   /** Locally abstract */
   type a,
@@ -37,16 +42,20 @@ let f = (
   /** Record */
   {x, y},
 ) => x
+
 let f = (
   /** Array */
   [a],
 ) => a
+
 let f = (
   /** Tuple */
   (a, b),
 ) => a
+
 let f = (
   /** Unit */
   (),
 ) => 1
+
 let f = (@a /** After an attribute */ {x, y}) => x

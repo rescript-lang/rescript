@@ -22,6 +22,7 @@ module Abstract: {
 module Unboxed: {
   @unboxed
   type t = Value(option<int>)
+
   let value: t
   let isUndefined: t => bool
 }

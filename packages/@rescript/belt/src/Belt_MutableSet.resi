@@ -195,6 +195,7 @@ s0->Belt.MutableSet.toArray == [2, 4, 5]
 let remove: (t<'value, 'id>, 'value) => unit
 
 let removeCheck: (t<'value, 'id>, 'value) => bool
+
 /* `b = removeCheck s e` `b` is true means one element removed */
 
 /**

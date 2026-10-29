@@ -8,6 +8,7 @@ let nullary = () => 3
 let unary = a => a + 3
 
 let xx = unary(3)
+
 test("ppx_apply_test_unary", () => {
   eq(__LOC__, u, 3)
 })

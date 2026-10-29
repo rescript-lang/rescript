@@ -21,6 +21,7 @@ Test.run(
   eq,
   list{5, 3, 1},
 )
+
 Test.run(
   __POS_OF__("reduceWithIndex - empty"),
   Array.reduceWithIndex([], list{}, (acc, v, i) => list{v + i, ...acc}),
@@ -34,6 +35,7 @@ Test.run(
   eq,
   list{1, 2, 3},
 )
+
 Test.run(__POS_OF__("reduceRight - empty"), Array.reduceRight([], list{}, List.add), eq, list{})
 
 Test.run(
@@ -42,6 +44,7 @@ Test.run(
   eq,
   list{1, 3, 5},
 )
+
 Test.run(
   __POS_OF__("reduceWithIndex - empty"),
   Array.reduceRightWithIndex([], list{}, (acc, v, i) => list{v + i, ...acc}),
@@ -68,7 +71,9 @@ Test.run(
   eq,
   [4, 16, 36],
 )
+
 Test.run(__POS_OF__("filterMap - no match"), Array.filterMap([1, 2, 3, 4, 5, 6], _ => None), eq, [])
+
 Test.run(
   __POS_OF__("filterMap - empty"),
   Array.filterMap([], n => mod(n, 2) == 0 ? Some(n * n) : None),
@@ -77,12 +82,14 @@ Test.run(
 )
 
 Test.run(__POS_OF__("keepSome"), Array.keepSome([Some(1), None, Some(3)]), eq, [1, 3])
+
 Test.run(
   __POS_OF__("keepSome - all Some"),
   Array.keepSome([Some(1), Some(2), Some(3)]),
   eq,
   [1, 2, 3],
 )
+
 Test.run(__POS_OF__("keepSome - all None"), Array.keepSome([None, None, None]), eq, [])
 Test.run(__POS_OF__("keepSome - empty"), Array.keepSome([]), eq, [])
 
@@ -92,7 +99,9 @@ Test.run(
   eq,
   Some(-6),
 )
+
 Test.run(__POS_OF__("findMap - no match"), Array.findMap([1, 2, 3, 4, 5, 6], _ => None), eq, None)
+
 Test.run(
   __POS_OF__("findMap - empty"),
   Array.findMap([], n => mod(n, 2) == 0 ? Some(n * n) : None),

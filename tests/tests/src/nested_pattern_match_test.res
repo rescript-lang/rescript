@@ -52,6 +52,7 @@ type t = {
   hi: int,
   lo: list<option<int>>,
 }
+
 let f_opion = x =>
   switch x {
   | {hi: 3, lo: list{None, None, Some(2), Some(1), Some(_), ..._}} => 2

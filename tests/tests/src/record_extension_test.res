@@ -38,6 +38,7 @@ type t2 =
   | B
   | C({x: int, y: string})
   | D({w: int})
+
 let f2 = x =>
   switch x {
   | D(_)

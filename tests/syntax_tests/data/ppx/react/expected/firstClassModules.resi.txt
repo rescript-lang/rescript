@@ -5,6 +5,7 @@ module Select: {
     type key
     type t
   }
+
   @res.jsxComponentProps
   type props<'model, 'selected, 'onChange, 'items> = {
     model: 'model,

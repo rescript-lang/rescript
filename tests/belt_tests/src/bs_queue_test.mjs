@@ -28,7 +28,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          21,
+          22,
           4
         ],
         Error: new Error()
@@ -39,7 +39,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          22,
+          23,
           4
         ],
         Error: new Error()
@@ -53,7 +53,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          23,
+          24,
           4
         ],
         Error: new Error()
@@ -68,7 +68,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          24,
+          25,
           4
         ],
         Error: new Error()
@@ -84,7 +84,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          25,
+          26,
           4
         ],
         Error: new Error()
@@ -95,7 +95,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          26,
+          27,
           4
         ],
         Error: new Error()
@@ -110,7 +110,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          27,
+          28,
           4
         ],
         Error: new Error()
@@ -121,7 +121,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          28,
+          29,
           4
         ],
         Error: new Error()
@@ -135,7 +135,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          29,
+          30,
           4
         ],
         Error: new Error()
@@ -146,7 +146,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          30,
+          31,
           4
         ],
         Error: new Error()
@@ -157,7 +157,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          31,
+          32,
           4
         ],
         Error: new Error()
@@ -168,7 +168,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          32,
+          33,
           4
         ],
         Error: new Error()
@@ -179,7 +179,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          33,
+          34,
           4
         ],
         Error: new Error()
@@ -192,7 +192,7 @@ Mocha.describe("Bs_queue_test", () => {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "bs_queue_test.res",
-        34,
+        35,
         4
       ],
       Error: new Error()
@@ -205,24 +205,13 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          39,
-          4
-        ],
-        Error: new Error()
-      };
-    }
-    if (!does_raise(Belt_MutableQueue.popExn, q)) {
-      throw {
-        RE_EXN_ID: "Assert_failure",
-        _1: [
-          "bs_queue_test.res",
           40,
           4
         ],
         Error: new Error()
       };
     }
-    if (Belt_MutableQueue.popExn((Belt_MutableQueue.add(q, 2), q)) !== 2) {
+    if (!does_raise(Belt_MutableQueue.popExn, q)) {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
@@ -233,12 +222,23 @@ Mocha.describe("Bs_queue_test", () => {
         Error: new Error()
       };
     }
-    if (!does_raise(Belt_MutableQueue.popExn, q)) {
+    if (Belt_MutableQueue.popExn((Belt_MutableQueue.add(q, 2), q)) !== 2) {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
           42,
+          4
+        ],
+        Error: new Error()
+      };
+    }
+    if (!does_raise(Belt_MutableQueue.popExn, q)) {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "bs_queue_test.res",
+          43,
           4
         ],
         Error: new Error()
@@ -251,7 +251,7 @@ Mocha.describe("Bs_queue_test", () => {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "bs_queue_test.res",
-        43,
+        44,
         4
       ],
       Error: new Error()
@@ -264,7 +264,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          48,
+          49,
           4
         ],
         Error: new Error()
@@ -275,7 +275,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          49,
+          50,
           4
         ],
         Error: new Error()
@@ -286,7 +286,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          50,
+          51,
           4
         ],
         Error: new Error()
@@ -297,7 +297,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          51,
+          52,
           4
         ],
         Error: new Error()
@@ -308,7 +308,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          52,
+          53,
           4
         ],
         Error: new Error()
@@ -319,7 +319,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          53,
+          54,
           4
         ],
         Error: new Error()
@@ -330,7 +330,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          54,
+          55,
           4
         ],
         Error: new Error()
@@ -341,7 +341,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          55,
+          56,
           4
         ],
         Error: new Error()
@@ -352,7 +352,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          56,
+          57,
           4
         ],
         Error: new Error()
@@ -363,7 +363,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          57,
+          58,
           4
         ],
         Error: new Error()
@@ -376,7 +376,7 @@ Mocha.describe("Bs_queue_test", () => {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "bs_queue_test.res",
-        58,
+        59,
         4
       ],
       Error: new Error()
@@ -393,7 +393,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          67,
+          68,
           4
         ],
         Error: new Error()
@@ -404,7 +404,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          68,
+          69,
           4
         ],
         Error: new Error()
@@ -415,7 +415,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          69,
+          70,
           4
         ],
         Error: new Error()
@@ -429,7 +429,7 @@ Mocha.describe("Bs_queue_test", () => {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "bs_queue_test.res",
-        71,
+        72,
         4
       ],
       Error: new Error()
@@ -457,7 +457,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          80,
+          81,
           4
         ],
         Error: new Error()
@@ -479,7 +479,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          81,
+          82,
           4
         ],
         Error: new Error()
@@ -490,7 +490,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          82,
+          83,
           4
         ],
         Error: new Error()
@@ -501,7 +501,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          83,
+          84,
           4
         ],
         Error: new Error()
@@ -513,7 +513,7 @@ Mocha.describe("Bs_queue_test", () => {
           RE_EXN_ID: "Assert_failure",
           _1: [
             "bs_queue_test.res",
-            85,
+            86,
             6
           ],
           Error: new Error()
@@ -526,7 +526,7 @@ Mocha.describe("Bs_queue_test", () => {
           RE_EXN_ID: "Assert_failure",
           _1: [
             "bs_queue_test.res",
-            88,
+            89,
             6
           ],
           Error: new Error()
@@ -541,7 +541,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          94,
+          95,
           4
         ],
         Error: new Error()
@@ -554,7 +554,7 @@ Mocha.describe("Bs_queue_test", () => {
           RE_EXN_ID: "Assert_failure",
           _1: [
             "bs_queue_test.res",
-            97,
+            98,
             6
           ],
           Error: new Error()
@@ -565,7 +565,7 @@ Mocha.describe("Bs_queue_test", () => {
           RE_EXN_ID: "Assert_failure",
           _1: [
             "bs_queue_test.res",
-            98,
+            99,
             6
           ],
           Error: new Error()
@@ -578,7 +578,7 @@ Mocha.describe("Bs_queue_test", () => {
           RE_EXN_ID: "Assert_failure",
           _1: [
             "bs_queue_test.res",
-            101,
+            102,
             6
           ],
           Error: new Error()
@@ -589,7 +589,7 @@ Mocha.describe("Bs_queue_test", () => {
           RE_EXN_ID: "Assert_failure",
           _1: [
             "bs_queue_test.res",
-            102,
+            103,
             6
           ],
           Error: new Error()
@@ -602,7 +602,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          105,
+          106,
           4
         ],
         Error: new Error()
@@ -615,7 +615,7 @@ Mocha.describe("Bs_queue_test", () => {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "bs_queue_test.res",
-        106,
+        107,
         4
       ],
       Error: new Error()
@@ -633,7 +633,7 @@ Mocha.describe("Bs_queue_test", () => {
           RE_EXN_ID: "Assert_failure",
           _1: [
             "bs_queue_test.res",
-            118,
+            119,
             8
           ],
           Error: new Error()
@@ -650,7 +650,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          126,
+          127,
           4
         ],
         Error: new Error()
@@ -661,7 +661,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          127,
+          128,
           4
         ],
         Error: new Error()
@@ -672,7 +672,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          128,
+          129,
           4
         ],
         Error: new Error()
@@ -683,7 +683,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          129,
+          130,
           4
         ],
         Error: new Error()
@@ -695,7 +695,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          131,
+          132,
           4
         ],
         Error: new Error()
@@ -706,7 +706,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          132,
+          133,
           4
         ],
         Error: new Error()
@@ -717,7 +717,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          133,
+          134,
           4
         ],
         Error: new Error()
@@ -730,7 +730,7 @@ Mocha.describe("Bs_queue_test", () => {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "bs_queue_test.res",
-        134,
+        135,
         4
       ],
       Error: new Error()
@@ -747,7 +747,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          142,
+          143,
           4
         ],
         Error: new Error()
@@ -763,7 +763,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          143,
+          144,
           4
         ],
         Error: new Error()
@@ -774,7 +774,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          144,
+          145,
           4
         ],
         Error: new Error()
@@ -785,7 +785,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          145,
+          146,
           4
         ],
         Error: new Error()
@@ -797,7 +797,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          147,
+          148,
           4
         ],
         Error: new Error()
@@ -808,7 +808,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          148,
+          149,
           4
         ],
         Error: new Error()
@@ -819,7 +819,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          149,
+          150,
           4
         ],
         Error: new Error()
@@ -837,7 +837,7 @@ Mocha.describe("Bs_queue_test", () => {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "bs_queue_test.res",
-        150,
+        151,
         4
       ],
       Error: new Error()
@@ -854,7 +854,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          158,
+          159,
           4
         ],
         Error: new Error()
@@ -865,7 +865,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          159,
+          160,
           4
         ],
         Error: new Error()
@@ -876,7 +876,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          160,
+          161,
           4
         ],
         Error: new Error()
@@ -892,7 +892,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          161,
+          162,
           4
         ],
         Error: new Error()
@@ -904,7 +904,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          163,
+          164,
           4
         ],
         Error: new Error()
@@ -915,7 +915,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          164,
+          165,
           4
         ],
         Error: new Error()
@@ -926,7 +926,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          165,
+          166,
           4
         ],
         Error: new Error()
@@ -944,7 +944,7 @@ Mocha.describe("Bs_queue_test", () => {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "bs_queue_test.res",
-        166,
+        167,
         4
       ],
       Error: new Error()
@@ -964,7 +964,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          177,
+          178,
           4
         ],
         Error: new Error()
@@ -980,7 +980,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          178,
+          179,
           4
         ],
         Error: new Error()
@@ -991,7 +991,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          179,
+          180,
           4
         ],
         Error: new Error()
@@ -1007,7 +1007,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          180,
+          181,
           4
         ],
         Error: new Error()
@@ -1019,7 +1019,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          182,
+          183,
           4
         ],
         Error: new Error()
@@ -1030,7 +1030,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          183,
+          184,
           4
         ],
         Error: new Error()
@@ -1051,7 +1051,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          185,
+          186,
           4
         ],
         Error: new Error()
@@ -1062,7 +1062,7 @@ Mocha.describe("Bs_queue_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_queue_test.res",
-          186,
+          187,
           4
         ],
         Error: new Error()
@@ -1075,7 +1075,7 @@ Mocha.describe("Bs_queue_test", () => {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "bs_queue_test.res",
-        188,
+        189,
         4
       ],
       Error: new Error()
@@ -1089,14 +1089,14 @@ Mocha.describe("Bs_queue_test", () => {
       4
     ]);
     let q1 = Belt_MutableQueue.map(q, x => x - 1 | 0);
-    Test_utils.eq("File \"bs_queue_test.res\", line 194, characters 7-14", Belt_MutableQueue.toArray(q1), [
+    Test_utils.eq("File \"bs_queue_test.res\", line 195, characters 7-14", Belt_MutableQueue.toArray(q1), [
       0,
       1,
       2,
       3
     ]);
-    Test_utils.ok("File \"bs_queue_test.res\", line 195, characters 7-14", Belt_MutableQueue.isEmpty(Belt_MutableQueue.fromArray([])));
-    Test_utils.ok("File \"bs_queue_test.res\", line 196, characters 7-14", Belt_MutableQueue.isEmpty(Belt_MutableQueue.map(Belt_MutableQueue.fromArray([]), x => x + 1 | 0)));
+    Test_utils.ok("File \"bs_queue_test.res\", line 196, characters 7-14", Belt_MutableQueue.isEmpty(Belt_MutableQueue.fromArray([])));
+    Test_utils.ok("File \"bs_queue_test.res\", line 197, characters 7-14", Belt_MutableQueue.isEmpty(Belt_MutableQueue.map(Belt_MutableQueue.fromArray([]), x => x + 1 | 0)));
   });
 });
 

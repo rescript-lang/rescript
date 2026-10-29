@@ -22,6 +22,7 @@ let m2: M.t<int, string, _> = M.make(~id=module(I2))
 let vv = MI.empty
 let vv2 = MI.empty
 module Md0 = Belt.Map.Dict
+
 let () = {
   let count = 1_000_00
   let data = ref(M.getData(m))
@@ -37,7 +38,9 @@ let () = {
   let newm = M.packIdData(~data=data.contents, ~id=m_dict)
   Console.log(newm)
 }
+
 module ISet = Belt.Set
+
 let () = {
   let m = Md0.empty
   let m11 = Md0.set(~cmp=Icmp.cmp, m, 1, 1)
@@ -47,6 +50,7 @@ let () = {
 }
 
 module S0 = Belt.Set.Dict
+
 let () = {
   let count = 100_000
   let v = ISet.make(~id=module(Icmp2))

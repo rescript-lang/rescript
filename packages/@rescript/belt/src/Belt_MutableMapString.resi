@@ -107,6 +107,7 @@ let set: (t<'a>, key, 'a) => unit
 
 @deprecated("Use `update` instead")
 let updateU: (t<'a>, key, option<'a> => option<'a>) => unit
+
 let update: (t<'a>, key, option<'a> => option<'a>) => unit
 
 @deprecated("Use `map` instead")
@@ -121,4 +122,5 @@ let map: (t<'a>, 'a => 'b) => t<'b>
 
 @deprecated("Use `mapWithKey` instead")
 let mapWithKeyU: (t<'a>, (key, 'a) => 'b) => t<'b>
+
 let mapWithKey: (t<'a>, (key, 'a) => 'b) => t<'b>

@@ -210,145 +210,145 @@ function optionString(o) {
 
 Mocha.describe("Pm_opt_fields_mixed_test", () => {
   Mocha.test("value pattern, then ?None on the same field", () => {
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 138, characters 7-14", valueThenNone({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 139, characters 7-14", valueThenNone({
       x: 1
     }), "x is 1");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 139, characters 7-14", valueThenNone({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 140, characters 7-14", valueThenNone({
       y: 2
     }), "y is 2");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 140, characters 7-14", valueThenNone({}), "no x");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 141, characters 7-14", valueThenNone({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 141, characters 7-14", valueThenNone({}), "no x");
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 142, characters 7-14", valueThenNone({
       x: 3
     }), "other");
   });
   Mocha.test("?None, then a value pattern on the same field", () => {
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 144, characters 7-14", noneThenValue({}), "no x");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 145, characters 7-14", noneThenValue({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 145, characters 7-14", noneThenValue({}), "no x");
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 146, characters 7-14", noneThenValue({
       x: 1
     }), "x is 1");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 146, characters 7-14", noneThenValue({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 147, characters 7-14", noneThenValue({
       x: 2
     }), "some x");
   });
   Mocha.test("?Some(v), then a value pattern on the same field", () => {
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 149, characters 7-14", someThenValue({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 150, characters 7-14", someThenValue({
       x: 7,
       y: 1
     }), 7);
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 150, characters 7-14", someThenValue({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 151, characters 7-14", someThenValue({
       x: 5
     }), 100);
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 151, characters 7-14", someThenValue({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 152, characters 7-14", someThenValue({
       x: 5,
       y: 2
     }), 100);
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 152, characters 7-14", someThenValue({}), 0);
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 153, characters 7-14", someThenValue({}), 0);
   });
   Mocha.test("dict patterns", () => {
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 155, characters 7-14", dictValueThenNone({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 156, characters 7-14", dictValueThenNone({
       x: 1
     }), "x is 1");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 156, characters 7-14", dictValueThenNone({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 157, characters 7-14", dictValueThenNone({
       y: 2
     }), "y is 2");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 157, characters 7-14", dictValueThenNone({}), "no x");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 158, characters 7-14", dictValueThenNone({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 158, characters 7-14", dictValueThenNone({}), "no x");
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 159, characters 7-14", dictValueThenNone({
       x: 3
     }), "other");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 159, characters 7-14", dictSomeThenValue({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 160, characters 7-14", dictSomeThenValue({
       x: 7,
       y: 1
     }), 7);
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 160, characters 7-14", dictSomeThenValue({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 161, characters 7-14", dictSomeThenValue({
       x: 5
     }), 100);
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 161, characters 7-14", dictSomeThenValue({}), 0);
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 162, characters 7-14", dictSomeThenValue({}), 0);
   });
   Mocha.test("untagged variant cases", () => {
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 164, characters 7-14", allPayloadCases({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 165, characters 7-14", allPayloadCases({
       p: "a"
     }), "string");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 165, characters 7-14", allPayloadCases({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 166, characters 7-14", allPayloadCases({
       p: 1
     }), "number");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 166, characters 7-14", allPayloadCases({}), "absent");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 167, characters 7-14", allPayloadCasesWithConstant({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 167, characters 7-14", allPayloadCases({}), "absent");
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 168, characters 7-14", allPayloadCasesWithConstant({
       c: "a"
     }), "string");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 168, characters 7-14", allPayloadCasesWithConstant({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 169, characters 7-14", allPayloadCasesWithConstant({
       c: 1
     }), "number");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 169, characters 7-14", allPayloadCasesWithConstant({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 170, characters 7-14", allPayloadCasesWithConstant({
       c: "A"
     }), "other");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 170, characters 7-14", allPayloadCasesWithConstant({}), "other");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 171, characters 7-14", sharedCaseName([
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 171, characters 7-14", allPayloadCasesWithConstant({}), "other");
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 172, characters 7-14", sharedCaseName([
       {
         x: "a"
       },
       {}
     ]), "first");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 172, characters 7-14", sharedCaseName([
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 173, characters 7-14", sharedCaseName([
       {},
       {
         x: "a"
       }
     ]), "second");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 173, characters 7-14", sharedCaseName([
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 174, characters 7-14", sharedCaseName([
       {},
       {
         x: 1
       }
     ]), "other");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 174, characters 7-14", sharedCaseName([
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 175, characters 7-14", sharedCaseName([
       {},
       {}
     ]), "other");
   });
   Mocha.test("a field whose type has an undefined case", () => {
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 177, characters 7-14", stringOrOther({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 178, characters 7-14", stringOrOther({
       u: "a"
     }), "a");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 178, characters 7-14", stringOrOther({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 179, characters 7-14", stringOrOther({
       u: null
     }), "null");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 179, characters 7-14", stringOrOther({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 180, characters 7-14", stringOrOther({
       u: Primitive_option.some(undefinedCase.contents)
     }), "other");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 180, characters 7-14", stringOrOther({}), "other");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 181, characters 7-14", objectOrOther({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 181, characters 7-14", stringOrOther({}), "other");
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 182, characters 7-14", objectOrOther({
       u: {}
     }), "object");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 182, characters 7-14", objectOrOther({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 183, characters 7-14", objectOrOther({
       u: Primitive_option.some(undefinedCase.contents)
     }), "undefined");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 183, characters 7-14", objectOrOther({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 184, characters 7-14", objectOrOther({
       u: "a"
     }), "other");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 184, characters 7-14", objectOrOther({}), "other");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 185, characters 7-14", objectOnly({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 185, characters 7-14", objectOrOther({}), "other");
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 186, characters 7-14", objectOnly({
       u: {}
     }), "object");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 186, characters 7-14", objectOnly({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 187, characters 7-14", objectOnly({
       u: Primitive_option.some(undefinedCase.contents)
     }), "other");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 187, characters 7-14", objectOnly({}), "other");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 188, characters 7-14", boundPayload({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 188, characters 7-14", objectOnly({}), "other");
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 189, characters 7-14", boundPayload({
       u: Primitive_option.some(undefinedCase.contents)
     }), "undefined");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 189, characters 7-14", boundPayload({
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 190, characters 7-14", boundPayload({
       u: "a"
     }), "other value");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 190, characters 7-14", boundPayload({}), "absent");
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 191, characters 7-14", boundPayload({}), "absent");
   });
   Mocha.test("options matched against constants", () => {
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 193, characters 7-14", 1 !== 1 ? "other" : "one", "one");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 194, characters 7-14", 2 !== 1 ? "other" : "one", "other");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 195, characters 7-14", undefined !== 1 ? "other" : "one", "other");
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 196, characters 7-14", optionString("x"), 1);
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 197, characters 7-14", optionString("y"), 2);
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 198, characters 7-14", optionString("z"), 3);
-    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 199, characters 7-14", optionString(undefined), 3);
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 194, characters 7-14", 1 !== 1 ? "other" : "one", "one");
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 195, characters 7-14", 2 !== 1 ? "other" : "one", "other");
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 196, characters 7-14", undefined !== 1 ? "other" : "one", "other");
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 197, characters 7-14", optionString("x"), 1);
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 198, characters 7-14", optionString("y"), 2);
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 199, characters 7-14", optionString("z"), 3);
+    Test_utils.eq("File \"pm_opt_fields_mixed_test.res\", line 200, characters 7-14", optionString(undefined), 3);
   });
 });
 

@@ -26,6 +26,7 @@ module Make = (U: S) => {
     v.contents = v.contents + 1
     v.contents = v.contents + 1
   }
+
   include U
 }
 

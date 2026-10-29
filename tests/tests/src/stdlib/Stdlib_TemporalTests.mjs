@@ -83,7 +83,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    61,
+    62,
     13,
     53
   ],
@@ -93,7 +93,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    67,
+    69,
     13,
     62
   ],
@@ -103,7 +103,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    78,
+    81,
     13,
     49
   ],
@@ -113,7 +113,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    89,
+    93,
     13,
     45
   ],
@@ -123,7 +123,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    100,
+    105,
     13,
     55
   ],
@@ -135,7 +135,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    110,
+    116,
     13,
     55
   ],
@@ -147,7 +147,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    120,
+    127,
     13,
     65
   ],
@@ -157,7 +157,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    131,
+    138,
     13,
     56
   ],
@@ -167,7 +167,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    137,
+    145,
     13,
     53
   ],
@@ -183,7 +183,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    145,
+    154,
     13,
     46
   ],
@@ -197,7 +197,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    156,
+    166,
     13,
     56
   ],
@@ -213,7 +213,7 @@ let date = Temporal.PlainDate.from("2024-02-29");
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    166,
+    176,
     20,
     53
   ],
@@ -223,7 +223,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    168,
+    179,
     13,
     56
   ],
@@ -233,7 +233,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    174,
+    186,
     13,
     44
   ],
@@ -251,7 +251,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    183,
+    196,
     13,
     47
   ],
@@ -263,7 +263,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    189,
+    203,
     13,
     64
   ],
@@ -275,7 +275,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    195,
+    210,
     13,
     46
   ],
@@ -289,7 +289,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    207,
+    222,
     13,
     53
   ],
@@ -306,7 +306,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    216,
+    232,
     13,
     57
   ],
@@ -323,7 +323,7 @@ let utc = Temporal.ZonedDateTime.from("2024-01-01T00:00:00+00:00[UTC]");
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    232,
+    248,
     13,
     57
   ],
@@ -333,7 +333,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    238,
+    255,
     13,
     54
   ],
@@ -343,7 +343,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    247,
+    265,
     13,
     39
   ],
@@ -353,7 +353,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    253,
+    272,
     13,
     37
   ],
@@ -363,7 +363,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TemporalTests.res",
-    259,
+    279,
     13,
     50
   ],

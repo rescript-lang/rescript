@@ -232,6 +232,7 @@ let partition = (d, p) => {
 }
 
 let subset = (a, b) => I.subset(a.data, b.data)
+
 let intersect = (dataa, datab) => {
   let (dataa, datab) = (dataa.data, datab.data)
   switch (dataa, datab) {

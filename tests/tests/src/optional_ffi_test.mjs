@@ -46,7 +46,7 @@ Mocha.describe("Optional_ffi_test", () => {
   Mocha.test("optional ffi test", () => {
     let u = hey(undefined, 3);
     let z = hey(5, 3);
-    Test_utils.eq("File \"optional_ffi_test.res\", line 41, characters 7-14", [
+    Test_utils.eq("File \"optional_ffi_test.res\", line 44, characters 7-14", [
       u,
       z
     ], [
@@ -79,7 +79,7 @@ Mocha.describe("Optional_ffi_test", () => {
       pair2_0,
       pair2_1
     ];
-    Test_utils.eq("File \"optional_ffi_test.res\", line 48, characters 7-14", pair, [
+    Test_utils.eq("File \"optional_ffi_test.res\", line 51, characters 7-14", pair, [
       [
         4,
         1
@@ -89,7 +89,7 @@ Mocha.describe("Optional_ffi_test", () => {
         1
       ]
     ]);
-    Test_utils.eq("File \"optional_ffi_test.res\", line 49, characters 7-14", pair2, [
+    Test_utils.eq("File \"optional_ffi_test.res\", line 52, characters 7-14", pair2, [
       [
         4,
         1
@@ -104,7 +104,7 @@ Mocha.describe("Optional_ffi_test", () => {
       "name4",
       pair_1$1
     ];
-    Test_utils.eq("File \"optional_ffi_test.res\", line 53, characters 7-14", pair$1, [
+    Test_utils.eq("File \"optional_ffi_test.res\", line 56, characters 7-14", pair$1, [
       "name4",
       "name4"
     ]);

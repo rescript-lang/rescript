@@ -1,5 +1,6 @@
 /* [@@@warning "a-11-8-4-a"] */
 @@warning("a+11+8-8")
+
 type t6 =
   | T60
   | T61

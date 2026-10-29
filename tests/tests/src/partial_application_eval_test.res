@@ -17,6 +17,7 @@ Object.defineProperty(globalThis, "partialApplicationValue", {
   configurable: true,
 })
 `)
+
 @val external partialApplicationValue: int = "partialApplicationValue"
 
 // At the top level, the bound argument is captured by the function only.

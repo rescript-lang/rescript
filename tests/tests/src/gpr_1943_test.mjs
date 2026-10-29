@@ -26,7 +26,7 @@ Mocha.describe("Gpr_1943_test", () => {
       "_50x'": 5,
       "x'": 6
     });
-    Test_utils.eq("File \"gpr_1943_test.res\", line 19, characters 7-14", [
+    Test_utils.eq("File \"gpr_1943_test.res\", line 20, characters 7-14", [
       0,
       1,
       2,

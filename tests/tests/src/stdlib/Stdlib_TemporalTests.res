@@ -57,12 +57,14 @@ Test.run(
   eq,
   "00:00:00",
 )
+
 Test.run(
   __POS_OF__("PlainTime.make with a later field only"),
   Temporal.PlainTime.make(~minute=30)->Temporal.PlainTime.toString,
   eq,
   "00:30:00",
 )
+
 Test.run(
   __POS_OF__("PlainDateTime.make with a later time field only"),
   Temporal.PlainDateTime.make(
@@ -74,6 +76,7 @@ Test.run(
   eq,
   "2024-02-29T00:00:05",
 )
+
 Test.run(
   __POS_OF__("PlainDateTime.make with a calendar"),
   Temporal.PlainDateTime.make(
@@ -85,6 +88,7 @@ Test.run(
   eq,
   #gregory,
 )
+
 Test.run(
   __POS_OF__("PlainDate.make with a calendar"),
   Temporal.PlainDate.make(
@@ -96,6 +100,7 @@ Test.run(
   eq,
   "2024-02-29[u-ca=gregory]",
 )
+
 Test.run(
   __POS_OF__("PlainYearMonth.make with a reference day"),
   Temporal.PlainYearMonth.make(
@@ -106,6 +111,7 @@ Test.run(
   eq,
   "2024-02-15[u-ca=iso8601]",
 )
+
 Test.run(
   __POS_OF__("PlainMonthDay.make with a reference year"),
   Temporal.PlainMonthDay.make(
@@ -116,6 +122,7 @@ Test.run(
   eq,
   "2024-02-29[u-ca=iso8601]",
 )
+
 Test.run(
   __POS_OF__("ZonedDateTime.fromEpochNanoseconds with a calendar"),
   Temporal.ZonedDateTime.fromEpochNanoseconds(
@@ -133,6 +140,7 @@ Test.run(
   eq,
   Some("RangeError"),
 )
+
 Test.run(
   __POS_OF__("fromFields rejects out-of-range fields"),
   catch(() =>
@@ -141,6 +149,7 @@ Test.run(
   eq,
   Some("RangeError"),
 )
+
 Test.run(
   __POS_OF__("addFields rejects a missing day"),
   catch(() =>
@@ -152,6 +161,7 @@ Test.run(
   eq,
   Some("RangeError"),
 )
+
 Test.run(
   __POS_OF__("Duration.addFields rejects calendar units"),
   catch(() =>
@@ -164,12 +174,14 @@ Test.run(
 let date = Temporal.PlainDate.fromStringOrThrow("2024-02-29")
 
 Test.run(__POS_OF__("era is None in the ISO calendar"), date->Temporal.PlainDate.era, eq, None)
+
 Test.run(
   __POS_OF__("eraYear is Some in the Gregorian calendar"),
   date->Temporal.PlainDate.withCalendar(#gregory)->Temporal.PlainDate.eraYear,
   eq,
   Some(2024),
 )
+
 Test.run(
   __POS_OF__("compare sorts chronologically"),
   ["2024-03-01", "2024-01-01", "2024-02-01"]
@@ -179,18 +191,21 @@ Test.run(
   eq,
   ["2024-01-01", "2024-02-01", "2024-03-01"],
 )
+
 Test.run(
   __POS_OF__("toJSON is used by JSON.stringify"),
   JSON.stringifyAny({"date": date}),
   eq,
   Some(`{"date":"2024-02-29"}`),
 )
+
 Test.run(
   __POS_OF__("toLocaleString passes Intl.DateTimeFormat options"),
   date->Temporal.PlainDate.toLocaleString(~locales=["en-US"], ~options={year: #numeric}),
   eq,
   "2024",
 )
+
 Test.run(
   __POS_OF__("until passes difference options"),
   date
@@ -212,6 +227,7 @@ Test.run(
   eq,
   29.,
 )
+
 Test.run(
   __POS_OF__("Duration.round relative to a ZonedDateTime"),
   Temporal.Duration.fromFields({hours: 25.})
@@ -234,6 +250,7 @@ Test.run(
   eq,
   true,
 )
+
 Test.run(
   __POS_OF__("getTimeZoneTransition with a transition"),
   utc
@@ -243,18 +260,21 @@ Test.run(
   eq,
   Some("2024-03-10T03:00:00-04:00[America/New_York]"),
 )
+
 Test.run(
   __POS_OF__("Instant.epochNanoseconds"),
   Temporal.Instant.fromEpochMilliseconds(1.)->Temporal.Instant.epochNanoseconds,
   eq,
   1_000_000n,
 )
+
 Test.run(
   __POS_OF__("Date.toTemporalInstant"),
   Date.fromTime(1_000.)->Date.toTemporalInstant->Temporal.Instant.epochMilliseconds,
   eq,
   1_000.,
 )
+
 Test.run(
   __POS_OF__("Now.zonedDateTimeISO in a time zone"),
   Temporal.Now.zonedDateTimeISO(~timeZone="Asia/Seoul")->Temporal.ZonedDateTime.offset,

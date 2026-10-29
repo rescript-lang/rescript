@@ -15,9 +15,11 @@ module AsProp = {
     @as("foo bar") fooBar: string,
     @as("data-x") dataX: string,
   }
+
   @react.componentWithProps
   let make = (_: props) => React.null
 }
+
 let asProp = <AsProp fooBar="a" dataX="b" />
 
 // A component bound to a lowercase global: <lowerComp /> would be an
@@ -26,6 +28,7 @@ module Lower = {
   @react.component @val
   external make: (~x: int) => React.element = "lowerComp"
 }
+
 let lowerExternal = <Lower x=1 />
 
 // The call passes a lone spread itself, not a copy of it
@@ -33,6 +36,7 @@ module LowerSpread = {
   type props = {x: int}
   @val external make: React.component<props> = "lowerComp"
 }
+
 @val external lowerProps: unit => LowerSpread.props = "lowerProps"
 let lowerSpread = <LowerSpread {...lowerProps()} />
 let lowerSpreadKeyed = <LowerSpread {...lowerProps()} key="k" />
@@ -49,6 +53,7 @@ let spreadCallKeyed = <div {...getProps()} key="k" />
 
 // A sequence is not an AssignmentExpression, so it needs parentheses
 let count = ref(0)
+
 let seqValue =
   <div
     title={
@@ -66,9 +71,11 @@ let fragmentChild =
 // A spread of a small record without optional fields copies its fields
 module Req = {
   type props = {a: string, b: string}
+
   @react.componentWithProps
   let make = (props: props) => <div title={props.a ++ props.b} />
 }
+
 let copySpread = (p: Req.props) => <Req {...p} b="override" />
 
 // A tag that is a field of a local module stays a member expression

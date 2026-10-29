@@ -4,5 +4,6 @@ module M: {
   module Helper = {
     let f = 1
   }
+
   let v = 1
 }

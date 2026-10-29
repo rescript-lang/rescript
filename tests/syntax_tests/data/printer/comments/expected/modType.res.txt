@@ -19,10 +19,12 @@
 
 // Pmty_functor
 /* c0 */ module type /* c1 */ Functor /* c2 */ = /* c3 */ SetLike /* c4 */ => /* c5 */ Set /* c6 */
+
 module type Functor = /* before */ (
   /* before S */ S /* after S */: /* before */ SetLike /* after */,
   /* before B */ B /* after B */: /* before */ BtreeLike /* after */,
 ) => /* before NeoTree */ NeoTree // after NeoTree
+
 module type Functor = (
   /* c0 */ /* c1 */ /* c2 */ SetLike /* c3 */,
   /* c4 */ /* c5 */ /* c6 */ BtreeLike /* c7 */,

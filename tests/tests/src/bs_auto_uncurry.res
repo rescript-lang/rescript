@@ -34,17 +34,20 @@ fun (_){
 */
 
 let f_0 = () => hi(() => ())
+
 let f_01 = () =>
   hi((() as x) =>
     if x == () {
       Console.log("x")
     }
   ) /* FIXME: not inlined */
+
 let f_02 = xs =>
   hi((() as x) => {
     xs := x
     Console.log("x")
   })
+
 let f_03 = (xs, u) => hi(u)
 
 let h = (x, y, z) => map2(x, y, z)
@@ -60,6 +63,7 @@ let h3 = x => ff(x, 2, add3(1))
 let h4 = x => ff1(x, add3(1))
 
 let h5 = x => ff2(x, add3(2))
+
 let add = (x, y) => {
   Console.log((x, y))
   x + y
@@ -68,6 +72,7 @@ let add = (x, y) => {
 let h6 = x => ff2(x, add)
 
 type elem
+
 @val
 external optional_cb: (
   (string, ~props: elem=?, array<int>) => elem /* This should emit a warning ? */,

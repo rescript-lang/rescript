@@ -63,10 +63,12 @@ let _ = list{
 let _ = list{1, /* c0 */ ...xs}
 let _ = list{1, /* c0 */ ...xs /* c1 */}
 let _ = list{1, /* c0 */ ...xs :> list<int> /* c1 */}
+
 let _ = list{
   1,
   // c0
   ...xs,
 }
+
 let f = (list{a, /* c0 */ ...rest}) => a
 let f = (list{a, /* c0 */ ...rest /* c1 */}) => a

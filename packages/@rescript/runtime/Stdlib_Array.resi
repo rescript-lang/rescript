@@ -625,6 +625,7 @@ See [`Array.lastIndexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 ```
 */
 @send external lastIndexOf: (array<'a>, 'a, ~from: int=?) => int = "lastIndexOf"
+
 let lastIndexOfOpt: (array<'a>, 'a) => option<int>
 
 /**
@@ -1118,6 +1119,7 @@ array[1] == Some("Hello")
 */
 @set_index
 external set: (array<'a>, int, 'a) => unit = ""
+
 /**
 `getSymbol(array, key)` retrieves the value stored under the symbol `key`, if present.
 

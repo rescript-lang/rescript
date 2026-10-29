@@ -83,19 +83,19 @@ function f12(x) {
 
 Mocha.describe("Name_mangle_test", () => {
   Mocha.test("name mangling test", () => {
-    Test_utils.eq("File \"name_mangle_test.res\", line 90, characters 7-14", f0({_open:0}), 1);
-    Test_utils.eq("File \"name_mangle_test.res\", line 91, characters 7-14", f1({_in:0}), 1);
-    Test_utils.eq("File \"name_mangle_test.res\", line 92, characters 7-14", f2({_MAX_LENGTH:0}), 1);
-    Test_utils.eq("File \"name_mangle_test.res\", line 93, characters 7-14", f3({_Capital:0}), 1);
-    Test_utils.eq("File \"name_mangle_test.res\", line 94, characters 7-14", f4({_open__:0}), 1);
-    Test_utils.eq("File \"name_mangle_test.res\", line 95, characters 7-14", f5({open__:0}), 1);
-    Test_utils.eq("File \"name_mangle_test.res\", line 96, characters 7-14", f6({ "_'x" :0}), 1);
-    Test_utils.eq("File \"name_mangle_test.res\", line 97, characters 7-14", f7({_Capital__:0}), 1);
-    Test_utils.eq("File \"name_mangle_test.res\", line 98, characters 7-14", f8({_MAX__:0}), 1);
-    Test_utils.eq("File \"name_mangle_test.res\", line 99, characters 7-14", f9({__:0}), 1);
-    Test_utils.eq("File \"name_mangle_test.res\", line 100, characters 7-14", f10({__x:0}), 1);
-    Test_utils.eq("File \"name_mangle_test.res\", line 101, characters 7-14", f11({___:0}), 1);
-    Test_utils.eq("File \"name_mangle_test.res\", line 102, characters 7-14", f12({____:0}), 1);
+    Test_utils.eq("File \"name_mangle_test.res\", line 91, characters 7-14", f0({_open:0}), 1);
+    Test_utils.eq("File \"name_mangle_test.res\", line 92, characters 7-14", f1({_in:0}), 1);
+    Test_utils.eq("File \"name_mangle_test.res\", line 93, characters 7-14", f2({_MAX_LENGTH:0}), 1);
+    Test_utils.eq("File \"name_mangle_test.res\", line 94, characters 7-14", f3({_Capital:0}), 1);
+    Test_utils.eq("File \"name_mangle_test.res\", line 95, characters 7-14", f4({_open__:0}), 1);
+    Test_utils.eq("File \"name_mangle_test.res\", line 96, characters 7-14", f5({open__:0}), 1);
+    Test_utils.eq("File \"name_mangle_test.res\", line 97, characters 7-14", f6({ "_'x" :0}), 1);
+    Test_utils.eq("File \"name_mangle_test.res\", line 98, characters 7-14", f7({_Capital__:0}), 1);
+    Test_utils.eq("File \"name_mangle_test.res\", line 99, characters 7-14", f8({_MAX__:0}), 1);
+    Test_utils.eq("File \"name_mangle_test.res\", line 100, characters 7-14", f9({__:0}), 1);
+    Test_utils.eq("File \"name_mangle_test.res\", line 101, characters 7-14", f10({__x:0}), 1);
+    Test_utils.eq("File \"name_mangle_test.res\", line 102, characters 7-14", f11({___:0}), 1);
+    Test_utils.eq("File \"name_mangle_test.res\", line 103, characters 7-14", f12({____:0}), 1);
   });
 });
 

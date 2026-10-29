@@ -39,6 +39,7 @@ let exotic = x =>
 /* let l_from_val = Lazy.from_val 3 */
 
 let l_from_fun = Lazy.make(_ => 3)
+
 let forward_test = Lazy.make(() => {
   let u = ref(3)
   u.contents = u.contents + 1
@@ -53,6 +54,7 @@ let f006: Lazy.t<unit => int> = Lazy.make(() => {
 })
 
 let f007 = Lazy.make(() => throw(Not_found))
+
 let f008 = Lazy.make(() => {
   Console.log("hi")
   throw(Not_found)

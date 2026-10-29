@@ -10,6 +10,7 @@ globalThis.UntaggedNs = {Klass: class Klass {}}
 module UntaggedShadowed = {
   let name = "local module"
 }
+
 module UntaggedNs = {
   let name = "local module"
 }

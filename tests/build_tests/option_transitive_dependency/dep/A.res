@@ -22,7 +22,9 @@ module Abstract = {
 module Unboxed = {
   @unboxed
   type t = Value(option<int>)
+
   let value = Value(None)
+
   let isUndefined = value => {
     let Value(inner) = value
     Option.isNone(inner)

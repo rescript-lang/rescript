@@ -56,7 +56,7 @@ function tl_exn(x) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "recursive_records_test.res",
-      43,
+      44,
       11
     ],
     Error: new Error()
@@ -77,18 +77,18 @@ function f3(x) {
 
 Mocha.describe("Recursive_records_test", () => {
   Mocha.test("recursive record operations", () => {
-    Test_utils.eq("File \"recursive_records_test.res\", line 56, characters 7-14", a0(rec_cell), 9);
-    Test_utils.eq("File \"recursive_records_test.res\", line 57, characters 7-14", a0(f0(3)), 9);
+    Test_utils.eq("File \"recursive_records_test.res\", line 57, characters 7-14", a0(rec_cell), 9);
+    Test_utils.eq("File \"recursive_records_test.res\", line 58, characters 7-14", a0(f0(3)), 9);
   });
   Mocha.test("recursive inline record operations", () => {
-    Test_utils.eq("File \"recursive_records_test.res\", line 61, characters 7-14", (hd(rec_cell2) + hd(tl_exn(rec_cell2)) | 0) + hd(tl_exn(tl_exn(rec_cell2))) | 0, 9);
+    Test_utils.eq("File \"recursive_records_test.res\", line 62, characters 7-14", (hd(rec_cell2) + hd(tl_exn(rec_cell2)) | 0) + hd(tl_exn(tl_exn(rec_cell2))) | 0, 9);
     let rec_cell2$1 = f2(3);
-    Test_utils.eq("File \"recursive_records_test.res\", line 63, characters 7-14", (hd(rec_cell2$1) + hd(tl_exn(rec_cell2$1)) | 0) + hd(tl_exn(tl_exn(rec_cell2$1))) | 0, 9);
+    Test_utils.eq("File \"recursive_records_test.res\", line 64, characters 7-14", (hd(rec_cell2$1) + hd(tl_exn(rec_cell2$1)) | 0) + hd(tl_exn(tl_exn(rec_cell2$1))) | 0, 9);
   });
   Mocha.test("recursive variant list operations", () => {
-    Test_utils.eq("File \"recursive_records_test.res\", line 69, characters 7-14", (Stdlib_List.headOrThrow(rec_cell3) + Stdlib_List.headOrThrow(Stdlib_List.tailOrThrow(rec_cell3)) | 0) + Stdlib_List.headOrThrow(Stdlib_List.tailOrThrow(Stdlib_List.tailOrThrow(rec_cell3))) | 0, 9);
+    Test_utils.eq("File \"recursive_records_test.res\", line 70, characters 7-14", (Stdlib_List.headOrThrow(rec_cell3) + Stdlib_List.headOrThrow(Stdlib_List.tailOrThrow(rec_cell3)) | 0) + Stdlib_List.headOrThrow(Stdlib_List.tailOrThrow(Stdlib_List.tailOrThrow(rec_cell3))) | 0, 9);
     let rec_cell3$1 = f3(3);
-    Test_utils.eq("File \"recursive_records_test.res\", line 71, characters 7-14", (Stdlib_List.headOrThrow(rec_cell3$1) + Stdlib_List.headOrThrow(Stdlib_List.tailOrThrow(rec_cell3$1)) | 0) + Stdlib_List.headOrThrow(Stdlib_List.tailOrThrow(Stdlib_List.tailOrThrow(rec_cell3$1))) | 0, 9);
+    Test_utils.eq("File \"recursive_records_test.res\", line 72, characters 7-14", (Stdlib_List.headOrThrow(rec_cell3$1) + Stdlib_List.headOrThrow(Stdlib_List.tailOrThrow(rec_cell3$1)) | 0) + Stdlib_List.headOrThrow(Stdlib_List.tailOrThrow(Stdlib_List.tailOrThrow(rec_cell3$1))) | 0, 9);
   });
 });
 

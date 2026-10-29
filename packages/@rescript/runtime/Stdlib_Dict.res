@@ -12,6 +12,7 @@ let delete = (dict, string) => {
 @obj external make: unit => dict<'a> = ""
 
 @val external fromArray: array<(string, 'a)> => dict<'a> = "Object.fromEntries"
+
 @val
 external fromIterable: Stdlib_Iterable.t<(string, 'a)> => dict<'a> = "Object.fromEntries"
 

@@ -2,6 +2,7 @@ type x = {
   @as("z") x: int,
   y: int,
 }
+
 type y = {
   @as("w") x: int,
   y: int,

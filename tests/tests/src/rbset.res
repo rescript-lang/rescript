@@ -1,5 +1,6 @@
 type elt = int
 type color = Black | Red
+
 type rec t =
   | Node(color, t, elt, t)
   | Empty
@@ -94,6 +95,7 @@ let lbalance = (x1, x2, x3) =>
     }
   | _ => Node(Black, x1, x2, x3)
   }
+
 let rbalance = (x1, x2, x3) =>
   switch (x1, x2, x3) {
   | (a, x, Node(Red, Node(Red, b, y, c), z, d)) =>

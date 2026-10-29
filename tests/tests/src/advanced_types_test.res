@@ -17,16 +17,19 @@ let withDefault: withDefault<int, _> = (1, [2])
 
 // `as 'a` names a type inside the annotation.
 type rec intList = [#Nil | #Cons(int, intList)]
+
 let rec sum = (l: intList) =>
   switch l {
   | #Nil => 0
   | #Cons(n, rest) => n + sum(rest)
   }
+
 let keep = (x: [#A | #B] as 'a): 'a => x
 
 // `#...t` matches every constructor of a polymorphic variant type.
 type basic = [#Red | #Green]
 type color = [basic | #Blue]
+
 let describeColor = (c: color) =>
   switch c {
   | #...basic as b => "basic " ++ ((b: basic) :> string)
@@ -47,6 +50,7 @@ module Token: {
   let parse: string => t
 } = {
   type t = Word(string) | Number(int)
+
   let parse = s =>
     switch Int.fromString(s) {
     | Some(n) => Number(n)
@@ -64,6 +68,7 @@ module Box: {
   let make = x => Some(x)
   let get = x => x->Option.getOrThrow
 }
+
 let widened: Box.t<[#A | #B]> = (Box.make(#A) :> Box.t<[#A | #B]>)
 
 // Destructive substitution removes a type from a signature.
@@ -73,7 +78,9 @@ module type Container = {
   let make: elt => t
   let toArray: t => array<elt>
 }
+
 module type IntContainer = Container with type elt := int
+
 module IntContainer: IntContainer = {
   type t = array<int>
   let make = x => [x]
@@ -85,37 +92,45 @@ module type Ord = {
   type t
   let compare: (t, t) => int
 }
+
 module IntOrd = {
   type t = int
   let compare = (a: int, b) => a - b
 }
+
 module type HasOrd = {
   module O: Ord
   let max: (O.t, O.t) => O.t
 }
+
 module IntMax: HasOrd with module O = IntOrd = {
   module O = IntOrd
   let max = (a, b) => O.compare(a, b) > 0 ? a : b
 }
+
 module type IntOrdType = module type of IntOrd
 module IntOrdCopy: IntOrdType = IntOrd
 
 // Higher-order and generative functors.
 module type MakeOrd = (X: Ord) => Ord
 module Apply = (F: MakeOrd, X: Ord) => F(X)
+
 module Reverse = (X: Ord) => {
   type t = X.t
   let compare = (a, b) => X.compare(b, a)
 }
+
 module ReverseInt = Apply(Reverse, IntOrd)
 
 module Counter = () => {
   let count = ref(0)
+
   let next = () => {
     count := count.contents + 1
     count.contents
   }
 }
+
 module Counter1 = Counter()
 module Counter2 = Counter()
 
@@ -125,14 +140,17 @@ module type Value = {
   let value: t
   let show: t => string
 }
+
 let showValue = (type a, m: module(Value with type t = a)) => {
   module V = unpack(m)
   V.show(V.value)
 }
+
 let valueOf = (type a, m: module(Value with type t = a)): a => {
   module V = unpack(m)
   V.value
 }
+
 module IntValue = {
   type t = int
   let value = 3

@@ -105,6 +105,7 @@ let f = x =>
     },
     ...
   ) /* in */
+
 /* all_v := !v :: !all_v ;
  u */
 
@@ -126,6 +127,7 @@ let g = x => {
   all_v := list{v.contents, ...all_v.contents}
   u
 }
+
 let a = f(0)(3, 4)
 
 let b = f(0)(3, 5)

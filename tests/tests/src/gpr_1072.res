@@ -41,6 +41,7 @@ let v_ice_cream3: list<ice_cream3_expect> = list{
 }
 
 type u
+
 @obj
 external ice_cream4: (~flavor: @string [#vanilla | @as("x") #chocolate]=?, ~num: int, unit) => u =
   ""
@@ -145,6 +146,7 @@ let () = {
 @val external again4: (~x: unit=?, ~y: unit, int, unit) => unit = "again4"
 
 let side_effect = ref(0)
+
 let () = {
   again4(~y=(), __LINE__, ())
   again4(~x=?None, ~y=(), __LINE__, ())

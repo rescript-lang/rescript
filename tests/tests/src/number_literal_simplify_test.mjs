@@ -43,23 +43,23 @@ let opaque = (x => x);
 
 Mocha.describe("Number_literal_simplify_test", () => {
   Mocha.test("equal float literals", () => {
-    Test_utils.eq("File \"number_literal_simplify_test.res\", line 37, characters 7-14", true, float_eq_eq(opaque(2.5)));
-    Test_utils.eq("File \"number_literal_simplify_test.res\", line 38, characters 7-14", false, float_eq_eq(opaque(3.5)));
-    Test_utils.eq("File \"number_literal_simplify_test.res\", line 39, characters 7-14", false, float_neq_eq(opaque(2.5)));
-    Test_utils.eq("File \"number_literal_simplify_test.res\", line 40, characters 7-14", false, float_eq_neq(opaque(2.5)));
-    Test_utils.eq("File \"number_literal_simplify_test.res\", line 41, characters 7-14", true, float_or(opaque(3.5)));
-    Test_utils.eq("File \"number_literal_simplify_test.res\", line 42, characters 7-14", false, float_or(opaque(2.5)));
+    Test_utils.eq("File \"number_literal_simplify_test.res\", line 39, characters 7-14", true, float_eq_eq(opaque(2.5)));
+    Test_utils.eq("File \"number_literal_simplify_test.res\", line 40, characters 7-14", false, float_eq_eq(opaque(3.5)));
+    Test_utils.eq("File \"number_literal_simplify_test.res\", line 41, characters 7-14", false, float_neq_eq(opaque(2.5)));
+    Test_utils.eq("File \"number_literal_simplify_test.res\", line 42, characters 7-14", false, float_eq_neq(opaque(2.5)));
+    Test_utils.eq("File \"number_literal_simplify_test.res\", line 43, characters 7-14", true, float_or(opaque(3.5)));
+    Test_utils.eq("File \"number_literal_simplify_test.res\", line 44, characters 7-14", false, float_or(opaque(2.5)));
   });
   Mocha.test("different float literals", () => {
-    Test_utils.eq("File \"number_literal_simplify_test.res\", line 45, characters 7-14", false, float_eq_other(opaque(2.5)));
-    Test_utils.eq("File \"number_literal_simplify_test.res\", line 46, characters 7-14", true, float_neq_other(opaque(3.5)));
-    Test_utils.eq("File \"number_literal_simplify_test.res\", line 47, characters 7-14", false, float_neq_other(opaque(2.5)));
+    Test_utils.eq("File \"number_literal_simplify_test.res\", line 47, characters 7-14", false, float_eq_other(opaque(2.5)));
+    Test_utils.eq("File \"number_literal_simplify_test.res\", line 48, characters 7-14", true, float_neq_other(opaque(3.5)));
+    Test_utils.eq("File \"number_literal_simplify_test.res\", line 49, characters 7-14", false, float_neq_other(opaque(2.5)));
   });
   Mocha.test("literal tag equal to a payload literal", () => {
-    Test_utils.eq("File \"number_literal_simplify_test.res\", line 50, characters 7-14", 6, int_tag_shadowed(opaque(1)));
-    Test_utils.eq("File \"number_literal_simplify_test.res\", line 51, characters 7-14", 6, int_tag_shadowed(opaque(2.0)));
-    Test_utils.eq("File \"number_literal_simplify_test.res\", line 52, characters 7-14", 6, float_tag_shadowed(opaque(2.5)));
-    Test_utils.eq("File \"number_literal_simplify_test.res\", line 53, characters 7-14", 6, float_tag_shadowed(opaque(1.0)));
+    Test_utils.eq("File \"number_literal_simplify_test.res\", line 52, characters 7-14", 6, int_tag_shadowed(opaque(1)));
+    Test_utils.eq("File \"number_literal_simplify_test.res\", line 53, characters 7-14", 6, int_tag_shadowed(opaque(2.0)));
+    Test_utils.eq("File \"number_literal_simplify_test.res\", line 54, characters 7-14", 6, float_tag_shadowed(opaque(2.5)));
+    Test_utils.eq("File \"number_literal_simplify_test.res\", line 55, characters 7-14", 6, float_tag_shadowed(opaque(1.0)));
   });
 });
 

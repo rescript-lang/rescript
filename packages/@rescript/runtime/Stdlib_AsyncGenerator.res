@@ -1,11 +1,13 @@
 type t<+'yield, +'return, -'next> = Stdlib_AsyncIterable.t<'yield>
 
 external asAsyncIterable: t<'yield, 'return, 'next> => Stdlib_AsyncIterable.t<'yield> = "%identity"
+
 external asAsyncIterableIterator: t<'yield, 'return, 'next> => Stdlib_AsyncIterableIterator.t<
   'yield,
   'return,
   'next,
 > = "%identity"
+
 external asAsyncIterator: t<'yield, 'return, 'next> => Stdlib_AsyncIterator.t<
   'yield,
   'return,

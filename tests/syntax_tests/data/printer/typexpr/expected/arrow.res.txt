@@ -185,10 +185,12 @@ external debounce: (int, unit => unit, unit => unit) => unit => unit = "debounce
 external debounce: (int, unit => unit, unit => unit => unit) => unit => unit = "debounce"
 
 type returnTyp = (int, int) => @magic float
+
 type returnTyp = (
   intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
   intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
 ) => @magic float
+
 type returnTyp = (
   intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
   intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,

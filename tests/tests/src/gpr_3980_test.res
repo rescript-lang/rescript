@@ -2,6 +2,7 @@ type student = {
   name: string,
   age: int,
 }
+
 let _ = switch Some(1) {
 | Some(1) =>
   switch %raw("1") {

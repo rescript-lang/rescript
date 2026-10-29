@@ -2,6 +2,7 @@ type state =
   | Empty
   | Int1(int)
   | Int2(int)
+
 let func = (state: state): int =>
   switch state {
   | Empty => 0

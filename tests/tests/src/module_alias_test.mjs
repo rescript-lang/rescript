@@ -17,7 +17,7 @@ let a = h.length({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}});
 Test_utils.eq("File \"module_alias_test.res\", line 25, characters 3-10", a, 3);
 
 Mocha.describe("Module_alias_test", () => {
-  Mocha.test("module_alias_test", () => Test_utils.eq("File \"module_alias_test.res\", line 28, characters 7-14", a, 3));
+  Mocha.test("module_alias_test", () => Test_utils.eq("File \"module_alias_test.res\", line 29, characters 7-14", a, 3));
 });
 
 let N;

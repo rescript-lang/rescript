@@ -154,7 +154,7 @@ let m = Stdlib_List.reduceReverse({hd: [
 ], tl: /* [] */0}}}}, "Empty", (acc, param) => add(param[0], param[1], acc));
 
 Mocha.describe("Inline_map_test", () => {
-  Mocha.test("inline map test", () => Test_utils.eq("File \"inline_map_test.res\", line 419, characters 7-14", find(10, m), /* 'a' */97));
+  Mocha.test("inline map test", () => Test_utils.eq("File \"inline_map_test.res\", line 420, characters 7-14", find(10, m), /* 'a' */97));
 });
 
 /* m Not a pure module */

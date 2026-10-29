@@ -6,6 +6,7 @@ type listType = [
   | #disjunction
   | #unit
 ]
+
 type style = [
   | #long
   | #short

@@ -2,5 +2,6 @@
 @module("node:assert") external equal: ('a, 'a, ~message: string=?) => unit = "strictEqual"
 @module("node:assert") external deepEqual: ('a, 'a, ~message: string=?) => unit = "deepStrictEqual"
 @module("node:assert") external fail: (~message: string=?) => unit = "fail"
+
 @module("node:assert")
 external throws: (unit => 'a, ~error: 'b=?, ~message: string=?) => unit = "throws"

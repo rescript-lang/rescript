@@ -9,6 +9,7 @@ module Fact = {
   module type S = {
     let fact: int => int
   }
+
   module rec M: S = {
     let fact = n =>
       if n <= 1 {
@@ -17,6 +18,7 @@ module Fact = {
         n * M.fact(n - 1)
       }
   }
+
   include M
 }
 

@@ -1,4 +1,5 @@
 type readline
+
 @send
 external on: (
   readline as 'self,
@@ -8,6 +9,7 @@ external on: (
     | #close(unit => unit)
   ],
 ) => 'self = "on"
+
 let u = rl => rl->on(#line(x => Console.log(x)))->on(#close(() => Console.log("finished")))
 
 @send external send: ({"hi": int} as 'self, string) => 'self = "send"

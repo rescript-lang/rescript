@@ -3,14 +3,17 @@
 type process = {mutable exitCode: int}
 @val external process: process = "process"
 @scope("Error") @val external captureStackTrace: {..} => unit = "captureStackTrace"
+
 @module("@babel/code-frame") @val
 external codeFrameColumns: (string, {..}, {..}) => string = "codeFrameColumns"
+
 @module("fs") @val external readFileSync: (string, {..}) => string = "readFileSync"
 @module("path") @val external join: (string, string) => string = "join"
 
 let dirname = %raw("new URL('.', import.meta.url).pathname")
 
 @val @module("util") external inspect: _ => string = "inspect"
+
 let print = value =>
   switch Type.typeof(value) {
   | #string => JSON.stringifyAny(value)->Option.getOrThrow // uses " instead of '

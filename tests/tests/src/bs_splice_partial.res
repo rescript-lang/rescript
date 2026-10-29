@@ -4,6 +4,7 @@
 */
 
 type t
+
 @send @variadic
 external on_exit_slice3: (t, int, ~h: @as(3) _, @as("xxx") _, array<int>) => unit = "xx"
 

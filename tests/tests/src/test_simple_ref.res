@@ -6,6 +6,7 @@ include (
       v.contents = v.contents + 1
       v.contents
     }
+
     let h = ref(0)
 
     let a = ref(0)
@@ -16,6 +17,7 @@ include (
       let b = a
       b.contents
     }
+
     let real_escape = (f, v) => {
       let b = c
       f(b)

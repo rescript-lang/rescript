@@ -18,6 +18,15 @@ val breakable_group : force_break:bool -> t -> t
  * will be checked until one fits. *)
 val custom_layout : t list -> t
 val break_parent : t
+
+val item_separator : prev:t -> next:t -> t
+(** A hard line, and a blank line when [prev] or [next], the documents printed
+    on each side of it, span several lines. It measures them but does not print
+    them. *)
+
+val comment : t -> t
+(** Prints like its argument, which [item_separator] does not measure. *)
+
 val join : sep:t -> t list -> t
 
 (* [(doc1, sep1); (doc2,sep2)] joins as doc1 sep1 doc2 *)

@@ -164,7 +164,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TestTests.res",
-    23,
+    24,
     13,
     27
   ],
@@ -174,7 +174,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_TestTests.res",
-    28,
+    30,
     20,
     31
   ],

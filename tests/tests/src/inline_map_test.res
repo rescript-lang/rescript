@@ -4,6 +4,7 @@ open Test_utils
 module Ord = {
   type t = int
 }
+
 let compare = (x: int, y: int) => compare(x, y)
 /* module Make(Ord: OrderedType) = struct */
 

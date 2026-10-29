@@ -2,6 +2,7 @@ open Mocha
 open Test_utils
 
 let log = ref(list{})
+
 let note = (s, v) => {
   log := list{s, ...log.contents}
   v

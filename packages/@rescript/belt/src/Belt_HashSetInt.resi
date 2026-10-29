@@ -33,10 +33,12 @@ let remove: (t, key) => unit
 
 @deprecated("Use `forEach` instead")
 let forEachU: (t, key => unit) => unit
+
 let forEach: (t, key => unit) => unit
 
 @deprecated("Use `reduce` instead")
 let reduceU: (t, 'c, ('c, key) => 'c) => 'c
+
 let reduce: (t, 'c, ('c, key) => 'c) => 'c
 
 let size: t => int

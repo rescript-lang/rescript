@@ -7,6 +7,7 @@
 /* Almost rewritten  by authors of ReScript */
 
 @@config({flags: ["-bs-noassertfalse"]})
+
 type rec node<'k, 'v> = {
   @as("k") mutable key: 'k,
   @as("v") mutable value: 'v,
@@ -264,6 +265,7 @@ let rec some = (n, p) =>
   | None => false
   | Some(n) => p(n.key, n.value) || (some(n.left, p) || some(n.right, p))
   }
+
 /* Beware: those two functions assume that the added k is *strictly*
    smaller (or bigger) than all the present keys in the tree; it
    does not test for equality with the current min (or max) key.
@@ -737,6 +739,7 @@ let rotateWithLeftChild = k2 =>
     k1.height = Pervasives.max(hlk1, hk2) + 1
     k1
   }
+
 /* right rotation */
 let rotateWithRightChild = k1 =>
   switch k1.right {

@@ -39,6 +39,7 @@ This means inline is tricky in javascript, here we try to inline [_loop]?
 let v = ref(0)
 let count = 10
 let arr = Array.make(~length=count, _ => ())
+
 let f = () => {
   let n = ref(0)
   while n.contents < count {

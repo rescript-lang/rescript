@@ -8,6 +8,7 @@
     /* "-dsource"; */
   ],
 })
+
 type t = {x: int, y: int}
 
 // let f = (x,y) => {
@@ -49,6 +50,7 @@ let testMatch = v =>
 
 let h = '😊'
 let hey = "hello, 世界"
+
 // failed to type check
 
 let optionMap = (x, f) =>

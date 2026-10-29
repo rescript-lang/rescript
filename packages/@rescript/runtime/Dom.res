@@ -281,6 +281,7 @@ type domSettableTokenList
 type nodeFilter = {
   acceptNode: element => int /* return type should be NodeFilter.action, but that would create a cycle */,
 }
+
 type nodeIterator
 type treeWalker
 

@@ -5,8 +5,10 @@ module DecideSubject = {
     /** A hint to use as a guide when thinking of your poem.*/
     hint: string,
   }
+
   /** The input used to generate the prompt and system prompt.*/
   type input
+
   /** The output from evaluating the llm prompt*/
   type output = {
     /** The text of the poem.*/

@@ -10,6 +10,7 @@ module M: {
 
 // `module type of` doesn't strengthen the module's types
 module type T = module type of await M
+
 module N: T = {
   type t = string
   let x = ""
@@ -19,5 +20,6 @@ module N: T = {
 module G = () => {
   let y = 1
 }
+
 module A = G(await {})
 let y = A.y

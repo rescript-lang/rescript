@@ -6,6 +6,7 @@ module Provider = {
 module Trigger = {
   @react.component
   let make = (~label: string) => React.string(label)
+
   let make = React.memo(make)
 }
 

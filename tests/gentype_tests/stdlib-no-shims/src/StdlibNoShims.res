@@ -68,6 +68,7 @@ let idRef = (x: ref<int>) => x
 
 @genType
 let returnsUnit = (): unit => ()
+
 @genType
 let idTuple = (x: (int, string, float)) => x
 
@@ -125,10 +126,13 @@ let idTuple = (x: (int, string, float)) => x
 @genType let idTemporalPlainMonthDay = (x: Temporal.PlainMonthDay.t) => x
 @genType let idTemporalZonedDateTime = (x: Temporal.ZonedDateTime.t) => x
 @genType let idTemporalCommonZonedDateTime = (x: Temporal.Common.zonedDateTime) => x
+
 @genType
 let temporalDateOfDateTime = (x: Temporal.PlainDateTime.t) => x->Temporal.PlainDateTime.toPlainDate
+
 @genType
 let temporalNextDay = (x: Temporal.PlainDate.t) => x->Temporal.PlainDate.addFields({days: 1.})
+
 @genType let temporalParseDate = (x: string) => x->Temporal.PlainDate.fromStringOrThrow
 
 // Errors

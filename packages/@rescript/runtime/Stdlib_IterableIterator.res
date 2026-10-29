@@ -15,6 +15,7 @@ let make: (unit => Stdlib_Iterator.result<'yield, 'return>) => t<
 
 external asIterator: t<'yield, 'return, 'next> => Stdlib_Iterator.t<'yield, 'return, 'next> =
   "%identity"
+
 external asIterable: t<'yield, 'return, 'next> => Stdlib_Iterable.t<'yield> = "%identity"
 
 let next = iterator => iterator->asIterator->Stdlib_Iterator.next

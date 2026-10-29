@@ -6,11 +6,13 @@ Intl.Segmenter.supportedLocalesOf(["en-US", "en-GB"], ~options={localeMatcher: #
 
 let _formatter = Intl.Segmenter.make()
 let _formatter = Intl.Segmenter.make(~locales=["en-US", "en-GB"])
+
 let _formatter = Intl.Segmenter.make(
   ~options={
     granularity: #word,
   },
 )
+
 let formatter = Intl.Segmenter.make(
   ~locales=["en-US"],
   ~options={

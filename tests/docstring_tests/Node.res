@@ -26,14 +26,18 @@ module ChildProcess = {
   type readable
   type spawnReturns = {stderr: readable, stdout: readable}
   type spawnOptions = {cwd?: string, env?: Dict.t<string>, timeout?: int}
+
   @module("node:child_process")
   external spawn: (string, array<string>, ~options: spawnOptions=?) => spawnReturns = "spawn"
 
   @send external on: (readable, string, Buffer.t => unit) => unit = "on"
+
   @send
   external once: (spawnReturns, string, (Null.t<float>, Null.t<string>) => unit) => unit = "once"
+
   // execSync is used by scripts/res/GenApiDocs.res
   type execSyncOptions = {maxBuffer?: float}
+
   @module("child_process")
   external execSync: (string, ~options: execSyncOptions=?) => Buffer.t = "execSync"
 }

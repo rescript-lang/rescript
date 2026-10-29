@@ -76,9 +76,9 @@ Mocha.describe("Stdlib_variance_test", () => {
     for (let x of widened) {
       seen.push(x);
     }
-    Test_utils.eq("File \"stdlib_variance_test.res\", line 64, characters 7-14", ["A"], seen);
+    Test_utils.eq("File \"stdlib_variance_test.res\", line 73, characters 7-14", ["A"], seen);
   });
-  Mocha.test("a tag accepting more parameters is used where fewer are expected", () => Test_utils.eq("File \"stdlib_variance_test.res\", line 69, characters 7-14", "a|b:x", joinTag`a${"x"}b`));
+  Mocha.test("a tag accepting more parameters is used where fewer are expected", () => Test_utils.eq("File \"stdlib_variance_test.res\", line 78, characters 7-14", "a|b:x", joinTag`a${"x"}b`));
 });
 
 let useWithB = failing;

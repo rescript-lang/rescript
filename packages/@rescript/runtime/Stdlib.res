@@ -170,6 +170,7 @@ null->Nullable.toOption == None
 ```
 */
 external null: nullable<'a> = "#null"
+
 /**
 `undefined` returns the JavaScript `undefined` value as a `nullable<'a>`.
 Use the `Nullable` helpers to convert it into an `option` or to read the value.
@@ -181,6 +182,7 @@ undefined->Nullable.toOption == None
 ```
 */
 external undefined: nullable<'a> = "#undefined"
+
 /**
 `typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.
 It helps you inspect values that come from JavaScript APIs.

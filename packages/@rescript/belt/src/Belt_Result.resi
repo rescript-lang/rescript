@@ -51,6 +51,7 @@ let getOrThrow: t<'a, 'b> => 'a
 
 @deprecated("Use `mapWithDefault` instead")
 let mapWithDefaultU: (t<'a, 'c>, 'b, 'a => 'b) => 'b
+
 /**
 `mapWithDefault(res, default, f)`: When res is `Ok(n)`, returns `f(n)`,
 otherwise `default`.
@@ -69,6 +70,7 @@ let mapWithDefault: (t<'a, 'c>, 'b, 'a => 'b) => 'b
 
 @deprecated("Use `map` instead")
 let mapU: (t<'a, 'c>, 'a => 'b) => t<'b, 'c>
+
 /**
 `map(res, f)`: When res is `Ok(n)`, returns `Ok(f(n))`. Otherwise returns res
 unchanged. Function `f` takes a value of the same type as `n` and returns an
@@ -88,6 +90,7 @@ let map: (t<'a, 'c>, 'a => 'b) => t<'b, 'c>
 
 @deprecated("Use `flatMap` instead")
 let flatMapU: (t<'a, 'c>, 'a => t<'b, 'c>) => t<'b, 'c>
+
 /**
 `flatMap(res, f)`: When res is `Ok(n)`, returns `f(n)`. Otherwise, returns res
 unchanged. Function `f` takes a value of the same type as `n` and returns a
@@ -140,6 +143,7 @@ let isError: t<'a, 'b> => bool
 
 @deprecated("Use `eq` instead")
 let eqU: (t<'a, 'c>, t<'b, 'd>, ('a, 'b) => bool) => bool
+
 /**
 `eq(res1, res2, f)`: Determine if two `Belt.Result` variables are equal with
 respect to an equality function. If `res1` and `res2` are of the form `Ok(n)`
@@ -173,6 +177,7 @@ let eq: (t<'a, 'c>, t<'b, 'd>, ('a, 'b) => bool) => bool
 
 @deprecated("Use `cmp` instead")
 let cmpU: (t<'a, 'c>, t<'b, 'd>, ('a, 'b) => int) => int
+
 /**
 `cmp(res1, res2, f)`: Compare two `Belt.Result` variables with respect to a
 comparison function. The comparison function returns -1 if the first variable

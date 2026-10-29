@@ -13,6 +13,7 @@
 /* We do dynamic hashing, and resize the table and rehash the elements
  when buckets become too long. */
 module C = Belt_internalBucketsType
+
 /* TODO:
    the current implementation relies on the fact that bucket 
    empty value is `undefined` in both places,

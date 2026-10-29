@@ -13,8 +13,8 @@ function isPayload(v) {
 
 Mocha.describe("Untagged_hidden_payload_test", () => {
   Mocha.test("an interface hiding a payload's class", () => {
-    Test_utils.eq("File \"untagged_hidden_payload_test.res\", line 14, characters 18-25", true, isPayload(new Date()));
-    Test_utils.eq("File \"untagged_hidden_payload_test.res\", line 15, characters 18-25", false, false);
+    Test_utils.eq("File \"untagged_hidden_payload_test.res\", line 15, characters 18-25", true, isPayload(new Date()));
+    Test_utils.eq("File \"untagged_hidden_payload_test.res\", line 16, characters 18-25", false, false);
   });
 });
 

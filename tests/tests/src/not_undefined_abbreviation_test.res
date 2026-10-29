@@ -19,6 +19,7 @@ let kind = value =>
   }
 
 let wrap = (x: refined) => Some(x)
+
 let unwrap = (x: option<refined>) =>
   switch x {
   | Some(_) => "some"

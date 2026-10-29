@@ -27,12 +27,14 @@ Test.run(__POS_OF__("is: list"), list{1, 2, 3} == list{1, 2, 3}, eq, true)
 Test.run(__POS_OF__("is: list"), list{1, 2, 3} === list{1, 2, 3}, eq, false)
 
 let d = Date.makeWithYM(~year=2000, ~month=1)
+
 Test.run(
   __POS_OF__("is: date"),
   Object.is(Date.makeWithYM(~year=2000, ~month=1), Date.makeWithYM(~year=2000, ~month=1)),
   eq,
   false,
 )
+
 Test.run(__POS_OF__("is: date"), Object.is(d, d), eq, true)
 
 let x = {"a": 1}
@@ -151,6 +153,7 @@ let getSymbolTestWhenExists = () => {
     Some("banana"),
   )
 }
+
 getSymbolTestWhenExists()
 
 Test.run(

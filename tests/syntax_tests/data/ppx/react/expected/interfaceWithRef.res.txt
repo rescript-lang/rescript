@@ -3,6 +3,7 @@ type props<'x, 'ref> = {
   x: 'x,
   ref?: 'ref,
 }
+
 let make = (
   {x, _}: props<string, ReactDOM.Ref.currentDomRef>,
   ref: nullable<ReactDOM.Ref.currentDomRef>,
@@ -10,6 +11,7 @@ let make = (
   let _ = ref->Nullable.toOption->Belt.Option.map(ReactDOM.Ref.domRef)
   React.string(x)
 }
+
 let make = React.forwardRef({
   let \"InterfaceWithRef" = (props: props<_>, ref) => make(props, ref)
   \"InterfaceWithRef"

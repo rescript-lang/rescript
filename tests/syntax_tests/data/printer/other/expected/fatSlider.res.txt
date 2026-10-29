@@ -6,6 +6,7 @@ module Range = {
   /* See https://github.com/reasonml/reason-react/blob/master/docs/clone-element.md */
   /* We'll need to spread both the style inside the props, and the props object itself using ReasonReact.cloneElement. */
   type rec propsThatNeedSpreading = {style: ReactDOMRe.Style.t}
+
   type rec renderTrackParams = {
     props: propsThatNeedSpreading,
     children: React.element,

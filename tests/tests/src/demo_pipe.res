@@ -1,4 +1,5 @@
 type readline
+
 @send
 external on: (
   readline,
@@ -8,4 +9,5 @@ external on: (
     | #close(unit => unit)
   ],
 ) => readline = "on"
+
 let register = rl => rl->on(#line(x => Console.log(x)))->on(#close(() => Console.log("finished")))

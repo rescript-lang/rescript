@@ -3,4 +3,5 @@ module Id: {
 } = {
   @unboxed type t = Text(string) | Number(int)
 }
+
 let fromString = ("a" :> Id.t)

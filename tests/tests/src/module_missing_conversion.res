@@ -4,6 +4,7 @@ module XX = {
   include Array
   let f = x => x
 }
+
 let u = [module(String: S)]
 
 let hh = {

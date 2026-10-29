@@ -14,6 +14,7 @@
 /* List operations */
 
 let u = List.length
+
 let rec length_aux = (len, x) =>
   switch x {
   | list{} => len

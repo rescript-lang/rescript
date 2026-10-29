@@ -127,11 +127,13 @@ module CoerceVariantBinaryOp = {
   let x = 0->Int.bitwiseOr(B :> int)
 
   let v = B
+
   let f1 = () =>
     switch v {
     | A => "a"
     | B => "b"
     }
+
   let f2 = () =>
     switch (v :> int) {
     | 2 => "b"

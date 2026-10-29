@@ -13,7 +13,9 @@ let elements =
   </div>
 
 type props = {children: string, a: string}
+
 module ChildrenFirst = {
   @val external make: React.component<props> = "ChildrenFirst"
 }
+
 let component = <ChildrenFirst a={note("a")}>{note("c")}</ChildrenFirst>

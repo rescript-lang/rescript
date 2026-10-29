@@ -8,6 +8,7 @@ type t = [
   | #1
   | #2
 ]
+
 type h =
   | A(t)
   | B(t, int)
@@ -23,6 +24,7 @@ let nest = (x: h) => {
   | B(#0, _) => 6
   }
 }
+
 @inline
 let f = (x: t) => {
   switch x {
@@ -53,6 +55,7 @@ let f3 = (x, b) => {
   | #333(_, h) => h
   }
 }
+
 let h = x => x == #0
 
 let g = f(#1)
@@ -61,6 +64,7 @@ let hihi = f3(#3, 0)
 
 let hh9 = 3 == Obj.magic(#3)
 let hh10 = "3" == Obj.magic(#3)
+
 let tuple = (
   nest(A(#0)),
   nest(A(#1)),

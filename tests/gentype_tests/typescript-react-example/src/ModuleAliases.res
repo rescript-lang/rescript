@@ -6,10 +6,12 @@ module Outer = {
 
 module Outer2 = {
   module OuterInnerAlias = Outer.Inner
+
   module Inner2 = {
     module InnerNested = {
       type t = {nested: int}
     }
+
     module OuterInnerAlias2 = OuterInnerAlias
   }
 }

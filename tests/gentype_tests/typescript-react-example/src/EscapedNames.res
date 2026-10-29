@@ -19,6 +19,7 @@ type record = {
   \"Illegal-field name": int,
   \"UPPERCASE": int,
 }
+
 @genType
 let myRecord = {
   normalField: IllegalName,
@@ -30,6 +31,7 @@ let myRecord = {
 /* https://github.com/rescript-lang/rescript/issues/8312 */
 type props = {}
 let make = (_: props) => React.null
+
 @genType
 let \"Icon_Add": props => React.element = make
 

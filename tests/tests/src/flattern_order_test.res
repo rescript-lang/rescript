@@ -49,6 +49,7 @@ type t = {
 }
 
 let v = ref(0)
+
 let rec obj = {
   get: _ => v.contents,
   set: i => v := i,

@@ -34,7 +34,7 @@ function compilerBug(a, b, c, f) {
 Mocha.describe("Gpr_3875_test", () => {
   Mocha.test("compiler bug pattern matching", () => {
     compilerBug("x", undefined, true, () => true);
-    Test_utils.eq("File \"gpr_3875_test.res\", line 35, characters 7-14", result.contents, "Some x, f returns true");
+    Test_utils.eq("File \"gpr_3875_test.res\", line 36, characters 7-14", result.contents, "Some x, f returns true");
   });
 });
 

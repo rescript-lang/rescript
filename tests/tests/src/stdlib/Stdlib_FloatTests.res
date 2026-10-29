@@ -22,24 +22,28 @@ Test.run(__POS_OF__("clamp - min infinity"), Float.clamp(~min=infinity, 4.2), eq
 Test.run(__POS_OF__("clamp - max infinity"), Float.clamp(~max=infinity, 4.2), eq, 4.2)
 Test.run(__POS_OF__("clamp - min -infinity"), Float.clamp(~min=neg_infinity, 4.2), eq, 4.2)
 Test.run(__POS_OF__("clamp - max -infinity"), Float.clamp(~max=neg_infinity, 4.2), eq, neg_infinity)
+
 Test.run(
   __POS_OF__("clamp - min infinity, max infinity"),
   Float.clamp(~min=infinity, ~max=infinity, 4.2),
   eq,
   infinity,
 )
+
 Test.run(
   __POS_OF__("clamp - min -infinity, max infinity"),
   Float.clamp(~min=neg_infinity, ~max=infinity, 4.2),
   eq,
   4.2,
 )
+
 Test.run(
   __POS_OF__("clamp - min infinity, max -infinity"),
   Float.clamp(~min=infinity, ~max=neg_infinity, 4.2),
   eq,
   infinity, // min wins
 )
+
 Test.run(
   __POS_OF__("clamp - min -infinity, max -infinity"),
   Float.clamp(~min=neg_infinity, ~max=neg_infinity, 4.2),

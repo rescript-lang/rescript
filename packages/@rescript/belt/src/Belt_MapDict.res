@@ -45,6 +45,7 @@ let map = N.map
 let keep = N.keepShared
 let partition = N.partitionShared
 let checkInvariantInternal = N.checkInvariantInternal
+
 let rec set = (t: t<_>, newK, newD, ~cmp) =>
   switch t {
   | None => N.singleton(newK, newD)

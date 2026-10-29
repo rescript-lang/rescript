@@ -34,6 +34,7 @@ let f3 = x => {
   let a = x
   (y, z) => a + y + z
 }
+
 /* be careful! When you start optimize functions of [@bs], its call site invariant 
    (Ml_app) will not hold any more.
    So the best is never shrink functons which could change arity

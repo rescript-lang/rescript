@@ -28,16 +28,19 @@ let rec map = (f, x) =>
 
 /** Test curry and uncurry calling convention */
 let test_curry = (x, y) => x + y
+
 let f = test_curry(32, ...)
 
 /** Create a typed binding for react */
 type t
+
 type element
 @val external document: t = "document"
 @send external getElementById: (t, string) => element = "getElementById"
 
 /** Phantom types */
 type config
+
 type component
 type attrs
 type component_class
@@ -45,9 +48,11 @@ type component_class
 /** make a json object */
 @obj
 external config: (~display_name: string=?, ~render: unit => component, unit) => config = ""
+
 /** make a json object */
 @obj
 external attrs: (~alt: string=?, ~autoPlay: bool=?, unit) => attrs = ""
+
 external str: string => component = "%identity"
 
 type vdom

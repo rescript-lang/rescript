@@ -1,5 +1,6 @@
 module X = {
   type y = {d: int}
+
   type x = {
     a: int,
     b: int,
