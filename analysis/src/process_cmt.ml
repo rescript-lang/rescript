@@ -165,6 +165,28 @@ let rec for_type_signature_item ~(env : Shared_types.Env.t)
         loc = declared.extent_loc;
       };
     ]
+  | Sig_modtype (ident, {mtd_type = Some mod_type; mtd_attributes; mtd_loc}) ->
+    let name = Ident.name ident in
+    let env = env |> Env.add_module_type ~name in
+    let declared =
+      add_declared ~extent:mtd_loc
+        ~item:(for_type_module ~name ~env mod_type)
+        ~name:(Location.mkloc name mtd_loc)
+        ~stamp:(Ident.binding_time ident) ~env mtd_attributes
+        (Exported.add exported Exported.Module)
+        Stamps.add_module
+    in
+    [
+      {
+        Module.kind =
+          Module
+            {type_ = declared.item; is_module_type = is_module_type declared};
+        name = declared.name.txt;
+        docstring = declared.docstring;
+        deprecated = declared.deprecated;
+        loc = declared.extent_loc;
+      };
+    ]
   | _ -> []
 
 and for_type_signature ~name ~env signature =
