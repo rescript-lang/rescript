@@ -2673,7 +2673,12 @@ let module_path_at ~(full : full) ~pos =
 
 let process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
     completable =
+  (* A raw open ends in a placeholder for the name it qualifies. *)
+  let opens =
+    Scope.get_raw_opens scope
+    |> List.map (List.filter (fun name -> name <> "place holder"))
+  in
   Type_utils.with_completion_scope ~file:full.file
-    ~module_path:(module_path_at ~full ~pos) ~pos (fun () ->
+    ~module_path:(module_path_at ~full ~pos) ~pos ~opens (fun () ->
       process_completable_in_scope ~state ~debug ~full ~scope ~env ~pos
         ~for_hover completable)
