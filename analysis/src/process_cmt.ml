@@ -148,7 +148,7 @@ let rec for_type_signature_item ~(env : Shared_types.Env.t)
     let name = Ident.name ident in
     let declared =
       add_declared ~extent:md_loc
-        ~item:(for_type_module ~name ~env md_type)
+        ~item:(for_type_module ~name ~env:(env |> Env.add_module ~name) md_type)
         ~name:(Location.mkloc name md_loc)
         ~stamp:(Ident.binding_time ident) ~env md_attributes
         (Exported.add exported Exported.Module)

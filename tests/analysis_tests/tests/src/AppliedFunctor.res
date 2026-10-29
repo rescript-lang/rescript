@@ -33,6 +33,7 @@ module WithNested = (O: Ord) => {
   module Nested = {
     //     ^ref
     let value = 1
+    //  ^ren nestedValue
   }
 }
 
@@ -48,6 +49,7 @@ let n = N.Nested.value
 
 module WithShapes = (O: Ord) => {
   type point = {x: int}
+  //   ^ref
   type shape = Dot | Box(int)
 }
 
