@@ -74,3 +74,30 @@ let px2 = p.x
 
 let box2 = Shapes.Box(2)
 //                ^ren Square
+
+module Make = AppliedFunctor.MakeSet
+
+module Aliased = Make(AppliedFunctor.IntOrd)
+
+let a = Aliased.add([], 1)
+//               ^def
+
+let av: Aliased.t = []
+//  ^typ
+
+module Make2 = Make
+
+module Functors = {
+  module Make = Make2
+}
+
+module Chained = Functors.Make(AppliedFunctor.IntOrd)
+
+let c = Chained.add([], 1)
+//               ^def
+
+let cv: Chained.t = []
+//  ^typ
+
+let a2 = Aliased.add([], 2)
+//                ^ref
