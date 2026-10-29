@@ -2,7 +2,10 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
+import * as Stdlib_JsExn from "@rescript/runtime/lib/es6/Stdlib_JsExn.mjs";
+import * as Stdlib_JsError from "@rescript/runtime/lib/es6/Stdlib_JsError.mjs";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
+import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.mjs";
 import * as Cross_module_inline_export from "./cross_module_inline_export.mjs";
 
 let mapped = 3;
@@ -76,39 +79,49 @@ visited.push(4);
 
 let fromOrdinary = Cross_module_inline_export.ordinary(3, x => x + 1 | 0);
 
+let fromCatch;
+
+try {
+  fromCatch = Stdlib_JsError.throwWithMessage("boom");
+} catch (raw_e) {
+  let e = Primitive_exceptions.internalToException(raw_e);
+  fromCatch = e.RE_EXN_ID === "JsExn" ? Stdlib_JsExn.message(e._1) : undefined;
+}
+
 Mocha.describe("cross-module inline opt-in", () => {
   Mocha.test("Option helpers", () => {
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 27, characters 7-14", mapped, 3);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 28, characters 7-14", flatMapped, 4);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 29, characters 7-14", mappedNested, Primitive_option.some(undefined));
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 30, characters 7-14", mapValue(2), 3);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 31, characters 7-14", mapValue(undefined), undefined);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 32, characters 7-14", flatMapValue(2), 4);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 33, characters 7-14", flatMapValue(undefined), undefined);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 28, characters 7-14", mapped, 3);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 29, characters 7-14", flatMapped, 4);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 30, characters 7-14", mappedNested, Primitive_option.some(undefined));
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 31, characters 7-14", mapValue(2), 3);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 32, characters 7-14", mapValue(undefined), undefined);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 33, characters 7-14", flatMapValue(2), 4);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 34, characters 7-14", flatMapValue(undefined), undefined);
     visited.push(5);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 35, characters 7-14", visited, [
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 36, characters 7-14", visited, [
       4,
       5
     ]);
   });
   Mocha.test("only marked exports are inlined", () => {
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 38, characters 7-14", 4, 4);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 39, characters 7-14", fromOrdinary, 4);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 39, characters 7-14", 4, 4);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 40, characters 7-14", fromOrdinary, 4);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 41, characters 7-14", fromCatch, "boom");
   });
   Mocha.test("additional Option helpers", () => {
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 42, characters 7-14", 4, 4);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 43, characters 7-14", undefined, undefined);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 44, characters 7-14", undefined, undefined);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 45, characters 7-14", 3, 3);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 46, characters 7-14", 0, 0);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 47, characters 7-14", 2, 2);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 44, characters 7-14", 4, 4);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 45, characters 7-14", undefined, undefined);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 46, characters 7-14", undefined, undefined);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 47, characters 7-14", 3, 3);
     Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 48, characters 7-14", 0, 0);
     Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 49, characters 7-14", 2, 2);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 50, characters 7-14", 3, 3);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 51, characters 7-14", true, true);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 52, characters 7-14", false, false);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 53, characters 7-14", false, false);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 54, characters 7-14", true, true);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 50, characters 7-14", 0, 0);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 51, characters 7-14", 2, 2);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 52, characters 7-14", 3, 3);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 53, characters 7-14", true, true);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 54, characters 7-14", false, false);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 55, characters 7-14", false, false);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 56, characters 7-14", true, true);
   });
   Mocha.test("eager fallback arguments", () => {
     let effects = [];
@@ -125,12 +138,12 @@ Mocha.describe("cross-module inline opt-in", () => {
       return 0;
     };
     getDefault();
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 70, characters 7-14", 2, 2);
-    mapDefault();
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 71, characters 7-14", 2, 2);
-    other();
     Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 72, characters 7-14", 2, 2);
-    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 73, characters 7-14", effects, [
+    mapDefault();
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 73, characters 7-14", 2, 2);
+    other();
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 74, characters 7-14", 2, 2);
+    Test_utils.eq("File \"cross_module_inline_opt_in_test.res\", line 75, characters 7-14", effects, [
       "getOr",
       "mapOr",
       "orElse"
@@ -157,5 +170,6 @@ export {
   visited,
   fromExport,
   fromOrdinary,
+  fromCatch,
 }
 /*  Not a pure module */

@@ -21,6 +21,7 @@ let _ = None->Option.forEach(_ => visited->Array.push(0))
 
 let fromExport = Cross_module_inline_export.apply(3, x => x + 1)
 let fromOrdinary = Cross_module_inline_export.ordinary(3, x => x + 1)
+let fromCatch = Cross_module_inline_export.catchMessage(() => JsError.throwWithMessage("boom"))
 
 describe("cross-module inline opt-in", () => {
   test("Option helpers", () => {
@@ -37,6 +38,7 @@ describe("cross-module inline opt-in", () => {
   test("only marked exports are inlined", () => {
     eq(__LOC__, fromExport, 4)
     eq(__LOC__, fromOrdinary, 4)
+    eq(__LOC__, fromCatch, Some("boom"))
   })
   test("additional Option helpers", () => {
     eq(__LOC__, filterValue(Some(4), x => x > 3), Some(4))
