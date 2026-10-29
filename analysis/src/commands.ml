@@ -301,11 +301,7 @@ let format ~source ~kind_file =
   in
 
   (* Keep a CRLF document's line endings, rather than return mixed ones *)
-  let restore_line_endings text =
-    if Res_line_endings.uses_crlf source then Res_line_endings.to_crlf text
-    else text
-  in
-  let source = Res_line_endings.to_lf source in
+  let newline = Res_line_endings.newline source in
 
   let result =
     match kind_file with
@@ -317,8 +313,8 @@ let format ~source ~kind_file =
       | true -> Error "Document has syntax errors"
       | false ->
         Ok
-          (Res_printer.print_implementation ~comments structure
-          |> restore_line_endings |> create_range))
+          (Res_printer.print_implementation ~newline ~comments structure
+          |> create_range))
     | Resi -> (
       let {Res_driver.parsetree = signature; comments; diagnostics} =
         Res_driver.parsing_engine.parse_interface_from_source ~source
@@ -327,8 +323,8 @@ let format ~source ~kind_file =
       | true -> Error "Document has syntax errors"
       | false ->
         Ok
-          (Res_printer.print_interface ~comments signature
-          |> restore_line_endings |> create_range))
+          (Res_printer.print_interface ~newline ~comments signature
+          |> create_range))
     | Other -> Error "Failed to format, file not supported"
   in
 

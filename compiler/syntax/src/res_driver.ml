@@ -151,16 +151,16 @@ let parse_interface_from_source ~display_filename ~source =
     comments = List.rev engine.comments;
   }
 
-let print_engine =
+let print_engine ~newline =
   {
     print_implementation =
       (fun ~width ~filename:_ ~comments structure ->
         Compiler_request_output.write_stdout_binary
-          (Res_printer.print_implementation ~width structure ~comments));
+          (Res_printer.print_implementation ~width ~newline structure ~comments));
     print_interface =
       (fun ~width ~filename:_ ~comments signature ->
         Compiler_request_output.write_stdout_binary
-          (Res_printer.print_interface ~width signature ~comments));
+          (Res_printer.print_interface ~width ~newline signature ~comments));
   }
 
 exception Already_reported

@@ -57,7 +57,11 @@ val has_pending_line_suffix : t -> bool
     count as flat. Text after [doc] on the same line would precede the
     comment. *)
 
-val to_string : width:int -> t -> string
+val to_string : ?newline:string -> width:int -> t -> string
+(** [to_string ~newline ~width doc] writes the line breaks of [doc] as
+    [newline] (default LF). A [literal_line] is part of a literal's contents
+    and stays LF. *)
+
 val debug : t -> unit
 
 val is_nil : t -> bool
