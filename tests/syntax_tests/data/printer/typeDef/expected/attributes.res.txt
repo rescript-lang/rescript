@@ -23,8 +23,7 @@ type t = {
   email: string,
   name: string,
 }
-/** doc */
-@attr type t = {x: int}
+@attr /** doc */ type t = {x: int}
 @attr type t = ..
 /** doc */
 type t = {x: int}
@@ -32,11 +31,10 @@ type t = {x: int}
 type t = ..
 /** doc */
 @attr type t = {x: int}
-/** doc */
-@attr @attr2 type t = ..
-/** doc */
-@outer
-type t = {/* c1 */ /* c2 */ x: int} // trail
+@attr /** doc */ @attr2 type t = ..
+/** d1 */
+@attr /** d2 */ type t = {x: int}
+@outer /** doc */ type t = {/* c1 */ /* c2 */ x: int} // trail
 type t =
   /** doc */
   | A

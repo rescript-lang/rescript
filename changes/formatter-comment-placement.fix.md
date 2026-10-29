@@ -1,0 +1,1 @@
+- Fix the formatter's placement of a doc comment on a single hugged parameter, of doc comments after an attribute, and of a comment before a list's tail spread, and the extra newline after a file with only a line comment.

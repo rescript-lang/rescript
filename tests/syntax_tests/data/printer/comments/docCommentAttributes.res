@@ -19,3 +19,15 @@ Normal comment Normal comment Normal comment Normal comment Normal comment
 */
 @a @b
 external f: unit => unit = "f"
+
+// A doc comment after an attribute stays after it
+@a /** Doc comment */ @b
+external f: unit => unit = "f"
+
+/** Doc comment 1 */ @a /** Doc comment 2 */
+let x = 1
+
+type t = | @a /** Doc comment */ A | B
+type r = {@a /** Doc comment */ x: int}
+type p = [@a /** Doc comment */ #A | #B]
+type q = @a /** Doc comment */ int

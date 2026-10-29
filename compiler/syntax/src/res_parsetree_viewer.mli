@@ -80,6 +80,9 @@ val should_indent_binary_expr : Parsetree.expression -> bool
 val should_inline_rhs_binary_expr : Parsetree.expression -> bool
 val mod_expr_has_attributes : Parsetree.module_expr -> bool
 val is_doc_comment_attribute : Parsetree.attribute -> bool
+
+(* The doc comments before every other attribute, and the attributes after
+   them, which may include later doc comments *)
 val partition_doc_comment_attributes :
   Parsetree.attributes -> Parsetree.attributes * Parsetree.attributes
 
