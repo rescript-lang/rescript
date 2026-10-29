@@ -66,6 +66,7 @@ let py = p.x
 module WithModType = (O: Ord) => {
   module type S = {
     let value: int
+    //  ^ref
   }
   module Nested: S = {
     let value = 1
@@ -79,3 +80,68 @@ let nv = Applied.Nested.value
 
 // let nv2 = Applied.Nested.
 //                          ^com
+
+let nv3 = Applied.Nested.value
+//                       ^ren renamed
+
+module WithDeepModType = (O: Ord) => {
+  module Outer = {
+    module type T = {
+      module Inner: {
+        let deep: int
+        //  ^ref
+      }
+      module type Abstract
+    }
+    module First: T = {
+      module Inner = {
+        let deep = 1
+      }
+      module type Abstract = {}
+    }
+    module Second: T = {
+      module Inner = {
+        let deep = 2
+      }
+      module type Abstract = {}
+    }
+  }
+}
+
+module Deep = WithDeepModType(IntOrd)
+
+let d1 = Deep.Outer.First.Inner.deep
+let d2 = Deep.Outer.Second.Inner.deep
+//                               ^ref
+
+module type WithSig = {
+  module type S = {
+    let sigValue: int
+    //  ^ref
+  }
+  module Nested: S
+}
+
+module WithSigResult = (O: Ord): WithSig => {
+  module type S = {
+    let sigValue: int
+  }
+  module Nested = {
+    let sigValue = 1
+  }
+}
+
+module AppliedSig = WithSigResult(IntOrd)
+
+let sv = AppliedSig.Nested.sigValue
+//                         ^ref
+
+module UseAppliedModType = (X: Applied.S) => {
+  let v = X.value
+  //        ^ref
+}
+
+module UseDeepModType = (Y: Deep.Outer.T) => {
+  let d = Y.Inner.deep
+  //              ^ref
+}

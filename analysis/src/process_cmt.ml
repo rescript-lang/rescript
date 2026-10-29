@@ -227,11 +227,15 @@ let rec record_renamed_stamps table (original : Types.module_type)
           match (item, renamed_item) with
           | Sig_value (id, _), Sig_value (id', _)
           | Sig_type (id, _, _), Sig_type (id', _, _)
-          | Sig_typext (id, _, _), Sig_typext (id', _, _)
-          | Sig_modtype (id, _), Sig_modtype (id', _) ->
+          | Sig_typext (id, _, _), Sig_typext (id', _, _) ->
             Some (id, id')
           | Sig_module (id, md, _), Sig_module (id', md', _) ->
             record_renamed_stamps table md.md_type md'.md_type;
+            Some (id, id')
+          | Sig_modtype (id, mtd), Sig_modtype (id', mtd') ->
+            (match (mtd.mtd_type, mtd'.mtd_type) with
+            | Some mty, Some mty' -> record_renamed_stamps table mty mty'
+            | _ -> ());
             Some (id, id')
           | _ -> None
         in
