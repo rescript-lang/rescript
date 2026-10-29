@@ -1659,6 +1659,11 @@ and parse_list_pattern ~start_pos ~attrs p =
     else pattern
   in
   match list_patterns with
+  | [(true, pattern)] ->
+    (* [list{...p}] is [p] itself. Like [list{...e}] in expressions, it keeps
+       the location of [p], so that the comments around the spread stay
+       outside it and are printed with [p]. *)
+    {pattern with ppat_attributes = attrs}
   | (true, pattern) :: patterns ->
     let patterns = patterns |> List.map filter_spread |> List.rev in
     let pat = make_list_pattern loc patterns (Some pattern) in
