@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/coercion_into_private_record.res[0m:[2m12:35-45[0m
+
+  10 [2m│[0m 
+  11 [2m│[0m // A plain record coerced into a private one: constructs a Blob.t from 
+     [2m│[0m outside
+  [1;31m12[0m [2m│[0m let fake = (p: plain): Blob.t => ([1;31mp :> Blob.t[0m)
+  13 [2m│[0m let s = Blob.size(fake({size: 1.}))
+  14 [2m│[0m 
+
+  Type plain is not a subtype of Blob.t 
+
+  [1;33mBlob.t[0m is private: its values can only be built in the module that defines it, so another type cannot be coerced to it.

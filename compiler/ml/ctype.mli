@@ -51,6 +51,9 @@ type subtype_context =
       right_record_name: Path.t;
       issues: Record_coercion.record_field_subtype_violation list;
     }  (** Records have fields that are not compatible. *)
+  | Coercion_into_private_type of {typename: Path.t}
+      (** The target is a private record or variant, whose values only its own
+          module can build. *)
 
 type type_pairs = (type_expr * type_expr) list
 exception Unify of type_pairs

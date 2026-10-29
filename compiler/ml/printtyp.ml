@@ -1789,7 +1789,12 @@ let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
               fprintf ppf "@ - ";
               print_record_field_subtype_violation ppf issue ~left_record_name
                 ~right_record_name)
-            issues)
+            issues
+        | Coercion_into_private_type {typename} ->
+          fprintf ppf
+            "@ @{<info>%s@} is private: its values can only be built in the \
+             module that defines it, so another type cannot be coerced to it."
+            (Path.name typename))
       | None -> ())
 
 let report_ambiguous_type_error ppf env (tp0, tp0') tpl txt1 txt2 txt3 =

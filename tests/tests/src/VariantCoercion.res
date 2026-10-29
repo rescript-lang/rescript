@@ -150,3 +150,19 @@ module CoerceVariantBinaryOp = {
 
   let z = (X :> float) +. (Y :> float) +. 1.5
 }
+
+// A private variant coerces out of itself, but nothing coerces into it from
+// another type
+module PrivateColor: {
+  type t = private Red | Green
+  let red: t
+} = {
+  type t = Red | Green
+  let red = Red
+}
+
+type plainColor = Red | Green
+
+let colorToPlain = (c: PrivateColor.t): plainColor => (c :> plainColor)
+let colorToString = (c: PrivateColor.t) => (c :> string)
+let redName = colorToString(PrivateColor.red)

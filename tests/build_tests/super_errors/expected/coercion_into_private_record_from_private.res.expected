@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/coercion_into_private_record_from_private.res[0m:[2m16:15-37[0m
+
+  14 [2m│[0m }
+  15 [2m│[0m 
+  [1;31m16[0m [2m│[0m let forged = ([1;31mFake.make(1.) :> Blob.t[0m)
+  17 [2m│[0m 
+
+  Type Fake.t is not a subtype of Blob.t 
+
+  [1;33mBlob.t[0m is private: its values can only be built in the module that defines it, so another type cannot be coerced to it.
