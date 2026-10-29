@@ -361,36 +361,31 @@ let extract_function_type2 ?type_arg_context ~state ~env ~package typ =
   in
   loop ?type_arg_context ~env [] typ
 
-(* The file being edited, the module path at the cursor and the modules
-   opened there, most recent first, while a completion request runs.
-   Extension constructors are named relative to it: unlike ordinary
-   constructors they can't be found from the expected type, so they have to
-   be written so that they are in scope there. *)
+(* The file being edited, the module path at the cursor and the scope there,
+   while a completion request runs. Extension constructors are named
+   relative to it: unlike ordinary constructors they can't be found from the
+   expected type, so they have to be written so that they are in scope
+   there. *)
 let completion_scope :
-    (File.t * string list * Pos.t * string list list) option ref =
+    (File.t * string list * Pos.t * Scope_types.item list) option ref =
   ref None
 
-let with_completion_scope ~file ~module_path ~pos ~opens f =
+let with_completion_scope ~file ~module_path ~pos ~scope f =
   let previous = !completion_scope in
-  completion_scope := Some (file, module_path, pos, opens);
+  completion_scope := Some (file, module_path, pos, scope);
   Fun.protect ~finally:(fun () -> completion_scope := previous) f
 
 (* The constructor written [path] in a payload position, with the
-   environment its payload is typed in. Extension constructors are named by
-   their module path, so the one sharing the longest suffix with [path] is
-   meant. Of several equally good ones, the one that came into scope last
-   wins: through the most recent open naming its unwritten qualifier, else
-   with nothing left unwritten, the last declared shadowing the others. *)
-let find_payload_constructor ~env ~constructors ~extension_envs path =
-  let opens =
-    match !completion_scope with
-    | Some (_, _, _, opens) -> opens
-    | None -> []
-  in
-  let rec common_suffix a b =
-    match (a, b) with
-    | x :: a, y :: b when x = y -> 1 + common_suffix a b
-    | _ -> 0
+   environment its payload is typed in. An ordinary constructor is found by
+   its name. An extension constructor is named by its module path from the
+   cursor: written qualified, it is the one that path names; unqualified, it
+   is looked up in the scope at the cursor as the compiler does, the most
+   recent declaration or open bringing a constructor of that name and type
+   into scope. *)
+let find_payload_constructor ~(env : Query_env.t) ~constructors ~extension_envs
+    path =
+  let with_env c =
+    (c, List.assq_opt c extension_envs |> Option.value ~default:env)
   in
   let rec ends_with l suffix =
     l = suffix
@@ -399,49 +394,50 @@ let find_payload_constructor ~env ~constructors ~extension_envs path =
     | _ :: l -> ends_with l suffix
     | [] -> false
   in
-  let written = List.rev path in
-  let scored =
+  let parts (c : Constructor.t) = String.split_on_char '.' c.cname.txt in
+  (* The constructors [path] names, possibly from an opened module, or
+     written from further out than the cursor. *)
+  let named path =
     constructors
-    |> List.map (fun (c : Constructor.t) ->
-        let parts = List.rev (String.split_on_char '.' c.cname.txt) in
-        let score = common_suffix parts written in
-        let qualifier = List.rev (List.filteri (fun i _ -> i >= score) parts) in
-        (c, score, qualifier))
+    |> List.filter (fun c ->
+        ends_with (parts c) path || ends_with path (parts c))
   in
-  let best = List.fold_left (fun m (_, score, _) -> max m score) 0 scored in
-  let candidates =
-    scored |> List.filter (fun (_, score, _) -> best > 0 && score = best)
-  in
-  (* How recently the constructor came into scope: the position in [opens]
-     of the module its unwritten qualifier names, or after all opens when
-     nothing is left unwritten. *)
-  let scope_rank qualifier =
-    let rec find i = function
-      | [] -> None
-      | o :: opens ->
-        if ends_with qualifier o || ends_with o qualifier then Some i
-        else find (i + 1) opens
-    in
-    if qualifier = [] then Some (List.length opens) else find 0 opens
-  in
-  let in_scope =
-    candidates
-    |> List.fold_left
-         (fun found (c, _, qualifier) ->
-           match (found, scope_rank qualifier) with
-           | Some (best, _), Some rank when rank <= best -> Some (rank, c)
-           | None, Some rank -> Some (rank, c)
-           | found, _ -> found)
-         None
-  in
+  let exact path = constructors |> List.find_opt (fun c -> parts c = path) in
+  let last l = List.nth_opt l (List.length l - 1) in
   let found =
-    match (in_scope, List.rev candidates) with
-    | Some (_, c), _ | None, (c, _, _) :: _ -> Some c
-    | None, [] -> None
+    match (extension_envs, path, !completion_scope) with
+    | [], _, _ ->
+      constructors
+      |> List.find_opt (fun (c : Constructor.t) -> Some c.cname.txt = last path)
+    | _, [name], Some ((file : File.t), _, _, scope) ->
+      let declared_at loc (c : Constructor.t) =
+        (snd (with_env c) : Query_env.t).file.uri = file.uri
+        && Loc.has_pos ~pos:(Loc.start c.cname.loc) loc
+      in
+      let rec lookup (scope : Scope_types.item list) =
+        match scope with
+        | [] -> exact path
+        | Constructor (n, loc) :: scope when n = name -> (
+          match constructors |> List.find_opt (declared_at loc) with
+          | Some c -> Some c
+          | None -> lookup scope)
+        | Open opened :: scope -> (
+          (* A raw open ends in a placeholder for the name it qualifies. *)
+          let opened =
+            List.filteri (fun i _ -> i < List.length opened - 1) opened
+          in
+          match last (named (opened @ path)) with
+          | Some c -> Some c
+          | None -> lookup scope)
+        | _ :: scope -> lookup scope
+      in
+      lookup scope
+    | _ -> (
+      match exact path with
+      | Some c -> Some c
+      | None -> last (named path))
   in
-  found
-  |> Option.map (fun c ->
-      (c, List.assq_opt c extension_envs |> Option.value ~default:env))
+  found |> Option.map with_env
 
 (* The stamp under which [typ] is declared in [file]. *)
 let type_stamp (file : File.t) (typ : Type.t) =
@@ -464,6 +460,14 @@ let extension_constructors ~state ~package ~(current_file : File.t)
     match !completion_scope with
     | Some (file, module_path, pos, _) -> (file, module_path, Some pos)
     | None -> (current_file, [], None)
+  in
+  (* An extension in a module type declares no constructor. *)
+  let rec in_module_type (path : Module_path.t) =
+    match path with
+    | ExportedModule {is_type = true} -> true
+    | ExportedModule {module_path} | IncludedModule (_, module_path) ->
+      in_module_type module_path
+    | File _ | NotVisible -> false
   in
   (* An extension of the edited file is in scope from its declaration on. *)
   let declared_before_cursor (file : File.t) (declared : _ Declared.t) =
@@ -502,6 +506,7 @@ let extension_constructors ~state ~package ~(current_file : File.t)
                name = type_name
                && ext_decl.type_kind = Type_open
                && declared_before_cursor file declared
+               && (not (in_module_type declared.module_path))
                && extends file ext_decl
              then Hashtbl.replace found (file.uri, stamp) (file, declared)));
   Hashtbl.to_seq_values found
