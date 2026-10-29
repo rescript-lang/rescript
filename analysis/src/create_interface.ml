@@ -124,6 +124,29 @@ let declared_in ~path ~functors ~(scope : Location.t option) (loc : Location.t)
   | Some scope when loc_within ~outer:scope loc -> true
   | _ -> not (List.exists (fun outer -> loc_within ~outer loc) functors)
 
+(* A declaration's location starts at [type], after the attributes written
+   in front of it, such as [@tag("kind")] or a doc comment: the position of
+   the first of those, when it comes before [pos_start]. An attribute's
+   location may start at its name, after the [@]. *)
+let attributes_start ~extractor (type_decl : Types.type_declaration) pos_start =
+  type_decl.type_attributes
+  |> List.fold_left
+       (fun pos_start (({loc}, _) : Parsetree.attribute) ->
+         if loc.loc_ghost then pos_start
+         else
+           let line, col = Loc.start loc in
+           let col =
+             if
+               col > 0
+               && line < Array.length extractor
+               && col <= String.length extractor.(line)
+               && extractor.(line).[col - 1] = '@'
+             then col - 1
+             else col
+           in
+           min pos_start (line, col))
+       pos_start
+
 let print_signature ~path ~extractor ~signature =
   Printtyp.reset_names ();
   let functors = functor_locs signature in
@@ -280,6 +303,7 @@ let print_signature ~path ~extractor ~signature =
       (if declared_in ~path ~functors ~scope type_decl.type_loc then
          let lines =
            let pos_start, pos_end = Loc.range type_decl.type_loc in
+           let pos_start = attributes_start ~extractor type_decl pos_start in
            extractor |> Source_file_extractor.extract ~pos_start ~pos_end
          in
          (* Copy the type declaration verbatim to preserve attributes *)

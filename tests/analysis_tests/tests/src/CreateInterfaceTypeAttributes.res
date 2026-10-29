@@ -1,0 +1,15 @@
+// ^int
+
+@tag("kind") type tagged = A(int) | B({x: int})
+
+@unboxed type num = Int(int) | Str(string)
+
+/** A documented type */
+type documented = int
+
+module M = {
+  @tag("t") type inner = C(int)
+}
+
+type rec tree = Leaf | Node(forest)
+and forest = array<tree>
