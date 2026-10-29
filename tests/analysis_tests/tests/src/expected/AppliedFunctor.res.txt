@@ -223,3 +223,16 @@ Rename src/AppliedFunctor.res 62:11 y
   }
 ]
 
+Hover src/AppliedFunctor.res 76:24
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
+
+Complete src/AppliedFunctor.res 79:28
+pos_cursor:[79:28] pos_no_white:[79:27] Found expr:[79:13->79:28]
+Pexp_ident Applied.Nested.:[79:13->79:28]
+Completable: Cpath Value[Applied, Nested, ""]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Applied, Nested, ""]
+Path Applied.Nested.
+[ { "detail": "int", "kind": 12, "label": "value", "tags": [] } ]
+

@@ -62,3 +62,20 @@ let shape = Shapes.Box(1)
 
 let py = p.x
 //         ^ren y
+
+module WithModType = (O: Ord) => {
+  module type S = {
+    let value: int
+  }
+  module Nested: S = {
+    let value = 1
+  }
+}
+
+module Applied = WithModType(IntOrd)
+
+let nv = Applied.Nested.value
+//                      ^hov
+
+// let nv2 = Applied.Nested.
+//                          ^com
