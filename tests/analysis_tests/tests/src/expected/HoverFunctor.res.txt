@@ -46,3 +46,43 @@ Hover src/HoverFunctor.res 36:9
   }
 }
 
+Hover src/HoverFunctor.res 45:7
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule Gen: (P: Primitive, ()) => {\n  type t = P.t\n}\n```"
+  }
+}
+
+Hover src/HoverFunctor.res 50:9
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule GenFirst: ((), P: Primitive) => {\n  type t = P.t\n}\n```"
+  }
+}
+
+Hover src/HoverFunctor.res 55:9
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule Curried: (A: Ord, B: Ord) => {\n  type t = (A.t, B.t)\n}\n```"
+  }
+}
+
+Hover src/HoverFunctor.res 60:9
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule GenCurried: ((), P: Primitive) => {\n  type t = P.t\n}\n```"
+  }
+}
+
+Hover src/HoverFunctor.res 65:8
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule GenApplied: () => {\n  type t = IntOrd.t\n}\n```"
+  }
+}
+

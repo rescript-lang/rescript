@@ -50,10 +50,10 @@ let module_type_to_string (mty : Types.module_type) =
   | Mty_functor _ -> "{...}"
 
 (* A functor parameter as hover shows it, such as [O: Ord]; a generative
-   functor's [*] parameter shows as nothing, giving [() => ...]. *)
+   functor's [*] parameter shows as [()]. *)
 let functor_param ~name (mty : Types.module_type option) =
   match (name, mty) with
-  | "*", _ -> ""
+  | "*", _ -> "()"
   | _, None -> name
   | _, Some mty -> name ^ ": " ^ module_type_to_string mty
 
