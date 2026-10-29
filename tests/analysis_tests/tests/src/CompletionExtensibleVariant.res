@@ -2,7 +2,7 @@ type attr = ..
 type attr += Str(string) | Num(int)
 
 module Sub = {
-  type attr += Flag
+  type attr += Flag | Toggle(bool)
   // Inside the declaring module the constructor is not qualified
   // let inside: attr = Fl
   //                      ^com
@@ -47,3 +47,7 @@ let a: A.t = A.FromA
 //                    ^com
 
 type attr += Later
+
+// Payload of a qualified extension constructor
+// let toggled: attr = Sub.Toggle(t
+//                                 ^com

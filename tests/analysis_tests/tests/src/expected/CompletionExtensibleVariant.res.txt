@@ -99,6 +99,18 @@ Path value
     "kind": 4,
     "label": "Sub.Flag",
     "tags": []
+  },
+  {
+    "detail": "Sub.Toggle(bool)",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSub.Toggle(bool)\n```\n\n```rescript\ntype attr = ..\n```"
+    },
+    "insertText": "Sub.Toggle(${1:_})",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Sub.Toggle(_)",
+    "tags": []
   }
 ]
 
@@ -114,7 +126,7 @@ Path valu
   {
     "detail": "insert exhaustive switch for value",
     "filterText": "value",
-    "insertText": "value {\n   | Str(_) => ${1:%todo}\n   | Num(_) => ${2:%todo}\n   | Sub.Flag => ${3:%todo}\n   | _ => ${4:%todo}\n   }",
+    "insertText": "value {\n   | Str(_) => ${1:%todo}\n   | Num(_) => ${2:%todo}\n   | Sub.Flag => ${3:%todo}\n   | Sub.Toggle(_) => ${4:%todo}\n   | _ => ${5:%todo}\n   }",
     "insertTextFormat": 2,
     "kind": 15,
     "label": "value (exhaustive switch)",
@@ -205,4 +217,31 @@ Resolved opens 1 Stdlib
 ContextPath Value[La]
 Path La
 [ { "detail": "module Lazy", "kind": 9, "label": "Lazy", "tags": [] } ]
+
+Complete src/CompletionExtensibleVariant.res 51:35
+XXX Not found!
+Completable: Cexpression Type[attr]=t->variantPayload::Toggle($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "bool",
+    "kind": 4,
+    "label": "true",
+    "sortText": "A true",
+    "tags": []
+  },
+  {
+    "detail": "'a => Type.t",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nIt helps you inspect values that come from JavaScript APIs.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"
+    },
+    "kind": 12,
+    "label": "typeof",
+    "tags": []
+  }
+]
 
