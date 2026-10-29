@@ -12,52 +12,64 @@ let add_reference ~extra stamp loc =
        Hashtbl.find extra.internal_references stamp
      else []))
 
+(* Items read from another file's signature, such as those of a functor
+   applied from that file, have that file's locations, so they declare
+   nothing at those positions of this file. *)
+let declared_in_file ~(file : File.t) (d : _ Declared.t) =
+  let source = d.extent_loc.loc_start.pos_fname in
+  d.extent_loc.loc_ghost || source = ""
+  || Filename.basename source = Filename.basename (Lsp.Uri.to_path file.uri)
+
 let extra_for_file ~(file : File.t) =
   let extra = init_extra () in
   file.stamps
   |> Stamps.iter_modules (fun stamp (d : Module.t Declared.t) ->
-      add_loc_item extra d.name.loc (LModule (Definition (stamp, Module)));
-      add_reference ~extra stamp d.name.loc);
+      if declared_in_file ~file d then (
+        add_loc_item extra d.name.loc (LModule (Definition (stamp, Module)));
+        add_reference ~extra stamp d.name.loc));
   file.stamps
   |> Stamps.iter_values (fun stamp (d : Types.type_expr Declared.t) ->
-      add_loc_item extra d.name.loc
-        (Typed (d.name.txt, d.item, Definition (stamp, Value)));
-      add_reference ~extra stamp d.name.loc);
+      if declared_in_file ~file d then (
+        add_loc_item extra d.name.loc
+          (Typed (d.name.txt, d.item, Definition (stamp, Value)));
+        add_reference ~extra stamp d.name.loc));
   file.stamps
   |> Stamps.iter_types (fun stamp (d : Type.t Declared.t) ->
-      add_loc_item extra d.name.loc
-        (TypeDefinition (d.name.txt, d.item.Type.decl, stamp));
-      add_reference ~extra stamp d.name.loc;
-      match d.item.Type.kind with
-      (* Fields and constructors of a type read from a signature, such as
+      if declared_in_file ~file d then (
+        add_loc_item extra d.name.loc
+          (TypeDefinition (d.name.txt, d.item.Type.decl, stamp));
+        add_reference ~extra stamp d.name.loc;
+        match d.item.Type.kind with
+        (* Fields and constructors of a type read from a signature, such as
          an applied functor's, have no location of their own; references
          to them are those of the declarations they come from. *)
-      | Record labels ->
-        labels
-        |> List.filter (fun {fname} -> not fname.loc.loc_ghost)
-        |> List.iter (fun {stamp; fname; typ} ->
-            add_reference ~extra stamp fname.loc;
-            add_loc_item extra fname.loc
-              (Typed (d.name.txt, typ, Definition (d.stamp, Field fname.txt))))
-      | Variant constructors ->
-        constructors
-        |> List.filter (fun {Constructor.cname} -> not cname.loc.loc_ghost)
-        |> List.iter (fun {Constructor.stamp; cname} ->
-            add_reference ~extra stamp cname.loc;
-            let t =
-              {
-                Types.id = 0;
-                level = 0;
-                desc =
-                  Tconstr
-                    ( Path.Pident {Ident.stamp; name = d.name.txt; flags = 0},
-                      [],
-                      ref Types.Mnil );
-              }
-            in
-            add_loc_item extra cname.loc
-              (Typed (d.name.txt, t, Definition (d.stamp, Constructor cname.txt))))
-      | _ -> ());
+        | Record labels ->
+          labels
+          |> List.filter (fun {fname} -> not fname.loc.loc_ghost)
+          |> List.iter (fun {stamp; fname; typ} ->
+              add_reference ~extra stamp fname.loc;
+              add_loc_item extra fname.loc
+                (Typed (d.name.txt, typ, Definition (d.stamp, Field fname.txt))))
+        | Variant constructors ->
+          constructors
+          |> List.filter (fun {Constructor.cname} -> not cname.loc.loc_ghost)
+          |> List.iter (fun {Constructor.stamp; cname} ->
+              add_reference ~extra stamp cname.loc;
+              let t =
+                {
+                  Types.id = 0;
+                  level = 0;
+                  desc =
+                    Tconstr
+                      ( Path.Pident {Ident.stamp; name = d.name.txt; flags = 0},
+                        [],
+                        ref Types.Mnil );
+                }
+              in
+              add_loc_item extra cname.loc
+                (Typed
+                   (d.name.txt, t, Definition (d.stamp, Constructor cname.txt))))
+        | _ -> ()));
   extra
 
 let add_external_reference ~extra module_name path tip loc =
