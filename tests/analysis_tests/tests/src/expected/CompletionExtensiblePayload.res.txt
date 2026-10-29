@@ -889,3 +889,368 @@ Path v
   }
 ]
 
+Complete src/CompletionExtensiblePayload.res 106:23
+XXX Not found!
+Completable: Cexpression Type[attr]->variantPayload::Value($0)
+Raw opens: 2 B.place holder ... A.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 3 Stdlib CompletionExtensiblePayload CompletionExtensiblePayload
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "Small",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSmall\n```\n\n```rescript\ntype size = Small | Large\n```"
+    },
+    "insertText": "Small",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Small",
+    "tags": []
+  },
+  {
+    "detail": "Large",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nLarge\n```\n\n```rescript\ntype size = Small | Large\n```"
+    },
+    "insertText": "Large",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Large",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 109:22
+pos_cursor:[109:22] pos_no_white:[109:21] Found pattern:[109:16->109:23]
+Ppat_construct Value:[109:16->109:21]
+pos_cursor:[109:22] pos_no_white:[109:21] Found pattern:[109:21->109:23]
+Ppat_construct ():[109:21->109:23]
+Completable: Cpattern Value[v]->variantPayload::Value($0)
+Raw opens: 2 B.place holder ... A.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 3 Stdlib CompletionExtensiblePayload CompletionExtensiblePayload
+ContextPath Value[v]
+Path v
+[
+  {
+    "detail": "Small",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSmall\n```\n\n```rescript\ntype size = Small | Large\n```"
+    },
+    "insertText": "Small",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Small",
+    "tags": []
+  },
+  {
+    "detail": "Large",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nLarge\n```\n\n```rescript\ntype size = Small | Large\n```"
+    },
+    "insertText": "Large",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Large",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 117:18
+XXX Not found!
+Completable: Cexpression Type[attr]=P
+Raw opens: 2 B.place holder ... A.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 3 Stdlib CompletionExtensiblePayload CompletionExtensiblePayload
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "Pair(color, CompletionExtensiblePayloadBase.shape)",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nPair(color, CompletionExtensiblePayloadBase.shape)\n```\n\n```rescript\ntype attr = ..\n```"
+    },
+    "insertText": "Pair(${1:_}, ${2:_})",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Pair(_, _)",
+    "sortText": "A Pair(_, _)",
+    "tags": []
+  },
+  { "detail": "module Promise", "kind": 9, "label": "Promise", "tags": [] },
+  { "detail": "module Pair", "kind": 9, "label": "Pair", "tags": [] },
+  {
+    "data": {
+      "modulePath": "Patterns",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Patterns",
+    "kind": 9,
+    "label": "Patterns",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Pervasives",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Pervasives",
+    "kind": 9,
+    "label": "Pervasives",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "PolyRec",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module PolyRec",
+    "kind": 9,
+    "label": "PolyRec",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "PrepareRename",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module PrepareRename",
+    "kind": 9,
+    "label": "PrepareRename",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_array",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_array",
+    "kind": 9,
+    "label": "Primitive_array",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_array_extern",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_array_extern",
+    "kind": 9,
+    "label": "Primitive_array_extern",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_bigint",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_bigint",
+    "kind": 9,
+    "label": "Primitive_bigint",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_bool",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_bool",
+    "kind": 9,
+    "label": "Primitive_bool",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_dict",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_dict",
+    "kind": 9,
+    "label": "Primitive_dict",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_exceptions",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_exceptions",
+    "kind": 9,
+    "label": "Primitive_exceptions",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_float",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_float",
+    "kind": 9,
+    "label": "Primitive_float",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_float_extern",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_float_extern",
+    "kind": 9,
+    "label": "Primitive_float_extern",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_hash",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_hash",
+    "kind": 9,
+    "label": "Primitive_hash",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_int",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_int",
+    "kind": 9,
+    "label": "Primitive_int",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_int_extern",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_int_extern",
+    "kind": 9,
+    "label": "Primitive_int_extern",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_js_extern",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_js_extern",
+    "kind": 9,
+    "label": "Primitive_js_extern",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_list",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_list",
+    "kind": 9,
+    "label": "Primitive_list",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_module",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_module",
+    "kind": 9,
+    "label": "Primitive_module",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_object",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_object",
+    "kind": 9,
+    "label": "Primitive_object",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_object_extern",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_object_extern",
+    "kind": 9,
+    "label": "Primitive_object_extern",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_option",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_option",
+    "kind": 9,
+    "label": "Primitive_option",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_promise",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_promise",
+    "kind": 9,
+    "label": "Primitive_promise",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_string",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_string",
+    "kind": 9,
+    "label": "Primitive_string",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "Primitive_string_extern",
+      "filePath": "src/CompletionExtensiblePayload.res"
+    },
+    "detail": "module Primitive_string_extern",
+    "kind": 9,
+    "label": "Primitive_string_extern",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensiblePayload.res 120:11
+XXX Not found!
+Completable: CexhaustiveSwitch Value[v]
+Raw opens: 2 B.place holder ... A.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 3 Stdlib CompletionExtensiblePayload CompletionExtensiblePayload
+ContextPath Value[v]
+Path v
+[
+  {
+    "detail": "CompletionExtensiblePayloadBase.attr",
+    "kind": 12,
+    "label": "v",
+    "tags": []
+  },
+  {
+    "detail": "insert exhaustive switch for value",
+    "filterText": "v",
+    "insertText": "v {\n   | Color(_) => ${1:%todo}\n   | Boxed(_) => ${2:%todo}\n   | Wrapped(_) => ${3:%todo}\n   | Pair(_) => ${4:%todo}\n   | Sized(_) => ${5:%todo}\n   | A.Value(_) => ${6:%todo}\n   | B.Value(_) => ${7:%todo}\n   | M.InM(_) => ${8:%todo}\n   | Value(_) => ${9:%todo}\n   | CompletionExtensiblePayloadBase.Value(_) => ${10:%todo}\n   | CompletionExtensiblePayloadBase.Shaped(_) => ${11:%todo}\n   | _ => ${12:%todo}\n   }",
+    "insertTextFormat": 2,
+    "kind": 15,
+    "label": "v (exhaustive switch)",
+    "tags": []
+  }
+]
+
