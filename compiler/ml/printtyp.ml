@@ -1300,16 +1300,31 @@ let rec mismatch = function
   | [] -> None
   | _ -> assert false
 
+let escape_explanation ppf p =
+  match p with
+  | Pident id -> (
+    match Ctype.existential_constructor id with
+    | Some constructor ->
+      fprintf ppf
+        "@,\
+         @[%s is an existential type bound by the constructor %s.@ It is only \
+         known in the scope of the pattern that matches %s.@]"
+        (Ident.name id) constructor constructor
+    | None ->
+      fprintf ppf "@,@[The type constructor@;<1 2>%a@ would escape its scope@]"
+        path p)
+  | _ ->
+    fprintf ppf "@,@[The type constructor@;<1 2>%a@ would escape its scope@]"
+      path p
+
 let explanation unif t3 t4 ppf =
   match (t3.desc, t4.desc) with
   | Ttuple [], Tvar _ | Tvar _, Ttuple [] ->
     fprintf ppf "@,Self type cannot escape its class"
   | Tconstr (p, _, _), Tvar _ when unif && t4.level < Path.binding_time p ->
-    fprintf ppf "@,@[The type constructor@;<1 2>%a@ would escape its scope@]"
-      path p
+    escape_explanation ppf p
   | Tvar _, Tconstr (p, _, _) when unif && t3.level < Path.binding_time p ->
-    fprintf ppf "@,@[The type constructor@;<1 2>%a@ would escape its scope@]"
-      path p
+    escape_explanation ppf p
   | Tvar _, Tunivar _ | Tunivar _, Tvar _ ->
     fprintf ppf "@,The universal variable %a would escape its scope" type_expr
       (if is_Tunivar t3 then t3 else t4)
