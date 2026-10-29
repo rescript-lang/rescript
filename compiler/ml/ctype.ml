@@ -87,6 +87,7 @@ type subtype_context =
       right_record_name: Path.t;
       issues: Record_coercion.record_field_subtype_violation list;
     }
+  | Coercion_into_private_type of {typename: Path.t}
 
 exception Subtype of type_pairs * type_pairs * subtype_context option
 
@@ -3500,6 +3501,20 @@ let extract_concrete_typedecl_opt env t =
   | v -> Some v
   | exception Not_found -> None
 
+(* Whether [t2] is a private record or variant that [t1], another type, would
+   be coerced into *)
+let coerces_into_private_type env t1 t2 =
+  match extract_concrete_typedecl_opt env t2 with
+  | Some
+      ( p2,
+        _,
+        {type_private = Private; type_kind = Type_record _ | Type_variant _} )
+    -> (
+    match extract_concrete_typedecl_opt env t1 with
+    | Some (p1, _, _) -> not (Path.same p1 p2)
+    | None -> true)
+  | Some _ | None -> false
+
 let rec subtype_rec env trace t1 t2 cstrs =
   let t1 = repr t1 in
   let t2 = repr t2 in
@@ -3564,6 +3579,20 @@ let rec subtype_rec env trace t1 t2 cstrs =
           (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
       | Tconstr (p1, _, _), _ when generic_private_abbrev env p1 ->
         subtype_rec env trace (expand_abbrev_opt env t1) t2 cstrs
+      | _, Tconstr _ when coerces_into_private_type env t1 t2 ->
+        (* Only the module defining a private record or variant builds its
+           values; a coercion from another type would build one anywhere *)
+        let typename =
+          match extract_concrete_typedecl_opt env t2 with
+          | Some (p2, _, _) -> p2
+          | None -> assert false
+        in
+        ( trace,
+          t1,
+          t2,
+          !(current_univar_pairs ()),
+          Some (Coercion_into_private_type {typename}) )
+        :: cstrs
       | Tconstr (p1, [], _), Tconstr (p2, [], _)
         when Path.same p1 Predef.path_int && Path.same p2 Predef.path_float ->
         (* Int can always be coerced to float *)
