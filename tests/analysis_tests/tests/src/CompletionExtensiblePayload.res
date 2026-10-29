@@ -100,3 +100,23 @@ open B
 
 // switch v { | Value() }
 //                    ^com
+
+// A local declaration after an open shadows the opened constructor
+type CompletionExtensiblePayloadBase.attr += Value(CompletionExtensiblePayloadThird.size)
+
+// let x: attr = Value()
+//                     ^com
+
+// switch v { | Value() }
+//                    ^com
+
+// An extension in a module type declares no constructor
+module type S = {
+  type CompletionExtensiblePayloadBase.attr += Phantom
+}
+
+// let x: attr = P
+//                ^com
+
+// switch v
+//         ^com
