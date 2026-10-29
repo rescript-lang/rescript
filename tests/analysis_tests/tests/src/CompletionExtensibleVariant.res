@@ -51,3 +51,21 @@ type attr += Later
 // Payload of a qualified extension constructor
 // let toggled: attr = Sub.Toggle(t
 //                                 ^com
+
+// Expanding the catch-all of an open type
+let _x = switch value {
+| Str(_) => "str"
+| _ => "other"
+//  ^xfm
+}
+
+let optValue = Some(value)
+let _y = switch optValue {
+| Some(Str(_)) => "str"
+| _ => "other"
+//  ^xfm
+}
+
+// An exhaustive switch of an open type
+// value
+// ^xfm^
