@@ -245,3 +245,71 @@ Path attr
   }
 ]
 
+Xform src/CompletionExtensibleVariant.res 57:4
+pos_cursor:[55:16] pos_no_white:[55:14] Found expr:[55:9->59:1]
+Completable: Cpath Value[value]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: CompletionExtensibleVariant.res
+{
+  "end": { "character": 3, "line": 57 },
+  "start": { "character": 2, "line": 57 }
+}
+newText:
+  <--here
+  Num(_) | Sub.Flag | Sub.Toggle(_) | Later | _
+
+Xform src/CompletionExtensibleVariant.res 64:4
+pos_cursor:[62:16] pos_no_white:[62:14] Found expr:[62:9->66:1]
+Completable: Cpath Value[optValue]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[optValue]
+Path optValue
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: CompletionExtensibleVariant.res
+{
+  "end": { "character": 3, "line": 64 },
+  "start": { "character": 2, "line": 64 }
+}
+newText:
+  <--here
+  Some(Num(_) | Sub.Flag | Sub.Toggle(_) | Later | _) | None
+
+Xform src/CompletionExtensibleVariant.res start: 69:3, end: 69:8
+found selection: [69:3->69:8] -> [69:3->69:8]
+XXX Not found!
+Completable: Cpath Value[value]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Exhaustive switch
+
+TextDocumentEdit: CompletionExtensibleVariant.res
+{
+  "end": { "character": 8, "line": 69 },
+  "start": { "character": 3, "line": 69 }
+}
+newText:
+   <--here
+   switch value {
+   | Str(_) => %todo
+   | Num(_) => %todo
+   | Sub.Flag => %todo
+   | Sub.Toggle(_) => %todo
+   | Later => %todo
+   | _ => %todo
+   }
+

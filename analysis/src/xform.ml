@@ -406,6 +406,13 @@ module Expand_catch_all_for_variants = struct
     in
     {Ast_iterator.default_iterator with expr}
 
+  (* Other files can extend an open type, so its expansion keeps a
+     catch-all alternative after the constructors known here. *)
+  let open_type_catch_all (decl : Types.type_declaration) =
+    match decl.type_kind with
+    | Type_open -> ["_"]
+    | Type_abstract | Type_record _ | Type_variant _ -> []
+
   let xform ~state ~source ~kind_file ~path ~pos ~full ~structure ~code_actions
       ~debug =
     let result = ref None in
@@ -445,7 +452,7 @@ module Expand_catch_all_for_variants = struct
         |> extract_type_from_expr ~state ~debug ~source ~kind_file ~full
              ~pos:(Pos.of_lexing switch_expr.pexp_loc.loc_end)
       with
-      | Some (Tvariant {constructors}) ->
+      | Some (Tvariant {constructors; variant_decl}) ->
         let missing_constructors =
           constructors
           |> List.filter (fun (c : Shared_types.Constructor.t) ->
@@ -453,13 +460,14 @@ module Expand_catch_all_for_variants = struct
         in
         if List.length missing_constructors > 0 then
           let new_text =
-            missing_constructors
+            (missing_constructors
             |> List.map (fun (c : Shared_types.Constructor.t) ->
                 c.cname.txt
                 ^
                 match c.args with
                 | Args [] -> ""
-                | Args _ | InlineRecord _ -> "(_)")
+                | Args _ | InlineRecord _ -> "(_)"))
+            @ open_type_catch_all variant_decl
             |> String.concat " | "
           in
           let range = Loc.range_of_loc catch_all_case.pc_lhs.ppat_loc in
@@ -549,9 +557,13 @@ module Expand_catch_all_for_variants = struct
           if List.length missing_constructors > 0 || not has_none_case then
             let new_text =
               "Some("
-              ^ (missing_constructors
-                |> List.map (fun (name, has_args) ->
-                    name ^ if has_args then "(_)" else "")
+              ^ (((missing_constructors
+                  |> List.map (fun (name, has_args) ->
+                      name ^ if has_args then "(_)" else ""))
+                 @
+                 match variant with
+                 | Tvariant {variant_decl} -> open_type_catch_all variant_decl
+                 | _ -> [])
                 |> String.concat " | ")
               ^ ")"
             in

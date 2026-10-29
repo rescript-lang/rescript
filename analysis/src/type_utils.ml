@@ -1290,15 +1290,23 @@ module Codegen = struct
       =
     match extracted_type with
     | Tvariant v ->
+      (* Other files can extend an open type, so only a catch-all case
+         makes the switch exhaustive. *)
+      let catch_all =
+        match v.variant_decl.type_kind with
+        | Type_open -> [any ()]
+        | Type_abstract | Type_record _ | Type_variant _ -> []
+      in
       Some
-        (v.constructors
-        |> List.map (fun (c : Shared_types.Constructor.t) ->
-            mk_construct_pat
-              ?payload:
-                (match c.args with
-                | Args [] -> None
-                | _ -> Some (any ()))
-              c.cname.txt))
+        ((v.constructors
+         |> List.map (fun (c : Shared_types.Constructor.t) ->
+             mk_construct_pat
+               ?payload:
+                 (match c.args with
+                 | Args [] -> None
+                 | _ -> Some (any ()))
+               c.cname.txt))
+        @ catch_all)
     | Tpolyvariant v ->
       Some
         (v.constructors
