@@ -23,6 +23,27 @@ References src/AppliedFunctor.res 7:7
   },
   {
     "range": {
+      "end": { "character": 19, "line": 81 },
+      "start": { "character": 16, "line": 81 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 95 },
+      "start": { "character": 16, "line": 95 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 20, "line": 101 },
+      "start": { "character": 17, "line": 101 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
       "end": { "character": 9, "line": 7 },
       "start": { "character": 6, "line": 7 }
     },
@@ -84,6 +105,27 @@ References src/AppliedFunctor.res 19:16
   },
   {
     "range": {
+      "end": { "character": 19, "line": 81 },
+      "start": { "character": 16, "line": 81 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 95 },
+      "start": { "character": 16, "line": 95 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 20, "line": 101 },
+      "start": { "character": 17, "line": 101 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
       "end": { "character": 9, "line": 7 },
       "start": { "character": 6, "line": 7 }
     },
@@ -135,6 +177,27 @@ Rename src/AppliedFunctor.res 22:16 insert
         "range": {
           "end": { "character": 19, "line": 62 },
           "start": { "character": 16, "line": 62 }
+        }
+      },
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 19, "line": 81 },
+          "start": { "character": 16, "line": 81 }
+        }
+      },
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 19, "line": 95 },
+          "start": { "character": 16, "line": 95 }
+        }
+      },
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 20, "line": 101 },
+          "start": { "character": 17, "line": 101 }
         }
       }
     ],

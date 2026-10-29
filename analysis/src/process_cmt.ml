@@ -503,6 +503,10 @@ let rec get_module_path mod_desc =
   | Tmod_functor (_ident, _argName, _maybeType, _resultExpr) -> None
   | Tmod_apply (functor_, _arg, _coercion) -> get_module_path functor_.mod_desc
   | Tmod_unpack (_expr, _moduleType) -> None
+  (* A module alias used as a functor or included is wrapped with the path
+     the compiler resolved its chain of aliases to: the module's own file. *)
+  | Tmod_constraint (_expr, _typ, _constraint, Tcoerce_alias (path, _)) ->
+    Some path
   | Tmod_constraint (expr, _typ, _constraint, _coercion) ->
     get_module_path expr.mod_desc
 
