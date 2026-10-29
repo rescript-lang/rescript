@@ -30,14 +30,12 @@ type key<_> = ..
 type key<_> += IntKey: key<int>
 type key<_> += StringKey: key<string>
 
-let defaultOf:
-  type a. key<a> => option<a> =
-  key =>
-    switch key {
-    | IntKey => Some(0)
-    | StringKey => Some("")
-    | _ => None
-    }
+let defaultOf: type a. key<a> => option<a> = key =>
+  switch key {
+  | IntKey => Some(0)
+  | StringKey => Some("")
+  | _ => None
+  }
 
 // Outside code can match a private extensible type but not extend it.
 module Private: {
