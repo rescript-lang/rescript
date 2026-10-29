@@ -43,6 +43,16 @@ let list{/* inside */} = list{}
 let /* before */ list{/* a1 */ a /* a2 */, /* b1 */ b /* b2 */} /* after */ = list{1, 2}
 let /* before */ list{/* a1 */ a /* a2 */, /* b1 */ ...b /* b2 */} /* after */ = list{1, 2}
 
+// A list pattern that is only a spread is the spread's operand
+let list{/* d */ ...r} = list{1, 2}
+let list{...r /* after */} = list{1, 2}
+let list{/* d1 */ /* d2 */ ...list{/* e */ ...r}} = list{1, 2}
+let f = (list{/* d */ ...r}) => r
+let f = x =>
+  switch x {
+  | list{/* d */ ...r} => r
+  }
+
 // Ppat_record
 let /* before */ {/* c0 */ name /* c1 */, /* c2 */ age /* c3 */} /* after */ = {
   name: "steve",

@@ -1,0 +1,1 @@
+- Keep the comments around the spread of a list pattern without other items when formatting, as in `list{/* c */ ...r}`.
