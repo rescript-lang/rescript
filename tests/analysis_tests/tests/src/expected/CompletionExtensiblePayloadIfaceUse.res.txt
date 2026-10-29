@@ -1,0 +1,34 @@
+Complete src/CompletionExtensiblePayloadIfaceUse.res 0:95
+XXX Not found!
+Completable: Cexpression Type[CompletionExtensiblePayloadIface, attr]->variantPayload::Toned($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[CompletionExtensiblePayloadIface, attr]
+Path CompletionExtensiblePayloadIface.attr
+[
+  {
+    "detail": "Light",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nLight\n```\n\n```rescript\ntype tone = Light | Dark\n```"
+    },
+    "insertText": "Light",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Light",
+    "tags": []
+  },
+  {
+    "detail": "Dark",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nDark\n```\n\n```rescript\ntype tone = Light | Dark\n```"
+    },
+    "insertText": "Dark",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Dark",
+    "tags": []
+  }
+]
+

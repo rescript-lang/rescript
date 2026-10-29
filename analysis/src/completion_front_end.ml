@@ -504,6 +504,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                    item_num = index;
                    source_arity = List.length patterns;
                    constructor_name = Longident.last txt;
+                   constructor_path = Longident.flatten txt;
                  }
               :: pattern_path)
             ?context_path)
