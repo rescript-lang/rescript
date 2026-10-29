@@ -426,7 +426,10 @@ let find_payload_constructor ~(env : Query_env.t) ~constructors ~extension_envs
           let opened =
             List.filteri (fun i _ -> i < List.length opened - 1) opened
           in
-          match last (named (opened @ path)) with
+          (* A constructor named without a module path is declared around
+             the cursor, so no open brings it into scope. *)
+          let in_module (c : Constructor.t) = List.length (parts c) > 1 in
+          match last (named (opened @ path) |> List.filter in_module) with
           | Some c -> Some c
           | None -> lookup scope)
         | _ :: scope -> lookup scope
