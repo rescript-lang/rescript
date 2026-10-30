@@ -1,0 +1,20 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/inclusion_field_renamed.res[0m:[2m4:5-6:1[0m
+
+  2 [2m│[0m module M: {
+  3 [2m│[0m   type t = {name: string, email: string, age: int}
+  [1;31m4[0m [2m│[0m } = [1;31m{[0m
+  [1;31m5[0m [2m│[0m [1;31m  type t = {name: string, mail: string, age: int}[0m
+  [1;31m6[0m [2m│[0m [1;31m}[0m
+  7 [2m│[0m 
+
+  Signature mismatch:
+  
+  Actual declaration ([36m/.../fixtures/inclusion_field_renamed.res[0m:[2m5:3-49[0m):
+    type t = {name: string, mail: string, age: int}
+  
+  Expected declaration ([36m/.../fixtures/inclusion_field_renamed.res[0m:[2m3:3-50[0m):
+    type t = {name: string, email: string, age: int}
+  
+  The field mail is named email in the expected declaration.

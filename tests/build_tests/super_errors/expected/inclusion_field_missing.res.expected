@@ -1,0 +1,20 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/inclusion_field_missing.res[0m:[2m5:5-7:1[0m
+
+  3 [2m│[0m module M: {
+  4 [2m│[0m   type t = {name: string, age: int, email: string}
+  [1;31m5[0m [2m│[0m } = [1;31m{[0m
+  [1;31m6[0m [2m│[0m [1;31m  type t = {name: string, email: string}[0m
+  [1;31m7[0m [2m│[0m [1;31m}[0m
+  8 [2m│[0m 
+
+  Signature mismatch:
+  
+  Actual declaration ([36m/.../fixtures/inclusion_field_missing.res[0m:[2m6:3-40[0m):
+    type t = {name: string, email: string}
+  
+  Expected declaration ([36m/.../fixtures/inclusion_field_missing.res[0m:[2m4:3-50[0m):
+    type t = {name: string, age: int, email: string}
+  
+  The field age is only present in the expected declaration.
