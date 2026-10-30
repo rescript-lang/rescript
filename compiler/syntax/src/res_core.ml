@@ -286,6 +286,80 @@ type type_parameter = {
   start_pos: Lexing.position;
 }
 
+let reject_raw_fixed_extensions p (typ : Parsetree.core_type) =
+  let super = Ast_iterator.default_iterator in
+  let iterator =
+    {
+      super with
+      typ =
+        (fun self typ ->
+          (match typ.ptyp_desc with
+          | Ptyp_extension ({txt = "raw"; loc}, _) ->
+            Parser.err ~start_pos:loc.loc_start ~end_pos:loc.loc_end p
+              (Diagnostics.message
+                 "%raw is only allowed as a direct external function argument")
+          | _ -> ());
+          super.typ self typ);
+    }
+  in
+  iterator.typ iterator typ
+
+(* Read an external's fixed arguments: [%raw(source)] and the deprecated
+   [@as(value) _]. *)
+let normalize_external_fixed_parameters p (typ : Parsetree.core_type) =
+  let typ =
+    match (Ast_fixed_arg.normalize_external_type typ).ptyp_desc with
+    | Ptyp_arrow {params; ret} ->
+      let params =
+        List.map
+          (fun (arg : Parsetree.arg) ->
+            match arg with
+            | Parg_fixed {loc} ->
+              Parser.warn p loc
+                (Warnings.Deprecated
+                   ( "The fixed-value `@as(...) _` external argument syntax is \
+                      deprecated. Use `%raw(...)` instead.",
+                     loc,
+                     loc,
+                     false ));
+              arg
+            | Parg_type
+                ({
+                   typ =
+                     {
+                       ptyp_desc =
+                         Ptyp_extension (({txt = "raw"} as id), payload);
+                       ptyp_loc;
+                       ptyp_attributes;
+                     };
+                 } as typed_arg) -> (
+              match Ast_raw.of_payload payload with
+              | Some source ->
+                Parg_fixed
+                  {
+                    attrs = typed_arg.attrs @ ptyp_attributes;
+                    lbl = typed_arg.lbl;
+                    value =
+                      {
+                        txt = Pfixed_raw source;
+                        loc = Ast_raw.payload_loc source;
+                      };
+                    loc = ptyp_loc;
+                  }
+              | None ->
+                Parser.err ~start_pos:id.loc.loc_start ~end_pos:id.loc.loc_end p
+                  (Diagnostics.message
+                     "The %raw extension can only be applied to a string");
+                arg)
+            | Parg_type _ -> arg)
+          params
+      in
+      {typ with ptyp_desc = Ptyp_arrow {params; ret}}
+    | _ -> typ
+  in
+  reject_raw_fixed_extensions p typ;
+  typ
+
 type typ_def_or_ext =
   | TypeDef of {
       rec_flag: Asttypes.rec_flag;
@@ -6287,7 +6361,7 @@ and parse_external_def ~attrs ~start_pos p =
       in
       let typ_expr =
         parse_external_type_expr ~current_type_name_path ~inline_types_context p
-        |> Ast_fixed_arg.normalize_external_type
+        |> normalize_external_fixed_parameters p
       in
       let equal_start = Parser.start_pos p in
       let equal_end = Parser.end_pos p in

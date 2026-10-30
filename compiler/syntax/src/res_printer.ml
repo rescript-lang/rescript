@@ -2011,10 +2011,7 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
     in
     match args with
     | [] -> Doc.nil
-    | [
-     (( Parg_type {attrs = []; lbl = Nolabel}
-      | Parg_fixed {attrs = []; lbl = Nolabel} ) as arg);
-    ] ->
+    | [Parg_type {attrs = []; lbl = Nolabel; typ}] ->
       let has_attrs_before = not (attrs_before = []) in
       let attrs =
         if has_attrs_before then
@@ -2022,16 +2019,12 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
         else Doc.nil
       in
       let typ_doc =
-        match arg with
-        | Parg_type {typ} -> (
-          let doc =
-            print_typ_expr ?inline_record_definitions ~state typ cmt_tbl
-          in
-          match typ.ptyp_desc with
-          | Ptyp_arrow _ | Ptyp_tuple _ | Ptyp_alias _ -> add_parens doc
-          | _ -> doc)
-        | Parg_fixed _ ->
-          print_type_parameter ?inline_record_definitions ~state arg cmt_tbl
+        let doc =
+          print_typ_expr ?inline_record_definitions ~state typ cmt_tbl
+        in
+        match typ.ptyp_desc with
+        | Ptyp_arrow _ | Ptyp_tuple _ | Ptyp_alias _ -> add_parens doc
+        | _ -> doc
       in
       Doc.group
         (Doc.concat
@@ -2432,17 +2425,25 @@ and print_type_parameter ?inline_record_definitions ~state parameter cmt_tbl =
         print_typ_expr ?inline_record_definitions ~state typ cmt_tbl,
         typ.ptyp_loc )
     | Parsetree.Parg_fixed {attrs; lbl; value; loc} ->
-      (* Comments go around [@as(...) _], as for the [_] it is written with. *)
-      let loc = Ast_fixed_arg.underscore_loc loc in
-      let as_doc, _ =
-        print_attribute ~state
-          (Ast_fixed_arg.to_attribute {value with loc = Location.none})
-          cmt_tbl
-      in
+      (* Comments go around [%raw(...)], as for a type. *)
+      let loc = Ast_fixed_arg.closing_loc loc in
       ( attrs,
         lbl,
+        (* Printed as [%raw(...)] is as an expression; other values migrate to
+           their JavaScript source. *)
         print_comments
-          (Doc.group (Doc.concat [as_doc; Doc.space; Doc.text "_"]))
+          (print_extension ~state ~at_module_lvl:false
+             (Ast_raw.to_extension ~name:"raw" ~name_loc:Location.none
+                (match value.txt with
+                | Pfixed_raw source -> source
+                | Pfixed_int _ | Pfixed_string _ | Pfixed_template _
+                | Pfixed_json _ ->
+                  Raw_string
+                    {
+                      txt = Ast_fixed_arg.js_source value.txt;
+                      loc = Location.none;
+                    }))
+             cmt_tbl)
           cmt_tbl loc,
         loc )
   in

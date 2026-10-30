@@ -51,7 +51,7 @@ let setExn = setOrThrow
 
 @new external makeUninitializedUnsafe: int => array<'a> = "Array"
 
-@send external copy: (t<'a>, @as(0) _) => t<'a> = "slice"
+@send external copy: (t<'a>, %raw("0")) => t<'a> = "slice"
 
 let swapUnsafe = (xs, i, j) => {
   let tmp = getUnsafe(xs, i)

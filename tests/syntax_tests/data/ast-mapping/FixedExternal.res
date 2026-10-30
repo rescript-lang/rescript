@@ -3,3 +3,4 @@
 @val external labelled: (~mode: @as(1) _, ~other: @as("o") _, int) => int = "f"
 @obj external obj: (~a: @as(1) _, ~b: int, unit) => _ = ""
 @val external single: @as(-1) _ => int = "f"
+@val external raw: (%raw("{}"), ~mode: %raw(`"img"`), int) => int = "f"
