@@ -98,10 +98,6 @@ let rec print_out_type_doc (out_type : Outcometree.out_type) =
   | Otyp_var (ng, s) ->
     Doc.concat [Doc.text ("'" ^ if ng then "_" else ""); Doc.text s]
   | Otyp_object (fields, rest) -> print_object_fields fields rest
-  | Otyp_attribute (typ, attribute) ->
-    Doc.group
-      (Doc.concat
-         [print_out_attribute_doc attribute; Doc.line; print_out_type_doc typ])
   (* example: Red | Blue | Green | CustomColour(float, float, float) *)
   | Otyp_sum constructors -> print_out_constructors_doc constructors
   (* example: {"name": string, "age": int} *)
