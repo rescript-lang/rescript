@@ -583,8 +583,16 @@ let include_symptom ~swapped env ppf = function
         if swapped then ("the expected", "the actual")
         else ("the actual", "the expected")
       in
+      (* Declarations can print the same and still differ, when a type they
+         mention differs between the two sides, e.g. a class the interface
+         leaves abstract. The reasons then say that first. *)
+      let read_the_same =
+        Format.asprintf "%a" (type_declaration id) d1
+        = Format.asprintf "%a" (type_declaration id) d2
+      in
       fprintf ppf "@,%a"
-        (Includecore.report_type_mismatch first second "declaration")
+        (Includecore.report_type_mismatch ~read_the_same first second
+           "declaration")
         errs
   | Extension_constructors (id, x1, x2) ->
     show_declarations ~swapped (extension_constructor id) ppf
