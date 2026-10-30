@@ -13,6 +13,18 @@
 
   Signature mismatch:
   
+  Actual declaration ([36m/.../fixtures/include_modtype_permutation.res[0m:[2m7:15-10:3[0m):
+    module type T = {
+      let b: int
+      let a: int
+    }
+  
+  Expected declaration ([36m/.../fixtures/include_modtype_permutation.res[0m:[2m2:15-5:3[0m):
+    module type T = {
+      let a: int
+      let b: int
+    }
+  
   In module type T:
   
   Illegal permutation of structure fields

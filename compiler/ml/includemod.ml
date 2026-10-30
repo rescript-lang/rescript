@@ -681,10 +681,22 @@ let include_err ~show_context ppf (cxt, env, err) =
    differ. The modules on the way are left out, as the items at the end say
    what differs, each under the position it is at. *)
 let report_error ppf errs =
+  (* Whether a symptom shows the declarations that differ. A permutation of
+     fields doesn't, so the comparison of the module types around it stays. *)
+  let shows_declarations (_, _, symptom) =
+    match symptom with
+    | Missing_field _ | Value_descriptions _ | Type_declarations _
+    | Extension_constructors _ | Module_types _ | Modtype_infos _ ->
+      true
+    | Modtype_permutation | Interface_mismatch _ | Unbound_modtype_path _
+    | Unbound_module_path _ | Invalid_module_alias _ ->
+      false
+  in
   let rec shown = function
     | [] -> []
-    | [err] -> [err]
-    | (_, _, (Module_types _ | Modtype_infos _)) :: rest -> shown rest
+    | (_, _, (Module_types _ | Modtype_infos _)) :: rest
+      when List.exists shows_declarations rest ->
+      shown rest
     | err :: rest -> err :: shown rest
   in
   let rec print ppf previous_cxt = function
