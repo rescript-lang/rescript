@@ -274,6 +274,7 @@ module File = struct
     stamps: Stamps.t;
     module_name: string;
     structure: Module.structure;
+    renamed_stamps: (int, int) Hashtbl.t;
   }
 
   let create module_name uri =
@@ -281,6 +282,7 @@ module File = struct
       uri;
       stamps = Stamps.init ();
       module_name;
+      renamed_stamps = Hashtbl.create 1;
       structure =
         {
           name = module_name;
@@ -404,7 +406,13 @@ and completion_type =
     }
 
 module Env = struct
-  type t = {stamps: Stamps.t; module_path: Module_path.t}
+  type t = {
+    stamps: Stamps.t;
+    module_path: Module_path.t;
+    renamed_stamps: (int, int) Hashtbl.t;
+        (** the stamps of an applied functor's renamed members, mapped to
+            those of the functor body's declarations they come from *)
+  }
   let add_exported_module ~name ~is_type env =
     {
       env with

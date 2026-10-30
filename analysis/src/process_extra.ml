@@ -12,47 +12,64 @@ let add_reference ~extra stamp loc =
        Hashtbl.find extra.internal_references stamp
      else []))
 
+(* Items read from another file's signature, such as those of a functor
+   applied from that file, have that file's locations, so they declare
+   nothing at those positions of this file. *)
+let declared_in_file ~(file : File.t) (d : _ Declared.t) =
+  let source = d.extent_loc.loc_start.pos_fname in
+  d.extent_loc.loc_ghost || source = ""
+  || Filename.basename source = Filename.basename (Lsp.Uri.to_path file.uri)
+
 let extra_for_file ~(file : File.t) =
   let extra = init_extra () in
   file.stamps
   |> Stamps.iter_modules (fun stamp (d : Module.t Declared.t) ->
-      add_loc_item extra d.name.loc (LModule (Definition (stamp, Module)));
-      add_reference ~extra stamp d.name.loc);
+      if declared_in_file ~file d then (
+        add_loc_item extra d.name.loc (LModule (Definition (stamp, Module)));
+        add_reference ~extra stamp d.name.loc));
   file.stamps
   |> Stamps.iter_values (fun stamp (d : Types.type_expr Declared.t) ->
-      add_loc_item extra d.name.loc
-        (Typed (d.name.txt, d.item, Definition (stamp, Value)));
-      add_reference ~extra stamp d.name.loc);
+      if declared_in_file ~file d then (
+        add_loc_item extra d.name.loc
+          (Typed (d.name.txt, d.item, Definition (stamp, Value)));
+        add_reference ~extra stamp d.name.loc));
   file.stamps
   |> Stamps.iter_types (fun stamp (d : Type.t Declared.t) ->
-      add_loc_item extra d.name.loc
-        (TypeDefinition (d.name.txt, d.item.Type.decl, stamp));
-      add_reference ~extra stamp d.name.loc;
-      match d.item.Type.kind with
-      | Record labels ->
-        labels
-        |> List.iter (fun {stamp; fname; typ} ->
-            add_reference ~extra stamp fname.loc;
-            add_loc_item extra fname.loc
-              (Typed (d.name.txt, typ, Definition (d.stamp, Field fname.txt))))
-      | Variant constructors ->
-        constructors
-        |> List.iter (fun {Constructor.stamp; cname} ->
-            add_reference ~extra stamp cname.loc;
-            let t =
-              {
-                Types.id = 0;
-                level = 0;
-                desc =
-                  Tconstr
-                    ( Path.Pident {Ident.stamp; name = d.name.txt; flags = 0},
-                      [],
-                      ref Types.Mnil );
-              }
-            in
-            add_loc_item extra cname.loc
-              (Typed (d.name.txt, t, Definition (d.stamp, Constructor cname.txt))))
-      | _ -> ());
+      if declared_in_file ~file d then (
+        add_loc_item extra d.name.loc
+          (TypeDefinition (d.name.txt, d.item.Type.decl, stamp));
+        add_reference ~extra stamp d.name.loc;
+        match d.item.Type.kind with
+        (* Fields and constructors of a type read from a signature, such as
+         an applied functor's, have no location of their own; references
+         to them are those of the declarations they come from. *)
+        | Record labels ->
+          labels
+          |> List.filter (fun {fname} -> not fname.loc.loc_ghost)
+          |> List.iter (fun {stamp; fname; typ} ->
+              add_reference ~extra stamp fname.loc;
+              add_loc_item extra fname.loc
+                (Typed (d.name.txt, typ, Definition (d.stamp, Field fname.txt))))
+        | Variant constructors ->
+          constructors
+          |> List.filter (fun {Constructor.cname} -> not cname.loc.loc_ghost)
+          |> List.iter (fun {Constructor.stamp; cname} ->
+              add_reference ~extra stamp cname.loc;
+              let t =
+                {
+                  Types.id = 0;
+                  level = 0;
+                  desc =
+                    Tconstr
+                      ( Path.Pident {Ident.stamp; name = d.name.txt; flags = 0},
+                        [],
+                        ref Types.Mnil );
+                }
+              in
+              add_loc_item extra cname.loc
+                (Typed
+                   (d.name.txt, t, Definition (d.stamp, Constructor cname.txt))))
+        | _ -> ()));
   extra
 
 let add_external_reference ~extra module_name path tip loc =
@@ -135,14 +152,55 @@ let extra_for_cmt ~(iterator : Tast_iterator.iterator)
     extra_for_signature_items ~iterator items;
     extra_for_parts parts
 
+(* The module and path of a member of a functor applied from another file:
+   the functor's path followed by the member's path inside its result. *)
+let applied_global ~(env : Query_env.t) stamp (tip : Tip.t) =
+  let declared =
+    let of_declared (d : _ Declared.t) = (d.module_path, d.name.txt) in
+    match tip with
+    | Value -> Stamps.find_value env.file.stamps stamp |> Option.map of_declared
+    | Type | Field _ | Constructor _ ->
+      Stamps.find_type env.file.stamps stamp |> Option.map of_declared
+    | Module ->
+      Stamps.find_module env.file.stamps stamp |> Option.map of_declared
+  in
+  let rec loop (module_path : Module_path.t) inner =
+    match module_path with
+    | IncludedModule (functor_path, _) -> (
+      match Resolve_path.from_compiler_path ~env functor_path with
+      | Global (module_name, path) -> Some (module_name, path @ inner)
+      | Stamp _ | Exported _ | GlobalMod _ | NotFound -> None)
+    | ExportedModule {name; module_path} -> loop module_path (name :: inner)
+    | File _ | NotVisible -> None
+  in
+  match declared with
+  | Some (module_path, name) when stamp >= Process_cmt.renamed_stamp_floor ->
+    loop module_path [name]
+  | _ -> None
+
+(* A use of a local declaration. A use of an applied functor's member is
+   also a use of the declaration in the functor's body that it was renamed
+   from, and when the functor is in another file, it is a use of that file's
+   declaration, as uses of the functor's own members are, for references
+   across files to find it. *)
+let reference_to_stamp ~(env : Query_env.t) ~extra stamp tip loc =
+  match applied_global ~env stamp tip with
+  | Some (module_name, path) ->
+    add_external_reference ~extra module_name path tip loc;
+    GlobalReference (module_name, path, tip)
+  | None ->
+    add_reference ~extra stamp loc;
+    (match Hashtbl.find_opt env.file.renamed_stamps stamp with
+    | Some original -> add_reference ~extra original loc
+    | None -> ());
+    LocalReference (stamp, tip)
+
 let add_for_path ~env ~extra path lident loc typ tip =
   let ident_name = Longident.last lident in
   let ident_loc = Utils.end_of_location loc (String.length ident_name) in
   let loc_type =
     match Resolve_path.from_compiler_path ~env path with
-    | Stamp stamp ->
-      add_reference ~extra stamp ident_loc;
-      LocalReference (stamp, tip)
+    | Stamp stamp -> reference_to_stamp ~env ~extra stamp tip ident_loc
     | NotFound -> NotFound
     | Global (module_name, path) ->
       add_external_reference ~extra module_name path tip ident_loc;
@@ -153,9 +211,7 @@ let add_for_path ~env ~extra path lident loc typ tip =
         | Type -> Exported.find env.exported Exported.Type name
         | _ -> Exported.find env.exported Exported.Value name
       with
-      | Some stamp ->
-        add_reference ~extra stamp ident_loc;
-        LocalReference (stamp, tip)
+      | Some stamp -> reference_to_stamp ~env ~extra stamp tip ident_loc
       | None -> NotFound)
     | GlobalMod _ -> NotFound
   in
@@ -167,21 +223,27 @@ let add_for_path_parent ~env ~extra path loc =
     | GlobalMod module_name ->
       add_file_reference ~extra module_name loc;
       TopLevelModule module_name
-    | Stamp stamp ->
-      add_reference ~extra stamp loc;
-      LModule (LocalReference (stamp, Module))
+    | Stamp stamp -> LModule (reference_to_stamp ~env ~extra stamp Module loc)
     | NotFound -> LModule NotFound
     | Global (module_name, path) ->
       add_external_reference ~extra module_name path Module loc;
       LModule (GlobalReference (module_name, path, Module))
     | Exported (env, name) -> (
       match Exported.find env.exported Exported.Module name with
-      | Some stamp ->
-        add_reference ~extra stamp loc;
-        LModule (LocalReference (stamp, Module))
+      | Some stamp -> LModule (reference_to_stamp ~env ~extra stamp Module loc)
       | None -> LModule NotFound)
   in
   add_loc_item extra loc loc_type
+
+(* A type of a functor applied from another file is that file's type, as
+   for its other members. *)
+let get_type_at_stamp ~env stamp =
+  match applied_global ~env stamp Type with
+  | Some (module_name, path) -> `Global (module_name, path)
+  | None -> (
+    match Stamps.find_type env.file.stamps stamp with
+    | Some declared_type -> `Local declared_type
+    | None -> `Not_found)
 
 let get_type_at_path ~env path =
   match Resolve_path.from_compiler_path ~env path with
@@ -191,16 +253,8 @@ let get_type_at_path ~env path =
   | Exported (env, name) -> (
     match Exported.find env.exported Exported.Type name with
     | None -> `Not_found
-    | Some stamp -> (
-      let declared_type = Stamps.find_type env.file.stamps stamp in
-      match declared_type with
-      | Some declared_type -> `Local declared_type
-      | None -> `Not_found))
-  | Stamp stamp -> (
-    let declared_type = Stamps.find_type env.file.stamps stamp in
-    match declared_type with
-    | Some declared_type -> `Local declared_type
-    | None -> `Not_found)
+    | Some stamp -> get_type_at_stamp ~env stamp)
+  | Stamp stamp -> get_type_at_stamp ~env stamp
 
 let add_for_field ~env ~extra ~record_type ~field_type {Asttypes.txt; loc} =
   match (Shared.dig record_type).desc with

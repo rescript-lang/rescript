@@ -1,0 +1,885 @@
+References src/AppliedFunctor.res 7:7
+[
+  {
+    "range": {
+      "end": { "character": 18, "line": 5 },
+      "start": { "character": 15, "line": 5 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 17 },
+      "start": { "character": 16, "line": 17 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 62 },
+      "start": { "character": 16, "line": 62 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 81 },
+      "start": { "character": 16, "line": 81 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 95 },
+      "start": { "character": 16, "line": 95 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 20, "line": 101 },
+      "start": { "character": 17, "line": 101 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 9, "line": 7 },
+      "start": { "character": 6, "line": 7 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 16 },
+      "start": { "character": 15, "line": 16 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 19 },
+      "start": { "character": 16, "line": 19 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 22 },
+      "start": { "character": 16, "line": 22 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+Hover src/AppliedFunctor.res 16:15
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\n(IntSet.t, int) => array<int>\n```\n\n---\n\n```\n \n```\n```rescript\ntype IntSet.t = array<int>\n```\nGo to: [Type definition](AppliedFunctor.res#L7,3)\n"
+  }
+}
+
+References src/AppliedFunctor.res 19:16
+[
+  {
+    "range": {
+      "end": { "character": 18, "line": 5 },
+      "start": { "character": 15, "line": 5 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 17 },
+      "start": { "character": 16, "line": 17 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 62 },
+      "start": { "character": 16, "line": 62 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 81 },
+      "start": { "character": 16, "line": 81 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 95 },
+      "start": { "character": 16, "line": 95 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 20, "line": 101 },
+      "start": { "character": 17, "line": 101 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 9, "line": 7 },
+      "start": { "character": 6, "line": 7 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 16 },
+      "start": { "character": 15, "line": 16 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 19 },
+      "start": { "character": 16, "line": 19 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 22 },
+      "start": { "character": 16, "line": 22 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+Rename src/AppliedFunctor.res 22:16 insert
+[
+  {
+    "edits": [
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 18, "line": 5 },
+          "start": { "character": 15, "line": 5 }
+        }
+      },
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 19, "line": 17 },
+          "start": { "character": 16, "line": 17 }
+        }
+      },
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 19, "line": 62 },
+          "start": { "character": 16, "line": 62 }
+        }
+      },
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 19, "line": 81 },
+          "start": { "character": 16, "line": 81 }
+        }
+      },
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 19, "line": 95 },
+          "start": { "character": 16, "line": 95 }
+        }
+      },
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 20, "line": 101 },
+          "start": { "character": 17, "line": 101 }
+        }
+      }
+    ],
+    "textDocument": { "uri": "file:///AppliedFunctorUse.res", "version": 0 }
+  },
+  {
+    "edits": [
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 9, "line": 7 },
+          "start": { "character": 6, "line": 7 }
+        }
+      },
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 18, "line": 16 },
+          "start": { "character": 15, "line": 16 }
+        }
+      },
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 19, "line": 19 },
+          "start": { "character": 16, "line": 19 }
+        }
+      },
+      {
+        "newText": "insert",
+        "range": {
+          "end": { "character": 19, "line": 22 },
+          "start": { "character": 16, "line": 22 }
+        }
+      }
+    ],
+    "textDocument": { "uri": "file:///AppliedFunctor.res", "version": 0 }
+  }
+]
+
+Hover src/AppliedFunctor.res 25:14
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nIntSet.t\n```\n\n---\n\n```\n \n```\n```rescript\ntype IntSet.t = array<int>\n```\nGo to: [Type definition](AppliedFunctor.res#L7,3)\n"
+  }
+}
+
+Complete src/AppliedFunctor.res 28:19
+pos_cursor:[28:19] pos_no_white:[28:18] Found expr:[28:12->28:19]
+Pexp_ident IntSet.:[28:12->28:19]
+Completable: Cpath Value[IntSet, ""]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[IntSet, ""]
+Path IntSet.
+[
+  {
+    "detail": "(t, int) => array<int>",
+    "kind": 12,
+    "label": "add",
+    "tags": []
+  }
+]
+
+References src/AppliedFunctor.res 32:11
+[
+  {
+    "range": {
+      "end": { "character": 17, "line": 22 },
+      "start": { "character": 11, "line": 22 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 25 },
+      "start": { "character": 12, "line": 25 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 28 },
+      "start": { "character": 12, "line": 28 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 56 },
+      "start": { "character": 12, "line": 56 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 68 },
+      "start": { "character": 12, "line": 68 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 15, "line": 32 },
+      "start": { "character": 9, "line": 32 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 16, "line": 46 },
+      "start": { "character": 10, "line": 46 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 17, "line": 150 },
+      "start": { "character": 11, "line": 150 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+Rename src/AppliedFunctor.res 34:8 nestedValue
+[
+  {
+    "edits": [
+      {
+        "newText": "nestedValue",
+        "range": {
+          "end": { "character": 23, "line": 22 },
+          "start": { "character": 18, "line": 22 }
+        }
+      },
+      {
+        "newText": "nestedValue",
+        "range": {
+          "end": { "character": 24, "line": 25 },
+          "start": { "character": 19, "line": 25 }
+        }
+      },
+      {
+        "newText": "nestedValue",
+        "range": {
+          "end": { "character": 24, "line": 28 },
+          "start": { "character": 19, "line": 28 }
+        }
+      },
+      {
+        "newText": "nestedValue",
+        "range": {
+          "end": { "character": 24, "line": 56 },
+          "start": { "character": 19, "line": 56 }
+        }
+      },
+      {
+        "newText": "nestedValue",
+        "range": {
+          "end": { "character": 24, "line": 68 },
+          "start": { "character": 19, "line": 68 }
+        }
+      }
+    ],
+    "textDocument": { "uri": "file:///AppliedFunctorUse.res", "version": 0 }
+  },
+  {
+    "edits": [
+      {
+        "newText": "nestedValue",
+        "range": {
+          "end": { "character": 13, "line": 34 },
+          "start": { "character": 8, "line": 34 }
+        }
+      },
+      {
+        "newText": "nestedValue",
+        "range": {
+          "end": { "character": 22, "line": 46 },
+          "start": { "character": 17, "line": 46 }
+        }
+      },
+      {
+        "newText": "nestedValue",
+        "range": {
+          "end": { "character": 23, "line": 150 },
+          "start": { "character": 18, "line": 150 }
+        }
+      }
+    ],
+    "textDocument": { "uri": "file:///AppliedFunctor.res", "version": 0 }
+  }
+]
+
+References src/AppliedFunctor.res 46:10
+[
+  {
+    "range": {
+      "end": { "character": 17, "line": 22 },
+      "start": { "character": 11, "line": 22 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 25 },
+      "start": { "character": 12, "line": 25 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 28 },
+      "start": { "character": 12, "line": 28 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 56 },
+      "start": { "character": 12, "line": 56 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 68 },
+      "start": { "character": 12, "line": 68 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 15, "line": 32 },
+      "start": { "character": 9, "line": 32 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 16, "line": 46 },
+      "start": { "character": 10, "line": 46 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 17, "line": 150 },
+      "start": { "character": 11, "line": 150 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+References src/AppliedFunctor.res 50:7
+[
+  {
+    "range": {
+      "end": { "character": 19, "line": 33 },
+      "start": { "character": 14, "line": 33 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 20, "line": 59 },
+      "start": { "character": 15, "line": 59 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 20, "line": 65 },
+      "start": { "character": 15, "line": 65 }
+    },
+    "uri": "file:///AppliedFunctorUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 12, "line": 50 },
+      "start": { "character": 7, "line": 50 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 57 },
+      "start": { "character": 14, "line": 57 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 20, "line": 153 },
+      "start": { "character": 15, "line": 153 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+Definition src/AppliedFunctor.res 58:11
+{
+  "range": {
+    "end": { "character": 17, "line": 50 },
+    "start": { "character": 16, "line": 50 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
+
+Definition src/AppliedFunctor.res 61:19
+{
+  "range": {
+    "end": { "character": 24, "line": 52 },
+    "start": { "character": 21, "line": 52 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
+
+Rename src/AppliedFunctor.res 64:11 y
+[
+  {
+    "edits": [
+      {
+        "newText": "y",
+        "range": {
+          "end": { "character": 24, "line": 33 },
+          "start": { "character": 23, "line": 33 }
+        }
+      },
+      {
+        "newText": "y",
+        "range": {
+          "end": { "character": 12, "line": 36 },
+          "start": { "character": 11, "line": 36 }
+        }
+      },
+      {
+        "newText": "y",
+        "range": {
+          "end": { "character": 25, "line": 59 },
+          "start": { "character": 24, "line": 59 }
+        }
+      },
+      {
+        "newText": "y",
+        "range": {
+          "end": { "character": 25, "line": 65 },
+          "start": { "character": 24, "line": 65 }
+        }
+      },
+      {
+        "newText": "y",
+        "range": {
+          "end": { "character": 13, "line": 71 },
+          "start": { "character": 12, "line": 71 }
+        }
+      }
+    ],
+    "textDocument": { "uri": "file:///AppliedFunctorUse.res", "version": 0 }
+  },
+  {
+    "edits": [
+      {
+        "newText": "y",
+        "range": {
+          "end": { "character": 17, "line": 50 },
+          "start": { "character": 16, "line": 50 }
+        }
+      },
+      {
+        "newText": "y",
+        "range": {
+          "end": { "character": 24, "line": 57 },
+          "start": { "character": 23, "line": 57 }
+        }
+      },
+      {
+        "newText": "y",
+        "range": {
+          "end": { "character": 12, "line": 58 },
+          "start": { "character": 11, "line": 58 }
+        }
+      },
+      {
+        "newText": "y",
+        "range": {
+          "end": { "character": 12, "line": 64 },
+          "start": { "character": 11, "line": 64 }
+        }
+      },
+      {
+        "newText": "y",
+        "range": {
+          "end": { "character": 25, "line": 153 },
+          "start": { "character": 24, "line": 153 }
+        }
+      },
+      {
+        "newText": "y",
+        "range": {
+          "end": { "character": 14, "line": 156 },
+          "start": { "character": 13, "line": 156 }
+        }
+      }
+    ],
+    "textDocument": { "uri": "file:///AppliedFunctor.res", "version": 0 }
+  }
+]
+
+References src/AppliedFunctor.res 69:8
+[
+  {
+    "range": {
+      "end": { "character": 18, "line": 69 },
+      "start": { "character": 4, "line": 69 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 29, "line": 79 },
+      "start": { "character": 24, "line": 79 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 30, "line": 85 },
+      "start": { "character": 25, "line": 85 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 17, "line": 141 },
+      "start": { "character": 12, "line": 141 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+Hover src/AppliedFunctor.res 79:24
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
+
+Complete src/AppliedFunctor.res 82:28
+pos_cursor:[82:28] pos_no_white:[82:27] Found expr:[82:13->82:28]
+Pexp_ident Applied.Nested.:[82:13->82:28]
+Completable: Cpath Value[Applied, Nested, ""]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Applied, Nested, ""]
+Path Applied.Nested.
+[ { "detail": "int", "kind": 12, "label": "value", "tags": [] } ]
+
+Rename src/AppliedFunctor.res 85:25 renamed
+[
+  {
+    "edits": [
+      {
+        "newText": "renamed",
+        "range": {
+          "end": { "character": 18, "line": 69 },
+          "start": { "character": 4, "line": 69 }
+        }
+      },
+      {
+        "newText": "renamed",
+        "range": {
+          "end": { "character": 29, "line": 79 },
+          "start": { "character": 24, "line": 79 }
+        }
+      },
+      {
+        "newText": "renamed",
+        "range": {
+          "end": { "character": 30, "line": 85 },
+          "start": { "character": 25, "line": 85 }
+        }
+      },
+      {
+        "newText": "renamed",
+        "range": {
+          "end": { "character": 17, "line": 141 },
+          "start": { "character": 12, "line": 141 }
+        }
+      }
+    ],
+    "textDocument": { "uri": "file:///AppliedFunctor.res", "version": 0 }
+  }
+]
+
+References src/AppliedFunctor.res 92:12
+[
+  {
+    "range": {
+      "end": { "character": 21, "line": 92 },
+      "start": { "character": 8, "line": 92 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 36, "line": 114 },
+      "start": { "character": 32, "line": 114 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 37, "line": 115 },
+      "start": { "character": 33, "line": 115 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 22, "line": 146 },
+      "start": { "character": 18, "line": 146 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+References src/AppliedFunctor.res 115:33
+[
+  {
+    "range": {
+      "end": { "character": 21, "line": 92 },
+      "start": { "character": 8, "line": 92 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 36, "line": 114 },
+      "start": { "character": 32, "line": 114 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 37, "line": 115 },
+      "start": { "character": 33, "line": 115 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 22, "line": 146 },
+      "start": { "character": 18, "line": 146 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+References src/AppliedFunctor.res 120:8
+get_loc_item #8: heuristic for JSX with at most one child
+heuristic for: [makeProps, make, createElement], give the loc of `make` 
+[
+  {
+    "range": {
+      "end": { "character": 21, "line": 120 },
+      "start": { "character": 4, "line": 120 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 35, "line": 137 },
+      "start": { "character": 27, "line": 137 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+References src/AppliedFunctor.res 137:27
+[
+  {
+    "range": {
+      "end": { "character": 21, "line": 120 },
+      "start": { "character": 4, "line": 120 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 35, "line": 137 },
+      "start": { "character": 27, "line": 137 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+References src/AppliedFunctor.res 141:12
+[
+  {
+    "range": {
+      "end": { "character": 18, "line": 69 },
+      "start": { "character": 4, "line": 69 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 29, "line": 79 },
+      "start": { "character": 24, "line": 79 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 30, "line": 85 },
+      "start": { "character": 25, "line": 85 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 17, "line": 141 },
+      "start": { "character": 12, "line": 141 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+References src/AppliedFunctor.res 146:18
+[
+  {
+    "range": {
+      "end": { "character": 21, "line": 92 },
+      "start": { "character": 8, "line": 92 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 36, "line": 114 },
+      "start": { "character": 32, "line": 114 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 37, "line": 115 },
+      "start": { "character": 33, "line": 115 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  },
+  {
+    "range": {
+      "end": { "character": 22, "line": 146 },
+      "start": { "character": 18, "line": 146 }
+    },
+    "uri": "file:///AppliedFunctor.res"
+  }
+]
+
+Definition src/AppliedFunctor.res 150:11
+{
+  "range": {
+    "end": { "character": 3, "line": 36 },
+    "start": { "character": 9, "line": 32 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
+
+TypeDefinition src/AppliedFunctor.res 153:4
+{
+  "range": {
+    "end": { "character": 23, "line": 50 },
+    "start": { "character": 2, "line": 50 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
+
+Definition src/AppliedFunctor.res 156:13
+{
+  "range": {
+    "end": { "character": 17, "line": 50 },
+    "start": { "character": 16, "line": 50 }
+  },
+  "uri": "file:///AppliedFunctor.res"
+}
+

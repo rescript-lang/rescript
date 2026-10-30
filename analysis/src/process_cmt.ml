@@ -148,9 +148,31 @@ let rec for_type_signature_item ~(env : Shared_types.Env.t)
     let name = Ident.name ident in
     let declared =
       add_declared ~extent:md_loc
-        ~item:(for_type_module ~name ~env md_type)
+        ~item:(for_type_module ~name ~env:(env |> Env.add_module ~name) md_type)
         ~name:(Location.mkloc name md_loc)
         ~stamp:(Ident.binding_time ident) ~env md_attributes
+        (Exported.add exported Exported.Module)
+        Stamps.add_module
+    in
+    [
+      {
+        Module.kind =
+          Module
+            {type_ = declared.item; is_module_type = is_module_type declared};
+        name = declared.name.txt;
+        docstring = declared.docstring;
+        deprecated = declared.deprecated;
+        loc = declared.extent_loc;
+      };
+    ]
+  | Sig_modtype (ident, {mtd_type = Some mod_type; mtd_attributes; mtd_loc}) ->
+    let name = Ident.name ident in
+    let env = env |> Env.add_module_type ~name in
+    let declared =
+      add_declared ~extent:mtd_loc
+        ~item:(for_type_module ~name ~env mod_type)
+        ~name:(Location.mkloc name mtd_loc)
+        ~stamp:(Ident.binding_time ident) ~env mtd_attributes
         (Exported.add exported Exported.Module)
         Stamps.add_module
     in
@@ -184,6 +206,62 @@ and for_type_module ~name ~env module_type =
     Structure (for_type_signature ~name ~env signature)
   | Mty_functor (_argIdent, _argType, result_type) ->
     for_type_module ~name ~env result_type
+
+(* Stamps given to renamed identifiers start here, far above the stamps
+   in a typed tree, so that they never meet one of them. *)
+let renamed_stamp_floor = 1 lsl 40
+
+(* [Subst] renames the items of a signature in place, so the original and
+   the renamed signature list the same items in the same order. Records
+   each renamed stamp's original, nested signatures included, for
+   references to find the declarations in the functor body. *)
+let rec record_renamed_stamps table (original : Types.module_type)
+    (renamed : Types.module_type) =
+  match (original, renamed) with
+  | Mty_signature items, Mty_signature renamed_items
+    when List.length items = List.length renamed_items ->
+    List.iter2
+      (fun (item : Types.signature_item) (renamed_item : Types.signature_item)
+         ->
+        let ids =
+          match (item, renamed_item) with
+          | Sig_value (id, _), Sig_value (id', _)
+          | Sig_type (id, _, _), Sig_type (id', _, _)
+          | Sig_typext (id, _, _), Sig_typext (id', _, _) ->
+            Some (id, id')
+          | Sig_module (id, md, _), Sig_module (id', md', _) ->
+            record_renamed_stamps table md.md_type md'.md_type;
+            Some (id, id')
+          | Sig_modtype (id, mtd), Sig_modtype (id', mtd') ->
+            (match (mtd.mtd_type, mtd'.mtd_type) with
+            | Some mty, Some mty' -> record_renamed_stamps table mty mty'
+            | _ -> ());
+            Some (id, id')
+          | _ -> None
+        in
+        match ids with
+        | Some (id, id') ->
+          Hashtbl.replace table (Ident.binding_time id') (Ident.binding_time id)
+        | None -> ())
+      items renamed_items
+  | Mty_functor (_, _, result), Mty_functor (_, _, renamed_result) ->
+    record_renamed_stamps table result renamed_result
+  | _ -> ()
+
+(* The type of an applied functor with the identifiers of the body's
+   declarations. The functor's result signature has them; an application's
+   has them only when the argument is not a path, else the compiler already
+   renamed them, so the results of curried applications are taken from the
+   functor applied first. *)
+let rec body_type (mod_expr : Typedtree.module_expr) =
+  match mod_expr.mod_desc with
+  | Tmod_apply (functor_, _arg, _coercion) -> (
+    match body_type functor_ with
+    | Types.Mty_functor (_, _, result) -> result
+    | mty -> mty)
+  | Tmod_ident _ | Tmod_structure _ | Tmod_functor _ | Tmod_constraint _
+  | Tmod_unpack _ ->
+    mod_expr.mod_type
 
 let get_module_type_path mod_desc =
   match mod_desc with
@@ -425,6 +503,10 @@ let rec get_module_path mod_desc =
   | Tmod_functor (_ident, _argName, _maybeType, _resultExpr) -> None
   | Tmod_apply (functor_, _arg, _coercion) -> get_module_path functor_.mod_desc
   | Tmod_unpack (_expr, _moduleType) -> None
+  (* A module alias used as a functor or included is wrapped with the path
+     the compiler resolved its chain of aliases to: the module's own file. *)
+  | Tmod_constraint (_expr, _typ, _constraint, Tcoerce_alias (path, _)) ->
+    Some path
   | Tmod_constraint (expr, _typ, _constraint, _coercion) ->
     get_module_path expr.mod_desc
 
@@ -546,13 +628,12 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
     bindings
     |> List.iter (fun {Typedtree.vb_expr} -> scan_let_modules ~env vb_expr);
     !items
-  | Tstr_module
-      {mb_id; mb_attributes; mb_loc; mb_name = name; mb_expr = {mod_desc}}
+  | Tstr_module {mb_id; mb_attributes; mb_loc; mb_name = name; mb_expr}
     when not
            (String.length name.txt >= 6
            && (String.sub name.txt 0 6 = "local_") [@doesNotRaise])
          (* %%private generates a dummy module called local_... *) ->
-    let item = for_module ~env mod_desc name.txt in
+    let item = for_module ~env mb_expr name.txt in
     let declared =
       add_declared ~item ~name ~extent:mb_loc ~stamp:(Ident.binding_time mb_id)
         ~env mb_attributes
@@ -647,8 +728,8 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
         decl |> for_type_declaration ~env ~exported ~rec_status)
   | _ -> []
 
-and for_module ~env mod_desc module_name =
-  match mod_desc with
+and for_module ~env (mod_expr : Typedtree.module_expr) module_name =
+  match mod_expr.mod_desc with
   | Tmod_ident (path, _lident) -> Ident path
   | Tmod_structure structure ->
     let env = env |> Env.add_module ~name:module_name in
@@ -665,15 +746,35 @@ and for_module ~env mod_desc module_name =
           ~extent:arg_name.loc ~stamp ~module_path:NotVisible false []
       in
       Stamps.add_module env.stamps stamp declared);
-    for_module ~env result_expr.mod_desc module_name
+    for_module ~env result_expr module_name
   | Tmod_apply (functor_, _arg, _coercion) ->
-    for_module ~env functor_.mod_desc module_name
+    (* The functor's body has the parameter's types; the application's
+       signature has the argument's. Its items keep the identifiers of the
+       body, whose stamps are already taken, so they are renamed first,
+       with stamps above any that a compilation hands out. Their locations
+       are in the functor's body, so they are marked as coming from the
+       functor, like included items, for definitions to find its file.
+       An inline functor's parameters and declarations are registered
+       first, for uses inside its body to resolve. *)
+    ignore (for_module ~env functor_ module_name);
+    let env = env |> Env.add_module ~name:module_name in
+    let env =
+      match get_module_path functor_.mod_desc with
+      | Some path ->
+        {env with module_path = IncludedModule (path, env.module_path)}
+      | None -> env
+    in
+    if Ident.current_time () < renamed_stamp_floor then
+      Ident.set_current_time renamed_stamp_floor;
+    let renamed = Subst.modtype Subst.identity mod_expr.mod_type in
+    record_renamed_stamps env.renamed_stamps (body_type mod_expr) renamed;
+    for_type_module ~name:module_name ~env renamed
   | Tmod_unpack (_expr, module_type) ->
     let env = env |> Env.add_module ~name:module_name in
     for_type_module ~name:module_name ~env module_type
   | Tmod_constraint (expr, typ, _constraint, _coercion) ->
     (* TODO do this better I think *)
-    let mod_kind = for_module ~env expr.mod_desc module_name in
+    let mod_kind = for_module ~env expr module_name in
     let env = env |> Env.add_module ~name:module_name in
     let mod_type_kind = for_type_module ~name:module_name ~env typ in
     Constraint (mod_kind, mod_type_kind)
@@ -690,7 +791,7 @@ and scan_let_modules ~env (e : Typedtree.expression) =
     (match expression.exp_desc with
     | Texp_letmodule (id, name, mexpr, _body) ->
       let stamp = Ident.binding_time id in
-      let item = for_module ~env mexpr.mod_desc name.txt in
+      let item = for_module ~env mexpr name.txt in
       let declared =
         Process_attributes.new_declared ~item ~extent:name.loc ~name ~stamp
           ~module_path:NotVisible false []
@@ -723,7 +824,11 @@ and for_structure ~name ~env str_items =
 let file_for_cmt_infos ~module_name ~uri
     ({cmt_modname; cmt_annots} : Cmt_format.cmt_infos) =
   let env =
-    {Env.stamps = Stamps.init (); module_path = File (uri, module_name)}
+    {
+      Env.stamps = Stamps.init ();
+      module_path = File (uri, module_name);
+      renamed_stamps = Hashtbl.create 1;
+    }
   in
   match cmt_annots with
   | Partial_implementation parts ->
@@ -737,7 +842,13 @@ let file_for_cmt_infos ~module_name ~uri
       |> List.concat
     in
     let structure = for_structure ~name:module_name ~env items in
-    {File.uri; module_name = cmt_modname; stamps = env.stamps; structure}
+    {
+      File.uri;
+      module_name = cmt_modname;
+      stamps = env.stamps;
+      structure;
+      renamed_stamps = env.renamed_stamps;
+    }
   | Partial_interface parts ->
     let items =
       parts |> Array.to_list
@@ -749,13 +860,31 @@ let file_for_cmt_infos ~module_name ~uri
       |> List.concat
     in
     let structure = for_signature ~name:module_name ~env items in
-    {uri; module_name = cmt_modname; stamps = env.stamps; structure}
+    {
+      uri;
+      module_name = cmt_modname;
+      stamps = env.stamps;
+      structure;
+      renamed_stamps = env.renamed_stamps;
+    }
   | Implementation structure ->
     let structure = for_structure ~name:module_name ~env structure.str_items in
-    {uri; module_name = cmt_modname; stamps = env.stamps; structure}
+    {
+      uri;
+      module_name = cmt_modname;
+      stamps = env.stamps;
+      structure;
+      renamed_stamps = env.renamed_stamps;
+    }
   | Interface signature ->
     let structure = for_signature ~name:module_name ~env signature.sig_items in
-    {uri; module_name = cmt_modname; stamps = env.stamps; structure}
+    {
+      uri;
+      module_name = cmt_modname;
+      stamps = env.stamps;
+      structure;
+      renamed_stamps = env.renamed_stamps;
+    }
 
 let file_for_cmt ~state ~module_name ~cmt ~uri =
   match Hashtbl.find_opt state.cmt_cache cmt with
