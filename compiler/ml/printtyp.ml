@@ -945,7 +945,8 @@ and tree_of_constructor ?printing_context ~layout ~position cd =
       let as_annotation = function
         | Variant_runtime.Null -> "@as(null)"
         | Undefined -> "@as(undefined)"
-        | String s -> Printf.sprintf "@as(%S)" s
+        | String s ->
+          Printf.sprintf "@as(\"%s\")" (String_literal.encode_js_string s)
         | Int i -> Printf.sprintf "@as(%d)" i
         | Float f -> Printf.sprintf "@as(%s)" f
         | Bool b -> Printf.sprintf "@as(%b)" b

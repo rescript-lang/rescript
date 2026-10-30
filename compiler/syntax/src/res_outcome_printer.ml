@@ -41,6 +41,9 @@ let collect_arrow_args (out_type : Outcometree.out_type) =
   | Otyp_arrow (args, ret) -> (args, ret)
   | _ -> ([], out_type)
 
+let print_string_literal_doc s =
+  Doc.text ("\"" ^ String_literal.encode_js_string s ^ "\"")
+
 let rec collect_functor_args (out_module_type : Outcometree.out_module_type)
     args =
   match out_module_type with
@@ -398,7 +401,12 @@ and print_record_decl_row_doc (name, runtime_name, mut, opt, arg) =
        [
          (match runtime_name with
          | Some runtime_name ->
-           Doc.text ("@as(\"" ^ String.escaped runtime_name ^ "\") ")
+           Doc.concat
+             [
+               Doc.text "@as(";
+               print_string_literal_doc runtime_name;
+               Doc.text ") ";
+             ]
          | None -> Doc.nil);
          (if mut then Doc.text "mutable " else Doc.nil);
          Printer.print_ident_like ~allow_uident:false name;
@@ -454,7 +462,6 @@ let print_type_parameter_doc (typ, (co, cn)) =
 
 (* Print a digested FFI declaration as the surface attributes the user
    wrote; the stored form is the declaration itself. *)
-let print_string_literal_doc s = Doc.text ("\"" ^ String.escaped s ^ "\"")
 
 let print_inline_const_doc (c : External_ffi_types.inline_const) =
   match c with
