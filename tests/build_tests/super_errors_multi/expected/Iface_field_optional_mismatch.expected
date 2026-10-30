@@ -8,12 +8,11 @@
 
   The implementation /.../fixtures/Iface_field_optional_mismatch/Foo.res
   does not match the interface /.../fixtures/Iface_field_optional_mismatch/foo.cmi:
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/Iface_field_optional_mismatch/Foo.res[0m:[2m1:1-28[0m):
     type t = {a: int, b: string}
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/Iface_field_optional_mismatch/Foo.resi[0m:[2m1:1-29[0m):
     type t = {a: int, b?: string}
-  [36m/.../fixtures/Iface_field_optional_mismatch/Foo.resi[0m:[2m1:1-29[0m:
-    Expected declaration
-  [36m/.../fixtures/Iface_field_optional_mismatch/Foo.res[0m:[2m1:1-28[0m:
-    Actual declaration
+  
   The optional attribute of field b is different.

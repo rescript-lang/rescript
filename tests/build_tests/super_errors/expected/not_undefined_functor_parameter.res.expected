@@ -11,19 +11,13 @@
   12 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-      type t = X.t
-    }
-  is not included in
-    {
-      type t
-    }
-  Type declarations do not match: type t = X.t is not included in type t
-  [36m/.../fixtures/not_undefined_functor_parameter.res[0m:[2m7:19-24[0m:
-    Expected declaration
-  [36m/.../fixtures/not_undefined_functor_parameter.res[0m:[2m9:5-16[0m:
-    Actual declaration
+  
+  Actual declaration ([36m/.../fixtures/not_undefined_functor_parameter.res[0m:[2m9:5-16[0m):
+    type t = X.t
+  
+  Expected declaration ([36m/.../fixtures/not_undefined_functor_parameter.res[0m:[2m7:19-24[0m):
+    type t
+  
   Their runtime representations differ:
-  the second declaration is @notUndefined,
-  but the first declaration can hold undefined.
+    Actual declaration: can hold undefined
+    Expected declaration: @notUndefined

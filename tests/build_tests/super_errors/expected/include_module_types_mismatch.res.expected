@@ -12,24 +12,11 @@
   14 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-      module M: {
-        let a: string
-      }
-    }
-  is not included in
-    Outer
+  
   In module M:
-  Modules do not match:
-    {
-      let a: string
-    }
-  is not included in
-    Inner
-  In module M:
-  Values do not match: let a: string is not included in let a: int
-  [36m/.../fixtures/include_module_types_mismatch.res[0m:[2m2:3-12[0m:
-    Expected declaration
-  [36m/.../fixtures/include_module_types_mismatch.res[0m:[2m11:9[0m:
-    Actual declaration
+  
+  Actual declaration ([36m/.../fixtures/include_module_types_mismatch.res[0m:[2m11:9[0m):
+    let a: string
+  
+  Expected declaration ([36m/.../fixtures/include_module_types_mismatch.res[0m:[2m2:3-12[0m):
+    let a: int

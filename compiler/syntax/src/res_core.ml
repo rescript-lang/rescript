@@ -7244,6 +7244,7 @@ and parse_module_declaration_or_alias ~attrs p =
 
 and parse_module_type_declaration ~attrs ~start_pos p =
   Parser.expect Typ p;
+  let name_start = Parser.start_pos p in
   let module_name =
     match Parser.peek p with
     | Uident ident ->
@@ -7265,7 +7266,12 @@ and parse_module_type_declaration ~attrs ~start_pos p =
       Some (parse_module_type p)
     | _ -> None
   in
-  let module_decl = Ast_helper.Mtd.mk ~attrs ?typ module_name in
+  (* From the name, like a module type declaration in a structure *)
+  let module_decl =
+    Ast_helper.Mtd.mk ~attrs
+      ~loc:(mk_loc name_start (Parser.position p))
+      ?typ module_name
+  in
   Ast_helper.Sig.modtype ~loc:(mk_loc start_pos (Parser.position p)) module_decl
 
 and parse_sign_let_desc ~attrs p =

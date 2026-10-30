@@ -191,6 +191,16 @@ type type_mismatch =
   | Runtime_annotation of string * string
   | Not_undefined
 
+(* A side of a comparison as a label: "the actual" and "declaration" make
+   "Actual declaration" *)
+let label side decl =
+  let side =
+    match String.split_on_char ' ' side with
+    | "the" :: rest -> String.concat " " rest
+    | _ -> side
+  in
+  String.capitalize_ascii (side ^ " " ^ decl)
+
 let report_type_mismatch0 first second decl ppf err =
   let pr fmt = Format.fprintf ppf fmt in
   match err with
@@ -225,27 +235,31 @@ let report_type_mismatch0 first second decl ppf err =
   | Record_representation (_rep1, _rep2) ->
     pr "Their internal representations differ"
   | Unboxed_representation b ->
-    pr "Their internal representations differ:@ %s %s %s"
-      (if b then second else first)
+    pr "@[<v 2>Their internal representations differ:@,%s %s %s@]"
+      (String.capitalize_ascii (if b then second else first))
       decl "uses unboxed representation"
-  | Immediate -> pr "%s is not an immediate type" first
+  | Immediate -> pr "%s %s is not an immediate type" first decl
   | Tag_name -> pr "Their @tag annotations differ"
   | Variant_representation s ->
     pr "The internal representations for case %s are not equal" (Ident.name s)
   | Not_undefined ->
     pr
-      "Their runtime representations differ:@ %s %s is @notUndefined,@ but %s \
-       %s can hold undefined"
-      second decl first decl
+      "@[<v 2>Their runtime representations differ:@,\
+       %s: can hold undefined@,\
+       %s: @notUndefined@]"
+      (label first decl) (label second decl)
   | Runtime_annotation (declared1, declared2) ->
-    pr
-      "Their runtime representations differ:@ %s %s states %s,@ %s %s states %s"
-      first decl declared1 second decl declared2
+    pr "@[<v 2>Their runtime representations differ:@,%s: %s@,%s: %s@]"
+      (label first decl) declared1 (label second decl) declared2
 
 let report_type_mismatch first second decl ppf =
   List.iter (fun err ->
-      if err = Manifest then ()
-      else
+      match err with
+      | Manifest -> ()
+      (* Its lines are labels, not sentences *)
+      | Runtime_annotation _ | Not_undefined ->
+        Format.fprintf ppf "@ %a" (report_type_mismatch0 first second decl) err
+      | _ ->
         Format.fprintf ppf "@ %a." (report_type_mismatch0 first second decl) err)
 
 let rec compare_constructor_arguments env cstr params1 params2 arg1 arg2 =
@@ -390,8 +404,8 @@ let compare_runtime_annotations env id decl1 decl2 =
     else
       [
         Runtime_annotation
-          ( Ast_untagged_variants.describe_declared_block_type declared1,
-            Ast_untagged_variants.describe_declared_block_type declared2 );
+          ( Ast_untagged_variants.describe_declared_values declared1,
+            Ast_untagged_variants.describe_declared_values declared2 );
       ]
 
 let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =

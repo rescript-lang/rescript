@@ -8,12 +8,11 @@
 
   The implementation /.../fixtures/Iface_privacy_mismatch/Foo.res
   does not match the interface /.../fixtures/Iface_privacy_mismatch/foo.cmi:
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/Iface_privacy_mismatch/Foo.res[0m:[2m1:1-20[0m):
     type t = private int
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/Iface_privacy_mismatch/Foo.resi[0m:[2m1:1-12[0m):
     type t = int
-  [36m/.../fixtures/Iface_privacy_mismatch/Foo.resi[0m:[2m1:1-12[0m:
-    Expected declaration
-  [36m/.../fixtures/Iface_privacy_mismatch/Foo.res[0m:[2m1:1-20[0m:
-    Actual declaration
+  
   A private type would be revealed.

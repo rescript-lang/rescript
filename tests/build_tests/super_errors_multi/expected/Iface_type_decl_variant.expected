@@ -10,12 +10,11 @@
 
   The implementation /.../fixtures/Iface_type_decl_variant/Foo.res
   does not match the interface /.../fixtures/Iface_type_decl_variant/foo.cmi:
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/Iface_type_decl_variant/Foo.res[0m:[2m1:1-3:13[0m):
     type t = A | B(string)
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/Iface_type_decl_variant/Foo.resi[0m:[2m1:1-3:10[0m):
     type t = A | B(int)
-  [36m/.../fixtures/Iface_type_decl_variant/Foo.resi[0m:[2m1:1-3:10[0m:
-    Expected declaration
-  [36m/.../fixtures/Iface_type_decl_variant/Foo.res[0m:[2m1:1-3:13[0m:
-    Actual declaration
+  
   The types for constructor B are not equal.

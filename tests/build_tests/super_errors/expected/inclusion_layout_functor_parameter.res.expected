@@ -1,0 +1,22 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/inclusion_layout_functor_parameter.res[0m:[2m9:5-15:1[0m
+
+   7 [2m│[0m     },
+   8 [2m│[0m   ) => {}
+   [1;31m9[0m [2m│[0m } = [1;31m{[0m
+  [1;31m10[0m [2m│[0m [1;31m  module F = ([0m
+   [2m.[0m [2m│[0m [2m...[0m
+  [1;31m14[0m [2m│[0m [1;31m  ) => {}[0m
+  [1;31m15[0m [2m│[0m [1;31m}[0m
+  16 [2m│[0m 
+
+  Signature mismatch:
+  
+  In the parameter X of functor F:
+  
+  Actual declaration ([36m/.../fixtures/inclusion_layout_functor_parameter.res[0m:[2m12:7-19[0m):
+    let a: string
+  
+  Expected declaration ([36m/.../fixtures/inclusion_layout_functor_parameter.res[0m:[2m6:7-16[0m):
+    let a: int

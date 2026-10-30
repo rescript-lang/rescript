@@ -1858,7 +1858,7 @@ let report_error ppf = function
   | Cannot_apply mty ->
     fprintf ppf "@[This module is not a functor; it has type@ %a@]" modtype mty
   | Not_included errs ->
-    fprintf ppf "@[<v>Signature mismatch:@ %a@]" Includemod.report_error errs
+    fprintf ppf "@[<v>Signature mismatch:@,@,%a@]" Includemod.report_error errs
   | Cannot_eliminate_dependency mty ->
     fprintf ppf
       "@[This functor has type@ %a@ The parameter cannot be eliminated in the \
@@ -1874,12 +1874,16 @@ let report_error ppf = function
   | With_mismatch (lid, explanation) ->
     fprintf ppf
       "@[<v>@[In this `with' constraint, the new definition of %a@ does not \
-       match its original definition@ in the constrained signature:@]@ %a@]"
+       match its original definition@ in the constrained signature:@]@,\
+       @,\
+       %a@]"
       longident lid Includemod.report_error explanation
   | With_makes_applicative_functor_ill_typed (lid, path, explanation) ->
     fprintf ppf
       "@[<v>@[This `with' constraint on %a makes the applicative functor @ \
-       type %s ill-typed in the constrained signature:@]@ %a@]"
+       type %s ill-typed in the constrained signature:@]@,\
+       @,\
+       %a@]"
       longident lid (Path.name path) Includemod.report_error explanation
   | With_changes_module_alias (lid, id, path) ->
     fprintf ppf

@@ -8,13 +8,12 @@
 
   The implementation /.../fixtures/Iface_constraint_mismatch/Foo.res
   does not match the interface /.../fixtures/Iface_constraint_mismatch/foo.cmi:
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/Iface_constraint_mismatch/Foo.res[0m:[2m1:1-35[0m):
     type t<'a> = 'a
-    constraint 'a = int
-  is not included in
+      constraint 'a = int
+  
+  Expected declaration ([36m/.../fixtures/Iface_constraint_mismatch/Foo.resi[0m:[2m1:1-10[0m):
     type t<'a>
-  [36m/.../fixtures/Iface_constraint_mismatch/Foo.resi[0m:[2m1:1-10[0m:
-    Expected declaration
-  [36m/.../fixtures/Iface_constraint_mismatch/Foo.res[0m:[2m1:1-35[0m:
-    Actual declaration
+  
   Their constraints differ.

@@ -10,12 +10,11 @@
 
   The implementation /.../fixtures/Iface_variant_representation_mismatch/Foo.res
   does not match the interface /.../fixtures/Iface_variant_representation_mismatch/foo.cmi:
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/Iface_variant_representation_mismatch/Foo.res[0m:[2m1:1-3:5[0m):
     type t = @as(0) A | B
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/Iface_variant_representation_mismatch/Foo.resi[0m:[2m1:1-3:5[0m):
     type t = @as("zero") A | B
-  [36m/.../fixtures/Iface_variant_representation_mismatch/Foo.resi[0m:[2m1:1-3:5[0m:
-    Expected declaration
-  [36m/.../fixtures/Iface_variant_representation_mismatch/Foo.res[0m:[2m1:1-3:5[0m:
-    Actual declaration
+  
   The internal representations for case A are not equal.

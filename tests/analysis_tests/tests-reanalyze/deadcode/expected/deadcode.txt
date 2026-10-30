@@ -1463,6 +1463,8 @@
   addDeclaration_ Value +test Shadow.res:11:6 path:+Shadow.M
   addDeclaration_ Value +test Shadow.res:9:6 path:+Shadow.M
   Scanning TestDeadExn.cmt Source:TestDeadExn.res
+  add_value_reference TestDeadExn.res:1:12 --> DeadExn.resi:2:0
+  add_type_reference TestDeadExn.res:1:12 --> DeadExn.resi:2:0
   Scanning TestEmitInnerModules.cmt Source:TestEmitInnerModules.res
   addDeclaration_ Value +x TestEmitInnerModules.res:3:6 path:+TestEmitInnerModules.Inner
   addDeclaration_ Value +y TestEmitInnerModules.res:5:6 path:+TestEmitInnerModules.Inner

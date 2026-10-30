@@ -12,29 +12,19 @@
   12 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-      module type T = {
-        let b: int
-        let a: int
-      }
-    }
-  is not included in
-    {
-      module type T = {
-        let a: int
-        let b: int
-      }
-    }
-  Module type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/include_modtype_permutation.res[0m:[2m7:15-10:3[0m):
     module type T = {
       let b: int
       let a: int
     }
-  does not match
+  
+  Expected declaration ([36m/.../fixtures/include_modtype_permutation.res[0m:[2m2:15-5:3[0m):
     module type T = {
       let a: int
       let b: int
     }
-  At position module type T = <here>
+  
+  In module type T:
+  
   Illegal permutation of structure fields
