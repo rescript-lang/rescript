@@ -1,30 +1,42 @@
 module Source_file_extractor = struct
-  let extract lines ~pos_start ~pos_end =
+  let leading_spaces line =
+    let len = String.length line in
+    let rec go i = if i < len && line.[i] = ' ' then go (i + 1) else i in
+    go 0
+
+  (* The source text from [pos_start] to [pos_end], indented by [indent]:
+     the lines after the first keep their indentation relative to the line
+     the text starts on. *)
+  let extract lines ~indent ~pos_start ~pos_end =
     let line_start, col_start = pos_start in
     let line_end, col_end = pos_end in
     let res = ref [] in
     if line_start < 0 || line_start > line_end || line_end >= Array.length lines
     then []
-    else (
+    else
+      let base = min col_start (leading_spaces lines.(line_start)) in
+      let reindent line =
+        let drop = min base (leading_spaces line) in
+        if drop = String.length line then ""
+        else indent ^ String.sub line drop (String.length line - drop)
+      in
       for n = line_end downto line_start do
         let line = lines.(n) in
         let len = String.length line in
         if n = line_start && n = line_end then (
           if col_start >= 0 && col_start < col_end && col_end <= len then
-            let indent = String.make col_start ' ' in
             res :=
               (indent ^ String.sub line col_start (col_end - col_start)) :: !res)
         else if n = line_start then (
           if col_start >= 0 && col_start < len then
-            let indent = String.make col_start ' ' in
             res :=
               (indent ^ String.sub line col_start (len - col_start)) :: !res)
         else if n = line_end then (
           if col_end > 0 && col_end <= len then
-            res := String.sub line 0 col_end :: !res)
-        else res := line :: !res
+            res := reindent (String.sub line 0 col_end) :: !res)
+        else res := reindent line :: !res
       done;
-      !res)
+      !res
 end
 
 module Attributes_utils : sig
@@ -280,7 +292,7 @@ let print_signature ~path ~extractor ~signature =
       (* Rescript primitive name, e.g. @val external ... *)
       let lines =
         let pos_start, pos_end = Loc.range val_loc in
-        extractor |> Source_file_extractor.extract ~pos_start ~pos_end
+        extractor |> Source_file_extractor.extract ~indent ~pos_start ~pos_end
       in
       let attributes = Attributes_utils.make lines in
 
@@ -304,7 +316,8 @@ let print_signature ~path ~extractor ~signature =
          let lines =
            let pos_start, pos_end = Loc.range type_decl.type_loc in
            let pos_start = attributes_start ~extractor type_decl pos_start in
-           extractor |> Source_file_extractor.extract ~pos_start ~pos_end
+           extractor
+           |> Source_file_extractor.extract ~indent ~pos_start ~pos_end
          in
          (* Copy the type declaration verbatim to preserve attributes *)
          Buffer.add_string buf ((lines |> String.concat "\n") ^ "\n")

@@ -1,0 +1,25 @@
+Create Interface src/CreateInterfaceIndent.res
+module Make: (
+  X: {
+    type t
+  },
+) =>
+{
+  type u = X.t
+}
+module M: {
+  type t = int
+}
+module N: {
+  type r = {
+    a: int,
+    b: string,
+  }
+}
+module P: {
+  @val external now: unit => float = "Date.now"
+  type v =
+    | A
+    | B
+}
+
