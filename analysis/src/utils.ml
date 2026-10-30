@@ -60,7 +60,6 @@ let filter_map f =
   aux []
 
 let dump_path path = Str.global_replace (Str.regexp_string "\\") "/" path
-let is_uncurried_internal path = starts_with (Path.name path) "Js.Fn.arity"
 
 let flatten_long_ident ?(jsx = false) ?(cut_at_offset = None) lid =
   let extend_path s path =

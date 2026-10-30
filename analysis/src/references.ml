@@ -106,9 +106,6 @@ let get_loc_item ~full ~pos ~debug =
       Printf.printf "n1:%s n2:%s n3:%s n4:%s\n" (name_of li1) (name_of li2)
         (name_of li3) (name_of li4);
     Some li3
-  | {loc_type = Typed (_, {desc = Tconstr (path, _, _)}, _)} :: li :: _
-    when Utils.is_uncurried_internal path ->
-    Some li
   | li :: _ -> Some li
   | _ -> None
 
