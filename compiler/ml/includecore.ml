@@ -201,7 +201,9 @@ let label side decl =
   in
   String.capitalize_ascii (side ^ " " ^ decl)
 
-let report_type_mismatch0 first second decl ppf err =
+(* [lead_in] introduces the two lines of a difference in runtime
+   representation; without it they stand under a lead-in printed before *)
+let report_type_mismatch0 ?(lead_in = true) first second decl ppf err =
   let pr fmt = Format.fprintf ppf fmt in
   match err with
   | Arity -> pr "They have different arities"
@@ -243,24 +245,41 @@ let report_type_mismatch0 first second decl ppf err =
   | Variant_representation s ->
     pr "The internal representations for case %s are not equal" (Ident.name s)
   | Not_undefined ->
-    pr
-      "@[<v 2>Their runtime representations differ:@,\
-       %s: can hold undefined@,\
-       %s: @notUndefined@]"
-      (label first decl) (label second decl)
+    if lead_in then pr "@[<v 2>Their runtime representations differ:@,";
+    pr "%s: can hold undefined@,%s: @notUndefined" (label first decl)
+      (label second decl);
+    if lead_in then pr "@]"
   | Runtime_annotation (declared1, declared2) ->
-    pr "@[<v 2>Their runtime representations differ:@,%s: %s@,%s: %s@]"
-      (label first decl) declared1 (label second decl) declared2
+    if lead_in then pr "@[<v 2>Their runtime representations differ:@,";
+    pr "%s: %s@,%s: %s" (label first decl) declared1 (label second decl)
+      declared2;
+    if lead_in then pr "@]"
 
-let report_type_mismatch first second decl ppf =
-  List.iter (fun err ->
-      match err with
-      | Manifest -> ()
-      (* Its lines are labels, not sentences *)
-      | Runtime_annotation _ | Not_undefined ->
-        Format.fprintf ppf "@ %a" (report_type_mismatch0 first second decl) err
-      | _ ->
-        Format.fprintf ppf "@ %a." (report_type_mismatch0 first second decl) err)
+(* Each reason on a line after a break. [read_the_same] puts them under a note
+   that the declarations print the same, which then replaces the lead-in of a
+   difference in runtime representation. *)
+let report_type_mismatch ?(read_the_same = false) first second decl ppf errs =
+  let report ppf =
+    List.iter (fun err ->
+        match err with
+        | Manifest -> ()
+        (* Its lines are labels, not sentences *)
+        | Runtime_annotation _ | Not_undefined ->
+          Format.fprintf ppf "@ %a"
+            (report_type_mismatch0 ~lead_in:(not read_the_same) first second
+               decl)
+            err
+        | _ ->
+          Format.fprintf ppf "@ %a."
+            (report_type_mismatch0 first second decl)
+            err)
+  in
+  if read_the_same then
+    Format.fprintf ppf
+      "@ @[<v 2>The declarations read the same, but a type they mention \
+       differs:%a@]"
+      report errs
+  else report ppf errs
 
 let rec compare_constructor_arguments env cstr params1 params2 arg1 arg2 =
   match (arg1, arg2) with

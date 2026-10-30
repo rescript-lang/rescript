@@ -15,7 +15,7 @@
     type t = {y: int}
   
   Expected declaration ([36m/.../fixtures/runtime_annotation_interface_over_record.res[0m:[2m2:21-26[0m):
-    type t
+    @typeOf("string") type t
   
   Their runtime representations differ:
     Actual declaration: typeof "object"

@@ -33,4 +33,13 @@ module WithWire: (
 module Applied: {
   type t = {@as("wire") field: int}
 }
+module type Type = {
+  type t
+}
+module Tagged: (
+  X: Type,
+) =>
+{
+  @tag("kind") type wrapped = Value({value: X.t}) | Empty({reason: string})
+}
 

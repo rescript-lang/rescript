@@ -15,7 +15,7 @@
     type t = option<int>
   
   Expected declaration ([36m/.../fixtures/not_undefined_functor_argument.res[0m:[2m3:19-24[0m):
-    type t
+    @notUndefined type t
   
   Their runtime representations differ:
     Actual declaration: can hold undefined

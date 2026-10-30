@@ -1,0 +1,1 @@
+- Keep `@tag`, `@notUndefined`, `@instanceOf` and `@typeOf` when printing a type declaration, in error messages, hover and generated interfaces.

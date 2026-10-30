@@ -13,9 +13,9 @@
   does not match the interface /.../fixtures/Iface_tag_name_mismatch/foo.cmi:
   
   Actual declaration ([36m/.../fixtures/Iface_tag_name_mismatch/Foo.res[0m:[2m2:1-4:5[0m):
-    type t = @as("a") A | B
+    @tag("type") type t = @as("a") A | B
   
   Expected declaration ([36m/.../fixtures/Iface_tag_name_mismatch/Foo.resi[0m:[2m2:1-4:5[0m):
-    type t = @as("a") A | B
+    @tag("kind") type t = @as("a") A | B
   
   Their @tag annotations differ.

@@ -67,4 +67,10 @@ val extension_constructors :
   Env.t -> Ident.t -> extension_constructor -> extension_constructor -> bool
 
 val report_type_mismatch :
-  string -> string -> string -> Format.formatter -> type_mismatch list -> unit
+  ?read_the_same:bool ->
+  string ->
+  string ->
+  string ->
+  Format.formatter ->
+  type_mismatch list ->
+  unit
