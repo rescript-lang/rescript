@@ -2,7 +2,6 @@
 
 import * as Test from "./Test.mjs";
 import * as Stdlib_JsExn from "@rescript/runtime/lib/es6/Stdlib_JsExn.mjs";
-import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.mjs";
 import * as Stdlib_JsError from "@rescript/runtime/lib/es6/Stdlib_JsError.mjs";
 import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
@@ -328,7 +327,9 @@ Test.run([
     57
   ],
   "getTimeZoneTransition without a transition"
-], Stdlib_Option.isNone(Primitive_option.fromNullable(utc.getTimeZoneTransition("previous"))), eq, true);
+], Primitive_option.fromNullable(utc.getTimeZoneTransition("previous")) === undefined, eq, true);
+
+let opt = utc.withTimeZone("America/New_York").getTimeZoneTransition("next");
 
 Test.run([
   [
@@ -338,7 +339,7 @@ Test.run([
     54
   ],
   "getTimeZoneTransition with a transition"
-], Stdlib_Option.map(Primitive_option.fromNullable(utc.withTimeZone("America/New_York").getTimeZoneTransition("next")), transition => transition.toString()), eq, "2024-03-10T03:00:00-04:00[America/New_York]");
+], !(opt == null) ? Primitive_option.some(opt.toString()) : undefined, eq, "2024-03-10T03:00:00-04:00[America/New_York]");
 
 Test.run([
   [
