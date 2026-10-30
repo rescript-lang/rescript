@@ -18,5 +18,5 @@
     type t
   
   Their runtime representations differ:
-    The actual declaration states values whose typeof is "object".
-    The expected declaration states values whose typeof is "string".
+    Actual declaration: typeof "object"
+    Expected declaration: typeof "string"

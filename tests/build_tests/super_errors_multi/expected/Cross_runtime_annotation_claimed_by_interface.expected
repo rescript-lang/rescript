@@ -16,5 +16,5 @@
     type t
   
   Their runtime representations differ:
-    The actual declaration states no runtime class or typeof.
-    The expected declaration states values whose typeof is "string".
+    Actual declaration: no stated class or typeof
+    Expected declaration: typeof "string"

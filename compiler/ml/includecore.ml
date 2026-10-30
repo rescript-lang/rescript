@@ -191,6 +191,16 @@ type type_mismatch =
   | Runtime_annotation of string * string
   | Not_undefined
 
+(* A side of a comparison as a label: "the actual" and "declaration" make
+   "Actual declaration" *)
+let label side decl =
+  let side =
+    match String.split_on_char ' ' side with
+    | "the" :: rest -> String.concat " " rest
+    | _ -> side
+  in
+  String.capitalize_ascii (side ^ " " ^ decl)
+
 let report_type_mismatch0 first second decl ppf err =
   let pr fmt = Format.fprintf ppf fmt in
   match err with
@@ -235,24 +245,21 @@ let report_type_mismatch0 first second decl ppf err =
   | Not_undefined ->
     pr
       "@[<v 2>Their runtime representations differ:@,\
-       %s %s is @notUndefined,@,\
-       but %s %s can hold undefined@]"
-      (String.capitalize_ascii second)
-      decl first decl
+       %s: can hold undefined@,\
+       %s: @notUndefined@]"
+      (label first decl) (label second decl)
   | Runtime_annotation (declared1, declared2) ->
-    pr
-      "@[<v 2>Their runtime representations differ:@,\
-       %s %s states %s.@,\
-       %s %s states %s@]"
-      (String.capitalize_ascii first)
-      decl declared1
-      (String.capitalize_ascii second)
-      decl declared2
+    pr "@[<v 2>Their runtime representations differ:@,%s: %s@,%s: %s@]"
+      (label first decl) declared1 (label second decl) declared2
 
 let report_type_mismatch first second decl ppf =
   List.iter (fun err ->
-      if err = Manifest then ()
-      else
+      match err with
+      | Manifest -> ()
+      (* Its lines are labels, not sentences *)
+      | Runtime_annotation _ | Not_undefined ->
+        Format.fprintf ppf "@ %a" (report_type_mismatch0 first second decl) err
+      | _ ->
         Format.fprintf ppf "@ %a." (report_type_mismatch0 first second decl) err)
 
 let rec compare_constructor_arguments env cstr params1 params2 arg1 arg2 =
@@ -397,8 +404,8 @@ let compare_runtime_annotations env id decl1 decl2 =
     else
       [
         Runtime_annotation
-          ( Ast_untagged_variants.describe_declared_block_type declared1,
-            Ast_untagged_variants.describe_declared_block_type declared2 );
+          ( Ast_untagged_variants.describe_declared_values declared1,
+            Ast_untagged_variants.describe_declared_values declared2 );
       ]
 
 let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =

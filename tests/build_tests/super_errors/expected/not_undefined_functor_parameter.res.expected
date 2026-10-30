@@ -19,5 +19,5 @@
     type t
   
   Their runtime representations differ:
-    The expected declaration is @notUndefined,
-    but the actual declaration can hold undefined.
+    Actual declaration: can hold undefined
+    Expected declaration: @notUndefined

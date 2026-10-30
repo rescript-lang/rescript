@@ -322,16 +322,16 @@ let runtime_annotation_to_string = function
   | Type_of block_type ->
     Printf.sprintf "@%s(\"%s\")" type_of (typeof_name block_type)
 
-(* What a declaration's annotations state, for error messages *)
-let describe_declared_block_type = function
+(* What a declaration's annotations state about its values, for error
+   messages *)
+let describe_declared_values = function
   | Some (InstanceType (Class {name; ancestors = []})) -> "instances of " ^ name
   | Some (InstanceType (Class {name; ancestors})) ->
     "instances of " ^ name ^ ", a subclass of "
     ^ String.concat " and " ancestors
   | Some (InstanceType Array) -> "arrays"
-  | Some block_type ->
-    "values whose typeof is \"" ^ typeof_name block_type ^ "\""
-  | None -> "no runtime class or typeof"
+  | Some block_type -> "typeof \"" ^ typeof_name block_type ^ "\""
+  | None -> "no stated class or typeof"
 
 (* The [@notUndefined], [@instanceOf] or [@typeOf] annotation in [attrs],
    validated. Only [Typedecl] passes [~loc]; later readers see attributes it

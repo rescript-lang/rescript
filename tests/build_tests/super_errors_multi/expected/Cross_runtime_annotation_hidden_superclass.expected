@@ -17,5 +17,5 @@
     type dog
   
   Their runtime representations differ:
-    The actual declaration states instances of Dog, a subclass of Animal.
-    The expected declaration states instances of Dog.
+    Actual declaration: instances of Dog, a subclass of Animal
+    Expected declaration: instances of Dog
