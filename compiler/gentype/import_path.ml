@@ -2,8 +2,6 @@ open Gentype_common
 
 type t = string * string
 
-let bs_curry_path ~config = ("", Config.get_bs_curry_path ~config)
-
 let from_module ~dir ~import_extension module_name =
   let with_no_path =
     (module_name |> Module_name.to_string
