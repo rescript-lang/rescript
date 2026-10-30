@@ -43,6 +43,9 @@ type pos =
   | Modtype of Ident.t
   | Arg of Ident.t
   | Body of Ident.t
+  | Reverse
+      (** The module types at this position compared the other way round, in
+          the second half of an equivalence check *)
 type error = pos list * Env.t * symptom
 
 exception Error of error list
@@ -423,7 +426,7 @@ and modtype_infos ~loc env cxt subst id info1 info2 =
 and check_modtype_equiv ~loc env cxt mty1 mty2 =
   match
     ( modtypes ~loc env cxt Subst.identity mty1 mty2,
-      modtypes ~loc env cxt Subst.identity mty2 mty1 )
+      modtypes ~loc env (Reverse :: cxt) Subst.identity mty2 mty1 )
   with
   | Tcoerce_none, Tcoerce_none -> ()
   | _c1, _c2 ->
@@ -555,11 +558,18 @@ let show_arity_mismatch env ppf (d1 : value_description)
 
 let include_symptom ~swapped env ppf = function
   | Missing_field (id, loc, kind, item) ->
-    fprintf ppf "The %s `%a` is required but not provided.@,@,%a" kind ident id
-      (show_declaration
-         (if swapped then "Actual declaration" else "Expected declaration")
-         loc signature)
-      [item]
+    (* Reversed, the item is one the actual declaration has and the expected
+       one lacks *)
+    if swapped then
+      fprintf ppf "The %s `%a` is only present in the actual declaration.@,@,%a"
+        kind ident id
+        (show_declaration "Actual declaration" loc signature)
+        [item]
+    else
+      fprintf ppf "The %s `%a` is required but not provided.@,@,%a" kind ident
+        id
+        (show_declaration "Expected declaration" loc signature)
+        [item]
   | Value_descriptions (id, d1, d2) ->
     show_declarations ~swapped (value_description id) ppf
       (d1, d1.val_loc, d2, d2.val_loc);
@@ -604,6 +614,7 @@ let rec context ppf = function
     fprintf ppf "@[<2>module type %a =@ %a@]" ident id context_mty rem
   | Body x :: rem -> fprintf ppf "(%s) =>@ %a" (argname x) context_mty rem
   | Arg x :: rem -> fprintf ppf "(%a:@ %a) => ..." ident x context_mty rem
+  | Reverse :: rem -> context ppf rem
   | [] -> fprintf ppf "<here>"
 
 and context_mty ppf = function
@@ -623,10 +634,10 @@ let path_of_modules = function
     let rec subm path = function
       | [] -> Some path
       | Module id :: rem -> subm (Pdot (path, Ident.name id, -1)) rem
-      | (Modtype _ | Arg _ | Body _) :: _ -> None
+      | (Modtype _ | Arg _ | Body _ | Reverse) :: _ -> None
     in
     subm (Pident id) rem
-  | (Modtype _ | Arg _ | Body _) :: _ | [] -> None
+  | (Modtype _ | Arg _ | Body _ | Reverse) :: _ | [] -> None
 
 (* Where in the module an error is, as a line before it. [cxt] is outermost
    first. A module type or a functor's result at the end of a module path is
@@ -659,12 +670,13 @@ let context ppf cxt =
     | None, _ -> fprintf ppf "@[<hv 2>At position@ %a@]@,@," context cxt
 
 let include_err ~show_context ppf (cxt, env, err) =
-  (* Inclusion is reversed in each functor parameter on the way *)
+  (* Inclusion is reversed in each functor parameter on the way, and in the
+     second half of an equivalence check of module types *)
   let swapped =
     List.length
       (List.filter
          (function
-           | Arg _ -> true
+           | Arg _ | Reverse -> true
            | Module _ | Modtype _ | Body _ -> false)
          cxt)
     mod 2
@@ -673,7 +685,7 @@ let include_err ~show_context ppf (cxt, env, err) =
   Printtyp.wrap_printing_env env (fun () ->
       fprintf ppf "@[<v>%a%a@]"
         (fun ppf cxt -> if show_context then context ppf cxt)
-        (List.rev cxt)
+        (List.rev (List.filter (fun pos -> pos <> Reverse) cxt))
         (include_symptom ~swapped env)
         err)
 

@@ -61,6 +61,9 @@ type pos =
   | Modtype of Ident.t
   | Arg of Ident.t
   | Body of Ident.t
+  | Reverse
+      (** The module types at this position compared the other way round, in
+          the second half of an equivalence check *)
 type error = pos list * Env.t * symptom
 
 exception Error of error list

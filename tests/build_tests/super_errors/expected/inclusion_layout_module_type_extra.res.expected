@@ -1,0 +1,21 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/inclusion_layout_module_type_extra.res[0m:[2m7:5-12:1[0m
+
+   5 [2m│[0m     let a: int
+   6 [2m│[0m   }
+   [1;31m7[0m [2m│[0m } = [1;31m{[0m
+   [1;31m8[0m [2m│[0m [1;31m  module type T = {[0m
+   [2m.[0m [2m│[0m [2m...[0m
+  [1;31m11[0m [2m│[0m [1;31m  }[0m
+  [1;31m12[0m [2m│[0m [1;31m}[0m
+  13 [2m│[0m 
+
+  Signature mismatch:
+  
+  In module type T:
+  
+  The value `b` is only present in the actual declaration.
+  
+  Actual declaration ([36m/.../fixtures/inclusion_layout_module_type_extra.res[0m:[2m10:5-14[0m):
+    let b: int
