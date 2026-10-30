@@ -1,0 +1,25 @@
+Complete src/CompletionExtensibleVariantUse.res 4:17
+XXX Not found!
+Completable: CexhaustiveSwitch Value[importe]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[importe]
+Path importe
+[
+  {
+    "detail": "CompletionExtensibleVariant.attr",
+    "kind": 12,
+    "label": "imported",
+    "tags": []
+  },
+  {
+    "detail": "insert exhaustive switch for value",
+    "filterText": "imported",
+    "insertText": "imported {\n   | CompletionExtensibleVariant.Str(_) => ${1:%todo}\n   | CompletionExtensibleVariant.Num(_) => ${2:%todo}\n   | CompletionExtensibleVariant.Sub.Flag => ${3:%todo}\n   | CompletionExtensibleVariant.Sub.Toggle(_) => ${4:%todo}\n   | CompletionExtensibleVariant.Later => ${5:%todo}\n   | Local => ${6:%todo}\n   | _ => ${7:%todo}\n   }",
+    "insertTextFormat": 2,
+    "kind": 15,
+    "label": "imported (exhaustive switch)",
+    "tags": []
+  }
+]
+

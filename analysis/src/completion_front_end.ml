@@ -504,6 +504,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                    item_num = index;
                    source_arity = List.length patterns;
                    constructor_name = Longident.last txt;
+                   constructor_path = Longident.flatten txt;
                  }
               :: pattern_path)
             ?context_path)
@@ -744,6 +745,12 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
     | Pstr_open {popen_lid} ->
       scope := !scope |> Scope.add_open ~lid:popen_lid.txt
     | Pstr_primitive vd -> scope_value_description vd
+    | Pstr_typext {ptyext_constructors} ->
+      ptyext_constructors
+      |> List.iter (fun (ext : Parsetree.extension_constructor) ->
+          scope :=
+            !scope
+            |> Scope.add_constructor ~name:ext.pext_name.txt ~loc:ext.pext_loc)
     | Pstr_value (rec_flag, bindings) ->
       if rec_flag = Recursive then bindings |> List.iter scope_value_binding;
       bindings |> List.iter (fun vb -> iterator.value_binding iterator vb);

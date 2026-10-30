@@ -378,6 +378,9 @@ and completion_type =
   | Tvariant of {
       env: Query_env.t;
       constructors: Constructor.t list;
+      extension_envs: (Constructor.t * Query_env.t) list;
+          (** The environments of the files declaring extension
+              constructors, where their payloads are typed *)
       variant_decl: Types.type_declaration;
       variant_name: string;
     }
@@ -606,6 +609,8 @@ module Completable = struct
     | NRecordBody of {seen_fields: string list}
     | NVariantPayload of {
         constructor_name: string;
+        constructor_path: string list;
+            (** The constructor as written, with its module path *)
         item_num: int;
         source_arity: int;
       }

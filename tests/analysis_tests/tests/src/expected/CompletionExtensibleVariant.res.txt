@@ -1,0 +1,315 @@
+Complete src/CompletionExtensibleVariant.res 6:26
+XXX Not found!
+Completable: Cexpression Type[attr]=Fl
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "Flag",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nFlag\n```\n\n```rescript\ntype attr = ..\n```"
+    },
+    "insertText": "Flag",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Flag",
+    "sortText": "A Flag",
+    "tags": []
+  },
+  {
+    "detail": "module Float32Array",
+    "kind": 9,
+    "label": "Float32Array",
+    "tags": []
+  },
+  {
+    "detail": "module Float64Array",
+    "kind": 9,
+    "label": "Float64Array",
+    "tags": []
+  },
+  { "detail": "module Float", "kind": 9, "label": "Float", "tags": [] }
+]
+
+Complete src/CompletionExtensibleVariant.res 10:19
+XXX Not found!
+Completable: Cexpression Type[attr]=Nu
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "Num(int)",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nNum(int)\n```\n\n```rescript\ntype attr = ..\n```"
+    },
+    "insertText": "Num($0)",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Num(_)",
+    "sortText": "A Num(_)",
+    "tags": []
+  },
+  { "detail": "module Nullable", "kind": 9, "label": "Nullable", "tags": [] },
+  { "detail": "module Null", "kind": 9, "label": "Null", "tags": [] }
+]
+
+Hover src/CompletionExtensibleVariant.res 13:19
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nattr\n```\n\n---\n\n```\n \n```\n```rescript\ntype attr = ..\n```\nGo to: [Type definition](CompletionExtensibleVariant.res#L1,1)\n"
+  }
+}
+
+Complete src/CompletionExtensibleVariant.res 16:21
+pos_cursor:[16:21] pos_no_white:[16:20] Found pattern:[16:20->16:21]
+Ppat_construct S:[16:20->16:21]
+Completable: Cpattern Value[value]=S
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+[
+  {
+    "detail": "Str(string)",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nStr(string)\n```\n\n```rescript\ntype attr = ..\n```"
+    },
+    "insertText": "Str(${1:_})",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Str(_)",
+    "tags": []
+  },
+  {
+    "detail": "Sub.Flag",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSub.Flag\n```\n\n```rescript\ntype attr = ..\n```"
+    },
+    "insertText": "Sub.Flag",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Sub.Flag",
+    "tags": []
+  },
+  {
+    "detail": "Sub.Toggle(bool)",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSub.Toggle(bool)\n```\n\n```rescript\ntype attr = ..\n```"
+    },
+    "insertText": "Sub.Toggle(${1:_})",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Sub.Toggle(_)",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensibleVariant.res 19:14
+XXX Not found!
+Completable: CexhaustiveSwitch Value[valu]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[valu]
+Path valu
+[
+  { "detail": "attr", "kind": 12, "label": "value", "tags": [] },
+  {
+    "detail": "insert exhaustive switch for value",
+    "filterText": "value",
+    "insertText": "value {\n   | Str(_) => ${1:%todo}\n   | Num(_) => ${2:%todo}\n   | Sub.Flag => ${3:%todo}\n   | Sub.Toggle(_) => ${4:%todo}\n   | _ => ${5:%todo}\n   }",
+    "insertTextFormat": 2,
+    "kind": 15,
+    "label": "value (exhaustive switch)",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensibleVariant.res 35:17
+pos_cursor:[35:17] pos_no_white:[35:16] Found pattern:[35:16->35:17]
+Ppat_construct M:[35:16->35:17]
+Completable: Cpattern Value[a]=M
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[a]
+Path a
+[
+  {
+    "detail": "MoreA",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nMoreA\n```\n\n```rescript\ntype t = ..\n```"
+    },
+    "insertText": "MoreA",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "MoreA",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensibleVariant.res 38:17
+pos_cursor:[38:17] pos_no_white:[38:16] Found pattern:[38:16->38:17]
+Ppat_construct F:[38:16->38:17]
+Completable: Cpattern Value[a]=F
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[a]
+Path a
+[
+  {
+    "detail": "A.FromA",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nA.FromA\n```\n\n```rescript\ntype t = ..\n```"
+    },
+    "insertText": "A.FromA",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "A.FromA",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensibleVariant.res 41:22
+pos_cursor:[41:22] pos_no_white:[41:21] Found pattern:[41:20->41:22]
+Ppat_construct Fl:[41:20->41:22]
+Completable: Cpattern Value[value]=Fl
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+[
+  {
+    "detail": "Sub.Flag",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSub.Flag\n```\n\n```rescript\ntype attr = ..\n```"
+    },
+    "insertText": "Sub.Flag",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Sub.Flag",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensibleVariant.res 45:22
+pos_cursor:[45:22] pos_no_white:[45:21] Found pattern:[45:20->45:22]
+Ppat_construct La:[45:20->45:22]
+Completable: Cpattern Value[value]=La
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+Completable: Cpath Value[La]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[La]
+Path La
+[ { "detail": "module Lazy", "kind": 9, "label": "Lazy", "tags": [] } ]
+
+Complete src/CompletionExtensibleVariant.res 51:35
+XXX Not found!
+Completable: Cexpression Type[attr]=t->variantPayload::Toggle($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "bool",
+    "kind": 4,
+    "label": "true",
+    "sortText": "A true",
+    "tags": []
+  },
+  {
+    "detail": "'a => Type.t",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nIt helps you inspect values that come from JavaScript APIs.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"
+    },
+    "kind": 12,
+    "label": "typeof",
+    "tags": []
+  }
+]
+
+Xform src/CompletionExtensibleVariant.res 57:4
+pos_cursor:[55:16] pos_no_white:[55:14] Found expr:[55:9->59:1]
+Completable: Cpath Value[value]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: CompletionExtensibleVariant.res
+{
+  "end": { "character": 3, "line": 57 },
+  "start": { "character": 2, "line": 57 }
+}
+newText:
+  <--here
+  Num(_) | Sub.Flag | Sub.Toggle(_) | Later | _
+
+Xform src/CompletionExtensibleVariant.res 64:4
+pos_cursor:[62:16] pos_no_white:[62:14] Found expr:[62:9->66:1]
+Completable: Cpath Value[optValue]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[optValue]
+Path optValue
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: CompletionExtensibleVariant.res
+{
+  "end": { "character": 3, "line": 64 },
+  "start": { "character": 2, "line": 64 }
+}
+newText:
+  <--here
+  Some(Num(_) | Sub.Flag | Sub.Toggle(_) | Later | _) | None
+
+Xform src/CompletionExtensibleVariant.res start: 69:3, end: 69:8
+found selection: [69:3->69:8] -> [69:3->69:8]
+XXX Not found!
+Completable: Cpath Value[value]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Exhaustive switch
+
+TextDocumentEdit: CompletionExtensibleVariant.res
+{
+  "end": { "character": 8, "line": 69 },
+  "start": { "character": 3, "line": 69 }
+}
+newText:
+   <--here
+   switch value {
+   | Str(_) => %todo
+   | Num(_) => %todo
+   | Sub.Flag => %todo
+   | Sub.Toggle(_) => %todo
+   | Later => %todo
+   | _ => %todo
+   }
+

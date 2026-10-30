@@ -35,6 +35,54 @@ let map_record_field {Types.ld_id; ld_type; ld_attributes; ld_optional} =
     deprecated = Process_attributes.find_deprecated_attribute ld_attributes;
   }
 
+(* The constructors of [type t += ...] are registered as constructors of an
+   open type named [t], so that completion can offer them for values of
+   type [t]. They are not part of any type declaration, hence the stand-in
+   declaration that carries the kind and, as its manifest, the extended
+   type, which completion compares with the type it completes. *)
+let add_extension_constructor ~(env : Env.t) ~id ~name
+    (ext : Types.extension_constructor) =
+  let type_decl : Types.type_declaration =
+    {
+      type_params = [];
+      type_arity = 0;
+      type_kind = Type_open;
+      type_private = Public;
+      type_manifest = Some (Ctype.newconstr ext.ext_type_path []);
+      type_variance = [];
+      type_newtype_level = None;
+      type_loc = Location.none;
+      type_attributes = [];
+      type_immediate = false;
+      type_representation = Boxed;
+      type_shape = Unstated;
+      type_inlined_types = [];
+    }
+  in
+  let stamp = Ident.binding_time id in
+  let item =
+    {
+      Constructor.stamp;
+      cname = name;
+      args =
+        (match ext.ext_args with
+        | Cstr_tuple args ->
+          Args (args |> List.map (fun t -> (t, Location.none)))
+        | Cstr_record fields ->
+          InlineRecord (fields |> List.map map_record_field));
+      res = ext.ext_ret_type;
+      type_decl = (Path.last ext.ext_type_path, type_decl);
+      docstring = attrs_to_docstring ext.ext_attributes;
+      deprecated =
+        Process_attributes.find_deprecated_attribute ext.ext_attributes;
+    }
+  in
+  let declared =
+    Process_attributes.new_declared ~item ~extent:ext.ext_loc ~name ~stamp
+      ~module_path:env.module_path true ext.ext_attributes
+  in
+  Stamps.add_constructor env.stamps stamp declared
+
 let rec for_type_signature_item ~(env : Shared_types.Env.t)
     ~(exported : Exported.t) (item : Types.signature_item) =
   match item with
@@ -148,7 +196,7 @@ let rec for_type_signature_item ~(env : Shared_types.Env.t)
     let name = Ident.name ident in
     let declared =
       add_declared ~extent:md_loc
-        ~item:(for_type_module ~name ~env md_type)
+        ~item:(for_type_module ~name ~env:(env |> Env.add_module ~name) md_type)
         ~name:(Location.mkloc name md_loc)
         ~stamp:(Ident.binding_time ident) ~env md_attributes
         (Exported.add exported Exported.Module)
@@ -165,6 +213,11 @@ let rec for_type_signature_item ~(env : Shared_types.Env.t)
         loc = declared.extent_loc;
       };
     ]
+  | Sig_typext (id, ext, _) ->
+    add_extension_constructor ~env ~id
+      ~name:(Location.mkloc (Ident.name id) ext.ext_loc)
+      ext;
+    []
   | _ -> []
 
 and for_type_signature ~name ~env signature =
@@ -328,6 +381,12 @@ let for_type_declaration ~env ~(exported : Exported.t)
     loc = declared.extent_loc;
   }
 
+let add_extension_constructors ~(env : Env.t) {Typedtree.tyext_constructors} =
+  tyext_constructors
+  |> List.iter
+       (fun ({ext_id; ext_name; ext_type} : Typedtree.extension_constructor) ->
+         add_extension_constructor ~env ~id:ext_id ~name:ext_name ext_type)
+
 let rec for_signature_item ~env ~(exported : Exported.t)
     (item : Typedtree.signature_item) =
   match item.sig_desc with
@@ -401,6 +460,9 @@ let rec for_signature_item ~env ~(exported : Exported.t)
         incl_type []
     in
     top_level
+  | Tsig_typext type_extension ->
+    add_extension_constructors ~env type_extension;
+    []
   (* TODO: process other things here *)
   | _ -> []
 
@@ -645,6 +707,9 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
           | _ -> Types.Trec_next
         in
         decl |> for_type_declaration ~env ~exported ~rec_status)
+  | Tstr_typext type_extension ->
+    add_extension_constructors ~env type_extension;
+    []
   | _ -> []
 
 and for_module ~env mod_desc module_name =

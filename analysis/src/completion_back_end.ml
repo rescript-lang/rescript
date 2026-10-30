@@ -1783,7 +1783,22 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
       ]
   | Tvariant {env; constructors; variant_decl; variant_name} ->
     if Debug.verbose () then print_endline "[complete_typed_value]--> Tvariant";
+    (* An extension constructor is named by its module path, as in
+       [Sub.Flag]; the prefix may also be the start of its last part. *)
+    let matches_prefix name =
+      prefix = ""
+      || Utils.starts_with name prefix
+      ||
+      match String.rindex_opt name '.' with
+      | Some i ->
+        Utils.starts_with
+          (String.sub name (i + 1) (String.length name - i - 1))
+          prefix
+      | None -> false
+    in
     constructors
+    |> List.filter (fun (constructor : Constructor.t) ->
+        matches_prefix constructor.cname.txt)
     |> List.map (fun (constructor : Constructor.t) ->
         let num_args =
           match constructor.args with
@@ -1800,7 +1815,6 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
             (Constructor
                (constructor, variant_decl |> Shared.decl_to_string variant_name))
           ~env)
-    |> filter_items ~prefix
   | Tpolyvariant {env; constructors; type_expr} ->
     if Debug.verbose () then
       print_endline "[complete_typed_value]--> Tpolyvariant";
@@ -2091,8 +2105,8 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
 
 module String_set = Set.Make (String)
 
-let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
-    completable =
+let rec process_completable_in_scope ~state ~debug ~full ~scope ~env ~pos
+    ~for_hover completable =
   if debug then
     Printf.printf "Completable: %s\n" (Completable.to_string completable);
   let package = full.package in
@@ -2398,7 +2412,8 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
       match (fallback, items) with
       | Some fallback, (None | Some []) ->
         fallback
-        |> process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
+        |> process_completable_in_scope ~state ~debug ~full ~scope ~env ~pos
+             ~for_hover
       | _, Some items -> items
       | None, None -> []
     in
@@ -2569,15 +2584,23 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
             typ_expr |> Type_utils.extract_type ~env:c.env ~package ~state
           with
           | Some (Tvariant v, _) ->
-            with_exhaustive_item c
-              ~cases:
-                (v.constructors
-                |> List.map (fun (constructor : Constructor.t) ->
-                    constructor.cname.txt
-                    ^
-                    match constructor.args with
-                    | Args [] -> ""
-                    | _ -> "(_)"))
+            let cases =
+              v.constructors
+              |> List.map (fun (constructor : Constructor.t) ->
+                  constructor.cname.txt
+                  ^
+                  match constructor.args with
+                  | Args [] -> ""
+                  | _ -> "(_)")
+            in
+            (* An open type can be extended elsewhere, so only a catch-all
+               case makes the switch exhaustive. *)
+            let cases =
+              match v.variant_decl.type_kind with
+              | Type_open -> cases @ ["_"]
+              | _ -> cases
+            in
+            with_exhaustive_item c ~cases
           | Some (Tpolyvariant v, _) ->
             with_exhaustive_item c
               ~cases:
@@ -2625,3 +2648,32 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
           ~env ~insert_text:"todo(\"${0:TODO}\")";
       ]
     else []
+
+(* The names of the modules around [pos] in [file], outermost first. *)
+let module_path_at ~(full : full) ~pos =
+  let rec in_items (items : Module.item list) =
+    match
+      items
+      |> List.find_opt (fun (item : Module.item) ->
+          Loc.has_pos ~pos item.loc
+          &&
+          match item.kind with
+          | Module _ -> true
+          | _ -> false)
+    with
+    | Some {name; kind = Module {type_}} -> name :: in_module type_
+    | _ -> []
+  and in_module (m : Module.t) =
+    match m with
+    | Structure {items} -> in_items items
+    | Constraint (implementation, _) -> in_module implementation
+    | Ident _ -> []
+  in
+  in_items full.file.structure.items
+
+let process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
+    completable =
+  Type_utils.with_completion_scope ~file:full.file
+    ~module_path:(module_path_at ~full ~pos) ~pos ~scope (fun () ->
+      process_completable_in_scope ~state ~debug ~full ~scope ~env ~pos
+        ~for_hover completable)
