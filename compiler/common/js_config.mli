@@ -47,7 +47,6 @@ type t = {
   force_cmj: bool ref;
   jsx_version: jsx_version option ref;
   jsx_module: jsx_module ref;
-  js_stdout: bool ref;
   source_map: source_map ref;
   source_map_sources_content: bool ref;
   source_map_root: string ref;
