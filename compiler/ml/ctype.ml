@@ -1409,7 +1409,7 @@ let type_changed () = Domain.DLS.get type_changed_key
 let merge r b = if b then r := true
 
 let occur env ty0 ty =
-  let allow_recursive = (*!Clflags.recursive_types ||*) !(umode ()) = Pattern in
+  let allow_recursive = !(umode ()) = Pattern in
   let old = !(type_changed ()) in
   try
     while
