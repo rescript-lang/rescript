@@ -70,8 +70,9 @@ and out_type_decl = {
   otype_params: (string * (bool * bool)) list;
   otype_type: out_type;
   otype_private: Asttypes.private_flag;
-  otype_immediate: bool;
-  otype_unboxed: bool;
+  otype_attributes: string list;
+      (** The annotations that change what the declaration means at run time,
+          as they are written, e.g. [@unboxed] or [@tag("kind")] *)
   otype_cstrs: (out_type * out_type) list;
 }
 and out_extension_constructor = {

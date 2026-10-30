@@ -5,4 +5,7 @@ module StrSet: {
 }
 type t = array<float>
 let add: (t, float) => array<float>
+module IntTagged: {
+  @tag("kind") type wrapped = Value({value: int}) | Empty({reason: string})
+}
 

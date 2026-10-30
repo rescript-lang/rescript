@@ -11,10 +11,10 @@
   does not match the interface /.../fixtures/Cross_runtime_annotation_hidden_superclass/classes.cmi:
   
   Actual declaration ([36m/.../fixtures/Cross_runtime_annotation_hidden_superclass/Classes.res[0m:[2m2:20-44[0m):
-    type dog = private animal
+    @instanceOf("Dog") type dog = private animal
   
   Expected declaration ([36m/.../fixtures/Cross_runtime_annotation_hidden_superclass/Classes.resi[0m:[2m2:20-27[0m):
-    type dog
+    @instanceOf("Dog") type dog
   
   Their runtime representations differ:
     Actual declaration: instances of Dog, a subclass of Animal

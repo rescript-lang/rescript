@@ -661,11 +661,10 @@ let rec print_out_sig_item_doc ?(print_name_as_is = false)
   | Osig_type (out_type_decl, out_rec_status) ->
     (* TODO: manifest ? *)
     let attrs =
-      match (out_type_decl.otype_immediate, out_type_decl.otype_unboxed) with
-      | false, false -> Doc.nil
-      | true, false -> Doc.concat [Doc.text "@immediate"; Doc.line]
-      | false, true -> Doc.concat [Doc.text "@unboxed"; Doc.line]
-      | true, true -> Doc.concat [Doc.text "@immediate @unboxed"; Doc.line]
+      match out_type_decl.otype_attributes with
+      | [] -> Doc.nil
+      | attributes ->
+        Doc.concat [Doc.text (String.concat " " attributes); Doc.line]
     in
     let kw =
       Doc.text

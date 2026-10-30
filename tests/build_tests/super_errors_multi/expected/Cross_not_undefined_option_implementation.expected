@@ -14,7 +14,7 @@
     type t = option<int>
   
   Expected declaration ([36m/.../fixtures/Cross_not_undefined_option_implementation/Hidden.resi[0m:[2m1:15-20[0m):
-    type t
+    @notUndefined type t
   
   Their runtime representations differ:
     Actual declaration: can hold undefined

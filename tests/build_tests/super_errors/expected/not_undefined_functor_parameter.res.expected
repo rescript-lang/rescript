@@ -16,7 +16,7 @@
     type t = X.t
   
   Expected declaration ([36m/.../fixtures/not_undefined_functor_parameter.res[0m:[2m7:19-24[0m):
-    type t
+    @notUndefined type t
   
   Their runtime representations differ:
     Actual declaration: can hold undefined

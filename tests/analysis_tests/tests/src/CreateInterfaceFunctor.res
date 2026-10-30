@@ -32,3 +32,12 @@ module WithWire = (X: {}) => {
 }
 
 module Applied = WithWire({})
+
+// Types of an applied functor keep their @tag
+module type Type = {
+  type t
+}
+
+module Tagged = (X: Type) => {
+  @tag("kind") type wrapped = Value({value: X.t}) | Empty({reason: string})
+}

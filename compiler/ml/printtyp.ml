@@ -892,14 +892,34 @@ and tree_of_type_decl id decl =
         decl.type_private,
         decl.type_representation = Unboxed )
   in
-  let immediate = Builtin_attributes.immediate decl.type_attributes in
+  let attributes =
+    let flag set attribute = if set then [attribute] else [] in
+    (* A malformed annotation was reported when the declaration was typed *)
+    let stated process =
+      try process decl.type_attributes
+      with Ast_untagged_variants.Error _ -> None
+    in
+    List.concat
+      [
+        flag (Builtin_attributes.immediate decl.type_attributes) "@immediate";
+        flag unboxed "@unboxed";
+        (match stated Ast_untagged_variants.process_tag_name with
+        | Some name -> [Printf.sprintf "@tag(\"%s\")" name]
+        | None -> []);
+        (match
+           stated (Ast_untagged_variants.process_runtime_annotation ?loc:None)
+         with
+        | Some annotation ->
+          [Ast_untagged_variants.runtime_annotation_to_string annotation]
+        | None -> []);
+      ]
+  in
   {
     otype_name = name;
     otype_params = args;
     otype_type = ty;
     otype_private = priv;
-    otype_immediate = immediate;
-    otype_unboxed = unboxed;
+    otype_attributes = attributes;
     otype_cstrs = constraints;
   }
 
