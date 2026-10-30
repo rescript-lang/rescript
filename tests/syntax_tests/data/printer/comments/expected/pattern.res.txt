@@ -53,6 +53,7 @@ let /* d */ r = list{1, 2}
 let r /* after */ = list{1, 2}
 let /* d1 */ /* d2 */ /* e */ r = list{1, 2}
 let f = /* d */ r => r
+
 let f = x =>
   switch x {
   /* d */ | r => r
