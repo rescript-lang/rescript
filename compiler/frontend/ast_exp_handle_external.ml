@@ -25,7 +25,7 @@
 let handle_debugger loc (payload : Ast_payload.t) =
   match payload with
   | PStr [] ->
-    Ast_external_mk.local_external_apply loc ~pval_prim:(Prim_name "%debugger")
+    Ast_external_mk.local_external_apply loc ~pval_prim:"%debugger"
       ~pval_type:
         (Ast_helper.Typ.arrow
            [Parg_type {attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
@@ -44,8 +44,8 @@ let raw_expression loc ~is_function (exp : Parsetree.expression) =
   {
     exp with
     pexp_desc =
-      Ast_external_mk.local_external_apply loc
-        ~pval_prim:(Prim_name "#raw_expr") ~pval_type:(raw_type ()) [exp];
+      Ast_external_mk.local_external_apply loc ~pval_prim:"#raw_expr"
+        ~pval_type:(raw_type ()) [exp];
     pexp_attributes =
       (match !is_function with
       | None -> exp.pexp_attributes
@@ -84,8 +84,8 @@ let raw_structure loc (exp : Parsetree.expression) =
     {
       exp with
       pexp_desc =
-        Ast_external_mk.local_external_apply loc
-          ~pval_prim:(Prim_name "#raw_stmt") ~pval_type:(raw_type ()) [exp];
+        Ast_external_mk.local_external_apply loc ~pval_prim:"#raw_stmt"
+          ~pval_type:(raw_type ()) [exp];
     }
 
 let handle_raw loc payload =

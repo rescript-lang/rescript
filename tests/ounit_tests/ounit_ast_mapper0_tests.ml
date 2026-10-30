@@ -259,7 +259,7 @@ let test_fixed_argument_roundtrips_through_ast0 _ =
       int_type
   in
   let vd =
-    Ast_helper.Val.mk ~prim:(Parsetree.Prim_name "f") (Location.mknoloc "f") typ
+    Ast_helper.Val.mk ~prim:(Location.mknoloc "f") (Location.mknoloc "f") typ
   in
   let vd0 =
     Ast_mapper_to0.default_mapper.value_description
@@ -320,7 +320,7 @@ let test_fixed_argument_locations_go_through_the_mapper _ =
       }
   in
   let vd =
-    Ast_helper.Val.mk ~prim:(Parsetree.Prim_name "f") (Location.mknoloc "f")
+    Ast_helper.Val.mk ~prim:(Location.mknoloc "f") (Location.mknoloc "f")
       (Ast_helper.Typ.arrow ~loc
          [
            fixed (Pfixed_json {txt = "{}"; loc = source_loc 6 8});
@@ -405,7 +405,7 @@ let test_fixed_argument_is_external_only _ =
   | Ptyp_arrow {params = [Parg_type _]} -> ()
   | _ -> assert_failure "Expected an ordinary argument in a value declaration");
   match
-    (roundtrip {vd with pval_prim = Some (Parsetree.Prim_name "f")}).pval_type
+    (roundtrip {vd with pval_prim = Some (Location.mknoloc "f")}).pval_type
       .ptyp_desc
   with
   | Ptyp_arrow {params = [Parg_fixed _]} -> ()
@@ -468,6 +468,33 @@ let test_try_finally_roundtrips_through_ast0 _ =
     OUnit.assert_equal ["before"] (attr_names round_tripped.pexp_attributes);
     OUnit.assert_equal finally.pexp_loc round_tripped_finally.pexp_loc
   | _ -> assert_failure "Expected a try with a finally after the v0 roundtrip"
+
+let test_external_primitive_roundtrips_through_ast0 _ =
+  let typ =
+    Ast_helper.Typ.constr ~loc (Location.mknoloc (Longident.Lident "t")) []
+  in
+  let external_ =
+    Ast_helper.Val.mk ~loc
+      ~attrs:[attr "send" (Parsetree.PStr [])]
+      ~prim:(located_string ~loc:(source_loc 10 16) "join")
+      (Location.mknoloc "join") typ
+  in
+  let wire =
+    Ast_mapper_to0.default_mapper.value_description
+      Ast_mapper_to0.default_mapper external_
+  in
+  OUnit.assert_equal ["join"] wire.pval_prim;
+  OUnit.assert_bool "the FFI attribute stays on the wire"
+    (has_attr "send" wire.pval_attributes);
+  let round_tripped =
+    Ast_mapper_from0.default_mapper.value_description
+      Ast_mapper_from0.default_mapper wire
+  in
+  (match round_tripped.pval_prim with
+  | Some {txt = "join"} -> ()
+  | _ -> assert_failure "Expected the primitive string after the v0 roundtrip");
+  OUnit.assert_bool "the FFI attribute survives the v0 roundtrip"
+    (has_attr "send" round_tripped.pval_attributes)
 
 let test_v0_ternary_marker_preserves_other_attribute_order _ =
   let ident name =
@@ -962,7 +989,8 @@ let test_jsx_component_on_value_descriptions_through_ast0 _ =
           attr "module" (Parsetree.PStr []);
           attr "react.component" (Parsetree.PStr []);
         ]
-      ~prim:(Prim_name "default") (Location.mknoloc "make") props_type
+      ~prim:(Location.mknoloc "default")
+      (Location.mknoloc "make") props_type
   in
   (match vd.pval_jsx_component with
   | Some {pjc_kind = Pjc_labelled None} -> ()
@@ -2785,6 +2813,8 @@ let suites =
          >:: test_record_rest_roundtrips_through_ast0;
          "ternary_roundtrips_through_ast0"
          >:: test_ternary_roundtrips_through_ast0;
+         "external_primitive_roundtrips_through_ast0"
+         >:: test_external_primitive_roundtrips_through_ast0;
          "v0_ternary_marker_preserves_other_attribute_order"
          >:: test_v0_ternary_marker_preserves_other_attribute_order;
          "v0_if_without_alternate_stays_if"
