@@ -1,0 +1,23 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/inclusion_inline_record.res[0m:[2m4:5-6:1[0m
+
+  2 [2m│[0m module M: {
+  3 [2m│[0m   type t = Person({name: string, age: int}) | Anonymous
+  [1;31m4[0m [2m│[0m } = [1;31m{[0m
+  [1;31m5[0m [2m│[0m [1;31m  type t = Person({age: int, name: string, nick: string}) | Anonymous[0m
+  [1;31m6[0m [2m│[0m [1;31m}[0m
+  7 [2m│[0m 
+
+  Signature mismatch:
+  
+  Actual declaration ([36m/.../fixtures/inclusion_inline_record.res[0m:[2m5:3-69[0m):
+    type t = Person({age: int, name: string, nick: string}) | Anonymous
+  
+  Expected declaration ([36m/.../fixtures/inclusion_inline_record.res[0m:[2m3:3-55[0m):
+    type t = Person({name: string, age: int}) | Anonymous
+  
+  The records of constructor Person differ:
+    The field nick is only present in the actual declaration.
+    The fields are in another order in the expected declaration:
+    name, age.

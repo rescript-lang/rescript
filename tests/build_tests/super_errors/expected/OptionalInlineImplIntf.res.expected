@@ -17,4 +17,5 @@
   Expected declaration ([36m/.../fixtures/OptionalInlineImplIntf.res[0m:[2m2:3-23[0m):
     type t = A({x?: int})
   
-  The optional attribute of field x is different.
+  The records of constructor A differ:
+    The optional attribute of field x is different.

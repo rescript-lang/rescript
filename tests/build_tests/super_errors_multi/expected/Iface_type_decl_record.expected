@@ -15,4 +15,4 @@
   Expected declaration ([36m/.../fixtures/Iface_type_decl_record/Foo.resi[0m:[2m1:1-25[0m):
     type t = {x: int, y: int}
   
-  Fields number 2 have different names, z and y.
+  The field z is named y in the expected declaration.

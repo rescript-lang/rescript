@@ -1,0 +1,22 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/inclusion_constructor_order.res[0m:[2m5:5-7:1[0m
+
+  3 [2m│[0m module M: {
+  4 [2m│[0m   type t = A(int) | B(string) | C
+  [1;31m5[0m [2m│[0m } = [1;31m{[0m
+  [1;31m6[0m [2m│[0m [1;31m  type t = B(int) | A(int) | C[0m
+  [1;31m7[0m [2m│[0m [1;31m}[0m
+  8 [2m│[0m 
+
+  Signature mismatch:
+  
+  Actual declaration ([36m/.../fixtures/inclusion_constructor_order.res[0m:[2m6:3-30[0m):
+    type t = B(int) | A(int) | C
+  
+  Expected declaration ([36m/.../fixtures/inclusion_constructor_order.res[0m:[2m4:3-33[0m):
+    type t = A(int) | B(string) | C
+  
+  The types for constructor B are not equal.
+  The constructors are in another order in the expected declaration:
+  A, B, C.

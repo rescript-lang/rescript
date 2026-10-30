@@ -1,0 +1,21 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/inclusion_constructor_extra.res[0m:[2m5:5-7:1[0m
+
+  3 [2m│[0m module M: {
+  4 [2m│[0m   type t = Red | Green | Blue | Gray
+  [1;31m5[0m [2m│[0m } = [1;31m{[0m
+  [1;31m6[0m [2m│[0m [1;31m  type t = Black | Red | Green | Blue | Grey[0m
+  [1;31m7[0m [2m│[0m [1;31m}[0m
+  8 [2m│[0m 
+
+  Signature mismatch:
+  
+  Actual declaration ([36m/.../fixtures/inclusion_constructor_extra.res[0m:[2m6:3-44[0m):
+    type t = Black | Red | Green | Blue | Grey
+  
+  Expected declaration ([36m/.../fixtures/inclusion_constructor_extra.res[0m:[2m4:3-36[0m):
+    type t = Red | Green | Blue | Gray
+  
+  The constructor Grey is named Gray in the expected declaration.
+  The constructor Black is only present in the actual declaration.

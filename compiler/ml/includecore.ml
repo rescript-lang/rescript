@@ -177,12 +177,16 @@ type type_mismatch =
   | Field_mutable of Ident.t
   | Field_optional of Ident.t
   | Field_arity of Ident.t
-  | Field_names of int * string * string
+  | Field_renamed of string * string
+  | Field_runtime_name of Ident.t * string * string
   | Field_missing of bool * Ident.t
+  | Field_order of string list
   | Constructor_type of Ident.t
   | Constructor_arity of Ident.t
-  | Constructor_names of int * string * string
+  | Constructor_renamed of string * string
   | Constructor_missing of bool * Ident.t
+  | Constructor_order of string list
+  | Constructor_record of Ident.t * type_mismatch list
   | Record_representation of record_representation * record_representation
   | Unboxed_representation of bool (* true means second one is unboxed *)
   | Immediate
@@ -203,7 +207,7 @@ let label side decl =
 
 (* [lead_in] introduces the two lines of a difference in runtime
    representation; without it they stand under a lead-in printed before *)
-let report_type_mismatch0 ?(lead_in = true) first second decl ppf err =
+let rec report_type_mismatch0 ?(lead_in = true) first second decl ppf err =
   let pr fmt = Format.fprintf ppf fmt in
   match err with
   | Arity -> pr "They have different arities"
@@ -218,22 +222,35 @@ let report_type_mismatch0 ?(lead_in = true) first second decl ppf err =
   | Field_optional s ->
     pr "The optional attribute of field %s is different" (Ident.name s)
   | Field_arity s -> pr "The arities for field %s differ" (Ident.name s)
-  | Field_names (n, name1, name2) ->
-    pr "Fields number %i have different names, %s and %s" n name1 name2
+  | Field_renamed (name1, name2) ->
+    pr "The field %s is named %s in %s %s" name1 name2 second decl
+  | Field_runtime_name (s, name1, name2) ->
+    pr "The field %s has the runtime name %S in %s %s,@ but %S in %s %s"
+      (Ident.name s) name1 first decl name2 second decl
   | Field_missing (b, s) ->
     pr "The field %s is only present in %s %s" (Ident.name s)
       (if b then second else first)
       decl
+  | Field_order names ->
+    pr "The fields are in another order in %s %s:@ %s" second decl
+      (String.concat ", " names)
   | Constructor_type s ->
     pr "The types for constructor %s are not equal" (Ident.name s)
   | Constructor_arity s ->
     pr "The arities for constructor %s differ" (Ident.name s)
-  | Constructor_names (n, name1, name2) ->
-    pr "Constructors number %i have different names, %s and %s" n name1 name2
+  | Constructor_renamed (name1, name2) ->
+    pr "The constructor %s is named %s in %s %s" name1 name2 second decl
   | Constructor_missing (b, s) ->
     pr "The constructor %s is only present in %s %s" (Ident.name s)
       (if b then second else first)
       decl
+  | Constructor_order names ->
+    pr "The constructors are in another order in %s %s:@ %s" second decl
+      (String.concat ", " names)
+  | Constructor_record (s, errs) ->
+    pr "@[<v 2>The records of constructor %s differ:%a@]" (Ident.name s)
+      (report_type_mismatch first second decl)
+      errs
   | Record_representation (_rep1, _rep2) ->
     pr "Their internal representations differ"
   | Unboxed_representation b ->
@@ -258,16 +275,20 @@ let report_type_mismatch0 ?(lead_in = true) first second decl ppf err =
 (* Each reason on a line after a break. [read_the_same] puts them under a note
    that the declarations print the same, which then replaces the lead-in of a
    difference in runtime representation. *)
-let report_type_mismatch ?(read_the_same = false) first second decl ppf errs =
+and report_type_mismatch ?(read_the_same = false) first second decl ppf errs =
   let report ppf =
     List.iter (fun err ->
         match err with
         | Manifest -> ()
-        (* Its lines are labels, not sentences *)
+        (* Its lines are labels, or its errors sentences of their own *)
         | Runtime_annotation _ | Not_undefined ->
           Format.fprintf ppf "@ %a"
             (report_type_mismatch0 ~lead_in:(not read_the_same) first second
                decl)
+            err
+        | Constructor_record _ ->
+          Format.fprintf ppf "@ %a"
+            (report_type_mismatch0 first second decl)
             err
         | _ ->
           Format.fprintf ppf "@ %a."
@@ -281,6 +302,89 @@ let report_type_mismatch ?(read_the_same = false) first second decl ppf errs =
       report errs
   else report ppf errs
 
+(* The entries of two declarations of a record or a variant, lined up by
+   name: those of the second declaration in its order, then those that only
+   the first one has. *)
+type 'a aligned =
+  | Both of 'a * int * 'a * int
+  | Renamed of 'a * 'a
+  | Only_first of 'a
+  | Only_second of 'a
+
+(* The aligned entries, and the names in both declarations in the order of
+   the second one when the first one has them in another order.
+
+   The entries that the other declaration lacks fall into gaps, each after an
+   entry both have, or at the start. When a gap holds as many of them in each
+   declaration, they are renamings, paired in order. *)
+let align_by_name name l1 l2 =
+  let positions l =
+    let tbl = Hashtbl.create 7 in
+    List.iteri (fun i x -> Hashtbl.replace tbl (name x) i) l;
+    tbl
+  in
+  let pos1 = positions l1 and pos2 = positions l2 in
+  let gaps l other =
+    let tbl = Hashtbl.create 7 and gap = ref None in
+    List.iter
+      (fun x ->
+        if Hashtbl.mem other (name x) then gap := Some (name x)
+        else
+          Hashtbl.replace tbl !gap
+            (x :: Option.value ~default:[] (Hashtbl.find_opt tbl !gap)))
+      l;
+    tbl
+  in
+  let gaps1 = gaps l1 pos2 in
+  let renamings = Hashtbl.create 7 and renamed = Hashtbl.create 7 in
+  Hashtbl.iter
+    (fun gap xs2 ->
+      match Hashtbl.find_opt gaps1 gap with
+      | Some xs1 when List.length xs1 = List.length xs2 ->
+        List.iter2
+          (fun x1 x2 ->
+            Hashtbl.replace renamings (name x2) x1;
+            Hashtbl.replace renamed (name x1) ())
+          xs1 xs2
+      | Some _ | None -> ())
+    (gaps l2 pos1);
+  let a1 = Array.of_list l1 in
+  let in_second =
+    List.mapi
+      (fun i x2 ->
+        match Hashtbl.find_opt pos1 (name x2) with
+        | Some i1 -> Both (a1.(i1), i1, x2, i)
+        | None -> (
+          match Hashtbl.find_opt renamings (name x2) with
+          | Some x1 -> Renamed (x1, x2)
+          | None -> Only_second x2))
+      l2
+  in
+  let only_first =
+    List.filter_map
+      (fun x1 ->
+        if Hashtbl.mem pos2 (name x1) || Hashtbl.mem renamed (name x1) then None
+        else Some (Only_first x1))
+      l1
+  in
+  let common l other =
+    List.filter_map
+      (fun x -> if Hashtbl.mem other (name x) then Some (name x) else None)
+      l
+  in
+  let order2 = common l2 pos1 in
+  (in_second @ only_first, if common l1 pos2 = order2 then None else Some order2)
+
+(* Declarations that agree on their names, as most do, need no tables *)
+let align name l1 l2 =
+  if
+    List.compare_lengths l1 l2 = 0
+    && List.for_all2 (fun x1 x2 -> String.equal (name x1) (name x2)) l1 l2
+  then
+    ( List.mapi (fun i (x1, x2) -> Both (x1, i, x2, i)) (List.combine l1 l2),
+      None )
+  else align_by_name name l1 l2
+
 let rec compare_constructor_arguments env cstr params1 params2 arg1 arg2 =
   match (arg1, arg2) with
   | Types.Cstr_tuple arg1, Types.Cstr_tuple arg2 ->
@@ -290,107 +394,137 @@ let rec compare_constructor_arguments env cstr params1 params2 arg1 arg2 =
       Ctype.equal env true (params1 @ arg1) (params2 @ arg2)
     then []
     else [Constructor_type cstr]
-  | Types.Cstr_record l1, Types.Cstr_record l2 ->
-    compare_records env params1 params2 0 l1 l2
+  | Types.Cstr_record l1, Types.Cstr_record l2 -> (
+    match compare_records env params1 params2 l1 l2 with
+    | [] -> []
+    | errs -> [Constructor_record (cstr, errs)])
   | _ -> [Constructor_type cstr]
 
-and compare_variants ~loc env params1 params2 ~layout1 ~layout2 n
+and compare_variants ~loc env params1 params2 ~layout1 ~layout2
     (cstrs1 : Types.constructor_declaration list)
     (cstrs2 : Types.constructor_declaration list) =
-  match (cstrs1, cstrs2) with
-  | [], [] -> []
-  | [], c :: _ -> [Constructor_missing (true, c.Types.cd_id)]
-  | c :: _, [] -> [Constructor_missing (false, c.Types.cd_id)]
-  | cd1 :: rem1, cd2 :: rem2 ->
-    if Ident.name cd1.cd_id <> Ident.name cd2.cd_id then
-      [Constructor_names (n, cd1.cd_id.name, cd2.cd_id.name)]
-    else (
-      Builtin_attributes.check_deprecated_inclusion ~def:cd1.cd_loc
-        ~use:cd2.cd_loc loc cd1.cd_attributes cd2.cd_attributes
-        (Ident.name cd1.cd_id);
-      let r =
-        match (cd1.cd_res, cd2.cd_res) with
-        | Some r1, Some r2 ->
-          if Ctype.equal env true [r1] [r2] then
-            compare_constructor_arguments env cd1.cd_id [r1] [r2] cd1.cd_args
-              cd2.cd_args
-          else [Constructor_type cd1.cd_id]
-        | Some _, None | None, Some _ -> [Constructor_type cd1.cd_id]
-        | _ ->
-          compare_constructor_arguments env cd1.cd_id params1 params2
-            cd1.cd_args cd2.cd_args
-      in
-      let r =
-        if r <> [] then r
-        else
-          match Ast_untagged_variants.is_nullary_variant cd1.cd_args with
-          | true ->
-            let tag_type1 = Variant_runtime.constructor_tag layout1 (n - 1) in
-            let tag_type2 = Variant_runtime.constructor_tag layout2 (n - 1) in
-            if tag_type1 <> tag_type2 then [Variant_representation cd1.cd_id]
-            else []
-          | false -> (
-            (* A tagged case with a payload carries its tag in the object;
-               an untagged one is its payload, whatever its [@as], and is
-               compared by its payload kind *)
-            match
-              ( Variant_runtime.constructor_at layout1 (n - 1),
-                Variant_runtime.constructor_at layout2 (n - 1) )
-            with
-            | Block (Tagged {tag = tag1}), Block (Tagged {tag = tag2})
-              when tag1.literal <> tag2.literal ->
-              [Variant_representation cd1.cd_id]
-            (* An unknown payload in the second declaration is the only
-               payload case and has no check, so any first one agrees *)
-            | ( Block (Untagged {block_type = block_type1}),
-                Block (Untagged {block_type = block_type2}) )
-              when block_type1 <> block_type2 && block_type2 <> UnknownType ->
-              [Variant_representation cd1.cd_id]
-            | _ -> r)
-      in
-      if r <> [] then r
-      else
-        compare_variants ~loc env params1 params2 ~layout1 ~layout2 (n + 1) rem1
-          rem2)
+  let name (cd : Types.constructor_declaration) = Ident.name cd.cd_id in
+  let aligned, order = align name cstrs1 cstrs2 in
+  List.concat_map
+    (function
+      | Both (cd1, i1, cd2, i2) ->
+        compare_constructors ~loc env params1 params2 ~layout1 ~layout2 cd1 i1
+          cd2 i2
+      | Renamed (cd1, cd2) -> [Constructor_renamed (name cd1, name cd2)]
+      | Only_first cd1 -> [Constructor_missing (false, cd1.cd_id)]
+      | Only_second cd2 -> [Constructor_missing (true, cd2.cd_id)])
+    aligned
+  @
+  match order with
+  | None -> []
+  | Some names -> [Constructor_order names]
 
-and compare_records env params1_ params2_ n_
-    (labels1_ : Types.label_declaration list)
-    (labels2_ : Types.label_declaration list) =
-  (* First try a fast path that checks if all the fields at once are consistent.
-     When that fails, try a slow path that blames the first inconsistent field *)
-  let rec aux ~fast params1 params2 n labels1 labels2 =
-    match (labels1, labels2) with
-    | [], [] ->
-      if fast then
-        if Ctype.equal env true params1 params2 then []
-        else aux ~fast:false params1_ params2_ n_ labels1_ labels2_
-      else []
-    | [], l :: _ -> [Field_missing (true, l.Types.ld_id)]
-    | l :: _, [] -> [Field_missing (false, l.Types.ld_id)]
-    | ld1 :: rem1, ld2 :: rem2 -> (
-      if Ident.name ld1.ld_id <> Ident.name ld2.ld_id then
-        [Field_names (n, ld1.ld_id.name, ld2.ld_id.name)]
-      else if ld1.ld_mutable <> ld2.ld_mutable then [Field_mutable ld1.ld_id]
-      else if ld1.ld_optional <> ld2.ld_optional then [Field_optional ld1.ld_id]
-      else
-        let name1 = Record_runtime.declaration_name ld1 in
-        let name2 = Record_runtime.declaration_name ld2 in
-        match name1 <> name2 with
-        | true -> [Field_names (n, name1, name2)]
-        | false ->
-          let current_field_consistent =
-            if fast then true
-            else
-              Ctype.equal env true (ld1.ld_type :: params1)
-                (ld2.ld_type :: params2)
-          in
-          if current_field_consistent then
-            (* add arguments to the parameters, cf. PR#7378 *)
-            aux ~fast (ld1.ld_type :: params1) (ld2.ld_type :: params2) (n + 1)
-              rem1 rem2
-          else [Field_type ld1.ld_id])
+(* [i1] and [i2] are the positions of the constructors in their layouts *)
+and compare_constructors ~loc env params1 params2 ~layout1 ~layout2
+    (cd1 : Types.constructor_declaration) i1
+    (cd2 : Types.constructor_declaration) i2 =
+  Builtin_attributes.check_deprecated_inclusion ~def:cd1.cd_loc ~use:cd2.cd_loc
+    loc cd1.cd_attributes cd2.cd_attributes (Ident.name cd1.cd_id);
+  let r =
+    match (cd1.cd_res, cd2.cd_res) with
+    | Some r1, Some r2 ->
+      if Ctype.equal env true [r1] [r2] then
+        compare_constructor_arguments env cd1.cd_id [r1] [r2] cd1.cd_args
+          cd2.cd_args
+      else [Constructor_type cd1.cd_id]
+    | Some _, None | None, Some _ -> [Constructor_type cd1.cd_id]
+    | _ ->
+      compare_constructor_arguments env cd1.cd_id params1 params2 cd1.cd_args
+        cd2.cd_args
   in
-  aux ~fast:true params1_ params2_ n_ labels1_ labels2_
+  if r <> [] then r
+  else
+    match Ast_untagged_variants.is_nullary_variant cd1.cd_args with
+    | true ->
+      let tag_type1 = Variant_runtime.constructor_tag layout1 i1 in
+      let tag_type2 = Variant_runtime.constructor_tag layout2 i2 in
+      if tag_type1 <> tag_type2 then [Variant_representation cd1.cd_id] else []
+    | false -> (
+      (* A tagged case with a payload carries its tag in the object; an
+         untagged one is its payload, whatever its [@as], and is compared by
+         its payload kind *)
+      match
+        ( Variant_runtime.constructor_at layout1 i1,
+          Variant_runtime.constructor_at layout2 i2 )
+      with
+      | Block (Tagged {tag = tag1}), Block (Tagged {tag = tag2})
+        when tag1.literal <> tag2.literal ->
+        [Variant_representation cd1.cd_id]
+      (* An unknown payload in the second declaration is the only payload case
+         and has no check, so any first one agrees *)
+      | ( Block (Untagged {block_type = block_type1}),
+          Block (Untagged {block_type = block_type2}) )
+        when block_type1 <> block_type2 && block_type2 <> UnknownType ->
+        [Variant_representation cd1.cd_id]
+      | _ -> [])
+
+and compare_records env params1 params2 (labels1 : Types.label_declaration list)
+    (labels2 : Types.label_declaration list) =
+  let name (ld : Types.label_declaration) = Ident.name ld.ld_id in
+  let aligned, order = align name labels1 labels2 in
+  let pairs =
+    List.filter_map
+      (function
+        | Both (ld1, _, ld2, _) -> Some (ld1, ld2)
+        | Renamed _ | Only_first _ | Only_second _ -> None)
+      aligned
+  in
+  (* The fields whose types differ. All the types are compared at once first;
+     when that fails, each field with the fields before it that agree, as
+     they are added to the parameters, cf. PR#7378 *)
+  let type_mismatches =
+    let types1 = List.map (fun (ld1, _) -> ld1.Types.ld_type) pairs in
+    let types2 = List.map (fun (_, ld2) -> ld2.Types.ld_type) pairs in
+    if Ctype.equal env true (params1 @ types1) (params2 @ types2) then []
+    else
+      let _, _, mismatches =
+        List.fold_left
+          (fun (params1, params2, mismatches) (ld1, ld2) ->
+            let params1' = ld1.Types.ld_type :: params1 in
+            let params2' = ld2.Types.ld_type :: params2 in
+            if Ctype.equal env true params1' params2' then
+              (params1', params2', mismatches)
+            else (params1, params2, ld1.ld_id :: mismatches))
+          (params1, params2, []) pairs
+      in
+      mismatches
+  in
+  let compare_fields (ld1 : Types.label_declaration) ld2 =
+    let name1 = Record_runtime.declaration_name ld1 in
+    let name2 = Record_runtime.declaration_name ld2 in
+    List.concat
+      [
+        (if ld1.ld_mutable <> ld2.ld_mutable then [Field_mutable ld1.ld_id]
+         else []);
+        (if ld1.ld_optional <> ld2.ld_optional then [Field_optional ld1.ld_id]
+         else []);
+        (if name1 <> name2 then [Field_runtime_name (ld1.ld_id, name1, name2)]
+         else []);
+        (* The type of an optional field is an option, which [Field_optional]
+           already reports *)
+        (if
+           ld1.ld_optional = ld2.ld_optional
+           && List.exists (Ident.same ld1.ld_id) type_mismatches
+         then [Field_type ld1.ld_id]
+         else []);
+      ]
+  in
+  List.concat_map
+    (function
+      | Both (ld1, _, ld2, _) -> compare_fields ld1 ld2
+      | Renamed (ld1, ld2) -> [Field_renamed (name ld1, name ld2)]
+      | Only_first ld1 -> [Field_missing (false, ld1.ld_id)]
+      | Only_second ld2 -> [Field_missing (true, ld2.ld_id)])
+    aligned
+  @
+  match order with
+  | None -> []
+  | Some names -> [Field_order names]
 
 (* What the second declaration states about its values at run time must
    hold for the first. Values are recognized by the class or [typeof] the
@@ -515,14 +649,14 @@ let type_declarations ?(equality = false) ~loc env name decl1 id decl2 =
               in
               mark cstrs1 usage name decl1;
               if equality then mark cstrs2 Env.Positive (Ident.name id) decl2;
-              compare_variants ~loc env decl1.type_params decl2.type_params 1
+              compare_variants ~loc env decl1.type_params decl2.type_params
                 ~layout1:(Variant_runtime.get_layout layout_ref1)
                 ~layout2:(Variant_runtime.get_layout layout_ref2)
                 cstrs1 cstrs2
             | Type_record (labels1, rep1), Type_record (labels2, rep2) ->
               let err =
-                compare_records env decl1.type_params decl2.type_params 1
-                  labels1 labels2
+                compare_records env decl1.type_params decl2.type_params labels1
+                  labels2
               in
               if err <> [] || rep1 = rep2 then err
               else [Record_representation (rep1, rep2)]

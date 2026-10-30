@@ -15,4 +15,5 @@
   Expected declaration ([36m/.../fixtures/Iface_field_names_mismatch/Foo.resi[0m:[2m1:1-25[0m):
     type t = {x: int, y: int}
   
-  Fields number 1 have different names, a and x.
+  The field a is named x in the expected declaration.
+  The field b is named y in the expected declaration.
