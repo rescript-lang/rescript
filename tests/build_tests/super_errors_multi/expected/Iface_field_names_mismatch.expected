@@ -8,12 +8,11 @@
 
   The implementation /.../fixtures/Iface_field_names_mismatch/Foo.res
   does not match the interface /.../fixtures/Iface_field_names_mismatch/foo.cmi:
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/Iface_field_names_mismatch/Foo.res[0m:[2m1:1-25[0m):
     type t = {a: int, b: int}
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/Iface_field_names_mismatch/Foo.resi[0m:[2m1:1-25[0m):
     type t = {x: int, y: int}
-  [36m/.../fixtures/Iface_field_names_mismatch/Foo.resi[0m:[2m1:1-25[0m:
-    Expected declaration
-  [36m/.../fixtures/Iface_field_names_mismatch/Foo.res[0m:[2m1:1-25[0m:
-    Actual declaration
+  
   Fields number 1 have different names, a and x.

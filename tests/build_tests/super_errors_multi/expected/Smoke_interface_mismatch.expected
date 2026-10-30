@@ -8,8 +8,9 @@
 
   The implementation /.../fixtures/Smoke_interface_mismatch/Foo.res
   does not match the interface /.../fixtures/Smoke_interface_mismatch/foo.cmi:
-  Values do not match: let v: string is not included in let v: int
-  [36m/.../fixtures/Smoke_interface_mismatch/Foo.resi[0m:[2m1:1-10[0m:
-    Expected declaration
-  [36m/.../fixtures/Smoke_interface_mismatch/Foo.res[0m:[2m1:5[0m:
-    Actual declaration
+  
+  Actual declaration ([36m/.../fixtures/Smoke_interface_mismatch/Foo.res[0m:[2m1:5[0m):
+    let v: string
+  
+  Expected declaration ([36m/.../fixtures/Smoke_interface_mismatch/Foo.resi[0m:[2m1:1-10[0m):
+    let v: int

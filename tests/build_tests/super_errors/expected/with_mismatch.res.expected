@@ -9,11 +9,9 @@
 
   In this `with' constraint, the new definition of t
   does not match its original definition in the constrained signature:
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/with_mismatch.res[0m:[2m5:29[0m):
     type t = string
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/with_mismatch.res[0m:[2m2:3-14[0m):
     type t = int
-  [36m/.../fixtures/with_mismatch.res[0m:[2m2:3-14[0m:
-    Expected declaration
-  [36m/.../fixtures/with_mismatch.res[0m:[2m5:29[0m:
-    Actual declaration

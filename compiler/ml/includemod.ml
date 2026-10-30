@@ -20,7 +20,8 @@ open Typedtree
 open Types
 
 type symptom =
-  | Missing_field of Ident.t * Location.t * string (* kind *)
+  | Missing_field of Ident.t * Location.t * string * signature_item
+      (** The name, location, kind and declaration of an expected item *)
   | Value_descriptions of Ident.t * value_description * value_description
   | Type_declarations of
       Ident.t
@@ -331,7 +332,8 @@ and signatures ~loc env cxt subst sig1 sig2 =
           (* see PR#5098 *)
           simplify_structure_coercion cc id_pos_list runtime_fields
         else Tcoerce_structure (cc, id_pos_list, runtime_fields)
-      | _ -> raise (Error unpaired))
+      (* In the order of the expected signature *)
+      | _ -> raise (Error (List.rev unpaired)))
     | item2 :: rem -> (
       let id2, loc, name2 = item_ident_name item2 in
       let name2, report =
@@ -357,7 +359,7 @@ and signatures ~loc env cxt subst sig1 sig2 =
       | exception Not_found ->
         let unpaired =
           if report then
-            (cxt, env, Missing_field (id2, loc, kind_of_field_desc name2))
+            (cxt, env, Missing_field (id2, loc, kind_of_field_desc name2, item2))
             :: unpaired
           else unpaired
         in
@@ -485,12 +487,21 @@ let modtypes env m1 m2 =
 open Format
 open Printtyp
 
-let show_loc msg ppf loc =
-  fprintf ppf "@\n@[<2>%a:@ %s@]" Location.print_loc loc msg
+(* A declaration under a label naming its side and its location *)
+let show_declaration label loc pp ppf x =
+  fprintf ppf "@[<v 2>%s (%a):@,%a@]" label Location.print_loc loc pp x
 
-let show_locs ppf (loc1, loc2) =
-  show_loc "Expected declaration" ppf loc2;
-  show_loc "Actual declaration" ppf loc1
+(* [x1] is included in [x2]. In a functor's parameter, where inclusion goes
+   the other way, [swapped] is true and [x2] is the actual declaration. *)
+let show_declarations ~swapped pp ppf (x1, loc1, x2, loc2) =
+  let (actual, actual_loc), (expected, expected_loc) =
+    if swapped then ((x2, loc2), (x1, loc1)) else ((x1, loc1), (x2, loc2))
+  in
+  fprintf ppf "%a@,@,%a"
+    (show_declaration "Actual declaration" actual_loc pp)
+    actual
+    (show_declaration "Expected declaration" expected_loc pp)
+    expected
 
 let find_arity_mismatch env ty1 ty2 =
   let rec loop seen ty1 ty2 =
@@ -535,47 +546,50 @@ let show_arity_mismatch env ppf (d1 : value_description)
       if n = 1 then "1 argument" else string_of_int n ^ " arguments"
     in
     fprintf ppf
-      "@\n\
+      "@,\
+       @,\
        @[The implementation contains a function taking %s where the interface \
        expects one taking %s.@]"
       (args n1) (args n2)
   | _ -> ()
 
-let include_symptom env ppf = function
-  | Missing_field (id, loc, kind) ->
-    fprintf ppf "The %s `%a` is required but not provided" kind ident id;
-    show_loc "Expected declaration" ppf loc
+let include_symptom ~swapped env ppf = function
+  | Missing_field (id, loc, kind, item) ->
+    fprintf ppf "The %s `%a` is required but not provided.@,@,%a" kind ident id
+      (show_declaration
+         (if swapped then "Actual declaration" else "Expected declaration")
+         loc signature)
+      [item]
   | Value_descriptions (id, d1, d2) ->
-    fprintf ppf
-      "@[<hv 2>Values do not match:@ %a@;<1 -2>is not included in@ %a@]"
-      (value_description id) d1 (value_description id) d2;
-    show_arity_mismatch env ppf d1 d2;
-    show_locs ppf (d1.val_loc, d2.val_loc)
+    show_declarations ~swapped (value_description id) ppf
+      (d1, d1.val_loc, d2, d2.val_loc);
+    if swapped then show_arity_mismatch env ppf d2 d1
+    else show_arity_mismatch env ppf d1 d2
   | Type_declarations (id, d1, d2, errs) ->
-    fprintf ppf "@[<v>@[<hv>%s:@;<1 2>%a@ %s@;<1 2>%a@]%a%a@]"
-      "Type declarations do not match" (type_declaration id) d1
-      "is not included in" (type_declaration id) d2 show_locs
-      (d1.type_loc, d2.type_loc)
-      (Includecore.report_type_mismatch "the first" "the second" "declaration")
-      errs
+    show_declarations ~swapped (type_declaration id) ppf
+      (d1, d1.type_loc, d2, d2.type_loc);
+    if List.exists (fun err -> err <> Includecore.Manifest) errs then
+      let first, second =
+        if swapped then ("the expected", "the actual")
+        else ("the actual", "the expected")
+      in
+      fprintf ppf "@,%a"
+        (Includecore.report_type_mismatch first second "declaration")
+        errs
   | Extension_constructors (id, x1, x2) ->
-    fprintf ppf
-      "@[<hv 2>Extension declarations do not match:@ %a@;\
-       <1 -2>is not included in@ %a@]"
-      (extension_constructor id) x1 (extension_constructor id) x2;
-    show_locs ppf (x1.ext_loc, x2.ext_loc)
+    show_declarations ~swapped (extension_constructor id) ppf
+      (x1, x1.ext_loc, x2, x2.ext_loc)
   | Module_types (mty1, mty2) ->
+    let actual, expected = if swapped then (mty2, mty1) else (mty1, mty2) in
     fprintf ppf
-      "@[<hv 2>Modules do not match:@ %a@;<1 -2>is not included in@ %a@]"
-      modtype mty1 modtype mty2
+      "@[<v 2>Actual module type:@,%a@]@,@,@[<v 2>Expected module type:@,%a@]"
+      modtype actual modtype expected
   | Modtype_infos (id, d1, d2) ->
-    fprintf ppf
-      "@[<hv 2>Module type declarations do not match:@ %a@;\
-       <1 -2>does not match@ %a@]"
-      (modtype_declaration id) d1 (modtype_declaration id) d2
+    show_declarations ~swapped (modtype_declaration id) ppf
+      (d1, d1.mtd_loc, d2, d2.mtd_loc)
   | Modtype_permutation -> fprintf ppf "Illegal permutation of structure fields"
   | Interface_mismatch (impl_name, intf_name) ->
-    fprintf ppf "@[The implementation %s@ does not match the interface %s:"
+    fprintf ppf "@[The implementation %s@ does not match the interface %s:@]"
       impl_name intf_name
   | Unbound_modtype_path path ->
     fprintf ppf "Unbound module type %a" Printtyp.path path
@@ -603,75 +617,84 @@ and argname x =
   let s = Ident.name x in
   if s = "*" then "" else s
 
-let path_of_context = function
+(* The path of the modules a context goes through, outermost first *)
+let path_of_modules = function
   | Module id :: rem ->
     let rec subm path = function
-      | [] -> path
+      | [] -> Some path
       | Module id :: rem -> subm (Pdot (path, Ident.name id, -1)) rem
-      | _ -> assert false
+      | (Modtype _ | Arg _ | Body _) :: _ -> None
     in
     subm (Pident id) rem
-  | _ -> assert false
+  | (Modtype _ | Arg _ | Body _) :: _ | [] -> None
 
+(* Where in the module an error is, as a line before it. [cxt] is outermost
+   first. A module type or a functor's result at the end of a module path is
+   named in words; any other position is shown as a module type with <here>. *)
 let context ppf cxt =
-  if cxt = [] then ()
-  else if
-    List.for_all
-      (function
-        | Module _ -> true
-        | _ -> false)
-      cxt
-  then fprintf ppf "In module %a:@ " path (path_of_context cxt)
-  else fprintf ppf "@[<hv 2>At position@ %a@]@ " context cxt
-
-let include_err ppf (cxt, env, err) =
-  Printtyp.wrap_printing_env env (fun () ->
-      fprintf ppf "@[<v>%a%a@]" context (List.rev cxt) (include_symptom env) err)
-
-let error_size = 400 (* in heap words *)
-
-(* An error part is big when its heap representation exceeds
-   [error_size] words. Each distinct reachable block counts its header
-   and fields; a block without scannable fields (string, float, custom) or a
-   closure counts its header only. String contents are excluded so that the
-   decision is independent of source file names stored in locations. The walk
-   stops as soon as the limit is exceeded, which bounds the visited list. *)
-let is_big obj =
-  let size = ref 0 in
-  let visited = ref [] in
-  let exception Big in
-  let rec walk (o : Obj.t) =
-    if Obj.is_block o && not (List.memq o !visited) then (
-      visited := o :: !visited;
-      let tag = Obj.tag o in
-      let scan =
-        tag < Obj.no_scan_tag && tag <> Obj.closure_tag && tag <> Obj.infix_tag
-      in
-      size := !size + if scan then 1 + Obj.size o else 1;
-      if !size > error_size then raise_notrace Big;
-      if scan then
-        for i = 0 to Obj.size o - 1 do
-          walk (Obj.field o i)
-        done)
+  let split_last l =
+    match List.rev l with
+    | last :: rev_init -> Some (List.rev rev_init, last)
+    | [] -> None
   in
-  try
-    walk (Obj.repr obj);
-    false
-  with Big -> true
-
-let report_error ppf errs =
-  if errs = [] then ()
+  if cxt = [] then ()
   else
-    let errs, err = Ext_list.split_at_last errs in
-    let pe = ref true in
-    let include_err' ppf ((_, _, obj) as err) =
-      if not (is_big obj) then fprintf ppf "%a@ " include_err err
-      else if !pe then (
-        fprintf ppf "...@ ";
-        pe := false)
-    in
-    let print_errs ppf = List.iter (include_err' ppf) in
-    fprintf ppf "@[<v>%a%a@]" print_errs errs include_err err
+    match (path_of_modules cxt, split_last cxt) with
+    | Some p, _ -> fprintf ppf "In module %a:@,@," path p
+    | None, Some ([], Modtype id) ->
+      fprintf ppf "In module type %a:@,@," ident id
+    | None, Some (modules, Modtype id) -> (
+      match path_of_modules modules with
+      | Some p -> fprintf ppf "In module type %a.%a:@,@," path p ident id
+      | None -> fprintf ppf "@[<hv 2>At position@ %a@]@,@," context cxt)
+    | None, Some (modules, Body _) -> (
+      match path_of_modules modules with
+      | Some p -> fprintf ppf "In the result of functor %a:@,@," path p
+      | None -> fprintf ppf "@[<hv 2>At position@ %a@]@,@," context cxt)
+    | None, Some (modules, Arg x) -> (
+      match path_of_modules modules with
+      | Some p ->
+        fprintf ppf "In the parameter %a of functor %a:@,@," ident x path p
+      | None -> fprintf ppf "@[<hv 2>At position@ %a@]@,@," context cxt)
+    | None, _ -> fprintf ppf "@[<hv 2>At position@ %a@]@,@," context cxt
+
+let include_err ~show_context ppf (cxt, env, err) =
+  (* Inclusion is reversed in each functor parameter on the way *)
+  let swapped =
+    List.length
+      (List.filter
+         (function
+           | Arg _ -> true
+           | Module _ | Modtype _ | Body _ -> false)
+         cxt)
+    mod 2
+    = 1
+  in
+  Printtyp.wrap_printing_env env (fun () ->
+      fprintf ppf "@[<v>%a%a@]"
+        (fun ppf cxt -> if show_context then context ppf cxt)
+        (List.rev cxt)
+        (include_symptom ~swapped env)
+        err)
+
+(* An error is a path of symptoms from the whole module down to the items that
+   differ. The modules on the way are left out, as the items at the end say
+   what differs, each under the position it is at. *)
+let report_error ppf errs =
+  let rec shown = function
+    | [] -> []
+    | [err] -> [err]
+    | (_, _, (Module_types _ | Modtype_infos _)) :: rest -> shown rest
+    | err :: rest -> err :: shown rest
+  in
+  let rec print ppf previous_cxt = function
+    | [] -> ()
+    | ((cxt, _, _) as err) :: rest ->
+      if previous_cxt <> None then fprintf ppf "@,@,";
+      include_err ~show_context:(previous_cxt <> Some cxt) ppf err;
+      print ppf (Some cxt) rest
+  in
+  fprintf ppf "@[<v>%a@]" (fun ppf errs -> print ppf None errs) (shown errs)
 
 let better_candidate_loc (x : error list) =
   match x with
@@ -679,7 +702,7 @@ let better_candidate_loc (x : error list) =
     match descr with
     | Value_descriptions (_, d1, _) -> Some d1.val_loc
     | Type_declarations (_, tdcl1, _, _) -> Some tdcl1.type_loc
-    | Missing_field (_, loc, _) -> Some loc
+    | Missing_field (_, loc, _, _) -> Some loc
     | _ -> None)
   | _ -> None
 

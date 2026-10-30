@@ -10,19 +10,9 @@
   6 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-      type t = string
-    }
-  is not included in
-    {
-      type t = int
-    }
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/include_type_decl_mismatch.res[0m:[2m4:3-17[0m):
     type t = string
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/include_type_decl_mismatch.res[0m:[2m2:3-14[0m):
     type t = int
-  [36m/.../fixtures/include_type_decl_mismatch.res[0m:[2m2:3-14[0m:
-    Expected declaration
-  [36m/.../fixtures/include_type_decl_mismatch.res[0m:[2m4:3-17[0m:
-    Actual declaration

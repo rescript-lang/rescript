@@ -9,12 +9,8 @@
   15 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-      let unrelated: string
-    }
-  is not included in
-    HasFoo
-  The value `foo` is required but not provided
-  [36m/.../fixtures/functor_apply_arg_mismatch.res[0m:[2m2:3-14[0m:
-    Expected declaration
+  
+  The value `foo` is required but not provided.
+  
+  Expected declaration ([36m/.../fixtures/functor_apply_arg_mismatch.res[0m:[2m2:3-14[0m):
+    let foo: int

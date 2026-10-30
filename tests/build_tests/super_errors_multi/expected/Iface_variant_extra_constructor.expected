@@ -8,12 +8,11 @@
 
   The implementation /.../fixtures/Iface_variant_extra_constructor/Foo.res
   does not match the interface /.../fixtures/Iface_variant_extra_constructor/foo.cmi:
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/Iface_variant_extra_constructor/Foo.res[0m:[2m1:1-18[0m):
     type t = A | B | C
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/Iface_variant_extra_constructor/Foo.resi[0m:[2m1:1-14[0m):
     type t = A | B
-  [36m/.../fixtures/Iface_variant_extra_constructor/Foo.resi[0m:[2m1:1-14[0m:
-    Expected declaration
-  [36m/.../fixtures/Iface_variant_extra_constructor/Foo.res[0m:[2m1:1-18[0m:
-    Actual declaration
-  The constructor C is only present in the first declaration.
+  
+  The constructor C is only present in the actual declaration.

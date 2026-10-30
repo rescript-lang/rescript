@@ -8,12 +8,11 @@
 
   The implementation /.../fixtures/Iface_value_arity_mismatch/Foo.res
   does not match the interface /.../fixtures/Iface_value_arity_mismatch/foo.cmi:
-  Values do not match:
+  
+  Actual declaration ([36m/.../fixtures/Iface_value_arity_mismatch/Foo.res[0m:[2m1:5[0m):
     let f: int => int => int
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/Iface_value_arity_mismatch/Foo.resi[0m:[2m1:1-24[0m):
     let f: (int, int) => int
+  
   The implementation contains a function taking 1 argument where the interface expects one taking 2 arguments.
-  [36m/.../fixtures/Iface_value_arity_mismatch/Foo.resi[0m:[2m1:1-24[0m:
-    Expected declaration
-  [36m/.../fixtures/Iface_value_arity_mismatch/Foo.res[0m:[2m1:5[0m:
-    Actual declaration

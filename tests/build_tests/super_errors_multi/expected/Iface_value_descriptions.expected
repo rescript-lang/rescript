@@ -8,11 +8,9 @@
 
   The implementation /.../fixtures/Iface_value_descriptions/Foo.res
   does not match the interface /.../fixtures/Iface_value_descriptions/foo.cmi:
-  Values do not match:
+  
+  Actual declaration ([36m/.../fixtures/Iface_value_descriptions/Foo.res[0m:[2m1:5-11[0m):
     let compute: string => int
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/Iface_value_descriptions/Foo.resi[0m:[2m1:1-23[0m):
     let compute: int => int
-  [36m/.../fixtures/Iface_value_descriptions/Foo.resi[0m:[2m1:1-23[0m:
-    Expected declaration
-  [36m/.../fixtures/Iface_value_descriptions/Foo.res[0m:[2m1:5-11[0m:
-    Actual declaration

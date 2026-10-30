@@ -10,19 +10,9 @@
   11 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-      let v: {@set "x": int}
-    }
-  is not included in
-    {
-      let v: {"x": int}
-    }
-  Values do not match:
+  
+  Actual declaration ([36m/.../fixtures/object_value_signature_set_mismatch.res[0m:[2m9:7[0m):
     let v: {@set "x": int}
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/object_value_signature_set_mismatch.res[0m:[2m7:3-19[0m):
     let v: {"x": int}
-  [36m/.../fixtures/object_value_signature_set_mismatch.res[0m:[2m7:3-19[0m:
-    Expected declaration
-  [36m/.../fixtures/object_value_signature_set_mismatch.res[0m:[2m9:7[0m:
-    Actual declaration

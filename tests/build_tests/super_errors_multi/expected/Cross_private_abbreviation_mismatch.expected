@@ -10,11 +10,9 @@
 
   The implementation /.../fixtures/Cross_private_abbreviation_mismatch/Priv.res
   does not match the interface /.../fixtures/Cross_private_abbreviation_mismatch/priv.cmi:
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/Cross_private_abbreviation_mismatch/Priv.res[0m:[2m3:1-10[0m):
     type t = b
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/Cross_private_abbreviation_mismatch/Priv.resi[0m:[2m2:1-18[0m):
     type t = private a
-  [36m/.../fixtures/Cross_private_abbreviation_mismatch/Priv.resi[0m:[2m2:1-18[0m:
-    Expected declaration
-  [36m/.../fixtures/Cross_private_abbreviation_mismatch/Priv.res[0m:[2m3:1-10[0m:
-    Actual declaration

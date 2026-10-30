@@ -38,7 +38,8 @@ val type_declarations :
 val print_coercion : formatter -> module_coercion -> unit
 
 type symptom =
-  | Missing_field of Ident.t * Location.t * string (* kind *)
+  | Missing_field of Ident.t * Location.t * string * signature_item
+      (** The name, location, kind and declaration of an expected item *)
   | Value_descriptions of Ident.t * value_description * value_description
   | Type_declarations of
       Ident.t

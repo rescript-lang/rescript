@@ -225,22 +225,29 @@ let report_type_mismatch0 first second decl ppf err =
   | Record_representation (_rep1, _rep2) ->
     pr "Their internal representations differ"
   | Unboxed_representation b ->
-    pr "Their internal representations differ:@ %s %s %s"
-      (if b then second else first)
+    pr "@[<v 2>Their internal representations differ:@,%s %s %s@]"
+      (String.capitalize_ascii (if b then second else first))
       decl "uses unboxed representation"
-  | Immediate -> pr "%s is not an immediate type" first
+  | Immediate -> pr "%s %s is not an immediate type" first decl
   | Tag_name -> pr "Their @tag annotations differ"
   | Variant_representation s ->
     pr "The internal representations for case %s are not equal" (Ident.name s)
   | Not_undefined ->
     pr
-      "Their runtime representations differ:@ %s %s is @notUndefined,@ but %s \
-       %s can hold undefined"
-      second decl first decl
+      "@[<v 2>Their runtime representations differ:@,\
+       %s %s is @notUndefined,@,\
+       but %s %s can hold undefined@]"
+      (String.capitalize_ascii second)
+      decl first decl
   | Runtime_annotation (declared1, declared2) ->
     pr
-      "Their runtime representations differ:@ %s %s states %s,@ %s %s states %s"
-      first decl declared1 second decl declared2
+      "@[<v 2>Their runtime representations differ:@,\
+       %s %s states %s.@,\
+       %s %s states %s@]"
+      (String.capitalize_ascii first)
+      decl declared1
+      (String.capitalize_ascii second)
+      decl declared2
 
 let report_type_mismatch first second decl ppf =
   List.iter (fun err ->

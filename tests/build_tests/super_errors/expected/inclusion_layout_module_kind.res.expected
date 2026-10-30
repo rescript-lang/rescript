@@ -1,0 +1,30 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/inclusion_layout_module_kind.res[0m:[2m11:5-15:1[0m
+
+   9 [2m│[0m     let b: int
+  10 [2m│[0m   }
+  [1;31m11[0m [2m│[0m } = [1;31m{[0m
+  [1;31m12[0m [2m│[0m [1;31m  module F = {[0m
+  [1;31m13[0m [2m│[0m [1;31m    let b = 1[0m
+  [1;31m14[0m [2m│[0m [1;31m  }[0m
+  [1;31m15[0m [2m│[0m [1;31m}[0m
+  16 [2m│[0m 
+
+  Signature mismatch:
+  
+  In module F:
+  
+  Actual module type:
+    {
+      let b: int
+    }
+  
+  Expected module type:
+    (
+      X: {
+        let a: int
+      },
+    ) => {
+      let b: int
+    }

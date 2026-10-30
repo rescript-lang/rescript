@@ -9,14 +9,13 @@
 
   The implementation /.../fixtures/Cross_not_undefined_option_implementation/Hidden.res
   does not match the interface /.../fixtures/Cross_not_undefined_option_implementation/hidden.cmi:
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/Cross_not_undefined_option_implementation/Hidden.res[0m:[2m1:1-20[0m):
     type t = option<int>
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/Cross_not_undefined_option_implementation/Hidden.resi[0m:[2m1:15-20[0m):
     type t
-  [36m/.../fixtures/Cross_not_undefined_option_implementation/Hidden.resi[0m:[2m1:15-20[0m:
-    Expected declaration
-  [36m/.../fixtures/Cross_not_undefined_option_implementation/Hidden.res[0m:[2m1:1-20[0m:
-    Actual declaration
+  
   Their runtime representations differ:
-  the second declaration is @notUndefined,
-  but the first declaration can hold undefined.
+    The expected declaration is @notUndefined,
+    but the actual declaration can hold undefined.

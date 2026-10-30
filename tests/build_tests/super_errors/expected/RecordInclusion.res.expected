@@ -10,13 +10,11 @@
   6 [2m│[0m 
 
   Signature mismatch:
-  ...
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/RecordInclusion.res[0m:[2m4:3-58[0m):
     type t<'a, 'b, 'c> = {x: int, y: list<('a, 'c)>, z: int}
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/RecordInclusion.res[0m:[2m2:3-58[0m):
     type t<'a, 'b, 'c> = {x: int, y: list<('a, 'b)>, z: int}
-  [36m/.../fixtures/RecordInclusion.res[0m:[2m2:3-58[0m:
-    Expected declaration
-  [36m/.../fixtures/RecordInclusion.res[0m:[2m4:3-58[0m:
-    Actual declaration
+  
   The types for field y are not equal.

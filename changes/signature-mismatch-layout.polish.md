@@ -1,0 +1,2 @@
+- Show a signature mismatch as the actual and the expected declaration, each under its location, with only the items that differ and the module path to them.
+- Keep the location of an extension constructor or exception declared in an interface, so that errors and reanalyze point to it.
