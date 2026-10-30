@@ -904,7 +904,8 @@ and tree_of_type_decl id decl =
         flag (Builtin_attributes.immediate decl.type_attributes) "@immediate";
         flag unboxed "@unboxed";
         (match stated Ast_untagged_variants.process_tag_name with
-        | Some name -> [Printf.sprintf "@tag(\"%s\")" name]
+        | Some name ->
+          [Printf.sprintf "@tag(\"%s\")" (String_literal.encode_js_string name)]
         | None -> []);
         (match
            stated (Ast_untagged_variants.process_runtime_annotation ?loc:None)

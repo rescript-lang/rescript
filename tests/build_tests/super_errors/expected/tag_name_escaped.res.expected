@@ -1,0 +1,20 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/tag_name_escaped.res[0m:[2m5:5-7:1[0m
+
+  3 [2m│[0m module M: {
+  4 [2m│[0m   @tag("k\"ind") type t = A({x: int}) | B({y: int})
+  [1;31m5[0m [2m│[0m } = [1;31m{[0m
+  [1;31m6[0m [2m│[0m [1;31m  @tag("typ\\é") type t = A({x: int}) | B({y: int})[0m
+  [1;31m7[0m [2m│[0m [1;31m}[0m
+  8 [2m│[0m 
+
+  Signature mismatch:
+  
+  Actual declaration ([36m/.../fixtures/tag_name_escaped.res[0m:[2m6:18-51[0m):
+    @tag("typ\\é") type t = A({x: int}) | B({y: int})
+  
+  Expected declaration ([36m/.../fixtures/tag_name_escaped.res[0m:[2m4:18-51[0m):
+    @tag("k\"ind") type t = A({x: int}) | B({y: int})
+  
+  Their @tag annotations differ.
