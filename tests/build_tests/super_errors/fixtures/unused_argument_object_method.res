@@ -17,6 +17,7 @@ let nested = clipboardData("e")["m"](clipboardData("f")["n"]("y"))
 let retained = clipboardData("e")
 let first = retained["m"]
 let second = retained["m"]("used")
+
 let readElsewhere = () => {
   let o = clipboardData("e")
   let get = () => o["m"]
